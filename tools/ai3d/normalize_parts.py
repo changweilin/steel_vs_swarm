@@ -90,12 +90,45 @@ PLANAR_ISLAND_MAX = 0.54
 #      ⇒ 不屬於任何大群的頂點,若離某個大平面在容差之內就**吸上去**。
 # 實測(五顆節點平均;牆 / 屋頂 / 近水平 / 軸對齊 / 小角):
 #   第一輪 85.6 / 56.1 / 38.5 / 55.0 / 16.7%  →  這一輪 89.2 / 57.3 / 45.8 / 65.2 / **7.5%**
+#
+# ---- 2026-08-14 第四輪:使用者「法線角夾角小的**相鄰**平面合併,**相對周邊面積過小**且
+#      **角度差異沒有過大**的區塊,與**角度最接近的鄰居**合併,最後收斂成多面柱體 / 錐台 /
+#      角錐 / 圓柱 / 圓台 / 圓錐等幾何多面體構成」----
+# 前三輪只處理「大群」:面積佔比在 `MIN_F` 之下的那些**整塊被略過**(㋖ 只救得到不屬於
+# 任何群的**孤立頂點**,救不到「自成一小群」的碎塊)。實測前三輪出貨的五顆節點,分群數
+# 仍是 224~670 群 —— 那不是「多面體」,是一層碎鱗。⇒ ㋗:小區塊整塊併進**相鄰**大群。
+#   ㋗-1 「相對周邊」= 比的是**那個鄰居**的面積,不是佔全體的比例。這一條就是使用者列的
+#        「圓柱 / 圓台 / 圓錐」的保護:曲面體的側面每一片都一樣大 ⇒ 比值恆 1 ⇒ 併不掉。
+#        (拿「佔全體比例」當判據的話,一根 36 面的圓柱每一片都只佔 2%,整根會被抹平。)
+#   ㋗-2 「相鄰」是**共邊**不是「法線像」:`_plane_groups` 的分群本來就不看連通性(同一個
+#        平面上隔了一整棟的兩塊會落進同一群,那對「這是不是同一面牆」是對的);但「把碎屑
+#        併給誰」問的是它**貼在誰身上**,只能由拓樸回答。相鄰表走 `_face_adj`。
+#   ㋗-3 上界 45° = 兩面直角牆之間的**倒角**,那是特徵不是雜訊 ⇒ 取 40° 留餘裕;
+#        下界是分群容差 12°(在那之內本來就併掉了)。40 → 45 的增益已在噪音內。
+#   ㋗-4 **併得過去才併**(見程式碼中的註解):拉一半比不拉更糟。
+# 五顆實測(原始 base 起跑,JS 原型;牆平整 / 貼在大平面上的面積 / 分群數):
+#   第三輪 71.4·88.3·94.7·96.8·90.5 / 59.5·69.4·80.4·94.0·83.6 / 670·577·346·224·357
+#   第四輪 84.9·95.2·95.4·99.1·94.8 / 78.5·82.5·83.2·97.1·91.4 / 407·358·280·149·199
 PLANAR_DEG = 12.0         # 法線夾角在此之內**才可能**是同一面牆
 PLANAR_OFF_F = 0.03       # 跨距 × 此值 = 合併容差,**同時**是對原始位置的累計位移上限
 PLANAR_PASSES = 16        # 重算群結構的趟數(累計夾制 ⇒ 多跑只會更收斂,不會更歪;8→16 再降 0.7pp)
 PLANAR_MIN_F = 0.005      # 群面積佔比低於此 ⇒ 不值得整(舊值 0.02 把半數牆板擋在門外)
 PLANAR_AXIS = 0.15        # 群法線的 |n.z| ≤ 此值 ⇒ 吸成**恰好垂直**;≥ √(1−此²) ⇒ 恰好水平
                           #   值 = `WALL_NY`(「近垂直」那條線),MUST NOT 另發明一個數字
+PLANAR_SMALL_F = 0.25     # 群面積 ≤ 此 × **那個鄰居**的面積 ⇒「相對周邊面積過小」(㋗)
+PLANAR_MERGE_DEG = 40.0   # ㋗ 併入時的法線夾角上限;0 ⇒ 整條 ㋗ 關掉(逐位元回第三輪)
+# ㋘ 前置去噪(2026-08-14 使用者「處理合併平面前,隨機凹凸不平的面先弄平整」)。見 `_denoise`。
+PLANAR_DN_ITER = 6        # 法線濾波趟數;0 ⇒ 整條 ㋘ 關掉(逐位元回 ㋗ 那一版)
+PLANAR_DN_VERT = 3        # 每趟的頂點回推次數(法線先濾好,位置再追上去)
+PLANAR_DN_DEG = 4.0       # 值域門檻(法線差以 `2·sin(此/2)` 換算)。取自**量到的雜訊本身**
+                          #   (整平前二面角中位數 3.3~4.3°),MUST < `PLANAR_FLAT_DEG`
+                          #   —— 平整那條線被去噪抹掉的話,「真的貼在平面上」就變成恆真
+PLANAR_DN_SS = 1.0        # 空間項:相鄰面重心距平均的倍數(尺度自帶 ⇒ 這一格是純倍率)
+PLANAR_FLAT_DEG = 6.0     # 「真的貼在自己那一群平面上」那條線(= `planar_spec.flat_deg`;
+                          #   本檔拿它當 `PLANAR_DN_DEG` 的上界,並在 --uvbands 解析時釘住相等)
+assert PLANAR_DN_DEG < PLANAR_FLAT_DEG, '去噪門檻 MUST < 平整門檻(否則平整那道閘變成恆真)'
+assert PLANAR_MERGE_DEG == 0.0 or PLANAR_DEG < PLANAR_MERGE_DEG < 45.0, \
+    '㋗ 的角度上界 MUST ∈ (分群容差, 45°)(下界之內本來就併掉了;45° 是倒角 = 特徵)'
 # `PLANAR_MAX_F`(舊的第二個位移上限)**已退場** —— 它與合併容差是同一件事的兩個數字,
 # 而兩個數字不一致的症狀正是 ㋑。MUST NOT 復辟。
 
@@ -222,6 +255,11 @@ for spec in opt_all('uvbands'):
     # 平整門檻 MUST 遠嚴於分群容差:兩個用同一個數字的話「有分到群就算平」= 這道閘恆真
     assert ub_fdeg == 0.0 or 0.0 < ub_fdeg < PLANAR_DEG, \
         f'--uvbands {ubname}:flat_deg 要在 (0, {PLANAR_DEG}) 之間(分群容差本身不是平整門檻)'
+    # 平整門檻只准有一個數:`PLANAR_FLAT_DEG` 是 ㋘ 去噪門檻的**上界**(去噪抹過那條線,
+    # 「真的貼在平面上」就變成恆真),而分帶吃的是這個參數 —— 兩邊分家不會報錯,只會讓
+    # 「去噪不准碰的那條線」與「量平整用的那條線」變成兩件事。
+    assert ub_fdeg == 0.0 or ub_fdeg == PLANAR_FLAT_DEG, \
+        f'--uvbands {ubname}:flat_deg {ub_fdeg} MUST === PLANAR_FLAT_DEG {PLANAR_FLAT_DEG}'
     UVBANDS[ubname] = (ub_roof, ub_plain, ub_minz, ub_wall, ub_fdeg, ub_fmin)
 # --mirror <node>=<x|z|auto>:**鏡像貼補**(2026-08-08 使用者定案「建築另一面是空的,
 # 使用鏡像貼補空的部分」)。單張照片只約束得到看得見的那幾面 —— 退縮階/簷帶/裙樓只長在
@@ -281,6 +319,10 @@ for spec in opt_all('mirror'):
 # ⚠ 這一刀**改變窗牆帶的分帶結果** ⇒ 同一次呼叫 MUST 一併重烤 `--uvbands`(UV 段吃的是
 #    最終座標,順序上本來就排在後面),而且重烤完 MUST 重量 `nodeProfile` 改寫 biomes 名冊。
 REPLANAR = set(opt_all('replanar'))
+# `--basefill <node>`:對 `--base` 裡已出貨的節點補底(見下方 BASEFILL)。
+# `--basefill-dry` = 只印診斷不寫檔(先看它會怎麼決定,再決定要不要真的動刀)。
+BASEFILL = set(opt_all('basefill'))
+BASEFILL_DRY = '--basefill-dry' in argv
 
 REWORK = {}
 for spec in opt_all('rework'):
@@ -364,6 +406,28 @@ def _shade(ob, ratio):
 BASE_TARGET = {'building': 0.90, 'rock': 0.35}   # 樹族缺席 = 不動
 BASE_EPS_F = 0.02          # 「貼齊」的容差 = 跨距 × 此值
 BASE_MAX_CUT_F = 0.12      # 最多鏟掉跨距的這麼多(寧可不達標也不砍掉一截樓)
+SEAL_GRID = 96             # ㋙ 封底:足跡上由下往上打的射線網格邊長(96² = 9216 條)。
+                           #   它是**取樣密度不是門檻** —— 調高只會多掃到幾片小面,
+                           #   壓下去的結果(一律壓到 z0)不隨它改變
+SEAL_OPEN_MAX = 0.076      # 破口邊 ÷ 面數 超過此值 ⇒ 不封底(射線會從破口鑽進去)。
+                           #   = 實測空隙 mass_a 0.0096 / mass_b 0.0087 vs ac_a 0.599 的幾何中點
+SEAL_RIM_F = 0.05          # ㋚ 底緣帶:只壓「離底 此值 × 跨距」之內的頂點(扇貝狀毛邊)
+CAVITY_FROM_TOP = False    # 由上往下那一向要不要套深度上限。**預設關**:屋頂天井 / 退縮 /
+                           #   女兒牆與屋脊之間的凹是**建築本身**,不是重建出來的空腔
+                           #   (實測開著會把 masslow_b 的屋頂拉出一道對角摺痕)
+CAVITY_F = 0.25            # ㋙ **凹陷深度上限**(2026-08-14 使用者定案):首個命中的深度
+                           #   ⚠ 使用者提的是 0.20,這一格是**掃出來**的(使用者「深度幫我
+                           #   找一個比較好的數值」)。六顆節點的內凹量分布是**雙峰**的
+                           #   (5% 寬分箱、六顆平均):淺浮雕自 0 衰減、深空腔另成一群,
+                           #   谷底在 30~35%。但 Blender 實跑五顆的**驗收指標**在 0.25 取到
+                           #   內部最佳(碎鱗率 .0917/.0863/.0899/.0882/.0930、
+                           #   貼平面 85.2/85.4/83.2/84.4/85.6%、小角 12.5/9.5/10.9/9.5/7.6%
+                           #   對應 0.20/0.25/0.325/0.40/0.55)—— 0.25 **三項全部優於 0.20**。
+                           #   0.55 的小角最低是因為它幾乎什麼都不做(碎鱗率最差)。
+                           #   ⚠ 0.25/0.325/0.40 的差距落在貪心分群的離散跳動裡,
+                           #   取值 MUST 看平均,**MUST NOT 逐顆挑**。
+                           #   超過「該方向寬度 × 此值」⇒ 拉回這個位置。**穿過去的不處理**
+                           #   —— 甜甜圈 / 拱門那種通道,射線根本不會命中實體(構造保證)
 
 
 def _family_of_out(out_path):
@@ -432,6 +496,108 @@ def _coloc(me, span):
         k = (round(v.co.x / q), round(v.co.y / q), round(v.co.z / q))
         rep[v.index] = seen.setdefault(k, v.index)
     return rep
+
+
+def _face_adj(me, rep):
+    """面與面的**相鄰**表(共用一條邊)。邊的鍵走 `rep` 正規化 —— `--node` 那條路的
+    `_planarize` 吃的是還沒焊過的三角形湯(`--replanar` 才先 `_weld`),拿原始頂點索引
+    當鍵的話每一片面都自成孤島、相鄰表整份是空的,而 ㋗ 只會安靜地什麼都沒併。"""
+    e2f = {}
+    for p in me.polygons:
+        vs = [rep[v] for v in p.vertices]
+        for i in range(len(vs)):
+            a, b = vs[i], vs[(i + 1) % len(vs)]
+            e2f.setdefault((a, b) if a < b else (b, a), []).append(p.index)
+    adj = [set() for _ in me.polygons]
+    for fs in e2f.values():
+        for a in fs:
+            for b in fs:
+                if a != b:
+                    adj[a].add(b)
+    return adj
+
+
+def _denoise(me, rep, home, off, adj):
+    """㋘ **前置去噪**(2026-08-14 使用者「處理合併平面前,隨機凹凸不平的面先弄平整」)。
+
+    ---- 為什麼要排在合併**之前** ----
+    `_plane_groups` 的入群條件是「法線角 ≤ `deg` **且** 平面偏移 ≤ `off`」,而 img→3D 的網格
+    表面帶著隨機的起伏:一面本來是平的牆,逐片面的法線在 ±5° 之間亂跳 ⇒ 貪心分群走到一半
+    就被一片跳出容差的面切斷,同一面牆因此裂成好幾群。⇒ **先把雜訊抹掉,分群才看得見那面牆**。
+    倒過來做(先合併再去噪)是不行的:群一旦切碎了,後面每一步都是在碎片上做事。
+
+    ---- 手法:雙邊法線濾波 + 頂點回推(feature-preserving,不是一般的平滑)----
+    一般的 Laplacian / Smooth 修改器會把**真的稜線**一起磨掉 —— 那正是第三輪 ㋔ 花了一整輪
+    修回來的東西。雙邊濾波的值域項 `exp(−‖Δn‖² / 2σr²)` 讓夾角大的鄰居**權重趨近 0** ⇒
+    稜線兩側互不影響,只有「同一面上的隨機起伏」被平均掉。
+      σs = 相鄰面重心距的平均(尺度自帶,不必手寫);
+      σr = `2·sin(DN_DEG/2)`(法線差)。`DN_DEG` 取自**量到的雜訊本身**(整平前的二面角
+           中位數 3.3~4.3°),而且 MUST < `PLANAR_FLAT_DEG` —— 平整那條線本身不能被去噪
+           抹掉,否則「真的貼在平面上」那道閘就退化成「我把它磨平了」。
+    頂點回推走 Sun 2007 的 `v += (1/|F(v)|) Σ n_f (n_f·(c_f − v))`(法線先濾好、位置再追上去)。
+
+    位移**共用同一個累計夾制**(對 `home` 的距離 ≤ `off`)—— 去噪與合併花的是同一份預算,
+    「整顆離原始掃描最多跑多遠」因此仍然只有一個數字(A46 ⑥ ㋑ 的同一條)。實測去噪本身
+    幾乎碰不到那個上限(它只抹掉雜訊),所以合併那一段拿得到的餘裕沒有變窄。
+
+    曲面體的保護是**結構性的**:24 面圓柱相鄰面差 15° ⇒ 值域權重 exp(−6.99) ≈ 0.0009,
+    濾出來的法線等於它自己 ⇒ 位移 0(行為直測見 runbook §5bb-e / §5bc-c)。
+    """
+    if PLANAR_DN_ITER <= 0:
+        return
+    sr = 2.0 * math.sin(math.radians(PLANAR_DN_DEG) / 2.0)
+    P = me.polygons
+
+    def geo():
+        return ([p.normal.copy() for p in P], [p.center.copy() for p in P], [p.area for p in P])
+
+    fn, fc, fa = geo()
+    ds = dn = 0
+    for i, _ in enumerate(P):
+        for j in adj[i]:
+            ds += (fc[i] - fc[j]).length
+            dn += 1
+    ss = (ds / dn if dn else 1.0) * PLANAR_DN_SS
+    if ss <= 0.0:
+        return
+    for _ in range(PLANAR_DN_ITER):
+        fn, fc, fa = geo()
+        vf = []
+        for i, _ in enumerate(P):
+            nx = ny = nz = 0.0
+            for j in [i] + list(adj[i]):
+                d = (fc[i] - fc[j]).length
+                q = (fn[i] - fn[j]).length
+                w = fa[j] * math.exp(-d * d / (2 * ss * ss)) * math.exp(-q * q / (2 * sr * sr))
+                nx += w * fn[j].x; ny += w * fn[j].y; nz += w * fn[j].z
+            ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
+            vf.append((nx / ln, ny / ln, nz / ln))
+        for _ in range(PLANAR_DN_VERT):
+            fn, fc, fa = geo()
+            acc = {}
+            for i, p in enumerate(P):
+                n = vf[i]
+                for vi in {rep[v] for v in p.vertices}:
+                    co = me.vertices[vi].co
+                    t = n[0] * (fc[i].x - co.x) + n[1] * (fc[i].y - co.y) + n[2] * (fc[i].z - co.z)
+                    a = acc.setdefault(vi, [0.0, 0.0, 0.0, 0])
+                    a[0] += n[0] * t; a[1] += n[1] * t; a[2] += n[2] * t; a[3] += 1
+            for vi, a in acc.items():
+                if not a[3]:
+                    continue
+                v = me.vertices[vi].co
+                x, y, z = v.x + a[0] / a[3], v.y + a[1] / a[3], v.z + a[2] / a[3]
+                h = home[vi]
+                dx, dy, dz = x - h.x, y - h.y, z - h.z
+                ln = math.sqrt(dx * dx + dy * dy + dz * dz)
+                if ln > off:                     # 與合併共用同一個累計位移上限
+                    s = off / ln
+                    x, y, z = h.x + dx * s, h.y + dy * s, h.z + dz * s
+                v.x, v.y, v.z = x, y, z
+            for v in me.vertices:                # 共位頂點跟著代表走(拓樸沒變)
+                if rep[v.index] != v.index:
+                    v.co = me.vertices[rep[v.index]].co.copy()
+            me.update()
 
 
 def _solve3(N, d):
@@ -517,22 +683,66 @@ def _planarize(ob, name):
     span = _span_of(me)
     off = span * PLANAR_OFF_F
     rep = _coloc(me, span)
-    home = [v.co.copy() for v in me.vertices]   # 累計夾制的原點
-    moved = 0
+    adj = _face_adj(me, rep)
+    cos_m = math.cos(math.radians(PLANAR_MERGE_DEG))
+    home = [v.co.copy() for v in me.vertices]   # 累計夾制的原點(去噪與合併**共用**這一份)
+    # ㋘ 前置去噪 MUST 排在分群之前 —— 使用者這一句的整個重點就是這個順序:
+    # 分群的入群條件吃法線角,而隨機起伏會把一面平牆從中間切開,合併因此看不見那面牆。
+    _denoise(me, rep, home, off, adj)
+    dn_far = max((v.co - home[v.index]).length for v in me.vertices) if me.vertices else 0.0
+    moved = eaten = 0
     for _ in range(PLANAR_PASSES):
         me.update()
         tot = sum(p.area for p in me.polygons) or 1.0
         own = {}                                 # 代表頂點 → [群, …]
-        big = []
+        big, small, gof = [], [], {}
         for g in _plane_groups(me, off, axis=PLANAR_AXIS):
-            if g['area'] / tot < PLANAR_MIN_F:
-                continue
-            big.append(g)
+            for fi in g['faces']:
+                gof[fi] = g
+            (big if g['area'] / tot >= PLANAR_MIN_F else small).append(g)
+        for g in big:
+            g['big'] = True
             for vi in {rep[vi] for fi in g['faces'] for vi in me.polygons[fi].vertices}:
                 own.setdefault(vi, []).append(g)
         moved = len(big)
         if not own:
             break
+        # ---- ㋗ 小區塊併入**角度最接近的相鄰**大群(2026-08-14 使用者)----
+        # 「相對周邊面積過小」= 這一塊的面積 ≤ `SMALL_F` × **那個鄰居**的面積(不是佔全體的
+        # 比例:圓柱 / 圓台 / 圓錐的側面每一片都一樣大 ⇒ 比值恆為 1 ⇒ 結構上併不掉,
+        # 那幾種曲面體因此原封不動 —— 這就是使用者列的「圓柱/圓台/圓錐」的保護)。
+        # 「角度差異沒有過大」= 法線夾角 ≤ `MERGE_DEG`(上界 45° 是兩面直角牆之間的**倒角**,
+        # 那是特徵不是雜訊)。併的方向是**小的貼上大的**:被併的那一塊不進大群的擬合
+        # (`refit` 不重跑)—— 反過來會讓碎屑把一面好牆拉歪,正是 ㋐ 那個坑的另一種寫法。
+        for g in small:
+            nb = set()
+            for fi in g['faces']:
+                for fj in adj[fi]:
+                    h = gof.get(fj)
+                    if h is not None and h is not g and h.get('big'):
+                        nb.add(id(h))
+            best, bd = None, cos_m
+            for h in big:
+                if id(h) not in nb or g['area'] > PLANAR_SMALL_F * h['area']:
+                    continue
+                d = g['n'][0] * h['n'][0] + g['n'][1] * h['n'][1] + g['n'][2] * h['n'][2]
+                if d >= bd:
+                    best, bd = h, d
+            if best is None:
+                continue
+            # **併得過去才併**:整塊的頂點都要能在累計位移上限之內落到那個平面上。
+            # 少了這一條就是「拉一半」—— 一塊本來 30° 的碎屑被拉成 5°,原本不算「法線角小的
+            # 相鄰對」的它從此算(實測小角佔比反而由 11.0% 升到 19.6%),而畫面上是半平不平。
+            vs = {rep[vi] for fi in g['faces'] for vi in me.polygons[fi].vertices}
+            if any(abs((home[vi].x - best['c'][0]) * best['n'][0]
+                       + (home[vi].y - best['c'][1]) * best['n'][1]
+                       + (home[vi].z - best['c'][2]) * best['n'][2]) > off for vi in vs):
+                continue
+            eaten += 1
+            for vi in vs:
+                a = own.setdefault(vi, [])
+                if not any(x is best for x in a):    # 身分比對:dict 的 `in` 是深度值比對
+                    a.append(best)
         # ㋖ 殘料吸附:不屬於任何大群的頂點(尖刺 / 屋頂碎片)離某個大平面夠近就吸上去
         for v in me.vertices:
             if v.index != rep[v.index] or v.index in own:
@@ -592,8 +802,9 @@ def _planarize(ob, name):
                 v.co = me.vertices[rep[v.index]].co.copy()
     me.update()
     far = max((v.co - home[v.index]).length for v in me.vertices) if me.vertices else 0.0
-    print(f'PLANAR {name}: 分數 {score:.3f} / 碎屑 {island:.3f} ⇒ {PLANAR_PASSES} 趟、'
-          f'末趟整平 {moved} 群(合併容差 = 累計位移上限 {off:.4f},實得最大位移 {far:.4f})')
+    print(f'PLANAR {name}: 分數 {score:.3f} / 碎屑 {island:.3f} ⇒ 去噪 {PLANAR_DN_ITER}×{PLANAR_DN_VERT} 趟'
+          f'(位移 {dn_far:.4f})、整平 {PLANAR_PASSES} 趟、末趟 {moved} 群、小區塊併入鄰居 {eaten} 次'
+          f'(合併容差 = 累計位移上限 {off:.4f},實得最大位移 {far:.4f})')
 
 
 def _hull_area(pts):
@@ -709,6 +920,186 @@ def _base_flatten(ob, name, fam):
     print(f'BASE {name}({fam}): 鏟掉 {best / span:.3f} × 跨距 ⇒ 斷面 {cap:.5f} '
           f'= 平坦值的 {cap / plateau:.2f}(目標 {target});'
           f'接觸率(診斷,對凸包){c0:.3f} → {c1:.3f}')
+
+
+def _hull_obj(ob):
+    """這一顆的凸包(暫時物件,只拿來打射線量「內凹了多少」)。呼叫端 MUST 負責刪掉。"""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bmesh.ops.convex_hull(bm, input=bm.verts, use_existing_faces=False)
+    bmesh.ops.triangulate(bm, faces=list(bm.faces))
+    hm = bpy.data.meshes.new(f'{ob.name}__hull')
+    bm.to_mesh(hm)
+    bm.free()
+    hob = bpy.data.objects.new(f'{ob.name}__hull', hm)
+    bpy.context.collection.objects.link(hob)
+    return hob
+
+
+def _open_share(me):
+    """破口邊數 ÷ 面數(「這顆網格封不封閉」的尺;0 = 完全封閉)。"""
+    cnt = {}
+    for p in me.polygons:
+        vs = list(p.vertices)
+        for i in range(len(vs)):
+            a, b = vs[i], vs[(i + 1) % len(vs)]
+            k = (a, b) if a < b else (b, a)
+            cnt[k] = cnt.get(k, 0) + 1
+    return sum(1 for c in cnt.values() if c == 1) / max(len(me.polygons), 1)
+
+
+def _base_seal(ob, name, rep):
+    """㋙ **底部封閉**(2026-08-14 使用者圈了三處「破洞」)。
+
+    ---- 先講量到的是什麼,因為那決定了刀該怎麼下 ----
+    使用者圈的三處**都不是破洞**:`chimney_a` / `masslow_a` / `mass_c` / `masslow_b` 的
+    **邊界邊是 0**(網格是封閉的),由下往上打射線也量不到奇數穿越(0.0~1.3%)。
+    真正的情況是 **img→3D 的底面是一顆內凹的穹頂**:朝下的面裡落在「離底 0.12 × 跨距」
+    之內的只有 6%(masslow_a)⇒ 整顆量體其實是靠一圈**扇貝狀的毛邊**站在地上,
+    本體的底面吊在半空中。消費端把 yMin 貼齊地面 ⇒ 建物與地面之間留著一圈縫,
+    從低角度看進去就是使用者圈的那一塊黑。
+
+    ⇒ 要補的不是洞,是**給它一個平的底**。
+
+    ---- 刀:「從地面往上看得到的那一片」整個壓到基準面 ----
+    ①`z0` = 最低點;②在足跡上打 `SEAL_GRID²` 條**由下往上**的射線;③收集**第一個**打到的面;
+    ④這些面的頂點 `z` 一律壓到 `z0`。
+
+    **為什麼判據是「從下面看得見」而不是法線或高度**:
+      ㋐ 拿**法線**泛洪會停在牆上 —— 穹頂與底緣之間隔著近垂直的面(實測 masslow_a
+         只泛洪到 739 片朝下面裡的 30 片);
+      ㋑ 拿**高度**當門檻,不是壓不到穹頂(它可以高到 0.6 × 節點高),就是把簷口 / 陽台 /
+         退縮階的下緣一起壓平;
+      ㋒ 「從下面看得見」正好把兩者分乾淨:簷口下方**被地面層的量體擋住** ⇒ 第一個打到的
+         不是它 ⇒ 它一格不動。而使用者圈的三處(懸空的底、柱腳之間的縫、基座上的凹槽)
+         定義上全都是「從下面看得見」。
+    壓下去的效果 = **把側牆往下延伸到地面**:牆是垂直的 ⇒ 外觀只有底緣從扇貝狀變成一條直線。
+
+    三條性質(都是構造保證,不是參數):
+      ㋐ **拓樸一格不動**(只改位置)⇒ 面數 / 頂點數 / 三角形預算不受影響;
+      ㋑ **外廓一格不動** —— 只把頂點往下壓到 `z0`,MUST NOT 有任何頂點跑到 `z0` 以下;
+      ㋒ 樹族**不適用**(葉冠本來就是開放面片的集合,§5aj-C ⑥ 的同一條)。
+    """
+    me = ob.data
+    # **只對封閉的網格動刀**(原則 6 寧缺勿錯)。選片的判據是「由下往上的第一個命中」,
+    # 而那個判據**只在封閉網格上成立**:網格有破口時射線會從破口鑽進去、打到對面或頂棚的
+    # 內面,那一片被拉到基準面 = 整顆被扯出一排尖刺(2026-08-14 實測 `ac_a`:破口佔面數
+    # 0.599,封底之後側面長出一排黑色尖楔;而外廓與面數兩個斷言照樣全綠)。
+    # 門檻兩側有 60× 空隙(mass_a 0.0096 / mass_b 0.0087 vs ac_a 0.599)⇒ 取幾何中點。
+    open_r = _open_share(me)
+    if open_r > SEAL_OPEN_MAX:
+        print(f'SEAL {name}: 破口佔面數 {open_r:.3f} > {SEAL_OPEN_MAX} ⇒ **不動**'
+              f'(射線會從破口鑽進去,封底會把對面的內面扯下來)')
+        return 0
+    span = _span_of(me)
+    lo = [min(v.co[a] for v in me.vertices) for a in range(3)]
+    hi = [max(v.co[a] for v in me.vertices) for a in range(3)]
+    ext = [hi[a] - lo[a] for a in range(3)]
+    z0 = lo[2]
+    hull = _hull_obj(ob)
+    n, moved, deepest = SEAL_GRID, 0, 0.0
+    try:
+        for axis in range(3):
+            u, w = [a for a in range(3) if a != axis]
+            for sgn in (1, -1):
+                if axis == 2 and sgn < 0 and not CAVITY_FROM_TOP:
+                    continue                           # 由上往下那一向見 `CAVITY_FROM_TOP`
+                cap = CAVITY_F * ext[axis]             # 「該方向寬度」的 20%
+                start = (lo[axis] if sgn > 0 else hi[axis]) - sgn * span
+                d = [0.0, 0.0, 0.0]
+                d[axis] = float(sgn)
+                fim = [[-1] * n for _ in range(n)]
+                tgm = [[0.0] * n for _ in range(n)]
+                cand = [[False] * n for _ in range(n)]
+                thru = [[False] * n for _ in range(n)]   # 這條射線直接穿過去(打不到實體)
+                for i in range(n):
+                    for j in range(n):
+                        o = [0.0, 0.0, 0.0]
+                        o[axis] = start
+                        o[u] = lo[u] + ext[u] * (i + 0.5) / n
+                        o[w] = lo[w] + ext[w] * (j + 0.5) / n
+                        ok, loc, nor, fi = ob.ray_cast(tuple(o), tuple(d))
+                        # 面向 MUST 朝著射線來的方向 —— 收到背面 = 射線已經穿進實體內部
+                        if not ok or fi < 0 or nor[axis] * sgn >= 0.0:
+                            thru[i][j] = True
+                            continue
+                        hok, hloc, _, _ = hull.ray_cast(tuple(o), tuple(d))
+                        if not hok:
+                            continue
+                        # **深度是相對於周圍表面(凸包)的內凹量**,不是離包圍盒有多遠 ——
+                        # 拿包圍盒當基準的話,一根圓柱從側面看,靠邊那幾條射線要走到圓心
+                        # 才碰到面 ⇒ 「深度 1.000 × 寬」,而它根本沒有凹陷(實測會誤拉 80 個
+                        # 頂點,把圓柱削成一根方柱)。
+                        dep = (loc[axis] - hloc[axis]) * sgn
+                        deepest = max(deepest, dep / ext[axis])
+                        fim[i][j] = fi
+                        tgm[i][j] = hloc[axis] + sgn * cap
+                        cand[i][j] = dep > cap
+                # 「類似甜甜圈這樣穿過去則不用處理」:把候選格連成區塊,**只要這個區塊碰得到
+                # 一條穿過去的射線,整塊放行**。逐點往側向打射線是不夠的 —— 甜甜圈的孔在
+                # 側向被整個環圍住(實測會誤拉 281 個頂點,把甜甜圈填成一塊圓餅)。
+                pull = {}
+                seenpx = [[False] * n for _ in range(n)]
+                for i in range(n):
+                    for j in range(n):
+                        if not cand[i][j] or seenpx[i][j]:
+                            continue
+                        reg, st, opened = [], [(i, j)], False
+                        seenpx[i][j] = True
+                        while st:
+                            a2, b2 = st.pop()
+                            reg.append((a2, b2))
+                            for da, db in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                                p2, q2 = a2 + da, b2 + db
+                                if not (0 <= p2 < n and 0 <= q2 < n):
+                                    continue
+                                if thru[p2][q2]:
+                                    opened = True
+                                elif cand[p2][q2] and not seenpx[p2][q2]:
+                                    seenpx[p2][q2] = True
+                                    st.append((p2, q2))
+                        if opened:
+                            continue
+                        for a2, b2 in reg:
+                            if fim[a2][b2] >= 0:
+                                pull[fim[a2][b2]] = tgm[a2][b2]
+                for fi, tgt in pull.items():
+                    for v in me.polygons[fi].vertices:
+                        vi = rep[v]
+                        if (me.vertices[vi].co[axis] - tgt) * sgn > 0.0:   # 只往**外**拉
+                            me.vertices[vi].co[axis] = tgt
+                            moved += 1
+                for v in me.vertices:                  # 共位頂點跟著代表走
+                    if rep[v.index] != v.index:
+                        v.co = me.vertices[rep[v.index]].co.copy()
+                me.update()
+    finally:
+        bpy.data.objects.remove(hull, do_unlink=True)
+    # ㋚ 底緣帶壓平(與深度上限正交:扇貝狀毛邊的內凹量**遠小於** 20%,那條規則碰不到它)
+    seen = set()
+    band = z0 + SEAL_RIM_F * span
+    for i in range(n):
+        for j in range(n):
+            x = lo[0] + ext[0] * (i + 0.5) / n
+            y = lo[1] + ext[1] * (j + 0.5) / n
+            ok, _, nor, fi = ob.ray_cast((x, y, z0 - span), (0.0, 0.0, 1.0))
+            if ok and fi >= 0 and nor.z < 0.0:
+                seen.add(fi)
+    vs = {rep[v] for fi in seen for v in me.polygons[fi].vertices
+          if me.vertices[rep[v]].co.z <= band}
+    for vi in vs:
+        me.vertices[vi].co.z = z0
+    for v in me.vertices:
+        if rep[v.index] != v.index:
+            v.co = me.vertices[rep[v.index]].co.copy()
+    me.update()
+    z1 = min(v.co.z for v in me.vertices)
+    assert z1 >= z0 - 1e-6, f'{name}:封底把頂點壓到基準面以下({z1} < {z0})'
+    print(f'SEAL {name}: 凹陷深度上限 {CAVITY_F} × 該方向寬度 ⇒ 拉回 {moved} 個頂點'
+          f'(最深的內凹 {deepest:.3f} × 寬);底緣帶壓平 {len(vs)} 個頂點'
+          f'(帶寬 {SEAL_RIM_F} × 跨距;射線網格 {SEAL_GRID}² × 6 向)')
+    return moved + len(vs)
 
 
 def _mirror(ob, axis, name, mode='half'):
@@ -868,6 +1259,82 @@ if BASE:
             continue
         o.data.materials.clear()
         made.append(o)
+
+# ⚠ 這一段 MUST 排在 `--replanar` **之前**:封底是**形狀**的修正(把懸空的底面壓到
+#   基準面),整平吃的是形狀 —— 反過來的話整平整的是那個還吊在半空中的底面。
+# ---- `--basefill`:對 base 裡已出貨的節點補底(2026-08-14)----
+# 先印診斷(`--basefill-dry` 就到此為止),再真的動刀。
+if BASEFILL:
+    assert BASE, '--basefill 要有 --base(它動的是已出貨節點)'
+    byname = {o.name.split('.')[0]: o for o in made}
+    miss = BASEFILL - set(byname)
+    assert not miss, f'--basefill 指到 base 裡不存在的節點:{sorted(miss)}'
+    fam_bf = _family_of_out(OUT)
+    for rname in sorted(BASEFILL):
+        ob = byname[rname]
+        bpy.ops.object.select_all(action='DESELECT')
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
+        assert fam_bf != 'tree', '--basefill 不適用樹族(葉冠是開放面片的集合,§5aj-C ⑥)'
+        me = ob.data
+        e0 = _ext(ob)
+        t0 = sum(len(p.vertices) - 2 for p in me.polygons)
+        if BASEFILL_DRY:
+            # 乾跑 = **內凹量的分布**(挑 `CAVITY_F` 的依據)。逐向由外向內打射線,
+            # 量「相對於凸包」的內凹量,以該方向寬度為單位,逐格加權該格的射線數。
+            span = _span_of(me)
+            lo = [min(v.co[a] for v in me.vertices) for a in range(3)]
+            hi = [max(v.co[a] for v in me.vertices) for a in range(3)]
+            ext = [hi[a] - lo[a] for a in range(3)]
+            hull = _hull_obj(ob)
+            nD = 48
+            bins = [0.0] * 21
+            tot = 0
+            try:
+                for axis in range(3):
+                    u, w = [a for a in range(3) if a != axis]
+                    for sgn in (1, -1):
+                        if axis == 2 and sgn < 0 and not CAVITY_FROM_TOP:
+                            continue
+                        start = (lo[axis] if sgn > 0 else hi[axis]) - sgn * span
+                        d = [0.0, 0.0, 0.0]
+                        d[axis] = float(sgn)
+                        for i in range(nD):
+                            for j in range(nD):
+                                o = [0.0, 0.0, 0.0]
+                                o[axis] = start
+                                o[u] = lo[u] + ext[u] * (i + 0.5) / nD
+                                o[w] = lo[w] + ext[w] * (j + 0.5) / nD
+                                ok, loc, nor, fi = ob.ray_cast(tuple(o), tuple(d))
+                                if not ok or fi < 0 or nor[axis] * sgn >= 0.0:
+                                    continue
+                                hok, hloc, _, _ = hull.ray_cast(tuple(o), tuple(d))
+                                if not hok:
+                                    continue
+                                dep = (loc[axis] - hloc[axis]) * sgn / ext[axis]
+                                bins[min(20, max(0, int(dep * 20)))] += 1
+                                tot += 1
+            finally:
+                bpy.data.objects.remove(hull, do_unlink=True)
+            tot = tot or 1
+            # 印**內凹量的直方圖**(5% 一箱):`CAVITY_F` 就是從這裡挑的 —— 兩個母體
+            # (淺浮雕 / 深空腔)之間的谷底在哪一箱,以及成本掃描該從哪一帶開始試。
+            print(f'HIST {rname}(內凹量 ÷ 該方向寬度,每箱 5%)'
+                  + ' ' + ' '.join(f'{b / tot:.5f}' for b in bins))
+            continue
+        try:
+            bpy.ops.mesh.customdata_custom_splitnormals_clear()
+        except RuntimeError:
+            pass
+        ratio = _weld(ob, rname)
+        _base_seal(ob, rname, _coloc(me, _span_of(me)))
+        _restore_ext(ob, e0)
+        _shade(ob, ratio)
+        e1 = _ext(ob)
+        t1 = sum(len(p.vertices) - 2 for p in me.polygons)
+        assert max(abs(a - b) for a, b in zip(e0, e1)) < 1e-5, f'{rname}:外廓還原失敗 {e0} → {e1}'
+        assert t1 <= t0, f'{rname}:面數上升 {t0} → {t1}(封底只動位置)'
+        print(f'BASEFILL {rname}: tris {t0} → {t1}・外廓 r={e1[0]:.4f} y=[{e1[1]:.4f},{e1[2]:.4f}](逐位元還原)')
 
 # ---- `--replanar`:對 base 裡已出貨的節點就地整平(2026-08-13)----
 # 紀律與 `--rework` 逐條相同:焊接先行(三角形湯整不動)、外廓逐位元還原、著色風格還原、

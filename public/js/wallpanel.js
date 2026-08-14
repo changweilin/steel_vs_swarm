@@ -42,17 +42,19 @@ export const PANEL = { DEG: 12, OFF_F: 0.03, WALL_NY: 0.15, FLAT_DEG: 6, MIN_F: 
 const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 /**
- * 把幾何切成**平整垂直牆面板**。回傳的 `faceOf[三角形序] = 面板索引`(−1 = 不是平整垂直牆)。
- * 分群規則與 `normalize_parts.py _plane_groups` 逐條相同:法線夾角 ≤ `DEG` **且** 平面偏移
+ * 平面分群(`wallPanels` 與收斂量測 `parts_src.solidConverge` 的**共用底層**)。
+ * 規則與 `normalize_parts.py _plane_groups` 逐條相同:法線夾角 ≤ `DEG` **且** 平面偏移
  * ≤ `OFF_F` × 跨距;每收一片就重擬(面積加權)。零亂數、依三角形序定序 ⇒ 決定性。
+ * ⚠ 這裡**不做**匯出端那條軸向吸附(`PLANAR_AXIS`)—— 吸附是「刀」的一部分,
+ *   量測端跟著吸就量不到「它到底有沒有被吸到軸上」(A46 ⑥ 的刀 vs 尺)。
  * @param {ArrayLike<number>} pos  逐頂點 xyz
  * @param {ArrayLike<number>} idx  逐三角形頂點索引
  */
-export function wallPanels(pos, idx, o = PANEL) {
+export function planeGroups(pos, idx, o = PANEL) {
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < pos.length; i += 3) for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], pos[i + a]); hi[a] = Math.max(hi[a], pos[i + a]); }
   const span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) || 1;
-  const off = span * o.OFF_F, cosT = Math.cos(o.DEG * Math.PI / 180), cosF = Math.cos(o.FLAT_DEG * Math.PI / 180);
+  const off = span * o.OFF_F, cosT = Math.cos(o.DEG * Math.PI / 180);
   const nT = idx.length / 3;
   const fn = new Float64Array(nT * 3), fc = new Float64Array(nT * 3), fa = new Float64Array(nT);
   let totA = 0;
@@ -91,6 +93,18 @@ export function wallPanels(pos, idx, o = PANEL) {
     if (hit) { hit.f.push(t); refit(hit); } else G.push({ n, c, f: [t], area: fa[t] });
   }
   for (const g of G) refit(g);
+  return { G, fn, fc, fa, totA, span, lo, hi, nT };
+}
+
+/**
+ * 把幾何切成**平整垂直牆面板**。回傳的 `faceOf[三角形序] = 面板索引`(−1 = 不是平整垂直牆)。
+ * 分群走 `planeGroups`(同一份規則,收斂量測也吃它)。
+ * @param {ArrayLike<number>} pos  逐頂點 xyz
+ * @param {ArrayLike<number>} idx  逐三角形頂點索引
+ */
+export function wallPanels(pos, idx, o = PANEL) {
+  const { G, fn, fa, totA, span, lo, hi, nT } = planeGroups(pos, idx, o);
+  const cosF = Math.cos(o.FLAT_DEG * Math.PI / 180);
   // 只留「近垂直 + 夠大」的群,並量它自己平面上的 2D 外框(u 沿水平切向、v 取世界 Y)
   const panels = [], faceOf = new Int32Array(nT).fill(-1);
   const T = Math.max(totA, 1e-9);

@@ -22,7 +22,7 @@ import { existsSync } from 'node:fs';
 import {
   beaconsPure, beaconsSrc, partLibs, libDescs as collectLibDescs, bioLibDescs, megaLibDescs, bldLibDescs,
   fbEnvelope, parseGlb, nodeExtent, nodeProfile, uvBandStats, glbPath, triBudget,
-  meshFaces, flatWalls, wallFlatness,
+  meshFaces, flatWalls, wallFlatness, solidConverge,
 } from './parts_src.mjs';
 
 let pass = 0, fail = 0;
@@ -121,7 +121,7 @@ for (const gp of targets) {
       // 2026-08-13:窗牆帶的第二個條件「完全平整」。規格住 `planar_spec`(匯出端的
       // `normalize_parts.py --uvbands` 第 5/6 欄吃同一份)⇒ 缺席就退回純傾角分帶。
       const flat = flatSpec(node);
-      const st = uvBandStats(node, minz, wallNy, flat);
+      const st = uvBandStats(node, minz, wallNy, flat, [bandF, bandF + plainF]);
       ok(!!st, `${tag}:有 UV(整棟量體是唯一吃貼圖的桶;沒有 UV = 整棟採到一個 texel 的純色板)`);
       if (st) {
         // 方向:牆面的 v MUST 隨高度遞增。glTF 的 UV 原點在左上、Blender 在左下 ⇒ 匯出端
@@ -140,8 +140,12 @@ for (const gp of targets) {
             `${tag}:屋頂帶寬 ≈ 朝上面積佔比(實測 ${st.parity.toFixed(3)} vs 宣告 ${bandF},差 ${Math.abs(st.parity - bandF).toFixed(3)} ≤ ${tolB})`);
           if (plainF > 0) {
             // 素牆帶(2026-08-12「窗只貼垂直平整的牆」;2026-08-13 起再收「近垂直但不平整」)
-            ok(st.tiltMinV >= bandF - 1e-3 && st.tiltMaxV <= wallLo + 1e-3,
-              `${tag}:傾斜/朝下/不平整的面收在素牆帶內(v ∈ [${st.tiltMinV.toFixed(3)}, ${st.tiltMaxV.toFixed(3)}] ⊆ [${bandF}, ${wallLo.toFixed(3)}])`);
+            // **面積加權**不是極值:貪心分群順序相依 ⇒ 門檻邊上的個位數面兩邊本來就會
+            // 不同調,而這道閘要擋的是「一整片斜屋頂被印上窗」。容差取量測檔那一份。
+            const tolE = (budget.families.building.profile_spec || {}).band_edge_tol ?? 0.005;
+            ok(st.tiltOutA <= tolE,
+              `${tag}:傾斜/朝下/不平整的面收在素牆帶內(越界面積佔 ${(st.tiltOutA * 100).toFixed(2)}% ≤ ${(tolE * 100).toFixed(1)}%;`
+              + `v ∈ [${st.tiltMinV.toFixed(3)}, ${st.tiltMaxV.toFixed(3)}] vs 帶 [${bandF}, ${wallLo.toFixed(3)}])`);
             ok(Math.abs(st.plainParity - plainF) <= tolP,
               `${tag}:素牆帶寬 ≈ 素牆面積佔比(實測 ${st.plainParity.toFixed(3)} vs 宣告 ${plainF},差 ${Math.abs(st.plainParity - plainF).toFixed(3)} ≤ ${tolP})`);
             // **這一輪的驗收尺**(2026-08-13):相鄰近垂直面之間夾角落在 (0.5°, deg] 的面積
@@ -155,6 +159,18 @@ for (const gp of targets) {
                 `${tag}:近垂直面已合併整平(法線角小的相鄰對佔 ${(wf.small * 100).toFixed(1)}% ≤ 45%;整平前五顆是 52.6~64.1%)`);
               ok(fw2.flatA / Math.max(fw2.wallA, 1e-9) >= 0.60,
                 `${tag}:近垂直面裡真的平整的 ${(fw2.flatA / fw2.wallA * 100).toFixed(1)}% ≥ 60%(整平前 53.9~90.2%)`);
+              // **第四輪的驗收尺**(2026-08-14 使用者「最後收斂成多面柱體 / 錐台 / 角錐 /
+              // 圓柱 / 圓台 / 圓錐等幾何多面體構成」)。兩條缺一不可:`scales` 只管碎不碎、
+              // `onPlane` 只管貼不貼 —— 單看前者,把整顆抹成一顆大球也很「不碎」;單看
+              // 後者,一層碎鱗每一片都貼在自己那一小群上,佔比一樣漂亮。門檻取第四輪
+              // 實測值往壞的方向留一格(碎鱗率最差 0.152 / 貼平面最差 0.744),而
+              // **第三輪出貨的那一份是負對照**(0.078~0.223 / 0.627~0.940 ⇒ 兩條都紅)。
+              const cv = solidConverge(node, flat);
+              ok(cv.scales <= 0.18,
+                `${tag}:已收斂成多面體(分群數 ${cv.groups} ÷ 三角形 ${node.tris} = ${cv.scales.toFixed(3)} ≤ 0.18;`
+                + `第四輪前五顆是 0.078~0.223,蓋掉 95% 面積要 ${cv.planes95} 片平面)`);
+              ok(cv.onPlane >= 0.70,
+                `${tag}:面積真的落在平面上(${(cv.onPlane * 100).toFixed(1)}% ≥ 70%;第四輪前 62.7~94.0%)`);
             }
           }
         } else {
