@@ -18,17 +18,24 @@
 //
 // 旋翼自轉:名冊只有 `unit.spin`(= 戰場 game.js spinners 吃的 `userData.spin` 那一份),
 // 本檔每幀推進同一份清單 —— MUST NOT 自己 traverse 場景找槳葉(那就是第二份名冊)。
+//
+// 2026-08-14 使用者:「機體台的新版展示台 UI 要跟舊版一樣,可以看變形過程,以後擴充不同
+// 版本時都用同一套展示台」。本檔因此**不認得任何一個版本**:
+//   ① 建構、能力旗標、rig 契約欄整組住 `versions.js` 的版本表(加一版 = 加一列);
+//   ② **變形過程只有一條驅動**:型態鈕推 `ent.heroY` 過門檻,插值/換樹一律讓真品
+//      locomotion 做(新版 `morphSwap` / 舊版 `stepMorph` 吃同一條 `MORPH.GROUND_Y`)——
+//      展示台 MUST NOT 自己寫一份型態插值,否則台上看到的變形與戰場不是同一個。
+//   ③ **台上型態 ≡ 選中的那一格**:名冊的單位本來就是 (機體, 型態),型態鈕 = 選另一格;
+//      而同一台變形者換格 **MUST NOT 重鍛**(重鍛 = 變形動畫當場被砍成瞬切)。
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { stepLocomotion, stepCombatFx } from '/public/js/locomotion.js';
 import { updateCelLight, disposeTree } from '/public/js/toon.js';
-import { SPECS, forgeMech, conversionDoc, resolveProp, mergeSpec, HUMANOID } from '../../public/js/forge/forge.js';
+import { MORPH } from '/public/js/data.js';
+import { SPECS, conversionDoc, resolveProp, HUMANOID } from '../../public/js/forge/forge.js';
 import { CATS, catOf, rosterByCat, splitKey, FORM_LABEL } from '../../public/js/forge/roster.js';
-import { dollFinish } from './dollfinish.js';
-// 舊版建模對照(2026-08-14 退役,只留在本台):七支舊 hero 建構器整組住 legacy/,
-// 遊戲一行都不 import 它 —— 這裡是它唯一的服役地點。
-import { buildLegacyUnit, legacyKindOf } from './legacy/legacy_models.js';
+import { STAGE_VERSIONS, versionOf, siblingSpec } from './versions.js';
 import { makeDollEditor } from './dolledit.js';
 import {
   fetchArt, fetchRefs, dropRefsCache, artStripHTML, refStripHTML, bindRefStrip,
@@ -101,9 +108,11 @@ let draftDoll = null;               // 紙娃娃草稿(尚未存檔的那一份;
 let reframeNext = false;            // 切武器頁後的第一幀要重取景(姿勢落定才量得準)
 let editor = null;
 let firing = false, nextShot = 0;
-// 舊版對照模式(2026-08-14):開著時台上是**退役的那一版**,新版的紙娃娃編輯與
-// 武器子集檢視一律停用 —— 舊建模沒有 doll 索引,也沒有 rig.wpn 的同源登記。
-let legacy = false;
+// 建模版本(名冊住 versions.js;能力旗標由那張表宣告,本檔不認得任何一個版本的名字)
+let ver = STAGE_VERSIONS[0];
+let unitKey = null;                 // 台上那台是為哪一格建的(換型態要不要重鍛的唯一判據)
+// 型態:0 = 地面型,1 = 飛行型。只是「回報高度要不要推過門檻」,插值住 locomotion。
+let formT = 0;
 let heavyAt = -1;
 let simT = 0;
 const clock = new THREE.Clock();
@@ -117,37 +126,43 @@ const avatarSrc = (id) => {
 /** 機體名恆取 data.js 那一份(spec.label 是建模註記,見 forge.js MECH_SPECS 的欄位說明) */
 const mechName = (s) => s.pilot?.machine || s.label;
 
-/** 重鍛目前這一台(換機體 / 紙娃娃編輯的每一次結構改動都走這裡)。
- *  紙娃娃**草稿**優先於已存檔的那一份 —— 編輯中看到的就是還沒存的樣子。 */
+/** 台上那台是為哪一格建的。變形者一台**兩格共用同一棵(或同一對)零件樹** ⇒ 鍵取機體,
+ *  換型態才不會重鍛(重鍛把 locomotion 的型態狀態一起丟掉 = 變形演出當場變成瞬切)。 */
+const unitKeyOf = (s) => `${ver.key}|${s.form ? s.ch : s.id}`;
+
+/** 樞軸點:變形者兩棵樹各一組(收成單一 Group 的話只點得亮其中一棵) */
+function showJoints(on) {
+  for (const j of unit?.joints || []) j.visible = on && ver.caps.joints;
+}
+
+/** 紙娃娃索引指到**台上選中的那個型態**那一棵(換型態只換指標,不重鍛) */
+function retargetDoll() {
+  if (unit?.dolls) unit.doll = unit.dolls[spec.form] || null;
+}
+
+/** 重鍛目前這一台(換機體 / 換版本 / 紙娃娃編輯的每一次結構改動都走這裡)。
+ *  怎麼建是版本表的事(versions.js);紙娃娃**草稿**優先於已存檔的那一份 ——
+ *  編輯中看到的就是還沒存的樣子。 */
 function buildUnit() {
   if (unit) {
     scene.remove(unit.group);
     disposeTree(unit.group);   // A25:換機體釋放 GPU 資源
   }
-  if (legacy) {
-    // 舊版對照:一台機體只有一份舊建模(舊制的變形者是單樹雙姿,沒有「型態」這個維度)
-    // ⇒ 變形者兩格都拿同一台;取景高沿用本台的建模基準高,兩版並排比例才可比。
-    const lu = buildLegacyUnit(spec.ch, { height: spec.height });
-    const joints = new THREE.Group();
-    joints.visible = false;
-    unit = lu ? { group: lu.group, rig: lu.rig, joints, spin: lu.spin || [] }
-      : { group: new THREE.Group(), rig: null, joints, spin: [] };
-    unit.group.add(joints);
-  } else {
-    const merged = mergeSpec(spec, OVR[spec.id]);
-    if (draftDoll) merged.doll = draftDoll;
-    unit = forgeMech(merged, { finish: dollFinish });
-  }
+  unit = ver.build(spec, { ovrOf: (id) => OVR[id], draft: draftDoll });
+  unitKey = unitKeyOf(spec);
   scene.add(unit.group);
-  unit.joints.visible = !legacy && $('btnJoints').classList.contains('on');
+  showJoints($('btnJoints').classList.contains('on'));
   ent = { id: spec.id, mesh: unit.group, heroY: 0 };   // loco 狀態綁 mesh,重鍛即重建
 }
 
 function setSpec(s) {
+  // 同一台變形者的另一個型態:零件樹已經在台上(兩棵樹都建好了)⇒ 只換「選中的是哪一格」
+  const keep = !!unit && unitKeyOf(s) === unitKey;
   spec = s;
   cat = s.cat;
   draftDoll = OVR[s.id]?.doll || null;
-  buildUnit();
+  formT = s.form === 'flight' ? 1 : 0;   // 台上型態 ≡ 選中的那一格(單一真相)
+  if (keep) retargetDoll(); else buildUnit();
   editor?.load(draftDoll);
   speedTgt = 0; speed = 0;
   for (const o of ['spdIdle', 'spdWalk', 'spdRun']) $(o).classList.toggle('on', o === 'spdIdle');
@@ -156,6 +171,14 @@ function setSpec(s) {
   renderCatButtons();
   renderRail();
   renderPanel();
+}
+
+/** 型態鈕 = 選另一格(名冊的單位本來就是 (機體, 型態))。
+ *  變形**過程**因此不是另一條路徑:換格不重鍛 ⇒ locomotion 照樣把收摺/換樹/展開演完。 */
+function setForm(f) {
+  if (!spec.form) return;
+  const s = spec.form === f ? spec : siblingSpec(spec);
+  if (s) setSpec(s);
 }
 
 // ---- 武器獨立檢視 ------------------------------------------------------------
@@ -176,7 +199,9 @@ function applyView(reframe = true) {
       controls.target.set(0, H * 0.52, 0);
       camera.position.set(H * 1.6, H * 0.62, H * 2.1);
     }
-    $('stageTag').textContent = `${mechName(spec)} ・ ${spec.pilot?.name || spec.ch} ・ ${spec.kind} 鷹架`;
+    const fm = spec.form ? ` ・ ${FORM_LABEL[spec.form]}` : '';
+    $('stageTag').textContent = `${mechName(spec)}${fm} ・ ${spec.pilot?.name || spec.ch}`
+      + ` ・ ${spec.kind} 鷹架 ・ ${ver.label}`;
   } else {
     // 取景:武器世界包圍盒(空盒 = 這一格沒掛那個 slot,退回機體取景)
     const f = wpnFrame(unit, view);
@@ -193,6 +218,22 @@ function applyView(reframe = true) {
   controls.update();
   for (const [id, v] of [['vMech', 'mech'], ['vWpnL', 'light'], ['vWpnH', 'heavy']])
     $(id).classList.toggle('on', view === v);
+  syncCaps();
+}
+
+/** 鈕面 = 這個版本/這一格**真的做得到**的事(能力旗標由版本表宣告,MUST NOT 在這裡嗅探)。
+ *  灰掉而不是藏起來:少一顆鈕會讓人以為那個功能不存在,灰掉才讀得出「這一版沒有」。 */
+function syncCaps() {
+  for (const id of ['vWpnL', 'vWpnH']) $(id).disabled = !ver.caps.wpn;
+  $('btnJoints').disabled = !ver.caps.joints;
+  for (const f of Object.keys(FORM_LABEL)) {
+    const b = $(`fm_${f}`);
+    if (!b) continue;
+    b.disabled = !spec.form;                       // 這一台不是變形者 = 沒有型態可切
+    b.classList.toggle('on', spec.form === f);
+    b.title = spec.form ? `切到${FORM_LABEL[f]}(變形過程由 locomotion 真品演出)`
+      : '只有變形者有兩個型態';
+  }
 }
 
 // ---- UI ----------------------------------------------------------------------
@@ -355,40 +396,11 @@ function renderPanel() {
       const ovr = spec.prop?.[k] != null;
       return `<tr class="${ovr ? 'ovr' : ''}"><td>${k}</td><td>${p[k]}</td><td>${HUMANOID[k].vrm}</td></tr>`;
     }).join('');
-  const rig = unit.rig;
-  // 舊版對照模式:rig 契約檢查驗的是**新版鷹架**的契約,拿去驗退役的舊建構器一定對不上
-  // (舊 morph 是單樹 rig.pose、舊 biped 沒有 legChainL/R)—— 那不是「舊版壞了」,是兩份
-  // 契約本來就不同 ⇒ 這一格改印「這台舊版走的是哪一支建構器」。
-  const chan = (legacy ? [
-    [`舊版建構器:${legacyKindOf(spec.ch) || '(無)'}`, !!rig],
-    [`rig.kind:${rig?.kind || '—'}(舊制變形者 = 單樹 rig.pose)`, !!rig?.kind],
-    ['已退役,只在本台對照 —— 遊戲已全面換成新版建模', true],
-  ] : air ? [
-    ['tilt(壓坡樞軸)+ tiltY0/bob/top', !!(rig.tilt && rig.tiltY0 != null && rig.top)],
-    ['升力系統(旋翼 / 撲翼 / 噴焰)', !!(unit.spin?.length || rig.wings?.length || rig.jets?.length)],
-    ['level(定翼巡航不低頭)', rig.level ? true : !rig.level],
-    ['weap/hvy/kickAmp(後座)', !!(rig.weap && rig.hvy && rig.kickAmp)],
-    ['muzzles + wpn(槍口/FPV 同源)', !!(rig.muzzles?.light && rig.muzzles?.heavy && rig.wpn?.light && rig.wpn?.heavy)],
-    ['moveSig / castSig(性格層)', !!(rig.moveSig && rig.castSig)],
-  ] : quad ? [
-    ['spine/chest/neck/head', !!(rig.spine && rig.chest && rig.neck && rig.head)],
-    ['legFL/FR/HL/HR + ch ×4', !!(rig.legFL && rig.legFR && rig.legHL && rig.legHR
-      && rig.chFL?.length && rig.chFR?.length && rig.chHL?.length && rig.chHR?.length)],
-    ['tailSegs(尾鞭)', !!(rig.tailSegs && rig.tailSegs.length >= 2)],
-    ['gait 參數(stride/top/bob)', !!(rig.stride && rig.top && rig.bob != null)],
-    ['weap/hvy/kickAmp(後座)', !!(rig.weap && rig.hvy && rig.kickAmp)],
-    ['muzzles + wpn(槍口/FPV 同源)', !!(rig.muzzles?.light && rig.muzzles?.heavy && rig.wpn?.light && rig.wpn?.heavy)],
-    ['moveSig / castSig(性格層)', !!(rig.moveSig && rig.castSig)],
-  ] : [
-    ['hips/chest/head', !!(rig.hips && rig.chest && rig.head)],
-    ['legL/R + legChain ×2', !!(rig.legL && rig.legChainL.length === 2 && rig.legChainR.length === 2)],
-    ['armL/R + armChain ×2', !!(rig.armL && rig.armChainL.length === 2 && rig.armChainR.length === 2)],
-    ['aimPose(據槍)', !!rig.aimPose],
-    ['gunR/gunL(俯仰)', !!(rig.gunR && rig.gunL)],
-    ['weap/hvy/kickAmp(後座)', !!(rig.weap && rig.hvy && rig.kickAmp)],
-    ['muzzles + wpn(槍口/FPV 同源)', !!(rig.muzzles?.light && rig.muzzles?.heavy && rig.wpn?.light && rig.wpn?.heavy)],
-    ['moveSig / castSig(性格層)', !!(rig.moveSig && rig.castSig)],
-  ]).map(([n, ok]) => `<li class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${n}</li>`).join('');
+  // rig 契約檢查驗的是**那個版本自己的**契約(新版的契約拿去驗退役的舊建構器一定對不上:
+  // 舊 morph 是單樹 rig.pose、舊 biped 沒有 legChainL/R —— 那不是「舊版壞了」,是兩份契約
+  // 本來就不同)⇒ 印哪幾條由版本表回答,本檔只負責畫。
+  const chan = ver.rigLines(unit, spec)
+    .map(([n, ok]) => `<li class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${n}</li>`).join('');
 
   // 四個分頁的內容。**武器檢視的入口只在舞台工具列**:改版前這裡還有一組文字跳轉
   // (→檢視輕武器 / ←回到機體),與工具列那組是同一個功能的第二份入口 —— 兩邊要各自
@@ -427,6 +439,9 @@ function renderTabs() {
     const b = document.createElement('button');
     b.className = 'segb' + (k === tab ? ' on' : '');
     b.innerHTML = k === 'mark' && mk ? `${label} ${mk.icon}` : label;
+    // 標記分頁 = 編輯模式 ⇒ 沒有紙娃娃索引的版本(舊版對照)灰掉它
+    b.disabled = k === 'mark' && !ver.caps.edit;
+    b.title = b.disabled ? `${ver.label}沒有紙娃娃索引(只能看,不能標記)` : '';
     b.onclick = () => setTab(k);
     box.appendChild(b);
   }
@@ -435,8 +450,8 @@ function renderTabs() {
 /** 分頁切換。**標記分頁 = 編輯模式**:紙娃娃編輯器不再是另一顆全域開關 —— 改版前它一開
  *  就把整個資訊欄蓋掉,而你正在對照的 2D 定案圖當場消失。 */
 function setTab(k) {
-  tab = k;
-  const on = k === 'mark';
+  tab = k === 'mark' && !ver.caps.edit ? 'data' : k;
+  const on = tab === 'mark';
   // 一邊自轉一邊拖 gizmo,拖到的是「拖的那一瞬間鏡頭在的地方」⇒ 進標記模式先停自轉
   if (on && controls.autoRotate) { controls.autoRotate = false; $('btnSpin').classList.remove('on'); }
   editor.setOn(on);
@@ -496,19 +511,52 @@ bindToggle('btnSpin', (on) => { controls.autoRotate = on; });
 // 紙娃娃編輯模式的開關 = 右欄的「標記」分頁(setTab),MUST NOT 再有第二顆全域鈕:
 // 兩顆開關管同一個模式,只要有一條路徑忘了同步,面板就會停在「看起來沒在編輯、
 // 但點機體會選到零件」的狀態。
-bindToggle('btnJoints', (on) => { if (unit && !legacy) unit.joints.visible = on; });
-// 舊版對照:新舊兩版在同一個取景、同一條 locomotion 下輪流上台
-bindToggle('btnLegacy', (on) => {
-  legacy = on;
-  if (on) view = 'mech';
-  buildUnit();
-  applyView();
-  renderPanel();
-});
+bindToggle('btnJoints', (on) => showJoints(on));
 $('btnSpin').classList.add('on');
 controls.autoRotate = true;
 for (const [id, v] of [['vMech', 'mech'], ['vWpnL', 'light'], ['vWpnH', 'heavy']])
   $(id).onclick = () => { view = v; applyView(); renderPanel(); };
+
+// ---- 版本鈕 / 型態鈕(兩組都由名冊推導,index.html 只放空容器)--------------------
+// 加一個建模版本 = 在 versions.js 加一列;這裡與 HTML 一行都不用改。
+function renderVerButtons() {
+  const box = $('verSeg');
+  box.innerHTML = '';
+  for (const v of STAGE_VERSIONS) {
+    const b = document.createElement('button');
+    b.className = 'segb' + (v.key === ver.key ? ' on' : '');
+    b.textContent = v.label;
+    b.title = v.tip;
+    b.onclick = () => setVersion(v.key);
+    box.appendChild(b);
+  }
+}
+
+/** 換版本:同一個取景、同一條 locomotion、同一組演出鈕,只換「這台是哪一版建的」 */
+function setVersion(key) {
+  ver = versionOf(key);
+  if (!ver.caps.wpn) view = 'mech';
+  if (!ver.caps.edit && tab === 'mark') setTab('data');
+  buildUnit();
+  applyView();
+  renderVerButtons();
+  renderPanel();
+}
+
+function renderFormButtons() {
+  const box = $('formSeg');
+  box.innerHTML = '';
+  for (const [f, label] of Object.entries(FORM_LABEL)) {
+    const b = document.createElement('button');
+    b.className = 'segb';
+    b.id = `fm_${f}`;
+    b.textContent = label;
+    b.onclick = () => setForm(f);
+    box.appendChild(b);
+  }
+}
+renderVerButtons();
+renderFormButtons();
 
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -537,9 +585,17 @@ function stepWorld(dt) {
       ent.heavyFx = { phase: 'fire', t0: simT };
       heavyAt = -1;
     }
+    // 變形過程:型態只推「回報高度」過門檻,收摺/換樹/展開(新版 morphSwap)與分段姿勢
+    // 插值(舊版 stepMorph)一律由**真品 locomotion** 演 —— 台上看到的變形因此與戰場同一個。
+    // 門檻推導自 `MORPH.GROUND_Y`(伺服器地面型判定同一條規則),×2 是阻尼過衝的餘裕。
+    ent.heroY = formT * MORPH.GROUND_Y * 2;
     // MUST 在 stepLocomotion 之前:本幀步態才吃得到射姿/後座/蓄力驅動場(charPreview:650)
     stepCombatFx(ent, simT, dt);
     stepLocomotion(ent, dt, simT, 0, -speed * dt, 0);
+    // 飛行型離地懸停:型態進度只**讀** locomotion 算好的那一份(新版 morphSwap 每幀寫回
+    // `userData.morph.m`、舊版寫 `ent.loco.morph`)—— 自己再阻尼一次就是第二條變形曲線。
+    const m = unit?.morph?.m ?? ent.loco?.morph ?? 0;
+    if (unit) unit.group.position.y = m * spec.height * (0.22 + Math.sin(simT * 2.4) * 0.04);
     // 切到武器頁的**第一幀**:手臂從鍛造靜姿彈到步態/據槍姿(t01 的臂位移超過 1.5m),
     // 而取景是在靜姿下算的 ⇒ 武器當場被甩出畫面。等姿勢落定再重取一次景。
     if (reframeNext && view !== 'mech') { reframeNext = false; applyView(true); }
@@ -602,7 +658,15 @@ window.__forge = {
   cast: (dir, slot = 'ult') => { ent.castFx = { t0: simT, slot, dir }; },
   step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) stepWorld(dt); },
   simT: () => simT,
-  joints: (on) => { if (unit) unit.joints.visible = !!on; },
+  joints: (on) => showJoints(!!on),
+  // 版本 / 型態:headless 一律走與人一樣的那條路(換型態 = 選另一格,而且不重鍛)
+  versions: () => STAGE_VERSIONS.map((v) => v.key),
+  setVersion: (k) => setVersion(k),
+  version: () => ver.key,
+  setForm: (f) => setForm(f),
+  form: () => spec.form || null,
+  // 型態進度(0 地面 / 1 飛行):**讀** locomotion 算好的那一份,拍變形過程逐幀對照用
+  morphM: () => unit?.morph?.m ?? ent?.loco?.morph ?? 0,
   // 紙娃娃(headless 檢視:直接餵一份覆寫文件,不必操作面板)。
   // MUST 同時餵給編輯器 —— 只改草稿的話,面板統計說 0、而下一次面板觸發的重鍛會把
   // 這份文件整份蓋掉(兩份草稿 = 兩個真相)。

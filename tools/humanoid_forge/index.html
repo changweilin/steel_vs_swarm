@@ -150,6 +150,10 @@
         <button class="segb" id="vWpnL">輕武器</button>
         <button class="segb" id="vWpnH">重武器</button>
       </div>
+      <!-- 型態:只有變形者有兩格(鈕面由 roster.js FORM_LABEL 推導,見 viewer.renderFormButtons);
+           按下去 = 選另一格,變形過程由真品 locomotion 演 -->
+      <span class="lb">型態</span>
+      <div class="seg" id="formSeg"></div>
       <span class="lb">速度</span>
       <div class="seg">
         <button class="segb on" id="spdIdle">靜止</button>
@@ -169,8 +173,11 @@
       <div class="seg">
         <button class="segb" id="btnSpin">環繞</button>
         <button class="segb" id="btnJoints">樞軸</button>
-        <button class="segb" id="btnLegacy" title="切到 2026-08-14 退役的舊版建模(只在本台看得到;遊戲已全面換成新版)">舊版</button>
       </div>
+      <!-- 建模版本:名冊住 versions.js(加一版 = 加一列,這裡與 viewer 都不用改);
+           每一版都上**同一座**展示台 —— 同一個取景、同一條 locomotion、同一組演出鈕 -->
+      <span class="lb">版本</span>
+      <div class="seg" id="verSeg"></div>
     </div>
   </div>
   <aside id="panel">
