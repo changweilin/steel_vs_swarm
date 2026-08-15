@@ -58,6 +58,7 @@ import { heroPalette, paintUnit } from '../paint.js';
 import { segLimbF, outlineWF } from './geo.js';
 import { MECH_DETAIL } from './mechs/index.js';
 import { rosterEntries } from './roster.js';
+import { tagBuilders, collectTagged, pairTagged, fadeTargets, restNodes, anchorPair } from '../morphrig.js';
 
 // ══════════ ① 標準化人形特徵表(對齊 VRM 1.0 必要骨)══════════
 // 比例以身高 1.0 正規化;def = 預設值,逐機規格(spec.prop)只覆寫想改的格子,
@@ -484,6 +485,88 @@ function forgeAirMech(spec, D, opts = {}) {
   return finishUnit({ group: g, rig, joints, spin: g.userData.spin }, spec, H, opts);
 }
 
+// ══════════ ④ 變形過程:兩態骨架 → 逐零件運動(2026-08-15)══════════
+// 規則面全住 `../morphrig.js`(零 import、離線可驗);這裡只做兩件 three 才做得到的事:
+//   ㋐ 鍛造時把逐機檔的建構器包成會戳標籤的版本(對應的構造保證);
+//   ㋑ 鍛造後把兩態的**靜止**變換反推成一組「A → B 的局部變換」表。
+// 逐幀那一端(locomotion.morphPose)因此只剩三個 lerp,零矩陣求逆。
+
+const _mm = new THREE.Matrix4(), _m2 = new THREE.Matrix4();
+const _mp = new THREE.Vector3(), _mq = new THREE.Quaternion(), _ms = new THREE.Vector3();
+
+const trsOf = (n) => ({
+  p: [n.position.x, n.position.y, n.position.z],
+  q: [n.quaternion.x, n.quaternion.y, n.quaternion.z, n.quaternion.w],
+  s: [n.scale.x, n.scale.y, n.scale.z],
+});
+
+/**
+ * 反推(接縫零件用):把**對面那一棵**的 `to` 量在**共同錨** `ancTo` 的框裡,再搬進
+ * 這一棵的 `ancFrom` 框、換算成掛在 `from` 底下的等價局部變換。
+ *   inv(from) · ancFrom · inv(ancTo) · to
+ * 錨為什麼 MUST 是「共同的**已對應**祖先」而不是「我自己的父」見 `morphrig.anchorPair`。
+ */
+function relTRS(from, ancFrom, ancTo, to) {
+  _mm.copy(from.matrixWorld).invert().multiply(ancFrom.matrixWorld)
+    .multiply(_m2.copy(ancTo.matrixWorld).invert()).multiply(to.matrixWorld)
+    .decompose(_mp, _mq, _ms);
+  return { p: [_mp.x, _mp.y, _mp.z], q: [_mq.x, _mq.y, _mq.z, _mq.w], s: [_ms.x, _ms.y, _ms.z] };
+}
+
+/** 淡出/淡入的一格:材質 MUST 連**描邊外殼**一起收(只收本體 = 淡掉的零件留下一圈黑輪廓) */
+function fadeEntry(n) {
+  const mats = [];
+  const push = (m) => { if (m) mats.push({ m, t0: m.transparent, o0: m.opacity, d0: m.depthWrite }); };
+  const own = Array.isArray(n.material) ? n.material : [n.material];
+  own.forEach(push);
+  for (const c of n.children) if (c.userData?.isOutline) (Array.isArray(c.material) ? c.material : [c.material]).forEach(push);
+  return { n, s0: [n.scale.x, n.scale.y, n.scale.z], v0: n.visible, mats, a: -1 };
+}
+
+/** 鍛造一棵樹,期間把 `D` 的建構器包成會戳標籤的版本(還原一律走 finally:拋錯留著包裝
+ *  = 這台機體之後每一次鍛造都在累加呼叫序號,而畫面上只表現成「變形亂飛」) */
+function forgeTagged(D, spec, opts) {
+  const untag = D ? tagBuilders(D) : null;
+  try { return forgeMech(spec, opts); } finally { untag?.(); }
+}
+
+/**
+ * 兩態骨架 → 變形運動表。
+ * 逐對零件記兩組局部變換:`A` = 這一棵自己的靜止姿態、`B` = 對面那一棵的等價姿態。
+ * 父節點也對應上 ⇒ 直接拿對方的局部變換(父自己也會被內插);父沒對應上(接縫:地面型掛
+ * 在 chest 骨、飛行型掛在 hull 群組)⇒ 反推等價局部變換。
+ */
+function captureMorphPlan(root, gg, ag) {
+  root.updateMatrixWorld(true);
+  const P = pairTagged(collectTagged(gg), collectTagged(ag));
+  const tags = new Set(P.pairs.map((x) => x.g.tag));
+  const gSet = new Set(P.pairs.map((x) => x.g.node));
+  const aSet = new Set(P.pairs.map((x) => x.a.node));
+  const gPairs = [], aPairs = [];
+  const pairOf = new Map(P.pairs.map((x) => [x.g.node, x.a.node]));
+  for (const { g, a } of P.pairs) {
+    // 共同錨:兩棵樹上都被推到同一個地方的那一顆祖先(沒有 ⇒ 用兩棵樹的根,它們同框)
+    const anc = anchorPair(g.node, a.node, pairOf);
+    const PG = anc ? anc[0] : gg, PA = anc ? anc[1] : ag;
+    // 錨恰好就是雙方的父 ⇒ 局部變換直接可比(父自己也會被內插;這一支只是精確版的 relTRS)
+    const kin = g.node.parent === PG && a.node.parent === PA;
+    gPairs.push({ n: g.node, A: trsOf(g.node), B: kin ? trsOf(a.node) : relTRS(g.node.parent, PG, PA, a.node) });
+    aPairs.push({ n: a.node, A: kin ? trsOf(g.node) : relTRS(a.node.parent, PA, PG, g.node), B: trsOf(a.node) });
+  }
+  const side = (r, pairs, set) => ({
+    pairs,
+    rest: restNodes(set, r).map((n) => ({ n, r: trsOf(n) })),
+    fade: fadeTargets(r, tags).map(fadeEntry),
+  });
+  return {
+    g: side(gg, gPairs, gSet),
+    a: side(ag, aPairs, aSet),
+    // 對應率:兩態到底共用了多少零件(機體台/稽核印它 —— 掉下去就是某一支飛行檔開始自己畫幾何)
+    n: { pair: P.pairs.length, soft: P.pairs.filter((x) => x.soft).length,
+      gOnly: P.gOnly.length, aOnly: P.aOnly.length },
+  };
+}
+
 /**
  * 鍛造一台**變形者**(地面型 + 飛行型兩棵樹)—— 2026-08-14 新版建模整合。
  *
@@ -499,8 +582,12 @@ function forgeAirMech(spec, D, opts = {}) {
  *      型態切換改指到當下那一棵(地面 'biped'/'quad'、飛行 'aerial')⇒ 既有四支步態驅動器、
  *      `stepCombatFx`、`stepCastPose`、`stepJumpPose` **一行不改**就吃得到正確的骨架。
  *      合併成一個代理 rig 的話,每一支消費端都要多一條「現在算哪一邊」的分支。
- *   ③ **變形演出住 locomotion**(`morphSwap`):收摺 → 換樹 → 展開,是逐幀的事,
- *      建構期只負責把兩棵樹與切換所需的把手交出去。
+ *   ③ **變形演出住 locomotion**(`morphSwap` 換樹 + `morphPose` 逐零件姿態),但**運動本身
+ *      是建構期反推出來的**(2026-08-15 使用者:「建立兩個形態的骨架後,反推變形時骨架應該
+ *      如何移動/旋轉/伸縮/透明化」)—— 兩態同零件已經是 mechs/_morph.js 的紀律,
+ *      那組運動因此是**兩態靜態骨架的推論**而不是另外編一套動畫:`captureMorphPlan` 把
+ *      逐零件的 A → B 局部變換算完交給逐幀端內插。手寫演出的下場是加一台變形者要再編一次,
+ *      而且改了飛行型的擺位之後演出還停在舊姿態(畫面上只表現成「變形變到一半歪掉」)。
  *
  * `ground`/`air` 交出**兩棵子單位本身**(不只是 rig):機體台的紙娃娃索引 `unit.doll` 是
  * 逐棵各一份(`dollFinish` 掛在各自的 `forgeMech` 收尾上),而名冊的單位是 (機體, 型態)
@@ -509,14 +596,20 @@ function forgeAirMech(spec, D, opts = {}) {
  * @returns { group, rig(地面), rigAir, fit(fitToHeight MUST 量這一棵), joints, spin, ground, air }
  */
 export function forgeMorphUnit(specGround, specAir, opts = {}) {
-  const G = forgeMech(specGround, opts);
-  const A = forgeMech(specAir, opts);
+  // 兩態同零件是**建構期**的紀律(mechs/_morph.js);把「哪一顆對哪一顆」也在建構期釘死,
+  // 變形演出才有東西可以反推(morphrig.js ①)。兩棵樹**各包一次** —— 呼叫序號要各自從 0 起算,
+  // 共用一份計數器的話飛行型的每一支建構器都會接在地面型的序號後面 = 全部對不上。
+  const DG = MECH_DETAIL[specGround.id];
+  const G = forgeTagged(DG, specGround, opts);
+  const A = forgeTagged(DG, specAir, opts);
   const g = new THREE.Group();
   g.add(G.group);
   g.add(A.group);
+  // 變形把手:locomotion 開頭的 `morphSwap` 認這一格(缺席 = 這台不是變形者);
+  // `plan` = 反推出來的逐零件運動(缺席 ⇒ 退回 2026-08-14 的根節點收摺演出)
+  const plan = captureMorphPlan(g, G.group, A.group);
   A.group.visible = false;             // 出廠 = 地面型(伺服器的 heroY 起始也在地面)
-  // 變形把手:locomotion 開頭的 `morphSwap` 認這一格(缺席 = 這台不是變形者)
-  g.userData.morph = { ground: G.rig, air: A.rig, gg: G.group, ag: A.group, m: 0, air0: false, k: 0 };
+  g.userData.morph = { ground: G.rig, air: A.rig, gg: G.group, ag: A.group, m: 0, air0: false, k: 0, act: false, plan };
   g.userData.rig = G.rig;
   // 自轉名冊兩態合併(隱藏那一棵的槳葉照轉也看不見;分兩份 = 換型態要重掛一次 spinners)
   g.userData.spin = [...(G.group.userData.spin || []), ...(A.group.userData.spin || [])];
