@@ -8,7 +8,7 @@
 // 所有目標值都經指數阻尼(非線性緩動)進骨架,不出現機械式瞬跳。
 // 純客戶端視覺:不動伺服器權威狀態;rig 由 models.js 各建模函式提供。
 
-import { MORPH } from './data.js';
+import { MORPH, lerpFPS } from './data.js';
 import { cycleU, dutyOf, hipDrive, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 
@@ -22,7 +22,9 @@ const MORPH_RIG = typeof location === 'undefined'
   || new URLSearchParams(location.search).get('morph') !== '0';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const damp = (c, t, k, dt) => c + (t - c) * Math.min(1, k * dt);
+// 逼近權重一律走 data.js 的**幀率無關**唯一縫(見那一段註解):舊制的 min(1, k·dt) 讓
+// 同一段步態在 30fps 與 144fps 收斂得不一樣快 —— 走路的上身擺幅因此隨幀率而變。
+const damp = (c, t, k, dt) => c + (t - c) * lerpFPS(k, dt);
 const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 // 加速/減速強度正規化基準(m/s²):L.accel 是原始加速度(硬起步可達 10~40),
 // 一律先除以它夾到 0..1 當「強度」,launch/brake/flare 脈衝才不會被原始量級放大成十幾度的暴衝。
@@ -201,7 +203,7 @@ export function stepCombatFx(ent, now, dt) {
     } else if (el <= HEAVY_FIRE_HOLD_S) { chgT = -1; glowT = 2; }
     else ent.heavyFx = null;   // 尖峰過後交還阻尼衰減
   }
-  const k = 1 - Math.exp(-FX_K * dt);
+  const k = lerpFPS(FX_K, dt);   // MUST NOT 自己再寫一份 exp(見 data.js lerpFPS)
   C.chg += (chgT - C.chg) * k;
   C.aim = damp(C.aim, now < C.aimUntil ? 1 : 0, now < C.aimUntil ? 9 : 3.5, dt);
   C.hA = damp(C.hA || 0, now < (C.hUntil ?? -1) ? 1 : 0, now < (C.hUntil ?? -1) ? 6 : 3, dt);

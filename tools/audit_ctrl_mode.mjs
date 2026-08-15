@@ -424,5 +424,30 @@ ok(/window\.addEventListener\('orientationchange', syncOrientation\)/.test(mobil
   && /screen\?\.orientation\?\.addEventListener\?\.\('change', syncOrientation\)/.test(mobileSrc),
   '轉向 MUST 由 `syncOrientation` 兩個監聽接手(全螢幕內轉手機才換得了直式/橫式版型)');
 
+// ── Ⅸ 視窗尺寸定案(旋轉 debounce;2026-08-16,`docs/anime_style_plan.md` ⑧-2)────────
+// 一次旋轉會連發好幾個尺寸,**只有最後一個是對的**。逐筆重配 render target = 頓一下,
+// 而且有機會停在中間那個錯的尺寸(畫面拉伸 / HUD 錯位,零錯誤訊息)。
+// 行為那一半(連發真的只回呼一次)住 `audit_touch_gesture` ⑨(要真的 setTimeout);
+// 這裡釘的是**只有一份等待時間**與**消費端沒有繞過它**——兩者都純原文,進得了 CI。
+sec('Ⅸ 視窗尺寸定案(旋轉 debounce)');
+ok(/SETTLE_MS:\s*50\s*,/.test(mobileSrc) && /SETTLE_IOS_MS:\s*500\s*,/.test(mobileSrc),
+  '等待時間 MUST 依裝置分兩檔(一般 50ms / iOS 500ms)且都住 `VIEWPORT`');
+ok(count(mobileSrc, /export function viewportSettleMs\(/g) === 1
+  && /isIOS\(\) \? VIEWPORT\.SETTLE_IOS_MS : VIEWPORT\.SETTLE_MS/.test(mobileSrc),
+  '「要等多久」只有 `viewportSettleMs()` 一份(消費端 MUST NOT 手寫毫秒數)');
+// iPadOS 13+ 預設送桌面版 UA ⇒ 只比對 iPad|iPhone|iPod 會把最會連發的那一類判成桌機
+ok(/\/Mac\/\.test\(ua\) && \(navigator\.maxTouchPoints \|\| 0\) > 1/.test(mobileSrc),
+  '`isIOS()` MUST 蓋住「iPadOS 偽裝成 Mac」那一格(Mac + 多點觸控)');
+ok(!/window\.dispatchEvent\(new Event\('resize'\)\)/.test(mobileSrc),
+  '`syncOrientation` MUST NOT 自己補送合成 resize —— 那是第二份等待時間,而且比 iOS 需要的短一截');
+ok(!/window\.addEventListener\('resize', this\._onResize\)/.test(gameSrc)
+  && /this\._offResize = onViewportSettled\(this\._onResize\)/.test(gameSrc),
+  '`game.js` 的畫布/相機/HUD MUST 訂閱 `onViewportSettled`,MUST NOT 自己綁 window resize');
+ok(/this\._offResize\?\.\(\)/.test(gameSrc),
+  'dispose MUST 解除訂閱(留著 = 下一局多一個殭屍消費端,同 Ⅳ 的搖桿層)');
+// `_applyRes()` 是像素比改變不是視窗改變 ⇒ 刻意直接呼叫,不該多等 50~500ms
+ok(/_applyRes\(\) \{[\s\S]{0,220}?this\._onResize\(\);/.test(gameSrc),
+  '`_applyRes()` MUST 仍直接呼叫 `_onResize()`(自適應解析度降階不該排隊等 debounce)');
+
 console.log(`\n${fail ? '✗' : '✓'} 操作方式 / 觀戰選單稽核:${pass}/${pass + fail} 通過`);
 process.exit(fail ? 1 : 0);

@@ -132,8 +132,13 @@ console.log('■ Ⅱ 消費端單一縫(game.js:係數一處定案、時間窗�
   t('END_RAD 只在 _recoiling(時間窗判定不散寫)',
     count(code, 'RECOIL.END_RAD') === 1 && count(rg, 'RECOIL.END_RAD') === 1);
   t('時間窗量的是 recoil.p 這個狀態本身', /Math\.abs\(this\.recoil\.p\)\s*>\s*RECOIL\.END_RAD/.test(rg), rg);
+  // 2026-08-16 起指數衰減收成 data.js 的唯一縫 `frictionFPS`(見那一段註解);
+  // 語意與數值逐位元不動(`frictionFPS(k, dt)` **就是** `Math.exp(-k · dt)`),
+  // 但 game.js MUST NOT 再自己寫一份 `Math.exp` —— 那是第二份幀率無關性的定義。
   t('回穩速率吃 RECOIL.DECAY(與時間窗同一條曲線)',
-    /Math\.exp\(-dt \* RECOIL\.DECAY\)/.test(code) && count(code, 'RECOIL.DECAY') === 1);
+    /frictionFPS\(RECOIL\.DECAY, dt\)/.test(code) && count(code, 'RECOIL.DECAY') === 1);
+  t('回穩 MUST 走 data.js 的阻尼縫,MUST NOT 自己寫 Math.exp',
+    !/Math\.exp\(-dt \* RECOIL\.DECAY\)/.test(code));
   t('game.js 無手寫回穩常數(-dt * 7)', !/-dt \* 7\b/.test(code));
 
   // ③ 那個靜默棘輪:係數 MUST 排在 `recoil.p +=` 之前

@@ -631,3 +631,72 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 **每一項落地都 MUST 附反向驗證**(原則 9):把判定寫回壞版,對應稽核 MUST 紅字。
 純表現層項目 MUST 同時證明 `npm run bal` / `npm test` **逐項不動**;
 序 2 與序 12 是**明知會變**的兩項,MUST 改前先留基準(前者量手感數據,後者拍定場照)。
+
+---
+
+## 執行紀錄
+
+> 逐輪追加。每一列 = 「做了什麼 / 用什麼守住 / 留下什麼給下一輪」。
+
+### 2026-08-16 第一輪:序 1 ~ 序 2 落地 + 序 3 的前置量測
+
+| 序 | 項目 | 狀態 | 縫 / 稽核 |
+|---|---|---|---|
+| 1 | ⑧-1 觸控點擊 = 距離 + 時間 | ✅ | 門檻**沿用既有的 `LOOK.TAP_MS`/`TAP_SLOP_PX`**(空處輕點與點擊型鈕同一組定義,不另訂第二組);`audit_touch_gesture` ⑧ ±`--break-tap`(6 紅、按住型對照組仍綠) |
+| 1 | ⑧-2 旋轉 debounce 依裝置 | ✅ | 新縫 `mobile.js VIEWPORT`/`isIOS`/`viewportSettleMs`/`bumpViewport`/`onViewportSettled`;`audit_ctrl_mode` Ⅸ(原文 7 條)+ `audit_touch_gesture` ⑨ ±`--break-debounce`(3 紅) |
+| 2 | ⑥-1 幀率無關阻尼 + ⑧-3 | ✅ | 新縫 `data.js frictionFPS`/`lerpFPS`(舊 `camSmoothF` 改名收編);game.js 20 處 `Math.min(1, dt*k)` + 4 處手寫 `Math.exp` + `locomotion.js damp()`/`FX_K` 全數轉呼;新稽核 `audit_damp_fps` ±`--break-damp` |
+| 3 | ①-1 `outlineContribution`(§0-c) | ⏸ 已量測、未落地 | 見下方「§0-c 編碼定案」 |
+
+**⑥-1 的量測結果**(`audit_damp_fps` Ⅱ 每次跑都會印):
+
+- 幀率無關性:k = 10、1 秒積分,30/60/144/240fps 的殘量比 **1.000000000000**(舊制 **7.0×**)。
+- 60fps 上與舊制的相對落差:現役 k = 3~10 的最大值 **7.9%** ⇒ **不必回頭重調任何係數**;
+  稽核以 10% 守門(超過就是有人加了大 k,那時才要重調)。
+- `frictionFPS(k, dt)` 與舊制的 `Math.exp(-k · dt)` **逐位元相同**(真 GPU 頁面直測 `=== true`)
+  ⇒ 後座回穩與空氣阻力那四處是純改寫。
+- `npm run bal` 🎉 全綠、`npm test` 🎉 全綠、`audit_gait_anat`/`audit_morph_rig`/`audit_paper_doll`/
+  `audit_spectator_cam`/`audit_view_lock`/`audit_recoil_move` 逐項不動。
+
+> ⚠ **`viewLockStep` 是具名例外,留給使用者裁決。** 它不只是真人的視野鎖定 ——
+> `server/bots.js _turn` 是**電腦玩家朝向的唯一寫入點**,而伺服器固定 8Hz:
+> `min(1, 9 × 0.125) = 1` ⇒ 小角度誤差**一個 tick 就轉到位**。換成指數逼近的話同一個 tick
+> 只走 67.5%、要三個 tick 才收進 3%,那是**權威側的行為改變**(原則 1),而且要照 §5.6
+> 補一輪 AI 退化量測才知道代價。客戶端那一半確實有幀率相依(144Hz 比 30Hz 收斂慢),
+> 但兩者共用同一個縫、拆兩份就是兩套規則 ⇒ **這一輪整支不動**。
+> 三條路:①維持現狀(bot 手感不動,真人的鎖定在高刷新率上略慢)②改成 exp 並補 AI 退化量測
+> ③`bots._turn` 改吃自己的一支(= 第二份實作,需要使用者明確放行)。
+
+**⑧-1 的行為改變(刻意,不是 bug)**:點擊型鈕**按住超過 260ms 再放開不會觸發**。
+這是「一次點擊 = 距離 + 時間」的直接推論,與 `tip.js` 的長按提示(380ms)同調。
+若使用者認為招式/商店這類鈕應該「按多久都算」,要拿掉的是**時間**那一半(距離那一半是
+⑧-1 點名的病灶),那是一行的事,但 MUST 由使用者定案 —— 兩種都自洽。
+
+### §0-c 編碼定案(2026-08-16 量測,真 GPU RGBA8 MRT 直測)
+
+計畫列的兩個選項裡,**第一個(加法打包)在數學上就不可解**:
+`class * 0.5 + contribution * 0.5` 的值域會重疊(class 0.5 給出 [0.25, 0.75]、
+class 1 給出 [0.5, 1.0])⇒ 解不回來。
+
+**定案:同一個通道、但用半位元組切**(仍是 §0-c 的「打包」,只是換一個解得回來的編碼):
+
+```glsl
+// 寫入(toon.js)
+gInfo.a = ( float(clsIdx) * 16.0 + floor(contribution * 15.0 + 0.5) ) / 255.0;   // clsIdx: NONE 0 / LAND 1 / HARD 2
+// 讀取(postfx.js)
+float q   = floor( a * 255.0 + 0.5 );
+float cls = floor( q / 16.0 );              // 0 / 1 / 2
+float ctr = fract( q / 16.0 ) * 16.0 / 15.0;
+```
+
+實測(64 texel × 3 類別 × 16 階,`readPixels` 回讀):**類別錯 0 筆、貢獻誤差 0.000**。
+每一個值都是 `k / 255` 的精確 8bit 位階 ⇒ 8bit UNORM 與浮點 RT 上都是恆等。
+貢獻只要 16 階就夠 —— 它的用法是 `step(noise)` 與最近面覆寫的 `ceil`/`floor`,**本來就近乎二元**。
+
+⚠ **連帶必須一起改的一條**:`postfx._mkRT` 目前給兩張附件都是 `LinearFilter`。
+今天沒事只是因為取樣偏移恰好是**整數個 texel**(`INK.THICK = 1.0`)⇒ 落在 texel 中心;
+一旦有人動 `THICK`,線性內插會把相鄰的 `q` 混成一個不存在的類別。
+落地時 MUST 把 **`rtScene.texture[1]` 設成 `NearestFilter`**(SKILL `anime-line-control`
+的 buffer discipline 也列著這一條)。
+
+⚠ **最近面覆寫 MUST 與編碼同一輪進來**(計畫 ①-1 已寫):否則 `contribution = 0` 的物件
+仍會被背後的天空描出輪廓,而那正是這個通道存在的理由。

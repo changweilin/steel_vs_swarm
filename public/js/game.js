@@ -17,7 +17,7 @@ import {
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow,
-  SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep,
+  SPEC_CAM, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
   CREEP_UPG,
 } from './data.js';
@@ -33,7 +33,7 @@ import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
-import { isTouchUI, lowPower, TouchControls } from './mobile.js';
+import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
 import { onCtrlChange } from './ctrlmode.js';
 import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
@@ -709,7 +709,11 @@ export class BattleClient {
       this.camera.updateProjectionMatrix();
       fitHudBand();
     };
-    window.addEventListener('resize', this._onResize);
+    // **MUST 走 `onViewportSettled` 的 debounce,MUST NOT 自己綁 window resize**:
+    // 一次旋轉會連發好幾個尺寸(iOS 尤其),逐筆重配 render target 是頓一下 + 有機會
+    // 停在中間那個錯的尺寸(見 mobile.js VIEWPORT)。`_applyRes()` 仍直接呼叫 `_onResize`
+    // —— 那是像素比改變不是視窗改變,沒有連發問題,也不該多等 50~500ms。
+    this._offResize = onViewportSettled(this._onResize);
 
     // 賽璐璐後製管線(勾線 → 調色 → FXAA);開關見上方 `off()`。
     // 低功耗/觸控走 8bit RT(半浮點在 tile GPU 上是頻寬成本,與關 MSAA 同一個瓶頸)。
@@ -3821,7 +3825,7 @@ export class BattleClient {
   _updateMissiles(dt) {
     for (const ms of this.samMeshes.values()) {
       const p = ms.mesh.position;
-      p.lerp(ms.tgt, Math.min(1, dt * 10));
+      p.lerp(ms.tgt, lerpFPS(10, dt));
       // 朝飛行方向 + 煙尾
       const dir = ms.tgt.clone().sub(ms.prev);
       if (dir.lengthSq() > 0.5) {
@@ -5842,10 +5846,11 @@ export class BattleClient {
     // 垂直位移:前後推杆 × 攀爬速度 × 控場係數(麻痺 = 掛在原地不動,不是掉下去)
     this.pos.y += ax.f * CLIMB.SPD * this._ccMoveF() * this._modF('speed') * dt;
     // 水平吸附到攀爬軸(被爆風/後座推開後自己回到梯子上)
-    const k = Math.min(1, dt * 10);
+    const k = lerpFPS(10, dt);
     this.pos.x += (r.x - this.pos.x) * k;
     this.pos.z += (r.z - this.pos.z) * k;
-    this.vel.x *= Math.exp(-dt * 6); this.vel.z *= Math.exp(-dt * 6); this.vel.y = 0;
+    const fr6 = frictionFPS(6, dt);
+    this.vel.x *= fr6; this.vel.z *= fr6; this.vel.y = 0;
     this.vy = 0;
     if (this.pos.y >= r.y1) {
       // 登頂:落腳點在結構內側(climb.js 已按該方向半徑夾制),高度取頂面 = surfaceAt 的 mount 台階
@@ -5860,7 +5865,7 @@ export class BattleClient {
       this._climb = null; this._climbOff = now + 0.35;
       return false;
     }
-    this.roll += (0 - this.roll) * Math.min(1, dt * 6);
+    this.roll += (0 - this.roll) * lerpFPS(6, dt);
     return true;
   }
 
@@ -7140,7 +7145,8 @@ export class BattleClient {
     } else if (!s.climax) {
       // ── 飛行機體:自適應重力拋物墜落 + per-axis 翻滾 + 拖尾煙 ──
       s.v.y -= s.g * dt;
-      s.v.x *= Math.exp(-dt * 0.7); s.v.z *= Math.exp(-dt * 0.7);   // 微空氣阻力:墜點不飄太遠
+      const frAir = frictionFPS(0.7, dt);
+      s.v.x *= frAir; s.v.z *= frAir;   // 微空氣阻力:墜點不飄太遠
       s.p.addScaledVector(s.v, dt);
       s.yaw += s.spin.y * dt; s.pitch += s.spin.x * dt; s.roll += s.spin.z * dt;
       s.smokeAcc += dt;
@@ -7168,8 +7174,8 @@ export class BattleClient {
 
     } else {
       // ── 飛行觸地保留:鏡頭在殘骸上方緩緩下俯、翻滾歸零,煙續冒 ──
-      s.pitch += (-0.5 - s.pitch) * Math.min(1, dt * 3);
-      s.roll += (0 - s.roll) * Math.min(1, dt * 3);
+      s.pitch += (-0.5 - s.pitch) * lerpFPS(3, dt);
+      s.roll += (0 - s.roll) * lerpFPS(3, dt);
       cam.position.copy(s.p);
       cam.rotation.set(0, 0, 0);
       cam.rotateY(s.yaw); cam.rotateX(s.pitch); cam.rotateZ(s.roll);
@@ -7502,9 +7508,9 @@ export class BattleClient {
       // 見底 = 爬不上去(上升分量歸零,水平/下降/懸停完全不受影響),不爬升即回充(∝ 電力回速)。
       // 上限/回速皆正比於電力(伺服器權威的 maxMp 與充能軌等級)⇒ MUST NOT 在此手寫係數。
       this._stepLift(dt, now, target, u);
-      this.vel.x += (target.x - this.vel.x) * Math.min(1, dt * 4);
-      this.vel.z += (target.z - this.vel.z) * Math.min(1, dt * 4);
-      this.vel.y += (target.y - this.vel.y) * Math.min(1, dt * 4);
+      this.vel.x += (target.x - this.vel.x) * lerpFPS(4, dt);
+      this.vel.z += (target.z - this.vel.z) * lerpFPS(4, dt);
+      this.vel.y += (target.y - this.vel.y) * lerpFPS(4, dt);
       this.pos.addScaledVector(this.vel, dt);
       // 受擊掉高(2026-07-30 使用者需求):待落公尺數逐幀消化 —— 總掉幅 ∝ 傷害(airSinkM,
       // 於快照偵測到掉血時入帳,見 _airSinkHit),SINK_S 只決定「掉多快」不改總量。
@@ -7532,7 +7538,7 @@ export class BattleClient {
       if (this.isMorph && !deepW && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
       // FPV 側傾:橫移/轉向時機身壓坡度
       const lat = this.vel.x * right.x + this.vel.z * right.z;
-      this.roll += (-lat / spd * 0.16 - this.roll) * Math.min(1, dt * 5);
+      this.roll += (-lat / spd * 0.16 - this.roll) * lerpFPS(5, dt);
     } else {
       this._airSink = 0;   // 地面型態不掉高(變形者觸地即清帳,免落地後被舊帳往下拉)
       // 機甲:貼地 + 跳躍;this.vel 是爆炸/後座的擊退速度(地面摩擦快速衰減)
@@ -7549,7 +7555,7 @@ export class BattleClient {
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       // 蓄力跳騰空(_lowG):水平近乎無阻力滑行(太空漫步的慣性);觸地恢復地面摩擦
-      const fr = Math.exp(-dt * (this._lowG ? 0.8 : 6));
+      const fr = frictionFPS(this._lowG ? 0.8 : 6, dt);
       this.vel.x *= fr; this.vel.z *= fr; this.vel.y = 0;
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
       // 水中有效地板(2026-07-19 可涉水改制):可下沉至「水面 − FULL_D(全滅頂深)」→ 深水可涉、
@@ -7609,7 +7615,7 @@ export class BattleClient {
       this.vy -= AIR.GRAV * (this._lowG ? CJUMP.GRAV_F : 1) * dt;
       this.pos.y += this.vy * dt;
       if (this.pos.y < gy) { this.pos.y = gy; this.vy = 0; this._lowG = false; }
-      this.roll += (0 - this.roll) * Math.min(1, dt * 6);
+      this.roll += (0 - this.roll) * lerpFPS(6, dt);
     }
 
     // 結構物硬碰撞(高架橋/地下道):機體與橋體/山體不可重疊 ——
@@ -7693,7 +7699,7 @@ export class BattleClient {
     // 後座力回復 + 鏡頭震動(trauma² 噪聲)
     // 回穩速率 = RECOIL.DECAY(唯一縫):位移懲罰的時間窗 `_recoiling()` 量的正是這條衰減曲線,
     // 在這裡手寫一個數字 = 兩邊分家(改了回穩快慢,懲罰時長卻不動,而畫面上完全看不出來)。
-    const rk = Math.exp(-dt * RECOIL.DECAY);
+    const rk = frictionFPS(RECOIL.DECAY, dt);
     this.recoil.p *= rk; this.recoil.y *= rk;
     this.trauma = Math.max(0, this.trauma - dt * 1.4);
     const n = this.trauma * this.trauma;
@@ -7722,7 +7728,7 @@ export class BattleClient {
     // 瞄準縮放:右鍵切換拉近視角(FOV 越小越像瞄準鏡)
     const wantFov = this.aiming ? (UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : this.baseFov;
     if (Math.abs(this.camera.fov - wantFov) > 0.05) {
-      this.camera.fov += (wantFov - this.camera.fov) * Math.min(1, dt * 10);
+      this.camera.fov += (wantFov - this.camera.fov) * lerpFPS(10, dt);
       this.camera.updateProjectionMatrix();
     }
     // 位置回報(10Hz;模擬 z=北)
@@ -7936,7 +7942,7 @@ export class BattleClient {
         this._specAnchor.copy(p);
         this._specAnchorOk = true;
       } else {
-        this._specAnchor.lerp(p, camSmoothF(SPEC_CAM.POS_K, dt));
+        this._specAnchor.lerp(p, lerpFPS(SPEC_CAM.POS_K, dt));
       }
       const a = this._specAnchor;
       // ② 偏航平滑(ry 是相機朝向慣例,模型才 +π);第一人稱要跟手 ⇒ 係數明顯較大
@@ -8048,9 +8054,9 @@ export class BattleClient {
     }
     wantPitch = Math.max(-Math.PI / 6, Math.min(Math.PI / 3, wantPitch));
     const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-    tur.rotation.y += wrap(wantYaw - tur.rotation.y) * Math.min(1, dt * 4);
+    tur.rotation.y += wrap(wantYaw - tur.rotation.y) * lerpFPS(4, dt);
     const pit = tur.userData.pitch;
-    pit.rotation.x += (-wantPitch - pit.rotation.x) * Math.min(1, dt * 4);
+    pit.rotation.x += (-wantPitch - pit.rotation.x) * lerpFPS(4, dt);
     // 開火後座(shot 事件標記 _turKick):砲管上撇一記、指數回穩
     if (ent._turKick > 0.01) {
       pit.rotation.x -= ent._turKick * 0.07;
@@ -8071,7 +8077,7 @@ export class BattleClient {
         const world = Math.atan2(aim.x - g.position.x, aim.z - g.position.z);
         wantLocal = wrap(world - g.rotation.y);
       }
-      c.rotation.y += wrap(wantLocal - c.rotation.y) * Math.min(1, dt * 3);
+      c.rotation.y += wrap(wantLocal - c.rotation.y) * lerpFPS(3, dt);
     });
     if (ent._turKick > 0.01) {
       for (const c of ent.gunPivots) c.userData.barrel.rotation.x = -0.14 - ent._turKick * 0.06;
@@ -8099,7 +8105,7 @@ export class BattleClient {
       const turY = tur.getWorldPosition(new THREE.Vector3()).y;
       wantPitch = Math.atan2(((p.y ?? turY) - turY), Math.hypot(dx, dz) || 1);
     }
-    tur.rotation.y += wrap(wantLocal - tur.rotation.y) * Math.min(1, dt * 5);
+    tur.rotation.y += wrap(wantLocal - tur.rotation.y) * lerpFPS(5, dt);
     // 砲管俯仰(2026-07-22 規則 1):有 pitch 節點的車砲把砲管指向目標仰角;
     // 拋物線攻城砲(tank 'siege')的「出膛仰角」由 _arcTracer 逐發回寫 _arcPitch 優先 ——
     // 砲管角度與實際彈道弧線一致
@@ -8107,7 +8113,7 @@ export class BattleClient {
     if (pit) {
       const arc = ent._arcPitch && now < ent._arcPitch.until ? ent._arcPitch.v : null;
       const wp = Math.max(-Math.PI / 6, Math.min(Math.PI / 3, arc ?? wantPitch));
-      pit.rotation.x += (-wp - pit.rotation.x) * Math.min(1, dt * 4);
+      pit.rotation.x += (-wp - pit.rotation.x) * lerpFPS(4, dt);
       // 開火後座(shot 事件標 _turKick):砲管上撇一記、指數回穩(同塔砲語意)
       if (ent._turKick > 0.01) {
         pit.rotation.x -= ent._turKick * 0.06;
@@ -8126,7 +8132,7 @@ export class BattleClient {
       const d = Math.hypot(aim.x - ent.mesh.position.x, aim.z - ent.mesh.position.z) || 1;
       want = Math.max(-1.1, Math.min(0.5, Math.atan2((aim.y ?? py) - py, d)));
     }
-    piv.rotation.x += (-want - piv.rotation.x) * Math.min(1, dt * 4);
+    piv.rotation.x += (-want - piv.rotation.x) * lerpFPS(4, dt);
   }
 
   _updateEnts(dt, now) {
@@ -8154,7 +8160,7 @@ export class BattleClient {
         ent.loco = null;   // 重生瞬移:骨架動畫狀態歸零,不殘留舊速度
         ent.cfx = null; ent.fireFx = null; ent.heavyFx = null; ent.castFx = null;   // 戰鬥動畫狀態一併歸零
       } else {
-        const k = Math.min(1, dt * 9);
+        const k = lerpFPS(9, dt);
         nx = cur.x + (ent.tgt.x - cur.x) * k;
         nz = cur.z + (ent.tgt.z - cur.z) * k;
       }
@@ -8224,7 +8230,7 @@ export class BattleClient {
         if (snapped) ent.mesh.rotation.y = wantYaw;
         else {
           const dy = Math.atan2(Math.sin(wantYaw - pyaw), Math.cos(wantYaw - pyaw));
-          ent.mesh.rotation.y = pyaw + dy * Math.min(1, dt * 8);
+          ent.mesh.rotation.y = pyaw + dy * lerpFPS(8, dt);
         }
       }
       // 極音速飛彈:機首俯仰跟著彈道(45° 出膛 → 頂點放平 → 極音速垂直俯衝)。
@@ -8236,7 +8242,7 @@ export class BattleClient {
         if (dh + Math.abs(dv) > 1e-3) {
           const wantPit = -Math.atan2(dv, dh);
           ent.mesh.rotation.x = snapped ? wantPit
-            : ent.mesh.rotation.x + (wantPit - ent.mesh.rotation.x) * Math.min(1, dt * 8);
+            : ent.mesh.rotation.x + (wantPit - ent.mesh.rotation.x) * lerpFPS(8, dt);
         }
       }
       cur.set(nx, ny, nz);
@@ -8998,7 +9004,7 @@ export class BattleClient {
     this.pipeline?.dispose();        // A25:3 個 RT + depthTexture + 3 個全螢幕材質
     this.pipeline = null;
     cancelAnimationFrame(this._raf);
-    window.removeEventListener('resize', this._onResize);
+    this._offResize?.();             // 視窗尺寸定案的訂閱(mobile.js onViewportSettled)
     window.removeEventListener('keydown', this._onKey);
     window.removeEventListener('keyup', this._onKey);
     document.removeEventListener('mousemove', this._onMouseMove);

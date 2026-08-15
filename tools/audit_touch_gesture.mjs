@@ -1,30 +1,59 @@
-// ============ 空處手勢稽核(#tlLook:拖曳視角 + 雙擊開火)============
-// 用途:改 `mobile.js` 的 `_bindLook` / `_setLookFire` / `_tickLookFire` / `LOOK.TAP_*` 後,
-// 用**合成指標事件**驗證這條手勢不會回歸成「拖個視角就開火」或「按住不放卻不開火」。
+// ============ 觸控手勢稽核(空處 #tlLook + 點擊型鈕)============
+// 用途:改 `mobile.js` 的 `_bindLook` / `_setLookFire` / `_tickLookFire` / `_bindButtons` /
+// `_tapOk` / `_tickTap` / `LOOK.TAP_*` 後,用**合成指標事件**驗證兩條手勢都不會回歸。
 //
-// 為什麼要有這支:開火誤觸在真機上很難重現(要剛好點成雙擊的節奏),但一旦壞掉就是每一場都中招;
-// 而判定本身是「時間 × 位移 × 前一次點擊」三個變數的狀態機,肉眼讀程式碼看不出邊界。
+// 為什麼要有這支:誤觸在真機上很難重現(要剛好點成雙擊的節奏、或剛好從鈕上滑出去),
+// 但一旦壞掉就是每一場都中招;而判定本身是「時間 × 位移 × 前一次點擊」三個變數的狀態機,
+// 肉眼讀程式碼看不出邊界。
 //
-// 驗的五件事:
+// 驗的七件事(①~⑦ 空處手勢、⑧ 點擊型鈕):
 //   ① 單指拖曳(轉視角)**MUST NOT** 開火 —— 這是每秒都在做的動作
 //   ② 純雙擊(點兩下就放開)**MUST NOT** 開火 —— 捲動/誤觸太容易產生
 //   ③ 輕點一下 → 再按住 = 開火(長按路徑,走幀迴圈 tick)
 //   ④ 輕點一下 → 再拖曳 = 開火,且視角照常轉(拖曳路徑)
 //   ⑤ 放開即停;且「A 鈕按著時放開空處手勢」MUST NOT 代 A 收掉射擊
-// 跑法:`node tools/audit_touch_gesture.mjs`
+//   ⑧ **一次點擊 = 距離 + 時間**(2026-08-16,`docs/anime_style_plan.md` ⑧-1):
+//      點擊型鈕在 `pointerdown` **MUST NOT** 派發;拖過 `TAP_SLOP_PX`、按超過 `TAP_MS`、
+//      或收到 `pointercancel` 一律不算點擊。按住型(A/R/ZR/B/ZL)**MUST 逐位元維持舊制**
+//      —— 拿點擊判定去閘射擊就是交火中途停火。
+//      壞掉的症狀:滑過搖桿邊緣就開商店 / 按了招式沒反應,兩者都不留任何錯誤訊息。
+// 跑法:`node tools/audit_touch_gesture.mjs`(反向驗證 `--break-tap` = 退回「按下即派發」)
 import { chromiumOrNull, chromePath, serve, skipNoPlaywright, THREE_STUB, THREE_CDN } from './pw.mjs';
+import { readSrc } from './audit_src.mjs';
 
 const chromium = await chromiumOrNull();
-if (!chromium) skipNoPlaywright('空處手勢稽核');
+if (!chromium) skipNoPlaywright('觸控手勢稽核');
+
+// 反向驗證(兩支,都是把規則寫回壞版):
+//   --break-tap      點擊型鈕改回舊制的「pointerdown 當場派發」⇒ ⑧ 整段 MUST 紅
+//   --break-debounce 視窗尺寸改回「每一筆都當場算數」        ⇒ ⑨ 整段 MUST 紅
+// 替換無效(原文已變)MUST 當場失敗 —— 不然 break 永遠是綠的(見 tools/CLAUDE.md 紀律 2)。
+const BREAK_TAP = process.argv.includes('--break-tap');
+const BREAK_DEB = process.argv.includes('--break-debounce');
+let mobileSrc = null;
+if (BREAK_TAP || BREAK_DEB) mobileSrc = readSrc('public', 'js', 'mobile.js');
+const patch = (flag, name, re, to) => {
+  if (!flag) return;
+  if (!re.test(mobileSrc)) {
+    console.log(`✗ ${name}:字面替換無效(原文已變 ⇒ 這支 break 根本沒造出壞版)`);
+    process.exit(1);
+  }
+  mobileSrc = mobileSrc.replace(re, to);
+};
+patch(BREAK_TAP, '--break-tap', /this\._tap\.set\(e\.pointerId,[^;]*\);/, 'this.client._cmd(act, true);');
+patch(BREAK_DEB, '--break-debounce', /export function bumpViewport\(\) \{[\s\S]*?\r?\n\}/,
+  'export function bumpViewport() { for (const fn of [..._vpSubs]) { try { fn(); } catch { /* */ } } }');
 
 const srv = await serve();
-// 只需要 #tlLook 與一顆 A 鈕:手勢判定不依賴版型,量的是狀態機不是幾何(幾何在 audit_touch_layout)
+// 只需要 #tlLook 與兩顆鈕:手勢判定不依賴版型,量的是狀態機不是幾何(幾何在 audit_touch_layout)。
+// A = 按住型(HOLD)、⊟ 商店 = 點擊型 —— 兩類規則不同,MUST 各驗各的。
 const PAGE = `<!doctype html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{"three":"${THREE_CDN}"}}<\/script>
 <style>#tlLook{position:fixed;inset:0}</style>
 </head><body>
 <div id="touchLayer" hidden><div id="tlLook"></div>
-<button class="tl-gb gb-a" type="button" data-act="fire">A</button></div>
+<button class="tl-gb gb-a" type="button" data-act="fire">A</button>
+<button class="tl-dp-b dir-up" type="button" data-act="shop">⊟</button></div>
 <script type="module">
 import * as M from '/public/js/mobile.js';
 window.M = M;
@@ -54,6 +83,11 @@ await page.route(THREE_CDN, (r) =>
   r.fulfill({ status: 200, contentType: 'text/javascript', body: THREE_STUB }));
 await page.route(`${srv.url}__gesture.html`, (r) =>
   r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: PAGE }));
+// 壞版才攔截模組本體:平常一律吃磁碟上的**真品**(攔截了就等於在驗自己貼的那份字串)
+if (mobileSrc) {
+  await page.route(`${srv.url}public/js/mobile.js`, (r) =>
+    r.fulfill({ status: 200, contentType: 'text/javascript', body: mobileSrc }));
+}
 page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
 await page.goto(`${srv.url}__gesture.html`);
 await page.waitForFunction(() => window.ready === true, null, { timeout: 8000 });
@@ -169,7 +203,86 @@ t('暫停時空處手勢不開火', (await fired()).filter((c) => c[1]).length =
 await ev('pointerup', 400, 200);
 await page.evaluate(() => { window.mock.paused = false; });
 
+console.log('\n■ ⑧ 點擊型鈕:一次點擊 = 距離 + 時間(--break-tap 這一整段 MUST 紅)');
+// 鈕上的合成事件:與 audit_gyro 同形(id 3,免得與空處手勢的 1 撞號)
+const btn = (type, x, y, act = 'shop') => page.evaluate(([type, x, y, act]) => {
+  const el = document.querySelector(`[data-act="${act}"]`);
+  el.setPointerCapture = () => {};
+  el.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 3, clientX: x, clientY: y }));
+}, [type, x, y, act]);
+const shopped = () => page.evaluate(() => window.cmds.filter((c) => c[0] === 'shop'));
+const pressed = () => page.evaluate(() =>
+  document.querySelector('[data-act="shop"]').classList.contains('press'));
+const SLOP = await page.evaluate(() => window.M.LOOK.TAP_SLOP_PX);
+const TAPMS = await page.evaluate(() => window.M.LOOK.TAP_MS);
+
+await fresh();
+await btn('pointerdown', 100, 100);
+t('按下當下 MUST NOT 派發(舊制在這裡就送出去了)', (await shopped()).length === 0, JSON.stringify(await shopped()));
+t('按下當下鈕面就亮(回饋先於動作)', await pressed());
+await btn('pointerup', 100, 100);
+t('放開 → 派發一次', JSON.stringify(await shopped()) === '[["shop",true]]', JSON.stringify(await shopped()));
+
+await fresh();
+await btn('pointerdown', 100, 100);
+await btn('pointermove', 100 + SLOP + 6, 100);      // 拖出容差 = 從鈕上滑走
+await btn('pointerup', 100 + SLOP + 6, 100);
+t('拖出 TAP_SLOP_PX 之外 → 不派發', (await shopped()).length === 0, JSON.stringify(await shopped()));
+t('拖走當場熄燈', (await pressed()) === false);
+
+await fresh();
+await btn('pointerdown', 100, 100);
+await wait(TAPMS + 90); await tick(2);              // 時間那一半住幀迴圈 ⇒ 要泵 tick
+t('按過 TAP_MS → 幀迴圈當場熄燈', (await pressed()) === false);
+await btn('pointerup', 100, 100);
+t('按過 TAP_MS → 不派發', (await shopped()).length === 0, JSON.stringify(await shopped()));
+
+await fresh();
+await btn('pointerdown', 100, 100);
+await btn('pointercancel', 100, 100);
+t('pointercancel(系統手勢接管)→ 不派發', (await shopped()).length === 0, JSON.stringify(await shopped()));
+
+// 按住型 MUST 逐位元維持舊制 —— 這一條是 --break-tap **不該**紅的對照組
+await fresh();
+await btn('pointerdown', 10, 10, 'fire');
+t('按住型 A 仍在 pointerdown 當場 fire↓', JSON.stringify(await fired()) === '[["fire",true]]', JSON.stringify(await fired()));
+await btn('pointermove', 10 + SLOP + 40, 10, 'fire');
+t('按住型拖遠 MUST NOT 停火(拇指微滑是常態)', await page.evaluate(() => window.mock.firing === true));
+await btn('pointerup', 10 + SLOP + 40, 10, 'fire');
+t('按住型放開 → fire↑', (await fired()).at(-1)[1] === false, JSON.stringify(await fired()));
+
+console.log('\n■ ⑨ 視窗尺寸定案:連發合併成最後一個(--break-debounce 這一段 MUST 紅)');
+// 旋轉一次會連發好幾個尺寸,逐筆重配 render target = 頓一下 + 有機會停在中間那個錯的尺寸。
+// 這一段量的是**行為**(真的 setTimeout);「只有一份等待時間 + 消費端沒繞過」在 audit_ctrl_mode Ⅸ。
+const dbg = await page.evaluate(async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const ms = window.M.viewportSettleMs();
+  let n = 0;
+  const off = window.M.onViewportSettled(() => { n++; });
+  for (let i = 0; i < 6; i++) window.M.bumpViewport();
+  const during = n;
+  await wait(ms + 150);
+  const after = n;
+  n = 0;
+  window.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('resize'));
+  const duringR = n;
+  await wait(ms + 150);
+  const afterR = n;
+  off();
+  n = 0;
+  window.dispatchEvent(new Event('resize'));
+  await wait(ms + 150);
+  return { ms, during, after, duringR, afterR, afterOff: n };
+});
+t('非 iOS 的等待時間 = VIEWPORT.SETTLE_MS(50)', dbg.ms === 50, JSON.stringify(dbg));
+t('連發 6 次 MUST NOT 當場回呼', dbg.during === 0, JSON.stringify(dbg));
+t('連發 6 次只回呼一次(合併成最後一個尺寸)', dbg.after === 1, JSON.stringify(dbg));
+t('真的 resize 事件走同一條 debounce', dbg.duringR === 0 && dbg.afterR === 1, JSON.stringify(dbg));
+t('解除訂閱後不再回呼(dispose 不留殭屍消費端)', dbg.afterOff === 0, JSON.stringify(dbg));
+
 await browser.close();
 srv.close();
-console.log(fail ? `\n✗ ${pass} 通過 / ${fail} 失敗` : `\n✓ 空處手勢 ${pass} 項全通過`);
+console.log(fail ? `\n✗ ${pass} 通過 / ${fail} 失敗` : `\n✓ 觸控手勢 ${pass} 項全通過`);
 process.exit(fail ? 1 : 0);

@@ -1037,6 +1037,30 @@ export const curveDropM = (d) => {
  */
 export const curveMaxEdgeM = () => Math.sqrt(4 * curveR() * CURVE.SAG_M);
 
+// ---- 幀率無關阻尼(全專案唯一縫;2026-08-16,`docs/anime_style_plan.md` ⑥-1)----
+// 「逐漸逼近一個目標值」在遊戲裡到處都是(相機跟隨、砲塔轉向、機體插值、座艙傾角、
+// 視野鎖定、步態關節)。**逐幀固定係數的寫法 `x += (t − x) * min(1, k·dt)` 是幀率相依的**:
+// 同一段運鏡在 30fps 收斂得比 144fps 快(k=10 時,一秒後的殘量差了三倍),
+// 而症狀只表現成「高刷新率的機器上比較黏 / 低幀率反而更晃」—— 沒有任何錯誤訊息,
+// 也不會有任何斷言紅字,因為每一幀單看都是對的。
+//
+// 正確形是**連續時間的指數衰減**:殘量 = e^(−k·dt) ⇒ 逼近權重 = 1 − e^(−k·dt)。
+// 它對 dt 的分割是**可加的**(跑兩個半步 ≡ 跑一整步)⇒ 幀率一改結果逐位元不動。
+//
+// 兩支對外,**全專案只有這一份 `Math.exp`**:
+//   `frictionFPS(k, dt)` 殘留比例  —— `v *= frictionFPS(k, dt)`
+//   `lerpFPS(k, dt)`     逼近權重  —— `x += (t − x) * lerpFPS(k, dt)`(= 1 − frictionFPS)
+// k 的單位是 1/s(越大越跟手),語意 = 「每秒把差距壓掉 1 − e^(−k)」。
+// **殘留比例是原式、逼近權重是它的補數**,順序不可對調:`1 − (1 − x)` 在浮點上不恆等於 `x`
+// ⇒ 反過來寫會讓既有的 `v *= Math.exp(−k·dt)` 消費端(後座回穩、空氣阻力)差最後幾位,
+// 而那正是「純改寫、行為 MUST 逐位元不動」的那一批。
+// 消費端 MUST 全走這兩支:**MUST NOT** 再出現 `Math.min(1, dt * k)` 這種逐幀係數
+// (那正是舊制的寫法),也 MUST NOT 自己寫第二份 `Math.exp(-k * dt)`。
+// ⚠ **恆定角速度的夾制不是阻尼**(`min(1, W·dt/ang)`、`viewLockStep` 的 `cap`):
+//   那是「每秒最多轉幾弧度」,本來就是幀率無關的,MUST NOT 順手改成 exp。
+export const frictionFPS = (k, dt) => Math.exp(-Math.max(0, k) * Math.max(0, dt));
+export const lerpFPS = (k, dt) => 1 - frictionFPS(k, dt);
+
 // ---- 視野鎖定(2026-08-01 使用者需求:虛擬搖桿加入「按住鎖定目標」= 觸控 ZR)----
 // **純客戶端視角輔助**(與 RECOIL / BALLISTIC 同層,伺服器完全不參與 ⇒ 不涉 A1):按住期間每幀把
 // **基準視角**(yaw/pitch)朝鎖定的敵方單位收斂,放開即恢復自由視角。權威側看到的仍只有
@@ -1069,6 +1093,13 @@ export const VIEW_LOCK = {
  * yaw 與 pitch 兩軸、以及稽核的行為直測全吃這一支,game.js MUST NOT 手寫 W/EASE。
  * 逼近項 `d × EASE × dt` 與角速度上限 `W × dt` 取小者(見 VIEW_LOCK 註解)。
  */
+// ⚠ **逼近項刻意留在舊制的 `min(1, EASE·dt)`,MUST NOT 順手改成 `lerpFPS`**(2026-08-16 具名例外):
+// 這一支不只給真人的視野鎖定用 —— `server/bots.js _turn` 是**電腦玩家朝向的唯一寫入點**,
+// 而伺服器是固定 8Hz(dt = 0.125)⇒ `min(1, 9 × 0.125) = 1`:小角度誤差**一個 tick 就轉到位**。
+// 換成指數逼近的話同一個 tick 只走 67.5%,bot 的朝向從此是漸近的(三個 tick 才進 3%)——
+// 那是**權威側的行為改變**(原則 1),而且要照 §5.6 補一輪 AI 退化量測才知道代價。
+// 客戶端那一半確實有幀率相依(144Hz 比 30Hz 收斂慢),但它與 bot 共用同一個縫、
+// 拆兩份就是兩套規則 ⇒ 這一輪整支不動,留給使用者裁決(見 docs/anime_style_plan.md ⑥-1)。
 export const viewLockStep = (d, dt) => {
   const cap = VIEW_LOCK.W * dt;
   return Math.max(-cap, Math.min(cap, d * Math.min(1, VIEW_LOCK.EASE * dt)));
@@ -1095,7 +1126,7 @@ export const SPEC_CAM = {
   // 相機的**抬高不另設常數**:注視點固定 = 機體頂高 × AIM_F,抬高完全由俯仰推導
   // (`camY = aimY − sin(pitch)·dist`)⇒ 觀戰者往下看多少,相機就抬多高,不會兩份參數打架。
   DIST_F: 6.5, AIM_F: 1.0, MIN_DIST: 12,
-  // 平滑係數(1/s;越大越跟手)。**運鏡不晃的全部本錢在這三個值 + camSmoothF 的幀率無關性**:
+  // 平滑係數(1/s;越大越跟手)。**運鏡不晃的全部本錢在這三個值 + lerpFPS 的幀率無關性**:
   // 快照 8Hz、機體位置每幀插值、伺服器 ry 量化到 0.01 rad ⇒ 直接把相機貼上去就是逐幀抖。
   // 第一人稱要跟手(玩家轉頭觀戰者就該跟著轉)⇒ FPV_YAW_K 明顯大於第三人稱的 YAW_K。
   POS_K: 6, YAW_K: 4, FPV_YAW_K: 12,
@@ -1116,12 +1147,9 @@ export const specViewNext = (id) => {
   const i = SPEC_CAM.VIEWS.indexOf(id);
   return SPEC_CAM.VIEWS[(i < 0 ? 0 : i + 1) % SPEC_CAM.VIEWS.length];
 };
-/**
- * 指數平滑的**幀率無關**權重:`1 − e^(−k·dt)`。相機平滑的唯一縫 ——
- * MUST NOT 退回逐幀固定係數(`x += (t − x) * 0.1`):同一段運鏡在 30fps 與 120fps
- * 會收斂出不同的跟隨延遲,高幀率反而更黏、低幀率反而更晃(正是「太晃」的來源)。
- */
-export const camSmoothF = (k, dt) => 1 - Math.exp(-Math.max(0, k) * Math.max(0, dt));
+// 相機平滑吃的就是上面那支 `lerpFPS`(2026-08-16 收成全域縫之前它叫 `camSmoothF`)——
+// MUST NOT 退回逐幀固定係數(`x += (t − x) * 0.1`):同一段運鏡在 30fps 與 120fps
+// 會收斂出不同的跟隨延遲,高幀率反而更黏、低幀率反而更晃(正是「太晃」的來源)。
 /** 角度差正規化到 [−π, π):跨 ±π 的偏航 MUST 走最短路徑,否則機體轉過背面時相機會繞一整圈。
  *  正負 π 兩端等價(轉一樣多、方向相反)⇒ 端點落在哪一邊不影響運鏡,只影響剛好 180° 的旋向 */
 export const wrapPi = (a) => {
@@ -1130,7 +1158,7 @@ export const wrapPi = (a) => {
   return d - Math.PI;
 };
 /** 這一幀的偏航平滑結果(rad)。兩個消費端(第一人稱視線 / 第三人稱跟隨)MUST 同吃這一支 */
-export const camAngleStep = (cur, tgt, k, dt) => cur + wrapPi(tgt - cur) * camSmoothF(k, dt);
+export const camAngleStep = (cur, tgt, k, dt) => cur + wrapPi(tgt - cur) * lerpFPS(k, dt);
 
 // ---- 集束炸彈(變形者專屬可分離子機;2026-08-01 更名,原「轟炸餌機」)----
 // 「其他性質跟餌機相同」(使用者定調)⇒ 載具(可分離子機)整套沿用:分離發射,航向鎖定發射瞬間的

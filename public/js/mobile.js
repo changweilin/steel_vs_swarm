@@ -82,6 +82,10 @@ export const LOOK = {
   // 空處「雙擊後按住 / 拖曳 = 射擊」的手勢門檻(見 TouchControls._bindLook)。
   // 這是給「不想把拇指移到 A 鈕」的玩家的第二條開火路徑,判定 MUST 嚴到不會誤觸:
   // 單指拖曳轉視角(最常做的事)絕不可以變成開火,故一定要先有一次**完整的輕點**。
+  //
+  // **「什麼算一次點擊」全站只有這一組門檻**(2026-08-16):空處手勢的輕點與點擊型鈕
+  // (`_bindButtons` 的非按住型 act)同吃 TAP_MS + TAP_SLOP_PX。MUST NOT 為按鈕另訂第二組數字 ——
+  // 兩份定義會漂,而症狀是「同樣的手指動作在鈕上算點擊、在空處不算」。
   TAP_MS: 260,            // 一次「輕點」的上限時長(超過就是按住,不算點)
   TAP_SLOP_PX: 16,        // 一次「輕點」允許的位移(超過就是拖曳,不算點)
   TAP_GAP_MS: 300,        // 兩點之間的最大間隔(超過就不是雙擊)
@@ -156,19 +160,69 @@ function screenAngle() {
   return Number.isFinite(window.orientation) ? window.orientation : 0;
 }
 
-let _oriRaf = 0;
-/** 直式/橫式判定並掛 class;版型改變時補送一次 resize(讓 BattleClient._onResize 重算 aspect)*/
+/* ---- 視窗尺寸定案(旋轉 debounce;唯一縫)---- */
+// **一次旋轉會連發好幾個尺寸,只有最後一個是對的** —— iOS 尤其。每一筆都照做的代價是
+// 重配一次 render target(頓一下)**而且有機會停在中間那個錯的尺寸**:畫面拉伸、HUD 錯位,
+// 而且沒有任何錯誤訊息。故「尺寸真的定案了」只有這一個縫,消費端(畫布 / 相機 / HUD 帶)
+// MUST 訂閱 `onViewportSettled`,MUST NOT 自己綁 `window.addEventListener('resize', …)`。
+// 直式/橫式的 body class 仍**當場**切(CSS 版型不該等 —— 等的是重配 GPU 資源那一半)。
+export const VIEWPORT = {
+  SETTLE_MS: 50,        // 一般裝置:壓掉拖曳視窗邊緣的連發
+  SETTLE_IOS_MS: 500,   // iOS:一次旋轉連發數個中間尺寸,等它安定(見上)
+};
+
+/**
+ * iOS / iPadOS。**iPadOS 13+ 的 UA 偽裝成 Mac**(桌面版網站請求是預設值)⇒ 只比對
+ * `iPad|iPhone|iPod` 會把 iPad 整批判成桌機,而 iPad 正是最會連發中間尺寸的那一類;
+ * 補「Mac + 有多點觸控」那一格才蓋得住(桌機 Mac 的 `maxTouchPoints` 是 0)。
+ */
+export function isIOS() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  return /Mac/.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+}
+
+/** 這台裝置要等多久才算「尺寸定案」(ms);兩個值都住 `VIEWPORT`,MUST NOT 在消費端手寫 */
+export function viewportSettleMs() { return isIOS() ? VIEWPORT.SETTLE_IOS_MS : VIEWPORT.SETTLE_MS; }
+
+const _vpSubs = new Set();
+let _vpT = 0;
+let _vpBound = false;
+
+/** 尺寸可能變了 → 重新起算 debounce(resize / 轉向 / 全螢幕進出共用這一支)*/
+export function bumpViewport() {
+  clearTimeout(_vpT);
+  _vpT = setTimeout(() => {
+    _vpT = 0;
+    for (const fn of [..._vpSubs]) {
+      try { fn(); } catch { /* 單一訂閱者出錯不該拖垮其他人(降級,不例外)*/ }
+    }
+  }, viewportSettleMs());
+}
+
+/** 訂閱「尺寸真的定案了」;回傳解除訂閱函式。首次訂閱時才綁三個來源(冪等)*/
+export function onViewportSettled(fn) {
+  _vpSubs.add(fn);
+  if (!_vpBound) {
+    _vpBound = true;
+    window.addEventListener('resize', bumpViewport);
+    window.addEventListener('orientationchange', bumpViewport);
+    window.screen?.orientation?.addEventListener?.('change', bumpViewport);
+  }
+  return () => _vpSubs.delete(fn);
+}
+
+/** 直式/橫式判定並掛 class(當場);尺寸那一半交給 `bumpViewport` 的 debounce */
 function syncOrientation() {
   const portrait = window.innerHeight >= window.innerWidth;
   const b = document.body;
   const was = b.classList.contains('ori-portrait');
   b.classList.toggle('ori-portrait', portrait);
   b.classList.toggle('ori-landscape', !portrait);
-  if (was !== portrait) {
-    // iOS 轉向後 innerWidth/Height 要一兩幀才穩:延後補送 resize,避免畫布拉伸
-    cancelAnimationFrame(_oriRaf);
-    _oriRaf = requestAnimationFrame(() => setTimeout(() => window.dispatchEvent(new Event('resize')), 120));
-  }
+  // 轉向本身也是一次「尺寸可能變了」:MUST 走同一個 debounce,MUST NOT 自己 rAF + setTimeout
+  // 補送一次合成 resize(那是第二份等待時間,而且它比 iOS 真正需要的短一截)
+  if (was !== portrait) bumpViewport();
 }
 
 let _installed = false;
@@ -802,6 +856,7 @@ export class TouchControls {
     this._fireArm = false;    // 本次按壓是「雙擊的第二點」⇒ 按久或拖動就開火
     this._lookFire = false;   // 本手勢目前正在開火(放開才收)
     this._held = new Map();   // pointerId → act(按住型搖桿鈕:A 射擊 / R 狙擊 / ZR 鎖定 / B 跳躍 / ZL 下降)
+    this._tap = new Map();    // pointerId → 待定案的點擊型按壓 { act, el, x, y, t }(見 _bindButtons)
     // 兩支類比搖桿共用同一份判定(_bindStick):移動的推杆量餵 axis,視角的推杆量餵每幀轉速。
     this.moveStick = null;
     this.lookStick = null;
@@ -922,15 +977,18 @@ export class TouchControls {
    * 玩家得靠搖桿的 ⊟ 商店買升級(收掉就等於卡死在倒數畫面)。
    */
   /**
-   * 每幀入口(game.js 主迴圈呼叫)。**兩件事只有這一個縫**:
+   * 每幀入口(game.js 主迴圈呼叫)。**三件事只有這一個縫**:
    *   ① 疊層開關 → 收起/放回整層(見 syncBlocked)
    *   ② 視角搖桿積分 → 推杆量 × 轉速 × dt 疊進 `_applyLook`
+   *   ③ 「按住多久」類的判定 → 空處手勢開火(`_tickLookFire`)與點擊型鈕逾時(`_tickTap`)
    * 視角搖桿是**持續**輸入(按著就一直轉),故 MUST 在幀迴圈積分,MUST NOT 在 pointermove 裡算
    * ——— 手指不動就收不到事件,視角會停住,那是「拖曳」不是「搖桿」。
+   * ③ 同理:手指按著不動時 pointermove 一筆都不會來。
    */
   tick(dt) {
     this.syncBlocked();
     this._tickLookFire();
+    this._tickTap();
     const st = this.lookStick;
     if (!st || st.mag <= 0 || this._blocked()) return;
     // 響應曲線:小推細膩、推到底才全速(比照主機手把;線性推杆在 FPS 上很難微調)
@@ -1028,8 +1086,24 @@ export class TouchControls {
   }
 
   /* ---- 動作鈕 ---- */
+  /**
+   * 兩類鈕、兩條規則:
+   *   **按住型**(`HOLD`:A 射擊 / R 狙擊 / ZR 鎖定 / B 跳躍 / ZL 下降)—— 按下即送 `act↓`、
+   *     放開送 `act↑`。「按住」本身就是語意,MUST NOT 拿點擊判定去閘它(拇指在射擊中微微滑動
+   *     是常態,判成「不是點擊」就會在交火中途停火)。
+   *   **點擊型**(其餘全部:商店 / 地圖 / 招式 / 小招 / 大招 / 填彈 / 換機 / HOME / 全螢幕 / 陀螺 / 左手)——
+   *     **一次點擊 = 距離 + 時間**(2026-08-16,`docs/anime_style_plan.md` ⑧-1):
+   *     按下只亮鈕面,派發等到**放開**才定案,而且位移 MUST ≤ `LOOK.TAP_SLOP_PX`、
+   *     時長 MUST ≤ `LOOK.TAP_MS`,`pointercancel`(系統手勢接管)一律不算。
+   *
+   * 為什麼點擊型不能在 `pointerdown` 就派發:那條路徑**沒有機會反悔**。手指從搖桿邊緣滑出去、
+   * 或落指落在鈕上才發現想按的是隔壁,舊制當場就送出去了 —— 症狀是「我沒按商店它自己開了」,
+   * 而且完全不會留下任何錯誤訊息。代價是點擊延遲一個抬指(數十毫秒),與所有原生介面一致。
+   *
+   * 時間那一半 MUST 在**幀迴圈**判定(`_tickTap`):手指按著不動就收不到 `pointermove`,
+   * 只在放開時檢查的話,鈕面會亮著等玩家抬指才熄 —— 與 `_tickLookFire` 同一條理由。
+   */
   _bindButtons() {
-    // 按住型:A 射擊 / R 狙擊(長按 = 施放招式,一般模式小招 / 狙擊模式大招)/ ZR 鎖定目標 / B 跳躍(蓄力跳)/ ZL 下降
     const HOLD = new Set(['fire', 'aim', 'jump', 'dive', 'lock']);
     this._onBtnDown = (e) => {
       const el = e.target.closest?.('[data-act]');
@@ -1041,20 +1115,32 @@ export class TouchControls {
       if (el.classList.contains('off') && act !== 'gyro') return;
       e.preventDefault();
       e.stopPropagation();
+      // 觸覺與鈕面**仍在按下當下**給(回饋要先於動作;點擊型只是把「動作」延到放開)
       this._haptic(act === 'fire' ? 6 : 10);
-      if (this._local(act, el)) return;               // 觸控層自己的鈕(陀螺/全螢幕/左手)
+      el.classList.add('press');
       if (HOLD.has(act)) {
         this._held.set(e.pointerId, act);
-        el.classList.add('press');
         this.client._cmd(act, true);
         capture(el, e.pointerId);
       } else {
-        el.classList.add('press');
-        this.client._cmd(act, true);
-        setTimeout(() => el.classList.remove('press'), 110);
+        this._tap.set(e.pointerId, { act, el, x: e.clientX, y: e.clientY, t: performance.now() });
       }
     };
+    // 拖走就取消:距離那一半只有在 pointermove 上判得到。`_tap` 空的時候直接早退 ——
+    // 這條委派掛在 document 上,拖曳視角的每一筆 move 都會經過。
+    this._onBtnMove = (e) => {
+      if (!this._tap.size) return;
+      const p = this._tap.get(e.pointerId);
+      if (p && !this._tapNear(p, e.clientX, e.clientY)) this._dropTap(e.pointerId, p);
+    };
     this._onBtnUp = (e) => {
+      const p = this._tap.get(e.pointerId);
+      if (p) {
+        this._tap.delete(e.pointerId);
+        const el = p.el;
+        setTimeout(() => el.classList.remove('press'), 110);   // 最短亮燈時間(同舊制)
+        if (this._tapOk(p, e) && !this._local(p.act, el)) this.client._cmd(p.act, true);
+      }
       const act = this._held.get(e.pointerId);
       if (!act) return;
       this._held.delete(e.pointerId);
@@ -1064,8 +1150,36 @@ export class TouchControls {
     };
     // 委派在 document 上:搖桿鈕與 #civPrompt 裡的平民鈕共用同一條派發路徑
     document.addEventListener('pointerdown', this._onBtnDown, true);
+    document.addEventListener('pointermove', this._onBtnMove, true);
     document.addEventListener('pointerup', this._onBtnUp, true);
     document.addEventListener('pointercancel', this._onBtnUp, true);
+  }
+
+  /** 位移還在「輕點」容差內嗎(門檻與空處輕點同一組,見 LOOK.TAP_SLOP_PX 那段註解)*/
+  _tapNear(p, x, y) { return Math.hypot(x - p.x, y - p.y) <= LOOK.TAP_SLOP_PX; }
+
+  /** 這一次按壓算不算一次點擊:取消的不算、拖走的不算、按太久的不算 */
+  _tapOk(p, e) {
+    return e.type !== 'pointercancel' && this._tapNear(p, e.clientX, e.clientY)
+      && performance.now() - p.t <= LOOK.TAP_MS;
+  }
+
+  /** 放棄一個待定案的按壓(熄燈 + 除帳);拖走與逾時共用這一支 */
+  _dropTap(id, p) {
+    p.el.classList.remove('press');
+    this._tap.delete(id);
+  }
+
+  /**
+   * 點擊型鈕的**時間**那一半:按著不動收不到 `pointermove` ⇒ MUST 在幀迴圈判定。
+   * 逾時當場熄燈 —— 玩家看得到「這一下沒被算成點擊」,而不是抬指才發現什麼都沒發生。
+   */
+  _tickTap() {
+    if (!this._tap.size) return;
+    const now = performance.now();
+    for (const [id, p] of this._tap) {
+      if (now - p.t > LOOK.TAP_MS) this._dropTap(id, p);
+    }
   }
 
   /** 直式持握提示:每場只提示一次(轉成橫式即自動收),點一下也收 */
@@ -1211,6 +1325,7 @@ export class TouchControls {
     }
     for (const act of this._held.values()) this.client._cmd(act, false);
     this._held.clear();
+    this._tap.clear();      // 待定案的點擊一律作廢:收起整層後收不到 pointerup(同 _held)
     document.querySelectorAll('[data-act].press').forEach((n) => n.classList.remove('press'));
   }
 
@@ -1236,8 +1351,10 @@ export class TouchControls {
       st.el.removeEventListener('pointercancel', st.onUp);
     }
     document.removeEventListener('pointerdown', this._onBtnDown, true);
+    document.removeEventListener('pointermove', this._onBtnMove, true);
     document.removeEventListener('pointerup', this._onBtnUp, true);
     document.removeEventListener('pointercancel', this._onBtnUp, true);
+    this._tap.clear();
     if (this.layer) this.layer.hidden = true;
   }
 }
