@@ -143,7 +143,38 @@ const jointDotF = (joints) => (x, y, z) => {
   m.position.set(x, y, z);
   joints.add(m);
 };
+/**
+ * 陀螺穩定名冊(`W.stab`)—— 逐幀把這些節點的**世界**姿態鎖回「機體航向 × 出廠當下的偏航」,
+ * 消費端只有 `locomotion.stepStab` 一支。用途是「掛在會動的骨頭上、但**必須**保持水平朝前」
+ * 的機構(t11 的肩甲武器台:2026-08-15 使用者「武器一律掛在肩甲上方,**始終**轉向前方」)。
+ *
+ * 偏航基準 `q0` 在**這裡**量一次,不是逐機檔手寫:
+ *   ㋐ 量的是節點自己出廠當下的世界 +z 在水平面上的方位角 ⇒ 地面型(擺正)恆 0、
+ *      飛行型(t11_flight 已把樞軸反解成純偏航 sx·Λ)恆 Λ —— **兩態各自對**,而逐機檔
+ *      一格參數都不必傳。手寫一個角度的話,改後掠角之後地面型與飛行型會有一個開始歪。
+ *   ㋑ 只取偏航:出廠姿態裡的俯仰/滾轉就是要被穩定掉的東西(留著 = 沒有穩定)。
+ * 參考框取單位根 `g`(只帶機體航向;`tilt`/`hips` 的俯仰壓坡都在它**之下**)⇒ 穩定節點
+ * 因此也不吃壓坡與懸停抖動 = 使用者的「肩甲平面保持平行地面」。
+ */
+function stabList(g, nodes) {
+  if (!nodes || !nodes.length) return null;
+  g.updateMatrixWorld(true);
+  const q = new THREE.Quaternion(), z = new THREE.Vector3();
+  const AY = new THREE.Vector3(0, 1, 0);
+  return nodes.map((n) => {
+    n.getWorldQuaternion(q);
+    z.set(0, 0, 1).applyQuaternion(q);
+    return {
+      g: n, ref: g,
+      q0: new THREE.Quaternion().setFromAxisAngle(AY, Math.atan2(z.x, z.z)),
+      // 逐幀暫存(locomotion.js 不 import three ⇒ 四元數由這一端配;逐節點各一組 = 逐幀零配置)
+      qa: new THREE.Quaternion(), qb: new THREE.Quaternion(),
+    };
+  });
+}
+
 function finishRig(g, rig, W, K, H, D, ctx, F, spec) {
+  rig.stab = stabList(g, W.stab);
   if (D.extra) D.extra(ctx, F, Object.assign(rig, { heavy: { glow: [], pivot: [] } }));
   // 發光強度旋鈕:整棵樹的 emissiveIntensity ×accentF(在記錄 glow base 之前套用)
   if (K.accentF !== 1) g.traverse((o) => {
@@ -419,9 +450,11 @@ function forgeQuadMech(spec, D, opts = {}) {
  * 與 8 個變形者飛行型共用本鷹架與同一個管理頁。
  *
  * 逐機幾何仍全住 mechs/<key>.js:
- *   D.air = { tiltY, bob, top, level?, insect?, span? }(公尺/弧度;語意同 models.js 那三支)
+ *   D.air = { tiltY, bob, top, level?, insect?, span?, pitchTop? }(公尺/弧度;語意同 models.js 那三支)
  *     tiltY 壓坡樞軸離地高(= rig.tiltY0,浮沉基準)/ level 定翼機(巡航不低頭,MUST 見
- *     stepAerial 的 rig.level 分支)/ insect 昆蟲震翅(高頻 8 字軌跡,與鳥類撲翼不同支)
+ *     stepAerial 的 rig.level 分支)/ insect 昆蟲震翅(高頻 8 字軌跡,與鳥類撲翼不同支)/
+ *     pitchTop 滿速前傾角(省略 = 0.2;「靜止直立、移動前傾」MUST 走這一格,MUST NOT 把
+ *     前傾角寫死在逐機檔的機身群組上 —— 那樣靜止時也一直低著頭)
  *   D.body(c, tilt)                     機身/艙體(必填)
  *   D.lift(c, tilt) → {                 升力系統(擇一或混用)
  *     rotors: [Group…]                    自轉槳盤(展示台/戰場同吃 userData.spin)
@@ -469,6 +502,7 @@ function forgeAirMech(spec, D, opts = {}) {
     kind: 'aerial', tilt, tiltY0: A.tiltY ?? 1.3,
     bob: A.bob ?? 0.06, top: A.top ?? 30,
     level: A.level ? 1 : 0, insect: A.insect ? 1 : 0,
+    pitchTop: A.pitchTop,          // 滿速前傾角(rad;省略 ⇒ stepAerial 的 0.2 = 逐位元同舊制)
     wings: L.wings || null, jets: L.jets || null, rotors: L.rotors || null,
     thrusters: L.thrusters || [], vents: L.vents || [],
     tailSegs: tailSegs || null,

@@ -16,7 +16,7 @@ export default {
   gait: { strideF: 1.35, bob: 0.13, sway: 0.1, top: 7, armBase: 0.1 },
   moveSig: { poise: 0.42, idleF: 0.68, idleA: 1.4, launch: 0.08, spool: 0.8, brake: 0.18, settle: 1.7 },
   castSig: { omni: 'stomp', dir: 'jab' },
-  doc: [['head', '**等腰直角三角形**塔身(稜柱;尖端朝機首 = 飛行型的 B-2 機鼻)+兩腰上的並排雙觀察窗(一格裂痕貼膠帶)+帶簷頂圓塔(旋成體)+環列觀察鏡+鞭天線'], ['chest', '梯形鉚接大胸甲(楔台上寬下收)+六角面胸前板(稜柱斜切)+鉚釘列+豎直進氣柵+防滾籠'], ['rack ×2', '欄杆貨架:帆布捆(旋成體圓捆×2)+麻袋+油桶(帶箍環)+備胎(圓環體)+吊掛貨櫃+蜂群發射巢+無線電'], ['hips', '寬扁楔台骨盆+五角前擋板(稜柱)+後腰雙配重塊(警示條+圓環吊環)'], ['leg ×2', '短粗鉚接腿:楔台疊板(下段外擴)+圓筒膝鼓(旋成體)+六角螺栓蓋+大平足(楔台+趾板)'], ['arm ×2', '圓筒大肩甲(旋成體鼓+緣列鉚釘)+**肩甲頂武器硬點**+臂側主翼板(薄刃鰭片+前緣識別條)+外露液壓'], ['hand ×2', '梯形拳+旋翼盤圓盾:碟形盤面(旋成體)+輪緣環(圓環體)+槳轂圓頂+中心孔環+四徑肋(一肋一件)'], ['武裝', '**兩具都掛在肩甲上方**:右肩雙聯機槍莢(旋成體砲管帶膛口套)+左肩集束布撒器(楔台斜切箱+2×3 發光膛口+尾纜束);轉向層與武器本體分兩層(重武器樞軸每幀回 rest)']],
+  doc: [['head', '**等腰直角三角形**塔身(稜柱;尖端朝機首 = 飛行型的 B-2 機鼻)+兩腰上的並排雙觀察窗(一格裂痕貼膠帶)+帶簷頂圓塔(旋成體)+環列觀察鏡+鞭天線'], ['chest', '梯形鉚接大胸甲(楔台上寬下收)+六角面胸前板(稜柱斜切)+鉚釘列+豎直進氣柵+防滾籠'], ['肩甲(貨運掛架)×2', '**使用者說的肩甲就是這一片**:大平板托盤(頂面內舷端 = 武器硬點 wMt±)+欄杆+帆布捆(旋成體圓捆×2)+麻袋+油桶(帶箍環)+備胎(圓環體)+吊掛貨櫃+蜂群發射巢+無線電'], ['hips', '寬扁楔台骨盆+五角前擋板(稜柱)+後腰雙配重塊(警示條+圓環吊環)'], ['leg ×2', '短粗鉚接腿:楔台疊板(下段外擴)+圓筒膝鼓(旋成體)+六角螺栓蓋+大平足(楔台+趾板)'], ['arm ×2', '圓筒肩關節護甲(旋成體鼓+緣列鉚釘;**不是肩甲**,不掛武器)+臂側主翼板(薄刃鰭片+前緣識別條)+外露液壓'], ['hand ×2', '梯形拳+旋翼盤圓盾:碟形盤面(旋成體)+輪緣環(圓環體)+槳轂圓頂+中心孔環+四徑肋(一肋一件)'], ['武裝', '**兩具都坐在肩甲板面上、恆朝航向**:右架雙聯機槍莢(旋成體砲管帶膛口套)+左架集束布撒器(楔台斜切箱+2×3 發光膛口+尾纜束);轉向層與武器本體分兩層(重武器樞軸每幀回 rest)']],
   head(c, h) {
     const { PAL, accent, G } = c;
     // ── 塔身 = **等腰直角三角形**的垂直稜柱(2026-08-14 使用者:「頭部改成等腰直角三角形」)──
@@ -157,12 +157,29 @@ export default {
     bk2.rotation.y = 0.12;                                                       // 第二箱(略歪)
     bxF(ch, 0.54, 0.03, 0.05, 0.08, top + 0.12, -0.4 * G, 0x3a3f45);             // 貨箱綁帶
     for (const sx of [-1, 1]) {                                                  // 雙側貨運掛架(滿載;長軸朝外 = 2D 的側伸托盤)
+      // ── 肩甲 = 這一片(2026-08-15 使用者附圖:圈的就是它)──
+      // 程式裡的歷史名字是「貨運掛架」,但使用者看到的是**肩上那塊大平板**,三條要求全落在它身上:
+      //   ①「武器一律掛在肩甲**上方**」⇒ 兩具武器的硬點 `wMt±` 坐在托盤**頂面**(下方那一段);
+      //   ②「變形時肩甲**平面保持平行地面**」+「**水平旋轉至平行雙臂**」⇒ 飛行型把整個 rack
+      //      反解成**純偏航**(t11_flight;地面型本來就是水平的,一格不動);
+      //   ③「**始終**轉向前方」⇒ 武器層登記進 `rig.stab` 逐幀鎖回機體航向(mount 那一段)。
+      // ⚠ 肩關節上那顆圓筒鼓**不是**肩甲(2026-08-15 標色圖裁決)—— 它只是關節護甲。
       const rack = new THREE.Group();
+      rack.name = sx > 0 ? 'rackR' : 'rackL';                                    // 取件錨(飛行型反解 + mount 取硬點)
       rack.position.set(sx * (d.shoulderX * 1.35), top + 0.16, 0);
       rack.rotation.z = sx * 0.06;
       ch.add(rack);
       if (sx > 0) c.rackR = rack; else c.rackL = rack;                           // mount 消費(不靠 children 掃描)
-      tboxF(rack, { w0: 1.3, d0: 0.6 * G, w1: 1.24, d1: 0.55 * G, h: 0.13 }, sx * 0.28, 0, 0, PAL.mid, { metalness: 0.6 });  // 掛架托盤(楔台,往外伸)
+      const TRAY_H = 0.13;
+      // 托盤另存一份參照:飛行型後掠之後要拿**它**(不是整個 rack)量離翼面多高 ——
+      // 整個 rack 的包圍盒含吊掛貨櫃,底面在托盤下方 0.5m,拿它算會把肩甲抬到半空中。
+      rack.userData.tray = tboxF(rack, { w0: 1.3, d0: 0.6 * G, w1: 1.24, d1: 0.55 * G, h: TRAY_H }, sx * 0.28, 0, 0, PAL.mid, { metalness: 0.6 });  // 肩甲托盤(楔台,往外伸)
+      // 武器硬點:托盤**頂面**、擺在**內舷端**(那一段整條沒有貨物 ⇒ 武器真的坐在板上,
+      // 不必為了閃開帆布捆而架在半空中)。高度由托盤自己的厚度推導(頂面 = h/2),MUST NOT 手寫。
+      const wmt = new THREE.Group();
+      wmt.name = sx > 0 ? 'wMtR' : 'wMtL';
+      wmt.position.set(sx * -0.20, TRAY_H / 2, 0);
+      rack.add(wmt);
       for (const oz of [-0.32, 0.32]) {
         const rail = cylF(rack, 0.015, 0.015, 1.26, 6, sx * 0.28, 0.17, oz, IRON, { metalness: 0.8 });
         rail.rotation.z = Math.PI / 2;                                           // 前後長欄杆
@@ -248,24 +265,16 @@ export default {
   },
   armUp(c, a, d) {
     const { PAL, accent, G } = c;
+    // 肩關節護甲(2026-08-15 使用者附圖裁決:**這顆鼓不是「肩甲」** —— 使用者說的肩甲是
+    // 雙側那兩片大平板,見 chest() 的 `rackR/rackL`。這一顆退回單純的肩關節護甲,不帶樞軸、
+    // 不掛武器,逐位元同 2026-08-14 的版本)。
     const pau = latheF(a, [[0.0001, -0.18 * G], [0.2 * G, -0.18 * G], [0.27 * G, -0.14 * G], [0.27 * G, -0.04], [0.29 * G, -0.03], [0.29 * G, 0.03], [0.27 * G, 0.04], [0.27 * G, 0.14 * G], [0.2 * G, 0.18 * G], [0.0001, 0.18 * G]],
       12, 0, 0.08, 0, PAL.main, { metalness: 0.6 });
-    pau.rotation.z = Math.PI / 2;                                                // 圓筒大肩甲(旋成體鼓,帶中箍)
+    pau.rotation.z = Math.PI / 2;                                                // 圓筒肩關節護甲(旋成體鼓,帶中箍)
     for (let i = 0; i < 3; i++) {
       const th = 0.5 + i * 2.1;
-      bxF(a, 0.03, 0.03, 0.03, c.sx * 0.19 * G, 0.08 + Math.cos(th) * 0.18, Math.sin(th) * 0.18, PAL.deep, { metalness: 0.7 });  // 肩甲外緣鉚釘
+      bxF(a, 0.03, 0.03, 0.03, c.sx * 0.19 * G, 0.08 + Math.cos(th) * 0.18, Math.sin(th) * 0.18, PAL.deep, { metalness: 0.7 });  // 護甲外緣鉚釘
     }
-    // 武器硬點:肩甲**正上方**(2026-08-15 使用者「武器一律掛在肩甲上方」;舊制掛在雙側貨運
-    // 掛架上)。高度由肩甲鼓自己的剖面推導(鼓心 0.08 + 外緣半徑 0.29G),MUST NOT 手寫 ——
-    // 改 girth 或改鼓的剖面時武器自己跟著坐上去。
-    // ⚠ 掛在**臂**上而不是胸腔:使用者「肩甲貼緊雙臂,連同雙臂旋轉肩關節」⇒ 肩甲與其上的
-    //   武器 MUST 隨臂一起轉(飛行型把整條臂繞自身長軸滾 90° 就是靠這一條把武器一起帶過去)。
-    // 名字是**唯一的取件方式**:`armUp` 拿到的是 `{...baseCtx, sx}` 的**複本**,寫回 c 到不了
-    //   `mount` 那一端(同 m05 的 `wrist±1` 探針錨)。
-    const mt = new THREE.Group();
-    mt.position.set(0, 0.08 + 0.29 * G, 0);
-    mt.name = c.sx > 0 ? 'shMtR' : 'shMtL';
-    a.add(mt);
     cylF(a, 0.05, 0.05, 0.05, 8, 0, 0.4, -0.1, COAL, { metalness: 0.7 });        // 肩頂排氣口
     tboxF(a, { w0: 0.26 * G, d0: 0.3 * G, w1: 0.29 * G, d1: 0.33 * G, h: d.len * 1.0, sz: 0.02 },
       0, -d.len * 0.5, 0, PAL.main, { metalness: 0.6 });                         // 上臂主殼(楔台)
@@ -326,19 +335,26 @@ export default {
       d.g.rotation.z = -sx * Math.PI / 2;                                        // 局部 +y = 朝外
       (c.discs || (c.discs = [])).push({ ...d, sx, hand: g });                   // 飛行型改定向成水平槳盤(t11_flight)
     }
-    // 武裝硬點 = **肩甲上方**(armUp 的 shMtR/shMtL)。轉向層 `sw` 與武器本體**分開兩層**:
-    // 重武器的 `heavyPivot` 每幀把 `piv.rotation` 阻尼回 rest,朝向寫在 piv 上會被它抹掉
-    // (症狀是飛行型的布撒器慢慢自己轉回朝下,而蓄力展開仍然正常)。
+    // 武裝硬點 = **肩甲(那片大平板)頂面**(chest 的 wMtR/wMtL)。轉向層 `sw` 與武器本體
+    // **分開兩層**:重武器的 `heavyPivot` 每幀把 `piv.rotation` 阻尼回 rest,朝向寫在 piv 上
+    // 會被它抹掉(症狀是飛行型的布撒器慢慢自己轉回朝下,而蓄力展開仍然正常)。
     const swivel = (nm) => {
       const sw = new THREE.Group();
       (F.chest.getObjectByName(nm) || F.chest).add(sw);
       (c.wpnSwivels || (c.wpnSwivels = [])).push(sw);   // 飛行型反解成「朝航向」(t11_flight)
       return sw;
     };
-    const swR = swivel('shMtR'), swL = swivel('shMtL');
+    const swR = swivel('wMtR'), swL = swivel('wMtL');
+    // 「**始終**轉向前方」(2026-08-15 使用者)= 轉向層登記成陀螺穩定節點 ⇒ 逐幀把世界姿態
+    // 鎖回機體航向(鷹架 stabList / locomotion stepStab)。飛行型的靜態反解只保證**站著**那一刻:
+    //   ①肩甲跟著胸腔走,而步態每幀在扭腰擺胸;②飛行型還有壓坡/俯仰/懸停抖動。
+    // 兩者都會把槍口帶偏,而畫面上只表現成「武器有點歪」。
+    // ⚠ 穩定的是**轉向層**不是肩甲本身:板該跟著變形走(它要維持 B-2 三角形),
+    //   只有坐在它上面的武器恆定朝前。
+    const stab = [swR, swL];
     // 右肩雙聯機槍莢(輕武器)
     const pod = new THREE.Group();
-    pod.position.set(0, 0.12, 0);              // 機匣半高 ⇒ 底面恰坐在肩甲頂
+    pod.position.set(0, 0.12, 0);              // 機匣半高 ⇒ 底面恰坐在肩甲板面上
     swR.add(pod);
     const ML = 0.85 * K.barrelF;
     tboxF(pod, { w0: 0.32, d0: 0.54, w1: 0.26, d1: 0.46, h: 0.24, sz: -0.05 }, 0, 0, 0, PAL.deep, { metalness: 0.65 });  // 共構機匣(楔台後收)
@@ -353,7 +369,7 @@ export default {
       tboxF(pod, { w0: 0.09, d0: 0.14, w1: 0.07, d1: 0.1, h: 0.18, sz: 0.03 }, ox, -0.2, 0.05, PAL.mid);  // 下垂雙彈匣(楔台)
     // 左肩集束布撒器(重武器):楔台斜切箱 + 2×3 發光膛口 + 俯仰樞軸(蓄力上仰)
     const piv = new THREE.Group();
-    piv.position.set(0, 0.15, 0);              // 布撒箱半高 ⇒ 底面恰坐在肩甲頂
+    piv.position.set(0, 0.15, 0);              // 布撒箱半高 ⇒ 底面恰坐在肩甲板面上
     swL.add(piv);
     tboxF(piv, { w0: 0.44, d0: 0.66, w1: 0.36, d1: 0.54, h: 0.3, sz: 0.06 }, 0, 0, 0, PAL.mid, { metalness: 0.6 });  // 布撒箱(楔台,前緣斜切)
     bxF(piv, 0.34, 0.05, 0.5, 0, 0.17, 0.02, accent, { emissive: accent, emissiveIntensity: 0.7 });  // 頂蓋識別條
@@ -372,7 +388,7 @@ export default {
       ports.push(p);                                                             // 2×3 發光膛口
     }
     return {
-      gunR: null, gunL: null,
+      gunR: null, gunL: null, stab,
       muzzles: { light: { n: lMuz, r: 0.08 }, heavy: { n: ports[1], r: 0.05 } },
       lightGlowM: [lMuz], heavyGlowM: ports,
       heavyPivot: [{ obj: piv, rest: { x: 0, y: 0, z: 0 }, deploy: { x: -0.18, y: 0, z: 0 } }],  // 蓄力上仰、擊發反坐

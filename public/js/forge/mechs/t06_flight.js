@@ -5,6 +5,8 @@
 // 2026-08-13 使用者定案(四條,**取代 2D 定案圖的壓平姿態**):
 //   ①「飛行姿態調整為**直立前傾**」⇒ 舊制那個「身體壓平」的姿態退場(mecha.js gen.sil 的
 //      那一句是 2D 圖的描述,使用者這一輪改了姿態;幾何仍是同一台機的同一批零件)。
+//      **2026-08-15 再修**:「直立」與「前傾」拆成速度的兩端(靜止直立 / 移動前傾),
+//      見下方 PITCH_TOP —— 機身群組自此沒有任何靜態傾角。
 //   ②「**噴射背包要有動畫**」⇒ 背後噴口接 `jetF`(rig.jets ⇒ locomotion stepAerial 依速度
 //      推焰長/亮度/抖焰);舊制那三片「固定不揮動的光翼刃」是純靜態發光片,沒有任何動畫通道。
 //   ③「尾焰噴射尾端生成**凝結雲**」⇒ 焰尾接一團半透明球(觔斗雲意象;一顆球一件、零亂數)。
@@ -18,26 +20,34 @@
 import * as THREE from 'three';
 import { sphF, jetF } from '../geo.js';
 import t06 from './t06.js';
-import { bipedDims, groundCtx, upright } from './_morph.js';
+import { bipedDims, groundCtx } from './_morph.js';
 
-const PITCH = 0.52;           // 直立前傾角(≈30°;使用者定案的飛行姿態)
 const HG = 6.0;               // 地面型的取景高 = 兩態共用的骨架尺度基準
 
+// ── 2026-08-15 使用者定案(姿態改為**速度的函數**)────────────────────────────
+//   「飛行形態**靜止時身體直立**、**移動時身體保持前傾**。」
+//   ⇒ 舊制那個寫死在 `hull.rotation.x` 上的 30° 前傾**退場**:它是靜態的,靜止時也一直
+//     低著頭。前傾改由 `air.pitchTop` 交給 `stepAerial`(rig.tilt 的俯仰,速度 0 ⇒ 恆 0
+//     = 直立;滿速 ⇒ PITCH_TOP)—— 這一台的機身群組因此**沒有任何靜態傾角**,
+//     頭 / 如意棒 / 尾焰的擺位也全部跟著少掉一層反傾補償(它們本來就是身體的一部分)。
+const PITCH_TOP = 0.52;       // 滿速前傾角(≈30°;= 舊制那個靜態角,移動到底時的姿態不變)
+
 // 2026-08-14 使用者:「噴射背包的**尾焰長一點**,方向朝後下,凝結雲剛好落在腳邊。」
-// 2026-08-15 使用者**改制**:「飛行形態靜止時尾焰縮短 1/2,**接近平行身體**,凝結雲減半,
-//   凝結雲**一律放在尾焰末端**。」⇒ 後兩句直接取代 2026-08-14 的「朝後下」與「落在腳邊」。
+// 2026-08-15 使用者**改制**(第二輪):「靜止時的尾焰長度 ×3、移動時 ×2,尾焰一律**平行身體**
+//   (相對身體向下),凝結雲大小全部 ×2。」⇒ 取代同日第一輪的「縮短 1/2 / 凝結雲減半」。
 const FLAME_R = 0.18;
-const FLAME_L = 1.6;                   // 尾焰長(舊值 3.2 —— 縮短 1/2;巡航仍由 stepAerial ×~1.9)
+const FLAME_L = 1.6;                   // 尾焰基準長(兩端倍率另走 lenF,見 lift())
 const FLAME_Y = 0.18;                  // 焰根離噴口的距離(jetF 自 g 的 +y 起算)
-// 噴流朝向:jg 的局部 +y = 噴流方向,而 jg 掛在**反傾錨**上 ⇒ 這一組角就是世界角。
-// 「接近平行身體」= 噴流沿**機體自己的縱軸**往機尾:軀幹繞 x 傾了 PITCH ⇒ 機尾方向
-// = Rx(PITCH)·(0,0,−1) = (0, sin PITCH, −cos PITCH);要 jg 的 +y 落在那裡,
-// Rx(a)·(0,1,0) = (0, cos a, sin a) ⇒ a = PITCH − π/2。**推導不手寫** —— 改飛行姿態角
-// 的時候噴流自己跟著走(手寫一個度數的話,改完 PITCH 尾焰就斜著插出機背)。
-const JET_X = PITCH - Math.PI / 2;     // ⇒ 與機體縱軸平行(舊值 −2.05 = 世界水平下 27.5°)
+// 噴流朝向:jg 的局部 +y = 噴流方向,而 jg 自 2026-08-15 起直接掛在**胸腔**(= 機體自己的框)
+// ⇒ Rx(π) 把 +y 送到機體的 −y = **相對身體向下**,而「一律平行身體」從此是**構造保證**
+// 不是一個算出來的角度:身體怎麼傾(現在還是逐幀變的),焰就怎麼跟著傾。
+// ⚠ MUST NOT 退回舊制的反傾錨 + `PITCH − π/2`:那組角只在「機身傾角是個常數」的時候成立,
+//   而這一輪它已經是速度的函數了(靜止直立、移動前傾)。
+const JET_X = Math.PI;
 const JET_Z = -0.30;                   // 外撇(左右各半,逐邊 ×sx;逐位元同舊值)
+const FLAME_F = { hold: 3, run: 2 };   // 兩端焰長倍率:靜止 ×3 / 移動 ×2(stepAerial 的 j.lenF)
 const CLOUD_R = 0.34;                  // 凝結雲球團基準半徑(團長 ≈ 3.4 × R)
-const CLOUD_F = 0.5;                   // 「凝結雲減半」:整團等比縮(球數與黃金角散布不動)
+const CLOUD_F = 1.0;                   // 「凝結雲大小全部 ×2」:整團等比放大(球數與黃金角散布不動)
 
 /**
  * 觔斗雲:尾焰末端的凝結雲。**一朵雲 = 一顆球一件**(生物/自然多重元件的同一條紀律),
@@ -59,13 +69,13 @@ function condCloud(parent, y0, r, n) {
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
   label: '輕功・飛行型(t06 觔斗雲)', kind: 'air', height: HG,
-  air: { tiltY: 3.3, bob: 0.05, top: 30, span: 2.4 },
+  air: { tiltY: 3.3, bob: 0.05, top: 30, span: 2.4, pitchTop: PITCH_TOP },
   moveSig: { hover: 0.30, hoverF: 0.7, hoverA: 0.15, surge: 0.70, flare: 0.85, bank: 0.62 },
   castSig: { omni: 'dance', dir: 'swing' },
   doc: [
-    ['直立前傾軀幹', '地面型胸腔/骨盆(t06.chest/pelvis)整組前傾 30° —— 使用者定案的飛行姿態'],
-    ['頭部', '地面型猴首(t06.head:金箍/紫金冠/火眼金睛)+ 反傾中介 Group 平視航向'],
-    ['噴射背包 ×2', '地面型噴口與噴焰翎(t06 的 jetPods 錨)+ jetF 動畫尾焰(長 1.6、**與機體縱軸平行**;推力 ∝ 速度,靜止也點著)'],
+    ['軀幹(靜止直立 / 移動前傾)', '地面型胸腔/骨盆(t06.chest/pelvis)零靜態傾角;前傾由速度驅動(air.pitchTop 30° @ 滿速)'],
+    ['頭部', '地面型猴首(t06.head:金箍/紫金冠/火眼金睛)—— 直接掛在胸腔上隨身體俯仰'],
+    ['噴射背包 ×2', '地面型噴口與噴焰翎(t06 的 jetPods 錨)+ jetF 動畫尾焰(**恆平行身體、相對身體向下**;靜止 ×3、移動 ×2,靜止也點著)'],
     ['觔斗雲 ×2', '焰尾凝結雲:半透明球團(一顆一件、黃金角散布、零亂數);掛在**焰的錐尖**上 ⇒ 焰隨推力伸縮時雲一律跟在尾焰末端'],
     ['長臂 ×2', '掌行長臂(t06.armUp/armFore/mount 的掌行前腳)後掠收攏'],
     ['雙腿', '同一組腿件併攏後伸(t06.thigh/shin/foot;足底噴口朝後)'],
@@ -76,9 +86,10 @@ export default {
   body(c, t) {
     const dim = bipedDims(t06, HG);
     groundCtx(c, dim);
+    // 機身群組**沒有靜態傾角**(2026-08-15 使用者「靜止直立 / 移動前傾」)——
+    // 俯仰整份交給 stepAerial 的 rig.tilt(air.pitchTop),這裡只剩位置。
     const hull = new THREE.Group();
     hull.position.set(0, -0.35, 0);
-    hull.rotation.x = PITCH;
     t.add(hull);
 
     const hips = new THREE.Group();
@@ -88,8 +99,13 @@ export default {
     hips.add(chest);
     t06.chest(c, chest, { shoulderX: dim.shoulderX, shoulderY: dim.shoulderYl, waistY: dim.waistYl });
     c._chest = chest;                          // lift() 的噴射包掛回同一個胸腔框
-    // 猴首:反傾平視航向(前傾飛行時頭仍看得到前方)
-    t06.head(c, upright(chest, PITCH, 0, dim.headYl, 0.04));
+    // 猴首:直接掛在胸腔上 —— 舊制那顆反傾中介 Group 是為了抵銷**靜態**的 30° 前傾,
+    // 而前傾自 2026-08-15 起是速度的函數(靜止時本來就直立)⇒ 抵銷一個常數只會讓
+    // 靜止時的頭往後仰 30°。移動時頭與身體一起前傾 = 使用者的「身體保持前傾」。
+    const hd = new THREE.Group();
+    hd.position.set(0, dim.headYl, 0.04);
+    chest.add(hd);
+    t06.head(c, hd);
 
     // ---- 長臂 ×2:後掠收攏(掌行機的長臂在飛行時貼身)----
     const hands = {};
@@ -136,8 +152,9 @@ export default {
     c._W = t06.mount(c, { chest, handL: hands[-1], handR: hands[1], hips });
     const staff = c._W.wpn.light.ref;
     staff.position.set(0.16, dim.shoulderYl * 0.62, -0.46 * dim.G);
-    // 棒身沿局部 +y ⇒ Rx(π/2 − PITCH) 把它送到世界 +z(航向):前傾多少就補回多少
-    staff.rotation.set(Math.PI / 2 - PITCH, 0, 0.04);
+    // 棒身沿局部 +y ⇒ Rx(π/2) 把它送到機體的 +z(航向)。機身群組已無靜態傾角 ⇒ 這裡
+    // 不再補償前傾:棒跟著身體一起俯仰(它是背在背上的,本來就該跟著走)。
+    staff.rotation.set(Math.PI / 2, 0, 0.04);
 
     // ---- 多節長尾:繞上背、尾端熔核砲朝前瞄準(t06.extra 的同一條鏈與同一門砲)----
     // 尾長固定 2.8m,要把梢端轉到朝前就得轉滿 ≈π ⇒ 弧半徑恆 ≈0.9m(比軀幹窄)。
@@ -158,15 +175,17 @@ export default {
     const { accent } = c;
     const jets = [];
     for (const p of c.jetPods || []) {
-      // 錨點吃地面型的噴口座標,但**朝向另算**:噴焰翎是站姿的上揚裝飾,飛行的噴流要朝
-      // 世界後下方。反傾 Group 先把座標系轉回世界對齊,朝向才不會跟著軀幹前傾一起被轉走。
-      const pod = upright(c._chest, PITCH, p.x, p.y, p.z);
+      // 錨點吃地面型的噴口座標,但**朝向另算**:噴焰翎是站姿的上揚裝飾,飛行的噴流要沿
+      // 機體自己的縱軸往下。掛在**胸腔**(機體框)之下 ⇒「一律平行身體」是構造保證,
+      // 身體俯仰多少焰就跟著多少(舊制的反傾錨是為了朝**世界**方向,那已經不是這一輪的要求)。
       const jg = new THREE.Group();
-      jg.rotation.set(JET_X, 0, JET_Z * p.sx);   // 噴流朝世界後下方(檔頭 JET_X)
-      pod.add(jg);
+      jg.position.set(p.x, p.y, p.z);
+      jg.rotation.set(JET_X, 0, JET_Z * p.sx);   // 噴流朝機體的 −y = 相對身體向下(檔頭 JET_X)
+      c._chest.add(jg);
       const fl = jetF(jg, FLAME_R, FLAME_L, 0, FLAME_Y, 0, accent);
       fl.g.rotation.x = Math.PI;                 // jetF 錐尖朝 −y ⇒ 翻正朝 +y = 噴流方向
       fl.idle = true;                            // 靜止也點著(雲掛在焰尾 ⇒ 熄火連雲一起不見)
+      fl.lenF = FLAME_F;                         // 靜止 ×3 / 移動 ×2(stepAerial 兩端倍率)
       jets.push(fl);
       // 觔斗雲:2026-08-15 使用者「**一律放在尾焰末端**」⇒ 掛在焰的**錐尖**上
       //(jetF 的錐體佔 `fl.g` 局部 [−len, 0] ⇒ 尖端就是 −FLAME_L)。
@@ -180,7 +199,7 @@ export default {
       const cg = new THREE.Group();
       cg.position.y = -FLAME_L;                  // 錐尖
       cg.rotation.x = Math.PI;                   // 讓 condCloud 的 +y 順著噴流繼續往外長
-      cg.scale.setScalar(CLOUD_F);               // 「凝結雲減半」(球數與黃金角散布不動)
+      cg.scale.setScalar(CLOUD_F);               // 「凝結雲大小全部 ×2」(球數與黃金角散布不動)
       fl.g.add(cg);
       condCloud(cg, -CLOUD_R * 1.2, CLOUD_R, 7);
     }
