@@ -1,549 +1,76 @@
-# Visual Upgrade Plan — Cel Pipeline, Object Detail, Verification
+# 畫面升級計畫(2026-08-03 那一輪)—— **已結案,只留編號字典與未量項**
 
-Derived from a study of sakura-crossing (`C:/Users/user/Documents/study/sakura-crossing`).
-Method captured in six skills under `.claude/skills/` — read those for the how, this file
-is the what:
+> **這一輪的每一項都已出貨。** 設計與禁令住 `CLAUDE.md` §2.1 F(賽璐璐管線 / 後製 / 描邊寬度 /
+> 陰影偏色 / 風化場 / 零件抖動 / 語意化地標 / 世界文字)與各 `tools/audit_*.mjs` 檔頭;
+> 逐檔改了什麼住 git 歷史。**本檔只留兩件事**:①程式碼註解引用的 P/V 編號對照表
+> ②當輪明講「還沒量」而至今仍沒量的項目。
+>
+> ⚠ **下一輪的畫面工作看 [`anime_style_plan.md`](anime_style_plan.md),不是本檔。**
+> 本檔的做法有數處已被 2026-08-15 的定案取代(見末節「已被取代」),照抄會走回頭路。
 
-| Section | Skill |
+## 1. 編號字典(source 註解引用的就是這些)
+
+| 編號 | 題目 | 現在住哪 |
+|---|---|---|
+| P0-A | 漸層天空穹頂 + 雲 | `environment.js` `skyStops`/`makeSkyDome`/`makeClouds` |
+| P0-B | 地形賽璐璐 + 色階梯 + 屬性場 | `terrain.js`(`envMat`/`GROUND_TONES`/`paintTerrainTones`)+ `field.js` |
+| P0-C | 螢幕空間勾線 pass | `postfx.js` `INK`;§2.1「後製管線」 |
+| P1-A | ramp 家族(2/3/4/soft) | `toon.js RAMPS`/`toonGradient(bands)`;A14 |
+| P1-B | 陰影偏色搬進 ramp 查表 | `toon.js` `shadowTintRGB` + `RAMP_HOOK`;§2.1「陰影偏色」 |
+| P1-C | 調色 + FXAA | `postfx.js`;`antialias` 只剩 `?post=0` 退路 |
+| P1-D | 描邊寬度(世界寬 vs 螢幕下限取大) | `toon.js outlineMaterial`;§2.1「描邊寬度」 |
+| P2-A | 風化屬性場 | `field.js bakeFieldTexture` → `toon.setWeatherField` → `celWeatherF()` |
+| P2-B | 零件級細節抖動 | `xform.js partId`/`partJitter`;**建物刻意不吃**(見下) |
+| P2-C | 語意化地標(擺在兵線/重生點/建築**旁邊**) | `beacons.js` + `biomes.placeBeacons` |
+| V-A | 固定機位定場鏡頭組 | `tools/shot_scene.mjs`(`--ink=0/--grade=0/--post=0/--dof=0`) |
+| V-B | 兵線與結構可通行泛洪 | `tools/audit_traverse.mjs` + `tools/venue_field.mjs` |
+| V-C | 數值掃描移出 Playwright | **部分做不到**,見 §3 |
+| V-D | 淨空數值檢查 | `audit_traverse.mjs`「淨空」段 |
+| V-E | 世界文字 | `worldtext.js` + `biomes.buildWorldSigns`;A37 |
+
+## 2. 三個「當時決定不做」的理由(仍然成立,不要回頭補完)
+
+- **P2-B 刻意排除建物**:建物的足跡**就是**它的碰撞盒(`_losGrid` 上傳的有向盒與網格擠出用的是
+  同一份 `hw2`/`hd2`),沒有餘裕可花 ⇒ 抖它就是 A30 的「看得見打不到」。障礙與地標另有宣告半徑
+  (`HAZARDS[].r`/`MEGALITHS[].col.r`)且幾何住在裡面,所以它們吃得起 —— 而且兩個消費端都**抖完
+  實測**水平外廓,頂出就把那一件退回原樣。
+- **P2-C 的「旁邊」是使用者定案**(2026-08-03:兵線 / 重生點 / 建築單位**旁邊**,周遭看得見即可)。
+  這一句把「會不會擋兵線」從「稽核要去發現的事」變成「構造保證」—— 落點一律過
+  `areaFree(blocked, …, foot + PAD)`,而 `blocked` 本來就帶兵線走廊 17m / 塔位 30m / 主堡 70m。
+  改回「放進兵線裡」就要 Overpass + 高程磚才驗得動(V-B 才有的東西)。
+- **OSM 建物立面不當第四種錨點**:建物排在植被之後,錨在它上面的 pass 得晚跑,會失去
+  `blockArea` 那層保護(樹會長穿電塔)。
+
+## 3. V-C:數值那一半離不開 Playwright,這是結論不是缺工
+
+掃描 ②~⑤(洞口漏天 / 斷面遮擋 / 透視破洞 / 洞內天空佔比)是對**真網格**打
+`THREE.Raycaster`,而 three 走 CDN importmap、A2 禁止進 `package.json` ⇒ Node 沒有 three;
+用手寫幾何近似等於**把受測物再實作一次**(§2.1),那種稽核會永遠全綠。掃描 ① 同理:覆蓋段的洞
+是**打洞的三角形**,不是壓平的高度場(`carveTunnels` 只看得到開放補集)。
+
+真的搬進 Node 的是更要緊的那一半:`venue_field.mjs makeCarvedField` 直接執行
+`terrain.js carveTunnels` **原文**,`audit_traverse` 因此泛洪在**開挖後**的地面上。
+淨空(V-D)刻意仍讀**天然**地形 ——「這座山蓋不蓋得住頂板」問的是沒被挖過的山。
+
+## 4. 仍然沒量的(當輪自己列的驗收面,至今未關)
+
+- **30 秒穩態幀時間,桌機 + 觸控,前後對照**。整條後製鏈的可行性是由這個數字決定的,而它從
+  2026-08-03 起就掛在那裡。`anime_style_plan.md` 每一項新 pass 都會再壓一次同一條線。
+- `hazards.js` / `biomes.js` / `models.js` 裡**會寫深度的半透明件**沒有逐一查過(`vfx.js` /
+  `castfx.js` 已確認乾淨)—— 勾線 pass 讀深度緩衝,寫深度的粒子/光束會描成雜點。
+- 設定頁樣品(`matsample.js`)在開著的時候多吃一個 WebGL context。
+
+## 5. 已被 2026-08-15 定案取代(**照本檔做 = 走回頭路**)
+
+| 本檔原文 | 現況 |
 |---|---|
-| P0-A, P0-C, P1-A…D | `cel-shading-pipeline` |
-| P0-B, P2-A, P2-B, P2-C | `procedural-object-detail` |
-| V-A | `headless-3d-inspection` |
-| V-B | `walkable-level-verification` |
-| V-C, V-D | `heightfield-terrain-integrity` + `headless-3d-inspection` |
-| V-E (declined) | `procedural-canvas-textures` |
-
-**Scope.** Sections P0–P2 are **presentation layer only** (原則 4): no authoritative
-geometry, collision, ballistics, LOS or balance values change, so `npm run bal` and the
-server audits are unaffected (㋒) — adjacent audits must still pass.
-Section V adds **offline verification tooling**; it changes no runtime code at all, but it
-reads the real `solidResolve` / `heightAt` / `rayTerrain` seams, so it must import them
-rather than reimplement them.
-
-Date 2026-08-03. **Frame time not yet measured**; every performance claim below is an
-open item, not a conclusion.
-
----
-
-## Execution status (2026-08-03)
-
-| Item | Status | Where |
-|---|---|---|
-| V-A fixed shot set | **done** | `tools/shot_scene.mjs` (derived camera list, `--ink=0/--grade=0/--fxaa=0/--post=0`) |
-| V-B traversability audit | **done** | `tools/audit_traverse.mjs` + `tools/venue_field.mjs` (extracted Node harness) |
-| V-D clearance | **done** | `audit_traverse.mjs` 「淨空」 section |
-| P0-A gradient sky | **done** | `environment.js skyStops`/`makeSkyDome`/`makeClouds` |
-| P0-B terrain cel + tone ladder | **done** | `terrain.js` (`envMat`, `GROUND_TONES`, `paintTerrainTones`) + `field.js` |
-| P0-C ink pass | **done** | `postfx.js` — thresholds measured with V-A, not guessed |
-| P1-A ramp family | **done** | `toon.js RAMPS`/`toonGradient(bands)` |
-| P1-C grade + FXAA | **done** | `postfx.js`; `antialias` now only on the `?post=0` fallback |
-| P1-D outline width | **done (conservative)** | `max(world width, screen floor)` — near field bit-identical, so the 15 call sites were **not** retuned |
-| P1-B shadow tint into ramp | **done** (anchor fixed 2026-08-03) | `toon.js` `shadowTintRGB` + `RAMP_HOOK` patch of `getGradientIrradiance`. The art-direction question is resolved by **handing it to the user**: two sliders (mech / environment) in the settings page, **default 0 = bit-identical to before**. The anchor originally named the wrong chunk, so the patch never applied — see the P1-B section below |
-| P2-A weathering field | **done** (preview fixed 2026-08-03) | `field.js bakeFieldTexture` → `toon.js setWeatherField` shared uniform → `celWeatherF()` scales moss + wash. Installed from `terrain.js` on both the imagery and no-imagery path, seed decorrelated from the tone ladder. The settings sample reads its own preview field (`ensurePreviewField`) because the world field is flat-neutral in the lobby and whole-map-scale in battle |
-| P2-B micro-jitter for obstacles / landmarks | **done (buildings deliberately excluded)** | `xform.js partId`/`partJitter` extracted as the seam; `hazards.js` and `biomes.js placeMegaliths` apply it and **measure** the resulting horizontal extent against the authoritative collider, reverting per part on overflow |
-| P2-C semantic placement | **done** | `beacons.js` + `biomes.js placeBeacons` — the deferral reason was dissolved by a scope call, not by finding a way to verify the original scope (see below) |
-| V-E world signage | **done** | `worldtext.js` + `biomes.js buildWorldSigns` — was declined in the original plan; the reason it was declined turned out not to hold (see V-E) |
-| V-C Node-side tunnel scans | **partly done, partly not possible** | see below |
-
-**New in this batch: user-tunable art direction.** Four knobs (`visualPrefs.js`) with sliders and a
-**live sample that renders through the real materials and the real post pipeline** (`matsample.js`),
-mounted in both the pause settings page and the lobby settings page. Defaults are the shipped values,
-and the two knobs this document flagged as needing art-direction confirmation default to 0, i.e.
-byte-identical to before this batch. New audit: `tools/audit_visual_prefs.mjs` (79 assertions,
-reverse-verified).
-
-**P2-B excludes buildings on purpose.** Building footprints *are* their collider — the oriented box
-uploaded via `_losGrid` is derived from the same `hw2`/`hd2` that the mesh is extruded from. Inflating
-the visual radius there is exactly the "visible but unhittable" failure (A30) the item warns about,
-with no margin to spend. Obstacles and landmarks both carry an explicit collider radius (`HAZARDS[].r`,
-`MEGALITHS[].col.r`) that the geometry sits *inside*, which is why they can take the jitter and
-buildings cannot. The margin is not assumed: both consumers measure the jittered part's horizontal
-extent and revert that part if it crosses the collider.
-
-**V-C: the numeric half cannot fully leave Playwright, and that is a finding, not an omission.**
-Scans ②–⑤ (portal sky-leak, section obstruction, see-through holes, in-bore sky fraction) are
-`THREE.Raycaster` hits against real **meshes** — structure parts, vegetation, ground-cover patches.
-three is loaded from a CDN importmap and A2 forbids adding it to `package.json`, so Node has no three;
-approximating those four with hand-written geometry would be a second implementation of the very thing
-under test (§2.1) and would pass forever. Scan ① is likewise mesh-level: covered bores are *punched
-triangles*, not flattened height field — `carveTunnels` only ever sees the **open complement**
-(approach cuttings and underpass ramps).
-
-What did move to Node is the piece that turned out to matter more: `venue_field.mjs makeCarvedField`
-executes the **real `terrain.js carveTunnels` source** on a copy of the height field, and
-`audit_traverse.mjs` now floods over the **carved** surface. Before this, the traversability audit
-walked approach cuttings and underpass ramps on *natural* terrain — a road that is only passable
-because it was excavated would have been reported unreachable. Clearance (V-D) deliberately still
-reads the natural field, because "can this mountain hide the roof slab" is a question about the
-un-excavated mountain. A synthetic-terrain behaviour test covers the mirror with no network, and it
-has been reverse-verified.
-
-**P2-C shipped once the scope question was answered, and the answer is what unblocked it.**
-The deferral was never about difficulty. It was that the original wording put objects *into* the lane —
-base exit, first tower, portal mouth, bridgehead — which are precisely the places V-B exists to protect,
-and V-B needs Overpass plus terrarium tiles to run, so the change could not be verified where it was
-written. On 2026-08-03 the user settled it: **beside the lane / spawn / building units, visible from the
-surroundings is enough.** That turns "does this block the lane" from something an audit has to discover
-into something the construction guarantees — every site must pass `areaFree(blocked, …, foot + PAD)`,
-and `blocked` already carries the lane corridor (17 m half-width), tower sites (30 m), bases (70 m),
-bridge corridors and open tunnel sections. Beacons go through **the same gate** buildings, megaliths and
-giant trees already go through, with one extra ring of margin.
-
-What that bought: the whole item became verifiable **offline** — no network, no browser, no three.
-`beacons.js` keeps its first half (constants, catalogue, part tables, anchors, site planning) free of
-`THREE`, with parts declared as plain data (`['box', w, h, d]`), so `tools/audit_beacons.mjs` executes
-that source through `new Function` and computes real footprints in Node. 68 assertions, reverse-verified
-two ways (`--break-extent`, `--break-pad`).
-
-Three things worth recording because the audit found them in the first draft, not review:
-the tank's brace made its true footprint 6.6 m against a declared 5.6 m (a silent A30 — the collider is
-measured from the mesh, so the reservation would have been too small); the extent formula was
-over-conservative for offset boxes (`|p| + half-diagonal` reads 6.6 m where the real corner is 4.7 m),
-which would have pushed every beacon needlessly outward — the opposite of "beside"; and two catalogue
-entries had `foot` inflated by 40–80% for the same reason. `foot` is now pinned **from both sides**
-against the computed extent.
-
-Not covered: OSM building facades as a fourth anchor class. Buildings are placed after vegetation in
-`buildBiomes`, so a beacon pass anchored on them would have to run late and would lose the `blockArea`
-protection that keeps trees from growing through a pylon. The lane samples already run past buildings on
-urban venues, which is where that anchor class would have landed anyway.
-
-**Two things the shot set found that blind tuning had got wrong** (both now fixed, both would
-have shipped silently): the shadow lift was written in linear space but reads in sRGB
-(0.045 linear → 0.23 displayed, i.e. the whole shadow range washed to grey), and the
-convex/concave strength factor was multiplied *before* the ink threshold instead of after,
-which pushed every building silhouette below the threshold — `--ink=0` and `--ink=1` produced
-byte-identical screenshots.
-
-**Still unmeasured, and it is the gate this document names:** 30 s steady-state frame time on
-desktop and touch, before/after. Also unchecked: depth-writing transparent materials in
-`hazards.js` / `biomes.js` / `models.js` (`vfx.js` and `castfx.js` are already clean).
-The 2026-08-03 batch adds two more items to that list, both needing a real browser: the
-settings-page sample costs one extra WebGL context while the page is open, and the ramp patch adds
-one `texture2D` + one `mix` to every cel fragment (both defaults are no-ops numerically, but the
-instructions execute regardless).
-
----
-
-## Gap analysis
-
-| Layer | sakura-crossing | This project | Gap |
-|---|---|---|---|
-| Ramp | 2/3/4/5-band + 2 high-key | **single** `[102,182,255]` | pale objects have nowhere to go |
-| Shadow tint | patched into ramp, scene-wide | `CEL_COOL` added to `outgoingLight`, **`envMat` only** | mechs/heroes/weapons just get darker |
-| Terrain | 5-tone ladder + cover field + threshold jitter | `terrain.js:435` **raw `new MeshToonMaterial`**, no cel patch | largest area in frame is the only unprocessed surface |
-| Sky | 3-stop dome, 26-step soft quantise, billboard clouds | `environment.js:101` `scene.background = skyC` **flat colour** | second-largest area is one solid colour |
-| Outlines | screen-space ink (all) + few hero shells | **shells only**; `biomes.js` calls `outlinify` **0 times** | buildings/landmarks/vegetation/terrain/water have no contour |
-| Shell width | clip space × `clip.w` ⇒ constant px | object space `normal * uOW` ⇒ **shrinks with distance** | distant mech lines disappear |
-| Post | ink → grade → FXAA | **none**, `game.js:8591` renders direct | no split-tone, no shadow lift |
-| AA | 1.5–2× supersample + FXAA | `antialias: !isTouchUI()` | **touch devices have no AA at all** |
-
-**Do not touch (already better than the reference):** hard metal specular band,
-rig-space triplanar livery, `bakeContactAO`, `markShared`/`disposeTree` GPU lifecycle
-seam, `vegPartXform` rigid-transform invariants, `RES_GOV`.
-
----
-
-## P0 — high value, low architectural risk
-
-### P0-A Gradient sky dome
-
-**Now** `scene.background = skyC`, a single colour. All 4 weathers × 3 times of day are
-expressed by that colour plus fog.
-
-**Do** Add a `BackSide` dome (radius ≈ 1.5× map span) in `environment.js`; three stops
-derived from the existing `TIMES` table; keep 35% quantisation:
-
-```glsl
-float t = clamp( h * 1.15 + 0.02, 0.0, 1.0 );
-float q = floor( t * 26.0 ) / 26.0;
-t = mix( t, q, 0.35 );
-```
-
-Billboard clouds, `depthWrite:false`, `fog:false`, two opacities; count scales inversely
-with `WEATHERS[w].light`; no clouds in `fog` weather.
-
-**Constraints** `frustumCulled = false`, `renderOrder = -10`. Colours MUST derive from
-`TIMES`/`SEASONS`/`WEATHERS` — no fourth colour table (§2.1), or sky and fog diverge in
-some combinations. Night dome must not exceed `T.sky` brightness.
-
-**Cost** 1 draw call, 1 shader. Lowest risk item.
-
-**Accept** Screenshots across 12 env combinations; `audit_ui_layout.mjs` green;
-rain/fog sky must not read brighter than the fog far colour.
-
----
-
-### P0-B Terrain cel patch + tone ladder
-
-**Now**
-```js
-mat = imagery ? new THREE.MeshToonMaterial({ map: tex, gradientMap: toonGradient() })
-              : new THREE.MeshToonMaterial({ color: 0x39424c, gradientMap: toonGradient() });
-```
-Two defects: (1) it is the only large surface not using `envMat`, so it gets neither
-`wash` nor `cool`; (2) **without satellite imagery it is one flat `0x39424c`** — exactly
-the "88% of the slope in one tone" failure the reference spent three rounds fixing.
-
-**Do**
-1. Immediate: both paths use `envMat(color, { map, rim: 0, wash: 0.5, cool: 0.5 })`.
-   `rim: 0` is required — ground planes at grazing angles wash out entirely
-   (already documented in `toon.js:envMat`).
-2. No-imagery path: replace the flat colour with an attribute-field-driven tone ladder.
-   - Add `coverAt(x, z)`: scattered-ellipse field, **weighted average** `s / max(0.55, w)`,
-     never a sum (a summed field saturates to a constant — worse than nothing).
-   - Seed from battlefield centre, same source as `biomes.js` `mulberry32` scatter (§2.3).
-   - Design the ladder by **relative luminance**; the dark-end step must exceed the
-     light-end step.
-   - Jitter every threshold with a coarser-grained hash or boundaries read as contour lines.
-
-**Constraints**
-- **A14 / #INC-106**: 3-band ramp dark stop MUST NOT fall below 102. Terrain is a large
-  `receiveShadow` mesh and `cool` lowers the dark band again — **sample and verify**.
-- Vertex colours cost `pos.count * 3` floats. If memory or build time is unacceptable,
-  split into N material groups instead (the reference uses separate meshes per tone).
-- Water material also lacks the patch; include it, but `transparent` meshes skip `moss`.
-
-**Accept** 3 maps × (imagery / no-imagery) screenshots. Sample per-tone area share;
-**no tone above 35%**, number recorded in the source comment as the regression baseline.
-`audit_gpu_lifecycle.mjs` green.
-
----
-
-### P0-C Screen-space ink pass ★ highest value
-
-**Now** Outlines exist only as inverted hulls, and `biomes.js` never calls `outlinify`.
-Net effect on screen: **mechs have black lines, the world has none** — mechs read as
-stickers on a photo. Covering the world with shells is not viable: hundreds of extra
-draw calls in a measurably draw-call-bound renderer.
-
-**Do** Add depth second-difference post pass (full GLSL in the `cel-shading-pipeline`
-skill, L3). Key points: second difference not first; convex full strength / concave ×0.42;
-ink mixed with base colour; distance fade; sky-depth early out.
-
-**Placement** New `public/js/postfx.js` exporting a `Pipeline` class.
-`game.js:8591` `this.renderer.render(this.scene, this.camera)` → `this.pipeline.render()`.
-
-**Constraints — all risk is here**
-- **A25 GPU lifecycle**: 3 RTs + depthTexture + 3 FullScreenQuad materials MUST all be
-  disposed on teardown. `audit_gpu_lifecycle.mjs` must cover the new module.
-- **`RES_GOV` interaction**: RT size MUST still flow from `_dpr() * _resScale`. The
-  pipeline MUST NOT compute its own pixel ratio, or the governor's downscale stops
-  affecting the RTs (i.e. the governor becomes a no-op). Conservative option: keep the
-  existing `setPixelRatio` and let passes follow the drawing buffer size.
-- **Mobile**: half-float RTs are a **bandwidth** cost on tilers — the same bottleneck as
-  the MSAA note at `game.js:481`. A downgrade path is mandatory: under `isTouchUI()` or
-  `svs_lowpower`, run ink only with an `UnsignedByteType` colour RT, or disable entirely.
-- `charPreview.js` is a separate renderer, unaffected.
-- **Thin meshes must stop writing depth.** The ink pass reads the depth buffer; audit
-  `vfx.js` / `castfx.js` / `hazards.js` for depth-writing particles, beams and decals
-  before shipping, or they render as speckle.
-- No predicate is touched: this is renderer-side only.
-
-**Follow-up** Once ink covers the scene, some of the 15 existing `outlinify` calls will
-double-line. Keep mechs / cockpit / turrets (hero props needing a heavier line); drop
-the `hazards.js` and `vfx.js` ones. Compare per item — do not remove them all at once.
-
-**Accept**
-- 30 s steady-state frame time, desktop + touch emulation, before/after. This is the only
-  data that decides viability.
-- Same-view screenshots with ink on/off (add a `?ink=0` toggle).
-- `audit_gpu_lifecycle.mjs` new assertions + 60 s firing, heap not monotonically rising.
-- `npm test` green (㋒).
-
----
-
-## P1 — clear value, ship with P0-C
-
-### P1-A Ramp family
-
-**Now** `toonGradient()` returns one `[102,182,255]` for everything.
-
-**Do** `toonGradient(bands = 3)` with:
-
-```js
-const RAMPS = {
-  2: [102, 255],          // small dark parts: tyres, cables, dark armour
-  3: [102, 182, 255],     // current — MUST stay bit-identical
-  4: [102, 158, 206, 255],
-  soft: [190, 255],       // pale masses: snow, smoke, water, white livery
-};
-```
-
-**Constraints** Band `3` bit-identical or the whole scene recolours. A14's ≥102 dark stop
-holds for every entry (`soft` is higher, so safer). All call sites go through
-`toonMat`/`envMat` `opts.bands`; no DataTexture construction elsewhere.
-
-**Accept** Call sites without `bands` produce bit-identical output (screenshot diff).
-New audit assertion: `DataTexture` for ramps constructed in `toon.js` only.
-
-### P1-B Move shadow tint into the ramp
-
-**Now** `CEL_COOL` mixes `outgoingLight` before `opaque_fragment` and only `envMat`
-enables it. Mechs, heroes and weapons use `toonMat`, so **their shadows only darken**.
-
-**Do** Patch `getGradientIrradiance()` instead (one line, skill L1b). Weaker tint for
-mechs (they must hold faction livery hue), stronger for environment.
-
-**Correction (2026-08-03).** This item originally said "patch `lights_toon_pars_fragment`",
-and it was implemented literally. That chunk only *calls* `getGradientIrradiance`; the
-function — and the one line worth patching — lives in **`gradientmap_pars_fragment`**. The
-replacement therefore never matched, every material silently fell through to the fallback
-path, and both shadow sliders did nothing visible. Nothing errored. See CLAUDE.md §2.1
-「陰影偏色(ramp 層)」④–⑥ for the invariants that now pin this down.
-
-**Constraints** `customProgramCacheKey` must encode the tint value.
-**This changes the shadow hue of every mech** — get art-direction confirmation before
-applying; do not fold it into another batch.
-
-### P1-C Grade pass + FXAA
-
-**Do** Append split-tone + `uLift` + FXAA to the P0-C pipeline.
-
-**Why** Lift and the strong cool fill are the same requirement twice: cel shadows must be
-coloured, not crushed. **MSAA does nothing for pass-drawn lines**, so once P0-C ships,
-`antialias: !isTouchUI()` should become `false` + FXAA — desktop saves the MSAA bandwidth
-and touch gets AA for the first time. The env system currently expresses season and time
-of day only through light and fog colour; grade makes those differences painterly rather
-than just brighter/darker.
-
-**Constraints** Grade runs in linear space then converts manually ⇒ `NoToneMapping` +
-`NoColorSpace` RTs. This changes every final colour; re-review all screenshots.
-
-### P1-D Clip-space outline width
-
-**Now** `outlineMaterial` extrudes along normals in object space by a fixed world width,
-divided by world scale only. No distance compensation ⇒ distant lines vanish, near ones bloat.
-
-**Do** Extrude in clip space × `clip.w` (skill L4); width unit becomes NDC. Add distance
-fade so shells do not double-line with ink.
-
-**Constraints** Keep the `SkinnedMesh` `bind(skeleton, bindMatrix)` branch and the
-`userData.outlineGeo` smooth-normal copy for hard-edged geometry. Changing the width unit
-means retuning all 15 call sites (`0.012` / `0.03` / `0.05` / `0.07` / `0.1` / `outlineW(target)`).
-
----
-
-## P2 — independent scheduling
-
-### P2-A Weathering attribute field
-
-**Now** `CEL_MOSS` is a world-Y projection plus one noise layer, applied **uniformly**
-to every environment object; `CEL_WASH` likewise. Neither has any notion of "this area is
-older than that one".
-
-**Do** Share P0-B's field (`coverAt`, or a `weatherAt(x,z)`); drive moss density, rust and
-water staining from it via uniform or vertex attribute.
-
-**Discipline** The field MUST NOT be derived from terrain. "How old is this wall" must not
-be purely a function of height above ground or distance from a blast — such terms are
-constant across a uniform region, which is the defect rather than the fix.
-
-### P2-B Extend micro-jitter to buildings / obstacles / landmarks
-
-**Now** `xform.js` `dj` jitter (`jr` increase-only radius, `spin` for axis-centred parts)
-applies to `VEG_DEFS` only. `BUILDERS` and `MEGALITHS` do not use it.
-
-**Do** Route building/obstacle part tables through `vegPartXform` — already a single seam,
-already covered by `audit_object_joints.mjs`, so extending needs no new verification.
-
-**Constraints** (reuse existing invariants) `jr` increase-only; `spin` only for
-`px === pz === 0`; never jitter `y`/`px`/`pz`/longitudinal scale.
-**Visual radius must stay inside the authoritative collider margin** (原則 4) — inflated
-geometry must not exceed the collision columns uploaded via `_losGrid`, or it becomes
-"visible but unhittable" (A30 family). `audit_climb.mjs` Ⅲ two-end agreement is the
-existing yardstick; this is the item most in need of measurement.
-
-### P2-C Semantic placement pass — **done (2026-08-03)**
-
-Current scatter is density-driven. Pick the points every player passes each match and place one
-legible object at each — **beside** them, not on them (user call, 2026-08-03: 兵線 / 重生點 /
-建築單位旁邊,在周遭可以看見即可).
-
-Anchors, all derived from geometry already in memory — zero new fetches, zero shared `rnd()`:
-
-| Anchor | Source | Clearance ring | Beacon | Height |
-|---|---|---|---|---|
-| 重生點 | `cfg.bases` | 70 m | comms mast | 29 m |
-| 建築單位 | `solveTowerSites()` (frontline first) | 30 m | water tower | 23 m |
-| 兵線 | lane polyline at 0.3 / 0.5 / 0.7 | 17 m | pylon / container stack / cairn | 35 / 10 / 13 m |
-
-Height tracks the clearance ring on purpose: a bigger ring pushes the beacon further out, so it has
-to be taller to still read from the lane. `BEACON.FAR` must exceed the base ring (70 + foot + PAD)
-or spawns silently never get one.
-
-Search is radius-outer / angle-inner, starting from the lane normal — nearest ring wins ("beside"),
-and beacons land at the roadside rather than dead ahead. Nothing fits ⇒ nothing is placed (原則 6).
-
----
-
-## V — verification and tooling (from the level/inspection/terrain skills)
-
-Independent of the rendering work, but **V-A gates it**: without a fixed camera set there is
-no way to prove any P0/P1 batch did not regress something off-frame.
-
-### V-A Fixed establishing-shot set ★ prerequisite for batch 1
-
-**Now** Five `tools/shot_*.mjs` Playwright tools exist (`units`, `tunnels`, `seasons`,
-`giants`, `gnest`), each per-feature. There is **no checked-in "one establishing shot per
-place, run before and after"** set, so visual regressions outside the feature under test
-are invisible.
-
-**Do** Add `tools/shot_scene.mjs` with a checked-in camera list — spawn, first tower, lane
-mid, both portals, bridgehead, base interior, roof deck, one open hillside, one water edge —
-per venue tier. Reuse the existing `__SVS` hook and `tools/pw.mjs` runner. Add a
-`?ink=0` / `?grade=0` style pass toggle once P0-C lands, so a layer can be isolated.
-
-**Note** Aerial framing must set `battle.pos` / `battle.pitch`, **not** `camera` directly —
-the camera is re-derived from the player each frame.
-
-**Accept** Full set captured on ≥2 venues; committed as the baseline for every later batch.
-
-### V-B Lane and structure traversability audit ★ highest value of the four skills
-
-**Now** `CLAUDE.md` states the failure directly: bots have no pathfinding, so a bot pressed
-against a building **stalls in place and the whole lane stops pushing** — and "a bot standing
-still" is easily misread as an AI difficulty problem. The current detector is the **indirect**
-`繞行%` proxy (`_skirtUntil` tick share, ≈4.0%, SD ≈0.2), measured over 24 sampled matches.
-There is **no connectivity check anywhere in the 40 audit scripts** (`grep 泛洪 CLAUDE.md` = 0).
-
-**Do** Add `tools/audit_traverse.mjs`: headless grid BFS over a baked venue using the real
-`solidResolve` / `heightAt` / slope gate, seeded at each base.
-
-- Key the visited set on **`(cell, height bucket)`** — one bit per cell makes every stair,
-  ramp and portal approach report unreachable while being perfectly walkable.
-- **No height tolerance in the key** — it ping-pongs forever on a slope (measured elsewhere:
-  53.6 M visits for 770 k cells, non-terminating).
-- Assert a **waypoint list**, not a cell count: both bases, every tower site, both portal
-  mouths of every bore end-to-end, every bridge deck, every underpass ramp.
-- Run per venue tier; chunk it if it exceeds a few seconds.
-
-**Why this beats the proxy** It answers "is the lane traversable" directly instead of
-inferring it from how often bots sidestep, and it runs offline with no sampling variance —
-the current method needs n≈24 because single-match 工事損血 ranges 433–10298.
-
-**Accept** All waypoints reached on every shipped venue; add to the regression matrix under
-「兵線導航規則」and「地下道 / 明隧道」, both of which currently verify *geometry contracts*
-but never *that a body can get through*.
-
-### V-C Move the quantitative scans out of Playwright into Node
-
-**Now** `shot_tunnels.mjs` already performs five numeric scans (section residue, portal
-sky-leak, section obstruction, see-through holes, in-bore sky fraction) — but inside a
-Playwright page. The whole class is marked ㋓ in the regression matrix: **not runnable in a
-sandbox, so an agent cannot verify its own tunnel work.**
-
-**Do** Split the numeric half into a Node entry point. Geometry never depends on canvas
-contents, so stub `document` with a proxy that no-ops every Canvas2D call, import
-`biomes.js` / `terrain.js` directly, and fire the same `rayTerrain` probes. Screenshots stay
-in Playwright; the pass/fail numbers move to `npm test`-adjacent scripts.
-
-**Constraint** The scans stay **screening values, not verdicts** — the existing note that
-slope-crossing gullies produce false positives still holds; a red result means "look at the
-picture", not "it is broken".
-
-**Accept** Same numbers from Node and Playwright on the same synthetic venue; ㋓ removed from
-the tunnel rows of the matrix.
-
-### V-D Numeric clearance check
-
-**Now** The matrix says to re-verify 「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」when
-`SOLDIER_H` / `HERO_SIZE.mul` / `BRIDGE_RISE` / `TUN.CLEAR` change, but names **no script** —
-it is a manual check.
-
-**Do** Add a `clearance()` function to the tunnel/bridge audit: sample the section along
-every bore, gallery and bridge underside, and report the worst headroom against the largest
-`heroTargetH` in `data.js`. Derive the mech height from `data.js`, never hard-code it.
-
-**Why** A section written from the wrong reference is completely silent — in the reference
-project an arch written from its radius instead of its springing put the crown 2.75 m out and
-ran a train through solid rock for the structure's entire life, because a tunnel is a dark
-hole with a dark shape moving in it. A numeric check is the only thing that finds this.
-
-**Accept** Worst-case headroom printed per structure; fails below the margin.
-
-### V-E World signage — **done (2026-08-03), and it was not the feature request it looked like**
-
-The original entry declined this as "a feature request, not a fix", on the reading that signage
-means *inventing* text. That reading was wrong in one specific way: **the names are already in
-memory**. Overpass returns tags by default on `out geom` / `out center tags`, and `biomes.js` keeps
-the whole `tags` object all the way through. So this is not "draw signs" — it is "the world already
-has names, put them back". Tunnel portals and bridge heads needed **zero** new Overpass queries.
-
-**The corpus** — what carries text, and where it came from:
-
-| Layer | Query cost | Text | Surface |
-|---|---|---|---|
-| Road ways | free (already fetched) | `name` | **tunnel / gallery / underpass portal plaques**, **bridge name plates** |
-| Buildings | free (already fetched) | `name` on commercial | facade sign band |
-| Named point nodes | +4 cheap node queries | `name`, `ref`, `ele` | place / peak / motorway-junction / station posts |
-
-Point features cost four `node[...]` queries with tiny quotas — no geometry, so the payload barely
-moves. `geoKey('osmF', …)` was bumped 1 → 2 with the query change; without that bump the new signs
-would never appear on any machine that had opened the map before, silently.
-
-**Everything the trap list warned about is enforced by `audit_world_text.mjs`** rather than by
-memory: aspect-ratio crush (plate and atlas cell are both 4:1, width derived from height, long names
-shrink the type instead of stretching the plate), the two-sided-plate mirror rule (two back-to-back
-single-sided quads sharing one cell, never `DoubleSide`), plus four this project needed on top —
-missing-glyph detection (A2 forbids shipping a font, so a device without CJK would render a row of
-tofu; >20% missing ⇒ no sign at all), **no name means no sign** (原則 6 — a fabricated name is worse
-than none), one mesh and one atlas for the entire world's text (this renderer is draw-call bound, so
-per-sign materials were never an option; the cell count *is* the quota), and zero `rnd()` consumption
-so hanging a sign cannot shift the vegetation and building layout (§2.3).
-
-Which name to show is a taste question, not a derivation — 27 venues span many scripts, and `name` is
-the local one. It became a fourth settings control (`worldTextLang`: local / 中文 / English), which is
-why `visualPrefs.js` grew a second control type (mutually-exclusive choices → segmented buttons,
-per §2.1's button-style rule) alongside the sliders.
-
-`paint.js` remains the exemplar it always was; nothing there changed.
-
----
-
-## Batch order
-
-| Batch | Items | Rationale |
-|---|---|---|
-| **0** | **V-A fixed shot set** | measurement instrument; every later batch is compared against it |
-| 1 | P0-A sky, P0-B terrain | small, low risk, largest areas |
-| 2 | P1-A ramp family | needed by P0-B's ladder and by later passes |
-| 3 | **P0-C ink + P1-C grade/FXAA** | one pipeline, build and verify together |
-| 4 | P1-D outline + prune duplicate shells | only knowable after ink ships |
-| 5 | P1-B shadow tint into ramp | changes every mech's art; confirm direction first |
-| 6 | P2-A / P2-B / P2-C | independent |
-
-**Runs in parallel, not blocked by any of the above** (different files, different reviewers):
-
-| Track | Items | Rationale |
-|---|---|---|
-| **T1** | **V-B traversability audit** | highest-value single item in this document; replaces an indirect proxy with a direct check and needs no rendering work |
-| T2 | V-C Node-side scans → V-D clearance | same refactor; V-D lands as one more scan once the Node harness exists |
-
-If capacity is limited, **V-A and V-B before anything visual.** V-B fixes a class of bug that
-currently reaches players (a stalled lane reads as broken AI); the rendering items fix how the
-game looks, which nothing is currently reporting as broken.
-
-**Gate for every batch:** **the V-A camera set re-shot and compared** · `npm test` green ·
-adjacent audits green (at minimum `audit_gpu_lifecycle.mjs`, `audit_ui_layout.mjs`) ·
-steady-state frame time on desktop and touch · **`npm run bal` unchanged** (any movement
-means something outside the presentation layer was touched).
-
-**Gate for track T1/T2:** the new audit must **reverse-verify** — break the predicate on
-purpose and confirm it goes red (原則 9). An audit that has never failed has never been
-tested. Read source through `tools/audit_src.mjs`, never `readFileSync`, or CRLF checkouts
-silently pass (㋑).
-
-**Register new seams in `CLAUDE.md` §2.1**: `postfx.js` Pipeline, `toonGradient(bands)`
-ramp table, `coverAt` attribute field. All three will have multiple consumers; unregistered
-seams grow second implementations.
-
----
-
-## Out of scope
-
-- No new npm dependencies (A2). Passes are hand-written; `FullScreenQuad` from
-  `three/addons/postprocessing/Pass.js` is in-tree and permitted.
-- No changes to predicates: range, blast, LOS, collision, slope, ballistics (原則 1, 原則 4).
-- No bloom / DoF / motion blur — sources of photographic feel, opposite to the target.
-- Do not change the three values of the `3`-band ramp (A14 / #INC-106).
+| 「Out of scope:不做 bloom / DoF / motion blur」 | **景深模糊已上線**(狙擊模式,`DOF`/`dofAimBlend`,§2.1)—— 這條禁令只剩「不做 bloom / motion blur」 |
+| P1-A「3 階 ramp MUST 逐位元不變」 | `anime_style_plan.md` §0-b 定案**換學派**(累積光 + `smoothstep` 硬切 + HSV 位移),`bands` 語意改成硬度。ramp 逐位元不變那一條隨學派切換一起重寫 |
+| P1-B「patch `getGradientIrradiance`」 | 錨點規則仍有效(§2.1「陰影偏色」③),但偏色手法改 HSV 位移 |
+| P0-C 的 GLSL「見 `cel-shading-pipeline` skill L3」 | 線條那一半已拆成獨立 SKILL **`anime-line-control`**;`cel-shading-pipeline` 的 L3 現在是打光 |
+| 開頭「六支 skill」對照表 | 2026-08-15 重整成九支,對照表見 `anime_style_plan.md` 開頭 |
+| 「Gap analysis」表(本檔原有) | **整表刪除** —— 它描述的是 2026-08-03 的落後現況,每一列都已補上,留著只會被讀成現況 |
+
+**仍然成立的那一句**:硬質金屬高光帶、rig 空間 triplanar 塗裝、`bakeContactAO`、
+`markShared`/`disposeTree` 生命週期縫、`vegPartXform` 剛體不變式、`RES_GOV` —— 這幾項當時就
+**優於參考專案**,兩輪都不要動。

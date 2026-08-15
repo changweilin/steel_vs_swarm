@@ -2,16 +2,20 @@
 name: mecha-polyhedron-modeling
 description: Rebuild procedural mecha from 2D concept art as polyhedron part assemblies on the humanoid-forge rig — a shared geometry vocabulary (tapered frusta / polygon prisms / lathes / blade fins / feather fans / segment chains / cable bundles), per-mecha builder files, frozen rig contracts, and a headless screenshot closed loop as the only correctness gate. Use when a mecha "uses only simple boxes", when modeling body/limbs/head/wings/feathers/tail/tentacles from a 2D image, when weapons must be rebuilt piece-by-piece from art, or when fanning out one agent per mecha for parallel remodeling.
 license: MIT
-compatibility: dev-only (tools/humanoid_forge/, never in public/js); vanilla ES modules + CDN three@0.160; Playwright borrowed from global npm (A2 — never in package.json)
+compatibility: forge lives in public/js/forge/ (game + board eat the same tree since 2026-08-14); boards and capture tools stay in tools/; vanilla ES modules + CDN three@0.160; Playwright borrowed from global npm (A2 — never in package.json)
 ---
 
 # Mecha Polyhedron Modeling (2D art → part assemblies, screenshot-verified)
 
 > **Route disambiguation** — two skills share the "more mecha detail, rig must not move" trigger:
-> - Shipped game units in `public/js/models.js`, detail via **AI-generated GLB parts** through the
+> - NPCs, vehicles and structures in `public/js/models.js` (heroes left it on 2026-08-14), detail
+>   via **AI-generated GLB parts** through the
 >   `partlib.js` fuse and the `audit_muzzle/cockpit/cast_jump` acceptance gate → `mech-part-forge`.
-> - The **humanoid forge prototype** (`tools/humanoid_forge/`, dev-only), detail via **procedural
->   polyhedra written by hand from 2D art**, screenshot loop as the only gate → this skill.
+> - The **humanoid forge** (`public/js/forge/`), detail via **procedural polyhedra written by hand
+>   from 2D art**, screenshot loop as the only gate → this skill. It stopped being a prototype on
+>   2026-08-14: the user ruled the new modelling replaces the old wholesale, so `makeUnit()`'s hero
+>   branch now calls `forgeHero()` and the board renders the same tree the match does. The old
+>   builders are frozen in `tools/humanoid_forge/legacy/legacy_models.js`, on the board only.
 >
 > Other siblings: `headless-3d-inspection` (generic `__shot` capture / raycast verification —
 > this skill's §4 is one instantiation of it); `cel-shading-pipeline` (the toon/outline renderer
@@ -49,11 +53,12 @@ compatibility: dev-only (tools/humanoid_forge/, never in public/js); vanilla ES 
 
 | File | Role | May you edit it? |
 |---|---|---|
-| `tools/humanoid_forge/geo.js` | Geometry vocabulary — the alphabet | Only to add a letter for ≥2 consumers; never mid-fan-out |
-| `tools/humanoid_forge/mechs/<id>.js` | One mecha's feature→part builders | Yes — this is where all modeling happens |
-| `tools/humanoid_forge/mechs/index.js` | Roster aggregation | Only when adding a mecha |
-| `tools/humanoid_forge/forge.js` | HUMANOID feature table, spec merge, rig scaffold | No (frozen contract) |
-| `tools/humanoid_forge/viewer.js` + `index.html` | Standalone board (:8631) with 2D reference strip | Board work only |
+| `public/js/forge/geo.js` | Geometry vocabulary — the alphabet (aliases re-exported from the repo-wide primitive seam `public/js/geo3d.js`) | Only to add a letter for ≥2 consumers; never mid-fan-out |
+| `public/js/forge/mechs/<id>.js` | One mecha's feature→part builders | Yes — this is where all modeling happens |
+| `public/js/forge/mechs/index.js` | Roster aggregation | Only when adding a mecha |
+| `public/js/forge/forge.js` | Feature table, spec merge, rig scaffold (`forgeMech` / `forgeMorphUnit`) | No (frozen contract) |
+| `public/js/forge/roster.js` | Roster + proto classification (`entryKey()` = `t01` / `t06@ground` / `t06@flight`) | Only when adding a mecha |
+| `tools/humanoid_forge/viewer.js` + `stage.js` + `index.html` | Standalone board (:8631); `stage.js` is the one shared stage both boards host | Board work only |
 | `tools/codex_review/review.js` | Codex board forge block + 2D reference strip | Board work only |
 | `tools/humanoid_forge/shot_mech.mjs` | Closed-loop capture tool | Rarely |
 
@@ -112,7 +117,8 @@ excluded); **zero `Math.random()`** — variation across fan/chain elements is i
 
 1. **Read the art.** All poses. Write a part plan: image feature → vocabulary letter, before code.
 2. **Evolve `mechs/<id>.js` in place.** Replace shells, add signature parts, rebuild weapons.
-3. **Gate syntax:** `node --input-type=module --check < tools/humanoid_forge/mechs/<id>.js`
+3. **Gate syntax:** `node --input-type=module --check < public/js/forge/mechs/<id>.js`
+   (or `node tools/audit_client_syntax.mjs`, which now walks `public/js/**` recursively)
    (plain `node --check` parses CommonJS and false-fails on `import`).
 4. **Shoot:** with the dev server up (`node tools/humanoid_forge.mjs --port <p>` — start your own
    from your checkout; a default-port server may be serving a stale checkout with no error), run
