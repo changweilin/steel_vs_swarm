@@ -10,11 +10,16 @@
 
 import { MORPH } from './data.js';
 import { cycleU, dutyOf, hipDrive, limbProfile, limbFlex } from './gaitcurve.js';
+import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
 const GAIT_ANAT = typeof location === 'undefined'
   || new URLSearchParams(location.search).get('gait') !== '0';
+// 變形過程(逐零件反推運動)的總開關(`?morph=0` = 退回 2026-08-14 的根節點收摺演出,
+// 做 A/B 前後對照;同 `?gait=0` / `?sag=0` / `?curve=0` 的慣例)。
+const MORPH_RIG = typeof location === 'undefined'
+  || new URLSearchParams(location.search).get('morph') !== '0';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (c, t, k, dt) => c + (t - c) * Math.min(1, k * dt);
@@ -85,6 +90,8 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   // 加法才不會跨幀累積;morph 的部件經 pose(m) 全軸 rotation.set 重設,全軸皆安全。
   stepCastPose(L, rig, ent, dt, now);
   stepJumpPose(L, rig, ent, dt);
+  // 變形姿態 MUST 排最後(morphSwap 紀律 ③):過渡中它對這一棵樹的零件有最終發言權
+  if (mesh.userData.morph) morphPose(mesh.userData.morph);
 }
 
 /**
@@ -382,17 +389,22 @@ function tentGuard(chain, now, k, ph, a) {
  *  袋鼠(rig.hop)整套改走 stepHop 跳躍步態。 */
 // ── 變形者型態切換(2026-08-14 新版建模:地面型與飛行型是**兩棵樹**)────────────────
 // 舊制是一棵樹 + `rig.pose(m)` 分段姿勢插值(stepMorph);新版建模的兩態各自對照自己的
-// 2D 定案圖、各自一支逐機檔,沒有可以互相插值的對應零件 ⇒ 改成「收摺 → 換樹 → 展開」。
+// 2D 定案圖、各自一支逐機檔 ⇒ 改成「換樹」。
 //
-// 四條紀律:
+// 2026-08-15 使用者:「兩個形態使用的零件都相同,建立兩個形態的骨架後,**反推**變形時骨架
+// 應該如何移動/旋轉/伸縮/透明化等運動。」⇒ 演出從「根節點收摺」升級成**逐零件**的運動:
+// 對應關係與 A→B 局部變換全部在建構期反推完(`forge.js captureMorphPlan`,規則住
+// `morphrig.js`),本檔只負責換樹與逐幀內插(`morphPose`,post-pass)。
+//
+// 五條紀律:
 //   ① **門檻與時間常數逐字沿用 stepMorph**(MORPH.GROUND_Y / damp 2.6)—— 那條門檻與
 //      伺服器的地面型判定同一條規則,小跳頂點不得觸發變形(舊門檻 1.2 會播半套再收回)。
 //   ② **換樹只在越過 0.5 那一瞬間做一次**(`air0` 邊緣):每幀重指 `userData.rig` 也對,
 //      但可見性與 rig 分兩處寫就會有一幀說著兩種話。
-//   ③ **收摺量取 |m−0.5|**:兩端(m=0/1)恆為 0 ⇒ 站著與巡航時**逐位元**是出廠姿態,
-//      演出只發生在過渡的那半秒;換樹那一刻兩棵樹都收到最緊,接得上。
-//   ④ 演出只動**過渡中那一棵的根節點**(scale / rotation.y / position.y)——
-//      零件級的姿勢全歸各自的步態驅動器管,這裡一格都不碰。
+//   ③ **姿態 MUST 排在步態之後**(post-pass,同 stepCastPose/stepJumpPose)—— 排在前面的話
+//      本幀的步態驅動器會把剛寫好的變形姿態整組覆寫掉,而畫面上只表現成「變形完全沒作用」。
+//   ④ **兩棵樹每幀都寫**:換樹那一幀新上台的那一棵要已經在正確的姿態上,才接得住。
+//   ⑤ 兩端(m=0/1)一格都不碰 ⇒ 站著與巡航時**逐位元**是出廠姿態 + 純步態(同舊制)。
 const FOLD = { HALF: 0.32, S: 0.42, SPIN: 2.2, LIFT: 0.35 };
 
 function morphSwap(ent, mesh, dt) {
@@ -406,7 +418,8 @@ function morphSwap(ent, mesh, dt) {
     M.gg.visible = !air;
     mesh.userData.rig = air ? M.air : M.ground;
   }
-  // 收摺:|m−0.5| 越小收得越緊(過渡中段縮到 1−S、繞縱軸轉 SPIN、抬起 LIFT)
+  if (MORPH_RIG && M.plan) { M.k = restK(M.m); return; }   // 逐零件變形:姿態走 morphPose
+  // ---- `?morph=0` 的對照組:2026-08-14 的根節點收摺(縮到 1−S、繞縱軸轉、抬起)----
   const k = M.k = clamp(1 - Math.abs(M.m - 0.5) / FOLD.HALF, 0, 1);
   const act = air ? M.ag : M.gg;
   const idle = air ? M.gg : M.ag;
@@ -415,6 +428,60 @@ function morphSwap(ent, mesh, dt) {
   act.position.y = FOLD.LIFT * k;
   // 沒在台上的那一棵一律歸零:下次換過去時不會帶著上一輪的殘餘變換
   if (idle.scale.x !== 1) { idle.scale.setScalar(1); idle.rotation.y = 0; idle.position.y = 0; }
+}
+
+// 逐零件變形姿態(post-pass)。暫存物件只有一份 —— 這一支每幀跑幾百顆零件,
+// 逐顆配一個新物件就是每秒上萬個短命物件(GC 停頓在變形那半秒最明顯)。
+const _mt = { p: [0, 0, 0], q: [0, 0, 0, 1], s: [1, 1, 1] };
+const _mq = [0, 0, 0, 1];
+
+function morphPose(M) {
+  if (!MORPH_RIG || !M.plan) return;
+  const on = morphing(M.m);
+  if (!on && !M.act) return;                      // 兩端穩態:一格不碰(紀律 ⑤)
+  const m = on ? M.m : (M.m >= 0.5 ? 1 : 0);      // 收工那一次:把姿態寫死在端點上
+  const t = morphEase(m), k = on ? restK(m) : 0;
+  morphSide(M.plan.g, t, k, fadeA(m, false));
+  morphSide(M.plan.a, t, k, fadeA(m, true));
+  M.act = on;
+}
+
+/** 一棵樹:對應零件內插(移動/旋轉/伸縮)+ 步態骨收斂 + 單態零件淡出淡入 */
+function morphSide(S, t, k, a) {
+  for (let i = 0; i < S.pairs.length; i++) {
+    const e = S.pairs[i], n = e.n;
+    mixTRS(e.A, e.B, t, _mt);
+    n.position.set(_mt.p[0], _mt.p[1], _mt.p[2]);
+    n.quaternion.set(_mt.q[0], _mt.q[1], _mt.q[2], _mt.q[3]);
+    n.scale.set(_mt.s[0], _mt.s[1], _mt.s[2]);
+  }
+  // 步態骨收斂回出廠姿態:過渡中段 k=1 ⇒ 兩棵樹的對應零件疊在同一個地方 ⇒ 換樹看不出來
+  // (A→B 是相對**自己的父節點**算的:父在出廠姿態時兩棵樹的世界解逐位元相同)
+  if (k > 0) for (let i = 0; i < S.rest.length; i++) {
+    const n = S.rest[i].n, r = S.rest[i].r, q = n.quaternion;
+    n.position.set(n.position.x + (r.p[0] - n.position.x) * k,
+      n.position.y + (r.p[1] - n.position.y) * k,
+      n.position.z + (r.p[2] - n.position.z) * k);
+    _mq[0] = q.x; _mq[1] = q.y; _mq[2] = q.z; _mq[3] = q.w;
+    slerpQ(_mq, r.q, k, _mq);
+    q.set(_mq[0], _mq[1], _mq[2], _mq[3]);
+    n.scale.set(n.scale.x + (r.s[0] - n.scale.x) * k,
+      n.scale.y + (r.s[1] - n.scale.y) * k,
+      n.scale.z + (r.s[2] - n.scale.z) * k);
+  }
+  for (let i = 0; i < S.fade.length; i++) {
+    const e = S.fade[i];
+    if (e.a === a) continue;                      // 到端點之後 a 恆定 ⇒ 材質一幀都不用再碰
+    e.a = a;
+    const s = shrinkS(a);
+    e.n.visible = e.v0 && a > 0.004;
+    e.n.scale.set(e.s0[0] * s, e.s0[1] * s, e.s0[2] * s);
+    for (let j = 0; j < e.mats.length; j++) {
+      const M = e.mats[j];
+      if (a >= 0.999) { M.m.transparent = M.t0; M.m.opacity = M.o0; M.m.depthWrite = M.d0; }
+      else { M.m.transparent = true; M.m.opacity = M.o0 * a; M.m.depthWrite = false; }
+    }
+  }
 }
 
 function stepBiped(L, rig, dt, now, speed, yawRate) {

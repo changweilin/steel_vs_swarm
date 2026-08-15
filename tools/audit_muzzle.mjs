@@ -129,8 +129,13 @@ const report = await page.evaluate(async () => {
         settle(ent, mesh, 300);   // L.morph damp 2.6 → 5s 內收斂到 1
         settle(ent, mesh, 90, 'light');
         mesh.updateMatrixWorld(true);
+        // ⚠ 量的 MUST 是**飛行型那一棵**的武裝(`rigAir`)—— 上面那個 `rig` 是函式開頭取的,
+        // 2026-08-14 兩棵樹並存之後它恆是**地面型**的 rig。舊制的地面型那一棵在飛行中整棵
+        // 凍在出廠姿態(槍口自然朝前)⇒ 這一條斷言其實恆真、什麼都沒驗到;2026-08-15 逐零件
+        // 變形上線後它會跟著飛行佈局擺過去,那個讀數既不是地面型也不是飛行型的設計值。
+        const rigA = mesh.userData.rigAir || mesh.userData.rig;
         for (const slot of ['light', 'heavy']) {
-          const set = rig.wpn?.[slot];
+          const set = rigA.wpn?.[slot];
           if (!set?.ref) continue;
           const dz = wpnDir(set).dot(Z);
           if (dz < 0.75) r.issues.push(`飛行 ${slot} 槍口未朝航向(dot=${dz.toFixed(2)})`);
