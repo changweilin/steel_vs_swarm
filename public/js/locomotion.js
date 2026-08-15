@@ -90,6 +90,7 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   // 加法才不會跨幀累積;morph 的部件經 pose(m) 全軸 rotation.set 重設,全軸皆安全。
   stepCastPose(L, rig, ent, dt, now);
   stepJumpPose(L, rig, ent, dt);
+  stepStab(rig);
   // 變形姿態 MUST 排最後(morphSwap 紀律 ③):過渡中它對這一棵樹的零件有最終發言權
   if (mesh.userData.morph) morphPose(mesh.userData.morph);
 }
@@ -135,6 +136,23 @@ function flexChain(chain, ph, a, idle = 0, t = 0, load = 0.45, hold = 0, A = nul
 
 /** 靜止度:速度趨零 → 1(給呼吸/微顫用;與步態振幅 a 互補) */
 const idleOf = (a) => clamp(1 - a / 0.06, 0, 1);
+
+// ── 陀螺穩定(post-pass;名冊與偏航基準 q0 由 forge.js stabList 出廠時量好)──
+// 「掛在會動的骨頭上、但必須保持水平朝前」的機構(t11 的肩甲武器台:2026-08-15 使用者
+// 「武器一律掛在肩甲上方,**始終**轉向前方」;實測不穩定的話跑步時偏到 60.8°)。
+// 目標世界姿態 = 機體航向(參考框 `ref` = 單位根,壓坡/俯仰/懸停抖動都在它之下)× 出廠偏航
+// ⇒ 局部 = inv(掛點世界) × 目標。MUST 排在步態/招式/跳躍**之後**(它們每幀在改父鏈)、
+// 排在 `morphPose` **之前**(變形過渡中那一份對零件有最終發言權,morphSwap 紀律 ③)。
+// ⚠ 本檔**不 import three**(同 morphPose 那一族:三維物件一律鴨子型別)⇒ 暫存四元數由
+//   出廠端隨名冊一起配好(逐節點各一組,逐幀零配置)。
+function stepStab(rig) {
+  if (!rig.stab) return;
+  for (const s of rig.stab) {
+    s.ref.getWorldQuaternion(s.qa);
+    s.g.parent.getWorldQuaternion(s.qb);
+    s.g.quaternion.copy(s.qb).invert().multiply(s.qa).multiply(s.q0);
+  }
+}
 
 // ── 開火/蓄力戰鬥動畫(third-person;game.js 戰場與 charPreview 展示台共用同一條)──
 // stepCombatFx 由 ent.fireFx(tracer/plasma 開火事件)與 ent.heavyFx(heavyCharge/heavyFire)
@@ -780,9 +798,12 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
   // 向右橫移(vLat>0)→ 右側(局部 +x)下壓 = rotation.z 負
   L.roll = damp(L.roll, clamp(-vLat / top, -1, 1) * 0.26 * fs.bank, airK, dt);
   // 前傾只屬於旋翼/撲翼(靠傾轉產生前向推力);定翼機(rig.level)推力來自引擎,
-  // 巡航機身保持水平 —— MUST NOT 跟著速度低頭(壓坡入彎照舊)
+  // 巡航機身保持水平 —— MUST NOT 跟著速度低頭(壓坡入彎照舊)。
+  // `rig.pitchTop` = **滿速前傾角**(rad;逐機旋鈕,省略 ⇒ 0.2 = 逐位元同舊制)。它是「靜止
+  // 直立、移動前傾」這一句的**唯一**表達處(2026-08-15 使用者對 t06 的定案)—— 逐機檔
+  // MUST NOT 改回把前傾角寫死在機身群組上(那樣靜止時也一直低著頭,而每一條斷言都是綠的)。
   L.pitch = damp(L.pitch, rig.level ? 0
-    : clamp(vFwd / top, -1, 1) * 0.2 + clamp(L.accel * 0.006, -0.07, 0.07), airK, dt);
+    : clamp(vFwd / top, -1, 1) * (rig.pitchTop ?? 0.2) + clamp(L.accel * 0.006, -0.07, 0.07), airK, dt);
   // flare:減速時揚翼張爪煞停、機鼻上仰(鷹/翼龍/龍/蜂);定翼(rig.level)spec flare 恆 0 ⇒ 不揚頭(MUST)
   L.flr = damp(L.flr ?? 0, accDn(L) * fs.flare, 6, dt);
   rig.tilt.rotation.z = L.roll;
@@ -813,7 +834,12 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
       // 省略 ⇒ 逐位元同舊制(懸停熄火是噴射機的常態)。
       j.g.visible = k > 0.03 || !!j.idle;
       const flick = 1 + Math.sin(now * 31 + i * 2.1 + L.ph) * 0.1;
-      j.g.scale.set(1, (0.35 + 1.5 * k) * flick, 1);
+      // `j.lenF = { hold, run }` = 這具噴口的**兩端**焰長倍率(靜止 / 滿速各一個;省略 ⇒ 1,1
+      // = 逐位元同舊制)。兩端各一個是必要的:焰長對速度是線性的一條線,而 2026-08-15 使用者
+      // 對 t06 的定案是「靜止 ×3、移動 ×2」—— 那是**改斜率**,單一個倍率表達不了(乘上去
+      // 只會整條平移,兩個要求同時只能滿足一個,而畫面上只表現成「懸停的焰好像不夠長」)。
+      const lo = 0.35 * (j.lenF?.hold ?? 1), hi = 1.85 * (j.lenF?.run ?? 1);
+      j.g.scale.set(1, (lo + (hi - lo) * k) * flick, 1);
       j.m1.opacity = (0.2 + 0.4 * k) * flick;
       j.m2.opacity = 0.4 + 0.5 * k;
       j.m1.emissiveIntensity = 1.2 + 2.2 * k;
