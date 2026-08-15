@@ -1,6 +1,6 @@
 ---
 name: procedural-object-detail
-description: Generate lifelike, non-repeating 3D object detail — deterministic seeding, parametric generators, scatter attribute fields, threshold jitter, semantic placement. Use when repeated objects look too uniform, terrain reads as one flat colour, vegetation/buildings need variation, scatter/weathering/wear is requested, or a region "reads as flat".
+description: Generate lifelike, non-repeating 3D object detail and readable silhouettes — deterministic seeding, parametric generators, fitted vs loose cloth, leaf-card canopies, moss/grass/wet encrustation on rock, scatter attribute fields, threshold jitter, semantic placement. Use when repeated objects look too uniform, a canopy reads as a blob or a lampshade, clothing reads as painted-on, rock reads as one flat colour, or scatter/weathering/wear is requested.
 license: MIT
 compatibility: Three.js or any procedural 3D scene
 ---
@@ -10,8 +10,12 @@ compatibility: Three.js or any procedural 3D scene
 **Rule: every variation must be derivable from a reason. RNG volume is not a reason.**
 Dice are the last implementation step, not the design.
 
-Method source: sakura-crossing (`C:/Users/user/Documents/study/sakura-crossing`),
-files `src/world/hills.js`, `src/world/buildings.js`, `src/world/details.js`.
+Method sources: sakura-crossing `src/world/{hills,buildings,details,trees,props}.js`;
+`messenger.abeto.co` leaf-card canopy shader, terrain triplanar masks, character shader.
+
+> Related: `anime-line-control` (what the line pass does to a dense mass),
+> `generator-table-catalog` (how a family of built objects is described),
+> `ambient-motion-layers` (how any of this moves).
 
 ---
 
@@ -163,6 +167,135 @@ spin = (hash01(partId ^ K, dj) - 0.5) * Math.PI * 2;  // spin about own extrusio
   specific-facing vertices; spinning detaches them.
 - **Never jitter `y` / `px` / `pz` / longitudinal scale** — those open stacked seams.
 - Use an integer hash (not `Math.sin`) for cross-engine bit-identity.
+
+---
+
+## L1b — The three silhouette families
+
+Most "it looks fake" reports are about **outline**, not surface. Three families cover
+nearly all of them, and each is built by a different mechanism.
+
+### A. Cloth — fitted and loose are two constructions, not one with a parameter
+
+| | Fitted (shirt, trousers, gloves, uniform) | Loose (skirt, coat, cape, noren, banner, flag) |
+|---|---|---|
+| Silhouette belongs to | the **body** | the **garment** |
+| Built as | skin weights on the body mesh, offset outward ~1–2 cm | its own geometry with its own root |
+| Motion | none of its own — it is the body | secondary, driven after the pose |
+| Gets | a **hem line** where it ends, and a cuff/collar/waist that reads at 20 m | a pivot at the **mount** and free travel at the **hem** |
+| Fails as | a painted-on texture, because nothing breaks the body's outline | a rigid board, or a flag rotating about its own centre |
+
+Rules that hold for both:
+
+- **A garment reads by its terminations.** Cuff, collar, hem, waist, opening. At the
+  distance these are seen, the cut of a sleeve is invisible and the *edge* of the sleeve is
+  the whole silhouette. Give a fitted garment 2–3 real edges before you give it a fold.
+- **Loose cloth pivots at its mount, never at its centre.** A noren hung off the eaves and
+  rotated about its own centre swings its top edge through the lintel it hangs from. Put a
+  pivot group at the hanging bar and animate that; the mesh sits at identity under it.
+- **In a baked/folded scene graph, an animated pivot needs an explicit rigid marker.** A
+  bake that folds geometry into world space clears container transforms, so
+  `rotation.x = flutter` afterwards swings root-space geometry about the world origin.
+  Marked groups are re-seated with the rig intact and an inner pivot left at identity.
+- **Waveform: slow lift + small flutter**, not one sine —
+  `sin(t·r + φ)·0.75 + sin(t·r·3.3 + φ)·0.25`, with `rate` and `phase` varied per piece.
+  Eight pieces on one rate is a mechanism; eight on eight rates is wind.
+- **Local wetness / mud / dust is a value ramp against a jagged waterline**, keyed on the
+  garment's *local* Y so it travels with the body:
+
+  ```glsl
+  float line = uWetHeight + (sin(lPos.x * 30.0) - 1.0) * 0.012;   // jag the boundary
+  vec3 wet = rgb2hsv(outgoingLight); wet.b = max(wet.b - 0.1, wet.b * 0.75);
+  outgoingLight = mix(outgoingLight, hsv2rgb(wet), step(lPos.y, line));
+  ```
+
+  A straight boundary reads as a rendering bug. One sine across the body fixes it.
+
+### B. Canopies — cards that face the camera and radiate from the cluster centre
+
+A canopy is the hardest silhouette in an outlined scene: leaf geometry inks into porridge,
+and a blob mass inks into a pile of polyhedra. Two constructions work.
+
+**B1. Camera-facing leaf cards, screen-space radial (best-looking, needs a shader).**
+Each card is a quad at a cluster centre `centr`, with the tree's own centre `centr_tree`
+also on the attribute. In the vertex shader, project **both** and rotate the card in
+**screen space** so it points away from the tree centre:
+
+```glsl
+vec2 quad2D = (proj * mv * vec4(centr,      1.0)).xy / w * aspect;
+vec2 bush2D = (proj * mv * vec4(centr_tree, 1.0)).xy / w * aspect;
+rot = rotateZ(atan(dir.y, dir.x) - PI2 * 0.25);   // dir = normalize(quad2D - bush2D)
+pos = centr + right * p.x + up * p.y + back * p.z;
+```
+
+The cards therefore fan outward on screen from **every** viewing angle, which is what gives
+a canopy its ragged edge instead of a circular one. Mix in a non-radial `detail` class
+(plain randomly-rotated cards) for the interior mass; only the outer shell needs radial.
+
+Three things that come free and must not be skipped:
+
+- **UV mirroring per card** (`mix(uv, vec2(1.0-uv.x, uv.y), step(0.5, rand.x))`) — halves
+  the visible repetition for zero cost.
+- **Per-card scale from `rand`** (`mix(0.5, 1.0, rand.w)`) — a uniform card size reads as
+  a stipple pattern.
+- **Every card writes the *tree's* depth**, not its own, so the line pass sees one mass.
+  See `anime-line-control` L4.
+
+**B2. Faceted blob mass in three tones (no shader, works with any material system).**
+Clusters of low-poly blobs in three values of one hue read as painted blossom or foliage
+far better than leaf geometry. Constraints, all measured:
+
+- **Unit size must be small enough that the eye reads the mass, not the unit.** A 4 m
+  canopy filled with 40 units of `0.5·S` reads as six floating lozenges; the same volume
+  needs ~120 units of ~0.3 m.
+- Three tones, one hue. Two reads flat; four reads as noise.
+- The canopy **must not `receiveShadow`** — quantised light shapes direct light only, so a
+  self-shadowed blob drops to ambient and hangs in the sky as a dark circle. It still casts.
+- A **dense hedge or bush mass needs a solid dark core box**, with blobs seated only on the
+  top and outer faces.
+
+**Conifer whorls are a third case:** one circular cone per tier is a stack of lampshades.
+Per-tier ellipse 0.84–1.18 plus 2–3° of tilt breaks every rim out of the horizontal and
+costs nothing in the instance matrix.
+
+### C. Encrusted surfaces — moss, grass, wet, lichen on rock
+
+The whole family is **one primary surface with masks derived from cheap fields**, never
+scattered geometry. Scattering moss meshes over a hillside costs draw calls and still
+reads as litter.
+
+```glsl
+vec4 n = triplanar(tNoise, worldNormal, worldPos * 0.4, 1.0);   // seamless on any face
+
+// grass takes hold where the face is flat-ish AND the noise allows it
+float grassMask = step(0.15, max(0.0, -n.r * 1.5 + dot(worldNormal, up))
+                            - n.g * 0.35 + 0.1 - n.b * 0.05);
+// wet takes hold low down
+float wetMask   = 1.0 - step(0.334, height * 0.015 + n.g * 0.006);
+
+// rock striations: a low-frequency sine of position folded into a noise lookup,
+// thresholded — bedding planes, not marble
+float s = sin(height*0.1 + dot(localNormal, vec3(0.5)) + dot(worldPos, vec3(2.0)));
+float striations = step(0.47, texture(tNoise, vec2(s*0.01, height*0.07 - s*0.02)).g
+                             + n.r*0.2 + n.g*0.05);
+```
+
+Four rules:
+
+1. **Every mask is a `step`, not a blend.** Cel shading quantises light; a smoothly blended
+   material boundary is the one soft edge in the frame and it looks like a mistake. Hard
+   masks with a noise-jittered threshold is the whole technique.
+2. **Fold the mask into `surfaceId`** so the boundary draws a line
+   (`surfaceId += grassMask * 0.1`). Otherwise grass on rock is two flat colours meeting
+   with nothing between them. See `anime-line-control` L2.
+3. **A mask must combine at least two orthogonal terms.** `dot(normal, up)` alone gives a
+   perfect contour; noise alone gives a random spatter; together they give a shelf of grass
+   on the ledges with a ragged edge — which is what it actually looks like.
+4. **The noise must be triplanar**, sampled on world position, or every vertical face gets
+   the texture smeared down it and the seam between projections is visible on every rock.
+
+**Break the line on encrusted surfaces too**: `outlineContribution *= step(0.3, n.r)` —
+a rock whose every crease is inked is a technical drawing.
 
 ---
 
@@ -337,3 +470,42 @@ the allocator in the reference project is the one that ended up buried in a fron
    the audit goes red. Otherwise nothing was verified.
 5. **Re-run connectivity checks after changing any scatter seed or window** — moved objects
    can block routes and nothing else finds it.
+
+---
+
+## Reference implementations
+
+Both shipped projects below implement what this skill describes. `WebFetch` gets 403 on
+both sites — use `curl` / `gh`.
+
+**sakura-crossing** — cel-shaded Japanese neighbourhood on a small planet; Three.js,
+vanilla ES modules, no image assets. One squashed commit, so the tree *is* the history.
+
+```bash
+git clone --depth 1 https://github.com/Kenton-GMI/sakura-crossing.git /c/tmp/sk
+#                                                                    ↑ short path: a deep
+#   temp dir fails on Windows with "cannot write keep file … Filename too long"
+```
+
+**messenger.abeto.co** — small-planet delivery game; the shipped bundle carries its GLSL
+verbatim in template literals.
+
+```bash
+curl -sSL --ssl-no-revoke https://messenger.abeto.co/ -o msg.html   # read the App3D-<hash>.js name
+curl -sSL --ssl-no-revoke https://messenger.abeto.co/assets/App3D-<hash>.js -o App3D.js
+# extract every template literal containing `void main` — 220 blocks, ~80 of which declare
+# `u*` uniforms and are the app's own. Identify a block by its uniform list.
+```
+
+**Read for this skill:**
+
+| What | Where |
+|---|---|
+| Leaf cards, screen-space radial rotation, per-card UV mirroring and scale, wind, player displacement | messenger — the block with `uLeavesShake, uShakeSpeed, uScale` and attributes `centr, centr_tree, rand, detail, leavescolor` |
+| Terrain masks: grass / wet / striations from triplanar noise, folded into `surfaceId` | messenger — the `IS_TERRAIN` branch of the block with `uSkinColor, uShowChars, uWetHeight …` |
+| Local wetness with a jagged waterline on a character | same block, the `vIsLocal == 1` branch |
+| Blob-mass canopies in three tones; the trunk-tip rotation derivation | sakura — `src/world/trees.js` (read the long comment about `applyEuler`) |
+| Attribute fields, cover field, threshold jitter, plantation stands, benching | sakura — `src/world/hills.js` |
+| Seeded RNG kit and the burnt-draw discipline | sakura — `src/core/util.js`, `rngKit` |
+| Cloth hangs: pivot at the mount, `sin + 0.25·sin(3.3ω)`, per-piece rate/phase | sakura — `src/world/details.js`, the `hang(...)` block |
+| The "reads-as" failures in this skill, each with the frame it was reported from | sakura — `CLAUDE.md` trap table (reeds, crows, willow fronds, conifer whorls, water panels) |
