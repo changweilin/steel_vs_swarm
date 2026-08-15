@@ -572,8 +572,17 @@ body.aiming .scope-vig { display: block; }
 .death-alert.on { animation: deathPulse 0.7s ease-in-out infinite; }
 @keyframes deathPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.9; } }
 
+/* HUD 下帶。**高度上限 = 畫面高的 1/6**(2026-08-15 使用者定案);比例由 game.js 的
+   `fitHudBand()` 量一次自然高後寫進 `--hud-k`(唯一縫,理由見那支的檔頭:CSS 沒辦法把長度
+   除成無單位的縮放比)。這裡只負責把那個比例**套上去**:
+     ・`transform: scale` 而不是改逐列尺寸 —— 十列資料各有自己的字級/邊距,逐列改 vh 是十份規則;
+     ・原點 `0 100%` = 畫面左下角(`bottom:0` 的錨點),縮放後仍貼齊下緣;
+     ・`width` 先除以比例再縮回來,橫向才仍然滿版(否則小地圖會離開右緣)。
+   量測面是 `getBoundingClientRect()`,它回的是**變換後**的盒 ⇒ 稽核量到的就是玩家看到的。 */
 .hud-bottom {
-  position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; pointer-events: none;
+  position: absolute; bottom: 0; left: 0; z-index: 10; pointer-events: none;
+  width: calc(100% / var(--hud-k, 1));
+  transform: scale(var(--hud-k, 1)); transform-origin: 0 100%;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
   padding: 6px 10px;
   background: linear-gradient(0deg, rgba(3, 5, 8, 0.85), transparent);
@@ -1946,8 +1955,14 @@ body.touch-ui.ori-landscape .hud-top {
 body.touch-ui.ori-landscape .base-bar { max-width: 30vw; }
 body.touch-ui.ori-landscape .wave-box { font-size: 10px; padding: 3px 10px; letter-spacing: 2px; }
 
-/* .hud-bottom 當定位框用:角色數據貼左上、小地圖貼右上(HTML 未動,只換定位) */
-body.touch-ui .hud-bottom { inset: 0; padding: 0; background: none; display: block; pointer-events: none; }
+/* .hud-bottom 當定位框用:角色數據貼左上、小地圖貼右上(HTML 未動,只換定位)。
+   ⚠ 觸控版這一層是**定位框**不是資料帶(inset:0 = 整個畫面)⇒ 1/6 的縮放 MUST 在此失效:
+   套上去等於把整個觸控 HUD(含搖桿旁的欄位)一起縮小,而版面是逐格量出來的(見 audit_touch_layout)。
+   觸控版自己的高度紀律住那一支,不走 `--hud-k`。 */
+body.touch-ui .hud-bottom {
+  inset: 0; padding: 0; background: none; display: block; pointer-events: none;
+  width: auto; transform: none;
+}
 body.touch-ui .hud-bottom > * { position: absolute; }
 /* A 機體資訊:左欄上段(寬度 = 整個左欄,與下方控件切齊成一直欄) */
 body.touch-ui.ori-landscape .hud-self {

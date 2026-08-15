@@ -106,16 +106,6 @@ const VIEW_SHAPE = {
   beetle: { e: 0.66, f: 0.14 }, panther: { e: 0.72, f: 0.12 },
 };
 const VIEW_DEF = { e: SELF_F.eye, f: 0.10 };
-// 駕駛艙座位(2026-07-12):仿生體的艙位由行進體態決定 ——
-//   'head' 體軸偏直立(人形機甲 / 猩猩 / 袋鼠 / 章魚 / 狼 / 吸血鬼 / 悟空 / 亞特拉斯):
-//          艙在頭部 → 看出去是自己的頭殼內壁(眉骨/頰骨/吻部/獠牙)
-//   'neck' 體軸偏水平(獵犬 / 暴龍 / 鴕鳥 / 劍龍 / 人馬 / 迅猛龍 / 黑豹 / 巨象 / 犀金龜):
-//          艙在頸根 → 看出去先看到自己的頭顱與頸背(嘴砲就從那顆頭的口中前伸)
-const SEAT = {
-  hound: 'neck', trex: 'neck', ostrich: 'neck', stego: 'neck', centaur: 'neck',
-  raptor: 'neck', panther: 'neck', elephant: 'neck', beetle: 'neck',
-};
-const seatOf = (creature) => SEAT[creature] || 'head';
 // 輕武器掛點(2026-07-12):武器長在機體哪裡由機體構造決定 ——
 //   hand 手持 / tentacle 觸手持械 / mouth 嘴砲(龍·暴龍·電漿口)/ back 背載砲塔(無手仿生體)
 //   / body 機身固定(旋翼無人機吊艙)/ wing 機翼固定(戰機硬點)/ claw 爪掛槍莢
@@ -134,7 +124,10 @@ const GUN_MOUNT = {
   // 機械飛行體態
   heli: 'body', tilt: 'body', jet: 'wing', uav: 'wing',
 };
-// 掛點錨的退路(座艙 builder 沒提供錨時):x = 右側掛點(wing/claw 鏡射成對)、s = 口徑倍率
+// 掛點錨(2026-08-15 起是**唯一**一份):x = 右側掛點(wing/claw 鏡射成對)、s = 口徑倍率。
+// 舊制由座艙 builder 逐機提供一份、查不到才退到這裡;那些 builder 隨舊版建模一併退場後,
+// 錨只剩這一張表 —— 它給的只是**起點**,真正定案的是 `_mountCockpitWeapon` 的四條取景夾制
+// (徑向推出準星錐 / 壓在頂緣線下 / 對準消失點 / 二分取合規最大尺寸)。
 const DEF_ANCHOR = {
   hand: { x: 0.5, y: -0.4, z: -1.0, s: 1.12 },
   tentacle: { x: 0.52, y: -0.5, z: -0.95, s: 1.2 },
@@ -170,6 +163,8 @@ const WPN_FWD_ROT = {
 const COCK_WLEN = { hand: 1.25, tentacle: 1.05, mouth: 1.1, back: 1.25, body: 0.9, wing: 0.85, claw: 0.85 };
 /**
  * FPV 取景規則(2026-07-24 使用者需求的**唯一真相**;稽核 = tools/audit_cockpit.mjs):
+ * ⓪ **畫面九宮格的中央那一格 MUST 淨空**(2026-08-15 使用者;`GRID_NDC`)—— 執行期的夾制只認這一條,
+ *    落在格內的件**平移**出去(水平 or 下沉,MUST NOT 往上)。①是它的推論(格涵蓋錐),留著當見證人。
  * ① 視野不可妨礙視線 → 準星錐 SIGHT_DEG 半角內 MUST 淨空(座艙任何件的投影都不得侵入)
  * ② 各件頂緣 MUST ≤ TOP_NDC = HUD 下帶上緣 → 準星 的 **2/3 處**(不得高過此線靠近準星)
  * ③ 面積不可太大 → 座艙總遮擋 ≤ AREA_MAX、武裝 ≤ WPN_AREA_MAX;
@@ -179,26 +174,171 @@ const COCK_WLEN = { hand: 1.25, tentacle: 1.05, mouth: 1.1, back: 1.25, body: 0.
  * 幾何換算(fov 68 全機種,A8):畫面半高張角 34° → tan34 = 0.6745;
  * 深度 z 處的畫面半高 = 0.6745|z|、半寬 = 半高 × aspect。NDC 邊界 ±1。
  */
-const HUD_BOTTOM_F = 0.22;                       // HUD 下帶佔畫面高比例(index.html .hud-bottom;實測 22%)
-const HUD_TOP_NDC = -1 + 2 * HUD_BOTTOM_F;       // HUD 下帶上緣 NDC y(≈ −0.56)
+// HUD 下帶佔畫面高比例。**2026-08-15 使用者定案「HUD 最多畫面高度的 1/6」** ⇒ 這個數字是
+// 天花板不是實測值:CSS(`--hud-h`,style.css .hud-bottom)與本常數 MUST 是**同一個** 1/6,
+// 因為它同時決定「HUD 佔多高」與「座艙件的頂緣壓到哪」(TOP_NDC 由它推導)。
+// 分家的症狀是座艙件的頂緣線落在 HUD 帶的中間或上方 —— 畫面上只表現成「有東西被 HUD 蓋住」。
+const HUD_BOTTOM_F = 1 / 6;
+const HUD_TOP_NDC = -1 + 2 * HUD_BOTTOM_F;       // HUD 下帶上緣 NDC y(= −2/3)
 export const COCKPIT = {
+  // **畫面九宮格的中央那一格 MUST 淨空**(2026-08-15 使用者:「畫面九宮格的中間不可放物件,
+  // 裡面的東西調整位置」)。這是**最外層的硬規則**,而且它**涵蓋**下面那個 11° 準星錐:
+  // 中央格邊界上離視軸最近的點是邊中點 (0, 1/3),角度 atan(1/3 × TAN_V) = 12.7° > 11°
+  // ⇒ 錐整個包在格子裡。兩條都留著是刻意的 —— 錐是「瞄準用的最小淨空」(與焰球外推同一條界),
+  // 格是「畫面構圖」,同一件事的兩把尺;夾制只認格(較嚴的那一把),錐由稽核當見證人。
+  // 「調整位置」是**平移**不是縮小:落在格內的件沿最短方向推出去(水平 or 下沉,MUST NOT 往上 ——
+  // 上方是天空與遠處敵機),推不動才輪到縮。
+  GRID_NDC: 1 / 3,
+  // 「fov 已經回到常態了沒有」的容差(度)。`_updatePlayer` 的拉近/拉遠在差距 < 0.05 時停手
+  // ⇒ 這個數 MUST > 0.05,否則座艙永遠不會再出現。
+  FOV_EPS: 0.1,
   SIGHT_DEG: 11,        // 準星錐半角(= 中央 1/3 視野,與焰球外推同一條界)。硬規則:錐內零遮擋
   AREA_MAX: 0.21,       // 座艙總遮擋上限(畫面比例)—— 至少 79% 畫面全清(最忙座艙 = 旋翼/進氣口/獸耳)
   WPN_AREA_MAX: 0.12,   // 武裝(gunGroup:手臂/砲座/武器本體)遮擋上限 —— 輕重同時可見 + 持槍手臂
-  // 頂緣天花板:HUD 上緣 → 準星 的 2/3 處(= HUD_TOP_NDC/3 ≈ −0.187)。件的頂緣不得高過此線 ⇒
+  // 頂緣天花板:HUD 上緣 → 準星 的 2/3 處(= HUD_TOP_NDC/3 ≈ −0.222)。件的頂緣不得高過此線 ⇒
   // 準星周圍上方 1/3 恆淨空、所有座艙元素壓在畫面下段。武器與結構共用同一條線(**MUST NOT** 分家)。
   TOP_NDC: HUD_TOP_NDC / 3,
+  // **單一物件面積上限(2026-08-15 使用者定案:「單一物件面積不可超過全畫面的 5%」)**。
+  // 這是使用者可見的**硬天花板**,座艙裡**任何**一件(武器本體 / 持械機構 / 機體剪影 / 艙框)
+  // 都不得越過;稽核量的是**實渲染**遮擋(tools/audit_cockpit.mjs,逐件單獨 render 讀回 alpha)。
+  // 下面兩個是**執行期的夾制旋鈕**,兩者都 **MUST < PART_AREA_MAX** —— 夾的是 NDC **包圍盒**,
+  // 而盒面積恆 ≥ 實渲染面積 ⇒ 夾住盒就構造性地夾住了那 5%,反過來不成立。
+  // 旋鈕比天花板緊是刻意的(使用者同一句話的前半:「不可過於佔據使用者視野」);
+  // 要放寬 MUST 逐格往 PART_AREA_MAX 靠,MUST NOT 直接把旋鈕設成 0.05。
+  PART_AREA_MAX: 0.05,
   // 2026-08-14 新版建模:同一個包圍盒**填得更滿**(舊版武器是幾根管子,新版是幾十顆零件)⇒
   // 同樣的盒上限換算出的實際遮擋變大(實測 s04 11.5%→12.1%、m05 11.6%→12.0%,均越過 WPN_AREA_MAX)。
   // 盒上限因此下修一級把實際遮擋壓回預算內;WPN_AREA_MAX 那條**使用者可見的**規則一格未動。
-  WPN_BOX_MAX: 0.039,   // 單件武裝的 NDC 包圍盒佔畫面比例上限(輕/重各一件 ⇒ 合計 ≈ WPN_AREA_MAX)
-  DEV_AREA_MAX: 0.035,  // 與武器/招式無關的裝置每件面積上限 —— **< WPN_BOX_MAX**(裝置恆比武器小)
+  WPN_BOX_MAX: 0.048,   // 單件武裝的 NDC 包圍盒佔畫面比例上限(輕/重各一件 ⇒ 合計 ≈ WPN_AREA_MAX)
+  DEV_AREA_MAX: 0.042,  // 與武器/招式無關的裝置每件面積上限 —— **< WPN_BOX_MAX**(裝置恆比武器小)
   VP_Z: 25,             // 消失點距離(公尺):視軸上的匯聚點,螢幕上就是準星
   VP_TOL_DEG: 12,       // 武器軸線與「武器 → 消失點」的容許夾角
   TAN_V: 0.674443,      // tan(fov/2) @ fov 68
 };
+/**
+ * 座艙機體剪影的取件參數(2026-08-15;唯一縫,見 `_cockBody` 檔頭)。
+ * 全部是「機體全高」的比例或「畫面比例」—— MUST NOT 出現絕對公尺數(機體高度逐角色不同)。
+ */
+const COCK_BODY = {
+  // 取樣點自眼位沿視軸**後退**(×全高)。地面型的真眼位坐在胸腔/顱腔裡(肩甲量體中心 z ≈ 0);
+  // 飛行型的眼位在**機鼻**(`VIEW_FLY_F`,整架機體都在身後)⇒ 不退遠一點的話前方一件都沒有,
+  // 而症狀是「這幾台的座艙是空的」(既有斷言全綠,因為空座艙每一條規則都過)。
+  BACK_F: 0.22,
+  BACK_F_AIR: 0.62,
+  R_F: 0.90,      // 取樣半徑(×全高):再遠的零件在座艙裡只剩幾個像素
+  D: 1.15,        // 重投影球面半徑(公尺):等比縮放到近場,**投影逐像素不變**
+  ZNEAR: 0.75,    // 重投影後**近面**的最小深度(公尺;相機近裁面 0.5)
+  K_MAX: 5,       // 放大倍率上限:再大就不是「看到自己的零件」而是把一塊板子糊在鏡頭上
+  FRONT_F: 0.16,  // 量體中心的前向分量下限(×距離):方向太橫的件,重投影方向本身是雜訊
+  N: 8,           // 最多幾件(draw call 與辨識度的取捨)
+  BUDGET: 0.15,   // 結構件的 NDC 盒面積**總和**上限(座艙總量 AREA_MAX 扣掉武裝與艙框的餘裕)
+  MIN_F: 3e-4,    // 太小的件不收:讀不出是什麼,只是雜訊
+};
 /** 深度 |z| 處、NDC 半徑 1 對應的世界半高(公尺):座艙件的貼邊/淨空換算唯一縫 */
 const ndcH = (z) => Math.abs(z) * COCKPIT.TAN_V;
+/**
+ * 描邊殼的世界外推量(公尺;`outlinify(g, 0.012)` 沿法線展開 + 餘裕)——
+ * **唯一縫**,頂緣與面積兩種夾制同吃。殼在頂點著色器展開、不進幾何 ⇒ 任何以包圍盒為準的
+ * 夾制都 MUST 自己補上這一段,否則夾住的是「沒有描邊的那一版」。
+ */
+const INK_W = 0.016;
+/**
+ * 動畫姿勢的取樣數(自轉繞一圈 / 擺動走一週期)—— 夾制的包絡精度。
+ * 12 是「槳葉最寬的那個角度不會被跳過」的下界:三葉槳每 120° 一個週期,12 個取樣 = 每 30°
+ * 一格,最壞漏掉的橫向跨距是 cos(15°) = 96.6%,剩下的 3.4% 由描邊外推 `INK_W` 吃掉。
+ */
+const ANIM_N = 12;
+/**
+ * 武裝動畫的搜尋上界(唯一縫;實際生效值由 `_solveGunPose` 反解,見那一支檔頭)。
+ * PULL_MAX = 後座回彈 0.11 + 填彈整管後拉 0.4(beam/rail 那一支最大)—— 兩者可以同時發生。
+ * 仰角的上界直接取 `BALLISTIC.LOB_SUP_MAX`(那本來就是「只夾視覺」的那個數)。
+ */
+const GUN_POSE = { PULL_MAX: 0.51, DROP_MAX: 0.5, PULL_N: 4 };
+/**
+ * `?cockanim=0` —— 關掉「夾制量動畫包絡」這一整件事,退回 2026-08-15 之前的行為
+ * (只量靜止那一幀、武裝繞**鏡頭**抬到 `LOB_SUP_MAX`)。稽核的反向驗證入口
+ * (`audit_cockpit --break-anim`),與 `?sag=0`/`?morph=0`/`?gait=0` 同一個慣例。
+ */
+const COCK_ANIM = typeof location === 'undefined'
+  || new URLSearchParams(location.search).get('cockanim') !== '0';
+const _ZERO3 = new THREE.Vector3();
+/**
+ * 座艙件的**螢幕佔比**(NDC 外接盒面積 / 全畫面)—— 唯一縫,結構件與武器本體同吃。
+ *
+ * MUST 投影**八個角**取外接盒,MUST NOT 拿「橫向跨距 ÷ 最近深度的畫面寬」當近似:
+ * 那個近似只有在量體是一片正對鏡頭的薄板時才成立。座艙件幾乎都是**離軸而且很深**的
+ * (一把斜掛在右下角、深度將近一公尺的槍)—— 它的螢幕外接盒是「遠端的最小 NDC」到
+ * 「近端的最大 NDC」,而近似取的是同一個橫向跨距投在近端,**少算了一倍**
+ * (實測 s03 手持槍:近似 12.3% × 21.8%,實渲染 25.3% × 35.8%)。
+ * 症狀是夾制以為自己夾在 3.6%,而使用者那條「單一物件 ≤ 5%」量到 5.2%。
+ *
+ * 橫縱各外推一個描邊殼(見 INK_W)。深度一律夾在 0.05 之上(近裁面之內的東西畫不出來,
+ * 但分母趨近 0 會讓佔比爆掉)。
+ */
+const ndcBox = (lo, hi) => {
+  const ASPECT = 16 / 9;                        // 取景基準(不隨視窗漂;與稽核的量測面同值)
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const z of [Math.max(0.05, Math.abs(hi.z)), Math.max(0.05, Math.abs(lo.z))]) {
+    const hh = ndcH(z), hw = hh * ASPECT;
+    x0 = Math.min(x0, (lo.x - INK_W) / hw); x1 = Math.max(x1, (hi.x + INK_W) / hw);
+    y0 = Math.min(y0, (lo.y - INK_W) / hh); y1 = Math.max(y1, (hi.y + INK_W) / hh);
+  }
+  return { x0, x1, y0, y1 };
+};
+const ndcFrac = (lo, hi) => {
+  const b = ndcBox(lo, hi);
+  return ((b.x1 - b.x0) / 2) * ((b.y1 - b.y0) / 2);
+};
+/**
+ * 中央九宮格的推出量(唯一縫;三個消費端:結構件夾制 / 持械機構驗收 / 武器本體取景)。
+ *
+ * 回傳把這一件推出中央格所需的**最短位移**(世界公尺,只有 x 或 y 其中一項非零);
+ * 已經在格外回 null。方向只考慮**水平**與**下沉** —— 往上推是把座艙件送進天空與遠處敵機
+ * 之間,而頂緣線(`TOP_NDC`)本來就禁止那件事。
+ *
+ * 位移在**世界空間**算(NDC 差 × 該深度的畫面半高):件是剛體,平移的是世界座標,
+ * 直接對 NDC 動手要嘛得逐深度分開推(件會被拉歪),要嘛得迭代猜。取哪個深度是關鍵 ——
+ * MUST 取**近面**(`min |z|`):同一段世界位移在近端換算出的 NDC 位移最大,拿遠端算會推不夠。
+ */
+const mid9Push = (lo, hi) => {
+  const b = ndcBox(lo, hi);
+  const G = COCKPIT.GRID_NDC;
+  if (b.x0 >= G || b.x1 <= -G || b.y0 >= G || b.y1 <= -G) return null;   // 已在格外
+  const zn = Math.max(0.05, Math.min(Math.abs(lo.z), Math.abs(hi.z)));
+  const hh = ndcH(zn), hw = hh * (16 / 9);
+  const right = (G - b.x0) * hw;        // 往右推到左緣貼齊 +1/3
+  const left = (b.x1 + G) * hw;         // 往左推到右緣貼齊 −1/3
+  const down = (b.y1 + G) * hh;         // 下沉到頂緣貼齊 −1/3
+  const m = Math.min(right, left, down);
+  const EPS = 0.01;                     // 貼齊會被浮點與描邊殼吃回去 ⇒ 多推一點點
+  if (m === down) return { x: 0, y: -(down + EPS) };
+  return { x: (m === right ? right + EPS : -(left + EPS)), y: 0 };
+};
+export { HUD_BOTTOM_F };
+const HUD_FIT_S = 0.5;                           // HUD 貼合重量測的節流間隔(秒)
+/**
+ * HUD 下帶貼合(2026-08-15 使用者:「HUD 最多畫面高度的 1/6」)——
+ * 唯一縫,兩個呼叫端(`_onResize` 與 tick 的節流)MUST 全走這一支。
+ *
+ * 為什麼 MUST 有這一支、而不是把 CSS 的尺寸全改成 vh:HUD 下帶的高是**內容撐出來的**
+ * (十列資料 + 小地圖,逐列各自有自己的字級與邊距),CSS 沒有辦法把「長度」除成一個無單位的
+ * 縮放比 ⇒ 「不超過畫面 1/6」這件事在純 CSS 裡表達不出來,只能逐列改成 vh 再逐列人工對帳,
+ * 而漏掉任何一列的症狀是「在小視窗上 HUD 吃掉三分之一畫面」。這裡量一次自然高、算一個比例,
+ * 交給 CSS 的 `--hud-k` 去縮 —— **一個數字管全部**。
+ *
+ * 三條:①量之前 MUST 先把 `--hud-k` 還原成 1(量的是**自然高**,不是上一輪縮過的結果,
+ * 否則會逐次收縮成一條線);②觸控版的 `.hud-bottom` 是**定位框**不是資料帶(inset:0),
+ * 縮它等於把整個觸控 HUD 縮小 ⇒ CSS 那側以 `body.touch-ui` 讓這個變數失效;
+ * ③比例只准縮不准放(`min(1, …)`)—— 內容少的時候放大它就不是「上限」而是「填滿」。
+ */
+export function fitHudBand() {
+  const el = document.querySelector('.hud-bottom');
+  if (!el) return;
+  el.style.setProperty('--hud-k', '1');
+  const nat = el.getBoundingClientRect().height;
+  const cap = (el.parentElement?.clientHeight || window.innerHeight) * HUD_BOTTOM_F;
+  el.style.setProperty('--hud-k', nat > cap && nat > 0 ? String(cap / nat) : '1');
+}
 // 重武器 third-person 掛點動畫(2026-07-13;2026-07-15 移居 locomotion.js stepCombatFx):
 // ent.heavyFx / ent.fireFx 事件驅動的蓄力/擊發/後座/射姿動畫全數住 stepCombatFx ——
 // 戰場(這裡)與選角展示台(charPreview)共用同一條,MUST NOT 在 game.js 另寫一份。
@@ -567,6 +707,7 @@ export class BattleClient {
       this.renderer.setSize(w, h, false);
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
+      fitHudBand();
     };
     window.addEventListener('resize', this._onResize);
 
@@ -1045,12 +1186,12 @@ export class BattleClient {
     }
   }
 
-  // ---------------- FPV 座艙(角色專屬:依 CHARACTERS[ch].visual 差異化,3D 賽璐璐)----------------
-  // 與世界模型(models.js)同一套視覺語彙,座艙 = 從自己機體「頭/艙位」往正前方看出去的自身剪影:
-  // 無人機 = 擬態獸(avian 撲翼)/ 定翼機(fixed 翼型)/ 旋翼機架;
-  // 機甲 = 人形艙框(proto 專屬)或獸首視野(creature);變形者 = 地面+飛行雙組件隨變形切換。
+  // ---------------- FPV 座艙(逐機體差異化 = 直接取那台機體自己的零件,3D 賽璐璐)----------------
+  // 座艙 = 從自己機體「頭/艙位」往正前方看出去的自身剪影,而那個剪影**就是機體本身的零件**:
+  // 結構走 `_cockBody`(複製 forge 真品零件)、武裝走 `_mountCockpitWeapon`(複製 rig.wpn 子樹),
+  // 變形者兩型態各取自己那一棵。2026-08-15 起座艙裡沒有任何一塊是手繪的 ——
+  // 手繪那一套畫的是舊版建模,而英雄機體 2026-08-14 起全面換成 forge(§6 退場清單)。
   // 取景一律按 fov 68(全機種統一,z=-0.8 處畫面邊緣 y≈±0.54):周邊件貼邊、不擋準星。
-  // 輕武器外觀依機構分類(gun/launcher/beam),主色 = 角色識別色。
   _buildCockpit() {
     if (!this.side) return;
     this.scene.add(this.camera);   // 相機要在場景樹裡,座艙子物件才會渲染
@@ -1079,8 +1220,7 @@ export class BattleClient {
     };
     const accent = PAL.accent;
     const g = new THREE.Group();
-    this.cockpitSpin = [];    // 旋翼(繞 y 自轉)
-    this.cockpitSpinZ = [];   // 螺旋槳(繞 z 自轉,軸線朝前)
+    this.cockpitSpin = [];    // 自轉件(繞樞軸 y 自轉;來源 = 第三人稱 userData.spin)
     this.cockpitFlap = [];    // 撲翼/觸手:每幀 rot[ax] = base + amp·sin(2π·hz·t + ph)
     this.cockGround = null;   // 變形者:地面型態組件
     this.cockAir = null;      // 變形者:飛行型態組件
@@ -1088,13 +1228,7 @@ export class BattleClient {
     this.gunGroup = new THREE.Group();
 
     // 人類駕駛艙罩:全機種共通(座艙裡坐的是人),機體自身結構一律在艙框之外
-    this._cockCanopy(g, mk, accent, vis);
-
-    // 座艙 builder 回傳「這具機體的武器掛點錨」—— 只有它知道自己的頭顱/機翼/手臂在哪
-    let anchors;
-    if (this.isDrone) anchors = this._buildDroneCockpit(g, mk, accent, vis);
-    else if (this.isMorph) anchors = this._buildMorphCockpit(g, mk, accent, vis);
-    else anchors = this._buildMechCockpit(g, mk, accent, vis);
+    this._cockCanopy(g, mk, accent);
 
     // 武裝(2026-07-22 同源改制):FPV 武器 = 複製第三人稱機體的武裝子樹(models.js rig.wpn 登記),
     // 輕/重兩把與第三人稱一樣「同時可見」;瞄準只切換作用中的槍口(_syncCockpitWeapon)。
@@ -1104,6 +1238,20 @@ export class BattleClient {
     unit3p.updateMatrixWorld(true);
     const rig3p = unit3p.userData.rig || {};
     const wpn = rig3p.wpn || {};
+    // 機體剪影(2026-08-15 使用者「駕駛艙畫面基於新版機體更新設計」):與武裝同源 ——
+    // 兩者都是**這台新版機體自己的零件**,差別只在武裝另有四條取景規則(_mountCockpitWeapon)。
+    const spin3p = unit3p.userData.spin || [];
+    const mp = unit3p.userData.morph;
+    if (this.isMorph) {
+      this.cockGround = new THREE.Group();
+      this.cockAir = new THREE.Group();
+      g.add(this.cockGround, this.cockAir);
+      this._cockBody(mp?.gg || unit3p, rig3p, spin3p, this.cockGround, false);
+      this._cockBody(mp?.ag || unit3p, unit3p.userData.rigAir || rig3p, spin3p, this.cockAir, true);
+      this.cockAir.visible = false;
+    } else {
+      this._cockBody(unit3p, rig3p, spin3p, g, this.isDrone);   // 無人機恆為飛行型視點(_flying)
+    }
     this._muzzles = { G: {}, A: {} };
     this._mountAudit = {};
     // 輕重同一具(同型雙模:hound/centaur/seraph/cthulhu/panther/raptor/同型機腹莢…)= 只建一次,兩槍口同複本
@@ -1119,19 +1267,24 @@ export class BattleClient {
       const rigA = unit3p.userData.rigAir || rig3p;
       const wpnA = rigA.wpn || wpn;
       for (const slots of jobs) {
-        Object.assign(this._muzzles.G, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this._gunG, anchors.ground, false));
-        Object.assign(this._muzzles.A, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpnA, rigA, this._gunA, anchors.air, true));
+        Object.assign(this._muzzles.G, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this._gunG, null, false));
+        Object.assign(this._muzzles.A, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpnA, rigA, this._gunA, null, true));
       }
       this._gunA.visible = false;
     } else {
       for (const slots of jobs) {
-        Object.assign(this._muzzles.G, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this.gunGroup, anchors, this.isDrone));
+        Object.assign(this._muzzles.G, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this.gunGroup, null, this.isDrone));
       }
     }
     this._muzzle = this._muzzles.G.light || this._muzzles.G.heavy;
 
     // 槍口焰(開火瞬間顯示):與第三人稱焰球同語彙(加法混色暖白,attachMuzzleFlames 的 FPV 對應物);
-    // 位置隨作用中槍口走(_syncCockpitWeapon)
+    // 位置隨作用中槍口走(_syncCockpitWeapon)。
+    // ⚠ **取景七條規則的具名例外**(2026-08-15):它是**開火回饋**不是機體零件 —— 加法混色、
+    // 不描邊、不寫深度、只亮 `_flashTtl` 那零點幾秒,而且它的位置就是槍口的定義(挪開它 =
+    // 說謊)。實測滿尺寸(重武器 ×2.3)時 32 台裡有 25 台會掃到中央格 0.15~0.57%、
+    // 自身佔畫面 2.1~6.0%。**要不要把它也收進規則裡是使用者的決定**,MUST NOT 自行夾制:
+    // 夾了就是「開了槍卻看不出來」,而狙擊模式裡它是唯一剩下的回饋(見 _syncCockpitWeapon)。
     this.flash = new THREE.Mesh(
       new THREE.SphereGeometry(0.09, 8, 6),
       new THREE.MeshBasicMaterial({
@@ -1153,6 +1306,7 @@ export class BattleClient {
     // 取景夾制 MUST 在 outlinify **之後**:描邊殼掛在各 mesh 底下會外擴頂緣 ≈0.012m,
     // 夾制的包圍盒要含殼才量得準(否則頂緣夾在 −0.187 但描邊把它頂回 −0.14)。件平移/縮放時描邊子件同動。
     this._frameCockpitStruct(g);
+    this._solveGunPose();                 // 武裝動畫(後座/填彈/超高仰角)的包絡上限,見該支檔頭
     // FPV 座艙 MUST NOT 投影(2026-08-14):它掛在**相機底下**,武裝是從第三人稱機體
     // `makeUnit` 複製過來的子樹 ⇒ 那一份的 `castShadow` 也跟著複製過來,而它離鏡頭一公尺、
     // 離地兩公尺,在陰影圖裡就是一大塊糊在正前方地面上的黑影(2026-08-14 實測 taroko dusk:
@@ -1166,39 +1320,74 @@ export class BattleClient {
   /**
    * 座艙**結構件**取景夾制(2026-07-24 使用者三條追加規則;武器本體由 _mountCockpitWeapon 自帶求解器):
    *  ② 每個結構件頂緣 MUST ≤ TOP_NDC(HUD→準星 2/3 處)—— 高過就整件下移。
-   *  ③ 與武器/招式無關的裝置每件面積 MUST ≤ 該座艙最大單一武器件 —— 超過就等比縮小。
+   *  ③ 與武器/招式無關的裝置每件面積 MUST ≤ 該座艙最大單一武器件 —— 超過就等比縮小;
+   *     持械機構夾在 `PART_AREA_MAX`(使用者的 5% 硬天花板),武器本體由 framed 自帶求解器夾。
    *  ① 下移後不得落進準星錐 —— 沿離軸方向(置中件則直接下沉)推到錐外。
    * 只處理「非武器」頂層件(cockpit.children 去掉 gunGroup;morph 另含 cockGround/cockAir 子件);
-   * 武器與持槍手臂在 gunGroup 內、屬「武器相關」故豁免面積規則。件彼此獨立掛在容器上(非骨架鏈),
+   * 武器本體在 gunGroup 內、由 `framed` 的二分解定案。件彼此獨立掛在容器上(非骨架鏈),
    * 逐件平移/縮放不會拆散關節 —— 唯一縫,MUST NOT 在各 builder 另寫夾制。
    */
   _frameCockpitStruct(g) {
-    const ASPECT = 16 / 9;                       // 取景基準(與 framed() 同,不隨視窗漂)
     const capY = COCKPIT.TOP_NDC, tanV = COCKPIT.TAN_V;
-    const tanS = Math.tan(COCKPIT.SIGHT_DEG * Math.PI / 180);
-    const INFL_W = 0.016;                         // 描邊殼沿法線外推 ≈0.012m(著色器展開,不進幾何)+ 餘裕
+    const INFL_W = INK_W;                         // 唯一縫(見 INK_W)
     g.updateMatrixWorld(true);                    // g 尚未掛上 camera ⇒ 先把容器矩陣算出來(否則子件世界座標是舊的)
     const _v = new THREE.Vector3();
-    const boxOf = (o) => { o.updateMatrixWorld(true); return new THREE.Box3().setFromObject(o); };
-    const frac = (bb) => {                        // 螢幕佔比(NDC 盒面積 / 全畫面)
-      if (bb.isEmpty()) return 0;
-      const zn = Math.max(0.05, Math.min(Math.abs(bb.min.z), Math.abs(bb.max.z)));
-      return ((bb.max.x - bb.min.x) / (ndcH(zn) * ASPECT) / 2) * ((bb.max.y - bb.min.y) / ndcH(zn) / 2);
+    /**
+     * 動畫姿勢取樣(2026-08-15 使用者:「螺旋槳放進去的時候會不會轉?不轉的話很奇怪,
+     * 會轉的話要考慮旋轉後的範圍」)——
+     * **夾制量的 MUST 是這一件在所有姿勢下的包絡,不是靜止那一幀**。
+     * 座艙裡真的每幀在動的有兩種:自轉件(`cockpitSpin`,繞樞軸 y 連續 360°)與擺動件
+     * (`cockpitFlap`,正弦 ±amp)。只量靜止那一幀的代價是:一片停在側面的槳葉量起來很窄,
+     * 轉起來卻掃出一整個圓盤 —— 實測 s11/m03 的槳盤轉到某個角度時**頂緣爬到 NDC +0.19**
+     * (門檻 −0.222)並吃掉中央格 0.8%,而每一條斷言在靜止那一幀上都是綠的。
+     * 取樣而不解析:自轉的掃掠是旋轉體、擺動的是圓弧帶,兩者的解析包絡各是一套公式,
+     * 而取樣一套管兩種、加第三種動畫時不必再推一次(這是**建構期**的成本,執行期一格未動)。
+     */
+    const spinSet = new Set(this.cockpitSpin);
+    const flapMap = new Map(this.cockpitFlap.map((f) => [f.o, f]));
+    const posesOf = (o) => {
+      const sp = [], fl = [];
+      o.traverse((n) => { if (spinSet.has(n)) sp.push(n); const f = flapMap.get(n); if (f) fl.push(f); });
+      return (sp.length || fl.length) ? { sp, fl } : null;
     };
+    /** 對每個取樣姿勢呼叫 fn();沒有動畫件就只呼叫一次(⇒ 逐位元同舊行為)。用完 MUST 還原 */
+    const withPoses = (o, fn) => {
+      const a = COCK_ANIM ? posesOf(o) : null;
+      if (!a) { o.updateWorldMatrix(true, true); fn(); return; }
+      const y0 = a.sp.map((n) => n.rotation.y);
+      const r0 = a.fl.map((f) => f.o.rotation[f.ax]);
+      for (let k = 0; k < ANIM_N; k++) {
+        const u = (k / ANIM_N) * Math.PI * 2;
+        for (const n of a.sp) n.rotation.y = u;
+        for (const f of a.fl) f.o.rotation[f.ax] = f.base + f.amp * Math.sin(u);
+        o.updateWorldMatrix(true, true);
+        fn();
+      }
+      a.sp.forEach((n, i) => { n.rotation.y = y0[i]; });
+      a.fl.forEach((f, i) => { f.o.rotation[f.ax] = r0[i]; });
+      o.updateWorldMatrix(true, true);
+    };
+    const boxOf = (o) => {
+      const out = new THREE.Box3();
+      withPoses(o, () => out.union(new THREE.Box3().setFromObject(o)));
+      return out;
+    };
+    const frac = (bb) => (bb.isEmpty() ? 0 : ndcFrac(bb.min, bb.max));   // 唯一縫
     // 頂緣 MUST 逐頂點投影量(不是 AABB):傾斜件(EVA 肩莢/斜掛槍)的實渲染頂緣比軸對齊盒高
     // 出 ~0.05m,AABB 估計會漏。回傳最高 NDC 頂點的 {ndc,z,y}(y 已含描邊外推 INFL_W)。
     const topVert = (o) => {
       let best = null;
-      o.updateWorldMatrix(true, true);
-      o.traverse((m) => {
-        const pos = m.isMesh && !m.userData.isOutline && m.geometry?.attributes?.position;
-        if (!pos) return;
-        for (let i = 0; i < pos.count; i++) {
-          _v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
-          if (_v.z >= -0.05) continue;
-          const ndc = (_v.y + INFL_W) / (Math.abs(_v.z) * tanV);
-          if (!best || ndc > best.ndc) best = { ndc, z: _v.z, y: _v.y };
-        }
+      withPoses(o, () => {
+        o.traverse((m) => {
+          const pos = m.isMesh && !m.userData.isOutline && m.geometry?.attributes?.position;
+          if (!pos) return;
+          for (let i = 0; i < pos.count; i++) {
+            _v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+            if (_v.z >= -0.05) continue;
+            const ndc = (_v.y + INFL_W) / (Math.abs(_v.z) * tanV);
+            if (!best || ndc > best.ndc) best = { ndc, z: _v.z, y: _v.y };
+          }
+        });
       });
       return best;
     };
@@ -1206,9 +1395,23 @@ export class BattleClient {
     const clamp = (o, areaCap, doCone) => {
       let bb = boxOf(o);
       if (bb.isEmpty()) return;
-      if (areaCap < Infinity) {                   // ③ 裝置面積 ≤ DEV_AREA_MAX(< 單一武器)
-        const f = frac(bb);
-        if (f > areaCap && f > 1e-5) { o.scale.multiplyScalar(Math.sqrt(areaCap / f)); bb = boxOf(o); }
+      // ③ 裝置面積 ≤ areaCap。兩條:
+      //  ・MUST **迭代**:佔比對縮放不是單純的平方關係(深度也跟著縮)—— 一步到位在跨度大的
+      //    件上收不回來。
+      //  ・縮放 MUST **保持量體中心不動**。`o.scale` 是繞**件自己的原點**縮的,而掛載機構
+      //    (`_cockMountStruct`)那幾件的原點就在**相機上**(零件各自帶絕對座標)⇒ 繞原點縮
+      //    等於把整組往鏡頭裡吸:深度跟著趨近 0、佔比永遠收不下來,六輪之後縮成 0.005 倍的
+      //    一粒灰塵貼在鏡頭上(實測 s03:持槍手臂整組消失,而每一條斷言都還是綠的)。
+      if (areaCap < Infinity) {
+        for (let it = 0; it < 6; it++) {
+          const f = frac(bb);
+          if (!(f > areaCap) || f <= 1e-5) break;
+          const c0 = bb.getCenter(new THREE.Vector3());
+          o.scale.multiplyScalar(Math.sqrt(areaCap / f));
+          bb = boxOf(o);
+          o.position.add(c0.sub(bb.getCenter(new THREE.Vector3())));
+          bb = boxOf(o);
+        }
       }
       for (let it = 0; it < 4; it++) {            // ② 頂緣(逐頂點,含描邊外推)
         const tv = topVert(o);
@@ -1217,28 +1420,109 @@ export class BattleClient {
         o.updateMatrixWorld(true);
       }
       if (!doCone) return;
-      for (let it = 0; it < 5; it++) {            // ① 準星錐:遠面最嚴格,沿離軸方向推出
+      // ① 中央九宮格淨空(2026-08-15 使用者;涵蓋舊的 11° 準星錐,見 COCKPIT.GRID_NDC)。
+      // 迭代是因為位移換算取的是**當下**的近面深度,而下沉會把近面推遠一點 ⇒ 一步通常夠、
+      // 偶爾要補第二步。推不出去(格子比件還小)就停手,由稽核紅字接手,MUST NOT 無限推。
+      for (let it = 0; it < 5; it++) {
         bb = boxOf(o);
-        const zf = Math.max(Math.abs(bb.min.z), Math.abs(bb.max.z));
-        const cx = Math.min(Math.max(0, bb.min.x), bb.max.x);
-        const cy = Math.min(Math.max(0, bb.min.y), bb.max.y);
-        const r = Math.hypot(cx, cy), need = tanS * zf;
-        if (r >= need) break;
-        let dx = cx, dy = cy, dl = Math.hypot(dx, dy);
-        if (dl < 1e-3) { dx = 0; dy = -1; dl = 1; }   // 置中件:直接下沉出錐(橫向推無意義)
-        o.position.x += (dx / dl) * (need - r + 0.02);
-        o.position.y += (dy / dl) * (need - r + 0.02);
+        const push = mid9Push(bb.min, bb.max);
+        if (!push) break;
+        o.position.x += push.x;
+        o.position.y += push.y;
+        o.updateMatrixWorld(true);
       }
     };
-    // 結構件(艙罩 + 機體剪影):裝置面積 + 頂緣 + 準星錐
+    // 結構件(艙罩 + 機體剪影):裝置面積 + 頂緣 + 中央格
     const skip = new Set([this.gunGroup, this.cockGround, this.cockAir]);
     for (const c of [...g.children]) if (!skip.has(c)) clamp(c, COCKPIT.DEV_AREA_MAX, true);
     if (this.isMorph) for (const cg of [this.cockGround, this.cockAir]) for (const c of [...cg.children]) clamp(c, COCKPIT.DEV_AREA_MAX, true);
     // 武器持槍機構(cockStruct:手臂/砲座/喉管)頂緣 + 準星錐,豁免面積(它是武器的一部分)。
     // 武器本體 wrap **MUST NOT** 在此平移 —— 頂緣/面積/準星錐/消失點全由 framed 二分解定案,
     // 事後平移會破壞 VP 對準(平移改變砲管軸線與消失點的夾角)。
+    // 面積上限自 2026-08-15 起**不再豁免**:使用者定案「單一物件面積不可超過全畫面的 5%」是
+    // 對**任何一件**說的,持械機構(手臂/砲座/喉管)也是一件。夾在 PART_AREA_MAX 而不是
+    // DEV_AREA_MAX ⇒ 「機構恆比裝置寬鬆、比 5% 嚴格」,舊制的無上限只差在少數幾件會被縮一級。
     const guns = this.isMorph ? [this._gunG, this._gunA] : [this.gunGroup];
-    for (const gun of guns) for (const c of [...gun.children]) if (c.userData.cockStruct) clamp(c, Infinity, true);
+    for (const gun of guns) for (const c of [...gun.children]) if (c.userData.cockStruct) clamp(c, COCKPIT.PART_AREA_MAX, true);
+  }
+
+  /**
+   * 武裝動畫的包絡上限(2026-08-15;唯一縫,兩個輸出 `_gunLift` / `_gunPull` 只在 tick 被讀)。
+   *
+   * 取景夾制定案的是**靜止那一幀**,但 `gunGroup` 每幀都在動:後座回彈(+z)、填彈動作
+   * (beam/rail 整管後拉 +0.4z、發射器上掀 −0.5rad、槍械退彈匣 −0.22y/+0.12rad)、
+   * 以及榴彈火控的**超高仰角**(`BALLISTIC.LOB_SUP_MAX` 0.70rad ≈ 40°)。三者都在夾制之後才套上去。
+   * 實測(靜止全綠的同一份座艙):仰角只要 **0.10rad(5.7°)** 就把 s02 的武裝推進中央格,
+   * 頂到 40° 時整把槍掃過準星(中央格被吃掉 6.6%、頂緣爬到 NDC +0.73);t11 空中型、m06、
+   * t01、t11 地面型同族。畫面上就是「瞄準的時候槍管擋在準星上」,而每一條既有斷言都是綠的。
+   *
+   * 兩件事一起做:
+   *  ⓐ **繞武器自己的掛點抬,不是繞鏡頭**。舊制 `gunGroup.rotation.x = θ` 的樞軸在**相機原點**
+   *     ⇒ 抬 θ 等於讓整把槍沿半徑 ≈1.3m 的圓弧掃過畫面(那不是砲管抬高,是整個座艙在翻)。
+   *     改繞武裝量體中心 `_gunPivot`:槍在原地翹起來,槍口抬得看得見而槍身待在角落。
+   *     樞軸補償寫進 `position`(T = P − R·P)⇒ `_muzzle` 仍是 gunGroup 的局部點,
+   *     `gunGroup.localToWorld(_muzzle)` 那四個彈道消費端一行不改。
+   *  ⓑ **上限由取景規則反解**,MUST NOT 手寫角度:二分找「仍然滿足頂緣 + 中央格」的最大值。
+   *     `LOB_SUP_MAX` 本來就註明是**只夾視覺、不夾彈道解** ⇒ 收緊它不動任何一發砲彈的落點。
+   *
+   * ❗ **往下轉也要夾**:旋轉的樞軸在量體中心 ⇒ 槍口壓下去的同時**槍尾翹上來**。
+   * 發射器/飛彈/電漿的填彈動作是「上掀開膛」(rx = −0.5rad),實測把 t06 飛行型的槍尾掀到
+   * NDC **+0.24**(門檻 −0.222)—— 只夾正向的話,這一族在填彈的半秒裡把東西掀進準星。
+   * 位移則只夾**往前**(dz>0 = 靠近鏡頭);dy 恆 ≤ 0(往下)不會違規。
+   */
+  _solveGunPose() {
+    const parts = [];
+    this.gunGroup.traverse((o) => { if (o.userData.cockWpn || o.userData.cockStruct) parts.push(o); });
+    // 樞軸 = 武裝量體(不含機構)的中心;查無武裝退回原點 ⇒ 逐位元同舊行為
+    const pb = new THREE.Box3();
+    for (const o of parts) if (o.userData.cockWpn) pb.expandByObject(o);
+    this._gunPivot = pb.isEmpty() ? new THREE.Vector3() : pb.getCenter(new THREE.Vector3());
+    this._gunLift = 0;
+    this._gunDrop = 0;
+    this._gunPull = 0;
+    if (!parts.length) return;
+    if (!COCK_ANIM) {                      // 壞版:不夾、樞軸退回鏡頭原點(= 改制前那一版)
+      this._gunPivot.set(0, 0, 0);
+      this._gunLift = BALLISTIC.LOB_SUP_MAX;
+      this._gunDrop = GUN_POSE.DROP_MAX;
+      this._gunPull = GUN_POSE.PULL_MAX;
+      return;
+    }
+    const base = this._gunBaseZ;
+    const P = this._gunPivot;
+    const ok = (lift, pull) => {
+      this.gunGroup.rotation.x = lift;
+      const c = Math.cos(lift), sn = Math.sin(lift);
+      this.gunGroup.position.set(0, P.y - (P.y * c - P.z * sn), base + pull + P.z - (P.y * sn + P.z * c));
+      this.gunGroup.updateMatrixWorld(true);
+      for (const o of parts) {
+        const bb = new THREE.Box3().setFromObject(o);
+        if (bb.isEmpty()) continue;
+        if (mid9Push(bb.min, bb.max)) return false;                       // 中央九宮格
+        if (ndcBox(bb.min, bb.max).y1 > COCKPIT.TOP_NDC) return false;    // 頂緣線
+      }
+      return true;
+    };
+    const solve = (lo, hi, f) => {
+      if (f(hi)) return hi;
+      for (let i = 0; i < 16; i++) { const m = (lo + hi) / 2; if (f(m)) lo = m; else hi = m; }
+      return lo;   // 回的恆是**驗過**的那一點(lo 起始 0 = 靜止姿勢)
+    };
+    // ⚠ 兩軸 MUST NOT 只在「另一軸頂到上限」那一點上驗:**位移最大不是最壞的情況**。
+    // 把武裝往鏡頭拉近會讓一個在視軸下方的件投影得**更低**(NDC y = y / (|z|·tanV),|z| 變小
+    // ⇒ 負值更負)⇒ 在 pull = 0.51 上驗「往下轉 0.31rad」是綠的,而執行期填彈只 pull 0.11 時
+    // 同一個角度把槍尾掀到 NDC −0.13(實測 s04,門檻 −0.222)。旋轉那兩軸因此 MUST **掃過**
+    // 整段位移範圍;位移那一軸在靜止姿態上解(旋轉的解已經掃過它)。
+    this._gunPull = solve(0, GUN_POSE.PULL_MAX, (v) => ok(0, v));
+    const sweep = (lift) => {
+      for (let i = 0; i <= GUN_POSE.PULL_N; i++) {
+        if (!ok(lift, (this._gunPull * i) / GUN_POSE.PULL_N)) return false;
+      }
+      return true;
+    };
+    this._gunLift = solve(0, BALLISTIC.LOB_SUP_MAX, (v) => sweep(v));
+    this._gunDrop = solve(0, GUN_POSE.DROP_MAX, (v) => sweep(-v));
+    ok(0, 0);                              // 還原成靜止姿勢(稽核與第一幀都從這裡出發)
   }
 
   /**
@@ -1248,11 +1532,35 @@ export class BattleClient {
    */
   _syncCockpitWeapon() {
     const fly = !!this.flight;
+    // **狙擊模式不出現機體零件**(2026-08-15 使用者定案):進鏡 ⇒ 座艙件整組收起。
+    // 三條:
+    //  ① 收的是**全部**座艙件(機體剪影 / 武裝 / 持械機構 / 艙框),MUST NOT 只收「擋到鏡圈的
+    //     那幾件」—— 鏡圈外一樣是瞄準用的畫面,而且「擋不擋得到」逐機體不同 = 又一份判定。
+    //  ② **槍口焰留著**:它不是機體零件而是開火回饋(這一發打出去了沒有,鏡裡也要看得見)。
+    //     它掛在 `gunGroup` 底下(後座回彈與火控抬角要跟著走)⇒ 收的是 gunGroup 的**子件**,
+    //     MUST NOT 收 gunGroup 本身。
+    //  ③ 收顯只准住這一支(每幀跑,與型態切換同一個結算點)—— 在別處另寫一份 `aiming ?` 分支,
+    //     兩份判定遲早分家,而症狀是「切回一般模式後某幾件沒回來」。
+    // ⚠ 收顯 MUST **同時**看布林與**已定案的 `camera.fov`**:取景那七條規則每一條都是在
+    // fov 68 上算的(A8 全機種統一),而狙擊鏡是 `UNITS[kind].zoomFov` = 35 —— **放大 2.14 倍**。
+    // fov 是**漸變**的(`_updatePlayer` 每幀拉近/拉遠),而 `aiming` 是當場翻的布林 ⇒
+    //  ・只判布林:退出狙擊那一瞬間零件全部回來,而 fov 還在 35 往 68 收 —— 那幾幀的座艙是
+    //    被放大兩倍畫出來的(中央格、頂緣、5% 三條同時破,而每一支稽核都在 fov 68 上驗)。
+    //  ・只判 fov:進鏡的第一幀 fov 還是 68,零件還在(只差一幀,但那一幀是滿版的)。
+    // 兩個都判 ⇒ 進鏡當場收、出鏡等 fov 真的回到 68 才放,中間沒有任何一幀是放大的。
+    const hide = !!this.aiming
+      || (this.baseFov > 0 && this.camera.fov < this.baseFov - COCKPIT.FOV_EPS);
     if (this.cockAir) {
-      this.cockAir.visible = fly;
-      this.cockGround.visible = !fly;
-      this._gunA.visible = fly;
-      this._gunG.visible = !fly;
+      this.cockAir.visible = !hide && fly;
+      this.cockGround.visible = !hide && !fly;
+      this._gunA.visible = !hide && fly;
+      this._gunG.visible = !hide && !fly;
+    }
+    for (const c of this.cockpit?.children || []) {
+      if (c !== this.gunGroup && c !== this.cockAir && c !== this.cockGround) c.visible = !hide;
+    }
+    for (const c of this.gunGroup?.children || []) {
+      if (c !== this.flash && c !== this._gunG && c !== this._gunA) c.visible = !hide;
     }
     const set = (this.isMorph && fly) ? this._muzzles?.A : this._muzzles?.G;
     if (!set) return;
@@ -1268,714 +1576,153 @@ export class BattleClient {
     return o;
   }
 
-  /** 無人機座艙:依 visual.form 分派 —— 擬態獸(撲翼)/ 定翼機(座艙罩)/ 旋翼機架。回傳武器掛點錨 */
-  _buildDroneCockpit(g, mk, accent, vis) {
-    if (vis.form === 'avian') return this._cockAvian(g, mk, accent, vis);
-    if (vis.form === 'fixed') return this._cockFixed(g, mk, accent, vis);
-    return this._cockRotor(g, mk, accent, vis);
-  }
-
-  /** 擬態獸無人機:自身頭部/口器在下緣、雙翼在畫面兩側拍動(creature 專屬,對應 models.js buildAvian) */
-  _cockAvian(g, mk, accent, vis) {
-    const C = vis.creature || 'eagle';
-    const skin = 0x4b545e, hard = 0x5b6772;
-    // ---- 翼:根樞軸在肩點,翼面向外伸出;繞 z 拍動(頻率/幅度依生物) ----
-    const wingSpec = {
-      bee: { hz: 7.5, amp: 0.42, len: 1.05, chord: 0.34, opacity: 0.42, pairs: 2 },
-      ptero: { hz: 1.15, amp: 0.30, len: 1.35, chord: 0.62, opacity: 0.72, pairs: 1 },
-      dragon: { hz: 0.9, amp: 0.26, len: 1.45, chord: 0.85, opacity: 0.78, pairs: 1 },
-      eagle: { hz: 1.3, amp: 0.28, len: 1.30, chord: 0.55, opacity: 1, pairs: 1, feather: true },
-    }[C];
-    // 翼根落在視錐內才看得見,但 MUST 靠畫面側緣下方(2026-07-16 視野開闊化):
-    // 根太靠中央(舊 x±0.34)翼面會蓋掉兩側中段視野;外推 + 下沉 + 加大後掠,
-    // 只剩翼前緣沿畫面兩側下角掃出去(翼尖出畫 = 正確的鳥類 FPV)。
-    for (const sx of [-1, 1]) {
-      for (let p = 0; p < wingSpec.pairs; p++) {
-        const root = new THREE.Group();
-        // 翼根再外推/後退(2026-07-24 面積收斂):翼面大半掃出畫面外,只留前緣沿側下角掠過
-        root.position.set(sx * 0.78, -0.42 - p * 0.16, -1.08 + p * 0.22);
-        root.rotation.y = sx * 0.5;
-        g.add(root);
-        if (wingSpec.feather) {
-          // 羽刃翼:羽片沿翼展放射(掠角逐片遞增),與 models.js feather() 同語彙
-          for (let i = 0; i < 5; i++) {
-            const t = i / 4;
-            const f = mk(new THREE.BoxGeometry(wingSpec.len * (0.55 + 0.45 * t), 0.03, wingSpec.chord * (0.9 - 0.4 * t)), i % 2 ? 0x8f9aa5 : hard);
-            f.position.set(sx * wingSpec.len * 0.5, -0.02 * i, 0.10 + t * 0.28);
-            f.rotation.y = sx * -t * 0.34;
-            root.add(f);
-          }
-        } else {
-          const w = mk(new THREE.BoxGeometry(wingSpec.len, 0.035, wingSpec.chord), C === 'bee' ? 0xbfe6ff : 0x6d5f7a,
-            { transparent: wingSpec.opacity < 1, opacity: wingSpec.opacity });
-          w.position.set(sx * wingSpec.len * 0.5, 0, 0.05);
-          root.add(w);
-          if (C !== 'bee') {   // 膜翼指骨梁
-            for (let i = 0; i < 3; i++) {
-              const rib = mk(new THREE.CylinderGeometry(0.018, 0.012, wingSpec.len * (0.9 - i * 0.18), 5), hard);
-              rib.rotation.z = Math.PI / 2;
-              rib.rotation.y = -i * 0.24 * sx;
-              rib.position.set(sx * wingSpec.len * 0.44, 0.01, -0.06 + i * 0.22);
-              root.add(rib);
-            }
-          }
-        }
-        this._flap(root, 'z', sx * 0.10, sx * wingSpec.amp, wingSpec.hz, p * Math.PI);
-      }
-    }
-    // ---- 頭/口器(正面 -z,畫面下緣)----
-    if (C === 'bee') {
-      const head = mk(new THREE.SphereGeometry(0.3, 10, 8), skin);
-      head.scale.set(1.1, 0.85, 0.9);
-      head.position.set(0, -0.52, -0.9);
-      g.add(head);
-      for (const sx of [-1, 1]) {
-        const eye = mk(new THREE.SphereGeometry(0.11, 8, 6), accent, { emissive: accent, emissiveIntensity: 1.1 });
-        eye.scale.set(0.85, 1.3, 0.7);
-        eye.position.set(sx * 0.22, -0.44, -1.02);
-        g.add(eye);
-        const ant = mk(new THREE.CylinderGeometry(0.012, 0.02, 0.42, 5), 0x2f353c);
-        ant.position.set(sx * 0.3, -0.44, -1.05);   // 觸角根外推下沉:舊值 ±0.12 讓觸角掃過準星(6.6°)
-        ant.rotation.set(-0.5, 0, sx * 0.5);
-        g.add(ant);
-      }
-      const sting = mk(new THREE.CylinderGeometry(0.01, 0.05, 0.5, 6), 0x2b3239, { metalness: 0.8 });
-      sting.rotation.x = Math.PI / 2;
-      sting.position.set(0, -0.58, -1.25);   // 螫針砲管沿視線前伸
-      g.add(sting);
-    } else if (C === 'eagle') {
-      const skull = mk(new THREE.BoxGeometry(0.42, 0.26, 0.42), skin);
-      skull.position.set(0, -0.5, -0.85);
-      g.add(skull);
-      const beak = mk(new THREE.ConeGeometry(0.13, 0.5, 6), 0xd8b45a);
-      beak.rotation.x = -Math.PI / 2;
-      beak.position.set(0, -0.52, -1.25);
-      g.add(beak);
-      for (const sx of [-1, 1]) {   // 頦下雙管
-        const tube = mk(new THREE.CylinderGeometry(0.03, 0.035, 0.5, 8), 0x2b3239, { metalness: 0.8 });
-        tube.rotation.x = Math.PI / 2;
-        tube.position.set(sx * 0.1, -0.66, -1.15);
-        g.add(tube);
-      }
-    } else if (C === 'ptero') {
-      const skull = mk(new THREE.BoxGeometry(0.34, 0.24, 0.5), skin);
-      skull.position.set(0, -0.5, -0.9);
-      g.add(skull);
-      const crest = mk(new THREE.BoxGeometry(0.05, 0.3, 0.34), accent, { emissive: accent, emissiveIntensity: 0.5 });
-      crest.position.set(0, -0.48, -0.82);   // 頭冠在視軸正上方 → MUST 沉在準星錐外(舊值 8.6°)
-      g.add(crest);
-      const jaw = mk(new THREE.ConeGeometry(0.1, 0.62, 4), 0xa9b2ba);
-      jaw.rotation.x = -Math.PI / 2;
-      jaw.position.set(0, -0.55, -1.3);
-      g.add(jaw);
-      for (const sx of [-1, 1]) {   // 吊掛雙爪抓槍莢
-        const claw = mk(new THREE.CylinderGeometry(0.03, 0.05, 0.38, 5), hard);
-        claw.position.set(sx * 0.4, -0.66, -0.7);
-        claw.rotation.z = sx * 0.3;
-        g.add(claw);
-      }
-    } else {   // dragon:張口露出口腔飛彈巢
-      const skull = mk(new THREE.BoxGeometry(0.42, 0.26, 0.48), skin);
-      skull.position.set(0, -0.58, -0.98);
-      g.add(skull);
-      const jaw = mk(new THREE.BoxGeometry(0.38, 0.1, 0.44), hard);
-      jaw.position.set(0, -0.8, -1.12);
-      jaw.rotation.x = 0.24;
-      g.add(jaw);
-      for (const sx of [-1, 1]) {   // 獠牙
-        const fang = mk(new THREE.ConeGeometry(0.04, 0.18, 5), 0xe4e9ee);
-        fang.rotation.x = Math.PI;
-        fang.position.set(sx * 0.16, -0.56, -1.2);
-        g.add(fang);
-        const horn = mk(new THREE.ConeGeometry(0.05, 0.32, 5), 0x39424b);
-        horn.position.set(sx * 0.2, -0.24, -0.78);
-        horn.rotation.set(-0.6, 0, sx * 0.35);
-        g.add(horn);
-      }
-      const cell = mk(new THREE.CylinderGeometry(0.05, 0.05, 0.3, 8), 0x14171a, { emissive: accent, emissiveIntensity: 0.7 });
-      cell.rotation.x = Math.PI / 2;
-      cell.position.set(0, -0.6, -1.1);
-      g.add(cell);
-    }
-    // 掛點:蜂/鷹/龍 = 口器砲(頭部前端);翼龍 = 雙爪吊掛槍莢
-    return {
-      mouth: { x: 0, y: C === 'dragon' ? -0.62 : -0.58, z: -1.35, s: 1.0 },
-      claw: { x: 0.42, y: -0.72, z: -1.05, s: 0.9 },
-      body: { x: 0.2, y: -0.5, z: -0.9, s: 0.95 },
-    };
-  }
-
-  /** 定翼無人機座艙:氣泡罩框 + 機鼻 + 翼型專屬前緣(對應 models.js buildFixedWing) */
-  _cockFixed(g, mk, accent, vis) {
-    const W = vis.wing || 'twinboom';
-    const hard = 0x5b6772, dark = 0x46505b;
-    // 氣泡罩全視野(2026-07-16 視野開闊化):無頂樑/A 柱,只剩翼型剪影。
-    // 2026-07-24 取景改制:本函式原本自建第二片儀表台(1.35×0.22,18.1% 遮擋)疊在
-    // _cockCanopy 那片之上 —— 同一個「儀表台」有兩份實作 = 面積雙倍。刪除,一律用艙罩那一片。
-    if (W === 'zero') {
-      // 零式:機首星型引擎整流罩 + 牽引螺旋槳(隔著它看出去,半透明盤 + 三葉)。
-      // 槳盤/整流罩 MUST 沉在準星錐之下 —— 舊值把 0.95 半徑的槳盤畫在視軸上(實測 0.2°),
-      // 等於全程隔著一片旋轉盤瞄準;下沉後只剩上緣弧掃過畫面下方,識別度不變。
-      const cowl = mk(new THREE.CylinderGeometry(0.42, 0.38, 0.5, 12), dark);
-      cowl.rotation.x = Math.PI / 2;
-      cowl.position.set(0, -1.0, -1.5);
-      g.add(cowl);
-      const disc = mk(new THREE.CircleGeometry(0.8, 20), 0xaeb8c2, { transparent: true, opacity: 0.13 });
-      disc.position.set(0, -1.55, -2.0);
-      g.add(disc);
-      const prop = new THREE.Group();
-      prop.position.set(0, -1.55, -1.95);
-      for (let i = 0; i < 3; i++) {
-        const arm = new THREE.Group();
-        arm.rotation.z = (i * Math.PI * 2) / 3;
-        const blade = mk(new THREE.BoxGeometry(0.09, 0.8, 0.03), 0x2f353c, { transparent: true, opacity: 0.5 });
-        blade.position.set(0, 0.4, 0);   // 槳長 MUST = 槳盤半徑(舊值 1.5 讓葉尖掃到準星,盤卻只有 0.8)
-        arm.add(blade);
-        prop.add(arm);
-      }
-      g.add(prop);
-      this.cockpitSpinZ.push(prop);
-    } else if (W === 'delta') {
-      // 三角飛翼:後掠前緣只從畫面下側角落斜掠出去(退離近場,不再是側牆)
-      for (const sx of [-1, 1]) {
-        const le = mk(new THREE.BoxGeometry(1.3, 0.05, 0.3), hard);
-        le.position.set(sx * 1.25, -0.4, -1.0);
-        le.rotation.set(0, sx * 0.7, sx * -0.06);
-        g.add(le);
-      }
-      const nose = mk(new THREE.ConeGeometry(0.22, 0.8, 4), dark);
-      nose.rotation.x = -Math.PI / 2;
-      nose.position.set(0, -0.6, -1.35);
-      g.add(nose);
-    } else if (W === 'canard') {
-      // 鴨式:前置小翼在畫面前緣兩側(比主翼更靠前 = 看得見)
-      for (const sx of [-1, 1]) {
-        const cd = mk(new THREE.BoxGeometry(0.8, 0.05, 0.3), hard);
-        cd.position.set(sx * 0.78, -0.2, -1.35);
-        cd.rotation.z = sx * 0.16;
-        g.add(cd);
-      }
-      const nose = mk(new THREE.ConeGeometry(0.2, 0.9, 4), dark);
-      nose.rotation.set(-Math.PI / 2, Math.PI / 4, 0);
-      nose.position.set(0, -0.58, -1.5);
-      g.add(nose);
-    } else if (W === 'vtail') {
-      // V 尾推進:長機鼻 + 頰側進氣口(尾在身後看不見)。機鼻沿視軸前伸 ⇒ 遠端張角最小,
-      // 高度 MUST 由「最遠端」反推(舊值 −0.62 在 z −2.05 處只剩 9.5°,壓在準星下沿)
-      const nose = mk(new THREE.CylinderGeometry(0.1, 0.28, 1.1, 8), dark);
-      nose.rotation.x = Math.PI / 2;
-      nose.position.set(0, -0.76, -1.5);
-      g.add(nose);
-      for (const sx of [-1, 1]) {
-        const inlet = mk(new THREE.BoxGeometry(0.18, 0.22, 0.5), 0x2b3239);
-        inlet.position.set(sx * 0.55, -0.6, -1.0);
-        g.add(inlet);
-      }
-    } else {
-      // 雙尾桁:兩側尾桁前段沿視線延伸出去(z 後移到近端不穿近裁面 0.5)
-      for (const sx of [-1, 1]) {
-        const boom = mk(new THREE.CylinderGeometry(0.08, 0.09, 1.5, 8), hard);
-        boom.rotation.x = Math.PI / 2;
-        boom.position.set(sx * 0.78, -0.44, -1.35);
-        g.add(boom);
-      }
-      const pod = mk(new THREE.BoxGeometry(0.5, 0.3, 0.7), dark);
-      pod.position.set(0, -0.66, -1.05);
-      g.add(pod);
-    }
-    // 掛點:戰機 = 機翼硬點(左右對稱掛架,壓到下側角落 —— 側帶中段不放武裝);零式翼根較靠內
-    return { wing: { x: W === 'zero' ? 0.82 : 0.95, y: -0.45, z: -1.05, s: 0.95 } };
-  }
-
-  /** 旋翼無人機座艙:機鼻(body 剪影)+ 機架/旋翼(frame)在畫面上緣;中灰藍避免暗部塌黑 */
-  _cockRotor(g, mk, accent, vis) {
-    const body = vis.body || 'box';
-    let nose;
-    if (body === 'wedge') {
-      nose = mk(new THREE.CylinderGeometry(0.05, 0.36, 0.7, 4), 0x4b545e);
-      nose.rotation.set(-Math.PI / 2, Math.PI / 4, 0);   // 尖端朝前的楔形
-    } else if (body === 'sphere') {
-      nose = mk(new THREE.SphereGeometry(0.3, 10, 8), 0x4b545e);
-    } else if (body === 'slab') {
-      nose = mk(new THREE.BoxGeometry(0.62, 0.1, 0.42), 0x4b545e);
-    } else if (body === 'frame') {
-      nose = mk(new THREE.BoxGeometry(0.5, 0.08, 0.5), 0x4b545e);
-      for (const sx of [-1, 1]) {
-        const rail = mk(new THREE.BoxGeometry(0.06, 0.14, 0.55), 0x5b6772);
-        rail.position.set(sx * 0.24, 0.05, 0);
-        nose.add(rail);
-      }
-    } else {
-      nose = mk(new THREE.BoxGeometry(0.5, 0.16, 0.5), 0x4b545e);
-    }
-    // 機鼻沉到準星錐之下(2026-07-24):舊值 y −0.42 / z −0.78 的球形機鼻頂緣只離視軸 8.0°,
-    // 且近端 z −0.48 穿進近裁面 0.5 —— 一併後移。
-    nose.position.set(0, -0.58, -0.92);
-    g.add(nose);
-    const lamp = mk(new THREE.BoxGeometry(0.34, 0.03, 0.04), accent, { emissive: accent, emissiveIntensity: 1.2 });
-    lamp.position.set(0, -0.47, -0.75);
-    g.add(lamp);
-
-    const prop = (x, y, z, len = 0.62) => {
-      const hub = mk(new THREE.CylinderGeometry(0.05, 0.05, 0.09, 8), 0x39414a);
-      hub.position.set(x, y - 0.05, z);
-      g.add(hub);
-      const p = mk(new THREE.BoxGeometry(len, 0.015, 0.055), 0x9aa4ad, { transparent: true, opacity: 0.55 });
-      p.position.set(x, y, z);
-      g.add(p);
-      this.cockpitSpin.push(p);
-    };
-    // 機臂一律退離近場(z ≤ -1.05)+ 貼頂緣(2026-07-16 視野開闊化):
-    // 舊值 z -0.7 的臂內端旋到 z≈-0.5,在畫面上放大成巨樑,把上方視野吃掉一半。
-    const arm = (x, y, z, ry, len = 0.75) => {
-      const a = mk(new THREE.BoxGeometry(len, 0.035, 0.055), 0x5b6772);
-      a.position.set(x, y, z);
-      a.rotation.y = ry;
-      g.add(a);
-    };
-    const frame = vis.frame || 'quad';
-    if (frame === 'hexa') {
-      // 六旋翼:左右二臂 + 正前中臂(全數縮上角/遠場)
-      for (const sx of [-1, 1]) { arm(sx * 0.72, 0.42, -1.05, sx * -0.65, 0.45); prop(sx * 0.92, 0.52, -1.18, 0.42); }
-      arm(0, 0.52, -1.15, Math.PI / 2, 0.4);
-      prop(0, 0.6, -1.32, 0.42);
-    } else if (frame === 'coax') {
-      // 同軸雙槳:中央桅桿 + 上下兩層大旋翼(細桅 + 半透明槳盤,不擋視野)
-      const mast = mk(new THREE.CylinderGeometry(0.03, 0.045, 0.44, 8), 0x39414a);
-      mast.position.set(0, 0.56, -1.1);
-      g.add(mast);
-      prop(0, 0.64, -1.1, 0.85);
-      prop(0, 0.74, -1.1, 0.85);
-    } else if (frame === 'wing') {
-      // 固定翼混合:細翼樑貼頂緣 + 翼尖旋翼
-      const wing = mk(new THREE.BoxGeometry(2.0, 0.035, 0.24), 0x5b6772);
-      wing.position.set(0, 0.56, -1.15);
-      g.add(wing);
-      for (const sx of [-1, 1]) prop(sx * 1.05, 0.64, -1.15, 0.5);
-    } else {
-      // 四旋翼:前二臂 + 旋翼(縮上角/遠場)
-      for (const sx of [-1, 1]) { arm(sx * 0.7, 0.42, -1.05, sx * -0.7, 0.5); prop(sx * 0.9, 0.52, -1.18, 0.45); }
-    }
-    // 掛點:旋翼無人機 = 機身固定(機腹吊艙,不是手持)
-    return { body: { x: 0.2, y: -0.34, z: -0.7, s: 1.0 } };
-  }
-
-  /** 機甲座艙(艙罩已由 _cockCanopy 建好):人形 = 原型專屬結構;獸型 = 依座位看到自己的頭。回傳掛點錨 */
-  _buildMechCockpit(g, mk, accent, vis) {
-    if (vis.proto || !vis.creature) {
-      this._cockProto(g, mk, accent, vis.proto);
-      return { hand: { x: 0.5, y: -0.36, z: -1.0, s: 1.12 } };   // 人形:右手持械(s 1.12:雙持時手臂+雙槍佔畫面過大)
-    }
-    return this._cockBeast(g, mk, accent, vis.creature);
-  }
-
-  /** 人形機甲原型專屬:與 models.js 的 visual.proto 同一套設計語彙 */
-  _cockProto(g, mk, accent, proto) {
-    if (proto === 'bastion') {
-      // 過裝甲(2026-07-16 視野開闊化:側面防彈牆拆除)—— 只剩斧砲長柄斜掠過右上遠角
-      const halberd = mk(new THREE.CylinderGeometry(0.05, 0.06, 2.4, 8), 0x2f353c, { metalness: 0.8 });
-      halberd.rotation.set(0.2, 0, 0.75);
-      halberd.position.set(0.9, 0.72, -1.75);
-      g.add(halberd);
-      const blade = mk(new THREE.BoxGeometry(0.5, 0.22, 0.05), 0xb9c3cc, { metalness: 0.9 });
-      blade.rotation.z = 0.75;
-      blade.position.set(1.7, 1.24, -1.75);
-      g.add(blade);
-    } else if (proto === 'seraph') {
-      // EVA 式倒三角上胸:肩上 binder 莢縮小、退到畫面上角外緣(只露內側一角)
-      for (const sx of [-1, 1]) {
-        const binder = mk(new THREE.BoxGeometry(0.12, 0.26, 0.36), 0x515e6b, { metalness: 0.5 });
-        binder.position.set(sx * 1.2, 0.74, -1.05);
-        binder.rotation.z = sx * -0.28;
-        g.add(binder);
-        const vent = mk(new THREE.BoxGeometry(0.05, 0.2, 0.05), accent, { emissive: accent, emissiveIntensity: 1.3 });
-        vent.position.set(sx * 1.06, 0.72, -0.8);
-        g.add(vent);
-      }
-      const lance = mk(new THREE.CylinderGeometry(0.045, 0.06, 2.6, 8), 0x39424b, { metalness: 0.85 });
-      lance.rotation.set(Math.PI / 2 - 0.12, 0, 0.06);
-      lance.position.set(0.85, -0.45, -1.7);
-      g.add(lance);
-      const rail = mk(new THREE.TorusGeometry(0.09, 0.02, 6, 12), accent, { emissive: accent, emissiveIntensity: 1.5 });
-      rail.position.set(0.85, -0.41, -2.4);
-      g.add(rail);
-    } else if (proto === 'aegis') {
-      // 塔盾攔截(2026-07-16 視野開闊化):巨盾降為「艙沿盾」—— 沉到左下角、只露盾緣,
-      // 防禦感保留在盾徽識別燈,不再吃掉左半視野。
-      const shield = mk(new THREE.BoxGeometry(0.1, 0.62, 0.5), 0x4a5560, { metalness: 0.6 });
-      shield.rotation.set(0, 0.22, 0.08);
-      shield.position.set(-1.18, -0.74, -1.2);
-      g.add(shield);
-      const boss = mk(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 10), accent, { emissive: accent, emissiveIntensity: 1.0 });
-      boss.rotation.z = Math.PI / 2;
-      boss.position.set(-1.08, -0.64, -1.2);
-      g.add(boss);
-      for (const ox of [0, 0.28]) {   // 攔截器發射巢:沿下緣排列
-        const cell = mk(new THREE.BoxGeometry(0.2, 0.14, 0.28), 0x39424b);
-        cell.position.set(-0.78 + ox, -0.76, -1.0);
-        g.add(cell);
-      }
-    } else if (proto === 'colossus') {
-      // 巨兵:眉簷細化並貼頂緣、雙圓眼縮上角(識別剪影保留,不遮上方視野)
-      const brow = mk(new THREE.CapsuleGeometry(0.06, 1.2, 4, 8), 0x5a6673);
-      brow.rotation.z = Math.PI / 2;
-      brow.position.set(0, 0.8, -1.15);   // 貼畫面上緣,只露簷底(不吃上方視野)
-      g.add(brow);
-      for (const sx of [-1, 1]) {
-        const eye = mk(new THREE.CylinderGeometry(0.11, 0.11, 0.05, 12), accent, { emissive: accent, emissiveIntensity: 1.6 });
-        eye.rotation.x = Math.PI / 2;
-        eye.position.set(sx * 0.38, 0.5, -1.15);
-        g.add(eye);
-      }
-      const pulse = mk(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 10), 0x39424b, { metalness: 0.8 });
-      pulse.rotation.x = Math.PI / 2;
-      pulse.position.set(0, 0.58, -1.35);
-      g.add(pulse);
-      const tip = mk(new THREE.SphereGeometry(0.05, 8, 6), accent, { emissive: accent, emissiveIntensity: 2 });
-      tip.position.set(0, 0.58, -1.52);
-      g.add(tip);
-    }
-  }
-
-  /** 獸型座艙:座位(SEAT)決定看到什麼 —— 頭部艙 = 頭殼內壁;頸部艙 = 自己的頭顱在前下方 */
-  _cockBeast(g, mk, accent, creature) {
-    return seatOf(creature) === 'neck'
-      ? this._cockNeck(g, mk, accent, creature)
-      : this._cockSkull(g, mk, accent, creature);
-  }
-
   /**
-   * 頭部艙(體軸直立:猩猩/袋鼠/章魚):駕駛艙在顱腔,**隔著艙罩**看到自己的吻部/獠牙/觸手
-   * 在前下方(艙框本身由 _cockCanopy 提供 —— 座艙裡坐的是人,不是獸的眼窩)。
+   * 座艙的機體剪影 = **這台新版機體自己的零件**(2026-08-15 使用者:「駕駛艙畫面基於新版機體
+   * 更新設計」)。舊制那十支手繪 builder(擬態獸 / 定翼 / 旋翼 / 人形原型 / 獸首 / 頸艙 /
+   * 變形雙態,逐 `visual.proto`·`creature`·`wing`·`pod` 分支)整組退場 —— 它們畫的是**舊版建模**
+   * 的識別剪影,而英雄機體自 2026-08-14 起一律由 `forge/` 鍛造:座艙裡那顆頭跟機體上那顆頭
+   * 從此是兩件不同的東西,而畫面上只表現成「座艙好像不是這台機體的」,沒有任何錯誤訊息。
+   *
+   * 取件規則(唯一縫。武裝**不走這裡** —— 它有自己的四條取景規則,見 `_mountCockpitWeapon`):
+   *  ⓐ **視點自機體實高推導**(`heroView`,與 `_updatePlayer` 的相機眼位**同一份**):只收眼位
+   *     周圍 `R_F × 全高` 內、且在前方的零件 ——「駕駛看得到自己機體的哪幾塊」是幾何問題,
+   *     不是美術問題。取樣點再沿視軸**後退** `BACK_F × 全高`:真眼位就坐在胸腔/顱腔裡,
+   *     肩甲與頭罩的量體中心幾乎恰落在眼位平面上(z ≈ 0)⇒ 不退一步的話它們不是被近裁面
+   *     切掉就是方向本身是雜訊(同 `_mountCockpitWeapon` 那條「軸線短到是雜訊」的病灶)。
+   *  ⓑ **重投影 = 以眼位為心的等比縮放**(位置 ×k、尺寸 ×k,k = D / 距離)⇒ **投影逐像素不變**:
+   *     把零件搬進 z ≈ −D 的近場只是為了不被相機近裁面切掉,看到的角度大小仍然是真的那一塊。
+   *     這同時就是規則④「消失點在準星」對結構件那一半的實現 —— 真透視本來就收斂在視軸上;
+   *     MUST NOT 再對結構件套一次武器那條「砲管軸線對齊消失點」(結構件沒有砲管軸線可對,
+   *     硬套只會把肩甲轉成一個指著準星的奇怪角度)。
+   *  ⓒ **預算制**:逐件盒面積(各自夾在 `DEV_AREA_MAX` 之下)由大到小累加到 `BUDGET` 為止,
+   *     其餘丟掉 —— 留大的那幾件是因為小碎片在座艙裡讀不出是什麼,只是雜訊加 draw call。
+   *  ⓓ 收進來的件一律再經 `_frameCockpitStruct` 的三條夾制(面積 / 頂緣 / 準星錐)。
+   *
+   * 「一件」= **同一個父節點底下的那批網格**:forge 的建構器把同一塊裝甲的零件畫進同一個
+   * Group,那就是天然的分件單位,MUST NOT 逐 mesh 拆(一塊裝甲會碎成十幾片各自被夾制,
+   * 看起來像散落的碎屑)、也 MUST NOT 整棵收(整台機體變成一件 = 5% 規則下縮成一個小點)。
+   *
+   * @param src   要取件的那一棵(變形者 = 該型態那一棵,見 `userData.morph.gg`/`.ag`)
+   * @param rig   該棵的 rig(取 `wpn` 名冊,武裝子樹要排除)
+   * @param spin  自轉名冊(`userData.spin`):命中的件改以該節點為樞軸,座艙裡照樣轉
+   * @param par   掛載容器(一般 = 座艙根;變形者 = `cockGround`/`cockAir`)
+   * @param air   飛行型態(眼位查表用)
    */
-  _cockSkull(g, mk, accent, creature) {
-    const bone = 0x4b545e, hard = 0x5b6772, tooth = 0xe4e9ee;
-    const jaw = (w, h, len, z = -1.25, y = -0.62) => {
-      const m = mk(new THREE.BoxGeometry(w, h, len), bone);
-      m.position.set(0, y, z);
-      g.add(m);
-      return m;
-    };
-    const fangs = (sxSpread, y, z, n = 2) => {
-      for (const sx of [-1, 1]) for (let i = 0; i < n; i++) {
-        const f = mk(new THREE.ConeGeometry(0.045, 0.2, 5), tooth, { noPaint: true });
-        f.rotation.x = Math.PI;
-        f.position.set(sx * (sxSpread - i * 0.1), y, z + i * 0.16);
-        g.add(f);
-      }
-    };
-    if (creature === 'gorilla') {
-      jaw(0.68, 0.24, 0.5, -1.2, -0.78);           // 寬吻(收窄下沉:近場寬吻單件吃掉 8% 畫面)
-      fangs(0.2, -0.52, -1.15);
-      for (const sx of [-1, 1]) {                  // 指節行走:前臂入畫下角
-        const arm = mk(new THREE.CylinderGeometry(0.12, 0.15, 0.75, 8), hard);
-        arm.rotation.set(0.5, 0, sx * 0.2);
-        arm.position.set(sx * 0.95, -0.95, -1.0);
-        g.add(arm);
-      }
-    } else if (creature === 'roo') {
-      jaw(0.4, 0.22, 0.7, -1.2, -0.62);
-      for (const sx of [-1, 1]) {                  // 大耳:細長、貼頂角外緣(只露耳尖入畫)
-        const ear = mk(new THREE.CapsuleGeometry(0.065, 0.3, 4, 8), hard);
-        ear.position.set(sx * 0.78, 0.84, -0.9);
-        ear.rotation.z = sx * 0.3;
-        g.add(ear);
-      }
-    } else if (creature === 'cthulhu') {
-      // 觸手面部:四條觸手在視窗周圍蠕動(靜止也動);持械那條由 _cockMountStruct 另外長出來
-      jaw(0.5, 0.2, 0.5, -1.05, -0.7);
-      const spread = [[-0.42, -0.46], [0.42, -0.46], [-0.24, -0.62], [0.24, -0.62]];
-      spread.forEach(([x, y], i) => {
-        const root = new THREE.Group();
-        root.position.set(x, y, -1.05);
-        g.add(root);
-        let parent = root;
-        for (let s = 0; s < 3; s++) {
-          const seg = new THREE.Group();
-          seg.position.set(0, s === 0 ? 0 : -0.02, -0.24);
-          const m = mk(new THREE.CylinderGeometry(0.05 - s * 0.012, 0.06 - s * 0.012, 0.26, 6), bone);
-          m.rotation.x = Math.PI / 2;
-          seg.add(m);
-          parent.add(seg);
-          this._flap(seg, 'x', 0.12, 0.22, 0.45, i * 1.1 + s * 0.8);
-          parent = seg;
-        }
-      });
-    } else {
-      jaw(0.5, 0.26, 0.8);
-      fangs(0.18, -0.5, -1.25);
+  _cockBody(src, rig, spin, par, air) {
+    const B = COCK_BODY;
+    const H = heroTargetH(this.heroKind, this.ch) || SOLDIER_H;
+    const vw = heroView(this.heroKind, this.ch, air);
+    // 眼位:與 _updatePlayer 同一式(y = 全高 × e、沿正面 −z 前移 全高 × f),再後退 BACK_F
+    const eye = new THREE.Vector3(0, H * vw.e, -H * vw.f + H * (air ? B.BACK_F_AIR : B.BACK_F));
+    src.updateMatrixWorld(true);
+
+    // 武裝子樹排除:它由 _mountCockpitWeapon 另複製一份並自帶取景解,兩份疊起來 = 同一把槍畫兩次
+    const skip = new Set();
+    for (const s of ['light', 'heavy']) {
+      for (const n of (rig?.wpn?.[s]?.nodes || [])) n?.traverse((o) => skip.add(o));
     }
-    return {
-      hand: { x: 0.55, y: -0.42, z: -1.0, s: 1.1 },
-      tentacle: { x: 0.52, y: -0.5, z: -0.95, s: 1.2 },
-      mouth: { x: 0, y: -0.58, z: -1.35, s: 1.05 },   // 口部就在下緣正前
-      back: { x: 0.5, y: 0.1, z: -1.45, s: 0.85 },    // 肩上砲座:退到側上角遠場(雙肩分扛 ×2 件,近場會吃掉 13% 畫面)
-    };
+    const spinSet = new Set(spin || []);
+    const inSet = (o, set) => { for (let p = o; p; p = p.parent) if (set.has(p)) return p; return null; };
+
+    // ---- 分件:同一個父節點底下的網格算一件 ----
+    // 逐**顆**濾掉跨過取樣平面的網格(不是逐件):件是「同一個父節點底下那批」,而那批裡
+    // 常常有一兩顆從眼位旁邊往後延伸(脊樑/掛架)。留著它們的代價是整件的包圍盒跨過 z = 0,
+    // 而螢幕佔比的分母取的是**近面深度** ⇒ 分母趨近 0、佔比爆成幾百趴,面積夾制一步收不回來。
+    const _mb = new THREE.Box3();
+    const parts = new Map();
+    src.traverse((o) => {
+      if (!o.isMesh || o.userData.isOutline || !o.geometry?.attributes?.position) return;
+      if (inSet(o, skip)) return;
+      _mb.setFromObject(o);
+      if (_mb.max.z >= eye.z - 0.08) return;
+      const key = o.parent || src;
+      let arr = parts.get(key);
+      if (!arr) parts.set(key, arr = []);
+      arr.push(o);
+    });
+
+    // ---- 逐件量投影(投影不變量:直接以眼位框的包圍盒算,不必先搬過去)----
+    // 取樣半徑錨在**這具機體的實際尺寸**,MUST NOT 只錨全高:飛行體是又寬又扁的
+    // (實測 s11 展長 10.1m 而全高 2.1m)⇒ 拿全高當半徑會把整對翼與引擎莢判成「太遠」,
+    // 而症狀同樣是「這幾台的座艙是空的」。
+    const _sz = new THREE.Box3().setFromObject(src).getSize(new THREE.Vector3());
+    const R = B.R_F * Math.max(H, _sz.x * 0.5, _sz.z * 0.5);
+    const _bb = new THREE.Box3();
+    const cand = [];
+    for (const [key, meshes] of parts) {
+      // 自轉件的包圍盒 MUST 量**掃掠後**的(繞樞軸轉一圈的包絡):選件與預算都吃這個佔比,
+      // 拿靜止那一幀的窄槳葉去排序,會把一整個圓盤當成一片薄板收進來。
+      // 這裡直接在**來源樹**上轉(那一棵是拋棄式的參照機體,從未 render)。
+      const piv = inSet(meshes[0], spinSet);
+      const y0 = piv ? piv.rotation.y : 0;
+      _bb.makeEmpty();
+      for (let k = 0; k < (piv ? ANIM_N : 1); k++) {
+        if (piv) { piv.rotation.y = (k / ANIM_N) * Math.PI * 2; piv.updateWorldMatrix(true, true); }
+        for (const m of meshes) _bb.expandByObject(m);
+      }
+      if (piv) { piv.rotation.y = y0; piv.updateWorldMatrix(true, true); }
+      if (_bb.isEmpty()) continue;
+      const lo = _bb.min.clone().sub(eye), hi = _bb.max.clone().sub(eye);
+      const ctr = lo.clone().add(hi).multiplyScalar(0.5);
+      const d = ctr.length();
+      // 「在前方」判的是**量體中心**不是近面:座艙裡看得到的那幾塊(肩甲/引擎莢/機鼻)幾乎都
+      // 跨過取樣平面 —— 要求整件都在前方等於一件都收不到(實測 t03/t09 一件不剩,而空座艙
+      // 每一條既有規則都過)。中心在後(ctr.z > 0)則 MUST 丟掉:那一件的重投影方向是反的,
+      // 硬算會把它丟到相機後方數十公尺(實測 33361% 那一族)。
+      if (ctr.z > -B.FRONT_F * d) continue;
+      if (!(d > H * 0.10) || d > R) continue;                        // 太近(貼著眼位)/ 太遠(剩幾個像素)
+      const f = ndcFrac(lo, hi);                                     // 佔比走唯一縫(投影不變)
+      if (f < B.MIN_F) continue;
+      // 等比放大到近場:D/d 讓量體中心落在球面上,ZNEAR/zRef 再把整件推出相機近裁面(取大)。
+      // zRef = 近面深度,但**恆取在中心之前的一段**(min 的第二項)—— 近面落在取樣平面後方時,
+      // 直接拿它當分母就是拿一個負數/近零數當放大倍率的分母。倍率有上限,推不出去就**不收**
+      // (原則 6:寧缺勿錯)—— 硬放大會把量體撐到數十公尺,而後面的頂緣/準星錐夾制是**平移**,
+      // 平移一塊比戰場還大的板子只是把它推到畫面外。
+      const zRef = -Math.min(hi.z, ctr.z * 0.35);
+      const k = Math.min(B.K_MAX, Math.max(B.D / d, B.ZNEAR / zRef));
+      if (zRef * k < B.ZNEAR * 0.7) continue;
+      cand.push({ key, meshes, ctr, f: Math.min(f, COCKPIT.DEV_AREA_MAX), k });
+    }
+    cand.sort((a, b) => b.f - a.f);
+
+    // ---- 預算:大件優先,累加到 BUDGET / N 為止 ----
+    let used = 0, n = 0;
+    for (const c of cand) {
+      if (n >= B.N || used + c.f > B.BUDGET) continue;
+      used += c.f; n++;
+      const pivotSrc = inSet(c.meshes[0], spinSet);                 // 自轉件:改以自轉節點為樞軸
+      const w = new THREE.Group();
+      // ⚠ 容器原點 MUST 落在**這一件自己身上**(量體中心的重投影位置),MUST NOT 留在眼位:
+      //   以眼位為心的等比縮放**恰好保持投影不變**(這正是 ⓑ 的本錢)⇒ 原點留在眼位的話,
+      //   `_frameCockpitStruct` 的面積夾制(`o.scale.multiplyScalar`)就是個 **no-op** ——
+      //   件照樣佔滿畫面,而逐項斷言只在「最大裝置」那一欄紅字(實測 562%~1880%)。
+      const org = c.ctr.clone().multiplyScalar(c.k);
+      w.position.copy(org);
+      w.scale.setScalar(c.k);
+      w.userData.cockBody = true;                                   // 稽核標記(逐件面積量測用)
+      const baseInv = new THREE.Matrix4().makeTranslation(
+        -(eye.x + c.ctr.x), -(eye.y + c.ctr.y), -(eye.z + c.ctr.z));
+      let frame = w, fInv = baseInv;
+      if (pivotSrc) {
+        const piv = new THREE.Group();
+        piv.matrix.multiplyMatrices(baseInv, pivotSrc.matrixWorld);
+        piv.matrix.decompose(piv.position, piv.quaternion, piv.scale);
+        w.add(piv);
+        frame = piv;
+        fInv = pivotSrc.matrixWorld.clone().invert();
+        this.cockpitSpin.push(piv);                                 // 與第三人稱 spinners 同一條驅動
+      }
+      for (const m of c.meshes) {
+        const cl = m.clone(false);                                  // 只複製這一顆:描邊殼與子件另計
+        cl.matrix.multiplyMatrices(fInv, m.matrixWorld);
+        cl.matrix.decompose(cl.position, cl.quaternion, cl.scale);
+        cl.userData.noPaint = true;                                 // 來源已上過塗裝,座艙不再疊一層
+        frame.add(cl);
+      }
+      par.add(w);
+    }
   }
 
-  /**
-   * 頸部艙(體軸水平:獵犬/暴龍/鴕鳥/劍龍/人馬/迅猛龍/黑豹/巨象/犀金龜):
-   * 視點在頸根 → 看出去先看到自己的頸背與頭顱(從後上方看那顆頭),嘴砲就從那顆頭的口中前伸。
-   */
-  _cockNeck(g, mk, accent, creature) {
-    const bone = 0x4b545e, hard = 0x5b6772, tooth = 0xe4e9ee, dark = 0x39424b;
-    // hy/hz = 頭顱中心;hw/hh/hd = 顱骨尺寸;nr = 頸半徑;snout/ear = 頭部特徵
-    const S = {
-      hound: { hy: -0.95, hz: -1.95, hw: 0.5, hh: 0.42, hd: 0.9, nr: 0.26, snout: 'muzzle', ear: 'prick' },
-      trex: { hy: -0.88, hz: -2.05, hw: 0.72, hh: 0.62, hd: 1.35, nr: 0.36, snout: 'jaws', ear: 'crest' },
-      raptor: { hy: -0.85, hz: -1.85, hw: 0.44, hh: 0.4, hd: 1.05, nr: 0.24, snout: 'jaws', ear: 'crest' },
-      panther: { hy: -0.9, hz: -1.8, hw: 0.5, hh: 0.42, hd: 0.72, nr: 0.26, snout: 'muzzle', ear: 'round' },
-      ostrich: { hy: -0.28, hz: -1.7, hw: 0.34, hh: 0.32, hd: 0.5, nr: 0.2, snout: 'beak', ear: null },
-      stego: { hy: -1.05, hz: -1.9, hw: 0.36, hh: 0.32, hd: 0.78, nr: 0.24, snout: 'muzzle', ear: null, plates: true },
-      centaur: { hy: -1.0, hz: -1.95, hw: 0.42, hh: 0.5, hd: 0.95, nr: 0.32, snout: 'muzzle', ear: 'prick', mane: true },
-      elephant: { hy: -0.85, hz: -1.95, hw: 0.82, hh: 0.7, hd: 0.85, nr: 0.42, snout: 'trunk', ear: 'fan' },
-      beetle: { hy: -0.95, hz: -1.8, hw: 0.7, hh: 0.4, hd: 0.8, nr: 0.34, snout: 'mand', ear: null, horn: true },
-    }[creature] || { hy: -0.95, hz: -1.9, hw: 0.5, hh: 0.44, hd: 0.9, nr: 0.28, snout: 'muzzle', ear: 'prick' };
-
-    // ---- 頸:自頸根(視點正下方)逐節前伸到顱底;節間加平端關節環(圓角量體不對接,見 CLAUDE.md)----
-    // K:艙位就長在頸上 = 這些件離鏡頭不到 1m,原尺寸會糊成一根擋住準星的柱子 → 一律縮尺。
-    // 座艙不是等比模型,是「從眼窩看出去的取景」;頭顱要小到能一眼認出輪廓,而不是一面牆。
-    const K = 0.6, LIFT = 0.2;
-    S.nr *= K; S.hw *= K; S.hh *= K; S.hd *= K;
-    S.hy += LIFT;   // 頭顱抬進畫面下三分之一(不抬會低到貼著畫面下緣)
-    // 抬完 MUST 夾回準星錐之外(2026-07-24 取景規則①,唯一縫 = COCKPIT.SIGHT_DEG):
-    // 錐在深度 |hz| 的世界半徑 = tan(SIGHT_DEG)·|hz|;顱頂另含冠/耳/角 ⇒ 預留 1.35×hh。
-    // 這條取代逐生物手寫高度 —— 鴕鳥 hy −0.28(眼高 ≈ 視軸,實測 0.2°:頭就擋在準星上)、
-    // 暴龍 −0.88(6.9°)都由同一式壓下去,新增生物自動適用。
-    const headClr = Math.tan(COCKPIT.SIGHT_DEG * Math.PI / 180) * Math.abs(S.hz);
-    S.hy = Math.min(S.hy, -headClr - S.hh * 1.35);
-    const N = 4;
-    const root = new THREE.Vector3(0, -0.78, -0.45);   // 頸根在視點正下方(我們就坐在它上面)
-    const nape = new THREE.Vector3(0, S.hy + S.hh * 0.45, S.hz + S.hd * 0.5);
-    for (let i = 0; i < N; i++) {
-      const t0 = i / N, t1 = (i + 1) / N;
-      const a = root.clone().lerp(nape, t0), b = root.clone().lerp(nape, t1);
-      const mid = a.clone().lerp(b, 0.5);
-      const len = a.distanceTo(b);
-      const r = S.nr * (1 - 0.18 * t1);
-      const seg = mk(new THREE.CylinderGeometry(r, r * 1.06, len * 0.92, 10), bone);
-      seg.position.copy(mid);
-      seg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-      g.add(seg);
-      const ring = mk(new THREE.CylinderGeometry(r * 1.12, r * 1.12, 0.05, 10), dark);
-      ring.position.copy(b);
-      ring.quaternion.copy(seg.quaternion);
-      g.add(ring);
-    }
-    if (S.mane) {   // 人馬:騎士座下的馬鬃(識別色)
-      const mane = mk(new THREE.BoxGeometry(0.08, 0.26, 1.5), accent, { emissive: accent, emissiveIntensity: 0.45 });
-      mane.position.set(0, -0.62, -1.2);
-      mane.rotation.x = -0.35;
-      g.add(mane);
-    }
-
-    // ---- 頭顱(從後上方看)----
-    const head = new THREE.Group();
-    head.position.set(0, S.hy, S.hz);
-    g.add(head);
-    const skull = mk(new THREE.BoxGeometry(S.hw, S.hh, S.hd), bone);
-    head.add(skull);
-    for (const sx of [-1, 1]) {   // 眼:從我們的角度看是頭側的兩點識別光
-      const eye = mk(new THREE.SphereGeometry(S.hw * 0.13, 8, 6), accent, { emissive: accent, emissiveIntensity: 1.3 });
-      eye.position.set(sx * S.hw * 0.48, S.hh * 0.12, -S.hd * 0.12);
-      head.add(eye);
-    }
-    if (S.snout === 'muzzle') {
-      const mz = mk(new THREE.BoxGeometry(S.hw * 0.62, S.hh * 0.55, S.hd * 0.55), bone);
-      mz.position.set(0, -S.hh * 0.2, -S.hd * 0.72);
-      head.add(mz);
-      const nose = mk(new THREE.SphereGeometry(S.hw * 0.16, 8, 6), 0x2b3239);
-      nose.position.set(0, -S.hh * 0.16, -S.hd * 0.98);
-      head.add(nose);
-    } else if (S.snout === 'jaws') {
-      const up = mk(new THREE.BoxGeometry(S.hw * 0.8, S.hh * 0.42, S.hd * 0.7), bone);
-      up.position.set(0, S.hh * 0.05, -S.hd * 0.72);
-      head.add(up);
-      const low = mk(new THREE.BoxGeometry(S.hw * 0.68, S.hh * 0.24, S.hd * 0.66), bone);
-      low.position.set(0, -S.hh * 0.34, -S.hd * 0.7);
-      low.rotation.x = 0.12;
-      head.add(low);
-      for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {   // 上顎獠牙
-        const f = mk(new THREE.ConeGeometry(S.hw * 0.07, S.hh * 0.34, 5), tooth, { noPaint: true });
-        f.rotation.x = Math.PI;
-        f.position.set(sx * S.hw * 0.3, -S.hh * 0.2, -S.hd * (0.5 + i * 0.18));
-        head.add(f);
-      }
-    } else if (S.snout === 'beak') {
-      const beak = mk(new THREE.ConeGeometry(S.hw * 0.42, S.hd * 1.2, 6), 0xd8b45a, { noPaint: true });
-      beak.rotation.x = -Math.PI / 2;
-      beak.position.set(0, -S.hh * 0.1, -S.hd * 0.9);
-      head.add(beak);
-    } else if (S.snout === 'trunk') {
-      // 長鼻:分節垂下並前伸(會擺);嘴砲從鼻端射出
-      let parent = head;
-      for (let i = 0; i < 4; i++) {
-        const seg = new THREE.Group();
-        seg.position.set(0, i === 0 ? -S.hh * 0.5 : -0.24, i === 0 ? -S.hd * 0.5 : -0.1);
-        const m = mk(new THREE.CylinderGeometry(0.17 - i * 0.03, 0.2 - i * 0.03, 0.3, 8), bone);
-        m.position.y = -0.15;
-        seg.add(m);
-        parent.add(seg);
-        this._flap(seg, 'x', -0.25, 0.08, 0.4, i * 0.7);
-        parent = seg;
-      }
-      for (const sx of [-1, 1]) {
-        const tusk = mk(new THREE.CylinderGeometry(0.03, 0.07, 0.85, 6), tooth, { noPaint: true });
-        tusk.rotation.set(1.25, 0, sx * 0.16);
-        tusk.position.set(sx * S.hw * 0.42, -S.hh * 0.5, -S.hd * 0.75);
-        head.add(tusk);
-      }
-    } else if (S.snout === 'mand') {
-      for (const sx of [-1, 1]) {   // 大顎
-        const mand = mk(new THREE.BoxGeometry(0.08, 0.07, 0.5), 0x2f353c);
-        mand.position.set(sx * S.hw * 0.24, -S.hh * 0.4, -S.hd * 0.8);
-        mand.rotation.y = sx * 0.18;
-        head.add(mand);
-      }
-    }
-    if (S.horn) {   // 犀金龜:頭角(招牌剪影)
-      const horn = mk(new THREE.ConeGeometry(0.09, 0.8, 6), hard);
-      horn.rotation.x = -1.25;   // 角尖前伸 ⇒ 根部 MUST 下移收短,否則掃進準星錐(實測 9.1°)
-      horn.position.set(0, S.hh * 0.2, -S.hd * 0.5);
-      head.add(horn);
-    }
-    if (S.ear === 'prick') {
-      for (const sx of [-1, 1]) {
-        const ear = mk(new THREE.ConeGeometry(S.hw * 0.26, S.hh * 1.0, 5), hard);
-        ear.position.set(sx * S.hw * 0.34, S.hh * 0.7, S.hd * 0.18);
-        ear.rotation.set(-0.2, 0, sx * 0.28);
-        head.add(ear);
-      }
-    } else if (S.ear === 'round') {
-      for (const sx of [-1, 1]) {
-        const ear = mk(new THREE.ConeGeometry(S.hw * 0.24, S.hh * 0.5, 5), hard);
-        ear.position.set(sx * S.hw * 0.38, S.hh * 0.6, S.hd * 0.1);
-        ear.rotation.z = sx * 0.22;
-        head.add(ear);
-      }
-    } else if (S.ear === 'crest') {
-      const crest = mk(new THREE.BoxGeometry(0.06, S.hh * 0.5, S.hd * 0.5), accent, { emissive: accent, emissiveIntensity: 0.6 });
-      crest.position.set(0, S.hh * 0.65, -S.hd * 0.1);
-      head.add(crest);
-    } else if (S.ear === 'fan') {
-      for (const sx of [-1, 1]) {   // 巨象:大耳(側緣,會扇動)
-        const ear = mk(new THREE.BoxGeometry(0.08, S.hh * 1.5, S.hd * 1.2), hard);
-        ear.position.set(sx * (S.hw * 0.6), 0, S.hd * 0.15);
-        this._flap(ear, 'y', sx * -0.35, sx * 0.12, 0.3);
-        head.add(ear);
-      }
-    }
-    if (S.plates) {   // 劍龍:背板列從頸背兩側往前排(自身剪影)
-      for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
-        const plate = mk(new THREE.BoxGeometry(0.06, 0.42 - i * 0.08, 0.3), accent,
-          { emissive: accent, emissiveIntensity: 0.35 });
-        plate.position.set(sx * 0.22, -0.42 - i * 0.1, -0.55 - i * 0.42);
-        plate.rotation.z = sx * 0.28;
-        g.add(plate);
-      }
-    }
-    // 肩甲/翼根:貼畫面兩側下緣(頸根兩旁就是肩)
-    for (const sx of [-1, 1]) {
-      const shoulder = mk(new THREE.BoxGeometry(0.32, 0.24, 0.48), hard);
-      shoulder.position.set(sx * 0.98, -0.82, -0.85);
-      shoulder.rotation.z = sx * -0.22;
-      g.add(shoulder);
-    }
-    return {
-      // 嘴砲:砲口在頭顱前端(鼻/喙/顎之外),不是掛在相機前
-      mouth: { x: 0, y: S.hy - S.hh * (S.snout === 'trunk' ? 1.5 : 0.25), z: S.hz - S.hd * 0.85, s: 1.15 },
-      back: { x: 0.52, y: 0.48, z: -1.55, s: 0.85 },  // 背載砲塔:架在右肩上方,砲管越過頭顱側前方
-      hand: { x: 0.55, y: -0.4, z: -1.0, s: 1.1 },   // 人馬騎士
-      tentacle: { x: 0.52, y: -0.5, z: -0.95, s: 1.2 },
-    };
-  }
-
-  /**
-   * 變形者座艙:地面 / 飛行兩組件同時建好,依 this.flight 切換可見(伺服器不管型態)。
-   * 型態一變,座艙結構與武裝掛點跟著整組換掉 —— 地面手持/嘴砲 ↔ 飛行機翼硬點/機身吊艙。
-   * 回傳 { ground, air } 兩套掛點錨。
-   */
-  _buildMorphCockpit(g, mk, accent, vis) {
-    const gr = new THREE.Group(), air = new THREE.Group();
-    g.add(gr); g.add(air);
-    this.cockGround = gr; this.cockAir = air;
-
-    // ---- 地面型:人形(艙罩之外沒有多餘結構)or 獸型頭顱(依 visual.ground;MORPH_HUMANOID 是唯一真相)----
-    const groundAnchors = MORPH_HUMANOID.has(vis.ground)
-      ? { hand: { x: 0.5, y: -0.36, z: -1.0, s: 1.12 } }
-      : this._cockBeast(gr, mk, accent, vis.ground);
-
-    // ---- 飛行型:依 visual.flight ----
-    const F = vis.flight, hard = 0x5b6772, dark = 0x46505b;
-    if (F === 'heli' || F === 'tilt') {
-      // 旋翼:頂上旋翼盤(heli 三旋翼 / tilt 兩具傾轉旋翼在兩側);
-      // 2026-07-16 視野開闊化:頂部 canopy 橫樑拆除,機艙/旋翼縮上角遠場
-      const xs = F === 'tilt' ? [-1.15, 1.15] : [-1.0, 1.0, 0];
-      for (const x of xs) {
-        const nac = mk(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 8), dark);
-        nac.position.set(x, x === 0 ? 0.74 : 0.56, x === 0 ? -1.6 : -1.45);
-        air.add(nac);
-        const rot = mk(new THREE.BoxGeometry(1.2, 0.02, 0.08), 0x9aa4ad, { transparent: true, opacity: 0.4 });
-        rot.position.set(x, (x === 0 ? 0.74 : 0.56) + 0.18, x === 0 ? -1.6 : -1.45);
-        air.add(rot);
-        this.cockpitSpin.push(rot);
-      }
-    } else if (F === 'jet' || F === 'uav') {
-      // 定翼噴射:兩側翼前緣退到下側角落遠場(不再是側牆)+ 機鼻(uav = 悟空光翼:光焰束)
-      for (const sx of [-1, 1]) {
-        const le = mk(new THREE.BoxGeometry(1.2, 0.05, 0.26), F === 'uav' ? accent : hard,
-          F === 'uav' ? { emissive: accent, emissiveIntensity: 1.4, transparent: true, opacity: 0.6 } : {});
-        le.position.set(sx * 1.15, -0.35, -0.95);
-        le.rotation.set(0, sx * 0.6, sx * -0.1);
-        air.add(le);
-      }
-      const nose = mk(new THREE.ConeGeometry(0.22, 0.9, 5), dark);
-      nose.rotation.x = -Math.PI / 2;
-      nose.position.set(0, -0.6, -1.45);
-      air.add(nose);
-      const hud = mk(new THREE.BoxGeometry(0.6, 0.03, 0.04), accent, { emissive: accent, emissiveIntensity: 1.2 });
-      hud.position.set(0, -0.4, -0.8);
-      air.add(hud);
-    } else if (F === 'levi' || F === 'archo' || F === 'owl' || F === 'beetle') {
-      // 擬態飛行(巨獸/始祖鳥/夜梟/犀金龜):撲翼/鞘翅在兩側拍動
-      const spec = {
-        levi: { hz: 0.7, amp: 0.22, len: 1.6, chord: 0.9, col: 0x6d5f7a, op: 0.8 },
-        archo: { hz: 1.4, amp: 0.3, len: 1.3, chord: 0.55, col: 0x8f9aa5, op: 1 },
-        owl: { hz: 1.1, amp: 0.26, len: 1.4, chord: 0.7, col: 0x7d8894, op: 1 },
-        beetle: { hz: 5.5, amp: 0.4, len: 1.1, chord: 0.4, col: 0xbfe6ff, op: 0.45 },
-      }[F];
-      for (const sx of [-1, 1]) {
-        const root = new THREE.Group();
-        root.position.set(sx * 0.78, -0.42, -1.08);   // 同 _cockAvian:翼根貼側緣下方(視野開闊化 + 面積收斂)
-        root.rotation.y = sx * 0.5;
-        air.add(root);
-        const w = mk(new THREE.BoxGeometry(spec.len, 0.04, spec.chord), spec.col,
-          { transparent: spec.op < 1, opacity: spec.op });
-        w.position.set(sx * spec.len * 0.5, 0, 0.08);
-        root.add(w);
-        this._flap(root, 'z', sx * 0.08, sx * spec.amp, spec.hz);
-        if (F === 'beetle') {   // 鞘翅(不動的硬殼罩在膜翼上;縮小退到側緣,z 留在近場外)
-          const elytra = mk(new THREE.BoxGeometry(0.5, 0.05, 0.36), hard);
-          elytra.position.set(sx * 0.82, 0.1, -0.95);
-          air.add(elytra);
-        }
-      }
-      const snout = mk(new THREE.ConeGeometry(0.18, 0.7, 5), dark);
-      snout.rotation.x = -Math.PI / 2;
-      snout.position.set(0, -0.6, -1.3);
-      air.add(snout);
-    }
-    air.visible = false;   // 重生一律地面型(_spawnAt)
-    return {
-      ground: groundAnchors,
-      // 飛行武裝:機翼硬點(定翼)/ 機身吊艙(旋翼)/ 口砲(擬態獸型)
-      air: {
-        wing: { x: 0.95, y: -0.45, z: -1.05, s: 1.0 },
-        body: { x: 0.28, y: -0.42, z: -1.0, s: 1.05 },
-        mouth: { x: 0, y: -0.62, z: -1.55, s: 1.05 },
-      },
-    };
-  }
 
   /**
    * 人類駕駛艙罩(**全機種共通**,2026-07-12;2026-07-16 拆除 A 柱/頂樑):儀表台 / HUD 燈條 + 左肩角色掛件。
@@ -1983,10 +1730,13 @@ export class BattleClient {
    * 機體自身的結構(頭顱/吻部/翼/旋翼/武器)都在艙框之外。**MUST NOT** 退回「從獸的眼窩看出去」。
    * 上方與兩側視野全開放(無 A 柱/無頂樑)—— 艙外的機體特徵不被艙框遮擋。
    */
-  _cockCanopy(g, mk, accent, vis) {
+  _cockCanopy(g, mk, accent) {
     // 儀表台(2026-07-24 取景改制):舊版 1.7×0.28 @ z −0.85 單件就吃掉 **26.4% 畫面**、
-    // 頂緣爬到 NDC −0.40(高過 HUD 下帶上緣 −0.56)—— 全 32 角色共用,是「面積太大」的最大單一來源。
-    // 收窄 + 下沉 + 後推到頂緣 ≈ NDC −0.60:整片壓在 HUD 下帶之內,遮擋降到 ~11%,座艙感不變。
+    // 頂緣爬到 NDC −0.40(高過 HUD 下帶上緣)—— 全 32 角色共用,是「面積太大」的最大單一來源。
+    // 收窄 + 下沉 + 後推:整片壓在 HUD 下帶之內,遮擋降到個位數,座艙感不變。
+    // 2026-08-15:左肩掛件座與 `visual.pod` 六分支一併退場 —— 那是**舊版建模**的識別掛件,
+    // 新版機體自己的掛件已由 `_cockBody` 從真品零件複製過來,再畫一份就是同一個東西畫兩次
+    // (而且是畫**錯**的那一份:pod 的形狀來自舊建模,新機體上根本沒有那個東西)。
     const dash = mk(new THREE.BoxGeometry(0.88, 0.16, 0.32), 0x46505b);
     dash.position.set(0, -0.72, -1.25);
     dash.rotation.x = 0.5;
@@ -1994,59 +1744,14 @@ export class BattleClient {
     const light = mk(new THREE.BoxGeometry(0.42, 0.04, 0.05), accent, { emissive: accent, emissiveIntensity: 0.9 });
     light.position.set(0, -0.64, -1.14);
     g.add(light);
-    // 左肩掛件座:縮小並沉到左下角(2026-07-16 視野開闊化:側面不放大面積件)
-    const shoulder = mk(new THREE.BoxGeometry(0.28, 0.16, 0.4), 0x5a6673);
-    shoulder.position.set(-0.94, -0.62, -1.05);
-    shoulder.rotation.z = 0.28;
-    g.add(shoulder);
-    const pod = vis.pod || 'none';
-    if (pod === 'antenna') {
-      const mast = mk(new THREE.CylinderGeometry(0.02, 0.03, 0.5, 6), 0x39424b);
-      mast.position.set(-0.9, -0.16, -1.05);
-      g.add(mast);
-      const tip = mk(new THREE.SphereGeometry(0.045, 8, 6), accent, { emissive: accent, emissiveIntensity: 1.4 });
-      tip.position.set(-0.9, 0.12, -1.05);
-      g.add(tip);
-    } else if (pod === 'blade') {
-      const fin = mk(new THREE.BoxGeometry(0.04, 0.3, 0.12), 0x39424b, { metalness: 0.7 });
-      fin.rotation.z = 0.3;
-      fin.position.set(-0.98, -0.42, -1.05);
-      g.add(fin);
-    } else if (pod === 'shield') {
-      const plate = mk(new THREE.BoxGeometry(0.07, 0.28, 0.24), 0x39424b, { metalness: 0.6 });
-      plate.rotation.z = 0.14;
-      plate.position.set(-1.02, -0.48, -1.0);
-      g.add(plate);
-    } else if (pod === 'rack') {
-      const rack = mk(new THREE.BoxGeometry(0.22, 0.15, 0.26), 0x39424b);
-      rack.position.set(-0.94, -0.44, -1.05);
-      g.add(rack);
-      for (const [ox, oy] of [[-0.05, -0.035], [0.05, -0.035], [-0.05, 0.035], [0.05, 0.035]]) {
-        const cell = mk(new THREE.CylinderGeometry(0.026, 0.026, 0.22, 6), 0x14171a);
-        cell.rotation.x = Math.PI / 2;
-        cell.position.set(-0.94 + ox, -0.44 + oy, -1.07);
-        g.add(cell);
-      }
-    } else if (pod === 'dish') {
-      const dish = mk(new THREE.CylinderGeometry(0.14, 0.05, 0.05, 10), 0xaab4bd);
-      dish.rotation.z = Math.PI / 3;
-      dish.position.set(-0.98, -0.4, -1.05);
-      g.add(dish);
-    } else if (pod === 'twin') {
-      for (const oy of [-0.045, 0.045]) {
-        const tube = mk(new THREE.CylinderGeometry(0.03, 0.035, 0.42, 8), 0x2b3239, { metalness: 0.8 });
-        tube.rotation.x = Math.PI / 2;
-        tube.position.set(-0.96, -0.42 + oy, -1.12);
-        g.add(tube);
-      }
-    }
   }
 
   /**
    * 輕/重武器座艙掛載(2026-07-22 同源改制):
    * **掛點(mount)決定長在機體哪裡;外觀直接複製第三人稱武裝子樹(models.js rig.wpn 登記)**,
    * 缺登記退回 podWeapon 依 def.type 建同語彙莢艙 —— 展示台/戰場/座艙三處武器同源。
-   * 掛點錨由座艙 builder 提供(它才知道自己的頭顱/機翼/手臂在哪);缺錨時退回 DEF_ANCHOR。
+   * 掛點錨統一走 `DEF_ANCHOR`(2026-08-15:逐機錨隨舊版座艙 builder 退場);`anchors` 參數保留
+   * 給未來逐機覆寫,現役呼叫端一律傳 null。
    * 異型雙持(雙手/雙莢/雙翼)左右分掛(與第三人稱同約定:左輕右重;rig.weap 'L'/'R' 優先);
    * 同型雙模(slots 含輕+重)只建一次,回傳兩個槍口。
    * @returns {Object} 每 slot 的槍口局部座標(gunGroup 空間;彈道與槍口焰共用)
@@ -2092,37 +1797,41 @@ export class BattleClient {
       const rr = Math.hypot(ax, ay) || 1;
       ax += (ax / rr) * 0.26; ay += (ay / rr) * 0.26; az -= 0.1;
     }
-    // ---- 取景夾制(2026-07-24 使用者四條規則;唯一縫 = COCKPIT)----
-    // ① 錨點徑向外推到準星錐之外:錐在深度 |az| 的世界半徑 = tan(SIGHT_DEG)·|az|。
-    //    「徑向」= 以準星(視軸)為圓心 —— 與規則④「消失點在準星」同一個圓心,推出去的方向天然離心。
+    // ---- 取景夾制(2026-07-24 四條 + 2026-08-15 的中央九宮格;唯一縫 = COCKPIT)----
+    // ① 錨點推到**中央九宮格之外**(2026-08-15 起取代舊的「徑向推出準星錐」——
+    //    格子涵蓋錐,見 COCKPIT.GRID_NDC)。格在深度 |az| 的世界半跨:
+    //    橫向 GRID_NDC × ndcH(az) × 16/9、縱向 GRID_NDC × ndcH(az)。
+    //    再各加掛載機構自身的半尺寸(≈0.24s)—— 手臂/砲座/喉管與武器同進退,只推武器不推機構的話,
+    //    砲座量體會自己坐進中央格裡(gorilla 雙肩分扛實測 2.5°)。
     // ② 錨點高度夾在武裝頂緣線之下,留 0.2m 讓武器本體長得出來(背載砲塔原本高過畫面上緣)。
-    // 取景環 = 準星錐 ×1.2 再加掛載機構自身的半尺寸(≈0.24s)—— 手臂/砲座/喉管與武器同進退,
-    // 只推武器不推機構的話,砲座量體會自己坐進準星裡(gorilla 雙肩分扛實測 2.5°)。
-    // 順序 MUST 是「先壓高度、再徑向外推」—— 反過來會用未夾制的高度算出「已在錐外」而放行,
-    // 壓下來之後量體就坐進準星裡(gorilla 雙肩分扛實測 2.5°)。
-    const clr = Math.tan(COCKPIT.SIGHT_DEG * Math.PI / 180) * Math.abs(az);
-    const ring = clr * 1.2 + 0.24 * s;
+    // 順序 MUST 是「先壓高度、再推出格」—— 反過來會用未夾制的高度算出「已在格外」而放行,
+    // 壓下來之後量體就坐進中央格裡。
     const topCap = COCKPIT.TOP_NDC * ndcH(az) - 0.2;
     ay = Math.min(ay, topCap);
-    const rr0 = Math.hypot(ax, ay);
-    if (rr0 > 1e-4 && rr0 < ring) { const f = ring / rr0; ax *= f; ay *= f; }
-    // 量體離視軸的最小夾角(遠面最嚴格;x/y 各自夾到 0 取最近點)
-    const coneDeg = (b) => Math.atan2(
-      Math.hypot(Math.min(Math.max(0, b.min.x), b.max.x), Math.min(Math.max(0, b.min.y), b.max.y)),
-      Math.max(Math.abs(b.min.z), Math.abs(b.max.z))) * 180 / Math.PI;
+    {
+      const pad = 0.24 * s;
+      const cw = COCKPIT.GRID_NDC * ndcH(az) * (16 / 9) + pad;
+      const ch = COCKPIT.GRID_NDC * ndcH(az) + pad;
+      // 已在格外就不動;要動的話取**較近**的那個方向(水平 or 下沉),與 mid9Push 同一條規則。
+      // MUST NOT 往上(上方是天空與遠處敵機,而且 topCap 本來就禁止)。
+      if (Math.abs(ax) < cw && ay > -ch) {
+        if (cw - Math.abs(ax) <= ay + ch) ax = (ax < 0 ? -1 : 1) * cw;
+        else ay = -ch;
+      }
+    }
     // 掛載機構(臂/觸手/喉管/砲座支柱/翼下掛架/爪/吊莢座)。
-    // 機構是剛體(手臂連著手、砲座連著支柱)⇒ 侵入準星錐時 MUST 整組沿徑向外推重建,
-    // 不能只挪其中一件;各分支自身的偏移量(吊莢座 +0.1s、砲座 −0.1s…)也因此不必逐條算進 ring。
+    // 機構是剛體(手臂連著手、砲座連著支柱)⇒ 侵入中央格時 MUST 整組外推重建,
+    // 不能只挪其中一件;各分支自身的偏移量(吊莢座 +0.1s、砲座 −0.1s…)也因此不必逐條算進 pad。
     let struct = null;
     for (let it = 0; it < 6; it++) {
       const flapN = this.cockpitFlap.length;   // tentacle 機構會 _flap 進 cockpitFlap;被駁回要一併回收
       struct = new THREE.Group();
-      struct.userData.cockStruct = true;       // 標記:武器相關掛載機構(取景夾制吃頂緣/準星錐,但豁免裝置面積規則)
+      struct.userData.cockStruct = true;       // 標記:武器相關掛載機構(取景夾制吃頂緣/中央格,但豁免裝置面積規則)
       parent.add(struct);
       this._cockMountStruct(mk, mount, { x: ax, y: ay, z: az, s }, sideSign || 1, struct);
       struct.updateMatrixWorld(true);
       const sb = new THREE.Box3().setFromObject(struct);
-      if (sb.isEmpty() || coneDeg(sb) >= COCKPIT.SIGHT_DEG) break;
+      if (sb.isEmpty() || !mid9Push(sb.min, sb.max)) break;
       parent.remove(struct);
       this.cockpitFlap.length = flapN;         // 丟棄本次機構的擺動註冊(否則指向已移除的孤兒節點)
       ax *= 1.12;
@@ -2246,24 +1955,20 @@ export class BattleClient {
       });
       return best;
     };
-    // 取景判定:①量體離視軸最小夾角 ≥ SIGHT_DEG(準星錐淨空)②頂緣 ≤ TOP_NDC(逐頂點)③盒 ≤ WPN_BOX_MAX
-    const framed = (b) => {
-      const cx = Math.min(Math.max(0, b.lo.x), b.hi.x);       // 量體上離視軸最近的點(x/y 各自夾到 0)
-      const cy = Math.min(Math.max(0, b.lo.y), b.hi.y);
-      const zf = Math.max(Math.abs(b.lo.z), Math.abs(b.hi.z));  // 遠面:同樣的橫向距離在此處張角最小
-      const zn = Math.max(0.05, Math.min(Math.abs(b.lo.z), Math.abs(b.hi.z)));
-      const deg = Math.atan2(Math.hypot(cx, cy), zf) * 180 / Math.PI;
-      const nw = (b.hi.x - b.lo.x) / (ndcH(zn) * 1.7778) / 2;   // 螢幕佔比(16:9 基準)
-      const nh = (b.hi.y - b.lo.y) / ndcH(zn) / 2;
-      return deg >= COCKPIT.SIGHT_DEG && nw * nh <= COCKPIT.WPN_BOX_MAX;
-    };
+    // 取景判定:①中央九宮格淨空(涵蓋 11° 準星錐)②頂緣 ≤ TOP_NDC(逐頂點)③盒 ≤ WPN_BOX_MAX
+    // 武器本體**不平移**(平移會改變砲管軸線與消失點的夾角)⇒ 這裡只當**判定**用,
+    // 出格就縮(下面的二分),MUST NOT 在這裡呼叫 mid9Push 事後挪。
+    const framed = (b) => !mid9Push(b.lo, b.hi) && ndcFrac(b.lo, b.hi) <= COCKPIT.WPN_BOX_MAX;
     const okAt = (k) => framed(place(k)) && wrapTopNdc() <= COCKPIT.TOP_NDC;   // place(k) 先就位,再逐頂點量頂緣
     // 二分取「合規的最大尺寸」:單調(縮小 → 離視軸更遠、頂緣更低),故無需迭代求解器
     let sc = sc0;
     if (!okAt(sc0)) {
       let lo = 0, hi = sc0;
       for (let i = 0; i < 20; i++) { const mid = (lo + hi) / 2; if (okAt(mid)) lo = mid; else hi = mid; }
-      sc = Math.max(lo, sc0 * 0.2);   // 下限:寧可留一項稽核紅字,也不要武器縮成看不見的點
+      // 下限只在**二分完全解不出來**時才頂上(寧可留一項稽核紅字,也不要武器縮成看不見的點)。
+      // 2026-08-15 收緊:解得出來就 MUST 用解 —— 舊制的 `max(lo, sc0*0.2)` 會把一個**合規的**
+      // 較小解換成一個違規的較大值,而使用者的 5% 是硬天花板不是建議值(實測 s03 5.2%)。
+      sc = lo > 0 ? lo : sc0 * 0.2;
     }
     place(sc);
     // 槍口(gunGroup 局部座標):複本槍口節點實位;查無節點退回包圍盒前緣中心
@@ -9102,11 +8807,12 @@ export class BattleClient {
     for (const g of this.spinners) {
       for (const p of g.userData.spin) p.rotation.y += dt * 40;
     }
-    // 座艙:旋翼/螺旋槳恆轉、撲翼拍動、型態切換、槍身後坐回彈、槍口焰熄滅
+    // 座艙:旋翼恆轉、撲翼拍動、型態切換、槍身後坐回彈、槍口焰熄滅
     if (this.cockpit) {
       const ct = (this._cockT += dt);
-      for (const p of this.cockpitSpin) p.rotation.y += dt * 55;
-      for (const p of this.cockpitSpinZ) p.rotation.z += dt * 30;
+      // 自轉件是**真品旋翼的複本**(_cockBody 以自轉節點為樞軸複製)⇒ 轉速 MUST 與第三人稱
+      // 那一條(上面的 `spinners`)同值,否則同一具旋翼在座艙裡與世界裡轉得不一樣快。
+      for (const p of this.cockpitSpin) p.rotation.y += dt * 40;
       for (const f of this.cockpitFlap) f.o.rotation[f.ax] = f.base + f.amp * Math.sin(ct * f.hz * 6.283 + f.ph);
       this._syncCockpitWeapon();
       this.weaponKick = Math.max(0, this.weaponKick - dt * 9);
@@ -9118,10 +8824,20 @@ export class BattleClient {
         const p = 1 - Math.max(0, cur.st.reloadEnd - now) / rl;
         reloadOff = this._reloadAnimOffset(cur.def, p);
       }
-      this.gunGroup.position.z = this._gunBaseZ + this.weaponKick * 0.11 + reloadOff.dz;
-      this.gunGroup.position.y = reloadOff.dy;
-      // 榴彈砲口跟著火控解抬高(超高仰角):拋物線武器本就不是沿準星直射,砲管平指才是穿幫
-      this.gunGroup.rotation.x = reloadOff.rx + (this._lobFc?.on ? this._lobFc.sup : 0);
+      // 武裝姿勢:後座 + 填彈 + 榴彈超高仰角。三者都 MUST 夾在 `_solveGunPose` 反解出來的
+      // 包絡內(見那一支檔頭),而抬升繞的是**武裝自己的掛點**不是鏡頭。
+      // 榴彈砲口跟著火控解抬高:拋物線武器本就不是沿準星直射,砲管平指才是穿幫。
+      const want = reloadOff.rx + (this._lobFc?.on ? this._lobFc.sup : 0);
+      const lift = Math.max(-(this._gunDrop || 0), Math.min(want, this._gunLift || 0));
+      const pull = Math.min(this.weaponKick * 0.11 + reloadOff.dz, this._gunPull || 0);
+      const P = this._gunPivot || _ZERO3;
+      const lc = Math.cos(lift), ls = Math.sin(lift);
+      this.gunGroup.rotation.x = lift;
+      this.gunGroup.position.set(
+        0,
+        reloadOff.dy + P.y - (P.y * lc - P.z * ls),
+        this._gunBaseZ + pull + P.z - (P.y * ls + P.z * lc),
+      );
       if (this._flashTtl != null) {
         this._flashTtl -= dt;
         if (this._flashTtl <= 0) { this.flash.visible = false; this._flashTtl = null; }
@@ -9130,6 +8846,9 @@ export class BattleClient {
       this.cockpit.visible = !this.dead || !!this._deathSeq;   // 過場期間保留座艙,隨鏡頭傾倒/翻滾(第一人稱殉爆)
     }
     this._updateWaterVeil();   // 水下/沼澤視野變色(最終 camera 定案後、render 前)
+    // HUD 下帶的高是內容撐出來的(爬升條 / 觀戰面板 / 僚機列會增減)⇒ 逐幀量會強制 layout,
+    // 節流到 HUD_FIT_S 一次:那是「多久之後才發現超線」的上限,不是動畫,肉眼看不出來。
+    if (now - (this._hudFitAt || 0) > HUD_FIT_S) { this._hudFitAt = now; fitHudBand(); }
     this._drawMinimap(now);
     updateCelLight(this.camera);   // 硬邊金屬高光帶的 view-space 光向
     // 景深**只在狙擊模式**(2026-08-09 使用者補充)。強度由**已定案的 camera.fov** 反解 ⇒
