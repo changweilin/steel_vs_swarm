@@ -119,6 +119,10 @@ export default {
     // ---- 方向舵尾(m05.extra 的同一條三節狼尾)----
     // **MUST 掛在反傾錨上**:節鏈沿局部 −z 往後長,直接掛 hips 會被軀幹前傾 1.44 轉成朝天
     // 的一根立桿(實測第一版就是這樣),而 whipTail 只覆寫節樞軸、不會把它轉回來。
+    // 2026-08-15 使用者「尾巴也要逐骨架變形」⇒ 這一態的逐節基礎姿勢**打直**:飛鼠的尾在滑翔時
+    // 是一片平伸在機尾的舵面(chainF 沿 −z 長 ⇒ 逐節 0 就是筆直後伸),而狼態是上揚後拱的
+    // 0.5/節。逐節差 0.5 rad ⇒ 三節各自轉、梢端走一大段 = 使用者要的「逐骨架」而不是整條平移。
+    c.tailCurl = { rot0: 0, rotD: 0 };
     const stub = { muzzles: {}, heavy: { glow: [] }, wpn: {} };
     m05.extra(c, { hips: upright(hips, PITCH) }, stub);
     c._tail = stub.tailSegs;

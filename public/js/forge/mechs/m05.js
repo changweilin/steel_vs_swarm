@@ -616,10 +616,16 @@ export default {
     //   節長 0.55 ×3 + 尾梢錐 ⇒ 逐頂點實測自尾根算起 **1.82**,
     //   頭體長(頭殼頂 5.563 − 坐骨底 2.753 = 2.81)⇒ **0.65**(犬 0.31 / 飛鼠 0.85 之間)。
     // 「扁」那一半由逐節**橫向舵羽**表達(chainF 的 r 是徑向的,單靠 r 做不出扁尾)。
+    // 2026-08-15 使用者:「尾巴也要逐骨架變形」⇒ 兩態各有自己的**逐節**基礎姿勢(同 t06 的
+    // `c.tailCurl` 縫):地面 = 狼尾上揚後拱、飛行 = 飛鼠的扁平方向舵一路打直朝機尾。
+    // ⚠ 同一份值 MUST 同時餵 chainF(變形內插的端點)與 `rig.tailCurl`(步態的靜止基礎姿勢)
+    //   —— whipTail 對每一節**絕對指派** rotation.x,只餵 chainF 的話兩態的尾巴在穩態被壓成
+    //   同一個樣子(改制前實測:全身逐組走 1~3m,尾巴只走 0.26m),而每一條斷言都正常。
+    const CU = c.tailCurl || { rot0: 0.5, rotD: 0 };
     const tail = chainF(F.hips, {
       n: 3, x: 0, y: -0.04, z: -0.28 * G,
       len0: 0.55, len1: 0.55, r0: 0.07, r1: 0.038,
-      rot0: 0.5, rotD: 0, seg: 7, ringColor: IRON,
+      rot0: CU.rot0, rotD: CU.rotD, seg: 7, ringColor: IRON,
       drawSeg: (t, i, s) => {
         const tuft = finF(t, { len: 0.15 - i * 0.02, w0: 0.05, w1: 0.008, t: 0.018, sweep: 0.04 },
           0, -s.r * 0.8, -s.len * 0.55, PAL.deep, { metalness: 0.5 });
@@ -647,6 +653,7 @@ export default {
       f.rotation.x = Math.PI - 0.35; f.rotation.z = sx * 0.4;
     }
     rig.tailSegs = tail.segs;
+    rig.tailCurl = CU;          // 步態端的靜止基礎姿勢(= chainF 那一份;見上方 ⚠)
     rig.tailUp = 0.08;
   },
 };

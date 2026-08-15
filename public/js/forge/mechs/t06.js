@@ -261,16 +261,22 @@ export default {
     rig.tailUp = 0.12;
     // 尾梢那一具熔核砲 = 重武器 ⇒ 交戰時整條尾蠍式前捲、砲口轉向正前
     //(locomotion whipTail 的 aim 分支;舊制走 stepMorph 的 rig.tailPose,那條路已隨單樹變形者退役)。
-    // ⚠ 累積角 **MUST 推導**:砲身自己已經轉了 π/2(上面的 `gunT.rotation.x`)⇒ 尾鏈只要再補
-    //   π/2 就把砲口帶到機首。抄飛行型那一組(累積 ≈3.3 rad)會多轉半圈 —— 實測 dot(+z) = −0.18,
-    //   砲口朝機尾,而畫面上尾巴確實捲起來了,看起來完全正常。
-    //   逐節遞減 AIM_D 維持弧形;rot0 由「Σ(rot0 + i·AIM_D) = π/2」反解。
+    // ⚠ 累積角 **MUST 推導,而基準是「砲口在 tip 框裡指向哪」不是「gunT 自己轉了幾度」**:
+    //   `gunT.rotation.x = π/2` 已經把砲身從局部 −y 擺成 tip 的 **−z**(= 尾梢的後方),
+    //   那個 π/2 因此**已經記在「砲口沿 tip 的 −z」這句話裡**,尾鏈 MUST NOT 再扣一次。
+    //   要把 −z 轉到 +z 就是轉 **π**。舊制扣了兩次(只補 π/2)⇒ Rx(π/2)·(0,0,−1) = (0,1,0)
+    //   = **砲口朝正上方**,而 2026-08-15 之前 `rig.wpn.heavy.fwd` 誤宣告成 '-z'(那是 tip 的軸、
+    //   不是 gunT 自己的軸)⇒ 稽核 ② 量到的是另一根軸、讀數 1.00 全綠,畫面上尾巴也確實捲了起來。
+    //   逐節遞減 AIM_D 維持弧形;rot0 由「Σ(rot0 + i·AIM_D) = π」反解。
     if (!c.tailCurl) {
       const AIM_D = -0.024, n = segs.length;
-      rig.tailAim = { rot0: (Math.PI / 2 - AIM_D * (n * (n - 1) / 2)) / n, rotD: AIM_D };
+      rig.tailAim = { rot0: (Math.PI - AIM_D * (n * (n - 1) / 2)) / n, rotD: AIM_D };
     }
     rig.muzzles.heavy = { n: hMuz, r: 0.13 * G };
     rig.heavy.glow.push({ mesh: hMuz, base: 1.6 });
-    rig.wpn.heavy = { nodes: [gunT], ref: gunT, muz: hMuz, fwd: '-z' };
+    // ⚠ `fwd` 是**ref 自己那個框**的前向軸,不是父框的。`gunT.rotation.x = π/2` ⇒ 砲口沿 tip
+    //   的 −z,但沿 gunT 自己的 **−y**。宣告成 '-z' 量到的是 gunT 的 −z(= tip 的 +y)——
+    //   與砲口差 90°,而兩態的稽核都仍讀得出「某根軸朝前」⇒ 綠字掩蓋著上面那個尾捲缺陷。
+    rig.wpn.heavy = { nodes: [gunT], ref: gunT, muz: hMuz, fwd: '-y' };
   },
 };

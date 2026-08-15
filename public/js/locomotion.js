@@ -324,19 +324,26 @@ function syncLegsToHips(L, rig, hips) {
  * 多節尾配重(mobility_plan Task 2.2):急轉時整條尾甩向轉向反側(角動量守恆的視覺化),
  * 尾梢逐節延遲 = 鞭;行進間再疊一道與步頻同調的擺動。基礎姿勢住幾何,這裡直接寫 rotation。
  */
-function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0, aim = null) {
+function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0, aim = null, curl = null) {
   L.tail = damp(L.tail ?? 0, clamp(-yawRate * 0.3, -0.55, 0.55), 3.5, dt);
   // 尾砲瞄準前捲(t06 悟空:尾梢那一具熔核砲就是重武器)—— 重武器交戰時整條尾蠍式過頂,
   // 砲口轉向正前。`aim = { p, rot0, rotD }`:p = 交戰保持窗(rig._aimH,0~1),
   // rot0/rotD = 前捲姿的逐節累積角(與飛行型 `tailCurl` 同一組值 ⇒ 兩種瞄準姿同一條弧)。
   // ⚠ MUST 疊在這裡:whipTail **絕對指派** rotation.x/y,在外面加角度下一幀就被抹掉
   //   (舊制是 stepMorph 的 rig.tailPose,那條路隨單樹變形者一起退役了)。
+  // `curl = { rot0, rotD }`(選用)= 這條尾巴的**靜止基礎姿勢**,逐節 `rot0 + i·rotD`。
+  // ⚠ 沒有它的話「基礎姿勢住幾何」這句話對尾巴**不成立**:上面那行絕對指派把 chainF authored
+  //   的逐節角整組抹掉(只有第 0 節的 `base` 活得下來)⇒ 變形者兩態各自 author 了不同的尾姿,
+  //   而畫面上兩態的尾巴長得一模一樣(m05 實測:全身逐組走 1~3m,尾巴只走 0.26m = 整條被平移
+  //   過去而已)。curl MUST 與該態 chainF 的 rot0/rotD 是**同一份值**,否則變形收工那一幀
+  //   morphPose 交棒給步態時尾巴會跳一下。省略 ⇒ 逐位元同舊制。
   const ap = aim ? clamp(aim.p || 0, 0, 1) : 0;
   segs.forEach((t, i) => {
     const d = i * 0.6;                       // 逐節相位延遲(由根往梢傳的波)
     const lag = 1 + i * 0.35;                // 尾梢甩幅大於尾根
     t.rotation.y = L.tail * lag * (1 - ap) + Math.sin(L.ph - d) * 0.1 * a;
     t.rotation.x = (i === 0 ? base : 0)
+      + (curl ? (curl.rot0 + i * curl.rotD) * (1 - ap) : 0)
       + (ap ? ap * (aim.rot0 + i * aim.rotD) : 0)
       + (Math.sin(L.ph * 2 - d) * 0.07 * a + idle * Math.sin(now * 1.1 - d) * 0.03) * (1 - ap);
   });
@@ -649,7 +656,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   if (rig.tailSegs) {
     // rig.tailAim 在冊 = 這條尾巴的梢端是重武器(t06):交戰時前捲瞄準,其餘照常甩尾
     whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate, 0,
-      rig.tailAim ? { p: rig._aimH || 0, ...rig.tailAim } : null);
+      rig.tailAim ? { p: rig._aimH || 0, ...rig.tailAim } : null, rig.tailCurl || null);
     // 抬尾配平:速度越快尾根抬得越高(暴龍/鴕鳥/袋鼠的重尾就是前傾的反向配重)
     rig.tailSegs[0].rotation.x += (rig.tailUp || 0) * a;
   }
@@ -802,7 +809,9 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
   if (rig.jets) {
     const k = clamp(Math.hypot(vFwd, vLat) / (rig.top || 30), 0, 1);
     rig.jets.forEach((j, i) => {
-      j.g.visible = k > 0.03;
+      // `j.idle` = 這具噴口**靜止也要點著**(t06 的觔斗雲掛在焰尾 ⇒ 熄火連雲一起不見)。
+      // 省略 ⇒ 逐位元同舊制(懸停熄火是噴射機的常態)。
+      j.g.visible = k > 0.03 || !!j.idle;
       const flick = 1 + Math.sin(now * 31 + i * 2.1 + L.ph) * 0.1;
       j.g.scale.set(1, (0.35 + 1.5 * k) * flick, 1);
       j.m1.opacity = (0.2 + 0.4 * k) * flick;
@@ -844,7 +853,7 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
   // 佔頂速的比例當 whipTail 的 a
   if (rig.tailSegs) {
     const aT = clamp(Math.hypot(vFwd, vLat) / (rig.top || 30), 0, 1);
-    whipTail(rig.tailSegs, L, dt, aT, idleOf(aT), now, yawRate);
+    whipTail(rig.tailSegs, L, dt, aT, idleOf(aT), now, yawRate, 0, null, rig.tailCurl || null);
   }
 }
 
