@@ -171,9 +171,12 @@ const zr = await page.evaluate(async () => {
   window.mkTc();
   window.tc.gyro.granted = true;
   await window.tc.setGyro(true, true);
+  // 一次**完整的點擊** = 按下 + 放開:2026-08-16 起點擊型鈕在放開才定案(距離 + 時間,
+  // 見 mobile.js `_bindButtons`)⇒ 只送 pointerdown 等於「按著沒放」,什麼都不會發生。
   const tap = async () => {
-    document.querySelector('[data-act="gyro"]')
-      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+    const b = document.querySelector('[data-act="gyro"]');
+    b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 8, clientY: 8 }));
+    b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientX: 8, clientY: 8 }));
     await new Promise((r) => setTimeout(r, 40));
     return { active: window.tc.gyro.active, pref: window.M.TOUCH.gyro,
              on: document.querySelector('[data-act="gyro"]').classList.contains('on') };
@@ -211,7 +214,8 @@ const tapped = await page.evaluate(async () => {
   window.mkTc();
   const btn = document.querySelector('[data-act="gyro"]');
   btn.classList.add('off');
-  btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+  btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 8, clientY: 8 }));
+  btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientX: 8, clientY: 8 }));
   await new Promise((r) => setTimeout(r, 50));
   return window.feeds.length;
 });

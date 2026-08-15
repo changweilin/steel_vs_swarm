@@ -45,6 +45,8 @@ node tools/audit_daynight.mjs        # 時間流逝(日夜循環)+ 太陽/月亮
 #   ±--break-clock/--break-fade/--break-elev/--break-cockpit/--break-range
 node tools/audit_cel_pipeline.mjs    # 賽璐璐管線(ramp / 天空 / 地形色階 / 描邊寬度 / 地貌不出接縫)
 node tools/audit_gpu_lifecycle.mjs   # 表現層資源生命週期(A25)+ RES_GOV
+node tools/audit_damp_fps.mjs        # 幀率無關阻尼(lerpFPS / frictionFPS 唯一縫)+ 背景分頁的 dt 夾制
+#   ±--break-damp(逼近權重換回 min(1, k·dt) ⇒ 互補/可加性/幀率無關三條 MUST 紅)
 node tools/audit_gait_anat.mjs        # 步態關節曲線(前後肢拓樸/佔空比/等速後掠/站姿型/跳躍分級/交戰姿態)
 #   ±--break-lock/--break-duty/--break-hip/--break-rest/--break-posture
 node tools/audit_morph_rig.mjs       # 變形過程(兩態零件對應 / 反推的共同錨 / 換樹接得上 / 淡出淡入時間表)
@@ -252,6 +254,9 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 操作方式 / 戰場選單 | `audit_ctrl_mode` + `npm test`「操作方式由房主選擇」段(**MUST 先重啟伺服器**,見 5.2)+ `audit_touch_layout` + `audit_ui_layout` |
 | 懸浮提示 / 按鍵風格 / 房間設定分頁 / 圖示 | `audit_ui_layout` 0.5 段 + `audit_ctrl_mode` Ⅲ + `audit_touch_layout` + ㋒ |
 | `mobile.js`/`_applyLook`/`_moveAxis`/`_cmd`/觸控 CSS | ①桌機 MUST 不回歸 ②`audit_touch_layout`(四分區零重疊、觸控目標 ≥44×40、`.tl-sys` 固定 grid)③疊層可點性 ④`audit_touch_gesture` |
+| 觸控「一次點擊」的判定(`LOOK.TAP_MS`/`TAP_SLOP_PX` / `_bindButtons` / `_tapNear` / `_tapOk` / `_dropTap` / `_tickTap`) | `audit_touch_gesture` ±**`--break-tap`**(⑧ 那一段 MUST 紅,而「按住型」那三條是**對照組 MUST 仍綠**)+ **`audit_gyro`**(它的合成點擊 MUST 是 down + up 一對 —— 只送 pointerdown 等於「按著沒放」,三條會紅而理由是假的)+ `audit_ctrl_mode`/`audit_touch_layout`/`audit_ui_layout` MUST 逐項不動 + `audit_client_syntax`(㋖)+ ㋒(`data.js`/`sim.js` 一行未改 ⇒ `npm run bal` / `npm test` MUST 逐項不動)+ **㋕ 真機**:從搖桿邊緣滑到鄰近鈕 MUST NOT 觸發、按住招式鈕超過 260ms 放開 MUST NOT 施放(這是**刻意**的行為改變,不是 bug)|
+| 視窗尺寸定案 / 旋轉 debounce(`VIEWPORT`/`isIOS`/`viewportSettleMs`/`bumpViewport`/`onViewportSettled`/`game._offResize`) | `audit_ctrl_mode` **Ⅸ**(原文:只有一份等待時間 + 消費端沒繞過)+ `audit_touch_gesture` **⑨** ±**`--break-debounce`**(行為:連發合併成一次)+ `audit_client_syntax`(㋖)+ `npm run audit:net`/`audit_solo_boot`(game.js 多一條 mobile.js import)+ ㋒ + **㋕ 真機轉一次**(iOS 的 500ms 只有在真的旋轉時才驗得到;桌機拖曳視窗邊緣 MUST 仍即時跟上) |
+| **幀率無關阻尼**(`data.js` 的 `frictionFPS`/`lerpFPS` / `camAngleStep` / `game.js` 的相機·砲塔·座艙·機體插值·後座回穩·空氣阻力 / `locomotion.js` 的 `damp()`·`FX_K`) | **`audit_damp_fps` ±`--break-damp`**(內建對照組:同一把尺量舊制 MUST 量得出 7× 的差別 —— 沒有它,「幀率無關」那句可能只是恆真)+ `audit_spectator_cam`/`audit_view_lock`/`audit_recoil_move`/`audit_gait_anat`/`audit_morph_rig`/`audit_paper_doll`(五支的既有斷言 MUST 逐項不動)+ `audit_bot_vision`(**`viewLockStep` 是具名例外,MUST 逐位元不動**)+ `audit_client_syntax`(㋖)+ **`npm run bal` / `npm test` MUST 逐項不動**(改的全是純表現層;動了就是漏到權威側)。⚠ **這一改不是逐位元中性的**:60fps 上與舊制的相對落差最大 7.9%(k = 10),現役 k 3~10 都在容差內 ⇒ 不必回頭重調係數;超過 10% 就要重調,稽核有守門。⚠ **`viewLockStep` 的逼近項 MUST NOT 順手改成 `lerpFPS`** —— 它同時是 `server/bots.js _turn`(bot 朝向唯一寫入點)的來源,伺服器固定 8Hz ⇒ 舊式在小角度是「一個 tick 轉到位」,換成指數逼近就是權威側行為改變,要照 §5.6 補一輪 AI 退化量測 |
 | 橫式商店兩欄 / 全螢幕方向 | `audit_touch_layout` 升級工坊段(六種持握)/ `audit_ctrl_mode` Ⅶ(原文無 `orientation.lock`、`unlock()` 恰兩處) |
 | `#touchLayer` 節點位置 / `--tl-*` | 搖桿 MUST 留 body 層 + 保留 `body.touch-ui` 保險預設值;真機大廳端對端量測 |
 | 選單版型 / 任何鈕面文字 | `audit_ui_layout`(鈕面無括號補述、桌機並排直式維持並排、`.cd-art` 解除 sticky、疊層 ✕ 規則) |

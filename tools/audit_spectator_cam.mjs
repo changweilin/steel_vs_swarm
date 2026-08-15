@@ -3,7 +3,7 @@
 //   ①「觀戰時:上帝視角加入下降操作」
 //   ②「玩家視角可切換第一人稱 / 第三人稱跟隨視角 / 第三人稱自由視角,運鏡時避免太晃,
 //      會顯示該玩家所有資訊(包括商店升級)」
-// 用途:改 `data.js SPEC_CAM`/`specViewNext`/`camSmoothF`/`camAngleStep`、
+// 用途:改 `data.js SPEC_CAM`/`specViewNext`/`lerpFPS`/`camAngleStep`、
 //      `game.js _updateSpectator`/`_specSetView`/`_specCycleView`/`_specFollow`/`_specHud`、
 //      觀戰鍵位(_onKey 的 F・Q/E、_cmd 的 special・swap)、或觀戰資訊面板
 //      (main.js renderSpecUpg / hud.self 的 spec 分支、index.html #specUpg、CSS body.spectating)
@@ -14,7 +14,7 @@
 //   Ⅰ 常數與單一縫:視角序只有 `SPEC_CAM.VIEWS` 一份(鍵盤 F 與觸控十字鍵左同吃 ⇒ 兩端不會
 //     走出不同的循環)、`_specView` 只有兩個寫入點(初值 + `_specSetView`)、
 //     game.js MUST NOT 自留一份係數表或手寫平滑常數。
-//   Ⅱ 平滑數學(**運鏡不晃的全部本錢**):`camSmoothF` 是 `1 − e^(−k·dt)` ⇒ 幀率無關 ——
+//   Ⅱ 平滑數學(**運鏡不晃的全部本錢**):`lerpFPS` 是 `1 − e^(−k·dt)` ⇒ 幀率無關 ——
 //     同一段時間不論切成幾幀,收斂到同一個位置。退回逐幀固定係數(`x += (t−x)*0.1`)不會報錯,
 //     只會讓 30fps 比 120fps 晃得多(正是使用者回報的那種「太晃」)。
 //     角度平滑 MUST 走最短路徑,否則機體轉過 ±π 時相機會繞一整圈。
@@ -27,7 +27,7 @@
 import { readSrc, grabMethod } from './audit_src.mjs';
 // heroTargetH 取 data.js 那一份(models.js 只是轉出;直接 import models.js 會拉進 three,
 // 而 three 走 CDN importmap,Node 端解析不了)
-import { SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep, wrapPi, ECON, CHARACTERS, SIDES, heroTargetH } from '../public/js/data.js';
+import { SPEC_CAM, specViewNext, specViewLocked, lerpFPS, camAngleStep, wrapPi, ECON, CHARACTERS, SIDES, heroTargetH } from '../public/js/data.js';
 import { SPEC_CONTROLS, specControls, CONTROLS_BY_KIND, TOUCH_CONTROLS } from '../public/js/help.js';
 
 const dataSrc = readSrc('public', 'js', 'data.js');
@@ -94,27 +94,27 @@ ok(count(gameSrc, /this\._specView = /g) === 2,
   `目前 ${count(gameSrc, /this\._specView = /g)} 處`);
 const upd = grabMethod(gameSrc, '_updateSpectator');
 ok(!/Math\.exp\(/.test(upd) && !/\* 0\.\d+\)/.test(upd.replace(/\/\/.*$/gm, '')),
-  '`_updateSpectator` MUST NOT 手寫平滑係數(一律經 camSmoothF / camAngleStep)');
-ok(/camSmoothF\(/.test(upd) && /camAngleStep\(/.test(upd),
+  '`_updateSpectator` MUST NOT 手寫平滑係數(一律經 lerpFPS / camAngleStep)');
+ok(/lerpFPS\(/.test(upd) && /camAngleStep\(/.test(upd),
   '位置與偏航兩軸都吃平滑縫');
-ok(count(dataSrc, /export const camSmoothF/g) === 1 && count(dataSrc, /export const camAngleStep/g) === 1,
+ok(count(dataSrc, /export const lerpFPS/g) === 1 && count(dataSrc, /export const camAngleStep/g) === 1,
   '平滑數學唯一縫住 data.js(離線稽核 import 得到真品)');
 
 // ── Ⅱ 平滑數學:幀率無關 + 最短路徑 ─────────────────────────────
 sec('Ⅱ 平滑數學(運鏡不晃的本錢)');
-ok(near(camSmoothF(SPEC_CAM.POS_K, 0), 0), 'dt = 0 ⇒ 完全不移動(暫停/切分頁不會偷偷位移)');
-ok(camSmoothF(SPEC_CAM.POS_K, 1 / 60) > 0 && camSmoothF(SPEC_CAM.POS_K, 1 / 60) < 1,
+ok(near(lerpFPS(SPEC_CAM.POS_K, 0), 0), 'dt = 0 ⇒ 完全不移動(暫停/切分頁不會偷偷位移)');
+ok(lerpFPS(SPEC_CAM.POS_K, 1 / 60) > 0 && lerpFPS(SPEC_CAM.POS_K, 1 / 60) < 1,
   '單幀權重落在 (0, 1):既會逼近也不會一步到位');
-ok(camSmoothF(SPEC_CAM.POS_K, 1 / 30) > camSmoothF(SPEC_CAM.POS_K, 1 / 60),
+ok(lerpFPS(SPEC_CAM.POS_K, 1 / 30) > lerpFPS(SPEC_CAM.POS_K, 1 / 60),
   '同係數下 dt 越大權重越大(掉幀時追得更多,才補得回落後量)');
-ok(camSmoothF(SPEC_CAM.POS_K, 1e6) <= 1 && camSmoothF(-5, 0.1) === 0 && camSmoothF(3, -1) === 0,
+ok(lerpFPS(SPEC_CAM.POS_K, 1e6) <= 1 && lerpFPS(-5, 0.1) === 0 && lerpFPS(3, -1) === 0,
   '權重恆 ≤ 1、負係數/負 dt 夾到 0(不過衝、不反向)');
 {
   // **幀率無關直測**:同一段 1 秒的追隨,30 / 60 / 240fps 收斂到同一個位置。
   // 這正是「太晃」的根因測試 —— 退回固定係數的話三者會差到 10% 以上。
   const chase = (fps) => {
     let x = 0;
-    for (let i = 0; i < fps; i++) x += (100 - x) * camSmoothF(SPEC_CAM.POS_K, 1 / fps);
+    for (let i = 0; i < fps; i++) x += (100 - x) * lerpFPS(SPEC_CAM.POS_K, 1 / fps);
     return x;
   };
   const a = chase(30), b = chase(60), c = chase(240);
@@ -158,9 +158,9 @@ class V3 {
 const THREE_STUB = { Vector3: V3 };
 const HERO_VIEW = () => ({ e: 0.85, f: 0.1 });   // 視點比例:真品住 game.js 模組層,行為與本測無關
 const proto = new Function(
-  'THREE', 'SPEC_CAM', 'specViewLocked', 'camSmoothF', 'camAngleStep', 'CHARACTERS', 'SIDES', 'heroTargetH', 'heroView',
+  'THREE', 'SPEC_CAM', 'specViewLocked', 'lerpFPS', 'camAngleStep', 'CHARACTERS', 'SIDES', 'heroTargetH', 'heroView',
   `return ({ ${grabMethod(gameSrc, '_updateSpectator')} });`,
-)(THREE_STUB, SPEC_CAM, specViewLocked, camSmoothF, camAngleStep, CHARACTERS, SIDES, heroTargetH, HERO_VIEW);
+)(THREE_STUB, SPEC_CAM, specViewLocked, lerpFPS, camAngleStep, CHARACTERS, SIDES, heroTargetH, HERO_VIEW);
 
 const CH = Object.keys(CHARACTERS)[0];
 const HH = heroTargetH(CHARACTERS[CH].kind, CH);
