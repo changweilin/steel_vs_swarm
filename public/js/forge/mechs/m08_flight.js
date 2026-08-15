@@ -70,9 +70,12 @@ export default {
     for (const [sx, z, front] of [[-1, FR.fz, true], [1, FR.fz, true], [-1, FR.hz, false], [1, FR.hz, false]]) {
       const cx = { ...c, sx, front };
       // 四節腿 ⇒ 姿態陣列補到四格(第四格 = 掌骨/蹠骨那一節;省略會落回宣告的 base = 站姿)
+      // 2026-08-15 使用者:「飛行形態**後腳向後收起**」⇒ 後肢根節自 0.55 抬到 1.45
+      //(肢體沿局部 −y ⇒ Rx(θ) 把它送到 (0, −cos θ, −sin θ):0.55 = 斜垂在體下、
+      // 1.45 ≈ 近水平朝機尾),膝/跗跟著收緊成貼腹的著陸姿。**前肢一格未動**。
       staticLimb(spine, front ? m08.legF(cx) : m08.legH(cx),
-        [0, front ? 1.5 : -1.6, front ? -0.9 : 1.0, front ? -0.5 : 0.6],
-        [sx * FR.legX, -0.06, z], [front ? 0.9 : 0.55, 0, sx * 0.3]);
+        [0, front ? 1.5 : -1.15, front ? -0.9 : 0.75, front ? -0.5 : 0.45],
+        [sx * FR.legX, -0.06, z], [front ? 0.9 : 1.45, 0, sx * 0.3]);
     }
     // ---- 尾(進 rig.tailSegs;細長尾在飛行時當配平舵)----
     const tail = new THREE.Group();
@@ -84,17 +87,8 @@ export default {
   lift(c) { return { wings: c.wings.map(({ w, outer, sgn }) => ({ w, outer, sgn })) }; },
   tail(c) { return c._tail || null; },
 
-  mount(c) {
-    // 使用者定案「武器在雙肩朝前」:同一具長狙擊莢與短莢,改掛在雙肩上、槍口朝航向
-    const R = m08.rifle(c, c._spine, 0.46, 0.62, 0.5);
-    const P = m08.pod(c, c._spine, -0.46, 0.62, 0.62);
-    return {
-      gunR: null, gunL: null,
-      muzzles: { light: { n: P.muz, r: 0.04 }, heavy: { n: R.muz, r: 0.08 } },
-      lightGlowM: [P.muz], heavyGlowM: [R.muz], heavyPivot: [],
-      weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.04 },
-      wpn: { light: { nodes: [P.g], ref: P.g, muz: P.muz, fwd: 'z' },
-        heavy: { nodes: [R.g], ref: R.g, muz: R.muz, fwd: 'z' } },
-    };
-  },
+  // 武裝**兩態同一份擺位**(2026-08-15 使用者:「輕重武器掛在肩頰骨左右兩側,變形時保持不變」)
+  // ⇒ 這裡 MUST 只是轉呼地面型那一支,MUST NOT 自己再寫一組座標(舊制寫了第二份 ⇒ 改一邊
+  //   另一邊靜默留在原地,而兩張截圖分開看都正常)。
+  mount(c) { return m08.mount(c, { spine: c._spine }); },
 };

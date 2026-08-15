@@ -58,11 +58,11 @@ export default {
   doc: [
     ['機身(與地面平行)', '地面型軀幹(t11.chest)整組攤平 90° —— 含腰腹段、背馱貨箱、防滾籠'],
     ['機鼻 = 三角型頭盔', '地面型頭部(t11.head + t11.helmet)+ 反傾中介 Group;等腰直角盔的 90° 尖端朝航向 = B-2 機鼻,兩腰與雙臂共線'],
-    ['主翼 ×2(後掠 45° = 盔的兩腰)', '雙臂朝斜後方:上臂/前臂的臂側主翼板(finF)成翼面、圓筒大肩甲成翼根整流罩'],
-    ['翼端旋翼 ×2', '拳側旋翼盤圓盾(t11.rotorDisc)轉成水平槳盤;**盤內徑肋伸出盤外一個前臂長**成大槳葉 + 自轉層(userData.spin)'],
+    ['主翼 ×2(後掠 45° = 盔的兩腰)', '雙臂朝斜後方 + **肩關節滾轉 90°**:上臂/前臂的臂側主翼板(finF)片面轉成水平成翼面、圓筒大肩甲平行地面成翼根整流罩'],
+    ['翼端旋翼 ×2', '拳側旋翼盤圓盾(t11.rotorDisc)**跟著臂滾成水平槳盤**(盤與臂恆同角,傾轉的是整個短艙);**盤內徑肋伸出盤外一個前臂長**成大槳葉 + 自轉層(userData.spin)'],
     ['翼上掛載', '雙側貨運掛架整組沿用(帆布大圓捆/麻袋/油桶/備胎/蜂群發射巢/吊掛貨櫃)'],
     ['後緣內段 ×2', '同一組大腿/小腿/大平足(t11.thigh/shin/foot)內縮成與地面平行、朝斜後方'],
-    ['武裝', '同一具右架雙聯機槍莢 + 左架集束布撒器,改掛在反傾硬點上朝航向'],
+    ['武裝', '同一具右肩雙聯機槍莢 + 左肩集束布撒器,隨肩甲滾平後由轉向層反解成朝航向'],
   ],
 
   body(c, t) {
@@ -99,10 +99,22 @@ export default {
       arm.position.set(sx * dim.shoulderX, dim.shoulderYl, 0);
       arm.rotation.z = sx * (Math.PI / 2 - ARM_SWEEP);
       chest.add(arm);
-      t11.armUp(cx, arm, { len: dim.upperArmL });
+      // ---- 肩關節滾轉(2026-08-15 使用者:「連同雙臂旋轉肩關節」)----
+      // 繞**肢體長軸**滾 90°(肢體鏈沿局部 −y ⇒ 繞局部 y 就是滾轉)。這一個角度同時解掉三件事,
+      // 而且是同一件事的三個面 —— 整條臂是一個剛體,滾它就是滾臂上的每一樣東西:
+      //   ① 肩甲的鼓面轉成**平行地面**(使用者),其上的武器硬點跟著朝上;
+      //   ② 臂側主翼板的片面法線轉成**垂直** ⇒ 翼面水平(舊制實測法線 (0.71,0,0.71) = 水平,
+      //      翼其實是**立**著的兩片鰭,而檔頭一直宣稱它是水平翼面);
+      //   ③ 拳側旋翼盤跟著轉成**水平槳盤** —— 這正是「傾轉旋翼」該有的解法:轉的是整個
+      //      短艙(臂),不是把盤自己扭回去(舊制 `g.quaternion.copy(q).invert()`),
+      //      使用者「雙臂始終與圓盾保持相同角度」講的就是這件事。
+      const roll = new THREE.Group();
+      roll.rotation.y = sx * Math.PI / 2;
+      arm.add(roll);
+      t11.armUp(cx, roll, { len: dim.upperArmL });
       const fore = new THREE.Group();
       fore.position.y = -dim.upperArmL;
-      arm.add(fore);
+      roll.add(fore);
       t11.armFore(cx, fore, { len: dim.foreArmL });
       const hand = new THREE.Group();
       hand.position.y = -dim.foreArmL;
@@ -138,24 +150,32 @@ export default {
       t11.foot(cx, foot, { clear: dim.clear, footL: dim.footL });
     }
 
-    // ---- 武裝硬點:掛架不動,武器改掛在反傾硬點上 ⇒ 槍口朝航向而不是朝天 ----
-    for (const k of ['rackL', 'rackR']) if (c[k]) c[k] = upright(c[k], PITCH);
     // 「圓盾內部會延伸出**前臂長**的大旋翼」:槳葉自盤心貫穿(徑肋是整根直徑條)⇒ 全長 =
     // 2 × (盤半徑 + 伸出量),伸出量取**前臂長**。兩個數字都是推導的 —— 盤半徑寫死在
     // rotorDisc 的輪緣環、前臂長吃骨架尺寸,手寫一個全長就是「改骨架比例後槳葉不跟著長」。
     c.rotorBlade = { len: 2 * (DISC_R + dim.foreArmL), w: 0.16 };
     c._W = t11.mount(c, { chest, handL: hands[-1], handR: hands[1], hips });
 
-    // ---- 旋翼盤定向:mount 已經把同一顆盤掛在拳上(地面 = 圓盾)—— 這裡只把它轉成水平槳盤。
-    // 角度**由手部的世界旋轉反解**,不手寫一組尤拉角:手臂日後多一個上反角/後掠角,
-    // 手寫的那組角會靜默歪掉,而截圖上只表現成「槳盤有點斜」。
-    const q = new THREE.Quaternion();
-    c._spin = (c.discs || []).map(({ g, spin, hand }) => {
-      hand.getWorldQuaternion(q);
-      g.quaternion.copy(q).invert();           // 盤面法線(局部 +y)= 世界 +y
-      g.position.set(0, -0.62, 0);             // 沿臂軸再往外 = 翼端
+    // ---- 旋翼盤:**角度一格不動**(2026-08-15 使用者「雙臂始終與圓盾保持相同角度」)----
+    // 舊制在這裡把盤的世界旋轉反解掉(`g.quaternion.copy(q).invert()`)⇒ 盤與臂的相對角度
+    // 兩態不同 = 使用者這一輪要拿掉的東西。盤之所以變成水平槳盤,現在是**肩關節滾了 90°**
+    // 的結果(見上方 roll)—— 傾轉旋翼轉的是整個短艙,不是盤自己。
+    // 這裡只剩**位置**:沿臂軸再往外挪到翼端(位置不是角度,不違反上面那句)。
+    c._spin = (c.discs || []).map(({ g, spin }) => {
+      g.position.set(0, -0.62, 0);
       return spin;
     });
+
+    // ---- 肩甲上的武器轉向航向(使用者:「飛行時肩甲平行地面,上面的武器轉向前方」)----
+    // 肩甲滾平之後,武器硬點的局部 +z(= 槍口方向,`wpn.fwd:'z'`)被帶到世界 −y = 朝地面
+    // ⇒ 由**掛點的世界旋轉反解**轉向層,讓它的局部軸與世界對齊 ⇒ +z 恰為航向。
+    // 反解而不是手寫尤拉角:後掠角 / 滾轉角 / 軀幹攤平角日後任一改動,這裡自己跟著走
+    //(同舊制旋翼盤那一段的作法;手寫的那組角只會表現成「槍口有點歪」)。
+    const q = new THREE.Quaternion();
+    for (const sw of c.wpnSwivels || []) {
+      sw.parent.getWorldQuaternion(q);
+      sw.quaternion.copy(q).invert();
+    }
   },
 
   // 旋翼自轉名冊(戰場 game.js spinners / 展示台 viewer 同吃 userData.spin)
