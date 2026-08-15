@@ -29,15 +29,15 @@
     "s02": {
       "real": []
     },
-    "s03@ground": {
+    "s10@ground": {
       "ground": [],
       "real": []
     },
-    "s03@flight": {
+    "s10@flight": {
       "air": [
         {
-          "id": "user_s03_flight_air_1",
-          "file": "user_s03_flight_air_1.webp",
+          "id": "user_s10_flight_air_1",
+          "file": "user_s10_flight_air_1.webp",
           "license": "user",
           "creator": null,
           "source_url": null,
@@ -45,8 +45,8 @@
           "api": "user"
         },
         {
-          "id": "user_s03_flight_air_2",
-          "file": "user_s03_flight_air_2.jpg",
+          "id": "user_s10_flight_air_2",
+          "file": "user_s10_flight_air_2.jpg",
           "license": "user",
           "creator": null,
           "source_url": null,
@@ -56,8 +56,8 @@
       ],
       "real": [
         {
-          "id": "user_s03_flight_real_1",
-          "file": "user_s03_flight_real_1.png",
+          "id": "user_s10_flight_real_1",
+          "file": "user_s10_flight_real_1.png",
           "license": "user",
           "creator": null,
           "source_url": null,
@@ -65,8 +65,8 @@
           "api": "user"
         },
         {
-          "id": "user_s03_flight_real_2",
-          "file": "user_s03_flight_real_2.jpg",
+          "id": "user_s10_flight_real_2",
+          "file": "user_s10_flight_real_2.jpg",
           "license": "user",
           "creator": null,
           "source_url": null,
@@ -200,15 +200,15 @@
         }
       ]
     },
-    "s10@ground": {
+    "s03@ground": {
       "ground": [],
       "real": []
     },
-    "s10@flight": {
+    "s03@flight": {
       "air": [
         {
-          "id": "user_s10_flight_air_1",
-          "file": "user_s10_flight_air_1.jpg",
+          "id": "user_s03_flight_air_1",
+          "file": "user_s03_flight_air_1.jpg",
           "license": "user",
           "creator": null,
           "source_url": null,
@@ -216,8 +216,8 @@
           "api": "user"
         },
         {
-          "id": "user_s10_flight_air_2",
-          "file": "user_s10_flight_air_2.jpg",
+          "id": "user_s03_flight_air_2",
+          "file": "user_s03_flight_air_2.jpg",
           "license": "user",
           "creator": null,
           "source_url": null,
@@ -225,8 +225,8 @@
           "api": "user"
         },
         {
-          "id": "user_s10_flight_air_3",
-          "file": "user_s10_flight_air_3.png",
+          "id": "user_s03_flight_air_3",
+          "file": "user_s03_flight_air_3.png",
           "license": "user",
           "creator": null,
           "source_url": null,
@@ -236,8 +236,8 @@
       ],
       "real": [
         {
-          "id": "user_s10_flight_real_1",
-          "file": "user_s10_flight_real_1.jpg",
+          "id": "user_s03_flight_real_1",
+          "file": "user_s03_flight_real_1.jpg",
           "license": "user",
           "creator": null,
           "source_url": null,
@@ -948,7 +948,7 @@
         ]
       }
     },
-    "s10@ground": {
+    "s03@ground": {
       "ground": {
         "q": "",
         "note": "構圖篩選判退 3 張(要全身照、背景乾淨)",
@@ -1284,7 +1284,7 @@
         ]
       }
     },
-    "s03@flight": {
+    "s10@flight": {
       "air": {
         "q": "archaeopteryx fossil bird",
         "note": "",
@@ -1300,7 +1300,7 @@
         "rejects": []
       }
     },
-    "s10@flight": {
+    "s03@flight": {
       "air": {
         "q": "airship blimp whale",
         "note": "",
