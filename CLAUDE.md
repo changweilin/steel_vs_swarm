@@ -707,11 +707,12 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 |---|---|
 | `public/js/.claude.md` | 模組層:逐檔職責與活躍工作的細節 |
 | `docs/smoke_tests.md` | 真機冒煙清單(§5 矩陣的 ㋕) |
-| `docs/ai3d_runbook.md` | img→3D 資產管線:§0 定案(方法分流 / 零件庫邊界 / 提示詞規格)、§1~§4 現況與佇列、§5* 逐輪紀錄(§5aj-C 等待執行的改制在此)|
+| `docs/ai3d_runbook.md` | img→3D 資產管線:§0 定案(方法分流 / 零件庫邊界 / 提示詞規格)、§1~§4 現況與佇列、§5 **逐節結論索引**(2026-08-15 蒸餾;錨點 `§5aj-C` 等一個未刪 —— 25 支工具與 `biomes.js`/`beacons.js` 註解在引用,**MUST NOT 改號或刪除**;逐輪敘事走 git)。方法論住 `.claude/skills/photo-to-3d-pipeline` 等三支,本檔不重複 |
 | `docs/map_grid_alignment.md` | 地圖主方位旋轉 / 道路量化 / 路網中繼 —— **只留未完事項**:使用者定案原句、**已排除的選項與理由**、㋕ 未驗項、還沒決定的。三階段的設計與禁令住 A42/A43 與各 `audit_*` 檔頭,逐檔改了什麼住 git 歷史與 PR #186/#188 |
 | `docs/bot_design.md` | 電腦玩家定位分類 / 學習迴圈設計全文 |
 | `docs/codex_format.md` | 角色 / 機體檔案格式規格書 |
-| `docs/visual_upgrade_plan.md` | 畫面升級計畫(P1/P2 項目編號的家) |
+| `docs/anime_style_plan.md` | **日系動漫畫面整合計畫(下一輪畫面工作看這一份)**:§0 四條裁決(2026-08-15 已定案)、①~⑨ 逐題對應回本檔的縫、執行順序。技術本體拆在 `.claude/skills/` 九支 SKILL,兩份外部來源的取得方式寫在該檔開頭 |
+| `docs/visual_upgrade_plan.md` | 2026-08-03 那一輪畫面升級 —— **已結案**,只留 P/V 編號字典(source 註解在引用)、仍沒量的幀時間,以及「哪幾條已被 2026-08-15 定案取代」 |
 | `docs/lane_scenarios.md` / `docs/tunnel_review.md` | 兵線場景 / 隧道覆核紀錄 |
 | `docs/characters.md` / `docs/story.md` | 角色與敘事 |
 | `docs/deploy.md` | 部署 |
