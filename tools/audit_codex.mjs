@@ -375,26 +375,23 @@ sec('Ⅵ 型態姿態(變形者飛行 / 地面):單一縫 + 真的說了「在�
 
   // 用不到的外觀欄位 MUST NOT 送進生圖(換機種留下的殘值 = 憑空多一條設計要求)。
   // 適用性 MUST 對得上**實際消費點**的原文反查 —— 一改就紅字。
-  // ⚠ 2026-08-14 新版建模全面替換舊版之後,消費點**換了家**:第三人稱機體改由
-  //   `public/js/forge/mechs/<key>.js` 逐機手寫(那些檔一欄都不讀),`frame`/`body`/`wing`
-  //   現在只剩 **FPV 座艙**那三支分支在讀(game.js `_cockRotor` / `_cockFixed` / `_cockAvian`)。
-  //   反查目標因此指向 game.js;繼續指著已經沒有那些函式的 models.js 的話,`consumedIn`
-  //   恆回 false ⇒ 「只讀 wing」那一條永遠紅字,而規則本身其實還成立。
+  // ⚠ 消費點**搬過兩次家**,而規則本身沒變:
+  //   ・2026-08-14 新版建模全面替換舊版 ⇒ 第三人稱機體改由 `forge/mechs/<key>.js` 逐機手寫
+  //     (那些檔一欄都不讀),`frame`/`body`/`wing` 只剩 FPV 座艙那三支分支在讀;
+  //   ・2026-08-15「駕駛艙畫面基於新版機體更新設計」⇒ 那三支手繪 builder 整組退場
+  //     (座艙改複製真品零件),於是這三欄在 3D 那一側**一個消費者都沒有了**。
+  //   ⇒ 反查因此翻面:不再問「誰在讀」,而是釘住「**沒有人在讀**」。這一條紅字 = 有人又把
+  //   `visual.frame`/`body`/`wing` 接回 3D 建模,那就是繞過 forge 逐機檔的第二份外觀真相
+  //   (§6 退場清單那一條)。`VIS_USED_BY_FORM` 從此純粹是**生圖用**的宣告,它的正確性由
+  //   下面兩條逐詞斷言守(哪一台帶旋翼骨架詞、哪一台不帶)。
   const cockCode = strip(readSrc('public', 'js', 'game.js'));
-  const consumedIn = (fn, key) => {
-    const at = cockCode.indexOf(`${fn}(g, mk, accent, vis) {`);
-    if (at < 0) return false;
-    const end = cockCode.indexOf('\n  _', at + 1);
-    return new RegExp(`vis\\??\\.${key}\\b`).test(cockCode.slice(at, end < 0 ? undefined : end));
-  };
-  t('擬態翼無人機不讀 frame/body(座艙原文反查)',
-    !consumedIn('_cockAvian', 'frame') && !consumedIn('_cockAvian', 'body'));
-  t('定翼無人機不讀 frame/body、只讀 wing(座艙原文反查)',
-    !consumedIn('_cockFixed', 'frame') && !consumedIn('_cockFixed', 'body')
-    && consumedIn('_cockFixed', 'wing'));
-  // 反查目標指錯家的話上面兩條會「因為找不到函式而通過」—— 這一條是它的哨兵
-  t('多旋翼座艙確實讀 frame/body(反查目標沒指錯家)',
-    consumedIn('_cockRotor', 'frame') && consumedIn('_cockRotor', 'body'));
+  const reads3d = (key) => new RegExp(`vis\\??\\.${key}\\b`).test(cockCode);
+  t('3D 那一側不再讀 frame/body/wing(座艙已改複製真品零件;原文反查)',
+    !reads3d('frame') && !reads3d('body') && !reads3d('wing'));
+  // 反查指錯家的話上面那一條會「因為抓不到任何東西而通過」—— 這一條是它的哨兵:
+  // 座艙**仍然**要讀得到分派用的那幾欄(form/proto/creature/ground/flight),抓不到 = 檔名指錯了。
+  t('反查目標沒指錯家(座艙仍讀 form/proto/creature 這幾欄)',
+    reads3d('form') && reads3d('proto') && reads3d('creature'));
   const AVIAN = Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].visual?.form === 'avian');
   t(`擬態翼機體的生圖詞不含旋翼/機身殼(${AVIAN.length} 台)`, AVIAN.length > 0 && AVIAN.every((id) => {
     const v = CHARACTERS[id].visual;
