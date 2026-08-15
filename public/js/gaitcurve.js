@@ -146,7 +146,7 @@ const CURVES = {
     { st: [[0, 0.30], [0.45, 0.34], [0.80, 0.44], [1, 0.40]],
       sw: [[0, 0.40], [0.40, 0.18], [0.75, 0.22], [1, 0.30]] },
   ],
-  // ══ 抓握前肢(不承重:迅猛龍/暴龍/猩猩以外的獸型雙足、s03 抱在胸前的前爪)══
+  // ══ 抓握前肢(不承重:迅猛龍/暴龍/猩猩以外的獸型雙足、s10 抱在胸前的前爪)══
   // 完全不進步態:恆定深屈的預備式 + 與步頻同調的微幅呼吸,擺幅小一個量級。
   // 「不承重的前肢跟著跑步甩大臂」是舊制最刺眼的一條(牠的手根本沒有碰到地)。
   grasp: [
@@ -214,7 +214,7 @@ export const POSTURE_KEYS = Object.keys(POSTURE);
  * 逐機解析成驅動端要的東西(locomotion 只認這個回傳值,MUST NOT 自己讀 POSTURE/CURVES)。
  * @param limb 逐機檔 `gait.limb`:{ fore, hind, foreRole, hindRole, reachF, lockF, bounceF }
  *             ── 兩邊各自的站姿(前後可以不同:貓科前肢趾行、象四肢皆柱狀、
- *                s03 前爪抱胸 ⇒ foreRole 'grasp' 而後肢 digitigrade)
+ *                s10 前爪抱胸 ⇒ foreRole 'grasp' 而後肢 digitigrade)
  * 省略 ⇒ 前後皆 digitigrade(獸型的多數),`grasp`/`arthropod` 由 role 自己帶同名站姿。
  */
 export function limbProfile(spec) {

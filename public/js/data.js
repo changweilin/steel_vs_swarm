@@ -3128,31 +3128,41 @@ export const CHARACTERS = {
     // 武器/招式/塗裝(hue + paint)綁角色不動)。**mods 整組隨機體搬**是刻意的:這樣
     // drone/morph 兩個機種池的 mods 多重集逐位元不變 ⇒ UNITS.drone.hp / SQUAD.ARMOR_F /
     // SQUAD.DRONE_AVG_HP 三個推導值完全不動,只剩 CLASS_SYM 的分組會位移(bal ⑤ 已複驗)。
-    // 塗裝 paint:'tattoo' 留在她身上正好:那張徽是「對稱線描羽紋」——始祖鳥化石上的羽印。
-    side: 'SWARM', kind: 'morph', name: '林翎', code: '半羽', machine: '「羽陣」始祖式可變機甲',
-    visual: { hue: 0x9ef2e6, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'tattoo' },
-    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 8 },
+    //
+    // 2026-08-16 使用者定案「台灣角色改為駕駛利維坦」:與 s10 卡佳・塔姆**整組對調機體欄**
+    // —— 她接下「飛鯨 ↔ 機械巨象」的利維坦,s10 接下她原本的「始祖鳥 ↔ 迅猛龍」。
+    // 走的是上面同一條規則,而且這一次比 2026-08-03 那次更乾淨:**兩台同為 SWARM morph**
+    // ⇒ 機種編制(7/3/2)、morph 池的 mods 多重集、rangeCap(兩邊 sight 同值)**逐位元不動**,
+    // 連 CLASS_SYM 的分組都不位移,只有兩人各自的 mods 換了對方那一組(bal ⑤ 需複驗離群列)。
+    // 塗裝 paint:'tattoo' 仍留在她身上(角色欄):那張對稱線描羽紋徽是她自己畫的**私章**,
+    // 不是機體識別 —— 換機之後她照樣把它噴在利維坦的囊體側面(見 lore.js)。
+    side: 'SWARM', kind: 'morph', name: '林翎', code: '半羽', machine: '「靜電」長耳可變訊號機',
+    visual: { hue: 0x9ef2e6, pod: 'antenna', flight: 'levi', ground: 'elephant', bulk: 0.95, paint: 'tattoo' },
+    mods: { hp: 0.9, sp: 1.2, mp: 1.3, speed: 1.05, armor: 8 },
     // 2026-08-03 換機體後的 dmg 校準(唯一合法的旋鈕,見 §2.1 三軸預算:「校準只走 dmg 階梯」)。
     // 她從無人機底盤換到變形機甲底盤 ⇒ rangeCap 由 sight 270 掉到 240,輕武器解析射程 114 → 108m
     // (重武器 168m 兩邊都沒被夾,不受影響)。射程是 ⑦ 量到最貴的一軸,而她的重武器又是全表
     // **總傷害最低**的那一把(反護盾的設計代價:vsSp 1.7 / vsHp 0.7 再吃 counterDmgF)⇒ 換完之後
     // bal ⑤ 掉到 17% < 20% 下界。**補在輕武器而不是重武器**:重武器的低總傷害是護盾軸的定價本身,
     // 動它等於把那筆交易改掉;輕武器沒掛任何護盾旗標,是乾淨的基礎火力。
-    light: { name: '翼面相位脈衝槍', rw: '翼緣相控陣・光速直擊', type: 'beam',
+    // 2026-08-16 換機:武器/招式**只改顯示字串**(翼面/羽冠/頸羽/羽面 → 耳廓/額隆/雙耳/隔艙稜線)——
+    // 那幾個名字指的是機體上的**實體零件**,機體換了就不存在;數值(dmg/rate/mag/range/vs/vsSp…)
+    // 一格未動 ⇒ bal 與 e2e 的期望值逐位元不變。武器本身仍是綁角色的(§2.1 角色機種),沒有搬給 s10。
+    light: { name: '耳廓相位脈衝槍', rw: '耳廓相控陣・光速直擊', type: 'beam',
       dmg: [15, 19, 24], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 190, crit: 0.06,
       vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
     // 護盾軸示範 ①【反護盾】:HPM 微波把能量灌進護盾場直接燒穿,對裝甲板卻幾乎只是加熱 ——
     // 開場兩發剝光對手護盾,之後就得換輕武器慢慢磨(見 data.js shieldSplit 上方註)。
     // **原本的 air 2.0 由夾制②自動歸 1**(反護盾不得有其他單位加成)—— 這裡刻意留著原值不手改:
     // 紀律是程式在管,寫死 1.0 反而看不出「這把武器本來被拿掉了什麼」。
-    heavy: { name: '羽冠高功率微波炮', rw: 'HPM 定向能・光速', type: 'beam',
+    heavy: { name: '額隆高功率微波炮', rw: 'HPM 定向能・光速', type: 'beam',
       dmg: [21, 31, 44], mag: 5, reload: 8, range: 280, emp: [0.8, 1.0, 1.2],
       vsSp: 1.7, vsHp: 0.7,
       vs: { flesh: 0.7, armor: 0.8, air: 2.0, building: 0.4 } },
     skill: { name: '定向干擾', fx: 'emp', r: 120, dur: [2.5, 3, 3.5], range: 260,
-      cd: [18, 16, 14], mp: [40, 45, 50], desc: '頸羽同相位對準:指定區域敵軍武器離線(建築免疫)' },
+      cd: [18, 16, 14], mp: [40, 45, 50], desc: '雙耳同相位對準:指定區域敵軍武器離線(建築免疫)' },
     ult: { name: '全頻壓制', fx: 'emp', r: 260, dur: [4, 5, 6],
-      cd: [70, 62, 54], mp: [90, 100, 110], desc: '全身羽面一起起振:以自身為中心的大範圍電子壓制' },
+      cd: [70, 62, 54], mp: [90, 100, 110], desc: '全身隔艙稜線一起起振:以自身為中心的大範圍電子壓制' },
   },
   s04: {
     side: 'SWARM', kind: 'drone', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
@@ -3266,11 +3276,14 @@ export const CHARACTERS = {
       desc: '獵網彈幕封鎖指定空域,獵物向彈著中心收攏(拉近)' },
   },
   s10: {
-    // 2026-08-02 機體混編:接下原屬傭兵的「飛鯨↔機械巨象」變形機甲 —— 鯨歌與象的次聲波是
-    // 自然界最遠的兩種通訊,象耳就是天線。她原本的機體註記寫著「別人的機體是拳頭,她的是一隻豎起來的耳朵」。
-    side: 'SWARM', kind: 'morph', name: '卡佳・塔姆', code: '白噪音', machine: '「靜電」長耳可變訊號機',
-    visual: { hue: 0xd7b8ff, pod: 'antenna', flight: 'levi', ground: 'elephant', bulk: 0.95, paint: 'minimal' },
-    mods: { hp: 0.9, sp: 1.2, mp: 1.3, speed: 1.05, armor: 8 },
+    // 2026-08-02 機體混編:接下原屬傭兵的「飛鯨↔機械巨象」變形機甲。
+    // 2026-08-16 使用者定案「台灣角色改為駕駛利維坦」:那台整組交給 s03 林翎,她接下 s03 原本的
+    // 「始祖鳥 ↔ 迅猛龍」(規則與代價見 s03 上方那段;兩台同為 SWARM morph ⇒ 編制與推導值不動)。
+    // 換得過去是因為這台機的設計理由與她本人一模一樣:翼面張開是相控陣、收翼摺成背脊長天線
+    // ——「同一組振子,兩種指向」,對一個靠聽頻譜活下來的人來說,耳朵換了形狀而已。
+    side: 'SWARM', kind: 'morph', name: '卡佳・塔姆', code: '白噪音', machine: '「羽陣」始祖式可變機甲',
+    visual: { hue: 0xd7b8ff, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'minimal' },
+    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 8 },
     light: { name: '低功率脈衝雷射槍艙', rw: '抑制型雷射訊號步槍・光速直擊', type: 'beam',
       dmg: [16, 20, 24], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 170, crit: 0.08,
       vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },

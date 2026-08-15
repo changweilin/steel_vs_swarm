@@ -949,7 +949,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   const LP = rig.limbP || (rig.limbP = limbProfile(rig.limb));
   const duty = dutyOf(G === 'trot' && gallop > 0 ? 'trot' : G, gallop);
   const hip = GAIT_ANAT ? (p) => hipDrive(cycleU(p), duty) : (p) => Math.sin(p);
-  // **不承重的前肢連肩都不該甩**(s03 抱在胸前的抓握爪):肩擺幅收到 18%,只留與步頻同調的
+  // **不承重的前肢連肩都不該甩**(s10 抱在胸前的抓握爪):肩擺幅收到 18%,只留與步頻同調的
   // 微幅呼吸。分節鏈那一半由 grasp 曲線負責,但有些機體的前肢根本沒有 chFL(整條爪是靜態件)
   // ⇒ 只改鏈是改不到的,肩這一行才是它唯一的動力來源。
   const foreF = GAIT_ANAT && LP.fore.role === 'grasp' ? 0.18 : 1;
