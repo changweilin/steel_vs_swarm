@@ -26,13 +26,20 @@ const _MASTER_DEF = 0.8;     // 預設主音量
 const _SFX_DEF = 0.9;        // 音效相對音量
 const _BGM_DEF = 0.42;       // 背景音樂相對音量(壓在音效之下)
 const _LS_KEY = 'svs_audio'; // localStorage 設定鍵
+// ⑦-3 多 take 的 playbackRate 抖動幅度(±7%)。**MUST NOT 拿放寬 `_DEDUP_S` 換「聽得出有多個
+// take」** —— 那會把齊射的收斂拿掉,直接回到一牆噪音。變化只准發生在**跨去重窗之間**。
+const _RATE_JIT = 0.07;
 // 移動環境音(程序循環;每類別僅 1 個常駐聲道 = 最多 4 聲道,低功耗全關)。
 // 各類別基準音量(壓得比開火/爆炸低,只當「戰場在動」的環境床)。
-const _MOVE = { rotor: 0.5, engine: 0.42, wingflap: 0.34, stomp: 0.5 };
+// `stomp_wet` = 踩水那一條鏈的**靜態音色配平**(⑦-2);它與 `stomp` 是同一個常駐聲道裡的
+// 兩條鏈,乾濕交叉淡入的權重恆和為 1(MUST NOT 為濕床另開第二個 `_moveVoice`)。
+const _MOVE = { rotor: 0.5, engine: 0.42, wingflap: 0.34, stomp: 0.5, stomp_wet: 0.44 };
 
 // Layer 2 樣本清單(放進 public/audio/ 即自動啟用;缺檔則走程序合成)。
 // 「音質最吃樣本」的重點槽才掛檔;其餘(命中/招式/UI…)一律程序合成。
 // 擴充方式:把 CC0 檔放進對應路徑並在此加一行 —— 見 public/audio/README.md。
+// **值的型別是 `string | string[]`**(⑦-3):陣列 = 2~4 個 take,逐次挑一個且不重複上一次。
+// 單字串一律解析成長度 1 的陣列 ⇒ 行為逐位元同舊制(rate 抖動除外)。
 const SFX_MANIFEST = {
   explosion: 'audio/sfx/explosion.ogg',         // 大型爆炸(拆塔/坦克/主堡)
   explosion_small: 'audio/sfx/explosion_small.ogg', // 小型爆炸/殉爆/地雷
@@ -44,12 +51,61 @@ const SFX_MANIFEST = {
   fire_light_energy: 'audio/sfx/fire_light_energy.ogg', // 蜂群雷射(retro_laser_01)
   fire_missile: 'audio/sfx/fire_missile.ogg',         // 導引飛彈/火箭(rocket_01)
 };
+// ⑦-4:逐場景**兩種編碼**(桌機 hi / 行動版 low)。取用只准經 `bgmUrl(name, low)` 這一個縫 ——
+// 兩處各自 `low ? … : …` 的話,低功耗關掉之後其中一處會靜默停在行動版編碼。
+// `low` 缺檔(尚未產出)⇒ 自動退回 `hi`(降級不例外)。
 const BGM_MANIFEST = {
-  menu: 'audio/bgm/menu.ogg',      // CC0《Meadow Thoughts》Écrivain(沉靜豎琴)
-  battle: 'audio/bgm/battle.mp3',  // CC0《Battle Theme A》cynicmusic(戰鬥旋律;mp3 無 ogg 版)
+  menu: { hi: 'audio/bgm/menu.ogg', low: 'audio/bgm/menu-mobile.ogg' },      // CC0《Meadow Thoughts》Écrivain
+  battle: { hi: 'audio/bgm/battle.mp3', low: 'audio/bgm/battle-mobile.mp3' }, // CC0《Battle Theme A》cynicmusic
 };
 
+/** BGM 取檔唯一縫(⑦-4)。低階走行動版編碼;沒有行動版就退回桌機版。 */
+export function bgmUrl(name, low) {
+  const e = BGM_MANIFEST[name];
+  if (!e) return null;
+  return (low && e.low) || e.hi;
+}
+
 const _clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+// ---- 地點環境音(唯一縫;⑦-1)------------------------------------------------
+// 「你**在哪裡**」的床,與「戰場上有什麼在動」的移動床(`_MOVE`)是兩件事。
+// 三條紀律:
+//  ① **常駐**:惰性建一次之後永不 `pause()`/`stop()`,只 ride 音量 —— 那正是
+//     「離開再回來,床從頭開始」的病因;`dispose()` 才收。
+//  ② **MUST NOT 走 `_play`**:那條路有去重窗與 `_MAX_VOICES`,常駐床走它就會在齊射時
+//     被丟棄,症狀是「打得最兇的時候環境音整片消失」。
+//  ③ **first-match-wins**:`AMBIENCE` 的**宣告順序就是優先序**,同時只有一床有增益。
+//     累加所有在範圍內的床 = 交界處兩床一起響(參考專案 symptom 表的
+//     『Overlapping zones both play』),而且總音量會爆掉。
+// `AMB_BASE` 是**恆亮床**,刻意不在 `AMBIENCE` 裡 —— 它無條件、無球,放進名冊就要為它
+// 發明一組永遠成立的 r/m。沒有它的話,所有床都不在範圍內時分區邊界會被聽成一個洞。
+const AMB_BASE = { id: 'base', url: 'audio/amb/base.ogg', vol: 0.30 };
+// 逐列 `{ id, url, vol, r, m }`;`r` = 起作用的查詢值上界、`m` = 淡入寬度(邊界的性格)。
+// 查詢值 `q[id]` 一律「**越小越近**」:二元床傳 0/1、密度床傳 `1 − 密度01`、據點床傳公尺。
+// ⚠ `m` 逐床 MUST 不同 —— 那個差別就是「邊界聽起來像什麼」:城市是慢慢浮起來的一片,
+// 洞口是一步之內就換掉的一道門。全部一樣 = 每個交界都同一種味道。
+const AMBIENCE = [
+  { id: 'tunnel', url: 'audio/amb/tunnel.ogg', vol: 0.42, r: 0.5, m: 0.5 },   // 洞內(隧道/地下道/明隧道)封閉迴響
+  { id: 'water', url: 'audio/amb/water.ogg', vol: 0.34, r: 0.5, m: 0.5 },     // 涉水
+  { id: 'swamp', url: 'audio/amb/swamp.ogg', vol: 0.30, r: 0.5, m: 0.5 },     // 沼澤
+  { id: 'camp', url: 'audio/amb/camp.ogg', vol: 0.26, r: 34, m: 14 },         // 據點(主堡/砲塔的機具低鳴;公尺)
+  { id: 'urban', url: 'audio/amb/urban.ogg', vol: 0.24, r: 0.55, m: 0.30 },   // 市區(建物密度)
+  { id: 'forest', url: 'audio/amb/forest.ogg', vol: 0.22, r: 0.60, m: 0.38 }, // 林地(神木/樹冠密度)
+];
+
+/**
+ * 地點床解析(**純函式**,全專案唯一一行 gain 公式)。
+ * @param {Record<string, number>} q 逐床查詢值(越小越近;缺席 = 不在範圍內)
+ * @returns {{ id: string, g: number } | null} 勝出的那一床與它的增益;都不在範圍內回 null
+ */
+export function ambienceMix(q) {
+  for (const a of AMBIENCE) {
+    const g = _clamp((a.r - (q[a.id] ?? Infinity)) / a.m, 0, 1);
+    if (g > 0) return { id: a.id, g };
+  }
+  return null;
+}
 
 export class GameAudio {
   constructor() {
@@ -58,9 +114,12 @@ export class GameAudio {
     this._master = null;     // 主匯流排 gain
     this._sfx = null;        // 音效匯流排 gain
     this._noise = null;      // 共用白噪 buffer(1s,全噪音音源重用)
-    this._buffers = {};      // 已 decode 的樣本 AudioBuffer(缺則 undefined → 合成)
+    this._buffers = {};      // 已 decode 的樣本:id → AudioBuffer[](空陣列/undefined → 合成)
+    this._sfxLoaded = false; // 樣本註冊完成旗標(⑦-4:低階早退時恆 false ⇒ 關掉低功耗要補載)
     this._active = 0;        // 目前發聲數(上限管制)
     this._last = new Map();  // 音效去重:id → ctx 時間戳
+    this._lastTake = new Map(); // ⑦-3:上一次挑到的 take 索引(不重複挑同一顆)
+    this._amb = {};          // 地點環境音常駐床:id → { el, g }(永不 pause,只 ride 音量)
     this._scene = null;      // 目前 BGM 場景意圖('menu' | 'battle')
     this._unlocked = false;
     this._bgm = {};          // name → { el, ok }
@@ -73,6 +132,10 @@ export class GameAudio {
     // 讀值 MUST 走 mobile.js lowPower() —— 「沒設定過」在手機上要吃「預設開」,
     // 直接比對 localStorage === '1' 會讓手機的預設值失效(音效仍走取樣、環境音仍開)。
     this.lowPower = lowPower();
+    // 地點環境音總開關(`?amb=0` = 整支 `setAmbience` 早退,做改制前後 A/B;
+    // 同 `?sag=0`/`?morph=0`/`?gait=0`/`?selfbed=1` 的慣例)。
+    this.ambOn = typeof location === 'undefined'
+      || new URLSearchParams(location.search).get('amb') !== '0';
 
     // 設定持久化:音效(SFX)/ 音樂(BGM)各自獨立音量與開關;相容舊版單一 {master,muted}
     const saved = this._load();
@@ -131,6 +194,7 @@ export class GameAudio {
     clearInterval(this._bgmFade);
     clearTimeout(this._bgmGrace);
     this._procStop();
+    this._stopAmbience();   // 常駐床只有在這裡才 pause(每幀的 ride 一律不 pause)
     for (const b of Object.values(this._bgm)) { try { b.el.pause(); } catch { /* noop */ } }
     try { this._ctx?.close(); } catch { /* noop */ }
     this._dead = true;
@@ -151,6 +215,10 @@ export class GameAudio {
   setLowPower(on) {
     this.lowPower = !!on;
     if (this.lowPower) this._stopMove();   // 立刻收掉常駐移動聲道
+    // ⑦-4 的補載入路徑:低階早退跳過了整份 SFX 名冊 ⇒ 關掉低功耗**必須**在這裡補註冊,
+    // 否則音效永久停在 Layer 1 合成 —— 有聲音、沒有錯誤訊息、每一條既有斷言全綠,
+    // 使用者只會說「設定好像沒作用」。地點床同理(惰性建,下一次 setAmbience 自己補)。
+    else if (this._ctx && !this._sfxLoaded) this._loadSamples();
   }
   _applyVolume() {
     if (this._master) this._master.gain.value = 1;               // 主匯流排恆 1,音量各聲道自理
@@ -164,21 +232,40 @@ export class GameAudio {
   }
 
   // ---- Layer 2 樣本載入(失敗靜默,退合成)----
+  /**
+   * ⑦-4 低記憶體階梯:**低階整份 SFX 名冊不註冊**。真實成本不是下載而是
+   * `decodeAudioData` 之後常駐的 PCM buffer;低功耗一律走 Layer 1 合成 ⇒ 那些 buffer
+   * 從頭到尾不會被播,decode 它們是純浪費。早退 MUST 排在 fetch 迴圈**之前**。
+   * ⚠ 連帶 MUST 有 `setLowPower(false)` 的補載入路徑 —— 沒有的話,設定頁把低功耗
+   * 關掉之後音效永久停在合成,**有聲音、沒有錯誤訊息、每一條既有斷言全綠**。
+   */
   async _loadSamples() {
-    for (const [id, url] of Object.entries(SFX_MANIFEST)) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const buf = await this._ctx.decodeAudioData(await res.arrayBuffer());
-        this._buffers[id] = buf;
-      } catch { /* 缺檔/decode 失敗 → 保持 undefined → 合成 fallback */ }
+    if (this.lowPower) { this._loadBgm(); return; }
+    for (const [id, val] of Object.entries(SFX_MANIFEST)) {
+      const urls = Array.isArray(val) ? val : [val];   // ⑦-3:單字串 = 長度 1 的陣列
+      const takes = [];
+      for (const url of urls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          takes.push(await this._ctx.decodeAudioData(await res.arrayBuffer()));
+        } catch { /* 缺檔/decode 失敗 → 少一個 take;全缺 → 空陣列 → 合成 fallback */ }
+      }
+      if (takes.length) this._buffers[id] = takes;
     }
-    for (const [name, url] of Object.entries(BGM_MANIFEST)) {
+    this._sfxLoaded = true;
+    this._loadBgm();
+  }
+
+  /** BGM 串流註冊(不 decode 進 buffer)。兩條載入路徑共用;取檔一律經 `bgmUrl` 唯一縫。 */
+  _loadBgm() {
+    for (const name of Object.keys(BGM_MANIFEST)) {
+      if (this._bgm[name]) continue;   // 補載入時不重建(元素重建 = 曲子從頭開始)
       const el = new Audio();
       el.loop = true; el.preload = 'auto'; el.volume = 0;
       el.addEventListener('canplaythrough', () => { this._bgm[name].ok = true; if (this._scene === name && this._unlocked) this._applyScene(name); }, { once: true });
       el.addEventListener('error', () => { this._bgm[name].ok = false; }, { once: true });
-      el.src = url;
+      el.src = bgmUrl(name, this.lowPower);
       this._bgm[name] = { el, ok: false };
     }
   }
@@ -352,7 +439,7 @@ export class GameAudio {
     this._last.set(id, t);
     if (this._active >= _MAX_VOICES) return; // 發聲上限
     // 低功耗 = 一律走 Layer 1 合成(所有樣本槽都有對應合成 case,故必有聲);一般模式有樣本優先。
-    if (!this.lowPower && this._buffers[id]) this._playSample(id, gain, pan);
+    if (!this.lowPower && this._buffers[id]?.length) this._playSample(id, gain, pan);
     else this._synth(id, gain, pan);
   }
 
@@ -373,15 +460,33 @@ export class GameAudio {
     setTimeout(() => { this._active = Math.max(0, this._active - 1); }, dur * 1000 + 60);
   }
 
+  /**
+   * ⑦-3:逐次挑一個 take(不重複上一次)+ `playbackRate` ±`_RATE_JIT` 抖動。
+   * `Math.random()` 在此**不違反 A4** —— 那條管的是確定性散布路徑(世界佈局的共享 `rnd()`
+   * 序列);take 選擇與 rate 抖動是逐事件、純客戶端、不進任何共享序列(同檔 `_buildNoise`
+   * 已是先例)。稽核釘死本檔的 `Math.random()` 只准出現在這三處。
+   */
   _playSample(id, gain, pan) {
+    const takes = this._buffers[id];
+    let i = 0;
+    if (takes.length > 1) {
+      const prev = this._lastTake.get(id);
+      i = Math.floor(Math.random() * takes.length) % takes.length;
+      if (i === prev) i = (i + 1) % takes.length;    // 不重複上一次(長度 1 時恆是同一顆)
+      this._lastTake.set(id, i);
+    }
     const src = this._ctx.createBufferSource();
-    src.buffer = this._buffers[id];
+    src.buffer = takes[i];
+    const rate = 1 + (Math.random() * 2 - 1) * _RATE_JIT;
+    src.playbackRate.value = rate;
     const g = this._bus(pan);
     g.gain.value = gain;
     src.connect(g);
     src.onended = () => { try { src.disconnect(); g.disconnect(); } catch { /* noop */ } };
     src.start();
-    this._count(Math.min(src.buffer.duration, 2));
+    // ⚠ 時長 MUST 除以 rate:不除的話聲部計數的釋放時機錯位,`_MAX_VOICES` 在長時間
+    // 交火後緩慢漂掉(偏保守 ⇒ 音效愈打愈少),而且沒有任何錯誤訊息。
+    this._count(Math.min(src.buffer.duration / rate, 2));
   }
 
   // ---- Layer 1 程序合成音庫 ----
@@ -560,13 +665,22 @@ export class GameAudio {
     if (ctx.createStereoPanner) { sp = ctx.createStereoPanner(); sp.pan.value = 0; g.connect(sp); sp.connect(this._sfx); }
     else g.connect(this._sfx);
     const rate = [];   // { p: AudioParam, base } —— setMove 依速度縮放(引擎轉速/葉片斬波速)
+    let dry = null, wet = null;   // ⑦-2 stomp 專用:乾/濕兩條鏈的交叉淡入權重(恆和為 1)
     // 斬波器:噪源經帶通後,用 LFO 對增益做 0↔1 開合(旋翼葉片拍擊/振翅/履帶震動的節奏感)
-    const chopped = (srcFilter, lfoType, lfoHz, addRate) => {
+    // 回傳那顆 LFO —— ⑦-2 的濕床要掛**同一顆**(見下方 stomp 分支)。
+    const chopped = (srcFilter, lfoType, lfoHz, addRate, dest = g) => {
       const chop = ctx.createGain(); chop.gain.value = 0.5;
       const lfo = ctx.createOscillator(); lfo.type = lfoType; lfo.frequency.value = lfoHz;
       const lg = ctx.createGain(); lg.gain.value = 0.5; lfo.connect(lg); lg.connect(chop.gain);
-      srcFilter.connect(chop); chop.connect(g); lfo.start();
+      srcFilter.connect(chop); chop.connect(dest); lfo.start();
       if (addRate) rate.push({ p: lfo.frequency, base: lfoHz });
+      return lfo;
+    };
+    /** 把第二條鏈掛到**既有的**那顆 LFO 上(MUST NOT `ctx.createOscillator()` 第二顆)*/
+    const chopOn = (lfo, srcFilter, dest) => {
+      const chop = ctx.createGain(); chop.gain.value = 0.5;
+      const lg = ctx.createGain(); lg.gain.value = 0.5; lfo.connect(lg); lg.connect(chop.gain);
+      srcFilter.connect(chop); chop.connect(dest);
     };
     if (cat === 'engine') {                          // 引擎轟鳴:鋸齒基頻 + 低頻噪(穩定不斬波)
       const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 46;
@@ -581,15 +695,32 @@ export class GameAudio {
       const n = this._noiseSrc(); const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 0.9;
       n.connect(bp); n.start(); chopped(bp, 'sine', 8, true); rate.push({ p: bp.frequency, base: 1100 });
     } else {                                          // stomp 重機具震地:極低頻轟隆 + 慢震(踏步/履帶)
+      // ⑦-2 乾/濕兩條鏈,**由同一顆 LFO 開合** —— 「同相」因此是**構造保證**而不是一段
+      // 同步程式,不可能漂。⚠ MUST NOT 為濕床另建第二顆振盪器或第二個 `_moveVoice`:
+      // 那正是計畫要解的「走進水裡會踏空一拍」,而兩顆 LFO 在任何靜態斷言上都看不出問題。
+      dry = ctx.createGain(); dry.gain.value = 1;     // 乾床權重 = 1 − wet
+      wet = ctx.createGain(); wet.gain.value = 0;     // 濕床權重 = wet(兩者恆和為 1)
+      dry.connect(g);
+      const trim = ctx.createGain();                  // 濕床的靜態音色配平(唯一調校縫 = _MOVE)
+      trim.gain.value = (_MOVE.stomp_wet || _MOVE.stomp) / _MOVE.stomp;
+      trim.connect(wet); wet.connect(g);
       const n = this._noiseSrc(); const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 95;
-      n.connect(lp); n.start(); chopped(lp, 'sine', 2.6, true);
+      n.connect(lp); n.start();
+      const lfo = chopped(lp, 'sine', 2.6, true, dry);
+      // 濕床:帶通 ~300Hz(踩水的水花在中頻)接同一顆 lfo ⇒ 與乾床逐拍同相
+      const nw = this._noiseSrc(); const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 300; bp.Q.value = 0.8;
+      nw.connect(bp); nw.start(); chopOn(lfo, bp, trim);
     }
-    return (this._move[cat] = { g, sp, rate });
+    return (this._move[cat] = { g, sp, rate, dry, wet });
   }
 
   /** 每幀由 game.js 呼叫:gain 為 0..1「存在感」(距離×密度×移動),此處乘上類別基準音量
-   *  (_MOVE = 各類別響度的單一調校縫);gain≈0 時不會硬建聲道。 */
-  setMove(cat, gain, pan = 0, rate = 1) {
+   *  (_MOVE = 各類別響度的單一調校縫);gain≈0 時不會硬建聲道。
+   *  `wet` = 0..1 地面濕度(⑦-2,只有 stomp 有兩條鏈):乾床套 `1 − wet`、濕床套 `wet`
+   *  ⇒ **兩者恆和為 1**(不會出現雙重腳步,也不會在交界少掉一拍)。
+   *  其餘類別 `wet` 恆 0 ⇒ 逐位元同舊制。 */
+  setMove(cat, gain, pan = 0, rate = 1, wet = 0) {
     if (this._dead || !this._ctx || this.lowPower) return;
     const v = gain > 0.002 ? this._moveVoice(cat) : this._move[cat];
     if (!v) return;
@@ -598,6 +729,65 @@ export class GameAudio {
     if (v.sp) v.sp.pan.setTargetAtTime(_clamp(pan, -1, 1), t, 0.14);
     const r = _clamp(rate, 0.5, 1.8);
     for (const it of v.rate) it.p.setTargetAtTime(it.base * r, t, 0.14);
+    if (v.dry && v.wet) {
+      const w = _clamp(wet, 0, 1);
+      v.dry.gain.setTargetAtTime(1 - w, t, 0.14);
+      v.wet.gain.setTargetAtTime(w, t, 0.14);
+    }
+  }
+
+  // ================= 地點環境音(常駐床;⑦-1)=================
+  /**
+   * 每幀由 game.js `_updatePlaceAudio` 呼叫。`q` = 逐床查詢值(越小越近)。
+   * 勝出那一床 ride 到 `vol × g`、其餘 ride 到 0、恆亮床永遠在 `AMB_BASE.vol`。
+   * 「哪一床贏」的規則住純函式 `ambienceMix`(宣告順序 = 優先序);本處只負責播。
+   */
+  setAmbience(q) {
+    if (this._dead || !this._ctx || !this.ambOn) return;
+    const win = ambienceMix(q || {});
+    this._ambRide(AMB_BASE, AMB_BASE.vol);
+    for (const a of AMBIENCE) this._ambRide(a, (win && win.id === a.id) ? a.vol * win.g : 0);
+  }
+
+  /** 單一常駐床的音量 ride。惰性建、**永不 pause**;低階只留恆亮床。 */
+  _ambRide(def, vol) {
+    const low = this.lowPower && def.id !== AMB_BASE.id;
+    let v = this._amb[def.id];
+    if (!v) {
+      if (low || vol <= 0.0005) return;    // 沒聲音就不硬建聲道(同 setMove 的 gain 閘)
+      v = this._ambVoice(def);
+      if (!v) return;
+    }
+    const target = low ? 0 : _clamp(vol, 0, 1);
+    if (v.g) v.g.gain.setTargetAtTime(target, this._ctx.currentTime, 0.5);
+    else v.el.volume = target;             // 無 createMediaElementSource 的舊瀏覽器:直接寫
+  }
+
+  /** 惰性建一床:`HTMLAudioElement` **串流**(不 decode 進 buffer —— 七床各 30s 立體聲
+   *  decode 起來是數十 MB PCM,那正是「decoded buffer 才是音效系統的真實成本」那個坑),
+   *  再經 `createMediaElementSource` 接進 WebAudio 匯流排 ⇒ 拿得到 AudioParam,
+   *  音量 ride 才走得了與移動床**同一套** `setTargetAtTime`(天生 click-free)。 */
+  _ambVoice(def) {
+    if (this._dead || !this._ctx) return null;
+    const el = new Audio();
+    el.loop = true; el.preload = 'auto'; el.volume = 1;
+    el.src = def.url;
+    let g = null;
+    try {
+      const src = this._ctx.createMediaElementSource(el);
+      g = this._ctx.createGain(); g.gain.value = 0.0001;
+      // 掛在**音效**匯流排(不是主匯流排):地點床是環境音不是配樂 ⇒ 設定頁把音效關掉
+      // 或拉到 0 時它要跟著沒有聲音(掛 master 的話那兩顆旋鈕對它一格都不生效)。
+      src.connect(g); g.connect(this._sfx);
+    } catch { g = null; el.volume = 0; }   // 降級不例外:接不上就用元素自己的 volume
+    el.play().catch(() => {});             // 缺檔 ⇒ error 事件 ⇒ 這一床靜默,其餘照常
+    return (this._amb[def.id] = { el, g });
+  }
+
+  /** 離場:收掉常駐床(`dispose` 才 pause —— 每幀的 ride MUST NOT pause,見 ⑦-1 紀律 ①)*/
+  _stopAmbience() {
+    for (const v of Object.values(this._amb)) { try { v.el.pause(); } catch { /* noop */ } }
+    this._amb = {};
   }
 
   /** 低功耗切換或離場:把所有常駐移動聲道靜音(聲道保留,下次再拉起)。 */

@@ -42,6 +42,27 @@
 // 用法:node tools/audit_traverse.mjs [--only=jinlong,taroko] [--team=1|2|3] [--cell=4] [--json=out.json]
 //      node tools/audit_traverse.mjs --break-slope   ← 反向驗證:把坡度閘寫死成「什麼都擋」
 // 退出碼:0 = 全部航點可達;1 = 有航點不可達
+//
+// ---- 接縫紀律:泛洪看得到什麼、看不到什麼(2026-08-16 併入,`docs/anime_style_plan.md` ④-4;
+//      純註解,零斷言改動)----
+// 這一支是全專案唯一「真的走一遍」的稽核,所以它同時是那一族接縫陷阱**最好的偵測器**與
+// **最大的盲區**。兩件事分開記:
+//
+//  ㋐ **泛洪抓得到、而人抓不到的那一種:平台盒 MUST 重疊,不得相接。**
+//     「取最高的那一個平台」這種高度查詢**四邊都是排他的** ⇒ 一次落在兩塊平台**接縫上**的查詢
+//     **兩塊都不匹配**,回傳的是原始地面高。症狀:*玩家從一塊平台走到另一塊時掉下去,
+//     而且掉下去就爬不回來*。⚠ 關鍵是**誰會踩到它**:真人幾乎永遠不會恰好站在那條數學上
+//     零寬的線上,而**本支 0.35 m 的泛洪格每一次都踩得到** —— 所以「玩起來沒事、稽核紅字」
+//     不是誤報,是這支稽核在做它該做的事(參考專案的原始紀錄:平台盒 MUST 重疊約 40 mm)。
+//     同一族的第二半:**兩個區域各自「正確地」結束自己的工作**,就會在中間留下一段沒有人負責的
+//     門檻 —— 一段 0.6 m 的無主門檻可以讓玩家掉下 1.79 m 到自然地面而再也上不來。
+//     本專案對應的落點是橋面板 ⇄ 引道、隧道頂板 ⇄ 地形、明隧道 open 段 ⇄ 覆蓋段這三處交界
+//     (規則住 A29 / A6b,判定面在 `audit_layer_block`);本支是**唯一會真的走過去試**的那一支。
+//  ㋑ **泛洪結構上看不到的那一種:純視覺帶。** 不進 `blockers`、不進碰撞、不改站立面的東西,
+//     對本支而言**不存在** —— 地下道緣石 `UND.COPE`、道路漸縮帶、標線、緩衝布景、視線背景、
+//     邊界緩衝裙的擺件、旗陣、落花與鳥群一律如此。所以「一道緣石橫在車道入口上」「一片布景
+//     擋住視線走廊」這一類 symptom,**本支永遠是綠的**,而它們只在真機上看得出來(㋕)。
+//     ⇒ 看到「通行稽核全綠」時 MUST NOT 推論成「這條路看起來也沒問題」。
 import { writeFileSync } from 'node:fs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 // WATER 是橋下淨空那一段在用的(水面下不算「走得過去」)。漏了它不會報錯 ——
@@ -49,9 +70,11 @@ import { VENUES, venueConfig } from '../public/js/venues.js';
 // 場地都靜默不驗,而收尾只會印「通過 N 項」看起來全綠(實測 27 場地跳掉 10 個)。
 import { SLOPE, slopeDeg, slopeBlocked, battleBBox, heroTargetH, CHARACTERS, WATER } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
+// `buildStructs`/`projectArc`/`ptAt`/`sampleAlong` 2026-08-16 起住 venue_field.mjs
+// (§0-a 線工切面樁要的「結構足跡 keep-out」與本支泛洪吃同一份清單,抄第二份就是繞過那條縫)。
 import {
-  llToWorld, elevSampler, buildHeightField, osmFor, tunnelRunOf, strucTunnel, strucHw,
-  LANE_HW, ptSeg, arcOf, densify, ROAD_SEG, makeDeckAt, makeCarvedField, TUN, UND, BRIDGE_RISE,
+  llToWorld, elevSampler, buildHeightField, osmFor, makeCarvedField, TUN, BRIDGE_RISE,
+  buildStructs, projectArc, ptAt,
 } from './venue_field.mjs';
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((s) => {
@@ -104,101 +127,6 @@ function makeSurfaces(ground, structs) {
     }
     return out;
   };
-}
-
-/** 點落在結構通行寬內時回傳它的弧長座標,否則 null */
-function projectArc(x, z, st) {
-  let best = Infinity, bs = 0;
-  const p = st.pts;
-  for (let i = 1; i < p.length; i++) {
-    const d = ptSeg([x, z], p[i - 1], p[i]);
-    if (d < best) {
-      best = d;
-      const ex = p[i][0] - p[i - 1][0], ez = p[i][1] - p[i - 1][1], L2 = ex * ex + ez * ez || 1;
-      let t = ((x - p[i - 1][0]) * ex + (z - p[i - 1][1]) * ez) / L2;
-      t = t < 0 ? 0 : t > 1 ? 1 : t;
-      bs = st.cum[i - 1] + t * Math.hypot(ex, ez);
-    }
-  }
-  return best <= st.hw ? bs : null;
-}
-
-/** 結構清單(隧道 / 地下道 / 橋)+ 它們貢獻的航點 + 開挖走廊(carveTunnels 的輸入) */
-function buildStructs(osm, center, hf) {
-  const structs = [], marks = [], carveRuns = [];
-  for (const w of (osm?.roads || [])) {
-    if (!LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
-    const hw = strucHw(w.tags);
-    if (strucTunnel(w.tags)) {
-      const run = tunnelRunOf(w, center, hf.heightAt, hf);
-      if (!run || !run.intervals.length) continue;
-      const total = run.cum[run.cum.length - 1] || 1;
-      const floorAt = (s) => sampleAlong(run.cum, run.floors, s);
-      const st = { pts: run.pts, cum: run.cum, hw, floorAt, kind: run.under ? '地下道' : '隧道' };
-      structs.push(st);
-      // 航點:兩端洞口 + 每一段覆蓋區間的中點(= 真的鑽過去,不是繞到山頂上)
-      for (const [a, b] of run.intervals) {
-        marks.push({ name: `${st.kind}洞口A`, p: ptAt(run, a), y: floorAt(a) });
-        marks.push({ name: `${st.kind}洞中`, p: ptAt(run, (a + b) / 2), y: floorAt((a + b) / 2) });
-        marks.push({ name: `${st.kind}洞口B`, p: ptAt(run, b), y: floorAt(b) });
-      }
-      // 開挖走廊(V-C):`carveTunnels` 吃的是**敞開補集**(引道 / 路塹),不是覆蓋段本身 ——
-      // 洞體是把三角形整片刪掉,不是把山壓平。分段規則逐字鏡射 `biomes.js` 那一段
-      // (bounds = [頭, 各覆蓋段的頂點索引…, 尾],成對取);cut 旗標 = 地下道引道收窄成垂直路塹。
-      // 少了這一步,泛洪就是拿**天然**地形在走引道 —— 一條靠開挖才通的路會被報成不可達,
-      // 而那是假紅字,比沒驗還糟。
-      {
-        const bounds = [0, ...run.intervals.flatMap(([, , ia, ib]) => [ia, ib]), run.pts.length - 1];
-        for (let k = 0; k + 1 < bounds.length; k += 2) {
-          const a = bounds[k], b = bounds[k + 1];
-          if (!(b - a >= 1)) continue;
-          carveRuns.push({ pts: run.pts.slice(a, b + 1), floors: run.floors.slice(a, b + 1),
-            covA: k > 0, covB: k + 2 < bounds.length, hw, cut: !!run.under });
-        }
-      }
-      if (run.under) {   // 地下道引道:兩端各一個(引道走不通 = 掉進洞裡出不來)
-        marks.push({ name: '地下道引道A', p: ptAt(run, Math.min(total, UND.EDGE + 2)), y: floorAt(Math.min(total, UND.EDGE + 2)) });
-        marks.push({ name: '地下道引道B', p: ptAt(run, Math.max(0, total - UND.EDGE - 2)), y: floorAt(Math.max(0, total - UND.EDGE - 2)) });
-      }
-    } else if (w.tags.bridge) {
-      const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
-      if (pts.length < 2) continue;
-      const cum = arcOf(pts);
-      const total = cum[cum.length - 1] || 1;
-      if (total < 24) continue;                       // 太短的「橋」是路面涵管,沒有橋面可走
-      const hA = hf.heightAt(pts[0][0], pts[0][1]);
-      const hB = hf.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
-      const deckAt = makeDeckAt(hA, hB, total, hf.heightAt);
-      const st = { pts, cum, hw, floorAt: (s, x, z) => deckAt(s, x, z), kind: '橋' };
-      structs.push(st);
-      const mid = total / 2;
-      const mp = ptAt({ pts, cum }, mid);
-      marks.push({ name: '橋面中段', p: mp, y: deckAt(mid, mp[0], mp[1]) });
-    }
-  }
-  return { structs, marks, carveRuns };
-}
-
-/** 折線上弧長 s 的座標 */
-function ptAt(run, s) {
-  const { pts, cum } = run;
-  for (let i = 1; i < cum.length; i++) {
-    if (cum[i] >= s) {
-      const t = (s - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]);
-      return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t];
-    }
-  }
-  return pts[pts.length - 1];
-}
-/** 沿弧長線性內插一組取樣值(隧道路面 floors 已由 tunFloorAt 逐點算好) */
-function sampleAlong(cum, vals, s) {
-  for (let i = 1; i < cum.length; i++) {
-    if (cum[i] >= s) {
-      const t = (s - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]);
-      return vals[i - 1] + (vals[i] - vals[i - 1]) * t;
-    }
-  }
-  return vals[vals.length - 1];
 }
 
 /**

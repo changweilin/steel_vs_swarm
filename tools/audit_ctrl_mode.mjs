@@ -30,10 +30,41 @@ import { readSrc, grabMethod, grabFn } from './audit_src.mjs';
 
 const read = (...p) => readSrc(...p);
 const ctrlSrc = read('public', 'js', 'ctrlmode.js');
-const mobileSrc = read('public', 'js', 'mobile.js');
+let mobileSrc = read('public', 'js', 'mobile.js');
 const gameSrc = read('public', 'js', 'game.js');
 const mainSrc = read('public', 'js', 'main.js');
-const htmlSrc = read('public', 'index.html');
+let htmlSrc = read('public', 'index.html');
+let cssSrc = read('public', 'css', 'style.css');
+
+// 反向驗證(四支,全部服務 Ⅹ 段;把規則寫回改制前的壞版):
+//   --break-viewport 拿掉 viewport meta 的 `viewport-fit=cover` ⇒ Ⅹ① MUST 紅
+//   --break-textadj  拿掉根層的 text-size-adjust                ⇒ Ⅹ② MUST 紅
+//   --break-touchdev 頁面級硬化的選擇器改回 `body.touch-ui`     ⇒ Ⅹ③ MUST 紅、Ⅹ⑤ MUST 仍綠
+//   --break-touchact 拿掉 `#game { touch-action: none }` 那一條  ⇒ Ⅹ③ MUST 紅
+// 替換無效(原文已變)MUST 當場失敗 —— 不然 break 永遠是綠的(§5.4 ㋑ / tools/CLAUDE.md 紀律 2)。
+// ⚠ 樣式一律只綁**結構錨點**(屬性名 / 選擇器),MUST NOT 綁現值(綁死現值的 break 會在值被
+//    重算之後靜默變成 no-op,而紅字數量少一條看起來只像「這一輪順便修好了」)。
+const BREAK_VIEWPORT = process.argv.includes('--break-viewport');
+const BREAK_TEXTADJ = process.argv.includes('--break-textadj');
+const BREAK_TOUCHDEV = process.argv.includes('--break-touchdev');
+const BREAK_TOUCHACT = process.argv.includes('--break-touchact');
+/** 逐條字面替換;沒咬到就當場失敗(替換無效 = 壞版根本沒造出來) */
+const patch = (flag, name, src, re, to) => {
+  if (!flag) return src;
+  if (!re.test(src)) {
+    console.log(`✗ ${name}:字面替換無效(原文已變 ⇒ 這支 break 根本沒造出壞版)`);
+    process.exit(1);
+  }
+  return src.replace(re, to);
+};
+htmlSrc = patch(BREAK_VIEWPORT, '--break-viewport', htmlSrc, /,\s*viewport-fit=cover/, '');
+cssSrc = patch(BREAK_TEXTADJ, '--break-textadj', cssSrc,
+  /-webkit-text-size-adjust:[^;]*;\s*text-size-adjust:[^;]*;/, '');
+cssSrc = patch(BREAK_TOUCHACT, '--break-touchact', cssSrc,
+  /body\.touch-dev #game \{[^}]*\}\r?\n/, '');
+cssSrc = patch(BREAK_TOUCHDEV, '--break-touchdev', cssSrc, /body\.touch-dev\b/g, 'body.touch-ui');
+mobileSrc = patch(BREAK_TOUCHDEV, '--break-touchdev', mobileSrc,
+  /document\.body\.classList\.toggle\('touch-dev',[^;]*;/, '');
 
 const verbose = process.argv.includes('-v');
 let pass = 0, fail = 0;
@@ -197,7 +228,6 @@ ok(!/\bTOUCH_UI\s*[?&|)]/.test(code(mainSrc).replace(/TOUCH_UI\(\)/g, '')),
   'main.js MUST NOT 有殘留的 TOUCH_UI 常數用法(漏改 = 那一處永遠是舊值)');
 ok(/^onCtrlChange\(\(\) => syncCtrlSettings\(\)\);$/m.test(mobileSrc),
   '操作方式 UI 的同步訂閱 MUST 住模組層(掛在 installTouchUI 裡 ⇒ 進房後選項不會即時變灰)');
-const cssSrc = read('public', 'css', 'style.css');
 ok(/\.segb:disabled/.test(cssSrc),
   '停用態 MUST 有視覺區別(不然玩家只會覺得「按了沒反應」)');
 // 2026-07-31「按鍵風格統一」:分段按鈕的鈕面樣式只准有 `.seg`/`.segb` 一份。
@@ -448,6 +478,105 @@ ok(/this\._offResize\?\.\(\)/.test(gameSrc),
 // `_applyRes()` 是像素比改變不是視窗改變 ⇒ 刻意直接呼叫,不該多等 50~500ms
 ok(/_applyRes\(\) \{[\s\S]{0,220}?this\._onResize\(\);/.test(gameSrc),
   '`_applyRes()` MUST 仍直接呼叫 `_onResize()`(自適應解析度降階不該排隊等 debounce)');
+
+// ── Ⅹ 頁面級觸控硬化 / viewport / 安全區(2026-08-16,`docs/anime_style_plan.md` ⑧-5)────────
+// 改制前這一整族**沒有任何一支稽核在守**(viewport meta / touch-action / safe-area 全 repo 零命中),
+// 而它們壞掉一律不報錯:捏合把整個戰場縮成一半、下拉刷新把對局重整掉、長按選字選到 HUD、
+// iOS 橫式自己放大字級把 HUD 帶推成另一個比例 —— 每一種都只表現成「手機上怪怪的」。
+//
+// 這一段釘的是**「這台機器有沒有觸控硬體」與「這一房用不用搖桿」是兩個不同的問題**:
+// `body.touch-ui` = `ctrlmode.usePad()` = **房主可關的房間設定**(房主鎖「限定滑鼠鍵盤」時恆 false),
+// 把頁面級硬化掛在它下面 = 房主一鎖鍵鼠,真手機上那組保護整組消失。裝置那一半 MUST 走
+// `body.touch-dev`(判定唯一縫 `ctrlmode.touchCapable()`),版型那一半(--tl-* / .tl-* / 安全區)
+// MUST 留在 `body.touch-ui`。③ 與 ⑤ **兩欄同時對**才代表兩個旗標真的被拆開了。
+sec('Ⅹ 頁面級觸控硬化 / viewport / 安全區(⑧-5)');
+const cssCode = cssSrc.replace(/\/\*[\s\S]*?\*\//g, '');
+/** 逐 rule block 拆出「選擇器清單 + 宣告區」(巢狀 @media 的內層規則一樣吃得到) */
+const cssRules = [...cssCode.matchAll(/([^{}@]+)\{([^{}]*)\}/g)].map((m) => ({
+  sels: m[1].split(',').map((s) => s.trim().replace(/\s+/g, ' ')).filter(Boolean),
+  decl: m[2],
+}));
+/** 選擇器的**主體**(最後一個 compound)—— 「這條規則到底作用在誰身上」 */
+const subjectOf = (s) => s.split(/\s*[>+~]\s*|\s+/).filter(Boolean).pop() || '';
+const subjectsWhere = (re) => {
+  const out = new Set();
+  for (const r of cssRules) if (re.test(r.decl)) for (const s of r.sels) out.add(subjectOf(s));
+  return out;
+};
+
+// ① viewport-fit=cover:沒有它,`env(safe-area-inset-*)` 在挖孔/劉海機上恆回 0 ⇒ 下面 ⑤ 那四個
+//    變數全部是 0px,而 CSS 照樣算得出來、畫面照樣畫得出來,只有搖桿被瀏海吃掉。
+ok(/<meta name="viewport"[^>]*viewport-fit=cover/.test(htmlSrc),
+  'viewport meta MUST 含 `viewport-fit=cover`(挖孔螢幕的 safe-area-inset 才拿得到非零值)');
+// 縮放禁令是「戰場觸控要吃掉所有手勢」的另一半,與 ① 同一條 meta,一起釘住
+ok(/<meta name="viewport"[^>]*user-scalable=no/.test(htmlSrc),
+  'viewport meta MUST 含 `user-scalable=no`(雙擊放大會把準星與搖桿一起放大到畫面外)');
+
+// ② text-size-adjust:iOS 橫式會自動放大它認為太小的文字,而 HUD 下帶的 1/6 上限是
+//    `game.fitHudBand()` 量**自然高**反解 `--hud-k` 的 ⇒ 字被瀏覽器改大 = HUD 整條換一個比例。
+//    MUST 掛在根層(html / html, body),掛在 body.touch-* 之下就又綁回房間設定了。
+const rootTextAdj = cssRules.some((r) => r.sels.some((s) => /^(html|body)$/.test(s))
+  && /(^|\s|-)text-size-adjust:\s*100%/.test(r.decl));
+ok(rootTextAdj, '根層(html / body)MUST 宣告 `text-size-adjust: 100%`(iOS 橫式自動放大字級會扭掉 HUD 的 1/6)');
+ok(/-webkit-text-size-adjust:\s*100%/.test(cssCode),
+  'MUST 一併帶 `-webkit-` 前綴(iOS Safari 只認前綴版)');
+
+// ③ 五條頁面級硬化 MUST 掛在**裝置** class 之下,且該 class 只由 `touchCapable()` 決定
+const devBlock = cssRules.find((r) => r.sels.length === 1 && r.sels[0] === 'body.touch-dev');
+const uiBlocks = cssRules.filter((r) => r.sels.some((s) => /^body\.touch-ui$/.test(s)));
+const HARDEN = [
+  [/overscroll-behavior:\s*none/, 'overscroll-behavior(下拉刷新 / 捲動鏈)'],
+  [/-webkit-user-select:\s*none/, '-webkit-user-select(長按選字)'],
+  [/(^|[;\s])user-select:\s*none/, 'user-select(長按選字)'],
+  [/-webkit-touch-callout:\s*none/, '-webkit-touch-callout(長按跳系統選單)'],
+  [/-webkit-tap-highlight-color:\s*transparent/, '-webkit-tap-highlight-color(點擊藍框)'],
+];
+for (const [re, label] of HARDEN) {
+  ok(!!devBlock && re.test(devBlock.decl),
+    `頁面級硬化 ${label} MUST 掛在裝置 class \`body.touch-dev\` 之下`);
+  ok(!uiBlocks.some((r) => re.test(r.decl)),
+    `${label} MUST NOT 留在 \`body.touch-ui\`(那是房主可關的房間設定,鎖鍵鼠時保護會整組消失)`);
+}
+ok(cssRules.some((r) => r.sels.includes('body.touch-dev #game') && /touch-action:\s*none/.test(r.decl)),
+  '`#game { touch-action: none }` MUST 掛在 `body.touch-dev` 之下(捏合/雙擊縮放要在真手機上恆被吃掉)');
+ok(!cssRules.some((r) => r.sels.includes('body.touch-ui #game') && /touch-action:\s*none/.test(r.decl)),
+  '`body.touch-ui #game { touch-action: none }` MUST 已改綁裝置 class(留著 = 舊制那一份仍在)');
+// 判定唯一縫:掛載點只准轉呼 `touchCapable()`,MUST NOT 在 mobile.js 自己判裝置(Ⅰ 已守後半)
+ok(/classList\.toggle\('touch-dev',\s*touchCapable\(\)\)/.test(code(mobileSrc)),
+  '`touch-dev` 的判定 MUST 只轉呼 `ctrlmode.touchCapable()`(裝置判定全 repo 只有一份)');
+ok(count(code(mobileSrc), /classList\.toggle\('touch-dev'/g) === 1
+  && /installTouchUI\(\)[\s\S]{0,900}?classList\.toggle\('touch-dev'/.test(code(mobileSrc)),
+  '`touch-dev` 的掛載點 MUST 恰一處、且與 `installTouchUI()` 同一支(兩處掛 = 兩份真相)');
+ok(!/classList\.toggle\('touch-dev',\s*(on|isTouchUI\(\)|usePad\(\))/.test(code(mobileSrc)),
+  '`touch-dev` MUST NOT 吃 `isTouchUI()` / `usePad()`(那樣就只是 touch-ui 的第二個名字)');
+
+// ④ 捲動容器 MUST NOT 被 touch-action:none 蓋到 —— 大廳 `.screen` 與商店/設定/圖鑑十幾個
+//    `overflow-y: auto` 面板靠捲動;寫在根層或捲動容器上的症狀是「大廳滑不動」而不是報錯。
+//    判準是選擇器的**主體**(最後一個 compound):`body.touch-dev #game` 的主體是 `#game`,
+//    那是刻意的具名例外(戰場那一格本來就不該捲)。
+const taSubjects = subjectsWhere(/touch-action:\s*none/);
+const scrollSubjects = subjectsWhere(/overflow(-[xy])?:\s*(auto|scroll)/);
+const ROOTISH = /^(\*|html|body(\.[\w-]+)*)$/;
+ok(taSubjects.size > 0, '掃得到 `touch-action: none` 的規則(掃不到 = 這一條是恆真的假綠)');
+const taBad = [...taSubjects].filter((s) => ROOTISH.test(s) || scrollSubjects.has(s));
+ok(taBad.length === 0,
+  `\`touch-action: none\` MUST NOT 上根層或捲動容器${taBad.length ? `(命中:${taBad.join(' / ')})` : ''}`);
+ok(cssRules.some((r) => r.sels.includes('.screen') && /overflow:\s*auto/.test(r.decl)),
+  '`.screen` MUST 維持 `overflow: auto`(大廳每一頁都靠它捲)');
+
+// ⑤ 安全區與控件變數 MUST 留在 `body.touch-ui` —— 它們是**版型**:沒有搖桿層就沒有東西要內縮。
+//    這一欄是 ③ 的對照組:--break-touchdev 會讓 ③ 紅而 ⑤ MUST 仍綠,兩欄同時對才代表旗標拆開了。
+const SAFE_VARS = ['--tl-sl', '--tl-sr', '--tl-sb', '--tl-st'];
+for (const v of SAFE_VARS) {
+  ok(uiBlocks.some((r) => new RegExp(`\\${v}:\\s*env\\(safe-area-inset-`).test(r.decl)),
+    `安全區變數 ${v} MUST 仍住 \`body.touch-ui\`(那是版型不是裝置)`);
+  ok(!devBlock || !new RegExp(`\\${v}:`).test(devBlock.decl),
+    `安全區變數 ${v} MUST NOT 搬進 \`body.touch-dev\``);
+}
+ok(uiBlocks.some((r) => /--tl-alpha:/.test(r.decl)) && uiBlocks.some((r) => /--tl-stick:/.test(r.decl)),
+  '控件尺寸/透明度變數 MUST 仍住 `body.touch-ui`(版型與裝置 MUST NOT 再合流)');
+ok(!devBlock || !/--tl-/.test(devBlock.decl),
+  '`body.touch-dev` MUST 只放頁面級硬化,一個 `--tl-*` 都不准放');
 
 console.log(`\n${fail ? '✗' : '✓'} 操作方式 / 觀戰選單稽核:${pass}/${pass + fail} 通過`);
 process.exit(fail ? 1 : 0);

@@ -39,14 +39,74 @@ node tools/audit_cc_flash.mjs        # 異常狀態致盲白幕 + 蓄力跳水�
 node tools/audit_world_height.mjs    # 世界高度上限(遊戲天花板 / 物件上限)
 node tools/audit_world_edge.mjs      # 世界邊界(障礙環型錄 / 緩衝空間布景 / 視線邊界背景)
 node tools/audit_world_curve.mjs     # 世界曲面(拐點 / 地平線反解 / 幾何細度)
-node tools/audit_visual_prefs.mjs    # 畫面旋鈕 / 陰影偏色 / 風化場 / 抖動 / 景深
+node tools/audit_visual_prefs.mjs    # 畫面旋鈕 / 陰影偏色 / 風化場 / 抖動 / 景深 / **3D LUT 取代不疊加 / 斜向轉場(縫 + 呼叫端)**
+#   ±--break-lutstack(LUT 改查已經被 split-tone 動過的顏色 ⇒ Ⅶ MUST 紅)
+#   ±--break-wipe(閘門退成無條件 + 幕的端點不再外推 ⇒ Ⅷ MUST 紅 2 條,而 Ⅷ-b 順序 MUST 仍綠)
+#   ±--break-wipepair(`_wipeCut` 只遮不揭 ⇒ Ⅷ-h MUST 紅 2 條:「成對」與「`playWipe` 恰三處」——
+#                     後者是同一個缺陷的第二個指紋,而 Ⅷ-i/j 的重入守衛與狀態閘 MUST 仍綠)
 node tools/audit_soft_stroke.mjs     # 軟性物質(細勾線 + 飄揚 + 陣風 + 海浪 + 稻/草/芒草波 + 國旗)
+#                                    #  + **玩家位移擾動 + 岸邊泡沫/倒影 + 墨線斷筆 + 掠射抑制項恰一項**
+#   ±--break-ink/--break-anchor/--break-wave/--break-gust
+#   ±--break-char(位移加項拿掉)/--break-charR(擾動半徑換成常數)
+#   ±--break-charslot(空槽不再顯式歸零 ⇒ 行為直測 MUST 紅 2 條)/--break-foam(泡沫不由水深驅動)
+#   ±--break-inkbreak(alpha 寫入點退回 `= uSoftInk;` ⇒ Ⅱ + Ⅺ MUST 紅 2 條)
+#   ±--break-inkanchor(斷筆錨點帶回平移欄 mat3 → mat4 ⇒ Ⅺ MUST 紅)
+#   ±--break-graze(深度門檻再疊一項 `+ ( 1.0 - nz )` ⇒ Ⅺ「兩者擇一」MUST 紅)
 node tools/audit_daynight.mjs        # 時間流逝(日夜循環)+ 太陽/月亮軌道 + 主光換手 + 影子
 #   ±--break-clock/--break-fade/--break-elev/--break-cockpit/--break-range
-node tools/audit_cel_pipeline.mjs    # 賽璐璐管線(ramp / 天空 / 地形色階 / 描邊寬度 / 地貌不出接縫)
+node tools/audit_cel_pipeline.mjs    # 賽璐璐管線(ramp / 天空 / 地形色階 / 描邊寬度 / 地貌不出接縫
+                                     #  / **gInfo.a 半位元組打包 / 表面群組 / 內部折邊抑制 / 地貌分區子帶
+                                     #    / 溶入 / 霧 ≡ 勾線淡出 / 賽璐璐學派**)
+#   ±--break-scale/--break-inkinfo/--break-land/--break-lutland
+#   ±--break-contrib(貢獻從編碼與寫入端一起拿掉 ⇒ Ⅷ①② + 寫入端條 MUST 紅 4 條)
+#   ±--break-occl(最近面覆寫改成 mix ⇒ 「結果只會是 0 或 1」MUST 紅)
+#   ±--break-nearest(附件 1 改回線性內插 ⇒ NearestFilter 那一條 MUST 紅)
+#   ±--break-selff(SELF_F / GRAZE_K 寫回 1.0 / 0.0 ⇒ 兩條 MUST 紅)
+#   ±--break-grp(群組早退整段刪掉 ⇒ 「五格同號且至少一格是 GROUP」MUST 紅)
+#   ±--break-dissolve(discard 錨點挪到 opaque_fragment 之後 + 快取鍵拿掉 D ⇒ Ⅸ MUST 紅 2 條)
+#   ±--break-landink(子帶改用計畫字面的 `* 0.1` + 拿掉拉桿閘 ⇒ Ⅸ MUST 紅 3 條)
+#   ±--break-fade(淡出錨回相機 far 平面 ⇒ Ⅹ MUST 紅 3 條)
+#     ⚠ 既知粗糙處:這一支會在印完 3 條紅字之後以 TypeError 收場(壞版把 `_inkFadeM` 整支刪掉,
+#       而後面那段行為直測還要 `.exec(P)[0]`)。仍以 exit 1 收尾 ⇒「MUST 紅」成立,但訊息會蓋在堆疊底下
+#   ±--break-school(School B 的 ramp hook 換回查表 + 硬切重組整段刪掉 ⇒ Ⅺ MUST 紅 4 條,
+#                   而 Ⅰ 的 ramp 斷言與 audit_visual_prefs Ⅱ MUST 仍全綠 —— 它們守的是仍在服役的 School A)
+#   ±--break-cutfloor(暗側地板改成手寫 0.25 < 102/255 ⇒ Ⅺ 的 A14 ② MUST 紅 2 條)
+#   ±--break-neutral(拿掉暗側亮度重正規化 ⇒ Ⅺ 的 A14 ③ MUST 紅 2 條,含 28665 組的數值恆等式)
+#   ±--break-cutorder(bands 4 的帶改得比 3 還窄 ⇒ Ⅺ 的硬度階梯 MUST 紅)
+#   ±--break-schoolmix(多一處繞過 toon.js 的裸 MeshToonMaterial ⇒ Ⅺ⑧ 凍結名冊 MUST 紅)
+#   ±--break-shadowtype(投影型別換回 PCFShadowMap ⇒ Ⅺ⑨ MUST 紅)
+node tools/audit_struct_ink.mjs      # 立體結構的線工授權(⑨:零原生材質 / 貢獻推導不手寫 /
+                                     #  坑門混凝土共用具名號 / 底色凍結 + 提亮只准 emissive / 零 rnd)
+#   ±--break-rawmat(結構區塊多一支原生材質 ⇒ Ⅰ MUST 紅)
+#   ±--break-contrib(貢獻改手寫常數 ⇒ Ⅱ MUST 紅 3 條)
+#   ±--break-surf(三處具名號拿掉 ⇒ Ⅲ MUST 紅 2 條)
+#   ±--break-emissive(換淺底色代替 emissive ⇒ Ⅳ MUST 紅 4 條)
+node tools/audit_leaf_card.mjs       # 葉片卡冠層 / 整棵樹的剪影(張數推導 / 外廓 ≤ 保險絲冠幅 / 零共享 rnd
+                                     #  / 佈局只讀 p.g / 無 MRT 必退回)
+#   ±--break-count(張數改逐型手寫)/--break-fuse(包絡改讀庫幾何)
+#   ±--break-rnd(抖動改吃共享 rnd)/--break-mrtgate(能力與群組閘拿掉)
+node tools/audit_rock_ink.mjs        # 剪影優先:巨岩兩群組 / 石堆逐款一號 + 貢獻由 detailR 推導 / 遠景背景的注入
+#   ±--break-rocksurf(巨岩群組指派整段拿掉)/--break-detsurf(取號移進內層零件迴圈)
+#   ±--break-ctr(貢獻改手寫常數)
+node tools/audit_ambient_motion.mjs  # 環境動態(落花 / 落葉粒子:季節閘 / 色調推導 / 分群 / 兩頻率 / 自轉軸
+                                     #  / 沿中心線環繞 / 預跑 / 亂數帳 / 接線契約)
+#   ±--break-tone/--break-petal/--break-spin/--break-wrap/--break-prewarm/--break-rnd/--break-shared/--break-off
+node tools/audit_water_edge.mjs      # 岸邊泡沫的深度場(烤 + 蓋章)/ 水面倒影塊的名冊與幾何 / 舊泡沫退場 / 純表現層
+#   ±--break-foam(烤場不再讀地形高度 ⇒ Ⅰ 紅 3:陸地 / 深水 / 列欄序;四條控制組仍綠)
+#   ±--break-stamp(蓋章退回外接圓 ⇒ Ⅱ 紅 1:盒外那一點被誤蓋;兩條「盒內」對照組仍綠)
+#   ±--break-refl(倒影名冊不排除邊界牆環 ⇒ Ⅲ 紅 2;上限 / 全序 / MIN_H 三條仍綠)
+#   ±--break-fade(倒影的 seaFade 不再除以寫入處數 ⇒ Ⅲ 紅 1)
 node tools/audit_gpu_lifecycle.mjs   # 表現層資源生命週期(A25)+ RES_GOV
 node tools/audit_damp_fps.mjs        # 幀率無關阻尼(lerpFPS / frictionFPS 唯一縫)+ 背景分頁的 dt 夾制
 #   ±--break-damp(逼近權重換回 min(1, k·dt) ⇒ 互補/可加性/幀率無關三條 MUST 紅)
+node tools/audit_anim_weights.mjs    # 動畫權重向量(⑥-3;縫恰一份 / 離地門檻注入 / 三軌和 = 1 / 缺欄不回 NaN)
+                                     #  + **⑤-1 植被擾動的餵入端**(Ⅶ)
+#   ±--break-second/--break-thresh/--break-sum/--break-gate/--break-hand
+#   ±--break-tread(killswitch 的早退拿掉 ⇒ 「?tread=0 回空陣列」行為直測 MUST 紅)
+#   ±--break-charspd(速率改由 _charSlots 自己再推導一次 ⇒ 「沒有第二份速度推導」等三條 MUST 紅)
+#   ±--break-charorder(餵入點移到 _updateEnts 之前 ⇒ 順序那一條 MUST 紅)
+node tools/audit_audio_layers.mjs    # 音效層級(地點床名冊與優先序 / 乾濕同相 / 多 take / 低記憶體階梯 / CC0 來源帳)
+#   ±--break-prio/--break-base/--break-margin/--break-sync/--break-take/--break-tier/--break-licence
 node tools/audit_gait_anat.mjs        # 步態關節曲線(前後肢拓樸/佔空比/等速後掠/站姿型/跳躍分級/交戰姿態)
 #   ±--break-lock/--break-duty/--break-hip/--break-rest/--break-posture
 node tools/audit_morph_rig.mjs       # 變形過程(兩態零件對應 / 反推的共同錨 / 換樹接得上 / 淡出淡入時間表)
@@ -67,6 +127,12 @@ node tools/audit_road_grid.mjs       # 地圖主方位(旋轉)+ 道路 16 方向
 node tools/audit_road_joint.mjs      # 道路塗裝寬 / 結構接合 / 立體結構建置範圍
 node tools/audit_road_bed.mjs        # 道路路基整平
 node tools/audit_slope_move.mjs      # 地形坡度移動
+node tools/audit_zone_cut.mjs        # §0-a 線工切面可行性樁(Ⅰ~Ⅴ 離線;CI 收得到)
+#   --census                            # 只印 29 場地普查(序 14 貼圖規格的論據)
+#   --venue <id> --team <n> [--tex 2048] [--png] [--sweep-rank] [--sweep-areamin]
+#   ±--break-quantize(MUST 挑**市區 + θ≠0** 場地驗)/--break-slope/--break-merge/--break-order
+#   ±--break-rnd/--break-keepout(MUST 挑**有結構**的場地驗)/--break-id/--break-label
+#   ⚠ `--venue` 那一段需外網或 `tools/.scen_cache`(㋓);沒有 `--venue` 時只跑離線的 Ⅰ~Ⅴ
 node tools/audit_terrain_ray.mjs     # 地形解析射線
 node tools/audit_climb.mjs           # 攀爬路線 + 障礙橫斷面(A30/A31)
 node tools/audit_bridge_crossing.mjs # 橋交會去重
@@ -82,7 +148,18 @@ node tools/audit_ground_qc.mjs / audit_ground_seam.mjs / audit_ground_enclave.mj
 node tools/audit_minimap_view.mjs    # 小地圖顯示範圍
 node tools/audit_view_lock.mjs       # 視野鎖定
 node tools/audit_spectator_cam.mjs   # 觀戰相機
-node tools/audit_ctrl_mode.mjs       # 操作方式 + 戰場選單 + 按鍵風格
+node tools/audit_ctrl_mode.mjs       # 操作方式 + 戰場選單 + 按鍵風格 + **頁面級觸控硬化(Ⅹ)**
+#   ±--break-viewport/--break-textadj/--break-touchdev/--break-touchact
+node tools/audit_vehicle_spec.mjs    # 載具/擺件型錄(宣告盒 ⊇ 實測外廓且不虛胖 / 輪心 = R / 鼻頭在 +x
+                                     #  / 零 import 零亂數 / 消費端零第二份實作 / 停車場碰撞盒四角凍結
+                                     #  / detailR 哨兵 / 公設分桶數 / 凹處往外堆 / 可視角 / 兩份 AABB 交叉比對)
+#   ±--break-spec(輪拱保險桿改回手寫)/--break-dup(停車場繞過型錄)/--break-face(鼻頭改 −x)
+#   ±--break-recess(凹處往內挖)/--break-sight(可視角門檻拿掉)
+#   ±--break-batch(公設顏色回到材質)/--break-detr(DETAIL_DEFS.carwreck 放大)
+node tools/audit_wildlife.mjs        # 鳥群(四項積分器行為直測 / 分群 / 零共享 rnd / 錨不到就不放
+                                     #  / 剪影下限 / 幀率無關 / biomes 接線)
+#   ±--break-spring/--break-noise/--break-friction/--break-group
+#   ±--break-rnd/--break-anchor/--break-snap
 node tools/audit_ui_layout.mjs       # 選單版型 / 鈕面文字 / 懸浮提示 / 圖示
 node tools/audit_touch_layout.mjs / audit_touch_gesture.mjs
 node tools/audit_osm_relay.mjs       # 路網中繼(payload 淨化 / 逐格單調 / 接線順序)
@@ -139,6 +216,31 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 ---
 
 ### 5.5 改了什麼 → MUST 跑什麼
+
+#### 5.5-0 判準通則(**適用下表全部;根 §5.4 ㋗ 的全文**)
+
+下表大量出現「MUST 逐項不動 / 逐位元不變」。**判準本身有三處天生的雜訊,拿逐字元 diff 去比會得到假紅字**;
+2026-08-16 三道並行窗各自踩到一次,一併記在這裡:
+
+- **㋗-1 `audit_touch_layout` / `audit_touch_gesture` / `audit_ui_layout` 的框線數字有 run-to-run 抖動**
+  (±1~4px,**pristine 自己也會抖**)⇒ 判準是「**通過數 + 失敗案例集合**不變」,MUST NOT 逐字元 diff。
+  `audit_touch_layout` 那 **8/60 既有紅字 MUST 維持在 8** —— 變多才是真的動到版型。
+- **㋗-2 `npm test` 有 5 處輸出隨機**(PIN / 掉落現金 / TC 稀有度 / 爆風結算尾數 / 障礙種類)⇒ 同上,
+  判準是「✅ 的**條數**相同 + 斷言逐項相同」,那幾行數字每次都會不一樣。
+- **㋗-3 `audit_traverse --json` 的 `cells` 欄天生非決定性**:`BattleSim` 建構期以 `Math.random()` 擺
+  第三方野營碉堡 ⇒ `sim.solidResolve` 每次看到的障礙不同,**同一份程式碼**實測 barcelona 三次跑出
+  319591 / 319585 / 319579。拿它做逐位元 A/B 的人都會踩到 ⇒ 比對 MUST **排除該欄**,或改用
+  `buildStructs` 輸出的雜湊。⚠ 同一支的**全場地計數**也不能拿 BASELINE 比 —— 它的判定吃外部圖資,
+  工作樹的 `tools/.scen_cache` 內容一換,結構數就變(實測 91/18 → 121/21 而程式一行沒改)。
+
+另兩條抽原文的錨點紀律(㋑ 家族,2026-08-16 各踩過一次):
+
+- 改 `toon.js` 的 `opaque_fragment` 前置區塊或 `void main()` 宣告區 ⇒ **`audit_soft_stroke` 那兩條
+  「排在 `#include <opaque_fragment>` 之後」的錨 MUST 收在 `applyCelPatch` 之內**(`opaqueAnchor()`)——
+  2026-08-16 起 `toonPlain` 在檔案更後面也有一次同樣的 `.replace(…)`,全檔 `lastIndexOf` 會指到那一次,
+  兩條斷言從此紅在**完全錯的理由**上。
+- **`public/js/toon.js` 與 `public/js/postfx.js` 的 GLSL 註解裡出現反引號**是本族踩過四次的坑
+  (2026-08-16 兩道窗各兩次)—— 見下表第一列,`audit_client_syntax` Ⅲ 抓得到,但**要記得先跑它**。
 
 | 改動 | 驗證 |
 |---|---|
@@ -205,6 +307,21 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 地貌類別碼 / 地貌法線 / LUT 地貌分支(`INK_CLASS`/`LAND_SURF_ID`/`land`·`landNrm`/`landNrmAt`/`lutApplyLand`/`_wantInfo`) | `audit_cel_pipeline` Ⅶ ±`--break-land`/`--break-lutland` + `audit_visual_prefs`/`audit_soft_stroke`/`audit_gpu_lifecycle`/`audit_world_curve` + `audit_client_syntax`(㋖;**Ⅲ 那一段就是這一輪補的** —— GLSL 註解裡的反引號可以收在一個「後面接得起來」的位置,`node --check` 全綠而管線在建構子炸)+ ground/terrain 那一批(ground_tile/seam/enclave/qc/border、siteplan、beacons、object_joints、world_edge:幾何一格未動,MUST 逐項不變)+ **㋒ 逐位元**(`data.js`/`sim.js`/伺服器一行未改 ⇒ `npm run bal` / `npm test` MUST 逐項不動)+ **㋓ `shot_scene` 三輪 A/B**:①旋鈕全關 ⇒ 與改制前**逐位元相同**(13 張定場照 md5 全同,2026-08-13 實測);②`--pref inkMrt=on` ⇒ 地面那張黑色網格 MUST 消失而建物/道路/樹的線 MUST 還在;③`--pref lutSrc=baked`(折邊勾線仍關著)⇒ MUST **一條線都沒有多**(多出來就是兩個消費端被綁在一起了) |
 | 3D LUT 調色 | `audit_visual_prefs` + `audit_cel_pipeline` + **真 GPU 直測**(`matsample` readPixels:`none` ⇄ `baked` 只差量化(mean 1.28/765)、強度 0 / 檔案不存在 / 切回 `none` 三者**逐位元相同**、人工反相 LUT 天翻地覆 = 表真的被查了)+ ㋒ |
 | 空氣透視(雙色霧) | `audit_visual_prefs` + `audit_cel_pipeline` + **真 GPU 直測**(`matsample` 走真品管線 readPixels:拉桿 0% ⇔ 還原後**逐位元相同**、把霧帶推到 knee 之外 ⇒ 補正**恆 0**、沒餵距離 ⇒ 不生效)+ ㋒(data.js/sim.js 一行未動 ⇒ `npm run bal`/`npm test` MUST 逐項不變) |
+| **`gInfo.a` 半位元組打包 / 表面群組 / outlineContribution / 內部折邊抑制 / 群組早退**(`toon.js` 的 `INK_CLASS`·`INK_LEVELS`·`inkQuant`·`INK_PACK_GLSL`·`INK_UNPACK_GLSL`·`SURF_ID`·`surfGroup`·`joinSurfGroup`·`INK_REPEAT_M`·`inkRepeat`·`applyCelPatch` 的六個新選項 / `postfx.js` 的 `INK_MRT.SELF_F`·`GRAZE_K`·`_mkRT` 的 NearestFilter·勾線三個讀取點·`_wantInfo` 第三消費端 / `data.js` 的 `INK_CTR`·`inkCtrM` / `visualPrefs.js` 的九格新旋鈕)| `audit_cel_pipeline` ±**九支** `--break`(每一支 MUST 對應紅字)+ `audit_soft_stroke` ±**八支** + `audit_visual_prefs` / `audit_gpu_lifecycle`(既有斷言 MUST 逐項不動)+ `audit_client_syntax`(㋖;**GLSL 註解裡的反引號**是這一族踩過四次的坑)+ `npm run audit:net` / `audit_solo_boot`(**`postfx.js` 多一條 `import … from './toon.js'` 的模組邊**,A28 家族不該憑推理放行)+ `audit_world_curve` / `audit_daynight` / `audit_ground_*` / `audit_siteplan` / `audit_beacons` / `audit_object_joints --seeds 8`(幾何與 rnd 序列一格未動 ⇒ MUST **逐項不變**)+ **`npm run bal` / `npm test` MUST 逐項不動**(`data.js` 只多了不進 `balanceFingerprint` 的表現層常數,`sim.js` / `server/**` 一行未改;動了就是純表現層漏到判定上)+ **㋓ `shot_scene` 三輪 md5 對照**(旋鈕全關 / `--pref inkMrt=on` / `--pref lutSrc=baked`,MUST 與改制前**逐張相同**;手法與 2026-08-13 那一輪逐字相同,**但兩個新陷阱見 `docs/_pending/shots-baseline.md`**:`-prefs` 那一組跨進程不穩定 ⇒ MUST 以「同一輪環境下的 pre/post 對拍」為準,而 `--stations meta.json` 回放**不等於**同參數的新鮮推導 ⇒ venue/team 相同時 MUST NOT 帶它)+ **㋓ 真 GPU MRT `readPixels` 重跑 64 組往返**(離線的 Ⅷ① 只證明**數學**對,證明不了驅動上的 8bit / half 位階)+ **㋓ 真 GPU:新的 `attribute`(`aSurfId`/`aCard`/`aReflO`)與 `varying`(`vSurfId`/`vSeaFade`)會不會讓整批物件不畫 —— `gl.getError()` MUST 為 0** |
+| **墨線斷筆 / 掠射抑制項 / 地貌分區子帶 / LUT 取代不疊加 / 斜向轉場 / 溶入 / 勾線淡出錨**(`toon.js` 的 `INK_BREAK`·`_inkBreakA`·`celInkBreak`·`vCelInkP`·`CEL_INKA`/`CEL_INKB`·`LAND_ZONE_N`·`landZoneId`·`CEL_LAND_ID`·`_landInkA`·`CEL_DIS`·`celDissolve`·`setDissolve`·`celHash`/`celNoise` 的提出 / `postfx.js` 的 `INK.FADE_F`·`_inkFadeM`·`uFade0`/`uFade1`·`_wipeMaterial`·`setWipe`·`playWipe`·`_tickWipe`·chain 插點·`_quads` 推導式 dispose·群組早退的 LAND 例外 / `data.js` 的 `WIPE`·`wipeAt`·`DISSOLVE`·`dissolveAt` / `cutin.js` 的 `setPipeline`·`wipe`)| `audit_soft_stroke` ±**三支**新 `--break` 且**八支既有 `--break` MUST 仍各自咬得住** —— 本輪動過 Ⅱ 的三條既有斷言,而那一段正是「軟性契約斷掉」的唯一防線,三條的**語意**(恰一處寫入 / 非軟性件恆寫 1 / 只給不透明件)MUST 逐條保住 + `audit_cel_pipeline` ±**三支**新 `--break` 且**九支既有 MUST 仍咬得住** + `audit_visual_prefs` ±**兩支**新 `--break` + `audit_gpu_lifecycle`(dispose 名冊改推導,既有斷言 MUST 逐項不動)+ `audit_client_syntax` ±`--break-glsl`(㋖)+ `npm run audit:net` / `audit_solo_boot`(`postfx.js` 多一條 `data.js` import、`cutin.js` 多一支選用消費端)+ `audit_damp_fps` / `audit_touch_gesture` / `audit_view_lock` / `audit_spectator_cam` / `audit_recoil_move` / `audit_world_curve` / `audit_daynight`(既有斷言 MUST 逐項不動)+ ground / siteplan / beacons / `audit_object_joints --seeds 8`(**零共享 `rnd()` 消耗** ⇒ MUST **逐位元不變**,判準是輸出逐字元相同不是「仍全綠」)+ **`npm run bal` / `npm test` MUST 逐項不動**(㋗-2)+ **㋓ `shot_scene` 三輪 md5 對照**(`--pref inkBreak=0` / `landInk=0` / `wipe=0` MUST 與改制前**逐張相同**)+ **㋓ `--pref inkBreak=0.6` 與 `+ inkMrt=on`**(斷筆唯一的驗收面)+ **㋓ 平移不變性直測**(同一台機體放在 (0,0) 與 (137, −91),同一組相對機位截圖,機體佔的那一塊 MUST 逐像素相同 —— `mat3` 那一條唯一驗得到的地方;寫成 `mat4` 之後每一條離線斷言照樣全綠)+ **㋓ `shot_scene` 五種天氣 A/B**(④-3 唯一的驗收面:`clear` MUST **像素相同**,其餘四種 MUST 看得出遠景的線收在霧裡)+ **㋓ 溶入五格定裝照**(k = 0/0.25/0.5/0.75/1,背景各拍一次**天空與地形** —— 洞邊的墨線在兩種背景下是**不同**的行為)+ **㋓ `audit_cockpit` / `audit_muzzle`**(`SVS_URL` MUST 指向本工作區的埠)+ **㋕ 真機**:①把 `wipe` 拉起來放一次自己的大招 ②`landInk` 拉起來看拼圖接縫有沒有被描出來(那是這一項的**已知代價**,不是 bug)+ **㋓ 真 GPU `gl.getError()` MUST 為 0**:`vCelInkP` 是**對每一份不透明 cel 材質都成立**的新 varying(`vDisP` / `vLandId` 只在各自的 define 之下),而 WebGL1 的 varying 下限只有 8 個 vec4 ⇒ 「整批物件不畫、console 一個字都沒有」是這一族的典型死法,離線這端**量不到** |
+| **賽璐璐學派切換**(`toon.js` 的 `CEL_CUT`·`cutOf`·`SHADOW_V_F`·`_school`·`celSchool()`·`RAMP_PATCH_A`·`RAMP_PATCH_B`·`RAMP_CAN`·`CEL_LUM_GLSL`·`CEL_KEY_GLSL`·`CEL_CUT_DECL_GLSL`·`CEL_CUT_MIX_GLSL`·`celCutUniforms`·`tintA`·`coolOn`·`toonPlain` / `visualPrefs.js` 的 `celSchool` / `data.js` 的 `SHADOW` 檔頭 / `game.js` 的 `shadowMap.type`)| `audit_cel_pipeline` ±**六支**新 `--break`(每一支 MUST 對應紅字)+ `audit_visual_prefs`(Ⅰ 多一條 def、Ⅱ 多三條;**既有 20 條偏色斷言 MUST 逐項不動**)+ `audit_soft_stroke` / `audit_gpu_lifecycle` / `audit_world_curve` / `audit_daynight`(MUST 逐項不動)+ `audit_client_syntax`(㋖)+ `npm run audit:net` / `audit_solo_boot` + **`npm run bal` / `npm test` MUST 逐項不動**(`data.js` **只改註解**;動了就是純表現層漏進判定)+ **㋓ `shot_scene` 三層 md5 對照**(手法同 2026-08-13 的 LUT 那一輪,**兩個新陷阱**見上一列與 `docs/_pending/shots-baseline.md`)+ **㋕ 真機開一場 School B**(洞內 / 隧道在硬切下會平成一塊黑 —— 那是序 12b 的 emissive 要解的,而它依賴本項先落地)。⚠ 改 `RAMPS[3][0]` MUST 回頭看 `CEL_CUT.SHADOW_V`(它是推導值,會自己跟著走 —— 要檢查的是**跟著走之後還好不好看**);改 `CEL_CUT` 任一帶 MUST 重跑 Ⅺ⑤ 的階梯序;**def 翻成 `'b'` 之前 MUST 先把 `biomes.js` 那 4 處裸 `MeshToonMaterial` 改吃 `toonPlain`**(A14 ④) |
+| **立體結構的材質 / 線工授權 / 坑門表面群組 / 洞口反光帶**(`biomes.js` 的 `bandPitchM` 與 `buildRoads` → `makeDeckIndex` 那一區的 22 支材質、`stripeLit`/`stripeDark`/`stripeCtr`;`toon.js` 的 `SURF_ID.CONCRETE`/`inkRepeat` 消費端) | `audit_struct_ink` ±**四支** `--break`(每一支 MUST 對應紅字)+ **既有七支幾何稽核逐項不動**(`audit_open_tunnel` / `audit_underpass` / `audit_layer_block` / `audit_road_joint` / `audit_road_bed` / `audit_bridge_crossing` / `audit_bridge_tower_pad` / `audit_water_skirt`)—— **這八支就是「視覺改動有沒有漏進幾何」的判決面,判準是逐項不動不是「仍全綠」** + `audit_siteplan` / `audit_beacons` / `audit_object_joints --seeds 8` / `audit_ground_*` / `audit_world_edge` **逐字元相同**(結構區塊零共享 `rnd()` 消耗)+ `audit_cel_pipeline` / `audit_soft_stroke` / `audit_visual_prefs` / `audit_gpu_lifecycle` / `audit_climb` / `audit_slope_move` / `audit_npc_collide` / `audit_world_height` / `audit_terrain_ray` 全綠 + `audit_client_syntax`(㋖)+ `npm run audit:net` / `audit_solo_boot` + **`npm run bal` / `npm test` MUST 逐項不動** + **㋓ `shot_tunnels --kind tunnel\|underpass\|gallery` 三輪與改制前基準並排**(洞內是這一族**唯一沒有任何離線稽核看得到**的地方;判準 MUST 是「同一套 `--synth` 下的前後對照」—— 沙箱裡取不到衛星影像,拿絕對亮度門檻當閘會是假紅字)+ **㋓ `shot_scene --venue taroko --pref inkMrt=on`**(⑨-3 / ⑨-4 只住第二張附件 ⇒ 不帶這個旗標會得到「改了沒反應」的假結論)+ **㋕ 真機**:走進山體隧道與地下道各一次、走上高架橋一次(判準三條:洞內看得出拱頂/樑/柱的輪廓、洞口黃帶亮著而牆沒有整片被提亮、坑門混凝土與上方山坡之間有一條線而額牆與 collar 之間沒有)。⚠ 改 `TUN.COL_GAP` / 欄杆帶高 / `UND.COPE` MUST 回頭看 `audit_struct_ink` Ⅱ-e(那幾條斷言釘的是**推導的單調性**,不是現值) |
+| **落花 / 落葉粒子**(`public/js/petals.js` 全檔 / `biomes.js` 的 `foliageCrown`·`petalGeo`·`PETAL_OFF`·`buildPetals` 與 `dynamics` 之後那一段接線 / `ENV.seasons[].accent` 的消費) | `audit_ambient_motion` ±**八支** `--break-*`(每一支 MUST 對應紅字)+ **`audit_siteplan` / `audit_beacons` / `audit_object_joints --seeds 8` / `audit_ground_tile` / `ground_qc` / `ground_seam` / `ground_enclave` / `ground_border` / `audit_world_edge` 逐項不變** —— 這九支是「**零共享 `rnd()` 消耗**」的唯一證明面,而**判準是「逐項不變」不是「仍全綠」**(它們驗規則不驗位置,序列被推移時全部照樣綠)+ `audit_soft_stroke` / `audit_cel_pipeline` / `audit_gpu_lifecycle` / `audit_visual_prefs` / `audit_world_curve` 逐項不變(材質走 `envMat` ⇒ 勾線 alpha 契約與 `gInfo` 宣告都是繼承來的)+ `audit_client_syntax`(㋖;名冊多一支 `petals.js`)+ `npm run audit:net` / `audit_solo_boot`(新增客戶端模組:URL 佈局鏡射 + `data.js` 單一模組實例)+ **`npm run bal` / `npm test` MUST 逐項不動**(`ENV.seasons[].accent` 只被讀取)+ **㋓ `shot_scene --venue taroko` 的春 / 秋 / 夏各一張**(「像不像在飄」與三色調的實際觀感只有實拍看得到)+ **㋓ 幀成本**(逐幀 `setMatrixAt` + `instanceMatrix` 上傳量;`RES_GOV` 只調解析度、調不掉它 —— 現有雨雪粒子 1600/1100 顆逐幀寫 position 是可比較的基準)+ **㋕ 真機**(低功耗階梯 `MAX_TOTAL_LOW` / `MAX_FIELDS_LOW` 的實際數字 MUST 在真機量過再定值)。⚠ 改 `PETAL.CELL_M` / `MIN_CROWNS` / `DENSITY` MUST 回頭看 `audit_ambient_motion` Ⅲ・Ⅳ 的測試場還咬不咬得到上限 |
+| **葉片卡冠層 / 整棵樹的剪影 / 巨岩・石堆・遠景的表面群組與貢獻**(`public/js/leafcard.js` 全檔 / `biomes.js` 的 `MEGA_BODY_F`·`_msbox`·`placeMegaliths` 的群組指派·`CARD_MRT_CAP`·`groupInkOn`·`leafCardOn`·`leafCardTex`·`leafRowGeo`·`surfIdGeo`·`buildVegMeshes` 的三行·`buildBackdrop({ ctr })` 與其呼叫點 / `ground.js` 細節發射迴圈的 `surf`·`contrib`) | `audit_leaf_card` ±**四支** `--break` + `audit_rock_ink` ±**三支** + **`audit_siteplan` / `audit_beacons` / `audit_object_joints --seeds 8` / `audit_ground_*` / `audit_world_edge` / `audit_world_height` / `audit_gpu_lifecycle` / `audit_world_curve` 逐項不變**(零共享 `rnd()` 的唯一證明面;判準同上)+ `audit_cel_pipeline` / `audit_soft_stroke` / `audit_visual_prefs` / `audit_ambient_motion` 全綠(⚠ `audit_soft_stroke` Ⅳ⑤ 的 `vegSoftKind(` 恰一次與 `const mat = toonMat(seasonColor` 恰一次是這一族最容易被順手打破的兩條)+ `audit_client_syntax` ±`--break-glsl`(㋖;名冊多一支 `leafcard.js`)+ `npm run audit:net` / `audit_solo_boot` + **`npm run bal` / `npm test` MUST 逐項不動** + **`intake_parts` MUST 全綠;⚠ `leafCard` 的預設一旦翻成 `auto`/`all`,MUST 先重跑 `measure_veg_tris --kinds`/`--giants` 更新 `tri_budget.json` 的 `measured_kind_tris`/`measured_veg_total_max` 再跑 `intake_parts`** —— 它是整層總量閘的**分母**(被取代的現值),葉片卡把逐型現值改大 ⇒ 那道閘**變鬆**,而紅字與真正的三角形成本無關 + **㋓ 真 GPU 直測**(新的 `attribute`/`varying` 會不會讓整批物件不畫 —— `gl.getError()` MUST 為 0、開→關→再開 MUST **逐位元還原**)+ **㋓ `shot_scene --venue taroko --pref inkMrt=on` / `shot_veg`**(「這顆岩看起來像不像一顆岩」「這叢冠讀不讀得出鋸齒」在每一條斷言上都是綠的)+ **㋕ 真機**(走到一片露頭旁繞一圈、站上全圖最高點看遠山、走到圖界看那一圈假山;林子裡貼著樹走)。⚠ 改 `MEGA_BODY_F` 或 `meta.col.r` 的定義 MUST 回頭看 `audit_rock_ink` Ⅰ 印出來的比值分佈(`col.r` 一動整批比值平移,而**每一條斷言仍會過**);改 `CARD.SIZE_M`/`COVER`/`N_MAX` MUST 回頭量真機填充率 |
+| **岸邊泡沫 / 水面倒影塊的消費端**(`terrain.js` 的 `seaFadeAt`・`seaFadeAtWorld`・`bakeSeaDepth`・`stampSeaBlockers` 與對外 API 那兩欄 / `main.js` 的 `terrain.stampSeaBlockers?.()` 那一行 / `biomes.js` 的 `REFL_WAVE_WRITERS`・`REFL_C`・`planReflectors`・`buildWaterReflections`・`buildWaterEdges` 的泡沫分支退場) | `audit_water_edge` ±**四支** `--break`(條數見 §5.1)+ **`audit_soft_stroke` MUST 逐項不變**(toon 側一行未改;⚠ 它的 Ⅵ 用 `^function seaFadeOf…^}` 抽原文丟進**只注入 `smooth01`/`edgeWallInsetM`** 的沙箱 ⇒ `seaFadeOf` MUST 保持自給自足,抽函式的方向不可反過來)+ **ground / siteplan / beacons / object_joints / world_edge / world_height / world_curve / gpu_lifecycle / cel_pipeline / visual_prefs / climb / layer_block / npc_collide / slope_move / leaf_card / rock_ink / ambient_motion 逐項不變**(`audit_terrain_ray` 只有那一行 ms 讀數會跳,那是計時不是語意)+ `audit_open_tunnel` / `audit_underpass` / `audit_road_joint` / `audit_road_bed` / `audit_road_grid` / `audit_world_text` / `audit_vernacular` / `audit_ground_drape` / `audit_mini_map` / `audit_bridge_crossing` / `audit_water_skirt` / `audit_bridge_tower_pad` / `audit_lane_navigation` 全綠(㋔)+ `audit_client_syntax` ±`--break-glsl`(㋖)+ `npm run audit:net` / `audit_solo_boot`(**`terrain.js` 多一條 `import { lowPower } from './mobile.js'`** ⇒ A28 家族的模組邊不該憑推理放行)+ **`npm run bal` / `npm test` MUST 逐項不動**(㋗-2)+ **㋓ `shot_scene --venue <有水域的場地> --dof=0 --curve=0` 的 `waterline` 機位三輪**(預設 / `--pref foam=0` / `--pref reflect=1`;「泡沫像不像浪」「倒影是亮的還是暗的」離線一條都驗不到)+ **㋓ 真 GPU**(`aReflO` / `vSeaFade` ⇒ `gl.getError()` MUST 為 0;`reflect` 0 → 1 → 0 MUST **逐位元還原**)+ **㋕ 真機走到岸邊**(泡沫有沒有跟著浪上下、有沒有繞過柱子、53m 外環那一圈 MUST 一點泡沫都沒有)。⚠ 改 `FOAM.TEXEL_M` / `FOAM.RANGE_M` MUST 回頭量建構耗時(**MUST 收在一格 `SLICE_MS` = 16ms 之內**,超過就要挪到既有的階段回報點之後,MUST NOT 自己新增 `await`) |
+| **載具 / 擺件型錄**(`public/js/vehicles.js` 全檔 / `siteplan.js` 的 `LOT_STALL`·`LOT_PAINT`·`CIVIC_PARTS.lot`·`buildCivic` 的分組合併 / `hazards.js BUILDERS.wreck` / `biomes.js` 的 `vehGroup`·`car()`·`makeTrain()`) | `audit_vehicle_spec` ±**七支** `--break` + **`audit_siteplan` / `audit_object_joints --seeds 8` 的差異 MUST 只有「碰撞柱根數」與「接合數」兩處**(車有輪子了 ⇒ 零件變多是**預期**;`異常 0 項` 與 `265 項` MUST 不動)+ **`audit_beacons` / `audit_ground_*` / `audit_world_edge` 逐位元不變**(零共享 `rnd()` 的證明面)+ `audit_soft_stroke` / `audit_cel_pipeline` / `audit_visual_prefs` / `audit_gpu_lifecycle` / `audit_leaf_card` / `audit_rock_ink` / `audit_water_edge` / `audit_ambient_motion` / `audit_world_height` / `audit_world_curve` / `audit_climb` / `audit_layer_block` / `audit_npc_collide` / `audit_slope_move` / `audit_daynight` 全綠 + `audit_client_syntax`(㋖;名冊多一支 `vehicles.js`)+ `npm run audit:net` / `audit_solo_boot` + **`npm run bal` / `npm test` MUST 逐項不動** + **㋓ `shot_scene --venue shibuya --dof=0 --curve=0`**(「這一台車看起來像不像車」離線一條斷言都量不到)+ **㋕ 真機**:貼著停車場走一圈(九台車的碰撞盒仍貼合、車輪真的觸地)、開一場看封路車禍、看一次行駛列車。⚠ 三支稽核(`audit_object_joints:577` / `audit_siteplan:95` / `audit_soft_stroke:311`)的 `new Function` 樁**MUST 注入 `makeVehicle`**(後兩支另加 `makeRecess`,soft_stroke 還要**一併抽** `LOT_STALL` 與 `LOT_PAINT` 的原文)—— 漏掉任何一格的症狀是整支稽核在 `const CIVIC_PARTS = {…}` 那一行 `ReferenceError`,而錯誤訊息與「接合 / 場址 / 軟性物質」完全無關,很容易被讀成「稽核壞了」。⚠ 改 `LOT_STALL` MUST 回頭看 `audit_vehicle_spec` Ⅵ(碰撞盒四角是**凍結常數**);改 `VEHICLE_SPEC.sedan` 的 `waist` MUST 回頭看 `audit_siteplan` 的「掛碰撞的一律有量體」(車身頂 < 1.0m 會被判成隱形絆腳石) |
+| **鳥群(⑥-2)**(`public/js/wildlife.js` 全檔 / `biomes.js` 的 `BIRDS_OFF`·`shoreRing`·`buildFlocks` 與其呼叫點) | `audit_wildlife` ±**七支** `--break` + **`audit_siteplan` / `audit_beacons` / `audit_object_joints --seeds 8` / `audit_ground_tile` / `ground_qc` 逐項不動**(⑥-2 是**純新增**且零共享 rnd ⇒ 這五支是唯一的證明面)+ `audit_damp_fps`(摩擦吃 `frictionFPS`;⚠ 那一支的掃描名冊目前只有 `data.js`/`game.js`/`locomotion.js`/`animweights.js` —— **`wildlife.js` SHOULD 補進第 40 行那一組 `readSrc`**,現況由 `audit_wildlife` Ⅰ 就地釘住同樣的三條 ⇒ 沒有缺口,但兩份名冊遲早分家)+ `audit_cel_pipeline`(鳥群走既有 `envMat` ⇒ Ⅵ 的自寫 ShaderMaterial 計數 MUST **不變**;變了就是有人自己寫了材質)+ `audit_daynight`(**不投影**;那一支掃不到 biomes.js ⇒ 這一條只有 `audit_wildlife` Ⅷ 在守)+ `audit_gpu_lifecycle` / `audit_world_height`(高度夾在 `objHeightMax()`)/ `audit_world_edge`(水平夾在 `edgeWallInsetM()`)+ `audit_client_syntax`(㋖)+ `npm run audit:net` / `audit_solo_boot` + **`npm run bal` / `npm test` MUST 逐項不動** + **㋓ `shot_scene --venue <有水域的場地> --pref birds=1`**(「像不像鳥」「有沒有真的在飛」離線一條都驗不到;`instanceMatrix.needsUpdate` 忘了會凍結而**每一支稽核全綠**)+ **㋕ 真機看一次**(牠們有沒有繞著水岸飛、拍翼有沒有整群同步)。⚠ 改 `FLOCK.SPRING` / `FRICTION_K` / `SPEED` MUST 回頭看 `TRACK_MIN` / `V_MAX` 兩個門檻(它們是**實測**出來的判準,不是旋鈕) |
+| **動畫權重向量**(`public/js/animweights.js` 全檔 / `locomotion.stepLocomotion` 收尾的 `L.w` / `game.js` 的 `_entWeights`·`_stepSelfWeights`·`_moveCat` 的 air 判定·`_updateMoveAudio` 的 `moveGate`/`rate`) | `audit_anim_weights` ±**五支** `--break`(每一支 MUST 對應紅字)+ **`audit_gait_anat` 逐字不變**(`stepLocomotion` 只多寫一格 `L.w`、不讀任何新東西 ⇒ 步態逐位元不動;這就是計畫 ⑥ 驗證欄那句「既有斷言 MUST 逐項不動」)+ `audit_morph_rig`/`audit_paper_doll`/`audit_damp_fps`(**`animweights.js` MUST 進 `audit_damp_fps` 的掃描名冊** —— 名冊漏掉的檔案裡寫 `Math.min(1, dt·k)` 一樣掃不到而那支照樣全綠)+ `audit_client_syntax`(㋖)+ `npm run audit:net`/`audit_solo_boot` + ㋔ game.js 那一批(`npc_collide`/`climb`/`layer_block`/`slope_move`/`view_lock`/`spectator_cam`/`blood_splat`)+ **`npm run bal` / `npm test` MUST 逐項不動**。⚠ **音效端刻意不是逐位元中性**:離地門檻由 3m 收斂到 `MORPH.GROUND_Y`(2m)、`moveGate`/`rate` 的輸入由未阻尼的 `_moveSpd` 換成阻尼過的權重 ⇒ ①2~3m 高度帶內的英雄從此**立刻**切到飛行型音床(舊制慢一拍)②靜止/起步的音量過渡不再有 8Hz 插值鋸齒。這兩項**沒有任何離線模型守得住**(`npm run bal` 不模型化音效)⇒ MUST 列進交付說明的未驗項並**真機聽一次**(㋕) |
+| **⑤-1 植被擾動的餵入端**(`game.js` 的 `TREAD`·`_charSlots`·`_selfSpd`·`_stepSelfWeights` 的閘門·主迴圈的 `setCelChar(this._charSlots())`) | `audit_anim_weights` Ⅶ ±**三支** `--break`(每一支 MUST 對應紅字;既有五支 MUST 仍各自紅字)+ **`audit_gait_anat` 逐字不變**(`locomotion.js` 一行未改)+ `audit_soft_stroke`(`toon.js` 那一半 MUST 逐項不動)+ `audit_damp_fps` ±`--break-damp`(`_charSlots` 不自己阻尼,但它是 game.js 掃描名冊的一部分)+ `audit_client_syntax`(㋖)+ ㋔ game.js 那一批 + **`npm run bal` / `npm test` MUST 逐項不動** + **㋓ `audit_muzzle`/`audit_cockpit`/`audit_cast_jump`**(game.js 動過;`SVS_URL` MUST 指向本工作區的埠)。⚠ **「草真的被撥開了嗎」離線一條都驗不到** —— GLSL 在 Node 端執行不了,原文不變式只證明「有這個機制」⇒ ㋓ `shot_scene` 的 `lane_mid`/`hilltop` 在 `?tread=0` 與預設下各拍一張:**`?tread=0` MUST 與改制前 md5 逐位元相同**(那是「早退不加」的驗收面),預設下 MUST 看得出機體腳邊的草倒向外側 |
+| **轉場的呼叫端**(`game._wipeCut` + 建構子的 `playWipe('reveal')` + `_updateDeathSeq` 的 `done` 分支 + `_applySnap` 的 `m.over`) | `audit_visual_prefs` **Ⅷ-h~j**(**三條呼叫端斷言**:cover 與 reveal 成對 / `playWipe` 恰三處 + `_wipeCut` 恰兩個呼叫點 / 重入守衛 `first` 與 `s.cut` / 狀態閘不跟著延後 —— 縫那一半住同一段的 Ⅷ-a~g)±`--break-wipepair`(把 `_wipeCut` 裡 `p.playWipe('reveal', null, opts);` 那一行刪掉 ⇒ 第一條 MUST 紅;**替換無效 MUST 當場 `process.exit(1)`**,樣式用 `\r?\n`)+ ㋔ game.js 那一批 + **`npm run bal` / `npm test` MUST 逐項不動** + **㋓ 真瀏覽器把旋鈕開起來各走一次**:開戰 / 陣亡 / 結算三個時機,判準是「幕拉開之後畫面回得來」(`_wipeA` MUST 回 0)。⚠ **旋鈕開著時 `hud.over` 與陣亡過場收尾各延後 `WIPE.COVER_S`(0.34s)** —— 那是設計上的時序改動,不是 bug |
+| **音效層級**(`public/js/audio.js` 全檔 / `game.js` 的 `_updateMoveAudio`·`_updatePlaceAudio`·`_ambDensityAt`·`_clearAroundBunker` 的快取失效 / `public/audio/README.md` 的來源帳 / `public/audio/**` 新增任何檔案) | `audit_audio_layers` ±**七支** `--break`(每一支 MUST 對應紅字;`--break-take` 的兩條「去重窗現值」與 `--break-tier` 的三條「`bgmUrl` / 補載入」是**對照組 MUST 仍綠**)+ `audit_anim_weights`(移動床的 gate 吃的是權重向量)+ `audit_client_syntax`(㋖)+ `npm run audit:net`(⚠ 稽核檔內 **MUST NOT 出現帶前導斜線的 `audio` 路徑字面** —— `audit_net_modes.mjs` 的 `strayPaths` 掃 `tools/*.mjs`,踩到會紅在一個完全不相干的訊息上)+ `audit_solo_boot` + ㋔ game.js 那一批 + **`npm run bal` / `npm test` MUST 逐項不動**(純表現層,伺服器不 import `audio.js`)。**放進 `public/audio/**` 的任何檔案 MUST 同時在 README 的來源帳補一列**(Ⅷ 段雙向比對:實體存在卻沒登記 = 紅)。⚠ ㋕ 真機三件離線驗不到:①**低功耗開→關**之後樣本 MUST 回來(這是本項最容易靜默壞掉的一格)②走進水裡的腳步 MUST 是**交叉淡入不是換聲道**(踏空一拍只有耳朵聽得到)③地點床的優先序聽起來對不對 |
+| **頁面級觸控硬化 / 裝置 vs 版型旗標**(`style.css` 的 `body.touch-dev` 區塊與 `body.touch-dev #game`、根層 `text-size-adjust`、`body.touch-ui` 的 `--tl-*` 與安全區、`mobile.installTouchUI()` 的 `touch-dev` 掛載、`index.html` 的 viewport meta) | `audit_ctrl_mode` **Ⅹ** ±**四支** `--break-viewport`/`--break-textadj`/`--break-touchdev`/`--break-touchact`(每一支 MUST 對應紅字;`--break-touchdev` 下 Ⅹ⑤ **MUST 仍綠** —— 兩欄同時對才代表旗標拆開了)+ `audit_touch_layout` / `audit_touch_gesture` / `audit_ui_layout` / `audit_gyro` MUST **逐項不動**(判準見 ㋗-1:框線數字有 run-to-run 抖動,`audit_touch_layout` 的 **8/60 既有紅 MUST 維持在 8**)+ `audit_client_syntax`(㋖)+ `npm run audit:net` / `audit_solo_boot` + ㋒ + **㋕ 真機**:①房主鎖「限定滑鼠鍵盤」時在手機上仍**捏合不動、下拉不刷新、長按不選字**(這正是改制前壞掉的那一格,而它在離線這端只表現成選擇器字串不同)②iPhone 橫握 HUD 下帶比例與直握一致(text-size-adjust 的唯一驗收面)③有觸控螢幕的 Windows 筆電第一次吃到 `#game{touch-action:none}` 與 `user-select:none` —— 是**刻意**的行為改變 |
+| **線工切面**(`tools/zonecut.mjs` 全檔 / `audit_zone_cut.mjs` / `venue_field.cutLinesFor` / `venue_field` 的 `buildStructs`·`projectArc`·`ptAt`·`sampleAlong` / `ground.js cellZoneAt` 的**判定順序**) | `audit_zone_cut` ±**八支** `--break`(每一支 MUST 對應紅字;`--break-quantize` MUST 挑**市區 + θ≠0** 場地 —— 山區的界線多半來自坡度等值線、不經投影 ⇒ 壞版在那裡咬不動;`--break-keepout` MUST 挑**有結構**的場地。兩支都已加**適用性硬閘**:挑錯輸入 MUST 當場 `process.exit(1)` 並說明該挑什麼,MUST NOT 讓它報綠)+ `audit_traverse`(四支函式搬家 ⇒ **MUST 做 A/B**:`--only=<有快取的場地> --json=` 前後比對,而**比對 MUST 排除 `cells` 欄**,見 ㋗-3)+ `audit_underpass`/`audit_venue_biome --offline`/`audit_lane_scenarios`(㋓;venue_field 的既有 export 一格未動 ⇒ MUST 逐項不變)+ ground 那一批 + `siteplan`/`beacons`/`object_joints --seeds 8`/`road_grid`/`slope_move`/`cel_pipeline`/`client_syntax`/`solo_boot`(讀的是同一份 ground.js/biomes.js 原文,而原文沒改 ⇒ MUST 逐項不變)+ **`npm run bal` / `npm test` MUST 逐項不動**(`git diff --stat -- public/ server/` MUST 為空)+ 改 `logo_lib.encodePNG` MUST 重跑 `flatten_logo`/`split_logo`/`compose_logo` 比對 md5(⚠ 那三支的 `OUT_DIR` 是**寫死的絕對路徑**,指向出貨儲存庫的 `public/assets` —— 在 worktree 裡跑會寫到別的儲存庫去;2026-08-16 改採**原文層 A/B**:抽 `git show HEAD:tools/logo_lib.mjs` 的舊 `encodePNG` 原文、以樁掉的 `writeFileSync` 捕捉位元組,與新的 `pngBytes` 逐位元比對) |
 | 建構期讓步(`buildYield` / `await onProgress`) | `audit_client_syntax`(㋖:`await` 落在非 async 的回呼裡是 SyntaxError)+ **`audit_siteplan` Ⅵ 與 `audit_open_tunnel` Ⅵ**(兩支真的執行 biomes/terrain 原文,沙箱要吃得下 await)+ biomes 那一批(siteplan/beacons/open_tunnel/underpass/road_joint/world_text/object_joints/ground_*)+ **A/B 直測 MUST 比對產出**(同一場地 warm 跑兩次,`blockers`/`decks`/`tunnels` 逐項相同 = 讓步沒有動到取樣順序)+ ㋒ |
 | 程序生成物件擺位(`BUILDERS`/`VEG_DEFS`/`vegPartXform`/`MEGALITHS`/`synthMegalith`/`decorateMegalith`/`rockProbe`) | `audit_object_joints --seeds 8`(約 23000 接合;FLOAT/PARTIAL/DETACHED/ISOLATED 四硬失敗;豁免附理由;巨岩段含「兩端支承」具名救援) |
 | 場址配置(都市計畫 / 羞避 / 地質排列) | `audit_siteplan` ±`--break-line`/`--break-shy`/`--break-strike` + **`intake_parts`**(外廓契約 + 三角形**兩道閘**:單件 ≤ 族上限、**逐款 Σ 庫零件 ≤ `kind_factor` × 該款現值**;**改 `GIANT_DEFS` 任一零件表 MUST 重量 `tri_budget.json` 的 `kind_tris`**)+ `audit_beacons` + ㋔ + **`audit_traverse`(㋓:沿街多出數百棟 ⇒ 街廓夾出來的通道要仍走得通;沙箱降級的未驗結果 MUST NOT 當綠燈)** + ㋒ |

@@ -36,8 +36,10 @@
 //   ④ 取樣點是**黃金角螺旋**(填滿圓盤)不是單一圓環:圓環在低取樣數下會糊成甜甜圈邊。
 //
 // ---- A25 GPU 生命週期 ----
-// 這支持有 3 個 RenderTarget + 1 張 depthTexture + 4 個 FullScreenQuad 材質,
-// **全部** MUST 在 `dispose()` 釋放。`audit_gpu_lifecycle.mjs` ⑦ 逐項釘住。
+// 這支持有 3 個 RenderTarget + 1 張 depthTexture + **`_quads` 那張表上的每一支**
+// FullScreenQuad 材質(現役 5 支:ink / dof / grade / wipe / fxaa),
+// **全部** MUST 在 `dispose()` 釋放,而名冊 MUST 由 `_quads` 推導不手寫
+// —— 手寫的那一份會在加 pass 時靜默過期。`audit_gpu_lifecycle.mjs` ⑦ 逐項釘住。
 //
 // ---- RES_GOV 交互(最容易靜默壞掉的一條)----
 // RT 尺寸 MUST 由 `renderer.getDrawingBufferSize()` 取得 —— 那已經是
@@ -46,7 +48,8 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { visualPref, onVisualChange } from './visualPrefs.js';
-import { DOF } from './data.js';
+import { INK_UNPACK_GLSL } from './toon.js';
+import { DOF, WIPE, combatReachM, wipeAt } from './data.js';
 
 // ---- 勾線資訊緩衝(2026-08-12;材質端的契約住 `toon.js` 的同名段)----
 // 第二張附件帶著**視空間法線與 surfaceId**,補上深度看不見的那些線(牆腳與地面、退縮平台的
@@ -60,17 +63,36 @@ import { DOF } from './data.js';
 //   ③ 拿不到 MRT(WebGL1)或開關關著 ⇒ 整組退回深度那一份,**逐位元**同這批改動之前。
 //
 // ---- 第四條:`.a` 帶的是**表面類別**(2026-08-13)----
-// 類別碼與寫入端全住 `toon.js INK_CLASS`(NONE 0 / LAND 0.5 / HARD 1)。本檔兩個消費端:
-//   ・勾線:哨兵門檻因此從 `> 0.5` 改成 `> 0.25`(LAND 恰好是 0.5,用舊門檻會把整片地面
-//     判成「沒有資訊」—— 而 8bit RT 上 0.5 存成 0.50196 **剛好又 > 0.5**,那是「桌機看起來
-//     好了、低功耗裝置上又是另一個樣子」的那種壞法);
-//   ・3D LUT:見下方 `LUT` 段的「地貌」那一條。
-// 勾線本身**不再需要**為地貌寫任何特例:地貌共用一個 surfaceId(id 項自動歸零)、貼地拼圖
-// 改寫真地形法線(折邊項因此量到地形)—— 兩件事都在寫入端解決,這裡一行分支都沒有。
+// 類別碼與寫入端全住 `toon.js INK_CLASS`。本檔兩個消費端:勾線的哨兵、以及 3D LUT 的地貌
+// 分支(見下方 `LUT` 段)。勾線本身**不再需要**為地貌寫任何特例:地貌共用一個 surfaceId
+// (id 項自動歸零)、貼地拼圖改寫真地形法線(折邊項因此量到地形)—— 兩件事都在寫入端解決。
+//
+// ---- 第五條:`.a` 自 2026-08-16 起是**打包**(半位元組切;計畫 §0-c / 序 3)----
+// 高半位元組 = 類別**索引**(NONE 0 / LAND 1 / HARD 2 / GROUP 3)、低半位元組 = 這一格的
+// `outlineContribution`(16 階)。編解碼**只住** `toon.js INK_PACK_GLSL` / `INK_UNPACK_GLSL`,
+// 本檔三個讀取點(勾線哨兵 / 勾線貢獻 / LUT 地貌帶)一律轉呼 —— 魔數 16 / 15 / 255 在本檔
+// **一個都不准出現**。三條會靜默壞掉的事寫在原地(第 ④ 層):
+//   ① **NONE = 「沒有意見」不是「不畫線」**:天空穹頂 / 護盾殼 / 粒子 / 招牌今天都寫哨兵 0,
+//      把它們讀成貢獻 0 會把它們**今天有的**深度線整批滅掉(那些線來自深度二階差分,
+//      與資訊緩衝無關)⇒ 不是逐位元中性。中心 cls == NONE ⇒ 貢獻 1。
+//   ② **沒有資訊的鄰居 MUST 不投票**:一顆飄過去的粒子(cls NONE、深度比背景近)會以
+//      floor(0) 把它後面所有的線關掉,症狀是「特效經過的地方線會閃掉」。
+//   ③ **最近面覆寫是 `ceil`/`floor` 硬決定,MUST NOT 換成 `mix`/`smoothstep`** —— 那會在
+//      每一個與否決面相鄰的物件外圈長出半強度光暈,而那正是這個通道要消掉的東西。
+// ⚠ 舊的哨兵門檻 `> 0.25` 在新編碼下**恆不成立**(`.a` 上限 = (3×16+15)/255 = 0.247)⇒
+//   折邊勾線整個變 no-op,而使用者看到的是「開了那顆開關沒反應」、console 一個字都沒有。
 const INK_MRT = {
   NRM0: 0.05,        // 法線折邊起畫(相鄰兩格視空間法線 xy 的中央差分長度)
   NRM1: 0.42,        // 全強度。實測:同一塊平板 < 0.02、90° 折邊 ≈ 1.0
   ID: 0.55,          // id 不同(不同材質相接)給的強度 —— 比折邊輕,它只是「不同東西」
+  // ---- 內部折邊的抑制(2026-08-16;S8)----
+  // 五格**同一個表面群組**時把法線折邊那一項的門檻抬高 ⇒ ico 碎面 / 圓柱小面 / 高度場
+  // 網格線退場,而節理 / 崖階 / 棧道(它們是**另一個**群組)照樣出線。
+  // **深度那一項刻意不抬**:深度跳變 = 前面有東西擋住後面 = 剪影的定義,不管兩邊是不是
+  // 同一個表面;順手抬了就是兩顆重疊的石頭糊成一坨。
+  SELF_F: 2.2,       // MUST > 1(= 1 的話整段是恆等式,等於沒做)
+  GRAZE_K: 2.0,      // 掠射抑制:門檻 × (1 + K·(1 − n.z))。與深度那一項的 INK.K_S 語意相同
+                     // 但**單位不同、值不可共用**。MUST > 0
 };
 // ---- 勾線參數 ----
 const INK = {
@@ -83,9 +105,19 @@ const INK = {
   EDGE1: 0.36,       // 全強度
   CONCAVE_F: 0.42,   // 凹邊強度倍率(手繪內角線比外輪廓輕)
   DARK: 0.14,        // 墨色(與底色相混的目標值,不是純黑)
-  FADE0: 0.55,       // 開始淡出的深度(相機 far 的比例)
+  // ---- 遠處淡出的兩個端點(2026-08-16 起是**形狀比**,錨換成霧;序 8 ④-3)----
+  // 舊制錨在 `camera.far`(= 地圖邊長 × 2)。那與 `data.js DOF` 檔頭那句「錨也 MUST NOT 取
+  // 相機 far 平面:那隨隊制變」是同一條規則,而勾線淡出是**唯一還沒照做的**那一個。
+  // 實測(camera.far = span × 2 ⇒ 舊制淡出帶恆為 [1.10, 1.90] × span):
+  //   clear 1.9 / cloudy 1.6 / rain 1.0 / snow 1.1 / fog 0.35 —— 霧的遠端只有 `clear` 對得上
+  //   (1.90 ≡ 0.95 × 2,這就是這兩個常數當初是在晴天定場照上調出來的證據);
+  //   rain / snow / fog **連淡出的起點都排在霧飽和之後** ⇒ 線整段畫在已經全白的霧色上,
+  //   那正是「背景在中距離變成線框」。
+  FADE0: 0.55,       // 淡出起點 / 終點的**比**(舊制的分母是 camera.far,新制是 fadeEnd)
   FADE1: 0.95,       // 完全不畫線
+  FADE_F: 0,         // = FADE0 / FADE1(推導,見下一行;MUST NOT 手寫 0.578…)
 };
+INK.FADE_F = INK.FADE0 / INK.FADE1;
 // ---- 調色(split-tone + 陰影抬升)----
 // 賽璐璐的陰影 MUST 是**有顏色的**,不是壓黑的。`uLift` 把最暗的部分抬離 0,
 // split-tone 讓暗部偏冷、亮部偏暖 —— 這與 toon.js 的 `CEL_COOL` 是同一個需求的兩個尺度
@@ -236,6 +268,7 @@ export class Pipeline {
     this.enabled = {
       ink: opts.ink !== false, dof: opts.dof !== false,
       grade: opts.grade !== false, fxaa: opts.fxaa !== false,
+      wipe: opts.wipe !== false,
     };
     // 半浮點 RT 在 tile GPU 上是**頻寬**成本(與 game.js 關 MSAA 同一個瓶頸)⇒ 低功耗走 8bit。
     // 8bit 線性緩衝在暗部會有輕微色帶,但那遠比掉幀好。
@@ -252,6 +285,7 @@ export class Pipeline {
     // 打開(墨線量 2.2 倍),而使用者只動了調色那一欄。
     this._mrt = this._wantInfo();
     this._inkMrt = this._mrt && visualPref('inkMrt') === 'on';
+    this._inkGrp = this._mrt && visualPref('inkGroup') === 'on';
     this.rtScene = this._mkRT(true);
     this.rtA = this._mkRT(false);
     this.rtB = this._mkRT(false);
@@ -262,7 +296,16 @@ export class Pipeline {
     this.dofQuad = new FullScreenQuad(this._dofMaterial(opts.lowPower ? Math.max(2, DOF.TAPS >> 1) : DOF.TAPS));
     this.gradeQuad = new FullScreenQuad(this._gradeMaterial());
     this.fxaaQuad = new FullScreenQuad(this._fxaaMaterial());
-    this._quads = { ink: this.inkQuad, dof: this.dofQuad, grade: this.gradeQuad, fxaa: this.fxaaQuad };
+    this.wipeQuad = new FullScreenQuad(this._wipeMaterial());
+    this._quads = {
+      ink: this.inkQuad, dof: this.dofQuad, grade: this.gradeQuad,
+      wipe: this.wipeQuad, fxaa: this.fxaaQuad,
+    };
+    // 斜向轉場(序 8 ④-1)。同 `_dofRange` 的寧缺勿錯:沒有轉場在跑就**整個 pass 退出鏈**。
+    this._wipeKnob = 0;    // = visualPref('wipe');0 ⇒ playWipe 同步走回呼、幕從不出現
+    this._wipeA = 0;       // 這一幀有沒有東西要畫(閘門形狀逐字鏡射 dof 那一列)
+    this._wipe = null;     // { mode, t, onCut } —— 由 render() 逐幀推進,**MUST NOT 用 setTimeout**
+    this._wipeT0 = null;   // 自己的時鐘(render() 沒有 dt);背景分頁的長 dt MUST 夾住
     // 景深的兩個轉折點由呼叫端餵(`setDof`)。**沒餵過就不掛這一 pass** —— 猜一個距離的話
     // 就是「某個消費端的遠景莫名其妙糊掉」,而預設不生效才是寧缺勿錯(原則 6)。
     this._dofRange = null;
@@ -294,6 +337,9 @@ export class Pipeline {
       this._lutA = visualPref('lut');
       this._pushLutA();
       this._syncLutSrc();
+      // 轉場:拉桿 0 ⇒ `playWipe` 早退並**同步**走回呼 ⇒ 連時序都逐位元同舊制
+      this._wipeKnob = visualPref('wipe');
+      if (this._wipeKnob <= 0) { this._wipe = null; this.setWipe(0, 0); }
       this._syncMrt();
     };
     this._syncPrefs();
@@ -313,6 +359,17 @@ export class Pipeline {
     const rt = depth && this._mrt
       ? new THREE.WebGLMultipleRenderTargets(w, h, 2, opt)
       : new THREE.WebGLRenderTarget(w, h, opt);
+    // 附件 1 帶的是**打包過的整數**(類別索引 × 16 + 貢獻階),線性內插會把相鄰的 q 混成
+    // 一個不存在的類別。今天沒事只因 `INK.THICK = 1.0` 讓取樣偏移恰好落在 texel 中心 ——
+    // 一旦有人動 THICK 就壞,而那表現成「某些表面的線莫名其妙全沒了」。
+    // ⚠ 守衛 MUST 是 `Array.isArray`:退場路徑(WebGL1 / 旋鈕全關)上 `rt.texture` 是**單一
+    //   Texture**,`rt.texture[1]` 是 undefined ⇒ 直接 TypeError 把**預設路徑**的整條管線
+    //   在建構子炸掉。r160 的 `WebGLMultipleRenderTargets.setSize` 只改 image.width/height
+    //   ⇒ 濾波設定在 resize 之後仍在;`_syncMrt` 重建也走同一支 ⇒ 不必第二處。
+    if (Array.isArray(rt.texture)) {
+      rt.texture[1].minFilter = THREE.NearestFilter;
+      rt.texture[1].magFilter = THREE.NearestFilter;
+    }
     if (depth) {
       rt.depthTexture = new THREE.DepthTexture(w, h);
       rt.depthTexture.type = THREE.UnsignedIntType;
@@ -325,7 +382,8 @@ export class Pipeline {
    * 的來源(來源 = none 時整條 LUT 不生效 ⇒ 也不必為它多配一張附件)。
    */
   _wantInfo() {
-    return this._mrtCap && (visualPref('inkMrt') === 'on' || visualPref('lutSrc') !== 'none');
+    return this._mrtCap && (visualPref('inkMrt') === 'on' || visualPref('lutSrc') !== 'none'
+      || visualPref('inkGroup') === 'on');
   }
 
   /**
@@ -336,7 +394,10 @@ export class Pipeline {
   _syncMrt() {
     const want = this._wantInfo();
     const wantInk = want && visualPref('inkMrt') === 'on';
-    if (want === this._mrt && wantInk === this._inkMrt) return;
+    // 群組早退是**第三個消費端**,MUST NOT 與 `_inkMrt` 合成一個旗標(同 LUT 那一條:
+    // 合成 = 開群組剪影順手把折邊勾線也打開,墨線量 2.2 倍而使用者只動了另一欄)。
+    const wantGrp = want && visualPref('inkGroup') === 'on';
+    if (want === this._mrt && wantInk === this._inkMrt && wantGrp === this._inkGrp) return;
     if (want !== this._mrt) {
       this._mrt = want;
       this.rtScene.depthTexture?.dispose();
@@ -351,6 +412,7 @@ export class Pipeline {
       this.setLut(this._lutTex || null, this._lutN || LUT.SIZE);
     }
     this._inkMrt = wantInk;
+    this._inkGrp = wantGrp;
     this.inkQuad.material.dispose();           // 著色器把 mrt 編進去了,MUST 重建
     this.inkQuad.material = this._inkMaterial();
     this.inkQuad.material.uniforms.uInk.value = visualPref('ink');
@@ -484,20 +546,51 @@ export class Pipeline {
     }
   }
 
+  /**
+   * 勾線遠處淡出的兩個端點(公尺;序 8 ④-3)。**推導只有這一份。**
+   *
+   * 錨 = `scene.fog`(那正是 `setAirFog` 的 docstring 已經要求「與 `scene.fog` 逐位元相同」
+   * 的同一個物件 ⇒ 不開第二個寫入點),而不是 `camera.far`(= 地圖邊長 × 2,隨隊制變)。
+   *
+   * **地板 `combatReachM() / FADE_F`**:與 `data.js DOF` 檔頭那條「打得到的東西恆為全清晰」
+   * 逐條對稱 —— 它讓「打得到的東西恆有線」也變成結構保證。沒有地板的話迷你地圖 + 霧天
+   * (span 480 × 0.35 = 168m)會讓 `fadeStart` 落在交戰距離 304m 裡面,甚至 `fade0 > fade1`
+   * (smoothstep 端點反轉)。
+   *
+   * `scene.fog` 缺席(樣品 / `shot_veg` 那類無霧場景)MUST **退回舊式**(原則 6)——
+   * 直接讀 `fog.far` 會拿到 undefined ⇒ `smoothstep(NaN, NaN, d)` ⇒ **整片沒有線**,
+   * 而每一條離線斷言都會過(它們讀的是原文不是執行結果)。
+   */
+  _inkFadeM() {
+    const f = this.scene?.fog;
+    const end = (f && f.far > 0)
+      ? Math.max(f.far, combatReachM() / INK.FADE_F)
+      : this.camera.far * INK.FADE1;
+    return [end * INK.FADE_F, end];
+  }
+
   _inkMaterial() {
     const mrt = this._inkMrt;
+    const grp = this._inkGrp;
+    // **配不配資訊緩衝 vs 誰在用它是兩件事**(同 _wantInfo 那一條):折邊勾線與群組
+    // 早退是兩個獨立的消費端,任一個開著就要取樣 tInfo,但只有折邊那一個會加墨線。
+    const useInfo = mrt || grp;
     return new THREE.ShaderMaterial({
       uniforms: {
         tColor: { value: null }, tDepth: { value: null }, tInfo: { value: null },
         uTexel: { value: new THREE.Vector2() },
         uNear: { value: 0.5 }, uFar: { value: 1000 }, uInk: { value: 1 },
+        // 遠處淡出的兩個端點(公尺)。由 `_inkFadeM()` 每幀餵入 —— **MUST NOT** 在著色器裡
+        // 拿 `uFar × 比例` 算(那就是錨回相機 far 平面,見 INK.FADE0 旁邊那一段)。
+        uFade0: { value: 1e9 }, uFade1: { value: 2e9 },
       },
       vertexShader: QUAD_VS,
       fragmentShader: `
         uniform sampler2D tColor; uniform sampler2D tDepth;
         uniform vec2 uTexel; uniform float uNear; uniform float uFar; uniform float uInk;
+        uniform float uFade0; uniform float uFade1;
         varying vec2 vUv;
-        ${mrt ? 'uniform sampler2D tInfo;' : ''}
+        ${useInfo ? `uniform sampler2D tInfo;\n${INK_UNPACK_GLSL}` : ''}
         float lin( vec2 uv ) {                     // 非線性深度 → 視線距離(公尺)
           float z = texture2D( tDepth, uv ).x * 2.0 - 1.0;
           return ( 2.0 * uNear * uFar ) / ( uFar + uNear - z * ( uFar - uNear ) );
@@ -527,7 +620,7 @@ export class Pipeline {
           // 而建物輪廓在這個 stencil 下大多算凹邊(近景像素旁邊是更遠的背景)⇒ 整批被吃掉:
           // 2026-08-03 定場照的除錯輸出裡,建物邊的 e 明明有 2 以上,ink 卻是 0。
           float ae = abs( e );
-          ${mrt ? `
+          ${useInfo ? `
           // ---- 法線折邊 + 面 id(勾線資訊緩衝;見檔頭 INK_MRT)----
           // 五次取樣**排在早退之前**:這一項存在的理由就是「深度看不見的那些邊」,
           // 拿深度來決定要不要看它等於把它關掉。這是開關打開時要付的錢。
@@ -535,20 +628,54 @@ export class Pipeline {
           vec4 il = texture2D( tInfo, vUv - vec2( t.x, 0.0 ) ), ir = texture2D( tInfo, vUv + vec2( t.x, 0.0 ) );
           vec4 iu = texture2D( tInfo, vUv + vec2( 0.0, t.y ) ), ib = texture2D( tInfo, vUv - vec2( 0.0, t.y ) );
           float mrtEdge = 0.0;
+          // .a 是打包過的 ⇒ **一律先解碼**(舊的 > 0.25 在新編碼下恆不成立,見檔頭第五條)
+          float c0 = inkCls( i0.a ), cl = inkCls( il.a ), cr = inkCls( ir.a );
+          float cu = inkCls( iu.a ), cb = inkCls( ib.a );
+          // 中心貢獻:**cls == NONE ⇒ 1(沒有意見)不是 0**(檔頭第五條 ①)
+          float ctr = ( c0 > 0.5 ) ? inkCtr( i0.a ) : 1.0;
           // 五格都要有資訊(哨兵)。缺一格就當這裡沒有第二訊號 —— 交界那一圈交給深度那一份,
           // 而天空/特效/招牌整片都沒有資訊 ⇒ 它們一條新線都不會多出來。
-          // 門檻是 **0.25** 不是 0.5:.a 自 2026-08-13 起是類別碼(NONE 0 / LAND 0.5 /
-          // HARD 1),0.5 是「地貌」不是「沒有資訊」。
-          if ( min( min( i0.a, min( il.a, ir.a ) ), min( iu.a, ib.a ) ) > 0.25 ) {
+          if ( min( min( c0, min( cl, cr ) ), min( cu, cb ) ) > 0.5 ) {
             // 中央差分:與深度那一項用**同一組偏移**,兩種線才會落在同一排像素上
             float nrm = length( vec2( length( il.rg - ir.rg ), length( iu.rg - ib.rg ) ) );
             float idv = max( abs( il.b - ir.b ), abs( iu.b - ib.b ) );
+            // ---- 內部折邊的抑制(S8)----
+            // same = 五格同一個表面群組(**只在哨兵齊全的分支內成立** ⇒ 分支外恆 0,
+            // 天空/特效那一圈的剪影一格不動);nz 由中央格的法線 xy 反解掠射程度。
+            float same = 1.0 - step( 0.004, idv );
+            vec2 n0 = i0.rg * 2.0 - 1.0;
+            float nz = sqrt( max( 0.0, 1.0 - dot( n0, n0 ) ) );
+            float gz = 1.0 + ${INK_MRT.GRAZE_K.toFixed(2)} * ( 1.0 - nz );${mrt ? `
+            // 門檻 MUST 經 mix(…, same) 切換而不是常數;**深度那一項刻意不抬**(見 INK_MRT)。
+            float t0 = mix( ${INK_MRT.NRM0.toFixed(3)}, ${INK_MRT.NRM0.toFixed(3)} * ${INK_MRT.SELF_F.toFixed(2)}, same ) * gz;
+            float t1 = mix( ${INK_MRT.NRM1.toFixed(3)}, ${INK_MRT.NRM1.toFixed(3)} * ${INK_MRT.SELF_F.toFixed(2)}, same ) * gz;
             mrtEdge = max(
-              smoothstep( ${INK_MRT.NRM0.toFixed(3)}, ${INK_MRT.NRM1.toFixed(3)}, nrm ),
-              step( 0.004, idv ) * ${INK_MRT.ID.toFixed(2)} );
+              smoothstep( t0, t1, nrm ),
+              step( 0.004, idv ) * ${INK_MRT.ID.toFixed(2)} );` : ''}${grp ? `
+            // ---- 群組早退(INK_GRP;②-1 與石堆項共用)----
+            // 「五格同號**且至少一格是 GROUP**」⇒ 整格不畫:整株樹 / 整顆巨岩讀成一個剪影。
+            // 「至少一格」而不是「最近那一格」是刻意的 —— 樹幹(HARD)與樹冠(GROUP)共用
+            // 同一株的面號 ⇒ 幹內部的折邊留著、幹與冠的交界不出線,而且省掉 5 路 argmin。
+            float grpMax = max( max( c0, max( cl, cr ) ), max( cu, cb ) );
+            // **五格都不是 LAND** 這道閘是為了地貌分區子帶(序 4 ①-3)先放的:
+            // 分區子帶與群組號共用整數格那把梳子,萬一撞號,早退會讓整株樹對著那一種地面
+            // **整個剪影消失**(不是既有那條「撞號 = 少一條線」)。
+            // ⚠ 今天它是**恆真**的:地貌恆 LAND_SURF_ID = 0,而群組號 k ≥ 2 ⇒ 兩者的 idv
+            //   恆 ≥ 0.03 > 0.004 ⇒ same 本來就是 0,這一格永遠走不到 ⇒ **逐位元中性**。
+            float grpMin = min( min( c0, min( cl, cr ) ), min( cu, cb ) );
+            if ( same > 0.5 && grpMax > 2.5 && grpMin > 1.5 ) { gl_FragColor = base; return; }` : ``}
+            // ---- 最近面覆寫(硬決定)----
+            // 逐鄰居投票:**沒有資訊的鄰居不投票**(檔頭第五條 ②);ceil / floor
+            // MUST NOT 換成 mix / smoothstep(檔頭第五條 ③)。深度就用既有的 l/r/u/b。
+            float minD = d, minC = ctr;
+            if ( cl > 0.5 && l < minD ) { minD = l; minC = inkCtr( il.a ); }
+            if ( cr > 0.5 && r < minD ) { minD = r; minC = inkCtr( ir.a ); }
+            if ( cu > 0.5 && u < minD ) { minD = u; minC = inkCtr( iu.a ); }
+            if ( cb > 0.5 && b < minD ) { minD = b; minC = inkCtr( ib.a ); }
+            if ( minD < d ) { ctr = ( minC > ctr ) ? max( ctr, ceil( minC ) ) : min( ctr, floor( minC ) ); }
           }
-          // 兩個訊號都跨不過門檻才早退
-          if ( ae <= ${INK.EDGE0.toFixed(3)} && mrtEdge <= 0.0 ) { gl_FragColor = base; return; }` : `
+          // 兩個訊號都跨不過門檻才早退(貢獻歸零的那一格也一樣不必再算下去)
+          if ( ( ae <= ${INK.EDGE0.toFixed(3)} && mrtEdge <= 0.0 ) || ctr <= 0.0 ) { gl_FragColor = base; return; }` : `
           // 早退:軟性倍率 ∈ (0,1] ⇒ ae × soft ≤ ae,硬性門檻都跨不過的一定也跨不過。
           // 絕大多數像素在這裡離開(邊緣偵測本來就只有少數像素有值)⇒ 下面那四個 alpha
           // 取樣只發生在「真的要畫線」的像素上,平均成本接近零。
@@ -568,9 +695,11 @@ export class Pipeline {
           // 建物邊界推成兩倍濃的實線。它一樣吃軟性倍率(葉叢的折邊也該是細線)。
           // 凹凸權重刻意**不套**在它身上:法線差分沒有凹凸的方向資訊,乘上去只是把折邊
           // 整批打 ${INK.CONCAVE_F.toFixed(2)} 折。
-          ink = max( ink, mrtEdge * soft );` : ''}
-          // ② 遠處淡出:遠景線密到變雜訊,而且會蓋掉霧
-          ink *= 1.0 - smoothstep( uFar * ${INK.FADE0.toFixed(2)}, uFar * ${INK.FADE1.toFixed(2)}, d );
+          ink = max( ink, mrtEdge * soft );` : ''}${useInfo ? `
+          // 貢獻(§0-c 的低半位元組):1 = 舊制(inkQuant(1) 嚴格 === 1)⇒ 這一行是恆等式。
+          ink *= ctr;` : ''}
+          // ② 遠處淡出:遠景線密到變雜訊,而且會蓋掉霧 ⇒ **淡出帶 ≡ 霧帶**(序 8 ④-3)
+          ink *= 1.0 - smoothstep( uFade0, uFade1, d );
           // 強度拉桿:夾在 [0,1] —— 拉桿最大到 150% 是為了讓「線更濃」有得調,
           // 但覆蓋率本身是機率意義的權重,超過 1 只會把半透明的線推成實線,不會更黑。
           ink = clamp( ink * uInk, 0.0, 1.0 );
@@ -647,7 +776,7 @@ export class Pipeline {
         uniform vec3 uAirNear; uniform vec3 uAirFar;
         uniform float uFogN; uniform float uFogF; uniform float uAirA;
         uniform sampler2D tLut; uniform float uLutA; uniform vec2 uLutSize;   // x = 邊長, y = 1/邊長
-        ${info ? 'uniform sampler2D tInfo;' : ''}
+        ${info ? `uniform sampler2D tInfo;\n${INK_UNPACK_GLSL}` : ''}
         varying vec2 vUv;
         ${SRGB_GLSL}
         vec3 toLinear( vec3 c ) {
@@ -719,15 +848,113 @@ export class Pipeline {
           if ( uLutA > 0.0 ) {
             vec3 lc = lutApply( pre );
             ${info ? `
-            // 地貌(類別碼 0.5;NONE 0 與 HARD 1 都在帶外)⇒ 換成不吃色度的那一支。
-            // **帶而不是等號**:8bit RT 上 0.5 存成 0.50196。
-            float cls = texture2D( tInfo, vUv ).a;
-            if ( cls > 0.25 && cls < 0.75 ) lc = lutApplyLand( pre );` : ''}
+            // 地貌(類別索引 1;NONE 0 / HARD 2 / GROUP 3 都在帶外)⇒ 換成不吃色度的那一支。
+            // **帶而不是等號**:解出來的是浮點,等號判定會整片失效。
+            // ⚠ 舊帶 0.25~0.75 讀的是**打包前**的 .a —— 直接留著的話 LAND 落在
+            //   16/255~31/255 = 0.063~0.122,分支恆不成立 ⇒ 2026-08-13 修掉的
+            //   「拼圖接縫被 LUT 顯影」原樣回來,而且沒有任何錯誤訊息。
+            float cls = inkCls( texture2D( tInfo, vUv ).a );
+            if ( cls > 0.5 && cls < 1.5 ) lc = lutApplyLand( pre );` : ''}
             c = mix( c, lc, uLutA );
           }
           gl_FragColor = vec4( c, 1.0 );
         }`,
     });
+  }
+
+  /**
+   * 斜向轉場(序 8 ④-1)。**兩支獨立的 0→1 uniform** 而不是一支:
+   * 幕的覆蓋區間是 `[w2, w1]` —— 遮幕推前緣、揭幕推後緣,同一支著色器兩種用法,
+   * 而「幕走到一半停住」(過場載入)在這個形狀上是免費的。
+   *
+   * flash 是 **vibrance / brightnessContrast**,不是白色淡入:白幕會把整格畫面洗掉,
+   * 而動畫的切點是「顏色一下子跳出來」。對比樞軸 MUST 是 `WIPE.PIVOT`(線性中灰,
+   * 與 GRADE 的 `smoothstep(0.18, 0.72, l)` 同一把尺)。
+   */
+  _wipeMaterial() {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        tColor: { value: null },
+        uW1: { value: 0 }, uW2: { value: 0 }, uFlash: { value: 0 }, uWipeA: { value: 0 },
+        uWipeC: { value: new THREE.Color(0.06, 0.07, 0.09) },
+      },
+      vertexShader: QUAD_VS,
+      fragmentShader: `
+        uniform sampler2D tColor;
+        uniform float uW1; uniform float uW2; uniform float uFlash; uniform float uWipeA;
+        uniform vec3 uWipeC;
+        varying vec2 vUv;
+        void main() {
+          vec3 c = texture2D( tColor, vUv ).rgb;
+          // 閃光:先做(它是鏡頭上的事),幕再蓋上去
+          if ( uFlash > 0.0 ) {
+            float f = uFlash * uWipeA;
+            float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+            c = mix( vec3( l ), c, 1.0 + ${WIPE.FLASH_VIB.toFixed(3)} * f );
+            c = ( c - ${WIPE.PIVOT.toFixed(3)} ) * ( 1.0 + ${WIPE.FLASH_CON.toFixed(3)} * f )
+                + ${WIPE.PIVOT.toFixed(3)} + ${WIPE.FLASH_BRI.toFixed(3)} * f;
+            c = max( c, 0.0 );
+          }
+          // 幕:沿 (x + y·INC) 斜向掃過去。**兩個端點各外推一個羽化寬** ⇒ w=0 真的是
+          // 「一格都沒蓋」、w=1 真的是「整片蓋滿」(不外推的話遠角只蓋到一半,而
+          // data.js wipeAt 那一端的 p ≥ 1 保證就白給了)。
+          float s = ( vUv.x + vUv.y * ${WIPE.INC.toFixed(3)} ) / ( 1.0 + ${WIPE.INC.toFixed(3)} );
+          float sf = ${WIPE.SOFT.toFixed(4)};
+          float e1 = uW1 * ( 1.0 + 2.0 * sf ) - sf;
+          float e2 = uW2 * ( 1.0 + 2.0 * sf ) - sf;
+          float a = smoothstep( e1, e1 - sf, s ) * smoothstep( e2, e2 + sf, s ) * uWipeA;
+          gl_FragColor = vec4( mix( c, uWipeC, clamp( a, 0.0, 1.0 ) ), 1.0 );
+        }`,
+    });
+  }
+
+  /**
+   * 幕的**唯一寫入點**。`a`(前緣)/ `b`(後緣)∈ [0,1],覆蓋區間 = [b, a]。
+   * @param opts { flash?, color? }
+   */
+  setWipe(a, b, opts = null) {
+    const u = this.wipeQuad.material.uniforms;
+    u.uW1.value = Math.min(1, Math.max(0, a));
+    u.uW2.value = Math.min(1, Math.max(0, b));
+    u.uFlash.value = Math.min(1, Math.max(0, opts?.flash ?? 0));
+    if (opts?.color != null) u.uWipeC.value.set(opts.color);
+    u.uWipeA.value = this._wipeKnob;
+    // 「有東西要畫」= 幕有寬度 或 閃光還在。兩者皆無 ⇒ 整個 pass 退出鏈
+    this._wipeA = (this._wipeKnob > 0 && (u.uW1.value > u.uW2.value || u.uFlash.value > 0))
+      ? this._wipeKnob : 0;
+  }
+
+  /**
+   * 播一段轉場。**回呼由幀迴圈觸發,MUST NOT 用 `setTimeout`** —— 離場 / 重賽會在幕播到
+   * 一半發生,計時器留下來就是下一場冒出上一場的畫面(`dialogue.js` 檔頭紀律②的同一條)。
+   * @param mode  'cover'(遮幕;回呼在**全覆蓋那一刻**觸發 = 切點)/ 'reveal'(揭幕)
+   * @param onCut 切點回呼;**旋鈕關著時當場同步呼叫**並回 false ⇒ 時序逐位元同舊制
+   * @returns 有沒有真的播(false = 旋鈕關著,呼叫端不必自己判)
+   */
+  playWipe(mode, onCut = null, opts = null) {
+    if (!this.enabled.wipe || this._wipeKnob <= 0) { onCut?.(); return false; }
+    this._wipe = { mode, t: 0, onCut, color: opts?.color ?? null };
+    this._wipeT0 = null;
+    const w = wipeAt(mode, 0);
+    this.setWipe(w.w1, w.w2, { flash: w.flash, color: this._wipe.color });
+    return true;
+  }
+
+  /** 逐幀推進(唯一呼叫點 = `render()`;`render()` 沒有 dt ⇒ 自己記時鐘) */
+  _tickWipe() {
+    if (!this._wipe) return;
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    // 背景分頁回來的那一幀 dt 會是幾十秒 ⇒ MUST 夾住(同 game.js 主迴圈的 dt 夾制),
+    // 否則切回分頁看到的是「幕已經播完了」而回呼在同一幀補放
+    const dt = this._wipeT0 == null ? 0 : Math.min(0.1, now - this._wipeT0);
+    this._wipeT0 = now;
+    const w = this._wipe;
+    w.t += dt;
+    const s = wipeAt(w.mode, w.t);
+    this.setWipe(s.w1, s.w2, { flash: s.flash, color: w.color });
+    if (!s.done) return;
+    this._wipe = null;
+    w.onCut?.();
   }
 
   /**
@@ -788,6 +1015,16 @@ export class Pipeline {
     // 退出時輸出**逐位元**同這一批改動之前 —— 一般視角因此完全不付這一 pass 的錢。
     if (this.enabled.dof && this._dofRange && this._dofA * this._dofBlend > 0) chain.push('dof');
     if (this.enabled.grade) chain.push('grade');
+    // 轉場 MUST 排在 **grade 之後、fxaa 之前**(序 8 ④-1)。四條理由缺一不可:
+    //   ①FXAA MUST 留在鏈尾(它兼任線性 → sRGB);
+    //   ②幕的斜邊是硬邊,擺在 FXAA **之前**才有抗鋸齒 —— 擺之後就是一條裸鋸齒對角線,
+    //     而那正是動畫轉場最刺眼的地方;
+    //   ③幕 MUST 蓋在**調過色的**畫面上:擺在 grade 之前 = 幕色被 split-tone / LUT 再調一次,
+    //     美術挑的顏色不是畫出來的顏色;
+    //   ④flash 是鏡頭上的事,與 grade 同層而排在它之後。
+    // 閘門形狀**逐字鏡射 dof 那一列**:0 ⇒ 整個 pass 退出鏈,不是跑一個乘 0 的 pass。
+    this._tickWipe();
+    if (this.enabled.wipe && this._wipeA > 0) chain.push('wipe');
     // 最後一 pass **一定要跑**:它同時負責線性 → sRGB。`?fxaa=0` 只是把邊緣混合關掉
     // (`uAA = 0`),MUST NOT 整個 pass 跳過 —— 跳過的話畫面會整片變暗變濁(少了色彩空間轉換),
     // 而那看起來像「調色把畫面弄壞了」,查半天查不到。
@@ -821,6 +1058,8 @@ export class Pipeline {
         u.uNear.value = this.camera.near;
         u.uFar.value = this.camera.far;
       }
+      // 勾線淡出帶(④-3):與 tDepth 同一段共用接線 —— 天氣 / 隊制一換,霧遠端跟著換
+      if (u.uFade0) { const fade = this._inkFadeM(); u.uFade0.value = fade[0]; u.uFade1.value = fade[1]; }
       r.setRenderTarget(dst);
       quad.render(r);
       src = dst || src;
@@ -828,10 +1067,15 @@ export class Pipeline {
     r.setRenderTarget(null);
   }
 
-  /** A25:3 個 RT + depthTexture + 4 個全螢幕材質,一個都不能漏(拉桿訂閱也要退掉) */
+  /**
+   * A25:3 個 RT + depthTexture + **`_quads` 那張表上的每一支**全螢幕材質,一個都不能漏
+   * (拉桿訂閱也要退掉)。名冊由 `_quads` **推導** —— 手寫的那一份會在加 pass 時靜默過期,
+   * 而漏掉一支的症狀是每開一場漏一支 shader program,`audit_gpu_lifecycle` 照樣全綠。
+   */
   dispose() {
     this._offPrefs?.();   // 不解訂閱 = 已 dispose 的材質被拉桿的 closure 抓著不放
     this._offPrefs = null;
+    this._wipe = null;    // 播到一半就離場:回呼跟著丟掉(它是幀迴圈驅動的,沒有計時器要清)
     for (const rt of [this.rtScene, this.rtA, this.rtB]) {
       rt.depthTexture?.dispose();
       rt.dispose();
@@ -839,7 +1083,7 @@ export class Pipeline {
     // 程序生成/載入進來的 LUT 由本管線持有(A25:一顆 canvas 貼圖也是 GPU 資源)
     this._lutOwned?.dispose();
     this._lutOwned = null;
-    for (const q of [this.inkQuad, this.dofQuad, this.gradeQuad, this.fxaaQuad]) {
+    for (const q of Object.values(this._quads)) {
       q.material.dispose();
       q.dispose();
     }

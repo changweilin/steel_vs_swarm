@@ -14,15 +14,31 @@
 // 讀原文一律走 `audit_src.mjs`(㋑ CRLF 陷阱);純函式一律**執行真品原文**再驗行為,
 // MUST NOT 在本檔重寫一份公式。
 // 用法:node tools/audit_visual_prefs.mjs
-import { readSrc } from './audit_src.mjs';
+import { readSrc, grabMethod } from './audit_src.mjs';
 import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault, onVisualChange }
   from '../public/js/visualPrefs.js';
 import { partId, partJitter, vegPartXform } from '../public/js/xform.js';
 import { makeField, bakeFieldTexture } from '../public/js/field.js';
 import {
   DOF, combatReachM, dofNearM, dofFarM, dofAimBlend, UNITS, HERO_SIZE, CHARACTERS, GAME, MAPGEO,
-  heroWeapon, heroAbility, altRangeMax, RANGE_TOL, hyperMaxArcM,
+  heroWeapon, heroAbility, altRangeMax, RANGE_TOL, hyperMaxArcM, WIPE, wipeAt,
 } from '../public/js/data.js';
+
+/** 反向驗證:LUT 查的變成已經被 split-tone 動過的顏色(疊加而非取代)⇒ Ⅶ MUST 紅字 */
+const BREAK_LUTSTACK = process.argv.includes('--break-lutstack');
+/** 反向驗證:轉場的閘門退成無條件 + 幕的端點不再外推 ⇒ Ⅷ MUST 紅字 */
+const BREAK_WIPE = process.argv.includes('--break-wipe');
+/** 反向驗證:`_wipeCut` 只遮不揭(reveal 那一行刪掉)⇒ Ⅷ-h MUST 紅字 */
+const BREAK_WIPEPAIR = process.argv.includes('--break-wipepair');
+/**
+ * 反向驗證的字面替換(§5.4 ㋑):CRLF 容忍樣式 + **替換無效當場失敗**;
+ * 樣式一律 `/g`(先咬到註解的話 `bare()` 剝掉之後斷言照樣全綠 = 等於沒跑)。
+ */
+function bendSrc(src, re, to, flag) {
+  const out = src.replace(re, to);
+  if (out === src) { console.error(`✗ ${flag}:樣式沒咬到,反向驗證等於沒跑`); process.exit(1); }
+  return out;
+}
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -42,6 +58,7 @@ const dataSrc = readSrc('public', 'js', 'data.js');
 const htmlSrc = readSrc('public', 'index.html');
 const cssSrc = readSrc('public', 'css', 'style.css');
 const helpSrc = readSrc('public', 'js', 'help.js');
+const gameRaw = readSrc('public', 'js', 'game.js');
 /** 逐行剝掉行註解(單一縫計數 MUST NOT 把註解裡提到的名字算進去) */
 const bare = (s) => s.split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
 const count = (s, re) => (bare(s).match(re) || []).length;
@@ -61,6 +78,14 @@ console.log('\nⅠ 旋鈕表(visualPrefs.js)');
   // **卡在「需要美術方向確認」的兩項預設 MUST 是 0** —— 沒動過拉桿的玩家 MUST 看到舊畫面。
   ok(VISUAL_KNOBS.shadowMech.def === 0, '機體陰影偏色預設 0(= 逐位元同舊制,計畫書要求先確認方向)');
   ok(VISUAL_KNOBS.shadowEnv.def === 0, '環境陰影偏色預設 0(同上)');
+  // 賽璐璐學派(§0-b;2026-08-16 使用者定案「改 —— 走 School B」)是**上面那條紀律的
+  // 具名例外**:它不是「需美術方向確認」的旋鈕,而是計畫書 §0 已經裁決過的交付值 ⇒
+  // def 是 'b'。守它的不是「預設要等於某個值」,而是**退路仍在**:
+  //   ① 'a' 仍是合法選項(整套 ramp 查表沒有被刪掉,切回去是改一行 def);
+  //   ② 混場那道硬閘住 `audit_cel_pipeline` Ⅺ⑧(裸 MeshToonMaterial 名冊非空 ⇒ def
+  //      MUST NOT 是 'b'),本檔 MUST NOT 複製第二份 —— 兩份會分家。
+  ok(VISUAL_KNOBS.celSchool.def === 'b' && VISUAL_KNOBS.celSchool.choices.includes('a'),
+    "賽璐璐學派預設 B(§0-b 使用者定案的交付值),且 A 仍是合法選項 = 切回舊制的退路還在");
   ok(VISUAL_KNOBS.ink.def === 1 && VISUAL_KNOBS.weather.def === 1, '已定案的兩項預設 1(= 交付調校值)');
   ok(Object.values(VISUAL_KNOBS).every((d) => d.choices || d.min === 0),
     '每一根拉桿都拉得到 0(= 這一項完全不生效)');
@@ -244,6 +269,18 @@ console.log('\nⅡ 陰影偏色(P1-B)');
   // 共享 uniform:拉桿改值 MUST NOT 重建材質
   ok(/onVisualChange\(syncVisualPrefs\)/.test(toonSrc), 'toon.js 訂閱拉桿');
   ok(!/needsUpdate = true;?\s*\}\s*\nonVisualChange/.test(toonSrc), '拉桿回呼不重建材質(共享 uniform 即可)');
+
+  // ---- 賽璐璐學派(§0-b;2026-08-16)在這一族上的三條 ----
+  // 上面每一條**一格未動** —— 它們守的是仍在服役的 School A 路徑(預設),而學派切換本身的
+  // 原文不變式住 `audit_cel_pipeline` Ⅺ。這裡只補「兩派共用同一份色相」那一半。
+  ok(count(toonSrc, /SHADOW_HUE\s*=/g) === 1 && count(toonSrc, /_rampTint = \{/g) === 1,
+    '**兩派共用同一份 SHADOW_HUE 與同一組 `_rampTint` 兩軌**(硬切的暗側色 = 亮側 × 同一顆 uCelRampTint)—— 為 School B 另建第二份就是「兩派的陰影是兩種顏色」');
+  const hueMin = Number(/HUE_MIN_A: ([\d.]+)/.exec(toonSrc)?.[1]);
+  ok(Number.isFinite(hueMin) && hueMin > 0 && hueMin <= maxA,
+    `School B 的**色相下限** HUE_MIN_A = ${hueMin} ∈ (0, ${maxA}] —— 兩根拉桿的 def 是 0,照搬到硬切路徑就是灰色陰影,而色相位移正是那一換學派的全部收益(下限多少是美術方向,待使用者裁決)`);
+  ok(/const tintA = \(k\) => \(_school === 'b' \? Math\.max\(visualPref\(k\), CEL_CUT\.HUE_MIN_A\) : visualPref\(k\)\);/.test(bare(toonSrc))
+    && count(bare(toonSrc), /shadowTintRGB\(tintA\('/g) === 2,
+    '下限只夾在 School B 那一側,而且**兩軌同吃一支** `tintA` ⇒ School A 下 `tintA(k) ≡ visualPref(k)` = 逐位元同舊制');
 }
 
 // ============ Ⅲ 風化場(P2-A) ============
@@ -555,9 +592,15 @@ console.log('\nⅥ 景深模糊(data.js DOF + postfx 的 pass)');
     '取樣點是黃金角螺旋且半徑開根號(面積均勻;單一圓環會糊成甜甜圈邊)');
   ok(/_dofA = DOF\.MAX_R \* visualPref\('dof'\)/.test(bp) && /uDofA \/ uTexel\.y/.test(bp),
     '最大半徑是螢幕高度的比例(與解析度和 RES_GOV 降階無關),不是寫死的像素');
-  ok(count(bp, /new FullScreenQuad\(/g) === 4
-    && /\[this\.inkQuad, this\.dofQuad, this\.gradeQuad, this\.fxaaQuad\]/.test(bp),
-    'A25:四個全螢幕材質都在 dispose 的名冊裡');
+  // A25:dispose 的名冊 MUST **由 `_quads` 推導**(2026-08-16 加 wipe 那一 pass 時改的)——
+  // 手寫的那一份會在加 pass 時靜默過期,而漏掉一支的症狀是每開一場漏一支 shader program,
+  // `audit_gpu_lifecycle` ⑦ 照樣全綠(它量的是「有沒有這一行」不是「數量對不對」)。
+  {
+    const nq = count(bp, /new FullScreenQuad\(/g);
+    const nk = (/this\._quads = \{([\s\S]*?)\};/.exec(bp)?.[1] || '').split(',').filter((s) => s.includes(':')).length;
+    ok(nq === nk && /for \(const q of Object\.values\(this\._quads\)\)/.test(bp),
+      `A25:全螢幕材質 ${nq} 支、\`_quads\` ${nk} 格,而 dispose 的名冊由 _quads 推導(手寫 = 加 pass 時靜默過期)`);
+  }
 
   // ---- Ⅵ-g 樣品的景深帶 MUST 夾住樣品場景 ----
   // 沿用戰場那一組(576~864m)的話,24m 深的樣品每一個像素都在焦內 = 拉桿拉了看不出差異
@@ -581,5 +624,152 @@ console.log('\nⅥ 景深模糊(data.js DOF + postfx 的 pass)');
   }
 }
 
+// ============ Ⅶ 3D LUT:**取代** split-tone 而不是疊加(序 4 ①-5)============
+// 這一段之前**一條斷言都沒有** —— 現制是對的,但「LUT 查的是調色前的顏色」這件事只寫在
+// 註解裡。疊起來的症狀是「美術在外部工具裡看到的圖」與「畫出來的圖」不一樣,而畫面上
+// 只表現成「這張 LUT 好像太重了」,沒有任何錯誤訊息。
+console.log('\nⅦ 3D LUT:取代 split-tone 而不是疊加');
+{
+  let P = postSrc;
+  if (BREAK_LUTSTACK) {
+    // 壞版:LUT 查的變成**已經被 split-tone 動過**的顏色 = 疊加而不是取代
+    P = bendSrc(P, /vec3 lc = lutApply\( pre \);/g, 'vec3 lc = lutApply( c );', '--break-lutstack');
+  }
+  const G = /_gradeMaterial\(\) \{[\s\S]*?\n  \}/.exec(P)[0];
+  const main = G.slice(G.indexOf('void main() {'));
+  ok(main.indexOf('vec3 pre = c;') >= 0 && main.indexOf('vec3 pre = c;') < main.indexOf('c *= mix( sh, hi,'),
+    '`vec3 pre = c;` 排在 split-tone **之前**(排後面的話 pre 已經被調過色 = 疊加)');
+  ok(/vec3 lc = lutApply\( pre \);/.test(main) && !/lutApply\( c \)/.test(main),
+    'LUT MUST 查**調色前**的顏色(`lutApply( pre )`);`void main()` 內 MUST NOT 出現 `lutApply( c )`');
+  ok(/c = mix\( c, lc, uLutA \);/.test(main),
+    '合成是**交叉淡入**(`mix(c, lc, uLutA)`)—— 兩者是同一件事的兩種寫法,中間值只能是淡入');
+  ok(count(main, /uLutA/g) === 2,
+    `\`uLutA\` 在 main 內恰兩處(分支閘 + 交叉淡入;實測 ${count(main, /uLutA/g)})—— 第三處 = 有人拿它去乘/加`);
+  ok(/if \( uLutA > 0\.0 \) \{[\s\S]*?c = mix\( c, lc, uLutA \);/.test(main),
+    '整段收在 `if ( uLutA > 0.0 )` 之下(0 ⇒ 連取樣都不做 ⇒ 逐位元同舊制)');
+  ok(count(P, /_pushLutA\(\) \{/g) === 1,
+    '`_pushLutA` 是 `uLutA` 的**唯一寫入點**(第二處 = 拉桿與來源各寫各的)');
+  ok(VISUAL_KNOBS.lut.def === 1 && VISUAL_KNOBS.lutSrc.def === 'none',
+    '出貨預設 `lut = 1` / `lutSrc = none` ⇒ 管線根本沒有 LUT ⇒ **逐位元同舊制**(拉桿預設 0 的話使用者選了來源畫面不會動)');
+  // split-tone 的四個常數 MUST 由 `${g.…}` 插值:手打數字 = 第二份調色表
+  ok(!/vec3 sh = vec3\( 0\.86/.test(P) && /vec3 sh = vec3\( \$\{g\.SHADOW/.test(P)
+    && /vec3 hi = vec3\( \$\{g\.HIGH/.test(P) && /\$\{g\.SAT/.test(P) && /\$\{g\.LIFT/.test(P),
+    'shader 的四個 split-tone 常數全部由 `${g.…}` 插值(原文 MUST NOT 手打 0.86 / 0.94 / 1.10)');
+  // **兩份數學 MUST 逐位元相同**:檔頭早就宣稱它們相同、卻一條斷言都沒有。
+  // 分家的症狀是「切到內建(程序生成)之後畫面微妙地不一樣」,而那正是它存在的理由被否定。
+  const eLut = /const t = smooth\(([\d.]+), ([\d.]+), l\);/.exec(P);
+  const eSh = /smoothstep\( ([\d.]+), ([\d.]+), l \)/.exec(main);
+  ok(!!eLut && !!eSh && eLut[1] === eSh[1] && eLut[2] === eSh[2],
+    `makeGradeLut 的 smooth(${eLut?.[1]}, ${eLut?.[2]}) 與 shader 的 smoothstep(${eSh?.[1]}, ${eSh?.[2]}) **兩對邊界逐位元相同**`);
+  ok(/c\[i\] \*= GRADE\.SHADOW\[i\] \+ \(GRADE\.HIGH\[i\] - GRADE\.SHADOW\[i\]\) \* t;/.test(P)
+    && /c\[i\] = l \+ \(c\[i\] - l\) \* GRADE\.SAT;/.test(P)
+    && /c\[i\] = c\[i\] \* \(1 - GRADE\.LIFT\) \+ GRADE\.LIFT;/.test(P),
+    'makeGradeLut 的三步(split-tone / 彩度 / 抬升)全部讀 `GRADE` 同一張表,順序與 shader 相同');
+}
+
+// ============ Ⅷ 斜向轉場(序 8 ④-1)============
+// 結構逐條鏡射 Ⅵ(它是同一種東西:旋鈕 + 一支加成本的 pass)。
+console.log('\nⅧ 斜向轉場(data.js WIPE + postfx 的 pass)');
+{
+  let P = postSrc;
+  if (BREAK_WIPE) {
+    // 壞版兩處:①閘門退成無條件(= 跑一個乘 0 的 pass)②幕的兩個端點不再外推羽化寬
+    //(= p ≥ 1 時遠角只蓋到一半,「全螢幕覆蓋」那條保證白給)
+    P = bendSrc(P, /if \(this\.enabled\.wipe && this\._wipeA > 0\) chain\.push\('wipe'\);/g,
+      "chain.push('wipe');", '--break-wipe(閘門)');
+    P = bendSrc(P, /float e1 = uW1 \* \( 1\.0 \+ 2\.0 \* sf \) - sf;/g, 'float e1 = uW1;', '--break-wipe(端點)');
+  }
+  // Ⅷ-a 時間軸的兩端是**定義不是校準**(直接執行 data.js 的真品純函式)
+  ok(WIPE.COVER_S > 0 && WIPE.REVEAL_S > 0 && WIPE.FLASH_S >= 0
+    && WIPE.FLASH_S <= Math.min(WIPE.COVER_S, WIPE.REVEAL_S),
+    `WIPE 參數齊全(遮 ${WIPE.COVER_S}s / 揭 ${WIPE.REVEAL_S}s / 閃 ${WIPE.FLASH_S}s;閃光 MUST ≤ 兩者較短的那一個)`);
+  const c0 = wipeAt('cover', 0), c1 = wipeAt('cover', WIPE.COVER_S), cX = wipeAt('cover', 1e3);
+  const r0 = wipeAt('reveal', 0), r1 = wipeAt('reveal', WIPE.REVEAL_S);
+  ok(c0.w1 === 0 && c0.w2 === 0 && !c0.done, `遮幕 t = 0 ⇒ 幕不存在(w1 ${c0.w1} / w2 ${c0.w2})`);
+  ok(c1.w1 === 1 && c1.w2 === 0 && c1.done && cX.w1 === 1,
+    '遮幕 t ≥ dur ⇒ **[0,1] 全覆蓋**且 done(兩端是定義:超時再久也只是停在全覆蓋)');
+  ok(r0.w1 === 1 && r0.w2 === 0 && r1.w1 === 1 && r1.w2 === 1 && r1.done,
+    '揭幕從全覆蓋退到空集合(前緣停在 1、後緣掃過去)');
+  ok(c0.flash === 0 && c1.flash === 1 && r0.flash === 1 && r1.flash === 0,
+    '閃光的重音落在**切點**:遮幕收尾 0 → 1、揭幕起手 1 → 0(兩者刻意不對稱 —— 切點只有一個)');
+  let mono = true, prev = -1;
+  for (let t = 0; t <= WIPE.COVER_S; t += WIPE.COVER_S / 64) { const w = wipeAt('cover', t).w1; if (w < prev - 1e-12) mono = false; prev = w; }
+  ok(mono, '遮幕的前緣**單調遞增**(幕不會倒退)');
+  // Ⅷ-b 順序:grade 之後、fxaa 之前(切 chain 原文比,不是比索引)
+  const R = /  render\(\) \{[\s\S]*?\n  \}/.exec(P)[0];
+  const iG = R.indexOf("chain.push('grade')"), iW = R.indexOf("chain.push('wipe')"), iF = R.indexOf("chain.push('fxaa')");
+  ok(iG >= 0 && iW > iG && iF > iW,
+    '轉場排在 **grade 之後、fxaa 之前**(FXAA 兼任線性→sRGB MUST 留鏈尾;幕的斜邊擺它之前才有抗鋸齒;幕 MUST 蓋在調過色的畫面上)');
+  // Ⅷ-c 0 ⇒ 整個 pass 退出鏈(閘門形狀逐字鏡射 dof 那一列)
+  ok(/if \(this\.enabled\.wipe && this\._wipeA > 0\) chain\.push\('wipe'\);/.test(R),
+    '0 ⇒ **整個 pass 退出鏈**(不是跑一個乘 0 的 pass;閘門形狀逐字鏡射 dof 那一列)');
+  // Ⅷ-d 旋鈕預設關 + playWipe 在關著時**同步**走回呼
+  ok(VISUAL_KNOBS.wipe.def === 0 && VISUAL_KNOBS.wipe.min === 0,
+    `轉場旋鈕預設 ${VISUAL_KNOBS.wipe.def}(紀律①:需要美術方向的一律 def = 這一項不生效)`);
+  ok(/playWipe\(mode, onCut = null, opts = null\) \{\s*\r?\n\s*if \(!this\.enabled\.wipe \|\| this\._wipeKnob <= 0\) \{ onCut\?\.\(\); return false; \}/.test(P),
+    '旋鈕關著時 `playWipe` **當場同步**走回呼並回 false ⇒ 連時序都逐位元同舊制');
+  ok(!/setTimeout/.test(bare(P).replace(/\/\*[\s\S]*?\*\//g, '')),
+    '回呼由**幀迴圈**觸發,postfx.js 的執行碼零 `setTimeout`(計時器留下來 = 下一場冒出上一場的畫面)');
+  ok(/const dt = this\._wipeT0 == null \? 0 : Math\.min\(0\.1, now - this\._wipeT0\);/.test(P),
+    '自己的時鐘 MUST 夾住 dt(背景分頁回來的那一幀是幾十秒 ⇒ 不夾就是「幕已經播完了」而回呼在同一幀補放)');
+  // Ⅷ-e p ≥ 1 MUST 全螢幕覆蓋 —— 釘的是幕的兩個端點各外推一個羽化寬那一行(不是數值近似)
+  ok(/float e1 = uW1 \* \( 1\.0 \+ 2\.0 \* sf \) - sf;/.test(P) && /float e2 = uW2 \* \( 1\.0 \+ 2\.0 \* sf \) - sf;/.test(P),
+    '幕的兩個端點各**外推一個羽化寬** ⇒ w=1 真的整片蓋滿、w=0 真的一格都沒蓋');
+  // Ⅷ-f flash 的對比樞軸 MUST 是線性中灰,與 GRADE 的 smoothstep 同一把尺
+  const pivot = Number(/smoothstep\( ([\d.]+), [\d.]+, l \)/.exec(/_gradeMaterial\(\) \{[\s\S]*?\n  \}/.exec(P)[0])?.[1]);
+  ok(WIPE.PIVOT === pivot,
+    `flash 的對比樞軸 ${WIPE.PIVOT} === GRADE 的 ${pivot}(RT 是線性的;寫 0.5 會把整個畫面壓黑而只表現成「閃光怎麼是暗的」)`);
+  // Ⅷ-g setWipe 恰一份實作;幕色由呼叫端餵(MUST NOT 在 data.js 開第二份墨色)
+  ok(count(P, /\n  setWipe\(/g) === 1 && count(P, /\n  playWipe\(/g) === 1 && count(P, /\n  _tickWipe\(/g) === 1,
+    '`setWipe` / `playWipe` / `_tickWipe` 各恰一份實作');
+  ok(!/color|COLOR/.test(JSON.stringify(WIPE)) && /uWipeC/.test(P),
+    '幕色由呼叫端餵(`WIPE` 裡沒有顏色)—— 寫在 data.js 就是與 toon.js OUTLINE_COLOR 並存的第二份墨色');
+  // 指紋只雜湊那六張表 ⇒ 純表現層常數不進去(前例 = `CURVE` / `DOF`)。**釘的是指紋本體**,
+  // 不是「檔案裡有沒有出現」:漏掉就是整份學習策略被判過期而重跑一輪 bot_learn。
+  const fp = /export const balanceFingerprint = \(\) => \{[\s\S]*?\n\};/.exec(dataSrc)[0];
+  ok(!/WIPE|DISSOLVE/.test(fp),
+    '`WIPE` / `DISSOLVE` 不進 `balanceFingerprint`(它只雜湊 UNITS/CHARACTERS/WEAPONS/ECON/SQUAD/GAME)');
+
+  // ---- Ⅷ-h~j 轉場的**呼叫端**(序 8 ④-1 的下半;`game.js` 那一半)----
+  // 縫住 postfx.js(上面 a~g),呼叫端住 game.js —— 而呼叫端的三條不變式在這裡之前
+  // **沒有任何稽核在守**。三條的共同病灶是「畫面壞掉而沒有任何錯誤訊息」:
+  //   ・cover 播完幕停在**全覆蓋**(Ⅷ-a 那一條已經釘死它是**定義**)⇒ 沒接 reveal = 黑到底;
+  //   ・`m.over` 之後**每一份**快照都帶 over、陣亡過場結束之後**每一幀**的 `done` 都是 true
+  //     ⇒ 不擋就是幕每 COVER_S 重刷一次;
+  //   ・狀態閘跟著延後 ⇒ 暫停選單在結算時彈出來。
+  let G = gameRaw;
+  if (BREAK_WIPEPAIR) {
+    // 壞版:`_wipeCut` 只遮不揭(reveal 那一行刪掉)。樣式咬的是**執行碼那一行**
+    //(行尾分號 + 換行),註解裡提到 `reveal` 的那幾行不帶 `p.playWipe(`。
+    G = bendSrc(G, /\n *p\.playWipe\('reveal', null, opts\);\r?\n/g, '\n', '--break-wipepair');
+  }
+  const g = bare(G);
+  // Ⅷ-h 「遮幕 → 切 → 揭幕」的唯一實作:那一對 MUST 寫在同一個地方
+  //(分散到各呼叫點各寫一次,遲早有一個只寫了前半)
+  const cut = grabMethod(G, '_wipeCut');
+  ok(/playWipe\('cover'/.test(cut) && /playWipe\('reveal'/.test(cut),
+    '`_wipeCut` 內 cover 與 reveal **成對**(cover 的終態是全覆蓋 —— 少了 reveal 就是畫面停在一片幕色上)');
+  // 樣式吃得下選用鏈:建構子那一處是 `playWipe?.(`(API 沒上線時的降級,原則 6),
+  // `_wipeCut` 那一對是 `playWipe(`(它自己在上面用 typeof 擋過了)⇒ 1 + 2 = 3
+  ok(count(G, /playWipe\??\.?\(/g) === 3,
+    'game.js 的 `playWipe` 恰三處:開戰揭幕 1 + `_wipeCut` 的一對 2(第四處 = 有人在別的地方又寫了一次成對邏輯)');
+  ok(count(G, /this\._wipeCut\(/g) === 2,
+    '`_wipeCut` 恰兩個呼叫點(陣亡過場收尾 / 結算)');
+  // Ⅷ-i 重入守衛:m.over 每一份快照都帶、陣亡的 done 每一幀都真 ⇒ 不擋就是幕一直重刷
+  ok(/const first = !this\._gameOver;/.test(g) && /if \(first\) this\._wipeCut\(/.test(g),
+    '結算只有**第一份**帶 over 的快照起幕(`m.over` 之後每一份快照都是 true)');
+  ok(/if \(done && !s\.cut\)/.test(g) && /s\.cut = true;/.test(g),
+    '陣亡過場收尾恰起一次幕(`done` 之後每一幀都是 true)');
+  // Ⅷ-j 狀態閘 MUST NOT 跟著延後(延後 = 暫停選單在結算時彈出來)
+  ok(/this\._gameOver = true; this\._deathSeq = null; this\.hud\.deathCine\?\.\(false\);[\s\S]{0,400}?_wipeCut/.test(g),
+    '`_gameOver` / `_deathSeq` / `deathCine` 三個狀態閘照舊立刻做,只有結算頁排在切點上');
+}
+
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);
+const BREAKS = [BREAK_LUTSTACK && '--break-lutstack', BREAK_WIPE && '--break-wipe',
+  BREAK_WIPEPAIR && '--break-wipepair'].filter(Boolean);
+if (BREAKS.length) {
+  console.log(`（反向驗證模式:${BREAKS.join(' ')} —— 上面 MUST 有紅字）`);
+  process.exit(fail === 0 ? 1 : 0);
+}
 process.exit(fail === 0 ? 0 : 1);

@@ -11,6 +11,7 @@
 import { MORPH, lerpFPS } from './data.js';
 import { cycleU, dutyOf, hipDrive, limbProfile, limbFlex } from './gaitcurve.js';
 import { morphEase, restK, fadeA, shrinkS, morphing, mixTRS, slerpQ } from './morphrig.js';
+import { animWeights } from './animweights.js';
 
 // 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
 // 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
@@ -95,6 +96,14 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   stepStab(rig);
   // 變形姿態 MUST 排最後(morphSwap 紀律 ③):過渡中它對這一棵樹的零件有最終發言權
   if (mesh.userData.morph) morphPose(mesh.userData.morph);
+  // 動畫權重向量(⑥-3):「這台現在在做什麼」的唯一產生點。**只寫不讀** ——
+  // 本行之上的每一段步態一格未動(audit_gait_anat 八段 MUST 逐字不變),
+  // 而消費端(移動環境音/地點床/日後的自機 stem)從此只認 `ent.loco.w`。
+  // 度量一律在這裡注入:離地門檻吃 `MORPH.GROUND_Y`(與上方換樹同一條線,
+  // 不是第四個門檻)、速度正規化基準吃 `rig.top`(與各 stepX 的 `L.amp` 同一個)。
+  L.w = animWeights(L, rig, {
+    groundY: MORPH.GROUND_Y, y: ent.heroY || 0, flies: !!ent.flies, top: rig.top,
+  });
 }
 
 /**

@@ -8,8 +8,11 @@
 // 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
 import * as THREE from 'three';
 import { envMat } from './hazards.js';
-import { setWeatherField, seaSoft, seaSegM } from './toon.js';
+import { setWeatherField, seaSoft, seaSegM, FOAM, seaFieldN, setSeaDepthField } from './toon.js';
 import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
+// 低功耗旗標的唯一真相(深度場的 texel 邊長跟著它折半 —— 同 `SHADOW.TEXEL_M` 那一條)。
+// MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家;biomes.js 的同一條註)。
+import { lowPower } from './mobile.js';
 import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, siteCPs, mapArg, curveMaxEdgeM, edgeBufferM, edgeWallInsetM } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
@@ -56,6 +59,19 @@ function seaFadeOf(geo, w, h) {
   }
   return a;
 }
+/**
+ * 逐點版的浪幅淡出(2026-08-16 ⑤-3:水面倒影塊的頂點在 `biomes.js` 建,要吃**同一份**規則)。
+ * 抄一份的症狀只是「圖界附近的倒影塊浮在平的水面上晃」—— 沒有錯誤訊息。
+ *
+ * ⚠ 實作 MUST 是**轉呼 `seaFadeOf`**,而 `seaFadeOf` MUST 逐字保持自給自足(只用
+ *   `smooth01` / `edgeWallInsetM`):`audit_soft_stroke` Ⅵ 以
+ *   `^function seaFadeOf\(geo, w, h\) \{[\s\S]*?^\}` 抽它的原文丟進 `new Function` 沙箱直測,
+ *   而那個沙箱**只注入那兩支**。反過來抽(讓 `seaFadeOf` 呼叫 `seaFadeAt`)的話,
+ *   那支稽核會在**呼叫**時丟 ReferenceError ⇒ 整支當場中斷,而錯誤訊息與海浪無關。
+ * @param lx,ly PlaneGeometry 局部座標(= 世界 x / z 相對水盤中心;兩軸都取絕對值 ⇒ 正負無關)
+ */
+export const seaFadeAt = (lx, ly, w, h) => seaFadeOf(
+  { attributes: { position: { count: 1, getX: () => lx, getY: () => ly } } }, w, h)[0];
 // 點到多段線集合(每段 [x1,z1,x2,z2])的最短距離
 function distToSegs(px, pz, segs) {
   let min = Infinity;
@@ -539,12 +555,28 @@ export async function buildTerrain(cfg, onProgress) {
   const group = new THREE.Group();
   group.add(mesh);
 
+  // ---- 海面深度場(2026-08-16 S6;岸邊泡沫 ⑤-2 的驅動量)----
+  // **為什麼是烤好的場而不是逐幀真深度**:水面 fragment 拿不到場景深度 —— 它與
+  // `rtScene.depthTexture` 是同一個 FBO 的附件(postfx.js `Pipeline.render`),取樣它就是
+  // 回饋迴圈;第二趟深度 prepass 則是 postfx 檔頭當初拒絕第二張陰影圖的同一筆成本。
+  // 場 = 地形高度場 + `blockers` 蓋章 ⇒ 「泡沫繞過每一根柱子」由蓋章那一步給,繞不過的
+  // 只有沒有碰撞柱的純表現層擺件與移動中的機體(已知取捨,見交付說明)。
+  // **零 `rnd()` 消耗**(§2.3):逐 texel 純取樣,不抽任何亂數。
+  //
+  // ⚠ 這兩個 `let` MUST 宣告在**水面那一段之前**:`bakeSeaDepth` 是 hoist 得到的函式宣告,
+  //   但它讀的 `seaData`/`seaN` 是 `let` ⇒ 擺在呼叫點之後就是 **TDZ ReferenceError**,
+  //   而錯誤訊息指向完全無關的地方(同 toon.js `_foamA` 那一段的坑)。
+  let seaData = null, seaN = 0;
+
   // 水面(有低於海平面的區域才加);waterY = 水面高(無水域 = null,供 game.js 涉水/深水物理)。
   // 水面高的唯一真相 = data.js WATER.LEVEL(涉水深/道路跨水判定共用同一數字)。
   let waterY = null;
   let waterMat = null;   // 緩衝空間的外環水面共用**同一份**材質(見檔尾 buildEdgeSkirt)
   if (minH < WATER.LEVEL + 0.2) {
     waterY = WATER.LEVEL;
+    // 岸邊泡沫的驅動量(S6;⑤-2):把水深烤成一張場。**無水域就不烤** ⇒ 場留在 toon.js 的
+    // 1×1「很深」中性貼圖 ⇒ 恆無泡沫(原則 6),而不是滿場泡沫。
+    bakeSeaDepth();
     // 分段數由 `curveMaxEdgeM()` 推導(MUST NOT 手寫):世界曲面是**逐頂點**沉降,一整片
     // 鋪成兩個三角形的話中間就是一條弦 —— 邊長 L 的弦高 L²/(4R),整張圖一格的舊制在 L3
     // (1200m)上是 25m,水面會從遠處的地形裡整片浮出來。地形自己的格是 6.25m ⇒ 弦高
@@ -575,6 +607,76 @@ export async function buildTerrain(cfg, onProgress) {
     group.add(water);
     waterMat = water.material;
   }
+
+  /**
+   * 烤(或重烤)深度場。邊長 MUST 走 `seaFieldN()` 推導並跟著 lowPower 折半 ——
+   * 手寫 1024 的話低階裝置多背 1MB VRAM 而畫面一模一樣(同 `SHADOW.TEXEL_M` 那一條)。
+   * 取樣 MUST 走 `sampleField`(= `heightAt` 的同一份三角化雙線性):自己再寫一份雙線性
+   * 就是「泡沫的岸線」與「腳踩得到的岸線」差半格,而畫面上只表現成「泡沫沒有貼著岸」。
+   * @returns 有沒有真的烤(無水域 = false ⇒ 場留在中性)
+   */
+  function bakeSeaDepth() {
+    if (waterY == null) return false;
+    const n = seaFieldN(worldW, worldH, lowPower());
+    if (!seaData || seaN !== n) { seaData = new Uint8Array(n * n); seaN = n; }
+    for (let i = 0; i < n; i++) {
+      const z = minZ + worldH * (i + 0.5) / n;          // 列 = z(同 field.bakeFieldTexture;
+      for (let j = 0; j < n; j++) {                      //  DataTexture 的 flipY 恆 false)
+        const x = minX + worldW * (j + 0.5) / n;
+        const d = waterY - sampleField(heights, x, z);   // 水深(負 = 陸地)
+        seaData[i * n + j] = d <= 0 ? 0
+          : d >= FOAM.RANGE_M ? 255 : Math.round(d / FOAM.RANGE_M * 255);
+      }
+    }
+    setSeaDepthField(seaData, n, { minX, minZ, w: worldW, h: worldH });
+    return true;
+  }
+
+  /**
+   * 把 `blockers` 蓋進深度場(唯一呼叫端 = `main.js`,MUST 排在 `buildBiomes` 之後 ——
+   * 建圖期拿不到碰撞柱,拿了就是循環。同 `terrain.inBorderBand` 立過的先例)。
+   *
+   * 三條:
+   * ①**橫斷面 MUST 是 A30 的那一份**(有向盒 `hw2/hd2/ry`,圓只當 broad-phase)——
+   *   只用外接圓的話,40m 長條建物旁邊會多出一圈方形泡沫,而「看得見的泡沫」與「擋得住彈
+   *   的牆」對不上正是 A30 那一族的症狀。
+   * ②**先重烤再蓋章**:`heights` 在水盤建好之後還會被 `carveTunnels` / `carveGalleryBands` /
+   *   `gradeRoadBeds` 改(路塹與整平),用建構當下那一份就是「路基整平過的岸邊泡沫沒跟著走」。
+   * ③蓋章只把腳印**壓乾**(d = 0),MUST NOT 暈開 —— 泡沫帶的寬度由 `FOAM.BAND_M` 定,
+   *   在這裡暈一圈等於第二份帶寬。
+   * @returns 蓋到的柱數(無水域 = 0)
+   */
+  function stampSeaBlockers(blockers) {
+    if (!bakeSeaDepth() || !blockers?.length) return 0;
+    const n = seaN, tx = worldW / n, tz = worldH / n;
+    let hit = 0;
+    for (const b of blockers) {
+      if (!b || b.y + b.h <= waterY) continue;          // 整根都在水面以下 ⇒ 蓋了也看不到
+      const rr = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;   // broad-phase = 外接半對角(A30)
+      if (!(rr > 0)) continue;
+      const j0 = Math.max(0, Math.floor((b.x - rr - minX) / tx)), j1 = Math.min(n - 1, Math.ceil((b.x + rr - minX) / tx));
+      const i0 = Math.max(0, Math.floor((b.z - rr - minZ) / tz)), i1 = Math.min(n - 1, Math.ceil((b.z + rr - minZ) / tz));
+      // 有向盒的 local 軸:three Euler(0, ry, 0) 的反解 ⇒ `sn` 取 **−sin**(A30;
+      // 寫 +sin 就是「看得見的牆在這裡、泡沫繞過的牆在另一邊」)
+      const cs = b.hw2 != null ? Math.cos(b.ry || 0) : 1, sn = b.hw2 != null ? -Math.sin(b.ry || 0) : 0;
+      for (let i = i0; i <= i1; i++) {
+        const z = minZ + tz * (i + 0.5), oz = z - b.z;
+        for (let j = j0; j <= j1; j++) {
+          const x = minX + tx * (j + 0.5), ox = x - b.x;
+          if (b.hw2 != null) {
+            const lx = ox * cs + oz * sn, lz = -ox * sn + oz * cs;
+            if (Math.abs(lx) > b.hw2 || Math.abs(lz) > b.hd2) continue;
+          } else if (ox * ox + oz * oz > rr * rr) continue;
+          if (seaData[i * n + j]) { seaData[i * n + j] = 0; hit++; }
+        }
+      }
+    }
+    setSeaDepthField(seaData, n, { minX, minZ, w: worldW, h: worldH });
+    return hit;
+  }
+
+  /** 世界座標版的浪幅淡出(倒影塊的頂點屬性吃它;水盤中心 = 圖心 ⇒ 只是換個座標原點) */
+  const seaFadeAtWorld = (x, z) => seaFadeAt(x - (minX + maxX) / 2, z - (minZ + maxZ) / 2, worldW, worldH);
 
   // 世界座標高度取樣。
   // MUST 與網格三角化(idx: a,c,b / b,c,d;對角線 = b–c)一致:雙線性在鞍點會低於
@@ -1256,5 +1358,7 @@ export async function buildTerrain(cfg, onProgress) {
   // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
   // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
-  return { group, mesh, heightAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
+  // ⬇ 新欄位一律**只加不改**(⑤-2 / ⑤-3):`stampSeaBlockers` = 深度場的蓋章入口(main.js
+  //   在 buildBiomes 之後呼叫一次)、`seaFadeAtWorld` = 倒影塊頂點的浪幅淡出(biomes.js)。
+  return { group, mesh, heightAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
 }

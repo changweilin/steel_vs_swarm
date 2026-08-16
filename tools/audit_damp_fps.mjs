@@ -33,6 +33,25 @@ const code = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/
 const dataSrc = readSrc('public', 'js', 'data.js');
 const gameSrc = readSrc('public', 'js', 'game.js');
 const locoSrc = readSrc('public', 'js', 'locomotion.js');
+// ⚠ 這是一份**手寫名冊** —— 新增「會逐漸逼近目標值」的客戶端模組時 MUST 記得補一列。
+// 名冊漏掉的檔案裡寫 `Math.min(1, dt * k)` 或第二份 `Math.exp(-k * dt)` 一樣掃不到,
+// 而這支照樣全綠(那正是缺口的形狀:沒有錯誤訊息,只有兩份幀率無關性的定義)。
+//
+// **為什麼不由目錄推導**(同 `audit_client_syntax` 的 `listJs`)—— 2026-08-16 實測過:
+// `public/js/**` 110 支裡除了本名冊之外還有 `charPreview.js:766-767` 兩處舊制
+// (`this.viewR += (this.wantR - this.viewR) * Math.min(1, 5 * dt)` 與同形的 `dist`,
+// 圖鑑預覽的軌道鏡頭)⇒ 推導版**當場紅 2 條**。那是真的缺陷不是誤判,但修它要動
+// `public/js/charPreview.js`(另一件事)⇒ 推導化 MUST 與那兩行**同一輪**落地,
+// 在那之前把名冊換成推導只會讓這支變成「永遠紅著的稽核」= 沒有人看的稽核。
+//
+// `animweights.js`(⑥-3 動畫權重向量)2026-08-16 進名冊:它吃的是別人阻尼過的量、
+// 自己一格都不該再阻尼,所以這兩條對它是**恆真**的斷言 —— 恆真正是要守住的性質。
+// `wildlife.js`(序 11 鳥群 / 小動物)2026-08-16 第二輪進名冊:它的摩擦走
+// `frictionFPS(FLOCK.FRICTION_K, d)` ⇒ 是真的消費端,而 `audit_wildlife` Ⅰ 就地
+// 釘著同樣三條 —— **兩份名冊遲早分家**,故兩邊都掃(這一支是「全域只有一份阻尼數學」
+// 那條規則的名冊,那一支是「這個模組自己有沒有守規矩」)。
+const weightSrc = readSrc('public', 'js', 'animweights.js');
+const wildSrc = readSrc('public', 'js', 'wildlife.js');
 
 // ── 執行原文:把那兩行抽出來真的跑一次(MUST NOT 改成 import —— 那樣 --break-damp 就咬不到)
 const m = dataSrc.match(/export const frictionFPS = [^\r\n]*\r?\nexport const lerpFPS = [^\r\n]*/);
@@ -64,7 +83,10 @@ ok(/export const frictionFPS = \(k, dt\) => Math\.exp\(/.test(dataSrc),
 // 逐幀固定係數:`Math.min(1, dt * k)` / `Math.min(1, k * dt)` 且**緊接著收括號**。
 // 恆定角速度夾制(`Math.min(1, maxTurn * dt / ang)`)不收括號 ⇒ 結構上不會誤傷(見 Ⅲ)。
 const LEGACY = /Math\.min\(1, *(dt \* [A-Za-z0-9_.]+|[A-Za-z0-9_.]+ \* dt)\)/g;
-for (const [name, src] of [['game.js', gameSrc], ['locomotion.js', locoSrc]]) {
+/** 掃描名冊(手寫;理由見上方檔頭)。兩條掃描 MUST 吃**同一份**名冊 —— 分成兩張表就是這一支自己內部先分家 */
+const ROSTER = [['game.js', gameSrc], ['locomotion.js', locoSrc], ['animweights.js', weightSrc],
+  ['wildlife.js', wildSrc]];
+for (const [name, src] of ROSTER) {
   ok(count(code(src), LEGACY) === 0,
     `${name} MUST NOT 殘留逐幀固定係數 \`Math.min(1, dt * k)\``,
     JSON.stringify(code(src).match(LEGACY) || []));
@@ -79,9 +101,9 @@ for (const [name, src] of [['game.js', gameSrc], ['locomotion.js', locoSrc]]) {
 }
 // 第二份 exp:`Math.exp(-dt * …)` / `Math.exp(-<ident> * dt)`(data.js 的那一份是縫本身,排除)
 const SECOND_EXP = /Math\.exp\(-(dt \* |[A-Za-z0-9_.]+ \* dt)/g;
-ok(count(code(gameSrc), SECOND_EXP) === 0 && count(code(locoSrc), SECOND_EXP) === 0,
+ok(ROSTER.every(([, src]) => count(code(src), SECOND_EXP) === 0),
   '消費端 MUST NOT 自己寫第二份 `Math.exp(-k * dt)`(那是第二份幀率無關性的定義)',
-  JSON.stringify([...(code(gameSrc).match(SECOND_EXP) || []), ...(code(locoSrc).match(SECOND_EXP) || [])]));
+  JSON.stringify(ROSTER.flatMap(([, src]) => code(src).match(SECOND_EXP) || [])));
 ok(/import \{ MORPH, lerpFPS \} from '\.\/data\.js';/.test(locoSrc)
   && /const damp = \(c, t, k, dt\) => c \+ \(t - c\) \* lerpFPS\(k, dt\);/.test(locoSrc),
   'locomotion.js 的 `damp()` MUST 轉呼這一支(它曾是第二份實作)');

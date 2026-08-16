@@ -20,6 +20,9 @@ export { toonGradient, toonMat, toonify, envMat, bakeContactAO };
 // ---- 零件級細節抖動的規則(單一縫;植被的 vegPartXform 同吃這兩支)----
 import { partId, partJitter } from './xform.js';
 
+// ---- 載具 / 擺件型錄(唯一縫;該檔零 import、零 THREE ⇒ 離線稽核吃得到同一份)----
+import { makeVehicle } from './vehicles.js';
+
 // ---- 幾何速記 ----
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 const cyl = (r1, r2, h, n = 6) => new THREE.CylinderGeometry(r1, r2, h, n);
@@ -116,24 +119,34 @@ const BUILDERS = {
       const car = new THREE.Group();
       const paint = jitterColor(paints[Math.floor(rnd() * paints.length)], rnd);
       // 台台不同(2026-07-29):車身尺寸逐台抽、車頂塌陷程度各異(底緣貼車身頂,塌多低多少)
+      // 2026-08-16 序 10:形狀改吃 `vehicles.js` 的**唯一縫**,本支只決定「這一台多大、
+      // 什麼漆、塌多少、擺在哪」—— 舊制那一份手寫車體(唯一有輪子的那一份)正是
+      // SPEC `sedan` 的基準值來源(R 0.34、四輪觸地),故收斂後外觀同級而尺寸有型錄背書。
+      // **rnd 消耗枚數逐枚不變**(這一支跑的是逐障礙的區域序列,改了就是同一顆種子長出
+      // 另一批障礙 —— 而 `audit_object_joints` 的樁件正是照著這個枚數在對)。
       const bw = 1.7 + rnd() * 0.3, bh = 0.8 + rnd() * 0.15, bl = 3.5 + rnd() * 0.8;
-      mesh(car, box(bw, bh, bl), paint, 0, 0.85, 0);
       const crush = 0.55 + rnd() * 0.4;                                   // 1 = 完好車頂、0.55 = 塌剩一半
-      const cab = mesh(car, box(bw * 0.9, 0.62, bl * 0.48),
-        new THREE.Color(paint).multiplyScalar(0.85),
-        0, 0.85 + bh / 2 + 0.31 * crush, -0.25 + (rnd() - 0.5) * 0.3);
-      cab.scale.y = crush;
-      cab.rotation.z = (rnd() - 0.5) * 0.16;                              // 塌得一邊高一邊低
-      for (const [sx, sz] of [[-1, -1.3], [-1, 1.3], [1, -1.3], [1, 1.3]]) {
-        const w = mesh(car, cyl(0.34, 0.34, 0.25, 8), 0x1c1f22, sx * 0.95, 0.34, sz);   // 軸心 = 輪半徑 → 觸地
-        w.rotation.z = Math.PI / 2;
+      const dive = (rnd() - 0.5) * 0.3;                                   // 車鼻插進地面的俯仰
+      const roll = (rnd() - 0.5) * 0.16;                                  // 塌得一邊高一邊低
+      for (const p of makeVehicle('sedan', { fit: { L: bl, W: bw, H: bh + 0.65 }, crush, paint })) {
+        const [t, ga, gb, gc, sg] = p.g;
+        const geo = t === 'box' ? box(ga, gb, gc)
+          : t === 'cyl' ? cyl(ga, gb, gc, sg || 6)
+            : t === 'cone' ? cone(ga, gb, sg || 6) : ico(ga);
+        const [px = 0, py = 0, pz = 0] = p.p || [];
+        const m = mesh(car, geo, p.c, px, py, pz);
+        const [rx = 0, ry = 0, rz = 0] = p.r || [];
+        if (rx || ry || rz) m.rotation.set(rx, ry, rz);
       }
       const a = rnd() * Math.PI * 2, d = i === 0 ? 0 : r * (0.4 + rnd() * 0.5);
       car.position.set(Math.cos(a) * d, 0, Math.sin(a) * d);
+      // 損毀姿態:翻肚 / 俯仰 / 側傾。`dive`/`roll` 是舊制掛在車艙上的那兩枚亂數 ——
+      // 車艙的塌陷改由 `makeVehicle` 的 `crush` 統一給,兩枚就改記在整台車的姿態上
+      // (枚數不變 ⇒ 同一顆種子之後的每一件散落物落點逐位元不動)
       car.rotation.set(
-        rnd() < 0.3 ? Math.PI : (rnd() - 0.5) * 0.3,   // 三成翻肚
+        (rnd() < 0.3 ? Math.PI : (rnd() - 0.5) * 0.3) + dive,   // 三成翻肚
         rnd() * Math.PI * 2,
-        (rnd() - 0.5) * 0.5,
+        (rnd() - 0.5) * 0.5 + roll,
       );
       if (car.rotation.x > 2) car.position.y = 1.3;
       g.add(car);

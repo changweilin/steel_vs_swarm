@@ -135,8 +135,13 @@ export function buildLogo() {
   return { w, h, rgba, cls };
 }
 
-// 通用 PNG 編碼(RGBA8)
-export function encodePNG(file, cw, ch, rgbaRows) {
+// 通用 PNG 編碼(RGBA8)。
+// **編碼與寫檔 2026-08-16 拆開**:`OUT_DIR` 是寫死的**絕對路徑**(出貨儲存庫的
+// `public/assets`),而 `audit_zone_cut.mjs` 的對照圖要落在 `tools/.shots/zonecut/`。
+// 拆成「純函式 `pngBytes` + 薄殼 `encodePNG`」讓第二個消費端拿得到位元組,而**不必**
+// 另寫第二份 PNG 編碼器(全庫唯一一份純 Node PNG 編碼器就住這裡)。
+// `encodePNG` 的簽章與寫出的位元組**逐位元不動** —— 三個既有呼叫端一格未改。
+export function pngBytes(cw, ch, rgbaRows) {
   const crcTable = [...Array(256)].map((_, n) => {
     let c = n;
     for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
@@ -155,12 +160,15 @@ export function encodePNG(file, cw, ch, rgbaRows) {
   };
   const ih = Buffer.alloc(13);
   ih.writeUInt32BE(cw, 0); ih.writeUInt32BE(ch, 4); ih[8] = 8; ih[9] = 6;
-  writeFileSync(`${OUT_DIR}/${file}`, Buffer.concat([
+  return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk('IHDR', ih),
     chunk('IDAT', deflateSync(rgbaRows, { level: 9 })),
     chunk('IEND', Buffer.alloc(0)),
-  ]));
+  ]);
+}
+export function encodePNG(file, cw, ch, rgbaRows) {
+  writeFileSync(`${OUT_DIR}/${file}`, pngBytes(cw, ch, rgbaRows));
 }
 
 // 自動裁切到不透明邊界後編碼輸出(keep:回傳該像素是否保留,可用來只導出某個區塊)
