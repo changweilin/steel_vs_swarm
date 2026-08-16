@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { visualPref, onVisualChange } from './visualPrefs.js';
 import { makeField, bakeFieldTexture } from './field.js';
-import { curveKneeM, curveR } from './data.js';
+import { curveKneeM, curveR, SOLDIER_H, DISSOLVE } from './data.js';
 
 // ============ 世界曲面(2026-08-09;規則與推導全文見 data.js 的 CURVE 區塊)============
 // 使用者要的東西只有一句:**平面算完、擺完,最後一步才轉成曲面**。這裡就是那「最後一步」,
@@ -152,13 +152,48 @@ installWorldCurve();
 //      照樣出線、拼圖邊界(同一個連續法線場)不出線。餵不到就退回自己的法線(原則 6);
 //   ③ `.a` 帶類別碼 —— 3D LUT 那一端要知道「這一格是地貌」才做得到「不針對地貌作用」
 //      (postfx.js 的 `lutApply` 分支)。哨兵語意不變:0 仍是「沒有資訊」。
+//
+// ---- `.a` 自 2026-08-16 起是**打包**(半位元組切;計畫 §0-c / 序 3)----
+// 高半位元組 = 表面類別**索引**(0~3),低半位元組 = `outlineContribution` 的 16 階。
+// 類別碼從此**不是 alpha 值** —— MUST NOT 再拿 `INK_CLASS.*` 跟 `.a` 直接比大小,
+// 一律經 `INK_UNPACK_GLSL` 的 `inkCls()` / `inkCtr()` 解碼(消費端住 `postfx.js` 三處)。
+// 魔數 16 / 15 / 255 **只准出現在下面那兩段 GLSL 字串裡**:三個讀取點各抄一次的話,
+// 日後調階數只會改到其中一處 ⇒ 類別解錯,而那表現成「某些表面的線莫名其妙全沒了」。
 export const INK_CLASS = {
   NONE: 0,     // 沒有寫過(天空穹頂 / 護盾殼 / 粒子 / 招牌)—— 哨兵
-  LAND: 0.5,   // 地貌:地形 + 一切貼在它上面的地被層
-  HARD: 1,     // 其餘(機體 / 建物 / 道路 / 水面 / 擺件)= 舊制
+  LAND: 1,     // 地貌:地形 + 一切貼在它上面的地被層
+  HARD: 2,     // 其餘(機體 / 建物 / 道路 / 水面 / 擺件)= 舊制
+  GROUP: 3,    // 表面群組(整株樹 / 整顆巨岩 / 一堆石頭):群組內部不出線,剪影留著
 };
+/** 打包的基底(8bit UNORM 的分母)。`.a` 的最大值是 (3×16+15)/255 = 0.247 ⇒ 舊的 `> 0.25` 哨兵在新編碼下**恆不成立** */
+const INK_BASE = 255;
+/** 貢獻的階數(低半位元組 4 bit)。MUST NOT 手寫 16 —— 下面每一個 16 都由它推導 */
+export const INK_LEVELS = 16;
+const INK_TOP = INK_LEVELS - 1;
+/**
+ * 授權值 → 實際存得下的那一階(k / 15)。呼叫端傳 0.4 而緩衝裡是 0.4000 或 0.4667,
+ * 稽核與定裝照量到的就是另一個數 ⇒ 一律先經這一支收成 16 階之一。
+ * **`inkQuant(1)` 嚴格 === 1**(level 15;逐位元中性靠它)。
+ */
+export const inkQuant = (c) => Math.round(Math.min(1, Math.max(0, c || 0)) * INK_TOP) / INK_TOP;
+/** 「這一款東西不值得一條線」的具名否決值 —— 唯一容許手寫的貢獻(見 `inkRepeat`) */
+export const INK_CONTRIB_NONE = 0;
+/** 編碼(寫入端 = 本檔的 gInfo 那一行)。⚠ `inkPack(NONE, 0) === 0` ⇒ 哨兵語意逐位元保留 */
+export const INK_PACK_GLSL = `
+float inkPack( float cls, float ctr ) {
+  return ( cls * ${INK_LEVELS}.0 + floor( clamp( ctr, 0.0, 1.0 ) * ${INK_TOP}.0 + 0.5 ) ) / ${INK_BASE}.0;
+}`;
+/**
+ * 解碼(讀取端 = `postfx.js` 的勾線與 grade 兩支 fragmentShader,一律 import 前置)。
+ * `q = floor(a*255+0.5)` 在 HalfFloatType RT 上仍精確(0.247 處 ulp × 255 = 0.03 ≪ ±0.5);
+ * 日後把 `INK_BASE` 改大會**先在 half 上**壞掉,而畫面只表現成「某些表面的線沒了」。
+ */
+export const INK_UNPACK_GLSL = `
+float inkQ( float a ) { return floor( a * ${INK_BASE}.0 + 0.5 ); }
+float inkCls( float a ) { return floor( inkQ( a ) / ${INK_LEVELS}.0 ); }
+float inkCtr( float a ) { return fract( inkQ( a ) / ${INK_LEVELS}.0 ) * ${INK_LEVELS}.0 / ${INK_TOP}.0; }`;
 export const INK_INFO_DECL = 'layout(location = 1) out highp vec4 gInfo;';
-export const INK_INFO_NONE = 'gInfo = vec4( 0.0 );';   // 哨兵 0 = 這一格沒有法線資訊
+export const INK_INFO_NONE = 'gInfo = vec4( 0.0 );';   // 哨兵 0 = 這一格沒有法線資訊(= inkPack(NONE, 0))
 function installInkInfo() {
   if (THREE.ShaderChunk.__inkInfo) return;
   const OPAQUE = '#include <opaque_fragment>';
@@ -184,6 +219,47 @@ const nextSurfId = () => ((_surfSeq = (_surfSeq + 23) & 63) + 0.5) / 64;
  * 穩穩跨過 `INK_MRT` 那一項的 0.004 門檻(地貌 vs 建物的線一條都不會少)。
  */
 const LAND_SURF_ID = 0;
+/**
+ * 具名表面群組(2026-08-16;S3)。**整數格 `k / 64`**,而 `nextSurfId` 是半整數格
+ * `(k + 0.5) / 64` ⇒ 兩者恆差 ≥ 0.5/64 = 0.0078 > `INK_MRT.ID` 的 0.004 門檻,
+ * 群組號永遠不會與逐材質號撞在一起(撞號 = 少一條該有的線)。
+ * `k = 0` 保留給地貌(= `LAND_SURF_ID`)、`k = 1` 保留給坑門混凝土家族。
+ */
+export const SURF_ID = { LAND: LAND_SURF_ID, CONCRETE: 1 / 64 };
+let _grpSeq = 1;
+/**
+ * 配一個新的表面群組號(整數格,k ∈ [2, 63] 循環)。**零亂數消耗** —— 它吃的是模組級序
+ * 不是共享 `rnd()`(§2.3;在呼叫端抽一枚 `rnd()` 當群組種子 = 整張圖的佈局往後推移)。
+ */
+export function surfGroup() {
+  _grpSeq = _grpSeq >= 63 ? 2 : _grpSeq + 1;
+  return _grpSeq / 64;
+}
+/**
+ * 把一份材質(或整棵子樹上每一份 cel 材質)併進同一個表面群組。
+ *
+ * ⚠ **MUST 在 `scene.add` / `new InstancedMesh` 之前呼叫**:`uSurfId` 的值在
+ * `onBeforeCompile`(首次編譯)當下就凍結,晚一步就是**一行都不生效** —— 線照畫、
+ * console 一個字都沒有、每一條原文斷言照樣綠。
+ * 地貌材質(`celOpts.land`)MUST skip:它恆 `LAND_SURF_ID`(A46 / 稽核 Ⅶ)。
+ * @param target 材質 或 Object3D 子樹
+ * @param id     群組號;省略 = 配一個新的
+ * @returns 實際使用的群組號(呼叫端要把同一株的別的列併進來時傳回去)
+ */
+export function joinSurfGroup(target, id = surfGroup()) {
+  const put = (m) => {
+    if (!m || !m.userData?.celOpts || m.userData.celOpts.land) return;
+    m.userData.celSurfId = id;
+  };
+  if (target?.isMaterial) put(target);
+  else if (target?.traverse) {
+    target.traverse((o) => {
+      if (!o.isMesh || o.userData.isOutline) return;
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(put);
+    });
+  }
+  return id;
+}
 
 // ---- cel ramp 家族(NearestFilter = 硬邊界)----
 // **單一縫**:全專案的明暗階梯只有這一張表,ramp 的 DataTexture MUST 只在本檔建構 ——
@@ -234,6 +310,49 @@ export function toonGradient(bands = 3) {
 export function rampFloor(bands = 3) {
   const key = RAMPS[bands] ? bands : 3;
   return RAMPS[key][0] / 255;
+}
+
+// ---------------- 賽璐璐學派(§0-b;2026-08-16)----------------
+// 兩派畫的是同一件事的兩種畫法,**縫仍只有本檔一份**、消費端一行不改:
+//   School A(`celSchool = 'a'`,預設 / 交付定案值)= 上面那張 `RAMPS` 查表。
+//   School B(`'b'`)= 累積直接光 → **一刀 smoothstep 硬切** → 暗側往色相位移。
+//
+// **`bands` 這個參數不消失,語意變成「這一刀有多硬」**(2 最硬 → soft 最軟)——
+// 這是把 School A 的「階數越多層次越多」翻譯成 School B「唯一那一刀越寬」的**唯一**
+// 合法映射,故帶寬與中點 MUST 嚴格遞增(2 < 3 < 4 < soft)。四個既有 `bands:` 呼叫端
+// (terrain ×2 / worldtext / matsample)因此一個都不必改;序一破,它們的語意就全反了。
+//
+// ⚠ **`bands = 4` 的「中間那一階」在硬切下是真的消失了**(一刀只有一個終端)——
+// 本表把它翻譯成**更寬的帶**,那是「軟化」不是「多一階」。整片山坡因此回到兩塊色,
+// 靠地貌/材質自己的色階梯撐。這是使用者裁決③(見 docs/_pending/lane-ink-w3.md ⑤)。
+//
+// **`SHADOW_V` 是 A14 在硬切路徑上的地板,MUST 推導不手寫** —— 102 這個數只准有一份家
+// (`RAMPS`)。旋鈕是「相對地板的餘裕」`SHADOW_V_F`(MUST ≥ 1),不是那個地板本身:
+// 手寫 0.5 的話,有人調 `RAMPS[3][0]` 之後暗側就悄悄跌到地板以下,而每一條斷言全綠。
+const SHADOW_V_F = 1.25;
+export const CEL_CUT = {
+  2: [0.10, 0.15],
+  3: [0.20, 0.40],
+  4: [0.26, 0.54],
+  soft: [0.30, 0.70],
+  // 暗側的**值**乘數(A14 ②:MUST ≥ rampFloor(3) = 102/255)
+  SHADOW_V: rampFloor(3) * SHADOW_V_F,
+  // School B 下兩根陰影偏色拉桿的**下限**(A14 ③ 的色相那一半)。
+  // 兩根拉桿的 def 是 0(visualPrefs 紀律①:預設 = 這一項不生效),照搬到 School B
+  // 就是**灰色陰影** —— 而色相位移正是這一換學派的全部收益。故硬切路徑上夾一個下限,
+  // 拉桿仍可往上到 TINT_MAX_A。「下限多少」是美術方向(使用者裁決②)。
+  HUE_MIN_A: 1,
+};
+/**
+ * 這一組 `bands` 的硬切帶 `[lo, hi]`(School B)。
+ * fallback 規則與 `toonGradient` / `rampFloor` **同一條**:未知鍵一律回 3。
+ * ⚠ 用 `Array.isArray` 而不是 truthy:`CEL_CUT` 同時裝著兩個純量旋鈕
+ * (`SHADOW_V` / `HUE_MIN_A`),truthy 判定會讓 `bands: 'SHADOW_V'` 這種鍵穿過去。
+ * @param bands 2 / 3 / 4 / 'soft';省略 = 3
+ */
+export function cutOf(bands = 3) {
+  const key = Array.isArray(CEL_CUT[bands]) ? bands : 3;
+  return CEL_CUT[key];
 }
 
 // ---------------- 陰影偏色搬進 ramp(P1-B;2026-08-03)----------------
@@ -309,18 +428,53 @@ const RAMP_DEPTH_FN = `
   float celRampDepth( float g ) {
     return clamp( ( g - uCelRampLo ) / max( 1e-3, 1.0 - uCelRampLo ), 0.0, 1.0 );
   }`;
-const RAMP_PATCHED = (() => {
-  const chunk = THREE.ShaderChunk?.[RAMP_CHUNK];
-  if (typeof chunk !== 'string' || !chunk.includes(RAMP_HOOK)) return null;
-  return chunk.replace(RAMP_HOOK, `
+// School A 的替換文字裝進**具名常數**(2026-08-16):本項的逐位元中性靠「School A 吐出的
+// GLSL 字串逐字不變」拿保證,而那句話要有東西可以比對 —— 稽核 Ⅺ 直接釘住這一段原文。
+const RAMP_PATCH_A = `
     {
       // ramp 的階值 celG:暗階最小、亮階 = 1。偏色只給暗階(權重 = celRampDepth),
       // 亮階恆不偏 —— 賽璐璐的受光面本來就該是光源本色。
       // 乘數的 Rec.709 亮度恆 = 1(shadowTintRGB 已正規化)⇒ 暗階亮度逐位元不動,A14 不受影響。
       float celG = texture2D( gradientMap, coord ).r;
       return vec3( celG ) * mix( uCelRampTint, vec3( 1.0 ), celRampDepth( celG ) );
-    }`);
+    }`;
+// School B 的替換文字:**回傳線性 N·L**,一階量化都不做。
+// 這一行是整個學派切換的唯一分岔點 —— 換掉之後 `reflectedLight.directDiffuse` 就是
+// 「已經乘過**陰影遮罩**與燈色的累積直接光」(three r160 `lights_fragment_begin` 把
+// `getShadow()` 乘進 `directLight.color`,而 `RE_Direct_Toon` 在那之後才呼叫
+// `getGradientIrradiance()`)⇒「投影遮蔽與 N·L 被同一刀量化」這件 School B 唯一買得到的
+// 東西,是這一行的直接推論,不需要任何新的 three 錨點。
+// `dotNL` 是 r160 `getGradientIrradiance()` 內的既有區域變數(2026-08-16 對過 r160 原文)。
+const RAMP_PATCH_B = `
+    {
+      // School B:不查表。量化整個往後挪到 opaque_fragment 前置的那一刀。
+      return vec3( saturate( dotNL ) );
+    }`;
+const RAMP_CHUNK_SRC = THREE.ShaderChunk?.[RAMP_CHUNK];
+const RAMP_CAN = typeof RAMP_CHUNK_SRC === 'string' && RAMP_CHUNK_SRC.includes(RAMP_HOOK);
+// 學派是**模組載入時定案一次**的常數(與 `installWorldCurve` 讀 `?curve=0` 同一個 idiom),
+// **MUST NOT** 做成每幀可切的共享 uniform:所有 School B 的東西都包在
+// `_school === 'b'` 的**字串拼接**裡 ⇒ School A 走的是同一份 GLSL 原始碼,不是「同一支
+// 程式裡的另一條分支」,連 mix/select 造成的浮點重排都不存在。
+// 代價寫在旋鈕的 hint 裡:**切換後要重新開一場才生效**。
+//
+// 替換錨點對不上(升級 three)⇒ School B **退回 School A**(原則 6:寧缺勿錯)。
+// MUST NOT 讓它硬切一個**已經量化過**的 ramp 值 —— 那一刀會切在階梯上,終端線變鋸齒。
+const _school = (() => {
+  const qs = typeof location !== 'undefined' ? location.search : '';
+  const q = new URLSearchParams(qs).get('cel');
+  const want = (q === 'a' || q === 'b') ? q : (visualPref('celSchool') === 'b' ? 'b' : 'a');
+  if (want === 'b' && !RAMP_CAN) {
+    console.warn('[cel] three 的 ramp 錨點對不上,賽璐璐學派 B 退回 A');
+    return 'a';
+  }
+  return want;
 })();
+/** 現役學派('a' = ramp 查表 / 'b' = 硬切;稽核與 `?cel=` 的回報用) */
+export function celSchool() { return _school; }
+const RAMP_PATCHED = RAMP_CAN
+  ? RAMP_CHUNK_SRC.replace(RAMP_HOOK, _school === 'b' ? RAMP_PATCH_B : RAMP_PATCH_A)
+  : null;
 
 // 共享 uniform:一份物件餵給所有材質 ⇒ 拉桿改值即全場生效,MUST NOT 改成重建材質
 // (材質早就發到 GPU 了,戰鬥中重建等於整場卡住)。
@@ -328,6 +482,70 @@ const _rampTint = {
   mech: { value: new THREE.Color(1, 1, 1) },
   env: { value: new THREE.Color(1, 1, 1) },
 };
+
+// ---------------- School B 的 GLSL(硬切重組)----------------
+// **只在 `_school === 'b'` 時拼進字串**;School A 這兩段一個字元都不會出現。
+//
+// 亮度的定義只有一份:`LUMA_709`。**MUST NOT 手抄那三個數** —— 手抄的那一份會跟
+// `shadowTintRGB` 的正規化分家,而 A14 ③ 的亮度恆等式正是靠這兩者是同一把尺。
+const CEL_LUM_GLSL = `        float celLum( vec3 c ) { return dot( c, vec3( ${LUMA_709.join(', ')} ) ); }`;
+// 主光色 × 強度。**MUST 讀 three 自己那份燈光 uniform,MUST NOT 在 JS 端再存一份**:
+// ①`directionalLights[i].color` 就是 `light.color × light.intensity`(WebGLLights 寫進去的),
+//   而 `environment.js` 的日夜循環每幀都在改那兩個值 ⇒ 天色自動跟著走;
+// ②JS 副本要有一個呼叫端每幀餵它,而那個呼叫端住在別的檔 —— 兩份數字遲早分家,
+//   症狀是「夜戰的暗側是一個與太陽無關的常數」,`DAYCLOCK` 整套在畫面上靜默失效,
+//   而 `audit_daynight` 每一條斷言照樣全綠(它量的是 `clockHour`/`sunDirAt` 的數,不是像素)。
+// ③這裡取的是**沒有乘過陰影遮罩**的燈色(遮罩只乘進 `lights_fragment_begin` 的區域變數
+//   `directLight.color`)⇒ 它就是「這一格如果完全受光會是什麼顏色」的定義。
+const CEL_KEY_GLSL = `
+        vec3 celKeyColor() {
+          vec3 celK = vec3( 0.0 );
+          #if NUM_DIR_LIGHTS > 0
+          for ( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) celK += directionalLights[ i ].color;
+          #endif
+          return celK;
+        }`;
+const CEL_CUT_DECL_GLSL = `
+        uniform float uCelCutLo;
+        uniform float uCelCutHi;
+        uniform float uCelShadowV;
+${CEL_LUM_GLSL}
+${CEL_KEY_GLSL}`;
+// 重組本體。四條鐵律(每一條壞掉都不報錯):
+//   ①**MUST 排在 rim / metal 之前**:重組是**覆寫** `outgoingLight`,寫在它們之後就把
+//     那兩個加成式演出吃掉,而畫面上只表現成「金屬高光不見了」。
+//   ②`totalEmissiveRadiance` MUST 重新加回來 —— 覆寫會把它吃掉,症狀是所有自發光件
+//     在夜裡熄滅(隧道 / 窗光 / 曳光的底色)。
+//   ③**切的輸入 MUST 把 albedo 除掉**:`directDiffuse` 含 albedo,而本專案的機體塗裝
+//     從 0x0a 到 0xff 都有 ⇒ 直接拿它當 0~1 的遮蔽量,深色裝甲永遠跨不過那道門檻,
+//     看起來像「這台機體永遠背光」。除法的分母取**同一格的全受光值** `celOnL` ⇒
+//     單一主光時 `celLit ≡ dotNL × shadow`,**對任何基色、任何燈色都是恆等式**
+//     (albedo 與燈色在分子分母上同時出現,逐通道約掉之後 luma 也約掉)。
+//   ④**暗側的亮度 MUST 重正規化**(A14 ③ 在硬切路徑上的等價式):
+//     `luma(celOn × tint) ≠ luma(celOn) × luma(tint)` —— luma 是內積,對逐通道乘法
+//     不是乘性的(純紅基色上比值就是 tint.r)。少了那一行就是「把亮度藏進色相」的後門,
+//     而畫面上只表現成深色件在暗面塌成黑塊,正是 A14 / #INC-106 當初要擋的那件事。
+//     加了之後 `luma(celOff) ≡ uCelShadowV × luma(celOn)` 對**任何**基色與**任何**拉桿值
+//     恆成立,而 `uCelShadowV ≥ rampFloor(3)` 是 A14 ② 的那條地板。
+const CEL_CUT_MIX_GLSL = `
+          {
+            // ---- School B:硬切重組(§0-b)----
+            vec3 celKey = celKeyColor();
+            vec3 celOn = diffuseColor.rgb * celKey * RECIPROCAL_PI;
+            float celOnL = celLum( celOn );
+            float celLit = celOnL > 1e-6 ? saturate( celLum( reflectedLight.directDiffuse ) / celOnL ) : 0.0;
+            float celCut = smoothstep( uCelCutLo, uCelCutHi, celLit );
+            vec3 celOff = celOn * uCelRampTint;
+            celOff *= uCelShadowV * celOnL / max( 1e-6, celLum( celOff ) );
+            outgoingLight = mix( celOff, celOn, celCut ) + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
+          }`;
+/** School B 的三個逐材質 uniform(硬度來自這份材質自己的 `bands`)。 */
+function celCutUniforms(shader, bands) {
+  const [lo, hi] = cutOf(bands);
+  shader.uniforms.uCelCutLo = { value: lo };
+  shader.uniforms.uCelCutHi = { value: hi };
+  shader.uniforms.uCelShadowV = { value: CEL_CUT.SHADOW_V };
+}
 
 // ---------------- 風化屬性場(P2-A;2026-08-03)----------------
 // 舊制的 moss / wash 對**全場每一個環境物件**一視同仁 —— 沒有任何「這一區比那一區老」的
@@ -340,6 +558,17 @@ let _wTex = null;
 const _wField = { value: null };
 const _wRect = { value: new THREE.Vector4(0, 0, 1, 1) };   // (minX, minZ, 1/寬, 1/高)
 const _wSpread = { value: 0 };
+// 岸邊泡沫的強度與顏色(共享 uniform;深度場本體住下方的 `_seaField`)。
+// **宣告 MUST 排在 `syncVisualPrefs` 之前** —— 那一支在模組載入時就跑一次,`const` 的 TDZ
+// 會讓整支 toon.js 在 import 當下丟 ReferenceError,而錯誤訊息指向完全無關的地方。
+const _foamA = { value: 0 };
+const _foamC = { value: new THREE.Color(0.94, 0.97, 1) };
+// 墨線斷筆(序 4 ①-2)/ 地貌分界墨線(序 4 ①-3)的共享 uniform。
+// **宣告位置與 `_foamA` 同一個理由**(上面那段註解):`syncVisualPrefs()` 在模組載入時就跑,
+// 寫在它後面就是 TDZ ReferenceError,而錯誤訊息指向完全無關的地方。
+// 形狀常數住 `INK_BREAK`(見「軟性物質」段下方)—— 那一份不進 syncVisualPrefs,可以晚一點宣告。
+const _inkBreakA = { value: 0 };
+const _landInkA = { value: 0 };
 
 /** 中性場(還沒載入戰場、或展示台/角色預覽):恆 0.5 ⇒ 乘數恆 1 */
 function neutralWField() {
@@ -403,10 +632,17 @@ function ensurePreviewField() {
 }
 
 // 拉桿 → 共享 uniform(訂閱一次;本檔是全專案唯一持有這些 uniform 的地方)
+// School B 下把兩根偏色拉桿夾上 `CEL_CUT.HUE_MIN_A` 的**下限**(A14 ③ 的色相那一半):
+// 拉桿的 def 是 0,照搬過去就是灰色陰影 = 整個換學派的收益歸零。
+// School A 下 `_school !== 'b'` ⇒ 這一支**逐位元同舊制**(`shadowTintRGB(0)` 仍是純白)。
+const tintA = (k) => (_school === 'b' ? Math.max(visualPref(k), CEL_CUT.HUE_MIN_A) : visualPref(k));
 function syncVisualPrefs() {
-  _rampTint.mech.value.setRGB(...shadowTintRGB(visualPref('shadowMech')));
-  _rampTint.env.value.setRGB(...shadowTintRGB(visualPref('shadowEnv')));
+  _rampTint.mech.value.setRGB(...shadowTintRGB(tintA('shadowMech')));
+  _rampTint.env.value.setRGB(...shadowTintRGB(tintA('shadowEnv')));
   _wSpread.value = WEATHER_SPREAD * visualPref('weather');
+  _foamA.value = visualPref('foam');
+  _inkBreakA.value = visualPref('inkBreak');
+  _landInkA.value = visualPref('landInk');
 }
 syncVisualPrefs();
 onVisualChange(syncVisualPrefs);
@@ -447,6 +683,16 @@ export function updateCelLight(camera, dirWorld = null) {
 //
 //     場景 RT 的 alpha ≡ 這一格的**勾線門檻倍率**(1 = 硬性,< 1 = 軟性 ⇒ 線更細)
 //
+// ---- 2026-08-16(序 4 ①-2):同一條通道自此帶**兩個因子的乘積** ----
+//     alpha ≡ 軟性(這是什麼材質,逐材質常數)× 雜訊斷筆(這一格的筆抬起來了沒有,逐 fragment)
+// **寫入點仍然恰一處**(下面那一段 CEL_INKA 區塊裡的那一行)——
+// 兩個因子分兩處寫就是兩份契約,而分家的症狀是「斷筆只作用在軟性件上」。
+// ⚠ 這一段刻意**不逐字複述**那一行程式碼:`--break-inkbreak` 的字面替換會先咬到註解,
+// 而註解被 `code()` 剝掉之後斷言照樣全綠 = 反向驗證等於沒跑(2026-08-16 當場踩過)。
+// 讀取端(`postfx.js` 的 `soft = min(這一格 + 四鄰)` 與 `smoothstep(EDGE0, EDGE1, ae*soft)`
+// 以及 `ink = max(ink, mrtEdge * soft)`)**一行都不用改**:它天生就把新因子吃進去,
+// 而且深度那一份訊號與折邊那一份同時變細 = 真的像筆抬起來,不是只有其中一種線斷掉。
+//
 // 這是 toon.js 與 postfx.js 之間的**契約**,兩邊的註解都指向這一行。可行的理由有三:
 //   ・three 對 `transparent === false && blending === NormalBlending` 的材質一律 `NoBlending`
 //     ⇒ 不透明件的 alpha 是**直寫**的,不會被混合攪掉;
@@ -462,6 +708,78 @@ export function updateCelLight(camera, dirWorld = null) {
 // 門檻抬高 ⇒ 越過門檻的像素帶變窄。故軟性 = 把 `|e|` 乘上 `INK_SOFT_A` 再進 smoothstep
 // —— 線帶真的變窄(不是只變淡),而且 `INK_SOFT_A = 1` 逐位元回到舊制。
 const INK_SOFT_A = 0.3;
+
+// ---- 墨線斷筆(2026-08-16;序 4 ①-2)----
+// 「像筆抬起來」= 沿著線隨機把門檻倍率壓低一段。四個常數的語意逐條寫在這裡:
+//   ・`SPAN_*` 是**世界公尺的抬筆週期**,兩軌分開的理由是尺度差兩個量級:機體全高 4.5~9m
+//     (一筆畫要有十來個週期才讀得出「斷」),而地形的一筆畫跨數十公尺。軌的選擇沿用既有的
+//     `tint` 參數(`toonMat` 恆 'mech'、`envMat` 恆 'env',= `_rampTint` 那條已存在的軸),
+//     **MUST NOT 另建「哪些材質算機體」的名冊**(名冊會在加零件時靜默過期)。
+//   ・`CUT` 是 `celNoise` 值域 [0,1] 上的斷點門檻(越大斷得越多)。
+//   ・`LO` 是斷處的門檻倍率。**0 = 真的斷開**;取 0.12 = 筆壓變輕 —— 輪廓線對著天空整段消失
+//     讀起來是破洞,而 `INK_SOFT_A` 那條先例本來就是「變細不是不見」。
+// ⚠ 三件離線稽核看不到的事(定裝照才驗得到,見 audit_soft_stroke Ⅺ 的檔頭):
+//   ① 勾線 pass 取 `min(這一格 + 四鄰)` ⇒ 缺口被**侵蝕一圈**,實際比寫進去的寬約 2px;
+//   ② 斷筆錨在世界/局部空間 ⇒ 一個週期投影到螢幕的像素數 ∝ 1/距離,`SPAN_MECH` 太小會在
+//      遠處退化成亞像素雜訊(`LO ≠ 0` 讓它變成「濃淡在抖」而不是「洞在閃」,那是取捨不是解);
+//   ③ 8bit RT 上 `INK_SOFT_A × LO = 0.036` ≈ 9/255 ⇒ 軟性件的斷處實質等於沒有線。
+export const INK_BREAK = {
+  SPAN_ENV: 3.0,      // 環境軌的抬筆週期(遊戲公尺)
+  SPAN_MECH: 0.45,    // 機體軌;MUST < SPAN_ENV(尺度差兩個量級)
+  CUT: 0.42,          // celNoise ∈ [0,1] 上的斷點門檻
+  LO: 0.12,           // 斷處的門檻倍率(0 = 真的斷開)
+};
+
+// ---- 地貌分界墨線(2026-08-16;序 4 ①-3)----
+// `LAND_SURF_ID` 是「讓地貌**不要**出線」;反過來「同一塊地形上草↔岩要**出線**」需要
+// 把地貌分區折進 surfaceId。三條算術寫在這裡,因為撞號是這一族唯一會靜默壞掉的地方:
+//   ① 子帶 MUST 落在**整數格 `k/64`**(與 `surfGroup` 同一把梳子)—— 半整數格是 `nextSurfId`
+//      的值域,落上去就是「某些地貌對某些材質的線靜默消失」。計畫原文的 `+= grassMask * 0.1`
+//      **會撞**:0.1 / 0.15 落在現役槽 0.1015625 / 0.1484375 的 0.004 門檻之內。
+//   ② 從**頂端**往下配(63, 62, …),而 `surfGroup` 由 2 往上配 ⇒ 一場戰鬥配不到 56 個群組
+//      就不會碰面;真的碰面也只是既有那條「撞號 = 少一條線,不是壞掉」。
+//   ③ **群組早退那一條例外**:它會讓整株樹的剪影消失而不是少一條線 ⇒ `postfx.js` 的早退
+//      另外加了「五格都不是 LAND」這道閘(今天恆真 ⇒ 逐位元中性,見那一段註解)。
+export const LAND_ZONE_N = 6;
+/**
+ * 地貌分區 → surfaceId 子帶(整數格,由頂端往下配)。
+ * @param i 分區索引 ∈ [0, LAND_ZONE_N);超界或非整數一律回 `LAND_SURF_ID`(原則 6:
+ *          寧缺勿錯 —— 回一個亂數格會在地面上畫出一條沒有意義的線)
+ */
+export const landZoneId = (i) => (Number.isInteger(i) && i >= 0 && i < LAND_ZONE_N
+  ? (64 - LAND_ZONE_N + i) / 64 : LAND_SURF_ID);
+
+// ---- `outlineContribution` 的推導縫(2026-08-16;S4 的 toon.js 那一半)----
+// 與上面那個常數是同一族的兩半:軟性管**這條線多細**、貢獻管**這條線畫不畫**。
+// 規則:呼叫端 MUST 傳「自己排零件時**已經算出來的**間距」,MUST NOT 手寫貢獻數字、
+// MUST NOT 另建「零件種類 → 貢獻」的名冊(名冊會在加零件時靜默過期)。
+// 唯一容許手寫的是 `INK_CONTRIB_NONE`(否決)。
+//
+// ⚠ **倍率 2 是授權值不是量測值**(同 `MINI.BUFFER_F = 1/3`、`SELF_ULT.REALIZED_F = 0.35`
+// 的處理方式):試過 `SOLDIER_H`(把三組全推到 1)與 `heroTallestH() ≈ 26m`(全推到近 0)
+// 兩個現成錨都配不起來。校準面 = 序 12b 的定裝照,MUST NOT 宣稱它是量出來的。
+export const INK_REPEAT_M = SOLDIER_H * 2;
+/**
+ * 構件間距 → 貢獻。間距越密 ⇒ 那一排線越像雜訊 ⇒ 貢獻越低。
+ * @param pitchM 構件重複的節距(遊戲公尺);≥ `INK_REPEAT_M` ⇒ 1(不重複 = 值得一條線)
+ */
+export const inkRepeat = (pitchM) => inkQuant(Math.min(1, Math.max(0, pitchM / INK_REPEAT_M)));
+
+// ---- 玩家位移擾動(2026-08-16;S5 的 toon.js 那一半)----
+// 機體走過去把腳邊的草撥開。三件事全部住頂點著色器 ⇒ 伺服器一格未改、碰撞一格未改。
+// **N 是成本預算常數不是美術參數**:每一個槽位是逐頂點一次 `length()` + 一次 `smoothstep()`,
+// 而草 / 稻那幾列是全場頂點數最高的 InstancedMesh。取 4 = 主視野機體 + 離相機最近的 3 台
+// (第三人稱與觀戰下兩台常同框,只撥開自機腳邊的草很明顯不對)。
+// ⚠ 代價寫在這裡而不是靠加大 N 掩蓋:被擠出槽位的那一台在下一幀 spd 歸 0 ⇒ 它腳邊的草
+// 會彈回去。那是 N 有限的必然結果。
+export const CHAR = {
+  N: 4,
+  R0: 1.1,          // 站著不動時的擾動半徑(m):貼著身體那一圈
+  R_PER_MPS: 0.26,  // **半徑是速度的函式**(走路撥開、跑步甩開)—— 這一行就是這一項的本體
+  SPD_REF: 6,       // 強度飽和速率(m/s):到這個速度就是滿幅
+  PUSH_F: 1.8,      // 位移相對於該株擺幅(`uSoftAmp`)的倍率
+  SPD_K: 6,         // 速率平滑的阻尼係數(消費端走序 2 的 `lerpFPS`,MUST NOT 自己寫 min(1, k·dt))
+};
 
 /**
  * 全場風(單一縫)。植被/旗幟(本檔的頂點位移)與雲朵(`environment.js` 的漂移)MUST
@@ -520,6 +838,7 @@ export const seaSoft = () => ({ k: 'sea', span: WIND.SEA_M });
 /** 水面網格的最大邊長(m):由波長與取樣率推導,MUST NOT 手寫段數 */
 export const seaSegM = () => WIND.SEA_M / WIND.SEA_SEG;
 
+
 // 共享 uniform(同 `_celLightDirView` / `_rampTint`:一份物件餵給所有材質)。
 // **時鐘刻意不取模**:各 kind 的頻率彼此不可通約,取模會在週期邊界跳一下;
 // float32 在一小時(t = 3600)上的相位解析度仍有 ~0.001 rad,一場對局綽綽有餘。
@@ -532,6 +851,103 @@ const _windK = {
 const _gustK = {
   value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.GUST_M),
 };
+// 玩家位移擾動的兩支共享 uniform(同 `_windT` 的 idiom:一份物件餵給所有軟性材質)。
+// 全槽 `spd = 0` ⇒ 位移項在著色器裡早退 ⇒ **逐位元同舊制**。
+const _charPos = { value: Array.from({ length: CHAR.N }, () => new THREE.Vector3()) };
+const _charSpd = { value: new Float32Array(CHAR.N) };
+// 海面深度場(泡沫的驅動量)。預設 1×1 的「很深」中性貼圖 ⇒ 沒有水域 / 還沒烤 /
+// 舊存檔一律**沒有泡沫**而不是滿場泡沫(原則 6 寧缺勿錯)。
+let _seaTex = null;
+const _seaField = { value: null };
+const _seaRect = { value: new THREE.Vector4(0, 0, 1, 1) };   // (minX, minZ, 1/寬, 1/高)
+function neutralSeaField() {
+  const t = new THREE.DataTexture(new Uint8Array([255]), 1, 1, THREE.RedFormat);
+  t.needsUpdate = true;
+  return t;
+}
+_seaField.value = neutralSeaField();
+
+/**
+ * 安裝海面深度場(唯一寫入點;呼叫端 = `terrain.js` 的 `bakeSeaDepth`,每場一次)。
+ * 逐條照抄 `setWeatherField` —— 包括 `old?.dispose()`(A25:不放掉就是每開一場漏一張)。
+ * @param data   Uint8Array(size × size);值 = `clamp(水深 / FOAM.RANGE_M, 0, 1) × 255`
+ * @param size   邊長格數(MUST 由 `seaFieldN()` 推導)
+ * @param bounds { minX, minZ, w, h } 世界取樣框
+ */
+export function setSeaDepthField(data, size, bounds) {
+  const old = _seaTex;
+  const t = new THREE.DataTexture(data, size, size, THREE.RedFormat);
+  t.minFilter = THREE.LinearFilter;
+  t.magFilter = THREE.LinearFilter;
+  t.wrapS = THREE.ClampToEdgeWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  t.needsUpdate = true;
+  _seaTex = t;
+  _seaField.value = t;
+  _seaRect.value.set(bounds.minX, bounds.minZ,
+    1 / Math.max(1e-6, bounds.w), 1 / Math.max(1e-6, bounds.h));
+  old?.dispose();
+}
+
+// ---- 岸邊泡沫 / 水面倒影(2026-08-16;S6 的 toon.js 那一半)----
+// 泡沫的驅動量是**水深**不是岸線幾何:水面 fragment 拿不到場景深度(它與 `rtScene.depthTexture`
+// 是同一個 FBO 的附件 = 回饋迴圈),第二趟深度 prepass 又是 postfx 檔頭拒絕過的同一筆成本
+// ⇒ 深度做成**烤好的場**(terrain 高度場 + `blockers` 蓋章),逐 fragment 取樣。
+// 相位再減去 `celSeaH` ⇒ 浪一來泡沫沖上岸;繞過每一根柱子由蓋章那一步給。
+// **MUST NOT 在 terrain.js / biomes.js 手寫這些值**(同 `SEA_M`/`SEA_SEG` 的紀律)。
+export const FOAM = {
+  BAND_M: 0.55,     // 泡沫帶的深度節距(m):一條帶 = 深度差這麼多
+  STEP: 0.42,       // 硬邊門檻(賽璐璐的泡沫是白色硬邊,不是柔霧)
+  NOISE_M: 3.4,     // 噪聲的空間尺度(m):讓帶緣碎掉,不是一圈同心圓
+  RANGE_M: 6,       // 深度場的量化上界(m):深過這個值恆無泡沫 ⇒ 中性場 = 沒有泡沫
+  TEXEL_M: 1.5,     // 場的 texel 邊長(m);低功耗折半由 `seaFieldN` 推導
+};
+export const REFL = {
+  SEG_N: 3,         // 一個反射體切幾段(斷口讓它讀起來像被浪打散的倒影)
+  GAP_F: 0.22,      // 斷口佔段長的比例
+  MIN_H: 4,         // 進名冊的最小反射體高(m)
+  MAX_N: 24,        // 反射體上限(一份幾何一個 draw call ⇒ 上限是頂點預算不是 draw call)
+  HALF_F: 0.9,      // 倒影塊半寬 ÷ 反射體半徑
+};
+/**
+ * 深度場的邊長格數(**推導,MUST NOT 手寫 1024**)。低功耗折半 —— 手寫的話低階裝置
+ * 多背 1MB VRAM 而畫面一模一樣(同 `SHADOW.TEXEL_M` 那一條)。
+ */
+export const seaFieldN = (worldW, worldH, low = false) => {
+  const m = FOAM.TEXEL_M * (low ? 2 : 1);
+  return Math.max(2, Math.min(1024, Math.ceil(Math.max(worldW, worldH) / m)));
+};
+/** 泡沫帶的深度節距(消費端只准經這一支取值) */
+export const foamBandM = () => FOAM.BAND_M;
+
+// ---- 風 / 浪 / 泡沫的 GLSL(**恰一份實作**,頂點與片段兩端注入同一份字串)----
+// 泡沫住片段、浪高住頂點,而泡沫的相位要減去浪高 ⇒ 兩端都要 `celSeaH`。
+// 抄第二份的代價是「泡沫的沖刷與浪峰差半個波長」,而畫面上只表現成「泡沫怪怪的」。
+const CEL_WIND_GLSL = `
+        uniform float uWindT;
+        uniform vec2 uWindDir;
+        uniform vec2 uWindK;
+        uniform vec2 uGustK;
+        uniform float uSoftSpan;
+        uniform float uSoftBase;
+        uniform float uSoftSy;
+        uniform float uSoftAmp;
+        uniform float uSoftFreq;
+        // 陣風包絡(單一實作,擺動與海浪同吃)。振幅乘上一層「波長長一個量級、走得慢一半」
+        // 的行波 ⇒ 掃到的那一帶倒得深、其餘幾乎靜止 = 眼睛讀得出「一道浪推過去」。
+        // 平均值恆為 1 ⇒ 這一層**不改變平均擺幅**,只重新分配;GUST_F = 0 恆回 1.0(舊制)。
+        float celGust( vec2 celGxz ) {
+          return 1.0 + ${WIND.GUST_F.toFixed(3)} * sin( uWindT * ${WIND.GUST_S.toFixed(3)} + dot( celGxz, uGustK ) );
+        }`;
+const CEL_SEA_GLSL = `
+        // 浪高(世界 XZ 的純函式)。**位移與法線 MUST 吃同一支** —— 兩邊各寫一份的話,
+        // 光影的浪與幾何的浪會差半個波長,而畫面上只表現成「水面的亮帶跟浪對不上」。
+        float celSeaH( vec2 celSxz ) {
+          float celSp = dot( celSxz, uWindK );
+          return uSoftAmp * celGust( celSxz )
+               * ( sin( uWindT * uSoftFreq + celSp ) * 0.72
+                 + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celSp * 1.6 + 1.7 ) * 0.28 );
+        }`;
 
 /**
  * 推進風的時鐘(每幀一次;呼叫端 = `game.js` 的主迴圈)。
@@ -543,6 +959,22 @@ export function stepCelWind(dt) {
 
 /** 目前的風時鐘(秒);雲朵那半(environment.js)與植被同吃一個時鐘 */
 export function celWindTime() { return _windT.value; }
+
+/**
+ * 餵入這一幀的擾動源(唯一寫入點;呼叫端 = `game.js` 主迴圈,MUST 排在 `_updateEnts` 之後)。
+ * **沒填到的槽位由本函式顯式寫 `spd = 0`** —— 留上一幀的值的話,那台機體離開之後
+ * 它腳邊的草就永遠倒著(呼叫端不必補,補了也是第二份規則)。
+ * ⚠ MUST NOT 併進 `stepCelWind(dt)` 的簽章:`audit_soft_stroke` Ⅴ 釘死那一支的呼叫形狀。
+ * @param list [{ x, y, z, spd }, …],長度 ≤ CHAR.N
+ */
+export function setCelChar(list) {
+  const n = list ? list.length : 0;
+  for (let i = 0; i < CHAR.N; i++) {
+    const c = i < n ? list[i] : null;
+    if (c) _charPos.value[i].set(c.x || 0, c.y || 0, c.z || 0);
+    _charSpd.value[i] = c ? Math.max(0, c.spd || 0) : 0;
+  }
+}
 
 /**
  * 注入賽璐璐補丁:邊緣光(rim)+ 金屬硬邊高光帶(CEL_METAL 定義時)。
@@ -563,15 +995,41 @@ export function celWindTime() { return _windT.value; }
  *             + 類別碼 LAND。**MUST NOT 掛在道路、建物、擺件上**(那些的邊界線是要的)。
  *   landNrm — 再加一條:gInfo 的法線改吃幾何的 `aLandN` 屬性(呼叫端餵真地形法線)。
  *             只給**貼地拼圖**(它自己的法線是 (0,1,0) 這個謊);地形自己與立體脊不傳。
+ * 勾線資訊緩衝的擴充(2026-08-16;S2 —— 新參數 MUST 一律加在**尾端**):
+ *   ink      — 表面類別 'hard'(預設)/ 'land' / 'group' / 'none'。`land: true` 會把預設的
+ *              'hard' 升成 'land',而顯式的 `ink` 一律勝出。
+ *   contrib  — `outlineContribution` ∈ [0,1](**MUST 由 `inkRepeat()` / `inkCtrM()` 推導**,
+ *              唯一容許手寫的是 `INK_CONTRIB_NONE`)。1 = 舊制;0 = 這一款東西不出線。
+ *              **是 uniform 不是 define** ⇒ MUST NOT 進 `customProgramCacheKey`(進去就是
+ *              每一個貢獻值切一支新程式,而畫面上完全看不出來)。
+ *   surf     — 顯式指定表面群組號(`surfGroup()` 給的);`land` 勝出。
+ *   surfAttr — 面號改吃逐實例屬性 `aSurfId`(同一株樹的幹 / 枝 / 冠共用一號)。
+ *   card     — 葉片卡:四角在視域空間展開(屬性 `aCard`)。
+ *   refl     — 水面倒影塊:朝向在頂點著色器算(屬性 `aReflO` + uniform `uWaterY`),類別恆 NONE。
+ * 序 4 / 序 8 的擴充(2026-08-16;同樣 MUST 一律加在**尾端**):
+ *   dissolve — 溶入(`discard` 抖動,不是 alpha 淡入):賽璐璐件用 alpha 淡入會失去自己的
+ *              輪廓,而 `discard` 掉的片元連 gInfo 都不寫 ⇒ 洞邊由既有的兩支訊號自己出線。
+ *              進度住 `mat.userData.celDisU`(**穩定的 uniform 物件**),唯一寫入點 =
+ *              `setDissolve()`。1 = 完全實體(預設)⇒ 沒接驅動端的材質逐位元同舊制。
+ *   landId   — 地貌分區子帶:`gInfo.b` 改吃逐頂點屬性 `aLandId`(值由 `landZoneId()` 給)。
+ *              **由 `landInk` 拉桿閘住**(uniform,不是 define ⇒ 拉桿一動不必重建材質):
+ *              拉桿 0 或屬性缺席 ⇒ 恆等於 `LAND_SURF_ID` = 逐位元同舊制。
  */
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false } = {}) {
+const INK_KIND = { none: 'NONE', land: 'LAND', hard: 'HARD', group: 'GROUP' };
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false, ink = 'hard', contrib = 1, surf = null, surfAttr = false, card = false, refl = false, dissolve = false, landId = false } = {}) {
   if (preview) ensurePreviewField();
   const sk = soft ? (SOFT_KINDS[soft.k] || SOFT_KINDS.leaf) : null;
   const defines = { ...(mat.defines || {}) };
   if (metal) defines.CEL_METAL = '';
   if (wash > 0) defines.CEL_WASH = '';
   if (moss) defines.CEL_MOSS = '';
-  if (cool > 0) defines.CEL_COOL = '';
+  // **CEL_COOL 在 School B 下 MUST 關掉**:它是舊制那條「事後把 outgoingLight 往冷色拌一下」
+  // 的終端(自己一條 `smoothstep(0.05, 0.45, dot(normal, uCelLightDir))`),與硬切並存的話
+  // 同一顆物件上會有**兩條位置不同的明暗界**,而它讀起來就是「渲染壞了」。
+  // 兩派 MUST NOT 混在同一顆物件上;暗側的顏色在 School B 由 `uCelRampTint` 一份給。
+  // School A 下 `coolOn === (cool > 0)` ⇒ defines 與快取鍵**逐位元同舊制**。
+  const coolOn = cool > 0 && _school !== 'b';
+  if (coolOn) defines.CEL_COOL = '';
   if (paint) defines.CEL_PAINT = '';
   // 單一主徽(totem/tattoo/flag)只貼一面朝外的顯眼裝甲:用 rig 空間法線與指定朝向(paint.face,
   // 直立機甲取 +Z 胸甲、橫置飛行器取 +Y 頂面)的夾角把貼花閘在該半球,避免三平面投影
@@ -580,13 +1038,23 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   // 平面閘(hinomaru):只在與 paint.flat 軸「平行」的面(頂+底兩面,|N·軸| 大)顯現 →
   // 抑制三平面投影在薄件側緣(垂直面)的溢色。與 GATE(單一半球)互斥。
   if (paint?.flat) defines.CEL_PAINT_FLAT = '';
-  if (wash > 0 || moss) defines.CEL_WP = '';   // 需要世界座標 varying
+  // 需要世界座標 varying。海浪那一族**顯式**列進來:泡沫要世界 XZ,而水面現況剛好有
+  // `wash: 0.5` —— 靠巧合成立的東西沒有斷言守得住。
+  if (wash > 0 || moss || sk?.axis === 'w') defines.CEL_WP = '';
   // 細勾線與擺動**分兩個 define**:草坪要前者不要後者(它是鋪面,擺起來只會跟步道錯開)。
   // 細勾線那半**只給不透明件**:通道是「場景 RT 的 alpha」,而半透明件的 alpha 是**不透明度**
   // ——`gl_FragColor.a = uSoftInk` 寫下去就是把水面從 0.82 直接改成 0.30。檔頭那條契約本來就
   // 只對不透明件成立(「半透明件混合後 alpha 只會被推向 1 = 硬性 = 舊行為」),這裡把它寫成閘。
   const inkable = !!sk && !mat.transparent;
   if (inkable) defines.CEL_SOFT = '';
+  // 墨線斷筆(序 4 ①-2)。閘與 `inkable` **同一條理由**(半透明件的 alpha 是不透明度,
+  // 寫勾線倍率就是把水面從 0.82 改成 0.30)⇒ 兩者共用 `!mat.transparent` 這一句。
+  // 差別只在少了 `!!sk`:斷筆對硬性件一樣要作用,而 `uSoftInk` 對它們恆 1 ⇒ 舊行為是新式的特例。
+  // ⚠ 落地前逐一核對過呼叫端:`transparent:false` 但 `opacity < 1` 的 cel 材質**零命中**
+  //   (四處 `opacity` 全帶 `transparent: true`),而 three 對 `!transparent && NormalBlending`
+  //   一律定義 `OPAQUE` ⇒ `diffuseColor.a = 1.0` ⇒ 這裡寫 1.0 是 no-op。
+  const inkAlpha = !mat.transparent;
+  if (inkAlpha) { defines.CEL_INKA = ''; defines.CEL_INKB = ''; }
   if (sk && sk.amp > 0) {
     if (sk.axis === 'w') defines.CEL_WAVE = '';   // 表面波(海浪):垂直位移 + 逐頂點相位
     else {
@@ -596,20 +1064,60 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   }
   // 地貌法線:只有它需要 define(共用 id 與類別碼都只是 uniform ⇒ 不必分程式)
   if (landNrm) defines.CEL_LAND_N = '';
+  // S2 的四個新 define。**類別碼與貢獻刻意不在這裡** —— 它們是 uniform(見簽章註解)。
+  if (surfAttr) defines.CEL_SURF_A = '';
+  if (card) defines.CEL_LEAFCARD = '';
+  if (refl) defines.CEL_REFL = '';
+  if (dissolve) defines.CEL_DIS = '';
+  if (landId) defines.CEL_LAND_ID = '';
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm, ink, contrib, surf, surfAttr, card, refl, dissolve, landId };
+  // 溶入進度是**穩定的 uniform 物件**(同 `_windT` / `_rampTint` 的做法):在 onBeforeCompile
+  // 裡 `{ value: 1 }` 新建的話,材質一重編譯(改 defines / needsUpdate)就換一顆,而驅動端
+  // 抓著的是舊的 ⇒ 症狀是「有時候不會溶入」。1 = 完全實體。
+  if (dissolve && !mat.userData.celDisU) {
+    mat.userData.celDisU = { value: 1 };
+    mat.userData.celDisO = { value: new THREE.Vector3() };
+  }
   // surfaceId 逐材質定案一次(MUST NOT 在 onBeforeCompile 裡抽 —— 那支會因為 defines 改變或
   // needsUpdate 重跑,同一塊裝甲會在重編譯之後換號,而畫面上只表現成「線閃了一下」)。
   // **逐材質不是逐頂點**:逐頂點 id 要動到每一支幾何產生器,而這裡九成的價值在法線那一項;
   // 逐材質 id 免費拿到「建物 vs 地面」「機體 vs 岩石」這一類分界。是刻意的降級,不是假裝有。
   // 地貌一律共用同一號(檔頭 ①):它是**類別**不是實例,MUST NOT 走 nextSurfId
   if (land) mat.userData.celSurfId = LAND_SURF_ID;
+  else if (surf != null) mat.userData.celSurfId = surf;
   else if (mat.userData.celSurfId == null) mat.userData.celSurfId = nextSurfId();
+  // 類別碼:`land: true` 把預設的 'hard' 升成 'land',顯式的 `ink` 一律勝出;
+  // 倒影塊恆 NONE(它是貼在水上的一片色塊,不該被畫輪廓)。
+  const inkKey = refl ? 'none' : (land && ink === 'hard' ? 'land' : ink);
+  const inkCls = INK_CLASS[INK_KIND[inkKey] || 'HARD'];
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uSurfId = { value: mat.userData.celSurfId };
-    shader.uniforms.uInkClass = { value: land ? INK_CLASS.LAND : INK_CLASS.HARD };
+    shader.uniforms.uInkClass = { value: inkCls };
+    // **MUST 經 inkQuant 量化**:呼叫端傳 0.4 而緩衝裡是 0.4000 / 0.4667,稽核與定裝照
+    // 量到的就是另一個數。MUST NOT 在 CPU 端先把 cls 與 ctr 併成一個數 —— 序 4(雜訊斷線)
+    // 要逐 fragment 調變 ctr,併掉就沒有調變點了。
+    shader.uniforms.uInkCtr = { value: inkQuant(contrib) };
+    shader.uniforms.uCharPos = _charPos;
+    shader.uniforms.uCharSpd = _charSpd;
+    shader.uniforms.uSeaField = _seaField;
+    shader.uniforms.uSeaRect = _seaRect;
+    shader.uniforms.uFoamA = _foamA;
+    shader.uniforms.uFoamC = _foamC;
+    shader.uniforms.uWaterY = { value: (refl && refl.y) || 0 };
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
+    // 地貌分區子帶的閘(序 4 ①-3):**共享 uniform** ⇒ 拉桿一動全場同一幀跟著換,
+    // 而且不必為它多切一支程式(紀律③:改值 MUST NOT 重建材質)。
+    shader.uniforms.uLandInk = _landInkA;
+    // 溶入:進度 + 該單位的世界原點(錨在單位自己身上 —— 拿純世界座標的話機體會從一張
+    // 固定的網格裡「游」過去,與 ①-2 的斷筆錨點是同一條理由)
+    shader.uniforms.uDis = mat.userData.celDisU || { value: 1 };
+    shader.uniforms.uDisO = mat.userData.celDisO || { value: new THREE.Vector3() };
     // 軟性:勾線門檻倍率(寫進場景 RT 的 alpha)+ 擺動的四個形狀參數
+    // 斷筆的兩個 uniform 與它**寫在一起**:同一條通道的兩個因子(檔頭「軟性物質」段)。
+    // 軌 = 既有的 `tint` 軸,MUST NOT 另建名冊。
+    shader.uniforms.uInkBreakA = _inkBreakA;
+    shader.uniforms.uInkBreakSpan = { value: tint === 'env' ? INK_BREAK.SPAN_ENV : INK_BREAK.SPAN_MECH };
     shader.uniforms.uSoftInk = { value: inkable ? INK_SOFT_A : 1 };
     shader.uniforms.uSoftSpan = { value: Math.max(1e-3, soft?.span ?? 1) };
     shader.uniforms.uSoftBase = { value: soft?.base ?? 0 };
@@ -621,7 +1129,12 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uWindK = _windK;
     shader.uniforms.uGustK = _gustK;
     // 陰影偏色(P1-B):共享 uniform 物件 ⇒ 拉桿一動,全場材質同一幀跟著換
+    // **兩派共用同一份色相**(同一張 `SHADOW_HUE`、同一根拉桿、同一條 mech/env 兩軌),
+    // MUST NOT 為 School B 另建第二份 —— 那就是「兩派的陰影是兩種顏色」。
     shader.uniforms.uCelRampTint = _rampTint[tint] || _rampTint.mech;
+    // School B:硬度由**這份材質自己的 bands** 給(與 uCelRampLo 同一個道理)。
+    // School A 下一格都不加 ⇒ uniform 集合逐位元同舊制。
+    if (_school === 'b') celCutUniforms(shader, bands);
     // 場只換「哪一張 + 取樣框」兩個 uniform;取樣規則(celWeatherF)與強度仍是同一份
     shader.uniforms.uCelWField = preview ? _wFieldPrev : _wField;
     shader.uniforms.uCelWRect = preview ? _wRectPrev : _wRect;
@@ -650,36 +1163,56 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         attribute vec3 aLandN;
         varying vec3 vLandN;
         #endif
-        #if defined( CEL_SWAY ) || defined( CEL_WAVE )
-        uniform float uWindT;
-        uniform vec2 uWindDir;
-        uniform vec2 uWindK;
-        uniform vec2 uGustK;
-        uniform float uSoftSpan;
-        uniform float uSoftBase;
-        uniform float uSoftSy;
-        uniform float uSoftAmp;
-        uniform float uSoftFreq;
-        // 陣風包絡(單一實作,擺動與海浪同吃)。振幅乘上一層「波長長一個量級、走得慢一半」
-        // 的行波 ⇒ 掃到的那一帶倒得深、其餘幾乎靜止 = 眼睛讀得出「一道浪推過去」。
-        // 平均值恆為 1 ⇒ 這一層**不改變平均擺幅**,只重新分配;GUST_F = 0 恆回 1.0(舊制)。
-        float celGust( vec2 celGxz ) {
-          return 1.0 + ${WIND.GUST_F.toFixed(3)} * sin( uWindT * ${WIND.GUST_S.toFixed(3)} + dot( celGxz, uGustK ) );
-        }
+        #ifdef CEL_SURF_A
+        // 逐**實例**的面號(S3):同一株樹的幹 / 枝 / 冠共用一號 ⇒ 群組早退看得出「這是一棵樹」。
+        // 缺席時 gInfo.b 仍走 uSurfId(逐材質),見片段端的 #ifdef。
+        attribute float aSurfId;
+        varying float vSurfId;
         #endif
-        #ifdef CEL_WAVE
+        #ifdef CEL_LAND_ID
+        // 逐**頂點**的地貌分區子帶(序 4 ①-3)。逐頂點而不是逐材質:底毯是逐 sub#variant
+        // 分桶的獨立材質,把分區併進分桶鍵會讓 scree / steppe / concrete 這些跨分區的款分裂成
+        // 多桶(= 多 draw call);逐頂點屬性**零額外 draw call**。缺席 ⇒ 0 ⇒ 恆等於 LAND_SURF_ID。
+        attribute float aLandId;
+        varying float vLandId;
+        #endif
+        #ifdef CEL_DIS
+        // 溶入:錨在**單位自己的世界原點**上(uDisO)。抖動網格因此跟著機體走,
+        // 而不是機體從一張固定的網格裡游過去。
+        uniform vec3 uDisO;
+        varying vec3 vDisP;
+        #endif
+        #ifdef CEL_INKB
+        // 墨線斷筆的錨點(序 4 ①-2)。宣告在頂點端,值在 project_vertex 之後算。
+        varying vec3 vCelInkP;
+        #endif
+        #ifdef CEL_LEAFCARD
+        // 葉片卡:vec3( 角落 x, 角落 y, 旋轉 )。四個角在**視域空間**展開 ⇒ 中心點已經過了
+        // project_vertex 的 worldCurve,MUST NOT 自己再彎一次(那會沉兩次)。
+        attribute vec3 aCard;
+        #endif
+        #ifdef CEL_REFL
+        // 倒影塊(S6):position.x = 橫向偏移(世界公尺)、position.y = 沿倒影方向的比例 [0,1]。
+        attribute vec3 aReflO;   // ( 反射體世界 X, 反射體世界 Z, 反射體高 h )
+        uniform float uWaterY;
+        #endif
+        #if defined( CEL_SWAY ) || defined( CEL_WAVE ) || defined( CEL_REFL )
+${CEL_WIND_GLSL}
+        #endif
+        #if defined( CEL_WAVE ) || defined( CEL_REFL )
         // 逐頂點的淡出權重(1 = 滿幅、0 = 平的)。**由呼叫端烤在幾何上**,不是 uniform:
         // 水盤與緩衝空間外環水面共用同一份材質,而外環的網格粗到取樣不了波(邊長 53m >
         // 波長 64m 的 Nyquist)⇒ 讓它整片為 0,接縫兩側同為平面,沒有折痕也沒有遠處亂跳。
         attribute float seaFade;
-        // 浪高(世界 XZ 的純函式)。**位移與法線 MUST 吃同一支** —— 兩邊各寫一份的話,
-        // 光影的浪與幾何的浪會差半個波長,而畫面上只表現成「水面的亮帶跟浪對不上」。
-        float celSeaH( vec2 celSxz ) {
-          float celSp = dot( celSxz, uWindK );
-          return uSoftAmp * celGust( celSxz )
-               * ( sin( uWindT * uSoftFreq + celSp ) * 0.72
-                 + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celSp * 1.6 + 1.7 ) * 0.28 );
-        }
+${CEL_SEA_GLSL}
+        #endif
+        #ifdef CEL_WAVE
+        varying float vSeaFade;   // 泡沫那一半在片段端吃它(53m 外環水面 MUST 無泡沫)
+        #endif
+        #ifdef CEL_SWAY
+        // 玩家位移擾動(S5):機體走過去把腳邊的草撥開。全槽 spd = 0 ⇒ 位移項早退 ⇒ 逐位元同舊制。
+        uniform vec3 uCharPos[ ${CHAR.N} ];
+        uniform float uCharSpd[ ${CHAR.N} ];
         #endif
         void main() {`)
       // 法線 MUST 在 `beginnormal_vertex` 這一段改:three 的 normal_vertex(算 vNormal)排在
@@ -705,6 +1238,23 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
       // 擺動 MUST 排在 project_vertex **之前**:那一段吃 transformed 算 mvPosition 與
       // gl_Position,擺完再算才會連 vViewPosition / 世界座標 varying 一起是同一個姿勢。
       .replace('#include <project_vertex>', `
+        #ifdef CEL_REFL
+        {
+          // ---- 水面倒影塊(S6;⑤-3)----
+          // 朝向在**頂點著色器**算 ⇒ 一份幾何、一個 draw call、零逐幀 CPU 更新。
+          // 長度由鏡像幾何反解:眼高 e、反射體高 h、水平距 D ⇒ len = D·h/(e+h)(推導不手寫)。
+          // ⚠ 契約:這份材質 MUST 掛在**世界原點**(identity modelMatrix)—— 下面直接把
+          //   世界座標寫回 transformed,mesh 自己再帶一個位移就會整批偏掉。
+          float rE = max( 0.1, cameraPosition.y - uWaterY );
+          vec2 rD2 = cameraPosition.xz - aReflO.xy;
+          float rD = length( rD2 );
+          vec2 rDir = rD2 / max( rD, 1e-4 );
+          float rLen = rD * aReflO.z / ( rE + aReflO.z );
+          vec2 rNrm = vec2( -rDir.y, rDir.x );
+          vec2 rP = aReflO.xy + rDir * ( rLen * transformed.y ) + rNrm * transformed.x;
+          transformed = vec3( rP.x, uWaterY + celSeaH( rP ) * seaFade, rP.y );
+        }
+        #endif
         #ifdef CEL_SWAY
         {
           // ---- 擺動權重 sw:0 = 錨在根部 / 旗桿側(不動),1 = 梢端 ----
@@ -712,11 +1262,14 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           // uSoftSy = 零件自身的縱向縮放)⇒ 樹幹頂與樹冠底在同一個高度上拿到**同一個** sw,
           // 位移場是連續的 ⇒ 接合不會被風吹開(A26 / A27 的接合完成度與擺動無關)。
           // 逐零件各自從 0 起算的話,每一顆樹冠都會繞自己的中心剪切,疊接縫當場開開合合。
+          // swH(這個頂點在整株座標上的位置)**恰一處**:玩家位移擾動那一段也要它,
+          // 抄第二份的話 --break-anchor 只會咬到其中一份而反向驗證變成永遠綠(§5.4 ㋑)。
           #ifdef CEL_SWAY_H
-            float sw = clamp( ( uSoftBase + transformed.x ) / uSoftSpan, 0.0, 1.0 );
+            float swH = uSoftBase + transformed.x;
           #else
-            float sw = clamp( ( uSoftBase + transformed.y * uSoftSy ) / uSoftSpan, 0.0, 1.0 );
+            float swH = uSoftBase + transformed.y * uSoftSy;
           #endif
+          float sw = clamp( swH / uSoftSpan, 0.0, 1.0 );
           sw *= sw;   // 二次:根部更硬、梢端更軟(一次的話整株看起來像被平移)
           // ---- 相位:取**實例原點**,不是逐頂點 ----
           // 逐頂點取相位 = 同一片葉子的兩端各走各的 = 幾何被拉扯變形;取原點則整個零件同相,
@@ -751,6 +1304,26 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           transformed += swD * swA;
           // 擺出去時梢端略降(弧長守恆的一階近似)—— 少了這一項會看起來像整株在平移
           transformed.y -= sw * uSoftAmp * abs( swOsc ) * 0.3;
+          // ---- 玩家位移擾動(S5;⑤-1)----
+          // 距離是 **2.5D**:水平取**實例原點**(逐頂點取 XZ 會把整株拉歪)、垂直取這個頂點
+          // 自己的株上高度 ⇒ 一台在地面走的機體構造上碰不到 6m 高的樹冠。
+          // 半徑 **是速度的函式**(走路撥開、跑步甩開)—— 這一行就是這一項的本體。
+          // ⚠ 兩條硬規則:①MUST NOT 引入第三個 sin(;②MUST NOT 對零向量 normalize() 之後
+          //   乘 0(NaN × 0 仍是 NaN ⇒ 那批 InstancedMesh 整批消失而 console 一個字都沒有)
+          //   —— 故一律 spd > 0 早退 + 除以 max(len, 1e-4)。
+          float swHy = swO.y + swH * length( swM[ 1 ] );
+          for ( int ci = 0; ci < ${CHAR.N}; ci++ ) {
+            float cSpd = uCharSpd[ ci ];
+            if ( cSpd <= 0.0 ) continue;
+            vec3 cRel = vec3( swO.x, swHy, swO.z ) - uCharPos[ ci ];
+            float cR = ${CHAR.R0.toFixed(3)} + ${CHAR.R_PER_MPS.toFixed(3)} * cSpd;
+            float cD = length( cRel );
+            if ( cD >= cR ) continue;
+            float cW = smoothstep( cR, 0.0, cD ) * min( 1.0, cSpd / ${CHAR.SPD_REF.toFixed(2)} );
+            vec2 cOut = cRel.xz / max( length( cRel.xz ), 1e-4 );
+            vec3 cDir = normalize( vec3( cOut.x, 0.0, cOut.y ) * swM + vec3( 1e-6 ) );
+            transformed += cDir * ( cW * sw * uSoftAmp * ${CHAR.PUSH_F.toFixed(2)} );
+          }
         }
         #endif
         #ifdef CEL_WAVE
@@ -762,9 +1335,60 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           // transformed.y 上會把浪打到水平方向去)。與 swD 同一個轉置 idiom。
           vec3 seaUp = normalize( vec3( 0.0, 1.0, 0.0 ) * mat3( modelMatrix ) + vec3( 1e-6 ) );
           transformed += seaUp * ( celSeaH( seaXZ ) * seaFade );
+          vSeaFade = seaFade;
         }
         #endif
         #include <project_vertex>
+        #ifdef CEL_LEAFCARD
+        {
+          // 葉片卡的四角在**視域空間**展開。三條理由缺一不可:
+          //   ①\`mvPosition\` 在 r160 的 project_vertex 展開後仍在 scope 內,而 vViewPosition
+          //     與 vFogDepth 排在它之後 ⇒ 邊緣光 / 霧跟著走;
+          //   ②中心點已經過了 worldCurve ⇒ 卡片自動吃到世界曲面,MUST NOT 自己再彎一次;
+          //   ③擺動(CEL_SWAY)作用在中心點上 ⇒ 一張卡整片同相位移,不會被剪成菱形。
+          // 尺寸乘水平世界縮放而**不吃 sy** ⇒ 壓扁的冠上面的卡片仍是方的。
+          mat3 cdM = mat3( modelMatrix );
+          #ifdef USE_INSTANCING
+            cdM = cdM * mat3( instanceMatrix );
+          #endif
+          float cdS = length( cdM[ 0 ] );
+          float cdC = cos( aCard.z ), cdSn = sin( aCard.z );
+          mvPosition.xy += vec2( aCard.x * cdC - aCard.y * cdSn,
+                                 aCard.x * cdSn + aCard.y * cdC ) * cdS;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+        #endif
+        #ifdef CEL_SURF_A
+        vSurfId = aSurfId;
+        #endif
+        #ifdef CEL_LAND_ID
+        vLandId = aLandId;
+        #endif
+        #ifdef CEL_INKB
+        {
+          // ---- 墨線斷筆的錨點(序 4 ①-2)----
+          // **MUST 是 mat3( modelMatrix ) 不是 modelMatrix** —— 丟掉平移那一欄就是
+          // 「走一步缺口不在身上游動」的全部理由(等價於 CEL_PAINT 那句 never makes the
+          // pattern swim across the body);轉動仍跟著跑 ⇒ 缺口黏在裝甲板上。
+          // instanceMatrix 收進來 ⇒ 同款植被逐株不同花紋,而對靜態實例它退化成世界座標。
+          // 地形的 modelMatrix ≈ 單位陣、position 就是世界 XZ ⇒ 同一條式子對地形自動是
+          // 世界空間,**不需要第二份**(兩份雜訊 = 地形的斷點與機體的斷點是兩種花紋)。
+          vec4 ibP = vec4( transformed, 1.0 );
+          #ifdef USE_INSTANCING
+            ibP = instanceMatrix * ibP;
+          #endif
+          vCelInkP = mat3( modelMatrix ) * ibP.xyz;
+        }
+        #endif
+        #ifdef CEL_DIS
+        {
+          vec4 dsP = vec4( transformed, 1.0 );
+          #ifdef USE_INSTANCING
+            dsP = instanceMatrix * dsP;
+          #endif
+          vDisP = ( modelMatrix * dsP ).xyz - uDisO;
+        }
+        #endif
         #ifdef CEL_WP
         {
           // World-space position varying (instancing-aware) for wash / moss projection.
@@ -789,6 +1413,15 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         vLandN = normalMatrix * aLandN;
         #endif`);
     shader.fragmentShader = shader.fragmentShader
+      // 溶入的 discard MUST 排在 `#include <opaque_fragment>` **之前**(那一段才寫顏色與
+      // gInfo);排在它之後就是「顏色與 gInfo 都寫完了才 discard」= 洞邊的資訊仍然是機體的,
+      // 而那正是這一項要拿掉的東西。`clipping_planes_fragment` 是 three 給的第一個錨點,
+      // 緊接在 `void main() {` 之後 ⇒ 連被裁掉的片元都不必算光照。
+      .replace('#include <clipping_planes_fragment>', `
+        #include <clipping_planes_fragment>
+        #ifdef CEL_DIS
+        if ( celDissolve( vDisP ) ) discard;
+        #endif`)
       .replace('#include <normal_fragment_begin>', `
         #include <normal_fragment_begin>
         #if defined( CEL_WASH ) || defined( CEL_MOSS )
@@ -841,7 +1474,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         }
         #endif`)
       .replace('#include <opaque_fragment>', `
-        {
+        {${_school === 'b' ? CEL_CUT_MIX_GLSL : ''}
           vec3 celV = normalize( vViewPosition );
           // 邊緣光:背光輪廓亮一圈(硬邊 smoothstep,不是柔霧)
           float celRim = 1.0 - saturate( dot( normal, celV ) );
@@ -878,11 +1511,30 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           }
         }
         #include <opaque_fragment>
-        #ifdef CEL_SOFT
+        #ifdef CEL_INKA
         // 場景 RT 的 alpha ≡ 這一格的**勾線門檻倍率**(見檔頭「軟性物質」段的契約)。
+        // 自 2026-08-16 起帶**兩個因子**:軟性(逐材質常數)× 斷筆(逐 fragment)。
+        // **寫入仍然恰一處** —— 兩個因子分兩處寫就是兩份契約。
         // MUST 排在 opaque_fragment **之後**:那一段的 \`#ifdef OPAQUE diffuseColor.a = 1.0\`
         // 會把先寫的值蓋掉。之後的 colorspace / fog / dithering 都只動 rgb,寫在這裡最穩。
-        gl_FragColor.a = uSoftInk;
+        // 閘由 CEL_SOFT 放寬成 CEL_INKA(= 不透明的 cel 材質,CEL_SOFT 的超集):
+        // 硬性件的 uSoftInk 恆 1、拉桿 0 時 celInkBreak() 恆回字面 1.0 ⇒ 寫下去的是 1.0,
+        // 而 OPAQUE 本來就已經讓那些像素的 alpha 是 1.0 ⇒ **新寫入是 no-op**。
+        gl_FragColor.a = uSoftInk * celInkBreak();
+        #endif
+        #ifdef CEL_WAVE
+        {
+          // ---- 岸邊泡沫(S6;⑤-2)----
+          // **MUST 排在 opaque_fragment 之後**:寫進 diffuseColor 會讓泡沫再過一次 toon ramp
+          // (硬邊被階梯切成兩段、陰影裡的泡沫變灰),而使用者要的是白色硬邊。
+          // alpha 推向 1 也正是「泡沫是不透明的、蓋住水底」。
+          // 中性深度場(1×1 = 很深)⇒ celFoam 恆 0 ⇒ 這一段早退 ⇒ **逐位元同舊制**。
+          float celF = celFoam( vCelWP.xz ) * vSeaFade * uFoamA;
+          if ( celF > 0.0 ) {
+            gl_FragColor.rgb = mix( gl_FragColor.rgb, uFoamC, celF );
+            gl_FragColor.a = mix( gl_FragColor.a, 1.0, celF );
+          }
+        }
         #endif
         // 勾線資訊緩衝(檔頭那一段):覆寫 opaque_fragment 寫下的「沒有資訊」。
         // **MUST 是視空間法線** —— 勾線是螢幕空間的,世界法線在鏡頭轉動時不會變而畫面上的
@@ -896,18 +1548,36 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           // normalize(0) 是 NaN,那會沿著整片地面畫出隨機黑點)。
           if ( dot( vLandN, vLandN ) > 1e-8 ) gN = normalize( vLandN );
           #endif
-          gInfo = vec4( gN.xy * 0.5 + 0.5, uSurfId, uInkClass );
+          // .b = 面號:預設**逐材質**;帶 CEL_SURF_A 時改吃**逐實例**屬性(同一株樹的
+          // 幹 / 枝 / 冠共用一號 ⇒ 群組早退看得出「這是一棵樹」)。
+          #ifdef CEL_SURF_A
+            float gSurf = vSurfId;
+          #else
+            float gSurf = uSurfId;
+          #endif
+          #ifdef CEL_LAND_ID
+          // 地貌分區子帶(序 4 ①-3):**兩道閘都要成立**才換號 ——
+          //   ・拉桿 0 ⇒ 恆等於 LAND_SURF_ID(逐位元同舊制,而且是 uniform 分支不必重建材質);
+          //   ・屬性缺席 ⇒ vLandId 是 0 ⇒ 同樣恆等(原則 6:呼叫端還沒接上就當作沒有這回事)。
+          if ( uLandInk > 0.0 && vLandId > 0.0 ) gSurf = vLandId;
+          #endif
+          // .a = 打包(高半位元組 = 類別索引、低半位元組 = 貢獻 16 階)。
+          // inkC 是**序 4(雜訊斷線)的調變點** —— 本輪就是這一行原樣。
+          float inkC = uInkCtr;
+          gInfo = vec4( gN.xy * 0.5 + 0.5, gSurf, inkPack( uInkClass, inkC ) );
         }`)
       .replace('void main() {', `
         uniform vec3 uCelLightDir;
         uniform float uCelRim;
         uniform float uSurfId;
         uniform float uInkClass;
+        uniform float uInkCtr;${_school === 'b' ? CEL_CUT_DECL_GLSL : ''}
+${INK_PACK_GLSL}
+        #ifdef CEL_SURF_A
+        varying float vSurfId;
+        #endif
         #ifdef CEL_LAND_N
         varying vec3 vLandN;
-        #endif
-        #ifdef CEL_SOFT
-        uniform float uSoftInk;
         #endif
         uniform float uCelWash;
         uniform float uCelCool;
@@ -924,13 +1594,84 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         #endif
         #ifdef CEL_WP
         varying vec3 vCelWP;
+        #endif
         // Cheap 2D value noise (hash-based); low frequency only, never photoreal grain.
+        // **全專案唯一一支**(2026-08-16 由 #ifdef CEL_WP 之下提出來):wash / moss / 泡沫 /
+        // 墨線斷筆同吃。兩份 hash 在同一個場景裡就是「地形的斷點與機體的斷點是兩種花紋」,
+        // 而那沒有任何錯誤訊息。代價是沒有 CEL_WP 的材質多編一支(會被編譯器剝掉的)死函式 ——
+        // 「沒標軟性的程式碼一行都不多」那條精神條款在這裡刻意讓步,理由就是上面那一句。
         float celHash( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
         float celNoise( vec2 p ) {
           vec2 i = floor( p ), f = fract( p );
           f = f * f * ( 3.0 - 2.0 * f );
           return mix( mix( celHash( i ), celHash( i + vec2( 1.0, 0.0 ) ), f.x ),
                       mix( celHash( i + vec2( 0.0, 1.0 ) ), celHash( i + vec2( 1.0, 1.0 ) ), f.x ), f.y );
+        }
+        #ifdef CEL_INKA
+        uniform float uSoftInk;
+        uniform float uInkBreakA;
+        uniform float uInkBreakSpan;
+        varying vec3 vCelInkP;
+        // ---- 墨線斷筆(序 4 ①-2)----
+        // 回傳「這一格的門檻倍率」(1 = 沒抬筆)。第一行是 **uniform 分支**(與 postfx 的
+        // \`if ( uAirA > 0.0 )\` / \`if ( uLutA > 0.0 )\` 同一個 idiom)⇒ 拉桿 0 時連雜訊都不算,
+        // 而且回傳的是**字面 1.0** 不是 mix 出來的 1.0(浮點上兩者可以不同)。
+        // **兩個平面各取一次**是必要的:只取 p.xz 的話垂直裝甲板上整條線同相 = 沒有斷點。
+        float celInkBreak() {
+          if ( uInkBreakA <= 0.0 ) return 1.0;
+          vec3 p = vCelInkP / uInkBreakSpan;
+          float n = celNoise( p.xz ) * 0.62 + celNoise( p.yz * 1.73 + 11.3 ) * 0.38;
+          float brk = mix( 1.0, ${INK_BREAK.LO.toFixed(3)}, step( n, ${INK_BREAK.CUT.toFixed(3)} ) );
+          return mix( 1.0, brk, uInkBreakA );
+        }
+        #endif
+        #ifdef CEL_LAND_ID
+        uniform float uLandInk;
+        varying float vLandId;
+        #endif
+        #ifdef CEL_DIS
+        uniform float uDis;
+        uniform vec3 uDisO;
+        varying vec3 vDisP;
+        // ---- 溶入(序 8 ④-2)----
+        // \`discard\` 不是 alpha 淡入:賽璐璐件淡入會連自己的輪廓一起淡掉,而 discard 掉的
+        // 片元**連 gInfo 都不寫** ⇒ 洞邊留下的是它背後那個東西的資訊,兩支勾線訊號自己
+        // 在洞邊出線 = 「溶入中的機體不失去輪廓」。抖動格距以**世界公尺**給(不是 texel):
+        // 以 texel 給的話遠處整台會被墨點蓋掉。
+        // 遠距剔除那一半:DISSOLVE.FAR_M ≤ 0 ⇒ 下面那一行**根本不編進來**(結構保證,
+        // 不是 runtime 分支);曲線只有這一份 —— JS 端再寫一支同樣的 smoothstep 就是兩份
+        // 會分家的實作,而分家的症狀是「剔除的邊界跟看到的不一樣」。
+        bool celDissolve( vec3 dp ) {
+          float k = uDis;${DISSOLVE.FAR_M > 0 ? `
+          k = min( k, 1.0 - smoothstep( ${DISSOLVE.FAR_M.toFixed(1)}, ${(DISSOLVE.FAR_M + Math.max(1e-3, DISSOLVE.FAR_BAND_M)).toFixed(1)}, distance( cameraPosition, uDisO ) ) );` : ''}
+          if ( k >= 1.0 ) return false;
+          float n = celNoise( dp.xz / ${DISSOLVE.CELL_M.toFixed(3)} ) * 0.6
+                  + celNoise( dp.yz / ${DISSOLVE.CELL_M.toFixed(3)} * 1.61 + 7.3 ) * 0.4;
+          return n > k;
+        }
+        #endif
+        #ifdef CEL_WAVE
+        varying float vSeaFade;
+        uniform sampler2D uSeaField;
+        uniform vec4 uSeaRect;      // (minX, minZ, 1/寬, 1/高)
+        uniform float uFoamA;
+        uniform vec3 uFoamC;
+${CEL_WIND_GLSL}
+${CEL_SEA_GLSL}
+        // ---- 岸邊泡沫(S6)----
+        // 驅動量是**水深**(烤好的深度場)不是岸線幾何:水面 fragment 拿不到場景深度
+        // (它與 rtScene.depthTexture 是同一個 FBO 的附件 = 回饋迴圈)。
+        // 相位減去 celSeaH ⇒ 浪一來泡沫沖上岸(**MUST 吃同一支** —— 自己再寫一次相位的話
+        // 泡沫的沖刷與浪峰會差半個波長)。深度 ≥ RANGE_M ⇒ 恆 0 ⇒ 中性場沒有泡沫。
+        float celFoam( vec2 celFxz ) {
+          vec2 celFuv = clamp( ( celFxz - uSeaRect.xy ) * uSeaRect.zw, 0.0, 1.0 );
+          float celFd = texture2D( uSeaField, celFuv ).r * ${FOAM.RANGE_M.toFixed(2)};
+          float celFade = clamp( 1.0 - celFd / ${FOAM.RANGE_M.toFixed(2)}, 0.0, 1.0 );
+          if ( celFade <= 0.0 ) return 0.0;
+          float celFb = fract( ( celFd - celSeaH( celFxz ) ) / ${FOAM.BAND_M.toFixed(3)} );
+          float celFp = ( 1.0 - abs( celFb * 2.0 - 1.0 ) ) * celFade
+                      + ( celNoise( celFxz / ${FOAM.NOISE_M.toFixed(2)} ) - 0.5 ) * 0.35;
+          return step( ${FOAM.STEP.toFixed(2)}, celFp );   // 硬邊(賽璐璐的泡沫不是柔霧)
         }
         #endif
         // 風化場(P2-A):「這一區有多老」。中性 0.5 ⇒ 乘數恆 1;**uCelWSpread = 0 時逐位元同舊制**
@@ -963,8 +1704,11 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   // 細勾線(three 只認這把鑰匙),而畫面上只表現成「有些樹會動、有些不會」。
   // `I` = 細勾線那一半有沒有開:同一個 soft.k 在不透明件開、在半透明件關(見上面 inkable
   // 那道閘)⇒ 不進鑰匙的話兩者共用同一支程式,水面會拿到寫死 alpha 的那一版。
+  // ⚠ **每一個新的 define 都 MUST 進這把鑰匙,而 uniform 一個都不准進**:
+  // 漏掉 `card`/`surfAttr` 的症狀是「四個角都落在中心 ⇒ 整叢卡片塌成一個點」,
+  // 而 `contrib`(uniform)進去的話就是每一個貢獻值編一支新程式(編譯尖峰 + 記憶體)。
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${coolOn ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${surfAttr ? 'A' : ''}${card ? 'K' : ''}${refl ? 'R' : ''}${inkAlpha ? 'B' : ''}${dissolve ? 'D' : ''}${landId ? 'Z' : ''}${rim}`;
   return mat;
 }
 
@@ -985,11 +1729,16 @@ export function applyPaint(mat, paint) {
 export function toonMat(color, opts = {}) {
   // rim 可覆寫(同 envMat;預設 0.22 ⇒ 既有呼叫端逐位元不變):GLB 植被的葉片要掛軟性旗標
   // 又不能因此比同一棵樹的樹幹多一圈邊緣光,那條路徑傳 rim: 0。
-  const { celMetal, bands, rim = 0.22, soft = null, ...rest } = opts;
+  // S2 的六個新欄位 MUST **解構出來**再往下傳:落進 `...rest` 就是丟給 MeshToonMaterial
+  // 的建構子 = three 靜默忽略一個不存在的屬性,而貢獻永遠是 1、卡片永遠不展開。
+  // `landId` **刻意不在這裡**:它與 `land` / `landNrm` 同一族(地貌),而機體之間的線是要的
+  // —— 稽核 Ⅶ 那一條 `!/land/.test(toonMat)` 就是為這件事訂的,MUST NOT 為了方便鬆掉它。
+  const { celMetal, bands, rim = 0.22, soft = null,
+    ink, contrib, surf, surfAttr, card, refl, dissolve, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // `bands` MUST 一起傳下去:偏色權重要以**這張 ramp 自己的暗階**正規化,拿不到就會用
   // 預設 3 階的 0.4 去量 soft(0.745)那一組 = 白色大面積的陰影偏色少掉一半。
-  return applyCelPatch(m, { metal: !!celMetal, rim, soft, bands });
+  return applyCelPatch(m, { metal: !!celMetal, rim, soft, bands, ink, contrib, surf, surfAttr, card, refl, dissolve });
 }
 
 /**
@@ -1002,11 +1751,84 @@ export function envMat(color, opts = {}) {
   // preview:設定頁樣品專用(改吃樣品自己那張風化場,見 ensurePreviewField)
   // land / landNrm:地貌(見 applyCelPatch 的同名參數)。**只有 terrain.js 與 ground.js
   // 傳它** —— 道路、建物、擺件的邊界線是要的,掛上去就是把那些線一起關掉。
-  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, soft = null, land = false, landNrm = false, ...rest } = opts;
+  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, soft = null, land = false, landNrm = false,
+    ink, contrib, surf, surfAttr, card, refl, dissolve, landId, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // tint: 'env' —— 陰影偏色分「機體」與「環境」兩軌(P1-B):機甲要保住陣營塗裝的色相,
   // 環境可以偏得重一點。兩軌各自一根拉桿,MUST NOT 併成一個值。
-  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands, land: land || landNrm, landNrm });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands, land: land || landNrm, landNrm, ink, contrib, surf, surfAttr, card, refl, dissolve, landId });
+}
+
+/**
+ * **只掛學派、不掛演出**的賽璐璐材質(2026-08-16;§0-b A14 ④)。
+ *
+ * 用途:那幾處**刻意**不吃 cel 補丁的 `MeshToonMaterial`(GLB 植被的不透明樹幹、洞頂 /
+ * 岸邊泡沫 / 潮間帶 / 水簾這幾層透明覆蓋)。它們在 School A 下無害;School B 下留在
+ * ramp 而全世界改硬切 = **同一棵樹的葉子硬切、樹幹漸層**,而那沒有任何錯誤訊息。
+ *
+ * 三條:
+ *   ①**School A 下完全不掛 `onBeforeCompile`** ⇒ 逐位元等於今天那一行裸的
+ *     `new THREE.MeshToonMaterial({ …, gradientMap: toonGradient() })`。這是「最小侵入」
+ *     唯一的證據面(定場照 md5 全同)。
+ *   ②MUST NOT 順手改成 `toonMat` / `envMat` —— 那會加上 rim 與 gInfo 覆寫:
+ *     樹幹那一行的 `rim: 0` 是刻意的,而 gInfo 覆寫會讓折邊勾線多出線。
+ *   ③軌固定走 `env`(這幾處全是環境物件),與 `envMat` 同軌。
+ *
+ * @param params MeshToonMaterial 的建構參數(額外收 `bands`,語意同 `toonMat`)
+ */
+export function toonPlain(params = {}) {
+  const { bands, ...rest } = params;
+  const m = new THREE.MeshToonMaterial({ gradientMap: toonGradient(bands), ...rest });
+  if (_school !== 'b') return m;
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uCelRampTint = _rampTint.env;
+    celCutUniforms(shader, bands);
+    const canPatch = RAMP_PATCHED && shader.fragmentShader.includes(RAMP_INC);
+    shader.fragmentShader = `uniform vec3 uCelRampTint;\n${
+      (canPatch ? shader.fragmentShader.replace(RAMP_INC, RAMP_PATCHED) : shader.fragmentShader)
+        .replace('void main() {', `${CEL_CUT_DECL_GLSL}\n        void main() {`)
+        .replace('#include <opaque_fragment>', `${CEL_CUT_MIX_GLSL}\n        #include <opaque_fragment>`)}`;
+  };
+  // 這幾份材質彼此的差異只有顏色/貼圖(uniform),沒有任何 define ⇒ 一把鍵就夠;
+  // 但 MUST 與 `applyCelPatch` 那一族**分開**(它們的 GLSL 不同)。
+  m.customProgramCacheKey = () => 'celPlain';
+  return m;
+}
+
+/**
+ * 溶入的**唯一寫入點**(序 8 ④-2)。呼叫端 MUST NOT 自己去戳 `mat.userData.celDisU`
+ * —— 那顆 uniform 物件的穩定性(重編譯不換顆)是這一項唯一會靜默壞掉的地方。
+ *
+ * 反轉外殼描邊在溶入期間 MUST **整片收起來**:全專案每一片外殼共用 `'celOutline'` 這一把
+ * 快取鍵,給部分外殼加 define 而鍵不變 = three 發錯程式(不報錯)。代價寫在這裡:
+ * 結束那一幀輪廓由「只有勾線 pass」變回「勾線 + 外殼」,線寬會跳一下;升級路徑是逐單位
+ * 的 `'celOutlineD'` 鍵變體(要讓 `outlinify` 的旗標一路穿過 forge 的收尾鉤)。
+ *
+ * @param target Object3D 子樹 或 單一材質
+ * @param k      進度 ∈ [0,1];1 = 完全實體(結束時 MUST 寫回 1 並停止逐幀寫入)
+ * @param origin 該單位的世界原點(抖動網格錨在它上面);省略 = 沿用上一次
+ * @returns 實際被寫到的材質數(0 = 這棵樹上沒有任何 dissolve 材質 ⇒ 呼叫端接錯了)
+ */
+export function setDissolve(target, k, origin = null) {
+  const v = Math.min(1, Math.max(0, k));
+  let n = 0;
+  const put = (m) => {
+    const u = m?.userData?.celDisU;
+    if (!u) return;
+    u.value = v;
+    if (origin) m.userData.celDisO.value.set(origin.x, origin.y, origin.z);
+    n++;
+  };
+  if (target?.isMaterial) put(target);
+  else if (target?.traverse) {
+    target.traverse((o) => {
+      if (!o.isMesh) return;
+      // 外殼描邊:溶入期間整片收起(見上面的理由),結束(k ≥ 1)復原
+      if (o.userData.isOutline) { o.visible = v >= 1; return; }
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(put);
+    });
+  }
+  return n;
 }
 
 /**
@@ -1029,13 +1851,20 @@ export function bakeContactAO(root, fade = 2.4) {
     if (m.emissive && (m.emissive.r + m.emissive.g + m.emissive.b) > 0.05 && (m.emissiveIntensity ?? 1) >= 0.5) return;
     toRoot.multiplyMatrices(inv, o.matrixWorld);
     const pos = o.geometry.attributes.position;
+    // **乘進既有的頂點色而不是覆寫**(2026-08-16;S9):`mergeGeos(geos, colors)`(beacons.js
+    // 的頂點色合併縫)與本支寫的是**同一個通道**。現況兩個消費端剛好互斥所以從沒撞過,
+    // 而載具/公設合併那一輪讓它們第一次同時出現 —— 撞到的症狀是「整組沒有接地陰影」
+    // 或「整組變灰白」,兩種都不報錯而 `audit_gpu_lifecycle` 照樣全綠(它量的是 dispose)。
+    // 沒有既有頂點色 ⇒ 基底 1 ⇒ 逐位元同舊制。
+    const prev = o.geometry.attributes.color;
     const colors = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i).applyMatrix4(toRoot);
       const t = Math.min(1, Math.max(0, v.y / fade));   // 0 = 貼地全暗,1 = 無 AO
-      colors[i * 3] = _aoTint.r + (1 - _aoTint.r) * t;
-      colors[i * 3 + 1] = _aoTint.g + (1 - _aoTint.g) * t;
-      colors[i * 3 + 2] = _aoTint.b + (1 - _aoTint.b) * t;
+      const p0 = prev ? prev.getX(i) : 1, p1 = prev ? prev.getY(i) : 1, p2 = prev ? prev.getZ(i) : 1;
+      colors[i * 3] = (_aoTint.r + (1 - _aoTint.r) * t) * p0;
+      colors[i * 3 + 1] = (_aoTint.g + (1 - _aoTint.g) * t) * p1;
+      colors[i * 3 + 2] = (_aoTint.b + (1 - _aoTint.b) * t) * p2;
     }
     o.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     m.vertexColors = true;

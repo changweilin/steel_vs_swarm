@@ -21,7 +21,17 @@ export class CutIn {
   constructor(root) {
     this.root = root;
     this.timers = new Set();
+    // 斜向轉場(序 8 ④-1)的**選用**消費端。沒接上 ⇒ 一格都不會發生(原則 6):
+    // 立繪本身是 DOM overlay,而幕是後製 pass ⇒ 兩者只在「同一個施放事件」上會合。
+    this.pipeline = null;
   }
+
+  /**
+   * 接上後製管線(`game.js` 建完 pipeline 之後一行:`this.cutin.setPipeline(this.pipeline)`)。
+   * **MUST NOT 由本檔自己去找 pipeline** —— 全專案有兩個 `new Pipeline`(戰場與設定頁樣品),
+   * 模組級的「當下這一支」會在開設定頁時指到樣品那一支上。
+   */
+  setPipeline(p) { this.pipeline = p || null; }
 
   /**
    * @param {object} ev  伺服器 cast 事件(ch/slot/side/lvl)
@@ -55,11 +65,28 @@ export class CutIn {
     this.root.appendChild(el);
     const t = setTimeout(() => { el.remove(); this.timers.delete(t); }, DUR[mode]);
     this.timers.add(t);
+    // 自己的大招那一格才刷屏(`full`):小卡與敵方警示條在戰鬥中太頻繁,蓋住視野就是玩法改動。
+    // 幕色吃**施放者的陣營色**(呼叫端已經算好的那一個)—— 幕色刻意不住 `data.js WIPE`,
+    // 那會變成與 `toon.js OUTLINE_COLOR` 並存的第二份墨色。
+    if (mode === 'full') this.wipe(sideColor);
+  }
+
+  /**
+   * 遮幕 → 揭幕的一次刷屏。旋鈕關著時 `playWipe` 會**同步**走回呼並回 false ⇒
+   * 這一支整條退化成「呼叫兩次早退」,連時序都逐位元同舊制。
+   * 回呼由**幀迴圈**觸發(`Pipeline._tickWipe`),本檔的 `timers` 一格都不用動。
+   */
+  wipe(color) {
+    const p = this.pipeline;
+    if (!p) return false;
+    const opt = { color };
+    return p.playWipe('cover', () => this.pipeline?.playWipe('reveal', null, opt), opt);
   }
 
   dispose() {
     for (const t of this.timers) clearTimeout(t);
     this.timers.clear();
+    this.pipeline = null;   // 幕的回呼抓著 this ⇒ 離場 MUST 斷掉(管線自己也會清 _wipe)
     if (this.root) this.root.innerHTML = '';
   }
 }

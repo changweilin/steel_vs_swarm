@@ -53,6 +53,7 @@
 // 退出碼:0 = 全部接好;1 = 有 FLOAT / PARTIAL / DETACHED / ISOLATED
 import { HAZARDS } from '../public/js/data.js';
 import { vegPartXform } from '../public/js/xform.js';
+import { makeVehicle } from '../public/js/vehicles.js';
 import { readSrc } from './audit_src.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
@@ -574,9 +575,12 @@ function buildHazardParts(kind, seed, r) {
     const m = new Node3({ t: 'ico', r: size, rock: true }); m.position.set(x, y, z); parent.add(m); return m;
   };
   const jitterColor = (hex, rn) => { rn(); rn(); rn(); return colorStub(); };   // offsetHSL 三個引數 = 3 枚
-  const BUILDERS = new Function('mesh', 'box', 'cyl', 'cone', 'ico', 'rockMesh', 'jitterColor', 'THREE', 'Math',
+  // `makeVehicle` 是**真品**(vehicles.js 零 import、零 THREE ⇒ Node 端載得動),
+  // 不是樁 —— 車禍殘骸的車體形狀正是要被這一支稽核量的東西,寫一份樁就等於自己驗自己。
+  // 漏了這一格的症狀:整支稽核在第一款障礙 ReferenceError,而訊息與「接合」完全無關。
+  const BUILDERS = new Function('mesh', 'box', 'cyl', 'cone', 'ico', 'rockMesh', 'jitterColor', 'makeVehicle', 'THREE', 'Math',
     hzBlock[0].replace('const BUILDERS =', 'return'))(
-    mesh, G.box, G.cyl, G.cone, G.ico, rockMesh, jitterColor, THREE, Math);
+    mesh, G.box, G.cyl, G.cone, G.ico, rockMesh, jitterColor, makeVehicle, THREE, Math);
   if (!BUILDERS[kind]) return null;
   BUILDERS[kind](g, r, rnd);
   // 攤平零件樹(Group 嵌套變換一併算進去)

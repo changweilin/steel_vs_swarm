@@ -35,6 +35,8 @@
 //           --break-wave(海浪相位改取實例原點)/ --break-gust(陣風包絡拿掉)
 //           四者 MUST 分別讓 Ⅰ / Ⅲ / Ⅵ / Ⅶ 紅字,否則等於沒驗到(原則 9)。
 import { readSrc } from './audit_src.mjs';
+// 載具型錄唯一縫(零 import ⇒ Node 端直接載得動真品;⑧ 段的 CIVIC_PARTS 沙箱要注入)
+import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
 import { CHARACTERS } from '../public/js/data.js';
 import { LORE } from '../public/js/lore.js';
 import { VENUES } from '../public/js/venues.js';
@@ -44,9 +46,49 @@ const BREAK_INK = process.argv.includes('--break-ink');
 const BREAK_ANCHOR = process.argv.includes('--break-anchor');
 const BREAK_WAVE = process.argv.includes('--break-wave');
 const BREAK_GUST = process.argv.includes('--break-gust');
+/** 反向驗證:玩家位移擾動的位移加項整段拿掉 ⇒ Ⅹ MUST 紅字 */
+const BREAK_CHAR = process.argv.includes('--break-char');
+/** 反向驗證:擾動半徑換成常數(= 走路與跑步撥開的範圍一樣大)⇒ Ⅹ MUST 紅字 */
+const BREAK_CHARR = process.argv.includes('--break-charR');
+/** 反向驗證:空槽不再顯式歸零(留上一幀的值)⇒ Ⅹ 的行為直測 MUST 紅字 */
+const BREAK_CHARSLOT = process.argv.includes('--break-charslot');
+/** 反向驗證:泡沫的深度取樣換成常數(= 不再由水深驅動)⇒ Ⅹ MUST 紅字 */
+const BREAK_FOAM = process.argv.includes('--break-foam');
+/** 反向驗證:alpha 寫入點退回 `= uSoftInk;`(斷筆因子沒有乘進去)⇒ Ⅱ + Ⅺ MUST 紅字 */
+const BREAK_INKBREAK = process.argv.includes('--break-inkbreak');
+/** 反向驗證:斷筆錨點帶回平移欄(mat3 → mat4)⇒ Ⅺ MUST 紅字 */
+const BREAK_INKANCHOR = process.argv.includes('--break-inkanchor');
+/** 反向驗證:深度門檻再疊一項法線式上限(= ①-4 的「兩者擇一」被違反)⇒ Ⅺ MUST 紅字 */
+const BREAK_GRAZE = process.argv.includes('--break-graze');
 
-const toon = readSrc('public', 'js', 'toon.js');
-const post = readSrc('public', 'js', 'postfx.js');
+let toon = readSrc('public', 'js', 'toon.js');
+let post = readSrc('public', 'js', 'postfx.js');
+/**
+ * 反向驗證的字面替換(§5.4 ㋑):CRLF 容忍樣式 + **替換無效當場失敗**。
+ * 含 `\n` 的字面替換在這個工作區是無聲 no-op,而那時 break 永遠是綠的。
+ */
+function bend(src, re, to, flag) {
+  const out = src.replace(re, to);
+  if (out === src) { console.error(`✗ ${flag}:樣式沒咬到,反向驗證等於沒跑`); process.exit(1); }
+  return out;
+}
+// 這兩支 MUST 在**讀原文之後、任何一段用它之前**套用:Ⅱ(契約)與 Ⅺ(斷筆)讀的是同一份。
+// ⚠ 樣式一律 `/g`:字面替換若先咬到**註解**裡的同一串字,`code()` 剝掉註解之後斷言照樣
+//   全綠 = 反向驗證等於沒跑(2026-08-16 當場踩過;toon.js 那一段註解也已改成不逐字複述)。
+if (BREAK_INKBREAK) {
+  toon = bend(toon, /gl_FragColor\.a = uSoftInk \* celInkBreak\(\);/g,
+    'gl_FragColor.a = uSoftInk;', '--break-inkbreak');
+}
+if (BREAK_INKANCHOR) {
+  toon = bend(toon, /vCelInkP = mat3\( modelMatrix \) \* ibP\.xyz;/g,
+    'vCelInkP = ( modelMatrix * ibP ).xyz;', '--break-inkanchor');
+}
+if (BREAK_GRAZE) {
+  // 壞版 = 「兩者疊上去」:深度門檻的分母追加一項法線式上限(計畫 ①-4 明寫 MUST NOT 疊)
+  post = bend(post, /float e = lap \/ max\( 0\.001, d \* \$\{INK\.K_D\.toFixed\(3\)\} \+ slope \* \$\{INK\.K_S\.toFixed\(1\)\} \);/,
+    'float e = lap / max( 0.001, d * ${INK.K_D.toFixed(3)} + slope * ${INK.K_S.toFixed(1)} + ( 1.0 - nz ) );',
+    '--break-graze');
+}
 const biomes = readSrc('public', 'js', 'biomes.js');
 const site = readSrc('public', 'js', 'siteplan.js');
 const envSrc = readSrc('public', 'js', 'environment.js');
@@ -72,6 +114,25 @@ function block(src, anchor) {
     else if (src[j] === '}') { d--; if (started && d === 0) { j++; break; } }
   }
   return src.slice(i, j);
+}
+/**
+ * `applyCelPatch` 那一段原文的**起點**。
+ * ⚠ 兩條「排在 `#include <opaque_fragment>` 之後」的斷言原本用**全檔** `lastIndexOf` 取錨,
+ * 而 2026-08-16(§0-b 學派)起 `toonPlain` 在檔案更後面也有一次
+ * `.replace('#include <opaque_fragment>', …)` ⇒ 全檔 lastIndexOf 會指到那一次,
+ * 兩條的比較從此恆為假(紅在完全錯的理由上)。錨因此 MUST 收在 applyCelPatch 之內。
+ */
+const celPatchAt = (T) => {
+  const i = T.indexOf('function applyCelPatch(');
+  const j = T.indexOf('export function applyPaint(');
+  if (i < 0 || j <= i) throw new Error('找不到 applyCelPatch 區塊');
+  return { i, src: T.slice(i, j) };
+};
+/** applyCelPatch 之內最後一次 `#include <opaque_fragment>` 在**全檔**的位置 */
+function opaqueAnchor(T) {
+  const { i, src } = celPatchAt(T);
+  const k = src.lastIndexOf('#include <opaque_fragment>');
+  return k < 0 ? -1 : i + k;
 }
 
 console.log('== 軟性物質稽核(細勾線 + 隨風飄揚)==\n');
@@ -132,10 +193,16 @@ if (BREAK_INK) INK_SOFT_A = 1;
 console.log('\nⅡ alpha 契約(場景 RT 的 alpha ≡ 這一格的勾線門檻倍率)');
 {
   const T = code(toon), P = code(post);
-  ok(count(T, /gl_FragColor\.a = uSoftInk;/g) === 1, '材質端恰一處寫入(gl_FragColor.a = uSoftInk)');
+  // 2026-08-16(序 4 ①-2):同一條通道自此帶**兩個因子的乘積**(軟性 × 斷筆)。
+  // **這三條的語意一格未動** —— ①恰一處寫入 ②非軟性件恆寫 1 ③只給不透明件;
+  // 改的只是「寫入長什麼樣」與「宣告收在哪一道閘之下」。改斷言是最容易把真回歸洗成綠燈
+  // 的動作 ⇒ `--break-ink` / `--break-anchor` 兩支既有反向驗證 MUST 仍各自紅字(對照組),
+  // 而新的 `--break-inkbreak` 咬的正是「斷筆因子有沒有真的乘進同一個寫入點」。
+  ok(count(T, /gl_FragColor\.a = uSoftInk \* celInkBreak\(\);/g) === 1,
+    '材質端**恰一處**寫入(gl_FragColor.a = uSoftInk * celInkBreak())—— 兩個因子分兩處寫就是兩份契約');
   // 排在 opaque_fragment **之後**:那一段的 `#ifdef OPAQUE diffuseColor.a = 1.0` 會蓋掉先寫的值
-  const iOpaque = T.lastIndexOf('#include <opaque_fragment>');
-  ok(iOpaque >= 0 && T.indexOf('gl_FragColor.a = uSoftInk;') > iOpaque,
+  const iOpaque = opaqueAnchor(T);
+  ok(iOpaque >= 0 && T.indexOf('gl_FragColor.a = uSoftInk * celInkBreak();') > iOpaque,
     '寫入排在 #include <opaque_fragment> 之後(排前面會被 OPAQUE 的 a = 1.0 蓋掉)');
   // 2026-08-13:`sk` → `inkable`(= 有 sk **且不透明**)。半透明件的 alpha 是**不透明度**,
   // 寫進勾線倍率就是把水面從 0.82 直接改成 0.30 —— 契約本來就只對不透明件成立。
@@ -144,8 +211,13 @@ console.log('\nⅡ alpha 契約(場景 RT 的 alpha ≡ 這一格的勾線門檻
   ok(/const inkable = !!sk && !mat\.transparent;/.test(T)
     && /if \(inkable\) defines\.CEL_SOFT = '';/.test(T),
     '細勾線那一半只給不透明件(半透明件的 alpha 是不透明度,不是勾線通道)');
-  ok(/#ifdef CEL_SOFT[\s\S]{0,200}uniform float uSoftInk;/.test(T),
-    'uSoftInk 的宣告收在 CEL_SOFT 之下(沒標軟性的程式碼一行都不多)');
+  // CEL_INKA(寫入那一道閘)是 CEL_SOFT 的**超集**,而且 MUST 吃同一句 `!mat.transparent`:
+  // 兩道閘的條件一旦分家,就會出現「這份材質寫得了斷筆卻寫不了軟性」這種半套狀態。
+  ok(/const inkAlpha = !mat\.transparent;/.test(T)
+    && /if \(inkAlpha\) \{ defines\.CEL_INKA = ''; defines\.CEL_INKB = ''; \}/.test(T),
+    '斷筆的閘 === `!mat.transparent`(與 inkable 同一條理由,只少了 `!!sk` ⇒ 硬性件也吃得到)');
+  ok(/#ifdef CEL_INKA[\s\S]{0,200}uniform float uSoftInk;/.test(T),
+    'uSoftInk 的宣告收在 CEL_INKA 之下(= 寫入的同一道閘;沒開的程式碼一行都不多)');
   // 勾線 pass:讀 alpha、且 MUST 乘進 smoothstep 的**輸入**。
   // 範圍限在 `_inkMaterial()`(FXAA 也在同一支檔裡對 tColor 做四鄰取樣,混在一起會假綠)
   const INKM = code(block(post, '  _inkMaterial() {'));
@@ -257,9 +329,15 @@ console.log('\nⅣ 消費端覆蓋(使用者點名的六種軟性物質)');
     '旗面權重錨在 −x 半寬處 = 旗桿側(桿邊不動、旗尾飄最開)');
 
   // ⑧ 花園 / 草原(公設鋪面)
-  const CIVIC_PARTS = new Function('_row',
-    `${block(site, 'export const CIVIC_PARTS = ').replace('export ', '')}\nreturn CIVIC_PARTS;`)(
-    (n, f) => Array.from({ length: n }, (_, i) => f(i)));
+  // 停車場的九台車與收費亭的窗口凹處走 `vehicles.js` 的載具型錄唯一縫(該檔零 import ⇒
+  // Node 端直接載得動真品),而停車格 `LOT_STALL` 與色票 `LOT_PAINT` 是 siteplan 自己的
+  // 模組級常數 ⇒ **一併抽原文**。漏了任何一格,整支稽核會在 `const CIVIC_PARTS = {…}`
+  // 那一行 ReferenceError,而錯誤訊息與軟性物質完全無關。
+  const CIVIC_PARTS = new Function('_row', 'makeVehicle', 'makeRecess',
+    `${block(site, 'export const LOT_STALL = ').replace('export ', '')}
+     ${/^const LOT_PAINT = .*$/m.exec(site)[0]}
+     ${block(site, 'export const CIVIC_PARTS = ').replace('export ', '')}\nreturn CIVIC_PARTS;`)(
+    (n, f) => Array.from({ length: n }, (_, i) => f(i)), makeVehicle, makeRecess);
   const soft = Object.entries(CIVIC_PARTS).flatMap(([k, ps]) => ps.filter((p) => p.sf).map((p) => `${k}:${p.sf}`));
   ok(soft.some((s) => s === 'park:turf') && soft.some((s) => s === 'park:grass'),
     '公園:草坪(turf,只細線)+ 花圃(grass,會擺動)都標到了');
@@ -358,8 +436,12 @@ console.log('\nⅥ 海浪(表面波;toon.js + terrain.js 原文)');
   ok(T.indexOf('objectNormal = normalize( normalize( seaNw )') >= 0
     && T.indexOf('objectNormal = normalize( normalize( seaNw )') < iSea,
     '法線那一段排在位移那一段之前(= three 的原生順序,不是我們自己排的)');
-  ok(count(T, /float celSeaH\( vec2/g) === 1 && count(T, /celSeaH\(/g) === 6,
-    '浪高恰一份實作(位移 1 次 + 中央差分 4 次 = 5 個呼叫點);兩份公式 = 光影的浪與幾何的浪差半個波長');
+  // 2026-08-16:呼叫點由 6 變 8 —— 水面倒影塊(CEL_REFL)與岸邊泡沫(celFoam)各多一處,
+  // 而它們**正是 MUST 吃同一支**的兩個新消費端(自己再寫一次相位 = 泡沫的沖刷與浪峰差
+  // 半個波長、倒影塊與水面各起各的伏)。**「恰一份實作」那一條才是不變式**;呼叫點數只是
+  // 「有沒有人偷偷抄第二份」的哨兵,新增消費端時 MUST 連同理由一起改。
+  ok(count(T, /float celSeaH\( vec2/g) === 1 && count(T, /celSeaH\(/g) === 8,
+    '浪高恰一份實作(定義 1 + 中央差分 4 + 水面位移 1 + 倒影塊 1 + 泡沫相位 1);兩份公式 = 光影的浪與幾何的浪差半個波長');
   // ---- 淡出:兩張水面共用材質,粗網格那一張 MUST 顯式歸零 ----
   ok(/wgeo\.setAttribute\('seaFade', new THREE\.BufferAttribute\(new Float32Array\(wp\.length \/ 3\), 1\)\)/.test(code(terr)),
     '外環水面顯式補 seaFade = 0(靠「缺屬性讀成 0」是未宣告的預設值,沒有斷言守得住)');
@@ -554,9 +636,206 @@ console.log('\nⅨ 國旗(地圖 30 : 駐軍 60 : 敵對 10)');
     '旗面朝下風(旗尾 = 局部 +x;不轉的話旗子側著吹,看起來像旗桿裝反了)');
 }
 
+// ---------------------------------------------------------------- Ⅹ
+// 玩家位移擾動(S5)與岸邊泡沫 / 水面倒影(S6)—— **本輪只落地縫,呼叫端一個都沒接**。
+// 兩者的病灶都不報錯:
+//   ・空槽沒有顯式歸零 ⇒ 那台機體離開之後它腳邊的草**永遠倒著**;
+//   ・對零向量 `normalize()` 之後乘 0 ⇒ NaN × 0 仍是 NaN ⇒ 那批 InstancedMesh **整批消失**;
+//   ・擾動半徑寫成常數 ⇒ 「走路撥開、跑步甩開」那一層整個不見,而畫面上仍然「有在動」;
+//   ・泡沫的驅動量不是水深 ⇒ 它就不再繞過石頭與柱子(而看起來仍然像一圈泡沫)。
+console.log('\nⅩ 玩家位移擾動(S5)+ 岸邊泡沫 / 倒影(S6)');
+{
+  let T = code(toon);
+  const CHAR = new Function(`${block(toon, 'export const CHAR = ').replace('export ', '')}\nreturn CHAR;`)();
+  const FOAM = new Function(`${block(toon, 'export const FOAM = ').replace('export ', '')}\nreturn FOAM;`)();
+  const REFL = new Function(`${block(toon, 'export const REFL = ').replace('export ', '')}\nreturn REFL;`)();
+  // ---- S5 參數表 ----
+  ok(CHAR.N >= 1 && Number.isInteger(CHAR.N), `擾動源槽數 N = ${CHAR.N}(成本預算常數:每一槽是逐頂點一次 length())`);
+  ok(CHAR.R0 > 0 && CHAR.R_PER_MPS > 0,
+    `擾動半徑 = ${CHAR.R0} + ${CHAR.R_PER_MPS} × 速率 —— **半徑是速度的函式**(常數半徑 = 走路與跑步撥開的範圍一樣大)`);
+  ok(CHAR.SPD_REF > 0 && CHAR.PUSH_F > 0 && CHAR.SPD_K > 0,
+    `飽和速率 ${CHAR.SPD_REF} m/s、位移倍率 ${CHAR.PUSH_F}、平滑係數 ${CHAR.SPD_K}`);
+  // ---- S5 行為直測:空槽 MUST 顯式歸零 ----
+  let setSrc = block(toon, 'export function setCelChar(').replace('export ', '');
+  if (BREAK_CHARSLOT) {
+    const bentS = setSrc.replace(/_charSpd\.value\[i\] = c \? Math\.max\(0, c\.spd \|\| 0\) : 0;/,
+      'if (c) _charSpd.value[i] = Math.max(0, c.spd || 0);');
+    if (bentS === setSrc) { console.error('✗ --break-charslot:樣式沒咬到 toon.js,反向驗證等於沒跑'); process.exit(1); }
+    setSrc = bentS;
+  }
+  const pos = Array.from({ length: CHAR.N }, () => ({ x: 0, y: 0, z: 0, set(a, b2, c) { this.x = a; this.y = b2; this.z = c; } }));
+  const spd = new Float64Array(CHAR.N);
+  const setFn = new Function('CHAR', '_charPos', '_charSpd', `${setSrc}\nreturn setCelChar;`)(
+    CHAR, { value: pos }, { value: spd });
+  setFn([{ x: 1, y: 0, z: 2, spd: 5 }, { x: 3, y: 0, z: 4, spd: 7 }]);
+  const two = [spd[0], spd[1]];
+  setFn([{ x: 1, y: 0, z: 2, spd: 5 }]);
+  ok(two[0] === 5 && two[1] === 7, `兩台在線時逐槽都寫進去(${two.join(' / ')})`);
+  ok(spd[0] === 5 && spd[1] === 0,
+    `只剩一台時第二槽**顯式歸零**(實測 ${spd[1]});留上一幀的值 = 那台離開之後草永遠倒著`);
+  setFn([]);
+  ok([...spd].every((v) => v === 0), '全空 ⇒ 全槽 0 ⇒ 位移項早退 ⇒ 逐位元同舊制');
+  // ---- S5 原文:位移落在 CEL_SWAY 區塊,而且是「早退不加」----
+  const sway = /#ifdef CEL_SWAY\n([\s\S]*?)#endif\n\s*#include <project_vertex>/.exec(T);
+  let S5 = sway ? sway[1] : '';
+  if (BREAK_CHAR) {
+    const bent = S5.replace(/transformed \+= cDir \* \( cW \* sw \* uSoftAmp \* \$\{CHAR\.PUSH_F[^}]*\} \);/, '');
+    if (bent === S5) { console.error('✗ --break-char:樣式沒咬到 toon.js,反向驗證等於沒跑'); process.exit(1); }
+    S5 = bent;
+  }
+  if (BREAK_CHARR) {
+    const bent = S5.replace(/float cR = \$\{CHAR\.R0[^}]*\} \+ \$\{CHAR\.R_PER_MPS[^}]*\} \* cSpd;/,
+      'float cR = ${CHAR.R0.toFixed(3)};');
+    if (bent === S5) { console.error('✗ --break-charR:樣式沒咬到 toon.js,反向驗證等於沒跑'); process.exit(1); }
+    S5 = bent;
+  }
+  ok(/transformed \+= cDir \* \( cW \* sw \* uSoftAmp \* \$\{CHAR\.PUSH_F[^}]*\} \);/.test(S5),
+    '位移加項排在 #include <project_vertex> **之前**(那一段吃 transformed 算 gl_Position)');
+  ok(/float cR = \$\{CHAR\.R0[^}]*\} \+ \$\{CHAR\.R_PER_MPS[^}]*\} \* cSpd;/.test(S5),
+    '擾動半徑吃 uCharSpd(常數半徑 = SKILL L1 第 3 層的整個重點消失:走路撥開、跑步甩開)');
+  ok(/if \( cSpd <= 0\.0 \) continue;/.test(S5),
+    '空槽**早退**而不是「加一個 0」(x + 0.0 對 −0.0 不是恆等;而且省掉每頂點 N 次 length())');
+  ok(/max\( length\( cRel\.xz \), 1e-4 \)/.test(S5) && !/normalize\( cRel/.test(S5),
+    '離心方向除以 max(len, 1e-4) —— **MUST NOT 對零向量 normalize() 之後乘 0**(NaN × 0 仍是 NaN ⇒ 那批 InstancedMesh 整批消失,console 一個字都沒有)');
+  ok(/vec3\( cOut\.x, 0\.0, cOut\.y \) \* swM/.test(S5),
+    '方向轉進零件局部座標(沿用 swD 那一行的轉置 idiom;實例的 ry 是亂數)');
+  ok(/swO\.y \+ swH \* length\( swM\[ 1 \] \)/.test(S5),
+    '距離是 2.5D:水平取實例原點、垂直取這個頂點自己的株上高度 ⇒ 地面上的機體構造上碰不到 6m 高的樹冠');
+  ok(count(S5, /sin\(/g) === 2,
+    '**沒有第三個 sin(**(擴充這一區塊時最容易踩的一條:Ⅲ 的正規式是全域計數)');
+
+  // ---- S6 泡沫:常數與推導 ----
+  ok(FOAM.BAND_M > 0 && FOAM.STEP > 0 && FOAM.STEP < 1 && FOAM.NOISE_M > 0 && FOAM.RANGE_M > 0 && FOAM.TEXEL_M > 0,
+    `FOAM 參數齊全(帶寬 ${FOAM.BAND_M}m、硬邊門檻 ${FOAM.STEP}、深度上界 ${FOAM.RANGE_M}m、texel ${FOAM.TEXEL_M}m)`);
+  ok(REFL.SEG_N >= 2 && REFL.GAP_F > 0 && REFL.GAP_F < 1 && REFL.MIN_H > 0 && REFL.MAX_N > 0,
+    `REFL 參數齊全(${REFL.SEG_N} 段、斷口 ${REFL.GAP_F}、最小高 ${REFL.MIN_H}m、上限 ${REFL.MAX_N} 個)`);
+  const fieldN = new Function('FOAM', `${block(toon, 'export const seaFieldN = ').replace('export ', '')}\nreturn seaFieldN;`)(FOAM);
+  const hi = fieldN(1200, 1200, false), lo = fieldN(1200, 1200, true);
+  ok(hi > lo && lo >= 2, `深度場邊長由 TEXEL_M 推導、低功耗折半(${hi} → ${lo});MUST NOT 手寫 1024`);
+  ok(!/1024/.test(block(toon, 'export const seaFieldN = ').replace(/Math\.min\(1024/, '')),
+    'seaFieldN 內除了上限夾制之外沒有手寫解析度');
+  ok(/old\?\.dispose\(\);/.test(block(toon, 'export function setSeaDepthField(')),
+    'setSeaDepthField 釋放上一場的場貼圖(A25:不放掉就是每開一場漏一張)');
+  ok(/new Uint8Array\(\[255\]\)/.test(T) && /function neutralSeaField/.test(T),
+    '預設是 1×1 的「很深」中性貼圖 ⇒ 沒有水域 / 還沒烤 ⇒ **沒有泡沫**而不是滿場泡沫(原則 6)');
+  // ---- S6 泡沫:GLSL 原文 ----
+  let FSRC = /float celFoam\( vec2 celFxz \) \{[\s\S]*?\n        \}/.exec(T);
+  ok(!!FSRC, 'celFoam 住 toon.js(GLSL 補丁一律不外流)');
+  let fsrc = FSRC ? FSRC[0] : '';
+  if (BREAK_FOAM) {
+    const bent = fsrc.replace(/float celFd = texture2D\( uSeaField, celFuv \)\.r \* \$\{FOAM\.RANGE_M[^}]*\};/,
+      'float celFd = 1.0;');
+    if (bent === fsrc) { console.error('✗ --break-foam:樣式沒咬到 toon.js,反向驗證等於沒跑'); process.exit(1); }
+    fsrc = bent;
+  }
+  ok(/texture2D\( uSeaField, celFuv \)/.test(fsrc),
+    '泡沫的驅動量是**水深**(唯一來源 = 深度場取樣);換成常數 = 它不再繞過石頭與柱子,而看起來仍然像一圈泡沫');
+  ok(/celFade = clamp\( 1\.0 - celFd \/ \$\{FOAM\.RANGE_M[^}]*\}, 0\.0, 1\.0 \)/.test(fsrc)
+    && /if \( celFade <= 0\.0 \) return 0\.0;/.test(fsrc),
+    '深度 ≥ RANGE_M ⇒ **恆 0**(中性場恰好落在這裡 ⇒ 逐位元同舊制)');
+  ok(/celSeaH\( celFxz \)/.test(fsrc),
+    '相位減去 celSeaH(浪一來泡沫沖上岸)—— 自己再寫一次相位 = 泡沫的沖刷與浪峰差半個波長');
+  ok(/step\( \$\{FOAM\.STEP[^}]*\}, celFp \)/.test(fsrc),
+    '硬邊(step)不是柔霧 —— 賽璐璐的泡沫是白色硬邊');
+  const iOpaque = opaqueAnchor(T);
+  ok(iOpaque > 0 && T.indexOf('float celF = celFoam( vCelWP.xz ) * vSeaFade * uFoamA;') > iOpaque,
+    '套用排在 #include <opaque_fragment> **之後**(寫進 diffuseColor 會讓泡沫再過一次 toon ramp:硬邊被階梯切開、陰影裡的泡沫變灰)');
+  ok(/celFoam\( vCelWP\.xz \) \* vSeaFade/.test(T),
+    '泡沫乘 vSeaFade(否則 53m 外環水面會被 ClampToEdge 拉出一圈全白)');
+  ok(/wash > 0 \|\| moss \|\| sk\?\.axis === 'w'/.test(T),
+    'CEL_WP 的條件**顯式**收海浪那一族(水面現況剛好有 wash: 0.5,靠巧合成立的東西沒有斷言守得住)');
+}
+
+// ---------------------------------------------------------------- Ⅺ
+// 墨線斷筆(序 4 ①-2)騎的正是 Ⅱ 那條 alpha 契約 ⇒ 兩段住同一支稽核。
+// ⚠ **三件離線量不到的事**(定裝照才驗得到,已寫進 toon.js INK_BREAK 旁邊):
+//   ① 勾線 pass 取 min(這一格 + 四鄰)⇒ 缺口被侵蝕一圈,實際比寫進去的寬約 2px;
+//   ② 世界空間錨定 ⇒ 一個週期投影到螢幕的像素數 ∝ 1/距離,遠處會退化成亞像素雜訊;
+//   ③ 8bit RT 上軟性件的斷處(0.3 × 0.12 ≈ 9/255)實質等於沒有線。
+console.log('\nⅪ 墨線斷筆(序 4 ①-2)+ 掠射抑制項恰一項(①-4)');
+{
+  const T = code(toon), P = code(post);
+  const BRK = new Function(`${block(toon, 'export const INK_BREAK = ').replace('export ', '')}\nreturn INK_BREAK;`)();
+  // ---- 參數表 ----
+  ok(BRK.CUT > 0 && BRK.CUT < 1, `斷點門檻 CUT = ${BRK.CUT} ∈ (0,1)(celNoise 的值域;0 或 1 = 恆不斷 / 恆斷)`);
+  ok(BRK.LO >= 0 && BRK.LO < 1, `斷處倍率 LO = ${BRK.LO} ∈ [0,1)(= 1 就是整段恆等式 = 等於沒做)`);
+  ok(BRK.SPAN_MECH > 0 && BRK.SPAN_ENV > 0 && BRK.SPAN_MECH < BRK.SPAN_ENV,
+    `兩軌的抬筆週期 機體 ${BRK.SPAN_MECH}m < 環境 ${BRK.SPAN_ENV}m(機體全高 4.5~9m、地形的一筆畫跨數十公尺 ⇒ 同一個週期只能對其中一邊)`);
+  // ---- 軌的選擇:沿用既有的 tint 軸,MUST NOT 另建名冊 ----
+  ok(/uInkBreakSpan = \{ value: tint === 'env' \? INK_BREAK\.SPAN_ENV : INK_BREAK\.SPAN_MECH \}/.test(T),
+    '軌 = 既有的 `tint` 參數(= _rampTint 那條已存在的軸);另建「哪些材質算機體」的名冊會在加零件時靜默過期');
+  ok(!/SPAN_MECH/.test(T.replace(/uInkBreakSpan[^\n]*\n/, '').replace(/SPAN_MECH: [\d.]+,/, '')),
+    'SPAN_MECH 的消費端**恰一處**(第二處 = 兩份軌選擇,而分家的症狀只是「有些零件不會斷筆」)');
+  // ---- 拉桿 → 共享 uniform ----
+  ok(/_inkBreakA\.value = visualPref\('inkBreak'\);/.test(T)
+    && /shader\.uniforms\.uInkBreakA = _inkBreakA;/.test(T),
+    '拉桿走**共享 uniform 物件**(`= _inkBreakA`,不是 `{ value: … }`)⇒ 改值不必重建材質(紀律③)');
+  ok(/const _inkBreakA = \{ value: 0 \};/.test(T)
+    && T.indexOf('const _inkBreakA') < T.indexOf('function syncVisualPrefs'),
+    '宣告排在 syncVisualPrefs **之前**(它在模組載入時就跑一次 ⇒ 晚一步就是整支 toon.js 在 import 當下 TDZ ReferenceError)');
+  // ---- GLSL:錨點、雜訊、早退 ----
+  const IB = /#ifdef CEL_INKB\n([\s\S]*?)#endif\n\s*#ifdef CEL_DIS/.exec(T);
+  ok(!!IB, '斷筆錨點住頂點端的 CEL_INKB 區塊');
+  const ib = IB ? IB[1] : '';
+  ok(/vCelInkP = mat3\( modelMatrix \) \* ibP\.xyz;/.test(ib) && !/modelMatrix \* ibP/.test(ib),
+    '錨點 MUST 丟掉平移欄(`mat3( modelMatrix )`)—— 寫成 mat4 之後畫面上只是「走一步缺口在身上游動」,而每一條離線斷言照樣全綠');
+  ok(/ibP = instanceMatrix \* ibP;/.test(ib),
+    'instanceMatrix 收進來(同款植被逐株不同花紋;對靜態實例它退化成世界座標)');
+  const CB = /float celInkBreak\(\) \{[\s\S]*?\n        \}/.exec(T);
+  ok(!!CB, 'celInkBreak() 住 toon.js(GLSL 補丁一律不外流)');
+  const cb = CB ? CB[0] : '';
+  ok(/if \( uInkBreakA <= 0\.0 \) return 1\.0;/.test(cb),
+    '拉桿 0 ⇒ **uniform 分支早退**,回傳的是字面 1.0 不是 mix 出來的 1.0(浮點上兩者可以不同)');
+  ok(count(cb, /celNoise\(/g) === 2,
+    '兩個平面各取一次雜訊(只取 p.xz 的話垂直裝甲板上整條線同相 = 沒有斷點)');
+  ok(/step\( n, \$\{INK_BREAK\.CUT[^}]*\} \)/.test(cb) && /mix\( 1\.0, \$\{INK_BREAK\.LO[^}]*\}/.test(cb),
+    '門檻與斷處倍率由 JS 模板插值(GLSL 裡手寫數字 = 第二份參數表)');
+  ok(/return mix\( 1\.0, brk, uInkBreakA \);/.test(cb),
+    '拉桿是**線性混入**(0 ⇒ 恆等 1;沒有第二條時間/強度曲線)');
+  // 雜訊全專案恰一份:兩份 hash = 地形的斷點與機體的斷點是兩種花紋,而沒有錯誤訊息
+  ok(count(T, /float celHash\( vec2 p \)/g) === 1 && count(T, /float celNoise\( vec2 p \)/g) === 1,
+    'celHash / celNoise 全專案**各恰一份**(斷筆與 wash / moss / 泡沫同吃)');
+  // `#ifdef CEL_WP` 在 celHash **之前就已經 #endif** ⇒ 雜訊在 ifdef 之外(關在裡面的話
+  // 沒有 CEL_WP 的材質拿不到它,而 GLSL 的錯誤是**整批物件不畫**、console 一個字都沒有)
+  ok(/#ifdef CEL_WP\s+varying vec3 vCelWP;\s+#endif\s+float celHash\( vec2 p \)/.test(T),
+    'celNoise 已提出 `#ifdef CEL_WP`(那一格 ifdef 只剩 varying 宣告,雜訊在它之外)');
+  // ---- 快取鍵 ----
+  ok(/\$\{inkAlpha \? 'B' : ''\}/.test(T),
+    'CEL_INKA/CEL_INKB 進 customProgramCacheKey(defines 不同卻共用程式 ⇒ 半透明件拿到寫死 alpha 的那一版 = 水面從 0.82 變 0.30)');
+
+  // ---- ①-4 掠射抑制項:恰一項,MUST NOT 疊 ----
+  // 2026-08-16 定案:**維持 `INK.K_S`,不換成 `1 − n.z`**。量測(解析平面模型,fovY 68°、
+  // 1080p、門檻倍率相對正對鏡頭的牆)在下面直接算給你看;`1 + K_N·(1 − n.z)` 的上界恆為
+  // `1 + K_N` ⇒ 配到 2° 相等要 K_N = 11.1,那時 45° 斜面被推到 3.1 倍過度抑制;配到 10°
+  // 相等則仰角 2° 只剩 0.30 倍 ⇒ **兩條曲線在任何單一係數下都配不起來**。
+  // 另外三條:`1 − n.z` 只有 inkMrt 開著才拿得到法線(而它**預設關**、WebGL1 上根本沒有)、
+  // 哨兵像素沒有法線要第二份門檻(= 第二份實作)、低解析度時它對像素尺寸是線性沒有上界。
+  const INKM2 = code(block(post, '  _inkMaterial() {'));
+  const DEN = /float e = lap \/ max\([^;]*\);/.exec(INKM2);
+  ok(!!DEN, '深度門檻的分母是一行式子(勾線 pass 的 `e = lap / max(…)`)');
+  const den = DEN ? DEN[0] : '';
+  ok(/slope \* \$\{INK\.K_S[^}]*\}/.test(den) && count(den, /INK\.K_S/g) === 1,
+    '掠射抑制項**恰一項**(`slope × INK.K_S`)');
+  ok(!/n\.z|\bnz\b|depthLimit|uDepthRange/.test(den),
+    '深度門檻 MUST NOT 再疊法線式上限(計畫 ①-4「兩者擇一,MUST NOT 疊」寫成可驗的形式)');
+  // 行為:從**原文**取 K_D / K_S,以解析平面模型算門檻倍率
+  const KD = Number(/K_D: ([\d.]+),/.exec(P)?.[1]);
+  const KS = Number(/K_S: ([\d.]+),/.exec(P)?.[1]);
+  const alpha = 2 * Math.tan((68 / 2) * Math.PI / 180) / 1080;   // 每像素的角尺寸(fovY 68°、1080p)
+  const mult = (deg) => 1 + 2 * alpha * KS / (KD * Math.tan(deg * Math.PI / 180));
+  ok(Number.isFinite(KD) && Number.isFinite(KS) && KD > 0 && KS > 0,
+    `門檻兩項係數由原文取(K_D = ${KD}、K_S = ${KS})`);
+  ok(mult(2) >= 8,
+    `掠射 2° 的門檻倍率 ${mult(2).toFixed(2)}× ≥ 8×(45° 只有 ${mult(45).toFixed(2)}× ⇒ 山坡乾淨而建物輪廓還在;K_S 被「簡化」成 0 就在這裡紅)`);
+}
+
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);
 const BREAKS = [BREAK_INK && '--break-ink', BREAK_ANCHOR && '--break-anchor',
-  BREAK_WAVE && '--break-wave', BREAK_GUST && '--break-gust'].filter(Boolean);
+  BREAK_WAVE && '--break-wave', BREAK_GUST && '--break-gust',
+  BREAK_CHAR && '--break-char', BREAK_CHARR && '--break-charR',
+  BREAK_CHARSLOT && '--break-charslot', BREAK_FOAM && '--break-foam',
+  BREAK_INKBREAK && '--break-inkbreak', BREAK_INKANCHOR && '--break-inkanchor',
+  BREAK_GRAZE && '--break-graze'].filter(Boolean);
 if (BREAKS.length) {
   console.log(`（反向驗證模式:${BREAKS.join(' ')} —— 上面 MUST 有紅字）`);
   process.exit(fail === 0 ? 1 : 0);

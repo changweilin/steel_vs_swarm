@@ -535,6 +535,57 @@ export async function landcoverFor(id, bbox) {
   return out;
 }
 
+/**
+ * 切面線工專屬圖資(2026-08-16:`audit_zone_cut.mjs` 的 §0-a 線工切面樁用)——
+ * 回答「這張圖上有哪些**行政界**與**海岸線**」。
+ *
+ * 為什麼是第三支而不是併進 `osmFor`/`landcoverFor`:兩支的快取檔(`*_L1v2.json` /
+ * `*_landcover_v1.json`)是場景掃描、泛洪稽核與 `audit_venue_biome` 共用的**貴重資產**,
+ * 改它們的查詢就得換鍵、整批重抓(公共 Overpass 對雲端 IP 常態拒絕,重抓一次是分鐘級)。
+ * `landcoverFor` 的檔頭已經把這條理由寫死一次,本支是同一條理由的第二個實例。
+ * 三支共用同一個 `overpass()`(鏡像輪替 + 逐站計時,§2.4)與同一個快取目錄。
+ *
+ * 兩類線刻意分開回:
+ *   `boundary`  行政界 —— 在 §0-a 的線工裡是**低優先**(多數與河/路重合),呼叫端只在
+ *               「附近沒有其他參與線」時才採用;
+ *   `coastline` 海岸線 —— 恆參與(它是真實世界最硬的一條地貌界線)。
+ *
+ * ⚠ **行政界在 OSM 裡是 relation 不是 way**(2026-08-16 實測:barcelona 的戰場 bbox 內
+ *   `way["boundary"="administrative"]` 回 **0 條**,而 `rel["boundary"="administrative"]`
+ *   回 **41 個**)—— 成員 way 通常**不帶** `boundary` 標籤,只是 relation 的成員。
+ *   查 way 就是「這張圖沒有行政界」而每一個數字看起來都正常。故本支查 relation
+ *   再用 `way(r)` 展開成員 way(v2 換鍵重抓;v1 那一份是這個坑的證物)。
+ *   展開後的成員 way 沒有 `boundary` 標籤 ⇒ 分類改成**排除法**:帶 `natural=coastline` 的
+ *   歸海岸線、其餘全是行政界成員(兩個產生器只有這兩個,無歧義)。
+ *
+ * 沒有 `/map` 備援:Overpass 掛掉就回 `null`,呼叫端 **MUST 標成「未驗」**,
+ * MUST NOT 當成「這張圖沒有行政界」(原則 6:降級不例外、寧缺勿錯)。
+ */
+export async function cutLinesFor(id, bbox) {
+  const f = join(CACHE, `${id}_cutlines_v2.json`);
+  if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
+  const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
+  const km2 = bboxKm2(bbox);
+  // 額度隨面積縮放(同 osmFor / landcoverFor 的紀律)。行政界在都會區可以層層疊(市 / 區 /
+  // 里各一條、而且常常共線)⇒ 給得比海岸線寬;海岸線在一張戰場圖上頂多幾條 way。
+  const nAdm = quotaOf(km2, 120, 60, 400), nCoast = quotaOf(km2, 40, 30, 200);
+  const els = await overpass(`[out:json][timeout:60];`
+    + `rel["boundary"="administrative"](${bb});way(r);out geom ${nAdm};`
+    + `way["natural"="coastline"](${bb});out geom ${nCoast};`);
+  if (!els) return null;
+  const line = (e) => e.type === 'way' && Array.isArray(e.geometry) && e.geometry.length >= 2;
+  const ways = els.filter(line).map((e) => ({ tags: e.tags || {}, geometry: e.geometry }));
+  const out = {
+    src: 'overpass',
+    coastline: ways.filter((w) => w.tags.natural === 'coastline'),
+    boundary: ways.filter((w) => w.tags.natural !== 'coastline'),
+  };
+  out.capped = out.boundary.length >= nAdm || out.coastline.length >= nCoast;
+  out.quota = { boundary: nAdm, coastline: nCoast };
+  writeFileSync(f, JSON.stringify(out));
+  return out;
+}
+
 // ---- 幾何小工具(遊戲公尺)----
 export function segCross(a, b, c, d) {            // 線段真交叉(共端點不算)
   const cr = (o, p, q) => (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0]);
@@ -590,4 +641,106 @@ export function tunnelRunOf(way, center, heightAt, hf) {
   });
   if (!up) return { pts, cum, floors, intervals, under: false };
   return { pts: up.pts, cum: up.cum, floors: up.floors, intervals: up.intervals, under: true, sink: up.sink };
+}
+
+// ---- 結構清單(2026-08-16 由 `audit_traverse.mjs` 搬進來;純搬家,一行未改)----
+// 為什麼要搬:`audit_zone_cut.mjs`(§0-a 線工切面樁)要的「結構足跡 keep-out」與泛洪要的
+// 是**同一份**結構清單(隧道 / 地下道 / 橋的通行折線與半寬)。留在 audit_traverse 裡的話
+// 第二個消費端只能抄一份 —— 而「消費端 MUST 走這一支,MUST NOT 自己再抄一份」正是本檔
+// 檔頭那條規則。四支的自由變數本來就全部住在本檔(LANE_HW / strucHw / strucTunnel /
+// tunnelRunOf / densify / llToWorld / ROAD_SEG / arcOf / makeDeckAt / UND / ptSeg)。
+
+/** 點落在結構通行寬內時回傳它的弧長座標,否則 null */
+export function projectArc(x, z, st) {
+  let best = Infinity, bs = 0;
+  const p = st.pts;
+  for (let i = 1; i < p.length; i++) {
+    const d = ptSeg([x, z], p[i - 1], p[i]);
+    if (d < best) {
+      best = d;
+      const ex = p[i][0] - p[i - 1][0], ez = p[i][1] - p[i - 1][1], L2 = ex * ex + ez * ez || 1;
+      let t = ((x - p[i - 1][0]) * ex + (z - p[i - 1][1]) * ez) / L2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      bs = st.cum[i - 1] + t * Math.hypot(ex, ez);
+    }
+  }
+  return best <= st.hw ? bs : null;
+}
+
+/** 折線上弧長 s 的座標 */
+export function ptAt(run, s) {
+  const { pts, cum } = run;
+  for (let i = 1; i < cum.length; i++) {
+    if (cum[i] >= s) {
+      const t = (s - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]);
+      return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t];
+    }
+  }
+  return pts[pts.length - 1];
+}
+/** 沿弧長線性內插一組取樣值(隧道路面 floors 已由 tunFloorAt 逐點算好) */
+export function sampleAlong(cum, vals, s) {
+  for (let i = 1; i < cum.length; i++) {
+    if (cum[i] >= s) {
+      const t = (s - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]);
+      return vals[i - 1] + (vals[i] - vals[i - 1]) * t;
+    }
+  }
+  return vals[vals.length - 1];
+}
+
+/** 結構清單(隧道 / 地下道 / 橋)+ 它們貢獻的航點 + 開挖走廊(carveTunnels 的輸入) */
+export function buildStructs(osm, center, hf) {
+  const structs = [], marks = [], carveRuns = [];
+  for (const w of (osm?.roads || [])) {
+    if (!LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
+    const hw = strucHw(w.tags);
+    if (strucTunnel(w.tags)) {
+      const run = tunnelRunOf(w, center, hf.heightAt, hf);
+      if (!run || !run.intervals.length) continue;
+      const total = run.cum[run.cum.length - 1] || 1;
+      const floorAt = (s) => sampleAlong(run.cum, run.floors, s);
+      const st = { pts: run.pts, cum: run.cum, hw, floorAt, kind: run.under ? '地下道' : '隧道' };
+      structs.push(st);
+      // 航點:兩端洞口 + 每一段覆蓋區間的中點(= 真的鑽過去,不是繞到山頂上)
+      for (const [a, b] of run.intervals) {
+        marks.push({ name: `${st.kind}洞口A`, p: ptAt(run, a), y: floorAt(a) });
+        marks.push({ name: `${st.kind}洞中`, p: ptAt(run, (a + b) / 2), y: floorAt((a + b) / 2) });
+        marks.push({ name: `${st.kind}洞口B`, p: ptAt(run, b), y: floorAt(b) });
+      }
+      // 開挖走廊(V-C):`carveTunnels` 吃的是**敞開補集**(引道 / 路塹),不是覆蓋段本身 ——
+      // 洞體是把三角形整片刪掉,不是把山壓平。分段規則逐字鏡射 `biomes.js` 那一段
+      // (bounds = [頭, 各覆蓋段的頂點索引…, 尾],成對取);cut 旗標 = 地下道引道收窄成垂直路塹。
+      // 少了這一步,泛洪就是拿**天然**地形在走引道 —— 一條靠開挖才通的路會被報成不可達,
+      // 而那是假紅字,比沒驗還糟。
+      {
+        const bounds = [0, ...run.intervals.flatMap(([, , ia, ib]) => [ia, ib]), run.pts.length - 1];
+        for (let k = 0; k + 1 < bounds.length; k += 2) {
+          const a = bounds[k], b = bounds[k + 1];
+          if (!(b - a >= 1)) continue;
+          carveRuns.push({ pts: run.pts.slice(a, b + 1), floors: run.floors.slice(a, b + 1),
+            covA: k > 0, covB: k + 2 < bounds.length, hw, cut: !!run.under });
+        }
+      }
+      if (run.under) {   // 地下道引道:兩端各一個(引道走不通 = 掉進洞裡出不來)
+        marks.push({ name: '地下道引道A', p: ptAt(run, Math.min(total, UND.EDGE + 2)), y: floorAt(Math.min(total, UND.EDGE + 2)) });
+        marks.push({ name: '地下道引道B', p: ptAt(run, Math.max(0, total - UND.EDGE - 2)), y: floorAt(Math.max(0, total - UND.EDGE - 2)) });
+      }
+    } else if (w.tags.bridge) {
+      const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
+      if (pts.length < 2) continue;
+      const cum = arcOf(pts);
+      const total = cum[cum.length - 1] || 1;
+      if (total < 24) continue;                       // 太短的「橋」是路面涵管,沒有橋面可走
+      const hA = hf.heightAt(pts[0][0], pts[0][1]);
+      const hB = hf.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+      const deckAt = makeDeckAt(hA, hB, total, hf.heightAt);
+      const st = { pts, cum, hw, floorAt: (s, x, z) => deckAt(s, x, z), kind: '橋' };
+      structs.push(st);
+      const mid = total / 2;
+      const mp = ptAt({ pts, cum }, mid);
+      marks.push({ name: '橋面中段', p: mp, y: deckAt(mid, mp[0], mp[1]) });
+    }
+  }
+  return { structs, marks, carveRuns };
 }

@@ -71,8 +71,8 @@
 // 純視覺:不進射擊 raycast、不描邊、不產生碰撞柱(空地依然自由通行)。
 // 亂數決定性:呼叫端傳入以戰場中心為種子的 rnd + seed,全房間一致。
 import * as THREE from 'three';
-import { ENV } from './data.js';
-import { envMat } from './toon.js';
+import { ENV, inkCtrM } from './data.js';
+import { envMat, surfGroup } from './toon.js';
 import { gridAngle } from './roadgrid.js';
 
 const MAX_DETAIL = 19000;  // 3D 細節實例總上限(特徵層 + 底毯撒佈;全 InstancedMesh,draw call 不變;
@@ -4942,6 +4942,21 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   for (const type in det) {
     const items = det[type];
     if (!items.length) continue;
+    // ---- 表面群組 + outlineContribution(2026-08-16;序 3 的 S3 / S4 消費端)----
+    // 使用者追加的「石堆的處置」:一顆石頭在畫面上是**一個東西**。現況是 `boulder` 的大小
+    // 兩瓣、`slab` 的板 + 墩、`snag` 的幹 + 兩枝各自是一個逐材質 surfaceId ⇒ **每一顆石頭
+    // 中間被切一刀**(而兩顆不同的石頭反而同號 —— 一款 = 一個 InstancedMesh = 一份材質)。
+    // ①**取號 MUST 在零件迴圈之外**(逐 `type` 一次):放進去就是逐零件各一號 = 完全沒做,
+    //   而「有沒有呼叫 surfGroup」看起來一模一樣(反向驗證 `--break-detsurf` 咬的正是位置)。
+    // ②**粒度是「一顆」不是「一堆」**:兩顆之間的輪廓由**深度**那一項給(它們是分開的實體,
+    //   深度真的有落差)⇒ 這裡刻意**不標 `ink: 'group'`**。標了的話群組早退會把「五格同號」
+    //   的判定套到全世界同款的石頭上,岩屑坡上那十幾顆當場糊成一坨(rock-silhouette 規格
+    //   點名的那個坑)。同號只讓 `INK_MRT.ID` 那一項閉嘴、並讓法線折邊改吃 `SELF_F` 的門檻。
+    // ③**貢獻由既有的實測縫 `detailR(type)` 推導**(量零件真幾何;手寫值會靜默過期),
+    //   直徑 = ×2 ⇒ `pebble`(r≈0.42)之類「畫面上只有幾個像素」的東西不值得一條線,
+    //   而 `boulder`(r≈1.25)以上恆為 1(= 舊制)。零新名冊。
+    // **零亂數消耗**:`surfGroup()` 吃的是 toon.js 的模組級序不是共享 `rnd()`(§2.3)。
+    const sg = surfGroup(), sCtr = inkCtrM(detailR(type) * 2);
     for (const part of DETAIL_DEFS[type]) {
       // 材質塗層與 2D 地表同語彙:低頻水彩 wash + 冷藍陰影(envMat),
       // 人造附件再疊程序貼圖(貨櫃浪板/太陽能電池格/看板畫面/木箱板紋)
@@ -4949,6 +4964,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       // 落地平移烤在幾何裡,頂點的 y 本身就是整株座標(見 DETAIL_DEFS 檔頭那一段)。
       const mat = envMat(partColor(part.c), {
         map: part.tex ? detailTex(part.tex) : null, wash: 0.35, cool: 0.4,
+        surf: sg, contrib: sCtr,
         ...(part.sf ? { soft: { k: part.sf, span: detailSpan(type), base: 0, sy: part.sy ?? 1 } } : {}),
       });
       const m = new THREE.InstancedMesh(part.geo, mat, items.length);

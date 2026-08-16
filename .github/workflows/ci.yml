@@ -73,6 +73,21 @@ jobs:
           node tools/audit_venue_biome.mjs --offline
           node tools/audit_vernacular.mjs
           node tools/audit_codex.mjs
+          # ---- 2026-08-16 日系動漫計畫第二輪的十支新稽核 ----
+          # 這一段 MUST 與 `.claude/rules/verification.md` §5.1(續)的清單同步:
+          # 新增一支稽核卻沒有在這裡註冊 = 它只在人手跑的時候存在,而每一次 PR 都是綠的。
+          node tools/audit_struct_ink.mjs
+          node tools/audit_rock_ink.mjs
+          node tools/audit_leaf_card.mjs
+          node tools/audit_ambient_motion.mjs
+          node tools/audit_water_edge.mjs
+          node tools/audit_vehicle_spec.mjs
+          node tools/audit_wildlife.mjs
+          node tools/audit_anim_weights.mjs
+          node tools/audit_audio_layers.mjs
+          # 線工切面樁:不帶 --venue 時只跑離線那幾段(帶了要 Overpass,同 venue_biome 的理由)
+          node tools/audit_zone_cut.mjs
+          node tools/audit_damp_fps.mjs
 
       - name: 平衡不變式
         run: npm run bal

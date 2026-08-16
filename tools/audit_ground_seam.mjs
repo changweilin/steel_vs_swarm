@@ -379,9 +379,13 @@ console.log('== Ⅴ 逐組合交界樣式(明確/柔和/斑塊/中間樣態帶)=
     ? ok('異 seed → 帶分佈不同(每圖不同貌)') : bad('異 seed 帶分佈退化相同');
 
   // ⑤ 自然岸:綠地↔水域夾蘆葦緣(marsh);市區↔水域 = 硬岸線無帶
+  // ⚠ 訊息裡的分工是**這一支管不到的那一半**,MUST 跟著現況走:潮間帶(濕泥帶)仍住
+  // `biomes.buildWaterEdges`,而**水岸泡沫 2026-08-16 ⑤-2 已退場**(改成 `terrain.bakeSeaDepth`
+  // 烤深度場 + `toon.js celFoam()` 的硬邊,見那一支檔頭與 §6)。這只是 `ok()` 的訊息、
+  // 不是斷言條件 —— 但說謊的訊息比沒有訊息更糟:下一個人會照著它去 `buildWaterEdges` 裡找泡沫。
   const outGQ = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'G#0' : 'Q#0'), N, N, opt);
   outGQ.some((o) => o.st.band && o.key.startsWith('marsh#'))
-    ? ok('綠地↔水域 → 蘆葦緣帶(marsh;泡沫/潮間帶仍住 buildWaterEdges)')
+    ? ok('綠地↔水域 → 蘆葦緣帶(marsh;潮間帶仍住 buildWaterEdges,泡沫 2026-08-16 起住 toon.celFoam)')
     : bad('綠地↔水域無蘆葦帶(或 midP 過低致本 seed 全空 —— 檢查 gate)');
   const outUQ = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'U#0' : 'Q#0'), N, N, opt);
   (outUQ.every((o) => !o.st.band) && outUQ.every((o) => o.st.sharp === 3.2))

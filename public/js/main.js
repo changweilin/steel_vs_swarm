@@ -1995,6 +1995,12 @@ function startPrebuild(cfg) {
     // 會先清成 null,再戰回房重建同一個 terrain 也不會沿用上一次的遮罩)。
     // 裝上去之後 `terrainEnvCode` 才是完整規則 ⇒ 底下的 bakeWetGrid 與 game._envAt 同吃一份。
     terrain.inBorderBand = biomes.userData.bandDryAt || null;
+    // 岸邊泡沫的深度場蓋章(2026-08-16 ⑤-2):把碰撞柱的腳印壓成「乾的」⇒ 泡沫繞過每一根
+    // 柱子、每一棟建物。**安裝點與 `inBorderBand` 同一個理由**(建圖期拿不到 blockers,
+    // 拿了就是循環)。⚠ 與 `inBorderBand` **刻意不同**的是:泡沫是純表現層,MUST NOT 反過來
+    // 被 `terrainEnvCode` 讀到 —— 那條「表現層規劃反過來決定權威水沼分類」的口子是使用者
+    // 2026-08-13 逐案裁決的,MUST NOT 擴大適用。無水域 ⇒ 這一支自己 no-op。
+    terrain.stampSeaBlockers?.(terrain.blockers);
     // 高架橋橋面 = 可站立平台。surfaceAt(x, z, curY):curY 高於橋面一個台階內才算「站在橋上」,
     // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
     const deckY = makeDeckIndex(biomes.userData.decks);

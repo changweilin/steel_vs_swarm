@@ -6,8 +6,10 @@
 // 因此本檔 MUST NOT 直接改 yaw/pitch/keys/firing,也 MUST NOT 自行結算任何權威狀態
 // (伺服器權威見 /CLAUDE.md §1);新增按鈕只准新增 act 名稱,不准在此另寫一份操作邏輯。
 //
-// 版型:body 上掛三個 class 供 CSS 特化 —— `touch-ui`(觸控版)、`ori-portrait`/`ori-landscape`
-// (直式/橫式)、`touch-lefty`(左手模式,左右鏡像)。版型細節全在 css/style.css,本檔只掛 class。
+// 版型:body 上掛四個 class 供 CSS 特化 —— `touch-ui`(觸控版)、`ori-portrait`/`ori-landscape`
+// (直式/橫式)、`touch-lefty`(左手模式,左右鏡像),以及**與版型正交**的 `touch-dev`
+// (這台機器有觸控硬體;頁面級觸控硬化綁它,見 installTouchUI())。
+// 版型細節全在 css/style.css,本檔只掛 class。
 // 視野角度 MUST NOT 因直/橫式而改(全機種 fov 68,見 /CLAUDE.md A8):直式只是水平視野較窄,
 // 故直式首次進場提示「建議橫向持握」,而不是偷偷改 FOV。
 import * as THREE from 'three';
@@ -235,6 +237,13 @@ let _installed = false;
 export function installTouchUI() {
   const on = isTouchUI();
   document.body.classList.toggle('touch-ui', on);
+  // 裝置級硬化旗標(2026-08-16,`docs/anime_style_plan.md` ⑧-5):`touch-ui` 是**房間設定**
+  // (房主鎖「限定滑鼠鍵盤」⇒ 恆 false),而「捏合縮放 / 下拉刷新 / 長按選字 / 點擊高亮要不要
+  // 擋掉」問的是**這台機器有沒有觸控硬體** —— 兩件事共用一個旗標的話,房主一鎖鍵鼠,真手機上
+  // 那組頁面級保護整組消失而遊戲照樣在跑、零錯誤訊息。判定只准轉呼 `ctrlmode.touchCapable()`,
+  // 本檔 MUST NOT 再寫一份 `maxTouchPoints` / `pointer: coarse`(見檔頭與 A21 家族)。
+  // 純滑鼠桌機 `touchCapable()` 恆 false ⇒ 逐位元同改制前。
+  document.body.classList.toggle('touch-dev', touchCapable());
   document.body.classList.toggle('touch-lefty', on && TOUCH.lefty);
   syncOrientation();
   if (!_installed) {

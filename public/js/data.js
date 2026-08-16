@@ -951,6 +951,80 @@ export const dofAimBlend = (fov, baseFov, zoomFov) => {
   return Math.max(0, Math.min(1, (baseFov - fov) / span));
 };
 
+// ---- 畫面轉場:斜向 wipe(2026-08-16;序 8 ④-1)----
+// **純表現層**,與 `DOF` / `CURVE` / `SHADOW` / `DAYCLOCK` 同層。住 `data.js` 的三個理由:
+//   ① 它是 Node 端載得動的純資料 ⇒ 稽核吃得到**真品**而不是用 regex 猜著色器;
+//   ② 形狀(傾角 / 幕緣)與時間軸是同一件事的兩半,拆成兩個檔就是兩份會分家的實作;
+//   ③ **不進 `balanceFingerprint`**(那一支只雜湊 UNITS/CHARACTERS/WEAPONS/ECON/SQUAD/GAME)
+//      ⇒ `botPolicy.js` 不會被判過期。落地時實跑 `audit_bot_policy` 確認過。
+// **幕色刻意不住這裡**:由呼叫端餵(`SIDES[side].color`)—— 寫在這裡就是與
+// `toon.js OUTLINE_COLOR` 並存的第二份墨色。
+export const WIPE = {
+  INC: 0.45,        // 斜率:幕沿 (x + y·INC) 方向掃過去(0 = 純直向)
+  SOFT: 0.012,      // 幕緣的羽化寬(螢幕比例);抗鋸齒仍由排在後面的 FXAA 負責
+  COVER_S: 0.34,    // 遮幕時長(秒)
+  REVEAL_S: 0.42,   // 揭幕時長(秒)
+  FLASH_S: 0.22,    // 閃光時長(秒);MUST ≤ 兩者較短的那一個(閃光是切點的重音)
+  // 閃光是 **vibrance / brightnessContrast**,不是白色淡入(白幕會把整格畫面洗掉)。
+  // 對比樞軸恆 0.18 = 線性中灰,與 `GRADE` 的 `smoothstep(0.18, 0.72, l)` **同一把尺**;
+  // 寫 0.5 的話(RT 是線性的、0.5 已經很亮)拉對比會把整個畫面壓黑,而畫面上只表現成
+  // 「閃光怎麼是暗的」。
+  FLASH_VIB: 0.55,  // 彩度增益
+  FLASH_CON: 0.35,  // 對比增益
+  FLASH_BRI: 0.10,  // 亮度增益
+  PIVOT: 0.18,      // 對比樞軸(線性中灰)
+};
+/** smoothstep(0,1,x) —— 本段兩支純函式共用,MUST NOT 各寫一份 */
+const _sstep = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+/**
+ * 轉場時間軸(純函式,離線可驗)。
+ * @param mode 'cover'(遮幕:幕從無到全覆蓋)/ 'reveal'(揭幕:幕從全覆蓋退出去)
+ * @param t    已經過的秒數
+ * @returns `{ w1, w2, flash, done }` —— w1 = 前緣、w2 = 後緣(覆蓋區間 = [w2, w1]);
+ *          兩端點是**定義不是校準**:`t ≤ 0 ⇒ 幕不存在`、`t ≥ dur ⇒ 幕走完`。
+ */
+export const wipeAt = (mode, t) => {
+  const reveal = mode === 'reveal';
+  const dur = reveal ? WIPE.REVEAL_S : WIPE.COVER_S;
+  const raw = dur > 0 ? t / dur : 1;
+  const done = raw >= 1;
+  const p = raw <= 0 ? 0 : (done ? 1 : _sstep(raw));
+  // 遮幕:前緣掃過去、後緣留在 0 ⇒ p = 1 時 [0,1] **全螢幕覆蓋**(不是「幾乎全部」)。
+  // 揭幕:前緣停在 1、後緣掃過去 ⇒ p = 1 時覆蓋區間縮成空集合。
+  const w1 = reveal ? 1 : p;
+  const w2 = reveal ? p : 0;
+  // 閃光的重音落在**切點**:遮幕是收尾(0 → 1)、揭幕是起手(1 → 0)。
+  // 兩者刻意不對稱 —— 切點只有一個,而它夾在兩段之間。
+  const fs = WIPE.FLASH_S;
+  let flash = 0;
+  if (fs > 0) {
+    flash = reveal
+      ? Math.max(0, 1 - t / fs)
+      : Math.min(1, Math.max(0, (t - (dur - fs)) / fs));
+  }
+  return { w1, w2, flash: done ? (reveal ? 0 : 1) : flash, done };
+};
+
+// ---- 物件出現:溶入(2026-08-16;序 8 ④-2)----
+// `discard` 抖動而**不是** alpha 淡入:賽璐璐件淡入會連自己的輪廓一起淡掉(而輪廓正是這個
+// 畫風的全部)。範圍**只有「出現」那一半**:「消失」要把 mesh 從 `this.ents` 摘出來丟進一份
+// ghost 清單,而那份清單有 20 個以上的消費端(含準星解算與鎖定)⇒ 延後移除 = 客戶端把準星
+// 解到一個伺服器已經沒有的目標上。
+export const DISSOLVE = {
+  IN_S: 0.55,       // 溶入時長(秒)
+  CELL_M: 0.42,     // 抖動格距(**世界公尺**,不是 texel:以 texel 給的話遠處整台被墨點蓋掉)
+  // ---- 遠距剔除那一半:**0 = 停用,而且是結構保證不是分支** ----
+  // `> 0` 時 `toon.js` 才把那一段 GLSL **編進去**(見 celDissolve);0 ⇒ 著色器裡連那一行都
+  // 沒有 ⇒ 逐位元同舊制。曲線只有 GLSL 那一份 —— JS 這邊再寫一支「同一條 smoothstep」
+  // 就是兩份會分家的實作,而分家的症狀是「剔除的邊界跟看到的不一樣」。
+  // ⚠ 這個功能**本身還不存在**(見上面 DOF 檔頭最後一段:「日後真做距離剔除時…」),
+  //    這裡只把縫留好;要開它 MUST 先看 DOF 的全糊帶(物件消失的邊界該落在糊掉的那一圈裡)。
+  FAR_M: 0,         // 開始溶出的距離(m);≤ 0 ⇒ **那一段不編進著色器**
+  FAR_BAND_M: 60,   // 溶出帶寬(m)
+};
+/** 溶入進度:0 = 全部 discard、1 = 完全實體。兩端是定義不是校準 */
+export const dissolveAt = (t) => (DISSOLVE.IN_S > 0 ? _sstep(t / DISSOLVE.IN_S) : 1);
+
 // ---- 世界曲面(2026-08-09 使用者需求「地圖改成曲面…曲率半徑可以『有遠方機體先看到上半部』
 // 的效果,但鄰近局部感受又是平的」)----
 // **純表現層**(與 DOF / SCOPE / RECOIL 同層:伺服器完全不知道它的存在 ⇒ 不涉 A1)。住 data.js
@@ -990,6 +1064,7 @@ export const CURVE = {
   // 都正常。
   SAG_M: 0.05,
 };
+
 let _curveEye = 0;
 /**
  * 錨定地平線用的**參考視點高**(m)= 全場最矮機體視點高的**下界**。
@@ -2608,6 +2683,38 @@ export const hgtEnc = (h, minH) => {
 // (sim._blast/_lanceHits 的垂直帶 —— 打到機體哪個部位就在那裡結算)。兩端 MUST 共用同一把尺,
 // 各寫一份 = 看得到卻打不到。models.js 只做 re-export,呼叫端不動。
 export const SOLDIER_H = 1.8;
+// ---- `outlineContribution` 的尺寸軸(2026-08-16;S4 的 data.js 那一半)----
+// **純表現層常數**(不進 `balanceFingerprint`,前例 = `CURVE` / `DOF`):它只決定
+// 「這一款東西值不值得一條墨線」,`sim.js` 與伺服器一格都不讀它。
+//
+// **兩份 contribution 常數表刻意分家,而且分工是規則**:
+//   ・`toon.js INK_REPEAT_M` / `inkRepeat(pitchM)` —— 軸是**構件重複的節距**
+//     (欄杆立柱、格網那一族:密到變雜訊的東西不值得一條線);
+//   ・本段 `INK_CTR` / `inkCtrM(sizeM)` —— 軸是**這個東西本身有多大**
+//     (碎石、落葉、小擺件:畫面上只有幾個像素的東西不值得一條線)。
+// 消費端一律**轉呼其中一支**,MUST NOT 自己寫第三份(兩份並存已經是「拉桿改了一半」的
+// 風險上限,第三份就是必然分家)。授權值一律先經 `toon.js inkQuant` 收成 16 階之一。
+export const INK_CTR = {
+  // 小於這個尺寸的東西一律不出線(遠景的碎石堆會變成一團黑點)
+  NONE_M: 0.35,
+  // 大於等於這個尺寸的東西恆為 1(= 舊制)。取 `SOLDIER_H` 的倍數:「跟人一樣大」就是
+  // 「玩家會把它當成一個東西看」的門檻。
+  FULL_M: SOLDIER_H * 2,
+  // 遠景背景那一圈(視線邊界背景)的授權值。**這一格需美術方向確認**:0 = 一張背景板、
+  // 1 = 遠山。取 0.5 以外的值 MUST 由定裝照定案(見 docs/_pending/lane-ink.md 的待裁決)。
+  BACKDROP: 0.5,
+};
+/**
+ * 尺寸 → 貢獻(**嚴格單調遞增**;`sizeM ≥ INK_CTR.FULL_M` 恆等於 1)。
+ * @param sizeM 這一款東西的世界尺寸(m;直徑 / 全高之類的「一眼看到多大」)
+ */
+export const inkCtrM = (sizeM) => {
+  const s = Math.max(0, sizeM || 0);
+  if (s >= INK_CTR.FULL_M) return 1;
+  if (s <= INK_CTR.NONE_M) return 0;
+  return (s - INK_CTR.NONE_M) / (INK_CTR.FULL_M - INK_CTR.NONE_M);
+};
+
 
 // 機體尺寸(2026-07-12 改制,相對真人身高):
 //   機甲 / 變形者(不分型態)= 150%~250%、無人機 = 75%~150%。
@@ -6022,6 +6129,16 @@ export const bodyFade = (y) => Math.max(0, Math.min(1, y / DAYCLOCK.FADE_Y));
 // 約 37 texel(夠利)、涵蓋半徑 123m(2048)/ 61m(1024)。**MUST NOT 手寫涵蓋半徑** ——
 // 換貼圖尺寸(低功耗折半)時它要自己跟著走,不然低階機的影子會靜默糊掉一倍。
 // 沒有 cascade:框外就是沒有影子,而那是刻意的(第二張陰影圖 = 第二趟全場 render)。
+//
+// **投影的軟硬是賽璐璐學派的一部分**(2026-08-16 §0-b;常數一格未動,這一段只補「為什麼」):
+// 型別住 `game.js` 的 `renderer.shadowMap.type`,而它與 `visualPrefs.celSchool` 是同一件事的兩半 ——
+//   ・School A(ramp 查表):遮罩乘在**查表之後**,那個值早就被階梯量化過了,再柔化只是讓
+//     兩道階梯互相打架;
+//   ・School B(硬切):遮罩與 N·L 一起進**同一刀** `smoothstep(uCelCutLo, uCelCutHi, …)`
+//     ⇒ 先柔化再量化 = 那一刀把 PCF 的雜訊邊緣重新收成一條乾淨的線(終端線更短、不階梯)。
+// ⚠ 本專案**現況已經是 `PCFSoftShadowMap`** ⇒ §0-b 在這一項沒有程式要改;真正缺的是
+// 「有人把它換掉之後沒有任何斷言會紅」—— 那條斷言自 2026-08-16 起住
+// `audit_cel_pipeline` Ⅺ⑨(±`--break-shadowtype`)。
 export const SHADOW = {
   SIZE: 2048, SIZE_LOW: 1024,   // 低功耗 / 觸控裝置走 LOW
   TEXEL_M: 0.12,

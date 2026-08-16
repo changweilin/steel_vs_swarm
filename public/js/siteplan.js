@@ -28,6 +28,8 @@
 import * as THREE from 'three';
 import { envMat, toonMat, bakeContactAO } from './toon.js';
 import { partExtent, mergeGeos } from './beacons.js';
+// 載具/擺件型錄唯一縫(零 import ⇒ 本檔「純區塊」的零 THREE 契約不破,離線稽核照樣執行原文)
+import { makeVehicle, makeRecess } from './vehicles.js';
 
 // ============================================================================
 // §A 都市計畫(市區:沿街配置 + 街廓 + 公設)
@@ -215,6 +217,13 @@ export function planBlocks({ segs = [], probeLot, probeCivic, opts = {} }) {
 // 座標系:+x 沿街、+z 面向街道(與 `roadFaceRy` 定義的建物朝向同框)。
 const _row = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 
+// 停車格(白線畫出來的那一格)。**一個數字兩個消費端**:白線的節距與長度、以及停在裡面
+// 那一台車的 `fit` 盒子 —— 兩邊各寫一份的症狀是「車比格子大一圈 / 車尾露在通道上」,
+// 而碰撞柱是由車身那一件實算的 ⇒ 白線與碰撞盒會安靜地對不上(A30 家族)。
+export const LOT_STALL = { L: 4.8, W: 2.2, H: 1.55, PITCH: 5 };
+// 車身色票(一台一色;`vc` 通道再逐座停車場抖色相)
+const LOT_PAINT = [0xb4553c, 0x3f6f7a, 0xa8a08c, 0x7d8a4a, 0x51585f];
+
 export const CIVIC_PARTS = {
   // 公園:草坪 + 十字步道 + 水池 + 涼亭(有量體)+ 長椅/花圃(低矮,不擋路)
   park: [
@@ -268,16 +277,23 @@ export const CIVIC_PARTS = {
   lot: [
     { g: ['box', 50, 0.5, 34], c: 0x3f4348, p: [0, -0.25, 0] },              // 柏油
     { g: ['box', 50, 0.54, 0.3], c: 0xe0e4e8, p: [0, -0.22, 0] },            // 中央通道邊線
-    ..._row(10, (i) => ({ g: ['box', 0.3, 0.54, 10.4], c: 0xe0e4e8, p: [-22.5 + i * 5, -0.22, -7.4] })),
-    ..._row(10, (i) => ({ g: ['box', 0.3, 0.54, 10.4], c: 0xe0e4e8, p: [-22.5 + i * 5, -0.22, 7.4] })),
-    // 停放車輛(車體 + 車頂;各自登記碰撞柱 —— 停車場裡的車是實心的)
-    // `vc`:車體與車頂同通道 ⇒ 同一台車一起轉色;同圖兩座停車場停的車色不再逐位元相同
-    ..._row(5, (i) => ({ g: ['box', 2.2, 1.35, 4.8], c: [0xb4553c, 0x3f6f7a, 0xa8a08c, 0x7d8a4a, 0x51585f][i], p: [-20 + i * 5, 0.68, -7.4], col: 1, vc: 1 + i })),
-    ..._row(5, (i) => ({ g: ['box', 2.0, 0.9, 2.4], c: [0x93412c, 0x335b64, 0x8b8474, 0x67723c, 0x41474d][i], p: [-20 + i * 5, 1.75, -7.8], vc: 1 + i })),
-    ..._row(4, (i) => ({ g: ['box', 2.2, 1.35, 4.8], c: [0x3f6f7a, 0xa8a08c, 0xb4553c, 0x7d8a4a][i], p: [2.5 + i * 5, 0.68, 7.4], col: 1, vc: 6 + i })),
-    ..._row(4, (i) => ({ g: ['box', 2.0, 0.9, 2.4], c: [0x335b64, 0x8b8474, 0x93412c, 0x67723c][i], p: [2.5 + i * 5, 1.75, 7.0], vc: 6 + i })),
-    // 收費亭 + 柵欄 + 燈桿
+    ..._row(10, (i) => ({ g: ['box', 0.3, 0.54, LOT_STALL.L * 2 + 0.8], c: 0xe0e4e8, p: [-22.5 + i * LOT_STALL.PITCH, -0.22, -7.4] })),
+    ..._row(10, (i) => ({ g: ['box', 0.3, 0.54, LOT_STALL.L * 2 + 0.8], c: 0xe0e4e8, p: [-22.5 + i * LOT_STALL.PITCH, -0.22, 7.4] })),
+    // 停放車輛:形狀走 `vehicles.js` 的**唯一縫**,本表只宣告「格子多大、停在哪、什麼色」。
+    // `fit` = 停車格(= 白線畫出來的那一格,LOT_STALL)⇒ 車與白線一起改,MUST NOT 各寫一份;
+    // `col` 由 `makeVehicle` 掛在車身**與車艙**兩件上(碰撞柱是一疊,同 A46 ①);
+    // `vc`(色相變異通道)一台車一個 ⇒ 車體與車頂一起轉色,同圖兩座停車場停的車色不同。
+    ..._row(5, (i) => makeVehicle('sedan', {
+      fit: LOT_STALL, lod: 1, paint: LOT_PAINT[i], col: 1, vc: 1 + i,
+      at: [-20 + i * LOT_STALL.PITCH, 0, -7.4], ry: Math.PI / 2,
+    })).flat(),
+    ..._row(4, (i) => makeVehicle('sedan', {
+      fit: LOT_STALL, lod: 1, paint: LOT_PAINT[i + 1], col: 1, vc: 6 + i,
+      at: [2.5 + i * LOT_STALL.PITCH, 0, 7.4], ry: -Math.PI / 2,
+    })).flat(),
+    // 收費亭(**真凹處**:窗口往外堆一圈楣樑 + 側返 + 檻,量體本身一格不動 —— ③-2)
     { g: ['box', 2.6, 3.0, 2.6], c: 0xd8d2c4, p: [-23, 1.5, 14.5], col: 1 },
+    ...makeRecess({ W: 1.5, H: 1.1, D: 0.4, at: [-23, 1.2, 15.8], c: 0xbdb6a6 }),
     { g: ['box', 3.0, 0.3, 3.0], c: 0x51585f, p: [-23, 3.15, 14.5] },
     { g: ['box', 7.0, 0.24, 0.24], c: 0xd94f3d, p: [-18, 1.5, 14.5] },
     ..._row(2, (i) => ({ g: ['cyl', 0.22, 0.28, 9, 6], c: 0x585e64, p: [(i ? 1 : -1) * 16, 4.5, 0], col: 1 })),
@@ -533,13 +549,28 @@ export function buildCivic(kind, seed = 0) {
     bk.top = Math.max(bk.top, geo.boundingBox.max.y);
     bk.geos.push(geo);
   }
+  // ③-4 draw call:**分桶鍵一格未動**(它決定材質旗標與擺動 span 的分母 —— `sf` 混桶
+  // 就是「同色的鋪面與草坪共用一份旗標」)。換掉的只有「一個顏色 = 一顆 mesh」那一半:
+  // 同一組(自發光 × 軟性)的桶併成一顆,顏色改走 `mergeGeos(geos, cols)` 的**頂點色通道**。
+  // 實測分桶數 lot 25 → 2、park 12 → 4、pitch 7 → 3(`CIVIC.MAX = 9` 座 ⇒ 上界 132 → 27)。
+  // **自發光刻意不併**:emissive 是逐材質的 uniform,併起來就是全場的燈同一個顏色。
+  // ⚠ 頂點色通道與 `bakeContactAO` 現在會同時出現 ⇒ 那一支 MUST 是**乘**不是覆寫(S9);
+  //   覆寫的症狀是「整組沒有接地陰影」或「整組變灰白」,兩種都不報錯。
+  const groups = new Map();
   for (const b of buckets.values()) {
-    const merged = mergeGeos(b.geos);
+    const mk = `${b.e ? `E${b.c}` : ''}|${b.sf || ''}`;
+    let gp = groups.get(mk);
+    if (!gp) { gp = { c: b.c, e: b.e, sf: b.sf, top: 0, geos: [], cols: [] }; groups.set(mk, gp); }
+    gp.top = Math.max(gp.top, b.top);
+    for (const geo of b.geos) { gp.geos.push(geo); gp.cols.push(b.c); }
+  }
+  for (const b of groups.values()) {
+    const merged = mergeGeos(b.geos, b.cols);
     // 軟性(草坪/草皮/花圃):細勾線 + 隨風飄揚,分類與參數住 `toon.js SOFT_KINDS`
     const soft = b.sf ? { k: b.sf, span: Math.max(0.2, b.top), base: 0, sy: 1 } : null;
     const mat = b.e
-      ? toonMat(b.c, { emissive: b.c, emissiveIntensity: 1.0 })
-      : envMat(b.c, { wash: 0.5, cool: 0.4, rim: 0, soft });
+      ? toonMat(b.c, { emissive: b.c, emissiveIntensity: 1.0, vertexColors: true })
+      : envMat(0xffffff, { vertexColors: true, wash: 0.5, cool: 0.4, rim: 0, soft });
     g.add(new THREE.Mesh(merged, mat));
   }
   bakeContactAO(g, 2.6);

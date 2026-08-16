@@ -32,6 +32,7 @@
 //   --break-storey  層高不再夾在帶內(拿掉「先取落在帶內的候選」那一步)
 //                   ⇒ Ⅴ 的層高全域不變式 MUST 紅字
 import { readSrc } from './audit_src.mjs';
+import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
 import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM, edgeWallDeepM } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
 // 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
@@ -92,12 +93,15 @@ const { partExtent } = new Function(`
   return { partExtent };
 `)();
 
-const M = new Function('partExtent', `
+// `makeVehicle` / `makeRecess` 住 vehicles.js(載具型錄唯一縫,零 import ⇒ Node 端直接載得動)
+//  —— 停車場的九台車與收費亭的窗口凹處都經它產出,漏了注入就是整支稽核在
+//     `const CIVIC_PARTS = {…}` 那一行 ReferenceError,而錯誤訊息與場址配置完全無關。
+const M = new Function('partExtent', 'makeVehicle', 'makeRecess', `
   ${pureSrc.replace(/^export /gm, '')}
   return { URBAN, urbanRowPitch, CIVIC, CIVIC_KINDS, CIVIC_ORDER, CIVIC_PARTS, CIVIC_TREES,
            plotSeed, frac, roadFaceRy, planBlocks, civicExtent, partCollider, civicColliders,
            CROWN, crownGap, planShyGrove, ROCKFIELD, strikeRad, planRockField };
-`)(partExtent);
+`)(partExtent, makeVehicle, makeRecess);
 
 if (BREAK_LINE) M.URBAN.DEPTH = [12, 40];
 if (BREAK_SHY) { M.CROWN.GAP_M = 0; M.CROWN.GAP_F = 0; M.CROWN.FIT_MIN = 0; }

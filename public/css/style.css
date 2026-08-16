@@ -50,7 +50,12 @@ body[data-side="STEEL"] {
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+/* `text-size-adjust: 100%` = 「字級由 CSS 說了算」(2026-08-16,`docs/anime_style_plan.md` ⑧-5)。
+   iOS 橫式會自動放大它認為太小的文字,而 HUD 下帶的 1/6 上限是 `game.fitHudBand()` 量**自然高**
+   反解出 `--hud-k` 的(見 COCKPIT ⑦)⇒ 字被瀏覽器放大 = 量到的自然高變了 = HUD 在 iPhone 橫握時
+   整條縮成另一個比例,而且沒有任何錯誤訊息。既有的 `body.touch-ui input, select { font-size: 16px }`
+   只擋住「聚焦時整頁放大」,擋不到這一條。MUST 掛在根層(裝置級,不是版型級)。 */
+html, body { height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* 底圖 = 鋼鐵藍(左上)× 蜂群黃(右下)沿斜線正面對撞,接縫爆出洋紅火花(電馭叛客衝突感)。
    純漸層 ⇒ 選角後不變;方位對齊 logo 與標題橫幔。 */
 body {
@@ -1611,8 +1616,11 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 /* ============================================================================
    手機 / 平板:觸控操控層 + 直式(ori-portrait)/ 橫式(ori-landscape)版型特化
    ----------------------------------------------------------------------------
-   啟用條件:body.touch-ui(由 js/mobile.js installTouchUI() 依裝置判定掛上;
-   大廳的操作方式選「限定搖桿」或網址 ?ctrl=pad 可在桌機強制驗版型)。設計原則:
+   啟用條件:body.touch-ui(由 js/mobile.js installTouchUI() 依**操作方式**掛上;
+   大廳的操作方式選「限定搖桿」或網址 ?ctrl=pad 可在桌機強制驗版型)。
+   ⚠ 與它同一支掛的還有 body.touch-dev,但那是**裝置**(`ctrlmode.touchCapable()`)——
+   頁面級觸控硬化歸 touch-dev、操控版型歸 touch-ui,兩者 MUST NOT 再合流(見下方那一段)。
+   設計原則:
      ① 3D 視野是主角 —— 控件一律半透明、貼四角,中央 1/3 與準星四周不放任何實體件。
      ② 拇指可達 —— 觸控目標 ≥ 44px;左拇指移動、右拇指射擊/瞄準,招式列貼右下拇指弧。
      ③ 不做第二套 HUD —— 招式/填彈鈕就是既有 .ab-box / .wpn-box(名稱與 CD 已在其中),
@@ -1635,13 +1643,28 @@ body.touch-ui {
      (十字鍵原本 .82、ABXY/肩鍵/系統鍵則完全沒設,只靠底色 alpha,三者本來就不同調)。 */
   --tl-alpha: 0.55;
   --tl-alpha-on: 1;
+}
+
+/* ---------- 頁面級觸控硬化:綁**裝置**(touch-dev),不是版型(touch-ui)---------- */
+/* 2026-08-16(`docs/anime_style_plan.md` ⑧-5)。這五條在改制前掛在 `body.touch-ui` 之下,而
+   `touch-ui` = `mobile.isTouchUI()` = `ctrlmode.usePad()` = **房主可關的房間設定** ⇒ 房主選
+   「限定滑鼠鍵盤」時 `ctrlScheme()` 直接回 'kbm',真手機上這一整組保護當場消失:捏合縮放
+   (iOS Safari 無視 `user-scalable=no`)、下拉刷新、長按選字、點擊藍色高亮全部回來,而遊戲
+   照樣在跑、零錯誤訊息。**「這台機器有沒有觸控硬體」與「這一房用不用搖桿」是兩個不同的問題**,
+   改制前共用了一個旗標。判定唯一縫 = `ctrlmode.touchCapable()`(掛載點 `mobile.installTouchUI()`),
+   CSS 與 mobile.js MUST NOT 再寫一份 `maxTouchPoints` / `pointer: coarse`(A21 家族)。
+   ⚠ `touch-action: none` MUST NOT 上 `html` / `body` / `.screen` / `.overlay-box`:大廳 `.screen`
+   與商店/設定/圖鑑十幾個 `overflow-y: auto` 面板靠捲動,寫在根層就是「大廳捲不動」。
+   只上 `#game`(戰場那一格本來就不該捲)。控件尺寸 `--tl-*`、逐控件 `.tl-*` 的 touch-action、
+   安全區 `--tl-sl/sr/sb/st` **一律留在 `body.touch-ui`** —— 那是版型不是裝置。 */
+body.touch-dev {
   overscroll-behavior: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
-body.touch-ui #game { touch-action: none; }
+body.touch-dev #game { touch-action: none; }
 body.touch-ui #gameCanvas { cursor: default; }
 body.touch-ui [hidden] { display: none !important; }
 /* 桌機隱藏觸控專屬設定;觸控版隱藏鍵鼠專屬提示 */

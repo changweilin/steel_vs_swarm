@@ -27,9 +27,10 @@ import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './m
 import { applyEnvironment } from './environment.js';
 import { Pipeline } from './postfx.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
-import { toonMat, outlinify, updateCelLight, stepCelWind, disposeTree } from './toon.js';
+import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, CHAR, disposeTree } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
+import { animWeights } from './animweights.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
@@ -261,6 +262,24 @@ const GUN_POSE = { PULL_MAX: 0.51, DROP_MAX: 0.5, PULL_N: 4 };
  */
 const COCK_ANIM = typeof location === 'undefined'
   || new URLSearchParams(location.search).get('cockanim') !== '0';
+/**
+ * `?selfbed=1` —— 把**自機**納入移動環境床(踏地/引擎兩類)。
+ * 現制(與 2026-07 以來一致)明確 `continue` 掉 `ent.isSelf` ⇒ 玩家聽不到自己的機體,
+ * 而 ⑦-2 講的「走進水裡會踏空一拍」在語意上就是**自己的**腳步。納入是玩家第一次聽到
+ * 自己的機體 = **可聽的行為改變**,屬使用者裁決題(見 `docs/_pending/lane-motion.md` 待裁決 ②)
+ * ⇒ 照專案慣例做成旋鈕、**預設 = 不生效**(逐位元同舊制)。與 `?amb=0`/`?cockanim=0` 同慣例。
+ */
+const SELF_BED = typeof location !== 'undefined'
+  && new URLSearchParams(location.search).get('selfbed') === '1';
+/**
+ * `?tread=0` —— 關掉「機體走過去把腳邊的草撥開」(⑤-1;縫 = `toon.js` 的 `CHAR`/`setCelChar`)。
+ * 關掉時 `_charSlots()` 回**空陣列** ⇒ `setCelChar` 把全槽的 `spd` 顯式寫 0 ⇒ 頂點著色器那一段
+ * 逐槽 `continue` 早退(「早退不加」而不是「加一個 0」:`x + 0.0` 對 `-0.0` 不是恆等)
+ * ⇒ 逐位元同舊制。這同時是 `audit_soft_stroke --break-char` 的對照組入口,
+ * 與 `?sag=0`/`?morph=0`/`?gait=0`/`?cockanim=0` 同一個慣例。
+ */
+const TREAD = typeof location === 'undefined'
+  || new URLSearchParams(location.search).get('tread') !== '0';
 const _ZERO3 = new THREE.Vector3();
 /**
  * 座艙件的**螢幕佔比**(NDC 外接盒面積 / 全畫面)—— 唯一縫,結構件與武器本體同吃。
@@ -627,6 +646,11 @@ export class BattleClient {
     }
 
     this.clock = new THREE.Clock();
+    // 開戰揭幕(序 8 ④-1):幕從全覆蓋退出去。MUST 排在第一次 `requestAnimationFrame`
+    // **之前** —— 揭幕的第 0 幀就是全覆蓋,晚一幀掛上去會先閃一格沒有幕的畫面。
+    // 這一支刻意**不走 `_wipeCut`**:開戰只有揭幕沒有遮幕(要遮什麼?前一幕是大廳的 DOM),
+    // 而 `_wipeCut` 的語意是「幕蓋上去 → 切 → 拉開」。旋鈕 0 ⇒ `playWipe` 早退回 false。
+    this.pipeline?.playWipe?.('reveal', null, { color: sideInfo(this.side).color });
     this._raf = requestAnimationFrame(() => this._loop());
   }
 
@@ -3128,7 +3152,17 @@ export class BattleClient {
     const sh = this._specHud();
     this.hud.self?.(sh ? sh.hp : this.hp, sh ? sh.max : this.maxHp,
       sh ? 0 : this._burstCdLeft(), sh || this._weaponHud());
-    if (m.over) { this._gameOver = true; this._deathSeq = null; this.hud.deathCine?.(false); this.hud.over?.(m.winner, m.stats); }
+    if (m.over) {
+      const first = !this._gameOver;
+      this._gameOver = true; this._deathSeq = null; this.hud.deathCine?.(false);
+      // 結算遮幕(序 8 ④-1):前三件是**狀態閘**,照舊立刻做 —— 延後會讓暫停選單在結算時
+      // 彈出來。只有結算頁本身排在切點上,而且**只有第一份帶 over 的快照**才起幕:
+      // `m.over` 之後每一份快照都是 true,不擋就是幕一直重刷。
+      // 旋鈕關著時 `_wipeCut` 當場同步走回呼 ⇒ 兩條路都逐位元同舊制。
+      if (first) this._wipeCut(() => this.hud.over?.(m.winner, m.stats),
+        m.winner ? sideInfo(m.winner).color : null);
+      else this.hud.over?.(m.winner, m.stats);
+    }
   }
 
   _spawnEnt(e) {
@@ -3274,6 +3308,7 @@ export class BattleClient {
       this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);   // 碰撞柱與視覺一致(A6)
       this.terrain.rebuildBlockerTops?.();   // 頂面站立索引同步重建(拆掉的樓不留幽靈站立面)
       this.terrain.rebuildClimbs?.();        // 攀爬路線索引同步重建(拆掉的樓不留通往空中的梯子)
+      this._ambDens?.clear();                // 地點床密度快取(拆掉的樓不留幽靈市區聲;與上兩行同一族)
     }
   }
 
@@ -7189,9 +7224,15 @@ export class BattleClient {
     s.fpvAcc = (s.fpvAcc || 0) + dt;
     if (s.fpvAcc >= (s.climax ? 0.26 : 0.12)) { s.fpvAcc = 0; this._engulfFPV(cam); }
 
-    if (done) {
-      this._deathSeq = null;
-      this.hud.deathCine?.(false);   // 熄紅框(倒數頁由下一 8Hz 快照顯示)
+    if (done && !s.cut) {
+      // 陣亡過場 → 重生倒數頁的切點(序 8 ④-1)。`s.cut` 的守衛不可少:過場結束之後
+      // `done` 每一幀都是 true,不擋就是幕每 0.34 秒重刷一次;而旋鈕關著時 `_wipeCut`
+      // 當場同步走回呼 ⇒ 這兩行的執行時機逐位元同舊制(下一幀 `_deathSeq` 已是 null)。
+      s.cut = true;
+      this._wipeCut(() => {
+        this._deathSeq = null;
+        this.hud.deathCine?.(false);   // 熄紅框(倒數頁由下一 8Hz 快照顯示)
+      }, sideInfo(this.side).color);
     }
   }
 
@@ -7777,6 +7818,108 @@ export class BattleClient {
     this._tickHoldAbility(now);    // 長按右鍵 → 機種專屬能力(一般/狙擊模式皆可;在 _tryFire 之前判定手勢)
     this._tryFire(now);
     this._tickLock(now);
+    this._stepSelfWeights(dt);     // 自機的動畫權重(⑥-3;`?selfbed=1` 才算,預設零成本)
+  }
+
+  /**
+   * 自機的動畫權重向量。自機在 `_updateEnts` 早退(位置由 `this.pos` 直接指派)⇒ 它沒有
+   * `ent.loco`,也就沒有權重。這裡用**同一支** `animWeights` 從位置差分組一份 `this._selfW`
+   * ——`MUST NOT` 在音效端另寫一條「玩家版」的速度判斷(那就是第二份實作)。
+   * 差分 + 阻尼逐字沿用 `locomotion.js` 的 `L.vx/L.vz/L.amp`(同 k = 6、同 `lerpFPS`),
+   * 而 **MUST NOT** 拿 `this.vel`:攀爬 / push-out / 蓄力跳三條路徑都不經過它。
+   *
+   * 交出兩份、來源同一個 `L`:`this._selfW`(權重向量,音效那一半讀)與 `this._selfSpd`
+   * (**同一份差分的 m/s 地速**,⑤-1 的植被擾動讀)。⚠ 兩者 MUST NOT 各自差分一次 ——
+   * 那就是 ⑥-3 花一整輪刪掉的 `ent._moveSpd` 的第二次投胎。`_selfSpd` 是「自機版的
+   * `ent.loco.speed`」:自機在 `_updateEnts` 早退 ⇒ 它沒有 `loco`,這一支就是它的替身。
+   *
+   * 閘門吃**兩個**消費端(`?selfbed=1` 的移動床 / `?tread` 的植被擾動),任一開著就要跑;
+   * 兩個都關才整支早退。`_selfW` 在只有 `?tread` 開著時算了但沒有人讀(`_updateMoveAudio`
+   * 仍 `continue` 掉自機)⇒ 音效端逐位元同舊制。
+   */
+  _stepSelfWeights(dt) {
+    if ((!SELF_BED && !TREAD) || dt <= 0) return;
+    const L = (this._selfL ??= { px: this.pos.x, pz: this.pos.z, vx: 0, vz: 0, speed: 0, amp: 0 });
+    const k = lerpFPS(6, dt);
+    L.vx += ((this.pos.x - L.px) / dt - L.vx) * k;
+    L.vz += ((this.pos.z - L.pz) / dt - L.vz) * k;
+    L.px = this.pos.x; L.pz = this.pos.z;
+    L.speed = Math.hypot(L.vx, L.vz);
+    this._selfSpd = L.speed;   // 自機版的 `ent.loco.speed`(⑤-1 的槽 0 讀它;同一份差分)
+    let rig = null;
+    for (const e of this.ents.values()) if (e.isSelf) { rig = e.mesh?.userData?.rig || null; break; }
+    const top = rig?.top || 0;
+    L.amp += ((top > 0 ? Math.min(1.2, L.speed / top) : 0) - L.amp) * k;
+    this._selfW = animWeights(L, rig, {
+      groundY: MORPH.GROUND_Y, y: this._altAG || 0, flies: this._flying(), top,
+    });
+  }
+
+  /**
+   * 這一幀的**植被擾動源**(⑤-1 的餵入端;唯一呼叫點 = 主迴圈 `stepCelWind(dt)` 之後)。
+   * 槽 0 = **主視野機體**(交戰中 = 自機、觀戰 / 陣亡過場 = 正在跟隨的那一台),
+   * 其餘依「離相機距離」升冪補到 `CHAR.N`。
+   *
+   * ⚠ **速率不在這裡推導**。`CHAR.SPD_K` 那條「位置差分 + `lerpFPS` 平滑」的規則已經有
+   * 現成的實作:他機走 `locomotion.stepLocomotion` 的 `L.speed`(位移差分 + `damp` k = 6),
+   * 自機走 `_stepSelfWeights` 的 `_selfSpd`(**逐字同一條**)。在這裡再差分一次就是
+   * ⑥-3 花一整輪刪掉的 `ent._moveSpd` 換個名字回來 —— 而兩份速度的差別只表現成
+   * 「草被撥開的時機跟腳步聲對不上」,沒有任何錯誤訊息。
+   *
+   * ⚠ MUST 排在 `_updateEnts` **之後**:`ent.mesh.position` 那時才是本幀插值完的值
+   * (8Hz 快照 → `lerpFPS(9)`),早一步拿到的是上一幀的位置。
+   *
+   * 換手的代價寫在 `CHAR.N` 旁邊:被擠出槽位的那一台下一幀 `spd` 歸 0(`setCelChar` 顯式寫),
+   * 它腳邊的草會彈回去。進來的那一台則從它自己**已經在跑**的 `L.speed` 接手 ⇒ 不是從 0 淡入,
+   * 也不會瞬跳(那份阻尼從它出生就一直在積分)。
+   *
+   * 零配置:輸出陣列與槽物件都是重用的池(逐幀 60 次 × 4 槽的 GC 不值得付)。
+   */
+  _charSlots() {
+    const out = (this._charOut ??= []);
+    out.length = 0;
+    if (!TREAD) return out;        // ?tread=0 ⇒ 空陣列 ⇒ setCelChar 全槽歸零 ⇒ 位移項恆早退
+    const pool = (this._charPool ??= Array.from({ length: CHAR.N },
+      () => ({ x: 0, y: 0, z: 0, spd: 0 })));
+    const add = (p, spd) => {
+      const s = pool[out.length];
+      s.x = p.x; s.y = p.y; s.z = p.z;
+      s.spd = spd > 0 ? spd : 0;
+      out.push(s);
+    };
+    // 槽 0:交戰中的自機位置權威在 `this.pos`(它的 ent 只是每幀 copy 過去的影子);
+    // 觀戰 / 陣亡過場時主視野是 `_specPid` 跟隨的那一台。兩者都可能不存在(剛進場 / 沒人可跟)
+    // ⇒ 那就直接讓最近的機體遞補,MUST NOT 留一個空的槽 0(空槽 = 少一台會撥草的機體)。
+    let lead = null;
+    if (this.side && !this.dead) {
+      add(this.pos, this._selfSpd);
+    } else if (this._specPid != null) {
+      for (const e of this.ents.values()) {
+        if (e.pid === this._specPid && e.hero && e.mesh) { lead = e; break; }
+      }
+      if (lead) add(lead.mesh.position, lead.loco?.speed);
+    }
+    const cap = CHAR.N - out.length;
+    if (cap <= 0) return out;
+    // 其餘槽:離相機最近的 cap 台。固定長度的插入排序 ⇒ 不整串排序、不配置。
+    const cam = this.camera.position;
+    const nd = (this._charND ??= new Float64Array(CHAR.N));
+    const ne = (this._charNE ??= new Array(CHAR.N));
+    let n = 0;
+    for (const e of this.ents.values()) {
+      if (e === lead || e.isSelf || !e.hero || e.dead || !e.mesh?.visible) continue;
+      const p = e.mesh.position;
+      const dx = p.x - cam.x, dy = p.y - cam.y, dz = p.z - cam.z;
+      const d = dx * dx + dy * dy + dz * dz;
+      let i = n;
+      while (i > 0 && nd[i - 1] > d) i--;
+      if (i >= cap) continue;
+      for (let j = Math.min(n, cap - 1); j > i; j--) { nd[j] = nd[j - 1]; ne[j] = ne[j - 1]; }
+      nd[i] = d; ne[i] = e;
+      if (n < cap) n++;
+    }
+    for (let i = 0; i < n; i++) add(ne[i].mesh.position, ne[i].loco?.speed);
+    return out;
   }
 
   /** 可跟隨名冊(含 bot)。排序 MUST 穩定,否則 Q/E 循環會隨快照跳位 */
@@ -8246,8 +8389,10 @@ export class BattleClient {
         }
       }
       cur.set(nx, ny, nz);
-      // 水平移動速率(m/s):餵移動環境音的音量/音高(_updateMoveAudio);瞬移幀不計
-      ent._moveSpd = (!snapped && dt > 0) ? Math.hypot(nx - px, nz - pz) / dt : (ent._moveSpd || 0) * 0.6;
+      // ⑥-3:舊制在這裡還有一份 `ent._moveSpd`(未阻尼的位移差分 + 逐幀常數 `* 0.6`
+      // = 幀率相依)專門餵移動環境音 —— 那是與 `locomotion.js` 的 `L.speed` 量同一件事
+      // 而不同結果的**第二份速度推導**。已整行刪除,消費端改讀 `ent.loco.w`
+      // (唯一產生點 = `stepLocomotion` 收尾的 `animWeights`)。
       // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
       const tur = ent.mesh.userData.turret;
       if (tur) this._aimVehicleTurret(ent, tur, dt, now);
@@ -8278,7 +8423,11 @@ export class BattleClient {
     if (k === 'soldier' || ent.civ) return null;     // 步兵/平民非重機具,不進環境床
     if (ent.hero && ent.ch) {
       const v = CHARACTERS[ent.ch]?.visual || {};
-      if (ent.flies || (ent.heroY || 0) > 3) {       // 升空:依飛行型
+      // 「升空了沒有」吃動畫權重向量的 air 軌(⑥-3)—— 那一軌的過渡帶恰在
+      // `MORPH.GROUND_Y` 上跨過 0.5 ⇒ 與 locomotion 換樹**同一條線**。
+      // 舊制在這裡寫死 `> 3`,是全專案第三個離地門檻(換樹 2 / 取景 2.5 / 這裡 3)
+      // ⇒ 2~3m 之間機體已經是飛行型而音床還在踏地。
+      if (ent.flies || (ent.loco?.w?.air || 0) > 0.5) {       // 升空:依飛行型
         const fl = v.flight;
         if (fl === 'heli' || fl === 'tilt') return 'rotor';
         if (fl === 'jet' || fl === 'uav') return 'engine';
@@ -8289,43 +8438,133 @@ export class BattleClient {
     return null;
   }
 
-  /** 每幀:掃全場,每類別挑「最近的可聞移動源」餵 audio.setMove(存在感/平移/速率)。
-   *  低功耗全關(audio.setMove 內亦擋);單位靜止則音量趨近 0(聲道續存)。純表現層。 */
+  /** 一個實體的動畫權重向量(⑥-3 的唯一讀取縫)。自機在 `_updateEnts` 早退、沒有 `loco`
+   *  ⇒ 走 `_updatePlayer` 收尾組好的 `this._selfW`(**同一支** `animWeights`)。
+   *  MUST NOT 在音效端另寫一條「玩家版」的速度判斷 —— 那就是第二份實作。 */
+  _entWeights(ent) {
+    return (ent.isSelf ? this._selfW : ent.loco?.w) || null;
+  }
+
+  /** 每幀:掃全場,每類別挑「最近的可聞移動源」餵 audio.setMove(存在感/平移/速率/濕度)。
+   *  低功耗全關(audio.setMove 內亦擋);單位靜止則音量趨近 0(聲道續存)。純表現層。
+   *  「他在不在動」一律吃 `ent.loco.w`(⑥-3 的動畫權重向量),MUST NOT 在這裡再寫一條
+   *  速度曲線 —— 舊制的 `moveGate`/`rate` 吃的是已刪除的 `ent._moveSpd`(第二份速度推導)。*/
   _updateMoveAudio() {
     const a = this.audio;
-    if (!a || a.lowPower || a._dead) return;
+    if (!a || a._dead) return;
+    // 地點床在低功耗仍留**恆亮床**(降級是「少幾床」不是「整片靜音」;`_ambRide` 自己分流)
+    // ⇒ MUST 排在 lowPower 早退**之前**,移動床那一半照舊在低功耗全關。
+    this._updatePlaceAudio();
+    if (a.lowPower) return;
     const cl = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
     const MAXD = 200, REF = 32;
+    const RATE_K = 0.7;            // 跑步權重 → 音高/斬波速的斜率(上界仍夾在 1.5)
     const cam = this.camera.position, e = this.camera.matrixWorld.elements;  // 世界右向量 = 矩陣第一欄
     const best = { rotor: null, engine: null, wingflap: null, stomp: null };
     const cnt = { rotor: 0, engine: 0, wingflap: 0, stomp: 0 };
     for (const ent of this.ents.values()) {
-      if (ent.isSelf || ent.isStatic || ent.dead || !ent.mesh.visible) continue;
+      // 自機納入移動床是**可聽的行為改變**(玩家第一次聽到自己的機體),使用者尚未裁決
+      // ⇒ 做成旋鈕,預設 = 不生效 = 逐位元同舊制(`?selfbed=1` 開)。
+      if ((ent.isSelf && !SELF_BED) || ent.isStatic || ent.dead || !ent.mesh.visible) continue;
       const cat = this._moveCat(ent);
       if (!cat) continue;
+      if (ent.isSelf && cat !== 'stomp' && cat !== 'engine') continue;   // 自機只納入地面型兩床
       const p = ent.mesh.position;
       const dx = p.x - cam.x, dz = p.z - cam.z, dy = p.y - cam.y;
-      const d = Math.sqrt(dx * dx + dz * dz + dy * dy);
+      const d = ent.isSelf ? 0 : Math.sqrt(dx * dx + dz * dz + dy * dy);
       if (d > MAXD) continue;
       cnt[cat]++;
       const b = best[cat];
-      if (!b || d < b.d) best[cat] = { d, dx, dz, spd: ent._moveSpd || 0 };
+      if (!b || d < b.d) {
+        best[cat] = {
+          d, dx: ent.isSelf ? 0 : dx, dz: ent.isSelf ? 0 : dz,
+          w: this._entWeights(ent), self: !!ent.isSelf, x: p.x, z: p.z,
+        };
+      }
     }
     for (const cat of ['rotor', 'engine', 'wingflap', 'stomp']) {
       const b = best[cat];
-      if (!b) { a.setMove(cat, 0, 0, 1); continue; }
+      if (!b) { a.setMove(cat, 0, 0, 1, 0); continue; }
+      // ⚠ null 守衛不可少:`ent.loco` 在重生瞬移那一幀被設成 null(_updateEnts 的 _snapPos
+      // 分支)⇒ 沒有守衛就是 NaN 進 AudioParam.setTargetAtTime、把整條幀迴圈打斷。
+      const w = b.w;
+      const mv = w ? cl(w.walk + w.run, 0, 1) : 0;                     // 「他在不在走/跑」
+      const rn = w ? cl(w.run, 0, 1) : 0;
       const dist = REF / (REF + b.d);                                  // 距離衰減
       const dens = cl(0.55 + cnt[cat] * 0.14, 0.55, 1);                // 密度:場上越多同類越響
       // 地面型(引擎/踏地)靜止仍有怠速底噪但小;飛行型(旋翼/翅膀)本就常動
-      const moveGate = (cat === 'stomp' || cat === 'engine')
-        ? cl(0.35 + b.spd * 0.09, 0.35, 1)
-        : cl(0.5 + b.spd * 0.05, 0.5, 1);
+      const floor = (cat === 'stomp' || cat === 'engine') ? 0.35 : 0.5;
+      const moveGate = floor + (1 - floor) * mv;
       const presence = cl(dist * dens * moveGate, 0, 1);               // 0..1;類別基準響度在 audio 端乘
       const hl = Math.hypot(b.dx, b.dz) || 1;
       const pan = cl((e[0] * b.dx + e[2] * b.dz) / hl, -1, 1);
-      const rate = cl(0.8 + b.spd * 0.05, 0.7, 1.5);                   // 速度→音高/斬波速
-      a.setMove(cat, presence, pan, rate);
+      const rate = cl(0.8 + rn * RATE_K, 0.7, 1.5);                    // 跑步權重→音高/斬波速
+      // 濕度只對 stomp 有意義(乾/濕兩條鏈由 audio 端的**同一顆 LFO** 開合 ⇒ 不會踏空一拍),
+      // 而且只對**勝出那一台**量一次:自機讀當幀已算好的 `this._env.ground`,不再查第二次。
+      const wet = cat !== 'stomp' ? 0
+        : (b.self ? (this._env?.ground === 1 ? 1 : 0)
+          : (terrainEnvCode(this.terrain, b.x, b.z) === 1 ? 1 : 0));
+      a.setMove(cat, presence, pan, rate, wet);
     }
+  }
+
+  /** 地點環境音(⑦-1)每幀量測端:組一份查詢 `q` 交給 `audio.setAmbience`。
+   *  三件事都**複用既有的量**,零新索引、零新地形取樣、零共享 `rnd()`:
+   *   ① water / swamp ← `this._env.ground`(`_envAt` 每幀已算過,見 `_updatePlayer`)
+   *   ② tunnel ← 既有的 `terrain.tunnelAt`
+   *   ③ urban / forest ← **既有的 A6 碰撞網格** `this._blockGrid`(64m 格)逐格計數,
+   *      結果快取在 `this._ambDens`(鍵同為 `"i,j"`)⇒ 走進新格才算一次。
+   *      四鄰格心雙線性內插:不插的話走過格界會有一次聽得出來的音量跳變,
+   *      而每一條離線斷言都會過(gain 仍在 [0,1]、優先序仍對)。
+   *  「哪一床贏」的規則住 `audio.ambienceMix`(純函式,宣告順序 = 優先序);本處只量。 */
+  _updatePlaceAudio() {
+    const a = this.audio;
+    if (!a?.ambOn || !a.setAmbience) return;
+    const t = this.terrain;
+    const x = this.pos.x, z = this.pos.z;
+    const g = this._env?.ground || 0;
+    const dens = this._ambDensityAt(x, z);
+    // 據點(主堡/砲塔/碉堡)最近距離:靜態實體數十個以內,逐幀線性掃即可
+    let camp = Infinity;
+    for (const ent of this.ents.values()) {
+      if (!ent.isStatic || ent.dead) continue;
+      const p = ent.mesh.position;
+      const d = Math.hypot(p.x - x, p.z - z);
+      if (d < camp) camp = d;
+    }
+    a.setAmbience({
+      tunnel: t?.tunnelAt?.(x, z) ? 0 : 1,     // 二元查詢:0 = 在裡面
+      water: g === 1 ? 0 : 1,
+      swamp: g === 2 ? 0 : 1,
+      camp,                                    // 公尺
+      urban: 1 - dens.bld,                     // 密度查詢:0 = 最密
+      forest: 1 - dens.tree,
+    });
+  }
+
+  /** 64m 碰撞網格的逐格密度(0..1),四鄰格心雙線性內插。逐格結果快取於 `this._ambDens`。 */
+  _ambDensityAt(x, z) {
+    const bg = this._blockGrid;
+    if (!bg) return { bld: 0, tree: 0 };
+    const C = bg.C;
+    const URB_FULL = 26, FOR_FULL = 14;        // 「一格算滿」的計數(純聽感調校旋鈕)
+    const cache = (this._ambDens ??= new Map());
+    const cell = (i, j) => {
+      const k = `${i},${j}`;
+      let v = cache.get(k);
+      if (v) return v;
+      let nb = 0, nt = 0;
+      for (const b of bg.grid.get(k) || []) { if (b.bld) nb++; else if (b.cl === 'tree') nt++; }
+      cache.set(k, v = { bld: Math.min(1, nb / URB_FULL), tree: Math.min(1, nt / FOR_FULL) });
+      return v;
+    };
+    const u = x / C - 0.5, v = z / C - 0.5;
+    const i0 = Math.floor(u), j0 = Math.floor(v);
+    const fx = u - i0, fz = v - j0;
+    const c00 = cell(i0, j0), c10 = cell(i0 + 1, j0), c01 = cell(i0, j0 + 1), c11 = cell(i0 + 1, j0 + 1);
+    const mix = (key) => (c00[key] * (1 - fx) + c10[key] * fx) * (1 - fz)
+      + (c01[key] * (1 - fx) + c11[key] * fx) * fz;
+    return { bld: mix('bld'), tree: mix('tree') };
   }
 
   /** 平民/間諜:頭頂掛「其陣營」箭頭(我方/敵方都顯示 —— 外觀只能分辨陣營,不揭露間諜);
@@ -8745,6 +8984,31 @@ export class BattleClient {
     ctx.fillText(label, 6, h - 3);
   }
 
+  // ---------------- 畫面轉場(序 8 ④-1)----------------
+  /**
+   * 「遮幕 → 切 → 揭幕」的**唯一實作**(三個呼叫點:陣亡過場收尾 / 結算 / 未來的章節切換)。
+   * 幕本體、時間軸與 pass 都住 `postfx.js` + `data.js WIPE`(lane-ink 的 S 契約);
+   * 這一支只決定**什麼時候切**與**切點上要做什麼**。
+   *
+   * ⚠ `cover` 播完之後幕停在**全覆蓋**(`wipeAt` 的 `t ≥ dur ⇒ w1 = 1, w2 = 0` 是定義)——
+   * 呼叫端 MUST 自己接一段 `reveal`,否則畫面就停在一整片幕色上而且沒有任何錯誤訊息。
+   * 那一對 MUST 寫在**同一個地方**:分散到三個呼叫點各寫一次,遲早有一個只寫了前半。
+   *
+   * 旋鈕 `wipe` = 0(預設)時 `playWipe` **當場同步走回呼並回 false** ⇒ 這一支等價於
+   * `onCut()` 一行 —— 連呼叫時序都逐位元同舊制(`hud.over` 不會晚 0.34 秒)。
+   * `pipeline` 不存在(`?post=0`)或那支 API 還沒上線時同理降級(原則 6)。
+   * @returns 有沒有真的播幕(false = 旋鈕關著 / 沒有管線,呼叫端不必自己判)
+   */
+  _wipeCut(onCut, color = null) {
+    const p = this.pipeline;
+    if (typeof p?.playWipe !== 'function') { onCut?.(); return false; }
+    const opts = color != null ? { color } : null;
+    return p.playWipe('cover', () => {
+      onCut?.();
+      p.playWipe('reveal', null, opts);
+    }, opts);
+  }
+
   // ---------------- 主迴圈 ----------------
   _loop() {
     if (this.disposed) return;
@@ -8800,6 +9064,10 @@ export class BattleClient {
     // 全場風的時鐘(植被/旗幟的頂點擺動 + 雲的漂移同吃)。MUST 排在 `envFx.update` 之前:
     // 雲那半讀的是 `celWindTime()`,晚一步就跟地面上的草差一幀。
     stepCelWind(dt);
+    // ⑤-1 玩家位移擾動:把「誰在哪裡、走多快」餵給同一批軟性材質(唯一寫入點 = setCelChar)。
+    // MUST 排在 `_updateEnts` **之後** —— 那時 `ent.mesh.position` 才是本幀插值完的值;
+    // 也 MUST NOT 併進 `stepCelWind(dt)` 的簽章(`audit_soft_stroke` Ⅴ 釘死那一支的呼叫形狀)。
+    setCelChar(this._charSlots());
     // 日夜循環:鐘點 = f(開場時段, **伺服器權威的經過秒數**)。快照 8Hz 且秒數取整 ⇒ 兩幀之間
     // 自己補 dt(48× 的速率下,1 秒的量化誤差 = 太陽轉 0.8°,補不補都看不出來;不補的話
     // 天色會以 8Hz 一格一格跳)。MUST NOT 改成純本地時鐘 —— 那會讓兩台客戶端的天色分家。

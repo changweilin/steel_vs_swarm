@@ -28,7 +28,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {
   ENV, solveTowerSites, siteCPs, mapArg, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
   WORLD_EDGE, edgeWallInsetM, edgeWallHM, edgeWallDeepM, xzToLL, SLOPE, slopeDeg,
-  CHARACTERS,
+  CHARACTERS, INK_CTR,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { quantizeRoads, GRID_HW } from './roadgrid.js';
@@ -47,6 +47,10 @@ import {
   planBufferProps, propParts, planBackdrop, backdropParts,
 } from './edgewall.js';
 import { libGeo } from './partlib.js';
+// 載具 / 擺件型錄(2026-08-16 序 10;純資料、零 import、零 THREE ⇒ 離線稽核吃得到同一份)
+import { makeVehicle } from './vehicles.js';
+// 鳥群(2026-08-16 序 11 ⑥-2;零 THREE 的積分器 —— 四項規則離線驗得到,見該檔檔頭)
+import { FLOCK, planFlockRoutes, flockInit, flockStep, flockHeading, wingAngle, birdParts } from './wildlife.js';
 // 平整垂直牆面板 + 窗格貼齊(2026-08-13;零 import 的純模組,離線工具吃同一支 —— 面板的
 // 定義只有一份,見該檔檔頭)
 import { wallPanels, splitByPanel, panelGridUV } from './wallpanel.js';
@@ -63,7 +67,26 @@ import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
 import { harvestOsm, mergeCorpus, localeOf, signCopy } from './vernacular.js';
 import { VENUE_TEXT } from './venueText.js';
 import { drawFlag, pickFlagIso, flagSeed, sideIsoRoster, isoOfFlagEmoji, FLAG_RATIO } from './flags.js';
-import { WIND } from './toon.js';
+// 落花 / 落葉粒子的**規則層**(2026-08-16 ⑤-4;零 THREE、只 import rng.js —— 同 edgewall /
+// flags / wallpanel 的邊界)。本檔只負責「把最終的植被實例名冊翻成樹冠、建幾何、逐幀寫矩陣」。
+import { PETAL, petalSeason, petalTones, planPetalFields, stepPetal, petalRnd } from './petals.js';
+// 葉片卡冠層的**排列規則層**(2026-08-16 ②-1;零 THREE、只 import rng.js —— 同上一條的邊界)。
+// 本檔只負責「把純資料的卡片名冊組成 BufferGeometry、畫遮罩、接進既有的那一行 InstancedMesh」。
+import { CARD, cardEnvelope, cardCount, planCards, cardRnd, leafSurfId } from './leafcard.js';
+// `REFL` / `seaSoft` = 水面倒影塊(⑤-3)的形狀常數與海浪參數:**MUST NOT 在本檔手寫**
+// (同 `SEA_M`/`SEA_SEG` 的紀律 —— 消費端手寫 = 改了 toon.js 那邊只動到一半)。
+// `SURF_ID` / `inkRepeat` / `INK_CONTRIB_NONE` = 立體結構的線工授權(2026-08-16 序 12b;S3/S4)。
+// 貢獻一律**推導**(`inkRepeat` 的節距軸 / `inkCtrM` 的尺寸軸),唯一容許手寫的是具名否決值。
+// `toonPlain` = **賽璐璐學派的第三個入口**(2026-08-16 序 12;§0-b):不掛 rim / gInfo,
+// 但**掛學派**。本檔這四處(GLB 植被的不透明樹幹 / 洞頂 / 潮間帶 / 水簾)以前是裸的
+// `new THREE.MeshToonMaterial` ⇒ 換學派時它們會留在舊制,而畫面上只表現成「同一棵樹
+// 葉子是硬切的、樹幹還是三階 ramp」,沒有任何錯誤訊息。一個場景 MUST 只有一套量化
+// (`audit_cel_pipeline` Ⅺ⑧ 的凍結名冊守著:名冊非空 ⇒ `celSchool` 的 def MUST NOT 是 'b')。
+import {
+  WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, celWindTime,
+  SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
+} from './toon.js';
+import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
@@ -898,10 +921,9 @@ function extractNatureParts(gltf, season) {
     const mat = leafy
       ? toonMat(src.color ? src.color.clone() : new THREE.Color(0xffffff),
         { map: src.map || null, rim: 0, soft: { k: 'leaf', span: 1 } })
-      : new THREE.MeshToonMaterial({
+      : toonPlain({
         color: src.color ? src.color.clone() : new THREE.Color(0xffffff),
         map: src.map || null,
-        gradientMap: toonGradient(),
       });
     if (src.map) { mat.alphaTest = 0.5; mat.side = THREE.DoubleSide; }   // 葉片鏤空貼圖
     if (leafy) mat.color.multiply(new THREE.Color(SEASON_LEAF_TINT[season] ?? 0xffffff));
@@ -1015,6 +1037,142 @@ function vegSpan(def) {
   return Math.max(0.5, top);
 }
 
+// ---- 葉片卡冠層 + 整棵樹的表面群組(2026-08-16 ②-1;`docs/anime_style_plan.md` 序 7)----
+// 使用者這一輪的話是「葉冠處理**延伸到整棵樹**」:一株樹在畫面上是**一個東西**,不該被
+// 勾線畫成一堆多邊形稜線。落地是**兩層**,而且兩層各自成立、可以只開一層:
+//   ①**逐株面號**(`surfAttr` + `aSurfId`,吃 `inkGroup` 旋鈕):同一株的幹 / 枝 / 冠拿到
+//     同一個號、葉列的類別碼是 `GROUP` ⇒ 勾線 pass 的群組早退把「幹與冠的交界」那條線收掉,
+//     而**幹自己的多邊形折邊留著**(五格同號但沒有一格是 GROUP ⇒ 不早退;110m 神木近距離
+//     還讀得出是一根有轉折的柱子,見 seq7 規格的取捨 ⑤)。相鄰兩株是**不同**號 ⇒ 兩株之間
+//     仍然有線 —— 這正是逐株而不是逐型的理由。
+//   ②**葉片卡**(`leafCard` 旋鈕,掛在 ① 之下):葉團的幾何由實心團塊換成一叢面向鏡頭的卡片,
+//     任何角度都給鋸齒冠緣。排列規則住 `leafcard.js`(零 THREE),本段只組幾何與畫遮罩。
+//
+// **三條會靜默壞掉的地方**:
+//   ・**沒有群組早退的卡片叢比舊制更糟**:一張卡的 alpha-test 邊界對深度二階差分而言就是
+//     一條真的輪廓 ⇒ 12~24 張卡 = 12~24 個黑色多邊形。故 ② MUST 掛在 ① 與 MRT 能力之下,
+//     配不到就**逐位元退回團塊**(原則 6)。
+//   ・**佈局數學 MUST 只讀保險絲 `p.g`**:`giantCrownR`(冠幅)與 `vegSpan`(擺幅分母)一格
+//     未動。卡片幾何的包圍盒比保險絲大(卡心在包絡上、卡片還往外伸半張)⇒ 誤改成讀卡片幾何,
+//     擺動權重的分母會變大 = 整片林子擺幅變小,而沒有任何錯誤訊息。
+//   ・**`transparent` 被誤設成 true**:`applyCelPatch` 的 `inkable = !!sk && !mat.transparent`
+//     會把細勾線那一半關掉,而且 `gl_FragColor.a = uSoftInk` 寫下去就是把冠層的不透明度改成
+//     0.3。一律 `transparent: false` + `alphaTest`。`castShadow` 同理 MUST 維持 false
+//     (陰影走 `MeshDepthMaterial`,沒有 `CEL_LEAFCARD` 補丁 ⇒ 卡片在陰影圖裡是退化四邊形)。
+//
+// ⚠ **能力閘只有半份住在這裡**:`postfx` 的 `_mrtCap` = 「renderer 是 WebGL2」∧「three 有
+// `WebGLMultipleRenderTargets`」,而本檔沒有 renderer ⇒ 只問得到後半(逐字同 postfx.js)。
+// 前半要一支從 `postfx.js` 匯出的能力查詢才問得到(見交付說明的待裁決)。
+const CARD_MRT_CAP = typeof THREE.WebGLMultipleRenderTargets === 'function';
+/** 逐株面號要不要掛(= 群組剪影開著)。旋鈕關著 ⇒ 整段不生效、逐位元同舊制 */
+const groupInkOn = () => visualPref('inkGroup') === 'on';
+/**
+ * 這一列要不要換成葉片卡。三態旋鈕:`off` / `auto`(只換**解析不到庫節點**的葉列 ⇒
+ * `intake_parts` 的分母與 `node_cap` 完全不動)/ `all`(連庫冠簇一起換)。
+ * @param sk   `vegSoftKind(part)` 的結果(**MUST 沿用同一次呼叫**,MUST NOT 再呼叫一次:
+ *             `audit_soft_stroke` Ⅳ⑤ 釘住 `vegSoftKind(` 全檔恰一次)
+ */
+function leafCardOn(part, sk) {
+  if (sk !== 'leaf' || !CARD_MRT_CAP || !groupInkOn()) return false;
+  const mode = visualPref('leafCard');
+  if (mode === 'all') return true;
+  return mode === 'auto' && partGeo(part) === part.g;
+}
+
+let _cardTex = null;
+/**
+ * 葉片卡的遮罩貼圖(程序生成,整場一份)。RGB 近白 ⇒ 季節色與逐實例 tint 照樣透出來;
+ * alpha 才是形狀,配 `alphaTest` 切出鋸齒冠緣。
+ * 刻意**不設 NearestFilter**:窗格那一族要硬邊是因為格線落在 texel 中間(A46 ⑦),
+ * 葉緣要的是「不規則」不是「像素對齊」,而 alphaTest 本來就把它切成硬邊。
+ */
+function leafCardTex() {
+  if (_cardTex) return _cardTex;
+  const S = 128, cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const rnd = mulberry32(0x1EAF5EED);
+  g.clearRect(0, 0, S, S);
+  // 一叢 = 十來片小葉:中心密、邊緣散(整片方形實心的話卡片就只是一個方塊)
+  for (let i = 0; i < 14; i++) {
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * S * 0.42;
+    const x = S / 2 + Math.cos(a) * d, y = S / 2 + Math.sin(a) * d;
+    const rx = S * (0.11 + rnd() * 0.09), ry = rx * (0.55 + rnd() * 0.5);
+    g.save();
+    g.translate(x, y); g.rotate(rnd() * Math.PI * 2);
+    // 明度逐片微差 ⇒ 同一張卡上的葉片不是一塊死白(乘上季節色之後才有層次)
+    const v = 226 + Math.floor(rnd() * 29);
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+  _cardTex = new THREE.CanvasTexture(cv);
+  _cardTex.colorSpace = THREE.SRGBColorSpace;
+  return _cardTex;
+}
+
+const _cardGeo = new Map();
+/**
+ * 一列葉團 → 一叢卡片的 `BufferGeometry`(逐型逐列快取一份;`markShared` ⇒ A25 跳過)。
+ * `position` = 卡心重複四次、`normal` = 球面法線、`aCard` = (角落 x, 角落 y, 自轉),
+ * 四角在**視域空間**展開(`toon.js` 的 `CEL_LEAFCARD` 區塊;中心點已經過了世界曲面那一刀
+ * 與擺動 ⇒ 卡片自動吃到曲面、一整片同相位移,MUST NOT 在這裡再彎一次)。
+ * 包絡認不出來 / 張數為零 ⇒ 回 `null`,呼叫端退回保險絲團塊(原則 6)。
+ */
+function leafRowGeo(type, part, pi) {
+  const ck = `${type}|${pi}`;
+  if (_cardGeo.has(ck)) return _cardGeo.get(ck);
+  // **MUST 讀保險絲 `part.g` 的 parameters**(不是 partGeo 的解析結果):包絡與 `giantCrownR`
+  // 吃同一組參數,畫出來的冠幅才不可能大過佈局用的那一份(leafcard.js 檔頭 ③④)
+  const env = cardEnvelope(part.g?.parameters);
+  const cards = env ? planCards(env, cardRnd(type, pi)) : [];
+  if (!cards.length) { _cardGeo.set(ck, null); return null; }
+  const n = cards.length;
+  const pos = new Float32Array(n * 12), nor = new Float32Array(n * 12);
+  const crd = new Float32Array(n * 12), uv = new Float32Array(n * 8);
+  const idx = new Uint16Array(n * 6);
+  const CU = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]];
+  cards.forEach((c, i) => {
+    for (let k = 0; k < 4; k++) {
+      const o = i * 4 + k;
+      pos[o * 3] = c.cx; pos[o * 3 + 1] = c.cy; pos[o * 3 + 2] = c.cz;
+      nor[o * 3] = c.nx; nor[o * 3 + 1] = c.ny; nor[o * 3 + 2] = c.nz;
+      crd[o * 3] = CU[k][0] * c.hr; crd[o * 3 + 1] = CU[k][1] * c.hr; crd[o * 3 + 2] = c.rot;
+      uv[o * 2] = CU[k][2]; uv[o * 2 + 1] = CU[k][3];
+    }
+    const b = i * 4;
+    idx.set([b, b + 1, b + 2, b, b + 2, b + 3], i * 6);
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setAttribute('aCard', new THREE.BufferAttribute(crd, 3));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeBoundingBox(); g.computeBoundingSphere();
+  markShared(g);
+  _cardGeo.set(ck, g);
+  return g;
+}
+
+/**
+ * 幫一列掛上逐實例的 `aSurfId`。**只換屬性、不動拓樸**:position / normal / uv / index
+ * 沿用**同一份** `BufferAttribute`(與 `alignedGeo` 的窗格對齊同一個 idiom)⇒ draw call、
+ * 三角形數、記憶體逐位元不動,只多一條逐實例的 float。
+ * ⚠ 殼 `markShared` 註冊:它借用的是別人的屬性,被 `disposeTree` 放掉就會把保險絲幾何
+ * (整場共用、每一場都要用)一起釋放 ⇒ 之後所有借用者變空白(A25 的原話)。
+ */
+function surfIdGeo(geo, attr) {
+  if (!attr) return geo;               // 群組剪影關著 ⇒ 連殼都不建(逐位元同舊制)
+  const q = new THREE.BufferGeometry();
+  for (const k in geo.attributes) q.setAttribute(k, geo.attributes[k]);
+  if (geo.index) q.setIndex(geo.index);
+  q.boundingBox = geo.boundingBox;
+  q.boundingSphere = geo.boundingSphere;
+  q.setAttribute('aSurfId', attr);   // 逐型**一份**屬性,各列共用 ⇒ 一顆 GPU buffer
+  return markShared(q);
+}
+
 /**
  * 把某類植被的所有實例組成 InstancedMesh(每 part 一個 draw call)。
  * `export` 是給 **3D 零件對照台**(dev-only)用的:那座台子要兩側都由**遊戲自己的**建構器建,
@@ -1042,15 +1200,37 @@ export function buildVegMeshes(type, items, season) {
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   const tint = new THREE.Color();
+  // 逐株面號(②-1;零共享 `rnd()` —— 落點雜湊自帶種子,§2.3)。**整型算一次、每一列共用
+  // 同一份陣列** ⇒ 同一株的幹 / 枝 / 冠拿到逐位元相同的號,群組早退才讀得出「這是一棵樹」。
+  const grpOn = groupInkOn();
+  let sidAttr = null;
+  if (grpOn) {
+    const arr = new Float32Array(items.length);
+    items.forEach((it, i) => { arr[i] = leafSurfId(it.x, it.z); });
+    sidAttr = new THREE.InstancedBufferAttribute(arr, 1);
+  }
   rows.forEach((part, pi) => {
     // 日漫賽璐璐渲染(4 階 toon 漸層,取代寫實 PBR)
     // 軟性零件(葉/草)另帶擺動錨點:base = 這個零件的原點在整株上的高度、sy = 它自己的
     // 縱向壓縮 ⇒ 樹幹頂與樹冠底在同一個高度上拿到同一份權重,接合不會被風吹開。
     const sk = vegSoftKind(part);
-    const mat = toonMat(seasonColor(part.key, part.c, season),
-      sk ? { soft: { k: sk, span, base: part.y || 0, sy: part.sy || 1 } } : {});
+    // 葉片卡是「畫什麼」的**第三個**解析結果(`lib` > 卡片 > 保險絲;優先序住 leafCardOn)。
+    // 判定 MUST 沿用上面那一次 `vegSoftKind` 的結果 —— 再呼叫一次就是第二張名單(A39)。
+    const card = leafCardOn(part, sk) ? leafRowGeo(type, part, pi) : null;
+    // 材質選項一路收在同一個物件裡:`const mat = toonMat(seasonColor…` **全檔恰一處**
+    // (`audit_soft_stroke` Ⅳ⑤ 釘住),分支寫成第二個呼叫點就是「軟性旗標有兩條路」
+    const mo = sk ? { soft: { k: sk, span, base: part.y || 0, sy: part.sy || 1 } } : {};
+    if (grpOn) {
+      mo.surfAttr = true;                       // 面號改吃逐實例屬性 aSurfId
+      if (sk === 'leaf') mo.ink = 'group';      // 葉列 = 群組剪影;木質列維持 'hard'(幹的折邊留著)
+    }
+    if (card) { mo.map = leafCardTex(); mo.alphaTest = 0.5; mo.transparent = false; mo.card = true; }
+    const mat = toonMat(seasonColor(part.key, part.c, season), mo);
     // 畫的是 partGeo 解析結果(AI 零件庫 ?? 保險絲);佈局(span/冠幅)仍吃 p.g,見 partGeo 檔頭
     const m = new THREE.InstancedMesh(partGeo(part), mat, items.length);
+    // 卡片與逐株面號**只換這一列的幾何**,那一行的解析縫一格未動:卡片是「畫什麼」的第三個
+    // 解析結果,優先序 `lib` > 卡片 > 保險絲(判定住 `leafCardOn`);面號是只換屬性的殼。
+    if (card || sidAttr) m.geometry = surfIdGeo(card || m.geometry, sidAttr);
     items.forEach((it, i) => {
       // 零件擺位 + 實例朝向/微傾斜(剛體)一律走 xform.js 的單一縫:
       // 併進逐零件歐拉角會讓 rx≠0 的枝叉被朝向攪亂、微傾斜變成分段剪切(接合開縫)
@@ -1098,6 +1278,254 @@ export function buildVegMeshes(type, items, season) {
     meshes.push(m);
   });
   return meshes;
+}
+
+// ---- 落花 / 落葉粒子(2026-08-16;`docs/anime_style_plan.md` ⑤-4)----
+// 分工:**規則住 `petals.js`**(季節閘 / 三色調 / 分群 / 逐粒運動;零 THREE、只 import rng.js
+// ⇒ 離線稽核 `audit_ambient_motion` 真的執行得到那些純函式),本檔只做三件事 ——
+// ①把**最終**的植被實例名冊 `items` 翻成樹冠名冊 ②建三顆 InstancedMesh ③逐幀寫矩陣。
+// 這與 `edgewall.js → buildEdgeWall`、`flags.js → placeBaseFlags` 是同一條分工。
+//
+// 三條會靜默壞掉的地方:
+//   ・**共享 `rnd()` 的帳**:一律走專屬 `petalRnd(gseed)`,共享 `rnd`/`grnd` 消耗恆為 0。
+//     多抽一枚就把後面每一株植被、每一棟建物的佈局整條推移(§2.3),而畫面上只表現成
+//     「整張圖變了」,沒有任何錯誤訊息 —— `audit_siteplan`/`beacons`/`object_joints` 逐項不動
+//     是唯一的證明面(它們驗規則不驗位置,所以「仍全綠」不算數)。
+//   ・**A25**:單位四邊形**只有一份**且 `markShared` 註冊(整場共用的那份被 `disposeTree`
+//     放掉 ⇒ 之後所有借用者變空白);逐色調各一顆 mesh = 三個 draw call、幾何不重配。
+//   ・**半透明會把場景 RT 的 alpha 推離 1**(A39 的勾線門檻契約):落花蓋住的像素上,
+//     背後建物邊的線會變細。量級極小(逐粒覆蓋率很低)且與「落花是軟性物質」自洽,
+//     但要知道它存在 —— 看到幾根線變細時 MUST NOT 回頭去改勾線參數。
+/**
+ * 岸線環(鳥群的第一順位錨點)。**純幾何、零亂數、零共享 `rnd()`**。
+ *
+ * 手法:先用粗格掃 `terrainEnvCode`(與 `buildWaterEdges` 同一支判定)找出水域格,
+ * 取其重心,再往 24 個方位射線,記下**最後一格仍是水**的位置 ⇒ 連成一條閉合折線。
+ * 這一支刻意**不**去串「岸線 run」:那要處理分岔與多個水體,而鳥群只需要一條可飛的環,
+ * 多解的複雜度買不到任何畫面上的差別(降級不例外,原則 6)。
+ * 水域面積太小(< `MIN_CELLS` 格)⇒ 回 null = 這一類錨不到。
+ */
+function shoreRing(terrain) {
+  if (terrain.waterY == null) return null;
+  const MIN_CELLS = 12, DIRS = 24, CELL = 16;
+  const cols = Math.max(4, Math.min(192, Math.ceil((terrain.maxX - terrain.minX) / CELL)));
+  const rows = Math.max(4, Math.min(192, Math.ceil((terrain.maxZ - terrain.minZ) / CELL)));
+  const dx = (terrain.maxX - terrain.minX) / cols, dz = (terrain.maxZ - terrain.minZ) / rows;
+  let n = 0, sx = 0, sz = 0;
+  const wet = new Uint8Array(cols * rows);
+  for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) {
+    const x = terrain.minX + (j + 0.5) * dx, z = terrain.minZ + (i + 0.5) * dz;
+    if (terrainEnvCode(terrain, x, z) !== 1) continue;
+    wet[i * cols + j] = 1; n++; sx += x; sz += z;
+  }
+  if (n < MIN_CELLS) return null;
+  const cx = sx / n, cz = sz / n;
+  const isWet = (x, z) => {
+    const j = Math.floor((x - terrain.minX) / dx), i = Math.floor((z - terrain.minZ) / dz);
+    return i >= 0 && i < rows && j >= 0 && j < cols && wet[i * cols + j] === 1;
+  };
+  const step = Math.min(dx, dz) * 0.5;
+  const reach = Math.hypot(terrain.maxX - terrain.minX, terrain.maxZ - terrain.minZ);
+  const poly = [];
+  for (let d = 0; d < DIRS; d++) {
+    const th = (d / DIRS) * Math.PI * 2;
+    const ux = Math.cos(th), uz = Math.sin(th);
+    let last = 0;
+    for (let r = 0; r <= reach; r += step) if (isWet(cx + ux * r, cz + uz * r)) last = r;
+    // 岸線環往岸上退半格:鳥沿著水岸飛而不是壓在水面正上方
+    poly.push([cx + ux * (last + step), cz + uz * (last + step)]);
+  }
+  return poly;
+}
+
+const BIRDS_OFF = typeof location !== 'undefined' && /[?&]birds=0/.test(location.search);
+
+// ============ 鳥群(⑥-2;規則住 wildlife.js,本支只建 mesh + 接既有的 dynamics)============
+// 三件事在這裡而不是在 wildlife.js:①錨點由**已經定案的世界幾何**推導(水域 / 神木林候選地 /
+// 地標)②InstancedMesh 與逐幀矩陣 ③夾制線與天花板由呼叫端**注入**(同 edgewall 的坡度門檻)。
+// **零共享 `rnd()` 消耗**(§2.3):錨點是讀既有結果、逐鳥抖動走座標雜湊。
+// `birds` 拉桿 def = 0 ⇒ 一條曲線都不建(零 mesh、零 dynamics 條目)= 逐位元同舊制;
+// `?birds=0` 是同一條的 killswitch(同 `?petal=0` / `?gait=0` / `?morph=0` 的慣例)。
+function buildFlocks(group, terrain, dynamics, { anchors, low }) {
+  const dens = visualPref('birds');
+  if (BIRDS_OFF || !(dens > 0)) return 0;
+  const inset = edgeWallInsetM();
+  const routes = planFlockRoutes({
+    anchors,
+    probe: (x, z) => terrain.heightAt(x, z),
+    bounds: {
+      minX: terrain.minX + inset, maxX: terrain.maxX - inset,
+      minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset,
+    },
+    altMax: objHeightMax(),   // 飛出天花板 = 世界曲面把牠往下沉(看起來像鳥主動俯衝)
+    low,
+  });
+  if (!routes.length) return 0;   // 錨不到就不放(原則 6)—— MUST NOT 退回「戰場中央一條環」
+
+  const parts = birdParts();
+  const geoOf = (rows) => {
+    const geos = [], cols = [];
+    for (const p of rows) {
+      const [t, a, b, c, sg] = p.g;
+      const geo = t === 'box' ? new THREE.BoxGeometry(a, b, c)
+        : t === 'cyl' ? new THREE.CylinderGeometry(a, b, c, sg || 6)
+          : t === 'cone' ? new THREE.ConeGeometry(a, b, sg || 6)
+            : new THREE.IcosahedronGeometry(a, 0);
+      const m = new THREE.Matrix4();
+      const [px = 0, py = 0, pz = 0] = p.p || [];
+      const [rx = 0, ry = 0, rz = 0] = p.r || [];
+      m.compose(new THREE.Vector3(px, py, pz),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)),
+        new THREE.Vector3(1, 1, 1));
+      geo.applyMatrix4(m);
+      geos.push(geo); cols.push(p.c);
+    }
+    return mergeGeos(geos, cols);
+  };
+  const bodyGeo = geoOf(parts.filter((p) => !p.wing));
+  const wingGeo = [1, -1].map((s) => geoOf(parts.filter((p) => p.wing === s)));
+
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), WQ = new THREE.Quaternion();
+  const P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1);
+  const FWD = new THREE.Vector3(0, 0, 1), DIR = new THREE.Vector3(), AXZ = new THREE.Vector3(0, 0, 1);
+  const H = [0, 0, 0];
+  const flocks = [];
+  let total = 0;
+  for (const route of routes) {
+    const st = flockInit(route);
+    const mk = (geo) => {
+      // 逐鳥的密度由拉桿夾:`birds` 是**密度**不是開關,1.5 = 一群半
+      const n = Math.max(1, Math.round(st.count * Math.min(1.5, dens)));
+      const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
+        vertexColors: true, wash: 0.3, cool: 0.45, rim: 0,
+      }), n);
+      m.frustumCulled = false;   // 整群橫跨全圖,包圍球恆過期(同 makeClouds 的 grp)
+      m.castShadow = false;      // 投影旗標只有 makeUnit 與 buildGroundCover 兩個縫(§2.1 F)
+      group.add(m);
+      return m;
+    };
+    flocks.push({ st, body: mk(bodyGeo), wing: [mk(wingGeo[0]), mk(wingGeo[1])] });
+    total += st.count;
+  }
+  const write = (t) => {
+    for (const f of flocks) {
+      const n = f.body.count;
+      for (let i = 0; i < n; i++) {
+        const j = (i % f.st.count) * 3;
+        P.set(f.st.pos[j], f.st.pos[j + 1], f.st.pos[j + 2]);
+        flockHeading(f.st, i % f.st.count, H);
+        DIR.set(H[0], H[1], H[2]);
+        if (DIR.lengthSq() > 1e-9) Q.setFromUnitVectors(FWD, DIR.normalize());
+        M.compose(P, Q, S);
+        f.body.setMatrixAt(i, M);
+        const a = wingAngle(f.st, i % f.st.count, t);
+        for (const s of [0, 1]) {
+          WQ.setFromAxisAngle(AXZ, s === 0 ? a : -a);
+          M.compose(P, WQ.premultiply(Q), S);
+          f.wing[s].setMatrixAt(i, M);
+        }
+      }
+      f.body.instanceMatrix.needsUpdate = true;
+      for (const w of f.wing) w.instanceMatrix.needsUpdate = true;
+    }
+  };
+  write(0);   // 首幀就位(dynamics 還沒跑時不會整批疊在原點)
+  dynamics.push((dt) => {
+    const t = celWindTime();   // 全場共用的風時鐘(雲 / 植被同一支)
+    for (const f of flocks) flockStep(f.st, t, dt);
+    write(t);
+  });
+  return total;
+}
+
+const PETAL_OFF = typeof location !== 'undefined' && /[?&]petal=0/.test(location.search);
+let _petalGeo = null;
+/** 單位四邊形(整場唯一一份;A25 markShared ⇒ disposeTree 跳過) */
+const petalGeo = () => (_petalGeo ??= markShared(new THREE.PlaneGeometry(1, 1)));
+
+/**
+ * 落葉樹冠的量體(逐型算一次,零亂數):由 `key: 'foliage'` 的零件推導冠頂高與冠幅半徑。
+ * **判據 MUST 是既有欄位**(同 `SOFT_BY_VEG_KEY` 那一條):另開一張「哪幾種樹會落葉」的名單
+ * 遲早與季節換色那一份分家,而畫面上只表現成「這棵樹在落葉、旁邊同款的沒有」。
+ * 佈局數學只讀**保險絲** `p.g`(partlib 紀律:庫幾何載不載得到逐客戶端不同,讀它 = 跨客戶端分家)。
+ */
+function foliageCrown(def) {
+  const fs = def?.parts?.filter((p) => p.key === 'foliage');
+  if (!fs?.length) return null;
+  let top = 0, r = 0;
+  for (const p of fs) {
+    if (!p.g.boundingBox) p.g.computeBoundingBox();
+    const bb = p.g.boundingBox;
+    top = Math.max(top, (p.y || 0) + bb.max.y * (p.sy || 1));
+    r = Math.max(r, Math.hypot(p.px || 0, p.pz || 0) + Math.max(bb.max.x, bb.max.z));
+  }
+  return { top, r };
+}
+
+/**
+ * 建立落花層。回傳實得粒子數(0 = 這張圖沒有落葉樹或全被地貌閘擋掉 ⇒ 零 mesh 零 dynamics)。
+ * @param items 最終的植被實例名冊(建物過濾已完成)
+ */
+function buildPetals(group, terrain, items, season, mode, dynamics, gseed) {
+  const crowns = [];
+  for (const type in items) {
+    const cr = foliageCrown(VEG_DEFS[type]);   // 針葉常綠 / 草類 / 神木一律不在此列
+    if (!cr) continue;
+    for (const it of items[type]) {
+      crowns.push({ x: it.x, z: it.z, top: it.y + cr.top * it.s, r: cr.r * it.s });
+    }
+  }
+  if (!crowns.length) return 0;
+  const { parts } = planPetalFields(crowns, {
+    mode,
+    groundAt: (x, z) => terrain.heightAt(x, z),
+    // 地貌閘(第二道;樹本來就不長在水裡):水域/沼澤上不下花
+    dryAt: (x, z) => terrainEnvCode(terrain, x, z) === 0,
+    low: lowPower(),
+  }, petalRnd(gseed));
+  if (!parts.length) return 0;
+
+  // 三色調由 `ENV.seasons[季]` 的 accent 與 foliage **推導**(petals.js petalTones),
+  // MUST NOT 在此手寫色碼 —— 手寫那一份會在調季節色盤時靜默過期。
+  const meshes = petalTones(ENV.seasons[season], mode).map((c, i) => {
+    const n = parts.reduce((a, p) => a + (p.tone === i ? 1 : 0), 0);
+    if (!n) return null;
+    const m = new THREE.InstancedMesh(petalGeo(), envMat(c, {
+      transparent: true, opacity: PETAL.OPACITY, depthWrite: false,
+      side: THREE.DoubleSide, rim: 0, wash: 0, cool: 0,
+    }), n);
+    m.userData.noOutline = true;   // 0.2m 的碎片掛反轉外殼只會糊成一團黑
+    m.frustumCulled = false;       // 實例散佈全圖,包圍球不可靠(同植被)
+    m.castShadow = false;
+    m.renderOrder = 2;             // 疊在不透明世界之上(同水岸泡沫的慣例)
+    group.add(m);
+    return m;
+  });
+  const seq = [0, 0, 0];
+  for (const p of parts) p.mi = seq[p.tone]++;
+
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), AX = new THREE.Vector3();
+  const P = new THREE.Vector3(), S = new THREE.Vector3();
+  let t = 0;
+  const write = (dt) => {
+    t += dt;
+    for (const p of parts) {
+      stepPetal(p, dt, t);
+      // 位置一律是「場中心線 + 偏移」:環繞因此是構造保證,不靠任何係數調得剛好
+      P.set(p.cx + p.ox, p.y0 + p.oy, p.cz + p.oz);
+      AX.set(p.ax, p.ay, p.az);
+      Q.setFromAxisAngle(AX, p.ang);      // 逐粒隨機軸自轉(全部繞 Y = 一地的硬幣)
+      S.set(p.sz * PETAL.ASPECT, p.sz, p.sz);
+      M.compose(P, Q, S);
+      meshes[p.tone]?.setMatrixAt(p.mi, M);
+    }
+    for (const m of meshes) if (m) m.instanceMatrix.needsUpdate = true;
+  };
+  write(0);   // 首幀就位(dynamics 尚未跑時不會整批疊在原點)
+  // 逐幀 dt MUST 夾在 `PETAL.DT_MAX` —— 與 `toon.stepCelWind` 同一個理由(背景分頁切回來
+  // 那一幀的 dt 是好幾秒,不夾就是整場落花瞬移到地面)。
+  dynamics.push((dt) => write(Math.min(PETAL.DT_MAX, Math.max(0, dt || 0))));
+  return parts.length;
 }
 
 // ---- 建物(特殊地標 = 小 Group;住宅/商辦 = InstancedMesh)----
@@ -3199,6 +3627,13 @@ function sinkBaseY(terrain, x, z, r, n = 8) {
 // 演出半徑再往外長就是「看得見卻打不到」(原則 4 / A30 家族)。
 const MEGA_JIT = 0.12;   // 2026-08-05:0.05 → 0.12(全專案最小的抖幅;夾制本就「量測後退回」,加幅安全)
 const _mjbox = new THREE.Box3();
+// ---- 巨岩的表面群組門檻(2026-08-16;見 placeMegaliths 那一段)----
+// 「這一件是主量體還是貼壁結構件」的判據 = **這一件自己的水平外廓 ÷ 碰撞柱半徑**。
+// ⚠ 合成岩的 `col.r = max(RX,RZ) + 4` 帶了 +4 的常數餘裕 ⇒ 主量體的比值恆 < 1
+// (實測落在 0.8~0.95)。日後有人改 `col.r` 的定義,這個比值會整批平移而**不會有任何
+// 斷言紅字** —— `audit_rock_ink` Ⅰ 因此把逐型的比值分佈印出來(同 `audit_bot_role` 末段)。
+const MEGA_BODY_F = 0.5;
+const _msbox = new THREE.Box3();
 /** 落點 → 細節種子(0~1;零亂數消耗,見呼叫端註解) */
 function djAt(x, z) {
   const h = (Math.imul(Math.round(x * 8) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 8) | 0, 0x85EBCA77)) | 0;
@@ -3703,10 +4138,32 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW 
       // 同源同相(2026-08-03):偏移量的**主項是整片露頭共用**的 fH/fS/fL(同一岩層 = 同一礦源),
       // 逐顆只再抖一小截。整片各抽各的話,一片露頭會是七彩的 —— 那看起來是七顆孤岩剛好擠在一起,
       // 不是一片露頭。
+      // 表面群組(2026-08-16;序 3 S3 的第一個消費端,`docs/anime_style_plan.md` 使用者追加的
+      // 「山頭 / 巨石 / 石堆」那一句)。一顆巨岩在畫面上是**一個東西**,不該被勾線畫成一堆
+      // 多邊形稜線 —— 而現況是 `envMat` 每呼叫一次就抽一個逐材質 surfaceId ⇒ **一顆岩的
+      // 20~40 塊零件各自是一個號**,`INK_MRT.ID` 那一項沿著同一顆岩的每一條塊界畫線。
+      // 分兩群,判據 **MUST 是量出來的外廓比而不是逐型名冊**:
+      //   ・主量體(dome / slab / tower / 碎石坡 cone)的水平外廓貼著碰撞柱半徑(實測 0.8~1.0);
+      //   ・貼壁結構件(鑿面 / 侵蝕 rib / 之字棧道踏板 / 鏡牆帶 / 獅爪 / 石屋)小一個數量級
+      //     (實測 0.03~0.35)⇒ 門檻取 0.5 兩側各有一個數量級的餘裕。
+      // **效果**:同群組內部(塊與塊、ico / 圓柱的小面之間)的 id 線消失、法線折邊改吃
+      // `INK_MRT.SELF_F` 抬高的門檻;而結構件與主量體**跨群組** ⇒ 節理 / 層理 / 崖階 / 棧道
+      // 那幾條線自動留著(使用者要的「有意義的結構線」)。
+      // ⚠ 三條順序:①MUST 排在 `jitterMegalith` **之前**(抖動只增不減水平半徑,量在抖動之後
+      // 會讓靠近門檻的件逐顆跳邊)②MUST 排在 `group.add(g)` **之前**(`uSurfId` 在首次編譯
+      // 當下凍結,晚一步就是一行都不生效:線照畫、console 一個字都沒有)③量測與 `jitterMegalith`
+      // 的 `_mjbox` **同一把尺、同一個局部座標系**(`g.scale` 隨後才套上去)。
+      // **零亂數消耗**:群組號吃 `surfGroup()` 的模組級序,不是共享 `rnd()`(§2.3 —— 在這裡
+      // 抽一枚當群組種子就會把後面每一顆巨岩、每一株植被的佈局整條推移)。
+      const gBody = surfGroup(), gFeat = surfGroup();
       const dH = fH + (rnd() - 0.5) * 0.015, dS = fS + (rnd() - 0.5) * 0.04, dL = fL + (rnd() - 0.5) * 0.04;
       g.traverse((o) => {
         if (o.isMesh && o.material?.userData?.rock) {
           o.material.color.offsetHSL(dH, dS, dL + (rnd() - 0.5) * 0.05);
+          _msbox.setFromObject(o);
+          const ext = Math.max(Math.abs(_msbox.min.x), Math.abs(_msbox.max.x),
+            Math.abs(_msbox.min.z), Math.abs(_msbox.max.z));
+          joinSurfGroup(o.material, ext >= MEGA_BODY_F * meta.col.r ? gBody : gFeat);
         }
       });
       // 零件級細節抖動(P2-B;2026-08-03):名岩的 build() 逐顆抽條數/尺寸,但**同一顆裡的
@@ -5064,45 +5521,34 @@ function buildSwampSurface(group, terrain) {
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
   geo.setIndex(idx);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshToonMaterial({
-    color: 0x4a3358, gradientMap: toonGradient(), transparent: true, opacity: 0.72, side: THREE.DoubleSide,
+  const mesh = new THREE.Mesh(geo, toonPlain({
+    color: 0x4a3358, transparent: true, opacity: 0.72, side: THREE.DoubleSide,
   }));
   mesh.frustumCulled = false;
   mesh.userData.noOutline = true;
   group.add(mesh);
 }
 
-// 水岸泡沫貼圖(快取):透明底上的柔白氣泡群,近乎各向同性 —— 任意朝向的岸線都讀作浪花。
-let _foamTex = null;
-function shoreFoamTex() {
-  if (_foamTex) return _foamTex;
-  const S = 128, cv = document.createElement('canvas'); cv.width = cv.height = S;
-  const ctx = cv.getContext('2d');
-  for (let i = 0; i < 80; i++) {
-    const x = Math.random() * S, y = Math.random() * S, r = 1.5 + Math.random() * 5.5;
-    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
-    rg.addColorStop(0, `rgba(255,255,255,${0.5 + Math.random() * 0.4})`);
-    rg.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-  }
-  const tex = new THREE.CanvasTexture(cv);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;   // offset 漂移(浪花微光)靠 wrap
-  _foamTex = tex;
-  return tex;
-}
-
 /**
- * 水岸波浪 + 沼澤潮間帶(2026-07-24 使用者需求「水域與陸地邊界加波浪,沼澤與陸地邊界加潮間帶」)。
- * 以 terrainEnvCode 一趟格點掃描(~8m,共用同一份 code 網格)找兩種邊界格,產兩帶:
- *   - **波浪泡沫**:水域(1)緊鄰乾地(0)的格 → 貼在 waterY 上方的半透明泡沫片(動態:潮汐呼吸 +
- *     微浮沉 + 泡沫紋理漂移),掛在岸線內側、略向岸上外擴蓋住格縫。
- *   - **潮間帶**:沼澤(2)與乾地(0)交界兩側的格 → 隨地形起伏的濕泥帶(靜態)。
+ * 沼澤潮間帶(2026-07-24 使用者需求的後半「沼澤與陸地邊界加潮間帶」)。
+ * 以 terrainEnvCode 一趟格點掃描(~8m)找沼澤(2)與乾地(0)交界兩側的格 →
+ * 隨地形起伏的濕泥帶(靜態)。
+ *
+ * ⚠ **前半(水岸波浪泡沫)已於 2026-08-16 ⑤-2 退場**,MUST NOT 復辟(§6):
+ * 舊制是「8m 格點 + Canvas 徑向漸層的軟 alpha + 固定在 `waterY + 0.1` 的平板 + opacity 呼吸」,
+ * 三件事都是這一輪要否定的 —— 驅動量是**岸線幾何**(量化成方塊)而不是水深、外觀是**柔霧**
+ * 而不是賽璐璐的白色硬邊、而且平板**穿不過浪**(浪高 ±0.9m 的波峰直接從泡沫片裡穿出去)。
+ * 現制住 `toon.js celFoam()`(深度場驅動 + `step()` 硬邊 + 相位減 `celSeaH` ⇒ 跟著浪沖上岸),
+ * 消費端只有 `terrain.bakeSeaDepth` / `stampSeaBlockers`。兩份並存 = 新的硬邊被舊的軟 alpha
+ * 糊掉,而每一條既有斷言照樣全綠(症狀只是「岸邊看起來髒髒的」)。
+ * 連帶退場的還有 `shoreFoamTex()` 的三個 `Math.random()`(只染像素、不進散布路徑,
+ * 刪掉是嚴格改善)。
+ *
  * 與 buildSwampSurface 同紀律:純視覺不進 raycast(game.js 只打 terrain.mesh)、透明材質不描邊、
- * 純幾何格取樣不耗共享 rnd(§2.3 佈局序列不受影響;泡沫貼圖 Math.random 只染像素、不進散布路徑)。
- * 波浪動畫 push 進 dynamics(group.userData.update → terrain.biomesUpdate → game.js 每幀)。
+ * 純幾何格取樣不耗共享 rnd(§2.3 佈局序列不受影響)。
  * wy==null(無水域)= 無岸也無沼澤(terrainEnvCode 沼澤分類本身要求 wy!=null),直接略過。
  */
-function buildWaterEdges(group, terrain, dynamics) {
+function buildWaterEdges(group, terrain) {
   const wy = terrain.waterY;
   if (wy == null) return;
   const { minX, maxX, minZ, maxZ } = terrain;
@@ -5119,25 +5565,12 @@ function buildWaterEdges(group, terrain, dynamics) {
   const at = (i, j) => (i < 0 || j < 0 || i >= rows || j >= cols) ? 0 : code[i * cols + j];
   const nbr = (i, j, want) => at(i - 1, j) === want || at(i + 1, j) === want || at(i, j - 1) === want || at(i, j + 1) === want;
 
-  const fp = [], fnrm = [], fuv = [], fidx = []; let fb = 0;   // 泡沫(平貼 waterY)
   const tp = [], tidx = []; let tb = 0;                         // 潮間帶(隨地形)
-  const EXP = 0.55;   // 泡沫片向外擴(蓋格縫、往岸上舔一點)
   for (let i = 0; i < rows; i++) {
     const z0 = minZ + i * ch, z1 = z0 + ch;
     for (let j = 0; j < cols; j++) {
       const x0 = minX + j * cw, x1 = x0 + cw;
       const c = code[i * cols + j];
-      // 波浪 = 水域的可見邊緣:水格緊鄰「非水」(乾地 0 或沼澤 2)。近岸常是 水→沼→乾 三層,
-      // 水直接鄰乾地反而少見(僅陡岸/碼頭),故 MUST 含 nbr(2),否則泡沫只零星出現在淺灘小島。
-      if (c === 1 && (nbr(i, j, 0) || nbr(i, j, 2))) {
-        const ex = cw * EXP, ez = ch * EXP;
-        const a0 = x0 - ex, a1 = x1 + ex, b0 = z0 - ez, b1 = z1 + ez;
-        fp.push(a0, wy, b0, a1, wy, b0, a1, wy, b1, a0, wy, b1);
-        for (let k = 0; k < 4; k++) fnrm.push(0, 1, 0);
-        fuv.push(0, 0, 1, 0, 1, 1, 0, 1);
-        fidx.push(fb, fb + 2, fb + 1, fb, fb + 3, fb + 2);
-        fb += 4;
-      }
       if ((c === 2 && nbr(i, j, 0)) || (c === 0 && nbr(i, j, 2))) {
         const yy = (x, z) => terrain.heightAt(x, z) + 0.06;   // 略抬離地表免 z-fight
         tp.push(x0, yy(x0, z0), z0, x1, yy(x1, z0), z0, x1, yy(x1, z1), z1, x0, yy(x0, z1), z1);
@@ -5147,46 +5580,137 @@ function buildWaterEdges(group, terrain, dynamics) {
     }
   }
 
-  // 波浪泡沫 mesh(平貼水面,動態)
-  if (fidx.length) {
-    const foamTex = shoreFoamTex();
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(fp, 3));
-    geo.setAttribute('normal', new THREE.Float32BufferAttribute(fnrm, 3));
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(fuv, 2));
-    geo.setIndex(fidx);
-    const mat = new THREE.MeshToonMaterial({
-      map: foamTex, color: 0xdff4ff, gradientMap: toonGradient(),
-      transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.frustumCulled = false;
-    mesh.userData.noOutline = true;
-    mesh.renderOrder = 1;        // 疊在水盤之上
-    mesh.position.y = 0.1;       // 首幀就浮在 waterY 上方(dynamics 尚未跑時免與水盤 z-fight)
-    group.add(mesh);
-    let t = 0;
-    dynamics.push((dt) => {
-      t += dt;
-      mat.opacity = 0.36 + 0.2 * Math.sin(t * 1.6);          // 潮汐呼吸
-      mesh.position.y = 0.1 + Math.sin(t * 1.2) * 0.05;      // 波浪微浮沉
-      foamTex.offset.x = (foamTex.offset.x + dt * 0.05) % 1; // 泡沫漂移微光
-    });
-  }
-
   // 潮間帶 mesh(隨地形起伏,靜態濕泥帶)
   if (tidx.length) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(tp, 3));
     geo.setIndex(tidx);
     geo.computeVertexNormals();
-    const mesh = new THREE.Mesh(geo, new THREE.MeshToonMaterial({
-      color: 0x5f533c, gradientMap: toonGradient(), transparent: true, opacity: 0.55, side: THREE.DoubleSide,   // 濕泥色(潮間帶)
+    const mesh = new THREE.Mesh(geo, toonPlain({
+      color: 0x5f533c, transparent: true, opacity: 0.55, side: THREE.DoubleSide,   // 濕泥色(潮間帶)
     }));
     mesh.frustumCulled = false;
     mesh.userData.noOutline = true;
     group.add(mesh);
   }
+}
+
+// ---------------- 水面倒影塊(2026-08-16 ⑤-3;S6 的 biomes 消費端)----------------
+// **不做 planar reflection**:那是第二趟全場 render —— `postfx.js` 檔頭為了同一筆成本拒絕過
+// 第二張陰影圖。改成「一份幾何、一個 draw call、朝向在頂點著色器算」的 3~4 段斷口色塊:
+// 每個反射體交出 (世界 X, 世界 Z, 水面上的高) 三個數,長度由鏡像幾何**反解**
+// `len = D·h/(e+h)`(住 toon.js 的 `CEL_REFL` 分支,推導不手寫),高度吃同一支
+// `celSeaH × seaFade` ⇒ 跟著浪起伏,而不是一片死平的色塊貼在起伏的水面上(舊泡沫片的病)。
+//
+// ⚠ **浪高寫入處有兩個**(這是本段唯一的補償項):`refl` 的材質 MUST 同時帶 `soft: seaSoft()`
+//   才拿得到 `uSoftAmp`/`uSoftFreq`(S6 契約原文),而 `soft.axis === 'w'` 會連帶開 `CEL_WAVE`
+//   ⇒ toon.js 的頂點端 `#ifdef CEL_REFL` 與 `#ifdef CEL_WAVE` **各加一次** `celSeaH * seaFade`,
+//   合起來是 2× 波幅(倒影塊浮在水面上方最多 0.9m)。`toon.js` 是別的道的檔案 ⇒ 唯一能在本檔
+//   修的地方是**逐頂點的 `seaFade` 除以寫入處數**,合起來恰好一個浪高。
+//   `audit_water_edge` Ⅲ **數 toon.js 的寫入處**並與這個常數比對 ⇒ 上游哪天在 `CEL_WAVE`
+//   那一段補上 `#ifndef CEL_REFL`,這裡當場紅字(正解見交付說明的待裁決)。
+const REFL_WAVE_WRITERS = 2;
+// 倒影塊的色與濃度:**待裁決**(亮 = 天光高光帶 / 暗 = 物件擋住天光)。`reflect` 拉桿 def = 0
+// ⇒ mesh `visible = false` ⇒ 一個 draw call 都不進、一個像素都不寫 ⇒ 逐位元同舊制。
+// 逐反射體的顏色**刻意沒有**(`blockers` 只有幾何、沒有材質色,要就得在 buildBiomes 收第二本
+// 逐棟代表色的帳)—— 全場共用一個色是**刻意的降級**,不是假裝有(同 `surfaceId` 逐材質那條)。
+const REFL_C = 0xdfeeff, REFL_A = 0.34;
+
+/**
+ * 反射體名冊(純幾何、零亂數)。四道閘,順序即語意:
+ * ①**排除邊界牆環** —— 它是 `blockers` 的**第一批**(A44),`slice(0, N)` 剛好只選到它,
+ *   結果是四條邊各長出一道連續倒影牆而圖心的建物一個都沒有。判據取既有的唯一縫
+ *   `edgeWallInsetM()`(環的盒心恆在夾制線**外側**:內面貼線、厚度往圖界方向長)。
+ * ②水面上要夠高(`REFL.MIN_H`);③腳要在近岸帶(**同一個 `MIN_H`**:一個授權值,不是兩個);
+ * ④取「離圖心近 + 高」的前 `REFL.MAX_N`(頂點預算,不是 draw call —— 整份是一個 mesh)。
+ */
+function planReflectors(terrain, blockers) {
+  const wy = terrain.waterY;
+  if (wy == null || !blockers?.length) return [];
+  const inset = edgeWallInsetM();
+  const { minX, maxX, minZ, maxZ } = terrain;
+  const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+  const halfSpan = Math.max(1, Math.min(maxX - minX, maxZ - minZ) / 2);
+  const out = [];
+  for (const b of blockers) {
+    if (!b) continue;
+    if (Math.min(b.x - minX, maxX - b.x, b.z - minZ, maxZ - b.z) < inset) continue;   // ①
+    const h = b.y + b.h - wy;
+    if (!(h > REFL.MIN_H)) continue;                                                   // ②
+    if (terrain.heightAt(b.x, b.z) >= wy + REFL.MIN_H) continue;                       // ③
+    const r = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;   // broad-phase 外接半對角(A30)
+    if (!(r > 0)) continue;
+    out.push({ x: b.x, z: b.z, h, r, s: h / (1 + Math.hypot(b.x - cx, b.z - cz) / halfSpan) });
+  }
+  // 排序 MUST 是全序(同分再比座標)—— 「前 N 個」在兩台客戶端上要是同一批
+  out.sort((a, b) => b.s - a.s || a.x - b.x || a.z - b.z);
+  return out.slice(0, REFL.MAX_N);                                                     // ④
+}
+
+/**
+ * 倒影塊幾何(一份幾何、一個 mesh)。頂點契約 = S6:
+ *   `position` = (橫向偏移**世界公尺**, 沿倒影方向的比例 [0,1], 未用)
+ *   `aReflO`   = (反射體世界 X, 反射體世界 Z, 反射體在水面上的高 h)
+ *   `seaFade`  = 逐頂點浪幅淡出(**唯一來源 = `terrain.seaFadeAtWorld`**,除以寫入處數)
+ * mesh MUST 掛在**世界原點**(identity matrix):頂點分支直接把世界座標寫回 `transformed`。
+ * 逐段的長度與寬窄由**落點雜湊**自帶種子 ⇒ **零共享 `rnd()` 消耗**(§2.3);每段固定抽 2 枚。
+ * @returns 反射體數(0 = 沒有水域 / 岸邊沒有夠高的東西)
+ */
+function buildWaterReflections(group, terrain, blockers, dynamics) {
+  const wy = terrain.waterY;
+  if (wy == null) return 0;
+  const list = planReflectors(terrain, blockers);
+  if (!list.length) return 0;
+  const pos = [], nrm = [], ro = [], fade = [], idx = [];
+  let base = 0;
+  const seg = 1 / REFL.SEG_N;
+  for (const b of list) {
+    const rnd = mulberry32(edgeSeed(b.x, b.z, 0x5EF1));
+    const hw = REFL.HALF_F * b.r;
+    const f = terrain.seaFadeAtWorld(b.x, b.z) / REFL_WAVE_WRITERS;
+    for (let k = 0; k < REFL.SEG_N; k++) {
+      // 兩枚亂數**先抽完再判**(§2.3 抽樣紀律:淘汰檢查排在抽樣之後 ⇒ 每段固定消耗)
+      const gj = 0.6 + rnd() * 0.8;      // 斷口寬的逐段抖動
+      const wj = 0.7 + rnd() * 0.6;      // 段寬的逐段抖動(被浪打散的倒影不是一條等寬的帶)
+      const g = seg * REFL.GAP_F * gj;
+      const t0 = k * seg + g * 0.5, t1 = (k + 1) * seg - g * 0.5;
+      if (!(t1 > t0)) continue;
+      const w = hw * wj;
+      pos.push(-w, t0, 0, w, t0, 0, w, t1, 0, -w, t1, 0);
+      for (let v = 0; v < 4; v++) { nrm.push(0, 1, 0); ro.push(b.x, b.z, b.h); fade.push(f); }
+      idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+      base += 4;
+    }
+  }
+  if (!idx.length) return 0;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  geo.setAttribute('aReflO', new THREE.Float32BufferAttribute(ro, 3));
+  geo.setAttribute('seaFade', new THREE.Float32BufferAttribute(fade, 1));
+  geo.setIndex(idx);
+  const mat = envMat(REFL_C, {
+    // `refl` ⇒ define CEL_REFL + 類別碼恆 NONE(貼在水上的一片色塊,不該被畫輪廓);
+    // `soft: seaSoft()` ⇒ 浪的振幅/頻率與水盤**同一份**(見上方 REFL_WAVE_WRITERS 那一段)
+    refl: { y: wy }, soft: seaSoft(),
+    bands: 'soft', rim: 0, wash: 0, cool: 0,
+    transparent: true, opacity: REFL_A, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.frustumCulled = false;   // 頂點在著色器裡才拿到世界位置 ⇒ 包圍盒是原點旁邊一小塊
+  mesh.castShadow = false;      // 陰影走 MeshDepthMaterial(沒有 CEL_REFL 補丁 ⇒ 會投出退化四邊形)
+  mesh.userData.noOutline = true;
+  mesh.renderOrder = 1;         // 疊在水盤之上(舊泡沫片留下的慣例)
+  mesh.visible = false;         // 拉桿 def = 0 ⇒ 首幀就不進 draw call
+  group.add(mesh);
+  // 拉桿逐幀讀(**不訂閱 `onVisualChange`**:訂閱要記得退訂,而 biomes group 沒有 dispose 鉤;
+  // 這裡本來就有每幀一次的桶)。`reflect === 0` ⇒ `visible = false` ⇒ 一個像素都不寫。
+  dynamics.push(() => {
+    const a = visualPref('reflect');
+    mesh.visible = a > 0;
+    if (a > 0) mat.opacity = REFL_A * Math.min(1, a);
+  });
+  return list.length;
 }
 
 // ---- 馬路橫切水域邊緣改繞行(2026-07-28 使用者需求)----
@@ -6418,7 +6942,27 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     }
   }
 
+  // ---- 立體結構的線工授權(⑨-3;2026-08-16 序 12b)----------------------------------
+  // 貢獻(`outlineContribution`)一律由**這一桶剛排完的幾何**實測推導,MUST NOT 手寫數字、
+  // MUST NOT 建「零件種類 → 貢獻」的名冊(名冊會在加構件時靜默過期;§2.1 F outlineContribution)。
+  //
+  // 量的是**節距**:本檔每一個帶狀/面狀桶的頂點都是**成對**推入的 —— 直立緞帶(欄杆 / 邊梁 /
+  // 擋土牆)是同一 (x,z) 的下緣與上緣,面狀件(路面 / 標線 / 底板 / 緣石帶)是跨向的兩緣。
+  // ⇒ 每一對的距離就是「這一條線與下一條線之間有多遠」,也就是 `inkRepeat` 那一軸要的東西。
+  // 取**最大值**不是最小值:邊梁底緣被地表夾住的那幾段對距會退化成 0(引道口),拿 min 就是
+  // 整條邊梁的墨線一起消失,而畫面上只表現成「橋腹沒有線」、沒有任何錯誤訊息。
+  // 手寫第二份 `1.1` 的代價是「改了緞帶高度而貢獻停在舊值」—— 同樣沒有錯誤訊息。
+  const bandPitchM = (b) => {
+    let m = 0;
+    for (let i = 0; i + 5 < b.pos.length; i += 6) {
+      const d = Math.hypot(b.pos[i + 3] - b.pos[i], b.pos[i + 4] - b.pos[i + 1], b.pos[i + 5] - b.pos[i + 2]);
+      if (d > m) m = d;
+    }
+    return m;
+  };
   // ---- 路面 Mesh(每「地貌×主次」一個 draw call;柏油/泥土/礫石材質塗層)----
+  // 貢獻**維持預設 1**:跨向節距 = 車道寬(≫ `INK_REPEAT_M`)⇒ 推導值就是 1,而
+  // `inkQuant(1)` 嚴格 === 1 ⇒ 寫一個 `contrib: 1` 進去只是把「推導」偽裝成手寫的常數。
   for (const b of buckets.values()) {
     if (!b.idx.length) continue;
     const geo = new THREE.BufferGeometry();
@@ -6445,7 +6989,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     geo.setAttribute('color', new THREE.Float32BufferAttribute(mark.col, 3));
     geo.setIndex(mark.idx);
     // 標線 offset 比路面更強(−3 < −2)→ 恆畫在路面之上,不與被拉近的路面 z-fight
+    // 貢獻:標線是**塗料**不是構件 —— 它與路面貼在同一個平面上,兩者的 surfaceId 一差就是
+    // 每一條虛線、每一塊斑馬線都被描一圈黑邊(inkMrt 開著時最刺眼的一處)。實測對距
+    // 0.18~0.56m(縱向實線 / 雙黃線 / 斑馬線 / 導流線)⇒ 節距軸把它收到一絲筆觸。
     const m = new THREE.Mesh(geo, envMat(0xf2edda, { vertexColors: true, wash: 0.15, cool: 0.3, rim: 0,
+      contrib: inkRepeat(bandPitchM(mark)),
       polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
     m.frustumCulled = false;
     m.renderOrder = 2;
@@ -6471,7 +7019,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     geo.setAttribute('position', new THREE.Float32BufferAttribute(rail.pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(rail.nrm, 3));
     geo.setIndex(rail.idx);
-    const m = new THREE.Mesh(geo, envMat(0xaab2b8, { wash: 0.35, cool: 0.45, side: THREE.DoubleSide }));
+    // 貢獻:計畫 §⑨ 寫的「欄杆立柱 → 中等」在本儲存庫沒有立柱 —— 欄杆是**一條連續緞帶**,
+    // 「量太滿」的實際來源是緞帶上下兩條邊的二階差分(側視一座橋在 2.2m 內擠著欄杆上下緣、
+    // 邊梁上下緣、底板緣共五條近乎平行的線)。節距軸吃的正是這件事:帶高 1.08m。
+    const m = new THREE.Mesh(geo, envMat(0xaab2b8, { wash: 0.35, cool: 0.45, side: THREE.DoubleSide,
+      contrib: inkRepeat(bandPitchM(rail)) }));
     m.frustumCulled = false;
     m.userData.noOutline = true;
     group.add(m);
@@ -6482,7 +7034,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     geo.setAttribute('position', new THREE.Float32BufferAttribute(girder.pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(girder.nrm, 3));
     geo.setIndex(girder.idx);
-    const m = new THREE.Mesh(geo, envMat(0x5c636a, { wash: 0.3, cool: 0.5, side: THREE.DoubleSide }));
+    // 貢獻同欄杆(同一族的第二條緞帶,帶高 1.0m);底板 `soffit` 刻意**不收** —— 它的對距是
+    // 橋寬(10~20m)⇒ 推導值本來就是 1,而從橋下抬頭那一條輪廓正是橋的剪影。
+    const m = new THREE.Mesh(geo, envMat(0x5c636a, { wash: 0.3, cool: 0.5, side: THREE.DoubleSide,
+      contrib: inkRepeat(bandPitchM(girder)) }));
     m.frustumCulled = false;
     m.userData.noOutline = true;
     group.add(m);
@@ -6519,7 +7074,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     geo.setIndex(galRoof.idx);
     // polygonOffset:頂板頂面與「剛好等高的地表」在轉換帶會擦身而過(明隧道判定門檻正是
     // 地表 < 頂板頂面),不推一點點就是一條閃爍的接縫。
+    // `surf`(⑨-4):額牆 / 翼牆 / collar / 外露頂板是**同一座構造物**(這一行的註解自己寫了),
+    // 而現制它們各呼叫一次 `envMat` ⇒ 各抽一個 `nextSurfId()` ⇒ `INK_MRT.ID` 會在同一座
+    // 構造物**內部**畫線。共用具名號之後線收窄到只落在外緣;混凝土↔上方山坡那條線照樣出得來
+    // (地貌恆 `SURF_ID.LAND = 0`,兩者差 1/64 = 0.0156 > 勾線 pass 的 id 門檻 0.004 ——
+    //  ⚠ 那個門檻是 postfx 著色器裡 `step( 0.004, idv )` 的字面,不是 `INK_MRT.ID`(= 線的強度))。
     const m = new THREE.Mesh(geo, envMat(0x9a958c, { wash: 0.4, cool: 0.45, side: THREE.DoubleSide,
+      surf: SURF_ID.CONCRETE,
       polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
     m.frustumCulled = false;
     m.userData.noOutline = true;
@@ -6540,8 +7101,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   }
   // ---- 明隧道柱列:開放側每 COL_GAP 一支撐頂柱(純視覺,不登記碰撞柱;柱間可穿透)----
   if (galCols.length) {
+    // 貢獻:柱列是本專案唯一真正「重複到會變雜訊」的結構構件(計畫 §⑨ 的「格網」那一格)
+    // ⇒ 節距軸直接吃 `TUN.COL_GAP`(現值 4.5m ≥ `INK_REPEAT_M` 3.6m ⇒ 推導值 1 = 舊制)。
+    // 這一行今天是恆等式,但把柱距收緊到 3.6m 以下時它會自己讓步,MUST NOT 改寫成常數。
     const btM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
-      envMat(0x938e85, { wash: 0.4, cool: 0.45 }), galCols.length);
+      envMat(0x938e85, { wash: 0.4, cool: 0.45, contrib: inkRepeat(TUN.COL_GAP) }), galCols.length);
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
     galCols.forEach((b, i) => {
@@ -6594,6 +7158,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     group.add(bM);
   }
   // ---- 地下道天花照明:每支橫樑下掛一具長條燈(常亮 emissive)----
+  // ⑨-5:燈具本身**一格不改** —— 它早就是 emissive、早就是 InstancedMesh、也早就涵蓋
+  // 山體隧道 / 地下道 / 明隧道(產生點在 `if (strc && total > 8)` 之內、`covS(s)` 只挑覆蓋段)。
+  // 貢獻維持預設 1:節距 12m ≫ `INK_REPEAT_M` ⇒ 推導值就是 1,而洞內最需要的一條輪廓正是它。
   if (ceilLamps.length) {
     const lM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.14, 1.6),
       toonMat(0xece7d2, { emissive: new THREE.Color(0xffe9a0), emissiveIntensity: 0.9 }), ceilLamps.length);
@@ -6743,7 +7310,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 材質沿用門洞混凝土(同一座洞口的額牆/翼牆/collar 是同一構造物)。DoubleSide:collar 恆在
       // 管身**之外**(外環在地形上、內環貼管壁),幾何上不可能橫跨斷面 ⇒ 不會重演「暗面 DoubleSide
       // = 出洞黑牆」那一坑;反過來單面若有一片繞行判錯就是一個看穿的破洞,取水密不取單面。
+      // `surf`(⑨-4):與額牆 / 翼牆 / 外露頂板共用同一號 —— 註解上一行講的「同一構造物」
+      // 從此在 surfaceId 上也成立(不共用的話 collar 與額牆的接縫會被畫一條線)。
       const cm = new THREE.Mesh(cgeo, envMat(0x9a958c, { wash: 0.4, cool: 0.45, side: THREE.DoubleSide,
+        surf: SURF_ID.CONCRETE,
         polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
       cm.frustumCulled = false;
       cm.userData.noOutline = true;
@@ -6754,7 +7324,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   for (const [pi, p] of portals.entries()) {
     const g = new THREE.Group();
     const W = Math.max(6, p.w), H2 = Math.max(6.5, p.h || 6.5);   // 門洞高 ≥ 隧道淨空(最大機甲進得去)
-    const wallM = envMat(0x9a958c, { wash: 0.4, cool: 0.45 });
+    // `surf`(⑨-4):額牆(立柱 + 頂梁)與兩翼擋土牆 —— 與 collar / 外露頂板同一座構造物。
+    // 本專案沒有「坑門冠石」這種零件,額牆頂梁 `lintel` 就是計畫 §⑨ 那一格的實際落點,而它
+    // 吃的正是這一份 `wallM` ⇒ 冠石那一列自動成立(貢獻維持推導值 1:門洞高 ≥ 6.5m)。
+    const wallM = envMat(0x9a958c, { wash: 0.4, cool: 0.45, surf: SURF_ID.CONCRETE });
     // 門洞是「真的洞」(2026-07-15 隧道有實體內部後改版):額牆 = 兩側立柱 + 頂梁,中央開口
     // (寬 W−1.6、高 H2−1.2)直通隧道路面 —— MUST NOT 退回蓋住路面的黑色實心塞子。
     const lintel = new THREE.Mesh(new THREE.BoxGeometry(W + 3, 3.2, 1.2), wallM);
@@ -6776,16 +7349,31 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     // ⇒ 這片黑板多餘,且正是「洞外一片黑 / 某側出入口封死」的元凶,一律不掛。**只有 terrain 完全無
     // punchPortalHoles 能力**(整批降級)才掛回 —— 寧可黑,不可露出土牆(§4 失敗策略 = 降級不例外)。
     if (!punched) {
+      // 貢獻 = 具名否決(唯一容許手寫的那一個):這一片是**降級用的黑布幕**不是構造物,
+      // 被天空描出一圈輪廓正好把「它是一塊板子」畫出來 —— 那是 `outlineContribution` 存在
+      // 的理由。同時它是「最近面覆寫」的活體測試:布幕在前 ⇒ 它後面那一格的線也一起讓開。
       const mouth = new THREE.Mesh(new THREE.PlaneGeometry(W - 1.6, H2 - 1.2),
-        envMat(0x0e1013, { wash: 0, cool: 0.1, rim: 0 }));
+        envMat(0x0e1013, { wash: 0, cool: 0.1, rim: 0, contrib: INK_CONTRIB_NONE }));
       mouth.position.set(0, (H2 - 1.2) / 2, -1.3);
       g.add(mouth);
     }
     // 洞口警示條紋(黃黑相間,貼在洞頂上緣):標示通行淨空邊界
+    // ⑨-5 洞內照明:School B 之下洞內整片落在暗帶是**預期**,處方是「亮的東西自己亮」——
+    // 黃格補 `emissive`(反光帶的語意就是亮的那一半),黑格不補。**底色兩個 hex 逐位元不動**:
+    // 既有定案是「不亮的凹處要 emissive,**不是換淺一點的顏色**」(自動販賣機取出口那一課),
+    // 換底色的症狀是白天整條發白。MUST NOT 順手調高牆的底色或天花燈的 emissiveIntensity。
+    // 材質提到迴圈外:舊制逐 stripe 各建一支 ⇒ 每座洞口 8 支、48 座洞口最多 384 支材質,
+    // 而 `nextSurfId` 只有 64 個槽(撞號 = 別處少一條線,沒有任何錯誤訊息)。
+    // 貢獻走節距軸吃**呼叫端自己算出來的** `stripeW`(每格 0.55~1.6m ⇒ 一絲筆觸):
+    // 八格黃黑相間各描一圈黑邊就是把警示帶讀成八個獨立物件。
     const stripeN = 8, stripeSpan = W - 1.6, stripeW = stripeSpan / stripeN;
+    const stripeCtr = inkRepeat(stripeW);
+    const stripeLit = envMat(0xf2c230, { wash: 0.2, cool: 0.2, contrib: stripeCtr,
+      emissive: new THREE.Color(0x6a5210), emissiveIntensity: 0.55 });
+    const stripeDark = envMat(0x1a1a1a, { wash: 0.2, cool: 0.2, contrib: stripeCtr });
     for (let si = 0; si < stripeN; si++) {
       const seg = new THREE.Mesh(new THREE.BoxGeometry(stripeW * 0.94, 0.5, 0.15),
-        envMat(si % 2 === 0 ? 0xf2c230 : 0x1a1a1a, { wash: 0.2, cool: 0.2 }));
+        si % 2 === 0 ? stripeLit : stripeDark);
       seg.position.set(-stripeSpan / 2 + stripeW * (si + 0.5), H2 - 1.0, 0.76);
       g.add(seg);
     }
@@ -7280,30 +7868,51 @@ function buildRails(group, rails, terrain, center, dynamics, crossings) {
   return lines.length;
 }
 
-/** 低多邊形列車(車頭 + 2 節車廂) */
+// ---- 載具描述子 → THREE.Group(`vehicles.js` 型錄的**唯一**建構出口)----
+// 型錄是純資料(零 THREE),把它變成網格的動作只准有這一份 —— 兩份的症狀是「同一款車
+// 在車禍現場有輪子、在鐵軌上沒有」,而每一條既有斷言照樣全綠。
+// **零 `rnd()` 消耗**:形狀是 kind + opts 的純函式,同座標同結果(§2.3)。
+function vehGroup(kind, opts = {}) {
+  const g = new THREE.Group();
+  for (const p of makeVehicle(kind, opts)) {
+    const [t, a, b, c, sg] = p.g;
+    const geo = t === 'box' ? new THREE.BoxGeometry(a, b, c)
+      : t === 'cyl' ? new THREE.CylinderGeometry(a, b, c, sg || 6)
+        : t === 'cone' ? new THREE.ConeGeometry(a, b, sg || 6)
+          : new THREE.IcosahedronGeometry(a, 0);
+    const m = new THREE.Mesh(geo, p.e
+      ? toonMat(p.c, { emissive: new THREE.Color(p.c), emissiveIntensity: 0.6 })
+      : toonMat(p.c));
+    const [px = 0, py = 0, pz = 0] = p.p || [];
+    m.position.set(px, py, pz);
+    const [rx = 0, ry = 0, rz = 0] = p.r || [];
+    if (rx || ry || rz) m.rotation.set(rx, ry, rz);
+    g.add(m);
+  }
+  return g;
+}
+
+/** 低多邊形列車(車頭 + 2 節車廂)。車廂形狀走 `vehicles.js railcar` 的唯一縫 */
 function makeTrain(metro) {
   const g = new THREE.Group();
   const body = metro ? 0xdfe5ea : 0xe8873c;
   const stripe = metro ? 0x2a6fa8 : 0xf4f0e6;
+  // 舊制的節距 14.4m 與車廂 13.4m 是同一件事的兩個手寫數:節距 = 車長 + 車鉤間隙。
+  // 型錄給車長,間隙留在這裡(它是「這一列怎麼編組」不是「一節車廂長什麼樣」)。
+  const carL = 13.4, gap = 1.0;
   for (let c = 0; c < 3; c++) {
-    const car = new THREE.Group();
-    const m = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.4, 13.4), toonMat(body));
-    m.position.y = 2.4;
-    car.add(m);
-    const st = new THREE.Mesh(new THREE.BoxGeometry(3.05, 0.7, 13.4), toonMat(stripe));
-    st.position.y = 1.7;
-    car.add(st);
-    const win = new THREE.Mesh(new THREE.BoxGeometry(3.06, 0.9, 11.5),
-      toonMat(0x27313a, { emissive: new THREE.Color(0x36434f), emissiveIntensity: 0.5 }));
-    win.position.y = 3.1;
-    car.add(win);
-    if (c === 0) {   // 車頭斜鼻
+    // `railcar` 的鼻頭在 +x,而這一支的列車沿 **+z** 行駛(`trainDriver` 走 lookAt)
+    // ⇒ 整節車廂繞 y 轉 −90°,由 `makeVehicle` 的 `ry` 剛體處理(A27:MUST NOT 逐零件轉)
+    const car = vehGroup('railcar', {
+      fit: { L: carL, W: 3.0, H: 4.3 }, paint: body, cabC: stripe,
+      ry: -Math.PI / 2, at: [0, 0, c * (carL + gap)],
+    });
+    if (c === 0) {   // 車頭斜鼻(編組的事,不是車廂的事)
       const nose = new THREE.Mesh(new THREE.BoxGeometry(3.0, 2.6, 2.2), toonMat(body));
       nose.position.set(0, 2.0, -7.6);
       nose.rotation.x = 0.35;
       car.add(nose);
     }
-    car.position.z = c * 14.4;
     g.add(car);
   }
   return g;
@@ -7433,8 +8042,8 @@ function buildWaterfalls(group, falls, terrain, center, dynamics) {
     for (const [w, off, op] of [[7, 0, 0.85], [5, 0.8, 0.55]]) {
       const sheet = new THREE.Mesh(
         new THREE.PlaneGeometry(w, drop),
-        new THREE.MeshToonMaterial({
-          color: 0xeaf6fb, gradientMap: toonGradient(), transparent: true, opacity: op, side: THREE.DoubleSide,
+        toonPlain({
+          color: 0xeaf6fb, transparent: true, opacity: op, side: THREE.DoubleSide,
         }),
       );
       sheet.position.set(0, drop / 2, -off);
@@ -7698,7 +8307,11 @@ function buildBufferProps({ group, terrain }) {
 // 落在緩衝深度的 `BACK_INSET_F` 上,逐段由**最近的圖界點**的地貌決定貼哪一種。
 // 高度上限吃 `objHeightMax()`(與建物/地標/巨岩同一個天花板)⇒ 背景永遠構不到世界天花板;
 // 而它離可玩區 400m 以上、又被 x/z 夾制擋著,飛行機體也永遠到不了 —— 兩件事各自成立。
-function buildBackdrop({ group, terrain }) {
+// **`ctr`(outlineContribution)由呼叫端注入**,MUST NOT 在本函式裡讀 `INK_CTR`:這一支
+// 被 `audit_world_edge` 以真品原文抽出來在沙箱裡跑(自由變數是逐一具名注入的),就地引用一個
+// 新的模組常數就是那支稽核當場 ReferenceError —— 而它驗的「演出 ⊆ 碰撞盒 / 逐零件落地」與
+// 墨線完全無關。同 `edgewall.js` 的坡度門檻由呼叫端注入那一條紀律。省略 ⇒ 逐位元同舊制。
+function buildBackdrop({ group, terrain, ctr }) {
   if (!terrain.bufferHeightAt) return 0;
   const wy = terrain.waterY;
   const probe = (x, z) => {
@@ -7721,8 +8334,14 @@ function buildBackdrop({ group, terrain }) {
     emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed }),
       b.x, gy(b.x, b.z), b.z, b.ry, 1, gy);
   }
-  // 遠景:洗白拉高、冷色重一點(大氣透視)⇒ 與近處的世界分得開,不會誤讀成可以走過去的地形
-  flushPartBatch(group, batch, { wash: 0.78, cool: 0.72, rim: 0 });
+  // 遠景:洗白拉高、冷色重一點(大氣透視)⇒ 與近處的世界分得開,不會誤讀成可以走過去的地形。
+  // `contrib` 是同一句話的另一半:遠景是**畫上去的背景不是物件**,它的每一條稜線都不值得
+  // 一條全強度的墨線。⚠ **這一批目前是全場最刺眼的一處**,而真正的通用解是計畫 ④-3
+  // 「霧範圍 ≡ 勾線淡出範圍」(`INK.FADE0/FADE1` 錨在 `camera.far` ⇒ 對現役地圖等於永不淡出,
+  // 而背景環落在圖界外 410m、`scene.fog` 的 near 是 span×0.5 ≈ 797m ⇒ 那一圈五邊形錐體
+  // 零霧、勾線 100% 強度)。contribution 只是止血:**真山(地形)在同樣距離上仍是全強度**,
+  // MUST NOT 因此把 FADE 常數就地改小(那會把近景的線一起吃掉)。
+  flushPartBatch(group, batch, { wash: 0.78, cool: 0.72, rim: 0, contrib: ctr });
   return plan.length;
 }
 
@@ -7829,14 +8448,11 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
   const noOut = (grp) => { grp.traverse((o) => { if (o.isMesh) o.userData.noOutline = true; }); return grp; };
   const placed = [];
 
-  const car = (c, len = 4.4) => {   // 低多邊形轎車(車禍用)
-    const cg = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(len, 1.2, 1.9), toonMat(c));
-    body.position.y = 0.9; cg.add(body);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(len * 0.45, 0.85, 1.7), toonMat(0x2c343c));
-    cab.position.set(-len * 0.08, 1.9, 0); cg.add(cab);
-    return cg;
-  };
+  // 轎車(車禍用):形狀走 `vehicles.js` 的**唯一縫**,本支只決定「多長、什麼漆」。
+  // ⚠ **零 `rnd()` 消耗**(舊制也是零)—— 這一支的宿主 `buildRoadBlocks(…, rnd)` 吃的是
+  // 世界**共享**序列,順手在這裡抽一枚就把後面每一株植被、每一棟補間建物的落點整條推移,
+  // 而畫面上只表現成「整張圖變了」(§2.3)。
+  const car = (c, len = 4.4) => vehGroup('sedan', { fit: { L: len, W: 1.9, H: 1.55 }, paint: c });
   const barrier = () => {   // 工程拒馬:橙白條紋橫板 + 雙腳
     const bg = new THREE.Group();
     const board = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.7, 0.2), toonMat(0xd97b29));
@@ -8350,7 +8966,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 緩衝空間布景與視線邊界背景:純表現層(不進 blockers/occ/LOS)、零共享 rnd ⇒ 插在這裡
   // 不會推移任何一株植被的佈局,也不影響 occ 上傳的段數。
   const bufferProps = buildBufferProps({ group, terrain });
-  const backdropSegs = buildBackdrop({ group, terrain });
+  const backdropSegs = buildBackdrop({ group, terrain, ctr: INK_CTR.BACKDROP });
   const greenSites = [], bareSites = [];
   for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 28); a++) {
     const x = rx(), z = rz();
@@ -9846,9 +10462,35 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 鐵路/捷運(含行駛列車)+ 瀑布(動態物件)----
   await onProgress?.(0.92, '鋪設鐵路與瀑布…');
   const dynamics = [];
-  buildWaterEdges(group, terrain, dynamics);   // 水岸波浪(動態)+ 沼澤潮間帶(靜態)
+  buildWaterEdges(group, terrain);   // 沼澤潮間帶(靜態;水岸泡沫 2026-08-16 退場,見該支檔頭)
+  // 水面倒影塊(⑤-3):MUST 排在**所有** `blockers.push` 之後(名冊由碰撞柱推導 ——
+  // 少一批就是「那幾棟樓在水裡沒有影子」),與 `planClimbRoutes` 同一個理由。
+  // 零共享 `rnd()` 消耗;`reflect` 拉桿 def = 0 ⇒ mesh 不可見 ⇒ 逐位元同舊制。
+  const reflN = buildWaterReflections(group, terrain, blockers, dynamics);
+  // ---- 鳥群(⑥-2)----
+  // MUST 排在 `placeGiantGroves` / `landmarkG` **之後**(錨點取的是它們已經定案的幾何),
+  // 更新函式推進**既有的** `dynamics` 桶 ⇒ game.js 一行不動(第二條更新迴圈是禁令)。
+  // 錨點順位 水域岸線 > 神木林 > 地標;**刻意排除兵線 / 塔位 / 主堡**(那是戰術資訊,
+  // 鳥繞著前線飛就是把它畫出來)。三類都錨不到 ⇒ 這張圖沒有鳥群(原則 6)。
+  const birdsBuilt = buildFlocks(group, terrain, dynamics, {
+    anchors: {
+      shore: shoreRing(terrain),
+      groves: giantTrees ? greenSites.map(([x, z]) => ({ x, z, r: 26 })) : [],
+      landmarks: landmarkG.map((l) => ({ x: l.x, z: l.z, r: l.r })),
+    },
+    low: lowPower(),
+  });
   const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics, osmData.crossings) : 0;
   const fallsBuilt = osmData?.falls?.length ? buildWaterfalls(group, osmData.falls, terrain, center, dynamics) : 0;
+
+  // ---- 落花 / 落葉粒子(⑤-4)----
+  // MUST 排在植被散佈與建物過濾**之後**:落點的唯一來源是**最終**的 `items`(見 buildPetals)。
+  // 逐幀步進併進既有的 `dynamics` 桶(`group.userData.update` → `terrain.biomesUpdate` →
+  // game.js),**MUST NOT** 在 game.js 另開第二條更新迴圈(climb.js 檔頭已把規則寫死)。
+  // `?petal=0` = **整段不建立**(零 mesh、零 dynamics 條目)⇒ 對照組逐位元同舊制;
+  // 「建了但每幀不更新」不算 —— 那留著 draw call 與記憶體。
+  const petalMode = PETAL_OFF ? null : petalSeason(season);
+  const petalsBuilt = petalMode ? buildPetals(group, terrain, items, season, petalMode, dynamics, gseed) : 0;
 
   // ---- 世界文字(洞口匾額 / 橋名牌 / 地名標牌 / 建物招牌;2026-08-03)----
   // MUST 排在 buildRoads 與建物之後(位置全部取自它們已經定案的幾何),排在攀爬路線之前
@@ -9915,6 +10557,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     groundDetails: ground.details,
     groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
     groundBuffer: ground.bufCells,   // 緩衝空間的底毯格數(2026-08-12;0 = 那一圈沒鋪成)
+    petals: petalsBuilt,             // 落花 / 落葉粒子數(0 = 夏冬、沒有落葉樹、或 ?petal=0)
+    reflectors: reflN,               // 水面倒影塊的反射體數(0 = 無水域,或岸邊沒有夠高的東西)
     buildings: generic.length + landmarks.length,
     landmarks: landmarks.length,
     roads: roadsBuilt,
