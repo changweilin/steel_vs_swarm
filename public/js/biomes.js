@@ -1344,7 +1344,7 @@ const BIRDS_OFF = typeof location !== 'undefined' && /[?&]birds=0/.test(location
 // 三件事在這裡而不是在 wildlife.js:①錨點由**已經定案的世界幾何**推導(水域 / 神木林候選地 /
 // 地標)②InstancedMesh 與逐幀矩陣 ③夾制線與天花板由呼叫端**注入**(同 edgewall 的坡度門檻)。
 // **零共享 `rnd()` 消耗**(§2.3):錨點是讀既有結果、逐鳥抖動走座標雜湊。
-// `birds` 拉桿 def = 0 ⇒ 一條曲線都不建(零 mesh、零 dynamics 條目)= 逐位元同舊制;
+// `birds = 0` ⇒ 一條曲線都不建(零 mesh、零 dynamics 條目);
 // `?birds=0` 是同一條的 killswitch(同 `?petal=0` / `?gait=0` / `?morph=0` 的慣例)。
 function buildFlocks(group, terrain, dynamics, { anchors, low }) {
   const dens = visualPref('birds');
@@ -5610,7 +5610,7 @@ function buildWaterEdges(group, terrain) {
 //   `audit_water_edge` Ⅲ **數 toon.js 的寫入處**並與這個常數比對 ⇒ 上游哪天在 `CEL_WAVE`
 //   那一段補上 `#ifndef CEL_REFL`,這裡當場紅字(正解見交付說明的待裁決)。
 const REFL_WAVE_WRITERS = 2;
-// 倒影塊的色與濃度:**待裁決**(亮 = 天光高光帶 / 暗 = 物件擋住天光)。`reflect` 拉桿 def = 0
+// 倒影塊的色與濃度由交付值定案。`reflect = 0`
 // ⇒ mesh `visible = false` ⇒ 一個 draw call 都不進、一個像素都不寫 ⇒ 逐位元同舊制。
 // 逐反射體的顏色**刻意沒有**(`blockers` 只有幾何、沒有材質色,要就得在 buildBiomes 收第二本
 // 逐棟代表色的帳)—— 全場共用一個色是**刻意的降級**,不是假裝有(同 `surfaceId` 逐材質那條)。
@@ -10465,7 +10465,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   buildWaterEdges(group, terrain);   // 沼澤潮間帶(靜態;水岸泡沫 2026-08-16 退場,見該支檔頭)
   // 水面倒影塊(⑤-3):MUST 排在**所有** `blockers.push` 之後(名冊由碰撞柱推導 ——
   // 少一批就是「那幾棟樓在水裡沒有影子」),與 `planClimbRoutes` 同一個理由。
-  // 零共享 `rnd()` 消耗;`reflect` 拉桿 def = 0 ⇒ mesh 不可見 ⇒ 逐位元同舊制。
+  // 零共享 `rnd()` 消耗;`reflect = 0` ⇒ mesh 不可見。
   const reflN = buildWaterReflections(group, terrain, blockers, dynamics);
   // ---- 鳥群(⑥-2)----
   // MUST 排在 `placeGiantGroves` / `landmarkG` **之後**(錨點取的是它們已經定案的幾何),

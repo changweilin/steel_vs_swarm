@@ -41,7 +41,7 @@
 // 前置與 shot_tunnels.mjs 完全相同(Playwright + terrarium 高程 + 合成圖資),
 // **找不到 playwright 就印一行說明並以 0 結束**(A2:MUST NOT 寫進 package.json)。
 // 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--curve=0] [--lib=0] [--live]
-//                                [--pref inkMrt=on] [--pref lutSrc=baked]  ← 設定頁旋鈕(預設全是「不生效」)
+//                                [--pref inkMrt=on] [--pref lutSrc=baked]  ← 設定頁旋鈕
 //                                [--time day|dusk|night] [--season …] [--weather …]
 import fs from 'node:fs';
 import path from 'node:path';

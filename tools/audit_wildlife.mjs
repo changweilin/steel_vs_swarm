@@ -303,7 +303,7 @@ console.log('\nⅧ 接線(biomes.js)');
   ok(/instanceMatrix\.needsUpdate = true/.test(seg),
     '每幀 `instanceMatrix.needsUpdate = true`(忘了就是鳥群凍結在出生位置,而每一支稽核全綠)');
   ok(/const dens = visualPref\('birds'\);/.test(seg) && /if \(BIRDS_OFF \|\| !\(dens > 0\)\) return 0;/.test(seg),
-    '拉桿 `birds` def = 0 ⇒ **一條曲線都不建**(零 mesh、零 dynamics 條目)= 逐位元同舊制');
+    '`birds = 0` 時不建曲線(零 mesh、零 dynamics 條目);預設密度由 visualPrefs 定案');
   ok(/\[?\?&\]birds=0/.test(bio.replace(/\\/g, '')) || /birds=0/.test(bio),
     '`?birds=0` killswitch(同 ?petal=0 / ?gait=0 / ?morph=0 的 A/B 慣例)');
   ok(!/lanes|towerSites|basesW/.test(seg),

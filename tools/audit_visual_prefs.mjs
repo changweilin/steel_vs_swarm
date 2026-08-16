@@ -75,18 +75,21 @@ console.log('\nⅠ 旋鈕表(visualPrefs.js)');
       : Number.isFinite(d.def) && d.def >= d.min && d.def <= d.max && d.step > 0;
     ok(good && !!d.label && !!d.hint, `${k}:欄位齊全且預設值合法`);
   }
-  // **卡在「需要美術方向確認」的兩項預設 MUST 是 0** —— 沒動過拉桿的玩家 MUST 看到舊畫面。
-  ok(VISUAL_KNOBS.shadowMech.def === 0, '機體陰影偏色預設 0(= 逐位元同舊制,計畫書要求先確認方向)');
-  ok(VISUAL_KNOBS.shadowEnv.def === 0, '環境陰影偏色預設 0(同上)');
-  // 賽璐璐學派(§0-b;2026-08-16 使用者定案「改 —— 走 School B」)是**上面那條紀律的
-  // 具名例外**:它不是「需美術方向確認」的旋鈕,而是計畫書 §0 已經裁決過的交付值 ⇒
-  // def 是 'b'。守它的不是「預設要等於某個值」,而是**退路仍在**:
+  ok(VISUAL_KNOBS.shadowMech.def === 0, '機體陰影偏色維持既有交付值 0');
+  ok(VISUAL_KNOBS.shadowEnv.def === 0, '環境陰影偏色維持既有交付值 0');
+  // 賽璐璐學派(§0-b;2026-08-16 使用者定案「改 —— 走 School B」)的交付值是 'b'。守它
+  // 的不是「預設要等於某個值」,而是**退路仍在**:
   //   ① 'a' 仍是合法選項(整套 ramp 查表沒有被刪掉,切回去是改一行 def);
   //   ② 混場那道硬閘住 `audit_cel_pipeline` Ⅺ⑧(裸 MeshToonMaterial 名冊非空 ⇒ def
   //      MUST NOT 是 'b'),本檔 MUST NOT 複製第二份 —— 兩份會分家。
   ok(VISUAL_KNOBS.celSchool.def === 'b' && VISUAL_KNOBS.celSchool.choices.includes('a'),
     "賽璐璐學派預設 B(§0-b 使用者定案的交付值),且 A 仍是合法選項 = 切回舊制的退路還在");
   ok(VISUAL_KNOBS.ink.def === 1 && VISUAL_KNOBS.weather.def === 1, '已定案的兩項預設 1(= 交付調校值)');
+  ok(VISUAL_KNOBS.inkMrt.def === 'on' && VISUAL_KNOBS.inkGroup.def === 'on'
+    && VISUAL_KNOBS.leafCard.def === 'auto', '整棵樹剪影預設生效(資訊緩衝 + 群組 + 葉片卡)');
+  ok(VISUAL_KNOBS.inkBreak.def === 1 && VISUAL_KNOBS.reflect.def === 1
+    && VISUAL_KNOBS.landInk.def === 1 && VISUAL_KNOBS.birds.def === 1,
+  '墨線斷筆 / 倒影 / 地貌墨線 / 鳥群預設生效');
   ok(Object.values(VISUAL_KNOBS).every((d) => d.choices || d.min === 0),
     '每一根拉桿都拉得到 0(= 這一項完全不生效)');
   // 互斥選項:名單外的值一律退回預設(手改 localStorage 不得穿過去)
@@ -703,9 +706,9 @@ console.log('\nⅧ 斜向轉場(data.js WIPE + postfx 的 pass)');
   // Ⅷ-c 0 ⇒ 整個 pass 退出鏈(閘門形狀逐字鏡射 dof 那一列)
   ok(/if \(this\.enabled\.wipe && this\._wipeA > 0\) chain\.push\('wipe'\);/.test(R),
     '0 ⇒ **整個 pass 退出鏈**(不是跑一個乘 0 的 pass;閘門形狀逐字鏡射 dof 那一列)');
-  // Ⅷ-d 旋鈕預設關 + playWipe 在關著時**同步**走回呼
-  ok(VISUAL_KNOBS.wipe.def === 0 && VISUAL_KNOBS.wipe.min === 0,
-    `轉場旋鈕預設 ${VISUAL_KNOBS.wipe.def}(紀律①:需要美術方向的一律 def = 這一項不生效)`);
+  // Ⅷ-d 預設啟用;手動關閉時 playWipe 仍須同步走回呼。
+  ok(VISUAL_KNOBS.wipe.def === 1 && VISUAL_KNOBS.wipe.min === 0,
+    `轉場旋鈕預設 ${VISUAL_KNOBS.wipe.def}(交付定案值)`);
   ok(/playWipe\(mode, onCut = null, opts = null\) \{\s*\r?\n\s*if \(!this\.enabled\.wipe \|\| this\._wipeKnob <= 0\) \{ onCut\?\.\(\); return false; \}/.test(P),
     '旋鈕關著時 `playWipe` **當場同步**走回呼並回 false ⇒ 連時序都逐位元同舊制');
   ok(!/setTimeout/.test(bare(P).replace(/\/\*[\s\S]*?\*\//g, '')),
