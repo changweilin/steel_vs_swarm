@@ -44,6 +44,7 @@ node tools/audit_visual_prefs.mjs    # 畫面旋鈕 / 陰影偏色 / 風化場 /
 #   ±--break-wipe(閘門退成無條件 + 幕的端點不再外推 ⇒ Ⅷ MUST 紅 2 條,而 Ⅷ-b 順序 MUST 仍綠)
 #   ±--break-wipepair(`_wipeCut` 只遮不揭 ⇒ Ⅷ-h MUST 紅 2 條:「成對」與「`playWipe` 恰三處」——
 #                     後者是同一個缺陷的第二個指紋,而 Ⅷ-i/j 的重入守衛與狀態閘 MUST 仍綠)
+#   ±--break-shot-replay(meta 把浮點機位四捨五入後才存 ⇒ Ⅵ 的回放精度 MUST 紅 2 條)
 node tools/audit_soft_stroke.mjs     # 軟性物質(細勾線 + 飄揚 + 陣風 + 海浪 + 稻/草/芒草波 + 國旗)
 #                                    #  + **玩家位移擾動 + 岸邊泡沫/倒影 + 墨線斷筆 + 掠射抑制項恰一項**
 #   ±--break-ink/--break-anchor/--break-wave/--break-gust
