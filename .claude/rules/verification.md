@@ -116,7 +116,7 @@ node tools/audit_siteplan.mjs        # 都市計畫 / 樹冠羞避 / 地質排�
 #   ±--break-line/--break-shy/--break-strike/--break-gate/--break-mass/--break-mass2/--break-roof
 #   ±--break-prof/--break-fill/--break-glass/--break-flat
 node tools/audit_beacons.mjs         # 語意化地標
-node tools/audit_world_text.mjs      # 世界文字(圖集 / 版面 / 裝箱 / 接線)
+node tools/audit_world_text.mjs      # 世界文字(圖集 / 版面 / 裝箱 / 接線);±--break-cache
 node tools/audit_vernacular.mjs      # 在地文字語料
 node tools/audit_codex.mjs           # 角色 / 機體檔案格式
 node tools/audit_paper_doll.mjs      # 機體台紙娃娃系統(骨架/零件/彩繪覆寫層 + 存檔語意)
@@ -331,7 +331,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 整棟量體的**碰撞剖面 / 尺寸貼合 / 招牌落點 / 窗間距**(`bldProfile`/`profGeo`/`fitNode`/`fitScale`/`slabBox`/`bldFace`/`MASS.UVB`/`FACADES[].win`/`nodeProfile`/`--uvbands`) | `audit_siteplan` Ⅴ ±`--break-prof`/`--break-fill`/`--break-glass`(各紅 4 / 1 / 2 條)+ **`intake_parts`**(剖面宣告 = 實測、三帶 v 界、名冊涵蓋率)+ `audit_auto_intake` ±`--break-append`(名冊追加要連剖面一起補、撤下要逐位元可逆)+ `audit_object_joints --seeds 8` + `audit_beacons` + `audit_client_syntax`(㋖)+ **`npm run bal` / `npm test` MUST 逐項不動**(平衡與 sim 一行未改)+ **改剖面段數/名冊 MUST 回頭看 `LOS.MAX_OCC` 餘裕**(16 棟 ×(段數−1)根柱)+ **㋓:`shot_scene` 的 `mass_near`/`masslow_near` 與 `shot_facades`**(三帶接縫落在哪、無縫玻璃牆讀不讀得出來、撐滿基地後的比例,只有截圖看得到)+ **㋕:貼著塔走一圈**(退縮平台站得上去、上半段不再撞到空氣)+ `audit_traverse`(㋓;地面層通行寬理應逐位元不動) |
 | 鏡像貼補 | ⚠ **先看 `docs/ai3d_runbook.md` §5aj-C**(改制待執行)+ `mesh_sym --gate` + **`node_sheet --ref`(四面黏土對照 —— 這一族的錯只有截圖看得到)** + `intake_parts`(外廓與預算 MUST 逐位元不動)+ `audit_object_joints --seeds 8` + `audit_beacons`/`audit_siteplan` + 3D 對照台 0-0-0 + ㋒ |
 | 語意化地標 | `audit_beacons` ±`--break-extent`/`--break-pad` + `audit_object_joints`/`audit_gpu_lifecycle` + ㋒ |
-| 世界文字 | `audit_world_text` ±反向驗證 + `audit_vernacular` + **`shot_signs`(㋓:版面與缺字偵測只有這裡看得到)** + `audit_visual_prefs`(旋鈕表多一個 `choices`)+ ㋔ + ㋒ |
+| 世界文字 | `audit_world_text` ±`--break-cache` + `audit_vernacular` + **`shot_signs`(㋓:版面與缺字偵測只有這裡看得到)** + `audit_visual_prefs`(旋鈕表多一個 `choices`)+ ㋔ + ㋒ |
 | 在地文字語料 | `audit_vernacular` ±反向驗證 + `audit_world_text` + **重跑 `bake_venue_text.mjs`**(不重烤 = 底本走舊規則、執行期補收走新規則,兩份語料在同一張圖上打架)+ ㋒ |
 | 角色 / 機體檔案格式 | `audit_codex` ±`--break-layer`/`--break-align`/`--break-pose` + `gen2d --audit` + `audit_hex_stats`/`audit_ui_layout`/`audit_ctrl_mode` + `audit_net_modes`/`audit_solo_boot`(新增客戶端模組)+ ㋒ |
 | 機體台紙娃娃系統(`tools/humanoid_forge/` 的 `doll.js`/`shapes.js`/`mark.js`/`dollapply.js`/`dolledit.js`/`specstore.mjs`/`boardapi.mjs`/`refstrip.js`/`wpnview.js`/`board.css` 與 forge.js 的 `finishUnit`)/ **共用展示台**(`stage.js` 場景+演出+圖示工具列 / `versions.js` 版本表 / 兩座宿主 `viewer.js`·`codex_review/review.js` / `board.css` 的 `.fbar`) | `audit_paper_doll` ±`--break-stageseam`/`--break-pair`/`--break-morph`/`--break-rebuild`/`--break-twostage`(展示台那五支;每一支 MUST 對應紅字)±`--break-clamp`/`--break-key`/`--break-seam`/`--break-order`/`--break-roster`/`--break-patch`/`--break-socket`/`--break-overlay`/`--break-entry`/`--break-dollvis`/`--break-reframe` + **兩座看板各開一次**(㋕:編輯器/原型照帶/樣式/覆寫層全是共用的 —— 覆核台調比例之後機體台的紙娃娃 MUST 還在)+ ㋒(幾乎全在 `tools/`;`forgeMorphUnit` 只多交出兩棵子單位、遊戲端不讀 ⇒ `npm test`/`npm run bal` MUST 逐項不變)+ **㋕ 兩座看板各開一次**(這一族的鈕面與版面純視覺,離線只量得到結構)+ **㋕ 開一次機體台看變形**(2026-08-14 使用者:「新版展示台 UI 要跟舊版一樣,可以看變形過程」——「按了型態鈕台上沒反應」與「變形被砍成瞬切」在離線這端只表現成原文對不上,而原文是可以改對而行為仍錯的;逐版各切一次,`__forge.morphM()` MUST 是**連續**爬升而不是一步到 1)。兩條會靜默壞掉的線:①改 `mechs/<key>.js` 的**零件順序** ⇒ 舊覆寫會落到別的零件上(鍵 = 建構序路徑),MUST 在該機體台上目視覆核一次;②**純視覺的壞法(疊層蓋住機體、版面擠掉)離線稽核只量得到結構** ⇒ 動過任一座看板的版面 MUST 走 headless 入口實拍一張(`window.__forge.__shot` / `window.__cr.shot`,落盤路由住 `boardapi.mjs`)|

@@ -10,7 +10,7 @@
 //
 // `worldtext.js` import three ⇒ Node 端載不進來,名字解析那幾支以 `new Function` 抽原文執行
 // (與 audit_visual_prefs Ⅱ 同一套做法);其餘走 `audit_src.mjs` 讀原文(㋑ CRLF)。
-// 用法:node tools/audit_world_text.mjs
+// 用法:node tools/audit_world_text.mjs [--break-cache]
 import { readSrc, grabFn } from './audit_src.mjs';
 import { pickName, pickRef } from '../public/js/vernacular.js';
 import { VISUAL_KNOBS } from '../public/js/visualPrefs.js';
@@ -19,9 +19,14 @@ let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
 
 const wtSrc = readSrc('public', 'js', 'worldtext.js');
-const bioSrc = readSrc('public', 'js', 'biomes.js');
+let bioSrc = readSrc('public', 'js', 'biomes.js');
 const mainSrc = readSrc('public', 'js', 'main.js');
 const helpSrc = readSrc('public', 'js', 'help.js');
+if (process.argv.includes('--break-cache')) {
+  const broken = bioSrc.replace(/geoKey\('osmF', 3,/, "geoKey('osmF', 2,");
+  if (broken === bioSrc) throw new Error('--break-cache 無法造出舊快取版本');
+  bioSrc = broken;
+}
 const bare = (s) => s.split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
 const count = (s, re) => (bare(s).match(re) || []).length;
 
@@ -125,7 +130,8 @@ console.log('\nⅢ 接線(biomes.js)');
     '不新增任何碰撞柱(原則 4:表現層不得動權威幾何)');
   ok(/建物的 ry|if \(!b\.commercial\) continue;/.test(fn), '住宅不掛招牌(量會爆掉且不合理)');
   // Overpass 查詢改了 ⇒ 快取版本 MUST 跟著跳
-  ok(/geoKey\('osmF', 2,/.test(bioSrc), '圖資快取版本已跳到 2(不跳的話舊快取沒有 pois,新標牌永遠不出現)');
+  ok(/geoKey\('osmF', 3,/.test(bioSrc),
+    '圖資快取版本已跳到 3(包含 pois 與地貌四類新圖資；不跳版會讓舊快取靜默缺欄)');
   ok(/node\["place"/.test(bioSrc) && /node\["natural"="peak"\]/.test(bioSrc)
     && /node\["highway"="motorway_junction"\]/.test(bioSrc) && /node\["railway"~"\^\(station\|halt\)\$"\]/.test(bioSrc),
     '四類具名點位都進查詢');
