@@ -243,6 +243,10 @@ real parts to calibrate against is a 10×-expensive failure. Resume with
 
 ## 4. Queue
 
+> 2026-08-18 下一對話的可執行交接清單：[`docs/ai3d_handoff_2026-08-18.md`](ai3d_handoff_2026-08-18.md)。
+> runner 建置、兩資料家命令、61 件替代順序、逐批驗收與完成定義以該檔為準。
+> Gemini CLI 執行時啟用 workspace skill：`.gemini/skills/gemini-img-to-3d-pipeline/SKILL.md`。
+
 Steps A–F0 are **all shipped** — see §1. What remains:
 
 1. **Wait for photos in `inbox/`**, then regenerate the four blocked nodes + `depot` (§1).
