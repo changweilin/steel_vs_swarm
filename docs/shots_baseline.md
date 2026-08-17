@@ -47,11 +47,14 @@
 「**同一輪環境下的 pre/post 對拍**」為準,MUST NOT 拿隔了幾十分鐘的第一輪當基準
 —— 否則下一個人會把那 6 張讀成「有人動到 School A」,然後去追一個不存在的 bug。
 
-## 3. ⚠ `--stations meta.json` 回放**不是**逐位元等於同參數的新鮮推導
+## 3. `--stations meta.json` 回放陷阱(2026-08-17 已修正)
 
 同一個 `--venue` / `--team` 下,`--stations` 回放與不帶它的推導 **13/13 全部不同**(而兩者各自跨進程穩定)。
-⇒ A/B 對拍在 venue / team 相同時 MUST **不要帶 `--stations`**(機位推導本來就是決定性的);
-`--stations` 只在「改了程式導致機位推導本身改變」時才有意義。
+根因不是場景非決定性,而是舊版 `shot_scene` 在寫 meta 前先對 `p` / `look` 做
+`Math.round()`。差不到 0.5m 就足以讓整張圖的線邊一起平移,純視覺 A/B 會把它誤讀成材質改變。
+
+2026-08-17 起 meta 保留完整浮點機位,只有 console 顯示值會四捨五入。新 meta 可用於像素 A/B;
+舊 meta 的 `p` / `look` 若全是整數就是已污染基準,MUST 重建而不是繼續回放。
 
 ## 4. School B 的量測(taroko,`--pref celSchool=b` vs 預設)
 

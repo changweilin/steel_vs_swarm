@@ -22,8 +22,8 @@
 //   ㋐ **旋鈕關著 / 純結構重構 ⇒ 逐張相同是要的結果**(「這一輪沒有漏到畫面上」的證明)。
 //      前例:2026-08-13 那一輪 13 張定場照 md5 全同、④-1 轉場旋鈕 def = 0 的驗收面也是它。
 //      這種比對 MUST 講清楚**比的是哪一組旗標**,而且 pre / post MUST 在**同一輪環境**下拍
-//      (見 `docs/_pending/shots-baseline.md`:`-prefs` 那一組跨進程不穩定;
-//      `--stations meta.json` 回放**不等於**同參數的新鮮推導 ⇒ venue/team 相同時 MUST NOT 帶它)。
+//      (見 `docs/shots_baseline.md`:`-prefs` 那一組跨進程不穩定;2026-08-17 起 meta 保留完整
+//      浮點機位,舊版把機位四捨五入過的 meta MUST NOT 拿來做像素 A/B)。
 //
 //   ㋑ **改了材質 / 顏色 / 貼圖而畫面逐像素完全相同 ⇒ 那一面根本沒有被畫。**
 //      這是共面兩片的**硬幣拋**(renderer 隨鏡頭任意贏一片),不是「改得太細看不出來」——
@@ -61,7 +61,7 @@ const VENUE = arg('--venue', 'taroko');
 const TEAM = +arg('--team', '1');
 const OUT = path.resolve(arg('--out', join(ROOT, 'tools', `.shots_scene/${VENUE}`)));
 const LIVE = has('--live');
-// `--stations <meta.json>`:**照抄前一輪推導出來的機位**再拍一次。
+// `--stations <meta.json>`:**照抄前一輪推導出來的完整浮點機位**再拍一次。
 // 為什麼需要:機位是由**世界幾何**推導的(離兵線最近的那株喬木、最高點、第一座橋…),
 // 而 `--lib=0` 換掉的正是那些幾何 ⇒ 前後兩張其實**站在不同的地方、拍不同的樹**
 // (blackforest 實測 veg_near 的 z 從 185 跑到 239)。這一支的賣點是「改動前後各拍一次」,
@@ -558,6 +558,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
   }
 
   const out = [];
+  let glError = 0;
   // 回放 MUST 整組取代(不是補進去):混著用會拍出「一半新機位、一半舊機位」的圖組,
   // 而檔名一模一樣 ⇒ 之後沒有任何東西能分辨哪幾張可以比。
   const all = replay && replay.length ? replay : stations;
@@ -569,16 +570,18 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
     envFx.update(0.016, camera, elapsed);
     updateCelLight(camera);
     if (pipe) pipe.render(); else renderer.render(scene, camera);
+    glError ||= renderer.getContext().getError();
     out.push({ name: st.name, png: canvas.toDataURL('image/png'),
-      p: st.p.map((v) => Math.round(v)), look: st.look.map((v) => Math.round(v)) });
+      p: [...st.p], look: [...st.look] });
   }
-  return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor,
+  return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor, glError,
     curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
 }, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY, env: ENV, elapsed: ELAPSED });
 
 for (const s of shots.shots) {
   fs.writeFileSync(join(OUT, `${s.name}${SUFFIX}.png`), Buffer.from(s.png.split(',')[1], 'base64'));
-  console.log(`  ${s.name}${SUFFIX}  eye=${s.p.join(',')}  →  ${s.look.join(',')}`);
+  console.log(`  ${s.name}${SUFFIX}  eye=${s.p.map((v) => Math.round(v)).join(',')}`
+    + `  →  ${s.look.map((v) => Math.round(v)).join(',')}`);
 }
 if (shots.biomeErr) console.log(`  ⚠ buildBiomes 例外:${shots.biomeErr}`);
 console.log(`  地物 mesh ${shots.objN}・零件庫節點 ${shots.libN}${LAYERS.lib ? '' : '(--lib=0 保險絲)'}・隧道 ${shots.tunnels}・橋 ${shots.decks}`
@@ -588,6 +591,7 @@ console.log(`  地物 mesh ${shots.objN}・零件庫節點 ${shots.libN}${LAYERS
 // 而這支工具的賣點正是「改動前後各拍一次」,拍到的若是同一件事就什麼都比不出來。
 console.log(`  世界曲面 ${shots.curveOn ? `已裝(拐點 ${Math.round(shots.curveKnee)}m / 地平線 ${Math.round(shots.curveHorizon)}m)`
   : (LAYERS.curve ? '⚠ 未裝(three 錨點對不上?)' : '關閉(--curve=0)')}`);
+console.log(`  真 GPU gl.getError() = ${shots.glError}`);
 // 繞行了哪一顆 MUST 印出來:四張圖本身分不出「這顆真的長著庫節點」還是「認錯人拍了一顆
 // 程序岩」—— 節點名 + 候選顆數就是那個證據(0 顆 = 這張圖沒有庫岩體,不是拍失敗)。
 if (LAYERS.lib) {
@@ -604,9 +608,10 @@ if (LAYERS.lib) {
 fs.writeFileSync(join(OUT, `meta${SUFFIX}.json`), JSON.stringify({
   venue: VENUE, team: TEAM, layers: LAYERS, env: ENV,
   tunnels: shots.tunnels, decks: shots.decks, water: shots.water,
-  objN: shots.objN, libN: shots.libN, biomeErr: shots.biomeErr, imagery: shots.imagery,
+  objN: shots.objN, libN: shots.libN, biomeErr: shots.biomeErr, imagery: shots.imagery, glError: shots.glError,
   stations: shots.shots.map((s) => ({ name: s.name, p: s.p, look: s.look })),
 }, null, 2));
 console.log(`\n${shots.shots.length} 張 → ${OUT}`);
 await browser.close();
 srv.close();
+if (shots.glError !== 0) throw new Error(`WebGL 錯誤:gl.getError() = ${shots.glError}`);

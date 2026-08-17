@@ -30,6 +30,8 @@ const BREAK_LUTSTACK = process.argv.includes('--break-lutstack');
 const BREAK_WIPE = process.argv.includes('--break-wipe');
 /** 反向驗證:`_wipeCut` 只遮不揭(reveal 那一行刪掉)⇒ Ⅷ-h MUST 紅字 */
 const BREAK_WIPEPAIR = process.argv.includes('--break-wipepair');
+/** 反向驗證:定場 meta 把浮點機位四捨五入後才存 ⇒ 回放不是同一顆相機 */
+const BREAK_SHOT_REPLAY = process.argv.includes('--break-shot-replay');
 /**
  * 反向驗證的字面替換(§5.4 ㋑):CRLF 容忍樣式 + **替換無效當場失敗**;
  * 樣式一律 `/g`(先咬到註解的話 `bare()` 剝掉之後斷言照樣全綠 = 等於沒跑)。
@@ -531,9 +533,16 @@ console.log('\nⅥ 景深模糊(data.js DOF + postfx 的 pass)');
   // 定場鏡頭組是「改動前後各拍一次」的工具:沒餵距離 ⇒ `_dofRange` 恆為 null ⇒ 這一 pass
   // 永遠不掛,而每一張圖與每一行讀數都照樣正常 = 它從此拍不到交付版本真正的樣子。
   {
-    const shotSrc = bare(readSrc('tools', 'shot_scene.mjs'));
+    let shotSrc = bare(readSrc('tools', 'shot_scene.mjs'));
+    if (BREAK_SHOT_REPLAY) shotSrc = bendSrc(shotSrc,
+      /p:\s*\[\.\.\.st\.p\],\s*look:\s*\[\.\.\.st\.look\]/g,
+      'p: st.p.map((v) => Math.round(v)), look: st.look.map((v) => Math.round(v))', '--break-shot-replay');
     ok(/pipe\?\.setDof\(dofNearM\(\), dofFarM\(\)\)/.test(shotSrc), '定場鏡頭組也餵距離(否則永遠拍不到景深)');
     ok(/dof: flag\('dof'\)/.test(shotSrc), '定場鏡頭組有 --dof=0 圖層隔離(與 ink/grade/fxaa 同一組)');
+    ok(/p:\s*\[\.\.\.st\.p\],\s*look:\s*\[\.\.\.st\.look\]/.test(shotSrc),
+      '定場 meta 保留完整浮點機位(回放才是同一顆相機)');
+    ok(!/p:\s*st\.p\.map\([^\n]*Math\.round/.test(shotSrc),
+      '四捨五入只准用於 console,不得寫進 meta');
   }
 
   // ---- Ⅵ-c2 只在狙擊模式(2026-08-09 使用者補充)----
