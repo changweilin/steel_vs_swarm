@@ -68,6 +68,7 @@
 // 跑法:node tools/audit_cel_pipeline.mjs [--break-scale] [--break-inkinfo] [--break-land] [--break-lutland]
 //                                        [--break-school] [--break-cutfloor] [--break-neutral]
 //                                        [--break-cutorder] [--break-schoolmix] [--break-shadowtype]
+//                                        [--break-landmask]
 import { readdirSync } from 'node:fs';
 import { readSrc } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
@@ -118,6 +119,8 @@ const BREAK_CUTORDER = process.argv.includes('--break-cutorder');
 const BREAK_SCHOOLMIX = process.argv.includes('--break-schoolmix');
 /** 反向驗證:投影型別換回 PCFShadowMap ⇒ Ⅺ MUST 紅字(2026-08-16 之前沒有東西在守這一行) */
 const BREAK_SHADOWTYPE = process.argv.includes('--break-shadowtype');
+/** 反向驗證:三平面遮罩退回單一 XZ 投影(= 垂直崖面沿 Y 拉成一整條)⇒ Ⅸ MUST 紅字 */
+const BREAK_LANDMASK = process.argv.includes('--break-landmask');
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
 /** 只留「真的會執行的程式碼」—— 註解裡提到某個名字不算違規 */
@@ -747,6 +750,11 @@ console.log('\nⅨ 溶入的材質契約(④-2)+ 地貌分區子帶(①-3)');
     T = bend2(T, /if \( uLandInk > 0\.0 && vLandId > 0\.0 \) gSurf = vLandId;/g,
       'gSurf = vLandId;', '--break-landink(拉桿閘)');
   }
+  if (BREAK_LANDMASK) {
+    T = bend2(T,
+      /return celNoise\( p\.yz \) \* w\.x \+ celNoise\( p\.xz \) \* w\.y \+ celNoise\( p\.xy \) \* w\.z;/g,
+      'return celNoise( p.xz );', '--break-landmask(三平面)');
+  }
   // ---- ① 溶入:錨點、uniform 物件、快取鍵、外殼 ----
   const iClip = T.indexOf("'#include <clipping_planes_fragment>'");
   const iOpq = T.indexOf(".replace('#include <opaque_fragment>'");
@@ -798,6 +806,41 @@ return { LAND_ZONE_N, landZoneId };`)();
     '`CEL_LAND_ID` 進 customProgramCacheKey(它是 define:attribute 有沒有讀是編進程式裡的)');
   ok(/same > 0\.5 && grpMax > 2\.5 && grpMin > 1\.5/.test(P),
     '群組早退多一道「五格都不是 LAND」的閘 —— 子帶與群組號共用整數格那把梳子,萬一撞號,早退會讓整株樹**整個剪影消失**而不是少一條線(今天恆真 ⇒ 逐位元中性)');
+
+  // ---- ④ 分區內苔草 / 濕痕:三平面硬遮罩 + 整數 surfaceId ----
+  const LM = new Function(`const LAND_ZONE_N = ${LZ.LAND_ZONE_N};
+const LAND_SURF_ID = 0;
+${/export const LAND_MASK_N = \d+;/.exec(T)[0].replace('export ', '')}
+${/export const landMaskId = [\s\S]*?;\n/.exec(T)[0].replace('export ', '')}
+return { LAND_MASK_N, landMaskId };`)();
+  const maskIds = [];
+  for (let z = 0; z < LZ.LAND_ZONE_N; z++) for (let m = 1; m < LM.LAND_MASK_N; m++) maskIds.push(LM.landMaskId(z, m));
+  ok(LM.LAND_MASK_N === 3 && maskIds.length === LZ.LAND_ZONE_N * 2,
+    `每分區恰三態(基底 / 苔草 / 濕痕),遮罩格 ${maskIds.length} 個`);
+  ok(maskIds.every((v) => Math.abs(v * 64 - Math.round(v * 64)) < 1e-12 && v > 0 && v < zoneIds[0])
+    && new Set([...zoneIds, ...maskIds]).size === zoneIds.length + maskIds.length,
+  `遮罩 surfaceId 全為整數格且與基底分區不撞號(${maskIds.map((v) => (v * 64).toFixed(0)).join('/')})`);
+  ok(LM.landMaskId(-1, 1) === 0 && LM.landMaskId(0, 0) === 0
+    && LM.landMaskId(0, LM.LAND_MASK_N) === 0 && LM.landMaskId(1.5, 1) === 0,
+  '遮罩索引超界 / 基底態 / 非整數一律回 LAND_SURF_ID(寧缺勿錯)');
+  const tri = /float celTriNoise\( vec3 p, vec3 wn \) \{[\s\S]*?\n        \}/.exec(T)?.[0] || '';
+  ok(/celNoise\( p\.yz \) \* w\.x/.test(tri) && /celNoise\( p\.xz \) \* w\.y/.test(tri)
+    && /celNoise\( p\.xy \) \* w\.z/.test(tri),
+  '遮罩噪聲同時取 YZ / XZ / XY 三平面並按世界法線混合(單一 XZ 投影會把崖面沿 Y 拉直)');
+  const landMask = /float lmA = celTriNoise[\s\S]*?diffuseColor\.rgb = mix\( diffuseColor\.rgb, diffuseColor\.rgb \* vec3\( 0\.68, 0\.74, 0\.78 \), lmWet \);/.exec(T)?.[0] || '';
+  ok(/lmGrassZone/.test(landMask) && /lmWetZone/.test(landMask)
+    && /lmN\.y/.test(landMask) && /lmA/.test(landMask) && /lmB/.test(landMask),
+  '苔草 / 濕痕各自同時吃分區語意、表面方向與兩個噪聲尺度(只有幾何 = 等高線;只有噪聲 = 隨機斑點)');
+  ok(/lmGrass = [\s\S]*?\* step\(/.test(landMask) && /lmWet = [\s\S]*?\* step\(/.test(landMask)
+    && !/smoothstep/.test(landMask),
+  '兩種材質邊界都是硬 step,MUST NOT 混成賽璐璐畫面裡唯一一條軟邊');
+  ok(/lmOpen = 1\.0 - step\( 0\.5, lf\.a \)/.test(landMask),
+    '道路 / 建成遮罩排除苔草與濕痕(正式道路上不得被地形 shader 重新長回覆蓋)');
+  ok(/if \( celLandMask > 0\.5 \)/.test(T)
+    && /LAND_ZONE_N \* LAND_MASK_N/.test(T) && /lfZone \* \$\{LAND_MASK_N - 1\}/.test(T),
+  '可見遮罩折進既有 gInfo.b 整數槽；沒有另開第二份勾線通道');
+  ok(/\$\{landField \? 'X' : ''\}/.test(T),
+    '`CEL_LAND_FIELD` 進 customProgramCacheKey(defines 不同卻共用程式 = 地形整批有色無遮罩或反過來)');
 }
 
 // ---------------------------------------------------------------- Ⅹ

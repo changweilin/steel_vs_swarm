@@ -763,6 +763,8 @@ export const INK_BREAK = {
 //   ③ **群組早退那一條例外**:它會讓整株樹的剪影消失而不是少一條線 ⇒ `postfx.js` 的早退
 //      另外加了「五格都不是 LAND」這道閘(今天恆真 ⇒ 逐位元中性,見那一段註解)。
 export const LAND_ZONE_N = 7;
+// 每分區三態:基底 / 苔草 / 濕痕。基底仍佔頂端 7 格；兩種遮罩佔它下方 14 格。
+export const LAND_MASK_N = 3;
 /**
  * 地貌分區 → surfaceId 子帶(整數格,由頂端往下配)。
  * @param i 分區索引 ∈ [0, LAND_ZONE_N);超界或非整數一律回 `LAND_SURF_ID`(原則 6:
@@ -770,6 +772,14 @@ export const LAND_ZONE_N = 7;
  */
 export const landZoneId = (i) => (Number.isInteger(i) && i >= 0 && i < LAND_ZONE_N
   ? (64 - LAND_ZONE_N + i) / 64 : LAND_SURF_ID);
+/**
+ * 地貌分區內的材質遮罩 → surfaceId 子帶。mask=1 苔草、2 濕痕；0 仍走 landZoneId。
+ * 遮罩格緊接在基底格下方，且全是整數格，與逐材質的半整數格永不撞號。
+ */
+export const landMaskId = (zone, mask) => (Number.isInteger(zone) && zone >= 0 && zone < LAND_ZONE_N
+  && Number.isInteger(mask) && mask > 0 && mask < LAND_MASK_N
+  ? (64 - LAND_ZONE_N * LAND_MASK_N + zone * (LAND_MASK_N - 1) + mask - 1) / 64
+  : LAND_SURF_ID);
 
 // ---- `outlineContribution` 的推導縫(2026-08-16;S4 的 toon.js 那一半)----
 // 與上面那個常數是同一族的兩半:軟性管**這條線多細**、貢獻管**這條線畫不畫**。
@@ -1471,6 +1481,23 @@ ${CEL_SEA_GLSL}
           else c = v > 0.5 ? vec3( 0.29, 0.27, 0.26 ) : vec3( 0.39, 0.36, 0.34 );
           float grain = ( lf.b - 0.5 ) * 0.10;
           diffuseColor.rgb = c * ( 1.0 + grain );
+
+          // 苔草 / 濕痕(計畫 ②-2):低頻分區回答「這裡是什麼」，三平面噪聲只負責
+          // 分區內的碎邊。兩種遮罩都同時吃語意、法線與兩個尺度的噪聲，且用硬 step；
+          // lf.a 是道路 / 建成遮罩，避免把苔草重新畫回正式道路與建成足跡。
+          vec3 lmN = normalize( inverseTransformDirection( normal, viewMatrix ) );
+          float lmA = celTriNoise( vCelWP * 0.24, lmN );
+          float lmB = celTriNoise( vCelWP * 0.075 + vec3( 7.1, 3.7, 11.9 ), lmN );
+          float lmOpen = 1.0 - step( 0.5, lf.a );
+          float lmGrassZone = step( 1.5, z ) * ( 1.0 - step( 3.5, z ) ) + step( 4.5, z );
+          float lmGrass = lmOpen * lmGrassZone
+            * step( 0.64, max( 0.0, lmN.y ) * 0.62 + lmA * 0.48 - lmB * 0.16 );
+          float lmWetZone = 1.0 - step( 0.5, abs( z - 1.0 ) );
+          float lmWet = lmOpen * lmWetZone
+            * step( 0.66, ( 1.0 - max( 0.0, lmN.y ) ) * 0.22 + lmA * 0.46 + lmB * 0.34 );
+          celLandMask = max( lmGrass, lmWet * 2.0 );
+          diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.30, 0.43, 0.22 ), lmGrass * 0.62 );
+          diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 0.68, 0.74, 0.78 ), lmWet );
         }
         #endif
         #if defined( CEL_WASH ) || defined( CEL_MOSS )
@@ -1614,7 +1641,12 @@ ${CEL_SEA_GLSL}
           if ( uLandInk > 0.0 ) {
             vec2 lfUv = clamp( ( vCelWP.xz - uLandRect.xy ) * uLandRect.zw, 0.0, 1.0 );
             float lfZone = floor( texture2D( uLandField, lfUv ).r * 255.0 + 0.5 );
-            gSurf = ( ${64 - 7}.0 + clamp( lfZone, 0.0, ${7 - 1}.0 ) ) / 64.0;
+            lfZone = clamp( lfZone, 0.0, ${LAND_ZONE_N - 1}.0 );
+            gSurf = ( ${64 - LAND_ZONE_N}.0 + lfZone ) / 64.0;
+            if ( celLandMask > 0.5 ) {
+              gSurf = ( ${64 - LAND_ZONE_N * LAND_MASK_N}.0
+                + lfZone * ${LAND_MASK_N - 1}.0 + celLandMask - 1.0 ) / 64.0;
+            }
           }
           #endif
           // .a = 打包(高半位元組 = 類別索引、低半位元組 = 貢獻 16 階)。
@@ -1663,6 +1695,14 @@ ${INK_PACK_GLSL}
           return mix( mix( celHash( i ), celHash( i + vec2( 1.0, 0.0 ) ), f.x ),
                       mix( celHash( i + vec2( 0.0, 1.0 ) ), celHash( i + vec2( 1.0, 1.0 ) ), f.x ), f.y );
         }
+        #ifdef CEL_LAND_FIELD
+        // 三平面取樣:垂直崖面不會把 XZ 花紋沿 Y 整條拉直，投影換手也沒有可見接縫。
+        float celTriNoise( vec3 p, vec3 wn ) {
+          vec3 w = pow( abs( wn ), vec3( 4.0 ) );
+          w /= max( 1e-5, w.x + w.y + w.z );
+          return celNoise( p.yz ) * w.x + celNoise( p.xz ) * w.y + celNoise( p.xy ) * w.z;
+        }
+        #endif
         #ifdef CEL_INKA
         uniform float uSoftInk;
         uniform float uInkBreakA;
@@ -1746,7 +1786,10 @@ ${CEL_SEA_GLSL}
             return 1.0;
           #endif
         }
-        void main() {`);
+        void main() {
+          #ifdef CEL_LAND_FIELD
+          float celLandMask = 0.0;
+          #endif`);
     // ---- 陰影偏色接進 ramp 查表(P1-B)----
     // MUST 在最後做:上面那一串 replace 都靠 three 的 `#include` 錨點,先動這裡不影響它們,
     // 但把宣告塞到最前面會讓 `void main() {` 的錨點落在我們自己的字串上。
@@ -1769,7 +1812,7 @@ ${CEL_SEA_GLSL}
   // 漏掉 `card`/`surfAttr` 的症狀是「四個角都落在中心 ⇒ 整叢卡片塌成一個點」,
   // 而 `contrib`(uniform)進去的話就是每一個貢獻值編一支新程式(編譯尖峰 + 記憶體)。
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${coolOn ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${surfAttr ? 'A' : ''}${card ? 'K' : ''}${refl ? 'R' : ''}${inkAlpha ? 'B' : ''}${dissolve ? 'D' : ''}${landId ? 'Z' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${coolOn ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${surfAttr ? 'A' : ''}${card ? 'K' : ''}${refl ? 'R' : ''}${inkAlpha ? 'B' : ''}${dissolve ? 'D' : ''}${landId ? 'Z' : ''}${landField ? 'X' : ''}${rim}`;
   return mat;
 }
 

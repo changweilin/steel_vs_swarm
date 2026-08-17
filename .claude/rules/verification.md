@@ -401,5 +401,11 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 - **取 base 對照時 `git stash` 不可靠**(變更已 commit 就是 no-op,會安靜地拿新程式碼當基準;切分支也會污染仍在跑的背景樣本)—— 一律 `git show <rev>:path` 把 `sim.js`/`bots.js`/`data.js` 三支倒進暫存目錄各跑各的。
 - 定位分類專屬:定位版 vs 關掉 `_resolveRole` 的同一批 bot 做 **CRN 配對鏡射**自對戰,量工事損血差。
 
+### 5.5-2026-08-17 地貌苔草／濕痕遮罩
+
+| 改動 | MUST 跑 |
+|---|---|
+| `toon.js LAND_MASK_N`・`landMaskId`・`celTriNoise`・`celLandMask`・`CEL_LAND_FIELD` 快取鍵 | `audit_cel_pipeline` Ⅸ④ ±`--break-landmask` + `audit_client_syntax`(㋖)+ `audit_visual_prefs` / `audit_soft_stroke` / `audit_gpu_lifecycle` / `audit_world_curve` + `audit_zone_cut` / `audit_ground_*` / `audit_siteplan` / `audit_beacons` / `audit_object_joints --seeds 8`(零幾何、零共享 `rnd()`,判準逐項不動)+ `npm run bal` / `npm test` 逐項不動 + ㋓ 真 GPU:`gl.getError() = 0`、taroko 崖面繞拍確認三平面換手無接縫、`landInk=0/1` 只改遮罩邊不改顏色 |
+
 ---
 
