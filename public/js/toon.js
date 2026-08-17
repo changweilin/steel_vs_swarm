@@ -930,8 +930,9 @@ export function setSeaDepthField(data, size, bounds) {
 export const FOAM = {
   BAND_M: 0.55,     // 泡沫帶的深度節距(m):一條帶 = 深度差這麼多
   STEP: 0.42,       // 硬邊門檻(賽璐璐的泡沫是白色硬邊,不是柔霧)
+  SHAPE_K: 5,       // 帶心尖銳度:三角波直接 step 會讓每一道白條佔掉過半週期
   NOISE_M: 3.4,     // 噪聲的空間尺度(m):讓帶緣碎掉,不是一圈同心圓
-  RANGE_M: 6,       // 深度場的量化上界(m):深過這個值恆無泡沫 ⇒ 中性場 = 沒有泡沫
+  RANGE_M: 2.4,     // 只留潮緣近岸帶;6m 會在緩灘上鋪出十餘道道路標線般的白條
   TEXEL_M: 1.5,     // 場的 texel 邊長(m);低功耗折半由 `seaFieldN` 推導
 };
 export const REFL = {
@@ -940,6 +941,8 @@ export const REFL = {
   MIN_H: 4,         // 進名冊的最小反射體高(m)
   MAX_N: 24,        // 反射體上限(一份幾何一個 draw call ⇒ 上限是頂點預算不是 draw call)
   HALF_F: 0.9,      // 倒影塊半寬 ÷ 反射體半徑
+  MAX_HALF_M: 1.5,  // 巨船/長樓的 broad-phase 半徑不得把倒影撐成數十公尺寬的懸浮平板
+  MAX_LEN_M: 18,    // 低視點的鏡像解會趨近水平距離;美術倒影只保留物件腳邊的碎段
 };
 /**
  * 深度場的邊長格數(**推導,MUST NOT 手寫 1024**)。低功耗折半 —— 手寫的話低階裝置
@@ -1284,7 +1287,7 @@ ${CEL_SEA_GLSL}
           vec2 rD2 = cameraPosition.xz - aReflO.xy;
           float rD = length( rD2 );
           vec2 rDir = rD2 / max( rD, 1e-4 );
-          float rLen = rD * aReflO.z / ( rE + aReflO.z );
+          float rLen = min( rD * aReflO.z / ( rE + aReflO.z ), ${REFL.MAX_LEN_M.toFixed(1)} );
           vec2 rNrm = vec2( -rDir.y, rDir.x );
           vec2 rP = aReflO.xy + rDir * ( rLen * transformed.y ) + rNrm * transformed.x;
           transformed = vec3( rP.x, uWaterY + celSeaH( rP ) * seaFade, rP.y );
@@ -1788,8 +1791,9 @@ ${CEL_SEA_GLSL}
           float celFade = clamp( 1.0 - celFd / ${FOAM.RANGE_M.toFixed(2)}, 0.0, 1.0 );
           if ( celFade <= 0.0 ) return 0.0;
           float celFb = fract( ( celFd - celSeaH( celFxz ) ) / ${FOAM.BAND_M.toFixed(3)} );
-          float celFp = ( 1.0 - abs( celFb * 2.0 - 1.0 ) ) * celFade
-                      + ( celNoise( celFxz / ${FOAM.NOISE_M.toFixed(2)} ) - 0.5 ) * 0.35;
+          float celBand = max( 0.0, 4.0 * celFb * ( 1.0 - celFb ) );
+          float celFp = pow( celBand, ${FOAM.SHAPE_K.toFixed(1)} ) * celFade
+                      * mix( 0.45, 1.0, celNoise( celFxz / ${FOAM.NOISE_M.toFixed(2)} ) );
           return step( ${FOAM.STEP.toFixed(2)}, celFp );   // 硬邊(賽璐璐的泡沫不是柔霧)
         }
         #endif

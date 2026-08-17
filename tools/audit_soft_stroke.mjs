@@ -54,6 +54,8 @@ const BREAK_CHARR = process.argv.includes('--break-charR');
 const BREAK_CHARSLOT = process.argv.includes('--break-charslot');
 /** 反向驗證:泡沫的深度取樣換成常數(= 不再由水深驅動)⇒ Ⅹ MUST 紅字 */
 const BREAK_FOAM = process.argv.includes('--break-foam');
+/** 反向驗證:泡沫帶退回寬三角波 ⇒ Ⅹ MUST 紅字 */
+const BREAK_FOAM_SHAPE = process.argv.includes('--break-foam-shape');
 /** 反向驗證:alpha 寫入點退回 `= uSoftInk;`(斷筆因子沒有乘進去)⇒ Ⅱ + Ⅺ MUST 紅字 */
 const BREAK_INKBREAK = process.argv.includes('--break-inkbreak');
 /** 反向驗證:斷筆錨點帶回平移欄(mat3 → mat4)⇒ Ⅺ MUST 紅字 */
@@ -715,7 +717,8 @@ console.log('\nⅩ 玩家位移擾動(S5)+ 岸邊泡沫 / 倒影(S6)');
     '**沒有第三個 sin(**(擴充這一區塊時最容易踩的一條:Ⅲ 的正規式是全域計數)');
 
   // ---- S6 泡沫:常數與推導 ----
-  ok(FOAM.BAND_M > 0 && FOAM.STEP > 0 && FOAM.STEP < 1 && FOAM.NOISE_M > 0 && FOAM.RANGE_M > 0 && FOAM.TEXEL_M > 0,
+  ok(FOAM.BAND_M > 0 && FOAM.STEP > 0 && FOAM.STEP < 1 && FOAM.SHAPE_K > 1
+    && FOAM.NOISE_M > 0 && FOAM.RANGE_M > 0 && FOAM.TEXEL_M > 0,
     `FOAM 參數齊全(帶寬 ${FOAM.BAND_M}m、硬邊門檻 ${FOAM.STEP}、深度上界 ${FOAM.RANGE_M}m、texel ${FOAM.TEXEL_M}m)`);
   ok(REFL.SEG_N >= 2 && REFL.GAP_F > 0 && REFL.GAP_F < 1 && REFL.MIN_H > 0 && REFL.MAX_N > 0,
     `REFL 參數齊全(${REFL.SEG_N} 段、斷口 ${REFL.GAP_F}、最小高 ${REFL.MIN_H}m、上限 ${REFL.MAX_N} 個)`);
@@ -738,6 +741,11 @@ console.log('\nⅩ 玩家位移擾動(S5)+ 岸邊泡沫 / 倒影(S6)');
     if (bent === fsrc) { console.error('✗ --break-foam:樣式沒咬到 toon.js,反向驗證等於沒跑'); process.exit(1); }
     fsrc = bent;
   }
+  if (BREAK_FOAM_SHAPE) {
+    const bent = fsrc.replace(/pow\( celBand, \$\{FOAM\.SHAPE_K[^}]*\} \)/, 'celBand');
+    if (bent === fsrc) { console.error('✗ --break-foam-shape:樣式沒咬到 toon.js,反向驗證等於沒跑'); process.exit(1); }
+    fsrc = bent;
+  }
   ok(/texture2D\( uSeaField, celFuv \)/.test(fsrc),
     '泡沫的驅動量是**水深**(唯一來源 = 深度場取樣);換成常數 = 它不再繞過石頭與柱子,而看起來仍然像一圈泡沫');
   ok(/celFade = clamp\( 1\.0 - celFd \/ \$\{FOAM\.RANGE_M[^}]*\}, 0\.0, 1\.0 \)/.test(fsrc)
@@ -747,6 +755,10 @@ console.log('\nⅩ 玩家位移擾動(S5)+ 岸邊泡沫 / 倒影(S6)');
     '相位減去 celSeaH(浪一來泡沫沖上岸)—— 自己再寫一次相位 = 泡沫的沖刷與浪峰差半個波長');
   ok(/step\( \$\{FOAM\.STEP[^}]*\}, celFp \)/.test(fsrc),
     '硬邊(step)不是柔霧 —— 賽璐璐的泡沫是白色硬邊');
+  ok(/4\.0 \* celFb \* \( 1\.0 - celFb \)/.test(fsrc)
+    && /pow\( celBand, \$\{FOAM\.SHAPE_K[^}]*\} \)/.test(fsrc)
+    && /\* mix\( 0\.45, 1\.0, celNoise/.test(fsrc),
+    '泡沫帶是高次 parabola × 淡出 × 噪聲;三角波直接 step 會讓白條佔過半週期');
   const iOpaque = opaqueAnchor(T);
   ok(iOpaque > 0 && T.indexOf('float celF = celFoam( vCelWP.xz ) * vSeaFade * uFoamA;') > iOpaque,
     '套用排在 #include <opaque_fragment> **之後**(寫進 diffuseColor 會讓泡沫再過一次 toon ramp:硬邊被階梯切開、陰影裡的泡沫變灰)');
@@ -843,7 +855,7 @@ console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} �
 const BREAKS = [BREAK_INK && '--break-ink', BREAK_ANCHOR && '--break-anchor',
   BREAK_WAVE && '--break-wave', BREAK_GUST && '--break-gust',
   BREAK_CHAR && '--break-char', BREAK_CHARR && '--break-charR',
-  BREAK_CHARSLOT && '--break-charslot', BREAK_FOAM && '--break-foam',
+  BREAK_CHARSLOT && '--break-charslot', BREAK_FOAM && '--break-foam', BREAK_FOAM_SHAPE && '--break-foam-shape',
   BREAK_INKBREAK && '--break-inkbreak', BREAK_INKANCHOR && '--break-inkanchor',
   BREAK_GRAZE && '--break-graze'].filter(Boolean);
 if (BREAKS.length) {
