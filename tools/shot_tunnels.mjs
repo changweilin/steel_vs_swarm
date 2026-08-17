@@ -45,6 +45,8 @@ const VENUE = arg('--venue', KIND === 'underpass' ? 'civicblvd' : 'taroko');
 const OUT = path.resolve(arg('--out', join(ROOT, 'tools', `.shots_tunnels/${KIND}`)));
 const LIVE = has('--live');
 const DEBUG = has('--debug');   // 洞口破片定位:同視角出「原樣 / 隱藏地被層 / 只留地被層」三份
+const CEL = arg('--cel', 'b');
+if (!['a', 'b'].includes(CEL)) throw new Error(`--cel MUST 是 a / b(收到 ${CEL})`);
 const PORT = +arg('--port', 8631);
 
 const chromium = await chromiumOrNull();
@@ -102,7 +104,7 @@ if (!LIVE) {
   await page.route('**/api/interpreter**', osm);
 }
 // 檢視頁:與 /public/js 同源(相對 import 才解析得到),只有 importmap + 一張 canvas
-const PROBE_URL = `${srv.url}public/__tunnel_probe.html`;
+const PROBE_URL = `${srv.url}public/__tunnel_probe.html?cel=${CEL}`;
 await page.route(PROBE_URL, (r) => r.fulfill({
   status: 200, contentType: 'text/html; charset=utf-8',
   body: `<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -112,12 +114,14 @@ await page.route(PROBE_URL, (r) => r.fulfill({
 }));
 await page.goto(PROBE_URL, { waitUntil: 'domcontentloaded' });
 
-const report = await page.evaluate(async ({ venueId, kind, synth, dbg }) => {
+const report = await page.evaluate(async ({ venueId, kind, synth, dbg, cel }) => {
   const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
   const { buildBiomes, makeTunnelIndex } = await import('/public/js/biomes.js');
   const { applyEnvironment } = await import('/public/js/environment.js');
+  const { Pipeline } = await import('/public/js/postfx.js');
+  const { updateCelLight } = await import('/public/js/toon.js');
   const { MAPGEO, WATER } = await import('/public/js/data.js');
 
   const venue = VENUES.find((v) => v.id === venueId);
@@ -384,14 +388,20 @@ const report = await page.evaluate(async ({ venueId, kind, synth, dbg }) => {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(1); renderer.setSize(1280, 720, false);
   const scene = new THREE.Scene();
-  applyEnvironment(scene, terrain, cfg.env);
+  const envFx = applyEnvironment(scene, terrain, cfg.env);
   scene.add(terrain.group);
   const span = Math.max(terrain.worldW, terrain.worldH);
   const cam = new THREE.PerspectiveCamera(68, 1280 / 720, 0.4, span * 2);
+  scene.add(cam);
+  const pipe = new Pipeline(renderer, scene, cam, { dof: false, wipe: false });
   const shots = [];
+  let glError = 0;
   const snap = (name, pos, look) => {
-    cam.position.set(...pos); cam.lookAt(...look); cam.updateProjectionMatrix();
-    renderer.render(scene, cam);
+    cam.position.set(...pos); cam.lookAt(...look); cam.updateProjectionMatrix(); cam.updateMatrixWorld(true);
+    envFx.update(0.016, cam, 0);
+    updateCelLight(cam);
+    pipe.render();
+    glError ||= renderer.getContext().getError();
     shots.push({ name, data: canvas.toDataURL('image/png') });
   };
 
@@ -414,6 +424,12 @@ const report = await page.evaluate(async ({ venueId, kind, synth, dbg }) => {
   mouths.forEach((p, i) => {
     const ox = Math.sin(p.ry), oz = Math.cos(p.ry), rx = oz, rz = -ox, fy = p.y;
     const eye = (d) => Math.max(H(p.x + ox * d, p.z + oz * d), fy) + 3.2;
+    // 陡坡明隧道 20m 就能升降十幾公尺；沿用洞口 fy 會把洞內相機埋進路面／側牆。
+    // 每個洞內鏡位 MUST 回查 tunnelAt 的當地 floor，不能由洞口高度外插。
+    const inside = (d, lift = 3.2) => {
+      const x = p.x - ox * d, z = p.z - oz * d;
+      return [x, (tunnelAt(x, z)?.floor ?? H(x, z)) + lift, z];
+    };
     if (dbg) {
       snapDbg(`p${i}_dbg_out14`, [p.x + ox * 14, fy + 3.0, p.z + oz * 14], [p.x - ox * 30, fy + 4, p.z - oz * 30]);
       snapDbg(`p${i}_dbg_in12`, [p.x - ox * 12, fy + 3.0, p.z - oz * 12], [p.x + ox * 40, fy + 4, p.z + oz * 40]);
@@ -471,12 +487,13 @@ const report = await page.evaluate(async ({ venueId, kind, synth, dbg }) => {
     snap(`p${i}_oblL`, [p.x + ox * 28 + rx * 22, eye(28) + 4, p.z + oz * 28 + rz * 22], [p.x, fy + 4, p.z]);
     snap(`p${i}_oblR`, [p.x + ox * 28 - rx * 22, eye(28) + 4, p.z + oz * 28 - rz * 22], [p.x, fy + 4, p.z]);
     snap(`p${i}_mouth`, [p.x + ox * 3, fy + 3.2, p.z + oz * 3], [p.x - ox * 60, fy + 4, p.z - oz * 60]);
-    snap(`p${i}_in20_out`, [p.x - ox * 20, fy + 3.2, p.z - oz * 20], [p.x + ox * 60, fy + 4.5, p.z + oz * 60]);
-    snap(`p${i}_in45_out`, [p.x - ox * 45, fy + 3.2, p.z - oz * 45], [p.x + ox * 90, fy + 4.5, p.z + oz * 90]);
-    snap(`p${i}_in20_up`, [p.x - ox * 20, fy + 2.0, p.z - oz * 20], [p.x - ox * 24, fy + 12, p.z - oz * 24]);
+    const in20 = inside(20), in45 = inside(45), in20Up = inside(20, 2.0);
+    snap(`p${i}_in20_out`, in20, [p.x + ox * 60, eye(60) + 1.3, p.z + oz * 60]);
+    snap(`p${i}_in45_out`, in45, [p.x + ox * 90, eye(90) + 1.3, p.z + oz * 90]);
+    snap(`p${i}_in20_up`, in20Up, [in20Up[0] - ox * 4, in20Up[1] + 10, in20Up[2] - oz * 4]);
   });
   const meta = {
-    kind, venue: venueId, place: cfg.placeName, synth, score: +best.s.toFixed(1),
+    kind, venue: venueId, place: cfg.placeName, synth, cel, score: +best.s.toFixed(1),
     line: pts.map((p) => p.map((v) => +v.toFixed(1))),
     portals: portals.length, segs: segs.length, covered: covSegs.length,
     open: segs.length - covSegs.length, gal: segs.filter((d) => d.gal).length,
@@ -507,8 +524,11 @@ const report = await page.evaluate(async ({ venueId, kind, synth, dbg }) => {
     snap('aerial_side', camA, [cx, fy, cz]);
     snap('aerial_axis', camB, [cx, fy, cz]);
   }
+  meta.glError = glError;
+  pipe.dispose();
+  envFx.dispose();
   return { meta, shots };
-}, { venueId: VENUE, kind: KIND, synth: !LIVE, dbg: DEBUG });
+}, { venueId: VENUE, kind: KIND, synth: !LIVE, dbg: DEBUG, cel: CEL });
 
 for (const s of report.shots) fs.writeFileSync(join(OUT, `${s.name}.png`), Buffer.from(s.data.split(',')[1], 'base64'));
 fs.writeFileSync(join(OUT, 'meta.json'), JSON.stringify(report.meta, null, 2));
@@ -517,6 +537,8 @@ console.log(`【${KIND}】${report.meta.place}　門洞 ${report.meta.portals}�
 console.log(`  斷面地形殘留 ${sc.intruders}/${sc.sectSamples}　斷面遮擋 ${sc.blockIn}　由上而下看穿 ${sc.voidHits}/${sc.voidN}`);
 console.log(`  洞口見天 ${sc.apron.map((a) => `${a.miss}/${a.n}`).join('、') || '(無門洞)'}`);
 console.log(`  洞內見天 ${sc.leaks.map((l) => `${l.sky}${l.gal ? '*' : ''}`).join(' ')}　(* = 明隧道段,開放側本來就見天)`);
+console.log(`  真 GPU gl.getError() = ${report.meta.glError}`);
 console.log(`✓ ${report.shots.length} 張 → ${OUT}`);
 await browser.close();
 srv.close();
+if (report.meta.glError !== 0) throw new Error(`WebGL 錯誤:gl.getError() = ${report.meta.glError}`);

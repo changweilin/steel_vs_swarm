@@ -36,11 +36,12 @@ const mainSrc = read('public', 'js', 'main.js');
 let htmlSrc = read('public', 'index.html');
 let cssSrc = read('public', 'css', 'style.css');
 
-// 反向驗證(四支,全部服務 Ⅹ 段;把規則寫回改制前的壞版):
+// 反向驗證(五支,全部服務 Ⅹ 段;把規則寫回改制前的壞版):
 //   --break-viewport 拿掉 viewport meta 的 `viewport-fit=cover` ⇒ Ⅹ① MUST 紅
 //   --break-textadj  拿掉根層的 text-size-adjust                ⇒ Ⅹ② MUST 紅
 //   --break-touchdev 頁面級硬化的選擇器改回 `body.touch-ui`     ⇒ Ⅹ③ MUST 紅、Ⅹ⑤ MUST 仍綠
 //   --break-touchact 拿掉 `#game { touch-action: none }` 那一條  ⇒ Ⅹ③ MUST 紅
+//   --break-meta-select 拿掉 PIN / 區網網址的選字窄豁免       ⇒ Ⅹ⑥ MUST 紅
 // 替換無效(原文已變)MUST 當場失敗 —— 不然 break 永遠是綠的(§5.4 ㋑ / tools/CLAUDE.md 紀律 2)。
 // ⚠ 樣式一律只綁**結構錨點**(屬性名 / 選擇器),MUST NOT 綁現值(綁死現值的 break 會在值被
 //    重算之後靜默變成 no-op,而紅字數量少一條看起來只像「這一輪順便修好了」)。
@@ -48,6 +49,7 @@ const BREAK_VIEWPORT = process.argv.includes('--break-viewport');
 const BREAK_TEXTADJ = process.argv.includes('--break-textadj');
 const BREAK_TOUCHDEV = process.argv.includes('--break-touchdev');
 const BREAK_TOUCHACT = process.argv.includes('--break-touchact');
+const BREAK_META_SELECT = process.argv.includes('--break-meta-select');
 /** 逐條字面替換;沒咬到就當場失敗(替換無效 = 壞版根本沒造出來) */
 const patch = (flag, name, src, re, to) => {
   if (!flag) return src;
@@ -62,6 +64,8 @@ cssSrc = patch(BREAK_TEXTADJ, '--break-textadj', cssSrc,
   /-webkit-text-size-adjust:[^;]*;\s*text-size-adjust:[^;]*;/, '');
 cssSrc = patch(BREAK_TOUCHACT, '--break-touchact', cssSrc,
   /body\.touch-dev #game \{[^}]*\}\r?\n/, '');
+cssSrc = patch(BREAK_META_SELECT, '--break-meta-select', cssSrc,
+  /body\.touch-dev #roomPin,\s*body\.touch-dev #roomUrls\s*\{[^}]*\}\r?\n/, '');
 cssSrc = patch(BREAK_TOUCHDEV, '--break-touchdev', cssSrc, /body\.touch-dev\b/g, 'body.touch-ui');
 mobileSrc = patch(BREAK_TOUCHDEV, '--break-touchdev', mobileSrc,
   /document\.body\.classList\.toggle\('touch-dev',[^;]*;/, '');
@@ -577,6 +581,20 @@ ok(uiBlocks.some((r) => /--tl-alpha:/.test(r.decl)) && uiBlocks.some((r) => /--t
   '控件尺寸/透明度變數 MUST 仍住 `body.touch-ui`(版型與裝置 MUST NOT 再合流)');
 ok(!devBlock || !/--tl-/.test(devBlock.decl),
   '`body.touch-dev` MUST 只放頁面級硬化,一個 `--tl-*` 都不准放');
+
+// ⑥ 頁面級 `user-select:none` 不能讓觸控筆電房主無法把中繼資料交給隊友。只放行兩個
+//    唯讀值；放行 `.room-meta` 或整個房間頁會讓標題 / HUD 長按選字重新滲回來。
+const relaySelect = cssRules.find((r) => r.sels.includes('body.touch-dev #roomPin')
+  && r.sels.includes('body.touch-dev #roomUrls'));
+ok(!!relaySelect && relaySelect.sels.length === 2,
+  '觸控選字豁免 MUST 恰好只含 `#roomPin` / `#roomUrls` 兩個唯讀中繼值');
+ok(!!relaySelect && /-webkit-user-select:\s*text/.test(relaySelect.decl)
+  && /(^|[;\s])user-select:\s*text/.test(relaySelect.decl),
+  'PIN / 區網網址 MUST 同時恢復標準與 WebKit 的文字選取');
+ok(!!relaySelect && /-webkit-touch-callout:\s*default/.test(relaySelect.decl),
+  'PIN / 區網網址 MUST 恢復 iOS 長按選單,否則可選但無法複製');
+ok(/<div class="room-meta">[^<]*PIN\s*<b id="roomPin"[^>]*>[^<]*<\/b>[\s\S]*?<span id="roomUrls"[^>]*>/.test(htmlSrc),
+  '選字豁免的兩個 id MUST 仍是房間中繼資料的唯讀文字節點');
 
 console.log(`\n${fail ? '✗' : '✓'} 操作方式 / 觀戰選單稽核:${pass}/${pass + fail} 通過`);
 process.exit(fail ? 1 : 0);

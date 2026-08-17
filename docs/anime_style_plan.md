@@ -807,8 +807,9 @@ StereoPanner、BGM 串流 + 淡入淡出、程序旋律備援。
 >    逐位元同值)。三選一見交付說明。
 > ⑤ **新增的代價一條**:`user-select: none` 由「pad 版型」擴到「有觸控硬體」⇒ **有觸控螢幕的 Windows
 >    筆電 / 2-in-1** 第一次吃到它,實測房間 PIN(`#roomPin`)與區網網址(`#roomUrls`)由 `auto` 變 `none`
->    ⇒ **房主想把網址或 PIN 複製給隊友時選不起來**,而那台機器多半正是筆電。已開票(三條路,
->    最小的一條是加一行窄豁免放行房間中繼資料)。
+>    ⇒ **房主想把網址或 PIN 複製給隊友時選不起來**,而那台機器多半正是筆電。
+>    **2026-08-17 第十三輪已修補**:只對兩個唯讀節點恢復 `user-select:text` 與 iOS 長按選單；
+>    `.room-meta`、房間頁與戰場其餘部分仍維持硬化。
 
 ### 驗證
 `audit_ctrl_mode` / `audit_touch_layout` / `audit_touch_gesture` MUST 逐項不動;
@@ -937,7 +938,7 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 | 14 | ④-B 樁過了才把分區烤成貼圖並接上 fragment 遮罩 | 高 | 否 | ✅ 2026-08-17：OSM 四類圖資、1024² RGBA field、fragment palette、分區 surface ID 已接 runtime |
 | 15 | ④-C 拆拼圖層；**`ZONES` 特徵層一格不動** | 很高 | 否 | ✅ 2026-08-17：正式路徑停用底毯/飛地/界線發射；舊函式只留未接線相容 fallback |
 | — | ⑤-5 雲層飄移 | — | — | ✅ **早在 2026-08-13 隨海浪那一輪就完成**(本輪零工作,見 §⑤ 更正 ⑤)|
-| — | ⑧-5 viewport / safe-area / touch-action | 低 | 觸控裝置上**否** | ✅ 第二輪 —— 不只是核對,含**一項缺陷修補**(頁面級硬化綁錯旗標)|
+| — | ⑧-5 viewport / safe-area / touch-action | 低 | 觸控裝置上**否** | ✅ 第二輪修正頁面級硬化旗標；第十三輪補 PIN / 區網網址選字窄豁免 |
 
 **每一項落地都 MUST 附反向驗證**(原則 9):把判定寫回壞版,對應稽核 MUST 紅字。
 純表現層項目 MUST 同時證明 `npm run bal` / `npm test` **逐項不動**;
@@ -1043,7 +1044,7 @@ float ctr = fract( q / 16.0 ) * 16.0 / 15.0;
 | 12 / §0-b 賽璐璐學派切換 | ✅ **def 已翻成 `'b'`** | `toon.js` 的 `CEL_CUT`/`cutOf`/`_school`/`celSchool()`/`RAMP_PATCH_A`/`RAMP_PATCH_B` + `toonPlain()`(**學派的第三個入口**:掛學派不掛演出);`biomes.js` 那 4 處裸 `MeshToonMaterial` 改呼叫 `toonPlain` ⇒ 凍結名冊清空、硬閘放行 | `audit_cel_pipeline` 新 Ⅺ + 六支 `--break`;**A14 改寫成四句**(編號與 `[#INC-106]` 一格不動) |
 | 12b / ⑨ 立體結構重新渲染 | ✅ **幾何 / 碰撞 / slab / decks / cols / 走廊一格未動** | `biomes.js` 新增 `bandPitchM()`(緞帶件的成對頂點實測節距,零亂數)+ 22 支結構材質的線工授權(6 支吃推導值、15 支維持預設、1 支具名否決)+ 坑門混凝土三處共用 `SURF_ID.CONCRETE` + 洞口警示條紋補 `emissive` 並把材質提到迴圈外(**384 → 96 支**) | **新 `audit_struct_ink` 35 項**,四支反向驗證(1/3/2/4 條紅字) |
 | 13 / ④-A 線工切面可行性樁 | ✅ **判決 = 條件式 GO** | **新工具 `tools/zonecut.mjs`**(零 import / 零亂數 / 純函式)+ `venue_field.cutLinesFor` + 四支結構清單函式由 `audit_traverse` 搬進 `venue_field`;`public/**` 與 `server/**` 一行未動 | **新 `audit_zone_cut` 38 項** + 8 支 `--break`(其中兩支加了**適用性硬閘**) |
-| ⑧-5 / viewport · safe-area · touch-action | ✅ 含**一項缺陷修補** | `mobile.js` 新增 body class `touch-dev`(裝置級,判定唯一縫 `ctrlmode.touchCapable()`)+ 根層 `text-size-adjust`;五條頁面級硬化由 `touch-ui`(房間設定)改綁 `touch-dev`(裝置能力) | `audit_ctrl_mode` 新 Ⅹ(32 條 + 四支 `--break`)—— 全 repo **第一支**驗 viewport meta / touch-action / safe-area 的離線斷言 |
+| ⑧-5 / viewport · safe-area · touch-action | ✅ 含**兩項缺陷修補** | `mobile.js` 新增 body class `touch-dev`(裝置級,判定唯一縫 `ctrlmode.touchCapable()`)+ 根層 `text-size-adjust`;五條頁面級硬化由 `touch-ui`(房間設定)改綁 `touch-dev`(裝置能力);第十三輪只對 `#roomPin/#roomUrls` 恢復選字 | `audit_ctrl_mode` Ⅹ **36 條 + 五支 `--break`** —— 全 repo 第一支驗 viewport meta / touch-action / safe-area 與中繼資料選字的離線斷言 |
 | ④-4 / 接縫紀律進稽核檔頭 | ✅(**純註解,零行為**) | 六支稽核檔頭:`audit_traverse` / `audit_ground_drape` / `audit_road_joint` / `audit_layer_block` / `audit_underpass` / `audit_open_tunnel` | 六支通過數**逐項不變**(86 / drape ALL PASS / 61 / 161 / 163 / traverse taroko 6+1)—— 那就是它的驗收面 |
 
 **權威層的逐位元證明面**(五道各自量過,判準是「輸出逐字元相同」不是「仍全綠」):
@@ -1084,11 +1085,12 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
   (`docs/shots_baseline.md`)與幾處真 GPU 直測之外,`shot_scene` / `shot_tunnels` / `shot_facades`
   的對照本輪沒拍。**2026-08-17 第七至十輪已另補 ④-2 dissolve、②-2 太魯閣崖面、
   ⑤-2/⑤-3 水岸與 ②-1 葉片卡冠層的真 GPU；第十一輪另補 ①-2 墨線斷筆定場 A/B**,
-  不再列入此缺口。①-2 的機體平移不變性已於第十二輪補做真 GPU 直測，也不再列入。
+  不再列入此缺口。①-2 的機體平移不變性已於第十二輪補做真 GPU 直測；第十四輪另補
+  ⑨ 山體隧道／地下道／明隧道與 London 高架橋正式後製實拍，也不再列入。
 - **真機(㋕)**:①旋鈕拉起來看斷筆 / 葉片卡 / 泡沫 / 倒影 / 鳥群 / 幕的實際觀感;
   ②走進兩個洞與走上橋面各一次(**洞內是 ⑨ 唯一沒有任何離線稽核看得到的地方**);
   ③音效端刻意不中性的那兩處(離地門檻 3 m → 2 m、gate 曲線換來源)聽一次;
-  ④觸控筆電上「房間 PIN / 區網網址選不起來」那一條。
+  ④觸控筆電上確認房間 PIN / 區網網址可長按複製，且其餘房間文字仍不可選。
 - **`npm run audit:net`**:五道一致依「本窗硬紀律」未跑(它的 ⑦ 段會真的 spawn 每一支 dev 工具,
   含永不結束、會連外網下載的 `harvest_loop.mjs`)⇒ **由整合流程統一跑一次**。
 - **`audit_traverse` 全場地**:它的判定吃**外部圖資** ⇒ **不能拿 BASELINE 做「逐項不變」比對**
@@ -1232,3 +1234,29 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 本輪的真 GPU 探針為短命驗證檔，跑完即刪；四張正式／故障注入影像留在 gitignored 的
 `tools/.shots_scene/ink-translation/`。至此 ①-2 的「斷筆可見」與「機體平移時缺口黏在裝甲板上」
 兩個畫面契約皆有真 GPU 證據；離線 `audit_soft_stroke --break-inkanchor` 繼續負責日常回歸守門。
+
+### 2026-08-17 第十三輪：⑧-5 觸控筆電中繼資料選字
+
+| 項目 | 結果 | 稽核 |
+|---|---|---|
+| 豁免範圍 | 只對 `#roomPin` / `#roomUrls` 恢復 `user-select:text`；`.room-meta`、房間頁與戰場其餘文字仍維持頁面級硬化 | `audit_ctrl_mode` Ⅹ 170/170 |
+| iOS 長按 | 同兩節點恢復 `-webkit-touch-callout:default`，避免文字可選但複製選單仍被封鎖 | 同上 |
+| 反向驗證 | `--break-meta-select` 移除整個窄豁免，新增三條契約如期全紅 | 167/170，只有三條預期失敗 |
+| 真機邊界 | 本機缺 Playwright，`audit_touch_layout` / `touch_gesture` / `ui_layout` / `gyro` 均明確跳過 | 仍需觸控筆電長按複製一次 |
+
+本輪沒有更動操作派發、搖桿版型、權威狀態或共享亂數；`mobile-webgl-interaction` 的 L3 原則
+落成「頁面預設封鎖，必要文字節點窄豁免」，避免為了可複製而放寬整個房間頁。
+
+### 2026-08-17 第十四輪：⑨ 立體結構真 GPU 驗收 + 橋面共面修補
+
+| 項目 | 結果 | 證據面 |
+|---|---|---|
+| 三種隧道 | 山體隧道／地下道／明隧道各 24 張；正式 School B、環境更新、勾線、調色與 FXAA 全鏈，`gl.getError() = 0` | `shot_tunnels --kind tunnel\|underpass\|gallery`；洞內路面、牆、頂板、樑柱與燈具皆可辨 |
+| 工具假象 | 舊工具直接呼叫 renderer，未跑 `Pipeline` / `envFx.update` / `updateCelLight`，產生 alpha=31 的白色破片；明隧道內鏡頭另誤用洞口高度 | 工具改走正式管線，內鏡頭改查 `tunnelAt(x,z).floor`；School A/B 對照排除材質學派根因 |
+| 高架橋 | London 固定橋頭機位原有一條橫跨車道的灰梁；射線辨識為 `capM`，不是砲塔台或碰撞障礙 | `shot_scene --only bridge --probe-ndc x,y` 回報 instance、材質、頂點數、距離與命中點 |
+| 共面修補 | 水平帽梁保留 0.8m 梁高並下掛 0.8m，涵蓋坡段前緣與 smoothstep 分段弦差；橋面、decks、碰撞、LOS、通行寬皆未改 | 同機位重拍後灰梁消失，側向射線第一命中改為柏油橋面；`audit_bridge_crossing` 18/18 |
+| 反向驗證 | `--break-cap-sink` 把帽梁頂面推回共面版 | 如期只紅 Ⅷ 1 條（17/18） |
+
+本輪把 `headless-3d-inspection` 的「先由正式管線實拍，再以 raycast 辨識面片」與
+`scene-seams-and-light` 的共面硬幣拋規則落進既有工具；沒有以調色或加深材質掩蓋幾何問題。
+真機走進兩個洞、走上橋面仍保留為 ㋕ 驗收，不以 headless 截圖冒充操作驗證。

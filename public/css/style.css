@@ -1664,6 +1664,13 @@ body.touch-dev {
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
+/* 房間中繼資料是觸控裝置上唯二需要複製的唯讀文字；豁免 MUST 保持窄於 `.room-meta`。 */
+body.touch-dev #roomPin,
+body.touch-dev #roomUrls {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
 body.touch-dev #game { touch-action: none; }
 body.touch-ui #gameCanvas { cursor: default; }
 body.touch-ui [hidden] { display: none !important; }

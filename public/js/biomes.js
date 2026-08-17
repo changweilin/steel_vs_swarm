@@ -7213,12 +7213,14 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     pM.frustumCulled = false;
     group.add(pM);
     // 墩頂帽梁:橋墩與橋面之間加寬的橫向承接梁,補足支撐結構感
+    // 頂面 MUST 低於橋面:與路面共面時會依鏡頭角度蓋過柏油,看成一道橫跨車道的障礙。
+    const capH = 0.8, capSink = 0.8;   // 水平帽梁下掛於橋腹;餘裕涵蓋坡段前緣與分段弦差
     const capM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
       envMat(0x8f959a, { wash: 0.35, cool: 0.45 }), piers.length);
     piers.forEach((p, i) => {
       E.set(0, p.ry, 0); Q.setFromEuler(E);
-      P.set(p.x, p.y1 - 0.4, p.z);
-      S.set(p.w, 0.8, p.r * 2.3);
+      P.set(p.x, p.y1 - capSink - capH / 2, p.z);
+      S.set(p.w, capH, p.r * 2.3);
       M.compose(P, Q, S);
       capM.setMatrixAt(i, M);
     });
