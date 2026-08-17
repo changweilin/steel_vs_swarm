@@ -569,6 +569,9 @@ const _foamC = { value: new THREE.Color(0.94, 0.97, 1) };
 // 形狀常數住 `INK_BREAK`(見「軟性物質」段下方)—— 那一份不進 syncVisualPrefs,可以晚一點宣告。
 const _inkBreakA = { value: 0 };
 const _landInkA = { value: 0 };
+let _landTex = null;
+const _landField = { value: null };
+const _landRect = { value: new THREE.Vector4(0, 0, 1, 1) };
 
 /** 中性場(還沒載入戰場、或展示台/角色預覽):恆 0.5 ⇒ 乘數恆 1 */
 function neutralWField() {
@@ -577,6 +580,25 @@ function neutralWField() {
   return t;
 }
 _wField.value = neutralWField();
+{
+  const t = new THREE.DataTexture(new Uint8Array([2, 0, 128, 0]), 1, 1, THREE.RGBAFormat);
+  t.needsUpdate = true;
+  _landField.value = t;
+}
+
+/** 安裝線工切面地貌場；上一場貼圖立即釋放(A25)。 */
+export function setLandField(data, nx, nz, bounds) {
+  const old = _landTex;
+  const t = new THREE.DataTexture(data, nx, nz, THREE.RGBAFormat);
+  t.minFilter = t.magFilter = THREE.NearestFilter; // R/G 是類別，線性過濾會插出不存在的分區。
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  t.needsUpdate = true;
+  _landTex = t;
+  _landField.value = t;
+  _landRect.value.set(bounds.minX, bounds.minZ,
+    1 / Math.max(1e-6, bounds.maxX - bounds.minX), 1 / Math.max(1e-6, bounds.maxZ - bounds.minZ));
+  old?.dispose();
+}
 
 /**
  * 安裝風化場(唯一寫入點;呼叫端 = `terrain.js buildTerrain`,每場一次)。
@@ -740,7 +762,7 @@ export const INK_BREAK = {
 //      就不會碰面;真的碰面也只是既有那條「撞號 = 少一條線,不是壞掉」。
 //   ③ **群組早退那一條例外**:它會讓整株樹的剪影消失而不是少一條線 ⇒ `postfx.js` 的早退
 //      另外加了「五格都不是 LAND」這道閘(今天恆真 ⇒ 逐位元中性,見那一段註解)。
-export const LAND_ZONE_N = 6;
+export const LAND_ZONE_N = 7;
 /**
  * 地貌分區 → surfaceId 子帶(整數格,由頂端往下配)。
  * @param i 分區索引 ∈ [0, LAND_ZONE_N);超界或非整數一律回 `LAND_SURF_ID`(原則 6:
@@ -1016,7 +1038,7 @@ export function setCelChar(list) {
  *              拉桿 0 或屬性缺席 ⇒ 恆等於 `LAND_SURF_ID` = 逐位元同舊制。
  */
 const INK_KIND = { none: 'NONE', land: 'LAND', hard: 'HARD', group: 'GROUP' };
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false, ink = 'hard', contrib = 1, surf = null, surfAttr = false, card = false, refl = false, dissolve = false, landId = false } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false, ink = 'hard', contrib = 1, surf = null, surfAttr = false, card = false, refl = false, dissolve = false, landId = false, landField = false } = {}) {
   if (preview) ensurePreviewField();
   const sk = soft ? (SOFT_KINDS[soft.k] || SOFT_KINDS.leaf) : null;
   const defines = { ...(mat.defines || {}) };
@@ -1040,7 +1062,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   if (paint?.flat) defines.CEL_PAINT_FLAT = '';
   // 需要世界座標 varying。海浪那一族**顯式**列進來:泡沫要世界 XZ,而水面現況剛好有
   // `wash: 0.5` —— 靠巧合成立的東西沒有斷言守得住。
-  if (wash > 0 || moss || sk?.axis === 'w') defines.CEL_WP = '';
+  if (wash > 0 || moss || sk?.axis === 'w' || landField) defines.CEL_WP = '';
   // 細勾線與擺動**分兩個 define**:草坪要前者不要後者(它是鋪面,擺起來只會跟步道錯開)。
   // 細勾線那半**只給不透明件**:通道是「場景 RT 的 alpha」,而半透明件的 alpha 是**不透明度**
   // ——`gl_FragColor.a = uSoftInk` 寫下去就是把水面從 0.82 直接改成 0.30。檔頭那條契約本來就
@@ -1070,8 +1092,9 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   if (refl) defines.CEL_REFL = '';
   if (dissolve) defines.CEL_DIS = '';
   if (landId) defines.CEL_LAND_ID = '';
+  if (landField) defines.CEL_LAND_FIELD = '';
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm, ink, contrib, surf, surfAttr, card, refl, dissolve, landId };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm, ink, contrib, surf, surfAttr, card, refl, dissolve, landId, landField };
   // 溶入進度是**穩定的 uniform 物件**(同 `_windT` / `_rampTint` 的做法):在 onBeforeCompile
   // 裡 `{ value: 1 }` 新建的話,材質一重編譯(改 defines / needsUpdate)就換一顆,而驅動端
   // 抓著的是舊的 ⇒ 症狀是「有時候不會溶入」。1 = 完全實體。
@@ -1109,6 +1132,8 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     // 地貌分區子帶的閘(序 4 ①-3):**共享 uniform** ⇒ 拉桿一動全場同一幀跟著換,
     // 而且不必為它多切一支程式(紀律③:改值 MUST NOT 重建材質)。
     shader.uniforms.uLandInk = _landInkA;
+    shader.uniforms.uLandField = _landField;
+    shader.uniforms.uLandRect = _landRect;
     // 溶入:進度 + 該單位的世界原點(錨在單位自己身上 —— 拿純世界座標的話機體會從一張
     // 固定的網格裡「游」過去,與 ①-2 的斷筆錨點是同一條理由)
     shader.uniforms.uDis = mat.userData.celDisU || { value: 1 };
@@ -1424,6 +1449,30 @@ ${CEL_SEA_GLSL}
         #endif`)
       .replace('#include <normal_fragment_begin>', `
         #include <normal_fragment_begin>
+        #ifdef CEL_LAND_FIELD
+        {
+          vec2 lfUv = clamp( ( vCelWP.xz - uLandRect.xy ) * uLandRect.zw, 0.0, 1.0 );
+          vec4 lf = texture2D( uLandField, lfUv );
+          float z = floor( lf.r * 255.0 + 0.5 );
+          float v = floor( lf.g * 255.0 + 0.5 );
+          vec3 c = vec3( 0.44, 0.52, 0.36 );
+          if ( z < 0.5 ) c = v > 0.5 ? vec3( 0.16, 0.30, 0.39 ) : vec3( 0.25, 0.43, 0.48 );
+          else if ( z < 1.5 ) c = v > 0.5 ? vec3( 0.30, 0.43, 0.34 ) : vec3( 0.36, 0.46, 0.35 );
+          else if ( z < 2.5 ) {
+            c = v < 0.5 ? vec3( 0.42, 0.54, 0.31 ) : v < 1.5 ? vec3( 0.50, 0.59, 0.36 )
+              : v < 2.5 ? vec3( 0.35, 0.47, 0.28 ) : vec3( 0.53, 0.58, 0.29 );
+          } else if ( z < 3.5 ) {
+            c = v < 0.5 ? vec3( 0.48, 0.39, 0.29 ) : v < 1.5 ? vec3( 0.47, 0.45, 0.40 )
+              : v < 2.5 ? vec3( 0.64, 0.52, 0.34 ) : vec3( 0.45, 0.29, 0.20 );
+          } else if ( z < 4.5 ) {
+            c = v < 0.5 ? vec3( 0.42, 0.43, 0.42 ) : v < 1.5 ? vec3( 0.37, 0.49, 0.34 )
+              : v < 2.5 ? vec3( 0.34, 0.45, 0.31 ) : vec3( 0.55, 0.55, 0.52 );
+          } else if ( z < 5.5 ) c = v < 0.5 ? vec3( 0.47, 0.49, 0.48 ) : v < 1.5 ? vec3( 0.42, 0.43, 0.42 ) : vec3( 0.74, 0.78, 0.81 );
+          else c = v > 0.5 ? vec3( 0.29, 0.27, 0.26 ) : vec3( 0.39, 0.36, 0.34 );
+          float grain = ( lf.b - 0.5 ) * 0.10;
+          diffuseColor.rgb = c * ( 1.0 + grain );
+        }
+        #endif
         #if defined( CEL_WASH ) || defined( CEL_MOSS )
         {
           #ifdef CEL_WASH
@@ -1561,6 +1610,13 @@ ${CEL_SEA_GLSL}
           //   ・屬性缺席 ⇒ vLandId 是 0 ⇒ 同樣恆等(原則 6:呼叫端還沒接上就當作沒有這回事)。
           if ( uLandInk > 0.0 && vLandId > 0.0 ) gSurf = vLandId;
           #endif
+          #ifdef CEL_LAND_FIELD
+          if ( uLandInk > 0.0 ) {
+            vec2 lfUv = clamp( ( vCelWP.xz - uLandRect.xy ) * uLandRect.zw, 0.0, 1.0 );
+            float lfZone = floor( texture2D( uLandField, lfUv ).r * 255.0 + 0.5 );
+            gSurf = ( ${64 - 7}.0 + clamp( lfZone, 0.0, ${7 - 1}.0 ) ) / 64.0;
+          }
+          #endif
           // .a = 打包(高半位元組 = 類別索引、低半位元組 = 貢獻 16 階)。
           // inkC 是**序 4(雜訊斷線)的調變點** —— 本輪就是這一行原樣。
           float inkC = uInkCtr;
@@ -1625,9 +1681,14 @@ ${INK_PACK_GLSL}
           return mix( 1.0, brk, uInkBreakA );
         }
         #endif
-        #ifdef CEL_LAND_ID
+        #if defined(CEL_LAND_ID) && !defined(CEL_LAND_FIELD)
         uniform float uLandInk;
         varying float vLandId;
+        #endif
+        #ifdef CEL_LAND_FIELD
+        uniform float uLandInk;
+        uniform sampler2D uLandField;
+        uniform vec4 uLandRect;
         #endif
         #ifdef CEL_DIS
         uniform float uDis;
@@ -1752,11 +1813,11 @@ export function envMat(color, opts = {}) {
   // land / landNrm:地貌(見 applyCelPatch 的同名參數)。**只有 terrain.js 與 ground.js
   // 傳它** —— 道路、建物、擺件的邊界線是要的,掛上去就是把那些線一起關掉。
   const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, soft = null, land = false, landNrm = false,
-    ink, contrib, surf, surfAttr, card, refl, dissolve, landId, ...rest } = opts;
+    ink, contrib, surf, surfAttr, card, refl, dissolve, landId, landField, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // tint: 'env' —— 陰影偏色分「機體」與「環境」兩軌(P1-B):機甲要保住陣營塗裝的色相,
   // 環境可以偏得重一點。兩軌各自一根拉桿,MUST NOT 併成一個值。
-  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands, land: land || landNrm, landNrm, ink, contrib, surf, surfAttr, card, refl, dissolve, landId });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands, land: land || landNrm, landNrm, ink, contrib, surf, surfAttr, card, refl, dissolve, landId, landField });
 }
 
 /**

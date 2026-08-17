@@ -43,6 +43,9 @@ export const OSM_RELAY = {
   MAX_FALL: 40,          // 瀑布(額度 20)
   MAX_XING: 60,          // 平交道(額度 40)
   MAX_POI: 80,           // 具名點位(地名 24 + 山峰 12 + 交流道 12 + 車站 12)
+  MAX_COVER: 900,        // landuse / natural / leisure 面(線工切面 + 面標籤)
+  MAX_WATERWAY: 120,     // 河川 / 溝渠線
+  MAX_BOUNDARY: 500,     // 行政 relation 成員線 + 海岸線
   MAX_PTS: 4000,         // 單條 way 的節點數上限
   MAX_PTS_TOTAL: 200000, // 全部 way 的節點總預算(實測密路網 ~21000)
   MAX_TAGS: 40,          // 單一元素的 tag 數上限
@@ -114,7 +117,7 @@ function waysOf(arr, cap, need, budget) {
   for (const w of arr) {
     if (out.length >= cap) { drop++; continue; }
     const tags = tagsOf(w?.tags);
-    if (typeof tags[need] !== 'string') { drop++; continue; }
+    if (need && typeof tags[need] !== 'string') { drop++; continue; }
     const g = ptsOf(w?.geometry, budget);
     if (!g) { drop++; continue; }
     out.push({ tags, geometry: g });
@@ -154,13 +157,19 @@ export function sanitizeOsmRelay(m) {
   const f = m?.feats;
   if (f && typeof f === 'object') {
     const ra = waysOf(f.rails, OSM_RELAY.MAX_RAIL, 'railway', budget);
-    drop += ra.drop;
+    const cv = waysOf(f.covers, OSM_RELAY.MAX_COVER, null, budget);
+    const wa = waysOf(f.waters, OSM_RELAY.MAX_WATERWAY, 'waterway', budget);
+    const bd = waysOf(f.boundaries, OSM_RELAY.MAX_BOUNDARY, null, budget);
+    drop += ra.drop + cv.drop + wa.drop + bd.drop;
     feats = {
       buildings: nodesOf(f.buildings, OSM_RELAY.MAX_BLD),
       rails: ra.out,
       falls: nodesOf(f.falls, OSM_RELAY.MAX_FALL),
       crossings: nodesOf(f.crossings, OSM_RELAY.MAX_XING),
       pois: nodesOf(f.pois, OSM_RELAY.MAX_POI),
+      covers: cv.out,
+      waters: wa.out,
+      boundaries: bd.out,
     };
   }
   if (!feats && !roads) return null;

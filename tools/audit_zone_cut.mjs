@@ -55,7 +55,7 @@ import {
 import { quantizeRoads } from '../public/js/roadgrid.js';
 import {
   elevSampler, buildHeightField, osmFor, landcoverFor, cutLinesFor, buildStructs,
-  roadWidth, llToWorld, TUN, UND,
+  roadWidth, llToWorld, R_EARTH, WORLD_S, d2r, TUN, UND,
 } from './venue_field.mjs';
 
 // `--k=v` 與 `--k v` 兩種寫法都收(既有稽核用前者,本支的用法說明寫後者;
@@ -93,7 +93,7 @@ function sub(src, re, to, why) {
 // ---- 受測的規則本體 ----
 // **原文閘與被執行的程式碼 MUST 是同一份**:`--break-*` 改的是 ZSRC,而原文閘也讀 ZSRC ⇒
 // 「零 Math.random」那條斷言在 --break-rnd 之下真的會紅(讀檔案的話它永遠是綠的)。
-let ZSRC = readSrc('tools', 'zonecut.mjs');
+let ZSRC = readSrc('public', 'js', 'zonecut.js');
 if (BREAK.merge) {
   ZSRC = sub(ZSRC, /if \(!\(live\[f\] < rel \* bestA\)\) continue;/,
     'if (!(live[f] < areaMin)) continue;', 'mergeSmall 的相對門檻');
@@ -116,7 +116,7 @@ console.log(`== §0-a 線工切面可行性樁 ==${ANY_BREAK ? `  ⚠ 反向驗�
 // =====================================================================================
 // Ⅰ 規則本體:原文閘 + 行為直測(離線,CI 一定跑得到)
 // =====================================================================================
-console.log('Ⅰ 規則本體(tools/zonecut.mjs)');
+console.log('Ⅰ 規則本體(public/js/zonecut.js)');
 {
   const noComment = ZSRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   ok(!/^\s*import\s/m.test(noComment) && !/\brequire\s*\(/.test(noComment),
@@ -380,7 +380,7 @@ try {
     ok(czW(0, 0) === 'water', 'envCode 1 ⇒ water(權威遮罩優先)');
     const steep = { minX: 0, minZ: 0, heightAt: (x) => x * 0.9 };
     const czS = cellZoneFactory({ terrain: steep, envAt: () => 0, classifyPure: () => 'green', cell: 13, alpineH: Infinity });
-    ok(czS(0, 0) === '!', '坡度 > 0.75 ⇒ \'!\'(懸崖不鋪)');
+    ok(czS(0, 0) === 'cliff', '坡度 > 0.75 ⇒ cliff(正式懸崖分區)');
     const mid = { minX: 0, minZ: 0, heightAt: (x) => x * 0.5 };
     const czM = cellZoneFactory({ terrain: mid, envAt: () => 0, classifyPure: () => 'urban', cell: 13, alpineH: Infinity });
     ok(czM(0, 0) === 'bare', '坡度 > 0.28 ⇒ bare(山坡不會是停車場)');
@@ -390,12 +390,10 @@ try {
 }
 
 // =====================================================================================
-// Ⅴ surfaceId 出線的量化算術(純報告;樁不改 shader)
+// Ⅴ surfaceId 出線的量化算術
 // =====================================================================================
-console.log('\nⅤ surfaceId 出線的算術(驗收面 3;純報告)');
-// 提案:地貌從「共用一個 LAND_SURF_ID」換成逐分區 id。**這是推翻 2026-08-13
-// 「不要看出地貌拼圖接縫」定案的形狀 ⇒ MUST 由使用者放行**,樁只出算術。
-const ZONE_LIST = ['water', 'wet', 'green', 'bare', 'urban', 'alpine'];
+console.log('\nⅤ surfaceId 出線的算術(驗收面 3;已接 runtime)');
+const ZONE_LIST = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
 {
   const TSRC = readSrc('public', 'js', 'toon.js');
   const PSRC = readSrc('public', 'js', 'postfx.js');
@@ -455,8 +453,31 @@ const ZONE_LIST = ['water', 'wet', 'green', 'bare', 'urban', 'alpine'];
     console.log(`    ⚠ **naive 的「2/255 等距」行不通**:2/255 恰好就是材質碼 ${matCodes[0]}`
       + `((0.5)/${DEN} = ${(0.5 / DEN).toFixed(6)} 量化後同碼)⇒ 那一處「地貌 vs 建物」的線整條消失。`
       + `間距 MUST 由**材質碼的格**解出來,MUST NOT 手寫等距。`);
-    console.log('    ⚠ 這一面只出報告:真的把 LAND_SURF_ID 從常數換成 f(zone) 會推翻 2026-08-13'
-      + '「地貌共用一個 surfaceId」的定案(audit_cel_pipeline Ⅶ)⇒ 需使用者裁決,不在本輪。');
+    const LFSRC = readSrc('public', 'js', 'landfield.js');
+    ok(/LAND_ZONES = \['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'\]/.test(LFSRC),
+      'runtime 分區名冊含正式 cliff，且順序與貼圖 R 通道一致');
+    ok(/LAND_ROAD_RANK = 3/.test(LFSRC) && /LAND_AREA_MIN_F = 0\.0004/.test(LFSRC),
+      'runtime 線分級 rank≤3、面積下限 0.0004 已定案');
+    const BIO = readSrc('public', 'js', 'biomes.js');
+    const GND = readSrc('public', 'js', 'ground.js');
+    const TER = readSrc('public', 'js', 'terrain.js');
+    const RELAY = readSrc('public', 'js', 'osmrelay.js');
+    ok(/geoKey\('osmF', 3/.test(BIO) && /covers, waters, boundaries/.test(BIO),
+      'OSM 快取已升 v3，四類新圖資進 runtime payload');
+    ok(/buildLandField\(/.test(BIO) && /setLandField\(/.test(BIO),
+      'buildBiomes 建場後把單一 land field 接進 toon');
+    ok((TER.match(/landField: true/g) || []).length === 2 && /CEL_LAND_FIELD/.test(TSRC),
+      '地形兩條材質路徑都取樣 land field shader');
+    ok(/surfaceField \? new Array\(gnx \* gnz\)\.fill\(null\)/.test(GND)
+      && /if \(!surfaceField\) for/.test(GND),
+      'runtime 停用舊飛地與底毯發射；相容 fallback 留存但不接線');
+    ok(/MAX_COVER:\s*900/.test(RELAY) && /MAX_WATERWAY:\s*120/.test(RELAY)
+      && /MAX_BOUNDARY:\s*500/.test(RELAY), '中繼端有新 payload 的逐類上限');
+    ok(!/Math\.random\(|\brnd\(/.test(LFSRC), 'land field 零 Math.random / 零共享 rnd(§2.3)');
+    ok(VENUES.every((v) => {
+      const c = venueConfig(v, 1).center, p = [c.lat + 0.001, c.lng - 0.001];
+      return JSON.stringify(llToWorld(p[0], p[1], c)) === JSON.stringify(llToXZ(p[0], p[1], c));
+    }), 'venue_field.llToWorld 直接服從 A42 投影唯一縫');
   }
 }
 
@@ -524,15 +545,17 @@ async function cutVenue(v, team, opts = {}) {
   const waterY = minH < WATER.LEVEL + 0.2 ? WATER.LEVEL : null;
 
   // ---- 線工組裝 ----
-  // ⚠ 投影一律走 `data.llToXZ`(含 A42 主方位);`venue_field.llToWorld` 是 **pre-A42 的手抄**,
-  //    全檔 grep 不到 rot/mapRot ⇒ 拿它投影出來的線與真的畫出來的世界差 θ。
+  // 投影一律走 `data.llToXZ`(含 A42 主方位)；反向驗證在本稽核內明造 pre-A42 舊公式。
   // `proj` = 世界的正解(地形 / zoneGrid / 真值線一律吃它,含 A42 主方位)。
   // `projCut` = **只給切面線**;`--break-quantize` 只壞這一支 ⇒ 缺陷被隔離成
   // 「切面的線與整個世界不在同一個框裡」,而那正是規格描述的症狀。
   // 兩支都壞掉的話整份世界一起轉,距離看起來完全正常(反向驗證會靜默全綠)。
   const proj = (p) => llToXZ(p.lat, p.lon ?? p.lng, cfg.center);
   const projCut = BREAK.quantize
-    ? (p) => llToWorld(p.lat, p.lon ?? p.lng, cfg.center)      // 壞版:pre-A42 的手抄,無旋轉
+    ? (p) => [
+      ((p.lon ?? p.lng) - cfg.center.lng) * d2r(1) * R_EARTH * Math.cos(d2r(cfg.center.lat)) * WORLD_S,
+      -(p.lat - cfg.center.lat) * d2r(1) * R_EARTH * WORLD_S,
+    ]                                                         // 壞版:pre-A42 手抄,無旋轉
     : proj;
   m = t0();
   let roads = osm?.roads || [];
@@ -620,9 +643,7 @@ async function cutVenue(v, team, opts = {}) {
       const pad = st.kind === '橋' ? 4 : STRUCT_CLEAR_PAD;
       const r = (st.hw + pad) / mpt;
       for (let s = 1; s < st.pts.length; s++) {
-        // 結構折線是 venue_field.llToWorld(pre-A42)算出來的世界座標 ⇒ 這裡 MUST 用同一組換算
-        // 才對得上。**這是本樁的一個未驗項**(見報告結尾):兩份換算差 θ 的場地上,
-        // keep-out 帶會整條轉開。
+        // 結構折線與切面都走 data.llToXZ(A42 主方位唯一縫)，keep-out 因此與 runtime 同框。
         const a = st.pts[s - 1], b = st.pts[s];
         const i0 = Math.max(0, Math.floor(toI(Math.min(a[0], b[0])) - r - 1));
         const i1 = Math.min(nx - 1, Math.ceil(toI(Math.max(a[0], b[0])) + r + 1));

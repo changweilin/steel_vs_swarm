@@ -37,6 +37,8 @@ import { osmRelayKey } from './osmrelay.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { buildGroundCover } from './ground.js';
+import { buildLandField } from './landfield.js';
+import { setLandField } from './toon.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed, mergeGeos } from './beacons.js';
@@ -4460,15 +4462,16 @@ async function fetchOsmFeatures(bbox) {
   // Overpass 回應快取(geocache.js):同 bbox 首次完整成功即定案(remark = 伺服器截斷/逾時,不入庫)。
   // 之後每場建物/鐵路輸入位元級一致 —— 圖資不再隨鏡像輪替/限流逐局忽有忽無。
   // 鍵含查詢額度:額度常數改版自然失效重抓。
-  // 版本 2(2026-08-03):查詢多了具名點位(worldtext 的地名/山峰/交流道/車站標牌)。
+  // 版本 3(2026-08-17):加入線工切面需要的地被、水道、海岸線與行政 relation 成員線。
   // **改查詢 MUST 同步 +1**:不改版的話舊快取會照樣命中,而它裡面沒有 pois ⇒ 新標牌
   // 在所有「以前開過這張圖」的機器上永遠不出現,且沒有任何錯誤訊息。
-  const ckey = geoKey('osmF', 2, bbox, `q${nBld}`);
+  const nCover = quotaOf(bboxKm2(bbox), 400, 200, 900);
+  const ckey = geoKey('osmF', 3, bbox, `q${nBld}-${nCover}`);
   const cached = await geoGet(ckey);
   if (cached) return cached;
   // 具名點位額度刻意極小:一張圖最多掛 32 塊牌(worldtext SIGN_MAX),多抓也用不到,
   // 而 node 查詢本身很便宜(不帶幾何)⇒ payload 幾乎不動。
-  const q = `[out:json][timeout:9];`
+  const q = `[out:json][timeout:15];`
     + `(way["building"](${bb});node["power"="tower"](${bb}););out center tags ${nBld};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`
@@ -4476,13 +4479,28 @@ async function fetchOsmFeatures(bbox) {
     + `node["place"~"^(city|town|village|suburb|neighbourhood)$"](${bb});out 24;`
     + `node["natural"="peak"](${bb});out 12;`
     + `node["highway"="motorway_junction"](${bb});out 12;`
-    + `node["railway"~"^(station|halt)$"](${bb});out 12;`;
+    + `node["railway"~"^(station|halt)$"](${bb});out 12;`
+    + `way["waterway"~"^(river|stream|canal|drain|ditch)$"](${bb});out geom 120;`
+    + `way["landuse"](${bb});out geom ${nCover};`
+    + `way["natural"](${bb});out geom ${nCover};`
+    + `way["leisure"~"^(park|garden|golf_course|nature_reserve|recreation_ground)$"](${bb});out geom ${nCover};`
+    + `rel["boundary"="administrative"](${bb});way(r);out geom 400;`;
   return overpassQuery(q, (data) => {
     const buildings = [], rails = [], falls = [], crossings = [], pois = [];
+    const covers = [], waters = [], boundaries = [];
     for (const el of data.elements || []) {
       const tags = el.tags || {};
       if (el.type === 'way' && el.geometry && tags.railway) {
         rails.push({ tags, geometry: el.geometry });
+      } else if (el.type === 'way' && el.geometry && tags.waterway) {
+        waters.push({ tags, geometry: el.geometry });
+      } else if (el.type === 'way' && el.geometry && tags.natural === 'coastline') {
+        boundaries.push({ tags, geometry: el.geometry });
+      } else if (el.type === 'way' && el.geometry && (tags.landuse || tags.natural || tags.leisure)) {
+        covers.push({ tags, geometry: el.geometry });
+      } else if (el.type === 'way' && el.geometry && !tags.building) {
+        // relation 展開後的成員 way 通常沒有 boundary tag；排除具名類別後即為行政界成員。
+        boundaries.push({ tags, geometry: el.geometry });
       } else if (el.type === 'node' && tags.railway === 'level_crossing') {
         crossings.push({ lat: el.lat, lng: el.lon, tags });
       } else if (el.type === 'node' && tags.waterway === 'waterfall') {
@@ -4497,7 +4515,7 @@ async function fetchOsmFeatures(bbox) {
         if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
       }
     }
-    const res = { buildings, rails, falls, crossings, pois };
+    const res = { buildings, rails, falls, crossings, pois, covers, waters, boundaries };
     // 入庫走深拷貝:IDB 寫入是非同步,下游(buildRails 等)會就地變異這些物件,
     // 不拷貝會把「該局變異後」的資料定案
     if (!data.remark) geoPut(ckey, structuredClone(res));
@@ -10405,10 +10423,20 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     return false;
   };
 
-  // ---- 地被覆蓋層:開闊地的賽璐璐地表色塊 + 表面細節(ground.js)----
+  // ---- 線工切面地貌場:地形本身著色，底毯不再另鋪一層皮 ----
+  const gseed = (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0;
+  const landField = await buildLandField({
+    terrain, center, roads: roadInput, rails: osmData?.rails || [], waters: osmData?.waters || [],
+    covers: osmData?.covers || [], boundaries: osmData?.boundaries || [], gradeCorridors,
+    classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
+    envCodeAt: (x, z) => terrainEnvCode(terrain, x, z), projectAt: llToWorld,
+    seed: gseed, onProgress,
+  });
+  setLandField(landField.data, landField.nx, landField.nz, landField.bounds);
+
+  // ---- 地被特徵層:田地/球場/公園等有真實邊界的離散地塊(ground.js)----
   // 專用 rnd(同心種子異或常數):不動用共享 rnd 序列,建物/植被佈局不受影響
   await onProgress?.(0.88, '鋪設地表覆蓋層…');
-  const gseed = (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0;
   const grnd = mulberry32(gseed ^ 0x51AB);
   const gcStart = group.children.length;   // 洞口打洞用:此後加入 group 的都是地被層(底毯拼圖 + 細節實例)
   const ground = buildGroundCover(group, terrain, {
@@ -10421,6 +10449,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
+    surfaceField: landField,
     // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
     // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
   });

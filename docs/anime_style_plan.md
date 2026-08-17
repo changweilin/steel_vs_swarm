@@ -571,6 +571,13 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 >    `audit_beacons:39` 把 beacons 的整段純區塊丟進 `new Function` 執行(呼叫 `makeVehicle` 就
 >    `ReferenceError`)。兩處各需要**一行**改到別道擁有的稽核,清單已印在 `audit_vehicle_spec` Ⅴ-b。
 
+> **2026-08-17 使用者裁決（只記錄，下輪執行）**:
+> ① `hazards.buildHazard` 採「**rock 件排除在合併之外**」；一般零件逐材質合併，
+> `chiselRock` 與其 `outlineGeo` 維持現役獨立描邊路徑，MUST NOT 順手改成合併 `outlineGeo`。
+> ② `ground.js DETAIL_DEFS.carwreck` / `container` **改採真實尺度**；接受 `detailR`、
+> `detFree` 淘汰結果與後續決定性散布佈局遷移。下輪 MUST 重新建立場景基準，不能拿舊佈局
+> 做逐位元相同比對；仍須證明同一份新程式碼、同一種子可重現。
+
 ### 驗證
 `audit_siteplan` Ⅴ、`intake_parts`、`audit_object_joints`;新增一支載具 `SPEC` 稽核
 (逐列推導值 vs 實測外廓)。
@@ -734,10 +741,9 @@ StereoPanner、BGM 串流 + 淡入淡出、程序旋律備援。
 > ① **第 2 點說移動床的 gain ride 要補 `setTargetAtTime` —— 那一段 2026-07 就已經是它了**
 >    (天生 click-free 且幀率無關,序 2 的 `lerpFPS` 不必碰它)。⑦-2 真正缺的只有「地面變體」與
 >    「吃權重」兩件,兩件都已落地。「移動床沒有接動畫權重」那半屬實。
-> ② **七床 + 兩份行動版 BGM 的 CC0 音檔本輪未下載** ⇒ **機制完成、內容待補**;缺檔時該床靜默、
->    `base` 頂著。規格(mono / OGG Vorbis ≤ 96 kbps / 8~12 s 無縫 loop / 每床 ≤ 150 KB)與四個來源建議
->    已寫進 `public/audio/README.md` 的待補表。行動版 BGM 需要主機上有 ffmpeg,而且 ⑦-4 的定案是
->    「**另一份編碼**,不是只調低音量」。
+> ② **2026-08-17 已補齊七床 + 兩份行動版 BGM。** 七床為 10 秒 mono OGG、每床 24~75 KB；
+>    行動版 BGM 為獨立 32/48 kbps 編碼，各低於 800 KB。逐檔 CC0 來源帳與轉製關係住
+>    `public/audio/README.md`；缺檔降級契約仍保留。
 > ③ **`audio.js` 全檔沒有 `visibilitychange` 處理**(切到背景分頁時 BGM 與常駐床照樣播,而
 >    `game.js` / `main.js` 已有 `document.hidden` 的先例)。計畫 ⑦ 的四條沒有列它,依「刻意設計
 >    MUST NOT 補完」本輪**不動,只回報**。
@@ -905,8 +911,8 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 
 ## 執行順序建議(價值 ÷ 風險)
 
-> **狀態欄基準日 2026-08-16**(第二輪收尾)。序 1~13 全部落地;剩下的只有序 14 / 15,
-> 而它們卡在一道**條件式**的門(見序 13 那一列)。
+> **狀態欄基準日 2026-08-17**。序 1~15 全部落地；序 10b 與 ③-4 障礙合併
+> 已裁決並排入下一輪，詳見本檔收尾狀態第 4 點。
 
 | 序 | 項目 | 風險 | 逐位元中性? | 狀態 |
 |---|---|---|---|---|
@@ -915,7 +921,7 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 | 3 | ①-1 `outlineContribution` 打包(§0-c) | 中 | 旋鈕關 = 是 | ✅ 第二輪(交的是**縫**;賦值是序 7/12b 的事)|
 | 4 | ①-2 雜訊斷線 + ①-4 深度門檻擇一 | 低 | 旋鈕關 = 是 | ✅ 第二輪(①-4 **定案維持 `K_S`**)|
 | 5 | ⑤-1 玩家位移植被、⑤-4 落花粒子 | 低 | 是(純新增) | ✅ 第二輪(⑤-1 分規則層 + 餵入端兩窗)|
-| 6 | ⑦-1 區域環境音、⑦-2 gain-ride、⑦-3 多 take(§0-d) | 低 | 是 | ✅ 第二輪 —— **機制完成、CC0 音檔待補**;音效端刻意不中性(⑥-3 換門檻)|
+| 6 | ⑦-1 區域環境音、⑦-2 gain-ride、⑦-3 多 take(§0-d) | 低 | 是 | ✅ 第二輪機制；**2026-08-17 補齊七床與兩份行動版 BGM** |
 | 6b | **⑥-3 動畫權重向量**(計畫裡沒有獨立序號,而 ⑦-2 吃的正是它) | 低 | 否(音效行為改變) | ✅ 第二輪,提前到序 6 之前 |
 | 7 | ②-1 葉片卡冠層(含同深度)+ **使用者追加:山頭 / 巨石 / 石堆** | 中(新材質 + MRT 宣告) | 否 → **實得:旋鈕 def off = 是** | ✅ 第二輪(走 `CEL_LEAFCARD` define 不是自寫材質)|
 | 8 | ④-1 wipe 轉場、④-2 dissolve | 中 | 旋鈕關 = 是 | ✅ 第二輪(④-2 只做「出現」那一半;④-3 一併)|
@@ -925,8 +931,8 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 | 12 | **①/② 賽璐璐學派切換(§0-b,已定案「改」)** | 高 | **否** —— 13 張定場照全變,MUST 先拍基準 | ✅ 第二輪,**def 已翻成 `'b'`**(兩派並存,切回舊制 = 一行);基準照全表住 [`docs/shots_baseline.md`](shots_baseline.md) |
 | 12b | **⑨ 立體結構重新渲染**(隨序 12 一起,材質/MRT/貢獻/emissive 五件) | 中 | 否(跟著 12 變) | ✅ 第二輪(幾何 / 碰撞 / slab / decks / cols / 走廊**一格未動**,八支幾何稽核逐項不動)|
 | 13 | **④-A 線工切面可行性樁**(光柵化 + flood fill + 逐面標籤,只出報告與對照圖) | 低(不動出貨) | 是 | ✅ 第二輪 —— **判決 = 條件式 GO**,前提見下 |
-| 14 | ④-B 樁過了才把分區烤成貼圖並接上 fragment 遮罩 | 高 | 旋鈕過渡,預設舊制 = 是 | ⏸ **第一道門:執行期要多抓 landuse / natural / waterway / boundary 四類圖資**(不是建議是前提)|
-| 15 | ④-C 拆拼圖層:`CARPET` 清單 → 19 段遮罩階梯,`CARPET_LOT` / `carpetOrder` / `CARPET_VARIANTS` / `planSeamOverlays` / `planEnclaves` / `BORDER_SAME_ZONE` / `bandDryAt` / `emitCell` 認養整批退場。**`ZONES` 特徵層一格不動** | 很高 | 否 | ⏸ 取消成本(失去對象的稽核條目)已逐條列在 [`docs/zonecut_stub.md`](zonecut_stub.md) |
+| 14 | ④-B 樁過了才把分區烤成貼圖並接上 fragment 遮罩 | 高 | 否 | ✅ 2026-08-17：OSM 四類圖資、1024² RGBA field、fragment palette、分區 surface ID 已接 runtime |
+| 15 | ④-C 拆拼圖層；**`ZONES` 特徵層一格不動** | 很高 | 否 | ✅ 2026-08-17：正式路徑停用底毯/飛地/界線發射；舊函式只留未接線相容 fallback |
 | — | ⑤-5 雲層飄移 | — | — | ✅ **早在 2026-08-13 隨海浪那一輪就完成**(本輪零工作,見 §⑤ 更正 ⑤)|
 | — | ⑧-5 viewport / safe-area / touch-action | 低 | 觸控裝置上**否** | ✅ 第二輪 —— 不只是核對,含**一項缺陷修補**(頁面級硬化綁錯旗標)|
 
@@ -1025,7 +1031,7 @@ float ctr = fract( q / 16.0 ) * 16.0 / 15.0;
 | 5 / ⑤-4 落花 · 落葉粒子 | ✅ | **新模組 `public/js/petals.js`**(零 THREE、只 import `rng.js`、零共享 `rnd()`)+ `biomes.js` 的 `foliageCrown`/`petalGeo`/`buildPetals`;killswitch `?petal=0` | **新 `audit_ambient_motion` 63 項**,八支反向驗證逐支咬得住 |
 | 5 / ⑤-1 玩家位移擾動 | ✅(規則層在序 3、餵入端在本窗) | `toon.js CHAR`/`setCelChar`(GLSL 側)+ `game.js` 的 `TREAD`/`_charSlots()`(槽 0 = 主視野機體、其餘依離相機距離升冪、固定長度插入排序**零配置**);killswitch `?tread=0` | `audit_anim_weights` Ⅶ 18 條(**行為直測**:真的把 `_charSlots` 原文丟進 `new Function` 跑)+ 3 支 `--break` |
 | 6b / ⑥-3 動畫權重向量 | ✅ | **新模組 `public/js/animweights.js`**(零 import、有序 10 軌、地面三軌和恆為 1、缺欄回 0 不回 NaN);`locomotion.stepLocomotion` 收尾**只寫不讀** `L.w`;`game.js` 刪掉 `ent._moveSpd` 這第二份速度推導 | **新 `audit_anim_weights` 54 項** + 8 支 `--break` |
-| 6 / ⑦-1~⑦-4 音效 | ✅ **機制完成、CC0 音檔待補** | `audio.js` 的 `AMB_BASE` + `AMBIENCE` 六床 + 純函式 `ambienceMix()`(first-match-wins)+ `bgmUrl(name, low)` + `setMove` 五格 gain-ride(乾濕兩鏈共用同一顆 chop LFO)+ 多 take(`string \| string[]` + `playbackRate` ±7%) | **新 `audit_audio_layers` 58 項** + 7 支 `--break` |
+| 6 / ⑦-1~⑦-4 音效 | ✅ **機制與音檔完成** | `audio.js` 的分層機制 + `public/audio/amb` 七床 + `bgm/*-mobile.*` 兩份獨立編碼 | `audit_audio_layers` 58 項 + 7 支 `--break` |
 | 7 / ②-1 葉片卡冠層 → **整棵樹**,+ 使用者追加的**山頭 / 巨石 / 石堆** | ✅(`leafCard`/`inkGroup` def 皆 `off`) | **新模組 `public/js/leafcard.js`**(零 THREE 排列規則層)+ `biomes.js` 的 `MEGA_BODY_F`/`leafCardOn`/`leafCardTex`/`leafRowGeo`/`surfIdGeo` + `ground.js` 細節迴圈的 `surf`/`contrib` + `buildBackdrop` 的注入欄 | **新 `audit_leaf_card` 43 項 / `audit_rock_ink` 30 項**,七支反向驗證 |
 | 8 / ④-1 wipe + ④-2 dissolve(只做「出現」)+ ④-3 霧 ≡ 勾線淡出 | ✅(`wipe` def 0) | `data.js` 的 `WIPE`/`wipeAt()`/`DISSOLVE`/`dissolveAt()`(純函式,**不進 `balanceFingerprint`**);`postfx.js` 的 `_wipeMaterial()`/`setWipe()`/`playWipe()`/`_tickWipe()` + chain 插在 **grade 與 fxaa 之間** + dispose 名冊改由 `_quads` **推導** + `INK.FADE_F`/`_inkFadeM()`;`toon.js` 的 `dissolve`(`discard` 不是 alpha)+ 唯一寫入點 `setDissolve()`;呼叫端 `cutin.js setPipeline/wipe` 與 `game.js _wipeCut`(三個時機) | `audit_visual_prefs` 新 Ⅷ ±`--break-wipe`、`audit_cel_pipeline` 新 Ⅸ・Ⅹ ±`--break-dissolve`/`--break-fade` |
 | 9 / ⑤-2 岸邊泡沫(**替換**)+ ⑤-3 倒影塊 | ✅(`foam` def 1、`reflect` def 0) | `terrain.js` 的 `seaFadeAt`/`seaFadeAtWorld`/`bakeSeaDepth`/`stampSeaBlockers`(對外 API **只加不改**)+ `main.js` 一行接線 + `biomes.js` 的 `planReflectors`/`buildWaterReflections`/`REFL_WAVE_WRITERS`;舊的格點泡沫片**退場** | **新 `audit_water_edge` 64 項**,四支反向驗證(3/1/2/1 條紅字) |
@@ -1086,16 +1092,15 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
   建構期以 `Math.random()` 擺第三方野營碉堡),同一份程式碼三次跑出 319591 / 319585 / 319579 ——
   任何拿它做逐位元 A/B 的人都會踩到。
 
-**這一輪沒做完的事(下一輪的入口)**
+**2026-08-17 收尾狀態**
 
-1. **序 14 / 15**:卡在序 13 的那道條件式門(執行期要多抓 landuse / natural / waterway / boundary
-   四類圖資)。兩份交接清單住 [`docs/zonecut_stub.md`](zonecut_stub.md)。
-2. **`INK_MRT.SELF_F` / `GRAZE_K` 的定案掃描**(現值 2.2 / 2.0 是**起手值不是實測值**):
-   判準三條全部要在定場照上人眼判讀(`shot_scene --pref inkMrt=on` 的 4 × 4 掃描),
-   而它依賴序 7 的消費端先上線 —— 現在上線了,**下一輪就做得了**。
-3. **④-4 的另兩支**:規格點名的 `audit_ground_tile.mjs` 與 `shot_scene.mjs` 不在本輪的擁有清單裡
-   ⇒ 未做。純註解、零行為,可以獨立排在任何一輪。
-4. **③-4 的障礙那一半**(`hazards.buildHazard` 收尾合併)與 **10b**(edgewall / beacons /
-   `DETAIL_DEFS` 三處載具收斂 + 後者的真實尺度)—— 兩者都各有一條「動它會連帶動到別人」的線,
-   已量清。
-5. **CC0 音檔七床 + 兩份行動版 BGM**(規格與來源建議已寫進 `public/audio/README.md` 的待補表)。
+1. **序 14 / 15 已完成**：執行期取得 landuse / natural / waterway / boundary，分區場接上
+   fragment；陡坡為正式 `cliff`，不再以留白露出衛星影像。舊底毯系統保留為未接線 fallback，
+   不再產生正式路徑的 draw call。
+2. **`INK_MRT.SELF_F` / `GRAZE_K` 已做 4 × 4 定場掃描**，定案為 **2.4 / 1.5**。
+3. **④-4 另兩支已補入接縫判讀註解**；`shot_scene` 另增 `--only`、`--ink-self`、
+   `--ink-graze`，讓掃描不必改正式來源。
+4. **下一輪目標已裁決但本輪不執行**：③-4 的 `hazards.buildHazard` 合併須排除 rock；
+   10b 的 `DETAIL_DEFS.carwreck` / `container` 改成真實尺度並接受決定性散布佈局遷移，連同
+   edgewall / beacons 收斂與新基準驗證一併完成。
+5. **CC0 音檔已補齊**：七床 + 兩份行動版 BGM 均已進來源帳並通過雙向檔案稽核。

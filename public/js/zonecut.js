@@ -7,7 +7,7 @@
 // **零 import / 零亂數 / 純函式**(同 `roadgrid.js` / `wallpanel.js` / `edgewall.js` /
 // `osmrelay.js` 的家族紀律)。線與取樣一律由呼叫端以**參數**注入(座標、半寬、keep-out 遮罩
 // 全部在 texel 空間交進來)⇒ 本檔認不得 OSM、認不得地形、認不得 three。
-// 這不是潔癖:序 14 若成立,第一步就是把本檔**原封改名**成 `public/js/zonecut.js`
+// 序 14 起由遊戲端與離線工具共用本檔；零 import / 零亂數讓兩端執行同一份規則。
 // 讓遊戲端與離線工具同吃一份定義,不會長出第二份實作 —— 零 import 是那一步只是一次改名的前提。
 //
 // 四條會靜默壞掉的線(每一條都有對應的反向驗證,見 `tools/audit_zone_cut.mjs`):

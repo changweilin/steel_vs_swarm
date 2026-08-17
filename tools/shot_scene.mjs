@@ -69,6 +69,9 @@ const LIVE = has('--live');
 // 只是把「哪一輪」講清楚 —— 而 meta 本來就已經把機位寫進去了。
 const STATIONS = arg('--stations', '');
 const REPLAY = STATIONS ? JSON.parse(fs.readFileSync(STATIONS, 'utf8')).stations : null;
+const ONLY = arg('--only', '').split(',').map((s) => s.trim()).filter(Boolean);
+const INK_SELF = arg('--ink-self', '');
+const INK_GRAZE = arg('--ink-graze', '');
 const PORT = +arg('--port', 8632);
 // `--time night`(+ `--season` / `--weather`):環境本來寫死 `summer/day/clear`,而**夜間是
 // 一整條沒有任何離線工具走過的路** —— `biomes.js` 的 `night` 旗標(`cfg.env?.time === 'night'`)
@@ -119,6 +122,7 @@ const SUFFIX = Object.entries(LAYERS).filter(([, v]) => !v).map(([k]) => `_no-${
   + Object.entries(ENV).filter(([k, v]) => v !== ENV_DEF[k]).map(([, v]) => `_${v}`).join('')
   // 旋鈕 MUST 進檔名(同 ENV):兩輪互相覆寫的話事後分不出手上這張是開著還是關著
   + Object.entries(PREFS).map(([k, v]) => `_${k}-${v}`).join('')
+  + (INK_SELF ? `_self-${INK_SELF}` : '') + (INK_GRAZE ? `_graze-${INK_GRAZE}` : '')
   + (ELAPSED ? `_t${Math.round(ELAPSED)}s` : '');
 
 const chromium = await chromiumOrNull();
@@ -154,6 +158,15 @@ if (threeLocal) {
       : r.abort();
   });
 }
+// 定裝掃描只在工具伺服器攔截常數；正式來源保持不動，選定後才回寫。
+if (INK_SELF || INK_GRAZE) {
+  let postSrc = fs.readFileSync(join(ROOT, 'public', 'js', 'postfx.js'), 'utf8');
+  if (INK_SELF) postSrc = postSrc.replace(/SELF_F:\s*[\d.]+,/, `SELF_F: ${Number(INK_SELF).toFixed(2)},`);
+  if (INK_GRAZE) postSrc = postSrc.replace(/GRAZE_K:\s*[\d.]+,/, `GRAZE_K: ${Number(INK_GRAZE).toFixed(2)},`);
+  await page.route('**/public/js/postfx.js', (r) => r.fulfill({
+    status: 200, contentType: 'text/javascript; charset=utf-8', body: postSrc,
+  }));
+}
 // 圖磚一律由 Node 轉送(瀏覽器直連在沙箱/代理環境常被擋)
 const relay = async (route, contentType) => {
   for (let i = 0; i < 3; i++) {
@@ -188,7 +201,7 @@ await page.route(`${PROBE_URL}**`, (r) => r.fulfill({
 }));
 await page.goto(PROBE_NAV, { waitUntil: 'domcontentloaded' });
 
-const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, env, elapsed }) => {
+const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, only, env, elapsed }) => {
   const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
@@ -547,7 +560,8 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
   const out = [];
   // 回放 MUST 整組取代(不是補進去):混著用會拍出「一半新機位、一半舊機位」的圖組,
   // 而檔名一模一樣 ⇒ 之後沒有任何東西能分辨哪幾張可以比。
-  const use = replay && replay.length ? replay : stations;
+  const all = replay && replay.length ? replay : stations;
+  const use = only.length ? all.filter((s) => only.includes(s.name)) : all;
   for (const st of use) {
     camera.position.set(st.p[0], st.p[1], st.p[2]);
     camera.lookAt(st.look[0], st.look[1], st.look[2]);
@@ -560,7 +574,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
   }
   return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor,
     curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
-}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, env: ENV, elapsed: ELAPSED });
+}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY, env: ENV, elapsed: ELAPSED });
 
 for (const s of shots.shots) {
   fs.writeFileSync(join(OUT, `${s.name}${SUFFIX}.png`), Buffer.from(s.png.split(',')[1], 'base64'));

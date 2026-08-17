@@ -544,10 +544,10 @@ export async function buildTerrain(cfg, onProgress) {
     const tex = new THREE.CanvasTexture(imagery.canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
-    mat = envMat(0xffffff, { map: tex, rim: 0, bands: 4, land: true });
+    mat = envMat(0xffffff, { map: tex, rim: 0, bands: 4, land: true, landField: true });
   } else {
     paintTerrainTones(geo, pos, { minX, maxX, minZ, maxZ }, center);
-    mat = envMat(0xffffff, { vertexColors: true, rim: 0, bands: 4, land: true });
+    mat = envMat(0xffffff, { vertexColors: true, rim: 0, bands: 4, land: true, landField: true });
   }
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;

@@ -3018,7 +3018,7 @@ function borderTex(kind) {
  * @param opts.roadClear  (x,z)=>是否落在道路走廊上(bool);特徵拼圖避開路面免 3D 件戳穿,
  *                        可缺席 = 不遮罩(行為同舊版)。查詢不吃 rnd(拒絕在首個 rnd() 前 = 序列不變)
  */
-export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys }) {
+export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys, surfaceField = null }) {
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
   const AQ_DET = new Set(['reed', 'lotuspad', 'fish']);   // 水生細節:免吃岸線高度淘汰、貼水面擺放
@@ -3151,6 +3151,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
   }
   const zoneAt = (x, z) => {
+    if (surfaceField) return surfaceField.sample(x, z);
     // 水/沼優先走 envCode(與伺服器遮罩/涉水判定同一規則 = WYSIWYG):
     // 水域回 'water'(無特徵 patch 清單 ⇒ 任何場所拼圖不得落水),沼澤回 'wet'(啟用濕地特徵)
     const ec = envAt(x, z);
@@ -3266,14 +3267,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const slope = Math.max(
       Math.abs(terrain.heightAt(cx + cell, cz) - hC),
       Math.abs(terrain.heightAt(cx, cz + cell) - hC)) / cell;
-    if (slope > 0.75) return '!';
+    if (slope > 0.75) return 'cliff';
     const votes = {};
     for (const [ox, oz] of [[0, 0], [cell * 0.4, 0], [-cell * 0.4, 0], [0, cell * 0.4], [0, -cell * 0.4]]) {
       const zn0 = classifyPure(cx + ox, cz + oz);
       votes[zn0] = (votes[zn0] || 0) + 1;
     }
     let zn = Object.keys(votes).reduce((a, b) => (votes[b] > votes[a] ? b : a));
-    if (zn === 'water') return null;   // envCode 判乾但影像多數決仍水色(灰帶):留空露衛星底圖
+    if (zn === 'water') zn = slope > 0.28 ? 'bare' : 'green'; // 乾地不再露衛星；在面層級安全降級。
     if (slope > 0.28 && zn !== 'wet') zn = 'bare';
     // 沼澤(2)一律鋪濕地拼圖(取代舊「green 且 hC<2.2 且 minH<0.5」私規則 —— 與 envCode 統一)
     if (ec === 2) zn = 'wet';
@@ -3284,7 +3285,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // **變體(花紋)不在這裡挑** —— 整張 subGrid 算完之後交 planCarpetVariants 逐格挑,
   // 才做得到「同顏色的相鄰拼圖花紋不同」(逐格獨立挑一定挑得出相鄰同款)。
   const cellSubAt = (i, j, zn) => {
-    if (zn == null || zn === '!') return zn;
+    if (zn == null || zn === 'cliff') return zn;
     const cx = terrain.minX + (i + 0.5) * cell, cz = terrain.minZ + (j + 0.5) * cell;
     if (zn === 'water') {                               // 依水深配淺/深款(水深是物理量,逐格看)
       const wy = terrain.waterY;
@@ -3542,8 +3543,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // encGrid[cell] = `${內}@${外}` 樣式鍵或 null;encRt = 樣式執行期物件(set = 該樣式
   // 允許的全部地表 —— tryPatch 放行閘,僅對 enclave 格生效,不讓樣式地表外漏到一般分區)
   const zoneGrid = new Array(gnx * gnz).fill(null);
-  for (let j = 0; j < gnz; j++) for (let i = 0; i < gnx; i++) zoneGrid[j * gnx + i] = cellZoneAt(i, j);
-  const encGrid = planEnclaves(zoneGrid, gnx, gnz, {});
+  for (let j = 0; j < gnz; j++) for (let i = 0; i < gnx; i++) {
+    const x = terrain.minX + (i + 0.5) * cell, z = terrain.minZ + (j + 0.5) * cell;
+    zoneGrid[j * gnx + i] = surfaceField ? surfaceField.sample(x, z) : cellZoneAt(i, j);
+  }
+  const encGrid = surfaceField ? new Array(gnx * gnz).fill(null) : planEnclaves(zoneGrid, gnx, gnz, {});
   const encRt = new Map();
   for (const k in ENCLAVE_STYLES) {
     // 樣式的底毯清單同樣排成顏色路徑(carpetOrder;與 carpetLists 同一條規則)。原樣式物件
@@ -3566,11 +3570,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const varGrid = planCarpetVariants(subGrid, gnx, gnz, { seed, variants: CARPET_VARIANTS });
   const keys = new Array(gnx * gnz).fill(null);
   const landCells = [];                                 // [x, z, key]:底毯細節撒佈用
-  for (let j = 0; j < gnz; j++) {
+  if (!surfaceField) for (let j = 0; j < gnz; j++) {
     for (let i = 0; i < gnx; i++) {
       const sub = subGrid[j * gnx + i];
       if (!sub) continue;
-      if (sub === '!') { keys[j * gnx + i] = '!'; continue; }   // 陡坡:不鋪但記錄(供外溢補縫)
+      if (sub === 'cliff') { keys[j * gnx + i] = 'cliff'; continue; }
       const key = `${sub}#${varGrid[j * gnx + i]}`;
       const mid = emitCell(carpetBuckets, key, i, j, null);
       if (!mid) continue;
@@ -3595,7 +3599,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   //    站在邊界往外看是一片直角接直角的色塊,比舊制那張糊掉的衛星圖更假)。圖界那兩條線上的
   //    角點**不准抖**(那是與真地形的接縫,動了就開縫);外溢走的是圖內同一支 planSeamOverlays。
   let bufCells = 0;
-  if (terrain.bufferHeightAt) {
+  if (!surfaceField && terrain.bufferHeightAt) {
     const B = terrain.bufferM;   // 深度讀地形實際鋪的那一份(迷你地圖縮到 1/3;見 terrain.js ⑧)
     const bcell = cell * BUF_CELL_F;
     const nOut = Math.max(1, Math.ceil(B / bcell));
@@ -3657,7 +3661,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const d = BORDER_KINDS[k];
     return Math.max(d.flat ? d.flat.w / 2 * (1 + BORDER_BAND.EDGE_A) : 0, d.ridge ? d.ridge.w / 2 : 0);
   };
-  const bdPlan = planBorderPuzzle(keys, gnx, gnz, {
+  const bdPlan = surfaceField ? { chains: [], corners: [], forks: [] } : planBorderPuzzle(keys, gnx, gnz, {
     // 地貌取**格子自己的分區**(zoneGrid,與底毯選款同一份),不由款式反查
     zoneOf: (i, j) => zoneGrid[j * gnx + i],
     coarseOf, cornerXZ: cornerAt, driftMax: cell * 0.6,
