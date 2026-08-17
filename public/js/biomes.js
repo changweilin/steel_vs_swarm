@@ -5632,7 +5632,7 @@ const REFL_WAVE_WRITERS = 2;
 // ⇒ mesh `visible = false` ⇒ 一個 draw call 都不進、一個像素都不寫 ⇒ 逐位元同舊制。
 // 逐反射體的顏色**刻意沒有**(`blockers` 只有幾何、沒有材質色,要就得在 buildBiomes 收第二本
 // 逐棟代表色的帳)—— 全場共用一個色是**刻意的降級**,不是假裝有(同 `surfaceId` 逐材質那條)。
-const REFL_C = 0xdfeeff, REFL_A = 0.34;
+const REFL_C = 0xdfeeff, REFL_A = 0.22;
 
 /**
  * 反射體名冊(純幾何、零亂數)。四道閘,順序即語意:
@@ -5684,7 +5684,7 @@ function buildWaterReflections(group, terrain, blockers, dynamics) {
   const seg = 1 / REFL.SEG_N;
   for (const b of list) {
     const rnd = mulberry32(edgeSeed(b.x, b.z, 0x5EF1));
-    const hw = REFL.HALF_F * b.r;
+    const hw = Math.min(REFL.MAX_HALF_M, REFL.HALF_F * b.r);
     const f = terrain.seaFadeAtWorld(b.x, b.z) / REFL_WAVE_WRITERS;
     for (let k = 0; k < REFL.SEG_N; k++) {
       // 兩枚亂數**先抽完再判**(§2.3 抽樣紀律:淘汰檢查排在抽樣之後 ⇒ 每段固定消耗)

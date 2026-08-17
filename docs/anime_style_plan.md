@@ -620,10 +620,10 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 >    霧天」那一格會讓 `fade0 > fade1`(smoothstep 端點反轉),而且**打得到的目標會沒有輪廓線**。
 >    這是對計畫原文的偏離(它與 DOF Ⅵ-b 是同一條規則的兩端),已開票。另:④-3 對 `clear` 以外
 >    四種天氣是**設計上的行為改變**(線從此跟著霧收),**不是旋鈕** —— 兩個錨不可能並存。
-> ⑤ **④-4 落地為六支稽核的純註解**(`audit_traverse` / `audit_ground_drape` / `audit_road_joint` /
->    `audit_layer_block` / `audit_underpass` / `audit_open_tunnel`),一行執行碼未改、六支通過數逐項不變。
->    ⚠ 規格另外點名的 `audit_ground_tile.mjs` 與 `shot_scene.mjs` **不在本輪的擁有清單裡** ⇒ 未做,
->    它們是純註解、零行為,可以獨立排在任何一輪。
+> ⑤ **④-4 落地為八支稽核 / 定場工具的純註解**(`audit_traverse` / `audit_ground_drape` /
+>    `audit_road_joint` / `audit_layer_block` / `audit_underpass` / `audit_open_tunnel` /
+>    `audit_ground_tile` / `shot_scene`),一行執行碼未改。後兩支已於 2026-08-17 核對在案,
+>    計畫先前仍寫成「未做」是文件狀態落後。
 
 ### 驗證
 `audit_ground_*` 全批 MUST 逐項不動、`audit_world_edge`、`audit_cel_pipeline`;
@@ -1142,3 +1142,14 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 | 範圍 | 只擴充既有 `SOFT_KINDS.cloth` 頂點縫；零幾何、零權威狀態、零共享 `rnd()` | `audit_object_joints --seeds 8` / `audit_siteplan` |
 
 機體垂布與繩索目前沒有可消費的完整名冊，本輪不創造新內容；日後加入時直接沿用同一布料縫。
+
+### 2026-08-17 第六輪：⑤-2 / ⑤-3 真 GPU 水岸驗收與調校
+
+| 項目 | 真 GPU 症狀 | 收斂結果 | 稽核 |
+|---|---|---|---|
+| 岸邊泡沫 | 淡水 `waterline` 原值把 6m 緩灘鋪成十餘道高覆蓋率白條，讀成道路標線 | 改為高次 parabola × 深度淡出 × 噪聲；有效深度縮至 2.4m，固定鏡位實得 2~3 道破碎岸浪 | `audit_soft_stroke` 193 項；`--break-foam-shape` 如期 1 紅 |
+| 水面倒影 | 低視點鏡像解配 broad-phase 外接半徑，巨船／長樓把三段倒影撐成跨水面的灰色棧板 | 半寬封頂 1.5m、長度封頂 18m、opacity 0.22；方向與 `D·h/(e+h)` 比例仍保留 | `audit_water_edge` 65 項；`--break-size` / `--break-length` 各如期 1 紅 |
+| 固定鏡位 | `taroko hilltop` 被近側山脊遮掉約半幅，不能作為崖面 triplanar 的驗收照 | 記為鏡位缺口；`taroko aerial` 只證明 `landField` 已進 draw call，不冒充崖面驗收 | `shot_scene --only hilltop,aerial` |
+
+淡水同一份 `meta.json` 依序拍預設、`reflect=0`、`foam=0` 與調校後版本，沒有用不同機位
+掩蓋差異。`reflect=0` 對照仍存在的灰色潮間帶不屬倒影系統，本輪不擴張範圍。

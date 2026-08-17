@@ -29,12 +29,16 @@
 //                   「盒心蓋得到」與「沿長軸蓋得到」兩條對照組 MUST 仍綠
 //   --break-refl    倒影名冊不再排除邊界牆環 ⇒ Ⅲ **紅 2**;上限 / 全序 / MIN_H 三條仍綠
 //   --break-fade    倒影的 seaFade 不再除以寫入處數 ⇒ Ⅲ **紅 1**(補償條)
+//   --break-size    倒影寬度退回 broad-phase 半徑 ⇒ Ⅲ **紅 1**(巨船變懸浮平板)
+//   --break-length  低視點鏡像長度不再封頂 ⇒ Ⅲ **紅 1**(碎倒影變百公尺棧板)
 import { readSrc, grabBlock, grabConst } from './audit_src.mjs';
 
 const A = process.argv.slice(2);
 const BRK = {
   foam: A.includes('--break-foam'), stamp: A.includes('--break-stamp'),
   refl: A.includes('--break-refl'), fade: A.includes('--break-fade'),
+  size: A.includes('--break-size'),
+  length: A.includes('--break-length'),
 };
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✓ ${m}`); } else { fail++; console.log(`  ✗ ${m}`); } };
@@ -188,8 +192,12 @@ console.log('\nⅢ 水面倒影塊(一份幾何、一個 draw call、朝向在�
     + 'CEL_REFL 自己 1 + CEL_WAVE 的水面位移 1)—— 上游補上 `#ifndef CEL_REFL` 之後這一條會紅,那是**提醒**不是壞掉');
   ok(/rDir = rD2 \/ max\( rD, 1e-4 \)/.test(seg) && count(seg, /cameraPosition\.xz/g) === 1,
     '倒影方向由 cameraPosition 推導(恰一處,MUST NOT 手寫方向)');
-  ok(/rLen = rD \* aReflO\.z \/ \( rE \+ aReflO\.z \)/.test(seg),
-    '長度 = D·h/(e+h) 的鏡像反解(MUST NOT 手寫倍率)');
+  let segLen = seg;
+  if (BRK.length) segLen = bend(segLen,
+    /min\( rD \* aReflO\.z \/ \( rE \+ aReflO\.z \), \$\{REFL\.MAX_LEN_M[^}]*\} \)/,
+    'rD * aReflO.z / ( rE + aReflO.z )', '--break-length');
+  ok(/rLen = min\( rD \* aReflO\.z \/ \( rE \+ aReflO\.z \), \$\{REFL\.MAX_LEN_M[^}]*\} \)/.test(segLen),
+    '長度由 D·h/(e+h) 鏡像反解後夾 MAX_LEN_M(低視點不得把三段碎倒影拉成百公尺棧板)');
 
   // ---- ② 名冊(planReflectors 行為直測)----
   let planSrc = `function planReflectors(terrain, blockers) ${grabBlock(bioSrc, 'function planReflectors(terrain, blockers) {')}`;
@@ -225,6 +233,9 @@ console.log('\nⅢ 水面倒影塊(一份幾何、一個 draw call、朝向在�
   // ---- ③ 幾何與材質的原文契約 ----
   let buildSrc = `function buildWaterReflections(group, terrain, blockers, dynamics) ${grabBlock(bioC, 'function buildWaterReflections(group, terrain, blockers, dynamics) {')}`;
   if (BRK.fade) buildSrc = bend(buildSrc, / \/ REFL_WAVE_WRITERS;/, ';', '--break-fade');
+  if (BRK.size) buildSrc = bend(buildSrc,
+    /Math\.min\(REFL\.MAX_HALF_M, REFL\.HALF_F \* b\.r\)/,
+    'REFL.HALF_F * b.r', '--break-size');
   ok(/terrain\.seaFadeAtWorld\(b\.x, b\.z\) \/ REFL_WAVE_WRITERS/.test(buildSrc),
     'seaFade 的唯一來源 = terrain.seaFadeAtWorld(抄一份的症狀只是「圖界附近的倒影塊浮在平的水面上晃」),而且除以補償常數');
   ok(count(buildSrc, /terrain\.seaFadeAtWorld\(/g) === 1, 'seaFade 取值恰一處');
@@ -244,9 +255,11 @@ console.log('\nⅢ 水面倒影塊(一份幾何、一個 draw call、朝向在�
     'mesh MUST 掛在**世界原點**(identity matrix)—— 頂點分支直接把世界座標寫回 transformed,自己再帶一個位移就整批偏掉');
   ok(/aReflO/.test(buildSrc) && /'seaFade'/.test(buildSrc),
     '兩個逐頂點屬性(aReflO = 反射體的世界 XZ + 水上高;seaFade = 浪幅淡出)都掛上去了');
+  ok(/Math\.min\(REFL\.MAX_HALF_M, REFL\.HALF_F \* b\.r\)/.test(buildSrc),
+    '倒影半寬有 MAX_HALF_M 上限(broad-phase 外接半徑只服務碰撞,巨船不得撐成數十公尺寬的懸浮平板)');
   ok(/visualPref\('reflect'\)/.test(buildSrc) && /mesh\.visible = a > 0/.test(buildSrc),
     '`reflect` 拉桿 = 0 ⇒ mesh 不可見 ⇒ 一個 draw call 都不進、一個像素都不寫(⑤-3 逐位元同舊制的證明面)');
-  ok(!/REFL\.(SEG_N|GAP_F|MIN_H|MAX_N|HALF_F)\s*=/.test(bioC)
+  ok(!/REFL\.(SEG_N|GAP_F|MIN_H|MAX_N|HALF_F|MAX_HALF_M|MAX_LEN_M)\s*=/.test(bioC)
     && /REFL\.SEG_N/.test(buildSrc) && /REFL\.HALF_F/.test(buildSrc) && /REFL\.GAP_F/.test(buildSrc),
     '形狀常數一律取 toon.js 的 `REFL`,biomes.js **不手寫**(同 SEA_M/SEA_SEG 的紀律)');
   // 接線順序:名冊由碰撞柱推導 ⇒ MUST 排在所有 blockers.push 之後
