@@ -1082,7 +1082,7 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 
 - **絕大多數定裝照與真 GPU A/B**:除了序 12 的 78 + 65 + 26 + 65 張定場照
   (`docs/shots_baseline.md`)與幾處真 GPU 直測之外,`shot_scene` / `shot_tunnels` / `shot_facades`
-  的對照本輪沒拍。
+  的對照本輪沒拍。**2026-08-17 第七輪已另補 ④-2 dissolve 的真 GPU 三格與計時**,不再列入此缺口。
 - **真機(㋕)**:①旋鈕拉起來看斷筆 / 葉片卡 / 泡沫 / 倒影 / 鳥群 / 幕的實際觀感;
   ②走進兩個洞與走上橋面各一次(**洞內是 ⑨ 唯一沒有任何離線稽核看得到的地方**);
   ③音效端刻意不中性的那兩處(離地門檻 3 m → 2 m、gate 曲線換來源)聽一次;
@@ -1152,4 +1152,15 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 | 迷霧安全 | 只有同一快照的權威 `die` 事件允許留殘影；單純從快照消失立即移除 | 同上 ±`--break-dissolve`(反向驗證三條紅字) |
 | 編譯範圍 | 只有戰場 `makeUnit({ dissolve:true })` 為不透明 cel 材質開 `CEL_DIS`；圖鑑／機體台不編譯 | 同上 + `audit_client_syntax` |
 
-遠距剔除仍保持 `FAR_M = 0`，本輪不擴大到視野距離政策。真 GPU 的洞邊勾線與 0.45 秒定裝動畫仍列為 ㋓ 未驗項。
+遠距剔除仍保持 `FAR_M = 0`，本輪不擴大到視野距離政策。
+
+### 2026-08-17 第七輪：④-2 真 GPU 驗收
+
+| 項目 | 結果 | 證據面 |
+|---|---|---|
+| 正式材質路徑 | `makeUnit('creep:tank', 'STEEL', { dissolve:true })` 共 65 個不透明 cel 材質接上 `CEL_DIS` | 正式 `models.js → toon.js → postfx.Pipeline`，非替身 shader |
+| 三格外觀 | `k=1` 完整機體；`k=0.5` 為硬邊孔洞且孔內露出背景；`k=0` 完全消失 | 本機 WebGL 實拍，三格 `gl.getError() = 0` |
+| 動畫計時 | `dissolveOutAt(performance.now() - t0)` 實測 453ms 完成，規格 450ms | 真 `requestAnimationFrame`，終格 `gl.getError() = 0` |
+
+本輪只使用短命渲染探針，驗畢即刪，沒有新增出貨頁面或測試依賴。④-2 的真 GPU 洞邊與時長由
+㋓ 未驗改為通過；迷霧安全仍由 `audit_cel_pipeline --break-dissolve` 的權威事件反向驗證守門。
