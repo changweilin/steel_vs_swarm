@@ -304,8 +304,8 @@ console.log('\n== Ⅲ 靜態規則(執行原文)==');
     /if \(subOf\(kn\) === subOf\(k0\)\) continue;/.test(seamFn));
   // ④ 緩衝空間底毯
   const bufSeg = src.slice(src.indexOf('// ==== 緩衝空間的底毯'), src.indexOf('// ==== 地貌界線拼圖:規劃'));
-  t('緩衝空間底毯存在且只在拿得到 bufferHeightAt 時才鋪(降級不例外,原則 6)',
-    bufSeg.length > 400 && /if \(terrain\.bufferHeightAt\) \{/.test(bufSeg));
+  t('surfaceField 路徑停用緩衝底毯；相容路徑只在拿得到 bufferHeightAt 時才鋪',
+    bufSeg.length > 400 && /if \(!surfaceField && terrain\.bufferHeightAt\) \{/.test(bufSeg));
   t('高度走 terrain.bufferHeightAt(裙的外推高度唯一縫;拿 heightAt 會被夾回圖界)',
     /terrain\.bufferHeightAt,\s*null, null, null\)/.test(bufSeg) && !/terrain\.heightAt/.test(bufSeg));
   t('分區與選款鏡射回圖內取(三角波在圖界上恆等 ⇒ 接縫兩側同款)',

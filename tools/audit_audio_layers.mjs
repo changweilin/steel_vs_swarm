@@ -328,7 +328,7 @@ sec('Ⅶ ⑦-4 低記憶體階梯(--break-tier MUST 紅;另兩條是對照組)')
     '`bgmUrl` 行為:低階取 low、一般取 hi、查無回 null');
   {
     const noLow = new Function(`const BGM_MANIFEST = { m: { hi: 'a.ogg' } };\n${grabFn(audioSrc, 'bgmUrl')}\nreturn bgmUrl;`)();
-    ok(noLow('m', true) === 'a.ogg', '行動版編碼尚未產出 ⇒ 自動退回桌機版(降級不例外)');
+    ok(noLow('m', true) === 'a.ogg', '個別行動版編碼缺席時自動退回桌機版(降級不例外)');
   }
 }
 

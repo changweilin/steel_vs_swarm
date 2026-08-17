@@ -36,7 +36,7 @@ const grabQ = (fn) => {
   return m[1];
 };
 const mkQuery = (fn, params) => new Function(...params, `return (${grabQ(fn)});`);
-const featQ = mkQuery('fetchOsmFeatures', ['bb', 'nBld']);
+const featQ = mkQuery('fetchOsmFeatures', ['bb', 'nBld', 'nCover']);
 const roadQ = mkQuery('fetchOsmRoads', ['bb', 'nMain', 'nMinor']);
 const quotaOf = new Function('return ' + /const quotaOf = ([^;]+);/.exec(bio)[1])();
 const bboxKm2 = new Function(`${grabFn(bio, 'bboxKm2')}; return bboxKm2;`)();
@@ -62,9 +62,14 @@ async function overpass(q) {
 /** 逐字鏡射 fetchOsmFeatures 的分類(那一支住在 import 不了 three 的檔案裡) */
 function parseFeats(data) {
   const buildings = [], rails = [], falls = [], crossings = [], pois = [];
+  const covers = [], waters = [], boundaries = [];
   for (const el of data.elements || []) {
     const tags = el.tags || {};
     if (el.type === 'way' && el.geometry && tags.railway) rails.push({ tags, geometry: el.geometry });
+    else if (el.type === 'way' && el.geometry && tags.waterway) waters.push({ tags, geometry: el.geometry });
+    else if (el.type === 'way' && el.geometry && tags.natural === 'coastline') boundaries.push({ tags, geometry: el.geometry });
+    else if (el.type === 'way' && el.geometry && (tags.landuse || tags.natural || tags.leisure)) covers.push({ tags, geometry: el.geometry });
+    else if (el.type === 'way' && el.geometry && !tags.building) boundaries.push({ tags, geometry: el.geometry });
     else if (el.type === 'node' && tags.railway === 'level_crossing') crossings.push({ lat: el.lat, lng: el.lon, tags });
     else if (el.type === 'node' && tags.waterway === 'waterfall') falls.push({ lat: el.lat, lng: el.lon, tags });
     else if (el.type === 'node' && (tags.place || tags.natural === 'peak' || tags.highway === 'motorway_junction' || tags.railway)) {
@@ -74,7 +79,7 @@ function parseFeats(data) {
       if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
     }
   }
-  return { buildings, rails, falls, crossings, pois };
+  return { buildings, rails, falls, crossings, pois, covers, waters, boundaries };
 }
 
 const argv = process.argv.slice(2);
@@ -83,8 +88,9 @@ const team = +arg('--team', 5);
 const ids = arg('--venues', 'barcelona,paris,manhattan,shibuya').split(',').filter(Boolean);
 
 console.log(`路網中繼 payload 實測(${team}v${team};上限 maxPayload 2048KB / MAX_BYTES ${kb(OSM_RELAY.MAX_BYTES)})\n`);
-console.log('場地        km²   道路way 建物  鐵路  原始JSON  中繼訊息  餘裕vs2MiB  fit');
+console.log('場地        km²   道路way 建物 地被 水道 界線  原始JSON  中繼訊息  餘裕vs2MiB  fit');
 let worst = 0;
+let measured = 0;
 for (const id of ids) {
   const v = VENUES.find((x) => x.id === id);
   if (!v) { console.log(`${id}:沒有這個場地`); continue; }
@@ -92,7 +98,7 @@ for (const id of ids) {
   const bbox = battleBBox(cfg);
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   const km2 = bboxKm2(bbox);
-  const fd = await overpass(featQ(bb, quotaOf(km2, 850, 400, 1200)));
+  const fd = await overpass(featQ(bb, quotaOf(km2, 850, 400, 1200), quotaOf(km2, 400, 200, 900)));
   await sleep(1500);
   const rd = await overpass(roadQ(bb, quotaOf(km2, 150, 150, 600), quotaOf(km2, 1300, 400, 1600)));
   if (!fd || !rd) { console.log(`${id.padEnd(11)} 圖資取得失敗(換個時段再跑)`); continue; }
@@ -105,12 +111,18 @@ for (const id of ids) {
   const clean = sanitizeOsmRelay({ bbox, feats, roads });
   const fit = osmRelayFit(clean);
   const msg = fit ? bytes(JSON.stringify(fit.msg)) : 0;
+  measured++;
   worst = Math.max(worst, msg);
   console.log(`${id.padEnd(11)} ${km2.toFixed(2).padStart(5)} ${String(roads.length).padStart(6)} `
-    + `${String(feats.buildings.length).padStart(6)} ${String(feats.rails.length).padStart(5)} `
+    + `${String(feats.buildings.length).padStart(6)} ${String(feats.covers.length).padStart(4)}`
+    + ` ${String(feats.waters.length).padStart(4)} ${String(feats.boundaries.length).padStart(4)} `
     + `${kb(raw).padStart(8)} ${kb(msg).padStart(9)} ${((2 * 1024 * 1024) / msg).toFixed(1).padStart(9)}× `
     + `${fit ? (fit.dropFeats ? '丟了 feats' : 'ok') : '整份放棄'}`);
   await sleep(1500);
+}
+if (!measured) {
+  console.error('\n❌ 沒有任何場地取得兩份圖資；容量未驗，MUST NOT 把 0KB 當成餘裕。');
+  process.exit(1);
 }
 console.log(`\n最大一則 ${kb(worst)};maxPayload 餘裕 ${((2 * 1024 * 1024) / (worst || 1)).toFixed(1)}×、`
   + `MAX_BYTES 餘裕 ${(OSM_RELAY.MAX_BYTES / (worst || 1)).toFixed(1)}×`);

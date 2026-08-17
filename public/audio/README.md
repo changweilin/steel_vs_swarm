@@ -36,21 +36,21 @@
 
 ---
 
-## 待補(⑦-1 地點床 / ⑦-4 行動版 BGM;**本輪未下載任何檔案**)
+## 地點床與行動版 BGM(2026-08-17 已收錄)
 
-名冊已在 `audio.js`(`AMB_BASE` / `AMBIENCE` / `BGM_MANIFEST` 的 `low` 欄)登記,**檔案尚未取得**。
-缺檔時系統照常運作:該床靜默、`base` 頂著、BGM 自動退回桌機版編碼(降級不例外)⇒
-機制完成、內容待補。取得之後把每一列的「來源」欄從「待補」換成真正的授權頁即可。
+名冊已在 `audio.js`(`AMB_BASE` / `AMBIENCE` / `BGM_MANIFEST` 的 `low` 欄)登記。七床皆由
+下列 CC0 原檔重編為 10 秒 mono OGG；短淡入/淡出讓循環接點回到零振幅。缺檔時仍依原契約
+靜默降級：該床不播、`base` 頂著，BGM 回桌機版。
 
 | 檔案 | 用途 | 來源 |
 |---|---|---|
-| `amb/base.ogg` | 恆亮床(風 + 遠處戰場低頻;分區邊界不會被聽成一個洞) | 待補(**CC0**;見下方取得清單) |
-| `amb/tunnel.ogg` | 洞內(隧道/地下道/明隧道)封閉迴響床 | 待補(**CC0**) |
-| `amb/water.ogg` | 涉水床 | 待補(**CC0**) |
-| `amb/swamp.ogg` | 沼澤床 | 待補(**CC0**) |
-| `amb/camp.ogg` | 據點床(主堡/砲塔附近的機具低鳴) | 待補(**CC0**) |
-| `amb/urban.ogg` | 市區床(建物密度驅動) | 待補(**CC0**) |
-| `amb/forest.ogg` | 林地床(樹冠密度驅動) | 待補(**CC0**) |
+| `amb/base.ogg` | 恆亮床(風 + 遠處戰場低頻;分區邊界不會被聽成一個洞) | OpenGameArt《[wind whoosh loop](https://opengameart.org/content/wind-whoosh-loop)》(**CC0**) |
+| `amb/tunnel.ogg` | 洞內(隧道/地下道/明隧道)封閉迴響床 | 同上，低通 + 短回聲重編(**CC0**) |
+| `amb/water.ogg` | 涉水床 | OpenGameArt《[40 CC0 water / splash / slime SFX](https://opengameart.org/content/40-cc0-water-splash-slime-sfx)》`loop_water_02.ogg`(**CC0**) |
+| `amb/swamp.ogg` | 沼澤床 | OpenGameArt《[Swamp Environment Audio](https://opengameart.org/content/swamp-environment-audio)》(**CC0**) |
+| `amb/camp.ogg` | 據點床(主堡/砲塔附近的機具低鳴) | OpenGameArt《wind whoosh loop》，低通調變重編(**CC0**) |
+| `amb/urban.ogg` | 市區床(建物密度驅動) | 同上，中頻調變重編(**CC0**) |
+| `amb/forest.ogg` | 林地床(樹冠密度驅動) | OpenGameArt《[Birds and Wind - Ambient](https://opengameart.org/content/birds-and-wind-ambient-birds-wind-and-synth)》純環境版(**CC0**) |
 | `bgm/menu-mobile.ogg` | 大廳 BGM 的**行動版編碼**(由現有 CC0 `menu.ogg` 重編) | 同 `bgm/menu.ogg`(**CC0**,允許改作免署名) |
 | `bgm/battle-mobile.mp3` | 戰場 BGM 的**行動版編碼**(由現有 CC0 `battle.mp3` 重編) | 同 `bgm/battle.mp3`(**CC0**,允許改作免署名) |
 

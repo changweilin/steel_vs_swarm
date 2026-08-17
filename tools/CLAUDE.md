@@ -15,7 +15,7 @@
 | `dev_supervisor.mjs` | 1 | **全專案唯一「HTTP 進來 → spawn 行程」的路徑**,三道閘(loopback / 參數零信任 / `x-dev-tools`)只准住這裡;兩個掛載點 MUST 轉呼它 |
 | `venue_field.mjs` | 1 | Node 端取得「與執行期同形」地形 / 圖資 / **結構清單**的**唯一縫**;消費端 MUST 走它,MUST NOT 各自再抄一份。2026-08-16 收進 `buildStructs`/`projectArc`/`ptAt`/`sampleAlong`(原住 `audit_traverse.mjs` —— §0-a 線工切面要的「結構足跡 keep-out」與泛洪要的是**同一份**結構清單,抄第二份就是這一支存在的理由被繞過)與 `cutLinesFor`(行政界 + 海岸線,自己的快取鍵 `_cutlines_v2`;**MUST NOT 併進 `osmFor`/`landcoverFor`** —— 那兩本快取是掃描稽核與 `audit_venue_biome` 的貴重資產,改查詢就得換鍵整批重抓)。⚠ **行政界在 OSM 裡是 relation 不是 way**:實測 barcelona 戰場 bbox 內 `way["boundary"="administrative"]` 回 **0 條**而 `rel[…]` 回 **41 個**(成員 way 通常不帶 `boundary` 標籤)⇒ 查 way 就是「這張圖沒有行政界」而每一個數字看起來都正常 |
 | `audit_src.mjs` | 1 | 讀原文與抽方法區塊的**唯一縫**(見下) |
-| `zonecut.mjs` | 1 | §0-a 線工切面的**規則本體**(光柵化 / 4 鄰泛洪 / 小面併鄰 / 決定性分層取樣)。**零 import、零亂數、純函式** —— 序 14 若成立,第一步是把它**原封改名**成 `public/js/zonecut.js` 讓遊戲端與離線工具同吃一份定義(同 `roadgrid.js`/`wallpanel.js`/`edgewall.js`/`osmrelay.js` 的家族),零 import 是那一步只是一次改名的前提 |
+| `../public/js/zonecut.js` | 1 | §0-a 線工切面的**規則本體**(光柵化 / 4 鄰泛洪 / 小面併鄰 / 決定性分層取樣)。遊戲端與離線工具同吃一份定義；**零 import、零亂數、純函式**。 |
 
 ## 寫 / 改稽核的六條紀律
 

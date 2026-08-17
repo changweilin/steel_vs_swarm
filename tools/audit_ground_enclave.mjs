@@ -223,9 +223,9 @@ console.log('== Ⅳ 靜態規則(單一縫 / 消費端接線)==');
   !/function planEnclaves[\s\S]*?\n\}/.exec(src)[0].match(/\brnd\(|Math\.random|THREE\./)
     ? ok('planEnclaves 原文零 rnd / 零 Math.random / 零 THREE(純函式,A4/§2.3)')
     : bad('planEnclaves 摻入 rnd / Math.random / THREE');
-  /const encGrid = planEnclaves\(zoneGrid, gnx, gnz/.test(src)
-    ? ok('buildGroundCover 經 planEnclaves 取 encGrid(判定單一縫)')
-    : bad('包裹判定未走 planEnclaves(第二份實作?)');
+  /const encGrid = surfaceField \? new Array\(gnx \* gnz\)\.fill\(null\) : planEnclaves\(zoneGrid, gnx, gnz/.test(src)
+    ? ok('surfaceField 路徑停用舊飛地；相容路徑仍只走 planEnclaves')
+    : bad('surfaceField 未停用舊飛地，或相容路徑繞過 planEnclaves');
   (src.match(/export const ENCLAVE_STYLES = \{/g) || []).length === 1
     ? ok('ENCLAVE_STYLES 組合表只有一份(樣式唯一真相)')
     : bad('ENCLAVE_STYLES 出現多份');

@@ -18,7 +18,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites } from '../public/js/data.js';
+import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ } from '../public/js/data.js';
 
 export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 export const CACHE = join(ROOT, 'tools', '.scen_cache');
@@ -28,12 +28,9 @@ export const R_EARTH = 6371000;
 export const d2r = (d) => d * Math.PI / 180;
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// ---- 與 terrain.js 同一組換算(該檔 import three ⇒ Node 端載不進來,逐字照抄)----
+// ---- 經緯度投影唯一縫(A42):直接轉呼 data.llToXZ,不可在工具端手抄 ----
 export const WORLD_S = 1 / MAPGEO.REAL_SCALE;
-export const llToWorld = (lat, lng, center) => [
-  (lng - center.lng) * Math.PI / 180 * R_EARTH * Math.cos(d2r(center.lat)) * WORLD_S,
-  -((lat - center.lat) * Math.PI / 180 * R_EARTH * WORLD_S),
-];
+export const llToWorld = (lat, lng, center) => llToXZ(lat, lng, center);
 const lon2tx = (lon, z) => (lon + 180) / 360 * 2 ** z;
 const lat2ty = (lat, z) => (1 - Math.log(Math.tan(d2r(lat)) + 1 / Math.cos(d2r(lat))) / Math.PI) / 2 * 2 ** z;
 export const smooth01 = (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); };
