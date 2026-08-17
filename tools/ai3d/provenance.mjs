@@ -15,7 +15,7 @@
 // 照片不進儲存庫(runbook §3 規則 2)⇒ 只記相對路徑,能不能顯示由 `photoRoots` 當下解析。
 // A2:零 npm 依賴。
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { delimiter, join, resolve } from 'node:path';
+import { basename, delimiter, dirname, join, resolve } from 'node:path';
 import { ROOT } from '../audit_src.mjs';
 
 /**
@@ -312,8 +312,15 @@ export const venvHome = () => venvHomes()[0]?.home ?? null;
  *   ③ 這個家刻意住**儲存庫之外** ⇒ `photoRoots()` 永遠推導不到它,只有明著帶
  *      `--home` / `--photos` 才讀得到。⇒「不會被誤拿去出貨」是**構造保證**,不是紀律。
  */
+export function normalizeCorpusHome(home) {
+  if (!home) return home;
+  const root = resolve(home);
+  const parent = dirname(root);
+  return basename(root).toLowerCase() === 'photos' && existsSync(join(parent, 'corpus.json')) ? parent : root;
+}
+
 export function corpusMeta(home) {
-  const p = join(home || '', 'corpus.json');
+  const p = join(normalizeCorpusHome(home) || '', 'corpus.json');
   if (!home || !existsSync(p)) return { shipping: true, why: null, declared: false };
   try {
     const j = JSON.parse(readFileSync(p, 'utf8'));

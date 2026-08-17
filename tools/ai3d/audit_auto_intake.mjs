@@ -27,6 +27,10 @@
 //   --break-keys       來源帳的鍵只讀 `keys`         ⇒ Ⅺ 紅(以 `key:` 寫的那些列判決查不到)
 //   --break-redo       未覆核重跑插到新圖前面        ⇒ Ⅺ 紅(順位是使用者定的)
 //   --break-archive    封存不寫墓碑帳                ⇒ Ⅺ 紅(撤完之後沒有任何一本帳說得出它存在過)
+//   --break-replace    替代舊件不寫墓碑帳            ⇒ Ⅺ 紅(被替代物從封存區消失)
+//   --break-parallel   分類平行退回逐族串行          ⇒ Ⅹ 紅(需求與帳本合併鎖失去驗證)
+//   --break-route      巨岩重新混進 SF3D 主路由      ⇒ Ⅹ 紅(方法名存、實際仍跑舊法)
+//   --break-corpus-path `--home .../photos` 不回推資料家 ⇒ Ⅹ 紅(讀不到 shipping:false)
 // Ⅸ 的**三態順序**沒有 break 旗標,理由是它已經被四條固定期望值釘死(todo/done/dropped/fix
 // 各一條,且 fix 那一條刻意同時滿足 dropped)—— 分支被調換位置時至少有一條會紅。
 //
@@ -45,7 +49,7 @@ import {
 import { appendRoster, verifyRoster, snapshot, restore, pickSlot } from './auto_intake.mjs';
 import { removeRoster } from './apply_verdicts.mjs';
 import { photoStates, STATES } from './photo_state.mjs';
-import { archivedPhotoIds, corpusMeta, loadArchive, partKeys } from './provenance.mjs';
+import { archivedPhotoIds, corpusMeta, loadArchive, normalizeCorpusHome, partKeys } from './provenance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BREAK_APPEND = process.argv.includes('--break-append');
@@ -61,6 +65,10 @@ const BREAK_ON = process.argv.includes('--break-on');
 const BREAK_KEYS = process.argv.includes('--break-keys');
 const BREAK_REDO = process.argv.includes('--break-redo');
 const BREAK_ARCHIVE = process.argv.includes('--break-archive');
+const BREAK_REPLACE = process.argv.includes('--break-replace');
+const BREAK_PARALLEL = process.argv.includes('--break-parallel');
+const BREAK_ROUTE = process.argv.includes('--break-route');
+const BREAK_CORPUS_PATH = process.argv.includes('--break-corpus-path');
 
 let pass = 0, fail = 0, unverified = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -532,6 +540,20 @@ console.log('\nⅩ 非出貨語料家(corpus.json:授權未確認的那一份只
     ok(corpusMeta(dir).shipping === true, '沒寫 shipping 欄 ⇒ 仍是出貨用(只有明講 false 才算)');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 
+  const nested = mkdtempSync(join(tmpdir(), 'svs-corpus-path-'));
+  try {
+    mkdirSync(join(nested, 'photos'));
+    writeFileSync(join(nested, 'corpus.json'), JSON.stringify({ shipping: false }));
+    let provSrc = readSrc('tools', 'ai3d', 'provenance.mjs');
+    if (BREAK_CORPUS_PATH) provSrc = inject(provSrc,
+      "basename(root).toLowerCase() === 'photos' && existsSync(join(parent, 'corpus.json')) ? parent : root",
+      'false ? parent : root', '--break-corpus-path');
+    ok(/basename\(root\)\.toLowerCase\(\) === 'photos'/.test(provSrc)
+        && normalizeCorpusHome(join(nested, 'photos')) === nested
+        && corpusMeta(join(nested, 'photos')).shipping === false,
+      '`--home <資料家>/photos` 回推資料家根，不能繞過父層 shipping:false');
+  } finally { rmSync(nested, { recursive: true, force: true }); }
+
   // (b) 兩個消費端。第 ⑦⑧ 站的閘是**推導自家**而不是指令列旗標
   let hlSrc = readSrc('tools', 'ai3d', 'harvest_loop.mjs');
   if (BREAK_CORPUS) {
@@ -556,6 +578,34 @@ console.log('\nⅩ 非出貨語料家(corpus.json:授權未確認的那一份只
     '非出貨家鬆的只有「是不是 CC0」—— 仍 MUST 逐張記下實際授權(不記 = 沒有帳)');
   ok(/restricted: meta\.shipping \? undefined : true/.test(fpSrc),
     '非出貨家收進來的逐筆蓋 restricted 戳記(帳本自己說得出「這張不能出貨」)');
+
+  // (c2) 不同分類平行時三支 Python 都會回寫同一本帳；沒有 family 合併鎖就是最後完成者覆蓋前者。
+  let parallelSrc = hlSrc;
+  if (BREAK_PARALLEL) parallelSrc = inject(parallelSrc,
+    'await mapLimit(families, CATEGORY_JOBS, async (fam) => {',
+    'await mapLimit(families, 1, async (fam) => {', '--break-parallel');
+  ok(/mapLimit\(families, CATEGORY_JOBS/.test(parallelSrc) && /const CATEGORY_JOBS =/.test(parallelSrc),
+    '去背 / 分離 / 篩選依 family 平行，GPU 仍留在後段單通道');
+  for (const file of ['matte_photos.py', 'split_targets.py', 'screen_mattes.py']) {
+    const src = readSrc('tools', 'ai3d', file);
+    ok(/from manifest_store import merge_manifest/.test(src) && /merge_manifest\(MANIFEST/.test(src),
+      `${file} 以 family 合併鎖回寫帳本(平行 worker 不互相覆蓋)`);
+  }
+  let routeSrc = hlSrc;
+  let methodSrc = readSrc('tools', 'ai3d', 'auto_intake.mjs');
+  if (BREAK_ROUTE) routeSrc = inject(routeSrc,
+    "const hyPend = all.filter((p) => routeFor(p.fam).method === 'hunyuan_2gp').slice(0, GEN_LIMIT);",
+    "const hyPend = all.filter((p) => routeFor(p.fam).method === 'sf3d').slice(0, GEN_LIMIT);", '--break-route');
+  if (BREAK_ROUTE) methodSrc = inject(methodSrc, 'method: item.tool,',
+    "method: item.tool === 'trellis2_spz' ? 'trellis2_spz' : 'sf3d',", '--break-route');
+  const policySrc = readSrc('tools', 'ai3d', 'pipeline_policy.mjs');
+  ok(/rock:\s*\{\s*method:\s*'hunyuan_2gp'/.test(policySrc)
+      && /const hyPend = all\.filter\(\(p\) => routeFor\(p\.fam\)\.method === 'hunyuan_2gp'\)/.test(routeSrc)
+      && /routeFor\(p\.fam\)\.method !== 'hunyuan_2gp'/.test(routeSrc)
+      && /method: item\.tool,/.test(methodSrc),
+    '巨岩生成、來源帳方法同走 Hunyuan3D-2GP，SF3D 池明確排除巨岩');
+  ok(/paint stage 永不跑/.test(routeSrc) && /shape-only; no paint/.test(routeSrc),
+    'Hunyuan 只跑 shape-only，21GB paint stage 不進採集迴圈');
 
   // (d) 面板 MUST 標出來 —— 非出貨語料長得跟正式語料一模一樣
   ok(/corpus: corpusMeta\(pick\.home\)/.test(readSrc('tools', 'parts_review.mjs')),
@@ -631,22 +681,34 @@ console.log('\nⅪ 封存區 / 未覆核重跑 / 來源帳鍵的正規化');
     vsrc2 = inject(vsrc2, 'arch.parts.push(archiveRow(key, w.rows, it, w.slot));', '', '--break-archive');
   }
   ok(/it\.status === 'archive'/.test(vsrc2), 'apply_verdicts 認得 archive');
-  ok(/arch\.parts\.push\(archiveRow\(/.test(vsrc2), '移除 = 撤節點 + 把那一列搬進封存帳');
+  const archiveBranch = (vsrc2.split("it.status === 'archive'")[1]?.split('} else if')[0] || '');
+  ok(/arch\.parts\.push\(archiveRow\(key/.test(archiveBranch), '移除 = 撤節點 + 把那一列搬進封存帳');
   ok(/if \(arch\.parts\.length\) writeJson\(ARCHIVE_PATH/.test(vsrc2), '封存帳只在真的有東西進去時落地');
   // 移除**不動照片**:使用者要的是「不要在遊戲與台上出現」,不是「這張照片不能用」。
   // 取**那一個分支的原文**來驗 —— 抓個大概(前後 N 個字元)會把隔壁 reimg/purge 分支
   // 的 `screen_mattes.py` 一起吃進來,而那條斷言從此永遠紅字(或永遠綠,看寫法)。
   // 註解裡本來就寫著「判決的紀律只有 screen_mattes.py 一份」⇒ 驗的是**程式碼**,
   // 剝掉行註解再看(㋐:逐行剝註解 MUST 吃 `\r?\n`,而 readSrc 已經正規化過換行)
-  const arcBranch = (vsrc2.split("it.status === 'archive'")[1]?.split('} else if')[0] || '')
+  const arcBranch = archiveBranch
     .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
   ok(arcBranch.length > 0 && !/screen_mattes\.py|writeJson\(HARVEST_STATE|ovr\[/.test(arcBranch),
     '移除 MUST NOT 順手改語料帳本或覆寫表(判決紀律只有 screen_mattes 一份;不重跑靠的是封存帳)');
 
+  // (c2) 「替代」不是刪除新件：撤的是來源帳 `replaces` 指到的舊件，墓碑帶回 replaced_by。
+  let replaceSrc = vsrc2;
+  if (BREAK_REPLACE) replaceSrc = inject(replaceSrc, 'arch.parts.push(tomb);', '', '--break-replace');
+  const replaceBranch = replaceSrc.match(/if \(it\.status === 'replace'\) \{([\s\S]*?)\} else if/)?.[1] || '';
+  ok(/const replaceKey = it\.status === 'replace' \? fresh\?\.replaces : null/.test(replaceSrc),
+    '替代目標只讀新件來源帳的 replaces，缺席就停、不猜');
+  ok(/arch\.parts\.push\(tomb\)/.test(replaceBranch) && /tomb\.replaced_by = key/.test(replaceBranch),
+    '替代完成後舊件進封存區，墓碑反查得到新件');
+
   // (d) 重跑**排在新圖後面**(使用者定的順位)+ 最早餵過的先跑(不然每輪重跑同樣那十幾張)
   let hlsrc = readSrc('tools', 'ai3d', 'harvest_loop.mjs');
-  if (BREAK_REDO) hlsrc = inject(hlsrc, 'return [...out, ...redo];', 'return [...redo, ...out];', '--break-redo');
-  ok(/return \[\.\.\.out, \.\.\.redo\];/.test(hlsrc), '新圖排前面、未覆核重跑接在後面(順位在後面)');
+  if (BREAK_REDO) hlsrc = inject(hlsrc, 'return [...replacements, ...out, ...redo];',
+    'return [...redo, ...replacements, ...out];', '--break-redo');
+  ok(/return \[\.\.\.replacements, \.\.\.out, \.\.\.redo\];/.test(hlsrc),
+    '替代候選與新圖排前面、未覆核重跑接在最後(順位在後面)');
   ok(/redo\.sort\(\(a, b\) => a\.fedAt\.localeCompare\(b\.fedAt\)\)/.test(hlsrc),
     '重跑取最早餵過的優先(不排序 ⇒ 每一輪都重跑同樣那十幾張)');
   ok(/photoStates\(HOME\)\.rows\.filter\(\(r\) => r\.state === 'done' && !r\.reviewed\)/.test(hlsrc),

@@ -53,13 +53,16 @@
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --no-redo       不重跑未覆核的(送過就不再送)
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --dry           只印每一站要跑什麼,不執行
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, appendFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
+import { availableParallelism } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { partLibs } from './parts_src.mjs';
-import { corpusMeta, loadProvenance } from './provenance.mjs';
+import { corpusMeta, loadProvenance, normalizeCorpusHome } from './provenance.mjs';
 import { photoStates } from './photo_state.mjs';
+import { dataFamilies, gpuFamilies, routeFor } from './pipeline_policy.mjs';
+import { legacyJobs } from './replacement_plan.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -67,7 +70,7 @@ const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(`--${n}`);
 const opt = (n, d = null) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : d; };
 
-const HOME = opt('home', HERE);
+const HOME = normalizeCorpusHome(opt('home', HERE));
 // venv 與 vendor 未必與語料同住(runbook §5d:weights/venv 在一個資料家、照片在另一個)
 const VENV_HOME = opt('venv', HOME);
 // `--rounds 0`(或負數)= 一直跑下去:採集是機率的(可用率 ~1/15),而「跑到夠為止」
@@ -87,7 +90,7 @@ const NO_GEN = flag('no-gen');
 // (`<家>/corpus.json` 的 shipping:false),不是掛在指令列上 —— 使用者選的就是「只跑到
 // contact sheet 就停」這條路,而它唯一的弱點是「每次都要記得加 --no-intake」,忘一次就
 // 進了第 ⑦⑧ 站。沒宣告的家逐位元同舊行為。
-const CORPUS = corpusMeta(opt('home', HERE));
+const CORPUS = corpusMeta(HOME);
 const NO_INTAKE = flag('no-intake') || !CORPUS.shipping;
 // 一輪最多自動入庫幾顆。刻意小:名冊每多一顆,同一張圖上的剪影分佈就整個重排
 // (`bldGeo`/`megaGeo` 的輪替除數是名冊長度)⇒ 一次塞十顆等於一次改十次全場外觀,
@@ -96,6 +99,8 @@ const INTAKE_LIMIT = Number(opt('intake-limit', 4));
 // **未覆核的重跑**(2026-08-11 使用者定案:「採集迴圈預設未覆核的全重跑(順位在後面)」)。
 // 預設開;`--no-redo` 退回 2026-08-11 之前的行為(送過就永遠不再送)。細節見 `pendingMattes`。
 const NO_REDO = flag('no-redo');
+// 只平行 CPU 的去背 / 分離 / 篩選。GPU 模型維持單通道批次；同卡平行載入會超過 12GB。
+const CATEGORY_JOBS = Math.max(1, Number(opt('category-jobs', Math.min(3, availableParallelism()))));
 
 // **逐族選模型,不是全族一把**(runbook §5n 量出來的:T2-spz 對建築/規則幾何是雙 ◎,
 // SF3D 在同一張仰拍煙囪上出的是一顆歪塊)。`--t2` 指到 TRELLIS.2-stableprojectorz 的 checkout;
@@ -106,6 +111,11 @@ const T2_PY = T2_HOME ? join(T2_HOME, '.venv', 'Scripts', process.platform === '
 const T2_GATE = T2_HOME ? join(T2_HOME, 'run_t2_gate.py') : null;
 const T2_BIN = T2_HOME ? join(T2_HOME, 'binarize_feed.py') : null;
 const t2Ready = !!(T2_PY && existsSync(T2_PY) && existsSync(T2_GATE) && existsSync(T2_BIN));
+// Hunyuan 的官方 entrypoint 隨 checkout 版本變動；skill 明令不得猜旗標。這裡只接一支外部
+// adapter，契約固定為 `<adapter> <images...> --output-dir <dir>`，輸出可為 `<i>/mesh.glb`
+// 或 `<target-id>.glb`。adapter 內部才依該 checkout 的 README 呼叫 2GP shape-only。
+const HUNYUAN = opt('hunyuan');
+const hunyuanReady = !!(HUNYUAN && existsSync(HUNYUAN));
 
 const PY = join(VENV_HOME, '.venv', 'Scripts', process.platform === 'win32' ? 'python.exe' : 'python');
 const PY_NIX = join(VENV_HOME, '.venv', 'bin', 'python');
@@ -136,6 +146,40 @@ function step(label, cmd, args, opts = {}) {
   if (r.error) { console.warn(`  ⚠ ${label} 起不來:${r.error.message}(跳過,其餘照跑)`); return { ok: false, out }; }
   if (r.status !== 0) console.warn(`  ⚠ ${label} 回傳 ${r.status}(不中斷整輪)`);
   return { ok: r.status === 0, out };
+}
+
+async function stepAsync(label, cmd, args, opts = {}) {
+  if (opts.skip && opts.hard) return step(label, cmd, args, opts);
+  if (DRY) return step(label, cmd, args, opts);
+  if (opts.skip) return step(label, cmd, args, opts);
+  return await new Promise((resolve) => {
+    const child = spawn(cmd, args, {
+      cwd: opts.cwd || ROOT, shell: process.platform === 'win32' && !/[\\/]/.test(cmd),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const chunks = [];
+    child.stdout.on('data', (buf) => chunks.push(buf));
+    child.stderr.on('data', (buf) => chunks.push(buf));
+    child.on('error', (error) => resolve({ ok: false, out: '', error }));
+    child.on('close', (code) => {
+      const out = Buffer.concat(chunks).toString('utf8');
+      console.log(`  ▶ ${label}`);
+      for (const line of out.split(/\r?\n/)) if (line.trim()) console.log(`     ${line}`);
+      if (code) console.warn(`  ⚠ ${label} 回傳 ${code}(不中斷整輪)`);
+      resolve({ ok: code === 0, out });
+    });
+  });
+}
+
+async function mapLimit(rows, limit, fn) {
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, rows.length) }, async () => {
+    while (cursor < rows.length) {
+      const row = rows[cursor++];
+      await fn(row);
+    }
+  });
+  await Promise.all(workers);
 }
 
 const loadJson = (p, d) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return d; } };
@@ -196,7 +240,13 @@ function pendingMattes(done) {
   // 「餵過但沒人看過」的母照片(推導縫 = photo_state;`--no-redo` 退回舊行為)
   const unreviewed = NO_REDO ? new Set()
     : new Set(photoStates(HOME).rows.filter((r) => r.state === 'done' && !r.reviewed).map((r) => r.id));
-  const out = [], redo = [], held = { shipped: 0, cut: 0, noSeam: new Map() };
+  const legacy = new Map();
+  for (const job of legacyJobs()) {
+    const k = `${job.family}/${job.part || ''}`;
+    if (!legacy.has(k)) legacy.set(k, []);
+    legacy.get(k).push(job.key);
+  }
+  const out = [], replacements = [], redo = [], held = { shipped: 0, cut: 0, noSeam: new Map() };
   for (const fam of readdirSync(MATTE_DIR, { withFileTypes: true }).filter((d) => d.isDirectory())) {
     if (FAMILY && fam.name !== FAMILY) continue;
     const famDir = join(MATTE_DIR, fam.name);
@@ -219,7 +269,11 @@ function pendingMattes(done) {
           // 「刪除來源圖」兩件事都以母照片為單位 ⇒ 投料帳 MUST 同時帶著兩層,
           // 少了 pid 的話第 ⑦ 站只能去拆檔名(而命名規則只在 split_targets.py 定義一次)。
           const unit = { key, fam: fam.name, part: part.name, id: u.id, pid: id, path: u.path };
-          if (!done[key]) out.push(unit);
+          if (!done[key]) {
+            const q = legacy.get(`${fam.name}/${part.name}`);
+            if (q?.length) replacements.push({ ...unit, replaces: q.shift() });
+            else out.push(unit);
+          }
           else if (unreviewed.has(id)) redo.push({ ...unit, fedAt: String(done[key]), redo: true });
         }
       }
@@ -234,7 +288,8 @@ function pendingMattes(done) {
   redo.sort((a, b) => a.fedAt.localeCompare(b.fedAt));
   if (redo.length) console.log(`  ·  ${redo.length} 個已餵過但**沒人覆核**的目標排在新圖後面重跑(--no-redo 關掉)`);
   else if (!NO_REDO && !out.length) console.log('  ·  沒有未覆核的可以重跑(每一張都有人看過了)');
-  return [...out, ...redo];
+  if (replacements.length) console.log(`  ·  ${replacements.length} 個候選優先供 8/15 前舊件逐一替代；新件通過人眼後才撤舊件`);
+  return [...replacements, ...out, ...redo];
 }
 
 
@@ -250,6 +305,11 @@ function screenFams() {
     .filter((d) => d.isDirectory() && legit.has(d.name)).map((d) => d.name);
 }
 
+function corpusFams() {
+  const rows = loadJson(MANIFEST, []);
+  return [...new Set(rows.filter((row) => row.ok && (!FAMILY || row.family === FAMILY)).map((row) => row.family).filter(Boolean))].sort();
+}
+
 /**
  * 投料帳 `<產出目錄>/.feed.json` —— 第 ⑦ 站的入場券(沒有它就不入庫,規則 9)。
  * 兩層 id 都要記:`id` = 母照片(來源帳與「已出貨/黑名單」都以它為單位)、
@@ -258,7 +318,7 @@ function screenFams() {
 function writeFeed(dir, pend, gen) {
   const items = pend.map((p, index) => ({
     index, id: p.pid, target: p.id, family: p.fam, part: p.part,
-    matte: relative(HOME, p.path).split('\\').join('/'), ...gen,
+    matte: relative(HOME, p.path).split('\\').join('/'), replaces: p.replaces || null, ...gen,
   }));
   writeFileSync(join(dir, '.feed.json'),
     JSON.stringify({ at: new Date().toISOString(), home: HOME, python, items }, null, 2));
@@ -269,6 +329,10 @@ async function round(n) {
   console.log(`\n══ 第 ${n}${FOREVER ? "" : `/${ROUNDS}`} 輪(${tag})資料家 ${HOME}`);
   if (!CORPUS.shipping) console.log(`   ⚠ 非出貨語料家:${CORPUS.why || '不進遊戲'}`);
   const rec = { round: n, at: new Date().toISOString(), home: HOME, adopted: 0, fetched: 0, generated: 0 };
+
+  // 非出貨家允許既有本機照片先入「候選帳」，但授權欄維持 unverified，且第 ⑦⑧ 站仍被硬擋。
+  if (!CORPUS.shipping) step('限制授權照片編目', process.execPath,
+    ['tools/ai3d/index_restricted_photos.mjs', '--home', HOME]);
 
   // ⓪ 收編 inbox —— 零網路,所以永遠先跑:使用者放進去的圖不必等抓取那一站成不成功
   const a = step('收編 inbox(自己放的圖)', process.execPath,
@@ -291,38 +355,56 @@ async function round(n) {
 
   // ② 去背 / ②b 圈選+分離 / ③ 選片閘
   const noPy = python ? null : `找不到 venv python(${PY})—— 去背/分離/選片/生成四站跳過`;
-  step('去背', python || 'python', ['matte_photos.py', ...(FAMILY ? [FAMILY] : []), '--home', HOME],
-    { cwd: HERE, skip: noPy });
-  // ②b **MUST 排在選片閘之前**:切開之後判決的單位才是「一個目標」。反過來的話,一張
-  // 「水塔 + 一整棟房子」的照片會先被 ④多主體 整張淘汰掉,那兩個目標從此再也回不來
-  // (而畫面上只表現成「可用率就是這麼低」)。
-  step('圈選 + 分離', python || 'python',
-    ['split_targets.py', '--sheet', '--home', HOME, ...(FAMILY ? ['--family', FAMILY] : [])],
-    { cwd: HERE, skip: noPy });
-  // ③ 選片閘 —— **逐族各跑一次**:`screen_mattes.py` 的 `--family` 預設是 `tree`,
-  // 不逐族傳的話 rock/building/landmark 的 matte **永遠不會過閘**,而下游只跳過
-  // `screen.v === 'reject'` ⇒ 那三族的垃圾會原封不動被送上 GPU(紀律 ③ 當場失效),
-  // 而畫面上只表現成「產出率怎麼一直這麼低」。2026-08-10 首輪實測就是這樣:
-  // 只印了「tree 族 matte 45 張」一行,另外三族一張都沒驗。
-  for (const fam of (FAMILY ? [FAMILY] : screenFams())) {
-    step(`選片閘 · ${fam}`, python || 'python',
-      ['screen_mattes.py', '--sheet', '--home', HOME, '--family', fam],
-      { cwd: HERE, skip: noPy });
-  }
+  const families = FAMILY ? [FAMILY] : corpusFams();
+  console.log(`  ·  分類平行 ${CATEGORY_JOBS} 工: ${families.map((f) => `${f}→${routeFor(f).method}`).join('、')}`);
+  await mapLimit(families, CATEGORY_JOBS, async (fam) => {
+    await stepAsync(`去背 · ${fam}`, python || 'python', ['matte_photos.py', fam, '--home', HOME], { cwd: HERE, skip: noPy });
+    // 同一分類內仍嚴格維持 去背 → 分離 → 篩選；不同分類才平行。
+    await stepAsync(`圈選 + 分離 · ${fam}`, python || 'python',
+      ['split_targets.py', '--sheet', '--home', HOME, '--family', fam], { cwd: HERE, skip: noPy });
+    await stepAsync(`選片閘 · ${fam}`, python || 'python',
+      ['screen_mattes.py', '--sheet', '--home', HOME, '--family', fam], { cwd: HERE, skip: noPy });
+  });
 
   // ④ img→3D:只餵這一輪新過閘的(紀律 ②③),而且**逐族選模型**(§5n:建築走 T2-spz)
   const done = loadJson(STATE, {});
   const all = pendingMattes(done);
   // 逐族切額度時**順序不能重排**:`pendingMattes` 已經把「新的在前、未覆核重跑的在後」
   // 排好了(使用者定案的順位),這裡再 sort 一次就等於把那個順位丟掉
-  const t2Pend = all.filter((p) => T2_FAMS.has(p.fam)).slice(0, T2_LIMIT);
-  const sfPend = all.filter((p) => !T2_FAMS.has(p.fam)).slice(0, GEN_LIMIT);
-  rec.redone = [...sfPend, ...t2Pend].filter((p) => p.redo).length;
+  const gpuFams = new Set(gpuFamilies(families));
+  const dataFams = dataFamilies(families);
+  if (dataFams.length) console.log(`  ·  ${dataFams.join('、')} 走 Route A 純資料零件；保留照片供零件台/人工寫表，不送 GPU`);
+  const t2Pend = all.filter((p) => gpuFams.has(p.fam) && T2_FAMS.has(p.fam)).slice(0, T2_LIMIT);
+  const hyPend = all.filter((p) => routeFor(p.fam).method === 'hunyuan_2gp').slice(0, GEN_LIMIT);
+  const sfPend = all.filter((p) => gpuFams.has(p.fam)
+    && !T2_FAMS.has(p.fam) && routeFor(p.fam).method !== 'hunyuan_2gp').slice(0, GEN_LIMIT);
+  rec.redone = [...hyPend, ...sfPend, ...t2Pend].filter((p) => p.redo).length;
   const outDir = join(HOME, 'out', 'sf3d_auto', tag);
+  const hyDir = join(HOME, 'out', 'hunyuan_auto', tag);
   const t2Dir = join(HOME, 'out', 't2_auto', tag);
   const feedDir = join(t2Dir, 'feed');
 
-  // ④-a SF3D(岩 / 樹 / 地標)
+  // ④-a Hunyuan3D-2GP shape-only(巨岩)。paint stage 永不跑；沒有 adapter 時保留候選，
+  // 不暗中改用 SF3D 產出「新版」來替代舊件。
+  const hySkip = NO_GEN ? '--no-gen'
+    : (hunyuanReady ? null : `沒給 --hunyuan adapter 或路徑不對(${HUNYUAN || '未指定'})⇒ 巨岩本輪不生成`)
+    || (hyPend.length ? null : '沒有新的巨岩 matte 要跑');
+  if (!hySkip && !DRY) mkdirSync(hyDir, { recursive: true });
+  const hyIsPy = /\.py$/i.test(HUNYUAN || '');
+  const hy = step(`img→3D · Hunyuan3D-2GP(${hyPend.length} 張)`, hyIsPy ? (python || 'python') : (HUNYUAN || 'hunyuan-adapter'),
+    [...(hyIsPy ? [HUNYUAN] : []), ...hyPend.map((p) => p.path), '--output-dir', hyDir], { skip: hySkip });
+  const hyMade = !hySkip && !DRY && hy.ok;
+  if (hyMade) {
+    for (const p of hyPend) done[p.key] = tag;
+    rec.generated += hyPend.length;
+    rec.hunyuanDir = relative(HOME, hyDir).split('\\').join('/');
+    writeFeed(hyDir, hyPend, {
+      tool: 'hunyuan_2gp', runner: `${HUNYUAN} — ${hyIsPy ? python : 'executable adapter'}`,
+      params: 'shape-only; no paint; adapter contract v1',
+    });
+  }
+
+  // ④-b SF3D(雕塑樹)。規則人造物已走 Route A，巨岩由 Hunyuan 主路由處理。
   const genSkip = NO_GEN ? '--no-gen'
     : noPy || (existsSync(SF3D) ? null : `找不到 SF3D(${SF3D})`)
     || (sfPend.length ? null : '沒有新的 matte 要跑');
@@ -331,7 +413,8 @@ async function round(n) {
     [SF3D, ...sfPend.map((p) => p.path), '--output-dir', outDir,
       '--texture-resolution', '512', '--remesh_option', 'triangle', '--target_vertex_count', '520'],
     { skip: genSkip });
-  if (!genSkip && !DRY && g.ok) {
+  const sfMade = !genSkip && !DRY && g.ok;
+  if (sfMade) {
     for (const p of sfPend) done[p.key] = tag;
     rec.generated += sfPend.length;
     rec.outDir = relative(HOME, outDir).split('\\').join('/');
@@ -346,7 +429,7 @@ async function round(n) {
     });
   }
 
-  // ④-b T2-spz(建築)。餵入 MUST 先二值化 —— T2 的 preprocess 以 alpha>204 取 bbox,
+  // ④-c T2-spz(建築)。餵入 MUST 先二值化 —— T2 的 preprocess 以 alpha>204 取 bbox,
   // 軟 alpha 的漸層段會被整段裁掉(§5n「同一張 matte ≠ 同一個輸入」,hoodoo 基座變石板的成因)。
   // 沒給 `--t2` 就**不生成**而不是退回 SF3D:後者對建築是量出來比較差的那一條(§5n 雙 ◎ vs 歪塊),
   // 悄悄退回去只會讓語料庫多幾顆一樣要重生成的節點。
@@ -360,7 +443,8 @@ async function round(n) {
   const t2 = step(`img→3D · T2-spz(${t2Pend.length} 張)`, T2_PY || 'python',
     [T2_GATE, ...t2Pend.map((p) => join(feedDir, `${p.key.split('/').pop()}.png`)), '--out', t2Dir],
     { skip: t2Skip || (bin.ok ? null : '二值化沒成功'), cwd: T2_HOME || ROOT });
-  if (!t2Skip && !DRY && t2.ok) {
+  const t2Made = !t2Skip && !DRY && t2.ok;
+  if (t2Made) {
     for (const p of t2Pend) done[p.key] = tag;
     rec.generated += t2Pend.length;
     rec.t2Dir = relative(HOME, t2Dir).split('\\').join('/');
@@ -374,21 +458,24 @@ async function round(n) {
   // 而 T2-spz 的原始輸出**本來就是雙層撕裂薄殼**(provenance METHODS 那一條:必須先過
   // solidify_parts.py 才進 normalize;實測 48k 面 / 6k 開放邊 / 200 元件)⇒ 同一把尺量下去
   // 會把每一顆建築都判成「殼/碎片 ✗」,而那是尺用錯了不是東西壞了(skill:門檻內建形狀假設)。
-  const noOut = rec.generated && !genSkip ? null : '這一輪 SF3D 沒有新產出';
+  const noOut = sfMade ? null : '這一輪 SF3D 沒有新產出';
   step('實心度快篩', process.execPath, ['tools/ai3d/mesh_stats.mjs', outDir], { skip: noOut });
 
   // ⑥ contact sheet —— **兩路都要**。黏土縮圖與形狀假設無關,而它正是「人眼那一步」的輸入:
   // 少了 T2 這一半,建築族從頭到尾沒有任何一張圖可以看(症狀只會表現成「產出率好像很低」)。
   step('contact sheet · SF3D', process.execPath, ['tools/ai3d/mesh_sheet.mjs', outDir], { skip: noOut });
+  step('contact sheet · Hunyuan', process.execPath, ['tools/ai3d/mesh_sheet.mjs', hyDir],
+    { skip: hyMade ? null : '這一輪 Hunyuan 沒有新產出' });
   step('contact sheet · T2', process.execPath, ['tools/ai3d/mesh_sheet.mjs', t2Dir],
-    { skip: (!t2Skip && rec.generated) ? null : '這一輪 T2 沒有新產出' });
+    { skip: t2Made ? null : '這一輪 T2 沒有新產出' });
 
   // ⑦⑧ 自動入庫 + 收尾稽核(2026-08-10;`--no-intake` 退回舊行為)。**逐批各跑一次** ——
   // 兩批的投料帳分開,而第 ⑦ 站的入場券就是投料帳。收尾稽核由 `--gate-full` 在該支裡跑完,
   // 紅字它自己整批回滾(逐位元)⇒ 這裡只要把回報記進本輪的帳。
   rec.intake = 0; rec.rolledBack = 0;
   for (const [label, dir, skip] of [
-    ['SF3D', outDir, noOut], ['T2', t2Dir, (!t2Skip && rec.generated) ? null : '這一輪 T2 沒有新產出'],
+    ['Hunyuan', hyDir, hyMade ? null : '這一輪 Hunyuan 沒有新產出'],
+    ['SF3D', outDir, noOut], ['T2', t2Dir, t2Made ? null : '這一輪 T2 沒有新產出'],
   ]) {
     const s = NO_INTAKE
       ? (CORPUS.shipping ? '--no-intake' : `非出貨語料家(corpus.json shipping:false)⇒ 停在 contact sheet,不進遊戲`)
