@@ -72,6 +72,14 @@ const REPLAY = STATIONS ? JSON.parse(fs.readFileSync(STATIONS, 'utf8')).stations
 const ONLY = arg('--only', '').split(',').map((s) => s.trim()).filter(Boolean);
 const INK_SELF = arg('--ink-self', '');
 const INK_GRAZE = arg('--ink-graze', '');
+// `--probe-ndc x,y`:對 `--only` 指定的鏡頭射一條螢幕空間射線,把前八個命中寫進 meta。
+// 用來把「截圖上看起來像凸起」變成可重現的幾何證據;座標範圍皆為 -1..1。
+const PROBE_NDC = arg('--probe-ndc', '');
+const PROBE = PROBE_NDC ? PROBE_NDC.split(',').map(Number) : null;
+if (PROBE && (PROBE.length !== 2 || PROBE.some((v) => !Number.isFinite(v) || v < -1 || v > 1))) {
+  console.error('--probe-ndc 格式為 x,y,且兩值皆須介於 -1..1');
+  process.exit(1);
+}
 const PORT = +arg('--port', 8632);
 // `--time night`(+ `--season` / `--weather`):環境本來寫死 `summer/day/clear`,而**夜間是
 // 一整條沒有任何離線工具走過的路** —— `biomes.js` 的 `night` 旗標(`cfg.env?.time === 'night'`)
@@ -201,7 +209,7 @@ await page.route(`${PROBE_URL}**`, (r) => r.fulfill({
 }));
 await page.goto(PROBE_NAV, { waitUntil: 'domcontentloaded' });
 
-const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, only, env, elapsed }) => {
+const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, only, env, elapsed, probe }) => {
   const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
@@ -558,6 +566,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
   }
 
   const out = [];
+  const probeHits = [];
   let glError = 0;
   // 回放 MUST 整組取代(不是補進去):混著用會拍出「一半新機位、一半舊機位」的圖組,
   // 而檔名一模一樣 ⇒ 之後沒有任何東西能分辨哪幾張可以比。
@@ -571,12 +580,28 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
     updateCelLight(camera);
     if (pipe) pipe.render(); else renderer.render(scene, camera);
     glError ||= renderer.getContext().getError();
+    if (probe) {
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(new THREE.Vector2(probe[0], probe[1]), camera);
+      const hits = ray.intersectObjects(scene.children, true).slice(0, 8).map((h) => ({
+        distance: h.distance,
+        point: h.point.toArray(),
+        type: h.object.type,
+        name: h.object.name || '',
+        instanceId: h.instanceId ?? null,
+        vertices: h.object.geometry?.attributes?.position?.count ?? null,
+        material: Array.isArray(h.object.material)
+          ? h.object.material.map((m) => m?.name || m?.color?.getHexString?.() || '')
+          : (h.object.material?.name || h.object.material?.color?.getHexString?.() || ''),
+      }));
+      probeHits.push({ name: st.name, ndc: [...probe], hits });
+    }
     out.push({ name: st.name, png: canvas.toDataURL('image/png'),
       p: [...st.p], look: [...st.look] });
   }
   return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor, glError,
-    curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
-}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY, env: ENV, elapsed: ELAPSED });
+    probeHits, curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
+}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY, env: ENV, elapsed: ELAPSED, probe: PROBE });
 
 for (const s of shots.shots) {
   fs.writeFileSync(join(OUT, `${s.name}${SUFFIX}.png`), Buffer.from(s.png.split(',')[1], 'base64'));
@@ -592,6 +617,11 @@ console.log(`  地物 mesh ${shots.objN}・零件庫節點 ${shots.libN}${LAYERS
 console.log(`  世界曲面 ${shots.curveOn ? `已裝(拐點 ${Math.round(shots.curveKnee)}m / 地平線 ${Math.round(shots.curveHorizon)}m)`
   : (LAYERS.curve ? '⚠ 未裝(three 錨點對不上?)' : '關閉(--curve=0)')}`);
 console.log(`  真 GPU gl.getError() = ${shots.glError}`);
+for (const p of shots.probeHits) {
+  console.log(`  射線 ${p.name} ndc=${p.ndc.join(',')}`);
+  for (const h of p.hits) console.log(`      · ${h.type}${h.instanceId == null ? '' : `#${h.instanceId}`} ${h.material}`
+    + ` v${h.vertices ?? '-'} d${h.distance.toFixed(2)} @${h.point.map((v) => v.toFixed(2)).join(',')}`);
+}
 // 繞行了哪一顆 MUST 印出來:四張圖本身分不出「這顆真的長著庫節點」還是「認錯人拍了一顆
 // 程序岩」—— 節點名 + 候選顆數就是那個證據(0 顆 = 這張圖沒有庫岩體,不是拍失敗)。
 if (LAYERS.lib) {
@@ -609,6 +639,7 @@ fs.writeFileSync(join(OUT, `meta${SUFFIX}.json`), JSON.stringify({
   venue: VENUE, team: TEAM, layers: LAYERS, env: ENV,
   tunnels: shots.tunnels, decks: shots.decks, water: shots.water,
   objN: shots.objN, libN: shots.libN, biomeErr: shots.biomeErr, imagery: shots.imagery, glError: shots.glError,
+  probeHits: shots.probeHits,
   stations: shots.shots.map((s) => ({ name: s.name, p: s.p, look: s.look })),
 }, null, 2));
 console.log(`\n${shots.shots.length} 張 → ${OUT}`);

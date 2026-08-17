@@ -7,9 +7,11 @@
 //   鐵路未 merge 鏈,端點貼近的同線段不得誤剔)。
 // 跑法:node tools/audit_bridge_crossing.mjs   退出碼:0 = 全綠;1 = 紅字
 // **改完 MUST 反向驗證**:把 polylinesMeet 的「真正交叉」return 寫回 false ⇒「交叉必剔除」段 MUST 紅字(內建對照組)。
+// `--break-cap-sink`:把帽梁頂面推回與橋面共面 ⇒ Ⅷ MUST 紅字。
 import { readSrc } from './audit_src.mjs';
 
 const src = readSrc('public', 'js', 'biomes.js');
+const BREAK_CAP_SINK = process.argv.includes('--break-cap-sink');
 
 function loadCore(mutate = (s) => s) {
   const roadW = src.slice(src.indexOf('const ROAD_W = {'), src.indexOf('};', src.indexOf('const ROAD_W = {')) + 2);
@@ -106,6 +108,23 @@ console.log('Ⅶ 反向驗證:polylinesMeet 恆回 false ⇒ 交會不被偵測'
   ok(bad.dedupeCrossingBridges([major, minor], null, []).roads.length === 2, '對照組:道路交會失效 ⇒ 兩條都留');
   const out = bad.dedupeCrossingBridges([way('primary', line(-50, 0, 50, 0))], null, [], [rail(line(0, -50, 0, 50))]);
   ok(out.roads.length === 1 && out.rails.length === 1, '對照組:鐵路×道路交會失效 ⇒ 都留(稽核有牙齒)');
+}
+
+console.log('Ⅷ 橋墩帽梁頂面低於橋面(避免共面硬幣拋)');
+{
+  let capSrc = src;
+  if (BREAK_CAP_SINK) {
+    const before = capSrc;
+    capSrc = capSrc.replace(/p\.y1 - capSink - capH \/ 2/, 'p.y1 - capH / 2');
+    if (capSrc === before) throw new Error('--break-cap-sink 字面替換沒有生效(原文改了?)');
+  }
+  const h = Number(/const capH = ([\d.]+), capSink = [\d.]+;/.exec(capSrc)?.[1]);
+  const sink = Number(/const capH = [\d.]+, capSink = ([\d.]+);/.exec(capSrc)?.[1]);
+  ok(Number.isFinite(h) && Number.isFinite(sink) && h >= 0.8 && sink >= 0.8,
+    `水平帽梁保持結構厚度且下掛餘裕 ≥ 0.8m(厚 ${h}m・下沉 ${sink}m)`);
+  ok(/P\.set\(p\.x, p\.y1 - capSink - capH \/ 2, p\.z\);/.test(capSrc)
+    && /S\.set\(p\.w, capH, p\.r \* 2\.3\);/.test(capSrc),
+  '帽梁中心與厚度共用 capH,頂面 = p.y1 − capSink(MUST NOT 與橋面共面)');
 }
 
 console.log(`\n${fail === 0 ? '✅ 全綠' : '❌ 有紅字'}  pass=${pass} fail=${fail}`);
