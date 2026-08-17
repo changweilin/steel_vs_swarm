@@ -2711,6 +2711,24 @@ document.querySelectorAll('#pauseTabs .pause-tab, #pauseOverlay .pause-back').fo
   b.addEventListener('click', () => { switchPausePage(b.dataset.page); app.audio?.ui('click'); });
 });
 
+// ── 設定頁子分頁切換(音訊 / 操控 / 畫面 / 觸控 / 開發)──
+function switchSetTab(scopeEl, subpage) {
+  if (!scopeEl) return;
+  scopeEl.querySelectorAll('.set-tabs .set-tab').forEach((b) => {
+    b.classList.toggle('on', b.dataset.setpage === subpage);
+  });
+  scopeEl.querySelectorAll('.set-panel').forEach((p) => {
+    p.hidden = p.dataset.setpage !== subpage;
+  });
+}
+document.querySelectorAll('#pauseSetTabs .set-tab, #lobbySetTabs .set-tab').forEach((b) => {
+  b.addEventListener('click', () => {
+    const pageEl = b.closest('.pause-page');
+    switchSetTab(pageEl, b.dataset.setpage);
+    app.audio?.ui('click');
+  });
+});
+
 // ── 設定:各類開關 helper(switch 以 aria-checked 記狀態)──
 function setSwitch(id, on) { $(id)?.setAttribute('aria-checked', on ? 'true' : 'false'); }
 function bindSwitch(id, apply) {
@@ -2865,6 +2883,22 @@ async function syncDevTools() {
     const res = await fetch('/dev/tools', { cache: 'no-store' });
     _devTools = res.ok ? (await res.json()).tools : null;
   } catch { _devTools = null; }   // 靜態站台 / file:// 一律走這裡
+  const hasDev = !!_devTools?.length;
+  for (const id of ['pauseSetTabs', 'lobbySetTabs']) {
+    const tabs = $(id);
+    if (!tabs) continue;
+    const devBtn = tabs.querySelector('.set-tab[data-setpage="dev"]');
+    if (devBtn) devBtn.hidden = !hasDev;
+  }
+  if (!hasDev) {
+    for (const scopeId of ['pauseOverlay', 'lobbyMenu']) {
+      const scope = $(scopeId);
+      const activeDev = scope?.querySelector('.set-panel[data-setpage="dev"]:not([hidden])');
+      if (activeDev) {
+        switchSetTab(scope.querySelector('.pause-page[data-page="settings"]'), 'audio');
+      }
+    }
+  }
   for (const id of DEV_MOUNTS) renderDevTools($(id));
 }
 

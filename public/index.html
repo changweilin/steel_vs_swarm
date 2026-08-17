@@ -485,48 +485,54 @@
         </div>
       </div>
 
-      <!-- 分頁:設定(音效 / 音樂雙聲道 + 低功耗等各類開關)-->
+      <!-- 分頁:設定(音訊 / 操控 / 畫面 / 開發)-->
       <div class="pause-page" data-page="settings" hidden>
+        <div class="set-tabs seg seg-sm" id="pauseSetTabs">
+          <button class="segb set-tab on" type="button" data-setpage="audio">音訊</button>
+          <button class="segb set-tab" type="button" data-setpage="ctrl">操控</button>
+          <button class="segb set-tab" type="button" data-setpage="visual">畫面</button>
+          <button class="segb set-tab" type="button" data-setpage="dev" hidden>開發</button>
+        </div>
+
         <div class="set-list">
-          <div class="set-row">
-            <span class="set-label">音效</span>
-            <button id="setSfxOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音效開關"><span></span></button>
-            <input id="setSfxVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音效音量">
-            <span class="set-val" id="setSfxVal">0%</span>
+          <!-- 子分頁:音訊 (音效 / 音樂雙聲道 + 低功耗模式) -->
+          <div class="set-panel" data-setpage="audio">
+            <div class="set-row">
+              <span class="set-label">音效</span>
+              <button id="setSfxOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音效開關"><span></span></button>
+              <input id="setSfxVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音效音量">
+              <span class="set-val" id="setSfxVal">0%</span>
+            </div>
+            <div class="set-row">
+              <span class="set-label">音樂</span>
+              <button id="setBgmOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音樂開關"><span></span></button>
+              <input id="setBgmVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音樂音量">
+              <span class="set-val" id="setBgmVal">0%</span>
+            </div>
+            <div class="set-row">
+              <span class="set-label">低功耗模式</span>
+              <button id="setLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
+              <button class="tip-dot" type="button" aria-label="說明" data-tipkey="lowPower">ⓘ</button>
+            </div>
           </div>
-          <div class="set-row">
-            <span class="set-label">音樂</span>
-            <button id="setBgmOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音樂開關"><span></span></button>
-            <input id="setBgmVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音樂音量">
-            <span class="set-val" id="setBgmVal">0%</span>
-          </div>
-          <div class="set-row">
-            <span class="set-label">低功耗模式</span>
-            <button id="setLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
-            <button class="tip-dot" type="button" aria-label="說明" data-tipkey="lowPower">ⓘ</button>
+
+          <!-- 子分頁:操控 (操作方式 + 觸控操控) -->
+          <div class="set-panel" data-setpage="ctrl" hidden>
+            <div id="pauseCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
+            <div class="set-sub touch-only">▎觸控操控</div>
+            <div class="touch-only" id="pauseTouchMount" style="flex-direction:column;gap:12px"></div>
           </div>
 
-          <!-- 操作方式(限定模式 + 目前操控):內容由 mobile.js renderCtrlSettings() 注入。
-               **桌機不隱藏** —— 「限定搖桿」在桌機上同樣成立;能不能改由 ctrlmode.js 決定
-               (進房後限定模式鎖住;不限定才可在此切換鍵鼠 ⇄ 搖桿)。 -->
-          <div class="set-sub">▎操作方式</div>
-          <div id="pauseCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
+          <!-- 子分頁:畫面 (畫面表現:art-direction 拉桿 + 即時樣品) -->
+          <div class="set-panel" data-setpage="visual" hidden>
+            <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
+            <div id="pauseVisualMount" class="vset"></div>
+          </div>
 
-          <!-- 畫面表現(art-direction 拉桿 + 即時樣品):內容由 main.js renderVisualSettings() 注入。
-               陰影偏色/勾線/風化這幾項在計畫書裡卡在「需要美術方向確認」—— 落地方式就是這裡,
-               由玩家自己在樣品上定案(預設值 = 逐位元同舊制)。 -->
-          <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
-          <div id="pauseVisualMount" class="vset"></div>
-
-          <!-- 觸控/陀螺儀:內容由 main.js renderTouchSettings() 注入(與大廳「手機操控」面板共用
-               同一份設定表,MUST NOT 在兩處各寫一份 DOM)。桌機以 .touch-only 隱藏整區。 -->
-          <div class="set-sub touch-only">▎觸控操控</div>
-          <div class="touch-only" id="pauseTouchMount" style="flex-direction:column;gap:12px"></div>
-
-          <!-- 開發工具:內容由 main.js renderDevTools() 注入,**連小標都由它產生** ——
-               這一區在出貨版(GitHub Pages / 單機版 / 隊友連進來的區網位址)一律整塊不存在,
-               小標若寫成靜態標記就會在那些地方留下一個空的區塊標題。 -->
-          <div id="pauseDevMount" style="display:flex;flex-direction:column;gap:12px"></div>
+          <!-- 子分頁:開發工具 (本機開發工具啟停) -->
+          <div class="set-panel" data-setpage="dev" hidden>
+            <div id="pauseDevMount" style="display:flex;flex-direction:column;gap:12px"></div>
+          </div>
         </div>
         <div class="row" style="justify-content:center"><button class="btn small pause-back" type="button" data-page="menu">◀ 返回選單</button></div>
       </div>
@@ -675,31 +681,51 @@
 
     <!-- 分頁:設定 -->
     <div class="pause-page" data-page="settings">
+      <div class="set-tabs seg seg-sm" id="lobbySetTabs">
+        <button class="segb set-tab on" type="button" data-setpage="audio">音訊</button>
+        <button class="segb set-tab" type="button" data-setpage="ctrl">操控</button>
+        <button class="segb set-tab" type="button" data-setpage="visual">畫面</button>
+        <button class="segb set-tab" type="button" data-setpage="dev" hidden>開發</button>
+      </div>
       <div class="set-list">
-        <div class="set-row">
-          <span class="set-label">音效</span>
-          <button id="lsetSfxOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音效開關"><span></span></button>
-          <input id="lsetSfxVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音效音量">
-          <span class="set-val" id="lsetSfxVal">0%</span>
+        <!-- 子分頁:音訊 -->
+        <div class="set-panel" data-setpage="audio">
+          <div class="set-row">
+            <span class="set-label">音效</span>
+            <button id="lsetSfxOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音效開關"><span></span></button>
+            <input id="lsetSfxVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音效音量">
+            <span class="set-val" id="lsetSfxVal">0%</span>
+          </div>
+          <div class="set-row">
+            <span class="set-label">音樂</span>
+            <button id="lsetBgmOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音樂開關"><span></span></button>
+            <input id="lsetBgmVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音樂音量">
+            <span class="set-val" id="lsetBgmVal">0%</span>
+          </div>
+          <div class="set-row">
+            <span class="set-label">低功耗模式</span>
+            <button id="lsetLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
+            <button class="tip-dot" type="button" aria-label="說明" data-tipkey="lowPower">ⓘ</button>
+          </div>
         </div>
-        <div class="set-row">
-          <span class="set-label">音樂</span>
-          <button id="lsetBgmOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音樂開關"><span></span></button>
-          <input id="lsetBgmVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音樂音量">
-          <span class="set-val" id="lsetBgmVal">0%</span>
+
+        <!-- 子分頁:操控 (操作方式 + 觸控操控) -->
+        <div class="set-panel" data-setpage="ctrl" hidden>
+          <div id="lobbyMenuCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
+          <div class="set-sub touch-only">▎觸控操控</div>
+          <div class="touch-only" id="lobbyMenuTouchMount" style="flex-direction:column;gap:12px"></div>
         </div>
-        <div class="set-row">
-          <span class="set-label">低功耗模式</span>
-          <button id="lsetLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
-          <button class="tip-dot" type="button" aria-label="說明" data-tipkey="lowPower">ⓘ</button>
+
+        <!-- 子分頁:畫面 -->
+        <div class="set-panel" data-setpage="visual" hidden>
+          <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
+          <div id="lobbyVisualMount" class="vset"></div>
         </div>
-        <div class="set-sub">▎操作方式</div>
-        <div id="lobbyMenuCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
-        <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
-        <div id="lobbyVisualMount" class="vset"></div>
-        <div class="set-sub touch-only">▎觸控操控</div>
-        <div class="touch-only" id="lobbyMenuTouchMount" style="flex-direction:column;gap:12px"></div>
-        <div id="lobbyDevMount" style="display:flex;flex-direction:column;gap:12px"></div>
+
+        <!-- 子分頁:開發工具 -->
+        <div class="set-panel" data-setpage="dev" hidden>
+          <div id="lobbyDevMount" style="display:flex;flex-direction:column;gap:12px"></div>
+        </div>
       </div>
     </div>
 

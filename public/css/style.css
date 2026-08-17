@@ -1054,8 +1054,20 @@ body[data-screen="game"] .fs-toggle-btn { display: none; }
 .pause-page[hidden] { display: none; }
 .pause-back { align-self: center; }
 
-/* ── 設定:各類開關(switch)+ 音量滑桿 ── */
-.set-list { display: flex; flex-direction: column; gap: 14px; text-align: left; min-width: min(468px, 84vw); padding: 4px 0; }
+/* ── 設定:子分頁 + 各類開關(switch)+ 音量滑桿 ── */
+.set-tabs { justify-content: center; gap: 5px; margin-bottom: 2px; flex-wrap: wrap; }
+.set-list {
+  display: flex; flex-direction: column; gap: 14px; text-align: left; min-width: min(468px, 84vw);
+  max-height: min(480px, 52vh); overflow-y: auto; overflow-x: hidden;
+  padding: 4px 6px 4px 0; -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
+}
+.set-list::-webkit-scrollbar { width: 5px; }
+.set-list::-webkit-scrollbar-track { background: transparent; }
+.set-list::-webkit-scrollbar-thumb { background: rgba(var(--railS-rgb), 0.35); border-radius: 2px; }
+.set-list::-webkit-scrollbar-thumb:hover { background: var(--railS); }
+.set-panel { display: flex; flex-direction: column; gap: 14px; }
+.set-panel[hidden] { display: none !important; }
 .set-row { display: flex; align-items: center; gap: 12px; }
 .set-label { font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--text); min-width: 92px; }
 .set-slider { flex: 1; accent-color: var(--railS); cursor: pointer; }
