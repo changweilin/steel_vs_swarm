@@ -63,7 +63,7 @@ node tools/audit_cel_pipeline.mjs    # 賽璐璐管線(ramp / 天空 / 地形色
 #   ±--break-nearest(附件 1 改回線性內插 ⇒ NearestFilter 那一條 MUST 紅)
 #   ±--break-selff(SELF_F / GRAZE_K 寫回 1.0 / 0.0 ⇒ 兩條 MUST 紅)
 #   ±--break-grp(群組早退整段刪掉 ⇒ 「五格同號且至少一格是 GROUP」MUST 紅)
-#   ±--break-dissolve(discard 錨點挪到 opaque_fragment 之後 + 快取鍵拿掉 D ⇒ Ⅸ MUST 紅 2 條)
+#   ±--break-dissolve(discard 錨點挪到 opaque_fragment 之後 + 快取鍵拿掉 D + 死亡閘改成恒 true ⇒ Ⅸ MUST 紅 3 條)
 #   ±--break-landink(子帶改用計畫字面的 `* 0.1` + 拿掉拉桿閘 ⇒ Ⅸ MUST 紅 3 條)
 #   ±--break-fade(淡出錨回相機 far 平面 ⇒ Ⅹ MUST 紅 3 條)
 #     ⚠ 既知粗糙處:這一支會在印完 3 條紅字之後以 TypeError 收場(壞版把 `_inkFadeM` 整支刪掉,
@@ -412,6 +412,12 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 改動 | MUST 跑 |
 |---|---|
 | `toon.js LAND_MASK_N`・`landMaskId`・`celTriNoise`・`celLandMask`・`CEL_LAND_FIELD` 快取鍵 | `audit_cel_pipeline` Ⅸ④ ±`--break-landmask` + `audit_client_syntax`(㋖)+ `audit_visual_prefs` / `audit_soft_stroke` / `audit_gpu_lifecycle` / `audit_world_curve` + `audit_zone_cut` / `audit_ground_*` / `audit_siteplan` / `audit_beacons` / `audit_object_joints --seeds 8`(零幾何、零共享 `rnd()`,判準逐項不動)+ `npm run bal` / `npm test` 逐項不動 + ㋓ 真 GPU:`gl.getError() = 0`、taroko 崖面繞拍確認三平面換手無接縫、`landInk=0/1` 只改遮罩邊不改顏色 |
+
+### 5.5-2026-08-17 權威死亡溶出
+
+| 改動 | MUST 跑 |
+|---|---|
+| `DISSOLVE.OUT_S` / `dissolveOutAt` / `toon.enableDissolve` / `game._dissolveGhosts` | `audit_cel_pipeline` Ⅸ ±`--break-dissolve`(三條紅字：錨點、快取鍵、權威 `die` 閘)+ `audit_client_syntax`(㋖)+ `audit_visual_prefs` / `audit_soft_stroke` / `audit_gpu_lifecycle` / `audit_world_curve` + `audit_view_lock` / `audit_spectator_cam` / `audit_recoil_move` / `audit_damp_fps`(移除前先摘除所有戰鬥消費端)+ `npm run bal` / `npm test` 逐項不動 + ㋓ 真 GPU：不透明 cel 材質洞邊無額外輪廓、死亡後 0.45s 溶出、單純離開迷霧視野必須立即消失 |
 
 ---
 

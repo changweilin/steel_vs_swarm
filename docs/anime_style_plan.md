@@ -613,9 +613,9 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 >    規格漏寫的一條:**cover 播完幕停在全覆蓋** ⇒ 每一個 cover 呼叫點都必須自己接 reveal。
 > ② **`_tickWipe` 不由 `game.js` 推**:落地時把它放進 `postfx.render()` 自己組 chain 那一段
 >    ⇒ 呼叫端不必給 dt,而且**再推一次 = 幕以兩倍速播完**。
-> ③ **④-2 只做了「出現」那一半。** 「消失」要 ghost 清單(`this.ents` 有 20+ 個消費端,含準星
->    解算與鎖定);「遠距剔除」這個功能**本身還不存在**(`data.js DOF` 檔頭:「日後真做距離剔除時…」)
->    ⇒ 縫留好但 `DISSOLVE.FAR_M = 0` ⇒ **那一段根本不編進著色器**。
+> ③ **2026-08-17 消失那一半已完成。** 實體先從 `this.ents`、鎖定、動畫與光曈消費端摘除,
+>    只把 mesh 留在 `_dissolveGhosts` 做純渲染收尾。快照缺席可能只是迷霧,因此只有同幀權威 `die`
+>    事件可開溶出;其餘即時移除,不洩漏視野外位置。遠距剔除仍未開(`DISSOLVE.FAR_M = 0`)。
 > ④ **④-3 的「嚴格等式」加了一條地板** `fadeEnd ≥ combatReachM() / FADE_F`:不加的話「迷你地圖 +
 >    霧天」那一格會讓 `fade0 > fade1`(smoothstep 端點反轉),而且**打得到的目標會沒有輪廓線**。
 >    這是對計畫原文的偏離(它與 DOF Ⅵ-b 是同一條規則的兩端),已開票。另:④-3 對 `clear` 以外
@@ -927,7 +927,7 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 | 6 | ⑦-1 區域環境音、⑦-2 gain-ride、⑦-3 多 take(§0-d) | 低 | 是 | ✅ 第二輪機制；**2026-08-17 補齊七床與兩份行動版 BGM** |
 | 6b | **⑥-3 動畫權重向量**(計畫裡沒有獨立序號,而 ⑦-2 吃的正是它) | 低 | 否(音效行為改變) | ✅ 第二輪,提前到序 6 之前 |
 | 7 | ②-1 葉片卡冠層(含同深度)+ **使用者追加:山頭 / 巨石 / 石堆** | 中(新材質 + MRT 宣告) | 否 → **實得:旋鈕 def off = 是** | ✅ 第二輪(走 `CEL_LEAFCARD` define 不是自寫材質)|
-| 8 | ④-1 wipe 轉場、④-2 dissolve | 中 | 旋鈕關 = 是 | ✅ 第二輪(④-2 只做「出現」那一半;④-3 一併)|
+| 8 | ④-1 wipe 轉場、④-2 dissolve | 中 | 旋鈕關 = 是 | ✅ 第二輪交材質縫;第六輪補完權威死亡溶出 |
 | 9 | ⑤-2 岸邊泡沫、⑤-3 倒影塊 | 中 | ~~是(純新增)~~ → **⑤-2 是替換不是新增** | ✅ 第二輪(舊的格點泡沫片退場)|
 | 10 | ③-1 載具 `SPEC` 收斂 + ③-2 真凹處 + ③-3 可視角 + ③-4 公設 draw call | 中 | 否 | ✅ 第二輪(10a;edgewall / beacons / DETAIL_DEFS 三筆債見 10b)|
 | 11 | ⑥-2 GPGPU 鳥群 | 中 | 是(純新增) | ✅ 第二輪 —— **積分器落在 JS 不是 GPGPU**(對計畫字面的偏離,待放行)|
@@ -1036,7 +1036,7 @@ float ctr = fract( q / 16.0 ) * 16.0 / 15.0;
 | 6b / ⑥-3 動畫權重向量 | ✅ | **新模組 `public/js/animweights.js`**(零 import、有序 10 軌、地面三軌和恆為 1、缺欄回 0 不回 NaN);`locomotion.stepLocomotion` 收尾**只寫不讀** `L.w`;`game.js` 刪掉 `ent._moveSpd` 這第二份速度推導 | **新 `audit_anim_weights` 54 項** + 8 支 `--break` |
 | 6 / ⑦-1~⑦-4 音效 | ✅ **機制與音檔完成** | `audio.js` 的分層機制 + `public/audio/amb` 七床 + `bgm/*-mobile.*` 兩份獨立編碼 | `audit_audio_layers` 58 項 + 7 支 `--break` |
 | 7 / ②-1 葉片卡冠層 → **整棵樹**,+ 使用者追加的**山頭 / 巨石 / 石堆** | ✅(`leafCard`/`inkGroup` def 皆 `off`) | **新模組 `public/js/leafcard.js`**(零 THREE 排列規則層)+ `biomes.js` 的 `MEGA_BODY_F`/`leafCardOn`/`leafCardTex`/`leafRowGeo`/`surfIdGeo` + `ground.js` 細節迴圈的 `surf`/`contrib` + `buildBackdrop` 的注入欄 | **新 `audit_leaf_card` 43 項 / `audit_rock_ink` 30 項**,七支反向驗證 |
-| 8 / ④-1 wipe + ④-2 dissolve(只做「出現」)+ ④-3 霧 ≡ 勾線淡出 | ✅(`wipe` def 0) | `data.js` 的 `WIPE`/`wipeAt()`/`DISSOLVE`/`dissolveAt()`(純函式,**不進 `balanceFingerprint`**);`postfx.js` 的 `_wipeMaterial()`/`setWipe()`/`playWipe()`/`_tickWipe()` + chain 插在 **grade 與 fxaa 之間** + dispose 名冊改由 `_quads` **推導** + `INK.FADE_F`/`_inkFadeM()`;`toon.js` 的 `dissolve`(`discard` 不是 alpha)+ 唯一寫入點 `setDissolve()`;呼叫端 `cutin.js setPipeline/wipe` 與 `game.js _wipeCut`(三個時機) | `audit_visual_prefs` 新 Ⅷ ±`--break-wipe`、`audit_cel_pipeline` 新 Ⅸ・Ⅹ ±`--break-dissolve`/`--break-fade` |
+| 8 / ④-1 wipe + ④-2 dissolve(出現／權威死亡消失)+ ④-3 霧 ≡ 勾線淡出 | ✅(`wipe` def 0、遠距剔除 def 0) | `data.js` 的 `WIPE`/`wipeAt()`/`DISSOLVE`/`dissolveAt()`/`dissolveOutAt()`(純函式,**不進 `balanceFingerprint`**);`postfx.js` 的 `_wipeMaterial()`/`setWipe()`/`playWipe()`/`_tickWipe()` + chain 插在 **grade 與 fxaa 之間** + dispose 名冊改由 `_quads` **推導** + `INK.FADE_F`/`_inkFadeM()`;`toon.js` 的 `dissolve`(`discard` 不是 alpha)+ `enableDissolve()` + 唯一寫入點 `setDissolve()`;呼叫端 `cutin.js setPipeline/wipe`、`game.js _wipeCut`(三個時機)與 `_dissolveGhosts`(僅同幀權威 `die`) | `audit_visual_prefs` Ⅷ ±`--break-wipe`、`audit_cel_pipeline` Ⅸ・Ⅹ ±`--break-dissolve`/`--break-fade` |
 | 9 / ⑤-2 岸邊泡沫(**替換**)+ ⑤-3 倒影塊 | ✅(`foam` def 1、`reflect` def 0) | `terrain.js` 的 `seaFadeAt`/`seaFadeAtWorld`/`bakeSeaDepth`/`stampSeaBlockers`(對外 API **只加不改**)+ `main.js` 一行接線 + `biomes.js` 的 `planReflectors`/`buildWaterReflections`/`REFL_WAVE_WRITERS`;舊的格點泡沫片**退場** | **新 `audit_water_edge` 64 項**,四支反向驗證(3/1/2/1 條紅字) |
 | 10 / ③-1 SPEC + ③-2 真凹處 + ③-3 可視角 + ③-4 公設 draw call | ✅(10a;10b 見待裁決) | **新模組 `public/js/vehicles.js`**(零 import 零 THREE 零亂數:五款型錄 + 生成器 + 三支量尺 + `RECESS` + 可視角);消費端 `siteplan.CIVIC_PARTS.lot`(配新的 `LOT_STALL`)/ `hazards.BUILDERS.wreck` / `biomes.car()` / `biomes.makeTrain()`;`biomes.vehGroup` = THREE 那一側的**唯一建構出口** | **新 `audit_vehicle_spec` 79 項** + 7 支 `--break` |
 | 11 / ⑥-2 鳥群 | ✅(`birds` def 0) | **新模組 `public/js/wildlife.js`**(零 THREE 的積分器:曲線 + 逐軸噪聲 + 弱彈簧 + 摩擦 + 分群 + `uSnap`,計畫列的六項一項不刪)+ `biomes.shoreRing`/`buildFlocks` | **新 `audit_wildlife` 44 項** + 7 支 `--break` |
@@ -1082,7 +1082,7 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 
 - **絕大多數定裝照與真 GPU A/B**:除了序 12 的 78 + 65 + 26 + 65 張定場照
   (`docs/shots_baseline.md`)與幾處真 GPU 直測之外,`shot_scene` / `shot_tunnels` / `shot_facades`
-  的對照本輪沒拍。
+  的對照本輪沒拍。**2026-08-17 第七／八輪已另補 ④-2 dissolve 與 ②-2 太魯閣崖面的真 GPU**,不再列入此缺口。
 - **真機(㋕)**:①旋鈕拉起來看斷筆 / 葉片卡 / 泡沫 / 倒影 / 鳥群 / 幕的實際觀感;
   ②走進兩個洞與走上橋面各一次(**洞內是 ⑨ 唯一沒有任何離線稽核看得到的地方**);
   ③音效端刻意不中性的那兩處(離地門檻 3 m → 2 m、gate 曲線換來源)聽一次;
@@ -1131,7 +1131,7 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 | 墨線縫 | 基底 57~63、遮罩 43~56，全部為 `k/64` 整數槽；遮罩邊沿用 `landInk` | 同上；反向驗證如期 1 條紅字 |
 
 本輪只改地形材質與原文稽核；權威幾何、碰撞、地貌場資料與場景散布均未改。真 GPU 的崖面
-三平面換手與實際色彩仍需 ㋓ 定裝照確認。
+三平面換手與實際色彩已於第八輪補驗。
 
 ### 2026-08-17 第五輪：②-3 旗面布料波形
 
@@ -1142,3 +1142,36 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 | 範圍 | 只擴充既有 `SOFT_KINDS.cloth` 頂點縫；零幾何、零權威狀態、零共享 `rnd()` | `audit_object_joints --seeds 8` / `audit_siteplan` |
 
 機體垂布與繩索目前沒有可消費的完整名冊，本輪不創造新內容；日後加入時直接沿用同一布料縫。
+
+### 2026-08-17 第六輪：④-2 權威死亡溶出
+
+| 項目 | 結果 | 稽核 |
+|---|---|---|
+| 溶出曲線 | `DISSOLVE.OUT_S = 0.45`；`dissolveOutAt()` 由 1 單調降到 0 | `audit_cel_pipeline` Ⅸ |
+| 戰鬥消費端切割 | `_removeEnt` 先清 `ents`、鎖定、動畫與光曈，再把純渲染 mesh 放入 `_dissolveGhosts` | 同上 |
+| 迷霧安全 | 只有同一快照的權威 `die` 事件允許留殘影；單純從快照消失立即移除 | 同上 ±`--break-dissolve`(反向驗證三條紅字) |
+| 編譯範圍 | 只有戰場 `makeUnit({ dissolve:true })` 為不透明 cel 材質開 `CEL_DIS`；圖鑑／機體台不編譯 | 同上 + `audit_client_syntax` |
+
+遠距剔除仍保持 `FAR_M = 0`，本輪不擴大到視野距離政策。
+
+### 2026-08-17 第七輪：④-2 真 GPU 驗收
+
+| 項目 | 結果 | 證據面 |
+|---|---|---|
+| 正式材質路徑 | `makeUnit('creep:tank', 'STEEL', { dissolve:true })` 共 65 個不透明 cel 材質接上 `CEL_DIS` | 正式 `models.js → toon.js → postfx.Pipeline`，非替身 shader |
+| 三格外觀 | `k=1` 完整機體；`k=0.5` 為硬邊孔洞且孔內露出背景；`k=0` 完全消失 | 本機 WebGL 實拍，三格 `gl.getError() = 0` |
+| 動畫計時 | `dissolveOutAt(performance.now() - t0)` 實測 453ms 完成，規格 450ms | 真 `requestAnimationFrame`，終格 `gl.getError() = 0` |
+
+本輪只使用短命渲染探針，驗畢即刪，沒有新增出貨頁面或測試依賴。④-2 的真 GPU 洞邊與時長由
+㋓ 未驗改為通過；迷霧安全仍由 `audit_cel_pipeline --break-dissolve` 的權威事件反向驗證守門。
+
+### 2026-08-17 第八輪：②-2 太魯閣崖面真 GPU 驗收
+
+| 項目 | 結果 | 證據面 |
+|---|---|---|
+| 正式地形路徑 | 太魯閣 `venueConfig → buildTerrain → buildLandField → setLandField → Pipeline` | 正式地形材質與 1024² RGBA 場，非替身 shader |
+| 崖面樣本 | 自動取全場最陡樣本，梯度 2.65；地貌場含 cliff 623,359 格、green 54,484 格 | 兩個相差約 108° 的相機視角 |
+| 三平面換手 | 苔草硬邊維持世界尺度；兩視角皆無單一 XZ 投影的垂直拉絲，也沒有投影換面直縫 | 兩格真 GPU 定裝照，皆 `gl.getError() = 0`、瀏覽器零錯誤 |
+| 實際色彩 | green／cliff 分區清楚，苔草只以硬邊斑塊混入，沒有柔霧或道路式整片覆色 | School B + 正式勾線／後製管線 |
+
+本輪同樣只使用短命渲染探針，驗畢即刪；沒有改動地形幾何、地貌場演算法、共享亂數或出貨頁面。

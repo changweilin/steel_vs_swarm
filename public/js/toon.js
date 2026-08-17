@@ -1954,6 +1954,26 @@ export function setDissolve(target, k, origin = null) {
 }
 
 /**
+ * 事後為單位材質開啟 dissolve define。只接已走 `applyCelPatch` 的不透明材質;
+ * 光環 / 血條 / 透明特效維持即時收起,不把 alpha 淡出復辟成第二份實作。
+ */
+export function enableDissolve(target) {
+  const seen = new Set();
+  let n = 0;
+  target?.traverse?.((o) => {
+    if (!o.isMesh || o.userData.isOutline) return;
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+      if (!m || m.transparent || seen.has(m) || !m.userData?.celOpts) continue;
+      seen.add(m);
+      applyCelPatch(m, { ...m.userData.celOpts, dissolve: true });
+      m.needsUpdate = true;
+      n++;
+    }
+  });
+  return n;
+}
+
+/**
  * 接地環境光遮蔽(botw_plan Task 2.2):對群組內每個 mesh 烤頂點色,
  * 越貼近群組地面(局部 y=0)越暗偏冷 → 物件「長」在地上而不是浮貼。
  * 跳過透明/發光/wireframe 件(火舌/水面/信標/電塔),只動不透明結構件。

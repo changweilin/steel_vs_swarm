@@ -10,7 +10,7 @@ import {
   SIDES, CHARACTERS, recoilTier, THIRD, isThirdSide, sideInfo, CIVILIANS,
   SOLDIER_H, MORPH_HUMANOID, heroTargetH, TARGET_H,
 } from './data.js';
-import { toonify, outlinify } from './toon.js';
+import { toonify, outlinify, enableDissolve } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 // 程序生成幾何積木(全專案唯一縫;本檔與 mecha/geo.js、機體台舊版對照同吃一份)
 import { mat, outlineW, dim, bx, cyl, rbz } from './geo3d.js';
@@ -2090,7 +2090,7 @@ function forgeHero(heroKind, ch, side) {
  * kind: 'hero:drone' | 'hero:robot' | 'creep:soldier' | 'creep:apc' | 'creep:tank' | 'tower' | 'base:SWARM' | 'base:STEEL'
  * opts.ch:英雄角色 id — 依 CHARACTERS[ch].visual 生成專屬機體(主色/機架/掛件)。
  */
-export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
+export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false } = {}) {
   const vis = ch && CHARACTERS[ch] ? CHARACTERS[ch].visual : null;
   // 英雄體型綁角色護甲(heroTargetH 內含獸型矮化);其餘查表
   const heroKind = kind.startsWith('hero:') ? kind.slice(5) : null;
@@ -2226,5 +2226,7 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
   });
   g.userData.kind = kind;
   g.userData.side = side;
+  // 戰場才開溶解材質;圖鑑 / 機體台不傳此旗標,不多編一組 shader。
+  if (dissolve) enableDissolve(g);
   return { group: g, mixer };
 }
