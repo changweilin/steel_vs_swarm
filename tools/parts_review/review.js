@@ -33,6 +33,7 @@ const n3 = (v) => (v == null ? '—' : (Math.round(v * 1000) / 1000).toString())
  */
 const STATUS = {
   ok: ['✔ 通過', 'ok'],
+  replace: ['⇢ 通過並替代舊件', 'flag'],
   regen: ['⟳ 重生(同圖換參數)', 'flag'],
   reimg: ['⇄ 換來源圖', 'flag'],
   archive: ['⊘ 移除(撤出遊戲並封存)', 'flag'],

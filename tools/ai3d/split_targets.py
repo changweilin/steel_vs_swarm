@@ -63,6 +63,7 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
 
 from matte_frame import ALPHA_SOLID, frame
+from manifest_store import merge_manifest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 _HOME = HERE
@@ -262,9 +263,7 @@ def main():
     if args.dry:
         print('(--dry:未寫入)')
     elif changed:
-        with open(MANIFEST, 'w', encoding='utf-8') as fh:
-            json.dump(manifest, fh, ensure_ascii=False, indent=2)
-            fh.write('\n')
+        merge_manifest(MANIFEST, manifest, {args.family} if args.family else None)
         print(f'帳本已回寫({changed} 筆 targets 變更)')
 
     if args.sheet:

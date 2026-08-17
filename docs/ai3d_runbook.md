@@ -477,6 +477,19 @@ the AI part to the fallback's *shape*, not to the slot's name**.
     挑**。**2026-08-14 使用者定案:走「重生節點」** ⇒ 形態學閉運算 / voxel remesh **不採用,
     MUST NOT 自行復辟**。
 
+### 2026-08-18 分類平行採集與 8/15 前舊件替代
+
+- CPU 前處理依 family 平行(`--category-jobs`)，每族內仍維持去背 → 分離 → 篩選；三支 Python 以
+  跨行程鎖按 family 原子合併帳本。GPU 保持單通道，避免 12GB 卡同時載入模型。
+- 模型路由對齊 §0.1 與最新 skill：building → T2-spz；rock → Hunyuan3D-2GP shape-only；
+  sculptural tree → SF3D；landmark / vehicle / ship → Route A 純資料零件。Hunyuan 只接外部 adapter，
+  不猜 checkout entrypoint；缺席時明示跳過，不用 SF3D 冒充替代版。
+- `replacement_plan.mjs` 以 `at < 2026-08-15` 建立逐件清單。新件投料帳帶 `replaces`；只有同一輪替槽
+  才能自動標記。零件台判 `⇢ replace` 後才撤舊件，舊來源列搬進封存帳並記 `replaced_by`。
+- 固定槽與 Route A 零件不猜配方，列為「人工配方」；它們仍在同一份 61 件清單中，不會被靜默略過。
+- 外部 restricted 語料先由 `index_restricted_photos.mjs` 編目，但 `corpus.json shipping:false` 仍強制
+  停在 contact sheet；不得自動入庫或成為替代物。
+
 ---
 
 ## 6. Open questions for the repo owner (do not guess)

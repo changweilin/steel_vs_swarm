@@ -200,6 +200,7 @@ export function manifest(items = {}, photosOpt = null) {
         }
         : null,
       item: items[name] || null,
+      replaces: p.replaces || null,
     });
   }
 

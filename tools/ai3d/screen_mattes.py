@@ -130,6 +130,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
+from manifest_store import merge_manifest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # 資料家(matte / photos / 帳本 / sheet)= --home,不給就是腳本自己的目錄(舊行為)。
@@ -331,10 +332,8 @@ def load_manifest():
         return json.load(f)
 
 
-def save_manifest(m):
-    with open(MANIFEST, 'w', encoding='utf-8') as f:
-        json.dump(m, f, ensure_ascii=False, indent=2)
-        f.write('\n')
+def save_manifest(m, fam=None):
+    merge_manifest(MANIFEST, m, {fam} if fam else None)
 
 
 def contact_sheet(cells, out_path):
@@ -480,7 +479,7 @@ def main():
         if args.dry:
             print(f'刪除來源圖 {hit} 筆 / {removed} 個檔(--dry:未寫入也未刪檔)')
         elif hit:
-            save_manifest(manifest)
+            save_manifest(manifest, fam)
             print(f'刪除來源圖 {hit} 筆,共刪 {removed} 個檔;帳本條目留著當黑名單(不會再被抓/收編/送生成)')
         else:
             print('沒有命中任何條目 —— 未寫入')
@@ -494,7 +493,7 @@ def main():
         if args.dry:
             print(f'人眼判決 {mode} × {n} 筆(其中 {changed} 筆是變更)(--dry:未寫入)')
         elif changed:
-            save_manifest(manifest)
+            save_manifest(manifest, fam)
             print(f'人眼判決 {mode} × {n} 筆已回寫({changed} 筆變更)')
         else:
             print(f'人眼判決 {mode} × {n} 筆,判決皆與帳上相同 —— 未寫入')
@@ -592,7 +591,7 @@ def main():
         print(f'⚠ {len(orphans)} 張 matte 在帳本裡找不到對應條目(結論寫不回去):{", ".join(orphans[:6])}…'
               if len(orphans) > 6 else f'⚠ 帳本缺條目:{", ".join(orphans)}')
     if not args.dry and changed:
-        save_manifest(manifest)
+        save_manifest(manifest, fam)
         print(f'帳本已回寫({changed} 筆 screen 變更)→ 之後 fetch_photos.mjs --plan 計的是可用張數')
     elif args.dry:
         print('(--dry:未寫入)')

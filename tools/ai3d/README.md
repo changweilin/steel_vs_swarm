@@ -25,15 +25,23 @@ image→3D GLB、小植被維持程序生成)。
 | `photo_manifest.json` | 照片帳本(產出後自動生成):`{source_url, license, creator, retrieved_at, …}` 一項不少 |
 | `photos/{family}/{part}/` | 照片本體(**勿入版控** —— 照片只是離線輸入,入庫的只有零件 GLB) |
 | `inbox/{family}/{part}/` | **自己放圖的地方**(2026-08-10 使用者定案):丟圖進去 + 同一層一個 `sources.json` 記授權,`fetch_photos.mjs --adopt` 收編成正式語料。授權硬閘不因為是手動放的就鬆(只收 CC0/PD),短邊 <1024 或非影像位元組一律不收、原檔留著。`--inbox` 印格式與路徑 |
-| `harvest_loop.mjs` | **週期採集迴圈**(2026-08-10 使用者定案「成功率太低 ⇒ 跑腳本週期性抓更多 img」):收編 inbox → 抓照片 → 去背 → 圈選分離 → 選片閘 → img→3D → 快篩 → contact sheet → **自動入庫 → 收尾稽核**,`--every` 分鐘跑一輪。每一站可缺席(沒 venv/GPU/Blender 就跳過)、只餵新的且未被選片閘淘汰的 matte。`--no-intake` 退回 2026-08-10 之前「停在 contact sheet」的行為 |
+| `harvest_loop.mjs` | **週期採集迴圈**:不同分類的去背 / 分離 / 篩選以 `--category-jobs` 平行；同一張 GPU 維持單通道。模型由 `pipeline_policy.mjs` 分流(T2-spz 建築 / Hunyuan 2GP 巨岩 / SF3D 雕塑樹 / Route A 規則物)，再自動入庫與收尾稽核。`--no-intake` 停在 contact sheet |
+| `pipeline_policy.mjs` | 最新 SKILL 的分類路由唯一表；規則人造物只產純資料零件，MUST NOT 烤成整件 GLB |
+| `replacement_plan.mjs` | 列出 2026-08-15 前生成物的逐件替代佇列；輪替名冊標成「自動換槽」，固定槽標成「人工配方」 |
+| `index_restricted_photos.mjs` | 把外部 `shipping:false` 語料家的未建檔照片補入帳本；只准非出貨家，授權保持 `unverified(restricted corpus)` |
+| `manifest_store.py` | 分類 worker 的跨行程鎖 + 原子合併；避免平行回寫 `photo_manifest.json` 互相覆蓋 |
 | `harvest_log.jsonl` / `harvest_state.json` | 迴圈的帳(每輪收編/下載/生成/入庫/回滾幾筆)與「哪些 matte 送過 img→3D」|
 | `<產出目錄>/.feed.json` | **投料帳**(生成當下寫):`index → 母照片 id / 目標 id / 族 / 工具 / 參數`。第 ⑦ 站的入場券 —— 沒有它就不入庫(規則 9)。它同時補掉 `tri_budget.json resample_2026_08_08` 記著的那個洞:只記照片與 fit 的話,同一張圖配同一組參數**復現不出**已出貨的那一顆 |
 | `intake_recipes.mjs` | **自動入庫配方的唯一縫**:可自動追加的名冊格由「值是陣列」**推導**(MEGA_LIB.block / BLD_LIB.mass / .masslow),**只有兩欄是手寫的**(縮放目標 `fit` 與 T2 的實體化預設);包絡、三角形上限、UV 契約、下一個節點名一律推導 |
 | `auto_intake.mjs` | **第 ⑦⑧ 站**:normalize(T2 先實體化)→ intake 閘 → 破口閘 → 名冊錨定追加 + 重新執行真品原文驗證 → 來源帳 → 逐顆快閘;`--gate-full` 收尾跑相鄰稽核 + `npm run bal`。**任一步紅字整批回滾,逐位元**(GLB / biomes.js / 來源帳三份一起)。**從不 commit** |
-| `apply_verdicts.mjs` | **第 ⑨ 站**:把 3D 零件對照台的人眼判決執行掉 —— `⟳ regen`(撤節點 + 寫覆寫參數 + 放回待跑池)/ `⇄ reimg`(撤節點 + 該目標不再挑)/ `✕ purge`(撤節點 + **真刪照片** + 進黑名單)。撤節點 = GLB + 名冊 + 來源帳三邊同時;撤到名冊剩 1 顆會停下來要 `--force` |
+| `apply_verdicts.mjs` | **第 ⑨ 站**:執行人眼判決；`⇢ replace` 只讀新件來源帳的 `replaces`，通過後撤下舊件並以 `replaced_by` 墓碑移入封存區。其餘為 regen / reimg / archive / purge；撤到名冊剩 1 顆會停下來要 `--force` |
 | `intake_overrides.json` | 判 `⟳ 重生` 之後要換的參數(鍵 = 母照片 id;`cells` / `offset` / `target` / `fit` / `tool`)。第 ⑦ 站與第 ⑨ 站同吃這一份 |
 | `photo_state.mjs` | **圖檔三態的唯一推導縫**(未處理 / 已處理 / 需修正 + 已淘汰)。**零新狀態檔** —— 全部由既有四本帳推導(照片帳本 / `harvest_state` / 來源帳 / 對照台判決);分支順序 `需修正 > 已淘汰 > 已處理 > 未處理` 本身就是語意 |
-| `audit_auto_intake.mjs` | 上面那一整條的稽核(Ⅰ~Ⅸ);反向驗證 `--break-append` / `--break-rollback` / `--break-blacklist` / `--break-spawn` / `--break-panel` / `--break-pane`。注入一律走 `inject()` —— **錨點不存在就 exit 2**(被改名的錨點會讓 break 變成無聲 no-op,而那時反向驗證是綠的)|
+| `audit_auto_intake.mjs` | 上面整條的稽核；包含分類平行、帳本合併鎖、替代封存與順位。新增反向驗證 `--break-parallel` / `--break-replace`，其餘旗標看檔頭 |
+
+Hunyuan 不猜官方 checkout 的 entrypoint。`--hunyuan <adapter>` 接受一支依該版本 README 寫的外部
+adapter，固定契約為 `<adapter> <images...> --output-dir <dir>`；輸出可用 `<index>/mesh.glb` 或
+`<target-id>.glb`。未提供時巨岩保留在候選池，不會暗中用 SF3D 冒充新版替代物。
 
 **在零件台上開關採集迴圈**(2026-08-10):`npm run parts` 頂上那一條窄帶有「▶ 啟動採集迴圈 / ⏹ 停止」
 與四個狀態鈕(按下去展開那一態是哪幾張圖、下一步是什麼)。啟停走 `tools/dev_supervisor.mjs` 那一支

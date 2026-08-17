@@ -5,9 +5,10 @@
  * 2026-08-10 使用者定案:「先全部自動化,人眼再審查,決定要刪除原始照片或調整參數重新處理」。
  * 第 ⑦ 站(`auto_intake.mjs`)負責前半;這一支負責後半 —— 把台上的判決變成真的動作。
  *
- * 判決字彙的唯一真相是 `tools/parts_review/review.js` 的 `STATUS`,五個出口在這裡各對一個動作:
+ * 判決字彙的唯一真相是 `tools/parts_review/review.js` 的 `STATUS`,每個出口在這裡各對一個動作:
  *
  *   ✔ ok      什麼都不做(它已經是出貨狀態;commit 是使用者的事,這一支**不 commit**)
+ *   ⇢ replace 新件保留;撤下 `parts_manifest.replaces` 指到的舊件並搬進封存區
  *   ⟳ regen   同一張圖換參數重跑:撤節點 → 寫覆寫參數 → 把它從「已餵過」名單放回待跑池
  *   ⇄ reimg   換來源圖:撤節點 + 這張圖標記不再挑(**照片留著** —— Route A 仍要看照片)
  *   ⊘ archive 移除:撤節點 + **原來源帳整列搬進封存帳**,照片留著、不再自動重跑
@@ -179,11 +180,32 @@ function main() {
 
   for (const [key, it] of todo) {
     console.log(`\n── ${key}:${it.status}${it.note ? `(${it.note})` : ''}`);
-    const w = withdraw(key);
+    const active = loadJson(MANIFEST_PATH, { parts: [] });
+    const fresh = active.parts.find((p) => partKeys(p).includes(key));
+    const replaceKey = it.status === 'replace' ? fresh?.replaces : null;
+    if (it.status === 'replace' && !replaceKey) {
+      console.log('   ⏭  來源帳沒有 replaces 目標；這顆不能猜要替代誰'); held++; continue;
+    }
+    const w = withdraw(replaceKey || key);
     if (!w.ok) { console.log(`   ⏭  ${w.why}`); held++; continue; }
     const imgs = imgsOf(w.rows);
 
-    if (it.status === 'regen') {
+    if (it.status === 'replace') {
+      const tomb = archiveRow(replaceKey, w.rows, it, w.slot);
+      tomb.why = it.note || `由 ${key} 替代`;
+      tomb.replaced_by = key;
+      arch.parts.push(tomb);
+      // 新件已在第 ⑦ 站完整入庫；此處只把「尚待人眼」旗標結案，並留下替代鏈。
+      if (!DRY) {
+        const now = loadJson(MANIFEST_PATH, { version: 1, parts: [] });
+        const row = now.parts.find((p) => partKeys(p).includes(key));
+        if (!row) { console.log('   ⏭  撤舊後找不到新件來源帳；停止'); held++; continue; }
+        delete row.auto;
+        row.replacement = { old: replaceKey, at: new Date().toISOString() };
+        writeJson(MANIFEST_PATH, now);
+      }
+      console.log(`   ⇢ 保留 ${key};${DRY ? '(dry)會' : '已'}撤下 ${replaceKey} 並移入封存區`);
+    } else if (it.status === 'regen') {
       // 同一張圖換參數:覆寫表以**母照片 id** 為鍵(auto_intake 與 harvest_loop 同吃這一份)
       for (const im of imgs) {
         ovr[im.id] = { ...(ovr[im.id] || {}), at: new Date().toISOString(), note: it.note || null,

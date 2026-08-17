@@ -30,6 +30,7 @@ from PIL import Image
 from rembg import remove, new_session
 
 from matte_frame import frame
+from manifest_store import merge_manifest
 
 HERE = Path(__file__).parent
 argv = sys.argv[1:]
@@ -58,6 +59,7 @@ for _e in MAN:
     if _e.get('src') == 'drawing':
         DRAWING_PARTS.add((_e.get('family'), _e.get('part')))
 BY_ID = {(e.get('family'), e.get('part'), e.get('id')): e for e in MAN if e.get('ok')}
+BY_FILE = {str((HOME / e.get('file')).resolve()): e for e in MAN if e.get('ok') and e.get('file')}
 
 session = new_session('u2net')
 n = 0
@@ -73,10 +75,15 @@ for src in sorted(PHOTOS.rglob('*.*')):
     # 帳本裡也沒有對應條目 ⇒ 63 張(2026-08-10 實測)沒有授權帳、沒有判決、也沒有消費端的檔案
     # 靜靜躺在那裡。使用者自己放的圖有正規入口(`fetch_photos.mjs --inbox` / `--adopt`,授權硬閘
     # 照跑),這裡 MUST 跳過並**說出來**,MUST NOT 靜默略過(也 MUST NOT 幫它猜零件名)。
-    if src.parent.parent.parent != PHOTOS:
+    entry = BY_FILE.get(str(src.resolve()))
+    if src.parent.parent.parent == PHOTOS:
+        fam, part = src.parent.parent.name, src.parent.name
+    elif entry and entry.get('restricted'):
+        # 非出貨家允許把既有的 photos/<族>/* 編成 part=whole；檔案不搬動，來源路徑保持可追溯。
+        fam, part = entry.get('family'), entry.get('part')
+    else:
         skipped_loose += 1
         continue
-    fam, part = src.parent.parent.name, src.parent.name
     if fam_filter and fam != fam_filter:
         continue
     if part_filter and part != part_filter:
@@ -85,7 +92,7 @@ for src in sorted(PHOTOS.rglob('*.*')):
         skipped_dwg += 1
         continue
     dst = OUT / fam / part / (src.stem + '.png')
-    entry = BY_ID.get((fam, part, src.stem))
+    entry = entry or BY_ID.get((fam, part, src.stem))
     # `--rebbox`:matte 已經有了、只是帳上缺邊框 ⇒ 重跑模型只為了記帳,**不重寫 matte**
     # (模型是決定性的 ⇒ 重寫也會是同一張,但不寫就不可能寫壞)。
     fresh = not dst.exists()
@@ -118,7 +125,7 @@ for src in sorted(PHOTOS.rglob('*.*')):
     else:
         print(f'· {fam}/{part}/{dst.name}  邊框回填 {img.size[0]}×{img.size[1]}')
 if booked and MANIFEST.exists():
-    MANIFEST.write_text(json.dumps(MAN, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    merge_manifest(MANIFEST, MAN, {fam_filter} if fam_filter else None)
 print(f'共 {n} 張' + (f';邊框帳 {booked} 筆' if booked else '')
       + (f';設計圖跳過 {skipped_dwg} 張(走 plan_to_mesh.py --screen)' if skipped_dwg else '')
       + (f';不在 <族>/<零件>/ 底下跳過 {skipped_loose} 張(自己放的圖走 fetch_photos.mjs --inbox / --adopt)'
