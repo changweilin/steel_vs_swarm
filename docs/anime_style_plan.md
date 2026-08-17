@@ -1100,7 +1100,21 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 2. **`INK_MRT.SELF_F` / `GRAZE_K` 已做 4 × 4 定場掃描**，定案為 **2.4 / 1.5**。
 3. **④-4 另兩支已補入接縫判讀註解**；`shot_scene` 另增 `--only`、`--ink-self`、
    `--ink-graze`，讓掃描不必改正式來源。
-4. **下一輪目標已裁決但本輪不執行**：③-4 的 `hazards.buildHazard` 合併須排除 rock；
-   10b 的 `DETAIL_DEFS.carwreck` / `container` 改成真實尺度並接受決定性散布佈局遷移，連同
-   edgewall / beacons 收斂與新基準驗證一併完成。
+4. **③-4 / 10b 已於第三輪完成**：`hazards.buildHazard` 靜態件逐材質合併並排除 rock / 動態 /
+   透明件；`DETAIL_DEFS.carwreck` / `container` 改成真實尺度並建立新 `detailR` 基準；
+   edgewall / beacons 已收斂到 `vehicles.js`。
 5. **CC0 音檔已補齊**：七床 + 兩份行動版 BGM 均已進來源帳並通過雙向檔案稽核。
+
+### 2026-08-17 第三輪：③-4 / 10b 收尾
+
+| 項目 | 結果 | 稽核 |
+|---|---|---|
+| `hazards.buildHazard` draw call | jitter 後逐材質合併；rock 的 `outlineGeo`、火舌/水面等動態件、透明件維持獨立 | `audit_vehicle_spec` ⅩⅢ ±`--break-hazard` |
+| ground 真實尺度 | carwreck 4.8 × 1.45 × 1.9m；20ft container 6.058 × 2.591 × 2.438m | 新 `detailR` 2.581181899828 / 3.265088360213，±`--break-detr` |
+| edgewall / beacons 收斂 | railcar / truck / container / depot 全數轉呼 `makeVehicle`；AABB 轉呼 `partAABB` | `audit_vehicle_spec` Ⅴ-b・Ⅻ ±`--break-converge`; `audit_world_edge`; `audit_beacons` |
+
+本輪依使用者裁決接受舊場景佈局失效；驗收改為同一份新程式碼與同一種子可重現，MUST NOT
+拿第二輪的逐位元場景輸出作比較基準。
+
+新版本重現驗證：`audit_siteplan` / `audit_ground_qc` / `audit_object_joints --seeds 8` 各連跑兩次，
+三組輸出皆逐字元相同。`shot_scene` 新定場照因本機找不到 Playwright 而跳過，仍列為 ㋓ 未驗項。

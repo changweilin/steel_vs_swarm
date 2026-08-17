@@ -5,6 +5,8 @@
 > **共通鐵律(不逐列重述)**:消費端 MUST 全部走這個縫、MUST NOT 另寫第二份實作或在別處二次運算、**推導值 MUST NOT 手寫**、純表現層 MUST NOT 動權威幾何。「稽核」欄 = 該縫的細節與症狀敘事所在(檔頭),改它先開那支。
 
 
+> **2026-08-17 載具型錄更新（取代下列載具列末段的暫存債）**：`edgewall` 的 railcar/truck/container、`beacons.depot` 已轉呼 `makeVehicle`；`edgewall.partBox` 已轉呼 `partAABB`。`ground` 不新增第二支描述子轉接器，直接採真實外廓，`detailR` 新基準為 carwreck **2.581181899828** / container **3.265088360213**，接受本次散布佈局遷移。`hazards.buildHazard` 在 jitter 後逐材質合併靜態件，rock / 動態 / 透明件排除。反向驗證：`--break-converge` / `--break-hazard` / `--break-detr`。
+
 | 領域 | 唯一縫 | 鐵律 / 稽核 |
 |---|---|---|
 | 都市計畫(沿街排列 + 公設) | `siteplan.js` §A(`URBAN`/`CIVIC`/`CIVIC_KINDS`/`CIVIC_PARTS`/`CIVIC_TREES`/`plotSeed`/`frac`/`roadFaceRy()`/`planBlocks()`/`civicExtent()`/`partCollider()`/`civicColliders()`/`buildCivic()`) | ①對齊的是**建築線**不是中心線;②排距推導(`urbanRowPitch()`);③**先劃公設用地、再劃建築基地**;④公設是開放空間(草坪/跑道/柏油面 MUST NOT 登記碰撞柱;**長條件 MUST 登記有向盒** → A30);**2026-08-16 追加**:`CIVIC_PARTS` 的四個語意通道(`col`/`vc`/`opt`/`sf`)在載具改吃型錄之後 MUST 由 `makeVehicle(kind, { col, vc, opt, sf })` **原樣帶出來** —— `col` 決定進不進 `blockers`(缺了 = 走得進去的實心車)、`vc` 決定色相變異通道(車體與車頂 MUST 同通道才一起轉色)、`opt` 是非碰撞小件的存缺通道(**`col` 件恆保留**)、`sf` 進分桶鍵;⑤朝向公式只有 `roadFaceRy()`(`nearestRoadAngle` 轉呼);⑥**零共享 `rnd()` 消耗**;⑦市區閘不可省;⑧`URBAN.MAX` 的天花板是 `LOS.MAX_OCC`。稽核 `audit_siteplan` |

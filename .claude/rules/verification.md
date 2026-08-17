@@ -155,7 +155,8 @@ node tools/audit_vehicle_spec.mjs    # 載具/擺件型錄(宣告盒 ⊇ 實測�
                                      #  / detailR 哨兵 / 公設分桶數 / 凹處往外堆 / 可視角 / 兩份 AABB 交叉比對)
 #   ±--break-spec(輪拱保險桿改回手寫)/--break-dup(停車場繞過型錄)/--break-face(鼻頭改 −x)
 #   ±--break-recess(凹處往內挖)/--break-sight(可視角門檻拿掉)
-#   ±--break-batch(公設顏色回到材質)/--break-detr(DETAIL_DEFS.carwreck 放大)
+#   ±--break-batch(公設顏色回到材質)/--break-detr(DETAIL_DEFS 縮回舊尺度)
+#   ±--break-converge(edgewall/beacons 寫回手工副本)/--break-hazard(hazards 略過合併)
 node tools/audit_wildlife.mjs        # 鳥群(四項積分器行為直測 / 分群 / 零共享 rnd / 錨不到就不放
                                      #  / 剪影下限 / 幀率無關 / biomes 接線)
 #   ±--break-spring/--break-noise/--break-friction/--break-group

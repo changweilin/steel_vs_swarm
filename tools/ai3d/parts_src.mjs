@@ -21,6 +21,7 @@ import { join } from 'node:path';
 import { ROOT, readSrc } from '../audit_src.mjs';
 // 平整垂直牆面板的**唯一**分群規則(零 import 的純模組;遊戲端 biomes.js 吃同一支)
 import { wallPanels, planeGroups } from '../../public/js/wallpanel.js';
+import { makeVehicle } from '../../public/js/vehicles.js';
 
 /** beacons.js 的純區塊邊界(THREE 以上那一段)—— 兩個消費端同吃,MUST NOT 各寫一份字串 */
 export const PURE_HEAD = 'export const BEACON = {';
@@ -31,10 +32,10 @@ export function beaconsPure(src) {
   const i0 = src.indexOf(PURE_HEAD);
   const i1 = src.indexOf(PURE_TAIL);
   if (i0 < 0 || i1 < 0) throw new Error('beacons.js 純區塊的邊界標記找不到(檔案結構變了?)');
-  return new Function(`
+  return new Function('makeVehicle', `
     ${src.slice(i0, i1).replace(/^export /gm, '')}
     return { BEACON, BEACON_KINDS, KIND_PARTS, partExtent, kindExtent };
-  `)();
+  `)(makeVehicle);
 }
 
 export const beaconsSrc = () => readSrc('public', 'js', 'beacons.js');

@@ -34,6 +34,7 @@ import * as THREE from 'three';
 import { toonMat, envMat, bakeContactAO } from './toon.js';
 import { mulberry32 } from './rng.js';
 import { libGeo } from './partlib.js';
+import { makeVehicle } from './vehicles.js';
 
 // ---- 規劃參數 ----
 // NEAR/FAR 是「centre 到 centre」的搜尋帶:近端沒有意義上的下限(真正的下限由 `blocked`
@@ -249,10 +250,10 @@ const KIND_PARTS = {
   ],
   // 貨櫃堆:交錯堆疊的貨櫃 + 油桶 + 棧板。矮但佔地大,只用在近距離的兵線錨點。
   depot: [
-    { g: ['box', 6.1, 2.6, 2.5], c: 0xb4553c, p: [0, 1.3, -1.5] },
-    { g: ['box', 6.1, 2.6, 2.5], c: 0x3f6f7a, p: [0.5, 1.3, 1.5] },
-    { g: ['box', 6.1, 2.6, 2.5], c: 0x7d8a4a, p: [-0.6, 3.9, -0.4] },
-    { g: ['box', 6.1, 2.6, 2.5], c: 0xa8a08c, p: [0.3, 6.5, 0.2] },
+    ...makeVehicle('container20', { paint: 0xb4553c, at: [0, 0, -1.5] }),
+    ...makeVehicle('container20', { paint: 0x3f6f7a, at: [0.5, 0, 1.5] }),
+    ...makeVehicle('container20', { paint: 0x7d8a4a, at: [-0.6, 2.591, -0.4] }),
+    ...makeVehicle('container20', { paint: 0xa8a08c, at: [0.3, 5.182, 0.2] }),
     { g: ['box', 6.3, 0.16, 2.7], c: 0x2f3438, p: [0.3, 7.85, 0.2] },
     ...[[-4.2, -2.6], [-3.6, -1.1], [-4.4, 0.4]].map(([x, z], i) => (
       { g: ['cyl', 0.62, 0.62, 1.7, 8], c: i === 1 ? 0xc2913a : 0x4a5a66, p: [x, 0.85, z] })),

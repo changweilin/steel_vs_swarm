@@ -35,6 +35,7 @@
 //     不進 `occ`、不進 LOS,伺服器對這一整套一無所知(原則 4)。它們唯一的職責是「往外看
 //     不是虛空」。
 import { mulberry32 } from './rng.js';
+import { makeVehicle, partAABB } from './vehicles.js';
 
 // ---- 規劃參數 ----
 export const EDGE_WALL = {
@@ -205,37 +206,9 @@ export function planWallRuns(segs, opts = {}) {
 // `beacons.js partExtent` 算的是「離軸心多遠」(圓形外廓,規劃期預留空間用),本檔要的是
 // **三軸各自的區間**(零件收不收得進那個長方盒)—— 圓外廓答不了「厚度方向有沒有頂出去」。
 // 兩支算的不是同一件事,故不是第二份實作;而且那一支住在 import THREE 的檔案裡(紀律①)。
-const _absR = (rx, ry, rz) => {
-  const cx = Math.cos(rx), sx = Math.abs(Math.sin(rx));
-  const cy = Math.cos(ry), sy = Math.abs(Math.sin(ry));
-  const cz = Math.cos(rz), sz = Math.abs(Math.sin(rz));
-  const ax = Math.abs(cx), ay = Math.abs(cy), az = Math.abs(cz);
-  // |R| 的逐項絕對值(Euler 'XYZ' = Rx·Ry·Rz)—— 用它乘半徑向量即得旋轉後 AABB 的半邊長,
-  // 對長方體是**精確**值,對圓柱/圓錐/多面體是保守上界(偏差一律朝「算大」= 朝不違反 A30)
-  return [
-    [ay * az, ay * sz, sy],
-    [sx * sy * az + ax * sz, Math.abs(sx * sy * sz) + ax * az, sx * ay],
-    [Math.abs(ax * sy * az) + sx * sz, ax * sy * sz + sx * az, ax * ay],
-  ];
-};
-
 /** 零件在**局部座標**的 AABB:{ x0,x1, y0,y1, z0,z1 }。純幾何、無 three */
 export function partBox(part) {
-  const [t, a, b, c] = part.g;
-  let hx, hy, hz;
-  if (t === 'box') { hx = a / 2; hy = b / 2; hz = c / 2; }
-  else if (t === 'cyl') { hx = Math.max(a, b); hy = c / 2; hz = Math.max(a, b); }
-  else if (t === 'cone') { hx = a; hy = b / 2; hz = a; }
-  else { hx = hy = hz = a; }   // ico
-  const [px = 0, py = 0, pz = 0] = part.p || [];
-  const [rx = 0, ry = 0, rz = 0] = part.r || [];
-  if (rx || ry || rz) {
-    const M = _absR(rx, ry, rz);
-    const h = [hx, hy, hz];
-    const o = M.map((row) => row[0] * h[0] + row[1] * h[1] + row[2] * h[2]);
-    [hx, hy, hz] = o;
-  }
-  return { x0: px - hx, x1: px + hx, y0: py - hy, y1: py + hy, z0: pz - hz, z1: pz + hz };
+  return partAABB(part);
 }
 
 /**
@@ -483,17 +456,15 @@ const PARTS = {
     return [
       { g: ['box', len, emb, D], c: 0x6f6a5e, p: [0, emb / 2, 0] },
       { g: ['box', len, 0.5, D * 0.86], c: 0x8a8378, p: [0, emb + 0.25, 0] },
+      { g: ['box', len, H - emb, 0.3], c: 0x596168, p: [0, emb + (H - emb) / 2, zIn(D, 0.3)] },
       ...[-0.72, 0.72].map((z) => (
         { g: ['box', len, 0.16, 0.14], c: 0x5d6167, p: [0, rail + 0.08, z] })),
       ...rep(len, 13.5, (x, s) => {
         const c = pick(rnd, [0x3f6f7a, 0x7d4a3c, 0x4c5a3f, 0x5a5f68]);
         return [
-          { g: ['box', s * 0.9, 3.3, 3.0], c, p: [x, rail + 0.5 + 1.65, 0] },
-          { g: ['box', s * 0.9, 0.35, 2.6], c: 0x9aa2a8, p: [x, rail + 0.5 + 3.45, 0] },
-          { g: ['box', s * 0.86, 0.9, 3.06], c: 0x2f353b, p: [x, rail + 1.9, 0] },
-          ...[-0.32, 0.32].map((f) => (
-            { g: ['cyl', 0.45, 0.45, 1.5, 6], c: 0x4a4f55, p: [x + s * f, rail + 0.35, 0], r: [0, 0, Math.PI / 2] })),
-          { g: ['box', s * 0.16, 0.5, 1.4], c: 0x8d949c, p: [x, rail + 4.15, 0] },
+          ...makeVehicle('railcar', {
+            fit: { L: s * 0.9, W: 3.0, H: 3.85 }, paint: c, at: [x, rail + 0.5, 0],
+          }),
         ];
       }),
       // 電車線桿:柱 + 橫臂(頂**恰在**盒頂 —— 差一點就是「盒子上面有一截空的」)
@@ -508,17 +479,19 @@ const PARTS = {
     const berm = 1.5;
     return [
       { g: ['box', len, berm, D], c: 0x6f685c, p: [0, berm / 2, 0] },
+      { g: ['box', len, H - berm, 0.3], c: 0x5c625d, p: [0, berm + (H - berm) / 2, zIn(D, 0.3)] },
       ...rep(len, 12.5, (x, s) => {
         const c = pick(rnd, [0xb4553c, 0x3f6f7a, 0x7d8a4a, 0xa8a08c, 0xc2913a]);
         const c2 = pick(rnd, [0x9a4a35, 0x35606b, 0x6d7a40]);
         return [
-          ...[-0.3, 0.02, 0.3].map((f) => (
-            { g: ['cyl', 0.52, 0.52, 2.4, 6], c: 0x35393e, p: [x + s * f, berm + 0.52, 0], r: [0, 0, Math.PI / 2] })),
-          { g: ['box', s * 0.94, 0.7, 2.5], c: 0x4a4f55, p: [x, berm + 1.25, 0] },
-          { g: ['box', s * 0.6, 2.7, 2.45], c, p: [x + s * 0.16, berm + 1.6 + 1.35, 0] },
-          { g: ['box', s * 0.24, 2.5, 2.4], c: pick(rnd, [0xd6cdbb, 0x3f4750, 0xb9ae9c]), p: [x - s * 0.32, berm + 1.6 + 1.25, 0] },
-          { g: ['box', s * 0.55, 2.4, 2.3], c: c2, p: [x + s * 0.14, H - 1.25, 0] },
-          { g: ['box', s * 0.06, 0.9, 0.14], c: 0x2f353b, p: [x - s * 0.44, berm + 3.4, 0] },
+          ...makeVehicle('truck', {
+            fit: { L: s * 0.94, W: 2.5, H: Math.min(4.0, H - berm) }, paint: c,
+            cabC: pick(rnd, [0xd6cdbb, 0x3f4750, 0xb9ae9c]), at: [x, berm, 0],
+          }),
+          ...makeVehicle('container20', {
+            fit: { L: s * 0.55, W: 2.3, H: 2.4 }, paint: c2,
+            at: [x + s * 0.14, H - 2.5, 0],
+          }),
         ];
       }),
     ];
@@ -741,9 +714,20 @@ const PARTS = {
       { g: ['box', len * 0.99, 0.5, hullD], c: 0x8a8f92, p: [0, deck + 0.25, zIn(D, hullD)] },
       // 貨櫃堆(三列 × 兩層)
       ...rep(len, 6.4, (x, s) => [-4.6, 0, 4.6].flatMap((z, j) => [
-        { g: ['box', s * 0.9, 2.6, 2.4], c: pick(rnd, [0xb4553c, 0x3f6f7a, 0x7d8a4a, 0xa8a08c, 0xc2913a]), p: [x, deck + 1.8, zIn(D, hullD) + z] },
-        ...(rnd() < 0.75 ? [{ g: ['box', s * 0.9, 2.6, 2.4], c: pick(rnd, [0x9a4a35, 0x35606b, 0x6d7a40, 0x8f8878]), p: [x, deck + 4.5, zIn(D, hullD) + z] }] : []),
-        ...(j === 1 && rnd() < 0.4 ? [{ g: ['box', s * 0.9, 2.6, 2.4], c: 0x8d949c, p: [x, deck + 7.2, zIn(D, hullD) + z] }] : []),
+        ...makeVehicle('container20', {
+          fit: { L: s * 0.9, W: 2.4, H: 2.6 },
+          paint: pick(rnd, [0xb4553c, 0x3f6f7a, 0x7d8a4a, 0xa8a08c, 0xc2913a]),
+          at: [x, deck + 0.5, zIn(D, hullD) + z],
+        }),
+        ...(rnd() < 0.75 ? makeVehicle('container20', {
+          fit: { L: s * 0.9, W: 2.4, H: 2.6 },
+          paint: pick(rnd, [0x9a4a35, 0x35606b, 0x6d7a40, 0x8f8878]),
+          at: [x, deck + 3.2, zIn(D, hullD) + z],
+        }) : []),
+        ...(j === 1 && rnd() < 0.4 ? makeVehicle('container20', {
+          fit: { L: s * 0.9, W: 2.4, H: 2.6 }, paint: 0x8d949c,
+          at: [x, deck + 5.9, zIn(D, hullD) + z],
+        }) : []),
       ]).flat(),
       ),
       // 上層建築 + 駕駛台 + 煙囪 + 桅桿(桅頂 = 盒頂)
