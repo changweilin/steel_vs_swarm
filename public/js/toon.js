@@ -1324,9 +1324,27 @@ ${CEL_SEA_GLSL}
             // 值 = 沿旗面走過的波數 × 2π;取 0.8 個波:整數波會讓兩端同相 = 又變回剪切。
             swP -= sw * ${(0.8 * Math.PI * 2).toFixed(3)};
           #endif
-          // 兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點
-          float swOsc = sin( uWindT * uSoftFreq + swP ) * 0.72
-                      + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + swP * 1.6 + 1.7 ) * 0.28;
+          // 一個共用的雙頻波形；旗面另以實例原點雜湊取速率 / 相位，避免整圈旗陣像機械連桿。
+          float swRate = uSoftFreq;
+          float swPhase = swP;
+          float swBeat = ${WIND.BEAT.toFixed(3)};
+          float swSlowW = 0.72;
+          float swFastW = 0.28;
+          float swFastPhase = swP * 1.6 + 1.7;
+          #ifdef CEL_SWAY_H
+            // 布料 = 慢抬起 + 3.3× 小幅快顫。雜湊只吃已定案的世界落點，零共享 rnd。
+            float swPiece = fract( dot( swO.xyz, vec3( 0.1031, 0.11369, 0.13787 ) ) );
+            swPiece = fract( ( swPiece + 0.33 ) * ( swPiece + 19.19 ) );
+            swRate *= mix( 0.88, 1.12, swPiece );
+            swPhase += swPiece * 6.2831853;
+            swBeat = 3.3;
+            swSlowW = 0.75;
+            swFastW = 0.25;
+            swFastPhase = swPhase;
+          #endif
+          // 兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點。
+          float swOsc = sin( uWindT * swRate + swPhase ) * swSlowW
+                      + sin( uWindT * swRate * swBeat + swFastPhase ) * swFastW;
           // 世界風向 → 零件局部方向。GLSL 的 \`v * m\` = transpose(m) * v;實例矩陣是
           // 旋轉 × (XZ 等比、Y 另計) 的縮放 ⇒ 轉置與逆只差一個對角縮放,水平分量的比例不變,
           // 正規化後方向一致。MUST NOT 省掉這一步:實例的 ry 是亂數,直接拿世界向量當局部

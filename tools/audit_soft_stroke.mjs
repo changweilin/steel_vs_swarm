@@ -33,7 +33,7 @@
 // 跑法:node tools/audit_soft_stroke.mjs
 // 反向驗證:--break-ink(軟性倍率當成 1)/ --break-anchor(擺動錨點拿掉)
 //           --break-wave(海浪相位改取實例原點)/ --break-gust(陣風包絡拿掉)
-//           四者 MUST 分別讓 Ⅰ / Ⅲ / Ⅵ / Ⅶ 紅字,否則等於沒驗到(原則 9)。
+//           --break-cloth(旗面速率退回全員同步)。五者 MUST 各自讓對應欄紅字,否則等於沒驗到(原則 9)。
 import { readSrc } from './audit_src.mjs';
 // 載具型錄唯一縫(零 import ⇒ Node 端直接載得動真品;⑧ 段的 CIVIC_PARTS 沙箱要注入)
 import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
@@ -60,6 +60,8 @@ const BREAK_INKBREAK = process.argv.includes('--break-inkbreak');
 const BREAK_INKANCHOR = process.argv.includes('--break-inkanchor');
 /** 反向驗證:深度門檻再疊一項法線式上限(= ①-4 的「兩者擇一」被違反)⇒ Ⅺ MUST 紅字 */
 const BREAK_GRAZE = process.argv.includes('--break-graze');
+/** 反向驗證:旗面速率不再逐件變化 ⇒ Ⅲ 布料波形 MUST 紅字 */
+const BREAK_CLOTH = process.argv.includes('--break-cloth');
 
 let toon = readSrc('public', 'js', 'toon.js');
 let post = readSrc('public', 'js', 'postfx.js');
@@ -88,6 +90,10 @@ if (BREAK_GRAZE) {
   post = bend(post, /float e = lap \/ max\( 0\.001, d \* \$\{INK\.K_D\.toFixed\(3\)\} \+ slope \* \$\{INK\.K_S\.toFixed\(1\)\} \);/,
     'float e = lap / max( 0.001, d * ${INK.K_D.toFixed(3)} + slope * ${INK.K_S.toFixed(1)} + ( 1.0 - nz ) );',
     '--break-graze');
+}
+if (BREAK_CLOTH) {
+  toon = bend(toon, /swRate \*= mix\( 0\.88, 1\.12, swPiece \);/g,
+    'swRate *= 1.0;', '--break-cloth');
 }
 const biomes = readSrc('public', 'js', 'biomes.js');
 const site = readSrc('public', 'js', 'siteplan.js');
@@ -258,8 +264,12 @@ console.log('\nⅢ 擺動的不變式(toon.js 頂點原文)');
   ok(!/dot\( transformed\.xz, uWindK \)/.test(S), '相位 MUST NOT 逐頂點取');
   ok(/vec3\( uWindDir\.x, 0\.0, uWindDir\.y \) \* swM/.test(S),
     '世界風向轉進零件局部座標(實例的 ry 是亂數 ⇒ 直接拿世界向量會變成每株各吹各的)');
-  ok(/sin\( uWindT \* uSoftFreq \+ swP \)/.test(S) && count(S, /sin\(/g) === 2,
+  ok(/sin\( uWindT \* swRate \+ swPhase \)/.test(S) && count(S, /sin\(/g) === 2,
     '兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點');
+  ok(/#ifdef CEL_SWAY_H[\s\S]*?swPiece = fract[\s\S]*?swRate \*= mix\( 0\.88, 1\.12, swPiece \);[\s\S]*?swPhase \+= swPiece \* 6\.2831853;[\s\S]*?#endif/.test(S),
+    '旗面 rate / phase 逐件由已定案落點雜湊,零共享 rnd(全員同速 = 機械連桿)');
+  ok(/swBeat = 3\.3;[\s\S]*?swSlowW = 0\.75;[\s\S]*?swFastW = 0\.25;[\s\S]*?swFastPhase = swPhase;/.test(S),
+    '布料波形 = 75% 慢抬起 + 25% 的 3.3× 快顫,兩層共用逐件相位');
   ok(/transformed\.y -= /.test(S), '擺出去時梢端略降(少了這一項會看起來像整株在平移)');
   ok(count(code(toon), /defines\.CEL_SWAY = ''/g) === 1 && /sk\.amp > 0/.test(code(toon)),
     '擺動與細勾線分兩個 define(草坪要前者不要後者)');

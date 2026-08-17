@@ -401,6 +401,12 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 - **取 base 對照時 `git stash` 不可靠**(變更已 commit 就是 no-op,會安靜地拿新程式碼當基準;切分支也會污染仍在跑的背景樣本)—— 一律 `git show <rev>:path` 把 `sim.js`/`bots.js`/`data.js` 三支倒進暫存目錄各跑各的。
 - 定位分類專屬:定位版 vs 關掉 `_resolveRole` 的同一批 bot 做 **CRN 配對鏡射**自對戰,量工事損血差。
 
+### 5.5-2026-08-17 旗面布料波形
+
+| 改動 | MUST 跑 |
+|---|---|
+| `toon.js CEL_SWAY_H` 的 `swPiece` / `swRate` / `swPhase` / 3.3× 快顫 | `audit_soft_stroke` Ⅲ ±`--break-cloth` + `audit_client_syntax`(㋖)+ `audit_cel_pipeline` / `audit_visual_prefs` / `audit_gpu_lifecycle` / `audit_world_curve` + `audit_object_joints --seeds 8` / `audit_siteplan` / `audit_beacons`(零幾何、零共享 `rnd()`,判準逐項不動)+ `npm run bal` / `npm test` 逐項不動 + 真 GPU:`gl.getError() = 0`、旗桿側不動、同圈旗面不同速不同相位、植被擺動觀感不變 |
+
 ### 5.5-2026-08-17 地貌苔草／濕痕遮罩
 
 | 改動 | MUST 跑 |
