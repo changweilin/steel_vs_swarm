@@ -19,7 +19,7 @@ import {
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow,
   SPEC_CAM, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
-  CREEP_UPG,
+  CREEP_UPG, DISSOLVE, dissolveOutAt,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -27,7 +27,7 @@ import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './m
 import { applyEnvironment } from './environment.js';
 import { Pipeline } from './postfx.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
-import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, CHAR, disposeTree } from './toon.js';
+import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, setDissolve, CHAR, disposeTree } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { animWeights } from './animweights.js';
@@ -524,6 +524,7 @@ export class BattleClient {
     Object.assign(this, opts);
     this.center = this.cfg.center;
     this.ents = new Map();
+    this._dissolveGhosts = [];        // 純渲染殘影;MUST NOT 留在 ents / 鎖定 / 動畫消費端
     this.effects = [];
     this.keys = {};
     this.yaw = 0; this.pitch = -0.1;
@@ -3121,9 +3122,10 @@ export class BattleClient {
       this._updateHpBar(ent);
       this._updateDamageStage(ent);
     }
-    // 移除消失的單位
+    // 移除消失的單位。快照缺席也可能是迷霧過濾;只有同幀權威 die 事件可留純渲染殘影。
+    const deadIds = new Set((m.ev || []).filter((ev) => ev.e === 'die').map((ev) => ev.id));
     for (const [id, ent] of this.ents) {
-      if (!seen.has(id)) { this._removeEnt(id, ent); }
+      if (!seen.has(id)) { this._removeEnt(id, ent, deadIds.has(id)); }
     }
     // 事件
     for (const ev of m.ev || []) this._onEvent(ev);
@@ -3234,7 +3236,7 @@ export class BattleClient {
     // 平民:陣營看 cs(伺服器 side=null,讓兩陣營都能開槍),ch = 職業 index(選 buildCivilian 變體)
     // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
     const { group, mixer } = makeUnit(key, civ ? e.cs : e.s,
-      { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' && e.k !== 'hyper' });
+      { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' && e.k !== 'hyper', dissolve: true });
     if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 護衛自殺機衝出:SIZE_F(1/2)體型
     const hero = HERO_KINDS.has(e.k);
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
@@ -3392,10 +3394,9 @@ export class BattleClient {
     ent.guns = g;
   }
 
-  _removeEnt(id, ent) {
+  _removeEnt(id, ent, dissolve = false) {
     if (this._lockId === id) this._clearLockGlow();   // 光暈是目標 mesh 的子節點,別留下懸空參照
     if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); this._rgPool?.push(ent._rgGlow); ent._rgGlow = null; }   // 射程光暈回收進池(共用材質,MUST NOT 隨 mesh 一起丟)
-    this.scene.remove(ent.mesh);
     if (ent.aura) { this.scene.remove(ent.aura); this._auras = (this._auras || []).filter((x) => x !== ent); }
     if (ent.guns) this.scene.remove(ent.guns);
     if (ent.mixer) this.mixers.delete(ent.mixer);
@@ -3404,6 +3405,28 @@ export class BattleClient {
     this.flamers.delete(ent.mesh);
     this.damaged.delete(ent);
     this.ents.delete(id);
+    // 戰鬥參照全部已在上面清掉,之後才能把 mesh 當純渲染殘影留在 scene。
+    // 迷霧消失(dissolve=false)必須即時收起,不得洩漏視野外位置。
+    const origin = ent.mesh.position.clone();
+    if (dissolve && ent.mesh.visible && DISSOLVE.OUT_S > 0 && setDissolve(ent.mesh, 1, origin) > 0) {
+      if (ent.bar) ent.bar.visible = false;
+      this._dissolveGhosts.push({ mesh: ent.mesh, origin, t: 0 });
+    } else {
+      this.scene.remove(ent.mesh);
+    }
+  }
+
+  /** 權威死亡的純渲染收尾;不讀 ents、不回寫任何戰鬥狀態。 */
+  _updateDissolveGhosts(dt) {
+    for (let i = this._dissolveGhosts.length - 1; i >= 0; i--) {
+      const g = this._dissolveGhosts[i];
+      g.t += dt;
+      const k = dissolveOutAt(g.t);
+      setDissolve(g.mesh, k, g.origin);
+      if (k > 0) continue;
+      this.scene.remove(g.mesh);
+      this._dissolveGhosts.splice(i, 1);
+    }
   }
 
   // 血條:HP 用紅色標示現有值,護盾(英雄雙層 HP 第一層)用玻璃藍疊在上方一列
@@ -9036,6 +9059,7 @@ export class BattleClient {
     this._updatePlayer(dt, now);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);
+    this._updateDissolveGhosts(dt);   // 實體先摘出 ents,殘影只在這條純渲染路徑收尾
     this._updateRangeGlows();         // 這一發會傷到的單位才亮範圍光暈(鎖定目標另有 lockGlow)
     this._updateMoveAudio();          // 移動環境音(旋翼/引擎/振翅/震地;低功耗自動全關)
     this._updateBullets(dt);

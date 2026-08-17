@@ -73,7 +73,7 @@ import { readdirSync } from 'node:fs';
 import { readSrc } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { makeField, makeToneLadder } from '../public/js/field.js';
-import { INK_CTR, inkCtrM, combatReachM, DISSOLVE } from '../public/js/data.js';
+import { INK_CTR, inkCtrM, combatReachM, DISSOLVE, dissolveOutAt } from '../public/js/data.js';
 import { VISUAL_KNOBS } from '../public/js/visualPrefs.js';
 
 const toon = readSrc('public', 'js', 'toon.js');
@@ -81,6 +81,7 @@ const env = readSrc('public', 'js', 'environment.js');
 const terr = readSrc('public', 'js', 'terrain.js');
 const field = readSrc('public', 'js', 'field.js');
 const game = readSrc('public', 'js', 'game.js');
+const models = readSrc('public', 'js', 'models.js');
 const postfx = readSrc('public', 'js', 'postfx.js');
 
 /** 反向驗證:把螢幕下限退回「不除世界縮放」的舊制 ⇒ Ⅳ MUST 紅字 */
@@ -101,7 +102,7 @@ const BREAK_NEAREST = process.argv.includes('--break-nearest');
 const BREAK_SELFF = process.argv.includes('--break-selff');
 /** 反向驗證:群組早退整段刪掉 ⇒ Ⅷ⑥ MUST 紅字 */
 const BREAK_GRP = process.argv.includes('--break-grp');
-/** 反向驗證:discard 錨點挪到 opaque_fragment 之後 + 快取鍵拿掉 D ⇒ Ⅸ MUST 紅字 */
+/** 反向驗證:discard 錨點挪錯 + 快取鍵拿掉 D + 迷霧也留殘影 ⇒ Ⅸ MUST 紅字 */
 const BREAK_DISSOLVE = process.argv.includes('--break-dissolve');
 /** 反向驗證:地貌分區子帶改用計畫字面的 `* 0.1`(撞號)+ 拿掉拉桿閘 ⇒ Ⅸ MUST 紅字 */
 const BREAK_LANDINK = process.argv.includes('--break-landink');
@@ -730,7 +731,7 @@ return ctr; };`)(
 // 而且兩者的錯法一模一樣 —— **沒有錯誤訊息,只有畫面上說不出哪裡怪**。
 console.log('\nⅨ 溶入的材質契約(④-2)+ 地貌分區子帶(①-3)');
 {
-  let T = code(toon), P = code(postfx);
+  let T = code(toon), P = code(postfx), G = code(game);
   const bend2 = (src, re, to, flag) => {
     const out = src.replace(re, to);
     if (out === src) { console.error(`✗ ${flag}:樣式沒咬到,反向驗證等於沒跑`); process.exit(1); }
@@ -742,6 +743,7 @@ console.log('\nⅨ 溶入的材質契約(④-2)+ 地貌分區子帶(①-3)');
     T = bend2(T, /\.replace\('#include <clipping_planes_fragment>', `\r?\n\s*#include <clipping_planes_fragment>\r?\n\s*#ifdef CEL_DIS\r?\n\s*if \( celDissolve\( vDisP \) \) discard;\r?\n\s*#endif`\)/,
       ".replace('#include <opaque_fragment>', `\n        #include <opaque_fragment>\n        #ifdef CEL_DIS\n        if ( celDissolve( vDisP ) ) discard;\n        #endif`)", '--break-dissolve(錨點)');
     T = bend2(T, /\$\{dissolve \? 'D' : ''\}/g, '', '--break-dissolve(快取鍵)');
+    G = bend2(G, /deadIds\.has\(id\)/, 'true', '--break-dissolve(迷霧洩漏)');
   }
   if (BREAK_LANDINK) {
     // 壞版:子帶改用計畫字面的 `* 0.1`(0.1 / 0.15 落在現役槽 0.1015625 / 0.1484375 的
@@ -781,6 +783,27 @@ console.log('\nⅨ 溶入的材質契約(④-2)+ 地貌分區子帶(①-3)');
     '反轉外殼仍共用 `celOutline` **一把**快取鍵(給部分外殼加 define 而鍵不變 = three 發錯程式,不報錯)');
   ok(/export function setDissolve\(/.test(T) && /o\.userData\.isOutline\) \{ o\.visible = v >= 1; return; \}/.test(T),
     '溶入期間外殼**整片收起**,結束復原 —— 而且那條規則住 `setDissolve` 這唯一寫入點(呼叫端自己去戳 userData = 第二份實作)');
+  ok(/export function enableDissolve\(/.test(T)
+    && /m\.transparent \|\| seen\.has\(m\) \|\| !m\.userData\?\.celOpts/.test(T)
+    && /applyCelPatch\(m, \{ \.\.\.m\.userData\.celOpts, dissolve: true \}\)/.test(T),
+    '溶解 define 事後只掛已走 cel 的不透明材質(alpha 特效不復辟第二份淡出)');
+  ok(/makeUnit\(kind, side, \{ ring = true, ch = null, dissolve = false \}/.test(code(models))
+    && /if \(dissolve\) enableDissolve\(g\);/.test(code(models))
+    && /dissolve: true/.test(G),
+    '只有戰場 makeUnit 開溶解材質;圖鑑 / 機體台不多編一組 shader');
+  ok(/const deadIds = new Set\(\(m\.ev \|\| \[\]\)\.filter\(\(ev\) => ev\.e === 'die'\)\.map\(\(ev\) => ev\.id\)\);/.test(G)
+    && /_removeEnt\(id, ent, deadIds\.has\(id\)\)/.test(G),
+    '溶出只認同幀權威 die 事件;快照缺席(迷霧)必須即時收起');
+  const iEntDrop = G.indexOf('this.ents.delete(id);');
+  const iGhostAdd = G.indexOf('this._dissolveGhosts.push({ mesh: ent.mesh, origin, t: 0 });');
+  ok(iEntDrop >= 0 && iGhostAdd > iEntDrop
+    && /_updateDissolveGhosts\(dt\)[\s\S]*?dissolveOutAt\(g\.t\)[\s\S]*?this\.scene\.remove\(g\.mesh\);[\s\S]*?_dissolveGhosts\.splice\(i, 1\);/.test(G),
+    '先摘掉 ents 再留純渲染殘影;時間到由同一迴圈收 scene 與清單');
+  const outSamples = [0, DISSOLVE.OUT_S * 0.25, DISSOLVE.OUT_S * 0.5, DISSOLVE.OUT_S, DISSOLVE.OUT_S * 2]
+    .map(dissolveOutAt);
+  ok(DISSOLVE.OUT_S > 0 && outSamples[0] === 1 && outSamples.at(-1) === 0
+    && outSamples.every((v, i) => i === 0 || v <= outSamples[i - 1]),
+    `溶出曲線由 1 單調降到 0(${outSamples.map((v) => v.toFixed(3)).join('/')})`);
   // ---- ② 地貌分區子帶:撞號算術 ----
   const LZ = new Function(`${/export const LAND_ZONE_N = \d+;/.exec(T)[0].replace('export ', '')}
 ${/const LAND_SURF_ID = 0;/.exec(T)[0]}
