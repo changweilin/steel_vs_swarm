@@ -22,6 +22,7 @@ import { partId, partJitter } from './xform.js';
 
 // ---- 載具 / 擺件型錄(唯一縫;該檔零 import、零 THREE ⇒ 離線稽核吃得到同一份)----
 import { makeVehicle } from './vehicles.js';
+import { mergeGeos } from './beacons.js';
 
 // ---- 幾何速記 ----
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -528,6 +529,35 @@ function jitterParts(g, dj, r) {
 }
 
 /**
+ * 靜態不透明零件依材質合併。鑿刻岩的平滑 `outlineGeo`、逐幀火舌與水面維持獨立；
+ * 前者是現役反轉外殼描邊唯一需要的幾何，後兩者各有自己的執行期狀態。
+ */
+function batchHazardParts(g) {
+  g.updateMatrixWorld(true);
+  const buckets = new Map();
+  g.traverse((o) => {
+    if (!o.isMesh || o.material.transparent || o.userData.outlineGeo || Object.keys(o.userData).length) return;
+    const m = o.material;
+    const key = [m.type, m.color?.getHex(), m.emissive?.getHex(), m.emissiveIntensity,
+      m.opacity, m.side, JSON.stringify(m.userData.celOpts || {})].join('|');
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(o);
+  });
+  for (const meshes of buckets.values()) {
+    if (meshes.length < 2) continue;
+    const keep = meshes[0].material;
+    const geos = meshes.map((o) => o.geometry.clone().applyMatrix4(o.matrixWorld));
+    const merged = new THREE.Mesh(mergeGeos(geos), keep);
+    for (const o of meshes) {
+      o.parent.remove(o);
+      o.geometry.dispose();
+      if (o.material !== keep) o.material.dispose();
+    }
+    g.add(merged);
+  }
+}
+
+/**
  * 建立一個障礙物 / 防空陣地。
  * @param kind HAZARDS 的 key 或 'aasite' / 'relay'
  * @param seed 實體 id(全房間一致的隨機差異化)
@@ -541,6 +571,7 @@ export function buildHazard(kind, seed, r = 8) {
   // 各個零件**是逐位元一樣的比例 —— 兩顆落石的每一塊石頭都同一副長寬比。dj 由 seed 推
   // (確定性:全房同一顆障礙長得一樣,§2.3),規則整組沿用植被那一份縫(xform.js)。
   jitterParts(g, ((seed * 2246822519) >>> 0) / 4294967296, r);
+  batchHazardParts(g);
   // 接地 AO 頂點色(botw_plan Task 2.2):貼地處偏暗冷 → 物件「長」在地上
   // (神木不加大衰減:板根/樹幹本色深,AO 拉高會整片近黑)
   bakeContactAO(g, 2.4);

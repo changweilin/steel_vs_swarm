@@ -35,14 +35,9 @@
 //     碰撞半徑外緣時的俯角。淺而深的凹槽(0.17 高 × 0.135 深 = 38°)在站立高度上
 //     **看不到底**,做了等於沒做。
 //
-// ---- 與 `edgewall.partBox` 的關係(MUST 讀)----
-// 本檔的 `partAABB()` 與 `edgewall.js partBox()` 算的是同一件事(零件在局部座標的 AABB)。
-// 現況是**知情的暫時兩份**:`edgewall.js` 由 `audit_world_edge.mjs:572` 釘死「只 import
-// rng.js 一支」⇒ 在那一條放寬成「rng.js + vehicles.js」之前,edgewall 不能轉呼本檔。
-// 兩份之間的防線 = `audit_vehicle_spec` Ⅻ **逐案例數值交叉比對**(刀與尺不同源)。
-// 接上 edgewall 的那一輪 MUST 把 `edgewall.partBox` 改成
-// `import { partAABB as partBox } from './vehicles.js'; export { partBox };`(同 hazards.js
-// 對 `mulberry32` 的 idiom:純轉出不建立本地繫結 ⇒ MUST 是 import + export 兩行)。
+// ---- 與 `edgewall.partBox` 的關係----
+// 2026-08-17 起 `edgewall.partBox()` 直接轉呼本檔 `partAABB()`；旋轉 AABB 算術只有這一份。
+// edgewall 保留舊函式名，因為 wallFit / wallFaceCover 與既有稽核以它作公開入口。
 
 // ---- 推導常數(**不是**逐款美術值:改一格就是全型錄一起動)----
 export const VEHICLE = {
@@ -382,8 +377,7 @@ const _absR = (rx, ry, rz) => {
 
 /**
  * 零件在**局部座標**的 AABB:{ x0,x1, y0,y1, z0,z1 }。純幾何、無 three。
- * ⚠ 與 `edgewall.js partBox` 是同一條規則的兩份實作(見檔頭「與 edgewall.partBox 的關係」)
- *   —— `audit_vehicle_spec` Ⅻ 逐案例數值交叉比對兩支,直到 edgewall 轉呼本支為止。
+ * `edgewall.js partBox` 直接轉呼本支；`audit_vehicle_spec` Ⅻ 同時釘住轉呼原文與數值。
  */
 export function partAABB(part) {
   const [t, a, b, c] = part.g;

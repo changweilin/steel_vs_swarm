@@ -493,8 +493,8 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
      「灌木叢被畫成一堆黑多邊形」。
    - 縫:`biomes.js` 植被建構 + 一支新的葉片 `ShaderMaterial`(MUST 宣告 `gInfo`,
      否則整批不畫,A46 那一族)。
-2. **苔草/濕痕改成 triplanar 遮罩**,不是散布幾何。與 ① 第 3 點同一條 `surfaceId` 縫。
-3. **布料**:本專案沒有人物,但**旗幟(`flags.js`)、機體垂布、繩索**適用同一條 ——
+2. ✅ **苔草/濕痕改成 triplanar 遮罩**,不是散布幾何。與 ① 第 3 點同一條 `surfaceId` 縫。
+3. ✅ **布料**:本專案沒有人物,但**旗幟(`flags.js`)、機體垂布、繩索**適用同一條 ——
    樞軸在掛點、`sin + 0.33·sin(3.3ω)`、逐件 rate/phase。`flags.js` 已有分段旗面,
    補「樞軸不在中心」與「rate/phase 逐面不同」。
 
@@ -508,11 +508,14 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 > ③ **葉片卡走 `applyCelPatch` 的 `CEL_LEAFCARD` define,不是計畫字面的「一支新的葉片
 >    `ShaderMaterial`」。** 自寫材質要重新繼承三條契約(`gInfo` 宣告 / 軟性 alpha / 世界曲面),
 >    走 define 是結構性繼承。**這是對計畫字面的偏離,已開票請使用者放行。**
-> ④ **第 2 點(苔草 / 濕痕 triplanar 遮罩)本輪 MUST NOT 做,而且理由與 ①-3 是同一條**:
+> ④ **第 2 點(苔草 / 濕痕 triplanar 遮罩)在第二輪 MUST NOT 做,而且理由與 ①-3 是同一條**:
 >    現制的 `icefield`/`scree`/`plateau` 換手發生在 `ground.js` 的逐格投票邊界與 `CARPET_LOT`
 >    量化格上、**不在真實雪線上**,而全部地貌共用 `LAND_SURF_ID` 正是 2026-08-13 為了藏那條接縫
 >    定的案(A46 / `audit_cel_pipeline` Ⅶ)。現在給它一個 id 邊 = 把剛藏起來的拼圖接縫用黑線
 >    重新描一次。它是 §0-a 遮罩面(序 14/15)的**推論**,不是可以先做的廉價替代。
+>    **2026-08-17 阻塞解除**:序 14/15 已把正式地形換成 OSM 線工切面的 `landField`；本項只在
+>    `CEL_LAND_FIELD` 內以分區語意 × 世界法線 × 兩尺度三平面噪聲產生硬遮罩，道路 / 建成遮罩
+>    排除。顏色恆生效；遮罩邊的 `surfaceId` 仍由既有 `landInk` 開關閘住，沒有復辟舊拼圖邊。
 > ⑤ **`leafCard` 的預設一旦翻成 `auto`/`all`,`tri_budget.json` MUST 先重量**
 >    (`measure_veg_tris --kinds`/`--giants` → `measured_kind_tris`/`measured_veg_total_max` → 重跑
 >    `intake_parts`),否則那道整層總量閘的**分母**被靜默放寬。現值 def = `off` ⇒ 出貨組態的
@@ -1100,7 +1103,42 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 2. **`INK_MRT.SELF_F` / `GRAZE_K` 已做 4 × 4 定場掃描**，定案為 **2.4 / 1.5**。
 3. **④-4 另兩支已補入接縫判讀註解**；`shot_scene` 另增 `--only`、`--ink-self`、
    `--ink-graze`，讓掃描不必改正式來源。
-4. **下一輪目標已裁決但本輪不執行**：③-4 的 `hazards.buildHazard` 合併須排除 rock；
-   10b 的 `DETAIL_DEFS.carwreck` / `container` 改成真實尺度並接受決定性散布佈局遷移，連同
-   edgewall / beacons 收斂與新基準驗證一併完成。
+4. **③-4 / 10b 已於第三輪完成**：`hazards.buildHazard` 靜態件逐材質合併並排除 rock / 動態 /
+   透明件；`DETAIL_DEFS.carwreck` / `container` 改成真實尺度並建立新 `detailR` 基準；
+   edgewall / beacons 已收斂到 `vehicles.js`。
 5. **CC0 音檔已補齊**：七床 + 兩份行動版 BGM 均已進來源帳並通過雙向檔案稽核。
+
+### 2026-08-17 第三輪：③-4 / 10b 收尾
+
+| 項目 | 結果 | 稽核 |
+|---|---|---|
+| `hazards.buildHazard` draw call | jitter 後逐材質合併；rock 的 `outlineGeo`、火舌/水面等動態件、透明件維持獨立 | `audit_vehicle_spec` ⅩⅢ ±`--break-hazard` |
+| ground 真實尺度 | carwreck 4.8 × 1.45 × 1.9m；20ft container 6.058 × 2.591 × 2.438m | 新 `detailR` 2.581181899828 / 3.265088360213，±`--break-detr` |
+| edgewall / beacons 收斂 | railcar / truck / container / depot 全數轉呼 `makeVehicle`；AABB 轉呼 `partAABB` | `audit_vehicle_spec` Ⅴ-b・Ⅻ ±`--break-converge`; `audit_world_edge`; `audit_beacons` |
+
+本輪依使用者裁決接受舊場景佈局失效；驗收改為同一份新程式碼與同一種子可重現，MUST NOT
+拿第二輪的逐位元場景輸出作比較基準。
+
+新版本重現驗證：`audit_siteplan` / `audit_ground_qc` / `audit_object_joints --seeds 8` 各連跑兩次，
+三組輸出皆逐字元相同。`shot_scene` 新定場照因本機找不到 Playwright 而跳過，仍列為 ㋓ 未驗項。
+
+### 2026-08-17 第四輪：②-2 苔草／濕痕 triplanar 遮罩
+
+| 項目 | 結果 | 稽核 |
+|---|---|---|
+| 遮罩來源 | 正式 `landField` 分區決定可長苔／可積濕；世界法線 + 兩尺度三平面噪聲只切分區內碎邊 | `audit_cel_pipeline` Ⅸ④ |
+| 賽璐璐邊界 | 苔草與濕痕皆為硬 `step()`；道路／建成遮罩排除，不新增散布幾何或共享 `rnd()` | 同上 ±`--break-landmask` |
+| 墨線縫 | 基底 57~63、遮罩 43~56，全部為 `k/64` 整數槽；遮罩邊沿用 `landInk` | 同上；反向驗證如期 1 條紅字 |
+
+本輪只改地形材質與原文稽核；權威幾何、碰撞、地貌場資料與場景散布均未改。真 GPU 的崖面
+三平面換手與實際色彩仍需 ㋓ 定裝照確認。
+
+### 2026-08-17 第五輪：②-3 旗面布料波形
+
+| 項目 | 結果 | 稽核 |
+|---|---|---|
+| 掛點樞軸 | 旗桿在旗面 −x 緣，權重由 0 到旗尾；沿用既有橫向分段與局部座標 | `audit_soft_stroke` Ⅲ |
+| 布料節奏 | 75% 慢抬起 + 25% 的 3.3× 快顫；rate / phase 由每面旗的已定案落點雜湊 | 同上 ±`--break-cloth` |
+| 範圍 | 只擴充既有 `SOFT_KINDS.cloth` 頂點縫；零幾何、零權威狀態、零共享 `rnd()` | `audit_object_joints --seeds 8` / `audit_siteplan` |
+
+機體垂布與繩索目前沒有可消費的完整名冊，本輪不創造新內容；日後加入時直接沿用同一布料縫。

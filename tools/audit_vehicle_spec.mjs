@@ -12,14 +12,14 @@
 //   Ⅴ 零 import / 零亂數 —— 抽一枚共享 `rnd()` 就把全圖佈局整條推移(§2.3 / A4)。
 //   Ⅵ 停車場九台車的**碰撞盒世界四角點**逐點凍結 —— 欄位表示從 `2.2×4.8, ry=0` 換成
 //     `4.8×2.2, ry=π/2` 是同一個有向盒的另一種寫法,比欄位會假紅、比角點才是真的。
-//   Ⅶ `detailR('carwreck')` / `detailR('container')` 逐位元凍結 —— **§2.3 的哨兵**:
+//   Ⅶ `detailR('carwreck')` / `detailR('container')` 新基準 —— **§2.3 的哨兵**:
 //     那兩個數一動,`detFree` 的淘汰結果就變 ⇒ 全圖每一株植被的落點整條推移,
 //     而畫面上只表現成「這張圖跟上次不一樣」。
 //   Ⅷ 公設分桶數(③-4)—— 顏色回到材質就是 25 個 draw call 一座停車場。
 //   Ⅹ 凹處零件的最小 z ≥ 量體前緣(③-2)—— 往內挖 = 面板整片消失,不報錯。
 //   Ⅺ 可視角(③-3)—— 淺而深的凹槽在站立高度上看不到底,做了等於沒做。
-//   Ⅻ `partAABB` vs `edgewall.partBox` 數值交叉比對 —— 兩份實作是**知情的暫時狀態**
-//     (見 vehicles.js 檔頭),這一段是它唯一的防線。
+//   Ⅻ `edgewall.partBox` 轉呼 `partAABB` —— AABB 只有一份實作。
+//   ⅩⅢ hazards 靜態件合併，但 rock / 動態 / 透明件排除。
 //
 // 反向驗證(`--break-*`;§5.4 ㋑:CRLF 容忍 + 替換無效當場失敗 + 期望值不隨 break 改變)
 //   --break-spec   輪拱/保險桿改回手寫常數(與型錄脫鉤)      ⇒ Ⅰ・Ⅱ 紅
@@ -28,7 +28,9 @@
 //   --break-recess 凹處改成往內挖                              ⇒ Ⅹ 紅
 //   --break-sight  可視角門檻拿掉                              ⇒ Ⅺ 紅
 //   --break-batch  公設分桶鍵把顏色放回材質                    ⇒ Ⅷ 紅
-//   --break-detr   DETAIL_DEFS.carwreck 放大到真實車長          ⇒ Ⅶ 紅
+//   --break-detr   DETAIL_DEFS.carwreck/container 縮回舊尺寸     ⇒ Ⅶ 紅
+//   --break-converge edgewall/beacons 寫回手工副本              ⇒ Ⅴ-b・Ⅻ 紅
+//   --break-hazard hazards 略過合併或吞掉 rock                  ⇒ ⅩⅢ 紅
 import * as V from '../public/js/vehicles.js';
 import { partBox } from '../public/js/edgewall.js';
 import { readSrc } from './audit_src.mjs';
@@ -42,6 +44,8 @@ const BREAK_RECESS = A.includes('--break-recess');
 const BREAK_SIGHT = A.includes('--break-sight');
 const BREAK_BATCH = A.includes('--break-batch');
 const BREAK_DETR = A.includes('--break-detr');
+const BREAK_CONVERGE = A.includes('--break-converge');
+const BREAK_HAZARD = A.includes('--break-hazard');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -50,9 +54,11 @@ const count = (s, re) => (s.match(re) || []).length;
 
 const veh = readSrc('public', 'js', 'vehicles.js');
 const site = readSrc('public', 'js', 'siteplan.js');
-const hz = readSrc('public', 'js', 'hazards.js');
+let hz = readSrc('public', 'js', 'hazards.js');
 const bio = readSrc('public', 'js', 'biomes.js');
-const ground = readSrc('public', 'js', 'ground.js');
+let ground = readSrc('public', 'js', 'ground.js');
+let edge = readSrc('public', 'js', 'edgewall.js');
+let beacon = readSrc('public', 'js', 'beacons.js');
 
 // ---- `--break-*` 的字面替換:MUST 是 CRLF 容忍樣式,替換無效 MUST 當場失敗 ----
 const mustReplace = (src, re, to, flag) => {
@@ -60,6 +66,15 @@ const mustReplace = (src, re, to, flag) => {
   if (out === src) { console.error(`  ✗ ${flag} 的字面替換沒有生效(原文改過了?)`); process.exit(1); }
   return out;
 };
+
+if (BREAK_CONVERGE) {
+  edge = mustReplace(edge, /return partAABB\(part\);/, 'return part;', '--break-converge');
+  beacon = mustReplace(beacon, /\.\.\.makeVehicle\('container20', \{ paint: 0xb4553c,[^\n]*\}\),/,
+    "{ g: ['box', 6.1, 2.6, 2.5], c: 0xb4553c, p: [0, 1.3, -1.5] },", '--break-converge');
+}
+if (BREAK_HAZARD) {
+  hz = mustReplace(hz, /\n  batchHazardParts\(g\);/, '', '--break-hazard');
+}
 
 // 壞版的型錄:
 //  `--break-spec` 把保險桿的位置從「由 L 推導」改回**手寫常數**(型錄值一格未動)
@@ -166,7 +181,7 @@ console.log('\nⅤ 檔案邊界:零 import、零 THREE、零亂數');
   const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
   const code = strip(veh);
   ok((code.match(/^import .*$/gm) || []).length === 0,
-    'vehicles.js **零 import**(連 rng.js 都不要 ⇒ edgewall.js 的「只 import rng.js」契約接得上)');
+    'vehicles.js **零 import**(連 rng.js 都不要 ⇒ edgewall 可安全轉呼純型錄 / 量尺)');
   ok(!/\bTHREE\b/.test(code), 'vehicles.js 零 THREE(這才是型錄與量尺能離線驗的原因)');
   ok(!/Math\.random/.test(code) && !/\brnd\s*\(/.test(code),
     'vehicles.js 零亂數:`makeVehicle` 是純函式 —— 抽一枚共享 rnd 就把全圖佈局整條推移(§2.3 / A4)');
@@ -201,14 +216,15 @@ console.log('\nⅤ-b 消費端:同一台車只有一份實作');
   // 型錄的 `fit` MUST 由宿主的既有契約推導(停車格白線與車吃同一個數)
   ok(/export const LOT_STALL = \{/.test(site) && /fit: LOT_STALL/.test(lotSrc),
     '停車格是一個數兩個消費端(白線節距 + 車的 fit 盒),MUST NOT 各寫一份');
-  // 尚未接上的三處:**印出來當債,不判定**(理由見 docs/_pending/lane-world-w3.md ④)
-  const debt = [
-    ['edgewall.js PARTS.train/trucks/ship', /rep\(len, 13\.5,/.test(readSrc('public', 'js', 'edgewall.js'))],
-    ['beacons.js KIND_PARTS.depot', /\['box', 6\.1, 2\.6, 2\.5\]/.test(readSrc('public', 'js', 'beacons.js'))],
-    ['ground.js DETAIL_DEFS.carwreck/container', /carwreck: \[\{ geo: box\(/.test(ground)],
-  ];
-  console.log(`  ℹ 尚未收斂的手寫副本(本輪刻意不接,見交付說明 ④):`);
-  for (const [n, still] of debt) console.log(`      ${still ? '·' : '✓'} ${n}`);
+  ok(/makeVehicle\('railcar'/.test(edge) && /makeVehicle\('truck'/.test(edge)
+    && count(edge, /makeVehicle\('container20'/g) >= 3,
+  'edgewall 的列車 / 貨車 / 貨櫃走型錄唯一縫');
+  ok(count(beacon, /makeVehicle\('container20'/g) === 4
+    && !/\['box', 6\.1, 2\.6, 2\.5\]/.test(beacon),
+  'beacons depot 四只貨櫃走型錄唯一縫');
+  ok(/container:\[\{ geo: box\(6\.058, 2\.591, 2\.438\)/.test(ground)
+    && /carwreck: \[\{ geo: box\(4\.8, 1\.45, 1\.9\)/.test(ground),
+  'ground 細節採 20ft ISO 貨櫃 / 轎車真實公稱外廓');
 }
 
 console.log('\nⅥ 停車場九台車的碰撞盒:世界四角點逐點凍結');
@@ -258,16 +274,18 @@ console.log('\nⅥ 停車場九台車的碰撞盒:世界四角點逐點凍結');
     `碰撞柱是**一疊**不是一顆:九台車各登記車身 + 車艙(全款 ${M.civicColliders('lot').length} 根;舊制 12 根 = 車頂那一截是空氣)`);
 }
 
-console.log('\nⅦ §2.3 哨兵:detailR(\'carwreck\') / detailR(\'container\') 逐位元凍結');
+console.log('\nⅦ §2.3 哨兵:detailR(\'carwreck\') / detailR(\'container\') 新基準');
 {
   // 這兩個數由 `ground.js DETAIL_DEFS` 的幾何實算,而 `addDetail` 的所有早退都排在
   // `orient()` 與 `tx/tz` 兩枚共享 `rnd()` **之前** ⇒ 一件被 `detFree` 淘汰就少抽 3~4 枚。
   // 它們一動,全圖每一株植被、每一棟補間建物的落點整條推移,而**沒有任何錯誤訊息**。
-  const FROZEN = { carwreck: Math.hypot(1.9 / 2, 1.05 / 2), container: Math.hypot(3.0 / 2, 1.25 / 2) };
+  const FROZEN = { carwreck: Math.hypot(4.8 / 2, 1.9 / 2), container: Math.hypot(6.058 / 2, 2.438 / 2) };
   let G = ground;
   if (BREAK_DETR) {
-    G = mustReplace(G, /carwreck: \[\{ geo: box\(1\.9, 0\.6, 1\.05\)/,
-      'carwreck: [{ geo: box(4.8, 1.45, 1.9)', '--break-detr');
+    G = mustReplace(G, /container:\[\{ geo: box\(6\.058, 2\.591, 2\.438\)/,
+      'container:[{ geo: box(3.0, 1.3, 1.25)', '--break-detr');
+    G = mustReplace(G, /carwreck: \[\{ geo: box\(4\.8, 1\.45, 1\.9\)/,
+      'carwreck: [{ geo: box(1.9, 0.6, 1.05)', '--break-detr');
   }
   const SHORTHAND = /^const cone = [\s\S]*?^const cyl = [^\n]*\n/m.exec(G)[0];
   const DEFS = /^const DETAIL_DEFS = \{[\s\S]*?^\};/m.exec(G)[0];
@@ -303,7 +321,7 @@ console.log('\nⅦ §2.3 哨兵:detailR(\'carwreck\') / detailR(\'container\') �
   for (const [k, want] of Object.entries(FROZEN)) {
     const got = rOf(k);
     ok(near(got, want, 1e-12),
-      `detailR('${k}') = ${got.toFixed(12)}(凍結值 ${want.toFixed(12)})—— 這一條紅 = 全圖散佈序列整條推移`);
+      `detailR('${k}') = ${got.toFixed(12)}(新基準 ${want.toFixed(12)})—— 這一條紅 = 新程式碼不再可重現`);
   }
 }
 
@@ -391,7 +409,7 @@ console.log('\nⅪ ③-3 可視角:凹處在站立高度上看不看得到底');
     `對照組另一側:同一個溝槽挖 ${(dMax0 * 0.8).toFixed(3)}m MUST 判合格(兩側都有牙 ⇒ 不是恆真也不是恆假)`);
 }
 
-console.log('\nⅫ 兩份 AABB 實作交叉比對(vehicles.partAABB vs edgewall.partBox)');
+console.log('\nⅫ AABB 單一縫(edgewall.partBox → vehicles.partAABB)');
 {
   const cases = [
     { g: ['box', 3, 1, 2], p: [1, 2, -3] },
@@ -407,7 +425,20 @@ console.log('\nⅫ 兩份 AABB 實作交叉比對(vehicles.partAABB vs edgewall.
     for (const k of ['x0', 'x1', 'y0', 'y1', 'z0', 'z1']) worst = Math.max(worst, Math.abs(a[k] - b[k]));
   }
   ok(worst <= 1e-12,
-    `六個案例逐項相同(最大偏差 ${worst.toExponential(2)})—— 兩份實作是**知情的暫時狀態**,見 vehicles.js 檔頭`);
+    `六個案例逐項相同(最大偏差 ${worst.toExponential(2)})`);
+  ok(/export function partBox\(part\) \{\s*return partAABB\(part\);\s*\}/.test(edge),
+    'edgewall.partBox 直接轉呼 partAABB，沒有第二份旋轉 AABB 算術');
+}
+
+console.log('\nⅩⅢ hazards 靜態件合併:rock / 動態 / 透明件排除');
+{
+  ok(/batchHazardParts\(g\);/.test(hz) && /mergeGeos\(geos\)/.test(hz),
+    'jitter 後進逐材質合併唯一縫');
+  ok(/o\.material\.transparent \|\| o\.userData\.outlineGeo \|\| Object\.keys\(o\.userData\)\.length/.test(hz),
+    '透明件、rock outlineGeo、逐幀 userData 件維持獨立');
+  ok(hz.indexOf('batchHazardParts(g);') > hz.indexOf('jitterParts(g,')
+    && hz.indexOf('batchHazardParts(g);') < hz.indexOf('bakeContactAO(g,'),
+  '合併順序 = jitter 後、AO / outlinify 前');
 }
 
 console.log(`\n${fail ? '❌' : '🎉'} 通過 ${pass} 項,失敗 ${fail} 項`);

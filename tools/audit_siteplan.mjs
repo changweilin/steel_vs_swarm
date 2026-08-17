@@ -88,10 +88,10 @@ const pureSrc = src.slice(i0, i1);
 // `partExtent` 住 beacons.js(零件外廓的唯一縫,公設與地標共用)—— 一併執行原文注入進來
 const b0 = bcn.indexOf('export const BEACON = {');
 const b1 = bcn.indexOf('// ---- 建構(以下才需要 THREE)----');
-const { partExtent } = new Function(`
+const { partExtent } = new Function('makeVehicle', `
   ${bcn.slice(b0, b1).replace(/^export /gm, '')}
   return { partExtent };
-`)();
+`)(makeVehicle);
 
 // `makeVehicle` / `makeRecess` 住 vehicles.js(載具型錄唯一縫,零 import ⇒ Node 端直接載得動)
 //  —— 停車場的九台車與收費亭的窗口凹處都經它產出,漏了注入就是整支稽核在

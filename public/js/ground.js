@@ -1493,8 +1493,10 @@ const DETAIL_DEFS = {
   canopy:   [{ geo: cyl(0.14, 0.14, 3.2, 5), c: 0xc8ccc8 },
              { geo: new THREE.BoxGeometry(4.6, 0.28, 3.2).translate(0, 3.3, 0), c: 0xe8e4da }],
   pump:     [{ geo: box(0.5, 1.1, 0.35), c: 'palette' }],
-  container:[{ geo: box(3.0, 1.3, 1.25), c: 'palette', tex: 'corrugated' }],
-  carwreck: [{ geo: box(1.9, 0.6, 1.05), c: 'palette' }],
+  // 20ft ISO 貨櫃 / 轎車真實公稱外廓。此處是 BufferGeometry 消費端，不另寫 vehicles 轉接器；
+  // 尺寸改變會刻意遷移 detailR → detFree 後續散布序列(2026-08-17 使用者裁決)。
+  container:[{ geo: box(6.058, 2.591, 2.438), c: 'palette', tex: 'corrugated' }],
+  carwreck: [{ geo: box(4.8, 1.45, 1.9), c: 'palette' }],
   solarpanel: [{ geo: new THREE.BoxGeometry(2.4, 0.1, 1.4).rotateX(-0.42).translate(0, 0.85, 0), c: 0x2e4a6e, tex: 'solarcell' },
              { geo: cyl(0.07, 0.07, 0.6, 4), c: 0x9aa0a4 }],
   // — 休憩設施 —

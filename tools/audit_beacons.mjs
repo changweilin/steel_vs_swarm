@@ -18,6 +18,7 @@
 // 反向驗證(原則 9):`node tools/audit_beacons.mjs --break-extent` 把一件零件撐出 foot,
 // Ⅰ MUST 紅字;`--break-pad` 把預留餘裕歸零,Ⅲ 的預留斷言 MUST 紅字。
 import { readSrc } from './audit_src.mjs';
+import { makeVehicle } from '../public/js/vehicles.js';
 import { solveTowerSites } from '../public/js/data.js';
 
 const BREAK_EXTENT = process.argv.includes('--break-extent');
@@ -36,11 +37,11 @@ const i1 = src.indexOf('// ---- 建構(以下才需要 THREE)----');
 if (i0 < 0 || i1 < 0 || i1 <= i0) { console.log('❌ 找不到純區塊界標'); process.exit(1); }
 const pureSrc = src.slice(i0, i1);
 
-const M = new Function(`
+const M = new Function('makeVehicle', `
   ${pureSrc.replace(/^export /gm, '')}
   return { BEACON, BEACON_KINDS, KIND_PARTS, KIND_BY_ANCHOR, LANE_KINDS,
            partExtent, kindExtent, beaconSeed, beaconAnchors, beaconKindFor, planBeaconSites };
-`)();
+`)(makeVehicle);
 
 if (BREAK_EXTENT) M.KIND_PARTS.pylon.push({ g: ['box', 40, 1, 1], c: 0x999999, p: [0, 5, 0] });
 if (BREAK_PAD) M.BEACON.PAD = 0;

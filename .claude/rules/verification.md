@@ -155,7 +155,8 @@ node tools/audit_vehicle_spec.mjs    # 載具/擺件型錄(宣告盒 ⊇ 實測�
                                      #  / detailR 哨兵 / 公設分桶數 / 凹處往外堆 / 可視角 / 兩份 AABB 交叉比對)
 #   ±--break-spec(輪拱保險桿改回手寫)/--break-dup(停車場繞過型錄)/--break-face(鼻頭改 −x)
 #   ±--break-recess(凹處往內挖)/--break-sight(可視角門檻拿掉)
-#   ±--break-batch(公設顏色回到材質)/--break-detr(DETAIL_DEFS.carwreck 放大)
+#   ±--break-batch(公設顏色回到材質)/--break-detr(DETAIL_DEFS 縮回舊尺度)
+#   ±--break-converge(edgewall/beacons 寫回手工副本)/--break-hazard(hazards 略過合併)
 node tools/audit_wildlife.mjs        # 鳥群(四項積分器行為直測 / 分群 / 零共享 rnd / 錨不到就不放
                                      #  / 剪影下限 / 幀率無關 / biomes 接線)
 #   ±--break-spring/--break-noise/--break-friction/--break-group
@@ -399,6 +400,18 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 - **樣本數 MUST 跟著場景規模走**:5v5×600s 的單場工事損血在 433~10298 之間跳 ⇒ n≤3 能同時「證明」變好與變壞(2026-08-02 兩個方向各踩一次,補到 n=6 才看出值域幾乎完全重疊)。2v2×240s 的基準是 **24 場**平均(高難度:工事損血 ≈3600、擊殺 ≈76、RALLY 佔比 ≈0.10 —— RALLY 佔比衝到 0.3 以上就是「bot 一直在撤退」)。
 - **取 base 對照時 `git stash` 不可靠**(變更已 commit 就是 no-op,會安靜地拿新程式碼當基準;切分支也會污染仍在跑的背景樣本)—— 一律 `git show <rev>:path` 把 `sim.js`/`bots.js`/`data.js` 三支倒進暫存目錄各跑各的。
 - 定位分類專屬:定位版 vs 關掉 `_resolveRole` 的同一批 bot 做 **CRN 配對鏡射**自對戰,量工事損血差。
+
+### 5.5-2026-08-17 旗面布料波形
+
+| 改動 | MUST 跑 |
+|---|---|
+| `toon.js CEL_SWAY_H` 的 `swPiece` / `swRate` / `swPhase` / 3.3× 快顫 | `audit_soft_stroke` Ⅲ ±`--break-cloth` + `audit_client_syntax`(㋖)+ `audit_cel_pipeline` / `audit_visual_prefs` / `audit_gpu_lifecycle` / `audit_world_curve` + `audit_object_joints --seeds 8` / `audit_siteplan` / `audit_beacons`(零幾何、零共享 `rnd()`,判準逐項不動)+ `npm run bal` / `npm test` 逐項不動 + 真 GPU:`gl.getError() = 0`、旗桿側不動、同圈旗面不同速不同相位、植被擺動觀感不變 |
+
+### 5.5-2026-08-17 地貌苔草／濕痕遮罩
+
+| 改動 | MUST 跑 |
+|---|---|
+| `toon.js LAND_MASK_N`・`landMaskId`・`celTriNoise`・`celLandMask`・`CEL_LAND_FIELD` 快取鍵 | `audit_cel_pipeline` Ⅸ④ ±`--break-landmask` + `audit_client_syntax`(㋖)+ `audit_visual_prefs` / `audit_soft_stroke` / `audit_gpu_lifecycle` / `audit_world_curve` + `audit_zone_cut` / `audit_ground_*` / `audit_siteplan` / `audit_beacons` / `audit_object_joints --seeds 8`(零幾何、零共享 `rnd()`,判準逐項不動)+ `npm run bal` / `npm test` 逐項不動 + ㋓ 真 GPU:`gl.getError() = 0`、taroko 崖面繞拍確認三平面換手無接縫、`landInk=0/1` 只改遮罩邊不改顏色 |
 
 ---
 
