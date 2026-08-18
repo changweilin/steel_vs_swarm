@@ -28,9 +28,10 @@
 //   --break-redo       未覆核重跑插到新圖前面        ⇒ Ⅺ 紅(順位是使用者定的)
 //   --break-archive    封存不寫墓碑帳                ⇒ Ⅺ 紅(撤完之後沒有任何一本帳說得出它存在過)
 //   --break-replace    替代舊件不寫墓碑帳            ⇒ Ⅺ 紅(被替代物從封存區消失)
-//   --break-parallel   分類平行退回逐族串行          ⇒ Ⅹ 紅(需求與帳本合併鎖失去驗證)
 //   --break-route      巨岩重新混進 SF3D 主路由      ⇒ Ⅹ 紅(方法名存、實際仍跑舊法)
 //   --break-corpus-path `--home .../photos` 不回推資料家 ⇒ Ⅹ 紅(讀不到 shipping:false)
+//   --break-filter     零件台篩選選單被拔除          ⇒ Ⅻ 紅
+//   --break-version    同方法物件版本號未管理/選單未接 ⇒ ⅩⅢ 紅
 // Ⅸ 的**三態順序**沒有 break 旗標,理由是它已經被四條固定期望值釘死(todo/done/dropped/fix
 // 各一條,且 fix 那一條刻意同時滿足 dropped)—— 分支被調換位置時至少有一條會紅。
 //
@@ -70,6 +71,7 @@ const BREAK_PARALLEL = process.argv.includes('--break-parallel');
 const BREAK_ROUTE = process.argv.includes('--break-route');
 const BREAK_CORPUS_PATH = process.argv.includes('--break-corpus-path');
 const BREAK_FILTER = process.argv.includes('--break-filter');
+const BREAK_VERSION = process.argv.includes('--break-version');
 
 let pass = 0, fail = 0, unverified = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -774,6 +776,45 @@ console.log('\nⅫ 零件台篩選功能 (方法 / 物件分類 / 生成日期)'
   ok(/const filterDate = arg\('--date'\)/.test(prMjsSrc), 'parts_review.mjs --report 支援 --date 篩選');
 }
 
+// ============ ⅩⅢ 同方法 3D 物件版本號管理 ============
+console.log('\nⅩⅢ 同方法 3D 物件版本號管理 (version / verStr / 選單篩選 / 自動累加)');
+{
+  const prMjsSrc = readSrc('tools', 'parts_review.mjs');
+  let rvVerSrc = readSrc('tools', 'parts_review', 'review.js');
+  let htmlVerSrc = readSrc('tools', 'parts_review', 'index.html');
+  let autoIntakeSrc = readSrc('tools', 'ai3d', 'auto_intake.mjs');
+
+  if (BREAK_VERSION) {
+    rvVerSrc = rvVerSrc.replace(/prFilterVersion/, 'brokenVer');
+    htmlVerSrc = htmlVerSrc.replace(/prFilterVersion/, 'brokenVer');
+    autoIntakeSrc = autoIntakeSrc.replace(/version =/g, 'brokenVer =');
+  }
+
+  // (a) manifest rows 每一列均有 version (整數 >= 1) 與 verStr (v1, v2, ...) 欄位，且 manifest 回傳 versions 清單
+  const { manifest } = await import('../parts_review.mjs');
+  const m = manifest();
+  ok(Array.isArray(m.versions) && m.versions.length >= 1, 'manifest 包含 versions 版本清單');
+  ok(m.rows.every((r) => Number.isInteger(r.version) && r.version >= 1 && typeof r.verStr === 'string' && r.verStr.startsWith('v')),
+    'manifest 每一列均帶有整數 version 與 v{N} 格式 verStr 欄位');
+
+  // (b) index.html 包含版本下拉選單
+  ok(/id="prFilterVersion"/.test(htmlVerSrc), 'index.html 包含 #prFilterVersion 版本下拉選單');
+
+  // (c) review.js 包含 filterVersion 狀態、選單初始化、keepRow 與 .pr-pill.ver 標籤
+  ok(/app\.filterVersion/.test(rvVerSrc), 'review.js 狀態支援 filterVersion');
+  ok(/const vSel = \$\('prFilterVersion'\)/.test(rvVerSrc), 'review.js 初始化 #prFilterVersion 下拉選單');
+  ok(/r\.verStr !== app\.filterVersion|app\.filterVersion/.test(rvVerSrc), 'keepRow 正確判定版本號篩選');
+  ok(/pr-pill ver/.test(rvVerSrc), 'renderList 渲染 .pr-pill.ver 版本標籤');
+
+  // (d) CLI --report 支援 --version / --ver 篩選
+  ok(/const filterVersion = arg\('--version'\) \|\| arg\('--ver'\)/.test(prMjsSrc), 'parts_review.mjs --report 支援 --version / --ver 篩選');
+
+  // (e) auto_intake.mjs writeProvenance 於替代舊件時自動累加版本號
+  ok(/replaces/.test(autoIntakeSrc) && /version = \(Number\.isInteger\(prev\.version\) \? prev\.version : 1\) \+ 1/.test(autoIntakeSrc),
+    'auto_intake.mjs 於 writeProvenance 偵測 replaces 時自動自舊件累加版本號');
+}
+
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項,失敗 ${fail} 項${unverified ? `,未驗 ${unverified} 項` : ''}`);
 process.exit(fail ? 1 : 0);
+
 

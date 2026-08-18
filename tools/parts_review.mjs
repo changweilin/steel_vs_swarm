@@ -190,6 +190,8 @@ export function manifest(items = {}, photosOpt = null) {
       env,
       pct: mea ? mea.rMax / env.r : null,
       at: p?.at || null,
+      version: p?.version || 1,
+      verStr: `v${p?.version || 1}`,
       budget: budget
         ? {
           // 預算依**消費角色**取(與 intake 同一條:巨岩塊走 families.megalith、建物配件桶
@@ -283,6 +285,8 @@ export function manifest(items = {}, photosOpt = null) {
       base,
       baseErr,
       at: p?.at || null,
+      version: p?.version || dbItem?.version || 1,
+      verStr: `v${p?.version || dbItem?.version || 1}`,
       item: items[rowKey] || null,
     });
   }
@@ -311,11 +315,14 @@ export function manifest(items = {}, photosOpt = null) {
     key: (p.keys || [])[0] || null,
     method: METHODS[p.method] || { key: p.method, short: p.method || '?', label: `未知方法「${p.method}」` },
     imgs: imgsOut((p.keys || [])[0] || '', p.imgs),
+    version: p.version || 1,
+    verStr: `v${p.version || 1}`,
   })).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
 
   rows.sort((a, b) => (a.key < b.key ? -1 : 1));
   const uniqueFamilies = [...new Set(rows.map((r) => r.family || (r.key ? r.key.split('/')[0] : null)).filter(Boolean))].sort();
   const uniqueDates = [...new Set(rows.map((r) => r.at || r.prov?.at || null).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+  const uniqueVersions = [...new Set(rows.map((r) => r.verStr || `v${r.version || 1}`))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   return {
     rows,
@@ -331,6 +338,7 @@ export function manifest(items = {}, photosOpt = null) {
     methods: Object.values(METHODS),
     families: uniqueFamilies,
     dates: uniqueDates,
+    versions: uniqueVersions,
   };
 }
 
@@ -385,15 +393,17 @@ async function report() {
   const filterMethod = arg('--method');
   const filterFamily = arg('--family');
   const filterDate = arg('--date');
+  const filterVersion = arg('--version') || arg('--ver');
 
   let rows = m.rows;
   if (filterMethod) rows = rows.filter((r) => (r.method?.key || r.prov?.method) === filterMethod);
   if (filterFamily) rows = rows.filter((r) => (r.family || r.key.split('/')[0]) === filterFamily);
   if (filterDate) rows = rows.filter((r) => (r.at || r.prov?.at || '').startsWith(filterDate));
+  if (filterVersion) rows = rows.filter((r) => (r.verStr || `v${r.version || 1}`) === filterVersion || String(r.version) === filterVersion);
 
   console.log('3D 零件對照台 — 對照表');
-  if (filterMethod || filterFamily || filterDate) {
-    console.log(`  (篩選條件: 方法=${filterMethod || '全部'}, 分類=${filterFamily || '全部'}, 日期=${filterDate || '全部'}；符合 ${rows.length}/${m.rows.length} 件)`);
+  if (filterMethod || filterFamily || filterDate || filterVersion) {
+    console.log(`  (篩選條件: 方法=${filterMethod || '全部'}, 分類=${filterFamily || '全部'}, 日期=${filterDate || '全部'}, 版本=${filterVersion || '全部'}；符合 ${rows.length}/${m.rows.length} 件)`);
   }
   const ck = m.checkout;
   console.log(`  服務中的 checkout  ${ck.root}${ck.rev ? `  ${ck.branch}@${ck.rev}(${ck.at})` : ''}`
@@ -407,6 +417,7 @@ async function report() {
     const st2 = r.item?.status ? ` [${r.item.status}]` : '';
     console.log(`\n  ${r.key}${st2}`);
     console.log(`    方法  ${meth}${r.method ? ` — ${r.method.label}` : ''}`);
+    console.log(`    版本  ${r.verStr || `v${r.version || 1}`}`);
     console.log(`    來源圖 ${img}`);
     console.log(`    消費端 ${r.consumer || '—'}`);
     for (const n of r.notes || []) console.log(`    附註  ${n.label}:${n.detail}`);
