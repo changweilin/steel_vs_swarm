@@ -1073,6 +1073,13 @@ body[data-screen="game"] .fs-toggle-btn { display: none; }
 .set-slider { flex: 1; accent-color: var(--railS); cursor: pointer; }
 .set-val { font-family: var(--mono); font-size: 11px; color: var(--dim); min-width: 42px; text-align: right; }
 .set-hint { font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+/* 開發工具的完整輸出:只在使用者展開時插入,避免背景工作每輪重畫一大段文字。 */
+.dev-tool-output {
+  flex: 1 0 100%; max-height: 220px; margin: 0; overflow: auto; padding: 8px;
+  box-sizing: border-box; white-space: pre-wrap; word-break: break-word;
+  font: 10px/1.5 var(--mono); color: var(--dim); background: rgba(4, 7, 11, 0.72);
+  border: 1px solid var(--line); border-left: 2px solid var(--railS);
+}
 .switch {
   position: relative; width: 46px; height: 22px; flex: none; cursor: pointer; padding: 0;
   border: 1px solid var(--line); background: rgba(8, 12, 17, 0.9); clip-path: var(--notch-sm);
