@@ -1,0 +1,38 @@
+{
+  "id": "tree_canopy_pngtree-coniferous-tree-png-image_6230847",
+  "key": "tree/canopy_pngtree-coniferous-tree-png-image_6230847_445f251f",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/pngtree-coniferous-tree-png-image_6230847.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\pngtree-coniferous-tree-png-image_6230847.png",
+  "created_at": "2026-08-18T05:52:57.361Z",
+  "bounds": {
+    "min": [
+      -4.52,
+      0,
+      -4.4083
+    ],
+    "max": [
+      4.2727,
+      13.4206,
+      4.3843
+    ],
+    "size": [
+      8.793,
+      13.421,
+      8.793
+    ],
+    "rMax": 6.314,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 10.352826733806364,
+    "W": 9.574540321965362,
+    "H": 13.278995956359196,
+    "trunkH": 5.975548180361638,
+    "trunkR": 0.619473563744564
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

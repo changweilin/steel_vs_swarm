@@ -1,0 +1,38 @@
+{
+  "id": "tree_canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677",
+  "key": "tree/canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677_917e50ee",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png",
+  "created_at": "2026-08-18T05:52:57.363Z",
+  "bounds": {
+    "min": [
+      -3.5012,
+      0,
+      -3.7677
+    ],
+    "max": [
+      3.7596,
+      12.2286,
+      3.4931
+    ],
+    "size": [
+      7.261,
+      12.229,
+      7.261
+    ],
+    "rMax": 5.143,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 8.250896467536432,
+    "W": 8.204661631189442,
+    "H": 12.09953459983215,
+    "trunkH": 5.444790569924468,
+    "trunkR": 0.47513389791714356
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

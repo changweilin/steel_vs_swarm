@@ -1,0 +1,38 @@
+{
+  "id": "tree_canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6",
+  "key": "tree/canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6_4fdb292e",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
+  "created_at": "2026-08-18T05:52:57.388Z",
+  "bounds": {
+    "min": [
+      -3.5276,
+      0,
+      -3.4464
+    ],
+    "max": [
+      3.3718,
+      13.9698,
+      3.453
+    ],
+    "size": [
+      6.899,
+      13.97,
+      6.899
+    ],
+    "rMax": 4.932,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 8.230373083085375,
+    "W": 7.406233310444801,
+    "H": 13.822339208056764,
+    "trunkH": 6.220052643625544,
+    "trunkR": 0.45367360952162966
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

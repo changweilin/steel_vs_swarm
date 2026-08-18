@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_car_Farizon-SV-3",
+  "key": "vehicle/car_Farizon-SV-3_1e2f4407",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/Farizon-SV-3.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\Farizon-SV-3.jpg",
+  "created_at": "2026-08-18T05:52:57.562Z",
+  "bounds": {
+    "min": [
+      -2.5111,
+      0.0166,
+      -0.9758
+    ],
+    "max": [
+      2.5111,
+      1.4345,
+      0.9758
+    ],
+    "size": [
+      5.022,
+      1.418,
+      1.952
+    ],
+    "rMax": 2.694,
+    "triangles": 208,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 5.0222156099794,
+    "W": 1.951528191042954,
+    "H": 1.434489204242008,
+    "R": 0.34,
+    "axle": [
+      -1.4062203707942322,
+      1.4062203707942322
+    ],
+    "sill": 0.42,
+    "waist": 0.95,
+    "roof": 1.434489204242008,
+    "cab": [
+      -1.1048874341954682,
+      0.7533323414969101
+    ],
+    "rakeF": 0.34,
+    "rakeR": 0.2,
+    "side": [
+      0.48,
+      0.9
+    ],
+    "extra": [
+      "mirror",
+      "headlight",
+      "grille"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

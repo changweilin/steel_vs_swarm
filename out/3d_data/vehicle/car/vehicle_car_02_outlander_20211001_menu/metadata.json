@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_car_02_outlander_20211001_menu",
+  "key": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/02_outlander_20211001_menu.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\02_outlander_20211001_menu.jpg",
+  "created_at": "2026-08-18T05:52:57.446Z",
+  "bounds": {
+    "min": [
+      -2.3034,
+      0.0166,
+      -0.9511
+    ],
+    "max": [
+      2.3034,
+      1.387,
+      0.9511
+    ],
+    "size": [
+      4.607,
+      1.37,
+      1.902
+    ],
+    "rMax": 2.492,
+    "triangles": 208,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 4.606807049668116,
+    "W": 1.9021316853589685,
+    "H": 1.3869726100556954,
+    "R": 0.34,
+    "axle": [
+      -1.2899059739070726,
+      1.2899059739070726
+    ],
+    "sill": 0.42,
+    "waist": 0.95,
+    "roof": 1.3869726100556954,
+    "cab": [
+      -1.0134975509269855,
+      0.6910210574502174
+    ],
+    "rakeF": 0.34,
+    "rakeR": 0.2,
+    "side": [
+      0.48,
+      0.9
+    ],
+    "extra": [
+      "mirror",
+      "headlight",
+      "grille"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

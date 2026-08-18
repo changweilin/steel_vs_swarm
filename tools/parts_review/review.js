@@ -173,6 +173,51 @@ function build(phase, src, kind, seed, builder = 'beacon') {
       const g = new gfx.THREE.Group();
       g.add(im);
       gfx.groups.set(key, g);
+    } else if (builder === 'model3d') {
+      const g = new gfx.THREE.Group();
+      gfx.groups.set(key, g);
+      fetch(`/api/model3d?key=${encodeURIComponent(kind)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((model) => {
+          if (!model) return;
+          if (model.parts && model.parts.length) {
+            for (const p of model.parts) {
+              let geo = null;
+              if (p.type === 'box') {
+                geo = new gfx.THREE.BoxGeometry(...p.dimensions);
+              } else if (p.type === 'cylinder') {
+                geo = new gfx.THREE.CylinderGeometry(p.radius[0], p.radius[1], p.height, p.segments || 8);
+              }
+              if (geo) {
+                const mat = new gfx.THREE.MeshStandardMaterial({
+                  color: p.color || 0x888888,
+                  roughness: 0.5,
+                  metalness: 0.1,
+                });
+                const mesh = new gfx.THREE.Mesh(geo, mat);
+                mesh.position.set(...p.position);
+                if (p.rotation) mesh.rotation.set(...p.rotation);
+                g.add(mesh);
+              }
+            }
+          } else if (model.meshData) {
+            const geo = new gfx.THREE.BufferGeometry();
+            geo.setAttribute('position', new gfx.THREE.Float32BufferAttribute(model.meshData.vertices, 3));
+            if (model.meshData.normals?.length) {
+              geo.setAttribute('normal', new gfx.THREE.Float32BufferAttribute(model.meshData.normals, 3));
+            } else {
+              geo.computeVertexNormals();
+            }
+            if (model.meshData.uvs?.length) {
+              geo.setAttribute('uv', new gfx.THREE.Float32BufferAttribute(model.meshData.uvs, 2));
+            }
+            geo.setIndex(model.meshData.faces);
+            const mat = new gfx.THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.5 });
+            g.add(new gfx.THREE.Mesh(geo, mat));
+          }
+          if (app.cur === kind) mountStage(rowOf(kind));
+        })
+        .catch((e) => console.warn('載入 3D 模型失敗:', e));
     } else if (builder === 'beacon' && mod.BEACON_KINDS[kind]) {
       gfx.groups.set(key, mod.buildBeacon(kind, seed));
     } else {
@@ -254,7 +299,7 @@ function setViewerGroup(v, group, builder = 'beacon') {
   // 神木的碰撞柱不是由幾何量出來的(那是樹幹的登記柱,住 biomes 的散布端)⇒ 這裡照實
   // 改量包圍盒,MUST NOT 拿 beaconCollider 硬套一個看起來很像碰撞柱的東西上去。
   // 巨岩同理但反過來:它**有**登記柱(synthMegalith 回傳的 `col`),量包圍盒才是假的。
-  const col = (builder === 'veg' || builder === 'bld') ? vegExtent(group)
+  const col = (builder === 'veg' || builder === 'bld' || builder === 'model3d') ? vegExtent(group)
     : builder === 'mega' ? group.userData.megaCol
       : gfx.beacons.beaconCollider(group);
   // 碰撞柱是**整件**的柱子(163m 的巨岩那一根尤其)⇒ 零件取景不畫它,否則畫面上只剩幾條
@@ -284,6 +329,7 @@ const COL_WHAT = {
   veg: '外廓(包圍盒;碰撞柱住散布端)',
   mega: '碰撞柱(登記值 meta.col)',
   bld: '外廓(包圍盒;屋頂配件不掛碰撞柱,建物本體的碰撞盒在 blockers)',
+  model3d: '3D 幾何外廓(包圍盒)',
 };
 
 /** 一個群組的 mesh,依 traversal 順序(兩側同一支建構器同一顆 seed ⇒ 逐索引對得起來)*/
@@ -604,6 +650,20 @@ function methodSection(r) {
 }
 
 function dataSection(r) {
+  if (r.bounds) {
+    const sz = r.bounds.size ? `${r.bounds.size[0].toFixed(2)}m × ${r.bounds.size[1].toFixed(2)}m × ${r.bounds.size[2].toFixed(2)}m` : '—';
+    const specRows = r.spec ? Object.entries(r.spec).map(([k, v]) => `<tr><td>規格 ${esc(k)}</td><td class="num">${esc(v)}</td><td class="pr-dim">遊戲規格參數</td></tr>`).join('') : '';
+    return `<div class="pr-sec"><h3>3D 物件幾何與規格</h3>
+      <table class="pr-tab">
+        <tr><th>項目</th><th>數值</th><th>說明</th></tr>
+        <tr><td>尺寸 (長×高×寬)</td><td class="num">${sz}</td><td class="pr-good">實體尺寸包圍盒</td></tr>
+        <tr><td>水平外廓半徑 (rMax)</td><td class="num">${n3(r.bounds.rMax)}m</td><td class="pr-dim">外接球/柱半徑</td></tr>
+        <tr><td>三角形面數 (Tris)</td><td class="num">${r.bounds.triangles}</td><td class="pr-good">✔ 低多邊形幾何</td></tr>
+        <tr><td>頂點數 (Verts)</td><td class="num">${r.bounds.vertices}</td><td class="pr-dim">頂點數</td></tr>
+        ${specRows}
+      </table>
+      <div class="pr-dim" style="margin-top:4px">3D 物件已入庫至 <code>out/3d_data/</code> 與 <code>out/3d_database.json</code>，可在此進行覆核。</div></div>`;
+  }
   if (r.measured) {
     const okE = r.measured.rMax <= r.env.r + 1e-6;
     const okT = !r.budget || r.measured.tris <= r.budget.cap;

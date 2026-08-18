@@ -1,0 +1,39 @@
+{
+  "id": "ship_hull_k23",
+  "key": "ship/hull_k23_79890a7d",
+  "family": "ship",
+  "subpart": "hull",
+  "source_image": "ship/k23.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\k23.jpg",
+  "created_at": "2026-08-18T05:52:57.187Z",
+  "bounds": {
+    "min": [
+      -20.998,
+      -0.8903,
+      -5.9143
+    ],
+    "max": [
+      23.1699,
+      15.7214,
+      5.9143
+    ],
+    "size": [
+      44.168,
+      16.612,
+      11.829
+    ],
+    "rMax": 23.913,
+    "triangles": 128,
+    "vertices": 80
+  },
+  "spec": {
+    "L": 44.206225680933855,
+    "W": 11.828542000457771,
+    "H": 12.714244296940565,
+    "draft": 3.5,
+    "deckHeight": 5.5,
+    "bridgeFloors": 3
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_motor__covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee",
+  "key": "vehicle/motor__covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee_add47b6a",
+  "family": "vehicle",
+  "subpart": "motor",
+  "source_image": "vehicle/motor/_covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\_covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee.png",
+  "created_at": "2026-08-18T05:52:57.863Z",
+  "bounds": {
+    "min": [
+      -0.96,
+      0.0137,
+      -0.41
+    ],
+    "max": [
+      1,
+      1.261,
+      0.41
+    ],
+    "size": [
+      1.96,
+      1.247,
+      0.82
+    ],
+    "rMax": 1.081,
+    "triangles": 152,
+    "vertices": 92
+  },
+  "spec": {
+    "L": 2.2480376897840846,
+    "W": 0.82,
+    "H": 1.3010360875867857,
+    "R": 0.28,
+    "type": "motorcycle"
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

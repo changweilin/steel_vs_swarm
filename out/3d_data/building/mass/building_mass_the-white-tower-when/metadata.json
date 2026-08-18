@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_the-white-tower-when",
+  "key": "building/mass_the-white-tower-when_7b045f0f",
+  "family": "building",
+  "subpart": "mass",
+  "source_image": "building/the-white-tower-when.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\the-white-tower-when.jpg",
+  "created_at": "2026-08-18T05:52:57.069Z",
+  "bounds": {
+    "min": [
+      -9.6497,
+      0,
+      -11.4577
+    ],
+    "max": [
+      9.6497,
+      39.4935,
+      11.4577
+    ],
+    "size": [
+      19.299,
+      39.493,
+      22.915
+    ],
+    "rMax": 14.98,
+    "triangles": 156,
+    "vertices": 102
+  },
+  "spec": {
+    "L": 19.299336232547493,
+    "W": 22.915358205539025,
+    "H": 35.49349202716106,
+    "stories": 10,
+    "roofBand": 0.15
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

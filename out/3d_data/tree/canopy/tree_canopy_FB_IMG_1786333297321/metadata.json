@@ -1,0 +1,38 @@
+{
+  "id": "tree_canopy_FB_IMG_1786333297321",
+  "key": "tree/canopy_FB_IMG_1786333297321_95423ea7",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/FB_IMG_1786333297321.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\FB_IMG_1786333297321.jpg",
+  "created_at": "2026-08-18T05:52:57.320Z",
+  "bounds": {
+    "min": [
+      -3.4249,
+      0,
+      -3.3768
+    ],
+    "max": [
+      3.3166,
+      16.3996,
+      3.3647
+    ],
+    "size": [
+      6.742,
+      16.4,
+      6.742
+    ],
+    "rMax": 4.81,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 7.6115434500648504,
+    "W": 7.667238879987793,
+    "H": 16.22655069810025,
+    "trunkH": 7.301947814145113,
+    "trunkR": 0.5301441977569238
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

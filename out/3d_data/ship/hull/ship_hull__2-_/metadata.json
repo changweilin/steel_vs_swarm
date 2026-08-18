@@ -1,0 +1,39 @@
+{
+  "id": "ship_hull__2-_",
+  "key": "ship/hull_圖2-超日王號_20ddb028",
+  "family": "ship",
+  "subpart": "hull",
+  "source_image": "ship/圖2-超日王號.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\圖2-超日王號.jpg",
+  "created_at": "2026-08-18T05:52:57.222Z",
+  "bounds": {
+    "min": [
+      -15.8595,
+      -0.6494,
+      -5.264
+    ],
+    "max": [
+      17.683,
+      16.4265,
+      5.264
+    ],
+    "size": [
+      33.543,
+      17.076,
+      10.528
+    ],
+    "rMax": 18.45,
+    "triangles": 128,
+    "vertices": 80
+  },
+  "spec": {
+    "L": 33.38834210727092,
+    "W": 10.528015564202335,
+    "H": 14.281162737468527,
+    "draft": 3.5,
+    "deckHeight": 5.5,
+    "bridgeFloors": 3
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

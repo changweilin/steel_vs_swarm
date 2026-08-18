@@ -1,0 +1,38 @@
+{
+  "id": "tree_sp_conifer_manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_",
+  "key": "tree/sp_conifer_manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain__60a33dfb",
+  "family": "tree",
+  "subpart": "sp_conifer",
+  "source_image": "tree/sp_conifer/manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_conifer\\manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_.jpg",
+  "created_at": "2026-08-18T05:52:57.385Z",
+  "bounds": {
+    "min": [
+      -4.0101,
+      0,
+      -3.9721
+    ],
+    "max": [
+      4.0441,
+      12.2643,
+      3.8404
+    ],
+    "size": [
+      8.054,
+      12.264,
+      7.813
+    ],
+    "rMax": 5.644,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 9.833867399099717,
+    "W": 7.87224383916991,
+    "H": 12.134813458457312,
+    "trunkH": 5.460666056305791,
+    "trunkR": 0.6986861982146945
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

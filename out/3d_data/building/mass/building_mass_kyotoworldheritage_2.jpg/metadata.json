@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_kyotoworldheritage_2.jpg",
+  "key": "building/mass_kyotoworldheritage_2.jpg_9d4c3fda",
+  "family": "building",
+  "subpart": "mass",
+  "source_image": "building/kyotoworldheritage_2.jpg.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\kyotoworldheritage_2.jpg.webp",
+  "created_at": "2026-08-18T05:52:57.046Z",
+  "bounds": {
+    "min": [
+      -11.6386,
+      0,
+      -7.4173
+    ],
+    "max": [
+      11.6386,
+      34.5186,
+      7.4173
+    ],
+    "size": [
+      23.277,
+      34.519,
+      14.835
+    ],
+    "rMax": 13.801,
+    "triangles": 132,
+    "vertices": 86
+  },
+  "spec": {
+    "L": 23.277180132753493,
+    "W": 14.834607461661708,
+    "H": 30.51856260013733,
+    "stories": 9,
+    "roofBand": 0.15
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

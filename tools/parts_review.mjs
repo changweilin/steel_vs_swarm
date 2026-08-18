@@ -204,24 +204,47 @@ export function manifest(items = {}, photosOpt = null) {
     });
   }
 
-  // ── (B) 純資料件(生成物 = 零件表本身;原版來自 baseline rev)────────────
+  // 讀取 3D 物件資料庫索引 (out/3d_database.json)
+  const db3DPath = join(ROOT, 'out', '3d_database.json');
+  const db3D = existsSync(db3DPath) ? readJson(db3DPath, { items: [] }) : { items: [] };
+  const db3DMap = new Map((db3D.items || []).map((it) => [it.key, it]));
+
+  // ── (B) 純資料件與 3D 物件(生成物 = 零件表或 3D 幾何資料;原版來自 baseline rev)────────────
   for (const p of prov.parts) {
     if (METHODS[p.method]?.kind !== 'parts') continue;
-    // 鍵一律走 `partKeys` 那一份正規化(唯一縫,住 provenance.mjs):
-    // 這裡原本直接讀 `p.key`,而來源帳**兩種寫法都合法**(一筆帳掛多個鍵是刻意允許的,
-    // 見 provenance.mjs 檔頭)⇒ 一筆用 `keys:` 寫的純資料件會讓整支對照台 TypeError 掛掉,
-    // 而 `--report` 是「這一輪到底交付了什麼」的唯一離線出口(2026-08-06 實際踩到)。
     const allKeys = partKeys(p);
     const pk = allKeys.find((k) => k.startsWith('beacon/'));
     const kind = pk ? pk.slice('beacon/'.length) : null;
-    // 列的鍵 MUST 走同一份正規化 —— 舊制直接讀 `p.key`,而以 `keys:` 寫的帳沒有那一欄
-    // ⇒ 整列的鍵是 `undefined`:清單畫得出來、覆核存不進去(狀態以鍵為索引)、`--report`
-    // 印出一行字面的「undefined」。同一個坑上面那個 `pk` 已經修過一次,這裡是它的另一半。
-    // 兩者皆空的帳進不到這裡(`loadProvenance` 已在「有一筆沒有 key / keys」那條擋掉)。
     const rowKey = pk || allKeys[0];
-    const now = kind && B.KIND_PARTS[kind]
-      ? { parts: B.KIND_PARTS[kind].length, foot: B.BEACON_KINDS[kind]?.foot ?? null, extent: +B.kindExtent(kind).toFixed(3) }
-      : null;
+    const dbItem = db3DMap.get(rowKey) || null;
+
+    let now = null;
+    let mea = null;
+    let env = null;
+    let view = { mode: 'now-only', kind };
+
+    if (kind && B.KIND_PARTS[kind]) {
+      now = { parts: B.KIND_PARTS[kind].length, foot: B.BEACON_KINDS[kind]?.foot ?? null, extent: +B.kindExtent(kind).toFixed(3) };
+    } else if (dbItem) {
+      now = {
+        parts: dbItem.bounds?.triangles || 0,
+        foot: dbItem.bounds?.size || [1, 1, 1],
+        extent: dbItem.bounds?.rMax || 1.0,
+      };
+      mea = {
+        tris: dbItem.bounds?.triangles || 0,
+        verts: dbItem.bounds?.vertices || 0,
+        rMax: dbItem.bounds?.rMax || 1.0,
+        yMin: dbItem.bounds?.min?.[1] ?? 0,
+        yMax: dbItem.bounds?.max?.[1] ?? (dbItem.bounds?.size?.[1] || 1),
+      };
+      env = {
+        r: dbItem.bounds?.rMax || 1.0,
+        hy: (dbItem.bounds?.size?.[1] || 1) / 2,
+      };
+      view = { mode: 'now-only', builder: 'model3d', kind: rowKey, key: rowKey, modelPath: `/${dbItem.outputDir}/model.json` };
+    }
+
     let base = null, baseErr = null;
     if (p.baseline?.rev && kind) {
       try {
@@ -232,20 +255,29 @@ export function manifest(items = {}, photosOpt = null) {
         if (!base) baseErr = `${p.baseline.rev} 的零件表裡沒有 ${kind}`;
       } catch (e) { baseErr = `取不到 ${p.baseline.rev} 的 beacons.js:${e.message}`; }
     }
+
+    const title = dbItem
+      ? `${dbItem.family}/${dbItem.subpart} (${dbItem.id})`
+      : (kind ? `${kind}(${p.consumer || ''})` : rowKey);
+
     rows.push({
       key: rowKey,
-      title: kind ? `${kind}(${p.consumer || ''})` : rowKey,
-      family: null,
-      node: null,
-      method: METHODS[p.method],
+      title,
+      family: dbItem?.family || null,
+      node: dbItem?.subpart || null,
+      method: METHODS[p.method] || { key: p.method, label: p.method, short: p.method },
       prov: p,
       imgs: imgOut(rowKey),
-      flaws: [],   // 純資料件沒有 GLB 網格可量 ⇒ 半成品判定對它不適用(不是「量過而合格」)
-      consumer: p.consumer || '',
+      flaws: [],
+      consumer: p.consumer || (dbItem ? `${dbItem.family} catalog` : ''),
       view: p.baseline?.rev && kind && !baseErr
         ? { mode: 'baseline-vs-now', kind, rev: p.baseline.rev }
-        : { mode: 'now-only', kind },
+        : view,
       missing: !now,
+      measured: mea,
+      env,
+      bounds: dbItem?.bounds || null,
+      spec: dbItem?.spec || null,
       now,
       base,
       baseErr,
@@ -533,6 +565,20 @@ async function serve() {
           return send(200, JSON.stringify({ ok: true, items: st.items }));
         }
         return send(405, '{"error":"method"}');
+      }
+
+      if (u.pathname === '/api/model3d') {
+        const key = u.searchParams.get('key');
+        const db3DPath = join(ROOT, 'out', '3d_database.json');
+        const db3D = existsSync(db3DPath) ? readJson(db3DPath, { items: [] }) : { items: [] };
+        const item = db3D.items?.find((it) => it.key === key);
+        if (item) {
+          const modelFile = join(ROOT, item.outputDir, 'model.json');
+          if (existsSync(modelFile)) {
+            return send(200, readFileSync(modelFile), 'application/json; charset=utf-8');
+          }
+        }
+        return send(404, '{"error":"model not found"}');
       }
 
       // 來源圖:客戶端只送 key + 索引,路徑一律由伺服器從來源帳解析(零信任;
