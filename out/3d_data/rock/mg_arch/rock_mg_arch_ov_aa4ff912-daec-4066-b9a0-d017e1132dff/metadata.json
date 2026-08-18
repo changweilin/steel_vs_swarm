@@ -1,0 +1,41 @@
+{
+  "id": "rock_mg_arch_ov_aa4ff912-daec-4066-b9a0-d017e1132dff",
+  "key": "rock/mg_arch_ov_aa4ff912-daec-4066-b9a0-d017e1132dff_e8f6c2b6",
+  "family": "rock",
+  "subpart": "mg_arch",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/mg_arch/ov_aa4ff912-daec-4066-b9a0-d017e1132dff.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\mg_arch\\ov_aa4ff912-daec-4066-b9a0-d017e1132dff.jpg",
+  "created_at": "2026-08-18T14:27:15.694Z",
+  "bounds": {
+    "min": [
+      -6.4184,
+      -1.3589,
+      -7.0859
+    ],
+    "max": [
+      6.8439,
+      5.2338,
+      6.1192
+    ],
+    "size": [
+      13.262,
+      6.593,
+      13.205
+    ],
+    "rMax": 9.561,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 8.82762645914397,
+    "W": 8.673144121461814,
+    "H": 5.080727855344472,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

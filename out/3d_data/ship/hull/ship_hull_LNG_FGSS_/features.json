@@ -5,25 +5,26 @@
   "symmetryMode": "symmetric",
   "symmetryScore": 0.85,
   "aspectRatio": 1.2,
+  "colorRichness": 60,
   "colors": {
-    "primaryHex": 8359053,
-    "accentHex": 2719929,
+    "roofHex": 8359053,
+    "facadeHex": 9807270,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
     "darkHex": 2899536,
     "brightHex": 15528177
   },
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
-  "totalParts": 6,
+  "reconstructedFeatures": [],
+  "totalParts": 4,
   "partNames": [
     "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
+    "bow_flare_wedge",
     "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
+    "vessel_funnel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid"
   ]
 }

@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_admin_51_1680233914_9ARlI77I3P.jpg_t1000",
+  "key": "building/mass_admin_51_1680233914_9ARlI77I3P.jpg!t1000_54124e73",
+  "family": "building",
+  "subpart": "mass",
+  "style": "classical_temple_peristyle",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/admin_51_1680233914_9ARlI77I3P.jpg!t1000.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\admin_51_1680233914_9ARlI77I3P.jpg!t1000.webp",
+  "created_at": "2026-08-18T14:27:15.279Z",
+  "bounds": {
+    "min": [
+      -17.3927,
+      0,
+      -17.3927
+    ],
+    "max": [
+      17.3927,
+      19.6423,
+      17.3927
+    ],
+    "size": [
+      34.785,
+      19.642,
+      34.785
+    ],
+    "rMax": 24.597,
+    "triangles": 1064,
+    "vertices": 613
+  },
+  "spec": {
+    "L": 31.98544289311055,
+    "W": 18.522102693217366,
+    "H": 19.6549629968719,
+    "style": "pantheon_rotunda_with_grand_dome"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

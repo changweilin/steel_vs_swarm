@@ -1,0 +1,95 @@
+{
+  "id": "building_mass_images (15)",
+  "sourceImage": "building/images (15).jpg",
+  "style": "church_pointed_spire",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.888,
+  "aspectRatio": 1.382,
+  "colorRichness": 65.43,
+  "colors": {
+    "roofRgb": [
+      210,
+      215,
+      234
+    ],
+    "roofHex": 13817834,
+    "facadeRgb": [
+      162,
+      190,
+      222
+    ],
+    "facadeHex": 10665694,
+    "baseRgb": [
+      167,
+      144,
+      135
+    ],
+    "baseHex": 10981511,
+    "accentRgb": [
+      171,
+      194,
+      225
+    ],
+    "accentHex": 11256545,
+    "darkRgb": [
+      45,
+      39,
+      41
+    ],
+    "darkHex": 2959145,
+    "brightRgb": [
+      214,
+      217,
+      232
+    ],
+    "brightHex": 14080488
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stone_nave_and_buttresses",
+      "method": "stepped_buttress_frustums"
+    },
+    {
+      "name": "octagonal_gothic_sharp_spire",
+      "method": "tall_octagonal_prism_and_pyramid"
+    }
+  ],
+  "totalParts": 29,
+  "partNames": [
+    "cathedral_stone_plinth",
+    "cathedral_nave_hall",
+    "nave_roof_slope_north",
+    "nave_roof_slope_south",
+    "nave_buttress_1_n",
+    "buttress_pinnacle_1_n",
+    "nave_buttress_1_s",
+    "buttress_pinnacle_1_s",
+    "nave_buttress_2_n",
+    "buttress_pinnacle_2_n",
+    "nave_buttress_2_s",
+    "buttress_pinnacle_2_s",
+    "nave_buttress_3_n",
+    "buttress_pinnacle_3_n",
+    "nave_buttress_3_s",
+    "buttress_pinnacle_3_s",
+    "nave_buttress_4_n",
+    "buttress_pinnacle_4_n",
+    "nave_buttress_4_s",
+    "buttress_pinnacle_4_s",
+    "nave_buttress_5_n",
+    "buttress_pinnacle_5_n",
+    "nave_buttress_5_s",
+    "buttress_pinnacle_5_s",
+    "bell_tower_octagonal_shaft",
+    "belfry_cornice_balustrade",
+    "gothic_sharp_spire_apex",
+    "spire_cross_finial_post",
+    "spire_cross_finial_beam"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "polygonal_prism"
+  ]
+}

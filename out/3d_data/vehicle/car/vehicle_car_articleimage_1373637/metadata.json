@@ -3,37 +3,39 @@
   "key": "vehicle/car_articleimage_1373637_cc2f1f88",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
+  "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/articleimage_1373637.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\articleimage_1373637.jpg",
-  "created_at": "2026-08-18T10:56:14.501Z",
+  "created_at": "2026-08-18T14:27:16.402Z",
   "bounds": {
     "min": [
-      -2.5039,
-      0.0171,
-      -0.9748
+      -1.0188,
+      -0.0321,
+      -0.34
     ],
     "max": [
-      2.5139,
-      1.5634,
-      0.9748
+      1.0188,
+      1.1064,
+      0.34
     ],
     "size": [
-      5.018,
-      1.546,
-      1.95
+      2.038,
+      1.139,
+      0.68
     ],
-    "rMax": 2.696,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 1.074,
+    "triangles": 972,
+    "vertices": 575
   },
   "spec": {
-    "L": 4.947872129396505,
-    "W": 1.92,
-    "H": 1.5633699549858855,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 1.82,
+    "W": 0.68,
+    "H": 1.1,
+    "R": 0.34,
+    "style": "precision_diamond_tube_bicycle"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -1,0 +1,97 @@
+{
+  "id": "building_mass_images (17)",
+  "sourceImage": "building/images (17).jpg",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.758,
+  "aspectRatio": 1.771,
+  "colorRichness": 65.13,
+  "colors": {
+    "roofRgb": [
+      140,
+      182,
+      211
+    ],
+    "roofHex": 9221843,
+    "facadeRgb": [
+      161,
+      189,
+      190
+    ],
+    "facadeHex": 10599870,
+    "baseRgb": [
+      123,
+      123,
+      122
+    ],
+    "baseHex": 8092538,
+    "accentRgb": [
+      134,
+      176,
+      208
+    ],
+    "accentHex": 8827088,
+    "darkRgb": [
+      35,
+      38,
+      32
+    ],
+    "darkHex": 2303520,
+    "brightRgb": [
+      218,
+      224,
+      230
+    ],
+    "brightHex": 14344422
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
+    },
+    {
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
+    }
+  ],
+  "totalParts": 33,
+  "partNames": [
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "front_balcony_f7_l",
+    "front_balcony_f7_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_fire_platform_f7",
+    "rear_fire_stair_f7",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

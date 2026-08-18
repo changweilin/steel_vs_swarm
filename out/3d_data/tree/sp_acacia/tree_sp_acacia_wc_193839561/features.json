@@ -1,0 +1,65 @@
+{
+  "id": "tree_sp_acacia_wc_193839561",
+  "sourceImage": "tree/sp_acacia/wc_193839561.jpg",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.871,
+  "aspectRatio": 1.528,
+  "colorRichness": 74.47,
+  "colors": {
+    "roofRgb": [
+      229,
+      237,
+      240
+    ],
+    "roofHex": 15068656,
+    "facadeRgb": [
+      213,
+      220,
+      229
+    ],
+    "facadeHex": 14015717,
+    "baseRgb": [
+      156,
+      122,
+      81
+    ],
+    "baseHex": 10254929,
+    "accentRgb": [
+      33,
+      41,
+      21
+    ],
+    "accentHex": 2173205,
+    "darkRgb": [
+      33,
+      41,
+      21
+    ],
+    "darkHex": 2173205,
+    "brightRgb": [
+      225,
+      233,
+      238
+    ],
+    "brightHex": 14805486
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
+  ]
+}

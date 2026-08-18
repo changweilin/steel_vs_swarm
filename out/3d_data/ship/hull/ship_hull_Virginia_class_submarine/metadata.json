@@ -3,35 +3,37 @@
   "key": "ship/hull_Virginia_class_submarine_10a64c5e",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "ship/Virginia_class_submarine.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\Virginia_class_submarine.jpg",
-  "created_at": "2026-08-18T10:56:14.229Z",
+  "created_at": "2026-08-18T14:27:16.071Z",
   "bounds": {
     "min": [
-      -18.6875,
-      -0.6998,
-      -6.4781
+      -19.4774,
+      -0.8127,
+      -6.7281
     ],
     "max": [
-      20.6393,
-      17.8059,
-      6.4781
+      22.2573,
+      17.502,
+      6.7281
     ],
     "size": [
-      39.327,
-      18.506,
-      12.956
+      41.735,
+      18.315,
+      13.456
     ],
-    "rMax": 21.632,
-    "triangles": 104,
-    "vertices": 64
+    "rMax": 23.252,
+    "triangles": 64,
+    "vertices": 40
   },
   "spec": {
-    "L": 39.34210727092393,
-    "W": 12.956107423514153,
-    "H": 14.804028381780729,
+    "L": 42.34210727092393,
+    "W": 13.456107423514153,
+    "H": 15.804028381780729,
     "style": "multipurpose_maritime_vessel"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",

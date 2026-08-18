@@ -1,49 +1,70 @@
 {
   "id": "tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)",
   "sourceImage": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg",
-  "style": "conifer_pine",
+  "style": "conifer_pine_spire",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.887,
+  "symmetryScore": 0.852,
   "aspectRatio": 1,
+  "colorRichness": 69.82,
   "colors": {
-    "primaryHex": 13028029,
-    "primaryRgb": [
-      198,
-      202,
-      189
+    "roofRgb": [
+      236,
+      236,
+      236
     ],
-    "accentHex": 1908769,
+    "roofHex": 15527148,
+    "facadeRgb": [
+      221,
+      221,
+      221
+    ],
+    "facadeHex": 14540253,
+    "baseRgb": [
+      228,
+      228,
+      228
+    ],
+    "baseHex": 15000804,
     "accentRgb": [
-      29,
-      32,
-      33
+      144,
+      157,
+      102
     ],
-    "darkHex": 4080950,
+    "accentHex": 9477478,
     "darkRgb": [
-      62,
-      69,
-      54
+      56,
+      65,
+      46
     ],
-    "brightHex": 15395560,
+    "darkHex": 3686702,
     "brightRgb": [
-      234,
-      234,
-      232
-    ]
+      252,
+      252,
+      252
+    ],
+    "brightHex": 16579836
   },
   "reconstructedFeatures": [
     {
-      "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "name": "tapered_resin_trunk",
+      "method": "conical_frustum_trunk"
+    },
+    {
+      "name": "six_tiered_conical_needle_canopies",
+      "method": "tiered_multi_sided_cones"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 7,
   "partNames": [
     "pine_tapered_trunk",
     "pine_canopy_tier_1",
     "pine_canopy_tier_2",
     "pine_canopy_tier_3",
     "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
+    "pine_canopy_tier_5",
+    "pine_canopy_tier_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid"
   ]
 }

@@ -5,34 +5,36 @@
   "subpart": "mass",
   "style": "leaning_arcade_tower",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/pisa-1056568_960_720.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\pisa-1056568_960_720.jpg",
-  "created_at": "2026-08-18T10:56:14.130Z",
+  "created_at": "2026-08-18T14:27:15.986Z",
   "bounds": {
     "min": [
-      -6.6,
+      -9.7089,
       0,
-      -6.6
+      -11.5601
     ],
     "max": [
-      7.2895,
-      26.3185,
-      6.6
+      9.7089,
+      37.7948,
+      11.2601
     ],
     "size": [
-      13.889,
-      26.319,
-      13.2
+      19.418,
+      37.795,
+      22.82
     ],
-    "rMax": 9.833,
-    "triangles": 664,
-    "vertices": 360
+    "rMax": 15.096,
+    "triangles": 512,
+    "vertices": 338
   },
   "spec": {
-    "L": 14,
-    "W": 14,
-    "H": 26.518501564049746,
-    "style": "leaning_campanile_arcade"
+    "L": 19.03700312809949,
+    "W": 19.920210574502175,
+    "H": 35.39482719157702,
+    "style": "modern_flat_terrace_commercial"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

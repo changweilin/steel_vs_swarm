@@ -1,0 +1,77 @@
+{
+  "id": "tree_gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a",
+  "sourceImage": "tree/gt_dragontree/ov_737d2395-17ee-4db1-8c64-a019dbf02f3a.jpg",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.853,
+  "aspectRatio": 0.755,
+  "colorRichness": 53.37,
+  "colors": {
+    "roofRgb": [
+      164,
+      140,
+      126
+    ],
+    "roofHex": 10783870,
+    "facadeRgb": [
+      94,
+      84,
+      77
+    ],
+    "facadeHex": 6181965,
+    "baseRgb": [
+      122,
+      109,
+      101
+    ],
+    "baseHex": 8023397,
+    "accentRgb": [
+      198,
+      168,
+      150
+    ],
+    "accentHex": 13019286,
+    "darkRgb": [
+      21,
+      21,
+      22
+    ],
+    "darkHex": 1381654,
+    "brightRgb": [
+      198,
+      168,
+      150
+    ],
+    "brightHex": 13019286
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "fluted_buttress_root_fins",
+      "method": "frustum_fins"
+    },
+    {
+      "name": "multi_tier_overlapping_canopy_domes",
+      "method": "ellipsoidal_canopy_domes"
+    }
+  ],
+  "totalParts": 13,
+  "partNames": [
+    "gnarled_trunk_core",
+    "buttress_fin_1",
+    "buttress_fin_2",
+    "buttress_fin_3",
+    "buttress_fin_4",
+    "buttress_fin_5",
+    "canopy_foliage_dome_1",
+    "canopy_foliage_dome_2",
+    "canopy_foliage_dome_3",
+    "canopy_foliage_dome_4",
+    "canopy_foliage_dome_5",
+    "canopy_foliage_dome_6",
+    "canopy_foliage_dome_7"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "ellipsoid_sphere"
+  ]
+}

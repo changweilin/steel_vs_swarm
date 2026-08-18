@@ -1,0 +1,41 @@
+{
+  "id": "landmark_main_11CC20Geba88ude20Welt-Tianjin20Finance_20Centre-GettyImages-global",
+  "key": "landmark/main_11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global_a17bbba5",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "landmark/11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global.webp",
+  "created_at": "2026-08-18T14:27:15.589Z",
+  "bounds": {
+    "min": [
+      -4.0215,
+      0,
+      -4.0215
+    ],
+    "max": [
+      4.0215,
+      16.0624,
+      4.0215
+    ],
+    "size": [
+      8.043,
+      16.062,
+      8.043
+    ],
+    "rMax": 5.687,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "L": 8.9367208361944,
+    "W": 8.960524910353246,
+    "H": 14.489448386358434,
+    "style": "industrial_landmark_installation"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

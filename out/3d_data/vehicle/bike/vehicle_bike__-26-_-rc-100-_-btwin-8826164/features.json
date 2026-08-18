@@ -1,56 +1,78 @@
 {
   "id": "vehicle_bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164",
   "sourceImage": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
-  "style": "cargo_bike",
+  "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.956,
+  "symmetryScore": 0.947,
   "aspectRatio": 1,
+  "colorRichness": 75.93,
   "colors": {
-    "primaryHex": 14606046,
-    "primaryRgb": [
-      222,
-      222,
-      222
+    "roofRgb": [
+      244,
+      244,
+      244
     ],
-    "accentHex": 986895,
+    "roofHex": 16053492,
+    "facadeRgb": [
+      244,
+      244,
+      244
+    ],
+    "facadeHex": 16053492,
+    "baseRgb": [
+      244,
+      244,
+      244
+    ],
+    "baseHex": 16053492,
     "accentRgb": [
-      15,
-      15,
-      15
+      69,
+      67,
+      67
     ],
-    "darkHex": 3552565,
+    "accentHex": 4539203,
     "darkRgb": [
-      54,
-      53,
-      53
+      29,
+      29,
+      29
     ],
-    "brightHex": 15724527,
+    "darkHex": 1907997,
     "brightRgb": [
-      239,
-      239,
-      239
-    ]
+      243,
+      243,
+      243
+    ],
+    "brightHex": 15987699
   },
   "reconstructedFeatures": [
     {
-      "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "name": "diamond_tubular_frame_tubes",
+      "method": "tubular_cylinders"
     },
     {
       "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "method": "torus_tires_and_chainring"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 13,
   "partNames": [
     "frame_top_tube",
     "frame_down_tube",
     "frame_seat_tube",
     "front_fork_blades",
-    "bicycle_handlebars",
+    "frame_seat_stays",
+    "frame_chain_stays",
+    "chrome_handlebars",
     "ergonomic_saddle",
     "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "bike_front_tire",
+    "bike_front_spoke_disc",
+    "bike_rear_tire",
+    "bike_rear_spoke_disc"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring"
   ]
 }

@@ -1,57 +1,66 @@
 {
   "id": "building_bld_tower_manual__Run-in-taipei-1920x1080",
   "sourceImage": "building/bld_tower/manual__Run-in-taipei-1920x1080.jpg",
-  "style": "modern_skyscraper_tower",
+  "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.883,
+  "symmetryScore": 0.866,
   "aspectRatio": 1.778,
+  "colorRichness": 60.8,
   "colors": {
-    "primaryHex": 10923436,
-    "primaryRgb": [
-      166,
-      173,
-      172
-    ],
-    "accentHex": 857366,
-    "accentRgb": [
-      13,
-      21,
-      22
-    ],
-    "darkHex": 3358787,
-    "darkRgb": [
-      51,
-      64,
-      67
-    ],
-    "brightHex": 14081759,
-    "brightRgb": [
-      214,
+    "roofRgb": [
       222,
-      223
-    ]
+      236,
+      246
+    ],
+    "roofHex": 14609654,
+    "facadeRgb": [
+      183,
+      188,
+      190
+    ],
+    "facadeHex": 12041406,
+    "baseRgb": [
+      123,
+      116,
+      107
+    ],
+    "baseHex": 8090731,
+    "accentRgb": [
+      49,
+      58,
+      57
+    ],
+    "accentHex": 3226169,
+    "darkRgb": [
+      49,
+      58,
+      57
+    ],
+    "darkHex": 3226169,
+    "brightRgb": [
+      220,
+      231,
+      237
+    ],
+    "brightHex": 14477293
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_setback_tower",
-      "method": "triple_tier_massing"
+      "name": "multi_tier_setback_tower_masses",
+      "method": "progressive_setback_boxes"
     },
     {
-      "name": "curtain_wall_ribs",
-      "method": "vertical_mullion_grid"
-    },
-    {
-      "name": "rooftop_mechanicals",
-      "method": "chillers_and_antenna"
+      "name": "rooftop_penthouse_and_antenna_spire",
+      "method": "penthouse_and_spire"
     }
   ],
   "totalParts": 27,
   "partNames": [
     "podium_lobby_glass",
-    "entrance_canopy",
+    "grand_entrance_canopy",
     "tower_tier_1",
     "tower_tier_2_setback",
-    "tower_tier_3_crown",
+    "crown_pyramid_frustum",
     "floor_spandrel_1",
     "floor_spandrel_2",
     "floor_spandrel_3",
@@ -72,7 +81,13 @@
     "floor_spandrel_18",
     "floor_spandrel_19",
     "floor_spandrel_20",
-    "rooftop_hvac_penthouse",
+    "rooftop_mechanical_penthouse",
     "rooftop_antenna_spire"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "polygonal_prism"
   ]
 }

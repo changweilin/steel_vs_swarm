@@ -3,36 +3,38 @@
   "key": "tree/sp_conifer_manual_FB_IMG_1786332582292_0f638aa6",
   "family": "tree",
   "subpart": "sp_conifer",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/sp_conifer/manual_FB_IMG_1786332582292.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_conifer\\manual_FB_IMG_1786332582292.jpg",
-  "created_at": "2026-08-18T10:56:14.347Z",
+  "created_at": "2026-08-18T14:27:16.217Z",
   "bounds": {
     "min": [
-      -7.7276,
-      0,
-      -6.9694
+      -3.6996,
+      -0.2383,
+      -3.2831
     ],
     "max": [
-      5.6904,
-      18.9086,
-      6.9761
+      2.9498,
+      3.5634,
+      2.9108
     ],
     "size": [
-      13.418,
-      18.909,
-      13.945
+      6.649,
+      3.802,
+      6.194
     ],
-    "rMax": 10.406,
-    "triangles": 128,
-    "vertices": 82
+    "rMax": 4.946,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 13.43141069657435,
-    "W": 12.020180056458381,
-    "H": 19.9025406271458,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 6.465705348287175,
+    "W": 5.7600900282291905,
+    "H": 3.7192263675898376,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

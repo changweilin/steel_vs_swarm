@@ -1,68 +1,95 @@
 {
   "id": "building_mass_the-white-tower-when",
   "sourceImage": "building/the-white-tower-when.jpg",
-  "style": "castle_fortress",
+  "style": "church_pointed_spire",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.788,
+  "symmetryScore": 0.784,
   "aspectRatio": 1,
+  "colorRichness": 82.6,
   "colors": {
-    "primaryHex": 10591389,
-    "primaryRgb": [
-      161,
-      156,
-      157
+    "roofRgb": [
+      242,
+      241,
+      245
     ],
-    "accentHex": 591889,
+    "roofHex": 15921653,
+    "facadeRgb": [
+      223,
+      223,
+      224
+    ],
+    "facadeHex": 14671840,
+    "baseRgb": [
+      27,
+      25,
+      27
+    ],
+    "baseHex": 1775899,
     "accentRgb": [
-      9,
-      8,
-      17
+      18,
+      16,
+      23
     ],
-    "darkHex": 3221804,
+    "accentHex": 1183767,
     "darkRgb": [
-      49,
-      41,
-      44
+      18,
+      16,
+      23
     ],
-    "brightHex": 15132390,
+    "darkHex": 1183767,
     "brightRgb": [
-      230,
-      230,
-      230
-    ]
+      239,
+      238,
+      240
+    ],
+    "brightHex": 15724272
   },
   "reconstructedFeatures": [
     {
-      "name": "four_corner_turrets",
-      "method": "quad_symmetric_bastions"
+      "name": "stone_nave_and_buttresses",
+      "method": "stepped_buttress_frustums"
     },
     {
-      "name": "crenellated_parapet",
-      "method": "perimeter_merlons"
+      "name": "octagonal_gothic_sharp_spire",
+      "method": "tall_octagonal_prism_and_pyramid"
     }
   ],
-  "totalParts": 21,
+  "totalParts": 29,
   "partNames": [
-    "stone_keep_body",
-    "turret_-1_-1",
-    "turret_conical_roof_-1_-1",
-    "turret_-1_1",
-    "turret_conical_roof_-1_1",
-    "turret_1_-1",
-    "turret_conical_roof_1_-1",
-    "turret_1_1",
-    "turret_conical_roof_1_1",
-    "merlon_north_0",
-    "merlon_south_0",
-    "merlon_north_1",
-    "merlon_south_1",
-    "merlon_north_2",
-    "merlon_south_2",
-    "merlon_north_3",
-    "merlon_south_3",
-    "merlon_north_4",
-    "merlon_south_4",
-    "merlon_north_5",
-    "merlon_south_5"
+    "cathedral_stone_plinth",
+    "cathedral_nave_hall",
+    "nave_roof_slope_north",
+    "nave_roof_slope_south",
+    "nave_buttress_1_n",
+    "buttress_pinnacle_1_n",
+    "nave_buttress_1_s",
+    "buttress_pinnacle_1_s",
+    "nave_buttress_2_n",
+    "buttress_pinnacle_2_n",
+    "nave_buttress_2_s",
+    "buttress_pinnacle_2_s",
+    "nave_buttress_3_n",
+    "buttress_pinnacle_3_n",
+    "nave_buttress_3_s",
+    "buttress_pinnacle_3_s",
+    "nave_buttress_4_n",
+    "buttress_pinnacle_4_n",
+    "nave_buttress_4_s",
+    "buttress_pinnacle_4_s",
+    "nave_buttress_5_n",
+    "buttress_pinnacle_5_n",
+    "nave_buttress_5_s",
+    "buttress_pinnacle_5_s",
+    "bell_tower_octagonal_shaft",
+    "belfry_cornice_balustrade",
+    "gothic_sharp_spire_apex",
+    "spire_cross_finial_post",
+    "spire_cross_finial_beam"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "polygonal_prism"
   ]
 }

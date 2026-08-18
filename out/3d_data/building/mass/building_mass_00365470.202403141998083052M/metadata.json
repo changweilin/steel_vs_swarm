@@ -3,36 +3,38 @@
   "key": "building/mass_00365470.202403141998083052M_d6a8345d",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
+  "style": "classical_temple_peristyle",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/00365470.202403141998083052M.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\00365470.202403141998083052M.jpg",
-  "created_at": "2026-08-18T10:56:14.060Z",
+  "created_at": "2026-08-18T14:27:15.915Z",
   "bounds": {
     "min": [
-      -10.7169,
+      -17.4377,
       0,
-      -10.9733
+      -17.4377
     ],
     "max": [
-      10.7169,
-      30.1373,
-      10.6733
+      17.4377,
+      20.4906,
+      17.4377
     ],
     "size": [
-      21.434,
-      30.137,
-      21.647
+      34.875,
+      20.491,
+      34.875
     ],
-    "rMax": 15.338,
-    "triangles": 444,
-    "vertices": 296
+    "rMax": 24.661,
+    "triangles": 1064,
+    "vertices": 613
   },
   "spec": {
-    "L": 21.433798733501185,
-    "W": 18.946669718471046,
-    "H": 29.864682993820097,
-    "style": "commercial_residential_asymmetric"
+    "L": 32.07534905012589,
+    "W": 21.29777981231403,
+    "H": 18.621560997940033,
+    "style": "pantheon_rotunda_with_grand_dome"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

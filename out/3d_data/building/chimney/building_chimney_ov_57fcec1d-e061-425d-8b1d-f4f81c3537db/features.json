@@ -1,0 +1,101 @@
+{
+  "id": "building_chimney_ov_57fcec1d-e061-425d-8b1d-f4f81c3537db",
+  "sourceImage": "building/chimney/ov_57fcec1d-e061-425d-8b1d-f4f81c3537db.jpeg",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.842,
+  "aspectRatio": 1.333,
+  "colorRichness": 72.97,
+  "colors": {
+    "roofRgb": [
+      201,
+      211,
+      220
+    ],
+    "roofHex": 13226972,
+    "facadeRgb": [
+      187,
+      199,
+      209
+    ],
+    "facadeHex": 12306385,
+    "baseRgb": [
+      44,
+      44,
+      32
+    ],
+    "baseHex": 2894880,
+    "accentRgb": [
+      93,
+      74,
+      57
+    ],
+    "accentHex": 6113849,
+    "darkRgb": [
+      18,
+      27,
+      19
+    ],
+    "darkHex": 1186579,
+    "brightRgb": [
+      203,
+      212,
+      220
+    ],
+    "brightHex": 13358300
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
+    },
+    {
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
+    }
+  ],
+  "totalParts": 37,
+  "partNames": [
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "front_balcony_f7_l",
+    "front_balcony_f7_r",
+    "front_balcony_f8_l",
+    "front_balcony_f8_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_fire_platform_f7",
+    "rear_fire_stair_f7",
+    "rear_fire_platform_f8",
+    "rear_fire_stair_f8",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

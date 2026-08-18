@@ -1,0 +1,41 @@
+{
+  "id": "tree_cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+  "key": "tree/cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_9293a29b",
+  "family": "tree",
+  "subpart": "cf_araucaria",
+  "style": "conifer_pine_spire",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\cf_araucaria\\ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
+  "created_at": "2026-08-18T14:27:15.787Z",
+  "bounds": {
+    "min": [
+      -4.2949,
+      0,
+      -4.2949
+    ],
+    "max": [
+      4.2949,
+      19.6424,
+      4.2949
+    ],
+    "size": [
+      8.59,
+      19.642,
+      8.59
+    ],
+    "rMax": 6.074,
+    "triangles": 224,
+    "vertices": 126
+  },
+  "spec": {
+    "L": 7.770313572899977,
+    "W": 8.589875638971542,
+    "H": 19.089402609292744,
+    "style": "conifer_pine_tiered_cones"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

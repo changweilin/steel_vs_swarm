@@ -3,36 +3,38 @@
   "key": "tree/canopy_1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg_7bdcca82",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg.webp",
-  "created_at": "2026-08-18T10:56:14.242Z",
+  "created_at": "2026-08-18T14:27:16.086Z",
   "bounds": {
     "min": [
-      -8.4845,
-      0,
-      -7.6383
+      -2.7283,
+      -0.195,
+      -3.4645
     ],
     "max": [
-      8.6801,
-      17.9009,
-      6.4328
+      3.2425,
+      3.0751,
+      3.0787
     ],
     "size": [
-      17.165,
-      17.901,
-      14.071
+      5.971,
+      3.27,
+      6.543
     ],
-    "rMax": 11.416,
-    "triangles": 140,
-    "vertices": 90
+    "rMax": 4.471,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 14.423476005188068,
-    "W": 13.813649195086596,
-    "H": 17.62333104448005,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 6.961738002594034,
+    "W": 6.656824597543298,
+    "H": 3.291874570840009,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

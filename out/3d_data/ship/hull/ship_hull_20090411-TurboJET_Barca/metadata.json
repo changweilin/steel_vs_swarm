@@ -3,35 +3,37 @@
   "key": "ship/hull_20090411-TurboJET_Barca_da4471af",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "ship/20090411-TurboJET_Barca.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\20090411-TurboJET_Barca.jpg",
-  "created_at": "2026-08-18T10:56:14.154Z",
+  "created_at": "2026-08-18T14:27:16.008Z",
   "bounds": {
     "min": [
-      -19.8304,
-      -0.7471,
-      -6.1929
+      -20.5841,
+      -0.8642,
+      -6.4429
     ],
     "max": [
-      21.8611,
-      16.7268,
-      6.1929
+      23.4782,
+      16.3779,
+      6.4429
     ],
     "size": [
-      41.692,
-      17.474,
-      12.386
+      44.062,
+      17.242,
+      12.886
     ],
-    "rMax": 22.721,
-    "triangles": 104,
-    "vertices": 64
+    "rMax": 24.346,
+    "triangles": 64,
+    "vertices": 40
   },
   "spec": {
-    "L": 41.74814984359503,
-    "W": 12.385786221103228,
-    "H": 12.555825131609064,
+    "L": 44.74814984359503,
+    "W": 12.885786221103228,
+    "H": 13.555825131609064,
     "style": "multipurpose_maritime_vessel"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",

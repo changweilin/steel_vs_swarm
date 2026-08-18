@@ -1,0 +1,80 @@
+{
+  "id": "building_mass_176784033021147409.jpg!900x.water3",
+  "sourceImage": "building/176784033021147409.jpg!900x.water3.jpg",
+  "style": "village_triangular_gable",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.791,
+  "aspectRatio": 1.333,
+  "colorRichness": 69.26,
+  "colors": {
+    "roofRgb": [
+      35,
+      83,
+      159
+    ],
+    "roofHex": 2315167,
+    "facadeRgb": [
+      116,
+      151,
+      203
+    ],
+    "facadeHex": 7641035,
+    "baseRgb": [
+      107,
+      107,
+      112
+    ],
+    "baseHex": 7039856,
+    "accentRgb": [
+      42,
+      91,
+      165
+    ],
+    "accentHex": 2775973,
+    "darkRgb": [
+      48,
+      42,
+      39
+    ],
+    "darkHex": 3156519,
+    "brightRgb": [
+      234,
+      233,
+      239
+    ],
+    "brightHex": 15395311
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stone_masonry_foundation_plinth",
+      "method": "textured_plinth_box"
+    },
+    {
+      "name": "steep_triangular_pitched_gable_roof",
+      "method": "dual_opposing_gable_wedges"
+    },
+    {
+      "name": "stone_chimney_and_porch_canopy",
+      "method": "prism_chimney_and_cantilever_porch"
+    }
+  ],
+  "totalParts": 10,
+  "partNames": [
+    "cottage_stone_foundation",
+    "cottage_timber_walls",
+    "pitched_gable_roof_north",
+    "pitched_gable_roof_south",
+    "roof_ridge_beam",
+    "stone_masonry_chimney",
+    "chimney_crown_cap",
+    "entrance_porch_canopy",
+    "porch_pillar_L",
+    "porch_pillar_R"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "polygonal_prism",
+    "frustum_pyramid"
+  ]
+}

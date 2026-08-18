@@ -1,58 +1,70 @@
 {
   "id": "tree_canopy_臺灣杉照片提供／陳建帆",
   "sourceImage": "tree/臺灣杉照片提供／陳建帆.jpg",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
-  "symmetryScore": 0.827,
+  "style": "conifer_pine_spire",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.814,
   "aspectRatio": 0.665,
+  "colorRichness": 77.45,
   "colors": {
-    "primaryHex": 3694708,
-    "primaryRgb": [
-      56,
-      96,
-      116
+    "roofRgb": [
+      33,
+      116,
+      178
     ],
-    "accentHex": 16777215,
+    "roofHex": 2192562,
+    "facadeRgb": [
+      45,
+      123,
+      169
+    ],
+    "facadeHex": 2980777,
+    "baseRgb": [
+      42,
+      55,
+      38
+    ],
+    "baseHex": 2766630,
     "accentRgb": [
-      255,
-      255,
-      255
+      38,
+      122,
+      183
     ],
-    "darkHex": 2372914,
+    "accentHex": 2521783,
     "darkRgb": [
-      36,
-      53,
-      50
+      22,
+      29,
+      23
     ],
-    "brightHex": 13296364,
+    "darkHex": 1449239,
     "brightRgb": [
-      202,
-      226,
-      236
-    ]
+      227,
+      245,
+      251
+    ],
+    "brightHex": 14939643
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
+      "name": "tapered_resin_trunk",
+      "method": "conical_frustum_trunk"
     },
     {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "six_tiered_conical_needle_canopies",
+      "method": "tiered_multi_sided_cones"
     }
   ],
-  "totalParts": 11,
+  "totalParts": 7,
   "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4",
-    "canopy_foliage_dome_5",
-    "canopy_foliage_dome_6"
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5",
+    "pine_canopy_tier_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid"
   ]
 }

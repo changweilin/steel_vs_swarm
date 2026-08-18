@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_180512-10030-2-uyEK9",
   "sourceImage": "vehicle/motor/180512-10030-2-uyEK9.png",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.864,
+  "symmetryScore": 0.854,
   "aspectRatio": 1.59,
+  "colorRichness": 66.64,
   "colors": {
-    "primaryHex": 7898006,
-    "primaryRgb": [
-      120,
-      131,
-      150
+    "roofRgb": [
+      183,
+      187,
+      195
     ],
-    "accentHex": 328968,
+    "roofHex": 12041155,
+    "facadeRgb": [
+      114,
+      122,
+      155
+    ],
+    "facadeHex": 7502491,
+    "baseRgb": [
+      188,
+      192,
+      200
+    ],
+    "baseHex": 12370120,
     "accentRgb": [
-      5,
-      5,
-      8
+      28,
+      67,
+      132
     ],
-    "darkHex": 1781072,
+    "accentHex": 1852292,
     "darkRgb": [
-      27,
-      45,
-      80
+      21,
+      29,
+      47
     ],
-    "brightHex": 13488342,
+    "darkHex": 1383727,
     "brightRgb": [
-      205,
-      208,
-      214
-    ]
+      212,
+      215,
+      221
+    ],
+    "brightHex": 13948893
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

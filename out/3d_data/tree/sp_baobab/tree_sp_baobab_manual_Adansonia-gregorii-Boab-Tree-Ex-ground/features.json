@@ -1,58 +1,65 @@
 {
   "id": "tree_sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground",
   "sourceImage": "tree/sp_baobab/manual_Adansonia-gregorii-Boab-Tree-Ex-ground.jpg",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.847,
+  "symmetryScore": 0.838,
   "aspectRatio": 1,
+  "colorRichness": 51.06,
   "colors": {
-    "primaryHex": 8749452,
-    "primaryRgb": [
+    "roofRgb": [
+      149,
+      147,
+      177
+    ],
+    "roofHex": 9802673,
+    "facadeRgb": [
+      134,
+      141,
+      172
+    ],
+    "facadeHex": 8818092,
+    "baseRgb": [
+      164,
       133,
-      129,
-      140
+      102
     ],
-    "accentHex": 1052175,
+    "baseHex": 10782054,
     "accentRgb": [
-      16,
-      14,
-      15
+      174,
+      142,
+      107
     ],
-    "darkHex": 3749168,
+    "accentHex": 11439723,
     "darkRgb": [
-      57,
-      53,
-      48
+      51,
+      47,
+      41
     ],
-    "brightHex": 13287619,
+    "darkHex": 3354409,
     "brightRgb": [
-      202,
-      192,
-      195
-    ]
+      204,
+      194,
+      197
+    ],
+    "brightHex": 13419205
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
-    },
-    {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
     }
   ],
-  "totalParts": 11,
+  "totalParts": 6,
   "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4",
-    "canopy_foliage_dome_5",
-    "canopy_foliage_dome_6"
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
   ]
 }

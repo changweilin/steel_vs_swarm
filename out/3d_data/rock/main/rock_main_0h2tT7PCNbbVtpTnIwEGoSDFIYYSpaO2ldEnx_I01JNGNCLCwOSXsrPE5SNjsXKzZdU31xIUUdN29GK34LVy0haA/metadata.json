@@ -1,0 +1,41 @@
+{
+  "id": "rock_main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA",
+  "key": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_5c025537",
+  "family": "rock",
+  "subpart": "main",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg",
+  "created_at": "2026-08-18T14:27:15.633Z",
+  "bounds": {
+    "min": [
+      -4.3351,
+      -0.9007,
+      -5.0154
+    ],
+    "max": [
+      4.7102,
+      5.6945,
+      4.3672
+    ],
+    "size": [
+      9.045,
+      6.595,
+      9.383
+    ],
+    "rMax": 6.629,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 5.960883497367819,
+    "W": 6.487380788891432,
+    "H": 5.527954528114748,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

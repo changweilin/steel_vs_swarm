@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_shoreline-studio-norm-architects_14",
+  "key": "building/mass_shoreline-studio-norm-architects_14_ee7e2ed1",
+  "family": "building",
+  "subpart": "mass",
+  "style": "classical_temple_peristyle",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/shoreline-studio-norm-architects_14.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\shoreline-studio-norm-architects_14.jpg",
+  "created_at": "2026-08-18T14:27:15.561Z",
+  "bounds": {
+    "min": [
+      -16.5483,
+      0,
+      -16.5483
+    ],
+    "max": [
+      16.5483,
+      18.7898,
+      16.5483
+    ],
+    "size": [
+      33.097,
+      18.79,
+      33.097
+    ],
+    "rMax": 23.403,
+    "triangles": 1064,
+    "vertices": 613
+  },
+  "spec": {
+    "L": 30.296635385671777,
+    "W": 19.428427557793544,
+    "H": 16.628244449530786,
+    "style": "pantheon_rotunda_with_grand_dome"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

@@ -1,70 +1,101 @@
 {
   "id": "building_mass_architecture-houou-02-tmb",
   "sourceImage": "building/architecture-houou-02-tmb.jpg",
-  "style": "asian_pagoda_pavilion",
-  "symmetryMode": "symmetric",
-  "symmetryScore": 0.922,
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.902,
   "aspectRatio": 1.502,
+  "colorRichness": 53.86,
   "colors": {
-    "primaryHex": 7758173,
-    "primaryRgb": [
-      118,
-      97,
-      93
-    ],
-    "accentHex": 16642795,
-    "accentRgb": [
-      253,
-      242,
-      235
-    ],
-    "darkHex": 5057573,
-    "darkRgb": [
-      77,
-      44,
-      37
-    ],
-    "brightHex": 13551550,
-    "brightRgb": [
-      206,
-      199,
+    "roofRgb": [
+      94,
+      139,
       190
-    ]
+    ],
+    "roofHex": 6196158,
+    "facadeRgb": [
+      110,
+      79,
+      60
+    ],
+    "facadeHex": 7229244,
+    "baseRgb": [
+      137,
+      139,
+      137
+    ],
+    "baseHex": 9014153,
+    "accentRgb": [
+      162,
+      82,
+      59
+    ],
+    "accentHex": 10637883,
+    "darkRgb": [
+      67,
+      35,
+      29
+    ],
+    "darkHex": 4399901,
+    "brightRgb": [
+      201,
+      195,
+      187
+    ],
+    "brightHex": 13222843
   },
   "reconstructedFeatures": [
     {
-      "name": "flared_curved_eaves",
-      "method": "multi_tier_symmetric_roofs"
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
     },
     {
-      "name": "finial_spire_sanrin",
-      "method": "sacred_bronze_finial"
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
     }
   ],
-  "totalParts": 23,
+  "totalParts": 37,
   "partNames": [
-    "stone_plinth_foundation",
-    "pagoda_chamber_tier_1",
-    "pillar_1_-1_-1",
-    "pillar_1_-1_1",
-    "pillar_1_1_-1",
-    "pillar_1_1_1",
-    "curved_eaves_1",
-    "roof_slope_1",
-    "pagoda_chamber_tier_2",
-    "pillar_2_-1_-1",
-    "pillar_2_-1_1",
-    "pillar_2_1_-1",
-    "pillar_2_1_1",
-    "curved_eaves_2",
-    "roof_slope_2",
-    "pagoda_chamber_tier_3",
-    "pillar_3_-1_-1",
-    "pillar_3_-1_1",
-    "pillar_3_1_-1",
-    "pillar_3_1_1",
-    "curved_eaves_3",
-    "roof_slope_3",
-    "finial_spire_sanrin"
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "front_balcony_f7_l",
+    "front_balcony_f7_r",
+    "front_balcony_f8_l",
+    "front_balcony_f8_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_fire_platform_f7",
+    "rear_fire_stair_f7",
+    "rear_fire_platform_f8",
+    "rear_fire_stair_f8",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
   ]
 }

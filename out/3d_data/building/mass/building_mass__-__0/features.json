@@ -1,0 +1,101 @@
+{
+  "id": "building_mass_欣榮文創股份有限公司-隘興段_0",
+  "sourceImage": "building/欣榮文創股份有限公司-隘興段_0.jpg",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.863,
+  "aspectRatio": 1.778,
+  "colorRichness": 56.67,
+  "colors": {
+    "roofRgb": [
+      167,
+      175,
+      187
+    ],
+    "roofHex": 10989499,
+    "facadeRgb": [
+      161,
+      170,
+      183
+    ],
+    "facadeHex": 10594999,
+    "baseRgb": [
+      66,
+      74,
+      53
+    ],
+    "baseHex": 4344373,
+    "accentRgb": [
+      54,
+      61,
+      49
+    ],
+    "accentHex": 3554609,
+    "darkRgb": [
+      25,
+      31,
+      28
+    ],
+    "darkHex": 1646364,
+    "brightRgb": [
+      179,
+      183,
+      191
+    ],
+    "brightHex": 11777983
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
+    },
+    {
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
+    }
+  ],
+  "totalParts": 37,
+  "partNames": [
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "front_balcony_f7_l",
+    "front_balcony_f7_r",
+    "front_balcony_f8_l",
+    "front_balcony_f8_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_fire_platform_f7",
+    "rear_fire_stair_f7",
+    "rear_fire_platform_f8",
+    "rear_fire_stair_f8",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

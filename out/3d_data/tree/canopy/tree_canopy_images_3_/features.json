@@ -1,0 +1,78 @@
+{
+  "id": "tree_canopy_images (3)",
+  "sourceImage": "tree/images (3).jpg",
+  "style": "bonsai_potted_twisted",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.843,
+  "aspectRatio": 1,
+  "colorRichness": 74.6,
+  "colors": {
+    "roofRgb": [
+      255,
+      255,
+      255
+    ],
+    "roofHex": 16777215,
+    "facadeRgb": [
+      253,
+      253,
+      251
+    ],
+    "facadeHex": 16645627,
+    "baseRgb": [
+      255,
+      255,
+      255
+    ],
+    "baseHex": 16777215,
+    "accentRgb": [
+      58,
+      53,
+      27
+    ],
+    "accentHex": 3814683,
+    "darkRgb": [
+      58,
+      53,
+      27
+    ],
+    "darkHex": 3814683,
+    "brightRgb": [
+      254,
+      254,
+      253
+    ],
+    "brightHex": 16711421
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "ceramic_pot_plinth",
+      "method": "frustum_pot_and_rim"
+    },
+    {
+      "name": "gnarled_twisted_trunk_segments",
+      "method": "multi_segment_angled_cylinders"
+    },
+    {
+      "name": "cloud_foliage_pads",
+      "method": "flattened_ellipsoidal_cushions"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "bonsai_ceramic_pot",
+    "bonsai_pot_rim",
+    "bonsai_trunk_seg_1",
+    "bonsai_trunk_seg_2",
+    "bonsai_trunk_seg_3",
+    "bonsai_cloud_pad_1",
+    "bonsai_cloud_pad_2",
+    "bonsai_cloud_pad_3",
+    "bonsai_cloud_pad_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "torus_ring",
+    "ellipsoid_sphere"
+  ]
+}

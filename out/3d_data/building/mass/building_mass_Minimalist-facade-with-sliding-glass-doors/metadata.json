@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_Minimalist-facade-with-sliding-glass-doors",
+  "key": "building/mass_Minimalist-facade-with-sliding-glass-doors_6c665748",
+  "family": "building",
+  "subpart": "mass",
+  "style": "church_pointed_spire",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/Minimalist-facade-with-sliding-glass-doors.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\Minimalist-facade-with-sliding-glass-doors.webp",
+  "created_at": "2026-08-18T14:27:15.507Z",
+  "bounds": {
+    "min": [
+      -13.3055,
+      0,
+      -8.2653
+    ],
+    "max": [
+      15.1324,
+      31.9429,
+      8.2653
+    ],
+    "size": [
+      28.438,
+      31.943,
+      16.531
+    ],
+    "rMax": 17.243,
+    "triangles": 480,
+    "vertices": 298
+  },
+  "spec": {
+    "L": 26.089265278095674,
+    "W": 16.20637827115282,
+    "H": 28.34290074006256,
+    "style": "gothic_cathedral_with_sharp_spire"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

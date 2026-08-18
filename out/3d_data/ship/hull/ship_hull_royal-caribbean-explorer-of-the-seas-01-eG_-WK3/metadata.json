@@ -3,35 +3,37 @@
   "key": "ship/hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_29b71f73",
   "family": "ship",
   "subpart": "hull",
-  "style": "oil_tanker_bulk",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
-  "created_at": "2026-08-18T10:56:14.220Z",
+  "created_at": "2026-08-18T14:27:16.063Z",
   "bounds": {
     "min": [
-      -25.4489,
-      -0.9794,
-      -6.0441
+      -26.0253,
+      -1.1173,
+      -6.2941
     ],
     "max": [
-      27.868,
-      18.4308,
-      6.0441
+      29.4802,
+      18.153,
+      6.2941
     ],
     "size": [
-      53.317,
-      19.41,
-      12.088
+      55.505,
+      19.27,
+      12.588
     ],
-    "rMax": 28.516,
-    "triangles": 104,
-    "vertices": 64
+    "rMax": 30.145,
+    "triangles": 64,
+    "vertices": 40
   },
   "spec": {
-    "L": 53.57663843747616,
-    "W": 12.08817425803006,
-    "H": 16.105928130006866,
+    "L": 56.57663843747616,
+    "W": 12.58817425803006,
+    "H": 17.105928130006866,
     "style": "multipurpose_maritime_vessel"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",

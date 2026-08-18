@@ -1,0 +1,41 @@
+{
+  "id": "rock_main_large-heavy-rock-stone-isolated-on-background-png",
+  "key": "rock/main_large-heavy-rock-stone-isolated-on-background-png_b5d19b5a",
+  "family": "rock",
+  "subpart": "main",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/large-heavy-rock-stone-isolated-on-background-png.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\large-heavy-rock-stone-isolated-on-background-png.webp",
+  "created_at": "2026-08-18T14:27:15.691Z",
+  "bounds": {
+    "min": [
+      -6.4099,
+      -1.347,
+      -7.1161
+    ],
+    "max": [
+      6.8862,
+      6.4916,
+      6.1421
+    ],
+    "size": [
+      13.296,
+      7.839,
+      13.258
+    ],
+    "rMax": 9.577,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 8.815114061188678,
+    "W": 8.651232166018158,
+    "H": 6.301762417029069,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

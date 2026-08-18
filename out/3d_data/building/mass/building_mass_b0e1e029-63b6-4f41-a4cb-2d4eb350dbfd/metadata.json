@@ -3,36 +3,38 @@
   "key": "building/mass_b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd_5c0208a0",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
+  "style": "church_pointed_spire",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd.jpg",
-  "created_at": "2026-08-18T10:56:14.100Z",
+  "created_at": "2026-08-18T14:27:15.953Z",
   "bounds": {
     "min": [
-      -11.2317,
+      -15.7322,
       0,
-      -11.3317
+      -9.5755
     ],
     "max": [
-      11.2317,
-      26.9373,
-      11.0317
+      17.7678,
+      34.7967,
+      9.5755
     ],
     "size": [
-      22.463,
-      26.937,
-      22.363
+      33.5,
+      34.797,
+      19.151
     ],
-    "rMax": 15.955,
-    "triangles": 396,
-    "vertices": 264
+    "rMax": 20.184,
+    "triangles": 480,
+    "vertices": 298
   },
   "spec": {
-    "L": 22.463355458915082,
-    "W": 19.663355458915085,
-    "H": 26.79505607690547,
-    "style": "commercial_residential_asymmetric"
+    "L": 30.847516594186313,
+    "W": 18.77557030594339,
+    "H": 31.196704051270313,
+    "style": "gothic_cathedral_with_sharp_spire"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -1,0 +1,65 @@
+{
+  "id": "tree_buttress_wc_4063079",
+  "sourceImage": "tree/buttress/wc_4063079.jpg",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.702,
+  "aspectRatio": 1.5,
+  "colorRichness": 59.41,
+  "colors": {
+    "roofRgb": [
+      62,
+      70,
+      55
+    ],
+    "roofHex": 4081207,
+    "facadeRgb": [
+      95,
+      125,
+      109
+    ],
+    "facadeHex": 6258029,
+    "baseRgb": [
+      78,
+      97,
+      74
+    ],
+    "baseHex": 5136714,
+    "accentRgb": [
+      115,
+      165,
+      234
+    ],
+    "accentHex": 7579114,
+    "darkRgb": [
+      19,
+      25,
+      15
+    ],
+    "darkHex": 1251599,
+    "brightRgb": [
+      175,
+      169,
+      145
+    ],
+    "brightHex": 11512209
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
+  ]
+}

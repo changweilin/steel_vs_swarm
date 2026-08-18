@@ -1,0 +1,41 @@
+{
+  "id": "landmark_main_Arc_de_Triomf_Barcelona",
+  "key": "landmark/main_Arc_de_Triomf_Barcelona_d4a3acba",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "landmark/Arc_de_Triomf_Barcelona.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\Arc_de_Triomf_Barcelona.webp",
+  "created_at": "2026-08-18T14:27:15.597Z",
+  "bounds": {
+    "min": [
+      -3.8635,
+      0,
+      -3.8635
+    ],
+    "max": [
+      3.8635,
+      19.4351,
+      3.8635
+    ],
+    "size": [
+      7.727,
+      19.435,
+      7.727
+    ],
+    "rMax": 5.464,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "L": 8.585580224307622,
+    "W": 10.006256198977646,
+    "H": 17.86211947814145,
+    "style": "industrial_landmark_installation"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

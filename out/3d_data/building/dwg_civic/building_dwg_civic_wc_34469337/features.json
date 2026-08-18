@@ -1,0 +1,90 @@
+{
+  "id": "building_dwg_civic_wc_34469337",
+  "sourceImage": "building/dwg_civic/wc_34469337.jpg",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.911,
+  "aspectRatio": 1.251,
+  "colorRichness": 80.82,
+  "colors": {
+    "roofRgb": [
+      126,
+      126,
+      126
+    ],
+    "roofHex": 8289918,
+    "facadeRgb": [
+      216,
+      216,
+      216
+    ],
+    "facadeHex": 14211288,
+    "baseRgb": [
+      200,
+      200,
+      200
+    ],
+    "baseHex": 13158600,
+    "accentRgb": [
+      216,
+      216,
+      216
+    ],
+    "accentHex": 14211288,
+    "darkRgb": [
+      20,
+      20,
+      20
+    ],
+    "darkHex": 1315860,
+    "brightRgb": [
+      240,
+      240,
+      240
+    ],
+    "brightHex": 15790320
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
+    },
+    {
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
+    }
+  ],
+  "totalParts": 23,
+  "partNames": [
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

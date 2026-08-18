@@ -1,0 +1,41 @@
+{
+  "id": "building_bld_tower_ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801",
+  "key": "building/bld_tower_ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801_7baf36d5",
+  "family": "building",
+  "subpart": "bld_tower",
+  "style": "church_pointed_spire",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/bld_tower/ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_tower\\ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801.jpg",
+  "created_at": "2026-08-18T14:27:15.399Z",
+  "bounds": {
+    "min": [
+      -13.4888,
+      0,
+      -8.9151
+    ],
+    "max": [
+      15.6793,
+      33.7553,
+      8.9151
+    ],
+    "size": [
+      29.168,
+      33.755,
+      17.83
+    ],
+    "rMax": 18.037,
+    "triangles": 480,
+    "vertices": 298
+  },
+  "spec": {
+    "L": 26.448706797894253,
+    "W": 17.480567635614555,
+    "H": 30.155306324864576,
+    "style": "gothic_cathedral_with_sharp_spire"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

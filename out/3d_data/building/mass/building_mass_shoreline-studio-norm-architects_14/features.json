@@ -1,0 +1,90 @@
+{
+  "id": "building_mass_shoreline-studio-norm-architects_14",
+  "sourceImage": "building/shoreline-studio-norm-architects_14.jpg",
+  "style": "classical_temple_peristyle",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.83,
+  "aspectRatio": 1.442,
+  "colorRichness": 70.73,
+  "colors": {
+    "roofRgb": [
+      241,
+      239,
+      238
+    ],
+    "roofHex": 15855598,
+    "facadeRgb": [
+      90,
+      79,
+      59
+    ],
+    "facadeHex": 5918523,
+    "baseRgb": [
+      118,
+      106,
+      64
+    ],
+    "baseHex": 7760448,
+    "accentRgb": [
+      45,
+      36,
+      21
+    ],
+    "accentHex": 2958357,
+    "darkRgb": [
+      45,
+      36,
+      21
+    ],
+    "darkHex": 2958357,
+    "brightRgb": [
+      241,
+      239,
+      237
+    ],
+    "brightHex": 15855597
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
+    },
+    {
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
+    }
+  ],
+  "totalParts": 23,
+  "partNames": [
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

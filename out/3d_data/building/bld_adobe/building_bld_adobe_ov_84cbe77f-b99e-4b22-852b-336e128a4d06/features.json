@@ -1,0 +1,90 @@
+{
+  "id": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06",
+  "sourceImage": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.905,
+  "aspectRatio": 1.712,
+  "colorRichness": 52.15,
+  "colors": {
+    "roofRgb": [
+      231,
+      212,
+      188
+    ],
+    "roofHex": 15193276,
+    "facadeRgb": [
+      186,
+      174,
+      148
+    ],
+    "facadeHex": 12234388,
+    "baseRgb": [
+      234,
+      216,
+      196
+    ],
+    "baseHex": 15390916,
+    "accentRgb": [
+      197,
+      185,
+      156
+    ],
+    "accentHex": 12958108,
+    "darkRgb": [
+      81,
+      76,
+      67
+    ],
+    "darkHex": 5327939,
+    "brightRgb": [
+      235,
+      217,
+      196
+    ],
+    "brightHex": 15456708
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
+    },
+    {
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
+    }
+  ],
+  "totalParts": 23,
+  "partNames": [
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

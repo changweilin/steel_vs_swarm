@@ -3,68 +3,98 @@
   "sourceImage": "building/kyotoworldheritage_2.jpg.webp",
   "style": "asian_pagoda_pavilion",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.822,
+  "symmetryScore": 0.807,
   "aspectRatio": 1.498,
+  "colorRichness": 67.45,
   "colors": {
-    "primaryHex": 8486751,
-    "primaryRgb": [
-      129,
-      127,
-      95
+    "roofRgb": [
+      186,
+      216,
+      246
     ],
-    "accentHex": 16579835,
+    "roofHex": 12245238,
+    "facadeRgb": [
+      104,
+      98,
+      35
+    ],
+    "facadeHex": 6840867,
+    "baseRgb": [
+      105,
+      102,
+      53
+    ],
+    "baseHex": 6907445,
     "accentRgb": [
-      252,
-      252,
-      251
+      155,
+      141,
+      30
     ],
-    "darkHex": 4012319,
+    "accentHex": 10194206,
     "darkRgb": [
-      61,
-      57,
-      31
+      43,
+      40,
+      23
     ],
-    "brightHex": 13425121,
+    "darkHex": 2828311,
     "brightRgb": [
-      204,
+      193,
       217,
-      225
-    ]
+      244
+    ],
+    "brightHex": 12704244
   },
   "reconstructedFeatures": [
     {
-      "name": "flared_curved_eaves",
-      "method": "multi_tier_symmetric_roofs"
+      "name": "stepped_stone_plinth_podium",
+      "method": "frustum_plinth"
     },
     {
-      "name": "finial_spire_sanrin",
-      "method": "sacred_bronze_finial"
+      "name": "multi_tier_upturned_flared_eaves",
+      "method": "flared_frustum_eaves"
+    },
+    {
+      "name": "sacred_bronze_finial_spire",
+      "method": "torus_sanrin_and_cone"
     }
   ],
-  "totalParts": 23,
+  "totalParts": 30,
   "partNames": [
-    "stone_plinth_foundation",
+    "pagoda_stone_podium",
     "pagoda_chamber_tier_1",
-    "pillar_1_-1_-1",
-    "pillar_1_-1_1",
-    "pillar_1_1_-1",
-    "pillar_1_1_1",
-    "curved_eaves_1",
-    "roof_slope_1",
+    "veranda_column_1_-1_-1",
+    "veranda_column_1_-1_1",
+    "veranda_column_1_1_-1",
+    "veranda_column_1_1_1",
+    "curved_eaves_frustum_1",
+    "eave_ridge_cap_1",
     "pagoda_chamber_tier_2",
-    "pillar_2_-1_-1",
-    "pillar_2_-1_1",
-    "pillar_2_1_-1",
-    "pillar_2_1_1",
-    "curved_eaves_2",
-    "roof_slope_2",
+    "veranda_column_2_-1_-1",
+    "veranda_column_2_-1_1",
+    "veranda_column_2_1_-1",
+    "veranda_column_2_1_1",
+    "curved_eaves_frustum_2",
+    "eave_ridge_cap_2",
     "pagoda_chamber_tier_3",
-    "pillar_3_-1_-1",
-    "pillar_3_-1_1",
-    "pillar_3_1_-1",
-    "pillar_3_1_1",
-    "curved_eaves_3",
-    "roof_slope_3",
-    "finial_spire_sanrin"
+    "veranda_column_3_-1_-1",
+    "veranda_column_3_-1_1",
+    "veranda_column_3_1_-1",
+    "veranda_column_3_1_1",
+    "curved_eaves_frustum_3",
+    "eave_ridge_cap_3",
+    "apex_pyramid_roof",
+    "finial_central_mast",
+    "sanrin_sacred_ring_1",
+    "sanrin_sacred_ring_2",
+    "sanrin_sacred_ring_3",
+    "sanrin_sacred_ring_4",
+    "sanrin_sacred_ring_5",
+    "houju_sacred_jewel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring",
+    "ellipsoid_sphere"
   ]
 }

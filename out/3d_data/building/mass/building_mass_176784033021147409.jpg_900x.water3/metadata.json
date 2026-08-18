@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_176784033021147409.jpg_900x.water3",
+  "key": "building/mass_176784033021147409.jpg!900x.water3_4bc6c04f",
+  "family": "building",
+  "subpart": "mass",
+  "style": "village_triangular_gable",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/176784033021147409.jpg!900x.water3.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\176784033021147409.jpg!900x.water3.jpg",
+  "created_at": "2026-08-18T14:27:15.260Z",
+  "bounds": {
+    "min": [
+      -7.7957,
+      0,
+      -8.0055
+    ],
+    "max": [
+      7.7957,
+      10.5449,
+      9.3777
+    ],
+    "size": [
+      15.591,
+      10.545,
+      17.383
+    ],
+    "rMax": 12.195,
+    "triangles": 140,
+    "vertices": 90
+  },
+  "spec": {
+    "L": 14.173952849622339,
+    "W": 14.55547417410544,
+    "H": 9.719867246509498,
+    "style": "alpine_village_cottage_pitched_gable"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

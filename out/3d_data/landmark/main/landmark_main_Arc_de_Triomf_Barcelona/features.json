@@ -1,0 +1,63 @@
+{
+  "id": "landmark_main_Arc_de_Triomf_Barcelona",
+  "sourceImage": "landmark/Arc_de_Triomf_Barcelona.webp",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.904,
+  "aspectRatio": 1.5,
+  "colorRichness": 57.85,
+  "colors": {
+    "roofRgb": [
+      81,
+      139,
+      215
+    ],
+    "roofHex": 5344215,
+    "facadeRgb": [
+      142,
+      154,
+      151
+    ],
+    "facadeHex": 9345687,
+    "baseRgb": [
+      144,
+      128,
+      126
+    ],
+    "baseHex": 9470078,
+    "accentRgb": [
+      80,
+      143,
+      219
+    ],
+    "accentHex": 5279707,
+    "darkRgb": [
+      51,
+      39,
+      48
+    ],
+    "darkHex": 3352368,
+    "brightRgb": [
+      212,
+      194,
+      181
+    ],
+    "brightHex": 13943477
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "truss_framework_and_dish_dome",
+      "method": "prisms_and_hemisphere_dish"
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "landmark_heavy_base",
+    "lattice_mast_tower",
+    "parabolic_dish_array"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "hemisphere_dome"
+  ]
+}

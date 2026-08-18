@@ -1,49 +1,70 @@
 {
   "id": "tree_canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6",
   "sourceImage": "tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
-  "style": "conifer_pine",
+  "style": "conifer_pine_spire",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.956,
+  "symmetryScore": 0.951,
   "aspectRatio": 1,
+  "colorRichness": 72.87,
   "colors": {
-    "primaryHex": 13094090,
-    "primaryRgb": [
-      199,
-      204,
-      202
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 2834751,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      255,
+      255,
+      255
+    ],
+    "facadeHex": 16777215,
+    "baseRgb": [
+      255,
+      255,
+      255
+    ],
+    "baseHex": 16777215,
     "accentRgb": [
-      43,
-      65,
+      116,
+      45,
+      45
+    ],
+    "accentHex": 7613741,
+    "darkRgb": [
+      46,
+      66,
       63
     ],
-    "darkHex": 3490625,
-    "darkRgb": [
-      53,
-      67,
-      65
-    ],
-    "brightHex": 16579836,
+    "darkHex": 3031615,
     "brightRgb": [
-      252,
-      252,
-      252
-    ]
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
   },
   "reconstructedFeatures": [
     {
-      "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "name": "tapered_resin_trunk",
+      "method": "conical_frustum_trunk"
+    },
+    {
+      "name": "six_tiered_conical_needle_canopies",
+      "method": "tiered_multi_sided_cones"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 7,
   "partNames": [
     "pine_tapered_trunk",
     "pine_canopy_tier_1",
     "pine_canopy_tier_2",
     "pine_canopy_tier_3",
     "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
+    "pine_canopy_tier_5",
+    "pine_canopy_tier_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid"
   ]
 }

@@ -1,70 +1,88 @@
 {
   "id": "building_mass_phoenix-tower_rotated_270",
   "sourceImage": "building/phoenix-tower_rotated_270.jpg",
-  "style": "asian_pagoda_pavilion",
+  "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.781,
+  "symmetryScore": 0.779,
   "aspectRatio": 1,
+  "colorRichness": 79.43,
   "colors": {
-    "primaryHex": 8952490,
-    "primaryRgb": [
-      136,
-      154,
-      170
+    "roofRgb": [
+      152,
+      196,
+      250
     ],
-    "accentHex": 461579,
+    "roofHex": 10011898,
+    "facadeRgb": [
+      177,
+      203,
+      240
+    ],
+    "facadeHex": 11652080,
+    "baseRgb": [
+      43,
+      49,
+      38
+    ],
+    "baseHex": 2830630,
     "accentRgb": [
-      7,
-      11,
-      11
+      136,
+      170,
+      228
     ],
-    "darkHex": 2698795,
+    "accentHex": 8956644,
     "darkRgb": [
-      41,
-      46,
-      43
+      20,
+      25,
+      22
     ],
-    "brightHex": 12441845,
+    "darkHex": 1317142,
     "brightRgb": [
-      189,
-      216,
-      245
-    ]
+      201,
+      226,
+      249
+    ],
+    "brightHex": 13230841
   },
   "reconstructedFeatures": [
     {
-      "name": "flared_curved_eaves",
-      "method": "multi_tier_symmetric_roofs"
+      "name": "multi_tier_setback_tower_masses",
+      "method": "progressive_setback_boxes"
     },
     {
-      "name": "finial_spire_sanrin",
-      "method": "sacred_bronze_finial"
+      "name": "rooftop_penthouse_and_antenna_spire",
+      "method": "penthouse_and_spire"
     }
   ],
-  "totalParts": 23,
+  "totalParts": 22,
   "partNames": [
-    "stone_plinth_foundation",
-    "pagoda_chamber_tier_1",
-    "pillar_1_-1_-1",
-    "pillar_1_-1_1",
-    "pillar_1_1_-1",
-    "pillar_1_1_1",
-    "curved_eaves_1",
-    "roof_slope_1",
-    "pagoda_chamber_tier_2",
-    "pillar_2_-1_-1",
-    "pillar_2_-1_1",
-    "pillar_2_1_-1",
-    "pillar_2_1_1",
-    "curved_eaves_2",
-    "roof_slope_2",
-    "pagoda_chamber_tier_3",
-    "pillar_3_-1_-1",
-    "pillar_3_-1_1",
-    "pillar_3_1_-1",
-    "pillar_3_1_1",
-    "curved_eaves_3",
-    "roof_slope_3",
-    "finial_spire_sanrin"
+    "podium_lobby_glass",
+    "grand_entrance_canopy",
+    "tower_tier_1",
+    "tower_tier_2_setback",
+    "crown_pyramid_frustum",
+    "floor_spandrel_1",
+    "floor_spandrel_2",
+    "floor_spandrel_3",
+    "floor_spandrel_4",
+    "floor_spandrel_5",
+    "floor_spandrel_6",
+    "floor_spandrel_7",
+    "floor_spandrel_8",
+    "floor_spandrel_9",
+    "floor_spandrel_10",
+    "floor_spandrel_11",
+    "floor_spandrel_12",
+    "floor_spandrel_13",
+    "floor_spandrel_14",
+    "floor_spandrel_15",
+    "rooftop_mechanical_penthouse",
+    "rooftop_antenna_spire"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "polygonal_prism"
   ]
 }

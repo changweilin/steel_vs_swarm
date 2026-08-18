@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_images_5_",
+  "key": "building/mass_images (5)_f4a3f454",
+  "family": "building",
+  "subpart": "mass",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/images (5).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\images (5).jpg",
+  "created_at": "2026-08-18T14:27:15.489Z",
+  "bounds": {
+    "min": [
+      -13.5258,
+      0,
+      -13.5258
+    ],
+    "max": [
+      13.5258,
+      37.7426,
+      13.5258
+    ],
+    "size": [
+      27.052,
+      37.743,
+      27.052
+    ],
+    "rMax": 19.128,
+    "triangles": 1276,
+    "vertices": 786
+  },
+  "spec": {
+    "L": 25.76342412451362,
+    "W": 25.760402838178074,
+    "H": 33.69262226291295,
+    "style": "oriental_pagoda_flared_eaves"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

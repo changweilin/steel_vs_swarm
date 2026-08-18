@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027",
+  "key": "building/mass_pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027_0d40385f",
+  "family": "building",
+  "subpart": "mass",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027.png",
+  "created_at": "2026-08-18T14:27:15.530Z",
+  "bounds": {
+    "min": [
+      -16.2185,
+      0,
+      -16.2185
+    ],
+    "max": [
+      16.2185,
+      18.6903,
+      16.2185
+    ],
+    "size": [
+      32.437,
+      18.69,
+      32.437
+    ],
+    "rMax": 22.936,
+    "triangles": 1064,
+    "vertices": 613
+  },
+  "spec": {
+    "L": 29.636987869077593,
+    "W": 18.063111314564736,
+    "H": 17.89321736476692,
+    "style": "pantheon_rotunda_with_grand_dome"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

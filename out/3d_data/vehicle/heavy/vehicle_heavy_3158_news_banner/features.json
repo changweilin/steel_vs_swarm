@@ -1,65 +1,78 @@
 {
   "id": "vehicle_heavy_3158_news_banner",
   "sourceImage": "vehicle/heavy/3158_news_banner.jpg",
-  "style": "semi_tractor",
+  "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.831,
+  "symmetryScore": 0.825,
   "aspectRatio": 1.912,
+  "colorRichness": 60.99,
   "colors": {
-    "primaryHex": 6704968,
-    "primaryRgb": [
-      102,
-      79,
-      72
+    "roofRgb": [
+      186,
+      143,
+      136
     ],
-    "accentHex": 14675701,
+    "roofHex": 12226440,
+    "facadeRgb": [
+      99,
+      60,
+      47
+    ],
+    "facadeHex": 6503471,
+    "baseRgb": [
+      85,
+      81,
+      76
+    ],
+    "baseHex": 5591372,
     "accentRgb": [
-      223,
-      238,
-      245
+      128,
+      67,
+      44
     ],
-    "darkHex": 4272173,
+    "accentHex": 8405804,
     "darkRgb": [
-      65,
-      48,
-      45
+      52,
+      46,
+      46
     ],
-    "brightHex": 12633031,
+    "darkHex": 3419694,
     "brightRgb": [
-      192,
-      195,
-      199
-    ]
+      207,
+      217,
+      227
+    ],
+    "brightHex": 13621731
   },
   "reconstructedFeatures": [
     {
-      "name": "enclosed_cargo_box",
-      "method": "composite_insulated_box"
-    },
-    {
-      "name": "dual_vertical_exhausts",
-      "method": "chrome_exhaust_stacks"
-    },
-    {
-      "name": "heavy_truck_dual_exhaust_and_axles",
+      "name": "mirrored_automobile_features",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.1
+      "zOffset": 0.825
     }
   ],
-  "totalParts": 13,
+  "totalParts": 15,
   "partNames": [
-    "freight_chassis_frame",
-    "freight_cab_body",
-    "cab_windshield",
-    "freight_cargo_box",
-    "rear_rollup_door",
-    "exhaust_stack_left",
-    "steer_wheel_left",
-    "drive_wheel_1_left",
-    "drive_wheel_2_left",
-    "exhaust_stack_right",
-    "steer_wheel_right",
-    "drive_wheel_1_right",
-    "drive_wheel_2_right"
+    "automobile_main_body",
+    "passenger_glass_cabin",
+    "engine_hood_slope",
+    "headlight_left",
+    "taillight_left",
+    "passenger_tire_f_left",
+    "wheel_rim_f_left",
+    "passenger_tire_r_left",
+    "wheel_rim_r_left",
+    "headlight_right",
+    "taillight_right",
+    "passenger_tire_f_right",
+    "wheel_rim_f_right",
+    "passenger_tire_r_right",
+    "wheel_rim_r_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "wedge",
+    "torus_ring"
   ]
 }

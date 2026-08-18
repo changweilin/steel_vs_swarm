@@ -3,35 +3,37 @@
   "key": "ship/hull_tkldbkxi3ftl5wewz3u2_2876d456",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "ship/tkldbkxi3ftl5wewz3u2.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\tkldbkxi3ftl5wewz3u2.jpg",
-  "created_at": "2026-08-18T10:56:14.223Z",
+  "created_at": "2026-08-18T14:27:16.066Z",
   "bounds": {
     "min": [
-      -24.4775,
-      -0.9392,
-      -5.1296
+      -25.0845,
+      -1.0735,
+      -5.3796
     ],
     "max": [
-      26.8295,
-      17.1428,
-      5.1296
+      28.4425,
+      16.8112,
+      5.3796
     ],
     "size": [
-      51.307,
-      18.082,
-      10.259
+      53.527,
+      17.885,
+      10.759
     ],
-    "rMax": 27.315,
-    "triangles": 104,
-    "vertices": 64
+    "rMax": 28.947,
+    "triangles": 64,
+    "vertices": 40
   },
   "spec": {
-    "L": 51.5316243228809,
-    "W": 10.259105821316854,
-    "H": 13.422476539253834,
+    "L": 54.5316243228809,
+    "W": 10.759105821316854,
+    "H": 14.422476539253834,
     "style": "multipurpose_maritime_vessel"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",

@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_54175397571_be4ab8de90_b",
   "sourceImage": "vehicle/motor/54175397571_be4ab8de90_b.jpg",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.91,
+  "symmetryScore": 0.904,
   "aspectRatio": 1.414,
+  "colorRichness": 70.87,
   "colors": {
-    "primaryHex": 9473935,
-    "primaryRgb": [
-      144,
-      143,
-      143
+    "roofRgb": [
+      176,
+      176,
+      176
     ],
-    "accentHex": 0,
+    "roofHex": 11579568,
+    "facadeRgb": [
+      180,
+      179,
+      179
+    ],
+    "facadeHex": 11842483,
+    "baseRgb": [
+      231,
+      231,
+      231
+    ],
+    "baseHex": 15198183,
     "accentRgb": [
-      0,
-      0,
-      0
+      128,
+      124,
+      122
     ],
-    "darkHex": 3026478,
+    "accentHex": 8420474,
     "darkRgb": [
-      46,
-      46,
-      46
+      31,
+      31,
+      31
     ],
-    "brightHex": 13421772,
+    "darkHex": 2039583,
     "brightRgb": [
-      204,
-      204,
-      204
-    ]
+      230,
+      230,
+      230
+    ],
+    "brightHex": 15132390
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

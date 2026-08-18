@@ -3,36 +3,38 @@
   "key": "ship/hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_ed0f78de",
   "family": "ship",
   "subpart": "hull",
-  "style": "aircraft_carrier",
+  "style": "naval_aircraft_carrier",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
-  "created_at": "2026-08-18T10:56:14.227Z",
+  "created_at": "2026-08-18T14:27:16.069Z",
   "bounds": {
     "min": [
-      -32.0746,
-      -1.1476,
-      -10.6795
+      -33.5446,
+      -1.5345,
+      -13.7831
     ],
     "max": [
-      34.1748,
-      22.9491,
-      10.6795
+      35.8677,
+      24.9146,
+      10.9295
     ],
     "size": [
-      66.249,
-      24.097,
-      21.359
+      69.412,
+      26.449,
+      24.713
     ],
-    "rMax": 35.805,
-    "triangles": 84,
-    "vertices": 54
+    "rMax": 37.496,
+    "triangles": 200,
+    "vertices": 127
   },
   "spec": {
-    "L": 65.45838101777676,
-    "W": 21.358930342565042,
-    "H": 18.553444724193177,
-    "style": "aircraft_carrier_flight_deck"
+    "L": 68.45838101777676,
+    "W": 21.858930342565042,
+    "H": 19.553444724193177,
+    "style": "naval_aircraft_carrier_flight_deck"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

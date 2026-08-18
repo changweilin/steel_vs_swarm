@@ -1,0 +1,41 @@
+{
+  "id": "tree_canopy_ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4",
+  "key": "tree/canopy_ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4_57291227",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "tree/canopy/ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\canopy\\ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4.jpg",
+  "created_at": "2026-08-18T14:27:15.778Z",
+  "bounds": {
+    "min": [
+      -3.6901,
+      -0.179,
+      -3.3614
+    ],
+    "max": [
+      3.1163,
+      3.5241,
+      3.1256
+    ],
+    "size": [
+      6.806,
+      3.703,
+      6.487
+    ],
+    "rMax": 4.992,
+    "triangles": 216,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 6.995994506752117,
+    "W": 5.607385366598001,
+    "H": 3.8049668116273745,
+    "style": "low_lying_organic_shrub_mounds"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

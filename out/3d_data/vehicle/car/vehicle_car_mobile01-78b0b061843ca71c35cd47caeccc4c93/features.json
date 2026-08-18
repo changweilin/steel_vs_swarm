@@ -1,69 +1,78 @@
 {
   "id": "vehicle_car_mobile01-78b0b061843ca71c35cd47caeccc4c93",
   "sourceImage": "vehicle/car/mobile01-78b0b061843ca71c35cd47caeccc4c93.jpg",
-  "style": "sedan_hatchback",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.75,
+  "symmetryScore": 0.739,
   "aspectRatio": 1.333,
+  "colorRichness": 69.93,
   "colors": {
-    "primaryHex": 9277842,
-    "primaryRgb": [
-      141,
-      145,
-      146
+    "roofRgb": [
+      130,
+      133,
+      141
     ],
-    "accentHex": 0,
+    "roofHex": 8553869,
+    "facadeRgb": [
+      138,
+      131,
+      143
+    ],
+    "facadeHex": 9077647,
+    "baseRgb": [
+      116,
+      124,
+      132
+    ],
+    "baseHex": 7634052,
     "accentRgb": [
-      0,
-      0,
-      0
+      41,
+      81,
+      143
     ],
-    "darkHex": 2171947,
+    "accentHex": 2707855,
     "darkRgb": [
-      33,
-      36,
-      43
+      13,
+      13,
+      13
     ],
-    "brightHex": 14870244,
+    "darkHex": 855309,
     "brightRgb": [
-      226,
-      230,
-      228
-    ]
+      229,
+      232,
+      230
+    ],
+    "brightHex": 15067366
   },
   "reconstructedFeatures": [
     {
-      "name": "three_box_profile",
-      "method": "hood_cabin_trunk_architecture"
-    },
-    {
-      "name": "symmetric_mirrors_and_lights",
-      "method": "bilateral_mirror_Z_axis"
-    },
-    {
-      "name": "mirrored_sedan_features",
+      "name": "mirrored_automobile_features",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.8099999999999999
+      "zOffset": 0.825
     }
   ],
-  "totalParts": 17,
+  "totalParts": 15,
   "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
+    "automobile_main_body",
+    "passenger_glass_cabin",
     "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
     "headlight_left",
     "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
+    "passenger_tire_f_left",
+    "wheel_rim_f_left",
+    "passenger_tire_r_left",
+    "wheel_rim_r_left",
     "headlight_right",
     "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
+    "passenger_tire_f_right",
+    "wheel_rim_f_right",
+    "passenger_tire_r_right",
+    "wheel_rim_r_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "wedge",
+    "torus_ring"
   ]
 }

@@ -1,0 +1,63 @@
+{
+  "id": "landmark_lattice_ov_63cf1d91-359f-4c98-be96-5045391faff6",
+  "sourceImage": "landmark/lattice/ov_63cf1d91-359f-4c98-be96-5045391faff6.jpg",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.88,
+  "aspectRatio": 1.333,
+  "colorRichness": 49.59,
+  "colors": {
+    "roofRgb": [
+      41,
+      66,
+      50
+    ],
+    "roofHex": 2703922,
+    "facadeRgb": [
+      128,
+      129,
+      91
+    ],
+    "facadeHex": 8421723,
+    "baseRgb": [
+      132,
+      116,
+      85
+    ],
+    "baseHex": 8680533,
+    "accentRgb": [
+      19,
+      34,
+      32
+    ],
+    "accentHex": 1253920,
+    "darkRgb": [
+      19,
+      34,
+      32
+    ],
+    "darkHex": 1253920,
+    "brightRgb": [
+      171,
+      171,
+      174
+    ],
+    "brightHex": 11250606
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "truss_framework_and_dish_dome",
+      "method": "prisms_and_hemisphere_dish"
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "landmark_heavy_base",
+    "lattice_mast_tower",
+    "parabolic_dish_array"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "hemisphere_dome"
+  ]
+}

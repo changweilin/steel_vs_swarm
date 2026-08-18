@@ -1,0 +1,65 @@
+{
+  "id": "tree_canopy_pngtree-chinese-juniper-isolated-on-white-background-png-image_320181",
+  "sourceImage": "tree/pngtree-chinese-juniper-isolated-on-white-background-png-image_320181.jpg",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.926,
+  "aspectRatio": 1,
+  "colorRichness": 84.04,
+  "colors": {
+    "roofRgb": [
+      240,
+      240,
+      240
+    ],
+    "roofHex": 15790320,
+    "facadeRgb": [
+      238,
+      238,
+      238
+    ],
+    "facadeHex": 15658734,
+    "baseRgb": [
+      238,
+      238,
+      238
+    ],
+    "baseHex": 15658734,
+    "accentRgb": [
+      37,
+      51,
+      9
+    ],
+    "accentHex": 2437897,
+    "darkRgb": [
+      37,
+      51,
+      9
+    ],
+    "darkHex": 2437897,
+    "brightRgb": [
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
+  ]
+}

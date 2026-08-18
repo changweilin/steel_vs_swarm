@@ -3,36 +3,38 @@
   "key": "tree/gt_cryptomeria_manual_twFir_s_ed94c225",
   "family": "tree",
   "subpart": "gt_cryptomeria",
-  "style": "conifer_pine",
+  "style": "conifer_pine_spire",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/gt_cryptomeria/manual_twFir_s.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\gt_cryptomeria\\manual_twFir_s.jpg",
-  "created_at": "2026-08-18T10:56:14.323Z",
+  "created_at": "2026-08-18T14:27:16.189Z",
   "bounds": {
     "min": [
-      -3.4232,
+      -3.6732,
       0,
-      -3.4232
+      -3.6732
     ],
     "max": [
-      3.4232,
-      20.164,
-      3.4232
+      3.6732,
+      22.2719,
+      3.6732
     ],
     "size": [
-      6.846,
-      20.164,
-      6.846
+      7.346,
+      22.272,
+      7.346
     ],
-    "rMax": 4.841,
-    "triangles": 192,
-    "vertices": 108
+    "rMax": 5.195,
+    "triangles": 224,
+    "vertices": 126
   },
   "spec": {
-    "L": 7.688296330205234,
-    "W": 6.846456092164492,
-    "H": 19.64486152437629,
-    "style": "conifer_pine_pagoda_tiers"
+    "L": 8.188296330205233,
+    "W": 7.346456092164492,
+    "H": 21.64486152437629,
+    "style": "conifer_pine_tiered_cones"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

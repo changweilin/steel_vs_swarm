@@ -3,37 +3,39 @@
   "key": "vehicle/car_Cybertruck-來了！限量-Cybertruck-模型台灣上架_f0ddba1a",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/Cybertruck-來了！限量-Cybertruck-模型台灣上架.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\Cybertruck-來了！限量-Cybertruck-模型台灣上架.jpg",
-  "created_at": "2026-08-18T10:56:14.503Z",
+  "created_at": "2026-08-18T14:27:16.405Z",
   "bounds": {
     "min": [
-      -2.5772,
-      0.0171,
-      -0.9748
+      -2.5922,
+      -0.0072,
+      -1.3196
     ],
     "max": [
-      2.5872,
-      1.5888,
-      0.9748
+      2.6022,
+      1.6188,
+      1.3196
     ],
     "size": [
-      5.164,
-      1.572,
-      1.95
+      5.194,
+      1.626,
+      2.639
     ],
-    "rMax": 2.765,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 2.918,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 5.094462500953688,
-    "W": 1.92,
-    "H": 1.588822003509575,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 5.144462500953688,
+    "W": 1.95,
+    "H": 1.618822003509575,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

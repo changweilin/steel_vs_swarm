@@ -1,0 +1,41 @@
+{
+  "id": "landmark_lattice_ov_bf94972e-caab-4443-80a0-32e53c423673",
+  "key": "landmark/lattice_ov_bf94972e-caab-4443-80a0-32e53c423673_f354f3ff",
+  "family": "landmark",
+  "subpart": "lattice",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "landmark/lattice/ov_bf94972e-caab-4443-80a0-32e53c423673.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\lattice\\ov_bf94972e-caab-4443-80a0-32e53c423673.jpg",
+  "created_at": "2026-08-18T14:27:15.618Z",
+  "bounds": {
+    "min": [
+      -4.0852,
+      0,
+      -4.0852
+    ],
+    "max": [
+      4.0852,
+      17.0983,
+      4.0852
+    ],
+    "size": [
+      8.17,
+      17.098,
+      8.17
+    ],
+    "rMax": 5.777,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "L": 9.078263523308156,
+    "W": 10.850507362478066,
+    "H": 15.525291828793774,
+    "style": "industrial_landmark_installation"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

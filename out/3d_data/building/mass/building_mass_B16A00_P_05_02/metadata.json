@@ -3,36 +3,38 @@
   "key": "building/mass_B16A00_P_05_02_4da87118",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/B16A00_P_05_02.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\B16A00_P_05_02.jpg",
-  "created_at": "2026-08-18T10:56:14.102Z",
+  "created_at": "2026-08-18T14:27:15.956Z",
   "bounds": {
     "min": [
-      -11.3883,
+      -13.1683,
       0,
-      -10.2849
+      -13.1683
     ],
     "max": [
-      11.3883,
-      22.4755,
-      9.9849
+      13.1683,
+      30.367,
+      13.1683
     ],
     "size": [
-      22.777,
-      22.476,
-      20.27
+      26.337,
+      30.367,
+      26.337
     ],
-    "rMax": 15.345,
-    "triangles": 300,
-    "vertices": 200
+    "rMax": 18.623,
+    "triangles": 1276,
+    "vertices": 786
   },
   "spec": {
-    "L": 22.77659266041047,
-    "W": 17.569878690775923,
-    "H": 22.475532158388646,
-    "style": "commercial_residential_asymmetric"
+    "L": 25.08244449530785,
+    "W": 23.569878690775923,
+    "H": 26.317021438925764,
+    "style": "oriental_pagoda_flared_eaves"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -3,35 +3,37 @@
   "key": "ship/hull_Methanier_aspher_LNGRIVERS_bda91a0a",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "ship/Methanier_aspher_LNGRIVERS.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\Methanier_aspher_LNGRIVERS.jpg",
-  "created_at": "2026-08-18T10:56:14.211Z",
+  "created_at": "2026-08-18T14:27:16.056Z",
   "bounds": {
     "min": [
-      -17.258,
-      -0.6407,
-      -4.948
+      -18.0931,
+      -0.7484,
+      -5.198
     ],
     "max": [
-      19.111,
-      19.3112,
-      4.948
+      20.7303,
+      19.07,
+      5.198
     ],
     "size": [
-      36.369,
-      19.952,
-      9.896
+      38.823,
+      19.818,
+      10.396
     ],
-    "rMax": 19.741,
-    "triangles": 104,
-    "vertices": 64
+    "rMax": 21.372,
+    "triangles": 64,
+    "vertices": 40
   },
   "spec": {
-    "L": 36.33272297245747,
-    "W": 9.896063172350653,
-    "H": 17.939940489814603,
+    "L": 39.33272297245747,
+    "W": 10.396063172350653,
+    "H": 18.939940489814603,
     "style": "multipurpose_maritime_vessel"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",

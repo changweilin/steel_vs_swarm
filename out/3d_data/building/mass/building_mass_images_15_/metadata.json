@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_images_15_",
+  "key": "building/mass_images (15)_f6c4e057",
+  "family": "building",
+  "subpart": "mass",
+  "style": "church_pointed_spire",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/images (15).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\images (15).jpg",
+  "created_at": "2026-08-18T14:27:15.471Z",
+  "bounds": {
+    "min": [
+      -13.7768,
+      0,
+      -7.9879
+    ],
+    "max": [
+      15.3084,
+      38.328,
+      7.9879
+    ],
+    "size": [
+      29.085,
+      38.328,
+      15.976
+    ],
+    "rMax": 17.267,
+    "triangles": 480,
+    "vertices": 298
+  },
+  "spec": {
+    "L": 27.013412680247196,
+    "W": 15.662546730754558,
+    "H": 34.728007934691384,
+    "style": "gothic_cathedral_with_sharp_spire"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

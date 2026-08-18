@@ -1,0 +1,41 @@
+{
+  "id": "landmark_main_A13239_1459246004_0",
+  "key": "landmark/main_A13239_1459246004_0_f21e3da2",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "landmark/A13239_1459246004_0.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\A13239_1459246004_0.jpg",
+  "created_at": "2026-08-18T14:27:15.594Z",
+  "bounds": {
+    "min": [
+      -5.2934,
+      0,
+      -5.2934
+    ],
+    "max": [
+      5.2934,
+      13.6895,
+      5.2934
+    ],
+    "size": [
+      10.587,
+      13.69,
+      10.587
+    ],
+    "rMax": 7.486,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "L": 11.763179980163272,
+    "W": 11.904722667277028,
+    "H": 12.116548409246967,
+    "style": "industrial_landmark_installation"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

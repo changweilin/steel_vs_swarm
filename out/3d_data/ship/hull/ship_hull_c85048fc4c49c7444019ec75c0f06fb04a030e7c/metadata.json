@@ -3,35 +3,37 @@
   "key": "ship/hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c_08a5dce6",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "ship/c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg",
-  "created_at": "2026-08-18T10:56:14.195Z",
+  "created_at": "2026-08-18T14:27:16.043Z",
   "bounds": {
     "min": [
-      -25.9682,
-      -1.0008,
-      -6.6986
+      -26.5281,
+      -1.1406,
+      -6.9486
     ],
     "max": [
-      28.4231,
-      18.1346,
-      6.6986
+      30.0349,
+      17.8443,
+      6.9486
     ],
     "size": [
-      54.391,
-      19.135,
-      13.397
+      56.563,
+      18.985,
+      13.897
     ],
-    "rMax": 29.202,
-    "triangles": 104,
-    "vertices": 64
+    "rMax": 30.828,
+    "triangles": 64,
+    "vertices": 40
   },
   "spec": {
-    "L": 54.66979476615549,
-    "W": 13.397154192416266,
-    "H": 15.488670176241703,
+    "L": 57.66979476615549,
+    "W": 13.897154192416266,
+    "H": 16.488670176241705,
     "style": "multipurpose_maritime_vessel"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",

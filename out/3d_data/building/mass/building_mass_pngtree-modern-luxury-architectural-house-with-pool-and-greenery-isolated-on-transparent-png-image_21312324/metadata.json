@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324",
+  "key": "building/mass_pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324_225490b0",
+  "family": "building",
+  "subpart": "mass",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324.png",
+  "created_at": "2026-08-18T14:27:15.537Z",
+  "bounds": {
+    "min": [
+      -11.7117,
+      0,
+      -11.7117
+    ],
+    "max": [
+      11.7117,
+      31.0706,
+      11.7117
+    ],
+    "size": [
+      23.423,
+      31.071,
+      23.423
+    ],
+    "rMax": 16.563,
+    "triangles": 1276,
+    "vertices": 786
+  },
+  "spec": {
+    "L": 22.30798809796292,
+    "W": 22.595101853971162,
+    "H": 27.02064545662623,
+    "style": "oriental_pagoda_flared_eaves"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

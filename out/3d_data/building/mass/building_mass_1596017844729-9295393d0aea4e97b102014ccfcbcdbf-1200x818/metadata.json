@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818",
+  "key": "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_df66f67d",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_stepped_skyscraper",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
+  "created_at": "2026-08-18T14:27:15.234Z",
+  "bounds": {
+    "min": [
+      -13.6006,
+      0,
+      -13.2779
+    ],
+    "max": [
+      13.6006,
+      85.363,
+      17.3279
+    ],
+    "size": [
+      27.201,
+      85.363,
+      30.606
+    ],
+    "rMax": 22.028,
+    "triangles": 340,
+    "vertices": 220
+  },
+  "spec": {
+    "L": 27.20125123979553,
+    "W": 26.555855649652855,
+    "H": 72.81300068665598,
+    "style": "modern_stepped_setback_skyscraper"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

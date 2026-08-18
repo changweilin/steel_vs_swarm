@@ -1,49 +1,70 @@
 {
   "id": "tree_canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531",
   "sourceImage": "tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg",
-  "style": "conifer_pine",
+  "style": "conifer_pine_spire",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.917,
+  "symmetryScore": 0.896,
   "aspectRatio": 1,
+  "colorRichness": 76.34,
   "colors": {
-    "primaryHex": 14080969,
-    "primaryRgb": [
-      214,
-      219,
-      201
-    ],
-    "accentHex": 2107151,
-    "accentRgb": [
-      32,
-      39,
-      15
-    ],
-    "darkHex": 4537625,
-    "darkRgb": [
-      69,
-      61,
-      25
-    ],
-    "brightHex": 15856365,
-    "brightRgb": [
-      241,
+    "roofRgb": [
       242,
-      237
-    ]
+      242,
+      242
+    ],
+    "roofHex": 15921906,
+    "facadeRgb": [
+      238,
+      238,
+      238
+    ],
+    "facadeHex": 15658734,
+    "baseRgb": [
+      244,
+      244,
+      244
+    ],
+    "baseHex": 16053492,
+    "accentRgb": [
+      64,
+      66,
+      27
+    ],
+    "accentHex": 4211227,
+    "darkRgb": [
+      64,
+      66,
+      27
+    ],
+    "darkHex": 4211227,
+    "brightRgb": [
+      253,
+      253,
+      253
+    ],
+    "brightHex": 16645629
   },
   "reconstructedFeatures": [
     {
-      "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "name": "tapered_resin_trunk",
+      "method": "conical_frustum_trunk"
+    },
+    {
+      "name": "six_tiered_conical_needle_canopies",
+      "method": "tiered_multi_sided_cones"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 7,
   "partNames": [
     "pine_tapered_trunk",
     "pine_canopy_tier_1",
     "pine_canopy_tier_2",
     "pine_canopy_tier_3",
     "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
+    "pine_canopy_tier_5",
+    "pine_canopy_tier_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid"
   ]
 }

@@ -3,36 +3,38 @@
   "key": "tree/sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_0d01f99f",
   "family": "tree",
   "subpart": "sp_baobab",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/sp_baobab/manual_Adansonia-gregorii-Boab-Tree-Ex-ground.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_baobab\\manual_Adansonia-gregorii-Boab-Tree-Ex-ground.jpg",
-  "created_at": "2026-08-18T10:56:14.341Z",
+  "created_at": "2026-08-18T14:27:16.211Z",
   "bounds": {
     "min": [
-      -6.8991,
-      0,
-      -8.1614
+      -3.5828,
+      -0.2331,
+      -3.5116
     ],
     "max": [
-      7.4837,
-      20.6897,
-      7.5418
+      3.4806,
+      3.7228,
+      3.1929
     ],
     "size": [
-      14.383,
-      20.69,
-      15.703
+      7.063,
+      3.956,
+      6.704
     ],
-    "rMax": 10.687,
-    "triangles": 152,
-    "vertices": 98
+    "rMax": 5.017,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 13.409666590371558,
-    "W": 13.409132524605173,
-    "H": 20.378011749446863,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 6.454833295185779,
+    "W": 6.454566262302587,
+    "H": 3.808377203021286,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

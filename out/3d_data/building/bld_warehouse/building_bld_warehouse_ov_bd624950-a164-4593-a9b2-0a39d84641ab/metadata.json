@@ -1,0 +1,41 @@
+{
+  "id": "building_bld_warehouse_ov_bd624950-a164-4593-a9b2-0a39d84641ab",
+  "key": "building/bld_warehouse_ov_bd624950-a164-4593-a9b2-0a39d84641ab_7d340a0d",
+  "family": "building",
+  "subpart": "bld_warehouse",
+  "style": "village_triangular_gable",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/bld_warehouse/ov_bd624950-a164-4593-a9b2-0a39d84641ab.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_warehouse\\ov_bd624950-a164-4593-a9b2-0a39d84641ab.jpg",
+  "created_at": "2026-08-18T14:27:15.408Z",
+  "bounds": {
+    "min": [
+      -9.9257,
+      0,
+      -8.0906
+    ],
+    "max": [
+      9.9257,
+      11.72,
+      9.4551
+    ],
+    "size": [
+      19.851,
+      11.72,
+      17.546
+    ],
+    "rMax": 13.708,
+    "triangles": 140,
+    "vertices": 90
+  },
+  "spec": {
+    "L": 18.04669260700389,
+    "W": 14.710200656137943,
+    "H": 10.89501029983978,
+    "style": "alpine_village_cottage_pitched_gable"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

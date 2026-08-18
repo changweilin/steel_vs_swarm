@@ -3,36 +3,38 @@
   "key": "tree/canopy_800_eb53c296eb6fc1ac757c290a1f6444b8_52a4f9cd",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/800_eb53c296eb6fc1ac757c290a1f6444b8.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\800_eb53c296eb6fc1ac757c290a1f6444b8.jpg",
-  "created_at": "2026-08-18T10:56:14.257Z",
+  "created_at": "2026-08-18T14:27:16.111Z",
   "bounds": {
     "min": [
-      -5.9107,
-      0,
-      -5.4991
+      -2.7306,
+      -0.1637,
+      -3.0041
     ],
     "max": [
-      4.8322,
-      20.1643,
-      4.8668
+      3.1896,
+      3.0113,
+      3.0824
     ],
     "size": [
-      10.743,
-      20.164,
-      10.366
+      5.92,
+      3.175,
+      6.087
     ],
-    "rMax": 8.073,
-    "triangles": 140,
-    "vertices": 90
+    "rMax": 4.436,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 10.609864957656214,
-    "W": 11.439192797741665,
-    "H": 19.94013885709926,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 5.054932478828107,
+    "W": 5.4695963988708325,
+    "H": 3.7262760357061113,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

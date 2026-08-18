@@ -1,0 +1,93 @@
+{
+  "id": "building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0",
+  "sourceImage": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.843,
+  "aspectRatio": 1.497,
+  "colorRichness": 74.37,
+  "colors": {
+    "roofRgb": [
+      236,
+      236,
+      236
+    ],
+    "roofHex": 15527148,
+    "facadeRgb": [
+      224,
+      223,
+      221
+    ],
+    "facadeHex": 14737373,
+    "baseRgb": [
+      140,
+      140,
+      133
+    ],
+    "baseHex": 9211013,
+    "accentRgb": [
+      83,
+      82,
+      73
+    ],
+    "accentHex": 5460553,
+    "darkRgb": [
+      22,
+      22,
+      24
+    ],
+    "darkHex": 1447448,
+    "brightRgb": [
+      234,
+      234,
+      233
+    ],
+    "brightHex": 15395561
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
+    },
+    {
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
+    }
+  ],
+  "totalParts": 29,
+  "partNames": [
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

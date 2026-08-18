@@ -1,0 +1,41 @@
+{
+  "id": "building_dwg_house_wc_33743892",
+  "key": "building/dwg_house_wc_33743892_914dfe81",
+  "family": "building",
+  "subpart": "dwg_house",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/dwg_house/wc_33743892.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\dwg_house\\wc_33743892.jpg",
+  "created_at": "2026-08-18T14:27:15.445Z",
+  "bounds": {
+    "min": [
+      -18.1502,
+      0,
+      -18.1502
+    ],
+    "max": [
+      18.1502,
+      18.376,
+      18.1502
+    ],
+    "size": [
+      36.3,
+      18.376,
+      36.3
+    ],
+    "rMax": 25.668,
+    "triangles": 1064,
+    "vertices": 613
+  },
+  "spec": {
+    "L": 33.50038910505837,
+    "W": 18.331242847333485,
+    "H": 16.849805447470818,
+    "style": "pantheon_rotunda_with_grand_dome"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

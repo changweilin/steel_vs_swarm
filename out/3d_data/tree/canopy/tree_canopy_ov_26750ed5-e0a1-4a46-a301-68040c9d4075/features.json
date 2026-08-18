@@ -1,0 +1,65 @@
+{
+  "id": "tree_canopy_ov_26750ed5-e0a1-4a46-a301-68040c9d4075",
+  "sourceImage": "tree/canopy/ov_26750ed5-e0a1-4a46-a301-68040c9d4075.jpg",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.826,
+  "aspectRatio": 1.499,
+  "colorRichness": 81.58,
+  "colors": {
+    "roofRgb": [
+      154,
+      201,
+      254
+    ],
+    "roofHex": 10144254,
+    "facadeRgb": [
+      51,
+      82,
+      34
+    ],
+    "facadeHex": 3363362,
+    "baseRgb": [
+      121,
+      144,
+      53
+    ],
+    "baseHex": 7966773,
+    "accentRgb": [
+      15,
+      35,
+      10
+    ],
+    "accentHex": 992010,
+    "darkRgb": [
+      15,
+      35,
+      10
+    ],
+    "darkHex": 992010,
+    "brightRgb": [
+      222,
+      237,
+      250
+    ],
+    "brightHex": 14609914
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
+  ]
+}

@@ -1,58 +1,65 @@
 {
   "id": "tree_sp_baobab_manual_Birdwood_Downs_station",
   "sourceImage": "tree/sp_baobab/manual_Birdwood_Downs_station.jpg",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.912,
+  "symmetryScore": 0.896,
   "aspectRatio": 1.5,
+  "colorRichness": 59.64,
   "colors": {
-    "primaryHex": 7569026,
-    "primaryRgb": [
-      115,
-      126,
-      130
+    "roofRgb": [
+      71,
+      127,
+      215
     ],
-    "accentHex": 394499,
+    "roofHex": 4685783,
+    "facadeRgb": [
+      116,
+      142,
+      124
+    ],
+    "facadeHex": 7638652,
+    "baseRgb": [
+      197,
+      169,
+      126
+    ],
+    "baseHex": 12953982,
     "accentRgb": [
-      6,
-      5,
-      3
+      75,
+      132,
+      222
     ],
-    "darkHex": 3747622,
+    "accentHex": 4949214,
     "darkRgb": [
-      57,
-      47,
-      38
+      51,
+      43,
+      33
     ],
-    "brightHex": 13090474,
+    "darkHex": 3353377,
     "brightRgb": [
-      199,
-      190,
-      170
-    ]
+      210,
+      183,
+      141
+    ],
+    "brightHex": 13809549
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
-    },
-    {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
     }
   ],
-  "totalParts": 11,
+  "totalParts": 6,
   "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4",
-    "canopy_foliage_dome_5",
-    "canopy_foliage_dome_6"
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
   ]
 }

@@ -3,37 +3,39 @@
   "key": "vehicle/train_76c22c3294e14a2e91b55d837df2308d_9340b5be",
   "family": "vehicle",
   "subpart": "train",
-  "style": "freight_wagon",
+  "style": "freight_locomotive_train",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/train/76c22c3294e14a2e91b55d837df2308d.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\train\\76c22c3294e14a2e91b55d837df2308d.jpg",
-  "created_at": "2026-08-18T10:56:14.689Z",
+  "created_at": "2026-08-18T14:27:16.679Z",
   "bounds": {
     "min": [
-      -11.2648,
-      0.0225,
-      -1.5907
+      -2.4934,
+      -0.0072,
+      -1.2689
     ],
     "max": [
-      11.9933,
-      4.225,
-      1.5907
+      2.5034,
+      1.707,
+      1.2689
     ],
     "size": [
-      23.258,
-      4.202,
-      3.181
+      4.997,
+      1.714,
+      2.538
     ],
-    "rMax": 12.098,
-    "triangles": 404,
-    "vertices": 232
+    "rMax": 2.807,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 23.468398565651942,
-    "W": 3.15,
-    "H": 3.95,
-    "R": 0.46,
-    "style": "streamlined_high_speed_train"
+    "L": 4.946839856565194,
+    "W": 1.95,
+    "H": 1.7070283054856183,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

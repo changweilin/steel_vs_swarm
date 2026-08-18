@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_ea928273145f45cbb50e9db4",
+  "key": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+  "family": "building",
+  "subpart": "mass",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/ea928273145f45cbb50e9db4.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\ea928273145f45cbb50e9db4.jpg",
+  "created_at": "2026-08-18T14:27:15.449Z",
+  "bounds": {
+    "min": [
+      -11.757,
+      0,
+      -10.6827
+    ],
+    "max": [
+      11.757,
+      35.1216,
+      10.3827
+    ],
+    "size": [
+      23.514,
+      35.122,
+      21.065
+    ],
+    "rMax": 15.885,
+    "triangles": 464,
+    "vertices": 306
+  },
+  "spec": {
+    "L": 23.05293354695964,
+    "W": 18.165392538338292,
+    "H": 32.721629663538565,
+    "style": "modern_flat_terrace_commercial"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

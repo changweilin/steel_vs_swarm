@@ -1,0 +1,93 @@
+{
+  "id": "building_mass_20230614-025323_U26000_M862223_8d98",
+  "sourceImage": "building/20230614-025323_U26000_M862223_8d98.webp",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.756,
+  "aspectRatio": 1,
+  "colorRichness": 52.16,
+  "colors": {
+    "roofRgb": [
+      185,
+      196,
+      206
+    ],
+    "roofHex": 12174542,
+    "facadeRgb": [
+      172,
+      161,
+      159
+    ],
+    "facadeHex": 11313567,
+    "baseRgb": [
+      170,
+      146,
+      120
+    ],
+    "baseHex": 11178616,
+    "accentRgb": [
+      85,
+      70,
+      51
+    ],
+    "accentHex": 5588531,
+    "darkRgb": [
+      85,
+      70,
+      51
+    ],
+    "darkHex": 5588531,
+    "brightRgb": [
+      235,
+      227,
+      212
+    ],
+    "brightHex": 15459284
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
+    },
+    {
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
+    }
+  ],
+  "totalParts": 29,
+  "partNames": [
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

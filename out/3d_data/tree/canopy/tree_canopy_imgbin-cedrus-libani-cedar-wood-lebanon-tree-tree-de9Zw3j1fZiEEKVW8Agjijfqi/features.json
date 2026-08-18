@@ -1,49 +1,70 @@
 {
   "id": "tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
   "sourceImage": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
-  "style": "conifer_pine",
+  "style": "conifer_pine_spire",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.889,
+  "symmetryScore": 0.873,
   "aspectRatio": 1.468,
+  "colorRichness": 77.77,
   "colors": {
-    "primaryHex": 12500923,
-    "primaryRgb": [
-      190,
-      191,
-      187
+    "roofRgb": [
+      222,
+      222,
+      222
     ],
-    "accentHex": 1120265,
+    "roofHex": 14606046,
+    "facadeRgb": [
+      205,
+      205,
+      205
+    ],
+    "facadeHex": 13487565,
+    "baseRgb": [
+      228,
+      228,
+      228
+    ],
+    "baseHex": 15000804,
     "accentRgb": [
-      17,
-      24,
-      9
+      43,
+      48,
+      32
     ],
-    "darkHex": 3356712,
+    "accentHex": 2830368,
     "darkRgb": [
-      51,
-      56,
-      40
+      43,
+      48,
+      32
     ],
-    "brightHex": 15000803,
+    "darkHex": 2830368,
     "brightRgb": [
-      228,
-      228,
-      227
-    ]
+      253,
+      253,
+      253
+    ],
+    "brightHex": 16645629
   },
   "reconstructedFeatures": [
     {
-      "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "name": "tapered_resin_trunk",
+      "method": "conical_frustum_trunk"
+    },
+    {
+      "name": "six_tiered_conical_needle_canopies",
+      "method": "tiered_multi_sided_cones"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 7,
   "partNames": [
     "pine_tapered_trunk",
     "pine_canopy_tier_1",
     "pine_canopy_tier_2",
     "pine_canopy_tier_3",
     "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
+    "pine_canopy_tier_5",
+    "pine_canopy_tier_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid"
   ]
 }

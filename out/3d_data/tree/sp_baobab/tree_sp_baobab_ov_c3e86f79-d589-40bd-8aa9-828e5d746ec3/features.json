@@ -1,0 +1,78 @@
+{
+  "id": "tree_sp_baobab_ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3",
+  "sourceImage": "tree/sp_baobab/ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3.jpg",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.858,
+  "aspectRatio": 1,
+  "colorRichness": 82.39,
+  "colors": {
+    "roofRgb": [
+      245,
+      245,
+      245
+    ],
+    "roofHex": 16119285,
+    "facadeRgb": [
+      152,
+      152,
+      152
+    ],
+    "facadeHex": 10000536,
+    "baseRgb": [
+      245,
+      245,
+      245
+    ],
+    "baseHex": 16119285,
+    "accentRgb": [
+      244,
+      244,
+      244
+    ],
+    "accentHex": 16053492,
+    "darkRgb": [
+      3,
+      3,
+      3
+    ],
+    "darkHex": 197379,
+    "brightRgb": [
+      244,
+      244,
+      244
+    ],
+    "brightHex": 16053492
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "fluted_buttress_root_fins",
+      "method": "frustum_fins"
+    },
+    {
+      "name": "multi_tier_overlapping_canopy_domes",
+      "method": "ellipsoidal_canopy_domes"
+    }
+  ],
+  "totalParts": 14,
+  "partNames": [
+    "gnarled_trunk_core",
+    "buttress_fin_1",
+    "buttress_fin_2",
+    "buttress_fin_3",
+    "buttress_fin_4",
+    "buttress_fin_5",
+    "canopy_foliage_dome_1",
+    "canopy_foliage_dome_2",
+    "canopy_foliage_dome_3",
+    "canopy_foliage_dome_4",
+    "canopy_foliage_dome_5",
+    "canopy_foliage_dome_6",
+    "canopy_foliage_dome_7",
+    "canopy_foliage_dome_8"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "ellipsoid_sphere"
+  ]
+}

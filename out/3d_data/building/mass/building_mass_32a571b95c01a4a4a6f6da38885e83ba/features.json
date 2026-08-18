@@ -1,80 +1,90 @@
 {
   "id": "building_mass_32a571b95c01a4a4a6f6da38885e83ba",
   "sourceImage": "building/32a571b95c01a4a4a6f6da38885e83ba.jpg",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
-  "symmetryScore": 0.849,
+  "style": "classical_temple_peristyle",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.834,
   "aspectRatio": 0.708,
+  "colorRichness": 56.01,
   "colors": {
-    "primaryHex": 6449785,
-    "primaryRgb": [
-      98,
-      106,
-      121
+    "roofRgb": [
+      49,
+      63,
+      100
     ],
-    "accentHex": 16184561,
+    "roofHex": 3227492,
+    "facadeRgb": [
+      67,
+      87,
+      131
+    ],
+    "facadeHex": 4413315,
+    "baseRgb": [
+      104,
+      102,
+      92
+    ],
+    "baseHex": 6841948,
     "accentRgb": [
-      246,
-      244,
-      241
+      83,
+      113,
+      173
     ],
-    "darkHex": 3291207,
+    "accentHex": 5468589,
     "darkRgb": [
-      50,
-      56,
-      71
+      37,
+      39,
+      37
     ],
-    "brightHex": 13354945,
+    "darkHex": 2434853,
     "brightRgb": [
-      203,
-      199,
-      193
-    ]
+      206,
+      202,
+      195
+    ],
+    "brightHex": 13552323
   },
   "reconstructedFeatures": [
     {
-      "name": "front_facade_balconies",
-      "method": "storefront_and_residential_balconies"
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
     },
     {
-      "name": "rear_fire_escape_and_utilities",
-      "method": "asymmetric_procedural_augmentation"
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
     }
   ],
-  "totalParts": 33,
+  "totalParts": 23,
   "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "balcony_f6_l",
-    "balcony_f6_r",
-    "balcony_f7_l",
-    "balcony_f7_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_fire_escape_landing_f6",
-    "rear_fire_ladder_f6",
-    "rear_fire_escape_landing_f7",
-    "rear_fire_ladder_f7",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
   ]
 }

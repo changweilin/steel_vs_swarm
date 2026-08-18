@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_AF530-2",
   "sourceImage": "vehicle/motor/AF530-2.webp",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.838,
+  "symmetryScore": 0.834,
   "aspectRatio": 1,
+  "colorRichness": 77.49,
   "colors": {
-    "primaryHex": 4407105,
-    "primaryRgb": [
-      67,
-      63,
-      65
+    "roofRgb": [
+      0,
+      0,
+      0
     ],
-    "accentHex": 16314871,
+    "roofHex": 0,
+    "facadeRgb": [
+      32,
+      31,
+      31
+    ],
+    "facadeHex": 2105119,
+    "baseRgb": [
+      0,
+      0,
+      0
+    ],
+    "baseHex": 0,
     "accentRgb": [
-      248,
-      241,
-      247
+      186,
+      167,
+      174
     ],
-    "darkHex": 1184274,
+    "accentHex": 12232622,
     "darkRgb": [
-      18,
-      18,
-      18
+      0,
+      0,
+      0
     ],
-    "brightHex": 14535379,
+    "darkHex": 0,
     "brightRgb": [
-      221,
-      202,
-      211
-    ]
+      230,
+      213,
+      222
+    ],
+    "brightHex": 15128030
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

@@ -3,36 +3,38 @@
   "key": "building/mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_7dd14440",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/4b36cf76-bdea-7886-fd39-5a3269b6047e.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\4b36cf76-bdea-7886-fd39-5a3269b6047e.jpg",
-  "created_at": "2026-08-18T10:56:14.088Z",
+  "created_at": "2026-08-18T14:27:15.942Z",
   "bounds": {
     "min": [
-      -9.0203,
+      -16.1652,
       0,
-      -11.079
+      -16.1652
     ],
     "max": [
-      9.0203,
-      23.7716,
-      10.779
+      16.1652,
+      19.7027,
+      16.1652
     ],
     "size": [
-      18.041,
-      23.772,
-      21.858
+      32.33,
+      19.703,
+      32.33
     ],
-    "rMax": 14.287,
-    "triangles": 348,
-    "vertices": 232
+    "rMax": 22.861,
+    "triangles": 1064,
+    "vertices": 613
   },
   "spec": {
-    "L": 18.04055848020142,
-    "W": 19.157976653696497,
-    "H": 23.771572442206455,
-    "style": "commercial_residential_asymmetric"
+    "L": 29.530418860151066,
+    "W": 21.438651102464334,
+    "H": 16.590524147402153,
+    "style": "pantheon_rotunda_with_grand_dome"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

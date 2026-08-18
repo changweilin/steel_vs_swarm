@@ -1,0 +1,93 @@
+{
+  "id": "building_mass_mobile01-6f983fdd0b12d341a5c696410db00027",
+  "sourceImage": "building/mobile01-6f983fdd0b12d341a5c696410db00027.jpg",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.877,
+  "aspectRatio": 0.958,
+  "colorRichness": 78.97,
+  "colors": {
+    "roofRgb": [
+      226,
+      234,
+      238
+    ],
+    "roofHex": 14871278,
+    "facadeRgb": [
+      254,
+      251,
+      250
+    ],
+    "facadeHex": 16710650,
+    "baseRgb": [
+      237,
+      223,
+      182
+    ],
+    "baseHex": 15589302,
+    "accentRgb": [
+      246,
+      238,
+      204
+    ],
+    "accentHex": 16182988,
+    "darkRgb": [
+      38,
+      33,
+      34
+    ],
+    "darkHex": 2498850,
+    "brightRgb": [
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
+    },
+    {
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
+    }
+  ],
+  "totalParts": 29,
+  "partNames": [
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

@@ -3,37 +3,39 @@
   "key": "vehicle/car_241120-27067-61-GPe1X_527cbf60",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/241120-27067-61-GPe1X.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\241120-27067-61-GPe1X.jpg",
-  "created_at": "2026-08-18T10:56:14.472Z",
+  "created_at": "2026-08-18T14:27:16.360Z",
   "bounds": {
     "min": [
-      -2.53,
-      0.0171,
-      -0.9748
+      -2.545,
+      -0.0072,
+      -1.2953
     ],
     "max": [
-      2.54,
-      1.7498,
-      0.9748
+      2.555,
+      1.7798,
+      1.2953
     ],
     "size": [
-      5.07,
-      1.733,
-      1.95
+      5.1,
+      1.787,
+      2.591
     ],
-    "rMax": 2.721,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 2.865,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 4.999929808499275,
-    "W": 1.92,
-    "H": 1.749801632715343,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 5.049929808499275,
+    "W": 1.95,
+    "H": 1.779801632715343,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

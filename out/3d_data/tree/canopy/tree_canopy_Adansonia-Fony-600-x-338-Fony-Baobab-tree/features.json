@@ -1,56 +1,65 @@
 {
   "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
   "sourceImage": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
-  "style": "baobab_tree",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.911,
+  "symmetryScore": 0.905,
   "aspectRatio": 1.775,
+  "colorRichness": 47.24,
   "colors": {
-    "primaryHex": 8622487,
-    "primaryRgb": [
-      131,
-      145,
-      151
+    "roofRgb": [
+      122,
+      162,
+      210
     ],
-    "accentHex": 2628883,
+    "roofHex": 8037074,
+    "facadeRgb": [
+      140,
+      171,
+      207
+    ],
+    "facadeHex": 9219023,
+    "baseRgb": [
+      133,
+      125,
+      106
+    ],
+    "baseHex": 8748394,
     "accentRgb": [
-      40,
-      29,
-      19
+      123,
+      165,
+      210
     ],
-    "darkHex": 4864817,
+    "accentHex": 8103378,
     "darkRgb": [
-      74,
-      59,
-      49
+      75,
+      61,
+      48
     ],
-    "brightHex": 10469339,
+    "darkHex": 4930864,
     "brightRgb": [
-      159,
-      191,
-      219
-    ]
+      153,
+      186,
+      218
+    ],
+    "brightHex": 10074842
   },
   "reconstructedFeatures": [
     {
-      "name": "swollen_bottle_trunk",
-      "method": "massive_succulent_barrel"
-    },
-    {
-      "name": "sparse_rosette_crown",
-      "method": "root_like_canopy_clusters"
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 6,
   "partNames": [
-    "baobab_bottle_trunk",
-    "baobab_branch_1",
-    "baobab_foliage_clump_1",
-    "baobab_branch_2",
-    "baobab_foliage_clump_2",
-    "baobab_branch_3",
-    "baobab_foliage_clump_3",
-    "baobab_branch_4",
-    "baobab_foliage_clump_4"
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
   ]
 }

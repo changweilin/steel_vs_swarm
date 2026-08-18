@@ -1,0 +1,63 @@
+{
+  "id": "landmark_main_progress-m.658f5ec2",
+  "sourceImage": "landmark/progress-m.658f5ec2.png",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.86,
+  "aspectRatio": 0.714,
+  "colorRichness": 64.81,
+  "colors": {
+    "roofRgb": [
+      143,
+      183,
+      215
+    ],
+    "roofHex": 9418711,
+    "facadeRgb": [
+      155,
+      188,
+      209
+    ],
+    "facadeHex": 10206417,
+    "baseRgb": [
+      96,
+      98,
+      103
+    ],
+    "baseHex": 6316647,
+    "accentRgb": [
+      145,
+      178,
+      204
+    ],
+    "accentHex": 9548492,
+    "darkRgb": [
+      41,
+      45,
+      38
+    ],
+    "darkHex": 2698534,
+    "brightRgb": [
+      196,
+      219,
+      238
+    ],
+    "brightHex": 12901358
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "truss_framework_and_dish_dome",
+      "method": "prisms_and_hemisphere_dish"
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "landmark_heavy_base",
+    "lattice_mast_tower",
+    "parabolic_dish_array"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "hemisphere_dome"
+  ]
+}

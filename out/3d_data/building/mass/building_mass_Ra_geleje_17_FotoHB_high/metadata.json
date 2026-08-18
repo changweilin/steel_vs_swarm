@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_Ra_geleje_17_FotoHB_high",
+  "key": "building/mass_Ra_geleje_17_FotoHB_high_267047d1",
+  "family": "building",
+  "subpart": "mass",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/Ra_geleje_17_FotoHB_high.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\Ra_geleje_17_FotoHB_high.jpg",
+  "created_at": "2026-08-18T14:27:15.548Z",
+  "bounds": {
+    "min": [
+      -10.8572,
+      0,
+      -11.1807
+    ],
+    "max": [
+      10.8572,
+      37.1179,
+      10.8807
+    ],
+    "size": [
+      21.714,
+      37.118,
+      22.061
+    ],
+    "rMax": 15.585,
+    "triangles": 464,
+    "vertices": 306
+  },
+  "spec": {
+    "L": 21.288624399176012,
+    "W": 19.161318379491874,
+    "H": 34.717875944151984,
+    "style": "modern_flat_terrace_commercial"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

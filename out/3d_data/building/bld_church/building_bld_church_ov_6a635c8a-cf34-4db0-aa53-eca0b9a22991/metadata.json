@@ -1,0 +1,41 @@
+{
+  "id": "building_bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991",
+  "key": "building/bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_f035dc47",
+  "family": "building",
+  "subpart": "bld_church",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/bld_church/ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_church\\ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991.jpg",
+  "created_at": "2026-08-18T14:27:15.317Z",
+  "bounds": {
+    "min": [
+      -16.6266,
+      0,
+      -16.6266
+    ],
+    "max": [
+      16.6266,
+      19.8828,
+      16.6266
+    ],
+    "size": [
+      33.253,
+      19.883,
+      33.253
+    ],
+    "rMax": 23.514,
+    "triangles": 1064,
+    "vertices": 613
+  },
+  "spec": {
+    "L": 30.453192950331882,
+    "W": 20.412451361867703,
+    "H": 18.148104066529335,
+    "style": "pantheon_rotunda_with_grand_dome"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

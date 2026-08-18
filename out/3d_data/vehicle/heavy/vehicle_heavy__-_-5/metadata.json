@@ -3,37 +3,39 @@
   "key": "vehicle/heavy_文境旅遊-賓士豪華大客車-5_815d2cf8",
   "family": "vehicle",
   "subpart": "heavy",
-  "style": "semi_tractor",
+  "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/heavy/文境旅遊-賓士豪華大客車-5.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\文境旅遊-賓士豪華大客車-5.jpg",
-  "created_at": "2026-08-18T10:56:14.616Z",
+  "created_at": "2026-08-18T14:27:16.576Z",
   "bounds": {
     "min": [
-      -5.0705,
-      0.0255,
-      -1.313
+      -2.5667,
+      -0.0072,
+      -1.3064
     ],
     "max": [
-      5.1605,
-      4,
-      1.313
+      2.5767,
+      1.7086,
+      1.3064
     ],
     "size": [
-      10.231,
-      3.974,
-      2.626
+      5.143,
+      1.716,
+      2.613
     ],
-    "rMax": 5.325,
-    "triangles": 348,
-    "vertices": 200
+    "rMax": 2.889,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 10.3210193026627,
-    "W": 2.6,
-    "H": 3.971576256961929,
-    "R": 0.52,
-    "style": "heavy_cargo_freight_truck"
+    "L": 5.093363088426032,
+    "W": 1.95,
+    "H": 1.7086305027847715,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

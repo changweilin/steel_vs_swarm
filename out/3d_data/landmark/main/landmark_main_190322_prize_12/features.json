@@ -1,0 +1,63 @@
+{
+  "id": "landmark_main_190322_prize_12",
+  "sourceImage": "landmark/190322_prize_12.jpg",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.812,
+  "aspectRatio": 1.504,
+  "colorRichness": 64.21,
+  "colors": {
+    "roofRgb": [
+      57,
+      120,
+      181
+    ],
+    "roofHex": 3766453,
+    "facadeRgb": [
+      92,
+      152,
+      206
+    ],
+    "facadeHex": 6068430,
+    "baseRgb": [
+      85,
+      83,
+      81
+    ],
+    "baseHex": 5591889,
+    "accentRgb": [
+      46,
+      121,
+      181
+    ],
+    "accentHex": 3045813,
+    "darkRgb": [
+      21,
+      27,
+      32
+    ],
+    "darkHex": 1383200,
+    "brightRgb": [
+      183,
+      206,
+      225
+    ],
+    "brightHex": 12046049
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "truss_framework_and_dish_dome",
+      "method": "prisms_and_hemisphere_dish"
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "landmark_heavy_base",
+    "lattice_mast_tower",
+    "parabolic_dish_array"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "hemisphere_dome"
+  ]
+}

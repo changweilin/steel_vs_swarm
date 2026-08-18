@@ -3,37 +3,39 @@
   "key": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_4a03f68e",
   "family": "vehicle",
   "subpart": "car",
-  "style": "suv_crossover",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
-  "created_at": "2026-08-18T10:56:14.469Z",
+  "created_at": "2026-08-18T14:27:16.354Z",
   "bounds": {
     "min": [
-      -2.525,
-      0.0171,
-      -0.9748
+      -2.54,
+      -0.0072,
+      -1.2927
     ],
     "max": [
-      2.535,
-      1.5661,
-      0.9748
+      2.55,
+      1.5961,
+      1.2927
     ],
     "size": [
-      5.06,
-      1.549,
-      1.95
+      5.09,
+      1.603,
+      2.585
     ],
-    "rMax": 2.716,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 2.859,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 4.989944304570077,
-    "W": 1.92,
-    "H": 1.5661440451667048,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 5.039944304570077,
+    "W": 1.95,
+    "H": 1.5961440451667048,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

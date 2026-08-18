@@ -1,0 +1,41 @@
+{
+  "id": "rock_main_Ballinagree",
+  "key": "rock/main_Ballinagree_2daf527d",
+  "family": "rock",
+  "subpart": "main",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/Ballinagree.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\Ballinagree.jpg",
+  "created_at": "2026-08-18T14:27:15.651Z",
+  "bounds": {
+    "min": [
+      -4.1896,
+      -0.8382,
+      -5.4528
+    ],
+    "max": [
+      4.5583,
+      7.5358,
+      4.8978
+    ],
+    "size": [
+      8.748,
+      8.374,
+      10.351
+    ],
+    "rMax": 6.876,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 5.657778286411841,
+    "W": 8.639635309376668,
+    "H": 7.3154192416266115,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

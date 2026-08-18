@@ -1,53 +1,68 @@
 {
   "id": "ship_hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea",
   "sourceImage": "ship/aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
-  "style": "aircraft_carrier",
+  "style": "naval_aircraft_carrier",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.868,
+  "symmetryScore": 0.864,
   "aspectRatio": 1.843,
+  "colorRichness": 70.29,
   "colors": {
-    "primaryHex": 7967661,
-    "primaryRgb": [
-      121,
+    "roofRgb": [
+      210,
+      224,
+      237
+    ],
+    "roofHex": 13820141,
+    "facadeRgb": [
+      120,
       147,
-      173
+      175
     ],
-    "accentHex": 197907,
+    "facadeHex": 7902127,
+    "baseRgb": [
+      15,
+      67,
+      106
+    ],
+    "baseHex": 1000298,
     "accentRgb": [
-      3,
-      5,
-      19
+      27,
+      77,
+      118
     ],
-    "darkHex": 1719651,
+    "accentHex": 1789302,
     "darkRgb": [
-      26,
-      61,
-      99
+      18,
+      35,
+      67
     ],
-    "brightHex": 13359076,
+    "darkHex": 1188675,
     "brightRgb": [
-      203,
-      215,
-      228
-    ]
+      222,
+      231,
+      240
+    ],
+    "brightHex": 14608368
   },
   "reconstructedFeatures": [
     {
-      "name": "angled_flight_deck",
-      "method": "full_length_cantilever_deck"
-    },
-    {
-      "name": "starboard_island_tower",
-      "method": "asymmetric_command_bridge"
+      "name": "angled_flight_deck_and_island",
+      "method": "carrier_deck_and_island"
     }
   ],
   "totalParts": 6,
   "partNames": [
     "carrier_main_hull",
     "clipper_bow_wedge",
-    "full_flight_deck",
+    "underwater_bulbous_bow",
+    "full_flight_deck_slab",
     "starboard_island_tower",
-    "island_navigation_bridge",
     "phased_array_radar_mast"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid"
   ]
 }

@@ -1,49 +1,60 @@
 {
   "id": "ship_hull_202135002-4",
   "sourceImage": "ship/202135002-4.jpg",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.846,
+  "symmetryScore": 0.84,
   "aspectRatio": 1.779,
+  "colorRichness": 66.06,
   "colors": {
-    "primaryHex": 10463141,
-    "primaryRgb": [
-      159,
-      167,
-      165
+    "roofRgb": [
+      239,
+      238,
+      239
     ],
-    "accentHex": 1185563,
+    "roofHex": 15724271,
+    "facadeRgb": [
+      171,
+      179,
+      177
+    ],
+    "facadeHex": 11252657,
+    "baseRgb": [
+      98,
+      123,
+      118
+    ],
+    "baseHex": 6454134,
     "accentRgb": [
-      18,
-      23,
-      27
+      75,
+      98,
+      93
     ],
-    "darkHex": 3226424,
+    "accentHex": 4940381,
     "darkRgb": [
-      49,
-      59,
-      56
+      39,
+      43,
+      43
     ],
-    "brightHex": 14605790,
+    "darkHex": 2566955,
     "brightRgb": [
-      222,
-      221,
-      222
-    ]
+      237,
+      236,
+      236
+    ],
+    "brightHex": 15592684
   },
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
-  "totalParts": 6,
+  "reconstructedFeatures": [],
+  "totalParts": 4,
   "partNames": [
     "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
+    "bow_flare_wedge",
     "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
+    "vessel_funnel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid"
   ]
 }

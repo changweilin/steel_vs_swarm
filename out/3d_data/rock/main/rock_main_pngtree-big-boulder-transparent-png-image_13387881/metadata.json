@@ -1,0 +1,41 @@
+{
+  "id": "rock_main_pngtree-big-boulder-transparent-png-image_13387881",
+  "key": "rock/main_pngtree-big-boulder-transparent-png-image_13387881_a5db36f2",
+  "family": "rock",
+  "subpart": "main",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/pngtree-big-boulder-transparent-png-image_13387881.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\pngtree-big-boulder-transparent-png-image_13387881.png",
+  "created_at": "2026-08-18T14:27:15.724Z",
+  "bounds": {
+    "min": [
+      -6.6246,
+      -1.3987,
+      -7.3053
+    ],
+    "max": [
+      7.0834,
+      5.8883,
+      6.3014
+    ],
+    "size": [
+      13.708,
+      7.287,
+      13.607
+    ],
+    "rMax": 9.862,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 9.110833905546654,
+    "W": 8.853933012893874,
+    "H": 5.716052491035325,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

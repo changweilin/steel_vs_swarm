@@ -1,0 +1,100 @@
+{
+  "id": "building_bld_temple_ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7",
+  "sourceImage": "building/bld_temple/ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7.jpg",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.777,
+  "aspectRatio": 1.499,
+  "colorRichness": 79.85,
+  "colors": {
+    "roofRgb": [
+      73,
+      37,
+      34
+    ],
+    "roofHex": 4793634,
+    "facadeRgb": [
+      65,
+      37,
+      33
+    ],
+    "facadeHex": 4269345,
+    "baseRgb": [
+      48,
+      24,
+      18
+    ],
+    "baseHex": 3151890,
+    "accentRgb": [
+      64,
+      31,
+      27
+    ],
+    "accentHex": 4202267,
+    "darkRgb": [
+      24,
+      14,
+      14
+    ],
+    "darkHex": 1576462,
+    "brightRgb": [
+      248,
+      248,
+      248
+    ],
+    "brightHex": 16316664
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stone_plinth_podium",
+      "method": "frustum_plinth"
+    },
+    {
+      "name": "multi_tier_upturned_flared_eaves",
+      "method": "flared_frustum_eaves"
+    },
+    {
+      "name": "sacred_bronze_finial_spire",
+      "method": "torus_sanrin_and_cone"
+    }
+  ],
+  "totalParts": 30,
+  "partNames": [
+    "pagoda_stone_podium",
+    "pagoda_chamber_tier_1",
+    "veranda_column_1_-1_-1",
+    "veranda_column_1_-1_1",
+    "veranda_column_1_1_-1",
+    "veranda_column_1_1_1",
+    "curved_eaves_frustum_1",
+    "eave_ridge_cap_1",
+    "pagoda_chamber_tier_2",
+    "veranda_column_2_-1_-1",
+    "veranda_column_2_-1_1",
+    "veranda_column_2_1_-1",
+    "veranda_column_2_1_1",
+    "curved_eaves_frustum_2",
+    "eave_ridge_cap_2",
+    "pagoda_chamber_tier_3",
+    "veranda_column_3_-1_-1",
+    "veranda_column_3_-1_1",
+    "veranda_column_3_1_-1",
+    "veranda_column_3_1_1",
+    "curved_eaves_frustum_3",
+    "eave_ridge_cap_3",
+    "apex_pyramid_roof",
+    "finial_central_mast",
+    "sanrin_sacred_ring_1",
+    "sanrin_sacred_ring_2",
+    "sanrin_sacred_ring_3",
+    "sanrin_sacred_ring_4",
+    "sanrin_sacred_ring_5",
+    "houju_sacred_jewel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring",
+    "ellipsoid_sphere"
+  ]
+}

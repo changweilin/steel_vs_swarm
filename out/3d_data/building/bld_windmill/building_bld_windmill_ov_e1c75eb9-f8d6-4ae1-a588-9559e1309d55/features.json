@@ -1,0 +1,87 @@
+{
+  "id": "building_bld_windmill_ov_e1c75eb9-f8d6-4ae1-a588-9559e1309d55",
+  "sourceImage": "building/bld_windmill/ov_e1c75eb9-f8d6-4ae1-a588-9559e1309d55.jpg",
+  "style": "modern_stepped_skyscraper",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.842,
+  "aspectRatio": 1.499,
+  "colorRichness": 51.3,
+  "colors": {
+    "roofRgb": [
+      66,
+      112,
+      169
+    ],
+    "roofHex": 4354217,
+    "facadeRgb": [
+      145,
+      173,
+      195
+    ],
+    "facadeHex": 9547203,
+    "baseRgb": [
+      92,
+      120,
+      123
+    ],
+    "baseHex": 6060155,
+    "accentRgb": [
+      135,
+      153,
+      43
+    ],
+    "accentHex": 8886571,
+    "darkRgb": [
+      68,
+      80,
+      48
+    ],
+    "darkHex": 4476976,
+    "brightRgb": [
+      183,
+      196,
+      202
+    ],
+    "brightHex": 12043466
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "multi_tier_setback_tower_masses",
+      "method": "progressive_setback_boxes"
+    },
+    {
+      "name": "rooftop_penthouse_and_antenna_spire",
+      "method": "penthouse_and_spire"
+    }
+  ],
+  "totalParts": 21,
+  "partNames": [
+    "podium_lobby_glass",
+    "grand_entrance_canopy",
+    "tower_tier_1",
+    "tower_tier_2_setback",
+    "crown_pyramid_frustum",
+    "floor_spandrel_1",
+    "floor_spandrel_2",
+    "floor_spandrel_3",
+    "floor_spandrel_4",
+    "floor_spandrel_5",
+    "floor_spandrel_6",
+    "floor_spandrel_7",
+    "floor_spandrel_8",
+    "floor_spandrel_9",
+    "floor_spandrel_10",
+    "floor_spandrel_11",
+    "floor_spandrel_12",
+    "floor_spandrel_13",
+    "floor_spandrel_14",
+    "rooftop_mechanical_penthouse",
+    "rooftop_antenna_spire"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "polygonal_prism"
+  ]
+}

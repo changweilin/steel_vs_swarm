@@ -1,57 +1,72 @@
 {
   "id": "vehicle_motor_GOGORO%20SuperSport%20ACE",
   "sourceImage": "vehicle/motor/GOGORO%20SuperSport%20ACE.png",
-  "style": "sportbike",
+  "style": "racing_sportbike",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.816,
+  "symmetryScore": 0.812,
   "aspectRatio": 1,
+  "colorRichness": 85.96,
   "colors": {
-    "primaryHex": 8948361,
-    "primaryRgb": [
-      136,
-      138,
-      137
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 0,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      128,
+      154,
+      120
+    ],
+    "facadeHex": 8428152,
+    "baseRgb": [
+      237,
+      237,
+      237
+    ],
+    "baseHex": 15592941,
     "accentRgb": [
-      0,
-      0,
-      0
+      14,
+      16,
+      18
     ],
-    "darkHex": 1645597,
+    "accentHex": 921618,
     "darkRgb": [
-      25,
-      28,
-      29
+      14,
+      16,
+      18
     ],
-    "brightHex": 16053492,
+    "darkHex": 921618,
     "brightRgb": [
-      244,
-      244,
-      244
-    ]
+      253,
+      253,
+      253
+    ],
+    "brightHex": 16645629
   },
   "reconstructedFeatures": [
     {
-      "name": "aerodynamic_fairing",
-      "method": "racing_cowl_and_windscreen"
-    },
-    {
-      "name": "upswept_exhaust",
-      "method": "titanium_racing_muffler"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 10,
+  "totalParts": 9,
   "partNames": [
-    "racing_main_fairing",
-    "front_nose_fairing",
-    "racing_windscreen",
-    "aerodynamic_fuel_tank",
-    "stepped_racing_seat",
-    "usd_front_fork",
-    "rear_mono_swingarm",
-    "upswept_racing_muffler",
-    "front_wheel_disc",
-    "rear_wheel_wide"
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
+    "teardrop_fuel_tank",
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

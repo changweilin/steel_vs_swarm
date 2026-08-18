@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_c8a41c3d-5818-4853-b00f-cabe19fc7275",
   "sourceImage": "vehicle/motor/c8a41c3d-5818-4853-b00f-cabe19fc7275.jpg",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.851,
+  "symmetryScore": 0.832,
   "aspectRatio": 1.333,
+  "colorRichness": 62.72,
   "colors": {
-    "primaryHex": 8355945,
-    "primaryRgb": [
-      127,
-      128,
-      105
+    "roofRgb": [
+      216,
+      215,
+      159
     ],
-    "accentHex": 15464952,
+    "roofHex": 14210975,
+    "facadeRgb": [
+      139,
+      144,
+      100
+    ],
+    "facadeHex": 9146468,
+    "baseRgb": [
+      102,
+      95,
+      88
+    ],
+    "baseHex": 6709080,
     "accentRgb": [
-      235,
-      249,
-      248
-    ],
-    "darkHex": 3026993,
-    "darkRgb": [
-      46,
-      48,
-      49
-    ],
-    "brightHex": 13620116,
-    "brightRgb": [
-      207,
+      196,
       211,
-      148
-    ]
+      99
+    ],
+    "accentHex": 12899171,
+    "darkRgb": [
+      31,
+      33,
+      35
+    ],
+    "darkHex": 2040099,
+    "brightRgb": [
+      219,
+      217,
+      194
+    ],
+    "brightHex": 14408130
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

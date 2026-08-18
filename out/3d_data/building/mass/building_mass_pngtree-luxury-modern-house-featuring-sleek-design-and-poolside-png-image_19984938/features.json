@@ -1,0 +1,100 @@
+{
+  "id": "building_mass_pngtree-luxury-modern-house-featuring-sleek-design-and-poolside-png-image_19984938",
+  "sourceImage": "building/pngtree-luxury-modern-house-featuring-sleek-design-and-poolside-png-image_19984938.png",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.804,
+  "aspectRatio": 1,
+  "colorRichness": 75.53,
+  "colors": {
+    "roofRgb": [
+      0,
+      0,
+      0
+    ],
+    "roofHex": 0,
+    "facadeRgb": [
+      113,
+      127,
+      133
+    ],
+    "facadeHex": 7438213,
+    "baseRgb": [
+      0,
+      0,
+      0
+    ],
+    "baseHex": 0,
+    "accentRgb": [
+      79,
+      97,
+      105
+    ],
+    "accentHex": 5202281,
+    "darkRgb": [
+      0,
+      0,
+      0
+    ],
+    "darkHex": 0,
+    "brightRgb": [
+      226,
+      226,
+      225
+    ],
+    "brightHex": 14869217
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stone_plinth_podium",
+      "method": "frustum_plinth"
+    },
+    {
+      "name": "multi_tier_upturned_flared_eaves",
+      "method": "flared_frustum_eaves"
+    },
+    {
+      "name": "sacred_bronze_finial_spire",
+      "method": "torus_sanrin_and_cone"
+    }
+  ],
+  "totalParts": 30,
+  "partNames": [
+    "pagoda_stone_podium",
+    "pagoda_chamber_tier_1",
+    "veranda_column_1_-1_-1",
+    "veranda_column_1_-1_1",
+    "veranda_column_1_1_-1",
+    "veranda_column_1_1_1",
+    "curved_eaves_frustum_1",
+    "eave_ridge_cap_1",
+    "pagoda_chamber_tier_2",
+    "veranda_column_2_-1_-1",
+    "veranda_column_2_-1_1",
+    "veranda_column_2_1_-1",
+    "veranda_column_2_1_1",
+    "curved_eaves_frustum_2",
+    "eave_ridge_cap_2",
+    "pagoda_chamber_tier_3",
+    "veranda_column_3_-1_-1",
+    "veranda_column_3_-1_1",
+    "veranda_column_3_1_-1",
+    "veranda_column_3_1_1",
+    "curved_eaves_frustum_3",
+    "eave_ridge_cap_3",
+    "apex_pyramid_roof",
+    "finial_central_mast",
+    "sanrin_sacred_ring_1",
+    "sanrin_sacred_ring_2",
+    "sanrin_sacred_ring_3",
+    "sanrin_sacred_ring_4",
+    "sanrin_sacred_ring_5",
+    "houju_sacred_jewel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring",
+    "ellipsoid_sphere"
+  ]
+}

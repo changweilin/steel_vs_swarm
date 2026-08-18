@@ -1,0 +1,63 @@
+{
+  "id": "rock_main_南犹他州巨岩山-164605945",
+  "sourceImage": "rock/南犹他州巨岩山-164605945.webp",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.807,
+  "aspectRatio": 1.333,
+  "colorRichness": 57.08,
+  "colors": {
+    "roofRgb": [
+      140,
+      144,
+      162
+    ],
+    "roofHex": 9212066,
+    "facadeRgb": [
+      169,
+      141,
+      103
+    ],
+    "facadeHex": 11111783,
+    "baseRgb": [
+      202,
+      143,
+      83
+    ],
+    "baseHex": 13274963,
+    "accentRgb": [
+      74,
+      39,
+      26
+    ],
+    "accentHex": 4859674,
+    "darkRgb": [
+      74,
+      39,
+      26
+    ],
+    "darkHex": 4859674,
+    "brightRgb": [
+      189,
+      193,
+      199
+    ],
+    "brightHex": 12435911
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "faceted_cleavage_planes_and_scree",
+      "method": "dodecahedron_and_talus"
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "erratic_boulder_core",
+    "talus_scree_facet_1",
+    "talus_scree_facet_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "frustum_pyramid"
+  ]
+}

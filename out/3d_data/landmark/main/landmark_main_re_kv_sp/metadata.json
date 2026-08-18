@@ -1,0 +1,41 @@
+{
+  "id": "landmark_main_re_kv_sp",
+  "key": "landmark/main_re_kv_sp_73549b36",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "landmark/re_kv_sp.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\re_kv_sp.jpg",
+  "created_at": "2026-08-18T14:27:15.626Z",
+  "bounds": {
+    "min": [
+      -5.0766,
+      0,
+      -5.0766
+    ],
+    "max": [
+      5.0766,
+      15.5501,
+      5.0766
+    ],
+    "size": [
+      10.153,
+      15.55,
+      10.153
+    ],
+    "rMax": 7.179,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "L": 11.281300068665598,
+    "W": 8.042786297398337,
+    "H": 13.977111467154955,
+    "style": "industrial_landmark_installation"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}
