@@ -341,8 +341,20 @@ function writeProvenance({ item, slot, nodeName, row, feed }) {
   const ph = photos.find((e) => e.id === item.id) || {};
   const rev = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).stdout?.trim() || null;
   const replaces = item.replaces && slot.names.includes(item.replaces) ? item.replaces : null;
+  // 同方法/同物件的版本號管理: 若有替代舊件(replaces)，版本號自舊件累加；未指定則預設為 1
+  let version = 1;
+  if (replaces) {
+    const prev = man.parts.find((p) => p.keys?.includes(replaces) && p.method === item.tool)
+      || man.parts.find((p) => p.keys?.includes(replaces));
+    if (prev) {
+      version = (Number.isInteger(prev.version) ? prev.version : 1) + 1;
+    }
+  } else if (Number.isInteger(item.version)) {
+    version = item.version;
+  }
   man.parts.push({
     method: item.tool,
+    version,
     consumer: `biomes ${slot.table}.${slot.key} 輪替名冊`,
     rev,
     at: new Date().toISOString().slice(0, 10),
@@ -368,7 +380,7 @@ function writeProvenance({ item, slot, nodeName, row, feed }) {
       solidify: item.tool === 'trellis2_spz' ? (slot.recipe.solidify || null) : null,
       note: '自動入庫(第 ⑦ 站):名冊追加走 intake_recipes 的推導,人眼複核排在入庫之後(對照台)',
     },
-    note: `自動入庫;投料帳 ${feed.at || '?'} 第 ${row.sub} 顆${replaces ? `;待替代 ${replaces}` : ''}`,
+    note: `自動入庫;投料帳 ${feed.at || '?'} 第 ${row.sub} 顆${replaces ? `;待替代 ${replaces}` : ''} (v${version})`,
     keys: [nodeName],
   });
   writeFileSync(MANIFEST_PATH, Buffer.from(`${JSON.stringify(man, null, 2)}\n`, 'utf8'));
