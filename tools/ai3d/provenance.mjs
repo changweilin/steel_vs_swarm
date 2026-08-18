@@ -185,6 +185,10 @@ export function photoRoots(extra = null) {
   if (existsSync(wtClaude)) {
     for (const d of readdirSync(wtClaude)) roots.push(join(wtClaude, d, 'tools', 'ai3d'));
   }
+  const wtGemini = join(main, '.gemini', 'antigravity', 'worktrees', 'steel_vs_swarm');
+  if (existsSync(wtGemini)) {
+    for (const d of readdirSync(wtGemini)) roots.push(join(wtGemini, d, 'tools', 'ai3d'));
+  }
   const defaultStudy = join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', 'study', 'ai3d_restricted');
   if (existsSync(defaultStudy)) {
     roots.push(defaultStudy);
