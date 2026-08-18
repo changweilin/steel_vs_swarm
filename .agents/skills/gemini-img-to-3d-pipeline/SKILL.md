@@ -1,138 +1,198 @@
 ---
 name: gemini-img-to-3d-pipeline
-description: Pure LLM In-Context fine-grained image-to-3D polyhedral geometric reconstruction pipeline with domain-sharded subagent parallelization and per-object atomic persistence. Trigger when performing fine-grained semantic 3D reconstruction from reference photos, spawning domain-specific parallel subagents (Building, Vehicle, Tree, Nature/Ship/Landmark), synthesizing procedural polyhedral assemblies (Abeto anime aesthetic & Sakura Crossing declarative assembly), or executing robust resume-from-checkpoint batch generation.
+description: In-Context fine-grained image-to-3D polyhedral geometric reconstruction pipeline with domain-sharded subagent parallelization and per-object atomic persistence. Trigger when performing fine-grained semantic 3D reconstruction from reference photos, spawning domain-specific parallel subagents (Building, Vehicle, Tree, Nature/Ship/Landmark), synthesizing procedural polyhedral assemblies (Abeto anime aesthetic & Sakura Crossing declarative assembly), or executing robust resume-from-checkpoint batch generation.
 license: MIT
-compatibility: Offline repository toolchain (Node.js ES modules, Python 3.11/3.13 CV analyzers, Three.js 0.160 CDN importmap; zero extra npm dependencies — A2 rule compliant)
+compatibility: Offline repository toolchain (Node.js ES modules, Python 3.11/3.13 CV analyzers, Three.js 0.160 CDN importmap; zero extra npm dependencies - A2 rule compliant)
 ---
 
-# Gemini Img-to-3D: In-Context Fine-Grained Pipeline
+# Gemini Img-to-3D: In-Context Polyhedral Reconstruction Pipeline
 
-本 Skill 定義 **純 LLM In-Context 逐圖精細 3D 重建與多領域 Subagent 平行管線**。
-適用於從目標照片提取深度語意、構建高還原度幾何多面體物件、並行排程以及即時原子化儲存之完整標準作業程序。
-
----
-
-## 0. 核心設計原則與美學標準
-
-### 0.1 美術風格：Abeto 賽璐璐動畫美學
-- **清晰幾何剪影**：拒絕模糊軟爛網格，全面採用幾何多面體（多角稜柱、錐台、角錐、圓柱、圓台、半球/橢球、圓環、楔形、正多面體等）裝配構成。
-- **色彩分區明確**：嚴格拆分 7 區色彩（屋頂/樹冠、主體/立面/車身、底座/底盤/樹幹、點綴飾條/車燈、金屬/暗部、鍍鉻/高光、冷調深藍玻璃）。
-
-### 0.2 生成架構：Sakura Crossing 宣告式語意建模
-- **每張照片獨立特徵化**：基於照片垂直切片（24-slice profile）、輪廓斜率、實體度、灰度梯度與對稱性獨立推理幾何參數。
-- **絕無千篇一律的死板模板**：每張圖獨立計算各部件尺寸與裝配位置，風格獨一無二。
+Defines the pure LLM in-context semantic image-to-3D reconstruction, domain-sharded subagent execution protocol, vision disambiguation filters, and atomic persistence pipeline. Transforms single-view reference images into clean, stylized polyhedral 3D assemblies matching the Abeto anime aesthetic and Sakura Crossing procedural generation architecture.
 
 ---
 
-## 1. 物件領域平行化 (Domain-Sharded Subagents)
+## 0. Core Aesthetic & Technical Foundations
 
-為避免單一對話 Context 膨脹並加速批量生產，採用 **領域切片平行化（Domain Sharding）**，透過 `invoke_subagent` 啟動專屬領域 Subagent：
+### 0.1 Art Style: Abeto Cel-Shaded Anime Aesthetic (messenger.abeto.co)
+- **Crisp Geometric Silhouette**: Eliminate organic/mushy meshes. Construct all geometry through discrete polyhedral primitives (prisms, frustums, cones, cylinders, domes, rings, polyhedra, wedges).
+- **Quantised Lighting & Shadow Hue Shift**: Light is stepped into 2-4 flat discrete bands. Shadows shift hue toward cool blue/violet (`#1e293b` / `#2c3e50`) rather than desaturated darkness.
+- **7-Zone Strict Color Separation**: Strict partition across 7 palette zones (`roofHex`, `facadeHex`, `baseHex`, `accentHex`, `glassHex`, `darkHex`, `brightHex`).
+- **Glass & Chrome Isolation**: Windows, windscreens, and curtain walls strictly use cool translucent/navy tones (`glassHex`). Never merge window glass with facade paint or vehicle chassis.
+- **Zero Image Texture Dependency**: All surface markings, decals, and signage are generated procedurally or via runtime Canvas2D.
+
+### 0.2 Generation Engine: Sakura Crossing Declarative Assembly (Kenton-GMI/sakura-crossing)
+- **In-Context Semantic Decomposition**: Perform 24-slice vertical profile analysis, silhouette slope estimation, solidity calculation, grayscale gradient mapping, and axial symmetry detection directly from input images.
+- **Pure-Data Declarative Schema**: Output geometry as structured JSON primitive part arrays (`type`, `dimensions` / `radii`, `pos`, `rot`, `colorKey`).
+- **Parametric Uniqueness**: Compute exact bounding envelopes and relative part ratios per individual image; no generic/uniform templates.
+- **Ground Seating & Zero Keep-Out Invariants**: Pivot anchor must sit at ground-contact base `[0, 0, 0]`. Ensure parts observe `TERRAIN_DROP` and collider clearance rules.
+
+---
+
+## 1. Domain-Sharded Subagent Execution Architecture
+
+Distribute batch reconstruction across 4 domain-specific subagents via `invoke_subagent` to maintain context cleanliness and throughput:
 
 ```mermaid
 graph TD
-    Parent[Parent Agent / Orchestrator] -->|invoke_subagent| SubBuilding[Subagent: 建築組<br>Building Domain]
-    Parent -->|invoke_subagent| SubVehicle[Subagent: 載具組<br>Vehicle Domain]
-    Parent -->|invoke_subagent| SubTree[Subagent: 植被組<br>Tree Domain]
-    Parent -->|invoke_subagent| SubNature[Subagent: 自然/船舶/地標組<br>Nature/Ship/Landmark]
+    Parent[Parent Orchestrator] -->|invoke_subagent| SubBld[Subagent-Building<br>Domain: Architecture]
+    Parent -->|invoke_subagent| SubVeh[Subagent-Vehicle<br>Domain: Transport]
+    Parent -->|invoke_subagent| SubTree[Subagent-Tree<br>Domain: Vegetation]
+    Parent -->|invoke_subagent| SubNat[Subagent-Nature<br>Domain: Rocks/Ships/Landmarks]
     
-    SubBuilding -->|Per-Object Atomic Save| Storage[(out/3d_data/ & Manifest)]
-    SubVehicle -->|Per-Object Atomic Save| Storage
-    SubTree -->|Per-Object Atomic Save| Storage
-    SubNature -->|Per-Object Atomic Save| Storage
+    SubBld -->|Atomic Save| Store[(out/3d_data/ & manifests)]
+    SubVeh -->|Atomic Save| Store
+    SubTree -->|Atomic Save| Store
+    SubNat -->|Atomic Save| Store
 ```
 
-### 1.1 四大領域 Subagent 專責劃分
+### 1.1 Subagent Domain Responsibilities & Specialized Dispatch
 
-| 領域 Subagent | 處理物件分類 | 核心幾何特徵與防呆重點 |
+| Domain Subagent | Target Object Keys | Core Morphology & Disambiguation Focus |
 |---|---|---|
-| 🤖 **Subagent-Building** | `building/mass`, `building/bld_*` | 區分平頂商辦（女兒牆/排氣管/逃生梯）、尖頂教堂（八角鐘樓/飛扶壁）、三角山牆木屋（斜頂山牆/煙囪）、東方寶塔（飛簷錐台/寶剎）、古典圓頂（柱列/半球穹頂）。 |
-| 🤖 **Subagent-Vehicle** | `vehicle/bike`, `car`, `truck`, `train`, `motor` | 腳踏車細鋼管菱形車架（上管/下管/立管/後叉/前叉細圓柱）與圓環輪組；汽車/火車車身烤漆與**深藍透明玻璃（glassHex）嚴格分離**。 |
-| 🤖 **Subagent-Tree** | `tree/canopy`, `tree/cf_*`, `tree/sp_*`, `tree/sh_*` | 針葉樹（多層交錯旋轉錐台輪生裙，**絕非立方體**）、闊葉神木（板根基座 + 十二面體雲團）、盆栽（陶盆 + 扭曲主幹 + 雲葉盤）、矮灌木。 |
-| 🤖 **Subagent-Nature** | `rock/*`, `ship/*`, `landmark/*` | 巨岩（斷面與節理多面體）、船舶（船艏楔形/艦橋窗帶/煙囪）、地標設施（桁架結構/發光天線）。 |
+| 🤖 **Subagent-Building** | `building/mass`, `building/bld_*` | Commercial flat roofs (parapets, HVAC chillers, escape ladders), gothic spires, gabled chalets, oriental pagodas (flared multi-tier eaves), classical rotundas. **Novel morphologies must be synthesized from first principles rather than boxed.** |
+| 🤖 **Subagent-Vehicle** | `vehicle/bike`, `car`, `truck`, `train`, `motor` | Bicycles (diamond tubular skeleton + torus wheels; sub-pixel thin member recovery); motor vehicles (**strict separation of `glassHex` windscreens/side windows from chassis**). |
+| 🤖 **Subagent-Tree** | `tree/canopy`, `tree/cf_*`, `tree/sp_*`, `tree/sh_*` | **STRICT BAN ON CUBE CANOPIES**. Species-specific grammars: Conifer (stacked alternating frustums), Broadleaf (dodecahedron clusters + buttress roots), Bamboo (segmented culms + fan wedges), Shrubs (grounded ellipsoids). **Sky/cloud background rejection**. |
+| 🤖 **Subagent-Nature** | `rock/*`, `ship/*`, `landmark/*` | Megaliths (faceted fracture planes), ships (wedge bow + superstructure + mast poles; glazing isolation), landmarks (truss frameworks, beacon towers). |
 
-### 1.2 Subagent 60% 上下文水位熔斷與重啟續行機制 (60% Threshold Circuit Breaker & Restart)
+### 1.2 60% Context Window Circuit Breaker & Hand-off Protocol
 
-為徹底杜絕因長對話導致 Token 耗盡、超載崩潰或響應衰退，**強制執行 60% 上下文水位熔斷機制**：
+To prevent context exhaustion and quality degradation, subagents enforce an automated 60% watermark hand-off:
 
-1. **水位監控（Usage Watermark）**：
-   - 當 Subagent 處理累計達 **Context Window 的 60%**（約每完成 30~40 筆 In-Context 詳細物件時），必須主動觸發「優雅暫停與交接（Graceful Hand-off）」。
-2. **即時落盤確保零遺失（Atomic Flush）**：
-   - 確保當前已完成的最後一個物件之 `model.json`、`features.json`、`metadata.json`、`model.obj` 全數落地。
-   - 同步更新 `out/3d_database.json` 與 `tools/ai3d/parts_manifest.json`。
-3. **交接回報（Handoff Report）**：
-   - Subagent 向 Parent Agent 回報當前進度摘要（例如：「*Subagent-Building: 已完成 35/178 件，最後完成 key: `building/mass_35`，觸發 60% 額度熔斷交接*」）並結束該對話。
-4. **乾淨重啟接續（Clean Restart & Resume）**：
-   - Parent Agent 接收交接訊號後，立即啟動一個**全新的 Subagent**（Context 100% 清空重置）。
-   - 全新 Subagent 透過斷點協定（§2.3）自動跳過已完成的 35 件，無縫接續處理第 36 件，直至該領域全數完工。
+1. **Watermark Monitoring**:
+   - At ~60% context capacity (~30-40 fully reconstructed objects), trigger a graceful pause.
+2. **Atomic Disk Flush**:
+   - Guarantee the last completed object's `model.json`, `features.json`, `metadata.json`, and `model.obj` are fully written to disk.
+   - Sync `out/3d_database.json` and `tools/ai3d/parts_manifest.json`.
+3. **Handoff Signal**:
+   - Subagent reports summary back to Parent: `"Subagent-Building: Completed 35/178 items, last key: building/mass_35, triggering 60% context circuit-breaker"` and terminates.
+4. **Clean Restart & Resume**:
+   - Parent Orchestrator launches a fresh Subagent instance (0% context).
+   - The new subagent executes Resume Protocol (§2.3), skips all completed items, and continues seamlessly from item 36.
 
-### 1.3 剩餘額度動態切換網路搜索擴充模式 (Dynamic Web Search Expansion on Remaining Quota)
+### 1.3 Dynamic Web Search Expansion on Remaining Quota
 
-當 Subagent 處理完該領域所分配之現有照片後，若 Context 仍有充裕額度（未達 60% 熔斷閾值），**強制自動切換為網路搜索擴充模式**繼續執行：
+If existing input photos are exhausted before reaching the 60% context limit, subagents automatically transition to Web Search Expansion Mode:
 
-1. **對應類別精準檢索（Targeted Query）**：
-   - Subagent 依自身專責領域（如建築、載具、樹木、自然/地標），針對資料庫中覆蓋率較低或具代表性之細項（例如：特定針闊葉樹種、歷史教堂尖塔、特殊工程車輛、貨櫃輪船等），使用精準物件名稱進行網路圖片檢索。
-2. **雙軌授權分類與存放分流（Dual-Corpus Licence Routing）**：
-   - 🟢 **CC0 / Public Domain 圖檔（出貨級）**：
-     - 存入正式出貨庫存路徑：`tools/ai3d/photos/<family>/<subpart>/<image_name>`。
-     - 登記於正式 `photo_manifest.json`，可用於遊戲本體發布。
-   - 🟡 **非 CC0 / 具版權 / 未確認授權圖檔（研究參考級）**：
-     - 存入受限研究庫存路徑：`C:\Users\user\Documents\study\ai3d_restricted\photos\<family>\<subpart>\<image_name>`。
-     - 於帳本標註 `restricted: true` / `shipping: false`，僅供本機研究、對照台預覽與模型訓練驗證，不直接打包進出貨發行版。
-3. **照片下載建檔與立即執行 Img-to-3D**：
-   - 記錄來源資訊（`source_url`, `license`, `creator`, `query`）。
-   - 下載完畢後立即對新圖片進行 In-Context 深度特徵推理與多面體 3D 幾何建模。
-   - 執行 §2 逐件原子化落盤存檔（分別寫入對應之 `out/3d_data/`），持續擴充 3D 零件庫直至達到 60% 水位交接。
-
----
-
-## 2. 逐件原子化儲存與斷點續傳機制 (Per-Object Atomic Save & Resume)
-
-為防止 LLM 處理途中因達到 Token 限制或對話中斷導致進度遺失，**必須執行逐件原子化即時落盤（Per-Object Atomic Persistence）**。
-
-### 2.1 單一物件產出規範
-每當一個物件分析與幾何生成完成，必須立即將下列檔案寫入磁碟：
-- `out/3d_data/<family>/<subpart>/<object_id>/model.json`（包含 parts 零件列表與完整三角面 meshData）
-- `out/3d_data/<family>/<subpart>/<object_id>/features.json`（特徵辨識、對稱性、色彩色票、零件清單）
-- `out/3d_data/<family>/<subpart>/<object_id>/metadata.json`（來源照片、生成版本 v4、包圍盒尺寸、三角形數）
-- `out/3d_data/<family>/<subpart>/<object_id>/model.obj`（標準 Wavefront OBJ 幾何檔）
-
-### 2.2 帳本與資料庫即時更新
-- 即時更新 `out/3d_database.json` 索引項目。
-- 即時登記 `tools/ai3d/parts_manifest.json` 來源帳。
-- 記錄至檢查點狀態檔（`tools/ai3d/harvest_state.json`）。
-
-### 2.3 斷點續傳協定 (Resume Protocol)
-任何 Subagent 或批次重啟時：
-1. 讀取 `out/3d_database.json` 與目標照片清單。
-2. 檢查目標資料夾是否已有合法的 `model.json` 與 `features.json`。
-3. 若已完成且版本符合 `v4`，直接**略過（Skip）**，從下一筆未完成的照片開始執行。
+1. **Targeted Semantic Query**:
+   - Search for under-represented categories in the database (e.g. specific cedar varieties, historical spire styles, heavy machinery, cargo vessels).
+2. **Dual-Corpus License Routing**:
+   - 🟢 **CC0 / Public Domain (Shipping Grade)**:
+     - Save to: `tools/ai3d/photos/<family>/<subpart>/<image_name>`.
+     - Register in `photo_manifest.json` for shipping bundle inclusion.
+   - 🟡 **Restricted / Unverified (Study Grade)**:
+     - Save to: `C:\Users\user\Documents\study\ai3d_restricted\photos\<family>\<subpart>\<image_name>`.
+     - Flag in ledger as `restricted: true` / `shipping: false` (local study & review only).
+3. **Immediate Reconstruction & Intake**:
+   - Log provenance (`source_url`, `license`, `creator`, `query`).
+   - Run In-Context Img-to-3D reconstruction, output atomic artifacts (§2), and update indices.
 
 ---
 
-## 3. 多面體幾何基本體語彙 (Polyhedral Primitive Vocabulary)
+## 2. Per-Object Atomic Persistence & Resume Protocol
 
-幾何構裝必須使用以下多面體基本體，嚴禁退回單純立方體：
+### 2.1 Artifact Directory Structure
+For every reconstructed object, write atomically into `out/3d_data/<family>/<subpart>/<object_id>/`:
+- `model.json`: Hierarchical parts list, primitive specs, local transforms, and triangulated mesh data.
+- `features.json`: Semantic tags, profile measurements, symmetry axes, 7-color hex table.
+- `metadata.json`: Source image path/URL, generator version (`v4`), bounding box `[w, h, d]`, triangle count.
+- `model.obj`: Standard Wavefront OBJ 3D geometry file.
 
-| 基本體類型 (`p.type`) | 參數結構 | 典型應用場景 |
+### 2.2 Ledger & Database Synchronization
+- Append/update entry in `out/3d_database.json`.
+- Register record in `tools/ai3d/parts_manifest.json`.
+- Write status into checkpoint file `tools/ai3d/harvest_state.json`.
+
+### 2.3 Resume Protocol
+On initialization or restart:
+1. Load target photo list and `out/3d_database.json`.
+2. Inspect target directory for valid `model.json` and `features.json`.
+3. If valid and `version === "v4"`, **skip** item and proceed to next incomplete entry.
+
+---
+
+## 3. Polyhedral Primitive Geometry Vocabulary & Assembly Grammars
+
+All assemblies must be composed exclusively of the following declarative primitives:
+
+| Primitive (`p.type`) | Parameter Schema | Application Examples |
 |---|---|---|
-| `box` | `dimensions: [w, h, d]` | 建築量體基座、貨櫃、招牌板、陽台底板 |
-| `polygonal_prism` | `radius, height, sides` (3~16) | 六角/八角塔身、立柱迴廊、水塔支架 |
-| `frustum_pyramid` | `radii: [topR, botR], height, sides` | 寶塔飛簷、針葉樹輪生裙、古典柱頭、花盆 |
-| `pyramid` / `cone` | `radii: [0, botR] / radius, height, sides` | 教堂尖塔、寶剎塔尖、松樹頂梢、圓錐頂 |
-| `cylinder` | `radius: [topR, botR] / r, height, sides` | 鋼管車架、輪軸、煙囪、樹幹、纜線管柱 |
-| `conical_frustum` | `radii: [topR, botR], height, sides` | 漸縮樹幹、錐形桶身、輪圈內凹輪廓 |
-| `hemisphere_dome` | `radii: [rx, ry, rz]` | 萬神殿圓頂、天文台穹頂、雷達罩 |
-| `ellipsoid_sphere` | `radii: [rx, ry, rz]` | 闊葉樹雲冠、灌木叢、巨岩鼓包 |
-| `torus_ring` | `radius, tube` | 腳踏車/車輛輪胎、管道法蘭環、救生圈 |
-| `dodecahedron_polyhedron` | `radius` | 巨岩崩落塊、結晶節理、多面樹冠瓣 |
-| `icosahedron_polyhedron` | `radius` | 粗糙天然礦石、有機群落特徵塊 |
-| `wedge` | `dimensions: [w, h, d]` | 斜坡雙面山牆、船艏破浪楔、擋風導流罩 |
+| `box` | `dimensions: [w, h, d]` | Building base masses, cargo containers, signboards, balcony slabs |
+| `polygonal_prism` | `radius, height, sides` (3-16) | Hexagonal/octagonal towers, colonnades, tank supports |
+| `frustum_pyramid` | `radii: [topR, botR], height, sides` | Pagoda eaves, conifer foliage skirts, column capitals, planters |
+| `pyramid` / `cone` | `radii: [0, botR], height, sides` | Church steeples, spire tips, pine tree apex, conical caps |
+| `cylinder` | `radii: [topR, botR] | radius, height, sides` | Steel bike tubes, wheel axles, chimneys, tree trunks, utility poles |
+| `conical_frustum` | `radii: [topR, botR], height, sides` | Tapered tree trunks, conical vats, recessed wheel rims |
+| `hemisphere_dome` | `radii: [rx, ry, rz]` | Observatory domes, pantheon rotundas, radar radomes |
+| `ellipsoid_sphere` | `radii: [rx, ry, rz]` | Broadleaf canopy clouds, shrub clusters, rock humps |
+| `torus_ring` | `radius, tube` | Bicycle / vehicle tires, pipe flanges, lifebuoys |
+| `dodecahedron_polyhedron` | `radius` | Boulder fragments, crystalline joints, faceted foliage clusters |
+| `icosahedron_polyhedron` | `radius` | Rough mineral rocks, organic clusters, coral boulders |
+| `wedge` | `dimensions: [w, h, d]` | Gabled roofs, ship bow wedges, windshield cowlings, ramps |
 
 ---
 
-## 4. 色彩萃取與玻璃分離紀律
+### 3.1 Architectural Archetype Matching & Novel Topology Rule
+Select geometry strictly matching target architectural morphology:
+1. **Commercial Flat-Roof**: Base `box` + inset parapet `box` frame + rooftop HVAC `box` / chiller `cylinder` + emergency ladder `cylinder` array.
+2. **Gothic / Alpine Church**: Nave `box` + pitched roof `wedge` + bell tower `polygonal_prism` (octagonal, 8 sides) + steeple `pyramid` (8 sides) + flying buttress `wedge` spans.
+3. **Gabled Cottage / Chalet**: Lower floor `box` + upper overhang `box` + dual-slope gable `wedge` + chimney `box` / `cylinder`.
+4. **Oriental Pagoda / Shrine**: Stepped base `box` + stacked alternating stories (`polygonal_prism`) + flared eaves (`frustum_pyramid` with `topR < botR` and outer lip flare) + finial spire (`cone` + stacked `torus_ring` rings).
+5. **Classical Rotunda / Dome**: Stylobate disc (`cylinder`) + peristyle column array (radial `cylinder`s) + entablature ring (`cylinder` / `polygonal_prism`) + hemisphere dome (`hemisphere_dome`).
+6. **Novel / Unprecedented Archetypes**: If the target building exhibits non-standard morphology (e.g. hyperbolic shell, folded plate, geodesic sphere, stepped ziggurat), **MUST NOT fallback to a simple box**. Synthesize a composite assembly from first principles by combining appropriate polyhedral primitives to match the true silhouette.
 
-每個物件必須萃取並定義 7 區色彩，且於 `features.json` 與 `model.json` 中嚴格遵守：
+---
+
+### 3.2 Botanical Canopy Grammars (Strict Ban on Generic Cubes)
+Canopies must **NEVER** be approximated as a single `box`. Use tailored botanical primitive grammars:
+1. **Conifers (Pine, Cedar, Fir, Cryptomeria)**:
+   - Trunk: Tapered vertical `conical_frustum` or `cylinder` (`colorKey: "facadeHex"`).
+   - Foliage: 4-8 vertically stacked `frustum_pyramid` (6-8 sides) with alternating azimuth rotations (`rot: [0, Math.PI / n, 0]`), terminating in an apex `pyramid` / `cone` (`colorKey: "roofHex"`).
+2. **Broadleaf & Deciduous (Oak, Camphor, Cherry, Maple)**:
+   - Trunk & Roots: Main trunk `cylinder` / `conical_frustum` + 3-5 radial buttress root `wedge` or angled `conical_frustum` anchors (`colorKey: "baseHex"`).
+   - Canopy: Multi-lobed cluster of 5-12 interpenetrating `dodecahedron_polyhedron` or flattened `ellipsoid_sphere` nodes (`colorKey: "roofHex"`).
+3. **Shrubs, Hedges & Boxwood**:
+   - Hemispherical / rounded clusters using ground-truncated `ellipsoid_sphere` or low-poly `icosahedron_polyhedron` masses.
+4. **Bamboo & Palms**:
+   - Culms/Trunks: Segmented slender `cylinder` sections with intermediate node `torus_ring` joints.
+   - Fronds/Foliage: Radial star/fan arrays of angled thin `wedge` or extruded flat `polygonal_prism` leaves.
+5. **Bonsai & Potted Flora**:
+   - Ceramic base pot: `frustum_pyramid` / `conical_frustum` (`colorKey: "baseHex"`).
+   - Sinuous trunk: 3-5 linked, angled, and rotated `cylinder` segments.
+   - Foliage: Distinct horizontal tabular cloud discs of `ellipsoid_sphere` or `dodecahedron_polyhedron`.
+
+---
+
+### 3.3 Micro-Skeleton & Thin-Feature Recovery Protocol
+Delicate structural elements (bicycles, space-frame trusses, antennas, ship masts, railings) must be explicitly recovered and parameterized:
+1. **Bicycles & Light Two-Wheelers**:
+   - Frame Diamond: Distinct slender `cylinder` primitives (`radius: 0.015-0.025m`) for Top Tube, Down Tube, Seat Tube, Seat Stays, Chain Stays, and Front Fork.
+   - Wheels: 2x `torus_ring` tires (`radius: 0.33m, tube: 0.025m`) + hub `cylinder`s.
+   - Handlebars & Saddle: Transverse `cylinder` handlebar with angled grip segments + wedge/box saddle.
+2. **Lattice Trusses & Antennas**:
+   - Construct vertical chords with 3-4 corner `cylinder`s / `polygonal_prism`s braced with diagonal lattice cross-struts. Never consolidate into a solid prism.
+3. **Maritime Masts & Deck Railings**:
+   - Ship masts, radar arches, and cranes must be isolated as dedicated slender `cylinder` hierarchies standing upon the deck, with rigging points preserved.
+
+---
+
+## 4. Vision Disambiguation & Palette Discipline
+
+### 4.1 Background / Sky / Cloud Hallucination Rejection Filter
+When inferring geometry from single-view photographs:
+- **Sky & Cloud Segregation**: White or pale blue upper regions must be cross-checked against background chromatic continuity. High-luminance, low-saturation regions with diffuse continuous gradients represent sky/cloud backgrounds - **NEVER reconstruct sky/clouds into foliage canopies or roof geometry**.
+- **Silhouette Boundary Test**: Valid foliage and roof boundaries exhibit high local contrast, micro-occlusion step changes, or self-shadow contours. Continuous atmospheric gradients must be subtracted during feature isolation.
+- **Horizon & Terrain Disambiguation**: Ground contact must be established at the true base plane (`y = 0`). Ground shadows and horizon hills must not be mistaken for base plinths.
+
+### 4.2 Material Glazing vs Chassis/Hull Isolation
+- **Vehicle Glazing Separation**: Windscreens, rear windows, side glass, and cabin glazing must NEVER inherit the vehicle chassis body color (`facadeHex`). They must be explicitly extracted and assigned to `glassHex` (cool deep navy/cyan tone: `0x1e293b`, `0x2c3e50`, `0x38bdf8`, `0x0f172a`).
+- **Maritime Wheelhouses & Bridge Bands**: Ship observation bridges and porthole bands must be isolated into distinct `glassHex` strips embedded into the `facadeHex` superstructure.
+- **Architectural Curtain Walls & Shopfronts**: Ground floor retail display windows and ribbon curtain glazing must be isolated as `glassHex` recessed surfaces.
+
+---
+
+### 4.3 7-Zone Color Palette Schema & Enforcement
+
+Every object must extract and define exactly 7 discrete color hex values in `features.json` and `model.json`:
 
 ```json
 {
@@ -148,30 +208,36 @@ graph TD
 }
 ```
 
-- 🧊 **玻璃色隔離防線**：汽車擋風玻璃、側窗、船艦艦橋窗帶、建築幕牆一律使用深藍冷調色票（如 `0x1e293b`, `0x2c3e50`, `0x38bdf8`, `0x0f172a`），**絕不可與車身烤漆（facadeHex）混為一談**。
+- `roofHex`: Roof surfaces, upper canopy foliage, primary vehicle top trims.
+- `facadeHex`: Primary exterior walls, vehicle chassis base paint, main tree trunks.
+- `baseHex`: Foundation plinths, undercarriages, root collars, planters, curbs.
+- `accentHex`: Signage borders, headlight bezels, moldings, accent panels.
+- `glassHex` (**Strict Isolation**): Windscreens, side windows, bridge observation bands, curtain wall glazing (`0x1e293b`, `0x2c3e50`, `0x38bdf8`, `0x0f172a`). Never assign `facadeHex` to glass.
+- `darkHex`: Mechanical underbodies, exhaust mufflers, tires, deep recessed shadow voids, structural grates.
+- `brightHex`: Chrome trims, illuminated lamps, white road markings, specular highlight bands.
 
 ---
 
-## 5. 離線稽核與回歸驗證防線
+## 5. Offline Audit & Verification Battery
 
-所有產出完成後，必須通過全套專案離線稽核：
+All generated assets and ledger updates must pass the repository's offline verification suite with 100% green status:
 
 ```bash
-# 1. 採集與入庫帳本稽核 (190 項全綠)
+# 1. Intake and provenance ledger audit (190 invariant checks)
 node tools/ai3d/audit_auto_intake.mjs
 
-# 2. 零件對照台資料庫報告驗收 (0 缺件、0 孤兒)
+# 2. Parts review database validation (0 missing, 0 orphaned parts)
 node tools/parts_review.mjs --report
 
-# 3. 街廓佈局與幾何信任階梯稽核 (265 項全綠)
+# 3. Urban siteplan and geometry trust hierarchy audit (265 invariant checks)
 node tools/audit_siteplan.mjs
 
-# 4. 地標型錄與外廓稽核 (68 項全綠)
+# 4. Landmark catalog and envelope verification (68 invariant checks)
 node tools/audit_beacons.mjs
 
-# 5. 前端模組與 GLSL 語法稽核 (230 項全綠)
+# 5. Client syntax & GLSL shader validation (230 invariant checks)
 node tools/audit_client_syntax.mjs
 
-# 6. 核心平衡不變式回歸驗證 (全數通過)
+# 6. Core gameplay balance invariants
 npm run bal
 ```
