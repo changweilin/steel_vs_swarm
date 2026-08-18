@@ -2877,6 +2877,51 @@ function disposeVisualSettings() {
 const DEV_MOUNTS = ['pauseDevMount', 'lobbyDevMount'];
 let _devTools = null;             // null / [] = 沒有這個端點(出貨版與隊友端),整區收起來
 let _devToolsSync = null;
+const _devOutputOpen = new Set();
+const _devOutput = new Map();
+
+/** 全量輸出只在使用者攤開視窗時拿，避免每輪狀態監控都搬 300 行日誌。 */
+async function loadDevToolOutput(key) {
+  try {
+    const res = await fetch(`/dev/tools/${key}/log`, { cache: 'no-store' });
+    const out = res.ok ? await res.json() : null;
+    const log = out?.log || '尚無輸出';
+    _devOutput.set(key, log);
+    return log;
+  } catch {
+    _devOutput.set(key, '讀取輸出失敗');
+    return '';
+  }
+}
+
+/** 錯誤文字由後端紀錄的啟動錯誤優先；日誌僅取錯誤行，避免複製一整段正常輸出。 */
+function devToolErrorText(t, log) {
+  if (t.run?.error) return t.run.error;
+  return String(log || '').split('\n').filter((line) => /起不來|錯誤|error|exception|failed|失敗|❌|💥|⚠/i.test(line)).join('\n');
+}
+
+/** localhost 在部分瀏覽器不是安全內容時 Clipboard API 不可用，退回暫時文字框。 */
+async function copyDevToolError(t) {
+  const log = await loadDevToolOutput(t.key);
+  const error = devToolErrorText(t, log);
+  if (!error) { toast('尚未偵測到錯誤訊息'); return; }
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard API 不可用');
+    await navigator.clipboard.writeText(error);
+  } catch {
+    const field = document.createElement('textarea');
+    field.value = error;
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.appendChild(field);
+    field.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch { /* 由下方提示複製失敗 */ }
+    field.remove();
+    if (!copied) { toast('無法複製錯誤訊息'); return; }
+  }
+  toast('已複製錯誤訊息');
+}
 
 /** 背景行程仍在跑時才輪詢。設定頁開著時中止或無輸出，不必再按一次按鈕才看得出來。 */
 function monitorDevTools() {
@@ -2893,6 +2938,11 @@ function syncDevTools() {
       const res = await fetch('/dev/tools', { cache: 'no-store' });
       _devTools = res.ok ? (await res.json()).tools : null;
     } catch { _devTools = null; }   // 靜態站台 / file:// 一律走這裡
+    if (_devTools) {
+      const live = new Set(_devTools.map((t) => t.key));
+      for (const key of _devOutputOpen) if (!live.has(key)) _devOutputOpen.delete(key);
+      await Promise.all([..._devOutputOpen].map(loadDevToolOutput));
+    }
     const hasDev = !!_devTools?.length;
     for (const id of ['pauseSetTabs', 'lobbySetTabs']) {
       const tabs = $(id);
@@ -2980,6 +3030,39 @@ function devToolRow(t) {
   // window.open 在點擊處理器裡不會被擋;`noopener` 免得那一頁拿得到本頁的 window
   open.addEventListener('click', () => { window.open(t.url, '_blank', 'noopener'); app.audio?.ui('click'); });
   row.appendChild(open);
+
+  const copyError = document.createElement('button');
+  copyError.className = 'btn small';
+  copyError.type = 'button';
+  copyError.textContent = '⧉ 複製錯誤';
+  copyError.addEventListener('click', async () => {
+    copyError.disabled = true;
+    await copyDevToolError(t);
+    copyError.disabled = false;
+  });
+  row.appendChild(copyError);
+
+  const output = document.createElement('button');
+  output.className = 'btn small';
+  output.type = 'button';
+  const outputOpen = _devOutputOpen.has(t.key);
+  output.textContent = outputOpen ? '▾ 收起輸出' : '▸ 查看輸出';
+  output.addEventListener('click', async () => {
+    if (outputOpen) _devOutputOpen.delete(t.key);
+    else {
+      _devOutputOpen.add(t.key);
+      _devOutput.set(t.key, '讀取輸出中…');
+    }
+    await syncDevTools();
+    for (const id of DEV_MOUNTS) renderDevTools($(id));
+  });
+  row.appendChild(output);
+  if (outputOpen) {
+    const log = document.createElement('pre');
+    log.className = 'dev-tool-output';
+    log.textContent = _devOutput.get(t.key) || t.log || '尚無輸出';
+    row.appendChild(log);
+  }
   return row;
 }
 // 開啟戰場暫停「設定」頁時把 UI 同步到目前(持久化的)狀態
