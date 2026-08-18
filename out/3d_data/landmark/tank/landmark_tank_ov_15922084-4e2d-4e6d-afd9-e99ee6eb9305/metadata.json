@@ -5,11 +5,11 @@
   "subpart": "tank",
   "style": "industrial_installation_rig",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "landmark/tank/ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\tank\\ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305.jpg",
-  "created_at": "2026-08-18T14:27:15.629Z",
+  "created_at": "2026-08-18T15:15:57.863Z",
   "bounds": {
     "min": [
       -4.4436,

@@ -5,11 +5,11 @@
   "subpart": "bld_church",
   "style": "classical_dome_rotunda",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_church/ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_church\\ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991.jpg",
-  "created_at": "2026-08-18T14:27:15.317Z",
+  "created_at": "2026-08-18T15:15:57.552Z",
   "bounds": {
     "min": [
       -16.6266,

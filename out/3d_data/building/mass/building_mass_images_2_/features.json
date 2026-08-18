@@ -1,11 +1,11 @@
 {
   "id": "building_mass_images (2)",
   "sourceImage": "building/images (2).jpg",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
   "symmetryScore": 0.798,
   "aspectRatio": 0.75,
-  "colorRichness": 64.66,
+  "colorRichness": 61.45,
   "colors": {
     "roofRgb": [
       201,
@@ -26,11 +26,11 @@
     ],
     "baseHex": 6709603,
     "accentRgb": [
-      112,
-      110,
-      104
+      109,
+      106,
+      100
     ],
-    "accentHex": 7368296,
+    "accentHex": 7170660,
     "darkRgb": [
       65,
       61,
@@ -42,56 +42,65 @@
       250,
       250
     ],
-    "brightHex": 16448250
+    "brightHex": 16448250,
+    "glassRgb": [
+      30,
+      41,
+      59
+    ],
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [
     {
-      "name": "front_storefront_and_cantilever_balconies",
-      "method": "storefront_and_balconies"
+      "name": "stepped_stone_plinth_podium",
+      "method": "frustum_plinth"
     },
     {
-      "name": "rear_fire_escape_stair_tower_and_flues",
-      "method": "asymmetric_fire_escape_and_ducts"
+      "name": "multi_tier_upturned_flared_eaves",
+      "method": "flared_frustum_eaves"
+    },
+    {
+      "name": "sacred_bronze_finial_spire",
+      "method": "torus_sanrin_and_cone"
     }
   ],
-  "totalParts": 33,
+  "totalParts": 30,
   "partNames": [
-    "building_mass_body",
-    "flat_roof_parapet_rim",
-    "rooftop_elevator_penthouse",
-    "front_storefront_glazed",
-    "front_balcony_f1_l",
-    "front_balcony_f1_r",
-    "front_balcony_f2_l",
-    "front_balcony_f2_r",
-    "front_balcony_f3_l",
-    "front_balcony_f3_r",
-    "front_balcony_f4_l",
-    "front_balcony_f4_r",
-    "front_balcony_f5_l",
-    "front_balcony_f5_r",
-    "front_balcony_f6_l",
-    "front_balcony_f6_r",
-    "front_balcony_f7_l",
-    "front_balcony_f7_r",
-    "rear_fire_platform_f1",
-    "rear_fire_stair_f1",
-    "rear_fire_platform_f2",
-    "rear_fire_stair_f2",
-    "rear_fire_platform_f3",
-    "rear_fire_stair_f3",
-    "rear_fire_platform_f4",
-    "rear_fire_stair_f4",
-    "rear_fire_platform_f5",
-    "rear_fire_stair_f5",
-    "rear_fire_platform_f6",
-    "rear_fire_stair_f6",
-    "rear_fire_platform_f7",
-    "rear_fire_stair_f7",
-    "rear_exhaust_duct_flue"
+    "pagoda_stone_podium",
+    "pagoda_chamber_tier_1",
+    "veranda_column_1_-1_-1",
+    "veranda_column_1_-1_1",
+    "veranda_column_1_1_-1",
+    "veranda_column_1_1_1",
+    "curved_eaves_frustum_1",
+    "eave_ridge_cap_1",
+    "pagoda_chamber_tier_2",
+    "veranda_column_2_-1_-1",
+    "veranda_column_2_-1_1",
+    "veranda_column_2_1_-1",
+    "veranda_column_2_1_1",
+    "curved_eaves_frustum_2",
+    "eave_ridge_cap_2",
+    "pagoda_chamber_tier_3",
+    "veranda_column_3_-1_-1",
+    "veranda_column_3_-1_1",
+    "veranda_column_3_1_-1",
+    "veranda_column_3_1_1",
+    "curved_eaves_frustum_3",
+    "eave_ridge_cap_3",
+    "apex_pyramid_roof",
+    "finial_central_mast",
+    "sanrin_sacred_ring_1",
+    "sanrin_sacred_ring_2",
+    "sanrin_sacred_ring_3",
+    "sanrin_sacred_ring_4",
+    "sanrin_sacred_ring_5",
+    "houju_sacred_jewel"
   ],
   "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
     "box",
-    "frustum_pyramid"
+    "torus_ring",
+    "ellipsoid_sphere"
   ]
 }

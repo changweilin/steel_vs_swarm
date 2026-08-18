@@ -1,11 +1,11 @@
 {
   "id": "building_mass_state-capitol",
   "sourceImage": "building/state-capitol.jpg",
-  "style": "classical_temple_peristyle",
+  "style": "classical_dome_rotunda",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.901,
   "aspectRatio": 1,
-  "colorRichness": 59.08,
+  "colorRichness": 61.59,
   "colors": {
     "roofRgb": [
       99,
@@ -32,17 +32,23 @@
     ],
     "accentHex": 6454181,
     "darkRgb": [
-      41,
+      40,
       34,
       25
     ],
-    "darkHex": 2695705,
+    "darkHex": 2630169,
     "brightRgb": [
-      210,
-      206,
-      203
+      211,
+      216,
+      224
     ],
-    "brightHex": 13815499
+    "brightHex": 13883616,
+    "glassRgb": [
+      98,
+      123,
+      165
+    ],
+    "glassHex": 6454181
   },
   "reconstructedFeatures": [
     {

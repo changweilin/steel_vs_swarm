@@ -5,11 +5,11 @@
   "subpart": "heavy",
   "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "vehicle/heavy/20250917103436615.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\20250917103436615.jpg",
-  "created_at": "2026-08-18T14:27:16.496Z",
+  "created_at": "2026-08-18T15:15:58.747Z",
   "bounds": {
     "min": [
       -2.5493,

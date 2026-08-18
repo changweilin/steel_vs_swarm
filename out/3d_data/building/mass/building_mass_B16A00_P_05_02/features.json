@@ -1,11 +1,11 @@
 {
   "id": "building_mass_B16A00_P_05_02",
   "sourceImage": "building/B16A00_P_05_02.jpg",
-  "style": "asian_pagoda_pavilion",
+  "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.868,
   "aspectRatio": 1.501,
-  "colorRichness": 68.57,
+  "colorRichness": 67.26,
   "colors": {
     "roofRgb": [
       138,
@@ -26,75 +26,66 @@
     ],
     "baseHex": 9868661,
     "accentRgb": [
-      24,
-      134,
-      200
+      35,
+      137,
+      202
     ],
-    "accentHex": 1607368,
+    "accentHex": 2329034,
     "darkRgb": [
-      62,
-      69,
-      56
+      53,
+      58,
+      49
     ],
-    "darkHex": 4080952,
+    "darkHex": 3488305,
     "brightRgb": [
-      239,
-      243,
-      246
+      241,
+      245,
+      247
     ],
-    "brightHex": 15725558
+    "brightHex": 15857143,
+    "glassRgb": [
+      35,
+      137,
+      202
+    ],
+    "glassHex": 2329034
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_stone_plinth_podium",
-      "method": "frustum_plinth"
+      "name": "multi_tier_setback_tower_masses",
+      "method": "progressive_setback_boxes"
     },
     {
-      "name": "multi_tier_upturned_flared_eaves",
-      "method": "flared_frustum_eaves"
-    },
-    {
-      "name": "sacred_bronze_finial_spire",
-      "method": "torus_sanrin_and_cone"
+      "name": "rooftop_penthouse_and_antenna_spire",
+      "method": "penthouse_and_spire"
     }
   ],
-  "totalParts": 30,
+  "totalParts": 19,
   "partNames": [
-    "pagoda_stone_podium",
-    "pagoda_chamber_tier_1",
-    "veranda_column_1_-1_-1",
-    "veranda_column_1_-1_1",
-    "veranda_column_1_1_-1",
-    "veranda_column_1_1_1",
-    "curved_eaves_frustum_1",
-    "eave_ridge_cap_1",
-    "pagoda_chamber_tier_2",
-    "veranda_column_2_-1_-1",
-    "veranda_column_2_-1_1",
-    "veranda_column_2_1_-1",
-    "veranda_column_2_1_1",
-    "curved_eaves_frustum_2",
-    "eave_ridge_cap_2",
-    "pagoda_chamber_tier_3",
-    "veranda_column_3_-1_-1",
-    "veranda_column_3_-1_1",
-    "veranda_column_3_1_-1",
-    "veranda_column_3_1_1",
-    "curved_eaves_frustum_3",
-    "eave_ridge_cap_3",
-    "apex_pyramid_roof",
-    "finial_central_mast",
-    "sanrin_sacred_ring_1",
-    "sanrin_sacred_ring_2",
-    "sanrin_sacred_ring_3",
-    "sanrin_sacred_ring_4",
-    "sanrin_sacred_ring_5",
-    "houju_sacred_jewel"
+    "podium_lobby_glass",
+    "grand_entrance_canopy",
+    "tower_tier_1",
+    "tower_tier_2_setback",
+    "crown_pyramid_frustum",
+    "floor_spandrel_1",
+    "floor_spandrel_2",
+    "floor_spandrel_3",
+    "floor_spandrel_4",
+    "floor_spandrel_5",
+    "floor_spandrel_6",
+    "floor_spandrel_7",
+    "floor_spandrel_8",
+    "floor_spandrel_9",
+    "floor_spandrel_10",
+    "floor_spandrel_11",
+    "floor_spandrel_12",
+    "rooftop_mechanical_penthouse",
+    "rooftop_antenna_spire"
   ],
   "polyhedralPrimitivesUsed": [
-    "frustum_pyramid",
     "box",
-    "torus_ring",
-    "ellipsoid_sphere"
+    "wedge",
+    "frustum_pyramid",
+    "polygonal_prism"
   ]
 }

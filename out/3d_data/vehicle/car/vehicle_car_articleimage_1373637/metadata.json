@@ -5,11 +5,11 @@
   "subpart": "car",
   "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "vehicle/car/articleimage_1373637.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\articleimage_1373637.jpg",
-  "created_at": "2026-08-18T14:27:16.402Z",
+  "created_at": "2026-08-18T15:15:58.666Z",
   "bounds": {
     "min": [
       -1.0188,

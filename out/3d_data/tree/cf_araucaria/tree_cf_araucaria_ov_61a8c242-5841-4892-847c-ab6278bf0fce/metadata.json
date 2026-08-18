@@ -5,11 +5,11 @@
   "subpart": "cf_araucaria",
   "style": "conifer_pine_spire",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\cf_araucaria\\ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
-  "created_at": "2026-08-18T14:27:15.787Z",
+  "created_at": "2026-08-18T15:15:58.027Z",
   "bounds": {
     "min": [
       -4.2949,

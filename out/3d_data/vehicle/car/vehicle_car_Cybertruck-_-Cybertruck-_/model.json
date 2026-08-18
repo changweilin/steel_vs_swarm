@@ -2,7 +2,7 @@
   "id": "vehicle_car_Cybertruck-來了！限量-Cybertruck-模型台灣上架",
   "family": "vehicle",
   "subpart": "car",
-  "style": "standard_passenger_automobile",
+  "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
   "spec": {
     "L": 5.144462500953688,
@@ -72,7 +72,7 @@
         0,
         0
       ],
-      "color": 1447705,
+      "color": 986897,
       "triangles": 16
     },
     {
@@ -153,7 +153,7 @@
         0,
         0
       ],
-      "color": 1447705,
+      "color": 986897,
       "triangles": 192
     },
     {
@@ -193,7 +193,7 @@
         0,
         0
       ],
-      "color": 1447705,
+      "color": 986897,
       "triangles": 192
     },
     {
@@ -275,7 +275,7 @@
         0,
         0
       ],
-      "color": 1447705,
+      "color": 986897,
       "triangles": 192
     },
     {
@@ -315,7 +315,7 @@
         0,
         0
       ],
-      "color": 1447705,
+      "color": 986897,
       "triangles": 192
     },
     {

@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "commercial_flat_terrace",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/images (19).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\images (19).jpg",
-  "created_at": "2026-08-18T14:27:15.480Z",
+  "created_at": "2026-08-18T15:15:57.717Z",
   "bounds": {
     "min": [
       -9.2229,

@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "classical_dome_rotunda",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/e28ba9534d67c7605a1800bc035444d5.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\e28ba9534d67c7605a1800bc035444d5.jpg",
-  "created_at": "2026-08-18T14:27:15.969Z",
+  "created_at": "2026-08-18T15:15:58.198Z",
   "bounds": {
     "min": [
       -15.9088,

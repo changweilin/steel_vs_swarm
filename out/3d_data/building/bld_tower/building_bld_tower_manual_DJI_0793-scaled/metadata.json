@@ -5,11 +5,11 @@
   "subpart": "bld_tower",
   "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_tower/manual_DJI_0793-scaled.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\bld_tower\\manual_DJI_0793-scaled.jpg",
-  "created_at": "2026-08-18T14:27:15.961Z",
+  "created_at": "2026-08-18T15:15:58.190Z",
   "bounds": {
     "min": [
       -11.3976,

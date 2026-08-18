@@ -194,24 +194,71 @@ function build(phase, src, kind, seed, builder = 'beacon') {
           if (model.parts && model.parts.length) {
             for (const p of model.parts) {
               let geo = null;
-              if (p.type === 'box') {
+              if (p.type === 'box' && p.dimensions) {
                 geo = new gfx.THREE.BoxGeometry(...p.dimensions);
+              } else if (p.type === 'polygonal_prism') {
+                geo = new gfx.THREE.CylinderGeometry(p.radius, p.radius, p.height, p.sides || 8);
+              } else if (p.type === 'frustum_pyramid' || p.type === 'conical_frustum') {
+                const topR = p.radii ? p.radii[0] : (p.radius || 1);
+                const botR = p.radii ? p.radii[1] : (p.radius || 1);
+                geo = new gfx.THREE.CylinderGeometry(topR, botR, p.height, p.sides || 8);
+              } else if (p.type === 'pyramid' || p.type === 'cone') {
+                const r = p.radii ? p.radii[1] : (p.radius || 1);
+                geo = new gfx.THREE.ConeGeometry(r, p.height, p.sides || 8);
               } else if (p.type === 'cylinder') {
-                geo = new gfx.THREE.CylinderGeometry(p.radius[0], p.radius[1], p.height, p.segments || 8);
+                const topR = p.radii ? p.radii[0] : (Array.isArray(p.radius) ? p.radius[0] : (p.radius || 1));
+                const botR = p.radii ? p.radii[1] : (Array.isArray(p.radius) ? p.radius[1] : (p.radius || 1));
+                geo = new gfx.THREE.CylinderGeometry(topR, botR, p.height, p.sides || p.segments || 16);
+              } else if (p.type === 'hemisphere_dome') {
+                const rx = p.radii ? p.radii[0] : 1;
+                const ry = p.radii ? p.radii[1] : 1;
+                const rz = p.radii ? p.radii[2] : 1;
+                geo = new gfx.THREE.SphereGeometry(1, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+                geo.scale(rx, ry, rz);
+              } else if (p.type === 'ellipsoid_sphere') {
+                const rx = p.radii ? p.radii[0] : 1;
+                const ry = p.radii ? p.radii[1] : 1;
+                const rz = p.radii ? p.radii[2] : 1;
+                geo = new gfx.THREE.SphereGeometry(1, 14, 10);
+                geo.scale(rx, ry, rz);
+              } else if (p.type === 'torus_ring') {
+                geo = new gfx.THREE.TorusGeometry(p.radius, p.tube, 12, 24);
+              } else if (p.type === 'dodecahedron_polyhedron') {
+                geo = new gfx.THREE.DodecahedronGeometry(p.radius || 1);
+              } else if (p.type === 'icosahedron_polyhedron') {
+                geo = new gfx.THREE.IcosahedronGeometry(p.radius || 1);
+              } else if (p.type === 'wedge' && p.dimensions) {
+                const [w, h, d] = p.dimensions;
+                const hw = w / 2, hh = h / 2, hd = d / 2;
+                const verts = new Float32Array([
+                  -hw, -hh, -hd,  hw, -hh, -hd,  hw, -hh, hd,  -hw, -hh, hd,
+                  -hw, hh, -hd,   hw, hh, -hd
+                ]);
+                const indices = [
+                  0, 2, 1,  0, 3, 2,
+                  0, 1, 5,  0, 5, 4,
+                  2, 3, 4,  2, 4, 5,
+                  0, 4, 3,  1, 2, 5
+                ];
+                geo = new gfx.THREE.BufferGeometry();
+                geo.setAttribute('position', new gfx.THREE.BufferAttribute(verts, 3));
+                geo.setIndex(indices);
+                geo.computeVertexNormals();
               }
               if (geo) {
                 const mat = new gfx.THREE.MeshStandardMaterial({
-                  color: p.color || 0x888888,
+                  color: p.color != null ? p.color : 0x888888,
                   roughness: 0.5,
                   metalness: 0.1,
                 });
                 const mesh = new gfx.THREE.Mesh(geo, mat);
-                mesh.position.set(...p.position);
+                if (p.position) mesh.position.set(...p.position);
                 if (p.rotation) mesh.rotation.set(...p.rotation);
                 g.add(mesh);
               }
             }
-          } else if (model.meshData) {
+          }
+          if (!g.children.length && model.meshData) {
             const geo = new gfx.THREE.BufferGeometry();
             geo.setAttribute('position', new gfx.THREE.Float32BufferAttribute(model.meshData.vertices, 3));
             if (model.meshData.normals?.length) {
@@ -908,24 +955,53 @@ function featuresSection(r) {
   const asp = feat?.aspectRatio != null ? feat.aspectRatio.toFixed(2) : (r.bounds?.size ? (r.bounds.size[0] / Math.max(0.1, r.bounds.size[1])).toFixed(2) : '—');
   const colors = feat?.colors;
 
+  const hexStr = (val, fallback = '888888') => {
+    if (val == null) return fallback;
+    if (typeof val === 'number') return val.toString(16).padStart(6, '0');
+    return String(val).replace('#', '').padStart(6, '0');
+  };
+
   const colorSwatches = colors ? `
     <div style="display:flex;gap:12px;margin:8px 0;align-items:center;flex-wrap:wrap">
+      ${colors.facadeHex != null ? `
       <div style="display:flex;align-items:center;gap:6px">
-        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${colors.primaryHex.toString(16).padStart(6, '0')}"></span>
-        <span class="pr-dim">主色 #${colors.primaryHex.toString(16).padStart(6, '0')}</span>
-      </div>
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${hexStr(colors.facadeHex)}"></span>
+        <span class="pr-dim">主體 #${hexStr(colors.facadeHex)}</span>
+      </div>` : (colors.primaryHex != null ? `
       <div style="display:flex;align-items:center;gap:6px">
-        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${colors.accentHex.toString(16).padStart(6, '0')}"></span>
-        <span class="pr-dim">點綴色 #${colors.accentHex.toString(16).padStart(6, '0')}</span>
-      </div>
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${hexStr(colors.primaryHex)}"></span>
+        <span class="pr-dim">主色 #${hexStr(colors.primaryHex)}</span>
+      </div>` : '')}
+      ${colors.roofHex != null ? `
       <div style="display:flex;align-items:center;gap:6px">
-        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${colors.darkHex.toString(16).padStart(6, '0')}"></span>
-        <span class="pr-dim">陰影/暗色 #${colors.darkHex.toString(16).padStart(6, '0')}</span>
-      </div>
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${hexStr(colors.roofHex)}"></span>
+        <span class="pr-dim">頂部/樹冠 #${hexStr(colors.roofHex)}</span>
+      </div>` : ''}
+      ${colors.baseHex != null ? `
       <div style="display:flex;align-items:center;gap:6px">
-        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${colors.brightHex.toString(16).padStart(6, '0')}"></span>
-        <span class="pr-dim">金屬/亮色 #${colors.brightHex.toString(16).padStart(6, '0')}</span>
-      </div>
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${hexStr(colors.baseHex)}"></span>
+        <span class="pr-dim">基底/底盤 #${hexStr(colors.baseHex)}</span>
+      </div>` : ''}
+      ${colors.accentHex != null ? `
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${hexStr(colors.accentHex)}"></span>
+        <span class="pr-dim">點綴 #${hexStr(colors.accentHex)}</span>
+      </div>` : ''}
+      ${colors.glassHex != null ? `
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${hexStr(colors.glassHex)}"></span>
+        <span class="pr-dim">玻璃/窗帶 #${hexStr(colors.glassHex)}</span>
+      </div>` : ''}
+      ${colors.darkHex != null ? `
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${hexStr(colors.darkHex)}"></span>
+        <span class="pr-dim">陰影/暗部 #${hexStr(colors.darkHex)}</span>
+      </div>` : ''}
+      ${colors.brightHex != null ? `
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${hexStr(colors.brightHex)}"></span>
+        <span class="pr-dim">金屬/亮色 #${hexStr(colors.brightHex)}</span>
+      </div>` : ''}
     </div>` : '';
 
   const featList = (feat?.reconstructedFeatures || r.reconstructedFeatures || []);

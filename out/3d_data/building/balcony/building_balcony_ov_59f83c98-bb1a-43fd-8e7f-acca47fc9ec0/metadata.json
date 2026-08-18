@@ -3,38 +3,38 @@
   "key": "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_91597873",
   "family": "building",
   "subpart": "balcony",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\balcony\\ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
-  "created_at": "2026-08-18T14:27:15.285Z",
+  "created_at": "2026-08-18T15:15:57.521Z",
   "bounds": {
     "min": [
-      -12.3631,
+      -12.9576,
       0,
-      -10.8013
+      -12.9576
     ],
     "max": [
-      12.3631,
-      28.5847,
-      10.5013
+      12.9576,
+      31.5064,
+      12.9576
     ],
     "size": [
-      24.726,
-      28.585,
-      21.303
+      25.915,
+      31.506,
+      25.915
     ],
-    "rMax": 16.417,
-    "triangles": 368,
-    "vertices": 242
+    "rMax": 18.325,
+    "triangles": 1276,
+    "vertices": 786
   },
   "spec": {
-    "L": 24.24142824444953,
-    "W": 18.402517738612953,
-    "H": 26.18466468299382,
-    "style": "modern_flat_terrace_commercial"
+    "L": 24.68107118333715,
+    "W": 23.402517738612953,
+    "H": 27.45644312199588,
+    "style": "oriental_pagoda_flared_eaves"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

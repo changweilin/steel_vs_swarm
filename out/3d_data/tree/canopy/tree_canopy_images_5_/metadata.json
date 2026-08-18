@@ -3,38 +3,38 @@
   "key": "tree/canopy_images (5)_9eed4007",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
+  "style": "bonsai_potted_twisted",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "tree/images (5).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\images (5).jpg",
-  "created_at": "2026-08-18T14:27:15.837Z",
+  "created_at": "2026-08-18T15:15:58.075Z",
   "bounds": {
     "min": [
-      -9.9789,
-      0,
-      -9.4743
+      -1.95,
+      -0.5625,
+      -1.3511
     ],
     "max": [
-      9.6365,
-      26.2341,
-      9.9
+      1.95,
+      4.95,
+      1.3364
     ],
     "size": [
-      19.615,
-      26.234,
-      19.374
+      3.9,
+      5.513,
+      2.688
     ],
-    "rMax": 13.816,
-    "triangles": 1080,
-    "vertices": 688
+    "rMax": 2.372,
+    "triangles": 712,
+    "vertices": 449
   },
   "spec": {
-    "L": 14.802853437094683,
-    "W": 14.800335698481728,
-    "H": 23.69262226291295,
-    "style": "broadleaf_buttress_and_dome_canopies"
+    "L": 3.2,
+    "W": 3.2,
+    "H": 5.940856031128405,
+    "style": "bonsai_twisted_trunk_and_cloud_pads"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -3,38 +3,38 @@
   "key": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73",
   "family": "building",
   "subpart": "mass",
-  "style": "asian_pagoda_pavilion",
-  "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/14beauty-well-ugly-slide-4QC3-master1050.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\14beauty-well-ugly-slide-4QC3-master1050.jpg",
-  "created_at": "2026-08-18T14:27:15.231Z",
+  "created_at": "2026-08-18T15:15:57.480Z",
   "bounds": {
     "min": [
-      -12.0623,
+      -11.2036,
       0,
-      -12.0623
+      -10.6263
     ],
     "max": [
-      12.0623,
-      33.642,
-      12.0623
+      11.2036,
+      31.788,
+      10.3263
     ],
     "size": [
-      24.125,
-      33.642,
-      24.125
+      22.407,
+      31.788,
+      20.953
     ],
-    "rMax": 17.059,
-    "triangles": 1276,
-    "vertices": 786
+    "rMax": 15.441,
+    "triangles": 416,
+    "vertices": 274
   },
   "spec": {
-    "L": 22.975875486381323,
-    "W": 23.052597848477912,
-    "H": 29.59197375448234,
-    "style": "oriental_pagoda_flared_eaves"
+    "L": 21.967833981841764,
+    "W": 18.052597848477912,
+    "H": 29.38796063172351,
+    "style": "modern_flat_terrace_commercial"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -5,11 +5,11 @@
   "subpart": "lattice",
   "style": "industrial_installation_rig",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "landmark/lattice/ov_74aada95-6d17-4bce-abdb-81a90f79d97f.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\lattice\\ov_74aada95-6d17-4bce-abdb-81a90f79d97f.jpg",
-  "created_at": "2026-08-18T14:27:15.616Z",
+  "created_at": "2026-08-18T15:15:57.849Z",
   "bounds": {
     "min": [
       -4.1907,

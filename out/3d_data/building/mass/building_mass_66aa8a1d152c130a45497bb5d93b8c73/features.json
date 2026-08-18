@@ -1,11 +1,11 @@
 {
   "id": "building_mass_66aa8a1d152c130a45497bb5d93b8c73",
   "sourceImage": "building/66aa8a1d152c130a45497bb5d93b8c73.jpg",
-  "style": "classical_dome_rotunda",
+  "style": "village_triangular_gable",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.851,
   "aspectRatio": 1.778,
-  "colorRichness": 50.24,
+  "colorRichness": 50.01,
   "colors": {
     "roofRgb": [
       133,
@@ -26,65 +26,61 @@
     ],
     "baseHex": 3757147,
     "accentRgb": [
-      94,
-      137,
-      183
+      99,
+      144,
+      190
     ],
-    "accentHex": 6195639,
+    "accentHex": 6525118,
     "darkRgb": [
-      49,
-      69,
-      85
+      47,
+      67,
+      82
     ],
-    "darkHex": 3229013,
+    "darkHex": 3097426,
     "brightRgb": [
       167,
       207,
-      229
+      230
     ],
-    "brightHex": 10997733
+    "brightHex": 10997734,
+    "glassRgb": [
+      47,
+      67,
+      82
+    ],
+    "glassHex": 3097426
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_stylobate_and_peristyle",
-      "method": "tri_tier_plinth_and_octagonal_columns"
+      "name": "stone_masonry_foundation_plinth",
+      "method": "textured_plinth_box"
     },
     {
-      "name": "classical_pantheon_hemisphere_dome",
-      "method": "hemisphere_dome_and_oculus"
+      "name": "steep_triangular_pitched_gable_roof",
+      "method": "dual_opposing_gable_wedges"
+    },
+    {
+      "name": "stone_chimney_and_porch_canopy",
+      "method": "prism_chimney_and_cantilever_porch"
     }
   ],
-  "totalParts": 23,
+  "totalParts": 10,
   "partNames": [
-    "stylobate_plinth_tier_1",
-    "stylobate_plinth_tier_2",
-    "stylobate_plinth_tier_3",
-    "sanctuary_cella_wall",
-    "peristyle_column_0_n",
-    "peristyle_column_0_s",
-    "peristyle_column_1_n",
-    "peristyle_column_1_s",
-    "peristyle_column_2_n",
-    "peristyle_column_2_s",
-    "peristyle_column_3_n",
-    "peristyle_column_3_s",
-    "peristyle_column_4_n",
-    "peristyle_column_4_s",
-    "peristyle_column_5_n",
-    "peristyle_column_5_s",
-    "peristyle_column_6_n",
-    "peristyle_column_6_s",
-    "peristyle_column_7_n",
-    "peristyle_column_7_s",
-    "classical_entablature",
-    "pantheon_rotunda_dome",
-    "dome_oculus_ring"
+    "cottage_stone_foundation",
+    "cottage_timber_walls",
+    "pitched_gable_roof_north",
+    "pitched_gable_roof_south",
+    "roof_ridge_beam",
+    "stone_masonry_chimney",
+    "chimney_crown_cap",
+    "entrance_porch_canopy",
+    "porch_pillar_L",
+    "porch_pillar_R"
   ],
   "polyhedralPrimitivesUsed": [
-    "frustum_pyramid",
     "box",
+    "wedge",
     "polygonal_prism",
-    "hemisphere_dome",
-    "torus_ring"
+    "frustum_pyramid"
   ]
 }

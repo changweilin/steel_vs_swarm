@@ -5,11 +5,11 @@
   "subpart": "canopy",
   "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "tree/800_eb53c296eb6fc1ac757c290a1f6444b8.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\800_eb53c296eb6fc1ac757c290a1f6444b8.jpg",
-  "created_at": "2026-08-18T14:27:16.111Z",
+  "created_at": "2026-08-18T15:15:58.336Z",
   "bounds": {
     "min": [
       -2.7306,

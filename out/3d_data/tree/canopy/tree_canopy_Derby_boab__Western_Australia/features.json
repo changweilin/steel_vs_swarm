@@ -1,11 +1,11 @@
 {
   "id": "tree_canopy_Derby_boab,_Western_Australia",
   "sourceImage": "tree/Derby_boab,_Western_Australia.jpg",
-  "style": "bonsai_potted_twisted",
+  "style": "broadleaf_camphor_oak",
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.845,
   "aspectRatio": 1.333,
-  "colorRichness": 53.42,
+  "colorRichness": 56.03,
   "colors": {
     "roofRgb": [
       84,
@@ -26,53 +26,60 @@
     ],
     "baseHex": 12427903,
     "accentRgb": [
-      87,
-      139,
-      191
+      83,
+      134,
+      186
     ],
-    "accentHex": 5737407,
+    "accentHex": 5473978,
     "darkRgb": [
-      43,
-      35,
-      32
+      41,
+      34,
+      30
     ],
-    "darkHex": 2827040,
+    "darkHex": 2695710,
     "brightRgb": [
-      139,
-      183,
-      216
+      164,
+      202,
+      224
     ],
-    "brightHex": 9156568
+    "brightHex": 10799840,
+    "glassRgb": [
+      83,
+      134,
+      186
+    ],
+    "glassHex": 5473978
   },
   "reconstructedFeatures": [
     {
-      "name": "ceramic_pot_plinth",
-      "method": "frustum_pot_and_rim"
+      "name": "fluted_buttress_root_fins",
+      "method": "frustum_fins"
     },
     {
-      "name": "gnarled_twisted_trunk_segments",
-      "method": "multi_segment_angled_cylinders"
-    },
-    {
-      "name": "cloud_foliage_pads",
-      "method": "flattened_ellipsoidal_cushions"
+      "name": "multi_tier_overlapping_canopy_domes",
+      "method": "ellipsoidal_canopy_domes"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 15,
   "partNames": [
-    "bonsai_ceramic_pot",
-    "bonsai_pot_rim",
-    "bonsai_trunk_seg_1",
-    "bonsai_trunk_seg_2",
-    "bonsai_trunk_seg_3",
-    "bonsai_cloud_pad_1",
-    "bonsai_cloud_pad_2",
-    "bonsai_cloud_pad_3",
-    "bonsai_cloud_pad_4"
+    "gnarled_trunk_core",
+    "buttress_fin_1",
+    "buttress_fin_2",
+    "buttress_fin_3",
+    "buttress_fin_4",
+    "buttress_fin_5",
+    "canopy_foliage_dome_1",
+    "canopy_foliage_dome_2",
+    "canopy_foliage_dome_3",
+    "canopy_foliage_dome_4",
+    "canopy_foliage_dome_5",
+    "canopy_foliage_dome_6",
+    "canopy_foliage_dome_7",
+    "canopy_foliage_dome_8",
+    "canopy_foliage_dome_9"
   ],
   "polyhedralPrimitivesUsed": [
     "frustum_pyramid",
-    "torus_ring",
     "ellipsoid_sphere"
   ]
 }

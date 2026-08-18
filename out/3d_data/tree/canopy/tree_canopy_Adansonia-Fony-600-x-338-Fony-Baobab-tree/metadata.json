@@ -3,38 +3,38 @@
   "key": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_38edd5ad",
   "family": "tree",
   "subpart": "canopy",
-  "style": "shrub_bush_mound",
+  "style": "bonsai_potted_twisted",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
-  "created_at": "2026-08-18T14:27:16.119Z",
+  "created_at": "2026-08-18T15:15:58.345Z",
   "bounds": {
     "min": [
-      -3.0607,
-      -0.1927,
-      -2.7389
+      -1.95,
+      -0.5625,
+      -1.3511
     ],
     "max": [
-      3.4031,
-      2.6975,
-      2.8679
+      1.95,
+      4.95,
+      1.3364
     ],
     "size": [
-      6.464,
-      2.89,
-      5.607
+      3.9,
+      5.513,
+      2.688
     ],
-    "rMax": 4.45,
-    "triangles": 216,
-    "vertices": 120
+    "rMax": 2.372,
+    "triangles": 712,
+    "vertices": 449
   },
   "spec": {
-    "L": 4.8810940718699936,
-    "W": 6.0727473868925,
-    "H": 2.849507896543831,
-    "style": "low_lying_organic_shrub_mounds"
+    "L": 3.2,
+    "W": 3.2,
+    "H": 4.728656443121996,
+    "style": "bonsai_twisted_trunk_and_cloud_pads"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

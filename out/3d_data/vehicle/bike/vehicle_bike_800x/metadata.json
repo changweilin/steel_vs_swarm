@@ -5,11 +5,11 @@
   "subpart": "bike",
   "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "vehicle/bike/800x.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\800x.jpg",
-  "created_at": "2026-08-18T14:27:16.270Z",
+  "created_at": "2026-08-18T15:15:58.541Z",
   "bounds": {
     "min": [
       -1.0188,

@@ -1,11 +1,11 @@
 {
   "id": "tree_canopy_images (7)",
   "sourceImage": "tree/images (7).jpg",
-  "style": "shrub_bush_mound",
+  "style": "bonsai_potted_twisted",
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.872,
   "aspectRatio": 0.876,
-  "colorRichness": 77.55,
+  "colorRichness": 75,
   "colors": {
     "roofRgb": [
       255,
@@ -26,40 +26,59 @@
     ],
     "baseHex": 11520466,
     "accentRgb": [
-      128,
-      80,
-      40
+      126,
+      79,
+      39
     ],
-    "accentHex": 8409128,
+    "accentHex": 8277799,
     "darkRgb": [
-      25,
-      76,
-      34
+      24,
+      71,
+      32
     ],
-    "darkHex": 1657890,
+    "darkHex": 1591072,
     "brightRgb": [
       253,
       254,
       252
     ],
-    "brightHex": 16645884
+    "brightHex": 16645884,
+    "glassRgb": [
+      111,
+      198,
+      230
+    ],
+    "glassHex": 7325414
   },
   "reconstructedFeatures": [
     {
-      "name": "low_lying_clustered_cushion_domes",
-      "method": "polyhedral_dodecahedron_and_spheres"
+      "name": "ceramic_pot_plinth",
+      "method": "frustum_pot_and_rim"
+    },
+    {
+      "name": "gnarled_twisted_trunk_segments",
+      "method": "multi_segment_angled_cylinders"
+    },
+    {
+      "name": "cloud_foliage_pads",
+      "method": "flattened_ellipsoidal_cushions"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 9,
   "partNames": [
-    "shrub_foliage_mound_1",
-    "shrub_foliage_mound_2",
-    "shrub_foliage_mound_3",
-    "shrub_foliage_mound_4",
-    "shrub_foliage_mound_5",
-    "shrub_foliage_mound_6"
+    "bonsai_ceramic_pot",
+    "bonsai_pot_rim",
+    "bonsai_trunk_seg_1",
+    "bonsai_trunk_seg_2",
+    "bonsai_trunk_seg_3",
+    "bonsai_cloud_pad_1",
+    "bonsai_cloud_pad_2",
+    "bonsai_cloud_pad_3",
+    "bonsai_cloud_pad_4"
   ],
   "polyhedralPrimitivesUsed": [
-    "dodecahedron_polyhedron"
+    "frustum_pyramid",
+    "torus_ring",
+    "ellipsoid_sphere"
   ]
 }

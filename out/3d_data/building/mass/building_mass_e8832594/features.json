@@ -1,11 +1,11 @@
 {
   "id": "building_mass_e8832594",
   "sourceImage": "building/e8832594.jpg",
-  "style": "church_pointed_spire",
-  "symmetryMode": "symmetric",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
   "symmetryScore": 0.853,
   "aspectRatio": 1.898,
-  "colorRichness": 65.64,
+  "colorRichness": 66.01,
   "colors": {
     "roofRgb": [
       209,
@@ -26,70 +26,86 @@
     ],
     "baseHex": 6449228,
     "accentRgb": [
-      99,
-      121,
-      150
+      98,
+      123,
+      154
     ],
-    "accentHex": 6519190,
+    "accentHex": 6454170,
     "darkRgb": [
-      46,
-      52,
-      48
+      37,
+      42,
+      40
     ],
-    "darkHex": 3028016,
+    "darkHex": 2435624,
     "brightRgb": [
       231,
       236,
       243
     ],
-    "brightHex": 15199475
+    "brightHex": 15199475,
+    "glassRgb": [
+      98,
+      123,
+      154
+    ],
+    "glassHex": 6454170
   },
   "reconstructedFeatures": [
     {
-      "name": "stone_nave_and_buttresses",
-      "method": "stepped_buttress_frustums"
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
     },
     {
-      "name": "octagonal_gothic_sharp_spire",
-      "method": "tall_octagonal_prism_and_pyramid"
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
     }
   ],
-  "totalParts": 29,
+  "totalParts": 41,
   "partNames": [
-    "cathedral_stone_plinth",
-    "cathedral_nave_hall",
-    "nave_roof_slope_north",
-    "nave_roof_slope_south",
-    "nave_buttress_1_n",
-    "buttress_pinnacle_1_n",
-    "nave_buttress_1_s",
-    "buttress_pinnacle_1_s",
-    "nave_buttress_2_n",
-    "buttress_pinnacle_2_n",
-    "nave_buttress_2_s",
-    "buttress_pinnacle_2_s",
-    "nave_buttress_3_n",
-    "buttress_pinnacle_3_n",
-    "nave_buttress_3_s",
-    "buttress_pinnacle_3_s",
-    "nave_buttress_4_n",
-    "buttress_pinnacle_4_n",
-    "nave_buttress_4_s",
-    "buttress_pinnacle_4_s",
-    "nave_buttress_5_n",
-    "buttress_pinnacle_5_n",
-    "nave_buttress_5_s",
-    "buttress_pinnacle_5_s",
-    "bell_tower_octagonal_shaft",
-    "belfry_cornice_balustrade",
-    "gothic_sharp_spire_apex",
-    "spire_cross_finial_post",
-    "spire_cross_finial_beam"
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "front_balcony_f7_l",
+    "front_balcony_f7_r",
+    "front_balcony_f8_l",
+    "front_balcony_f8_r",
+    "front_balcony_f9_l",
+    "front_balcony_f9_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_fire_platform_f7",
+    "rear_fire_stair_f7",
+    "rear_fire_platform_f8",
+    "rear_fire_stair_f8",
+    "rear_fire_platform_f9",
+    "rear_fire_stair_f9",
+    "rear_exhaust_duct_flue"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
-    "wedge",
-    "frustum_pyramid",
-    "polygonal_prism"
+    "frustum_pyramid"
   ]
 }

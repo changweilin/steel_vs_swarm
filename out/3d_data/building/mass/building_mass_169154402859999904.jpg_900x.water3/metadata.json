@@ -3,38 +3,38 @@
   "key": "building/mass_169154402859999904.jpg!900x.water3_b92410c7",
   "family": "building",
   "subpart": "mass",
-  "style": "asian_pagoda_pavilion",
-  "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/169154402859999904.jpg!900x.water3.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\169154402859999904.jpg!900x.water3.jpg",
-  "created_at": "2026-08-18T14:27:15.243Z",
+  "created_at": "2026-08-18T15:15:57.489Z",
   "bounds": {
     "min": [
-      -12.9195,
+      -12.3139,
       0,
-      -12.9195
+      -9.2498
     ],
     "max": [
-      12.9195,
-      33.338,
-      12.9195
+      12.3139,
+      31.332,
+      8.9498
     ],
     "size": [
-      25.839,
-      33.338,
-      25.839
+      24.628,
+      31.332,
+      18.2
     ],
-    "rMax": 18.271,
-    "triangles": 1276,
-    "vertices": 786
+    "rMax": 15.401,
+    "triangles": 416,
+    "vertices": 274
   },
   "spec": {
-    "L": 24.60865186541543,
-    "W": 20.299656672007323,
-    "H": 29.288014038300144,
-    "style": "oriental_pagoda_flared_eaves"
+    "L": 24.144869153887235,
+    "W": 15.299656672007325,
+    "H": 28.932021057450218,
+    "style": "modern_flat_terrace_commercial"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

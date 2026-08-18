@@ -1,11 +1,11 @@
 {
   "id": "building_window_ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf",
   "sourceImage": "building/window/ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf.jpg",
-  "style": "classical_dome_rotunda",
-  "symmetryMode": "symmetric",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
   "symmetryScore": 0.854,
   "aspectRatio": 1.001,
-  "colorRichness": 75.11,
+  "colorRichness": 75.04,
   "colors": {
     "roofRgb": [
       238,
@@ -26,65 +26,74 @@
     ],
     "baseHex": 15724009,
     "accentRgb": [
-      232,
+      233,
       187,
-      152
+      153
     ],
-    "accentHex": 15252376,
+    "accentHex": 15317913,
     "darkRgb": [
-      32,
-      24,
-      23
+      25,
+      18,
+      19
     ],
-    "darkHex": 2103319,
+    "darkHex": 1643027,
     "brightRgb": [
       239,
       238,
-      233
+      234
     ],
-    "brightHex": 15724265
+    "brightHex": 15724266,
+    "glassRgb": [
+      30,
+      41,
+      59
+    ],
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_stylobate_and_peristyle",
-      "method": "tri_tier_plinth_and_octagonal_columns"
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
     },
     {
-      "name": "classical_pantheon_hemisphere_dome",
-      "method": "hemisphere_dome_and_oculus"
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
     }
   ],
-  "totalParts": 23,
+  "totalParts": 29,
   "partNames": [
-    "stylobate_plinth_tier_1",
-    "stylobate_plinth_tier_2",
-    "stylobate_plinth_tier_3",
-    "sanctuary_cella_wall",
-    "peristyle_column_0_n",
-    "peristyle_column_0_s",
-    "peristyle_column_1_n",
-    "peristyle_column_1_s",
-    "peristyle_column_2_n",
-    "peristyle_column_2_s",
-    "peristyle_column_3_n",
-    "peristyle_column_3_s",
-    "peristyle_column_4_n",
-    "peristyle_column_4_s",
-    "peristyle_column_5_n",
-    "peristyle_column_5_s",
-    "peristyle_column_6_n",
-    "peristyle_column_6_s",
-    "peristyle_column_7_n",
-    "peristyle_column_7_s",
-    "classical_entablature",
-    "pantheon_rotunda_dome",
-    "dome_oculus_ring"
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_exhaust_duct_flue"
   ],
   "polyhedralPrimitivesUsed": [
-    "frustum_pyramid",
     "box",
-    "polygonal_prism",
-    "hemisphere_dome",
-    "torus_ring"
+    "frustum_pyramid"
   ]
 }

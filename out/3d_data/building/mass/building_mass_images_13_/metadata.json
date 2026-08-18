@@ -3,38 +3,38 @@
   "key": "building/mass_images (13)_483e2aac",
   "family": "building",
   "subpart": "mass",
-  "style": "church_pointed_spire",
+  "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/images (13).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\images (13).jpg",
-  "created_at": "2026-08-18T14:27:15.466Z",
+  "created_at": "2026-08-18T15:15:57.703Z",
   "bounds": {
     "min": [
-      -14.6282,
+      -12.7885,
       0,
-      -8.3281
+      -12.3297
     ],
     "max": [
-      16.1576,
-      35.9498,
-      8.3281
+      12.7885,
+      80.8617,
+      16.3797
     ],
     "size": [
-      30.786,
-      35.95,
-      16.656
+      25.577,
+      80.862,
+      28.709
     ],
-    "rMax": 18.178,
-    "triangles": 480,
-    "vertices": 298
+    "rMax": 20.781,
+    "triangles": 316,
+    "vertices": 204
   },
   "spec": {
-    "L": 28.682810711833373,
-    "W": 16.329671168078125,
-    "H": 32.34979781795987,
-    "style": "gothic_cathedral_with_sharp_spire"
+    "L": 25.577080949111163,
+    "W": 24.659342336156254,
+    "H": 68.31174181734951,
+    "style": "modern_stepped_setback_skyscraper"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

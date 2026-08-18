@@ -3,39 +3,39 @@
   "key": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_492d571e",
   "family": "vehicle",
   "subpart": "car",
-  "style": "standard_passenger_automobile",
+  "style": "aerodynamic_gt_supercar",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "vehicle/car/0a7e31437a6be0675bc9cd13c0b401b1.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\0a7e31437a6be0675bc9cd13c0b401b1.jpg",
-  "created_at": "2026-08-18T14:27:16.296Z",
+  "created_at": "2026-08-18T15:15:58.565Z",
   "bounds": {
     "min": [
-      -2.6259,
-      -0.0072,
-      -1.3368
+      -2.4856,
+      -0.0304,
+      -1.3671
     ],
     "max": [
-      2.6359,
-      1.7627,
-      1.3368
+      2.6456,
+      1.2351,
+      1.3671
     ],
     "size": [
-      5.262,
-      1.77,
-      2.674
+      5.131,
+      1.266,
+      2.734
     ],
-    "rMax": 2.956,
-    "triangles": 1012,
-    "vertices": 612
+    "rMax": 2.978,
+    "triangles": 1032,
+    "vertices": 626
   },
   "spec": {
-    "L": 5.211724269474327,
-    "W": 1.95,
-    "H": 1.7627267872129397,
-    "R": 0.36,
-    "style": "passenger_automobile"
+    "L": 4.971293202105745,
+    "W": 2.08,
+    "H": 1.3713633936064697,
+    "R": 0.38,
+    "style": "aerodynamic_supercar_gt"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

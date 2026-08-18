@@ -3,38 +3,38 @@
   "key": "building/bld_tower_ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4_c4606f20",
   "family": "building",
   "subpart": "bld_tower",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "modern_stepped_skyscraper",
+  "symmetryMode": "symmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_tower/ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_tower\\ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4.jpg",
-  "created_at": "2026-08-18T14:27:15.394Z",
+  "created_at": "2026-08-18T15:15:57.625Z",
   "bounds": {
     "min": [
-      -11.1469,
+      -12.9284,
       0,
-      -10.6236
+      -13.0314
     ],
     "max": [
-      11.1469,
-      30.7831,
-      10.3236
+      12.9284,
+      75.5077,
+      17.0814
     ],
     "size": [
-      22.294,
-      30.783,
-      20.947
+      25.857,
+      75.508,
+      30.113
     ],
-    "rMax": 15.399,
-    "triangles": 416,
-    "vertices": 274
+    "rMax": 21.422,
+    "triangles": 304,
+    "vertices": 196
   },
   "spec": {
-    "L": 21.856748302433815,
-    "W": 18.0471046005951,
-    "H": 28.383062485694666,
-    "style": "modern_flat_terrace_commercial"
+    "L": 25.856748302433815,
+    "W": 26.062806134126802,
+    "H": 62.957656214236664,
+    "style": "modern_stepped_setback_skyscraper"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

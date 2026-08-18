@@ -12,14 +12,16 @@
     "baseHex": 3426654,
     "accentHex": 15105570,
     "darkHex": 2899536,
-    "brightHex": 15528177
+    "brightHex": 15528177,
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [],
-  "totalParts": 4,
+  "totalParts": 5,
   "partNames": [
     "vessel_hull_body",
     "bow_flare_wedge",
     "vessel_superstructure",
+    "wheelhouse_glass_strip",
     "vessel_funnel"
   ],
   "polyhedralPrimitivesUsed": [

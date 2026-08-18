@@ -5,7 +5,7 @@
   "symmetryMode": "symmetric",
   "symmetryScore": 0.917,
   "aspectRatio": 1.781,
-  "colorRichness": 61.7,
+  "colorRichness": 60.76,
   "colors": {
     "roofRgb": [
       193,
@@ -26,30 +26,37 @@
     ],
     "baseHex": 1517619,
     "accentRgb": [
-      16,
-      32,
-      42
+      13,
+      29,
+      39
     ],
-    "accentHex": 1056810,
+    "accentHex": 859431,
     "darkRgb": [
-      16,
-      32,
-      42
+      13,
+      29,
+      39
     ],
-    "darkHex": 1056810,
+    "darkHex": 859431,
     "brightRgb": [
       205,
-      209,
-      209
+      210,
+      210
     ],
-    "brightHex": 13488593
+    "brightHex": 13488850,
+    "glassRgb": [
+      120,
+      133,
+      144
+    ],
+    "glassHex": 7898512
   },
   "reconstructedFeatures": [],
-  "totalParts": 4,
+  "totalParts": 5,
   "partNames": [
     "vessel_hull_body",
     "bow_flare_wedge",
     "vessel_superstructure",
+    "wheelhouse_glass_strip",
     "vessel_funnel"
   ],
   "polyhedralPrimitivesUsed": [

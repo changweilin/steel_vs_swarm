@@ -1,11 +1,11 @@
 {
   "id": "tree_canopy_Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)",
   "sourceImage": "tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg",
-  "style": "shrub_bush_mound",
+  "style": "succulent_bottle_baobab",
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.859,
   "aspectRatio": 1.5,
-  "colorRichness": 64.5,
+  "colorRichness": 65.07,
   "colors": {
     "roofRgb": [
       152,
@@ -26,40 +26,56 @@
     ],
     "baseHex": 8562271,
     "accentRgb": [
-      110,
+      109,
       139,
-      30
+      27
     ],
-    "accentHex": 7244574,
+    "accentHex": 7179035,
     "darkRgb": [
-      50,
+      51,
       47,
       25
     ],
-    "darkHex": 3288857,
+    "darkHex": 3354393,
     "brightRgb": [
-      182,
-      207,
+      184,
+      208,
       229
     ],
-    "brightHex": 11980773
+    "brightHex": 12112101,
+    "glassRgb": [
+      152,
+      195,
+      230
+    ],
+    "glassHex": 10011622
   },
   "reconstructedFeatures": [
     {
-      "name": "low_lying_clustered_cushion_domes",
-      "method": "polyhedral_dodecahedron_and_spheres"
+      "name": "swollen_barrel_trunk",
+      "method": "conical_frustum_trunk"
+    },
+    {
+      "name": "umbrella_crown_clusters",
+      "method": "radial_branches_and_domes"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 11,
   "partNames": [
-    "shrub_foliage_mound_1",
-    "shrub_foliage_mound_2",
-    "shrub_foliage_mound_3",
-    "shrub_foliage_mound_4",
-    "shrub_foliage_mound_5",
-    "shrub_foliage_mound_6"
+    "baobab_barrel_trunk",
+    "baobab_branch_1",
+    "baobab_foliage_dome_1",
+    "baobab_branch_2",
+    "baobab_foliage_dome_2",
+    "baobab_branch_3",
+    "baobab_foliage_dome_3",
+    "baobab_branch_4",
+    "baobab_foliage_dome_4",
+    "baobab_branch_5",
+    "baobab_foliage_dome_5"
   ],
   "polyhedralPrimitivesUsed": [
-    "dodecahedron_polyhedron"
+    "frustum_pyramid",
+    "ellipsoid_sphere"
   ]
 }

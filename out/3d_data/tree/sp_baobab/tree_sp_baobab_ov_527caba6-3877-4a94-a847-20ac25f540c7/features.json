@@ -1,11 +1,11 @@
 {
   "id": "tree_sp_baobab_ov_527caba6-3877-4a94-a847-20ac25f540c7",
   "sourceImage": "tree/sp_baobab/ov_527caba6-3877-4a94-a847-20ac25f540c7.png",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.743,
   "aspectRatio": 1.399,
-  "colorRichness": 83.08,
+  "colorRichness": 88.93,
   "colors": {
     "roofRgb": [
       238,
@@ -26,54 +26,46 @@
     ],
     "baseHex": 15790320,
     "accentRgb": [
-      245,
-      245,
-      245
+      253,
+      253,
+      253
     ],
-    "accentHex": 16119285,
+    "accentHex": 16645629,
     "darkRgb": [
-      4,
-      4,
-      4
+      3,
+      3,
+      3
     ],
-    "darkHex": 263172,
+    "darkHex": 197379,
     "brightRgb": [
-      245,
-      245,
-      245
+      253,
+      253,
+      253
     ],
-    "brightHex": 16119285
+    "brightHex": 16645629,
+    "glassRgb": [
+      3,
+      3,
+      3
+    ],
+    "glassHex": 197379
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_root_fins",
-      "method": "frustum_fins"
-    },
-    {
-      "name": "multi_tier_overlapping_canopy_domes",
-      "method": "ellipsoidal_canopy_domes"
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
     }
   ],
-  "totalParts": 15,
+  "totalParts": 6,
   "partNames": [
-    "gnarled_trunk_core",
-    "buttress_fin_1",
-    "buttress_fin_2",
-    "buttress_fin_3",
-    "buttress_fin_4",
-    "buttress_fin_5",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4",
-    "canopy_foliage_dome_5",
-    "canopy_foliage_dome_6",
-    "canopy_foliage_dome_7",
-    "canopy_foliage_dome_8",
-    "canopy_foliage_dome_9"
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
   ],
   "polyhedralPrimitivesUsed": [
-    "frustum_pyramid",
-    "ellipsoid_sphere"
+    "dodecahedron_polyhedron"
   ]
 }

@@ -5,11 +5,11 @@
   "subpart": "hull",
   "style": "generic",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "ship/LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方.webp",
-  "created_at": "2026-08-18T14:27:16.055Z",
+  "created_at": "2026-08-18T15:15:58.283Z",
   "bounds": {
     "min": [
       -23.6494,
@@ -27,8 +27,8 @@
       10.929
     ],
     "rMax": 27.41,
-    "triangles": 64,
-    "vertices": 40
+    "triangles": 76,
+    "vertices": 48
   },
   "spec": {
     "L": 51.41176470588235,

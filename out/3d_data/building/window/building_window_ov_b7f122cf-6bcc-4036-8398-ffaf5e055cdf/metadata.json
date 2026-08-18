@@ -3,38 +3,38 @@
   "key": "building/window_ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf_4e481ead",
   "family": "building",
   "subpart": "window",
-  "style": "classical_dome_rotunda",
-  "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/window/ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\window\\ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf.jpg",
-  "created_at": "2026-08-18T14:27:15.582Z",
+  "created_at": "2026-08-18T15:15:57.817Z",
   "bounds": {
     "min": [
-      -15.7433,
+      -9.6469,
       0,
-      -15.7433
+      -10.6322
     ],
     "max": [
-      15.7433,
-      19.1067,
-      15.7433
+      9.6469,
+      28.5206,
+      10.3322
     ],
     "size": [
-      31.487,
-      19.107,
-      31.487
+      19.294,
+      28.521,
+      20.964
     ],
-    "rMax": 22.264,
-    "triangles": 1064,
-    "vertices": 613
+    "rMax": 14.356,
+    "triangles": 368,
+    "vertices": 242
   },
   "spec": {
-    "L": 28.68665598535134,
-    "W": 20.042877851529717,
-    "H": 16.706858930342566,
-    "style": "pantheon_rotunda_with_grand_dome"
+    "L": 18.915541313801786,
+    "W": 18.064316777294575,
+    "H": 26.120576791027695,
+    "style": "modern_flat_terrace_commercial"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

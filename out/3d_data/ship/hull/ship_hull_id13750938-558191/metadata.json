@@ -5,11 +5,11 @@
   "subpart": "hull",
   "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "ship/id13750938-558191.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\id13750938-558191.jpg",
-  "created_at": "2026-08-18T14:27:16.051Z",
+  "created_at": "2026-08-18T15:15:58.278Z",
   "bounds": {
     "min": [
       -26.1776,
@@ -27,8 +27,8 @@
       11.789
     ],
     "rMax": 30.228,
-    "triangles": 64,
-    "vertices": 40
+    "triangles": 76,
+    "vertices": 48
   },
   "spec": {
     "L": 56.907759212634474,

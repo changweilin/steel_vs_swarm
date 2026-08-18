@@ -5,11 +5,11 @@
   "subpart": "car",
   "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "vehicle/car/241016-26812-1-UmpVe.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\241016-26812-1-UmpVe.jpg",
-  "created_at": "2026-08-18T14:27:16.357Z",
+  "created_at": "2026-08-18T15:15:58.625Z",
   "bounds": {
     "min": [
       -2.5759,

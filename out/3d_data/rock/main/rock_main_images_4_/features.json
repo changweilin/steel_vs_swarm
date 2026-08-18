@@ -5,7 +5,7 @@
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.923,
   "aspectRatio": 2.048,
-  "colorRichness": 67.23,
+  "colorRichness": 68.17,
   "colors": {
     "roofRgb": [
       233,
@@ -38,11 +38,17 @@
     ],
     "darkHex": 5919048,
     "brightRgb": [
-      250,
-      250,
-      250
+      252,
+      252,
+      252
     ],
-    "brightHex": 16448250
+    "brightHex": 16579836,
+    "glassRgb": [
+      30,
+      41,
+      59
+    ],
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [
     {

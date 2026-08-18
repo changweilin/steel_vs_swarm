@@ -3,38 +3,38 @@
   "key": "building/bld_lighthouse_ov_a2f6edb9-4915-485a-bff7-5090f6c6277f_fcecf187",
   "family": "building",
   "subpart": "bld_lighthouse",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "modern_stepped_skyscraper",
+  "symmetryMode": "symmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_lighthouse/ov_a2f6edb9-4915-485a-bff7-5090f6c6277f.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_lighthouse\\ov_a2f6edb9-4915-485a-bff7-5090f6c6277f.jpg",
-  "created_at": "2026-08-18T14:27:15.344Z",
+  "created_at": "2026-08-18T15:15:57.576Z",
   "bounds": {
     "min": [
-      -12.506,
+      -14.2608,
       0,
-      -10.0951
+      -12.3269
     ],
     "max": [
-      12.506,
-      34.7518,
-      9.7951
+      14.2608,
+      85.4294,
+      16.3769
     ],
     "size": [
-      25.012,
-      34.752,
-      19.89
+      28.522,
+      85.429,
+      28.704
     ],
-    "rMax": 16.072,
-    "triangles": 464,
-    "vertices": 306
+    "rMax": 21.716,
+    "triangles": 340,
+    "vertices": 220
   },
   "spec": {
-    "L": 24.521583886472875,
-    "W": 16.9902952620737,
-    "H": 32.351750972762645,
-    "style": "modern_flat_terrace_commercial"
+    "L": 28.521583886472875,
+    "W": 24.65372701609827,
+    "H": 72.87937743190662,
+    "style": "modern_stepped_setback_skyscraper"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -3,38 +3,38 @@
   "key": "building/bld_hanok_ov_ad4c1b7a-e581-4d3e-b2dc-d698da9bc642_d293fbea",
   "family": "building",
   "subpart": "bld_hanok",
-  "style": "classical_dome_rotunda",
+  "style": "village_triangular_gable",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_hanok/ov_ad4c1b7a-e581-4d3e-b2dc-d698da9bc642.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_hanok\\ov_ad4c1b7a-e581-4d3e-b2dc-d698da9bc642.jpg",
-  "created_at": "2026-08-18T14:27:15.334Z",
+  "created_at": "2026-08-18T15:15:57.568Z",
   "bounds": {
     "min": [
-      -16.7907,
+      -9.2298,
       0,
-      -16.7907
+      -7.8787
     ],
     "max": [
-      16.7907,
-      20.5067,
-      16.7907
+      9.2298,
+      12.2975,
+      9.2624
     ],
     "size": [
-      33.581,
-      20.507,
-      33.581
+      18.46,
+      12.297,
+      17.141
     ],
-    "rMax": 23.746,
-    "triangles": 1064,
-    "vertices": 613
+    "rMax": 13.076,
+    "triangles": 140,
+    "vertices": 90
   },
   "spec": {
-    "L": 30.781414511329825,
-    "W": 21.324879835202562,
-    "H": 18.62998397802701,
-    "style": "pantheon_rotunda_with_grand_dome"
+    "L": 16.781414511329825,
+    "W": 14.324879835202564,
+    "H": 11.472487983520256,
+    "style": "alpine_village_cottage_pitched_gable"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -1,11 +1,11 @@
 {
   "id": "building_dormer_wc_14646619",
   "sourceImage": "building/dormer/wc_14646619.jpg",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
+  "style": "village_triangular_gable",
+  "symmetryMode": "symmetric",
   "symmetryScore": 0.808,
   "aspectRatio": 1.355,
-  "colorRichness": 65.49,
+  "colorRichness": 71.17,
   "colors": {
     "roofRgb": [
       127,
@@ -38,60 +38,49 @@
     ],
     "darkHex": 2038560,
     "brightRgb": [
-      211,
-      212,
-      209
+      234,
+      234,
+      237
     ],
-    "brightHex": 13882577
+    "brightHex": 15395565,
+    "glassRgb": [
+      128,
+      177,
+      239
+    ],
+    "glassHex": 8434159
   },
   "reconstructedFeatures": [
     {
-      "name": "front_storefront_and_cantilever_balconies",
-      "method": "storefront_and_balconies"
+      "name": "stone_masonry_foundation_plinth",
+      "method": "textured_plinth_box"
     },
     {
-      "name": "rear_fire_escape_stair_tower_and_flues",
-      "method": "asymmetric_fire_escape_and_ducts"
+      "name": "steep_triangular_pitched_gable_roof",
+      "method": "dual_opposing_gable_wedges"
+    },
+    {
+      "name": "stone_chimney_and_porch_canopy",
+      "method": "prism_chimney_and_cantilever_porch"
     }
   ],
-  "totalParts": 33,
+  "totalParts": 10,
   "partNames": [
-    "building_mass_body",
-    "flat_roof_parapet_rim",
-    "rooftop_elevator_penthouse",
-    "front_storefront_glazed",
-    "front_balcony_f1_l",
-    "front_balcony_f1_r",
-    "front_balcony_f2_l",
-    "front_balcony_f2_r",
-    "front_balcony_f3_l",
-    "front_balcony_f3_r",
-    "front_balcony_f4_l",
-    "front_balcony_f4_r",
-    "front_balcony_f5_l",
-    "front_balcony_f5_r",
-    "front_balcony_f6_l",
-    "front_balcony_f6_r",
-    "front_balcony_f7_l",
-    "front_balcony_f7_r",
-    "rear_fire_platform_f1",
-    "rear_fire_stair_f1",
-    "rear_fire_platform_f2",
-    "rear_fire_stair_f2",
-    "rear_fire_platform_f3",
-    "rear_fire_stair_f3",
-    "rear_fire_platform_f4",
-    "rear_fire_stair_f4",
-    "rear_fire_platform_f5",
-    "rear_fire_stair_f5",
-    "rear_fire_platform_f6",
-    "rear_fire_stair_f6",
-    "rear_fire_platform_f7",
-    "rear_fire_stair_f7",
-    "rear_exhaust_duct_flue"
+    "cottage_stone_foundation",
+    "cottage_timber_walls",
+    "pitched_gable_roof_north",
+    "pitched_gable_roof_south",
+    "roof_ridge_beam",
+    "stone_masonry_chimney",
+    "chimney_crown_cap",
+    "entrance_porch_canopy",
+    "porch_pillar_L",
+    "porch_pillar_R"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
+    "wedge",
+    "polygonal_prism",
     "frustum_pyramid"
   ]
 }
