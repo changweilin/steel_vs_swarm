@@ -69,6 +69,7 @@ const BREAK_REPLACE = process.argv.includes('--break-replace');
 const BREAK_PARALLEL = process.argv.includes('--break-parallel');
 const BREAK_ROUTE = process.argv.includes('--break-route');
 const BREAK_CORPUS_PATH = process.argv.includes('--break-corpus-path');
+const BREAK_FILTER = process.argv.includes('--break-filter');
 
 let pass = 0, fail = 0, unverified = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -727,5 +728,52 @@ console.log('\nⅪ 封存區 / 未覆核重跑 / 來源帳鍵的正規化');
     '每一個候選自帶「出不出貨」(面板要逐列標,而不是只標選中的那一個)');
 }
 
+// ============ Ⅻ 零件台篩選 (方法 / 物件分類 / 生成日期) ============
+console.log('\nⅫ 零件台篩選功能 (方法 / 物件分類 / 生成日期)');
+{
+  const prMjsSrc = readSrc('tools', 'parts_review.mjs');
+  let rvFilterSrc = readSrc('tools', 'parts_review', 'review.js');
+  let htmlFilterSrc = readSrc('tools', 'parts_review', 'index.html');
+
+  if (BREAK_FILTER) {
+    rvFilterSrc = rvFilterSrc.replace(/setupFilters\(\)/, '');
+    htmlFilterSrc = htmlFilterSrc.replace(/prFilterMethod/, 'brokenMethod');
+  }
+
+  // (a) manifest 包含 methods, families, dates 與每列的 family, method, at 欄位
+  const { manifest } = await import('../parts_review.mjs');
+  const m = manifest();
+  ok(Array.isArray(m.methods) && m.methods.length >= 3, 'manifest 包含 methods 方法字彙清單');
+  ok(Array.isArray(m.families) && m.families.length >= 3, 'manifest 包含 families 物件分類清單');
+  ok(Array.isArray(m.dates) && m.dates.length >= 3, 'manifest 包含 dates 生成日期清單');
+  ok(m.rows.every((r) => r.key && ('family' in r) && ('method' in r) && ('at' in r)),
+    'manifest 每一列均帶有 family、method 與 at 欄位');
+
+  // (b) index.html 包含方法、分類、日期三組下拉選單與重置按鈕
+  ok(/id="prFilterMethod"/.test(htmlFilterSrc), 'index.html 包含 #prFilterMethod 方法下拉選單');
+  ok(/id="prFilterFamily"/.test(htmlFilterSrc), 'index.html 包含 #prFilterFamily 物件分類下拉選單');
+  ok(/id="prFilterDate"/.test(htmlFilterSrc), 'index.html 包含 #prFilterDate 生成日期下拉選單');
+  ok(/id="prFilterReset"/.test(htmlFilterSrc), 'index.html 包含 #prFilterReset 篩選重置按鈕');
+
+  // (c) review.js 包含 setupFilters, keepRow 與篩選連動邏輯
+  ok(/function setupFilters\(/.test(rvFilterSrc) && /setupFilters\(\)/.test(rvFilterSrc),
+    'review.js 於啟動時執行 setupFilters() 初始化選單選項');
+  ok(/app\.filterMethod/.test(rvFilterSrc) && /app\.filterFamily/.test(rvFilterSrc) && /app\.filterDate/.test(rvFilterSrc),
+    'review.js 狀態支援 filterMethod、filterFamily 與 filterDate');
+  ok(/const keepRow =/.test(rvFilterSrc), 'review.js 具備 keepRow 複合篩選判定函式');
+  ok(/mk !== app\.filterMethod|app\.filterMethod/.test(rvFilterSrc),
+    'keepRow 正確判定生成方法篩選');
+  ok(/fam !== app\.filterFamily|app\.filterFamily/.test(rvFilterSrc),
+    'keepRow 正確判定物件分類篩選');
+  ok(/\.startsWith\(app\.filterDate\)/.test(rvFilterSrc),
+    'keepRow 正確判定生成日期前綴篩選');
+
+  // (d) CLI --report 支援篩選
+  ok(/const filterMethod = arg\('--method'\)/.test(prMjsSrc), 'parts_review.mjs --report 支援 --method 篩選');
+  ok(/const filterFamily = arg\('--family'\)/.test(prMjsSrc), 'parts_review.mjs --report 支援 --family 篩選');
+  ok(/const filterDate = arg\('--date'\)/.test(prMjsSrc), 'parts_review.mjs --report 支援 --date 篩選');
+}
+
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項,失敗 ${fail} 項${unverified ? `,未驗 ${unverified} 項` : ''}`);
 process.exit(fail ? 1 : 0);
+

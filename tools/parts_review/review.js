@@ -70,7 +70,18 @@ const FIT_PAD = 1.3;
 
 const app = {
   data: null, cur: null, filter: 'all', list: 'nodes',
+  filterMethod: '', filterFamily: '', filterDate: '',
   seed: SEEDS[0], dist: 'part', collider: true, spin: true,
+};
+
+const FAMILY_LABELS = {
+  beacon: 'beacon (地標)',
+  bld: 'bld (建物配件)',
+  building: 'building (建築)',
+  rock: 'rock (岩石/巨岩)',
+  ship: 'ship (船艦)',
+  tree: 'tree (植被/神木)',
+  vehicle: 'vehicle (載具)',
 };
 
 // ---- 資料 ------------------------------------------------------------------
@@ -521,6 +532,126 @@ function renderPhotoList() {
   for (const el of $('prList').querySelectorAll('.pr-row')) el.onclick = () => select(el.dataset.key);
 }
 
+function setupFilters() {
+  const mSel = $('prFilterMethod');
+  const fSel = $('prFilterFamily');
+  const dSel = $('prFilterDate');
+  const rBtn = $('prFilterReset');
+  if (!mSel || !fSel || !dSel) return;
+
+  // 1. 生成方法選單
+  const methodCounts = new Map();
+  for (const r of app.data.rows) {
+    const k = r.method?.key || (r.prov ? r.prov.method : 'undoc');
+    methodCounts.set(k, (methodCounts.get(k) || 0) + 1);
+  }
+  const methods = app.data.methods || [];
+  const methodOpts = [
+    '<option value="">方法: 全部</option>',
+    ...methods.filter((m) => methodCounts.has(m.key)).map((m) =>
+      `<option value="${esc(m.key)}">${esc(m.short || m.label)} (${methodCounts.get(m.key) || 0})</option>`),
+    ...(methodCounts.has('undoc') ? [`<option value="undoc">未記載 (${methodCounts.get('undoc') || 0})</option>`] : []),
+  ];
+  mSel.innerHTML = methodOpts.join('');
+
+  // 2. 物件分類選單
+  const familyCounts = new Map();
+  for (const r of app.data.rows) {
+    const fam = r.family || (r.key ? r.key.split('/')[0] : 'other');
+    familyCounts.set(fam, (familyCounts.get(fam) || 0) + 1);
+  }
+  const families = [...familyCounts.keys()].sort();
+  const famOpts = [
+    '<option value="">分類: 全部</option>',
+    ...families.map((f) =>
+      `<option value="${esc(f)}">${esc(FAMILY_LABELS[f] || f)} (${familyCounts.get(f) || 0})</option>`),
+  ];
+  fSel.innerHTML = famOpts.join('');
+
+  // 3. 生成日期選單
+  const dateCounts = new Map();
+  for (const r of app.data.rows) {
+    const dt = r.at || r.prov?.at || 'none';
+    dateCounts.set(dt, (dateCounts.get(dt) || 0) + 1);
+  }
+  const dates = [...dateCounts.keys()].filter((d) => d !== 'none').sort((a, b) => b.localeCompare(a));
+  const dateOpts = [
+    '<option value="">日期: 全部</option>',
+    ...dates.map((d) => `<option value="${esc(d)}">${esc(d)} (${dateCounts.get(d) || 0})</option>`),
+    ...(dateCounts.has('none') ? [`<option value="none">未記載/無日期 (${dateCounts.get('none') || 0})</option>`] : []),
+  ];
+  dSel.innerHTML = dateOpts.join('');
+
+  const onFilterChange = () => {
+    app.filterMethod = mSel.value;
+    app.filterFamily = fSel.value;
+    app.filterDate = dSel.value;
+    mSel.classList.toggle('active', !!app.filterMethod);
+    fSel.classList.toggle('active', !!app.filterFamily);
+    dSel.classList.toggle('active', !!app.filterDate);
+    if (rBtn) rBtn.hidden = !app.filterMethod && !app.filterFamily && !app.filterDate;
+
+    // 若目前選取的物件不在篩選後的清單中，自動跳到第一筆
+    const filteredRows = app.data.rows.filter(keepRow);
+    if (app.cur && !filteredRows.some((r) => r.key === app.cur)) {
+      app.cur = filteredRows[0]?.key || null;
+      renderBody();
+    }
+    renderList();
+    renderStat();
+  };
+
+  mSel.onchange = onFilterChange;
+  fSel.onchange = onFilterChange;
+  dSel.onchange = onFilterChange;
+
+  if (rBtn) {
+    rBtn.onclick = () => {
+      mSel.value = '';
+      fSel.value = '';
+      dSel.value = '';
+      onFilterChange();
+    };
+  }
+}
+
+const keepRow = (r) => {
+  const s = statOf(r);
+  if (app.filter === 'wip') {
+    if (!isWip(r)) return false;
+  } else {
+    if (isWip(r)) return false;   // 其餘每一個分頁都收起半成品
+    if (app.filter === 'todo' && !!s.status) return false;
+    if (app.filter === 'flag' && !s.flag) return false;
+    if (app.filter === 'miss' && !r.missing) return false;
+    if (app.filter === 'undoc' && !!r.prov) return false;
+  }
+  // 方法篩選
+  if (app.filterMethod) {
+    if (app.filterMethod === 'undoc') {
+      if (r.prov && r.method) return false;
+    } else {
+      const mk = r.method?.key || r.prov?.method;
+      if (mk !== app.filterMethod) return false;
+    }
+  }
+  // 分類篩選
+  if (app.filterFamily) {
+    const fam = r.family || (r.key ? r.key.split('/')[0] : '');
+    if (fam !== app.filterFamily) return false;
+  }
+  // 生成日期篩選
+  if (app.filterDate) {
+    if (app.filterDate === 'none') {
+      if (r.at || r.prov?.at) return false;
+    } else {
+      const dt = r.at || r.prov?.at || '';
+      if (!dt.startsWith(app.filterDate)) return false;
+    }
+  }
+  return true;
+};
+
 function renderList() {
   // 左側清單有四種內容:生成物 / 語料圖檔(四態)/ 封存區 / 執行進度。
   // 執行進度沒有「一件一件」可挑 ⇒ 清單只放一列當作它自己的入口(不留空白,也不假裝有列表)
@@ -532,17 +663,8 @@ function renderList() {
   }
   if (app.list === 'archive') return renderArchiveList();
   if (app.list !== 'nodes') return renderPhotoList();
-  const keep = (r) => {
-    const s = statOf(r);
-    if (app.filter === 'wip') return isWip(r);
-    if (isWip(r)) return false;   // 其餘每一個分頁都收起半成品
-    if (app.filter === 'todo') return !s.status;
-    if (app.filter === 'flag') return s.flag;
-    if (app.filter === 'miss') return r.missing;
-    if (app.filter === 'undoc') return !r.prov;
-    return true;
-  };
-  $('prList').innerHTML = app.data.rows.filter(keep).map((r) => {
+  const rows = app.data.rows.filter(keepRow);
+  $('prList').innerHTML = rows.map((r) => {
     const s = statOf(r);
     const pill = isWip(r) ? '<span class="pr-pill miss">半成品</span>'
       : r.missing ? '<span class="pr-pill miss">缺件</span>'
@@ -563,11 +685,15 @@ function renderStat() {
   const rows = app.data.rows;
   const wip = app.data.wip?.length || 0;
   const shown = rows.filter((r) => !isWip(r));
+  const filtered = rows.filter(keepRow);
   const ok = shown.filter((r) => itemOf(r.key)?.status === 'ok').length;
   const flag = shown.filter((r) => statOf(r).flag).length;
+  const hasExtraFilter = !!(app.filterMethod || app.filterFamily || app.filterDate);
+  const filterInfo = hasExtraFilter ? `(篩選後 ${filtered.length} 件) ・ ` : '';
+
   // 分子分母都只算**台上顯示的那些** —— 把收起來的半成品算進「生成物」的話,
   // 「已通過 N / 生成物 M」這個進度永遠差那幾件而看不出原因
-  $('prStat').textContent = `生成物 ${shown.length} 件 ・ 已通過 ${ok} ・ 有意見 ${flag}`
+  $('prStat').textContent = `生成物 ${shown.length} 件 ・ ${filterInfo}已通過 ${ok} ・ 有意見 ${flag}`
     + ` ・ 半成品 ${wip}(已收起) ・ 缺件 ${app.data.missing.length} ・ 孤兒節點 ${app.data.orphans.length}`
     + ` ・ 未記載來源 ${app.data.undocumented.length}`
     // 封存的**不算在生成物裡**(它已經不在遊戲裡了)⇒ 另外一個數字,而不是把分母撐大
@@ -582,6 +708,7 @@ function renderStat() {
     el.title = ck.root;
   }
 }
+
 
 // ---- 右側 ------------------------------------------------------------------
 function select(key) { app.cur = key; renderList(); renderBody(); }
@@ -1223,16 +1350,24 @@ function renderPhotoBody(id) {
 app.data = await api();
 try { await initGfx(app.data); }
 catch (e) { gfx.error = e?.message || String(e); console.warn('3D 對照停用:', e); }
+setupFilters();
 renderStat();
 renderList();
-select(app.data.rows[0]?.key);
+select(app.data.rows.filter(keepRow)[0]?.key || app.data.rows[0]?.key);
 for (const b of $('prFilter').querySelectorAll('.segb')) {
   b.onclick = () => {
     app.filter = b.dataset.f;
     for (const x of $('prFilter').querySelectorAll('.segb')) x.classList.toggle('on', x === b);
+    const filteredRows = app.data.rows.filter(keepRow);
+    if (app.cur && !filteredRows.some((r) => r.key === app.cur)) {
+      app.cur = filteredRows[0]?.key || null;
+      renderBody();
+    }
     renderList();
+    renderStat();
   };
 }
+
 // 採集迴圈那一條放**最後**載入:它會去問啟停端點與語料帳本,而那兩件都可能不在
 // (終端機直接跑這個台子、或語料家不在本機)⇒ 失敗一律只影響這一條窄帶,主畫面照常。
 loadHarvest();
