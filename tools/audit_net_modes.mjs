@@ -384,9 +384,15 @@ try {
     }
     ok(up && started.owned,
       `${t.key}:start 之後${t.kind === 'job' ? '子行程還活著' : `埠 ${started.port} 真的聽得到`},而且是我們開的`);
+    // 設定頁的背景行程監控只准讀管理者交出的觀測資料；PID 與起訖時間不可由客戶端猜。
+    ok(Number.isInteger(started.monitor?.pid) && !!started.monitor?.startedAt
+      && !!started.monitor?.lastOutputAt && started.monitor.uptimeMs >= 0,
+    `${t.key}:啟動後回報背景行程的 PID、起始時間與持續時間`);
     const stopped = await sup.stop(t.key);
     ok(!(t.kind === 'job' ? stopped.running : stopped.listening) && !stopped.owned,
       `${t.key}:stop 之後${t.kind === 'job' ? '行程收掉了' : '埠放掉了'}`);
+    ok(!!stopped.monitor?.endedAt && stopped.monitor.uptimeMs >= 0,
+      `${t.key}:停止後保留背景行程的結束時間與持續時間`);
     ok((await sup.stop(t.key)).error === '這一支不是從這裡啟動的', `${t.key}:重複 stop 不炸,而且明講原因`);
   }
 } finally {
