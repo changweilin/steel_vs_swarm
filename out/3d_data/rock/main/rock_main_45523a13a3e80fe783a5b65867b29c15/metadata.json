@@ -5,11 +5,11 @@
   "subpart": "main",
   "style": "faceted_erratic_boulder",
   "symmetryMode": "asymmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "rock/45523a13a3e80fe783a5b65867b29c15.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\45523a13a3e80fe783a5b65867b29c15.jpg",
-  "created_at": "2026-08-18T15:15:57.879Z",
+  "created_at": "2026-08-18T17:17:52.552Z",
   "bounds": {
     "min": [
       -6.7193,

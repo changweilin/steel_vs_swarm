@@ -28,7 +28,7 @@
 import { createServer } from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
@@ -91,9 +91,40 @@ export function manifest(items = {}, photosOpt = null) {
     catch (e) { families.set(fam, { path: p, nodes: null, error: `GLB 解析失敗:${e.message}` }); }
   }
 
+  // 載入所有資料家的照片帳本以查詢原始照片下載時間
+  const photoMetaMap = new Map();
+  for (const root of roots) {
+    const manPath = join(root, 'photo_manifest.json');
+    if (existsSync(manPath)) {
+      try {
+        const man = JSON.parse(readFileSync(manPath, 'utf8'));
+        if (Array.isArray(man)) {
+          for (const entry of man) {
+            if (entry.id) photoMetaMap.set(entry.id, entry);
+            if (entry.file) photoMetaMap.set(entry.file.replace(/\\/g, '/'), entry);
+          }
+        }
+      } catch {}
+    }
+  }
+
   const imgsOut = (key, imgs) => (imgs || []).map((im, i) => {
     const hit = resolvePhoto(im.file, roots);
-    return { ...im, has: !!hit, url: hit ? `/api/img?key=${encodeURIComponent(key)}&i=${i}` : null };
+    const entry = photoMetaMap.get(im.id) || photoMetaMap.get(im.file?.replace(/\\/g, '/')) || null;
+    let downloaded_at = entry?.retrieved_at || entry?.downloaded_at || im.retrieved_at || im.downloaded_at || null;
+    if (!downloaded_at && hit) {
+      try {
+        downloaded_at = statSync(hit.path).mtime.toISOString();
+      } catch {}
+    }
+    const photoDate = downloaded_at ? downloaded_at.slice(0, 10) : null;
+    return {
+      ...im,
+      has: !!hit,
+      downloaded_at,
+      photoDate,
+      url: hit ? `/api/img?key=${encodeURIComponent(key)}&i=${i}` : null,
+    };
   });
   const imgOut = (key) => imgsOut(key, prov.byKey.get(key)?.imgs);
 
@@ -330,9 +361,16 @@ export function manifest(items = {}, photosOpt = null) {
     verStr: `v${p.version || 1}`,
   })).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
 
+  for (const r of rows) {
+    const pDates = (r.imgs || []).map((im) => im.photoDate).filter(Boolean);
+    r.photoDate = pDates[0] || null;
+    r.photoDates = [...new Set(pDates)];
+  }
+
   rows.sort((a, b) => (a.key < b.key ? -1 : 1));
   const uniqueFamilies = [...new Set(rows.map((r) => r.family || (r.key ? r.key.split('/')[0] : null)).filter(Boolean))].sort();
   const uniqueDates = [...new Set(rows.map((r) => r.at || r.prov?.at || null).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+  const uniquePhotoDates = [...new Set(rows.flatMap((r) => r.photoDates || []))].filter(Boolean).sort((a, b) => b.localeCompare(a));
   const uniqueVersions = [...new Set(rows.map((r) => r.verStr || `v${r.version || 1}`))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   return {
@@ -349,6 +387,7 @@ export function manifest(items = {}, photosOpt = null) {
     methods: Object.values(METHODS),
     families: uniqueFamilies,
     dates: uniqueDates,
+    photoDates: uniquePhotoDates,
     versions: uniqueVersions,
   };
 }
@@ -404,17 +443,19 @@ async function report() {
   const filterMethod = arg('--method');
   const filterFamily = arg('--family');
   const filterDate = arg('--date');
+  const filterPhotoDate = arg('--photo-date') || arg('--photodate');
   const filterVersion = arg('--version') || arg('--ver');
 
   let rows = m.rows;
   if (filterMethod) rows = rows.filter((r) => (r.method?.key || r.prov?.method) === filterMethod);
   if (filterFamily) rows = rows.filter((r) => (r.family || r.key.split('/')[0]) === filterFamily);
   if (filterDate) rows = rows.filter((r) => (r.at || r.prov?.at || '').startsWith(filterDate));
+  if (filterPhotoDate) rows = rows.filter((r) => (r.photoDates && r.photoDates.some((d) => d.startsWith(filterPhotoDate))) || (r.photoDate && r.photoDate.startsWith(filterPhotoDate)));
   if (filterVersion) rows = rows.filter((r) => (r.verStr || `v${r.version || 1}`) === filterVersion || String(r.version) === filterVersion);
 
   console.log('3D 零件對照台 — 對照表');
-  if (filterMethod || filterFamily || filterDate || filterVersion) {
-    console.log(`  (篩選條件: 方法=${filterMethod || '全部'}, 分類=${filterFamily || '全部'}, 日期=${filterDate || '全部'}, 版本=${filterVersion || '全部'}；符合 ${rows.length}/${m.rows.length} 件)`);
+  if (filterMethod || filterFamily || filterDate || filterPhotoDate || filterVersion) {
+    console.log(`  (篩選條件: 方法=${filterMethod || '全部'}, 分類=${filterFamily || '全部'}, 生成日期=${filterDate || '全部'}, 照片下載時間=${filterPhotoDate || '全部'}, 版本=${filterVersion || '全部'}；符合 ${rows.length}/${m.rows.length} 件)`);
   }
   const ck = m.checkout;
   console.log(`  服務中的 checkout  ${ck.root}${ck.rev ? `  ${ck.branch}@${ck.rev}(${ck.at})` : ''}`

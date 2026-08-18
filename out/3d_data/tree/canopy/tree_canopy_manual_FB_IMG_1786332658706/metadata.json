@@ -5,11 +5,11 @@
   "subpart": "canopy",
   "style": "broadleaf_camphor_oak",
   "symmetryMode": "asymmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "tree/canopy/manual_FB_IMG_1786332658706.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\canopy\\manual_FB_IMG_1786332658706.jpg",
-  "created_at": "2026-08-18T15:15:58.364Z",
+  "created_at": "2026-08-18T17:17:53.061Z",
   "bounds": {
     "min": [
       -7.9215,

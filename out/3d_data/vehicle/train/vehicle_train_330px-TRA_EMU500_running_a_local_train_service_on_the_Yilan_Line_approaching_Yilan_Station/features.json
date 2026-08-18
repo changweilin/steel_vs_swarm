@@ -52,33 +52,58 @@
   },
   "reconstructedFeatures": [
     {
-      "name": "mirrored_automobile_features",
+      "name": "aerodynamic_bullet_nose_cone",
+      "method": "streamlined_wedge_and_nose"
+    },
+    {
+      "name": "panoramic_cockpit_and_ribbon_glazing",
+      "method": "ribbon_window_strips"
+    },
+    {
+      "name": "high_voltage_pantograph_assembly",
+      "method": "diamond_pantograph"
+    },
+    {
+      "name": "dual_bogie_rail_wheelsets",
+      "method": "rail_bogie_trucks"
+    },
+    {
+      "name": "bogie_wheels_front",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.825
+      "zOffset": 1.45
+    },
+    {
+      "name": "bogie_wheels_rear",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.45
     }
   ],
-  "totalParts": 15,
+  "totalParts": 20,
   "partNames": [
-    "automobile_main_body",
-    "passenger_glass_cabin",
-    "engine_hood_slope",
-    "headlight_left",
-    "taillight_left",
-    "passenger_tire_f_left",
-    "wheel_rim_f_left",
-    "passenger_tire_r_left",
-    "wheel_rim_r_left",
-    "headlight_right",
-    "taillight_right",
-    "passenger_tire_f_right",
-    "wheel_rim_f_right",
-    "passenger_tire_r_right",
-    "wheel_rim_r_right"
+    "bullet_train_main_body",
+    "bullet_roof_streamline_arch",
+    "bullet_aerodynamic_nose_wedge",
+    "bullet_cockpit_windshield_glass",
+    "passenger_ribbon_window_glazing",
+    "pantograph_insulator_base",
+    "pantograph_lower_arm",
+    "pantograph_upper_arm",
+    "pantograph_contact_shoe",
+    "undercarriage_aero_skirts",
+    "bogie_frame_front",
+    "rail_wheel_front_1_left",
+    "rail_wheel_front_2_left",
+    "rail_wheel_front_1_right",
+    "rail_wheel_front_2_right",
+    "bogie_frame_rear",
+    "rail_wheel_rear_1_left",
+    "rail_wheel_rear_2_left",
+    "rail_wheel_rear_1_right",
+    "rail_wheel_rear_2_right"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
     "frustum_pyramid",
-    "wedge",
-    "torus_ring"
+    "wedge"
   ]
 }

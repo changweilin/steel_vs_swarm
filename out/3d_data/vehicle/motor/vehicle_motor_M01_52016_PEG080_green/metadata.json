@@ -5,11 +5,11 @@
   "subpart": "motor",
   "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "vehicle/motor/M01_52016_PEG080_green.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\M01_52016_PEG080_green.jpg",
-  "created_at": "2026-08-18T15:15:58.889Z",
+  "created_at": "2026-08-18T17:17:53.607Z",
   "bounds": {
     "min": [
       -1.0348,

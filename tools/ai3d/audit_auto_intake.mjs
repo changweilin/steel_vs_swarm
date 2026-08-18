@@ -72,6 +72,7 @@ const BREAK_ROUTE = process.argv.includes('--break-route');
 const BREAK_CORPUS_PATH = process.argv.includes('--break-corpus-path');
 const BREAK_FILTER = process.argv.includes('--break-filter');
 const BREAK_VERSION = process.argv.includes('--break-version');
+const BREAK_PHOTO_DATE = process.argv.includes('--break-photo-date');
 
 let pass = 0, fail = 0, unverified = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -812,6 +813,37 @@ console.log('\nⅩⅢ 同方法 3D 物件版本號管理 (version / verStr / 選
   // (e) auto_intake.mjs writeProvenance 於替代舊件時自動累加版本號
   ok(/replaces/.test(autoIntakeSrc) && /version = \(Number\.isInteger\(prev\.version\) \? prev\.version : 1\) \+ 1/.test(autoIntakeSrc),
     'auto_intake.mjs 於 writeProvenance 偵測 replaces 時自動自舊件累加版本號');
+}
+
+// ============ ⅩⅣ 原始照片下載時間篩選 ============
+console.log('\nⅩⅣ 原始照片下載時間篩選 (photoDates / photoDate / 下拉選單 / CLI --photo-date)');
+{
+  const prMjsSrc = readSrc('tools', 'parts_review.mjs');
+  let rvPhotoSrc = readSrc('tools', 'parts_review', 'review.js');
+  let htmlPhotoSrc = readSrc('tools', 'parts_review', 'index.html');
+
+  if (BREAK_PHOTO_DATE) {
+    rvPhotoSrc = rvPhotoSrc.replace(/prFilterPhotoDate/, 'brokenPhotoDate');
+    htmlPhotoSrc = htmlPhotoSrc.replace(/prFilterPhotoDate/, 'brokenPhotoDate');
+  }
+
+  // (a) manifest 包含 photoDates 陣列與每列的 photoDates / photoDate 欄位
+  const { manifest } = await import('../parts_review.mjs');
+  const m = manifest();
+  ok(Array.isArray(m.photoDates), 'manifest 包含 photoDates 照片下載日期清單');
+  ok(m.rows.every((r) => 'photoDate' in r && 'photoDates' in r), 'manifest 每一列均帶有 photoDate 與 photoDates 欄位');
+
+  // (b) index.html 包含照片下載時間下拉選單
+  ok(/id="prFilterPhotoDate"/.test(htmlPhotoSrc), 'index.html 包含 #prFilterPhotoDate 照片下載時間下拉選單');
+
+  // (c) review.js 包含 filterPhotoDate 狀態、選單初始化與 keepRow 判定
+  ok(/app\.filterPhotoDate/.test(rvPhotoSrc), 'review.js 狀態支援 filterPhotoDate');
+  ok(/const pdSel = \$\('prFilterPhotoDate'\)/.test(rvPhotoSrc), 'review.js 初始化 #prFilterPhotoDate 下拉選單');
+  ok(/app\.filterPhotoDate/.test(rvPhotoSrc) && /\.startsWith\(app\.filterPhotoDate\)/.test(rvPhotoSrc),
+    'keepRow 正確判定原始照片下載時間篩選');
+
+  // (d) CLI --report 支援 --photo-date 篩選
+  ok(/const filterPhotoDate = arg\('--photo-date'\)/.test(prMjsSrc), 'parts_review.mjs --report 支援 --photo-date 篩選');
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項,失敗 ${fail} 項${unverified ? `,未驗 ${unverified} 項` : ''}`);

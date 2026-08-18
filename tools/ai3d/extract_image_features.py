@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-extract_image_features.py (v4.0 High-Fidelity Per-Image Vision & Morphotype Analysis)
+extract_image_features.py (v5.0 High-Fidelity Per-Image Vision & Morphotype Analysis)
 
 徹底針對每張照片獨立進行電腦視覺分析，絕不使用死板字串套版：
 1. 前景目標精準切割與 24 段高精度切片 (24-slice vertical profile: 各高度寬度比、中心偏移、斜率變化、邊緣密度、灰度梯度)。
@@ -434,7 +434,7 @@ def classify_semantic_style(family, subpart, stem, raw_info):
 def analyze_all_photos_to_json(roots, out_json_path):
     exts = ('.jpg', '.jpeg', '.png', '.webp')
     results = {}
-    print(f"🚀 開始 v4.0 逐張照片獨立深度特徵萃取 (無抄襲模板): {roots}")
+    print(f"🚀 開始 v5.0 逐張照片獨立深度特徵萃取 (無抄襲模板): {roots}")
     
     total_imgs = 0
     for r in roots:
@@ -479,12 +479,12 @@ def analyze_all_photos_to_json(roots, out_json_path):
     os.makedirs(os.path.dirname(os.path.abspath(out_json_path)), exist_ok=True)
     with open(out_json_path, 'w', encoding='utf-8') as fp:
         json.dump(results, fp, ensure_ascii=False, indent=2)
-    print(f"✅ 成功萃取 {len(results)} 張照片之 v4.0 獨立深度特徵至 {out_json_path}")
+    print(f"✅ 成功萃取 {len(results)} 張照片之 v5.0 獨立深度特徵至 {out_json_path}")
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '--all':
         roots = [
-            r'C:\Users\user\Documents\app\steel_vs_swarm\tools\ai3d\photos',
+            r'C:\Users\user\Documents\steel_vs_swarm\tools\ai3d\photos',
             r'C:\Users\user\Documents\study\ai3d_restricted\photos'
         ]
         out_p = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(__file__), 'extracted_features.json')

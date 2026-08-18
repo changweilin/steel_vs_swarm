@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "village_triangular_gable",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c.jpg",
-  "created_at": "2026-08-18T15:15:58.158Z",
+  "created_at": "2026-08-18T17:17:52.850Z",
   "bounds": {
     "min": [
       -8.6117,

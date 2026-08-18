@@ -5,11 +5,11 @@
   "subpart": "bld_windmill",
   "style": "asian_pagoda_pavilion",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/bld_windmill/ov_ce84750c-9ba0-424e-9005-d55c57fb101b.jpeg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_windmill\\ov_ce84750c-9ba0-424e-9005-d55c57fb101b.jpeg",
-  "created_at": "2026-08-18T15:15:57.642Z",
+  "created_at": "2026-08-18T17:17:52.329Z",
   "bounds": {
     "min": [
       -12.0729,

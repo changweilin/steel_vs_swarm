@@ -5,11 +5,11 @@
   "subpart": "balcony",
   "style": "village_triangular_gable",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/balcony/ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\balcony\\ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8.jpg",
-  "created_at": "2026-08-18T15:15:57.523Z",
+  "created_at": "2026-08-18T17:17:52.209Z",
   "bounds": {
     "min": [
       -10.4194,

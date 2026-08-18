@@ -52,33 +52,66 @@
   },
   "reconstructedFeatures": [
     {
-      "name": "mirrored_automobile_features",
+      "name": "heavy_diesel_locomotive_hood_body",
+      "method": "long_hood_and_chassis"
+    },
+    {
+      "name": "elevated_engineer_cab_and_windows",
+      "method": "operator_cab_glazing"
+    },
+    {
+      "name": "rooftop_dynamic_brake_radiator_fans",
+      "method": "cooling_fans_and_stacks"
+    },
+    {
+      "name": "heavy_six_axle_rail_bogies",
+      "method": "tri_axle_bogies"
+    },
+    {
+      "name": "locomotive_bogies_front",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.825
+      "zOffset": 1.4
+    },
+    {
+      "name": "locomotive_bogies_rear",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.4
     }
   ],
-  "totalParts": 15,
+  "totalParts": 28,
   "partNames": [
-    "automobile_main_body",
-    "passenger_glass_cabin",
-    "engine_hood_slope",
-    "headlight_left",
-    "taillight_left",
-    "passenger_tire_f_left",
-    "wheel_rim_f_left",
-    "passenger_tire_r_left",
-    "wheel_rim_r_left",
-    "headlight_right",
-    "taillight_right",
-    "passenger_tire_f_right",
-    "wheel_rim_f_right",
-    "passenger_tire_r_right",
-    "wheel_rim_r_right"
+    "locomotive_main_deck",
+    "front_snowplow_pilot",
+    "front_knuckle_coupler",
+    "rear_knuckle_coupler",
+    "engineer_cab_body",
+    "cab_forward_windshield_glass",
+    "cab_side_window_glass",
+    "diesel_engine_long_hood",
+    "radiator_cooling_fan_1",
+    "radiator_cooling_fan_2",
+    "radiator_cooling_fan_3",
+    "diesel_exhaust_smokestack",
+    "side_walkway_deck_L",
+    "side_walkway_deck_R",
+    "locomotive_bogie_frame_front",
+    "loco_wheel_front_1_left",
+    "loco_wheel_front_2_left",
+    "loco_wheel_front_3_left",
+    "loco_wheel_front_1_right",
+    "loco_wheel_front_2_right",
+    "loco_wheel_front_3_right",
+    "locomotive_bogie_frame_rear",
+    "loco_wheel_rear_1_left",
+    "loco_wheel_rear_2_left",
+    "loco_wheel_rear_3_left",
+    "loco_wheel_rear_1_right",
+    "loco_wheel_rear_2_right",
+    "loco_wheel_rear_3_right"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
-    "frustum_pyramid",
     "wedge",
-    "torus_ring"
+    "frustum_pyramid"
   ]
 }

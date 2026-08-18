@@ -5,11 +5,11 @@
   "subpart": "hull",
   "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "ship/379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg",
-  "created_at": "2026-08-18T15:15:58.255Z",
+  "created_at": "2026-08-18T17:17:52.950Z",
   "bounds": {
     "min": [
       -23.3317,

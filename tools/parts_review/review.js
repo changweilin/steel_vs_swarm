@@ -70,7 +70,7 @@ const FIT_PAD = 1.3;
 
 const app = {
   data: null, cur: null, filter: 'all', list: 'nodes',
-  filterMethod: '', filterFamily: '', filterDate: '', filterVersion: '',
+  filterMethod: '', filterFamily: '', filterDate: '', filterPhotoDate: '', filterVersion: '',
   seed: SEEDS[0], dist: 'part', collider: true, spin: true,
 };
 
@@ -583,6 +583,7 @@ function setupFilters() {
   const mSel = $('prFilterMethod');
   const fSel = $('prFilterFamily');
   const dSel = $('prFilterDate');
+  const pdSel = $('prFilterPhotoDate');
   const vSel = $('prFilterVersion');
   const rBtn = $('prFilterReset');
   if (!mSel || !fSel || !dSel) return;
@@ -630,7 +631,25 @@ function setupFilters() {
   ];
   dSel.innerHTML = dateOpts.join('');
 
-  // 4. 版本號選單 (同方法/同物件的版本管理)
+  // 4. 原始照片下載時間選單
+  if (pdSel) {
+    const pdCounts = new Map();
+    for (const r of app.data.rows) {
+      const pds = (r.photoDates && r.photoDates.length) ? r.photoDates : (r.photoDate ? [r.photoDate] : ['none']);
+      for (const pd of pds) {
+        pdCounts.set(pd, (pdCounts.get(pd) || 0) + 1);
+      }
+    }
+    const photoDates = (app.data.photoDates || [...pdCounts.keys()]).filter((d) => d !== 'none').sort((a, b) => b.localeCompare(a));
+    const pdOpts = [
+      '<option value="">照片下載: 全部</option>',
+      ...photoDates.map((d) => `<option value="${esc(d)}">${esc(d)} (${pdCounts.get(d) || 0})</option>`),
+      ...(pdCounts.has('none') ? [`<option value="none">未記載下載時間 (${pdCounts.get('none') || 0})</option>`] : []),
+    ];
+    pdSel.innerHTML = pdOpts.join('');
+  }
+
+  // 5. 版本號選單 (同方法/同物件的版本管理)
   const verCounts = new Map();
   for (const r of app.data.rows) {
     const vStr = r.verStr || `v${r.version || 1}`;
@@ -647,12 +666,14 @@ function setupFilters() {
     app.filterMethod = mSel.value;
     app.filterFamily = fSel.value;
     app.filterDate = dSel.value;
+    app.filterPhotoDate = pdSel ? pdSel.value : '';
     app.filterVersion = vSel ? vSel.value : '';
     mSel.classList.toggle('active', !!app.filterMethod);
     fSel.classList.toggle('active', !!app.filterFamily);
     dSel.classList.toggle('active', !!app.filterDate);
+    if (pdSel) pdSel.classList.toggle('active', !!app.filterPhotoDate);
     if (vSel) vSel.classList.toggle('active', !!app.filterVersion);
-    if (rBtn) rBtn.hidden = !app.filterMethod && !app.filterFamily && !app.filterDate && !app.filterVersion;
+    if (rBtn) rBtn.hidden = !app.filterMethod && !app.filterFamily && !app.filterDate && !app.filterPhotoDate && !app.filterVersion;
 
     // 若目前選取的物件不在篩選後的清單中，自動跳到第一筆
     const filteredRows = app.data.rows.filter(keepRow);
@@ -667,6 +688,7 @@ function setupFilters() {
   mSel.onchange = onFilterChange;
   fSel.onchange = onFilterChange;
   dSel.onchange = onFilterChange;
+  if (pdSel) pdSel.onchange = onFilterChange;
   if (vSel) vSel.onchange = onFilterChange;
 
   if (rBtn) {
@@ -674,6 +696,7 @@ function setupFilters() {
       mSel.value = '';
       fSel.value = '';
       dSel.value = '';
+      if (pdSel) pdSel.value = '';
       if (vSel) vSel.value = '';
       onFilterChange();
     };
@@ -712,6 +735,17 @@ const keepRow = (r) => {
     } else {
       const dt = r.at || r.prov?.at || '';
       if (!dt.startsWith(app.filterDate)) return false;
+    }
+  }
+  // 原始照片下載時間篩選
+  if (app.filterPhotoDate) {
+    if (app.filterPhotoDate === 'none') {
+      if ((r.photoDates && r.photoDates.length > 0) || (r.photoDate && r.photoDate !== 'none')) return false;
+    } else {
+      const match = (r.photoDates && r.photoDates.some((d) => d.startsWith(app.filterPhotoDate)))
+        || (r.photoDate && r.photoDate.startsWith(app.filterPhotoDate))
+        || (r.imgs && r.imgs.some((im) => im.photoDate === app.filterPhotoDate || im.downloaded_at?.startsWith(app.filterPhotoDate)));
+      if (!match) return false;
     }
   }
   // 版本號篩選 (同方法/同物件版本管理)

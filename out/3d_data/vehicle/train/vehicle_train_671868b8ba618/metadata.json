@@ -5,37 +5,36 @@
   "subpart": "train",
   "style": "freight_locomotive_train",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "vehicle/train/671868b8ba618.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\train\\671868b8ba618.webp",
-  "created_at": "2026-08-18T15:15:58.931Z",
+  "created_at": "2026-08-18T17:17:53.645Z",
   "bounds": {
     "min": [
-      -2.4922,
-      -0.0072,
-      -1.2682
+      -11.4162,
+      0,
+      -1.55
     ],
     "max": [
-      2.5022,
-      1.7098,
-      1.2682
+      11.4162,
+      3.7303,
+      1.55
     ],
     "size": [
-      4.994,
-      1.717,
-      2.536
+      22.832,
+      3.73,
+      3.1
     ],
-    "rMax": 2.805,
-    "triangles": 1012,
-    "vertices": 612
+    "rMax": 11.521,
+    "triangles": 892,
+    "vertices": 502
   },
   "spec": {
-    "L": 4.944349584191653,
-    "W": 1.95,
-    "H": 1.7098237582970932,
-    "R": 0.36,
-    "style": "passenger_automobile"
+    "L": 21.943495841916533,
+    "W": 3.1,
+    "H": 4.39473563744564,
+    "style": "diesel_electric_freight_locomotive"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
