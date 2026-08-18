@@ -2876,30 +2876,42 @@ function disposeVisualSettings() {
 //      在客戶端自己判一次 hostname = 同一條規則兩份,而真正說了算的是伺服器那一份。
 const DEV_MOUNTS = ['pauseDevMount', 'lobbyDevMount'];
 let _devTools = null;             // null / [] = 沒有這個端點(出貨版與隊友端),整區收起來
+let _devToolsSync = null;
+
+/** 背景行程仍在跑時才輪詢。設定頁開著時中止或無輸出，不必再按一次按鈕才看得出來。 */
+function monitorDevTools() {
+  if (document.visibilityState !== 'visible' || _devToolsSync || !_devTools?.some((t) => t.owned && t.on)) return;
+  syncDevTools();
+}
+setInterval(monitorDevTools, 3000);
 
 /** 問一次後端,兩個掛載點一起重畫。開場、開設定頁、按完啟停各一次 */
-async function syncDevTools() {
-  try {
-    const res = await fetch('/dev/tools', { cache: 'no-store' });
-    _devTools = res.ok ? (await res.json()).tools : null;
-  } catch { _devTools = null; }   // 靜態站台 / file:// 一律走這裡
-  const hasDev = !!_devTools?.length;
-  for (const id of ['pauseSetTabs', 'lobbySetTabs']) {
-    const tabs = $(id);
-    if (!tabs) continue;
-    const devBtn = tabs.querySelector('.set-tab[data-setpage="dev"]');
-    if (devBtn) devBtn.hidden = !hasDev;
-  }
-  if (!hasDev) {
-    for (const scopeId of ['pauseOverlay', 'lobbyMenu']) {
-      const scope = $(scopeId);
-      const activeDev = scope?.querySelector('.set-panel[data-setpage="dev"]:not([hidden])');
-      if (activeDev) {
-        switchSetTab(scope.querySelector('.pause-page[data-page="settings"]'), 'audio');
+function syncDevTools() {
+  if (_devToolsSync) return _devToolsSync;
+  _devToolsSync = (async () => {
+    try {
+      const res = await fetch('/dev/tools', { cache: 'no-store' });
+      _devTools = res.ok ? (await res.json()).tools : null;
+    } catch { _devTools = null; }   // 靜態站台 / file:// 一律走這裡
+    const hasDev = !!_devTools?.length;
+    for (const id of ['pauseSetTabs', 'lobbySetTabs']) {
+      const tabs = $(id);
+      if (!tabs) continue;
+      const devBtn = tabs.querySelector('.set-tab[data-setpage="dev"]');
+      if (devBtn) devBtn.hidden = !hasDev;
+    }
+    if (!hasDev) {
+      for (const scopeId of ['pauseOverlay', 'lobbyMenu']) {
+        const scope = $(scopeId);
+        const activeDev = scope?.querySelector('.set-panel[data-setpage="dev"]:not([hidden])');
+        if (activeDev) {
+          switchSetTab(scope.querySelector('.pause-page[data-page="settings"]'), 'audio');
+        }
       }
     }
-  }
-  for (const id of DEV_MOUNTS) renderDevTools($(id));
+    for (const id of DEV_MOUNTS) renderDevTools($(id));
+  })();
+  return _devToolsSync.finally(() => { _devToolsSync = null; });
 }
 
 async function devToolAction(key, act) {
@@ -2938,7 +2950,10 @@ function devToolRow(t) {
   const state = t.url ? (on ? t.url : '未啟動')
     : on ? `執行中${t.home ? ` ・ ${String(t.home).split(/[\\/]/).slice(-3).join('/')}` : ''}`
       : (t.run?.error ? `⚠ ${t.run.error}` : '未執行');
-  row.innerHTML = `<span class="set-label">${t.label}</span><span class="set-hint">${state}</span>`;
+  const mon = t.monitor;
+  const runtime = mon ? ` ・ PID ${mon.pid ?? '?'} ・ ${Math.floor(mon.uptimeMs / 1000)} 秒`
+    + (mon.endedAt ? ' ・ 已結束' : '') : '';
+  row.innerHTML = `<span class="set-label">${t.label}</span><span class="set-hint">${state}${runtime}</span>`;
   attachTip(row.querySelector('.set-label'), t.hint);   // 逐項說明走 ⓘ 懸浮提示(觸控長按)
 
   // 啟停:鈕面吃**伺服器推導的 `on`** —— 使用者關心的是開不開得起來,而那對兩種工具是兩件事。

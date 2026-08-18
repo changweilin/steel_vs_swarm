@@ -158,6 +158,20 @@ function listening(port) {
 /** 我們自己開的那支還活著嗎(job 的存活判準;server 另外還要問埠) */
 const alive = (rec) => !!rec && rec.child.exitCode === null && !rec.child.killed;
 
+/** 我們啟動的子行程觀測資料。終端機自行啟動的工具沒有可信 PID，故寧缺勿猜。 */
+function monitorOf(rec) {
+  if (!rec) return null;
+  const endedAt = rec.endedAt || null;
+  const until = endedAt ? Date.parse(endedAt) : Date.now();
+  return {
+    pid: rec.child.pid || null,
+    startedAt: rec.startedAt,
+    lastOutputAt: rec.lastOutputAt || rec.startedAt,
+    endedAt,
+    uptimeMs: Math.max(0, until - Date.parse(rec.startedAt)),
+  };
+}
+
 async function statusOf(t) {
   const rec = running.get(t.key);
   const owned = alive(rec);
@@ -165,6 +179,7 @@ async function statusOf(t) {
     key: t.key, kind: t.kind, label: t.label, hint: t.hint, owned,
     log: rec ? rec.log.slice(-6).join('\n') : '',
     run: lastRun.get(t.key) || null,
+    monitor: monitorOf(rec),
   };
   // job 沒有埠 ⇒ **不回 url / listening**(回一個假的 `http://localhost:undefined/` 會讓
   // 客戶端畫出一個點不開的連結,而那看起來像「台子壞了」)。`running` 就是它的 listening。
@@ -227,11 +242,14 @@ export async function start(key, homeIdx = null) {
     return { ...(await statusOf(t)), error: err };
   }
   const log = [];
+  const startedAt = new Date().toISOString();
+  const rec = { child: null, log, startedAt, lastOutputAt: startedAt, endedAt: null };
   // argv 全部來自 TOOLS 常數 + `argvOf` 推導出來的資料家(邊界 ③:請求只能挑一個 key);
   // cwd 固定在儲存庫根,工具自己解析相對路徑
   const child = spawn(process.execPath, [t.script, ...argv],
     { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   const keep = (buf) => {
+    rec.lastOutputAt = new Date().toISOString();
     // ANSI 控制碼要**脫掉**:這條迴圈會轉呼一堆 python 工具,而其中幾支(onnxruntime 那一族)
     // 印的是帶色碼的訊息 —— 原樣送到頁面上就是一串 `[1;31m` 夾在中文裡,而那正是使用者要看
     // 「跑到哪一站」的地方。終端機看得懂色碼,HTML 看不懂。
@@ -245,6 +263,7 @@ export async function start(key, homeIdx = null) {
   child.stdout.on('data', keep);
   child.stderr.on('data', keep);
   child.once('exit', (code) => {
+    rec.endedAt = new Date().toISOString();
     keep(`(行程結束,代碼 ${code})`);
     const r = lastRun.get(t.key);
     if (r) r.exit = code;
@@ -253,13 +272,15 @@ export async function start(key, homeIdx = null) {
   // 而這條路上的「未捕捉」會把承載它的那支伺服器(遊戲伺服器或零件台)整個帶走:
   // 使用者按了啟動,然後整個站台不見了。⇒ 收成一行日誌 + 一則錯誤,讓進度頁講得出來。
   child.once('error', (e) => {
+    rec.endedAt = new Date().toISOString();
     keep(`(起不來:${e.message})`);
     const r = lastRun.get(t.key);
     if (r) r.error = `起不來:${e.message}`;
   });
-  running.set(t.key, { child, log });
+  rec.child = child;
+  running.set(t.key, rec);
   lastRun.set(t.key, {
-    at: new Date().toISOString(),
+    at: startedAt,
     // 完整命令列**要看得到**:三個家推不推導得到是這條迴圈最常見的失敗(少了 --venv 就是
     // 四站靜默跳過、每輪印「生成 0」)⇒ 進度頁把它原樣印出來,不必去猜跑的是哪一個家。
     argv: [t.script, ...argv],
@@ -290,9 +311,10 @@ export async function stop(key) {
   if (!rec || !alive(rec)) return { ...(await statusOf(t)), error: '這一支不是從這裡啟動的' };
   rec.child.kill();
   const until = Date.now() + 2000;
-  // server 等它把埠放掉;job 沒有埠 ⇒ 等行程真的收掉(採集迴圈可能正卡在 15 分鐘的等待,
-  // 但 `kill()` 對它是立刻的 —— 等的是 Node 把 exitCode 填上)
-  while (Date.now() < until && (t.kind === 'job' ? rec.child.exitCode === null : await listening(t.port))) await sleep(POLL_MS);
+  // server 除了等它把埠放掉，還要等子行程真的結束：埠先釋放、exit 事件晚一拍時，監控資料
+  // 才能在這次回應中帶回 endedAt。job 沒有埠，一樣只等行程真的收掉(採集迴圈可能正卡在
+  // 15 分鐘的等待，但 `kill()` 對它是立刻的 —— 等的是 Node 把 exitCode 填上)。
+  while (Date.now() < until && (alive(rec) || (t.kind === 'server' && await listening(t.port)))) await sleep(POLL_MS);
   // **紀錄留著**(舊版在這裡 `running.delete`):停下來之後才是最想回頭看日誌的時候 ——
   // 刪掉的話執行進度頁在按下停止的那一瞬間整個清空,看起來像「剛才什麼都沒跑」。
   // 存活判準吃的是 `alive()`(exitCode 已經填上 ⇒ 恆 false),不是這個 Map 有沒有這一格:
