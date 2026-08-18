@@ -57,6 +57,10 @@ const PHOTOS = join(HOME, 'photos');
 const MANIFEST = join(HOME, 'photo_manifest.json');
 export const UA = 'steel-vs-swarm-asset-pipeline/1.0 (CC0 photo sourcing; contact: repo issues)';
 
+// 雙語料庫路徑(使用者需求:CC0 放入專案庫, 非 CC0 放入研究庫)
+export const CC0_HOME = HERE;
+export const RESTRICTED_HOME = join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', 'study', 'ai3d_restricted');
+
 // ============ 照片型錄(唯一縫)============
 // 族/零件對齊計畫書 §4.2 的「AI 該產出什麼」:查詢是**零件**不是成品(拍整棵樹沒有用,
 // image→3D 要的是樹冠模組/枝叉/板根各自成像)。want = 每零件目標張數(多抓幾張供挑選,
@@ -411,6 +415,15 @@ const CC0_RE = /^(cc0|pdm)$/i;                               // Openverse 的 li
 const COMMONS_OK = /cc0|public domain/i;                     // Commons 的 LicenseShortName
 const TIFF_THUMB_W = 2400;                                   // TIFF 走 MediaWiki 縮圖(見 searchCommons)
 
+/** CC0 授權判定縫:判斷是否為 CC0 / Public Domain / PDM */
+export function isCC0(lic) {
+  const s = String(lic || '').trim().toLowerCase();
+  if (CC0_RE.test(s)) return true;
+  if (COMMONS_OK.test(s)) return true;
+  if (/^(cc0|pdm|public\s*domain|cc0\s*1\.0|pd|cc-zero|zero|no\s*rights\s*reserved)$/i.test(s)) return true;
+  return false;
+}
+
 async function jget(url) {
   const r = await fetch(url, { headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -433,50 +446,42 @@ const EXCLUDED_SOURCES = ['smithsonian_cooper_hewitt_museum', 'museumsvictoria',
   'brooklynmuseum', 'thorvaldsensmuseum',
   'floraon', 'inaturalist', 'biodiversity_heritage_library'].join(',');
 
-/** Openverse:免金鑰;license=cc0 已含 public domain mark */
-export async function searchOpenverse(q, n) {
-  const u = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&license=cc0&page_size=${n}`
+/** Openverse:免金鑰;支援 ccOnly(預設 true)或廣泛 Creative Commons */
+export async function searchOpenverse(q, n, { ccOnly = true } = {}) {
+  const licParam = ccOnly ? '&license=cc0' : '';
+  const u = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}${licParam}&page_size=${n}`
     + `&excluded_source=${EXCLUDED_SOURCES}`;
   const j = await jget(u);
-  return (j.results || []).filter((it) => CC0_RE.test(it.license || '')).map((it) => ({
+  const results = j.results || [];
+  return (ccOnly ? results.filter((it) => CC0_RE.test(it.license || '')) : results).map((it) => ({
     id: `ov_${it.id}`, url: it.url, w: it.width, h: it.height,
-    license: it.license, creator: it.creator || null,
+    license: it.license || 'cc-unspecified', creator: it.creator || null,
     source_url: it.foreign_landing_url || it.url, api: 'openverse',
   }));
 }
 
 /**
  * Google 圖片(官方 Custom Search JSON API;2026-08-13 使用者:「不要只搜索 wiki,直接搜索 google」)。
- *
- * 三條:
- *   ① **走官方 API 不爬網頁** —— 爬 google.com/search 違反它的服務條款,而且隨時會被擋,
- *      壞掉的樣子是「今天開始一張都抓不到」。要金鑰:`GOOGLE_API_KEY` + `GOOGLE_CSE_ID`
- *      (Programmable Search Engine 的 cx),**兩個缺一就整支跳過**(回空陣列讓呼叫端降級,
- *      MUST NOT 拋 —— 沒設金鑰不是錯誤,是這台機器還沒接這個來源)。
- *   ② **授權硬閘照舊**:查詢一律帶 `rights=cc_publicdomain`(使用者 2026-08-13 裁決「只收
- *      授權可用的」)。Google 回報的授權是**頁面宣告**,證據力比 Openverse/Commons 的
- *      metadata 弱 ⇒ 逐張記 `license: 'pd(google 回報)'`,帳本不假裝它跟 CC0 同級。
- *   ③ **構圖詞在查詢裡就講**(`full body`/`white background`)—— Google 吃得到頁面文字,
- *      這是三個來源裡唯一能在**搜尋階段**就偏向全身照/白底的;其餘來源靠事後的構圖篩選。
  */
-export async function searchGoogle(q, n) {
+export async function searchGoogle(q, n, { ccOnly = true } = {}) {
   const key = process.env.GOOGLE_API_KEY, cx = process.env.GOOGLE_CSE_ID;
   if (!key || !cx) return [];
+  const rights = ccOnly ? 'cc_publicdomain' : 'cc_publicdomain,cc_attribute,cc_sharealike,cc_noncommercial';
   const u = 'https://www.googleapis.com/customsearch/v1?searchType=image'
     + `&key=${encodeURIComponent(key)}&cx=${encodeURIComponent(cx)}`
     + `&q=${encodeURIComponent(q)}&num=${Math.min(10, n)}`
-    + '&rights=cc_publicdomain&imgType=photo&safe=active';
+    + `&rights=${encodeURIComponent(rights)}&imgType=photo&safe=active`;
   const j = await jget(u);
   return (j.items || []).map((it) => ({
     id: `gg_${Buffer.from(it.link).toString('base64url').slice(0, 22)}`,
     url: it.link, w: it.image?.width, h: it.image?.height,
-    license: 'pd(google 回報)', creator: it.displayLink || null,
+    license: ccOnly ? 'pd(google 回報)' : 'unverified(google 圖片搜尋)', creator: it.displayLink || null,
     source_url: it.image?.contextLink || it.link, api: 'google',
   }));
 }
 
-/** Wikimedia Commons:補地標類;逐張驗 extmetadata 的授權欄 */
-export async function searchCommons(q, n) {
+/** Wikimedia Commons:補地標類;支援 ccOnly(預設 true)或全授權解析 */
+export async function searchCommons(q, n, { ccOnly = true } = {}) {
   const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*'
     + `&generator=search&gsrnamespace=6&gsrlimit=${n}&gsrsearch=${encodeURIComponent(q)}`
     + `&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=${TIFF_THUMB_W}`;
@@ -484,19 +489,9 @@ export async function searchCommons(q, n) {
   const pages = Object.values(j?.query?.pages || {});
   return pages.map((p) => {
     const ii = p.imageinfo?.[0]; if (!ii) return null;
-    const lic = ii.extmetadata?.LicenseShortName?.value || '';
-    if (!COMMONS_OK.test(lic)) return null;                  // 硬閘:CC-BY 一律拒收
-    // **TIFF 改吃 MediaWiki 幫我們算好的 JPEG 縮圖**(2026-08-09;§5ak-c)。
-    // 理由是語料本身:使用者要的測繪圖幾乎全是 HABS 那一批,而 **HABS 在 Commons 上一律是
-    // 5000px 的典藏 TIFF** ⇒ 舊制的 magic-byte 嗅探把每一張都判成「非影像位元組」並記成
-    // **持續性失敗**(那條規則會讓同一張永遠不再重試)= 三個設計圖列**結構性地**永遠抓不到東西,
-    // 而畫面上只看得到一排 ✗。縮圖那條路同時省掉幾十 MB 的下載,而 2400px 的短邊仍遠高於
-    // 1024 的下限(⇒ 尺寸閘 MUST 改吃**縮圖的**尺寸,吃原圖就會放行一張其實只有 800px 的檔案)。
-    // ⚠ **只放行 TIFF**:PDF/DjVu 的「縮圖」是第一頁的渲染,而 2026-08-05 那張「照片」正是
-    //   148 頁的 PDF —— 那不是我們要的東西,維持拒收(嗅探仍是最後一道)。
-    // ⚠ 副檔名 MUST 允許後面接查詢字串:`ii.url` 帶著 `?utm_source=…&utm_content=original`
-    //   ⇒ 錨在字串尾的 `\.tiff?$` **一張都比對不到**,而症狀與完全沒改一樣(照樣一排
-    //   「非影像位元組」)。同一條寫法早就在 download() 的副檔名解析裡了。
+    const lic = ii.extmetadata?.LicenseShortName?.value || ii.extmetadata?.License?.value || '';
+    if (ccOnly && !COMMONS_OK.test(lic)) return null;
+    if (!lic) return null;
     const tif = /\.tiff?(?:\?|$)/i.test(ii.url || '');
     const url = tif && ii.thumburl ? ii.thumburl : ii.url;
     const [w, h] = tif && ii.thumburl ? [ii.thumbwidth, ii.thumbheight] : [ii.width, ii.height];
@@ -508,6 +503,55 @@ export async function searchCommons(q, n) {
   }).filter(Boolean);
 }
 
+/** Pexels:需 PEXELS_API_KEY(免費 200/hr)*/
+export async function searchPexels(q, n) {
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) return [];
+  try {
+    const u = `https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=${Math.min(80, n)}`;
+    const r = await fetch(u, { headers: { Authorization: key, 'User-Agent': UA } });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.photos || []).map((p) => ({
+      id: `px_${p.id}`, url: p.src?.original || p.src?.large2x || p.src?.large, w: p.width, h: p.height,
+      license: 'Pexels License', creator: p.photographer || null,
+      source_url: p.url, api: 'pexels',
+    }));
+  } catch { return []; }
+}
+
+/** Pixabay:需 PIXABAY_API_KEY(免費 100/min)*/
+export async function searchPixabay(q, n) {
+  const key = process.env.PIXABAY_API_KEY;
+  if (!key) return [];
+  try {
+    const u = `https://pixabay.com/api/?key=${encodeURIComponent(key)}&q=${encodeURIComponent(q)}&image_type=photo&per_page=${Math.min(200, n)}&safesearch=true`;
+    const j = await jget(u);
+    return (j.hits || []).map((h) => ({
+      id: `pb_${h.id}`, url: h.largeImageURL || h.imageURL, w: h.imageWidth, h: h.imageHeight,
+      license: 'Pixabay License', creator: h.user || null,
+      source_url: h.pageURL, api: 'pixabay',
+    }));
+  } catch { return []; }
+}
+
+/** Unsplash:需 UNSPLASH_ACCESS_KEY(免費 50/hr)*/
+export async function searchUnsplash(q, n) {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key) return [];
+  try {
+    const u = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=${Math.min(30, n)}`;
+    const r = await fetch(u, { headers: { Authorization: `Client-ID ${key}`, 'User-Agent': UA } });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.results || []).map((it) => ({
+      id: `us_${it.id}`, url: it.urls?.raw || it.urls?.full, w: it.width, h: it.height,
+      license: 'Unsplash License', creator: it.user?.name || null,
+      source_url: it.links?.html || it.urls?.raw, api: 'unsplash',
+    }));
+  } catch { return []; }
+}
+
 // magic bytes 嗅探:副檔名與 Content-Type 都不可信(2026-08-05 實測 Commons 一張「照片」
 // 是 148 頁 PDF)⇒ 只認檔案開頭位元組;認得的三種 = 影像管線吃得下的三種格式。
 export function sniffImage(buf) {
@@ -517,8 +561,8 @@ export function sniffImage(buf) {
   return null;
 }
 
-async function download(it, fam, part) {
-  const dir = join(PHOTOS, fam, part);
+export async function download(it, fam, part, targetHome = HOME) {
+  const dir = join(targetHome, 'photos', fam, part);
   mkdirSync(dir, { recursive: true });
   const ext = (it.url.match(/\.(jpe?g|png|webp)(?:\?|$)/i)?.[1] || 'jpg').toLowerCase();
   const file = join(dir, `${it.id}.${ext}`);
@@ -575,7 +619,7 @@ export function imageSize(b) {
   return null;
 }
 
-export const licenceOk = (l) => CC0_RE.test(String(l || '').trim()) || COMMONS_OK.test(String(l || ''));
+export const licenceOk = (l) => isCC0(l);
 
 function adoptInbox() {
   mkdirSync(INBOX, { recursive: true });
@@ -666,132 +710,229 @@ async function main() {
   // 配比守門線排在最前面:型錄本身寫壞了,抓下來的每一張都是照著壞配額抓的(而照片有配額成本)。
   const drift = buildingMixDrift();
   if (drift) { console.error(`❌ ${drift}`); process.exit(1); }
-  const work = workList();
+
+  const ROUTE_LICENSE = flag('route-license') || flag('auto-route');
+  const ROUNDS = Number(opt('rounds') || 1);
+  const FOREVER = !(ROUNDS > 0) && (flag('schedule') || (argv.includes('--rounds') && ROUNDS === 0));
+  const EVERY_MIN = Number(opt('every') || 15);
+  const DELAY_MS = Number(opt('delay') || 1100);
+  const DRY = flag('dry');
+
+  const CC0_MANIFEST = join(CC0_HOME, 'photo_manifest.json');
+  const RESTRICTED_MANIFEST = join(RESTRICTED_HOME, 'photo_manifest.json');
+
   if (flag('review')) {
-    for (const e of manifest.filter((e) => e.ok)) {
+    const list = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : [];
+    for (const e of list.filter((e) => e.ok)) {
       console.log(`${e.family}/${e.part}  ${e.file}  ${e.w || '?'}×${e.h || '?'}  ${e.license}  ${e.source_url}`);
     }
     return;
   }
-  if (flag('plan') || !work.length) {
-    console.log('工作清單(零件:可用/目標;「可用」= 下載成功且未被選片閘淘汰):');
-    for (const [fam, parts] of Object.entries(PHOTO_CATALOG)) {
-      for (const [part, def] of Object.entries(parts)) {
-        const rej = screened(fam, part);
-        console.log(`  ${fam}/${part}: ${have(fam, part)}/${def.want}${rej ? `(選片閘另淘汰 ${rej} 張)` : ''}`);
-      }
-    }
-    // 整棟建物配比:目標(型錄 want)與**手上真的有幾張**分開印 —— 前者是定案、後者是現況,
-    // 混成一個數字就看不出「還缺哪一組」(而缺的那一組正是下一輪要抓的)。
-    const mix = buildingMix();
-    const got = {}; const gotSrc = {}; let gotTotal = 0;
-    for (const [part, def] of Object.entries(PHOTO_CATALOG.building)) {
-      if (!def.grp) continue;
-      const n = have('building', part); got[def.grp] = (got[def.grp] || 0) + n; gotTotal += n;
-      (gotSrc[def.grp] ||= {})[srcOf(def)] = (gotSrc[def.grp]?.[srcOf(def)] || 0) + n;
-    }
-    console.log('\n整棟建物配比(使用者 2026-08-09 定案 50/25/25;分母含設計圖):');
-    for (const g of Object.keys(BUILDING_MIX)) {
-      const tgt = `${mix.by[g] || 0}/${mix.total} = ${(mix.share[g] * 100).toFixed(1)}%`;
-      const cur = gotTotal ? `${got[g] || 0}/${gotTotal} = ${((got[g] || 0) / gotTotal * 100).toFixed(1)}%` : '0';
-      console.log(`  ${g.padEnd(6)} 目標 ${tgt.padEnd(20)} 現有 ${cur}`);
-    }
-    // 逐組的**輸入格式**拆帳:配比對了不代表語料對了 —— 照片與設計圖走的是兩條完全不同的
-    // 轉換路(img→3D vs plan_to_mesh),混成一個數字就看不出「這一組全是設計圖」。
-    console.log('  ── 輸入格式拆帳(目標 → 現有;drawing 走 plan_to_mesh 那條幾何路)──');
-    for (const g of Object.keys(BUILDING_MIX)) {
-      const cell = (s) => `${s} ${mix.bySrc[g]?.[s] || 0}→${gotSrc[g]?.[s] || 0}`;
-      console.log(`  ${g.padEnd(6)} ${SRC_KINDS.map(cell).join('・')}`);
-    }
-    if (!work.length) console.log('\n缺額為零,不用抓。');
-    return;
+
+  if (ROUTE_LICENSE) {
+    console.log(`[自動授權分流模式]`);
+    console.log(`  CC0 目標庫:       ${CC0_HOME}/photos/ (帳本 ${CC0_MANIFEST})`);
+    console.log(`  限制授權研究庫:   ${RESTRICTED_HOME}/photos/ (帳本 ${RESTRICTED_MANIFEST})`);
   }
 
-  let fetched = 0;
-  let cooled = false;   // 撞上 IP 級限流(2026-08-05 實測 upload.wikimedia.org Retry-After: 600)
-  let searchThrottled = 0;                  // 連續「兩個搜尋 API 都零結果且至少一邊限流」的查詢數
-  const SEARCH_COOL_N = 6;                  // 到這個數才判定搜尋層被封(間歇 401/429 不足以早退)
-  // 節流是**逐主機**的:upload.wikimedia.org 撞 429 不代表 rawpixel/flickr 也被封 ——
-  // 舊制「一顆 429 整輪收工」讓 Commons-hosted 候選多的零件把整輪額度全數陪葬,
-  // 排在後面的零件永遠輪不到。改成:被封主機記進 hostCool,本輪只跳過同主機的候選。
-  const hostCool = new Set();
-  const hostOf = (u) => { try { return new URL(u).host; } catch { return u; } };
-  for (const { fam, part, def, need } of work) {
-    if (cooled || fetched >= LIMIT) break;
-    // seen 收成功條目 + **持續性失敗**(非影像位元組/403/404 —— 那是「這張檔案的事實」):
-    // 少了後者,選片閘把可用數清零之後,每一輪都會把同一份 PDF / 同一批 403 重新下載一次、
-    // 再 append 一筆重複 fail 列(2026-08-07 帳上實測 acunit 一張 PDF 已疊 8 筆),而且無效
-    // 請求還燒掉 upload.wikimedia.org 的 429 額度 = 真候選整輪被 hostCool 跳過。
-    // 暫時性失敗(429 限流)本來就不進帳本 ⇒ 重跑天然能再試(②的「可續跑」不受影響);
-    // 其他未知錯誤(5xx/網路斷)不匹配樣式 ⇒ 照舊可重試。
-    const PERSIST_FAIL_RE = /非影像位元組|HTTP 40[34]/;
-    const seen = new Set(manifest.filter((e) => e.family === fam && e.part === part
-      && (e.ok || PERSIST_FAIL_RE.test(e.error || ''))).map((e) => e.id));
-    for (const q of queryLadder(fam, def)) {
-      if (cooled || fetched >= LIMIT) break;
-      const tryItems = async (items) => {
-        for (const it of items) {
-          if (cooled || fetched >= LIMIT || have(fam, part) >= def.want) break;
-          if (seen.has(it.id)) continue;
-          if (hostCool.has(hostOf(it.url))) continue;   // 該主機本輪已被 429 封鎖:跳過,別燒成失敗
-          seen.add(it.id);
-          // 選片過濾:短邊 <1024 直接跳過(skill §5.3:不足 1024 不准進 image→3D);尺寸未知照收並標記
-          const short = Math.min(it.w || Infinity, it.h || Infinity);
-          if (short < 1024) continue;
-          const entry = {
-            family: fam, part, id: it.id, query: q, api: it.api,
-            // 輸入格式進帳本(預設 photo 不寫 ⇒ 既有條目逐位元不變):下游的 python 端靠
-            // 這一欄認出「這張不是照片」,MUST NOT 在那邊再抄一份零件名單(第二份實作)。
-            ...(srcOf(def) === 'photo' ? {} : { src: srcOf(def) }),
-            source_url: it.source_url, license: it.license, creator: it.creator,
-            retrieved_at: new Date().toISOString(), w: it.w || null, h: it.h || null,
-            size_unknown: !(it.w && it.h) || undefined,
-          };
-          try {
-            // 帳本一律記「相對**資料家**的 POSIX 路徑」:舊制 replace(HERE + '/') 在 Windows 上
-            // 因分隔符不符靜默失效 ⇒ 別台 worktree 的絕對路徑漏進帳本(2026-08-05 實測 28 筆)。
-            // 基準 MUST 是 HOME 不是 HERE —— 帳本與照片住同一個資料家,拿腳本位置當基準的話
-            // `--home` 一給,帳本裡就會出現 `../../…` 這種跨 worktree 的相對路徑。
-            entry.file = relative(HOME, await download(it, fam, part)).split('\\').join('/');
-            entry.ok = true;
-            fetched++;
-            console.log(`✓ ${fam}/${part} ← ${it.id}(${it.license})`);
-          } catch (e) {
-            entry.ok = false; entry.error = e.message;
-            console.warn(`✗ ${fam}/${part} ← ${it.id}:${e.message}`);
-            // 429 = IP 級限流:它是「這一輪的網路狀態」不是「這張照片的屬性」⇒ 不進帳本
-            // (帳本記的是授權與檔案的事實;持續性失敗如 404 仍照記)。封鎖只及**該主機**,
-            // 其他主機的候選照抓;全輪早退(cooled)只留給搜尋 API 本身被限流的情況。
-            if (/HTTP 429/.test(e.message)) { hostCool.add(hostOf(it.url)); continue; }
-          }
-          manifest.push(entry);
-          writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));
-          await new Promise((r) => setTimeout(r, 1100));     // 禮貌限速(Openverse 匿名額度)
-        }
-      };
-      let items = [];
-      let more = [];
-      let q429 = false;   // 這一條查詢的「搜尋層」有沒有撞限流(Openverse 額度耗盡實測回 401 或 429)
-      try { items = await searchOpenverse(q, need * 3); } catch (e) { q429 ||= /HTTP (401|429)/.test(e.message); console.warn(`Openverse 失敗(${q}):${e.message}`); }
-      await tryItems(items);
-      // 降級不例外(④):Openverse「搜尋零結果」**或「有結果但下載被限流(429)整批失敗」**
-      // 同一條查詢都降級到 Commons 再試 —— 舊制只蓋前者,實測 Openverse 匿名額度一燒完,
-      // 缺額零件就永遠補不滿,而畫面上只看得到「✗ HTTP 429」一排。
-      if (have(fam, part) < def.want && fetched < LIMIT) {
-        try { more = await searchCommons(q, need * 3); } catch (e) { q429 ||= /HTTP (401|429)/.test(e.message); console.warn(`Commons 失敗(${q}):${e.message}`); }
-        await tryItems(more);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  for (let roundIdx = 1; FOREVER || roundIdx <= ROUNDS; roundIdx++) {
+    if (FOREVER || ROUNDS > 1) {
+      console.log(`\n════ 第 ${roundIdx}${FOREVER ? '' : `/${ROUNDS}`} 輪 抓取作業 (${new Date().toISOString()}) ════`);
+    }
+
+    let cc0Manifest = existsSync(CC0_MANIFEST) ? JSON.parse(readFileSync(CC0_MANIFEST, 'utf8')) : [];
+    let restrictedManifest = existsSync(RESTRICTED_MANIFEST) ? JSON.parse(readFileSync(RESTRICTED_MANIFEST, 'utf8')) : [];
+    let curManifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : [];
+
+    const usableIn = (m, fam, part) => m.filter((e) => e.family === fam && e.part === part && usable(e)).length;
+    const screenedIn = (m, fam, part) => m.filter((e) => e.family === fam && e.part === part && e.ok && e.screen && e.screen.v === 'reject').length;
+
+    const work = [];
+    for (const [fam, parts] of Object.entries(PHOTO_CATALOG)) {
+      if (ONLY_FAM && fam !== ONLY_FAM) continue;
+      for (const [part, def] of Object.entries(parts)) {
+        if (ONLY_PART && `${fam}/${part}` !== ONLY_PART) continue;
+        const got = ROUTE_LICENSE ? usableIn(cc0Manifest, fam, part) : usableIn(curManifest, fam, part);
+        if (got < def.want) work.push({ fam, part, def, got, need: def.want - got });
       }
-      // 搜尋層的全輪早退(檔頭註解一直承諾、2026-08-07 之前從未實作):兩個搜尋 API 都
-      // 拿不出半個結果、而且至少一邊回限流,連續 SEARCH_COOL_N 條查詢都如此 = 搜尋層真的
-      // 被封 ⇒ 再掃剩下的幾十列只是對已限流的主機多打幾百發、延長封鎖。單發 429 MUST NOT
-      // 早退(實測 401/429 是間歇的,後面的查詢還撈得到);計數在任何一批結果進來時歸零。
-      if (items.length || more.length) searchThrottled = 0;
-      else if (q429 && ++searchThrottled >= SEARCH_COOL_N) cooled = true;
-      if (have(fam, part) >= def.want) break;
+    }
+
+    if (flag('plan') || !work.length) {
+      console.log('工作清單(零件:可用/目標;「可用」= 下載成功且未被選片閘淘汰):');
+      for (const [fam, parts] of Object.entries(PHOTO_CATALOG)) {
+        for (const [part, def] of Object.entries(parts)) {
+          const m = ROUTE_LICENSE ? cc0Manifest : curManifest;
+          const rej = screenedIn(m, fam, part);
+          console.log(`  ${fam}/${part}: ${usableIn(m, fam, part)}/${def.want}${rej ? `(選片閘另淘汰 ${rej} 張)` : ''}`);
+        }
+      }
+      const mix = buildingMix();
+      const got = {}; const gotSrc = {}; let gotTotal = 0;
+      for (const [part, def] of Object.entries(PHOTO_CATALOG.building)) {
+        if (!def.grp) continue;
+        const m = ROUTE_LICENSE ? cc0Manifest : curManifest;
+        const n = usableIn(m, 'building', part); got[def.grp] = (got[def.grp] || 0) + n; gotTotal += n;
+        (gotSrc[def.grp] ||= {})[srcOf(def)] = (gotSrc[def.grp]?.[srcOf(def)] || 0) + n;
+      }
+      console.log('\n整棟建物配比(使用者 2026-08-09 定案 50/25/25;分母含設計圖):');
+      for (const g of Object.keys(BUILDING_MIX)) {
+        const tgt = `${mix.by[g] || 0}/${mix.total} = ${(mix.share[g] * 100).toFixed(1)}%`;
+        const cur = gotTotal ? `${got[g] || 0}/${gotTotal} = ${((got[g] || 0) / gotTotal * 100).toFixed(1)}%` : '0';
+        console.log(`  ${g.padEnd(6)} 目標 ${tgt.padEnd(20)} 現有 ${cur}`);
+      }
+      console.log('  ── 輸入格式拆帳(目標 → 現有;drawing 走 plan_to_mesh 那條幾何路)──');
+      for (const g of Object.keys(BUILDING_MIX)) {
+        const cell = (s) => `${s} ${mix.bySrc[g]?.[s] || 0}→${gotSrc[g]?.[s] || 0}`;
+        console.log(`  ${g.padEnd(6)} ${SRC_KINDS.map(cell).join('・')}`);
+      }
+      if (!work.length) console.log('\n缺額為零,不用抓。');
+      return;
+    }
+
+    let fetched = 0;
+    let fetchedCC0 = 0;
+    let fetchedRestricted = 0;
+    let cooled = false;
+    let searchThrottled = 0;
+    const SEARCH_COOL_N = 6;
+    const hostCool = new Set();
+    const hostOf = (u) => { try { return new URL(u).host; } catch { return u; } };
+
+    // 全域去重 Seen Set(涵蓋 CC0 帳本 + 限制授權帳本 + 既有檔案)
+    const PERSIST_FAIL_RE = /非影像位元組|HTTP 40[34]/;
+    const allManifestEntries = ROUTE_LICENSE ? [...cc0Manifest, ...restrictedManifest] : curManifest;
+    const seenIds = new Set(allManifestEntries.filter((e) => e.ok || PERSIST_FAIL_RE.test(e.error || '')).map((e) => e.id));
+    const seenUrls = new Set(allManifestEntries.flatMap((e) => [e.source_url, e.url]).filter(Boolean));
+
+    for (const { fam, part, def, need } of work) {
+      if (cooled || fetched >= LIMIT) break;
+      for (const q of queryLadder(fam, def)) {
+        if (cooled || fetched >= LIMIT) break;
+        const curHave = () => ROUTE_LICENSE ? usableIn(cc0Manifest, fam, part) : usableIn(curManifest, fam, part);
+        if (curHave() >= def.want) break;
+
+        const tryItems = async (items) => {
+          for (const it of items) {
+            if (cooled || fetched >= LIMIT || curHave() >= def.want) break;
+            if (seenIds.has(it.id)) continue;
+            if (it.source_url && seenUrls.has(it.source_url)) continue;
+            if (it.url && seenUrls.has(it.url)) continue;
+            if (hostCool.has(hostOf(it.url))) continue;
+
+            seenIds.add(it.id);
+            if (it.source_url) seenUrls.add(it.source_url);
+            if (it.url) seenUrls.add(it.url);
+
+            const short = Math.min(it.w || Infinity, it.h || Infinity);
+            if (short < 1024) continue;
+
+            const isCc0 = isCC0(it.license);
+            let targetHome = HOME;
+            let targetManifest = curManifest;
+            let targetManifestPath = MANIFEST;
+            let isRestricted = !isCc0;
+
+            if (ROUTE_LICENSE) {
+              targetHome = isCc0 ? CC0_HOME : RESTRICTED_HOME;
+              targetManifest = isCc0 ? cc0Manifest : restrictedManifest;
+              targetManifestPath = isCc0 ? CC0_MANIFEST : RESTRICTED_MANIFEST;
+            } else if (CORPUS.shipping && !isCc0) {
+              continue; // 單目錄出貨模式下拒收非 CC0
+            }
+
+            const entry = {
+              family: fam, part, id: it.id, query: q, api: it.api,
+              ...(srcOf(def) === 'photo' ? {} : { src: srcOf(def) }),
+              source_url: it.source_url, license: it.license, creator: it.creator,
+              retrieved_at: new Date().toISOString(), w: it.w || null, h: it.h || null,
+              size_unknown: !(it.w && it.h) || undefined,
+              ...(isRestricted ? { restricted: true } : {}),
+            };
+
+            if (DRY) {
+              console.log(`  [dry] ✓ [${isCc0 ? 'CC0' : 'Restricted'}] ${fam}/${part} ← ${it.id} (${it.license})`);
+              fetched++;
+              if (isCc0) fetchedCC0++; else fetchedRestricted++;
+              continue;
+            }
+
+            try {
+              const file = await download(it, fam, part, targetHome);
+              entry.file = relative(targetHome, file).split('\\').join('/');
+              entry.ok = true;
+              fetched++;
+              if (isCc0) fetchedCC0++; else fetchedRestricted++;
+              console.log(`✓ [${isCc0 ? 'CC0' : 'Restricted'}] ${fam}/${part} ← ${it.id} (${it.license})`);
+              targetManifest.push(entry);
+              writeFileSync(targetManifestPath, JSON.stringify(targetManifest, null, 2));
+            } catch (e) {
+              entry.ok = false; entry.error = e.message;
+              console.warn(`✗ ${fam}/${part} ← ${it.id}:${e.message}`);
+              if (/HTTP 429/.test(e.message)) {
+                hostCool.add(hostOf(it.url));
+              } else {
+                targetManifest.push(entry);
+                writeFileSync(targetManifestPath, JSON.stringify(targetManifest, null, 2));
+              }
+            }
+            await sleep(DELAY_MS);
+          }
+        };
+
+        let items = [];
+        let more = [];
+        let q429 = false;
+        const ccOnly = !ROUTE_LICENSE && CORPUS.shipping;
+
+        try {
+          items = await searchOpenverse(q, need * 3, { ccOnly });
+        } catch (e) {
+          q429 ||= /HTTP (401|429)/.test(e.message);
+          console.warn(`Openverse 失敗(${q}):${e.message}`);
+        }
+        await tryItems(items);
+
+        if (curHave() < def.want && fetched < LIMIT) {
+          try {
+            more = await searchCommons(q, need * 3, { ccOnly });
+          } catch (e) {
+            q429 ||= /HTTP (401|429)/.test(e.message);
+            console.warn(`Commons 失敗(${q}):${e.message}`);
+          }
+          await tryItems(more);
+        }
+
+        // 選擇性外接 API(具備金鑰時自動納入)
+        if (curHave() < def.want && fetched < LIMIT && !ccOnly) {
+          if (process.env.PEXELS_API_KEY) {
+            try { const px = await searchPexels(q, need * 2); await tryItems(px); } catch {}
+          }
+          if (process.env.PIXABAY_API_KEY) {
+            try { const pb = await searchPixabay(q, need * 2); await tryItems(pb); } catch {}
+          }
+          if (process.env.UNSPLASH_ACCESS_KEY) {
+            try { const us = await searchUnsplash(q, need * 2); await tryItems(us); } catch {}
+          }
+        }
+
+        if (items.length || more.length) searchThrottled = 0;
+        else if (q429 && ++searchThrottled >= SEARCH_COOL_N) cooled = true;
+        if (curHave() >= def.want) break;
+      }
+    }
+
+    if (cooled || hostCool.size) {
+      console.log(`\n⚠ 撞上來源 IP 級限流(HTTP 429${hostCool.size ? `;被封主機:${[...hostCool].join(', ')}` : ''}),等待冷卻窗期。`);
+    }
+    console.log(`\n本輪完成:共下載 ${fetched} 張 (CC0: ${fetchedCC0} 張, Restricted: ${fetchedRestricted} 張)。`);
+
+    if ((FOREVER || roundIdx < ROUNDS) && !DRY) {
+      console.log(`\n… 等待 ${EVERY_MIN} 分鐘後執行第 ${roundIdx + 1} 輪 (符合來源冷卻規範)...`);
+      await sleep(EVERY_MIN * 60_000);
     }
   }
-  if (cooled || hostCool.size) console.log(`\n⚠ 撞上來源 IP 級限流(HTTP 429${hostCool.size ? `;被封主機:${[...hostCool].join(', ')}` : ''}),約 10 分鐘後重跑同指令續補。`);
-  console.log(`\n本輪下載 ${fetched} 張;重跑同指令可續補缺額。`);
 }
 
 // 進入點守衛:只有被當指令跑才啟動。import 本檔(例如只想拿 PHOTO_CATALOG 驗型錄)
@@ -799,3 +940,4 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => { console.error(e); process.exit(1); });
 }
+
