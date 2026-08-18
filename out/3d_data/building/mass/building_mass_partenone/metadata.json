@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_partenone",
+  "key": "building/mass_partenone_80983390",
+  "family": "building",
+  "subpart": "mass",
+  "source_image": "building/partenone.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\partenone.jpg",
+  "created_at": "2026-08-18T05:52:57.050Z",
+  "bounds": {
+    "min": [
+      -7.0848,
+      0,
+      -11.2234
+    ],
+    "max": [
+      7.0848,
+      26.0799,
+      11.2234
+    ],
+    "size": [
+      14.17,
+      26.08,
+      22.447
+    ],
+    "rMax": 13.272,
+    "triangles": 108,
+    "vertices": 70
+  },
+  "spec": {
+    "L": 14.16955825131609,
+    "W": 22.44678416113527,
+    "H": 22.079896238651102,
+    "stories": 6,
+    "roofBand": 0.15
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

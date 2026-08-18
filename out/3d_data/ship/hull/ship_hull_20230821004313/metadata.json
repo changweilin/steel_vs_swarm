@@ -1,0 +1,39 @@
+{
+  "id": "ship_hull_20230821004313",
+  "key": "ship/hull_20230821004313_d2114950",
+  "family": "ship",
+  "subpart": "hull",
+  "source_image": "ship/20230821004313.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\20230821004313.jpg",
+  "created_at": "2026-08-18T05:52:57.113Z",
+  "bounds": {
+    "min": [
+      -22.6239,
+      -0.9665,
+      -4.5144
+    ],
+    "max": [
+      24.906,
+      18.5043,
+      4.5144
+    ],
+    "size": [
+      47.53,
+      19.471,
+      9.029
+    ],
+    "rMax": 25.312,
+    "triangles": 128,
+    "vertices": 80
+  },
+  "spec": {
+    "L": 47.62920576791028,
+    "W": 9.028725108720531,
+    "H": 18.898420691233692,
+    "draft": 3.5,
+    "deckHeight": 5.5,
+    "bridgeFloors": 3
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

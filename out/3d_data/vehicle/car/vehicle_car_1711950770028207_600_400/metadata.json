@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_car_1711950770028207_600_400",
+  "key": "vehicle/car_1711950770028207_600_400_c93b5fc4",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/1711950770028207_600_400.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\1711950770028207_600_400.png",
+  "created_at": "2026-08-18T05:52:57.464Z",
+  "bounds": {
+    "min": [
+      -2.4998,
+      0.0166,
+      -0.9422
+    ],
+    "max": [
+      2.4998,
+      1.4444,
+      0.9422
+    ],
+    "size": [
+      5,
+      1.428,
+      1.884
+    ],
+    "rMax": 2.671,
+    "triangles": 208,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 4.999510185397116,
+    "W": 1.884327458609903,
+    "H": 1.4443862058442054,
+    "R": 0.34,
+    "axle": [
+      -1.3998628519111926,
+      1.3998628519111926
+    ],
+    "sill": 0.42,
+    "waist": 0.95,
+    "roof": 1.4443862058442054,
+    "cab": [
+      -1.0998922407873655,
+      0.7499265278095674
+    ],
+    "rakeF": 0.34,
+    "rakeR": 0.2,
+    "side": [
+      0.48,
+      0.9
+    ],
+    "extra": [
+      "mirror",
+      "headlight",
+      "grille"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

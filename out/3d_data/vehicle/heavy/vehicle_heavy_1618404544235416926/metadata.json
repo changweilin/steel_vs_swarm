@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_heavy_1618404544235416926",
+  "key": "vehicle/heavy_1618404544235416926_1ec6c7d0",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "source_image": "vehicle/heavy/1618404544235416926.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\1618404544235416926.jpg",
+  "created_at": "2026-08-18T05:52:57.618Z",
+  "bounds": {
+    "min": [
+      -5.2126,
+      0.0255,
+      -1.2877
+    ],
+    "max": [
+      5.4176,
+      3.9417,
+      1.2877
+    ],
+    "size": [
+      10.63,
+      3.916,
+      2.575
+    ],
+    "rMax": 5.569,
+    "triangles": 300,
+    "vertices": 172
+  },
+  "spec": {
+    "L": 10.825162127107653,
+    "W": 2.55,
+    "H": 3.941725795376516,
+    "R": 0.52,
+    "axle": [
+      -3.7888067444876783,
+      -1.623774319066148,
+      3.8970583657587547
+    ],
+    "sill": 1.02,
+    "waist": 1.35,
+    "roof": 3.941725795376516,
+    "cab": [
+      2.7062905317769133,
+      5.196077821011674
+    ],
+    "rakeF": 0.12,
+    "rakeR": 0,
+    "extra": [
+      "heavy_box",
+      "mirror",
+      "exhaust"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

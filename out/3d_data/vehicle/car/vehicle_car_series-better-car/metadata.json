@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_car_series-better-car",
+  "key": "vehicle/car_series-better-car_2860aa4e",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/series-better-car.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\series-better-car.png",
+  "created_at": "2026-08-18T05:52:57.595Z",
+  "bounds": {
+    "min": [
+      -2.4644,
+      0.0166,
+      -0.9426
+    ],
+    "max": [
+      2.4644,
+      1.4788,
+      0.9426
+    ],
+    "size": [
+      4.929,
+      1.462,
+      1.885
+    ],
+    "rMax": 2.639,
+    "triangles": 208,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 4.9287296864271,
+    "W": 1.8851300831616693,
+    "H": 1.4787586785687037,
+    "R": 0.34,
+    "axle": [
+      -1.380044312199588,
+      1.380044312199588
+    ],
+    "sill": 0.42,
+    "waist": 0.95,
+    "roof": 1.4787586785687037,
+    "cab": [
+      -1.0843205310139619,
+      0.7393094529640649
+    ],
+    "rakeF": 0.34,
+    "rakeR": 0.2,
+    "side": [
+      0.48,
+      0.9
+    ],
+    "extra": [
+      "mirror",
+      "headlight",
+      "grille"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

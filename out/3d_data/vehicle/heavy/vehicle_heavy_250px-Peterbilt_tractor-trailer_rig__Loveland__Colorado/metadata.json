@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_heavy_250px-Peterbilt_tractor-trailer_rig__Loveland__Colorado",
+  "key": "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_2eece7bd",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "source_image": "vehicle/heavy/250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado.jpg",
+  "created_at": "2026-08-18T05:52:57.635Z",
+  "bounds": {
+    "min": [
+      -5.507,
+      0.0255,
+      -1.2877
+    ],
+    "max": [
+      5.712,
+      3.8173,
+      1.2877
+    ],
+    "size": [
+      11.219,
+      3.792,
+      2.575
+    ],
+    "rMax": 5.855,
+    "triangles": 300,
+    "vertices": 172
+  },
+  "spec": {
+    "L": 11.414023041123064,
+    "W": 2.55,
+    "H": 3.8173220416571296,
+    "R": 0.52,
+    "axle": [
+      -3.9949080643930723,
+      -1.7121034561684596,
+      4.109048294804303
+    ],
+    "sill": 1.02,
+    "waist": 1.35,
+    "roof": 3.8173220416571296,
+    "cab": [
+      2.853505760280766,
+      5.47873105973907
+    ],
+    "rakeF": 0.12,
+    "rakeR": 0,
+    "extra": [
+      "heavy_box",
+      "mirror",
+      "exhaust"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

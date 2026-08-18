@@ -1,0 +1,38 @@
+{
+  "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
+  "key": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_38edd5ad",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+  "created_at": "2026-08-18T05:52:57.263Z",
+  "bounds": {
+    "min": [
+      -3.8112,
+      0,
+      -3.9379
+    ],
+    "max": [
+      3.6491,
+      9.3629,
+      3.7785
+    ],
+    "size": [
+      7.46,
+      9.363,
+      7.716
+    ],
+    "rMax": 5.48,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 7.262188143739986,
+    "W": 9.645494773785,
+    "H": 9.264042114900436,
+    "trunkH": 4.168818951705196,
+    "trunkR": 0.6957518883039597
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

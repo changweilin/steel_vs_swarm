@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_B16A00_P_05_02",
+  "key": "building/mass_B16A00_P_05_02_4da87118",
+  "family": "building",
+  "subpart": "mass",
+  "source_image": "building/B16A00_P_05_02.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\B16A00_P_05_02.jpg",
+  "created_at": "2026-08-18T05:52:57.023Z",
+  "bounds": {
+    "min": [
+      -12.0824,
+      0,
+      -10.5699
+    ],
+    "max": [
+      12.0824,
+      27.1096,
+      10.5699
+    ],
+    "size": [
+      24.165,
+      27.11,
+      21.14
+    ],
+    "rMax": 16.053,
+    "triangles": 108,
+    "vertices": 70
+  },
+  "spec": {
+    "L": 24.1648889906157,
+    "W": 21.139757381551842,
+    "H": 23.109575036240177,
+    "stories": 7,
+    "roofBand": 0.15
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

@@ -1,0 +1,39 @@
+{
+  "id": "ship_hull_20090411-TurboJET_Barca",
+  "key": "ship/hull_20090411-TurboJET_Barca_da4471af",
+  "family": "ship",
+  "subpart": "hull",
+  "source_image": "ship/20090411-TurboJET_Barca.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\20090411-TurboJET_Barca.jpg",
+  "created_at": "2026-08-18T05:52:57.102Z",
+  "bounds": {
+    "min": [
+      -17.3067,
+      -0.7172,
+      -6.4143
+    ],
+    "max": [
+      19.2284,
+      15.7335,
+      6.4143
+    ],
+    "size": [
+      36.535,
+      16.451,
+      12.829
+    ],
+    "rMax": 20.27,
+    "triangles": 128,
+    "vertices": 80
+  },
+  "spec": {
+    "L": 36.43518730449378,
+    "W": 12.82867933165484,
+    "H": 12.741100175478753,
+    "draft": 3.5,
+    "deckHeight": 5.5,
+    "bridgeFloors": 3
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

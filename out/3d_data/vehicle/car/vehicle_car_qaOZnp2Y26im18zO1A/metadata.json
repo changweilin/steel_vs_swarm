@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_car_qaOZnp2Y26im18zO1A",
+  "key": "vehicle/car_qaOZnp2Y26im18zO1A_4c70f696",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/qaOZnp2Y26im18zO1A.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\qaOZnp2Y26im18zO1A.webp",
+  "created_at": "2026-08-18T05:52:57.593Z",
+  "bounds": {
+    "min": [
+      -2.494,
+      0.0166,
+      -0.9395
+    ],
+    "max": [
+      2.494,
+      1.4303,
+      0.9395
+    ],
+    "size": [
+      4.988,
+      1.414,
+      1.879
+    ],
+    "rMax": 2.665,
+    "triangles": 208,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 4.987910276951247,
+    "W": 1.878965438315404,
+    "H": 1.4303082322423133,
+    "R": 0.34,
+    "axle": [
+      -1.3966148775463494,
+      1.3966148775463494
+    ],
+    "sill": 0.42,
+    "waist": 0.95,
+    "roof": 1.4303082322423133,
+    "cab": [
+      -1.0973402609292744,
+      0.748186541542687
+    ],
+    "rakeF": 0.34,
+    "rakeR": 0.2,
+    "side": [
+      0.48,
+      0.9
+    ],
+    "extra": [
+      "mirror",
+      "headlight",
+      "grille"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

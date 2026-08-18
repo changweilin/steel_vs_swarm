@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_d5394391",
+  "key": "building/mass_d5394391_d77236ed",
+  "family": "building",
+  "subpart": "mass",
+  "source_image": "building/d5394391.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\d5394391.jpg",
+  "created_at": "2026-08-18T05:52:57.039Z",
+  "bounds": {
+    "min": [
+      -8.0224,
+      0,
+      -7.6294
+    ],
+    "max": [
+      8.0224,
+      42.4249,
+      7.6294
+    ],
+    "size": [
+      16.045,
+      42.425,
+      15.259
+    ],
+    "rMax": 11.071,
+    "triangles": 168,
+    "vertices": 110
+  },
+  "spec": {
+    "L": 16.044769970244907,
+    "W": 15.258869306477454,
+    "H": 38.424872205691614,
+    "stories": 11,
+    "roofBand": 0.15
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

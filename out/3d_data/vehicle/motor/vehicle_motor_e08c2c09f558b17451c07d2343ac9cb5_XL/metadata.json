@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_motor_e08c2c09f558b17451c07d2343ac9cb5_XL",
+  "key": "vehicle/motor_e08c2c09f558b17451c07d2343ac9cb5_XL_5388c140",
+  "family": "vehicle",
+  "subpart": "motor",
+  "source_image": "vehicle/motor/e08c2c09f558b17451c07d2343ac9cb5_XL.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\e08c2c09f558b17451c07d2343ac9cb5_XL.jpg",
+  "created_at": "2026-08-18T05:52:57.836Z",
+  "bounds": {
+    "min": [
+      -0.96,
+      0.0137,
+      -0.41
+    ],
+    "max": [
+      1,
+      1.2661,
+      0.41
+    ],
+    "size": [
+      1.96,
+      1.252,
+      0.82
+    ],
+    "rMax": 1.081,
+    "triangles": 152,
+    "vertices": 92
+  },
+  "spec": {
+    "L": 2.1906576638437474,
+    "W": 0.82,
+    "H": 1.3060807202258335,
+    "R": 0.28,
+    "type": "motorcycle"
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

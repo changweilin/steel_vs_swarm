@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2_1_",
+  "key": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2 (1)_0d0be029",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/1926-FORD-MODEL-T-TOURING-CAR-2 (1).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\1926-FORD-MODEL-T-TOURING-CAR-2 (1).jpg",
+  "created_at": "2026-08-18T05:52:57.481Z",
+  "bounds": {
+    "min": [
+      -2.2756,
+      0.0166,
+      -0.9566
+    ],
+    "max": [
+      2.2756,
+      1.3593,
+      0.9566
+    ],
+    "size": [
+      4.551,
+      1.343,
+      1.913
+    ],
+    "rMax": 2.468,
+    "triangles": 208,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 4.55117875944152,
+    "W": 1.9131120775158312,
+    "H": 1.359256122682536,
+    "R": 0.34,
+    "axle": [
+      -1.2743300526436256,
+      1.2743300526436256
+    ],
+    "sill": 0.42,
+    "waist": 0.95,
+    "roof": 1.359256122682536,
+    "cab": [
+      -1.0012593270771344,
+      0.6826768139162279
+    ],
+    "rakeF": 0.34,
+    "rakeR": 0.2,
+    "side": [
+      0.48,
+      0.9
+    ],
+    "extra": [
+      "mirror",
+      "headlight",
+      "grille"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

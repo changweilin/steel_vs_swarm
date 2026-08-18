@@ -1,0 +1,38 @@
+{
+  "id": "tree_canopy_ADEY1909_1_",
+  "key": "tree/canopy_ADEY1909 (1)_569f65ab",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/ADEY1909 (1).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\ADEY1909 (1).jpg",
+  "created_at": "2026-08-18T05:52:57.265Z",
+  "bounds": {
+    "min": [
+      -3.5908,
+      0,
+      -3.6517
+    ],
+    "max": [
+      3.5866,
+      13.5401,
+      3.668
+    ],
+    "size": [
+      7.177,
+      13.54,
+      7.32
+    ],
+    "rMax": 5.13,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 7.209849698634318,
+    "W": 9.056801709010452,
+    "H": 13.397161821927215,
+    "trunkH": 6.028722819867247,
+    "trunkR": 0.639441519798581
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

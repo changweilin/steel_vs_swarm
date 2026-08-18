@@ -1,0 +1,38 @@
+{
+  "id": "tree_canopy_ddf148d60683c553_1_",
+  "key": "tree/canopy_ddf148d60683c553 (1)_b651a22f",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/ddf148d60683c553 (1).webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\ddf148d60683c553 (1).webp",
+  "created_at": "2026-08-18T05:52:57.302Z",
+  "bounds": {
+    "min": [
+      -3.5646,
+      0,
+      -3.5553
+    ],
+    "max": [
+      3.5139,
+      16.4184,
+      3.6202
+    ],
+    "size": [
+      7.079,
+      16.418,
+      7.175
+    ],
+    "rMax": 5.045,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 7.1835278858625164,
+    "W": 8.858968490119784,
+    "H": 16.245105668726634,
+    "trunkH": 7.310297550926985,
+    "trunkR": 0.6219821469443809
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

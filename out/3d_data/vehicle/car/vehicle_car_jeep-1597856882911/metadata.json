@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_car_jeep-1597856882911",
+  "key": "vehicle/car_jeep-1597856882911_8d77f457",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/jeep-1597856882911.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\jeep-1597856882911.jpg",
+  "created_at": "2026-08-18T05:52:57.567Z",
+  "bounds": {
+    "min": [
+      -2.2552,
+      0.0166,
+      -0.9694
+    ],
+    "max": [
+      2.2552,
+      1.5109,
+      0.9694
+    ],
+    "size": [
+      4.51,
+      1.494,
+      1.939
+    ],
+    "rMax": 2.455,
+    "triangles": 208,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 4.510336461432822,
+    "W": 1.9388418402380407,
+    "H": 1.510927748531319,
+    "R": 0.34,
+    "axle": [
+      -1.2628942092011903,
+      1.2628942092011903
+    ],
+    "sill": 0.42,
+    "waist": 0.95,
+    "roof": 1.510927748531319,
+    "cab": [
+      -0.9922740215152209,
+      0.6765504692149233
+    ],
+    "rakeF": 0.34,
+    "rakeR": 0.2,
+    "side": [
+      0.48,
+      0.9
+    ],
+    "extra": [
+      "mirror",
+      "headlight",
+      "grille"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

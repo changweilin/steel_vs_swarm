@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_heavy_CSPV-02_01",
+  "key": "vehicle/heavy_CSPV-02_01_b1d74929",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "source_image": "vehicle/heavy/CSPV-02_01.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\CSPV-02_01.png",
+  "created_at": "2026-08-18T05:52:57.673Z",
+  "bounds": {
+    "min": [
+      -5.1376,
+      0.0255,
+      -1.2877
+    ],
+    "max": [
+      5.3426,
+      3.9614,
+      1.2877
+    ],
+    "size": [
+      10.48,
+      3.936,
+      2.575
+    ],
+    "rMax": 5.496,
+    "triangles": 300,
+    "vertices": 172
+  },
+  "spec": {
+    "L": 10.675196459906921,
+    "W": 2.55,
+    "H": 3.9613550011444265,
+    "R": 0.52,
+    "axle": [
+      -3.736318760967422,
+      -1.6012794689860381,
+      3.8430707255664913
+    ],
+    "sill": 1.02,
+    "waist": 1.35,
+    "roof": 3.9613550011444265,
+    "cab": [
+      2.6687991149767303,
+      5.124094300755322
+    ],
+    "rakeF": 0.12,
+    "rakeR": 0,
+    "extra": [
+      "heavy_box",
+      "mirror",
+      "exhaust"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

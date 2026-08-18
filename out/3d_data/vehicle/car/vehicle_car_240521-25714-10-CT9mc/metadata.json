@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_car_240521-25714-10-CT9mc",
+  "key": "vehicle/car_240521-25714-10-CT9mc_a52150f3",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/240521-25714-10-CT9mc.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\240521-25714-10-CT9mc.png",
+  "created_at": "2026-08-18T05:52:57.507Z",
+  "bounds": {
+    "min": [
+      -2.5092,
+      0.0166,
+      -0.9308
+    ],
+    "max": [
+      2.5092,
+      1.4479,
+      0.9308
+    ],
+    "size": [
+      5.018,
+      1.431,
+      1.862
+    ],
+    "rMax": 2.676,
+    "triangles": 208,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 5.018406958113985,
+    "W": 1.8616281376363775,
+    "H": 1.4479446097505149,
+    "R": 0.34,
+    "axle": [
+      -1.405153948271916,
+      1.405153948271916
+    ],
+    "sill": 0.42,
+    "waist": 0.95,
+    "roof": 1.4479446097505149,
+    "cab": [
+      -1.1040495307850768,
+      0.7527610437170977
+    ],
+    "rakeF": 0.34,
+    "rakeR": 0.2,
+    "side": [
+      0.48,
+      0.9
+    ],
+    "extra": [
+      "mirror",
+      "headlight",
+      "grille"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

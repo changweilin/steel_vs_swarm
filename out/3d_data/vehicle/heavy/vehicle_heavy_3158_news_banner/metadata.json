@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_heavy_3158_news_banner",
+  "key": "vehicle/heavy_3158_news_banner_930018ff",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "source_image": "vehicle/heavy/3158_news_banner.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\3158_news_banner.jpg",
+  "created_at": "2026-08-18T05:52:57.640Z",
+  "bounds": {
+    "min": [
+      -4.8927,
+      0.0255,
+      -1.2877
+    ],
+    "max": [
+      5.0977,
+      3.5416,
+      1.2877
+    ],
+    "size": [
+      9.99,
+      3.516,
+      2.575
+    ],
+    "rMax": 5.258,
+    "triangles": 300,
+    "vertices": 172
+  },
+  "spec": {
+    "L": 10.18535133897917,
+    "W": 2.55,
+    "H": 3.541588464179446,
+    "R": 0.52,
+    "axle": [
+      -3.5648729686427094,
+      -1.5278027008468755,
+      3.666726482032501
+    ],
+    "sill": 1.02,
+    "waist": 1.35,
+    "roof": 3.541588464179446,
+    "cab": [
+      2.5463378347447927,
+      4.888968642710002
+    ],
+    "rakeF": 0.12,
+    "rakeR": 0,
+    "extra": [
+      "heavy_box",
+      "mirror",
+      "exhaust"
+    ]
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

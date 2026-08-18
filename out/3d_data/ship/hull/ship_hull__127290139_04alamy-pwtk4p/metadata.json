@@ -1,0 +1,39 @@
+{
+  "id": "ship_hull__127290139_04alamy-pwtk4p",
+  "key": "ship/hull__127290139_04alamy-pwtk4p_f9c434fb",
+  "family": "ship",
+  "subpart": "hull",
+  "source_image": "ship/_127290139_04alamy-pwtk4p.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\_127290139_04alamy-pwtk4p.png",
+  "created_at": "2026-08-18T05:52:57.218Z",
+  "bounds": {
+    "min": [
+      -16.9227,
+      -0.6992,
+      -6.9147
+    ],
+    "max": [
+      18.8184,
+      15.6287,
+      6.9147
+    ],
+    "size": [
+      35.741,
+      16.328,
+      13.829
+    ],
+    "rMax": 20.049,
+    "triangles": 128,
+    "vertices": 80
+  },
+  "spec": {
+    "L": 35.62684061951629,
+    "W": 13.829457541771571,
+    "H": 12.508308537422751,
+    "draft": 3.5,
+    "deckHeight": 5.5,
+    "bridgeFloors": 3
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}

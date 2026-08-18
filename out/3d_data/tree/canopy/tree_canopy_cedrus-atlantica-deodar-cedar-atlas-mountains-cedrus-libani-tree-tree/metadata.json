@@ -1,0 +1,38 @@
+{
+  "id": "tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree",
+  "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_ab168c59",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg",
+  "created_at": "2026-08-18T05:52:57.293Z",
+  "bounds": {
+    "min": [
+      -4.2364,
+      0,
+      -4.4852
+    ],
+    "max": [
+      4.5038,
+      12.3365,
+      4.2368
+    ],
+    "size": [
+      8.74,
+      12.336,
+      8.722
+    ],
+    "rMax": 6.183,
+    "triangles": 68,
+    "vertices": 42
+  },
+  "spec": {
+    "L": 10.550354772259098,
+    "W": 9.21694514381628,
+    "H": 12.206347753109025,
+    "trunkH": 5.492856488899061,
+    "trunkR": 0.4503913939116503
+  },
+  "method": "llm_parts_and_3d_geom",
+  "status": "ingested"
+}
