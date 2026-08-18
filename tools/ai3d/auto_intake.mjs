@@ -280,7 +280,7 @@ function intakeOne({ row, item, slot, nodeName, blender, budget, feed }) {
         '--cells', String(ov.cells ?? item.cells ?? sp.cells),
         // `offset` 是唯一逐顆需要調的那一個(§5am:masslow_b 要 0.014,0.006 出破口)
         '--offset', String(ov.offset ?? item.offset ?? sp.offset),
-        '--target', String(ov.target ?? item.target ?? sp.target)], { cwd: HERE });
+        '--target', String((typeof ov.target === 'number' ? ov.target : null) ?? (typeof item.target === 'number' ? item.target : null) ?? sp.target)], { cwd: HERE });
     if (!s.ok) return undo(`實體化失敗(${s.why})`);
     if (!DRY) src = solid;
   }

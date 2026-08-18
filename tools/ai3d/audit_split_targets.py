@@ -258,7 +258,7 @@ def main():
     ck('rnd' not in body and 'random' not in body,
        '分離這一站零亂數(§2.3:多抽一枚就把整張圖的佈局推移)')
     mp = open(os.path.join(HERE, 'matte_photos.py'), encoding='utf-8').read()
-    ck('parent.parent.parent != PHOTOS' in mp,
+    ck('src.parent.parent.parent == PHOTOS' in mp,
        'matte_photos 只收 photos/<族>/<零件>/*(散在外面的檔案會被記成族名 `photos`)')
 
     # ── Ⅴ 真語料的零誤殺硬約束(語料不在就跳過,MUST NOT 洗成通過)──
