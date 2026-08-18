@@ -1,35 +1,52 @@
 {
   "id": "vehicle_motor_000002_1645174811",
-  "sourceImage": "vehicle/motor/000002_1645174811.jpg",
+  "stem": "000002_1645174811",
+  "family": "vehicle",
+  "subpart": "motor",
   "style": "standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.786,
   "aspectRatio": 1,
+  "symmetryScore": 0.786,
+  "widthProfile": [
+    0.148,
+    0.383,
+    0.414,
+    0.406,
+    0.531,
+    0.562,
+    0.609,
+    0.602,
+    0.43,
+    0.234
+  ],
   "colors": {
-    "primaryHex": 11842742,
+    "primaryHex": 1315606,
     "primaryRgb": [
-      180,
-      180,
-      182
+      20,
+      19,
+      22
     ],
-    "accentHex": 197379,
+    "accentHex": 14540258,
     "accentRgb": [
-      3,
-      3,
-      3
+      221,
+      221,
+      226
     ],
-    "darkHex": 1776157,
+    "darkHex": 1710364,
     "darkRgb": [
-      27,
       26,
-      29
+      25,
+      28
     ],
-    "brightHex": 16185079,
+    "brightHex": 13750485,
     "brightRgb": [
-      246,
-      246,
-      247
-    ]
+      209,
+      208,
+      213
+    ],
+    "foliageHex": 1315606,
+    "barkHex": 2892832,
+    "roofHex": 6184290
   },
   "reconstructedFeatures": [
     {
@@ -40,15 +57,5 @@
       "name": "dual_chrome_pipes",
       "method": "staggered_exhaust_system"
     }
-  ],
-  "totalParts": 7,
-  "partNames": [
-    "motorcycle_engine_chassis",
-    "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

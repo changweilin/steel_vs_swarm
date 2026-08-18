@@ -1,0 +1,65 @@
+{
+  "id": "vehicle_bike_800x__1_",
+  "stem": "800x (1)",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_cruiser",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.681,
+  "symmetryScore": 0.827,
+  "widthProfile": [
+    0.258,
+    0.242,
+    0.438,
+    0.57,
+    0.727,
+    0.805,
+    0.875,
+    0.883,
+    0.734,
+    0.555
+  ],
+  "colors": {
+    "primaryHex": 2500136,
+    "primaryRgb": [
+      38,
+      38,
+      40
+    ],
+    "accentHex": 15395562,
+    "accentRgb": [
+      234,
+      234,
+      234
+    ],
+    "darkHex": 2368550,
+    "darkRgb": [
+      36,
+      36,
+      38
+    ],
+    "brightHex": 14145495,
+    "brightRgb": [
+      215,
+      215,
+      215
+    ],
+    "foliageHex": 2500136,
+    "barkHex": 5781286,
+    "roofHex": 6118750
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "tubular_truss_geometry"
+    },
+    {
+      "name": "visible_spoked_wheels",
+      "method": "dual_wheel_rims_and_hubs"
+    },
+    {
+      "name": "drivetrain_and_saddle",
+      "method": "crankset_pedals_seatpost"
+    }
+  ]
+}

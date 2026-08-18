@@ -1,0 +1,65 @@
+{
+  "id": "vehicle_bike_14-_________-900-__-___-btwin-8646464",
+  "stem": "14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_cruiser",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1,
+  "symmetryScore": 0.945,
+  "widthProfile": [
+    0,
+    0,
+    0.094,
+    0.25,
+    0.492,
+    0.758,
+    0.719,
+    0.734,
+    0,
+    0
+  ],
+  "colors": {
+    "primaryHex": 14013652,
+    "primaryRgb": [
+      213,
+      212,
+      212
+    ],
+    "accentHex": 2959401,
+    "accentRgb": [
+      45,
+      40,
+      41
+    ],
+    "darkHex": 3551023,
+    "darkRgb": [
+      54,
+      47,
+      47
+    ],
+    "brightHex": 13816530,
+    "brightRgb": [
+      210,
+      210,
+      210
+    ],
+    "foliageHex": 14013652,
+    "barkHex": 7557181,
+    "roofHex": 6512735
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "tubular_truss_geometry"
+    },
+    {
+      "name": "visible_spoked_wheels",
+      "method": "dual_wheel_rims_and_hubs"
+    },
+    {
+      "name": "drivetrain_and_saddle",
+      "method": "crankset_pedals_seatpost"
+    }
+  ]
+}

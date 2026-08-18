@@ -1,49 +1,57 @@
 {
-  "id": "ship_hull_Disney%20Adventure%20ship%201",
-  "sourceImage": "ship/Disney%20Adventure%20ship%201.jpg",
-  "style": "general_cargo_ship",
+  "id": "ship_hull_Disney_20Adventure_20ship_201",
+  "stem": "Disney%20Adventure%20ship%201",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "cruise_liner",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.843,
   "aspectRatio": 1.778,
+  "symmetryScore": 0.843,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.992,
+    1
+  ],
   "colors": {
-    "primaryHex": 6588070,
+    "primaryHex": 6728417,
     "primaryRgb": [
-      100,
-      134,
-      166
+      102,
+      170,
+      225
     ],
-    "accentHex": 198161,
+    "accentHex": 794942,
     "accentRgb": [
-      3,
-      6,
-      17
+      12,
+      33,
+      62
     ],
-    "darkHex": 1583428,
+    "darkHex": 1124937,
     "darkRgb": [
-      24,
-      41,
-      68
+      17,
+      42,
+      73
     ],
-    "brightHex": 12900068,
+    "brightHex": 12375529,
     "brightRgb": [
-      196,
-      214,
-      228
-    ]
+      188,
+      213,
+      233
+    ],
+    "foliageHex": 6728417,
+    "barkHex": 8279369,
+    "roofHex": 7319267
   },
   "reconstructedFeatures": [
     {
       "name": "streamlined_hull_superstructure",
       "method": "terraced_decks_and_masts"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
-    "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
   ]
 }

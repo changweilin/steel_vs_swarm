@@ -1,23 +1,21 @@
 {
   "id": "ship_hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050",
-  "key": "ship/hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050_6ef1343d",
+  "stem": "00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050",
   "family": "ship",
   "subpart": "hull",
-  "style": "aircraft_carrier",
-  "symmetryMode": "asymmetric",
   "source_image": "ship/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg",
-  "created_at": "2026-08-18T10:56:14.137Z",
+  "generated_at": "2026-08-18T13:38:03.877Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -33.7497,
-      -1.2237,
-      -10.1952
+      -33.75,
+      -1.224,
+      -10.195
     ],
     "max": [
-      35.9087,
+      35.909,
       22.663,
-      10.1952
+      10.195
     ],
     "size": [
       69.658,
@@ -33,7 +31,5 @@
     "W": 20.390409704737927,
     "H": 17.917753871976807,
     "style": "aircraft_carrier_flight_deck"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

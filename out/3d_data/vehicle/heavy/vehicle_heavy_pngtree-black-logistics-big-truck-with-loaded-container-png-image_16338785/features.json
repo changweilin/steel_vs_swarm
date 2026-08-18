@@ -1,35 +1,52 @@
 {
   "id": "vehicle_heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785",
-  "sourceImage": "vehicle/heavy/pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785.png",
-  "style": "semi_tractor",
+  "stem": "pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "box_van_delivery",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.957,
   "aspectRatio": 1,
+  "symmetryScore": 0.957,
+  "widthProfile": [
+    0,
+    0,
+    0,
+    0.297,
+    0.836,
+    0.836,
+    0.844,
+    0.797,
+    0,
+    0
+  ],
   "colors": {
-    "primaryHex": 1579290,
+    "primaryHex": 3948353,
     "primaryRgb": [
-      24,
-      25,
-      26
+      60,
+      63,
+      65
     ],
-    "accentHex": 13095124,
+    "accentHex": 9935258,
     "accentRgb": [
-      199,
-      208,
-      212
+      151,
+      153,
+      154
     ],
-    "darkHex": 921360,
+    "darkHex": 2829872,
     "darkRgb": [
-      14,
-      15,
-      16
+      43,
+      46,
+      48
     ],
-    "brightHex": 12435649,
+    "brightHex": 12238270,
     "brightRgb": [
+      186,
       189,
-      192,
-      193
-    ]
+      190
+    ],
+    "foliageHex": 3948353,
+    "barkHex": 5781286,
+    "roofHex": 3948353
   },
   "reconstructedFeatures": [
     {
@@ -45,21 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.1
     }
-  ],
-  "totalParts": 13,
-  "partNames": [
-    "freight_chassis_frame",
-    "freight_cab_body",
-    "cab_windshield",
-    "freight_cargo_box",
-    "rear_rollup_door",
-    "exhaust_stack_left",
-    "steer_wheel_left",
-    "drive_wheel_1_left",
-    "drive_wheel_2_left",
-    "exhaust_stack_right",
-    "steer_wheel_right",
-    "drive_wheel_1_right",
-    "drive_wheel_2_right"
   ]
 }

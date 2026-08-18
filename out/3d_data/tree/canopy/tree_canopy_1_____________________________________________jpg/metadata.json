@@ -1,0 +1,35 @@
+{
+  "id": "tree_canopy_1_____________________________________________jpg",
+  "stem": "1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg.webp",
+  "generated_at": "2026-08-18T13:38:03.980Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -2.556,
+      0,
+      -2.619
+    ],
+    "max": [
+      2.334,
+      3.06,
+      2.883
+    ],
+    "size": [
+      4.89,
+      3.06,
+      5.502
+    ],
+    "rMax": 3.853,
+    "triangles": 216,
+    "vertices": 122
+  },
+  "spec": {
+    "L": 7.469390402075227,
+    "W": 7.225459678034638,
+    "H": 3.127916380560006,
+    "style": "low_polyhedral_bush_cluster"
+  }
+}

@@ -1,35 +1,52 @@
 {
   "id": "building_mass_architecture-houou-02-tmb",
-  "sourceImage": "building/architecture-houou-02-tmb.jpg",
+  "stem": "architecture-houou-02-tmb",
+  "family": "building",
+  "subpart": "mass",
   "style": "asian_pagoda_pavilion",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.922,
   "aspectRatio": 1.502,
+  "symmetryScore": 0.922,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7758173,
+    "primaryHex": 8410438,
     "primaryRgb": [
-      118,
-      97,
-      93
+      128,
+      85,
+      70
     ],
-    "accentHex": 16642795,
+    "accentHex": 12564914,
     "accentRgb": [
-      253,
-      242,
-      235
+      191,
+      185,
+      178
     ],
-    "darkHex": 5057573,
+    "darkHex": 4795172,
     "darkRgb": [
-      77,
-      44,
-      37
+      73,
+      43,
+      36
     ],
-    "brightHex": 13551550,
+    "brightHex": 13157308,
     "brightRgb": [
-      206,
-      199,
-      190
-    ]
+      200,
+      195,
+      188
+    ],
+    "foliageHex": 4676153,
+    "barkHex": 7487539,
+    "roofHex": 6391469
   },
   "reconstructedFeatures": [
     {
@@ -40,31 +57,5 @@
       "name": "finial_spire_sanrin",
       "method": "sacred_bronze_finial"
     }
-  ],
-  "totalParts": 23,
-  "partNames": [
-    "stone_plinth_foundation",
-    "pagoda_chamber_tier_1",
-    "pillar_1_-1_-1",
-    "pillar_1_-1_1",
-    "pillar_1_1_-1",
-    "pillar_1_1_1",
-    "curved_eaves_1",
-    "roof_slope_1",
-    "pagoda_chamber_tier_2",
-    "pillar_2_-1_-1",
-    "pillar_2_-1_1",
-    "pillar_2_1_-1",
-    "pillar_2_1_1",
-    "curved_eaves_2",
-    "roof_slope_2",
-    "pagoda_chamber_tier_3",
-    "pillar_3_-1_-1",
-    "pillar_3_-1_1",
-    "pillar_3_1_-1",
-    "pillar_3_1_1",
-    "curved_eaves_3",
-    "roof_slope_3",
-    "finial_spire_sanrin"
   ]
 }

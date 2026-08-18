@@ -1,49 +1,57 @@
 {
   "id": "tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree",
-  "sourceImage": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg",
+  "stem": "cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "conifer_pine",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.887,
   "aspectRatio": 1,
+  "symmetryScore": 0.887,
+  "widthProfile": [
+    0.625,
+    0.688,
+    0.742,
+    0.758,
+    0.773,
+    0.805,
+    0.82,
+    0.82,
+    0.828,
+    0.625
+  ],
   "colors": {
-    "primaryHex": 13028029,
+    "primaryHex": 14014417,
     "primaryRgb": [
-      198,
-      202,
-      189
+      213,
+      215,
+      209
     ],
-    "accentHex": 1908769,
+    "accentHex": 7437399,
     "accentRgb": [
-      29,
-      32,
-      33
+      113,
+      124,
+      87
     ],
-    "darkHex": 4080950,
+    "darkHex": 3883316,
     "darkRgb": [
-      62,
-      69,
-      54
+      59,
+      65,
+      52
     ],
-    "brightHex": 15395560,
+    "brightHex": 15066594,
     "brightRgb": [
-      234,
-      234,
-      232
-    ]
+      229,
+      229,
+      226
+    ],
+    "foliageHex": 6648650,
+    "barkHex": 5781286,
+    "roofHex": 14935008
   },
   "reconstructedFeatures": [
     {
       "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "method": "six_tiered_polyhedral_conical_canopies"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
   ]
 }

@@ -1,24 +1,23 @@
 {
-  "id": "ship_hull_Disney%20Adventure%20ship%201",
+  "id": "ship_hull_Disney_20Adventure_20ship_201",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "cruise_liner",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 48.1801327534905,
     "W": 13.439940489814603,
-    "H": 12.042298008697642,
-    "style": "multipurpose_maritime_vessel"
+    "H": 12.042298008697642
   },
   "bounds": {
     "min": [
-      -22.8856,
-      -0.8734,
+      -22.886,
+      -0.873,
       -6.72
     ],
     "max": [
-      25.1275,
-      16.4803,
+      25.128,
+      16.48,
       6.72
     ],
     "size": [
@@ -49,7 +48,7 @@
         0,
         0
       ],
-      "color": 6588070,
+      "color": 6728417,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -71,7 +70,7 @@
         0,
         -0.22
       ],
-      "color": 6588070,
+      "color": 6728417,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -93,7 +92,7 @@
         0,
         0
       ],
-      "color": 1583428,
+      "color": 1124937,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -115,7 +114,7 @@
         0,
         0
       ],
-      "color": 12900068,
+      "color": 12375529,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +137,7 @@
         0,
         0
       ],
-      "color": 198161,
+      "color": 794942,
       "vertexCount": 18,
       "triangleCount": 32
     },
@@ -161,20 +160,12 @@
         0,
         0
       ],
-      "color": 1583428,
+      "color": 1124937,
       "vertexCount": 14,
       "triangleCount": 24
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
   "meshData": {
-    "vertexCount": 64,
-    "triangleCount": 104,
     "vertices": [
       -22.1629,
       0,

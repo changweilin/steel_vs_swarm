@@ -1,0 +1,66 @@
+{
+  "id": "vehicle_car_Cybertruck-_____-Cybertruck-______",
+  "stem": "Cybertruck-來了！限量-Cybertruck-模型台灣上架",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.778,
+  "symmetryScore": 0.767,
+  "widthProfile": [
+    0.086,
+    0.578,
+    0.648,
+    0.742,
+    0.797,
+    0.789,
+    0.742,
+    0.555,
+    0.375,
+    0.062
+  ],
+  "colors": {
+    "primaryHex": 2171428,
+    "primaryRgb": [
+      33,
+      34,
+      36
+    ],
+    "accentHex": 14474718,
+    "accentRgb": [
+      220,
+      221,
+      222
+    ],
+    "darkHex": 2566186,
+    "darkRgb": [
+      39,
+      40,
+      42
+    ],
+    "brightHex": 13421774,
+    "brightRgb": [
+      204,
+      204,
+      206
+    ],
+    "foliageHex": 2171428,
+    "barkHex": 5781286,
+    "roofHex": 6513766
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "three_box_profile",
+      "method": "hood_cabin_trunk_architecture"
+    },
+    {
+      "name": "symmetric_mirrors_and_lights",
+      "method": "bilateral_mirror_Z_axis"
+    },
+    {
+      "name": "mirrored_sedan_features",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 0.8099999999999999
+    }
+  ]
+}

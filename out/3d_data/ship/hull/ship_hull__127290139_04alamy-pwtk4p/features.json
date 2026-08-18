@@ -1,49 +1,57 @@
 {
   "id": "ship_hull__127290139_04alamy-pwtk4p",
-  "sourceImage": "ship/_127290139_04alamy-pwtk4p.png",
+  "stem": "_127290139_04alamy-pwtk4p",
+  "family": "ship",
+  "subpart": "hull",
   "style": "general_cargo_ship",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.946,
   "aspectRatio": 1.778,
+  "symmetryScore": 0.946,
+  "widthProfile": [
+    0,
+    0,
+    0,
+    0,
+    0.328,
+    0.625,
+    0.727,
+    0.812,
+    0.758,
+    0.656
+  ],
   "colors": {
-    "primaryHex": 2774131,
+    "primaryHex": 2705250,
     "primaryRgb": [
-      42,
-      84,
-      115
+      41,
+      71,
+      98
     ],
-    "accentHex": 16707003,
+    "accentHex": 14796437,
     "accentRgb": [
-      254,
-      237,
-      187
+      225,
+      198,
+      149
     ],
-    "darkHex": 999792,
+    "darkHex": 1849166,
     "darkRgb": [
-      15,
-      65,
-      112
+      28,
+      55,
+      78
     ],
-    "brightHex": 15651743,
+    "brightHex": 15585694,
     "brightRgb": [
-      238,
-      211,
-      159
-    ]
+      237,
+      209,
+      158
+    ],
+    "foliageHex": 5274981,
+    "barkHex": 8086859,
+    "roofHex": 2705250
   },
   "reconstructedFeatures": [
     {
       "name": "streamlined_hull_superstructure",
       "method": "terraced_decks_and_masts"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
-    "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
   ]
 }

@@ -1,25 +1,24 @@
 {
-  "id": "ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise",
+  "id": "ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise__CVN_65__is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise",
   "family": "ship",
   "subpart": "hull",
   "style": "aircraft_carrier",
   "symmetryMode": "asymmetric",
-  "spec": {
+  "dimensions": {
     "L": 65.45838101777676,
     "W": 21.358930342565042,
-    "H": 18.553444724193177,
-    "style": "aircraft_carrier_flight_deck"
+    "H": 18.553444724193177
   },
   "bounds": {
     "min": [
-      -32.0746,
-      -1.1476,
-      -10.6795
+      -32.075,
+      -1.148,
+      -10.68
     ],
     "max": [
-      34.1748,
-      22.9491,
-      10.6795
+      34.175,
+      22.949,
+      10.68
     ],
     "size": [
       66.249,
@@ -49,7 +48,7 @@
         0,
         0
       ],
-      "color": 2237733,
+      "color": 2105890,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -71,7 +70,7 @@
         0,
         -0.25
       ],
-      "color": 2237733,
+      "color": 2105890,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -93,7 +92,7 @@
         0,
         0
       ],
-      "color": 131329,
+      "color": 1579545,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -115,7 +114,7 @@
         0,
         0
       ],
-      "color": 12697790,
+      "color": 12829377,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -137,7 +136,7 @@
         0,
         0
       ],
-      "color": 2237733,
+      "color": 2105890,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -160,24 +159,12 @@
         0,
         0
       ],
-      "color": 2237733,
+      "color": 2105890,
       "vertexCount": 14,
       "triangleCount": 24
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "angled_flight_deck",
-      "method": "full_length_cantilever_deck"
-    },
-    {
-      "name": "starboard_island_tower",
-      "method": "asymmetric_command_bridge"
-    }
-  ],
   "meshData": {
-    "vertexCount": 54,
-    "triangleCount": 84,
     "vertices": [
       -30.7654,
       0,

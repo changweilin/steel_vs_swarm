@@ -1,0 +1,35 @@
+{
+  "id": "tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree__1_",
+  "stem": "cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg",
+  "generated_at": "2026-08-18T13:38:04.027Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -3.779,
+      0,
+      -3.594
+    ],
+    "max": [
+      3.779,
+      17.253,
+      3.594
+    ],
+    "size": [
+      7.558,
+      17.253,
+      7.189
+    ],
+    "rMax": 5.215,
+    "triangles": 272,
+    "vertices": 150
+  },
+  "spec": {
+    "L": 8.084191653315022,
+    "W": 7.558480201419089,
+    "H": 16.745296406500344,
+    "style": "conifer_pine_pagoda_tiers"
+  }
+}

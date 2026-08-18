@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_sub8",
-  "sourceImage": "vehicle/train/sub8.jpg",
-  "style": "freight_wagon",
+  "stem": "sub8",
+  "family": "vehicle",
+  "subpart": "train",
+  "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.846,
   "aspectRatio": 1.5,
+  "symmetryScore": 0.846,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 6713440,
+    "primaryHex": 4285540,
     "primaryRgb": [
-      102,
-      112,
-      96
+      65,
+      100,
+      100
     ],
-    "accentHex": 16579320,
+    "accentHex": 13094102,
     "accentRgb": [
-      252,
-      250,
-      248
+      199,
+      204,
+      214
     ],
-    "darkHex": 3095872,
+    "darkHex": 2701884,
     "darkRgb": [
-      47,
-      61,
-      64
+      41,
+      58,
+      60
     ],
-    "brightHex": 13224649,
+    "brightHex": 13028044,
     "brightRgb": [
-      201,
+      198,
       202,
-      201
-    ]
+      204
+    ],
+    "foliageHex": 5203003,
+    "barkHex": 8404783,
+    "roofHex": 5798273
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

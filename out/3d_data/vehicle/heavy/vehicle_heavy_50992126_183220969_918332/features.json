@@ -1,0 +1,66 @@
+{
+  "id": "vehicle_heavy_50992126_183220969_918332",
+  "stem": "50992126_183220969.918332",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.905,
+  "symmetryScore": 0.694,
+  "widthProfile": [
+    0.992,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 1383195,
+    "primaryRgb": [
+      21,
+      27,
+      27
+    ],
+    "accentHex": 14346731,
+    "accentRgb": [
+      218,
+      233,
+      235
+    ],
+    "darkHex": 1581868,
+    "darkRgb": [
+      24,
+      35,
+      44
+    ],
+    "brightHex": 13360855,
+    "brightRgb": [
+      203,
+      222,
+      215
+    ],
+    "foliageHex": 3822649,
+    "barkHex": 6044213,
+    "roofHex": 6650748
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "enclosed_cargo_box",
+      "method": "composite_insulated_box"
+    },
+    {
+      "name": "dual_vertical_exhausts",
+      "method": "chrome_exhaust_stacks"
+    },
+    {
+      "name": "heavy_truck_dual_exhaust_and_axles",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.1
+    }
+  ]
+}

@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_76c22c3294e14a2e91b55d837df2308d",
-  "sourceImage": "vehicle/train/76c22c3294e14a2e91b55d837df2308d.jpg",
-  "style": "freight_wagon",
+  "stem": "76c22c3294e14a2e91b55d837df2308d",
+  "family": "vehicle",
+  "subpart": "train",
+  "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.721,
   "aspectRatio": 1.775,
+  "symmetryScore": 0.721,
+  "widthProfile": [
+    1,
+    0.984,
+    0.992,
+    0.992,
+    1,
+    0.992,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 6514796,
+    "primaryHex": 593179,
     "primaryRgb": [
-      99,
-      104,
-      108
+      9,
+      13,
+      27
     ],
-    "accentHex": 16777215,
+    "accentHex": 15396333,
     "accentRgb": [
-      255,
-      255,
-      255
-    ],
-    "darkHex": 1909035,
-    "darkRgb": [
-      29,
-      33,
-      43
-    ],
-    "brightHex": 15396075,
-    "brightRgb": [
       234,
-      236,
-      235
-    ]
+      237,
+      237
+    ],
+    "darkHex": 923178,
+    "darkRgb": [
+      14,
+      22,
+      42
+    ],
+    "brightHex": 15133161,
+    "brightRgb": [
+      230,
+      233,
+      233
+    ],
+    "foliageHex": 5271878,
+    "barkHex": 4404527,
+    "roofHex": 8554124
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

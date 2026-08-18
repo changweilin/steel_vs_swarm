@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd_jpg",
+  "stem": "2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "source_image": "vehicle/heavy/2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg.webp",
+  "generated_at": "2026-08-18T13:38:04.338Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -4.757,
+      0.025,
+      -1.313
+    ],
+    "max": [
+      4.847,
+      4,
+      1.313
+    ],
+    "size": [
+      9.604,
+      3.974,
+      2.626
+    ],
+    "rMax": 5.022,
+    "triangles": 348,
+    "vertices": 200
+  },
+  "spec": {
+    "L": 9.69414053559167,
+    "W": 2.6,
+    "H": 3.9670748455024034,
+    "R": 0.52,
+    "style": "heavy_cargo_freight_truck"
+  }
+}

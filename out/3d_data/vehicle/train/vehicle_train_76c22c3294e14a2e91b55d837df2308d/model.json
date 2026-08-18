@@ -2,25 +2,23 @@
   "id": "vehicle_train_76c22c3294e14a2e91b55d837df2308d",
   "family": "vehicle",
   "subpart": "train",
-  "style": "freight_wagon",
+  "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 23.468398565651942,
     "W": 3.15,
-    "H": 3.95,
-    "R": 0.46,
-    "style": "streamlined_high_speed_train"
+    "H": 3.95
   },
   "bounds": {
     "min": [
-      -11.2648,
-      0.0225,
-      -1.5907
+      -11.265,
+      0.022,
+      -1.591
     ],
     "max": [
-      11.9933,
+      11.993,
       4.225,
-      1.5907
+      1.591
     ],
     "size": [
       23.258,
@@ -50,7 +48,7 @@
         0,
         0
       ],
-      "color": 15396075,
+      "color": 15133161,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -72,7 +70,7 @@
         0,
         0
       ],
-      "color": 6514796,
+      "color": 593179,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -94,7 +92,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -116,7 +114,7 @@
         0,
         -0.35
       ],
-      "color": 15396075,
+      "color": 15133161,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +136,7 @@
         0,
         0
       ],
-      "color": 16777215,
+      "color": 15396333,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -160,7 +158,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -183,7 +181,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -206,7 +204,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -229,7 +227,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -252,7 +250,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -274,7 +272,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -297,7 +295,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -320,7 +318,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -343,7 +341,7 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -366,48 +364,12 @@
         0,
         0
       ],
-      "color": 1909035,
+      "color": 923178,
       "vertexCount": 22,
       "triangleCount": 40
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "aerodynamic_wedge_nose",
-      "method": "high_speed_emu_cowl"
-    },
-    {
-      "name": "single_arm_pantograph",
-      "method": "roof_catenary_collector"
-    },
-    {
-      "name": "flush_continuous_windows",
-      "method": "tinted_glass_ribbon"
-    },
-    {
-      "name": "train_rail_wheels",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.395
-    },
-    {
-      "name": "train_rail_wheels",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.395
-    },
-    {
-      "name": "train_rail_wheels",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.395
-    },
-    {
-      "name": "train_rail_wheels",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.395
-    }
-  ],
   "meshData": {
-    "vertexCount": 232,
-    "triangleCount": 404,
     "vertices": [
       -11.2648,
       1.045,

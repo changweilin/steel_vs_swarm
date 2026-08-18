@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_JSV_01",
-  "sourceImage": "vehicle/car/JSV_01.jpg",
+  "stem": "JSV_01",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.861,
   "aspectRatio": 1.524,
+  "symmetryScore": 0.861,
+  "widthProfile": [
+    0,
+    0.602,
+    0.664,
+    0.766,
+    0.773,
+    0.781,
+    0.766,
+    0.727,
+    0.688,
+    0.367
+  ],
   "colors": {
-    "primaryHex": 9935518,
+    "primaryHex": 5922402,
     "primaryRgb": [
-      151,
-      154,
-      158
+      90,
+      94,
+      98
     ],
-    "accentHex": 131586,
+    "accentHex": 14540770,
     "accentRgb": [
-      2,
-      2,
-      2
+      221,
+      223,
+      226
     ],
-    "darkHex": 2895151,
+    "darkHex": 2698028,
     "darkRgb": [
-      44,
-      45,
-      47
+      41,
+      43,
+      44
     ],
-    "brightHex": 15527663,
+    "brightHex": 13554389,
     "brightRgb": [
-      236,
-      238,
-      239
-    ]
+      206,
+      210,
+      213
+    ],
+    "foliageHex": 5922402,
+    "barkHex": 5781809,
+    "roofHex": 6974058
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

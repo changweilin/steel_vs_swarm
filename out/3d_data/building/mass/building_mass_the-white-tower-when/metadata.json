@@ -1,39 +1,35 @@
 {
   "id": "building_mass_the-white-tower-when",
-  "key": "building/mass_the-white-tower-when_7b045f0f",
+  "stem": "the-white-tower-when",
   "family": "building",
   "subpart": "mass",
-  "style": "castle_fortress",
-  "symmetryMode": "symmetric",
   "source_image": "building/the-white-tower-when.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\the-white-tower-when.jpg",
-  "created_at": "2026-08-18T10:56:14.134Z",
+  "generated_at": "2026-08-18T13:38:03.874Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -12.8729,
+      -13.785,
       0,
-      -13.5122
+      -14.544
     ],
     "max": [
-      12.8729,
-      25.33,
-      13.5122
+      13.785,
+      27.83,
+      14.544
     ],
     "size": [
-      25.746,
-      25.33,
-      27.024
+      27.57,
+      27.83,
+      29.088
     ],
-    "rMax": 18.663,
-    "triangles": 380,
-    "vertices": 232
+    "rMax": 20.039,
+    "triangles": 412,
+    "vertices": 248
   },
   "spec": {
-    "L": 24.649668116273748,
-    "W": 26.45767910276951,
-    "H": 22.40955214770733,
+    "L": 26.649668116273748,
+    "W": 28.45767910276951,
+    "H": 24.40955214770733,
     "style": "medieval_stone_keep_turrets"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

@@ -1,49 +1,57 @@
 {
   "id": "ship_hull_k23",
-  "sourceImage": "ship/k23.jpg",
+  "stem": "k23",
+  "family": "ship",
+  "subpart": "hull",
   "style": "general_cargo_ship",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.837,
   "aspectRatio": 2.34,
+  "symmetryScore": 0.837,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    0.953,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 10464179,
+    "primaryHex": 10795980,
     "primaryRgb": [
-      159,
-      171,
-      179
+      164,
+      187,
+      204
     ],
-    "accentHex": 198159,
+    "accentHex": 3690594,
     "accentRgb": [
-      3,
-      6,
-      15
+      56,
+      80,
+      98
     ],
-    "darkHex": 2765116,
+    "darkHex": 2176326,
     "darkRgb": [
-      42,
-      49,
-      60
+      33,
+      53,
+      70
     ],
-    "brightHex": 12831954,
+    "brightHex": 12175312,
     "brightRgb": [
-      195,
-      204,
-      210
-    ]
+      185,
+      199,
+      208
+    ],
+    "foliageHex": 5473910,
+    "barkHex": 7358276,
+    "roofHex": 10599632
   },
   "reconstructedFeatures": [
     {
       "name": "streamlined_hull_superstructure",
       "method": "terraced_decks_and_masts"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
-    "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
   ]
 }

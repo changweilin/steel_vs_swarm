@@ -1,0 +1,57 @@
+{
+  "id": "tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94__1_",
+  "stem": "bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1)",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "shrub_bush_hedge",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 1.504,
+  "symmetryScore": 0.841,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.844,
+    0.938,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 2698265,
+    "primaryRgb": [
+      41,
+      44,
+      25
+    ],
+    "accentHex": 15725306,
+    "accentRgb": [
+      239,
+      242,
+      250
+    ],
+    "darkHex": 2961437,
+    "darkRgb": [
+      45,
+      48,
+      29
+    ],
+    "brightHex": 14936046,
+    "brightRgb": [
+      227,
+      231,
+      238
+    ],
+    "foliageHex": 2501910,
+    "barkHex": 4931372,
+    "roofHex": 14343651
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "ground_multi_dome_mounds",
+      "method": "overlapping_polyhedral_mounds"
+    }
+  ]
+}

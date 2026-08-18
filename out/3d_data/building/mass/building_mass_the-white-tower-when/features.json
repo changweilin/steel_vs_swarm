@@ -1,35 +1,52 @@
 {
   "id": "building_mass_the-white-tower-when",
-  "sourceImage": "building/the-white-tower-when.jpg",
-  "style": "castle_fortress",
+  "stem": "the-white-tower-when",
+  "family": "building",
+  "subpart": "mass",
+  "style": "castle_fortress_keep",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.788,
   "aspectRatio": 1,
+  "symmetryScore": 0.788,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 10591389,
+    "primaryHex": 3090474,
     "primaryRgb": [
-      161,
-      156,
-      157
+      47,
+      40,
+      42
     ],
-    "accentHex": 591889,
+    "accentHex": 16053237,
     "accentRgb": [
-      9,
-      8,
-      17
+      244,
+      243,
+      245
     ],
-    "darkHex": 3221804,
+    "darkHex": 2498596,
     "darkRgb": [
-      49,
-      41,
-      44
+      38,
+      32,
+      36
     ],
-    "brightHex": 15132390,
+    "brightHex": 15263977,
     "brightRgb": [
-      230,
-      230,
-      230
-    ]
+      232,
+      232,
+      233
+    ],
+    "foliageHex": 2173216,
+    "barkHex": 5455926,
+    "roofHex": 15132137
   },
   "reconstructedFeatures": [
     {
@@ -40,29 +57,5 @@
       "name": "crenellated_parapet",
       "method": "perimeter_merlons"
     }
-  ],
-  "totalParts": 21,
-  "partNames": [
-    "stone_keep_body",
-    "turret_-1_-1",
-    "turret_conical_roof_-1_-1",
-    "turret_-1_1",
-    "turret_conical_roof_-1_1",
-    "turret_1_-1",
-    "turret_conical_roof_1_-1",
-    "turret_1_1",
-    "turret_conical_roof_1_1",
-    "merlon_north_0",
-    "merlon_south_0",
-    "merlon_north_1",
-    "merlon_south_1",
-    "merlon_north_2",
-    "merlon_south_2",
-    "merlon_north_3",
-    "merlon_south_3",
-    "merlon_north_4",
-    "merlon_south_4",
-    "merlon_north_5",
-    "merlon_south_5"
   ]
 }

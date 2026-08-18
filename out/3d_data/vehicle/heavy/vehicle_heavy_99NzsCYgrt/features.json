@@ -1,35 +1,52 @@
 {
   "id": "vehicle_heavy_99NzsCYgrt",
-  "sourceImage": "vehicle/heavy/99NzsCYgrt.jpg",
+  "stem": "99NzsCYgrt",
+  "family": "vehicle",
+  "subpart": "heavy",
   "style": "semi_tractor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.901,
   "aspectRatio": 1,
+  "symmetryScore": 0.901,
+  "widthProfile": [
+    0.922,
+    0.914,
+    0.953,
+    0.984,
+    0.992,
+    0.984,
+    0.992,
+    0.984,
+    0.945,
+    0.914
+  ],
   "colors": {
-    "primaryHex": 11635852,
+    "primaryHex": 15395562,
     "primaryRgb": [
-      177,
-      140,
-      140
+      234,
+      234,
+      234
     ],
-    "accentHex": 0,
+    "accentHex": 2302503,
     "accentRgb": [
-      0,
-      0,
-      0
+      35,
+      34,
+      39
     ],
-    "darkHex": 5184287,
+    "darkHex": 4659485,
     "darkRgb": [
-      79,
-      27,
-      31
+      71,
+      25,
+      29
     ],
-    "brightHex": 15855600,
+    "brightHex": 15263463,
     "brightRgb": [
-      241,
-      239,
-      240
-    ]
+      232,
+      230,
+      231
+    ],
+    "foliageHex": 15395562,
+    "barkHex": 11219243,
+    "roofHex": 15395306
   },
   "reconstructedFeatures": [
     {
@@ -45,21 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.1
     }
-  ],
-  "totalParts": 13,
-  "partNames": [
-    "freight_chassis_frame",
-    "freight_cab_body",
-    "cab_windshield",
-    "freight_cargo_box",
-    "rear_rollup_door",
-    "exhaust_stack_left",
-    "steer_wheel_left",
-    "drive_wheel_1_left",
-    "drive_wheel_2_left",
-    "exhaust_stack_right",
-    "steer_wheel_right",
-    "drive_wheel_1_right",
-    "drive_wheel_2_right"
   ]
 }

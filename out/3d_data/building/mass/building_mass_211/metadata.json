@@ -1,39 +1,35 @@
 {
   "id": "building_mass_211",
-  "key": "building/mass_211_59cedb08",
+  "stem": "211",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
   "source_image": "building/211.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\211.jpg",
-  "created_at": "2026-08-18T10:56:14.078Z",
+  "generated_at": "2026-08-18T13:38:03.824Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -10.395,
+      -13.994,
       0,
-      -9.7768
+      -13.128
     ],
     "max": [
-      10.395,
-      24.0757,
-      9.4768
+      13.994,
+      64.804,
+      16.078
     ],
     "size": [
-      20.79,
-      24.076,
-      19.254
+      27.987,
+      64.804,
+      29.206
     ],
-    "rMax": 14.27,
-    "triangles": 348,
-    "vertices": 232
+    "rMax": 21.315,
+    "triangles": 264,
+    "vertices": 174
   },
   "spec": {
-    "L": 20.789990081635768,
-    "W": 16.553627832455938,
-    "H": 24.075715266651407,
-    "style": "commercial_residential_asymmetric"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+    "L": 27.98748760204471,
+    "W": 26.256046387426565,
+    "H": 56.05416952773327,
+    "style": "modern_stepped_skyscraper"
+  }
 }

@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_bike_14-_________-900-__-___-btwin-8646464",
+  "stem": "14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
+  "family": "vehicle",
+  "subpart": "bike",
+  "source_image": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
+  "generated_at": "2026-08-18T13:38:04.182Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -0.99,
+      0,
+      -0.325
+    ],
+    "max": [
+      0.99,
+      1.04,
+      0.325
+    ],
+    "size": [
+      1.98,
+      1.04,
+      0.65
+    ],
+    "rMax": 1.042,
+    "triangles": 352,
+    "vertices": 210
+  },
+  "spec": {
+    "L": 1.7827100022888533,
+    "W": 0.65,
+    "H": 1.0603822384985122,
+    "R": 0.34,
+    "style": "precision_bicycle_frame"
+  }
+}

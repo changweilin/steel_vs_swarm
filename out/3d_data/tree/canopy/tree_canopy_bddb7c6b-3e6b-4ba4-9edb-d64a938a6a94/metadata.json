@@ -1,39 +1,35 @@
 {
   "id": "tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94",
-  "key": "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_915251b5",
+  "stem": "bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
   "source_image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg",
-  "created_at": "2026-08-18T10:56:14.277Z",
+  "generated_at": "2026-08-18T13:38:04.013Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -6.3261,
+      -2.556,
       0,
-      -7.1481
+      -2.619
     ],
     "max": [
-      6.268,
-      15.3474,
-      4.6508
+      2.334,
+      3.06,
+      2.883
     ],
     "size": [
-      12.594,
-      15.347,
-      11.799
+      4.89,
+      3.06,
+      5.502
     ],
-    "rMax": 9.545,
-    "triangles": 128,
-    "vertices": 82
+    "rMax": 3.853,
+    "triangles": 216,
+    "vertices": 122
   },
   "spec": {
-    "L": 9.750629434653238,
-    "W": 14.474212252994583,
-    "H": 15.833508812085146,
-    "style": "gnarled_broadleaf_buttress"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+    "L": 5.600251773861295,
+    "W": 7.489684901197833,
+    "H": 2.904188601510643,
+    "style": "low_polyhedral_bush_cluster"
+  }
 }

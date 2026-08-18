@@ -1,56 +1,61 @@
 {
   "id": "tree_canopy_Pachycereus_pringlei_forest",
-  "sourceImage": "tree/Pachycereus_pringlei_forest.jpg",
-  "style": "broadleaf_camphor_oak",
+  "stem": "Pachycereus_pringlei_forest",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "cactus_succulent",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.844,
   "aspectRatio": 1.5,
+  "symmetryScore": 0.844,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7306370,
+    "primaryHex": 11976390,
     "primaryRgb": [
-      111,
-      124,
-      130
+      182,
+      190,
+      198
     ],
-    "accentHex": 15133420,
+    "accentHex": 4208935,
     "accentRgb": [
-      230,
-      234,
-      236
-    ],
-    "darkHex": 4209191,
-    "darkRgb": [
       64,
-      58,
+      57,
       39
     ],
-    "brightHex": 12699081,
+    "darkHex": 4077606,
+    "darkRgb": [
+      62,
+      56,
+      38
+    ],
+    "brightHex": 12699338,
     "brightRgb": [
       193,
-      197,
-      201
-    ]
+      198,
+      202
+    ],
+    "foliageHex": 11976390,
+    "barkHex": 7298378,
+    "roofHex": 7967918
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
+      "name": "ribbed_columnar_stem",
+      "method": "octagonal_faceted_cylinder"
     },
     {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "candelabra_arms",
+      "method": "curved_lateral_branches"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4"
   ]
 }

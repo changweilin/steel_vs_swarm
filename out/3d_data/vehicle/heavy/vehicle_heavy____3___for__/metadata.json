@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_heavy____3___for__",
+  "stem": "規格表3大圖合for官網",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "source_image": "vehicle/heavy/規格表3大圖合for官網.jpg",
+  "generated_at": "2026-08-18T13:38:04.392Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -5.445,
+      0.025,
+      -1.313
+    ],
+    "max": [
+      5.535,
+      4,
+      1.313
+    ],
+    "size": [
+      10.98,
+      3.974,
+      2.626
+    ],
+    "rMax": 5.688,
+    "triangles": 348,
+    "vertices": 200
+  },
+  "spec": {
+    "L": 11.069665064469369,
+    "W": 2.6,
+    "H": 3.9770466163118945,
+    "R": 0.52,
+    "style": "heavy_cargo_freight_truck"
+  }
+}

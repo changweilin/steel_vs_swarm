@@ -1,49 +1,57 @@
 {
   "id": "tree_canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166",
-  "sourceImage": "tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg",
+  "stem": "elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "conifer_pine",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.985,
   "aspectRatio": 1,
+  "symmetryScore": 0.985,
+  "widthProfile": [
+    0,
+    0.289,
+    0.406,
+    0.555,
+    0.594,
+    0.641,
+    0.641,
+    0.523,
+    0.242,
+    0
+  ],
   "colors": {
-    "primaryHex": 11252659,
+    "primaryHex": 1657417,
     "primaryRgb": [
-      171,
-      179,
-      179
-    ],
-    "accentHex": 403273,
-    "accentRgb": [
-      6,
-      39,
+      25,
+      74,
       73
     ],
-    "darkHex": 2310468,
+    "accentHex": 14277596,
+    "accentRgb": [
+      217,
+      219,
+      220
+    ],
+    "darkHex": 2177860,
     "darkRgb": [
-      35,
-      65,
+      33,
+      59,
       68
     ],
-    "brightHex": 16514043,
+    "brightHex": 13685459,
     "brightRgb": [
-      251,
-      251,
-      251
-    ]
+      208,
+      210,
+      211
+    ],
+    "foliageHex": 2187591,
+    "barkHex": 9517624,
+    "roofHex": 3566939
   },
   "reconstructedFeatures": [
     {
       "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "method": "six_tiered_polyhedral_conical_canopies"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
   ]
 }

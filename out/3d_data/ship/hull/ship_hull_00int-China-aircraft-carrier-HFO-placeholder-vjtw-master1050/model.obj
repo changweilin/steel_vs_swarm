@@ -1,7 +1,7 @@
-# 3D Model: ship/hull/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050
-# Style: aircraft_carrier | Symmetry: asymmetric
-# Dimensions: 69.658 x 23.887 x 20.39 m
-# Triangles: 84 | Vertices: 54
+# Direct LLM-3D Synthesis Engine v3
+# Object: 00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050 (ship/hull)
+# Style: aircraft_carrier, Symmetry: asymmetric
+
 v -32.3722 0 -6.9327
 v 32.3722 0 -6.9327
 v 32.3722 7.5 -6.9327
@@ -56,6 +56,60 @@ v 5.4502 22.663 -7.8523
 v 5.5702 22.663 -7.8523
 v 5.5102 16.163 -7.7484
 v 5.5102 22.663 -7.7484
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 -1 0
+vn 0 -1 0
+vn 0 -1 0
+vn 0 -1 0
+vn 0 -1 0
+vn 0 -1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 -1 0
+vn 0 1 0
 vt 0.5 0.5
 vt 0.5 0.5
 vt 0.5 0.5
@@ -110,60 +164,6 @@ vt 0.6666666666666666 1
 vt 0.8333333333333334 1
 vt 0.5 0.5
 vt 0.5 0.5
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 -1 0
-vn 0 -1 0
-vn 0 -1 0
-vn 0 -1 0
-vn 0 -1 0
-vn 0 -1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 1 0
-vn 0 -1 0
-vn 0 1 0
 f 1/1/1 3/3/3 2/2/2
 f 1/1/1 4/4/4 3/3/3
 f 5/5/5 6/6/6 7/7/7

@@ -1,49 +1,57 @@
 {
   "id": "ship_hull_Methanier_aspher_LNGRIVERS",
-  "sourceImage": "ship/Methanier_aspher_LNGRIVERS.jpg",
-  "style": "general_cargo_ship",
+  "stem": "Methanier_aspher_LNGRIVERS",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "oil_tanker_bulk",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.936,
   "aspectRatio": 1.855,
+  "symmetryScore": 0.936,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 11254198,
+    "primaryHex": 11712182,
     "primaryRgb": [
-      171,
-      185,
+      178,
+      182,
       182
     ],
-    "accentHex": 4935506,
+    "accentHex": 5932924,
     "accentRgb": [
-      75,
-      79,
-      82
+      90,
+      135,
+      124
     ],
-    "darkHex": 4870232,
+    "darkHex": 2304564,
     "darkRgb": [
-      74,
-      80,
-      88
+      35,
+      42,
+      52
     ],
-    "brightHex": 14475232,
+    "brightHex": 14081507,
     "brightRgb": [
-      220,
-      223,
-      224
-    ]
+      214,
+      221,
+      227
+    ],
+    "foliageHex": 5741189,
+    "barkHex": 10059124,
+    "roofHex": 15135230
   },
   "reconstructedFeatures": [
     {
       "name": "streamlined_hull_superstructure",
       "method": "terraced_decks_and_masts"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
-    "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
   ]
 }

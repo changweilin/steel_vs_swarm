@@ -1,35 +1,52 @@
 {
   "id": "tree_canopy_madagascar-baobab",
-  "sourceImage": "tree/madagascar-baobab.jpg",
+  "stem": "madagascar-baobab",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "baobab_tree",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.901,
   "aspectRatio": 0.75,
+  "symmetryScore": 0.901,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 9936535,
+    "primaryHex": 12637151,
     "primaryRgb": [
-      151,
-      158,
-      151
+      192,
+      211,
+      223
     ],
-    "accentHex": 1250318,
+    "accentHex": 5460776,
     "accentRgb": [
-      19,
-      20,
-      14
+      83,
+      83,
+      40
     ],
-    "darkHex": 3880741,
+    "darkHex": 3749156,
     "darkRgb": [
-      59,
-      55,
-      37
+      57,
+      53,
+      36
     ],
-    "brightHex": 12110547,
+    "brightHex": 12176086,
     "brightRgb": [
-      184,
+      185,
       202,
-      211
-    ]
+      214
+    ],
+    "foliageHex": 5793060,
+    "barkHex": 7296310,
+    "roofHex": 11519188
   },
   "reconstructedFeatures": [
     {
@@ -37,20 +54,8 @@
       "method": "massive_succulent_barrel"
     },
     {
-      "name": "sparse_rosette_crown",
-      "method": "root_like_canopy_clusters"
+      "name": "polyhedral_foliage_pads",
+      "method": "faceted_dome_cushions"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "baobab_bottle_trunk",
-    "baobab_branch_1",
-    "baobab_foliage_clump_1",
-    "baobab_branch_2",
-    "baobab_foliage_clump_2",
-    "baobab_branch_3",
-    "baobab_foliage_clump_3",
-    "baobab_branch_4",
-    "baobab_foliage_clump_4"
   ]
 }

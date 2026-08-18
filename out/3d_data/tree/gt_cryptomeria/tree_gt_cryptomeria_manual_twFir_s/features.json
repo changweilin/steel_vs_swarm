@@ -1,49 +1,57 @@
 {
   "id": "tree_gt_cryptomeria_manual_twFir_s",
-  "sourceImage": "tree/gt_cryptomeria/manual_twFir_s.jpg",
+  "stem": "manual_twFir_s",
+  "family": "tree",
+  "subpart": "gt_cryptomeria",
   "style": "conifer_pine",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.902,
   "aspectRatio": 0.474,
+  "symmetryScore": 0.902,
+  "widthProfile": [
+    1,
+    0.992,
+    0.969,
+    1,
+    0.859,
+    1,
+    1,
+    0.992,
+    0.992,
+    1
+  ],
   "colors": {
-    "primaryHex": 6381902,
+    "primaryHex": 5855807,
     "primaryRgb": [
-      97,
-      97,
-      78
+      89,
+      90,
+      63
     ],
-    "accentHex": 15921906,
+    "accentHex": 13553874,
     "accentRgb": [
-      242,
-      242,
-      242
+      206,
+      208,
+      210
     ],
-    "darkHex": 3882022,
+    "darkHex": 3684642,
     "darkRgb": [
-      59,
-      60,
-      38
+      56,
+      57,
+      34
     ],
-    "brightHex": 13948375,
+    "brightHex": 13882840,
     "brightRgb": [
-      212,
+      211,
       213,
-      215
-    ]
+      216
+    ],
+    "foliageHex": 4015397,
+    "barkHex": 6180922,
+    "roofHex": 12961478
   },
   "reconstructedFeatures": [
     {
       "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "method": "six_tiered_polyhedral_conical_canopies"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
   ]
 }

@@ -1,22 +1,36 @@
 {
   "id": "vehicle_bike_T-806_blue",
-  "sourceImage": "vehicle/bike/T-806_blue.jpg",
-  "style": "cargo_bike",
+  "stem": "T-806_blue",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_cruiser",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.924,
   "aspectRatio": 1.676,
+  "symmetryScore": 0.924,
+  "widthProfile": [
+    0.117,
+    0.219,
+    0.227,
+    0.602,
+    0.766,
+    0.836,
+    0.969,
+    0.93,
+    0.648,
+    0.555
+  ],
   "colors": {
-    "primaryHex": 14606817,
+    "primaryHex": 12173504,
     "primaryRgb": [
-      222,
-      225,
-      225
+      185,
+      192,
+      192
     ],
-    "accentHex": 1250069,
+    "accentHex": 4211009,
     "accentRgb": [
-      19,
-      19,
-      21
+      64,
+      65,
+      65
     ],
     "darkHex": 3421237,
     "darkRgb": [
@@ -24,33 +38,28 @@
       52,
       53
     ],
-    "brightHex": 15790834,
+    "brightHex": 13555157,
     "brightRgb": [
-      240,
-      242,
-      242
-    ]
+      206,
+      213,
+      213
+    ],
+    "foliageHex": 12173504,
+    "barkHex": 5781286,
+    "roofHex": 10527396
   },
   "reconstructedFeatures": [
     {
       "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "method": "tubular_truss_geometry"
     },
     {
-      "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "name": "visible_spoked_wheels",
+      "method": "dual_wheel_rims_and_hubs"
+    },
+    {
+      "name": "drivetrain_and_saddle",
+      "method": "crankset_pedals_seatpost"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "frame_top_tube",
-    "frame_down_tube",
-    "frame_seat_tube",
-    "front_fork_blades",
-    "bicycle_handlebars",
-    "ergonomic_saddle",
-    "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

@@ -1,56 +1,65 @@
 {
   "id": "vehicle_bike_110296IA-M009_L",
-  "sourceImage": "vehicle/bike/110296IA-M009_L.jpg",
-  "style": "cargo_bike",
+  "stem": "110296IA-M009_L",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_cruiser",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.909,
   "aspectRatio": 1.778,
+  "symmetryScore": 0.909,
+  "widthProfile": [
+    0.023,
+    0.242,
+    0.258,
+    0.641,
+    0.781,
+    0.672,
+    0.727,
+    0.594,
+    0.555,
+    0.875
+  ],
   "colors": {
-    "primaryHex": 13028043,
+    "primaryHex": 14408924,
     "primaryRgb": [
-      198,
-      202,
-      203
+      219,
+      220,
+      220
     ],
-    "accentHex": 1118482,
+    "accentHex": 2829616,
     "accentRgb": [
-      17,
-      17,
-      18
+      43,
+      45,
+      48
     ],
-    "darkHex": 3028538,
+    "darkHex": 2896694,
     "darkRgb": [
-      46,
-      54,
-      58
+      44,
+      51,
+      54
     ],
-    "brightHex": 16251128,
+    "brightHex": 13948630,
     "brightRgb": [
-      247,
-      248,
-      248
-    ]
+      212,
+      214,
+      214
+    ],
+    "foliageHex": 14408924,
+    "barkHex": 7429181,
+    "roofHex": 7832453
   },
   "reconstructedFeatures": [
     {
       "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "method": "tubular_truss_geometry"
     },
     {
-      "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "name": "visible_spoked_wheels",
+      "method": "dual_wheel_rims_and_hubs"
+    },
+    {
+      "name": "drivetrain_and_saddle",
+      "method": "crankset_pedals_seatpost"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "frame_top_tube",
-    "frame_down_tube",
-    "frame_seat_tube",
-    "front_fork_blades",
-    "bicycle_handlebars",
-    "ergonomic_saddle",
-    "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

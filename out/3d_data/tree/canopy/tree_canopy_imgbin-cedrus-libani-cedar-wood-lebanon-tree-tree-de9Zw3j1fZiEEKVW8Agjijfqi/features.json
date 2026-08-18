@@ -1,49 +1,57 @@
 {
   "id": "tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
-  "sourceImage": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
+  "stem": "imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "conifer_pine",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.889,
   "aspectRatio": 1.468,
+  "symmetryScore": 0.889,
+  "widthProfile": [
+    0.742,
+    0.758,
+    0.781,
+    0.812,
+    0.828,
+    0.852,
+    0.852,
+    0.789,
+    0.727,
+    0.734
+  ],
   "colors": {
-    "primaryHex": 12500923,
+    "primaryHex": 13422028,
     "primaryRgb": [
-      190,
-      191,
-      187
+      204,
+      205,
+      204
     ],
-    "accentHex": 1120265,
+    "accentHex": 3751470,
     "accentRgb": [
-      17,
-      24,
-      9
+      57,
+      62,
+      46
     ],
-    "darkHex": 3356712,
+    "darkHex": 3290919,
     "darkRgb": [
-      51,
-      56,
-      40
+      50,
+      55,
+      39
     ],
-    "brightHex": 15000803,
+    "brightHex": 14935011,
     "brightRgb": [
-      228,
-      228,
+      227,
+      227,
       227
-    ]
+    ],
+    "foliageHex": 3159842,
+    "barkHex": 5781286,
+    "roofHex": 13816528
   },
   "reconstructedFeatures": [
     {
       "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "method": "six_tiered_polyhedral_conical_canopies"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
   ]
 }

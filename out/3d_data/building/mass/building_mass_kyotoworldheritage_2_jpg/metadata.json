@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_kyotoworldheritage_2_jpg",
+  "stem": "kyotoworldheritage_2.jpg",
+  "family": "building",
+  "subpart": "mass",
+  "source_image": "building/kyotoworldheritage_2.jpg.webp",
+  "generated_at": "2026-08-18T13:38:03.859Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -11.703,
+      0,
+      -9.698
+    ],
+    "max": [
+      11.703,
+      31.884,
+      9.698
+    ],
+    "size": [
+      23.407,
+      31.884,
+      19.396
+    ],
+    "rMax": 15.199,
+    "triangles": 420,
+    "vertices": 256
+  },
+  "spec": {
+    "L": 24.638590066376747,
+    "W": 20.417303730830852,
+    "H": 28.433875028610665,
+    "style": "asian_pagoda_upturned_eaves"
+  }
+}

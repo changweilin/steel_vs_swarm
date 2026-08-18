@@ -1,35 +1,52 @@
 {
   "id": "ship_hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050",
-  "sourceImage": "ship/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg",
+  "stem": "00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050",
+  "family": "ship",
+  "subpart": "hull",
   "style": "aircraft_carrier",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.938,
   "aspectRatio": 1.5,
+  "symmetryScore": 0.938,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    0.945,
+    0.969,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 3953784,
+    "primaryHex": 7248085,
     "primaryRgb": [
-      60,
-      84,
-      120
+      110,
+      152,
+      213
     ],
-    "accentHex": 16317693,
+    "accentHex": 1645602,
     "accentRgb": [
-      248,
-      252,
-      253
+      25,
+      28,
+      34
     ],
-    "darkHex": 2240580,
+    "darkHex": 2174271,
     "darkRgb": [
-      34,
-      48,
-      68
+      33,
+      45,
+      63
     ],
-    "brightHex": 13492199,
+    "brightHex": 12835299,
     "brightRgb": [
-      205,
-      223,
-      231
-    ]
+      195,
+      217,
+      227
+    ],
+    "foliageHex": 395269,
+    "barkHex": 5781286,
+    "roofHex": 6262483
   },
   "reconstructedFeatures": [
     {
@@ -40,14 +57,5 @@
       "name": "starboard_island_tower",
       "method": "asymmetric_command_bridge"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "carrier_main_hull",
-    "clipper_bow_wedge",
-    "full_flight_deck",
-    "starboard_island_tower",
-    "island_navigation_bridge",
-    "phased_array_radar_mast"
   ]
 }

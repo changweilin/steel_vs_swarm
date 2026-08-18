@@ -1,56 +1,65 @@
 {
   "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1",
-  "sourceImage": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg",
-  "style": "cargo_bike",
+  "stem": "folding-gravel-bike-changebike-gf-102g-b1",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_cruiser",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.795,
   "aspectRatio": 1.231,
+  "symmetryScore": 0.795,
+  "widthProfile": [
+    0.477,
+    0.219,
+    0.422,
+    0.602,
+    0.672,
+    0.789,
+    0.805,
+    0.75,
+    0.531,
+    0.297
+  ],
   "colors": {
-    "primaryHex": 13357264,
+    "primaryHex": 4142903,
     "primaryRgb": [
-      203,
-      208,
-      208
+      63,
+      55,
+      55
     ],
-    "accentHex": 1118485,
+    "accentHex": 15067368,
     "accentRgb": [
-      17,
-      17,
-      21
+      229,
+      232,
+      232
     ],
-    "darkHex": 3879731,
+    "darkHex": 3551282,
     "darkRgb": [
-      59,
-      51,
-      51
+      54,
+      48,
+      50
     ],
-    "brightHex": 15791605,
+    "brightHex": 12966617,
     "brightRgb": [
-      240,
-      245,
-      245
-    ]
+      197,
+      218,
+      217
+    ],
+    "foliageHex": 4142903,
+    "barkHex": 6111034,
+    "roofHex": 8095881
   },
   "reconstructedFeatures": [
     {
       "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "method": "tubular_truss_geometry"
     },
     {
-      "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "name": "visible_spoked_wheels",
+      "method": "dual_wheel_rims_and_hubs"
+    },
+    {
+      "name": "drivetrain_and_saddle",
+      "method": "crankset_pedals_seatpost"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "frame_top_tube",
-    "frame_down_tube",
-    "frame_seat_tube",
-    "front_fork_blades",
-    "bicycle_handlebars",
-    "ergonomic_saddle",
-    "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

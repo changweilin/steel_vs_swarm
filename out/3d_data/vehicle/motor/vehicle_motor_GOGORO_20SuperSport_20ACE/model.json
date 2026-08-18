@@ -1,25 +1,23 @@
 {
-  "id": "vehicle_motor_GOGORO%20SuperSport%20ACE",
+  "id": "vehicle_motor_GOGORO_20SuperSport_20ACE",
   "family": "vehicle",
   "subpart": "motor",
   "style": "sportbike",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 2.1,
     "W": 0.78,
-    "H": 1.215158312352178,
-    "R": 0.3,
-    "style": "superbike_full_fairing"
+    "H": 1.215158312352178
   },
   "bounds": {
     "min": [
       -0.98,
-      0.0147,
+      0.015,
       -0.21
     ],
     "max": [
       1.02,
-      1.1604,
+      1.16,
       0.32
     ],
     "size": [
@@ -50,7 +48,7 @@
         0,
         0
       ],
-      "color": 8948361,
+      "color": 1118997,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -72,7 +70,7 @@
         0,
         -0.32
       ],
-      "color": 8948361,
+      "color": 1118997,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -94,7 +92,7 @@
         0,
         -0.45
       ],
-      "color": 1645597,
+      "color": 1645340,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -116,7 +114,7 @@
         0,
         0.12
       ],
-      "color": 8948361,
+      "color": 1118997,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +136,7 @@
         0,
         0.18
       ],
-      "color": 1645597,
+      "color": 1645340,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -160,7 +158,7 @@
         0,
         -0.42
       ],
-      "color": 16053492,
+      "color": 13751250,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -182,7 +180,7 @@
         0,
         0.18
       ],
-      "color": 16053492,
+      "color": 13751250,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -205,7 +203,7 @@
         0,
         0.45
       ],
-      "color": 16053492,
+      "color": 13751250,
       "vertexCount": 18,
       "triangleCount": 32
     },
@@ -228,7 +226,7 @@
         0,
         0
       ],
-      "color": 1645597,
+      "color": 1645340,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -251,24 +249,12 @@
         0,
         0
       ],
-      "color": 1645597,
+      "color": 1645340,
       "vertexCount": 22,
       "triangleCount": 40
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "aerodynamic_fairing",
-      "method": "racing_cowl_and_windscreen"
-    },
-    {
-      "name": "upswept_exhaust",
-      "method": "titanium_racing_muffler"
-    }
-  ],
   "meshData": {
-    "vertexCount": 118,
-    "triangleCount": 196,
     "vertices": [
       -0.575,
       0.32,

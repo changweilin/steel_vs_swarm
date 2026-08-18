@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2",
-  "sourceImage": "vehicle/car/1926-FORD-MODEL-T-TOURING-CAR-2.jpg",
+  "stem": "1926-FORD-MODEL-T-TOURING-CAR-2",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.743,
   "aspectRatio": 1.415,
+  "symmetryScore": 0.743,
+  "widthProfile": [
+    0.133,
+    0.562,
+    0.555,
+    0.688,
+    0.859,
+    0.836,
+    0.828,
+    0.656,
+    0.273,
+    0.117
+  ],
   "colors": {
-    "primaryHex": 8684676,
+    "primaryHex": 1644825,
     "primaryRgb": [
-      132,
-      132,
-      132
+      25,
+      25,
+      25
     ],
-    "accentHex": 65793,
+    "accentHex": 14737631,
     "accentRgb": [
-      1,
-      1,
-      1
+      224,
+      224,
+      223
     ],
-    "darkHex": 2039583,
+    "darkHex": 1973790,
     "darkRgb": [
-      31,
-      31,
-      31
+      30,
+      30,
+      30
     ],
-    "brightHex": 16250871,
+    "brightHex": 14079445,
     "brightRgb": [
-      247,
-      247,
-      247
-    ]
+      214,
+      213,
+      213
+    ],
+    "foliageHex": 1644825,
+    "barkHex": 5781286,
+    "roofHex": 5395026
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

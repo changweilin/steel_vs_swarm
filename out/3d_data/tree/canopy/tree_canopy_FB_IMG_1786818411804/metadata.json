@@ -1,39 +1,35 @@
 {
   "id": "tree_canopy_FB_IMG_1786818411804",
-  "key": "tree/canopy_FB_IMG_1786818411804_21872cbf",
+  "stem": "FB_IMG_1786818411804",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
   "source_image": "tree/FB_IMG_1786818411804.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\FB_IMG_1786818411804.jpg",
-  "created_at": "2026-08-18T10:56:14.315Z",
+  "generated_at": "2026-08-18T13:38:04.053Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -7.3231,
-      0,
-      -6.8459
+      -6.338,
+      -0.226,
+      -6.854
     ],
     "max": [
-      5.8299,
-      19.3002,
-      7.3829
+      6.338,
+      20.425,
+      6.854
     ],
     "size": [
-      13.153,
-      19.3,
-      14.229
+      12.676,
+      20.651,
+      13.708
     ],
-    "rMax": 10.025,
-    "triangles": 140,
-    "vertices": 90
+    "rMax": 9.335,
+    "triangles": 456,
+    "vertices": 264
   },
   "spec": {
-    "L": 13.570954451819638,
-    "W": 12.504730296787976,
-    "H": 19.42511635004196,
-    "style": "gnarled_broadleaf_buttress"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+    "L": 14.570954451819638,
+    "W": 13.504730296787976,
+    "H": 20.42511635004196,
+    "style": "organic_polyhedral_broadleaf_oak"
+  }
 }

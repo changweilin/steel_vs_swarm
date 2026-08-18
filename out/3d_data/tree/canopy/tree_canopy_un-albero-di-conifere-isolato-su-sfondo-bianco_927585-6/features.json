@@ -1,49 +1,57 @@
 {
   "id": "tree_canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6",
-  "sourceImage": "tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
+  "stem": "un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "conifer_pine",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.956,
   "aspectRatio": 1,
+  "symmetryScore": 0.956,
+  "widthProfile": [
+    0.039,
+    0.109,
+    0.227,
+    0.297,
+    0.367,
+    0.445,
+    0.453,
+    0.516,
+    0.469,
+    0.477
+  ],
   "colors": {
-    "primaryHex": 13094090,
+    "primaryHex": 4016196,
     "primaryRgb": [
-      199,
-      204,
-      202
+      61,
+      72,
+      68
     ],
-    "accentHex": 2834751,
+    "accentHex": 14869473,
     "accentRgb": [
-      43,
+      226,
+      227,
+      225
+    ],
+    "darkHex": 3621183,
+    "darkRgb": [
+      55,
       65,
       63
     ],
-    "darkHex": 3490625,
-    "darkRgb": [
-      53,
-      67,
-      65
-    ],
-    "brightHex": 16579836,
+    "brightHex": 13816783,
     "brightRgb": [
-      252,
-      252,
-      252
-    ]
+      210,
+      211,
+      207
+    ],
+    "foliageHex": 6124643,
+    "barkHex": 7288374,
+    "roofHex": 7108981
   },
   "reconstructedFeatures": [
     {
       "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "method": "six_tiered_polyhedral_conical_canopies"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
   ]
 }

@@ -1,0 +1,35 @@
+{
+  "id": "tree_canopy_ddf148d60683c553__1_",
+  "stem": "ddf148d60683c553 (1)",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/ddf148d60683c553 (1).webp",
+  "generated_at": "2026-08-18T13:38:04.034Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -2.556,
+      0,
+      -2.619
+    ],
+    "max": [
+      2.334,
+      3.06,
+      2.883
+    ],
+    "size": [
+      4.89,
+      3.06,
+      5.502
+    ],
+    "rMax": 3.853,
+    "triangles": 216,
+    "vertices": 122
+  },
+  "spec": {
+    "L": 5.773411154345006,
+    "W": 6.4435873960479135,
+    "H": 3.705638208590829,
+    "style": "low_polyhedral_bush_cluster"
+  }
+}

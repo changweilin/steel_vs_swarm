@@ -1,23 +1,21 @@
 {
   "id": "vehicle_train_206_1_l",
-  "key": "vehicle/train_206_1_l_c7807c77",
+  "stem": "206_1_l",
   "family": "vehicle",
   "subpart": "train",
-  "style": "freight_wagon",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/train/206_1_l.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\train\\206_1_l.jpg",
-  "created_at": "2026-08-18T10:56:14.674Z",
+  "generated_at": "2026-08-18T13:38:04.443Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
       -11.81,
-      0.0225,
-      -1.5907
+      0.022,
+      -1.591
     ],
     "max": [
-      12.5611,
+      12.561,
       4.225,
-      1.5907
+      1.591
     ],
     "size": [
       24.371,
@@ -34,7 +32,5 @@
     "H": 3.95,
     "R": 0.46,
     "style": "streamlined_high_speed_train"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

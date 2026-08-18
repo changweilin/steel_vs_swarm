@@ -1,23 +1,21 @@
 {
   "id": "vehicle_car_articleimage_1373637",
-  "key": "vehicle/car_articleimage_1373637_cc2f1f88",
+  "stem": "articleimage_1373637",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/articleimage_1373637.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\articleimage_1373637.jpg",
-  "created_at": "2026-08-18T10:56:14.501Z",
+  "generated_at": "2026-08-18T13:38:04.277Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -2.5039,
-      0.0171,
-      -0.9748
+      -2.504,
+      0.017,
+      -0.975
     ],
     "max": [
-      2.5139,
-      1.5634,
-      0.9748
+      2.514,
+      1.563,
+      0.975
     ],
     "size": [
       5.018,
@@ -34,7 +32,5 @@
     "H": 1.5633699549858855,
     "R": 0.35,
     "style": "standard_passenger_sedan"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

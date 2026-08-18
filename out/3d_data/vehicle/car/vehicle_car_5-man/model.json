@@ -4,23 +4,21 @@
   "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 4.858539711604486,
     "W": 1.92,
-    "H": 1.6477767605096514,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "H": 1.6477767605096514
   },
   "bounds": {
     "min": [
-      -2.4593,
-      0.0171,
-      -0.9748
+      -2.459,
+      0.017,
+      -0.975
     ],
     "max": [
-      2.4693,
-      1.6478,
-      0.9748
+      2.469,
+      1.648,
+      0.975
     ],
     "size": [
       4.929,
@@ -50,7 +48,7 @@
         0,
         0
       ],
-      "color": 2962239,
+      "color": 724506,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -72,7 +70,7 @@
         0,
         0
       ],
-      "color": 1777452,
+      "color": 1251108,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -94,7 +92,7 @@
         0,
         0.1
       ],
-      "color": 2962239,
+      "color": 724506,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -116,7 +114,7 @@
         0,
         -0.05
       ],
-      "color": 2962239,
+      "color": 724506,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +136,7 @@
         0,
         0
       ],
-      "color": 16645628,
+      "color": 10133931,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -160,7 +158,7 @@
         0,
         0
       ],
-      "color": 2962239,
+      "color": 724506,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -182,7 +180,7 @@
         0,
         0
       ],
-      "color": 2962239,
+      "color": 724506,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -204,7 +202,7 @@
         0,
         0
       ],
-      "color": 13488342,
+      "color": 13290963,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -248,7 +246,7 @@
         0,
         0
       ],
-      "color": 2962239,
+      "color": 724506,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -271,7 +269,7 @@
         0,
         0
       ],
-      "color": 1777452,
+      "color": 1251108,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -294,7 +292,7 @@
         0,
         0
       ],
-      "color": 1777452,
+      "color": 1251108,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -316,7 +314,7 @@
         0,
         0
       ],
-      "color": 13488342,
+      "color": 13290963,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -360,7 +358,7 @@
         0,
         0
       ],
-      "color": 2962239,
+      "color": 724506,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -383,7 +381,7 @@
         0,
         0
       ],
-      "color": 1777452,
+      "color": 1251108,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -406,29 +404,12 @@
         0,
         0
       ],
-      "color": 1777452,
+      "color": 1251108,
       "vertexCount": 22,
       "triangleCount": 40
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "three_box_profile",
-      "method": "hood_cabin_trunk_architecture"
-    },
-    {
-      "name": "symmetric_mirrors_and_lights",
-      "method": "bilateral_mirror_Z_axis"
-    },
-    {
-      "name": "mirrored_sedan_features",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.8099999999999999
-    }
-  ],
   "meshData": {
-    "vertexCount": 192,
-    "triangleCount": 316,
     "vertices": [
       -2.4293,
       0.3,

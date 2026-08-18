@@ -1,49 +1,57 @@
 {
   "id": "ship_hull_GettyImages-630597388-compressor",
-  "sourceImage": "ship/GettyImages-630597388-compressor.jpg",
+  "stem": "GettyImages-630597388-compressor",
+  "family": "ship",
+  "subpart": "hull",
   "style": "general_cargo_ship",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.909,
   "aspectRatio": 1.5,
+  "symmetryScore": 0.909,
+  "widthProfile": [
+    1,
+    0.289,
+    0.281,
+    0.969,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 5991036,
+    "primaryHex": 4412000,
     "primaryRgb": [
-      91,
-      106,
-      124
+      67,
+      82,
+      96
     ],
-    "accentHex": 16711414,
+    "accentHex": 12370121,
     "accentRgb": [
-      254,
-      254,
-      246
+      188,
+      192,
+      201
     ],
-    "darkHex": 2766920,
+    "darkHex": 2503748,
     "darkRgb": [
-      42,
-      56,
-      72
+      38,
+      52,
+      68
     ],
-    "brightHex": 13421774,
+    "brightHex": 12764363,
     "brightRgb": [
-      204,
-      204,
-      206
-    ]
+      194,
+      196,
+      203
+    ],
+    "foliageHex": 3357747,
+    "barkHex": 5781286,
+    "roofHex": 8887223
   },
   "reconstructedFeatures": [
     {
       "name": "streamlined_hull_superstructure",
       "method": "terraced_decks_and_masts"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
-    "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
   ]
 }

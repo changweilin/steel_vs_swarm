@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_jspace-pu_20241108_menu",
-  "sourceImage": "vehicle/car/jspace-pu_20241108_menu.jpg",
+  "stem": "jspace-pu_20241108_menu",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.778,
   "aspectRatio": 1.524,
+  "symmetryScore": 0.778,
+  "widthProfile": [
+    0.359,
+    0.438,
+    0.5,
+    0.562,
+    0.797,
+    0.797,
+    0.75,
+    0.734,
+    0.734,
+    0.484
+  ],
   "colors": {
-    "primaryHex": 8225930,
+    "primaryHex": 1514529,
     "primaryRgb": [
-      125,
-      132,
-      138
+      23,
+      28,
+      33
     ],
-    "accentHex": 196608,
+    "accentHex": 14014942,
     "accentRgb": [
-      3,
-      0,
-      0
+      213,
+      217,
+      222
     ],
-    "darkHex": 2106924,
+    "darkHex": 2041130,
     "darkRgb": [
-      32,
-      38,
-      44
+      31,
+      37,
+      42
     ],
-    "brightHex": 15856628,
+    "brightHex": 12896977,
     "brightRgb": [
-      241,
-      243,
-      244
-    ]
+      196,
+      202,
+      209
+    ],
+    "foliageHex": 1514529,
+    "barkHex": 1511695,
+    "roofHex": 5792103
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

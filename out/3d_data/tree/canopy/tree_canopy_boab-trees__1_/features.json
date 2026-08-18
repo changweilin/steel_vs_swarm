@@ -1,0 +1,61 @@
+{
+  "id": "tree_canopy_boab-trees__1_",
+  "stem": "boab-trees (1)",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 1.5,
+  "symmetryScore": 0.928,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 804227,
+    "primaryRgb": [
+      12,
+      69,
+      131
+    ],
+    "accentHex": 14136447,
+    "accentRgb": [
+      215,
+      180,
+      127
+    ],
+    "darkHex": 934007,
+    "darkRgb": [
+      14,
+      64,
+      119
+    ],
+    "brightHex": 13811871,
+    "brightRgb": [
+      210,
+      192,
+      159
+    ],
+    "foliageHex": 804227,
+    "barkHex": 8219214,
+    "roofHex": 1329023
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "swollen_bottle_trunk",
+      "method": "massive_succulent_barrel"
+    },
+    {
+      "name": "polyhedral_foliage_pads",
+      "method": "faceted_dome_cushions"
+    }
+  ]
+}

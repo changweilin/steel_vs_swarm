@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_00365470_202403141998083052M",
+  "stem": "00365470.202403141998083052M",
+  "family": "building",
+  "subpart": "mass",
+  "source_image": "building/00365470.202403141998083052M.jpg",
+  "generated_at": "2026-08-18T13:38:03.809Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -10.717,
+      0,
+      -10.973
+    ],
+    "max": [
+      10.717,
+      30.137,
+      10.673
+    ],
+    "size": [
+      21.434,
+      30.137,
+      21.647
+    ],
+    "rMax": 15.338,
+    "triangles": 444,
+    "vertices": 296
+  },
+  "spec": {
+    "L": 21.433798733501185,
+    "W": 18.946669718471046,
+    "H": 29.864682993820097,
+    "style": "commercial_residential_asymmetric"
+  }
+}

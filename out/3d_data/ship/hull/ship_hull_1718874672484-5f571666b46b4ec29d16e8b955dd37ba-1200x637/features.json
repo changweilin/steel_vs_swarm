@@ -1,49 +1,57 @@
 {
   "id": "ship_hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637",
-  "sourceImage": "ship/1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637.webp",
+  "stem": "1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637",
+  "family": "ship",
+  "subpart": "hull",
   "style": "general_cargo_ship",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.849,
   "aspectRatio": 1.884,
+  "symmetryScore": 0.849,
+  "widthProfile": [
+    0.844,
+    0.719,
+    0.883,
+    1,
+    1,
+    0.758,
+    0.703,
+    0.789,
+    1,
+    0.844
+  ],
   "colors": {
-    "primaryHex": 9875118,
+    "primaryHex": 11126472,
     "primaryRgb": [
-      150,
-      174,
-      174
+      169,
+      198,
+      200
     ],
-    "accentHex": 196609,
+    "accentHex": 2703428,
     "accentRgb": [
-      3,
-      0,
-      1
+      41,
+      64,
+      68
     ],
-    "darkHex": 2176059,
+    "darkHex": 1978680,
     "darkRgb": [
-      33,
-      52,
-      59
+      30,
+      49,
+      56
     ],
     "brightHex": 13098717,
     "brightRgb": [
       199,
       222,
       221
-    ]
+    ],
+    "foliageHex": 5730652,
+    "barkHex": 5648943,
+    "roofHex": 15004399
   },
   "reconstructedFeatures": [
     {
       "name": "streamlined_hull_superstructure",
       "method": "terraced_decks_and_masts"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
-    "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
   ]
 }

@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_Farizon-SV-3",
-  "sourceImage": "vehicle/car/Farizon-SV-3.jpg",
+  "stem": "Farizon-SV-3",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.82,
   "aspectRatio": 1.499,
+  "symmetryScore": 0.82,
+  "widthProfile": [
+    0.055,
+    0.617,
+    0.594,
+    0.734,
+    0.773,
+    0.781,
+    0.82,
+    0.781,
+    0.695,
+    0.586
+  ],
   "colors": {
-    "primaryHex": 9935260,
+    "primaryHex": 2369837,
     "primaryRgb": [
-      151,
-      153,
-      156
-    ],
-    "accentHex": 592650,
-    "accentRgb": [
-      9,
-      11,
-      10
-    ],
-    "darkHex": 2698802,
-    "darkRgb": [
+      36,
       41,
-      46,
-      50
+      45
     ],
-    "brightHex": 15329770,
+    "accentHex": 15198184,
+    "accentRgb": [
+      231,
+      231,
+      232
+    ],
+    "darkHex": 2632752,
+    "darkRgb": [
+      40,
+      44,
+      48
+    ],
+    "brightHex": 14540255,
     "brightRgb": [
-      233,
-      233,
-      234
-    ]
+      221,
+      221,
+      223
+    ],
+    "foliageHex": 2369837,
+    "barkHex": 5781286,
+    "roofHex": 6844533
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

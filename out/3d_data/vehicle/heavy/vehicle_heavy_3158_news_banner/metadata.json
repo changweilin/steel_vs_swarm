@@ -1,21 +1,19 @@
 {
   "id": "vehicle_heavy_3158_news_banner",
-  "key": "vehicle/heavy_3158_news_banner_930018ff",
+  "stem": "3158_news_banner",
   "family": "vehicle",
   "subpart": "heavy",
-  "style": "semi_tractor",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/heavy/3158_news_banner.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\3158_news_banner.jpg",
-  "created_at": "2026-08-18T10:56:14.567Z",
+  "generated_at": "2026-08-18T13:38:04.341Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -4.9119,
-      0.0255,
+      -4.912,
+      0.025,
       -1.313
     ],
     "max": [
-      5.0019,
+      5.002,
       4,
       1.313
     ],
@@ -34,7 +32,5 @@
     "H": 3.767990386816205,
     "R": 0.52,
     "style": "heavy_cargo_freight_truck"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

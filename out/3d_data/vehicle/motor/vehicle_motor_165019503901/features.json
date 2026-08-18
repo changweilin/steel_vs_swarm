@@ -1,35 +1,52 @@
 {
   "id": "vehicle_motor_165019503901",
-  "sourceImage": "vehicle/motor/165019503901.jpg",
+  "stem": "165019503901",
+  "family": "vehicle",
+  "subpart": "motor",
   "style": "standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.871,
   "aspectRatio": 1.501,
+  "symmetryScore": 0.871,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 8948109,
+    "primaryHex": 12171706,
     "primaryRgb": [
-      136,
-      137,
-      141
+      185,
+      185,
+      186
     ],
-    "accentHex": 592137,
+    "accentHex": 2303017,
     "accentRgb": [
-      9,
-      9,
-      9
+      35,
+      36,
+      41
     ],
-    "darkHex": 2961206,
+    "darkHex": 2829621,
     "darkRgb": [
+      43,
       45,
-      47,
-      54
+      53
     ],
-    "brightHex": 13619151,
+    "brightHex": 13684944,
     "brightRgb": [
-      207,
-      207,
-      207
-    ]
+      208,
+      208,
+      208
+    ],
+    "foliageHex": 12171706,
+    "barkHex": 5781286,
+    "roofHex": 11974328
   },
   "reconstructedFeatures": [
     {
@@ -40,15 +57,5 @@
       "name": "dual_chrome_pipes",
       "method": "staggered_exhaust_system"
     }
-  ],
-  "totalParts": 7,
-  "partNames": [
-    "motorcycle_engine_chassis",
-    "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

@@ -1,35 +1,52 @@
 {
   "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
-  "sourceImage": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+  "stem": "Adansonia-Fony-600-x-338-Fony-Baobab-tree",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "baobab_tree",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.911,
   "aspectRatio": 1.775,
+  "symmetryScore": 0.911,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 8622487,
+    "primaryHex": 10009306,
     "primaryRgb": [
-      131,
-      145,
-      151
+      152,
+      186,
+      218
     ],
-    "accentHex": 2628883,
+    "accentHex": 5918013,
     "accentRgb": [
-      40,
-      29,
-      19
+      90,
+      77,
+      61
     ],
-    "darkHex": 4864817,
+    "darkHex": 4667695,
     "darkRgb": [
-      74,
-      59,
-      49
+      71,
+      57,
+      47
     ],
-    "brightHex": 10469339,
+    "brightHex": 10271962,
     "brightRgb": [
-      159,
-      191,
-      219
-    ]
+      156,
+      188,
+      218
+    ],
+    "foliageHex": 7768679,
+    "barkHex": 7232331,
+    "roofHex": 7904703
   },
   "reconstructedFeatures": [
     {
@@ -37,20 +54,8 @@
       "method": "massive_succulent_barrel"
     },
     {
-      "name": "sparse_rosette_crown",
-      "method": "root_like_canopy_clusters"
+      "name": "polyhedral_foliage_pads",
+      "method": "faceted_dome_cushions"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "baobab_bottle_trunk",
-    "baobab_branch_1",
-    "baobab_foliage_clump_1",
-    "baobab_branch_2",
-    "baobab_foliage_clump_2",
-    "baobab_branch_3",
-    "baobab_foliage_clump_3",
-    "baobab_branch_4",
-    "baobab_foliage_clump_4"
   ]
 }

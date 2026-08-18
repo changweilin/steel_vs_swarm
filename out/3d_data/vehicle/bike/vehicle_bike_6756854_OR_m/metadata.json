@@ -1,40 +1,36 @@
 {
   "id": "vehicle_bike_6756854_OR_m",
-  "key": "vehicle/bike_6756854_OR_m_4318f4c3",
+  "stem": "6756854_OR_m",
   "family": "vehicle",
   "subpart": "bike",
-  "style": "cargo_bike",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/bike/6756854_OR_m.webp",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\6756854_OR_m.webp",
-  "created_at": "2026-08-18T10:56:14.377Z",
+  "generated_at": "2026-08-18T13:38:04.190Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -0.98,
+      -0.99,
       0,
       -0.325
     ],
     "max": [
-      0.98,
-      1.0785,
+      0.99,
+      1.083,
       0.325
     ],
     "size": [
-      1.96,
-      1.079,
+      1.98,
+      1.083,
       0.65
     ],
-    "rMax": 1.032,
-    "triangles": 200,
-    "vertices": 118
+    "rMax": 1.042,
+    "triangles": 352,
+    "vertices": 210
   },
   "spec": {
     "L": 1.7887914854657816,
     "W": 0.65,
     "H": 1.10353322652018,
-    "R": 0.33,
+    "R": 0.34,
     "style": "precision_bicycle_frame"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

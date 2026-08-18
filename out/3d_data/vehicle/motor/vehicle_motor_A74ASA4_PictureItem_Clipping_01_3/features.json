@@ -1,35 +1,52 @@
 {
   "id": "vehicle_motor_A74ASA4_PictureItem_Clipping_01_3",
-  "sourceImage": "vehicle/motor/A74ASA4_PictureItem_Clipping_01_3.jpg",
+  "stem": "A74ASA4_PictureItem_Clipping_01_3",
+  "family": "vehicle",
+  "subpart": "motor",
   "style": "standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.894,
   "aspectRatio": 1.501,
+  "symmetryScore": 0.894,
+  "widthProfile": [
+    0,
+    0,
+    0.391,
+    0.586,
+    0.711,
+    0.734,
+    0.758,
+    0.766,
+    0.719,
+    0.719
+  ],
   "colors": {
-    "primaryHex": 11709355,
+    "primaryHex": 5197133,
     "primaryRgb": [
-      178,
-      171,
-      171
+      79,
+      77,
+      77
     ],
-    "accentHex": 3421236,
+    "accentHex": 14342874,
     "accentRgb": [
-      52,
-      52,
-      52
+      218,
+      218,
+      218
     ],
-    "darkHex": 4801604,
+    "darkHex": 4538689,
     "darkRgb": [
-      73,
-      68,
-      68
+      69,
+      65,
+      65
     ],
-    "brightHex": 16185078,
+    "brightHex": 13684687,
     "brightRgb": [
-      246,
-      246,
-      246
-    ]
+      208,
+      207,
+      207
+    ],
+    "foliageHex": 5197133,
+    "barkHex": 10045512,
+    "roofHex": 13027271
   },
   "reconstructedFeatures": [
     {
@@ -40,15 +57,5 @@
       "name": "dual_chrome_pipes",
       "method": "staggered_exhaust_system"
     }
-  ],
-  "totalParts": 7,
-  "partNames": [
-    "motorcycle_engine_chassis",
-    "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

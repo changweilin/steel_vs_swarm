@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_bike_800x__1_",
+  "stem": "800x (1)",
+  "family": "vehicle",
+  "subpart": "bike",
+  "source_image": "vehicle/bike/800x (1).jpg",
+  "generated_at": "2026-08-18T13:38:04.192Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -0.99,
+      0,
+      -0.325
+    ],
+    "max": [
+      0.99,
+      1.048,
+      0.325
+    ],
+    "size": [
+      1.98,
+      1.048,
+      0.65
+    ],
+    "rMax": 1.042,
+    "triangles": 352,
+    "vertices": 210
+  },
+  "spec": {
+    "L": 1.9006385900663767,
+    "W": 0.65,
+    "H": 1.067611963073167,
+    "R": 0.34,
+    "style": "precision_bicycle_frame"
+  }
+}

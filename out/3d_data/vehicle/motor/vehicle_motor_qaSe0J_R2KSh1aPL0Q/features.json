@@ -1,35 +1,52 @@
 {
   "id": "vehicle_motor_qaSe0J_R2KSh1aPL0Q",
-  "sourceImage": "vehicle/motor/qaSe0J_R2KSh1aPL0Q.webp",
+  "stem": "qaSe0J_R2KSh1aPL0Q",
+  "family": "vehicle",
+  "subpart": "motor",
   "style": "standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.877,
   "aspectRatio": 1.414,
+  "symmetryScore": 0.877,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.773,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 9211019,
+    "primaryHex": 13355979,
     "primaryRgb": [
-      140,
-      140,
-      139
+      203,
+      203,
+      203
     ],
-    "accentHex": 328965,
+    "accentHex": 2894892,
     "accentRgb": [
-      5,
-      5,
-      5
+      44,
+      44,
+      44
     ],
-    "darkHex": 2960685,
+    "darkHex": 2894892,
     "darkRgb": [
-      45,
-      45,
-      45
+      44,
+      44,
+      44
     ],
-    "brightHex": 13750737,
+    "brightHex": 14079702,
     "brightRgb": [
-      209,
-      209,
-      209
-    ]
+      214,
+      214,
+      214
+    ],
+    "foliageHex": 13355979,
+    "barkHex": 5781286,
+    "roofHex": 13224393
   },
   "reconstructedFeatures": [
     {
@@ -40,15 +57,5 @@
       "name": "dual_chrome_pipes",
       "method": "staggered_exhaust_system"
     }
-  ],
-  "totalParts": 7,
-  "partNames": [
-    "motorcycle_engine_chassis",
-    "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

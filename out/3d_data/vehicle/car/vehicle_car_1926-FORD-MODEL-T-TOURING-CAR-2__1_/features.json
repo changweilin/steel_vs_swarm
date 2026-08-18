@@ -1,0 +1,66 @@
+{
+  "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2__1_",
+  "stem": "1926-FORD-MODEL-T-TOURING-CAR-2 (1)",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.415,
+  "symmetryScore": 0.743,
+  "widthProfile": [
+    0.133,
+    0.562,
+    0.555,
+    0.688,
+    0.859,
+    0.836,
+    0.828,
+    0.656,
+    0.273,
+    0.117
+  ],
+  "colors": {
+    "primaryHex": 1644825,
+    "primaryRgb": [
+      25,
+      25,
+      25
+    ],
+    "accentHex": 14737631,
+    "accentRgb": [
+      224,
+      224,
+      223
+    ],
+    "darkHex": 1973790,
+    "darkRgb": [
+      30,
+      30,
+      30
+    ],
+    "brightHex": 14079445,
+    "brightRgb": [
+      214,
+      213,
+      213
+    ],
+    "foliageHex": 1644825,
+    "barkHex": 5781286,
+    "roofHex": 5395026
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "three_box_profile",
+      "method": "hood_cabin_trunk_architecture"
+    },
+    {
+      "name": "symmetric_mirrors_and_lights",
+      "method": "bilateral_mirror_Z_axis"
+    },
+    {
+      "name": "mirrored_sedan_features",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 0.8099999999999999
+    }
+  ]
+}

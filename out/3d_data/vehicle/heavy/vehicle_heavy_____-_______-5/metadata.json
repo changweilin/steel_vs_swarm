@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_heavy_____-_______-5",
+  "stem": "文境旅遊-賓士豪華大客車-5",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "source_image": "vehicle/heavy/文境旅遊-賓士豪華大客車-5.jpg",
+  "generated_at": "2026-08-18T13:38:04.387Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -5.071,
+      0.025,
+      -1.313
+    ],
+    "max": [
+      5.16,
+      4,
+      1.313
+    ],
+    "size": [
+      10.231,
+      3.974,
+      2.626
+    ],
+    "rMax": 5.325,
+    "triangles": 348,
+    "vertices": 200
+  },
+  "spec": {
+    "L": 10.3210193026627,
+    "W": 2.6,
+    "H": 3.971576256961929,
+    "R": 0.52,
+    "style": "heavy_cargo_freight_truck"
+  }
+}

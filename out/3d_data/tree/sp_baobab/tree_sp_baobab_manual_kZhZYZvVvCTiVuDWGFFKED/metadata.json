@@ -1,39 +1,35 @@
 {
   "id": "tree_sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED",
-  "key": "tree/sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED_fbe350c3",
+  "stem": "manual_kZhZYZvVvCTiVuDWGFFKED",
   "family": "tree",
   "subpart": "sp_baobab",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
   "source_image": "tree/sp_baobab/manual_kZhZYZvVvCTiVuDWGFFKED.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_baobab\\manual_kZhZYZvVvCTiVuDWGFFKED.jpg",
-  "created_at": "2026-08-18T10:56:14.345Z",
+  "generated_at": "2026-08-18T13:38:04.089Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -5.1324,
-      0,
-      -4.665
+      -5.769,
+      -0.226,
+      -6.098
     ],
     "max": [
-      4.6562,
-      19.6594,
-      5.9929
+      5.769,
+      21.524,
+      6.098
     ],
     "size": [
-      9.789,
-      19.659,
-      10.658
+      11.539,
+      21.751,
+      12.196
     ],
-    "rMax": 7.589,
-    "triangles": 128,
-    "vertices": 82
+    "rMax": 8.395,
+    "triangles": 456,
+    "vertices": 264
   },
   "spec": {
-    "L": 11.190699626153965,
-    "W": 10.081368734264133,
-    "H": 20.524498359655148,
-    "style": "gnarled_broadleaf_buttress"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+    "L": 12.190699626153965,
+    "W": 11.081368734264133,
+    "H": 21.524498359655148,
+    "style": "organic_polyhedral_broadleaf_oak"
+  }
 }

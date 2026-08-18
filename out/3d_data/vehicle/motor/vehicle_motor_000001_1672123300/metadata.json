@@ -1,22 +1,20 @@
 {
   "id": "vehicle_motor_000001_1672123300",
-  "key": "vehicle/motor_000001_1672123300_34efdc65",
+  "stem": "000001_1672123300",
   "family": "vehicle",
   "subpart": "motor",
-  "style": "standard_motor",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/motor/000001_1672123300.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\000001_1672123300.jpg",
-  "created_at": "2026-08-18T10:56:14.622Z",
+  "generated_at": "2026-08-18T13:38:04.394Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
       -0.97,
-      0.0142,
+      0.014,
       -0.41
     ],
     "max": [
       1.04,
-      1.2114,
+      1.211,
       0.41
     ],
     "size": [
@@ -34,7 +32,5 @@
     "H": 1.301357289997711,
     "R": 0.29,
     "style": "cruiser_scooter_motorcycle"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

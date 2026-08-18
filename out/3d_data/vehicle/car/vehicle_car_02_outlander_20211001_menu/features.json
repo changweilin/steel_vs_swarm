@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_02_outlander_20211001_menu",
-  "sourceImage": "vehicle/car/02_outlander_20211001_menu.jpg",
+  "stem": "02_outlander_20211001_menu",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "suv_crossover",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.793,
   "aspectRatio": 1.524,
+  "symmetryScore": 0.793,
+  "widthProfile": [
+    0.492,
+    0.625,
+    0.734,
+    0.773,
+    0.812,
+    0.805,
+    0.797,
+    0.789,
+    0.719,
+    0.617
+  ],
   "colors": {
-    "primaryHex": 6250335,
+    "primaryHex": 1315860,
     "primaryRgb": [
-      95,
-      95,
-      95
+      20,
+      20,
+      20
     ],
-    "accentHex": 16777215,
+    "accentHex": 14211288,
     "accentRgb": [
-      255,
-      255,
-      255
+      216,
+      216,
+      216
     ],
-    "darkHex": 2368548,
+    "darkHex": 2236962,
     "darkRgb": [
-      36,
-      36,
-      36
+      34,
+      34,
+      34
     ],
-    "brightHex": 15527148,
+    "brightHex": 13553359,
     "brightRgb": [
-      236,
-      236,
-      236
-    ]
+      206,
+      206,
+      207
+    ],
+    "foliageHex": 1315860,
+    "barkHex": 8478805,
+    "roofHex": 3815994
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

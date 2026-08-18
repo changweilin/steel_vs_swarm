@@ -1,23 +1,21 @@
 {
   "id": "building_mass_0",
-  "key": "building/mass_0_338144da",
+  "stem": "0",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
   "source_image": "building/0.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\0.jpg",
-  "created_at": "2026-08-18T10:56:14.057Z",
+  "generated_at": "2026-08-18T13:38:03.805Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -10.6788,
+      -10.679,
       0,
-      -11.3234
+      -11.323
     ],
     "max": [
-      10.6788,
-      27.4087,
-      11.0234
+      10.679,
+      27.409,
+      11.023
     ],
     "size": [
       21.358,
@@ -33,7 +31,5 @@
     "W": 19.646784161135272,
     "H": 27.40865186541543,
     "style": "commercial_residential_asymmetric"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

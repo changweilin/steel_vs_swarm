@@ -4,22 +4,21 @@
   "subpart": "hull",
   "style": "oil_tanker_bulk",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 53.57663843747616,
     "W": 12.08817425803006,
-    "H": 16.105928130006866,
-    "style": "multipurpose_maritime_vessel"
+    "H": 16.105928130006866
   },
   "bounds": {
     "min": [
-      -25.4489,
-      -0.9794,
-      -6.0441
+      -25.449,
+      -0.979,
+      -6.044
     ],
     "max": [
       27.868,
-      18.4308,
-      6.0441
+      18.431,
+      6.044
     ],
     "size": [
       53.317,
@@ -49,7 +48,7 @@
         0,
         0
       ],
-      "color": 6714751,
+      "color": 267820,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -71,7 +70,7 @@
         0,
         -0.22
       ],
-      "color": 6714751,
+      "color": 267820,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -93,7 +92,7 @@
         0,
         0
       ],
-      "color": 728368,
+      "color": 399664,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -115,7 +114,7 @@
         0,
         0
       ],
-      "color": 13687516,
+      "color": 13555930,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +137,7 @@
         0,
         0
       ],
-      "color": 16252415,
+      "color": 14345449,
       "vertexCount": 18,
       "triangleCount": 32
     },
@@ -161,20 +160,12 @@
         0,
         0
       ],
-      "color": 728368,
+      "color": 399664,
       "vertexCount": 14,
       "triangleCount": 24
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
   "meshData": {
-    "vertexCount": 64,
-    "triangleCount": 104,
     "vertices": [
       -24.6453,
       0,

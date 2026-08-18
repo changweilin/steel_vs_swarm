@@ -1,0 +1,66 @@
+{
+  "id": "vehicle_heavy____3___for__",
+  "stem": "規格表3大圖合for官網",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.506,
+  "symmetryScore": 0.819,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 10602463,
+    "primaryRgb": [
+      161,
+      199,
+      223
+    ],
+    "accentHex": 2237734,
+    "accentRgb": [
+      34,
+      37,
+      38
+    ],
+    "darkHex": 2764078,
+    "darkRgb": [
+      42,
+      45,
+      46
+    ],
+    "brightHex": 12113124,
+    "brightRgb": [
+      184,
+      212,
+      228
+    ],
+    "foliageHex": 132356,
+    "barkHex": 3221796,
+    "roofHex": 10603494
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "enclosed_cargo_box",
+      "method": "composite_insulated_box"
+    },
+    {
+      "name": "dual_vertical_exhausts",
+      "method": "chrome_exhaust_stacks"
+    },
+    {
+      "name": "heavy_truck_dual_exhaust_and_axles",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.1
+    }
+  ]
+}

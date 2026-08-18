@@ -1,39 +1,35 @@
 {
   "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
-  "key": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_38edd5ad",
+  "stem": "Adansonia-Fony-600-x-338-Fony-Baobab-tree",
   "family": "tree",
   "subpart": "canopy",
-  "style": "baobab_tree",
-  "symmetryMode": "asymmetric",
   "source_image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
-  "created_at": "2026-08-18T10:56:14.261Z",
+  "generated_at": "2026-08-18T13:38:04.006Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -3.8,
+      -3.687,
       0,
-      -3.8
+      -4.057
     ],
     "max": [
-      3.8,
-      10.2358,
-      3.8
+      4.184,
+      11.086,
+      4.057
     ],
     "size": [
-      7.6,
-      10.236,
-      7.6
+      7.871,
+      11.086,
+      8.113
     ],
-    "rMax": 5.374,
-    "triangles": 184,
-    "vertices": 110
+    "rMax": 5.828,
+    "triangles": 328,
+    "vertices": 186
   },
   "spec": {
-    "L": 8.457312886243992,
-    "W": 9.887296864271,
-    "H": 11.132021057450217,
+    "L": 8.957312886243992,
+    "W": 10.387296864271,
+    "H": 12.132021057450217,
     "style": "succulent_bottle_baobab"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

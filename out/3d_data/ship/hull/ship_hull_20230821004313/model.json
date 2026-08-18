@@ -4,22 +4,21 @@
   "subpart": "hull",
   "style": "general_cargo_ship",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 50.70336461432822,
     "W": 9.852483405813688,
-    "H": 17.17381551842527,
-    "style": "multipurpose_maritime_vessel"
+    "H": 17.17381551842527
   },
   "bounds": {
     "min": [
-      -24.0841,
-      -0.9229,
-      -4.9262
+      -24.084,
+      -0.923,
+      -4.926
     ],
     "max": [
-      26.4089,
-      18.9434,
-      4.9262
+      26.409,
+      18.943,
+      4.926
     ],
     "size": [
       50.493,
@@ -49,7 +48,7 @@
         0,
         0
       ],
-      "color": 7571612,
+      "color": 1716285,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -71,7 +70,7 @@
         0,
         -0.22
       ],
-      "color": 7571612,
+      "color": 1716285,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -93,7 +92,7 @@
         0,
         0
       ],
-      "color": 2177354,
+      "color": 1651778,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -115,7 +114,7 @@
         0,
         0
       ],
-      "color": 12966376,
+      "color": 12244199,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +137,7 @@
         0,
         0
       ],
-      "color": 16777215,
+      "color": 13689067,
       "vertexCount": 18,
       "triangleCount": 32
     },
@@ -161,20 +160,12 @@
         0,
         0
       ],
-      "color": 2177354,
+      "color": 1651778,
       "vertexCount": 14,
       "triangleCount": 24
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
   "meshData": {
-    "vertexCount": 64,
-    "triangleCount": 104,
     "vertices": [
       -23.3235,
       0,

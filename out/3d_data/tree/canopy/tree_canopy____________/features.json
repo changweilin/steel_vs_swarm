@@ -1,0 +1,61 @@
+{
+  "id": "tree_canopy____________",
+  "stem": "臺灣杉照片提供／陳建帆",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 0.665,
+  "symmetryScore": 0.827,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 2849716,
+    "primaryRgb": [
+      43,
+      123,
+      180
+    ],
+    "accentHex": 13296107,
+    "accentRgb": [
+      202,
+      225,
+      235
+    ],
+    "darkHex": 2371622,
+    "darkRgb": [
+      36,
+      48,
+      38
+    ],
+    "brightHex": 13887729,
+    "brightRgb": [
+      211,
+      232,
+      241
+    ],
+    "foliageHex": 2634531,
+    "barkHex": 5781286,
+    "roofHex": 2191530
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "fluted_buttress_roots",
+      "method": "organic_root_flare_spread"
+    },
+    {
+      "name": "polyhedral_canopy_cloud_cluster",
+      "method": "eight_faceted_dome_blobs"
+    }
+  ]
+}

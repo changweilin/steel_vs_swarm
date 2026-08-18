@@ -1,0 +1,35 @@
+{
+  "id": "tree_canopy_______",
+  "stem": "山上的孤松樹",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/山上的孤松樹.jpg",
+  "generated_at": "2026-08-18T13:38:04.096Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -6.395,
+      -0.226,
+      -6.929
+    ],
+    "max": [
+      6.395,
+      16.338,
+      6.929
+    ],
+    "size": [
+      12.79,
+      16.564,
+      13.859
+    ],
+    "rMax": 9.429,
+    "triangles": 456,
+    "vertices": 264
+  },
+  "spec": {
+    "L": 14.15644312199588,
+    "W": 13.746356908522163,
+    "H": 16.21228351262684,
+    "style": "organic_polyhedral_broadleaf_oak"
+  }
+}

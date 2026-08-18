@@ -1,0 +1,57 @@
+{
+  "id": "tree_canopy_____-____-elho__-___-__-03",
+  "stem": "網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "shrub_bush_hedge",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 1.501,
+  "symmetryScore": 0.863,
+  "widthProfile": [
+    0.312,
+    0.344,
+    0.312,
+    0.391,
+    0.508,
+    0.516,
+    0.539,
+    0.539,
+    0.531,
+    0.578
+  ],
+  "colors": {
+    "primaryHex": 14473947,
+    "primaryRgb": [
+      220,
+      218,
+      219
+    ],
+    "accentHex": 5794090,
+    "accentRgb": [
+      88,
+      105,
+      42
+    ],
+    "darkHex": 3425045,
+    "darkRgb": [
+      52,
+      67,
+      21
+    ],
+    "brightHex": 14144718,
+    "brightRgb": [
+      215,
+      212,
+      206
+    ],
+    "foliageHex": 7310406,
+    "barkHex": 9856597,
+    "roofHex": 12305309
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "ground_multi_dome_mounds",
+      "method": "overlapping_polyhedral_mounds"
+    }
+  ]
+}

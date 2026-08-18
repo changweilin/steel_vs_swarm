@@ -1,39 +1,35 @@
 {
   "id": "tree_canopy_ADEY1909",
-  "key": "tree/canopy_ADEY1909_c6f80c88",
+  "stem": "ADEY1909",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
   "source_image": "tree/ADEY1909.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\ADEY1909.jpg",
-  "created_at": "2026-08-18T10:56:14.264Z",
+  "generated_at": "2026-08-18T13:38:04.009Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -6.0128,
+      -2.556,
       0,
-      -7.2541
+      -2.619
     ],
     "max": [
-      5.6741,
-      17.0712,
-      7.4432
+      2.334,
+      3.06,
+      2.883
     ],
     "size": [
-      11.687,
-      17.071,
-      14.697
+      4.89,
+      3.06,
+      5.502
     ],
-    "rMax": 9.422,
-    "triangles": 128,
-    "vertices": 82
+    "rMax": 3.853,
+    "triangles": 216,
+    "vertices": 122
   },
   "spec": {
-    "L": 13.54753185320821,
-    "W": 12.454604409857328,
-    "H": 17.706218051422905,
-    "style": "gnarled_broadleaf_buttress"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+    "L": 7.119012741283283,
+    "W": 6.6818417639429315,
+    "H": 3.138277256427863,
+    "style": "low_polyhedral_bush_cluster"
+  }
 }

@@ -1,35 +1,52 @@
 {
   "id": "building_mass_4f5ee370c1564cadabc47ce365c4f353",
-  "sourceImage": "building/4f5ee370c1564cadabc47ce365c4f353.jpeg",
+  "stem": "4f5ee370c1564cadabc47ce365c4f353",
+  "family": "building",
+  "subpart": "mass",
   "style": "commercial_residential",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.877,
   "aspectRatio": 1.502,
+  "symmetryScore": 0.877,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    0.961,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 3690072,
+    "primaryHex": 1977128,
     "primaryRgb": [
-      56,
-      78,
-      88
+      30,
+      43,
+      40
     ],
-    "accentHex": 16576698,
+    "accentHex": 6334937,
     "accentRgb": [
-      252,
-      240,
-      186
+      96,
+      169,
+      217
     ],
-    "darkHex": 2504509,
+    "darkHex": 1978676,
     "darkRgb": [
-      38,
-      55,
-      61
+      30,
+      49,
+      52
     ],
-    "brightHex": 12436406,
+    "brightHex": 10862794,
     "brightRgb": [
-      189,
-      195,
-      182
-    ]
+      165,
+      192,
+      202
+    ],
+    "foliageHex": 1648671,
+    "barkHex": 8013866,
+    "roofHex": 2457015
   },
   "reconstructedFeatures": [
     {
@@ -40,33 +57,5 @@
       "name": "rear_fire_escape_and_utilities",
       "method": "asymmetric_procedural_augmentation"
     }
-  ],
-  "totalParts": 25,
-  "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
   ]
 }

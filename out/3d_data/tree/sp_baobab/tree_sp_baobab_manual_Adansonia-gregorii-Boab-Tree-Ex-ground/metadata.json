@@ -1,39 +1,35 @@
 {
   "id": "tree_sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground",
-  "key": "tree/sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_0d01f99f",
+  "stem": "manual_Adansonia-gregorii-Boab-Tree-Ex-ground",
   "family": "tree",
   "subpart": "sp_baobab",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
   "source_image": "tree/sp_baobab/manual_Adansonia-gregorii-Boab-Tree-Ex-ground.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_baobab\\manual_Adansonia-gregorii-Boab-Tree-Ex-ground.jpg",
-  "created_at": "2026-08-18T10:56:14.341Z",
+  "generated_at": "2026-08-18T13:38:04.084Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -6.8991,
+      -3.687,
       0,
-      -8.1614
+      -4.057
     ],
     "max": [
-      7.4837,
-      20.6897,
-      7.5418
+      4.184,
+      12.748,
+      4.057
     ],
     "size": [
-      14.383,
-      20.69,
-      15.703
+      7.871,
+      12.748,
+      8.113
     ],
-    "rMax": 10.687,
-    "triangles": 152,
-    "vertices": 98
+    "rMax": 5.828,
+    "triangles": 328,
+    "vertices": 186
   },
   "spec": {
-    "L": 13.409666590371558,
-    "W": 13.409132524605173,
-    "H": 20.378011749446863,
-    "style": "gnarled_broadleaf_buttress"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+    "L": 10.845799954222935,
+    "W": 10.845479514763104,
+    "H": 14.689005874723431,
+    "style": "succulent_bottle_baobab"
+  }
 }

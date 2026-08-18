@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_250px-Honda-TN360",
-  "sourceImage": "vehicle/car/250px-Honda-TN360.jpg",
+  "stem": "250px-Honda-TN360",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.822,
   "aspectRatio": 1.337,
+  "symmetryScore": 0.822,
+  "widthProfile": [
+    0.938,
+    1,
+    1,
+    1,
+    1,
+    0.977,
+    1,
+    0.969,
+    0.922,
+    0.945
+  ],
   "colors": {
-    "primaryHex": 7697783,
+    "primaryHex": 7566195,
     "primaryRgb": [
-      117,
-      117,
-      119
+      115,
+      115,
+      115
     ],
-    "accentHex": 16777215,
+    "accentHex": 14867158,
     "accentRgb": [
-      255,
-      255,
-      255
+      226,
+      218,
+      214
     ],
-    "darkHex": 3289140,
+    "darkHex": 3091503,
     "darkRgb": [
-      50,
-      48,
-      52
+      47,
+      44,
+      47
     ],
-    "brightHex": 13882323,
+    "brightHex": 14012364,
     "brightRgb": [
-      211,
-      211,
-      211
-    ]
+      213,
+      207,
+      204
+    ],
+    "foliageHex": 7566195,
+    "barkHex": 6109745,
+    "roofHex": 11182750
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

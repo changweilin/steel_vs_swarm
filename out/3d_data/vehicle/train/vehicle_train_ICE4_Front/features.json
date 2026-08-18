@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_ICE4_Front",
-  "sourceImage": "vehicle/train/ICE4_Front.jpg",
+  "stem": "ICE4_Front",
+  "family": "vehicle",
+  "subpart": "train",
   "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.816,
   "aspectRatio": 1.778,
+  "symmetryScore": 0.816,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7829366,
+    "primaryHex": 15264750,
     "primaryRgb": [
-      119,
-      119,
-      118
+      232,
+      235,
+      238
     ],
-    "accentHex": 16251132,
+    "accentHex": 2105373,
     "accentRgb": [
-      247,
-      248,
-      252
+      32,
+      32,
+      29
     ],
-    "darkHex": 3157293,
+    "darkHex": 3025962,
     "darkRgb": [
-      48,
-      45,
-      45
+      46,
+      44,
+      42
     ],
-    "brightHex": 14343646,
+    "brightHex": 14606818,
     "brightRgb": [
-      218,
-      221,
-      222
-    ]
+      222,
+      225,
+      226
+    ],
+    "foliageHex": 1250835,
+    "barkHex": 5453363,
+    "roofHex": 14738405
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

@@ -1,23 +1,21 @@
 {
   "id": "ship_hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1",
-  "key": "ship/hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_1a84fc87",
+  "stem": "8eadcf6f-3d54-4ddf-92e6-a815be2b03c1",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
-  "symmetryMode": "symmetric",
   "source_image": "ship/8eadcf6f-3d54-4ddf-92e6-a815be2b03c1.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\8eadcf6f-3d54-4ddf-92e6-a815be2b03c1.jpg",
-  "created_at": "2026-08-18T10:56:14.189Z",
+  "generated_at": "2026-08-18T13:38:03.928Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -17.3824,
-      -0.6458,
-      -4.9962
+      -17.382,
+      -0.646,
+      -4.996
     ],
     "max": [
       19.244,
       17.387,
-      4.9962
+      4.996
     ],
     "size": [
       36.626,
@@ -33,7 +31,5 @@
     "W": 9.9923781185626,
     "H": 13.931334401464866,
     "style": "multipurpose_maritime_vessel"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

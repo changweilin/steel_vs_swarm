@@ -1,39 +1,35 @@
 {
   "id": "tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
-  "key": "tree/canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi_b42e1b17",
+  "stem": "imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
   "family": "tree",
   "subpart": "canopy",
-  "style": "conifer_pine",
-  "symmetryMode": "symmetric",
   "source_image": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
-  "created_at": "2026-08-18T10:56:14.326Z",
+  "generated_at": "2026-08-18T13:38:04.068Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -4.0659,
+      -4.066,
       0,
-      -4.0659
+      -3.867
     ],
     "max": [
-      4.0659,
-      14.8826,
-      4.0659
+      4.066,
+      15.969,
+      3.867
     ],
     "size": [
       8.132,
-      14.883,
-      8.132
+      15.969,
+      7.734
     ],
-    "rMax": 5.75,
-    "triangles": 192,
-    "vertices": 108
+    "rMax": 5.611,
+    "triangles": 272,
+    "vertices": 150
   },
   "spec": {
     "L": 7.580796520943007,
     "W": 8.131723506523231,
-    "H": 14.499427786678874,
+    "H": 15.499427786678874,
     "style": "conifer_pine_pagoda_tiers"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

@@ -1,40 +1,36 @@
 {
   "id": "vehicle_bike_110295IA-M009_L",
-  "key": "vehicle/bike_110295IA-M009_L_d442e9ed",
+  "stem": "110295IA-M009_L",
   "family": "vehicle",
   "subpart": "bike",
-  "style": "cargo_bike",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/bike/110295IA-M009_L.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\110295IA-M009_L.jpg",
-  "created_at": "2026-08-18T10:56:14.364Z",
+  "generated_at": "2026-08-18T13:38:04.175Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -0.98,
+      -0.99,
       0,
       -0.325
     ],
     "max": [
-      0.98,
-      1.0351,
+      0.99,
+      1.04,
       0.325
     ],
     "size": [
-      1.96,
-      1.035,
+      1.98,
+      1.04,
       0.65
     ],
-    "rMax": 1.032,
-    "triangles": 200,
-    "vertices": 118
+    "rMax": 1.042,
+    "triangles": 352,
+    "vertices": 210
   },
   "spec": {
     "L": 1.874387731746395,
     "W": 0.65,
     "H": 1.0601426718547342,
-    "R": 0.33,
+    "R": 0.34,
     "style": "precision_bicycle_frame"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

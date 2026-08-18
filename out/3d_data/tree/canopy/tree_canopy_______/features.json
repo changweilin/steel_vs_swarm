@@ -1,0 +1,61 @@
+{
+  "id": "tree_canopy_______",
+  "stem": "山上的孤松樹",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 1.333,
+  "symmetryScore": 0.935,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 13753321,
+    "primaryRgb": [
+      209,
+      219,
+      233
+    ],
+    "accentHex": 4343855,
+    "accentRgb": [
+      66,
+      72,
+      47
+    ],
+    "darkHex": 3028006,
+    "darkRgb": [
+      46,
+      52,
+      38
+    ],
+    "brightHex": 14081769,
+    "brightRgb": [
+      214,
+      222,
+      233
+    ],
+    "foliageHex": 4345136,
+    "barkHex": 9930069,
+    "roofHex": 14082027
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "fluted_buttress_roots",
+      "method": "organic_root_flare_spread"
+    },
+    {
+      "name": "polyhedral_canopy_cloud_cluster",
+      "method": "eight_faceted_dome_blobs"
+    }
+  ]
+}

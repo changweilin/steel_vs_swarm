@@ -1,56 +1,57 @@
 {
   "id": "tree_canopy_ADEY1909",
-  "sourceImage": "tree/ADEY1909.jpg",
-  "style": "broadleaf_camphor_oak",
+  "stem": "ADEY1909",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "shrub_bush_hedge",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.879,
   "aspectRatio": 1.787,
+  "symmetryScore": 0.879,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 5072213,
+    "primaryHex": 2635044,
     "primaryRgb": [
-      77,
-      101,
-      85
+      40,
+      53,
+      36
     ],
-    "accentHex": 10671870,
+    "accentHex": 9817339,
     "accentRgb": [
-      162,
-      214,
-      254
+      149,
+      204,
+      251
     ],
-    "darkHex": 2569506,
+    "darkHex": 2569251,
     "darkRgb": [
       39,
-      53,
-      34
+      52,
+      35
     ],
-    "brightHex": 10080508,
+    "brightHex": 9883131,
     "brightRgb": [
-      153,
-      208,
-      252
-    ]
+      150,
+      205,
+      251
+    ],
+    "foliageHex": 4150315,
+    "barkHex": 6441275,
+    "roofHex": 5606319
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
-    },
-    {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "ground_multi_dome_mounds",
+      "method": "overlapping_polyhedral_mounds"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4"
   ]
 }

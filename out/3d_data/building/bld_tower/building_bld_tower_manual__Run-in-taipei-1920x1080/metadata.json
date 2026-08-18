@@ -1,39 +1,35 @@
 {
   "id": "building_bld_tower_manual__Run-in-taipei-1920x1080",
-  "key": "building/bld_tower_manual__Run-in-taipei-1920x1080_8b3aa198",
+  "stem": "manual__Run-in-taipei-1920x1080",
   "family": "building",
   "subpart": "bld_tower",
-  "style": "modern_skyscraper_tower",
-  "symmetryMode": "symmetric",
   "source_image": "building/bld_tower/manual__Run-in-taipei-1920x1080.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\bld_tower\\manual__Run-in-taipei-1920x1080.jpg",
-  "created_at": "2026-08-18T10:56:14.108Z",
+  "generated_at": "2026-08-18T13:38:03.849Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -10.4305,
+      -11.431,
       0,
-      -11.9255
+      -12.925
     ],
     "max": [
-      10.4305,
-      86.7408,
-      14.8755
+      11.431,
+      91.741,
+      15.876
     ],
     "size": [
-      20.861,
-      86.741,
-      26.801
+      22.861,
+      91.741,
+      28.801
     ],
-    "rMax": 18.168,
-    "triangles": 336,
-    "vertices": 222
+    "rMax": 19.562,
+    "triangles": 360,
+    "vertices": 238
   },
   "spec": {
-    "L": 20.86106660563058,
-    "W": 23.850919356069276,
-    "H": 77.99084458686198,
+    "L": 22.86106660563058,
+    "W": 25.850919356069276,
+    "H": 82.99084458686198,
     "style": "modern_stepped_skyscraper"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

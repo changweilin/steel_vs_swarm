@@ -1,0 +1,57 @@
+{
+  "id": "tree_canopy_ADEY1909__1_",
+  "stem": "ADEY1909 (1)",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "shrub_bush_hedge",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 1.787,
+  "symmetryScore": 0.879,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 2635044,
+    "primaryRgb": [
+      40,
+      53,
+      36
+    ],
+    "accentHex": 9817339,
+    "accentRgb": [
+      149,
+      204,
+      251
+    ],
+    "darkHex": 2569251,
+    "darkRgb": [
+      39,
+      52,
+      35
+    ],
+    "brightHex": 9883131,
+    "brightRgb": [
+      150,
+      205,
+      251
+    ],
+    "foliageHex": 4150315,
+    "barkHex": 6441275,
+    "roofHex": 5606319
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "ground_multi_dome_mounds",
+      "method": "overlapping_polyhedral_mounds"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2__1_",
+  "stem": "1926-FORD-MODEL-T-TOURING-CAR-2 (1)",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/1926-FORD-MODEL-T-TOURING-CAR-2 (1).jpg",
+  "generated_at": "2026-08-18T13:38:04.227Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -2.447,
+      0.017,
+      -0.975
+    ],
+    "max": [
+      2.457,
+      1.663,
+      0.975
+    ],
+    "size": [
+      4.904,
+      1.646,
+      1.95
+    ],
+    "rMax": 2.643,
+    "triangles": 316,
+    "vertices": 192
+  },
+  "spec": {
+    "L": 4.834119172961013,
+    "W": 1.92,
+    "H": 1.6631120775158312,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
+  }
+}

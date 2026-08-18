@@ -1,0 +1,66 @@
+{
+  "id": "vehicle_heavy_____-_______-5",
+  "stem": "文境旅遊-賓士豪華大客車-5",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.501,
+  "symmetryScore": 0.759,
+  "widthProfile": [
+    0.992,
+    0.992,
+    1,
+    1,
+    0.984,
+    1,
+    0.938,
+    0.906,
+    0.984,
+    0.977
+  ],
+  "colors": {
+    "primaryHex": 12833237,
+    "primaryRgb": [
+      195,
+      209,
+      213
+    ],
+    "accentHex": 3092783,
+    "accentRgb": [
+      47,
+      49,
+      47
+    ],
+    "darkHex": 3158576,
+    "darkRgb": [
+      48,
+      50,
+      48
+    ],
+    "brightHex": 13688032,
+    "brightRgb": [
+      208,
+      220,
+      224
+    ],
+    "foliageHex": 4938063,
+    "barkHex": 5522747,
+    "roofHex": 13753825
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "enclosed_cargo_box",
+      "method": "composite_insulated_box"
+    },
+    {
+      "name": "dual_vertical_exhausts",
+      "method": "chrome_exhaust_stacks"
+    },
+    {
+      "name": "heavy_truck_dual_exhaust_and_axles",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.1
+    }
+  ]
+}

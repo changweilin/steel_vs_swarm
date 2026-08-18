@@ -1,69 +1,66 @@
 {
   "id": "vehicle_car_teslam3-960",
-  "sourceImage": "vehicle/car/teslam3-960.png",
-  "style": "sedan_hatchback",
+  "stem": "teslam3-960",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "sports_coupe",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.84,
   "aspectRatio": 2.286,
+  "symmetryScore": 0.84,
+  "widthProfile": [
+    0.695,
+    0.594,
+    0.898,
+    0.977,
+    0.953,
+    0.953,
+    1,
+    0.969,
+    0.914,
+    0.867
+  ],
   "colors": {
-    "primaryHex": 6967642,
+    "primaryHex": 7040119,
     "primaryRgb": [
-      106,
-      81,
-      90
+      107,
+      108,
+      119
     ],
-    "accentHex": 16645629,
+    "accentHex": 2560279,
     "accentRgb": [
-      253,
-      253,
-      253
+      39,
+      17,
+      23
     ],
-    "darkHex": 5119013,
+    "darkHex": 4790818,
     "darkRgb": [
-      78,
-      28,
-      37
+      73,
+      26,
+      34
     ],
-    "brightHex": 12303549,
+    "brightHex": 12172219,
     "brightRgb": [
+      185,
       187,
-      188,
-      189
-    ]
+      187
+    ],
+    "foliageHex": 7040119,
+    "barkHex": 7871013,
+    "roofHex": 8157826
   },
   "reconstructedFeatures": [
     {
-      "name": "three_box_profile",
-      "method": "hood_cabin_trunk_architecture"
+      "name": "aerodynamic_bodykit",
+      "method": "front_splitter_and_side_scoops"
     },
     {
-      "name": "symmetric_mirrors_and_lights",
-      "method": "bilateral_mirror_Z_axis"
+      "name": "rear_wing_spoiler",
+      "method": "carbon_downforce_wing"
     },
     {
-      "name": "mirrored_sedan_features",
+      "name": "mirrored_supercar_aerodynamics",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.8099999999999999
+      "zOffset": 0.8849999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

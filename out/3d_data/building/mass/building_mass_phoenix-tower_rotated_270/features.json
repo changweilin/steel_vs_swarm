@@ -1,35 +1,52 @@
 {
   "id": "building_mass_phoenix-tower_rotated_270",
-  "sourceImage": "building/phoenix-tower_rotated_270.jpg",
+  "stem": "phoenix-tower_rotated_270",
+  "family": "building",
+  "subpart": "mass",
   "style": "asian_pagoda_pavilion",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.781,
   "aspectRatio": 1,
+  "symmetryScore": 0.781,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 8952490,
+    "primaryHex": 13099512,
     "primaryRgb": [
-      136,
-      154,
-      170
+      199,
+      225,
+      248
     ],
-    "accentHex": 461579,
+    "accentHex": 1975330,
     "accentRgb": [
-      7,
-      11,
-      11
+      30,
+      36,
+      34
     ],
-    "darkHex": 2698795,
+    "darkHex": 2304038,
     "darkRgb": [
-      41,
-      46,
-      43
+      35,
+      40,
+      38
     ],
-    "brightHex": 12441845,
+    "brightHex": 12047604,
     "brightRgb": [
-      189,
-      216,
-      245
-    ]
+      183,
+      212,
+      244
+    ],
+    "foliageHex": 2107933,
+    "barkHex": 4997169,
+    "roofHex": 9943523
   },
   "reconstructedFeatures": [
     {
@@ -40,31 +57,5 @@
       "name": "finial_spire_sanrin",
       "method": "sacred_bronze_finial"
     }
-  ],
-  "totalParts": 23,
-  "partNames": [
-    "stone_plinth_foundation",
-    "pagoda_chamber_tier_1",
-    "pillar_1_-1_-1",
-    "pillar_1_-1_1",
-    "pillar_1_1_-1",
-    "pillar_1_1_1",
-    "curved_eaves_1",
-    "roof_slope_1",
-    "pagoda_chamber_tier_2",
-    "pillar_2_-1_-1",
-    "pillar_2_-1_1",
-    "pillar_2_1_-1",
-    "pillar_2_1_1",
-    "curved_eaves_2",
-    "roof_slope_2",
-    "pagoda_chamber_tier_3",
-    "pillar_3_-1_-1",
-    "pillar_3_-1_1",
-    "pillar_3_1_-1",
-    "pillar_3_1_1",
-    "curved_eaves_3",
-    "roof_slope_3",
-    "finial_spire_sanrin"
   ]
 }

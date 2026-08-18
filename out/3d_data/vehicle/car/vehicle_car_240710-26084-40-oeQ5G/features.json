@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_240710-26084-40-oeQ5G",
-  "sourceImage": "vehicle/car/240710-26084-40-oeQ5G.jpg",
+  "stem": "240710-26084-40-oeQ5G",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.81,
   "aspectRatio": 1.554,
+  "symmetryScore": 0.81,
+  "widthProfile": [
+    0,
+    0.367,
+    0.547,
+    0.633,
+    0.781,
+    0.812,
+    0.906,
+    0.906,
+    0.922,
+    0.727
+  ],
   "colors": {
-    "primaryHex": 8158332,
+    "primaryHex": 1381654,
     "primaryRgb": [
-      124,
-      124,
-      124
+      21,
+      21,
+      22
     ],
-    "accentHex": 16777215,
+    "accentHex": 14803169,
     "accentRgb": [
-      255,
-      255,
-      255
+      225,
+      224,
+      225
     ],
-    "darkHex": 1973790,
+    "darkHex": 1907997,
     "darkRgb": [
-      30,
-      30,
-      30
+      29,
+      29,
+      29
     ],
-    "brightHex": 15461355,
+    "brightHex": 13750482,
     "brightRgb": [
-      235,
-      235,
-      235
-    ]
+      209,
+      208,
+      210
+    ],
+    "foliageHex": 1381654,
+    "barkHex": 5781286,
+    "roofHex": 10197915
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

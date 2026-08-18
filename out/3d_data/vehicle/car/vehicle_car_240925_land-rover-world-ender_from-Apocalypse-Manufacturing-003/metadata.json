@@ -1,23 +1,21 @@
 {
   "id": "vehicle_car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003",
-  "key": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_4a03f68e",
+  "stem": "240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003",
   "family": "vehicle",
   "subpart": "car",
-  "style": "suv_crossover",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
-  "created_at": "2026-08-18T10:56:14.469Z",
+  "generated_at": "2026-08-18T13:38:04.248Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
       -2.525,
-      0.0171,
-      -0.9748
+      0.017,
+      -0.975
     ],
     "max": [
       2.535,
-      1.5661,
-      0.9748
+      1.566,
+      0.975
     ],
     "size": [
       5.06,
@@ -34,7 +32,5 @@
     "H": 1.5661440451667048,
     "R": 0.35,
     "style": "standard_passenger_sedan"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_car_176103315400__1_",
+  "stem": "176103315400 (1)",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/176103315400 (1).jpg",
+  "generated_at": "2026-08-18T13:38:04.222Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -2.599,
+      0.017,
+      -0.975
+    ],
+    "max": [
+      2.609,
+      1.711,
+      0.975
+    ],
+    "size": [
+      5.208,
+      1.694,
+      1.95
+    ],
+    "rMax": 2.785,
+    "triangles": 316,
+    "vertices": 192
+  },
+  "spec": {
+    "L": 5.1381765468833445,
+    "W": 1.92,
+    "H": 1.7112420843823912,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
+  }
+}

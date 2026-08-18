@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_0626fa11-e77d-47dd-a38c-0d5441425c53",
-  "sourceImage": "vehicle/car/0626fa11-e77d-47dd-a38c-0d5441425c53.png",
+  "stem": "0626fa11-e77d-47dd-a38c-0d5441425c53",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.803,
   "aspectRatio": 1.464,
+  "symmetryScore": 0.803,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 9995389,
+    "primaryHex": 16507346,
     "primaryRgb": [
-      152,
-      132,
-      125
+      251,
+      225,
+      210
     ],
-    "accentHex": 460553,
+    "accentHex": 2170146,
     "accentRgb": [
-      7,
-      7,
-      9
+      33,
+      29,
+      34
     ],
-    "darkHex": 2367524,
+    "darkHex": 2827818,
     "darkRgb": [
-      36,
-      32,
-      36
+      43,
+      38,
+      42
     ],
-    "brightHex": 16044736,
+    "brightHex": 16308421,
     "brightRgb": [
-      244,
-      210,
-      192
-    ]
+      248,
+      216,
+      197
+    ],
+    "foliageHex": 16507346,
+    "barkHex": 8021087,
+    "roofHex": 16570050
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

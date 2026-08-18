@@ -1,23 +1,21 @@
 {
   "id": "ship_hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3",
-  "key": "ship/hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_29b71f73",
+  "stem": "royal-caribbean-explorer-of-the-seas-01-eG_-WK3",
   "family": "ship",
   "subpart": "hull",
-  "style": "oil_tanker_bulk",
-  "symmetryMode": "symmetric",
   "source_image": "ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
-  "created_at": "2026-08-18T10:56:14.220Z",
+  "generated_at": "2026-08-18T13:38:03.957Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -25.4489,
-      -0.9794,
-      -6.0441
+      -25.449,
+      -0.979,
+      -6.044
     ],
     "max": [
       27.868,
-      18.4308,
-      6.0441
+      18.431,
+      6.044
     ],
     "size": [
       53.317,
@@ -33,7 +31,5 @@
     "W": 12.08817425803006,
     "H": 16.105928130006866,
     "style": "multipurpose_maritime_vessel"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

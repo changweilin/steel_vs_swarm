@@ -1,0 +1,35 @@
+{
+  "id": "tree_canopy_Green_baobab_at_sunny_day__Madagascar_dreamstime_xxl_46207442__1_",
+  "stem": "Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg",
+  "generated_at": "2026-08-18T13:38:04.059Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -3.687,
+      0,
+      -4.057
+    ],
+    "max": [
+      4.184,
+      11.656,
+      4.057
+    ],
+    "size": [
+      7.871,
+      11.656,
+      8.113
+    ],
+    "rMax": 5.828,
+    "triangles": 328,
+    "vertices": 186
+  },
+  "spec": {
+    "L": 10.218974593728541,
+    "W": 9.958274204623484,
+    "H": 13.008926527809567,
+    "style": "succulent_bottle_baobab"
+  }
+}

@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_250px-JR_East_E001_series_Train_Suite_Shiki-shima_20170619",
-  "sourceImage": "vehicle/train/250px-JR_East_E001_series_Train_Suite_Shiki-shima_20170619.jpg",
-  "style": "freight_wagon",
+  "stem": "250px-JR_East_E001_series_Train_Suite_Shiki-shima_20170619",
+  "family": "vehicle",
+  "subpart": "train",
+  "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.821,
   "aspectRatio": 1.506,
+  "symmetryScore": 0.821,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7106902,
+    "primaryHex": 3225120,
     "primaryRgb": [
-      108,
-      113,
-      86
+      49,
+      54,
+      32
     ],
-    "accentHex": 16711411,
+    "accentHex": 14671568,
     "accentRgb": [
-      254,
-      254,
-      243
+      223,
+      222,
+      208
     ],
-    "darkHex": 3225123,
+    "darkHex": 3225120,
     "darkRgb": [
       49,
       54,
-      35
+      32
     ],
-    "brightHex": 12765134,
+    "brightHex": 12567761,
     "brightRgb": [
-      194,
-      199,
-      206
-    ]
+      191,
+      196,
+      209
+    ],
+    "foliageHex": 5332515,
+    "barkHex": 5325615,
+    "roofHex": 11318205
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

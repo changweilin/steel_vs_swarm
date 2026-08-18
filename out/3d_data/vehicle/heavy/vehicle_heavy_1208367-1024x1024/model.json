@@ -4,21 +4,19 @@
   "subpart": "heavy",
   "style": "semi_tractor",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 10.47112993057145,
     "W": 2.6,
-    "H": 3.8772068360418097,
-    "R": 0.52,
-    "style": "heavy_cargo_freight_truck"
+    "H": 3.8772068360418097
   },
   "bounds": {
     "min": [
-      -5.1456,
-      0.0255,
+      -5.146,
+      0.025,
       -1.313
     ],
     "max": [
-      5.2356,
+      5.236,
       4,
       1.313
     ],
@@ -50,7 +48,7 @@
         0,
         0
       ],
-      "color": 4469553,
+      "color": 4272174,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -72,7 +70,7 @@
         0,
         0
       ],
-      "color": 9269615,
+      "color": 13225940,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -94,7 +92,7 @@
         0,
         0
       ],
-      "color": 4469553,
+      "color": 4272174,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -116,7 +114,7 @@
         0,
         0
       ],
-      "color": 13093582,
+      "color": 13422801,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +136,7 @@
         0,
         0
       ],
-      "color": 16709872,
+      "color": 4603451,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -161,7 +159,7 @@
         0,
         0
       ],
-      "color": 13093582,
+      "color": 13422801,
       "vertexCount": 14,
       "triangleCount": 24
     },
@@ -184,7 +182,7 @@
         0,
         0
       ],
-      "color": 4469553,
+      "color": 4272174,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -207,7 +205,7 @@
         0,
         0
       ],
-      "color": 4469553,
+      "color": 4272174,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -230,7 +228,7 @@
         0,
         0
       ],
-      "color": 4469553,
+      "color": 4272174,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -253,7 +251,7 @@
         0,
         0
       ],
-      "color": 13093582,
+      "color": 13422801,
       "vertexCount": 14,
       "triangleCount": 24
     },
@@ -276,7 +274,7 @@
         0,
         0
       ],
-      "color": 4469553,
+      "color": 4272174,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -299,7 +297,7 @@
         0,
         0
       ],
-      "color": 4469553,
+      "color": 4272174,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -322,29 +320,12 @@
         0,
         0
       ],
-      "color": 4469553,
+      "color": 4272174,
       "vertexCount": 22,
       "triangleCount": 40
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "enclosed_cargo_box",
-      "method": "composite_insulated_box"
-    },
-    {
-      "name": "dual_vertical_exhausts",
-      "method": "chrome_exhaust_stacks"
-    },
-    {
-      "name": "heavy_truck_dual_exhaust_and_axles",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.1
-    }
-  ],
   "meshData": {
-    "vertexCount": 200,
-    "triangleCount": 348,
     "vertices": [
       -4.9738,
       0.7,

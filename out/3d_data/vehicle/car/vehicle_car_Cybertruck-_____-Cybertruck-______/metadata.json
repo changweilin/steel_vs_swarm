@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_car_Cybertruck-_____-Cybertruck-______",
+  "stem": "Cybertruck-來了！限量-Cybertruck-模型台灣上架",
+  "family": "vehicle",
+  "subpart": "car",
+  "source_image": "vehicle/car/Cybertruck-來了！限量-Cybertruck-模型台灣上架.jpg",
+  "generated_at": "2026-08-18T13:38:04.279Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -2.577,
+      0.017,
+      -0.975
+    ],
+    "max": [
+      2.587,
+      1.589,
+      0.975
+    ],
+    "size": [
+      5.164,
+      1.572,
+      1.95
+    ],
+    "rMax": 2.765,
+    "triangles": 316,
+    "vertices": 192
+  },
+  "spec": {
+    "L": 5.094462500953688,
+    "W": 1.92,
+    "H": 1.588822003509575,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
+  }
+}

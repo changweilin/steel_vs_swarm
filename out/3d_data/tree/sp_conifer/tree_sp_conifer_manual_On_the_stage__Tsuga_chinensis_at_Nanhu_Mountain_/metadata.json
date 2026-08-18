@@ -1,39 +1,35 @@
 {
   "id": "tree_sp_conifer_manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_",
-  "key": "tree/sp_conifer_manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain__60a33dfb",
+  "stem": "manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_",
   "family": "tree",
   "subpart": "sp_conifer",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
   "source_image": "tree/sp_conifer/manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_conifer\\manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_.jpg",
-  "created_at": "2026-08-18T10:56:14.348Z",
+  "generated_at": "2026-08-18T13:38:04.092Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -6.0756,
-      0,
-      -6.4944
+      -5.955,
+      -0.226,
+      -6.345
     ],
     "max": [
-      5.7703,
-      17.9165,
-      6.4423
+      5.955,
+      19.135,
+      6.345
     ],
     "size": [
-      11.846,
-      17.916,
-      12.937
+      11.91,
+      19.361,
+      12.689
     ],
-    "rMax": 8.893,
-    "triangles": 152,
-    "vertices": 98
+    "rMax": 8.701,
+    "triangles": 456,
+    "vertices": 264
   },
   "spec": {
-    "L": 12.833867399099717,
-    "W": 10.87224383916991,
-    "H": 18.134813458457312,
-    "style": "gnarled_broadleaf_buttress"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+    "L": 13.833867399099717,
+    "W": 11.87224383916991,
+    "H": 19.134813458457312,
+    "style": "organic_polyhedral_broadleaf_oak"
+  }
 }

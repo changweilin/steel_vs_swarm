@@ -1,0 +1,35 @@
+{
+  "id": "tree_canopy_8bfac7d0d6571bc99bcbb78_jpg_1280_1280_3_3d6c",
+  "stem": "8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.jpg",
+  "generated_at": "2026-08-18T13:38:04.001Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -6.795,
+      -0.226,
+      -7.42
+    ],
+    "max": [
+      6.795,
+      18.496,
+      7.42
+    ],
+    "size": [
+      13.59,
+      18.722,
+      14.839
+    ],
+    "rMax": 10.061,
+    "triangles": 456,
+    "vertices": 264
+  },
+  "spec": {
+    "L": 11.304837109941253,
+    "W": 15.317959868772412,
+    "H": 18.49564354924849,
+    "style": "organic_polyhedral_broadleaf_oak"
+  }
+}

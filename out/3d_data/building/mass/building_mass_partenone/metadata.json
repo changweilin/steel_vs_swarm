@@ -1,39 +1,35 @@
 {
   "id": "building_mass_partenone",
-  "key": "building/mass_partenone_80983390",
+  "stem": "partenone",
   "family": "building",
   "subpart": "mass",
-  "style": "classical_temple",
-  "symmetryMode": "symmetric",
   "source_image": "building/partenone.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\partenone.jpg",
-  "created_at": "2026-08-18T10:56:14.123Z",
+  "generated_at": "2026-08-18T13:38:03.864Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -14.9424,
+      -23.014,
       -0.005,
-      -10.3078
+      -10.558
     ],
     "max": [
-      14.9424,
-      12.5071,
-      10.3078
+      23.014,
+      12.507,
+      10.558
     ],
     "size": [
-      29.885,
+      46.028,
       12.512,
-      20.616
+      21.116
     ],
-    "rMax": 18.153,
-    "triangles": 800,
-    "vertices": 460
+    "rMax": 25.32,
+    "triangles": 788,
+    "vertices": 454
   },
   "spec": {
-    "L": 28.084779125658045,
-    "W": 18.815594720378424,
+    "L": 30.084779125658045,
+    "W": 19.315594720378424,
     "H": 12.507133592736706,
     "style": "classical_parthenon_peristyle"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

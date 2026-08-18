@@ -1,80 +1,65 @@
 {
   "id": "building_mass_32a571b95c01a4a4a6f6da38885e83ba",
-  "sourceImage": "building/32a571b95c01a4a4a6f6da38885e83ba.jpg",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
-  "symmetryScore": 0.849,
+  "stem": "32a571b95c01a4a4a6f6da38885e83ba",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_skyscraper_tower",
+  "symmetryMode": "symmetric",
   "aspectRatio": 0.708,
+  "symmetryScore": 0.849,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    0.992,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 6449785,
+    "primaryHex": 3359338,
     "primaryRgb": [
-      98,
-      106,
-      121
+      51,
+      66,
+      106
     ],
-    "accentHex": 16184561,
+    "accentHex": 12565685,
     "accentRgb": [
-      246,
-      244,
-      241
+      191,
+      188,
+      181
     ],
-    "darkHex": 3291207,
+    "darkHex": 2962758,
     "darkRgb": [
-      50,
-      56,
-      71
+      45,
+      53,
+      70
     ],
-    "brightHex": 13354945,
+    "brightHex": 13157565,
     "brightRgb": [
-      203,
-      199,
-      193
-    ]
+      200,
+      196,
+      189
+    ],
+    "foliageHex": 2304544,
+    "barkHex": 8085845,
+    "roofHex": 4213611
   },
   "reconstructedFeatures": [
     {
-      "name": "front_facade_balconies",
-      "method": "storefront_and_residential_balconies"
+      "name": "stepped_setback_tower",
+      "method": "triple_tier_massing"
     },
     {
-      "name": "rear_fire_escape_and_utilities",
-      "method": "asymmetric_procedural_augmentation"
+      "name": "curtain_wall_ribs",
+      "method": "vertical_mullion_grid"
+    },
+    {
+      "name": "rooftop_mechanicals",
+      "method": "chillers_and_antenna"
     }
-  ],
-  "totalParts": 33,
-  "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "balcony_f6_l",
-    "balcony_f6_r",
-    "balcony_f7_l",
-    "balcony_f7_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_fire_escape_landing_f6",
-    "rear_fire_ladder_f6",
-    "rear_fire_escape_landing_f7",
-    "rear_fire_ladder_f7",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
   ]
 }

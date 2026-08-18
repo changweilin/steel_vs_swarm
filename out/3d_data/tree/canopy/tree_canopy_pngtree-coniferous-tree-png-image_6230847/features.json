@@ -1,49 +1,57 @@
 {
   "id": "tree_canopy_pngtree-coniferous-tree-png-image_6230847",
-  "sourceImage": "tree/pngtree-coniferous-tree-png-image_6230847.png",
+  "stem": "pngtree-coniferous-tree-png-image_6230847",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "conifer_pine",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.989,
   "aspectRatio": 1,
+  "symmetryScore": 0.989,
+  "widthProfile": [
+    0.07,
+    0.109,
+    0.133,
+    0.211,
+    0.25,
+    0.336,
+    0.406,
+    0.344,
+    0.047,
+    0.047
+  ],
   "colors": {
-    "primaryHex": 4681282,
+    "primaryHex": 4418073,
     "primaryRgb": [
-      71,
-      110,
-      66
+      67,
+      106,
+      25
     ],
-    "accentHex": 1253636,
+    "accentHex": 8156772,
     "accentRgb": [
-      19,
-      33,
-      4
+      124,
+      118,
+      100
     ],
-    "darkHex": 3362323,
+    "darkHex": 3164433,
     "darkRgb": [
-      51,
-      78,
-      19
+      48,
+      73,
+      17
     ],
-    "brightHex": 13161180,
+    "brightHex": 13819110,
     "brightRgb": [
-      200,
       210,
-      220
-    ]
+      220,
+      230
+    ],
+    "foliageHex": 4549403,
+    "barkHex": 6444102,
+    "roofHex": 5206821
   },
   "reconstructedFeatures": [
     {
       "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "method": "six_tiered_polyhedral_conical_canopies"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
   ]
 }

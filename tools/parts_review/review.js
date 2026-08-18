@@ -198,6 +198,42 @@ function build(phase, src, kind, seed, builder = 'beacon') {
                 geo = new gfx.THREE.BoxGeometry(...p.dimensions);
               } else if (p.type === 'cylinder') {
                 geo = new gfx.THREE.CylinderGeometry(p.radius[0], p.radius[1], p.height, p.segments || 8);
+              } else if (p.type === 'cone') {
+                const r = p.radius ? (Array.isArray(p.radius) ? p.radius[1] : p.radius) : (p.dimensions ? p.dimensions[0] / 2 : 1.0);
+                const h = p.height || (p.dimensions ? p.dimensions[1] : 2.0);
+                geo = new gfx.THREE.ConeGeometry(r, h, p.segments || 8);
+              } else if (p.type === 'sphere' || p.type === 'polyhedron_blob') {
+                const rx = p.dimensions ? p.dimensions[0] / 2 : (p.radius || 1.0);
+                const ry = p.dimensions ? p.dimensions[1] / 2 : (p.radius || 1.0);
+                const rz = p.dimensions ? p.dimensions[2] / 2 : (p.radius || 1.0);
+                geo = new gfx.THREE.SphereGeometry(rx, p.segments || 8, 6);
+                if (ry !== rx || rz !== rx) {
+                  geo.scale(1.0, ry / rx, rz / rx);
+                }
+              } else if (p.type === 'pyramid') {
+                const r = p.dimensions ? Math.max(p.dimensions[0], p.dimensions[2]) * 0.707 : 1.0;
+                const h = p.dimensions ? p.dimensions[1] : (p.height || 2.0);
+                geo = new gfx.THREE.ConeGeometry(r, h, 4);
+                geo.rotateY(Math.PI / 4);
+              } else if (p.type === 'prism') {
+                const w = p.dimensions ? p.dimensions[0] : 2.0;
+                const h = p.dimensions ? p.dimensions[1] : 2.0;
+                const d = p.dimensions ? p.dimensions[2] : 2.0;
+                const hw = w / 2, hh = h / 2, hd = d / 2;
+                geo = new gfx.THREE.BufferGeometry();
+                const v = new Float32Array([
+                  -hw, -hh, -hd,   hw, -hh, -hd,   0, hh, -hd, // 前三角
+                  -hw, -hh,  hd,   hw, -hh,  hd,   0, hh,  hd  // 後三角
+                ]);
+                const idx = [
+                  0, 1, 2,  3, 5, 4,
+                  0, 3, 4,  0, 4, 1,
+                  0, 2, 5,  0, 5, 3,
+                  1, 4, 5,  1, 5, 2
+                ];
+                geo.setAttribute('position', new gfx.THREE.BufferAttribute(v, 3));
+                geo.setIndex(idx);
+                geo.computeVertexNormals();
               }
               if (geo) {
                 const mat = new gfx.THREE.MeshStandardMaterial({

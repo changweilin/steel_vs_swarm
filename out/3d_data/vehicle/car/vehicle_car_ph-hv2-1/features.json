@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_ph-hv2-1",
-  "sourceImage": "vehicle/car/ph-hv2-1.jpg",
+  "stem": "ph-hv2-1",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.852,
   "aspectRatio": 1.676,
+  "symmetryScore": 0.852,
+  "widthProfile": [
+    0,
+    0.312,
+    0.539,
+    0.688,
+    0.75,
+    0.758,
+    0.758,
+    0.719,
+    0.43,
+    0
+  ],
   "colors": {
-    "primaryHex": 11579823,
+    "primaryHex": 13290440,
     "primaryRgb": [
-      176,
-      177,
-      175
+      202,
+      203,
+      200
     ],
-    "accentHex": 0,
+    "accentHex": 855565,
     "accentRgb": [
-      0,
-      0,
-      0
+      13,
+      14,
+      13
     ],
-    "darkHex": 2040096,
+    "darkHex": 1908766,
     "darkRgb": [
-      31,
-      33,
-      32
+      29,
+      32,
+      30
     ],
-    "brightHex": 15527147,
+    "brightHex": 13816528,
     "brightRgb": [
-      236,
-      236,
-      235
-    ]
+      210,
+      210,
+      208
+    ],
+    "foliageHex": 3093551,
+    "barkHex": 5781286,
+    "roofHex": 8356223
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

@@ -1,22 +1,20 @@
 {
   "id": "building_mass_4b36cf76-bdea-7886-fd39-5a3269b6047e",
-  "key": "building/mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_7dd14440",
+  "stem": "4b36cf76-bdea-7886-fd39-5a3269b6047e",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
   "source_image": "building/4b36cf76-bdea-7886-fd39-5a3269b6047e.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\4b36cf76-bdea-7886-fd39-5a3269b6047e.jpg",
-  "created_at": "2026-08-18T10:56:14.088Z",
+  "generated_at": "2026-08-18T13:38:03.831Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -9.0203,
+      -9.02,
       0,
       -11.079
     ],
     "max": [
-      9.0203,
-      23.7716,
+      9.02,
+      23.772,
       10.779
     ],
     "size": [
@@ -33,7 +31,5 @@
     "W": 19.157976653696497,
     "H": 23.771572442206455,
     "style": "commercial_residential_asymmetric"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

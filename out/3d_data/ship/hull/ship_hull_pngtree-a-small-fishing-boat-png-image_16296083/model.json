@@ -2,24 +2,23 @@
   "id": "ship_hull_pngtree-a-small-fishing-boat-png-image_16296083",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "tugboat_workboat",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 52.13038834210727,
     "W": 10.386915388723583,
-    "H": 14.140627145799954,
-    "style": "multipurpose_maritime_vessel"
+    "H": 14.140627145799954
   },
   "bounds": {
     "min": [
-      -24.7619,
+      -24.762,
       -0.951,
-      -5.1935
+      -5.194
     ],
     "max": [
-      27.1336,
-      17.4875,
-      5.1935
+      27.134,
+      17.488,
+      5.194
     ],
     "size": [
       51.895,
@@ -49,7 +48,7 @@
         0,
         0
       ],
-      "color": 14277080,
+      "color": 14606044,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -71,7 +70,7 @@
         0,
         -0.22
       ],
-      "color": 14277080,
+      "color": 14606044,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -93,7 +92,7 @@
         0,
         0
       ],
-      "color": 3292746,
+      "color": 3095625,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -115,7 +114,7 @@
         0,
         0
       ],
-      "color": 15658734,
+      "color": 13750991,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +137,7 @@
         0,
         0
       ],
-      "color": 858151,
+      "color": 3359053,
       "vertexCount": 18,
       "triangleCount": 32
     },
@@ -161,20 +160,12 @@
         0,
         0
       ],
-      "color": 3292746,
+      "color": 3095625,
       "vertexCount": 14,
       "triangleCount": 24
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
   "meshData": {
-    "vertexCount": 64,
-    "triangleCount": 104,
     "vertices": [
       -23.98,
       0,

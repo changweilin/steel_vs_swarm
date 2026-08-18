@@ -1,35 +1,52 @@
 {
   "id": "tree_sp_baobab_manual_Baobab_and_elephant__Tanzania",
-  "sourceImage": "tree/sp_baobab/manual_Baobab_and_elephant__Tanzania.jpg",
+  "stem": "manual_Baobab_and_elephant__Tanzania",
+  "family": "tree",
+  "subpart": "sp_baobab",
   "style": "baobab_tree",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.893,
   "aspectRatio": 1.5,
+  "symmetryScore": 0.893,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 8554633,
+    "primaryHex": 8684403,
     "primaryRgb": [
-      130,
-      136,
-      137
+      132,
+      131,
+      115
     ],
-    "accentHex": 987156,
+    "accentHex": 10665436,
     "accentRgb": [
-      15,
-      16,
-      20
+      162,
+      189,
+      220
     ],
-    "darkHex": 4208945,
+    "darkHex": 3946287,
     "darkRgb": [
-      64,
-      57,
-      49
+      60,
+      55,
+      47
     ],
-    "brightHex": 11322328,
+    "brightHex": 11911880,
     "brightRgb": [
-      172,
-      195,
-      216
-    ]
+      181,
+      194,
+      200
+    ],
+    "foliageHex": 6714448,
+    "barkHex": 6575686,
+    "roofHex": 8164026
   },
   "reconstructedFeatures": [
     {
@@ -37,20 +54,8 @@
       "method": "massive_succulent_barrel"
     },
     {
-      "name": "sparse_rosette_crown",
-      "method": "root_like_canopy_clusters"
+      "name": "polyhedral_foliage_pads",
+      "method": "faceted_dome_cushions"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "baobab_bottle_trunk",
-    "baobab_branch_1",
-    "baobab_foliage_clump_1",
-    "baobab_branch_2",
-    "baobab_foliage_clump_2",
-    "baobab_branch_3",
-    "baobab_foliage_clump_3",
-    "baobab_branch_4",
-    "baobab_foliage_clump_4"
   ]
 }

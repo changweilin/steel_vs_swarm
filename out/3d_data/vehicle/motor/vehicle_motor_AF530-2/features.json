@@ -1,35 +1,52 @@
 {
   "id": "vehicle_motor_AF530-2",
-  "sourceImage": "vehicle/motor/AF530-2.webp",
+  "stem": "AF530-2",
+  "family": "vehicle",
+  "subpart": "motor",
   "style": "standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.838,
   "aspectRatio": 1,
+  "symmetryScore": 0.838,
+  "widthProfile": [
+    0.156,
+    0.359,
+    0.344,
+    0.602,
+    0.695,
+    0.695,
+    0.82,
+    0.797,
+    0.656,
+    0.203
+  ],
   "colors": {
-    "primaryHex": 4407105,
+    "primaryHex": 14074571,
     "primaryRgb": [
-      67,
-      63,
-      65
+      214,
+      194,
+      203
     ],
-    "accentHex": 16314871,
+    "accentHex": 1710618,
     "accentRgb": [
-      248,
-      241,
-      247
+      26,
+      26,
+      26
     ],
-    "darkHex": 1184274,
+    "darkHex": 2960429,
     "darkRgb": [
-      18,
-      18,
-      18
+      45,
+      44,
+      45
     ],
-    "brightHex": 14535379,
+    "brightHex": 14337743,
     "brightRgb": [
-      221,
-      202,
-      211
-    ]
+      218,
+      198,
+      207
+    ],
+    "foliageHex": 14074571,
+    "barkHex": 6440768,
+    "roofHex": 7301996
   },
   "reconstructedFeatures": [
     {
@@ -40,15 +57,5 @@
       "name": "dual_chrome_pipes",
       "method": "staggered_exhaust_system"
     }
-  ],
-  "totalParts": 7,
-  "partNames": [
-    "motorcycle_engine_chassis",
-    "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

@@ -1,0 +1,61 @@
+{
+  "id": "building_mass_kyotoworldheritage_2_jpg",
+  "stem": "kyotoworldheritage_2.jpg",
+  "family": "building",
+  "subpart": "mass",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.498,
+  "symmetryScore": 0.822,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 6380590,
+    "primaryRgb": [
+      97,
+      92,
+      46
+    ],
+    "accentHex": 12703986,
+    "accentRgb": [
+      193,
+      216,
+      242
+    ],
+    "darkHex": 3683614,
+    "darkRgb": [
+      56,
+      53,
+      30
+    ],
+    "brightHex": 12834536,
+    "brightRgb": [
+      195,
+      214,
+      232
+    ],
+    "foliageHex": 4608289,
+    "barkHex": 7625006,
+    "roofHex": 12047088
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "flared_curved_eaves",
+      "method": "multi_tier_symmetric_roofs"
+    },
+    {
+      "name": "finial_spire_sanrin",
+      "method": "sacred_bronze_finial"
+    }
+  ]
+}

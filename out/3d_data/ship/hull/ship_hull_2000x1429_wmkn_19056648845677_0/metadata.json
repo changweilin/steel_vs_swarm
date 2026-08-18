@@ -1,23 +1,21 @@
 {
   "id": "ship_hull_2000x1429_wmkn_19056648845677_0",
-  "key": "ship/hull_2000x1429_wmkn_19056648845677_0_6e432c84",
+  "stem": "2000x1429_wmkn_19056648845677_0",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
-  "symmetryMode": "symmetric",
   "source_image": "ship/2000x1429_wmkn_19056648845677_0.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\2000x1429_wmkn_19056648845677_0.jpg",
-  "created_at": "2026-08-18T10:56:14.153Z",
+  "generated_at": "2026-08-18T13:38:03.893Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -22.8796,
-      -0.8731,
-      -6.6213
+      -22.88,
+      -0.873,
+      -6.621
     ],
     "max": [
-      25.1211,
-      17.7281,
-      6.6213
+      25.121,
+      17.728,
+      6.621
     ],
     "size": [
       48.001,
@@ -33,7 +31,5 @@
     "W": 13.242610818646526,
     "H": 14.641794460975051,
     "style": "multipurpose_maritime_vessel"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

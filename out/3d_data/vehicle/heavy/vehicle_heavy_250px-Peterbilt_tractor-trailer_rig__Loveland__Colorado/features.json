@@ -1,35 +1,52 @@
 {
-  "id": "vehicle_heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado",
-  "sourceImage": "vehicle/heavy/250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado.jpg",
-  "style": "semi_tractor",
+  "id": "vehicle_heavy_250px-Peterbilt_tractor-trailer_rig__Loveland__Colorado",
+  "stem": "250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "box_van_delivery",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.83,
   "aspectRatio": 1.25,
+  "symmetryScore": 0.83,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7956841,
+    "primaryHex": 6246736,
     "primaryRgb": [
-      121,
-      105,
-      105
+      95,
+      81,
+      80
     ],
-    "accentHex": 16777215,
+    "accentHex": 16448251,
     "accentRgb": [
-      255,
-      255,
-      255
+      250,
+      250,
+      251
     ],
-    "darkHex": 4075568,
+    "darkHex": 3550765,
     "darkRgb": [
-      62,
-      48,
-      48
+      54,
+      46,
+      45
     ],
-    "brightHex": 15460841,
+    "brightHex": 15855857,
     "brightRgb": [
-      235,
-      233,
-      233
-    ]
+      241,
+      240,
+      241
+    ],
+    "foliageHex": 2436132,
+    "barkHex": 8277328,
+    "roofHex": 14604248
   },
   "reconstructedFeatures": [
     {
@@ -45,21 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.1
     }
-  ],
-  "totalParts": 13,
-  "partNames": [
-    "freight_chassis_frame",
-    "freight_cab_body",
-    "cab_windshield",
-    "freight_cargo_box",
-    "rear_rollup_door",
-    "exhaust_stack_left",
-    "steer_wheel_left",
-    "drive_wheel_1_left",
-    "drive_wheel_2_left",
-    "exhaust_stack_right",
-    "steer_wheel_right",
-    "drive_wheel_1_right",
-    "drive_wheel_2_right"
   ]
 }

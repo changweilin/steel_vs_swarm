@@ -1,22 +1,20 @@
 {
   "id": "ship_hull_Disney_20Adventure_20ship_201",
-  "key": "ship/hull_Disney%20Adventure%20ship%201_1dd4290a",
+  "stem": "Disney%20Adventure%20ship%201",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
-  "symmetryMode": "symmetric",
   "source_image": "ship/Disney%20Adventure%20ship%201.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\Disney%20Adventure%20ship%201.jpg",
-  "created_at": "2026-08-18T10:56:14.200Z",
+  "generated_at": "2026-08-18T13:38:03.937Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -22.8856,
-      -0.8734,
+      -22.886,
+      -0.873,
       -6.72
     ],
     "max": [
-      25.1275,
-      16.4803,
+      25.128,
+      16.48,
       6.72
     ],
     "size": [
@@ -33,7 +31,5 @@
     "W": 13.439940489814603,
     "H": 12.042298008697642,
     "style": "multipurpose_maritime_vessel"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

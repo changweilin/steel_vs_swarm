@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_LNG_____________________FGSS____________",
+  "stem": "LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方",
+  "family": "ship",
+  "subpart": "hull",
+  "source_image": "ship/LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方.webp",
+  "generated_at": "2026-08-18T13:38:03.946Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -22.996,
+      -0.878,
+      -5.215
+    ],
+    "max": [
+      25.245,
+      17.115,
+      5.215
+    ],
+    "size": [
+      48.241,
+      17.993,
+      10.429
+    ],
+    "rMax": 25.778,
+    "triangles": 104,
+    "vertices": 64
+  },
+  "spec": {
+    "L": 48.41176470588235,
+    "W": 10.429457541771573,
+    "H": 13.364705882352942,
+    "style": "multipurpose_maritime_vessel"
+  }
+}

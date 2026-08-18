@@ -4,22 +4,21 @@
   "subpart": "hull",
   "style": "aircraft_carrier",
   "symmetryMode": "asymmetric",
-  "spec": {
+  "dimensions": {
     "L": 79.01419089036392,
     "W": 20.592317082475013,
-    "H": 19.51110093842985,
-    "style": "aircraft_carrier_flight_deck"
+    "H": 19.51110093842985
   },
   "bounds": {
     "min": [
       -38.717,
-      -1.4495,
-      -10.2962
+      -1.45,
+      -10.296
     ],
     "max": [
-      41.0503,
+      41.05,
       23.38,
-      10.2962
+      10.296
     ],
     "size": [
       79.767,
@@ -49,7 +48,7 @@
         0,
         0
       ],
-      "color": 1719651,
+      "color": 1258843,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -71,7 +70,7 @@
         0,
         -0.25
       ],
-      "color": 1719651,
+      "color": 1258843,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -93,7 +92,7 @@
         0,
         0
       ],
-      "color": 197907,
+      "color": 1189962,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -115,7 +114,7 @@
         0,
         0
       ],
-      "color": 13359076,
+      "color": 13096419,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -137,7 +136,7 @@
         0,
         0
       ],
-      "color": 1719651,
+      "color": 1258843,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -160,24 +159,12 @@
         0,
         0
       ],
-      "color": 1719651,
+      "color": 1258843,
       "vertexCount": 14,
       "triangleCount": 24
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "angled_flight_deck",
-      "method": "full_length_cantilever_deck"
-    },
-    {
-      "name": "starboard_island_tower",
-      "method": "asymmetric_command_bridge"
-    }
-  ],
   "meshData": {
-    "vertexCount": 54,
-    "triangleCount": 84,
     "vertices": [
       -37.1367,
       0,

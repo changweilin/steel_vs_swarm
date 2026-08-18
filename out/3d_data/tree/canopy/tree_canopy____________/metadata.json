@@ -1,0 +1,35 @@
+{
+  "id": "tree_canopy____________",
+  "stem": "臺灣杉照片提供／陳建帆",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/臺灣杉照片提供／陳建帆.jpg",
+  "generated_at": "2026-08-18T13:38:04.102Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -6.284,
+      -0.226,
+      -6.782
+    ],
+    "max": [
+      6.284,
+      21.409,
+      6.782
+    ],
+    "size": [
+      12.568,
+      21.635,
+      13.563
+    ],
+    "rMax": 9.245,
+    "triangles": 456,
+    "vertices": 264
+  },
+  "spec": {
+    "L": 15.218242160677502,
+    "W": 13.273250934615092,
+    "H": 21.408773937590603,
+    "style": "organic_polyhedral_broadleaf_oak"
+  }
+}

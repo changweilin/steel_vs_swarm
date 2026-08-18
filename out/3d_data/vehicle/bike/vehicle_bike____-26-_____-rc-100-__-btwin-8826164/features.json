@@ -1,0 +1,65 @@
+{
+  "id": "vehicle_bike____-26-_____-rc-100-__-btwin-8826164",
+  "stem": "兒童款-26-彎把公路車-rc-100-白色-btwin-8826164",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_cruiser",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1,
+  "symmetryScore": 0.956,
+  "widthProfile": [
+    0,
+    0,
+    0.148,
+    0.344,
+    0.719,
+    0.695,
+    0.734,
+    0.688,
+    0,
+    0
+  ],
+  "colors": {
+    "primaryHex": 14539996,
+    "primaryRgb": [
+      221,
+      220,
+      220
+    ],
+    "accentHex": 3420979,
+    "accentRgb": [
+      52,
+      51,
+      51
+    ],
+    "darkHex": 3355443,
+    "darkRgb": [
+      51,
+      51,
+      51
+    ],
+    "brightHex": 14013908,
+    "brightRgb": [
+      213,
+      213,
+      212
+    ],
+    "foliageHex": 14539996,
+    "barkHex": 5781286,
+    "roofHex": 14539996
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "tubular_truss_geometry"
+    },
+    {
+      "name": "visible_spoked_wheels",
+      "method": "dual_wheel_rims_and_hubs"
+    },
+    {
+      "name": "drivetrain_and_saddle",
+      "method": "crankset_pedals_seatpost"
+    }
+  ]
+}

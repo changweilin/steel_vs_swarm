@@ -1,23 +1,21 @@
 {
   "id": "vehicle_car_250px-Honda-TN360",
-  "key": "vehicle/car_250px-Honda-TN360_5f314df2",
+  "stem": "250px-Honda-TN360",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/250px-Honda-TN360.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\250px-Honda-TN360.jpg",
-  "created_at": "2026-08-18T10:56:14.476Z",
+  "generated_at": "2026-08-18T13:38:04.255Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -2.4351,
-      0.0171,
-      -0.9748
+      -2.435,
+      0.017,
+      -0.975
     ],
     "max": [
-      2.4451,
-      1.6661,
-      0.9748
+      2.445,
+      1.666,
+      0.975
     ],
     "size": [
       4.88,
@@ -34,7 +32,5 @@
     "H": 1.6660631723506523,
     "R": 0.35,
     "style": "standard_passenger_sedan"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

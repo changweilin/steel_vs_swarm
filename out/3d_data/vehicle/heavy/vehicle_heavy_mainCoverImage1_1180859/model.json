@@ -4,21 +4,19 @@
   "subpart": "heavy",
   "style": "semi_tractor",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 10.075349050125887,
     "W": 2.6,
-    "H": 3.9397611963073165,
-    "R": 0.52,
-    "style": "heavy_cargo_freight_truck"
+    "H": 3.9397611963073165
   },
   "bounds": {
     "min": [
-      -4.9477,
-      0.0255,
+      -4.948,
+      0.025,
       -1.313
     ],
     "max": [
-      5.0377,
+      5.038,
       4,
       1.313
     ],
@@ -72,7 +70,7 @@
         0,
         0
       ],
-      "color": 12698316,
+      "color": 1711703,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -116,7 +114,7 @@
         0,
         0
       ],
-      "color": 16579830,
+      "color": 14935192,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +136,7 @@
         0,
         0
       ],
-      "color": 263173,
+      "color": 15593325,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -161,7 +159,7 @@
         0,
         0
       ],
-      "color": 16579830,
+      "color": 14935192,
       "vertexCount": 14,
       "triangleCount": 24
     },
@@ -253,7 +251,7 @@
         0,
         0
       ],
-      "color": 16579830,
+      "color": 14935192,
       "vertexCount": 14,
       "triangleCount": 24
     },
@@ -327,24 +325,7 @@
       "triangleCount": 40
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "enclosed_cargo_box",
-      "method": "composite_insulated_box"
-    },
-    {
-      "name": "dual_vertical_exhausts",
-      "method": "chrome_exhaust_stacks"
-    },
-    {
-      "name": "heavy_truck_dual_exhaust_and_axles",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.1
-    }
-  ],
   "meshData": {
-    "vertexCount": 200,
-    "triangleCount": 348,
     "vertices": [
       -4.7858,
       0.7,

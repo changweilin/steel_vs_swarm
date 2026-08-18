@@ -2,24 +2,22 @@
   "id": "vehicle_motor__covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c",
   "family": "vehicle",
   "subpart": "motor",
-  "style": "standard_motor",
+  "style": "scooter_moped",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 2.15,
     "W": 0.82,
-    "H": 1.2818226901655603,
-    "R": 0.29,
-    "style": "cruiser_scooter_motorcycle"
+    "H": 1.2818226901655603
   },
   "bounds": {
     "min": [
       -0.97,
-      0.0142,
+      0.014,
       -0.41
     ],
     "max": [
       1.04,
-      1.1918,
+      1.192,
       0.41
     ],
     "size": [
@@ -50,7 +48,7 @@
         0,
         0
       ],
-      "color": 2039575,
+      "color": 5066056,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -72,7 +70,7 @@
         0,
         0.1
       ],
-      "color": 15854528,
+      "color": 12896846,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -94,7 +92,7 @@
         0,
         0
       ],
-      "color": 789515,
+      "color": 3026219,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -116,7 +114,7 @@
         0,
         0
       ],
-      "color": 13817692,
+      "color": 13620312,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -139,7 +137,7 @@
         0,
         1.571
       ],
-      "color": 13817692,
+      "color": 13620312,
       "vertexCount": 18,
       "triangleCount": 32
     },
@@ -162,7 +160,7 @@
         0,
         0
       ],
-      "color": 789515,
+      "color": 3026219,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -185,24 +183,12 @@
         0,
         0
       ],
-      "color": 789515,
+      "color": 3026219,
       "vertexCount": 22,
       "triangleCount": 40
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
-    }
-  ],
   "meshData": {
-    "vertexCount": 94,
-    "triangleCount": 160,
     "vertices": [
       -0.6,
       0.295,

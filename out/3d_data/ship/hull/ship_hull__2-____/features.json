@@ -1,0 +1,57 @@
+{
+  "id": "ship_hull__2-____",
+  "stem": "圖2-超日王號",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.5,
+  "symmetryScore": 0.866,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    0.703,
+    0.766,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 7508143,
+    "primaryRgb": [
+      114,
+      144,
+      175
+    ],
+    "accentHex": 1254718,
+    "accentRgb": [
+      19,
+      37,
+      62
+    ],
+    "darkHex": 1721194,
+    "darkRgb": [
+      26,
+      67,
+      106
+    ],
+    "brightHex": 13094093,
+    "brightRgb": [
+      199,
+      204,
+      205
+    ],
+    "foliageHex": 7508143,
+    "barkHex": 5781286,
+    "roofHex": 7509434
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "streamlined_hull_superstructure",
+      "method": "terraced_decks_and_masts"
+    }
+  ]
+}

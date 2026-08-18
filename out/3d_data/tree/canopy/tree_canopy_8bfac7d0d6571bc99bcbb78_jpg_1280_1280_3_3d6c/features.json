@@ -1,0 +1,61 @@
+{
+  "id": "tree_canopy_8bfac7d0d6571bc99bcbb78_jpg_1280_1280_3_3d6c",
+  "stem": "8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 0.75,
+  "symmetryScore": 0.857,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 10732263,
+    "primaryRgb": [
+      163,
+      194,
+      231
+    ],
+    "accentHex": 4274965,
+    "accentRgb": [
+      65,
+      59,
+      21
+    ],
+    "darkHex": 3551506,
+    "darkRgb": [
+      54,
+      49,
+      18
+    ],
+    "brightHex": 10797792,
+    "brightRgb": [
+      164,
+      194,
+      224
+    ],
+    "foliageHex": 5399604,
+    "barkHex": 8285228,
+    "roofHex": 9873070
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "fluted_buttress_roots",
+      "method": "organic_root_flare_spread"
+    },
+    {
+      "name": "polyhedral_canopy_cloud_cluster",
+      "method": "eight_faceted_dome_blobs"
+    }
+  ]
+}

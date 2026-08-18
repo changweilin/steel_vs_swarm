@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station",
-  "sourceImage": "vehicle/train/330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station.jpg",
+  "stem": "330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station",
+  "family": "vehicle",
+  "subpart": "train",
   "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.713,
   "aspectRatio": 1.5,
+  "symmetryScore": 0.713,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    0.992,
+    1,
+    0.992,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 8026238,
+    "primaryHex": 11707800,
     "primaryRgb": [
-      122,
-      120,
-      126
+      178,
+      165,
+      152
     ],
-    "accentHex": 16644584,
+    "accentHex": 3024934,
     "accentRgb": [
-      253,
-      249,
-      232
+      46,
+      40,
+      38
     ],
-    "darkHex": 2370628,
+    "darkHex": 2501693,
     "darkRgb": [
-      36,
+      38,
       44,
-      68
+      61
     ],
-    "brightHex": 13947603,
+    "brightHex": 13881808,
     "brightRgb": [
-      212,
-      210,
-      211
-    ]
+      211,
+      209,
+      208
+    ],
+    "foliageHex": 3884838,
+    "barkHex": 5587248,
+    "roofHex": 11513259
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

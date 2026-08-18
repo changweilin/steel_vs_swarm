@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_trainticket25759751_m",
-  "sourceImage": "vehicle/train/trainticket25759751_m.jpg",
-  "style": "freight_wagon",
+  "stem": "trainticket25759751_m",
+  "family": "vehicle",
+  "subpart": "train",
+  "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.818,
   "aspectRatio": 1.74,
+  "symmetryScore": 0.818,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 6317902,
+    "primaryHex": 6317642,
     "primaryRgb": [
       96,
-      103,
-      78
+      102,
+      74
     ],
-    "accentHex": 16645630,
+    "accentHex": 16382455,
     "accentRgb": [
-      253,
-      253,
-      254
+      249,
+      249,
+      247
     ],
-    "darkHex": 2308402,
+    "darkHex": 2569518,
     "darkRgb": [
-      35,
-      57,
-      50
+      39,
+      53,
+      46
     ],
-    "brightHex": 15058831,
+    "brightHex": 15456180,
     "brightRgb": [
-      229,
-      199,
-      143
-    ]
+      235,
+      215,
+      180
+    ],
+    "foliageHex": 4219208,
+    "barkHex": 8739908,
+    "roofHex": 13089430
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

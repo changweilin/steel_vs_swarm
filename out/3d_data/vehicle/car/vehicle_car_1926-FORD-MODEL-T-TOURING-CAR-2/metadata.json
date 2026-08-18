@@ -1,23 +1,21 @@
 {
   "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2",
-  "key": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d",
+  "stem": "1926-FORD-MODEL-T-TOURING-CAR-2",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/1926-FORD-MODEL-T-TOURING-CAR-2.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\1926-FORD-MODEL-T-TOURING-CAR-2.jpg",
-  "created_at": "2026-08-18T10:56:14.449Z",
+  "generated_at": "2026-08-18T13:38:04.229Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -2.4474,
-      0.0171,
-      -0.9748
+      -2.447,
+      0.017,
+      -0.975
     ],
     "max": [
-      2.4574,
-      1.7112,
-      0.9748
+      2.457,
+      1.711,
+      0.975
     ],
     "size": [
       4.905,
@@ -34,7 +32,5 @@
     "H": 1.7111718928816664,
     "R": 0.35,
     "style": "standard_passenger_sedan"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

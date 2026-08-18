@@ -1,35 +1,52 @@
 {
   "id": "vehicle_heavy_long-haul-semi-truck-on-260nw-2742073731",
-  "sourceImage": "vehicle/heavy/long-haul-semi-truck-on-260nw-2742073731.jpg",
-  "style": "semi_tractor",
+  "stem": "long-haul-semi-truck-on-260nw-2742073731",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "box_van_delivery",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.77,
   "aspectRatio": 1.389,
+  "symmetryScore": 0.77,
+  "widthProfile": [
+    0.852,
+    0.938,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 6775160,
+    "primaryHex": 1382442,
     "primaryRgb": [
-      103,
-      97,
-      120
+      21,
+      24,
+      42
     ],
-    "accentHex": 16051700,
+    "accentHex": 16184566,
     "accentRgb": [
+      246,
       244,
-      237,
-      244
+      246
     ],
-    "darkHex": 2171445,
+    "darkHex": 2039859,
     "darkRgb": [
-      33,
-      34,
-      53
+      31,
+      32,
+      51
     ],
-    "brightHex": 13879517,
+    "brightHex": 14274273,
     "brightRgb": [
-      211,
-      200,
-      221
-    ]
+      217,
+      206,
+      225
+    ],
+    "foliageHex": 1382442,
+    "barkHex": 7624772,
+    "roofHex": 10065087
   },
   "reconstructedFeatures": [
     {
@@ -45,21 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.1
     }
-  ],
-  "totalParts": 13,
-  "partNames": [
-    "freight_chassis_frame",
-    "freight_cab_body",
-    "cab_windshield",
-    "freight_cargo_box",
-    "rear_rollup_door",
-    "exhaust_stack_left",
-    "steer_wheel_left",
-    "drive_wheel_1_left",
-    "drive_wheel_2_left",
-    "exhaust_stack_right",
-    "steer_wheel_right",
-    "drive_wheel_1_right",
-    "drive_wheel_2_right"
   ]
 }

@@ -1,24 +1,22 @@
 {
-  "id": "vehicle_heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado",
+  "id": "vehicle_heavy_250px-Peterbilt_tractor-trailer_rig__Loveland__Colorado",
   "family": "vehicle",
   "subpart": "heavy",
-  "style": "semi_tractor",
+  "style": "box_van_delivery",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 10.881445029373618,
     "W": 2.6,
-    "H": 3.997768368047608,
-    "R": 0.52,
-    "style": "heavy_cargo_freight_truck"
+    "H": 3.997768368047608
   },
   "bounds": {
     "min": [
-      -5.3507,
-      0.0255,
+      -5.351,
+      0.025,
       -1.313
     ],
     "max": [
-      5.4407,
+      5.441,
       4,
       1.313
     ],
@@ -50,7 +48,7 @@
         0,
         0
       ],
-      "color": 4075568,
+      "color": 3550765,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -72,7 +70,7 @@
         0,
         0
       ],
-      "color": 7956841,
+      "color": 6246736,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -94,7 +92,7 @@
         0,
         0
       ],
-      "color": 4075568,
+      "color": 3550765,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -116,7 +114,7 @@
         0,
         0
       ],
-      "color": 15460841,
+      "color": 15855857,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +136,7 @@
         0,
         0
       ],
-      "color": 16777215,
+      "color": 16448251,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -161,7 +159,7 @@
         0,
         0
       ],
-      "color": 15460841,
+      "color": 15855857,
       "vertexCount": 14,
       "triangleCount": 24
     },
@@ -184,7 +182,7 @@
         0,
         0
       ],
-      "color": 4075568,
+      "color": 3550765,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -207,7 +205,7 @@
         0,
         0
       ],
-      "color": 4075568,
+      "color": 3550765,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -230,7 +228,7 @@
         0,
         0
       ],
-      "color": 4075568,
+      "color": 3550765,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -253,7 +251,7 @@
         0,
         0
       ],
-      "color": 15460841,
+      "color": 15855857,
       "vertexCount": 14,
       "triangleCount": 24
     },
@@ -276,7 +274,7 @@
         0,
         0
       ],
-      "color": 4075568,
+      "color": 3550765,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -299,7 +297,7 @@
         0,
         0
       ],
-      "color": 4075568,
+      "color": 3550765,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -322,29 +320,12 @@
         0,
         0
       ],
-      "color": 4075568,
+      "color": 3550765,
       "vertexCount": 22,
       "triangleCount": 40
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "enclosed_cargo_box",
-      "method": "composite_insulated_box"
-    },
-    {
-      "name": "dual_vertical_exhausts",
-      "method": "chrome_exhaust_stacks"
-    },
-    {
-      "name": "heavy_truck_dual_exhaust_and_axles",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.1
-    }
-  ],
   "meshData": {
-    "vertexCount": 200,
-    "triangleCount": 348,
     "vertices": [
       -5.1687,
       0.7,

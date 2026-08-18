@@ -1,35 +1,52 @@
 {
   "id": "vehicle_heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179",
-  "sourceImage": "vehicle/heavy/big-truck-semitrailer-mockup-transportation-260nw-2623868179.jpg",
-  "style": "semi_tractor",
+  "stem": "big-truck-semitrailer-mockup-transportation-260nw-2623868179",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "box_van_delivery",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.87,
   "aspectRatio": 1.393,
+  "symmetryScore": 0.87,
+  "widthProfile": [
+    1,
+    1,
+    0.922,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7637910,
+    "primaryHex": 2833965,
     "primaryRgb": [
-      116,
-      139,
-      150
+      43,
+      62,
+      45
     ],
-    "accentHex": 132615,
+    "accentHex": 15264239,
     "accentRgb": [
-      2,
-      6,
-      7
+      232,
+      233,
+      239
     ],
-    "darkHex": 2308398,
+    "darkHex": 2242346,
     "darkRgb": [
-      35,
-      57,
-      46
+      34,
+      55,
+      42
     ],
-    "brightHex": 12768233,
+    "brightHex": 14409961,
     "brightRgb": [
-      194,
-      211,
+      219,
+      224,
       233
-    ]
+    ],
+    "foliageHex": 3096868,
+    "barkHex": 5781286,
+    "roofHex": 2919115
   },
   "reconstructedFeatures": [
     {
@@ -45,21 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.1
     }
-  ],
-  "totalParts": 13,
-  "partNames": [
-    "freight_chassis_frame",
-    "freight_cab_body",
-    "cab_windshield",
-    "freight_cargo_box",
-    "rear_rollup_door",
-    "exhaust_stack_left",
-    "steer_wheel_left",
-    "drive_wheel_1_left",
-    "drive_wheel_2_left",
-    "exhaust_stack_right",
-    "steer_wheel_right",
-    "drive_wheel_1_right",
-    "drive_wheel_2_right"
   ]
 }

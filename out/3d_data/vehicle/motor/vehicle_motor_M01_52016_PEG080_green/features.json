@@ -1,35 +1,52 @@
 {
   "id": "vehicle_motor_M01_52016_PEG080_green",
-  "sourceImage": "vehicle/motor/M01_52016_PEG080_green.jpg",
+  "stem": "M01_52016_PEG080_green",
+  "family": "vehicle",
+  "subpart": "motor",
   "style": "standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.812,
   "aspectRatio": 1,
+  "symmetryScore": 0.812,
+  "widthProfile": [
+    0.484,
+    0.391,
+    0.547,
+    0.586,
+    0.609,
+    0.617,
+    0.656,
+    0.688,
+    0.633,
+    0.453
+  ],
   "colors": {
-    "primaryHex": 10198682,
+    "primaryHex": 2105890,
     "primaryRgb": [
-      155,
-      158,
-      154
+      32,
+      34,
+      34
     ],
-    "accentHex": 263172,
+    "accentHex": 14803683,
     "accentRgb": [
-      4,
-      4,
-      4
+      225,
+      226,
+      227
     ],
-    "darkHex": 2434598,
+    "darkHex": 2237476,
     "darkRgb": [
-      37,
-      38,
-      38
+      34,
+      36,
+      36
     ],
-    "brightHex": 15922162,
+    "brightHex": 13225419,
     "brightRgb": [
-      242,
-      243,
-      242
-    ]
+      201,
+      205,
+      203
+    ],
+    "foliageHex": 5331527,
+    "barkHex": 5781286,
+    "roofHex": 7567477
   },
   "reconstructedFeatures": [
     {
@@ -40,15 +57,5 @@
       "name": "dual_chrome_pipes",
       "method": "staggered_exhaust_system"
     }
-  ],
-  "totalParts": 7,
-  "partNames": [
-    "motorcycle_engine_chassis",
-    "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

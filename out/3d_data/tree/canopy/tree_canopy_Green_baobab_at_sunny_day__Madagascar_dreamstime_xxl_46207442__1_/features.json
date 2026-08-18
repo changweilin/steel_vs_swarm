@@ -1,0 +1,61 @@
+{
+  "id": "tree_canopy_Green_baobab_at_sunny_day__Madagascar_dreamstime_xxl_46207442__1_",
+  "stem": "Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 1.5,
+  "symmetryScore": 0.868,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 4672035,
+    "primaryRgb": [
+      71,
+      74,
+      35
+    ],
+    "accentHex": 12046564,
+    "accentRgb": [
+      183,
+      208,
+      228
+    ],
+    "darkHex": 3880481,
+    "darkRgb": [
+      59,
+      54,
+      33
+    ],
+    "brightHex": 10864612,
+    "brightRgb": [
+      165,
+      199,
+      228
+    ],
+    "foliageHex": 6321965,
+    "barkHex": 5586734,
+    "roofHex": 9282721
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "swollen_bottle_trunk",
+      "method": "massive_succulent_barrel"
+    },
+    {
+      "name": "polyhedral_foliage_pads",
+      "method": "faceted_dome_cushions"
+    }
+  ]
+}

@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_206_1_l",
-  "sourceImage": "vehicle/train/206_1_l.jpg",
-  "style": "freight_wagon",
+  "stem": "206_1_l",
+  "family": "vehicle",
+  "subpart": "train",
+  "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.786,
   "aspectRatio": 1.501,
+  "symmetryScore": 0.786,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7636620,
+    "primaryHex": 12360830,
     "primaryRgb": [
-      116,
-      134,
-      140
+      188,
+      156,
+      126
     ],
-    "accentHex": 16777215,
+    "accentHex": 937345,
     "accentRgb": [
-      255,
-      255,
-      255
+      14,
+      77,
+      129
     ],
-    "darkHex": 1198195,
+    "darkHex": 1198451,
     "darkRgb": [
       18,
-      72,
+      73,
       115
     ],
-    "brightHex": 13489881,
+    "brightHex": 13095381,
     "brightRgb": [
-      205,
-      214,
-      217
-    ]
+      199,
+      209,
+      213
+    ],
+    "foliageHex": 5143871,
+    "barkHex": 10255459,
+    "roofHex": 9620973
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

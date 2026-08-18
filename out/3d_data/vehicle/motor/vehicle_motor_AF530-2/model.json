@@ -4,22 +4,20 @@
   "subpart": "motor",
   "style": "standard_motor",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 2.15,
     "W": 0.82,
-    "H": 1.2543274586099031,
-    "R": 0.29,
-    "style": "cruiser_scooter_motorcycle"
+    "H": 1.2543274586099031
   },
   "bounds": {
     "min": [
       -0.97,
-      0.0142,
+      0.014,
       -0.41
     ],
     "max": [
       1.04,
-      1.1643,
+      1.164,
       0.41
     ],
     "size": [
@@ -50,7 +48,7 @@
         0,
         0
       ],
-      "color": 4407105,
+      "color": 14074571,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -72,7 +70,7 @@
         0,
         0.1
       ],
-      "color": 16314871,
+      "color": 1710618,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -94,7 +92,7 @@
         0,
         0
       ],
-      "color": 1184274,
+      "color": 2960429,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -116,7 +114,7 @@
         0,
         0
       ],
-      "color": 14535379,
+      "color": 14337743,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -139,7 +137,7 @@
         0,
         1.571
       ],
-      "color": 14535379,
+      "color": 14337743,
       "vertexCount": 18,
       "triangleCount": 32
     },
@@ -162,7 +160,7 @@
         0,
         0
       ],
-      "color": 1184274,
+      "color": 2960429,
       "vertexCount": 22,
       "triangleCount": 40
     },
@@ -185,24 +183,12 @@
         0,
         0
       ],
-      "color": 1184274,
+      "color": 2960429,
       "vertexCount": 22,
       "triangleCount": 40
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
-    }
-  ],
   "meshData": {
-    "vertexCount": 94,
-    "triangleCount": 160,
     "vertices": [
       -0.6,
       0.295,

@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_series-better-car",
-  "sourceImage": "vehicle/car/series-better-car.png",
+  "stem": "series-better-car",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.888,
   "aspectRatio": 1.859,
+  "symmetryScore": 0.888,
+  "widthProfile": [
+    0,
+    0.375,
+    0.508,
+    0.789,
+    0.852,
+    0.875,
+    0.875,
+    0.898,
+    0.852,
+    0.695
+  ],
   "colors": {
-    "primaryHex": 7095615,
+    "primaryHex": 1052174,
     "primaryRgb": [
-      108,
-      69,
-      63
+      16,
+      14,
+      14
     ],
-    "accentHex": 16050666,
+    "accentHex": 15703709,
     "accentRgb": [
-      244,
-      233,
-      234
+      239,
+      158,
+      157
     ],
-    "darkHex": 3677213,
+    "darkHex": 3152410,
     "darkRgb": [
-      56,
-      28,
-      29
+      48,
+      26,
+      26
     ],
-    "brightHex": 16364209,
+    "brightHex": 16232623,
     "brightRgb": [
-      249,
-      178,
-      177
-    ]
+      247,
+      176,
+      175
+    ],
+    "foliageHex": 2635817,
+    "barkHex": 8923691,
+    "roofHex": 7824228
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

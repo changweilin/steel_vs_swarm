@@ -1,0 +1,37 @@
+{
+  "id": "ship_hull_LNG_____________________FGSS____________",
+  "stem": "LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "generic",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1.2,
+  "symmetryScore": 0.85,
+  "widthProfile": [
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5,
+    0.5
+  ],
+  "colors": {
+    "primaryHex": 8947848,
+    "accentHex": 3368601,
+    "darkHex": 2236962,
+    "brightHex": 13421772,
+    "roofHex": 10502192,
+    "foliageHex": 3046706,
+    "barkHex": 6111287
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "streamlined_hull_superstructure",
+      "method": "terraced_decks_and_masts"
+    }
+  ]
+}

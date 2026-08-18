@@ -1,49 +1,57 @@
 {
   "id": "ship_hull_1802",
-  "sourceImage": "ship/1802.jpg",
+  "stem": "1802",
+  "family": "ship",
+  "subpart": "hull",
   "style": "general_cargo_ship",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.907,
   "aspectRatio": 1.333,
+  "symmetryScore": 0.907,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.984,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7837100,
+    "primaryHex": 7908570,
     "primaryRgb": [
-      119,
-      149,
-      172
+      120,
+      172,
+      218
     ],
-    "accentHex": 204083,
+    "accentHex": 1257805,
     "accentRgb": [
-      3,
-      29,
-      51
+      19,
+      49,
+      77
     ],
-    "darkHex": 1915476,
+    "darkHex": 1652562,
     "darkRgb": [
-      29,
-      58,
-      84
+      25,
+      55,
+      82
     ],
-    "brightHex": 11652318,
+    "brightHex": 11389662,
     "brightRgb": [
-      177,
-      204,
+      173,
+      202,
       222
-    ]
+    ],
+    "foliageHex": 7908570,
+    "barkHex": 5781286,
+    "roofHex": 7777242
   },
   "reconstructedFeatures": [
     {
       "name": "streamlined_hull_superstructure",
       "method": "terraced_decks_and_masts"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
-    "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
   ]
 }

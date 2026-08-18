@@ -1,0 +1,57 @@
+{
+  "id": "tree_canopy_1_____________________________________________jpg",
+  "stem": "1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "shrub_bush_hedge",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 1.495,
+  "symmetryScore": 0.856,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 12508668,
+    "primaryRgb": [
+      190,
+      221,
+      252
+    ],
+    "accentHex": 3226396,
+    "accentRgb": [
+      49,
+      59,
+      28
+    ],
+    "darkHex": 2962970,
+    "darkRgb": [
+      45,
+      54,
+      26
+    ],
+    "brightHex": 13097686,
+    "brightRgb": [
+      199,
+      218,
+      214
+    ],
+    "foliageHex": 6519351,
+    "barkHex": 5260075,
+    "roofHex": 10797769
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "ground_multi_dome_mounds",
+      "method": "overlapping_polyhedral_mounds"
+    }
+  ]
+}

@@ -1,35 +1,52 @@
 {
   "id": "building_mass_155577510",
-  "sourceImage": "building/155577510.jpg",
+  "stem": "155577510",
+  "family": "building",
+  "subpart": "mass",
   "style": "commercial_residential",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.913,
   "aspectRatio": 1,
+  "symmetryScore": 0.913,
+  "widthProfile": [
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.438,
+    0
+  ],
   "colors": {
-    "primaryHex": 9735302,
+    "primaryHex": 2828844,
     "primaryRgb": [
-      148,
-      140,
-      134
+      43,
+      42,
+      44
     ],
-    "accentHex": 787976,
+    "accentHex": 16045996,
     "accentRgb": [
-      12,
-      6,
-      8
+      244,
+      215,
+      172
     ],
-    "darkHex": 3419437,
+    "darkHex": 3222829,
     "darkRgb": [
-      52,
+      49,
       45,
       45
     ],
-    "brightHex": 16117734,
+    "brightHex": 14930356,
     "brightRgb": [
-      245,
-      239,
-      230
-    ]
+      227,
+      209,
+      180
+    ],
+    "foliageHex": 4937793,
+    "barkHex": 7554873,
+    "roofHex": 3421238
   },
   "reconstructedFeatures": [
     {
@@ -40,49 +57,5 @@
       "name": "rear_fire_escape_and_utilities",
       "method": "asymmetric_procedural_augmentation"
     }
-  ],
-  "totalParts": 41,
-  "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "balcony_f6_l",
-    "balcony_f6_r",
-    "balcony_f7_l",
-    "balcony_f7_r",
-    "balcony_f8_l",
-    "balcony_f8_r",
-    "balcony_f9_l",
-    "balcony_f9_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_fire_escape_landing_f6",
-    "rear_fire_ladder_f6",
-    "rear_fire_escape_landing_f7",
-    "rear_fire_ladder_f7",
-    "rear_fire_escape_landing_f8",
-    "rear_fire_ladder_f8",
-    "rear_fire_escape_landing_f9",
-    "rear_fire_ladder_f9",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
   ]
 }

@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003",
-  "sourceImage": "vehicle/car/240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
+  "stem": "240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "suv_crossover",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.749,
   "aspectRatio": 1.778,
+  "symmetryScore": 0.749,
+  "widthProfile": [
+    0.484,
+    0.594,
+    0.734,
+    0.891,
+    0.953,
+    0.969,
+    0.992,
+    0.906,
+    0.719,
+    0.516
+  ],
   "colors": {
-    "primaryHex": 7498599,
+    "primaryHex": 1973275,
     "primaryRgb": [
-      114,
-      107,
-      103
+      30,
+      28,
+      27
     ],
-    "accentHex": 16316149,
+    "accentHex": 13880777,
     "accentRgb": [
-      248,
-      246,
-      245
+      211,
+      205,
+      201
     ],
-    "darkHex": 2894119,
+    "darkHex": 2762533,
     "darkRgb": [
-      44,
-      41,
-      39
+      42,
+      39,
+      37
     ],
-    "brightHex": 14933980,
+    "brightHex": 13617604,
     "brightRgb": [
-      227,
-      223,
-      220
-    ]
+      207,
+      201,
+      196
+    ],
+    "foliageHex": 921614,
+    "barkHex": 6635051,
+    "roofHex": 6578525
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }

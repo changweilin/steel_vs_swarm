@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_bike____-26-_____-rc-100-__-btwin-8826164",
+  "stem": "兒童款-26-彎把公路車-rc-100-白色-btwin-8826164",
+  "family": "vehicle",
+  "subpart": "bike",
+  "source_image": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
+  "generated_at": "2026-08-18T13:38:04.205Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -0.99,
+      0,
+      -0.325
+    ],
+    "max": [
+      0.99,
+      1.036,
+      0.325
+    ],
+    "size": [
+      1.98,
+      1.036,
+      0.65
+    ],
+    "rMax": 1.042,
+    "triangles": 352,
+    "vertices": 210
+  },
+  "spec": {
+    "L": 1.9215587090867476,
+    "W": 0.65,
+    "H": 1.0561493858243687,
+    "R": 0.34,
+    "style": "precision_bicycle_frame"
+  }
+}

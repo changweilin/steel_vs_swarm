@@ -1,23 +1,21 @@
 {
   "id": "ship_hull_20090411-TurboJET_Barca",
-  "key": "ship/hull_20090411-TurboJET_Barca_da4471af",
+  "stem": "20090411-TurboJET_Barca",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
-  "symmetryMode": "symmetric",
   "source_image": "ship/20090411-TurboJET_Barca.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\20090411-TurboJET_Barca.jpg",
-  "created_at": "2026-08-18T10:56:14.154Z",
+  "generated_at": "2026-08-18T13:38:03.895Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -19.8304,
-      -0.7471,
-      -6.1929
+      -19.83,
+      -0.747,
+      -6.193
     ],
     "max": [
-      21.8611,
-      16.7268,
-      6.1929
+      21.861,
+      16.727,
+      6.193
     ],
     "size": [
       41.692,
@@ -33,7 +31,5 @@
     "W": 12.385786221103228,
     "H": 12.555825131609064,
     "style": "multipurpose_maritime_vessel"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

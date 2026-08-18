@@ -2,23 +2,22 @@
   "id": "ship_hull_Methanier_aspher_LNGRIVERS",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "oil_tanker_bulk",
   "symmetryMode": "symmetric",
-  "spec": {
+  "dimensions": {
     "L": 36.33272297245747,
     "W": 9.896063172350653,
-    "H": 17.939940489814603,
-    "style": "multipurpose_maritime_vessel"
+    "H": 17.939940489814603
   },
   "bounds": {
     "min": [
       -17.258,
-      -0.6407,
+      -0.641,
       -4.948
     ],
     "max": [
       19.111,
-      19.3112,
+      19.311,
       4.948
     ],
     "size": [
@@ -49,7 +48,7 @@
         0,
         0
       ],
-      "color": 11254198,
+      "color": 11712182,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -71,7 +70,7 @@
         0,
         -0.22
       ],
-      "color": 11254198,
+      "color": 11712182,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -93,7 +92,7 @@
         0,
         0
       ],
-      "color": 4870232,
+      "color": 2304564,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -115,7 +114,7 @@
         0,
         0
       ],
-      "color": 14475232,
+      "color": 14081507,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -138,7 +137,7 @@
         0,
         0
       ],
-      "color": 4935506,
+      "color": 5932924,
       "vertexCount": 18,
       "triangleCount": 32
     },
@@ -161,20 +160,12 @@
         0,
         0
       ],
-      "color": 4870232,
+      "color": 2304564,
       "vertexCount": 14,
       "triangleCount": 24
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
   "meshData": {
-    "vertexCount": 64,
-    "triangleCount": 104,
     "vertices": [
       -16.7131,
       0,

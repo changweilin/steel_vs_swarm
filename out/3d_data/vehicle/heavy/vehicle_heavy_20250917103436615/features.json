@@ -1,35 +1,52 @@
 {
   "id": "vehicle_heavy_20250917103436615",
-  "sourceImage": "vehicle/heavy/20250917103436615.jpg",
+  "stem": "20250917103436615",
+  "family": "vehicle",
+  "subpart": "heavy",
   "style": "semi_tractor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.872,
   "aspectRatio": 1.33,
+  "symmetryScore": 0.872,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    0.977,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 8939631,
+    "primaryHex": 7432294,
     "primaryRgb": [
-      136,
+      113,
       104,
-      111
+      102
     ],
-    "accentHex": 15854822,
+    "accentHex": 15131359,
     "accentRgb": [
-      241,
-      236,
-      230
+      230,
+      226,
+      223
     ],
-    "darkHex": 7019561,
+    "darkHex": 6954024,
     "darkRgb": [
-      107,
+      106,
       28,
-      41
+      40
     ],
-    "brightHex": 14211292,
+    "brightHex": 14211034,
     "brightRgb": [
       216,
-      216,
-      220
-    ]
+      215,
+      218
+    ],
+    "foliageHex": 3752751,
+    "barkHex": 8920881,
+    "roofHex": 14144984
   },
   "reconstructedFeatures": [
     {
@@ -45,21 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.1
     }
-  ],
-  "totalParts": 13,
-  "partNames": [
-    "freight_chassis_frame",
-    "freight_cab_body",
-    "cab_windshield",
-    "freight_cargo_box",
-    "rear_rollup_door",
-    "exhaust_stack_left",
-    "steer_wheel_left",
-    "drive_wheel_1_left",
-    "drive_wheel_2_left",
-    "exhaust_stack_right",
-    "steer_wheel_right",
-    "drive_wheel_1_right",
-    "drive_wheel_2_right"
   ]
 }

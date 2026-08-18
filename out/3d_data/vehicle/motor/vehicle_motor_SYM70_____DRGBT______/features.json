@@ -1,0 +1,61 @@
+{
+  "id": "vehicle_motor_SYM70_____DRGBT______",
+  "stem": "SYM70 共創設計DRGBT 優勝彩繪款",
+  "family": "vehicle",
+  "subpart": "motor",
+  "style": "scooter_moped",
+  "symmetryMode": "symmetric",
+  "aspectRatio": 1,
+  "symmetryScore": 0.836,
+  "widthProfile": [
+    1,
+    0.625,
+    0.391,
+    0.594,
+    0.664,
+    0.703,
+    0.82,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 16645630,
+    "primaryRgb": [
+      253,
+      253,
+      254
+    ],
+    "accentHex": 1316630,
+    "accentRgb": [
+      20,
+      23,
+      22
+    ],
+    "darkHex": 2303526,
+    "darkRgb": [
+      35,
+      38,
+      38
+    ],
+    "brightHex": 14804457,
+    "brightRgb": [
+      225,
+      229,
+      233
+    ],
+    "foliageHex": 2634023,
+    "barkHex": 5781286,
+    "roofHex": 11779269
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "chassis_engine_block",
+      "method": "v_twin_cylinder_cooling_fins"
+    },
+    {
+      "name": "dual_chrome_pipes",
+      "method": "staggered_exhaust_system"
+    }
+  ]
+}

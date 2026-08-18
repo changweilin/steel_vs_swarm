@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_330px-Series-E353-S116",
-  "sourceImage": "vehicle/train/330px-Series-E353-S116.jpg",
-  "style": "freight_wagon",
+  "stem": "330px-Series-E353-S116",
+  "family": "vehicle",
+  "subpart": "train",
+  "style": "bullet_train_emu",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.784,
   "aspectRatio": 1.5,
+  "symmetryScore": 0.784,
+  "widthProfile": [
+    1,
+    0.992,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7631478,
+    "primaryHex": 4865594,
     "primaryRgb": [
-      116,
-      114,
-      118
+      74,
+      62,
+      58
     ],
-    "accentHex": 16382205,
+    "accentHex": 13421519,
     "accentRgb": [
-      249,
-      248,
-      253
-    ],
-    "darkHex": 3486518,
-    "darkRgb": [
-      53,
-      51,
-      54
-    ],
-    "brightHex": 13290449,
-    "brightRgb": [
-      202,
+      204,
       203,
-      209
-    ]
+      207
+    ],
+    "darkHex": 3354160,
+    "darkRgb": [
+      51,
+      46,
+      48
+    ],
+    "brightHex": 13224140,
+    "brightRgb": [
+      201,
+      200,
+      204
+    ],
+    "foliageHex": 593162,
+    "barkHex": 5981239,
+    "roofHex": 10330536
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

@@ -1,0 +1,61 @@
+{
+  "id": "building_mass_cf7c3f08fa949ce468837181b8de14d4_webp",
+  "stem": "cf7c3f08fa949ce468837181b8de14d4.webp",
+  "family": "building",
+  "subpart": "mass",
+  "style": "commercial_residential",
+  "symmetryMode": "asymmetric",
+  "aspectRatio": 1.499,
+  "symmetryScore": 0.812,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.977,
+    0.961,
+    1,
+    1,
+    1
+  ],
+  "colors": {
+    "primaryHex": 7034953,
+    "primaryRgb": [
+      107,
+      88,
+      73
+    ],
+    "accentHex": 16448250,
+    "accentRgb": [
+      250,
+      250,
+      250
+    ],
+    "darkHex": 3155230,
+    "darkRgb": [
+      48,
+      37,
+      30
+    ],
+    "brightHex": 15855856,
+    "brightRgb": [
+      241,
+      240,
+      240
+    ],
+    "foliageHex": 3622446,
+    "barkHex": 6047031,
+    "roofHex": 15461610
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_facade_balconies",
+      "method": "storefront_and_residential_balconies"
+    },
+    {
+      "name": "rear_fire_escape_and_utilities",
+      "method": "asymmetric_procedural_augmentation"
+    }
+  ]
+}

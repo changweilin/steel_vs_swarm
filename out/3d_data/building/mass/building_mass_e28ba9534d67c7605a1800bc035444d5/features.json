@@ -1,35 +1,52 @@
 {
   "id": "building_mass_e28ba9534d67c7605a1800bc035444d5",
-  "sourceImage": "building/e28ba9534d67c7605a1800bc035444d5.jpg",
+  "stem": "e28ba9534d67c7605a1800bc035444d5",
+  "family": "building",
+  "subpart": "mass",
   "style": "commercial_residential",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.803,
   "aspectRatio": 1.499,
+  "symmetryScore": 0.803,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 8226394,
+    "primaryHex": 3754268,
     "primaryRgb": [
-      125,
-      134,
-      90
+      57,
+      73,
+      28
     ],
-    "accentHex": 16777215,
+    "accentHex": 16316665,
     "accentRgb": [
-      255,
-      255,
-      255
+      248,
+      248,
+      249
     ],
-    "darkHex": 2833190,
+    "darkHex": 2701343,
     "darkRgb": [
-      43,
-      59,
-      38
+      41,
+      56,
+      31
     ],
-    "brightHex": 15001045,
+    "brightHex": 15066839,
     "brightRgb": [
-      228,
       229,
-      213
-    ]
+      230,
+      215
+    ],
+    "foliageHex": 6061089,
+    "barkHex": 8086333,
+    "roofHex": 13751496
   },
   "reconstructedFeatures": [
     {
@@ -40,33 +57,5 @@
       "name": "rear_fire_escape_and_utilities",
       "method": "asymmetric_procedural_augmentation"
     }
-  ],
-  "totalParts": 25,
-  "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
   ]
 }

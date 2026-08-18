@@ -1,35 +1,52 @@
 {
   "id": "vehicle_motor__covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c",
-  "sourceImage": "vehicle/motor/_covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c.png",
-  "style": "standard_motor",
+  "stem": "_covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c",
+  "family": "vehicle",
+  "subpart": "motor",
+  "style": "scooter_moped",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.921,
   "aspectRatio": 0.835,
+  "symmetryScore": 0.921,
+  "widthProfile": [
+    0.102,
+    0.305,
+    0.516,
+    0.617,
+    0.617,
+    0.68,
+    0.516,
+    0.18,
+    0,
+    0
+  ],
   "colors": {
-    "primaryHex": 2039575,
+    "primaryHex": 5066056,
     "primaryRgb": [
-      31,
-      31,
-      23
+      77,
+      77,
+      72
     ],
-    "accentHex": 15854528,
+    "accentHex": 12896846,
     "accentRgb": [
-      241,
-      235,
-      192
+      196,
+      202,
+      78
     ],
-    "darkHex": 789515,
+    "darkHex": 3026219,
     "darkRgb": [
-      12,
-      12,
-      11
+      46,
+      45,
+      43
     ],
-    "brightHex": 13817692,
+    "brightHex": 13620312,
     "brightRgb": [
-      210,
-      215,
-      92
-    ]
+      207,
+      212,
+      88
+    ],
+    "foliageHex": 5066056,
+    "barkHex": 5844777,
+    "roofHex": 3026220
   },
   "reconstructedFeatures": [
     {
@@ -40,15 +57,5 @@
       "name": "dual_chrome_pipes",
       "method": "staggered_exhaust_system"
     }
-  ],
-  "totalParts": 7,
-  "partNames": [
-    "motorcycle_engine_chassis",
-    "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

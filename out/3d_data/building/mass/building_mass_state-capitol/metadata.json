@@ -1,39 +1,35 @@
 {
   "id": "building_mass_state-capitol",
-  "key": "building/mass_state-capitol_d564d625",
+  "stem": "state-capitol",
   "family": "building",
   "subpart": "mass",
-  "style": "modern_skyscraper_tower",
-  "symmetryMode": "symmetric",
   "source_image": "building/state-capitol.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\state-capitol.jpg",
-  "created_at": "2026-08-18T10:56:14.131Z",
+  "generated_at": "2026-08-18T13:38:03.872Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -14.221,
+      -14.975,
       0,
-      -14.3835
+      -14.975
     ],
     "max": [
-      14.221,
-      57.7683,
-      17.3335
+      22.999,
+      30.791,
+      14.975
     ],
     "size": [
-      28.442,
-      57.768,
-      31.717
+      37.974,
+      30.791,
+      29.95
     ],
-    "rMax": 22.421,
-    "triangles": 240,
-    "vertices": 158
+    "rMax": 27.444,
+    "triangles": 520,
+    "vertices": 284
   },
   "spec": {
-    "L": 28.441901274128327,
-    "W": 28.76707103074693,
-    "H": 49.018310826276036,
-    "style": "modern_stepped_skyscraper"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+    "L": 32.75352101930266,
+    "W": 33.01365682459755,
+    "H": 28.91847104600595,
+    "style": "classical_domed_rotunda_monument"
+  }
 }

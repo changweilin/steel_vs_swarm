@@ -1,23 +1,21 @@
 {
   "id": "ship_hull_666",
-  "key": "ship/hull_666_e6e7d764",
+  "stem": "666",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
-  "symmetryMode": "symmetric",
   "source_image": "ship/666.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\666.jpg",
-  "created_at": "2026-08-18T10:56:14.183Z",
+  "generated_at": "2026-08-18T13:38:03.922Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -24.1715,
-      -0.9266,
-      -6.5639
+      -24.172,
+      -0.927,
+      -6.564
     ],
     "max": [
-      26.5023,
-      19.1349,
-      6.5639
+      26.502,
+      19.135,
+      6.564
     ],
     "size": [
       50.674,
@@ -33,7 +31,5 @@
     "W": 13.127862973983367,
     "H": 17.572625314717328,
     "style": "multipurpose_maritime_vessel"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

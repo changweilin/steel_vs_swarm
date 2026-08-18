@@ -1,49 +1,57 @@
 {
   "id": "tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137",
-  "sourceImage": "tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg",
+  "stem": "pngtree-alaska-cedar-tree-png-image_5004137",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "conifer_pine",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.888,
   "aspectRatio": 1,
+  "symmetryScore": 0.888,
+  "widthProfile": [
+    0.102,
+    0.211,
+    0.328,
+    0.32,
+    0.359,
+    0.383,
+    0.375,
+    0.469,
+    0.5,
+    0.359
+  ],
   "colors": {
-    "primaryHex": 12566972,
+    "primaryHex": 2962469,
     "primaryRgb": [
-      191,
-      193,
-      188
+      45,
+      52,
+      37
     ],
-    "accentHex": 1118732,
+    "accentHex": 13882576,
     "accentRgb": [
-      17,
-      18,
-      12
+      211,
+      212,
+      208
     ],
-    "darkHex": 3357226,
+    "darkHex": 3160104,
     "darkRgb": [
-      51,
-      58,
-      42
+      48,
+      56,
+      40
     ],
-    "brightHex": 15987699,
+    "brightHex": 13422281,
     "brightRgb": [
-      243,
-      243,
-      243
-    ]
+      204,
+      206,
+      201
+    ],
+    "foliageHex": 3621165,
+    "barkHex": 5781286,
+    "roofHex": 7698800
   },
   "reconstructedFeatures": [
     {
       "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "method": "six_tiered_polyhedral_conical_canopies"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
   ]
 }

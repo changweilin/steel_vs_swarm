@@ -1,35 +1,52 @@
 {
   "id": "vehicle_motor_180512-10030-2-uyEK9",
-  "sourceImage": "vehicle/motor/180512-10030-2-uyEK9.png",
+  "stem": "180512-10030-2-uyEK9",
+  "family": "vehicle",
+  "subpart": "motor",
   "style": "standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.864,
   "aspectRatio": 1.59,
+  "symmetryScore": 0.864,
+  "widthProfile": [
+    0.891,
+    0.977,
+    0.938,
+    0.961,
+    0.961,
+    0.984,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7898006,
+    "primaryHex": 14014686,
     "primaryRgb": [
-      120,
-      131,
-      150
+      213,
+      216,
+      222
     ],
-    "accentHex": 328968,
+    "accentHex": 1383985,
     "accentRgb": [
-      5,
-      5,
-      8
+      21,
+      30,
+      49
     ],
-    "darkHex": 1781072,
+    "darkHex": 1715018,
     "darkRgb": [
-      27,
-      45,
-      80
+      26,
+      43,
+      74
     ],
-    "brightHex": 13488342,
+    "brightHex": 13291220,
     "brightRgb": [
-      205,
-      208,
-      214
-    ]
+      202,
+      206,
+      212
+    ],
+    "foliageHex": 14014686,
+    "barkHex": 8349277,
+    "roofHex": 12107204
   },
   "reconstructedFeatures": [
     {
@@ -40,15 +57,5 @@
       "name": "dual_chrome_pipes",
       "method": "staggered_exhaust_system"
     }
-  ],
-  "totalParts": 7,
-  "partNames": [
-    "motorcycle_engine_chassis",
-    "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

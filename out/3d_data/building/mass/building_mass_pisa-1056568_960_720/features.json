@@ -1,35 +1,52 @@
 {
   "id": "building_mass_pisa-1056568_960_720",
-  "sourceImage": "building/pisa-1056568_960_720.jpg",
+  "stem": "pisa-1056568_960_720",
+  "family": "building",
+  "subpart": "mass",
   "style": "leaning_arcade_tower",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.901,
   "aspectRatio": 1.333,
+  "symmetryScore": 0.901,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 5342132,
+    "primaryHex": 874417,
     "primaryRgb": [
-      81,
-      131,
-      180
+      13,
+      87,
+      177
     ],
-    "accentHex": 527110,
+    "accentHex": 11119009,
     "accentRgb": [
-      8,
-      11,
-      6
+      169,
+      169,
+      161
     ],
-    "darkHex": 1526400,
+    "darkHex": 1328510,
     "darkRgb": [
-      23,
-      74,
-      128
+      20,
+      69,
+      126
     ],
-    "brightHex": 13618881,
+    "brightHex": 13224381,
     "brightRgb": [
-      207,
-      206,
-      193
-    ]
+      201,
+      201,
+      189
+    ],
+    "foliageHex": 3227434,
+    "barkHex": 7493189,
+    "roofHex": 1858988
   },
   "reconstructedFeatures": [
     {
@@ -40,22 +57,5 @@
       "name": "inclination_lean",
       "method": "authentic_axial_tilt"
     }
-  ],
-  "totalParts": 14,
-  "partNames": [
-    "ground_tier_blind_arcade",
-    "arcade_gallery_tier_1",
-    "balustrade_rim_1",
-    "arcade_gallery_tier_2",
-    "balustrade_rim_2",
-    "arcade_gallery_tier_3",
-    "balustrade_rim_3",
-    "arcade_gallery_tier_4",
-    "balustrade_rim_4",
-    "arcade_gallery_tier_5",
-    "balustrade_rim_5",
-    "arcade_gallery_tier_6",
-    "balustrade_rim_6",
-    "top_belfry_chamber"
   ]
 }

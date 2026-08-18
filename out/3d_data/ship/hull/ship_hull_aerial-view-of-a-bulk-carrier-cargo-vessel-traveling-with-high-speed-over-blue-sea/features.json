@@ -1,35 +1,52 @@
 {
   "id": "ship_hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea",
-  "sourceImage": "ship/aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
+  "stem": "aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea",
+  "family": "ship",
+  "subpart": "hull",
   "style": "aircraft_carrier",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.868,
   "aspectRatio": 1.843,
+  "symmetryScore": 0.868,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    0.969,
+    0.992,
+    1,
+    0.992,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7967661,
+    "primaryHex": 10992850,
     "primaryRgb": [
-      121,
-      147,
-      173
+      167,
+      188,
+      210
     ],
-    "accentHex": 197907,
+    "accentHex": 1189962,
     "accentRgb": [
-      3,
-      5,
-      19
+      18,
+      40,
+      74
     ],
-    "darkHex": 1719651,
+    "darkHex": 1258843,
     "darkRgb": [
-      26,
-      61,
-      99
+      19,
+      53,
+      91
     ],
-    "brightHex": 13359076,
+    "brightHex": 13096419,
     "brightRgb": [
-      203,
-      215,
-      228
-    ]
+      199,
+      213,
+      227
+    ],
+    "foliageHex": 10992850,
+    "barkHex": 6888743,
+    "roofHex": 13359592
   },
   "reconstructedFeatures": [
     {
@@ -40,14 +57,5 @@
       "name": "starboard_island_tower",
       "method": "asymmetric_command_bridge"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "carrier_main_hull",
-    "clipper_bow_wedge",
-    "full_flight_deck",
-    "starboard_island_tower",
-    "island_navigation_bridge",
-    "phased_array_radar_mast"
   ]
 }

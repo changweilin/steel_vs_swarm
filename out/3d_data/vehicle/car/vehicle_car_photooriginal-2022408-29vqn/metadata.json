@@ -1,23 +1,21 @@
 {
   "id": "vehicle_car_photooriginal-2022408-29vqn",
-  "key": "vehicle/car_photooriginal-2022408-29vqn_b22c13df",
+  "stem": "photooriginal-2022408-29vqn",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/photooriginal-2022408-29vqn.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\photooriginal-2022408-29vqn.jpg",
-  "created_at": "2026-08-18T10:56:14.525Z",
+  "generated_at": "2026-08-18T13:38:04.301Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -2.4709,
-      0.0171,
-      -0.9748
+      -2.471,
+      0.017,
+      -0.975
     ],
     "max": [
-      2.4809,
-      1.6395,
-      0.9748
+      2.481,
+      1.639,
+      0.975
     ],
     "size": [
       4.952,
@@ -34,7 +32,5 @@
     "H": 1.6395368886854353,
     "R": 0.35,
     "style": "standard_passenger_sedan"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

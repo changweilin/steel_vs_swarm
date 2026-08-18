@@ -1,49 +1,57 @@
 {
   "id": "tree_canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957",
-  "sourceImage": "tree/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957.png",
+  "stem": "pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "conifer_pine",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.897,
   "aspectRatio": 1,
+  "symmetryScore": 0.897,
+  "widthProfile": [
+    0.797,
+    0.82,
+    0.68,
+    0.578,
+    0.758,
+    0.859,
+    0.859,
+    0.75,
+    0.672,
+    0.828
+  ],
   "colors": {
-    "primaryHex": 1777939,
+    "primaryHex": 4214571,
     "primaryRgb": [
-      27,
-      33,
-      19
+      64,
+      79,
+      43
     ],
-    "accentHex": 15132389,
+    "accentHex": 10332012,
     "accentRgb": [
-      230,
-      230,
-      229
+      157,
+      167,
+      108
     ],
-    "darkHex": 1053962,
+    "darkHex": 2963743,
     "darkRgb": [
-      16,
-      21,
-      10
+      45,
+      57,
+      31
     ],
-    "brightHex": 13685199,
+    "brightHex": 12765333,
     "brightRgb": [
-      208,
-      209,
-      207
-    ]
+      194,
+      200,
+      149
+    ],
+    "foliageHex": 4215588,
+    "barkHex": 5781286,
+    "roofHex": 5199936
   },
   "reconstructedFeatures": [
     {
       "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "method": "six_tiered_polyhedral_conical_canopies"
     }
-  ],
-  "totalParts": 6,
-  "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
   ]
 }

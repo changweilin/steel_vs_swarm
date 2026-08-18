@@ -1,70 +1,65 @@
 {
   "id": "building_mass_state-capitol",
-  "sourceImage": "building/state-capitol.jpg",
-  "style": "modern_skyscraper_tower",
+  "stem": "state-capitol",
+  "family": "building",
+  "subpart": "mass",
+  "style": "domed_rotunda_monument",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.908,
   "aspectRatio": 1,
+  "symmetryScore": 0.908,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7436415,
+    "primaryHex": 4472874,
     "primaryRgb": [
-      113,
-      120,
-      127
+      68,
+      64,
+      42
     ],
-    "accentHex": 16777214,
+    "accentHex": 13883873,
     "accentRgb": [
-      255,
-      255,
-      254
+      211,
+      217,
+      225
     ],
-    "darkHex": 4011816,
+    "darkHex": 3616548,
     "darkRgb": [
-      61,
       55,
-      40
+      47,
+      36
     ],
-    "brightHex": 13752030,
+    "brightHex": 13289930,
     "brightRgb": [
-      209,
-      214,
-      222
-    ]
+      202,
+      201,
+      202
+    ],
+    "foliageHex": 4149789,
+    "barkHex": 5653050,
+    "roofHex": 6454181
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_setback_tower",
-      "method": "triple_tier_massing"
+      "name": "cylindrical_rotunda_drum",
+      "method": "sixteen_sided_arcade_drum"
     },
     {
-      "name": "curtain_wall_ribs",
-      "method": "vertical_mullion_grid"
+      "name": "hemispherical_ribbed_dome",
+      "method": "stepped_concentric_dome_cap"
     },
     {
-      "name": "rooftop_mechanicals",
-      "method": "chillers_and_antenna"
+      "name": "classical_pediment_portico",
+      "method": "tetrastyle_colonnaded_entrance"
     }
-  ],
-  "totalParts": 19,
-  "partNames": [
-    "podium_lobby_glass",
-    "entrance_canopy",
-    "tower_tier_1",
-    "tower_tier_2_setback",
-    "tower_tier_3_crown",
-    "floor_spandrel_1",
-    "floor_spandrel_2",
-    "floor_spandrel_3",
-    "floor_spandrel_4",
-    "floor_spandrel_5",
-    "floor_spandrel_6",
-    "floor_spandrel_7",
-    "floor_spandrel_8",
-    "floor_spandrel_9",
-    "floor_spandrel_10",
-    "floor_spandrel_11",
-    "floor_spandrel_12",
-    "rooftop_hvac_penthouse",
-    "rooftop_antenna_spire"
   ]
 }

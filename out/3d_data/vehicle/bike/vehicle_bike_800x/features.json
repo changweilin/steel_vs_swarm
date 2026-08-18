@@ -1,56 +1,65 @@
 {
   "id": "vehicle_bike_800x",
-  "sourceImage": "vehicle/bike/800x.jpg",
-  "style": "cargo_bike",
+  "stem": "800x",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_cruiser",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.869,
   "aspectRatio": 1,
+  "symmetryScore": 0.869,
+  "widthProfile": [
+    0,
+    0.133,
+    0.32,
+    0.594,
+    0.594,
+    0.656,
+    0.641,
+    0.625,
+    0.508,
+    0.023
+  ],
   "colors": {
-    "primaryHex": 14408153,
+    "primaryHex": 14738144,
     "primaryRgb": [
-      219,
-      217,
-      217
+      224,
+      226,
+      224
     ],
-    "accentHex": 1379338,
+    "accentHex": 3551793,
     "accentRgb": [
-      21,
-      12,
-      10
+      54,
+      50,
+      49
     ],
-    "darkHex": 3353643,
+    "darkHex": 3156779,
     "darkRgb": [
-      51,
-      44,
+      48,
+      43,
       43
     ],
-    "brightHex": 15725812,
+    "brightHex": 12966106,
     "brightRgb": [
-      239,
-      244,
-      244
-    ]
+      197,
+      216,
+      218
+    ],
+    "foliageHex": 14738144,
+    "barkHex": 12862266,
+    "roofHex": 10412009
   },
   "reconstructedFeatures": [
     {
       "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "method": "tubular_truss_geometry"
     },
     {
-      "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "name": "visible_spoked_wheels",
+      "method": "dual_wheel_rims_and_hubs"
+    },
+    {
+      "name": "drivetrain_and_saddle",
+      "method": "crankset_pedals_seatpost"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "frame_top_tube",
-    "frame_down_tube",
-    "frame_seat_tube",
-    "front_fork_blades",
-    "bicycle_handlebars",
-    "ergonomic_saddle",
-    "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

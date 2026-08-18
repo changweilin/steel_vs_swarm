@@ -1,21 +1,19 @@
 {
   "id": "vehicle_heavy_slide-02",
-  "key": "vehicle/heavy_slide-02_1ea87cda",
+  "stem": "slide-02",
   "family": "vehicle",
   "subpart": "heavy",
-  "style": "semi_tractor",
-  "symmetryMode": "symmetric",
   "source_image": "vehicle/heavy/slide-02.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\slide-02.jpg",
-  "created_at": "2026-08-18T10:56:14.614Z",
+  "generated_at": "2026-08-18T13:38:04.385Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
   "bounds": {
     "min": [
-      -4.3502,
-      0.0255,
+      -4.35,
+      0.025,
       -1.313
     ],
     "max": [
-      4.4402,
+      4.44,
       4,
       1.313
     ],
@@ -34,7 +32,5 @@
     "H": 3.9605287251087207,
     "R": 0.52,
     "style": "heavy_cargo_freight_truck"
-  },
-  "method": "llm_fine_detail_parts_and_3d_geom",
-  "status": "ingested"
+  }
 }

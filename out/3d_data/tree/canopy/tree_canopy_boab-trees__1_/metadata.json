@@ -1,0 +1,35 @@
+{
+  "id": "tree_canopy_boab-trees__1_",
+  "stem": "boab-trees (1)",
+  "family": "tree",
+  "subpart": "canopy",
+  "source_image": "tree/boab-trees (1).jpg",
+  "generated_at": "2026-08-18T13:38:04.019Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -3.687,
+      0,
+      -4.057
+    ],
+    "max": [
+      4.184,
+      12.487,
+      4.057
+    ],
+    "size": [
+      7.871,
+      12.487,
+      8.113
+    ],
+    "rMax": 5.828,
+    "triangles": 328,
+    "vertices": 186
+  },
+  "spec": {
+    "L": 9.388395513847563,
+    "W": 8.790455481803617,
+    "H": 14.287327382314793,
+    "style": "succulent_bottle_baobab"
+  }
+}

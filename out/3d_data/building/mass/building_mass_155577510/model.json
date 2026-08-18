@@ -4,22 +4,21 @@
   "subpart": "mass",
   "style": "commercial_residential",
   "symmetryMode": "asymmetric",
-  "spec": {
+  "dimensions": {
     "L": 21.57759975585565,
     "W": 17.600640878919663,
-    "H": 33.82092011902037,
-    "style": "commercial_residential_asymmetric"
+    "H": 33.82092011902037
   },
   "bounds": {
     "min": [
-      -10.7888,
+      -10.789,
       0,
-      -10.3003
+      -10.3
     ],
     "max": [
-      10.7888,
-      33.8209,
-      10.0003
+      10.789,
+      33.821,
+      10
     ],
     "size": [
       21.578,
@@ -49,7 +48,7 @@
         0,
         0
       ],
-      "color": 9735302,
+      "color": 2828844,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -71,7 +70,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -93,7 +92,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -115,7 +114,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -137,7 +136,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -159,7 +158,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -181,7 +180,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -203,7 +202,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -225,7 +224,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -247,7 +246,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -269,7 +268,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -291,7 +290,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -313,7 +312,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -335,7 +334,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -357,7 +356,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -379,7 +378,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -401,7 +400,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -423,7 +422,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -445,7 +444,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -467,7 +466,7 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -489,7 +488,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -511,7 +510,7 @@
         0,
         -0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -533,7 +532,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -555,7 +554,7 @@
         0,
         0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -577,7 +576,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -599,7 +598,7 @@
         0,
         -0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -621,7 +620,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -643,7 +642,7 @@
         0,
         0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -665,7 +664,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -687,7 +686,7 @@
         0,
         -0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -709,7 +708,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -731,7 +730,7 @@
         0,
         0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -753,7 +752,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -775,7 +774,7 @@
         0,
         -0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -797,7 +796,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -819,7 +818,7 @@
         0,
         0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -841,7 +840,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -863,7 +862,7 @@
         0,
         -0.35
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -885,7 +884,7 @@
         0,
         0
       ],
-      "color": 16117734,
+      "color": 14930356,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -907,7 +906,7 @@
         0,
         0
       ],
-      "color": 3419437,
+      "color": 3222829,
       "vertexCount": 8,
       "triangleCount": 12
     },
@@ -929,24 +928,12 @@
         0,
         0
       ],
-      "color": 787976,
+      "color": 16045996,
       "vertexCount": 8,
       "triangleCount": 12
     }
   ],
-  "reconstructedFeatures": [
-    {
-      "name": "front_facade_balconies",
-      "method": "storefront_and_residential_balconies"
-    },
-    {
-      "name": "rear_fire_escape_and_utilities",
-      "method": "asymmetric_procedural_augmentation"
-    }
-  ],
   "meshData": {
-    "vertexCount": 328,
-    "triangleCount": 492,
     "vertices": [
       -10.7888,
       0,

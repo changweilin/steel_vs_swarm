@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_2025-porsche-carrera-t-coupe",
-  "sourceImage": "vehicle/car/2025-porsche-carrera-t-coupe.jpg",
+  "stem": "2025-porsche-carrera-t-coupe",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sports_coupe",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.856,
   "aspectRatio": 1.778,
+  "symmetryScore": 0.856,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    0.984,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 7239292,
+    "primaryHex": 2500652,
     "primaryRgb": [
-      110,
-      118,
-      124
-    ],
-    "accentHex": 16707777,
-    "accentRgb": [
-      254,
-      240,
-      193
-    ],
-    "darkHex": 2631980,
-    "darkRgb": [
+      38,
       40,
-      41,
       44
     ],
-    "brightHex": 13619142,
+    "accentHex": 15458248,
+    "accentRgb": [
+      235,
+      223,
+      200
+    ],
+    "darkHex": 2632495,
+    "darkRgb": [
+      40,
+      43,
+      47
+    ],
+    "brightHex": 13356744,
     "brightRgb": [
-      207,
-      207,
-      198
-    ]
+      203,
+      206,
+      200
+    ],
+    "foliageHex": 2500652,
+    "barkHex": 4076324,
+    "roofHex": 12897486
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8849999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "supercar_lower_body",
-    "cabin_canopy",
-    "carbon_front_splitter",
-    "rear_gt_wing",
-    "wing_strut_left",
-    "wing_strut_right",
-    "rear_aero_diffuser",
-    "led_headlight_left",
-    "led_taillight_left",
-    "aero_mirror_left",
-    "alloy_wheel_front_left",
-    "alloy_wheel_rear_left",
-    "led_headlight_right",
-    "led_taillight_right",
-    "aero_mirror_right",
-    "alloy_wheel_front_right",
-    "alloy_wheel_rear_right"
   ]
 }

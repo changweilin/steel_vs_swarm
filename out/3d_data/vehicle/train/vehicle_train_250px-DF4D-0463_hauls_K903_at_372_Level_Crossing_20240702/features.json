@@ -1,35 +1,52 @@
 {
   "id": "vehicle_train_250px-DF4D-0463_hauls_K903_at_372_Level_Crossing_20240702",
-  "sourceImage": "vehicle/train/250px-DF4D-0463_hauls_K903_at_372_Level_Crossing_20240702.jpg",
-  "style": "freight_wagon",
+  "stem": "250px-DF4D-0463_hauls_K903_at_372_Level_Crossing_20240702",
+  "family": "vehicle",
+  "subpart": "train",
+  "style": "locomotive",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.865,
   "aspectRatio": 1.506,
+  "symmetryScore": 0.865,
+  "widthProfile": [
+    1,
+    1,
+    0.844,
+    0.977,
+    1,
+    1,
+    0.945,
+    1,
+    0.984,
+    0.992
+  ],
   "colors": {
-    "primaryHex": 6578013,
+    "primaryHex": 5064515,
     "primaryRgb": [
-      100,
-      95,
-      93
+      77,
+      71,
+      67
     ],
-    "accentHex": 15984350,
+    "accentHex": 12500412,
     "accentRgb": [
-      243,
-      230,
-      222
-    ],
-    "darkHex": 3616302,
-    "darkRgb": [
-      55,
-      46,
-      46
-    ],
-    "brightHex": 12762807,
-    "brightRgb": [
-      194,
       190,
-      183
-    ]
+      189,
+      188
+    ],
+    "darkHex": 3484971,
+    "darkRgb": [
+      53,
+      45,
+      43
+    ],
+    "brightHex": 12631739,
+    "brightRgb": [
+      192,
+      190,
+      187
+    ],
+    "foliageHex": 3225641,
+    "barkHex": 5389367,
+    "roofHex": 9211019
   },
   "reconstructedFeatures": [
     {
@@ -64,23 +81,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 1.395
     }
-  ],
-  "totalParts": 15,
-  "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
   ]
 }

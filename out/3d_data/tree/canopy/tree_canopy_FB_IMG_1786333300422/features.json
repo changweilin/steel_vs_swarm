@@ -1,35 +1,52 @@
 {
   "id": "tree_canopy_FB_IMG_1786333300422",
-  "sourceImage": "tree/FB_IMG_1786333300422.jpg",
+  "stem": "FB_IMG_1786333300422",
+  "family": "tree",
+  "subpart": "canopy",
   "style": "broadleaf_camphor_oak",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.835,
   "aspectRatio": 0.653,
+  "symmetryScore": 0.835,
+  "widthProfile": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 6320747,
+    "primaryHex": 8421715,
     "primaryRgb": [
-      96,
-      114,
-      107
+      128,
+      129,
+      83
     ],
-    "accentHex": 14282734,
+    "accentHex": 11587298,
     "accentRgb": [
-      217,
-      239,
-      238
+      176,
+      206,
+      226
     ],
-    "darkHex": 2501664,
+    "darkHex": 2435615,
     "darkRgb": [
-      38,
-      44,
-      32
+      37,
+      42,
+      31
     ],
-    "brightHex": 10341612,
+    "brightHex": 10274280,
     "brightRgb": [
-      157,
-      204,
-      236
-    ]
+      156,
+      197,
+      232
+    ],
+    "foliageHex": 4740909,
+    "barkHex": 7560012,
+    "roofHex": 9418202
   },
   "reconstructedFeatures": [
     {
@@ -37,20 +54,8 @@
       "method": "organic_root_flare_spread"
     },
     {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "polyhedral_canopy_cloud_cluster",
+      "method": "eight_faceted_dome_blobs"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4"
   ]
 }

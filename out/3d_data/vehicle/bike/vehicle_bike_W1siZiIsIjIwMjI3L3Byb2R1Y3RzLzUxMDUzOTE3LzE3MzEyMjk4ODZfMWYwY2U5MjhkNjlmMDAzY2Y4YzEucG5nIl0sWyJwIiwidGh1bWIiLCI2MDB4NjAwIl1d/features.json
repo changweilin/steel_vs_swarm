@@ -1,56 +1,65 @@
 {
   "id": "vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
-  "sourceImage": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
-  "style": "cargo_bike",
+  "stem": "W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_cruiser",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.881,
   "aspectRatio": 1.345,
+  "symmetryScore": 0.881,
+  "widthProfile": [
+    0.031,
+    0.195,
+    0.367,
+    0.43,
+    0.68,
+    0.812,
+    0.688,
+    0.711,
+    0.648,
+    0.258
+  ],
   "colors": {
-    "primaryHex": 14669267,
+    "primaryHex": 14931926,
     "primaryRgb": [
-      223,
-      213,
-      211
+      227,
+      215,
+      214
     ],
-    "accentHex": 1906203,
+    "accentHex": 7032387,
     "accentRgb": [
-      29,
-      22,
-      27
+      107,
+      78,
+      67
     ],
-    "darkHex": 4273719,
+    "darkHex": 3814196,
     "darkRgb": [
-      65,
-      54,
-      55
+      58,
+      51,
+      52
     ],
-    "brightHex": 16250356,
+    "brightHex": 14404040,
     "brightRgb": [
-      247,
-      245,
-      244
-    ]
+      219,
+      201,
+      200
+    ],
+    "foliageHex": 14931926,
+    "barkHex": 10904906,
+    "roofHex": 12882567
   },
   "reconstructedFeatures": [
     {
       "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "method": "tubular_truss_geometry"
     },
     {
-      "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "name": "visible_spoked_wheels",
+      "method": "dual_wheel_rims_and_hubs"
+    },
+    {
+      "name": "drivetrain_and_saddle",
+      "method": "crankset_pedals_seatpost"
     }
-  ],
-  "totalParts": 9,
-  "partNames": [
-    "frame_top_tube",
-    "frame_down_tube",
-    "frame_seat_tube",
-    "front_fork_blades",
-    "bicycle_handlebars",
-    "ergonomic_saddle",
-    "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
   ]
 }

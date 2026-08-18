@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull__2-____",
+  "stem": "圖2-超日王號",
+  "family": "ship",
+  "subpart": "hull",
+  "source_image": "ship/圖2-超日王號.jpg",
+  "generated_at": "2026-08-18T13:38:03.970Z",
+  "method": "Direct LLM-3D Synthesis Engine v3",
+  "bounds": {
+    "min": [
+      -18.673,
+      -0.699,
+      -5.426
+    ],
+    "max": [
+      20.623,
+      17.281,
+      5.426
+    ],
+    "size": [
+      39.296,
+      17.98,
+      10.852
+    ],
+    "rMax": 21.325,
+    "triangles": 104,
+    "vertices": 64
+  },
+  "spec": {
+    "L": 39.31067368581674,
+    "W": 10.85201037613489,
+    "H": 13.710872053101395,
+    "style": "multipurpose_maritime_vessel"
+  }
+}

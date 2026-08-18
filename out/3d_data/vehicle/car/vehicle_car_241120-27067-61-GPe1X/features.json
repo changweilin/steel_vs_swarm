@@ -1,35 +1,52 @@
 {
   "id": "vehicle_car_241120-27067-61-GPe1X",
-  "sourceImage": "vehicle/car/241120-27067-61-GPe1X.jpg",
+  "stem": "241120-27067-61-GPe1X",
+  "family": "vehicle",
+  "subpart": "car",
   "style": "sedan_hatchback",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.728,
   "aspectRatio": 1.468,
+  "symmetryScore": 0.728,
+  "widthProfile": [
+    0.992,
+    1,
+    0.984,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
   "colors": {
-    "primaryHex": 6249029,
+    "primaryHex": 920846,
     "primaryRgb": [
-      95,
-      90,
-      69
+      14,
+      13,
+      14
     ],
-    "accentHex": 16579308,
+    "accentHex": 12893096,
     "accentRgb": [
-      252,
-      250,
-      236
+      196,
+      187,
+      168
     ],
-    "darkHex": 1710359,
+    "darkHex": 1842203,
     "darkRgb": [
-      26,
-      25,
-      23
+      28,
+      28,
+      27
     ],
-    "brightHex": 14010769,
+    "brightHex": 13681817,
     "brightRgb": [
-      213,
-      201,
-      145
-    ]
+      208,
+      196,
+      153
+    ],
+    "foliageHex": 855821,
+    "barkHex": 6377257,
+    "roofHex": 5657678
   },
   "reconstructedFeatures": [
     {
@@ -45,25 +62,5 @@
       "method": "bilateral_mirror_Z_axis",
       "zOffset": 0.8099999999999999
     }
-  ],
-  "totalParts": 17,
-  "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
   ]
 }
