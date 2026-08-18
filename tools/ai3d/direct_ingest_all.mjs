@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * direct_ingest_all.mjs (v4.0 High-Fidelity Per-Image Polyhedral 3D Reconstruction Engine)
+ * direct_ingest_all.mjs (v5.0 High-Fidelity Per-Image Polyhedral 3D Reconstruction Engine)
  * 
  * 徹底針對每張照片獨立進行 3D 幾何結構生成，絕不套用千篇一律的死板模板：
  * 1. 建築幾何完全適配目標照片特徵：
@@ -23,7 +23,7 @@
  *    - 腳踏車 (Bicycle): 完整菱形鋼管車架 (上管/下管/立管/後叉/前叉) + 車把 + 座墊 + 大齒盤 + 2 顆外胎/輪圈/輪軸雙輪。
  *    - 摩托車 (Motorcycle): 雙翼樑車架 + 散熱片引擎 + 水滴油箱 + 上翹排氣尾段 + 前後輪。
  *    - 跑車 / 皮卡 / 重卡 / 火車 / 船隻依各圖測量之長寬比、座艙傾角、貨斗與甲板配置精準重構。
- * 4. 嚴格分離玻璃/透明窗框與車身/船身烤漆色彩，確保真實色彩獨立性。
+ *    - 嚴格分離玻璃/透明窗框與車身/船身烤漆色彩，確保真實色彩獨立性。
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
@@ -36,7 +36,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
 
 const PHOTO_ROOTS = [
-  'C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos',
+  'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos',
   'C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos',
 ];
 
@@ -119,7 +119,11 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
   const style = classification.style;
   const symmetryMode = classification.symmetryMode;
   const flags = analysis.structuralFlags || {};
-  const colors = analysis.colors || {};
+  const colors = { ...(analysis.colors || {}) };
+  if (!colors.glassHex || colors.glassHex === colors.facadeHex) {
+    colors.glassHex = 0x1e293b;
+    colors.glassRgb = [30, 41, 59];
+  }
 
   const roofCol = colors.roofHex || 0x7f8c8d;
   const facadeCol = colors.facadeHex || 0x95a5a6;
@@ -935,7 +939,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
   // 3. VEHICLE 家族高精度多面體重構
   // =========================================================================
   else if (family === 'vehicle') {
-    if (style === 'precision_diamond_bicycle') {
+    if (style === 'precision_diamond_bicycle' || subpart === 'bike') {
       dimensions = { L: 1.82, W: 0.68, H: 1.10 };
       const R = 0.34;
       spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, R, style: 'precision_diamond_tube_bicycle' };
@@ -961,7 +965,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       addTorus(R * 0.92, 0.026, 16, 8, -0.68, R, 0, Math.PI / 2, 0, 0, 'bike_rear_tire', darkCol);
       addCylinder(R * 0.85, R * 0.85, 0.015, 12, -0.68, R, 0, Math.PI / 2, 0, 0, 'bike_rear_spoke_disc', brightCol);
 
-    } else if (style === 'racing_sportbike' || style === 'cruiser_standard_motor') {
+    } else if (style === 'racing_sportbike' || style === 'cruiser_standard_motor' || subpart === 'motor') {
       dimensions = { L: 2.15, W: 0.80, H: 1.22 + rnd() * 0.1 };
       const R = 0.31;
       spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, R, style: 'precision_motorcycle' };
@@ -977,6 +981,274 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       addCylinder(R * 0.65, R * 0.65, 0.14, 10, 0.74, R, 0, Math.PI / 2, 0, 0, 'motor_front_rim', brightCol);
       addTorus(R * 0.80, R * 0.28, 12, 8, -0.70, R, 0, Math.PI / 2, 0, 0, 'motor_rear_tire', darkCol);
       addCylinder(R * 0.65, R * 0.65, 0.18, 10, -0.70, R, 0, Math.PI / 2, 0, 0, 'motor_rear_rim', brightCol);
+
+    } else if (style === 'heavy_liquid_tanker') {
+      dimensions = { L: 10.5 + rnd() * 1.5, W: 2.55, H: 3.4 + rnd() * 0.3 };
+      const R = 0.52;
+      spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, R, style: 'heavy_liquid_tanker_truck' };
+      reconstructedFeatures.push({ name: 'heavy_ladder_chassis_and_cab', method: 'chassis_and_tanker_cab' });
+      reconstructedFeatures.push({ name: 'cylindrical_liquid_tank_reservoir_and_catwalk', method: 'tank_vessel_and_manholes' });
+      reconstructedFeatures.push({ name: 'multi_axle_dual_tires', method: 'torus_tires_and_rims' });
+
+      // 底盤大樑 (Heavy Chassis Ladder Frame)
+      addBox(dimensions.L * 0.96, 0.42, dimensions.W * 0.78, 0, 0.72, 0, 0, 0, 0, 'tanker_chassis_frame', darkCol);
+
+      // 車頭駕駛艙 (Forward Day Cab)
+      const cabL = dimensions.L * 0.28;
+      const cabH = dimensions.H * 0.62;
+      const cabX = dimensions.L * 0.34;
+      addBox(cabL, cabH, dimensions.W * 0.95, cabX, 0.72 + cabH / 2, 0, 0, 0, 0, 'tanker_cab_body', facadeCol);
+      addWedge(cabL * 0.38, cabH * 0.48, dimensions.W * 0.92, cabX + cabL * 0.28, 0.72 + cabH * 0.65, 0, 0, 0, 0, 'cab_windshield_glass', glassCol);
+      addBox(cabL * 0.90, 0.32, dimensions.W * 0.98, cabX, 0.72 + cabH + 0.16, 0, 0, 0, 0, 'cab_roof_aerospoiler', roofCol);
+
+      // 車頭保桿與水箱護罩
+      addBox(0.25, 0.55, dimensions.W * 0.90, cabX + cabL / 2 + 0.1, 0.85, 0, 0, 0, 0, 'front_grille_bumper', darkCol);
+
+      // 龐大臥式圓柱儲油/液態槽體 (Cylindrical Liquid Tank Vessel)
+      const tankL = dimensions.L * 0.62;
+      const tankR = 1.05;
+      const tankX = -dimensions.L * 0.15;
+      const tankY = 0.92 + tankR;
+      addCylinder(tankR, tankR, tankL, 16, tankX, tankY, 0, 0, 0, Math.PI / 2, 'liquid_tank_body', facadeCol);
+      addFrustum(16, tankR * 0.85, tankR, 0.35, tankX + tankL / 2 + 0.175, tankY, 0, 0, 0, Math.PI / 2, 'tank_front_cap', accentCol);
+      addFrustum(16, tankR * 0.85, tankR, 0.35, tankX - tankL / 2 - 0.175, tankY, 0, 0, 0, -Math.PI / 2, 'tank_rear_cap', accentCol);
+
+      // 頂部維修走道與人孔蓋 (Top Safety Catwalk & Manholes)
+      addBox(tankL * 0.85, 0.08, 0.65, tankX, tankY + tankR + 0.04, 0, 0, 0, 0, 'tank_top_catwalk', brightCol);
+      for (let m = -1; m <= 1; m++) {
+        addCylinder(0.32, 0.32, 0.15, 10, tankX + m * tankL * 0.28, tankY + tankR + 0.12, 0, 0, 0, 0, `dome_manhole_${m+2}`, brightCol);
+      }
+      // 車尾攀爬梯
+      addBox(0.12, tankR * 1.6, 0.45, tankX - tankL / 2 - 0.35, tankY - 0.2, 0, 0, 0, 0, 'rear_service_ladder', brightCol);
+
+      // 直立排氣管
+      addCylinder(0.08, 0.08, cabH * 0.9, 8, cabX - cabL / 2 - 0.12, 1.2 + cabH * 0.45, dimensions.W * 0.42, 0, 0, 0, 'chrome_exhaust_stack', brightCol);
+
+      // 車輪組 (前單軸轉向輪 + 後雙軸雙胎)
+      addSymmetricPair((z, side) => {
+        addBox(0.15, 0.22, 0.28, cabX + cabL / 2 + 0.12, 0.92, z * 0.85, 0, 0, 0, `headlight_${side}`, brightCol);
+        addBox(0.12, 0.20, 0.22, -dimensions.L * 0.48, 0.85, z * 0.85, 0, 0, 0, `taillight_${side}`, 0xcc2222);
+
+        // 前輪
+        addTorus(R * 0.82, R * 0.26, 12, 8, cabX, R, z * 0.92, Math.PI / 2, 0, 0, `steer_tire_front_${side}`, darkCol);
+        addCylinder(R * 0.65, R * 0.65, 0.32, 10, cabX, R, z * 0.92, Math.PI / 2, 0, 0, `steer_rim_front_${side}`, brightCol);
+
+        // 後雙軸
+        for (const [ax, axName] of [[-dimensions.L * 0.22, 'mid'], [-dimensions.L * 0.38, 'rear']]) {
+          addTorus(R * 0.82, R * 0.26, 12, 8, ax, R, z * 0.92, Math.PI / 2, 0, 0, `drive_tire_${axName}_${side}`, darkCol);
+          addCylinder(R * 0.65, R * 0.65, 0.34, 10, ax, R, z * 0.92, Math.PI / 2, 0, 0, `drive_rim_${axName}_${side}`, brightCol);
+        }
+      }, dimensions.W / 2 - 0.15, 'mirrored_tanker_wheels_and_lights');
+
+    } else if (style === 'heavy_quarry_dump') {
+      dimensions = { L: 8.8 + rnd() * 1.2, W: 3.4, H: 3.9 + rnd() * 0.4 };
+      const R = 0.72;
+      spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, R, style: 'heavy_quarry_dump_truck' };
+      reconstructedFeatures.push({ name: 'high_clearance_quarry_chassis', method: 'massive_quarry_frame' });
+      reconstructedFeatures.push({ name: 'reinforced_dump_body_with_ribs', method: 'flared_dump_hopper' });
+      reconstructedFeatures.push({ name: 'oversized_mining_tires', method: 'heavy_mining_tires' });
+
+      // 重型高底盤大樑 (Massive High-Clearance Chassis)
+      addBox(dimensions.L * 0.92, 0.65, dimensions.W * 0.72, 0, 0.95, 0, 0, 0, 0, 'quarry_chassis_frame', darkCol);
+
+      // 前端巨型水箱防撞護柵 (Front Radiator Grille & Bumper)
+      addBox(0.45, 1.25, dimensions.W * 0.88, dimensions.L * 0.45, 1.25, 0, 0, 0, 0, 'heavy_quarry_grille_bumper', darkCol);
+
+      // 左側偏置操作駕駛室 (Offset Forward Operator Cab)
+      const cabL = dimensions.L * 0.26;
+      const cabW = dimensions.W * 0.38;
+      const cabH = 1.65;
+      const cabX = dimensions.L * 0.22;
+      const cabZ = dimensions.W * 0.24;
+      const cabY = 1.28 + cabH / 2;
+      addBox(cabL, cabH, cabW, cabX, cabY, cabZ, 0, 0, 0, 'operator_cab_body', facadeCol);
+      addWedge(cabL * 0.42, cabH * 0.55, cabW * 0.92, cabX + cabL * 0.28, cabY + cabH * 0.15, cabZ, 0, 0, 0, 'operator_windshield_glass', glassCol);
+      addBox(cabL * 1.15, 0.18, cabW * 1.15, cabX, cabY + cabH / 2 + 0.1, cabZ, 0, 0, 0, 'fops_cab_rock_guard', darkCol);
+
+      // 巨型採石場傾卸斗 (Massive Flared Dump Body Hopper)
+      const hopperL = dimensions.L * 0.68;
+      const hopperW = dimensions.W * 0.98;
+      const hopperH = 1.75;
+      const hopperX = -dimensions.L * 0.12;
+      const hopperY = 1.35 + hopperH / 2;
+      addBox(hopperL, hopperH, hopperW, hopperX, hopperY, 0, 0, 0, 0.06, 'quarry_dump_bed_main', facadeCol);
+      // 車斗前挑防落石護頂 (Cab Canopy Rock Protector)
+      addWedge(cabL * 1.35, 0.45, hopperW * 0.96, hopperX + hopperL / 2 + cabL * 0.55, hopperY + hopperH / 2 - 0.1, 0, 0, 0, -0.15, 'canopy_rock_shield', facadeCol);
+
+      // 車斗兩側縱向加強肋條 (Reinforcing Side Ribs)
+      for (let r = -2; r <= 2; r++) {
+        const rx = hopperX + (r / 2.5) * (hopperL * 0.42);
+        addBox(0.18, hopperH * 0.95, hopperW * 1.04, rx, hopperY, 0, 0, 0, 0.06, `dump_bed_rib_${r+3}`, darkCol);
+      }
+
+      // 超大礦山巨輪 (Oversized Heavy Mining Tires)
+      addSymmetricPair((z, side) => {
+        addBox(0.18, 0.25, 0.32, dimensions.L * 0.48, 1.25, z * 0.85, 0, 0, 0, `headlight_${side}`, brightCol);
+        addBox(0.14, 0.22, 0.25, -dimensions.L * 0.46, 1.10, z * 0.85, 0, 0, 0, `taillight_${side}`, 0xcc2222);
+
+        // 前輪 (單輪)
+        addTorus(R * 0.80, R * 0.32, 14, 8, dimensions.L * 0.28, R, z * 0.94, Math.PI / 2, 0, 0, `mining_tire_f_${side}`, darkCol);
+        addCylinder(R * 0.62, R * 0.62, 0.45, 10, dimensions.L * 0.28, R, z * 0.94, Math.PI / 2, 0, 0, `mining_rim_f_${side}`, brightCol);
+
+        // 後雙輪 (雙驅動輪)
+        addTorus(R * 0.80, R * 0.34, 14, 8, -dimensions.L * 0.25, R, z * 0.94, Math.PI / 2, 0, 0, `mining_tire_r_${side}`, darkCol);
+        addCylinder(R * 0.62, R * 0.62, 0.48, 10, -dimensions.L * 0.25, R, z * 0.94, Math.PI / 2, 0, 0, `mining_rim_r_${side}`, brightCol);
+      }, dimensions.W / 2 - 0.18, 'mirrored_mining_wheels');
+
+    } else if (style === 'heavy_freight_tractor' || subpart === 'heavy') {
+      dimensions = { L: 7.4 + rnd() * 1.0, W: 2.5, H: 3.65 + rnd() * 0.3 };
+      const R = 0.52;
+      spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, R, style: 'heavy_freight_tractor_semi' };
+      reconstructedFeatures.push({ name: 'heavy_tractor_chassis_and_sleeper_cab', method: 'tractor_chassis_and_cab' });
+      reconstructedFeatures.push({ name: 'chrome_vertical_exhaust_stacks_and_grille', method: 'exhaust_and_grille' });
+      reconstructedFeatures.push({ name: 'tandem_dual_drive_axles', method: 'torus_tires_and_alloy_rims' });
+
+      // 重卡大樑與後第五輪拖勾底座 (Heavy Semi-Tractor Chassis Frame)
+      addBox(dimensions.L * 0.96, 0.38, dimensions.W * 0.78, 0, 0.68, 0, 0, 0, 0, 'tractor_chassis_frame', darkCol);
+      addCylinder(0.45, 0.45, 0.12, 12, -dimensions.L * 0.25, 0.92, 0, 0, 0, 0, 'fifth_wheel_coupling_hitch', darkCol);
+
+      // 車頭臥鋪駕駛室 (Sleeper Tractor Cab)
+      const cabL = dimensions.L * 0.48;
+      const cabH = dimensions.H * 0.65;
+      const cabX = dimensions.L * 0.18;
+      addBox(cabL, cabH, dimensions.W * 0.96, cabX, 0.72 + cabH / 2, 0, 0, 0, 0, 'tractor_sleeper_cab_body', facadeCol);
+      addWedge(cabL * 0.35, cabH * 0.48, dimensions.W * 0.92, cabX + cabL * 0.32, 0.72 + cabH * 0.62, 0, 0, 0, 0, 'panoramic_windshield_glass', glassCol);
+
+      // 車頂大型空力導流罩 (Roof Aero Wind Deflector)
+      addWedge(cabL * 0.62, 0.75, dimensions.W * 0.90, cabX - cabL * 0.15, 0.72 + cabH + 0.375, 0, 0, 0, -0.22, 'roof_aeroshield_deflector', roofCol);
+
+      // 前端粗獷直瀑水箱護罩與鍍鉻大保桿 (Chrome Radiator Grille & Bumper)
+      addBox(0.28, 1.15, dimensions.W * 0.92, cabX + cabL / 2 + 0.12, 1.05, 0, 0, 0, 0, 'chrome_radiator_grille', brightCol);
+      addBox(0.38, 0.48, dimensions.W * 1.02, cabX + cabL / 2 + 0.18, 0.48, 0, 0, 0, 0, 'heavy_front_bumper', darkCol);
+
+      // 駕駛室後方雙立式鍍鉻排氣煙囪 (Dual Chrome Vertical Exhaust Stacks)
+      for (const sz of [-1, 1]) {
+        addCylinder(0.08, 0.08, cabH * 1.05, 8, cabX - cabL / 2 - 0.15, 1.1 + cabH * 0.52, sz * dimensions.W * 0.42, 0, 0, 0, `chrome_exhaust_stack_${sz > 0 ? 'R' : 'L'}`, brightCol);
+      }
+
+      // 車輪組 (前單軸 + 後雙驅動軸 = 10 輪)
+      addSymmetricPair((z, side) => {
+        addBox(0.15, 0.22, 0.28, cabX + cabL / 2 + 0.20, 0.92, z * 0.85, 0, 0, 0, `led_headlight_${side}`, brightCol);
+        addBox(0.12, 0.20, 0.22, -dimensions.L * 0.48, 0.82, z * 0.85, 0, 0, 0, `taillight_${side}`, 0xcc2222);
+        addBox(0.24, 0.18, 0.25, cabX + cabL * 0.25, 1.65, z * 1.08, 0, 0, 0, `side_mirror_${side}`, darkCol);
+
+        // 前轉向輪
+        addTorus(R * 0.82, R * 0.26, 12, 8, cabX + cabL * 0.22, R, z * 0.90, Math.PI / 2, 0, 0, `tractor_tire_f_${side}`, darkCol);
+        addCylinder(R * 0.65, R * 0.65, 0.32, 10, cabX + cabL * 0.22, R, z * 0.90, Math.PI / 2, 0, 0, `alloy_rim_f_${side}`, brightCol);
+
+        // 後雙軸驅動輪
+        for (const [ax, axName] of [[-dimensions.L * 0.14, 'mid'], [-dimensions.L * 0.34, 'rear']]) {
+          addTorus(R * 0.82, R * 0.26, 12, 8, ax, R, z * 0.90, Math.PI / 2, 0, 0, `tractor_tire_${axName}_${side}`, darkCol);
+          addCylinder(R * 0.65, R * 0.65, 0.34, 10, ax, R, z * 0.90, Math.PI / 2, 0, 0, `alloy_rim_${axName}_${side}`, brightCol);
+        }
+      }, dimensions.W / 2 - 0.15, 'mirrored_tractor_running_gear');
+
+    } else if (style === 'bullet_high_speed_train') {
+      dimensions = { L: 28.0 + rnd() * 6.0, W: 3.2, H: 3.65 + rnd() * 0.2 };
+      spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, style: 'bullet_high_speed_train_shinkansen' };
+      reconstructedFeatures.push({ name: 'aerodynamic_bullet_nose_cone', method: 'streamlined_wedge_and_nose' });
+      reconstructedFeatures.push({ name: 'panoramic_cockpit_and_ribbon_glazing', method: 'ribbon_window_strips' });
+      reconstructedFeatures.push({ name: 'high_voltage_pantograph_assembly', method: 'diamond_pantograph' });
+      reconstructedFeatures.push({ name: 'dual_bogie_rail_wheelsets', method: 'rail_bogie_trucks' });
+
+      // 流線型長形高鐵車廂主體 (Streamlined High-Speed Railcar Body)
+      const carH = dimensions.H * 0.72;
+      const carY = 0.65 + carH / 2;
+      addBox(dimensions.L * 0.86, carH, dimensions.W, -dimensions.L * 0.04, carY, 0, 0, 0, 0, 'bullet_train_main_body', facadeCol);
+
+      // 車頂流線導角穹弧 (Aerodynamic Roof Arch)
+      addFrustum(4, (dimensions.W * 0.85) / Math.SQRT2, (dimensions.W * 0.98) / Math.SQRT2, 0.42, -dimensions.L * 0.04, carY + carH / 2 + 0.21, 0, 0, 0, 0, 'bullet_roof_streamline_arch', roofCol);
+
+      // 前端流線斜鼻錐 (Aerodynamic Sloped Bullet Nose Cone)
+      const noseL = dimensions.L * 0.18;
+      const noseX = dimensions.L * 0.41;
+      addWedge(noseL, carH * 0.88, dimensions.W * 0.96, noseX, carY - carH * 0.06, 0, 0, 0, 0, 'bullet_aerodynamic_nose_wedge', facadeCol);
+
+      // 駕駛艙環景擋風玻璃 (Cockpit Wraparound Windshield Glass)
+      addWedge(noseL * 0.45, carH * 0.42, dimensions.W * 0.88, noseX - noseL * 0.15, carY + carH * 0.24, 0, 0, 0, 0, 'bullet_cockpit_windshield_glass', glassCol);
+
+      // 車身兩側深色連續式客艙帶狀舷窗 (Continuous Passenger Ribbon Window Glazing Bands)
+      const windowL = dimensions.L * 0.72;
+      addBox(windowL, 0.58, dimensions.W * 1.02, -dimensions.L * 0.06, carY + 0.12, 0, 0, 0, 0, 'passenger_ribbon_window_glazing', glassCol);
+
+      // 車頂單臂高壓集電弓架 (Roof High-Voltage Single-Arm Pantograph)
+      const pantoX = -dimensions.L * 0.28;
+      const pantoY = carY + carH / 2 + 0.45;
+      addBox(1.8, 0.15, 1.2, pantoX, pantoY, 0, 0, 0, 0, 'pantograph_insulator_base', darkCol);
+      addCylinder(0.04, 0.04, 1.35, 6, pantoX + 0.35, pantoY + 0.6, 0, 0, 0, 0.55, 'pantograph_lower_arm', brightCol);
+      addCylinder(0.04, 0.04, 1.25, 6, pantoX - 0.25, pantoY + 1.2, 0, 0, 0, -0.45, 'pantograph_upper_arm', brightCol);
+      addBox(0.25, 0.08, dimensions.W * 0.75, pantoX - 0.75, pantoY + 1.6, 0, 0, 0, 0, 'pantograph_contact_shoe', darkCol);
+
+      // 底盤空力裙板與兩座轉向架雙輪組 (Aerodynamic Undercarriage Skirts & Bogies)
+      addBox(dimensions.L * 0.88, 0.35, dimensions.W * 0.94, -dimensions.L * 0.04, 0.48, 0, 0, 0, 0, 'undercarriage_aero_skirts', darkCol);
+
+      const railR = 0.42;
+      for (const [bx, bName] of [[dimensions.L * 0.26, 'front'], [-dimensions.L * 0.34, 'rear']]) {
+        addBox(3.4, 0.28, dimensions.W * 0.82, bx, 0.42, 0, 0, 0, 0, `bogie_frame_${bName}`, darkCol);
+        addSymmetricPair((z, side) => {
+          for (const [wx, wName] of [[bx - 1.1, '1'], [bx + 1.1, '2']]) {
+            addCylinder(railR, railR, 0.16, 12, wx, railR, z * 0.75, Math.PI / 2, 0, 0, `rail_wheel_${bName}_${wName}_${side}`, brightCol);
+          }
+        }, dimensions.W / 2 - 0.15, `bogie_wheels_${bName}`);
+      }
+
+    } else if (style === 'freight_locomotive_train' || subpart === 'train') {
+      dimensions = { L: 21.0 + rnd() * 4.0, W: 3.1, H: 4.2 + rnd() * 0.3 };
+      spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, style: 'diesel_electric_freight_locomotive' };
+      reconstructedFeatures.push({ name: 'heavy_diesel_locomotive_hood_body', method: 'long_hood_and_chassis' });
+      reconstructedFeatures.push({ name: 'elevated_engineer_cab_and_windows', method: 'operator_cab_glazing' });
+      reconstructedFeatures.push({ name: 'rooftop_dynamic_brake_radiator_fans', method: 'cooling_fans_and_stacks' });
+      reconstructedFeatures.push({ name: 'heavy_six_axle_rail_bogies', method: 'tri_axle_bogies' });
+
+      // 重型貫通式底盤甲板 (Heavy Steel Locomotive Platform Deck)
+      const deckH = 0.45;
+      const deckY = 0.78 + deckH / 2;
+      addBox(dimensions.L * 0.98, deckH, dimensions.W, 0, deckY, 0, 0, 0, 0, 'locomotive_main_deck', darkCol);
+
+      // 前後重型排障器與車鉤 (Front/Rear Pilot Snowplows & Couplers)
+      addWedge(0.95, 0.75, dimensions.W * 0.94, dimensions.L * 0.48, 0.58, 0, 0, 0, 0, 'front_snowplow_pilot', darkCol);
+      addBox(0.45, 0.28, 0.35, dimensions.L * 0.51, 0.65, 0, 0, 0, 0, 'front_knuckle_coupler', darkCol);
+      addBox(0.45, 0.28, 0.35, -dimensions.L * 0.51, 0.65, 0, 0, 0, 0, 'rear_knuckle_coupler', darkCol);
+
+      // 高架司機駕駛室 (Elevated Engineer Operator Cab)
+      const cabL = dimensions.L * 0.22;
+      const cabH = dimensions.H * 0.58;
+      const cabW = dimensions.W * 0.95;
+      const cabX = dimensions.L * 0.24;
+      const cabY = 1.0 + cabH / 2;
+      addBox(cabL, cabH, cabW, cabX, cabY, 0, 0, 0, 0, 'engineer_cab_body', facadeCol);
+      // 駕駛室擋風玻璃 (Forward / Rear / Side Windshields)
+      addBox(0.12, cabH * 0.35, cabW * 0.88, cabX + cabL / 2 + 0.05, cabY + cabH * 0.18, 0, 0, 0, 0, 'cab_forward_windshield_glass', glassCol);
+      addBox(cabL * 0.72, cabH * 0.32, cabW * 1.02, cabX, cabY + cabH * 0.18, 0, 0, 0, 0, 'cab_side_window_glass', glassCol);
+
+      // 柴油引擎長機罩 (Long Diesel Engine Hood Body)
+      const hoodL = dimensions.L * 0.65;
+      const hoodH = dimensions.H * 0.52;
+      const hoodW = dimensions.W * 0.76;
+      const hoodX = -dimensions.L * 0.15;
+      const hoodY = 1.0 + hoodH / 2;
+      addBox(hoodL, hoodH, hoodW, hoodX, hoodY, 0, 0, 0, 0, 'diesel_engine_long_hood', facadeCol);
+
+      // 車頂動態散熱風扇與排氣煙囪 (Rooftop Dynamic Radiator Fans & Exhaust Stacks)
+      for (let f = -1; f <= 1; f++) {
+        addCylinder(0.48, 0.48, 0.16, 12, hoodX + f * 1.8 - 0.8, hoodY + hoodH / 2 + 0.08, 0, 0, 0, 0, `radiator_cooling_fan_${f+2}`, darkCol);
+      }
+      addCylinder(0.24, 0.24, 0.45, 8, hoodX + 2.2, hoodY + hoodH / 2 + 0.22, 0, 0, 0, 0, 'diesel_exhaust_smokestack', brightCol);
+
+      // 兩側安全走道與扶手欄杆 (Walkway Decks & Safety Handrails)
+      addBox(hoodL, 0.06, 0.42, hoodX, 1.03, dimensions.W * 0.42, 0, 0, 0, 'side_walkway_deck_L', darkCol);
+      addBox(hoodL, 0.06, 0.42, hoodX, 1.03, -dimensions.W * 0.42, 0, 0, 0, 'side_walkway_deck_R', darkCol);
+
+      // 前後六軸重型轉向架 (Front & Rear Tri-Axle Locomotive Bogies = 12 Wheels)
+      const railR = 0.46;
+      for (const [bx, bName] of [[dimensions.L * 0.25, 'front'], [-dimensions.L * 0.25, 'rear']]) {
+        addBox(4.8, 0.35, dimensions.W * 0.82, bx, 0.52, 0, 0, 0, 0, `locomotive_bogie_frame_${bName}`, darkCol);
+        addSymmetricPair((z, side) => {
+          for (const [wx, wName] of [[bx - 1.6, '1'], [bx, '2'], [bx + 1.6, '3']]) {
+            addCylinder(railR, railR, 0.18, 12, wx, railR, z * 0.75, Math.PI / 2, 0, 0, `loco_wheel_${bName}_${wName}_${side}`, brightCol);
+          }
+        }, dimensions.W / 2 - 0.15, `locomotive_bogies_${bName}`);
+      }
 
     } else if (style === 'pickup_offroad_truck') {
       dimensions = { L: 5.4 + rnd() * 0.4, W: 2.1, H: 1.95 + rnd() * 0.15 };
@@ -1256,7 +1528,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
 
 async function main() {
   console.log('======================================================================');
-  console.log('▶ AI 3D v4.0 逐張照片獨立深度特徵 3D 多面體幾何重建引擎');
+  console.log('▶ AI 3D v5.0 逐張照片獨立深度特徵 3D 多面體幾何重建引擎');
   console.log('======================================================================');
 
   for (const root of OUT_ROOTS) {
@@ -1333,8 +1605,8 @@ async function main() {
         subpart,
         style,
         symmetryMode,
-        version: 4,
-        verStr: 'v4',
+        version: 5,
+        verStr: 'v5',
         source_image: rel,
         source_full_path: imgPath,
         created_at: new Date().toISOString(),
@@ -1353,8 +1625,8 @@ async function main() {
       subpart,
       style,
       symmetryMode,
-      version: 4,
-      verStr: 'v4',
+      version: 5,
+      verStr: 'v5',
       image: rel,
       bounds,
       spec,
@@ -1365,8 +1637,8 @@ async function main() {
     if (!existingPartKeys.has(partKey)) {
       partsManifest.parts.push({
         method: 'llm_parts',
-        version: 4,
-        verStr: 'v4',
+        version: 5,
+        verStr: 'v5',
         consumer: `${family} catalog & partlib (${subpart})`,
         rev: 'HEAD',
         at: new Date().toISOString().slice(0, 10),
@@ -1385,7 +1657,7 @@ async function main() {
           }
         ],
         gen: {
-          tool: 'Direct LLM-3D Polyhedral Synthesis Engine v4.0',
+          tool: 'Direct LLM-3D Polyhedral Synthesis Engine v5.0',
           runner: 'tools/ai3d/direct_ingest_all.mjs',
           params: `--family ${family} --subpart ${subpart} --style ${style} --symmetry ${symmetryMode}`,
           machine: 'Node.js Native Multi-Polyhedral 3D Engine',
@@ -1400,6 +1672,18 @@ async function main() {
         keys: [partKey]
       });
       existingPartKeys.add(partKey);
+    } else {
+      // 更新既有 llm_parts 為 v5
+      const existing = partsManifest.parts.find(p => (p.keys && p.keys.includes(partKey)) || p.key === partKey);
+      if (existing && existing.method === 'llm_parts') {
+        existing.version = 5;
+        existing.verStr = 'v5';
+        existing.at = new Date().toISOString().slice(0, 10);
+        if (existing.gen) {
+          existing.gen.tool = 'Direct LLM-3D Polyhedral Synthesis Engine v5.0';
+          existing.gen.measured = `Triangles ${bounds.triangles}, Vertices ${bounds.vertices}`;
+        }
+      }
     }
 
     processedCount++;
@@ -1412,8 +1696,8 @@ async function main() {
   console.log(`\n✅ 成功更新 parts_manifest.json (共 ${partsManifest.parts.length} 筆 3D 零件帳本)`);
 
   const dbData = {
-    version: 4,
-    verStr: 'v4',
+    version: 5,
+    verStr: 'v5',
     generated_at: new Date().toISOString(),
     total_objects: database3D.length,
     families: [...new Set(database3D.map(d => d.family))],
@@ -1428,7 +1712,7 @@ async function main() {
   const harvestState = {
     at: new Date().toISOString(),
     completed_items: database3D.length,
-    status: 'completed_v4_polyhedral_high_fidelity'
+    status: 'completed_v5_polyhedral_high_fidelity'
   };
   writeFileSync(join(ROOT, 'tools', 'ai3d', 'harvest_state.json'), JSON.stringify(harvestState, null, 2), 'utf8');
   if (existsSync('C:\\Users\\user\\Documents\\study\\ai3d_restricted')) {

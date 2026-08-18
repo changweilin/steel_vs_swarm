@@ -5,37 +5,37 @@
   "subpart": "heavy",
   "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "vehicle/heavy/af5effb1-231f-4d00-b789-084fd2d60294.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\af5effb1-231f-4d00-b789-084fd2d60294.jpg",
-  "created_at": "2026-08-18T15:15:58.783Z",
+  "created_at": "2026-08-18T17:17:53.484Z",
   "bounds": {
     "min": [
-      -2.507,
-      -0.0072,
-      -1.2758
+      -3.7608,
+      -0.0416,
+      -1.313
     ],
     "max": [
-      2.517,
-      1.6875,
-      1.2758
+      3.7008,
+      4.1886,
+      1.313
     ],
     "size": [
-      5.024,
-      1.695,
-      2.552
+      7.462,
+      4.23,
+      2.626
     ],
-    "rMax": 2.822,
-    "triangles": 1012,
-    "vertices": 612
+    "rMax": 3.983,
+    "triangles": 1640,
+    "vertices": 988
   },
   "spec": {
-    "L": 4.974037537193865,
-    "W": 1.95,
-    "H": 1.6874906538490884,
-    "R": 0.36,
-    "style": "passenger_automobile"
+    "L": 7.710093842984665,
+    "W": 2.5,
+    "H": 3.8112359807736325,
+    "R": 0.52,
+    "style": "heavy_freight_tractor_semi"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

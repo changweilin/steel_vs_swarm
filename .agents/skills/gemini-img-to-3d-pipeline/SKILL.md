@@ -94,7 +94,7 @@ If existing input photos are exhausted before reaching the 60% context limit, su
 For every reconstructed object, write atomically into `out/3d_data/<family>/<subpart>/<object_id>/`:
 - `model.json`: Hierarchical parts list, primitive specs, local transforms, and triangulated mesh data.
 - `features.json`: Semantic tags, profile measurements, symmetry axes, 7-color hex table.
-- `metadata.json`: Source image path/URL, generator version (`v4`), bounding box `[w, h, d]`, triangle count.
+- `metadata.json`: Source image path/URL, generator version (`v5`), bounding box `[w, h, d]`, triangle count.
 - `model.obj`: Standard Wavefront OBJ 3D geometry file.
 
 ### 2.2 Ledger & Database Synchronization
@@ -106,7 +106,7 @@ For every reconstructed object, write atomically into `out/3d_data/<family>/<sub
 On initialization or restart:
 1. Load target photo list and `out/3d_database.json`.
 2. Inspect target directory for valid `model.json` and `features.json`.
-3. If valid and `version === "v4"`, **skip** item and proceed to next incomplete entry.
+3. If valid and `version === "v5"`, **skip** item and proceed to next incomplete entry.
 
 ---
 

@@ -41,10 +41,13 @@
     <select id="prFilterDate" class="pr-fsel" title="依生成日期篩選">
       <option value="">日期: 全部</option>
     </select>
+    <select id="prFilterPhotoDate" class="pr-fsel" title="依原始照片下載時間篩選">
+      <option value="">照片下載: 全部</option>
+    </select>
     <select id="prFilterVersion" class="pr-fsel" title="依版本號篩選">
       <option value="">版本: 全部</option>
     </select>
-    <button id="prFilterReset" class="pr-freset" title="重置方法/分類/日期/版本篩選" hidden>✕ 清除篩選</button>
+    <button id="prFilterReset" class="pr-freset" title="重置方法/分類/日期/照片下載/版本篩選" hidden>✕ 清除篩選</button>
   </div>
   <div class="seg pr-filter" id="prFilter">
     <!-- 「全部」= 全部**成品**:半成品由伺服器端量出來(mesh_sym.nodeFlaws),

@@ -5,11 +5,11 @@
   "subpart": "canopy",
   "style": "bonsai_potted_twisted",
   "symmetryMode": "asymmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
-  "created_at": "2026-08-18T15:15:58.345Z",
+  "created_at": "2026-08-18T17:17:53.041Z",
   "bounds": {
     "min": [
       -1.95,

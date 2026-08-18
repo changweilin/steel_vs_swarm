@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "classical_temple_peristyle",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/list.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\list.jpg",
-  "created_at": "2026-08-18T15:15:58.206Z",
+  "created_at": "2026-08-18T17:17:52.899Z",
   "bounds": {
     "min": [
       -17.7181,

@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/20230210700917.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\20230210700917.jpg",
-  "created_at": "2026-08-18T15:15:58.161Z",
+  "created_at": "2026-08-18T17:17:52.853Z",
   "bounds": {
     "min": [
       -14.8008,

@@ -189,10 +189,6 @@ export function photoRoots(extra = null) {
   if (existsSync(wtGemini)) {
     for (const d of readdirSync(wtGemini)) roots.push(join(wtGemini, d, 'tools', 'ai3d'));
   }
-  const defaultStudy = join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', 'study', 'ai3d_restricted');
-  if (existsSync(defaultStudy)) {
-    roots.push(defaultStudy);
-  }
   return [...new Set(roots)].filter((r) => existsSync(r));
 }
 
@@ -227,8 +223,6 @@ export function extraHomes() {
     } catch { /* 讀不懂就當沒註冊(寧缺勿錯:壞掉的指標檔 MUST NOT 變成亂讀目錄的後門) */ }
   }
   for (const p of (process.env.SVS_PHOTO_HOMES || '').split(delimiter)) if (p) push(p);
-  const defaultStudy = join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', 'study', 'ai3d_restricted');
-  if (existsSync(defaultStudy)) push(defaultStudy);
   return out;
 }
 
@@ -346,7 +340,8 @@ export const corpusShips = (home) => corpusMeta(home).shipping;
 export function resolvePhoto(file, roots) {
   if (!file) return null;
   const rel = file.replace(/\\/g, '/');
-  for (const r of roots) {
+  const allRoots = [...new Set([...(roots || []), ...extraHomes()])];
+  for (const r of allRoots) {
     const candidates = [
       join(r, rel),
       join(r, 'photos', rel),

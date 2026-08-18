@@ -5,11 +5,11 @@
   "subpart": "mg_dome",
   "style": "faceted_erratic_boulder",
   "symmetryMode": "asymmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "rock/mg_dome/ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\mg_dome\\ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf.jpg",
-  "created_at": "2026-08-18T15:15:57.945Z",
+  "created_at": "2026-08-18T17:17:52.607Z",
   "bounds": {
     "min": [
       -4.351,

@@ -5,11 +5,11 @@
   "subpart": "motor",
   "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "vehicle/motor/11871715_O_m.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\11871715_O_m.webp",
-  "created_at": "2026-08-18T15:15:58.844Z",
+  "created_at": "2026-08-18T17:17:53.563Z",
   "bounds": {
     "min": [
       -1.0348,

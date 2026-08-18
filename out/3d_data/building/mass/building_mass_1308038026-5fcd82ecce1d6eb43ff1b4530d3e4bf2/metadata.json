@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "commercial_flat_terrace",
   "symmetryMode": "asymmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2.jpg",
-  "created_at": "2026-08-18T15:15:58.156Z",
+  "created_at": "2026-08-18T17:17:52.848Z",
   "bounds": {
     "min": [
       -11.0528,

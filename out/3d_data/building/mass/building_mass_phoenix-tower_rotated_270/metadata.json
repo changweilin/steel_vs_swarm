@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/phoenix-tower_rotated_270.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\phoenix-tower_rotated_270.jpg",
-  "created_at": "2026-08-18T15:15:58.210Z",
+  "created_at": "2026-08-18T17:17:52.904Z",
   "bounds": {
     "min": [
       -13.4615,

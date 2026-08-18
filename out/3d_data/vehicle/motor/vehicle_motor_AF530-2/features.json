@@ -44,11 +44,11 @@
     ],
     "brightHex": 15259873,
     "glassRgb": [
-      0,
-      0,
-      0
+      30,
+      41,
+      59
     ],
-    "glassHex": 0
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [
     {

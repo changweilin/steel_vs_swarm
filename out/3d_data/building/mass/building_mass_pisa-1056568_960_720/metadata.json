@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "leaning_arcade_tower",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/pisa-1056568_960_720.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\pisa-1056568_960_720.jpg",
-  "created_at": "2026-08-18T15:15:58.215Z",
+  "created_at": "2026-08-18T17:17:52.908Z",
   "bounds": {
     "min": [
       -3.6,

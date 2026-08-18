@@ -5,11 +5,11 @@
   "subpart": "car",
   "style": "aerodynamic_gt_supercar",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "vehicle/car/2025-porsche-carrera-t-coupe.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\2025-porsche-carrera-t-coupe.jpg",
-  "created_at": "2026-08-18T15:15:58.604Z",
+  "created_at": "2026-08-18T17:17:53.259Z",
   "bounds": {
     "min": [
       -2.4609,

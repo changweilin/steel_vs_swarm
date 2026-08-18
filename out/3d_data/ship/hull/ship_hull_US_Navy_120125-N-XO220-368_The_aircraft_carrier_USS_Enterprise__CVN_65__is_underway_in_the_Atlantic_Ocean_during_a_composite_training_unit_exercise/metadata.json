@@ -5,11 +5,11 @@
   "subpart": "hull",
   "style": "naval_aircraft_carrier",
   "symmetryMode": "asymmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
-  "created_at": "2026-08-18T15:15:58.297Z",
+  "created_at": "2026-08-18T17:17:52.992Z",
   "bounds": {
     "min": [
       -33.5446,

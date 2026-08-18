@@ -5,11 +5,11 @@
   "subpart": "mass",
   "style": "asian_pagoda_pavilion",
   "symmetryMode": "symmetric",
-  "version": 4,
-  "verStr": "v4",
+  "version": 5,
+  "verStr": "v5",
   "source_image": "building/kyotoworldheritage_2.jpg.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\kyotoworldheritage_2.jpg.webp",
-  "created_at": "2026-08-18T15:15:58.203Z",
+  "created_at": "2026-08-18T17:17:52.896Z",
   "bounds": {
     "min": [
       -12.9353,
