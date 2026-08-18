@@ -1,0 +1,41 @@
+{
+  "id": "rock_main__-164605945",
+  "key": "rock/main_南犹他州巨岩山-164605945_1e750d61",
+  "family": "rock",
+  "subpart": "main",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/南犹他州巨岩山-164605945.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\南犹他州巨岩山-164605945.webp",
+  "created_at": "2026-08-18T14:27:15.745Z",
+  "bounds": {
+    "min": [
+      -4.4558,
+      -0.9177,
+      -5.409
+    ],
+    "max": [
+      4.8825,
+      6.8648,
+      4.7625
+    ],
+    "size": [
+      9.338,
+      7.782,
+      10.171
+    ],
+    "rMax": 7.008,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 6.126230258640421,
+    "W": 7.548615243762875,
+    "H": 6.66401922636759,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

@@ -1,0 +1,65 @@
+{
+  "id": "tree_sp_conifer_wc_133471453",
+  "sourceImage": "tree/sp_conifer/wc_133471453.jpg",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.82,
+  "aspectRatio": 1.5,
+  "colorRichness": 78.6,
+  "colors": {
+    "roofRgb": [
+      177,
+      211,
+      249
+    ],
+    "roofHex": 11654137,
+    "facadeRgb": [
+      122,
+      129,
+      79
+    ],
+    "facadeHex": 8028495,
+    "baseRgb": [
+      99,
+      111,
+      46
+    ],
+    "baseHex": 6516526,
+    "accentRgb": [
+      106,
+      116,
+      48
+    ],
+    "accentHex": 6976560,
+    "darkRgb": [
+      28,
+      31,
+      25
+    ],
+    "darkHex": 1842969,
+    "brightRgb": [
+      236,
+      243,
+      251
+    ],
+    "brightHex": 15528955
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
+  ]
+}

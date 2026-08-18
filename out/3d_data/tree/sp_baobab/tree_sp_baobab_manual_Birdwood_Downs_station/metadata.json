@@ -3,36 +3,38 @@
   "key": "tree/sp_baobab_manual_Birdwood_Downs_station_3ed4208b",
   "family": "tree",
   "subpart": "sp_baobab",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/sp_baobab/manual_Birdwood_Downs_station.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_baobab\\manual_Birdwood_Downs_station.jpg",
-  "created_at": "2026-08-18T10:56:14.344Z",
+  "created_at": "2026-08-18T14:27:16.214Z",
   "bounds": {
     "min": [
-      -5.6501,
-      0,
-      -5.1211
+      -2.5437,
+      -0.2007,
+      -2.9535
     ],
     "max": [
-      5.4283,
-      18.0216,
-      6.2769
+      2.8229,
+      3.1272,
+      2.6611
     ],
     "size": [
-      11.078,
-      18.022,
-      11.398
+      5.367,
+      3.328,
+      5.615
     ],
-    "rMax": 8.299,
-    "triangles": 152,
-    "vertices": 98
+    "rMax": 3.898,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 11.919546807049668,
-    "W": 9.831807431143664,
-    "H": 17.40640878919661,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 5.709773403524834,
+    "W": 4.665903715571832,
+    "H": 3.251201647974365,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

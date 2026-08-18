@@ -1,65 +1,78 @@
 {
   "id": "vehicle_heavy_long-haul-semi-truck-on-260nw-2742073731",
   "sourceImage": "vehicle/heavy/long-haul-semi-truck-on-260nw-2742073731.jpg",
-  "style": "semi_tractor",
+  "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.77,
+  "symmetryScore": 0.764,
   "aspectRatio": 1.389,
+  "colorRichness": 77.97,
   "colors": {
-    "primaryHex": 6775160,
-    "primaryRgb": [
-      103,
-      97,
-      120
+    "roofRgb": [
+      177,
+      165,
+      220
     ],
-    "accentHex": 16051700,
+    "roofHex": 11642332,
+    "facadeRgb": [
+      85,
+      81,
+      94
+    ],
+    "facadeHex": 5591390,
+    "baseRgb": [
+      140,
+      121,
+      139
+    ],
+    "baseHex": 9206155,
     "accentRgb": [
-      244,
-      237,
-      244
+      19,
+      22,
+      40
     ],
-    "darkHex": 2171445,
+    "accentHex": 1250856,
     "darkRgb": [
-      33,
-      34,
-      53
+      19,
+      22,
+      40
     ],
-    "brightHex": 13879517,
+    "darkHex": 1250856,
     "brightRgb": [
-      211,
-      200,
-      221
-    ]
+      253,
+      253,
+      253
+    ],
+    "brightHex": 16645629
   },
   "reconstructedFeatures": [
     {
-      "name": "enclosed_cargo_box",
-      "method": "composite_insulated_box"
-    },
-    {
-      "name": "dual_vertical_exhausts",
-      "method": "chrome_exhaust_stacks"
-    },
-    {
-      "name": "heavy_truck_dual_exhaust_and_axles",
+      "name": "mirrored_automobile_features",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.1
+      "zOffset": 0.825
     }
   ],
-  "totalParts": 13,
+  "totalParts": 15,
   "partNames": [
-    "freight_chassis_frame",
-    "freight_cab_body",
-    "cab_windshield",
-    "freight_cargo_box",
-    "rear_rollup_door",
-    "exhaust_stack_left",
-    "steer_wheel_left",
-    "drive_wheel_1_left",
-    "drive_wheel_2_left",
-    "exhaust_stack_right",
-    "steer_wheel_right",
-    "drive_wheel_1_right",
-    "drive_wheel_2_right"
+    "automobile_main_body",
+    "passenger_glass_cabin",
+    "engine_hood_slope",
+    "headlight_left",
+    "taillight_left",
+    "passenger_tire_f_left",
+    "wheel_rim_f_left",
+    "passenger_tire_r_left",
+    "wheel_rim_r_left",
+    "headlight_right",
+    "taillight_right",
+    "passenger_tire_f_right",
+    "wheel_rim_f_right",
+    "passenger_tire_r_right",
+    "wheel_rim_r_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "wedge",
+    "torus_ring"
   ]
 }

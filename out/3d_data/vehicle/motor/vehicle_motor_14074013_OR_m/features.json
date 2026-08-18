@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_14074013_OR_m",
   "sourceImage": "vehicle/motor/14074013_OR_m.webp",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.61,
+  "symmetryScore": 0.608,
   "aspectRatio": 1,
+  "colorRichness": 79.38,
   "colors": {
-    "primaryHex": 11316395,
-    "primaryRgb": [
-      172,
-      172,
-      171
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 131586,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      255,
+      255,
+      255
+    ],
+    "facadeHex": 16777215,
+    "baseRgb": [
+      255,
+      255,
+      255
+    ],
+    "baseHex": 16777215,
     "accentRgb": [
-      2,
-      2,
-      2
+      137,
+      136,
+      129
     ],
-    "darkHex": 2631720,
+    "accentHex": 9013377,
     "darkRgb": [
-      40,
-      40,
-      40
+      20,
+      20,
+      20
     ],
-    "brightHex": 16514043,
+    "darkHex": 1315860,
     "brightRgb": [
-      251,
-      251,
-      251
-    ]
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

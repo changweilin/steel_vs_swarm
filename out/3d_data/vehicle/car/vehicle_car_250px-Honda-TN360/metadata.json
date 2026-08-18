@@ -3,37 +3,39 @@
   "key": "vehicle/car_250px-Honda-TN360_5f314df2",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/250px-Honda-TN360.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\250px-Honda-TN360.jpg",
-  "created_at": "2026-08-18T10:56:14.476Z",
+  "created_at": "2026-08-18T14:27:16.365Z",
   "bounds": {
     "min": [
-      -2.4351,
-      0.0171,
-      -0.9748
+      -2.4501,
+      -0.0072,
+      -1.2466
     ],
     "max": [
-      2.4451,
-      1.6661,
-      0.9748
+      2.4601,
+      1.6961,
+      1.2466
     ],
     "size": [
-      4.88,
-      1.649,
-      1.95
+      4.91,
+      1.703,
+      2.493
     ],
-    "rMax": 2.632,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 2.758,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 4.8101625085832,
-    "W": 1.92,
-    "H": 1.6660631723506523,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 4.860162508583199,
+    "W": 1.95,
+    "H": 1.6960631723506525,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

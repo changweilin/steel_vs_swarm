@@ -1,49 +1,60 @@
 {
   "id": "ship_hull_20oz-china-ships-wgkl-master1050",
   "sourceImage": "ship/20oz-china-ships-wgkl-master1050.jpg",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.963,
+  "symmetryScore": 0.958,
   "aspectRatio": 1.5,
+  "colorRichness": 46.54,
   "colors": {
-    "primaryHex": 9539743,
-    "primaryRgb": [
-      145,
-      144,
-      159
+    "roofRgb": [
+      213,
+      209,
+      218
     ],
-    "accentHex": 1815,
+    "roofHex": 14012890,
+    "facadeRgb": [
+      136,
+      132,
+      155
+    ],
+    "facadeHex": 8946843,
+    "baseRgb": [
+      183,
+      183,
+      188
+    ],
+    "baseHex": 12040124,
     "accentRgb": [
-      0,
-      7,
-      23
+      140,
+      136,
+      161
     ],
-    "darkHex": 4014155,
+    "accentHex": 9210017,
     "darkRgb": [
-      61,
-      64,
-      75
+      74,
+      75,
+      85
     ],
-    "brightHex": 12567494,
+    "darkHex": 4868949,
     "brightRgb": [
-      191,
-      195,
-      198
-    ]
+      216,
+      214,
+      221
+    ],
+    "brightHex": 14210781
   },
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
-  "totalParts": 6,
+  "reconstructedFeatures": [],
+  "totalParts": 4,
   "partNames": [
     "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
+    "bow_flare_wedge",
     "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
+    "vessel_funnel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid"
   ]
 }

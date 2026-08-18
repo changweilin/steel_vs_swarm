@@ -1,76 +1,93 @@
 {
   "id": "building_mass_104405729",
   "sourceImage": "building/104405729.jpg",
-  "style": "commercial_residential",
+  "style": "commercial_flat_terrace",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.896,
+  "symmetryScore": 0.887,
   "aspectRatio": 1,
+  "colorRichness": 68.95,
   "colors": {
-    "primaryHex": 9735815,
-    "primaryRgb": [
-      148,
-      142,
-      135
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 1382429,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      127,
+      119,
+      118
+    ],
+    "facadeHex": 8353654,
+    "baseRgb": [
+      255,
+      255,
+      255
+    ],
+    "baseHex": 16777215,
     "accentRgb": [
-      21,
-      24,
-      29
+      175,
+      115,
+      73
     ],
-    "darkHex": 3684668,
+    "accentHex": 11498313,
     "darkRgb": [
-      56,
-      57,
-      60
+      50,
+      52,
+      57
     ],
-    "brightHex": 15198180,
+    "darkHex": 3290169,
     "brightRgb": [
-      231,
-      231,
-      228
-    ]
+      252,
+      253,
+      253
+    ],
+    "brightHex": 16580093
   },
   "reconstructedFeatures": [
     {
-      "name": "front_facade_balconies",
-      "method": "storefront_and_residential_balconies"
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
     },
     {
-      "name": "rear_fire_escape_and_utilities",
-      "method": "asymmetric_procedural_augmentation"
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
     }
   ],
   "totalParts": 29,
   "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "balcony_f6_l",
-    "balcony_f6_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_fire_escape_landing_f6",
-    "rear_fire_ladder_f6",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
   ]
 }

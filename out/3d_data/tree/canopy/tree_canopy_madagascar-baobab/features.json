@@ -1,56 +1,75 @@
 {
   "id": "tree_canopy_madagascar-baobab",
   "sourceImage": "tree/madagascar-baobab.jpg",
-  "style": "baobab_tree",
+  "style": "succulent_bottle_baobab",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.901,
+  "symmetryScore": 0.893,
   "aspectRatio": 0.75,
+  "colorRichness": 59.62,
   "colors": {
-    "primaryHex": 9936535,
-    "primaryRgb": [
-      151,
-      158,
-      151
+    "roofRgb": [
+      187,
+      205,
+      224
     ],
-    "accentHex": 1250318,
+    "roofHex": 12307936,
+    "facadeRgb": [
+      183,
+      194,
+      193
+    ],
+    "facadeHex": 12042945,
+    "baseRgb": [
+      108,
+      114,
+      46
+    ],
+    "baseHex": 7107118,
     "accentRgb": [
-      19,
-      20,
-      14
+      106,
+      105,
+      49
     ],
-    "darkHex": 3880741,
+    "accentHex": 6973745,
     "darkRgb": [
-      59,
-      55,
-      37
+      53,
+      51,
+      32
     ],
-    "brightHex": 12110547,
+    "darkHex": 3486496,
     "brightRgb": [
-      184,
-      202,
-      211
-    ]
+      191,
+      210,
+      223
+    ],
+    "brightHex": 12571359
   },
   "reconstructedFeatures": [
     {
-      "name": "swollen_bottle_trunk",
-      "method": "massive_succulent_barrel"
+      "name": "swollen_barrel_trunk",
+      "method": "conical_frustum_trunk"
     },
     {
-      "name": "sparse_rosette_crown",
-      "method": "root_like_canopy_clusters"
+      "name": "umbrella_crown_clusters",
+      "method": "radial_branches_and_domes"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 11,
   "partNames": [
-    "baobab_bottle_trunk",
+    "baobab_barrel_trunk",
     "baobab_branch_1",
-    "baobab_foliage_clump_1",
+    "baobab_foliage_dome_1",
     "baobab_branch_2",
-    "baobab_foliage_clump_2",
+    "baobab_foliage_dome_2",
     "baobab_branch_3",
-    "baobab_foliage_clump_3",
+    "baobab_foliage_dome_3",
     "baobab_branch_4",
-    "baobab_foliage_clump_4"
+    "baobab_foliage_dome_4",
+    "baobab_branch_5",
+    "baobab_foliage_dome_5"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "ellipsoid_sphere"
   ]
 }

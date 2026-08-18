@@ -1,0 +1,41 @@
+{
+  "id": "landmark_lattice_ov_63cf1d91-359f-4c98-be96-5045391faff6",
+  "key": "landmark/lattice_ov_63cf1d91-359f-4c98-be96-5045391faff6_3a436734",
+  "family": "landmark",
+  "subpart": "lattice",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "landmark/lattice/ov_63cf1d91-359f-4c98-be96-5045391faff6.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\lattice\\ov_63cf1d91-359f-4c98-be96-5045391faff6.jpg",
+  "created_at": "2026-08-18T14:27:15.615Z",
+  "bounds": {
+    "min": [
+      -4.1345,
+      0,
+      -4.1345
+    ],
+    "max": [
+      4.1345,
+      18.9755,
+      4.1345
+    ],
+    "size": [
+      8.269,
+      18.976,
+      8.269
+    ],
+    "rMax": 5.847,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "L": 9.187823300526436,
+    "W": 8.827466239414054,
+    "H": 17.402517738612957,
+    "style": "industrial_landmark_installation"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

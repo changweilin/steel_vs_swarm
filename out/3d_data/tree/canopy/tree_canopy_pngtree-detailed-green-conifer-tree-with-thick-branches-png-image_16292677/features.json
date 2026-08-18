@@ -1,49 +1,70 @@
 {
   "id": "tree_canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677",
   "sourceImage": "tree/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png",
-  "style": "conifer_pine",
+  "style": "conifer_pine_spire",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.939,
+  "symmetryScore": 0.933,
   "aspectRatio": 1,
+  "colorRichness": 79.91,
   "colors": {
-    "primaryHex": 11778215,
-    "primaryRgb": [
-      179,
-      184,
-      167
+    "roofRgb": [
+      230,
+      230,
+      230
     ],
-    "accentHex": 1054218,
+    "roofHex": 15132390,
+    "facadeRgb": [
+      230,
+      230,
+      230
+    ],
+    "facadeHex": 15132390,
+    "baseRgb": [
+      230,
+      230,
+      230
+    ],
+    "baseHex": 15132390,
     "accentRgb": [
-      16,
-      22,
-      10
+      79,
+      96,
+      45
     ],
-    "darkHex": 3226140,
+    "accentHex": 5201965,
     "darkRgb": [
-      49,
-      58,
-      28
+      42,
+      50,
+      24
     ],
-    "brightHex": 15593196,
+    "darkHex": 2765336,
     "brightRgb": [
-      237,
-      238,
-      236
-    ]
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
   },
   "reconstructedFeatures": [
     {
-      "name": "tiered_conical_whorls",
-      "method": "five_tiered_needle_canopies"
+      "name": "tapered_resin_trunk",
+      "method": "conical_frustum_trunk"
+    },
+    {
+      "name": "six_tiered_conical_needle_canopies",
+      "method": "tiered_multi_sided_cones"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 7,
   "partNames": [
     "pine_tapered_trunk",
     "pine_canopy_tier_1",
     "pine_canopy_tier_2",
     "pine_canopy_tier_3",
     "pine_canopy_tier_4",
-    "pine_canopy_tier_5"
+    "pine_canopy_tier_5",
+    "pine_canopy_tier_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid"
   ]
 }

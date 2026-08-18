@@ -3,36 +3,38 @@
   "key": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_38edd5ad",
   "family": "tree",
   "subpart": "canopy",
-  "style": "baobab_tree",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
-  "created_at": "2026-08-18T10:56:14.261Z",
+  "created_at": "2026-08-18T14:27:16.119Z",
   "bounds": {
     "min": [
-      -3.8,
-      0,
-      -3.8
+      -3.0607,
+      -0.1927,
+      -2.7389
     ],
     "max": [
-      3.8,
-      10.2358,
-      3.8
+      3.4031,
+      2.6975,
+      2.8679
     ],
     "size": [
-      7.6,
-      10.236,
-      7.6
+      6.464,
+      2.89,
+      5.607
     ],
-    "rMax": 5.374,
-    "triangles": 184,
-    "vertices": 110
+    "rMax": 4.45,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 8.457312886243992,
-    "W": 9.887296864271,
-    "H": 11.132021057450217,
-    "style": "succulent_bottle_baobab"
+    "L": 4.8810940718699936,
+    "W": 6.0727473868925,
+    "H": 2.849507896543831,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

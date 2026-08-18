@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_7801666",
   "sourceImage": "vehicle/motor/7801666.jpg",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.826,
+  "symmetryScore": 0.814,
   "aspectRatio": 1.778,
+  "colorRichness": 81.88,
   "colors": {
-    "primaryHex": 9737106,
-    "primaryRgb": [
-      148,
-      147,
-      146
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 0,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      202,
+      196,
+      197
+    ],
+    "facadeHex": 13288645,
+    "baseRgb": [
+      243,
+      242,
+      243
+    ],
+    "baseHex": 15987443,
     "accentRgb": [
-      0,
-      0,
-      0
+      99,
+      92,
+      84
     ],
-    "darkHex": 2368035,
+    "accentHex": 6511700,
     "darkRgb": [
-      36,
-      34,
-      35
+      16,
+      15,
+      17
     ],
-    "brightHex": 16316407,
+    "darkHex": 1052433,
     "brightRgb": [
-      248,
-      247,
-      247
-    ]
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

@@ -5,34 +5,36 @@
   "subpart": "canopy",
   "style": "broadleaf_camphor_oak",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/51YNHnO1PXL.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\51YNHnO1PXL.jpg",
-  "created_at": "2026-08-18T10:56:14.249Z",
+  "created_at": "2026-08-18T14:27:16.099Z",
   "bounds": {
     "min": [
-      -6.5642,
+      -9.5546,
       0,
-      -7.1016
+      -8.8177
     ],
     "max": [
-      6.465,
-      20.4546,
-      7.1179
+      8.5615,
+      23.5561,
+      8.3903
     ],
     "size": [
-      13.029,
-      20.455,
-      14.22
+      18.116,
+      23.556,
+      17.208
     ],
-    "rMax": 9.671,
-    "triangles": 152,
-    "vertices": 98
+    "rMax": 13.002,
+    "triangles": 1200,
+    "vertices": 765
   },
   "spec": {
-    "L": 10.624818799114976,
-    "W": 13.866598001068132,
-    "H": 19.700999465934235,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 11.124818799114976,
+    "W": 14.366598001068132,
+    "H": 20.700999465934235,
+    "style": "broadleaf_buttress_and_dome_canopies"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -1,0 +1,90 @@
+{
+  "id": "building_mass_pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027",
+  "sourceImage": "building/pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027.png",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.801,
+  "aspectRatio": 1,
+  "colorRichness": 69.97,
+  "colors": {
+    "roofRgb": [
+      42,
+      38,
+      28
+    ],
+    "roofHex": 2762268,
+    "facadeRgb": [
+      116,
+      98,
+      73
+    ],
+    "facadeHex": 7627337,
+    "baseRgb": [
+      0,
+      0,
+      0
+    ],
+    "baseHex": 0,
+    "accentRgb": [
+      53,
+      52,
+      26
+    ],
+    "accentHex": 3486746,
+    "darkRgb": [
+      0,
+      0,
+      0
+    ],
+    "darkHex": 0,
+    "brightRgb": [
+      214,
+      209,
+      197
+    ],
+    "brightHex": 14078405
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
+    },
+    {
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
+    }
+  ],
+  "totalParts": 23,
+  "partNames": [
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

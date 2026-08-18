@@ -3,36 +3,38 @@
   "key": "tree/canopy_臺灣杉照片提供／陳建帆_31f04a07",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
+  "style": "conifer_pine_spire",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/臺灣杉照片提供／陳建帆.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\臺灣杉照片提供／陳建帆.jpg",
-  "created_at": "2026-08-18T10:56:14.358Z",
+  "created_at": "2026-08-18T14:27:16.231Z",
   "bounds": {
     "min": [
-      -7.559,
+      -4.1933,
       0,
-      -6.7056
+      -4.1933
     ],
     "max": [
-      7.4312,
-      20.134,
-      6.8733
+      4.1933,
+      20.6376,
+      4.1933
     ],
     "size": [
-      14.99,
-      20.134,
-      13.579
+      8.387,
+      20.638,
+      8.387
     ],
-    "rMax": 10.122,
-    "triangles": 152,
-    "vertices": 98
+    "rMax": 5.93,
+    "triangles": 224,
+    "vertices": 126
   },
   "spec": {
-    "L": 14.218242160677502,
-    "W": 12.273250934615092,
-    "H": 20.408773937590603,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 9.35912108033875,
+    "W": 8.386625467307546,
+    "H": 20.05658045319295,
+    "style": "conifer_pine_tiered_cones"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

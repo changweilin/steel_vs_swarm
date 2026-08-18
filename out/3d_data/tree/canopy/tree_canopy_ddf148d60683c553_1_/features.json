@@ -3,54 +3,75 @@
   "sourceImage": "tree/ddf148d60683c553 (1).webp",
   "style": "broadleaf_camphor_oak",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.922,
+  "symmetryScore": 0.912,
   "aspectRatio": 1.848,
+  "colorRichness": 86.15,
   "colors": {
-    "primaryHex": 7967864,
-    "primaryRgb": [
-      121,
-      148,
-      120
+    "roofRgb": [
+      240,
+      239,
+      239
     ],
-    "accentHex": 16777215,
-    "accentRgb": [
-      255,
-      255,
-      255
+    "roofHex": 15790063,
+    "facadeRgb": [
+      69,
+      118,
+      61
     ],
-    "darkHex": 1721887,
-    "darkRgb": [
-      26,
-      70,
-      31
-    ],
-    "brightHex": 15856369,
-    "brightRgb": [
+    "facadeHex": 4552253,
+    "baseRgb": [
       241,
-      242,
-      241
-    ]
+      241,
+      242
+    ],
+    "baseHex": 15856114,
+    "accentRgb": [
+      13,
+      55,
+      20
+    ],
+    "accentHex": 866068,
+    "darkRgb": [
+      13,
+      55,
+      20
+    ],
+    "darkHex": 866068,
+    "brightRgb": [
+      253,
+      253,
+      253
+    ],
+    "brightHex": 16645629
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
+      "name": "fluted_buttress_root_fins",
+      "method": "frustum_fins"
     },
     {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "multi_tier_overlapping_canopy_domes",
+      "method": "ellipsoidal_canopy_domes"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 13,
   "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
+    "gnarled_trunk_core",
+    "buttress_fin_1",
+    "buttress_fin_2",
+    "buttress_fin_3",
+    "buttress_fin_4",
+    "buttress_fin_5",
     "canopy_foliage_dome_1",
     "canopy_foliage_dome_2",
     "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4"
+    "canopy_foliage_dome_4",
+    "canopy_foliage_dome_5",
+    "canopy_foliage_dome_6",
+    "canopy_foliage_dome_7"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "ellipsoid_sphere"
   ]
 }

@@ -1,0 +1,65 @@
+{
+  "id": "tree_sp_baobab_wc_156495515",
+  "sourceImage": "tree/sp_baobab/wc_156495515.png",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.884,
+  "aspectRatio": 1.284,
+  "colorRichness": 31.96,
+  "colors": {
+    "roofRgb": [
+      90,
+      86,
+      79
+    ],
+    "roofHex": 5920335,
+    "facadeRgb": [
+      71,
+      71,
+      64
+    ],
+    "facadeHex": 4671296,
+    "baseRgb": [
+      122,
+      103,
+      82
+    ],
+    "baseHex": 8021842,
+    "accentRgb": [
+      135,
+      108,
+      80
+    ],
+    "accentHex": 8875088,
+    "darkRgb": [
+      42,
+      42,
+      39
+    ],
+    "darkHex": 2763303,
+    "brightRgb": [
+      149,
+      131,
+      110
+    ],
+    "brightHex": 9798510
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
+  ]
+}

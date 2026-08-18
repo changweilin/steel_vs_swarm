@@ -1,0 +1,63 @@
+{
+  "id": "rock_main_large-heavy-rock-stone-isolated-on-background-png",
+  "sourceImage": "rock/large-heavy-rock-stone-isolated-on-background-png.webp",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.728,
+  "aspectRatio": 1,
+  "colorRichness": 82.71,
+  "colors": {
+    "roofRgb": [
+      0,
+      0,
+      0
+    ],
+    "roofHex": 0,
+    "facadeRgb": [
+      112,
+      111,
+      104
+    ],
+    "facadeHex": 7368552,
+    "baseRgb": [
+      0,
+      0,
+      0
+    ],
+    "baseHex": 0,
+    "accentRgb": [
+      1,
+      1,
+      2
+    ],
+    "accentHex": 65794,
+    "darkRgb": [
+      1,
+      1,
+      2
+    ],
+    "darkHex": 65794,
+    "brightRgb": [
+      246,
+      250,
+      250
+    ],
+    "brightHex": 16186106
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "faceted_cleavage_planes_and_scree",
+      "method": "dodecahedron_and_talus"
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "erratic_boulder_core",
+    "talus_scree_facet_1",
+    "talus_scree_facet_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "frustum_pyramid"
+  ]
+}

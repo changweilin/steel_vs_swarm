@@ -1,0 +1,41 @@
+{
+  "id": "rock_main_71W8rWv9TvL._AC_UF894_1000_QL80_",
+  "key": "rock/main_71W8rWv9TvL._AC_UF894,1000_QL80__b2600fbb",
+  "family": "rock",
+  "subpart": "main",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/71W8rWv9TvL._AC_UF894,1000_QL80_.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\71W8rWv9TvL._AC_UF894,1000_QL80_.jpg",
+  "created_at": "2026-08-18T14:27:15.649Z",
+  "bounds": {
+    "min": [
+      -4.5534,
+      -0.9466,
+      -5.6946
+    ],
+    "max": [
+      4.9445,
+      5.9112,
+      5.0657
+    ],
+    "size": [
+      9.498,
+      6.858,
+      10.76
+    ],
+    "rMax": 7.291,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 6.2611200122072175,
+    "W": 8.530075532158389,
+    "H": 5.738269626916915,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

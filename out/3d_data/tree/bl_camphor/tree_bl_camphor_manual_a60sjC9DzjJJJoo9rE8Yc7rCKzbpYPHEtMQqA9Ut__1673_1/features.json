@@ -1,56 +1,65 @@
 {
   "id": "tree_bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1",
   "sourceImage": "tree/bl_camphor/manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1.jpg",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.794,
+  "symmetryScore": 0.778,
   "aspectRatio": 1.503,
+  "colorRichness": 67.64,
   "colors": {
-    "primaryHex": 6584188,
-    "primaryRgb": [
-      100,
-      119,
-      124
+    "roofRgb": [
+      90,
+      161,
+      242
     ],
-    "accentHex": 15987701,
+    "roofHex": 5939698,
+    "facadeRgb": [
+      110,
+      125,
+      97
+    ],
+    "facadeHex": 7241057,
+    "baseRgb": [
+      127,
+      117,
+      112
+    ],
+    "baseHex": 8353136,
     "accentRgb": [
-      243,
-      243,
+      70,
+      157,
+      239
+    ],
+    "accentHex": 4627951,
+    "darkRgb": [
+      33,
+      33,
+      20
+    ],
+    "darkHex": 2171156,
+    "brightRgb": [
+      148,
+      191,
       245
     ],
-    "darkHex": 3289123,
-    "darkRgb": [
-      50,
-      48,
-      35
-    ],
-    "brightHex": 10798834,
-    "brightRgb": [
-      164,
-      198,
-      242
-    ]
+    "brightHex": 9748469
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
-    },
-    {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 6,
   "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4"
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
   ]
 }

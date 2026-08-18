@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
   "sourceImage": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf.jpg",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.813,
+  "symmetryScore": 0.802,
   "aspectRatio": 1,
+  "colorRichness": 81.42,
   "colors": {
-    "primaryHex": 11119279,
-    "primaryRgb": [
-      169,
-      170,
-      175
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 262920,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      195,
+      197,
+      208
+    ],
+    "facadeHex": 12830160,
+    "baseRgb": [
+      255,
+      255,
+      255
+    ],
+    "baseHex": 16777215,
     "accentRgb": [
-      4,
-      3,
-      8
+      18,
+      18,
+      27
     ],
-    "darkHex": 2500659,
+    "accentHex": 1184283,
     "darkRgb": [
-      38,
-      40,
-      51
+      18,
+      18,
+      27
     ],
-    "brightHex": 16251128,
+    "darkHex": 1184283,
     "brightRgb": [
-      247,
-      248,
-      248
-    ]
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

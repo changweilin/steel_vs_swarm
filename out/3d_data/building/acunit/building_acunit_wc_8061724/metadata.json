@@ -1,0 +1,41 @@
+{
+  "id": "building_acunit_wc_8061724",
+  "key": "building/acunit_wc_8061724_618600b3",
+  "family": "building",
+  "subpart": "acunit",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/acunit/wc_8061724.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\acunit\\wc_8061724.jpg",
+  "created_at": "2026-08-18T14:27:15.276Z",
+  "bounds": {
+    "min": [
+      -11.2696,
+      0,
+      -9.6708
+    ],
+    "max": [
+      11.2696,
+      33.4737,
+      9.3708
+    ],
+    "size": [
+      22.539,
+      33.474,
+      19.042
+    ],
+    "rMax": 14.85,
+    "triangles": 416,
+    "vertices": 274
+  },
+  "spec": {
+    "L": 22.09723048752575,
+    "W": 16.141588464179446,
+    "H": 31.073655298695353,
+    "style": "modern_flat_terrace_commercial"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

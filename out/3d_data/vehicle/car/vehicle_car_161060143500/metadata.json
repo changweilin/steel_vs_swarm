@@ -3,37 +3,39 @@
   "key": "vehicle/car_161060143500_158d09d9",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/161060143500.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\161060143500.jpg",
-  "created_at": "2026-08-18T10:56:14.434Z",
+  "created_at": "2026-08-18T14:27:16.298Z",
   "bounds": {
     "min": [
-      -2.5878,
-      0.0171,
-      -0.9748
+      -2.6028,
+      -0.0072,
+      -1.325
     ],
     "max": [
-      2.5978,
-      1.6157,
-      0.9748
+      2.6128,
+      1.6457,
+      1.325
     ],
     "size": [
-      5.186,
-      1.599,
-      1.95
+      5.216,
+      1.653,
+      2.65
     ],
-    "rMax": 2.775,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 2.93,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 5.115666437781338,
-    "W": 1.92,
-    "H": 1.6157328145265888,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 5.165666437781338,
+    "W": 1.95,
+    "H": 1.6457328145265888,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

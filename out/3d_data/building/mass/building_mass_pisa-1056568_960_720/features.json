@@ -3,59 +3,103 @@
   "sourceImage": "building/pisa-1056568_960_720.jpg",
   "style": "leaning_arcade_tower",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.901,
+  "symmetryScore": 0.885,
   "aspectRatio": 1.333,
+  "colorRichness": 66.82,
   "colors": {
-    "primaryHex": 5342132,
-    "primaryRgb": [
-      81,
-      131,
-      180
+    "roofRgb": [
+      17,
+      88,
+      175
     ],
-    "accentHex": 527110,
+    "roofHex": 1136815,
+    "facadeRgb": [
+      60,
+      129,
+      211
+    ],
+    "facadeHex": 3965395,
+    "baseRgb": [
+      120,
+      126,
+      110
+    ],
+    "baseHex": 7896686,
     "accentRgb": [
-      8,
-      11,
-      6
+      19,
+      98,
+      188
     ],
-    "darkHex": 1526400,
+    "accentHex": 1270460,
     "darkRgb": [
-      23,
-      74,
-      128
+      37,
+      42,
+      34
     ],
-    "brightHex": 13618881,
+    "darkHex": 2435618,
     "brightRgb": [
-      207,
-      206,
-      193
-    ]
+      213,
+      217,
+      218
+    ],
+    "brightHex": 14014938
   },
   "reconstructedFeatures": [
     {
-      "name": "concentric_arcades",
-      "method": "six_tiered_radial_galleries"
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
     },
     {
-      "name": "inclination_lean",
-      "method": "authentic_axial_tilt"
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
     }
   ],
-  "totalParts": 14,
+  "totalParts": 41,
   "partNames": [
-    "ground_tier_blind_arcade",
-    "arcade_gallery_tier_1",
-    "balustrade_rim_1",
-    "arcade_gallery_tier_2",
-    "balustrade_rim_2",
-    "arcade_gallery_tier_3",
-    "balustrade_rim_3",
-    "arcade_gallery_tier_4",
-    "balustrade_rim_4",
-    "arcade_gallery_tier_5",
-    "balustrade_rim_5",
-    "arcade_gallery_tier_6",
-    "balustrade_rim_6",
-    "top_belfry_chamber"
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "front_balcony_f6_l",
+    "front_balcony_f6_r",
+    "front_balcony_f7_l",
+    "front_balcony_f7_r",
+    "front_balcony_f8_l",
+    "front_balcony_f8_r",
+    "front_balcony_f9_l",
+    "front_balcony_f9_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_fire_platform_f6",
+    "rear_fire_stair_f6",
+    "rear_fire_platform_f7",
+    "rear_fire_stair_f7",
+    "rear_fire_platform_f8",
+    "rear_fire_stair_f8",
+    "rear_fire_platform_f9",
+    "rear_fire_stair_f9",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
   ]
 }

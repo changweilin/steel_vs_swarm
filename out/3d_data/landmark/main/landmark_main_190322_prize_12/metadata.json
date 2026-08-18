@@ -1,0 +1,41 @@
+{
+  "id": "landmark_main_190322_prize_12",
+  "key": "landmark/main_190322_prize_12_121c1f06",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "landmark/190322_prize_12.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\190322_prize_12.jpg",
+  "created_at": "2026-08-18T14:27:15.591Z",
+  "bounds": {
+    "min": [
+      -4.1107,
+      0,
+      -4.1107
+    ],
+    "max": [
+      4.1107,
+      14.8533,
+      4.1107
+    ],
+    "size": [
+      8.221,
+      14.853,
+      8.221
+    ],
+    "rMax": 5.813,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "L": 9.134843976501106,
+    "W": 11.993896391241321,
+    "H": 13.280292973220416,
+    "style": "industrial_landmark_installation"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

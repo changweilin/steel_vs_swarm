@@ -1,56 +1,65 @@
 {
   "id": "tree_canopy_Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)",
   "sourceImage": "tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg",
-  "style": "baobab_tree",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.868,
+  "symmetryScore": 0.859,
   "aspectRatio": 1.5,
+  "colorRichness": 64.5,
   "colors": {
-    "primaryHex": 7965575,
-    "primaryRgb": [
-      121,
-      139,
-      135
+    "roofRgb": [
+      152,
+      186,
+      221
     ],
-    "accentHex": 1511439,
+    "roofHex": 10009309,
+    "facadeRgb": [
+      144,
+      187,
+      223
+    ],
+    "facadeHex": 9485279,
+    "baseRgb": [
+      130,
+      166,
+      95
+    ],
+    "baseHex": 8562271,
     "accentRgb": [
-      23,
-      16,
-      15
+      110,
+      139,
+      30
     ],
-    "darkHex": 4142885,
+    "accentHex": 7244574,
     "darkRgb": [
-      63,
-      55,
-      37
+      50,
+      47,
+      25
     ],
-    "brightHex": 10602727,
+    "darkHex": 3288857,
     "brightRgb": [
-      161,
-      200,
-      231
-    ]
+      182,
+      207,
+      229
+    ],
+    "brightHex": 11980773
   },
   "reconstructedFeatures": [
     {
-      "name": "swollen_bottle_trunk",
-      "method": "massive_succulent_barrel"
-    },
-    {
-      "name": "sparse_rosette_crown",
-      "method": "root_like_canopy_clusters"
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 6,
   "partNames": [
-    "baobab_bottle_trunk",
-    "baobab_branch_1",
-    "baobab_foliage_clump_1",
-    "baobab_branch_2",
-    "baobab_foliage_clump_2",
-    "baobab_branch_3",
-    "baobab_foliage_clump_3",
-    "baobab_branch_4",
-    "baobab_foliage_clump_4"
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
   ]
 }

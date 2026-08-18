@@ -1,0 +1,41 @@
+{
+  "id": "rock_st_dolmen_ov_ab168278-6be0-4d4b-ae0a-448fd630ad80",
+  "key": "rock/st_dolmen_ov_ab168278-6be0-4d4b-ae0a-448fd630ad80_58a8ecab",
+  "family": "rock",
+  "subpart": "st_dolmen",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/st_dolmen/ov_ab168278-6be0-4d4b-ae0a-448fd630ad80.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\st_dolmen\\ov_ab168278-6be0-4d4b-ae0a-448fd630ad80.jpg",
+  "created_at": "2026-08-18T14:27:15.735Z",
+  "bounds": {
+    "min": [
+      -4.7126,
+      -0.9938,
+      -5.3889
+    ],
+    "max": [
+      5.0453,
+      4.3444,
+      4.6962
+    ],
+    "size": [
+      9.758,
+      5.338,
+      10.085
+    ],
+    "rMax": 7.159,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 6.48115510795758,
+    "W": 7.046105134660868,
+    "H": 4.217357137407492,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

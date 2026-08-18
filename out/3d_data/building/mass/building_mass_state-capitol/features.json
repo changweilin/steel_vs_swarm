@@ -1,70 +1,90 @@
 {
   "id": "building_mass_state-capitol",
   "sourceImage": "building/state-capitol.jpg",
-  "style": "modern_skyscraper_tower",
+  "style": "classical_temple_peristyle",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.908,
+  "symmetryScore": 0.901,
   "aspectRatio": 1,
+  "colorRichness": 59.08,
   "colors": {
-    "primaryHex": 7436415,
-    "primaryRgb": [
-      113,
-      120,
-      127
+    "roofRgb": [
+      99,
+      124,
+      165
     ],
-    "accentHex": 16777214,
+    "roofHex": 6519973,
+    "facadeRgb": [
+      133,
+      153,
+      186
+    ],
+    "facadeHex": 8755642,
+    "baseRgb": [
+      77,
+      88,
+      35
+    ],
+    "baseHex": 5068835,
     "accentRgb": [
-      255,
-      255,
-      254
+      98,
+      123,
+      165
     ],
-    "darkHex": 4011816,
+    "accentHex": 6454181,
     "darkRgb": [
-      61,
-      55,
-      40
+      41,
+      34,
+      25
     ],
-    "brightHex": 13752030,
+    "darkHex": 2695705,
     "brightRgb": [
-      209,
-      214,
-      222
-    ]
+      210,
+      206,
+      203
+    ],
+    "brightHex": 13815499
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_setback_tower",
-      "method": "triple_tier_massing"
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
     },
     {
-      "name": "curtain_wall_ribs",
-      "method": "vertical_mullion_grid"
-    },
-    {
-      "name": "rooftop_mechanicals",
-      "method": "chillers_and_antenna"
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
     }
   ],
-  "totalParts": 19,
+  "totalParts": 23,
   "partNames": [
-    "podium_lobby_glass",
-    "entrance_canopy",
-    "tower_tier_1",
-    "tower_tier_2_setback",
-    "tower_tier_3_crown",
-    "floor_spandrel_1",
-    "floor_spandrel_2",
-    "floor_spandrel_3",
-    "floor_spandrel_4",
-    "floor_spandrel_5",
-    "floor_spandrel_6",
-    "floor_spandrel_7",
-    "floor_spandrel_8",
-    "floor_spandrel_9",
-    "floor_spandrel_10",
-    "floor_spandrel_11",
-    "floor_spandrel_12",
-    "rooftop_hvac_penthouse",
-    "rooftop_antenna_spire"
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
   ]
 }

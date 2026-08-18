@@ -1,0 +1,89 @@
+{
+  "id": "building_window_ov_864569fb-56ef-4684-97df-6a18597be0dc",
+  "sourceImage": "building/window/ov_864569fb-56ef-4684-97df-6a18597be0dc.jpg",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.864,
+  "aspectRatio": 1,
+  "colorRichness": 80,
+  "colors": {
+    "roofRgb": [
+      239,
+      239,
+      235
+    ],
+    "roofHex": 15724523,
+    "facadeRgb": [
+      238,
+      207,
+      173
+    ],
+    "facadeHex": 15650733,
+    "baseRgb": [
+      239,
+      239,
+      235
+    ],
+    "baseHex": 15724523,
+    "accentRgb": [
+      28,
+      17,
+      12
+    ],
+    "accentHex": 1839372,
+    "darkRgb": [
+      28,
+      17,
+      12
+    ],
+    "darkHex": 1839372,
+    "brightRgb": [
+      238,
+      238,
+      234
+    ],
+    "brightHex": 15658730
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_storefront_and_cantilever_balconies",
+      "method": "storefront_and_balconies"
+    },
+    {
+      "name": "rear_fire_escape_stair_tower_and_flues",
+      "method": "asymmetric_fire_escape_and_ducts"
+    }
+  ],
+  "totalParts": 25,
+  "partNames": [
+    "building_mass_body",
+    "flat_roof_parapet_rim",
+    "rooftop_elevator_penthouse",
+    "front_storefront_glazed",
+    "front_balcony_f1_l",
+    "front_balcony_f1_r",
+    "front_balcony_f2_l",
+    "front_balcony_f2_r",
+    "front_balcony_f3_l",
+    "front_balcony_f3_r",
+    "front_balcony_f4_l",
+    "front_balcony_f4_r",
+    "front_balcony_f5_l",
+    "front_balcony_f5_r",
+    "rear_fire_platform_f1",
+    "rear_fire_stair_f1",
+    "rear_fire_platform_f2",
+    "rear_fire_stair_f2",
+    "rear_fire_platform_f3",
+    "rear_fire_stair_f3",
+    "rear_fire_platform_f4",
+    "rear_fire_stair_f4",
+    "rear_fire_platform_f5",
+    "rear_fire_stair_f5",
+    "rear_exhaust_duct_flue"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

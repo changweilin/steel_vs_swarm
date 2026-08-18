@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_qaSe0J_R2KSh1aPL0Q",
   "sourceImage": "vehicle/motor/qaSe0J_R2KSh1aPL0Q.webp",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.877,
+  "symmetryScore": 0.87,
   "aspectRatio": 1.414,
+  "colorRichness": 80.61,
   "colors": {
-    "primaryHex": 9211019,
-    "primaryRgb": [
-      140,
-      140,
-      139
+    "roofRgb": [
+      204,
+      204,
+      204
     ],
-    "accentHex": 328965,
+    "roofHex": 13421772,
+    "facadeRgb": [
+      203,
+      203,
+      203
+    ],
+    "facadeHex": 13355979,
+    "baseRgb": [
+      248,
+      248,
+      248
+    ],
+    "baseHex": 16316664,
     "accentRgb": [
-      5,
-      5,
-      5
+      87,
+      87,
+      85
     ],
-    "darkHex": 2960685,
+    "accentHex": 5723989,
     "darkRgb": [
-      45,
-      45,
-      45
+      23,
+      23,
+      23
     ],
-    "brightHex": 13750737,
+    "darkHex": 1513239,
     "brightRgb": [
-      209,
-      209,
-      209
-    ]
+      248,
+      248,
+      248
+    ],
+    "brightHex": 16316664
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

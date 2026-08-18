@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor_ECP0030603705169_4_20691615",
   "sourceImage": "vehicle/motor/ECP0030603705169_4_20691615.jpg",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.896,
+  "symmetryScore": 0.893,
   "aspectRatio": 1,
+  "colorRichness": 80.06,
   "colors": {
-    "primaryHex": 13421514,
-    "primaryRgb": [
-      204,
-      203,
-      202
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 460552,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      255,
+      255,
+      255
+    ],
+    "facadeHex": 16777215,
+    "baseRgb": [
+      255,
+      255,
+      255
+    ],
+    "baseHex": 16777215,
     "accentRgb": [
-      7,
-      7,
-      8
+      219,
+      213,
+      203
     ],
-    "darkHex": 3420724,
+    "accentHex": 14407115,
     "darkRgb": [
-      52,
-      50,
-      52
+      31,
+      29,
+      31
     ],
-    "brightHex": 16316406,
+    "darkHex": 2039071,
     "brightRgb": [
-      248,
-      247,
-      246
-    ]
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

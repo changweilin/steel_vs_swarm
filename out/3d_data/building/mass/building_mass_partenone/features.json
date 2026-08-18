@@ -1,81 +1,90 @@
 {
   "id": "building_mass_partenone",
   "sourceImage": "building/partenone.jpg",
-  "style": "classical_temple",
+  "style": "classical_temple_peristyle",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.919,
+  "symmetryScore": 0.91,
   "aspectRatio": 1,
+  "colorRichness": 56.47,
   "colors": {
-    "primaryHex": 4749713,
-    "primaryRgb": [
-      72,
-      121,
+    "roofRgb": [
+      67,
+      170,
+      229
+    ],
+    "roofHex": 4434661,
+    "facadeRgb": [
+      70,
+      122,
+      138
+    ],
+    "facadeHex": 4618890,
+    "baseRgb": [
+      29,
+      51,
+      44
+    ],
+    "baseHex": 1913644,
+    "accentRgb": [
+      67,
+      167,
+      225
+    ],
+    "accentHex": 4433889,
+    "darkRgb": [
+      22,
+      39,
+      38
+    ],
+    "darkHex": 1451814,
+    "brightRgb": [
+      188,
+      169,
       145
     ],
-    "accentHex": 16446370,
-    "accentRgb": [
-      250,
-      243,
-      162
-    ],
-    "darkHex": 2111288,
-    "darkRgb": [
-      32,
-      55,
-      56
-    ],
-    "brightHex": 14270102,
-    "brightRgb": [
-      217,
-      190,
-      150
-    ]
+    "brightHex": 12364177
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_stylobate_base",
-      "method": "tri_tier_concentric_plinth"
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
     },
     {
-      "name": "peristyle_fluted_colonnade",
-      "method": "four_sided_symmetric_columns"
-    },
-    {
-      "name": "pediment_and_tympanum",
-      "method": "front_and_rear_mirrored_gables"
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
     }
   ],
-  "totalParts": 30,
+  "totalParts": 23,
   "partNames": [
-    "stylobate_tier_1",
-    "stylobate_tier_2",
-    "stylobate_tier_3",
-    "cella_sanctuary_wall",
-    "column_north_1",
-    "column_south_1",
-    "column_north_2",
-    "column_south_2",
-    "column_north_3",
-    "column_south_3",
-    "column_north_4",
-    "column_south_4",
-    "column_north_5",
-    "column_south_5",
-    "column_north_6",
-    "column_south_6",
-    "column_north_7",
-    "column_south_7",
-    "column_north_8",
-    "column_south_8",
-    "column_east_2",
-    "column_west_2",
-    "column_east_3",
-    "column_west_3",
-    "column_east_4",
-    "column_west_4",
-    "entablature_frieze",
-    "roof_pitched_slab",
-    "pediment_front_east",
-    "pediment_rear_west_mirror"
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
   ]
 }

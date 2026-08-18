@@ -1,0 +1,41 @@
+{
+  "id": "landmark_dish_ov_ea651899-beed-40c9-8e9e-617e88218cdb",
+  "key": "landmark/dish_ov_ea651899-beed-40c9-8e9e-617e88218cdb_5b6878ae",
+  "family": "landmark",
+  "subpart": "dish",
+  "style": "industrial_installation_rig",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "landmark/dish/ov_ea651899-beed-40c9-8e9e-617e88218cdb.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\dish\\ov_ea651899-beed-40c9-8e9e-617e88218cdb.jpg",
+  "created_at": "2026-08-18T14:27:15.607Z",
+  "bounds": {
+    "min": [
+      -4.4656,
+      0,
+      -4.4656
+    ],
+    "max": [
+      4.4656,
+      19.4659,
+      4.4656
+    ],
+    "size": [
+      8.931,
+      19.466,
+      8.931
+    ],
+    "rMax": 6.315,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "L": 9.923491264209964,
+    "W": 10.22793926909285,
+    "H": 17.89288166628519,
+    "style": "industrial_landmark_installation"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

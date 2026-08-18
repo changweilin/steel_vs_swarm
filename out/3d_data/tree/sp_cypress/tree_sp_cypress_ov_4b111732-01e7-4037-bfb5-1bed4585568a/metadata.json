@@ -1,0 +1,41 @@
+{
+  "id": "tree_sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a",
+  "key": "tree/sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a_9ae02931",
+  "family": "tree",
+  "subpart": "sp_cypress",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "tree/sp_cypress/ov_4b111732-01e7-4037-bfb5-1bed4585568a.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\sp_cypress\\ov_4b111732-01e7-4037-bfb5-1bed4585568a.jpg",
+  "created_at": "2026-08-18T14:27:15.907Z",
+  "bounds": {
+    "min": [
+      -8.3527,
+      0,
+      -9.9874
+    ],
+    "max": [
+      8.8583,
+      22.8084,
+      8.0815
+    ],
+    "size": [
+      17.211,
+      22.808,
+      18.069
+    ],
+    "rMax": 13.02,
+    "triangles": 1080,
+    "vertices": 688
+  },
+  "spec": {
+    "L": 11.687342641336691,
+    "W": 13.779201953154804,
+    "H": 20.238223849851224,
+    "style": "broadleaf_buttress_and_dome_canopies"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

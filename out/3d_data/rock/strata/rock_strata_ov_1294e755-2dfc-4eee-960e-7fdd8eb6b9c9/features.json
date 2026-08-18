@@ -1,0 +1,63 @@
+{
+  "id": "rock_strata_ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9",
+  "sourceImage": "rock/strata/ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9.jpg",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.716,
+  "aspectRatio": 0.75,
+  "colorRichness": 67.45,
+  "colors": {
+    "roofRgb": [
+      34,
+      56,
+      29
+    ],
+    "roofHex": 2242589,
+    "facadeRgb": [
+      71,
+      86,
+      59
+    ],
+    "facadeHex": 4675131,
+    "baseRgb": [
+      141,
+      140,
+      173
+    ],
+    "baseHex": 9276589,
+    "accentRgb": [
+      16,
+      139,
+      198
+    ],
+    "accentHex": 1084358,
+    "darkRgb": [
+      24,
+      39,
+      21
+    ],
+    "darkHex": 1582869,
+    "brightRgb": [
+      184,
+      196,
+      218
+    ],
+    "brightHex": 12109018
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "faceted_cleavage_planes_and_scree",
+      "method": "dodecahedron_and_talus"
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "erratic_boulder_core",
+    "talus_scree_facet_1",
+    "talus_scree_facet_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "frustum_pyramid"
+  ]
+}

@@ -3,36 +3,38 @@
   "key": "building/mass_1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2_d852d9d7",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
+  "style": "commercial_flat_terrace",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2.jpg",
-  "created_at": "2026-08-18T10:56:14.068Z",
+  "created_at": "2026-08-18T14:27:15.921Z",
   "bounds": {
     "min": [
-      -9.8361,
+      -11.0528,
       0,
-      -8.968
+      -9.568
     ],
     "max": [
-      9.8361,
-      33.3373,
-      8.668
+      11.0528,
+      37.6048,
+      9.268
     ],
     "size": [
-      19.672,
-      33.337,
-      17.636
+      22.106,
+      37.605,
+      18.836
     ],
-    "rMax": 13.311,
-    "triangles": 492,
-    "vertices": 328
+    "rMax": 14.619,
+    "triangles": 512,
+    "vertices": 338
   },
   "spec": {
-    "L": 19.672175173571375,
-    "W": 14.936049439230946,
-    "H": 33.20476081483177,
-    "style": "commercial_residential_asymmetric"
+    "L": 21.672175173571375,
+    "W": 15.936049439230946,
+    "H": 35.20476081483177,
+    "style": "modern_flat_terrace_commercial"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

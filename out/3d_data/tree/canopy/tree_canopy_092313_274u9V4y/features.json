@@ -1,57 +1,65 @@
 {
   "id": "tree_canopy_092313_274u9V4y",
   "sourceImage": "tree/092313_274u9V4y.jpg",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.777,
+  "symmetryScore": 0.761,
   "aspectRatio": 1.499,
+  "colorRichness": 70.39,
   "colors": {
-    "primaryHex": 8554605,
-    "primaryRgb": [
-      130,
-      136,
-      109
+    "roofRgb": [
+      159,
+      201,
+      227
     ],
-    "accentHex": 15989237,
+    "roofHex": 10471907,
+    "facadeRgb": [
+      132,
+      135,
+      87
+    ],
+    "facadeHex": 8685399,
+    "baseRgb": [
+      175,
+      158,
+      72
+    ],
+    "baseHex": 11509320,
     "accentRgb": [
-      243,
-      249,
-      245
+      41,
+      47,
+      18
     ],
-    "darkHex": 3488024,
+    "accentHex": 2699026,
     "darkRgb": [
-      53,
-      57,
-      24
+      41,
+      47,
+      18
     ],
-    "brightHex": 13031631,
+    "darkHex": 2699026,
     "brightRgb": [
-      198,
-      216,
-      207
-    ]
+      217,
+      231,
+      224
+    ],
+    "brightHex": 14280672
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
-    },
-    {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
     }
   ],
-  "totalParts": 10,
+  "totalParts": 6,
   "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4",
-    "canopy_foliage_dome_5"
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
   ]
 }

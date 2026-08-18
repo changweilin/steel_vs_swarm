@@ -1,0 +1,41 @@
+{
+  "id": "building_bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284",
+  "key": "building/bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_91a31eb5",
+  "family": "building",
+  "subpart": "bld_apartment",
+  "style": "classical_temple_peristyle",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/bld_apartment/ov_3f2c5daa-8615-4849-b459-ecfb801e2284.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_apartment\\ov_3f2c5daa-8615-4849-b459-ecfb801e2284.jpg",
+  "created_at": "2026-08-18T14:27:15.299Z",
+  "bounds": {
+    "min": [
+      -16.5507,
+      0,
+      -16.5507
+    ],
+    "max": [
+      16.5507,
+      20.0381,
+      16.5507
+    ],
+    "size": [
+      33.101,
+      20.038,
+      33.101
+    ],
+    "rMax": 23.406,
+    "triangles": 1064,
+    "vertices": 613
+  },
+  "spec": {
+    "L": 30.301304646372166,
+    "W": 19.290547035934996,
+    "H": 19.75201037613489,
+    "style": "pantheon_rotunda_with_grand_dome"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

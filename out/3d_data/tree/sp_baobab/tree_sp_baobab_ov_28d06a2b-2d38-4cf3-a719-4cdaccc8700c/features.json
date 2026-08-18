@@ -1,0 +1,65 @@
+{
+  "id": "tree_sp_baobab_ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c",
+  "sourceImage": "tree/sp_baobab/ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c.png",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.815,
+  "aspectRatio": 1,
+  "colorRichness": 86.89,
+  "colors": {
+    "roofRgb": [
+      241,
+      241,
+      241
+    ],
+    "roofHex": 15856113,
+    "facadeRgb": [
+      238,
+      238,
+      238
+    ],
+    "facadeHex": 15658734,
+    "baseRgb": [
+      243,
+      243,
+      243
+    ],
+    "baseHex": 15987699,
+    "accentRgb": [
+      252,
+      252,
+      252
+    ],
+    "accentHex": 16579836,
+    "darkRgb": [
+      14,
+      14,
+      14
+    ],
+    "darkHex": 921102,
+    "brightRgb": [
+      252,
+      252,
+      252
+    ],
+    "brightHex": 16579836
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
+  ]
+}

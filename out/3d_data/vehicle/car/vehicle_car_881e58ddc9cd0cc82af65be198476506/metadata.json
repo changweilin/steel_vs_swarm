@@ -3,37 +3,39 @@
   "key": "vehicle/car_881e58ddc9cd0cc82af65be198476506_3ce068ee",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/881e58ddc9cd0cc82af65be198476506.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\881e58ddc9cd0cc82af65be198476506.jpg",
-  "created_at": "2026-08-18T10:56:14.497Z",
+  "created_at": "2026-08-18T14:27:16.397Z",
   "bounds": {
     "min": [
-      -2.4583,
-      0.0171,
-      -0.9748
+      -2.4733,
+      -0.0072,
+      -1.2585
     ],
     "max": [
-      2.4683,
-      1.6954,
-      0.9748
+      2.4833,
+      1.7254,
+      1.2585
     ],
     "size": [
-      4.927,
-      1.678,
-      1.95
+      4.957,
+      1.733,
+      2.517
     ],
-    "rMax": 2.654,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 2.784,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 4.856610971236743,
-    "W": 1.92,
-    "H": 1.6953971160448615,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 4.906610971236743,
+    "W": 1.95,
+    "H": 1.7253971160448616,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

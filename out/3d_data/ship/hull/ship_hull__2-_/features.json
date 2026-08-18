@@ -1,49 +1,60 @@
 {
   "id": "ship_hull_圖2-超日王號",
   "sourceImage": "ship/圖2-超日王號.jpg",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.866,
+  "symmetryScore": 0.858,
   "aspectRatio": 1.5,
+  "colorRichness": 61.59,
   "colors": {
-    "primaryHex": 5994900,
-    "primaryRgb": [
-      91,
-      121,
-      148
+    "roofRgb": [
+      111,
+      147,
+      186
     ],
-    "accentHex": 16711422,
+    "roofHex": 7312314,
+    "facadeRgb": [
+      67,
+      112,
+      147
+    ],
+    "facadeHex": 4419731,
+    "baseRgb": [
+      25,
+      72,
+      113
+    ],
+    "baseHex": 1656945,
     "accentRgb": [
-      254,
-      254,
-      254
+      30,
+      75,
+      115
     ],
-    "darkHex": 1852006,
+    "accentHex": 1985395,
     "darkRgb": [
-      28,
-      66,
-      102
+      19,
+      37,
+      63
     ],
-    "brightHex": 13422800,
+    "darkHex": 1254719,
     "brightRgb": [
-      204,
       208,
-      208
-    ]
+      212,
+      214
+    ],
+    "brightHex": 13685974
   },
-  "reconstructedFeatures": [
-    {
-      "name": "streamlined_hull_superstructure",
-      "method": "terraced_decks_and_masts"
-    }
-  ],
-  "totalParts": 6,
+  "reconstructedFeatures": [],
+  "totalParts": 4,
   "partNames": [
     "vessel_hull_body",
-    "bow_wedge_flare",
-    "vessel_main_deck",
+    "bow_flare_wedge",
     "vessel_superstructure",
-    "vessel_funnel",
-    "vessel_radar_mast"
+    "vessel_funnel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid"
   ]
 }

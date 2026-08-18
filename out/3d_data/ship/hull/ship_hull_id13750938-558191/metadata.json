@@ -3,35 +3,37 @@
   "key": "ship/hull_id13750938-558191_66594566",
   "family": "ship",
   "subpart": "hull",
-  "style": "general_cargo_ship",
+  "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "ship/id13750938-558191.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\id13750938-558191.jpg",
-  "created_at": "2026-08-18T10:56:14.205Z",
+  "created_at": "2026-08-18T14:27:16.051Z",
   "bounds": {
     "min": [
-      -25.6062,
-      -0.9859,
-      -5.6443
+      -26.1776,
+      -1.1243,
+      -5.8943
     ],
     "max": [
-      28.0362,
-      18.9306,
-      5.6443
+      29.6482,
+      18.6735,
+      5.8943
     ],
     "size": [
-      53.642,
-      19.916,
-      11.289
+      55.826,
+      19.798,
+      11.789
     ],
-    "rMax": 28.599,
-    "triangles": 104,
-    "vertices": 64
+    "rMax": 30.228,
+    "triangles": 64,
+    "vertices": 40
   },
   "spec": {
-    "L": 53.907759212634474,
-    "W": 11.288540474555582,
-    "H": 17.147081712062256,
+    "L": 56.907759212634474,
+    "W": 11.788540474555582,
+    "H": 18.147081712062256,
     "style": "multipurpose_maritime_vessel"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",

@@ -1,56 +1,65 @@
 {
   "id": "tree_sp_baobab_manual_Baobab_and_elephant__Tanzania",
   "sourceImage": "tree/sp_baobab/manual_Baobab_and_elephant__Tanzania.jpg",
-  "style": "baobab_tree",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.893,
+  "symmetryScore": 0.875,
   "aspectRatio": 1.5,
+  "colorRichness": 51.9,
   "colors": {
-    "primaryHex": 8554633,
-    "primaryRgb": [
-      130,
-      136,
-      137
+    "roofRgb": [
+      124,
+      152,
+      210
     ],
-    "accentHex": 987156,
+    "roofHex": 8165586,
+    "facadeRgb": [
+      142,
+      159,
+      161
+    ],
+    "facadeHex": 9346977,
+    "baseRgb": [
+      162,
+      160,
+      128
+    ],
+    "baseHex": 10657920,
     "accentRgb": [
-      15,
-      16,
-      20
+      127,
+      157,
+      211
     ],
-    "darkHex": 4208945,
+    "accentHex": 8363475,
     "darkRgb": [
-      64,
+      63,
       57,
-      49
+      48
     ],
-    "brightHex": 11322328,
+    "darkHex": 4143408,
     "brightRgb": [
-      172,
-      195,
-      216
-    ]
+      214,
+      197,
+      155
+    ],
+    "brightHex": 14075291
   },
   "reconstructedFeatures": [
     {
-      "name": "swollen_bottle_trunk",
-      "method": "massive_succulent_barrel"
-    },
-    {
-      "name": "sparse_rosette_crown",
-      "method": "root_like_canopy_clusters"
+      "name": "low_lying_clustered_cushion_domes",
+      "method": "polyhedral_dodecahedron_and_spheres"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 6,
   "partNames": [
-    "baobab_bottle_trunk",
-    "baobab_branch_1",
-    "baobab_foliage_clump_1",
-    "baobab_branch_2",
-    "baobab_foliage_clump_2",
-    "baobab_branch_3",
-    "baobab_foliage_clump_3",
-    "baobab_branch_4",
-    "baobab_foliage_clump_4"
+    "shrub_foliage_mound_1",
+    "shrub_foliage_mound_2",
+    "shrub_foliage_mound_3",
+    "shrub_foliage_mound_4",
+    "shrub_foliage_mound_5",
+    "shrub_foliage_mound_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron"
   ]
 }

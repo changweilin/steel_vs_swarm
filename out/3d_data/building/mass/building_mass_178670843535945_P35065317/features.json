@@ -1,0 +1,100 @@
+{
+  "id": "building_mass_178670843535945_P35065317",
+  "sourceImage": "building/178670843535945_P35065317.jpg",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.745,
+  "aspectRatio": 0.782,
+  "colorRichness": 67.88,
+  "colors": {
+    "roofRgb": [
+      170,
+      201,
+      240
+    ],
+    "roofHex": 11192816,
+    "facadeRgb": [
+      193,
+      204,
+      224
+    ],
+    "facadeHex": 12700896,
+    "baseRgb": [
+      99,
+      115,
+      89
+    ],
+    "baseHex": 6517593,
+    "accentRgb": [
+      98,
+      162,
+      226
+    ],
+    "accentHex": 6464226,
+    "darkRgb": [
+      32,
+      48,
+      62
+    ],
+    "darkHex": 2109502,
+    "brightRgb": [
+      233,
+      240,
+      247
+    ],
+    "brightHex": 15331575
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stone_plinth_podium",
+      "method": "frustum_plinth"
+    },
+    {
+      "name": "multi_tier_upturned_flared_eaves",
+      "method": "flared_frustum_eaves"
+    },
+    {
+      "name": "sacred_bronze_finial_spire",
+      "method": "torus_sanrin_and_cone"
+    }
+  ],
+  "totalParts": 30,
+  "partNames": [
+    "pagoda_stone_podium",
+    "pagoda_chamber_tier_1",
+    "veranda_column_1_-1_-1",
+    "veranda_column_1_-1_1",
+    "veranda_column_1_1_-1",
+    "veranda_column_1_1_1",
+    "curved_eaves_frustum_1",
+    "eave_ridge_cap_1",
+    "pagoda_chamber_tier_2",
+    "veranda_column_2_-1_-1",
+    "veranda_column_2_-1_1",
+    "veranda_column_2_1_-1",
+    "veranda_column_2_1_1",
+    "curved_eaves_frustum_2",
+    "eave_ridge_cap_2",
+    "pagoda_chamber_tier_3",
+    "veranda_column_3_-1_-1",
+    "veranda_column_3_-1_1",
+    "veranda_column_3_1_-1",
+    "veranda_column_3_1_1",
+    "curved_eaves_frustum_3",
+    "eave_ridge_cap_3",
+    "apex_pyramid_roof",
+    "finial_central_mast",
+    "sanrin_sacred_ring_1",
+    "sanrin_sacred_ring_2",
+    "sanrin_sacred_ring_3",
+    "sanrin_sacred_ring_4",
+    "sanrin_sacred_ring_5",
+    "houju_sacred_jewel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring",
+    "ellipsoid_sphere"
+  ]
+}

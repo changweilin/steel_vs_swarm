@@ -1,69 +1,84 @@
 {
   "id": "vehicle_car_teslam3-960",
   "sourceImage": "vehicle/car/teslam3-960.png",
-  "style": "sedan_hatchback",
+  "style": "aerodynamic_gt_supercar",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.84,
+  "symmetryScore": 0.829,
   "aspectRatio": 2.286,
+  "colorRichness": 57.38,
   "colors": {
-    "primaryHex": 6967642,
-    "primaryRgb": [
+    "roofRgb": [
+      138,
+      143,
+      150
+    ],
+    "roofHex": 9080726,
+    "facadeRgb": [
+      111,
+      95,
+      106
+    ],
+    "facadeHex": 7298922,
+    "baseRgb": [
       106,
-      81,
-      90
+      102,
+      111
     ],
-    "accentHex": 16645629,
+    "baseHex": 6973039,
     "accentRgb": [
-      253,
-      253,
-      253
-    ],
-    "darkHex": 5119013,
-    "darkRgb": [
-      78,
-      28,
+      151,
+      25,
       37
     ],
-    "brightHex": 12303549,
+    "accentHex": 9902373,
+    "darkRgb": [
+      35,
+      15,
+      21
+    ],
+    "darkHex": 2297621,
     "brightRgb": [
-      187,
-      188,
-      189
-    ]
+      184,
+      185,
+      187
+    ],
+    "brightHex": 12106171
   },
   "reconstructedFeatures": [
     {
-      "name": "three_box_profile",
-      "method": "hood_cabin_trunk_architecture"
+      "name": "wedge_monocoque_and_gt_wing",
+      "method": "carbon_aero_assembly"
     },
     {
-      "name": "symmetric_mirrors_and_lights",
-      "method": "bilateral_mirror_Z_axis"
-    },
-    {
-      "name": "mirrored_sedan_features",
+      "name": "mirrored_supercar_running_gear",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.8099999999999999
+      "zOffset": 0.9
     }
   ],
   "totalParts": 17,
   "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
+    "supercar_lower_tub",
+    "front_nose_wedge",
+    "carbon_front_splitter",
+    "cockpit_glass_canopy",
+    "carbon_gt_rear_wing",
+    "laser_headlight_left",
+    "led_taillight_left",
+    "low_profile_tire_f_left",
+    "forged_alloy_rim_f_left",
+    "low_profile_tire_r_left",
+    "forged_alloy_rim_r_left",
+    "laser_headlight_right",
+    "led_taillight_right",
+    "low_profile_tire_f_right",
+    "forged_alloy_rim_f_right",
+    "low_profile_tire_r_right",
+    "forged_alloy_rim_r_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

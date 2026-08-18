@@ -3,37 +3,39 @@
   "key": "vehicle/car_241016-26812-1-UmpVe_5b81b057",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/241016-26812-1-UmpVe.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\241016-26812-1-UmpVe.jpg",
-  "created_at": "2026-08-18T10:56:14.471Z",
+  "created_at": "2026-08-18T14:27:16.357Z",
   "bounds": {
     "min": [
-      -2.5609,
-      0.0171,
-      -0.9748
+      -2.5759,
+      -0.0072,
+      -1.3112
     ],
     "max": [
-      2.5709,
-      1.5744,
-      0.9748
+      2.5859,
+      1.6044,
+      1.3112
     ],
     "size": [
-      5.132,
-      1.557,
-      1.95
+      5.162,
+      1.612,
+      2.622
     ],
-    "rMax": 2.75,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 2.899,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 5.06175326161593,
-    "W": 1.92,
-    "H": 1.5743778133821622,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 5.11175326161593,
+    "W": 1.95,
+    "H": 1.6043778133821622,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

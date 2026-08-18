@@ -3,36 +3,38 @@
   "key": "building/mass_the-white-tower-when_7b045f0f",
   "family": "building",
   "subpart": "mass",
-  "style": "castle_fortress",
+  "style": "church_pointed_spire",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/the-white-tower-when.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\the-white-tower-when.jpg",
-  "created_at": "2026-08-18T10:56:14.134Z",
+  "created_at": "2026-08-18T14:27:15.990Z",
   "bounds": {
     "min": [
-      -12.8729,
+      -14.6113,
       0,
-      -13.5122
+      -9.1656
     ],
     "max": [
-      12.8729,
-      25.33,
-      13.5122
+      16.6738,
+      35.4553,
+      9.1656
     ],
     "size": [
-      25.746,
-      25.33,
-      27.024
+      31.285,
+      35.455,
+      18.331
     ],
-    "rMax": 18.663,
-    "triangles": 380,
-    "vertices": 232
+    "rMax": 19.027,
+    "triangles": 480,
+    "vertices": 298
   },
   "spec": {
-    "L": 24.649668116273748,
-    "W": 26.45767910276951,
-    "H": 22.40955214770733,
-    "style": "medieval_stone_keep_turrets"
+    "L": 28.649668116273748,
+    "W": 17.97178606851301,
+    "H": 31.85528343633173,
+    "style": "gothic_cathedral_with_sharp_spire"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

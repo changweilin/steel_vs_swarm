@@ -1,0 +1,41 @@
+{
+  "id": "tree_canopy_images_2_",
+  "key": "tree/canopy_images (2)_da6011e9",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "tree/images (2).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\images (2).jpg",
+  "created_at": "2026-08-18T14:27:15.828Z",
+  "bounds": {
+    "min": [
+      -6.6214,
+      0,
+      -6.8128
+    ],
+    "max": [
+      7.1668,
+      23.477,
+      7.73
+    ],
+    "size": [
+      13.788,
+      23.477,
+      14.543
+    ],
+    "rMax": 10.541,
+    "triangles": 1080,
+    "vertices": 688
+  },
+  "spec": {
+    "L": 11.29030289158465,
+    "W": 10.914015411612116,
+    "H": 20.47223620965896,
+    "style": "broadleaf_buttress_and_dome_canopies"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

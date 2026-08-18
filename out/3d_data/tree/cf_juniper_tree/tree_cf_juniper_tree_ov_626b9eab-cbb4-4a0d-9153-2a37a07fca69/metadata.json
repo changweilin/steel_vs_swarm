@@ -1,0 +1,41 @@
+{
+  "id": "tree_cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69",
+  "key": "tree/cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69_ae4348b8",
+  "family": "tree",
+  "subpart": "cf_juniper_tree",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "tree/cf_juniper_tree/ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\cf_juniper_tree\\ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69.jpg",
+  "created_at": "2026-08-18T14:27:15.792Z",
+  "bounds": {
+    "min": [
+      -3.4036,
+      -0.1914,
+      -2.7602
+    ],
+    "max": [
+      2.9025,
+      3.5366,
+      3.2887
+    ],
+    "size": [
+      6.306,
+      3.728,
+      6.049
+    ],
+    "rMax": 4.386,
+    "triangles": 216,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 5.115587090867475,
+    "W": 5.2938124666208894,
+    "H": 3.6691004806591896,
+    "style": "low_lying_organic_shrub_mounds"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

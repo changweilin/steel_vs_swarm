@@ -1,56 +1,78 @@
 {
   "id": "vehicle_bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
   "sourceImage": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
-  "style": "cargo_bike",
+  "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.945,
+  "symmetryScore": 0.942,
   "aspectRatio": 1,
+  "colorRichness": 72.2,
   "colors": {
-    "primaryHex": 14079443,
-    "primaryRgb": [
-      214,
-      213,
-      211
+    "roofRgb": [
+      244,
+      244,
+      244
     ],
-    "accentHex": 723210,
+    "roofHex": 16053492,
+    "facadeRgb": [
+      244,
+      244,
+      244
+    ],
+    "facadeHex": 16053492,
+    "baseRgb": [
+      244,
+      244,
+      244
+    ],
+    "baseHex": 16053492,
     "accentRgb": [
-      11,
-      9,
-      10
+      178,
+      120,
+      81
     ],
-    "darkHex": 3682608,
+    "accentHex": 11696209,
     "darkRgb": [
-      56,
-      49,
-      48
+      37,
+      34,
+      35
     ],
-    "brightHex": 15856113,
+    "darkHex": 2433571,
     "brightRgb": [
-      241,
-      241,
-      241
-    ]
+      243,
+      243,
+      243
+    ],
+    "brightHex": 15987699
   },
   "reconstructedFeatures": [
     {
-      "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "name": "diamond_tubular_frame_tubes",
+      "method": "tubular_cylinders"
     },
     {
       "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "method": "torus_tires_and_chainring"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 13,
   "partNames": [
     "frame_top_tube",
     "frame_down_tube",
     "frame_seat_tube",
     "front_fork_blades",
-    "bicycle_handlebars",
+    "frame_seat_stays",
+    "frame_chain_stays",
+    "chrome_handlebars",
     "ergonomic_saddle",
     "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "bike_front_tire",
+    "bike_front_spoke_disc",
+    "bike_rear_tire",
+    "bike_rear_spoke_disc"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring"
   ]
 }

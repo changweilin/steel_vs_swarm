@@ -1,69 +1,78 @@
 {
   "id": "vehicle_car_articleimage_1373637",
   "sourceImage": "vehicle/car/articleimage_1373637.jpg",
-  "style": "sedan_hatchback",
+  "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.857,
+  "symmetryScore": 0.849,
   "aspectRatio": 1.5,
+  "colorRichness": 75.81,
   "colors": {
-    "primaryHex": 9808570,
-    "primaryRgb": [
-      149,
-      170,
-      186
+    "roofRgb": [
+      125,
+      177,
+      222
     ],
-    "accentHex": 0,
+    "roofHex": 8237534,
+    "facadeRgb": [
+      177,
+      206,
+      221
+    ],
+    "facadeHex": 11652829,
+    "baseRgb": [
+      197,
+      201,
+      214
+    ],
+    "baseHex": 12962262,
     "accentRgb": [
-      0,
-      0,
-      0
+      223,
+      139,
+      28
     ],
-    "darkHex": 1779759,
+    "accentHex": 14650140,
     "darkRgb": [
-      27,
-      40,
-      47
+      18,
+      31,
+      38
     ],
-    "brightHex": 13294826,
+    "darkHex": 1187622,
     "brightRgb": [
-      202,
-      220,
-      234
-    ]
+      218,
+      229,
+      240
+    ],
+    "brightHex": 14345712
   },
   "reconstructedFeatures": [
     {
-      "name": "three_box_profile",
-      "method": "hood_cabin_trunk_architecture"
+      "name": "diamond_tubular_frame_tubes",
+      "method": "tubular_cylinders"
     },
     {
-      "name": "symmetric_mirrors_and_lights",
-      "method": "bilateral_mirror_Z_axis"
-    },
-    {
-      "name": "mirrored_sedan_features",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.8099999999999999
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "torus_tires_and_chainring"
     }
   ],
-  "totalParts": 17,
+  "totalParts": 13,
   "partNames": [
-    "sedan_main_body",
-    "sedan_glass_cabin",
-    "engine_hood_slope",
-    "trunk_decklid",
-    "radiator_grille",
-    "front_bumper",
-    "rear_bumper",
-    "headlight_left",
-    "taillight_left",
-    "side_mirror_left",
-    "wheel_front_left",
-    "wheel_rear_left",
-    "headlight_right",
-    "taillight_right",
-    "side_mirror_right",
-    "wheel_front_right",
-    "wheel_rear_right"
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "frame_seat_stays",
+    "frame_chain_stays",
+    "chrome_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "bike_front_tire",
+    "bike_front_spoke_disc",
+    "bike_rear_tire",
+    "bike_rear_spoke_disc"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring"
   ]
 }

@@ -1,0 +1,41 @@
+{
+  "id": "tree_.sheet_sheet_02",
+  "key": "tree/.sheet_sheet_02_33adb7a5",
+  "family": "tree",
+  "subpart": ".sheet",
+  "style": "shrub_bush_mound",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "tree/.sheet/sheet_02.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\.sheet\\sheet_02.png",
+  "created_at": "2026-08-18T14:27:15.749Z",
+  "bounds": {
+    "min": [
+      -2.9266,
+      -0.1724,
+      -2.9481
+    ],
+    "max": [
+      3.4192,
+      2.8571,
+      3.1274
+    ],
+    "size": [
+      6.346,
+      3.03,
+      6.075
+    ],
+    "rMax": 4.634,
+    "triangles": 216,
+    "vertices": 120
+  },
+  "spec": {
+    "L": 5.642824444953078,
+    "W": 5.73224231326772,
+    "H": 3.064271000228885,
+    "style": "low_lying_organic_shrub_mounds"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

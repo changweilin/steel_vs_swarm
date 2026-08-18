@@ -3,36 +3,38 @@
   "key": "tree/canopy_Pachycereus_pringlei_forest_364afc0a",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/Pachycereus_pringlei_forest.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Pachycereus_pringlei_forest.jpg",
-  "created_at": "2026-08-18T10:56:14.330Z",
+  "created_at": "2026-08-18T14:27:16.201Z",
   "bounds": {
     "min": [
-      -6.3567,
-      0,
-      -6.5921
+      -2.5074,
+      -0.1742,
+      -3.213
     ],
     "max": [
-      6.8591,
-      18.4779,
-      5.2655
+      2.836,
+      3.1788,
+      3.1925
     ],
     "size": [
-      13.216,
-      18.478,
-      11.858
+      5.343,
+      3.353,
+      6.405
     ],
-    "rMax": 9.158,
-    "triangles": 128,
-    "vertices": 82
+    "rMax": 4.27,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 13.331006332494088,
-    "W": 12.055123216601816,
-    "H": 19.470649271381703,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 6.415503166247044,
+    "W": 5.777561608300908,
+    "H": 3.6382467383840695,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

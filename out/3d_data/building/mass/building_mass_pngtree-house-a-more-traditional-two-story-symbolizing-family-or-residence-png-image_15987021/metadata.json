@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021",
+  "key": "building/mass_pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021_f8520f84",
+  "family": "building",
+  "subpart": "mass",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021.png",
+  "created_at": "2026-08-18T14:27:15.521Z",
+  "bounds": {
+    "min": [
+      -9.8095,
+      0,
+      -10.1996
+    ],
+    "max": [
+      9.8095,
+      27.3304,
+      9.8996
+    ],
+    "size": [
+      19.619,
+      27.33,
+      20.099
+    ],
+    "rMax": 14.151,
+    "triangles": 368,
+    "vertices": 242
+  },
+  "spec": {
+    "L": 19.23427176317998,
+    "W": 17.199221789883268,
+    "H": 24.930373083085374,
+    "style": "modern_flat_terrace_commercial"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

@@ -1,86 +1,78 @@
 {
   "id": "vehicle_train_1758402595_62693",
   "sourceImage": "vehicle/train/1758402595_62693.jpg",
-  "style": "freight_wagon",
+  "style": "freight_locomotive_train",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.781,
+  "symmetryScore": 0.768,
   "aspectRatio": 1.911,
+  "colorRichness": 65.42,
   "colors": {
-    "primaryHex": 7830113,
-    "primaryRgb": [
-      119,
-      122,
-      97
+    "roofRgb": [
+      92,
+      102,
+      55
     ],
-    "accentHex": 16710908,
+    "roofHex": 6055479,
+    "facadeRgb": [
+      104,
+      112,
+      75
+    ],
+    "facadeHex": 6844491,
+    "baseRgb": [
+      85,
+      102,
+      50
+    ],
+    "baseHex": 5596722,
     "accentRgb": [
-      254,
-      252,
-      252
+      214,
+      103,
+      27
     ],
-    "darkHex": 3818282,
+    "accentHex": 14051099,
     "darkRgb": [
-      58,
-      67,
-      42
+      47,
+      57,
+      32
     ],
-    "brightHex": 14605015,
+    "darkHex": 3094816,
     "brightRgb": [
-      222,
-      218,
-      215
-    ]
+      225,
+      221,
+      220
+    ],
+    "brightHex": 14802396
   },
   "reconstructedFeatures": [
     {
-      "name": "aerodynamic_wedge_nose",
-      "method": "high_speed_emu_cowl"
-    },
-    {
-      "name": "single_arm_pantograph",
-      "method": "roof_catenary_collector"
-    },
-    {
-      "name": "flush_continuous_windows",
-      "method": "tinted_glass_ribbon"
-    },
-    {
-      "name": "train_rail_wheels",
+      "name": "mirrored_automobile_features",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.395
-    },
-    {
-      "name": "train_rail_wheels",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.395
-    },
-    {
-      "name": "train_rail_wheels",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.395
-    },
-    {
-      "name": "train_rail_wheels",
-      "method": "bilateral_mirror_Z_axis",
-      "zOffset": 1.395
+      "zOffset": 0.825
     }
   ],
   "totalParts": 15,
   "partNames": [
-    "train_car_body",
-    "roof_aerodynamic_cap",
-    "continuous_tinted_windows",
-    "aerodynamic_bullet_nose",
-    "high_speed_pantograph",
-    "train_bogie_frame_r",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "train_bogie_frame_f",
-    "rail_wheel_left",
-    "rail_wheel_right",
-    "rail_wheel_left",
-    "rail_wheel_right"
+    "automobile_main_body",
+    "passenger_glass_cabin",
+    "engine_hood_slope",
+    "headlight_left",
+    "taillight_left",
+    "passenger_tire_f_left",
+    "wheel_rim_f_left",
+    "passenger_tire_r_left",
+    "wheel_rim_r_left",
+    "headlight_right",
+    "taillight_right",
+    "passenger_tire_f_right",
+    "wheel_rim_f_right",
+    "passenger_tire_r_right",
+    "wheel_rim_r_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "wedge",
+    "torus_ring"
   ]
 }

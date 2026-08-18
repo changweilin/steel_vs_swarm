@@ -1,0 +1,41 @@
+{
+  "id": "building_mass__-__0",
+  "key": "building/mass_欣榮文創股份有限公司-隘興段_0_ef2c01a8",
+  "family": "building",
+  "subpart": "mass",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/欣榮文創股份有限公司-隘興段_0.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\欣榮文創股份有限公司-隘興段_0.jpg",
+  "created_at": "2026-08-18T14:27:15.587Z",
+  "bounds": {
+    "min": [
+      -9.3164,
+      0,
+      -11.5719
+    ],
+    "max": [
+      9.3164,
+      34.6179,
+      11.2719
+    ],
+    "size": [
+      18.633,
+      34.618,
+      22.844
+    ],
+    "rMax": 14.856,
+    "triangles": 464,
+    "vertices": 306
+  },
+  "spec": {
+    "L": 18.267460135805294,
+    "W": 19.94383154039826,
+    "H": 32.217898832684824,
+    "style": "modern_flat_terrace_commercial"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

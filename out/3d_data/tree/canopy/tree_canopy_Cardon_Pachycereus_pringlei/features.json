@@ -1,56 +1,70 @@
 {
   "id": "tree_canopy_Cardon_Pachycereus_pringlei",
   "sourceImage": "tree/Cardon_Pachycereus_pringlei.jpg",
-  "style": "broadleaf_camphor_oak",
-  "symmetryMode": "asymmetric",
-  "symmetryScore": 0.872,
+  "style": "conifer_pine_spire",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.858,
   "aspectRatio": 0.791,
+  "colorRichness": 73.69,
   "colors": {
-    "primaryHex": 8425875,
-    "primaryRgb": [
-      128,
-      145,
-      147
+    "roofRgb": [
+      91,
+      152,
+      220
     ],
-    "accentHex": 789766,
+    "roofHex": 6002908,
+    "facadeRgb": [
+      161,
+      200,
+      232
+    ],
+    "facadeHex": 10602728,
+    "baseRgb": [
+      147,
+      119,
+      66
+    ],
+    "baseHex": 9664322,
     "accentRgb": [
-      12,
-      13,
-      6
+      95,
+      154,
+      218
     ],
-    "darkHex": 2960420,
+    "accentHex": 6265562,
     "darkRgb": [
-      45,
-      44,
-      36
+      35,
+      35,
+      26
     ],
-    "brightHex": 13364211,
+    "darkHex": 2302746,
     "brightRgb": [
-      203,
-      235,
-      243
-    ]
+      222,
+      247,
+      249
+    ],
+    "brightHex": 14612473
   },
   "reconstructedFeatures": [
     {
-      "name": "fluted_buttress_roots",
-      "method": "organic_root_flare_spread"
+      "name": "tapered_resin_trunk",
+      "method": "conical_frustum_trunk"
     },
     {
-      "name": "undulating_dome_canopies",
-      "method": "asymmetric_foliage_clusters"
+      "name": "six_tiered_conical_needle_canopies",
+      "method": "tiered_multi_sided_cones"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 7,
   "partNames": [
-    "gnarled_tree_trunk",
-    "buttress_root_fin_1",
-    "buttress_root_fin_2",
-    "buttress_root_fin_3",
-    "buttress_root_fin_4",
-    "canopy_foliage_dome_1",
-    "canopy_foliage_dome_2",
-    "canopy_foliage_dome_3",
-    "canopy_foliage_dome_4"
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5",
+    "pine_canopy_tier_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid"
   ]
 }

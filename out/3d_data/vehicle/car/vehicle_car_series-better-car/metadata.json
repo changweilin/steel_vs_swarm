@@ -3,37 +3,39 @@
   "key": "vehicle/car_series-better-car_2860aa4e",
   "family": "vehicle",
   "subpart": "car",
-  "style": "sedan_hatchback",
+  "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "vehicle/car/series-better-car.png",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\series-better-car.png",
-  "created_at": "2026-08-18T10:56:14.532Z",
+  "created_at": "2026-08-18T14:27:16.450Z",
   "bounds": {
     "min": [
-      -2.5729,
-      0.0171,
-      -0.9748
+      -2.5879,
+      -0.0072,
+      -1.3173
     ],
     "max": [
-      2.5829,
-      1.6351,
-      0.9748
+      2.5979,
+      1.6651,
+      1.3173
     ],
     "size": [
-      5.156,
-      1.618,
-      1.95
+      5.186,
+      1.672,
+      2.635
     ],
-    "rMax": 2.761,
-    "triangles": 316,
-    "vertices": 192
+    "rMax": 2.913,
+    "triangles": 1012,
+    "vertices": 612
   },
   "spec": {
-    "L": 5.0858197909514,
-    "W": 1.92,
-    "H": 1.6351300831616693,
-    "R": 0.35,
-    "style": "standard_passenger_sedan"
+    "L": 5.1358197909514,
+    "W": 1.95,
+    "H": 1.6651300831616693,
+    "R": 0.36,
+    "style": "passenger_automobile"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -1,69 +1,84 @@
 {
   "id": "vehicle_car_2025-porsche-carrera-t-coupe",
   "sourceImage": "vehicle/car/2025-porsche-carrera-t-coupe.jpg",
-  "style": "sports_coupe",
+  "style": "aerodynamic_gt_supercar",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.856,
+  "symmetryScore": 0.852,
   "aspectRatio": 1.778,
+  "colorRichness": 68.44,
   "colors": {
-    "primaryHex": 7239292,
-    "primaryRgb": [
-      110,
+    "roofRgb": [
+      194,
+      205,
+      207
+    ],
+    "roofHex": 12766671,
+    "facadeRgb": [
+      94,
       118,
-      124
+      139
     ],
-    "accentHex": 16707777,
+    "facadeHex": 6190731,
+    "baseRgb": [
+      38,
+      42,
+      51
+    ],
+    "baseHex": 2501171,
     "accentRgb": [
-      254,
-      240,
-      193
+      110,
+      136,
+      163
     ],
-    "darkHex": 2631980,
+    "accentHex": 7243939,
     "darkRgb": [
-      40,
-      41,
-      44
+      29,
+      32,
+      35
     ],
-    "brightHex": 13619142,
+    "darkHex": 1908771,
     "brightRgb": [
-      207,
-      207,
-      198
-    ]
+      235,
+      223,
+      200
+    ],
+    "brightHex": 15458248
   },
   "reconstructedFeatures": [
     {
-      "name": "aerodynamic_bodykit",
-      "method": "front_splitter_and_side_scoops"
+      "name": "wedge_monocoque_and_gt_wing",
+      "method": "carbon_aero_assembly"
     },
     {
-      "name": "rear_wing_spoiler",
-      "method": "carbon_downforce_wing"
-    },
-    {
-      "name": "mirrored_supercar_aerodynamics",
+      "name": "mirrored_supercar_running_gear",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.8849999999999999
+      "zOffset": 0.9
     }
   ],
   "totalParts": 17,
   "partNames": [
-    "supercar_lower_body",
-    "cabin_canopy",
+    "supercar_lower_tub",
+    "front_nose_wedge",
     "carbon_front_splitter",
-    "rear_gt_wing",
-    "wing_strut_left",
-    "wing_strut_right",
-    "rear_aero_diffuser",
-    "led_headlight_left",
+    "cockpit_glass_canopy",
+    "carbon_gt_rear_wing",
+    "laser_headlight_left",
     "led_taillight_left",
-    "aero_mirror_left",
-    "alloy_wheel_front_left",
-    "alloy_wheel_rear_left",
-    "led_headlight_right",
+    "low_profile_tire_f_left",
+    "forged_alloy_rim_f_left",
+    "low_profile_tire_r_left",
+    "forged_alloy_rim_r_left",
+    "laser_headlight_right",
     "led_taillight_right",
-    "aero_mirror_right",
-    "alloy_wheel_front_right",
-    "alloy_wheel_rear_right"
+    "low_profile_tire_f_right",
+    "forged_alloy_rim_f_right",
+    "low_profile_tire_r_right",
+    "forged_alloy_rim_r_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

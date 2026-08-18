@@ -1,76 +1,80 @@
 {
   "id": "building_mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c",
   "sourceImage": "building/1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c.jpg",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
-  "symmetryScore": 0.884,
+  "style": "village_triangular_gable",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.869,
   "aspectRatio": 1.504,
+  "colorRichness": 68.81,
   "colors": {
-    "primaryHex": 10529126,
-    "primaryRgb": [
-      160,
+    "roofRgb": [
+      206,
+      232,
+      238
+    ],
+    "roofHex": 13560046,
+    "facadeRgb": [
       169,
-      102
+      190,
+      92
     ],
-    "accentHex": 197124,
+    "facadeHex": 11124316,
+    "baseRgb": [
+      165,
+      203,
+      83
+    ],
+    "baseHex": 10865491,
     "accentRgb": [
-      3,
-      2,
-      4
+      169,
+      205,
+      87
     ],
-    "darkHex": 3746845,
+    "accentHex": 11128151,
     "darkRgb": [
-      57,
-      44,
-      29
+      38,
+      35,
+      19
     ],
-    "brightHex": 12308861,
+    "darkHex": 2499347,
     "brightRgb": [
-      187,
-      209,
-      125
-    ]
+      215,
+      235,
+      237
+    ],
+    "brightHex": 14150637
   },
   "reconstructedFeatures": [
     {
-      "name": "front_facade_balconies",
-      "method": "storefront_and_residential_balconies"
+      "name": "stone_masonry_foundation_plinth",
+      "method": "textured_plinth_box"
     },
     {
-      "name": "rear_fire_escape_and_utilities",
-      "method": "asymmetric_procedural_augmentation"
+      "name": "steep_triangular_pitched_gable_roof",
+      "method": "dual_opposing_gable_wedges"
+    },
+    {
+      "name": "stone_chimney_and_porch_canopy",
+      "method": "prism_chimney_and_cantilever_porch"
     }
   ],
-  "totalParts": 29,
+  "totalParts": 10,
   "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "balcony_f6_l",
-    "balcony_f6_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_fire_escape_landing_f6",
-    "rear_fire_ladder_f6",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
+    "cottage_stone_foundation",
+    "cottage_timber_walls",
+    "pitched_gable_roof_north",
+    "pitched_gable_roof_south",
+    "roof_ridge_beam",
+    "stone_masonry_chimney",
+    "chimney_crown_cap",
+    "entrance_porch_canopy",
+    "porch_pillar_L",
+    "porch_pillar_R"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "polygonal_prism",
+    "frustum_pyramid"
   ]
 }

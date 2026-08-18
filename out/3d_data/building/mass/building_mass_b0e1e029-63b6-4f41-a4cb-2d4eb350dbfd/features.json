@@ -1,80 +1,95 @@
 {
   "id": "building_mass_b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd",
   "sourceImage": "building/b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd.jpg",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
-  "symmetryScore": 0.848,
+  "style": "church_pointed_spire",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.828,
   "aspectRatio": 1.333,
+  "colorRichness": 67.02,
   "colors": {
-    "primaryHex": 8682342,
-    "primaryRgb": [
-      132,
-      123,
-      102
+    "roofRgb": [
+      228,
+      230,
+      229
     ],
-    "accentHex": 16514043,
+    "roofHex": 15001317,
+    "facadeRgb": [
+      138,
+      116,
+      96
+    ],
+    "facadeHex": 9073760,
+    "baseRgb": [
+      92,
+      114,
+      38
+    ],
+    "baseHex": 6058534,
     "accentRgb": [
-      251,
-      251,
-      251
-    ],
-    "darkHex": 3354407,
-    "darkRgb": [
-      51,
-      47,
+      83,
+      98,
       39
     ],
-    "brightHex": 15000800,
+    "accentHex": 5464615,
+    "darkRgb": [
+      31,
+      31,
+      26
+    ],
+    "darkHex": 2039578,
     "brightRgb": [
-      228,
-      228,
-      224
-    ]
+      230,
+      231,
+      230
+    ],
+    "brightHex": 15132646
   },
   "reconstructedFeatures": [
     {
-      "name": "front_facade_balconies",
-      "method": "storefront_and_residential_balconies"
+      "name": "stone_nave_and_buttresses",
+      "method": "stepped_buttress_frustums"
     },
     {
-      "name": "rear_fire_escape_and_utilities",
-      "method": "asymmetric_procedural_augmentation"
+      "name": "octagonal_gothic_sharp_spire",
+      "method": "tall_octagonal_prism_and_pyramid"
     }
   ],
-  "totalParts": 33,
+  "totalParts": 29,
   "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "balcony_f6_l",
-    "balcony_f6_r",
-    "balcony_f7_l",
-    "balcony_f7_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_fire_escape_landing_f6",
-    "rear_fire_ladder_f6",
-    "rear_fire_escape_landing_f7",
-    "rear_fire_ladder_f7",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
+    "cathedral_stone_plinth",
+    "cathedral_nave_hall",
+    "nave_roof_slope_north",
+    "nave_roof_slope_south",
+    "nave_buttress_1_n",
+    "buttress_pinnacle_1_n",
+    "nave_buttress_1_s",
+    "buttress_pinnacle_1_s",
+    "nave_buttress_2_n",
+    "buttress_pinnacle_2_n",
+    "nave_buttress_2_s",
+    "buttress_pinnacle_2_s",
+    "nave_buttress_3_n",
+    "buttress_pinnacle_3_n",
+    "nave_buttress_3_s",
+    "buttress_pinnacle_3_s",
+    "nave_buttress_4_n",
+    "buttress_pinnacle_4_n",
+    "nave_buttress_4_s",
+    "buttress_pinnacle_4_s",
+    "nave_buttress_5_n",
+    "buttress_pinnacle_5_n",
+    "nave_buttress_5_s",
+    "buttress_pinnacle_5_s",
+    "bell_tower_octagonal_shaft",
+    "belfry_cornice_balustrade",
+    "gothic_sharp_spire_apex",
+    "spire_cross_finial_post",
+    "spire_cross_finial_beam"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "polygonal_prism"
   ]
 }

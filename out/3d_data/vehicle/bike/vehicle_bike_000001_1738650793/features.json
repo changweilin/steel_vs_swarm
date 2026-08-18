@@ -1,56 +1,78 @@
 {
   "id": "vehicle_bike_000001_1738650793",
   "sourceImage": "vehicle/bike/000001_1738650793.jpg",
-  "style": "cargo_bike",
+  "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.868,
+  "symmetryScore": 0.857,
   "aspectRatio": 1,
+  "colorRichness": 86.4,
   "colors": {
-    "primaryHex": 14341589,
-    "primaryRgb": [
-      218,
-      213,
-      213
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 789516,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      254,
+      254,
+      254
+    ],
+    "facadeHex": 16711422,
+    "baseRgb": [
+      255,
+      255,
+      255
+    ],
+    "baseHex": 16777215,
     "accentRgb": [
-      12,
-      12,
-      12
+      204,
+      19,
+      16
     ],
-    "darkHex": 3811626,
+    "accentHex": 13374224,
     "darkRgb": [
-      58,
-      41,
-      42
+      31,
+      27,
+      28
     ],
-    "brightHex": 16382200,
+    "darkHex": 2038556,
     "brightRgb": [
-      249,
-      248,
-      248
-    ]
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
   },
   "reconstructedFeatures": [
     {
-      "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "name": "diamond_tubular_frame_tubes",
+      "method": "tubular_cylinders"
     },
     {
       "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "method": "torus_tires_and_chainring"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 13,
   "partNames": [
     "frame_top_tube",
     "frame_down_tube",
     "frame_seat_tube",
     "front_fork_blades",
-    "bicycle_handlebars",
+    "frame_seat_stays",
+    "frame_chain_stays",
+    "chrome_handlebars",
     "ergonomic_saddle",
     "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "bike_front_tire",
+    "bike_front_spoke_disc",
+    "bike_rear_tire",
+    "bike_rear_spoke_disc"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring"
   ]
 }

@@ -1,0 +1,41 @@
+{
+  "id": "rock_main_images_2_",
+  "key": "rock/main_images (2)_a67c6130",
+  "family": "rock",
+  "subpart": "main",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "rock/images (2).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\images (2).jpg",
+  "created_at": "2026-08-18T14:27:15.676Z",
+  "bounds": {
+    "min": [
+      -4.7507,
+      -0.9862,
+      -5.2801
+    ],
+    "max": [
+      5.1658,
+      6.3421,
+      4.5427
+    ],
+    "size": [
+      9.916,
+      7.328,
+      9.823
+    ],
+    "rMax": 7.103,
+    "triangles": 80,
+    "vertices": 46
+  },
+  "spec": {
+    "L": 6.532242313267719,
+    "W": 6.231212329289693,
+    "H": 6.156603341725796,
+    "style": "faceted_erratic_boulder"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

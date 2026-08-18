@@ -1,54 +1,72 @@
 {
   "id": "vehicle_motor__covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee",
   "sourceImage": "vehicle/motor/_covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee.png",
-  "style": "standard_motor",
+  "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.926,
+  "symmetryScore": 0.923,
   "aspectRatio": 0.833,
+  "colorRichness": 70.01,
   "colors": {
-    "primaryHex": 2039328,
-    "primaryRgb": [
+    "roofRgb": [
+      0,
+      0,
+      0
+    ],
+    "roofHex": 0,
+    "facadeRgb": [
+      0,
+      0,
+      0
+    ],
+    "facadeHex": 0,
+    "baseRgb": [
+      0,
+      0,
+      0
+    ],
+    "baseHex": 0,
+    "accentRgb": [
       31,
       30,
-      32
+      33
     ],
-    "accentHex": 15131879,
-    "accentRgb": [
-      230,
-      228,
-      231
-    ],
-    "darkHex": 789517,
+    "accentHex": 2039329,
     "darkRgb": [
-      12,
-      12,
-      13
+      0,
+      0,
+      0
     ],
-    "brightHex": 13619155,
+    "darkHex": 0,
     "brightRgb": [
       207,
       207,
       211
-    ]
+    ],
+    "brightHex": 13619155
   },
   "reconstructedFeatures": [
     {
-      "name": "chassis_engine_block",
-      "method": "v_twin_cylinder_cooling_fins"
-    },
-    {
-      "name": "dual_chrome_pipes",
-      "method": "staggered_exhaust_system"
+      "name": "twin_spar_frame_and_teardrop_tank",
+      "method": "ellipsoid_tank_and_fairing"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 9,
   "partNames": [
-    "motorcycle_engine_chassis",
+    "motorcycle_frame_engine",
+    "front_nose_cowl",
     "teardrop_fuel_tank",
-    "leather_saddle",
-    "chrome_handlebars",
-    "round_headlight",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "stepped_racing_saddle",
+    "upswept_titanium_muffler",
+    "motor_front_tire",
+    "motor_front_rim",
+    "motor_rear_tire",
+    "motor_rear_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "torus_ring"
   ]
 }

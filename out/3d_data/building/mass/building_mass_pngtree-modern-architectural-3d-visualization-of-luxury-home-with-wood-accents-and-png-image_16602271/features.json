@@ -1,0 +1,90 @@
+{
+  "id": "building_mass_pngtree-modern-architectural-3d-visualization-of-luxury-home-with-wood-accents-and-png-image_16602271",
+  "sourceImage": "building/pngtree-modern-architectural-3d-visualization-of-luxury-home-with-wood-accents-and-png-image_16602271.webp",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.804,
+  "aspectRatio": 1,
+  "colorRichness": 75.07,
+  "colors": {
+    "roofRgb": [
+      231,
+      231,
+      231
+    ],
+    "roofHex": 15198183,
+    "facadeRgb": [
+      181,
+      144,
+      116
+    ],
+    "facadeHex": 11898996,
+    "baseRgb": [
+      231,
+      231,
+      231
+    ],
+    "baseHex": 15198183,
+    "accentRgb": [
+      183,
+      138,
+      107
+    ],
+    "accentHex": 12028523,
+    "darkRgb": [
+      44,
+      42,
+      28
+    ],
+    "darkHex": 2894364,
+    "brightRgb": [
+      253,
+      253,
+      253
+    ],
+    "brightHex": 16645629
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
+    },
+    {
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
+    }
+  ],
+  "totalParts": 23,
+  "partNames": [
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

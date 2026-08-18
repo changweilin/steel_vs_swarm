@@ -1,0 +1,41 @@
+{
+  "id": "building_bld_medit_ov_f42bb333-5736-49e6-a13c-9a15bc80d31f",
+  "key": "building/bld_medit_ov_f42bb333-5736-49e6-a13c-9a15bc80d31f_1039d514",
+  "family": "building",
+  "subpart": "bld_medit",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/bld_medit/ov_f42bb333-5736-49e6-a13c-9a15bc80d31f.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_medit\\ov_f42bb333-5736-49e6-a13c-9a15bc80d31f.jpg",
+  "created_at": "2026-08-18T14:27:15.349Z",
+  "bounds": {
+    "min": [
+      -11.3493,
+      0,
+      -11.3493
+    ],
+    "max": [
+      11.3493,
+      33.9304,
+      11.3493
+    ],
+    "size": [
+      22.699,
+      33.93,
+      22.699
+    ],
+    "rMax": 16.05,
+    "triangles": 1276,
+    "vertices": 786
+  },
+  "spec": {
+    "L": 20.40128175783932,
+    "W": 23.161821927214465,
+    "H": 29.880430304417487,
+    "style": "oriental_pagoda_flared_eaves"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

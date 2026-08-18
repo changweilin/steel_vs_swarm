@@ -1,80 +1,90 @@
 {
   "id": "building_mass_list",
   "sourceImage": "building/list.jpg",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
-  "symmetryScore": 0.899,
+  "style": "classical_temple_peristyle",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.887,
   "aspectRatio": 1,
+  "colorRichness": 62.94,
   "colors": {
-    "primaryHex": 8355191,
-    "primaryRgb": [
-      127,
-      125,
-      119
+    "roofRgb": [
+      98,
+      100,
+      105
     ],
-    "accentHex": 328964,
+    "roofHex": 6448233,
+    "facadeRgb": [
+      157,
+      157,
+      156
+    ],
+    "facadeHex": 10329500,
+    "baseRgb": [
+      107,
+      101,
+      67
+    ],
+    "baseHex": 7038275,
     "accentRgb": [
-      5,
-      5,
-      4
+      84,
+      77,
+      58
     ],
-    "darkHex": 3091493,
+    "accentHex": 5524794,
     "darkRgb": [
-      47,
-      44,
-      37
+      30,
+      28,
+      22
     ],
-    "brightHex": 13092544,
+    "darkHex": 1973270,
     "brightRgb": [
-      199,
-      198,
-      192
-    ]
+      219,
+      219,
+      217
+    ],
+    "brightHex": 14408665
   },
   "reconstructedFeatures": [
     {
-      "name": "front_facade_balconies",
-      "method": "storefront_and_residential_balconies"
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
     },
     {
-      "name": "rear_fire_escape_and_utilities",
-      "method": "asymmetric_procedural_augmentation"
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
     }
   ],
-  "totalParts": 33,
+  "totalParts": 23,
   "partNames": [
-    "building_mass",
-    "front_storefront_glass",
-    "balcony_f1_l",
-    "balcony_f1_r",
-    "balcony_f2_l",
-    "balcony_f2_r",
-    "balcony_f3_l",
-    "balcony_f3_r",
-    "balcony_f4_l",
-    "balcony_f4_r",
-    "balcony_f5_l",
-    "balcony_f5_r",
-    "balcony_f6_l",
-    "balcony_f6_r",
-    "balcony_f7_l",
-    "balcony_f7_r",
-    "rear_fire_escape_landing_f1",
-    "rear_fire_ladder_f1",
-    "rear_fire_escape_landing_f2",
-    "rear_fire_ladder_f2",
-    "rear_fire_escape_landing_f3",
-    "rear_fire_ladder_f3",
-    "rear_fire_escape_landing_f4",
-    "rear_fire_ladder_f4",
-    "rear_fire_escape_landing_f5",
-    "rear_fire_ladder_f5",
-    "rear_fire_escape_landing_f6",
-    "rear_fire_ladder_f6",
-    "rear_fire_escape_landing_f7",
-    "rear_fire_ladder_f7",
-    "rear_ventilation_duct",
-    "rear_service_door",
-    "rear_electrical_transformer"
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
   ]
 }

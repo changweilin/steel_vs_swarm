@@ -3,36 +3,38 @@
   "key": "building/mass_architecture-houou-02-tmb_d29db730",
   "family": "building",
   "subpart": "mass",
-  "style": "asian_pagoda_pavilion",
-  "symmetryMode": "symmetric",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/architecture-houou-02-tmb.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\architecture-houou-02-tmb.jpg",
-  "created_at": "2026-08-18T10:56:14.098Z",
+  "created_at": "2026-08-18T14:27:15.952Z",
   "bounds": {
     "min": [
-      -10.26,
+      -11.6281,
       0,
-      -8.6852
+      -9.2423
     ],
     "max": [
-      10.26,
-      33.0933,
-      8.6852
+      11.6281,
+      34.8649,
+      8.9423
     ],
     "size": [
-      20.52,
-      33.093,
-      17.37
+      23.256,
+      34.865,
+      18.185
     ],
-    "rMax": 13.442,
-    "triangles": 432,
-    "vertices": 262
+    "rMax": 14.854,
+    "triangles": 464,
+    "vertices": 306
   },
   "spec": {
-    "L": 21.60009155413138,
-    "W": 18.284641794460974,
-    "H": 29.643274586099032,
-    "style": "asian_pagoda_upturned_eaves"
+    "L": 22.800122072175174,
+    "W": 15.284641794460976,
+    "H": 32.464911879148545,
+    "style": "modern_flat_terrace_commercial"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

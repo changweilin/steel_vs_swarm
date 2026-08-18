@@ -1,53 +1,68 @@
 {
   "id": "ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise",
   "sourceImage": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
-  "style": "aircraft_carrier",
+  "style": "naval_aircraft_carrier",
   "symmetryMode": "asymmetric",
-  "symmetryScore": 0.828,
+  "symmetryScore": 0.824,
   "aspectRatio": 1.4,
+  "colorRichness": 60.2,
   "colors": {
-    "primaryHex": 8947847,
-    "primaryRgb": [
-      136,
-      136,
-      135
+    "roofRgb": [
+      196,
+      195,
+      193
     ],
-    "accentHex": 131329,
+    "roofHex": 12895169,
+    "facadeRgb": [
+      153,
+      153,
+      152
+    ],
+    "facadeHex": 10066328,
+    "baseRgb": [
+      143,
+      143,
+      141
+    ],
+    "baseHex": 9408397,
     "accentRgb": [
-      2,
-      1,
-      1
+      18,
+      19,
+      19
     ],
-    "darkHex": 2237733,
+    "accentHex": 1184531,
     "darkRgb": [
-      34,
-      37,
-      37
+      18,
+      19,
+      19
     ],
-    "brightHex": 12697790,
+    "darkHex": 1184531,
     "brightRgb": [
-      193,
-      192,
-      190
-    ]
+      198,
+      197,
+      196
+    ],
+    "brightHex": 13026756
   },
   "reconstructedFeatures": [
     {
-      "name": "angled_flight_deck",
-      "method": "full_length_cantilever_deck"
-    },
-    {
-      "name": "starboard_island_tower",
-      "method": "asymmetric_command_bridge"
+      "name": "angled_flight_deck_and_island",
+      "method": "carrier_deck_and_island"
     }
   ],
   "totalParts": 6,
   "partNames": [
     "carrier_main_hull",
     "clipper_bow_wedge",
-    "full_flight_deck",
+    "underwater_bulbous_bow",
+    "full_flight_deck_slab",
     "starboard_island_tower",
-    "island_navigation_bridge",
     "phased_array_radar_mast"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere",
+    "frustum_pyramid"
   ]
 }

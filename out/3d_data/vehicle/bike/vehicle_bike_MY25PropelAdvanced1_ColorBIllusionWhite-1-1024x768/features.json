@@ -1,56 +1,78 @@
 {
   "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768",
   "sourceImage": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
-  "style": "cargo_bike",
+  "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
-  "symmetryScore": 0.921,
+  "symmetryScore": 0.915,
   "aspectRatio": 1.333,
+  "colorRichness": 76.04,
   "colors": {
-    "primaryHex": 13290443,
-    "primaryRgb": [
-      202,
-      203,
-      203
+    "roofRgb": [
+      255,
+      255,
+      255
     ],
-    "accentHex": 1052946,
+    "roofHex": 16777215,
+    "facadeRgb": [
+      254,
+      254,
+      254
+    ],
+    "facadeHex": 16711422,
+    "baseRgb": [
+      255,
+      255,
+      255
+    ],
+    "baseHex": 16777215,
     "accentRgb": [
-      16,
-      17,
-      18
+      41,
+      41,
+      42
     ],
-    "darkHex": 3355443,
+    "accentHex": 2697514,
     "darkRgb": [
-      51,
-      51,
-      51
+      41,
+      41,
+      42
     ],
-    "brightHex": 16119285,
+    "darkHex": 2697514,
     "brightRgb": [
-      245,
-      245,
-      245
-    ]
+      254,
+      254,
+      254
+    ],
+    "brightHex": 16711422
   },
   "reconstructedFeatures": [
     {
-      "name": "diamond_tube_frame",
-      "method": "top_down_seat_stays"
+      "name": "diamond_tubular_frame_tubes",
+      "method": "tubular_cylinders"
     },
     {
       "name": "spoke_wheels_and_drivetrain",
-      "method": "thin_aero_rims"
+      "method": "torus_tires_and_chainring"
     }
   ],
-  "totalParts": 9,
+  "totalParts": 13,
   "partNames": [
     "frame_top_tube",
     "frame_down_tube",
     "frame_seat_tube",
     "front_fork_blades",
-    "bicycle_handlebars",
+    "frame_seat_stays",
+    "frame_chain_stays",
+    "chrome_handlebars",
     "ergonomic_saddle",
     "chainring_crankset",
-    "front_spoke_wheel",
-    "rear_spoke_wheel"
+    "bike_front_tire",
+    "bike_front_spoke_disc",
+    "bike_rear_tire",
+    "bike_rear_spoke_disc"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "torus_ring"
   ]
 }

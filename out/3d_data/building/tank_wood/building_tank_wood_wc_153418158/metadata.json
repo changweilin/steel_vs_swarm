@@ -1,0 +1,41 @@
+{
+  "id": "building_tank_wood_wc_153418158",
+  "key": "building/tank_wood_wc_153418158_0e406619",
+  "family": "building",
+  "subpart": "tank_wood",
+  "style": "classical_dome_rotunda",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
+  "source_image": "building/tank_wood/wc_153418158.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\tank_wood\\wc_153418158.jpg",
+  "created_at": "2026-08-18T14:27:15.568Z",
+  "bounds": {
+    "min": [
+      -16.9766,
+      0,
+      -16.9766
+    ],
+    "max": [
+      16.9766,
+      21.2081,
+      16.9766
+    ],
+    "size": [
+      33.953,
+      21.208,
+      33.953
+    ],
+    "rMax": 24.009,
+    "triangles": 1064,
+    "vertices": 613
+  },
+  "spec": {
+    "L": 31.15321583886473,
+    "W": 21.844541084916457,
+    "H": 19.728389410238805,
+    "style": "pantheon_rotunda_with_grand_dome"
+  },
+  "method": "llm_fine_detail_parts_and_3d_geom",
+  "status": "ingested"
+}

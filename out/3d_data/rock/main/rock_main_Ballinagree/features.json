@@ -1,0 +1,63 @@
+{
+  "id": "rock_main_Ballinagree",
+  "sourceImage": "rock/Ballinagree.jpg",
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.883,
+  "aspectRatio": 1.742,
+  "colorRichness": 64.35,
+  "colors": {
+    "roofRgb": [
+      192,
+      222,
+      249
+    ],
+    "roofHex": 12639993,
+    "facadeRgb": [
+      136,
+      155,
+      171
+    ],
+    "facadeHex": 8952747,
+    "baseRgb": [
+      59,
+      62,
+      36
+    ],
+    "baseHex": 3882532,
+    "accentRgb": [
+      57,
+      59,
+      37
+    ],
+    "accentHex": 3750693,
+    "darkRgb": [
+      57,
+      59,
+      37
+    ],
+    "darkHex": 3750693,
+    "brightRgb": [
+      206,
+      229,
+      248
+    ],
+    "brightHex": 13559288
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "faceted_cleavage_planes_and_scree",
+      "method": "dodecahedron_and_talus"
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "erratic_boulder_core",
+    "talus_scree_facet_1",
+    "talus_scree_facet_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "frustum_pyramid"
+  ]
+}

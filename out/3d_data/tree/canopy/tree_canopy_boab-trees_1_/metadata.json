@@ -3,36 +3,38 @@
   "key": "tree/canopy_boab-trees (1)_ffe655ee",
   "family": "tree",
   "subpart": "canopy",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "tree/boab-trees (1).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\boab-trees (1).jpg",
-  "created_at": "2026-08-18T10:56:14.285Z",
+  "created_at": "2026-08-18T14:27:16.133Z",
   "bounds": {
     "min": [
-      -5.6988,
-      0,
-      -5.794
+      -2.8295,
+      -0.1867,
+      -3.2431
     ],
     "max": [
-      4.9153,
-      19.0386,
-      4.9333
+      3.1302,
+      3.462,
+      3.1794
     ],
     "size": [
-      10.614,
-      19.039,
-      10.727
+      5.96,
+      3.649,
+      6.422
     ],
-    "rMax": 8.127,
-    "triangles": 140,
-    "vertices": 90
+    "rMax": 4.462,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 10.980659189745937,
-    "W": 9.984092469672694,
-    "H": 19.574654764629585,
-    "style": "gnarled_broadleaf_buttress"
+    "L": 5.240329594872969,
+    "W": 4.742046234836347,
+    "H": 3.6577477683680475,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

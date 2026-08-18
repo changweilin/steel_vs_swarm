@@ -3,36 +3,38 @@
   "key": "building/mass_list_33721942",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_residential",
-  "symmetryMode": "asymmetric",
+  "style": "classical_temple_peristyle",
+  "symmetryMode": "symmetric",
+  "version": 3,
+  "verStr": "v3",
   "source_image": "building/list.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\list.jpg",
-  "created_at": "2026-08-18T10:56:14.120Z",
+  "created_at": "2026-08-18T14:27:15.977Z",
   "bounds": {
     "min": [
-      -11.0908,
+      -17.7181,
       0,
-      -9.0793
+      -17.7181
     ],
     "max": [
-      11.0908,
-      27.6822,
-      8.7793
+      17.7181,
+      19.0183,
+      17.7181
     ],
     "size": [
-      22.182,
-      27.682,
-      17.859
+      35.436,
+      19.018,
+      35.436
     ],
-    "rMax": 14.333,
-    "triangles": 396,
-    "vertices": 264
+    "rMax": 25.057,
+    "triangles": 1064,
+    "vertices": 613
   },
   "spec": {
-    "L": 22.18161287861448,
-    "W": 15.158525978484779,
-    "H": 27.6822156099794,
-    "style": "commercial_residential_asymmetric"
+    "L": 32.63620965896086,
+    "W": 18.772350652323187,
+    "H": 17.894071869993134,
+    "style": "pantheon_rotunda_with_grand_dome"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
