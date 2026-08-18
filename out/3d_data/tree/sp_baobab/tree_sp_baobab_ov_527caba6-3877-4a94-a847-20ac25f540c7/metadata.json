@@ -3,38 +3,38 @@
   "key": "tree/sp_baobab_ov_527caba6-3877-4a94-a847-20ac25f540c7_50a22670",
   "family": "tree",
   "subpart": "sp_baobab",
-  "style": "broadleaf_camphor_oak",
+  "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "tree/sp_baobab/ov_527caba6-3877-4a94-a847-20ac25f540c7.png",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\sp_baobab\\ov_527caba6-3877-4a94-a847-20ac25f540c7.png",
-  "created_at": "2026-08-18T14:27:15.885Z",
+  "created_at": "2026-08-18T15:15:58.127Z",
   "bounds": {
     "min": [
-      -7.5175,
-      0,
-      -7.6986
+      -2.9304,
+      -0.1377,
+      -2.4768
     ],
     "max": [
-      6.6246,
-      19.1766,
-      6.136
+      2.9489,
+      2.5659,
+      2.8232
     ],
     "size": [
-      14.142,
-      19.177,
-      13.835
+      5.879,
+      2.704,
+      5.3
     ],
-    "rMax": 10.76,
-    "triangles": 1200,
-    "vertices": 765
+    "rMax": 4.082,
+    "triangles": 216,
+    "vertices": 120
   },
   "spec": {
-    "L": 10.758831158922714,
-    "W": 11.560387579156176,
-    "H": 16.317143511100937,
-    "style": "broadleaf_buttress_and_dome_canopies"
+    "L": 4.879415579461357,
+    "W": 5.280193789578088,
+    "H": 2.8594644083314256,
+    "style": "low_lying_organic_shrub_mounds"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

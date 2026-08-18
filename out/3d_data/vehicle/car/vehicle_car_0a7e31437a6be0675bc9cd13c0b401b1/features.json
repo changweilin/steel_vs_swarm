@@ -1,11 +1,11 @@
 {
   "id": "vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1",
   "sourceImage": "vehicle/car/0a7e31437a6be0675bc9cd13c0b401b1.jpg",
-  "style": "standard_passenger_automobile",
+  "style": "aerodynamic_gt_supercar",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.772,
   "aspectRatio": 1.906,
-  "colorRichness": 75.19,
+  "colorRichness": 75.85,
   "colors": {
     "roofRgb": [
       206,
@@ -26,53 +26,65 @@
     ],
     "baseHex": 8226698,
     "accentRgb": [
-      15,
-      18,
-      20
+      12,
+      13,
+      15
     ],
-    "accentHex": 987668,
+    "accentHex": 789775,
     "darkRgb": [
-      15,
-      18,
-      20
+      12,
+      13,
+      15
     ],
-    "darkHex": 987668,
+    "darkHex": 789775,
     "brightRgb": [
-      232,
       235,
-      236
+      237,
+      238
     ],
-    "brightHex": 15264748
+    "brightHex": 15461870,
+    "glassRgb": [
+      135,
+      147,
+      154
+    ],
+    "glassHex": 8885146
   },
   "reconstructedFeatures": [
     {
-      "name": "mirrored_automobile_features",
+      "name": "wedge_monocoque_and_gt_wing",
+      "method": "carbon_aero_assembly"
+    },
+    {
+      "name": "mirrored_supercar_running_gear",
       "method": "bilateral_mirror_Z_axis",
-      "zOffset": 0.825
+      "zOffset": 0.9
     }
   ],
-  "totalParts": 15,
+  "totalParts": 17,
   "partNames": [
-    "automobile_main_body",
-    "passenger_glass_cabin",
-    "engine_hood_slope",
-    "headlight_left",
-    "taillight_left",
-    "passenger_tire_f_left",
-    "wheel_rim_f_left",
-    "passenger_tire_r_left",
-    "wheel_rim_r_left",
-    "headlight_right",
-    "taillight_right",
-    "passenger_tire_f_right",
-    "wheel_rim_f_right",
-    "passenger_tire_r_right",
-    "wheel_rim_r_right"
+    "supercar_lower_tub",
+    "front_nose_wedge",
+    "carbon_front_splitter",
+    "cockpit_glass_canopy",
+    "carbon_gt_rear_wing",
+    "laser_headlight_left",
+    "led_taillight_left",
+    "low_profile_tire_f_left",
+    "forged_alloy_rim_f_left",
+    "low_profile_tire_r_left",
+    "forged_alloy_rim_r_left",
+    "laser_headlight_right",
+    "led_taillight_right",
+    "low_profile_tire_f_right",
+    "forged_alloy_rim_f_right",
+    "low_profile_tire_r_right",
+    "forged_alloy_rim_r_right"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
-    "frustum_pyramid",
     "wedge",
+    "frustum_pyramid",
     "torus_ring"
   ]
 }

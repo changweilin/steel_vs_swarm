@@ -1,11 +1,11 @@
 {
   "id": "building_mass_admin_51_1680233914_9ARlI77I3P.jpg!t1000",
   "sourceImage": "building/admin_51_1680233914_9ARlI77I3P.jpg!t1000.webp",
-  "style": "classical_temple_peristyle",
+  "style": "asian_pagoda_pavilion",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.851,
   "aspectRatio": 0.847,
-  "colorRichness": 61.39,
+  "colorRichness": 61.09,
   "colors": {
     "roofRgb": [
       208,
@@ -26,65 +26,81 @@
     ],
     "baseHex": 14869217,
     "accentRgb": [
-      57,
-      56,
-      55
+      52,
+      51,
+      50
     ],
-    "accentHex": 3749943,
+    "accentHex": 3420978,
     "darkRgb": [
-      57,
-      56,
-      55
+      52,
+      51,
+      50
     ],
-    "darkHex": 3749943,
+    "darkHex": 3420978,
     "brightRgb": [
       229,
       231,
-      231
+      232
     ],
-    "brightHex": 15067111
+    "brightHex": 15067112,
+    "glassRgb": [
+      52,
+      51,
+      50
+    ],
+    "glassHex": 3420978
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_stylobate_and_peristyle",
-      "method": "tri_tier_plinth_and_octagonal_columns"
+      "name": "stepped_stone_plinth_podium",
+      "method": "frustum_plinth"
     },
     {
-      "name": "classical_pantheon_hemisphere_dome",
-      "method": "hemisphere_dome_and_oculus"
+      "name": "multi_tier_upturned_flared_eaves",
+      "method": "flared_frustum_eaves"
+    },
+    {
+      "name": "sacred_bronze_finial_spire",
+      "method": "torus_sanrin_and_cone"
     }
   ],
-  "totalParts": 23,
+  "totalParts": 30,
   "partNames": [
-    "stylobate_plinth_tier_1",
-    "stylobate_plinth_tier_2",
-    "stylobate_plinth_tier_3",
-    "sanctuary_cella_wall",
-    "peristyle_column_0_n",
-    "peristyle_column_0_s",
-    "peristyle_column_1_n",
-    "peristyle_column_1_s",
-    "peristyle_column_2_n",
-    "peristyle_column_2_s",
-    "peristyle_column_3_n",
-    "peristyle_column_3_s",
-    "peristyle_column_4_n",
-    "peristyle_column_4_s",
-    "peristyle_column_5_n",
-    "peristyle_column_5_s",
-    "peristyle_column_6_n",
-    "peristyle_column_6_s",
-    "peristyle_column_7_n",
-    "peristyle_column_7_s",
-    "classical_entablature",
-    "pantheon_rotunda_dome",
-    "dome_oculus_ring"
+    "pagoda_stone_podium",
+    "pagoda_chamber_tier_1",
+    "veranda_column_1_-1_-1",
+    "veranda_column_1_-1_1",
+    "veranda_column_1_1_-1",
+    "veranda_column_1_1_1",
+    "curved_eaves_frustum_1",
+    "eave_ridge_cap_1",
+    "pagoda_chamber_tier_2",
+    "veranda_column_2_-1_-1",
+    "veranda_column_2_-1_1",
+    "veranda_column_2_1_-1",
+    "veranda_column_2_1_1",
+    "curved_eaves_frustum_2",
+    "eave_ridge_cap_2",
+    "pagoda_chamber_tier_3",
+    "veranda_column_3_-1_-1",
+    "veranda_column_3_-1_1",
+    "veranda_column_3_1_-1",
+    "veranda_column_3_1_1",
+    "curved_eaves_frustum_3",
+    "eave_ridge_cap_3",
+    "apex_pyramid_roof",
+    "finial_central_mast",
+    "sanrin_sacred_ring_1",
+    "sanrin_sacred_ring_2",
+    "sanrin_sacred_ring_3",
+    "sanrin_sacred_ring_4",
+    "sanrin_sacred_ring_5",
+    "houju_sacred_jewel"
   ],
   "polyhedralPrimitivesUsed": [
     "frustum_pyramid",
     "box",
-    "polygonal_prism",
-    "hemisphere_dome",
-    "torus_ring"
+    "torus_ring",
+    "ellipsoid_sphere"
   ]
 }

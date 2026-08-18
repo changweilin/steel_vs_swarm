@@ -5,11 +5,11 @@
   "subpart": "bld_tower",
   "style": "village_triangular_gable",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_tower/manual_1711450890-2085471680-g.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\bld_tower\\manual_1711450890-2085471680-g.jpg",
-  "created_at": "2026-08-18T14:27:15.958Z",
+  "created_at": "2026-08-18T15:15:58.188Z",
   "bounds": {
     "min": [
       -10.7118,

@@ -5,11 +5,11 @@
   "subpart": "hull",
   "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "ship/_127290139_04alamy-pwtk4p.png",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\_127290139_04alamy-pwtk4p.png",
-  "created_at": "2026-08-18T14:27:16.072Z",
+  "created_at": "2026-08-18T15:15:58.300Z",
   "bounds": {
     "min": [
       -20.2867,
@@ -27,8 +27,8 @@
       13.553
     ],
     "rMax": 24.121,
-    "triangles": 64,
-    "vertices": 40
+    "triangles": 76,
+    "vertices": 48
   },
   "spec": {
     "L": 44.10147249561303,

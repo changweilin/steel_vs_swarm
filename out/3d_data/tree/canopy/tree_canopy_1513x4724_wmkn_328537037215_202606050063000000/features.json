@@ -1,11 +1,11 @@
 {
   "id": "tree_canopy_1513x4724_wmkn_328537037215_202606050063000000",
   "sourceImage": "tree/1513x4724_wmkn_328537037215_202606050063000000.jpg",
-  "style": "conifer_pine_spire",
-  "symmetryMode": "symmetric",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
   "symmetryScore": 0.907,
   "aspectRatio": 0.32,
-  "colorRichness": 62.11,
+  "colorRichness": 62.21,
   "colors": {
     "roofRgb": [
       210,
@@ -26,45 +26,58 @@
     ],
     "baseHex": 3753263,
     "accentRgb": [
-      42,
-      53,
-      37
+      37,
+      47,
+      32
     ],
-    "accentHex": 2766117,
+    "accentHex": 2436896,
     "darkRgb": [
-      42,
-      53,
-      37
+      37,
+      47,
+      32
     ],
-    "darkHex": 2766117,
+    "darkHex": 2436896,
     "brightRgb": [
-      221,
-      227,
-      225
+      222,
+      228,
+      226
     ],
-    "brightHex": 14541793
+    "brightHex": 14607586,
+    "glassRgb": [
+      30,
+      41,
+      59
+    ],
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [
     {
-      "name": "tapered_resin_trunk",
-      "method": "conical_frustum_trunk"
+      "name": "fluted_buttress_root_fins",
+      "method": "frustum_fins"
     },
     {
-      "name": "six_tiered_conical_needle_canopies",
-      "method": "tiered_multi_sided_cones"
+      "name": "multi_tier_overlapping_canopy_domes",
+      "method": "ellipsoidal_canopy_domes"
     }
   ],
-  "totalParts": 7,
+  "totalParts": 13,
   "partNames": [
-    "pine_tapered_trunk",
-    "pine_canopy_tier_1",
-    "pine_canopy_tier_2",
-    "pine_canopy_tier_3",
-    "pine_canopy_tier_4",
-    "pine_canopy_tier_5",
-    "pine_canopy_tier_6"
+    "gnarled_trunk_core",
+    "buttress_fin_1",
+    "buttress_fin_2",
+    "buttress_fin_3",
+    "buttress_fin_4",
+    "buttress_fin_5",
+    "canopy_foliage_dome_1",
+    "canopy_foliage_dome_2",
+    "canopy_foliage_dome_3",
+    "canopy_foliage_dome_4",
+    "canopy_foliage_dome_5",
+    "canopy_foliage_dome_6",
+    "canopy_foliage_dome_7"
   ],
   "polyhedralPrimitivesUsed": [
-    "frustum_pyramid"
+    "frustum_pyramid",
+    "ellipsoid_sphere"
   ]
 }

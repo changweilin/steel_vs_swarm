@@ -5,11 +5,11 @@
   "subpart": "car",
   "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "vehicle/car/mobile01-78b0b061843ca71c35cd47caeccc4c93.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\mobile01-78b0b061843ca71c35cd47caeccc4c93.jpg",
-  "created_at": "2026-08-18T14:27:16.429Z",
+  "created_at": "2026-08-18T15:15:58.691Z",
   "bounds": {
     "min": [
       -2.4723,

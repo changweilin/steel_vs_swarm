@@ -3,38 +3,38 @@
   "key": "building/mass_images (2)_76cc02ca",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/images (2).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\images (2).jpg",
-  "created_at": "2026-08-18T14:27:15.481Z",
+  "created_at": "2026-08-18T15:15:57.721Z",
   "bounds": {
     "min": [
-      -10.2329,
+      -11.3129,
       0,
-      -9.6484
+      -11.3129
     ],
     "max": [
-      10.2329,
-      33.1084,
-      9.3484
+      11.3129,
+      34.5222,
+      11.3129
     ],
     "size": [
-      20.466,
-      33.108,
-      18.997
+      22.626,
+      34.522,
+      22.626
     ],
-    "rMax": 14.064,
-    "triangles": 416,
-    "vertices": 274
+    "rMax": 15.999,
+    "triangles": 1276,
+    "vertices": 786
   },
   "spec": {
-    "L": 20.06448462653544,
-    "W": 16.09681849393454,
-    "H": 30.708354314488442,
-    "style": "modern_flat_terrace_commercial"
+    "L": 21.54836346990158,
+    "W": 21.09681849393454,
+    "H": 30.47223620965896,
+    "style": "oriental_pagoda_flared_eaves"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

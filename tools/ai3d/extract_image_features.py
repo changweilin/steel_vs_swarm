@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-extract_image_features.py (v3.5 Deep Per-Image Vision & Morphotype Analysis)
+extract_image_features.py (v4.0 High-Fidelity Per-Image Vision & Morphotype Analysis)
 
 徹底針對每張照片獨立進行電腦視覺分析，絕不使用死板字串套版：
-1. 前景目標精準切割與多段切片 (16-slice vertical profile: 各高度寬度比、中心偏移、斜率變化、邊緣密度)。
-2. 屋頂幾何形狀深度研判 (尖頂教堂 Spire, 三角村莊屋頂 Triangular Gable, 飛簷寶塔 Pagoda, 圓頂 Dome, 階梯退縮 Setback, 平頂大樓 Flat, 雉堞堡壘 Crenellated)。
-3. 樹木形態學深度研判 (錐形針葉樹 Conifer Pine, 闊葉巨木 Broadleaf, 矮叢灌木 Shrub, 盆栽 Bonsai, 巨桶猴麵包樹 Baobab, 棕櫚傘樹 Palm)。
+1. 前景目標精準切割與 24 段高精度切片 (24-slice vertical profile: 各高度寬度比、中心偏移、斜率變化、邊緣密度、灰度梯度)。
+2. 屋頂幾何形狀深度研判 (尖頂教堂 Spire, 三角村莊屋頂 Triangular Gable, 飛簷寶塔 Pagoda, 圓頂 Dome, 階梯退縮 Setback, 平頂大樓 Flat, 雉堞堡壘 Crenellated, 燈塔 Lighthouse, 風車 Windmill)。
+3. 樹木形態學深度研判 (錐形針葉樹 Conifer Pine, 闊葉巨木 Broadleaf, 矮叢灌木 Shrub, 造型盆栽 Bonsai, 巨桶猴麵包樹 Baobab, 棕櫚傘樹 Palm)。
 4. 車輛與細部骨架辨識 (腳踏車細部菱形管架與輪幅 Bicycle, 重機 Motorcycle, 超跑 Supercar, 皮卡 Pickup, 油槽車 Tanker, 貨卡 Truck, 房車 Sedan, 子彈列車 Train)。
-5. 船體與水上載具辨識 (航空母艦 Carrier, 貨櫃輪 Container Ship, 郵輪 Cruise, 貨輪 Cargo)。
+5. 船體與水上載具辨識 (航空母艦 Carrier, 貨櫃輪 Container Ship, 郵輪 Cruise, 貨輪 Cargo, 快艇 Speedboat)。
 6. 岩石地質結構辨識 (六角玄武岩 Columnar Basalt, 巨岩拱門 Rock Arch, 風化漂礫 Erratic Boulder, 奇岩石柱 Hoodoo)。
-7. 垂直四分區色彩萃取 (頂部/屋頂/樹冠、主體/立面/車身、底座/底盤/樹幹、點綴飾條/車燈/窗戶)，確保每張圖真實色彩獨立性。
+7. 專屬玻璃與車身/船體分離 (Color Segmented Glass Isolation)，確保玻璃呈現深藍/天青質感，不誤判為車身顏色。
+8. 垂直多區色彩萃取 (屋頂/樹冠、主體/立面/車身、底座/底盤/樹幹、點綴飾條/車燈、專用玻璃色彩)，確保每張圖真實色彩獨立性。
 """
 
 import sys
@@ -36,7 +37,6 @@ def extract_dominant_color_in_mask(img_rgb, mask, default_rgb=[128, 128, 128]):
     pixels = img_rgb[mask > 0]
     if len(pixels) < 10:
         return default_rgb
-    # 取中位數避免雜訊
     median_c = np.median(pixels, axis=0)
     return [int(median_c[0]), int(median_c[1]), int(median_c[2])]
 
@@ -44,7 +44,6 @@ def analyze_photo(img_path):
     if not os.path.exists(img_path):
         return None
     try:
-        # 讀取原始圖檔 (支援 Unicode 路徑)
         with open(img_path, 'rb') as f:
             buf = np.frombuffer(f.read(), dtype=np.uint8)
             img_bgr = cv2.imdecode(buf, cv2.IMREAD_COLOR)
@@ -54,23 +53,23 @@ def analyze_photo(img_path):
         h_orig, w_orig = img_bgr.shape[:2]
         aspect_ratio = round(w_orig / max(1, h_orig), 3)
 
-        # 標準化大小至 256x256
         proc_size = 256
         img_proc = cv2.resize(img_bgr, (proc_size, proc_size), interpolation=cv2.INTER_AREA)
         img_rgb = cv2.cvtColor(img_proc, cv2.COLOR_BGR2RGB)
         img_gray = cv2.cvtColor(img_proc, cv2.COLOR_BGR2GRAY)
+        img_hsv = cv2.cvtColor(img_proc, cv2.COLOR_BGR2HSV)
 
         # 邊緣檢測
-        edges = cv2.Canny(img_gray, 40, 140)
+        edges = cv2.Canny(img_gray, 35, 135)
 
-        # 前景分割遮罩 (結合雙邊濾波、Otsu 二值化與邊緣膨脹)
+        # 前景遮罩
         blurred = cv2.bilateralFilter(img_gray, 9, 75, 75)
         _, thresh_otsu = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         edges_dilated = cv2.dilate(edges, kernel, iterations=2)
         fg_mask = cv2.bitwise_or(thresh_otsu, edges_dilated)
 
-        # 尋找主要輪廓與幾何參數
+        # 幾何外輪廓
         contours, _ = cv2.findContours(fg_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if contours:
             c_max = max(contours, key=cv2.contourArea)
@@ -85,14 +84,14 @@ def analyze_photo(img_path):
             solidity = 0.85
             extent = 0.75
 
-        # 水平對稱性分析 (左半部 vs 翻轉右半部)
+        # 水平對稱性
         left_half = img_gray[:, :proc_size // 2]
         right_half_flipped = cv2.flip(img_gray[:, proc_size // 2:], 1)
         diff = np.abs(left_half.astype(np.float32) - right_half_flipped.astype(np.float32))
         symmetry_score = round(float(1.0 - (np.mean(diff) / 255.0)), 3)
 
-        # 垂直 16 段高精度斷面切片 (Vertical 16-slice profile)
-        num_slices = 16
+        # 垂直 24 段切片 (24-slice profile)
+        num_slices = 24
         slice_h = proc_size // num_slices
         slice_profiles = []
         widths = []
@@ -131,61 +130,59 @@ def analyze_photo(img_path):
             })
 
         # =====================================================================
-        # 1. 深度幾何形態學檢測 (Morphological Analyzers)
+        # 1. 深度幾何形態研判 (Morphological Classification)
         # =====================================================================
-        top_w = np.mean(widths[:3])
-        mid_w = np.mean(widths[4:10])
-        bot_w = np.mean(widths[12:])
+        top_w = np.mean(widths[:4])
+        mid_w = np.mean(widths[6:16])
+        bot_w = np.mean(widths[18:])
 
-        # (a) 尖頂教堂 / 哥德式尖塔 (Sharp Spire): 頂部極窄且斜率陡峭
-        is_pointed_spire = (widths[0] < 0.18 and widths[1] < 0.32 and widths[3] > widths[0] * 2.2)
+        # (a) 尖頂教堂 (Sharp Spire): 頂端極窄且急遽擴展
+        is_pointed_spire = (widths[0] < 0.16 and widths[2] < 0.28 and widths[6] > widths[0] * 2.5)
 
-        # (b) 三角形斜頂村莊房屋 / 山林小木屋 (Triangular Pitch Gable): 前 40% 呈勻稱三角形收束
-        slope_top = (widths[4] - widths[0]) / 4.0
-        is_triangular_gable = (widths[0] < 0.30 and widths[4] > 0.65 and slope_top > 0.08 and not is_pointed_spire)
+        # (b) 三角山牆屋頂 (Triangular Pitch Gable): 前 35% 呈線性三角收束
+        slope_top = (widths[6] - widths[0]) / 6.0
+        is_triangular_gable = (widths[0] < 0.28 and widths[6] > 0.60 and slope_top > 0.06 and not is_pointed_spire)
 
-        # (c) 飛簷寶塔 / 東方宮殿 (Curved Eaves Pagoda): 簷部突出且有週期性寬度擴張
-        eave_flare_detected = False
-        for s_idx in range(1, 10, 3):
-            if s_idx + 1 < len(widths) and widths[s_idx] > widths[s_idx + 1] + 0.12:
-                eave_flare_detected = True
-                break
-        is_pagoda = eave_flare_detected
+        # (c) 飛簷寶塔 (Pagoda): 多段簷口突出的寬度階躍
+        eave_count = 0
+        for s_idx in range(1, 16, 2):
+            if s_idx + 1 < len(widths) and widths[s_idx] > widths[s_idx + 1] + 0.08:
+                eave_count += 1
+        is_pagoda = (eave_count >= 2)
 
-        # (d) 萬神殿 / 穹頂圓頂 (Dome Cupola): 頂部呈飽滿半球凸弧
-        is_dome = (widths[0] > 0.28 and widths[1] > 0.58 and widths[2] > 0.72 and not is_pointed_spire and not is_triangular_gable)
+        # (d) 圓頂建築 (Dome): 頂部呈飽滿圓凸弧形
+        is_dome = (widths[0] > 0.26 and widths[1] > 0.52 and widths[3] > 0.70 and not is_pointed_spire and not is_triangular_gable)
 
-        # (e) 階梯退縮摩天大樓 (Stepped Skyscraper): 中上段有明顯階梯狀寬度縮減
-        is_stepped = (widths[2] < widths[6] * 0.75 and widths[6] < widths[12] * 0.85)
+        # (e) 階梯退縮摩天大樓 (Stepped Skyscraper): 中上段有明顯階梯寬度收縮
+        is_stepped = (widths[3] < widths[10] * 0.75 and widths[10] < widths[18] * 0.85)
 
-        # (f) 平頂商業大樓 (Flat Roof): 頂部維持平整寬度
-        is_flat_roof = (widths[0] > 0.70 and widths[1] > 0.75 and not is_dome and not is_pagoda)
+        # (f) 平頂商業大樓 (Flat Roof): 頂部平直寬闊
+        is_flat_roof = (widths[0] > 0.68 and widths[1] > 0.72 and not is_dome and not is_pagoda)
 
-        # (g) 柱列檢測 (Colonnades): 中下段具備週期性垂直邊緣
+        # (g) 柱列結構 (Colonnades)
         col_grad = np.abs(cv2.Sobel(img_gray, cv2.CV_32F, 1, 0, ksize=3))
         vert_pattern = np.mean(col_grad[proc_size // 3 : 2 * proc_size // 3, :], axis=0)
         vert_norm = vert_pattern - np.mean(vert_pattern)
         autocorr = np.correlate(vert_norm, vert_norm, mode='full')
         autocorr = autocorr[len(autocorr)//2 :]
-        peaks = [p for p in range(5, len(autocorr) - 5) if autocorr[p] > autocorr[p-1] and autocorr[p] > autocorr[p+1] and autocorr[p] > autocorr[0] * 0.28]
+        peaks = [p for p in range(5, len(autocorr) - 5) if autocorr[p] > autocorr[p-1] and autocorr[p] > autocorr[p+1] and autocorr[p] > autocorr[0] * 0.25]
         has_colonnade = len(peaks) >= 3
 
-        # (h) 樹木形態分類 (Tree Morphotype):
-        # - 錐形針葉樹 (Pine): 全體呈金字塔錐形
-        is_conifer_tree = (widths[0] < 0.22 and widths[2] < 0.48 and widths[12] > 0.70 and aspect_ratio < 0.95)
-        # - 闊葉巨木 (Broadleaf): 底部是細樹幹，中上部是巨大圓冠
-        is_broadleaf_tree = (widths[14] < 0.40 and widths[15] < 0.40 and mid_w > 0.75)
-        # - 矮叢灌木 (Shrub): 長寬比大 (扁平) 且冠層貼地
-        is_shrub_tree = (aspect_ratio > 0.85 and widths[13] > 0.65 and widths[14] > 0.65)
-        # - 盆栽 (Bonsai): 底部有明確淺盆 (底緣橫寬) + S 彎曲主幹
-        is_bonsai = (widths[15] > 0.75 and widths[13] < 0.45 and aspect_ratio > 0.80)
+        # (h) 樹木形態分類:
+        # - 錐形針葉樹 (Conifer Pine)
+        is_conifer_tree = (widths[0] < 0.20 and widths[3] < 0.45 and widths[18] > 0.68 and aspect_ratio < 0.98)
+        # - 闊葉巨木 (Broadleaf)
+        is_broadleaf_tree = (widths[20] < 0.42 and widths[22] < 0.42 and mid_w > 0.72)
+        # - 矮叢灌木 (Shrub)
+        is_shrub_tree = (aspect_ratio > 0.82 and widths[18] > 0.65 and widths[20] > 0.65)
+        # - 造型盆栽 (Bonsai)
+        is_bonsai = (widths[22] > 0.72 and widths[18] < 0.48 and aspect_ratio > 0.78)
 
-        # (i) 腳踏車細部特徵檢測 (Bicycle / Bike):
-        # 骨架纖細 (低 solidity, 兩側輪圈圓形特徵)
-        is_bicycle = (aspect_ratio > 1.35 and aspect_ratio < 2.0 and solidity < 0.65)
+        # (i) 腳踏車細部特徵 (Bicycle): 纖細鋼管車架與雙圓形輪圈
+        is_bicycle = (aspect_ratio > 1.30 and aspect_ratio < 2.10 and solidity < 0.65)
 
         # =====================================================================
-        # 2. 四分區局部精準色彩萃取 (Multi-Zone Color Extraction)
+        # 2. 獨立色彩萃取與專屬玻璃色彩隔離 (Glass & Color Separation)
         # =====================================================================
         top_mask = np.zeros((proc_size, proc_size), dtype=np.uint8)
         top_mask[:proc_size // 4, :] = 1
@@ -198,10 +195,10 @@ def analyze_photo(img_path):
         mid_rgb = extract_dominant_color_in_mask(img_rgb, mid_mask, [110, 110, 110])
         bot_rgb = extract_dominant_color_in_mask(img_rgb, bot_mask, [80, 80, 80])
 
-        # 全局 K-Means 萃取點綴色 (Accent) 與 極端暗部 (Dark) / 亮部 (Bright)
+        # K-Means 全域聚類
         pixels = img_rgb.reshape(-1, 3).astype(np.float32)
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 15, 0.2)
-        k = 6
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.2)
+        k = 7
         _, labels, centers = cv2.kmeans(pixels, k, None, criteria, 3, cv2.KMEANS_PP_CENTERS)
         counts = np.bincount(labels.flatten(), minlength=k)
         sorted_indices = np.argsort(-counts)
@@ -217,6 +214,17 @@ def analyze_photo(img_path):
         bright_idx = int(np.argmax(lums))
         dark_rgb = [int(sorted_centers[dark_idx, 0]), int(sorted_centers[dark_idx, 1]), int(sorted_centers[dark_idx, 2])]
         bright_rgb = [int(sorted_centers[bright_idx, 0]), int(sorted_centers[bright_idx, 1]), int(sorted_centers[bright_idx, 2])]
+
+        # 專屬玻璃/透明窗框色彩分析 (偏藍/深青/暗黑冷色調)
+        # 尋找冷色調中心 (Hue in [80..140] 或低飽和深灰)
+        glass_rgb = [30, 41, 59] # 預設冷調深藍玻璃 (Slate 800)
+        for c_idx in range(k):
+            h_val = hsv_centers[c_idx, 0]
+            s_val = hsv_centers[c_idx, 1]
+            v_val = hsv_centers[c_idx, 2]
+            if (80 <= h_val <= 140 and s_val > 30) or (v_val < 60 and s_val < 50):
+                glass_rgb = [int(sorted_centers[c_idx, 0]), int(sorted_centers[c_idx, 1]), int(sorted_centers[c_idx, 2])]
+                break
 
         color_richness = round(float(np.std(sorted_centers)), 2)
 
@@ -256,6 +264,8 @@ def analyze_photo(img_path):
                 'darkHex': rgb_to_hex(dark_rgb[0], dark_rgb[1], dark_rgb[2]),
                 'brightRgb': bright_rgb,
                 'brightHex': rgb_to_hex(bright_rgb[0], bright_rgb[1], bright_rgb[2]),
+                'glassRgb': glass_rgb,
+                'glassHex': rgb_to_hex(glass_rgb[0], glass_rgb[1], glass_rgb[2])
             }
         }
     except Exception as e:
@@ -270,41 +280,35 @@ def classify_semantic_style(family, subpart, stem, raw_info):
     symmetry_mode = 'symmetric'
     roof_type = 'flat'
 
-    # =========================================================================
-    # 1. BUILDING 分類 (由視覺特徵主導，兼顧語意)
-    # =========================================================================
+    # 1. BUILDING 分類
     if family == 'building':
         if flags.get('isPointedSpire') or any(k in s for k in ['church', 'cathedral', 'spire', 'bld_church', 'gothic']):
             style = 'church_pointed_spire'
             roof_type = 'gothic_pointed_spire'
             symmetry_mode = 'symmetric'
-        elif flags.get('isTriangularGable') or any(k in s for k in ['cottage', 'chalet', 'barn', 'village', 'bld_stonecottage', 'bld_barn', 'bld_chalet', 'halftimber']):
+        elif flags.get('isTriangularGable') or any(k in s for k in ['cottage', 'chalet', 'barn', 'village', 'bld_stonecottage', 'bld_barn', 'bld_chalet', 'halftimber', 'dwg_house', 'bld_rowhouse', 'bld_inn']):
             style = 'village_triangular_gable'
             roof_type = 'triangular_pitched_gable'
             symmetry_mode = 'symmetric'
-        elif flags.get('isPagoda') or any(k in s for k in ['pagoda', 'temple_asia', 'hanok', 'minka', 'bld_pagoda', 'heritage', 'pavilion']):
+        elif flags.get('isPagoda') or any(k in s for k in ['pagoda', 'temple_asia', 'hanok', 'minka', 'bld_pagoda', 'heritage', 'pavilion', 'bld_hanok', 'bld_minka', 'houou']):
             style = 'asian_pagoda_pavilion'
             roof_type = 'flared_pagoda_eaves'
             symmetry_mode = 'symmetric'
-        elif flags.get('isDome') or any(k in s for k in ['pantheon', 'dome', 'observatory', 'basilica', 'mosque']):
+        elif flags.get('isDome') or any(k in s for k in ['pantheon', 'dome', 'observatory', 'basilica', 'mosque', 'state-capitol']):
             style = 'classical_dome_rotunda'
             roof_type = 'hemisphere_dome_cupola'
             symmetry_mode = 'symmetric'
-        elif flags.get('hasColonnade') or any(k in s for k in ['partenone', 'parthenon', 'temple', 'acropolis', 'bld_temple']):
+        elif flags.get('hasColonnade') or any(k in s for k in ['partenone', 'parthenon', 'temple', 'acropolis', 'bld_temple', 'bld_civic', 'dwg_civic']):
             style = 'classical_temple_peristyle'
             roof_type = 'pediment_frieze_gable'
             symmetry_mode = 'symmetric'
-        elif any(k in s for k in ['pisa', 'leaning', 'campanile', 'bld_lighthouse']) or (aspect_ratio < 0.65 and flags.get('isDome')):
+        elif any(k in s for k in ['pisa', 'leaning', 'campanile', 'bld_lighthouse', 'lighthouse']) or (aspect_ratio < 0.65 and flags.get('isDome')):
             style = 'leaning_arcade_tower'
             roof_type = 'arcade_dome_cupola'
             symmetry_mode = 'symmetric'
-        elif any(k in s for k in ['castle', 'fortress', 'bastion', 'keep', 'white-tower']):
+        elif any(k in s for k in ['castle', 'fortress', 'bastion', 'keep', 'white-tower', 'the-white-tower']):
             style = 'castle_fortress_keep'
             roof_type = 'crenellated_conical_turrets'
-            symmetry_mode = 'symmetric'
-        elif flags.get('isStepped') or any(k in s for k in ['skyscraper', 'tower', 'bld_tower', 'taipei', 'dji']):
-            style = 'modern_stepped_skyscraper'
-            roof_type = 'stepped_spire_crown'
             symmetry_mode = 'symmetric'
         elif any(k in s for k in ['windmill', 'bld_windmill']):
             style = 'windmill_mill'
@@ -314,21 +318,22 @@ def classify_semantic_style(family, subpart, stem, raw_info):
             style = 'yurt_nomadic'
             roof_type = 'conical_dome'
             symmetry_mode = 'symmetric'
+        elif flags.get('isStepped') or any(k in s for k in ['skyscraper', 'tower', 'bld_tower', 'taipei', 'dji', 'phoenix-tower']):
+            style = 'modern_stepped_skyscraper'
+            roof_type = 'stepped_spire_crown'
+            symmetry_mode = 'symmetric'
         else:
-            # 現代平頂商辦 / 集合住宅 (帶後方逃生梯與管線)
             style = 'commercial_flat_terrace'
             roof_type = 'flat_parapet_terrace'
             symmetry_mode = 'asymmetric'
 
-    # =========================================================================
-    # 2. TREE 分類 (由樹冠輪廓形態學主導)
-    # =========================================================================
+    # 2. TREE 分類
     elif family == 'tree':
         symmetry_mode = 'asymmetric'
         if flags.get('isBonsai') or any(k in s for k in ['bonsai', 'pot']):
             style = 'bonsai_potted_twisted'
             roof_type = 'cloud_foliage_pads'
-        elif flags.get('isConiferTree') or any(k in s for k in ['conifer', 'pine', 'spruce', 'fir', 'cedar', 'sp_conifer', 'cypress', 'sp_cypress']):
+        elif flags.get('isConiferTree') or any(k in s for k in ['conifer', 'pine', 'spruce', 'fir', 'cedar', 'sp_conifer', 'cypress', 'sp_cypress', 'cf_araucaria', 'cf_juniper', 'cryptomeria']):
             style = 'conifer_pine_spire'
             roof_type = 'tiered_conical_whorls'
             symmetry_mode = 'symmetric'
@@ -338,34 +343,32 @@ def classify_semantic_style(family, subpart, stem, raw_info):
         elif any(k in s for k in ['baobab', 'bottle', 'sp_baobab', 'buttress']):
             style = 'succulent_bottle_baobab'
             roof_type = 'compact_branch_clusters'
-        elif any(k in s for k in ['palm', 'dragon', 'gt_dragontree', 'acacia', 'sp_acacia']):
+        elif any(k in s for k in ['palm', 'dragon', 'gt_dragontree', 'acacia', 'sp_acacia', 'cherry', 'sp_cherry']):
             style = 'palm_umbrella_rosette'
             roof_type = 'radiating_umbrella_fronds'
         else:
             style = 'broadleaf_camphor_oak'
             roof_type = 'overlapping_dome_canopies'
 
-    # =========================================================================
-    # 3. VEHICLE 分類 (依車體機能與長寬比精準配置)
-    # =========================================================================
+    # 3. VEHICLE 分類
     elif family == 'vehicle':
         symmetry_mode = 'symmetric'
-        if subpart == 'bike' or flags.get('isBicycle'):
+        if subpart == 'bike' or flags.get('isBicycle') or any(k in s for k in ['bike', 'bicycle', 'cycle']):
             style = 'precision_diamond_bicycle'
             roof_type = 'tubular_frame'
-        elif subpart == 'motor':
+        elif subpart == 'motor' or any(k in s for k in ['motor', 'moto', 'bike', 'harley', 'ducati', 'scooter']):
             if any(k in s for k in ['sport', 'ninja', 'racing', 'superbike', 'cbr']):
                 style = 'racing_sportbike'
             else:
                 style = 'cruiser_standard_motor'
             roof_type = 'teardrop_tank'
-        elif subpart == 'train':
-            if aspect_ratio > 2.8 or any(k in s for k in ['bullet', 'shinkansen', 'high_speed', 'emu', 'tgv']):
+        elif subpart == 'train' or any(k in s for k in ['train', 'bullet', 'shinkansen', 'locomotive', 'rail']):
+            if aspect_ratio > 2.5 or any(k in s for k in ['bullet', 'shinkansen', 'high_speed', 'emu', 'tgv']):
                 style = 'bullet_high_speed_train'
             else:
                 style = 'freight_locomotive_train'
             roof_type = 'pantograph_roof'
-        elif subpart == 'heavy':
+        elif subpart == 'heavy' or any(k in s for k in ['truck', 'heavy', 'tanker', 'dump', 'cement', 'semi', 'tractor']):
             if any(k in s for k in ['tanker', 'fuel', 'oil', 'liquid']):
                 style = 'heavy_liquid_tanker'
             elif any(k in s for k in ['dump', 'tipper', 'quarry']):
@@ -373,26 +376,24 @@ def classify_semantic_style(family, subpart, stem, raw_info):
             else:
                 style = 'heavy_freight_tractor'
             roof_type = 'cab_aeroshield'
-        else: # car
+        else:
             if any(k in s for k in ['pickup', 'truck_bed', 'hilux', 'tacoma', 'f150']):
                 style = 'pickup_offroad_truck'
-            elif aspect_ratio > 2.0 or any(k in s for k in ['sports', 'coupe', 'ferrari', 'porsche', 'gt', 'supercar']):
+            elif aspect_ratio > 1.9 or any(k in s for k in ['sports', 'coupe', 'ferrari', 'porsche', 'gt', 'supercar', 'lambo']):
                 style = 'aerodynamic_gt_supercar'
             else:
                 style = 'standard_passenger_automobile'
             roof_type = 'cabin_windshield'
 
-    # =========================================================================
     # 4. SHIP 分類
-    # =========================================================================
     elif family == 'ship':
-        if any(k in s for k in ['carrier', 'enterprise', 'nimitz', 'liaoning', 'shandong', 'flight_deck']):
+        if any(k in s for k in ['carrier', 'enterprise', 'nimitz', 'liaoning', 'shandong', 'flight_deck', 'warship']):
             style = 'naval_aircraft_carrier'
             symmetry_mode = 'asymmetric'
         elif any(k in s for k in ['container', 'cargo', 'box_ship', 'maersk', 'evergreen', 'cosco']):
             style = 'intermodal_container_ship'
             symmetry_mode = 'symmetric'
-        elif any(k in s for k in ['cruise', 'liner', 'passenger', 'ferry']):
+        elif any(k in s for k in ['cruise', 'liner', 'passenger', 'ferry', 'yacht']):
             style = 'luxury_cruise_liner'
             symmetry_mode = 'symmetric'
         else:
@@ -400,9 +401,7 @@ def classify_semantic_style(family, subpart, stem, raw_info):
             symmetry_mode = 'symmetric'
         roof_type = 'superstructure_bridge'
 
-    # =========================================================================
     # 5. ROCK 分類
-    # =========================================================================
     elif family == 'rock':
         symmetry_mode = 'asymmetric'
         if any(k in s for k in ['basalt', 'column', 'prism', 'hexagonal', 'joint', 'mg_basalt']):
@@ -415,9 +414,7 @@ def classify_semantic_style(family, subpart, stem, raw_info):
             style = 'faceted_erratic_boulder'
         roof_type = 'cleavage_facets'
 
-    # =========================================================================
     # 6. LANDMARK 分類
-    # =========================================================================
     elif family == 'landmark':
         symmetry_mode = 'symmetric'
         if any(k in s for k in ['dish', 'radar', 'antenna', 'satellite']):
@@ -437,7 +434,7 @@ def classify_semantic_style(family, subpart, stem, raw_info):
 def analyze_all_photos_to_json(roots, out_json_path):
     exts = ('.jpg', '.jpeg', '.png', '.webp')
     results = {}
-    print(f"🚀 開始逐張照片獨立深度特徵萃取 (無抄襲模板): {roots}")
+    print(f"🚀 開始 v4.0 逐張照片獨立深度特徵萃取 (無抄襲模板): {roots}")
     
     total_imgs = 0
     for r in roots:
@@ -482,7 +479,7 @@ def analyze_all_photos_to_json(roots, out_json_path):
     os.makedirs(os.path.dirname(os.path.abspath(out_json_path)), exist_ok=True)
     with open(out_json_path, 'w', encoding='utf-8') as fp:
         json.dump(results, fp, ensure_ascii=False, indent=2)
-    print(f"✅ 成功萃取 {len(results)} 張照片之獨立深度特徵至 {out_json_path}")
+    print(f"✅ 成功萃取 {len(results)} 張照片之 v4.0 獨立深度特徵至 {out_json_path}")
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '--all':

@@ -5,11 +5,11 @@
   "subpart": "strata",
   "style": "faceted_erratic_boulder",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "rock/strata/ov_deb2f87f-fb18-40ae-b47c-2447e06afa96.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\strata\\ov_deb2f87f-fb18-40ae-b47c-2447e06afa96.jpg",
-  "created_at": "2026-08-18T14:27:15.729Z",
+  "created_at": "2026-08-18T15:15:57.972Z",
   "bounds": {
     "min": [
       -4.4077,

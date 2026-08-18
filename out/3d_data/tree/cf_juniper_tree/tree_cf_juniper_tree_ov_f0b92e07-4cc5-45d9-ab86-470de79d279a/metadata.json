@@ -5,11 +5,11 @@
   "subpart": "cf_juniper_tree",
   "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "tree/cf_juniper_tree/ov_f0b92e07-4cc5-45d9-ab86-470de79d279a.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\cf_juniper_tree\\ov_f0b92e07-4cc5-45d9-ab86-470de79d279a.jpg",
-  "created_at": "2026-08-18T14:27:15.793Z",
+  "created_at": "2026-08-18T15:15:58.035Z",
   "bounds": {
     "min": [
       -3.6971,

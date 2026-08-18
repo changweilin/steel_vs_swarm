@@ -3,13 +3,13 @@
   "key": "building/mass_4f5ee370c1564cadabc47ce365c4f353_da512724",
   "family": "building",
   "subpart": "mass",
-  "style": "classical_dome_rotunda",
+  "style": "classical_temple_peristyle",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/4f5ee370c1564cadabc47ce365c4f353.jpeg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\4f5ee370c1564cadabc47ce365c4f353.jpeg",
-  "created_at": "2026-08-18T14:27:15.944Z",
+  "created_at": "2026-08-18T15:15:58.175Z",
   "bounds": {
     "min": [
       -17.7879,

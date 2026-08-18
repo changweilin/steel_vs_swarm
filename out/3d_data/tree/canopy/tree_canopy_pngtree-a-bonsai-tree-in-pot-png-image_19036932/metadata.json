@@ -5,11 +5,11 @@
   "subpart": "canopy",
   "style": "bonsai_potted_twisted",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "tree/pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp",
-  "created_at": "2026-08-18T14:27:15.851Z",
+  "created_at": "2026-08-18T15:15:58.093Z",
   "bounds": {
     "min": [
       -1.95,

@@ -3,38 +3,38 @@
   "key": "building/bld_civic_ov_cf9db9ae-c981-4201-9d2b-b8d0452ee9f9_8cf985a3",
   "family": "building",
   "subpart": "bld_civic",
-  "style": "asian_pagoda_pavilion",
+  "style": "classical_dome_rotunda",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_civic/ov_cf9db9ae-c981-4201-9d2b-b8d0452ee9f9.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_civic\\ov_cf9db9ae-c981-4201-9d2b-b8d0452ee9f9.jpg",
-  "created_at": "2026-08-18T14:27:15.323Z",
+  "created_at": "2026-08-18T15:15:57.560Z",
   "bounds": {
     "min": [
-      -11.5433,
+      -16.0112,
       0,
-      -11.5433
+      -16.0112
     ],
     "max": [
-      11.5433,
-      36.9767,
-      11.5433
+      16.0112,
+      20.4164,
+      16.0112
     ],
     "size": [
-      23.087,
-      36.977,
-      23.087
+      32.022,
+      20.416,
+      32.022
     ],
-    "rMax": 16.325,
-    "triangles": 1276,
-    "vertices": 786
+    "rMax": 22.643,
+    "triangles": 1064,
+    "vertices": 613
   },
   "spec": {
-    "L": 21.222430762188143,
-    "W": 23.55779354543374,
-    "H": 32.926741435873964,
-    "style": "oriental_pagoda_flared_eaves"
+    "L": 29.222430762188143,
+    "W": 20.37186236362249,
+    "H": 19.463370717936982,
+    "style": "pantheon_rotunda_with_grand_dome"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

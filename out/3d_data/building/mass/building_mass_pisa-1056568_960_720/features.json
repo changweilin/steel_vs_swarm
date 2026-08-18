@@ -5,7 +5,7 @@
   "symmetryMode": "symmetric",
   "symmetryScore": 0.885,
   "aspectRatio": 1.333,
-  "colorRichness": 66.82,
+  "colorRichness": 67.52,
   "colors": {
     "roofRgb": [
       17,
@@ -26,80 +26,49 @@
     ],
     "baseHex": 7896686,
     "accentRgb": [
-      19,
-      98,
-      188
+      14,
+      91,
+      182
     ],
-    "accentHex": 1270460,
+    "accentHex": 940982,
     "darkRgb": [
-      37,
-      42,
-      34
+      36,
+      40,
+      33
     ],
-    "darkHex": 2435618,
+    "darkHex": 2369569,
     "brightRgb": [
       213,
-      217,
-      218
+      216,
+      217
     ],
-    "brightHex": 14014938
+    "brightHex": 14014681,
+    "glassRgb": [
+      14,
+      91,
+      182
+    ],
+    "glassHex": 940982
   },
   "reconstructedFeatures": [
     {
-      "name": "front_storefront_and_cantilever_balconies",
-      "method": "storefront_and_balconies"
-    },
-    {
-      "name": "rear_fire_escape_stair_tower_and_flues",
-      "method": "asymmetric_fire_escape_and_ducts"
+      "name": "tapered_masonry_shaft_and_lantern",
+      "method": "conical_shaft_and_glazed_cupola"
     }
   ],
-  "totalParts": 41,
+  "totalParts": 7,
   "partNames": [
-    "building_mass_body",
-    "flat_roof_parapet_rim",
-    "rooftop_elevator_penthouse",
-    "front_storefront_glazed",
-    "front_balcony_f1_l",
-    "front_balcony_f1_r",
-    "front_balcony_f2_l",
-    "front_balcony_f2_r",
-    "front_balcony_f3_l",
-    "front_balcony_f3_r",
-    "front_balcony_f4_l",
-    "front_balcony_f4_r",
-    "front_balcony_f5_l",
-    "front_balcony_f5_r",
-    "front_balcony_f6_l",
-    "front_balcony_f6_r",
-    "front_balcony_f7_l",
-    "front_balcony_f7_r",
-    "front_balcony_f8_l",
-    "front_balcony_f8_r",
-    "front_balcony_f9_l",
-    "front_balcony_f9_r",
-    "rear_fire_platform_f1",
-    "rear_fire_stair_f1",
-    "rear_fire_platform_f2",
-    "rear_fire_stair_f2",
-    "rear_fire_platform_f3",
-    "rear_fire_stair_f3",
-    "rear_fire_platform_f4",
-    "rear_fire_stair_f4",
-    "rear_fire_platform_f5",
-    "rear_fire_stair_f5",
-    "rear_fire_platform_f6",
-    "rear_fire_stair_f6",
-    "rear_fire_platform_f7",
-    "rear_fire_stair_f7",
-    "rear_fire_platform_f8",
-    "rear_fire_stair_f8",
-    "rear_fire_platform_f9",
-    "rear_fire_stair_f9",
-    "rear_exhaust_duct_flue"
+    "lighthouse_stone_plinth",
+    "tapered_masonry_shaft",
+    "gallery_corbel_balustrade",
+    "gallery_safety_railing",
+    "glazed_lantern_room",
+    "lantern_dome_cupola",
+    "lightning_rod_spire"
   ],
   "polyhedralPrimitivesUsed": [
-    "box",
-    "frustum_pyramid"
+    "frustum_pyramid",
+    "torus_ring",
+    "hemisphere_dome"
   ]
 }

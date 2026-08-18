@@ -5,11 +5,11 @@
   "subpart": "bld_lighthouse",
   "style": "commercial_flat_terrace",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_lighthouse/ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_lighthouse\\ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171.jpg",
-  "created_at": "2026-08-18T14:27:15.346Z",
+  "created_at": "2026-08-18T15:15:57.578Z",
   "bounds": {
     "min": [
       -11.3943,

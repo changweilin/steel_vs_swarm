@@ -3,38 +3,38 @@
   "key": "building/chimney_ov_57fcec1d-e061-425d-8b1d-f4f81c3537db_43f711ee",
   "family": "building",
   "subpart": "chimney",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/chimney/ov_57fcec1d-e061-425d-8b1d-f4f81c3537db.jpeg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\chimney\\ov_57fcec1d-e061-425d-8b1d-f4f81c3537db.jpeg",
-  "created_at": "2026-08-18T14:27:15.421Z",
+  "created_at": "2026-08-18T15:15:57.655Z",
   "bounds": {
     "min": [
-      -9.8074,
+      -10.9844,
       0,
-      -10.0436
+      -10.9844
     ],
     "max": [
-      9.8074,
-      34.2301,
-      9.7436
+      10.9844,
+      35.2701,
+      10.9844
     ],
     "size": [
-      19.615,
-      34.23,
-      19.787
+      21.969,
+      35.27,
+      21.969
     ],
-    "rMax": 14.038,
-    "triangles": 464,
-    "vertices": 306
+    "rMax": 15.534,
+    "triangles": 1276,
+    "vertices": 786
   },
   "spec": {
-    "L": 19.23024338139925,
-    "W": 16.88711375600824,
-    "H": 31.83007553215839,
-    "style": "modern_flat_terrace_commercial"
+    "L": 20.92268253604944,
+    "W": 21.88711375600824,
+    "H": 31.22005035477226,
+    "style": "oriental_pagoda_flared_eaves"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

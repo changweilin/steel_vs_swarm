@@ -1,11 +1,11 @@
 {
   "id": "building_mass_the-white-tower-when",
   "sourceImage": "building/the-white-tower-when.jpg",
-  "style": "church_pointed_spire",
+  "style": "castle_fortress_keep",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.784,
   "aspectRatio": 1,
-  "colorRichness": 82.6,
+  "colorRichness": 85.02,
   "colors": {
     "roofRgb": [
       242,
@@ -38,58 +38,40 @@
     ],
     "darkHex": 1183767,
     "brightRgb": [
-      239,
-      238,
-      240
+      242,
+      241,
+      243
     ],
-    "brightHex": 15724272
+    "brightHex": 15921651,
+    "glassRgb": [
+      18,
+      16,
+      23
+    ],
+    "glassHex": 1183767
   },
   "reconstructedFeatures": [
     {
-      "name": "stone_nave_and_buttresses",
-      "method": "stepped_buttress_frustums"
-    },
-    {
-      "name": "octagonal_gothic_sharp_spire",
-      "method": "tall_octagonal_prism_and_pyramid"
+      "name": "corner_turrets_and_crenellations",
+      "method": "crenellated_turrets"
     }
   ],
-  "totalParts": 29,
+  "totalParts": 11,
   "partNames": [
-    "cathedral_stone_plinth",
-    "cathedral_nave_hall",
-    "nave_roof_slope_north",
-    "nave_roof_slope_south",
-    "nave_buttress_1_n",
-    "buttress_pinnacle_1_n",
-    "nave_buttress_1_s",
-    "buttress_pinnacle_1_s",
-    "nave_buttress_2_n",
-    "buttress_pinnacle_2_n",
-    "nave_buttress_2_s",
-    "buttress_pinnacle_2_s",
-    "nave_buttress_3_n",
-    "buttress_pinnacle_3_n",
-    "nave_buttress_3_s",
-    "buttress_pinnacle_3_s",
-    "nave_buttress_4_n",
-    "buttress_pinnacle_4_n",
-    "nave_buttress_4_s",
-    "buttress_pinnacle_4_s",
-    "nave_buttress_5_n",
-    "buttress_pinnacle_5_n",
-    "nave_buttress_5_s",
-    "buttress_pinnacle_5_s",
-    "bell_tower_octagonal_shaft",
-    "belfry_cornice_balustrade",
-    "gothic_sharp_spire_apex",
-    "spire_cross_finial_post",
-    "spire_cross_finial_beam"
+    "fortress_battered_plinth",
+    "central_keep_mass",
+    "corner_bastion_turret",
+    "turret_conical_roof",
+    "corner_bastion_turret",
+    "turret_conical_roof",
+    "corner_bastion_turret",
+    "turret_conical_roof",
+    "corner_bastion_turret",
+    "turret_conical_roof",
+    "keep_parapet_wall"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
-    "wedge",
-    "frustum_pyramid",
-    "polygonal_prism"
+    "frustum_pyramid"
   ]
 }

@@ -5,7 +5,7 @@
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.864,
   "aspectRatio": 1.843,
-  "colorRichness": 70.29,
+  "colorRichness": 71.8,
   "colors": {
     "roofRgb": [
       210,
@@ -26,23 +26,29 @@
     ],
     "baseHex": 1000298,
     "accentRgb": [
-      27,
-      77,
-      118
+      7,
+      37,
+      72
     ],
-    "accentHex": 1789302,
+    "accentHex": 468296,
     "darkRgb": [
-      18,
-      35,
-      67
+      7,
+      37,
+      72
     ],
-    "darkHex": 1188675,
+    "darkHex": 468296,
     "brightRgb": [
-      222,
+      221,
       231,
       240
     ],
-    "brightHex": 14608368
+    "brightHex": 14542832,
+    "glassRgb": [
+      172,
+      191,
+      213
+    ],
+    "glassHex": 11321301
   },
   "reconstructedFeatures": [
     {
@@ -50,13 +56,14 @@
       "method": "carrier_deck_and_island"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 7,
   "partNames": [
     "carrier_main_hull",
     "clipper_bow_wedge",
     "underwater_bulbous_bow",
     "full_flight_deck_slab",
     "starboard_island_tower",
+    "island_bridge_windows_glass",
     "phased_array_radar_mast"
   ],
   "polyhedralPrimitivesUsed": [

@@ -3,38 +3,38 @@
   "key": "building/mass_about-06_2_orig_30b3c7c0",
   "family": "building",
   "subpart": "mass",
-  "style": "asian_pagoda_pavilion",
+  "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/about-06_2_orig.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\about-06_2_orig.jpg",
-  "created_at": "2026-08-18T14:27:15.274Z",
+  "created_at": "2026-08-18T15:15:57.509Z",
   "bounds": {
     "min": [
-      -11.2309,
+      -11.9282,
       0,
-      -11.2309
+      -11.4155
     ],
     "max": [
-      11.2309,
-      36.1088,
-      11.2309
+      11.9282,
+      87.2705,
+      15.4655
     ],
     "size": [
-      22.462,
-      36.109,
-      22.462
+      23.856,
+      87.27,
+      26.881
     ],
-    "rMax": 15.883,
-    "triangles": 1276,
-    "vertices": 786
+    "rMax": 19.531,
+    "triangles": 340,
+    "vertices": 220
   },
   "spec": {
-    "L": 21.392263675898374,
-    "W": 20.623208972304877,
-    "H": 32.05880827038987,
-    "style": "oriental_pagoda_flared_eaves"
+    "L": 23.8563515678645,
+    "W": 22.8309452964065,
+    "H": 74.720531013962,
+    "style": "modern_stepped_setback_skyscraper"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

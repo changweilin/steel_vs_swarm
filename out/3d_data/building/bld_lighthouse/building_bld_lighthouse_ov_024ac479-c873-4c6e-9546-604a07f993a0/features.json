@@ -1,11 +1,11 @@
 {
   "id": "building_bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0",
   "sourceImage": "building/bld_lighthouse/ov_024ac479-c873-4c6e-9546-604a07f993a0.jpg",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
+  "style": "modern_stepped_skyscraper",
+  "symmetryMode": "symmetric",
   "symmetryScore": 0.947,
   "aspectRatio": 1,
-  "colorRichness": 76.4,
+  "colorRichness": 74.44,
   "colors": {
     "roofRgb": [
       244,
@@ -26,72 +26,70 @@
     ],
     "baseHex": 16053492,
     "accentRgb": [
-      244,
-      244,
-      243
+      98,
+      98,
+      99
     ],
-    "accentHex": 16053491,
+    "accentHex": 6447715,
     "darkRgb": [
-      17,
-      17,
-      17
+      14,
+      14,
+      14
     ],
-    "darkHex": 1118481,
+    "darkHex": 921102,
     "brightRgb": [
       244,
       244,
       243
     ],
-    "brightHex": 16053491
+    "brightHex": 16053491,
+    "glassRgb": [
+      14,
+      14,
+      14
+    ],
+    "glassHex": 921102
   },
   "reconstructedFeatures": [
     {
-      "name": "front_storefront_and_cantilever_balconies",
-      "method": "storefront_and_balconies"
+      "name": "multi_tier_setback_tower_masses",
+      "method": "progressive_setback_boxes"
     },
     {
-      "name": "rear_fire_escape_stair_tower_and_flues",
-      "method": "asymmetric_fire_escape_and_ducts"
+      "name": "rooftop_penthouse_and_antenna_spire",
+      "method": "penthouse_and_spire"
     }
   ],
-  "totalParts": 33,
+  "totalParts": 23,
   "partNames": [
-    "building_mass_body",
-    "flat_roof_parapet_rim",
-    "rooftop_elevator_penthouse",
-    "front_storefront_glazed",
-    "front_balcony_f1_l",
-    "front_balcony_f1_r",
-    "front_balcony_f2_l",
-    "front_balcony_f2_r",
-    "front_balcony_f3_l",
-    "front_balcony_f3_r",
-    "front_balcony_f4_l",
-    "front_balcony_f4_r",
-    "front_balcony_f5_l",
-    "front_balcony_f5_r",
-    "front_balcony_f6_l",
-    "front_balcony_f6_r",
-    "front_balcony_f7_l",
-    "front_balcony_f7_r",
-    "rear_fire_platform_f1",
-    "rear_fire_stair_f1",
-    "rear_fire_platform_f2",
-    "rear_fire_stair_f2",
-    "rear_fire_platform_f3",
-    "rear_fire_stair_f3",
-    "rear_fire_platform_f4",
-    "rear_fire_stair_f4",
-    "rear_fire_platform_f5",
-    "rear_fire_stair_f5",
-    "rear_fire_platform_f6",
-    "rear_fire_stair_f6",
-    "rear_fire_platform_f7",
-    "rear_fire_stair_f7",
-    "rear_exhaust_duct_flue"
+    "podium_lobby_glass",
+    "grand_entrance_canopy",
+    "tower_tier_1",
+    "tower_tier_2_setback",
+    "crown_pyramid_frustum",
+    "floor_spandrel_1",
+    "floor_spandrel_2",
+    "floor_spandrel_3",
+    "floor_spandrel_4",
+    "floor_spandrel_5",
+    "floor_spandrel_6",
+    "floor_spandrel_7",
+    "floor_spandrel_8",
+    "floor_spandrel_9",
+    "floor_spandrel_10",
+    "floor_spandrel_11",
+    "floor_spandrel_12",
+    "floor_spandrel_13",
+    "floor_spandrel_14",
+    "floor_spandrel_15",
+    "floor_spandrel_16",
+    "rooftop_mechanical_penthouse",
+    "rooftop_antenna_spire"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
-    "frustum_pyramid"
+    "wedge",
+    "frustum_pyramid",
+    "polygonal_prism"
   ]
 }

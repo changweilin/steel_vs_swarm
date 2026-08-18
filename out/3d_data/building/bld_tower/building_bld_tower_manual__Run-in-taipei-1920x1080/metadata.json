@@ -5,11 +5,11 @@
   "subpart": "bld_tower",
   "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_tower/manual__Run-in-taipei-1920x1080.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\bld_tower\\manual__Run-in-taipei-1920x1080.jpg",
-  "created_at": "2026-08-18T14:27:15.962Z",
+  "created_at": "2026-08-18T15:15:58.191Z",
   "bounds": {
     "min": [
       -11.3444,

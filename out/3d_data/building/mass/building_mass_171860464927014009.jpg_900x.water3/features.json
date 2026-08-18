@@ -1,11 +1,11 @@
 {
   "id": "building_mass_171860464927014009.jpg!900x.water3",
   "sourceImage": "building/171860464927014009.jpg!900x.water3.jpg",
-  "style": "asian_pagoda_pavilion",
+  "style": "village_triangular_gable",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.79,
   "aspectRatio": 1.333,
-  "colorRichness": 64.21,
+  "colorRichness": 63.34,
   "colors": {
     "roofRgb": [
       62,
@@ -27,74 +27,60 @@
     "baseHex": 6646630,
     "accentRgb": [
       49,
-      147,
+      146,
       202
     ],
-    "accentHex": 3249098,
+    "accentHex": 3248842,
     "darkRgb": [
-      43,
-      47,
-      40
+      38,
+      41,
+      35
     ],
-    "darkHex": 2830120,
+    "darkHex": 2500899,
     "brightRgb": [
-      206,
-      220,
-      229
+      208,
+      222,
+      231
     ],
-    "brightHex": 13556965
+    "brightHex": 13688551,
+    "glassRgb": [
+      127,
+      188,
+      225
+    ],
+    "glassHex": 8371425
   },
   "reconstructedFeatures": [
     {
-      "name": "stepped_stone_plinth_podium",
-      "method": "frustum_plinth"
+      "name": "stone_masonry_foundation_plinth",
+      "method": "textured_plinth_box"
     },
     {
-      "name": "multi_tier_upturned_flared_eaves",
-      "method": "flared_frustum_eaves"
+      "name": "steep_triangular_pitched_gable_roof",
+      "method": "dual_opposing_gable_wedges"
     },
     {
-      "name": "sacred_bronze_finial_spire",
-      "method": "torus_sanrin_and_cone"
+      "name": "stone_chimney_and_porch_canopy",
+      "method": "prism_chimney_and_cantilever_porch"
     }
   ],
-  "totalParts": 30,
+  "totalParts": 10,
   "partNames": [
-    "pagoda_stone_podium",
-    "pagoda_chamber_tier_1",
-    "veranda_column_1_-1_-1",
-    "veranda_column_1_-1_1",
-    "veranda_column_1_1_-1",
-    "veranda_column_1_1_1",
-    "curved_eaves_frustum_1",
-    "eave_ridge_cap_1",
-    "pagoda_chamber_tier_2",
-    "veranda_column_2_-1_-1",
-    "veranda_column_2_-1_1",
-    "veranda_column_2_1_-1",
-    "veranda_column_2_1_1",
-    "curved_eaves_frustum_2",
-    "eave_ridge_cap_2",
-    "pagoda_chamber_tier_3",
-    "veranda_column_3_-1_-1",
-    "veranda_column_3_-1_1",
-    "veranda_column_3_1_-1",
-    "veranda_column_3_1_1",
-    "curved_eaves_frustum_3",
-    "eave_ridge_cap_3",
-    "apex_pyramid_roof",
-    "finial_central_mast",
-    "sanrin_sacred_ring_1",
-    "sanrin_sacred_ring_2",
-    "sanrin_sacred_ring_3",
-    "sanrin_sacred_ring_4",
-    "sanrin_sacred_ring_5",
-    "houju_sacred_jewel"
+    "cottage_stone_foundation",
+    "cottage_timber_walls",
+    "pitched_gable_roof_north",
+    "pitched_gable_roof_south",
+    "roof_ridge_beam",
+    "stone_masonry_chimney",
+    "chimney_crown_cap",
+    "entrance_porch_canopy",
+    "porch_pillar_L",
+    "porch_pillar_R"
   ],
   "polyhedralPrimitivesUsed": [
-    "frustum_pyramid",
     "box",
-    "torus_ring",
-    "ellipsoid_sphere"
+    "wedge",
+    "polygonal_prism",
+    "frustum_pyramid"
   ]
 }

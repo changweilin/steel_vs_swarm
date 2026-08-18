@@ -3,38 +3,38 @@
   "key": "building/mass_欣榮文創股份有限公司-隘興段_0_ef2c01a8",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/欣榮文創股份有限公司-隘興段_0.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\欣榮文創股份有限公司-隘興段_0.jpg",
-  "created_at": "2026-08-18T14:27:15.587Z",
+  "created_at": "2026-08-18T15:15:57.823Z",
   "bounds": {
     "min": [
-      -9.3164,
+      -12.2225,
       0,
-      -11.5719
+      -12.2225
     ],
     "max": [
-      9.3164,
-      34.6179,
-      11.2719
+      12.2225,
+      35.5286,
+      12.2225
     ],
     "size": [
-      18.633,
-      34.618,
-      22.844
+      24.445,
+      35.529,
+      24.445
     ],
-    "rMax": 14.856,
-    "triangles": 464,
-    "vertices": 306
+    "rMax": 17.285,
+    "triangles": 1276,
+    "vertices": 786
   },
   "spec": {
-    "L": 18.267460135805294,
-    "W": 19.94383154039826,
-    "H": 32.217898832684824,
-    "style": "modern_flat_terrace_commercial"
+    "L": 20.20059510185397,
+    "W": 24.94383154039826,
+    "H": 31.478599221789885,
+    "style": "oriental_pagoda_flared_eaves"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

@@ -3,38 +3,38 @@
   "key": "building/mass_images (6)_6bd5d944",
   "family": "building",
   "subpart": "mass",
-  "style": "classical_temple_peristyle",
+  "style": "asian_pagoda_pavilion",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/images (6).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\images (6).jpg",
-  "created_at": "2026-08-18T14:27:15.492Z",
+  "created_at": "2026-08-18T15:15:57.731Z",
   "bounds": {
     "min": [
-      -17.9842,
+      -13.2134,
       0,
-      -17.9842
+      -13.2134
     ],
     "max": [
-      17.9842,
-      20.3665,
-      17.9842
+      13.2134,
+      36.0967,
+      13.2134
     ],
     "size": [
-      35.968,
-      20.366,
-      35.968
+      26.427,
+      36.097,
+      26.427
     ],
-    "rMax": 25.433,
-    "triangles": 1064,
-    "vertices": 613
+    "rMax": 18.687,
+    "triangles": 1276,
+    "vertices": 786
   },
   "spec": {
-    "L": 33.16841382467384,
-    "W": 20.66379797055009,
-    "H": 19.023361562523842,
-    "style": "pantheon_rotunda_with_grand_dome"
+    "L": 25.168413824673838,
+    "W": 23.99569695582513,
+    "H": 32.046723125047684,
+    "style": "oriental_pagoda_flared_eaves"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

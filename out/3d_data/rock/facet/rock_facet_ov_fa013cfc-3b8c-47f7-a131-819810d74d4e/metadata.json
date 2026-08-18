@@ -5,11 +5,11 @@
   "subpart": "facet",
   "style": "faceted_erratic_boulder",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "rock/facet/ov_fa013cfc-3b8c-47f7-a131-819810d74d4e.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\facet\\ov_fa013cfc-3b8c-47f7-a131-819810d74d4e.jpg",
-  "created_at": "2026-08-18T14:27:15.665Z",
+  "created_at": "2026-08-18T15:15:57.909Z",
   "bounds": {
     "min": [
       -5.3358,

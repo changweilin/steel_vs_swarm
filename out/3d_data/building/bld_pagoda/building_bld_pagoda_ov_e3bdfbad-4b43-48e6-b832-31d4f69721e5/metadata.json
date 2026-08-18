@@ -3,38 +3,38 @@
   "key": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd",
   "family": "building",
   "subpart": "bld_pagoda",
-  "style": "asian_pagoda_pavilion",
+  "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/bld_pagoda/ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5.jpeg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_pagoda\\ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5.jpeg",
-  "created_at": "2026-08-18T14:27:15.359Z",
+  "created_at": "2026-08-18T15:15:57.590Z",
   "bounds": {
     "min": [
-      -11.9253,
+      -12.81,
       0,
-      -11.9253
+      -13.8653
     ],
     "max": [
-      11.9253,
-      35.7714,
-      11.9253
+      12.81,
+      86.0053,
+      17.9153
     ],
     "size": [
-      23.851,
-      35.771,
-      23.851
+      25.62,
+      86.005,
+      31.781
     ],
-    "rMax": 16.865,
-    "triangles": 1276,
-    "vertices": 786
+    "rMax": 22.024,
+    "triangles": 340,
+    "vertices": 220
   },
   "spec": {
-    "L": 22.714946211947815,
-    "W": 24.2979171435111,
-    "H": 31.721400778210118,
-    "style": "oriental_pagoda_flared_eaves"
+    "L": 25.619928282597087,
+    "W": 27.730556191348136,
+    "H": 73.45525291828794,
+    "style": "modern_stepped_setback_skyscraper"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

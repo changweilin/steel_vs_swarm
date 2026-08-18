@@ -1,11 +1,11 @@
 {
   "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
   "sourceImage": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
-  "style": "shrub_bush_mound",
+  "style": "bonsai_potted_twisted",
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.905,
   "aspectRatio": 1.775,
-  "colorRichness": 47.24,
+  "colorRichness": 46.07,
   "colors": {
     "roofRgb": [
       122,
@@ -28,38 +28,57 @@
     "accentRgb": [
       123,
       165,
-      210
+      211
     ],
-    "accentHex": 8103378,
+    "accentHex": 8103379,
     "darkRgb": [
-      75,
-      61,
-      48
+      73,
+      60,
+      47
     ],
-    "darkHex": 4930864,
+    "darkHex": 4799535,
     "brightRgb": [
       153,
       186,
-      218
+      217
     ],
-    "brightHex": 10074842
+    "brightHex": 10074841,
+    "glassRgb": [
+      153,
+      186,
+      217
+    ],
+    "glassHex": 10074841
   },
   "reconstructedFeatures": [
     {
-      "name": "low_lying_clustered_cushion_domes",
-      "method": "polyhedral_dodecahedron_and_spheres"
+      "name": "ceramic_pot_plinth",
+      "method": "frustum_pot_and_rim"
+    },
+    {
+      "name": "gnarled_twisted_trunk_segments",
+      "method": "multi_segment_angled_cylinders"
+    },
+    {
+      "name": "cloud_foliage_pads",
+      "method": "flattened_ellipsoidal_cushions"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 9,
   "partNames": [
-    "shrub_foliage_mound_1",
-    "shrub_foliage_mound_2",
-    "shrub_foliage_mound_3",
-    "shrub_foliage_mound_4",
-    "shrub_foliage_mound_5",
-    "shrub_foliage_mound_6"
+    "bonsai_ceramic_pot",
+    "bonsai_pot_rim",
+    "bonsai_trunk_seg_1",
+    "bonsai_trunk_seg_2",
+    "bonsai_trunk_seg_3",
+    "bonsai_cloud_pad_1",
+    "bonsai_cloud_pad_2",
+    "bonsai_cloud_pad_3",
+    "bonsai_cloud_pad_4"
   ],
   "polyhedralPrimitivesUsed": [
-    "dodecahedron_polyhedron"
+    "frustum_pyramid",
+    "torus_ring",
+    "ellipsoid_sphere"
   ]
 }

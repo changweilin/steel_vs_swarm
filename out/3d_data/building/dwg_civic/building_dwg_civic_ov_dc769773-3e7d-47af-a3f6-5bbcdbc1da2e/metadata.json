@@ -5,11 +5,11 @@
   "subpart": "dwg_civic",
   "style": "classical_dome_rotunda",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/dwg_civic/ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\dwg_civic\\ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e.jpg",
-  "created_at": "2026-08-18T14:27:15.437Z",
+  "created_at": "2026-08-18T15:15:57.672Z",
   "bounds": {
     "min": [
       -16.469,

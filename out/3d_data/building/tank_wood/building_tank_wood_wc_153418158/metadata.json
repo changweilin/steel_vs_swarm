@@ -5,11 +5,11 @@
   "subpart": "tank_wood",
   "style": "classical_dome_rotunda",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/tank_wood/wc_153418158.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\tank_wood\\wc_153418158.jpg",
-  "created_at": "2026-08-18T14:27:15.568Z",
+  "created_at": "2026-08-18T15:15:57.805Z",
   "bounds": {
     "min": [
       -16.9766,

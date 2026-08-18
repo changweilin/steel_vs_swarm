@@ -1,11 +1,11 @@
 {
   "id": "building_mass_architecture-949708_1920_(1)",
   "sourceImage": "building/architecture-949708_1920_(1).jpg",
-  "style": "church_pointed_spire",
+  "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.825,
   "aspectRatio": 1.5,
-  "colorRichness": 66.04,
+  "colorRichness": 65.7,
   "colors": {
     "roofRgb": [
       229,
@@ -26,65 +26,64 @@
     ],
     "baseHex": 6976855,
     "accentRgb": [
-      111,
-      120,
-      65
-    ],
-    "accentHex": 7305281,
-    "darkRgb": [
-      59,
-      65,
+      110,
+      119,
       64
     ],
-    "darkHex": 3883328,
-    "brightRgb": [
-      239,
-      242,
-      246
+    "accentHex": 7239488,
+    "darkRgb": [
+      58,
+      65,
+      63
     ],
-    "brightHex": 15725302
+    "darkHex": 3817791,
+    "brightRgb": [
+      242,
+      244,
+      247
+    ],
+    "brightHex": 15922423,
+    "glassRgb": [
+      145,
+      163,
+      173
+    ],
+    "glassHex": 9544621
   },
   "reconstructedFeatures": [
     {
-      "name": "stone_nave_and_buttresses",
-      "method": "stepped_buttress_frustums"
+      "name": "multi_tier_setback_tower_masses",
+      "method": "progressive_setback_boxes"
     },
     {
-      "name": "octagonal_gothic_sharp_spire",
-      "method": "tall_octagonal_prism_and_pyramid"
+      "name": "rooftop_penthouse_and_antenna_spire",
+      "method": "penthouse_and_spire"
     }
   ],
-  "totalParts": 29,
+  "totalParts": 22,
   "partNames": [
-    "cathedral_stone_plinth",
-    "cathedral_nave_hall",
-    "nave_roof_slope_north",
-    "nave_roof_slope_south",
-    "nave_buttress_1_n",
-    "buttress_pinnacle_1_n",
-    "nave_buttress_1_s",
-    "buttress_pinnacle_1_s",
-    "nave_buttress_2_n",
-    "buttress_pinnacle_2_n",
-    "nave_buttress_2_s",
-    "buttress_pinnacle_2_s",
-    "nave_buttress_3_n",
-    "buttress_pinnacle_3_n",
-    "nave_buttress_3_s",
-    "buttress_pinnacle_3_s",
-    "nave_buttress_4_n",
-    "buttress_pinnacle_4_n",
-    "nave_buttress_4_s",
-    "buttress_pinnacle_4_s",
-    "nave_buttress_5_n",
-    "buttress_pinnacle_5_n",
-    "nave_buttress_5_s",
-    "buttress_pinnacle_5_s",
-    "bell_tower_octagonal_shaft",
-    "belfry_cornice_balustrade",
-    "gothic_sharp_spire_apex",
-    "spire_cross_finial_post",
-    "spire_cross_finial_beam"
+    "podium_lobby_glass",
+    "grand_entrance_canopy",
+    "tower_tier_1",
+    "tower_tier_2_setback",
+    "crown_pyramid_frustum",
+    "floor_spandrel_1",
+    "floor_spandrel_2",
+    "floor_spandrel_3",
+    "floor_spandrel_4",
+    "floor_spandrel_5",
+    "floor_spandrel_6",
+    "floor_spandrel_7",
+    "floor_spandrel_8",
+    "floor_spandrel_9",
+    "floor_spandrel_10",
+    "floor_spandrel_11",
+    "floor_spandrel_12",
+    "floor_spandrel_13",
+    "floor_spandrel_14",
+    "floor_spandrel_15",
+    "rooftop_mechanical_penthouse",
+    "rooftop_antenna_spire"
   ],
   "polyhedralPrimitivesUsed": [
     "box",

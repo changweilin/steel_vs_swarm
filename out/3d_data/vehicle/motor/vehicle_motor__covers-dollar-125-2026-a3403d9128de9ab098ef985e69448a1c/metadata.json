@@ -5,11 +5,11 @@
   "subpart": "motor",
   "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "vehicle/motor/_covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c.png",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\_covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c.png",
-  "created_at": "2026-08-18T14:27:16.650Z",
+  "created_at": "2026-08-18T15:15:58.903Z",
   "bounds": {
     "min": [
       -1.0348,

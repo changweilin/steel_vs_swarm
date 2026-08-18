@@ -1,11 +1,11 @@
 {
   "id": "building_mass_4f5ee370c1564cadabc47ce365c4f353",
   "sourceImage": "building/4f5ee370c1564cadabc47ce365c4f353.jpeg",
-  "style": "classical_dome_rotunda",
+  "style": "classical_temple_peristyle",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.87,
   "aspectRatio": 1.502,
-  "colorRichness": 60.68,
+  "colorRichness": 61.83,
   "colors": {
     "roofRgb": [
       16,
@@ -26,11 +26,11 @@
     ],
     "baseHex": 1451550,
     "accentRgb": [
-      16,
-      107,
-      167
+      8,
+      100,
+      162
     ],
-    "accentHex": 1076135,
+    "accentHex": 550050,
     "darkRgb": [
       25,
       39,
@@ -38,11 +38,17 @@
     ],
     "darkHex": 1648418,
     "brightRgb": [
-      100,
-      171,
-      219
+      110,
+      177,
+      223
     ],
-    "brightHex": 6597595
+    "brightHex": 7254495,
+    "glassRgb": [
+      8,
+      100,
+      162
+    ],
+    "glassHex": 550050
   },
   "reconstructedFeatures": [
     {

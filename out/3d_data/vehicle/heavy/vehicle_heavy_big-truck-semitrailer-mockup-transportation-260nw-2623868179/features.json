@@ -1,11 +1,11 @@
 {
   "id": "vehicle_heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179",
   "sourceImage": "vehicle/heavy/big-truck-semitrailer-mockup-transportation-260nw-2623868179.jpg",
-  "style": "heavy_freight_tractor",
+  "style": "freight_locomotive_train",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.86,
   "aspectRatio": 1.393,
-  "colorRichness": 77.03,
+  "colorRichness": 76.03,
   "colors": {
     "roofRgb": [
       60,
@@ -26,23 +26,29 @@
     ],
     "baseHex": 8425112,
     "accentRgb": [
-      11,
-      143,
+      10,
+      142,
       244
     ],
-    "accentHex": 757748,
+    "accentHex": 691956,
     "darkRgb": [
-      28,
-      48,
-      33
+      21,
+      40,
+      29
     ],
-    "darkHex": 1847329,
+    "darkHex": 1386525,
     "brightRgb": [
       234,
       234,
       240
     ],
-    "brightHex": 15395568
+    "brightHex": 15395568,
+    "glassRgb": [
+      102,
+      121,
+      125
+    ],
+    "glassHex": 6715773
   },
   "reconstructedFeatures": [
     {

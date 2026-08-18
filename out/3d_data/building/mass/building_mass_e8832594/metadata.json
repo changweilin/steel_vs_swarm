@@ -3,38 +3,38 @@
   "key": "building/mass_e8832594_5efc2387",
   "family": "building",
   "subpart": "mass",
-  "style": "church_pointed_spire",
-  "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/e8832594.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\e8832594.jpg",
-  "created_at": "2026-08-18T14:27:15.447Z",
+  "created_at": "2026-08-18T15:15:57.683Z",
   "bounds": {
     "min": [
-      -15.509,
+      -12.1787,
       0,
-      -7.7872
+      -9.3018
     ],
     "max": [
-      16.4724,
-      39.0333,
-      7.7872
+      12.1787,
+      37.55,
+      9.0018
     ],
     "size": [
-      31.981,
-      39.033,
-      15.574
+      24.357,
+      37.55,
+      18.304
     ],
-    "rMax": 18.22,
-    "triangles": 480,
-    "vertices": 298
+    "rMax": 15.325,
+    "triangles": 512,
+    "vertices": 338
   },
   "spec": {
-    "L": 30.409796292057678,
-    "W": 15.269108110170139,
-    "H": 35.433340962844284,
-    "style": "gothic_cathedral_with_sharp_spire"
+    "L": 23.87972838941024,
+    "W": 15.403662165255207,
+    "H": 35.150011444266426,
+    "style": "modern_flat_terrace_commercial"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

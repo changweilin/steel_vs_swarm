@@ -1,11 +1,11 @@
 {
   "id": "building_bld_tower_ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801",
   "sourceImage": "building/bld_tower/ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801.jpg",
-  "style": "church_pointed_spire",
+  "style": "classical_temple_peristyle",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.823,
   "aspectRatio": 0.969,
-  "colorRichness": 71.94,
+  "colorRichness": 67.48,
   "colors": {
     "roofRgb": [
       255,
@@ -26,70 +26,71 @@
     ],
     "baseHex": 6838862,
     "accentRgb": [
-      34,
-      30,
-      25
+      36,
+      32,
+      27
     ],
-    "accentHex": 2235929,
+    "accentHex": 2367515,
     "darkRgb": [
-      34,
-      30,
-      25
+      36,
+      32,
+      27
     ],
-    "darkHex": 2235929,
+    "darkHex": 2367515,
     "brightRgb": [
       253,
       253,
       253
     ],
-    "brightHex": 16645629
+    "brightHex": 16645629,
+    "glassRgb": [
+      30,
+      41,
+      59
+    ],
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [
     {
-      "name": "stone_nave_and_buttresses",
-      "method": "stepped_buttress_frustums"
+      "name": "stepped_stylobate_and_peristyle",
+      "method": "tri_tier_plinth_and_octagonal_columns"
     },
     {
-      "name": "octagonal_gothic_sharp_spire",
-      "method": "tall_octagonal_prism_and_pyramid"
+      "name": "classical_pantheon_hemisphere_dome",
+      "method": "hemisphere_dome_and_oculus"
     }
   ],
-  "totalParts": 29,
+  "totalParts": 23,
   "partNames": [
-    "cathedral_stone_plinth",
-    "cathedral_nave_hall",
-    "nave_roof_slope_north",
-    "nave_roof_slope_south",
-    "nave_buttress_1_n",
-    "buttress_pinnacle_1_n",
-    "nave_buttress_1_s",
-    "buttress_pinnacle_1_s",
-    "nave_buttress_2_n",
-    "buttress_pinnacle_2_n",
-    "nave_buttress_2_s",
-    "buttress_pinnacle_2_s",
-    "nave_buttress_3_n",
-    "buttress_pinnacle_3_n",
-    "nave_buttress_3_s",
-    "buttress_pinnacle_3_s",
-    "nave_buttress_4_n",
-    "buttress_pinnacle_4_n",
-    "nave_buttress_4_s",
-    "buttress_pinnacle_4_s",
-    "nave_buttress_5_n",
-    "buttress_pinnacle_5_n",
-    "nave_buttress_5_s",
-    "buttress_pinnacle_5_s",
-    "bell_tower_octagonal_shaft",
-    "belfry_cornice_balustrade",
-    "gothic_sharp_spire_apex",
-    "spire_cross_finial_post",
-    "spire_cross_finial_beam"
+    "stylobate_plinth_tier_1",
+    "stylobate_plinth_tier_2",
+    "stylobate_plinth_tier_3",
+    "sanctuary_cella_wall",
+    "peristyle_column_0_n",
+    "peristyle_column_0_s",
+    "peristyle_column_1_n",
+    "peristyle_column_1_s",
+    "peristyle_column_2_n",
+    "peristyle_column_2_s",
+    "peristyle_column_3_n",
+    "peristyle_column_3_s",
+    "peristyle_column_4_n",
+    "peristyle_column_4_s",
+    "peristyle_column_5_n",
+    "peristyle_column_5_s",
+    "peristyle_column_6_n",
+    "peristyle_column_6_s",
+    "peristyle_column_7_n",
+    "peristyle_column_7_s",
+    "classical_entablature",
+    "pantheon_rotunda_dome",
+    "dome_oculus_ring"
   ],
   "polyhedralPrimitivesUsed": [
-    "box",
-    "wedge",
     "frustum_pyramid",
-    "polygonal_prism"
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "torus_ring"
   ]
 }

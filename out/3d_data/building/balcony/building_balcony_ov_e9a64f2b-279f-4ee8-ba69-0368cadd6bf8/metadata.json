@@ -3,38 +3,38 @@
   "key": "building/balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_dc5aaa76",
   "family": "building",
   "subpart": "balcony",
-  "style": "classical_temple_peristyle",
+  "style": "village_triangular_gable",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/balcony/ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\balcony\\ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8.jpg",
-  "created_at": "2026-08-18T14:27:15.287Z",
+  "created_at": "2026-08-18T15:15:57.523Z",
   "bounds": {
     "min": [
-      -17.8721,
+      -10.4194,
       0,
-      -17.8721
+      -7.7211
     ],
     "max": [
-      17.8721,
-      19.5158,
-      17.8721
+      10.4194,
+      10.7643,
+      9.1192
     ],
     "size": [
-      35.744,
-      19.516,
-      35.744
+      20.839,
+      10.764,
+      16.84
     ],
-    "rMax": 25.275,
-    "triangles": 1064,
-    "vertices": 613
+    "rMax": 13.846,
+    "triangles": 140,
+    "vertices": 90
   },
   "spec": {
-    "L": 32.94428931105516,
-    "W": 21.038437476157778,
-    "H": 16.585702296482797,
-    "style": "pantheon_rotunda_with_grand_dome"
+    "L": 18.94428931105516,
+    "W": 14.038437476157778,
+    "H": 9.939276722362097,
+    "style": "alpine_village_cottage_pitched_gable"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

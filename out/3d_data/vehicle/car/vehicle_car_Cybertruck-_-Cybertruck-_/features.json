@@ -1,11 +1,11 @@
 {
   "id": "vehicle_car_Cybertruck-來了！限量-Cybertruck-模型台灣上架",
   "sourceImage": "vehicle/car/Cybertruck-來了！限量-Cybertruck-模型台灣上架.jpg",
-  "style": "standard_passenger_automobile",
+  "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.764,
   "aspectRatio": 1.778,
-  "colorRichness": 78.76,
+  "colorRichness": 81.14,
   "colors": {
     "roofRgb": [
       248,
@@ -26,23 +26,29 @@
     ],
     "baseHex": 16316664,
     "accentRgb": [
-      22,
-      23,
-      25
+      15,
+      15,
+      17
     ],
-    "accentHex": 1447705,
+    "accentHex": 986897,
     "darkRgb": [
-      22,
-      23,
-      25
+      15,
+      15,
+      17
     ],
-    "darkHex": 1447705,
+    "darkHex": 986897,
     "brightRgb": [
       247,
       247,
       247
     ],
-    "brightHex": 16250871
+    "brightHex": 16250871,
+    "glassRgb": [
+      15,
+      15,
+      17
+    ],
+    "glassHex": 986897
   },
   "reconstructedFeatures": [
     {

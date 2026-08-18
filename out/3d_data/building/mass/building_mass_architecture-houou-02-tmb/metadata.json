@@ -3,38 +3,38 @@
   "key": "building/mass_architecture-houou-02-tmb_d29db730",
   "family": "building",
   "subpart": "mass",
-  "style": "commercial_flat_terrace",
-  "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/architecture-houou-02-tmb.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\architecture-houou-02-tmb.jpg",
-  "created_at": "2026-08-18T14:27:15.952Z",
+  "created_at": "2026-08-18T15:15:58.183Z",
   "bounds": {
     "min": [
-      -11.6281,
+      -12.39,
       0,
-      -9.2423
+      -12.39
     ],
     "max": [
-      11.6281,
-      34.8649,
-      8.9423
+      12.39,
+      35.6933,
+      12.39
     ],
     "size": [
-      23.256,
-      34.865,
-      18.185
+      24.78,
+      35.693,
+      24.78
     ],
-    "rMax": 14.854,
-    "triangles": 464,
-    "vertices": 306
+    "rMax": 17.522,
+    "triangles": 1276,
+    "vertices": 786
   },
   "spec": {
-    "L": 22.800122072175174,
-    "W": 15.284641794460976,
-    "H": 32.464911879148545,
-    "style": "modern_flat_terrace_commercial"
+    "L": 23.60009155413138,
+    "W": 20.284641794460974,
+    "H": 31.643274586099032,
+    "style": "oriental_pagoda_flared_eaves"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

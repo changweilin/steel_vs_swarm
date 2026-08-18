@@ -5,7 +5,7 @@
   "symmetryMode": "symmetric",
   "symmetryScore": 0.8,
   "aspectRatio": 1,
-  "colorRichness": 80.19,
+  "colorRichness": 78.43,
   "colors": {
     "roofRgb": [
       255,
@@ -26,23 +26,29 @@
     ],
     "baseHex": 16711679,
     "accentRgb": [
-      206,
-      84,
-      68
+      199,
+      74,
+      58
     ],
-    "accentHex": 13521988,
+    "accentHex": 13060666,
     "darkRgb": [
-      25,
+      26,
       23,
       25
     ],
-    "darkHex": 1644313,
+    "darkHex": 1709849,
     "brightRgb": [
       254,
       254,
       254
     ],
-    "brightHex": 16711422
+    "brightHex": 16711422,
+    "glassRgb": [
+      26,
+      23,
+      25
+    ],
+    "glassHex": 1709849
   },
   "reconstructedFeatures": [
     {

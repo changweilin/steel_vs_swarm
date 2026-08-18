@@ -5,11 +5,11 @@
   "subpart": "hull",
   "style": "naval_aircraft_carrier",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "ship/aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
-  "created_at": "2026-08-18T14:27:16.040Z",
+  "created_at": "2026-08-18T15:15:58.268Z",
   "bounds": {
     "min": [
       -40.187,
@@ -27,8 +27,8 @@
       25.122
     ],
     "rMax": 44.016,
-    "triangles": 200,
-    "vertices": 127
+    "triangles": 212,
+    "vertices": 135
   },
   "spec": {
     "L": 82.01419089036392,

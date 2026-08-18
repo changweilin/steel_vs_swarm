@@ -5,11 +5,11 @@
   "subpart": "train",
   "style": "bullet_high_speed_train",
   "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "vehicle/train/330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\train\\330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station.jpg",
-  "created_at": "2026-08-18T14:27:16.671Z",
+  "created_at": "2026-08-18T15:15:58.926Z",
   "bounds": {
     "min": [
       -2.6308,

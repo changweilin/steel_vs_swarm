@@ -5,11 +5,11 @@
   "subpart": "tor",
   "style": "faceted_erratic_boulder",
   "symmetryMode": "asymmetric",
-  "version": 3,
-  "verStr": "v3",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "rock/tor/ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\tor\\ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb.jpg",
-  "created_at": "2026-08-18T14:27:15.739Z",
+  "created_at": "2026-08-18T15:15:57.981Z",
   "bounds": {
     "min": [
       -6.062,

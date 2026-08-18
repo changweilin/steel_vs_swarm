@@ -26,23 +26,29 @@
     ],
     "baseHex": 9799018,
     "accentRgb": [
-      45,
-      45,
-      31
+      69,
+      68,
+      47
     ],
-    "accentHex": 2960671,
+    "accentHex": 4539439,
     "darkRgb": [
-      45,
-      45,
-      31
+      40,
+      40,
+      28
     ],
-    "darkHex": 2960671,
+    "darkHex": 2631708,
     "brightRgb": [
-      235,
-      238,
-      241
+      236,
+      239,
+      242
     ],
-    "brightHex": 15462129
+    "brightHex": 15527922,
+    "glassRgb": [
+      30,
+      41,
+      59
+    ],
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [
     {

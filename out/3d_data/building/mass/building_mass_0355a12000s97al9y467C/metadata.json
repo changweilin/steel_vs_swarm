@@ -3,38 +3,38 @@
   "key": "building/mass_0355a12000s97al9y467C_8a798ed9",
   "family": "building",
   "subpart": "mass",
-  "style": "classical_dome_rotunda",
-  "symmetryMode": "symmetric",
-  "version": 3,
-  "verStr": "v3",
+  "style": "commercial_flat_terrace",
+  "symmetryMode": "asymmetric",
+  "version": 4,
+  "verStr": "v4",
   "source_image": "building/0355a12000s97al9y467C.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\0355a12000s97al9y467C.jpg",
-  "created_at": "2026-08-18T14:27:15.917Z",
+  "created_at": "2026-08-18T15:15:58.153Z",
   "bounds": {
     "min": [
-      -17.3736,
+      -11.8641,
       0,
-      -17.3736
+      -10.7116
     ],
     "max": [
-      17.3736,
-      19.1129,
-      17.3736
+      11.8641,
+      28.2152,
+      10.4116
     ],
     "size": [
-      34.747,
-      19.113,
-      34.747
+      23.728,
+      28.215,
+      21.123
     ],
-    "rMax": 24.57,
-    "triangles": 1064,
-    "vertices": 613
+    "rMax": 15.984,
+    "triangles": 368,
+    "vertices": 242
   },
   "spec": {
-    "L": 31.947173266193637,
-    "W": 20.148836499580376,
-    "H": 16.605050736247808,
-    "style": "pantheon_rotunda_with_grand_dome"
+    "L": 23.26289768825818,
+    "W": 18.223254749370565,
+    "H": 25.81515220874342,
+    "style": "modern_flat_terrace_commercial"
   },
   "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"

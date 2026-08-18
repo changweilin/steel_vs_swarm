@@ -1,11 +1,11 @@
 {
   "id": "tree_sp_acacia_wc_193839561",
   "sourceImage": "tree/sp_acacia/wc_193839561.jpg",
-  "style": "shrub_bush_mound",
+  "style": "bonsai_potted_twisted",
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.871,
   "aspectRatio": 1.528,
-  "colorRichness": 74.47,
+  "colorRichness": 72.53,
   "colors": {
     "roofRgb": [
       229,
@@ -26,40 +26,59 @@
     ],
     "baseHex": 10254929,
     "accentRgb": [
-      33,
-      41,
-      21
+      30,
+      38,
+      19
     ],
-    "accentHex": 2173205,
+    "accentHex": 1975827,
     "darkRgb": [
-      33,
-      41,
-      21
+      30,
+      38,
+      19
     ],
-    "darkHex": 2173205,
+    "darkHex": 1975827,
     "brightRgb": [
       225,
       233,
       238
     ],
-    "brightHex": 14805486
+    "brightHex": 14805486,
+    "glassRgb": [
+      30,
+      41,
+      59
+    ],
+    "glassHex": 1976635
   },
   "reconstructedFeatures": [
     {
-      "name": "low_lying_clustered_cushion_domes",
-      "method": "polyhedral_dodecahedron_and_spheres"
+      "name": "ceramic_pot_plinth",
+      "method": "frustum_pot_and_rim"
+    },
+    {
+      "name": "gnarled_twisted_trunk_segments",
+      "method": "multi_segment_angled_cylinders"
+    },
+    {
+      "name": "cloud_foliage_pads",
+      "method": "flattened_ellipsoidal_cushions"
     }
   ],
-  "totalParts": 6,
+  "totalParts": 9,
   "partNames": [
-    "shrub_foliage_mound_1",
-    "shrub_foliage_mound_2",
-    "shrub_foliage_mound_3",
-    "shrub_foliage_mound_4",
-    "shrub_foliage_mound_5",
-    "shrub_foliage_mound_6"
+    "bonsai_ceramic_pot",
+    "bonsai_pot_rim",
+    "bonsai_trunk_seg_1",
+    "bonsai_trunk_seg_2",
+    "bonsai_trunk_seg_3",
+    "bonsai_cloud_pad_1",
+    "bonsai_cloud_pad_2",
+    "bonsai_cloud_pad_3",
+    "bonsai_cloud_pad_4"
   ],
   "polyhedralPrimitivesUsed": [
-    "dodecahedron_polyhedron"
+    "frustum_pyramid",
+    "torus_ring",
+    "ellipsoid_sphere"
   ]
 }

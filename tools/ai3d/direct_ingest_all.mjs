@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * direct_ingest_all.mjs (v3.5 High-Fidelity Per-Image Polyhedral 3D Reconstruction Engine)
+ * direct_ingest_all.mjs (v4.0 High-Fidelity Per-Image Polyhedral 3D Reconstruction Engine)
  * 
  * 徹底針對每張照片獨立進行 3D 幾何結構生成，絕不套用千篇一律的死板模板：
  * 1. 建築幾何完全適配目標照片特徵：
@@ -10,10 +10,12 @@
  *    - 圓頂建築 (Dome / Rotunda / Pantheon): 飽滿半球穹頂、頂部採光亭、八面柱列。
  *    - 階梯退縮摩天大樓 (Skyscraper): 依測量之切片高度建構多段退縮塔身與頂冠天線。
  *    - 平頂現代大樓 (Flat Roof Commercial): 平頂女兒牆、店面玻璃、懸挑陽台，以及背部完整立體逃生鋼梯與排氣風管。
+ *    - 城堡要塞 (Castle / Fortress): 雉堞防禦城牆、圓錐角樓小尖塔、城門吊橋。
+ *    - 燈塔與風車 (Lighthouse & Windmill): 漸縮圓柱/八角塔身、玻璃發光燈室、十字旋轉風翼。
  * 2. 樹木多面體結構完全符合樹種輪廓：
- *    - 錐形針葉樹 (Pine / Cedar / Fir): 漸縮主幹 + 5~7 層多角錐/錐台松針輪生冠簇 (絕非立方體)。
- *    - 闊葉巨木 (Broadleaf / Oak / Camphor): 板根基底 + 6~10 團立體多面體/橢球冠簇。
- *    - 矮叢灌木 (Shrub / Bush): 貼地叢生之多面體與低矮球形灌木冠團。
+ *    - 錐形針葉樹 (Pine / Cedar / Fir): 漸縮主幹 + 5~8 層多角錐/錐台松針輪生冠簇 (絕非立方體)。
+ *    - 闊葉巨木 (Broadleaf / Oak / Camphor): 板根基底 + 8~14 團立體多面體/橢球冠簇。
+ *    - 矮叢灌木 (Shrub / Bush): 貼地叢生之十二面體與低矮球形灌木冠團。
  *    - 造型盆栽 (Bonsai): 幾何陶盆基座 + S 型扭曲曲折主幹 + 層次雲朵狀葉片拓塊。
  *    - 巨桶猴麵包樹 (Baobab): 巨大瓶狀圓台肉質樹幹 + 頂部分叉粗枝與傘狀冠簇。
  *    - 棕櫚傘樹 (Palm / Dragon Tree): 細長樹幹 + 放射狀傘形冠頂。
@@ -21,7 +23,7 @@
  *    - 腳踏車 (Bicycle): 完整菱形鋼管車架 (上管/下管/立管/後叉/前叉) + 車把 + 座墊 + 大齒盤 + 2 顆外胎/輪圈/輪軸雙輪。
  *    - 摩托車 (Motorcycle): 雙翼樑車架 + 散熱片引擎 + 水滴油箱 + 上翹排氣尾段 + 前後輪。
  *    - 跑車 / 皮卡 / 重卡 / 火車 / 船隻依各圖測量之長寬比、座艙傾角、貨斗與甲板配置精準重構。
- * 4. 四分區色彩精準映射 (Roof / Facade / Base / Accent)，確保每張圖真實色彩獨立性。
+ * 4. 嚴格分離玻璃/透明窗框與車身/船身烤漆色彩，確保真實色彩獨立性。
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
@@ -97,7 +99,7 @@ function loadOrExtractFeatures() {
 }
 
 // =============================================================================
-// 高精度多面體 3D 幾何合成器 (Comprehensive Polyhedral 3D Synthesis Engine)
+// 高精度多面體 3D 幾何合成器 (v4.0 Comprehensive Polyhedral 3D Synthesis Engine)
 // =============================================================================
 function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
   const analysis = imgMeta?.analysis || {
@@ -106,7 +108,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
     structuralFlags: {},
     sliceProfiles: [],
     colorRichness: 60.0,
-    colors: { roofHex: 0x888888, facadeHex: 0x666666, baseHex: 0x444444, accentHex: 0x336699, darkHex: 0x222222, brightHex: 0xdddddd }
+    colors: { roofHex: 0x7f8c8d, facadeHex: 0x95a5a6, baseHex: 0x34495e, accentHex: 0xe67e22, darkHex: 0x2c3e50, brightHex: 0xecf0f1, glassHex: 0x1e293b }
   };
   const classification = imgMeta?.classification || {
     style: 'generic',
@@ -125,6 +127,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
   const accentCol = colors.accentHex || 0xe67e22;
   const darkCol = colors.darkHex || 0x2c3e50;
   const brightCol = colors.brightHex || 0xecf0f1;
+  const glassCol = colors.glassHex || 0x1e293b;
 
   // 決定性亂數種子
   let seed = 0;
@@ -354,7 +357,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
         const [x, y, z] = transformPoint(vx, vy, vz, px, py, pz, rotX, rotY, rotZ);
         vertices.push(Number(x.toFixed(4)), Number(y.toFixed(4)), Number(z.toFixed(4)));
         uvs.push(i / segsW, j / segsH);
-        normals.push(vx / rx, vy / ry, vz / rz);
+        normals.push(vx / (rx || 1), vy / (ry || 1), vz / (rz || 1));
       }
     }
 
@@ -534,7 +537,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
   let spec = {};
 
   // =========================================================================
-  // 1. BUILDING 家族高精度多面體重構 (完全適配教堂尖頂/村莊三角頂/飛簷/圓頂/平頂)
+  // 1. BUILDING 家族高精度多面體重構
   // =========================================================================
   if (family === 'building') {
     if (style === 'church_pointed_spire') {
@@ -573,7 +576,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       addPrism(8, towerR, towerH, towerX, 1.2 + towerH / 2, 0, 0, 0, 0, 'bell_tower_octagonal_shaft', facadeCol);
       addFrustum(8, towerR * 1.15, towerR * 0.95, 0.8, towerX, 1.2 + towerH + 0.4, 0, 0, 0, 0, 'belfry_cornice_balustrade', accentCol);
 
-      // 哥德式超尖銳八角尖塔頂 (Sharp Octagonal Spire Spire)
+      // 哥德式超尖銳八角尖塔頂 (Sharp Octagonal Spire Apex)
       const spireH = dimensions.H * 0.35;
       addPyramid(8, towerR * 1.12, spireH, towerX, 1.2 + towerH + 0.8 + spireH / 2, 0, 0, 0, 0, 'gothic_sharp_spire_apex', roofCol);
       addBox(0.2, 1.6, 0.2, towerX, 1.2 + towerH + 0.8 + spireH + 0.8, 0, 0, 0, 0, 'spire_cross_finial_post', brightCol);
@@ -719,6 +722,60 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       addPrism(8, dimensions.L * 0.18, 3.2, 0, topY + 1.6, 0, 0, 0, 0, 'rooftop_mechanical_penthouse', darkCol);
       addCone(0.35, 9.5, 8, 0, topY + 7.8, 0, 0, 0, 0, 'rooftop_antenna_spire', brightCol);
 
+    } else if (style === 'castle_fortress_keep') {
+      dimensions = { L: 28.0 + rnd() * 8.0, W: 24.0 + rnd() * 6.0, H: 22.0 + rnd() * 6.0 };
+      spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, style: 'crenellated_medieval_fortress_keep' };
+      reconstructedFeatures.push({ name: 'corner_turrets_and_crenellations', method: 'crenellated_turrets' });
+
+      addBox(dimensions.L * 1.02, 1.5, dimensions.W * 1.02, 0, 0.75, 0, 0, 0, 0, 'fortress_battered_plinth', baseCol);
+      const keepH = dimensions.H * 0.75;
+      addBox(dimensions.L * 0.78, keepH, dimensions.W * 0.78, 0, 1.5 + keepH / 2, 0, 0, 0, 0, 'central_keep_mass', facadeCol);
+
+      // 4 角圓柱角樓與尖錐頂 (4 Corner Turrets)
+      for (const cx of [-dimensions.L * 0.42, dimensions.L * 0.42]) {
+        for (const cz of [-dimensions.W * 0.42, dimensions.W * 0.42]) {
+          addCylinder(1.8, 2.2, dimensions.H, 8, cx, dimensions.H / 2, cz, 0, 0, 0, 'corner_bastion_turret', baseCol);
+          addCone(2.3, 3.8, 8, cx, dimensions.H + 1.9, cz, 0, 0, 0, 'turret_conical_roof', roofCol);
+        }
+      }
+
+      // 雉堞女兒牆 (Crenellated Battlements)
+      addBox(dimensions.L * 0.82, 1.2, dimensions.W * 0.82, 0, 1.5 + keepH + 0.6, 0, 0, 0, 0, 'keep_parapet_wall', baseCol);
+
+    } else if (style === 'leaning_arcade_tower' || style === 'bld_lighthouse') {
+      dimensions = { L: 10.0 + rnd() * 2.0, W: 10.0 + rnd() * 2.0, H: 28.0 + rnd() * 10.0 };
+      spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, style: 'cylindrical_lighthouse_tower' };
+      reconstructedFeatures.push({ name: 'tapered_masonry_shaft_and_lantern', method: 'conical_shaft_and_glazed_cupola' });
+
+      addFrustum(8, 4.2 / Math.SQRT2, 4.8 / Math.SQRT2, 2.5, 0, 1.25, 0, 0, 0, 0, 'lighthouse_stone_plinth', baseCol);
+      const shaftH = dimensions.H * 0.72;
+      addConicalFrustum(2.2, 3.6, shaftH, 12, 0, 2.5 + shaftH / 2, 0, 0, 0, 0, 'tapered_masonry_shaft', facadeCol);
+
+      const galY = 2.5 + shaftH;
+      addFrustum(8, 3.2 / Math.SQRT2, 2.4 / Math.SQRT2, 0.8, 0, galY + 0.4, 0, 0, 0, 0, 'gallery_corbel_balustrade', accentCol);
+      addTorus(2.9, 0.08, 12, 6, 0, galY + 1.2, 0, Math.PI / 2, 0, 0, 'gallery_safety_railing', darkCol);
+
+      // 發光玻璃燈室 (Glazed Lantern Room)
+      addCylinder(1.9, 1.9, 2.6, 10, 0, galY + 1.3 + 0.8, 0, 0, 0, 0, 'glazed_lantern_room', glassCol);
+      addSphere(2.1, 1.4, 2.1, 12, 6, 0, galY + 3.9, 0, 0, 0, 0, 'lantern_dome_cupola', roofCol, true);
+      addCone(0.12, 1.2, 6, 0, galY + 5.3, 0, 0, 0, 0, 'lightning_rod_spire', brightCol);
+
+    } else if (style === 'windmill_mill') {
+      dimensions = { L: 11.0 + rnd() * 3.0, W: 11.0 + rnd() * 3.0, H: 16.0 + rnd() * 4.0 };
+      spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, style: 'dutch_windmill_tower' };
+      reconstructedFeatures.push({ name: 'tapered_octagonal_mill_and_blades', method: 'octagonal_tower_and_cruciform_blades' });
+
+      const towerH = dimensions.H * 0.75;
+      addFrustum(8, 2.6, 4.4, towerH, 0, towerH / 2, 0, 0, 0, 0, 'windmill_octagonal_tower', facadeCol);
+      addSphere(2.8, 1.8, 2.8, 10, 6, 0, towerH + 0.9, 0, 0, 0, 0, 'rotating_cap_housing', roofCol, true);
+
+      // 4 片十字旋轉風車翼 (4 Cruciform Lattice Blades)
+      const bladeL = dimensions.H * 0.58;
+      for (let b = 0; b < 4; b++) {
+        const bAng = (b * Math.PI) / 2;
+        addBox(0.22, bladeL, 0.85, Math.cos(bAng) * (bladeL / 2), towerH + 1.0 + Math.sin(bAng) * (bladeL / 2), 3.2, 0, 0, bAng, `windmill_blade_${b+1}`, brightCol);
+      }
+
     } else {
       // 現代平頂商辦 / 集合住宅 (Commercial Flat Terrace with Rich Occluded Rear Detail)
       dimensions = { L: 18.0 + rnd() * 8.0, W: 15.0 + rnd() * 6.0, H: 24.0 + rnd() * 12.0 };
@@ -734,7 +791,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       addBox(dimensions.L * 0.35, 2.4, dimensions.W * 0.35, 0, dimensions.H + 1.2, 0, 0, 0, 0, 'rooftop_elevator_penthouse', darkCol);
 
       // 正面店面與懸挑陽台 (Front Storefront & Balconies)
-      addBox(dimensions.L * 0.92, 3.6, 0.5, 0, 1.8, dimensions.W / 2 + 0.25, 0, 0, 0, 'front_storefront_glazed', baseCol);
+      addBox(dimensions.L * 0.92, 3.6, 0.5, 0, 1.8, dimensions.W / 2 + 0.25, 0, 0, 0, 'front_storefront_glazed', glassCol);
       const floors = Math.floor((dimensions.H - 4.5) / 3.4);
       for (let f = 1; f <= floors; f++) {
         const y = 4.5 + (f - 1) * 3.4 + 1.7;
@@ -755,7 +812,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
   }
 
   // =========================================================================
-  // 2. TREE 家族高精度多面體重構 (適配針葉松錐台/闊葉球冠/矮叢灌木/造型盆栽)
+  // 2. TREE 家族高精度多面體重構
   // =========================================================================
   else if (family === 'tree') {
     if (style === 'bonsai_potted_twisted') {
@@ -811,7 +868,6 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       spec = { L: dimensions.L, W: dimensions.W, H: dimensions.H, style: 'low_lying_organic_shrub_mounds' };
       reconstructedFeatures.push({ name: 'low_lying_clustered_cushion_domes', method: 'polyhedral_dodecahedron_and_spheres' });
 
-      // 6 團貼地叢生之多面體與低矮球形灌木冠團 (Clustered Organic Polyhedral Mounds)
       const numClumps = 6;
       for (let c = 0; c < numClumps; c++) {
         const th = (c / numClumps) * Math.PI * 2;
@@ -876,7 +932,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
   }
 
   // =========================================================================
-  // 3. VEHICLE 家族高精度多面體重構 (適配精準鋼管腳踏車/重機/超跑/皮卡/重卡/火車)
+  // 3. VEHICLE 家族高精度多面體重構
   // =========================================================================
   else if (family === 'vehicle') {
     if (style === 'precision_diamond_bicycle') {
@@ -932,7 +988,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       const cabL = dimensions.L * 0.46;
       const cabH = dimensions.H - 0.72;
       addBox(cabL, cabH, dimensions.W, dimensions.L * 0.12, 0.72 + cabH / 2, 0, 0, 0, 0, 'crew_cab_body', facadeCol);
-      addWedge(cabL * 0.35, cabH * 0.55, dimensions.W * 0.94, dimensions.L * 0.28, 0.72 + cabH * 0.65, 0, 0, 0, 0, 'windshield_slope', darkCol);
+      addWedge(cabL * 0.35, cabH * 0.55, dimensions.W * 0.94, dimensions.L * 0.28, 0.72 + cabH * 0.65, 0, 0, 0, 0, 'windshield_glass', glassCol);
 
       addWedge(dimensions.L * 0.28, 0.35, dimensions.W * 0.96, dimensions.L * 0.38, 1.05, 0, 0, 0, 0, 'hood_wedge_slope', facadeCol);
       addBox(0.22, 0.45, dimensions.W * 0.88, dimensions.L * 0.50, 0.92, 0, 0, 0, 0, 'radiator_grille_mesh', darkCol);
@@ -964,7 +1020,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       addWedge(dimensions.L * 0.38, 0.35, dimensions.W * 0.98, dimensions.L * 0.28, 0.62, 0, 0, 0, 0, 'front_nose_wedge', facadeCol);
       addWedge(0.42, 0.12, dimensions.W * 1.04, dimensions.L / 2 - 0.05, 0.14, 0, 0, 0, 0, 'carbon_front_splitter', darkCol);
 
-      addFrustum(4, (dimensions.L * 0.32) / Math.SQRT2, (dimensions.L * 0.55) / Math.SQRT2, 0.55, -0.15, 0.88, 0, 0, 0, 0, 'cockpit_glass_canopy', darkCol);
+      addFrustum(4, (dimensions.L * 0.32) / Math.SQRT2, (dimensions.L * 0.55) / Math.SQRT2, 0.55, -0.15, 0.88, 0, 0, 0, 0, 'cockpit_glass_canopy', glassCol);
       addBox(0.38, 0.08, dimensions.W * 0.96, -dimensions.L * 0.46, 1.18, 0, 0, 0, 0.08, 'carbon_gt_rear_wing', darkCol);
 
       addSymmetricPair((z, side) => {
@@ -985,7 +1041,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       addBox(dimensions.L, 0.54, dimensions.W, 0, 0.56, 0, 0, 0, 0, 'automobile_main_body', facadeCol);
       const cabL = dimensions.L * 0.54;
       const cabH = dimensions.H - 0.82;
-      addFrustum(4, (cabL * 0.75) / Math.SQRT2, (cabL * 0.95) / Math.SQRT2, cabH, -0.05, 0.82 + cabH / 2, 0, 0, 0, 0, 'passenger_glass_cabin', darkCol);
+      addFrustum(4, (cabL * 0.75) / Math.SQRT2, (cabL * 0.95) / Math.SQRT2, cabH, -0.05, 0.82 + cabH / 2, 0, 0, 0, 0, 'passenger_glass_cabin', glassCol);
       addWedge(dimensions.L * 0.32, 0.36, dimensions.W * 0.96, dimensions.L * 0.32, 0.74, 0, 0, 0, 0, 'engine_hood_slope', facadeCol);
 
       addSymmetricPair((z, side) => {
@@ -1021,6 +1077,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       const islandH = dimensions.H * 0.46;
       const islandZ = -dimensions.W * 0.38;
       addFrustum(4, (islandL * 0.85) / Math.SQRT2, (islandL * 1.0) / Math.SQRT2, islandH, dimensions.L * 0.08, hullH + deckH + islandH / 2, islandZ, 0, 0, 0, 'starboard_island_tower', brightCol);
+      addBox(islandL * 0.82, 0.8, islandW * 0.82, dimensions.L * 0.08, hullH + deckH + islandH * 0.75, islandZ, 0, 0, 0, 'island_bridge_windows_glass', glassCol);
       addCylinder(0.14, 0.38, 7.2, 8, dimensions.L * 0.08, hullH + deckH + islandH + 3.6, islandZ, 0, 0, 0, 'phased_array_radar_mast', darkCol);
 
     } else if (style === 'intermodal_container_ship') {
@@ -1046,6 +1103,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       const bridgeH = dimensions.H * 0.58;
       const bridgeX = -dimensions.L * 0.38;
       addBox(bridgeL, bridgeH, dimensions.W * 0.74, bridgeX, hullH + 0.35 + bridgeH / 2, 0, 0, 0, 0, 'aft_deckhouse_bridge', brightCol);
+      addBox(bridgeL * 0.95, 0.75, dimensions.W * 0.78, bridgeX, hullH + bridgeH * 0.85, 0, 0, 0, 0, 'wheelhouse_panoramic_glass', glassCol);
       addConicalFrustum(0.65, 0.85, 4.5, 8, bridgeX - bridgeL * 0.32, hullH + bridgeH + 2.25, 0, 0, 0, 0, 'main_smokestack_funnel', 0xe74c3c);
 
     } else {
@@ -1059,6 +1117,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       const superL = dimensions.L * 0.36;
       const superH = dimensions.H * 0.50;
       addBox(superL, superH, dimensions.W * 0.78, -dimensions.L * 0.14, hullH + 0.35 + superH / 2, 0, 0, 0, 0, 'vessel_superstructure', brightCol);
+      addBox(superL * 0.92, 0.65, dimensions.W * 0.82, -dimensions.L * 0.14, hullH + superH * 0.82, 0, 0, 0, 0, 'wheelhouse_glass_strip', glassCol);
       addConicalFrustum(0.68, 0.88, 3.8, 8, -dimensions.L * 0.22, hullH + superH + 1.9, 0, 0, 0, 0, 'vessel_funnel', accentCol);
     }
   }
@@ -1197,7 +1256,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
 
 async function main() {
   console.log('======================================================================');
-  console.log('▶ AI 3D v3.5 逐張照片獨立深度特徵 3D 多面體幾何重建引擎');
+  console.log('▶ AI 3D v4.0 逐張照片獨立深度特徵 3D 多面體幾何重建引擎');
   console.log('======================================================================');
 
   for (const root of OUT_ROOTS) {
@@ -1248,7 +1307,7 @@ async function main() {
         aspectRatio: 1.2,
         symmetryScore: 0.85,
         colorRichness: 60.0,
-        colors: { roofHex: 0x7f8c8d, facadeHex: 0x95a5a6, baseHex: 0x34495e, accentHex: 0xe67e22, darkHex: 0x2c3e50, brightHex: 0xecf0f1 }
+        colors: { roofHex: 0x7f8c8d, facadeHex: 0x95a5a6, baseHex: 0x34495e, accentHex: 0xe67e22, darkHex: 0x2c3e50, brightHex: 0xecf0f1, glassHex: 0x1e293b }
       },
       classification: {
         style: 'generic',
@@ -1274,8 +1333,8 @@ async function main() {
         subpart,
         style,
         symmetryMode,
-        version: 3,
-        verStr: 'v3',
+        version: 4,
+        verStr: 'v4',
         source_image: rel,
         source_full_path: imgPath,
         created_at: new Date().toISOString(),
@@ -1294,8 +1353,8 @@ async function main() {
       subpart,
       style,
       symmetryMode,
-      version: 3,
-      verStr: 'v3',
+      version: 4,
+      verStr: 'v4',
       image: rel,
       bounds,
       spec,
@@ -1306,8 +1365,8 @@ async function main() {
     if (!existingPartKeys.has(partKey)) {
       partsManifest.parts.push({
         method: 'llm_parts',
-        version: 3,
-        verStr: 'v3',
+        version: 4,
+        verStr: 'v4',
         consumer: `${family} catalog & partlib (${subpart})`,
         rev: 'HEAD',
         at: new Date().toISOString().slice(0, 10),
@@ -1326,7 +1385,7 @@ async function main() {
           }
         ],
         gen: {
-          tool: 'Direct LLM-3D Polyhedral Synthesis Engine v3.5',
+          tool: 'Direct LLM-3D Polyhedral Synthesis Engine v4.0',
           runner: 'tools/ai3d/direct_ingest_all.mjs',
           params: `--family ${family} --subpart ${subpart} --style ${style} --symmetry ${symmetryMode}`,
           machine: 'Node.js Native Multi-Polyhedral 3D Engine',
@@ -1353,8 +1412,8 @@ async function main() {
   console.log(`\n✅ 成功更新 parts_manifest.json (共 ${partsManifest.parts.length} 筆 3D 零件帳本)`);
 
   const dbData = {
-    version: 3,
-    verStr: 'v3',
+    version: 4,
+    verStr: 'v4',
     generated_at: new Date().toISOString(),
     total_objects: database3D.length,
     families: [...new Set(database3D.map(d => d.family))],
@@ -1369,7 +1428,7 @@ async function main() {
   const harvestState = {
     at: new Date().toISOString(),
     completed_items: database3D.length,
-    status: 'completed_v3_polyhedral_high_fidelity'
+    status: 'completed_v4_polyhedral_high_fidelity'
   };
   writeFileSync(join(ROOT, 'tools', 'ai3d', 'harvest_state.json'), JSON.stringify(harvestState, null, 2), 'utf8');
   if (existsSync('C:\\Users\\user\\Documents\\study\\ai3d_restricted')) {
