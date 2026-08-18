@@ -189,6 +189,7 @@ export function manifest(items = {}, photosOpt = null) {
       flaws,
       env,
       pct: mea ? mea.rMax / env.r : null,
+      at: p?.at || null,
       budget: budget
         ? {
           // 預算依**消費角色**取(與 intake 同一條:巨岩塊走 families.megalith、建物配件桶
@@ -263,7 +264,7 @@ export function manifest(items = {}, photosOpt = null) {
     rows.push({
       key: rowKey,
       title,
-      family: dbItem?.family || null,
+      family: dbItem?.family || (pk ? 'beacon' : (rowKey.split('/')[0] || null)),
       node: dbItem?.subpart || null,
       method: METHODS[p.method] || { key: p.method, label: p.method, short: p.method },
       prov: p,
@@ -281,6 +282,7 @@ export function manifest(items = {}, photosOpt = null) {
       now,
       base,
       baseErr,
+      at: p?.at || null,
       item: items[rowKey] || null,
     });
   }
@@ -312,6 +314,9 @@ export function manifest(items = {}, photosOpt = null) {
   })).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
 
   rows.sort((a, b) => (a.key < b.key ? -1 : 1));
+  const uniqueFamilies = [...new Set(rows.map((r) => r.family || (r.key ? r.key.split('/')[0] : null)).filter(Boolean))].sort();
+  const uniqueDates = [...new Set(rows.map((r) => r.at || r.prov?.at || null).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+
   return {
     rows,
     orphans,
@@ -324,6 +329,8 @@ export function manifest(items = {}, photosOpt = null) {
     libs,
     photoRoots: roots.map((r) => r.replace(ROOT + sep, '') || r),
     methods: Object.values(METHODS),
+    families: uniqueFamilies,
+    dates: uniqueDates,
   };
 }
 
@@ -375,12 +382,24 @@ async function saveState(s) {
 async function report() {
   const st = await loadState();
   const m = manifest(st.items, arg('--photos'));
+  const filterMethod = arg('--method');
+  const filterFamily = arg('--family');
+  const filterDate = arg('--date');
+
+  let rows = m.rows;
+  if (filterMethod) rows = rows.filter((r) => (r.method?.key || r.prov?.method) === filterMethod);
+  if (filterFamily) rows = rows.filter((r) => (r.family || r.key.split('/')[0]) === filterFamily);
+  if (filterDate) rows = rows.filter((r) => (r.at || r.prov?.at || '').startsWith(filterDate));
+
   console.log('3D 零件對照台 — 對照表');
+  if (filterMethod || filterFamily || filterDate) {
+    console.log(`  (篩選條件: 方法=${filterMethod || '全部'}, 分類=${filterFamily || '全部'}, 日期=${filterDate || '全部'}；符合 ${rows.length}/${m.rows.length} 件)`);
+  }
   const ck = m.checkout;
   console.log(`  服務中的 checkout  ${ck.root}${ck.rev ? `  ${ck.branch}@${ck.rev}(${ck.at})` : ''}`
     + `${ck.dirty ? '  ⚑ 零件庫有未 commit 的改動' : ''}`);
   console.log(`  零件庫家族  [${m.libs.join(', ') || '空'}];照片探測路徑 ${m.photoRoots.length} 個`);
-  for (const r of m.rows) {
+  for (const r of rows) {
     const meth = r.method ? `${r.method.short}` : '⚑ 未記載來源';
     const img = r.imgs.length
       ? r.imgs.map((i) => `${i.id}${i.has ? '' : '(原圖不在本機)'}`).join('、')
