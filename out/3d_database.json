@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "generated_at": "2026-08-18T10:56:14.701Z",
   "total_objects": 334,
   "families": [
@@ -45,8 +45,8 @@
       },
       "triangles": 396,
       "outputDir": "out/3d_data/building/mass/building_mass_0",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_00365470.202403141998083052M",
@@ -84,8 +84,8 @@
       },
       "triangles": 444,
       "outputDir": "out/3d_data/building/mass/building_mass_00365470.202403141998083052M",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_0355a12000s97al9y467C",
@@ -123,8 +123,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_0355a12000s97al9y467C",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_104405729",
@@ -162,8 +162,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_104405729",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2",
@@ -201,8 +201,8 @@
       },
       "triangles": 492,
       "outputDir": "out/3d_data/building/mass/building_mass_1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c",
@@ -240,8 +240,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_155577510",
@@ -279,8 +279,8 @@
       },
       "triangles": 492,
       "outputDir": "out/3d_data/building/mass/building_mass_155577510",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_20230210700917",
@@ -318,8 +318,8 @@
       },
       "triangles": 300,
       "outputDir": "out/3d_data/building/mass/building_mass_20230210700917",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_211",
@@ -357,8 +357,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_211",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_250808-31799-30-gNZVV",
@@ -396,8 +396,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_250808-31799-30-gNZVV",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_32a571b95c01a4a4a6f6da38885e83ba",
@@ -435,8 +435,8 @@
       },
       "triangles": 396,
       "outputDir": "out/3d_data/building/mass/building_mass_32a571b95c01a4a4a6f6da38885e83ba",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_4582417806274137174c62995bfa9386",
@@ -474,8 +474,8 @@
       },
       "triangles": 444,
       "outputDir": "out/3d_data/building/mass/building_mass_4582417806274137174c62995bfa9386",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_4b36cf76-bdea-7886-fd39-5a3269b6047e",
@@ -513,8 +513,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_4b36cf76-bdea-7886-fd39-5a3269b6047e",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_4f5ee370c1564cadabc47ce365c4f353",
@@ -552,8 +552,8 @@
       },
       "triangles": 300,
       "outputDir": "out/3d_data/building/mass/building_mass_4f5ee370c1564cadabc47ce365c4f353",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_58e07d86c351679aa966afe4f56da3f6-420x280",
@@ -591,8 +591,8 @@
       },
       "triangles": 396,
       "outputDir": "out/3d_data/building/mass/building_mass_58e07d86c351679aa966afe4f56da3f6-420x280",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_66fc7920151e4d6b915aeaacc1502afd",
@@ -630,8 +630,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_66fc7920151e4d6b915aeaacc1502afd",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_architecture-houou-02-tmb",
@@ -669,8 +669,8 @@
       },
       "triangles": 432,
       "outputDir": "out/3d_data/building/mass/building_mass_architecture-houou-02-tmb",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd",
@@ -708,8 +708,8 @@
       },
       "triangles": 396,
       "outputDir": "out/3d_data/building/mass/building_mass_b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_B16A00_P_05_02",
@@ -747,8 +747,8 @@
       },
       "triangles": 300,
       "outputDir": "out/3d_data/building/mass/building_mass_B16A00_P_05_02",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_bld_tower_manual_1711450890-2085471680-g",
@@ -786,8 +786,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/bld_tower/building_bld_tower_manual_1711450890-2085471680-g",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_bld_tower_manual_DJI_0793-scaled",
@@ -825,8 +825,8 @@
       },
       "triangles": 312,
       "outputDir": "out/3d_data/building/bld_tower/building_bld_tower_manual_DJI_0793-scaled",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_bld_tower_manual__Run-in-taipei-1920x1080",
@@ -864,8 +864,8 @@
       },
       "triangles": 336,
       "outputDir": "out/3d_data/building/bld_tower/building_bld_tower_manual__Run-in-taipei-1920x1080",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_cf7c3f08fa949ce468837181b8de14d4.webp",
@@ -903,8 +903,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_cf7c3f08fa949ce468837181b8de14d4.webp",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_d5394391",
@@ -942,8 +942,8 @@
       },
       "triangles": 396,
       "outputDir": "out/3d_data/building/mass/building_mass_d5394391",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_e28ba9534d67c7605a1800bc035444d5",
@@ -981,8 +981,8 @@
       },
       "triangles": 300,
       "outputDir": "out/3d_data/building/mass/building_mass_e28ba9534d67c7605a1800bc035444d5",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_FB_IMG_1786334896262",
@@ -1020,8 +1020,8 @@
       },
       "triangles": 396,
       "outputDir": "out/3d_data/building/mass/building_mass_FB_IMG_1786334896262",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_kyotoworldheritage_2.jpg",
@@ -1059,8 +1059,8 @@
       },
       "triangles": 432,
       "outputDir": "out/3d_data/building/mass/building_mass_kyotoworldheritage_2.jpg",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_list",
@@ -1098,8 +1098,8 @@
       },
       "triangles": 396,
       "outputDir": "out/3d_data/building/mass/building_mass_list",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_partenone",
@@ -1137,8 +1137,8 @@
       },
       "triangles": 800,
       "outputDir": "out/3d_data/building/mass/building_mass_partenone",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_phoenix-tower_rotated_270",
@@ -1176,8 +1176,8 @@
       },
       "triangles": 432,
       "outputDir": "out/3d_data/building/mass/building_mass_phoenix-tower_rotated_270",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_photo0jpg",
@@ -1215,8 +1215,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/building/mass/building_mass_photo0jpg",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_pisa-1056568_960_720",
@@ -1254,8 +1254,8 @@
       },
       "triangles": 664,
       "outputDir": "out/3d_data/building/mass/building_mass_pisa-1056568_960_720",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_state-capitol",
@@ -1293,8 +1293,8 @@
       },
       "triangles": 240,
       "outputDir": "out/3d_data/building/mass/building_mass_state-capitol",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "building_mass_the-white-tower-when",
@@ -1332,8 +1332,8 @@
       },
       "triangles": 380,
       "outputDir": "out/3d_data/building/mass/building_mass_the-white-tower-when",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_000-34TU8F7",
@@ -1371,8 +1371,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_000-34TU8F7",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050",
@@ -1410,8 +1410,8 @@
       },
       "triangles": 84,
       "outputDir": "out/3d_data/ship/hull/ship_hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_0350p12000t3nb68kA8C8",
@@ -1449,8 +1449,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_0350p12000t3nb68kA8C8",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_1593571989300",
@@ -1488,8 +1488,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_1593571989300",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_1695146093",
@@ -1527,8 +1527,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_1695146093",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637",
@@ -1566,8 +1566,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_174340740201",
@@ -1605,8 +1605,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_174340740201",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_1778437182_68368",
@@ -1644,8 +1644,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_1778437182_68368",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_1802",
@@ -1683,8 +1683,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_1802",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_2-5-1024x768",
@@ -1722,8 +1722,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_2-5-1024x768",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_2000x1250_wmkn_84254351907813_0",
@@ -1761,8 +1761,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_2000x1250_wmkn_84254351907813_0",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_2000x1429_wmkn_19056648845677_0",
@@ -1800,8 +1800,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_2000x1429_wmkn_19056648845677_0",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_20090411-TurboJET_Barca",
@@ -1839,8 +1839,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_20090411-TurboJET_Barca",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_2020120858047817",
@@ -1878,8 +1878,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_2020120858047817",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_20210430002927_47",
@@ -1917,8 +1917,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_20210430002927_47",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_202135002-4",
@@ -1956,8 +1956,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_202135002-4",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_20230821004313",
@@ -1995,8 +1995,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_20230821004313",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_20240301000865",
@@ -2034,8 +2034,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_20240301000865",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_20250401005245",
@@ -2073,8 +2073,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_20250401005245",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_202512251310033872",
@@ -2112,8 +2112,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_202512251310033872",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_202602131051276980",
@@ -2151,8 +2151,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_202602131051276980",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_20260421104430-37bd4fa5",
@@ -2190,8 +2190,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_20260421104430-37bd4fa5",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_20oz-china-ships-wgkl-master1050",
@@ -2229,8 +2229,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_20oz-china-ships-wgkl-master1050",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_22xp-boaty-master1050",
@@ -2268,8 +2268,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_22xp-boaty-master1050",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_2798933",
@@ -2307,8 +2307,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_2798933",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_300gt-tuna-long-liner-boat_02",
@@ -2346,8 +2346,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_300gt-tuna-long-liner-boat_02",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_379b7bfc740ea9d22183f066b6e40ff8-600x400",
@@ -2385,8 +2385,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_379b7bfc740ea9d22183f066b6e40ff8-600x400",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_489644a4-bb94-6109-6f71-d81400ca1a48_620",
@@ -2424,8 +2424,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_489644a4-bb94-6109-6f71-d81400ca1a48_620",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_6232d26edb8ab",
@@ -2463,8 +2463,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_6232d26edb8ab",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_6621n",
@@ -2502,8 +2502,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_6621n",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_666",
@@ -2541,8 +2541,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_666",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_668d6f418c667-870x500",
@@ -2580,8 +2580,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_668d6f418c667-870x500",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_762bcd7026aa844c83ed2b0f5454b162",
@@ -2619,8 +2619,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_762bcd7026aa844c83ed2b0f5454b162",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58",
@@ -2658,8 +2658,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1",
@@ -2697,8 +2697,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_A04A00_P_01_02",
@@ -2736,8 +2736,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_A04A00_P_01_02",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea",
@@ -2775,8 +2775,8 @@
       },
       "triangles": 84,
       "outputDir": "out/3d_data/ship/hull/ship_hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_article-5ca19fe0e988a",
@@ -2814,8 +2814,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_article-5ca19fe0e988a",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c",
@@ -2853,8 +2853,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_Capture-3139",
@@ -2892,8 +2892,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_Capture-3139",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_d5154891",
@@ -2931,8 +2931,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_d5154891",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_Disney_20Adventure_20ship_201",
@@ -2970,8 +2970,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_Disney_20Adventure_20ship_201",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_e7642302",
@@ -3009,8 +3009,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_e7642302",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_GettyImages-630597388-compressor",
@@ -3048,8 +3048,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_GettyImages-630597388-compressor",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_id13750938-558191",
@@ -3087,8 +3087,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_id13750938-558191",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_img-1478851082-74949",
@@ -3126,8 +3126,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_img-1478851082-74949",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_k23",
@@ -3165,8 +3165,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_k23",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_LNG_FGSS_",
@@ -3204,8 +3204,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_LNG_FGSS_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_Methanier_aspher_LNGRIVERS",
@@ -3243,8 +3243,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_Methanier_aspher_LNGRIVERS",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad",
@@ -3282,8 +3282,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_mobileadv_1976_9821316_46373",
@@ -3321,8 +3321,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_mobileadv_1976_9821316_46373",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_nzdnc7pepb9ltbpslhtv",
@@ -3360,8 +3360,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_nzdnc7pepb9ltbpslhtv",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_pngtree-a-small-fishing-boat-png-image_16296083",
@@ -3399,8 +3399,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_pngtree-a-small-fishing-boat-png-image_16296083",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_pngtree-blue-and-white-speedboat-png-image_16228702",
@@ -3438,8 +3438,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_pngtree-blue-and-white-speedboat-png-image_16228702",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3",
@@ -3477,8 +3477,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_s11_1667405441519",
@@ -3516,8 +3516,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_s11_1667405441519",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_tkldbkxi3ftl5wewz3u2",
@@ -3555,8 +3555,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_tkldbkxi3ftl5wewz3u2",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_ttn1071_Cover0106",
@@ -3594,8 +3594,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_ttn1071_Cover0106",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise__CVN_65__is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise",
@@ -3633,8 +3633,8 @@
       },
       "triangles": 84,
       "outputDir": "out/3d_data/ship/hull/ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise__CVN_65__is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull_Virginia_class_submarine",
@@ -3672,8 +3672,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull_Virginia_class_submarine",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull__127290139_04alamy-pwtk4p",
@@ -3711,8 +3711,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull__127290139_04alamy-pwtk4p",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull__208000_-_",
@@ -3750,8 +3750,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull__208000_-_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "ship_hull__2-_",
@@ -3789,8 +3789,8 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/ship/hull/ship_hull__2-_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_092313_274u9V4y",
@@ -3828,8 +3828,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_092313_274u9V4y",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_1342001_PE948961_S5",
@@ -3867,8 +3867,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_1342001_PE948961_S5",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_1513x4724_wmkn_328537037215_202606050063000000",
@@ -3906,8 +3906,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_1513x4724_wmkn_328537037215_202606050063000000",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_15dc1b1d19bccbbf",
@@ -3945,8 +3945,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_15dc1b1d19bccbbf",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_1_.jpg",
@@ -3984,8 +3984,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_1_.jpg",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_20210316155158__33",
@@ -4023,8 +4023,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_20210316155158__33",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_3f0fcc8d74ce8fcc",
@@ -4062,8 +4062,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_3f0fcc8d74ce8fcc",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_495849468",
@@ -4101,8 +4101,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_495849468",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_51YNHnO1PXL",
@@ -4140,8 +4140,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_51YNHnO1PXL",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_5D11CCA4-7909-424",
@@ -4179,8 +4179,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_5D11CCA4-7909-424",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_700x1024_wmkn_0_C20250121000185",
@@ -4218,8 +4218,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_700x1024_wmkn_0_C20250121000185",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_70248068_1006",
@@ -4257,8 +4257,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_70248068_1006",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_7d535472ae45d3eb",
@@ -4296,8 +4296,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_7d535472ae45d3eb",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_800_eb53c296eb6fc1ac757c290a1f6444b8",
@@ -4335,8 +4335,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_800_eb53c296eb6fc1ac757c290a1f6444b8",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c",
@@ -4374,8 +4374,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_abc3c15b66b89dff",
@@ -4413,8 +4413,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_abc3c15b66b89dff",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
@@ -4452,8 +4452,8 @@
       },
       "triangles": 184,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_ADEY1909_1_",
@@ -4491,8 +4491,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_ADEY1909_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_ADEY1909",
@@ -4530,8 +4530,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_ADEY1909",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_1_",
@@ -4569,8 +4569,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94",
@@ -4608,8 +4608,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1",
@@ -4647,8 +4647,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/bl_camphor/tree_bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_boab-tree-header-image-blog",
@@ -4686,8 +4686,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_boab-tree-header-image-blog",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_boab-trees_1_",
@@ -4725,8 +4725,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_boab-trees_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_manual_FB_IMG_1786332532197",
@@ -4764,8 +4764,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_manual_FB_IMG_1786332532197",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_manual_FB_IMG_1786332658706",
@@ -4803,8 +4803,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_manual_FB_IMG_1786332658706",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_Cardon_Pachycereus_pringlei",
@@ -4842,8 +4842,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_Cardon_Pachycereus_pringlei",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_1_",
@@ -4881,8 +4881,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree",
@@ -4920,8 +4920,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_Choosing-the-right-cactus",
@@ -4959,8 +4959,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_Choosing-the-right-cactus",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_d0cec1f4425528fa",
@@ -4998,8 +4998,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_d0cec1f4425528fa",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_ddf148d60683c553_1_",
@@ -5037,8 +5037,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_ddf148d60683c553_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_ddf148d60683c553",
@@ -5076,8 +5076,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_ddf148d60683c553",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree",
@@ -5115,8 +5115,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_Derby_boab__Western_Australia",
@@ -5154,8 +5154,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_Derby_boab__Western_Australia",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_e7838fe5b8bde5ad90",
@@ -5193,8 +5193,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_e7838fe5b8bde5ad90",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166",
@@ -5232,8 +5232,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_FB_IMG_1786332532197_2_",
@@ -5271,8 +5271,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_FB_IMG_1786332532197_2_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_FB_IMG_1786333297321",
@@ -5310,8 +5310,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_FB_IMG_1786333297321",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_FB_IMG_1786333300422",
@@ -5349,8 +5349,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_FB_IMG_1786333300422",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_FB_IMG_1786818411804",
@@ -5388,8 +5388,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_FB_IMG_1786818411804",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_getImage-2-4",
@@ -5427,8 +5427,8 @@
       },
       "triangles": 140,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_getImage-2-4",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_getImage-3-4",
@@ -5466,8 +5466,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_getImage-3-4",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_Green_baobab_at_sunny_day._Madagascar_dreamstime_xxl_46207442_1_",
@@ -5505,8 +5505,8 @@
       },
       "triangles": 184,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_Green_baobab_at_sunny_day._Madagascar_dreamstime_xxl_46207442_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_gt_cryptomeria_manual_FB_IMG_1786333453208",
@@ -5544,8 +5544,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/gt_cryptomeria/tree_gt_cryptomeria_manual_FB_IMG_1786333453208",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_gt_cryptomeria_manual_twFir_s",
@@ -5583,8 +5583,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/gt_cryptomeria/tree_gt_cryptomeria_manual_twFir_s",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_id13801237-shutterstock_1868040619s",
@@ -5622,8 +5622,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_id13801237-shutterstock_1868040619s",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
@@ -5661,8 +5661,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_madagascar-baobab",
@@ -5700,8 +5700,8 @@
       },
       "triangles": 184,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_madagascar-baobab",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_p6CRn6GXmKSX",
@@ -5739,8 +5739,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_p6CRn6GXmKSX",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_Pachycereus_pringlei_forest",
@@ -5778,8 +5778,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_Pachycereus_pringlei_forest",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137",
@@ -5817,8 +5817,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531",
@@ -5856,8 +5856,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_pngtree-coniferous-tree-png-image_6230847",
@@ -5895,8 +5895,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_pngtree-coniferous-tree-png-image_6230847",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677",
@@ -5934,8 +5934,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957",
@@ -5973,8 +5973,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground",
@@ -6012,8 +6012,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/sp_baobab/tree_sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_sp_baobab_manual_Baobab_and_elephant__Tanzania",
@@ -6051,8 +6051,8 @@
       },
       "triangles": 184,
       "outputDir": "out/3d_data/tree/sp_baobab/tree_sp_baobab_manual_Baobab_and_elephant__Tanzania",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_sp_baobab_manual_Birdwood_Downs_station",
@@ -6090,8 +6090,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/sp_baobab/tree_sp_baobab_manual_Birdwood_Downs_station",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED",
@@ -6129,8 +6129,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/sp_baobab/tree_sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_sp_conifer_manual_FB_IMG_1786332582292",
@@ -6168,8 +6168,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/sp_conifer/tree_sp_conifer_manual_FB_IMG_1786332582292",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_sp_conifer_manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_",
@@ -6207,8 +6207,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/sp_conifer/tree_sp_conifer_manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6",
@@ -6246,8 +6246,8 @@
       },
       "triangles": 192,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy__",
@@ -6285,8 +6285,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy__",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy__-_-elho_-_-_-03",
@@ -6324,8 +6324,8 @@
       },
       "triangles": 128,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy__-_-elho_-_-_-03",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "tree_canopy__",
@@ -6363,8 +6363,8 @@
       },
       "triangles": 152,
       "outputDir": "out/3d_data/tree/canopy/tree_canopy__",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_000001_1738650793",
@@ -6403,8 +6403,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_000001_1738650793",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_003002_1725858476",
@@ -6443,8 +6443,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_003002_1725858476",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_10012915_R3_m",
@@ -6483,8 +6483,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_10012915_R3_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_110295IA-M009_L",
@@ -6523,8 +6523,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_110295IA-M009_L",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_110296IA-M009_L",
@@ -6563,8 +6563,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_110296IA-M009_L",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_12544404_O_m",
@@ -6603,8 +6603,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_12544404_O_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_13226803_R_m",
@@ -6643,8 +6643,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_13226803_R_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_14-_-900-_-_-btwin-8646464",
@@ -6683,8 +6683,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_14-_-900-_-_-btwin-8646464",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_19e97a45118b4dedac318903f350414f_R",
@@ -6723,8 +6723,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_19e97a45118b4dedac318903f350414f_R",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_3827532_O_m",
@@ -6763,8 +6763,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_3827532_O_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24",
@@ -6803,8 +6803,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_6756854_OR_m",
@@ -6843,8 +6843,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_6756854_OR_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_800x_1_",
@@ -6883,8 +6883,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_800x_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_800x",
@@ -6923,8 +6923,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_800x",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af",
@@ -6963,8 +6963,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1",
@@ -7003,8 +7003,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768",
@@ -7043,8 +7043,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_T-806_blue",
@@ -7083,8 +7083,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_T-806_blue",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
@@ -7123,8 +7123,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_bike__-26-_-rc-100-_-btwin-8826164",
@@ -7163,8 +7163,8 @@
       },
       "triangles": 200,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_bike__-26-_-rc-100-_-btwin-8826164",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_02_outlander_20211001_menu",
@@ -7203,8 +7203,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_02_outlander_20211001_menu",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_0626fa11-e77d-47dd-a38c-0d5441425c53",
@@ -7243,8 +7243,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_0626fa11-e77d-47dd-a38c-0d5441425c53",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1",
@@ -7283,8 +7283,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_161060143500",
@@ -7323,8 +7323,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_161060143500",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_1667357469403862_600_400",
@@ -7363,8 +7363,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_1667357469403862_600_400",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_1683687307801401_600_400",
@@ -7403,8 +7403,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_1683687307801401_600_400",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_1711950770028207_600_400",
@@ -7443,8 +7443,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_1711950770028207_600_400",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_1716951305013100_1400_0",
@@ -7483,8 +7483,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_1716951305013100_1400_0",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_176103315400_1_",
@@ -7523,8 +7523,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_176103315400_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_176103315400",
@@ -7563,8 +7563,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_176103315400",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_176174663300",
@@ -7603,8 +7603,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_176174663300",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2_1_",
@@ -7643,8 +7643,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2_1_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2",
@@ -7683,8 +7683,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_2017091364238789",
@@ -7723,8 +7723,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_2017091364238789",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_20200710700113",
@@ -7763,8 +7763,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_20200710700113",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_202409251527451",
@@ -7803,8 +7803,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_202409251527451",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_2025-porsche-carrera-t-coupe",
@@ -7843,8 +7843,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_2025-porsche-carrera-t-coupe",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_202504061134",
@@ -7883,8 +7883,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_202504061134",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_220809-20941-15-q0oDy",
@@ -7923,8 +7923,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_220809-20941-15-q0oDy",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_22b670d6d16ae4eac09410b9e8f2eac7_XL",
@@ -7963,8 +7963,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_22b670d6d16ae4eac09410b9e8f2eac7_XL",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_240203_FordExplorerFacelift_fromFord-07",
@@ -8003,8 +8003,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_240203_FordExplorerFacelift_fromFord-07",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_240521-25714-10-CT9mc",
@@ -8043,8 +8043,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_240521-25714-10-CT9mc",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_240710-26084-40-oeQ5G",
@@ -8083,8 +8083,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_240710-26084-40-oeQ5G",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003",
@@ -8123,8 +8123,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_241016-26812-1-UmpVe",
@@ -8163,8 +8163,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_241016-26812-1-UmpVe",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_241120-27067-61-GPe1X",
@@ -8203,8 +8203,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_241120-27067-61-GPe1X",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_250730-29093-1-4yYYG",
@@ -8243,8 +8243,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_250730-29093-1-4yYYG",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_250px-Honda-TN360",
@@ -8283,8 +8283,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_250px-Honda-TN360",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_2598949",
@@ -8323,8 +8323,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_2598949",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_3_",
@@ -8363,8 +8363,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_3_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_4590905_001_M",
@@ -8403,8 +8403,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_4590905_001_M",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_49b849c471e19d46290da9047c42de4a_XL",
@@ -8443,8 +8443,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_49b849c471e19d46290da9047c42de4a_XL",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_5-man",
@@ -8483,8 +8483,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_5-man",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_6841_rd",
@@ -8523,8 +8523,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_6841_rd",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_7car-202006291136-3",
@@ -8563,8 +8563,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_7car-202006291136-3",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_7car-202401030308-3",
@@ -8603,8 +8603,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_7car-202401030308-3",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_7CcTSYgumkMG",
@@ -8643,8 +8643,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_7CcTSYgumkMG",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_8361539",
@@ -8683,8 +8683,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_8361539",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_881e58ddc9cd0cc82af65be198476506",
@@ -8723,8 +8723,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_881e58ddc9cd0cc82af65be198476506",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_9d6035f40faac95805c9c47f572ebe3f",
@@ -8763,8 +8763,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_9d6035f40faac95805c9c47f572ebe3f",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_articleimage_1373637",
@@ -8803,8 +8803,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_articleimage_1373637",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_Cybertruck-_-Cybertruck-_",
@@ -8843,8 +8843,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_Cybertruck-_-Cybertruck-_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_depu",
@@ -8883,8 +8883,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_depu",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_Farizon-SV-3",
@@ -8923,8 +8923,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_Farizon-SV-3",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_IMG20260102180810I92509U2349",
@@ -8963,8 +8963,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_IMG20260102180810I92509U2349",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_jeep-1597856882911",
@@ -9003,8 +9003,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_jeep-1597856882911",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_jspace-pu_20241108_menu",
@@ -9043,8 +9043,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_jspace-pu_20241108_menu",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_JSV_01",
@@ -9083,8 +9083,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_JSV_01",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_md-ae74bad4fcbb06f537ade047c4f657fd",
@@ -9123,8 +9123,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_md-ae74bad4fcbb06f537ade047c4f657fd",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_MD_01_5x7",
@@ -9163,8 +9163,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_MD_01_5x7",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_mobile01-78b0b061843ca71c35cd47caeccc4c93",
@@ -9203,8 +9203,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_mobile01-78b0b061843ca71c35cd47caeccc4c93",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_Ou7KZDwD3jVNttR",
@@ -9243,8 +9243,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_Ou7KZDwD3jVNttR",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_ph-hv2-1",
@@ -9283,8 +9283,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_ph-hv2-1",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_photooriginal-2022408-29vqn",
@@ -9323,8 +9323,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_photooriginal-2022408-29vqn",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_php6z4pvZ",
@@ -9363,8 +9363,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_php6z4pvZ",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_qaDPp5eY29jQ2M2cng",
@@ -9403,8 +9403,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_qaDPp5eY29jQ2M2cng",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_qaOZnp2Y26im18zO1A",
@@ -9443,8 +9443,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_qaOZnp2Y26im18zO1A",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_series-better-car",
@@ -9483,8 +9483,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_series-better-car",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_showcase2_edeliver5_h1_720x414",
@@ -9523,8 +9523,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_showcase2_edeliver5_h1_720x414",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car_teslam3-960",
@@ -9563,8 +9563,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_teslam3-960",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_car__1",
@@ -9603,8 +9603,8 @@
       },
       "triangles": 316,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car__1",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_000001_1706597927",
@@ -9643,8 +9643,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_000001_1706597927",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_000001_1776155963",
@@ -9683,8 +9683,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_000001_1776155963",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_01242",
@@ -9723,8 +9723,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_01242",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_115576297",
@@ -9763,8 +9763,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_115576297",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_1208367-1024x1024",
@@ -9803,8 +9803,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_1208367-1024x1024",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2",
@@ -9843,8 +9843,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_1618404544235416926",
@@ -9883,8 +9883,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_1618404544235416926",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_1668138443926",
@@ -9923,8 +9923,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_1668138443926",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_167155193720",
@@ -9963,8 +9963,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_167155193720",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_20160119121809449",
@@ -10003,8 +10003,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_20160119121809449",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_2021070912244646524316",
@@ -10043,8 +10043,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_2021070912244646524316",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_20250917103436615",
@@ -10083,8 +10083,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_20250917103436615",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_20260514234220_58",
@@ -10123,8 +10123,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_20260514234220_58",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_250px-Peterbilt_tractor-trailer_rig__Loveland__Colorado",
@@ -10163,8 +10163,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_250px-Peterbilt_tractor-trailer_rig__Loveland__Colorado",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg",
@@ -10203,8 +10203,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_3158_news_banner",
@@ -10243,8 +10243,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_3158_news_banner",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_3d-render-cargo-delivery-truck_1048-5605",
@@ -10283,8 +10283,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_3d-render-cargo-delivery-truck_1048-5605",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_48390093819aa890",
@@ -10323,8 +10323,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_48390093819aa890",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_4d54f379-07b7-453d-9e45-5fa076db88df",
@@ -10363,8 +10363,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_4d54f379-07b7-453d-9e45-5fa076db88df",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_50992126_183220969.918332",
@@ -10403,8 +10403,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_50992126_183220969.918332",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_5126f791-8473-4ae4-b729-525c496362fd",
@@ -10443,8 +10443,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_5126f791-8473-4ae4-b729-525c496362fd",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_67342910-48b4-49b9-b2ab-bfd617a28c76",
@@ -10483,8 +10483,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_67342910-48b4-49b9-b2ab-bfd617a28c76",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_7car-201702220825-1",
@@ -10523,8 +10523,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_7car-201702220825-1",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_99NzsCYgrt",
@@ -10563,8 +10563,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_99NzsCYgrt",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_a33aa25d56bf3c88be759c9623090c9b",
@@ -10603,8 +10603,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_a33aa25d56bf3c88be759c9623090c9b",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_af5effb1-231f-4d00-b789-084fd2d60294",
@@ -10643,8 +10643,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_af5effb1-231f-4d00-b789-084fd2d60294",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179",
@@ -10683,8 +10683,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_car",
@@ -10723,8 +10723,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_car",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_CSPV-02_01",
@@ -10763,8 +10763,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_CSPV-02_01",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_d2462cec993f618a",
@@ -10803,8 +10803,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_d2462cec993f618a",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_image_1740103474992",
@@ -10843,8 +10843,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_image_1740103474992",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP",
@@ -10883,8 +10883,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_long-haul-semi-truck-on-260nw-2742073731",
@@ -10923,8 +10923,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_long-haul-semi-truck-on-260nw-2742073731",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_mainCoverImage1_1180859",
@@ -10963,8 +10963,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_mainCoverImage1_1180859",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef",
@@ -11003,8 +11003,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_news442315o",
@@ -11043,8 +11043,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_news442315o",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_photooriginal-2760150-ffEPQ",
@@ -11083,8 +11083,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_photooriginal-2760150-ffEPQ",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_photooriginal-98016-XUIGz",
@@ -11123,8 +11123,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_photooriginal-98016-XUIGz",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785",
@@ -11163,8 +11163,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_product_4714426807346_3",
@@ -11203,8 +11203,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_product_4714426807346_3",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy_slide-02",
@@ -11243,8 +11243,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_slide-02",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy__-_-5",
@@ -11283,8 +11283,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy__-_-5",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy__2_for_",
@@ -11323,8 +11323,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy__2_for_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_heavy__3_for_",
@@ -11363,8 +11363,8 @@
       },
       "triangles": 348,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy__3_for_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_000001_1672123300",
@@ -11403,8 +11403,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_000001_1672123300",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_000001_1742374978",
@@ -11443,8 +11443,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_000001_1742374978",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_000002_1645174811",
@@ -11483,8 +11483,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_000002_1645174811",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_10905670_R",
@@ -11523,8 +11523,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_10905670_R",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_11871715_O_m",
@@ -11563,8 +11563,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_11871715_O_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_14074013_OR_m",
@@ -11603,8 +11603,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_14074013_OR_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_14892810_OR_m",
@@ -11643,8 +11643,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_14892810_OR_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_165019503901",
@@ -11683,8 +11683,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_165019503901",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_180512-10030-2-uyEK9",
@@ -11723,8 +11723,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_180512-10030-2-uyEK9",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_24917349da43cda536c90d9b274f9e70_1200",
@@ -11763,8 +11763,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_24917349da43cda536c90d9b274f9e70_1200",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_54175397571_be4ab8de90_b",
@@ -11803,8 +11803,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_54175397571_be4ab8de90_b",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
@@ -11843,8 +11843,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_7801666",
@@ -11883,8 +11883,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_7801666",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_7aea2e93dab84c0a500e8c1db54288bd2",
@@ -11923,8 +11923,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_7aea2e93dab84c0a500e8c1db54288bd2",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_9ebd5dab928f4a6750f7899ed8425751",
@@ -11963,8 +11963,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_9ebd5dab928f4a6750f7899ed8425751",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_A16A00_P_03_02",
@@ -12003,8 +12003,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_A16A00_P_03_02",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_A74ASA4_PictureItem_Clipping_01_3",
@@ -12043,8 +12043,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_A74ASA4_PictureItem_Clipping_01_3",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_AF530-2",
@@ -12083,8 +12083,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_AF530-2",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_c8a41c3d-5818-4853-b00f-cabe19fc7275",
@@ -12123,8 +12123,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_c8a41c3d-5818-4853-b00f-cabe19fc7275",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_e08c2c09f558b17451c07d2343ac9cb5_XL",
@@ -12163,8 +12163,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_e08c2c09f558b17451c07d2343ac9cb5_XL",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_ECP0030603705169_4_20691615",
@@ -12203,8 +12203,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_ECP0030603705169_4_20691615",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_f2b1a059-1f3d-4c80-9f5a-c34b7028a3a3",
@@ -12243,8 +12243,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_f2b1a059-1f3d-4c80-9f5a-c34b7028a3a3",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_GOGORO_20SuperSport_20ACE",
@@ -12283,8 +12283,8 @@
       },
       "triangles": 196,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_GOGORO_20SuperSport_20ACE",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_M01_52016_PEG080_green",
@@ -12323,8 +12323,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_M01_52016_PEG080_green",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_mobile01-c12a5fe0448a84268c674b1c946cdc62",
@@ -12363,8 +12363,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_mobile01-c12a5fe0448a84268c674b1c946cdc62",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_qaSe0J_R2KSh1aPL0Q",
@@ -12403,8 +12403,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_qaSe0J_R2KSh1aPL0Q",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_silver",
@@ -12443,8 +12443,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_silver",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_SYM70_DRGBT_",
@@ -12483,8 +12483,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_SYM70_DRGBT_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor_xA2OUyOW4UtkxXB60SckQMMZFGl38rljQuy3xC2G",
@@ -12523,8 +12523,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_xA2OUyOW4UtkxXB60SckQMMZFGl38rljQuy3xC2G",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor__covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c",
@@ -12563,8 +12563,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor__covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_motor__covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee",
@@ -12603,8 +12603,8 @@
       },
       "triangles": 160,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_motor__covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_1758402595_62693",
@@ -12643,8 +12643,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_1758402595_62693",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_206_1_l",
@@ -12683,8 +12683,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_206_1_l",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_250px-DF4D-0463_hauls_K903_at_372_Level_Crossing_20240702",
@@ -12723,8 +12723,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_250px-DF4D-0463_hauls_K903_at_372_Level_Crossing_20240702",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_250px-JR_East_E001_series_Train_Suite_Shiki-shima_20170619",
@@ -12763,8 +12763,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_250px-JR_East_E001_series_Train_Suite_Shiki-shima_20170619",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_3046929",
@@ -12803,8 +12803,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_3046929",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_330px-Series-E353-S116",
@@ -12843,8 +12843,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_330px-Series-E353-S116",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station",
@@ -12883,8 +12883,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_5a54516dcf197_5a544e4c4d904_1413493539",
@@ -12923,8 +12923,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_5a54516dcf197_5a544e4c4d904_1413493539",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_671868b8ba618",
@@ -12963,8 +12963,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_671868b8ba618",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_76c22c3294e14a2e91b55d837df2308d",
@@ -13003,8 +13003,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_76c22c3294e14a2e91b55d837df2308d",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_desc_0joKDARyPPYFMN",
@@ -13043,8 +13043,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_desc_0joKDARyPPYFMN",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_DF4D_0353_at_Liucun__20210411172849_",
@@ -13083,8 +13083,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_DF4D_0353_at_Liucun__20210411172849_",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_ICE4_Front",
@@ -13123,8 +13123,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_ICE4_Front",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_sub8",
@@ -13163,8 +13163,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_sub8",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     },
     {
       "id": "vehicle_train_trainticket25759751_m",
@@ -13203,8 +13203,8 @@
       },
       "triangles": 404,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_trainticket25759751_m",
-      "version": 2,
-      "verStr": "v2"
+      "version": 3,
+      "verStr": "v3"
     }
   ]
 }

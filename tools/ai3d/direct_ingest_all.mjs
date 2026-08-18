@@ -1126,8 +1126,8 @@ async function main() {
       subpart,
       style,
       symmetryMode,
-      version: 2,
-      verStr: 'v2',
+      version: 3,
+      verStr: 'v3',
       image: rel,
       bounds,
       spec,
@@ -1138,8 +1138,8 @@ async function main() {
     if (!existingPartKeys.has(partKey)) {
       partsManifest.parts.push({
         method: 'llm_parts',
-        version: 2,
-        verStr: 'v2',
+        version: 3,
+        verStr: 'v3',
         consumer: `${family} catalog & partlib (${subpart})`,
         rev: 'HEAD',
         at: new Date().toISOString().slice(0, 10),
@@ -1185,7 +1185,7 @@ async function main() {
   console.log(`\n✅ 成功更新 parts_manifest.json (共 ${partsManifest.parts.length} 筆 3D 零件帳本)`);
 
   const dbData = {
-    version: 2,
+    version: 3,
     generated_at: new Date().toISOString(),
     total_objects: database3D.length,
     families: [...new Set(database3D.map(d => d.family))],
