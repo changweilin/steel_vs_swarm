@@ -1,0 +1,53 @@
+{
+  "id": "ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise",
+  "sourceImage": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
+  "style": "aircraft_carrier",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.828,
+  "aspectRatio": 1.4,
+  "colors": {
+    "primaryHex": 8947847,
+    "primaryRgb": [
+      136,
+      136,
+      135
+    ],
+    "accentHex": 131329,
+    "accentRgb": [
+      2,
+      1,
+      1
+    ],
+    "darkHex": 2237733,
+    "darkRgb": [
+      34,
+      37,
+      37
+    ],
+    "brightHex": 12697790,
+    "brightRgb": [
+      193,
+      192,
+      190
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "angled_flight_deck",
+      "method": "full_length_cantilever_deck"
+    },
+    {
+      "name": "starboard_island_tower",
+      "method": "asymmetric_command_bridge"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "carrier_main_hull",
+    "clipper_bow_wedge",
+    "full_flight_deck",
+    "starboard_island_tower",
+    "island_navigation_bridge",
+    "phased_array_radar_mast"
+  ]
+}

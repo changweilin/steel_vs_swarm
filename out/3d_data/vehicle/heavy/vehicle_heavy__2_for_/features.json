@@ -1,0 +1,65 @@
+{
+  "id": "vehicle_heavy_規格表2大圖合for官網",
+  "sourceImage": "vehicle/heavy/規格表2大圖合for官網.jpg",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.853,
+  "aspectRatio": 1.812,
+  "colors": {
+    "primaryHex": 7505043,
+    "primaryRgb": [
+      114,
+      132,
+      147
+    ],
+    "accentHex": 0,
+    "accentRgb": [
+      0,
+      0,
+      0
+    ],
+    "darkHex": 2306619,
+    "darkRgb": [
+      35,
+      50,
+      59
+    ],
+    "brightHex": 12505572,
+    "brightRgb": [
+      190,
+      209,
+      228
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "enclosed_cargo_box",
+      "method": "composite_insulated_box"
+    },
+    {
+      "name": "dual_vertical_exhausts",
+      "method": "chrome_exhaust_stacks"
+    },
+    {
+      "name": "heavy_truck_dual_exhaust_and_axles",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.1
+    }
+  ],
+  "totalParts": 13,
+  "partNames": [
+    "freight_chassis_frame",
+    "freight_cab_body",
+    "cab_windshield",
+    "freight_cargo_box",
+    "rear_rollup_door",
+    "exhaust_stack_left",
+    "steer_wheel_left",
+    "drive_wheel_1_left",
+    "drive_wheel_2_left",
+    "exhaust_stack_right",
+    "steer_wheel_right",
+    "drive_wheel_1_right",
+    "drive_wheel_2_right"
+  ]
+}

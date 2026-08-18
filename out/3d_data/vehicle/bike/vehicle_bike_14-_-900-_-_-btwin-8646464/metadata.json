@@ -3,13 +3,15 @@
   "key": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_fe9fa5f6",
   "family": "vehicle",
   "subpart": "bike",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
-  "created_at": "2026-08-18T05:52:57.417Z",
+  "created_at": "2026-08-18T10:56:14.371Z",
   "bounds": {
     "min": [
       -0.98,
-      0.0162,
+      0,
       -0.325
     ],
     "max": [
@@ -19,20 +21,20 @@
     ],
     "size": [
       1.96,
-      1.019,
+      1.035,
       0.65
     ],
     "rMax": 1.032,
-    "triangles": 152,
-    "vertices": 92
+    "triangles": 200,
+    "vertices": 118
   },
   "spec": {
-    "L": 1.7536133363851376,
+    "L": 1.7827100022888533,
     "W": 0.65,
     "H": 1.0603822384985122,
     "R": 0.33,
-    "type": "bicycle"
+    "style": "precision_bicycle_frame"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

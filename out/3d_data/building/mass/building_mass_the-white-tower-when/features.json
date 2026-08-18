@@ -1,0 +1,68 @@
+{
+  "id": "building_mass_the-white-tower-when",
+  "sourceImage": "building/the-white-tower-when.jpg",
+  "style": "castle_fortress",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.788,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 10591389,
+    "primaryRgb": [
+      161,
+      156,
+      157
+    ],
+    "accentHex": 591889,
+    "accentRgb": [
+      9,
+      8,
+      17
+    ],
+    "darkHex": 3221804,
+    "darkRgb": [
+      49,
+      41,
+      44
+    ],
+    "brightHex": 15132390,
+    "brightRgb": [
+      230,
+      230,
+      230
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "four_corner_turrets",
+      "method": "quad_symmetric_bastions"
+    },
+    {
+      "name": "crenellated_parapet",
+      "method": "perimeter_merlons"
+    }
+  ],
+  "totalParts": 21,
+  "partNames": [
+    "stone_keep_body",
+    "turret_-1_-1",
+    "turret_conical_roof_-1_-1",
+    "turret_-1_1",
+    "turret_conical_roof_-1_1",
+    "turret_1_-1",
+    "turret_conical_roof_1_-1",
+    "turret_1_1",
+    "turret_conical_roof_1_1",
+    "merlon_north_0",
+    "merlon_south_0",
+    "merlon_north_1",
+    "merlon_south_1",
+    "merlon_north_2",
+    "merlon_south_2",
+    "merlon_north_3",
+    "merlon_south_3",
+    "merlon_north_4",
+    "merlon_south_4",
+    "merlon_north_5",
+    "merlon_south_5"
+  ]
+}

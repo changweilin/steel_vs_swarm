@@ -3,57 +3,38 @@
   "key": "vehicle/car_241016-26812-1-UmpVe_5b81b057",
   "family": "vehicle",
   "subpart": "car",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/241016-26812-1-UmpVe.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\241016-26812-1-UmpVe.jpg",
-  "created_at": "2026-08-18T05:52:57.520Z",
+  "created_at": "2026-08-18T10:56:14.471Z",
   "bounds": {
     "min": [
-      -2.4463,
-      0.0166,
-      -0.9122
+      -2.5609,
+      0.0171,
+      -0.9748
     ],
     "max": [
-      2.4463,
-      1.4073,
-      0.9122
+      2.5709,
+      1.5744,
+      0.9748
     ],
     "size": [
-      4.893,
-      1.391,
-      1.824
+      5.132,
+      1.557,
+      1.95
     ],
-    "rMax": 2.611,
-    "triangles": 208,
-    "vertices": 120
+    "rMax": 2.75,
+    "triangles": 316,
+    "vertices": 192
   },
   "spec": {
-    "L": 4.892629892423895,
-    "W": 1.8243778133821622,
-    "H": 1.4072823682001983,
-    "R": 0.34,
-    "axle": [
-      -1.3699363698786908,
-      1.3699363698786908
-    ],
-    "sill": 0.42,
-    "waist": 0.95,
-    "roof": 1.4072823682001983,
-    "cab": [
-      -1.076378576333257,
-      0.7338944838635842
-    ],
-    "rakeF": 0.34,
-    "rakeR": 0.2,
-    "side": [
-      0.48,
-      0.9
-    ],
-    "extra": [
-      "mirror",
-      "headlight",
-      "grille"
-    ]
+    "L": 5.06175326161593,
+    "W": 1.92,
+    "H": 1.5743778133821622,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

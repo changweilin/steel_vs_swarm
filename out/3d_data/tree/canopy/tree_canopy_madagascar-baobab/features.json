@@ -1,0 +1,56 @@
+{
+  "id": "tree_canopy_madagascar-baobab",
+  "sourceImage": "tree/madagascar-baobab.jpg",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.901,
+  "aspectRatio": 0.75,
+  "colors": {
+    "primaryHex": 9936535,
+    "primaryRgb": [
+      151,
+      158,
+      151
+    ],
+    "accentHex": 1250318,
+    "accentRgb": [
+      19,
+      20,
+      14
+    ],
+    "darkHex": 3880741,
+    "darkRgb": [
+      59,
+      55,
+      37
+    ],
+    "brightHex": 12110547,
+    "brightRgb": [
+      184,
+      202,
+      211
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "swollen_bottle_trunk",
+      "method": "massive_succulent_barrel"
+    },
+    {
+      "name": "sparse_rosette_crown",
+      "method": "root_like_canopy_clusters"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "baobab_bottle_trunk",
+    "baobab_branch_1",
+    "baobab_foliage_clump_1",
+    "baobab_branch_2",
+    "baobab_foliage_clump_2",
+    "baobab_branch_3",
+    "baobab_foliage_clump_3",
+    "baobab_branch_4",
+    "baobab_foliage_clump_4"
+  ]
+}

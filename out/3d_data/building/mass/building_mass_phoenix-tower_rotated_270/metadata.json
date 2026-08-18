@@ -3,36 +3,37 @@
   "key": "building/mass_phoenix-tower_rotated_270_e2933c89",
   "family": "building",
   "subpart": "mass",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
   "source_image": "building/phoenix-tower_rotated_270.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\phoenix-tower_rotated_270.jpg",
-  "created_at": "2026-08-18T05:52:57.052Z",
+  "created_at": "2026-08-18T10:56:14.126Z",
   "bounds": {
     "min": [
-      -10.6923,
+      -10.3038,
       0,
-      -8.2655
+      -9.1511
     ],
     "max": [
-      10.6923,
-      35.6397,
-      8.2655
+      10.3038,
+      30.2042,
+      9.1511
     ],
     "size": [
-      21.385,
-      35.64,
-      16.531
+      20.608,
+      30.204,
+      18.302
     ],
-    "rMax": 13.515,
-    "triangles": 144,
-    "vertices": 94
+    "rMax": 13.781,
+    "triangles": 432,
+    "vertices": 262
   },
   "spec": {
-    "L": 21.384573128862442,
-    "W": 16.530922407873653,
-    "H": 31.639673456931412,
-    "stories": 9,
-    "roofBand": 0.15
+    "L": 21.69228656443122,
+    "W": 19.265461203936827,
+    "H": 26.754192416266118,
+    "style": "asian_pagoda_upturned_eaves"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

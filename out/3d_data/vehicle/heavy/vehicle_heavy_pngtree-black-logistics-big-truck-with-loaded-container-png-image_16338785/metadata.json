@@ -3,54 +3,38 @@
   "key": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306",
   "family": "vehicle",
   "subpart": "heavy",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/heavy/pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785.png",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785.png",
-  "created_at": "2026-08-18T05:52:57.698Z",
+  "created_at": "2026-08-18T10:56:14.610Z",
   "bounds": {
     "min": [
-      -5.5682,
+      -5.3944,
       0.0255,
-      -1.2877
+      -1.313
     ],
     "max": [
-      5.7732,
-      3.6978,
-      1.2877
+      5.4844,
+      4,
+      1.313
     ],
     "size": [
-      11.341,
-      3.672,
-      2.575
+      10.879,
+      3.974,
+      2.626
     ],
-    "rMax": 5.915,
-    "triangles": 300,
-    "vertices": 172
+    "rMax": 5.639,
+    "triangles": 348,
+    "vertices": 200
   },
   "spec": {
-    "L": 11.536430914778363,
-    "W": 2.55,
-    "H": 3.6977523460746164,
+    "L": 10.96887922484169,
+    "W": 2.6,
+    "H": 3.8981269550621804,
     "R": 0.52,
-    "axle": [
-      -4.037750820172427,
-      -1.7304646372167543,
-      4.15311512932021
-    ],
-    "sill": 1.02,
-    "waist": 1.35,
-    "roof": 3.6977523460746164,
-    "cab": [
-      2.8841077286945906,
-      5.537486839093614
-    ],
-    "rakeF": 0.12,
-    "rakeR": 0,
-    "extra": [
-      "heavy_box",
-      "mirror",
-      "exhaust"
-    ]
+    "style": "heavy_cargo_freight_truck"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

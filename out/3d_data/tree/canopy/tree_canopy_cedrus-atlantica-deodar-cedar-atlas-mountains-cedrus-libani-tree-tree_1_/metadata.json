@@ -3,36 +3,37 @@
   "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)_21c8ef01",
   "family": "tree",
   "subpart": "canopy",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
   "source_image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg",
-  "created_at": "2026-08-18T05:52:57.289Z",
+  "created_at": "2026-08-18T10:56:14.295Z",
   "bounds": {
     "min": [
-      -4.1731,
+      -3.7792,
       0,
-      -3.8974
+      -3.7792
     ],
     "max": [
-      4.0046,
-      11.4479,
-      4.1708
+      3.7792,
+      16.1614,
+      3.7792
     ],
     "size": [
-      8.178,
-      11.448,
-      8.068
+      7.558,
+      16.161,
+      7.558
     ],
-    "rMax": 5.782,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 5.345,
+    "triangles": 192,
+    "vertices": 108
   },
   "spec": {
-    "L": 9.668383306630044,
-    "W": 8.616960402838178,
-    "H": 11.327061875333792,
-    "trunkH": 5.097177843900206,
-    "trunkR": 0.6226825360494392
+    "L": 8.084191653315022,
+    "W": 7.558480201419089,
+    "H": 15.745296406500344,
+    "style": "conifer_pine_pagoda_tiers"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

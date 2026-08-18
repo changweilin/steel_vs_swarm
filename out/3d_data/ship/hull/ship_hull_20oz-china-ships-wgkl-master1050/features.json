@@ -1,0 +1,49 @@
+{
+  "id": "ship_hull_20oz-china-ships-wgkl-master1050",
+  "sourceImage": "ship/20oz-china-ships-wgkl-master1050.jpg",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.963,
+  "aspectRatio": 1.5,
+  "colors": {
+    "primaryHex": 9539743,
+    "primaryRgb": [
+      145,
+      144,
+      159
+    ],
+    "accentHex": 1815,
+    "accentRgb": [
+      0,
+      7,
+      23
+    ],
+    "darkHex": 4014155,
+    "darkRgb": [
+      61,
+      64,
+      75
+    ],
+    "brightHex": 12567494,
+    "brightRgb": [
+      191,
+      195,
+      198
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "streamlined_hull_superstructure",
+      "method": "terraced_decks_and_masts"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "vessel_hull_body",
+    "bow_wedge_flare",
+    "vessel_main_deck",
+    "vessel_superstructure",
+    "vessel_funnel",
+    "vessel_radar_mast"
+  ]
+}

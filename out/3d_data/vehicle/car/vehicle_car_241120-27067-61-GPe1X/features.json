@@ -1,0 +1,69 @@
+{
+  "id": "vehicle_car_241120-27067-61-GPe1X",
+  "sourceImage": "vehicle/car/241120-27067-61-GPe1X.jpg",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.728,
+  "aspectRatio": 1.468,
+  "colors": {
+    "primaryHex": 6249029,
+    "primaryRgb": [
+      95,
+      90,
+      69
+    ],
+    "accentHex": 16579308,
+    "accentRgb": [
+      252,
+      250,
+      236
+    ],
+    "darkHex": 1710359,
+    "darkRgb": [
+      26,
+      25,
+      23
+    ],
+    "brightHex": 14010769,
+    "brightRgb": [
+      213,
+      201,
+      145
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "three_box_profile",
+      "method": "hood_cabin_trunk_architecture"
+    },
+    {
+      "name": "symmetric_mirrors_and_lights",
+      "method": "bilateral_mirror_Z_axis"
+    },
+    {
+      "name": "mirrored_sedan_features",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 0.8099999999999999
+    }
+  ],
+  "totalParts": 17,
+  "partNames": [
+    "sedan_main_body",
+    "sedan_glass_cabin",
+    "engine_hood_slope",
+    "trunk_decklid",
+    "radiator_grille",
+    "front_bumper",
+    "rear_bumper",
+    "headlight_left",
+    "taillight_left",
+    "side_mirror_left",
+    "wheel_front_left",
+    "wheel_rear_left",
+    "headlight_right",
+    "taillight_right",
+    "side_mirror_right",
+    "wheel_front_right",
+    "wheel_rear_right"
+  ]
+}

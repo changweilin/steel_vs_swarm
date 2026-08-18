@@ -3,36 +3,37 @@
   "key": "tree/canopy_51YNHnO1PXL_a0f9e33c",
   "family": "tree",
   "subpart": "canopy",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/51YNHnO1PXL.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\51YNHnO1PXL.jpg",
-  "created_at": "2026-08-18T05:52:57.243Z",
+  "created_at": "2026-08-18T10:56:14.249Z",
   "bounds": {
     "min": [
-      -4.1573,
+      -6.5642,
       0,
-      -4.2107
+      -7.1016
     ],
     "max": [
-      4.0018,
-      13.8471,
-      4.4826
+      6.465,
+      20.4546,
+      7.1179
     ],
     "size": [
-      8.159,
-      13.847,
-      8.693
+      13.029,
+      20.455,
+      14.22
     ],
-    "rMax": 6.009,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 9.671,
+    "triangles": 152,
+    "vertices": 98
   },
   "spec": {
-    "L": 7.624818799114976,
-    "W": 10.866598001068132,
-    "H": 13.700999465934235,
-    "trunkH": 6.165449759670405,
-    "trunkR": 0.6319844357976654
+    "L": 10.624818799114976,
+    "W": 13.866598001068132,
+    "H": 19.700999465934235,
+    "style": "gnarled_broadleaf_buttress"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

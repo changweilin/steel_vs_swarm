@@ -1,0 +1,80 @@
+{
+  "id": "building_mass_d5394391",
+  "sourceImage": "building/d5394391.jpg",
+  "style": "commercial_residential",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.87,
+  "aspectRatio": 1.562,
+  "colors": {
+    "primaryHex": 8098726,
+    "primaryRgb": [
+      123,
+      147,
+      166
+    ],
+    "accentHex": 657413,
+    "accentRgb": [
+      10,
+      8,
+      5
+    ],
+    "darkHex": 3552561,
+    "darkRgb": [
+      54,
+      53,
+      49
+    ],
+    "brightHex": 12243683,
+    "brightRgb": [
+      186,
+      210,
+      227
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "front_facade_balconies",
+      "method": "storefront_and_residential_balconies"
+    },
+    {
+      "name": "rear_fire_escape_and_utilities",
+      "method": "asymmetric_procedural_augmentation"
+    }
+  ],
+  "totalParts": 33,
+  "partNames": [
+    "building_mass",
+    "front_storefront_glass",
+    "balcony_f1_l",
+    "balcony_f1_r",
+    "balcony_f2_l",
+    "balcony_f2_r",
+    "balcony_f3_l",
+    "balcony_f3_r",
+    "balcony_f4_l",
+    "balcony_f4_r",
+    "balcony_f5_l",
+    "balcony_f5_r",
+    "balcony_f6_l",
+    "balcony_f6_r",
+    "balcony_f7_l",
+    "balcony_f7_r",
+    "rear_fire_escape_landing_f1",
+    "rear_fire_ladder_f1",
+    "rear_fire_escape_landing_f2",
+    "rear_fire_ladder_f2",
+    "rear_fire_escape_landing_f3",
+    "rear_fire_ladder_f3",
+    "rear_fire_escape_landing_f4",
+    "rear_fire_ladder_f4",
+    "rear_fire_escape_landing_f5",
+    "rear_fire_ladder_f5",
+    "rear_fire_escape_landing_f6",
+    "rear_fire_ladder_f6",
+    "rear_fire_escape_landing_f7",
+    "rear_fire_ladder_f7",
+    "rear_ventilation_duct",
+    "rear_service_door",
+    "rear_electrical_transformer"
+  ]
+}

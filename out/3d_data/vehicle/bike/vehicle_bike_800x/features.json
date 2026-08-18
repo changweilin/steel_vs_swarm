@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_bike_800x",
+  "sourceImage": "vehicle/bike/800x.jpg",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.869,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 14408153,
+    "primaryRgb": [
+      219,
+      217,
+      217
+    ],
+    "accentHex": 1379338,
+    "accentRgb": [
+      21,
+      12,
+      10
+    ],
+    "darkHex": 3353643,
+    "darkRgb": [
+      51,
+      44,
+      43
+    ],
+    "brightHex": 15725812,
+    "brightRgb": [
+      239,
+      244,
+      244
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "top_down_seat_stays"
+    },
+    {
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "thin_aero_rims"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "bicycle_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

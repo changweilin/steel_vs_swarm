@@ -1,0 +1,49 @@
+{
+  "id": "tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
+  "sourceImage": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.889,
+  "aspectRatio": 1.468,
+  "colors": {
+    "primaryHex": 12500923,
+    "primaryRgb": [
+      190,
+      191,
+      187
+    ],
+    "accentHex": 1120265,
+    "accentRgb": [
+      17,
+      24,
+      9
+    ],
+    "darkHex": 3356712,
+    "darkRgb": [
+      51,
+      56,
+      40
+    ],
+    "brightHex": 15000803,
+    "brightRgb": [
+      228,
+      228,
+      227
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "tiered_conical_whorls",
+      "method": "five_tiered_needle_canopies"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5"
+  ]
+}

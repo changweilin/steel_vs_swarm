@@ -3,57 +3,38 @@
   "key": "vehicle/car_Cybertruck-來了！限量-Cybertruck-模型台灣上架_f0ddba1a",
   "family": "vehicle",
   "subpart": "car",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/Cybertruck-來了！限量-Cybertruck-模型台灣上架.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\Cybertruck-來了！限量-Cybertruck-模型台灣上架.jpg",
-  "created_at": "2026-08-18T05:52:57.558Z",
+  "created_at": "2026-08-18T10:56:14.503Z",
   "bounds": {
     "min": [
-      -2.4708,
-      0.0166,
-      -0.9194
+      -2.5772,
+      0.0171,
+      -0.9748
     ],
     "max": [
-      2.4708,
-      1.4031,
-      0.9194
+      2.5872,
+      1.5888,
+      0.9748
     ],
     "size": [
-      4.942,
-      1.387,
-      1.839
+      5.164,
+      1.572,
+      1.95
     ],
-    "rMax": 2.636,
-    "triangles": 208,
-    "vertices": 120
+    "rMax": 2.765,
+    "triangles": 316,
+    "vertices": 192
   },
   "spec": {
-    "L": 4.941693751430533,
-    "W": 1.838822003509575,
-    "H": 1.4031166552224001,
-    "R": 0.34,
-    "axle": [
-      -1.3836742504005493,
-      1.3836742504005493
-    ],
-    "sill": 0.42,
-    "waist": 0.95,
-    "roof": 1.4031166552224001,
-    "cab": [
-      -1.0871726253147171,
-      0.7412540627145799
-    ],
-    "rakeF": 0.34,
-    "rakeR": 0.2,
-    "side": [
-      0.48,
-      0.9
-    ],
-    "extra": [
-      "mirror",
-      "headlight",
-      "grille"
-    ]
+    "L": 5.094462500953688,
+    "W": 1.92,
+    "H": 1.588822003509575,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

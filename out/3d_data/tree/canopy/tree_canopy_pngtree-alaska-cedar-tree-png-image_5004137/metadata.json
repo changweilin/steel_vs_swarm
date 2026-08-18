@@ -3,36 +3,37 @@
   "key": "tree/canopy_pngtree-alaska-cedar-tree-png-image_5004137_1e268711",
   "family": "tree",
   "subpart": "canopy",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
   "source_image": "tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\pngtree-alaska-cedar-tree-png-image_5004137.jpg",
-  "created_at": "2026-08-18T05:52:57.355Z",
+  "created_at": "2026-08-18T10:56:14.332Z",
   "bounds": {
     "min": [
-      -4.4571,
+      -3.7509,
       0,
-      -4.4093
+      -3.7509
     ],
     "max": [
-      4.7179,
-      16.0488,
-      4.3968
+      3.7509,
+      19.6658,
+      3.7509
     ],
     "size": [
-      9.175,
-      16.049,
-      8.806
+      7.502,
+      19.666,
+      7.502
     ],
-    "rMax": 6.449,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 5.305,
+    "triangles": 192,
+    "vertices": 108
   },
   "spec": {
-    "L": 11.454451819638361,
-    "W": 8.503433279926757,
-    "H": 15.879377431906615,
-    "trunkH": 7.145719844357977,
-    "trunkR": 0.6082673380636301
+    "L": 8.97722590981918,
+    "W": 7.501716639963378,
+    "H": 19.15953307392996,
+    "style": "conifer_pine_pagoda_tiers"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

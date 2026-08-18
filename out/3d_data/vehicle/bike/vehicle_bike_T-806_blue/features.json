@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_bike_T-806_blue",
+  "sourceImage": "vehicle/bike/T-806_blue.jpg",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.924,
+  "aspectRatio": 1.676,
+  "colors": {
+    "primaryHex": 14606817,
+    "primaryRgb": [
+      222,
+      225,
+      225
+    ],
+    "accentHex": 1250069,
+    "accentRgb": [
+      19,
+      19,
+      21
+    ],
+    "darkHex": 3421237,
+    "darkRgb": [
+      52,
+      52,
+      53
+    ],
+    "brightHex": 15790834,
+    "brightRgb": [
+      240,
+      242,
+      242
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "top_down_seat_stays"
+    },
+    {
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "thin_aero_rims"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "bicycle_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

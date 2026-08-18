@@ -1,0 +1,49 @@
+{
+  "id": "tree_canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957",
+  "sourceImage": "tree/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957.png",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.897,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 1777939,
+    "primaryRgb": [
+      27,
+      33,
+      19
+    ],
+    "accentHex": 15132389,
+    "accentRgb": [
+      230,
+      230,
+      229
+    ],
+    "darkHex": 1053962,
+    "darkRgb": [
+      16,
+      21,
+      10
+    ],
+    "brightHex": 13685199,
+    "brightRgb": [
+      208,
+      209,
+      207
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "tiered_conical_whorls",
+      "method": "five_tiered_needle_canopies"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5"
+  ]
+}

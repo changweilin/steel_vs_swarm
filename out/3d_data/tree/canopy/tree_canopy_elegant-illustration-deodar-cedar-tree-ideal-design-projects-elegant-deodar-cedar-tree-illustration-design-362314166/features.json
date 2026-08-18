@@ -1,0 +1,49 @@
+{
+  "id": "tree_canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166",
+  "sourceImage": "tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.985,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 11252659,
+    "primaryRgb": [
+      171,
+      179,
+      179
+    ],
+    "accentHex": 403273,
+    "accentRgb": [
+      6,
+      39,
+      73
+    ],
+    "darkHex": 2310468,
+    "darkRgb": [
+      35,
+      65,
+      68
+    ],
+    "brightHex": 16514043,
+    "brightRgb": [
+      251,
+      251,
+      251
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "tiered_conical_whorls",
+      "method": "five_tiered_needle_canopies"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5"
+  ]
+}

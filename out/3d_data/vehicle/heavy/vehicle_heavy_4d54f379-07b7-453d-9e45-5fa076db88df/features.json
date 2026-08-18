@@ -1,0 +1,65 @@
+{
+  "id": "vehicle_heavy_4d54f379-07b7-453d-9e45-5fa076db88df",
+  "sourceImage": "vehicle/heavy/4d54f379-07b7-453d-9e45-5fa076db88df.jpg",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.81,
+  "aspectRatio": 1.333,
+  "colors": {
+    "primaryHex": 8609627,
+    "primaryRgb": [
+      131,
+      95,
+      91
+    ],
+    "accentHex": 15199986,
+    "accentRgb": [
+      231,
+      238,
+      242
+    ],
+    "darkHex": 6232865,
+    "darkRgb": [
+      95,
+      27,
+      33
+    ],
+    "brightHex": 12765373,
+    "brightRgb": [
+      194,
+      200,
+      189
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "enclosed_cargo_box",
+      "method": "composite_insulated_box"
+    },
+    {
+      "name": "dual_vertical_exhausts",
+      "method": "chrome_exhaust_stacks"
+    },
+    {
+      "name": "heavy_truck_dual_exhaust_and_axles",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.1
+    }
+  ],
+  "totalParts": 13,
+  "partNames": [
+    "freight_chassis_frame",
+    "freight_cab_body",
+    "cab_windshield",
+    "freight_cargo_box",
+    "rear_rollup_door",
+    "exhaust_stack_left",
+    "steer_wheel_left",
+    "drive_wheel_1_left",
+    "drive_wheel_2_left",
+    "exhaust_stack_right",
+    "steer_wheel_right",
+    "drive_wheel_1_right",
+    "drive_wheel_2_right"
+  ]
+}

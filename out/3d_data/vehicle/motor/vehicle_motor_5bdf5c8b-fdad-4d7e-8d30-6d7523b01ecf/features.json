@@ -1,0 +1,54 @@
+{
+  "id": "vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
+  "sourceImage": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf.jpg",
+  "style": "standard_motor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.813,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 11119279,
+    "primaryRgb": [
+      169,
+      170,
+      175
+    ],
+    "accentHex": 262920,
+    "accentRgb": [
+      4,
+      3,
+      8
+    ],
+    "darkHex": 2500659,
+    "darkRgb": [
+      38,
+      40,
+      51
+    ],
+    "brightHex": 16251128,
+    "brightRgb": [
+      247,
+      248,
+      248
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "chassis_engine_block",
+      "method": "v_twin_cylinder_cooling_fins"
+    },
+    {
+      "name": "dual_chrome_pipes",
+      "method": "staggered_exhaust_system"
+    }
+  ],
+  "totalParts": 7,
+  "partNames": [
+    "motorcycle_engine_chassis",
+    "teardrop_fuel_tank",
+    "leather_saddle",
+    "chrome_handlebars",
+    "round_headlight",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

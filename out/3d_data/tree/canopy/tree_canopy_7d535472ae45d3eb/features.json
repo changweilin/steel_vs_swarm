@@ -1,0 +1,56 @@
+{
+  "id": "tree_canopy_7d535472ae45d3eb",
+  "sourceImage": "tree/7d535472ae45d3eb.webp",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.898,
+  "aspectRatio": 1.335,
+  "colors": {
+    "primaryHex": 3628833,
+    "primaryRgb": [
+      55,
+      95,
+      33
+    ],
+    "accentHex": 16777215,
+    "accentRgb": [
+      255,
+      255,
+      255
+    ],
+    "darkHex": 2245141,
+    "darkRgb": [
+      34,
+      66,
+      21
+    ],
+    "brightHex": 15199972,
+    "brightRgb": [
+      231,
+      238,
+      228
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "fluted_buttress_roots",
+      "method": "organic_root_flare_spread"
+    },
+    {
+      "name": "undulating_dome_canopies",
+      "method": "asymmetric_foliage_clusters"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "gnarled_tree_trunk",
+    "buttress_root_fin_1",
+    "buttress_root_fin_2",
+    "buttress_root_fin_3",
+    "buttress_root_fin_4",
+    "canopy_foliage_dome_1",
+    "canopy_foliage_dome_2",
+    "canopy_foliage_dome_3",
+    "canopy_foliage_dome_4"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
+  "sourceImage": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.945,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 14079443,
+    "primaryRgb": [
+      214,
+      213,
+      211
+    ],
+    "accentHex": 723210,
+    "accentRgb": [
+      11,
+      9,
+      10
+    ],
+    "darkHex": 3682608,
+    "darkRgb": [
+      56,
+      49,
+      48
+    ],
+    "brightHex": 15856113,
+    "brightRgb": [
+      241,
+      241,
+      241
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "top_down_seat_stays"
+    },
+    {
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "thin_aero_rims"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "bicycle_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

@@ -3,37 +3,37 @@
   "key": "ship/hull_pngtree-a-small-fishing-boat-png-image_16296083_999a6ef2",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/pngtree-a-small-fishing-boat-png-image_16296083.png",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\pngtree-a-small-fishing-boat-png-image_16296083.png",
-  "created_at": "2026-08-18T05:52:57.199Z",
+  "created_at": "2026-08-18T10:56:14.217Z",
   "bounds": {
     "min": [
-      -23.4712,
-      -1.0062,
-      -4.9152
+      -24.7619,
+      -0.951,
+      -5.1935
     ],
     "max": [
-      25.8108,
-      16.6844,
-      4.9152
+      27.1336,
+      17.4875,
+      5.1935
     ],
     "size": [
-      49.282,
-      17.691,
-      9.83
+      51.895,
+      18.439,
+      10.387
     ],
-    "rMax": 26.275,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 27.626,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 49.412985427634084,
-    "W": 9.830373083085375,
-    "H": 14.854169527733273,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 52.13038834210727,
+    "W": 10.386915388723583,
+    "H": 14.140627145799954,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

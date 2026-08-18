@@ -1,0 +1,54 @@
+{
+  "id": "vehicle_motor_AF530-2",
+  "sourceImage": "vehicle/motor/AF530-2.webp",
+  "style": "standard_motor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.838,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 4407105,
+    "primaryRgb": [
+      67,
+      63,
+      65
+    ],
+    "accentHex": 16314871,
+    "accentRgb": [
+      248,
+      241,
+      247
+    ],
+    "darkHex": 1184274,
+    "darkRgb": [
+      18,
+      18,
+      18
+    ],
+    "brightHex": 14535379,
+    "brightRgb": [
+      221,
+      202,
+      211
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "chassis_engine_block",
+      "method": "v_twin_cylinder_cooling_fins"
+    },
+    {
+      "name": "dual_chrome_pipes",
+      "method": "staggered_exhaust_system"
+    }
+  ],
+  "totalParts": 7,
+  "partNames": [
+    "motorcycle_engine_chassis",
+    "teardrop_fuel_tank",
+    "leather_saddle",
+    "chrome_handlebars",
+    "round_headlight",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "vehicle_heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado",
+  "sourceImage": "vehicle/heavy/250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado.jpg",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.83,
+  "aspectRatio": 1.25,
+  "colors": {
+    "primaryHex": 7956841,
+    "primaryRgb": [
+      121,
+      105,
+      105
+    ],
+    "accentHex": 16777215,
+    "accentRgb": [
+      255,
+      255,
+      255
+    ],
+    "darkHex": 4075568,
+    "darkRgb": [
+      62,
+      48,
+      48
+    ],
+    "brightHex": 15460841,
+    "brightRgb": [
+      235,
+      233,
+      233
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "enclosed_cargo_box",
+      "method": "composite_insulated_box"
+    },
+    {
+      "name": "dual_vertical_exhausts",
+      "method": "chrome_exhaust_stacks"
+    },
+    {
+      "name": "heavy_truck_dual_exhaust_and_axles",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.1
+    }
+  ],
+  "totalParts": 13,
+  "partNames": [
+    "freight_chassis_frame",
+    "freight_cab_body",
+    "cab_windshield",
+    "freight_cargo_box",
+    "rear_rollup_door",
+    "exhaust_stack_left",
+    "steer_wheel_left",
+    "drive_wheel_1_left",
+    "drive_wheel_2_left",
+    "exhaust_stack_right",
+    "steer_wheel_right",
+    "drive_wheel_1_right",
+    "drive_wheel_2_right"
+  ]
+}

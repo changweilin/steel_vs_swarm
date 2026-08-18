@@ -3,36 +3,37 @@
   "key": "tree/canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree_6fb22c5a",
   "family": "tree",
   "subpart": "canopy",
+  "style": "giant_cryptomeria_redwood",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg",
-  "created_at": "2026-08-18T05:52:57.309Z",
+  "created_at": "2026-08-18T10:56:14.304Z",
   "bounds": {
     "min": [
-      -3.969,
+      -5.8865,
       0,
-      -4.0459
+      -6.2968
     ],
     "max": [
-      4.2406,
-      9.5335,
-      3.7973
+      6.8119,
+      16.3366,
+      6.1205
     ],
     "size": [
-      8.21,
-      9.534,
-      7.843
+      12.698,
+      16.337,
+      12.417
     ],
-    "rMax": 5.692,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 9.158,
+    "triangles": 152,
+    "vertices": 98
   },
   "spec": {
-    "L": 10.26203555352102,
-    "W": 7.513656824597543,
-    "H": 9.432867933165484,
-    "trunkH": 4.244790569924468,
-    "trunkR": 0.4670176241702907
+    "L": 13.26203555352102,
+    "W": 10.513656824597543,
+    "H": 15.432867933165484,
+    "style": "gnarled_broadleaf_buttress"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

@@ -1,0 +1,54 @@
+{
+  "id": "vehicle_motor_SYM70 共創設計DRGBT 優勝彩繪款",
+  "sourceImage": "vehicle/motor/SYM70 共創設計DRGBT 優勝彩繪款.jpg",
+  "style": "standard_motor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.836,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 8949135,
+    "primaryRgb": [
+      136,
+      141,
+      143
+    ],
+    "accentHex": 0,
+    "accentRgb": [
+      0,
+      0,
+      0
+    ],
+    "darkHex": 2369576,
+    "darkRgb": [
+      36,
+      40,
+      40
+    ],
+    "brightHex": 14475751,
+    "brightRgb": [
+      220,
+      225,
+      231
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "chassis_engine_block",
+      "method": "v_twin_cylinder_cooling_fins"
+    },
+    {
+      "name": "dual_chrome_pipes",
+      "method": "staggered_exhaust_system"
+    }
+  ],
+  "totalParts": 7,
+  "partNames": [
+    "motorcycle_engine_chassis",
+    "teardrop_fuel_tank",
+    "leather_saddle",
+    "chrome_handlebars",
+    "round_headlight",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

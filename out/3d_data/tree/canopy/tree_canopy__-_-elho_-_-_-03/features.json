@@ -1,0 +1,56 @@
+{
+  "id": "tree_canopy_網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03",
+  "sourceImage": "tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.863,
+  "aspectRatio": 1.501,
+  "colors": {
+    "primaryHex": 13949389,
+    "primaryRgb": [
+      212,
+      217,
+      205
+    ],
+    "accentHex": 732162,
+    "accentRgb": [
+      11,
+      44,
+      2
+    ],
+    "darkHex": 3099413,
+    "darkRgb": [
+      47,
+      75,
+      21
+    ],
+    "brightHex": 15461356,
+    "brightRgb": [
+      235,
+      235,
+      236
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "fluted_buttress_roots",
+      "method": "organic_root_flare_spread"
+    },
+    {
+      "name": "undulating_dome_canopies",
+      "method": "asymmetric_foliage_clusters"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "gnarled_tree_trunk",
+    "buttress_root_fin_1",
+    "buttress_root_fin_2",
+    "buttress_root_fin_3",
+    "buttress_root_fin_4",
+    "canopy_foliage_dome_1",
+    "canopy_foliage_dome_2",
+    "canopy_foliage_dome_3",
+    "canopy_foliage_dome_4"
+  ]
+}

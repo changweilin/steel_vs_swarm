@@ -1,0 +1,54 @@
+{
+  "id": "vehicle_motor_A74ASA4_PictureItem_Clipping_01_3",
+  "sourceImage": "vehicle/motor/A74ASA4_PictureItem_Clipping_01_3.jpg",
+  "style": "standard_motor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.894,
+  "aspectRatio": 1.501,
+  "colors": {
+    "primaryHex": 11709355,
+    "primaryRgb": [
+      178,
+      171,
+      171
+    ],
+    "accentHex": 3421236,
+    "accentRgb": [
+      52,
+      52,
+      52
+    ],
+    "darkHex": 4801604,
+    "darkRgb": [
+      73,
+      68,
+      68
+    ],
+    "brightHex": 16185078,
+    "brightRgb": [
+      246,
+      246,
+      246
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "chassis_engine_block",
+      "method": "v_twin_cylinder_cooling_fins"
+    },
+    {
+      "name": "dual_chrome_pipes",
+      "method": "staggered_exhaust_system"
+    }
+  ],
+  "totalParts": 7,
+  "partNames": [
+    "motorcycle_engine_chassis",
+    "teardrop_fuel_tank",
+    "leather_saddle",
+    "chrome_handlebars",
+    "round_headlight",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

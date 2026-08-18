@@ -1,0 +1,58 @@
+{
+  "id": "tree_canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree",
+  "sourceImage": "tree/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg",
+  "style": "giant_cryptomeria_redwood",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.804,
+  "aspectRatio": 0.667,
+  "colors": {
+    "primaryHex": 8289646,
+    "primaryRgb": [
+      126,
+      125,
+      110
+    ],
+    "accentHex": 15988477,
+    "accentRgb": [
+      243,
+      246,
+      253
+    ],
+    "darkHex": 4604977,
+    "darkRgb": [
+      70,
+      68,
+      49
+    ],
+    "brightHex": 12438490,
+    "brightRgb": [
+      189,
+      203,
+      218
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "fluted_buttress_roots",
+      "method": "organic_root_flare_spread"
+    },
+    {
+      "name": "undulating_dome_canopies",
+      "method": "asymmetric_foliage_clusters"
+    }
+  ],
+  "totalParts": 11,
+  "partNames": [
+    "gnarled_tree_trunk",
+    "buttress_root_fin_1",
+    "buttress_root_fin_2",
+    "buttress_root_fin_3",
+    "buttress_root_fin_4",
+    "canopy_foliage_dome_1",
+    "canopy_foliage_dome_2",
+    "canopy_foliage_dome_3",
+    "canopy_foliage_dome_4",
+    "canopy_foliage_dome_5",
+    "canopy_foliage_dome_6"
+  ]
+}

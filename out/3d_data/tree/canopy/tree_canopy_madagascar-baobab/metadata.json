@@ -3,36 +3,37 @@
   "key": "tree/canopy_madagascar-baobab_57ead4aa",
   "family": "tree",
   "subpart": "canopy",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/madagascar-baobab.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\madagascar-baobab.jpg",
-  "created_at": "2026-08-18T05:52:57.347Z",
+  "created_at": "2026-08-18T10:56:14.327Z",
   "bounds": {
     "min": [
-      -3.7991,
+      -3.8,
       0,
-      -3.8112
+      -3.8
     ],
     "max": [
-      3.5892,
-      16.8801,
-      3.8009
+      3.8,
+      12.6531,
+      3.8
     ],
     "size": [
-      7.388,
-      16.88,
-      7.612
+      7.6,
+      12.653,
+      7.6
     ],
-    "rMax": 5.381,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 5.374,
+    "triangles": 184,
+    "vertices": 110
   },
   "spec": {
-    "L": 7.38715953307393,
-    "W": 9.357404440375372,
-    "H": 16.70189974822614,
-    "trunkH": 7.515854886701763,
-    "trunkR": 0.4828564888990616
+    "L": 8.532295719844358,
+    "W": 9.714442664225222,
+    "H": 14.85094987411307,
+    "style": "succulent_bottle_baobab"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

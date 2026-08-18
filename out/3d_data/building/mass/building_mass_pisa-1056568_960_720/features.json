@@ -1,0 +1,61 @@
+{
+  "id": "building_mass_pisa-1056568_960_720",
+  "sourceImage": "building/pisa-1056568_960_720.jpg",
+  "style": "leaning_arcade_tower",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.901,
+  "aspectRatio": 1.333,
+  "colors": {
+    "primaryHex": 5342132,
+    "primaryRgb": [
+      81,
+      131,
+      180
+    ],
+    "accentHex": 527110,
+    "accentRgb": [
+      8,
+      11,
+      6
+    ],
+    "darkHex": 1526400,
+    "darkRgb": [
+      23,
+      74,
+      128
+    ],
+    "brightHex": 13618881,
+    "brightRgb": [
+      207,
+      206,
+      193
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "concentric_arcades",
+      "method": "six_tiered_radial_galleries"
+    },
+    {
+      "name": "inclination_lean",
+      "method": "authentic_axial_tilt"
+    }
+  ],
+  "totalParts": 14,
+  "partNames": [
+    "ground_tier_blind_arcade",
+    "arcade_gallery_tier_1",
+    "balustrade_rim_1",
+    "arcade_gallery_tier_2",
+    "balustrade_rim_2",
+    "arcade_gallery_tier_3",
+    "balustrade_rim_3",
+    "arcade_gallery_tier_4",
+    "balustrade_rim_4",
+    "arcade_gallery_tier_5",
+    "balustrade_rim_5",
+    "arcade_gallery_tier_6",
+    "balustrade_rim_6",
+    "top_belfry_chamber"
+  ]
+}

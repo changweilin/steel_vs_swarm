@@ -3,36 +3,37 @@
   "key": "tree/canopy_Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)_499ba6ec",
   "family": "tree",
   "subpart": "canopy",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg",
-  "created_at": "2026-08-18T05:52:57.334Z",
+  "created_at": "2026-08-18T10:56:14.320Z",
   "bounds": {
     "min": [
-      -4.1491,
+      -3.8,
       0,
-      -3.9729
+      -3.8
     ],
     "max": [
-      3.9234,
-      11.1354,
-      4.0997
+      3.8,
+      10.8058,
+      3.8
     ],
     "size": [
-      8.072,
-      11.135,
-      8.073
+      7.6,
+      10.806,
+      7.6
     ],
-    "rMax": 5.744,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 5.374,
+    "triangles": 184,
+    "vertices": 110
   },
   "spec": {
-    "L": 9.364957656214237,
-    "W": 8.930457007705806,
-    "H": 11.017853055619135,
-    "trunkH": 4.958033875028611,
-    "trunkR": 0.6618631265735866
+    "L": 9.718974593728541,
+    "W": 9.458274204623484,
+    "H": 12.008926527809567,
+    "style": "succulent_bottle_baobab"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

@@ -1,0 +1,69 @@
+{
+  "id": "vehicle_car_881e58ddc9cd0cc82af65be198476506",
+  "sourceImage": "vehicle/car/881e58ddc9cd0cc82af65be198476506.jpg",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.833,
+  "aspectRatio": 1.778,
+  "colors": {
+    "primaryHex": 6961471,
+    "primaryRgb": [
+      106,
+      57,
+      63
+    ],
+    "accentHex": 16709861,
+    "accentRgb": [
+      254,
+      248,
+      229
+    ],
+    "darkHex": 5382181,
+    "darkRgb": [
+      82,
+      32,
+      37
+    ],
+    "brightHex": 13551555,
+    "brightRgb": [
+      206,
+      199,
+      195
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "three_box_profile",
+      "method": "hood_cabin_trunk_architecture"
+    },
+    {
+      "name": "symmetric_mirrors_and_lights",
+      "method": "bilateral_mirror_Z_axis"
+    },
+    {
+      "name": "mirrored_sedan_features",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 0.8099999999999999
+    }
+  ],
+  "totalParts": 17,
+  "partNames": [
+    "sedan_main_body",
+    "sedan_glass_cabin",
+    "engine_hood_slope",
+    "trunk_decklid",
+    "radiator_grille",
+    "front_bumper",
+    "rear_bumper",
+    "headlight_left",
+    "taillight_left",
+    "side_mirror_left",
+    "wheel_front_left",
+    "wheel_rear_left",
+    "headlight_right",
+    "taillight_right",
+    "side_mirror_right",
+    "wheel_front_right",
+    "wheel_rear_right"
+  ]
+}

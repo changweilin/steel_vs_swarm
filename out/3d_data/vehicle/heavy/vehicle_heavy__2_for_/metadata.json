@@ -3,54 +3,38 @@
   "key": "vehicle/heavy_規格表2大圖合for官網_5e037079",
   "family": "vehicle",
   "subpart": "heavy",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/heavy/規格表2大圖合for官網.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\規格表2大圖合for官網.jpg",
-  "created_at": "2026-08-18T05:52:57.708Z",
+  "created_at": "2026-08-18T10:56:14.618Z",
   "bounds": {
     "min": [
-      -5.4683,
+      -5.3231,
       0.0255,
-      -1.2877
+      -1.313
     ],
     "max": [
-      5.6733,
-      3.8956,
-      1.2877
+      5.4131,
+      4,
+      1.313
     ],
     "size": [
-      11.142,
-      3.87,
-      2.575
+      10.736,
+      3.974,
+      2.626
     ],
-    "rMax": 5.818,
-    "triangles": 300,
-    "vertices": 172
+    "rMax": 5.57,
+    "triangles": 348,
+    "vertices": 200
   },
   "spec": {
-    "L": 11.336690318150607,
-    "W": 2.55,
-    "H": 3.8955825131609063,
+    "L": 10.826207370107577,
+    "W": 2.6,
+    "H": 4.062985427634088,
     "R": 0.52,
-    "axle": [
-      -3.9678416113527124,
-      -1.700503547722591,
-      4.081208514534218
-    ],
-    "sill": 1.02,
-    "waist": 1.35,
-    "roof": 3.8955825131609063,
-    "cab": [
-      2.834172579537652,
-      5.441611352712291
-    ],
-    "rakeF": 0.12,
-    "rakeR": 0,
-    "extra": [
-      "heavy_box",
-      "mirror",
-      "exhaust"
-    ]
+    "style": "heavy_cargo_freight_truck"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

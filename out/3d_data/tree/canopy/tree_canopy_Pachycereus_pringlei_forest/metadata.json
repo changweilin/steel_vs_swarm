@@ -3,36 +3,37 @@
   "key": "tree/canopy_Pachycereus_pringlei_forest_364afc0a",
   "family": "tree",
   "subpart": "canopy",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/Pachycereus_pringlei_forest.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Pachycereus_pringlei_forest.jpg",
-  "created_at": "2026-08-18T05:52:57.352Z",
+  "created_at": "2026-08-18T10:56:14.330Z",
   "bounds": {
     "min": [
-      -4.2754,
+      -6.3567,
       0,
-      -4.128
+      -6.5921
     ],
     "max": [
-      4.383,
-      13.6143,
-      4.4258
+      6.8591,
+      18.4779,
+      5.2655
     ],
     "size": [
-      8.658,
-      13.614,
-      8.554
+      13.216,
+      18.478,
+      11.858
     ],
-    "rMax": 6.229,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 9.158,
+    "triangles": 128,
+    "vertices": 82
   },
   "spec": {
-    "L": 10.331006332494088,
-    "W": 9.055123216601816,
-    "H": 13.470649271381705,
-    "trunkH": 6.061792172121767,
-    "trunkR": 0.563625543602655
+    "L": 13.331006332494088,
+    "W": 12.055123216601816,
+    "H": 19.470649271381703,
+    "style": "gnarled_broadleaf_buttress"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

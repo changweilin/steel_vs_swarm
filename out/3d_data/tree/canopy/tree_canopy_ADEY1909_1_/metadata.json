@@ -3,36 +3,37 @@
   "key": "tree/canopy_ADEY1909 (1)_569f65ab",
   "family": "tree",
   "subpart": "canopy",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/ADEY1909 (1).jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\ADEY1909 (1).jpg",
-  "created_at": "2026-08-18T05:52:57.265Z",
+  "created_at": "2026-08-18T10:56:14.263Z",
   "bounds": {
     "min": [
-      -3.5908,
+      -5.6658,
       0,
-      -3.6517
+      -6.3144
     ],
     "max": [
-      3.5866,
-      13.5401,
-      3.668
+      5.1797,
+      18.7947,
+      5.7893
     ],
     "size": [
-      7.177,
-      13.54,
-      7.32
+      10.846,
+      18.795,
+      12.104
     ],
-    "rMax": 5.13,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 8.484,
+    "triangles": 128,
+    "vertices": 82
   },
   "spec": {
-    "L": 7.209849698634318,
-    "W": 9.056801709010452,
-    "H": 13.397161821927215,
-    "trunkH": 6.028722819867247,
-    "trunkR": 0.639441519798581
+    "L": 10.209849698634317,
+    "W": 12.056801709010452,
+    "H": 19.397161821927213,
+    "style": "gnarled_broadleaf_buttress"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

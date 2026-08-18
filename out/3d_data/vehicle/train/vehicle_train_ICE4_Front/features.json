@@ -1,0 +1,86 @@
+{
+  "id": "vehicle_train_ICE4_Front",
+  "sourceImage": "vehicle/train/ICE4_Front.jpg",
+  "style": "bullet_train_emu",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.816,
+  "aspectRatio": 1.778,
+  "colors": {
+    "primaryHex": 7829366,
+    "primaryRgb": [
+      119,
+      119,
+      118
+    ],
+    "accentHex": 16251132,
+    "accentRgb": [
+      247,
+      248,
+      252
+    ],
+    "darkHex": 3157293,
+    "darkRgb": [
+      48,
+      45,
+      45
+    ],
+    "brightHex": 14343646,
+    "brightRgb": [
+      218,
+      221,
+      222
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "aerodynamic_wedge_nose",
+      "method": "high_speed_emu_cowl"
+    },
+    {
+      "name": "single_arm_pantograph",
+      "method": "roof_catenary_collector"
+    },
+    {
+      "name": "flush_continuous_windows",
+      "method": "tinted_glass_ribbon"
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    }
+  ],
+  "totalParts": 15,
+  "partNames": [
+    "train_car_body",
+    "roof_aerodynamic_cap",
+    "continuous_tinted_windows",
+    "aerodynamic_bullet_nose",
+    "high_speed_pantograph",
+    "train_bogie_frame_r",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "train_bogie_frame_f",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right"
+  ]
+}

@@ -3,54 +3,38 @@
   "key": "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_611d4559",
   "family": "vehicle",
   "subpart": "heavy",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/heavy/long-haul-semi-truck-on-260nw-2742073731.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\long-haul-semi-truck-on-260nw-2742073731.jpg",
-  "created_at": "2026-08-18T05:52:57.683Z",
+  "created_at": "2026-08-18T10:56:14.599Z",
   "bounds": {
     "min": [
-      -5.4289,
+      -5.2949,
       0.0255,
-      -1.2877
+      -1.313
     ],
     "max": [
-      5.6339,
-      3.4353,
-      1.2877
+      5.3849,
+      4,
+      1.313
     ],
     "size": [
-      11.063,
-      3.41,
-      2.575
+      10.68,
+      3.974,
+      2.626
     ],
-    "rMax": 5.779,
-    "triangles": 300,
-    "vertices": 172
+    "rMax": 5.543,
+    "triangles": 348,
+    "vertices": 200
   },
   "spec": {
-    "L": 11.257701991302358,
-    "W": 2.55,
-    "H": 3.4353124284733347,
+    "L": 10.769787136644542,
+    "W": 2.6,
+    "H": 3.679427023727779,
     "R": 0.52,
-    "axle": [
-      -3.940195696955825,
-      -1.6886552986953538,
-      4.052772716868849
-    ],
-    "sill": 1.02,
-    "waist": 1.35,
-    "roof": 3.4353124284733347,
-    "cab": [
-      2.8144254978255896,
-      5.403696955825132
-    ],
-    "rakeF": 0.12,
-    "rakeR": 0,
-    "extra": [
-      "heavy_box",
-      "mirror",
-      "exhaust"
-    ]
+    "style": "heavy_cargo_freight_truck"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

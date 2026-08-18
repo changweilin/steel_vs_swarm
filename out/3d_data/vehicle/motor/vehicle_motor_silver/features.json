@@ -1,0 +1,54 @@
+{
+  "id": "vehicle_motor_silver",
+  "sourceImage": "vehicle/motor/silver.png",
+  "style": "standard_motor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.746,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 8289920,
+    "primaryRgb": [
+      126,
+      126,
+      128
+    ],
+    "accentHex": 16777215,
+    "accentRgb": [
+      255,
+      255,
+      255
+    ],
+    "darkHex": 2565929,
+    "darkRgb": [
+      39,
+      39,
+      41
+    ],
+    "brightHex": 15921907,
+    "brightRgb": [
+      242,
+      242,
+      243
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "chassis_engine_block",
+      "method": "v_twin_cylinder_cooling_fins"
+    },
+    {
+      "name": "dual_chrome_pipes",
+      "method": "staggered_exhaust_system"
+    }
+  ],
+  "totalParts": 7,
+  "partNames": [
+    "motorcycle_engine_chassis",
+    "teardrop_fuel_tank",
+    "leather_saddle",
+    "chrome_handlebars",
+    "round_headlight",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

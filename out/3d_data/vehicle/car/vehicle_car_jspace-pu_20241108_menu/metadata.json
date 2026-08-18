@@ -3,57 +3,38 @@
   "key": "vehicle/car_jspace-pu_20241108_menu_f9d0505b",
   "family": "vehicle",
   "subpart": "car",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/jspace-pu_20241108_menu.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\jspace-pu_20241108_menu.jpg",
-  "created_at": "2026-08-18T05:52:57.569Z",
+  "created_at": "2026-08-18T10:56:14.512Z",
   "bounds": {
     "min": [
-      -2.4642,
-      0.0166,
-      -0.946
+      -2.5728,
+      0.0171,
+      -0.9748
     ],
     "max": [
-      2.4642,
-      1.3793,
-      0.946
+      2.5828,
+      1.6419,
+      0.9748
     ],
     "size": [
-      4.928,
-      1.363,
-      1.892
+      5.156,
+      1.625,
+      1.95
     ],
-    "rMax": 2.64,
-    "triangles": 208,
-    "vertices": 120
+    "rMax": 2.761,
+    "triangles": 316,
+    "vertices": 192
   },
   "spec": {
-    "L": 4.928455024032959,
-    "W": 1.8919233997100784,
-    "H": 1.3792942702372777,
-    "R": 0.34,
-    "axle": [
-      -1.3799674067292287,
-      1.3799674067292287
-    ],
-    "sill": 0.42,
-    "waist": 0.95,
-    "roof": 1.3792942702372777,
-    "cab": [
-      -1.0842601052872511,
-      0.7392682536049439
-    ],
-    "rakeF": 0.34,
-    "rakeR": 0.2,
-    "side": [
-      0.48,
-      0.9
-    ],
-    "extra": [
-      "mirror",
-      "headlight",
-      "grille"
-    ]
+    "L": 5.08563668268864,
+    "W": 1.92,
+    "H": 1.6419233997100786,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

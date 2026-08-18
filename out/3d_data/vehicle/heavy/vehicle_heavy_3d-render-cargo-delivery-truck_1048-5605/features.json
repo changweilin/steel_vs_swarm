@@ -1,0 +1,65 @@
+{
+  "id": "vehicle_heavy_3d-render-cargo-delivery-truck_1048-5605",
+  "sourceImage": "vehicle/heavy/3d-render-cargo-delivery-truck_1048-5605.jpg",
+  "style": "box_van_delivery",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.9,
+  "aspectRatio": 2.222,
+  "colors": {
+    "primaryHex": 11382447,
+    "primaryRgb": [
+      173,
+      174,
+      175
+    ],
+    "accentHex": 0,
+    "accentRgb": [
+      0,
+      0,
+      0
+    ],
+    "darkHex": 2039840,
+    "darkRgb": [
+      31,
+      32,
+      32
+    ],
+    "brightHex": 14737890,
+    "brightRgb": [
+      224,
+      225,
+      226
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "enclosed_cargo_box",
+      "method": "composite_insulated_box"
+    },
+    {
+      "name": "dual_vertical_exhausts",
+      "method": "chrome_exhaust_stacks"
+    },
+    {
+      "name": "heavy_truck_dual_exhaust_and_axles",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.1
+    }
+  ],
+  "totalParts": 13,
+  "partNames": [
+    "freight_chassis_frame",
+    "freight_cab_body",
+    "cab_windshield",
+    "freight_cargo_box",
+    "rear_rollup_door",
+    "exhaust_stack_left",
+    "steer_wheel_left",
+    "drive_wheel_1_left",
+    "drive_wheel_2_left",
+    "exhaust_stack_right",
+    "steer_wheel_right",
+    "drive_wheel_1_right",
+    "drive_wheel_2_right"
+  ]
+}

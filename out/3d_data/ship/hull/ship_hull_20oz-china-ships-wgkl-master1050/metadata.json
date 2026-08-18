@@ -3,37 +3,37 @@
   "key": "ship/hull_20oz-china-ships-wgkl-master1050_a5c7cd0b",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/20oz-china-ships-wgkl-master1050.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\20oz-china-ships-wgkl-master1050.jpg",
-  "created_at": "2026-08-18T05:52:57.130Z",
+  "created_at": "2026-08-18T10:56:14.170Z",
   "bounds": {
     "min": [
-      -19.8294,
-      -0.8355,
-      -5.4048
+      -21.8485,
+      -0.8305,
+      -5.5199
     ],
     "max": [
-      21.9221,
-      17.845,
-      5.4048
+      24.0188,
+      18.416,
+      5.5199
     ],
     "size": [
-      41.752,
-      18.68,
-      10.81
+      45.867,
+      19.247,
+      11.04
     ],
-    "rMax": 22.579,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 24.645,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 41.74608987563897,
-    "W": 10.809636072327764,
-    "H": 17.43331044480049,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 45.99687190051118,
+    "W": 11.039757381551842,
+    "H": 16.074982833600366,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

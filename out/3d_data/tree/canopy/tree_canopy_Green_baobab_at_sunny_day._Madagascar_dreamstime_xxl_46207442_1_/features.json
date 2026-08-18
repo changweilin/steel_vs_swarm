@@ -1,0 +1,56 @@
+{
+  "id": "tree_canopy_Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)",
+  "sourceImage": "tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.868,
+  "aspectRatio": 1.5,
+  "colors": {
+    "primaryHex": 7965575,
+    "primaryRgb": [
+      121,
+      139,
+      135
+    ],
+    "accentHex": 1511439,
+    "accentRgb": [
+      23,
+      16,
+      15
+    ],
+    "darkHex": 4142885,
+    "darkRgb": [
+      63,
+      55,
+      37
+    ],
+    "brightHex": 10602727,
+    "brightRgb": [
+      161,
+      200,
+      231
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "swollen_bottle_trunk",
+      "method": "massive_succulent_barrel"
+    },
+    {
+      "name": "sparse_rosette_crown",
+      "method": "root_like_canopy_clusters"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "baobab_bottle_trunk",
+    "baobab_branch_1",
+    "baobab_foliage_clump_1",
+    "baobab_branch_2",
+    "baobab_foliage_clump_2",
+    "baobab_branch_3",
+    "baobab_foliage_clump_3",
+    "baobab_branch_4",
+    "baobab_foliage_clump_4"
+  ]
+}

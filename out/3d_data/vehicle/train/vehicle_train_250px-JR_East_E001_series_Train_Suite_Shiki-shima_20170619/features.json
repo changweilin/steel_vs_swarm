@@ -1,0 +1,86 @@
+{
+  "id": "vehicle_train_250px-JR_East_E001_series_Train_Suite_Shiki-shima_20170619",
+  "sourceImage": "vehicle/train/250px-JR_East_E001_series_Train_Suite_Shiki-shima_20170619.jpg",
+  "style": "freight_wagon",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.821,
+  "aspectRatio": 1.506,
+  "colors": {
+    "primaryHex": 7106902,
+    "primaryRgb": [
+      108,
+      113,
+      86
+    ],
+    "accentHex": 16711411,
+    "accentRgb": [
+      254,
+      254,
+      243
+    ],
+    "darkHex": 3225123,
+    "darkRgb": [
+      49,
+      54,
+      35
+    ],
+    "brightHex": 12765134,
+    "brightRgb": [
+      194,
+      199,
+      206
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "aerodynamic_wedge_nose",
+      "method": "high_speed_emu_cowl"
+    },
+    {
+      "name": "single_arm_pantograph",
+      "method": "roof_catenary_collector"
+    },
+    {
+      "name": "flush_continuous_windows",
+      "method": "tinted_glass_ribbon"
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    }
+  ],
+  "totalParts": 15,
+  "partNames": [
+    "train_car_body",
+    "roof_aerodynamic_cap",
+    "continuous_tinted_windows",
+    "aerodynamic_bullet_nose",
+    "high_speed_pantograph",
+    "train_bogie_frame_r",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "train_bogie_frame_f",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right"
+  ]
+}

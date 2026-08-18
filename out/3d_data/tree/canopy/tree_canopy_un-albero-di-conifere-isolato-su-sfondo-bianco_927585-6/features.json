@@ -1,0 +1,49 @@
+{
+  "id": "tree_canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6",
+  "sourceImage": "tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.956,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 13094090,
+    "primaryRgb": [
+      199,
+      204,
+      202
+    ],
+    "accentHex": 2834751,
+    "accentRgb": [
+      43,
+      65,
+      63
+    ],
+    "darkHex": 3490625,
+    "darkRgb": [
+      53,
+      67,
+      65
+    ],
+    "brightHex": 16579836,
+    "brightRgb": [
+      252,
+      252,
+      252
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "tiered_conical_whorls",
+      "method": "five_tiered_needle_canopies"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5"
+  ]
+}

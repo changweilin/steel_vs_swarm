@@ -1,0 +1,49 @@
+{
+  "id": "ship_hull_666",
+  "sourceImage": "ship/666.jpg",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.952,
+  "aspectRatio": 1.333,
+  "colors": {
+    "primaryHex": 6188420,
+    "primaryRgb": [
+      94,
+      109,
+      132
+    ],
+    "accentHex": 14802393,
+    "accentRgb": [
+      225,
+      221,
+      217
+    ],
+    "darkHex": 3623006,
+    "darkRgb": [
+      55,
+      72,
+      94
+    ],
+    "brightHex": 13487311,
+    "brightRgb": [
+      205,
+      204,
+      207
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "streamlined_hull_superstructure",
+      "method": "terraced_decks_and_masts"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "vessel_hull_body",
+    "bow_wedge_flare",
+    "vessel_main_deck",
+    "vessel_superstructure",
+    "vessel_funnel",
+    "vessel_radar_mast"
+  ]
+}

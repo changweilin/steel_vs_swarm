@@ -1,0 +1,49 @@
+{
+  "id": "ship_hull_中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧",
+  "sourceImage": "ship/中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧.jpg",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.936,
+  "aspectRatio": 1.778,
+  "colors": {
+    "primaryHex": 6649471,
+    "primaryRgb": [
+      101,
+      118,
+      127
+    ],
+    "accentHex": 15133422,
+    "accentRgb": [
+      230,
+      234,
+      238
+    ],
+    "darkHex": 2704978,
+    "darkRgb": [
+      41,
+      70,
+      82
+    ],
+    "brightHex": 12699340,
+    "brightRgb": [
+      193,
+      198,
+      204
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "streamlined_hull_superstructure",
+      "method": "terraced_decks_and_masts"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "vessel_hull_body",
+    "bow_wedge_flare",
+    "vessel_main_deck",
+    "vessel_superstructure",
+    "vessel_funnel",
+    "vessel_radar_mast"
+  ]
+}

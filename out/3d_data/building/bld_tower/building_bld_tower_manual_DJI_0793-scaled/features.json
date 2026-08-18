@@ -1,0 +1,76 @@
+{
+  "id": "building_bld_tower_manual_DJI_0793-scaled",
+  "sourceImage": "building/bld_tower/manual_DJI_0793-scaled.jpg",
+  "style": "modern_skyscraper_tower",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.852,
+  "aspectRatio": 1.501,
+  "colors": {
+    "primaryHex": 7897736,
+    "primaryRgb": [
+      120,
+      130,
+      136
+    ],
+    "accentHex": 395016,
+    "accentRgb": [
+      6,
+      7,
+      8
+    ],
+    "darkHex": 3553084,
+    "darkRgb": [
+      54,
+      55,
+      60
+    ],
+    "brightHex": 11520733,
+    "brightRgb": [
+      175,
+      202,
+      221
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_setback_tower",
+      "method": "triple_tier_massing"
+    },
+    {
+      "name": "curtain_wall_ribs",
+      "method": "vertical_mullion_grid"
+    },
+    {
+      "name": "rooftop_mechanicals",
+      "method": "chillers_and_antenna"
+    }
+  ],
+  "totalParts": 25,
+  "partNames": [
+    "podium_lobby_glass",
+    "entrance_canopy",
+    "tower_tier_1",
+    "tower_tier_2_setback",
+    "tower_tier_3_crown",
+    "floor_spandrel_1",
+    "floor_spandrel_2",
+    "floor_spandrel_3",
+    "floor_spandrel_4",
+    "floor_spandrel_5",
+    "floor_spandrel_6",
+    "floor_spandrel_7",
+    "floor_spandrel_8",
+    "floor_spandrel_9",
+    "floor_spandrel_10",
+    "floor_spandrel_11",
+    "floor_spandrel_12",
+    "floor_spandrel_13",
+    "floor_spandrel_14",
+    "floor_spandrel_15",
+    "floor_spandrel_16",
+    "floor_spandrel_17",
+    "floor_spandrel_18",
+    "rooftop_hvac_penthouse",
+    "rooftop_antenna_spire"
+  ]
+}

@@ -3,36 +3,37 @@
   "key": "building/bld_tower_manual_1711450890-2085471680-g_6952afb2",
   "family": "building",
   "subpart": "bld_tower",
+  "style": "commercial_residential",
+  "symmetryMode": "asymmetric",
   "source_image": "building/bld_tower/manual_1711450890-2085471680-g.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\bld_tower\\manual_1711450890-2085471680-g.jpg",
-  "created_at": "2026-08-18T05:52:57.026Z",
+  "created_at": "2026-08-18T10:56:14.104Z",
   "bounds": {
     "min": [
-      -12.4759,
+      -11.6506,
       0,
-      -12.4997
+      -11.2498
     ],
     "max": [
-      12.4759,
-      30.7472,
-      12.4997
+      11.6506,
+      24.0345,
+      10.9498
     ],
     "size": [
-      24.952,
-      30.747,
-      24.999
+      23.301,
+      24.035,
+      22.2
     ],
-    "rMax": 17.66,
-    "triangles": 120,
-    "vertices": 78
+    "rMax": 16.196,
+    "triangles": 348,
+    "vertices": 232
   },
   "spec": {
-    "L": 24.951888303959716,
-    "W": 24.99931334401465,
-    "H": 26.74720378423743,
-    "stories": 8,
-    "roofBand": 0.15
+    "L": 23.301258869306476,
+    "W": 19.499656672007326,
+    "H": 24.034515907530327,
+    "style": "commercial_residential_asymmetric"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

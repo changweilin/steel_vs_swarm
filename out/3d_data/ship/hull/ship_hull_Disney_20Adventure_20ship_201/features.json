@@ -1,0 +1,49 @@
+{
+  "id": "ship_hull_Disney%20Adventure%20ship%201",
+  "sourceImage": "ship/Disney%20Adventure%20ship%201.jpg",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.843,
+  "aspectRatio": 1.778,
+  "colors": {
+    "primaryHex": 6588070,
+    "primaryRgb": [
+      100,
+      134,
+      166
+    ],
+    "accentHex": 198161,
+    "accentRgb": [
+      3,
+      6,
+      17
+    ],
+    "darkHex": 1583428,
+    "darkRgb": [
+      24,
+      41,
+      68
+    ],
+    "brightHex": 12900068,
+    "brightRgb": [
+      196,
+      214,
+      228
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "streamlined_hull_superstructure",
+      "method": "terraced_decks_and_masts"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "vessel_hull_body",
+    "bow_wedge_flare",
+    "vessel_main_deck",
+    "vessel_superstructure",
+    "vessel_funnel",
+    "vessel_radar_mast"
+  ]
+}

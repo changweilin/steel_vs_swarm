@@ -3,57 +3,38 @@
   "key": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_4a03f68e",
   "family": "vehicle",
   "subpart": "car",
+  "style": "suv_crossover",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
-  "created_at": "2026-08-18T05:52:57.513Z",
+  "created_at": "2026-08-18T10:56:14.469Z",
   "bounds": {
     "min": [
-      -2.3925,
-      0.0166,
-      -0.9081
+      -2.525,
+      0.0171,
+      -0.9748
     ],
     "max": [
-      2.3925,
-      1.5102,
-      0.9081
+      2.535,
+      1.5661,
+      0.9748
     ],
     "size": [
-      4.785,
-      1.494,
-      1.816
+      5.06,
+      1.549,
+      1.95
     ],
-    "rMax": 2.559,
-    "triangles": 208,
-    "vertices": 120
+    "rMax": 2.716,
+    "triangles": 316,
+    "vertices": 192
   },
   "spec": {
-    "L": 4.7849164568551155,
-    "W": 1.8161440451667048,
-    "H": 1.5101647974364842,
-    "R": 0.34,
-    "axle": [
-      -1.3397766079194324,
-      1.3397766079194324
-    ],
-    "sill": 0.42,
-    "waist": 0.95,
-    "roof": 1.5101647974364842,
-    "cab": [
-      -1.0526816205081253,
-      0.7177374685282673
-    ],
-    "rakeF": 0.34,
-    "rakeR": 0.2,
-    "side": [
-      0.48,
-      0.9
-    ],
-    "extra": [
-      "mirror",
-      "headlight",
-      "grille"
-    ]
+    "L": 4.989944304570077,
+    "W": 1.92,
+    "H": 1.5661440451667048,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }
