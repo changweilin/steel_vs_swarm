@@ -314,7 +314,7 @@ export async function stop(key) {
   // server 除了等它把埠放掉，還要等子行程真的結束：埠先釋放、exit 事件晚一拍時，監控資料
   // 才能在這次回應中帶回 endedAt。job 沒有埠，一樣只等行程真的收掉(採集迴圈可能正卡在
   // 15 分鐘的等待，但 `kill()` 對它是立刻的 —— 等的是 Node 把 exitCode 填上)。
-  while (Date.now() < until && (alive(rec) || (t.kind === 'server' && await listening(t.port)))) await sleep(POLL_MS);
+  while (Date.now() < until && (rec.child.exitCode === null || (t.kind === 'server' && await listening(t.port)))) await sleep(POLL_MS);
   // **紀錄留著**(舊版在這裡 `running.delete`):停下來之後才是最想回頭看日誌的時候 ——
   // 刪掉的話執行進度頁在按下停止的那一瞬間整個清空,看起來像「剛才什麼都沒跑」。
   // 存活判準吃的是 `alive()`(exitCode 已經填上 ⇒ 恆 false),不是這個 Map 有沒有這一格:

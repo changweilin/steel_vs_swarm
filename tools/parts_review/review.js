@@ -270,7 +270,120 @@ function buildMegalith(seed) {
 }
 
 function makeViewer() {
-   const hits = B.map((m, i) => (m.geometry.attributes.position.count === r.measured.verts ? i : -1))
+  const T = gfx.THREE;
+  const canvas = document.createElement('canvas');
+  const renderer = new T.WebGLRenderer({ canvas, antialias: true });
+  renderer.setClearColor(0x171b21, 1);
+  const scene = new T.Scene();
+  const SUN = new T.Vector3(-0.5, 0.45, -0.75).normalize();
+  const dir = new T.DirectionalLight(0xffffff, 2.1);
+  dir.position.copy(SUN).multiplyScalar(50);
+  scene.add(dir, new T.HemisphereLight(0xdff1ff, 0x2b2f38, 1.1));
+  scene.add(new T.GridHelper(30, 30, 0x4a5160, 0x3a4050));
+  const v = { canvas, renderer, scene, group: null, wire: null, live: false };
+
+  // 拖曳 = 兩側一起轉(orbit 是共用狀態);滾輪縮放同理
+  let drag = null;
+  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); app.spin = false; syncTools(); });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    gfx.orbit.yaw -= (e.clientX - drag.x) * 0.008;
+    gfx.orbit.pitch = Math.max(-0.35, Math.min(1.25, gfx.orbit.pitch + (e.clientY - drag.y) * 0.005));
+    drag = { x: e.clientX, y: e.clientY };
+  });
+  const stop = () => { drag = null; };
+  canvas.addEventListener('pointerup', stop);
+  canvas.addEventListener('pointercancel', stop);
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); app.zoom = Math.max(0.5, Math.min(2.5, (app.zoom || 1) * (e.deltaY > 0 ? 1.08 : 0.93))); }, { passive: false });
+  return v;
+}
+
+/** 掛一件到某一側。讀數(三角形/mesh 數/碰撞柱)一律**量真品群組**,不抄伺服器端的數字 */
+function setViewerGroup(v, group, builder = 'beacon') {
+  const T = gfx.THREE;
+  if (v.group && v.group !== group) v.scene.remove(v.group);
+  if (v.wire) { v.scene.remove(v.wire); v.wire.geometry.dispose(); v.wire.material.dispose(); v.wire = null; }
+  v.group = group || null;
+  v.live = !!group;
+  if (!group) return null;
+  v.scene.add(group);
+  // 神木的碰撞柱不是由幾何量出來的(那是樹幹的登記柱,住 biomes 的散布端)⇒ 這裡照實
+  // 改量包圍盒,MUST NOT 拿 beaconCollider 硬套一個看起來很像碰撞柱的東西上去。
+  // 巨岩同理但反過來:它**有**登記柱(synthMegalith 回傳的 `col`),量包圍盒才是假的。
+  const col = (builder === 'veg' || builder === 'bld' || builder === 'model3d') ? vegExtent(group)
+    : builder === 'mega' ? group.userData.megaCol
+      : gfx.beacons.beaconCollider(group);
+  // 碰撞柱是**整件**的柱子(163m 的巨岩那一根尤其)⇒ 零件取景不畫它,否則畫面上只剩幾條
+  // 從天到地的青線,而要看的那一顆零件在中間被切成兩半
+  if (app.collider && builder !== 'veg' && builder !== 'bld' && builder !== 'model3d' && app.dist !== 'part') {
+    v.wire = new T.Mesh(
+      new T.CylinderGeometry(col.r, col.r, col.h, 14, 1, true),
+      new T.MeshBasicMaterial({ color: 0x2ee6d6, wireframe: true, transparent: true, opacity: 0.3 }),
+    );
+    v.wire.position.y = col.h / 2;
+    v.scene.add(v.wire);
+  }
+  let tris = 0, meshes = 0;
+  group.traverse((o) => {
+    if (!o.isMesh) return;
+    meshes++;
+    const g = o.geometry;
+    // InstancedMesh 一件 = 幾何 × 實例數(台上只擺一株,但別讓讀數把這件事藏起來)
+    tris += (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1);
+  });
+  return { tris, meshes, r: col.r, h: col.h, colWhat: COL_WHAT[builder] || COL_WHAT.beacon };
+}
+
+/** 讀數那一行的「這根柱子是什麼」——三種來源不同,寫同一個字就是騙人 */
+const COL_WHAT = {
+  beacon: '碰撞柱(實測)',
+  veg: '外廓(包圍盒;碰撞柱住散布端)',
+  mega: '碰撞柱(登記值 meta.col)',
+  bld: '外廓(包圍盒;屋頂配件不掛碰撞柱,建物本體的碰撞盒在 blockers)',
+  model3d: '3D 幾何外廓(包圍盒)',
+};
+
+/** 一個群組的 mesh,依 traversal 順序(兩側同一支建構器同一顆 seed ⇒ 逐索引對得起來)*/
+function meshesOf(group) {
+  const out = [];
+  group.traverse((o) => { if (o.isMesh) out.push(o); });
+  return out;
+}
+
+/** 一顆 mesh 的世界包圍球(取景與配對都吃這一份) */
+function sphereOf(m) {
+  const box = new gfx.THREE.Box3();
+  box.expandByObject(m);
+  return box.isEmpty() ? null : box.getBoundingSphere(new gfx.THREE.Sphere());
+}
+/** 配對半徑倍率:原版那顆 primitive 的中心落在庫節點包圍球的這個倍數以內就算「同一處」 */
+const PAIR_F = 1.5;
+
+/**
+ * 「換掉的就是它」是哪幾顆 mesh —— **量台上這兩團**,不由描述子推(描述子只說得出
+ * 「fallback 包絡多大、零件表上寫在哪」,說不出呼叫端把它擺到哪、拉多大:巨岩那幾顆是
+ * 單位包絡節點,`mesh.scale` 在建造端才定案)。回傳 `{ per: [原版索引[], 生成索引[]], focus }`。
+ *
+ * 兩條路,先後不可對調:
+ *   ① **先在「AI 生成」那一側依實測頂點數認人**(`megaGeo`/`buildBeacon` 都是 clone,
+ *      頂點數不變 ⇒ 認得到);原版那一側**以位置配對**,MUST NOT 假設索引對得起來 ——
+ *      命令式巨岩會把好幾件 primitive 換成一顆庫節點(2026-08-06 實測 92 → 49 顆 mesh),
+ *      逐索引配對在它身上整組落空,而症狀只是「這一列退回整件取景」。
+ *   ② 認不出來(beacons 依材質**合併成桶**,cairn 11 件 → 8 顆 mesh ⇒ 桶裡混著別的零件、
+ *      頂點數對不上)⇒ 退回**逐索引差集** = 「這一款換掉的全部」;那條路要求兩側粒度一致,
+ *      不一致就回 null 交給整件取景(寧缺勿錯,原則 6)。
+ *
+ * 同一個來源形狀的不同尺寸階(`canopy_c6` / `c8`)頂點數相同 —— 同款同時消費兩階時會一起
+ * 入選,那是實話(台上就是看到兩顆),MUST NOT 為了「只留一顆」去猜。
+ */
+function sliceOf(sides, r) {
+  if (sides.length < 2 || !sides[0]?.g || !sides[1]?.g || !r.measured) return null;
+  const A = meshesOf(sides[0].g), B = meshesOf(sides[1].g);
+  if (!A.length || !B.length) return null;
+  sides[0].g.updateMatrixWorld(true);
+  sides[1].g.updateMatrixWorld(true);
+
+  const hits = B.map((m, i) => (m.geometry.attributes.position.count === r.measured.verts ? i : -1))
     .filter((i) => i >= 0);
   if (!hits.length) {
     // 認不出來又配不了索引 = 這顆座號的建造端**根本沒用到這個節點**(命令式巨岩逐座號挑型),
