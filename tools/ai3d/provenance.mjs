@@ -14,7 +14,7 @@
 //
 // 照片不進儲存庫(runbook §3 規則 2)⇒ 只記相對路徑,能不能顯示由 `photoRoots` 當下解析。
 // A2:零 npm 依賴。
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, delimiter, dirname, join, resolve } from 'node:path';
 import { ROOT } from '../audit_src.mjs';
 
@@ -177,12 +177,17 @@ export function photoRoots(extra = null) {
   if (extra) roots.push(resolve(extra));
   roots.push(join(ROOT, 'tools', 'ai3d'));
   // ROOT 是 worktree ⇒ 回推一層拿到主檢出;不是 ⇒ ROOT 自己就是主檢出(重複的由 Set 收掉)
-  const m = ROOT.replace(/\\/g, '/').match(/^(.*)\/\.claude\/worktrees\/[^/]+$/);
-  const main = m ? m[1] : ROOT;
+  const mClaude = ROOT.replace(/\\/g, '/').match(/^(.*)\/\.claude\/worktrees\/[^/]+$/);
+  const mGemini = ROOT.replace(/\\/g, '/').match(/^(.*)\/\.gemini\/antigravity\/worktrees\/[^/]+\/[^/]+$/);
+  const main = mClaude ? mClaude[1] : (mGemini ? mGemini[1] : ROOT);
   roots.push(join(main, 'tools', 'ai3d'));
-  const wt = join(main, '.claude', 'worktrees');
-  if (existsSync(wt)) {
-    for (const d of readdirSync(wt)) roots.push(join(wt, d, 'tools', 'ai3d'));
+  const wtClaude = join(main, '.claude', 'worktrees');
+  if (existsSync(wtClaude)) {
+    for (const d of readdirSync(wtClaude)) roots.push(join(wtClaude, d, 'tools', 'ai3d'));
+  }
+  const defaultStudy = join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', 'study', 'ai3d_restricted');
+  if (existsSync(defaultStudy)) {
+    roots.push(defaultStudy);
   }
   return [...new Set(roots)].filter((r) => existsSync(r));
 }
@@ -208,7 +213,7 @@ export function photoRoots(extra = null) {
  */
 export function extraHomes() {
   const out = [];
-  const push = (p) => { const r = p && resolve(p.trim()); if (r && !out.includes(r)) out.push(r); };
+  const push = (p) => { const r = p && resolve(p.trim()); if (r && !out.includes(r) && existsSync(r)) out.push(r); };
   for (const root of photoRoots()) {
     const f = join(root, 'corpus_homes.json');
     if (!existsSync(f)) continue;
@@ -218,6 +223,8 @@ export function extraHomes() {
     } catch { /* 讀不懂就當沒註冊(寧缺勿錯:壞掉的指標檔 MUST NOT 變成亂讀目錄的後門) */ }
   }
   for (const p of (process.env.SVS_PHOTO_HOMES || '').split(delimiter)) if (p) push(p);
+  const defaultStudy = join(process.env.USERPROFILE || process.env.HOME || '', 'Documents', 'study', 'ai3d_restricted');
+  if (existsSync(defaultStudy)) push(defaultStudy);
   return out;
 }
 
@@ -336,8 +343,19 @@ export function resolvePhoto(file, roots) {
   if (!file) return null;
   const rel = file.replace(/\\/g, '/');
   for (const r of roots) {
-    const p = join(r, rel);
-    if (existsSync(p)) return { path: p, root: r };
+    const candidates = [
+      join(r, rel),
+      join(r, 'photos', rel),
+      join(r, rel.startsWith('photos/') ? rel.slice('photos/'.length) : `photos/${rel}`),
+      join(r, 'photos', rel.startsWith('photos/') ? rel.slice('photos/'.length) : rel),
+    ];
+    for (const p of candidates) {
+      if (existsSync(p)) {
+        try {
+          if (!statSync(p).isDirectory()) return { path: p, root: r };
+        } catch {}
+      }
+    }
   }
   return null;
 }
