@@ -3,36 +3,37 @@
   "key": "tree/canopy_網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03_15b8dd04",
   "family": "tree",
   "subpart": "canopy",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg",
-  "created_at": "2026-08-18T05:52:57.393Z",
+  "created_at": "2026-08-18T10:56:14.356Z",
   "bounds": {
     "min": [
-      -4.5907,
+      -6.2822,
       0,
-      -4.6957
+      -6.4967
     ],
     "max": [
-      4.6598,
-      9.6698,
-      4.5548
+      7.3901,
+      14.8219,
+      5.5896
     ],
     "size": [
-      9.25,
-      9.67,
-      9.251
+      13.672,
+      14.822,
+      12.086
     ],
-    "rMax": 6.567,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 9.266,
+    "triangles": 128,
+    "vertices": 82
   },
   "spec": {
-    "L": 11.030937666895552,
-    "W": 9.934195468070497,
-    "H": 9.56775768673228,
-    "trunkH": 4.305490959029526,
-    "trunkR": 0.48427100022888536
+    "L": 14.030937666895552,
+    "W": 12.934195468070497,
+    "H": 15.56775768673228,
+    "style": "gnarled_broadleaf_buttress"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

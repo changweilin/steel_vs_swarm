@@ -3,37 +3,37 @@
   "key": "ship/hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58_14d63d76",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58.jpg",
-  "created_at": "2026-08-18T05:52:57.156Z",
+  "created_at": "2026-08-18T10:56:14.187Z",
   "bounds": {
     "min": [
-      -19.0988,
-      -0.8012,
-      -4.323
+      -21.264,
+      -0.8063,
+      -4.7986
     ],
     "max": [
-      21.142,
-      16.5144,
-      4.323
+      23.3939,
+      17.3515,
+      4.7986
     ],
     "size": [
-      40.241,
-      17.316,
-      8.646
+      44.658,
+      18.158,
+      9.597
     ],
-    "rMax": 21.579,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 23.881,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 40.20798046845197,
-    "W": 8.645937285420004,
-    "H": 14.476356145571069,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 44.76638437476158,
+    "W": 9.597291523613336,
+    "H": 13.857267109178302,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

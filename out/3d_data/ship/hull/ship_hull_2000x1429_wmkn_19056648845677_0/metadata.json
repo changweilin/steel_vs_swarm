@@ -3,37 +3,37 @@
   "key": "ship/hull_2000x1429_wmkn_19056648845677_0_6e432c84",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/2000x1429_wmkn_19056648845677_0.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\2000x1429_wmkn_19056648845677_0.jpg",
-  "created_at": "2026-08-18T05:52:57.100Z",
+  "created_at": "2026-08-18T10:56:14.153Z",
   "bounds": {
     "min": [
-      -21.1183,
-      -0.8959,
-      -7.057
+      -22.8796,
+      -0.8731,
+      -6.6213
     ],
     "max": [
-      23.2984,
-      16.9851,
-      7.057
+      25.1211,
+      17.7281,
+      6.6213
     ],
     "size": [
-      44.417,
-      17.881,
-      14.114
+      48.001,
+      18.601,
+      13.243
     ],
-    "rMax": 24.344,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 25.979,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 44.459525444419015,
-    "W": 14.113916227969787,
-    "H": 15.522392614633402,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 48.167620355535206,
+    "W": 13.242610818646526,
+    "H": 14.641794460975051,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

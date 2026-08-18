@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164",
+  "sourceImage": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.956,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 14606046,
+    "primaryRgb": [
+      222,
+      222,
+      222
+    ],
+    "accentHex": 986895,
+    "accentRgb": [
+      15,
+      15,
+      15
+    ],
+    "darkHex": 3552565,
+    "darkRgb": [
+      54,
+      53,
+      53
+    ],
+    "brightHex": 15724527,
+    "brightRgb": [
+      239,
+      239,
+      239
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "top_down_seat_stays"
+    },
+    {
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "thin_aero_rims"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "bicycle_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

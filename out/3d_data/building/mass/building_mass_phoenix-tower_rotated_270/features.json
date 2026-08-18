@@ -1,0 +1,70 @@
+{
+  "id": "building_mass_phoenix-tower_rotated_270",
+  "sourceImage": "building/phoenix-tower_rotated_270.jpg",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.781,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 8952490,
+    "primaryRgb": [
+      136,
+      154,
+      170
+    ],
+    "accentHex": 461579,
+    "accentRgb": [
+      7,
+      11,
+      11
+    ],
+    "darkHex": 2698795,
+    "darkRgb": [
+      41,
+      46,
+      43
+    ],
+    "brightHex": 12441845,
+    "brightRgb": [
+      189,
+      216,
+      245
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "flared_curved_eaves",
+      "method": "multi_tier_symmetric_roofs"
+    },
+    {
+      "name": "finial_spire_sanrin",
+      "method": "sacred_bronze_finial"
+    }
+  ],
+  "totalParts": 23,
+  "partNames": [
+    "stone_plinth_foundation",
+    "pagoda_chamber_tier_1",
+    "pillar_1_-1_-1",
+    "pillar_1_-1_1",
+    "pillar_1_1_-1",
+    "pillar_1_1_1",
+    "curved_eaves_1",
+    "roof_slope_1",
+    "pagoda_chamber_tier_2",
+    "pillar_2_-1_-1",
+    "pillar_2_-1_1",
+    "pillar_2_1_-1",
+    "pillar_2_1_1",
+    "curved_eaves_2",
+    "roof_slope_2",
+    "pagoda_chamber_tier_3",
+    "pillar_3_-1_-1",
+    "pillar_3_-1_1",
+    "pillar_3_1_-1",
+    "pillar_3_1_1",
+    "curved_eaves_3",
+    "roof_slope_3",
+    "finial_spire_sanrin"
+  ]
+}

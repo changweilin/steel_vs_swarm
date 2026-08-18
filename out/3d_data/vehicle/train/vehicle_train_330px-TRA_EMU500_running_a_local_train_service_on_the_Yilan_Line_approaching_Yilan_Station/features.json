@@ -1,0 +1,86 @@
+{
+  "id": "vehicle_train_330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station",
+  "sourceImage": "vehicle/train/330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station.jpg",
+  "style": "bullet_train_emu",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.713,
+  "aspectRatio": 1.5,
+  "colors": {
+    "primaryHex": 8026238,
+    "primaryRgb": [
+      122,
+      120,
+      126
+    ],
+    "accentHex": 16644584,
+    "accentRgb": [
+      253,
+      249,
+      232
+    ],
+    "darkHex": 2370628,
+    "darkRgb": [
+      36,
+      44,
+      68
+    ],
+    "brightHex": 13947603,
+    "brightRgb": [
+      212,
+      210,
+      211
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "aerodynamic_wedge_nose",
+      "method": "high_speed_emu_cowl"
+    },
+    {
+      "name": "single_arm_pantograph",
+      "method": "roof_catenary_collector"
+    },
+    {
+      "name": "flush_continuous_windows",
+      "method": "tinted_glass_ribbon"
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    }
+  ],
+  "totalParts": 15,
+  "partNames": [
+    "train_car_body",
+    "roof_aerodynamic_cap",
+    "continuous_tinted_windows",
+    "aerodynamic_bullet_nose",
+    "high_speed_pantograph",
+    "train_bogie_frame_r",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "train_bogie_frame_f",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right"
+  ]
+}

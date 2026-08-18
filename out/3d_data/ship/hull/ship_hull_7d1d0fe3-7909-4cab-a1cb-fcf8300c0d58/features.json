@@ -1,0 +1,49 @@
+{
+  "id": "ship_hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58",
+  "sourceImage": "ship/7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58.jpg",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.928,
+  "aspectRatio": 1.778,
+  "colors": {
+    "primaryHex": 11387337,
+    "primaryRgb": [
+      173,
+      193,
+      201
+    ],
+    "accentHex": 860718,
+    "accentRgb": [
+      13,
+      34,
+      46
+    ],
+    "darkHex": 2112343,
+    "darkRgb": [
+      32,
+      59,
+      87
+    ],
+    "brightHex": 13689572,
+    "brightRgb": [
+      208,
+      226,
+      228
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "streamlined_hull_superstructure",
+      "method": "terraced_decks_and_masts"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "vessel_hull_body",
+    "bow_wedge_flare",
+    "vessel_main_deck",
+    "vessel_superstructure",
+    "vessel_funnel",
+    "vessel_radar_mast"
+  ]
+}

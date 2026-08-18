@@ -3,36 +3,37 @@
   "key": "tree/gt_cryptomeria_manual_FB_IMG_1786333453208_7e043e41",
   "family": "tree",
   "subpart": "gt_cryptomeria",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/gt_cryptomeria/manual_FB_IMG_1786333453208.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\gt_cryptomeria\\manual_FB_IMG_1786333453208.jpg",
-  "created_at": "2026-08-18T05:52:57.338Z",
+  "created_at": "2026-08-18T10:56:14.321Z",
   "bounds": {
     "min": [
-      -3.4721,
+      -6.0118,
       0,
-      -3.3521
+      -5.5899
     ],
     "max": [
-      3.6159,
-      12.7747,
-      3.5131
+      4.9158,
+      18.9575,
+      6.1531
     ],
     "size": [
-      7.088,
-      12.775,
-      6.865
+      10.928,
+      18.957,
+      11.743
     ],
-    "rMax": 5.041,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 8.209,
+    "triangles": 152,
+    "vertices": 98
   },
   "spec": {
-    "L": 8.860036621652553,
-    "W": 6.699053940642405,
-    "H": 12.639826047150377,
-    "trunkH": 5.68792172121767,
-    "trunkR": 0.43046463721675443
+    "L": 11.860036621652553,
+    "W": 9.699053940642404,
+    "H": 18.63982604715038,
+    "style": "gnarled_broadleaf_buttress"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

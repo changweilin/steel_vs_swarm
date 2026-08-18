@@ -3,36 +3,37 @@
   "key": "building/mass_kyotoworldheritage_2.jpg_9d4c3fda",
   "family": "building",
   "subpart": "mass",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
   "source_image": "building/kyotoworldheritage_2.jpg.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\kyotoworldheritage_2.jpg.webp",
-  "created_at": "2026-08-18T05:52:57.046Z",
+  "created_at": "2026-08-18T10:56:14.118Z",
   "bounds": {
     "min": [
-      -11.6386,
+      -10.7533,
       0,
-      -7.4173
+      -8.7482
     ],
     "max": [
-      11.6386,
-      34.5186,
-      7.4173
+      10.7533,
+      29.8839,
+      8.7482
     ],
     "size": [
-      23.277,
-      34.519,
-      14.835
+      21.507,
+      29.884,
+      17.496
     ],
-    "rMax": 13.801,
-    "triangles": 132,
-    "vertices": 86
+    "rMax": 13.862,
+    "triangles": 432,
+    "vertices": 262
   },
   "spec": {
-    "L": 23.277180132753493,
-    "W": 14.834607461661708,
-    "H": 30.51856260013733,
-    "stories": 9,
-    "roofBand": 0.15
+    "L": 22.638590066376747,
+    "W": 18.417303730830852,
+    "H": 26.433875028610665,
+    "style": "asian_pagoda_upturned_eaves"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

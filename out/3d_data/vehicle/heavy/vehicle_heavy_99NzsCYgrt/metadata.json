@@ -3,54 +3,38 @@
   "key": "vehicle/heavy_99NzsCYgrt_433feb63",
   "family": "vehicle",
   "subpart": "heavy",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/heavy/99NzsCYgrt.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\99NzsCYgrt.jpg",
-  "created_at": "2026-08-18T05:52:57.661Z",
+  "created_at": "2026-08-18T10:56:14.581Z",
   "bounds": {
     "min": [
-      -4.4706,
+      -4.6105,
       0.0255,
-      -1.2877
+      -1.313
     ],
     "max": [
-      4.6756,
-      3.4434,
-      1.2877
+      4.7005,
+      4,
+      1.313
     ],
     "size": [
-      9.146,
-      3.418,
-      2.575
+      9.311,
+      3.974,
+      2.626
     ],
-    "rMax": 4.85,
-    "triangles": 300,
-    "vertices": 172
+    "rMax": 4.88,
+    "triangles": 348,
+    "vertices": 200
   },
   "spec": {
-    "L": 9.341260395208668,
-    "W": 2.55,
-    "H": 3.4433783474479287,
+    "L": 9.400900282291905,
+    "W": 2.6,
+    "H": 3.6861486228732736,
     "R": 0.52,
-    "axle": [
-      -3.2694411383230335,
-      -1.4011890592813,
-      3.3628537422751204
-    ],
-    "sill": 1.02,
-    "waist": 1.35,
-    "roof": 3.4433783474479287,
-    "cab": [
-      2.335315098802167,
-      4.48380498970016
-    ],
-    "rakeF": 0.12,
-    "rakeR": 0,
-    "extra": [
-      "heavy_box",
-      "mirror",
-      "exhaust"
-    ]
+    "style": "heavy_cargo_freight_truck"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

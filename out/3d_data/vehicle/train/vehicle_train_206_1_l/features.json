@@ -1,0 +1,86 @@
+{
+  "id": "vehicle_train_206_1_l",
+  "sourceImage": "vehicle/train/206_1_l.jpg",
+  "style": "freight_wagon",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.786,
+  "aspectRatio": 1.501,
+  "colors": {
+    "primaryHex": 7636620,
+    "primaryRgb": [
+      116,
+      134,
+      140
+    ],
+    "accentHex": 16777215,
+    "accentRgb": [
+      255,
+      255,
+      255
+    ],
+    "darkHex": 1198195,
+    "darkRgb": [
+      18,
+      72,
+      115
+    ],
+    "brightHex": 13489881,
+    "brightRgb": [
+      205,
+      214,
+      217
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "aerodynamic_wedge_nose",
+      "method": "high_speed_emu_cowl"
+    },
+    {
+      "name": "single_arm_pantograph",
+      "method": "roof_catenary_collector"
+    },
+    {
+      "name": "flush_continuous_windows",
+      "method": "tinted_glass_ribbon"
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    }
+  ],
+  "totalParts": 15,
+  "partNames": [
+    "train_car_body",
+    "roof_aerodynamic_cap",
+    "continuous_tinted_windows",
+    "aerodynamic_bullet_nose",
+    "high_speed_pantograph",
+    "train_bogie_frame_r",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "train_bogie_frame_f",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right"
+  ]
+}

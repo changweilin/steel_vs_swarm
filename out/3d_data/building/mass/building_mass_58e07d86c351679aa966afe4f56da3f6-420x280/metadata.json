@@ -3,36 +3,37 @@
   "key": "building/mass_58e07d86c351679aa966afe4f56da3f6-420x280_4347d7c4",
   "family": "building",
   "subpart": "mass",
+  "style": "commercial_residential",
+  "symmetryMode": "asymmetric",
   "source_image": "building/58e07d86c351679aa966afe4f56da3f6-420x280.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\58e07d86c351679aa966afe4f56da3f6-420x280.jpg",
-  "created_at": "2026-08-18T05:52:57.014Z",
+  "created_at": "2026-08-18T10:56:14.093Z",
   "bounds": {
     "min": [
-      -8.1864,
+      -8.791,
       0,
-      -12.6885
+      -11.3443
     ],
     "max": [
-      8.1864,
-      40.3386,
-      12.6885
+      8.791,
+      28.1451,
+      11.0443
     ],
     "size": [
-      16.373,
-      40.339,
-      25.377
+      17.582,
+      28.145,
+      22.389
     ],
-    "rMax": 15.1,
-    "triangles": 156,
-    "vertices": 102
+    "rMax": 14.352,
+    "triangles": 396,
+    "vertices": 264
   },
   "spec": {
-    "L": 16.372899977111466,
-    "W": 25.377065690089264,
-    "H": 36.33859769588769,
-    "stories": 11,
-    "roofBand": 0.15
+    "L": 17.581933318074313,
+    "W": 19.688532845044634,
+    "H": 28.145113298237582,
+    "style": "commercial_residential_asymmetric"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

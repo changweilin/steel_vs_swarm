@@ -3,53 +3,38 @@
   "key": "vehicle/train_671868b8ba618_3ebbbf6e",
   "family": "vehicle",
   "subpart": "train",
+  "style": "freight_wagon",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/train/671868b8ba618.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\train\\671868b8ba618.webp",
-  "created_at": "2026-08-18T05:52:57.887Z",
+  "created_at": "2026-08-18T10:56:14.687Z",
   "bounds": {
     "min": [
-      -9.8129,
-      0.021,
-      -1.4898
+      -11.2529,
+      0.0225,
+      -1.5907
     ],
     "max": [
-      10.4542,
-      3.855,
-      1.4898
+      11.9808,
+      4.225,
+      1.5907
     ],
     "size": [
-      20.267,
-      3.834,
-      2.98
+      23.234,
+      4.202,
+      3.181
     ],
-    "rMax": 10.56,
-    "triangles": 380,
-    "vertices": 216
+    "rMax": 12.086,
+    "triangles": 404,
+    "vertices": 232
   },
   "spec": {
-    "L": 20.443495841916533,
-    "W": 2.95,
-    "H": 3.85,
-    "R": 0.43,
-    "axle": [
-      -7.155223544670786,
-      7.155223544670786
-    ],
-    "sill": 1.02,
-    "waist": 1.95,
-    "roof": 3.35,
-    "cab": [
-      -9.812878004119936,
-      9.812878004119936
-    ],
-    "rakeF": 0.15,
-    "rakeR": 0.15,
-    "extra": [
-      "bogie",
-      "panto",
-      "streamline"
-    ]
+    "L": 23.443495841916533,
+    "W": 3.15,
+    "H": 3.95,
+    "R": 0.46,
+    "style": "streamlined_high_speed_train"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

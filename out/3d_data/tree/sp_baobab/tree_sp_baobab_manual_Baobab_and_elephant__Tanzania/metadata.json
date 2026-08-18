@@ -3,36 +3,37 @@
   "key": "tree/sp_baobab_manual_Baobab_and_elephant__Tanzania_cb4a1229",
   "family": "tree",
   "subpart": "sp_baobab",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/sp_baobab/manual_Baobab_and_elephant__Tanzania.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_baobab\\manual_Baobab_and_elephant__Tanzania.jpg",
-  "created_at": "2026-08-18T05:52:57.375Z",
+  "created_at": "2026-08-18T10:56:14.342Z",
   "bounds": {
     "min": [
-      -4.0397,
+      -3.8,
       0,
-      -3.6809
+      -3.8
     ],
     "max": [
-      4.2037,
-      13.9989,
-      3.9335
+      3.8,
+      11.7266,
+      3.8
     ],
     "size": [
-      8.243,
-      13.999,
-      7.614
+      7.6,
+      11.727,
+      7.6
     ],
-    "rMax": 5.757,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 5.374,
+    "triangles": 184,
+    "vertices": 110
   },
   "spec": {
-    "L": 10.304303044174869,
-    "W": 6.952735179674983,
-    "H": 13.851148241397727,
-    "trunkH": 6.233016708628977,
-    "trunkR": 0.5436987869077592
+    "L": 10.28258182650492,
+    "W": 8.27164110780499,
+    "H": 13.425574120698863,
+    "style": "succulent_bottle_baobab"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

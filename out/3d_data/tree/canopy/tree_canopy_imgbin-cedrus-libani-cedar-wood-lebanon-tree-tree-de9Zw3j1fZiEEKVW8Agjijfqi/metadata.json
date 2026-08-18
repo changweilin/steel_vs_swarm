@@ -3,36 +3,37 @@
   "key": "tree/canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi_b42e1b17",
   "family": "tree",
   "subpart": "canopy",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
   "source_image": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
-  "created_at": "2026-08-18T05:52:57.344Z",
+  "created_at": "2026-08-18T10:56:14.326Z",
   "bounds": {
     "min": [
-      -3.9648,
+      -4.0659,
       0,
-      -4.0926
+      -4.0659
     ],
     "max": [
-      4.165,
-      9.769,
-      4.0371
+      4.0659,
+      14.8826,
+      4.0659
     ],
     "size": [
-      8.13,
-      9.769,
-      8.13
+      8.132,
+      14.883,
+      8.132
     ],
-    "rMax": 5.8,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 5.75,
+    "triangles": 192,
+    "vertices": 108
   },
   "spec": {
-    "L": 8.661593041886015,
-    "W": 9.763447013046463,
-    "H": 9.665903715571831,
-    "trunkH": 4.349656672007324,
-    "trunkR": 0.657949187457084
+    "L": 7.580796520943007,
+    "W": 8.131723506523231,
+    "H": 14.499427786678874,
+    "style": "conifer_pine_pagoda_tiers"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

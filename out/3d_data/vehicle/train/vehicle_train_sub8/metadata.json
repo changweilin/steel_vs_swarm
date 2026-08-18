@@ -3,53 +3,38 @@
   "key": "vehicle/train_sub8_4070a6b0",
   "family": "vehicle",
   "subpart": "train",
+  "style": "freight_wagon",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/train/sub8.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\train\\sub8.jpg",
-  "created_at": "2026-08-18T05:52:57.902Z",
+  "created_at": "2026-08-18T10:56:14.696Z",
   "bounds": {
     "min": [
-      -11.042,
-      0.021,
-      -1.4898
+      -12.482,
+      0.0225,
+      -1.5907
     ],
     "max": [
-      11.7346,
-      3.855,
-      1.4898
+      13.2612,
+      4.225,
+      1.5907
     ],
     "size": [
-      22.777,
-      3.834,
-      2.98
+      25.743,
+      4.202,
+      3.181
     ],
-    "rMax": 11.829,
-    "triangles": 380,
-    "vertices": 216
+    "rMax": 13.356,
+    "triangles": 404,
+    "vertices": 232
   },
   "spec": {
-    "L": 23.00420386053254,
-    "W": 2.95,
-    "H": 3.85,
-    "R": 0.43,
-    "axle": [
-      -8.05147135118639,
-      8.05147135118639
-    ],
-    "sill": 1.02,
-    "waist": 1.95,
-    "roof": 3.35,
-    "cab": [
-      -11.04201785305562,
-      11.04201785305562
-    ],
-    "rakeF": 0.15,
-    "rakeR": 0.15,
-    "extra": [
-      "bogie",
-      "panto",
-      "streamline"
-    ]
+    "L": 26.00420386053254,
+    "W": 3.15,
+    "H": 3.95,
+    "R": 0.46,
+    "style": "streamlined_high_speed_train"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

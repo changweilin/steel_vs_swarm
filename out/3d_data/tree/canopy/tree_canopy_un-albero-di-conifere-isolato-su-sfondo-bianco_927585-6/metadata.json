@@ -3,36 +3,37 @@
   "key": "tree/canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6_4fdb292e",
   "family": "tree",
   "subpart": "canopy",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
   "source_image": "tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
-  "created_at": "2026-08-18T05:52:57.388Z",
+  "created_at": "2026-08-18T10:56:14.350Z",
   "bounds": {
     "min": [
-      -3.5276,
+      -3.4766,
       0,
-      -3.4464
+      -3.4766
     ],
     "max": [
-      3.3718,
-      13.9698,
-      3.453
+      3.4766,
+      18.0823,
+      3.4766
     ],
     "size": [
-      6.899,
-      13.97,
-      6.899
+      6.953,
+      18.082,
+      6.953
     ],
-    "rMax": 4.932,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 4.917,
+    "triangles": 192,
+    "vertices": 108
   },
   "spec": {
-    "L": 8.230373083085375,
-    "W": 7.406233310444801,
-    "H": 13.822339208056764,
-    "trunkH": 6.220052643625544,
-    "trunkR": 0.45367360952162966
+    "L": 7.365186541542688,
+    "W": 6.9531166552224,
+    "H": 17.616754406042574,
+    "style": "conifer_pine_pagoda_tiers"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

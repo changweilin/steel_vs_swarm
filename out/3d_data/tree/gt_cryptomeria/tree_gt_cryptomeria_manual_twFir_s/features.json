@@ -1,0 +1,49 @@
+{
+  "id": "tree_gt_cryptomeria_manual_twFir_s",
+  "sourceImage": "tree/gt_cryptomeria/manual_twFir_s.jpg",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.902,
+  "aspectRatio": 0.474,
+  "colors": {
+    "primaryHex": 6381902,
+    "primaryRgb": [
+      97,
+      97,
+      78
+    ],
+    "accentHex": 15921906,
+    "accentRgb": [
+      242,
+      242,
+      242
+    ],
+    "darkHex": 3882022,
+    "darkRgb": [
+      59,
+      60,
+      38
+    ],
+    "brightHex": 13948375,
+    "brightRgb": [
+      212,
+      213,
+      215
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "tiered_conical_whorls",
+      "method": "five_tiered_needle_canopies"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5"
+  ]
+}

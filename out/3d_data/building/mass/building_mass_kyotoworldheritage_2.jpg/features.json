@@ -1,0 +1,70 @@
+{
+  "id": "building_mass_kyotoworldheritage_2.jpg",
+  "sourceImage": "building/kyotoworldheritage_2.jpg.webp",
+  "style": "asian_pagoda_pavilion",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.822,
+  "aspectRatio": 1.498,
+  "colors": {
+    "primaryHex": 8486751,
+    "primaryRgb": [
+      129,
+      127,
+      95
+    ],
+    "accentHex": 16579835,
+    "accentRgb": [
+      252,
+      252,
+      251
+    ],
+    "darkHex": 4012319,
+    "darkRgb": [
+      61,
+      57,
+      31
+    ],
+    "brightHex": 13425121,
+    "brightRgb": [
+      204,
+      217,
+      225
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "flared_curved_eaves",
+      "method": "multi_tier_symmetric_roofs"
+    },
+    {
+      "name": "finial_spire_sanrin",
+      "method": "sacred_bronze_finial"
+    }
+  ],
+  "totalParts": 23,
+  "partNames": [
+    "stone_plinth_foundation",
+    "pagoda_chamber_tier_1",
+    "pillar_1_-1_-1",
+    "pillar_1_-1_1",
+    "pillar_1_1_-1",
+    "pillar_1_1_1",
+    "curved_eaves_1",
+    "roof_slope_1",
+    "pagoda_chamber_tier_2",
+    "pillar_2_-1_-1",
+    "pillar_2_-1_1",
+    "pillar_2_1_-1",
+    "pillar_2_1_1",
+    "curved_eaves_2",
+    "roof_slope_2",
+    "pagoda_chamber_tier_3",
+    "pillar_3_-1_-1",
+    "pillar_3_-1_1",
+    "pillar_3_1_-1",
+    "pillar_3_1_1",
+    "curved_eaves_3",
+    "roof_slope_3",
+    "finial_spire_sanrin"
+  ]
+}

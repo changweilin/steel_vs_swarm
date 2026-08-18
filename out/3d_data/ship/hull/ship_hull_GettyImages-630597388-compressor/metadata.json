@@ -3,37 +3,37 @@
   "key": "ship/hull_GettyImages-630597388-compressor_fc4b9d60",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/GettyImages-630597388-compressor.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\GettyImages-630597388-compressor.jpg",
-  "created_at": "2026-08-18T05:52:57.178Z",
+  "created_at": "2026-08-18T10:56:14.203Z",
   "bounds": {
     "min": [
-      -19.9624,
-      -0.8417,
-      -4.9825
+      -21.9549,
+      -0.8349,
+      -5.2383
     ],
     "max": [
-      22.0641,
-      16.5174,
-      4.9825
+      24.1325,
+      17.3539,
+      5.2383
     ],
     "size": [
-      42.026,
-      17.359,
-      9.965
+      46.087,
+      18.189,
+      10.477
     ],
-    "rMax": 22.62,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 24.694,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 42.02609292744335,
-    "W": 9.964957656214237,
-    "H": 14.483070115205615,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 46.22087434195468,
+    "W": 10.476638437476158,
+    "H": 13.862302586404212,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

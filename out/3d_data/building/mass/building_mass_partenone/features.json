@@ -1,0 +1,81 @@
+{
+  "id": "building_mass_partenone",
+  "sourceImage": "building/partenone.jpg",
+  "style": "classical_temple",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.919,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 4749713,
+    "primaryRgb": [
+      72,
+      121,
+      145
+    ],
+    "accentHex": 16446370,
+    "accentRgb": [
+      250,
+      243,
+      162
+    ],
+    "darkHex": 2111288,
+    "darkRgb": [
+      32,
+      55,
+      56
+    ],
+    "brightHex": 14270102,
+    "brightRgb": [
+      217,
+      190,
+      150
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "stepped_stylobate_base",
+      "method": "tri_tier_concentric_plinth"
+    },
+    {
+      "name": "peristyle_fluted_colonnade",
+      "method": "four_sided_symmetric_columns"
+    },
+    {
+      "name": "pediment_and_tympanum",
+      "method": "front_and_rear_mirrored_gables"
+    }
+  ],
+  "totalParts": 30,
+  "partNames": [
+    "stylobate_tier_1",
+    "stylobate_tier_2",
+    "stylobate_tier_3",
+    "cella_sanctuary_wall",
+    "column_north_1",
+    "column_south_1",
+    "column_north_2",
+    "column_south_2",
+    "column_north_3",
+    "column_south_3",
+    "column_north_4",
+    "column_south_4",
+    "column_north_5",
+    "column_south_5",
+    "column_north_6",
+    "column_south_6",
+    "column_north_7",
+    "column_south_7",
+    "column_north_8",
+    "column_south_8",
+    "column_east_2",
+    "column_west_2",
+    "column_east_3",
+    "column_west_3",
+    "column_east_4",
+    "column_west_4",
+    "entablature_frieze",
+    "roof_pitched_slab",
+    "pediment_front_east",
+    "pediment_rear_west_mirror"
+  ]
+}

@@ -3,36 +3,37 @@
   "key": "tree/canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166_4150b4a9",
   "family": "tree",
   "subpart": "canopy",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
   "source_image": "tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg",
-  "created_at": "2026-08-18T05:52:57.315Z",
+  "created_at": "2026-08-18T10:56:14.309Z",
   "bounds": {
     "min": [
-      -3.0269,
+      -3.5123,
       0,
-      -2.9885
+      -3.5123
     ],
     "max": [
-      3.1955,
-      9.2997,
-      3.2339
+      3.5123,
+      14.5251,
+      3.5123
     ],
     "size": [
-      6.222,
-      9.3,
-      6.222
+      7.025,
+      14.525,
+      7.025
     ],
-    "rMax": 4.546,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 4.967,
+    "triangles": 192,
+    "vertices": 108
   },
   "spec": {
-    "L": 6.55302510109102,
-    "W": 7.549134050507362,
-    "H": 9.201541161211566,
-    "trunkH": 4.140693522545205,
-    "trunkR": 0.5505561913481346
+    "L": 6.52651255054551,
+    "W": 7.024567025253681,
+    "H": 14.151155870908674,
+    "style": "conifer_pine_pagoda_tiers"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

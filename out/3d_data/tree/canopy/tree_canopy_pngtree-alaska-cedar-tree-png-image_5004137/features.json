@@ -1,0 +1,49 @@
+{
+  "id": "tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137",
+  "sourceImage": "tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.888,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 12566972,
+    "primaryRgb": [
+      191,
+      193,
+      188
+    ],
+    "accentHex": 1118732,
+    "accentRgb": [
+      17,
+      18,
+      12
+    ],
+    "darkHex": 3357226,
+    "darkRgb": [
+      51,
+      58,
+      42
+    ],
+    "brightHex": 15987699,
+    "brightRgb": [
+      243,
+      243,
+      243
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "tiered_conical_whorls",
+      "method": "five_tiered_needle_canopies"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5"
+  ]
+}

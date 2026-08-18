@@ -1,0 +1,56 @@
+{
+  "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
+  "sourceImage": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.911,
+  "aspectRatio": 1.775,
+  "colors": {
+    "primaryHex": 8622487,
+    "primaryRgb": [
+      131,
+      145,
+      151
+    ],
+    "accentHex": 2628883,
+    "accentRgb": [
+      40,
+      29,
+      19
+    ],
+    "darkHex": 4864817,
+    "darkRgb": [
+      74,
+      59,
+      49
+    ],
+    "brightHex": 10469339,
+    "brightRgb": [
+      159,
+      191,
+      219
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "swollen_bottle_trunk",
+      "method": "massive_succulent_barrel"
+    },
+    {
+      "name": "sparse_rosette_crown",
+      "method": "root_like_canopy_clusters"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "baobab_bottle_trunk",
+    "baobab_branch_1",
+    "baobab_foliage_clump_1",
+    "baobab_branch_2",
+    "baobab_foliage_clump_2",
+    "baobab_branch_3",
+    "baobab_foliage_clump_3",
+    "baobab_branch_4",
+    "baobab_foliage_clump_4"
+  ]
+}

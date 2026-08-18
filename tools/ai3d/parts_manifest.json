@@ -660,7 +660,9 @@
       "note": "節流讓照片晚於改寫抵達 ⇒ 這三張的角色是**事後交叉確認**(Dallas 型四腳塔確認了零件字彙:橫撐間的 X 形斜撐板、中央豎管、底環、錐頂 + 頂針),不是改寫當下的輸入。一個 centre-y 加倍的算術 bug 通過了外廓稽核(外廓不看 y),只有截圖迴圈抓得到 —— 這正是這座對照台存在的理由。",
       "keys": [
         "beacon/tank"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "keys": [
@@ -1532,7 +1534,9 @@
         "note": "**foot 8.0 → 9.2**:kindExtent 對傾斜件是保守的(位置半徑 + 該件 3D 半對角,不是真的旋轉後外廓)⇒ 12.4m 長的斜撐記 9.12m。與 P2b 水塔補 X 斜撐時 foot 5.2 → 5.6 是同一筆帳:照實算改標稱。腳的座標一格未動 ⇒ 這一項不是「塔變胖了」,是稽核模型對斜撐收的稅。",
         "checks": "audit_beacons 68 綠 + --break-extent 反向紅;audit_object_joints --seeds 8 = 21611 接合 / 0 異常(斜撐真的釘在腳上);intake 300;siteplan 218;cel 52 / gpu 54 / soft_stroke 73 / world_height 49;npm test 全通過;npm run bal 全綠;tools/shot_beacons.mjs --kind pylon 目視(X 斜撐與腳接得住)"
       },
-      "note": "Route A 第 2 顆(2026-08-10 §5at)。剩 mast(landmark/dish 3 張)與 depot(landmark/container 3 張)兩款尚未讀照片重寫,兩批照片都已在型錄達標。"
+      "note": "Route A 第 2 顆(2026-08-10 §5at)。剩 mast(landmark/dish 3 張)與 depot(landmark/container 3 張)兩款尚未讀照片重寫,兩批照片都已在型錄達標。",
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1592,7 +1596,9 @@
         "note": "**foot 3.8 → 3.9**:撐大外廓的是**最下段那一圈斜撐**(最長 ⇒ 3D 半對角稅最重,kindExtent 實算 3.8836)而不是碟。與 pylon 9.12 / tank 5.56 同一筆帳:照實算改標稱。三角斷面的面方位角 ry = −(b + 90°)(b = 兩根腳的角平分線)為解析解,另以 three 的 Euler XYZ 數值複驗 24 根斜撐,端點離腳軸最大偏差 1.6e-15 m、端點高度恰為各段邊界。",
         "checks": "audit_beacons 68 綠 + --break-extent / --break-pad 反向紅;audit_object_joints --seeds 8 = 11908 接合 / 0 異常;intake 300;siteplan 218;cel 57 / gpu 54 / soft_stroke 73;npm test 全通過(WS_URL=ws://localhost:8630);npm run bal 全綠;tools/shot_beacons.mjs --kind mast 新舊對照目視(斜撐接得住、碟有深度、交叉天線陣成形、無零件戳出碰撞柱)"
       },
-      "note": "Route A 第 3 顆(2026-08-10 §5av)。**剩下的 depot 卡在語料**:landmark/container 三張裡兩張是維多利亞時期的玻璃魚缸(博物館把它編目成 container)、一張是港口全景 ⇒ 0 張可用,詳見 runbook §5av-c。"
+      "note": "Route A 第 3 顆(2026-08-10 §5av)。**剩下的 depot 卡在語料**:landmark/container 三張裡兩張是維多利亞時期的玻璃魚缸(博物館把它編目成 container)、一張是港口全景 ⇒ 0 張可用,詳見 runbook §5av-c。",
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1632,7 +1638,9 @@
       },
       "keys": [
         "building/mass_0_338144da"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1672,7 +1680,9 @@
       },
       "keys": [
         "building/mass_00365470.202403141998083052M_d6a8345d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1712,7 +1722,9 @@
       },
       "keys": [
         "building/mass_0355a12000s97al9y467C_8a798ed9"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1752,7 +1764,9 @@
       },
       "keys": [
         "building/mass_104405729_70762040"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1792,7 +1806,9 @@
       },
       "keys": [
         "building/mass_1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2_d852d9d7"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1832,7 +1848,9 @@
       },
       "keys": [
         "building/mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c_aa644cdf"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1872,7 +1890,9 @@
       },
       "keys": [
         "building/mass_155577510_e8c31c08"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1912,7 +1932,9 @@
       },
       "keys": [
         "building/mass_20230210700917_433a68ce"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1952,7 +1974,9 @@
       },
       "keys": [
         "building/mass_211_59cedb08"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -1992,7 +2016,9 @@
       },
       "keys": [
         "building/mass_250808-31799-30-gNZVV_3a014764"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2032,7 +2058,9 @@
       },
       "keys": [
         "building/mass_32a571b95c01a4a4a6f6da38885e83ba_289b1e69"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2072,7 +2100,9 @@
       },
       "keys": [
         "building/mass_4582417806274137174c62995bfa9386_567af176"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2112,7 +2142,9 @@
       },
       "keys": [
         "building/mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_7dd14440"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2152,7 +2184,9 @@
       },
       "keys": [
         "building/mass_4f5ee370c1564cadabc47ce365c4f353_da512724"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2192,7 +2226,9 @@
       },
       "keys": [
         "building/mass_58e07d86c351679aa966afe4f56da3f6-420x280_4347d7c4"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2232,7 +2268,9 @@
       },
       "keys": [
         "building/mass_66fc7920151e4d6b915aeaacc1502afd_e4419813"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2272,7 +2310,9 @@
       },
       "keys": [
         "building/mass_architecture-houou-02-tmb_d29db730"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2312,7 +2352,9 @@
       },
       "keys": [
         "building/mass_b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd_5c0208a0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2352,7 +2394,9 @@
       },
       "keys": [
         "building/mass_B16A00_P_05_02_4da87118"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2392,7 +2436,9 @@
       },
       "keys": [
         "building/bld_tower_manual_1711450890-2085471680-g_6952afb2"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2432,7 +2478,9 @@
       },
       "keys": [
         "building/bld_tower_manual_DJI_0793-scaled_3125e0aa"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2472,7 +2520,9 @@
       },
       "keys": [
         "building/bld_tower_manual__Run-in-taipei-1920x1080_8b3aa198"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2512,7 +2562,9 @@
       },
       "keys": [
         "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2552,7 +2604,9 @@
       },
       "keys": [
         "building/mass_d5394391_d77236ed"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2592,7 +2646,9 @@
       },
       "keys": [
         "building/mass_e28ba9534d67c7605a1800bc035444d5_c725e79d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2632,7 +2688,9 @@
       },
       "keys": [
         "building/mass_FB_IMG_1786334896262_b0cc73ef"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2672,7 +2730,9 @@
       },
       "keys": [
         "building/mass_kyotoworldheritage_2.jpg_9d4c3fda"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2712,7 +2772,9 @@
       },
       "keys": [
         "building/mass_list_33721942"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2752,7 +2814,9 @@
       },
       "keys": [
         "building/mass_partenone_80983390"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2792,7 +2856,9 @@
       },
       "keys": [
         "building/mass_phoenix-tower_rotated_270_e2933c89"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2832,7 +2898,9 @@
       },
       "keys": [
         "building/mass_photo0jpg_c64c80af"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2872,7 +2940,9 @@
       },
       "keys": [
         "building/mass_pisa-1056568_960_720_a978eea5"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2912,7 +2982,9 @@
       },
       "keys": [
         "building/mass_state-capitol_d564d625"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2952,7 +3024,9 @@
       },
       "keys": [
         "building/mass_the-white-tower-when_7b045f0f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -2992,7 +3066,9 @@
       },
       "keys": [
         "ship/hull_000-34TU8F7_ac251efb"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3032,7 +3108,9 @@
       },
       "keys": [
         "ship/hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050_6ef1343d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3072,7 +3150,9 @@
       },
       "keys": [
         "ship/hull_0350p12000t3nb68kA8C8_04aac50a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3112,7 +3192,9 @@
       },
       "keys": [
         "ship/hull_1593571989300_2c0fefbd"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3152,7 +3234,9 @@
       },
       "keys": [
         "ship/hull_1695146093_eb47b495"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3192,7 +3276,9 @@
       },
       "keys": [
         "ship/hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637_47bf9580"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3232,7 +3318,9 @@
       },
       "keys": [
         "ship/hull_174340740201_6b311848"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3272,7 +3360,9 @@
       },
       "keys": [
         "ship/hull_1778437182_68368_5b5f54cb"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3312,7 +3402,9 @@
       },
       "keys": [
         "ship/hull_1802_5ee2b762"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3352,7 +3444,9 @@
       },
       "keys": [
         "ship/hull_2-5-1024x768_03ffcd60"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3392,7 +3486,9 @@
       },
       "keys": [
         "ship/hull_2000x1250_wmkn_84254351907813_0_449ca1f3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3432,7 +3528,9 @@
       },
       "keys": [
         "ship/hull_2000x1429_wmkn_19056648845677_0_6e432c84"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3472,7 +3570,9 @@
       },
       "keys": [
         "ship/hull_20090411-TurboJET_Barca_da4471af"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3512,7 +3612,9 @@
       },
       "keys": [
         "ship/hull_2020120858047817_4ab4126f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3552,7 +3654,9 @@
       },
       "keys": [
         "ship/hull_20210430002927_47_5ea97b8f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3592,7 +3696,9 @@
       },
       "keys": [
         "ship/hull_202135002-4_e1a91fcc"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3632,7 +3738,9 @@
       },
       "keys": [
         "ship/hull_20230821004313_d2114950"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3672,7 +3780,9 @@
       },
       "keys": [
         "ship/hull_20240301000865_37acb8bf"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3712,7 +3822,9 @@
       },
       "keys": [
         "ship/hull_20250401005245_f90c1b55"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3752,7 +3864,9 @@
       },
       "keys": [
         "ship/hull_202512251310033872_66101033"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3792,7 +3906,9 @@
       },
       "keys": [
         "ship/hull_202602131051276980_9f4f387d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3832,7 +3948,9 @@
       },
       "keys": [
         "ship/hull_20260421104430-37bd4fa5_b322a525"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3872,7 +3990,9 @@
       },
       "keys": [
         "ship/hull_20oz-china-ships-wgkl-master1050_a5c7cd0b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3912,7 +4032,9 @@
       },
       "keys": [
         "ship/hull_22xp-boaty-master1050_0e94733c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3952,7 +4074,9 @@
       },
       "keys": [
         "ship/hull_2798933_d0dba09d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -3992,7 +4116,9 @@
       },
       "keys": [
         "ship/hull_300gt-tuna-long-liner-boat_02_6d0de382"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4032,7 +4158,9 @@
       },
       "keys": [
         "ship/hull_379b7bfc740ea9d22183f066b6e40ff8-600x400_5277b253"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4072,7 +4200,9 @@
       },
       "keys": [
         "ship/hull_489644a4-bb94-6109-6f71-d81400ca1a48_620_61d1d996"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4112,7 +4242,9 @@
       },
       "keys": [
         "ship/hull_6232d26edb8ab_18e2cb25"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4152,7 +4284,9 @@
       },
       "keys": [
         "ship/hull_6621n_6a2567f9"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4192,7 +4326,9 @@
       },
       "keys": [
         "ship/hull_666_e6e7d764"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4232,7 +4368,9 @@
       },
       "keys": [
         "ship/hull_668d6f418c667-870x500_65b5299f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4272,7 +4410,9 @@
       },
       "keys": [
         "ship/hull_762bcd7026aa844c83ed2b0f5454b162_79fd9948"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4312,7 +4452,9 @@
       },
       "keys": [
         "ship/hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58_14d63d76"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4352,7 +4494,9 @@
       },
       "keys": [
         "ship/hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_1a84fc87"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4392,7 +4536,9 @@
       },
       "keys": [
         "ship/hull_A04A00_P_01_02_7f91124d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4432,7 +4578,9 @@
       },
       "keys": [
         "ship/hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_7dd0dbdc"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4472,7 +4620,9 @@
       },
       "keys": [
         "ship/hull_article-5ca19fe0e988a_4b36e0ed"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4512,7 +4662,9 @@
       },
       "keys": [
         "ship/hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c_08a5dce6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4552,7 +4704,9 @@
       },
       "keys": [
         "ship/hull_Capture-3139_d72440ad"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4592,7 +4746,9 @@
       },
       "keys": [
         "ship/hull_d5154891_a65e8d97"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4632,7 +4788,9 @@
       },
       "keys": [
         "ship/hull_Disney%20Adventure%20ship%201_1dd4290a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4672,7 +4830,9 @@
       },
       "keys": [
         "ship/hull_e7642302_3db091cf"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4712,7 +4872,9 @@
       },
       "keys": [
         "ship/hull_GettyImages-630597388-compressor_fc4b9d60"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4752,7 +4914,9 @@
       },
       "keys": [
         "ship/hull_id13750938-558191_66594566"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4792,7 +4956,9 @@
       },
       "keys": [
         "ship/hull_img-1478851082-74949_8506fc36"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4832,7 +4998,9 @@
       },
       "keys": [
         "ship/hull_k23_79890a7d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4872,7 +5040,9 @@
       },
       "keys": [
         "ship/hull_LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方_04a9c1ca"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4912,7 +5082,9 @@
       },
       "keys": [
         "ship/hull_Methanier_aspher_LNGRIVERS_bda91a0a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4952,7 +5124,9 @@
       },
       "keys": [
         "ship/hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad_69050026"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -4992,7 +5166,9 @@
       },
       "keys": [
         "ship/hull_mobileadv_1976_9821316_46373_39f9bce3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5032,7 +5208,9 @@
       },
       "keys": [
         "ship/hull_nzdnc7pepb9ltbpslhtv_5642e4e3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5072,7 +5250,9 @@
       },
       "keys": [
         "ship/hull_pngtree-a-small-fishing-boat-png-image_16296083_999a6ef2"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5112,7 +5292,9 @@
       },
       "keys": [
         "ship/hull_pngtree-blue-and-white-speedboat-png-image_16228702_c1d3f1e6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5152,7 +5334,9 @@
       },
       "keys": [
         "ship/hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_29b71f73"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5192,7 +5376,9 @@
       },
       "keys": [
         "ship/hull_s11_1667405441519_981e2ef6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5232,7 +5418,9 @@
       },
       "keys": [
         "ship/hull_tkldbkxi3ftl5wewz3u2_2876d456"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5272,7 +5460,9 @@
       },
       "keys": [
         "ship/hull_ttn1071_Cover0106_49f440a4"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5312,7 +5502,9 @@
       },
       "keys": [
         "ship/hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_ed0f78de"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5352,7 +5544,9 @@
       },
       "keys": [
         "ship/hull_Virginia_class_submarine_10a64c5e"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5392,7 +5586,9 @@
       },
       "keys": [
         "ship/hull__127290139_04alamy-pwtk4p_f9c434fb"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5432,7 +5628,9 @@
       },
       "keys": [
         "ship/hull_中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧_17db1ce9"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5472,7 +5670,9 @@
       },
       "keys": [
         "ship/hull_圖2-超日王號_20ddb028"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5512,7 +5712,9 @@
       },
       "keys": [
         "tree/canopy_092313_274u9V4y_a8d83e0a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5552,7 +5754,9 @@
       },
       "keys": [
         "tree/canopy_1342001_PE948961_S5_7815d285"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5592,7 +5796,9 @@
       },
       "keys": [
         "tree/canopy_1513x4724_wmkn_328537037215_202606050063000000_ba9c219b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5632,7 +5838,9 @@
       },
       "keys": [
         "tree/canopy_15dc1b1d19bccbbf_fa5013d0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5672,7 +5880,9 @@
       },
       "keys": [
         "tree/canopy_1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg_7bdcca82"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5712,7 +5922,9 @@
       },
       "keys": [
         "tree/canopy_20210316155158__33_629f5d59"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5752,7 +5964,9 @@
       },
       "keys": [
         "tree/canopy_3f0fcc8d74ce8fcc_766787cf"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5792,7 +6006,9 @@
       },
       "keys": [
         "tree/canopy_495849468_e39de0d6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5832,7 +6048,9 @@
       },
       "keys": [
         "tree/canopy_51YNHnO1PXL_a0f9e33c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5872,7 +6090,9 @@
       },
       "keys": [
         "tree/canopy_5D11CCA4-7909-424_e0a36de5"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5912,7 +6132,9 @@
       },
       "keys": [
         "tree/canopy_700x1024_wmkn_0_C20250121000185_168d91df"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5952,7 +6174,9 @@
       },
       "keys": [
         "tree/canopy_70248068_1006_24d7081b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -5992,7 +6216,9 @@
       },
       "keys": [
         "tree/canopy_7d535472ae45d3eb_75471d8f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6032,7 +6258,9 @@
       },
       "keys": [
         "tree/canopy_800_eb53c296eb6fc1ac757c290a1f6444b8_52a4f9cd"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6072,7 +6300,9 @@
       },
       "keys": [
         "tree/canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_f286c9bd"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6112,7 +6342,9 @@
       },
       "keys": [
         "tree/canopy_abc3c15b66b89dff_c0cc3df1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6152,7 +6384,9 @@
       },
       "keys": [
         "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_38edd5ad"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6192,7 +6426,9 @@
       },
       "keys": [
         "tree/canopy_ADEY1909 (1)_569f65ab"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6232,7 +6468,9 @@
       },
       "keys": [
         "tree/canopy_ADEY1909_c6f80c88"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6272,7 +6510,9 @@
       },
       "keys": [
         "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1)_25f72736"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6312,7 +6552,9 @@
       },
       "keys": [
         "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_915251b5"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6352,7 +6594,9 @@
       },
       "keys": [
         "tree/bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1_4c9731aa"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6392,7 +6636,9 @@
       },
       "keys": [
         "tree/canopy_boab-tree-header-image-blog_ca63a366"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6432,7 +6678,9 @@
       },
       "keys": [
         "tree/canopy_boab-trees (1)_ffe655ee"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6472,7 +6720,9 @@
       },
       "keys": [
         "tree/canopy_manual_FB_IMG_1786332532197_5007ac67"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6512,7 +6762,9 @@
       },
       "keys": [
         "tree/canopy_manual_FB_IMG_1786332658706_13821d9a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6552,7 +6804,9 @@
       },
       "keys": [
         "tree/canopy_Cardon_Pachycereus_pringlei_0e3f56ae"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6592,7 +6846,9 @@
       },
       "keys": [
         "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)_21c8ef01"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6632,7 +6888,9 @@
       },
       "keys": [
         "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_ab168c59"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6672,7 +6930,9 @@
       },
       "keys": [
         "tree/canopy_Choosing-the-right-cactus_9197cfee"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6712,7 +6972,9 @@
       },
       "keys": [
         "tree/canopy_d0cec1f4425528fa_42c33bc6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6752,7 +7014,9 @@
       },
       "keys": [
         "tree/canopy_ddf148d60683c553 (1)_b651a22f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6792,7 +7056,9 @@
       },
       "keys": [
         "tree/canopy_ddf148d60683c553_98f8ac9c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6832,7 +7098,9 @@
       },
       "keys": [
         "tree/canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree_6fb22c5a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6872,7 +7140,9 @@
       },
       "keys": [
         "tree/canopy_Derby_boab,_Western_Australia_37943124"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6912,7 +7182,9 @@
       },
       "keys": [
         "tree/canopy_e7838fe5b8bde5ad90_2fd264a0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6952,7 +7224,9 @@
       },
       "keys": [
         "tree/canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166_4150b4a9"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -6992,7 +7266,9 @@
       },
       "keys": [
         "tree/canopy_FB_IMG_1786332532197 (2)_46a2e08b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7032,7 +7308,9 @@
       },
       "keys": [
         "tree/canopy_FB_IMG_1786333297321_95423ea7"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7072,7 +7350,9 @@
       },
       "keys": [
         "tree/canopy_FB_IMG_1786333300422_583863b0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7112,7 +7392,9 @@
       },
       "keys": [
         "tree/canopy_FB_IMG_1786818411804_21872cbf"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7152,7 +7434,9 @@
       },
       "keys": [
         "tree/canopy_getImage-2-4_7d033839"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7192,7 +7476,9 @@
       },
       "keys": [
         "tree/canopy_getImage-3-4_351863b4"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7232,7 +7518,9 @@
       },
       "keys": [
         "tree/canopy_Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)_499ba6ec"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7272,7 +7560,9 @@
       },
       "keys": [
         "tree/gt_cryptomeria_manual_FB_IMG_1786333453208_7e043e41"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7312,7 +7602,9 @@
       },
       "keys": [
         "tree/gt_cryptomeria_manual_twFir_s_ed94c225"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7352,7 +7644,9 @@
       },
       "keys": [
         "tree/canopy_id13801237-shutterstock_1868040619s_078efa72"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7392,7 +7686,9 @@
       },
       "keys": [
         "tree/canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi_b42e1b17"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7432,7 +7728,9 @@
       },
       "keys": [
         "tree/canopy_madagascar-baobab_57ead4aa"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7472,7 +7770,9 @@
       },
       "keys": [
         "tree/canopy_p6CRn6GXmKSX_b6f71538"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7512,7 +7812,9 @@
       },
       "keys": [
         "tree/canopy_Pachycereus_pringlei_forest_364afc0a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7552,7 +7854,9 @@
       },
       "keys": [
         "tree/canopy_pngtree-alaska-cedar-tree-png-image_5004137_1e268711"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7592,7 +7896,9 @@
       },
       "keys": [
         "tree/canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531_8bdc2c22"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7632,7 +7938,9 @@
       },
       "keys": [
         "tree/canopy_pngtree-coniferous-tree-png-image_6230847_445f251f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7672,7 +7980,9 @@
       },
       "keys": [
         "tree/canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677_917e50ee"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7712,7 +8022,9 @@
       },
       "keys": [
         "tree/canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957_2762ad4b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7752,7 +8064,9 @@
       },
       "keys": [
         "tree/sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_0d01f99f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7792,7 +8106,9 @@
       },
       "keys": [
         "tree/sp_baobab_manual_Baobab_and_elephant__Tanzania_cb4a1229"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7832,7 +8148,9 @@
       },
       "keys": [
         "tree/sp_baobab_manual_Birdwood_Downs_station_3ed4208b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7872,7 +8190,9 @@
       },
       "keys": [
         "tree/sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED_fbe350c3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7912,7 +8232,9 @@
       },
       "keys": [
         "tree/sp_conifer_manual_FB_IMG_1786332582292_0f638aa6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7952,7 +8274,9 @@
       },
       "keys": [
         "tree/sp_conifer_manual_On_the_stage__Tsuga_chinensis_at_Nanhu_Mountain__60a33dfb"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -7992,7 +8316,9 @@
       },
       "keys": [
         "tree/canopy_un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6_4fdb292e"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8032,7 +8358,9 @@
       },
       "keys": [
         "tree/canopy_山上的孤松樹_aa146653"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8072,7 +8400,9 @@
       },
       "keys": [
         "tree/canopy_網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03_15b8dd04"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8112,7 +8442,9 @@
       },
       "keys": [
         "tree/canopy_臺灣杉照片提供／陳建帆_31f04a07"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8152,7 +8484,9 @@
       },
       "keys": [
         "vehicle/bike_000001_1738650793_61c03cf3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8192,7 +8526,9 @@
       },
       "keys": [
         "vehicle/bike_003002_1725858476_d6efffb7"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8232,7 +8568,9 @@
       },
       "keys": [
         "vehicle/bike_10012915_R3_m_20b94748"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8272,7 +8610,9 @@
       },
       "keys": [
         "vehicle/bike_110295IA-M009_L_d442e9ed"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8312,7 +8652,9 @@
       },
       "keys": [
         "vehicle/bike_110296IA-M009_L_fca3d2f7"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8352,7 +8694,9 @@
       },
       "keys": [
         "vehicle/bike_12544404_O_m_a2969dc5"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8392,7 +8736,9 @@
       },
       "keys": [
         "vehicle/bike_13226803_R_m_93a7ccd1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8432,7 +8778,9 @@
       },
       "keys": [
         "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_fe9fa5f6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8472,7 +8820,9 @@
       },
       "keys": [
         "vehicle/bike_19e97a45118b4dedac318903f350414f_R_2edb1758"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8512,7 +8862,9 @@
       },
       "keys": [
         "vehicle/bike_3827532_O_m_5a95382c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8552,7 +8904,9 @@
       },
       "keys": [
         "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_bbc285a7"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8592,7 +8946,9 @@
       },
       "keys": [
         "vehicle/bike_6756854_OR_m_4318f4c3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8632,7 +8988,9 @@
       },
       "keys": [
         "vehicle/bike_800x (1)_dd41a20a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8672,7 +9030,9 @@
       },
       "keys": [
         "vehicle/bike_800x_0f6397c9"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8712,7 +9072,9 @@
       },
       "keys": [
         "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_4a125c4d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8752,7 +9114,9 @@
       },
       "keys": [
         "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_5015bbd8"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8792,7 +9156,9 @@
       },
       "keys": [
         "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_10f84c9f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8832,7 +9198,9 @@
       },
       "keys": [
         "vehicle/bike_T-806_blue_ad4e6ee8"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8872,7 +9240,9 @@
       },
       "keys": [
         "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_2011fdd8"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8912,7 +9282,9 @@
       },
       "keys": [
         "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f2da84fa"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8952,7 +9324,9 @@
       },
       "keys": [
         "vehicle/car_02_outlander_20211001_menu_6f8ec1d7"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -8992,7 +9366,9 @@
       },
       "keys": [
         "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_a601049d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9032,7 +9408,9 @@
       },
       "keys": [
         "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_492d571e"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9072,7 +9450,9 @@
       },
       "keys": [
         "vehicle/car_161060143500_158d09d9"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9112,7 +9492,9 @@
       },
       "keys": [
         "vehicle/car_1667357469403862_600_400_a7a7a5c9"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9152,7 +9534,9 @@
       },
       "keys": [
         "vehicle/car_1683687307801401_600_400_86b6962a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9192,7 +9576,9 @@
       },
       "keys": [
         "vehicle/car_1711950770028207_600_400_c93b5fc4"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9232,7 +9618,9 @@
       },
       "keys": [
         "vehicle/car_1716951305013100_1400_0_a1b1d807"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9272,7 +9660,9 @@
       },
       "keys": [
         "vehicle/car_176103315400 (1)_62f338ca"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9312,7 +9702,9 @@
       },
       "keys": [
         "vehicle/car_176103315400_b84cb3e4"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9352,7 +9744,9 @@
       },
       "keys": [
         "vehicle/car_176174663300_fa83dbd1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9392,7 +9786,9 @@
       },
       "keys": [
         "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2 (1)_0d0be029"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9432,7 +9828,9 @@
       },
       "keys": [
         "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9472,7 +9870,9 @@
       },
       "keys": [
         "vehicle/car_2017091364238789_7b83e074"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9512,7 +9912,9 @@
       },
       "keys": [
         "vehicle/car_20200710700113_ef4437c6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9552,7 +9954,9 @@
       },
       "keys": [
         "vehicle/car_202409251527451_a060b2f3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9592,7 +9996,9 @@
       },
       "keys": [
         "vehicle/car_2025-porsche-carrera-t-coupe_7eb676c1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9632,7 +10038,9 @@
       },
       "keys": [
         "vehicle/car_202504061134_33848a5a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9672,7 +10080,9 @@
       },
       "keys": [
         "vehicle/car_220809-20941-15-q0oDy_02692d4c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9712,7 +10122,9 @@
       },
       "keys": [
         "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_5574c12e"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9752,7 +10164,9 @@
       },
       "keys": [
         "vehicle/car_240203_FordExplorerFacelift_fromFord-07_52e46180"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9792,7 +10206,9 @@
       },
       "keys": [
         "vehicle/car_240521-25714-10-CT9mc_a52150f3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9832,7 +10248,9 @@
       },
       "keys": [
         "vehicle/car_240710-26084-40-oeQ5G_1436d6c0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9872,7 +10290,9 @@
       },
       "keys": [
         "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_4a03f68e"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9912,7 +10332,9 @@
       },
       "keys": [
         "vehicle/car_241016-26812-1-UmpVe_5b81b057"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9952,7 +10374,9 @@
       },
       "keys": [
         "vehicle/car_241120-27067-61-GPe1X_527cbf60"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -9992,7 +10416,9 @@
       },
       "keys": [
         "vehicle/car_250730-29093-1-4yYYG_3354ccdc"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10032,7 +10458,9 @@
       },
       "keys": [
         "vehicle/car_250px-Honda-TN360_5f314df2"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10072,7 +10500,9 @@
       },
       "keys": [
         "vehicle/car_2598949_fc8325b6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10112,7 +10542,9 @@
       },
       "keys": [
         "vehicle/car_3列_77e43a72"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10152,7 +10584,9 @@
       },
       "keys": [
         "vehicle/car_4590905_001_M_59880f23"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10192,7 +10626,9 @@
       },
       "keys": [
         "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_bd2856ab"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10232,7 +10668,9 @@
       },
       "keys": [
         "vehicle/car_5-man_da4a0c78"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10272,7 +10710,9 @@
       },
       "keys": [
         "vehicle/car_6841_rd_e5213464"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10312,7 +10752,9 @@
       },
       "keys": [
         "vehicle/car_7car-202006291136-3_79e8b1ce"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10352,7 +10794,9 @@
       },
       "keys": [
         "vehicle/car_7car-202401030308-3_38a5ca9a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10392,7 +10836,9 @@
       },
       "keys": [
         "vehicle/car_7CcTSYgumkMG_d97a0690"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10432,7 +10878,9 @@
       },
       "keys": [
         "vehicle/car_8361539_a35ac16a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10472,7 +10920,9 @@
       },
       "keys": [
         "vehicle/car_881e58ddc9cd0cc82af65be198476506_3ce068ee"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10512,7 +10962,9 @@
       },
       "keys": [
         "vehicle/car_9d6035f40faac95805c9c47f572ebe3f_8a8058c6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10552,7 +11004,9 @@
       },
       "keys": [
         "vehicle/car_articleimage_1373637_cc2f1f88"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10592,7 +11046,9 @@
       },
       "keys": [
         "vehicle/car_Cybertruck-來了！限量-Cybertruck-模型台灣上架_f0ddba1a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10632,7 +11088,9 @@
       },
       "keys": [
         "vehicle/car_depu_1ba7f83a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10672,7 +11130,9 @@
       },
       "keys": [
         "vehicle/car_Farizon-SV-3_1e2f4407"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10712,7 +11172,9 @@
       },
       "keys": [
         "vehicle/car_IMG20260102180810I92509U2349_251a8a02"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10752,7 +11214,9 @@
       },
       "keys": [
         "vehicle/car_jeep-1597856882911_8d77f457"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10792,7 +11256,9 @@
       },
       "keys": [
         "vehicle/car_jspace-pu_20241108_menu_f9d0505b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10832,7 +11298,9 @@
       },
       "keys": [
         "vehicle/car_JSV_01_f91b8f68"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10872,7 +11340,9 @@
       },
       "keys": [
         "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_72aa0323"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10912,7 +11382,9 @@
       },
       "keys": [
         "vehicle/car_MD_01_5x7_5f3d7cfd"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10952,7 +11424,9 @@
       },
       "keys": [
         "vehicle/car_mobile01-78b0b061843ca71c35cd47caeccc4c93_4284fc96"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -10992,7 +11466,9 @@
       },
       "keys": [
         "vehicle/car_Ou7KZDwD3jVNttR_a3bca4c3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11032,7 +11508,9 @@
       },
       "keys": [
         "vehicle/car_ph-hv2-1_66682f1a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11072,7 +11550,9 @@
       },
       "keys": [
         "vehicle/car_photooriginal-2022408-29vqn_b22c13df"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11112,7 +11592,9 @@
       },
       "keys": [
         "vehicle/car_php6z4pvZ_b5bbf4e0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11152,7 +11634,9 @@
       },
       "keys": [
         "vehicle/car_qaDPp5eY29jQ2M2cng_74438192"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11192,7 +11676,9 @@
       },
       "keys": [
         "vehicle/car_qaOZnp2Y26im18zO1A_4c70f696"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11232,7 +11718,9 @@
       },
       "keys": [
         "vehicle/car_series-better-car_2860aa4e"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11272,7 +11760,9 @@
       },
       "keys": [
         "vehicle/car_showcase2_edeliver5_h1_720x414_9c47e61c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11312,7 +11802,9 @@
       },
       "keys": [
         "vehicle/car_teslam3-960_8400a2d0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11352,7 +11844,9 @@
       },
       "keys": [
         "vehicle/car_圖1_84826dd1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11392,7 +11886,9 @@
       },
       "keys": [
         "vehicle/heavy_000001_1706597927_fcaebcd1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11432,7 +11928,9 @@
       },
       "keys": [
         "vehicle/heavy_000001_1776155963_bfbffc5b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11472,7 +11970,9 @@
       },
       "keys": [
         "vehicle/heavy_01242_bfb1c741"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11512,7 +12012,9 @@
       },
       "keys": [
         "vehicle/heavy_115576297_0e91b2b6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11552,7 +12054,9 @@
       },
       "keys": [
         "vehicle/heavy_1208367-1024x1024_63b7840d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11592,7 +12096,9 @@
       },
       "keys": [
         "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_f2cdd6d1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11632,7 +12138,9 @@
       },
       "keys": [
         "vehicle/heavy_1618404544235416926_1ec6c7d0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11672,7 +12180,9 @@
       },
       "keys": [
         "vehicle/heavy_1668138443926_1f2093f2"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11712,7 +12222,9 @@
       },
       "keys": [
         "vehicle/heavy_167155193720_fe5745cd"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11752,7 +12264,9 @@
       },
       "keys": [
         "vehicle/heavy_20160119121809449_04950a17"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11792,7 +12306,9 @@
       },
       "keys": [
         "vehicle/heavy_2021070912244646524316_51ab54a3"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11832,7 +12348,9 @@
       },
       "keys": [
         "vehicle/heavy_20250917103436615_0c41e86d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11872,7 +12390,9 @@
       },
       "keys": [
         "vehicle/heavy_20260514234220_58_f9bd4e17"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11912,7 +12432,9 @@
       },
       "keys": [
         "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_2eece7bd"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11952,7 +12474,9 @@
       },
       "keys": [
         "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_854387df"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -11992,7 +12516,9 @@
       },
       "keys": [
         "vehicle/heavy_3158_news_banner_930018ff"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12032,7 +12558,9 @@
       },
       "keys": [
         "vehicle/heavy_3d-render-cargo-delivery-truck_1048-5605_04272849"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12072,7 +12600,9 @@
       },
       "keys": [
         "vehicle/heavy_48390093819aa890_9216802d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12112,7 +12642,9 @@
       },
       "keys": [
         "vehicle/heavy_4d54f379-07b7-453d-9e45-5fa076db88df_ffefe059"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12152,7 +12684,9 @@
       },
       "keys": [
         "vehicle/heavy_50992126_183220969.918332_526bae3d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12192,7 +12726,9 @@
       },
       "keys": [
         "vehicle/heavy_5126f791-8473-4ae4-b729-525c496362fd_7d1f057c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12232,7 +12768,9 @@
       },
       "keys": [
         "vehicle/heavy_67342910-48b4-49b9-b2ab-bfd617a28c76_cf17f8ed"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12272,7 +12810,9 @@
       },
       "keys": [
         "vehicle/heavy_7car-201702220825-1_6409956f"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12312,7 +12852,9 @@
       },
       "keys": [
         "vehicle/heavy_99NzsCYgrt_433feb63"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12352,7 +12894,9 @@
       },
       "keys": [
         "vehicle/heavy_a33aa25d56bf3c88be759c9623090c9b_17f478ce"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12392,7 +12936,9 @@
       },
       "keys": [
         "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_0031d4dd"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12432,7 +12978,9 @@
       },
       "keys": [
         "vehicle/heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_7d713624"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12472,7 +13020,9 @@
       },
       "keys": [
         "vehicle/heavy_car_6c11cba5"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12512,7 +13062,9 @@
       },
       "keys": [
         "vehicle/heavy_CSPV-02_01_b1d74929"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12552,7 +13104,9 @@
       },
       "keys": [
         "vehicle/heavy_d2462cec993f618a_11bf3610"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12592,7 +13146,9 @@
       },
       "keys": [
         "vehicle/heavy_image_1740103474992_00815e4a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12632,7 +13188,9 @@
       },
       "keys": [
         "vehicle/heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP_cce56548"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12672,7 +13230,9 @@
       },
       "keys": [
         "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_611d4559"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12712,7 +13272,9 @@
       },
       "keys": [
         "vehicle/heavy_mainCoverImage1_1180859_a53d215c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12752,7 +13314,9 @@
       },
       "keys": [
         "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_056db6f9"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12792,7 +13356,9 @@
       },
       "keys": [
         "vehicle/heavy_news442315o_6ef31cdb"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12832,7 +13398,9 @@
       },
       "keys": [
         "vehicle/heavy_photooriginal-2760150-ffEPQ_55db2e42"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12872,7 +13440,9 @@
       },
       "keys": [
         "vehicle/heavy_photooriginal-98016-XUIGz_0098b54c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12912,7 +13482,9 @@
       },
       "keys": [
         "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12952,7 +13524,9 @@
       },
       "keys": [
         "vehicle/heavy_product_4714426807346_3_b3043b34"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -12992,7 +13566,9 @@
       },
       "keys": [
         "vehicle/heavy_slide-02_1ea87cda"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13032,7 +13608,9 @@
       },
       "keys": [
         "vehicle/heavy_文境旅遊-賓士豪華大客車-5_815d2cf8"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13072,7 +13650,9 @@
       },
       "keys": [
         "vehicle/heavy_規格表2大圖合for官網_5e037079"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13112,7 +13692,9 @@
       },
       "keys": [
         "vehicle/heavy_規格表3大圖合for官網_09a45474"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13152,7 +13734,9 @@
       },
       "keys": [
         "vehicle/motor_000001_1672123300_34efdc65"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13192,7 +13776,9 @@
       },
       "keys": [
         "vehicle/motor_000001_1742374978_798df443"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13232,7 +13818,9 @@
       },
       "keys": [
         "vehicle/motor_000002_1645174811_644204de"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13272,7 +13860,9 @@
       },
       "keys": [
         "vehicle/motor_10905670_R_2d7604a8"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13312,7 +13902,9 @@
       },
       "keys": [
         "vehicle/motor_11871715_O_m_746ddcdc"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13352,7 +13944,9 @@
       },
       "keys": [
         "vehicle/motor_14074013_OR_m_adb71ef1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13392,7 +13986,9 @@
       },
       "keys": [
         "vehicle/motor_14892810_OR_m_5f418366"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13432,7 +14028,9 @@
       },
       "keys": [
         "vehicle/motor_165019503901_38aee327"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13472,7 +14070,9 @@
       },
       "keys": [
         "vehicle/motor_180512-10030-2-uyEK9_242bbe10"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13512,7 +14112,9 @@
       },
       "keys": [
         "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_364b3cae"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13552,7 +14154,9 @@
       },
       "keys": [
         "vehicle/motor_54175397571_be4ab8de90_b_bc0b0c3c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13592,7 +14196,9 @@
       },
       "keys": [
         "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1d9d6238"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13632,7 +14238,9 @@
       },
       "keys": [
         "vehicle/motor_7801666_ace34d8b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13672,7 +14280,9 @@
       },
       "keys": [
         "vehicle/motor_7aea2e93dab84c0a500e8c1db54288bd2_261d0904"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13712,7 +14322,9 @@
       },
       "keys": [
         "vehicle/motor_9ebd5dab928f4a6750f7899ed8425751_036b2bff"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13752,7 +14364,9 @@
       },
       "keys": [
         "vehicle/motor_A16A00_P_03_02_9c610553"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13792,7 +14406,9 @@
       },
       "keys": [
         "vehicle/motor_A74ASA4_PictureItem_Clipping_01_3_ed4a663d"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13832,7 +14448,9 @@
       },
       "keys": [
         "vehicle/motor_AF530-2_7139b445"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13872,7 +14490,9 @@
       },
       "keys": [
         "vehicle/motor_c8a41c3d-5818-4853-b00f-cabe19fc7275_161a16b1"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13912,7 +14532,9 @@
       },
       "keys": [
         "vehicle/motor_e08c2c09f558b17451c07d2343ac9cb5_XL_5388c140"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13952,7 +14574,9 @@
       },
       "keys": [
         "vehicle/motor_ECP0030603705169_4_20691615_82031499"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -13992,7 +14616,9 @@
       },
       "keys": [
         "vehicle/motor_f2b1a059-1f3d-4c80-9f5a-c34b7028a3a3_5c055380"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14032,7 +14658,9 @@
       },
       "keys": [
         "vehicle/motor_GOGORO%20SuperSport%20ACE_19fb775a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14072,7 +14700,9 @@
       },
       "keys": [
         "vehicle/motor_M01_52016_PEG080_green_050b992e"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14112,7 +14742,9 @@
       },
       "keys": [
         "vehicle/motor_mobile01-c12a5fe0448a84268c674b1c946cdc62_a19a8024"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14152,7 +14784,9 @@
       },
       "keys": [
         "vehicle/motor_qaSe0J_R2KSh1aPL0Q_5c0258e2"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14192,7 +14826,9 @@
       },
       "keys": [
         "vehicle/motor_silver_e02b79ff"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14232,7 +14868,9 @@
       },
       "keys": [
         "vehicle/motor_SYM70 共創設計DRGBT 優勝彩繪款_3097bcc6"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14272,7 +14910,9 @@
       },
       "keys": [
         "vehicle/motor_xA2OUyOW4UtkxXB60SckQMMZFGl38rljQuy3xC2G_faa027d4"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14312,7 +14952,9 @@
       },
       "keys": [
         "vehicle/motor__covers-dollar-125-2026-a3403d9128de9ab098ef985e69448a1c_393fb66a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14352,7 +14994,9 @@
       },
       "keys": [
         "vehicle/motor__covers-rts-135-d8da428bf310b43dba9ff9a92bcf09ee_add47b6a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14392,7 +15036,9 @@
       },
       "keys": [
         "vehicle/train_1758402595_62693_884e4d8b"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14432,7 +15078,9 @@
       },
       "keys": [
         "vehicle/train_206_1_l_c7807c77"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14472,7 +15120,9 @@
       },
       "keys": [
         "vehicle/train_250px-DF4D-0463_hauls_K903_at_372_Level_Crossing_20240702_ac029b2c"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14512,7 +15162,9 @@
       },
       "keys": [
         "vehicle/train_250px-JR_East_E001_series_Train_Suite_Shiki-shima_20170619_3a2c3147"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14552,7 +15204,9 @@
       },
       "keys": [
         "vehicle/train_3046929_255370fe"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14592,7 +15246,9 @@
       },
       "keys": [
         "vehicle/train_330px-Series-E353-S116_4bc4f228"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14632,7 +15288,9 @@
       },
       "keys": [
         "vehicle/train_330px-TRA_EMU500_running_a_local_train_service_on_the_Yilan_Line_approaching_Yilan_Station_4c942972"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14672,7 +15330,9 @@
       },
       "keys": [
         "vehicle/train_5a54516dcf197_5a544e4c4d904_1413493539_a26a11d2"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14712,7 +15372,9 @@
       },
       "keys": [
         "vehicle/train_671868b8ba618_3ebbbf6e"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14752,7 +15414,9 @@
       },
       "keys": [
         "vehicle/train_76c22c3294e14a2e91b55d837df2308d_9340b5be"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14792,7 +15456,9 @@
       },
       "keys": [
         "vehicle/train_desc_0joKDARyPPYFMN_37c786bd"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14832,7 +15498,9 @@
       },
       "keys": [
         "vehicle/train_DF4D_0353_at_Liucun_(20210411172849)_ac16e786"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14872,7 +15540,9 @@
       },
       "keys": [
         "vehicle/train_ICE4_Front_3bc44c3a"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14912,7 +15582,9 @@
       },
       "keys": [
         "vehicle/train_sub8_4070a6b0"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     },
     {
       "method": "llm_parts",
@@ -14952,7 +15624,9 @@
       },
       "keys": [
         "vehicle/train_trainticket25759751_m_09254612"
-      ]
+      ],
+      "version": 2,
+      "verStr": "v2"
     }
   ]
 }

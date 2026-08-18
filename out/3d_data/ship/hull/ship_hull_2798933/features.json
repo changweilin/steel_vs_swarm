@@ -1,0 +1,49 @@
+{
+  "id": "ship_hull_2798933",
+  "sourceImage": "ship/2798933.jpg",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.925,
+  "aspectRatio": 1.333,
+  "colors": {
+    "primaryHex": 8228505,
+    "primaryRgb": [
+      125,
+      142,
+      153
+    ],
+    "accentHex": 1585730,
+    "accentRgb": [
+      24,
+      50,
+      66
+    ],
+    "darkHex": 3557721,
+    "darkRgb": [
+      54,
+      73,
+      89
+    ],
+    "brightHex": 11781325,
+    "brightRgb": [
+      179,
+      196,
+      205
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "streamlined_hull_superstructure",
+      "method": "terraced_decks_and_masts"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "vessel_hull_body",
+    "bow_wedge_flare",
+    "vessel_main_deck",
+    "vessel_superstructure",
+    "vessel_funnel",
+    "vessel_radar_mast"
+  ]
+}

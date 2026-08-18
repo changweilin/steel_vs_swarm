@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768",
+  "sourceImage": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.921,
+  "aspectRatio": 1.333,
+  "colors": {
+    "primaryHex": 13290443,
+    "primaryRgb": [
+      202,
+      203,
+      203
+    ],
+    "accentHex": 1052946,
+    "accentRgb": [
+      16,
+      17,
+      18
+    ],
+    "darkHex": 3355443,
+    "darkRgb": [
+      51,
+      51,
+      51
+    ],
+    "brightHex": 16119285,
+    "brightRgb": [
+      245,
+      245,
+      245
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "top_down_seat_stays"
+    },
+    {
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "thin_aero_rims"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "bicycle_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

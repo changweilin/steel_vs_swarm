@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1",
+  "sourceImage": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.795,
+  "aspectRatio": 1.231,
+  "colors": {
+    "primaryHex": 13357264,
+    "primaryRgb": [
+      203,
+      208,
+      208
+    ],
+    "accentHex": 1118485,
+    "accentRgb": [
+      17,
+      17,
+      21
+    ],
+    "darkHex": 3879731,
+    "darkRgb": [
+      59,
+      51,
+      51
+    ],
+    "brightHex": 15791605,
+    "brightRgb": [
+      240,
+      245,
+      245
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "top_down_seat_stays"
+    },
+    {
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "thin_aero_rims"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "bicycle_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

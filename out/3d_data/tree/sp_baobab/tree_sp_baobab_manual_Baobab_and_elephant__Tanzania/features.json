@@ -1,0 +1,56 @@
+{
+  "id": "tree_sp_baobab_manual_Baobab_and_elephant__Tanzania",
+  "sourceImage": "tree/sp_baobab/manual_Baobab_and_elephant__Tanzania.jpg",
+  "style": "baobab_tree",
+  "symmetryMode": "asymmetric",
+  "symmetryScore": 0.893,
+  "aspectRatio": 1.5,
+  "colors": {
+    "primaryHex": 8554633,
+    "primaryRgb": [
+      130,
+      136,
+      137
+    ],
+    "accentHex": 987156,
+    "accentRgb": [
+      15,
+      16,
+      20
+    ],
+    "darkHex": 4208945,
+    "darkRgb": [
+      64,
+      57,
+      49
+    ],
+    "brightHex": 11322328,
+    "brightRgb": [
+      172,
+      195,
+      216
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "swollen_bottle_trunk",
+      "method": "massive_succulent_barrel"
+    },
+    {
+      "name": "sparse_rosette_crown",
+      "method": "root_like_canopy_clusters"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "baobab_bottle_trunk",
+    "baobab_branch_1",
+    "baobab_foliage_clump_1",
+    "baobab_branch_2",
+    "baobab_foliage_clump_2",
+    "baobab_branch_3",
+    "baobab_foliage_clump_3",
+    "baobab_branch_4",
+    "baobab_foliage_clump_4"
+  ]
+}

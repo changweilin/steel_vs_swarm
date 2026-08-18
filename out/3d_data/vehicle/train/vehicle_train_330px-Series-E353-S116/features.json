@@ -1,0 +1,86 @@
+{
+  "id": "vehicle_train_330px-Series-E353-S116",
+  "sourceImage": "vehicle/train/330px-Series-E353-S116.jpg",
+  "style": "freight_wagon",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.784,
+  "aspectRatio": 1.5,
+  "colors": {
+    "primaryHex": 7631478,
+    "primaryRgb": [
+      116,
+      114,
+      118
+    ],
+    "accentHex": 16382205,
+    "accentRgb": [
+      249,
+      248,
+      253
+    ],
+    "darkHex": 3486518,
+    "darkRgb": [
+      53,
+      51,
+      54
+    ],
+    "brightHex": 13290449,
+    "brightRgb": [
+      202,
+      203,
+      209
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "aerodynamic_wedge_nose",
+      "method": "high_speed_emu_cowl"
+    },
+    {
+      "name": "single_arm_pantograph",
+      "method": "roof_catenary_collector"
+    },
+    {
+      "name": "flush_continuous_windows",
+      "method": "tinted_glass_ribbon"
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    }
+  ],
+  "totalParts": 15,
+  "partNames": [
+    "train_car_body",
+    "roof_aerodynamic_cap",
+    "continuous_tinted_windows",
+    "aerodynamic_bullet_nose",
+    "high_speed_pantograph",
+    "train_bogie_frame_r",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "train_bogie_frame_f",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right"
+  ]
+}

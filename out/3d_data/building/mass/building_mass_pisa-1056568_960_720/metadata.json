@@ -3,36 +3,37 @@
   "key": "building/mass_pisa-1056568_960_720_a978eea5",
   "family": "building",
   "subpart": "mass",
+  "style": "leaning_arcade_tower",
+  "symmetryMode": "symmetric",
   "source_image": "building/pisa-1056568_960_720.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\pisa-1056568_960_720.jpg",
-  "created_at": "2026-08-18T05:52:57.056Z",
+  "created_at": "2026-08-18T10:56:14.130Z",
   "bounds": {
     "min": [
-      -7.7778,
+      -6.6,
       0,
-      -11.9202
+      -6.6
     ],
     "max": [
-      7.7778,
-      52.5879,
-      11.9202
+      7.2895,
+      26.3185,
+      6.6
     ],
     "size": [
-      15.556,
-      52.588,
-      23.84
+      13.889,
+      26.319,
+      13.2
     ],
-    "rMax": 14.233,
-    "triangles": 204,
-    "vertices": 134
+    "rMax": 9.833,
+    "triangles": 664,
+    "vertices": 360
   },
   "spec": {
-    "L": 15.555504692149233,
-    "W": 23.84042114900435,
-    "H": 48.58793011367971,
-    "stories": 14,
-    "roofBand": 0.15
+    "L": 14,
+    "W": 14,
+    "H": 26.518501564049746,
+    "style": "leaning_campanile_arcade"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

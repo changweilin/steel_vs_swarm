@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_bike_000001_1738650793",
+  "sourceImage": "vehicle/bike/000001_1738650793.jpg",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.868,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 14341589,
+    "primaryRgb": [
+      218,
+      213,
+      213
+    ],
+    "accentHex": 789516,
+    "accentRgb": [
+      12,
+      12,
+      12
+    ],
+    "darkHex": 3811626,
+    "darkRgb": [
+      58,
+      41,
+      42
+    ],
+    "brightHex": 16382200,
+    "brightRgb": [
+      249,
+      248,
+      248
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "top_down_seat_stays"
+    },
+    {
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "thin_aero_rims"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "bicycle_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}

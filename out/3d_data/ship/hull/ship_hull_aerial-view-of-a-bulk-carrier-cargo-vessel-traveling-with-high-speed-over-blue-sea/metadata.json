@@ -3,37 +3,37 @@
   "key": "ship/hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_7dd0dbdc",
   "family": "ship",
   "subpart": "hull",
+  "style": "aircraft_carrier",
+  "symmetryMode": "asymmetric",
   "source_image": "ship/aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
-  "created_at": "2026-08-18T05:52:57.164Z",
+  "created_at": "2026-08-18T10:56:14.192Z",
   "bounds": {
     "min": [
-      -21.6209,
-      -0.9195,
-      -5.8192
+      -38.717,
+      -1.4495,
+      -10.2962
     ],
     "max": [
-      23.8351,
-      18.56,
-      5.8192
+      41.0503,
+      23.38,
+      10.2962
     ],
     "size": [
-      45.456,
-      19.479,
-      11.638
+      79.767,
+      24.829,
+      20.592
     ],
-    "rMax": 24.535,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 42.322,
+    "triangles": 84,
+    "vertices": 54
   },
   "spec": {
-    "L": 45.51773861295491,
-    "W": 11.63847562371252,
-    "H": 19.022201876859693,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 79.01419089036392,
+    "W": 20.592317082475013,
+    "H": 19.51110093842985,
+    "style": "aircraft_carrier_flight_deck"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

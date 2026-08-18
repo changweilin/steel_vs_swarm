@@ -3,36 +3,37 @@
   "key": "building/mass_0355a12000s97al9y467C_8a798ed9",
   "family": "building",
   "subpart": "mass",
+  "style": "commercial_residential",
+  "symmetryMode": "asymmetric",
   "source_image": "building/0355a12000s97al9y467C.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\building\\0355a12000s97al9y467C.jpg",
-  "created_at": "2026-08-18T05:52:56.981Z",
+  "created_at": "2026-08-18T10:56:14.062Z",
   "bounds": {
     "min": [
-      -10.9472,
+      -10.6314,
       0,
-      -10.2233
+      -10.1116
     ],
     "max": [
-      10.9472,
-      30.2354,
-      10.2233
+      10.6314,
+      23.8152,
+      9.8116
     ],
     "size": [
-      21.894,
-      30.235,
-      20.447
+      21.263,
+      23.815,
+      19.923
     ],
-    "rMax": 14.979,
-    "triangles": 120,
-    "vertices": 78
+    "rMax": 14.672,
+    "triangles": 348,
+    "vertices": 232
   },
   "spec": {
-    "L": 21.894346532387274,
-    "W": 20.44650949874113,
-    "H": 26.235355153734645,
-    "stories": 8,
-    "roofBand": 0.15
+    "L": 21.26289768825818,
+    "W": 17.223254749370565,
+    "H": 23.81515220874342,
+    "style": "commercial_residential_asymmetric"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

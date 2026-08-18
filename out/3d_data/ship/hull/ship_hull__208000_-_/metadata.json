@@ -3,37 +3,37 @@
   "key": "ship/hull_中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧_17db1ce9",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧.jpg",
-  "created_at": "2026-08-18T05:52:57.220Z",
+  "created_at": "2026-08-18T10:56:14.231Z",
   "bounds": {
     "min": [
-      -14.5742,
-      -0.5891,
-      -7.1945
+      -17.6444,
+      -0.6567,
+      -6.713
     ],
     "max": [
-      16.3106,
-      18.9762,
-      7.1945
+      19.524,
+      19.3209,
+      6.713
     ],
     "size": [
-      30.885,
-      19.565,
-      14.389
+      37.168,
+      19.978,
+      13.426
     ],
-    "rMax": 17.827,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 20.646,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 30.682536049439232,
-    "W": 14.388944838635844,
-    "H": 19.94702067597467,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 37.146028839551384,
+    "W": 13.42596322575723,
+    "H": 17.960265506981003,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

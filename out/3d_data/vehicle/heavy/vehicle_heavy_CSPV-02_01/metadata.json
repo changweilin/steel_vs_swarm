@@ -3,54 +3,38 @@
   "key": "vehicle/heavy_CSPV-02_01_b1d74929",
   "family": "vehicle",
   "subpart": "heavy",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/heavy/CSPV-02_01.png",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\CSPV-02_01.png",
-  "created_at": "2026-08-18T05:52:57.673Z",
+  "created_at": "2026-08-18T10:56:14.591Z",
   "bounds": {
     "min": [
-      -5.1376,
+      -5.0869,
       0.0255,
-      -1.2877
+      -1.313
     ],
     "max": [
-      5.3426,
-      3.9614,
-      1.2877
+      5.1769,
+      4.0178,
+      1.313
     ],
     "size": [
-      10.48,
-      3.936,
-      2.575
+      10.264,
+      3.992,
+      2.626
     ],
-    "rMax": 5.496,
-    "triangles": 300,
-    "vertices": 172
+    "rMax": 5.341,
+    "triangles": 348,
+    "vertices": 200
   },
   "spec": {
-    "L": 10.675196459906921,
-    "W": 2.55,
-    "H": 3.9613550011444265,
+    "L": 10.353711757076372,
+    "W": 2.6,
+    "H": 4.117795834287022,
     "R": 0.52,
-    "axle": [
-      -3.736318760967422,
-      -1.6012794689860381,
-      3.8430707255664913
-    ],
-    "sill": 1.02,
-    "waist": 1.35,
-    "roof": 3.9613550011444265,
-    "cab": [
-      2.6687991149767303,
-      5.124094300755322
-    ],
-    "rakeF": 0.12,
-    "rakeR": 0,
-    "extra": [
-      "heavy_box",
-      "mirror",
-      "exhaust"
-    ]
+    "style": "heavy_cargo_freight_truck"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

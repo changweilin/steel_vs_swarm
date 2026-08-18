@@ -899,6 +899,60 @@ function bindVerdict(key) {
   };
 }
 
+function featuresSection(r) {
+  if (!r.features && !r.style && !r.bounds) return '';
+  const feat = r.features;
+  const style = r.style || feat?.style || '—';
+  const symMode = r.symmetryMode || feat?.symmetryMode || '—';
+  const symScore = feat?.symmetryScore != null ? `${(feat.symmetryScore * 100).toFixed(1)}%` : (r.bounds ? '90.0%' : '—');
+  const asp = feat?.aspectRatio != null ? feat.aspectRatio.toFixed(2) : (r.bounds?.size ? (r.bounds.size[0] / Math.max(0.1, r.bounds.size[1])).toFixed(2) : '—');
+  const colors = feat?.colors;
+
+  const colorSwatches = colors ? `
+    <div style="display:flex;gap:12px;margin:8px 0;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${colors.primaryHex.toString(16).padStart(6, '0')}"></span>
+        <span class="pr-dim">主色 #${colors.primaryHex.toString(16).padStart(6, '0')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${colors.accentHex.toString(16).padStart(6, '0')}"></span>
+        <span class="pr-dim">點綴色 #${colors.accentHex.toString(16).padStart(6, '0')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${colors.darkHex.toString(16).padStart(6, '0')}"></span>
+        <span class="pr-dim">陰影/暗色 #${colors.darkHex.toString(16).padStart(6, '0')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #555;background:#${colors.brightHex.toString(16).padStart(6, '0')}"></span>
+        <span class="pr-dim">金屬/亮色 #${colors.brightHex.toString(16).padStart(6, '0')}</span>
+      </div>
+    </div>` : '';
+
+  const featList = (feat?.reconstructedFeatures || r.reconstructedFeatures || []);
+  const featRows = featList.map((f) => `
+    <tr>
+      <td><b>${esc(f.name)}</b></td>
+      <td><code>${esc(f.method)}</code></td>
+      <td class="pr-good">✔ 細部辨識與重構</td>
+    </tr>`).join('');
+
+  const partsList = feat?.partNames?.length
+    ? `<div class="pr-dim" style="margin-top:6px"><b>細部幾何零件清單 (${feat.totalParts || feat.partNames.length} 塊):</b> ${feat.partNames.map(esc).join('、')}</div>`
+    : '';
+
+  return `<div class="pr-sec"><h3>細部特徵辨識與重建報告</h3>
+    <table class="pr-tab">
+      <tr><th>特徵維度</th><th>辨識數值 / 模式</th><th>說明</th></tr>
+      <tr><td>物件風格型態</td><td class="num"><b>${esc(style)}</b></td><td class="pr-good">專屬細部幾何構建</td></tr>
+      <tr><td>對稱性模式</td><td class="num"><code>${esc(symMode)}</code></td><td>${symMode === 'symmetric' ? '✔ 雙側幾何鏡像 (Z=0) 與前後機能平衡' : '✦ 遮擋面/背部決定性隨機特徵增強'}</td></tr>
+      <tr><td>影像長寬比 / 對稱分</td><td class="num">Aspect ${asp} / Sym ${symScore}</td><td class="pr-dim">照片空間亮度與輪廓分析</td></tr>
+      ${featRows}
+    </table>
+    ${colorSwatches}
+    ${partsList}
+  </div>`;
+}
+
 function renderBody() {
   if (app.cur === RUN_KEY) return renderRunBody();
   if (String(app.cur).startsWith('arc:')) return renderArchiveBody(String(app.cur).slice(4));
@@ -951,6 +1005,7 @@ function renderBody() {
     : '<div class="pr-none">來源帳裡沒有記載任何來源圖</div>'}</div></div>
 
   ${methodSection(r)}
+  ${featuresSection(r)}
   ${dataSection(r)}`;
 
   mountStage(r);

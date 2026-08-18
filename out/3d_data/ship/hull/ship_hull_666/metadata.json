@@ -3,37 +3,37 @@
   "key": "ship/hull_666_e6e7d764",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/666.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\666.jpg",
-  "created_at": "2026-08-18T05:52:57.149Z",
+  "created_at": "2026-08-18T10:56:14.183Z",
   "bounds": {
     "min": [
-      -22.7331,
-      -0.9716,
-      -6.9709
+      -24.1715,
+      -0.9266,
+      -6.5639
     ],
     "max": [
-      25.0227,
-      18.7436,
-      6.9709
+      26.5023,
+      19.1349,
+      6.5639
     ],
     "size": [
-      47.756,
-      19.715,
-      13.942
+      50.674,
+      20.061,
+      13.128
     ],
-    "rMax": 25.976,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 27.303,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 47.85923552300298,
-    "W": 13.941794460975052,
-    "H": 19.43016708628977,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 50.88738841840238,
+    "W": 13.127862973983367,
+    "H": 17.572625314717328,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

@@ -3,36 +3,37 @@
   "key": "tree/sp_baobab_manual_Birdwood_Downs_station_3ed4208b",
   "family": "tree",
   "subpart": "sp_baobab",
+  "style": "broadleaf_camphor_oak",
+  "symmetryMode": "asymmetric",
   "source_image": "tree/sp_baobab/manual_Birdwood_Downs_station.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_baobab\\manual_Birdwood_Downs_station.jpg",
-  "created_at": "2026-08-18T05:52:57.378Z",
+  "created_at": "2026-08-18T10:56:14.344Z",
   "bounds": {
     "min": [
-      -3.4477,
+      -5.6501,
       0,
-      -3.4234
+      -5.1211
     ],
     "max": [
-      3.696,
-      11.5281,
-      3.5267
+      5.4283,
+      18.0216,
+      6.2769
     ],
     "size": [
-      7.144,
-      11.528,
-      6.95
+      11.078,
+      18.022,
+      11.398
     ],
-    "rMax": 5.109,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 8.299,
+    "triangles": 152,
+    "vertices": 98
   },
   "spec": {
-    "L": 8.919546807049668,
-    "W": 6.831807431143663,
-    "H": 11.406408789196613,
-    "trunkH": 5.1328839551384755,
-    "trunkR": 0.5336095216296636
+    "L": 11.919546807049668,
+    "W": 9.831807431143664,
+    "H": 17.40640878919661,
+    "style": "gnarled_broadleaf_buttress"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

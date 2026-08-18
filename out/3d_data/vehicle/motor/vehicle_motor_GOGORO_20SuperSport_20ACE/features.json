@@ -1,0 +1,57 @@
+{
+  "id": "vehicle_motor_GOGORO%20SuperSport%20ACE",
+  "sourceImage": "vehicle/motor/GOGORO%20SuperSport%20ACE.png",
+  "style": "sportbike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.816,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 8948361,
+    "primaryRgb": [
+      136,
+      138,
+      137
+    ],
+    "accentHex": 0,
+    "accentRgb": [
+      0,
+      0,
+      0
+    ],
+    "darkHex": 1645597,
+    "darkRgb": [
+      25,
+      28,
+      29
+    ],
+    "brightHex": 16053492,
+    "brightRgb": [
+      244,
+      244,
+      244
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "aerodynamic_fairing",
+      "method": "racing_cowl_and_windscreen"
+    },
+    {
+      "name": "upswept_exhaust",
+      "method": "titanium_racing_muffler"
+    }
+  ],
+  "totalParts": 10,
+  "partNames": [
+    "racing_main_fairing",
+    "front_nose_fairing",
+    "racing_windscreen",
+    "aerodynamic_fuel_tank",
+    "stepped_racing_seat",
+    "usd_front_fork",
+    "rear_mono_swingarm",
+    "upswept_racing_muffler",
+    "front_wheel_disc",
+    "rear_wheel_wide"
+  ]
+}

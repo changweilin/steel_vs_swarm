@@ -3,57 +3,38 @@
   "key": "vehicle/car_881e58ddc9cd0cc82af65be198476506_3ce068ee",
   "family": "vehicle",
   "subpart": "car",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/881e58ddc9cd0cc82af65be198476506.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\881e58ddc9cd0cc82af65be198476506.jpg",
-  "created_at": "2026-08-18T05:52:57.550Z",
+  "created_at": "2026-08-18T10:56:14.497Z",
   "bounds": {
     "min": [
-      -2.2925,
-      0.0166,
-      -0.9727
+      -2.4583,
+      0.0171,
+      -0.9748
     ],
     "max": [
-      2.2925,
-      1.4997,
-      0.9727
+      2.4683,
+      1.6954,
+      0.9748
     ],
     "size": [
-      4.585,
-      1.483,
-      1.945
+      4.927,
+      1.678,
+      1.95
     ],
-    "rMax": 2.49,
-    "triangles": 208,
-    "vertices": 120
+    "rMax": 2.654,
+    "triangles": 316,
+    "vertices": 192
   },
   "spec": {
-    "L": 4.584916456855115,
-    "W": 1.9453971160448615,
-    "H": 1.499691004806592,
-    "R": 0.34,
-    "axle": [
-      -1.2837766079194324,
-      1.2837766079194324
-    ],
-    "sill": 0.42,
-    "waist": 0.95,
-    "roof": 1.499691004806592,
-    "cab": [
-      -1.0086816205081253,
-      0.6877374685282672
-    ],
-    "rakeF": 0.34,
-    "rakeR": 0.2,
-    "side": [
-      0.48,
-      0.9
-    ],
-    "extra": [
-      "mirror",
-      "headlight",
-      "grille"
-    ]
+    "L": 4.856610971236743,
+    "W": 1.92,
+    "H": 1.6953971160448615,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

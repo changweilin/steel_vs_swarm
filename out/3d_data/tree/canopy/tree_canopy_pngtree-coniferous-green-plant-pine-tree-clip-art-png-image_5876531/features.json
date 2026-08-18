@@ -1,0 +1,49 @@
+{
+  "id": "tree_canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531",
+  "sourceImage": "tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.917,
+  "aspectRatio": 1,
+  "colors": {
+    "primaryHex": 14080969,
+    "primaryRgb": [
+      214,
+      219,
+      201
+    ],
+    "accentHex": 2107151,
+    "accentRgb": [
+      32,
+      39,
+      15
+    ],
+    "darkHex": 4537625,
+    "darkRgb": [
+      69,
+      61,
+      25
+    ],
+    "brightHex": 15856365,
+    "brightRgb": [
+      241,
+      242,
+      237
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "tiered_conical_whorls",
+      "method": "five_tiered_needle_canopies"
+    }
+  ],
+  "totalParts": 6,
+  "partNames": [
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5"
+  ]
+}

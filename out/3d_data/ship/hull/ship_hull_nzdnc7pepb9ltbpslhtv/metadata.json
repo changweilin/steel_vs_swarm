@@ -3,37 +3,37 @@
   "key": "ship/hull_nzdnc7pepb9ltbpslhtv_5642e4e3",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/nzdnc7pepb9ltbpslhtv.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\nzdnc7pepb9ltbpslhtv.jpg",
-  "created_at": "2026-08-18T05:52:57.197Z",
+  "created_at": "2026-08-18T10:56:14.216Z",
   "bounds": {
     "min": [
-      -13.35,
-      -0.5318,
-      -4.5395
+      -16.665,
+      -0.6162,
+      -4.943
     ],
     "max": [
-      15.0035,
-      18.6006,
-      4.5395
+      18.477,
+      19.0205,
+      4.943
     ],
     "size": [
-      28.354,
-      19.132,
-      9.079
+      35.142,
+      19.637,
+      9.886
     ],
-    "rMax": 15.675,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 19.127,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 28.105287251087205,
-    "W": 9.078988326848249,
-    "H": 19.112413214312962,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 35.084229800869764,
+    "W": 9.885992217898833,
+    "H": 17.33430991073472,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

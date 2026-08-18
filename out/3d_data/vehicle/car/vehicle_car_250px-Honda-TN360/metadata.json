@@ -3,57 +3,38 @@
   "key": "vehicle/car_250px-Honda-TN360_5f314df2",
   "family": "vehicle",
   "subpart": "car",
+  "style": "sedan_hatchback",
+  "symmetryMode": "symmetric",
   "source_image": "vehicle/car/250px-Honda-TN360.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\250px-Honda-TN360.jpg",
-  "created_at": "2026-08-18T05:52:57.526Z",
+  "created_at": "2026-08-18T10:56:14.476Z",
   "bounds": {
     "min": [
-      -2.2576,
-      0.0166,
-      -0.958
+      -2.4351,
+      0.0171,
+      -0.9748
     ],
     "max": [
-      2.2576,
-      1.5405,
-      0.958
+      2.4451,
+      1.6661,
+      0.9748
     ],
     "size": [
-      4.515,
-      1.524,
-      1.916
+      4.88,
+      1.649,
+      1.95
     ],
-    "rMax": 2.452,
-    "triangles": 208,
-    "vertices": 120
+    "rMax": 2.632,
+    "triangles": 316,
+    "vertices": 192
   },
   "spec": {
-    "L": 4.5152437628748,
-    "W": 1.9160631723506523,
-    "H": 1.5405424582284275,
-    "R": 0.34,
-    "axle": [
-      -1.264268253604944,
-      1.264268253604944
-    ],
-    "sill": 0.42,
-    "waist": 0.95,
-    "roof": 1.5405424582284275,
-    "cab": [
-      -0.993353627832456,
-      0.6772865644312199
-    ],
-    "rakeF": 0.34,
-    "rakeR": 0.2,
-    "side": [
-      0.48,
-      0.9
-    ],
-    "extra": [
-      "mirror",
-      "headlight",
-      "grille"
-    ]
+    "L": 4.8101625085832,
+    "W": 1.92,
+    "H": 1.6660631723506523,
+    "R": 0.35,
+    "style": "standard_passenger_sedan"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

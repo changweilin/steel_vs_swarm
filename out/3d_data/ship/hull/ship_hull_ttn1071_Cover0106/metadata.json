@@ -3,37 +3,37 @@
   "key": "ship/hull_ttn1071_Cover0106_49f440a4",
   "family": "ship",
   "subpart": "hull",
+  "style": "general_cargo_ship",
+  "symmetryMode": "symmetric",
   "source_image": "ship/ttn1071_Cover0106.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\ttn1071_Cover0106.jpg",
-  "created_at": "2026-08-18T05:52:57.211Z",
+  "created_at": "2026-08-18T10:56:14.225Z",
   "bounds": {
     "min": [
-      -17.3493,
-      -0.7192,
-      -5.4034
+      -19.8644,
+      -0.7485,
+      -5.519
     ],
     "max": [
-      19.2739,
-      18.504,
-      5.4034
+      21.8976,
+      18.9432,
+      5.519
     ],
     "size": [
-      36.623,
-      19.223,
-      10.807
+      41.762,
+      19.692,
+      11.038
     ],
-    "rMax": 20.017,
-    "triangles": 128,
-    "vertices": 80
+    "rMax": 22.582,
+    "triangles": 104,
+    "vertices": 64
   },
   "spec": {
-    "L": 36.524834058136875,
-    "W": 10.80688944838636,
-    "H": 18.89768825818265,
-    "draft": 3.5,
-    "deckHeight": 5.5,
-    "bridgeFloors": 3
+    "L": 41.8198672465095,
+    "W": 11.037926298924239,
+    "H": 17.173266193636987,
+    "style": "multipurpose_maritime_vessel"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

@@ -1,0 +1,65 @@
+{
+  "id": "vehicle_heavy_long-haul-semi-truck-on-260nw-2742073731",
+  "sourceImage": "vehicle/heavy/long-haul-semi-truck-on-260nw-2742073731.jpg",
+  "style": "semi_tractor",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.77,
+  "aspectRatio": 1.389,
+  "colors": {
+    "primaryHex": 6775160,
+    "primaryRgb": [
+      103,
+      97,
+      120
+    ],
+    "accentHex": 16051700,
+    "accentRgb": [
+      244,
+      237,
+      244
+    ],
+    "darkHex": 2171445,
+    "darkRgb": [
+      33,
+      34,
+      53
+    ],
+    "brightHex": 13879517,
+    "brightRgb": [
+      211,
+      200,
+      221
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "enclosed_cargo_box",
+      "method": "composite_insulated_box"
+    },
+    {
+      "name": "dual_vertical_exhausts",
+      "method": "chrome_exhaust_stacks"
+    },
+    {
+      "name": "heavy_truck_dual_exhaust_and_axles",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.1
+    }
+  ],
+  "totalParts": 13,
+  "partNames": [
+    "freight_chassis_frame",
+    "freight_cab_body",
+    "cab_windshield",
+    "freight_cargo_box",
+    "rear_rollup_door",
+    "exhaust_stack_left",
+    "steer_wheel_left",
+    "drive_wheel_1_left",
+    "drive_wheel_2_left",
+    "exhaust_stack_right",
+    "steer_wheel_right",
+    "drive_wheel_1_right",
+    "drive_wheel_2_right"
+  ]
+}

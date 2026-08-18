@@ -259,6 +259,14 @@ export function manifest(items = {}, photosOpt = null) {
       } catch (e) { baseErr = `取不到 ${p.baseline.rev} 的 beacons.js:${e.message}`; }
     }
 
+    let features = null;
+    if (dbItem) {
+      const featFile = join(ROOT, dbItem.outputDir, 'features.json');
+      if (existsSync(featFile)) {
+        try { features = JSON.parse(readFileSync(featFile, 'utf8')); } catch {}
+      }
+    }
+
     const title = dbItem
       ? `${dbItem.family}/${dbItem.subpart} (${dbItem.id})`
       : (kind ? `${kind}(${p.consumer || ''})` : rowKey);
@@ -281,6 +289,9 @@ export function manifest(items = {}, photosOpt = null) {
       env,
       bounds: dbItem?.bounds || null,
       spec: dbItem?.spec || null,
+      features,
+      style: dbItem?.style || features?.style || null,
+      symmetryMode: dbItem?.symmetryMode || features?.symmetryMode || null,
       now,
       base,
       baseErr,
@@ -601,14 +612,40 @@ async function serve() {
         const key = u.searchParams.get('key');
         const db3DPath = join(ROOT, 'out', '3d_database.json');
         const db3D = existsSync(db3DPath) ? readJson(db3DPath, { items: [] }) : { items: [] };
-        const item = db3D.items?.find((it) => it.key === key);
+        const item = db3D.items?.find((it) => it.key === key || it.id === key);
         if (item) {
-          const modelFile = join(ROOT, item.outputDir, 'model.json');
-          if (existsSync(modelFile)) {
-            return send(200, readFileSync(modelFile), 'application/json; charset=utf-8');
+          const candidatePaths = [
+            join(ROOT, item.outputDir, 'model.json'),
+            join('C:\\Users\\user\\Documents\\study\\ai3d_restricted', item.outputDir, 'model.json'),
+            resolve(item.outputDir, 'model.json')
+          ];
+          for (const modelFile of candidatePaths) {
+            if (existsSync(modelFile)) {
+              return send(200, readFileSync(modelFile), 'application/json; charset=utf-8');
+            }
           }
         }
         return send(404, '{"error":"model not found"}');
+      }
+
+      if (u.pathname === '/api/features') {
+        const key = u.searchParams.get('key');
+        const db3DPath = join(ROOT, 'out', '3d_database.json');
+        const db3D = existsSync(db3DPath) ? readJson(db3DPath, { items: [] }) : { items: [] };
+        const item = db3D.items?.find((it) => it.key === key || it.id === key);
+        if (item) {
+          const candidatePaths = [
+            join(ROOT, item.outputDir, 'features.json'),
+            join('C:\\Users\\user\\Documents\\study\\ai3d_restricted', item.outputDir, 'features.json'),
+            resolve(item.outputDir, 'features.json')
+          ];
+          for (const featFile of candidatePaths) {
+            if (existsSync(featFile)) {
+              return send(200, readFileSync(featFile), 'application/json; charset=utf-8');
+            }
+          }
+        }
+        return send(404, '{"error":"features not found"}');
       }
 
       // 來源圖:客戶端只送 key + 索引,路徑一律由伺服器從來源帳解析(零信任;

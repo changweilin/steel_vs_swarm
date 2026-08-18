@@ -1,0 +1,86 @@
+{
+  "id": "vehicle_train_250px-DF4D-0463_hauls_K903_at_372_Level_Crossing_20240702",
+  "sourceImage": "vehicle/train/250px-DF4D-0463_hauls_K903_at_372_Level_Crossing_20240702.jpg",
+  "style": "freight_wagon",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.865,
+  "aspectRatio": 1.506,
+  "colors": {
+    "primaryHex": 6578013,
+    "primaryRgb": [
+      100,
+      95,
+      93
+    ],
+    "accentHex": 15984350,
+    "accentRgb": [
+      243,
+      230,
+      222
+    ],
+    "darkHex": 3616302,
+    "darkRgb": [
+      55,
+      46,
+      46
+    ],
+    "brightHex": 12762807,
+    "brightRgb": [
+      194,
+      190,
+      183
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "aerodynamic_wedge_nose",
+      "method": "high_speed_emu_cowl"
+    },
+    {
+      "name": "single_arm_pantograph",
+      "method": "roof_catenary_collector"
+    },
+    {
+      "name": "flush_continuous_windows",
+      "method": "tinted_glass_ribbon"
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    },
+    {
+      "name": "train_rail_wheels",
+      "method": "bilateral_mirror_Z_axis",
+      "zOffset": 1.395
+    }
+  ],
+  "totalParts": 15,
+  "partNames": [
+    "train_car_body",
+    "roof_aerodynamic_cap",
+    "continuous_tinted_windows",
+    "aerodynamic_bullet_nose",
+    "high_speed_pantograph",
+    "train_bogie_frame_r",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "train_bogie_frame_f",
+    "rail_wheel_left",
+    "rail_wheel_right",
+    "rail_wheel_left",
+    "rail_wheel_right"
+  ]
+}

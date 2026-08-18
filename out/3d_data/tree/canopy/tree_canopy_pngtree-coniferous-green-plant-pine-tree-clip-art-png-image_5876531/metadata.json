@@ -3,36 +3,37 @@
   "key": "tree/canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531_8bdc2c22",
   "family": "tree",
   "subpart": "canopy",
+  "style": "conifer_pine",
+  "symmetryMode": "symmetric",
   "source_image": "tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg",
-  "created_at": "2026-08-18T05:52:57.358Z",
+  "created_at": "2026-08-18T10:56:14.334Z",
   "bounds": {
     "min": [
-      -3.3875,
+      -3.3503,
       0,
-      -3.4828
+      -3.3503
     ],
     "max": [
-      3.3908,
-      13.2657,
-      3.2924
+      3.3503,
+      17.546,
+      3.3503
     ],
     "size": [
-      6.778,
-      13.266,
-      6.775
+      6.701,
+      17.546,
+      6.701
     ],
-    "rMax": 4.859,
-    "triangles": 68,
-    "vertices": 42
+    "rMax": 4.738,
+    "triangles": 192,
+    "vertices": 108
   },
   "spec": {
-    "L": 8.453841458762493,
-    "W": 6.9013885709926,
-    "H": 13.125673304341191,
-    "trunkH": 5.906552986953536,
-    "trunkR": 0.6347722590981918
+    "L": 7.476920729381247,
+    "W": 6.7006942854963,
+    "H": 17.094254978255893,
+    "style": "conifer_pine_pagoda_tiers"
   },
-  "method": "llm_parts_and_3d_geom",
+  "method": "llm_fine_detail_parts_and_3d_geom",
   "status": "ingested"
 }

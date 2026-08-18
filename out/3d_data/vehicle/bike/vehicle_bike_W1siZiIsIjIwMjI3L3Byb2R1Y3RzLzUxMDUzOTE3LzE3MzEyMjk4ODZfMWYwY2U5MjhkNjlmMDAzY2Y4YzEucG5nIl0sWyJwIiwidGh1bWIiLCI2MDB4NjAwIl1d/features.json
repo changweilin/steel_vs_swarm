@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
+  "sourceImage": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+  "style": "cargo_bike",
+  "symmetryMode": "symmetric",
+  "symmetryScore": 0.881,
+  "aspectRatio": 1.345,
+  "colors": {
+    "primaryHex": 14669267,
+    "primaryRgb": [
+      223,
+      213,
+      211
+    ],
+    "accentHex": 1906203,
+    "accentRgb": [
+      29,
+      22,
+      27
+    ],
+    "darkHex": 4273719,
+    "darkRgb": [
+      65,
+      54,
+      55
+    ],
+    "brightHex": 16250356,
+    "brightRgb": [
+      247,
+      245,
+      244
+    ]
+  },
+  "reconstructedFeatures": [
+    {
+      "name": "diamond_tube_frame",
+      "method": "top_down_seat_stays"
+    },
+    {
+      "name": "spoke_wheels_and_drivetrain",
+      "method": "thin_aero_rims"
+    }
+  ],
+  "totalParts": 9,
+  "partNames": [
+    "frame_top_tube",
+    "frame_down_tube",
+    "frame_seat_tube",
+    "front_fork_blades",
+    "bicycle_handlebars",
+    "ergonomic_saddle",
+    "chainring_crankset",
+    "front_spoke_wheel",
+    "rear_spoke_wheel"
+  ]
+}
