@@ -500,7 +500,7 @@ ok(/covV\[k\] && galAny\(k\)/.test(STRC),
   const MGC = src.slice(M0, src.indexOf('\nfunction buildRoads(', M0));
   ok(/cy = kind === 'tun'[\s\S]{0,220}tunFloorAt\(tw, cum\[i\], total\)[\s\S]{0,120}\+ TUN\.CLEAR/.test(MGC),
     'Ⅲ-e 走廊小段 MUST 帶頂板底面 cy,且由 tunFloorAt + TUN.CLEAR 推導(MUST NOT 手寫剖面)');
-  ok(/corridors\.push\(\{[^}]*kind, cy \}\)/.test(MGC), 'Ⅲ-e cy MUST 進走廊記錄(buildRoads 的判定就吃這一份)');
+  ok(/corridors\.push\(\{[^}]*kind, cy[\s,][^}]*\}\)/.test(MGC), 'Ⅲ-e cy MUST 進走廊記錄(buildRoads 的判定就吃這一份)');
   const B0 = src.indexOf('function buildRoads(');
   const BR = src.slice(B0, src.indexOf('\n// ---- 地標', B0) > 0 ? src.indexOf('\n// ---- 地標', B0) : B0 + 120000);
   ok(/function buildRoads\([^)]*bores = \[\]\)/.test(src), 'Ⅲ-e buildRoads MUST 收走廊清單(bores)');

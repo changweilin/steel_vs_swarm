@@ -1,0 +1,43 @@
+{
+  "id": "building_mass_01",
+  "sourceImage": "building/mass/01",
+  "style": "Modern Residential Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2764339,
+    "facadeHex": 15395562,
+    "baseHex": 13686234,
+    "accentHex": 4090696,
+    "darkHex": 2040615,
+    "brightHex": 16777215,
+    "glassHex": 4946842
+  },
+  "totalParts": 20,
+  "partNames": [
+    "ground_base",
+    "main_dark_core",
+    "facade_white_frame_left",
+    "facade_white_frame_mid",
+    "facade_white_frame_right",
+    "horizontal_beam_l1",
+    "horizontal_beam_l2",
+    "horizontal_beam_l3",
+    "horizontal_beam_l4",
+    "horizontal_beam_top",
+    "glass_windows_facade",
+    "balcony_glass_1",
+    "balcony_glass_2",
+    "balcony_glass_3",
+    "balcony_glass_4",
+    "rooftop_dark_structure",
+    "rooftop_white_crown_frame",
+    "rooftop_pergola_beam",
+    "foliage_accent_1",
+    "foliage_accent_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "ellipsoid_sphere"
+  ]
+}

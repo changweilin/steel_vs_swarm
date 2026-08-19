@@ -1,8 +1,8 @@
 {
-  "version": 5,
-  "verStr": "v5",
-  "generated_at": "2026-08-18T17:17:53.663Z",
-  "total_objects": 653,
+  "version": 6,
+  "verStr": "v6",
+  "generated_at": "2026-08-19T15:13:22.796Z",
+  "total_objects": 659,
   "families": [
     "building",
     "landmark",
@@ -25634,6 +25634,222 @@
       },
       "triangles": 892,
       "outputDir": "out/3d_data/vehicle/train/vehicle_train_trainticket25759751_m"
+    },
+    {
+      "id": "building_mass_0b480f6369f166b3c884ddb5940ca2e8",
+      "key": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b",
+      "family": "building",
+      "subpart": "mass",
+      "style": "Modern High-Rise Residential",
+      "symmetryMode": "asymmetric",
+      "version": 5,
+      "verStr": "v5",
+      "image": "building/0b480f6369f166b3c884ddb5940ca2e8.jpg",
+      "bounds": {
+        "min": [
+          -7,
+          0,
+          -6
+        ],
+        "max": [
+          8.3,
+          30,
+          7.1
+        ],
+        "size": [
+          15.3,
+          30,
+          13.1
+        ],
+        "rMax": 10.922,
+        "triangles": 656,
+        "vertices": 412
+      },
+      "spec": {
+        "style": "Modern High-Rise Residential"
+      },
+      "triangles": 656,
+      "outputDir": "out/3d_data/building/mass/building_mass_0b480f6369f166b3c884ddb5940ca2e8"
+    },
+    {
+      "id": "building_mass_101330",
+      "key": "building/mass_101330_f4de6359",
+      "family": "building",
+      "subpart": "mass",
+      "style": "Modern Minimalist Villa Architecture",
+      "symmetryMode": "asymmetric",
+      "version": 5,
+      "verStr": "v5",
+      "image": "building/101330.jpg",
+      "bounds": {
+        "min": [
+          -11,
+          -0.2,
+          -11
+        ],
+        "max": [
+          11,
+          7.6,
+          11
+        ],
+        "size": [
+          22,
+          7.8,
+          22
+        ],
+        "rMax": 15.556,
+        "triangles": 224,
+        "vertices": 146
+      },
+      "spec": {
+        "style": "Modern Minimalist Villa Architecture"
+      },
+      "triangles": 224,
+      "outputDir": "out/3d_data/building/mass/building_mass_101330"
+    },
+    {
+      "id": "building_mass_14beauty-well-ugly-slide-4QC3-master1050",
+      "key": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73",
+      "family": "building",
+      "subpart": "mass",
+      "style": "Brutalist Modular Architecture",
+      "symmetryMode": "symmetric",
+      "version": 5,
+      "verStr": "v5",
+      "image": "building/14beauty-well-ugly-slide-4QC3-master1050.jpg",
+      "bounds": {
+        "min": [
+          -14.2,
+          0,
+          -9
+        ],
+        "max": [
+          14.2,
+          11.9,
+          9
+        ],
+        "size": [
+          28.4,
+          11.9,
+          18
+        ],
+        "rMax": 16.812,
+        "triangles": 408,
+        "vertices": 272
+      },
+      "spec": {
+        "style": "Brutalist Modular Architecture"
+      },
+      "triangles": 408,
+      "outputDir": "out/3d_data/building/mass/building_mass_14beauty-well-ugly-slide-4QC3-master1050"
+    },
+    {
+      "id": "building_mass_01_v6",
+      "key": "building/mass_01_0a6db86c_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "Modern Residential Architecture",
+      "symmetryMode": "asymmetric",
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/01.jpg",
+      "bounds": {
+        "min": [
+          -5.25,
+          0,
+          -6
+        ],
+        "max": [
+          5.25,
+          27,
+          6
+        ],
+        "size": [
+          10.5,
+          27,
+          12
+        ],
+        "rMax": 7.973,
+        "triangles": 532,
+        "vertices": 340
+      },
+      "spec": {
+        "style": "Modern Residential Architecture"
+      },
+      "triangles": 532,
+      "outputDir": "out/3d_data/building/mass/building_mass_01_v6"
+    },
+    {
+      "id": "building_mass_0b480f6369f166b3c884ddb5940ca2e8_v6",
+      "key": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "Modern High-Rise Residential Building",
+      "symmetryMode": "asymmetric",
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/0b480f6369f166b3c884ddb5940ca2e8.jpg",
+      "bounds": {
+        "min": [
+          -7.2,
+          0,
+          -7
+        ],
+        "max": [
+          6,
+          29,
+          10.4
+        ],
+        "size": [
+          13.2,
+          29,
+          17.4
+        ],
+        "rMax": 12.007,
+        "triangles": 1044,
+        "vertices": 651
+      },
+      "spec": {
+        "style": "Modern High-Rise Residential Building"
+      },
+      "triangles": 1044,
+      "outputDir": "out/3d_data/building/mass/building_mass_0b480f6369f166b3c884ddb5940ca2e8_v6"
+    },
+    {
+      "id": "building_mass_101330_v6",
+      "key": "building/mass_101330_f4de6359_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "Modern Villa Architecture",
+      "symmetryMode": "asymmetric",
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/101330.jpg",
+      "bounds": {
+        "min": [
+          -11,
+          0,
+          -10
+        ],
+        "max": [
+          11,
+          6.75,
+          10
+        ],
+        "size": [
+          22,
+          6.75,
+          20
+        ],
+        "rMax": 14.866,
+        "triangles": 168,
+        "vertices": 112
+      },
+      "spec": {
+        "style": "Modern Villa Architecture"
+      },
+      "triangles": 168,
+      "outputDir": "out/3d_data/building/mass/building_mass_101330_v6"
     }
   ]
 }

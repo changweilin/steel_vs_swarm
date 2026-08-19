@@ -1,0 +1,45 @@
+{
+  "id": "building_mass_0b480f6369f166b3c884ddb5940ca2e8",
+  "sourceImage": "building/mass/0b480f6369f166b3c884ddb5940ca2e8",
+  "style": "Modern High-Rise Residential Building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3355448,
+    "facadeHex": 15133419,
+    "baseHex": 3290170,
+    "accentHex": 8159882,
+    "darkHex": 1972516,
+    "brightHex": 15790325,
+    "glassHex": 3823723
+  },
+  "totalParts": 22,
+  "partNames": [
+    "Ground Base Podium",
+    "Garage Door Frame",
+    "Garage Shutter Door",
+    "Main White Residential Block",
+    "Right Grey Elevator Core Tower",
+    "White Outer Portal Frame Left Pillar",
+    "White Outer Portal Frame Top Beam",
+    "White Outer Portal Frame Right Column Attachment",
+    "Rooftop Pergola Slats",
+    "Balcony Stack - Front Dark Bands",
+    "Front Window Wall Glazing",
+    "Balcony Glass Panels",
+    "Terrace Greenery Planter Box",
+    "Terrace Foliage Cluster 1",
+    "Terrace Foliage Cluster 2",
+    "Ground Tree Foliage 1",
+    "Ground Tree Foliage 2",
+    "Ground Tree Foliage 3",
+    "Ground Tree Trunk 1",
+    "Ground Tree Trunk 2",
+    "Parked Car Body",
+    "Parked Car Cabin"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

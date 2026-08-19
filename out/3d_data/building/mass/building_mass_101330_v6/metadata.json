@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_101330_v6",
+  "key": "building/mass_101330_f4de6359_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Villa Architecture",
+  "symmetryMode": "asymmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/101330.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\101330.jpg",
+  "created_at": "2026-08-19T15:13:22.757Z",
+  "bounds": {
+    "min": [
+      -11,
+      0,
+      -10
+    ],
+    "max": [
+      11,
+      6.75,
+      10
+    ],
+    "size": [
+      22,
+      6.75,
+      20
+    ],
+    "rMax": 14.866,
+    "triangles": 168,
+    "vertices": 112
+  },
+  "spec": {
+    "style": "Modern Villa Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

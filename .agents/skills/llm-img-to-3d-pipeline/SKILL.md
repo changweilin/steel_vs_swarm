@@ -1,243 +1,233 @@
 ---
 name: llm-img-to-3d-pipeline
-description: In-Context fine-grained image-to-3D polyhedral geometric reconstruction pipeline with domain-sharded subagent parallelization and per-object atomic persistence. Trigger when performing fine-grained semantic 3D reconstruction from reference photos, spawning domain-specific parallel subagents (Building, Vehicle, Tree, Nature/Ship/Landmark), synthesizing procedural polyhedral assemblies (Abeto anime aesthetic & Sakura Crossing declarative assembly), or executing robust resume-from-checkpoint batch generation.
+description: End-to-end multimodal LLM (Gemini 3.7 / GPT 5.6 Luna) image-to-3D polyhedral geometric reconstruction pipeline. Trigger when performing fine-grained semantic 3D reconstruction from reference photos, executing direct single-pass vision-to-geometry synthesis via Gemini 3.7 / GPT 5.6 Luna API (v6 architecture), synthesizing declarative polyhedral assemblies (Abeto anime aesthetic & Sakura Crossing declarative assembly), managing multi-version coexistence in the database, or reviewing 3D assets on the WebGL Parts Review Board (零件台).
 license: MIT
-compatibility: Offline repository toolchain (Node.js ES modules, Python 3.11/3.13 CV analyzers, Three.js 0.160 CDN importmap; zero extra npm dependencies - A2 rule compliant)
+compatibility: Offline repository toolchain (Node.js ES modules, Gemini 3.7 Flash/Pro / GPT 5.6 Luna API via native node:https, Three.js 0.160 CDN importmap; zero extra npm dependencies - A2 rule compliant)
 ---
 
-# LLM Img-to-3D: In-Context Polyhedral Reconstruction Pipeline
+# LLM Img-to-3D: Multimodal Polyhedral Reconstruction Pipeline (v6)
 
-Defines the pure LLM in-context semantic image-to-3D reconstruction, domain-sharded subagent execution protocol, vision disambiguation filters, and atomic persistence pipeline. Transforms single-view reference images into clean, stylized polyhedral 3D assemblies matching the Abeto anime aesthetic and Sakura Crossing procedural generation architecture.
+This document defines the direct multimodal Large Language Model (Gemini 3.7 / GPT 5.6 Luna) **single-pass photo reading to declarative polyhedral 3D geometric reconstruction pipeline**.
+The v6 pipeline **fully replaces** the legacy (v5) workflow ("Python OpenCV CV feature extraction + heuristic template matching"), transitioning to direct vision semantic understanding and structured JSON polyhedral part list generation, while preserving atomic 4-file disk persistence, dual-version database coexistence, and real-time WebGL review capabilities.
 
 ---
 
 ## 0. Core Aesthetic & Technical Foundations
 
 ### 0.1 Art Style: Abeto Cel-Shaded Anime Aesthetic (messenger.abeto.co)
-- **Crisp Geometric Silhouette**: Eliminate organic/mushy meshes. Construct all geometry through discrete polyhedral primitives (prisms, frustums, cones, cylinders, domes, rings, polyhedra, wedges).
-- **Quantised Lighting & Shadow Hue Shift**: Light is stepped into 2-4 flat discrete bands. Shadows shift hue toward cool blue/violet (`#1e293b` / `#2c3e50`) rather than desaturated darkness.
-- **7-Zone Strict Color Separation**: Strict partition across 7 palette zones (`roofHex`, `facadeHex`, `baseHex`, `accentHex`, `glassHex`, `darkHex`, `brightHex`).
-- **Glass & Chrome Isolation**: Windows, windscreens, and curtain walls strictly use cool translucent/navy tones (`glassHex`). Never merge window glass with facade paint or vehicle chassis.
-- **Zero Image Texture Dependency**: All surface markings, decals, and signage are generated procedurally or via runtime Canvas2D.
+- **Crisp Polyhedral Silhouette**: Eliminate organic/mushy meshes. All models are assembled exclusively from discrete polyhedral primitives (Prisms, Frustums, Cones, Cylinders, Domes, Rings, Polyhedra, Wedges, Boxes).
+- **Stepped Lighting & Cool Hue Shift**: Lighting is stepped into 2–4 flat discrete bands. Shadows shift hue toward cool blue/violet (`#1e293b` / `#2c3e50`) rather than desaturated darkness.
+- **7-Zone Strict Color Palette Partitioning**: Every object strictly partitions its palette into 7 semantic zones (`roofHex`, `facadeHex`, `baseHex`, `accentHex`, `glassHex`, `darkHex`, `brightHex`).
+- **Material Glazing Isolation**: Window glass, windscreens, and curtain walls strictly use cool translucent/navy tones (`glassHex`). Glazing must never be merged with facade wall paint or vehicle chassis base paint.
+- **Zero Image Texture Dependency**: No external raster textures are used. Signage, labels, license plates, and road markings are rendered procedurally or via runtime Canvas2D textures.
 
-### 0.2 Generation Engine: Sakura Crossing Declarative Assembly (Kenton-GMI/sakura-crossing)
-- **In-Context Semantic Decomposition**: Perform 24-slice vertical profile analysis, silhouette slope estimation, solidity calculation, grayscale gradient mapping, and axial symmetry detection directly from input images.
-- **Pure-Data Declarative Schema**: Output geometry as structured JSON primitive part arrays (`type`, `dimensions` / `radii`, `pos`, `rot`, `colorKey`).
-- **Parametric Uniqueness**: Compute exact bounding envelopes and relative part ratios per individual image; no generic/uniform templates.
-- **Ground Seating & Zero Keep-Out Invariants**: Pivot anchor must sit at ground-contact base `[0, 0, 0]`. Ensure parts observe `TERRAIN_DROP` and collider clearance rules.
+### 0.2 Generation Architecture: Declarative Polyhedral Assembly
+- **Pure-Data Declarative Schema**: Outputs a clean JSON array of structured primitive parts (specifying `type`, `dimensions` / `radii`, `pos`, `rot`, and `colorKey`).
+- **Ground Seating Invariant**: The geometric pivot anchor and rotation center must sit strictly at the ground-contact base `[0, 0, 0]` (`y = 0` represents ground level).
+- **Real-World Metric Scale**: Architecture, vehicles, and vegetation dimensions use real-world meters (m), strictly calibrated with the global `SOLDIER_H` (1.8m) scale system.
 
 ---
 
-## 1. Domain-Sharded Subagent Execution Architecture
-
-Distribute batch reconstruction across 4 domain-specific subagents via `invoke_subagent` to maintain context cleanliness and throughput:
+## 1. Architectural Evolution: v6 vs Legacy v5 Method
 
 ```mermaid
 graph TD
-    Parent[Parent Orchestrator] -->|invoke_subagent| SubBld[Subagent-Building<br>Domain: Architecture]
-    Parent -->|invoke_subagent| SubVeh[Subagent-Vehicle<br>Domain: Transport]
-    Parent -->|invoke_subagent| SubTree[Subagent-Tree<br>Domain: Vegetation]
-    Parent -->|invoke_subagent| SubNat[Subagent-Nature<br>Domain: Rocks/Ships/Landmarks]
-    
-    SubBld -->|Atomic Save| Store[(out/3d_data/ & manifests)]
-    SubVeh -->|Atomic Save| Store
-    SubTree -->|Atomic Save| Store
-    SubNat -->|Atomic Save| Store
+    subgraph "Legacy Method (v5.0 Pipeline - Replaced)"
+        IMG_OLD[Reference Photo] --> PY_CV[Python OpenCV/PIL<br>extract_image_features.py]
+        PY_CV --> FEAT_JSON[24-slice Feature JSON]
+        FEAT_JSON --> RULE_SYS[Node.js Hardcoded Classifier<br>30+ Static Templates]
+        RULE_SYS --> GEO_V5[Geometry Synthesizer]
+    end
+
+    subgraph "Current Method (v6.0 Multimodal Pipeline - Active Standard)"
+        IMG_NEW[Reference Photo] --> GEMINI_API[Gemini 3.7 / GPT 5.6 Luna API<br>Single-Pass Multimodal Vision]
+        GEMINI_API --> STRUCT_JSON[Structured JSON Schema<br>Style + 7-Zone Palette + Parts Array]
+        STRUCT_JSON --> GEO_V6[12-Primitive Geometry Synthesizer<br>direct_ingest_v6.mjs]
+    end
+
+    GEO_V6 --> ATOMIC_SAVE[Atomic Persistence: 4 Files<br>model.json / features.json / metadata.json / model.obj]
+    ATOMIC_SAVE --> DB_SYNC[Database & Ledger Sync<br>out/3d_database.json & parts_manifest.json]
+    DB_SYNC --> REVIEW_BOARD[3D Parts Review Board<br>http://localhost:8622/]
 ```
 
-### 1.1 Subagent Domain Responsibilities & Specialized Dispatch
-
-| Domain Subagent | Target Object Keys | Core Morphology & Disambiguation Focus |
+| Comparison Aspect | Legacy v5 Method (Replaced) | Active v6 Standard (Gemini 3.7 / GPT 5.6 Luna) |
 |---|---|---|
-| 🤖 **Subagent-Building** | `building/mass`, `building/bld_*` | Commercial flat roofs (parapets, HVAC chillers, escape ladders), gothic spires, gabled chalets, oriental pagodas (flared multi-tier eaves), classical rotundas. **Novel morphologies must be synthesized from first principles rather than boxed.** |
-| 🤖 **Subagent-Vehicle** | `vehicle/bike`, `car`, `truck`, `train`, `motor` | Bicycles (diamond tubular skeleton + torus wheels; sub-pixel thin member recovery); motor vehicles (**strict separation of `glassHex` windscreens/side windows from chassis**). |
-| 🤖 **Subagent-Tree** | `tree/canopy`, `tree/cf_*`, `tree/sp_*`, `tree/sh_*` | **STRICT BAN ON CUBE CANOPIES**. Species-specific grammars: Conifer (stacked alternating frustums), Broadleaf (dodecahedron clusters + buttress roots), Bamboo (segmented culms + fan wedges), Shrubs (grounded ellipsoids). **Sky/cloud background rejection**. |
-| 🤖 **Subagent-Nature** | `rock/*`, `ship/*`, `landmark/*` | Megaliths (faceted fracture planes), ships (wedge bow + superstructure + mast poles; glazing isolation), landmarks (truss frameworks, beacon towers). |
-
-### 1.2 60% Context Window Circuit Breaker & Hand-off Protocol
-
-To prevent context exhaustion and quality degradation, subagents enforce an automated 60% watermark hand-off:
-
-1. **Watermark Monitoring**:
-   - At ~60% context capacity (~30-40 fully reconstructed objects), trigger a graceful pause.
-2. **Atomic Disk Flush**:
-   - Guarantee the last completed object's `model.json`, `features.json`, `metadata.json`, and `model.obj` are fully written to disk.
-   - Sync `out/3d_database.json` and `tools/ai3d/parts_manifest.json`.
-3. **Handoff Signal**:
-   - Subagent reports summary back to Parent: `"Subagent-Building: Completed 35/178 items, last key: building/mass_35, triggering 60% context circuit-breaker"` and terminates.
-4. **Clean Restart & Resume**:
-   - Parent Orchestrator launches a fresh Subagent instance (0% context).
-   - The new subagent executes Resume Protocol (§2.3), skips all completed items, and continues seamlessly from item 36.
-
-### 1.3 Dynamic Web Search Expansion on Remaining Quota
-
-If existing input photos are exhausted before reaching the 60% context limit, subagents automatically transition to Web Search Expansion Mode:
-
-1. **Targeted Semantic Query**:
-   - Search for under-represented categories in the database (e.g. specific cedar varieties, historical spire styles, heavy machinery, cargo vessels).
-2. **Dual-Corpus License Routing**:
-   - 🟢 **CC0 / Public Domain (Shipping Grade)**:
-     - Save to: `tools/ai3d/photos/<family>/<subpart>/<image_name>`.
-     - Register in `photo_manifest.json` for shipping bundle inclusion.
-   - 🟡 **Restricted / Unverified (Study Grade)**:
-     - Save to: `C:\Users\user\Documents\study\ai3d_restricted\photos\<family>\<subpart>\<image_name>`.
-     - Flag in ledger as `restricted: true` / `shipping: false` (local study & review only).
-3. **Immediate Reconstruction & Intake**:
-   - Log provenance (`source_url`, `license`, `creator`, `query`).
-   - Run In-Context Img-to-3D reconstruction, output atomic artifacts (§2), and update indices.
+| **Core Engine** | Python OpenCV slice metrics + heuristic classifier | **Gemini 3.7 / GPT 5.6 Luna multimodal vision understanding** |
+| **Morphological Reasoning** | Restricted to 30 static templates (unmatched shapes degrade to generic boxes) | **First-principles semantic decomposition; accurately reconstructs arbitrary non-standard topologies** |
+| **Dependencies** | Requires Python 3.11/3.13 venv + OpenCV + NumPy + PIL | **Zero npm / Zero Python dependencies** (pure Node.js native `node:https`) |
+| **Color Extraction** | K-Means clustering (often polluted by sky/ground shadows) | **LLM semantic isolation** (isolates foreground object, rejects background clouds, separates glazing) |
+| **Throughput & Speed** | Dual-stage pipeline (~3.5s feature extraction + 0.5s synthesis) | **Single-pass end-to-end (API round-trip ~3–5s)** |
+| **Version Management** | `version: 5, verStr: 'v5'` | **`version: 6, verStr: 'v6'` (Coexists with v5 in database and viewer)** |
 
 ---
 
-## 2. Per-Object Atomic Persistence & Resume Protocol
+## 2. End-to-End Execution Workflow
 
-### 2.1 Artifact Directory Structure
-For every reconstructed object, write atomically into `out/3d_data/<family>/<subpart>/<object_id>/`:
-- `model.json`: Hierarchical parts list, primitive specs, local transforms, and triangulated mesh data.
-- `features.json`: Semantic tags, profile measurements, symmetry axes, 7-color hex table.
-- `metadata.json`: Source image path/URL, generator version (`v5`), bounding box `[w, h, d]`, triangle count.
-- `model.obj`: Standard Wavefront OBJ 3D geometry file.
+### Step 1: Environment & API Key Configuration
+Set the API key in the environment (zero extra npm packages, strictly adhering to rule A2):
+```powershell
+# Windows PowerShell
+$env:GEMINI_API_KEY="your-api-key"
 
-### 2.2 Ledger & Database Synchronization
-- Append/update entry in `out/3d_database.json`.
-- Register record in `tools/ai3d/parts_manifest.json`.
-- Write status into checkpoint file `tools/ai3d/harvest_state.json`.
+# Windows Command Prompt
+set GEMINI_API_KEY=your-api-key
+```
 
-### 2.3 Resume Protocol
-On initialization or restart:
-1. Load target photo list and `out/3d_database.json`.
-2. Inspect target directory for valid `model.json` and `features.json`.
-3. If valid and `version === "v5"`, **skip** item and proceed to next incomplete entry.
+### Step 2: Photo Discovery & Path Normalization
+The pipeline automatically scans `.jpg`, `.jpeg`, `.png`, and `.webp` images across dual corpora:
+1. **Public / Primary Corpus**: `C:\Users\user\Documents\steel_vs_swarm\tools\ai3d\photos\<family>\<subpart>\`
+2. **Restricted / Study Corpus**: `C:\Users\user\Documents\study\ai3d_restricted\photos\<family>\<subpart>\`
 
----
+Path classification rules:
+- `family`: Top-level folder (`building`, `tree`, `vehicle`, `ship`, `rock`, `landmark`)
+- `subpart`: Sub-level folder (e.g. `mass`, `canopy`, `car`, `hull`, `facet`)
+- `stem`: Base filename (excluding file extension)
 
-## 3. Polyhedral Primitive Geometry Vocabulary & Assembly Grammars
+### Step 3: Multimodal Vision Understanding & Structured Output
+`tools/ai3d/direct_ingest_v6.mjs` encodes images to Base64 and issues a native `node:https` request with a strict `responseSchema`:
 
-All assemblies must be composed exclusively of the following declarative primitives:
+```javascript
+// System Prompt Invariants
+const GEMINI_SYSTEM_PROMPT = `You are an expert 3D polyhedral geometric reconstruction engineer. Analyze the reference photograph, precisely identify object morphology, proportions, structural components, and color distribution, then describe the 3D geometry as a declarative list of polyhedral parts.
+1. Every part MUST specify pos [x, y, z] with y = 0 as the ground-contact base plane.
+2. Assembly parts must interface precisely without unwanted interpenetration or disjoint gaps.
+3. Symmetric structures should utilize axial reflection (along Z axis).
+4. Do NOT mistake background sky, clouds, or ground shadows for object geometry.
+5. Window/windshield glass MUST be strictly assigned to glassHex.
+6. All dimensions must use real-world meters (m).`;
+```
 
-| Primitive (`p.type`) | Parameter Schema | Application Examples |
-|---|---|---|
-| `box` | `dimensions: [w, h, d]` | Building base masses, cargo containers, signboards, balcony slabs |
-| `polygonal_prism` | `radius, height, sides` (3-16) | Hexagonal/octagonal towers, colonnades, tank supports |
-| `frustum_pyramid` | `radii: [topR, botR], height, sides` | Pagoda eaves, conifer foliage skirts, column capitals, planters |
-| `pyramid` / `cone` | `radii: [0, botR], height, sides` | Church steeples, spire tips, pine tree apex, conical caps |
-| `cylinder` | `radii: [topR, botR] | radius, height, sides` | Steel bike tubes, wheel axles, chimneys, tree trunks, utility poles |
-| `conical_frustum` | `radii: [topR, botR], height, sides` | Tapered tree trunks, conical vats, recessed wheel rims |
-| `hemisphere_dome` | `radii: [rx, ry, rz]` | Observatory domes, pantheon rotundas, radar radomes |
-| `ellipsoid_sphere` | `radii: [rx, ry, rz]` | Broadleaf canopy clouds, shrub clusters, rock humps |
-| `torus_ring` | `radius, tube` | Bicycle / vehicle tires, pipe flanges, lifebuoys |
-| `dodecahedron_polyhedron` | `radius` | Boulder fragments, crystalline joints, faceted foliage clusters |
-| `icosahedron_polyhedron` | `radius` | Rough mineral rocks, organic clusters, coral boulders |
-| `wedge` | `dimensions: [w, h, d]` | Gabled roofs, ship bow wedges, windshield cowlings, ramps |
-
----
-
-### 3.1 Architectural Archetype Matching & Novel Topology Rule
-Select geometry strictly matching target architectural morphology:
-1. **Commercial Flat-Roof**: Base `box` + inset parapet `box` frame + rooftop HVAC `box` / chiller `cylinder` + emergency ladder `cylinder` array.
-2. **Gothic / Alpine Church**: Nave `box` + pitched roof `wedge` + bell tower `polygonal_prism` (octagonal, 8 sides) + steeple `pyramid` (8 sides) + flying buttress `wedge` spans.
-3. **Gabled Cottage / Chalet**: Lower floor `box` + upper overhang `box` + dual-slope gable `wedge` + chimney `box` / `cylinder`.
-4. **Oriental Pagoda / Shrine**: Stepped base `box` + stacked alternating stories (`polygonal_prism`) + flared eaves (`frustum_pyramid` with `topR < botR` and outer lip flare) + finial spire (`cone` + stacked `torus_ring` rings).
-5. **Classical Rotunda / Dome**: Stylobate disc (`cylinder`) + peristyle column array (radial `cylinder`s) + entablature ring (`cylinder` / `polygonal_prism`) + hemisphere dome (`hemisphere_dome`).
-6. **Novel / Unprecedented Archetypes**: If the target building exhibits non-standard morphology (e.g. hyperbolic shell, folded plate, geodesic sphere, stepped ziggurat), **MUST NOT fallback to a simple box**. Synthesize a composite assembly from first principles by combining appropriate polyhedral primitives to match the true silhouette.
-
----
-
-### 3.2 Botanical Canopy Grammars (Strict Ban on Generic Cubes)
-Canopies must **NEVER** be approximated as a single `box`. Use tailored botanical primitive grammars:
-1. **Conifers (Pine, Cedar, Fir, Cryptomeria)**:
-   - Trunk: Tapered vertical `conical_frustum` or `cylinder` (`colorKey: "facadeHex"`).
-   - Foliage: 4-8 vertically stacked `frustum_pyramid` (6-8 sides) with alternating azimuth rotations (`rot: [0, Math.PI / n, 0]`), terminating in an apex `pyramid` / `cone` (`colorKey: "roofHex"`).
-2. **Broadleaf & Deciduous (Oak, Camphor, Cherry, Maple)**:
-   - Trunk & Roots: Main trunk `cylinder` / `conical_frustum` + 3-5 radial buttress root `wedge` or angled `conical_frustum` anchors (`colorKey: "baseHex"`).
-   - Canopy: Multi-lobed cluster of 5-12 interpenetrating `dodecahedron_polyhedron` or flattened `ellipsoid_sphere` nodes (`colorKey: "roofHex"`).
-3. **Shrubs, Hedges & Boxwood**:
-   - Hemispherical / rounded clusters using ground-truncated `ellipsoid_sphere` or low-poly `icosahedron_polyhedron` masses.
-4. **Bamboo & Palms**:
-   - Culms/Trunks: Segmented slender `cylinder` sections with intermediate node `torus_ring` joints.
-   - Fronds/Foliage: Radial star/fan arrays of angled thin `wedge` or extruded flat `polygonal_prism` leaves.
-5. **Bonsai & Potted Flora**:
-   - Ceramic base pot: `frustum_pyramid` / `conical_frustum` (`colorKey: "baseHex"`).
-   - Sinuous trunk: 3-5 linked, angled, and rotated `cylinder` segments.
-   - Foliage: Distinct horizontal tabular cloud discs of `ellipsoid_sphere` or `dodecahedron_polyhedron`.
-
----
-
-### 3.3 Micro-Skeleton & Thin-Feature Recovery Protocol
-Delicate structural elements (bicycles, space-frame trusses, antennas, ship masts, railings) must be explicitly recovered and parameterized:
-1. **Bicycles & Light Two-Wheelers**:
-   - Frame Diamond: Distinct slender `cylinder` primitives (`radius: 0.015-0.025m`) for Top Tube, Down Tube, Seat Tube, Seat Stays, Chain Stays, and Front Fork.
-   - Wheels: 2x `torus_ring` tires (`radius: 0.33m, tube: 0.025m`) + hub `cylinder`s.
-   - Handlebars & Saddle: Transverse `cylinder` handlebar with angled grip segments + wedge/box saddle.
-2. **Lattice Trusses & Antennas**:
-   - Construct vertical chords with 3-4 corner `cylinder`s / `polygonal_prism`s braced with diagonal lattice cross-struts. Never consolidate into a solid prism.
-3. **Maritime Masts & Deck Railings**:
-   - Ship masts, radar arches, and cranes must be isolated as dedicated slender `cylinder` hierarchies standing upon the deck, with rigging points preserved.
-
----
-
-## 4. Vision Disambiguation & Palette Discipline
-
-### 4.1 Background / Sky / Cloud Hallucination Rejection Filter
-When inferring geometry from single-view photographs:
-- **Sky & Cloud Segregation**: White or pale blue upper regions must be cross-checked against background chromatic continuity. High-luminance, low-saturation regions with diffuse continuous gradients represent sky/cloud backgrounds - **NEVER reconstruct sky/clouds into foliage canopies or roof geometry**.
-- **Silhouette Boundary Test**: Valid foliage and roof boundaries exhibit high local contrast, micro-occlusion step changes, or self-shadow contours. Continuous atmospheric gradients must be subtracted during feature isolation.
-- **Horizon & Terrain Disambiguation**: Ground contact must be established at the true base plane (`y = 0`). Ground shadows and horizon hills must not be mistaken for base plinths.
-
-### 4.2 Material Glazing vs Chassis/Hull Isolation
-- **Vehicle Glazing Separation**: Windscreens, rear windows, side glass, and cabin glazing must NEVER inherit the vehicle chassis body color (`facadeHex`). They must be explicitly extracted and assigned to `glassHex` (cool deep navy/cyan tone: `0x1e293b`, `0x2c3e50`, `0x38bdf8`, `0x0f172a`).
-- **Maritime Wheelhouses & Bridge Bands**: Ship observation bridges and porthole bands must be isolated into distinct `glassHex` strips embedded into the `facadeHex` superstructure.
-- **Architectural Curtain Walls & Shopfronts**: Ground floor retail display windows and ribbon curtain glazing must be isolated as `glassHex` recessed surfaces.
-
----
-
-### 4.3 7-Zone Color Palette Schema & Enforcement
-
-Every object must extract and define exactly 7 discrete color hex values in `features.json` and `model.json`:
-
+Structured JSON Response Format:
 ```json
 {
+  "style": "Modern High-Rise Residential",
+  "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 12885915,
-    "facadeHex": 16711422,
-    "baseHex": 14474460,
-    "accentHex": 3891402,
+    "roofHex": 8355711,
+    "facadeHex": 9804166,
+    "baseHex": 3426654,
+    "accentHex": 15105314,
     "glassHex": 1976635,
-    "darkHex": 2829100,
-    "brightHex": 16711421
-  }
+    "darkHex": 2899536,
+    "brightHex": 15527149
+  },
+  "parts": [
+    {
+      "name": "ground_podium",
+      "type": "box",
+      "dimensions": [15.3, 4.2, 13.1],
+      "pos": [0, 2.1, 0],
+      "rot": [0, 0, 0],
+      "colorKey": "baseHex"
+    },
+    {
+      "name": "main_tower",
+      "type": "box",
+      "dimensions": [12.0, 25.8, 10.5],
+      "pos": [0, 17.1, 0],
+      "rot": [0, 0, 0],
+      "colorKey": "facadeHex"
+    }
+  ]
 }
 ```
 
-- `roofHex`: Roof surfaces, upper canopy foliage, primary vehicle top trims.
-- `facadeHex`: Primary exterior walls, vehicle chassis base paint, main tree trunks.
-- `baseHex`: Foundation plinths, undercarriages, root collars, planters, curbs.
-- `accentHex`: Signage borders, headlight bezels, moldings, accent panels.
-- `glassHex` (**Strict Isolation**): Windscreens, side windows, bridge observation bands, curtain wall glazing (`0x1e293b`, `0x2c3e50`, `0x38bdf8`, `0x0f172a`). Never assign `facadeHex` to glass.
-- `darkHex`: Mechanical underbodies, exhaust mufflers, tires, deep recessed shadow voids, structural grates.
-- `brightHex`: Chrome trims, illuminated lamps, white road markings, specular highlight bands.
+### Step 4: 12-Primitive Polyhedral Geometry Synthesis
+The geometry synthesis engine converts the declarative `parts` array into full 3D meshes using 12 procedural generators:
+
+| Primitive (`type`) | Parameter Schema | Application Examples |
+|---|---|---|
+| `box` | `dimensions: [w, h, d]` | Building base masses, cargo containers, signboards, balcony slabs |
+| `polygonal_prism` | `radius, height, sides` (3~16) | Hexagonal/octagonal towers, colonnades, storage tank legs |
+| `frustum_pyramid` | `radii: [topR, botR], height, sides` | Pagoda flared eaves, temple roofs, conifer foliage skirts, column capitals |
+| `pyramid` | `radii: [0, botR], height, sides` | Steeples, pine tree apex, pyramid caps |
+| `cylinder` | `radii: [topR, botR], height, sides` | Steel trusses, exhaust stacks, tree trunks, utility poles, axles |
+| `conical_frustum` | `radii: [topR, botR], height, sides` | Tapered tree trunks, conical tanks, recessed wheel rims |
+| `cone` | `radii: [0, botR], height, sides` | Conical roof caps, radome noses |
+| `hemisphere_dome` | `radii: [rx, ry, rz]` | Observatory domes, pantheon rotundas, radar radomes |
+| `ellipsoid_sphere` | `radii: [rx, ry, rz]` | Broadleaf canopy clouds, shrub masses, rock mounds |
+| `torus_ring` | `radius, tube` | Tires, pipe flanges, lifebuoys, ring handrails |
+| `dodecahedron_polyhedron` | `radius` | Boulder fragments, crystalline nodes, faceted foliage clusters |
+| `icosahedron_polyhedron` | `radius` | Rough mineral rocks, organic clusters, coral boulders |
+| `wedge` | `dimensions: [w, h, d]` | Gabled roofs, dormers, ship bow wedges, windshield cowlings |
+
+### Step 5: 4-File Atomic Disk Persistence
+For every completed object, 4 discrete files are atomically written into `out/3d_data/<family>/<subpart>/<targetId>_v6/`:
+1. **`model.json`**: Hierarchical parts array, local transforms, bounding envelope, 7-zone color table, and triangulated vertex/normal/uv/face buffers.
+2. **`features.json`**: Computer vision semantic tags, style classification, symmetry mode, 7-color hex values, and primitive type breakdown.
+3. **`metadata.json`**: Provenance metadata (`id`, `key: <family>/<subpart>_<stem>_<hash>_v6`, `version: 6`, `verStr: 'v6'`, `method: 'gemini_v6'`, source image path, creation timestamp, bounds, triangle count).
+4. **`model.obj`**: Standard Wavefront OBJ 3D mesh format with explicit vertices (`v`), normals (`vn`), texture coordinates (`vt`), and faces (`f`).
+
+### Step 6: Database & Ledger Synchronization (Dual-Version Coexistence)
+1. **`out/3d_database.json`**:
+   - Reads existing database items, retains all v5 records, and merges newly generated v6 objects.
+   - All v6 objects carry a distinct `_v6` suffix on `id` and `key` to prevent key collisions.
+2. **`tools/ai3d/parts_manifest.json`**:
+   - Registers entries under `method: 'gemini_v6'`, `version: 6`, `verStr: 'v6'`, `keys: ['<partKey>_v6']`.
+3. **Resume Protocol**:
+   - On startup, inspects `out/3d_database.json`. If a photo already possesses a valid `version === 6` record, it is skipped immediately to avoid redundant API consumption.
 
 ---
 
-## 5. Offline Audit & Verification Battery
+## 3. CLI Operation Manual
 
-All generated assets and ledger updates must pass the repository's offline verification suite with 100% green status:
+### 3.1 Running v6 Geometric Reconstruction
 
 ```bash
-# 1. Intake and provenance ledger audit (190 invariant checks)
+# 1. Standard execution (processes all photos using default Gemini 3.7 / GPT 5.6 Luna)
+node tools/ai3d/direct_ingest_v6.mjs
+
+# 2. Limit number of items (quick test or small batch)
+node tools/ai3d/direct_ingest_v6.mjs --limit 5
+
+# 3. Filter by asset family
+node tools/ai3d/direct_ingest_v6.mjs --family building
+node tools/ai3d/direct_ingest_v6.mjs --family tree
+node tools/ai3d/direct_ingest_v6.mjs --family vehicle
+
+# 4. Filter by specific subpart
+node tools/ai3d/direct_ingest_v6.mjs --only building/mass
+
+# 5. Explicitly override model (e.g. Gemini 3.7 Pro or GPT 5.6 Luna)
+node tools/ai3d/direct_ingest_v6.mjs --model gemini-3.7-pro --limit 10
+node tools/ai3d/direct_ingest_v6.mjs --model gpt-5.6-luna --limit 10
+```
+
+### 3.2 WebGL Parts Review Board (3D 零件對照台)
+
+```bash
+# Launch the local review server (Default Port 8622)
+npm run parts
+# or
+node tools/parts_review.mjs
+```
+
+Open browser at: 👉 **`http://localhost:8622/`**
+
+**Review Board Capabilities**:
+1. **Version Filtering**: Switch the top filter dropdown to **`v6`** (view only Gemini 3.7 / GPT 5.6 Luna models), **`v5`**, or **`all`**.
+2. **Dual-Viewport Comparison**: Left viewport renders real-time 3D polyhedral models; right viewport renders baseline versions or reference photos.
+3. **Envelope & Wireframe Inspection**: Toggle bounding cylinders and mesh wireframes to inspect spatial clearances and collider alignment.
+4. **Metadata & Palette Card**: Inspect 7-Zone hex colors, triangle counts, bounding extents `[w, h, d]`, and vertex buffers.
+
+### 3.3 Offline Audits & Verification Battery
+
+```bash
+# 1. CLI Report (filter v6 objects)
+node tools/parts_review.mjs --report --version v6
+
+# 2. Provenance ledger & version management audit (Section XIII verification)
 node tools/ai3d/audit_auto_intake.mjs
 
-# 2. Parts review database validation (0 missing, 0 orphaned parts)
-node tools/parts_review.mjs --report
-
-# 3. Urban siteplan and geometry trust hierarchy audit (265 invariant checks)
-node tools/audit_siteplan.mjs
-
-# 4. Landmark catalog and envelope verification (68 invariant checks)
-node tools/audit_beacons.mjs
-
-# 5. Client syntax & GLSL shader validation (230 invariant checks)
+# 3. Client syntax & shader validation (230 invariant checks)
 node tools/audit_client_syntax.mjs
-
-# 6. Core gameplay balance invariants
-npm run bal
 ```
+
+---
+
+## 4. Resilience & Error Handling Principles
+
+In compliance with Core Principle 6 ("Graceful Degradation, No Exceptions; Better Omit Than Corrupt"):
+1. **API High Demand & Rate Limiting (503 / 429)**: When an API encounters temporary load spikes or timeouts, the script logs a warning and skips the image, **never aborting the entire batch**.
+2. **Corrupt Images or Unsupported Formats**: Unreadable files are skipped with a warning log.
+3. **Empty Output or Filter Rejection**: If an LLM response cannot be parsed or yields zero parts, the item is skipped gracefully, ensuring database integrity remains uncorrupted.

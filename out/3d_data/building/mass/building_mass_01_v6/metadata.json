@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_01_v6",
+  "key": "building/mass_01_0a6db86c_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Residential Architecture",
+  "symmetryMode": "asymmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/01.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\01.jpg",
+  "created_at": "2026-08-19T15:11:37.398Z",
+  "bounds": {
+    "min": [
+      -5.25,
+      0,
+      -6
+    ],
+    "max": [
+      5.25,
+      27,
+      6
+    ],
+    "size": [
+      10.5,
+      27,
+      12
+    ],
+    "rMax": 7.973,
+    "triangles": 532,
+    "vertices": 340
+  },
+  "spec": {
+    "style": "Modern Residential Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}
