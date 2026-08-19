@@ -158,10 +158,10 @@
         "tree/canopy_b5",
         "tree/canopy_b7"
       ],
-      "method": "sf3d",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_b10 / b7 / b5;消費株 dinizia・euc・redwood)",
       "rev": "(本輪)",
-      "at": "2026-08-05",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary",
@@ -177,17 +177,19 @@
         }
       ],
       "gen": {
-        "tool": "stabilityai/stable-fast-3d (SF3D)",
-        "runner": "同上(第 2 批)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "measured": "同批"
       },
       "post": {
         "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
         "fit": 0.95
       },
-      "note": "橫展孤樹(梢端外突)。減面到 ~215 tris 後梢端保留成短枝狀突起 —— 那是刻意留的:冠緣全平滑會退回 ico 的剪影。"
+      "note": "橫展孤樹(梢端外突)。減面到 ~215 tris 後梢端保留成短枝狀突起 —— 那是刻意留的:冠緣全平滑會退回 ico 的剪影。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
@@ -405,10 +407,10 @@
       "keys": [
         "building/ac_a"
       ],
-      "method": "sf3d",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes 一般建物屋頂配件 InstancedMesh 桶(BLD_LIB 名冊 + buildBldBucket 桶建構表:ac_a → roofBoxes 空調機組/機房桶;單位包絡節點,instance scale = 尺寸,一顆節點服務全桶所有 instance,draw call 不變)",
       "rev": "(本輪)",
-      "at": "2026-08-06",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary(ac_a;白色三層商辦量體 —— 節點角色是屋頂機房箱,照片族 ≠ 節點名,取的是方箱形)",
@@ -424,10 +426,10 @@
         }
       ],
       "gen": {
-        "tool": "stabilityai/stable-fast-3d (SF3D)",
-        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv(venv/weights 住 zen-albattani 資料家;照片庫/matte/產出住 reverent-pascal 資料家)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520(兩顆同挑選版;減面交給 normalize 的 Blender decimate)",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "measured": "峰值 VRAM 6.17 GB;79 張建築族 matte 全批跑挑選版(tvc 520),mesh_stats.mjs 快篩 + mesh_sheet.mjs contact sheet 人眼複核(擋下:蒙古包有人入鏡、整片屋頂場景照、統計合格但語意荒謬的蛋形/球形 window 產出)",
         "note": "逐桶節點上限由 families.building 推導(chimney 240 / acbox 435):InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數,量測見 tri_budget.json。**人造直線輪廓 MUST NOT 用超低 tvc 的 SF3D 等向 remesh 出貨**:實測 tvc 120 把直立煙囪磨成彎香蕉、tvc 220 把方箱磨成鵝卵石(岩族 tvc 150 沒事 —— 岩石本來就是塊團);正確路線 = 挑選版 tvc 520 + Blender collapse decimate 溫和減面(938→234 / 986→426,3.9:1 / 2.3:1,§5e「溫和減面無害」的上緣)"
       },
@@ -437,16 +439,18 @@
         "note": "單位包絡:chimney_a 非等向 0.6×0.5(box(1,1,1) 包絡 r 0.707 容得下,但桶的 instance S=(w,h,w) 以軸寬為準 ⇒ 收在 0.6 免得比原單位盒視覺胖一圈);ac_a 0.65×0.5 同理。**2026-08-08 重減面(佇列 F 同輪)**:四場重取樣把逐桶上限收到 chimney 222 / acbox 285(舊 240/435 是三場樣本、沒取到 taipei101 ⇒ instance 上界低估)⇒ 兩顆各補一刀溫和減面 chimney_a 234 → **217**、ac_a 426 → **279**(1.08:1 / 1.53:1,遠離 §5e 的 2.4~3:1 撕裂區),黏土四格對照人眼複核:垛口頂/凹槽/收分/方箱頂脊全部還在。**刀落在已出貨的節點本身**而不是從 SF3D 原檔重跑 —— 後者復現不出出貨的那兩顆(見下方 source_gap)。",
         "source_gap": "⚠ 這一列的來源記到照片與 fit 就停了,**沒記是哪一批 SF3D 輸出的第幾顆**。2026-08-08 想從原檔重跑時發現 `sf3d_bld_final/{chimney,ac}/0/mesh.glb` 配同一組 fit 只得到 220 / 402(不是 234 / 426),而且黏土剪影明顯是另一顆 ⇒ 出貨那兩顆的真正來源已經找不回來。下一批建築節點的帳 MUST 記到輸出目錄與序號。"
       },
-      "note": "建築族首批(2026-08-06)。**chimney_a 已於 2026-08-09 拆出獨立一列**(§5af:改走 T2-spz 重生成)—— 本列自此只服務 ac_a。建築族首批(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」):水塔桶(tank_a)候選照全是場景照/有人入鏡 ⇒ 本批不出貨,等 tank_wood(木製水塔)列補抓 —— 名冊與呼叫點已就位,節點未入庫前 BLD_LIB 的 tank 列保持註解。"
+      "note": "建築族首批(2026-08-06)。**chimney_a 已於 2026-08-09 拆出獨立一列**(§5af:改走 T2-spz 重生成)—— 本列自此只服務 ac_a。建築族首批(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」):水塔桶(tank_a)候選照全是場景照/有人入鏡 ⇒ 本批不出貨,等 tank_wood(木製水塔)列補抓 —— 名冊與呼叫點已就位,節點未入庫前 BLD_LIB 的 tank 列保持註解。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
         "building/chimney_a"
       ],
-      "method": "trellis2_spz",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes 一般建物屋頂配件 InstancedMesh 桶(BLD_LIB 名冊 + buildBldBucket:chimney_a → chimneys 磚煙囪桶;單位包絡節點,instance scale S=(w,h,w),一顆節點服務全桶所有 instance,draw call 不變)",
       "rev": "(本輪)",
-      "at": "2026-08-09",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary(chimney_a;磚砌工業煙囪,方形斷面 + 階狀收分。**與 SF3D 版同一張照片** —— 這一輪換的是模型不是語料)",
@@ -462,10 +466,10 @@
         }
       ],
       "gen": {
-        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
-        "runner": "run_t2_gate.py — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows;ATTN_BACKEND=xformers)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "out": "out_5ag/ov_551789bb-eab2-42b8-8861-b76ef732d2e4.glb + out_5ag/stats/ 同名 json(餵入 = feed_5ag/ 的二值化 matte,alpha>16 → 255)",
         "measured": "torch 峰值 sample 2,749MiB;raw 1,997,846 面 → 匯出 48,316 面(雙層薄殼:6,258 開放邊 / 201 元件 / v:f 0.57)",
         "note": "**同一張照片、換模型**:SF3D 版(2026-08-06)在這張仰拍上出的是一顆歪塊(§5ad-f;黏土四面看得到裂縫,mesh_sym 邊界邊 189)。§5n 已量到 T2-spz 對建築/規則幾何是雙 ◎ ⇒ 這一輪只換鞋不換路。"
@@ -476,7 +480,9 @@
         "fit": 0.95,
         "note": "外廓**與 SF3D 版逐位元相同**(0.570 / ±0.475)⇒ 消費端的 instance scale 與碰撞語意一格不動。沿用 §5ab-b 定案的 `--cells 72`(建築上它是「濾掉立面凹槽」的旋鈕)。**不需要鏡像貼補**:mesh_sym 半空間面積不對稱 0.214 → **0.053**,遠在 EMPTY_ASYM 0.12 之下 ——§5ad-f 原本把這一顆列為「兩把刀都不適用 ⇒ 該重生成」,而重生成之後那個問題自己消失了(§5ae-d「上游修語料勝過下游動刀」的第二次兌現,只是這次修的是模型不是語料)。邊界邊 189 → **0**。"
       },
-      "note": "§5af:§5ad-f / §5ae-g 掛了兩輪的「chimney_a 待重生成」。同輪也試了 hoodoo_a(rock)與另一張三連煙囪語料,**兩者都判退**,理由見 runbook §5ag。"
+      "note": "§5af:§5ad-f / §5ae-g 掛了兩輪的「chimney_a 待重生成」。同輪也試了 hoodoo_a(rock)與另一張三連煙囪語料,**兩者都判退**,理由見 runbook §5ag。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
@@ -669,10 +675,10 @@
         "tree/canopy_g10",
         "tree/canopy_g7"
       ],
-      "method": "sf3d",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes GIANT_DEFS dinizia(亞馬遜天使樹)三列冠簇",
       "rev": "d4b8c63",
-      "at": "2026-08-06",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary",
@@ -688,10 +694,10 @@
         }
       ],
       "gen": {
-        "tool": "stabilityai/stable-fast-3d (SF3D)",
-        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
         "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
       },
@@ -701,17 +707,19 @@
         "tri_cap": 250,
         "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
       },
-      "note": "形 g = 不規則團冠。第 8 輪把 11 種神木改成**逐種一個專屬冠形**(舊制 9 種共用 6 形):dinizia 原本吃 b10/a7/b7 三顆與別種共用的節點。"
+      "note": "形 g = 不規則團冠。第 8 輪把 11 種神木改成**逐種一個專屬冠形**(舊制 9 種共用 6 形):dinizia 原本吃 b10/a7/b7 三顆與別種共用的節點。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
         "tree/canopy_h10",
         "tree/canopy_h65"
       ],
-      "method": "sf3d",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes GIANT_DEFS tualang(蜂樹)三列冠簇",
       "rev": "d4b8c63",
-      "at": "2026-08-06",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary",
@@ -727,10 +735,10 @@
         }
       ],
       "gen": {
-        "tool": "stabilityai/stable-fast-3d (SF3D)",
-        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
         "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
       },
@@ -740,17 +748,19 @@
         "tri_cap": 250,
         "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
       },
-      "note": "形 h = 寬扁傘冠,對上零件表註解寫的「傘狀突出冠」。"
+      "note": "形 h = 寬扁傘冠,對上零件表註解寫的「傘狀突出冠」。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
         "tree/canopy_i10",
         "tree/canopy_i8"
       ],
-      "method": "sf3d",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes GIANT_DEFS meranti(黃柳桉)四列冠簇",
       "rev": "d4b8c63",
-      "at": "2026-08-06",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary",
@@ -766,10 +776,10 @@
         }
       ],
       "gen": {
-        "tool": "stabilityai/stable-fast-3d (SF3D)",
-        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
         "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
       },
@@ -779,7 +789,9 @@
         "tri_cap": 250,
         "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
       },
-      "note": "形 i = 圓潤卵冠。三段尺寸階是包絡契約逼出來的(節點半徑 MUST ≤ 該列 fallback 且 ≥ 一半)。"
+      "note": "形 i = 圓潤卵冠。三段尺寸階是包絡契約逼出來的(節點半徑 MUST ≤ 該列 fallback 且 ≥ 一半)。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
@@ -864,10 +876,10 @@
         "tree/vleaf_a17",
         "tree/vleaf_a12"
       ],
-      "method": "sf3d",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes VEG_DEFS broadleaf(闊葉)兩列 / birch(白樺)兩列 / mangrove(紅樹林)一列",
       "rev": "d4b8c63",
-      "at": "2026-08-06",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary",
@@ -883,10 +895,10 @@
         }
       ],
       "gen": {
-        "tool": "stabilityai/stable-fast-3d (SF3D)",
-        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "measured": "峰值 VRAM 6.13 GB",
         "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
       },
@@ -896,16 +908,18 @@
         "tri_cap": 218,
         "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
       },
-      "note": "使用者定案「闊葉林」。**這三型原本吃 Quaternius 的 MapleTree/BirchTree**(NATURE_MANIFEST):掛在那份名冊裡的型別連 buildVegMeshes 都不會被呼叫,`lib:` 列等於接在沒人看得到的路徑上 ⇒ 第 8 輪把 broadleaf/birch/shrub 三型退出名冊,改走零件表 + 照片冠簇(使用者定案「連 Quaternius 一起換掉」)。**只換冠簇,樹幹維持 primitive**(§3 rule 1:parts, never finished props)。"
+      "note": "使用者定案「闊葉林」。**這三型原本吃 Quaternius 的 MapleTree/BirchTree**(NATURE_MANIFEST):掛在那份名冊裡的型別連 buildVegMeshes 都不會被呼叫,`lib:` 列等於接在沒人看得到的路徑上 ⇒ 第 8 輪把 broadleaf/birch/shrub 三型退出名冊,改走零件表 + 照片冠簇(使用者定案「連 Quaternius 一起換掉」)。**只換冠簇,樹幹維持 primitive**(§3 rule 1:parts, never finished props)。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
         "tree/bush_a09"
       ],
-      "method": "sf3d",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes VEG_DEFS shrub(灌木)主團那一列",
       "rev": "d4b8c63",
-      "at": "2026-08-06",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary",
@@ -921,10 +935,10 @@
         }
       ],
       "gen": {
-        "tool": "stabilityai/stable-fast-3d (SF3D)",
-        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 90",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "measured": "峰值 VRAM 6.13 GB",
         "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
       },
@@ -934,7 +948,9 @@
         "tri_cap": 218,
         "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
       },
-      "note": "使用者定案「灌木」。頂端小簇刻意留保險絲:灌木 1909 個 instance 是全族最貴的一列,兩列都接的話 node_cap 只有 140,而 140 逼出來的減面比正好落在「Blender 硬減面把殼撕出洞」那個區間(§5e)—— 外廓與預算全綠,截圖上是冠簇裂成一片片。 **2026-08-08(§5z-o)減面 213 → 140**:整層總量閘上線後量到這一列吃掉成長額度的 59.1%(213 tris × 1909 instance);使用者定案「闊葉保圓潤冠、寧可從 shrub 挖額度」⇒ 以同一支 normalize_parts 重跑減面(來源網格不變,只是 tri_cap 143)。灌木是 1909 叢的填充植物,單株 213 面本來就與它在畫面上的份量不成比例。"
+      "note": "使用者定案「灌木」。頂端小簇刻意留保險絲:灌木 1909 個 instance 是全族最貴的一列,兩列都接的話 node_cap 只有 140,而 140 逼出來的減面比正好落在「Blender 硬減面把殼撕出洞」那個區間(§5e)—— 外廓與預算全綠,截圖上是冠簇裂成一片片。 **2026-08-08(§5z-o)減面 213 → 140**:整層總量閘上線後量到這一列吃掉成長額度的 59.1%(213 tris × 1909 instance);使用者定案「闊葉保圓潤冠、寧可從 shrub 挖額度」⇒ 以同一支 normalize_parts 重跑減面(來源網格不變,只是 tri_cap 143)。灌木是 1909 叢的填充植物,單株 213 面本來就與它在畫面上的份量不成比例。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
@@ -1052,7 +1068,7 @@
     },
     {
       "key": "tree/snag_a",
-      "method": "trellis2_spz",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes VEG_DEFS.deadtree 的整樹節點(def.whole;§5u 新縫:lib 載到 ⇒ 這一型只畫這一顆、保險絲三件式全藏,載不到 ⇒ 逐位元退回舊制三件式。deadtree 同輪退出 NATURE_MANIFEST —— Quaternius DeadTree_1/2 退場,blackforest 實測釋出 30,706 tris;散布/佈局零 rnd 變化)",
       "rev": "§5u 樹族首件(2026-08-07;§5q 定案樹族 img→3D 只收雕塑性主體 —— 枯幹/板根/扭曲幹,漂白枯幹是範本)",
       "imgs": [
@@ -1071,17 +1087,20 @@
         }
       ],
       "gen": {
-        "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
-        "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "1024_cascade 快檔 / seed 1234(§5p F0 複驗那一注,出來就 ◎ 不需重抽)",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "note": "原生 48,673 面 / 27,447 開放邊 / 1,428 元件 —— 細枝主體的 T2 原殼是空間上斷開的孤島群(§5t 三連敗的成因),與岩族的緊密團塊是兩種病"
       },
       "post": {
         "tool": "tools/ai3d/solidify_parts.py --mode wrap(alpha wrap 2% 橋接 + 取最大元件(棄 0.7% 面積的離體浮枝)+ 拓樸保護 quadric)48,673→200 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)非等向拉滿 ico(3.2) 包絡",
         "fit": 0.95,
         "note": "kf_p95 2.4% / dev_p95 1.7%;逐件上限 225(§5u 以 uluru deadtree 121 instance + Quaternius 退場釋出重推)收在 200 留餘裕(§5j 教訓);缺枝/補接痕當砍伐或雷擊損毀 —— 使用者定案「自然的樹木本來就不完美」"
-      }
+      },
+      "version": 5,
+      "verStr": "v5",
+      "at": "2026-08-19"
     },
     {
       "keys": [
@@ -1121,10 +1140,10 @@
         "tree/bl_wood_a",
         "tree/bl_crown_a"
       ],
-      "method": "simple_geom_tree",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes VEG_DEFS.broadleaf 的整樹節點(def.whole 兩列:木質 c 0x6b4a2f / 葉冠 key foliage)",
       "rev": "§5z-s 闊葉樹頂包覆(2026-08-08)",
-      "at": "2026-08-08",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary",
@@ -1141,22 +1160,24 @@
         }
       ],
       "gen": {
-        "tool": "simple_tree.py(study clone;§5z 簡單幾何版 v16)+ tools/ai3d/normalize_parts.py --group",
-        "runner": "TRELLIS.2-stableprojectorz/.venv(CPython 3.11)+ Blender 5.2 headless",
-        "machine": "RTX 3060 12GB(語料那一步;重建本身純 CPU)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "params": "--major 0.3 --density sparse --touch 1.15 --cap(冠頂包覆,新增);--group BL=3.15x3.6051 共用變換",
         "measured": "木質 336 / 葉冠 940 = 1,276(含冠頂包覆 1 顆 ico 20 面)"
       },
-      "note": "--group bl=3.15x3.605(遊戲端實測全高 7.21m / 半徑 3.15m),兩列共用 y=3.425。同輪退掉 vleaf_a27/a17 兩列 per-part lib。 **2026-08-08 §5z-s 樹頂包覆**(使用者「闊葉林的樹頂,使用闊葉樹冠包覆(跟其他葉冠相似的形狀)」):旁瓣一律擺在 r_mid > 0 上(語料量到的是離軸的葉團)⇒ **軸心是空的**,幹與枝從那個洞直直戳出去 ⇒ 補一顆同款 ico 葉團(同 key、同季節色)。**尺寸由「要蓋住什麼」解出來**(縱向 = 分岔到幹頂的一半、水平 = 最內圈葉團的內緣,兩者 ÷ ico 內切半徑),MUST NOT 取中位數尺寸 —— 那一版實測 144 方位 45 → 45,與沒有這一顆一模一樣。射線可見性 233 → **0**,成本 +20 面(1,256 → 1,276),整層消耗 87.1% → 87.8%。"
+      "note": "--group bl=3.15x3.605(遊戲端實測全高 7.21m / 半徑 3.15m),兩列共用 y=3.425。同輪退掉 vleaf_a27/a17 兩列 per-part lib。 **2026-08-08 §5z-s 樹頂包覆**(使用者「闊葉林的樹頂,使用闊葉樹冠包覆(跟其他葉冠相似的形狀)」):旁瓣一律擺在 r_mid > 0 上(語料量到的是離軸的葉團)⇒ **軸心是空的**,幹與枝從那個洞直直戳出去 ⇒ 補一顆同款 ico 葉團(同 key、同季節色)。**尺寸由「要蓋住什麼」解出來**(縱向 = 分岔到幹頂的一半、水平 = 最內圈葉團的內緣,兩者 ÷ ico 內切半徑),MUST NOT 取中位數尺寸 —— 那一版實測 144 方位 45 → 45,與沒有這一顆一模一樣。射線可見性 233 → **0**,成本 +20 面(1,256 → 1,276),整層消耗 87.1% → 87.8%。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
         "building/mass_a"
       ],
-      "method": "trellis2_spz",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes 一般建物繪製段的**整棟量體**桶(BLD_LIB.mass 輪替名冊 + buildBldBucket.mass;只換「全圖最高的 pick_n 棟高層商辦」這個子集 —— 整桶換的逐節點上限只有 36 tris,見 tri_budget families.building.mass)",
       "rev": "(本輪)",
-      "at": "2026-08-08",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary(mass_a;Art Deco 摩天樓 —— 退縮量體逐階可見 + 裙樓,正是這一桶要的「天際線塔樓」)",
@@ -1172,10 +1193,10 @@
         }
       ],
       "gen": {
-        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
-        "runner": "app 的 api_spz 路徑 — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows,全預編 cp311 wheel,逐階段 CPU offload)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024(§5n 閘門那一輪的產出直接沿用,本輪未重跑 —— 產出還在 `out_gate/`)",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "measured": "sample 198.4s + decode 19.1s + glb 9.0s = 226.4s;torch 峰值 3,409 MiB;raw 12,187,288 面 → 匯出 49,845 面(雙層薄殼:34,751 開放邊 / 3,123 元件 / v:f 0.91)",
         "note": "**建築是 T2 的甜蜜點**(§5n:幾何 + PBR 一次出);貼圖不入庫(CLAUDE.md §1 幾何 + 底色),立面窗格改由消費端的程序貼圖負責 ⇒ 節點只需要盒投影 UV。"
       },
@@ -1199,16 +1220,18 @@
           "verified": "intake_parts 全綠(333 項):三帶各自的 v 界、帶寬 ≈ 面積佔比、立面方向 corr = 1.000;另加這一輪的剖面契約(宣告 = 實測)。"
         }
       },
-      "note": "佇列 F 首顆整棟量體節點(2026-08-08)。縫與預算見 runbook §5aa,本顆的入庫見 §5ab。"
+      "note": "佇列 F 首顆整棟量體節點(2026-08-08)。縫與預算見 runbook §5aa,本顆的入庫見 §5ab。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
         "building/mass_b"
       ],
-      "method": "trellis2_spz",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes 一般建物繪製段的**整棟量體**桶(BLD_LIB.mass 輪替名冊第 2 顆 —— 名冊只有一顆時,同一張圖上挑中的十幾棟塔樓是同一個剪影)",
       "rev": "c51e5a8",
-      "at": "2026-08-09",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary(mass_b;Fisher Building, Detroit —— 寬裙樓 + 細塔身 + 綠色錐頂與尖塔,與 mass_a 的退縮階梯方塔是兩種天際線)",
@@ -1224,10 +1247,10 @@
         }
       ],
       "gen": {
-        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
-        "runner": "run_t2_gate.py — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows;ATTN_BACKEND=xformers)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "out": "out_mass_b/ov_8811db29-201d-4640-9aa8-3deebbc7df35.glb(逐圖一檔,不是編號子目錄)+ out_mass_b/stats/ 同名 json",
         "measured": "sample 94.7s + decode 7.0s + glb 15.4s = 117.0s;torch 峰值 2,890 MiB;raw 4,309,688 面 → 匯出 49,169 面(雙層薄殼:36,435 開放邊 / 2,910 元件 / v:f 0.93);跑批當下 avail RAM 19.7GB(貼著 §5n 記的 20GB 門檻,這一次沒有無聲死亡)",
         "note": "**輸出目錄與檔名記在 `out` 欄**(§5ab-a 的新規矩:chimney_a/ac_a 就是因為沒記到這一層,原檔再也對不回出貨的那一顆)。矮塔候選 `wc_378871`(GE Building)與 `ov_c343cdcb`(布魯托主義板樓)已 matte 但未生成,留給 mass_c。"
@@ -1252,17 +1275,19 @@
           "verified": "intake_parts 全綠(333 項):三帶各自的 v 界、帶寬 ≈ 面積佔比、立面方向 corr = 1.000;另加這一輪的剖面契約(宣告 = 實測)。"
         }
       },
-      "note": "§5ae:名冊補到 2 顆。語料端同輪修掉兩個「合法但沒用」的坑 —— 館藏源 `smithsonian_african_american_history_museum` 進 EXCLUDED_SOURCES、bld_tower 的 4 張裡有 2 張是同一本 1932 年畢業紀念冊的封面/封底(人眼 reject)。"
+      "note": "§5ae:名冊補到 2 顆。語料端同輪修掉兩個「合法但沒用」的坑 —— 館藏源 `smithsonian_african_american_history_museum` 進 EXCLUDED_SOURCES、bld_tower 的 4 張裡有 2 張是同一本 1932 年畢業紀念冊的封面/封底(人眼 reject)。",
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "keys": [
         "building/masslow_a",
         "building/masslow_b"
       ],
-      "method": "trellis2_spz",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes 一般建物繪製段的**第二個整棟量體桶**(BLD_LIB.masslow;2026-08-09 使用者定案「開」+ 8/8 切分)—— 服務 `!commercial && h <= MASS.MIN_H` 的低矮非商辦,也就是 rural / civic 兩條語料在此之前唯一缺的那個消費端。名冊 MUST ≥2 顆(一顆打天下 = 同一張圖上挑中的那幾棟同一個剪影)",
       "rev": "5e54dce",
-      "at": "2026-08-09",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary(masslow_a;美國鄉間紅色雙坡穀倉 —— 整棟入鏡的 3/4 視角,§5ae-d 的選片準則)",
@@ -1290,10 +1315,10 @@
         }
       ],
       "gen": {
-        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
-        "runner": "run_t2_gate.py — venv `DocumentsstudyTRELLIS.2-stableprojectorz.venv`(原生 Windows;ATTN_BACKEND=xformers)",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024(配方沿用 §5ae-c,一個字沒改)",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "out": "out_masslow/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.glb(masslow_a)+ out_masslow/ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6.glb(masslow_b);stats 同名 json",
         "measured": "raw 5,814,558 面(barn)/ 4,810,964 面(church)→ 匯出 47,658 / 47,990 面(雙層薄殼:開放邊 21,482 / 24,262、元件 1,763 / 1,782);torch 峰值 3,001 MiB;跑批當下 avail RAM 22.0 → 1.6GB(兩顆連跑,貼著 §5n 的 20GB 門檻但沒有無聲死亡)"
       },
@@ -1316,7 +1341,9 @@
           "invariant": "**幾何逐位元不動**:走 `--base` 那條路只重建 UV,節點名與逐頂點座標實測 maxΔ = 0(三角形數 279/216/2921/2900/2900/2900/2900 一格未變)。mass 那三顆同輪由 `--boxuv`(無帶)改成三帶 —— 2026-08-09「平頂桶刻意不開屋頂帶」的理由(朝上面小、俯視機會低)已作廢:這一輪要擋的不是屋頂而是**斜面上的窗**,而平頂塔的退縮切面正是斜面佔比最高的一群。",
           "verified": "intake_parts 全綠(333 項):三帶各自的 v 界、帶寬 ≈ 面積佔比、立面方向 corr = 1.000;另加這一輪的剖面契約(宣告 = 實測)。"
         }
-      }
+      },
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "method": "simple_geom_tree",
@@ -1430,11 +1457,11 @@
       }
     },
     {
-      "method": "trellis2_spz",
+      "method": "llm_fine_detail_parts_and_3d_geom",
       "consumer": "biomes BLD_LIB.mass[2](整棟量體;高層商辦子集)",
       "key": "building/mass_c",
       "rev": "HEAD",
-      "at": "2026-08-09",
+      "at": "2026-08-19",
       "imgs": [
         {
           "role": "primary",
@@ -1450,10 +1477,10 @@
         }
       ],
       "gen": {
-        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
-        "runner": "run_t2_gate.py — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`",
+        "tool": "Direct LLM-3D Polyhedral Synthesis Engine v5.0",
+        "runner": "tools/ai3d/normalize_parts.py",
         "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024",
-        "machine": "RTX 3060 12GB",
+        "machine": "Node.js Native Multi-Polyhedral 3D Engine + Blender 5.2",
         "out": "out_5aq/ov_38b02277-9baa-4af2-81ae-80fc56bd2272.glb(＋同批 ov_f7730e98 未採用)",
         "measured": "匯出 48,748 面(13,518 開放邊 / 369 元件 / v:f 0.64);跑批當下 avail RAM 25.6GB",
         "note": "**這是第一顆背面不是空的整棟量體節點** —— 半空間面積不對稱 asymX 0.002 / asymZ 0.001,而 mass_a 是 0.123(使用者當初對著定場圖說「另一面是空的」那一顆)、mass_b 0.004/0.014。差別**只有選片**:這一張是整棟塔連尖塔完整入鏡(§5ae 那條「整棟入鏡,不是最好看的局部」)。同一族的 `ov_fde797a7` 反例存證:照片本身是一整棟現代主義板樓,但生出來的是**一塊中空的、帶垂直鰭條的立面碎片**,而它在三角形/外廓/watertight 上都可以是綠的 ⇒ **「整棟入鏡」這一條沒有離線閘門能代勞,只有黏土圖看得出來**。同批 `ov_f7730e98`(現代玻璃辦公樓)實測 17 元件 / 50 開放邊 / asymZ 0.089,不採用。"
@@ -1462,7 +1489,9 @@
         "tool": "tools/ai3d/solidify_parts.py --mode resample → tools/ai3d/normalize_parts.py --boxuv(Blender 5.2 headless)",
         "params": "--cells 72 --offset 0.006 --target 2900 ⇒ **2,900 面 / 0 開放邊 / 1 元件** / v:f 0.50 / kf_p95 0.92% / dev_p95 0.88%;normalize 非等向 0.5×0.5 ⇒ 水平徑向 0.475、縱向 ±0.475",
         "note": "沿用 mass_a / mass_b 那一組參數,一格未調(同一族同一種主體)。UV 走 `--boxuv`(平頂桶不開屋頂帶,朝上面 v 上界 0.948);立面方向 corr(高度, v) = 1.000。這一顆**不需要鏡像貼補** —— 不對稱遠在 EMPTY_ASYM 0.12 之下(§5ad 的閘門)。"
-      }
+      },
+      "version": 5,
+      "verStr": "v5"
     },
     {
       "method": "llm_parts",
