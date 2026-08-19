@@ -29054,6 +29054,132 @@
       "keys": [
         "tree/sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab_ff271614"
       ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-19",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_0a6db86c",
+          "family": "building",
+          "part": "mass",
+          "query": "01",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/01.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.6-flash)",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--model gemini-3.6-flash --family building",
+        "machine": "Gemini API (gemini-3.6-flash)",
+        "measured": "Triangles 532, Vertices 340"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          10.5,
+          27,
+          12
+        ],
+        "note": "Extents [10.5, 27, 12]m, rMax 7.973m"
+      },
+      "keys": [
+        "building/mass_01_0a6db86c_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-19",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_a26ffc7b",
+          "family": "building",
+          "part": "mass",
+          "query": "0b480f6369f166b3c884ddb5940ca2e8",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/0b480f6369f166b3c884ddb5940ca2e8.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.6-flash)",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--model gemini-3.6-flash --family building",
+        "machine": "Gemini API (gemini-3.6-flash)",
+        "measured": "Triangles 1044, Vertices 651"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          13.2,
+          29,
+          17.4
+        ],
+        "note": "Extents [13.2, 29, 17.4]m, rMax 12.007m"
+      },
+      "keys": [
+        "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-19",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_f4de6359",
+          "family": "building",
+          "part": "mass",
+          "query": "101330",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/101330.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.6-flash)",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--model gemini-3.6-flash --family building",
+        "machine": "Gemini API (gemini-3.6-flash)",
+        "measured": "Triangles 168, Vertices 112"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          22,
+          6.75,
+          20
+        ],
+        "note": "Extents [22, 6.75, 20]m, rMax 14.866m"
+      },
+      "keys": [
+        "building/mass_101330_f4de6359_v6"
+      ]
     }
   ]
 }

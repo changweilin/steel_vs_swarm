@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_101330",
+  "sourceImage": "building/mass/101330",
+  "style": "Modern Villa Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14737632,
+    "facadeHex": 15790320,
+    "baseHex": 9013641,
+    "accentHex": 9124395,
+    "darkHex": 3816252,
+    "brightHex": 16777215,
+    "glassHex": 3631240
+  },
+  "totalParts": 14,
+  "partNames": [
+    "Site Base Ground",
+    "Swimming Pool",
+    "Main Lower Building Mass",
+    "Wood Accent Entrance Wall",
+    "Carport Dark Cantilever Volume",
+    "Upper Central White Floor",
+    "Dark Stone Feature Tower",
+    "Upper Balcony Box",
+    "Balcony Glass Window",
+    "Carport Parked Vehicle 1",
+    "Driveway Parked Vehicle 2",
+    "Boundary Wall Left",
+    "Boundary Wall Back",
+    "Boundary Wall Right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

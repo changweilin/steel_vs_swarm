@@ -67,6 +67,13 @@ export const METHODS = {
     short: '純資料件',
     doc: '規則/人造幾何(地標、建物模組、公設)—— 零二進位重量、零授權曝險,而且離線稽核量得到外廓(計畫書 §8)',
   },
+  gemini_v6: {
+    key: 'gemini_v6',
+    label: 'Gemini 讀照片 → 寫多面體零件列(v6)',
+    kind: 'parts',
+    short: 'Gemini v6',
+    doc: 'Gemini 3.7 / GPT 5.6 Luna 直讀照片以結構化輸出回傳多面體零件列(取代 v5 的 Python CV + 手寫規則,與 v5 並存)',
+  },
   procedural: {
     key: 'procedural',
     label: '純程序生成(未經 AI)',
