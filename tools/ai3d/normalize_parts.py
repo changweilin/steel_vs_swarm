@@ -1431,7 +1431,13 @@ if REWORK:
 pending = {}        # group → [ob, ...](置中與縮放延到全群備齊之後)
 for (name, src, target_r, target_hy, tri_cap, ry_deg, dy, grp) in NODES:
     before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=src)
+    if src.lower().endswith('.obj'):
+        try:
+            bpy.ops.wm.obj_import(filepath=src)
+        except AttributeError:
+            bpy.ops.import_scene.obj(filepath=src)
+    else:
+        bpy.ops.import_scene.gltf(filepath=src)
     news = [o for o in bpy.data.objects if o not in before and o.type == 'MESH']
     if not news:
         raise RuntimeError(f'{src} 匯入後沒有 mesh')
