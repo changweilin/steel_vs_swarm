@@ -118,8 +118,8 @@ export const VISUAL_KNOBS = {
   //   ① 裸 `MeshToonMaterial` 的凍結名冊清空(`audit_cel_pipeline` Ⅺ⑧ 硬閘,名冊非空就翻不了);
   //   ② 改制前後的定場照都拍過(`docs/_pending/shots-baseline.md`,78 + 65 + 26 + 65 張的 md5 全表)。
   // **切回舊制是這一行改回 'a'**,27 條 ramp 斷言與 `RAMPS`/`toonGradient` 全部原封不動留著。
-  // 仍未定的是**調校**不是學派:`CEL_CUT.HUE_MIN_A`(現值偏保守)與 bands=4 的中間階
-  // (硬切只有一個終端 ⇒ 整片山坡回到兩塊色),兩者都列在交付說明的待裁決。
+  // 2026-08-19 調校定案(不是學派切換):`CEL_CUT.HUE_MIN_A = 1.5`;
+  // bands=4 維持單一硬切的兩色結果,不補第二刀。School B 仍是交付預設。
   celSchool: {
     label: '賽璐璐學派', def: 'b', choices: ['a', 'b'],
     choiceLabels: { a: 'A(ramp 查表)', b: 'B(硬切 + 色相位移)' },
