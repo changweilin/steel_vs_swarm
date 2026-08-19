@@ -2,7 +2,7 @@
 // R=分區索引、G=有幾何理由的外觀段、B=決定性連續場、A=道路/建成遮罩。
 // 這裡只產純資料；DataTexture 與 shader 生命週期由 toon.js 管。
 import { SLOPE } from './data.js';
-import { rasterLines, floodFaces, assignWallTexels, mergeSmall, faceSamples } from './zonecut.js';
+import { rasterLines, corridorKeepOut, floodFaces, assignWallTexels, mergeSmall, faceSamples } from './zonecut.js';
 
 export const LAND_ZONES = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
 export const LAND_FIELD_N = 1024;
@@ -95,19 +95,7 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
     return i >= 0 && j >= 0 && i < nx && j < nz && !nearWall[j * nx + i];
   });
 
-  const keepOut = new Uint8Array(nx * nz);
-  for (const c of gradeCorridors) {
-    const r = (c.hw + (c.kind === 'tun' ? 7 : 4)) / mpt;
-    const ax = ti(c.x1), az = tj(c.z1), bx = ti(c.x2), bz = tj(c.z2);
-    const ex = bx - ax, ez = bz - az, l2 = ex * ex + ez * ez || 1;
-    const i0 = Math.max(0, Math.floor(Math.min(ax, bx) - r - 1)), i1 = Math.min(nx - 1, Math.ceil(Math.max(ax, bx) + r + 1));
-    const j0 = Math.max(0, Math.floor(Math.min(az, bz) - r - 1)), j1 = Math.min(nz - 1, Math.ceil(Math.max(az, bz) + r + 1));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-      let t = ((i + 0.5 - ax) * ex + (j + 0.5 - az) * ez) / l2;
-      t = Math.max(0, Math.min(1, t));
-      if ((i + 0.5 - ax - t * ex) ** 2 + (j + 0.5 - az - t * ez) ** 2 <= r * r) keepOut[j * nx + i] = 1;
-    }
-  }
+  const keepOut = corridorKeepOut(nx, nz, mpt, gradeCorridors, { toI: ti, toJ: tj });
 
   const slope = new Float32Array(nx * nz), height = new Float32Array(nx * nz);
   let hMin = Infinity, hMax = -Infinity;

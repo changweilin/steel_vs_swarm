@@ -5915,7 +5915,8 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
           const cy = kind === 'tun'
             ? Math.max(tunFloorAt(tw, cum[i], total), tunFloorAt(tw, cum[j], total)) + TUN.CLEAR
             : null;
-          corridors.push({ x1: run[i][0], z1: run[i][1], x2: run[j][0], z2: run[j][1], hw, kind, cy });
+          const clear = kind === 'tun' ? STRUCT_CLEAR_PAD : 4;
+          corridors.push({ x1: run[i][0], z1: run[i][1], x2: run[j][0], z2: run[j][1], hw, kind, cy, clear });
         }
         // 淨空格:橋樑全段;隧道只有敞開/洞口段(覆蓋段山頂地物照舊)。此處 heightAt 是開挖後
         // 高度:自然覆蓋段未被開挖(= 原高)→ skip;縫合蓋廊段(地表低於天花)→ 淨空,

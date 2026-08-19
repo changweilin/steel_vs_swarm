@@ -2174,7 +2174,7 @@ async function enterLoading(cfg) {
         ? [rd(b.x), rd(-b.z), rd(Math.min(60, Math.hypot(b.hw2, b.hd2))), rd(Math.min(300, b.h)),
            rd(b.hw2), rd(b.hd2), Math.round(-b.ry * 1e3) / 1e3]
         : [rd(b.x), rd(-b.z), rd(Math.min(60, b.r)), rd(Math.min(300, b.h))]));
-      const cor = (ud.gradeCorridors || []).slice(0, 2400)
+      const cor = (ud.gradeCorridors || []).slice(0, LOS.MAX_CORR)
         .map((c) => [rd(c.x1), rd(-c.z1), rd(c.x2), rd(-c.z2), rd(c.hw), c.kind === 'tun' ? 1 : 0]);
       // 橋面/隧道天花水平薄板(#1):deck ribbon(ty=1)+ 隧道 ribbon(ty=2),sim 座標(z 北 = −three z)。
       // 伺服器 _slabBlocked 判「兩端同 ribbon 且分屬板體兩側」擋彈道/LOS —— 補圓柱(occ)之外的水平板缺口。

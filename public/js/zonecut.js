@@ -75,6 +75,34 @@ export function rasterLines(nx, nz, segs, opts = {}) {
 }
 
 /**
+ * 立體交通走廊的結構足跡遮罩。
+ * `gradeCorridors` 已由建圖端算好通行半寬與淨空帶；切面、地貌場與離線樁只共用
+ * 這個光柵器，不得各自再寫一份「隧道加幾公尺 / 橋加幾公尺」的半徑。
+ */
+export function corridorKeepOut(nx, nz, mpt, corridors, { toI = (x) => x, toJ = (z) => z } = {}) {
+  const out = new Uint8Array(nx * nz);
+  for (const c of corridors || []) {
+    if (!Number.isFinite(c?.x1) || !Number.isFinite(c?.z1)
+      || !Number.isFinite(c?.x2) || !Number.isFinite(c?.z2)
+      || !Number.isFinite(c?.hw) || !Number.isFinite(c?.clear)) continue;
+    const r = (c.hw + c.clear) / mpt;
+    const ax = toI(c.x1), az = toJ(c.z1), bx = toI(c.x2), bz = toJ(c.z2);
+    const i0 = Math.max(0, Math.floor(Math.min(ax, bx) - r - 1));
+    const i1 = Math.min(nx - 1, Math.ceil(Math.max(ax, bx) + r + 1));
+    const j0 = Math.max(0, Math.floor(Math.min(az, bz) - r - 1));
+    const j1 = Math.min(nz - 1, Math.ceil(Math.max(az, bz) + r + 1));
+    const ex = bx - ax, ez = bz - az, l2 = ex * ex + ez * ez;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      let t = l2 ? ((i + 0.5 - ax) * ex + (j + 0.5 - az) * ez) / l2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const dx = i + 0.5 - (ax + t * ex), dz = j + 0.5 - (az + t * ez);
+      if (dx * dx + dz * dz <= r * r) out[j * nx + i] = 1;
+    }
+  }
+  return out;
+}
+
+/**
  * 對牆的補集做泛洪,每個連通區得到一個 face id。
  * **4 鄰**(見檔頭 ①)。播種走 row-major 掃描 ⇒ face id 恆為「第 k 個被掃到的面」,
  * 與 `segs` 的順序、每條 way 的頂點序**無關**。

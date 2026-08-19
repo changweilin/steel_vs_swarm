@@ -68,7 +68,7 @@
 // 跑法:node tools/audit_cel_pipeline.mjs [--break-scale] [--break-inkinfo] [--break-land] [--break-lutland]
 //                                        [--break-school] [--break-cutfloor] [--break-neutral]
 //                                        [--break-cutorder] [--break-schoolmix] [--break-shadowtype]
-//                                        [--break-landmask]
+//                                        [--break-landmask] [--break-surf]
 import { readdirSync } from 'node:fs';
 import { readSrc } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
@@ -122,6 +122,9 @@ const BREAK_SCHOOLMIX = process.argv.includes('--break-schoolmix');
 const BREAK_SHADOWTYPE = process.argv.includes('--break-shadowtype');
 /** 反向驗證:三平面遮罩退回單一 XZ 投影(= 垂直崖面沿 Y 拉成一整條)⇒ Ⅸ MUST 紅字 */
 const BREAK_LANDMASK = process.argv.includes('--break-landmask');
+/** 反向驗證:材質槽耗盡後退回循環配號(= 第 65 個語意材質撞回既有 id)⇒ Ⅷ MUST 紅字 */
+const BREAK_SURF = process.argv.includes('--break-surf');
+let surfToonBase = toon;
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
 /** 只留「真的會執行的程式碼」—— 註解裡提到某個名字不算違規 */
@@ -429,7 +432,13 @@ console.log('\nⅥ 勾線資訊緩衝的材質契約(A 方案)');
 console.log('\nⅦ 地貌不出接縫(LUT / 勾線只吃地形,不吃地貌)');
 {
   const ground = readSrc('public', 'js', 'ground.js');
-  let T = code(toon), P = code(postfx);
+  if (BREAK_SURF) {
+    const bent = surfToonBase.replace(/const id = _surfSeq >= SURF_SLOT_N\r?\n\s+\? SURF_ID\.OVERFLOW/,
+      'const id = false && _surfSeq >= SURF_SLOT_N\n    ? SURF_ID.OVERFLOW');
+    if (bent === surfToonBase) { console.error('✗ --break-surf:樣式沒咬到 toon.js,反向驗證等於沒跑'); process.exit(1); }
+    surfToonBase = bent;
+  }
+  let T = code(surfToonBase), P = code(postfx);
   const G = code(ground), TR = code(terr);
   if (BREAK_LAND) {
     const bent = T.replace('if (land) mat.userData.celSurfId = LAND_SURF_ID;', '');
@@ -659,6 +668,22 @@ return ctr; };`)(
   ok(worst >= 0.5 / 64 - 1e-12, `群組號與逐材質號的最小距離 ${worst.toFixed(5)} ≥ 0.0078(> id 門檻 0.004 ⇒ 不會撞號)`);
   ok(!/Math\.random|rnd\(/.test(/let _grpSeq = 1;[\s\S]*?\n\}/.exec(T)[0]),
     'surfGroup **零亂數消耗**(§2.3:抽一枚共享 rnd() 當群組種子就會把整張圖的佈局往後推移)');
+  const surfBlock = /let _surfSeq = 0;[\s\S]*?let _grpSeq = 1;/.exec(surfToonBase)?.[0] || '';
+  ok(!BREAK_SURF || surfBlock.includes('false && _surfSeq >= SURF_SLOT_N'),
+    '--break-surf 確實把耗盡分支改成回繞版(反向驗證不得靜默 no-op)');
+  const surfFns = new Function(`${surfBlock.replace('export const SURF_ID', 'const SURF_ID')}
+return { nextSurfId, SURF_ID, SURF_SLOT_N };`)();
+  const surfKeys = Array.from({ length: surfFns.SURF_SLOT_N + 4 }, (_, i) => `audit:${i}`);
+  const surfVals = surfKeys.map((k) => surfFns.nextSurfId(k));
+  ok(new Set(surfVals.slice(0, surfFns.SURF_SLOT_N)).size === surfFns.SURF_SLOT_N
+    && surfVals.slice(0, surfFns.SURF_SLOT_N).every((v) => Math.abs((v * 64) % 1 - 0.5) < 1e-12),
+  `逐材質前 ${surfFns.SURF_SLOT_N} 個語意鍵 MUST 各得唯一半格(實得 ${new Set(surfVals.slice(0, surfFns.SURF_SLOT_N)).size} 個)`);
+  ok(surfVals.slice(surfFns.SURF_SLOT_N).every((v) => v === surfFns.SURF_ID.OVERFLOW),
+    `材質槽耗盡 MUST 固定回 OVERFLOW=${surfFns.SURF_ID.OVERFLOW}(不得循環撞號)`);
+  ok(surfFns.nextSurfId('audit:stable') === surfFns.nextSurfId('audit:stable'),
+    '相同語意鍵 MUST 重用同一個 surfaceId(建構順序不應改寫整張圖的線)');
+  ok(surfFns.SURF_ID.OVERFLOW * 64 === 42 && !ids.includes(surfFns.SURF_ID.OVERFLOW),
+    'OVERFLOW 保留整數格 42，且不與 surfGroup() 的 2..41 或地貌 43..63 子帶重疊');
   ok(/celOpts\.land\) return;/.test(T),
     'joinSurfGroup 對地貌材質 MUST skip(它恆 LAND_SURF_ID,A46 / Ⅶ)');
   // S4:兩支推導縫各住一邊,而且都嚴格單調
