@@ -18,7 +18,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ } from '../public/js/data.js';
+import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ, xzToLL } from '../public/js/data.js';
 
 export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 export const CACHE = join(ROOT, 'tools', '.scen_cache');
@@ -74,6 +74,17 @@ const evalBlock = (from, fnName, extra = {}) => {
   const keys = Object.keys(extra);
   return new Function('TUN', ...keys, `${bsrc.slice(P0, P1)}\nreturn ${fnName};`)(TUN, ...keys.map((k) => extra[k]));
 };
+const grabFunctionSource = (name) => {
+  const start = bsrc.indexOf(`function ${name}(`);
+  if (start < 0) throw new Error(`biomes.js 找不到 ${name}`);
+  const open = bsrc.indexOf('{', start);
+  let depth = 0;
+  for (let i = open; i < bsrc.length; i++) {
+    if (bsrc[i] === '{') depth++;
+    else if (bsrc[i] === '}' && --depth === 0) return bsrc.slice(start, i + 1);
+  }
+  throw new Error(`biomes.js ${name} 大括號未閉合`);
+};
 export const tunnelCoverIntervals = evalBlock('function tunnelCoverIntervals(', 'tunnelCoverIntervals',
   { TUN_GAP_CLOSE, TUN_COV_MIN });
 export const tunnelWallProfile = evalBlock('const TUN_WALL_SAMP', 'tunnelWallProfile');
@@ -114,6 +125,22 @@ export function makeDeckAt(hA, hB, total, heightAt) {
   return new Function('hA', 'hB', 'total', 'terrain', 'BRIDGE_RISE', 'ROAD_LIFT', 'WATER',
     `${DECK_SRC}\nreturn deckAt;`)(hA, hB, total, { heightAt }, BRIDGE_RISE, ROAD_LIFT, WATER);
 }
+
+// ---- 走廊規則的執行期原文鏡射(切面樁與遊戲端 MUST 吃同一份)----
+const CELL_M = +/const CELL = ([\d.]+)/.exec(bsrc)[1];
+const STRUCT_CLEAR_PAD = new Function('UND', 'TUN',
+  `${/const STRUCT_CLEAR_PAD = [^\n]+/.exec(bsrc)[0]}\nreturn STRUCT_CLEAR_PAD;`)(UND, TUN);
+const blockArea = new Function('CELL', `${grabFunctionSource('blockArea')}\nreturn blockArea;`)(CELL_M);
+const runtimeSplitWaterPieces = new Function(
+  'WATER', 'SKIRT_NEAR', 'SKIRT_OPEN', 'SKIRT_MAX', 'SKIRT_STEP', 'SKIRT_CROSS_MIN',
+  `${grabFunctionSource('isWaterPt')}\n${grabFunctionSource('terrainEnvCode')}\n${grabFunctionSource('skirtWaterClips')}\n${grabFunctionSource('splitWaterPieces')}\nreturn splitWaterPieces;`,
+)(WATER, 30, 60, 72, 3, WATER.SPAN_MIN_M);
+export const markGradeCorridors = new Function(
+  'roadWidth', 'PASS_W', 'PED_HW', 'llToWorld', 'densify', 'splitWaterPieces', 'strucHw',
+  'tunFloorAt', 'TUN', 'STRUCT_CLEAR_PAD', 'WATER', 'ROAD_SEG', 'tunnelWallProfile', 'blockArea',
+  `${grabFunctionSource('markGradeCorridors')}\nreturn markGradeCorridors;`,
+)(roadWidth, PASS_W, PED_HW, llToWorld, densify, runtimeSplitWaterPieces, strucHw,
+  tunFloorAt, TUN, STRUCT_CLEAR_PAD, WATER, ROAD_SEG, tunnelWallProfile, blockArea);
 
 // ---- 極簡 PNG 解碼(terrarium 磚;A2:MUST NOT 新增 npm 依賴 ⇒ 只用 node:zlib)----
 function decodePng(buf) {
@@ -740,4 +767,39 @@ export function buildStructs(osm, center, hf) {
     }
   }
   return { structs, marks, carveRuns };
+}
+
+/**
+ * 準備與執行期相同的走廊輸入：隧道先掛上 `_tun`，兵線泡水段由同一支
+ * `splitWaterPieces` 原文生成偽 way。這支只供離線樁使用，不另造一套結構判定。
+ */
+export function gradeWaysForAudit(osmRoads, laneConfig, center, terrain) {
+  const roads = (osmRoads || []).map((w) => ({
+    ...w,
+    tags: { ...(w.tags || {}) },
+    geometry: (w.geometry || []).map((p) => ({ ...p })),
+  }));
+  for (const way of roads) {
+    if (!strucTunnel(way.tags)) continue;
+    const run = tunnelRunOf(way, center, terrain.heightAt, terrain);
+    way._tun = run ? [run] : [{ intervals: [] }];
+  }
+  const laneWetWays = [];
+  if (roads.length && laneConfig?.length) {
+    for (const lane of laneConfig) {
+      const pts = densify(lane.map(([lat, lng]) => llToWorld(lat, lng, center)), ROAD_SEG);
+      for (const p of runtimeSplitWaterPieces(pts, terrain, true)) {
+        if (p.wet === true && p.length >= 2) {
+          laneWetWays.push({
+            tags: { highway: 'primary' },
+            geometry: p.map(([x, z]) => {
+              const [lat, lon] = xzToLL(x, z, center);
+              return { lat, lon };
+            }),
+          });
+        }
+      }
+    }
+  }
+  return { roads, laneWetWays, ways: [...roads, ...laneWetWays] };
 }

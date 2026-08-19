@@ -2642,6 +2642,7 @@ export function bloodScreenUv(bearing, elev, halfH, halfV) {
 // 建物/神木/巨岩等實體障礙擋砲火與視線:塔/NPC/玩家都不能透視。
 // EYE_M/TGT_M:射手眼高 / 目標身高取樣(地面單位);TOWER_EYE_M:塔的砲位高(塔身 26m,砲位過半);
 // THRU_M:穿越障礙圓柱的弦長門檻(< 門檻 = 貼牆擦邊,不算遮蔽);MAX_OCC:上傳障礙數上限。
+// MAX_CORR:上傳立體交通走廊段數上限;房主與伺服器 MUST 共用這一個值,不得各自截斷。
 // MAX_SLAB:上傳橋面/隧道天花薄板段數上限(#1;橋面 deck 段可達數千,取足量)。
 // TUN_CLEAR_M:隧道路面→天花淨空(遊戲公尺)。單一縫:biomes.js 建洞(TUN.CLEAR)與
 // sim.js 飛行體所在層推定(_unitLev:飛行高度 ≥ 淨空 ⇒ 必在山體上方,非洞內)共用。
@@ -2663,7 +2664,7 @@ export function bloodScreenUv(bearing, elev, halfH, halfV) {
 //              否則邊界上的合法傷害會被驗證後靜默丟棄(A30 家族),那比偶爾隔山打牛更糟。
 //   RIDGE_SKIP_M 兩端各跳過的長度:射手與目標本來就站在地面上,端點附近地表必然貼著射線,
 //              不跳過就是「每一發都被自己腳下的地擋住」。
-export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_SLAB: 6000, TUN_CLEAR_M: 8,
+export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_CORR: 6000, MAX_SLAB: 6000, TUN_CLEAR_M: 8,
   HGT_M: 32, HGT_MAX: 256, RIDGE_M: 3, RIDGE_SKIP_M: 24 };
 
 // 粗高程網格的字串編碼(**唯一縫**:main.js 烘烤端與 sim.js 解析端同吃這一組)。

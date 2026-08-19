@@ -261,8 +261,8 @@ console.log('\nⅢ 坑門混凝土家族共用具名號(⑨-4;同一座構造物
   const halfGrid = [...Array(64).keys()].map((k) => (k + 0.5) / 64);   // nextSurfId 的值域
   ok(halfGrid.every((v) => Math.abs(v - SURF_ID.CONCRETE) > ID_THR),
     '具名號與 nextSurfId 的半整數格恆不撞號(撞號 = 別處少一條該有的線,而且逐場地不同)');
-  ok(/const nextSurfId = \(\) => \(\(_surfSeq = \(_surfSeq \+ \d+\) & 63\) \+ 0\.5\) \/ 64;/.test(toonSrc),
-    'nextSurfId 仍是半整數格(這一條一變,上面那個不撞號的推論就要重算)');
+  ok(/const nextSurfId = \(surfaceKey = null\) => \{[\s\S]*?SURF_ID\.OVERFLOW[\s\S]*?% SURF_SLOT_N/.test(toonSrc),
+    'nextSurfId 是穩定鍵值配號 + 半整數格，耗盡後不回繞(這一條一變,上面那個不撞號的推論就要重算)');
   ok(/if \(land\) mat\.userData\.celSurfId = LAND_SURF_ID;/.test(toonSrc)
     && toonSrc.indexOf('if (land) mat.userData.celSurfId = LAND_SURF_ID;') < toonSrc.indexOf('else if (surf != null)'),
     '地貌恆勝出(三分支順序 land → surf → nextSurfId;反過來的話同時傳兩個時地貌會掉出共用號)');

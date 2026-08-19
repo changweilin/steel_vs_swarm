@@ -389,7 +389,8 @@ B = 連續場(給門檻抖動用)、A = 保留(道路/建成遮罩)。
 >    硬切、樹幹漸層),而每一條既有斷言照樣全綠。
 > ⑤ **`bands` 的語意換成硬度之後,`bands = 4` 的中間那一階是真的消失了**(硬切只有一個終端)——
 >    taroko `hilltop` 實測 **56.97%** 的像素改變,幾乎全在那面坡上,整片山坡回到兩塊色。
->    **這是待裁決不是 bug**(SKILL 的立場是「direct light 撐不起緩坡,那是材質色階的事」)。
+>    **這是取捨不是 bug**(SKILL 的立場是「direct light 撐不起緩坡,那是材質色階的事」)。
+>    第十七輪裁決：維持單一硬切，不補回第二刀；中間階由地貌／材質色階承擔。
 > ⑥ **`uCelKey`(JS 端的主光色 uniform)刻意沒有做**:現制在 GLSL 端直接加總 three 自己的
 >    `directionalLights[i].color` ⇒ ①日夜循環自動跟著走 ②**沒有第二份數字可以分家** ③零跨檔相依。
 >    第二份的症狀會是「夜戰的暗側是一個與太陽無關的常數」、`DAYCLOCK` 整套在畫面上靜默失效,
@@ -427,7 +428,7 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 ## ① 畫面更像動漫 / 線條由誰決定
 
 ### 現況
-- `toon.js`:三階 ramp、`uShadowTint`、`INK_SOFT_A`、`celSurfId`(`nextSurfId` 64 槽環)、
+- `toon.js`:三階 ramp、`uShadowTint`、`INK_SOFT_A`、`celSurfId`(穩定語意鍵配號；槽耗盡固定回保底碼)、
   `LAND_SURF_ID`、`INK_INFO_DECL`(MRT 第二附件)。
 - `postfx.js`:`INK`(二階差分 + 掠射項 `K_S`)、`INK_MRT`(法線折邊 + 面 id)、LUT、
   空氣透視、DOF、`RES_GOV`。
@@ -504,10 +505,10 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 >    石堆 = 逐堆一個號 + 由 `detailR` 推導的 contribution;遠景背景 = 呼叫端注入 `INK_CTR.BACKDROP`。
 > ② **第 1 點的落地是「整棵樹」不是只有葉冠**:葉列 `ink:'group'`、木質列 `ink:'hard'`
 >    ⇒ 幹的內部折邊留著、幹與冠的交界不出線。要連幹也收是一行,但 110 m 神木近距離會讀成
->    一根沒有轉折的實心柱 —— **這是取捨不是 bug**,已開票。
+>    一根沒有轉折的實心柱 —— **這是取捨不是 bug**。裁決：維持木質列 `ink:'hard'`。
 > ③ **葉片卡走 `applyCelPatch` 的 `CEL_LEAFCARD` define,不是計畫字面的「一支新的葉片
 >    `ShaderMaterial`」。** 自寫材質要重新繼承三條契約(`gInfo` 宣告 / 軟性 alpha / 世界曲面),
->    走 define 是結構性繼承。**這是對計畫字面的偏離,已開票請使用者放行。**
+>    走 define 是結構性繼承。**這是對計畫字面的偏離,第十七輪已接受。**
 > ④ **第 2 點(苔草 / 濕痕 triplanar 遮罩)在第二輪 MUST NOT 做,而且理由與 ①-3 是同一條**:
 >    現制的 `icefield`/`scree`/`plateau` 換手發生在 `ground.js` 的逐格投票邊界與 `CARPET_LOT`
 >    量化格上、**不在真實雪線上**,而全部地貌共用 `LAND_SURF_ID` 正是 2026-08-13 為了藏那條接縫
@@ -568,7 +569,7 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 >    `biomes.vehGroup` 已經是那一份的唯一出口 ⇒ 第二份實作)。⚠ 那兩款的**真實尺度**問題
 >    (1.71 m / 2.70 m vs 其他副本的 3.5~6.1 m)是 §2.5 與 §2.3 的**正面衝突**:改尺寸 ⇒ `detailR` 變
 >    ⇒ `detFree` 的淘汰結果變 ⇒ **全圖散佈序列整條推移**,而畫面上只表現成「這張圖跟上次不一樣」。
->    已開票。
+>    2026-08-17 已裁決：`ground.js` 的 `carwreck` / `container` 改採真實尺度，接受散布佈局遷移。
 > ④ **`edgewall.js` / `beacons.js` 兩處尚未收斂,而且各被一條稽核釘住**:`audit_world_edge:572`
 >    斷言「`edgewall.js` 只 import rng.js」是**數量**判定(加第二條 import 就當場紅);
 >    `audit_beacons:39` 把 beacons 的整段純區塊丟進 `new Function` 執行(呼叫 `makeVehicle` 就
@@ -618,7 +619,7 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 >    事件可開溶出;其餘即時移除,不洩漏視野外位置。遠距剔除仍未開(`DISSOLVE.FAR_M = 0`)。
 > ④ **④-3 的「嚴格等式」加了一條地板** `fadeEnd ≥ combatReachM() / FADE_F`:不加的話「迷你地圖 +
 >    霧天」那一格會讓 `fade0 > fade1`(smoothstep 端點反轉),而且**打得到的目標會沒有輪廓線**。
->    這是對計畫原文的偏離(它與 DOF Ⅵ-b 是同一條規則的兩端),已開票。另:④-3 對 `clear` 以外
+>    這是對計畫原文的偏離(它與 DOF Ⅵ-b 是同一條規則的兩端),第十七輪已接受。另:④-3 對 `clear` 以外
 >    四種天氣是**設計上的行為改變**(線從此跟著霧收),**不是旋鈕** —— 兩個錨不可能並存。
 > ⑤ **④-4 落地為八支稽核 / 定場工具的純註解**(`audit_traverse` / `audit_ground_drape` /
 >    `audit_road_joint` / `audit_layer_block` / `audit_underpass` / `audit_open_tunnel` /
@@ -668,8 +669,9 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 >    第三個 `sin(` 會讓那一條紅,而紅字的理由(「兩個不可通約的正弦」)與落花完全無關。
 >    ⚠ 另:**本專案的 `VEG_DEFS` 沒有櫻花樹種** ⇒「落花」在這個世界裡沒有對應的來源幾何,
 >    色調只能由既有的 `ENV.seasons[].accent` 推導,而落葉名冊由 `key:'foliage'` **推導**
->    (實得 bamboo / broadleaf / birch / shrub / mangrove / sapling)。要不要真的加一款開花樹種
->    是**內容決定**,已開票。
+>    (實得 bamboo / broadleaf / birch / shrub / mangrove / sapling)。裁決：**不新增開花樹種**；
+>    落花沿用既有 `foliage` 名冊，顏色由 `ENV.seasons[].accent` 推導，避免新資產、散布序列
+>    與三角形預算分支。
 > ⑤ **第 5 點(雲層飄移)已經完成,本輪零工作。** 證據兩行:`environment.js` 的環繞取模**已經**先加
 >    半個 `WRAP` 再減、`clouds.step(celWindTime())` **已經**吃全場同一支風時鐘;SKILL 的其餘四條
 >    (`depthWrite:false, fog:false` / `renderOrder = -9` / 雙層 billboard / `frustumCulled = false`)也都在,
@@ -706,8 +708,8 @@ gInfo.a = class * 0.5 + contribution * 0.5     // class ∈ {0, 0.5, 1.0} 取低
 >    離地(`MORPH.GROUND_Y` 2 / `SPEC_CAM.FLY_M` 2.5 / 環境音的 `> 3` ⇒ 2~3 m 之間機體已經是飛行型
 >    而音床還在踏地)、「他在不在動」(`_updateMoveAudio` 又自己寫了一條速度曲線)。
 >    ⚠ **音效端因此刻意不是逐位元中性**(離地門檻 3 m → 2 m、gate 曲線換來源),沒有任何離線模型
->    守得住 ⇒ 真機聽一次(㋕)。已開票讓使用者有機會否決。
-> ③ **第 2 點的積分器落在 JS 而不是 GPGPU**(對計畫字面的偏離,**已開票請使用者放行或否決**)。
+>    守得住 ⇒ 真機聽一次(㋕)。第十七輪已裁決採 2m 門檻；真機聽感仍列未驗。
+> ③ **第 2 點的積分器落在 JS 而不是 GPGPU**(對計畫字面的偏離,**第十七輪已接受**)。
 >    計畫列的六項(曲線 / 逐軸噪聲 / 弱彈簧 0.0003 / 摩擦 / 分群 / `uSnap`)**一項都沒有刪**。
 >    量到的四筆成本:㋐ WebGL2 在本專案只是**能力探測**(`postfx._mrtCap`)⇒ GPGPU 必須配一份
 >    CPU fallback = **兩份實作**;㋑ compute pass 要在 `Pipeline` 之外呼叫 `setRenderTarget`,撞上
@@ -800,11 +802,12 @@ StereoPanner、BGM 串流 + 淡入淡出、程序旋律備援。
 >    `HUD_BOTTOM_F` / `fitHudBand()` 是同一條規則的兩端(字級被瀏覽器改 ⇒ 量到的自然高變 ⇒ `--hud-k` 變)。
 >    計畫沒有寫這條連動,建議補進去。
 > ③ **第 3 點(背景分頁的 `dt`)已隨序 2 的幀率無關阻尼一起收掉**,不再是缺口。
-> ④ **第 4 點(桌機 DPR)仍未裁決,而且爭點被計畫講反了**:參考專案的 1.15 是 `setPixelRatio(1)`
+> ④ **第 4 點(桌機 DPR)裁決維持現制**,而且爭點被計畫講反了:參考專案的 1.15 是 `setPixelRatio(1)`
 >    **之上的 RT 縮放**,本專案的 2 是**裝置像素比的天花板** —— 兩個不同的量。另 `RES_GOV.MIN`(0.7)
 >    × 天花板 2 ⇒ 桌機有效像素比的**地板是 1.40**,1.15 在今天的自適應範圍**之外**。爭點只在
 >    `dpr ≤ 2` 那一支(HiDPI 桌機/筆電),與手機無關(觸控路徑 `TOUCH_DPR_MAX = 1.5` 已與參考專案
->    逐位元同值)。三選一見交付說明。
+>    逐位元同值)。裁決：桌機維持現有 `dpr` 上限 2；不把 messenger 的 RT 縮放值誤當成裝置 DPR
+>    上限。觸控路徑維持 `TOUCH_DPR_MAX = 1.5`。
 > ⑤ **新增的代價一條**:`user-select: none` 由「pad 版型」擴到「有觸控硬體」⇒ **有觸控螢幕的 Windows
 >    筆電 / 2-in-1** 第一次吃到它,實測房間 PIN(`#roomPin`)與區網網址(`#roomUrls`)由 `auto` 變 `none`
 >    ⇒ **房主想把網址或 PIN 複製給隊友時選不起來**,而那台機器多半正是筆電。
@@ -882,9 +885,10 @@ StereoPanner、BGM 串流 + 淡入淡出、程序旋律備援。
 > ③ **天花燈不寫 `contrib: 1`**:它的節距 12 m ≫ `INK_REPEAT_M`(3.6 m)⇒ 推導值本來就是 1,
 >    而 `inkQuant(1)` 嚴格 === 1 ⇒ **維持預設**才是「逐位元同舊制」的證明面。
 > ④ **一個順手量到的舊病灶**:洞口警示條紋的材質數 **384 → 96**(舊制在 stripe 迴圈**內**建材質,
->    每座洞口 8 支 × 最多 48 座)—— 它在沖爛 `nextSurfId` 的 **64 個槽**。⚠ **根本壓力仍在**:
->    `biomes.js` 全檔 **221 處**材質建構 vs 64 個槽,撞號的症狀是「某兩塊相接的東西之間少了一條線」,
->    **沒有任何錯誤訊息,而且逐場地不同**(材質建構順序跟著圖資走)。已開票。
+>    每座洞口 8 支 × 最多 48 座)—— 舊制在沖爛 `nextSurfId` 的 **64 個循環槽**。現制改成
+>    **語意鍵穩定配號**；前 64 個鍵各拿唯一半格，耗盡後固定回 `SURF_ID.OVERFLOW`，絕不再回繞
+>    撞到既有材質。這解決了「同一場地因建構順序不同而靜默換線」；超過可表達的材質類別仍
+>    共享保底碼，屬刻意降級，不冒充新的表面邊界。
 > ⑤ **⑨-5 的 `emissive` 是本輪唯一「出貨預設就看得到」的畫面改動,而且沒有旋鈕**
 >    (⑨-3 / ⑨-4 只住第二張附件,而 `inkMrt` 預設 `off` ⇒ 預設組態下逐像素不變)。
 > ⑥ **⑨-5 夠不夠只有 ㋕ 知道。** 若真機上洞內仍讀不出來,下一步 MUST 是「再加一種會自己亮的東西」
@@ -898,15 +902,14 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 
 > **2026-08-16 實測更正:名冊已經有一份,叫 `gradeCorridors`,不需要新開;計畫寫的 `hillAt`
 > 在本儲存庫查無**(全庫零命中)。`biomes.markGradeCorridors()` 一趟做兩件事 —— 回傳逐段
-> `{x1,z1,x2,z2,hw,kind:'tun'|'bridge',cy}`,同時以 `blockArea(..., hw + (kind === 'tun' ?
+> `{x1,z1,x2,z2,hw,kind:'tun'|'bridge',cy,clear}`,同時以 `blockArea(..., hw + (kind === 'tun' ?
 > STRUCT_CLEAR_PAD : 4))` 把足跡打進散布用的 `blocked` 格(`STRUCT_CLEAR_PAD =
 > max(7, UND.COPE, TUN.GAL_CLEAR_W)`,現值 9)。序 13 的樁用的是**同一條推導** ⇒ 半徑一致,
 > 粒度上樁是逐線段膠囊、執行期是逐節點圓盤(節距 `ROAD_SEG` = 6 m 而 pad ≥ 7 m)⇒ 沿線方向
 > 樁 ⊇ 執行期,**這一半沒有缺口**。
-> ⚠ **五個對不上的地方**(座標框 / 名冊來源 / 兵線補橋 / 柱列側別 / `hw`)逐條列在
-> [`docs/zonecut_stub.md`](zonecut_stub.md),序 14 要嘛補、要嘛明講不管。
-> ⚠ 消費端 MUST 走 `group.userData.gradeCorridors` —— `main.js` 上傳伺服器的那一份
-> `.slice(0, 2400)` **會截斷**。
+> 五個原先對不上的地方已由 `docs/zonecut_stub.md` 定案並落地：樁改吃 `data.llToXZ`、
+> `markGradeCorridors`、`splitWaterPieces` 原文，切面走 `zonecut.corridorKeepOut`；消費端
+> MUST 走 `group.userData.gradeCorridors`，房主與伺服器共用 `LOS.MAX_CORR = 6000`，不再硬截 2400 段。
 
 驗證:`audit_traverse`(㋓)MUST 逐項不動 + ㋕ 真機走進兩個洞、走上橋面各一次
 —— 洞內是新視覺唯一沒有任何離線稽核看得到的地方。
@@ -931,7 +934,7 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 | 8 | ④-1 wipe 轉場、④-2 dissolve | 中 | 旋鈕關 = 是 | ✅ 第二輪交材質縫;第六輪補完權威死亡溶出 |
 | 9 | ⑤-2 岸邊泡沫、⑤-3 倒影塊 | 中 | ~~是(純新增)~~ → **⑤-2 是替換不是新增** | ✅ 第二輪(舊的格點泡沫片退場)|
 | 10 | ③-1 載具 `SPEC` 收斂 + ③-2 真凹處 + ③-3 可視角 + ③-4 公設 draw call | 中 | 否 | ✅ 第二輪(10a;edgewall / beacons / DETAIL_DEFS 三筆債見 10b)|
-| 11 | ⑥-2 GPGPU 鳥群 | 中 | 是(純新增) | ✅ 第二輪 —— **積分器落在 JS 不是 GPGPU**(對計畫字面的偏離,待放行)|
+| 11 | ⑥-2 GPGPU 鳥群 | 中 | 是(純新增) | ✅ 第二輪 —— **積分器落在 JS 不是 GPGPU**(對計畫字面的偏離,第十七輪已放行)|
 | 12 | **①/② 賽璐璐學派切換(§0-b,已定案「改」)** | 高 | **否** —— 13 張定場照全變,MUST 先拍基準 | ✅ 第二輪,**def 已翻成 `'b'`**(兩派並存,切回舊制 = 一行);基準照全表住 [`docs/shots_baseline.md`](shots_baseline.md) |
 | 12b | **⑨ 立體結構重新渲染**(隨序 12 一起,材質/MRT/貢獻/emissive 五件) | 中 | 否(跟著 12 變) | ✅ 第二輪(幾何 / 碰撞 / slab / decks / cols / 走廊**一格未動**,八支幾何稽核逐項不動)|
 | 13 | **④-A 線工切面可行性樁**(光柵化 + flood fill + 逐面標籤,只出報告與對照圖) | 低(不動出貨) | 是 | ✅ 第二輪 —— **判決 = 條件式 GO**,前提見下 |
@@ -948,7 +951,7 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 
 | 文件 | 內容 |
 |---|---|
-| [`docs/zonecut_stub.md`](zonecut_stub.md) | **序 13 的樁報告**:三個驗收面的逐場地數字、條件式 GO 的那道門、序 14 要多抓的四類圖資與五個對不上的 keep-out、序 15 的取消成本。**序 14/15 的 go/no-go 依據,下一輪必讀** |
+| [`docs/zonecut_stub.md`](zonecut_stub.md) | **序 13 的樁報告**:三個驗收面的逐場地數字、條件式 GO 的那道門、序 14 的 keep-out 對齊紀錄與未驗項、序 15 的取消成本。**後續畫面工作仍需讀** |
 | [`docs/shots_baseline.md`](shots_baseline.md) | **序 12 的定場照基準與 A/B**:四組 md5 全表 + School B 的量測 + **兩個拍照陷阱**(`-prefs` 那一組跨進程不穩定、`--stations` 回放不等於同參數的新鮮推導)|
 
 ---
@@ -976,19 +979,19 @@ keep-out 名冊 —— 與 `hillAt` 的 keep-out 同一份。不做的話,一條
 - `npm run bal` 🎉 全綠、`npm test` 🎉 全綠、`audit_gait_anat`/`audit_morph_rig`/`audit_paper_doll`/
   `audit_spectator_cam`/`audit_view_lock`/`audit_recoil_move` 逐項不動。
 
-> ⚠ **`viewLockStep` 是具名例外,留給使用者裁決。** 它不只是真人的視野鎖定 ——
+> ⚠ **`viewLockStep` 是具名例外,裁決維持現制共享 clamp。** 它不只是真人的視野鎖定 ——
 > `server/bots.js _turn` 是**電腦玩家朝向的唯一寫入點**,而伺服器固定 8Hz:
 > `min(1, 9 × 0.125) = 1` ⇒ 小角度誤差**一個 tick 就轉到位**。換成指數逼近的話同一個 tick
 > 只走 67.5%、要三個 tick 才收進 3%,那是**權威側的行為改變**(原則 1),而且要照 §5.6
 > 補一輪 AI 退化量測才知道代價。客戶端那一半確實有幀率相依(144Hz 比 30Hz 收斂慢),
 > 但兩者共用同一個縫、拆兩份就是兩套規則 ⇒ **這一輪整支不動**。
-> 三條路:①維持現狀(bot 手感不動,真人的鎖定在高刷新率上略慢)②改成 exp 並補 AI 退化量測
-> ③`bots._turn` 改吃自己的一支(= 第二份實作,需要使用者明確放行)。
+> 三條路中採 ①：維持現狀(bot 手感不動,真人的鎖定在高刷新率上略慢)。不改成 exp,也不拆
+> `bots._turn` 的第二份實作。
 
-**⑧-1 的行為改變(刻意,不是 bug)**:點擊型鈕**按住超過 260ms 再放開不會觸發**。
+**⑧-1 的行為裁決(刻意,不是 bug)**:點擊型鈕**按住超過 260ms 再放開不會觸發**。
 這是「一次點擊 = 距離 + 時間」的直接推論,與 `tip.js` 的長按提示(380ms)同調。
-若使用者認為招式/商店這類鈕應該「按多久都算」,要拿掉的是**時間**那一半(距離那一半是
-⑧-1 點名的病灶),那是一行的事,但 MUST 由使用者定案 —— 兩種都自洽。
+招式/商店等點擊型鈕同樣沿用這個時間門檻；不另開「按多久都算」的例外，避免形成第二套
+觸控點擊規則。
 
 ### §0-c 編碼定案(2026-08-16 量測,真 GPU RGBA8 MRT 直測)
 
@@ -1039,11 +1042,11 @@ float ctr = fract( q / 16.0 ) * 16.0 / 15.0;
 | 7 / ②-1 葉片卡冠層 → **整棵樹**,+ 使用者追加的**山頭 / 巨石 / 石堆** | ✅(`leafCard`/`inkGroup` def 皆 `off`) | **新模組 `public/js/leafcard.js`**(零 THREE 排列規則層)+ `biomes.js` 的 `MEGA_BODY_F`/`leafCardOn`/`leafCardTex`/`leafRowGeo`/`surfIdGeo` + `ground.js` 細節迴圈的 `surf`/`contrib` + `buildBackdrop` 的注入欄 | **新 `audit_leaf_card` 43 項 / `audit_rock_ink` 30 項**,七支反向驗證 |
 | 8 / ④-1 wipe + ④-2 dissolve(出現／權威死亡消失)+ ④-3 霧 ≡ 勾線淡出 | ✅(`wipe` def 0、遠距剔除 def 0) | `data.js` 的 `WIPE`/`wipeAt()`/`DISSOLVE`/`dissolveAt()`/`dissolveOutAt()`(純函式,**不進 `balanceFingerprint`**);`postfx.js` 的 `_wipeMaterial()`/`setWipe()`/`playWipe()`/`_tickWipe()` + chain 插在 **grade 與 fxaa 之間** + dispose 名冊改由 `_quads` **推導** + `INK.FADE_F`/`_inkFadeM()`;`toon.js` 的 `dissolve`(`discard` 不是 alpha)+ `enableDissolve()` + 唯一寫入點 `setDissolve()`;呼叫端 `cutin.js setPipeline/wipe`、`game.js _wipeCut`(三個時機)與 `_dissolveGhosts`(僅同幀權威 `die`) | `audit_visual_prefs` Ⅷ ±`--break-wipe`、`audit_cel_pipeline` Ⅸ・Ⅹ ±`--break-dissolve`/`--break-fade` |
 | 9 / ⑤-2 岸邊泡沫(**替換**)+ ⑤-3 倒影塊 | ✅(`foam` def 1、`reflect` def 0) | `terrain.js` 的 `seaFadeAt`/`seaFadeAtWorld`/`bakeSeaDepth`/`stampSeaBlockers`(對外 API **只加不改**)+ `main.js` 一行接線 + `biomes.js` 的 `planReflectors`/`buildWaterReflections`/`REFL_WAVE_WRITERS`;舊的格點泡沫片**退場** | **新 `audit_water_edge` 64 項**,四支反向驗證(3/1/2/1 條紅字) |
-| 10 / ③-1 SPEC + ③-2 真凹處 + ③-3 可視角 + ③-4 公設 draw call | ✅(10a;10b 見待裁決) | **新模組 `public/js/vehicles.js`**(零 import 零 THREE 零亂數:五款型錄 + 生成器 + 三支量尺 + `RECESS` + 可視角);消費端 `siteplan.CIVIC_PARTS.lot`(配新的 `LOT_STALL`)/ `hazards.BUILDERS.wreck` / `biomes.car()` / `biomes.makeTrain()`;`biomes.vehGroup` = THREE 那一側的**唯一建構出口** | **新 `audit_vehicle_spec` 79 項** + 7 支 `--break` |
-| 11 / ⑥-2 鳥群 | ✅(`birds` def 0) | **新模組 `public/js/wildlife.js`**(零 THREE 的積分器:曲線 + 逐軸噪聲 + 弱彈簧 + 摩擦 + 分群 + `uSnap`,計畫列的六項一項不刪)+ `biomes.shoreRing`/`buildFlocks` | **新 `audit_wildlife` 44 項** + 7 支 `--break` |
+| 10 / ③-1 SPEC + ③-2 真凹處 + ③-3 可視角 + ③-4 公設 draw call | ✅(10a;10b 2026-08-17 已裁決並完成) | **新模組 `public/js/vehicles.js`**(零 import 零 THREE 零亂數:五款型錄 + 生成器 + 三支量尺 + `RECESS` + 可視角);消費端 `siteplan.CIVIC_PARTS.lot`(配新的 `LOT_STALL`)/ `hazards.BUILDERS.wreck` / `biomes.car()` / `biomes.makeTrain()`;`biomes.vehGroup` = THREE 那一側的**唯一建構出口** | **新 `audit_vehicle_spec` 79 項** + 7 支 `--break` |
+| 11 / ⑥-2 鳥群 | ✅(`birds` def 0) | **新模組 `public/js/wildlife.js`**(零 THREE 的積分器:曲線 + 逐軸噪聲 + 弱彈簧 + 摩擦 + 分群 + `uSnap`,計畫列的六項一項不刪)+ `biomes.shoreRing`/`buildFlocks` | **新 `audit_wildlife` 44 項** + 7 支 `--break`;第十七輪已放行 JS 積分器 |
 | 12 / §0-b 賽璐璐學派切換 | ✅ **def 已翻成 `'b'`** | `toon.js` 的 `CEL_CUT`/`cutOf`/`_school`/`celSchool()`/`RAMP_PATCH_A`/`RAMP_PATCH_B` + `toonPlain()`(**學派的第三個入口**:掛學派不掛演出);`biomes.js` 那 4 處裸 `MeshToonMaterial` 改呼叫 `toonPlain` ⇒ 凍結名冊清空、硬閘放行 | `audit_cel_pipeline` 新 Ⅺ + 六支 `--break`;**A14 改寫成四句**(編號與 `[#INC-106]` 一格不動) |
 | 12b / ⑨ 立體結構重新渲染 | ✅ **幾何 / 碰撞 / slab / decks / cols / 走廊一格未動** | `biomes.js` 新增 `bandPitchM()`(緞帶件的成對頂點實測節距,零亂數)+ 22 支結構材質的線工授權(6 支吃推導值、15 支維持預設、1 支具名否決)+ 坑門混凝土三處共用 `SURF_ID.CONCRETE` + 洞口警示條紋補 `emissive` 並把材質提到迴圈外(**384 → 96 支**) | **新 `audit_struct_ink` 35 項**,四支反向驗證(1/3/2/4 條紅字) |
-| 13 / ④-A 線工切面可行性樁 | ✅ **判決 = 條件式 GO** | **新工具 `tools/zonecut.mjs`**(零 import / 零亂數 / 純函式)+ `venue_field.cutLinesFor` + 四支結構清單函式由 `audit_traverse` 搬進 `venue_field`;`public/**` 與 `server/**` 一行未動 | **新 `audit_zone_cut` 38 項** + 8 支 `--break`(其中兩支加了**適用性硬閘**) |
+| 13 / ④-A 線工切面可行性樁 | ✅ **判決 = 條件式 GO** | **新工具 `tools/zonecut.mjs`** + `venue_field.gradeWaysForAudit` / `markGradeCorridors` 原文鏡射 + `zonecut.corridorKeepOut`; runtime / server 共用 `LOS.MAX_CORR` 上限 | **`audit_zone_cut` 51 項** + `--break-keepout` / `--break-quantize` 適用性硬閘 |
 | ⑧-5 / viewport · safe-area · touch-action | ✅ 含**兩項缺陷修補** | `mobile.js` 新增 body class `touch-dev`(裝置級,判定唯一縫 `ctrlmode.touchCapable()`)+ 根層 `text-size-adjust`;五條頁面級硬化由 `touch-ui`(房間設定)改綁 `touch-dev`(裝置能力);第十三輪只對 `#roomPin/#roomUrls` 恢復選字 | `audit_ctrl_mode` Ⅹ **36 條 + 五支 `--break`** —— 全 repo 第一支驗 viewport meta / touch-action / safe-area 與中繼資料選字的離線斷言 |
 | ④-4 / 接縫紀律進稽核檔頭 | ✅(**純註解,零行為**) | 六支稽核檔頭:`audit_traverse` / `audit_ground_drape` / `audit_road_joint` / `audit_layer_block` / `audit_underpass` / `audit_open_tunnel` | 六支通過數**逐項不變**(86 / drape ALL PASS / 61 / 161 / 163 / traverse taroko 6+1)—— 那就是它的驗收面 |
 
@@ -1304,3 +1307,26 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 本輪沒有改權威模擬、平衡數值或世界散布；第 7～10 項的程式碼已存在，本輪補上裁決紀錄並清除
 會誤導後續工作的「待裁決」註解。音效的 ㋕ 真機聽感、其餘真 GPU 定裝照與 `audit:net` 仍依
 「未驗項」清單處理，不能用離線綠燈代替。
+
+### 2026-08-19 第十八輪：待裁決 1～4 定案
+
+| 項目 | 定案 | 狀態 |
+|---|---|---|
+| ⑧-4 桌機 DPR | 維持現制桌機 `dpr` 上限 **2**；不把 messenger 的 RT 縮放值 **1.15** 當成裝置 DPR 上限；觸控維持 `TOUCH_DPR_MAX = 1.5` | ✅ 文件裁決，程式不動 |
+| ⑧-1 點擊時間 | 維持現制「距離 + 時間」判定；點擊型鈕按住超過 **260ms** 不觸發，不另開招式／商店例外 | ✅ 文件裁決，程式不動 |
+| ②-1 整棵樹剪影 | 維持葉列 `ink:'group'`、木質列 `ink:'hard'`；保留樹幹內部折線 | ✅ 文件裁決，程式不動 |
+| ⑤-4 開花樹種 | **不新增開花樹種**；落花沿用既有 `foliage` 名冊，色彩由 `ENV.seasons[].accent` 推導 | ✅ 文件裁決，零新資產／零新散布分支 |
+
+本輪只記錄使用者裁決，沒有改動權威模擬、畫面程式、世界散布或共享亂數。後續不得把上述四項
+重新列為待裁決；真機聽感、定裝照與 `audit:net` 仍屬驗證缺口，不是設計裁決。
+
+### 2026-08-19 第十九輪：待裁決 5～6 解決
+
+| 項目 | 定案／實作 | 狀態 |
+|---|---|---|
+| ⑤ 材質 `surfaceId` 槽耗盡 | `toon.js` 改為語意鍵穩定配號；前 64 個鍵唯一，耗盡後固定使用 `SURF_ID.OVERFLOW`，不再以環狀序號回繞撞舊材質；`--break-surf` 反向稽核已接上 | ✅ 程式與稽核完成 |
+| ⑥ 線工切面結構足跡 | 樁鏡射 `llToXZ`、`markGradeCorridors`、`splitWaterPieces`；`zonecut.corridorKeepOut` 成為 keep-out 唯一光柵器；房主／伺服器共用 `LOS.MAX_CORR = 6000`，取消 2400 段分家截斷 | ✅ `audit_zone_cut` 51 項通過；真瀏覽器定裝照與全場地外部圖資掃描仍列未驗 |
+
+第 ⑤ 項的超量材質保底碼是刻意降級：它避免隨建構順序改變而隨機換線，但不宣稱 8-bit
+資訊緩衝能表達無限多個互不相同的表面類別。第 ⑥ 項的 gallery `gal` 側別仍只由 slab / LOS
+處理；切面 keep-out 用含 `TUN.GAL_CLEAR_W` 的兩側對稱保守帶，兩者責任不混用。

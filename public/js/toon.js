@@ -211,8 +211,24 @@ function installInkInfo() {
 }
 installInkInfo();
 let _surfSeq = 0;
-/** 逐材質的 surfaceId(量化到 [0,1] 的 64 階;相鄰材質撞號 = 少一條線,不是壞掉)*/
-const nextSurfId = () => ((_surfSeq = (_surfSeq + 23) & 63) + 0.5) / 64;
+const SURF_SLOT_N = 64;
+const _surfKeyIds = new Map();
+/**
+ * 逐材質 surfaceId 的穩定配號。
+ * 前 64 個**不同語意鍵**各拿一個半整數格；耗盡後回保留的共用碼，絕不回繞撞到舊材質。
+ * 沒有語意鍵的呼叫端由顏色 / 軌道推導鍵，避免建構順序差異把整張圖的線重新洗牌。
+ */
+const nextSurfId = (surfaceKey = null) => {
+  const key = surfaceKey == null ? `anon:${_surfSeq}` : String(surfaceKey);
+  const old = _surfKeyIds.get(key);
+  if (old != null) return old;
+  const id = _surfSeq >= SURF_SLOT_N
+    ? SURF_ID.OVERFLOW
+    : (((_surfSeq * 23 + 23) % SURF_SLOT_N) + 0.5) / SURF_SLOT_N;
+  _surfSeq++;
+  _surfKeyIds.set(key, id);
+  return id;
+};
 /**
  * 地貌共用的 surfaceId。取 **0 是刻意的**:`nextSurfId` 的值域是 `(k + 0.5) / 64`,
  * 最小 0.0078 ⇒ 0 永遠不會被抽到 ⇒ 地貌與任何一份非地貌材質的 id 差恆 ≥ 0.0078,
@@ -223,16 +239,17 @@ const LAND_SURF_ID = 0;
  * 具名表面群組(2026-08-16;S3)。**整數格 `k / 64`**,而 `nextSurfId` 是半整數格
  * `(k + 0.5) / 64` ⇒ 兩者恆差 ≥ 0.5/64 = 0.0078 > `INK_MRT.ID` 的 0.004 門檻,
  * 群組號永遠不會與逐材質號撞在一起(撞號 = 少一條該有的線)。
- * `k = 0` 保留給地貌(= `LAND_SURF_ID`)、`k = 1` 保留給坑門混凝土家族。
+ * `k = 0` 保留給地貌、`k = 1` 保留給坑門混凝土家族；`k = 42` 是材質槽耗盡的
+ * 明確共用碼，`k = 43..56` 留給地貌遮罩，`k = 57..63` 留給地貌分區。
  */
-export const SURF_ID = { LAND: LAND_SURF_ID, CONCRETE: 1 / 64 };
+export const SURF_ID = { LAND: LAND_SURF_ID, CONCRETE: 1 / 64, OVERFLOW: 42 / 64 };
 let _grpSeq = 1;
 /**
- * 配一個新的表面群組號(整數格,k ∈ [2, 63] 循環)。**零亂數消耗** —— 它吃的是模組級序
+ * 配一個新的表面群組號(整數格,k ∈ [2, 41] 循環；42 保留給材質耗盡保底碼)。**零亂數消耗** —— 它吃的是模組級序
  * 不是共享 `rnd()`(§2.3;在呼叫端抽一枚 `rnd()` 當群組種子 = 整張圖的佈局往後推移)。
  */
 export function surfGroup() {
-  _grpSeq = _grpSeq >= 63 ? 2 : _grpSeq + 1;
+  _grpSeq = _grpSeq >= 41 ? 2 : _grpSeq + 1;
   return _grpSeq / 64;
 }
 /**
@@ -1039,6 +1056,7 @@ export function setCelChar(list) {
  *              **是 uniform 不是 define** ⇒ MUST NOT 進 `customProgramCacheKey`(進去就是
  *              每一個貢獻值切一支新程式,而畫面上完全看不出來)。
  *   surf     — 顯式指定表面群組號(`surfGroup()` 給的);`land` 勝出。
+ *   surfKey  — 穩定的材質語意鍵；省略時由環境/機體軌道與底色推導。
  *   surfAttr — 面號改吃逐實例屬性 `aSurfId`(同一株樹的幹 / 枝 / 冠共用一號)。
  *   card     — 葉片卡:四角在視域空間展開(屬性 `aCard`)。
  *   refl     — 水面倒影塊:朝向在頂點著色器算(屬性 `aReflO` + uniform `uWaterY`),類別恆 NONE。
@@ -1052,7 +1070,7 @@ export function setCelChar(list) {
  *              拉桿 0 或屬性缺席 ⇒ 恆等於 `LAND_SURF_ID` = 逐位元同舊制。
  */
 const INK_KIND = { none: 'NONE', land: 'LAND', hard: 'HARD', group: 'GROUP' };
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false, ink = 'hard', contrib = 1, surf = null, surfAttr = false, card = false, refl = false, dissolve = false, landId = false, landField = false } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false, ink = 'hard', contrib = 1, surf = null, surfKey = null, surfAttr = false, card = false, refl = false, dissolve = false, landId = false, landField = false } = {}) {
   if (preview) ensurePreviewField();
   const sk = soft ? (SOFT_KINDS[soft.k] || SOFT_KINDS.leaf) : null;
   const defines = { ...(mat.defines || {}) };
@@ -1108,7 +1126,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   if (landId) defines.CEL_LAND_ID = '';
   if (landField) defines.CEL_LAND_FIELD = '';
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm, ink, contrib, surf, surfAttr, card, refl, dissolve, landId, landField };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm, ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, landId, landField };
   // 溶入進度是**穩定的 uniform 物件**(同 `_windT` / `_rampTint` 的做法):在 onBeforeCompile
   // 裡 `{ value: 1 }` 新建的話,材質一重編譯(改 defines / needsUpdate)就換一顆,而驅動端
   // 抓著的是舊的 ⇒ 症狀是「有時候不會溶入」。1 = 完全實體。
@@ -1123,7 +1141,12 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   // 地貌一律共用同一號(檔頭 ①):它是**類別**不是實例,MUST NOT 走 nextSurfId
   if (land) mat.userData.celSurfId = LAND_SURF_ID;
   else if (surf != null) mat.userData.celSurfId = surf;
-  else if (mat.userData.celSurfId == null) mat.userData.celSurfId = nextSurfId();
+  else if (mat.userData.celSurfId == null) {
+    const colorKey = mat.color?.getHexString?.() || 'none';
+    const key = surfKey == null ? `auto:${tint}:${metal ? 1 : 0}:${colorKey}` : `named:${surfKey}`;
+    mat.userData.celSurfKey = key;
+    mat.userData.celSurfId = nextSurfId(key);
+  }
   // 類別碼:`land: true` 把預設的 'hard' 升成 'land',顯式的 `ink` 一律勝出;
   // 倒影塊恆 NONE(它是貼在水上的一片色塊,不該被畫輪廓)。
   const inkKey = refl ? 'none' : (land && ink === 'hard' ? 'land' : ink);
@@ -1861,11 +1884,11 @@ export function toonMat(color, opts = {}) {
   // `landId` **刻意不在這裡**:它與 `land` / `landNrm` 同一族(地貌),而機體之間的線是要的
   // —— 稽核 Ⅶ 那一條 `!/land/.test(toonMat)` 就是為這件事訂的,MUST NOT 為了方便鬆掉它。
   const { celMetal, bands, rim = 0.22, soft = null,
-    ink, contrib, surf, surfAttr, card, refl, dissolve, ...rest } = opts;
+    ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // `bands` MUST 一起傳下去:偏色權重要以**這張 ramp 自己的暗階**正規化,拿不到就會用
   // 預設 3 階的 0.4 去量 soft(0.745)那一組 = 白色大面積的陰影偏色少掉一半。
-  return applyCelPatch(m, { metal: !!celMetal, rim, soft, bands, ink, contrib, surf, surfAttr, card, refl, dissolve });
+  return applyCelPatch(m, { metal: !!celMetal, rim, soft, bands, ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve });
 }
 
 /**
@@ -1879,11 +1902,11 @@ export function envMat(color, opts = {}) {
   // land / landNrm:地貌(見 applyCelPatch 的同名參數)。**只有 terrain.js 與 ground.js
   // 傳它** —— 道路、建物、擺件的邊界線是要的,掛上去就是把那些線一起關掉。
   const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, soft = null, land = false, landNrm = false,
-    ink, contrib, surf, surfAttr, card, refl, dissolve, landId, landField, ...rest } = opts;
+    ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, landId, landField, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // tint: 'env' —— 陰影偏色分「機體」與「環境」兩軌(P1-B):機甲要保住陣營塗裝的色相,
   // 環境可以偏得重一點。兩軌各自一根拉桿,MUST NOT 併成一個值。
-  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands, land: land || landNrm, landNrm, ink, contrib, surf, surfAttr, card, refl, dissolve, landId, landField });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands, land: land || landNrm, landNrm, ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, landId, landField });
 }
 
 /**

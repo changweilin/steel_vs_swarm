@@ -112,23 +112,25 @@ shibuya 3v3 掃參數:
 計畫 §⑨ 寫的 `hillAt` 在本儲存庫**查無**(全庫零命中)。實際的那一份:
 
 - **產出**:`biomes.markGradeCorridors()` 一趟做兩件事 —— ①回傳逐段
-  `{x1,z1,x2,z2,hw,kind:'tun'|'bridge',cy}`;②同時以
+  `{x1,z1,x2,z2,hw,kind:'tun'|'bridge',cy,clear}`;②同時以
   `blockArea(blocked, x, z, hw + (kind === 'tun' ? STRUCT_CLEAR_PAD : 4))` 把足跡打進散布用的
   `blocked` 格,`STRUCT_CLEAR_PAD = max(7, UND.COPE, TUN.GAL_CLEAR_W)`(現值 9)。
-- **消費端 MUST 走 `group.userData.gradeCorridors`** —— `main.js` 上傳伺服器的那一份
-  `.slice(0, 2400)` **會截斷**。
-- **樁裡那一份對得上**:半徑用同一條推導;粒度上樁是**逐線段膠囊**、執行期是**逐節點圓盤**
-  (節距 `ROAD_SEG` = 6 m 而 pad ≥ 7 m)⇒ 沿線方向樁 ⊇ 執行期,**這一半沒有缺口**。
+- **消費端 MUST 走 `group.userData.gradeCorridors`** —— 房主與伺服器現在都吃
+  `LOS.MAX_CORR = 6000`，不再各自硬截 `.slice(0, 2400)`；上限放在 `data.js` 的唯一縫。
+- **樁與執行期現在共用同一份走廊來源**:`venue_field.gradeWaysForAudit()` 以
+  `data.llToXZ` 的投影、`markGradeCorridors()` 的原文與 `splitWaterPieces()` 的原文組出輸入，
+  `zonecut.corridorKeepOut()` 再以同一個 `{hw, clear}` 光柵化；樁是膠囊、執行期是節點淨空，
+  兩者仍保留粒度差，但 pad ≥ 7m，所以樁的保守帶不會比執行期窄。
 
-**五個對不上的地方(序 14 要嘛補、要嘛明講不管)**:
+**五個原先對不上的地方已處理如下**:
 
 | # | 差異 | 後果 |
 |---|---|---|
-| 1 | **座標換算**:樁走 `venue_field.llToWorld`(**pre-A42,不帶主方位旋轉**),執行期走 `data.llToXZ`(旋轉是投影的一部分) | 有 `center.rot` 的場地上 keep-out 帶**整條轉開** —— 五條裡最嚴重的一條 |
-| 2 | **名冊來源**:樁走 `venue_field.buildStructs`(`LANE_HW` 白名單 + 弧長 < 24 m 的「橋」剔除),執行期走 `markGradeCorridors`(`PED_HW` 黑名單 + 沉錨/跨水規則) | 三類結構不在樁的 keep-out 裡:①**短橋**(< 24 m)②不在 `LANE_HW` 白名單也不在 `PED_HW` 黑名單的道路類(`track` / `road` / `busway` …)③**跨水段補橋**(`wet` 而 tags 沒有 `bridge`) |
-| 3 | **兵線補橋 `laneWetWays`** 完全不在樁的名冊裡(它由 `cfg` 推導,不是圖資) | 兵線跨水那幾段的橋在切面上不會被讓開 |
-| 4 | **明隧道柱列的側別**:兩份都不帶(`gradeCorridors` 逐段有 `hw`/`kind`/`cy`,`gal` 位元遮罩只進 `tunnelSegs` 第 7 欄) | 現況靠 `STRUCT_CLEAR_PAD` 已含 `TUN.GAL_CLEAR_W = 9` **兩側對稱**蓋住 ⇒ 構造上不漏,但要「只避開柱列那一側」得從同批交出的 `tunnels` 第 7 欄取 |
-| 5 | `hw` 的來源兩邊都是 `strucHw(tags)` ✅ | (列出來是為了下一輪不必重查) |
+| 1 | **座標換算** | ✅ 樁改用 `data.llToXZ`；旋轉場地與 runtime 同框，並由 `audit_zone_cut` 的 A42 對照守門 |
+| 2 | **名冊來源** | ✅ 樁改吃 `markGradeCorridors` 原文；短橋、非白名單道路與沉錨 / 跨水規則不再另抄 |
+| 3 | **兵線補橋 `laneWetWays`** | ✅ `gradeWaysForAudit` 用同一支 `splitWaterPieces` 從 `cfg.lanes` 推導並併入名冊 |
+| 4 | **明隧道柱列的側別** | ✅ keep-out 是結構足跡的保守遮罩，`clear = STRUCT_CLEAR_PAD` 已含 `TUN.GAL_CLEAR_W = 9`，故兩側對稱避讓是刻意契約；`gal` 側別只留給 slab / LOS 的穿出判定，不再被誤當成地貌切面缺口 |
+| 5 | `hw` 的來源 | ✅ runtime 與樁都走 `strucHw(tags)`，`clear` 也由 runtime 常數推導 |
 
 ---
 
@@ -223,9 +225,10 @@ shibuya 3v3 掃參數:
    barcelona 10.4% / **shibuya 只有 2.5%**),其餘一律退回 `green` ⇒
    **驗收面 1 只量得到圖資那一半**,shibuya 那一場尤其薄。
 2. **建構期成本的綁定值**:`buildBiomes` 跑在瀏覽器,而低功耗手機才是這一項真正的邊界。
-3. **明隧道柱列帶(`galStrips` / `carveGalleryBands`)在 Node 端拿不到** ⇒ keep-out 名冊不完整。
-4. **結構足跡 keep-out 的座標框**在旋轉場地上**未驗**(見 §9-4;`--break-keepout` 仍然咬得住,
-   它量的是「牆有沒有落進足跡」而兩邊同框)。
+3. **明隧道柱列帶**:keep-out 已採 `STRUCT_CLEAR_PAD` 的兩側對稱保守帶；`galStrips` 的側別仍只在
+   slab / LOS 端驗證，這是分工而非 keep-out 遺漏。
+4. **結構足跡 keep-out 的座標框**:已由 `corridorKeepOut` 的轉換參數與 A42 source assertion 覆蓋；
+   真場地的旋轉影像仍屬外部圖資驗證，不把離線樁當成瀏覽器定裝照。
 5. **只跑了 4 個場地**(taroko 1v1 山區 / shibuya 3v3 密市區 / barcelona 3v3 / rio 1v1 海岸);
    29 場地全掃沒做。
 6. **`audit_lane_scenarios`** 沒跑(㋓,吃外網且基準本來就 EXIT=1)。

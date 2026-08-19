@@ -54,7 +54,7 @@ import {
 } from '../public/js/data.js';
 import { quantizeRoads } from '../public/js/roadgrid.js';
 import {
-  elevSampler, buildHeightField, osmFor, landcoverFor, cutLinesFor, buildStructs,
+  elevSampler, buildHeightField, osmFor, landcoverFor, cutLinesFor, gradeWaysForAudit, markGradeCorridors,
   roadWidth, llToWorld, R_EARTH, WORLD_S, d2r, TUN, UND,
 } from './venue_field.mjs';
 
@@ -107,7 +107,7 @@ if (BREAK.rnd) {
   ZSRC = sub(ZSRC, /while \(cur\[f\] < want && rank === Math\.floor\(\(cur\[f\] \+ 0\.5\) \* area\[f\] \/ want\)\) out\[f\]\[cur\[f\]\+\+\] = idx;/,
     'if (cur[f] < want && Math.random() * area[f] < want) out[f][cur[f]++] = idx;', 'faceSamples 的分層取樣');
 }
-const Z_EXPORTS = ['NO_FACE', 'rasterLines', 'floodFaces', 'assignWallTexels', 'faceAreas',
+const Z_EXPORTS = ['NO_FACE', 'rasterLines', 'corridorKeepOut', 'floodFaces', 'assignWallTexels', 'faceAreas',
   'faceAdjacency', 'mergeSmall', 'faceSamples', 'canonicalFaces'];
 const Z = new Function(`${ZSRC.replace(/^export /gm, '')}\nreturn { ${Z_EXPORTS.join(', ')} };`)();
 
@@ -132,6 +132,17 @@ console.log('Ⅰ 規則本體(public/js/zonecut.js)');
     const wall = Uint8Array.from([0, 1, 1, 0]);   // (0,0) 與 (1,1) 只在對角相碰
     const r = Z.floodFaces(wall, nx, nz);
     ok(r.n === 2, `泛洪是 4 鄰:對角相碰的兩格 MUST 是兩個面(實得 ${r.n})`);
+  }
+  // ①-c0 結構足跡 MUST 走同一支膠囊光柵器,而不是各消費端再抄一份圓盤 / 半徑。
+  {
+    const corridor = [{ x1: 4, z1: 6, x2: 10, z2: 6, hw: 1, clear: 2 }];
+    const base = Z.corridorKeepOut(20, 20, 1, corridor);
+    const shifted = Z.corridorKeepOut(20, 20, 1, corridor, { toI: (x) => x + 3, toJ: (z) => z + 2 });
+    const centroid = (mask) => mask.reduce((a, v, k) => v ? [a[0] + k % 20, a[1] + Math.floor(k / 20), a[2] + 1] : a, [0, 0, 0]);
+    const a = centroid(base), b = centroid(shifted);
+    ok(a[2] > 0 && b[2] === a[2] && b[0] / b[2] - a[0] / a[2] > 2.5
+      && b[1] / b[2] - a[1] / a[2] > 1.5,
+    '走廊 keep-out 是可套用座標轉換的膠囊遮罩(旋轉 / 投影後仍與世界框同一份)');
   }
   // ①-d 牆 texel 併回是 8 鄰、而且 MUST 全部被指派(道路本身另有幾何,不需要自己的分區)
   {
@@ -397,14 +408,15 @@ const ZONE_LIST = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
 {
   const TSRC = readSrc('public', 'js', 'toon.js');
   const PSRC = readSrc('public', 'js', 'postfx.js');
-  const mSeq = /const nextSurfId = \(\) => \(\(_surfSeq = \(_surfSeq \+ (\d+)\) & (\d+)\) \+ 0\.5\) \/ (\d+);/.exec(TSRC);
+  const mSeq = /const nextSurfId = \(surfaceKey = null\) => \{[\s\S]*?SURF_SLOT_N/.exec(TSRC);
+  const mSlots = /const SURF_SLOT_N = (\d+);/.exec(TSRC);
   const mLand = /const LAND_SURF_ID = ([\d.]+);/.exec(TSRC);
   const mStep = /step\(\s*([\d.]+),\s*idv\s*\)/.exec(PSRC);
-  if (!mSeq || !mLand || !mStep) {
-    note(`抽不到 surfaceId 的錨點(nextSurfId ${!!mSeq} / LAND_SURF_ID ${!!mLand} / step 門檻 ${!!mStep})`
+  if (!mSeq || !mSlots || !mLand || !mStep) {
+    note(`抽不到 surfaceId 的錨點(nextSurfId ${!!mSeq} / slots ${!!mSlots} / LAND_SURF_ID ${!!mLand} / step 門檻 ${!!mStep})`
       + ' —— toon.js / postfx.js 正被別的道改動時會這樣,驗收面 3 未驗');
   } else {
-    const STEP = +mStep[1], MOD = +mSeq[2] + 1, DEN = +mSeq[3];
+    const STEP = +mStep[1], MOD = +mSlots[1], DEN = 64;
     // 8bit 量化(RT 是 RGBA8)。`step(STEP, idv)` 吃的是量化**之後**的差 ⇒ 全部在整數碼上算。
     const q8c = (v) => Math.round(v * 255);                       // 值 → 8bit 碼
     const matCodes = [...new Set([...Array(MOD)].map((_, k) => q8c((k + 0.5) / DEN)))].sort((a, b) => a - b);
@@ -427,7 +439,7 @@ const ZONE_LIST = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
       }
     }
     console.log(`    門檻 step(${STEP}, idv) ⇒ 最小碼距 ${MINC}/255 = ${(MINC / 255).toFixed(5)}`
-      + `(1/255 = ${(1 / 255).toFixed(5)} **跨不過**);nextSurfId 值域 (k+0.5)/${DEN} ⇒ ${matCodes.length} 個相異碼;`
+      + `(1/255 = ${(1 / 255).toFixed(5)} **跨不過**);nextSurfId 前 ${MOD} 個語意鍵值域 (k+0.5)/${DEN} ⇒ ${matCodes.length} 個相異碼;`
       + `LAND_SURF_ID = ${mLand[1]}`);
     console.log(`    0..255 裡離所有材質碼 ≥ ${MINC} 的碼共 ${allowed.length} 個 ⇒ 解出的分區 id:`
       + `${ZONE_LIST.map((z, i) => `${z} ${zoneCodes[i]}/255=${(zoneCodes[i] / 255).toFixed(5)}`).join('、')}`);
@@ -454,11 +466,24 @@ const ZONE_LIST = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
       + `((0.5)/${DEN} = ${(0.5 / DEN).toFixed(6)} 量化後同碼)⇒ 那一處「地貌 vs 建物」的線整條消失。`
       + `間距 MUST 由**材質碼的格**解出來,MUST NOT 手寫等距。`);
     const LFSRC = readSrc('public', 'js', 'landfield.js');
+    const BIO = readSrc('public', 'js', 'biomes.js');
+    const DSRC = readSrc('public', 'js', 'data.js');
+    const MSRC = readSrc('public', 'js', 'main.js');
+    const SSRC = readSrc('server', 'sim.js');
+    ok(/corridorKeepOut\(nx, nz, mpt, gradeCorridors/.test(LFSRC)
+      && /const clear = kind === 'tun' \? STRUCT_CLEAR_PAD : 4;/.test(BIO),
+    '切面與執行期共用 corridorKeepOut；橋 / 隧道淨空由 markGradeCorridors 的 clear 推導');
+    ok(/laneWetWays/.test(readSrc('tools', 'venue_field.mjs'))
+      && /runtimeSplitWaterPieces/.test(readSrc('tools', 'venue_field.mjs')),
+    '離線樁納入 cfg 推導的 laneWetWays，並鏡射執行期 splitWaterPieces 原文');
+    ok(/MAX_CORR:\s*6000/.test(DSRC) && /\.slice\(0, LOS\.MAX_CORR\)/.test(MSRC)
+      && /\.slice\(0, LOS\.MAX_CORR\)/.test(SSRC)
+      && !/slice\(0, 2400\)/.test(MSRC + SSRC),
+    'gradeCorridors 上傳 / 伺服器接收共用 LOS.MAX_CORR，不再各自硬截 2400 段');
     ok(/LAND_ZONES = \['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'\]/.test(LFSRC),
       'runtime 分區名冊含正式 cliff，且順序與貼圖 R 通道一致');
     ok(/LAND_ROAD_RANK = 3/.test(LFSRC) && /LAND_AREA_MIN_F = 0\.0004/.test(LFSRC),
       'runtime 線分級 rank≤3、面積下限 0.0004 已定案');
-    const BIO = readSrc('public', 'js', 'biomes.js');
     const GND = readSrc('public', 'js', 'ground.js');
     const TER = readSrc('public', 'js', 'terrain.js');
     const RELAY = readSrc('public', 'js', 'osmrelay.js');
@@ -634,56 +659,16 @@ async function cutVenue(v, team, opts = {}) {
   T.contour = Date.now() - m;
 
   // ---- 結構足跡 keep-out(隧道 hw + STRUCT_CLEAR_PAD / 橋 hw + 4;推導不手寫)----
-  const STRUCT_CLEAR_PAD = Math.max(7, UND.COPE, TUN.GAL_CLEAR_W);
-  const { structs } = osm ? buildStructs(osm, cfg.center, hf) : { structs: [] };
-  const keepOut = new Uint8Array(nx * nz);
-  let koN = 0;
-  if (!BREAK.keepout) {
-    for (const st of structs) {
-      const pad = st.kind === '橋' ? 4 : STRUCT_CLEAR_PAD;
-      const r = (st.hw + pad) / mpt;
-      for (let s = 1; s < st.pts.length; s++) {
-        // 結構折線與切面都走 data.llToXZ(A42 主方位唯一縫)，keep-out 因此與 runtime 同框。
-        const a = st.pts[s - 1], b = st.pts[s];
-        const i0 = Math.max(0, Math.floor(toI(Math.min(a[0], b[0])) - r - 1));
-        const i1 = Math.min(nx - 1, Math.ceil(toI(Math.max(a[0], b[0])) + r + 1));
-        const j0 = Math.max(0, Math.floor(toJ(Math.min(a[1], b[1])) - r - 1));
-        const j1 = Math.min(nz - 1, Math.ceil(toJ(Math.max(a[1], b[1])) + r + 1));
-        const ax = toI(a[0]), az = toJ(a[1]), bx = toI(b[0]), bz = toJ(b[1]);
-        const ex = bx - ax, ez = bz - az, L2 = ex * ex + ez * ez;
-        for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-          let t = L2 ? ((i + 0.5 - ax) * ex + (j + 0.5 - az) * ez) / L2 : 0;
-          t = t < 0 ? 0 : t > 1 ? 1 : t;
-          const dx = i + 0.5 - (ax + t * ex), dz = j + 0.5 - (az + t * ez);
-          if (dx * dx + dz * dz <= r * r && !keepOut[j * nx + i]) { keepOut[j * nx + i] = 1; koN++; }
-        }
-      }
-    }
-  } else {
-    // 壞版仍要量「有多少牆落進足跡」⇒ keep-out 照算,只是不交給 rasterLines
-    // (斷言的期望值恆為 0,MUST NOT 隨 break 改變)
-  }
-  const keepOutRef = BREAK.keepout ? (() => {
-    const ko = new Uint8Array(nx * nz);
-    for (const st of structs) {
-      const pad = st.kind === '橋' ? 4 : STRUCT_CLEAR_PAD;
-      const r = (st.hw + pad) / mpt;
-      for (let s = 1; s < st.pts.length; s++) {
-        const a = st.pts[s - 1], b = st.pts[s];
-        const ax = toI(a[0]), az = toJ(a[1]), bx = toI(b[0]), bz = toJ(b[1]);
-        const ex = bx - ax, ez = bz - az, L2 = ex * ex + ez * ez;
-        const i0 = Math.max(0, Math.floor(Math.min(ax, bx) - r - 1)), i1 = Math.min(nx - 1, Math.ceil(Math.max(ax, bx) + r + 1));
-        const j0 = Math.max(0, Math.floor(Math.min(az, bz) - r - 1)), j1 = Math.min(nz - 1, Math.ceil(Math.max(az, bz) + r + 1));
-        for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-          let t = L2 ? ((i + 0.5 - ax) * ex + (j + 0.5 - az) * ez) / L2 : 0;
-          t = t < 0 ? 0 : t > 1 ? 1 : t;
-          const dx = i + 0.5 - (ax + t * ex), dz = j + 0.5 - (az + t * ez);
-          if (dx * dx + dz * dz <= r * r) ko[j * nx + i] = 1;
-        }
-      }
-    }
-    return ko;
-  })() : keepOut;
+  const terrainForCorridors = { ...hf, waterY, sampleColor: null, natureAt: hf.heightAt };
+  const grade = osm
+    ? gradeWaysForAudit(roads, cfg.lanes, cfg.center, terrainForCorridors)
+    : { roads: [], laneWetWays: [], ways: [] };
+  const corridorBlocked = new Set();
+  const gradeCorridors = markGradeCorridors(grade.ways, terrainForCorridors, cfg.center, corridorBlocked, false);
+  const structWays = grade.roads.filter((w) => w.tags.bridge || w.tags.tunnel).length + grade.laneWetWays.length;
+  const keepOutRef = Z.corridorKeepOut(nx, nz, mpt, gradeCorridors, { toI, toJ });
+  const keepOut = BREAK.keepout ? new Uint8Array(nx * nz) : keepOutRef;
+  const koN = keepOutRef.reduce((a, b) => a + b, 0);
 
   // ---- 光柵化 → 泛洪 → 小面併鄰 → 牆併回 ----
   // `opts.noRings` = **去循環的對照組**:地被多邊形外環同時是「參與線」與「真值」⇒
@@ -821,7 +806,7 @@ async function cutVenue(v, team, opts = {}) {
   return { cfg, rect, bbox, hf, cell, gnx, gnz, nx, nz, mpt, ox, oz, toI, toJ, xOf, zOf,
     zoneGrid, faceZone, face: mg.face, nFaces: mg.n, merged: mg.merged, rawFaces: ff.n,
     wall: rl.wall, keepOut: keepOutRef, contourN, classes, admShare, admAll: admAll.length,
-    src, polyCover, structs: structs.length, T, samples, areaMin, rankMax, adjPairs,
+    src, polyCover, structs: structWays, gradeCorridors, T, samples, areaMin, rankMax, adjPairs,
     ringWays, cl, osm, waterY, relief, alpineH, koN, blocked: rl.blocked, cutSegs: rl.cutSegs,
     wallN: rl.wall.reduce((a, b) => a + b, 0) };
 }
@@ -833,6 +818,10 @@ console.log(`\nⅥ 真場地:${v.id} ${TEAM}v${TEAM}(貼圖 ${ARG.tex || 1024}²
 const R = await cutVenue(v, TEAM);
 if (R.skip) {
   note(`${v.id}:${R.skip} ⇒ Ⅵ 整段未驗(MUST NOT 當綠燈)`);
+  if (BREAK.keepout || BREAK.quantize) {
+    console.error(`❌ 反向驗證未執行:${v.id} 的場地資料不足(${R.skip}) ⇒ ${BREAK.keepout ? '--break-keepout' : '--break-quantize'} 不得假綠`);
+    process.exit(1);
+  }
 } else {
   const { nx, nz, mpt } = R;
   console.log(`    格網 ${nx}×${nz} @ ${mpt.toFixed(3)} m/texel;現制 zoneGrid ${R.gnx}×${R.gnz} @ ${R.cell.toFixed(2)}m;`

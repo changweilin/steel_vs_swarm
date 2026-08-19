@@ -287,7 +287,7 @@ export class BattleSim {
       ? occ.filter((o) => !this.camps.some((c) => dist2d(o[0], o[1], c.x, c.z) < THIRD.BLD_CLEAR_R))
       : occ;
     const cor = [];
-    for (const c of Array.isArray(w.cor) ? w.cor.slice(0, 2400) : []) {
+    for (const c of Array.isArray(w.cor) ? w.cor.slice(0, LOS.MAX_CORR) : []) {
       if (!Array.isArray(c) || c.length < 5) continue;
       const [x1, z1, x2, z2, hw, tun] = c.map(Number);
       if (![x1, z1, x2, z2, hw].every(Number.isFinite)) continue;
