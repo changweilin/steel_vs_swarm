@@ -9,6 +9,10 @@
 > (`visualPrefs.js` 的 `celSchool` 旋鈕窗 1 已加,本輪一格未動;`postfx.js` / `matsample.js` /
 > `audit_gpu_lifecycle.mjs` / `shot_scene.mjs` 本輪未改)。
 
+> **封存註記（2026-08-19）**：本檔保留當時的待裁決上下文，不再是現況來源。
+> 正式定案已記在 `docs/anime_style_plan.md` 第十七輪：School B 預設、`HUE_MIN_A = 1.5`、
+> `bands=4` 維持單一硬切兩色；`visualPrefs.js` 與 `toon.js` 為執行真品。
+
 ---
 
 ## ① `.claude/rules/seams-render.md` §2.1 F 要改寫 / 新增的那一列(原文)

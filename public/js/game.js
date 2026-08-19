@@ -8448,8 +8448,8 @@ export class BattleClient {
       const v = CHARACTERS[ent.ch]?.visual || {};
       // 「升空了沒有」吃動畫權重向量的 air 軌(⑥-3)—— 那一軌的過渡帶恰在
       // `MORPH.GROUND_Y` 上跨過 0.5 ⇒ 與 locomotion 換樹**同一條線**。
-      // 舊制在這裡寫死 `> 3`,是全專案第三個離地門檻(換樹 2 / 取景 2.5 / 這裡 3)
-      // ⇒ 2~3m 之間機體已經是飛行型而音床還在踏地。
+      // 2026-08-19 已放行:移除舊制寫死 `> 3` 的第三個門檻;2m 由 `MORPH.GROUND_Y`
+      // 統一進 `animWeights().air`,音床與換樹共用同一條過渡線。
       if (ent.flies || (ent.loco?.w?.air || 0) > 0.5) {       // 升空:依飛行型
         const fl = v.flight;
         if (fl === 'heli' || fl === 'tilt') return 'rotor';

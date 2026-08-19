@@ -1177,7 +1177,7 @@ export const VIEW_LOCK = {
 // 換成指數逼近的話同一個 tick 只走 67.5%,bot 的朝向從此是漸近的(三個 tick 才進 3%)——
 // 那是**權威側的行為改變**(原則 1),而且要照 §5.6 補一輪 AI 退化量測才知道代價。
 // 客戶端那一半確實有幀率相依(144Hz 比 30Hz 收斂慢),但它與 bot 共用同一個縫、
-// 拆兩份就是兩套規則 ⇒ 這一輪整支不動,留給使用者裁決(見 docs/anime_style_plan.md ⑥-1)。
+// 拆兩份就是兩套規則 ⇒ 2026-08-19 使用者定案:維持現狀,整支不動(見 docs/anime_style_plan.md ⑥-1)。
 export const viewLockStep = (d, dt) => {
   const cap = VIEW_LOCK.W * dt;
   return Math.max(-cap, Math.min(cap, d * Math.min(1, VIEW_LOCK.EASE * dt)));

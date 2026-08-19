@@ -15,6 +15,10 @@
 > `public/js/ground.js`・`public/js/edgewall.js`・`public/js/beacons.js` **一個字未動**
 > (理由見更正 2 / 3 / 4)。
 
+> **封存註記（2026-08-19）**：本檔的「待裁決」段落保留歷史上下文，不再代表現況。
+> 鳥群已接受 JS 積分器方案；正式紀錄見 `docs/anime_style_plan.md` 第十七輪，執行真品為
+> `public/js/wildlife.js`。
+
 ---
 
 ## ① `.claude/rules/seams-world.md` §2.1 G 要新增的一列(原文)
