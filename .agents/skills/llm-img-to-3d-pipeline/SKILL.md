@@ -1,11 +1,11 @@
 ---
-name: gemini-img-to-3d-pipeline
+name: llm-img-to-3d-pipeline
 description: In-Context fine-grained image-to-3D polyhedral geometric reconstruction pipeline with domain-sharded subagent parallelization and per-object atomic persistence. Trigger when performing fine-grained semantic 3D reconstruction from reference photos, spawning domain-specific parallel subagents (Building, Vehicle, Tree, Nature/Ship/Landmark), synthesizing procedural polyhedral assemblies (Abeto anime aesthetic & Sakura Crossing declarative assembly), or executing robust resume-from-checkpoint batch generation.
 license: MIT
 compatibility: Offline repository toolchain (Node.js ES modules, Python 3.11/3.13 CV analyzers, Three.js 0.160 CDN importmap; zero extra npm dependencies - A2 rule compliant)
 ---
 
-# Gemini Img-to-3D: In-Context Polyhedral Reconstruction Pipeline
+# LLM Img-to-3D: In-Context Polyhedral Reconstruction Pipeline
 
 Defines the pure LLM in-context semantic image-to-3D reconstruction, domain-sharded subagent execution protocol, vision disambiguation filters, and atomic persistence pipeline. Transforms single-view reference images into clean, stylized polyhedral 3D assemblies matching the Abeto anime aesthetic and Sakura Crossing procedural generation architecture.
 
