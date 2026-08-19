@@ -1275,3 +1275,16 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 `gInfo`、三角形預算或決定性散布契約。`audit_auto_intake` 目前仍為 **187 通過、1 失敗、
 1 未驗**：失敗是 `fetch_photos.mjs` 的 `seen` 判準抽取，未驗是本機缺 Python 前處理環境；
 兩者都留在 AI3D 入庫線，不能用本輪畫面稽核的綠燈掩蓋。
+
+### 2026-08-19 第十六輪：AI3D 黑名單稽核錨點修正
+
+| 項目 | 結果 | 證據面 |
+|---|---|---|
+| 失敗根因 | `fetch_photos.mjs` 已改成 `.filter((e) => e.ok || PERSIST_FAIL_RE.test(...))`；`audit_auto_intake` 還在抽舊的 `&& (e.ok || ...)` 文字，是真品行為未壞、稽核錨點過期 | `readSrc()` 原文比對；`fetch_photos.mjs` 一行未改 |
+| 修正範圍 | 只更新 `audit_auto_intake.mjs` 的 `seen` 原文抽取；黑名單、`usable()`、`screen.v === 'reject'` 行為與來源帳本一格未動 | `node --check tools/ai3d/audit_auto_intake.mjs` |
+| pristine | **188 通過、0 失敗、1 未驗** | `node tools/ai3d/audit_auto_intake.mjs` |
+| 反向驗證 | `--break-blacklist` 的行為段因本機找不到 Python + NumPy/PIL/SciPy 而跳過；**不列為通過** | 需在 3D runner 重新跑，確認故障版的 `seen(e)` 變紅 |
+
+本輪仍沒有改 `public/**`、權威狀態、散布亂數或渲染縫；第十五輪的 ② 資產邊界不變。
+第十五輪記下的 **187/1/1** 是修正前數字，本輪改為 **188/0/1**；剩下的一項是環境缺口，
+不是可用文字替換掩蓋的綠燈。
