@@ -1260,3 +1260,18 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 本輪把 `headless-3d-inspection` 的「先由正式管線實拍，再以 raycast 辨識面片」與
 `scene-seams-and-light` 的共面硬幣拋規則落進既有工具；沒有以調色或加深材質掩蓋幾何問題。
 真機走進兩個洞、走上橋面仍保留為 ㋕ 驗收，不以 headless 截圖冒充操作驗證。
+
+### 2026-08-19 第十五輪：樹木 v5 資產替換後的動漫渲染接合回歸
+
+| 範圍 | 結果 | 證據面 |
+|---|---|---|
+| 資產邊界 | `public/assets/models/parts/tree.glb` 換成 v5 版本；`parts_manifest` 與 normalize 設定同步。沒有改 `biomes.js`、`models.js`、樹木散布、`CEL_LEAFCARD`、碰撞或 LOS | `daa21b15`；資產變更只落在 GLB／AI3D 帳本／正規化工具 |
+| 葉片卡與整棵樹剪影 | 43/43；既有 `leafCard` 預設與三角形總量閘一格未動 | `audit_leaf_card` |
+| 巨岩／石堆線工 | 30/30；既有 `INK.FADE0/FADE1` 遠景提示仍在，本輪沒有把它誤算成資產替換已解決 | `audit_rock_ink` |
+| 接合與語法 | 22,637 個接合、0 異常；客戶端 230 項全過 | `audit_object_joints --seeds 8`・`audit_client_syntax` |
+| 權威回歸 | `npm run bal` 全綠；本輪沒有重啟 8620，因此 `npm test` 不列為本輪證據 | `npm run bal` |
+
+這一輪是 **② 的資產輸入更新，不是新的畫面縫**：v5 樹木不能藉機繞過葉片卡的群組深度、
+`gInfo`、三角形預算或決定性散布契約。`audit_auto_intake` 目前仍為 **187 通過、1 失敗、
+1 未驗**：失敗是 `fetch_photos.mjs` 的 `seen` 判準抽取，未驗是本機缺 Python 前處理環境；
+兩者都留在 AI3D 入庫線，不能用本輪畫面稽核的綠燈掩蓋。
