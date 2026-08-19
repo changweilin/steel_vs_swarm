@@ -1260,3 +1260,31 @@ per-run `Math.random()` 印出來的數字);`audit_siteplan` / `beacons` / `obje
 本輪把 `headless-3d-inspection` 的「先由正式管線實拍，再以 raycast 辨識面片」與
 `scene-seams-and-light` 的共面硬幣拋規則落進既有工具；沒有以調色或加深材質掩蓋幾何問題。
 真機走進兩個洞、走上橋面仍保留為 ㋕ 驗收，不以 headless 截圖冒充操作驗證。
+
+### 2026-08-19 第十五輪：樹木 v5 資產替換後的動漫渲染接合回歸
+
+| 範圍 | 結果 | 證據面 |
+|---|---|---|
+| 資產邊界 | `public/assets/models/parts/tree.glb` 換成 v5 版本；`parts_manifest` 與 normalize 設定同步。沒有改 `biomes.js`、`models.js`、樹木散布、`CEL_LEAFCARD`、碰撞或 LOS | `daa21b15`；資產變更只落在 GLB／AI3D 帳本／正規化工具 |
+| 葉片卡與整棵樹剪影 | 43/43；既有 `leafCard` 預設與三角形總量閘一格未動 | `audit_leaf_card` |
+| 巨岩／石堆線工 | 30/30；既有 `INK.FADE0/FADE1` 遠景提示仍在，本輪沒有把它誤算成資產替換已解決 | `audit_rock_ink` |
+| 接合與語法 | 22,637 個接合、0 異常；客戶端 230 項全過 | `audit_object_joints --seeds 8`・`audit_client_syntax` |
+| 權威回歸 | `npm run bal` 全綠；本輪沒有重啟 8620，因此 `npm test` 不列為本輪證據 | `npm run bal` |
+
+這一輪是 **② 的資產輸入更新，不是新的畫面縫**：v5 樹木不能藉機繞過葉片卡的群組深度、
+`gInfo`、三角形預算或決定性散布契約。`audit_auto_intake` 目前仍為 **187 通過、1 失敗、
+1 未驗**：失敗是 `fetch_photos.mjs` 的 `seen` 判準抽取，未驗是本機缺 Python 前處理環境；
+兩者都留在 AI3D 入庫線，不能用本輪畫面稽核的綠燈掩蓋。
+
+### 2026-08-19 第十六輪：AI3D 黑名單稽核錨點修正
+
+| 項目 | 結果 | 證據面 |
+|---|---|---|
+| 失敗根因 | `fetch_photos.mjs` 已改成 `.filter((e) => e.ok || PERSIST_FAIL_RE.test(...))`；`audit_auto_intake` 還在抽舊的 `&& (e.ok || ...)` 文字，是真品行為未壞、稽核錨點過期 | `readSrc()` 原文比對；`fetch_photos.mjs` 一行未改 |
+| 修正範圍 | 只更新 `audit_auto_intake.mjs` 的 `seen` 原文抽取；黑名單、`usable()`、`screen.v === 'reject'` 行為與來源帳本一格未動 | `node --check tools/ai3d/audit_auto_intake.mjs` |
+| pristine | **188 通過、0 失敗、1 未驗** | `node tools/ai3d/audit_auto_intake.mjs` |
+| 反向驗證 | `--break-blacklist` 的行為段因本機找不到 Python + NumPy/PIL/SciPy 而跳過；**不列為通過** | 需在 3D runner 重新跑，確認故障版的 `seen(e)` 變紅 |
+
+本輪仍沒有改 `public/**`、權威狀態、散布亂數或渲染縫；第十五輪的 ② 資產邊界不變。
+第十五輪記下的 **187/1/1** 是修正前數字，本輪改為 **188/0/1**；剩下的一項是環境缺口，
+不是可用文字替換掩蓋的綠燈。

@@ -236,7 +236,7 @@ console.log('\nⅥ 刪除來源圖的黑名單(fetch 的 seen / usable 與 harve
   // seen 的載重那一半就是 `e.ok ||` —— 「條目在不在 seen 裡」決定同一張圖會不會被重新下載,
   // 而 purge 之所以 MUST 維持 `ok: true` 就是為了留在這個集合裡
   const persistSrc = fsrc.match(/const PERSIST_FAIL_RE = (\/.+\/);/)?.[1];
-  const seenSrc = fsrc.match(/&& \(e\.ok \|\| PERSIST_FAIL_RE\.test\(e\.error \|\| ''\)\)\)/)?.[0];
+  const seenSrc = fsrc.match(/\.filter\(\(e\) => e\.ok \|\| PERSIST_FAIL_RE\.test\(e\.error \|\| ''\)\)/)?.[0];
   ok(!!usableSrc, 'fetch_photos.mjs 的 usable() 抽得到(抽不到 = 這一段在驗一個不存在的東西)');
   ok(!!seenSrc && !!persistSrc, 'fetch_photos.mjs 的 seen 判準抽得到(它決定「同一張圖會不會被重新下載」)');
   const hsrc = readSrc('tools', 'ai3d', 'harvest_loop.mjs');
