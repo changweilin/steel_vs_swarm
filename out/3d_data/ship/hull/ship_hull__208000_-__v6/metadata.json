@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull__208000_-__v6",
+  "key": "ship/hull_中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧_cca69839_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "industrial_bulk_carrier",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The bulk carrier 'China Steel Harmony' is reconstructed with high fidelity. The hull is modeled as a large box with a wedge bow, and the superstructure is built using stacked boxes and cylinders. The bridge windows are represented with glassHex. The symmetry is maintained for the superstructure and deck equipment. The scale is set to match a large bulk carrier (approx 290m length).",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧~0.png",
+  "created_at": "2026-08-20T16:22:30.717Z",
+  "bounds": {
+    "min": [
+      -15,
+      -2.5,
+      -145
+    ],
+    "max": [
+      15,
+      36,
+      155
+    ],
+    "size": [
+      30,
+      38.5,
+      300
+    ],
+    "rMax": 155.724,
+    "triangles": 330,
+    "vertices": 204
+  },
+  "spec": {
+    "style": "industrial_bulk_carrier"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

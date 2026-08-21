@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_Minimalist-facade-with-sliding-glass-doors_v6",
+  "key": "building/mass_Minimalist-facade-with-sliding-glass-doors_c070941c_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modernist Luxury Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the multi-tiered, stepped facade of the villa. The glass curtain walls and structural columns are positioned to match the original architecture. The roof overhangs and balcony slabs are modeled as distinct box components with correct depth. The rear and side sections were inferred based on the visible structural logic to ensure a 360-degree closed volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/Minimalist-facade-with-sliding-glass-doors.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\Minimalist-facade-with-sliding-glass-doors~0.png",
+  "created_at": "2026-08-21T08:46:14.599Z",
+  "bounds": {
+    "min": [
+      -9,
+      0,
+      -5
+    ],
+    "max": [
+      9,
+      12,
+      8
+    ],
+    "size": [
+      18,
+      12,
+      13
+    ],
+    "rMax": 12.042,
+    "triangles": 144,
+    "vertices": 96
+  },
+  "spec": {
+    "style": "Modernist Luxury Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

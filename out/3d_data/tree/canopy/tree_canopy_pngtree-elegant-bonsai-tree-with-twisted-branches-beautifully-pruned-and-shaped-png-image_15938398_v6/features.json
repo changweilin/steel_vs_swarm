@@ -1,0 +1,31 @@
+{
+  "id": "tree_canopy_pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398",
+  "sourceImage": "tree/canopy/pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3421235,
+    "facadeHex": 12303560,
+    "baseHex": 4605510,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 16777215
+  },
+  "totalParts": 8,
+  "partNames": [
+    "pot_base",
+    "trunk_main",
+    "trunk_upper",
+    "canopy_top",
+    "canopy_mid_right",
+    "canopy_mid_left",
+    "canopy_low_left",
+    "canopy_low_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

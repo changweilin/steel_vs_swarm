@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_v6",
+  "key": "ship/hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_c8647947_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern research vessel",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the main hull, the tiered superstructure, the bridge, and the mast. The deck layout and bow shape are consistent with the reference. Symmetry is applied to ensure the hull and superstructure are complete.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/8eadcf6f-3d54-4ddf-92e6-a815be2b03c1.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\8eadcf6f-3d54-4ddf-92e6-a815be2b03c1~0.png",
+  "created_at": "2026-08-20T16:12:02.989Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -30
+    ],
+    "max": [
+      6,
+      18,
+      35
+    ],
+    "size": [
+      12,
+      18,
+      65
+    ],
+    "rMax": 35.511,
+    "triangles": 370,
+    "vertices": 222
+  },
+  "spec": {
+    "style": "modern research vessel"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

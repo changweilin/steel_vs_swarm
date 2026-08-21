@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_v6",
+  "key": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_70ece11d_v6",
+  "family": "building",
+  "subpart": "bld_yurt",
+  "style": "traditional_yurt",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The yurt is reconstructed as a cylindrical base with a conical roof. The proportions match the original photo, including the solar panel, chimney, and entrance. The geometry is closed and solid, with the roof correctly sloping outwards.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_yurt/ov_75396782-7f8a-4829-983b-111047edc6d8.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_yurt\\ov_75396782-7f8a-4829-983b-111047edc6d8~0.png",
+  "created_at": "2026-08-21T07:29:15.468Z",
+  "bounds": {
+    "min": [
+      -2.5,
+      0,
+      -2.5
+    ],
+    "max": [
+      2.5,
+      4,
+      2.5
+    ],
+    "size": [
+      5,
+      4,
+      5
+    ],
+    "rMax": 3.536,
+    "triangles": 340,
+    "vertices": 184
+  },
+  "spec": {
+    "style": "traditional_yurt"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

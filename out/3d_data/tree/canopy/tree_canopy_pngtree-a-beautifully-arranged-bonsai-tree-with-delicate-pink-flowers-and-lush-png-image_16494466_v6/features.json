@@ -1,0 +1,34 @@
+{
+  "id": "tree_canopy_pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466",
+  "sourceImage": "tree/canopy/pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 45056,
+    "facadeHex": 526341,
+    "baseHex": 16777215,
+    "accentHex": 16750848,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 10,
+  "partNames": [
+    "pot",
+    "main_trunk",
+    "branch_left",
+    "branch_right",
+    "canopy_top",
+    "canopy_left",
+    "canopy_right",
+    "flower_1",
+    "flower_2",
+    "flower_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

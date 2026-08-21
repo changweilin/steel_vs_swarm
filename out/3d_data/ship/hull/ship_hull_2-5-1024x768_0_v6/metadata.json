@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_2-5-1024x768_0_v6",
+  "key": "ship/hull_2-5-1024x768~0_59d5ac5f_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "industrial_fishing_vessel",
+  "symmetryMode": "symmetric",
+  "similarityScore": 88,
+  "similarityReview": "The 3D model accurately captures the hull profile, the bulbous bow, and the multi-tiered superstructure. The bridge windows and mast details are represented with correct color coding. Bilateral symmetry was applied to ensure the port side and rear sections are fully realized based on the starboard view.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/2-5-1024x768.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\2-5-1024x768~0.png",
+  "created_at": "2026-08-20T16:06:50.828Z",
+  "bounds": {
+    "min": [
+      -20,
+      0,
+      -4
+    ],
+    "max": [
+      24.0024,
+      13.8,
+      4
+    ],
+    "size": [
+      44.002,
+      13.8,
+      8
+    ],
+    "rMax": 24.333,
+    "triangles": 538,
+    "vertices": 334
+  },
+  "spec": {
+    "style": "industrial_fishing_vessel"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

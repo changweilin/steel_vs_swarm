@@ -1,0 +1,40 @@
+{
+  "id": "rock_main__-164605945_0_v6",
+  "key": "rock/main_南犹他州巨岩山-164605945~0_9416ceae_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The generated 3D polygonal model accurately captures the monolithic sandstone cliff structure shown in the photo, featuring layered rock formations, weathered vertical striated faces, and a solid base anchored at y=0. Multiple dodecahedral and box primitives were seamlessly combined to form the massive textured cliffs.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/南犹他州巨岩山-164605945.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\南犹他州巨岩山-164605945~0.png",
+  "created_at": "2026-08-20T16:30:00.917Z",
+  "bounds": {
+    "min": [
+      -6.6774,
+      0,
+      -4
+    ],
+    "max": [
+      7.2678,
+      18.3738,
+      4
+    ],
+    "size": [
+      13.945,
+      18.374,
+      8
+    ],
+    "rMax": 8.296,
+    "triangles": 196,
+    "vertices": 118
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

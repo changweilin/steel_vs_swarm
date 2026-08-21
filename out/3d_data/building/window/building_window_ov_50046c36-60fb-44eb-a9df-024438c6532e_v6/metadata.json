@@ -1,0 +1,40 @@
+{
+  "id": "building_window_ov_50046c36-60fb-44eb-a9df-024438c6532e_v6",
+  "key": "building/window_ov_50046c36-60fb-44eb-a9df-024438c6532e_77421b44_v6",
+  "family": "building",
+  "subpart": "window",
+  "style": "Art Nouveau Stained Glass Portrait",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The 3D model captures the circular frame and the layered depth of the portrait elements (head, headdress, and jewelry) using a series of stacked discs and cylinders to represent the relief-like quality of the stained glass design.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/window/ov_50046c36-60fb-44eb-a9df-024438c6532e.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\window\\ov_50046c36-60fb-44eb-a9df-024438c6532e~0.png",
+  "created_at": "2026-08-21T10:42:12.565Z",
+  "bounds": {
+    "min": [
+      -1,
+      -1.0004,
+      -0.5508
+    ],
+    "max": [
+      1,
+      1.0004,
+      0.5008
+    ],
+    "size": [
+      2,
+      2.001,
+      1.052
+    ],
+    "rMax": 1.142,
+    "triangles": 1192,
+    "vertices": 661
+  },
+  "spec": {
+    "style": "Art Nouveau Stained Glass Portrait"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

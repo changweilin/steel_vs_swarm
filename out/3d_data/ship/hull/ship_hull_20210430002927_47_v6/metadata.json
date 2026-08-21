@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_20210430002927_47_v6",
+  "key": "ship/hull_20210430002927_47_f8967c20_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "yacht",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The yacht is reconstructed with a primary hull wedge, a central superstructure, and a bridge. All glass elements are correctly colored as glassHex. The symmetry is maintained by mirroring the hull and superstructure components. The scale is set to approximately 20m in length, consistent with a vessel of this type.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/20210430002927_47.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\20210430002927_47~0.png",
+  "created_at": "2026-08-20T16:08:16.746Z",
+  "bounds": {
+    "min": [
+      -2.5,
+      0,
+      -10
+    ],
+    "max": [
+      2.5,
+      7.6,
+      10
+    ],
+    "size": [
+      5,
+      7.6,
+      20
+    ],
+    "rMax": 10.308,
+    "triangles": 518,
+    "vertices": 324
+  },
+  "spec": {
+    "style": "yacht"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

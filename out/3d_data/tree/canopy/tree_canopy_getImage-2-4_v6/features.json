@@ -1,0 +1,27 @@
+{
+  "id": "tree_canopy_getImage-2-4",
+  "sourceImage": "tree/canopy/getImage-2-4",
+  "style": "winter_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 4605510,
+    "baseHex": 16777215,
+    "accentHex": 13421772,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 5,
+  "partNames": [
+    "trunk",
+    "main_canopy",
+    "secondary_canopy_left",
+    "secondary_canopy_right",
+    "snow_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

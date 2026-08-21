@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_54817480_v6",
+  "key": "tree/gt_dragontree_wc_54817480_51c1dbed_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "naturalistic_botanical",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the distinct multi-branched structure of the Dracaena draco (Dragon Tree) with a central trunk base and multiple upward-branching cylinders. The canopy is represented by clustered ellipsoids to mimic the dense, sword-like leaf rosettes. The stone path is modeled as a base layer to anchor the scene.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_54817480.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_54817480~0.png",
+  "created_at": "2026-08-20T17:00:30.641Z",
+  "bounds": {
+    "min": [
+      -2.2,
+      -0.1,
+      -5
+    ],
+    "max": [
+      3,
+      5,
+      5
+    ],
+    "size": [
+      5.2,
+      5.1,
+      10
+    ],
+    "rMax": 5.831,
+    "triangles": 652,
+    "vertices": 391
+  },
+  "spec": {
+    "style": "naturalistic_botanical"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_1__v6",
+  "key": "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1)_a1fe4d23_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_landscape_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the twisted, gnarled trunk of the juniper tree and the distinct layered canopy structure. The base rock formation is represented by dodecahedron_polyhedron to mimic the rugged texture. The overall silhouette and the asymmetric branch distribution are well-preserved.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1)~0.png",
+  "created_at": "2026-08-20T16:21:39.060Z",
+  "bounds": {
+    "min": [
+      -4,
+      -0.621,
+      -2.8532
+    ],
+    "max": [
+      4,
+      5.7,
+      2.8532
+    ],
+    "size": [
+      8,
+      6.321,
+      5.706
+    ],
+    "rMax": 4.913,
+    "triangles": 760,
+    "vertices": 462
+  },
+  "spec": {
+    "style": "natural_landscape_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

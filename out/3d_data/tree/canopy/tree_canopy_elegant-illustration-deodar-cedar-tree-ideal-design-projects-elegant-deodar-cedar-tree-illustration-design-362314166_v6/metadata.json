@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166_v6",
+  "key": "tree/canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166_73028fab_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "stylized_conifer_tree",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree is reconstructed using a central trunk and three distinct layers of conical foliage. The proportions match the reference image's triangular silhouette. The trunk is modeled as a conical frustum to capture the natural taper, and the foliage layers are represented by frustum_pyramids to mimic the layered pine-like structure. The base is anchored at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166~0.png",
+  "created_at": "2026-08-20T16:50:05.727Z",
+  "bounds": {
+    "min": [
+      -2.5,
+      0,
+      -2.5
+    ],
+    "max": [
+      2.5,
+      5.25,
+      2.5
+    ],
+    "size": [
+      5,
+      5.25,
+      5
+    ],
+    "rMax": 3.536,
+    "triangles": 208,
+    "vertices": 114
+  },
+  "spec": {
+    "style": "stylized_conifer_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

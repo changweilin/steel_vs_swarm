@@ -1,0 +1,34 @@
+{
+  "id": "building_mass_pngtree-modern-architectural-3d-visualization-of-luxury-home-with-wood-accents-and-png-image_16602271",
+  "sourceImage": "building/mass/pngtree-modern-architectural-3d-visualization-of-luxury-home-with-wood-accents-and-png-image_16602271",
+  "style": "Modern Minimalist Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 16777215,
+    "baseHex": 12632256,
+    "accentHex": 8421504,
+    "darkHex": 4210752,
+    "brightHex": 15790320,
+    "glassHex": 10092543
+  },
+  "totalParts": 11,
+  "partNames": [
+    "BasePlatform",
+    "GroundFloorMain",
+    "SecondFloorMain",
+    "Roof",
+    "GlassFacade",
+    "BalconyFloor",
+    "Staircase",
+    "Deck",
+    "SupportColumn",
+    "Tree1",
+    "Tree2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "cone"
+  ]
+}

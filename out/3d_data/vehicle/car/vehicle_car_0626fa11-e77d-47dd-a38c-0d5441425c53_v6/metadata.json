@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_0626fa11-e77d-47dd-a38c-0d5441425c53_v6",
+  "key": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_c8267009_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "Modern Electric SUV",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the modern electric SUV based on the provided image, capturing the distinct coupe-like sloped roofline, angular front fascia with distinctive split headlights, aerodynamic body panels, side mirrors, and proportioned alloy wheels. All parts adhere to the 7-zone color scheme and strict spatial interlocking rules.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/0626fa11-e77d-47dd-a38c-0d5441425c53.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\0626fa11-e77d-47dd-a38c-0d5441425c53~0.png",
+  "created_at": "2026-08-20T17:22:13.413Z",
+  "bounds": {
+    "min": [
+      -1.49,
+      0.195,
+      -2.1
+    ],
+    "max": [
+      1.49,
+      1.45,
+      2.15
+    ],
+    "size": [
+      2.98,
+      1.255,
+      4.25
+    ],
+    "rMax": 2.616,
+    "triangles": 992,
+    "vertices": 616
+  },
+  "spec": {
+    "style": "Modern Electric SUV"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

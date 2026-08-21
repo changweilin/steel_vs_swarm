@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_66aa8a1d152c130a45497bb5d93b8c73",
+  "sourceImage": "building/mass/66aa8a1d152c130a45497bb5d93b8c73",
+  "style": "japanese_castle_minecraft",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 13816530,
+    "baseHex": 4210752,
+    "accentHex": 8421504,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 3368652
+  },
+  "totalParts": 18,
+  "partNames": [
+    "stone_base_level1",
+    "castle_body_floor1",
+    "window_f1_front",
+    "window_f1_back",
+    "window_f1_left",
+    "window_f1_right",
+    "roof_eaves_1",
+    "castle_body_floor2",
+    "roof_eaves_2",
+    "gable_front_2",
+    "castle_body_floor3",
+    "roof_eaves_3",
+    "gable_front_3",
+    "castle_body_floor4",
+    "main_roof_top",
+    "entrance_porch_base",
+    "entrance_roof",
+    "front_stairs"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "wedge"
+  ]
+}

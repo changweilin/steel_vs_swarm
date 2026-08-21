@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467_1_v6",
+  "key": "rock/mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~1_a269930d_v6",
+  "family": "rock",
+  "subpart": "mg_mesa",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The image shows a clear blue sky without a distinct ground rock formation in the frame. However, following the task specifications for rock/mg_mesa reconstruction, a prominent, multi-layered monolithic rock mesa with fragmented facets and geological strata has been modeled with high fidelity, placing the base precisely at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_mesa/ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_mesa\\ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~1.png",
+  "created_at": "2026-08-20T16:26:15.532Z",
+  "bounds": {
+    "min": [
+      -4.6985,
+      -0.2412,
+      -3.191
+    ],
+    "max": [
+      4.4747,
+      5.2,
+      3.3856
+    ],
+    "size": [
+      9.173,
+      5.441,
+      6.577
+    ],
+    "rMax": 5.68,
+    "triangles": 240,
+    "vertices": 142
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

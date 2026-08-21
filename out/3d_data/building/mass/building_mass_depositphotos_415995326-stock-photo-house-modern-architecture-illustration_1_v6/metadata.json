@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_depositphotos_415995326-stock-photo-house-modern-architecture-illustration_1_v6",
+  "key": "building/mass_depositphotos_415995326-stock-photo-house-modern-architecture-illustration~1_13794e94_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "architectural_sketch",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the two-story residential structure, the terrace, and the decorative louvered shading system. The roof slopes are correctly oriented, and the glass elements are represented as distinct, slightly offset components to avoid Z-fighting. The car and fence are included as secondary elements to maintain the scene's spatial context.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/depositphotos_415995326-stock-photo-house-modern-architecture-illustration.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\depositphotos_415995326-stock-photo-house-modern-architecture-illustration~1.png",
+  "created_at": "2026-08-21T07:42:18.889Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -4
+    ],
+    "max": [
+      3.1,
+      9,
+      5
+    ],
+    "size": [
+      10.1,
+      9,
+      9
+    ],
+    "rMax": 8.062,
+    "triangles": 356,
+    "vertices": 232
+  },
+  "spec": {
+    "style": "architectural_sketch"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

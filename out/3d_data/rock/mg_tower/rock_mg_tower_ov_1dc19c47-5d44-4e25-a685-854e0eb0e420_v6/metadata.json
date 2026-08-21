@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_v6",
+  "key": "rock/mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_8c1d6767_v6",
+  "family": "rock",
+  "subpart": "mg_tower",
+  "style": "rock_monument",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the prominent desert rock mesa/monument formations seen in the background of the image with multi-faced polyhedra, featuring stepped erosion patterns, accurate earthy color palette, and a stable base anchored at y = 0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_tower/ov_1dc19c47-5d44-4e25-a685-854e0eb0e420.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_tower\\ov_1dc19c47-5d44-4e25-a685-854e0eb0e420~0.png",
+  "created_at": "2026-08-20T16:26:36.955Z",
+  "bounds": {
+    "min": [
+      -12.5,
+      -1,
+      -18
+    ],
+    "max": [
+      12.5,
+      5.25,
+      2
+    ],
+    "size": [
+      25,
+      6.25,
+      20
+    ],
+    "rMax": 21.915,
+    "triangles": 204,
+    "vertices": 124
+  },
+  "spec": {
+    "style": "rock_monument"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

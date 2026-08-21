@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_images (10)",
+  "sourceImage": "building/mass/images (10)",
+  "style": "Modern Architectural",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 12500670,
+    "facadeHex": 15393245,
+    "baseHex": 13816530,
+    "accentHex": 11184810,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 4612250
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_body_base",
+    "central_tower",
+    "rooftop_terrace_floor",
+    "rooftop_canopy",
+    "glass_window_front",
+    "glass_window_side",
+    "tower_decorative_panel",
+    "entrance_step",
+    "side_wall_panel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

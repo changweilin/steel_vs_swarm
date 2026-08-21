@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_depositphotos_415995326-stock-photo-house-modern-architecture-illustration~0",
+  "sourceImage": "building/mass/depositphotos_415995326-stock-photo-house-modern-architecture-illustration~0",
+  "style": "Modern Minimalist Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 15790320,
+    "baseHex": 10526880,
+    "accentHex": 13158600,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8438271
+  },
+  "totalParts": 7,
+  "partNames": [
+    "MainBuildingBody",
+    "RoofStructure",
+    "FrontGlassFacade",
+    "SupportColumnLeft",
+    "SupportColumnRight",
+    "EntranceFrame",
+    "BaseFoundation"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

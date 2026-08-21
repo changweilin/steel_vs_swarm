@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_1__v6",
+  "key": "tree/canopy_images (1)_70486a05_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The bonsai tree is reconstructed using a central twisted trunk (conical_frustum) and multiple ellipsoid_sphere components to represent the dense, layered canopy. The base is a wide, shallow cylinder representing the ceramic pot. The proportions and organic, twisted nature of the trunk are captured through stacked segments, achieving high visual fidelity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (1)~0.png",
+  "created_at": "2026-08-20T16:09:37.453Z",
+  "bounds": {
+    "min": [
+      -1,
+      -0.4,
+      -0.5706
+    ],
+    "max": [
+      1,
+      1.6,
+      0.5706
+    ],
+    "size": [
+      2,
+      2,
+      1.141
+    ],
+    "rMax": 1.151,
+    "triangles": 752,
+    "vertices": 441
+  },
+  "spec": {
+    "style": "Bonsai Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

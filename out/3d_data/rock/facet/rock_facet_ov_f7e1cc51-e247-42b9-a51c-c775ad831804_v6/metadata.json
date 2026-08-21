@@ -1,0 +1,40 @@
+{
+  "id": "rock_facet_ov_f7e1cc51-e247-42b9-a51c-c775ad831804_v6",
+  "key": "rock/facet_ov_f7e1cc51-e247-42b9-a51c-c775ad831804_4b71edfa_v6",
+  "family": "rock",
+  "subpart": "facet",
+  "style": "rock_megalith",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D megalith accurately captures the massive scale, rounded top, and vertical weathered stone faces of the monolithic rock shown in the reference image. The multi-polyhedron construction blends dodecahedrons and prisms to replicate the irregular natural topography while anchoring firmly at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/facet/ov_f7e1cc51-e247-42b9-a51c-c775ad831804.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\facet\\ov_f7e1cc51-e247-42b9-a51c-c775ad831804~0.png",
+  "created_at": "2026-08-20T16:19:23.640Z",
+  "bounds": {
+    "min": [
+      -2.7909,
+      -0.5552,
+      -2.4373
+    ],
+    "max": [
+      2.976,
+      4.4,
+      2.4373
+    ],
+    "size": [
+      5.767,
+      4.955,
+      4.875
+    ],
+    "rMax": 3.847,
+    "triangles": 284,
+    "vertices": 173
+  },
+  "spec": {
+    "style": "rock_megalith"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,51 @@
+{
+  "id": "vehicle_car_240710-26084-40-oeQ5G",
+  "sourceImage": "vehicle/car/240710-26084-40-oeQ5G",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16185078,
+    "baseHex": 2105376,
+    "accentHex": 3355443,
+    "darkHex": 1052688,
+    "brightHex": 13421772,
+    "glassHex": 1974330
+  },
+  "totalParts": 29,
+  "partNames": [
+    "chassis_base",
+    "cabin_body",
+    "roof_top",
+    "hood",
+    "front_grille",
+    "front_bumper_lower",
+    "front_bumper_plate",
+    "front_windshield",
+    "rear_windshield",
+    "left_side_window",
+    "right_side_window",
+    "left_headlight",
+    "right_headlight",
+    "front_left_fender",
+    "front_right_fender",
+    "rear_left_fender",
+    "rear_right_fender",
+    "left_rearview_mirror",
+    "right_rearview_mirror",
+    "roof_rack_left",
+    "roof_rack_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "rim_front_left",
+    "rim_front_right",
+    "rim_rear_left",
+    "rim_rear_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

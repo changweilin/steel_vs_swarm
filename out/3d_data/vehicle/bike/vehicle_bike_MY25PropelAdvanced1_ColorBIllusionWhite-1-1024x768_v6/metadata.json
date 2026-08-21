@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_v6",
+  "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_10f84c9f_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
+  "created_at": "2026-08-20T15:14:49.485Z",
+  "bounds": {
+    "min": [
+      -1.235,
+      0.1717,
+      -0.4862
+    ],
+    "max": [
+      1.235,
+      1.075,
+      0.4862
+    ],
+    "size": [
+      2.47,
+      0.903,
+      0.972
+    ],
+    "rMax": 1.327,
+    "triangles": 736,
+    "vertices": 464
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

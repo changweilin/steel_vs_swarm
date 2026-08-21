@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull__127290139_04alamy-pwtk4p",
+  "sourceImage": "ship/hull/_127290139_04alamy-pwtk4p",
+  "style": "LNG Carrier Ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 26843,
+    "baseHex": 3355443,
+    "accentHex": 16766720,
+    "darkHex": 1052688,
+    "brightHex": 14737632,
+    "glassHex": 8454143
+  },
+  "totalParts": 11,
+  "partNames": [
+    "Hull_Base",
+    "Bow_Wedge",
+    "Tank_1",
+    "Tank_2",
+    "Tank_3",
+    "Tank_4",
+    "Superstructure_Main",
+    "Bridge_Windows",
+    "Funnel",
+    "Radar_Dome",
+    "Hull_Bottom_Dark"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome"
+  ]
+}

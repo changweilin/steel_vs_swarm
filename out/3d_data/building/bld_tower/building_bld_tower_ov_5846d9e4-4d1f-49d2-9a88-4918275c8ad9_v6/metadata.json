@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_tower_ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9_v6",
+  "key": "building/bld_tower_ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9_fdb4d5aa_v6",
+  "family": "building",
+  "subpart": "bld_tower",
+  "style": "Art Deco Skyscraper",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the iconic Art Deco skyscraper's stepped setbacks, vertical piers, and illuminated crown. The main tower features multiple tiers of setbacks with vertical window strips modeled as glassHex boxes, framed by facadeHex piers. The crown is capped with a decorative polygonal prism structure. The base and lower tiers are fully enclosed to prevent hollow gaps, and the rear side is symmetrically mirrored to ensure a complete 3D volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_tower/ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_tower\\ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9~0.png",
+  "created_at": "2026-08-21T07:08:30.446Z",
+  "bounds": {
+    "min": [
+      -20.25,
+      0,
+      -20
+    ],
+    "max": [
+      20.25,
+      126.5,
+      20
+    ],
+    "size": [
+      40.5,
+      126.5,
+      40
+    ],
+    "rMax": 28.462,
+    "triangles": 416,
+    "vertices": 256
+  },
+  "spec": {
+    "style": "Art Deco Skyscraper"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_strata_ov_deb2f87f-fb18-40ae-b47c-2447e06afa96_v6",
+  "key": "rock/strata_ov_deb2f87f-fb18-40ae-b47c-2447e06afa96_6a31614e_v6",
+  "family": "rock",
+  "subpart": "strata",
+  "style": "geological_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully captured the soaring columnar monolithic sandstone formation with jagged strata, heavy lower base, and overhanging layered top mass.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/strata/ov_deb2f87f-fb18-40ae-b47c-2447e06afa96.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\strata\\ov_deb2f87f-fb18-40ae-b47c-2447e06afa96~0.png",
+  "created_at": "2026-08-20T16:28:13.928Z",
+  "bounds": {
+    "min": [
+      -3.0331,
+      0,
+      -3.1354
+    ],
+    "max": [
+      3.4705,
+      16.561,
+      2.7909
+    ],
+    "size": [
+      6.504,
+      16.561,
+      5.926
+    ],
+    "rMax": 4.453,
+    "triangles": 176,
+    "vertices": 106
+  },
+  "spec": {
+    "style": "geological_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

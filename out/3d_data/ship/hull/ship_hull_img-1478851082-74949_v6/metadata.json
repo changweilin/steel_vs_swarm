@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_img-1478851082-74949_v6",
+  "key": "ship/hull_img-1478851082-74949_5e21cd86_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern luxury motor yacht",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the sleek, aerodynamic hull shape using a combination of wedges and boxes. The teak deck is represented by a central box, and the cockpit area is recessed with glass elements. The hull's blue metallic finish and the contrast with the wooden deck are represented by the color palette. Symmetry is maintained throughout the hull and superstructure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/img-1478851082-74949.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\img-1478851082-74949~0.png",
+  "created_at": "2026-08-20T16:14:11.468Z",
+  "bounds": {
+    "min": [
+      -1.75,
+      -0.1,
+      0
+    ],
+    "max": [
+      1.75,
+      1.8,
+      8
+    ],
+    "size": [
+      3.5,
+      1.9,
+      8
+    ],
+    "rMax": 8.189,
+    "triangles": 132,
+    "vertices": 82
+  },
+  "spec": {
+    "style": "modern luxury motor yacht"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

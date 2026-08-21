@@ -1,0 +1,48 @@
+{
+  "id": "vehicle_bike_110296IA-M009_L",
+  "sourceImage": "vehicle/bike/110296IA-M009_L",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 20455,
+    "facadeHex": 20455,
+    "baseHex": 21087,
+    "accentHex": 14256673,
+    "darkHex": 21087,
+    "brightHex": 13421772,
+    "glassHex": 3494794
+  },
+  "totalParts": 25,
+  "partNames": [
+    "front_tire",
+    "rear_tire",
+    "front_wheel_rim",
+    "rear_wheel_rim",
+    "down_tube",
+    "top_tube",
+    "seat_tube",
+    "head_tube",
+    "rear_chainstay",
+    "rear_seatstay",
+    "front_fork_upper",
+    "front_fork_lower",
+    "handlebar_stem",
+    "handlebar",
+    "seatpost",
+    "saddle",
+    "rear_shock",
+    "bottom_bracket_cluster",
+    "crankarm_right",
+    "chainring",
+    "cassette_rear",
+    "front_brake_rotor",
+    "rear_brake_rotor",
+    "water_bottle_cage_1",
+    "water_bottle_cage_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

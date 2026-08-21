@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3_v6",
+  "key": "rock/mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3_7dd5410e_v6",
+  "family": "rock",
+  "subpart": "mg_arch",
+  "style": "rock_arch",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the large stone arch and rocky foundations using dodecahedrons and wedges, matching the curved arch geometry and the rugged rock texture.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_arch/ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_arch\\ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3~0.png",
+  "created_at": "2026-08-20T16:23:17.889Z",
+  "bounds": {
+    "min": [
+      -4.621,
+      -0.321,
+      -1.8507
+    ],
+    "max": [
+      4.25,
+      5.3,
+      2.321
+    ],
+    "size": [
+      8.871,
+      5.621,
+      4.172
+    ],
+    "rMax": 4.978,
+    "triangles": 116,
+    "vertices": 74
+  },
+  "spec": {
+    "style": "rock_arch"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

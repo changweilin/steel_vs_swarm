@@ -1,0 +1,31 @@
+{
+  "id": "tree_gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233",
+  "sourceImage": "tree/gt_dragontree/ov_ca9ebae3-973a-4246-a370-45f7a0991233",
+  "style": "Dragon Tree (Dracaena draco) fractal canopy",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 456789,
+    "facadeHex": 887766,
+    "baseHex": 554433,
+    "accentHex": 998877,
+    "darkHex": 332211,
+    "brightHex": 15528177,
+    "glassHex": 112233
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_trunk",
+    "branch_1",
+    "branch_2",
+    "canopy_cluster_1",
+    "canopy_cluster_2",
+    "canopy_cluster_3",
+    "branch_sub_1",
+    "branch_sub_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "dodecahedron_polyhedron"
+  ]
+}

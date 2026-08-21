@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_1593571989300_v6",
+  "key": "ship/hull_1593571989300_f9faa83a_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern luxury yacht",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the Lamborghini 63 yacht's aggressive wedge-shaped hull, the sleek dark glass canopy, and the tiered aft deck structure. Symmetry is maintained for the hull and superstructure. The color palette aligns with the metallic blue, black, and glass components observed in the reference.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/1593571989300.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\1593571989300~0.png",
+  "created_at": "2026-08-20T16:05:45.861Z",
+  "bounds": {
+    "min": [
+      -2.25,
+      -0.25,
+      -10.25
+    ],
+    "max": [
+      2.25,
+      2.2,
+      9
+    ],
+    "size": [
+      4.5,
+      2.45,
+      19.25
+    ],
+    "rMax": 10.494,
+    "triangles": 104,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "modern luxury yacht"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_acunit_wc_8061724",
+  "sourceImage": "building/acunit/wc_8061724",
+  "style": "building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4350311,
+    "facadeHex": 14606046,
+    "baseHex": 6579300,
+    "accentHex": 8540476,
+    "darkHex": 2631720,
+    "brightHex": 13816530,
+    "glassHex": 2642595
+  },
+  "totalParts": 17,
+  "partNames": [
+    "Wall_Base_Concrete",
+    "Wall_Upper_Siding",
+    "Roof_Overhang_Wedge",
+    "Platform_Base_Box",
+    "Support_Post_Left",
+    "Support_Post_Right",
+    "AC_Unit_Main_Body",
+    "AC_Unit_Grille",
+    "AC_Unit_Fan_Blade_1",
+    "AC_Unit_Logo_Badge",
+    "Wooden_Fence_Panel",
+    "Balcony_Rail_Base",
+    "Balcony_Pillar_1",
+    "Balcony_Pillar_2",
+    "Balcony_Pillar_3",
+    "Utility_Box_Wall",
+    "Utility_Meter"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

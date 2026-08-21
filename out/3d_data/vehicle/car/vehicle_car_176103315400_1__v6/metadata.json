@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_176103315400_1__v6",
+  "key": "vehicle/car_176103315400 (1)_250be0e2_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "automotive",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately reconstructs the rugged Toyota off-road SUV from the photo, featuring a boxy body, distinct raised roof rack with cargo boxes, iconic circular LED headlights, prominent dark armored front and rear bumpers, all-terrain tires, side mirrors, and slanted windshield.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/176103315400 (1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\176103315400 (1)~0.png",
+  "created_at": "2026-08-20T17:23:47.107Z",
+  "bounds": {
+    "min": [
+      -1.58,
+      0,
+      -2
+    ],
+    "max": [
+      1.58,
+      2.48,
+      2.4
+    ],
+    "size": [
+      3.16,
+      2.48,
+      4.4
+    ],
+    "rMax": 2.873,
+    "triangles": 1116,
+    "vertices": 622
+  },
+  "spec": {
+    "style": "automotive"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

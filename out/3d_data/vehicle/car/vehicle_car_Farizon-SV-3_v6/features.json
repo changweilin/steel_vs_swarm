@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_Farizon-SV-3",
+  "sourceImage": "vehicle/car/Farizon-SV-3",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 13816530,
+    "accentHex": 3355443,
+    "darkHex": 1644825,
+    "brightHex": 15790320,
+    "glassHex": 3368652
+  },
+  "totalParts": 15,
+  "partNames": [
+    "chassis",
+    "main_body",
+    "roof",
+    "windshield",
+    "front_grille_accent",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_mirror",
+    "right_mirror",
+    "left_front_window",
+    "right_front_window",
+    "rear_bumper",
+    "front_bumper"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

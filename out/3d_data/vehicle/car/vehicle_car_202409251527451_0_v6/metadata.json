@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_202409251527451_0_v6",
+  "key": "vehicle/car_202409251527451~0_97a1a859_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the primary white commercial truck cabin based on the front-three-quarter view, including the hood, prominent windshield with reflective shades, side mirror, headlights, bumper structure, and matching symmetric side geometry adhering strictly to vehicle 3D modeling rules.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/202409251527451.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\202409251527451~0.png",
+  "created_at": "2026-08-20T17:25:01.228Z",
+  "bounds": {
+    "min": [
+      -1.5,
+      0.05,
+      -1.1
+    ],
+    "max": [
+      1.5,
+      2.225,
+      2.07
+    ],
+    "size": [
+      3,
+      2.175,
+      3.17
+    ],
+    "rMax": 2.556,
+    "triangles": 336,
+    "vertices": 218
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

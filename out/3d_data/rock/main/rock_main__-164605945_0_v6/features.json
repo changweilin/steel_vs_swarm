@@ -1,0 +1,35 @@
+{
+  "id": "rock_main_南犹他州巨岩山-164605945~0",
+  "sourceImage": "rock/main/南犹他州巨岩山-164605945~0",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14201198,
+    "facadeHex": 13393282,
+    "baseHex": 12217688,
+    "accentHex": 9327937,
+    "darkHex": 4602951,
+    "brightHex": 16250820,
+    "glassHex": 3824248
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_rock_foundation",
+    "main_cliff_body",
+    "left_upper_buttress",
+    "center_peak_block",
+    "right_sloping_cliff",
+    "vertical_stratum_1",
+    "vertical_stratum_2",
+    "vertical_stratum_3",
+    "eroded_boulder_overlay_left",
+    "eroded_boulder_overlay_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "dodecahedron_polyhedron",
+    "polygonal_prism",
+    "icosahedron_polyhedron"
+  ]
+}

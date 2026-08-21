@@ -1,0 +1,41 @@
+{
+  "id": "vehicle_car_4590905_001_M",
+  "sourceImage": "vehicle/car/4590905_001_M",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 255,
+    "facadeHex": 33947,
+    "baseHex": 3355443,
+    "accentHex": 16711680,
+    "darkHex": 1052688,
+    "brightHex": 15790320,
+    "glassHex": 49407
+  },
+  "totalParts": 19,
+  "partNames": [
+    "chassis",
+    "cabin_body",
+    "windshield",
+    "left_window",
+    "right_window",
+    "front_bumper",
+    "bull_bar",
+    "license_plate",
+    "left_headlight",
+    "right_headlight",
+    "grille_center",
+    "left_mirror",
+    "right_mirror",
+    "cargo_bed",
+    "cargo_floor_inner",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel",
+    "rear_right_wheel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

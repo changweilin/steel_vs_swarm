@@ -1,0 +1,40 @@
+{
+  "id": "building_mass__3D_-02-scaled_v6",
+  "key": "building/mass_柑竹時尚華廈3D建築外觀浮-02-scaled_43b6a793_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_residential_building",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The building is reconstructed as a solid 3D mass with a central core and symmetrical side wings. The balcony structures and white frame elements are modeled as protruding boxes to ensure depth. The roof frame is represented by a box structure. All windows and balcony glass are assigned the glassHex color. The rear and side facades are mirrored to ensure a complete 360-degree structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/柑竹時尚華廈3D建築外觀浮-02-scaled.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\柑竹時尚華廈3D建築外觀浮-02-scaled~0.png",
+  "created_at": "2026-08-21T09:38:13.273Z",
+  "bounds": {
+    "min": [
+      -6.4,
+      -0.25,
+      -5.2
+    ],
+    "max": [
+      6.4,
+      30.5,
+      5.45
+    ],
+    "size": [
+      12.8,
+      30.75,
+      10.65
+    ],
+    "rMax": 8.406,
+    "triangles": 144,
+    "vertices": 96
+  },
+  "spec": {
+    "style": "modern_residential_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

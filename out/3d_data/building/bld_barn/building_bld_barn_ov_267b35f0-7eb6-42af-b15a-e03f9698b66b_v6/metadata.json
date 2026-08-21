@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6",
+  "key": "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_725f9c8f_v6",
+  "family": "building",
+  "subpart": "bld_barn",
+  "style": "building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D reconstruction accurately captures the main red barn structure with its distinct dual-gabled roof sections, stone foundation base, and attached smaller outbuilding. The roofs use correct wedge geometry sloping downward to the outside. Windows and doors are properly layered as individual components using glassHex and accentHex. The overall proportions and colors closely match the pastoral farm scene in the photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_barn\\ov_267b35f0-7eb6-42af-b15a-e03f9698b66b~0.png",
+  "created_at": "2026-08-20T17:24:25.285Z",
+  "bounds": {
+    "min": [
+      -6.1,
+      0,
+      -2.7
+    ],
+    "max": [
+      5.7,
+      5.5,
+      3.75
+    ],
+    "size": [
+      11.8,
+      5.5,
+      6.45
+    ],
+    "rMax": 6.823,
+    "triangles": 180,
+    "vertices": 122
+  },
+  "spec": {
+    "style": "building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

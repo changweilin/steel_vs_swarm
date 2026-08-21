@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_61bc69c388977_v6",
+  "key": "rock/main_61bc69c388977_ebe34c10_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "nature_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D rock pillar accurately captures the massive layered sedimentary structure, irregular protruding base, and grassy top plateau. Layered boxes and polygonal prisms were utilized to create the characteristic horizontal strata without overlapping artifacts.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/61bc69c388977.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\61bc69c388977~0.png",
+  "created_at": "2026-08-20T16:17:19.782Z",
+  "bounds": {
+    "min": [
+      -3.2,
+      1.5,
+      -2.8342
+    ],
+    "max": [
+      3.6424,
+      18.4,
+      2.8476
+    ],
+    "size": [
+      6.842,
+      16.9,
+      5.682
+    ],
+    "rMax": 4.623,
+    "triangles": 136,
+    "vertices": 84
+  },
+  "spec": {
+    "style": "nature_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

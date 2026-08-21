@@ -1,0 +1,34 @@
+{
+  "id": "rock_tor_wc_12044342",
+  "sourceImage": "rock/tor/wc_12044342",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 9868950,
+    "baseHex": 4605510,
+    "accentHex": 12500670,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 4016194
+  },
+  "totalParts": 10,
+  "partNames": [
+    "ground_base_rock",
+    "main_stack_layer1",
+    "main_stack_layer2",
+    "main_stack_summit",
+    "left_buttress_rock",
+    "left_upper_rock",
+    "right_flank_rock",
+    "right_summit_rock",
+    "foreground_detritus_1",
+    "foreground_detritus_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

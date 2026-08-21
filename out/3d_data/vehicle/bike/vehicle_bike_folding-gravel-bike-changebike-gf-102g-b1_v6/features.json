@@ -1,0 +1,39 @@
+{
+  "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1",
+  "sourceImage": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1",
+  "style": "vehicle/bike",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4310574,
+    "facadeHex": 4310574,
+    "baseHex": 2041133,
+    "accentHex": 14693179,
+    "darkHex": 2041133,
+    "brightHex": 14540253,
+    "glassHex": 3033501
+  },
+  "totalParts": 16,
+  "partNames": [
+    "front_wheel_tire",
+    "rear_wheel_tire",
+    "front_wheel_rim",
+    "rear_wheel_rim",
+    "front_fork",
+    "down_tube",
+    "top_tube",
+    "seat_tube",
+    "seat_post",
+    "saddle",
+    "head_tube",
+    "handlebar_stem",
+    "handlebar",
+    "chain_stay",
+    "seat_stay",
+    "bottom_bracket"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

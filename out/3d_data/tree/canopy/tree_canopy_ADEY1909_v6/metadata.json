@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ADEY1909_v6",
+  "key": "tree/canopy_ADEY1909_b76f23be_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 88,
+  "similarityReview": "The model accurately captures the dense, wide-spreading canopy structure using a large ellipsoid and multiple supporting sub-ellipsoids. The trunk system is modeled with multiple cylinders branching out from the base to support the canopy, reflecting the natural growth pattern seen in the photo. The color palette adheres to the 7-Zone system, with roofHex for the canopy and facadeHex for the trunk.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/ADEY1909.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\ADEY1909~0.png",
+  "created_at": "2026-08-20T16:21:23.255Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      0,
+      -4.2798
+    ],
+    "max": [
+      4.5,
+      6,
+      4.2798
+    ],
+    "size": [
+      9,
+      6,
+      8.56
+    ],
+    "rMax": 6.21,
+    "triangles": 604,
+    "vertices": 367
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

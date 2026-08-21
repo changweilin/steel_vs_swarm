@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2_v6",
+  "key": "building/mass_1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2_f1a51ad1_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Mediterranean Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the Mediterranean villa's multi-level massing, including the arched portico, the main gable roof, and the stepped side walls. The roof slopes are correctly oriented outwards. Glass elements are represented with the specified color palette, and the overall proportions align with the 1.8m scale reference.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2~0.png",
+  "created_at": "2026-08-21T09:50:11.802Z",
+  "bounds": {
+    "min": [
+      -9.5,
+      0,
+      -4.5
+    ],
+    "max": [
+      6.5,
+      9,
+      4.5
+    ],
+    "size": [
+      16,
+      9,
+      9
+    ],
+    "rMax": 10.512,
+    "triangles": 124,
+    "vertices": 84
+  },
+  "spec": {
+    "style": "Mediterranean Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

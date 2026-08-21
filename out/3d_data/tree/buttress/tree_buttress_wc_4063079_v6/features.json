@@ -1,0 +1,29 @@
+{
+  "id": "tree_buttress_wc_4063079",
+  "sourceImage": "tree/buttress/wc_4063079",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 450000,
+    "facadeHex": 654321,
+    "baseHex": 302010,
+    "accentHex": 889900,
+    "darkHex": 202020,
+    "brightHex": 999999,
+    "glassHex": 1976635
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "broad_leaf_branch",
+    "leaf_cluster_1",
+    "leaf_cluster_2",
+    "palm_canopy_top",
+    "right_palm_canopy",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324_v6",
+  "key": "building/mass_pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324_d6e9b897_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the multi-level modern villa structure, including the swimming pool, terrace, and glass facade. The geometric parts are aligned to ensure a closed, solid volume. The swimming pool and stairs are integrated into the base, and the glass elements are correctly colored.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324~0.png",
+  "created_at": "2026-08-21T09:06:11.603Z",
+  "bounds": {
+    "min": [
+      -4,
+      -0.1,
+      -4
+    ],
+    "max": [
+      4,
+      3.6,
+      4
+    ],
+    "size": [
+      8,
+      3.7,
+      8
+    ],
+    "rMax": 5.657,
+    "triangles": 480,
+    "vertices": 296
+  },
+  "spec": {
+    "style": "Modern Minimalist Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

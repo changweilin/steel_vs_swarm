@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_2025-porsche-carrera-t-coupe_0_v6",
+  "key": "vehicle/car_2025-porsche-carrera-t-coupe~0_2bd1fc8d_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "automotive_sportscar",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the sports car with accurate white body proportions, black aerodynamic roof details, dark alloy wheels matching the tire orientation, iconic circular headlights, side mirrors, and distinctive front bumper air intakes.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/2025-porsche-carrera-t-coupe.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\2025-porsche-carrera-t-coupe~0.png",
+  "created_at": "2026-08-20T17:25:22.064Z",
+  "bounds": {
+    "min": [
+      -1.46,
+      0.2,
+      -2.2
+    ],
+    "max": [
+      1.46,
+      1.34,
+      2.2
+    ],
+    "size": [
+      2.92,
+      1.14,
+      4.4
+    ],
+    "rMax": 2.64,
+    "triangles": 748,
+    "vertices": 470
+  },
+  "spec": {
+    "style": "automotive_sportscar"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

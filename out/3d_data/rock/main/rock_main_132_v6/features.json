@@ -1,0 +1,35 @@
+{
+  "id": "rock_main_132",
+  "sourceImage": "rock/main/132",
+  "style": "megalithic stone monument",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 10526880,
+    "facadeHex": 9868950,
+    "baseHex": 4342338,
+    "accentHex": 12566464,
+    "darkHex": 2105376,
+    "brightHex": 13421772,
+    "glassHex": 3289650
+  },
+  "totalParts": 12,
+  "partNames": [
+    "ground_plane",
+    "foreground_megalith_base",
+    "foreground_megalith_mid",
+    "foreground_megalith_top",
+    "stone_2_base",
+    "stone_2_top",
+    "stone_3_base",
+    "stone_3_top",
+    "stone_4_base",
+    "stone_4_top",
+    "stone_5_small",
+    "stone_6_distant"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

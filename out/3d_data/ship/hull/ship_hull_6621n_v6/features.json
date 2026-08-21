@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_6621n",
+  "sourceImage": "ship/hull/6621n",
+  "style": "Research Vessel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16711680,
+    "baseHex": 12632256,
+    "accentHex": 16776960,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8421631
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "superstructure",
+    "bridge_windows",
+    "mast_base",
+    "radar_dome",
+    "aft_crane_frame",
+    "lifeboat",
+    "waterline_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

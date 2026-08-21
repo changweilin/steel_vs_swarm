@@ -1,0 +1,26 @@
+{
+  "id": "tree_canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957",
+  "sourceImage": "tree/canopy/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957",
+  "style": "naturalistic_conifer",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2263808,
+    "facadeHex": 5260851,
+    "baseHex": 4020224,
+    "accentHex": 3033600,
+    "darkHex": 1315860,
+    "brightHex": 8421504,
+    "glassHex": 1976635
+  },
+  "totalParts": 3,
+  "partNames": [
+    "trunk",
+    "canopy_main",
+    "ground_patch"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "frustum_pyramid",
+    "ellipsoid_sphere"
+  ]
+}

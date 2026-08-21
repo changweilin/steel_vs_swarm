@@ -1,0 +1,35 @@
+{
+  "id": "rock_st_dolmen_ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4",
+  "sourceImage": "rock/st_dolmen/ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4",
+  "style": "ancient_megalithic_stones",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7895160,
+    "facadeHex": 9868950,
+    "baseHex": 6579300,
+    "accentHex": 11184810,
+    "darkHex": 3289650,
+    "brightHex": 13421772,
+    "glassHex": 4547839
+  },
+  "totalParts": 12,
+  "partNames": [
+    "ground_terrain",
+    "main_foreground_stone_base",
+    "main_foreground_stone_top",
+    "left_standing_stone",
+    "circle_stone_1",
+    "circle_stone_2",
+    "circle_stone_3",
+    "circle_stone_4",
+    "circle_stone_5",
+    "circle_stone_6",
+    "distant_stone_1",
+    "distant_stone_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

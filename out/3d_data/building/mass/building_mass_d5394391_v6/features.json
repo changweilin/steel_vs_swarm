@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_d5394391",
+  "sourceImage": "building/mass/d5394391",
+  "style": "modern_neoclassical_highrise",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14539737,
+    "baseHex": 11184810,
+    "accentHex": 8421504,
+    "darkHex": 2631720,
+    "brightHex": 15658734,
+    "glassHex": 4621715
+  },
+  "totalParts": 10,
+  "partNames": [
+    "tower_left_main",
+    "tower_right_main",
+    "podium_base",
+    "roof_crown_left",
+    "roof_crown_right",
+    "window_grid_left",
+    "window_grid_right",
+    "balcony_trim_left",
+    "balcony_trim_right",
+    "entrance_arch"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

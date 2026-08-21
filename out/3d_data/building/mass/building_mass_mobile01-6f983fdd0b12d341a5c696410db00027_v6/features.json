@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_mobile01-6f983fdd0b12d341a5c696410db00027",
+  "sourceImage": "building/mass/mobile01-6f983fdd0b12d341a5c696410db00027",
+  "style": "modern_narrow_townhouse",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14474460,
+    "facadeHex": 15790320,
+    "baseHex": 10066329,
+    "accentHex": 8421504,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8956385
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_body",
+    "roof_top_structure",
+    "balcony_1",
+    "window_floor_2",
+    "window_floor_3",
+    "window_floor_4",
+    "entrance_door",
+    "side_wall_trim",
+    "ground_plane"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_roofcap_ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff_v6",
+  "key": "building/roofcap_ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff_5a40a9ef_v6",
+  "family": "building",
+  "subpart": "roofcap",
+  "style": "historic_commercial_building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the two-story white facade building with its distinct grid of windows and ground-floor storefronts. The roof cornice and structural proportions are aligned with the perspective. The rear brick building is represented as a secondary mass to provide context and depth, ensuring a closed 3D volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/roofcap/ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\roofcap\\ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff~0.png",
+  "created_at": "2026-08-21T09:18:17.466Z",
+  "bounds": {
+    "min": [
+      -7.5,
+      0,
+      -17.5
+    ],
+    "max": [
+      20,
+      16,
+      5.3033
+    ],
+    "size": [
+      27.5,
+      16,
+      22.803
+    ],
+    "rMax": 20.691,
+    "triangles": 124,
+    "vertices": 82
+  },
+  "spec": {
+    "style": "historic_commercial_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

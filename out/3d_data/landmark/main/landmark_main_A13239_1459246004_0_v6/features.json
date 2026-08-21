@@ -1,0 +1,33 @@
+{
+  "id": "landmark_main_A13239_1459246004_0",
+  "sourceImage": "landmark/main/A13239_1459246004_0",
+  "style": "archaeological_landmark",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13421772,
+    "facadeHex": 14474460,
+    "baseHex": 12369084,
+    "accentHex": 11184810,
+    "darkHex": 6710886,
+    "brightHex": 16777215,
+    "glassHex": 8421504
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_level",
+    "level_2",
+    "level_3",
+    "level_4",
+    "level_5",
+    "level_6",
+    "level_7",
+    "level_8",
+    "top_temple",
+    "staircase_front"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "wedge"
+  ]
+}

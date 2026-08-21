@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_欣榮文創股份有限公司-隘興段_0",
+  "sourceImage": "building/mass/欣榮文創股份有限公司-隘興段_0",
+  "style": "Modern High-rise Residential",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 5592405,
+    "baseHex": 2236962,
+    "accentHex": 11184810,
+    "darkHex": 1118481,
+    "brightHex": 14540253,
+    "glassHex": 8956380
+  },
+  "totalParts": 14,
+  "partNames": [
+    "MainTowerBody",
+    "RoofFeature",
+    "BalconyLayer_1",
+    "BalconyGlass_1",
+    "BalconyLayer_2",
+    "BalconyGlass_2",
+    "BalconyLayer_3",
+    "BalconyGlass_3",
+    "BalconyLayer_4",
+    "BalconyGlass_4",
+    "BalconyLayer_5",
+    "BalconyGlass_5",
+    "GroundFloorGlass",
+    "BasePlinth"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

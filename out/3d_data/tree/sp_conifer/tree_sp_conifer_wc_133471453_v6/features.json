@@ -1,0 +1,28 @@
+{
+  "id": "tree_sp_conifer_wc_133471453",
+  "sourceImage": "tree/sp_conifer/wc_133471453",
+  "style": "natural_conifer",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3625216,
+    "facadeHex": 5324832,
+    "baseHex": 2629632,
+    "accentHex": 4013312,
+    "darkHex": 1315840,
+    "brightHex": 11184810,
+    "glassHex": 8421504
+  },
+  "totalParts": 5,
+  "partNames": [
+    "trunk",
+    "crown_bottom",
+    "crown_middle",
+    "crown_top",
+    "lower_branch"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "frustum_pyramid",
+    "pyramid"
+  ]
+}

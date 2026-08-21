@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_9__v6",
+  "key": "building/mass_images (9)_c9a02b1c_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_minimalist_villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the two-story modern villa structure, including the cantilevered upper floor, glass curtain walls, and the wooden deck base. All parts are tightly joined, and the glass elements are correctly colored. The back and side walls were mirrored to ensure a complete 360-degree structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (9).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (9)~0.png",
+  "created_at": "2026-08-21T08:40:11.512Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -4
+    ],
+    "max": [
+      4,
+      6.3,
+      4
+    ],
+    "size": [
+      8,
+      6.3,
+      8
+    ],
+    "rMax": 5.657,
+    "triangles": 596,
+    "vertices": 371
+  },
+  "spec": {
+    "style": "modern_minimalist_villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

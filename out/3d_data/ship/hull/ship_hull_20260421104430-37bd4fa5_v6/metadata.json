@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_20260421104430-37bd4fa5_v6",
+  "key": "ship/hull_20260421104430-37bd4fa5_86569231_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "industrial_cargo_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the primary hull, the tiered container stacks, and the central superstructure. The bridge windows are represented with glassHex, and the overall proportions reflect a standard container ship. The smoke stack and mast are included to maintain structural integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/20260421104430-37bd4fa5.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\20260421104430-37bd4fa5~0.png",
+  "created_at": "2026-08-20T16:09:34.182Z",
+  "bounds": {
+    "min": [
+      -75,
+      0,
+      -12.5
+    ],
+    "max": [
+      85,
+      31,
+      12.5
+    ],
+    "size": [
+      160,
+      31,
+      25
+    ],
+    "rMax": 85.914,
+    "triangles": 306,
+    "vertices": 188
+  },
+  "spec": {
+    "style": "industrial_cargo_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

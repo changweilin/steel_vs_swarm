@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_70248068_1006_v6",
+  "key": "tree/canopy_70248068_1006_ae322c38_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_baobab_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model successfully captures the massive, bulbous trunk of the Baobab tree using a conical_frustum, with a wide, sprawling canopy represented by multiple ellipsoid_sphere components to mimic the complex, layered foliage. The scale is set to reflect the immense size of the tree relative to the people at the base. The color palette adheres to the 7-Zone system, using facadeHex for the trunk and roofHex for the canopy.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/70248068_1006.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\70248068_1006~0.png",
+  "created_at": "2026-08-20T16:20:00.188Z",
+  "bounds": {
+    "min": [
+      -7,
+      -0.3,
+      -5.7063
+    ],
+    "max": [
+      7,
+      13,
+      5.7063
+    ],
+    "size": [
+      14,
+      13.3,
+      11.413
+    ],
+    "rMax": 9.031,
+    "triangles": 784,
+    "vertices": 474
+  },
+  "spec": {
+    "style": "natural_baobab_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

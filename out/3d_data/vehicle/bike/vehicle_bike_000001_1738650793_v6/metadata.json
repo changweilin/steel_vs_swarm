@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_000001_1738650793_v6",
+  "key": "vehicle/bike_000001_1738650793_e8f230ed_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "road_bicycle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The bicycle is modeled with high fidelity, capturing the diamond frame geometry, drop handlebars, and dual-wheel configuration. All structural tubes are represented as cylinders, and the drivetrain and wheels are positioned accurately to match the reference image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/000001_1738650793.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\000001_1738650793.jpg",
+  "created_at": "2026-08-20T15:58:44.331Z",
+  "bounds": {
+    "min": [
+      -1.275,
+      0.24,
+      -0.3566
+    ],
+    "max": [
+      1.275,
+      1.175,
+      0.3566
+    ],
+    "size": [
+      2.55,
+      0.935,
+      0.713
+    ],
+    "rMax": 1.324,
+    "triangles": 832,
+    "vertices": 483
+  },
+  "spec": {
+    "style": "road_bicycle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

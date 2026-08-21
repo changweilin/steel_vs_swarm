@@ -1,0 +1,32 @@
+{
+  "id": "rock_mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3",
+  "sourceImage": "rock/mg_arch/ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3",
+  "style": "rock_arch",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7237230,
+    "facadeHex": 6579300,
+    "baseHex": 3947580,
+    "accentHex": 8553090,
+    "darkHex": 2631720,
+    "brightHex": 11842740,
+    "glassHex": 3355443
+  },
+  "totalParts": 8,
+  "partNames": [
+    "left_abutment",
+    "arch_segment_1",
+    "arch_segment_2",
+    "arch_segment_3",
+    "right_abutment",
+    "rock_boulder_1",
+    "rock_boulder_2",
+    "arch_top_surface"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

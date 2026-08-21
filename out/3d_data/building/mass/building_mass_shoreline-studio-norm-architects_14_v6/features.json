@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_shoreline-studio-norm-architects_14",
+  "sourceImage": "building/mass/shoreline-studio-norm-architects_14",
+  "style": "Modern Thatch-Roof Pavilion",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 5523456,
+    "facadeHex": 8543210,
+    "baseHex": 335544,
+    "accentHex": 112233,
+    "darkHex": 222222,
+    "brightHex": 15658734,
+    "glassHex": 12345678
+  },
+  "totalParts": 9,
+  "partNames": [
+    "MainBuildingBody",
+    "ThatchRoof",
+    "SkylightFrame",
+    "SkylightGlass",
+    "FrontGlassFacade",
+    "WoodenWallSection",
+    "RearWall",
+    "LeftGlassWall",
+    "RightGlassWall"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

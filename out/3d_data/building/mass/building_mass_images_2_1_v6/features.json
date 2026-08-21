@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_images (2)~1",
+  "sourceImage": "building/mass/images (2)~1",
+  "style": "Modern Minimalist Residential Building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 12632256,
+    "accentHex": 8421504,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 10079487
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_block",
+    "rear_tower",
+    "front_balcony_slab",
+    "eave_1",
+    "eave_2",
+    "front_window_glass",
+    "skylight_frame",
+    "skylight_glass",
+    "water_tank_1",
+    "water_tank_2",
+    "car_body",
+    "railing_front"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_images_rock_v6",
+  "key": "rock/main_images rock_a92d6aa3_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D rock utilizes a combination of ellipsoid spheres and faceted polyhedra to capture the flat, organic, rounded river-stone shape and layered mineral textures observed in the reference photo. Contact with the ground is firmly anchored at y = 0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/images rock.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\images rock~0.png",
+  "created_at": "2026-08-20T16:22:16.402Z",
+  "bounds": {
+    "min": [
+      -1.15,
+      -0.1,
+      -0.856
+    ],
+    "max": [
+      1.15,
+      0.8641,
+      0.856
+    ],
+    "size": [
+      2.3,
+      0.964,
+      1.712
+    ],
+    "rMax": 1.434,
+    "triangles": 544,
+    "vertices": 335
+  },
+  "spec": {
+    "style": "natural_rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

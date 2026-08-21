@@ -1,0 +1,37 @@
+{
+  "id": "ship_hull_s11_1667405441519",
+  "sourceImage": "ship/hull/s11_1667405441519",
+  "style": "modern_catamaran_tour_boat",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 3426654,
+    "accentHex": 16711680,
+    "darkHex": 3355443,
+    "brightHex": 12632256,
+    "glassHex": 8421631
+  },
+  "totalParts": 12,
+  "partNames": [
+    "hull_left",
+    "hull_right",
+    "hull_base_left",
+    "hull_base_right",
+    "main_deck",
+    "bow_wedge",
+    "bridge_structure",
+    "bridge_window_front",
+    "roof_canopy",
+    "life_ring",
+    "radar_dome",
+    "mast"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "torus_ring",
+    "hemisphere_dome",
+    "cylinder"
+  ]
+}

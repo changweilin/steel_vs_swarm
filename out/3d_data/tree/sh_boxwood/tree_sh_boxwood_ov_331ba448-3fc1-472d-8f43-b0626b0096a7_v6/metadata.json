@@ -1,0 +1,40 @@
+{
+  "id": "tree_sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7_v6",
+  "key": "tree/sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7_0e771d35_v6",
+  "family": "tree",
+  "subpart": "sh_boxwood",
+  "style": "botanical_shrub",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the dense, rounded, and slightly irregular form of the boxwood shrub. By using multiple overlapping ellipsoid_sphere components, the natural, organic volume of the foliage is well-represented. The base is anchored at y=0, and the color palette reflects the deep green foliage and dark, shadowed interior of the shrub.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sh_boxwood/ov_331ba448-3fc1-472d-8f43-b0626b0096a7.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sh_boxwood\\ov_331ba448-3fc1-472d-8f43-b0626b0096a7~0.png",
+  "created_at": "2026-08-20T16:14:24.319Z",
+  "bounds": {
+    "min": [
+      -1,
+      -0.4,
+      -0.6657
+    ],
+    "max": [
+      1.2,
+      1.2,
+      0.6755
+    ],
+    "size": [
+      2.2,
+      1.6,
+      1.341
+    ],
+    "rMax": 1.377,
+    "triangles": 672,
+    "vertices": 414
+  },
+  "spec": {
+    "style": "botanical_shrub"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

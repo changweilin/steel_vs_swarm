@@ -1,0 +1,40 @@
+{
+  "id": "landmark_main_images_tc_v6",
+  "key": "landmark/main_images tc_e94daa46_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "Biophilic Twisted Skyscraper",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model captures the iconic double-helix twisted geometry of the Tao Zhu Yin Yuan tower. The central core is represented by a tall cylinder, with stacked floor plates modeled as polygonal prisms that rotate slightly to create the twist. The glass facade and greenery-filled balconies are represented by layered box and prism components. The top structure is modeled with a central core and surrounding roof canopy elements.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/images tc.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\main\\images tc~0.png",
+  "created_at": "2026-08-20T17:39:09.494Z",
+  "bounds": {
+    "min": [
+      -20,
+      0,
+      -20
+    ],
+    "max": [
+      20,
+      102.5,
+      36.05
+    ],
+    "size": [
+      40,
+      102.5,
+      56.05
+    ],
+    "rMax": 41.226,
+    "triangles": 508,
+    "vertices": 272
+  },
+  "spec": {
+    "style": "Biophilic Twisted Skyscraper"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

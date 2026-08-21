@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_v6",
+  "key": "ship/hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_f749b0ad_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The cruise ship model accurately captures the tiered superstructure, the distinct bridge glass section, and the overall hull curvature. The stern and bow proportions are maintained, and the use of glassHex for windows and darkHex for lower hull details provides a realistic appearance. The symmetry is enforced for the hull and superstructure components.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\royal-caribbean-explorer-of-the-seas-01-eG_-WK3~0.png",
+  "created_at": "2026-08-20T16:20:58.176Z",
+  "bounds": {
+    "min": [
+      -15.35,
+      -1,
+      -75
+    ],
+    "max": [
+      15.35,
+      53,
+      85
+    ],
+    "size": [
+      30.7,
+      54,
+      160
+    ],
+    "rMax": 86.375,
+    "triangles": 274,
+    "vertices": 170
+  },
+  "spec": {
+    "style": "cruise_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

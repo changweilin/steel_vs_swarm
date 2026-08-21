@@ -1,0 +1,32 @@
+{
+  "id": "landmark_main_Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008",
+  "sourceImage": "landmark/main/Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008",
+  "style": "neoclassical_monument",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 14540253,
+    "baseHex": 11184810,
+    "accentHex": 16766720,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8438271
+  },
+  "totalParts": 8,
+  "partNames": [
+    "base_pedestal",
+    "pedestal_cap",
+    "obelisk_shaft",
+    "pyramidion_tip",
+    "decorative_fence_left",
+    "decorative_fence_right",
+    "lamp_post_left",
+    "lamp_post_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "pyramid",
+    "cylinder"
+  ]
+}

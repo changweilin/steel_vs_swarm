@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_images_6__v6",
+  "key": "rock/main_images (6)_a9b25de9_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock_and_foliage",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The generated 3D rock structure closely matches the asymmetrical, moss-covered boulder shown in the reference image, complete with faceted polyhedron rock chunks and protruding grassy vegetation clusters on top.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/images (6).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\images (6)~0.png",
+  "created_at": "2026-08-20T16:21:34.536Z",
+  "bounds": {
+    "min": [
+      -1.4875,
+      -0.4042,
+      -0.8513
+    ],
+    "max": [
+      1.0028,
+      1.45,
+      0.8513
+    ],
+    "size": [
+      2.49,
+      1.854,
+      1.703
+    ],
+    "rMax": 1.714,
+    "triangles": 324,
+    "vertices": 193
+  },
+  "spec": {
+    "style": "rock_and_foliage"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

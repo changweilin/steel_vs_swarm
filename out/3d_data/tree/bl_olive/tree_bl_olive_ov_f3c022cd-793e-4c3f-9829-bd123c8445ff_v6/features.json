@@ -1,0 +1,33 @@
+{
+  "id": "tree_bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff",
+  "sourceImage": "tree/bl_olive/ov_f3c022cd-793e-4c3f-9829-bd123c8445ff",
+  "style": "historical_botanical_reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 5546036,
+    "facadeHex": 7825478,
+    "baseHex": 12367540,
+    "accentHex": 16768340,
+    "darkHex": 2302302,
+    "brightHex": 15790320,
+    "glassHex": 4567890
+  },
+  "totalParts": 9,
+  "partNames": [
+    "stone_base_wall",
+    "main_trunk_base",
+    "main_trunk_upper",
+    "canopy_main",
+    "canopy_left_branch",
+    "canopy_right_branch",
+    "background_cypress_left",
+    "background_cypress_right",
+    "fence_segment"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "ellipsoid_sphere",
+    "frustum_pyramid"
+  ]
+}

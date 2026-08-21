@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_GettyImages-630597388-compressor_v6",
+  "key": "ship/hull_GettyImages-630597388-compressor_9babfa3d_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "military_aircraft_carrier",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the Liaoning aircraft carrier's hull, flight deck, and island superstructure. The bow wedge is correctly angled, and the island structure includes the bridge and radar masts. Symmetry is maintained for the hull and deck features. Minor details like aircraft on deck are represented as simplified boxes to maintain structural integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/GettyImages-630597388-compressor.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\GettyImages-630597388-compressor~0.png",
+  "created_at": "2026-08-20T16:13:49.049Z",
+  "bounds": {
+    "min": [
+      -15,
+      -2.5,
+      -150
+    ],
+    "max": [
+      35,
+      28.5,
+      180
+    ],
+    "size": [
+      50,
+      31,
+      330
+    ],
+    "rMax": 183.371,
+    "triangles": 294,
+    "vertices": 180
+  },
+  "spec": {
+    "style": "military_aircraft_carrier"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "rock_main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243",
+  "sourceImage": "rock/main/pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8550742,
+    "facadeHex": 11182235,
+    "baseHex": 4606259,
+    "accentHex": 6512169,
+    "darkHex": 2631720,
+    "brightHex": 13816530,
+    "glassHex": 3290183
+  },
+  "totalParts": 7,
+  "partNames": [
+    "rock_base",
+    "rock_middle_bulk",
+    "rock_top_peak",
+    "rock_facet_left",
+    "rock_facet_right_shadow",
+    "moss_crevice_1",
+    "moss_crevice_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "box"
+  ]
+}

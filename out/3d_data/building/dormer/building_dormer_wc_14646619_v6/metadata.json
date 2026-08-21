@@ -1,0 +1,40 @@
+{
+  "id": "building_dormer_wc_14646619_v6",
+  "key": "building/dormer_wc_14646619_ae54ecc3_v6",
+  "family": "building",
+  "subpart": "dormer",
+  "style": "architectural_dormer",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The dormer structure is accurately reconstructed with correct roof pitch, window framing, and siding panels. The geometry follows the specified rules for outward-sloping eaves and tight component integration. The dormer roof is modeled as a wedge to match the slope, and the window is set slightly forward to avoid Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/dormer/wc_14646619.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\dormer\\wc_14646619~0.png",
+  "created_at": "2026-08-21T07:44:16.495Z",
+  "bounds": {
+    "min": [
+      -2,
+      -0.1,
+      -2
+    ],
+    "max": [
+      2,
+      1.9,
+      2
+    ],
+    "size": [
+      4,
+      2,
+      4
+    ],
+    "rMax": 2.828,
+    "triangles": 104,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "architectural_dormer"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

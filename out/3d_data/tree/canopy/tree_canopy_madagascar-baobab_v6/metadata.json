@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_madagascar-baobab_v6",
+  "key": "tree/canopy_madagascar-baobab_e1b30474_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_botanical",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The baobab tree is reconstructed using a large conical_frustum for the massive trunk and a flattened ellipsoid_sphere for the characteristic wide, sparse canopy. The proportions reflect the iconic 'bottle' shape of the Adansonia grandidieri. The base is anchored at y=0, and the canopy is positioned at the appropriate height to match the visual reference.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/madagascar-baobab.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\madagascar-baobab~0.png",
+  "created_at": "2026-08-20T17:01:33.904Z",
+  "bounds": {
+    "min": [
+      -5.5,
+      -0.3,
+      -5.2308
+    ],
+    "max": [
+      5.5,
+      13,
+      5.2308
+    ],
+    "size": [
+      11,
+      13.3,
+      10.462
+    ],
+    "rMax": 7.59,
+    "triangles": 336,
+    "vertices": 193
+  },
+  "spec": {
+    "style": "natural_botanical"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

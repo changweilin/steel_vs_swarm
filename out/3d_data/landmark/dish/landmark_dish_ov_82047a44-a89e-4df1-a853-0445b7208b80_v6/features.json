@@ -1,0 +1,31 @@
+{
+  "id": "landmark_dish_ov_82047a44-a89e-4df1-a853-0445b7208b80",
+  "sourceImage": "landmark/dish/ov_82047a44-a89e-4df1-a853-0445b7208b80",
+  "style": "industrial_telecommunications",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14211288,
+    "baseHex": 10526880,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 15658734,
+    "glassHex": 8438271
+  },
+  "totalParts": 8,
+  "partNames": [
+    "dish_left_reflector",
+    "dish_center_reflector",
+    "dish_right_reflector",
+    "support_pole_right",
+    "feed_horn_right",
+    "support_truss_1",
+    "roof_base_platform",
+    "safety_railing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "box"
+  ]
+}

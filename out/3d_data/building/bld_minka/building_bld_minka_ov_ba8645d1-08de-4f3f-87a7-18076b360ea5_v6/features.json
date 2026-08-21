@@ -1,0 +1,46 @@
+{
+  "id": "building_bld_minka_ov_ba8645d1-08de-4f3f-87a7-18076b360ea5",
+  "sourceImage": "building/bld_minka/ov_ba8645d1-08de-4f3f-87a7-18076b360ea5",
+  "style": "bld_minka",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 10055748,
+    "facadeHex": 9134148,
+    "baseHex": 5585444,
+    "accentHex": 11038544,
+    "darkHex": 2825752,
+    "brightHex": 15061150,
+    "glassHex": 1125160
+  },
+  "totalParts": 22,
+  "partNames": [
+    "ground_platform",
+    "cottage_base",
+    "main_cabin_walls",
+    "front_door",
+    "front_door_glass",
+    "side_window_left",
+    "side_window_right",
+    "roof_lower_fringe",
+    "roof_upper_dome",
+    "roof_top_cap",
+    "sign_post_left",
+    "sign_post_right",
+    "artists_cottage_signboard",
+    "signboard_text_plate",
+    "veranda_pillar_fl",
+    "veranda_pillar_fr",
+    "veranda_pillar_bl",
+    "veranda_pillar_br",
+    "front_fence_left",
+    "front_fence_right",
+    "fence_gate_left",
+    "fence_gate_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "pyramid",
+    "cylinder"
+  ]
+}

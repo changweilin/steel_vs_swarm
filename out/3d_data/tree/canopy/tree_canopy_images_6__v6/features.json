@@ -1,0 +1,39 @@
+{
+  "id": "tree_canopy_images (6)",
+  "sourceImage": "tree/canopy/images (6)",
+  "style": "bonsai tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7444319,
+    "facadeHex": 8546132,
+    "baseHex": 6116429,
+    "accentHex": 9414532,
+    "darkHex": 3949356,
+    "brightHex": 11842740,
+    "glassHex": 3236761
+  },
+  "totalParts": 13,
+  "partNames": [
+    "ground_rock_base",
+    "rock_detail_1",
+    "rock_detail_2",
+    "trunk_lower_base",
+    "trunk_twist_curve",
+    "trunk_mid_arch",
+    "trunk_upper_spread",
+    "branch_left",
+    "branch_right",
+    "foliage_cluster_left",
+    "foliage_cluster_center",
+    "foliage_cluster_right",
+    "foliage_top_pinnacle"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere",
+    "frustum_pyramid"
+  ]
+}

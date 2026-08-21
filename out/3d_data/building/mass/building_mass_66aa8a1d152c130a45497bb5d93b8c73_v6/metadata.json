@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_66aa8a1d152c130a45497bb5d93b8c73_v6",
+  "key": "building/mass_66aa8a1d152c130a45497bb5d93b8c73_b3336866_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "japanese_castle_minecraft",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the large multi-tiered Japanese castle with its distinctive dark tiled roofs, white plastered walls, stone base, and layered eaves. The pagoda tower and surrounding terrain elements are excluded to focus purely on the main castle architecture.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/66aa8a1d152c130a45497bb5d93b8c73.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\66aa8a1d152c130a45497bb5d93b8c73~0.png",
+  "created_at": "2026-08-20T17:22:04.520Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -7
+    ],
+    "max": [
+      7,
+      19.75,
+      12.5
+    ],
+    "size": [
+      14,
+      19.75,
+      19.5
+    ],
+    "rMax": 14.327,
+    "triangles": 212,
+    "vertices": 142
+  },
+  "spec": {
+    "style": "japanese_castle_minecraft"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,39 @@
+{
+  "id": "building_mass_155577510",
+  "sourceImage": "building/mass/155577510",
+  "style": "Traditional Japanese Temple Architecture (Byodo-in style)",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 11141120,
+    "baseHex": 13421772,
+    "accentHex": 16766720,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 49344
+  },
+  "totalParts": 14,
+  "partNames": [
+    "main_base",
+    "central_hall_body",
+    "central_roof",
+    "left_corridor",
+    "right_corridor",
+    "left_tower",
+    "right_tower",
+    "left_tower_roof",
+    "right_tower_roof",
+    "central_door",
+    "pillar_1",
+    "pillar_2",
+    "finial_left",
+    "finial_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "cylinder",
+    "pyramid"
+  ]
+}

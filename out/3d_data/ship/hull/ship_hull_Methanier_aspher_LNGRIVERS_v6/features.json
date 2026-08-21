@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull_Methanier_aspher_LNGRIVERS",
+  "sourceImage": "ship/hull/Methanier_aspher_LNGRIVERS",
+  "style": "industrial_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 45678,
+    "baseHex": 12345,
+    "accentHex": 16766720,
+    "darkHex": 2236962,
+    "brightHex": 14540253,
+    "glassHex": 8421631
+  },
+  "totalParts": 10,
+  "partNames": [
+    "hull_main",
+    "hull_base",
+    "bow_wedge",
+    "tank_1",
+    "tank_2",
+    "tank_3",
+    "superstructure_base",
+    "bridge_windows",
+    "funnel",
+    "mast_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome",
+    "cylinder"
+  ]
+}

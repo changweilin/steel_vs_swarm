@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_0350p12000t3nb68kA8C8_v6",
+  "key": "ship/hull_0350p12000t3nb68kA8C8_6a0a5762_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern motorboat",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The 3D model accurately captures the sleek hull shape, the red bimini top, the windshield, and the outboard motor. The proportions of the boat are consistent with real-world dimensions. The symmetry is maintained for the hull and seating area.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/0350p12000t3nb68kA8C8.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\0350p12000t3nb68kA8C8~0.png",
+  "created_at": "2026-08-20T16:05:32.232Z",
+  "bounds": {
+    "min": [
+      -1.1,
+      0,
+      -3
+    ],
+    "max": [
+      1.1,
+      1.85,
+      3.5
+    ],
+    "size": [
+      2.2,
+      1.85,
+      6.5
+    ],
+    "rMax": 3.669,
+    "triangles": 196,
+    "vertices": 116
+  },
+  "spec": {
+    "style": "modern motorboat"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_v6",
+  "key": "building/bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_d78a5af4_v6",
+  "family": "building",
+  "subpart": "bld_church",
+  "style": "historical_church",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately captures the classic rural church architecture, including the main hall body, side windows, front entrance porch, main gable roof, chimney, bell tower, and steeple. The proportions, color zoning, and directional roof slopes strictly adhere to the requirements.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_church/ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_church\\ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6~0.png",
+  "created_at": "2026-08-20T17:24:53.134Z",
+  "bounds": {
+    "min": [
+      -3.2723,
+      0,
+      -5.2
+    ],
+    "max": [
+      3.2723,
+      11,
+      6.8
+    ],
+    "size": [
+      6.545,
+      11,
+      12
+    ],
+    "rMax": 7.546,
+    "triangles": 296,
+    "vertices": 202
+  },
+  "spec": {
+    "style": "historical_church"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

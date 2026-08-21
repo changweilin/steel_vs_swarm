@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_pngtree-a-small-fishing-boat-png-image_16296083",
+  "sourceImage": "ship/hull/pngtree-a-small-fishing-boat-png-image_16296083",
+  "style": "fishing_boat",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 10066329,
+    "baseHex": 8388608,
+    "accentHex": 16753920,
+    "darkHex": 3355443,
+    "brightHex": 15658734,
+    "glassHex": 49151
+  },
+  "totalParts": 9,
+  "partNames": [
+    "hull_main",
+    "hull_bottom",
+    "cabin_base",
+    "window_front",
+    "window_side_left",
+    "window_side_right",
+    "mast_main",
+    "life_ring",
+    "name_plate"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

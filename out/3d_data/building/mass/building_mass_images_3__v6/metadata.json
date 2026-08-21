@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_3__v6",
+  "key": "building/mass_images (3)_d6ad42e0_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Residential",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately captures the multi-level structure, including the ground floor garage, the second-floor balcony, and the third-floor terrace. The proportions of the windows, the horizontal wood-slat accents, and the railing systems are modeled as distinct, slightly offset components to prevent Z-fighting. The building is fully enclosed with a solid rear and side wall structure to ensure 360-degree integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (3).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (3)~0.png",
+  "created_at": "2026-08-21T08:29:12.746Z",
+  "bounds": {
+    "min": [
+      -3,
+      0,
+      -4
+    ],
+    "max": [
+      3,
+      9.45,
+      5
+    ],
+    "size": [
+      6,
+      9.45,
+      9
+    ],
+    "rMax": 5.831,
+    "triangles": 120,
+    "vertices": 80
+  },
+  "spec": {
+    "style": "Modern Minimalist Residential"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

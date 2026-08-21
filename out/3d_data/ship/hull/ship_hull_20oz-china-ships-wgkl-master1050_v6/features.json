@@ -1,0 +1,36 @@
+{
+  "id": "ship_hull_20oz-china-ships-wgkl-master1050",
+  "sourceImage": "ship/hull/20oz-china-ships-wgkl-master1050",
+  "style": "modern_naval_warship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 10526880,
+    "facadeHex": 12632256,
+    "baseHex": 6579300,
+    "accentHex": 16777215,
+    "darkHex": 3158064,
+    "brightHex": 15790320,
+    "glassHex": 49151
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "superstructure_base",
+    "bridge_windows",
+    "main_mast",
+    "radar_dome",
+    "rear_hangar",
+    "funnel",
+    "hull_bottom",
+    "life_buoy_port",
+    "life_buoy_starboard"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_15__v6",
+  "key": "building/mass_images (15)_054dda0d_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Traditional Chinese Architecture (Temple of Heaven)",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the three-tiered circular structure of the Temple of Heaven. The frustum_pyramid components correctly represent the outward-sloping eaves, and the cylindrical main bodies are stacked with appropriate proportions. The central spire and the base platform are included to ensure 360-degree structural integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (15).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (15)~0.png",
+  "created_at": "2026-08-21T08:16:11.392Z",
+  "bounds": {
+    "min": [
+      -12.5,
+      0,
+      -12.5
+    ],
+    "max": [
+      12.5,
+      24.5,
+      12.5
+    ],
+    "size": [
+      25,
+      24.5,
+      25
+    ],
+    "rMax": 17.678,
+    "triangles": 868,
+    "vertices": 454
+  },
+  "spec": {
+    "style": "Traditional Chinese Architecture (Temple of Heaven)"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

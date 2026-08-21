@@ -1,0 +1,27 @@
+{
+  "id": "tree_canopy_madagascar-baobab",
+  "sourceImage": "tree/canopy/madagascar-baobab",
+  "style": "natural_botanical",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 468420,
+    "facadeHex": 13143020,
+    "baseHex": 605030,
+    "accentHex": 806040,
+    "darkHex": 302010,
+    "brightHex": 15014010,
+    "glassHex": 1976635
+  },
+  "totalParts": 4,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "root_base",
+    "upper_branch_structure"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

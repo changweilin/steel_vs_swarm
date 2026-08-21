@@ -1,0 +1,40 @@
+{
+  "id": "rock_collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5_v6",
+  "key": "rock/collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5_d9727412_v6",
+  "family": "rock",
+  "subpart": "collapse",
+  "style": "nature_rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully isolated and reconstructed the moss-covered forest rock boulder at the center using asymmetric polyhedral blocks and irregular dodecahedral shapes to match the jagged, weathered appearance in the photograph.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/collapse/ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\collapse\\ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5~0.png",
+  "created_at": "2026-08-20T16:18:29.103Z",
+  "bounds": {
+    "min": [
+      -0.6384,
+      -0.0906,
+      -0.4464
+    ],
+    "max": [
+      0.6367,
+      0.8494,
+      0.5056
+    ],
+    "size": [
+      1.275,
+      0.94,
+      0.952
+    ],
+    "rMax": 0.813,
+    "triangles": 168,
+    "vertices": 98
+  },
+  "spec": {
+    "style": "nature_rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

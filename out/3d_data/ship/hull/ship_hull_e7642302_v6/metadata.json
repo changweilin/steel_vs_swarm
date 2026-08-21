@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_e7642302_v6",
+  "key": "ship/hull_e7642302_80919ef8_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "military_aircraft_carrier",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the distinct wedge-shaped bow, the expansive flight deck, and the complex island superstructure. The hull is modeled as a watertight entity with correct color zoning. The island's tiered structure and radar masts are represented using appropriate primitives. Symmetry is maintained for the hull and deck features.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/e7642302.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\e7642302~0.png",
+  "created_at": "2026-08-20T16:13:35.882Z",
+  "bounds": {
+    "min": [
+      -37.5,
+      -2.5,
+      -155
+    ],
+    "max": [
+      37.5,
+      43,
+      175
+    ],
+    "size": [
+      75,
+      45.5,
+      330
+    ],
+    "rMax": 178.973,
+    "triangles": 294,
+    "vertices": 178
+  },
+  "spec": {
+    "style": "military_aircraft_carrier"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

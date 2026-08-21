@@ -1,0 +1,33 @@
+{
+  "id": "building_bld_warehouse_ov_bd624950-a164-4593-a9b2-0a39d84641ab",
+  "sourceImage": "building/bld_warehouse/ov_bd624950-a164-4593-a9b2-0a39d84641ab",
+  "style": "industrial_warehouse",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4210752,
+    "facadeHex": 10526880,
+    "baseHex": 6316128,
+    "accentHex": 8421504,
+    "darkHex": 2105376,
+    "brightHex": 14737632,
+    "glassHex": 3368652
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_building_body",
+    "roof_structure",
+    "chimney_base",
+    "chimney_stack",
+    "gatehouse_body",
+    "gatehouse_roof",
+    "window_row_1",
+    "window_row_2",
+    "main_entrance_frame",
+    "railway_bridge_structure"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

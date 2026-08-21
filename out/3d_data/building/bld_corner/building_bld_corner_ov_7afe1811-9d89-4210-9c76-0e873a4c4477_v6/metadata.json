@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_corner_ov_7afe1811-9d89-4210-9c76-0e873a4c4477_v6",
+  "key": "building/bld_corner_ov_7afe1811-9d89-4210-9c76-0e873a4c4477_2c25906a_v6",
+  "family": "building",
+  "subpart": "bld_corner",
+  "style": "building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the distinctive corner teal building with its mansard roof, dormer windows, ground-floor storefronts, and adjacent brick buildings, maintaining solid structural volume and proper window alignment.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_corner/ov_7afe1811-9d89-4210-9c76-0e873a4c4477.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_corner\\ov_7afe1811-9d89-4210-9c76-0e873a4c4477~0.png",
+  "created_at": "2026-08-20T17:26:08.684Z",
+  "bounds": {
+    "min": [
+      -12.5,
+      -0.25,
+      -10.4142
+    ],
+    "max": [
+      12.5,
+      10.4,
+      -0.5
+    ],
+    "size": [
+      25,
+      10.65,
+      9.914
+    ],
+    "rMax": 16.27,
+    "triangles": 296,
+    "vertices": 194
+  },
+  "spec": {
+    "style": "building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

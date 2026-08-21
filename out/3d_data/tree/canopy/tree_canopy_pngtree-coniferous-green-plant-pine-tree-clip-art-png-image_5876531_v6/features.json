@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531",
+  "sourceImage": "tree/canopy/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531",
+  "style": "stylized_conifer",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 468435,
+    "facadeHex": 825732,
+    "baseHex": 503520,
+    "accentHex": 982341,
+    "darkHex": 302010,
+    "brightHex": 756040,
+    "glassHex": 1976635
+  },
+  "totalParts": 7,
+  "partNames": [
+    "trunk",
+    "canopy_layer_1",
+    "canopy_layer_2",
+    "canopy_layer_3",
+    "canopy_layer_4",
+    "canopy_layer_5",
+    "canopy_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "frustum_pyramid",
+    "pyramid"
+  ]
+}

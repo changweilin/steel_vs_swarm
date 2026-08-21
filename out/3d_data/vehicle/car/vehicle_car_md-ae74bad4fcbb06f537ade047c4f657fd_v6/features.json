@@ -1,0 +1,48 @@
+{
+  "id": "vehicle_car_md-ae74bad4fcbb06f537ade047c4f657fd",
+  "sourceImage": "vehicle/car/md-ae74bad4fcbb06f537ade047c4f657fd",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2040683,
+    "facadeHex": 15792383,
+    "baseHex": 2039583,
+    "accentHex": 13158600,
+    "darkHex": 1973790,
+    "brightHex": 14540253,
+    "glassHex": 4353457
+  },
+  "totalParts": 24,
+  "partNames": [
+    "chassis_base",
+    "cabin_body",
+    "truck_bed",
+    "truck_bed_inner",
+    "cabin_roof",
+    "windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_grille_area",
+    "front_grille_slot1",
+    "front_grille_slot2",
+    "front_grille_slot3",
+    "left_headlight",
+    "right_headlight",
+    "left_mirror",
+    "right_mirror",
+    "front_left_wheel_tire",
+    "front_left_wheel_rim",
+    "front_right_wheel_tire",
+    "front_right_wheel_rim",
+    "rear_left_wheel_tire",
+    "rear_left_wheel_rim",
+    "rear_right_wheel_tire",
+    "rear_right_wheel_rim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "ellipsoid_sphere",
+    "torus_ring"
+  ]
+}

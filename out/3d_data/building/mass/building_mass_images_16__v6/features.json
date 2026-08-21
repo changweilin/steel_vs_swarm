@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_images (16)",
+  "sourceImage": "building/mass/images (16)",
+  "style": "modern_minimalist_townhouse",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 12632256,
+    "accentHex": 16744448,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8438271
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_building_block",
+    "ground_floor_recess",
+    "balcony_level_2",
+    "balcony_level_3",
+    "balcony_level_4",
+    "balcony_level_5",
+    "roof_structure",
+    "glass_railing_1",
+    "glass_railing_2",
+    "glass_railing_3",
+    "glass_railing_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

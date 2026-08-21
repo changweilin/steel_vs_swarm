@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_169154402859999904.jpg!900x.water3~1",
+  "sourceImage": "building/mass/169154402859999904.jpg!900x.water3~1",
+  "style": "Modern Residential Complex",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 1250381,
+    "facadeHex": 15066597,
+    "baseHex": 7895160,
+    "accentHex": 4602932,
+    "darkHex": 3289650,
+    "brightHex": 14540253,
+    "glassHex": 2043015
+  },
+  "totalParts": 17,
+  "partNames": [
+    "ground_lawn",
+    "boundary_wall_front",
+    "main_building_base",
+    "main_building_upper",
+    "secondary_building_right",
+    "dark_facade_panel_1",
+    "dark_facade_panel_2",
+    "dark_facade_panel_upper",
+    "accent_wood_panel_1",
+    "accent_wood_panel_2",
+    "balcony_box_1",
+    "balcony_railing_1",
+    "window_glass_1",
+    "window_glass_2",
+    "window_glass_3",
+    "window_glass_4",
+    "roof_top_flat"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

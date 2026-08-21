@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_178670843535945_P35065317_v6",
+  "key": "building/mass_178670843535945_P35065317_cecdb557_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_high_rise_building",
+  "symmetryMode": "asymmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/178670843535945_P35065317.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\178670843535945_P35065317.jpg",
+  "created_at": "2026-08-20T15:14:12.227Z",
+  "bounds": {
+    "min": [
+      -20,
+      0,
+      -11.5
+    ],
+    "max": [
+      8.5,
+      41,
+      9.5
+    ],
+    "size": [
+      28.5,
+      41,
+      21
+    ],
+    "rMax": 23.071,
+    "triangles": 48,
+    "vertices": 32
+  },
+  "spec": {
+    "style": "modern_high_rise_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

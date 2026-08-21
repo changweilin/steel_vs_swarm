@@ -1,0 +1,40 @@
+{
+  "id": "rock_tor_wc_12044342_v6",
+  "key": "rock/tor_wc_12044342_b69d12f1_v6",
+  "family": "rock",
+  "subpart": "tor",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The generated 3D model accurately captures the layered granite tor structure and jagged profile of the rock formation shown in the photograph, using stacked dodecahedral, wedge, and box polyhedra anchored securely to the ground at y=0 without gaps.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/tor/wc_12044342.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\tor\\wc_12044342~0.png",
+  "created_at": "2026-08-20T16:29:52.830Z",
+  "bounds": {
+    "min": [
+      -5.3607,
+      -0.5074,
+      -2.5384
+    ],
+    "max": [
+      4.7161,
+      5.6004,
+      2.9525
+    ],
+    "size": [
+      10.077,
+      6.108,
+      5.491
+    ],
+    "rMax": 5.931,
+    "triangles": 228,
+    "vertices": 134
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

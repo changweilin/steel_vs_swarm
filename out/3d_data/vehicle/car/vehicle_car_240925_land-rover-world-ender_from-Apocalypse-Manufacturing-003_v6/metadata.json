@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_v6",
+  "key": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_4a03f68e_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003.webp",
+  "created_at": "2026-08-20T15:21:15.896Z",
+  "bounds": {
+    "min": [
+      -1.85,
+      0.1897,
+      -2.9
+    ],
+    "max": [
+      1.85,
+      2.2,
+      3
+    ],
+    "size": [
+      3.7,
+      2.01,
+      5.9
+    ],
+    "rMax": 3.525,
+    "triangles": 912,
+    "vertices": 590
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

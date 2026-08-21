@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-flowers-bonsai-tree-png-image_12485135_v6",
+  "key": "tree/canopy_pngtree-flowers-bonsai-tree-png-image_12485135_331e6953_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The bonsai tree is reconstructed using a central twisted trunk (conical_frustum) and multiple ellipsoid_sphere clusters to represent the dense foliage and flowers. The ceramic pot is modeled as a frustum, and the base stand is a box. The proportions match the original image well, with the trunk's twist and the layered canopy structure captured accurately.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-flowers-bonsai-tree-png-image_12485135.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-flowers-bonsai-tree-png-image_12485135~0.png",
+  "created_at": "2026-08-20T16:13:59.436Z",
+  "bounds": {
+    "min": [
+      -0.55,
+      -0.2,
+      -0.3804
+    ],
+    "max": [
+      0.55,
+      1.5401,
+      0.3804
+    ],
+    "size": [
+      1.1,
+      1.74,
+      0.761
+    ],
+    "rMax": 0.669,
+    "triangles": 784,
+    "vertices": 476
+  },
+  "spec": {
+    "style": "Bonsai Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,47 @@
+{
+  "id": "building_mass_state-capitol~0",
+  "sourceImage": "building/mass/state-capitol~0",
+  "style": "Neoclassical Capitol Building",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11166549,
+    "facadeHex": 13344143,
+    "baseHex": 10515568,
+    "accentHex": 14397576,
+    "darkHex": 4208186,
+    "brightHex": 15790320,
+    "glassHex": 3360614
+  },
+  "totalParts": 21,
+  "partNames": [
+    "ground_base",
+    "central_block_base",
+    "central_block_upper",
+    "left_wing",
+    "right_wing",
+    "left_wing_roof",
+    "right_wing_roof",
+    "front_portico_columns",
+    "front_pediment",
+    "dome_drum_lower",
+    "dome_drum_upper",
+    "dome_colonnade",
+    "main_dome_shell",
+    "dome_lantern_base",
+    "dome_lantern_top",
+    "goddess_statue",
+    "central_windows_front",
+    "left_wing_windows",
+    "right_wing_windows",
+    "left_wing_windows_rear",
+    "right_wing_windows_rear"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "pyramid"
+  ]
+}

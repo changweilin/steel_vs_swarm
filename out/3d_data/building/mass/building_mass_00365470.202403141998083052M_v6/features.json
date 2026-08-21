@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_00365470.202403141998083052M",
+  "sourceImage": "building/mass/00365470.202403141998083052M",
+  "style": "Modern Residential High-rise",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 12632256,
+    "baseHex": 8421504,
+    "accentHex": 16766720,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 49344
+  },
+  "totalParts": 9,
+  "partNames": [
+    "MainTower1_Body",
+    "MainTower2_Body",
+    "Tower1_Crown",
+    "Tower2_Crown",
+    "Tower1_Windows",
+    "Tower2_Windows",
+    "Base_Platform",
+    "Tower1_Accent",
+    "Tower2_Accent"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

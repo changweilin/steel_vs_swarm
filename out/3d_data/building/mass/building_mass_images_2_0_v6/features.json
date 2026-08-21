@@ -1,0 +1,29 @@
+{
+  "id": "building_mass_images (2)~0",
+  "sourceImage": "building/mass/images (2)~0",
+  "style": "Modern Minimalist Residential",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14737632,
+    "baseHex": 12632256,
+    "accentHex": 10526880,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8421616
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_building_block",
+    "roof_top",
+    "car_porch_roof",
+    "front_window_glass",
+    "balcony_railing",
+    "car_body",
+    "front_boundary_wall",
+    "side_wall_extension"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

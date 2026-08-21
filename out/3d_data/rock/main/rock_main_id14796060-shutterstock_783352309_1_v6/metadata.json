@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_id14796060-shutterstock_783352309_1_v6",
+  "key": "rock/main_id14796060-shutterstock_783352309~1_24887f5d_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The generated 3D polyhedron assembly accurately models the jagged, layered rock formations visible in the reference scene. Multi-sided polyhedra and dodecahedrons are combined into a cohesive solid base with natural offsets, avoiding Z-fighting while matching the geological profile.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/id14796060-shutterstock_783352309.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\id14796060-shutterstock_783352309~1.png",
+  "created_at": "2026-08-20T16:20:44.506Z",
+  "bounds": {
+    "min": [
+      -2.5773,
+      -0.1943,
+      -1.4188
+    ],
+    "max": [
+      2.3855,
+      3.2747,
+      1.4188
+    ],
+    "size": [
+      4.963,
+      3.469,
+      2.838
+    ],
+    "rMax": 2.942,
+    "triangles": 120,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

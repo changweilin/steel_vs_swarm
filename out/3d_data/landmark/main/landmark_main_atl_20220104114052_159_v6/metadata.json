@@ -1,0 +1,40 @@
+{
+  "id": "landmark_main_atl_20220104114052_159_v6",
+  "key": "landmark/main_atl_20220104114052_159_7226fa0e_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "futuristic_landmark",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model captures the iconic crescent-shaped base and the soaring vertical tower. The vertical fins are represented by a series of boxes, and the tower's glass facade is modeled with a distinct vertical prism. The crescent base is approximated by a series of curved segments to match the architectural flow.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/atl_20220104114052_159.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\main\\atl_20220104114052_159~0.png",
+  "created_at": "2026-08-20T16:39:17.093Z",
+  "bounds": {
+    "min": [
+      -100,
+      -0.5,
+      -100
+    ],
+    "max": [
+      102.5,
+      320,
+      100
+    ],
+    "size": [
+      202.5,
+      320.5,
+      200
+    ],
+    "rMax": 143.2,
+    "triangles": 348,
+    "vertices": 192
+  },
+  "spec": {
+    "style": "futuristic_landmark"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

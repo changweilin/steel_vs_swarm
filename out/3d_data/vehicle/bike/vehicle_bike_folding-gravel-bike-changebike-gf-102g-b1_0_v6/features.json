@@ -1,0 +1,39 @@
+{
+  "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1~0",
+  "sourceImage": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1~0",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 7329188,
+    "baseHex": 3355443,
+    "accentHex": 13619151,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 43525
+  },
+  "totalParts": 16,
+  "partNames": [
+    "rear_tire",
+    "rear_rim",
+    "rear_hub",
+    "brake_rotor",
+    "cassette",
+    "derailleur",
+    "chainstay_left",
+    "chainstay_right",
+    "seatstay_left",
+    "seatstay_right",
+    "seat_tube",
+    "seat_clamp",
+    "bottom_bracket",
+    "chainring",
+    "crank_arm",
+    "pedal"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

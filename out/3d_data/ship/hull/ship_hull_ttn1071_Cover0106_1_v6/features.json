@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull_ttn1071_Cover0106~1",
+  "sourceImage": "ship/hull/ttn1071_Cover0106~1",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 10066329,
+    "accentHex": 16711680,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 49344
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "superstructure_tier1",
+    "bridge_windows",
+    "funnel_base",
+    "funnel_top",
+    "radar_dome_1",
+    "radar_dome_2",
+    "radar_dome_3",
+    "lifeboat_port",
+    "lifeboat_starboard"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "rock_hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b",
+  "sourceImage": "rock/hoodoo/ov_929bc3d9-0f01-401b-8834-49c26d838e8b",
+  "style": "rock_hoodoos",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11110185,
+    "facadeHex": 12431765,
+    "baseHex": 7233857,
+    "accentHex": 9863830,
+    "darkHex": 4602931,
+    "brightHex": 14605794,
+    "glassHex": 3822985
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_slope_ground",
+    "hoodoo_left_pillar",
+    "hoodoo_left_cap",
+    "hoodoo_middle_pillar",
+    "hoodoo_middle_cap1",
+    "hoodoo_middle_cap2",
+    "hoodoo_right_pillar",
+    "hoodoo_right_cap",
+    "rock_debris_left",
+    "rock_debris_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

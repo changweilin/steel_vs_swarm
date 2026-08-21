@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_2025-porsche-carrera-t-coupe~1",
+  "sourceImage": "vehicle/car/2025-porsche-carrera-t-coupe~1",
+  "style": "automotive",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 14540253,
+    "baseHex": 3355443,
+    "accentHex": 2236962,
+    "darkHex": 1644825,
+    "brightHex": 16777215,
+    "glassHex": 4018288
+  },
+  "totalParts": 15,
+  "partNames": [
+    "chassis_base",
+    "body_main",
+    "front_hood",
+    "roof_cabin",
+    "windshield",
+    "left_side_window",
+    "right_side_window",
+    "left_headlight",
+    "right_headlight",
+    "left_mirror",
+    "right_mirror",
+    "front_left_tire",
+    "front_right_tire",
+    "rear_left_tire",
+    "rear_right_tire"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "ellipsoid_sphere",
+    "torus_ring"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "rock_strata_ov_deb2f87f-fb18-40ae-b47c-2447e06afa96",
+  "sourceImage": "rock/strata/ov_deb2f87f-fb18-40ae-b47c-2447e06afa96",
+  "style": "geological_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14246470,
+    "facadeHex": 13329243,
+    "baseHex": 11883594,
+    "accentHex": 10309187,
+    "darkHex": 7289669,
+    "brightHex": 16185078,
+    "glassHex": 4015741
+  },
+  "totalParts": 9,
+  "partNames": [
+    "ground_base_strata",
+    "main_upright_column",
+    "front_slanted_face",
+    "overhanging_top_mass",
+    "upper_cap_rock",
+    "left_buttress_rock",
+    "right_flank_strata",
+    "lower_crag_debris_1",
+    "lower_crag_debris_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "wedge",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

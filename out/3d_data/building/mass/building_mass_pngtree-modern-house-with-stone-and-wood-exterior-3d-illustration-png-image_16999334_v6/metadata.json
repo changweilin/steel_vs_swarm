@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-modern-house-with-stone-and-wood-exterior-3d-illustration-png-image_16999334_v6",
+  "key": "building/mass_pngtree-modern-house-with-stone-and-wood-exterior-3d-illustration-png-image_16999334_1aaa3e8f_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Architectural Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the multi-level concrete and wood-accented structure. The primary massing, including the recessed entrance, the cantilevered upper floor, and the glass-enclosed sections, is represented with correct spatial relationships. The glass elements are assigned the specified cold-tone hex, and the concrete volumes are tightly integrated to ensure a solid, non-hollow structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-modern-house-with-stone-and-wood-exterior-3d-illustration-png-image_16999334.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-modern-house-with-stone-and-wood-exterior-3d-illustration-png-image_16999334~0.png",
+  "created_at": "2026-08-21T09:04:11.718Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -4
+    ],
+    "max": [
+      4,
+      5.15,
+      4
+    ],
+    "size": [
+      8,
+      5.15,
+      8
+    ],
+    "rMax": 5.657,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "Modern Architectural Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

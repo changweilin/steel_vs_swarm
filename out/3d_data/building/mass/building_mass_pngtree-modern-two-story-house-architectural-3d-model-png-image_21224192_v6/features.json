@@ -1,0 +1,36 @@
+{
+  "id": "building_mass_pngtree-modern-two-story-house-architectural-3d-model-png-image_21224192",
+  "sourceImage": "building/mass/pngtree-modern-two-story-house-architectural-3d-model-png-image_21224192",
+  "style": "modern_minimalist_villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 13816530,
+    "baseHex": 4605510,
+    "accentHex": 10526880,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 8435199
+  },
+  "totalParts": 12,
+  "partNames": [
+    "base_platform",
+    "ground_floor_main",
+    "upper_floor_main",
+    "upper_glass_enclosure",
+    "roof_top",
+    "entrance_steps",
+    "front_door_frame",
+    "front_door_glass",
+    "bush_1",
+    "bush_2",
+    "tree_1",
+    "tree_crown_1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cylinder",
+    "pyramid"
+  ]
+}

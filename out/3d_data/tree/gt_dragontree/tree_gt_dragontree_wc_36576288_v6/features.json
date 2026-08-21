@@ -1,0 +1,29 @@
+{
+  "id": "tree_gt_dragontree_wc_36576288",
+  "sourceImage": "tree/gt_dragontree/wc_36576288",
+  "style": "medieval_manuscript_illustration",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 8417364,
+    "baseHex": 11184810,
+    "accentHex": 16750848,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 6,
+  "partNames": [
+    "trunk",
+    "root_base",
+    "crown_main",
+    "flower_1",
+    "flower_2",
+    "flower_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "dodecahedron_polyhedron"
+  ]
+}

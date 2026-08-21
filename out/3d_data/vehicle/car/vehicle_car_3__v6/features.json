@@ -1,0 +1,43 @@
+{
+  "id": "vehicle_car_3列",
+  "sourceImage": "vehicle/car/3列",
+  "style": "futuristic_micro_van",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 15787754,
+    "facadeHex": 15787754,
+    "baseHex": 14073740,
+    "accentHex": 15539252,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 3824240
+  },
+  "totalParts": 21,
+  "partNames": [
+    "chassis_base",
+    "main_body",
+    "roof_top",
+    "front_accent_hood",
+    "front_windshield",
+    "left_front_window",
+    "right_front_window",
+    "left_rear_window",
+    "right_rear_window",
+    "rear_windshield",
+    "headlight_left",
+    "headlight_right",
+    "front_grille",
+    "rear_light_left",
+    "rear_light_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "side_accent_left",
+    "side_accent_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_roofcap_wc_67880953_v6",
+  "key": "building/roofcap_wc_67880953_ad59aea4_v6",
+  "family": "building",
+  "subpart": "roofcap",
+  "style": "historical_architectural_rooftop",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model successfully reconstructs the rooftop structure of the Met Life building, including the main mechanical penthouse, the surrounding parapet walls, and the roof surface. The perspective and proportions are aligned with the historical context. The glass panels on the penthouse are correctly identified and colored. The parapet wall and roof edge details are modeled to ensure a closed, solid geometry.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/roofcap/wc_67880953.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\roofcap\\wc_67880953~0.png",
+  "created_at": "2026-08-21T09:20:11.748Z",
+  "bounds": {
+    "min": [
+      -10,
+      -0.25,
+      -7.5
+    ],
+    "max": [
+      10.15,
+      5.5,
+      7.65
+    ],
+    "size": [
+      20.15,
+      5.75,
+      15.15
+    ],
+    "rMax": 12.71,
+    "triangles": 212,
+    "vertices": 126
+  },
+  "spec": {
+    "style": "historical_architectural_rooftop"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

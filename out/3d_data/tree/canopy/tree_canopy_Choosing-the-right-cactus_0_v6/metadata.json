@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_Choosing-the-right-cactus_0_v6",
+  "key": "tree/canopy_Choosing-the-right-cactus~0_2dc79c34_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "botanical_sculpture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The golden barrel cactus is modeled as a primary ellipsoid sphere with vertical ribs represented by a series of cylinders to capture the radial symmetry and texture. The base is anchored at y=0. The color palette accurately reflects the vibrant green of the cactus and the neutral tones of the surrounding pebbles.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/Choosing-the-right-cactus.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\Choosing-the-right-cactus~0.png",
+  "created_at": "2026-08-20T16:48:15.010Z",
+  "bounds": {
+    "min": [
+      -0.85,
+      -0.03,
+      -0.85
+    ],
+    "max": [
+      0.85,
+      0.5,
+      0.85
+    ],
+    "size": [
+      1.7,
+      0.53,
+      1.7
+    ],
+    "rMax": 1.202,
+    "triangles": 704,
+    "vertices": 436
+  },
+  "spec": {
+    "style": "botanical_sculpture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

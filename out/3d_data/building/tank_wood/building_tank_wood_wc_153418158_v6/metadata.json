@@ -1,0 +1,40 @@
+{
+  "id": "building_tank_wood_wc_153418158_v6",
+  "key": "building/tank_wood_wc_153418158_9e25518d_v6",
+  "family": "building",
+  "subpart": "tank_wood",
+  "style": "Gothic Revival Architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The Chicago Water Tower is reconstructed with its iconic octagonal tower, crenellated parapets, and stone facade. The tower's verticality and the base's gothic proportions are maintained. The main tower, base structure, and roof elements are modeled as a cohesive unit. Minor details like window frames and the lantern top are included to ensure structural integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/tank_wood/wc_153418158.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\tank_wood\\wc_153418158~0.png",
+  "created_at": "2026-08-21T09:26:17.033Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -6
+    ],
+    "max": [
+      6,
+      41.5,
+      6.5
+    ],
+    "size": [
+      12,
+      41.5,
+      12.5
+    ],
+    "rMax": 8.846,
+    "triangles": 212,
+    "vertices": 128
+  },
+  "spec": {
+    "style": "Gothic Revival Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

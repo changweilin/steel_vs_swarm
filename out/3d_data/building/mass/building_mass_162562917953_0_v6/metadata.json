@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_162562917953_0_v6",
+  "key": "building/mass_162562917953~0_156fa230_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model precisely captures the multi-story modern residential building with stacked cantilevered balconies, glass railings, textured lower facade, garage door, and upper structural frames. Proportions and coloring align strictly with the reference image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/162562917953.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\162562917953~0.png",
+  "created_at": "2026-08-20T17:19:33.886Z",
+  "bounds": {
+    "min": [
+      -11.5,
+      0,
+      -3.05
+    ],
+    "max": [
+      12,
+      12.7,
+      4.3287
+    ],
+    "size": [
+      23.5,
+      12.7,
+      7.379
+    ],
+    "rMax": 12.757,
+    "triangles": 600,
+    "vertices": 378
+  },
+  "spec": {
+    "style": "modern_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

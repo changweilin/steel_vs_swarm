@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_20090411-TurboJET_Barca",
+  "sourceImage": "ship/hull/20090411-TurboJET_Barca",
+  "style": "modern high-speed catamaran ferry",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16711680,
+    "facadeHex": 16777215,
+    "baseHex": 4210752,
+    "accentHex": 16711680,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 255
+  },
+  "totalParts": 11,
+  "partNames": [
+    "hull_left",
+    "hull_right",
+    "main_deck",
+    "superstructure",
+    "bridge_front",
+    "bridge_windows",
+    "side_windows",
+    "side_windows_mirror",
+    "life_raft_1",
+    "life_raft_2",
+    "radar_dome"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

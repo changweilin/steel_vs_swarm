@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561_v6",
+  "key": "tree/canopy_pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561_8f014463_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the bonsai's structure, including the cylindrical pot, the textured trunk with root flare, and the three distinct canopy layers. The proportions reflect a typical bonsai scale.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561~0.png",
+  "created_at": "2026-08-20T16:13:26.438Z",
+  "bounds": {
+    "min": [
+      -0.8,
+      -0.25,
+      -0.45
+    ],
+    "max": [
+      0.9,
+      1.45,
+      0.45
+    ],
+    "size": [
+      1.7,
+      1.7,
+      0.9
+    ],
+    "rMax": 1.006,
+    "triangles": 832,
+    "vertices": 496
+  },
+  "spec": {
+    "style": "Bonsai Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

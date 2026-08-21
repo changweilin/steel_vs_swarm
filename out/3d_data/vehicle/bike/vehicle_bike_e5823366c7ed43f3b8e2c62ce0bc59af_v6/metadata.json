@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_v6",
+  "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_4a125c4d_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
+  "created_at": "2026-08-20T15:14:15.502Z",
+  "bounds": {
+    "min": [
+      -1.05,
+      0.1243,
+      -0.3804
+    ],
+    "max": [
+      1.05,
+      0.9781,
+      0.3804
+    ],
+    "size": [
+      2.1,
+      0.854,
+      0.761
+    ],
+    "rMax": 1.117,
+    "triangles": 712,
+    "vertices": 416
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

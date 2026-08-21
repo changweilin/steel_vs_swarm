@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_dome_ov_b5a115f2-95ac-400f-ae3c-99e1c30ccf07_v6",
+  "key": "rock/mg_dome_ov_b5a115f2-95ac-400f-ae3c-99e1c30ccf07_28b32cfc_v6",
+  "family": "rock",
+  "subpart": "mg_dome",
+  "style": "rock_sculpture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The reconstructed rock model accurately captures the profiled shape with a vertical back wall and a sloped, stepped top profile similar to the blue textured model in the reference image. Multiple interlocking polyhedrons create the rough, organic rocky silhouette.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_dome/ov_b5a115f2-95ac-400f-ae3c-99e1c30ccf07.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_dome\\ov_b5a115f2-95ac-400f-ae3c-99e1c30ccf07~0.png",
+  "created_at": "2026-08-20T16:24:00.568Z",
+  "bounds": {
+    "min": [
+      -1.1,
+      0,
+      -0.6
+    ],
+    "max": [
+      1.1034,
+      1.8303,
+      0.6
+    ],
+    "size": [
+      2.203,
+      1.83,
+      1.2
+    ],
+    "rMax": 1.256,
+    "triangles": 104,
+    "vertices": 66
+  },
+  "spec": {
+    "style": "rock_sculpture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

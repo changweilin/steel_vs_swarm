@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_acacia_ov_4181513d-1acc-4d23-a817-709b1d24f3c2_v6",
+  "key": "tree/sp_acacia_ov_4181513d-1acc-4d23-a817-709b1d24f3c2_9d49456b_v6",
+  "family": "tree",
+  "subpart": "sp_acacia",
+  "style": "botanical_acacia_branch",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the central stem and the pinnate leaf structure of the Acacia branch. The thorns are represented as sharp conical protrusions. While the individual leaflets are too numerous to model one-by-one, the overall branching pattern and the yellow-green color palette are accurately represented.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_acacia/ov_4181513d-1acc-4d23-a817-709b1d24f3c2.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_acacia\\ov_4181513d-1acc-4d23-a817-709b1d24f3c2~0.png",
+  "created_at": "2026-08-20T17:03:59.145Z",
+  "bounds": {
+    "min": [
+      -0.52,
+      -0.5,
+      -0.05
+    ],
+    "max": [
+      0.52,
+      0.8067,
+      0.05
+    ],
+    "size": [
+      1.04,
+      1.307,
+      0.1
+    ],
+    "rMax": 0.522,
+    "triangles": 112,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "botanical_acacia_branch"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_architecture-houou-02-tmb_v6",
+  "key": "building/mass_architecture-houou-02-tmb_cb473105_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Traditional Japanese Temple Architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the Phoenix Hall's complex multi-tiered roof structure, the central Buddha chamber, and the symmetrical wing corridors. The roof slopes are correctly oriented outwards and downwards. The central Buddha statue area is represented as a recessed chamber with appropriate depth. The base and structural pillars are aligned to maintain the temple's characteristic proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/architecture-houou-02-tmb.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\architecture-houou-02-tmb~0.png",
+  "created_at": "2026-08-21T10:14:19.477Z",
+  "bounds": {
+    "min": [
+      -12,
+      0,
+      -4
+    ],
+    "max": [
+      12,
+      7,
+      4
+    ],
+    "size": [
+      24,
+      7,
+      8
+    ],
+    "rMax": 12.649,
+    "triangles": 180,
+    "vertices": 114
+  },
+  "spec": {
+    "style": "Traditional Japanese Temple Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

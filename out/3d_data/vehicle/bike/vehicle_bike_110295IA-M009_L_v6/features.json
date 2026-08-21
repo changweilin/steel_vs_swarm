@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_110295IA-M009_L",
+  "sourceImage": "vehicle/bike/110295IA-M009_L",
+  "style": "modern_racing_bicycle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16738560,
+    "facadeHex": 16568340,
+    "baseHex": 16711680,
+    "accentHex": 16766720,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 3026478
+  },
+  "totalParts": 17,
+  "partNames": [
+    "front_wheel_tire",
+    "front_wheel_rim",
+    "rear_wheel_tire",
+    "rear_wheel_rim",
+    "down_tube",
+    "top_tube",
+    "seat_tube",
+    "seat_post",
+    "saddle",
+    "head_tube",
+    "front_fork",
+    "chainstay",
+    "seatstay",
+    "bottom_bracket",
+    "crank_arm",
+    "handlebars",
+    "stem"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

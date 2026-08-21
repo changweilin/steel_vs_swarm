@@ -1,0 +1,40 @@
+{
+  "id": "tree_buttress_wc_3448263_v6",
+  "key": "tree/buttress_wc_3448263_28f6c098_v6",
+  "family": "tree",
+  "subpart": "buttress",
+  "style": "natural_organic",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The 3D model captures the massive, buttressed trunk of the baobab-like tree and its expansive, sprawling branch structure. The buttress roots are modeled using multiple cylinders and prisms to simulate the flared base. The canopy is represented by a cluster of ellipsoids to mimic the wide, leafless but complex branch network. The scale is set to reflect a large, ancient tree.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/buttress/wc_3448263.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\buttress\\wc_3448263~0.png",
+  "created_at": "2026-08-20T16:05:56.805Z",
+  "bounds": {
+    "min": [
+      -8,
+      0,
+      -3.8042
+    ],
+    "max": [
+      8,
+      12.5,
+      3.8042
+    ],
+    "size": [
+      16,
+      12.5,
+      7.608
+    ],
+    "rMax": 8.858,
+    "triangles": 660,
+    "vertices": 399
+  },
+  "spec": {
+    "style": "natural_organic"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_762bcd7026aa844c83ed2b0f5454b162_v6",
+  "key": "ship/hull_762bcd7026aa844c83ed2b0f5454b162_7e99a959_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "LNG Carrier Ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the iconic spherical LNG tank configuration, the deep blue hull, and the aft superstructure. The bow wedge and deck details are proportionally aligned. The symmetry is maintained for the hull and superstructure, ensuring a 360-degree complete representation.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/762bcd7026aa844c83ed2b0f5454b162.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\762bcd7026aa844c83ed2b0f5454b162~0.png",
+  "created_at": "2026-08-20T16:11:44.898Z",
+  "bounds": {
+    "min": [
+      -15,
+      -0.5,
+      -80
+    ],
+    "max": [
+      15,
+      32.5,
+      85
+    ],
+    "size": [
+      30,
+      33,
+      165
+    ],
+    "rMax": 86.313,
+    "triangles": 796,
+    "vertices": 472
+  },
+  "spec": {
+    "style": "LNG Carrier Ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

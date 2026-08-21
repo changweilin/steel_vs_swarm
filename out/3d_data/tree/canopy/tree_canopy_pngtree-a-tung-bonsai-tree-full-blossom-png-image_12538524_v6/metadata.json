@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524_v6",
+  "key": "tree/canopy_pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524_bee60ca6_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the complex root structure, the central trunk, and the multi-layered canopy of the bonsai. The use of ellipsoids for the canopy clusters effectively mimics the dense, flowering foliage. The base is represented by a wide, shallow cylinder to simulate the bonsai pot.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524~0.png",
+  "created_at": "2026-08-20T16:13:19.216Z",
+  "bounds": {
+    "min": [
+      -1.2,
+      -0.35,
+      -0.9
+    ],
+    "max": [
+      1.2,
+      2.2,
+      0.9
+    ],
+    "size": [
+      2.4,
+      2.55,
+      1.8
+    ],
+    "rMax": 1.5,
+    "triangles": 1152,
+    "vertices": 694
+  },
+  "spec": {
+    "style": "Bonsai Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

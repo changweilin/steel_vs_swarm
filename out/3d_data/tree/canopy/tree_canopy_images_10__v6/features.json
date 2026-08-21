@@ -1,0 +1,32 @@
+{
+  "id": "tree_canopy_images (10)",
+  "sourceImage": "tree/canopy/images (10)",
+  "style": "cartoon_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 45056,
+    "facadeHex": 8413760,
+    "baseHex": 5716768,
+    "accentHex": 3289600,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 1976635
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_trunk",
+    "root_base",
+    "canopy_main",
+    "canopy_left",
+    "canopy_right",
+    "small_foliage_left",
+    "small_foliage_right",
+    "branch_left",
+    "branch_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

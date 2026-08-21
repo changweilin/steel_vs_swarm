@@ -1,0 +1,28 @@
+{
+  "id": "building_bld_tower_wc_378871",
+  "sourceImage": "building/bld_tower/wc_378871",
+  "style": "Art Deco Skyscraper",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 13816530,
+    "baseHex": 11184810,
+    "accentHex": 16777215,
+    "darkHex": 3947580,
+    "brightHex": 16777215,
+    "glassHex": 4610930
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_tower_body",
+    "lower_wing_left",
+    "upper_setback_top",
+    "ge_sign_plate",
+    "radar_dome",
+    "window_grid_pattern"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "hemisphere_dome"
+  ]
+}

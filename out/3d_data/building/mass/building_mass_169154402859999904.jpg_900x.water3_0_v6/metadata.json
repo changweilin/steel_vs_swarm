@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_169154402859999904.jpg_900x.water3_0_v6",
+  "key": "building/mass_169154402859999904.jpg!900x.water3~0_26791d88_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "architectural",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately captures the architectural massing and proportions shown in the reference image, adhering to the required 7-zone coloring, correct roof downward-sloping geometry, tightly integrated multi-part structure, and symmetrical completion.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/169154402859999904.jpg!900x.water3.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\169154402859999904.jpg!900x.water3~0.png",
+  "created_at": "2026-08-20T17:19:46.748Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -3
+    ],
+    "max": [
+      6,
+      7.25,
+      3
+    ],
+    "size": [
+      12,
+      7.25,
+      6
+    ],
+    "rMax": 6.708,
+    "triangles": 88,
+    "vertices": 60
+  },
+  "spec": {
+    "style": "architectural"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

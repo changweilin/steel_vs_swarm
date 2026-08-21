@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_temple_ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7_v6",
+  "key": "building/bld_temple_ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7_4c6d761a_v6",
+  "family": "building",
+  "subpart": "bld_temple",
+  "style": "Japanese Temple Hanging Lantern",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the ornate bronze hanging lantern (Toro) featured in the foreground of the temple corridor. It captures the hexagonal structure, the flared decorative roof, the intricate lattice body with inner white paper/glass panels, the highly stylized flared bottom skirt, and the top hanging loop mechanism. All dimensions are scaled to realistic proportions (approx. 0.8m height for the lantern body).",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_temple/ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_temple\\ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7~0.png",
+  "created_at": "2026-08-21T07:06:55.644Z",
+  "bounds": {
+    "min": [
+      -0.36,
+      -0.42,
+      -0.3118
+    ],
+    "max": [
+      0.36,
+      1.2,
+      0.3118
+    ],
+    "size": [
+      0.72,
+      1.62,
+      0.624
+    ],
+    "rMax": 0.476,
+    "triangles": 706,
+    "vertices": 429
+  },
+  "spec": {
+    "style": "Japanese Temple Hanging Lantern"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

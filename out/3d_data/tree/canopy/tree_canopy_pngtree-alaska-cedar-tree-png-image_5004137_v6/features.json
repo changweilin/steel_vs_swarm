@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137",
+  "sourceImage": "tree/canopy/pngtree-alaska-cedar-tree-png-image_5004137",
+  "style": "coniferous_tree",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 22528,
+    "facadeHex": 8414784,
+    "baseHex": 5586464,
+    "accentHex": 16777215,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 6,
+  "partNames": [
+    "trunk",
+    "foliage_top",
+    "foliage_layer_1",
+    "foliage_layer_2",
+    "foliage_layer_3",
+    "foliage_layer_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "pyramid",
+    "frustum_pyramid"
+  ]
+}

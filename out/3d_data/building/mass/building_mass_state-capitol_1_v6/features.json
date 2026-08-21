@@ -1,0 +1,25 @@
+{
+  "id": "building_mass_state-capitol~1",
+  "sourceImage": "building/mass/state-capitol~1",
+  "style": "minimalist_skyline_block",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4481407,
+    "facadeHex": 5008015,
+    "baseHex": 3493247,
+    "accentHex": 6061487,
+    "darkHex": 2176847,
+    "brightHex": 8168191,
+    "glassHex": 7115215
+  },
+  "totalParts": 4,
+  "partNames": [
+    "sky_background_panel",
+    "sky_upper_gradient",
+    "sky_lower_gradient",
+    "ground_anchor_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

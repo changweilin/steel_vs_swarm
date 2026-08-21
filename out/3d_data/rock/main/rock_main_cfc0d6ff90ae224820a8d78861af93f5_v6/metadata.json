@@ -1,0 +1,38 @@
+{
+  "id": "rock_main_cfc0d6ff90ae224820a8d78861af93f5_v6",
+  "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_16787d08_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "geological_monolith",
+  "symmetryMode": "asymmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/cfc0d6ff90ae224820a8d78861af93f5.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\cfc0d6ff90ae224820a8d78861af93f5.webp",
+  "created_at": "2026-08-20T15:20:33.847Z",
+  "bounds": {
+    "min": [
+      -45,
+      -22.5325,
+      -45
+    ],
+    "max": [
+      45,
+      235.5,
+      45
+    ],
+    "size": [
+      90,
+      258.033,
+      90
+    ],
+    "rMax": 63.64,
+    "triangles": 132,
+    "vertices": 80
+  },
+  "spec": {
+    "style": "geological_monolith"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

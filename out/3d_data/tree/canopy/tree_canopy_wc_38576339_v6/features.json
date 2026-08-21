@@ -1,0 +1,26 @@
+{
+  "id": "tree_canopy_wc_38576339",
+  "sourceImage": "tree/canopy/wc_38576339",
+  "style": "naturalistic",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4671303,
+    "facadeHex": 3944727,
+    "baseHex": 2631720,
+    "accentHex": 5921370,
+    "darkHex": 1315860,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 4,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "canopy_lower_extension",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

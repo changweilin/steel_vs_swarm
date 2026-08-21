@@ -1,0 +1,37 @@
+{
+  "id": "tree_sp_baobab_wc_36649979",
+  "sourceImage": "tree/sp_baobab/wc_36649979",
+  "style": "natural_botanical",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3302450,
+    "facadeHex": 4862277,
+    "baseHex": 3221275,
+    "accentHex": 2041120,
+    "darkHex": 1973790,
+    "brightHex": 11184810,
+    "glassHex": 1454899
+  },
+  "totalParts": 13,
+  "partNames": [
+    "Main_Trunk",
+    "Trunk_Base_Roots",
+    "Main_Canopy_Top",
+    "Left_Primary_Branch",
+    "Right_Primary_Branch",
+    "Left_Canopy_Cluster",
+    "Right_Canopy_Cluster",
+    "Far_Left_Canopy",
+    "Far_Right_Canopy",
+    "Front_Left_Buttress",
+    "Front_Right_Buttress",
+    "Baobab_Fruit_1",
+    "Baobab_Fruit_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder",
+    "box"
+  ]
+}

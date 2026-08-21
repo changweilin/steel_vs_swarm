@@ -1,0 +1,42 @@
+{
+  "id": "vehicle_car_241016-26812-1-UmpVe",
+  "sourceImage": "vehicle/car/241016-26812-1-UmpVe",
+  "style": "modern_vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16119285,
+    "facadeHex": 16119285,
+    "baseHex": 2105376,
+    "accentHex": 3289650,
+    "darkHex": 1381654,
+    "brightHex": 15658734,
+    "glassHex": 2636904
+  },
+  "totalParts": 20,
+  "partNames": [
+    "chassis_base",
+    "car_body",
+    "roof_top",
+    "front_windshield",
+    "rear_windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_grille",
+    "headlight_left",
+    "headlight_right",
+    "taillight_left",
+    "taillight_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "mirror_left",
+    "mirror_right",
+    "roof_rail_left",
+    "roof_rail_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

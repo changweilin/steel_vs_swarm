@@ -1,0 +1,40 @@
+{
+  "id": "rock_talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_v6",
+  "key": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_068940f5_v6",
+  "family": "rock",
+  "subpart": "talus",
+  "style": "rock_talus_reconstruction",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 88,
+  "similarityReview": "Successfully reconstructed the rocky talus slope scene with a dominant cluster of angular boulders in the foreground using diverse polyhedra such as dodecahedrons, icosahedrons, and wedges. The rocks are solidly grounded at y = 0 with no floating parts, interlocking tightly to form a coherent geological feature matching the photograph's terrain.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/talus/ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\talus\\ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a~0.png",
+  "created_at": "2026-08-20T16:29:11.618Z",
+  "bounds": {
+    "min": [
+      -2.5927,
+      -0.621,
+      -1.121
+    ],
+    "max": [
+      2.708,
+      2.4338,
+      2.1977
+    ],
+    "size": [
+      5.301,
+      3.055,
+      3.319
+    ],
+    "rMax": 3.488,
+    "triangles": 200,
+    "vertices": 116
+  },
+  "spec": {
+    "style": "rock_talus_reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_pngtree-modern-house-with-stone-and-wood-exterior-3d-illustration-png-image_16999334",
+  "sourceImage": "building/mass/pngtree-modern-house-with-stone-and-wood-exterior-3d-illustration-png-image_16999334",
+  "style": "Modern Architectural Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 8421504,
+    "baseHex": 12632256,
+    "accentHex": 10053120,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 11060991
+  },
+  "totalParts": 9,
+  "partNames": [
+    "GroundBase",
+    "MainConcreteBlock",
+    "UpperCantilever",
+    "FrontEntranceSteps",
+    "GlassWallUpper",
+    "WoodSlatPanel",
+    "RightSideConcreteWall",
+    "EntranceGlassDoor",
+    "RoofEdgeTrim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "vehicle_car_JSV_01",
+  "sourceImage": "vehicle/car/JSV_01",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 10534341,
+    "baseHex": 3618635,
+    "accentHex": 2105376,
+    "darkHex": 1315860,
+    "brightHex": 15790320,
+    "glassHex": 3355443
+  },
+  "totalParts": 23,
+  "partNames": [
+    "chassis_base",
+    "body_main",
+    "roof_top",
+    "hood_slope",
+    "windshield_front",
+    "window_left_1",
+    "window_right_1",
+    "window_left_2",
+    "window_right_2",
+    "window_left_3",
+    "window_right_3",
+    "front_grille",
+    "headlight_left",
+    "headlight_right",
+    "front_bumper",
+    "mirror_left",
+    "mirror_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "taillight_left",
+    "taillight_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

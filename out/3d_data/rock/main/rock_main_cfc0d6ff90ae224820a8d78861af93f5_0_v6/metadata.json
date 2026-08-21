@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_cfc0d6ff90ae224820a8d78861af93f5_0_v6",
+  "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_cf590e11_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the primary landscape features with layered multi-faceted rock and terrain structures adhering to realistic proportions and color zoning.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/cfc0d6ff90ae224820a8d78861af93f5.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\cfc0d6ff90ae224820a8d78861af93f5~0.png",
+  "created_at": "2026-08-20T16:17:57.040Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -6
+    ],
+    "max": [
+      6,
+      4.5922,
+      6
+    ],
+    "size": [
+      12,
+      4.592,
+      12
+    ],
+    "rMax": 8.485,
+    "triangles": 96,
+    "vertices": 58
+  },
+  "spec": {
+    "style": "rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

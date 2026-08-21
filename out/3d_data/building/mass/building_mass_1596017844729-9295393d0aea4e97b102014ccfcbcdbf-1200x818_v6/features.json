@@ -1,0 +1,42 @@
+{
+  "id": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818",
+  "sourceImage": "building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818",
+  "style": "Modern Suburban House",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2697779,
+    "facadeHex": 11054235,
+    "baseHex": 7434609,
+    "accentHex": 4473924,
+    "darkHex": 1973790,
+    "brightHex": 16773055,
+    "glassHex": 3236750
+  },
+  "totalParts": 20,
+  "partNames": [
+    "main_body",
+    "stone_base_left",
+    "stone_base_right",
+    "garage_door_left",
+    "garage_door_right",
+    "front_door",
+    "front_door_glass",
+    "right_window",
+    "porch_pillar_left",
+    "porch_pillar_right",
+    "main_roof",
+    "front_gable_dormer",
+    "dormer_facade",
+    "dormer_window_left",
+    "dormer_window_center",
+    "dormer_window_right",
+    "left_side_roof_extension",
+    "chimney",
+    "porch_light_left",
+    "porch_light_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

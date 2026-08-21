@@ -1,0 +1,36 @@
+{
+  "id": "rock_hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0",
+  "sourceImage": "rock/hoodoo/ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14263152,
+    "facadeHex": 13398935,
+    "baseHex": 10515034,
+    "accentHex": 15183495,
+    "darkHex": 4075571,
+    "brightHex": 16445692,
+    "glassHex": 4352130
+  },
+  "totalParts": 12,
+  "partNames": [
+    "base_slope",
+    "pillar_main_1",
+    "pillar_main_2",
+    "pillar_main_3",
+    "rock_strata_mid_1",
+    "rock_strata_mid_2",
+    "rock_strata_mid_3",
+    "hoodoo_cap_1",
+    "hoodoo_cap_2",
+    "hoodoo_cap_3",
+    "background_cliff_left",
+    "background_cliff_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "icosahedron_polyhedron",
+    "dodecahedron_polyhedron"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "rock_facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0",
+  "sourceImage": "rock/facet/ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8553090,
+    "facadeHex": 7368816,
+    "baseHex": 4210752,
+    "accentHex": 10526880,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 33023
+  },
+  "totalParts": 8,
+  "partNames": [
+    "large_foreground_boulder_1",
+    "large_foreground_boulder_2",
+    "mid_river_rock_cluster_1",
+    "mid_river_rock_cluster_2",
+    "riverbed_stone_patch_3",
+    "riverbed_stone_patch_4",
+    "bank_slope_rock_1",
+    "bank_slope_rock_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

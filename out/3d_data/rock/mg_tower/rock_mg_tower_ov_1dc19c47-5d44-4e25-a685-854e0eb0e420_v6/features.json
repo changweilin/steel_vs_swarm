@@ -1,0 +1,36 @@
+{
+  "id": "rock_mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420",
+  "sourceImage": "rock/mg_tower/ov_1dc19c47-5d44-4e25-a685-854e0eb0e420",
+  "style": "rock_monument",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11822435,
+    "facadeHex": 10505809,
+    "baseHex": 7155009,
+    "accentHex": 13393245,
+    "darkHex": 4338474,
+    "brightHex": 14935011,
+    "glassHex": 3235442
+  },
+  "totalParts": 11,
+  "partNames": [
+    "MainMesaBase",
+    "MainMesaTop",
+    "SpirePillar",
+    "LeftMesaBase",
+    "LeftMesaTop",
+    "RightMesaBase",
+    "DistantMesa",
+    "ForegroundRockCluster1",
+    "ForegroundRockCluster2",
+    "ForegroundRockCluster3",
+    "GroundTerrainBed"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "wedge",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_facet_wc_18724201_v6",
+  "key": "rock/facet_wc_18724201_247a380d_v6",
+  "family": "rock",
+  "subpart": "facet",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the large segmented erratic boulder matching the photo's central weathered limestone cliff feature, split vertically with mossy top and jagged polyhedral blocks, anchored solidly at ground level y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/facet/wc_18724201.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\facet\\wc_18724201~0.png",
+  "created_at": "2026-08-20T16:19:48.062Z",
+  "bounds": {
+    "min": [
+      -4.5276,
+      -1.1894,
+      -2.9894
+    ],
+    "max": [
+      4.4144,
+      4.7894,
+      3.2276
+    ],
+    "size": [
+      8.942,
+      5.979,
+      6.217
+    ],
+    "rMax": 5.468,
+    "triangles": 488,
+    "vertices": 296
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

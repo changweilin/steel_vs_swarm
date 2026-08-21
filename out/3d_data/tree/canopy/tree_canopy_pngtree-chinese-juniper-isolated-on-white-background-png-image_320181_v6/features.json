@@ -1,0 +1,28 @@
+{
+  "id": "tree_canopy_pngtree-chinese-juniper-isolated-on-white-background-png-image_320181",
+  "sourceImage": "tree/canopy/pngtree-chinese-juniper-isolated-on-white-background-png-image_320181",
+  "style": "bonsai_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3421235,
+    "facadeHex": 5263410,
+    "baseHex": 9876543,
+    "accentHex": 2345678,
+    "darkHex": 1118481,
+    "brightHex": 16777215,
+    "glassHex": 1234567
+  },
+  "totalParts": 5,
+  "partNames": [
+    "pot_base",
+    "lower_foliage",
+    "middle_foliage",
+    "upper_foliage",
+    "trunk_main"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_arch_ov_c7a58b73-0787-4153-9dca-1a6fb3a3bf40_v6",
+  "key": "rock/mg_arch_ov_c7a58b73-0787-4153-9dca-1a6fb3a3bf40_19d878c1_v6",
+  "family": "rock",
+  "subpart": "mg_arch",
+  "style": "rock_arch",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the large natural rock arch formation with crystalline and dodecahedron polyhedrons stacked tightly together. The main arch span and supporting pillars accurately mirror the silhouette and proportions seen in the sunset reference photo, anchored to y = 0 without gap issues.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_arch/ov_c7a58b73-0787-4153-9dca-1a6fb3a3bf40.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_arch\\ov_c7a58b73-0787-4153-9dca-1a6fb3a3bf40~0.png",
+  "created_at": "2026-08-20T16:23:25.301Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -4
+    ],
+    "max": [
+      7,
+      11.3266,
+      4
+    ],
+    "size": [
+      14,
+      11.327,
+      8
+    ],
+    "rMax": 8.062,
+    "triangles": 264,
+    "vertices": 154
+  },
+  "spec": {
+    "style": "rock_arch"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

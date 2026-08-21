@@ -1,0 +1,38 @@
+{
+  "id": "landmark_main_Paris__Obelisk_in_the_Place_de_la_Concorde__July_22__2008_v6",
+  "key": "landmark/main_Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008_153a6e52_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "neoclassical_monument",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008.jpg",
+  "created_at": "2026-08-20T15:28:05.819Z",
+  "bounds": {
+    "min": [
+      -8.2,
+      0,
+      -2.6
+    ],
+    "max": [
+      8.2,
+      24.5,
+      2.6
+    ],
+    "size": [
+      16.4,
+      24.5,
+      5.2
+    ],
+    "rMax": 8.602,
+    "triangles": 144,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "neoclassical_monument"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

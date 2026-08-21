@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_240203_FordExplorerFacelift_fromFord-07_v6",
+  "key": "vehicle/car_240203_FordExplorerFacelift_fromFord-07_52e46180_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/240203_FordExplorerFacelift_fromFord-07.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\240203_FordExplorerFacelift_fromFord-07.jpg",
+  "created_at": "2026-08-20T15:20:29.352Z",
+  "bounds": {
+    "min": [
+      -1.43,
+      -0.12,
+      -2.3
+    ],
+    "max": [
+      1.43,
+      1.7191,
+      2.3
+    ],
+    "size": [
+      2.86,
+      1.839,
+      4.6
+    ],
+    "rMax": 2.708,
+    "triangles": 448,
+    "vertices": 264
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

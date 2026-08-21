@@ -50,3 +50,10 @@ node_modules/.bin/
 # 三角形預算量測的中間產物(量測結論住 tools/ai3d/tri_budget.json,原始快照不入版控)
 tools/ai3d/.tri_measure/
 tools/ai3d/__pycache__/
+
+# YOLO 暫存權重與中間切片快取 (隨時可重新運算, 勿入版控)
+*.pt
+out/image_cache/
+out/targets/
+out/yolo_features/
+

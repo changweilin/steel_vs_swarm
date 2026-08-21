@@ -1,0 +1,30 @@
+{
+  "id": "rock_mg_dome_ov_e735b3d1-6504-43ba-b082-60bcbc110afd",
+  "sourceImage": "rock/mg_dome/ov_e735b3d1-6504-43ba-b082-60bcbc110afd",
+  "style": "rock_sculpture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 255,
+    "facadeHex": 34870,
+    "baseHex": 16900,
+    "accentHex": 45055,
+    "darkHex": 12300,
+    "brightHex": 65535,
+    "glassHex": 34815
+  },
+  "totalParts": 6,
+  "partNames": [
+    "vertical_back_wall",
+    "base_platform",
+    "rocky_slope_wedge_main",
+    "rock_detail_cluster_1",
+    "rock_detail_cluster_2",
+    "rock_lower_cliff_fragment"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "icosahedron_polyhedron",
+    "dodecahedron_polyhedron"
+  ]
+}

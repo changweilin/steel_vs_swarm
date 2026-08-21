@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_motor_14892810_OR_m_v6",
+  "key": "vehicle/motor_14892810_OR_m_5f418366_v6",
+  "family": "vehicle",
+  "subpart": "motor",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/motor/14892810_OR_m.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\14892810_OR_m.webp",
+  "created_at": "2026-08-20T15:36:40.532Z",
+  "bounds": {
+    "min": [
+      -0.5,
+      0.02,
+      -1.08
+    ],
+    "max": [
+      0.5,
+      1.9344,
+      1.1
+    ],
+    "size": [
+      1,
+      1.914,
+      2.18
+    ],
+    "rMax": 1.208,
+    "triangles": 320,
+    "vertices": 190
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

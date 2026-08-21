@@ -1,0 +1,29 @@
+{
+  "id": "landmark_main_dffg.jpg_1140x855~0",
+  "sourceImage": "landmark/main/dffg.jpg_1140x855~0",
+  "style": "modernist_architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13414496,
+    "facadeHex": 15983456,
+    "baseHex": 8421504,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 4621735
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_body_left",
+    "main_body_right",
+    "glass_strip",
+    "cross_vertical",
+    "cross_horizontal",
+    "base_foundation"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "cylinder"
+  ]
+}

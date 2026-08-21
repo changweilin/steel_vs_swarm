@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928_1_v6",
+  "key": "building/mass_pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928~1_cefd667d_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_rooftop_villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the L-shaped rooftop villa structure, including the pool, glass railings, and terrace landscaping. The geometry is closed and follows the specified color and material constraints.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928~1.png",
+  "created_at": "2026-08-21T09:09:10.907Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -4
+    ],
+    "max": [
+      4.025,
+      8,
+      4.075
+    ],
+    "size": [
+      8.025,
+      8,
+      8.075
+    ],
+    "rMax": 5.728,
+    "triangles": 300,
+    "vertices": 189
+  },
+  "spec": {
+    "style": "modern_rooftop_villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

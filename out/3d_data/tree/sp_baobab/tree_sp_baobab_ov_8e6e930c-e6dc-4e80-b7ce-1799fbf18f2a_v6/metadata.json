@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a_v6",
+  "key": "tree/sp_baobab_ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a_bcf5e534_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "industrial_infrastructure",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately represents the concrete light pole with its four-way lamp assembly. The central pole is modeled as a cylinder, and the four lamps are represented by boxes angled outwards, consistent with the visual reference. The proportions are maintained relative to a standard height.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a~0.png",
+  "created_at": "2026-08-20T17:05:18.547Z",
+  "bounds": {
+    "min": [
+      -0.8667,
+      4.5,
+      -0.8532
+    ],
+    "max": [
+      0.8667,
+      10.5,
+      0.8532
+    ],
+    "size": [
+      1.733,
+      6,
+      1.706
+    ],
+    "rMax": 1.216,
+    "triangles": 224,
+    "vertices": 132
+  },
+  "spec": {
+    "style": "industrial_infrastructure"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

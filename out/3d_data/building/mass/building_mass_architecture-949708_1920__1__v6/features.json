@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_architecture-949708_1920_(1)",
+  "sourceImage": "building/mass/architecture-949708_1920_(1)",
+  "style": "Modern Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 2697513,
+    "baseHex": 7954516,
+    "accentHex": 11043444,
+    "darkHex": 1644825,
+    "brightHex": 14540253,
+    "glassHex": 3368652
+  },
+  "totalParts": 16,
+  "partNames": [
+    "main_base",
+    "base_wood_left",
+    "base_wood_right",
+    "volume_center_front",
+    "roof_center_front",
+    "glass_gable_front",
+    "volume_top",
+    "roof_top",
+    "glass_gable_top",
+    "volume_right",
+    "roof_right",
+    "glass_gable_right",
+    "volume_left_low",
+    "roof_left_low",
+    "glass_gable_left_low",
+    "front_ground_glass"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

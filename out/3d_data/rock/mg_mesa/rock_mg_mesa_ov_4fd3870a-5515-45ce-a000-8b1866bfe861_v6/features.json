@@ -1,0 +1,32 @@
+{
+  "id": "rock_mg_mesa_ov_4fd3870a-5515-45ce-a000-8b1866bfe861",
+  "sourceImage": "rock/mg_mesa/ov_4fd3870a-5515-45ce-a000-8b1866bfe861",
+  "style": "geological_mesa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 12096860,
+    "facadeHex": 13866870,
+    "baseHex": 6575950,
+    "accentHex": 16777215,
+    "darkHex": 3552822,
+    "brightHex": 16777215,
+    "glassHex": 4556780
+  },
+  "totalParts": 7,
+  "partNames": [
+    "mesa_plateau",
+    "upper_cliff_face",
+    "lower_slope_base",
+    "rock_fragment_1",
+    "rock_fragment_2",
+    "talus_slope_left",
+    "talus_slope_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "frustum_pyramid",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "rock_mg_arch_ov_c7a58b73-0787-4153-9dca-1a6fb3a3bf40",
+  "sourceImage": "rock/mg_arch/ov_c7a58b73-0787-4153-9dca-1a6fb3a3bf40",
+  "style": "rock_arch",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8546870,
+    "facadeHex": 6378553,
+    "baseHex": 3616550,
+    "accentHex": 11043435,
+    "darkHex": 2039583,
+    "brightHex": 14534595,
+    "glassHex": 3033189
+  },
+  "totalParts": 11,
+  "partNames": [
+    "ground_base",
+    "left_pillar_base",
+    "left_pillar_upper",
+    "right_pillar_base",
+    "right_pillar_upper",
+    "arch_span_center",
+    "arch_top_peak",
+    "rock_detail_left_1",
+    "rock_detail_right_1",
+    "rock_detail_top_left",
+    "rock_detail_top_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

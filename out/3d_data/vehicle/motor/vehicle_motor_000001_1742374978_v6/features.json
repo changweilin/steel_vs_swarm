@@ -1,0 +1,35 @@
+{
+  "id": "vehicle_motor_000001_1742374978",
+  "sourceImage": "vehicle/motor/000001_1742374978",
+  "style": "scooter_retro",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 8953982,
+    "facadeHex": 8953982,
+    "baseHex": 4342553,
+    "accentHex": 12615856,
+    "darkHex": 1973790,
+    "brightHex": 14540253,
+    "glassHex": 3031140
+  },
+  "totalParts": 12,
+  "partNames": [
+    "front_wheel",
+    "rear_wheel",
+    "front_fender",
+    "chassis_base",
+    "front_shield",
+    "rear_body",
+    "seat",
+    "handlebar_stem",
+    "handlebar_head",
+    "headlight",
+    "left_mirror",
+    "right_mirror"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "wedge",
+    "box"
+  ]
+}

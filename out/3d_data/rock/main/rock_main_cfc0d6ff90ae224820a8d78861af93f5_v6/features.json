@@ -1,0 +1,32 @@
+{
+  "id": "rock_main_cfc0d6ff90ae224820a8d78861af93f5",
+  "sourceImage": "rock/main/cfc0d6ff90ae224820a8d78861af93f5",
+  "style": "geological_monolith",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 10526880,
+    "facadeHex": 4605510,
+    "baseHex": 2631720,
+    "accentHex": 16777215,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 8438271
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_rock_body",
+    "rock_peak_cap",
+    "staircase_path",
+    "observation_tower_base",
+    "observation_tower_glass",
+    "observation_tower_roof",
+    "base_rock_support"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "box",
+    "wedge",
+    "icosahedron_polyhedron"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "id": "building_mass_the-white-tower-when",
+  "sourceImage": "building/mass/the-white-tower-when",
+  "style": "historical_pagoda",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3817296,
+    "facadeHex": 13813941,
+    "baseHex": 11181445,
+    "accentHex": 6907471,
+    "darkHex": 1973790,
+    "brightHex": 15132390,
+    "glassHex": 2176378
+  },
+  "totalParts": 28,
+  "partNames": [
+    "base_tier_1",
+    "base_tier_2",
+    "tower_body_1",
+    "eave_1",
+    "tower_body_2",
+    "eave_2",
+    "tower_body_3",
+    "eave_3",
+    "tower_body_4",
+    "eave_4",
+    "tower_body_5",
+    "eave_5",
+    "tower_body_6",
+    "eave_6",
+    "tower_body_7",
+    "eave_7",
+    "tower_body_8",
+    "eave_8",
+    "spire_base",
+    "spire_top",
+    "window_front_1",
+    "window_front_2",
+    "window_front_3",
+    "window_front_4",
+    "window_front_5",
+    "window_front_6",
+    "window_front_7",
+    "window_front_8"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "frustum_pyramid",
+    "cylinder",
+    "pyramid",
+    "box"
+  ]
+}

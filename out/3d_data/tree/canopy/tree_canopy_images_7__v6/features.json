@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_images (7)",
+  "sourceImage": "tree/canopy/images (7)",
+  "style": "fantasy_tree_island",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4500000,
+    "facadeHex": 8050000,
+    "baseHex": 6040000,
+    "accentHex": 16760000,
+    "darkHex": 3000000,
+    "brightHex": 16777215,
+    "glassHex": 10000000
+  },
+  "totalParts": 7,
+  "partNames": [
+    "island_base",
+    "main_trunk",
+    "canopy_main",
+    "door",
+    "lantern_left",
+    "lantern_right",
+    "root_system"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

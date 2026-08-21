@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_ttn1071_Cover0106_1_v6",
+  "key": "ship/hull_ttn1071_Cover0106~1_aa464459_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the cruise ship's tiered superstructure, the iconic funnel, and the radar dome array. The hull is modeled as a solid, watertight structure with correctly oriented wedge bow and tiered deck levels. Windows and bridge glass are represented as distinct, slightly offset layers to avoid Z-fighting. The overall proportions and structural hierarchy align well with the provided image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/ttn1071_Cover0106.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\ttn1071_Cover0106~1.png",
+  "created_at": "2026-08-20T16:21:36.950Z",
+  "bounds": {
+    "min": [
+      -15.35,
+      0,
+      -60
+    ],
+    "max": [
+      15.35,
+      30,
+      70
+    ],
+    "size": [
+      30.7,
+      30,
+      130
+    ],
+    "rMax": 71.663,
+    "triangles": 602,
+    "vertices": 362
+  },
+  "spec": {
+    "style": "cruise_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "building_roofcap_wc_67880953",
+  "sourceImage": "building/roofcap/wc_67880953",
+  "style": "historical_architectural_rooftop",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 11184810,
+    "baseHex": 6710886,
+    "accentHex": 13421772,
+    "darkHex": 3355443,
+    "brightHex": 15790320,
+    "glassHex": 4621710
+  },
+  "totalParts": 10,
+  "partNames": [
+    "roof_surface",
+    "penthouse_main",
+    "penthouse_glass_front",
+    "parapet_wall_front",
+    "parapet_wall_right",
+    "roof_edge_trim",
+    "ladder_vertical",
+    "ladder_vertical_2",
+    "flagpole_base",
+    "flagpole_shaft"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

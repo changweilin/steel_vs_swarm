@@ -1,0 +1,39 @@
+{
+  "id": "tree_gt_cryptomeria_manual_FB_IMG_1786333453208",
+  "sourceImage": "tree/gt_cryptomeria/manual_FB_IMG_1786333453208",
+  "style": "tree_cryptomeria",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4352085,
+    "facadeHex": 5851458,
+    "baseHex": 3291942,
+    "accentHex": 12344883,
+    "darkHex": 1973790,
+    "brightHex": 15329769,
+    "glassHex": 2045550
+  },
+  "totalParts": 13,
+  "partNames": [
+    "ground_base",
+    "tree_root_spread",
+    "main_trunk",
+    "upper_trunk",
+    "canopy_cluster_center",
+    "canopy_cluster_left",
+    "canopy_cluster_right",
+    "canopy_cluster_top",
+    "canopy_cluster_back",
+    "shrine_base",
+    "shrine_wall",
+    "shrine_roof",
+    "shrine_roof_gable"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere",
+    "wedge",
+    "frustum_pyramid"
+  ]
+}

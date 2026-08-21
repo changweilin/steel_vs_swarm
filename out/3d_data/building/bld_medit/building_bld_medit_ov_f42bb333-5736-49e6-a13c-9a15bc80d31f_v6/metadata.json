@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_medit_ov_f42bb333-5736-49e6-a13c-9a15bc80d31f_v6",
+  "key": "building/bld_medit_ov_f42bb333-5736-49e6-a13c-9a15bc80d31f_70aad49f_v6",
+  "family": "building",
+  "subpart": "bld_medit",
+  "style": "Mediterranean Santorini Church",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the iconic blue-domed church of Santorini along with its adjacent pink bell tower. The main church features a cylindrical base with arched windows and a prominent blue hemispherical dome. The pink bell tower is modeled with multi-tiered arches, columns, and a small dome on top, matching the architectural details in the photo. All elements are anchored to a solid white base, ensuring watertight geometry and realistic proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_medit/ov_f42bb333-5736-49e6-a13c-9a15bc80d31f.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_medit\\ov_f42bb333-5736-49e6-a13c-9a15bc80d31f~0.png",
+  "created_at": "2026-08-21T07:04:21.043Z",
+  "bounds": {
+    "min": [
+      -3.1,
+      0,
+      -2
+    ],
+    "max": [
+      3.65,
+      5.575,
+      2.9755
+    ],
+    "size": [
+      6.75,
+      5.575,
+      4.976
+    ],
+    "rMax": 4.709,
+    "triangles": 896,
+    "vertices": 543
+  },
+  "spec": {
+    "style": "Mediterranean Santorini Church"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

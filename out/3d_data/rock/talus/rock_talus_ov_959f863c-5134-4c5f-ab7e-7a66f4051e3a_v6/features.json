@@ -1,0 +1,31 @@
+{
+  "id": "rock_talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a",
+  "sourceImage": "rock/talus/ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a",
+  "style": "rock_talus_reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7370856,
+    "facadeHex": 8421504,
+    "baseHex": 5263440,
+    "accentHex": 9868950,
+    "darkHex": 3947580,
+    "brightHex": 11184810,
+    "glassHex": 3290315
+  },
+  "totalParts": 8,
+  "partNames": [
+    "large_boulder_base",
+    "boulder_upper_chunk_1",
+    "boulder_upper_chunk_2",
+    "talus_slope_wedge_left",
+    "talus_slope_wedge_right",
+    "scattered_rock_1",
+    "scattered_rock_2",
+    "peak_rock_fragment"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

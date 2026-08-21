@@ -1,0 +1,42 @@
+{
+  "id": "vehicle_car_qaOZnp2Y26im18zO1A",
+  "sourceImage": "vehicle/car/qaOZnp2Y26im18zO1A",
+  "style": "modern_electric_sedan",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4210752,
+    "facadeHex": 4868682,
+    "baseHex": 2105376,
+    "accentHex": 3158064,
+    "darkHex": 1052688,
+    "brightHex": 15132390,
+    "glassHex": 1454898
+  },
+  "totalParts": 19,
+  "partNames": [
+    "chassis_base",
+    "car_body_main",
+    "roof_cabin",
+    "front_hood_slope",
+    "front_windshield",
+    "rear_windshield",
+    "left_front_door_window",
+    "right_front_door_window",
+    "left_rear_door_window",
+    "right_rear_door_window",
+    "left_mirror",
+    "right_mirror",
+    "front_bumper_grille",
+    "left_headlight_accent",
+    "right_headlight_accent",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

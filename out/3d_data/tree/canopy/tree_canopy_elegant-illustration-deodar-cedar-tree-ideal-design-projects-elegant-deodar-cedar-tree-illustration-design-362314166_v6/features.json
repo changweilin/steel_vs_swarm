@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166",
+  "sourceImage": "tree/canopy/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166",
+  "style": "stylized_conifer_tree",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2245678,
+    "facadeHex": 8532245,
+    "baseHex": 1579032,
+    "accentHex": 16777215,
+    "darkHex": 1052688,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 5,
+  "partNames": [
+    "trunk",
+    "bottom_canopy",
+    "middle_canopy",
+    "top_canopy",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "frustum_pyramid",
+    "pyramid",
+    "cylinder"
+  ]
+}

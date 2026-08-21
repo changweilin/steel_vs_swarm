@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb_1_v6",
+  "key": "tree/canopy_ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb~1_20f1fabe_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "minimalist_monochrome_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree is modeled as a central trunk with a complex, layered canopy using multiple dodecahedron_polyhedron components to simulate the dense, irregular foliage silhouette seen in the high-contrast photograph. The scale is set to approximately 6 meters in height, consistent with a mature tree. The base is anchored at y=0. The monochrome aesthetic is represented by darkHex for the foliage and facadeHex for the trunk.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb~1.png",
+  "created_at": "2026-08-20T16:23:19.849Z",
+  "bounds": {
+    "min": [
+      -2.3354,
+      0,
+      -2.3354
+    ],
+    "max": [
+      2.3354,
+      7.9013,
+      2.3354
+    ],
+    "size": [
+      4.671,
+      7.901,
+      4.671
+    ],
+    "rMax": 3.303,
+    "triangles": 192,
+    "vertices": 106
+  },
+  "spec": {
+    "style": "minimalist_monochrome_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,51 @@
+{
+  "id": "building_mass_photo0jpg",
+  "sourceImage": "building/mass/photo0jpg",
+  "style": "Tibetan Palace Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14201136,
+    "facadeHex": 15263976,
+    "baseHex": 11184810,
+    "accentHex": 8134440,
+    "darkHex": 2104354,
+    "brightHex": 16766720,
+    "glassHex": 1122864
+  },
+  "totalParts": 26,
+  "partNames": [
+    "Main Hillside Base",
+    "White Palace Lower Wing Left",
+    "White Palace Upper Wing Left",
+    "Red Palace Central Block",
+    "White Palace Right Wing",
+    "Red Palace Golden Roof Center",
+    "Red Palace Golden Roof Left",
+    "Red Palace Golden Roof Right",
+    "White Palace Left Roof",
+    "White Palace Right Roof",
+    "Red Palace Window Row 1 Left",
+    "Red Palace Window Row 1 Mid",
+    "Red Palace Window Row 1 Right",
+    "Red Palace Window Row 2 Left",
+    "Red Palace Window Row 2 Mid",
+    "Red Palace Window Row 2 Right",
+    "White Palace Left Windows A",
+    "White Palace Left Windows B",
+    "White Palace Left Windows C",
+    "White Palace Right Windows A",
+    "White Palace Right Windows B",
+    "White Palace Right Windows C",
+    "Left Circular Watchtower",
+    "Left Circular Watchtower Roof",
+    "Staircase Ramp Wall Left",
+    "Staircase Ramp Wall Right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "wedge",
+    "cylinder",
+    "cone"
+  ]
+}

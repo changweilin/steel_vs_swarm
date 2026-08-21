@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_motor_54175397571_be4ab8de90_b",
+  "sourceImage": "vehicle/motor/54175397571_be4ab8de90_b",
+  "style": "motorcycle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3815994,
+    "facadeHex": 8421504,
+    "baseHex": 2105376,
+    "accentHex": 5263440,
+    "darkHex": 1052688,
+    "brightHex": 12632256,
+    "glassHex": 3368652
+  },
+  "totalParts": 15,
+  "partNames": [
+    "front_wheel",
+    "rear_wheel",
+    "chassis_base",
+    "main_body_facade",
+    "front_cowling",
+    "windshield",
+    "seat",
+    "rear_tail",
+    "handlebar_left",
+    "handlebar_right",
+    "exhaust_pipe",
+    "headlight",
+    "rear_light",
+    "mirror_left",
+    "mirror_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box",
+    "wedge"
+  ]
+}

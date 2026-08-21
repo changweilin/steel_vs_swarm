@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_images_16__v6",
+  "key": "building/mass_images (16)_0ced51c0_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_minimalist_townhouse",
+  "symmetryMode": "asymmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (16).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\images (16).jpg",
+  "created_at": "2026-08-20T14:38:52.417Z",
+  "bounds": {
+    "min": [
+      -3,
+      0,
+      -5
+    ],
+    "max": [
+      3,
+      20,
+      5.1
+    ],
+    "size": [
+      6,
+      20,
+      10.1
+    ],
+    "rMax": 5.917,
+    "triangles": 132,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "modern_minimalist_townhouse"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

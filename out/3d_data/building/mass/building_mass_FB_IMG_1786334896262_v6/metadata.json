@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_FB_IMG_1786334896262_v6",
+  "key": "building/mass_FB_IMG_1786334896262_af52e775_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_highrise_residential",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model captures the core structural grid of the high-rise building, including the distinct vertical pillars and the recessed balcony sections. The roof features and the facade grid are represented using modular boxes and prisms to maintain the architectural rhythm. The symmetry is applied to ensure the rear and side facades are consistent with the front, fulfilling the 360-degree requirement.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/FB_IMG_1786334896262.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\FB_IMG_1786334896262~0.png",
+  "created_at": "2026-08-21T10:30:13.827Z",
+  "bounds": {
+    "min": [
+      -11,
+      0,
+      -8.5
+    ],
+    "max": [
+      11,
+      52,
+      9.6
+    ],
+    "size": [
+      22,
+      52,
+      18.1
+    ],
+    "rMax": 14.6,
+    "triangles": 172,
+    "vertices": 106
+  },
+  "spec": {
+    "style": "modern_highrise_residential"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

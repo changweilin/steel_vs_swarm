@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_k23",
+  "sourceImage": "ship/hull/k23",
+  "style": "modern_yacht",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 12632256,
+    "accentHex": 16753920,
+    "darkHex": 3355443,
+    "brightHex": 15658734,
+    "glassHex": 49344
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "superstructure_base",
+    "bridge_windows",
+    "rear_canopy_roof",
+    "rear_support_pillar",
+    "life_ring_port",
+    "life_ring_starboard",
+    "radar_dome",
+    "hull_bottom"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "torus_ring",
+    "hemisphere_dome"
+  ]
+}

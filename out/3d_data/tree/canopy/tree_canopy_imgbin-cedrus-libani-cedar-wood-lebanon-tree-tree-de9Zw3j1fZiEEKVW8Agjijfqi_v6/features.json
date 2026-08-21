@@ -1,0 +1,28 @@
+{
+  "id": "tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
+  "sourceImage": "tree/canopy/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi",
+  "style": "coniferous_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2245678,
+    "facadeHex": 5523412,
+    "baseHex": 3312345,
+    "accentHex": 889977,
+    "darkHex": 221100,
+    "brightHex": 998877,
+    "glassHex": 112233
+  },
+  "totalParts": 5,
+  "partNames": [
+    "trunk",
+    "foliage_layer_1",
+    "foliage_layer_2",
+    "foliage_layer_3",
+    "foliage_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "frustum_pyramid",
+    "pyramid"
+  ]
+}

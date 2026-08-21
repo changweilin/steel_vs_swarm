@@ -1,0 +1,42 @@
+{
+  "id": "rock_mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a",
+  "sourceImage": "rock/mg_tower/ov_b44cd820-d44f-48fa-af35-d2920fab9d2a",
+  "style": "industrial_graffiti_towers",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 14540253,
+    "baseHex": 6579300,
+    "accentHex": 13369344,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 3355443
+  },
+  "totalParts": 20,
+  "partNames": [
+    "silo_1_body",
+    "silo_2_body",
+    "silo_3_body",
+    "silo_4_body",
+    "silo_1_top_cap",
+    "silo_2_top_cap",
+    "silo_3_top_cap",
+    "silo_4_top_cap",
+    "frame_long_beam_1",
+    "frame_long_beam_2",
+    "frame_support_pillar_1",
+    "frame_support_pillar_2",
+    "frame_support_pillar_3",
+    "frame_support_pillar_4",
+    "frame_support_pillar_5",
+    "frame_support_pillar_6",
+    "frame_support_pillar_7",
+    "frame_support_pillar_8",
+    "inclined_catwalk_support",
+    "base_foundation"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box"
+  ]
+}

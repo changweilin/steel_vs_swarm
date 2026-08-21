@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027",
+  "sourceImage": "building/mass/pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027",
+  "style": "Modern Architectural Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 12632256,
+    "baseHex": 5592405,
+    "accentHex": 11184810,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 10092543
+  },
+  "totalParts": 9,
+  "partNames": [
+    "GroundBase",
+    "GroundFloorWall",
+    "GroundFloorGlass",
+    "SecondFloorDeck",
+    "UpperFloorMain",
+    "UpperFloorGlassFront",
+    "RoofFrame",
+    "TerraceRail",
+    "Stairs"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

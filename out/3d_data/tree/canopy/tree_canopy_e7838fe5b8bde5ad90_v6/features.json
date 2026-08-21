@@ -1,0 +1,28 @@
+{
+  "id": "tree_canopy_e7838fe5b8bde5ad90",
+  "sourceImage": "tree/canopy/e7838fe5b8bde5ad90",
+  "style": "botanical_cactus",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3423232,
+    "facadeHex": 2345678,
+    "baseHex": 1234567,
+    "accentHex": 16777215,
+    "darkHex": 5066061,
+    "brightHex": 16777215,
+    "glassHex": 8421504
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_pad",
+    "left_ear",
+    "right_ear",
+    "front_left_pad",
+    "front_right_pad",
+    "base_stem"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

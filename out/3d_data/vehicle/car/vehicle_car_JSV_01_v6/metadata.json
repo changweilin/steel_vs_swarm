@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_JSV_01_v6",
+  "key": "vehicle/car_JSV_01_f91b8f68_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/JSV_01.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\JSV_01.jpg",
+  "created_at": "2026-08-20T15:25:27.153Z",
+  "bounds": {
+    "min": [
+      -1.18,
+      0.225,
+      -1.935
+    ],
+    "max": [
+      1.18,
+      1.725,
+      1.98
+    ],
+    "size": [
+      2.36,
+      1.5,
+      3.915
+    ],
+    "rMax": 2.305,
+    "triangles": 480,
+    "vertices": 286
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

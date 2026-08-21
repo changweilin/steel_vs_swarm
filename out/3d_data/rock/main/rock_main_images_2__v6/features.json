@@ -1,0 +1,30 @@
+{
+  "id": "rock_main_images (2)",
+  "sourceImage": "rock/main/images (2)",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 9868950,
+    "facadeHex": 8553090,
+    "baseHex": 6579300,
+    "accentHex": 7895160,
+    "darkHex": 3289650,
+    "brightHex": 11842740,
+    "glassHex": 4210752
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_boulder_body",
+    "boulder_extension_left",
+    "boulder_extension_right",
+    "boulder_top_ridge",
+    "boulder_base_wedge",
+    "rock_detail_bump1",
+    "rock_detail_bump2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

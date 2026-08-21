@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull_300gt-tuna-long-liner-boat_02",
+  "sourceImage": "ship/hull/300gt-tuna-long-liner-boat_02",
+  "style": "Fishing Vessel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 8388608,
+    "accentHex": 16711680,
+    "darkHex": 4210752,
+    "brightHex": 14540253,
+    "glassHex": 49151
+  },
+  "totalParts": 9,
+  "partNames": [
+    "MainHull",
+    "BulbousBow",
+    "LowerHull",
+    "Superstructure",
+    "BridgeWindows",
+    "Mast",
+    "RadarDome",
+    "LifeBuoyPort",
+    "LifeBuoyStarboard"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cylinder",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

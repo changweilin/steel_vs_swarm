@@ -1,0 +1,30 @@
+{
+  "id": "rock_main_images rock",
+  "sourceImage": "rock/main/images rock",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 8421504,
+    "baseHex": 4210752,
+    "accentHex": 13421772,
+    "darkHex": 2105376,
+    "brightHex": 15790320,
+    "glassHex": 6579300
+  },
+  "totalParts": 6,
+  "partNames": [
+    "MainRockBody",
+    "RockBase",
+    "RockTopLayer",
+    "MineralBand1",
+    "RockFacetFront",
+    "RockFacetBack"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "wedge",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

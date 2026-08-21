@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_20260421104430-37bd4fa5",
+  "sourceImage": "ship/hull/20260421104430-37bd4fa5",
+  "style": "industrial_cargo_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 10526880,
+    "facadeHex": 4210752,
+    "baseHex": 2105376,
+    "accentHex": 16744448,
+    "darkHex": 1052688,
+    "brightHex": 14737632,
+    "glassHex": 8454143
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "container_deck_area",
+    "superstructure_base",
+    "bridge_level",
+    "bridge_windows",
+    "funnel",
+    "radar_mast",
+    "radar_dome",
+    "container_stack_front",
+    "container_stack_rear"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

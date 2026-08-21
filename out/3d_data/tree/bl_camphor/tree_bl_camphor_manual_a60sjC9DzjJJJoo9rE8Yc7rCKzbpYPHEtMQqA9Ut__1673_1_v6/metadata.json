@@ -1,0 +1,40 @@
+{
+  "id": "tree_bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1_v6",
+  "key": "tree/bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1_65c73315_v6",
+  "family": "tree",
+  "subpart": "bl_camphor",
+  "style": "traditional_japanese_shrine_and_camphor_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the primary camphor tree with its complex branching structure and the adjacent traditional shrine building. The shrine's roof geometry, including the red gable and the dark tiled roof, is represented using wedge and box components. The tree trunk is modeled with a conical_frustum, and the canopy is represented by multiple ellipsoid_sphere components to simulate the dense foliage. The scale is consistent with a real-world environment.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/bl_camphor/manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\bl_camphor\\manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1~0.png",
+  "created_at": "2026-08-20T16:21:54.620Z",
+  "bounds": {
+    "min": [
+      -3.5,
+      0,
+      -3.3287
+    ],
+    "max": [
+      11.5,
+      10.5,
+      3.3287
+    ],
+    "size": [
+      15,
+      10.5,
+      6.657
+    ],
+    "rMax": 11.972,
+    "triangles": 272,
+    "vertices": 169
+  },
+  "spec": {
+    "style": "traditional_japanese_shrine_and_camphor_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

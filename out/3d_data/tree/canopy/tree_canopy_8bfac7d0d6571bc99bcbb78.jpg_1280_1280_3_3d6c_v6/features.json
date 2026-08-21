@@ -1,0 +1,28 @@
+{
+  "id": "tree_canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c",
+  "sourceImage": "tree/canopy/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c",
+  "style": "Crested Saguaro Cactus",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8561024,
+    "facadeHex": 10797400,
+    "baseHex": 6579300,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 4473924
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "left_arm",
+    "right_arm",
+    "crested_top",
+    "crested_top_detail",
+    "trunk_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "dodecahedron_polyhedron"
+  ]
+}

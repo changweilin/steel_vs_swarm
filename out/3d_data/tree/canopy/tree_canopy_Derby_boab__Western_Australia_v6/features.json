@@ -1,0 +1,33 @@
+{
+  "id": "tree_canopy_Derby_boab,_Western_Australia",
+  "sourceImage": "tree/canopy/Derby_boab,_Western_Australia",
+  "style": "naturalistic",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 554600,
+    "facadeHex": 856540,
+    "baseHex": 453020,
+    "accentHex": 302010,
+    "darkHex": 201510,
+    "brightHex": 958060,
+    "glassHex": 1976635
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_trunk",
+    "trunk_hollow",
+    "branch_left",
+    "branch_right",
+    "canopy_cluster_1",
+    "canopy_cluster_2",
+    "fence_post_1",
+    "fence_post_2",
+    "fence_rail"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "box",
+    "cylinder",
+    "dodecahedron_polyhedron"
+  ]
+}

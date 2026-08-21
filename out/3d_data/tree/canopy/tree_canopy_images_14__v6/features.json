@@ -1,0 +1,27 @@
+{
+  "id": "tree_canopy_images (14)",
+  "sourceImage": "tree/canopy/images (14)",
+  "style": "stylized_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4500000,
+    "facadeHex": 6000000,
+    "baseHex": 3000000,
+    "accentHex": 8000000,
+    "darkHex": 2000000,
+    "brightHex": 9000000,
+    "glassHex": 1000000
+  },
+  "totalParts": 5,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "canopy_top",
+    "canopy_side",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

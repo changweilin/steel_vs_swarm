@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_tmp_AS173217722971_v6",
+  "key": "building/mass_tmp_AS173217722971_b9dcf155_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Concrete Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the modular, block-based composition of the building. The primary massing, recessed balconies, and window placements are reconstructed using box primitives. The garage door and entrance are correctly positioned. The rear and side facades are mirrored to ensure a 360-degree solid volume as requested. The color palette adheres to the 7-Zone system.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/tmp_AS173217722971.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\tmp_AS173217722971~0.png",
+  "created_at": "2026-08-21T09:28:11.108Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -4.1
+    ],
+    "max": [
+      3.1,
+      13,
+      5.075
+    ],
+    "size": [
+      7.1,
+      13,
+      9.175
+    ],
+    "rMax": 5.947,
+    "triangles": 256,
+    "vertices": 163
+  },
+  "spec": {
+    "style": "Modern Minimalist Concrete Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

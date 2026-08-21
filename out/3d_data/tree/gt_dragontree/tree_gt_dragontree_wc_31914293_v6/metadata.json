@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_31914293_v6",
+  "key": "tree/gt_dragontree_wc_31914293_fbf3585a_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "Dragon Blood Tree (Dracaena cinnabari) landscape",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model successfully captures the iconic umbrella-shaped canopy of the Dragon Blood Tree using a flattened ellipsoid for the crown and a conical frustum for the trunk. The scale is set to reflect the massive, mature nature of these trees (approx 4-6m height). The spatial distribution of the trees follows the perspective of the original photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_31914293.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_31914293~0.png",
+  "created_at": "2026-08-20T16:58:35.828Z",
+  "bounds": {
+    "min": [
+      -8.8,
+      -0.1,
+      -9.9021
+    ],
+    "max": [
+      10,
+      5.7,
+      3.3287
+    ],
+    "size": [
+      18.8,
+      5.8,
+      13.231
+    ],
+    "rMax": 13.247,
+    "triangles": 728,
+    "vertices": 446
+  },
+  "spec": {
+    "style": "Dragon Blood Tree (Dracaena cinnabari) landscape"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

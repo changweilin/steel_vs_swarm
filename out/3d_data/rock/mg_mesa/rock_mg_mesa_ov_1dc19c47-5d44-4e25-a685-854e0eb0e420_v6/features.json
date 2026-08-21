@@ -1,0 +1,31 @@
+{
+  "id": "rock_mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420",
+  "sourceImage": "rock/mg_mesa/ov_1dc19c47-5d44-4e25-a685-854e0eb0e420",
+  "style": "rock_mesa_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11756580,
+    "facadeHex": 11818318,
+    "baseHex": 6046252,
+    "accentHex": 14777421,
+    "darkHex": 3943452,
+    "brightHex": 15790320,
+    "glassHex": 3362174
+  },
+  "totalParts": 6,
+  "partNames": [
+    "mesa_base_strata",
+    "mesa_mid_cliff",
+    "mesa_plateau_top",
+    "mesa_pinnacle_tower",
+    "foreground_rock_1",
+    "foreground_rock_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "cylinder",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

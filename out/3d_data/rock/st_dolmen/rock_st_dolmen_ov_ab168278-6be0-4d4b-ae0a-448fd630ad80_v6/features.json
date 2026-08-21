@@ -1,0 +1,29 @@
+{
+  "id": "rock_st_dolmen_ov_ab168278-6be0-4d4b-ae0a-448fd630ad80",
+  "sourceImage": "rock/st_dolmen/ov_ab168278-6be0-4d4b-ae0a-448fd630ad80",
+  "style": "ancient megalithic monument",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 7895160,
+    "facadeHex": 9868950,
+    "baseHex": 5263440,
+    "accentHex": 6579300,
+    "darkHex": 2631720,
+    "brightHex": 11842740,
+    "glassHex": 3290317
+  },
+  "totalParts": 6,
+  "partNames": [
+    "base_rock_mound",
+    "left_pillar",
+    "right_pillar",
+    "top_lintel_stone",
+    "lintel_detail_left",
+    "lintel_detail_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "box",
+    "icosahedron_polyhedron"
+  ]
+}

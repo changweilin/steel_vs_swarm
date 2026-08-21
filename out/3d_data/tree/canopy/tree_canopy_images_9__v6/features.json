@@ -1,0 +1,34 @@
+{
+  "id": "tree_canopy_images (9)",
+  "sourceImage": "tree/canopy/images (9)",
+  "style": "Bonsai landscape with coniferous trees and mossy rock base",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2263845,
+    "facadeHex": 4610860,
+    "baseHex": 3952936,
+    "accentHex": 5925184,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 16777215
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_rock_main",
+    "base_rock_secondary",
+    "left_tree_trunk",
+    "left_tree_canopy_top",
+    "left_tree_canopy_mid",
+    "left_tree_foliage_base",
+    "right_tree_trunk",
+    "right_tree_canopy_top",
+    "right_tree_canopy_mid",
+    "right_tree_foliage_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "cylinder",
+    "pyramid",
+    "frustum_pyramid"
+  ]
+}

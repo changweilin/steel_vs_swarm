@@ -1,0 +1,46 @@
+{
+  "id": "building_mass_171860464927014009.jpg!900x.water3",
+  "sourceImage": "building/mass/171860464927014009.jpg!900x.water3",
+  "style": "modern_building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 4210752,
+    "baseHex": 2105376,
+    "accentHex": 11822394,
+    "darkHex": 1052688,
+    "brightHex": 14540253,
+    "glassHex": 3298839
+  },
+  "totalParts": 24,
+  "partNames": [
+    "main_building_core",
+    "ground_base_podium",
+    "white_vertical_frame_left",
+    "white_vertical_frame_center",
+    "top_roof_canopy",
+    "balcony_stack_1",
+    "balcony_glass_1",
+    "balcony_stack_2",
+    "balcony_glass_2",
+    "balcony_stack_3",
+    "balcony_glass_3",
+    "balcony_stack_4",
+    "balcony_glass_4",
+    "balcony_stack_5",
+    "balcony_glass_5",
+    "right_wing_wood_panel",
+    "window_row_left_1",
+    "window_row_left_2",
+    "window_row_left_3",
+    "window_row_left_4",
+    "window_row_left_5",
+    "window_row_left_6",
+    "back_wall_filler",
+    "neighboring_small_building"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

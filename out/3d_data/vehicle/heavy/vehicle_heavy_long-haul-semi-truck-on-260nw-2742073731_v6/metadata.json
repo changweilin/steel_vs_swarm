@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_heavy_long-haul-semi-truck-on-260nw-2742073731_v6",
+  "key": "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_611d4559_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "vehicle/heavy",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/heavy/long-haul-semi-truck-on-260nw-2742073731.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\long-haul-semi-truck-on-260nw-2742073731.jpg",
+  "created_at": "2026-08-20T15:33:53.666Z",
+  "bounds": {
+    "min": [
+      -1.8,
+      0.25,
+      -7
+    ],
+    "max": [
+      1.8,
+      3.9,
+      5.245
+    ],
+    "size": [
+      3.6,
+      3.65,
+      12.245
+    ],
+    "rMax": 7.228,
+    "triangles": 540,
+    "vertices": 308
+  },
+  "spec": {
+    "style": "vehicle/heavy"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

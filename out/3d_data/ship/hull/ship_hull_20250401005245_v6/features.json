@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull_20250401005245",
+  "sourceImage": "ship/hull/20250401005245",
+  "style": "LNG Carrier Ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 2832750,
+    "baseHex": 8388608,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 14737632,
+    "glassHex": 4956350
+  },
+  "totalParts": 10,
+  "partNames": [
+    "Main Hull",
+    "Bottom Hull",
+    "LNG Tank 1",
+    "LNG Tank 2",
+    "LNG Tank 3",
+    "Bridge Base",
+    "Bridge Windows",
+    "Funnel",
+    "Radar Mast",
+    "Bow Wedge"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome",
+    "cylinder"
+  ]
+}

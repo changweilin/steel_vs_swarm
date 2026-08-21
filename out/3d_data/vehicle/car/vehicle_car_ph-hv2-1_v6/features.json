@@ -1,0 +1,41 @@
+{
+  "id": "vehicle_car_ph-hv2-1",
+  "sourceImage": "vehicle/car/ph-hv2-1",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16119285,
+    "facadeHex": 15790320,
+    "baseHex": 2105376,
+    "accentHex": 3289650,
+    "darkHex": 1052688,
+    "brightHex": 15790320,
+    "glassHex": 2045542
+  },
+  "totalParts": 18,
+  "partNames": [
+    "chassis_base",
+    "car_body_main",
+    "roof_cabin",
+    "front_hood_slope",
+    "front_windshield",
+    "rear_windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_bumper_grid",
+    "front_headlight_left",
+    "front_headlight_right",
+    "front_license_plate",
+    "left_rearview_mirror",
+    "right_rearview_mirror",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

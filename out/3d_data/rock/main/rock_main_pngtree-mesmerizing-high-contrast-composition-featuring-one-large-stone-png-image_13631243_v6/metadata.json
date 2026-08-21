@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_v6",
+  "key": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_e2df448f_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed rock model captures the vertical, tapering monolith shape with natural rocky texture built from overlapping dodecahedron and polyhedron primitives. Moss crevices and asymmetric shaded faces are accurately represented.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243~0.png",
+  "created_at": "2026-08-20T16:27:44.830Z",
+  "bounds": {
+    "min": [
+      -1.5952,
+      -0.2537,
+      -1.0405
+    ],
+    "max": [
+      1.6871,
+      3.1524,
+      1.0405
+    ],
+    "size": [
+      3.282,
+      3.406,
+      2.081
+    ],
+    "rMax": 1.982,
+    "triangles": 132,
+    "vertices": 80
+  },
+  "spec": {
+    "style": "natural_rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

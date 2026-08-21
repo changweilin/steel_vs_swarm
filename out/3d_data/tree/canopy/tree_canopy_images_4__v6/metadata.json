@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_4__v6",
+  "key": "tree/canopy_images (4)_61f02ffc_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The bonsai tree is reconstructed using a conical frustum for the main trunk, multiple ellipsoid spheres for the pine foliage clusters, and a box-based pot. The geometry captures the characteristic S-curve of the trunk and the layered canopy structure. The scale is set to approximately 0.8m height for the bonsai.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (4).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (4)~0.png",
+  "created_at": "2026-08-20T16:11:31.749Z",
+  "bounds": {
+    "min": [
+      -0.6,
+      -0.3515,
+      -0.3
+    ],
+    "max": [
+      0.95,
+      0.9,
+      0.3
+    ],
+    "size": [
+      1.55,
+      1.252,
+      0.6
+    ],
+    "rMax": 0.996,
+    "triangles": 780,
+    "vertices": 478
+  },
+  "spec": {
+    "style": "Bonsai Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

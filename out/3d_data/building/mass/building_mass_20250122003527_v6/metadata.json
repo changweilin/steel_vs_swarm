@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_20250122003527_v6",
+  "key": "building/mass_20250122003527_49425d53_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the iconic sloped geometric volume of the Lanyang Museum architecture with its dramatic leaning wedge roof, distinctive stone-textured facade blocks, and expansive blue glass curtain walls angled towards the left. The composition aligns well with real-world proportions, firmly anchored at the ground level.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/20250122003527.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\20250122003527~0.png",
+  "created_at": "2026-08-20T17:21:54.474Z",
+  "bounds": {
+    "min": [
+      -20,
+      -1.1975,
+      -10
+    ],
+    "max": [
+      20,
+      24.7334,
+      10
+    ],
+    "size": [
+      40,
+      25.931,
+      20
+    ],
+    "rMax": 22.361,
+    "triangles": 96,
+    "vertices": 66
+  },
+  "spec": {
+    "style": "modern_architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

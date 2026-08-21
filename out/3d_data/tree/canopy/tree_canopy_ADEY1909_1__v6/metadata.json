@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ADEY1909_1__v6",
+  "key": "tree/canopy_ADEY1909 (1)_7970b57d_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "organic_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree structure is modeled using a central trunk system branching into a large, dense, flattened canopy. The canopy is represented by a large ellipsoid to capture the wide, spreading shape of the Ficus-like tree. The trunk is modeled with multiple cylinders to represent the branching structure. The overall proportions and the horizontal spread of the canopy match the reference image well.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/ADEY1909 (1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\ADEY1909 (1)~0.png",
+  "created_at": "2026-08-20T16:21:16.244Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      0,
+      -4.2798
+    ],
+    "max": [
+      4.5,
+      6,
+      4.2798
+    ],
+    "size": [
+      9,
+      6,
+      8.56
+    ],
+    "rMax": 6.21,
+    "triangles": 412,
+    "vertices": 252
+  },
+  "spec": {
+    "style": "organic_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

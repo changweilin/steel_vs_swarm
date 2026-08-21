@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_VillaSavoye",
+  "sourceImage": "building/mass/VillaSavoye",
+  "style": "Modernist Architecture (Villa Savoye)",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 10526880,
+    "accentHex": 12632256,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_body",
+    "ground_floor_base",
+    "pilotis_1",
+    "pilotis_2",
+    "pilotis_3",
+    "pilotis_4",
+    "ribbon_window_front",
+    "rooftop_solarium_curve",
+    "rooftop_wall"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

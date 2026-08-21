@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_about-06_2_orig",
+  "sourceImage": "building/mass/about-06_2_orig",
+  "style": "Modern Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 6381921,
+    "baseHex": 3815994,
+    "accentHex": 11184810,
+    "darkHex": 2105376,
+    "brightHex": 15790320,
+    "glassHex": 26367
+  },
+  "totalParts": 17,
+  "partNames": [
+    "ground_base",
+    "main_building_core",
+    "ground_floor_glazing_front",
+    "ground_floor_glazing_side",
+    "overhang_tier_1",
+    "overhang_tier_2",
+    "overhang_tier_3",
+    "overhang_tier_4",
+    "overhang_tier_5",
+    "overhang_tier_6",
+    "penthouse_base",
+    "penthouse_roof_curve",
+    "penthouse_window_front",
+    "stilt_column_1",
+    "stilt_column_2",
+    "tree_trunk",
+    "tree_canopy_cluster"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

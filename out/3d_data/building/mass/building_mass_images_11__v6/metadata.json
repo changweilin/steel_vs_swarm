@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_11__v6",
+  "key": "building/mass_images (11)_2340eca9_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "isometric_modern_house",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the isometric architectural style, including the distinct mono-pitch roof, the garage door, and the recessed balcony area. All parts are tightly integrated with appropriate depth offsets to prevent Z-fighting. The roof slope is correctly oriented outwards.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (11).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (11)~0.png",
+  "created_at": "2026-08-21T08:08:16.704Z",
+  "bounds": {
+    "min": [
+      -3,
+      -0.1,
+      -3
+    ],
+    "max": [
+      3,
+      4,
+      3
+    ],
+    "size": [
+      6,
+      4.1,
+      6
+    ],
+    "rMax": 4.243,
+    "triangles": 104,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "isometric_modern_house"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

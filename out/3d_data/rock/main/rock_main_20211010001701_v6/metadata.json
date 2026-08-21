@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_20211010001701_v6",
+  "key": "rock/main_20211010001701_88fab0a9_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The massive desert monolith has been successfully reconstructed using a combination of faceted dodecahedrons, prisms, and angled wedges to capture the distinct vertical cleavage plane and weathered irregular profiles shown in the reference photograph. The base is firmly anchored at y=0 without intersecting gaps, and the orange-brown coloration accurately matches the desert sandstone appearance.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/20211010001701.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\20211010001701~0.png",
+  "created_at": "2026-08-20T16:17:00.362Z",
+  "bounds": {
+    "min": [
+      -4.9116,
+      -0.5482,
+      -2.6502
+    ],
+    "max": [
+      4.4,
+      8.0713,
+      3.7086
+    ],
+    "size": [
+      9.312,
+      8.62,
+      6.359
+    ],
+    "rMax": 5.754,
+    "triangles": 144,
+    "vertices": 86
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

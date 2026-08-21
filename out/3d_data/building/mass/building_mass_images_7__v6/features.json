@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_images (7)",
+  "sourceImage": "building/mass/images (7)",
+  "style": "Modern Architectural Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 10066329,
+    "baseHex": 5592405,
+    "accentHex": 8405056,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 1118481
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_base_structure",
+    "upper_level_structure",
+    "ground_floor_glass_wall",
+    "wooden_deck",
+    "roof_terrace_floor",
+    "pergola_structure",
+    "chimney_stack",
+    "decorative_tree_1",
+    "decorative_tree_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

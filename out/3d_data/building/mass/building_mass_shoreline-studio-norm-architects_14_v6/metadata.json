@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_shoreline-studio-norm-architects_14_v6",
+  "key": "building/mass_shoreline-studio-norm-architects_14_f7165663_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Thatch-Roof Pavilion",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the thatched roof geometry using a large wedge base with a central skylight cutout. The glass facade and wooden wall sections are modeled as distinct components with appropriate depth. The roof overhang is correctly oriented outwards and downwards. The rear and side facades were mirrored to ensure a complete 360-degree structure as per requirements.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/shoreline-studio-norm-architects_14.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\shoreline-studio-norm-architects_14~0.png",
+  "created_at": "2026-08-21T09:22:14.140Z",
+  "bounds": {
+    "min": [
+      -5,
+      0,
+      -3.5
+    ],
+    "max": [
+      5,
+      6.2,
+      3.5
+    ],
+    "size": [
+      10,
+      6.2,
+      7
+    ],
+    "rMax": 6.103,
+    "triangles": 104,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "Modern Thatch-Roof Pavilion"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

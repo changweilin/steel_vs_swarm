@@ -1,0 +1,29 @@
+{
+  "id": "landmark_dish_ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869",
+  "sourceImage": "landmark/dish/ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869",
+  "style": "industrial_satellite_dish",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 12632256,
+    "baseHex": 8421504,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 49344
+  },
+  "totalParts": 6,
+  "partNames": [
+    "dish_surface",
+    "dish_support_base",
+    "main_mast",
+    "lnb_arm",
+    "lnb_head",
+    "roof_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "box",
+    "cylinder"
+  ]
+}

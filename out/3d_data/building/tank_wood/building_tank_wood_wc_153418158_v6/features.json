@@ -1,0 +1,35 @@
+{
+  "id": "building_tank_wood_wc_153418158",
+  "sourceImage": "building/tank_wood/wc_153418158",
+  "style": "Gothic Revival Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4671303,
+    "facadeHex": 13487545,
+    "baseHex": 11184810,
+    "accentHex": 8421504,
+    "darkHex": 2105376,
+    "brightHex": 15790320,
+    "glassHex": 4621720
+  },
+  "totalParts": 11,
+  "partNames": [
+    "MainBase",
+    "TowerBase",
+    "TowerUpper",
+    "TowerRoof",
+    "LanternTop",
+    "FrontDoor",
+    "FrontWindow",
+    "CrenellationFront",
+    "SideWindowLeft",
+    "SideWindowRight",
+    "TowerWindow"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "cone",
+    "cylinder"
+  ]
+}

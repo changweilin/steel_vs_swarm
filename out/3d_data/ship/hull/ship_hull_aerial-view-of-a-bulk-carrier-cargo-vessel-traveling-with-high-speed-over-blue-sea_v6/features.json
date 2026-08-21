@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea",
+  "sourceImage": "ship/hull/aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea",
+  "style": "Bulk Carrier Ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16711680,
+    "baseHex": 128,
+    "accentHex": 16776960,
+    "darkHex": 3355443,
+    "brightHex": 15658734,
+    "glassHex": 8421631
+  },
+  "totalParts": 11,
+  "partNames": [
+    "Main Hull Base",
+    "Upper Hull Black Section",
+    "Bow Wedge",
+    "Deck",
+    "Superstructure",
+    "Bridge Windows",
+    "Crane 1",
+    "Crane 2",
+    "Crane 3",
+    "Funnel",
+    "Radar Dome"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

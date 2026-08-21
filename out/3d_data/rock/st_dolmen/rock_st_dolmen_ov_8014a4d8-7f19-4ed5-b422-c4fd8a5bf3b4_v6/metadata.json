@@ -1,0 +1,40 @@
+{
+  "id": "rock_st_dolmen_ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4_v6",
+  "key": "rock/st_dolmen_ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4_aef54361_v6",
+  "family": "rock",
+  "subpart": "st_dolmen",
+  "style": "ancient_megalithic_stones",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the primary megalithic standing stones and surrounding terrain features from the Callernish stones watercolor painting. Used dodecahedron and icosahedron polyhedra for irregular organic rock structures placed correctly in a 3D landscape layout.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/st_dolmen/ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\st_dolmen\\ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4~0.png",
+  "created_at": "2026-08-20T16:28:38.192Z",
+  "bounds": {
+    "min": [
+      -15,
+      -1,
+      -15
+    ],
+    "max": [
+      15,
+      4.3272,
+      15
+    ],
+    "size": [
+      30,
+      5.327,
+      30
+    ],
+    "rMax": 21.213,
+    "triangles": 344,
+    "vertices": 196
+  },
+  "spec": {
+    "style": "ancient_megalithic_stones"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

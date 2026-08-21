@@ -1,0 +1,32 @@
+{
+  "id": "rock_main_61bc69d997822",
+  "sourceImage": "rock/main/61bc69d997822",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 43520,
+    "facadeHex": 6706015,
+    "baseHex": 3223857,
+    "accentHex": 10066329,
+    "darkHex": 1447446,
+    "brightHex": 11184810,
+    "glassHex": 20456
+  },
+  "totalParts": 9,
+  "partNames": [
+    "water_base_plane",
+    "rock_strata_base",
+    "rock_strata_mid_lower",
+    "rock_strata_middle",
+    "rock_strata_mid_upper",
+    "rock_strata_top",
+    "grassy_summit",
+    "rock_outcrop_detail_1",
+    "rock_outcrop_detail_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "rock_facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609",
+  "sourceImage": "rock/facet/ov_e8344366-5513-4cd8-9d33-5cb394fe2609",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6579304,
+    "facadeHex": 4605510,
+    "baseHex": 2302755,
+    "accentHex": 7237230,
+    "darkHex": 1644825,
+    "brightHex": 11842740,
+    "glassHex": 2000000
+  },
+  "totalParts": 9,
+  "partNames": [
+    "Main_Rock_Base",
+    "Main_Rock_Middle_Bulk",
+    "Main_Rock_Top_Peak",
+    "Main_Rock_Right_Extension",
+    "Main_Rock_Left_Shoulder",
+    "Waterline_Base_Cliff",
+    "Guano_Stain_Detail",
+    "Small_Boulder_Base",
+    "Small_Boulder_Top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "box"
+  ]
+}

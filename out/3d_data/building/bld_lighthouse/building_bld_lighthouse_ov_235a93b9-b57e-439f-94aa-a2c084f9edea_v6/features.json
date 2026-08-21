@@ -1,0 +1,36 @@
+{
+  "id": "building_bld_lighthouse_ov_235a93b9-b57e-439f-94aa-a2c084f9edea",
+  "sourceImage": "building/bld_lighthouse/ov_235a93b9-b57e-439f-94aa-a2c084f9edea",
+  "style": "building/bld_lighthouse",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14737632,
+    "baseHex": 5592405,
+    "accentHex": 15105570,
+    "darkHex": 2236962,
+    "brightHex": 16777215,
+    "glassHex": 8454143
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_tower",
+    "gallery_base",
+    "lantern_room",
+    "lantern_roof",
+    "finial",
+    "window_1",
+    "window_2",
+    "rocky_base",
+    "gallery_railing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "polygonal_prism",
+    "frustum_pyramid",
+    "box",
+    "ellipsoid_sphere",
+    "torus_ring"
+  ]
+}

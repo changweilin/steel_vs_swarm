@@ -1,0 +1,29 @@
+{
+  "id": "tree_sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground",
+  "sourceImage": "tree/sp_baobab/manual_Adansonia-gregorii-Boab-Tree-Ex-ground",
+  "style": "nature_botanical_baobab",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 456789,
+    "facadeHex": 654321,
+    "baseHex": 321000,
+    "accentHex": 987654,
+    "darkHex": 202020,
+    "brightHex": 888888,
+    "glassHex": 123456
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "upper_trunk",
+    "canopy_cluster_1",
+    "canopy_cluster_2",
+    "canopy_cluster_3",
+    "base_root"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

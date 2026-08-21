@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928_0_v6",
+  "key": "building/mass_pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928~0_f8558b44_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the L-shaped modern villa structure, including the rooftop garden, glass curtain walls, and the garage entrance. The geometry is closed and consistent with real-world architectural proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928~0.png",
+  "created_at": "2026-08-21T09:08:10.622Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      -0.2,
+      -6.4266
+    ],
+    "max": [
+      6,
+      6.4,
+      6.1
+    ],
+    "size": [
+      12.5,
+      6.6,
+      12.527
+    ],
+    "rMax": 9.141,
+    "triangles": 276,
+    "vertices": 173
+  },
+  "spec": {
+    "style": "Modern Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

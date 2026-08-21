@@ -1,0 +1,33 @@
+{
+  "id": "vehicle_bike_003002_1725858476",
+  "sourceImage": "vehicle/bike/003002_1725858476",
+  "style": "Mountain Bicycle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 2631720,
+    "baseHex": 3426654,
+    "accentHex": 16738740,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 8454143
+  },
+  "totalParts": 10,
+  "partNames": [
+    "MainFrameDownTube",
+    "MainFrameTopTube",
+    "SeatPost",
+    "Seat",
+    "FrontFork",
+    "FrontWheelTire",
+    "RearWheelTire",
+    "ChainRing",
+    "Handlebar",
+    "AccentDecal"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box",
+    "torus_ring"
+  ]
+}

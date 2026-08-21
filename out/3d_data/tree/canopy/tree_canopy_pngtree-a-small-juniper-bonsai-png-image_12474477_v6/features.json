@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_pngtree-a-small-juniper-bonsai-png-image_12474477",
+  "sourceImage": "tree/canopy/pngtree-a-small-juniper-bonsai-png-image_12474477",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2245376,
+    "facadeHex": 5917757,
+    "baseHex": 11184810,
+    "accentHex": 16777215,
+    "darkHex": 3947580,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 6,
+  "partNames": [
+    "pot_base",
+    "trunk_main",
+    "canopy_bottom",
+    "canopy_mid_left",
+    "canopy_mid_right",
+    "canopy_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

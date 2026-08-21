@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_54027335_v6",
+  "key": "tree/gt_dragontree_wc_54027335_91f2ca44_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The dragon tree's iconic umbrella-shaped canopy is modeled using a large, flattened ellipsoid to capture the dense, spreading foliage, while the thick, textured trunk is represented by a conical frustum. The proportions reflect the characteristic low-branching structure of the Dracaena cinnabari. The base is anchored at y=0 with surrounding rock clusters.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_54027335.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_54027335~0.png",
+  "created_at": "2026-08-20T16:59:49.355Z",
+  "bounds": {
+    "min": [
+      -3.5,
+      -0.4605,
+      -3.3287
+    ],
+    "max": [
+      3.5,
+      5,
+      3.3287
+    ],
+    "size": [
+      7,
+      5.46,
+      6.657
+    ],
+    "rMax": 4.83,
+    "triangles": 412,
+    "vertices": 237
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

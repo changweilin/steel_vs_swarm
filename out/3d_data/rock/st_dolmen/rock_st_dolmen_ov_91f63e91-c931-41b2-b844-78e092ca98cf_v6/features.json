@@ -1,0 +1,39 @@
+{
+  "id": "rock_st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf",
+  "sourceImage": "rock/st_dolmen/ov_91f63e91-c931-41b2-b844-78e092ca98cf",
+  "style": "megalithic landscape",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7303023,
+    "facadeHex": 8092539,
+    "baseHex": 3883307,
+    "accentHex": 9408669,
+    "darkHex": 4014131,
+    "brightHex": 11382188,
+    "glassHex": 3296061
+  },
+  "totalParts": 16,
+  "partNames": [
+    "Main Megalith 1 Base",
+    "Main Megalith 1 Upper",
+    "Main Megalith 1 Apex",
+    "Second Megalith Base",
+    "Second Megalith Upper",
+    "Third Megalith Base",
+    "Third Megalith Upper",
+    "Background Megalith Left",
+    "Background Megalith Center",
+    "Background Megalith Right Line 1",
+    "Background Megalith Right Line 2",
+    "Distant Megalith 1",
+    "Distant Megalith 2",
+    "Distant Megalith 3",
+    "Far Right Megalith",
+    "Ground Base Patch"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "box"
+  ]
+}

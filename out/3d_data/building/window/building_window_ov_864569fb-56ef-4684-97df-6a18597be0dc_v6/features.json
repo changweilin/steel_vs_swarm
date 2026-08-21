@@ -1,0 +1,30 @@
+{
+  "id": "building_window_ov_864569fb-56ef-4684-97df-6a18597be0dc",
+  "sourceImage": "building/window/ov_864569fb-56ef-4684-97df-6a18597be0dc",
+  "style": "Art Nouveau Stained Glass Window",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16753920,
+    "facadeHex": 16766660,
+    "baseHex": 10066329,
+    "accentHex": 13369344,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 11066879
+  },
+  "totalParts": 6,
+  "partNames": [
+    "CircularFrame",
+    "GlassPanel",
+    "FaceBase",
+    "HairLayer",
+    "Headband",
+    "ClothingBase"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

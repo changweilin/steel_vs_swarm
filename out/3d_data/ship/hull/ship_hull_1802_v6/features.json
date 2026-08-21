@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_1802",
+  "sourceImage": "ship/hull/1802",
+  "style": "military_warship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 11184810,
+    "baseHex": 6710886,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 4621735
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "superstructure_base",
+    "bridge_windows",
+    "forward_turret",
+    "main_mast",
+    "secondary_mast",
+    "radar_dome",
+    "hull_bottom"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

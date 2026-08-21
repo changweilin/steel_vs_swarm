@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583_v6",
+  "key": "building/mass_pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583_a7eb2baf_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "isometric_low_poly_architectural",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the two-story villa structure with its characteristic L-shaped footprint, light blue roof, and large glass windows. The base, walls, and roof are integrated without gaps. The vegetation is represented by simplified geometric primitives as per the style.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583~0.png",
+  "created_at": "2026-08-21T08:54:21.580Z",
+  "bounds": {
+    "min": [
+      -3,
+      0,
+      -3
+    ],
+    "max": [
+      3,
+      3.95,
+      3
+    ],
+    "size": [
+      6,
+      3.95,
+      6
+    ],
+    "rMax": 4.243,
+    "triangles": 284,
+    "vertices": 179
+  },
+  "spec": {
+    "style": "isometric_low_poly_architectural"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

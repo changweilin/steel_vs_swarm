@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_depositphotos_415995326-stock-photo-house-modern-architecture-illustration~1",
+  "sourceImage": "building/mass/depositphotos_415995326-stock-photo-house-modern-architecture-illustration~1",
+  "style": "architectural_sketch",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14737632,
+    "baseHex": 12632256,
+    "accentHex": 8421504,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_building_body",
+    "main_roof",
+    "terrace_base",
+    "louver_shading_1",
+    "louver_shading_2",
+    "louver_shading_3",
+    "louver_shading_4",
+    "window_main",
+    "side_window",
+    "car_body",
+    "car_wheel_1",
+    "car_wheel_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "torus_ring"
+  ]
+}

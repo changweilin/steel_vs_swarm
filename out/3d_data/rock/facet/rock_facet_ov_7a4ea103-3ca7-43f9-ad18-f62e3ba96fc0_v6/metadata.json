@@ -1,0 +1,40 @@
+{
+  "id": "rock_facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_v6",
+  "key": "rock/facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_82efa19b_v6",
+  "family": "rock",
+  "subpart": "facet",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 88,
+  "similarityReview": "Successfully reconstructed the primary foreground and midground riverbed boulder cluster with a natural, jagged distribution using faceted polyhedron parts. Rocks are anchored firmly near y = 0 with no overlapping z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/facet/ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\facet\\ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0~0.png",
+  "created_at": "2026-08-20T16:19:07.756Z",
+  "bounds": {
+    "min": [
+      -1.9729,
+      -0.2241,
+      -3.3718
+    ],
+    "max": [
+      1.8779,
+      1.0182,
+      -0.0319
+    ],
+    "size": [
+      3.851,
+      1.242,
+      3.34
+    ],
+    "rMax": 3.907,
+    "triangles": 224,
+    "vertices": 128
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

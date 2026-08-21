@@ -1,0 +1,32 @@
+{
+  "id": "tree_canopy_pngtree-flowers-bonsai-tree-png-image_12485135",
+  "sourceImage": "tree/canopy/pngtree-flowers-bonsai-tree-png-image_12485135",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 45056,
+    "facadeHex": 6579300,
+    "baseHex": 11184810,
+    "accentHex": 16760780,
+    "darkHex": 3355443,
+    "brightHex": 15658734,
+    "glassHex": 1118481
+  },
+  "totalParts": 8,
+  "partNames": [
+    "stand",
+    "pot",
+    "soil",
+    "trunk",
+    "canopy_main",
+    "canopy_left",
+    "canopy_right",
+    "flowers"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "dodecahedron_polyhedron"
+  ]
+}

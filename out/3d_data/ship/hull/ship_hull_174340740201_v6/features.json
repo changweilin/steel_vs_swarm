@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull_174340740201",
+  "sourceImage": "ship/hull/174340740201",
+  "style": "modern cruise ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 10066329,
+    "accentHex": 16753920,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 4621730
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "bridge_structure",
+    "bridge_windows",
+    "funnel_stack_1",
+    "funnel_stack_2",
+    "radar_dome_1",
+    "radar_dome_2",
+    "deck_railing_front",
+    "hull_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

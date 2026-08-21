@@ -1,0 +1,44 @@
+{
+  "id": "vehicle_heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179",
+  "sourceImage": "vehicle/heavy/big-truck-semitrailer-mockup-transportation-260nw-2623868179",
+  "style": "vehicle/heavy",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16119285,
+    "facadeHex": 15592941,
+    "baseHex": 3355443,
+    "accentHex": 11184810,
+    "darkHex": 1644825,
+    "brightHex": 14540253,
+    "glassHex": 3368652
+  },
+  "totalParts": 21,
+  "partNames": [
+    "cab_body",
+    "cab_roof",
+    "windshield",
+    "side_window_left",
+    "side_window_right",
+    "trailer_container",
+    "trailer_roof",
+    "chassis_base",
+    "front_left_wheel",
+    "front_right_wheel",
+    "mid_left_wheel",
+    "mid_right_wheel",
+    "rear_left_wheel_1",
+    "rear_right_wheel_1",
+    "rear_left_wheel_2",
+    "rear_right_wheel_2",
+    "rear_left_wheel_3",
+    "rear_right_wheel_3",
+    "headlight_left",
+    "headlight_right",
+    "bumper"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

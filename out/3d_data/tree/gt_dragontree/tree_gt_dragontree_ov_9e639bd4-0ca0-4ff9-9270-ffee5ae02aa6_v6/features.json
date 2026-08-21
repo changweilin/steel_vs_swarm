@@ -1,0 +1,30 @@
+{
+  "id": "tree_gt_dragontree_ov_9e639bd4-0ca0-4ff9-9270-ffee5ae02aa6",
+  "sourceImage": "tree/gt_dragontree/ov_9e639bd4-0ca0-4ff9-9270-ffee5ae02aa6",
+  "style": "medieval_manuscript_illustration",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 8417356,
+    "baseHex": 5592405,
+    "accentHex": 16753920,
+    "darkHex": 2236962,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 7,
+  "partNames": [
+    "tree_trunk",
+    "tree_crown",
+    "root_base",
+    "creature_1",
+    "creature_2",
+    "creature_3",
+    "creature_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

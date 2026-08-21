@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike__-26-_-rc-100-_-btwin-8826164_0_v6",
+  "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~0_4ada33d7_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the white bicycle frame, rear wheel with tire, cassette, derailleur, chain, crankset, and pedal according to photographic references, maintaining accurate proportions in real-world metric units.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~0.png",
+  "created_at": "2026-08-20T17:21:43.491Z",
+  "bounds": {
+    "min": [
+      -0.885,
+      -0.03,
+      -0.5
+    ],
+    "max": [
+      0.4166,
+      0.875,
+      0.52
+    ],
+    "size": [
+      1.302,
+      0.905,
+      1.02
+    ],
+    "rMax": 1.016,
+    "triangles": 584,
+    "vertices": 337
+  },
+  "spec": {
+    "style": "vehicle/bike"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

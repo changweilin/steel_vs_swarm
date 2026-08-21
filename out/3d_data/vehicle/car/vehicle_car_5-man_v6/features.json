@@ -1,0 +1,52 @@
+{
+  "id": "vehicle_car_5-man",
+  "sourceImage": "vehicle/car/5-man",
+  "style": "automotive_vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3882562,
+    "facadeHex": 4014145,
+    "baseHex": 1973790,
+    "accentHex": 5987163,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 2174310
+  },
+  "totalParts": 29,
+  "partNames": [
+    "chassis_base",
+    "main_cabin_body",
+    "hood_front",
+    "hood_top_bump",
+    "roof",
+    "front_windshield",
+    "side_window_left",
+    "side_window_right",
+    "rear_side_window_left",
+    "rear_side_window_right",
+    "front_grille",
+    "headlight_left",
+    "headlight_right",
+    "front_bumper",
+    "front_license_plate_box",
+    "side_mirror_left",
+    "fender_flair_front_left",
+    "fender_flair_front_right",
+    "fender_flair_rear_left",
+    "fender_flair_rear_right",
+    "tire_front_left",
+    "rim_front_left",
+    "tire_front_right",
+    "rim_front_right",
+    "tire_rear_left",
+    "rim_rear_left",
+    "tire_rear_right",
+    "rim_rear_right",
+    "side_step_left"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "vehicle_car_240203_FordExplorerFacelift_fromFord-07",
+  "sourceImage": "vehicle/car/240203_FordExplorerFacelift_fromFord-07",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3819264,
+    "facadeHex": 7114138,
+    "baseHex": 2105376,
+    "accentHex": 1250067,
+    "darkHex": 1052688,
+    "brightHex": 14540253,
+    "glassHex": 1977937
+  },
+  "totalParts": 20,
+  "partNames": [
+    "chassis_base",
+    "body_main",
+    "roof_top",
+    "front_bumper",
+    "front_grille",
+    "front_windshield",
+    "left_front_window",
+    "right_front_window",
+    "left_rear_window",
+    "right_rear_window",
+    "left_headlight",
+    "right_headlight",
+    "left_mirror",
+    "right_mirror",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "rear_bumper",
+    "rear_windshield"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

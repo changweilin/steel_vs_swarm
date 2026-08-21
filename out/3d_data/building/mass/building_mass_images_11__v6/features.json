@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_images (11)",
+  "sourceImage": "building/mass/images (11)",
+  "style": "isometric_modern_house",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8347648,
+    "facadeHex": 15789530,
+    "baseHex": 4210752,
+    "accentHex": 13395456,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 8962815
+  },
+  "totalParts": 9,
+  "partNames": [
+    "ground_base",
+    "main_body",
+    "roof_main",
+    "garage_door",
+    "window_1",
+    "window_2",
+    "balcony_area",
+    "balcony_railing",
+    "balcony_glass"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

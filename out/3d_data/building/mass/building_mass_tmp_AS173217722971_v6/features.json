@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_tmp_AS173217722971",
+  "sourceImage": "building/mass/tmp_AS173217722971",
+  "style": "Modern Minimalist Concrete Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 14540253,
+    "baseHex": 10526880,
+    "accentHex": 5592405,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 49484
+  },
+  "totalParts": 9,
+  "partNames": [
+    "MainBuildingBlock",
+    "GarageSection",
+    "GarageDoor",
+    "Entrance",
+    "WindowLevel2",
+    "BalconyRecess",
+    "SideWallDetail",
+    "RoofParapet",
+    "TreeCrown"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "building_window_ov_50046c36-60fb-44eb-a9df-024438c6532e",
+  "sourceImage": "building/window/ov_50046c36-60fb-44eb-a9df-024438c6532e",
+  "style": "Art Nouveau Stained Glass Portrait",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16744272,
+    "facadeHex": 16767948,
+    "baseHex": 10053222,
+    "accentHex": 13369344,
+    "darkHex": 8388608,
+    "brightHex": 16777215,
+    "glassHex": 49560
+  },
+  "totalParts": 9,
+  "partNames": [
+    "CircularFrame",
+    "BackgroundDisc",
+    "HeadBase",
+    "HeaddressBand",
+    "JewelryNecklace",
+    "GlassDetail1",
+    "GlassDetail2",
+    "SideOrnamentLeft",
+    "SideOrnamentRight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere",
+    "torus_ring",
+    "box"
+  ]
+}

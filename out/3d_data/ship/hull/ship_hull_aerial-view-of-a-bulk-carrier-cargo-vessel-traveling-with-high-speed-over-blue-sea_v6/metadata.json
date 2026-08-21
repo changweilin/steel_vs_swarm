@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_v6",
+  "key": "ship/hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_b8df87d6_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "Bulk Carrier Ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the bulk carrier's hull proportions, the distinct red-black color scheme, the three cargo cranes, and the aft superstructure. The bow wedge and stern sections are correctly aligned to the waterline. All glass elements are represented with the specified glassHex color, and the symmetry ensures a complete 360-degree representation of the vessel.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea~0.png",
+  "created_at": "2026-08-20T16:12:22.076Z",
+  "bounds": {
+    "min": [
+      -10,
+      0,
+      -75
+    ],
+    "max": [
+      10,
+      27,
+      85
+    ],
+    "size": [
+      20,
+      27,
+      160
+    ],
+    "rMax": 85.586,
+    "triangles": 394,
+    "vertices": 232
+  },
+  "spec": {
+    "style": "Bulk Carrier Ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

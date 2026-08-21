@@ -1,0 +1,27 @@
+{
+  "id": "rock_main_images rock (1)~1",
+  "sourceImage": "rock/main/images rock (1)~1",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 6316128,
+    "baseHex": 4210752,
+    "accentHex": 10526880,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 3355443
+  },
+  "totalParts": 4,
+  "partNames": [
+    "rock_base",
+    "rock_middle_layer",
+    "rock_peak",
+    "rock_side_outcrop"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

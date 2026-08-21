@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_Ballinagree_v6",
+  "key": "rock/main_Ballinagree_9b29ba9e_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_monolith",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The main standing monolith is faithfully reconstructed using an icosahedral primary form combined with a dodecahedral secondary block for rough rock texture, anchored at ground level (y=0) and surrounded by lower rocky outcroppings.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/Ballinagree.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\Ballinagree~0.png",
+  "created_at": "2026-08-20T16:17:51.655Z",
+  "bounds": {
+    "min": [
+      -1.0314,
+      -0.2936,
+      -0.9691
+    ],
+    "max": [
+      1.3902,
+      3.1783,
+      1.2232
+    ],
+    "size": [
+      2.422,
+      3.472,
+      2.192
+    ],
+    "rMax": 1.852,
+    "triangles": 112,
+    "vertices": 64
+  },
+  "spec": {
+    "style": "natural_rock_monolith"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

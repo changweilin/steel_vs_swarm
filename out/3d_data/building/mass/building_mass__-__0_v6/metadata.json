@@ -1,0 +1,40 @@
+{
+  "id": "building_mass__-__0_v6",
+  "key": "building/mass_欣榮文創股份有限公司-隘興段_0_a9899864_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern High-rise Residential",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The building's core structural mass, including the distinctive curved roof feature and the repetitive balcony rhythm, has been accurately reconstructed. The glass facade and balcony railings are modeled as distinct layers to ensure depth. The rear and side facades were mirrored to ensure a complete 360-degree volume as requested.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/欣榮文創股份有限公司-隘興段_0.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\欣榮文創股份有限公司-隘興段_0~0.png",
+  "created_at": "2026-08-21T09:40:19.013Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      0,
+      -6.5
+    ],
+    "max": [
+      6.5,
+      52,
+      6.5
+    ],
+    "size": [
+      13,
+      52,
+      13
+    ],
+    "rMax": 9.192,
+    "triangles": 168,
+    "vertices": 112
+  },
+  "spec": {
+    "style": "Modern High-rise Residential"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

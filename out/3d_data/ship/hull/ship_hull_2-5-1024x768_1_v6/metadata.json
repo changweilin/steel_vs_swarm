@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_2-5-1024x768_1_v6",
+  "key": "ship/hull_2-5-1024x768~1_b8b0c686_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "industrial_fishing_vessel",
+  "symmetryMode": "symmetric",
+  "similarityScore": 88,
+  "similarityReview": "The 3D model accurately captures the primary hull structure, the raised bridge superstructure, and the bow wedge shape. The color palette follows the 7-Zone system, and the bridge windows are represented with glassHex. The mast and radar equipment are simplified into geometric primitives while maintaining the overall silhouette. The hull is watertight and includes the distinct red base and white upper body.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/2-5-1024x768.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\2-5-1024x768~1.png",
+  "created_at": "2026-08-20T16:06:58.978Z",
+  "bounds": {
+    "min": [
+      -15,
+      0,
+      -3.5255
+    ],
+    "max": [
+      19,
+      15.8,
+      3.5255
+    ],
+    "size": [
+      34,
+      15.8,
+      7.051
+    ],
+    "rMax": 19.324,
+    "triangles": 526,
+    "vertices": 326
+  },
+  "spec": {
+    "style": "industrial_fishing_vessel"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

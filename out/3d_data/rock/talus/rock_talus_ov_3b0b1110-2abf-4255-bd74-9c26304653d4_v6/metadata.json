@@ -1,0 +1,40 @@
+{
+  "id": "rock_talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_v6",
+  "key": "rock/talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_cfc8a7c5_v6",
+  "family": "rock",
+  "subpart": "talus",
+  "style": "nature_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "Successfully reconstructed a multi-layered rock and debris slope configuration mimicking the rugged mountain terrain and foreground boulders from the image, utilizing irregular polygonal polyhedra tightly interlocked without Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/talus/ov_3b0b1110-2abf-4255-bd74-9c26304653d4.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\talus\\ov_3b0b1110-2abf-4255-bd74-9c26304653d4~0.png",
+  "created_at": "2026-08-20T16:29:03.536Z",
+  "bounds": {
+    "min": [
+      -3,
+      0,
+      -3
+    ],
+    "max": [
+      3,
+      2.7,
+      3
+    ],
+    "size": [
+      6,
+      2.7,
+      6
+    ],
+    "rMax": 4.243,
+    "triangles": 132,
+    "vertices": 78
+  },
+  "spec": {
+    "style": "nature_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_2017091364238789_v6",
+  "key": "vehicle/car_2017091364238789_0ab10156_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the vintage Volkswagen Type 2 bus with its distinctive split front windshield, two-tone green and white color scheme, round headlights, prominent VW front emblem, and accurate wheel placement. All parts are securely joined without Z-fighting or floating artifacts.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/2017091364238789.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\2017091364238789~0.png",
+  "created_at": "2026-08-20T17:24:43.480Z",
+  "bounds": {
+    "min": [
+      -1.32,
+      0,
+      -2.1
+    ],
+    "max": [
+      1.32,
+      1.875,
+      2.28
+    ],
+    "size": [
+      2.64,
+      1.875,
+      4.38
+    ],
+    "rMax": 2.635,
+    "triangles": 1008,
+    "vertices": 614
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

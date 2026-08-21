@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_v6",
+  "key": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_ccb4c833_v6",
+  "family": "building",
+  "subpart": "bld_rowhouse",
+  "style": "Victorian Romanesque Revival Rowhouse Turret",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the iconic semi-circular brick bay window turret of the Romanesque Revival rowhouse. It features a solid brick base, a multi-tiered cylindrical bay structure with arched glass windows, decorative brick cornices, and a triangular pediment roof at the lower level. The back and sides are fully enclosed to ensure a complete 3D volume, and all windows are modeled as separate glass elements slightly offset to prevent Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_rowhouse/ov_c1b0e233-6fbb-4984-9329-5a7880895907.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_rowhouse\\ov_c1b0e233-6fbb-4984-9329-5a7880895907~0.png",
+  "created_at": "2026-08-21T07:05:57.501Z",
+  "bounds": {
+    "min": [
+      -2.4,
+      0,
+      -2.1
+    ],
+    "max": [
+      2.4,
+      9.8,
+      2.35
+    ],
+    "size": [
+      4.8,
+      9.8,
+      4.45
+    ],
+    "rMax": 3.359,
+    "triangles": 582,
+    "vertices": 352
+  },
+  "spec": {
+    "style": "Victorian Romanesque Revival Rowhouse Turret"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

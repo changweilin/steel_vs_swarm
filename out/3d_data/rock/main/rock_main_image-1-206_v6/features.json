@@ -1,0 +1,32 @@
+{
+  "id": "rock_main_image-1-206",
+  "sourceImage": "rock/main/image-1-206",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4342338,
+    "facadeHex": 3817290,
+    "baseHex": 2764069,
+    "accentHex": 5133649,
+    "darkHex": 1711139,
+    "brightHex": 6185859,
+    "glassHex": 2041130
+  },
+  "totalParts": 8,
+  "partNames": [
+    "mountain_base_slope",
+    "main_cliff_core",
+    "cliff_upper_strata",
+    "peak_summit_boulder",
+    "rock_fracture_left",
+    "rock_fracture_right",
+    "talus_scree_debris",
+    "adjacent_mountain_ridge"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

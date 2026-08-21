@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_175437636541282008.jpg_900x.water3_0_v6",
+  "key": "building/mass_175437636541282008.jpg!900x.water3~0_015c8ef8_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_architectural_building",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model successfully captures the multi-story modern residential building with its characteristic dark grey tile facade, prominent white vertical structural columns, wooden accent panels, balconies, dark stone ground podium, and open frame top structure. Proportions and color zoning match the reference image closely.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/175437636541282008.jpg!900x.water3.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\175437636541282008.jpg!900x.water3~0.png",
+  "created_at": "2026-08-20T17:21:06.560Z",
+  "bounds": {
+    "min": [
+      -7.1,
+      -0.1,
+      -5.1
+    ],
+    "max": [
+      7.1,
+      23,
+      5.1
+    ],
+    "size": [
+      14.2,
+      23.1,
+      10.2
+    ],
+    "rMax": 8.742,
+    "triangles": 348,
+    "vertices": 232
+  },
+  "spec": {
+    "style": "modern_architectural_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

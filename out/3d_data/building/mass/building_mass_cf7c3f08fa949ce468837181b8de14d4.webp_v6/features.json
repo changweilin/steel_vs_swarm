@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_cf7c3f08fa949ce468837181b8de14d4.webp",
+  "sourceImage": "building/mass/cf7c3f08fa949ce468837181b8de14d4.webp",
+  "style": "Japanese Colonial Wooden Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4210752,
+    "facadeHex": 8545338,
+    "baseHex": 12632256,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 14737632,
+    "glassHex": 8432080
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_body",
+    "foundation",
+    "main_roof",
+    "front_window_left",
+    "front_window_right",
+    "entrance_steps",
+    "signboard",
+    "right_gable_roof",
+    "back_wall"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_wc_115895229_v6",
+  "key": "tree/canopy_wc_115895229_59d1c861_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "nature_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the large bare-branched ancient tree with a massive trunk, spreading canopy layers represented by volumetric ellipsoids and spherical fragments, and anchored properly at the ground.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/wc_115895229.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\wc_115895229~0.png",
+  "created_at": "2026-08-20T16:36:14.605Z",
+  "bounds": {
+    "min": [
+      -8.5,
+      0,
+      -6
+    ],
+    "max": [
+      9,
+      13.5,
+      6
+    ],
+    "size": [
+      17.5,
+      13.5,
+      12
+    ],
+    "rMax": 10.817,
+    "triangles": 756,
+    "vertices": 464
+  },
+  "spec": {
+    "style": "nature_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

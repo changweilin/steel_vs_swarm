@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_kvtoyweb_v6",
+  "key": "building/mass_kvtoyweb_118f9361_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the two-story modern villa structure, including the stone-textured facade, the flat roof, and the recessed terrace area. The glass windows and doors are represented as distinct components with the correct material color. The geometry is closed and properly aligned with the ground plane.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/kvtoyweb.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\kvtoyweb~0.png",
+  "created_at": "2026-08-21T08:44:11.799Z",
+  "bounds": {
+    "min": [
+      -6.1,
+      0,
+      -4.2
+    ],
+    "max": [
+      4.2,
+      7.2,
+      4.2
+    ],
+    "size": [
+      10.3,
+      7.2,
+      8.4
+    ],
+    "rMax": 7.406,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "modern_villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

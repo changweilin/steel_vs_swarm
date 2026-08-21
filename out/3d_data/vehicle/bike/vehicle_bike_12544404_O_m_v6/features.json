@@ -1,0 +1,46 @@
+{
+  "id": "vehicle_bike_12544404_O_m",
+  "sourceImage": "vehicle/bike/12544404_O_m",
+  "style": "Road Bicycle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 303664,
+    "facadeHex": 193457,
+    "baseHex": 152033,
+    "accentHex": 1332021,
+    "darkHex": 202326,
+    "brightHex": 14606046,
+    "glassHex": 323388
+  },
+  "totalParts": 23,
+  "partNames": [
+    "front_wheel",
+    "rear_wheel",
+    "front_rim",
+    "rear_rim",
+    "front_brake_disc",
+    "rear_brake_disc",
+    "downtube",
+    "toptube",
+    "seattube",
+    "seatpost",
+    "saddle",
+    "headtube",
+    "fork_right",
+    "fork_left",
+    "chainstay_right",
+    "chainstay_left",
+    "seatstay_right",
+    "seatstay_left",
+    "bottom_bracket",
+    "crank_arm",
+    "chainring",
+    "handlebar_stem",
+    "handlebar_drop"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_cfc0d6ff90ae224820a8d78861af93f5_1_v6",
+  "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_10a17c83_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the massive monolithic rock structure (El Peñón de Guatapé) with appropriate tapering height, rugged polygonal prism layers, zigzag stairway cutouts, and the top multi-level observation tower complex matching the photographic subject.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/cfc0d6ff90ae224820a8d78861af93f5.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\cfc0d6ff90ae224820a8d78861af93f5~1.png",
+  "created_at": "2026-08-20T16:18:04.348Z",
+  "bounds": {
+    "min": [
+      -18,
+      7.4563,
+      -18
+    ],
+    "max": [
+      18,
+      87.5,
+      18
+    ],
+    "size": [
+      36,
+      80.044,
+      36
+    ],
+    "rMax": 25.456,
+    "triangles": 244,
+    "vertices": 144
+  },
+  "spec": {
+    "style": "rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

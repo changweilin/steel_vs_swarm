@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_1__v6",
+  "key": "building/mass_images (1)_f48e374f_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_commercial_building",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The building is reconstructed as a stack of 7 distinct floor levels, each featuring a glass facade and a protruding metal-framed balcony/eave structure. The vertical wooden-like louvers are represented by thin box elements. The overall massing and the staggered floor plate design are captured accurately. The rear and side facades are mirrored to ensure a complete 360-degree structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (1)~0.png",
+  "created_at": "2026-08-21T08:04:12.548Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      0,
+      -6.5
+    ],
+    "max": [
+      6.5,
+      35.5,
+      6.5
+    ],
+    "size": [
+      13,
+      35.5,
+      13
+    ],
+    "rMax": 9.192,
+    "triangles": 176,
+    "vertices": 118
+  },
+  "spec": {
+    "style": "modern_commercial_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

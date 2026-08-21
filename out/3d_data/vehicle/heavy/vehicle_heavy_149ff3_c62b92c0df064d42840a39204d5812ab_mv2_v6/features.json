@@ -1,0 +1,45 @@
+{
+  "id": "vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2",
+  "sourceImage": "vehicle/heavy/149ff3_c62b92c0df064d42840a39204d5812ab~mv2",
+  "style": "heavy_crane_truck",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14705152,
+    "facadeHex": 14705152,
+    "baseHex": 2105376,
+    "accentHex": 16773120,
+    "darkHex": 1052688,
+    "brightHex": 13421772,
+    "glassHex": 3368688
+  },
+  "totalParts": 22,
+  "partNames": [
+    "chassis_base",
+    "front_cab_body",
+    "front_windshield",
+    "front_bumper",
+    "left_headlight",
+    "right_headlight",
+    "left_side_window",
+    "right_side_window",
+    "left_mirror",
+    "right_mirror",
+    "crane_base_turret",
+    "main_boom_telescopic",
+    "boom_tip_pulley",
+    "hook_block",
+    "hook_curved",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_mid_left",
+    "wheel_mid_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "rear_counterweight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

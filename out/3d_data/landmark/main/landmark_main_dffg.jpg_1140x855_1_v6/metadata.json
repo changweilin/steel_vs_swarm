@@ -1,0 +1,40 @@
+{
+  "id": "landmark_main_dffg.jpg_1140x855_1_v6",
+  "key": "landmark/main_dffg.jpg_1140x855~1_63d9a4d3_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "Modernist Architectural Landmark",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the iconic hyperbolic-like geometry of the Luce Chapel using two large wedges for the main roof structure and a central glass facade. The proportions of the triangular profile are maintained, and the glass grid is represented as a distinct plane. The base steps and entrance are included for structural integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/dffg.jpg_1140x855.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\main\\dffg.jpg_1140x855~1.png",
+  "created_at": "2026-08-20T16:54:15.602Z",
+  "bounds": {
+    "min": [
+      -14.1822,
+      -1.173,
+      -7.5
+    ],
+    "max": [
+      14.1822,
+      21.173,
+      7.5
+    ],
+    "size": [
+      28.364,
+      22.346,
+      15
+    ],
+    "rMax": 16.043,
+    "triangles": 88,
+    "vertices": 60
+  },
+  "spec": {
+    "style": "Modernist Architectural Landmark"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

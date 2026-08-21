@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_pic_9576_12_0_v6",
+  "key": "rock/main_pic_9576_12~0_ef43bb3b_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "Natural Rock Formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D model accurately captures the prominent tall monolithic rock featuring the distinct upper curved notch, accompanied by the smaller adjacent standing stones behind a wooden fence boundary, using assembled faceted polyhedra to simulate natural stone texture and structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/pic_9576_12.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\pic_9576_12~0.png",
+  "created_at": "2026-08-20T16:27:23.175Z",
+  "bounds": {
+    "min": [
+      -2,
+      0,
+      -1.5
+    ],
+    "max": [
+      2,
+      5.1605,
+      1.5
+    ],
+    "size": [
+      4,
+      5.16,
+      3
+    ],
+    "rMax": 2.5,
+    "triangles": 204,
+    "vertices": 118
+  },
+  "spec": {
+    "style": "Natural Rock Formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "rock_main_20211010001701",
+  "sourceImage": "rock/main/20211010001701",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14258770,
+    "facadeHex": 13732410,
+    "baseHex": 11043394,
+    "accentHex": 15515784,
+    "darkHex": 4600609,
+    "brightHex": 16777215,
+    "glassHex": 40960
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_monolith_base",
+    "cleavage_crack_recess",
+    "upper_rock_crown",
+    "right_cliff_face",
+    "left_weathered_slope",
+    "foreground_boulder_one",
+    "foreground_boulder_two"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "polygonal_prism",
+    "wedge",
+    "icosahedron_polyhedron"
+  ]
+}

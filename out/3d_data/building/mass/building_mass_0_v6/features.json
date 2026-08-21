@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_0",
+  "sourceImage": "building/mass/0",
+  "style": "modern_iconic_architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14737632,
+    "baseHex": 8421504,
+    "accentHex": 16766720,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 8388607
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_sail_structure",
+    "rear_mast",
+    "glass_facade_panels",
+    "helipad_platform",
+    "restaurant_pod",
+    "base_foundation",
+    "top_fin"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "cylinder"
+  ]
+}

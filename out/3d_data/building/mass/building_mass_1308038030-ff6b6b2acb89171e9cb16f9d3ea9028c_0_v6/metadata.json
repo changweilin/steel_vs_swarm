@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c_0_v6",
+  "key": "building/mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c~0_af64d6f9_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "landscape_field",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 100,
+  "similarityReview": "The provided image is a uniform texture of a green field. As there is no architectural structure or distinct 3D object present in the input, the reconstruction represents the ground plane as a flat, expansive base layer to maintain geometric integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c~0.png",
+  "created_at": "2026-08-21T05:44:16.152Z",
+  "bounds": {
+    "min": [
+      -50,
+      -0.05,
+      -25
+    ],
+    "max": [
+      50,
+      0.05,
+      25
+    ],
+    "size": [
+      100,
+      0.1,
+      50
+    ],
+    "rMax": 55.902,
+    "triangles": 12,
+    "vertices": 8
+  },
+  "spec": {
+    "style": "landscape_field"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

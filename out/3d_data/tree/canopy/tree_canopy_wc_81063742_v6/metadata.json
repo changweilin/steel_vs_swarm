@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_wc_81063742_v6",
+  "key": "tree/canopy_wc_81063742_a07e2a9f_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the primary structure of the large oak tree, including the thick trunk and the expansive, irregular canopy. The canopy is represented by multiple overlapping ellipsoids to simulate the complex, spreading foliage characteristic of an autumn tree. The trunk is grounded at y=0, and the color palette reflects the golden-brown tones of the season.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/wc_81063742.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\wc_81063742~0.png",
+  "created_at": "2026-08-20T16:39:46.115Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      -0.1,
+      -4.2798
+    ],
+    "max": [
+      6.5,
+      12,
+      4.2798
+    ],
+    "size": [
+      13,
+      12.1,
+      8.56
+    ],
+    "rMax": 7.782,
+    "triangles": 848,
+    "vertices": 521
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

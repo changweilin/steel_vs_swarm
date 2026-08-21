@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_A04A00_P_01_02",
+  "sourceImage": "ship/hull/A04A00_P_01_02",
+  "style": "container_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 2236962,
+    "baseHex": 10066329,
+    "accentHex": 16711680,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 8454143
+  },
+  "totalParts": 9,
+  "partNames": [
+    "hull_base",
+    "bow_wedge",
+    "bottom_red_stripe",
+    "bridge_superstructure",
+    "bridge_windows",
+    "container_stack_1",
+    "radar_dome",
+    "life_buoy_port",
+    "life_buoy_starboard"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

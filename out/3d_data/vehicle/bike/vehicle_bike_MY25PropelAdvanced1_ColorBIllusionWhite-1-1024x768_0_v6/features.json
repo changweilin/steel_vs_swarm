@@ -1,0 +1,42 @@
+{
+  "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~0",
+  "sourceImage": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~0",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 2236962,
+    "accentHex": 2236962,
+    "darkHex": 2236962,
+    "brightHex": 13421772,
+    "glassHex": 2242857
+  },
+  "totalParts": 19,
+  "partNames": [
+    "rear_tire_left",
+    "rear_tire_right",
+    "rear_rim_left",
+    "rear_rim_right",
+    "seat_tube",
+    "down_tube",
+    "top_tube",
+    "left_seatstay",
+    "right_seatstay",
+    "left_chainstay",
+    "right_chainstay",
+    "crankset",
+    "chainring_teeth",
+    "pedal_arm",
+    "rear_cassette",
+    "rear_derailleur",
+    "chain",
+    "water_bottle_cage_1",
+    "water_bottle_cage_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

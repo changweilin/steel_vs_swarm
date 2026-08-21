@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_stonecottage_ov_d273a40d-cf1b-45f8-acd7-66471d0e552c_v6",
+  "key": "building/bld_stonecottage_ov_d273a40d-cf1b-45f8-acd7-66471d0e552c_053ff7d0_v6",
+  "family": "building",
+  "subpart": "bld_stonecottage",
+  "style": "Rustic Stone Cottage",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately reconstructs the rustic stone cottage from the image. It features a solid stone base and facade, a dual-pitched corrugated metal roof with correct outward-sloping wedges, two prominent stone chimneys with clay pots on both gable ends, and detailed window frames. The front facade includes the main window and door openings, with the back wall fully enclosed to prevent any hollow shell effect. The colors are mapped to match the weathered stone, rusted orange roof, and dark accents.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_stonecottage/ov_d273a40d-cf1b-45f8-acd7-66471d0e552c.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_stonecottage\\ov_d273a40d-cf1b-45f8-acd7-66471d0e552c~0.png",
+  "created_at": "2026-08-21T07:06:21.015Z",
+  "bounds": {
+    "min": [
+      -7.15,
+      0,
+      -2.6
+    ],
+    "max": [
+      7.15,
+      4.85,
+      2.6
+    ],
+    "size": [
+      14.3,
+      4.85,
+      5.2
+    ],
+    "rMax": 7.608,
+    "triangles": 240,
+    "vertices": 156
+  },
+  "spec": {
+    "style": "Rustic Stone Cottage"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

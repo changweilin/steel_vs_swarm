@@ -1,0 +1,34 @@
+{
+  "id": "building_mass_kyotoworldheritage_2.jpg",
+  "sourceImage": "building/mass/kyotoworldheritage_2.jpg",
+  "style": "Traditional Japanese Architecture (Kinkaku-ji style)",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 333333,
+    "facadeHex": 9807270,
+    "baseHex": 888888,
+    "accentHex": 15105570,
+    "darkHex": 111111,
+    "brightHex": 15528177,
+    "glassHex": 204060
+  },
+  "totalParts": 12,
+  "partNames": [
+    "base_platform",
+    "first_floor_walls",
+    "second_floor_walls",
+    "third_floor_walls",
+    "first_floor_balcony",
+    "second_floor_balcony",
+    "roof_tier_1",
+    "roof_tier_2",
+    "roof_tier_3",
+    "window_f1_front",
+    "window_f2_front",
+    "window_f3_front"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

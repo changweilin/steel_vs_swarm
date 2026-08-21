@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_images (19)",
+  "sourceImage": "building/mass/images (19)",
+  "style": "Traditional Taiwanese Sanheyuan Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 454040,
+    "facadeHex": 18012080,
+    "baseHex": 100100100,
+    "accentHex": 2005020,
+    "darkHex": 303030,
+    "brightHex": 220220220,
+    "glassHex": 204060
+  },
+  "totalParts": 10,
+  "partNames": [
+    "MainHallBase",
+    "LeftWingBase",
+    "RightWingBase",
+    "MainRoof",
+    "LeftRoof",
+    "RightRoof",
+    "MainDoor",
+    "LeftWindow",
+    "RightWindow",
+    "CourtyardFloor"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_mobile01-6f983fdd0b12d341a5c696410db00027_v6",
+  "key": "building/mass_mobile01-6f983fdd0b12d341a5c696410db00027_7a040336_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_narrow_townhouse",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the verticality and tiered facade of the narrow townhouse. All windows, balconies, and the recessed entrance are represented as distinct, slightly offset parts to prevent Z-fighting. The color palette follows the 7-Zone system, and the structure is fully enclosed with a solid base.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/mobile01-6f983fdd0b12d341a5c696410db00027.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\mobile01-6f983fdd0b12d341a5c696410db00027~0.png",
+  "created_at": "2026-08-21T08:48:11.502Z",
+  "bounds": {
+    "min": [
+      -5,
+      -0.2,
+      -5
+    ],
+    "max": [
+      5,
+      18,
+      5
+    ],
+    "size": [
+      10,
+      18.2,
+      10
+    ],
+    "rMax": 7.071,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "modern_narrow_townhouse"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

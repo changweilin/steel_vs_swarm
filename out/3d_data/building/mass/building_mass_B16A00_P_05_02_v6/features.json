@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_B16A00_P_05_02",
+  "sourceImage": "building/mass/B16A00_P_05_02",
+  "style": "Modern Neo-Classical Residential Towers",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 15790320,
+    "baseHex": 12632256,
+    "accentHex": 8421504,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4613500
+  },
+  "totalParts": 10,
+  "partNames": [
+    "Tower_Left_Main",
+    "Tower_Right_Main",
+    "Podium_Base",
+    "Left_Tower_Roof_Crown",
+    "Right_Tower_Roof_Crown",
+    "Left_Tower_Windows",
+    "Right_Tower_Windows",
+    "Entrance_Arch",
+    "Left_Balcony_Trim",
+    "Right_Balcony_Trim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

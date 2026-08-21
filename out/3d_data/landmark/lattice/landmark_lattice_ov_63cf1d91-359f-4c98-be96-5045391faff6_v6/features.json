@@ -1,0 +1,33 @@
+{
+  "id": "landmark_lattice_ov_63cf1d91-359f-4c98-be96-5045391faff6",
+  "sourceImage": "landmark/lattice/ov_63cf1d91-359f-4c98-be96-5045391faff6",
+  "style": "utility_infrastructure",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 10053120,
+    "baseHex": 12632256,
+    "accentHex": 16777215,
+    "darkHex": 4210752,
+    "brightHex": 15790320,
+    "glassHex": 8388607
+  },
+  "totalParts": 10,
+  "partNames": [
+    "pole_base_foundation",
+    "main_utility_pole",
+    "crossarm_1",
+    "crossarm_2",
+    "crossarm_3",
+    "insulator_set_1",
+    "insulator_set_2",
+    "insulator_set_3",
+    "transformer_box",
+    "cable_ring_mount"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box",
+    "torus_ring"
+  ]
+}

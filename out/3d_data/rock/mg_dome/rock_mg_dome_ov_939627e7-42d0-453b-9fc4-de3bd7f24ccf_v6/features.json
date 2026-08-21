@@ -1,0 +1,28 @@
+{
+  "id": "rock_mg_dome_ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf",
+  "sourceImage": "rock/mg_dome/ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf",
+  "style": "geological_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 336699,
+    "facadeHex": 336699,
+    "baseHex": 336699,
+    "accentHex": 447799,
+    "darkHex": 224466,
+    "brightHex": 558899,
+    "glassHex": 224466
+  },
+  "totalParts": 5,
+  "partNames": [
+    "main_base_wedge",
+    "top_peak_rock",
+    "side_ridge_rock",
+    "front_detail_rock",
+    "base_support_rock"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

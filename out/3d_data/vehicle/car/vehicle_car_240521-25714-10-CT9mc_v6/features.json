@@ -1,0 +1,51 @@
+{
+  "id": "vehicle_car_240521-25714-10-CT9mc",
+  "sourceImage": "vehicle/car/240521-25714-10-CT9mc",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4609135,
+    "facadeHex": 4872054,
+    "baseHex": 1974059,
+    "accentHex": 3224391,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 2045582
+  },
+  "totalParts": 28,
+  "partNames": [
+    "chassis_base",
+    "car_body_main",
+    "cabin_roof",
+    "front_hood",
+    "front_windshield",
+    "rear_windshield",
+    "left_front_window",
+    "right_front_window",
+    "left_rear_window",
+    "right_rear_window",
+    "front_bumper",
+    "front_grille",
+    "license_plate",
+    "left_headlight",
+    "right_headlight",
+    "left_side_mirror",
+    "right_side_mirror",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_front_rim",
+    "right_front_rim",
+    "left_rear_rim",
+    "right_rear_rim",
+    "rear_bumper",
+    "left_taillight",
+    "right_taillight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

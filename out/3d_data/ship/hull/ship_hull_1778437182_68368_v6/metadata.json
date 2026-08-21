@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_1778437182_68368_v6",
+  "key": "ship/hull_1778437182_68368_6560f458_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "cargo_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model accurately captures the hull profile, the pink superstructure, and the container arrangement. The bow wedge and stern structure are correctly proportioned. The bridge windows are represented with glassHex, and the overall silhouette matches the reference image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/1778437182_68368.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\1778437182_68368~0.png",
+  "created_at": "2026-08-20T16:06:28.608Z",
+  "bounds": {
+    "min": [
+      -45,
+      0,
+      -6
+    ],
+    "max": [
+      45,
+      11,
+      6
+    ],
+    "size": [
+      90,
+      11,
+      12
+    ],
+    "rMax": 45.398,
+    "triangles": 294,
+    "vertices": 180
+  },
+  "spec": {
+    "style": "cargo_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_depositphotos_415995326-stock-photo-house-modern-architecture-illustration_0_v6",
+  "key": "building/mass_depositphotos_415995326-stock-photo-house-modern-architecture-illustration~0_3ee2013a_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the modern architectural form shown in the image, including the distinct multi-level roof structure, the glass facade, and the structural support columns. The proportions are scaled to real-world dimensions, and the symmetry is maintained for the unseen rear sections.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/depositphotos_415995326-stock-photo-house-modern-architecture-illustration.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\depositphotos_415995326-stock-photo-house-modern-architecture-illustration~0.png",
+  "created_at": "2026-08-21T07:40:11.859Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      -0.2,
+      -4.5
+    ],
+    "max": [
+      6.5,
+      7,
+      4.5
+    ],
+    "size": [
+      13,
+      7.2,
+      9
+    ],
+    "rMax": 7.906,
+    "triangles": 120,
+    "vertices": 74
+  },
+  "spec": {
+    "style": "Modern Minimalist Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

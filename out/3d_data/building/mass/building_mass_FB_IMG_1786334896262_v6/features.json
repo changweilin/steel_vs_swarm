@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_FB_IMG_1786334896262",
+  "sourceImage": "building/mass/FB_IMG_1786334896262",
+  "style": "modern_highrise_residential",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 13158600,
+    "baseHex": 8421504,
+    "accentHex": 11184810,
+    "darkHex": 3158064,
+    "brightHex": 15790320,
+    "glassHex": 4621720
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_tower_body",
+    "vertical_pillar_front_left",
+    "vertical_pillar_front_right",
+    "roof_crown_structure",
+    "balcony_window_row_1",
+    "balcony_window_row_2",
+    "balcony_window_row_3",
+    "balcony_window_row_4",
+    "decorative_top_circle",
+    "base_pedestal"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

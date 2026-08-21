@@ -1,0 +1,37 @@
+{
+  "id": "landmark_tank_ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305",
+  "sourceImage": "landmark/tank/ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305",
+  "style": "landmark_industrial_and_ecclesiastical",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 11155788,
+    "baseHex": 14474460,
+    "accentHex": 16777215,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 12,
+  "partNames": [
+    "water_tank_cylinder",
+    "water_tank_bottom",
+    "water_tank_support_structure",
+    "church_main_body",
+    "church_base",
+    "church_roof",
+    "church_tower_base",
+    "church_tower_lantern",
+    "church_tower_roof",
+    "church_window_1",
+    "church_window_2",
+    "church_window_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "frustum_pyramid",
+    "box",
+    "wedge",
+    "polygonal_prism"
+  ]
+}

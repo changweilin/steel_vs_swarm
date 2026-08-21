@@ -1,0 +1,32 @@
+{
+  "id": "rock_main_images~0",
+  "sourceImage": "rock/main/images~0",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7368816,
+    "facadeHex": 6579300,
+    "baseHex": 4016156,
+    "accentHex": 9211020,
+    "darkHex": 2631720,
+    "brightHex": 11184810,
+    "glassHex": 3355443
+  },
+  "totalParts": 8,
+  "partNames": [
+    "ground_base",
+    "mossy_rock_podium",
+    "main_boulder_lower",
+    "main_boulder_upper",
+    "boulder_facet_front",
+    "boulder_facet_back",
+    "ground_rock_left",
+    "ground_rock_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

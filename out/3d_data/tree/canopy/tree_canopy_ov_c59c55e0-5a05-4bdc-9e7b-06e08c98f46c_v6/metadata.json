@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ov_c59c55e0-5a05-4bdc-9e7b-06e08c98f46c_v6",
+  "key": "tree/canopy_ov_c59c55e0-5a05-4bdc-9e7b-06e08c98f46c_a246083a_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree is modeled with a central trunk and a large, wide, irregular canopy using an ellipsoid_sphere to capture the broad, spreading nature of the tree in the image. The trunk is slightly tilted to match the natural growth pattern. The scale is set to approximately 6 meters in height, consistent with a mature tree in a field.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/ov_c59c55e0-5a05-4bdc-9e7b-06e08c98f46c.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\ov_c59c55e0-5a05-4bdc-9e7b-06e08c98f46c~0.png",
+  "created_at": "2026-08-20T16:08:03.389Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      -0.1,
+      -4.2798
+    ],
+    "max": [
+      4.5,
+      8,
+      4.2798
+    ],
+    "size": [
+      9,
+      8.1,
+      8.56
+    ],
+    "rMax": 6.21,
+    "triangles": 512,
+    "vertices": 315
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

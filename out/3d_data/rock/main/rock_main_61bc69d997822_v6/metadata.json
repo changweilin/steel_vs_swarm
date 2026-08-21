@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_61bc69d997822_v6",
+  "key": "rock/main_61bc69d997822_d7b6e06f_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D model accurately captures the layered sedimentary rock stack (Downpatrick Head-style sea stack) rising from the ocean. Multiple offset boxes and polygonal prisms are stacked to represent the horizontal geological strata, capped with a green grassy top.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/61bc69d997822.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\61bc69d997822~0.png",
+  "created_at": "2026-08-20T16:17:26.315Z",
+  "bounds": {
+    "min": [
+      -15,
+      0,
+      -15
+    ],
+    "max": [
+      15,
+      20.9,
+      15
+    ],
+    "size": [
+      30,
+      20.9,
+      30
+    ],
+    "rMax": 21.213,
+    "triangles": 140,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

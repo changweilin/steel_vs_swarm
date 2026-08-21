@@ -1,0 +1,40 @@
+{
+  "id": "rock_tor_ov_43802293-e834-4d23-8f72-935935cf9c85_v6",
+  "key": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6d23121f_v6",
+  "family": "rock",
+  "subpart": "tor",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the balanced rock formation ('Roc Cournut' natural landmark) featuring the massive boulder atop a clustered stack of lower rock strata, resting on the ground with appropriate natural color mapping.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/tor/ov_43802293-e834-4d23-8f72-935935cf9c85.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\tor\\ov_43802293-e834-4d23-8f72-935935cf9c85~0.png",
+  "created_at": "2026-08-20T16:29:36.706Z",
+  "bounds": {
+    "min": [
+      -2.1004,
+      -0.8943,
+      -1.4671
+    ],
+    "max": [
+      2.1626,
+      4.8529,
+      1.6671
+    ],
+    "size": [
+      4.263,
+      5.747,
+      3.134
+    ],
+    "rMax": 2.731,
+    "triangles": 216,
+    "vertices": 124
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_images_2__v6",
+  "key": "building/mass_images (2)_76cc02ca_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Architecture",
+  "symmetryMode": "asymmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (2).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\images (2).jpg",
+  "created_at": "2026-08-20T14:39:38.845Z",
+  "bounds": {
+    "min": [
+      -10,
+      -7.5,
+      -5.25
+    ],
+    "max": [
+      6,
+      7.5,
+      7
+    ],
+    "size": [
+      16,
+      15,
+      12.25
+    ],
+    "rMax": 11.294,
+    "triangles": 84,
+    "vertices": 56
+  },
+  "spec": {
+    "style": "Modern Minimalist Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

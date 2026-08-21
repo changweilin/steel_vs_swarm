@@ -1,0 +1,41 @@
+{
+  "id": "vehicle_car_7car-202401030308-3",
+  "sourceImage": "vehicle/car/7car-202401030308-3",
+  "style": "retro_vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14565376,
+    "baseHex": 2631720,
+    "accentHex": 16777215,
+    "darkHex": 2039583,
+    "brightHex": 14540253,
+    "glassHex": 3368652
+  },
+  "totalParts": 19,
+  "partNames": [
+    "chassis",
+    "main_body_lower",
+    "main_body_upper",
+    "front_windshield",
+    "front_bumper",
+    "headlight_left",
+    "headlight_right",
+    "front_vw_logo",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel",
+    "rear_right_wheel",
+    "side_window_left_1",
+    "side_window_left_2",
+    "side_window_left_3",
+    "side_window_right_1",
+    "side_window_right_2",
+    "side_window_right_3",
+    "roof_rack"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

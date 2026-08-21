@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_v6",
+  "key": "rock/mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_6d311589_v6",
+  "family": "rock",
+  "subpart": "mg_arch",
+  "style": "natural_rock_arch",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the large sea arch rock formation with an eroded arch opening, rocky base in water, and dense vegetation layer on the top crown.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_arch/ov_95d9c227-032e-415a-8ae3-2faea55fead7.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_arch\\ov_95d9c227-032e-415a-8ae3-2faea55fead7~0.png",
+  "created_at": "2026-08-20T16:23:00.609Z",
+  "bounds": {
+    "min": [
+      -7,
+      -1.0721,
+      -6.0721
+    ],
+    "max": [
+      7,
+      12,
+      6.0721
+    ],
+    "size": [
+      14,
+      13.072,
+      12.144
+    ],
+    "rMax": 9.267,
+    "triangles": 612,
+    "vertices": 379
+  },
+  "spec": {
+    "style": "natural_rock_arch"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

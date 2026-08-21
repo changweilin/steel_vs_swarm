@@ -1,0 +1,29 @@
+{
+  "id": "tree_sp_baobab_wc_3206087~0",
+  "sourceImage": "tree/sp_baobab/wc_3206087~0",
+  "style": "natural_landscape_baobab",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 605345,
+    "facadeHex": 988877,
+    "baseHex": 554433,
+    "accentHex": 887766,
+    "darkHex": 332211,
+    "brightHex": 999999,
+    "glassHex": 223344
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "trunk_knot_1",
+    "trunk_knot_2",
+    "trunk_knot_3",
+    "root_base",
+    "upper_canopy_cluster"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "dodecahedron_polyhedron",
+    "ellipsoid_sphere"
+  ]
+}

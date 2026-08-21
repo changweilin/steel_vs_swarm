@@ -1,0 +1,34 @@
+{
+  "id": "rock_main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA",
+  "sourceImage": "rock/main/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3438152,
+    "facadeHex": 7168341,
+    "baseHex": 2501412,
+    "accentHex": 4611680,
+    "darkHex": 1644825,
+    "brightHex": 12632256,
+    "glassHex": 26368
+  },
+  "totalParts": 9,
+  "partNames": [
+    "coastal_ground_base",
+    "main_rock_core",
+    "rock_extension_left",
+    "rock_extension_right",
+    "rock_ledge_front",
+    "rock_ledge_back",
+    "prominent_rock_beak",
+    "top_vegetation_mass",
+    "top_vegetation_detail"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "ellipsoid_sphere"
+  ]
+}

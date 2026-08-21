@@ -1,0 +1,30 @@
+{
+  "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~1",
+  "sourceImage": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~1",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 2236962,
+    "accentHex": 16777215,
+    "darkHex": 2236962,
+    "brightHex": 14540253,
+    "glassHex": 11184810
+  },
+  "totalParts": 7,
+  "partNames": [
+    "front_tire",
+    "front_rim",
+    "brake_rotor",
+    "brake_caliper",
+    "fork_left",
+    "fork_right",
+    "head_tube"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

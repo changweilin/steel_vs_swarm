@@ -1,0 +1,25 @@
+{
+  "id": "building_mass_178670843535945_P35065317",
+  "sourceImage": "building/mass/178670843535945_P35065317",
+  "style": "modern_high_rise_building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4473924,
+    "facadeHex": 8421504,
+    "baseHex": 3355443,
+    "accentHex": 5592405,
+    "darkHex": 2236962,
+    "brightHex": 13421772,
+    "glassHex": 1710618
+  },
+  "totalParts": 4,
+  "partNames": [
+    "main_tower_base",
+    "secondary_tower_base",
+    "main_tower_glass_facade",
+    "roof_accent_frame"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

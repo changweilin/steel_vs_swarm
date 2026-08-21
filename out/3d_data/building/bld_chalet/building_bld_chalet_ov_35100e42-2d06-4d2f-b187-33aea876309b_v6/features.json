@@ -1,0 +1,38 @@
+{
+  "id": "building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b",
+  "sourceImage": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b",
+  "style": "Alpine Chalet Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 5253165,
+    "facadeHex": 6828576,
+    "baseHex": 3810086,
+    "accentHex": 11814674,
+    "darkHex": 1973790,
+    "brightHex": 13421772,
+    "glassHex": 2640243
+  },
+  "totalParts": 16,
+  "partNames": [
+    "main_building_base",
+    "front_balcony_platform",
+    "front_balcony_railing",
+    "flower_box_front",
+    "gable_roof_front",
+    "roof_overhang_front",
+    "attic_window_center",
+    "attic_window_left",
+    "attic_window_right",
+    "ground_floor_window_left",
+    "ground_floor_window_center",
+    "ground_floor_window_right",
+    "chimney",
+    "side_building_right",
+    "side_roof_right",
+    "side_balcony_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

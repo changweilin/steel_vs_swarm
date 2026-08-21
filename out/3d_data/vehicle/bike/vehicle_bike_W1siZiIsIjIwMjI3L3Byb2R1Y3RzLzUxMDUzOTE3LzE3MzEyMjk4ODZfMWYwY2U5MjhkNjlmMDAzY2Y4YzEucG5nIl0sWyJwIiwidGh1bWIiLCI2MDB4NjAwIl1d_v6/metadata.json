@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_v6",
+  "key": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_394cf6bd_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "realistic",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the children's bicycle including the curved frame, orange tires, training wheel, front basket, handlebar, seat, and chain guard. All parts accurately match the 7-zone color scheme and bicycle modeling discipline.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d~0.png",
+  "created_at": "2026-08-20T17:21:35.179Z",
+  "bounds": {
+    "min": [
+      -1.15,
+      0.04,
+      -0.3091
+    ],
+    "max": [
+      1.15,
+      0.9298,
+      0.72
+    ],
+    "size": [
+      2.3,
+      0.89,
+      1.029
+    ],
+    "rMax": 1.357,
+    "triangles": 1064,
+    "vertices": 615
+  },
+  "spec": {
+    "style": "realistic"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

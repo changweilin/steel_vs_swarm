@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_boab-tree-header-image-blog",
+  "sourceImage": "tree/canopy/boab-tree-header-image-blog",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4500000,
+    "facadeHex": 8550000,
+    "baseHex": 5040000,
+    "accentHex": 3060000,
+    "darkHex": 202020,
+    "brightHex": 999999,
+    "glassHex": 1976635
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "trunk_base",
+    "canopy_main",
+    "canopy_left",
+    "canopy_right",
+    "canopy_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

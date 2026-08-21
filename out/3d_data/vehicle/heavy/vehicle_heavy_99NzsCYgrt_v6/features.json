@@ -1,0 +1,39 @@
+{
+  "id": "vehicle_heavy_99NzsCYgrt",
+  "sourceImage": "vehicle/heavy/99NzsCYgrt",
+  "style": "vehicle/heavy",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14223403,
+    "facadeHex": 14751793,
+    "baseHex": 2105376,
+    "accentHex": 3355443,
+    "darkHex": 1052688,
+    "brightHex": 14540253,
+    "glassHex": 33023
+  },
+  "totalParts": 16,
+  "partNames": [
+    "chassis",
+    "cab_body",
+    "cab_roof",
+    "windshield",
+    "grille_and_bumper",
+    "headlight_left",
+    "headlight_right",
+    "cargo_bed",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear1_left",
+    "wheel_rear1_right",
+    "wheel_rear2_left",
+    "wheel_rear2_right",
+    "side_mirror_left",
+    "side_mirror_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

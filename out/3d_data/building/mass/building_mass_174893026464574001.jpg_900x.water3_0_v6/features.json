@@ -1,0 +1,52 @@
+{
+  "id": "building_mass_174893026464574001.jpg!900x.water3~0",
+  "sourceImage": "building/mass/174893026464574001.jpg!900x.water3~0",
+  "style": "Modern Apartment Building",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 4603444,
+    "baseHex": 12632256,
+    "accentHex": 15790320,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 2115790
+  },
+  "totalParts": 31,
+  "partNames": [
+    "main_building_structure",
+    "base_foundation",
+    "roof_top_cap",
+    "floor_1_left_window",
+    "floor_1_right_window",
+    "floor_1_balcony",
+    "floor_2_left_window",
+    "floor_2_right_window",
+    "floor_2_balcony",
+    "floor_3_left_window",
+    "floor_3_right_window",
+    "floor_3_balcony",
+    "floor_4_left_window",
+    "floor_4_right_window",
+    "floor_4_balcony",
+    "floor_5_left_window",
+    "floor_5_right_window",
+    "floor_5_balcony",
+    "floor_6_left_window",
+    "floor_6_right_window",
+    "floor_6_balcony",
+    "floor_7_left_window",
+    "floor_7_right_window",
+    "floor_7_balcony",
+    "floor_8_left_window",
+    "floor_8_right_window",
+    "floor_8_balcony",
+    "floor_9_left_window",
+    "floor_9_right_window",
+    "floor_9_balcony",
+    "back_wall"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

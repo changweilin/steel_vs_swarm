@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_mesa_ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69_v6",
+  "key": "rock/mg_mesa_ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69_0c2533cc_v6",
+  "family": "rock",
+  "subpart": "mg_mesa",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model successfully captures the prominent Mesa rock formation with layered plateaus, steep vertical cliffs, and sloping talus bases. The use of varied dodecahedral and box primitives creates the rugged, eroded stratification seen in the photograph.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_mesa/ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_mesa\\ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69~0.png",
+  "created_at": "2026-08-20T16:25:58.820Z",
+  "bounds": {
+    "min": [
+      -140,
+      -7.506,
+      -135
+    ],
+    "max": [
+      125,
+      39,
+      50
+    ],
+    "size": [
+      265,
+      46.506,
+      185
+    ],
+    "rMax": 194.487,
+    "triangles": 228,
+    "vertices": 138
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

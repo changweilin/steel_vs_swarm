@@ -1,0 +1,33 @@
+{
+  "id": "landmark_main_11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global",
+  "sourceImage": "landmark/main/11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global",
+  "style": "modern_skyscraper",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2043187,
+    "facadeHex": 4353457,
+    "baseHex": 1646383,
+    "accentHex": 8558771,
+    "darkHex": 1120286,
+    "brightHex": 13421772,
+    "glassHex": 4487405
+  },
+  "totalParts": 9,
+  "partNames": [
+    "TowerCoreBase",
+    "TowerCoreMid",
+    "TowerCoreUpper",
+    "TowerCoreTop",
+    "TowerTipDome",
+    "RibFront",
+    "RibBack",
+    "RibLeft",
+    "RibRight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "conical_frustum",
+    "hemisphere_dome",
+    "box"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_manual_FB_IMG_1786332532197_v6",
+  "key": "tree/canopy_manual_FB_IMG_1786332532197_0be69595_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "tropical_emergent_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the tall, slender trunk and the expansive, flat-topped canopy characteristic of tropical emergent trees. The trunk is represented by a series of conical frustums to simulate natural taper, and the canopy is modeled using a large ellipsoid to represent the dense, spreading foliage. The scale is set to approximately 40 meters in height, consistent with tall tropical trees.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/manual_FB_IMG_1786332532197.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\manual_FB_IMG_1786332532197~0.png",
+  "created_at": "2026-08-20T16:22:31.301Z",
+  "bounds": {
+    "min": [
+      -12,
+      0,
+      -11.4127
+    ],
+    "max": [
+      12,
+      41,
+      11.4127
+    ],
+    "size": [
+      24,
+      41,
+      22.825
+    ],
+    "rMax": 16.56,
+    "triangles": 672,
+    "vertices": 401
+  },
+  "spec": {
+    "style": "tropical_emergent_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

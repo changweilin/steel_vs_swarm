@@ -1,0 +1,27 @@
+{
+  "id": "tree_canopy_Cardon_Pachycereus_pringlei",
+  "sourceImage": "tree/canopy/Cardon_Pachycereus_pringlei",
+  "style": "natural_cactus",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 450000,
+    "facadeHex": 556633,
+    "baseHex": 334422,
+    "accentHex": 889977,
+    "darkHex": 223311,
+    "brightHex": 778866,
+    "glassHex": 1976635
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "branch_tall",
+    "branch_mid_left",
+    "branch_small_left",
+    "branch_mid_right",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder"
+  ]
+}

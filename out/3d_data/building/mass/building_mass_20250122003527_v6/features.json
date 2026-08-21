@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_20250122003527",
+  "sourceImage": "building/mass/20250122003527",
+  "style": "modern_architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3819330,
+    "facadeHex": 6579304,
+    "baseHex": 2105376,
+    "accentHex": 4868682,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 2645165
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_base_platform",
+    "primary_slanted_body_left",
+    "secondary_slanted_body_center",
+    "tertiary_slanted_body_right",
+    "facade_accent_panel_1",
+    "facade_accent_panel_2",
+    "facade_accent_panel_3",
+    "rear_supporting_wall",
+    "glass_entrance_door"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0",
+  "sourceImage": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0",
+  "style": "Modern Brutalist Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15658734,
+    "baseHex": 13421772,
+    "accentHex": 11184810,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 2241364
+  },
+  "totalParts": 13,
+  "partNames": [
+    "main_core_block",
+    "upper_tower",
+    "tier1_front_base",
+    "tier1_front_window",
+    "tier2_right_block",
+    "tier2_right_window",
+    "tier3_top_left_wing",
+    "tier3_top_left_window",
+    "tier3_top_right_wing",
+    "tier3_top_right_window",
+    "cantilever_overhang_front",
+    "cantilever_overhang_right",
+    "cantilever_overhang_topleft"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

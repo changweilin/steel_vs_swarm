@@ -1,0 +1,30 @@
+{
+  "id": "tree_sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~1",
+  "sourceImage": "tree/sp_cypress/ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~1",
+  "style": "classical_landscape_sketch",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 10506790,
+    "facadeHex": 8542770,
+    "baseHex": 6578750,
+    "accentHex": 12023000,
+    "darkHex": 4605470,
+    "brightHex": 14474460,
+    "glassHex": 16777215
+  },
+  "totalParts": 6,
+  "partNames": [
+    "left_cypress_trunk",
+    "left_cypress_foliage",
+    "central_tree_trunk",
+    "central_tree_foliage_main",
+    "central_tree_foliage_top",
+    "ground_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "pyramid",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

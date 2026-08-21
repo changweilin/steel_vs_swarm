@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_images (16)~0",
+  "sourceImage": "building/mass/images (16)~0",
+  "style": "Modern Minimalist Residential Building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14211288,
+    "baseHex": 10526880,
+    "accentHex": 5592405,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 8438271
+  },
+  "totalParts": 11,
+  "partNames": [
+    "MainBuildingBody",
+    "GroundFloorBase",
+    "BalconyLevel2",
+    "BalconyGlass2",
+    "BalconyLevel3",
+    "BalconyGlass3",
+    "DecorativeScreen",
+    "RoofStructure",
+    "FrontDoor",
+    "SideWindow1",
+    "SideWindow2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

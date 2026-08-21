@@ -1,0 +1,39 @@
+{
+  "id": "vehicle_heavy_news442315o",
+  "sourceImage": "vehicle/heavy/news442315o",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 15790320,
+    "facadeHex": 12632256,
+    "baseHex": 3355443,
+    "accentHex": 16753920,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 3368652
+  },
+  "totalParts": 17,
+  "partNames": [
+    "bus_body_main",
+    "bus_roof",
+    "bus_chassis_base",
+    "front_windshield",
+    "left_side_windows",
+    "right_side_windows",
+    "front_bumper_chrome",
+    "front_grille_panel",
+    "front_hazard_stripe_panel",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_rear_view_mirror",
+    "right_rear_view_mirror",
+    "rear_windshield",
+    "rear_bumper"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

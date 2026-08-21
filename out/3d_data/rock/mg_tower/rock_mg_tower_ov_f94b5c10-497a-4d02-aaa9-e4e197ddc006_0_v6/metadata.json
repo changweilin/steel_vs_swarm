@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006_0_v6",
+  "key": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~0_54491ab8_v6",
+  "family": "rock",
+  "subpart": "mg_tower",
+  "style": "natural landscape geological monument",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the iconic Devils Tower monolithic rock formation with vertical columnar jointing style, surrounded by supportive talus base debris and natural varied terrain geometry, maintaining proper proportions and realistic ground anchoring.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_tower/ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_tower\\ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~0.png",
+  "created_at": "2026-08-20T16:26:53.852Z",
+  "bounds": {
+    "min": [
+      -28,
+      -2.6709,
+      -28
+    ],
+    "max": [
+      28,
+      44,
+      28
+    ],
+    "size": [
+      56,
+      46.671,
+      56
+    ],
+    "rMax": 39.598,
+    "triangles": 288,
+    "vertices": 158
+  },
+  "spec": {
+    "style": "natural landscape geological monument"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

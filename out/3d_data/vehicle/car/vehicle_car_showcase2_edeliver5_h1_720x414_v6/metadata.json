@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_showcase2_edeliver5_h1_720x414_v6",
+  "key": "vehicle/car_showcase2_edeliver5_h1_720x414_9c47e61c_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/showcase2_edeliver5_h1_720x414.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\showcase2_edeliver5_h1_720x414.jpg",
+  "created_at": "2026-08-20T15:27:47.678Z",
+  "bounds": {
+    "min": [
+      -1.3,
+      0,
+      -2.3
+    ],
+    "max": [
+      1.3,
+      2.15,
+      2.3
+    ],
+    "size": [
+      2.6,
+      2.15,
+      4.6
+    ],
+    "rMax": 2.642,
+    "triangles": 628,
+    "vertices": 350
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

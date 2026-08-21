@@ -1,0 +1,40 @@
+{
+  "id": "rock_tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_v6",
+  "key": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_d5ea17f3_v6",
+  "family": "rock",
+  "subpart": "tor",
+  "style": "architectural stone gateway facade",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The 3D model successfully captures the monumental architectural gateway facade shown in the photo, featuring the central archway, symmetrical flanking wings, massive stone bases, window recesses, and structural volumes.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/tor/ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\tor\\ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb~0.png",
+  "created_at": "2026-08-20T16:29:19.713Z",
+  "bounds": {
+    "min": [
+      -8,
+      0,
+      -2
+    ],
+    "max": [
+      8,
+      7.5,
+      2
+    ],
+    "size": [
+      16,
+      7.5,
+      4
+    ],
+    "rMax": 8.246,
+    "triangles": 244,
+    "vertices": 142
+  },
+  "spec": {
+    "style": "architectural stone gateway facade"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

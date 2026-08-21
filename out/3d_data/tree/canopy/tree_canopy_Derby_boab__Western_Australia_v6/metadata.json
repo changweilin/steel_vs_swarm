@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_Derby_boab__Western_Australia_v6",
+  "key": "tree/canopy_Derby_boab,_Western_Australia_4f8d6886_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "naturalistic",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The baobab tree's massive, bulbous trunk is represented by a large ellipsoid, with the hollow opening modeled as a dark box. The complex, spreading branches are approximated using cylinders. The overall proportions and the iconic 'bottle' shape of the baobab are captured accurately.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/Derby_boab,_Western_Australia.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\Derby_boab,_Western_Australia~0.png",
+  "created_at": "2026-08-20T16:49:29.621Z",
+  "bounds": {
+    "min": [
+      -3.9013,
+      -0.3,
+      -1.7119
+    ],
+    "max": [
+      3.9013,
+      4.9013,
+      3.05
+    ],
+    "size": [
+      7.803,
+      5.201,
+      4.762
+    ],
+    "rMax": 4.952,
+    "triangles": 368,
+    "vertices": 219
+  },
+  "spec": {
+    "style": "naturalistic"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

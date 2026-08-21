@@ -1,0 +1,34 @@
+{
+  "id": "building_mass_pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928~1",
+  "sourceImage": "building/mass/pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928~1",
+  "style": "modern_rooftop_villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14803425,
+    "baseHex": 12632256,
+    "accentHex": 8421504,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 11075583
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_building_base",
+    "rooftop_deck",
+    "swimming_pool",
+    "glass_railing_front",
+    "glass_railing_side",
+    "window_front_left",
+    "window_front_right",
+    "sun_lounger_1",
+    "sun_lounger_2",
+    "tree_main",
+    "tree_canopy"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

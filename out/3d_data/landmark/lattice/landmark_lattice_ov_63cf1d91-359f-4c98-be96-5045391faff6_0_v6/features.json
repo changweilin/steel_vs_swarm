@@ -1,0 +1,28 @@
+{
+  "id": "landmark_lattice_ov_63cf1d91-359f-4c98-be96-5045391faff6~0",
+  "sourceImage": "landmark/lattice/ov_63cf1d91-359f-4c98-be96-5045391faff6~0",
+  "style": "industrial_monument",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 8417336,
+    "facadeHex": 10515520,
+    "baseHex": 13421772,
+    "accentHex": 6579300,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 6,
+  "partNames": [
+    "foundation_base",
+    "gravel_pad",
+    "main_vertical_plate",
+    "side_support_left",
+    "side_support_right",
+    "weathered_texture_overlay"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box"
+  ]
+}

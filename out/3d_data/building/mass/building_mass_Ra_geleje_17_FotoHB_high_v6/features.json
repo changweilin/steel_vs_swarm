@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_Ra_geleje_17_FotoHB_high",
+  "sourceImage": "building/mass/Ra_geleje_17_FotoHB_high",
+  "style": "Modern Minimalist Wooden Cabin",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 13487565,
+    "baseHex": 9868950,
+    "accentHex": 14540253,
+    "darkHex": 4473924,
+    "brightHex": 16777215,
+    "glassHex": 10079487
+  },
+  "totalParts": 10,
+  "partNames": [
+    "deck_base",
+    "main_body",
+    "roof_main",
+    "chimney_central",
+    "glass_facade_left",
+    "glass_facade_right",
+    "glass_facade_center",
+    "frame_vertical_left",
+    "frame_vertical_right",
+    "back_wall"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

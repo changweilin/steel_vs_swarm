@@ -1,0 +1,26 @@
+{
+  "id": "rock_main_Ballinagree",
+  "sourceImage": "rock/main/Ballinagree",
+  "style": "natural_rock_monolith",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7434609,
+    "facadeHex": 5921350,
+    "baseHex": 3947580,
+    "accentHex": 8421504,
+    "darkHex": 2631720,
+    "brightHex": 9868950,
+    "glassHex": 2043954
+  },
+  "totalParts": 4,
+  "partNames": [
+    "Main Monolith Base",
+    "Monolith Upper Peak",
+    "Rock Fragment Left",
+    "Rock Fragment Ground"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "icosahedron_polyhedron",
+    "dodecahedron_polyhedron"
+  ]
+}

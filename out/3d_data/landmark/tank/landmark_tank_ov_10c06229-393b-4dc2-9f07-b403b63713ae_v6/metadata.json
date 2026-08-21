@@ -1,0 +1,38 @@
+{
+  "id": "landmark_tank_ov_10c06229-393b-4dc2-9f07-b403b63713ae_v6",
+  "key": "landmark/tank_ov_10c06229-393b-4dc2-9f07-b403b63713ae_d5431ffd_v6",
+  "family": "landmark",
+  "subpart": "tank",
+  "style": "industrial_landmark",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/tank/ov_10c06229-393b-4dc2-9f07-b403b63713ae.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\tank\\ov_10c06229-393b-4dc2-9f07-b403b63713ae.jpg",
+  "created_at": "2026-08-20T15:28:46.271Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      -0.25,
+      -4.2798
+    ],
+    "max": [
+      4.5,
+      17.1,
+      4.57
+    ],
+    "size": [
+      9,
+      17.35,
+      8.85
+    ],
+    "rMax": 6.414,
+    "triangles": 396,
+    "vertices": 227
+  },
+  "spec": {
+    "style": "industrial_landmark"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

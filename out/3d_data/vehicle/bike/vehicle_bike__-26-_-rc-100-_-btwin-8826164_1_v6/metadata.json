@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike__-26-_-rc-100-_-btwin-8826164_1_v6",
+  "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~1_1d0d8858_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the front section of the road bicycle including the frame tubes, fork, handlebar with drop bar shape, and front wheel with tire, rim, and hub following rigorous bike structure and connection constraints.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~1.png",
+  "created_at": "2026-08-20T17:21:51.489Z",
+  "bounds": {
+    "min": [
+      -1.32,
+      0.0099,
+      -1.035
+    ],
+    "max": [
+      0.9843,
+      1.9501,
+      1.035
+    ],
+    "size": [
+      2.304,
+      1.94,
+      2.07
+    ],
+    "rMax": 1.677,
+    "triangles": 736,
+    "vertices": 437
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

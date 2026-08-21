@@ -1,0 +1,43 @@
+{
+  "id": "vehicle_heavy_3158_news_banner",
+  "sourceImage": "vehicle/heavy/3158_news_banner",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16744215,
+    "facadeHex": 16777215,
+    "baseHex": 2105376,
+    "accentHex": 16738560,
+    "darkHex": 1052688,
+    "brightHex": 14540253,
+    "glassHex": 3368685
+  },
+  "totalParts": 20,
+  "partNames": [
+    "chassis_frame",
+    "cabin_body",
+    "cabin_roof",
+    "front_windshield",
+    "left_side_window",
+    "right_side_window",
+    "left_mirror",
+    "right_mirror",
+    "mixer_drum",
+    "mixer_drum_back",
+    "rear_frame_tower",
+    "rear_ladder",
+    "fuel_tank",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel_1",
+    "right_rear_wheel_1",
+    "left_rear_wheel_2",
+    "right_rear_wheel_2",
+    "front_bumper"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "conical_frustum",
+    "cylinder"
+  ]
+}

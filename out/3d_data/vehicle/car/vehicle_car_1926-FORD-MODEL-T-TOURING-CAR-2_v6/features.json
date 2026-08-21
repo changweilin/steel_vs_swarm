@@ -1,0 +1,52 @@
+{
+  "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2",
+  "sourceImage": "vehicle/car/1926-FORD-MODEL-T-TOURING-CAR-2",
+  "style": "vintage_automobile",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 1644825,
+    "baseHex": 657930,
+    "accentHex": 3289650,
+    "darkHex": 328965,
+    "brightHex": 14540253,
+    "glassHex": 3368652
+  },
+  "totalParts": 29,
+  "partNames": [
+    "chassis_base",
+    "hood_body",
+    "radiator_shell",
+    "radiator_cap",
+    "passenger_cabin",
+    "front_seat",
+    "rear_seat",
+    "folded_top_stack",
+    "windshield_frame",
+    "windshield_glass",
+    "steering_wheel",
+    "steering_column",
+    "left_running_board",
+    "right_running_board",
+    "left_front_fender",
+    "right_front_fender",
+    "left_rear_fender",
+    "right_rear_fender",
+    "left_front_wheel",
+    "left_front_rim",
+    "right_front_wheel",
+    "right_front_rim",
+    "left_rear_wheel",
+    "left_rear_rim",
+    "right_rear_wheel",
+    "right_rear_rim",
+    "left_headlight",
+    "right_headlight",
+    "crank_handle"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

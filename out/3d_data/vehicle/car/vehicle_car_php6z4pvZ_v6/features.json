@@ -1,0 +1,43 @@
+{
+  "id": "vehicle_car_php6z4pvZ",
+  "sourceImage": "vehicle/car/php6z4pvZ",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 12632256,
+    "baseHex": 3355443,
+    "accentHex": 2236962,
+    "darkHex": 1118481,
+    "brightHex": 15658734,
+    "glassHex": 4474393
+  },
+  "totalParts": 21,
+  "partNames": [
+    "chassis_base",
+    "cabin_body",
+    "cargo_bed",
+    "hood",
+    "roof",
+    "front_windshield",
+    "rear_windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_grille",
+    "front_bumper",
+    "left_headlight",
+    "right_headlight",
+    "left_rear_light",
+    "right_rear_light",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_mirror",
+    "right_mirror"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

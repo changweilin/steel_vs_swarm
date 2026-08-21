@@ -1,0 +1,31 @@
+{
+  "id": "rock_main_php1uNn7p",
+  "sourceImage": "rock/main/php1uNn7p",
+  "style": "natural geologic formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 13606775,
+    "facadeHex": 14201476,
+    "baseHex": 12690022,
+    "accentHex": 10714701,
+    "darkHex": 4602931,
+    "brightHex": 16579836,
+    "glassHex": 3887208
+  },
+  "totalParts": 7,
+  "partNames": [
+    "left_pedestal",
+    "right_pedestal",
+    "left_rock_main",
+    "right_rock_main",
+    "left_rock_top_capping",
+    "right_rock_top_capping",
+    "fissure_void_filler"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "box"
+  ]
+}

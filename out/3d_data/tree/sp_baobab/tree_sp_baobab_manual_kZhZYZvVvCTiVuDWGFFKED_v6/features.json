@@ -1,0 +1,28 @@
+{
+  "id": "tree_sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED",
+  "sourceImage": "tree/sp_baobab/manual_kZhZYZvVvCTiVuDWGFFKED",
+  "style": "natural_baobab_forest",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 5536482,
+    "facadeHex": 8873545,
+    "baseHex": 6575930,
+    "accentHex": 1234567,
+    "darkHex": 3355443,
+    "brightHex": 13421772,
+    "glassHex": 16777215
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "main_canopy",
+    "secondary_trunk",
+    "secondary_canopy",
+    "distant_trunk_1",
+    "distant_canopy_1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "dodecahedron_polyhedron"
+  ]
+}

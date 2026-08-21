@@ -1,0 +1,34 @@
+{
+  "id": "rock_facet_wc_18724201",
+  "sourceImage": "rock/facet/wc_18724201",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7439446,
+    "facadeHex": 12237498,
+    "baseHex": 6053457,
+    "accentHex": 9343360,
+    "darkHex": 3817789,
+    "brightHex": 14540253,
+    "glassHex": 3823485
+  },
+  "totalParts": 9,
+  "partNames": [
+    "MainBoulderBase",
+    "BoulderLeftWing",
+    "BoulderRightWing",
+    "SplitGapWedge",
+    "MossyTopLeft",
+    "MossyTopRight",
+    "RockBaseAnchor",
+    "ForegroundRockLeft",
+    "ForegroundRockRight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

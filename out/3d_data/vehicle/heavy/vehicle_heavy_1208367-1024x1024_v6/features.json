@@ -1,0 +1,44 @@
+{
+  "id": "vehicle_heavy_1208367-1024x1024",
+  "sourceImage": "vehicle/heavy/1208367-1024x1024",
+  "style": "realistic",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14474460,
+    "facadeHex": 14695442,
+    "baseHex": 1644825,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 26368
+  },
+  "totalParts": 22,
+  "partNames": [
+    "bus_body",
+    "bus_roof",
+    "bus_chassis",
+    "front_windshield",
+    "upper_front_windshield",
+    "side_windows_left",
+    "side_windows_right",
+    "front_bumper_mask",
+    "front_headlight_left",
+    "front_headlight_right",
+    "rear_window",
+    "rear_taillight_left",
+    "rear_taillight_right",
+    "rear_bumper",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left_outer",
+    "wheel_rear_left_inner",
+    "wheel_rear_right_outer",
+    "wheel_rear_right_inner",
+    "mirror_left",
+    "mirror_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

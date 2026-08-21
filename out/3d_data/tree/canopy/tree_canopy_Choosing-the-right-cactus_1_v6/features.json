@@ -1,0 +1,25 @@
+{
+  "id": "tree_canopy_Choosing-the-right-cactus~1",
+  "sourceImage": "tree/canopy/Choosing-the-right-cactus~1",
+  "style": "botanical",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777088,
+    "facadeHex": 8435776,
+    "baseHex": 5592405,
+    "accentHex": 16776960,
+    "darkHex": 4473924,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 3,
+  "partNames": [
+    "cactus_body",
+    "cactus_spines_top",
+    "base_soil"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

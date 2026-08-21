@@ -1,0 +1,38 @@
+{
+  "id": "building_mass_pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928_v6",
+  "key": "building/mass_pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928_a30d13a5_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_villa",
+  "symmetryMode": "asymmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928.webp",
+  "created_at": "2026-08-20T15:37:26.255Z",
+  "bounds": {
+    "min": [
+      -8,
+      -0.5,
+      -8
+    ],
+    "max": [
+      8,
+      7.4,
+      8
+    ],
+    "size": [
+      16,
+      7.9,
+      16
+    ],
+    "rMax": 11.314,
+    "triangles": 792,
+    "vertices": 495
+  },
+  "spec": {
+    "style": "modern_villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,37 @@
+{
+  "id": "building_mass_images (1)",
+  "sourceImage": "building/mass/images (1)",
+  "style": "modern_commercial_building",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 3223857,
+    "baseHex": 1052688,
+    "accentHex": 8545330,
+    "darkHex": 2631720,
+    "brightHex": 14540253,
+    "glassHex": 10079487
+  },
+  "totalParts": 15,
+  "partNames": [
+    "main_structure_core",
+    "floor_1_glass",
+    "floor_2_glass",
+    "floor_3_glass",
+    "floor_4_glass",
+    "floor_5_glass",
+    "floor_6_glass",
+    "floor_7_glass",
+    "eave_level_1",
+    "eave_level_2",
+    "eave_level_3",
+    "eave_level_4",
+    "eave_level_5",
+    "eave_level_6",
+    "roof_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

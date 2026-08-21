@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_images (12)",
+  "sourceImage": "building/mass/images (12)",
+  "style": "Modern Wooden Cabin",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4603904,
+    "facadeHex": 10580550,
+    "baseHex": 3947580,
+    "accentHex": 7886440,
+    "darkHex": 2631720,
+    "brightHex": 14540253,
+    "glassHex": 10079487
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_body",
+    "main_roof",
+    "porch_roof",
+    "chimney",
+    "balcony_floor",
+    "window_1",
+    "window_2",
+    "door_main",
+    "base_foundation"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

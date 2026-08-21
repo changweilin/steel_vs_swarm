@@ -1,0 +1,32 @@
+{
+  "id": "ship_hull_Virginia_class_submarine",
+  "sourceImage": "ship/hull/Virginia_class_submarine",
+  "style": "modern_military_submarine",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4473924,
+    "facadeHex": 5592405,
+    "baseHex": 2236962,
+    "accentHex": 16777215,
+    "darkHex": 1118481,
+    "brightHex": 12632256,
+    "glassHex": 46217
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_hull",
+    "bow_nose",
+    "sail_tower",
+    "bridge_window",
+    "torpedo_body",
+    "torpedo_nose",
+    "stern_stabilizer_v",
+    "stern_stabilizer_h"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere",
+    "box",
+    "cone"
+  ]
+}

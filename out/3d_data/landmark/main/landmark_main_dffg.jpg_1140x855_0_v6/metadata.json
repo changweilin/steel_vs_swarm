@@ -1,0 +1,40 @@
+{
+  "id": "landmark_main_dffg.jpg_1140x855_0_v6",
+  "key": "landmark/main_dffg.jpg_1140x855~0_e11f8572_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "modernist_architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model captures the iconic hyperbolic paraboloid form of the church using a large wedge and box structure. The glass strip is represented as a recessed glass panel. The cross is added as a vertical element. The overall scale and proportions reflect the original landmark.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/dffg.jpg_1140x855.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\main\\dffg.jpg_1140x855~0.png",
+  "created_at": "2026-08-20T16:49:14.102Z",
+  "bounds": {
+    "min": [
+      -14.1822,
+      -1.173,
+      -10
+    ],
+    "max": [
+      14.1822,
+      23.1,
+      10
+    ],
+    "size": [
+      28.364,
+      24.273,
+      20
+    ],
+    "rMax": 17.353,
+    "triangles": 84,
+    "vertices": 54
+  },
+  "spec": {
+    "style": "modernist_architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

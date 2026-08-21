@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_Minimalist-facade-with-sliding-glass-doors",
+  "sourceImage": "building/mass/Minimalist-facade-with-sliding-glass-doors",
+  "style": "Modernist Luxury Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14211288,
+    "baseHex": 8421504,
+    "accentHex": 12632256,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_structure_base",
+    "upper_tier_structure",
+    "ground_floor_columns",
+    "ground_floor_columns_2",
+    "ground_floor_columns_3",
+    "glass_facade_ground",
+    "second_floor_windows",
+    "third_floor_windows",
+    "third_floor_windows_right",
+    "balcony_slab_mid",
+    "roof_slab",
+    "glass_railing_mid"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

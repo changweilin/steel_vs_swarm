@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_175437636541282008.jpg_900x.water3_1_v6",
+  "key": "building/mass_175437636541282008.jpg!900x.water3~1_84ce94b1_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_building",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the modern architectural massing with prominent white frames and glass structures, adhering strictly to the outward sloping roof guidelines and 3D solid closure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/175437636541282008.jpg!900x.water3.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\175437636541282008.jpg!900x.water3~1.png",
+  "created_at": "2026-08-20T17:21:12.952Z",
+  "bounds": {
+    "min": [
+      -6.2,
+      0,
+      -4.2
+    ],
+    "max": [
+      6.2,
+      8.6,
+      4.2
+    ],
+    "size": [
+      12.4,
+      8.6,
+      8.4
+    ],
+    "rMax": 7.489,
+    "triangles": 88,
+    "vertices": 60
+  },
+  "spec": {
+    "style": "modern_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

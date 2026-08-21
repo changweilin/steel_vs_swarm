@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_192515746_v6",
+  "key": "tree/gt_dragontree_wc_192515746_34a68ec6_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "Dragon Blood Tree (Dracaena cinnabari)",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model successfully captures the iconic umbrella-shaped canopy of the Dragon Blood Tree using a large flattened ellipsoid for the foliage and a robust, textured conical frustum for the trunk. The branching structure is represented by a cluster of smaller cylinders to mimic the dense, spreading limbs. The proportions reflect the wide, flat-topped canopy characteristic of this species.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_192515746.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_192515746~0.png",
+  "created_at": "2026-08-20T16:57:30.070Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.3,
+      -5.7063
+    ],
+    "max": [
+      6,
+      7,
+      5.7063
+    ],
+    "size": [
+      12,
+      7.3,
+      11.413
+    ],
+    "rMax": 8.28,
+    "triangles": 560,
+    "vertices": 328
+  },
+  "spec": {
+    "style": "Dragon Blood Tree (Dracaena cinnabari)"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

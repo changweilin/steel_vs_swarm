@@ -1,0 +1,32 @@
+{
+  "id": "vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
+  "sourceImage": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2437632,
+    "facadeHex": 1647412,
+    "baseHex": 4210752,
+    "accentHex": 14540253,
+    "darkHex": 1315860,
+    "brightHex": 15790320,
+    "glassHex": 49454
+  },
+  "totalParts": 10,
+  "partNames": [
+    "front_wheel",
+    "rear_wheel",
+    "fuel_tank",
+    "engine_block",
+    "seat",
+    "front_headlight",
+    "exhaust_pipe",
+    "handlebar",
+    "front_fork_left",
+    "front_fork_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box"
+  ]
+}

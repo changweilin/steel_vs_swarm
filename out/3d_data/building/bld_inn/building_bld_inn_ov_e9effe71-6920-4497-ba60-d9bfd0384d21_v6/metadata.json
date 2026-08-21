@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_inn_ov_e9effe71-6920-4497-ba60-d9bfd0384d21_v6",
+  "key": "building/bld_inn_ov_e9effe71-6920-4497-ba60-d9bfd0384d21_ab12c4d5_v6",
+  "family": "building",
+  "subpart": "bld_inn",
+  "style": "Rustic Log Cabin Lodge",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the Navajo Lodge from the historical photo. It captures the complex asymmetric layout consisting of a large left wing, a recessed central lobby with a prominent stone chimney, and a smaller right wing. The double-pitched gabled roofs are correctly oriented with slopes extending outward and downward. Key architectural features, including the second-story wooden balcony, the rustic log-textured facade, stone-textured chimney, and multiple glass windows/doors, are modeled as distinct, tightly integrated components. The back and side walls are fully enclosed to ensure 360-degree structural integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_inn/ov_e9effe71-6920-4497-ba60-d9bfd0384d21.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_inn\\ov_e9effe71-6920-4497-ba60-d9bfd0384d21~0.png",
+  "created_at": "2026-08-21T07:03:28.455Z",
+  "bounds": {
+    "min": [
+      -12.5297,
+      0,
+      -7
+    ],
+    "max": [
+      12.6825,
+      9.5601,
+      7.3
+    ],
+    "size": [
+      25.212,
+      9.56,
+      14.3
+    ],
+    "rMax": 14.633,
+    "triangles": 500,
+    "vertices": 328
+  },
+  "spec": {
+    "style": "Rustic Log Cabin Lodge"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_1802_v6",
+  "key": "ship/hull_1802_ffc371dd_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "military_warship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the hull profile, the two distinct mast structures, and the forward gun turret. The hull is modeled as a watertight entity with the bow wedge and superstructure correctly positioned. Symmetry is applied to ensure the port and starboard sides are consistent. The bridge windows are represented with the specified glassHex color.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/1802.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\1802~0.png",
+  "created_at": "2026-08-20T16:06:41.700Z",
+  "bounds": {
+    "min": [
+      -30,
+      -0.25,
+      -5.004
+    ],
+    "max": [
+      40.004,
+      15,
+      5.1
+    ],
+    "size": [
+      70.004,
+      15.25,
+      10.104
+    ],
+    "rMax": 40.328,
+    "triangles": 354,
+    "vertices": 208
+  },
+  "spec": {
+    "style": "military_warship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

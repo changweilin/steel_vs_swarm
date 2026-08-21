@@ -1,0 +1,40 @@
+{
+  "id": "rock_st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_v6",
+  "key": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_717a2e93_v6",
+  "family": "rock",
+  "subpart": "st_dolmen",
+  "style": "megalithic landscape",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the prominent standing megalithic stones arranged in lines across a natural grassy field. Captured the massive irregular weathered stone shapes using diverse polyhedron components anchored precisely at ground level.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/st_dolmen/ov_91f63e91-c931-41b2-b844-78e092ca98cf.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\st_dolmen\\ov_91f63e91-c931-41b2-b844-78e092ca98cf~0.png",
+  "created_at": "2026-08-20T16:28:47.703Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.1386,
+      -8
+    ],
+    "max": [
+      6.1478,
+      4.9697,
+      2
+    ],
+    "size": [
+      12.148,
+      5.108,
+      10
+    ],
+    "rMax": 10,
+    "triangles": 440,
+    "vertices": 252
+  },
+  "spec": {
+    "style": "megalithic landscape"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

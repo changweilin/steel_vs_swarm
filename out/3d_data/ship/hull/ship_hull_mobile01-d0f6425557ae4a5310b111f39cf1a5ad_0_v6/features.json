@@ -1,0 +1,32 @@
+{
+  "id": "ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0",
+  "sourceImage": "ship/hull/mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0",
+  "style": "military_submarine",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 4210752,
+    "baseHex": 2105376,
+    "accentHex": 8421504,
+    "darkHex": 526344,
+    "brightHex": 12632256,
+    "glassHex": 16777215
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "sail_tower",
+    "bridge_window",
+    "stern_stabilizer_v",
+    "stern_stabilizer_h",
+    "propeller_hub",
+    "propeller_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "wedge",
+    "box",
+    "torus_ring"
+  ]
+}

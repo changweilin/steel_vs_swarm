@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_getImage-2-4_v6",
+  "key": "tree/canopy_getImage-2-4_9ff7e3bc_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "winter_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree is modeled with a central conical trunk and a large, complex ellipsoidal canopy representing the frost-covered foliage. The proportions match the wide, spreading nature of the tree in the image. The colors are mapped to reflect the snowy white canopy and dark trunk.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/getImage-2-4.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\getImage-2-4~0.png",
+  "created_at": "2026-08-20T16:51:37.806Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.5,
+      -5.7063
+    ],
+    "max": [
+      6,
+      11,
+      5.7063
+    ],
+    "size": [
+      12,
+      11.5,
+      11.413
+    ],
+    "rMax": 8.28,
+    "triangles": 688,
+    "vertices": 422
+  },
+  "spec": {
+    "style": "winter_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

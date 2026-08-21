@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad_0_v6",
+  "key": "ship/hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0_8cceca66_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "military_submarine",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The submarine hull is modeled using a combination of a long cylinder for the main body and a rounded wedge for the bow. The sail (conning tower) is constructed with a box and rounded edges to match the profile. All components are integrated to form a watertight hull. The rear control surfaces are modeled with wedges, and the propeller is represented by a cylinder and torus. The scale is set to approximately 100m in length.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/mobile01-d0f6425557ae4a5310b111f39cf1a5ad.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0.png",
+  "created_at": "2026-08-20T16:19:19.353Z",
+  "bounds": {
+    "min": [
+      -55.2,
+      -0.0004,
+      -5
+    ],
+    "max": [
+      55,
+      13,
+      5
+    ],
+    "size": [
+      110.2,
+      13,
+      10
+    ],
+    "rMax": 55.426,
+    "triangles": 264,
+    "vertices": 163
+  },
+  "spec": {
+    "style": "military_submarine"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

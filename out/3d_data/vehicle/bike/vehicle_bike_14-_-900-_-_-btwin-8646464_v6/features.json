@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
+  "sourceImage": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
+  "style": "transportation",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 9479360,
+    "facadeHex": 9479360,
+    "baseHex": 2105376,
+    "accentHex": 16753920,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 39579
+  },
+  "totalParts": 15,
+  "partNames": [
+    "rear_tire",
+    "front_tire",
+    "rear_rim",
+    "front_rim",
+    "down_tube",
+    "seat_tube",
+    "chain_stay",
+    "chain_guard",
+    "saddle",
+    "saddle_post",
+    "head_tube",
+    "front_fork",
+    "handlebar_stem",
+    "handlebar",
+    "pedal_crank"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

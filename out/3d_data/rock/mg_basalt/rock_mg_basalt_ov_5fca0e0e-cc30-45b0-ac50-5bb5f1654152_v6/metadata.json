@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_basalt_ov_5fca0e0e-cc30-45b0-ac50-5bb5f1654152_v6",
+  "key": "rock/mg_basalt_ov_5fca0e0e-cc30-45b0-ac50-5bb5f1654152_4d2e7b88_v6",
+  "family": "rock",
+  "subpart": "mg_basalt",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 88,
+  "similarityReview": "The reconstructed 3D model successfully captures the layered basaltic cliff structure shown in the photograph, featuring a prominent vertical columnar rock section at the top, stepped sediment and intermediate slopes, and a rugged foreground cliff face. Dodecahedron and box geometries are combined effectively to simulate natural geological variations.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_basalt/ov_5fca0e0e-cc30-45b0-ac50-5bb5f1654152.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_basalt\\ov_5fca0e0e-cc30-45b0-ac50-5bb5f1654152~0.png",
+  "created_at": "2026-08-20T16:23:32.799Z",
+  "bounds": {
+    "min": [
+      -7,
+      -0.0994,
+      -6.5
+    ],
+    "max": [
+      7,
+      15,
+      5
+    ],
+    "size": [
+      14,
+      15.099,
+      11.5
+    ],
+    "rMax": 9.552,
+    "triangles": 132,
+    "vertices": 80
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

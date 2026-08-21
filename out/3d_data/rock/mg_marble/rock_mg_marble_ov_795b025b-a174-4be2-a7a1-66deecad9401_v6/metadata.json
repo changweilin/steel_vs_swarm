@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_marble_ov_795b025b-a174-4be2-a7a1-66deecad9401_v6",
+  "key": "rock/mg_marble_ov_795b025b-a174-4be2-a7a1-66deecad9401_9bd67eb8_v6",
+  "family": "rock",
+  "subpart": "mg_marble",
+  "style": "rock_pagoda_sculpture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the complex multi-tiered stone pagoda and the foreground rockery formation using various polyhedron parts. The multi-tiered roofs exhibit accurate outward-flaring shapes, and the central rock structure features clustered dodecahedron and icosahedron parts seamlessly combined at y=0 without gaps.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_marble/ov_795b025b-a174-4be2-a7a1-66deecad9401.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_marble\\ov_795b025b-a174-4be2-a7a1-66deecad9401~0.png",
+  "created_at": "2026-08-20T16:24:26.666Z",
+  "bounds": {
+    "min": [
+      -2.9,
+      -0.6013,
+      -2.8284
+    ],
+    "max": [
+      2.9,
+      10.9,
+      3.4013
+    ],
+    "size": [
+      5.8,
+      11.501,
+      6.23
+    ],
+    "rMax": 4.47,
+    "triangles": 364,
+    "vertices": 224
+  },
+  "spec": {
+    "style": "rock_pagoda_sculpture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

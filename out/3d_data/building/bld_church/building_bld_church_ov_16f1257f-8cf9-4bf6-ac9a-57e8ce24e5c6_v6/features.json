@@ -1,0 +1,50 @@
+{
+  "id": "building_bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6",
+  "sourceImage": "building/bld_church/ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6",
+  "style": "historical_church",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 6579304,
+    "facadeHex": 15790320,
+    "baseHex": 4210752,
+    "accentHex": 11842740,
+    "darkHex": 2105376,
+    "brightHex": 15132390,
+    "glassHex": 4158864
+  },
+  "totalParts": 27,
+  "partNames": [
+    "church_base",
+    "main_hall",
+    "roof_left",
+    "roof_right",
+    "front_gable",
+    "back_gable",
+    "chimney",
+    "porch_body",
+    "porch_roof_left",
+    "porch_roof_right",
+    "porch_window",
+    "side_window_1",
+    "side_window_2",
+    "side_window_3",
+    "side_window_4",
+    "side_window_5",
+    "side_window_6",
+    "side_window_7",
+    "side_window_8",
+    "belfry_base",
+    "belfry_pillar_1",
+    "belfry_pillar_2",
+    "belfry_pillar_3",
+    "belfry_pillar_4",
+    "belfry_roof_left",
+    "belfry_roof_right",
+    "steeple"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "pyramid"
+  ]
+}

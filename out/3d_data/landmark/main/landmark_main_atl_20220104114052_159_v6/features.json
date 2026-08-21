@@ -1,0 +1,32 @@
+{
+  "id": "landmark_main_atl_20220104114052_159",
+  "sourceImage": "landmark/main/atl_20220104114052_159",
+  "style": "futuristic_landmark",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 12632256,
+    "accentHex": 16777215,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8454143
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_tower_core",
+    "tower_glass_facade",
+    "crescent_base_segment_1",
+    "crescent_base_segment_2",
+    "crescent_base_segment_3",
+    "crescent_base_segment_4",
+    "crescent_base_segment_5",
+    "tower_top_fin",
+    "base_platform"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

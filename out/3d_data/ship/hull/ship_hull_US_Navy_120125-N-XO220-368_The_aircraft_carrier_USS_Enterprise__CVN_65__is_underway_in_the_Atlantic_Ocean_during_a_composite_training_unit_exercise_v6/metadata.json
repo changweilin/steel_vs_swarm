@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise__CVN_65__is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_v6",
+  "key": "ship/hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_fb3e0c01_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "military_aircraft_carrier",
+  "symmetryMode": "symmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model accurately captures the distinctive flight deck shape, the island superstructure, and the bow wedge of the aircraft carrier. The hull is modeled as a solid, watertight structure with appropriate color coding. Minor details like radar domes and flight deck planes are represented as primitives. The symmetry is maintained for the hull and deck structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise~0.png",
+  "created_at": "2026-08-20T16:21:51.840Z",
+  "bounds": {
+    "min": [
+      -37.5,
+      -2.5,
+      -170
+    ],
+    "max": [
+      57.5,
+      47,
+      190
+    ],
+    "size": [
+      95,
+      49.5,
+      360
+    ],
+    "rMax": 198.51,
+    "triangles": 318,
+    "vertices": 196
+  },
+  "spec": {
+    "style": "military_aircraft_carrier"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

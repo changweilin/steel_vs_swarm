@@ -1,0 +1,40 @@
+{
+  "id": "rock_facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_v6",
+  "key": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_0bc6413a_v6",
+  "family": "rock",
+  "subpart": "facet",
+  "style": "nature_rock_moss",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D geometric model accurately captures the dome-like cushion of moss on the rocky surface, using an ellipsoid sphere for the main moss mass and surrounding polyhedrons for the rock outcrop and surrounding lichen spots.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/facet/ov_fa013cfc-3b8c-47f7-a131-819810d74d4e.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\facet\\ov_fa013cfc-3b8c-47f7-a131-819810d74d4e~0.png",
+  "created_at": "2026-08-20T16:19:30.670Z",
+  "bounds": {
+    "min": [
+      -1.0903,
+      -0.694,
+      -1.1704
+    ],
+    "max": [
+      0.794,
+      0.894,
+      0.794
+    ],
+    "size": [
+      1.884,
+      1.588,
+      1.964
+    ],
+    "rMax": 1.6,
+    "triangles": 264,
+    "vertices": 159
+  },
+  "spec": {
+    "style": "nature_rock_moss"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

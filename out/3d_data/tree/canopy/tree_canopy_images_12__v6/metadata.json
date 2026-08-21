@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_12__v6",
+  "key": "tree/canopy_images (12)_a752f51e_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "organic_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree structure is reconstructed using a central conical trunk and multiple ellipsoid clusters to represent the dense, layered canopy. The base is widened to mimic the root flare. The proportions capture the wide-spreading nature of the oak-like tree in the image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (12).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (12)~0.png",
+  "created_at": "2026-08-20T16:10:26.909Z",
+  "bounds": {
+    "min": [
+      -5.5,
+      0,
+      -3.8042
+    ],
+    "max": [
+      5.5,
+      7.5,
+      3.8042
+    ],
+    "size": [
+      11,
+      7.5,
+      7.608
+    ],
+    "rMax": 6.687,
+    "triangles": 816,
+    "vertices": 492
+  },
+  "spec": {
+    "style": "organic_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

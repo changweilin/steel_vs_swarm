@@ -1,0 +1,31 @@
+{
+  "id": "landmark_container_ov_c2d9cce0-a2c2-4ab9-a4cd-794194238895",
+  "sourceImage": "landmark/container/ov_c2d9cce0-a2c2-4ab9-a4cd-794194238895",
+  "style": "Industrial Port Crane and Container Ship",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 3421236,
+    "baseHex": 2105376,
+    "accentHex": 16711680,
+    "darkHex": 4210752,
+    "brightHex": 12632256,
+    "glassHex": 8454143
+  },
+  "totalParts": 9,
+  "partNames": [
+    "CraneMainVerticalSupport",
+    "CraneHorizontalBoom",
+    "CraneDiagonalSupport",
+    "ShipHull",
+    "ShipSuperstructure",
+    "ShipBridgeWindows",
+    "ContainerStack",
+    "CraneOperatorCabin",
+    "CraneOperatorWindow"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box"
+  ]
+}

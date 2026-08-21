@@ -1,0 +1,39 @@
+{
+  "id": "vehicle_heavy_規格表2大圖合for官網",
+  "sourceImage": "vehicle/heavy/規格表2大圖合for官網",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13421772,
+    "facadeHex": 12632256,
+    "baseHex": 3355443,
+    "accentHex": 2236962,
+    "darkHex": 1052688,
+    "brightHex": 15790320,
+    "glassHex": 3368652
+  },
+  "totalParts": 17,
+  "partNames": [
+    "chassis_base",
+    "cab_main",
+    "cab_roof_fairing",
+    "windshield",
+    "left_side_window",
+    "right_side_window",
+    "left_mirror",
+    "right_mirror",
+    "front_grille",
+    "front_bumper",
+    "container",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel_1",
+    "rear_right_wheel_1",
+    "rear_left_wheel_2",
+    "rear_right_wheel_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

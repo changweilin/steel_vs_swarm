@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467_0_v6",
+  "key": "rock/mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~0_12d15aeb_v6",
+  "family": "rock",
+  "subpart": "mg_mesa",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the large layered canyon mesa rock formation with stacked polygonal prisms, boxes, and dodecahedron chunks to capture the multi-tiered stratified geological structure, anchored at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_mesa/ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_mesa\\ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~0.png",
+  "created_at": "2026-08-20T16:26:07.559Z",
+  "bounds": {
+    "min": [
+      -22.5,
+      -0.7038,
+      -12.5
+    ],
+    "max": [
+      31,
+      22.3025,
+      14.2038
+    ],
+    "size": [
+      53.5,
+      23.006,
+      26.704
+    ],
+    "rMax": 34.099,
+    "triangles": 184,
+    "vertices": 110
+  },
+  "spec": {
+    "style": "rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

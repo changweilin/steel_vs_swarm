@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_16_1_v6",
+  "key": "building/mass_images (16)~1_eac986f2_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern minimalist architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the stepped massing of the modern building, including the recessed balconies, glass railings, and the rooftop terrace. The geometric proportions align with the perspective, and the material separation (glass vs. concrete facade) is correctly implemented.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (16).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (16)~1.png",
+  "created_at": "2026-08-21T08:18:12.947Z",
+  "bounds": {
+    "min": [
+      -3.05,
+      0,
+      -3.05
+    ],
+    "max": [
+      6.25,
+      12,
+      3.09
+    ],
+    "size": [
+      9.3,
+      12,
+      6.14
+    ],
+    "rMax": 6.972,
+    "triangles": 276,
+    "vertices": 173
+  },
+  "spec": {
+    "style": "modern minimalist architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

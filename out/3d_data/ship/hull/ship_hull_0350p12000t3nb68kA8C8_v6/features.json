@@ -1,0 +1,32 @@
+{
+  "id": "ship_hull_0350p12000t3nb68kA8C8",
+  "sourceImage": "ship/hull/0350p12000t3nb68kA8C8",
+  "style": "modern motorboat",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13631488,
+    "facadeHex": 16777215,
+    "baseHex": 2236962,
+    "accentHex": 16753920,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 4621730
+  },
+  "totalParts": 9,
+  "partNames": [
+    "hull_main",
+    "hull_bottom",
+    "windshield",
+    "bimini_top",
+    "outboard_motor",
+    "seat_row_1",
+    "seat_row_2",
+    "bimini_support_left",
+    "bimini_support_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

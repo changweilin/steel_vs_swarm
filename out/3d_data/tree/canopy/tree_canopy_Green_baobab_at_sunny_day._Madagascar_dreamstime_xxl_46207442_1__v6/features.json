@@ -1,0 +1,28 @@
+{
+  "id": "tree_canopy_Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)",
+  "sourceImage": "tree/canopy/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)",
+  "style": "Baobab Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4500000,
+    "facadeHex": 12000000,
+    "baseHex": 6000000,
+    "accentHex": 8000000,
+    "darkHex": 3000000,
+    "brightHex": 15000000,
+    "glassHex": 1976635
+  },
+  "totalParts": 5,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "branch_support_1",
+    "branch_support_2",
+    "base_root"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

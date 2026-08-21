@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_14beauty-well-ugly-slide-4QC3-master1050_v6",
+  "key": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_b856f0ad_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "brutalist architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Reconstructed the complex brutalist geometric facade with interlocking modular concrete volumes, recessed floor-to-ceiling glass windows, and protruding upper boxes, ensuring absolute structural depth and 360-degree symmetry.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/14beauty-well-ugly-slide-4QC3-master1050.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\14beauty-well-ugly-slide-4QC3-master1050~0.png",
+  "created_at": "2026-08-20T17:19:04.517Z",
+  "bounds": {
+    "min": [
+      -11.2,
+      0,
+      -5.2
+    ],
+    "max": [
+      11.2,
+      10,
+      5.2
+    ],
+    "size": [
+      22.4,
+      10,
+      10.4
+    ],
+    "rMax": 12.348,
+    "triangles": 216,
+    "vertices": 144
+  },
+  "spec": {
+    "style": "brutalist architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

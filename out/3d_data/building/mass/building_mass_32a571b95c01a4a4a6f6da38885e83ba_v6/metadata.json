@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_32a571b95c01a4a4a6f6da38885e83ba_v6",
+  "key": "building/mass_32a571b95c01a4a4a6f6da38885e83ba_de34a9bd_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Neoclassical High-rise",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The building is reconstructed as a symmetric high-rise with a central vertical axis. The facade features recessed glass panels and protruding structural columns. The top circular feature is represented by a torus ring. The proportions follow the verticality of the original image, with all windows and structural elements aligned to the grid.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/32a571b95c01a4a4a6f6da38885e83ba.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\32a571b95c01a4a4a6f6da38885e83ba~0.png",
+  "created_at": "2026-08-21T10:02:12.915Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -6
+    ],
+    "max": [
+      7,
+      60,
+      7.763
+    ],
+    "size": [
+      14,
+      60,
+      13.763
+    ],
+    "rMax": 10.453,
+    "triangles": 228,
+    "vertices": 149
+  },
+  "spec": {
+    "style": "Neoclassical High-rise"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

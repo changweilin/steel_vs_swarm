@@ -1,0 +1,36 @@
+{
+  "id": "ship_hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1",
+  "sourceImage": "ship/hull/8eadcf6f-3d54-4ddf-92e6-a815be2b03c1",
+  "style": "modern research vessel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 10530480,
+    "facadeHex": 16777215,
+    "baseHex": 8421504,
+    "accentHex": 16744448,
+    "darkHex": 2105376,
+    "brightHex": 14737632,
+    "glassHex": 4621730
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "hull_bottom",
+    "main_deck",
+    "superstructure_base",
+    "bridge_structure",
+    "bridge_windows",
+    "mast_base",
+    "radar_dome",
+    "lifeboat_port",
+    "lifeboat_starboard",
+    "crane_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

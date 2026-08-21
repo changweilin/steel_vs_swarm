@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_3f0fcc8d74ce8fcc_v6",
+  "key": "tree/canopy_3f0fcc8d74ce8fcc_29bf727c_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "banyan_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree structure is reconstructed using a central trunk and a large, wide-spreading canopy represented by multiple overlapping ellipsoids to capture the dense, irregular foliage of a banyan tree. Aerial roots are represented by thin cylinders hanging from the canopy. The overall silhouette and proportions match the reference image well.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/3f0fcc8d74ce8fcc.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\3f0fcc8d74ce8fcc~0.png",
+  "created_at": "2026-08-20T16:18:59.275Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      -0.1,
+      -3.8042
+    ],
+    "max": [
+      4.7,
+      6,
+      3.8042
+    ],
+    "size": [
+      9.2,
+      6.1,
+      7.608
+    ],
+    "rMax": 6.047,
+    "triangles": 832,
+    "vertices": 500
+  },
+  "spec": {
+    "style": "banyan_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

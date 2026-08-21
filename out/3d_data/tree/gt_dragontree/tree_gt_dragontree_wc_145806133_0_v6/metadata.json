@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_145806133_0_v6",
+  "key": "tree/gt_dragontree_wc_145806133~0_922b6fa3_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "natural_landscape_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The Dragon Blood Tree's iconic umbrella-shaped canopy is represented by a large, flattened ellipsoid, while the thick, textured trunk is modeled using a conical frustum. The proportions capture the characteristic wide, dense canopy and the sturdy, branching trunk structure. The base is anchored at y=0 with a slightly wider root base to simulate the natural ground connection.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_145806133.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_145806133~0.png",
+  "created_at": "2026-08-20T16:55:15.866Z",
+  "bounds": {
+    "min": [
+      -5,
+      -0.1,
+      -4.7553
+    ],
+    "max": [
+      5,
+      6,
+      4.7553
+    ],
+    "size": [
+      10,
+      6.1,
+      9.511
+    ],
+    "rMax": 6.9,
+    "triangles": 464,
+    "vertices": 276
+  },
+  "spec": {
+    "style": "natural_landscape_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "tree_gt_dragontree_ov_f9b7d32e-f7d1-4312-9583-a9401da9228a",
+  "sourceImage": "tree/gt_dragontree/ov_f9b7d32e-f7d1-4312-9583-a9401da9228a",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 454545,
+    "facadeHex": 655040,
+    "baseHex": 302520,
+    "accentHex": 807060,
+    "darkHex": 151515,
+    "brightHex": 909090,
+    "glassHex": 203040
+  },
+  "totalParts": 5,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "root_base",
+    "palm_trunk",
+    "palm_canopy"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

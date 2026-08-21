@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_241120-27067-61-GPe1X_v6",
+  "key": "vehicle/car_241120-27067-61-GPe1X_527cbf60_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/241120-27067-61-GPe1X.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\241120-27067-61-GPe1X.jpg",
+  "created_at": "2026-08-20T15:21:44.053Z",
+  "bounds": {
+    "min": [
+      -1.42,
+      0.25,
+      -2.1
+    ],
+    "max": [
+      1.42,
+      1.85,
+      2.35
+    ],
+    "size": [
+      2.84,
+      1.6,
+      4.45
+    ],
+    "rMax": 2.746,
+    "triangles": 496,
+    "vertices": 296
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

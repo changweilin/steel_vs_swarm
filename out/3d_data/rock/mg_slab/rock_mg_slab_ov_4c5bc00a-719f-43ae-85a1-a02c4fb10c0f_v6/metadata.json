@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_v6",
+  "key": "rock/mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_b83578cd_v6",
+  "family": "rock",
+  "subpart": "mg_slab",
+  "style": "ancient megalithic monument",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the megalithic stone arrangement with distinctive slanted lintels, uprights, and fallen stones resembling the historic structure shown in the image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_slab/ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_slab\\ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f~0.png",
+  "created_at": "2026-08-20T16:26:23.119Z",
+  "bounds": {
+    "min": [
+      -3.5,
+      -0.5314,
+      -3.5
+    ],
+    "max": [
+      3.5,
+      5.382,
+      3.5
+    ],
+    "size": [
+      7,
+      5.913,
+      7
+    ],
+    "rMax": 4.95,
+    "triangles": 148,
+    "vertices": 94
+  },
+  "spec": {
+    "style": "ancient megalithic monument"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

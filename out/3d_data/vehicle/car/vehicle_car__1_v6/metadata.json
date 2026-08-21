@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car__1_v6",
+  "key": "vehicle/car_圖1_84826dd1_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/圖1.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\圖1.jpg",
+  "created_at": "2026-08-20T15:28:04.763Z",
+  "bounds": {
+    "min": [
+      -1.33,
+      0.1,
+      -2.21
+    ],
+    "max": [
+      1.33,
+      1.25,
+      2.225
+    ],
+    "size": [
+      2.66,
+      1.15,
+      4.435
+    ],
+    "rMax": 2.592,
+    "triangles": 412,
+    "vertices": 240
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

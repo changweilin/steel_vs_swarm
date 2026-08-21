@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_article-5ca19fe0e988a_v6",
+  "key": "ship/hull_article-5ca19fe0e988a_e67f0e50_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern_cruise_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The cruise ship model accurately captures the iconic bow wedge, the tiered superstructure, and the bridge glass windows. The hull is modeled as a watertight, closed volume with appropriate proportions. Symmetry is maintained for the superstructure and hull, ensuring a 360-degree complete representation. Minor details like bridge windows and deck levels are layered to avoid Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/article-5ca19fe0e988a.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\article-5ca19fe0e988a~0.png",
+  "created_at": "2026-08-20T16:12:31.009Z",
+  "bounds": {
+    "min": [
+      -15,
+      -1,
+      -75
+    ],
+    "max": [
+      15,
+      39,
+      95
+    ],
+    "size": [
+      30,
+      40,
+      170
+    ],
+    "rMax": 96.177,
+    "triangles": 274,
+    "vertices": 170
+  },
+  "spec": {
+    "style": "modern_cruise_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

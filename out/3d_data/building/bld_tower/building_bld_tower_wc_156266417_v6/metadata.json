@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_tower_wc_156266417_v6",
+  "key": "building/bld_tower_wc_156266417_a4584b7c_v6",
+  "family": "building",
+  "subpart": "bld_tower",
+  "style": "Art Deco Skyscraper",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the iconic Art Deco skyscraper (30 Rockefeller Plaza style) with its characteristic multi-tiered setbacks, vertical limestone piers, and central soaring tower. The setbacks are modeled symmetrically on both sides, and the windows are represented as vertical strips of glassHex to capture the verticality of the facade. The base, mid-sections, and the crown are tightly integrated with no gaps, and the rear side is fully mirrored to ensure a complete 3D volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_tower/wc_156266417.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_tower\\wc_156266417~0.png",
+  "created_at": "2026-08-21T07:13:13.059Z",
+  "bounds": {
+    "min": [
+      -24,
+      0,
+      -22.5
+    ],
+    "max": [
+      24,
+      229.5,
+      22.5
+    ],
+    "size": [
+      48,
+      229.5,
+      45
+    ],
+    "rMax": 32.898,
+    "triangles": 280,
+    "vertices": 186
+  },
+  "spec": {
+    "style": "Art Deco Skyscraper"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_list_0_v6",
+  "key": "building/mass_list~0_b383a0ff_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Japanese Castle Stone Base and Wall",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the stone base (ishigaki) using a frustum_pyramid with a wide base, topped by the black-painted wall section and the white upper wall. Windows are represented as recessed boxes with glassHex. The structure is closed and solid, adhering to the 360-degree symmetry requirement.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/list.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\list~0.png",
+  "created_at": "2026-08-21T10:45:10.595Z",
+  "bounds": {
+    "min": [
+      -2.5,
+      0.25,
+      -2.5
+    ],
+    "max": [
+      2.5,
+      2.9,
+      3.1
+    ],
+    "size": [
+      5,
+      2.65,
+      5.6
+    ],
+    "rMax": 3.982,
+    "triangles": 88,
+    "vertices": 58
+  },
+  "spec": {
+    "style": "Japanese Castle Stone Base and Wall"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

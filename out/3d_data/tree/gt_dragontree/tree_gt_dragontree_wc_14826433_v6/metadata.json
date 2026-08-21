@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_14826433_v6",
+  "key": "tree/gt_dragontree_wc_14826433_e24a9a0f_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "symmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model accurately captures the structure of the Dragon Tree (Dracaena) with a central trunk, a dense base of sword-like leaves, and the complex, radiating inflorescence with fruit. The use of a central cylinder for the trunk and multiple ellipsoids for the leaf base provides a solid foundation. The inflorescence is represented by a central axis and radiating cylinders to mimic the branching structure, with small spheres representing the fruit. The color palette adheres to the 7-Zone system.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_14826433.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_14826433~0.png",
+  "created_at": "2026-08-20T16:55:48.150Z",
+  "bounds": {
+    "min": [
+      -1.5,
+      -0.25,
+      -1.4266
+    ],
+    "max": [
+      1.5,
+      2.6,
+      1.4266
+    ],
+    "size": [
+      3,
+      2.85,
+      2.853
+    ],
+    "rMax": 2.07,
+    "triangles": 736,
+    "vertices": 450
+  },
+  "spec": {
+    "style": "botanical_reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

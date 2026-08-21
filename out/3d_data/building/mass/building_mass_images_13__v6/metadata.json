@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_13__v6",
+  "key": "building/mass_images (13)_b823698c_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_minimalist_villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the multi-level modern villa structure, including the slanted roof, the cantilevered balcony, and the garage section. The glass elements are correctly colored and positioned. The base and structural volumes are closed and integrated.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (13).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (13)~0.png",
+  "created_at": "2026-08-21T08:12:13.729Z",
+  "bounds": {
+    "min": [
+      -5,
+      -0.2,
+      -5
+    ],
+    "max": [
+      5,
+      6,
+      5
+    ],
+    "size": [
+      10,
+      6.2,
+      10
+    ],
+    "rMax": 7.071,
+    "triangles": 116,
+    "vertices": 78
+  },
+  "spec": {
+    "style": "modern_minimalist_villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

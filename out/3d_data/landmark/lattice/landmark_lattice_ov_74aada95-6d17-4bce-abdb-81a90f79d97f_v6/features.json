@@ -1,0 +1,38 @@
+{
+  "id": "landmark_lattice_ov_74aada95-6d17-4bce-abdb-81a90f79d97f",
+  "sourceImage": "landmark/lattice/ov_74aada95-6d17-4bce-abdb-81a90f79d97f",
+  "style": "industrial_lattice_tower",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 13997824,
+    "accentHex": 16744448,
+    "darkHex": 3355443,
+    "brightHex": 15658734,
+    "glassHex": 4621730
+  },
+  "totalParts": 16,
+  "partNames": [
+    "base_leg_1",
+    "base_leg_2",
+    "base_leg_3",
+    "base_leg_4",
+    "mid_section_white_1",
+    "mid_section_white_2",
+    "mid_section_white_3",
+    "mid_section_white_4",
+    "red_section_1",
+    "red_section_2",
+    "red_section_3",
+    "red_section_4",
+    "top_crossbar",
+    "insulator_left",
+    "insulator_right",
+    "platform_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box"
+  ]
+}

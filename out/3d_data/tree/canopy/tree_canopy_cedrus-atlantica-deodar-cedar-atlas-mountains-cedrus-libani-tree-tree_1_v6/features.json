@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree~1",
+  "sourceImage": "tree/canopy/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree~1",
+  "style": "coniferous_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 468428,
+    "facadeHex": 5033216,
+    "baseHex": 3024900,
+    "accentHex": 6580000,
+    "darkHex": 2015232,
+    "brightHex": 8092345,
+    "glassHex": 1000000
+  },
+  "totalParts": 6,
+  "partNames": [
+    "trunk",
+    "canopy_bottom",
+    "canopy_middle",
+    "canopy_upper",
+    "canopy_top",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "frustum_pyramid",
+    "pyramid",
+    "ellipsoid_sphere"
+  ]
+}

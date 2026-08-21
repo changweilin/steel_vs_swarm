@@ -1,0 +1,31 @@
+{
+  "id": "ship_hull_1593571989300",
+  "sourceImage": "ship/hull/1593571989300",
+  "style": "modern luxury yacht",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 8445695,
+    "baseHex": 2105376,
+    "accentHex": 16766720,
+    "darkHex": 526344,
+    "brightHex": 14540253,
+    "glassHex": 3355443
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_hull",
+    "hull_base",
+    "canopy_glass",
+    "aft_deck_tier1",
+    "aft_deck_tier2",
+    "rear_platform",
+    "side_window_left",
+    "side_window_right",
+    "rear_light_bar"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box"
+  ]
+}

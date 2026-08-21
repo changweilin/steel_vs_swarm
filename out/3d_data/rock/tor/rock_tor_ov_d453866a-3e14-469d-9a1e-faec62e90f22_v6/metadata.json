@@ -1,0 +1,40 @@
+{
+  "id": "rock_tor_ov_d453866a-3e14-469d-9a1e-faec62e90f22_v6",
+  "key": "rock/tor_ov_d453866a-3e14-469d-9a1e-faec62e90f22_005967a8_v6",
+  "family": "rock",
+  "subpart": "tor",
+  "style": "natural_rock_tor",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The reconstructed 3D geometry accurately captures the monolithic rock formation with faceted polygonal and dodecahedral elements, well-anchored to the ground plane with realistic scale and layered rock fragments matching the source image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/tor/ov_d453866a-3e14-469d-9a1e-faec62e90f22.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\tor\\ov_d453866a-3e14-469d-9a1e-faec62e90f22~0.png",
+  "created_at": "2026-08-20T16:29:44.953Z",
+  "bounds": {
+    "min": [
+      -2.3775,
+      -0.5552,
+      -2.0552
+    ],
+    "max": [
+      2.4205,
+      4.8947,
+      2.1955
+    ],
+    "size": [
+      4.798,
+      5.45,
+      4.251
+    ],
+    "rMax": 3.268,
+    "triangles": 180,
+    "vertices": 108
+  },
+  "spec": {
+    "style": "natural_rock_tor"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

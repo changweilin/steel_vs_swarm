@@ -1,0 +1,29 @@
+{
+  "id": "building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57",
+  "sourceImage": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57",
+  "style": "architectural",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 11801696,
+    "baseHex": 6579304,
+    "accentHex": 14540253,
+    "darkHex": 2105376,
+    "brightHex": 15790320,
+    "glassHex": 33023
+  },
+  "totalParts": 7,
+  "partNames": [
+    "barn_base_box",
+    "side_wall_white",
+    "roof_left_wedge",
+    "roof_right_wedge",
+    "loft_window",
+    "loft_window_frame",
+    "facade_trim_horizontal"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

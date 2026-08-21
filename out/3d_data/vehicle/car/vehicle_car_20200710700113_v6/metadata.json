@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_20200710700113_v6",
+  "key": "vehicle/car_20200710700113_12205a2e_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The box truck 3D model accurately captures the proportions of the Hino light-duty cargo truck, including the cab, cargo box, wheels, front windshield, and characteristic large side mirrors. The 7-zone coloring and correct tire orientation comply with all vehicle geometry standards.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/20200710700113.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\20200710700113~0.png",
+  "created_at": "2026-08-20T17:24:53.519Z",
+  "bounds": {
+    "min": [
+      -1.4,
+      -0.08,
+      -2.52
+    ],
+    "max": [
+      1.4,
+      3.025,
+      2.15
+    ],
+    "size": [
+      2.8,
+      3.105,
+      4.67
+    ],
+    "rMax": 2.883,
+    "triangles": 804,
+    "vertices": 452
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

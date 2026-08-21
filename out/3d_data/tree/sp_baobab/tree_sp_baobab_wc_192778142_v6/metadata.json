@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_wc_192778142_v6",
+  "key": "tree/sp_baobab_wc_192778142_9e39e80b_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "Industrial Street Light",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the tall concrete pole and the four-way lighting fixture assembly. The proportions of the pole height relative to the light heads are consistent with standard street lighting. The geometry is closed and properly oriented.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/wc_192778142.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\wc_192778142~0.png",
+  "created_at": "2026-08-20T17:08:22.382Z",
+  "bounds": {
+    "min": [
+      -1.008,
+      -0.4,
+      -1.008
+    ],
+    "max": [
+      1.008,
+      8.6,
+      1.008
+    ],
+    "size": [
+      2.016,
+      9,
+      2.016
+    ],
+    "rMax": 1.426,
+    "triangles": 256,
+    "vertices": 150
+  },
+  "spec": {
+    "style": "Industrial Street Light"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

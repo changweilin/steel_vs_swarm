@@ -1,0 +1,33 @@
+{
+  "id": "vehicle_bike_T-806_blue",
+  "sourceImage": "vehicle/bike/T-806_blue",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 8903393,
+    "baseHex": 3355443,
+    "accentHex": 16755200,
+    "darkHex": 2236962,
+    "brightHex": 15658734,
+    "glassHex": 3368652
+  },
+  "totalParts": 10,
+  "partNames": [
+    "rear_tire",
+    "front_tire",
+    "main_frame_down",
+    "main_frame_seat",
+    "saddle",
+    "handlebar_stem",
+    "handlebar",
+    "chain_wheel",
+    "rear_basket",
+    "rear_rack"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

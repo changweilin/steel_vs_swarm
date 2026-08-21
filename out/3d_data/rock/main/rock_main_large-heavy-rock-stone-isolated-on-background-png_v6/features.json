@@ -1,0 +1,30 @@
+{
+  "id": "rock_main_large-heavy-rock-stone-isolated-on-background-png",
+  "sourceImage": "rock/main/large-heavy-rock-stone-isolated-on-background-png",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 5921370,
+    "baseHex": 3289650,
+    "accentHex": 8421504,
+    "darkHex": 1973790,
+    "brightHex": 13421772,
+    "glassHex": 2112423
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_rock_base",
+    "upper_ridge_rock",
+    "left_side_cluster",
+    "right_lower_facet",
+    "front_protrusion",
+    "ground_anchor_rock",
+    "small_pebble"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "wedge",
+    "icosahedron_polyhedron"
+  ]
+}

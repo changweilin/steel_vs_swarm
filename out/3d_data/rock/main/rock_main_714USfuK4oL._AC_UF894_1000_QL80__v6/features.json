@@ -1,0 +1,30 @@
+{
+  "id": "rock_main_714USfuK4oL._AC_UF894,1000_QL80_",
+  "sourceImage": "rock/main/714USfuK4oL._AC_UF894,1000_QL80_",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 12500670,
+    "facadeHex": 8421504,
+    "baseHex": 4210752,
+    "accentHex": 10526880,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 3355443
+  },
+  "totalParts": 6,
+  "partNames": [
+    "rock_base",
+    "rock_main_left",
+    "rock_main_right",
+    "rock_top_peak",
+    "rock_front_wedge",
+    "rock_crevice_filler"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "box"
+  ]
+}

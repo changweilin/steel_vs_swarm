@@ -1,0 +1,49 @@
+{
+  "id": "vehicle_heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP",
+  "sourceImage": "vehicle/heavy/l5zF0cXNkZuRpJnNw1D9AZTV0dKP",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14757929,
+    "facadeHex": 14757929,
+    "baseHex": 2105376,
+    "accentHex": 3289650,
+    "darkHex": 1315860,
+    "brightHex": 15790320,
+    "glassHex": 2045542
+  },
+  "totalParts": 26,
+  "partNames": [
+    "chassis_base",
+    "cabin_body",
+    "front_grille_dark",
+    "front_grille_accent",
+    "windshield",
+    "side_window_left",
+    "side_window_right",
+    "left_mirror",
+    "right_mirror",
+    "roof_lights_bar",
+    "front_bumper",
+    "front_bumper_guard",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_mid_left",
+    "wheel_mid_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "trailer_body",
+    "trailer_cargo_cover",
+    "trailer_wheel_1_left",
+    "trailer_wheel_1_right",
+    "trailer_wheel_2_left",
+    "trailer_wheel_2_right",
+    "trailer_wheel_3_left",
+    "trailer_wheel_3_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "wedge"
+  ]
+}

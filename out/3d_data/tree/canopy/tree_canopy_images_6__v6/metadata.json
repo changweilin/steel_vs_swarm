@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_6__v6",
+  "key": "tree/canopy_images (6)_bb6c738d_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "bonsai tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the complex twisted bonsai trunk with multiple sweeping segments and layered foliage clusters at the top, anchored securely on a rocky base at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (6).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (6)~0.png",
+  "created_at": "2026-08-20T16:11:54.145Z",
+  "bounds": {
+    "min": [
+      -1.45,
+      -0.2537,
+      -0.8
+    ],
+    "max": [
+      1.25,
+      2.6,
+      0.8
+    ],
+    "size": [
+      2.7,
+      2.854,
+      1.6
+    ],
+    "rMax": 1.656,
+    "triangles": 760,
+    "vertices": 457
+  },
+  "spec": {
+    "style": "bonsai tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

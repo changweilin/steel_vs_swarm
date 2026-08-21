@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_pngtree-blue-and-white-speedboat-png-image_16228702_v6",
+  "key": "ship/hull_pngtree-blue-and-white-speedboat-png-image_16228702_17dab541_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern motor yacht",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the sleek, aerodynamic profile of the motor yacht. The hull is constructed using a wedge for the bow and a box for the main body, with a secondary blue-colored facade layer. The cabin and windshield are modeled with glassHex components, and the canopy is represented by a box structure. Bilateral symmetry was applied to ensure the port and starboard sides are identical, and all components are watertight with appropriate offsets to prevent Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/pngtree-blue-and-white-speedboat-png-image_16228702.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\pngtree-blue-and-white-speedboat-png-image_16228702~0.png",
+  "created_at": "2026-08-20T16:20:50.103Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -1.25
+    ],
+    "max": [
+      5.4,
+      2.45,
+      1.25
+    ],
+    "size": [
+      9.4,
+      2.45,
+      2.5
+    ],
+    "rMax": 5.543,
+    "triangles": 136,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "modern motor yacht"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

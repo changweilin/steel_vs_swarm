@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_43408118_1_v6",
+  "key": "tree/gt_dragontree_wc_43408118~1_b436ddd0_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "woodblock_print_sculpture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the central figure on the hexagonal pedestal and the stylized tree canopy behind it. The hexagonal base is represented by a polygonal prism, and the tree canopy is represented by a cluster of dodecahedron_polyhedron to mimic the woodblock print's intricate, fragmented texture. The central figure is represented by a simplified box-based structure to maintain the geometric constraints.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_43408118.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_43408118~1.png",
+  "created_at": "2026-08-20T16:59:38.369Z",
+  "bounds": {
+    "min": [
+      -1.25,
+      -0.3,
+      -1.7888
+    ],
+    "max": [
+      1.25,
+      2.9671,
+      0.6928
+    ],
+    "size": [
+      2.5,
+      3.267,
+      2.482
+    ],
+    "rMax": 2.182,
+    "triangles": 296,
+    "vertices": 177
+  },
+  "spec": {
+    "style": "woodblock_print_sculpture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

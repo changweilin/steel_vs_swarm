@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_Pachycereus_pringlei_forest_v6",
+  "key": "tree/canopy_Pachycereus_pringlei_forest_b1763541_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "nature",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the complex multi-stemmed saguaro cactus in the desert landscape, capturing the main trunk, ground base, and numerous vertical ribbed arms with accurate cylindrical and conical geometry anchored at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/Pachycereus_pringlei_forest.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\Pachycereus_pringlei_forest~0.png",
+  "created_at": "2026-08-20T17:02:42.405Z",
+  "bounds": {
+    "min": [
+      -1.75,
+      0,
+      -0.7
+    ],
+    "max": [
+      2.2,
+      7.7,
+      0.7
+    ],
+    "size": [
+      3.95,
+      7.7,
+      1.4
+    ],
+    "rMax": 2.309,
+    "triangles": 384,
+    "vertices": 216
+  },
+  "spec": {
+    "style": "nature"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_7car-202401030308-3_v6",
+  "key": "vehicle/car_7car-202401030308-3_38a5ca9a_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "retro_vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/7car-202401030308-3.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\7car-202401030308-3.jpg",
+  "created_at": "2026-08-20T15:23:14.830Z",
+  "bounds": {
+    "min": [
+      -1.025,
+      0,
+      -2
+    ],
+    "max": [
+      1.025,
+      2.6,
+      2.27
+    ],
+    "size": [
+      2.05,
+      2.6,
+      4.27
+    ],
+    "rMax": 2.491,
+    "triangles": 752,
+    "vertices": 414
+  },
+  "spec": {
+    "style": "retro_vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

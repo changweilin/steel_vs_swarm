@@ -1,0 +1,37 @@
+{
+  "id": "vehicle_car_6841_rd",
+  "sourceImage": "vehicle/car/6841_rd",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 204064,
+    "facadeHex": 131586,
+    "baseHex": 65793,
+    "accentHex": 2631720,
+    "darkHex": 328965,
+    "brightHex": 15132390,
+    "glassHex": 43520
+  },
+  "totalParts": 14,
+  "partNames": [
+    "chassis",
+    "engine_hood",
+    "radiator_grille",
+    "main_cabin",
+    "windshield",
+    "roof",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_headlight",
+    "right_headlight",
+    "steering_wheel",
+    "license_plate"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

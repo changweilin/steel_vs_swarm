@@ -1,0 +1,40 @@
+{
+  "id": "building_window_ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf_v6",
+  "key": "building/window_ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf_596c9f13_v6",
+  "family": "building",
+  "subpart": "window",
+  "style": "Art Nouveau decorative window frame",
+  "symmetryMode": "symmetric",
+  "similarityScore": 85,
+  "similarityReview": "The 3D model reconstructs the circular frame and the square outer boundary as a structural architectural element. The central figure is represented by a stylized relief plane, while the circular frame and corner decorative panels are modeled with precise geometric depth to match the Art Nouveau aesthetic.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/window/ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\window\\ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf~0.png",
+  "created_at": "2026-08-21T09:36:14.872Z",
+  "bounds": {
+    "min": [
+      -1.0002,
+      -1.0003,
+      -0.8435
+    ],
+    "max": [
+      1.0003,
+      1.0002,
+      0.9635
+    ],
+    "size": [
+      2,
+      2,
+      1.807
+    ],
+    "rMax": 1.389,
+    "triangles": 676,
+    "vertices": 369
+  },
+  "spec": {
+    "style": "Art Nouveau decorative window frame"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

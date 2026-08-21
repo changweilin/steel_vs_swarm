@@ -1,0 +1,44 @@
+{
+  "id": "building_bld_tower_manual__Run-in-taipei-1920x1080",
+  "sourceImage": "building/bld_tower/manual__Run-in-taipei-1920x1080",
+  "style": "modern_skyscraper_taipei101",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2246473,
+    "facadeHex": 3432532,
+    "baseHex": 5073237,
+    "accentHex": 14404245,
+    "darkHex": 1844766,
+    "brightHex": 15066597,
+    "glassHex": 2191476
+  },
+  "totalParts": 20,
+  "partNames": [
+    "podium_base",
+    "podium_glass_atrium",
+    "tower_foundation_block",
+    "transition_slope_base",
+    "segment_1",
+    "segment_2",
+    "segment_3",
+    "segment_4",
+    "segment_5",
+    "segment_6",
+    "segment_7",
+    "segment_8",
+    "ruyi_ornament_north",
+    "ruyi_ornament_south",
+    "ruyi_ornament_east",
+    "ruyi_ornament_west",
+    "top_transition_block",
+    "top_spire_base",
+    "spire_needle",
+    "spire_tip"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "cylinder",
+    "cone"
+  ]
+}

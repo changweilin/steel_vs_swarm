@@ -1,0 +1,33 @@
+{
+  "id": "tree_canopy_id13801237-shutterstock_1868040619s",
+  "sourceImage": "tree/canopy/id13801237-shutterstock_1868040619s",
+  "style": "Giant Sequoia Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 345678,
+    "facadeHex": 884422,
+    "baseHex": 553311,
+    "accentHex": 996644,
+    "darkHex": 221100,
+    "brightHex": 775533,
+    "glassHex": 112233
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_trunk",
+    "root_flare",
+    "burn_scar",
+    "canopy_layer_1",
+    "canopy_layer_2",
+    "canopy_top",
+    "foliage_cluster_1",
+    "foliage_cluster_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "box",
+    "frustum_pyramid",
+    "pyramid",
+    "ellipsoid_sphere"
+  ]
+}

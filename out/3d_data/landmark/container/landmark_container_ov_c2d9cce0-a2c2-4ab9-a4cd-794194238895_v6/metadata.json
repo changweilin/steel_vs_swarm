@@ -1,0 +1,40 @@
+{
+  "id": "landmark_container_ov_c2d9cce0-a2c2-4ab9-a4cd-794194238895_v6",
+  "key": "landmark/container_ov_c2d9cce0-a2c2-4ab9-a4cd-794194238895_1c9aaec4_v6",
+  "family": "landmark",
+  "subpart": "container",
+  "style": "Industrial Port Crane and Container Ship",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the complex truss structure of the port crane and the main hull of the container ship. The crane's vertical and diagonal supports are represented by cylinders and boxes. The container ship is modeled as a large box base with a superstructure. The scale is approximated for a large-scale port facility.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/container/ov_c2d9cce0-a2c2-4ab9-a4cd-794194238895.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\container\\ov_c2d9cce0-a2c2-4ab9-a4cd-794194238895~0.png",
+  "created_at": "2026-08-20T16:44:18.352Z",
+  "bounds": {
+    "min": [
+      -5,
+      0,
+      -7.5
+    ],
+    "max": [
+      70,
+      46,
+      7.5
+    ],
+    "size": [
+      75,
+      46,
+      15
+    ],
+    "rMax": 70.401,
+    "triangles": 140,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "Industrial Port Crane and Container Ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

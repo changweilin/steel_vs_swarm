@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_e7838fe5b8bde5ad90_v6",
+  "key": "tree/canopy_e7838fe5b8bde5ad90_5abe7cf2_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "botanical_cactus",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the segmented, paddle-like structure of the Opuntia microdasys (Bunny Ears cactus). Each pad is represented by flattened ellipsoids. The arrangement mimics the branching pattern seen in the photo. The scale is set to a realistic desktop plant size (approx 0.4m height).",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/e7838fe5b8bde5ad90.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\e7838fe5b8bde5ad90~0.png",
+  "created_at": "2026-08-20T16:49:37.552Z",
+  "bounds": {
+    "min": [
+      -0.1345,
+      -0.45,
+      -0.04
+    ],
+    "max": [
+      0.1345,
+      0.55,
+      0.073
+    ],
+    "size": [
+      0.269,
+      1,
+      0.113
+    ],
+    "rMax": 0.153,
+    "triangles": 832,
+    "vertices": 513
+  },
+  "spec": {
+    "style": "botanical_cactus"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

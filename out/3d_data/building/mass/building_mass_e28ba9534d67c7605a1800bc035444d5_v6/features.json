@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_e28ba9534d67c7605a1800bc035444d5",
+  "sourceImage": "building/mass/e28ba9534d67c7605a1800bc035444d5",
+  "style": "European-style cottage with stone base and yellow facade",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4605510,
+    "facadeHex": 16773120,
+    "baseHex": 10066329,
+    "accentHex": 3355443,
+    "darkHex": 2236962,
+    "brightHex": 15790320,
+    "glassHex": 11184810
+  },
+  "totalParts": 13,
+  "partNames": [
+    "main_body",
+    "stone_base",
+    "main_roof",
+    "dormer_left",
+    "dormer_right",
+    "window_left",
+    "window_right",
+    "main_door",
+    "entrance_porch",
+    "door_frame",
+    "dormer_window_left",
+    "dormer_window_right",
+    "trim_black"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

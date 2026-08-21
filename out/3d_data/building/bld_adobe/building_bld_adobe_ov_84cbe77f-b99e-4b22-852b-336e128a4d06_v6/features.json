@@ -1,0 +1,30 @@
+{
+  "id": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06",
+  "sourceImage": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06",
+  "style": "building/bld_adobe",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7231268,
+    "facadeHex": 11181440,
+    "baseHex": 5921370,
+    "accentHex": 3815994,
+    "darkHex": 2500134,
+    "brightHex": 13158600,
+    "glassHex": 2176337
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_base",
+    "adobe_facade_body",
+    "left_gable_roof",
+    "front_door",
+    "front_window_left",
+    "front_window_right",
+    "wall_ladder_left",
+    "side_pillar_detail"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

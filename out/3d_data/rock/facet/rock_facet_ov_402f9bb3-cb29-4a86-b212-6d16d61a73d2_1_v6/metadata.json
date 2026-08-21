@@ -1,0 +1,40 @@
+{
+  "id": "rock_facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2_1_v6",
+  "key": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~1_38f00f58_v6",
+  "family": "rock",
+  "subpart": "facet",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The reconstructed 3D rock formation accurately captures the rugged, layered boulder features visible in the foreground and the cliff-like backdrop from the historic photograph, utilizing clustered dodecahedrons and polygonal prisms anchored properly to the ground plane y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/facet/ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\facet\\ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~1.png",
+  "created_at": "2026-08-20T16:18:50.281Z",
+  "bounds": {
+    "min": [
+      -3.3198,
+      -0.4078,
+      -6.5
+    ],
+    "max": [
+      3.6,
+      5.3,
+      2.5
+    ],
+    "size": [
+      6.92,
+      5.708,
+      9
+    ],
+    "rMax": 7.299,
+    "triangles": 168,
+    "vertices": 100
+  },
+  "spec": {
+    "style": "rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

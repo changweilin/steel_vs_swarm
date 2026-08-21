@@ -1,0 +1,40 @@
+{
+  "id": "building_dwg_house_wc_33743891_v6",
+  "key": "building/dwg_house_wc_33743891_96e138d2_v6",
+  "family": "building",
+  "subpart": "dwg_house",
+  "style": "Spanish Colonial Revival Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D reconstruction accurately captures the complex stepped massing of the Spanish Colonial Revival building shown in the elevation drawing. All major parapet levels, window placements, and the arched entryway are represented as distinct, tightly-joined box and prism components. The depth and layering of the facade are maintained through precise positioning of window frames and wall segments. The overall structural integrity is preserved by modeling the building as a solid, closed volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/dwg_house/wc_33743891.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\dwg_house\\wc_33743891~0.png",
+  "created_at": "2026-08-21T07:52:11.539Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -3
+    ],
+    "max": [
+      6,
+      12,
+      3.1
+    ],
+    "size": [
+      12,
+      12,
+      6.1
+    ],
+    "rMax": 6.754,
+    "triangles": 120,
+    "vertices": 80
+  },
+  "spec": {
+    "style": "Spanish Colonial Revival Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

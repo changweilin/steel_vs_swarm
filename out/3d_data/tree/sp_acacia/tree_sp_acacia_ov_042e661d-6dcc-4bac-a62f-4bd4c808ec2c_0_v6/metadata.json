@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c_0_v6",
+  "key": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_e07b6247_v6",
+  "family": "tree",
+  "subpart": "sp_acacia",
+  "style": "natural_landscape_vegetation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The image depicts a flat, arid savanna landscape with scattered low-lying mounds and sparse vegetation. I have reconstructed the central prominent mound/bush feature using an ellipsoid to represent the low-profile, dense growth characteristic of this terrain. The scale is set to match the low-lying nature of the vegetation relative to the ground plane.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_acacia/ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_acacia\\ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0.png",
+  "created_at": "2026-08-20T17:03:37.314Z",
+  "bounds": {
+    "min": [
+      -4.3,
+      -0.1,
+      -1.1413
+    ],
+    "max": [
+      4.9,
+      0.9,
+      1.1657
+    ],
+    "size": [
+      9.2,
+      1,
+      2.307
+    ],
+    "rMax": 5.037,
+    "triangles": 640,
+    "vertices": 396
+  },
+  "spec": {
+    "style": "natural_landscape_vegetation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

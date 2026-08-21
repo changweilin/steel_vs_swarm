@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_getImage-3-4_v6",
+  "key": "tree/canopy_getImage-3-4_eb2cb5d8_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Dragon Blood Tree forest",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the iconic umbrella-shaped canopy of the Dragon Blood Trees using a large ellipsoid_sphere for the crown and a conical_frustum for the trunk. The scale is set to reflect the large, mature tree in the foreground. The branching structure is represented by the main trunk and the dense canopy volume. The ground-level root flares are represented by baseHex components. The overall silhouette and proportions match the characteristic Socotra landscape.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/getImage-3-4.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\getImage-3-4~0.png",
+  "created_at": "2026-08-20T16:51:47.174Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      0,
+      -4.2798
+    ],
+    "max": [
+      4.5,
+      9,
+      4.2798
+    ],
+    "size": [
+      9,
+      9,
+      8.56
+    ],
+    "rMax": 6.21,
+    "triangles": 512,
+    "vertices": 302
+  },
+  "spec": {
+    "style": "Dragon Blood Tree forest"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

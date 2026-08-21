@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_A04A00_P_01_02_v6",
+  "key": "ship/hull_A04A00_P_01_02_ee255c96_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "container_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately represents the Hanjin Boston container ship. The hull is constructed with a wedge bow and a large box base. The container stacks are represented by multiple boxes. The bridge superstructure is built with stacked boxes and a glass-colored front. Symmetry is applied to the hull and superstructure. The scale is proportional to a large cargo vessel.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/A04A00_P_01_02.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\A04A00_P_01_02~0.png",
+  "created_at": "2026-08-20T16:12:12.768Z",
+  "bounds": {
+    "min": [
+      -16.2,
+      0,
+      -100
+    ],
+    "max": [
+      16.2,
+      32,
+      110
+    ],
+    "size": [
+      32.4,
+      32,
+      210
+    ],
+    "rMax": 111.187,
+    "triangles": 478,
+    "vertices": 300
+  },
+  "spec": {
+    "style": "container_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

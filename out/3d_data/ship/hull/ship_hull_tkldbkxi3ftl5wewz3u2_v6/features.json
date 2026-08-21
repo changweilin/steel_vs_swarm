@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_tkldbkxi3ftl5wewz3u2",
+  "sourceImage": "ship/hull/tkldbkxi3ftl5wewz3u2",
+  "style": "modern speedboat",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 255,
+    "facadeHex": 16777215,
+    "baseHex": 3355443,
+    "accentHex": 16711680,
+    "darkHex": 2236962,
+    "brightHex": 14540253,
+    "glassHex": 8421631
+  },
+  "totalParts": 10,
+  "partNames": [
+    "hull_base",
+    "bow_wedge",
+    "cabin_structure",
+    "windshield_front",
+    "side_windows",
+    "side_windows_mirror",
+    "canopy_roof",
+    "life_ring_left",
+    "life_ring_right",
+    "bottom_trim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "torus_ring"
+  ]
+}

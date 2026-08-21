@@ -1,0 +1,46 @@
+{
+  "id": "vehicle_car_series-better-car",
+  "sourceImage": "vehicle/car/series-better-car",
+  "style": "automotive_sportscar",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14423859,
+    "facadeHex": 14423859,
+    "baseHex": 1973790,
+    "accentHex": 3289650,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 3355443
+  },
+  "totalParts": 23,
+  "partNames": [
+    "chassis_base",
+    "car_body_main",
+    "cabin_roof",
+    "front_bumper",
+    "rear_bumper",
+    "front_windshield",
+    "rear_windshield",
+    "left_door",
+    "right_door",
+    "left_side_window",
+    "right_side_window",
+    "left_mirror",
+    "right_mirror",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel",
+    "rear_right_wheel",
+    "front_grille_lower",
+    "left_headlight",
+    "right_headlight",
+    "front_license_plate",
+    "front_splitter",
+    "rear_taillight_bar"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

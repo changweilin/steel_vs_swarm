@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_20230614-025323_U26000_M862223_8d98",
+  "sourceImage": "building/mass/20230614-025323_U26000_M862223_8d98",
+  "style": "modern_architectural_building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6586222,
+    "facadeHex": 9871503,
+    "baseHex": 4872036,
+    "accentHex": 3294025,
+    "darkHex": 2106419,
+    "brightHex": 14213340,
+    "glassHex": 3824559
+  },
+  "totalParts": 10,
+  "partNames": [
+    "waterfront_quay_base",
+    "main_building_core",
+    "glass_facade_level1",
+    "glass_facade_level2",
+    "glass_facade_level3",
+    "glass_facade_level4",
+    "terraced_ramp_left",
+    "rooftop_greenery",
+    "adjacent_brick_building",
+    "adjacent_building_glass_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "rock_main_1586238562",
+  "sourceImage": "rock/main/1586238562",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8553090,
+    "facadeHex": 14013909,
+    "baseHex": 4210752,
+    "accentHex": 11184810,
+    "darkHex": 1644825,
+    "brightHex": 15658734,
+    "glassHex": 3355443
+  },
+  "totalParts": 6,
+  "partNames": [
+    "ground_base",
+    "vegetated_hill_slope",
+    "main_cliff_core",
+    "upper_rock_peak",
+    "rock_crag_left",
+    "rock_crag_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "vehicle_car_220809-20941-15-q0oDy",
+  "sourceImage": "vehicle/car/220809-20941-15-q0oDy",
+  "style": "concept_car",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3881829,
+    "facadeHex": 9860253,
+    "baseHex": 1908756,
+    "accentHex": 13816530,
+    "darkHex": 1184274,
+    "brightHex": 14671839,
+    "glassHex": 2110565
+  },
+  "totalParts": 26,
+  "partNames": [
+    "chassis_base",
+    "main_body_facade",
+    "hood_wedge",
+    "cabin_roof",
+    "front_windshield",
+    "rear_windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_bumper",
+    "front_grille_accent",
+    "left_headlight",
+    "right_headlight",
+    "rear_bumper",
+    "rear_taillight",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_front_rim",
+    "right_front_rim",
+    "left_rear_rim",
+    "right_rear_rim",
+    "left_wheel_arch",
+    "right_wheel_arch",
+    "left_rear_wheel_arch",
+    "right_rear_wheel_arch"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

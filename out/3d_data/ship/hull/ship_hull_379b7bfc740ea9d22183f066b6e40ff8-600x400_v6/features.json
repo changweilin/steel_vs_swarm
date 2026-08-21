@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_379b7bfc740ea9d22183f066b6e40ff8-600x400",
+  "sourceImage": "ship/hull/379b7bfc740ea9d22183f066b6e40ff8-600x400",
+  "style": "military_warship_destroyer",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 9868950,
+    "baseHex": 4210752,
+    "accentHex": 16711680,
+    "darkHex": 2105376,
+    "brightHex": 15790320,
+    "glassHex": 4621735
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "hull_base",
+    "superstructure_lower",
+    "bridge_windows",
+    "main_mast",
+    "radar_dome",
+    "gun_turret",
+    "life_ring_port",
+    "life_ring_starboard",
+    "funnel_structure"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "cylinder",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

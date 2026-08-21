@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ov_26750ed5-e0a1-4a46-a301-68040c9d4075_v6",
+  "key": "tree/canopy_ov_26750ed5-e0a1-4a46-a301-68040c9d4075_5939eb6a_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 88,
+  "similarityReview": "The tree is modeled with a central trunk and a large, wide, asymmetrical canopy using multiple ellipsoid_sphere components to capture the natural, sprawling shape of the tree in the photo. The trunk is anchored at y=0, and the canopy layers are offset to avoid Z-fighting while maintaining the dense, leafy appearance.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/ov_26750ed5-e0a1-4a46-a301-68040c9d4075.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\ov_26750ed5-e0a1-4a46-a301-68040c9d4075~0.png",
+  "created_at": "2026-08-20T16:06:58.404Z",
+  "bounds": {
+    "min": [
+      -4,
+      -0.1,
+      -2.3776
+    ],
+    "max": [
+      4,
+      5.7,
+      2.3776
+    ],
+    "size": [
+      8,
+      5.8,
+      4.755
+    ],
+    "rMax": 4.653,
+    "triangles": 848,
+    "vertices": 521
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

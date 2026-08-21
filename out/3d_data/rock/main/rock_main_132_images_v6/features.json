@@ -1,0 +1,29 @@
+{
+  "id": "rock_main_132 images",
+  "sourceImage": "rock/main/132 images",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 8553090,
+    "baseHex": 4210752,
+    "accentHex": 6579300,
+    "darkHex": 2105376,
+    "brightHex": 12500670,
+    "glassHex": 3289650
+  },
+  "totalParts": 6,
+  "partNames": [
+    "ground_stone_base",
+    "bottom_rock_tier",
+    "bottom_rock_ext",
+    "middle_rock_tier",
+    "middle_rock_ext",
+    "top_rock_tier"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "wedge",
+    "icosahedron_polyhedron"
+  ]
+}

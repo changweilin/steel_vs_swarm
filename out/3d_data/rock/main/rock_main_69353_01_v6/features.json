@@ -1,0 +1,35 @@
+{
+  "id": "rock_main_69353_01",
+  "sourceImage": "rock/main/69353_01",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11149363,
+    "facadeHex": 10237970,
+    "baseHex": 4337440,
+    "accentHex": 11822168,
+    "darkHex": 2038031,
+    "brightHex": 14211288,
+    "glassHex": 3033182
+  },
+  "totalParts": 10,
+  "partNames": [
+    "ground_base",
+    "main_rock_body",
+    "rock_extension_east",
+    "rock_extension_west",
+    "rock_top_plateau",
+    "ridge_wedge_north",
+    "ridge_wedge_south",
+    "vertical_groove_1",
+    "vertical_groove_2",
+    "vertical_groove_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "cylinder"
+  ]
+}

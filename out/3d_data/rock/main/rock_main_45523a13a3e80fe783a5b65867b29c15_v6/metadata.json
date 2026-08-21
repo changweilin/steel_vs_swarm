@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_45523a13a3e80fe783a5b65867b29c15_v6",
+  "key": "rock/main_45523a13a3e80fe783a5b65867b29c15_2c3515ae_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_barrier",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the complex geological rock mound using diverse polyhedron shapes (icosahedron, dodecahedron, wedge, and box) with tight interlocking connections, realistic grey rock color schemes, and proper ground anchoring at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/45523a13a3e80fe783a5b65867b29c15.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\45523a13a3e80fe783a5b65867b29c15~0.png",
+  "created_at": "2026-08-20T16:17:07.567Z",
+  "bounds": {
+    "min": [
+      -2.0892,
+      -0.3488,
+      -1.7183
+    ],
+    "max": [
+      2.282,
+      1.9819,
+      1.2885
+    ],
+    "size": [
+      4.371,
+      2.331,
+      3.007
+    ],
+    "rMax": 2.705,
+    "triangles": 332,
+    "vertices": 192
+  },
+  "spec": {
+    "style": "natural_rock_barrier"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

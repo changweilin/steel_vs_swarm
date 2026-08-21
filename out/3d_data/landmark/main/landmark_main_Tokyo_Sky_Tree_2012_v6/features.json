@@ -1,0 +1,32 @@
+{
+  "id": "landmark_main_Tokyo_Sky_Tree_2012",
+  "sourceImage": "landmark/main/Tokyo_Sky_Tree_2012",
+  "style": "modern_landmark_tower",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 15790320,
+    "baseHex": 10526880,
+    "accentHex": 14737632,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_tower_body",
+    "lower_observation_deck",
+    "lower_observation_glass",
+    "upper_observation_deck",
+    "upper_observation_glass",
+    "antenna_mast",
+    "base_platform",
+    "adjacent_office_building",
+    "office_building_glass"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "cylinder",
+    "box"
+  ]
+}

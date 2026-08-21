@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3",
+  "sourceImage": "ship/hull/royal-caribbean-explorer-of-the-seas-01-eG_-WK3",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 10066329,
+    "accentHex": 16753920,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 4621736
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "superstructure_tier1",
+    "superstructure_tier2",
+    "bridge_windows",
+    "funnel_base",
+    "lifeboat_left",
+    "lifeboat_right",
+    "radar_dome",
+    "hull_bottom"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome"
+  ]
+}

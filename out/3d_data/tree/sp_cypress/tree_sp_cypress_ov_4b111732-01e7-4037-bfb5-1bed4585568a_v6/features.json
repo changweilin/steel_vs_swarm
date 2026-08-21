@@ -1,0 +1,31 @@
+{
+  "id": "tree_sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a",
+  "sourceImage": "tree/sp_cypress/ov_4b111732-01e7-4037-bfb5-1bed4585568a",
+  "style": "lithograph_landscape",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 454545,
+    "facadeHex": 655040,
+    "baseHex": 808080,
+    "accentHex": 303030,
+    "darkHex": 202020,
+    "brightHex": 909090,
+    "glassHex": 1976635
+  },
+  "totalParts": 7,
+  "partNames": [
+    "stone_basin",
+    "left_trunk",
+    "left_foliage_main",
+    "left_foliage_top",
+    "right_trunk",
+    "right_cypress_cone",
+    "right_cypress_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "pyramid"
+  ]
+}

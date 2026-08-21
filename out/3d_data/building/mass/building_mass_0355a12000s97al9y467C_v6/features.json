@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_0355a12000s97al9y467C",
+  "sourceImage": "building/mass/0355a12000s97al9y467C",
+  "style": "Traditional Japanese Gassho-zukuri Farmhouse",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 604627,
+    "facadeHex": 232220,
+    "baseHex": 454545,
+    "accentHex": 808080,
+    "darkHex": 101010,
+    "brightHex": 909090,
+    "glassHex": 102030
+  },
+  "totalParts": 7,
+  "partNames": [
+    "MainBody",
+    "RoofStructure",
+    "AtticWindow",
+    "Foundation",
+    "WallFrame",
+    "SupportPost1",
+    "SupportPost2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

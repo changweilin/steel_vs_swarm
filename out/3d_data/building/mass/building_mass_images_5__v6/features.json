@@ -1,0 +1,48 @@
+{
+  "id": "building_mass_images (5)",
+  "sourceImage": "building/mass/images (5)",
+  "style": "Modern Asian Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4868682,
+    "facadeHex": 14210252,
+    "baseHex": 8551794,
+    "accentHex": 6116689,
+    "darkHex": 3289650,
+    "brightHex": 15790320,
+    "glassHex": 11583173
+  },
+  "totalParts": 25,
+  "partNames": [
+    "Main Base Foundation",
+    "Entrance Steps",
+    "Left Stone Block - Ground Floor",
+    "Left Stone Block - Large Window",
+    "Left Stone Block - Window Frame Top",
+    "Central Ground Wall",
+    "Ground Floor Entrance Door",
+    "Ground Floor Living Room Window",
+    "Porch Column Left",
+    "Porch Column Center",
+    "Porch Column Right",
+    "Porch Roof",
+    "Left Wing - Second Floor Wall",
+    "Left Wing - Second Floor Window",
+    "Left Wing - Balcony Floor",
+    "Left Wing - Balcony Railing Front",
+    "Left Wing - Balcony Railing Left",
+    "Left Wing - Roof",
+    "Right Wing - Second Floor Wall",
+    "Right Wing - Second Floor Window",
+    "Right Wing - Balcony Railing Front",
+    "Third Floor Penthouse Wall",
+    "Third Floor Balcony Railing Front",
+    "Third Floor Main Roof",
+    "Rear Enclosure Wall"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "frustum_pyramid"
+  ]
+}

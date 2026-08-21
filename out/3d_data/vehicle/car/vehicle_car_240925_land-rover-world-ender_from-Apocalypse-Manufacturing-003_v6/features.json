@@ -1,0 +1,44 @@
+{
+  "id": "vehicle_car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003",
+  "sourceImage": "vehicle/car/240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 2105376,
+    "baseHex": 657930,
+    "accentHex": 11822352,
+    "darkHex": 1315860,
+    "brightHex": 15790320,
+    "glassHex": 3368652
+  },
+  "totalParts": 22,
+  "partNames": [
+    "chassis",
+    "body_main",
+    "roof",
+    "roof_rack",
+    "hood",
+    "windshield",
+    "side_window_left",
+    "side_window_right",
+    "rear_window",
+    "front_bumper_guard",
+    "roll_bar_rear",
+    "wheel_fl_torus",
+    "wheel_fr_torus",
+    "wheel_ml_torus",
+    "wheel_mr_torus",
+    "wheel_rl_torus",
+    "wheel_rr_torus",
+    "headlight_left",
+    "headlight_right",
+    "mirror_left",
+    "mirror_right",
+    "skid_plate"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "torus_ring"
+  ]
+}

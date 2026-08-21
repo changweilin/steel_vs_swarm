@@ -1,0 +1,30 @@
+{
+  "id": "tree_gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68",
+  "sourceImage": "tree/gt_cryptomeria/ov_ef085512-f1b2-4415-bb2a-4bad15affd68",
+  "style": "Ukiyo-e woodblock print landscape",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3421235,
+    "facadeHex": 6566432,
+    "baseHex": 4210688,
+    "accentHex": 16766720,
+    "darkHex": 2105376,
+    "brightHex": 15790320,
+    "glassHex": 4473924
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "canopy_layer_1",
+    "canopy_layer_2",
+    "root_base",
+    "ground_plane",
+    "distant_mountain"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "box",
+    "wedge"
+  ]
+}

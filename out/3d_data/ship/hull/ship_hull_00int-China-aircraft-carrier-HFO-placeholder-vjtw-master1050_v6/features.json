@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050",
+  "sourceImage": "ship/hull/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050",
+  "style": "military_aircraft_carrier",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12500670,
+    "facadeHex": 8421504,
+    "baseHex": 4210752,
+    "accentHex": 16766720,
+    "darkHex": 2105376,
+    "brightHex": 14737632,
+    "glassHex": 4621735
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "flight_deck",
+    "island_base",
+    "bridge_windows",
+    "radar_dome",
+    "stern_base",
+    "port_sponson",
+    "starboard_sponson",
+    "life_ring_port",
+    "life_ring_starboard"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

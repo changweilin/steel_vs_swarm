@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_Capture-3139",
+  "sourceImage": "ship/hull/Capture-3139",
+  "style": "container_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 255,
+    "baseHex": 12582912,
+    "accentHex": 16744448,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 8454143
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "hull_bottom",
+    "bow_wedge",
+    "bridge_base",
+    "bridge_windows",
+    "container_stack_1",
+    "container_stack_2",
+    "radar_mast",
+    "radar_dome",
+    "life_buoy"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "vehicle_heavy_CSPV-02_01",
+  "sourceImage": "vehicle/heavy/CSPV-02_01",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16724736,
+    "facadeHex": 16728848,
+    "baseHex": 3158064,
+    "accentHex": 16763904,
+    "darkHex": 1052688,
+    "brightHex": 16777215,
+    "glassHex": 33023
+  },
+  "totalParts": 26,
+  "partNames": [
+    "chassis_base",
+    "cabin_body",
+    "cabin_roof",
+    "windshield",
+    "front_grille",
+    "front_bumper",
+    "headlight_left",
+    "headlight_right",
+    "front_logo",
+    "left_door_window",
+    "right_door_window",
+    "left_mirror",
+    "right_mirror",
+    "rear_body",
+    "rear_shutter_left",
+    "rear_shutter_right",
+    "roof_lightbar",
+    "roof_ladder",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "wheel_rim_fl",
+    "wheel_rim_fr",
+    "wheel_rim_rl",
+    "wheel_rim_rr"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

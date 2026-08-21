@@ -1,0 +1,41 @@
+{
+  "id": "tree_canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree",
+  "sourceImage": "tree/canopy/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree",
+  "style": "nature",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3438128,
+    "facadeHex": 8540475,
+    "baseHex": 4010531,
+    "accentHex": 11119253,
+    "darkHex": 2040618,
+    "brightHex": 14540253,
+    "glassHex": 33023
+  },
+  "totalParts": 16,
+  "partNames": [
+    "ground_base",
+    "main_trunk_lower",
+    "main_trunk_middle",
+    "main_trunk_upper",
+    "root_buttress_1",
+    "root_buttress_2",
+    "root_buttress_3",
+    "canopy_cluster_center",
+    "canopy_cluster_left",
+    "canopy_cluster_right",
+    "canopy_cluster_top",
+    "sign_post_left",
+    "sign_post_right",
+    "sign_board",
+    "pathway_fence_left",
+    "pathway_fence_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "conical_frustum",
+    "cylinder",
+    "wedge",
+    "ellipsoid_sphere"
+  ]
+}

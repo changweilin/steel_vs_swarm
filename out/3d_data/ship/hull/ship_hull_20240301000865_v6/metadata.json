@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_20240301000865_v6",
+  "key": "ship/hull_20240301000865_e2c0f8b7_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "military_submarine",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The submarine is modeled as a primary cylindrical hull with a tapered bow and stern. The sail (conning tower) is positioned correctly on the dorsal side. The stern includes the propeller assembly and control surfaces. All parts are integrated into a watertight structure with appropriate color coding for a naval vessel.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/20240301000865.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\20240301000865~0.png",
+  "created_at": "2026-08-20T16:08:43.196Z",
+  "bounds": {
+    "min": [
+      -19.7,
+      -3.5004,
+      -3.5
+    ],
+    "max": [
+      15.5012,
+      7,
+      3.5
+    ],
+    "size": [
+      35.201,
+      10.5,
+      7
+    ],
+    "rMax": 20.008,
+    "triangles": 368,
+    "vertices": 219
+  },
+  "spec": {
+    "style": "military_submarine"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

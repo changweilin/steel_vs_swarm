@@ -1,0 +1,40 @@
+{
+  "id": "rock_st_dolmen_ov_ab168278-6be0-4d4b-ae0a-448fd630ad80_v6",
+  "key": "rock/st_dolmen_ov_ab168278-6be0-4d4b-ae0a-448fd630ad80_af293374_v6",
+  "family": "rock",
+  "subpart": "st_dolmen",
+  "style": "ancient megalithic monument",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the dolmen structure with two vertical megalithic support pillars and a massive horizontal lintel stone on top, anchored by a rocky base at y=0. Used appropriate polyhedral parts to mimic the rough stone textures and silhouette.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/st_dolmen/ov_ab168278-6be0-4d4b-ae0a-448fd630ad80.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\st_dolmen\\ov_ab168278-6be0-4d4b-ae0a-448fd630ad80~0.png",
+  "created_at": "2026-08-20T16:28:54.816Z",
+  "bounds": {
+    "min": [
+      -1.4403,
+      -1.1078,
+      -1.3078
+    ],
+    "max": [
+      1.4403,
+      2.9403,
+      1.3078
+    ],
+    "size": [
+      2.881,
+      4.048,
+      2.616
+    ],
+    "rMax": 1.945,
+    "triangles": 160,
+    "vertices": 92
+  },
+  "spec": {
+    "style": "ancient megalithic monument"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

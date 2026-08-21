@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_13226803_R_m",
+  "sourceImage": "vehicle/bike/13226803_R_m",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 1973790,
+    "baseHex": 1973790,
+    "accentHex": 15138848,
+    "darkHex": 657930,
+    "brightHex": 14540253,
+    "glassHex": 33145
+  },
+  "totalParts": 17,
+  "partNames": [
+    "front_tire",
+    "rear_tire",
+    "downtube",
+    "toptube",
+    "seattube",
+    "seattube_ext",
+    "seat",
+    "chainstay_r",
+    "chainstay_l",
+    "seatstay_r",
+    "seatstay_l",
+    "fork",
+    "headtube",
+    "handlebar_stem",
+    "handlebar_drop",
+    "crankset",
+    "pedal"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

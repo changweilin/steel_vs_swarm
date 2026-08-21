@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_7d535472ae45d3eb_v6",
+  "key": "tree/canopy_7d535472ae45d3eb_f41e76c6_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The tree is modeled with a robust, textured trunk base using a conical frustum and a large, expansive canopy using a primary ellipsoid sphere. The proportions capture the wide, spreading nature of the tree shown in the image. The base is anchored at y=0, and the color palette adheres to the 7-Zone requirement.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/7d535472ae45d3eb.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\7d535472ae45d3eb~0.png",
+  "created_at": "2026-08-20T16:20:12.054Z",
+  "bounds": {
+    "min": [
+      -5.5,
+      0,
+      -5.2308
+    ],
+    "max": [
+      5.5,
+      9.5,
+      5.2308
+    ],
+    "size": [
+      11,
+      9.5,
+      10.462
+    ],
+    "rMax": 7.59,
+    "triangles": 440,
+    "vertices": 266
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

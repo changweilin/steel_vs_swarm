@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_images",
+  "sourceImage": "building/mass/images",
+  "style": "Traditional East Asian Temple Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 5253120,
+    "baseHex": 13421772,
+    "accentHex": 16737792,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 9,
+  "partNames": [
+    "stone_base",
+    "main_body",
+    "lower_roof",
+    "upper_roof",
+    "main_door",
+    "staircase",
+    "railing_front",
+    "pillar_left",
+    "pillar_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "cylinder"
+  ]
+}

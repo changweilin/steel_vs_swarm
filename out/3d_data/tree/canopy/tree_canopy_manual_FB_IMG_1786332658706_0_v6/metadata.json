@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_manual_FB_IMG_1786332658706_0_v6",
+  "key": "tree/canopy_manual_FB_IMG_1786332658706~0_eedaf936_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "nature_landscape",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the dominant central tree with a thick trunk and a broad, sprawling canopy. The trunk is represented by a conical_frustum to reflect the natural taper, and the canopy is modeled using multiple ellipsoid_sphere components to simulate the complex, layered structure of the tree crown. The scale is set to reflect a large, mature tree.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/manual_FB_IMG_1786332658706.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\manual_FB_IMG_1786332658706~0.png",
+  "created_at": "2026-08-20T16:22:41.756Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.1,
+      -4.7553
+    ],
+    "max": [
+      6,
+      15,
+      4.7553
+    ],
+    "size": [
+      12,
+      15.1,
+      9.511
+    ],
+    "rMax": 7.656,
+    "triangles": 848,
+    "vertices": 521
+  },
+  "spec": {
+    "style": "nature_landscape"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

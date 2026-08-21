@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_0_v6",
+  "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af~0_1a8818ab_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "realistic",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the rear section of the bicycle including the large rear wheel, tire tread, chainstays, seatstays, seat tube, chainset, pedals, and rear derailleur with high geometric fidelity based on the input photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\e5823366c7ed43f3b8e2c62ce0bc59af~0.png",
+  "created_at": "2026-08-20T17:20:30.113Z",
+  "bounds": {
+    "min": [
+      -1.8034,
+      -0.5232,
+      -1.087
+    ],
+    "max": [
+      1.25,
+      1.6266,
+      1.12
+    ],
+    "size": [
+      3.053,
+      2.15,
+      2.207
+    ],
+    "rMax": 2.106,
+    "triangles": 724,
+    "vertices": 407
+  },
+  "spec": {
+    "style": "realistic"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}
