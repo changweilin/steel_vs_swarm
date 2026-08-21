@@ -1,0 +1,30 @@
+{
+  "id": "tree_sp_baobab_manual_Baobab_and_elephant__Tanzania~1",
+  "sourceImage": "tree/sp_baobab/manual_Baobab_and_elephant__Tanzania~1",
+  "style": "naturalistic_baobab_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 468426,
+    "facadeHex": 876543,
+    "baseHex": 564321,
+    "accentHex": 987654,
+    "darkHex": 333333,
+    "brightHex": 999999,
+    "glassHex": 123456
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "upper_trunk",
+    "main_canopy",
+    "elephant_body",
+    "elephant_head",
+    "elephant_leg1",
+    "elephant_leg2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

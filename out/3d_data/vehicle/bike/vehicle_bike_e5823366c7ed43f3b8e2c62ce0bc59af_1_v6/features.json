@@ -1,0 +1,33 @@
+{
+  "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af~1",
+  "sourceImage": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af~1",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 2105376,
+    "accentHex": 14423100,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 33023
+  },
+  "totalParts": 10,
+  "partNames": [
+    "front_tire",
+    "front_rim",
+    "brake_disc",
+    "left_fork_leg",
+    "right_fork_leg",
+    "fork_crown",
+    "fork_adjuster",
+    "frame_downtube",
+    "frame_toptube",
+    "head_tube"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

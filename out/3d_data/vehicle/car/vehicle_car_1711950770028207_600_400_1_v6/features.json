@@ -1,0 +1,32 @@
+{
+  "id": "vehicle_car_1711950770028207_600_400~1",
+  "sourceImage": "vehicle/car/1711950770028207_600_400~1",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 14540253,
+    "baseHex": 3355443,
+    "accentHex": 2105376,
+    "darkHex": 1052688,
+    "brightHex": 15790320,
+    "glassHex": 1973790
+  },
+  "totalParts": 10,
+  "partNames": [
+    "hood_base",
+    "windshield_glass",
+    "windshield_frame_top",
+    "windshield_frame_left",
+    "windshield_frame_right",
+    "wiper_left_arm",
+    "wiper_right_arm",
+    "left_mirror",
+    "right_mirror",
+    "roof_panel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

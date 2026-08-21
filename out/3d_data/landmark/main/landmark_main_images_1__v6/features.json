@@ -1,0 +1,39 @@
+{
+  "id": "landmark_main_images (1)",
+  "sourceImage": "landmark/main/images (1)",
+  "style": "architectural_landmark",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16729344,
+    "facadeHex": 16729344,
+    "baseHex": 16729344,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 43253
+  },
+  "totalParts": 14,
+  "partNames": [
+    "tower_base_pillar_1",
+    "tower_lower_section",
+    "main_observation_deck_bottom",
+    "main_observation_deck_walls",
+    "main_observation_deck_roof",
+    "tower_middle_section_lower",
+    "tower_middle_section_upper",
+    "upper_observation_deck_structure",
+    "upper_observation_deck_window",
+    "tower_spire_base",
+    "tower_spire_red_band",
+    "tower_spire_white_band",
+    "tower_spire_red_top",
+    "tower_ultimate_tip"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "frustum_pyramid",
+    "box",
+    "cylinder",
+    "pyramid"
+  ]
+}

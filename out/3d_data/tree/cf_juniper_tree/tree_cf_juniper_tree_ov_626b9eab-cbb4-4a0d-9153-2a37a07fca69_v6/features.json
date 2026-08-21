@@ -1,0 +1,31 @@
+{
+  "id": "tree_cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69",
+  "sourceImage": "tree/cf_juniper_tree/ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69",
+  "style": "Ancient Bristlecone Pine",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 828467,
+    "facadeHex": 967956,
+    "baseHex": 595240,
+    "accentHex": 453828,
+    "darkHex": 332822,
+    "brightHex": 999999,
+    "glassHex": 123456
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_trunk_base",
+    "central_trunk",
+    "left_branch_cluster",
+    "right_branch_cluster",
+    "top_spire_left",
+    "top_spire_right",
+    "weathered_root_extension",
+    "bark_texture_detail"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "dodecahedron_polyhedron",
+    "cylinder"
+  ]
+}

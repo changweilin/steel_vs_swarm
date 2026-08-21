@@ -1,0 +1,38 @@
+{
+  "id": "landmark_main_Tokyo_Sky_Tree_2012_v6",
+  "key": "landmark/main_Tokyo_Sky_Tree_2012_db7404db_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "modern_landmark_tower",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/Tokyo_Sky_Tree_2012.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\Tokyo_Sky_Tree_2012.jpg",
+  "created_at": "2026-08-20T15:29:15.044Z",
+  "bounds": {
+    "min": [
+      -30,
+      0,
+      -30
+    ],
+    "max": [
+      52.6,
+      460,
+      30
+    ],
+    "size": [
+      82.6,
+      460,
+      60
+    ],
+    "rMax": 60.554,
+    "triangles": 336,
+    "vertices": 186
+  },
+  "spec": {
+    "style": "modern_landmark_tower"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

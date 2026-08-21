@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_v6",
+  "key": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_c3fd0417_v6",
+  "family": "building",
+  "subpart": "bld_adobe",
+  "style": "architectural",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the distinctive adobe-style structure with flat roof parapets, projected wooden vigas, and front entrance extension. The proportions of the building mass, window placements, and glass details align well with the reference photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_adobe/ov_7ddf0b38-0498-471a-af95-d50274648109.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_adobe\\ov_7ddf0b38-0498-471a-af95-d50274648109~0.png",
+  "created_at": "2026-08-20T17:23:30.770Z",
+  "bounds": {
+    "min": [
+      -6.25,
+      0,
+      -3.35
+    ],
+    "max": [
+      6.95,
+      3.8,
+      5.9133
+    ],
+    "size": [
+      13.2,
+      3.8,
+      9.263
+    ],
+    "rMax": 9.125,
+    "triangles": 516,
+    "vertices": 338
+  },
+  "spec": {
+    "style": "architectural"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

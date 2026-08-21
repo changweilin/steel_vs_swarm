@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_8__v6",
+  "key": "tree/canopy_images (8)_1e2d987e_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_landscape_vegetation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the primary tall conifer tree and the cluster of large boulders. The tree trunk is represented by a cylinder, and the canopy by stacked frustum_pyramids to mimic the coniferous structure. The boulders are modeled using dodecahedron_polyhedrons to represent their irregular, organic shapes. The ground-level shrubs are represented by ellipsoid_spheres. The overall composition matches the spatial distribution of the original image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (8).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (8)~0.png",
+  "created_at": "2026-08-20T16:12:08.454Z",
+  "bounds": {
+    "min": [
+      -2.3,
+      -0.321,
+      -1.7321
+    ],
+    "max": [
+      4.5,
+      8.75,
+      1.7321
+    ],
+    "size": [
+      6.8,
+      9.071,
+      3.464
+    ],
+    "rMax": 4.822,
+    "triangles": 508,
+    "vertices": 304
+  },
+  "spec": {
+    "style": "natural_landscape_vegetation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

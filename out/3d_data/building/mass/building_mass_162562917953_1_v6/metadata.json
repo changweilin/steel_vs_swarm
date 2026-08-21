@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_162562917953_1_v6",
+  "key": "building/mass_162562917953~1_bc5cd00c_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model successfully captures the modern architectural style of the building top, featuring the cantilevered balcony with glass railings, the white stone-textured facade structure, and the large striking black cantilevered roof frame with correct outward sloping geometry.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/162562917953.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\162562917953~1.png",
+  "created_at": "2026-08-20T17:19:40.463Z",
+  "bounds": {
+    "min": [
+      -2.25,
+      0,
+      -2.5
+    ],
+    "max": [
+      2.25,
+      10.1,
+      2.5
+    ],
+    "size": [
+      4.5,
+      10.1,
+      5
+    ],
+    "rMax": 3.363,
+    "triangles": 116,
+    "vertices": 78
+  },
+  "spec": {
+    "style": "modern_architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ov_cce311a9-888e-485c-9a6d-352a912ffa60_v6",
+  "key": "tree/canopy_ov_cce311a9-888e-485c-9a6d-352a912ffa60_37587910_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "botanical_sculpture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree is modeled as a central trunk supporting a dense, spherical canopy. The ellipsoid_sphere captures the rounded, bushy nature of the variegated shrub, while the cylinder represents the woody stem. The scale is set to approximately 1.5m total height, consistent with a garden shrub. The colors reflect the yellow-green foliage and brown bark.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/ov_cce311a9-888e-485c-9a6d-352a912ffa60.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\ov_cce311a9-888e-485c-9a6d-352a912ffa60~0.png",
+  "created_at": "2026-08-20T16:08:15.204Z",
+  "bounds": {
+    "min": [
+      -0.7,
+      0,
+      -0.6657
+    ],
+    "max": [
+      0.7,
+      1.8,
+      0.6657
+    ],
+    "size": [
+      1.4,
+      1.8,
+      1.331
+    ],
+    "rMax": 0.966,
+    "triangles": 368,
+    "vertices": 224
+  },
+  "spec": {
+    "style": "botanical_sculpture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

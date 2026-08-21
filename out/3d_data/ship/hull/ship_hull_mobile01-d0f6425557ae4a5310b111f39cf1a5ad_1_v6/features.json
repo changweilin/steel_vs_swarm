@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad~1",
+  "sourceImage": "ship/hull/mobile01-d0f6425557ae4a5310b111f39cf1a5ad~1",
+  "style": "modern military submarine",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 204082,
+    "facadeHex": 303030,
+    "baseHex": 151515,
+    "accentHex": 505050,
+    "darkHex": 101010,
+    "brightHex": 808080,
+    "glassHex": 1976635
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_hull",
+    "bow_taper",
+    "stern_taper",
+    "dorsal_hump",
+    "vertical_stabilizer_top",
+    "vertical_stabilizer_bottom",
+    "horizontal_stabilizer_port",
+    "horizontal_stabilizer_starboard",
+    "propeller_hub"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "wedge"
+  ]
+}

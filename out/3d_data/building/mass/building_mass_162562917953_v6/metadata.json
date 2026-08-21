@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_162562917953_v6",
+  "key": "building/mass_162562917953_7f9ba979_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Architectural Residential",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the multi-level cantilevered balcony structure and the vertical massing of the building. The glass railings and the top roof frame are represented as distinct geometric elements. The base garage and brick-textured facade are aligned with the perspective, and the overall proportions follow the 1.8m scale reference.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/162562917953.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\162562917953.jpg",
+  "created_at": "2026-08-20T16:39:16.224Z",
+  "bounds": {
+    "min": [
+      -3.1,
+      0,
+      -3.1
+    ],
+    "max": [
+      3.1,
+      12.75,
+      4.7
+    ],
+    "size": [
+      6.2,
+      12.75,
+      7.8
+    ],
+    "rMax": 5.63,
+    "triangles": 120,
+    "vertices": 80
+  },
+  "spec": {
+    "style": "Modern Architectural Residential"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

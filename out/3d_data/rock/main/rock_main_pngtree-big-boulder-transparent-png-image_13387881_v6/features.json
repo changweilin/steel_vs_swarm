@@ -1,0 +1,31 @@
+{
+  "id": "rock_main_pngtree-big-boulder-transparent-png-image_13387881",
+  "sourceImage": "rock/main/pngtree-big-boulder-transparent-png-image_13387881",
+  "style": "Natural Rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 12566464,
+    "facadeHex": 9868950,
+    "baseHex": 5263440,
+    "accentHex": 11184810,
+    "darkHex": 3289650,
+    "brightHex": 14540253,
+    "glassHex": 4016180
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_boulder_core",
+    "rock_facet_top",
+    "rock_facet_right",
+    "rock_facet_left",
+    "rock_facet_front",
+    "rock_facet_back",
+    "base_anchor_rock"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "polygonal_prism"
+  ]
+}

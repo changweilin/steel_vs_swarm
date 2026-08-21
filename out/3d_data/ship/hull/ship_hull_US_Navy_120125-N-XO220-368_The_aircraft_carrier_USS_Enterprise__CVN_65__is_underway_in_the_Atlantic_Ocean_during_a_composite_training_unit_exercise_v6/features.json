@@ -1,0 +1,36 @@
+{
+  "id": "ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise",
+  "sourceImage": "ship/hull/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise",
+  "style": "military_aircraft_carrier",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 10526880,
+    "facadeHex": 8421504,
+    "baseHex": 4210752,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 46217
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "flight_deck",
+    "island_superstructure",
+    "bridge_windows",
+    "main_radar_dome",
+    "mast_structure",
+    "hull_bottom",
+    "aircraft_1",
+    "aircraft_2",
+    "aircraft_3",
+    "aircraft_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome",
+    "cylinder"
+  ]
+}

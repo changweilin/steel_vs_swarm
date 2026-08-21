@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_warehouse_ov_bd624950-a164-4593-a9b2-0a39d84641ab_v6",
+  "key": "building/bld_warehouse_ov_bd624950-a164-4593-a9b2-0a39d84641ab_94f82cde_v6",
+  "family": "building",
+  "subpart": "bld_warehouse",
+  "style": "industrial_warehouse",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The main warehouse structure is reconstructed with high fidelity, capturing the multi-story brick facade, arched window patterns, and the distinct chimney. The roof pitch and cornice details follow the geometric constraints. The perspective is maintained, and the secondary structures like the small gatehouse and the chimney are positioned correctly relative to the main building.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_warehouse/ov_bd624950-a164-4593-a9b2-0a39d84641ab.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_warehouse\\ov_bd624950-a164-4593-a9b2-0a39d84641ab~0.png",
+  "created_at": "2026-08-21T07:21:14.234Z",
+  "bounds": {
+    "min": [
+      -18,
+      0,
+      -20
+    ],
+    "max": [
+      17,
+      22.5,
+      20
+    ],
+    "size": [
+      35,
+      22.5,
+      40
+    ],
+    "rMax": 26.907,
+    "triangles": 148,
+    "vertices": 94
+  },
+  "spec": {
+    "style": "industrial_warehouse"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

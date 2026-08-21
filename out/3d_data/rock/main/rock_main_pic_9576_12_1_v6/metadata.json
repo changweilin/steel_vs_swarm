@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_pic_9576_12_1_v6",
+  "key": "rock/main_pic_9576_12~1_db5457a6_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The image exclusively shows a blue sky with clouds, with no rock formation present. However, complying strictly with the prompt requirement to reconstruct a rock formation, a multi-part clustered rock structure is generated with proper base anchoring at y = 0, using dodecahedron and icosahedron polyhedron components for realistic jagged geological features.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/pic_9576_12.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\pic_9576_12~1.png",
+  "created_at": "2026-08-20T16:27:31.247Z",
+  "bounds": {
+    "min": [
+      -2.2886,
+      -0.0469,
+      -1.4736
+    ],
+    "max": [
+      2.2748,
+      3.6218,
+      1.5376
+    ],
+    "size": [
+      4.563,
+      3.669,
+      3.011
+    ],
+    "rMax": 2.746,
+    "triangles": 120,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

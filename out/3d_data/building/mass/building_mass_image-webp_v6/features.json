@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_image-webp",
+  "sourceImage": "building/mass/image-webp",
+  "style": "Modern Residential Complex",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12500670,
+    "facadeHex": 10526880,
+    "baseHex": 8421504,
+    "accentHex": 13382400,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 12,
+  "partNames": [
+    "LeftBuildingMain",
+    "RightBuildingMain",
+    "OrangePanelLeft",
+    "OrangePanelRight",
+    "WindowLeft1",
+    "WindowRight1",
+    "RoofStructureLeft",
+    "RoofStructureRight",
+    "GroundVoidLeft",
+    "GroundVoidRight",
+    "WhiteFrameLeft",
+    "WhiteFrameRight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

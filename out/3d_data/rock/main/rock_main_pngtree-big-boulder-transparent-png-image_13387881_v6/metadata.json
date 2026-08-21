@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_pngtree-big-boulder-transparent-png-image_13387881_v6",
+  "key": "rock/main_pngtree-big-boulder-transparent-png-image_13387881_54263d8d_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "Natural Rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed rock successfully captures the faceted, angular boulder shape with natural stone tones, solid foundational contact at y=0, and layered polyhedra replicating the craggy surface and crevices.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/pngtree-big-boulder-transparent-png-image_13387881.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\pngtree-big-boulder-transparent-png-image_13387881~0.png",
+  "created_at": "2026-08-20T16:27:37.807Z",
+  "bounds": {
+    "min": [
+      -1.4433,
+      -0.3276,
+      -1.6815
+    ],
+    "max": [
+      1.5539,
+      1.9099,
+      1.3442
+    ],
+    "size": [
+      2.997,
+      2.237,
+      3.026
+    ],
+    "rMax": 2.216,
+    "triangles": 184,
+    "vertices": 106
+  },
+  "spec": {
+    "style": "Natural Rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

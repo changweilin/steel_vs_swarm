@@ -1,0 +1,32 @@
+{
+  "id": "rock_mg_tower_ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
+  "sourceImage": "rock/mg_tower/ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
+  "style": "natural_rock_monument",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 9868953,
+    "facadeHex": 8553090,
+    "baseHex": 6579300,
+    "accentHex": 11184810,
+    "darkHex": 3947580,
+    "brightHex": 13421772,
+    "glassHex": 3355443
+  },
+  "totalParts": 6,
+  "partNames": [
+    "ground_base_mound",
+    "rock_talus_slope",
+    "main_columnar_tower",
+    "top_flat_surface",
+    "rock_fragment_nw",
+    "rock_fragment_se"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "polygonal_prism",
+    "cylinder",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

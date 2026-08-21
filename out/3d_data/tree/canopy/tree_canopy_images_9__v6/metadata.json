@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_9__v6",
+  "key": "tree/canopy_images (9)_69208dd1_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai landscape with coniferous trees and mossy rock base",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 88,
+  "similarityReview": "The model successfully captures the two-peak coniferous tree structure using stacked frustum_pyramids for the canopy and ellipsoid_spheres for the dense lower foliage. The base is represented by a series of low-profile boxes and ellipsoids to simulate the mossy rock terrain. The scale and proportions align with a miniature bonsai landscape.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (9).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (9)~0.png",
+  "created_at": "2026-08-20T16:12:16.808Z",
+  "bounds": {
+    "min": [
+      -1.4,
+      -0.2,
+      -0.7608
+    ],
+    "max": [
+      2.3,
+      1.7,
+      0.7706
+    ],
+    "size": [
+      3.7,
+      1.9,
+      1.531
+    ],
+    "rMax": 2.426,
+    "triangles": 800,
+    "vertices": 488
+  },
+  "spec": {
+    "style": "Bonsai landscape with coniferous trees and mossy rock base"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

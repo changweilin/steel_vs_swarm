@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_66fc7920151e4d6b915aeaacc1502afd_v6",
+  "key": "building/mass_66fc7920151e4d6b915aeaacc1502afd_666c55f9_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Rustic Log Cabin Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the complex roof geometry, the central stone chimney, and the log-cabin wall structure. The porch overhangs are modeled with correct downward slopes using wedge and frustum components. The stone base and log walls are integrated to form a solid, closed volume. Minor details like window frames and glass panels are included with appropriate offsets to prevent Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/66fc7920151e4d6b915aeaacc1502afd.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\66fc7920151e4d6b915aeaacc1502afd~0.png",
+  "created_at": "2026-08-21T10:12:10.575Z",
+  "bounds": {
+    "min": [
+      -6.4,
+      0,
+      -4
+    ],
+    "max": [
+      5,
+      8,
+      4
+    ],
+    "size": [
+      11.4,
+      8,
+      8
+    ],
+    "rMax": 7.547,
+    "triangles": 108,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "Rustic Log Cabin Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

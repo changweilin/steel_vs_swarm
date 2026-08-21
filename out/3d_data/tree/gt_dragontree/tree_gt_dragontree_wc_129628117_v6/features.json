@@ -1,0 +1,30 @@
+{
+  "id": "tree_gt_dragontree_wc_129628117",
+  "sourceImage": "tree/gt_dragontree/wc_129628117",
+  "style": "Dragon Tree (Dracaena draco) botanical reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 345678,
+    "facadeHex": 564433,
+    "baseHex": 221100,
+    "accentHex": 889977,
+    "darkHex": 332211,
+    "brightHex": 999999,
+    "glassHex": 1976635
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "branch_1",
+    "branch_2",
+    "canopy_cluster_1",
+    "canopy_cluster_2",
+    "canopy_cluster_3",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

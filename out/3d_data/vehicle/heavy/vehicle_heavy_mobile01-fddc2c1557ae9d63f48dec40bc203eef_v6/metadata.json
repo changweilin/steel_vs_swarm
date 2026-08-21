@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_v6",
+  "key": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_056db6f9_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/heavy/mobile01-fddc2c1557ae9d63f48dec40bc203eef.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\mobile01-fddc2c1557ae9d63f48dec40bc203eef.jpg",
+  "created_at": "2026-08-20T15:34:12.449Z",
+  "bounds": {
+    "min": [
+      -4.25,
+      0.2,
+      -1.8
+    ],
+    "max": [
+      4.4,
+      4.1,
+      1.8
+    ],
+    "size": [
+      8.65,
+      3.9,
+      3.6
+    ],
+    "rMax": 4.754,
+    "triangles": 656,
+    "vertices": 368
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

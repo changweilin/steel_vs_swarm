@@ -1,0 +1,27 @@
+{
+  "id": "tree_canopy_51YNHnO1PXL",
+  "sourceImage": "tree/canopy/51YNHnO1PXL",
+  "style": "botanical_cactus",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8435060,
+    "facadeHex": 9876543,
+    "baseHex": 200000,
+    "accentHex": 12345678,
+    "darkHex": 300000,
+    "brightHex": 16777215,
+    "glassHex": 5000000
+  },
+  "totalParts": 6,
+  "partNames": [
+    "pot",
+    "main_stem",
+    "left_branch",
+    "right_branch_lower",
+    "right_branch_upper",
+    "small_side_stem"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder"
+  ]
+}

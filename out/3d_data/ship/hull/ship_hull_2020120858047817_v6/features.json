@@ -1,0 +1,36 @@
+{
+  "id": "ship_hull_2020120858047817",
+  "sourceImage": "ship/hull/2020120858047817",
+  "style": "fishing_vessel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 8421504,
+    "accentHex": 32768,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 49151
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "hull_base",
+    "bridge_structure",
+    "bridge_windows",
+    "roof_deck",
+    "mast_pole",
+    "radar_dome",
+    "stern_deck_area",
+    "life_ring_port",
+    "life_ring_starboard"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

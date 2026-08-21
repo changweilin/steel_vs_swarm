@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_ttn1071_Cover0106_0_v6",
+  "key": "ship/hull_ttn1071_Cover0106~0_aff25eb3_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 85,
+  "similarityReview": "The cruise ship hull and superstructure are modeled with high fidelity. The bow wedge, main hull, and upper deck levels are constructed using proportional boxes and wedges. Lifeboats are represented as cylinders along the side. The bridge windows are correctly identified as glassHex. The overall geometry captures the sleek, elongated profile of the Star Aquarius cruise ship.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/ttn1071_Cover0106.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\ttn1071_Cover0106~0.png",
+  "created_at": "2026-08-20T16:21:26.753Z",
+  "bounds": {
+    "min": [
+      -100,
+      -2,
+      -10
+    ],
+    "max": [
+      100,
+      27,
+      10.6
+    ],
+    "size": [
+      200,
+      29,
+      20.6
+    ],
+    "rMax": 100.56,
+    "triangles": 370,
+    "vertices": 216
+  },
+  "spec": {
+    "style": "cruise_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

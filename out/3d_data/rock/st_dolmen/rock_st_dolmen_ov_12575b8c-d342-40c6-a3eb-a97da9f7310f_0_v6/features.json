@@ -1,0 +1,32 @@
+{
+  "id": "rock_st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0",
+  "sourceImage": "rock/st_dolmen/ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0",
+  "style": "natural_rock_stairs",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7372864,
+    "facadeHex": 8421504,
+    "baseHex": 4608051,
+    "accentHex": 5795654,
+    "darkHex": 2105376,
+    "brightHex": 11184810,
+    "glassHex": 3292212
+  },
+  "totalParts": 9,
+  "partNames": [
+    "ground_base",
+    "stone_step_lower_left",
+    "stone_step_lower_right",
+    "stone_step_upper_left",
+    "stone_step_upper_right",
+    "stone_step_top_center",
+    "grass_patch_front",
+    "grass_patch_middle",
+    "stone_boulder_far"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

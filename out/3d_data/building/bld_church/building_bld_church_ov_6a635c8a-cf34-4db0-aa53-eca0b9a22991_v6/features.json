@@ -1,0 +1,47 @@
+{
+  "id": "building_bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991",
+  "sourceImage": "building/bld_church/ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991",
+  "style": "historical_church",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 13959168,
+    "facadeHex": 11842740,
+    "baseHex": 9868950,
+    "accentHex": 5263440,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 3319400
+  },
+  "totalParts": 22,
+  "partNames": [
+    "nave_base",
+    "nave_roof",
+    "tower_base",
+    "tower_upper_wood",
+    "tower_dome",
+    "tower_lantern",
+    "tower_spire_cap",
+    "spire_finial",
+    "clock_face",
+    "window_nave_1",
+    "window_nave_2",
+    "window_nave_3",
+    "window_tower",
+    "dormer_1",
+    "dormer_window_1",
+    "dormer_2",
+    "dormer_window_2",
+    "dormer_3",
+    "dormer_window_3",
+    "stone_wall",
+    "monument_base",
+    "monument_arch"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome",
+    "cylinder",
+    "pyramid"
+  ]
+}

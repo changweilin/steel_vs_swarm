@@ -1,0 +1,36 @@
+{
+  "id": "rock_mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7",
+  "sourceImage": "rock/mg_arch/ov_95d9c227-032e-415a-8ae3-2faea55fead7",
+  "style": "natural_rock_arch",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2445856,
+    "facadeHex": 8421504,
+    "baseHex": 3289650,
+    "accentHex": 6316128,
+    "darkHex": 1644825,
+    "brightHex": 12632256,
+    "glassHex": 3355443
+  },
+  "totalParts": 11,
+  "partNames": [
+    "sea_base_water_line",
+    "main_rock_body",
+    "left_pillar_rock",
+    "right_pillar_rock",
+    "arch_top_bridge",
+    "rock_erosion_detail_1",
+    "rock_erosion_detail_2",
+    "top_vegetation_layer",
+    "bush_clump_left",
+    "bush_clump_right",
+    "water_foam_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "wedge",
+    "icosahedron_polyhedron",
+    "ellipsoid_sphere"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_kvtoyweb",
+  "sourceImage": "building/mass/kvtoyweb",
+  "style": "modern_villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 16777215,
+    "baseHex": 10066329,
+    "accentHex": 8417335,
+    "darkHex": 4210752,
+    "brightHex": 14540253,
+    "glassHex": 8958195
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_body",
+    "terrace_base",
+    "stone_wall_accent",
+    "roof_slab",
+    "chimney",
+    "ground_floor_window_front",
+    "second_floor_window_front",
+    "side_window_right",
+    "terrace_door"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_motor_11871715_O_m",
+  "sourceImage": "vehicle/motor/11871715_O_m",
+  "style": "scooter",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3289650,
+    "facadeHex": 2302755,
+    "baseHex": 1315860,
+    "accentHex": 15790320,
+    "darkHex": 657930,
+    "brightHex": 16777215,
+    "glassHex": 43520
+  },
+  "totalParts": 14,
+  "partNames": [
+    "front_wheel_tire",
+    "front_wheel_rim",
+    "rear_wheel_tire",
+    "rear_wheel_rim",
+    "chassis_base",
+    "floorboard",
+    "rear_body",
+    "seat",
+    "front_shield",
+    "headlight",
+    "windshield",
+    "handlebar_center",
+    "left_mirror",
+    "right_mirror"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box",
+    "ellipsoid_sphere"
+  ]
+}

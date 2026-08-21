@@ -1,0 +1,46 @@
+{
+  "id": "vehicle_heavy_4d54f379-07b7-453d-9e45-5fa076db88df",
+  "sourceImage": "vehicle/heavy/4d54f379-07b7-453d-9e45-5fa076db88df",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14165552,
+    "facadeHex": 14165552,
+    "baseHex": 2105376,
+    "accentHex": 16766720,
+    "darkHex": 1052688,
+    "brightHex": 15790320,
+    "glassHex": 3368559
+  },
+  "totalParts": 24,
+  "partNames": [
+    "chassis_base",
+    "cab_main",
+    "cab_roof",
+    "front_windshield",
+    "side_window_left",
+    "side_window_right",
+    "cargo_body",
+    "cargo_shutter_1",
+    "cargo_shutter_2",
+    "cargo_shutter_3",
+    "cargo_shutter_1_right",
+    "cargo_shutter_2_right",
+    "cargo_shutter_3_right",
+    "stripe_left",
+    "stripe_right",
+    "cab_stripe_left",
+    "cab_stripe_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "headlight_left",
+    "headlight_right",
+    "rear_bumper"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

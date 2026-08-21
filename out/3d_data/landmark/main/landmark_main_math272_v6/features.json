@@ -1,0 +1,31 @@
+{
+  "id": "landmark_main_math272",
+  "sourceImage": "landmark/main/math272",
+  "style": "ancient_monument",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13415550,
+    "facadeHex": 14663555,
+    "baseHex": 12165200,
+    "accentHex": 15789568,
+    "darkHex": 8548950,
+    "brightHex": 16777215,
+    "glassHex": 4621715
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_pyramid_body",
+    "base_platform",
+    "foreground_rock_cluster_1",
+    "foreground_rock_cluster_2",
+    "small_tomb_structure",
+    "small_tomb_roof"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "pyramid",
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

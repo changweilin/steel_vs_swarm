@@ -1,0 +1,32 @@
+{
+  "id": "landmark_main_190322_prize_12",
+  "sourceImage": "landmark/main/190322_prize_12",
+  "style": "Modernist Architectural Landmark",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14474460,
+    "facadeHex": 10526880,
+    "baseHex": 8421504,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 15790320,
+    "glassHex": 4621735
+  },
+  "totalParts": 10,
+  "partNames": [
+    "Main_Base_Left",
+    "Main_Base_Right",
+    "Central_Tower_Core",
+    "Central_Tower_Glass",
+    "Roof_Left_Wing",
+    "Roof_Right_Wing",
+    "Entrance_Door",
+    "Stairs_Level_1",
+    "Stairs_Level_2",
+    "Stairs_Level_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

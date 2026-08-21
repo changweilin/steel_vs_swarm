@@ -1,0 +1,47 @@
+{
+  "id": "vehicle_heavy_3d-render-cargo-delivery-truck_1048-5605",
+  "sourceImage": "vehicle/heavy/3d-render-cargo-delivery-truck_1048-5605",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 15132390,
+    "facadeHex": 16185078,
+    "baseHex": 3289650,
+    "accentHex": 11184810,
+    "darkHex": 1644825,
+    "brightHex": 15790320,
+    "glassHex": 4355270
+  },
+  "totalParts": 25,
+  "partNames": [
+    "cargo_container",
+    "cargo_roof",
+    "chassis_frame",
+    "cab_body",
+    "cab_roof",
+    "windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_grille",
+    "front_bumper",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel_1",
+    "rear_right_wheel_1",
+    "rear_left_wheel_2",
+    "rear_right_wheel_2",
+    "front_left_rim",
+    "front_right_rim",
+    "rear_left_rim_1",
+    "rear_right_rim_1",
+    "rear_left_rim_2",
+    "rear_right_rim_2",
+    "fuel_tank",
+    "headlight_left",
+    "headlight_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

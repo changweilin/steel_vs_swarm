@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_v6",
+  "key": "building/bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_b18be66c_v6",
+  "family": "building",
+  "subpart": "bld_church",
+  "style": "historical_church",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D reconstruction accurately captures the main stone church body, the large bell tower with wooden upper section and onion dome, the red tiled gabled roof with dormers, and the surrounding stone wall with monument, maintaining proper real-world dimensions and multi-part integration.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_church/ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_church\\ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991~0.png",
+  "created_at": "2026-08-20T17:25:03.544Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -4.2
+    ],
+    "max": [
+      7,
+      24.25,
+      6
+    ],
+    "size": [
+      14,
+      24.25,
+      10.2
+    ],
+    "rMax": 9.22,
+    "triangles": 510,
+    "vertices": 312
+  },
+  "spec": {
+    "style": "historical_church"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

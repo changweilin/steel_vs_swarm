@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_T-806_blue_0_v6",
+  "key": "vehicle/bike_T-806_blue~0_d2ecf363_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "Industrial Design Vehicle Model",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the bicycle rear triangle, saddle, rear rack, chain guard, and rear wheel with precise tube intersections and color coordination matching the reference photograph.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/T-806_blue.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\T-806_blue~0.png",
+  "created_at": "2026-08-20T17:21:17.390Z",
+  "bounds": {
+    "min": [
+      -0.39,
+      0.15,
+      -0.3709
+    ],
+    "max": [
+      0.39,
+      0.84,
+      0.375
+    ],
+    "size": [
+      0.78,
+      0.69,
+      0.746
+    ],
+    "rMax": 0.541,
+    "triangles": 776,
+    "vertices": 429
+  },
+  "spec": {
+    "style": "Industrial Design Vehicle Model"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

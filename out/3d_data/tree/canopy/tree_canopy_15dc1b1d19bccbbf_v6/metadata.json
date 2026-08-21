@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_15dc1b1d19bccbbf_v6",
+  "key": "tree/canopy_15dc1b1d19bccbbf_70002309_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "naturalistic_banyan_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the complex, twisted trunk structure of the banyan tree using a series of cylinders and conical frustums. The canopy is represented by multiple overlapping ellipsoid_spheres to simulate the dense, irregular foliage. Aerial roots are represented by thin cylinders hanging from the branches. The overall silhouette matches the provided image well, though the organic complexity of the leaves is simplified into geometric volumes.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/15dc1b1d19bccbbf.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\15dc1b1d19bccbbf~0.png",
+  "created_at": "2026-08-20T16:18:30.257Z",
+  "bounds": {
+    "min": [
+      -3.8,
+      -0.1,
+      -2.3776
+    ],
+    "max": [
+      4.2,
+      7.2,
+      2.3776
+    ],
+    "size": [
+      8,
+      7.3,
+      4.755
+    ],
+    "rMax": 4.826,
+    "triangles": 832,
+    "vertices": 500
+  },
+  "spec": {
+    "style": "naturalistic_banyan_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_v6",
+  "key": "tree/gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_303b8b34_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "botanical_illustration_reconstruction",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The reconstruction captures the massive, flared base of the Dracaena Draco and its characteristic umbrella-like, multi-branched canopy. The trunk is modeled as a large conical frustum to represent the ancient, thick structure, while the canopy is represented by a collection of ellipsoid spheres to mimic the dense, clustered foliage typical of dragon trees. The scale is set to reflect the monumental size of the tree.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/ov_737d2395-17ee-4db1-8c64-a019dbf02f3a.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\ov_737d2395-17ee-4db1-8c64-a019dbf02f3a~0.png",
+  "created_at": "2026-08-20T16:09:19.948Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -5.7063
+    ],
+    "max": [
+      6,
+      13,
+      5.7063
+    ],
+    "size": [
+      12,
+      13,
+      11.413
+    ],
+    "rMax": 8.28,
+    "triangles": 632,
+    "vertices": 381
+  },
+  "spec": {
+    "style": "botanical_illustration_reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

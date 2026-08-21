@@ -1,0 +1,40 @@
+{
+  "id": "landmark_main_A13239_1459246004_0_v6",
+  "key": "landmark/main_A13239_1459246004_0_422f631b_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "archaeological_landmark",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the stepped pyramid structure of Chichen Itza. Each of the 9 levels is represented by a frustum_pyramid, with the top temple platform as a box. The central staircase is modeled as a wedge protruding slightly to avoid Z-fighting. Proportions are scaled to match the monumental size of the structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/A13239_1459246004_0.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\main\\A13239_1459246004_0~0.png",
+  "created_at": "2026-08-20T16:24:16.418Z",
+  "bounds": {
+    "min": [
+      -19.799,
+      0,
+      -19.799
+    ],
+    "max": [
+      19.799,
+      45,
+      22.5
+    ],
+    "size": [
+      39.598,
+      45,
+      42.299
+    ],
+    "rMax": 29.971,
+    "triangles": 148,
+    "vertices": 94
+  },
+  "spec": {
+    "style": "archaeological_landmark"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

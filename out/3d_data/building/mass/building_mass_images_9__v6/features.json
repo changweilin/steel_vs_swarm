@@ -1,0 +1,34 @@
+{
+  "id": "building_mass_images (9)",
+  "sourceImage": "building/mass/images (9)",
+  "style": "modern_minimalist_villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 15790320,
+    "baseHex": 6579300,
+    "accentHex": 3355443,
+    "darkHex": 2236962,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 11,
+  "partNames": [
+    "base_deck",
+    "ground_floor_main",
+    "garage_door",
+    "upper_floor_main",
+    "upper_glass_wall",
+    "roof_overhang",
+    "stairs",
+    "bush_1",
+    "bush_2",
+    "bush_3",
+    "tree"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

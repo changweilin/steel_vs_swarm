@@ -1,0 +1,26 @@
+{
+  "id": "tree_gt_dragontree_wc_145806133~1",
+  "sourceImage": "tree/gt_dragontree/wc_145806133~1",
+  "style": "botanical_sculpture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 45056,
+    "facadeHex": 5918784,
+    "baseHex": 3944704,
+    "accentHex": 8438016,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 12582912
+  },
+  "totalParts": 3,
+  "partNames": [
+    "main_trunk",
+    "foliage_crown",
+    "base_root_flare"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere",
+    "conical_frustum"
+  ]
+}

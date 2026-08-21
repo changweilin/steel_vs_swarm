@@ -1,0 +1,30 @@
+{
+  "id": "landmark_main_dffg.jpg_1140x855~1",
+  "sourceImage": "landmark/main/dffg.jpg_1140x855~1",
+  "style": "Modernist Architectural Landmark",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16766720,
+    "facadeHex": 12632256,
+    "baseHex": 8421504,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 46217
+  },
+  "totalParts": 8,
+  "partNames": [
+    "LeftRoofPanel",
+    "RightRoofPanel",
+    "GlassFacade",
+    "EntranceDoor",
+    "BaseStep1",
+    "BaseStep2",
+    "StructuralRibLeft",
+    "StructuralRibRight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box"
+  ]
+}

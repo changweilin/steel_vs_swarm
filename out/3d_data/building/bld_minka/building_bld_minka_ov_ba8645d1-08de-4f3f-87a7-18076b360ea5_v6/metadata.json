@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_minka_ov_ba8645d1-08de-4f3f-87a7-18076b360ea5_v6",
+  "key": "building/bld_minka_ov_ba8645d1-08de-4f3f-87a7-18076b360ea5_d422d4f9_v6",
+  "family": "building",
+  "subpart": "bld_minka",
+  "style": "bld_minka",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the Artists' Cottage. It features the distinctive thatched-style hipped roof using a frustum pyramid with topR < botR to ensure correct outward slope. The wooden cottage structure, front entrance sign, supporting pillars, and the surrounding picket fence are all modeled with precise real-world dimensions and tight alignment to avoid gaps or Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_minka/ov_ba8645d1-08de-4f3f-87a7-18076b360ea5.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_minka\\ov_ba8645d1-08de-4f3f-87a7-18076b360ea5~0.png",
+  "created_at": "2026-08-21T07:04:36.688Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -4
+    ],
+    "max": [
+      4,
+      5.05,
+      4
+    ],
+    "size": [
+      8,
+      5.05,
+      8
+    ],
+    "rMax": 5.657,
+    "triangles": 356,
+    "vertices": 222
+  },
+  "spec": {
+    "style": "bld_minka"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

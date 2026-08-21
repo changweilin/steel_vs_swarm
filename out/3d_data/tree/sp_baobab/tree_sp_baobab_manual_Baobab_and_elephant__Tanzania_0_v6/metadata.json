@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_manual_Baobab_and_elephant__Tanzania_0_v6",
+  "key": "tree/sp_baobab_manual_Baobab_and_elephant__Tanzania~0_3ab70374_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "natural_savanna_vegetation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The reconstruction captures the distinct silhouette of the foreground thorny shrub and the background baobab tree. The thorny shrub is modeled with a dense cluster of ellipsoids to represent its complex, airy structure, while the baobab is represented by a thick, tapering trunk and a wide, sparse canopy. The scale and proportions align with the savanna environment.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/manual_Baobab_and_elephant__Tanzania.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\manual_Baobab_and_elephant__Tanzania~0.png",
+  "created_at": "2026-08-20T17:04:19.090Z",
+  "bounds": {
+    "min": [
+      -5.5,
+      -0.3,
+      -10.3776
+    ],
+    "max": [
+      1.2,
+      5,
+      1.1413
+    ],
+    "size": [
+      6.7,
+      5.3,
+      11.519
+    ],
+    "rMax": 11.745,
+    "triangles": 720,
+    "vertices": 440
+  },
+  "spec": {
+    "style": "natural_savanna_vegetation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

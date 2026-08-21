@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521310_v6",
+  "key": "building/mass_pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521310_593fbb7d_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Luxury Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the multi-level cantilevered structure of the modern villa. The primary massing, including the ground floor stone base, the white cantilevered upper levels, and the rooftop penthouse, are represented with correct proportions. Glass surfaces are clearly defined, and the rooftop terrace features are included. The overall geometry is closed and consistent with the provided isometric view.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521310.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521310~0.png",
+  "created_at": "2026-08-21T08:52:13.639Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.25,
+      -6
+    ],
+    "max": [
+      6,
+      8.6,
+      6
+    ],
+    "size": [
+      12,
+      8.85,
+      12
+    ],
+    "rMax": 8.485,
+    "triangles": 428,
+    "vertices": 270
+  },
+  "spec": {
+    "style": "Modern Luxury Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

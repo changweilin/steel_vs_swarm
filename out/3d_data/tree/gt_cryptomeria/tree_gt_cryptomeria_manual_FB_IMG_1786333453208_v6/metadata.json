@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_cryptomeria_manual_FB_IMG_1786333453208_v6",
+  "key": "tree/gt_cryptomeria_manual_FB_IMG_1786333453208_d685bd43_v6",
+  "family": "tree",
+  "subpart": "gt_cryptomeria",
+  "style": "tree_cryptomeria",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the massive cedar trunk and layered green canopy along with the shrine context using cylinders, ellipsoid spheres, and boxes, maintaining accurate spatial proportions and 7-Zone color mapping.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_cryptomeria/manual_FB_IMG_1786333453208.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_cryptomeria\\manual_FB_IMG_1786333453208~0.png",
+  "created_at": "2026-08-20T16:52:56.112Z",
+  "bounds": {
+    "min": [
+      -9.5,
+      0,
+      -10.2308
+    ],
+    "max": [
+      10,
+      24.5,
+      5.7553
+    ],
+    "size": [
+      19.5,
+      24.5,
+      15.986
+    ],
+    "rMax": 13.961,
+    "triangles": 996,
+    "vertices": 609
+  },
+  "spec": {
+    "style": "tree_cryptomeria"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

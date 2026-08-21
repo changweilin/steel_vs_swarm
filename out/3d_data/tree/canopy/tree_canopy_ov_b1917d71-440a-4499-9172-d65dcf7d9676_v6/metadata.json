@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ov_b1917d71-440a-4499-9172-d65dcf7d9676_v6",
+  "key": "tree/canopy_ov_b1917d71-440a-4499-9172-d65dcf7d9676_04963134_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree is modeled with a central trunk and a large, wide, multi-layered ellipsoid canopy to capture the broad, spreading nature of the tree in the image. The proportions reflect the scale of a mature deciduous tree. The trunk is slightly tapered, and the canopy is composed of overlapping ellipsoids to simulate the dense, irregular foliage structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/ov_b1917d71-440a-4499-9172-d65dcf7d9676.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\ov_b1917d71-440a-4499-9172-d65dcf7d9676~0.png",
+  "created_at": "2026-08-20T16:07:54.548Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      -0.1,
+      -4.2798
+    ],
+    "max": [
+      5.5,
+      8.5,
+      4.2798
+    ],
+    "size": [
+      10,
+      8.6,
+      8.56
+    ],
+    "rMax": 6.969,
+    "triangles": 688,
+    "vertices": 422
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

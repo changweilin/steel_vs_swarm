@@ -1,0 +1,39 @@
+{
+  "id": "vehicle_car_圖1",
+  "sourceImage": "vehicle/car/圖1",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3817804,
+    "facadeHex": 3817804,
+    "baseHex": 1447446,
+    "accentHex": 2105376,
+    "darkHex": 657930,
+    "brightHex": 15658734,
+    "glassHex": 4348275
+  },
+  "totalParts": 17,
+  "partNames": [
+    "chassis_base",
+    "main_body_facade",
+    "cabin_roof",
+    "windshield_front",
+    "windshield_rear",
+    "side_window_left",
+    "side_window_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "headlight_left",
+    "headlight_right",
+    "rear_light_bar",
+    "mirror_left",
+    "mirror_right",
+    "front_bumper_grid"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

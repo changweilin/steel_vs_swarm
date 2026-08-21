@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_16_0_v6",
+  "key": "building/mass_images (16)~0_82684866_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Residential Building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the verticality and the complex recessed balcony structure of the building. The facade features are represented by layered boxes and prisms. The glass balconies and windows are correctly colored with glassHex. The base structure is anchored at y=0, and the overall proportions align with the provided architectural rendering.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (16).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (16)~0.png",
+  "created_at": "2026-08-21T03:14:10.288Z",
+  "bounds": {
+    "min": [
+      -2.6,
+      0,
+      -4.1
+    ],
+    "max": [
+      2.6,
+      19,
+      4.45
+    ],
+    "size": [
+      5.2,
+      19,
+      8.55
+    ],
+    "rMax": 5.154,
+    "triangles": 132,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "Modern Minimalist Residential Building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

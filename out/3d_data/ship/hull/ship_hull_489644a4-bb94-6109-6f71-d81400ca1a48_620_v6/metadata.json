@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_489644a4-bb94-6109-6f71-d81400ca1a48_620_v6",
+  "key": "ship/hull_489644a4-bb94-6109-6f71-d81400ca1a48_620_03744bc0_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "container_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the massive scale of the Evergreen container ship. The hull is represented by a large box with a wedge bow, and the container stacks are modeled as modular boxes. The bridge structure is correctly positioned with glassHex windows. Symmetry is applied to ensure the hull and superstructure are complete on both sides.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/489644a4-bb94-6109-6f71-d81400ca1a48_620.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\489644a4-bb94-6109-6f71-d81400ca1a48_620~0.png",
+  "created_at": "2026-08-20T16:10:46.890Z",
+  "bounds": {
+    "min": [
+      -150,
+      0,
+      -21.1413
+    ],
+    "max": [
+      170.0119,
+      32.5,
+      21.1413
+    ],
+    "size": [
+      320.012,
+      32.5,
+      42.283
+    ],
+    "rMax": 171.321,
+    "triangles": 320,
+    "vertices": 208
+  },
+  "spec": {
+    "style": "container_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

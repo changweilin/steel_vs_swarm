@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_129628116_v6",
+  "key": "tree/gt_dragontree_wc_129628116_e7689864_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the characteristic branching structure of the Pandanus (Dragon Tree) with its thick, segmented branches and drooping, long-leafed foliage clusters. The use of cylinders for branches and ellipsoids for the foliage clusters provides a good approximation of the organic form. The color palette adheres to the 7-Zone system, effectively distinguishing between the woody trunk/branches and the dense, drooping foliage.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_129628116.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_129628116~0.png",
+  "created_at": "2026-08-20T16:54:08.671Z",
+  "bounds": {
+    "min": [
+      -2.2,
+      0,
+      -0.7608
+    ],
+    "max": [
+      2.6,
+      4.7296,
+      0.7608
+    ],
+    "size": [
+      4.8,
+      4.73,
+      1.522
+    ],
+    "rMax": 2.709,
+    "triangles": 832,
+    "vertices": 500
+  },
+  "spec": {
+    "style": "botanical_reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

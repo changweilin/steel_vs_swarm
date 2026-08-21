@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_202512251310033872",
+  "sourceImage": "ship/hull/202512251310033872",
+  "style": "industrial_military_submarine",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 8407080,
+    "facadeHex": 8407080,
+    "baseHex": 16766720,
+    "accentHex": 16766720,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 4621730
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull",
+    "conning_tower",
+    "periscope_mast",
+    "side_bulge",
+    "cradle_support_1",
+    "cradle_support_2",
+    "bogie_wheel_1",
+    "bogie_wheel_2",
+    "bogie_wheel_3",
+    "bogie_wheel_4",
+    "bridge_window"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_bike_T-806_blue~0",
+  "sourceImage": "vehicle/bike/T-806_blue~0",
+  "style": "Industrial Design Vehicle Model",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13421772,
+    "facadeHex": 11593433,
+    "baseHex": 4210752,
+    "accentHex": 6579300,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 4878498
+  },
+  "totalParts": 13,
+  "partNames": [
+    "Rear_Tire",
+    "Rear_Rim",
+    "Seat_Tube",
+    "Seat_Post",
+    "Saddle",
+    "Rear_Stay_Left",
+    "Rear_Stay_Right",
+    "Chain_Guard",
+    "Rear_Rack_Platform",
+    "Rear_Rack_Support_Left",
+    "Rear_Rack_Support_Right",
+    "Rear_Basket",
+    "Rear_Fender"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "rock_main_images 132",
+  "sourceImage": "rock/main/images 132",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11118485,
+    "facadeHex": 9408643,
+    "baseHex": 7434079,
+    "accentHex": 12434313,
+    "darkHex": 4605510,
+    "brightHex": 13421772,
+    "glassHex": 3355443
+  },
+  "totalParts": 7,
+  "partNames": [
+    "ground_rock_base",
+    "mid_support_rock",
+    "central_flat_boulder",
+    "upper_left_small_boulder",
+    "massive_top_overhang_boulder",
+    "foreground_detached_rock",
+    "left_side_wing_rock"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "vehicle_heavy_photooriginal-98016-XUIGz",
+  "sourceImage": "vehicle/heavy/photooriginal-98016-XUIGz",
+  "style": "industrial_vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14705174,
+    "facadeHex": 15967744,
+    "baseHex": 2105376,
+    "accentHex": 13382400,
+    "darkHex": 1644825,
+    "brightHex": 14540253,
+    "glassHex": 3368683
+  },
+  "totalParts": 25,
+  "partNames": [
+    "chassis_base",
+    "rear_deck",
+    "front_cabin_body",
+    "front_cabin_roof",
+    "front_windshield",
+    "front_side_window_left",
+    "front_side_window_right",
+    "rear_cabin_body",
+    "rear_cabin_roof",
+    "rear_cabin_side_window_left",
+    "rear_cabin_side_window_right",
+    "crane_boom_main",
+    "crane_boom_tip",
+    "wheel_fl1",
+    "wheel_fl2",
+    "wheel_fr1",
+    "wheel_fr2",
+    "wheel_rl1",
+    "wheel_rl2",
+    "wheel_rr1",
+    "wheel_rr2",
+    "headlight_left",
+    "headlight_right",
+    "rear_bumper_light_left",
+    "rear_bumper_light_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_temple_ov_1993f298-c141-4121-8a41-ca4421afd46c_v6",
+  "key": "building/bld_temple_ov_1993f298-c141-4121-8a41-ca4421afd46c_cac99f29_v6",
+  "family": "building",
+  "subpart": "bld_temple",
+  "style": "Japanese Traditional Temple Gate (Yashamon of Taiyuin, Nikko)",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the grand Yashamon gate from Nikko Taiyuin. It captures the multi-tiered stone base with central stairs, the massive wooden support pillars, the intricate bracket systems (dougong) represented by layered horizontal beams, the decorative balcony railing on the upper tier, and the complex irimoya-style roof with a prominent curved karahafu gable at the front center. All elements are fully enclosed, mirrored symmetrically to complete the rear facade, and anchored to the ground plane.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_temple/ov_1993f298-c141-4121-8a41-ca4421afd46c.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_temple\\ov_1993f298-c141-4121-8a41-ca4421afd46c~0.png",
+  "created_at": "2026-08-21T07:06:40.337Z",
+  "bounds": {
+    "min": [
+      -11.8,
+      0,
+      -4
+    ],
+    "max": [
+      11.8,
+      9.9,
+      6
+    ],
+    "size": [
+      23.6,
+      9.9,
+      10
+    ],
+    "rMax": 13.238,
+    "triangles": 700,
+    "vertices": 436
+  },
+  "spec": {
+    "style": "Japanese Traditional Temple Gate (Yashamon of Taiyuin, Nikko)"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

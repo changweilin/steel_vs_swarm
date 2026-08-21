@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_images (17)",
+  "sourceImage": "building/mass/images (17)",
+  "style": "Modern Residential Townhouse",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 12632256,
+    "baseHex": 10526880,
+    "accentHex": 14590570,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 8438271
+  },
+  "totalParts": 12,
+  "partNames": [
+    "MainStructure",
+    "LeftUnitBalcony",
+    "RightUnitBalcony",
+    "LeftWindow",
+    "RightWindow",
+    "GroundFloorLeft",
+    "GroundFloorRight",
+    "RoofParapet",
+    "LeftDoor",
+    "RightDoor",
+    "LeftWoodAccent",
+    "RightWoodAccent"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

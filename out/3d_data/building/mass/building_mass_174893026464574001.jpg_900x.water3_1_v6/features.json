@@ -1,0 +1,41 @@
+{
+  "id": "building_mass_174893026464574001.jpg!900x.water3~1",
+  "sourceImage": "building/mass/174893026464574001.jpg!900x.water3~1",
+  "style": "Modern Apartment Building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 11822452,
+    "baseHex": 9868950,
+    "accentHex": 6579300,
+    "darkHex": 2105376,
+    "brightHex": 15066597,
+    "glassHex": 3368652
+  },
+  "totalParts": 20,
+  "partNames": [
+    "main_base",
+    "left_wing_facade",
+    "right_wing_facade",
+    "white_grid_left_outer",
+    "white_grid_left_inner",
+    "white_grid_right_outer",
+    "white_grid_right_inner",
+    "center_dark_column",
+    "roof_top_structure",
+    "roof_top_accent",
+    "ground_glass_front",
+    "ground_glass_side",
+    "balcony_stack_1",
+    "balcony_rail_1",
+    "window_row_left_1",
+    "window_row_left_2",
+    "window_row_left_3",
+    "window_row_left_4",
+    "window_row_left_5",
+    "window_row_left_6"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

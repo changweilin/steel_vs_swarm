@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_ov_f9b7d32e-f7d1-4312-9583-a9401da9228a_v6",
+  "key": "tree/gt_dragontree_ov_f9b7d32e-f7d1-4312-9583-a9401da9228a_e0843b64_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 88,
+  "similarityReview": "The dragon tree's massive, gnarled trunk is represented by a conical frustum with a wide base, and the complex, umbrella-like canopy is modeled using a large, flattened ellipsoid to capture its characteristic silhouette. The smaller palm tree is included as a secondary vertical element. The scale is set relative to a 1.8m human reference, with the tree base anchored at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/ov_f9b7d32e-f7d1-4312-9583-a9401da9228a.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\ov_f9b7d32e-f7d1-4312-9583-a9401da9228a~0.png",
+  "created_at": "2026-08-20T16:53:37.409Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -5.7063
+    ],
+    "max": [
+      7,
+      12,
+      5.7063
+    ],
+    "size": [
+      13,
+      12,
+      11.413
+    ],
+    "rMax": 9.031,
+    "triangles": 464,
+    "vertices": 276
+  },
+  "spec": {
+    "style": "botanical_reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_379b7bfc740ea9d22183f066b6e40ff8-600x400_v6",
+  "key": "ship/hull_379b7bfc740ea9d22183f066b6e40ff8-600x400_0d077c82_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "military_warship_destroyer",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the Arleigh Burke-class destroyer's hull geometry, including the characteristic bow wedge, the tiered superstructure, and the central mast structure. The symmetry is maintained for the hull and deck equipment. The bridge windows are represented with the requested glassHex material. Minor details like the radar arrays and gun turret are simplified into geometric primitives while maintaining correct proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\379b7bfc740ea9d22183f066b6e40ff8-600x400~0.png",
+  "created_at": "2026-08-20T16:10:30.846Z",
+  "bounds": {
+    "min": [
+      -8,
+      0,
+      -75
+    ],
+    "max": [
+      8,
+      17,
+      75
+    ],
+    "size": [
+      16,
+      17,
+      150
+    ],
+    "rMax": 75.425,
+    "triangles": 510,
+    "vertices": 318
+  },
+  "spec": {
+    "style": "military_warship_destroyer"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

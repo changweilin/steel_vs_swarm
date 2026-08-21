@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_175437636541282008.jpg!900x.water3~1",
+  "sourceImage": "building/mass/175437636541282008.jpg!900x.water3~1",
+  "style": "modern_building",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15658734,
+    "baseHex": 11842740,
+    "accentHex": 6316128,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 33023
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_base_structure",
+    "roof_overhang_left",
+    "roof_overhang_right",
+    "glass_facade_front",
+    "glass_facade_back",
+    "architectural_frame_top",
+    "accent_pillar_left",
+    "accent_pillar_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

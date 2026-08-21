@@ -1,0 +1,40 @@
+{
+  "id": "rock_facet_ov_05933c12-551a-40e6-b2e6-977a30ea4551_v6",
+  "key": "rock/facet_ov_05933c12-551a-40e6-b2e6-977a30ea4551_c86d1ac9_v6",
+  "family": "rock",
+  "subpart": "facet",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The reconstructed 3D model accurately captures the massive, weathered, and asymmetric boulder shape shown in the image. Using a combination of icosahedron and dodecahedron polyhedrons along with angled wedge structures creates the rugged, faceted rock surface and natural sloping profile anchored correctly at the ground.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/facet/ov_05933c12-551a-40e6-b2e6-977a30ea4551.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\facet\\ov_05933c12-551a-40e6-b2e6-977a30ea4551~0.png",
+  "created_at": "2026-08-20T16:30:16.138Z",
+  "bounds": {
+    "min": [
+      -1.3915,
+      -0.9078,
+      -1.3215
+    ],
+    "max": [
+      1.9657,
+      3.1793,
+      1.4013
+    ],
+    "size": [
+      3.357,
+      4.087,
+      2.723
+    ],
+    "rMax": 2.414,
+    "triangles": 132,
+    "vertices": 78
+  },
+  "spec": {
+    "style": "natural_rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

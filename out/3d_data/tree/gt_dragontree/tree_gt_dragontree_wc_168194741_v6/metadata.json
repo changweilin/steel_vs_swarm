@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_168194741_v6",
+  "key": "tree/gt_dragontree_wc_168194741_22d8617d_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "natural_botanical",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model accurately captures the iconic radial structure of the Dracaena draco (Dragon Tree). The trunk is represented by a conical frustum, and the dense, sword-like leaf canopy is modeled using a large, flattened ellipsoid to mimic the characteristic umbrella-like silhouette. The scale is set to approximately 3.5m height for the tree, consistent with the visual context.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_168194741.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_168194741~0.png",
+  "created_at": "2026-08-20T16:56:09.911Z",
+  "bounds": {
+    "min": [
+      -1.8,
+      0,
+      -1.7119
+    ],
+    "max": [
+      1.8,
+      2.9,
+      1.7119
+    ],
+    "size": [
+      3.6,
+      2.9,
+      3.424
+    ],
+    "rMax": 2.484,
+    "triangles": 528,
+    "vertices": 323
+  },
+  "spec": {
+    "style": "natural_botanical"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

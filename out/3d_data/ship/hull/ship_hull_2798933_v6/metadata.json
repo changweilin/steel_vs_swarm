@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_2798933_v6",
+  "key": "ship/hull_2798933_bb7f491f_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "fishing_vessel",
+  "symmetryMode": "symmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model accurately captures the fishing vessel's hull, bridge, and mast structure. The bow wedge and main hull are correctly proportioned. The bridge windows are represented with glassHex, and the mast and radar equipment are included. Symmetry is maintained for the hull and superstructure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/2798933.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\2798933~0.png",
+  "created_at": "2026-08-20T16:10:02.914Z",
+  "bounds": {
+    "min": [
+      -2,
+      0,
+      -6
+    ],
+    "max": [
+      2,
+      7.5,
+      9
+    ],
+    "size": [
+      4,
+      7.5,
+      15
+    ],
+    "rMax": 9.22,
+    "triangles": 498,
+    "vertices": 310
+  },
+  "spec": {
+    "style": "fishing_vessel"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

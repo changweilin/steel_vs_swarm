@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2",
+  "sourceImage": "building/mass/1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2",
+  "style": "Mediterranean Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 10506784,
+    "facadeHex": 14666138,
+    "baseHex": 12632256,
+    "accentHex": 8421504,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 4621720
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_body",
+    "main_roof",
+    "portico_base",
+    "portico_roof",
+    "window_1",
+    "window_2",
+    "arch_1",
+    "arch_2",
+    "arch_3",
+    "chimney",
+    "balcony_railing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

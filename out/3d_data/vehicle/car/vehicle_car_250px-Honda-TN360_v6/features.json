@@ -1,0 +1,37 @@
+{
+  "id": "vehicle_car_250px-Honda-TN360",
+  "sourceImage": "vehicle/car/250px-Honda-TN360",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 7244196,
+    "facadeHex": 7244196,
+    "baseHex": 2105376,
+    "accentHex": 12632256,
+    "darkHex": 1315840,
+    "brightHex": 15790320,
+    "glassHex": 3362195
+  },
+  "totalParts": 15,
+  "partNames": [
+    "chassis",
+    "cabin_body",
+    "cargo_bed",
+    "front_windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_bumper",
+    "front_grille",
+    "left_headlight",
+    "right_headlight",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_rearview_mirror"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

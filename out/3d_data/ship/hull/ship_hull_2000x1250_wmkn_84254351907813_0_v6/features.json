@@ -1,0 +1,43 @@
+{
+  "id": "ship_hull_2000x1250_wmkn_84254351907813_0",
+  "sourceImage": "ship/hull/2000x1250_wmkn_84254351907813_0",
+  "style": "military_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11843250,
+    "facadeHex": 9871523,
+    "baseHex": 3290165,
+    "accentHex": 14540253,
+    "darkHex": 2105376,
+    "brightHex": 15790320,
+    "glassHex": 3368652
+  },
+  "totalParts": 17,
+  "partNames": [
+    "hull_base",
+    "hull_main",
+    "bow_wedge",
+    "main_deck",
+    "foredeck_gun",
+    "superstructure_base",
+    "bridge_glass",
+    "bridge_roof",
+    "integrated_mast_lower",
+    "integrated_mast_upper",
+    "radar_dome_port",
+    "radar_dome_starboard",
+    "aft_superstructure",
+    "funnel_block",
+    "helipad_deck",
+    "life_ring_port",
+    "life_ring_starboard"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "frustum_pyramid",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

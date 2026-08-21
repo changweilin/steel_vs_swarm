@@ -1,0 +1,43 @@
+{
+  "id": "vehicle_car_jspace-pu_20241108_menu",
+  "sourceImage": "vehicle/car/jspace-pu_20241108_menu",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 7897735,
+    "facadeHex": 8424075,
+    "baseHex": 2434341,
+    "accentHex": 3289650,
+    "darkHex": 1381653,
+    "brightHex": 14540253,
+    "glassHex": 2108745
+  },
+  "totalParts": 20,
+  "partNames": [
+    "chassis_base",
+    "cab_body",
+    "cab_roof",
+    "front_windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_grille_bumper",
+    "left_headlight",
+    "right_headlight",
+    "left_mirror",
+    "right_mirror",
+    "cargo_bed_base",
+    "cargo_front_wall",
+    "cargo_left_wall",
+    "cargo_right_wall",
+    "cargo_rear_wall",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel",
+    "rear_right_wheel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

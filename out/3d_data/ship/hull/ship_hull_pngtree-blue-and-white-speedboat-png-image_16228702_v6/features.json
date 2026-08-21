@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_pngtree-blue-and-white-speedboat-png-image_16228702",
+  "sourceImage": "ship/hull/pngtree-blue-and-white-speedboat-png-image_16228702",
+  "style": "modern motor yacht",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 255,
+    "baseHex": 16777215,
+    "accentHex": 12632256,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8421631
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull_base",
+    "hull_blue_side",
+    "bow_wedge",
+    "cabin_structure",
+    "windshield_front",
+    "canopy_roof",
+    "railing_bow",
+    "side_window_port",
+    "side_window_starboard",
+    "anchor_assembly"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c_1_v6",
+  "key": "building/mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c~1_aeb54c5b_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Mediterranean-style villa with tiled roof and arched facade",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the three-story structure, the tiled roof with dormers, the arched ground floor, and the balcony railing. The color palette is consistent with the Mediterranean aesthetic. The structural integrity is maintained by using box and wedge primitives for the main mass and roof, with glassHex for windows.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c~1.png",
+  "created_at": "2026-08-21T05:46:17.798Z",
+  "bounds": {
+    "min": [
+      -12.5,
+      -1,
+      -5
+    ],
+    "max": [
+      12.5,
+      12,
+      5
+    ],
+    "size": [
+      25,
+      13,
+      10
+    ],
+    "rMax": 13.463,
+    "triangles": 140,
+    "vertices": 96
+  },
+  "spec": {
+    "style": "Mediterranean-style villa with tiled roof and arched facade"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

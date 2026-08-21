@@ -1,0 +1,28 @@
+{
+  "id": "rock_main_images (5)",
+  "sourceImage": "rock/main/images (5)",
+  "style": "Natural Rock Formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7368816,
+    "facadeHex": 6579304,
+    "baseHex": 4605510,
+    "accentHex": 8553090,
+    "darkHex": 2631720,
+    "brightHex": 9868950,
+    "glassHex": 3289650
+  },
+  "totalParts": 5,
+  "partNames": [
+    "rock_base_main",
+    "rock_middle_cluster",
+    "rock_right_elongated",
+    "rock_front_wedge",
+    "rock_ground_anchor"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

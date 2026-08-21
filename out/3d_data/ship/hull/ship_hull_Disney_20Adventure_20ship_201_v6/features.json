@@ -1,0 +1,32 @@
+{
+  "id": "ship_hull_Disney%20Adventure%20ship%201",
+  "sourceImage": "ship/hull/Disney%20Adventure%20ship%201",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 2105664,
+    "accentHex": 16766720,
+    "darkHex": 328965,
+    "brightHex": 14540253,
+    "glassHex": 4621735
+  },
+  "totalParts": 8,
+  "partNames": [
+    "hull_base",
+    "bow_wedge",
+    "superstructure_main",
+    "bridge_front",
+    "funnel_1",
+    "lifeboat_1",
+    "lifeboat_2",
+    "radar_dome"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "building_dwg_civic_ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e",
+  "sourceImage": "building/dwg_civic/ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e",
+  "style": "Neoclassical Historic Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 12632256,
+    "accentHex": 16777215,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8438271
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_central_block",
+    "central_roof",
+    "central_dome",
+    "left_wing",
+    "right_wing",
+    "left_roof",
+    "right_roof",
+    "central_portico_columns",
+    "main_entrance_glass",
+    "left_wing_windows",
+    "right_wing_windows",
+    "foundation_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome",
+    "cylinder"
+  ]
+}

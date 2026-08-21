@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_20230210700917",
+  "sourceImage": "building/mass/20230210700917",
+  "style": "Mughal Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 14737632,
+    "accentHex": 12632256,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8438271
+  },
+  "totalParts": 10,
+  "partNames": [
+    "MainPlinth",
+    "MainBody",
+    "CentralDome",
+    "Minaret1",
+    "Minaret2",
+    "Minaret3",
+    "Minaret4",
+    "MainEntrance",
+    "SideArch1",
+    "SideArch2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "hemisphere_dome",
+    "cylinder"
+  ]
+}

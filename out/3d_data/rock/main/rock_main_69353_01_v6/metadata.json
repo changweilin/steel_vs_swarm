@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_69353_01_v6",
+  "key": "rock/main_69353_01_abb820ea_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the iconic monolithic sandstone rock formation using combined polyhedron volumes. The main bulky body, characteristic vertical grooves, sloping faces, and surrounding terrain matching the Uluru reference photograph were well represented.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/69353_01.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\69353_01~0.png",
+  "created_at": "2026-08-20T16:17:33.035Z",
+  "bounds": {
+    "min": [
+      -60,
+      -11.7442,
+      -45
+    ],
+    "max": [
+      60,
+      47.7442,
+      45
+    ],
+    "size": [
+      120,
+      59.488,
+      90
+    ],
+    "rMax": 75,
+    "triangles": 188,
+    "vertices": 114
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

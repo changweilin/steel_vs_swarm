@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_132_v6",
+  "key": "rock/main_132_fb1ac1e1_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "megalithic stone monument",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the primary foreground megalith along with the surrounding standing stones in the grassy field, accurately capturing their rough, faceted, and vertically elongated stone volumes using polyhedrons and dodecahedron structures.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/132.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\132~0.png",
+  "created_at": "2026-08-20T16:16:48.641Z",
+  "bounds": {
+    "min": [
+      -20,
+      -0.2,
+      -20
+    ],
+    "max": [
+      20,
+      4.991,
+      20
+    ],
+    "size": [
+      40,
+      5.191,
+      40
+    ],
+    "rMax": 28.284,
+    "triangles": 344,
+    "vertices": 196
+  },
+  "spec": {
+    "style": "megalithic stone monument"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

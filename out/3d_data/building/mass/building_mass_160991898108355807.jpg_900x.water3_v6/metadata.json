@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_160991898108355807.jpg_900x.water3_v6",
+  "key": "building/mass_160991898108355807.jpg!900x.water3_9077e646_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately reconstructs the multi-story modern apartment building with its stepped massing, detailed balconies, glass windows, dark facade panels, and warm wood-accent vertical columns. The front facade grid, recessed balconies, and roof structure are well aligned.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/160991898108355807.jpg!900x.water3.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\160991898108355807.jpg!900x.water3~0.png",
+  "created_at": "2026-08-20T17:19:24.440Z",
+  "bounds": {
+    "min": [
+      -9.5,
+      0,
+      -5.1
+    ],
+    "max": [
+      7.1,
+      27.4,
+      5.3776
+    ],
+    "size": [
+      16.6,
+      27.4,
+      10.478
+    ],
+    "rMax": 10.782,
+    "triangles": 504,
+    "vertices": 325
+  },
+  "spec": {
+    "style": "modern_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

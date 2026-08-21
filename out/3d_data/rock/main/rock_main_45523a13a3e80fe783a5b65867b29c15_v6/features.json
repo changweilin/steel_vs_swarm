@@ -1,0 +1,36 @@
+{
+  "id": "rock_main_45523a13a3e80fe783a5b65867b29c15",
+  "sourceImage": "rock/main/45523a13a3e80fe783a5b65867b29c15",
+  "style": "natural_rock_barrier",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 13816528,
+    "facadeHex": 9868950,
+    "baseHex": 6579300,
+    "accentHex": 11842740,
+    "darkHex": 3947580,
+    "brightHex": 15790320,
+    "glassHex": 4543595
+  },
+  "totalParts": 13,
+  "partNames": [
+    "Rock_Base_Main_1",
+    "Rock_Base_Main_2",
+    "Rock_Base_Main_3",
+    "Rock_Mid_1",
+    "Rock_Mid_2",
+    "Rock_Front_Right",
+    "Rock_Front_Left",
+    "Rock_Center_Peak",
+    "Rock_Rear_Left",
+    "Rock_Rear_Right",
+    "Rock_Small_Detail_1",
+    "Rock_Small_Detail_2",
+    "Rock_Peak_Back"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

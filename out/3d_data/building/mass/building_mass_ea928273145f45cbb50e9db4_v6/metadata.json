@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_ea928273145f45cbb50e9db4_v6",
+  "key": "building/mass_ea928273145f45cbb50e9db4_41ba7b10_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the multi-level massing of the modern villa, including the garage block, the main living volume, and the cantilevered roof structure. All glass elements are represented as distinct planes with appropriate offsets to prevent Z-fighting. The structural integrity is maintained with closed volumes.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/ea928273145f45cbb50e9db4.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\ea928273145f45cbb50e9db4~0.png",
+  "created_at": "2026-08-21T07:58:16.015Z",
+  "bounds": {
+    "min": [
+      -7,
+      -0.1992,
+      -3
+    ],
+    "max": [
+      5,
+      5.9,
+      3
+    ],
+    "size": [
+      12,
+      6.099,
+      6
+    ],
+    "rMax": 7.616,
+    "triangles": 104,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "Modern Minimalist Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

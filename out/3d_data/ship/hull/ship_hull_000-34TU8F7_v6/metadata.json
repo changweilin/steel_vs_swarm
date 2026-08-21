@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_000-34TU8F7_v6",
+  "key": "ship/hull_000-34TU8F7_eeffdce5_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern_warship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the Type 054A frigate's hull geometry, including the wedge-shaped bow, the tiered superstructure, the main mast, and the helicopter deck. The color palette adheres to the 7-Zone system. Symmetry is maintained for the hull and superstructure components. The bridge windows are represented with glassHex for visual distinction.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/000-34TU8F7.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\000-34TU8F7~0.png",
+  "created_at": "2026-08-20T16:05:03.621Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -67
+    ],
+    "max": [
+      7,
+      17,
+      81
+    ],
+    "size": [
+      14,
+      17,
+      148
+    ],
+    "rMax": 81.302,
+    "triangles": 330,
+    "vertices": 198
+  },
+  "spec": {
+    "style": "modern_warship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,51 @@
+{
+  "id": "building_mass_173407398147386206.jpg!750x",
+  "sourceImage": "building/mass/173407398147386206.jpg!750x",
+  "style": "Modern Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 4600609,
+    "baseHex": 1973790,
+    "accentHex": 7895160,
+    "darkHex": 1315860,
+    "brightHex": 12566463,
+    "glassHex": 2184131
+  },
+  "totalParts": 29,
+  "partNames": [
+    "ground_base",
+    "main_facade_core",
+    "corner_column_front_left",
+    "corner_column_front_right",
+    "corner_column_back_left",
+    "corner_column_back_right",
+    "roof_cornice_top",
+    "roof_flat_cap",
+    "ground_storefront_glass",
+    "central_vertical_accent_stripe",
+    "balcony_stack_front_left_1",
+    "balcony_stack_front_left_2",
+    "balcony_stack_front_left_3",
+    "balcony_stack_front_left_4",
+    "balcony_stack_front_left_5",
+    "balcony_stack_front_left_6",
+    "balcony_stack_front_left_7",
+    "balcony_stack_front_left_8",
+    "balcony_stack_front_right_1",
+    "balcony_stack_front_right_2",
+    "balcony_stack_front_right_3",
+    "balcony_stack_front_right_4",
+    "balcony_stack_front_right_5",
+    "balcony_stack_front_right_6",
+    "balcony_stack_front_right_7",
+    "balcony_stack_front_right_8",
+    "window_band_left_profile",
+    "window_band_right_profile",
+    "rear_wall_panel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

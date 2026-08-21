@@ -1,0 +1,41 @@
+{
+  "id": "vehicle_car_showcase2_edeliver5_h1_720x414",
+  "sourceImage": "vehicle/car/showcase2_edeliver5_h1_720x414",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 1644825,
+    "baseHex": 328965,
+    "accentHex": 2105376,
+    "darkHex": 657930,
+    "brightHex": 14540253,
+    "glassHex": 33023
+  },
+  "totalParts": 18,
+  "partNames": [
+    "chassis_base",
+    "car_body",
+    "front_windshield",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_front_rim",
+    "right_front_rim",
+    "left_rear_rim",
+    "right_rear_rim",
+    "headlight_left",
+    "headlight_right",
+    "front_grille",
+    "left_window_side",
+    "right_window_side",
+    "left_side_mirror",
+    "right_side_mirror"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

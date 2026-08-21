@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_20230614-025323_U26000_M862223_8d98_v6",
+  "key": "building/mass_20230614-025323_U26000_M862223_8d98_067c1c69_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_architectural_building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the distinctive stacked concrete block aesthetic of the multi-level modern waterfront building, including the cascading terraced green roofs, expansive glass curtain walls, and surrounding waterfront promenade structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/20230614-025323_U26000_M862223_8d98.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\20230614-025323_U26000_M862223_8d98~0.png",
+  "created_at": "2026-08-20T17:21:47.839Z",
+  "bounds": {
+    "min": [
+      -35,
+      -2,
+      -10
+    ],
+    "max": [
+      16,
+      17.4,
+      10
+    ],
+    "size": [
+      51,
+      19.4,
+      20
+    ],
+    "rMax": 36.401,
+    "triangles": 116,
+    "vertices": 78
+  },
+  "spec": {
+    "style": "modern_architectural_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

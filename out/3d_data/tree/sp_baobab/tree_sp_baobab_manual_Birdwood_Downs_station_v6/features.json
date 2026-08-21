@@ -1,0 +1,31 @@
+{
+  "id": "tree_sp_baobab_manual_Birdwood_Downs_station",
+  "sourceImage": "tree/sp_baobab/manual_Birdwood_Downs_station",
+  "style": "natural_baobab_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8294400,
+    "facadeHex": 10066329,
+    "baseHex": 6579300,
+    "accentHex": 16777215,
+    "darkHex": 2236962,
+    "brightHex": 13421772,
+    "glassHex": 3355443
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk_base",
+    "hollow_cavity",
+    "upper_trunk",
+    "main_canopy_left",
+    "main_canopy_right",
+    "top_canopy_cluster",
+    "root_flare"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box",
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

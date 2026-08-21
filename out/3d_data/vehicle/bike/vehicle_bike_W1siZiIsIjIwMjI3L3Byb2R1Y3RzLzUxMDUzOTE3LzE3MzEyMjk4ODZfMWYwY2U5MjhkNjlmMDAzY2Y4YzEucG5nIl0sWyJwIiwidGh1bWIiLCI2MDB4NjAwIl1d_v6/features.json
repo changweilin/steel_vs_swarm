@@ -1,0 +1,42 @@
+{
+  "id": "vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
+  "sourceImage": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
+  "style": "realistic",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 10526880,
+    "baseHex": 6710886,
+    "accentHex": 15103043,
+    "darkHex": 2236962,
+    "brightHex": 15658734,
+    "glassHex": 3355443
+  },
+  "totalParts": 19,
+  "partNames": [
+    "front_tire",
+    "front_rim",
+    "rear_tire",
+    "rear_rim",
+    "training_wheel",
+    "training_wheel_tire",
+    "main_frame_curve",
+    "lower_frame_tube",
+    "seat_tube",
+    "rear_fork",
+    "front_fork",
+    "handlebar_stem",
+    "handlebar",
+    "saddle",
+    "chain_guard",
+    "pedal",
+    "basket",
+    "front_fender",
+    "rear_fender"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

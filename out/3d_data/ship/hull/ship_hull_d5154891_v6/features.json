@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull_d5154891",
+  "sourceImage": "ship/hull/d5154891",
+  "style": "container_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16711680,
+    "baseHex": 2105376,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 49151
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "bulbous_bow",
+    "lower_hull",
+    "superstructure_base",
+    "bridge_windows",
+    "funnel_structure",
+    "funnel_top",
+    "mast",
+    "radar_dome",
+    "deck_containers"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

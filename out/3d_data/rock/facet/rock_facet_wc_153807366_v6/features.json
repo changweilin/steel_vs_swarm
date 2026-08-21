@@ -1,0 +1,34 @@
+{
+  "id": "rock_facet_wc_153807366",
+  "sourceImage": "rock/facet/wc_153807366",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7234645,
+    "facadeHex": 5262145,
+    "baseHex": 3224376,
+    "accentHex": 8816254,
+    "darkHex": 2303534,
+    "brightHex": 12566463,
+    "glassHex": 3291035
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_rock_base",
+    "main_rock_upper_peak",
+    "main_rock_right_bulk",
+    "main_rock_front_shelf",
+    "main_rock_left_slope",
+    "lichen_accent_patch",
+    "waterline_foam_main",
+    "small_rock_base",
+    "small_rock_top",
+    "waterline_foam_small"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "box"
+  ]
+}

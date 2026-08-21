@@ -1,0 +1,34 @@
+{
+  "id": "landmark_main_20190403085330527",
+  "sourceImage": "landmark/main/20190403085330527",
+  "style": "neoclassical_architecture_with_modern_glass_pyramid",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4473924,
+    "facadeHex": 13487565,
+    "baseHex": 10526880,
+    "accentHex": 16766720,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 8454143
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_pyramid",
+    "left_wing_base",
+    "right_wing_base",
+    "left_wing_roof",
+    "right_wing_roof",
+    "left_column_1",
+    "right_column_1",
+    "plaza_floor",
+    "small_pyramid_left",
+    "small_pyramid_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "pyramid",
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

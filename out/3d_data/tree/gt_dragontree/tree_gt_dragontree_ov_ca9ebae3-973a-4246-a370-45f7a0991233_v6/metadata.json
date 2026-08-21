@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233_v6",
+  "key": "tree/gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233_1f7f8d90_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "Dragon Tree (Dracaena draco) fractal canopy",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the complex, fractal-like branching structure of the Dragon Tree using a hierarchy of cylinders. The canopy clusters are represented by dodecahedron_polyhedron to simulate the dense, spiky leaf clusters characteristic of this species. The branching logic follows the upward-spreading pattern observed in the photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/ov_ca9ebae3-973a-4246-a370-45f7a0991233.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\ov_ca9ebae3-973a-4246-a370-45f7a0991233~0.png",
+  "created_at": "2026-08-20T16:09:29.568Z",
+  "bounds": {
+    "min": [
+      -2.0605,
+      0,
+      -0.6539
+    ],
+    "max": [
+      2.0605,
+      6.6539,
+      0.6539
+    ],
+    "size": [
+      4.121,
+      6.654,
+      1.308
+    ],
+    "rMax": 2.162,
+    "triangles": 348,
+    "vertices": 190
+  },
+  "spec": {
+    "style": "Dragon Tree (Dracaena draco) fractal canopy"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

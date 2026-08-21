@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_2000x1429_wmkn_19056648845677_0_v6",
+  "key": "ship/hull_2000x1429_wmkn_19056648845677_0_22cfeafa_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern_warship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the hull geometry, the tiered superstructure, the mast assembly, and the aft helicopter deck. Symmetry is applied to ensure both sides of the hull and superstructure are represented. The color palette follows the 7-Zone system, and dimensions are scaled to represent a frigate-class vessel.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/2000x1429_wmkn_19056648845677_0.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\2000x1429_wmkn_19056648845677_0~0.png",
+  "created_at": "2026-08-20T16:07:48.790Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -60.433
+    ],
+    "max": [
+      7,
+      20,
+      67.5
+    ],
+    "size": [
+      14,
+      20,
+      127.933
+    ],
+    "rMax": 67.862,
+    "triangles": 318,
+    "vertices": 192
+  },
+  "spec": {
+    "style": "modern_warship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

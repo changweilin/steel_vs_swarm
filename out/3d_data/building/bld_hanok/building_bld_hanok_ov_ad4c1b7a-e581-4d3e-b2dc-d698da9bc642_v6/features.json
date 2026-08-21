@@ -1,0 +1,45 @@
+{
+  "id": "building_bld_hanok_ov_ad4c1b7a-e581-4d3e-b2dc-d698da9bc642",
+  "sourceImage": "building/bld_hanok/ov_ad4c1b7a-e581-4d3e-b2dc-d698da9bc642",
+  "style": "building_hanok",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4474437,
+    "facadeHex": 13471822,
+    "baseHex": 10061943,
+    "accentHex": 1843230,
+    "darkHex": 3156524,
+    "brightHex": 15790320,
+    "glassHex": 2243642
+  },
+  "totalParts": 20,
+  "partNames": [
+    "main_building_base",
+    "main_building_facade",
+    "lattice_door_1",
+    "lattice_door_2",
+    "lattice_door_3",
+    "lattice_door_4",
+    "main_roof_center",
+    "main_roof_eave_front",
+    "gate_posts_left",
+    "gate_posts_right",
+    "gate_wooden_doors",
+    "gate_signboard",
+    "gate_roof",
+    "gate_roof_eave",
+    "front_wall_clay",
+    "front_wall_base",
+    "front_wall_roof",
+    "front_wall_roof_cap",
+    "courtyard_tree_trunk",
+    "courtyard_tree_foliage"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "id": "vehicle_bike_6756854_OR_m",
+  "sourceImage": "vehicle/bike/6756854_OR_m",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16711680,
+    "facadeHex": 2631720,
+    "baseHex": 1315860,
+    "accentHex": 16724736,
+    "darkHex": 657930,
+    "brightHex": 14540253,
+    "glassHex": 33293
+  },
+  "totalParts": 28,
+  "partNames": [
+    "front_tire",
+    "rear_tire",
+    "front_rim",
+    "rear_rim",
+    "down_tube",
+    "down_tube_accent",
+    "top_tube",
+    "top_tube_accent",
+    "seat_tube",
+    "seat_post",
+    "saddle",
+    "bottom_bracket",
+    "chainring",
+    "pedal_crank",
+    "pedal",
+    "left_chainstay",
+    "right_chainstay",
+    "left_seatstay",
+    "right_seatstay",
+    "head_tube",
+    "handlebar_stem",
+    "handlebar",
+    "left_grip",
+    "right_grip",
+    "front_fork_left",
+    "front_fork_right",
+    "brake_cable_1",
+    "rear_derailleur"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

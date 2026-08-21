@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_15__v6",
+  "key": "tree/canopy_images (15)_2d42162c_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "stylized_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree's twisted trunk is represented by two interlocking cylinders to mimic the spiral structure. The canopy is modeled using multiple ellipsoid spheres to capture the layered, organic, and spreading nature of the tree crown shown in the illustration. The proportions and color palette align with the provided image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (15).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (15)~0.png",
+  "created_at": "2026-08-20T16:10:57.934Z",
+  "bounds": {
+    "min": [
+      -2,
+      1,
+      -1.4266
+    ],
+    "max": [
+      2.5,
+      5.7,
+      1.4266
+    ],
+    "size": [
+      4.5,
+      4.7,
+      2.853
+    ],
+    "rMax": 2.878,
+    "triangles": 608,
+    "vertices": 369
+  },
+  "spec": {
+    "style": "stylized_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

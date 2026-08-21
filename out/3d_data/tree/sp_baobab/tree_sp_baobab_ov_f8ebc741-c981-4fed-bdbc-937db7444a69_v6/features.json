@@ -1,0 +1,30 @@
+{
+  "id": "tree_sp_baobab_ov_f8ebc741-c981-4fed-bdbc-937db7444a69",
+  "sourceImage": "tree/sp_baobab/ov_f8ebc741-c981-4fed-bdbc-937db7444a69",
+  "style": "sketch_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3421236,
+    "facadeHex": 8417336,
+    "baseHex": 4207648,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "canopy_top",
+    "canopy_left",
+    "canopy_right",
+    "root_base",
+    "branch_detail_1",
+    "branch_detail_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

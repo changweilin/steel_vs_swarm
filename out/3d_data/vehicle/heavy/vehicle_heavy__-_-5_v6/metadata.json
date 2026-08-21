@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_heavy__-_-5_v6",
+  "key": "vehicle/heavy_文境旅遊-賓士豪華大客車-5_815d2cf8_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/heavy/文境旅遊-賓士豪華大客車-5.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\文境旅遊-賓士豪華大客車-5.jpg",
+  "created_at": "2026-08-20T15:35:25.191Z",
+  "bounds": {
+    "min": [
+      -1.82,
+      0,
+      -5.85
+    ],
+    "max": [
+      1.82,
+      3.1835,
+      5.87
+    ],
+    "size": [
+      3.64,
+      3.183,
+      11.72
+    ],
+    "rMax": 6.146,
+    "triangles": 576,
+    "vertices": 332
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

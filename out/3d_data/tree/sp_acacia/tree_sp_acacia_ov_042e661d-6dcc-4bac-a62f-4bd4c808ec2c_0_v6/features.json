@@ -1,0 +1,25 @@
+{
+  "id": "tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0",
+  "sourceImage": "tree/sp_acacia/ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0",
+  "style": "natural_landscape_vegetation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6579300,
+    "facadeHex": 8553062,
+    "baseHex": 5723904,
+    "accentHex": 9868950,
+    "darkHex": 3947580,
+    "brightHex": 13421772,
+    "glassHex": 16777215
+  },
+  "totalParts": 4,
+  "partNames": [
+    "main_mound_base",
+    "vegetation_cluster_top",
+    "secondary_patch_left",
+    "secondary_patch_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere"
+  ]
+}

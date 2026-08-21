@@ -1,0 +1,40 @@
+{
+  "id": "rock_collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_v6",
+  "key": "rock/collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_3c230bec_v6",
+  "family": "rock",
+  "subpart": "collapse",
+  "style": "rock_boulder",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The main boulder is successfully modeled using an irregular assembly of dodecahedrons, icosahedrons, and wedges to closely approximate its weathered, asymmetric, and rounded conical rock shape resting on the forest ground.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/collapse/ov_4a7de829-1184-4b05-bf5d-427b77fc76f5.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\collapse\\ov_4a7de829-1184-4b05-bf5d-427b77fc76f5~0.png",
+  "created_at": "2026-08-20T16:18:21.010Z",
+  "bounds": {
+    "min": [
+      -1.7671,
+      -0.1671,
+      -1.1048
+    ],
+    "max": [
+      1.4521,
+      2.5104,
+      2.0671
+    ],
+    "size": [
+      3.219,
+      2.678,
+      3.172
+    ],
+    "rMax": 2.526,
+    "triangles": 168,
+    "vertices": 98
+  },
+  "spec": {
+    "style": "rock_boulder"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

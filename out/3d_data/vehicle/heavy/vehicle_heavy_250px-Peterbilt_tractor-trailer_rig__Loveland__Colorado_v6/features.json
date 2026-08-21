@@ -1,0 +1,41 @@
+{
+  "id": "vehicle_heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado",
+  "sourceImage": "vehicle/heavy/250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12586544,
+    "facadeHex": 11796512,
+    "baseHex": 2105376,
+    "accentHex": 14693442,
+    "darkHex": 1052688,
+    "brightHex": 15658734,
+    "glassHex": 33023
+  },
+  "totalParts": 19,
+  "partNames": [
+    "chassis_base",
+    "cab_body",
+    "cab_hood",
+    "front_grille",
+    "front_bumper",
+    "windshield",
+    "left_door_window",
+    "right_door_window",
+    "left_side_mirror",
+    "right_side_mirror",
+    "roof_sign",
+    "trailer_body",
+    "trailer_roof",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel_1",
+    "right_rear_wheel_1",
+    "left_rear_wheel_2",
+    "right_rear_wheel_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

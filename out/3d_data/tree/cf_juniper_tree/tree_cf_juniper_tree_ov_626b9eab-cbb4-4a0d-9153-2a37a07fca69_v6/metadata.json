@@ -1,0 +1,40 @@
+{
+  "id": "tree_cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69_v6",
+  "key": "tree/cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69_d6bc3d40_v6",
+  "family": "tree",
+  "subpart": "cf_juniper_tree",
+  "style": "Ancient Bristlecone Pine",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the twisted, gnarled aesthetic of the ancient bristlecone pine using a combination of conical frustums for the main trunk and multiple dodecahedron_polyhedron components to represent the complex, weathered, and splintered branch structure. The base is anchored at y=0 with a wide, irregular root system. The color palette reflects the weathered wood texture.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/cf_juniper_tree/ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\cf_juniper_tree\\ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69~0.png",
+  "created_at": "2026-08-20T16:08:45.120Z",
+  "bounds": {
+    "min": [
+      -2.321,
+      -0.5473,
+      -1.5
+    ],
+    "max": [
+      2.9013,
+      6.5,
+      1.5
+    ],
+    "size": [
+      5.222,
+      7.047,
+      3
+    ],
+    "rMax": 3.266,
+    "triangles": 272,
+    "vertices": 152
+  },
+  "spec": {
+    "style": "Ancient Bristlecone Pine"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

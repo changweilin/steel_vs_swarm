@@ -1,0 +1,31 @@
+{
+  "id": "rock_main_images (6)",
+  "sourceImage": "rock/main/images (6)",
+  "style": "rock_and_foliage",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 43520,
+    "facadeHex": 5916244,
+    "baseHex": 2105376,
+    "accentHex": 329856,
+    "darkHex": 1315860,
+    "brightHex": 8421504,
+    "glassHex": 16777215
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_rock_base_left",
+    "main_rock_base_right",
+    "rock_top_crest",
+    "moss_patch_top",
+    "grass_blade_cluster_1",
+    "grass_blade_cluster_2",
+    "grass_blade_cluster_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

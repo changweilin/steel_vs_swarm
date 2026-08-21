@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c~1",
+  "sourceImage": "building/mass/1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c~1",
+  "style": "Mediterranean-style villa with tiled roof and arched facade",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8347685,
+    "facadeHex": 14663535,
+    "baseHex": 10526880,
+    "accentHex": 6579300,
+    "darkHex": 3158064,
+    "brightHex": 15790320,
+    "glassHex": 4621730
+  },
+  "totalParts": 13,
+  "partNames": [
+    "main_body",
+    "roof_main",
+    "dormer_1",
+    "dormer_2",
+    "dormer_3",
+    "balcony_railing",
+    "window_1",
+    "window_2",
+    "window_3",
+    "arch_1",
+    "arch_2",
+    "arch_3",
+    "ground_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_lighthouse_ov_235a93b9-b57e-439f-94aa-a2c084f9edea_v6",
+  "key": "building/bld_lighthouse_ov_235a93b9-b57e-439f-94aa-a2c084f9edea_fd3efeda_v6",
+  "family": "building",
+  "subpart": "bld_lighthouse",
+  "style": "building/bld_lighthouse",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The lighthouse is reconstructed as a multi-part assembly. The main tower is a conical frustum, with a detailed lantern room on top. The base is anchored to a rocky foundation. All windows are modeled as individual glass boxes slightly offset from the facade to prevent Z-fighting. The lantern roof and gallery are modeled with correct downward-sloping geometry.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_lighthouse/ov_235a93b9-b57e-439f-94aa-a2c084f9edea.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_lighthouse\\ov_235a93b9-b57e-439f-94aa-a2c084f9edea~0.png",
+  "created_at": "2026-08-20T17:39:09.880Z",
+  "bounds": {
+    "min": [
+      -2.5,
+      -0.5,
+      -2.3776
+    ],
+    "max": [
+      2.5,
+      14,
+      2.3776
+    ],
+    "size": [
+      5,
+      14.5,
+      4.755
+    ],
+    "rMax": 3.45,
+    "triangles": 528,
+    "vertices": 314
+  },
+  "spec": {
+    "style": "building/bld_lighthouse"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

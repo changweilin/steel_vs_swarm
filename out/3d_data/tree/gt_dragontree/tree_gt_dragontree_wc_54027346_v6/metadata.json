@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_54027346_v6",
+  "key": "tree/gt_dragontree_wc_54027346_a9839efc_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "natural_botanical",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The Dragon Blood Tree is reconstructed using a central conical trunk and a large, flattened ellipsoidal canopy. The branching structure is represented by a dense cluster of smaller ellipsoids to mimic the characteristic umbrella-shaped crown. The proportions align with the visual scale of the tree relative to the ground.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_54027346.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_54027346~0.png",
+  "created_at": "2026-08-20T17:00:02.220Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      0,
+      -6.1819
+    ],
+    "max": [
+      6.5,
+      10,
+      6.1819
+    ],
+    "size": [
+      13,
+      10,
+      12.364
+    ],
+    "rMax": 8.97,
+    "triangles": 908,
+    "vertices": 555
+  },
+  "spec": {
+    "style": "natural_botanical"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

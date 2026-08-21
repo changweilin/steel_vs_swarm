@@ -1,0 +1,33 @@
+{
+  "id": "rock_mg_arch_ov_aa4ff912-daec-4066-b9a0-d017e1132dff",
+  "sourceImage": "rock/mg_arch/ov_aa4ff912-daec-4066-b9a0-d017e1132dff",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 5921370,
+    "baseHex": 3289650,
+    "accentHex": 11184810,
+    "darkHex": 1973790,
+    "brightHex": 12500670,
+    "glassHex": 3355443
+  },
+  "totalParts": 8,
+  "partNames": [
+    "large_foreground_cliff",
+    "cliff_top_cap",
+    "central_rock_outcrop",
+    "central_rock_peak",
+    "right_bank_cliff",
+    "right_bank_upper_strata",
+    "rock_base_foundation",
+    "mossy_rock_patch"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "box",
+    "polygonal_prism"
+  ]
+}

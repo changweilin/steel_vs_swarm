@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~0",
+  "sourceImage": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~0",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 3355443,
+    "accentHex": 2105376,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 3368652
+  },
+  "totalParts": 15,
+  "partNames": [
+    "rear_tire",
+    "rear_rim",
+    "chain_stay",
+    "seat_stay",
+    "seat_tube",
+    "down_tube",
+    "top_tube",
+    "bottom_bracket",
+    "crank_arm",
+    "chainring",
+    "pedal",
+    "cassette",
+    "rear_derailleur",
+    "saddle",
+    "seat_post"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

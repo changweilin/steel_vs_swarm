@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_58e07d86c351679aa966afe4f56da3f6-420x280",
+  "sourceImage": "building/mass/58e07d86c351679aa966afe4f56da3f6-420x280",
+  "style": "Japanese Castle Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 16777215,
+    "baseHex": 8421504,
+    "accentHex": 16711680,
+    "darkHex": 3355443,
+    "brightHex": 16766720,
+    "glassHex": 4621730
+  },
+  "totalParts": 11,
+  "partNames": [
+    "stone_base",
+    "main_body_lower",
+    "roof_lower",
+    "main_body_middle",
+    "roof_middle",
+    "tower_base",
+    "tower_roof",
+    "window_1",
+    "window_2",
+    "gate_entrance",
+    "ornament_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "wedge",
+    "pyramid"
+  ]
+}

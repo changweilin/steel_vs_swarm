@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_02_outlander_20211001_menu_v6",
+  "key": "vehicle/car_02_outlander_20211001_menu_b102d546_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately reconstructs the modern SUV shown in the image, capturing its characteristic aggressive front grille, chrome accent C-shaped frame, sleek headlights, and robust body proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/02_outlander_20211001_menu.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\02_outlander_20211001_menu~0.png",
+  "created_at": "2026-08-20T17:22:00.655Z",
+  "bounds": {
+    "min": [
+      -1.51,
+      0.2241,
+      -2.1
+    ],
+    "max": [
+      1.51,
+      1.825,
+      2.135
+    ],
+    "size": [
+      3.02,
+      1.601,
+      4.235
+    ],
+    "rMax": 2.615,
+    "triangles": 720,
+    "vertices": 468
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

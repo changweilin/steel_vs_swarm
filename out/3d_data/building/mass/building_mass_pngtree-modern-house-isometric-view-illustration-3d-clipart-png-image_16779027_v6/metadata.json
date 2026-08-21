@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027_v6",
+  "key": "building/mass_pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027_4c4495f3_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Architectural Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model successfully captures the multi-level modern villa structure, including the ground floor deck, the second-floor terrace, and the cantilevered upper floor. Glass surfaces are represented with glassHex, and structural elements are aligned to ensure a solid, non-overlapping geometry. The back and side walls were inferred to complete the 360-degree structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027~0.png",
+  "created_at": "2026-08-21T09:02:15.340Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.15,
+      -6
+    ],
+    "max": [
+      6.1,
+      7.8,
+      6.1
+    ],
+    "size": [
+      12.1,
+      7.95,
+      12.1
+    ],
+    "rMax": 8.627,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "Modern Architectural Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

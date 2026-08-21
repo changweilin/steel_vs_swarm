@@ -1,0 +1,28 @@
+{
+  "id": "landmark_main_ADEC6675-7A2D-4F66-8879-94B55E2CBACA",
+  "sourceImage": "landmark/main/ADEC6675-7A2D-4F66-8879-94B55E2CBACA",
+  "style": "modern_futuristic_skyscraper",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 12632256,
+    "baseHex": 8421504,
+    "accentHex": 16777215,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8965300
+  },
+  "totalParts": 4,
+  "partNames": [
+    "podium_base",
+    "main_tower_body",
+    "tower_top_cap",
+    "podium_frame_support"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "polygonal_prism",
+    "pyramid",
+    "box"
+  ]
+}

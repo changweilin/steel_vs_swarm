@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_pngtree-coniferous-tree-png-image_6230847",
+  "sourceImage": "tree/canopy/pngtree-coniferous-tree-png-image_6230847",
+  "style": "coniferous_tree",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 45056,
+    "facadeHex": 6579300,
+    "baseHex": 3947580,
+    "accentHex": 8421504,
+    "darkHex": 2631720,
+    "brightHex": 12632256,
+    "glassHex": 16777215
+  },
+  "totalParts": 6,
+  "partNames": [
+    "trunk",
+    "foliage_layer_1",
+    "foliage_layer_2",
+    "foliage_layer_3",
+    "foliage_layer_4",
+    "foliage_layer_5"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "pyramid",
+    "frustum_pyramid"
+  ]
+}

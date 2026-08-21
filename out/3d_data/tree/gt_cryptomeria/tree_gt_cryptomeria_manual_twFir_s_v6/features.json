@@ -1,0 +1,34 @@
+{
+  "id": "tree_gt_cryptomeria_manual_twFir_s",
+  "sourceImage": "tree/gt_cryptomeria/manual_twFir_s",
+  "style": "natural_forest_giant_trees",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3421230,
+    "facadeHex": 8549470,
+    "baseHex": 4603930,
+    "accentHex": 16777215,
+    "darkHex": 2631720,
+    "brightHex": 14540253,
+    "glassHex": 11184810
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_trunk_left",
+    "main_trunk_right",
+    "root_base_left",
+    "root_base_right",
+    "canopy_layer_1_left",
+    "canopy_layer_2_left",
+    "canopy_layer_1_right",
+    "canopy_layer_2_right",
+    "top_foliage_left",
+    "top_foliage_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "frustum_pyramid",
+    "pyramid"
+  ]
+}

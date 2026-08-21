@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021",
+  "sourceImage": "building/mass/pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021",
+  "style": "low-poly architectural model",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 14737632,
+    "baseHex": 11579568,
+    "accentHex": 13158600,
+    "darkHex": 5263440,
+    "brightHex": 16777215,
+    "glassHex": 8438200
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_base",
+    "main_walls",
+    "left_roof_wedge",
+    "right_roof_wedge",
+    "chimney",
+    "front_door",
+    "front_left_window",
+    "front_right_window",
+    "attic_left_window",
+    "attic_right_window",
+    "side_right_window"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

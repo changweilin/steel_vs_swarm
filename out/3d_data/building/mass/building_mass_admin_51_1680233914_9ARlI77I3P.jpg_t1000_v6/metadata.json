@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_admin_51_1680233914_9ARlI77I3P.jpg_t1000_v6",
+  "key": "building/mass_admin_51_1680233914_9ARlI77I3P.jpg!t1000_39d8c43c_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model successfully captures the multi-story modern residential building with a carport, balconies, vertical louver facade features, and glass awnings. Proportions and 7-zone color mapping reflect the architectural render accurately.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/admin_51_1680233914_9ARlI77I3P.jpg!t1000.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\admin_51_1680233914_9ARlI77I3P.jpg!t1000~0.png",
+  "created_at": "2026-08-20T17:22:31.360Z",
+  "bounds": {
+    "min": [
+      -2.85,
+      0,
+      -3.6
+    ],
+    "max": [
+      3.3,
+      12.2,
+      5.75
+    ],
+    "size": [
+      6.15,
+      12.2,
+      9.35
+    ],
+    "rMax": 6.63,
+    "triangles": 132,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "modern_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

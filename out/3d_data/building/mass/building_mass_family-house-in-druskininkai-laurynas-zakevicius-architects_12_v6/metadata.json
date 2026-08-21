@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_family-house-in-druskininkai-laurynas-zakevicius-architects_12_v6",
+  "key": "building/mass_family-house-in-druskininkai-laurynas-zakevicius-architects_12_09fd6594_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Scandinavian Cabin",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately captures the distinct dual-pitched roof structure and the expansive glass facade. The proportions of the wooden facade and the roof overhangs are aligned with the reference image. The rear and side walls were mirrored to ensure a complete 360-degree structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/family-house-in-druskininkai-laurynas-zakevicius-architects_12.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\family-house-in-druskininkai-laurynas-zakevicius-architects_12~0.png",
+  "created_at": "2026-08-21T08:00:14.143Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -5
+    ],
+    "max": [
+      7,
+      7.5,
+      5
+    ],
+    "size": [
+      14,
+      7.5,
+      10
+    ],
+    "rMax": 8.602,
+    "triangles": 112,
+    "vertices": 76
+  },
+  "spec": {
+    "style": "Modern Scandinavian Cabin"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

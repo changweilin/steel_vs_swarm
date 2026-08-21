@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_pngtree-modern-two-story-house-architectural-3d-model-rendering-with-balconies-and-png-image_21138844",
+  "sourceImage": "building/mass/pngtree-modern-two-story-house-architectural-3d-model-rendering-with-balconies-and-png-image_21138844",
+  "style": "Modern Minimalist Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14803425,
+    "baseHex": 13158600,
+    "accentHex": 8421504,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4621710
+  },
+  "totalParts": 9,
+  "partNames": [
+    "ground_platform",
+    "main_block_ground",
+    "upper_block_left",
+    "upper_block_right",
+    "staircase_base",
+    "main_window_ground",
+    "upper_balcony_window",
+    "railing_front",
+    "staircase_railing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

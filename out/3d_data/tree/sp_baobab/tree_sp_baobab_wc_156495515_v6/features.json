@@ -1,0 +1,30 @@
+{
+  "id": "tree_sp_baobab_wc_156495515",
+  "sourceImage": "tree/sp_baobab/wc_156495515",
+  "style": "Impressionist Oil Painting Tree Reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 454545,
+    "facadeHex": 786655,
+    "baseHex": 554433,
+    "accentHex": 998877,
+    "darkHex": 332222,
+    "brightHex": 888877,
+    "glassHex": 223344
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk_base",
+    "upper_trunk",
+    "main_canopy_left",
+    "main_canopy_right",
+    "top_canopy_cluster",
+    "root_buttress_1",
+    "root_buttress_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

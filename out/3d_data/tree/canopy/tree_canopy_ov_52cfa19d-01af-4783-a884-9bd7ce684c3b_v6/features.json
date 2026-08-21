@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_ov_52cfa19d-01af-4783-a884-9bd7ce684c3b",
+  "sourceImage": "tree/canopy/ov_52cfa19d-01af-4783-a884-9bd7ce684c3b",
+  "style": "Naturalistic Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 784560,
+    "facadeHex": 564230,
+    "baseHex": 302010,
+    "accentHex": 908020,
+    "darkHex": 201505,
+    "brightHex": 959595,
+    "glassHex": 1976635
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "canopy_left_branch",
+    "canopy_right_branch",
+    "root_base",
+    "branch_detail_1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

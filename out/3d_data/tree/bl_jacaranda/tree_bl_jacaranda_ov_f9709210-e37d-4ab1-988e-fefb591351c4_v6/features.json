@@ -1,0 +1,34 @@
+{
+  "id": "tree_bl_jacaranda_ov_f9709210-e37d-4ab1-988e-fefb591351c4",
+  "sourceImage": "tree/bl_jacaranda/ov_f9709210-e37d-4ab1-988e-fefb591351c4",
+  "style": "nature_tree_reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8355839,
+    "facadeHex": 3812918,
+    "baseHex": 4603953,
+    "accentHex": 11184895,
+    "darkHex": 1973790,
+    "brightHex": 13421772,
+    "glassHex": 3355443
+  },
+  "totalParts": 11,
+  "partNames": [
+    "ground_road",
+    "main_trunk_base",
+    "main_trunk_upper",
+    "branch_left_major",
+    "branch_right_major",
+    "canopy_cluster_center",
+    "canopy_cluster_left",
+    "canopy_cluster_right",
+    "canopy_cluster_top",
+    "background_tree_left_trunk",
+    "background_tree_left_canopy"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

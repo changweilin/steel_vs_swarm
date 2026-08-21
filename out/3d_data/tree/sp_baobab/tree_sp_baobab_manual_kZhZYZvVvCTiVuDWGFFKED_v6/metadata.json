@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED_v6",
+  "key": "tree/sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED_16f3bbf8_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "natural_baobab_forest",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the iconic massive, cylindrical trunks and the flat, sprawling canopy structure of the Adansonia grandidieri trees. The proportions between the thick trunks and the sparse, wide-spreading branch systems are maintained. The use of dodecahedron_polyhedron for the canopy provides a good approximation of the complex, irregular branch clusters seen in the photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/manual_kZhZYZvVvCTiVuDWGFFKED.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\manual_kZhZYZvVvCTiVuDWGFFKED~0.png",
+  "created_at": "2026-08-20T17:04:58.766Z",
+  "bounds": {
+    "min": [
+      -14.3354,
+      2.5,
+      -12.3354
+    ],
+    "max": [
+      11.7367,
+      18.0721,
+      6.0721
+    ],
+    "size": [
+      26.072,
+      15.572,
+      18.407
+    ],
+    "rMax": 18.912,
+    "triangles": 284,
+    "vertices": 154
+  },
+  "spec": {
+    "style": "natural_baobab_forest"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "tree_sp_baobab_wc_192778142",
+  "sourceImage": "tree/sp_baobab/wc_192778142",
+  "style": "Industrial Street Light",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 8421504,
+    "baseHex": 4210752,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 14737632,
+    "glassHex": 11184810
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_pole",
+    "pole_base",
+    "fixture_hub",
+    "light_head_1",
+    "light_head_2",
+    "light_head_3",
+    "light_head_4",
+    "glass_panel_1",
+    "glass_panel_2",
+    "glass_panel_3",
+    "glass_panel_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box"
+  ]
+}

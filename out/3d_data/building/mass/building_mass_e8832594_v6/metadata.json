@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_e8832594_v6",
+  "key": "building/mass_e8832594_3d9851b4_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_commercial_complex",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the dual-tower structure with the central connecting podium. The glass curtain walls are represented by blue-tinted box components, and the structural massing follows the perspective of the original building. The podium base and roof-level mechanical structures are included to ensure 360-degree integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/e8832594.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\e8832594~0.png",
+  "created_at": "2026-08-21T07:56:11.527Z",
+  "bounds": {
+    "min": [
+      -30,
+      0,
+      -10
+    ],
+    "max": [
+      30,
+      54,
+      10.1
+    ],
+    "size": [
+      60,
+      54,
+      20.1
+    ],
+    "rMax": 31.655,
+    "triangles": 132,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "modern_commercial_complex"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

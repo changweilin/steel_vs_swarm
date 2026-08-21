@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021_v6",
+  "key": "building/mass_pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021_4a36477d_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "low-poly architectural model",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the dual-gable roof structure, the central chimney, and the symmetrical window/door placement. All parts are tightly integrated with correct outward-sloping roof geometry.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021~0.png",
+  "created_at": "2026-08-21T08:56:12.161Z",
+  "bounds": {
+    "min": [
+      -2.1,
+      0,
+      -2.1
+    ],
+    "max": [
+      2.1,
+      3.75,
+      2.1
+    ],
+    "size": [
+      4.2,
+      3.75,
+      4.2
+    ],
+    "rMax": 2.97,
+    "triangles": 124,
+    "vertices": 84
+  },
+  "spec": {
+    "style": "low-poly architectural model"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

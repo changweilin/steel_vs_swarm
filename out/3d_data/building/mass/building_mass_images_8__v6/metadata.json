@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_8__v6",
+  "key": "building/mass_images (8)_276c47e9_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modernist Architectural Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the complex cantilevered geometry of the modern villa, including the multi-level roof slabs, central chimney stack, and recessed glass wall sections. The proportions of the overhangs and the integration of the base platform are consistent with the original image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (8).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (8)~0.png",
+  "created_at": "2026-08-21T08:38:10.107Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -5
+    ],
+    "max": [
+      6,
+      6.5,
+      5
+    ],
+    "size": [
+      12,
+      6.5,
+      10
+    ],
+    "rMax": 7.81,
+    "triangles": 96,
+    "vertices": 64
+  },
+  "spec": {
+    "style": "Modernist Architectural Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

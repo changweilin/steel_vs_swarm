@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_e8832594",
+  "sourceImage": "building/mass/e8832594",
+  "style": "modern_commercial_complex",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 10526880,
+    "facadeHex": 13158600,
+    "baseHex": 6710886,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 15658734,
+    "glassHex": 4621760
+  },
+  "totalParts": 11,
+  "partNames": [
+    "left_tower_main",
+    "right_tower_main",
+    "left_tower_glass",
+    "right_tower_glass",
+    "podium_base",
+    "podium_front_glass",
+    "left_roof_structure",
+    "right_roof_structure",
+    "central_connector",
+    "trim_accent_left",
+    "trim_accent_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

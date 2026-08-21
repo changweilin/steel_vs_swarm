@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_668d6f418c667-870x500_v6",
+  "key": "ship/hull_668d6f418c667-870x500_036c559a_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the Disney Wish cruise ship's iconic black hull, white superstructure, and dual red funnels. The bow wedge, tiered deck structure, and bridge windows are modeled with correct proportions. Symmetry is maintained for the hull and superstructure, ensuring a complete 360-degree representation.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/668d6f418c667-870x500.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\668d6f418c667-870x500~0.png",
+  "created_at": "2026-08-20T16:11:35.682Z",
+  "bounds": {
+    "min": [
+      -170,
+      0,
+      -21
+    ],
+    "max": [
+      190.0159,
+      43,
+      21
+    ],
+    "size": [
+      360.016,
+      43,
+      42
+    ],
+    "rMax": 191.173,
+    "triangles": 390,
+    "vertices": 230
+  },
+  "spec": {
+    "style": "cruise_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_dome_ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf_v6",
+  "key": "rock/mg_dome_ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf_421bf51b_v6",
+  "family": "rock",
+  "subpart": "mg_dome",
+  "style": "geological_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the wedge-like profile of the rock formation. By using a large base box and a series of dodecahedron and icosahedron components, the irregular, rugged surface texture is represented. The overall silhouette matches the provided image, with the base anchored at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_dome/ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_dome\\ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf~0.png",
+  "created_at": "2026-08-20T16:23:53.478Z",
+  "bounds": {
+    "min": [
+      -1,
+      0,
+      -0.5
+    ],
+    "max": [
+      1,
+      1.7737,
+      0.6335
+    ],
+    "size": [
+      2,
+      1.774,
+      1.133
+    ],
+    "rMax": 1.184,
+    "triangles": 136,
+    "vertices": 78
+  },
+  "spec": {
+    "style": "geological_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

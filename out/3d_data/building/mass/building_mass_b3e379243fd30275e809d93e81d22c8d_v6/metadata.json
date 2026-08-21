@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_b3e379243fd30275e809d93e81d22c8d_v6",
+  "key": "building/mass_b3e379243fd30275e809d93e81d22c8d_351f9003_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately captures the modern multi-story residential building with its characteristic black and white facade blocks, stacked balconies with glass railings, large windows on the side facades, ground floor garage and fencing, and a solid structural layout matching the architectural rendering.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/b3e379243fd30275e809d93e81d22c8d.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\b3e379243fd30275e809d93e81d22c8d~0.png",
+  "created_at": "2026-08-20T17:22:51.319Z",
+  "bounds": {
+    "min": [
+      -5,
+      0,
+      -3.7
+    ],
+    "max": [
+      5,
+      16.4,
+      6.2
+    ],
+    "size": [
+      10,
+      16.4,
+      9.9
+    ],
+    "rMax": 7.965,
+    "triangles": 676,
+    "vertices": 432
+  },
+  "spec": {
+    "style": "modern_architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

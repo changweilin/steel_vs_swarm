@@ -1,0 +1,40 @@
+{
+  "id": "landmark_dish_ov_ea651899-beed-40c9-8e9e-617e88218cdb_v6",
+  "key": "landmark/dish_ov_ea651899-beed-40c9-8e9e-617e88218cdb_d205f42d_v6",
+  "family": "landmark",
+  "subpart": "dish",
+  "style": "industrial_telecommunication_tower",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the dual-dish configuration, the central support mast, and the complex antenna arm structure. The proportions of the dishes and the vertical mast are aligned with the visual reference. Minor details like the LNB arms and the specific antenna geometry are simplified into geometric primitives while maintaining structural integrity.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/dish/ov_ea651899-beed-40c9-8e9e-617e88218cdb.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\dish\\ov_ea651899-beed-40c9-8e9e-617e88218cdb~0.png",
+  "created_at": "2026-08-20T17:18:09.932Z",
+  "bounds": {
+    "min": [
+      -1.3589,
+      0,
+      -0.25
+    ],
+    "max": [
+      1.3589,
+      4.0441,
+      1.25
+    ],
+    "size": [
+      2.718,
+      4.044,
+      1.5
+    ],
+    "rMax": 1.846,
+    "triangles": 312,
+    "vertices": 172
+  },
+  "spec": {
+    "style": "industrial_telecommunication_tower"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

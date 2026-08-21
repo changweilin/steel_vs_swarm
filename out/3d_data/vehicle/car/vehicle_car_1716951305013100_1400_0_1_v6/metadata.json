@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_1716951305013100_1400_0_1_v6",
+  "key": "vehicle/car_1716951305013100_1400_0~1_baef78be_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "automotive",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the sleek sporty profile of the coupe, with correctly aligned wheels, distinct glass surfaces, headlights, and side mirrors, strictly following the 7-zone color and polygonal geometry constraints.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/1716951305013100_1400_0.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\1716951305013100_1400_0~1.png",
+  "created_at": "2026-08-20T17:23:31.347Z",
+  "bounds": {
+    "min": [
+      -1.45,
+      0.15,
+      -2.32
+    ],
+    "max": [
+      1.45,
+      1.4,
+      2.32
+    ],
+    "size": [
+      2.9,
+      1.25,
+      4.64
+    ],
+    "rMax": 2.736,
+    "triangles": 784,
+    "vertices": 494
+  },
+  "spec": {
+    "style": "automotive"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_chimney_ov_c49f7be0-9e6b-412f-b186-67d6ae037940_v6",
+  "key": "building/chimney_ov_c49f7be0-9e6b-412f-b186-67d6ae037940_d322ebb8_v6",
+  "family": "building",
+  "subpart": "chimney",
+  "style": "Modern Residential Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the prominent brick chimney structure and the adjacent roof sections. The geometric relationships between the roof slopes and the chimney stack are maintained, with correct orientation of the eaves. The brick pattern is represented by the primary facade color, and the chimney cap is modeled as a distinct top structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/chimney/ov_c49f7be0-9e6b-412f-b186-67d6ae037940.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\chimney\\ov_c49f7be0-9e6b-412f-b186-67d6ae037940~0.png",
+  "created_at": "2026-08-21T07:38:19.242Z",
+  "bounds": {
+    "min": [
+      -4.6251,
+      -0.5,
+      -3.1
+    ],
+    "max": [
+      5.6251,
+      7.3,
+      3.1
+    ],
+    "size": [
+      10.25,
+      7.8,
+      6.2
+    ],
+    "rMax": 6.423,
+    "triangles": 100,
+    "vertices": 68
+  },
+  "spec": {
+    "style": "Modern Residential Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

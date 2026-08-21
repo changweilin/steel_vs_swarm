@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_images (18)",
+  "sourceImage": "building/mass/images (18)",
+  "style": "Modern Residential Villa",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14211288,
+    "baseHex": 5592405,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 8438271
+  },
+  "totalParts": 11,
+  "partNames": [
+    "MainBody",
+    "StoneBase",
+    "RoofTop",
+    "FrontWindowGround",
+    "FrontDoorGround",
+    "BalconyFront",
+    "SupportColumnLeft",
+    "SupportColumnRight",
+    "Stairs",
+    "SideWindow1",
+    "SideWindow2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

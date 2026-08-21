@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_003002_1725858476_v6",
+  "key": "vehicle/bike_003002_1725858476_4cbaf01c_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "Mountain Bicycle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The bicycle is reconstructed with high fidelity, capturing the frame geometry, wheel placement, and characteristic pink accent decals. The 3D model includes the full frame, front suspension, seat post, and dual-wheel assembly, ensuring a complete 360-degree representation.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/003002_1725858476.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\003002_1725858476.jpg",
+  "created_at": "2026-08-20T15:58:58.739Z",
+  "bounds": {
+    "min": [
+      -0.96,
+      0.275,
+      -0.3424
+    ],
+    "max": [
+      0.96,
+      1.249,
+      0.3424
+    ],
+    "size": [
+      1.92,
+      0.974,
+      0.685
+    ],
+    "rMax": 1.019,
+    "triangles": 488,
+    "vertices": 294
+  },
+  "spec": {
+    "style": "Mountain Bicycle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

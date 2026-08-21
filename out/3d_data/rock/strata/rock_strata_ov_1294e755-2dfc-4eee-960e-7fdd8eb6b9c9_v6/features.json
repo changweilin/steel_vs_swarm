@@ -1,0 +1,51 @@
+{
+  "id": "rock_strata_ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9",
+  "sourceImage": "rock/strata/ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9",
+  "style": "rock_pyramid_sculpture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16755200,
+    "facadeHex": 13421772,
+    "baseHex": 15790320,
+    "accentHex": 16724838,
+    "darkHex": 3289650,
+    "brightHex": 16777215,
+    "glassHex": 3394764
+  },
+  "totalParts": 27,
+  "partNames": [
+    "main_core_mound",
+    "tier1_base_rock_white1",
+    "tier1_base_rock_white2",
+    "tier1_base_rock_cyan1",
+    "tier1_base_rock_pink1",
+    "tier1_base_rock_pink2",
+    "tier1_base_rock_pink3",
+    "tier1_base_rock_white3",
+    "tier1_base_rock_cyan2",
+    "tier2_rock_purple1",
+    "tier2_rock_orange1",
+    "tier2_rock_orange2",
+    "tier2_rock_pink4",
+    "tier2_rock_pink5",
+    "tier2_rock_orange3",
+    "tier2_rock_orange4",
+    "tier3_rock_green1",
+    "tier3_rock_green2",
+    "tier3_rock_green3",
+    "tier3_rock_green4",
+    "tier4_rock_blue1",
+    "tier4_rock_blue2",
+    "tier4_rock_blue3",
+    "tier5_rock_yellow1",
+    "tier5_rock_yellow2",
+    "tier6_rock_purple2",
+    "apex_rock_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "icosahedron_polyhedron",
+    "dodecahedron_polyhedron",
+    "pyramid"
+  ]
+}

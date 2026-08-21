@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_v6",
+  "key": "tree/canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_975e1ff2_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The bonsai tree is reconstructed using a central curved trunk and four distinct canopy layers. The trunk uses a series of cylinders to mimic the natural twist. The canopy layers are modeled as flattened ellipsoid_spheres to capture the dense, layered foliage characteristic of bonsai. The base is a shallow cylinder representing the pot, with a baseHex layer for the soil. The overall proportions and structural flow match the reference image well.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-a-bonsai-tree-in-pot-png-image_19036932~0.png",
+  "created_at": "2026-08-20T16:13:03.522Z",
+  "bounds": {
+    "min": [
+      -0.85,
+      -0.35,
+      -0.6
+    ],
+    "max": [
+      0.95,
+      1.7,
+      0.6
+    ],
+    "size": [
+      1.8,
+      2.05,
+      1.2
+    ],
+    "rMax": 1.124,
+    "triangles": 1088,
+    "vertices": 630
+  },
+  "spec": {
+    "style": "Bonsai Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

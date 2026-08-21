@@ -1,0 +1,47 @@
+{
+  "id": "building_bld_corner_ov_7afe1811-9d89-4210-9c76-0e873a4c4477",
+  "sourceImage": "building/bld_corner/ov_7afe1811-9d89-4210-9c76-0e873a4c4477",
+  "style": "building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6581850,
+    "facadeHex": 7183011,
+    "baseHex": 4342338,
+    "accentHex": 9896756,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 3235252
+  },
+  "totalParts": 23,
+  "partNames": [
+    "teal_building_main_body",
+    "teal_building_corner_bevel",
+    "mansard_roof_base",
+    "dormer_window_1",
+    "dormer_window_1_glass",
+    "dormer_window_2",
+    "dormer_window_2_glass",
+    "storefront_window_left",
+    "storefront_door_left",
+    "storefront_window_right",
+    "storefront_door_right",
+    "floor2_window_1",
+    "floor2_window_2",
+    "floor2_window_3",
+    "floor2_window_4",
+    "floor3_window_1",
+    "floor3_window_2",
+    "floor3_window_3",
+    "floor3_window_4",
+    "left_brick_building",
+    "right_brick_building",
+    "sidewalk_base",
+    "street_lamp_pole"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "cylinder"
+  ]
+}

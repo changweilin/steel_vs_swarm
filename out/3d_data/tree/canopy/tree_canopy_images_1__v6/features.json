@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_images (1)",
+  "sourceImage": "tree/canopy/images (1)",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 8421504,
+    "baseHex": 11184810,
+    "accentHex": 5592405,
+    "darkHex": 2236962,
+    "brightHex": 14540253,
+    "glassHex": 16777215
+  },
+  "totalParts": 7,
+  "partNames": [
+    "pot",
+    "trunk_base",
+    "trunk_mid",
+    "trunk_top",
+    "canopy_top",
+    "canopy_left",
+    "canopy_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

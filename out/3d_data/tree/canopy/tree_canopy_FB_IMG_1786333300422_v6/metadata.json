@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_FB_IMG_1786333300422_v6",
+  "key": "tree/canopy_FB_IMG_1786333300422_724fc64d_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the massive, multi-trunked structure of the giant redwood. The main trunks are represented by large cylinders, and the complex, layered canopy is approximated using multiple ellipsoid_sphere components to mimic the dense, irregular foliage clusters. The scale is set to reflect a giant tree (approx 30m height).",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/FB_IMG_1786333300422.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\FB_IMG_1786333300422~0.png",
+  "created_at": "2026-08-20T16:50:37.662Z",
+  "bounds": {
+    "min": [
+      -8,
+      0,
+      -4.7553
+    ],
+    "max": [
+      8,
+      31,
+      4.7553
+    ],
+    "size": [
+      16,
+      31,
+      9.511
+    ],
+    "rMax": 9.307,
+    "triangles": 960,
+    "vertices": 581
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

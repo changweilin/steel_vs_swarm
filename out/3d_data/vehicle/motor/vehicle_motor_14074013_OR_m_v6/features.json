@@ -1,0 +1,32 @@
+{
+  "id": "vehicle_motor_14074013_OR_m",
+  "sourceImage": "vehicle/motor/14074013_OR_m",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4352056,
+    "facadeHex": 5334842,
+    "baseHex": 2302755,
+    "accentHex": 16777215,
+    "darkHex": 1447446,
+    "brightHex": 14540253,
+    "glassHex": 3298836
+  },
+  "totalParts": 10,
+  "partNames": [
+    "Main Chassis Base",
+    "Scooter Body Cowling",
+    "Seat Main",
+    "Windshield Glass",
+    "Front Left Wheel Tire",
+    "Front Right Wheel Tire",
+    "Rear Wheel Tire",
+    "Headlight Assembly",
+    "Left Mirror",
+    "Right Mirror"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

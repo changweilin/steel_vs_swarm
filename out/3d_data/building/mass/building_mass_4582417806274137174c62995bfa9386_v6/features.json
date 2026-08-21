@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_4582417806274137174c62995bfa9386",
+  "sourceImage": "building/mass/4582417806274137174c62995bfa9386",
+  "style": "Neoclassical Skyscraper",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12500670,
+    "facadeHex": 14540253,
+    "baseHex": 11184810,
+    "accentHex": 8421504,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 32946
+  },
+  "totalParts": 9,
+  "partNames": [
+    "MainTowerBody",
+    "RoofCrown",
+    "CentralLogoPanel",
+    "WindowGrid",
+    "LeftWing",
+    "RightWing",
+    "BasePlinth",
+    "BalconyRecess1",
+    "BalconyRecess2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

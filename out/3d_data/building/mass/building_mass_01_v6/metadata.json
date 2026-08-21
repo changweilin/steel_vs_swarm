@@ -1,37 +1,39 @@
 {
   "id": "building_mass_01_v6",
-  "key": "building/mass_01_0a6db86c_v6",
+  "key": "building/mass_01_fd9bbc95_v6",
   "family": "building",
   "subpart": "mass",
-  "style": "Modern Residential Architecture",
+  "style": "Modern Architecture",
   "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the modern multi-story residential building with its characteristic white exterior framing grid, dark grey facade recessed panels, glass balcony railings, and stepped rooftop structures. Proportions and color zoning closely follow the reference image.",
   "version": 6,
   "verStr": "v6",
   "source_image": "building/01.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\01.jpg",
-  "created_at": "2026-08-19T15:11:37.398Z",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\01~0.png",
+  "created_at": "2026-08-20T17:18:26.394Z",
   "bounds": {
     "min": [
-      -5.25,
+      -4.3,
       0,
-      -6
+      -3.5
     ],
     "max": [
-      5.25,
-      27,
-      6
+      4,
+      21.75,
+      4.1
     ],
     "size": [
-      10.5,
-      27,
-      12
+      8.3,
+      21.75,
+      7.6
     ],
-    "rMax": 7.973,
-    "triangles": 532,
-    "vertices": 340
+    "rMax": 5.728,
+    "triangles": 300,
+    "vertices": 200
   },
   "spec": {
-    "style": "Modern Residential Architecture"
+    "style": "Modern Architecture"
   },
   "method": "gemini_v6",
   "status": "ingested"

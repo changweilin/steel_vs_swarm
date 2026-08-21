@@ -1,0 +1,34 @@
+{
+  "id": "building_mass_pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583",
+  "sourceImage": "building/mass/pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583",
+  "style": "isometric_low_poly_architectural",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 13434879,
+    "facadeHex": 16777215,
+    "baseHex": 15790320,
+    "accentHex": 14540253,
+    "darkHex": 8421504,
+    "brightHex": 16777215,
+    "glassHex": 11393279
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_platform",
+    "main_body_lower",
+    "roof_main",
+    "chimney",
+    "window_front_lower",
+    "window_front_upper",
+    "balcony_railing",
+    "tree_1",
+    "tree_2",
+    "stairs"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

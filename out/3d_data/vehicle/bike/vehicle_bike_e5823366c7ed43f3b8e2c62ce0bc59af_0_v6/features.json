@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af~0",
+  "sourceImage": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af~0",
+  "style": "realistic",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 2105376,
+    "accentHex": 16733525,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 38817
+  },
+  "totalParts": 15,
+  "partNames": [
+    "RearWheelTire",
+    "RearRim",
+    "RearDiscBrakeRotor",
+    "CassetteSprocket",
+    "ChainstayLeft",
+    "ChainstayRight",
+    "SeatstayLeft",
+    "SeatstayRight",
+    "SeatTube",
+    "DownTube",
+    "Crankset",
+    "CrankArm",
+    "Pedal",
+    "RearDerailleur",
+    "Kickstand"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

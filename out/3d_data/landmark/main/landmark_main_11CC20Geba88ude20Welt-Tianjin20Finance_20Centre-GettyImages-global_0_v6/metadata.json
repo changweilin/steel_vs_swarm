@@ -1,0 +1,40 @@
+{
+  "id": "landmark_main_11CC20Geba88ude20Welt-Tianjin20Finance_20Centre-GettyImages-global_0_v6",
+  "key": "landmark/main_11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global~0_c5b68e69_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "modern_skyscraper",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model captures the iconic curvilinear, tapering geometry of the Tianjin CTF Finance Centre. The main tower is represented by a series of stacked frustum_pyramids to simulate the smooth, inward-curving profile. The glass facade is represented by a high-density mesh of glassHex parts. The top crown structure is modeled with a combination of cylinders and a central frustum to match the complex apex design.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\main\\11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global~0.png",
+  "created_at": "2026-08-20T16:04:22.229Z",
+  "bounds": {
+    "min": [
+      -30,
+      0,
+      -30
+    ],
+    "max": [
+      45.05,
+      540.5,
+      30
+    ],
+    "size": [
+      75.05,
+      540.5,
+      60
+    ],
+    "rMax": 54.125,
+    "triangles": 216,
+    "vertices": 122
+  },
+  "spec": {
+    "style": "modern_skyscraper"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

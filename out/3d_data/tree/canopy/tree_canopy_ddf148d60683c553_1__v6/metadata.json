@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ddf148d60683c553_1__v6",
+  "key": "tree/canopy_ddf148d60683c553 (1)_200ed47c_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Naturalistic Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree is modeled with a central trunk and a wide, sprawling canopy using an ellipsoid to capture the natural, irregular horizontal spread of the foliage. The proportions match the reference image's wide aspect ratio, and the trunk is anchored at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/ddf148d60683c553 (1).webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\ddf148d60683c553 (1)~0.png",
+  "created_at": "2026-08-20T16:48:38.030Z",
+  "bounds": {
+    "min": [
+      -5.5,
+      -0.1,
+      -4.7553
+    ],
+    "max": [
+      5.5,
+      7,
+      4.7553
+    ],
+    "size": [
+      11,
+      7.1,
+      9.511
+    ],
+    "rMax": 7.271,
+    "triangles": 352,
+    "vertices": 216
+  },
+  "spec": {
+    "style": "Naturalistic Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_169154402859999904.jpg_900x.water3_1_v6",
+  "key": "building/mass_169154402859999904.jpg!900x.water3~1_5ab3ee9d_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Residential Complex",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the multi-level modern architecture block, incorporating precise box components for main walls, dark brick facade insets, glass windows, balconies, and the surrounding front courtyard boundary wall over a flat terrain.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/169154402859999904.jpg!900x.water3.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\169154402859999904.jpg!900x.water3~1.png",
+  "created_at": "2026-08-20T17:19:54.658Z",
+  "bounds": {
+    "min": [
+      -20,
+      -1,
+      -10
+    ],
+    "max": [
+      20,
+      10.2,
+      20
+    ],
+    "size": [
+      40,
+      11.2,
+      30
+    ],
+    "rMax": 28.284,
+    "triangles": 204,
+    "vertices": 136
+  },
+  "spec": {
+    "style": "Modern Residential Complex"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

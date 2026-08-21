@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_169154402859999904.jpg_900x.water3_v6",
+  "key": "building/mass_169154402859999904.jpg!900x.water3_a93587de_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Residential Building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The building's primary massing, including the white frame structure, dark brick infill, and the projecting balcony sections, has been reconstructed with high fidelity. The verticality and the layered facade details are captured using box components. The rear and side facades are inferred based on the architectural logic of the visible front and side, ensuring a complete 360-degree volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/169154402859999904.jpg!900x.water3.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\169154402859999904.jpg!900x.water3.jpg",
+  "created_at": "2026-08-20T16:44:17.204Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -6
+    ],
+    "max": [
+      7,
+      32,
+      6
+    ],
+    "size": [
+      14,
+      32,
+      12
+    ],
+    "rMax": 9.22,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "Modern Residential Building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

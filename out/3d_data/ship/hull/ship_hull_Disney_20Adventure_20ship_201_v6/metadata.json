@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_Disney_20Adventure_20ship_201_v6",
+  "key": "ship/hull_Disney%20Adventure%20ship%201_4b913647_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the Disney Adventure cruise ship's iconic dark blue hull, white superstructure, and tiered deck structure. The bridge and bow wedge are correctly proportioned. Symmetry is applied to ensure the full 360-degree structure is represented, including the rear funnels and side lifeboats.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/Disney%20Adventure%20ship%201.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\Disney%20Adventure%20ship%201~0.png",
+  "created_at": "2026-08-20T16:13:22.584Z",
+  "bounds": {
+    "min": [
+      -16,
+      0,
+      -75
+    ],
+    "max": [
+      16,
+      37.5,
+      85
+    ],
+    "size": [
+      32,
+      37.5,
+      160
+    ],
+    "rMax": 86.493,
+    "triangles": 286,
+    "vertices": 172
+  },
+  "spec": {
+    "style": "cruise_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

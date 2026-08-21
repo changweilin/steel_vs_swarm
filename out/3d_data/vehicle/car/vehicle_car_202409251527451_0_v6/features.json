@@ -1,0 +1,32 @@
+{
+  "id": "vehicle_car_202409251527451~0",
+  "sourceImage": "vehicle/car/202409251527451~0",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 2105376,
+    "accentHex": 13631488,
+    "darkHex": 1052688,
+    "brightHex": 15790320,
+    "glassHex": 33023
+  },
+  "totalParts": 10,
+  "partNames": [
+    "CabinMainBody",
+    "FrontHood",
+    "Windshield",
+    "LeftFrontWheel",
+    "RightFrontWheel",
+    "LeftFrontHeadlight",
+    "RightFrontHeadlight",
+    "FrontBumper",
+    "RightSideMirror",
+    "RoofRack"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "torus_ring"
+  ]
+}

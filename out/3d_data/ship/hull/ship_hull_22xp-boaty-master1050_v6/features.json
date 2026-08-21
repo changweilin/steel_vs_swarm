@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_22xp-boaty-master1050",
+  "sourceImage": "ship/hull/22xp-boaty-master1050",
+  "style": "modern icebreaker research vessel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16711680,
+    "baseHex": 8421504,
+    "accentHex": 16776960,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 49344
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "superstructure_base",
+    "bridge_structure",
+    "bridge_windows",
+    "helipad_deck",
+    "mast_structure",
+    "radar_dome",
+    "funnel_accent",
+    "hull_bottom"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome"
+  ]
+}

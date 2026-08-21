@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_55064976_v6",
+  "key": "tree/gt_dragontree_wc_55064976_ff474406_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The reconstruction captures the characteristic multi-branched structure of the Dragon Trees (Dracaena draco). The main trunks are modeled using conical_frustums to represent the tapering, and the canopy clusters are represented by ellipsoid_spheres to mimic the dense, sword-like leaf rosettes. The scale is set to reflect the height of mature trees, and the base is anchored at y=0 with surrounding rock clusters.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_55064976.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_55064976~0.png",
+  "created_at": "2026-08-20T17:00:53.276Z",
+  "bounds": {
+    "min": [
+      -5,
+      -0.3605,
+      -2.4266
+    ],
+    "max": [
+      1.7,
+      6.3,
+      1.1413
+    ],
+    "size": [
+      6.7,
+      6.66,
+      3.568
+    ],
+    "rMax": 5.558,
+    "triangles": 704,
+    "vertices": 421
+  },
+  "spec": {
+    "style": "botanical_reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

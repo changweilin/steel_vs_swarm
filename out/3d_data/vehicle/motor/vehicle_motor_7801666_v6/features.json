@@ -1,0 +1,37 @@
+{
+  "id": "vehicle_motor_7801666",
+  "sourceImage": "vehicle/motor/7801666",
+  "style": "motorcycle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 202755,
+    "facadeHex": 197379,
+    "baseHex": 401337,
+    "accentHex": 1184274,
+    "darkHex": 131586,
+    "brightHex": 13816530,
+    "glassHex": 33023
+  },
+  "totalParts": 13,
+  "partNames": [
+    "front_wheel_tire",
+    "front_wheel_rim",
+    "rear_wheel_tire",
+    "rear_wheel_rim",
+    "engine_block",
+    "exhaust_pipe",
+    "fuel_tank",
+    "seat",
+    "front_fork_left",
+    "front_fork_right",
+    "headlight",
+    "handlebar",
+    "rear_fender"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box",
+    "ellipsoid_sphere"
+  ]
+}

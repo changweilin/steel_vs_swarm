@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_18__v6",
+  "key": "building/mass_images (18)_791f1f5a_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Residential Villa",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The building is reconstructed as a two-story residential structure with a flat roof, balcony, and stone base. The geometry accurately reflects the proportions of the original design, including the recessed balcony, glass windows, and stone foundation. All parts are tightly joined, and the 360-degree structure is completed using mirror symmetry for the rear and side facades.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (18).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (18)~0.png",
+  "created_at": "2026-08-21T08:22:15.761Z",
+  "bounds": {
+    "min": [
+      -4.2,
+      0,
+      -3.2
+    ],
+    "max": [
+      4.2,
+      7.4,
+      4
+    ],
+    "size": [
+      8.4,
+      7.4,
+      7.2
+    ],
+    "rMax": 5.8,
+    "triangles": 132,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "Modern Residential Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_250808-31799-30-gNZVV_0_v6",
+  "key": "building/mass_250808-31799-30-gNZVV~0_b9381d4a_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Japanese Colonial Wooden Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the L-shaped wooden structure, the brick base, and the characteristic tiled roof. The roof slopes are correctly oriented outward. Windows and doors are modeled as distinct glass-textured components. The brick chimneys and structural details are positioned to match the perspective.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/250808-31799-30-gNZVV.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\250808-31799-30-gNZVV~0.png",
+  "created_at": "2026-08-21T09:58:14.559Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -4.5
+    ],
+    "max": [
+      6.5,
+      5.5,
+      4.5
+    ],
+    "size": [
+      13.5,
+      5.5,
+      9
+    ],
+    "rMax": 8.322,
+    "triangles": 152,
+    "vertices": 96
+  },
+  "spec": {
+    "style": "Japanese Colonial Wooden Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

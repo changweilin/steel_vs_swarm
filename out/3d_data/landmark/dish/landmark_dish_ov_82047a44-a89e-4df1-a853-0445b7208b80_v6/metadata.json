@@ -1,0 +1,40 @@
+{
+  "id": "landmark_dish_ov_82047a44-a89e-4df1-a853-0445b7208b80_v6",
+  "key": "landmark/dish_ov_82047a44-a89e-4df1-a853-0445b7208b80_27fc1f08_v6",
+  "family": "landmark",
+  "subpart": "dish",
+  "style": "industrial_telecommunications",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the three distinct satellite dish structures, including their parabolic reflectors, support trusses, and central feed horns. The geometry follows the physical constraints of the dishes, with correct orientation and structural support components. The mesh-like texture of the rightmost dish is represented by the structural frame, and the overall spatial arrangement matches the source image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/dish/ov_82047a44-a89e-4df1-a853-0445b7208b80.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\dish\\ov_82047a44-a89e-4df1-a853-0445b7208b80~0.png",
+  "created_at": "2026-08-20T17:10:13.538Z",
+  "bounds": {
+    "min": [
+      -3,
+      -0.2,
+      -1.4769
+    ],
+    "max": [
+      3.7359,
+      2.8842,
+      1.1533
+    ],
+    "size": [
+      6.736,
+      3.084,
+      2.63
+    ],
+    "rMax": 3.91,
+    "triangles": 520,
+    "vertices": 276
+  },
+  "spec": {
+    "style": "industrial_telecommunications"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

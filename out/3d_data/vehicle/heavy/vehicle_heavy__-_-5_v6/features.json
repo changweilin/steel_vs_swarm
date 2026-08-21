@@ -1,0 +1,44 @@
+{
+  "id": "vehicle_heavy_文境旅遊-賓士豪華大客車-5",
+  "sourceImage": "vehicle/heavy/文境旅遊-賓士豪華大客車-5",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 1381653,
+    "facadeHex": 12632256,
+    "baseHex": 2105376,
+    "accentHex": 26367,
+    "darkHex": 1644825,
+    "brightHex": 15790320,
+    "glassHex": 1320930
+  },
+  "totalParts": 22,
+  "partNames": [
+    "chassis_base",
+    "bus_body_main",
+    "bus_roof",
+    "front_windshield",
+    "front_bumper",
+    "front_grille",
+    "headlight_left",
+    "headlight_right",
+    "left_side_windows",
+    "right_side_windows",
+    "rear_window",
+    "rear_bumper",
+    "taillight_left",
+    "taillight_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left_1",
+    "wheel_rear_left_2",
+    "wheel_rear_right_1",
+    "wheel_rear_right_2",
+    "side_mirror_left",
+    "side_mirror_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_v6",
+  "key": "tree/canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_28ef5f1d_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Crested Saguaro Cactus",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the unique crested (cristate) top of the Saguaro cactus using a large dodecahedron, combined with the characteristic vertical cylindrical arms and main trunk. The proportions and vertical ribbing texture are represented by the cylindrical geometry, and the overall structure matches the reference image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c~0.png",
+  "created_at": "2026-08-20T16:20:46.063Z",
+  "bounds": {
+    "min": [
+      -1.5299,
+      0,
+      -1.121
+    ],
+    "max": [
+      1.3479,
+      6.621,
+      1.121
+    ],
+    "size": [
+      2.878,
+      6.621,
+      2.242
+    ],
+    "rMax": 1.897,
+    "triangles": 264,
+    "vertices": 144
+  },
+  "spec": {
+    "style": "Crested Saguaro Cactus"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "rock_facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~1",
+  "sourceImage": "rock/facet/ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~1",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8553090,
+    "facadeHex": 6579300,
+    "baseHex": 3947580,
+    "accentHex": 9868950,
+    "darkHex": 1973790,
+    "brightHex": 11842740,
+    "glassHex": 2171169
+  },
+  "totalParts": 8,
+  "partNames": [
+    "ground_base_rock",
+    "foreground_boulder_left",
+    "foreground_boulder_center",
+    "foreground_boulder_right",
+    "mid_slope_rock_mound",
+    "cliff_wall_back",
+    "cliff_detail_facet_1",
+    "cliff_detail_facet_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "polygonal_prism"
+  ]
+}

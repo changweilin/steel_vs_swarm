@@ -1,0 +1,32 @@
+{
+  "id": "rock_main_images (3)",
+  "sourceImage": "rock/main/images (3)",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 9868950,
+    "baseHex": 6579300,
+    "accentHex": 12500670,
+    "darkHex": 3947580,
+    "brightHex": 13158600,
+    "glassHex": 4210752
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_rock_body",
+    "rock_extension_left",
+    "rock_extension_right",
+    "rock_peak_crest",
+    "rock_base_foundation",
+    "rock_detail_wedge",
+    "rock_dark_crevice"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "polygonal_prism",
+    "wedge",
+    "box"
+  ]
+}

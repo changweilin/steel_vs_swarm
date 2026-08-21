@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_20oz-china-ships-wgkl-master1050_v6",
+  "key": "ship/hull_20oz-china-ships-wgkl-master1050_4d61c27b_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern_naval_warship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 88,
+  "similarityReview": "The model accurately captures the Type 054A frigate's distinct silhouette, including the wedge-shaped bow, the multi-tiered superstructure, the main mast radar array, and the rear helicopter hangar. The proportions of the hull relative to the superstructure are maintained. The glass surfaces are represented with the requested color palette, and the overall watertight hull structure is consistent with naval design standards.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/20oz-china-ships-wgkl-master1050.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\20oz-china-ships-wgkl-master1050~0.png",
+  "created_at": "2026-08-20T16:09:42.167Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.5,
+      -65
+    ],
+    "max": [
+      6,
+      22,
+      72.5
+    ],
+    "size": [
+      12,
+      22.5,
+      137.5
+    ],
+    "rMax": 72.748,
+    "triangles": 538,
+    "vertices": 334
+  },
+  "spec": {
+    "style": "modern_naval_warship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

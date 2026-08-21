@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_IMG20260102180810I92509U2349_v6",
+  "key": "vehicle/car_IMG20260102180810I92509U2349_251a8a02_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/IMG20260102180810I92509U2349.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\IMG20260102180810I92509U2349.jpg",
+  "created_at": "2026-08-20T15:24:42.015Z",
+  "bounds": {
+    "min": [
+      -1.38,
+      0.15,
+      -2.25
+    ],
+    "max": [
+      1.38,
+      1.6528,
+      2.25
+    ],
+    "size": [
+      2.76,
+      1.503,
+      4.5
+    ],
+    "rMax": 2.639,
+    "triangles": 456,
+    "vertices": 270
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_windmill_ov_f91b86b0-0315-4818-8174-46f42b70c7f9_v6",
+  "key": "building/bld_windmill_ov_f91b86b0-0315-4818-8174-46f42b70c7f9_9517df2b_v6",
+  "family": "building",
+  "subpart": "bld_windmill",
+  "style": "traditional_dutch_windmill",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The windmill is reconstructed with a conical base, a rotating cap, and four main sail frames. The structural integrity is maintained with precise alignment of the sails and the support beams. The windows and cap details are added as distinct components to ensure depth and realism.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_windmill/ov_f91b86b0-0315-4818-8174-46f42b70c7f9.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_windmill\\ov_f91b86b0-0315-4818-8174-46f42b70c7f9~0.png",
+  "created_at": "2026-08-21T07:27:17.127Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      2.1784,
+      -4.5
+    ],
+    "max": [
+      4.5,
+      13.815,
+      4.5
+    ],
+    "size": [
+      9,
+      11.637,
+      9
+    ],
+    "rMax": 6.364,
+    "triangles": 180,
+    "vertices": 108
+  },
+  "spec": {
+    "style": "traditional_dutch_windmill"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

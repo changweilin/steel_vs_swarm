@@ -1,0 +1,29 @@
+{
+  "id": "tree_gt_dragontree_wc_14826433",
+  "sourceImage": "tree/gt_dragontree/wc_14826433",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3421230,
+    "facadeHex": 8553062,
+    "baseHex": 4605510,
+    "accentHex": 16744448,
+    "darkHex": 2236962,
+    "brightHex": 14540253,
+    "glassHex": 1118481
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "leaf_base_layer_1",
+    "leaf_base_layer_2",
+    "inflorescence_axis",
+    "fruit_cluster_1",
+    "fruit_cluster_2",
+    "branch_support"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

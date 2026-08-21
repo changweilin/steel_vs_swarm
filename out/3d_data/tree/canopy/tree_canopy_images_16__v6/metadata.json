@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_16__v6",
+  "key": "tree/canopy_images (16)_a5bccdc3_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "cartoon_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree structure is reconstructed using a central trunk and multiple ellipsoid clusters to represent the dense canopy. The lemon fruits are represented as small ellipsoids. The base is a flattened ellipsoid representing the ground mound with rock details. The overall silhouette and hierarchical branching are captured accurately.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (16).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (16)~0.png",
+  "created_at": "2026-08-20T16:11:05.809Z",
+  "bounds": {
+    "min": [
+      -2.5,
+      -0.6,
+      -2.3776
+    ],
+    "max": [
+      2.5,
+      5.7,
+      2.3776
+    ],
+    "size": [
+      5,
+      6.3,
+      4.755
+    ],
+    "rMax": 3.45,
+    "triangles": 1224,
+    "vertices": 751
+  },
+  "spec": {
+    "style": "cartoon_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

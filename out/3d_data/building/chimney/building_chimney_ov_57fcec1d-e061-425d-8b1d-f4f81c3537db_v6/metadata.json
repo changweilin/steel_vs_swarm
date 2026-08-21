@@ -1,0 +1,40 @@
+{
+  "id": "building_chimney_ov_57fcec1d-e061-425d-8b1d-f4f81c3537db_v6",
+  "key": "building/chimney_ov_57fcec1d-e061-425d-8b1d-f4f81c3537db_a53d8e0a_v6",
+  "family": "building",
+  "subpart": "chimney",
+  "style": "industrial_ruin",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the brick factory structure and the prominent chimney. The window openings are represented as recessed box elements to simulate the void of the ruins. The chimney is modeled as a tall conical frustum to match the slight taper. The overall proportions and brick-like color palette align well with the source image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/chimney/ov_57fcec1d-e061-425d-8b1d-f4f81c3537db.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\chimney\\ov_57fcec1d-e061-425d-8b1d-f4f81c3537db~0.png",
+  "created_at": "2026-08-21T07:32:12.260Z",
+  "bounds": {
+    "min": [
+      -7.5,
+      0,
+      -5
+    ],
+    "max": [
+      7.5,
+      18.5,
+      5.1
+    ],
+    "size": [
+      15,
+      18.5,
+      10.1
+    ],
+    "rMax": 9.07,
+    "triangles": 236,
+    "vertices": 140
+  },
+  "spec": {
+    "style": "industrial_ruin"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

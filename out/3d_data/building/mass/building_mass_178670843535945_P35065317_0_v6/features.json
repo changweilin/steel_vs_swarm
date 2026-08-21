@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_178670843535945_P35065317~0",
+  "sourceImage": "building/mass/178670843535945_P35065317~0",
+  "style": "Modern Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4605510,
+    "facadeHex": 7500402,
+    "baseHex": 3092271,
+    "accentHex": 5395026,
+    "darkHex": 1973790,
+    "brightHex": 13421772,
+    "glassHex": 1913442
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_tower_base",
+    "main_tower_roof_frame",
+    "secondary_tower_base",
+    "secondary_tower_roof",
+    "glass_curtain_main_1",
+    "glass_curtain_main_2",
+    "balcony_stack_1",
+    "balcony_stack_2",
+    "balcony_stack_3",
+    "back_wall_main",
+    "back_wall_secondary"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

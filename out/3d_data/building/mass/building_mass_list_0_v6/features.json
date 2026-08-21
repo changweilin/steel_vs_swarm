@@ -1,0 +1,29 @@
+{
+  "id": "building_mass_list~0",
+  "sourceImage": "building/mass/list~0",
+  "style": "Japanese Castle Stone Base and Wall",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 8421504,
+    "accentHex": 15105570,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 7,
+  "partNames": [
+    "stone_base",
+    "black_wall_section",
+    "white_upper_wall",
+    "window_1",
+    "window_2",
+    "entrance_door",
+    "entrance_stairs"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box"
+  ]
+}

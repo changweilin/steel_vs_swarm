@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-chinese-juniper-isolated-on-white-background-png-image_320181_v6",
+  "key": "tree/canopy_pngtree-chinese-juniper-isolated-on-white-background-png-image_320181_df1fd774_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "bonsai_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The bonsai tree is reconstructed using a rectangular base for the pot and multiple ellipsoid_sphere components to represent the layered, dense foliage characteristic of the juniper bonsai. The proportions of the pot and the vertical distribution of the foliage layers closely match the source image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-chinese-juniper-isolated-on-white-background-png-image_320181.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-chinese-juniper-isolated-on-white-background-png-image_320181~0.png",
+  "created_at": "2026-08-20T16:13:35.303Z",
+  "bounds": {
+    "min": [
+      -0.5,
+      -0.1,
+      -0.3804
+    ],
+    "max": [
+      0.5,
+      1.55,
+      0.3804
+    ],
+    "size": [
+      1,
+      1.65,
+      0.761
+    ],
+    "rMax": 0.628,
+    "triangles": 524,
+    "vertices": 323
+  },
+  "spec": {
+    "style": "bonsai_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

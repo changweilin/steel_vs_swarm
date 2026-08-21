@@ -1,0 +1,33 @@
+{
+  "id": "tree_canopy_images (8)",
+  "sourceImage": "tree/canopy/images (8)",
+  "style": "natural_landscape_vegetation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 342323,
+    "facadeHex": 564433,
+    "baseHex": 777777,
+    "accentHex": 889977,
+    "darkHex": 222222,
+    "brightHex": 999999,
+    "glassHex": 1976635
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_tree_trunk",
+    "tree_canopy_top",
+    "tree_canopy_mid",
+    "main_boulder",
+    "secondary_boulder",
+    "small_rock_left",
+    "shrub_left",
+    "shrub_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "pyramid",
+    "frustum_pyramid",
+    "dodecahedron_polyhedron",
+    "ellipsoid_sphere"
+  ]
+}

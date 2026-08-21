@@ -1,0 +1,35 @@
+{
+  "id": "building_chimney_ov_a4e1bf68-61ac-49d3-935e-f2420b6bc67d",
+  "sourceImage": "building/chimney/ov_a4e1bf68-61ac-49d3-935e-f2420b6bc67d",
+  "style": "Victorian-era rural cottage with brick chimneys",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 15790320,
+    "baseHex": 8421504,
+    "accentHex": 6579300,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 4621730
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_body",
+    "roof_main",
+    "chimney_left",
+    "chimney_right",
+    "bay_window_front",
+    "window_glass_1",
+    "window_glass_2",
+    "door_main",
+    "foundation",
+    "tree_trunk",
+    "tree_canopy"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

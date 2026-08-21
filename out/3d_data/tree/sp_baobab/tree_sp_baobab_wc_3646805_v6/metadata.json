@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_wc_3646805_v6",
+  "key": "tree/sp_baobab_wc_3646805_042eea00_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "nature",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the iconic Baobab tree with its massive cylindrical trunk rooted at y=0, powerful branching structure, and flat-topped spreading canopy using multiple ellipsoid and cylinder components in accurate proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/wc_3646805.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\wc_3646805~0.png",
+  "created_at": "2026-08-20T17:18:15.656Z",
+  "bounds": {
+    "min": [
+      -7.8,
+      -0.4,
+      -3.0434
+    ],
+    "max": [
+      7.8,
+      11.7,
+      3.0434
+    ],
+    "size": [
+      15.6,
+      12.1,
+      6.087
+    ],
+    "rMax": 8.373,
+    "triangles": 1032,
+    "vertices": 625
+  },
+  "spec": {
+    "style": "nature"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

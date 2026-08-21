@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ov_71b76588-800c-4b51-892d-fb42f7067fb5_v6",
+  "key": "tree/canopy_ov_71b76588-800c-4b51-892d-fb42f7067fb5_76f94ef4_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree_reconstruction",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 88,
+  "similarityReview": "The model successfully captures the massive, wide-spreading canopy of the banyan tree using multiple ellipsoid_sphere components to simulate the dense, layered foliage. The trunk is represented by a large conical_frustum with base root structures, accurately reflecting the buttress roots typical of such trees. The scale is set to match a large mature tree (approx 15m height). The color palette adheres to the 7-Zone system, with facadeHex for the trunk and roofHex for the canopy.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/ov_71b76588-800c-4b51-892d-fb42f7067fb5.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\ov_71b76588-800c-4b51-892d-fb42f7067fb5~0.png",
+  "created_at": "2026-08-20T16:07:46.872Z",
+  "bounds": {
+    "min": [
+      -10,
+      0,
+      -8.8042
+    ],
+    "max": [
+      10,
+      12,
+      8.8042
+    ],
+    "size": [
+      20,
+      12,
+      17.608
+    ],
+    "rMax": 13.323,
+    "triangles": 928,
+    "vertices": 563
+  },
+  "spec": {
+    "style": "natural_tree_reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

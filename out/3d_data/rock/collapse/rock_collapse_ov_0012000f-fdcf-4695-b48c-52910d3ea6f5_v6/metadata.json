@@ -1,0 +1,40 @@
+{
+  "id": "rock_collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_v6",
+  "key": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_3c32036f_v6",
+  "family": "rock",
+  "subpart": "collapse",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the massive erratic boulder in the forest clearing using an asymmetrical arrangement of dodecahedrons and icosahedrons, capturing the weathered mossy surface and rounded top contour.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/collapse/ov_0012000f-fdcf-4695-b48c-52910d3ea6f5.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\collapse\\ov_0012000f-fdcf-4695-b48c-52910d3ea6f5~0.png",
+  "created_at": "2026-08-20T16:18:12.821Z",
+  "bounds": {
+    "min": [
+      -1.9507,
+      -0.15,
+      -1.5
+    ],
+    "max": [
+      1.9875,
+      2.8408,
+      1.5
+    ],
+    "size": [
+      3.938,
+      2.991,
+      3
+    ],
+    "rMax": 2.49,
+    "triangles": 168,
+    "vertices": 98
+  },
+  "spec": {
+    "style": "natural_rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_v6",
+  "key": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_ce9e7c01_v6",
+  "family": "rock",
+  "subpart": "mg_tower",
+  "style": "industrial_graffiti_towers",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the row of four vertical industrial graffiti-painted silos with connected top structural frames, maintaining correct relative proportions, cylindrical shapes, color zones, and ground placement matching the input photograph.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_tower/ov_b44cd820-d44f-48fa-af35-d2920fab9d2a.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_tower\\ov_b44cd820-d44f-48fa-af35-d2920fab9d2a~0.png",
+  "created_at": "2026-08-20T16:26:46.646Z",
+  "bounds": {
+    "min": [
+      -3.35,
+      0,
+      -1.2
+    ],
+    "max": [
+      3.35,
+      5.5492,
+      1.2
+    ],
+    "size": [
+      6.7,
+      5.549,
+      2.4
+    ],
+    "rMax": 3.558,
+    "triangles": 816,
+    "vertices": 448
+  },
+  "spec": {
+    "style": "industrial_graffiti_towers"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

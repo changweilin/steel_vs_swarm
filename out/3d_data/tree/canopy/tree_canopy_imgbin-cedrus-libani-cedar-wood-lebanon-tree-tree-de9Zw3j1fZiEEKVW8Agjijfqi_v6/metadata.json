@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi_v6",
+  "key": "tree/canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi_c79d9398_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "coniferous_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree is modeled using a central trunk and multiple layers of frustum_pyramid to represent the coniferous foliage. The trunk is slightly tapered to match the natural growth. The foliage layers are stacked with varying radii to mimic the dense, layered structure of a pine tree. The base is anchored at y=0. The overall silhouette matches the provided image well.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi~0.png",
+  "created_at": "2026-08-20T17:01:24.447Z",
+  "bounds": {
+    "min": [
+      -1.8,
+      0,
+      -1.8
+    ],
+    "max": [
+      1.8,
+      8.25,
+      1.8
+    ],
+    "size": [
+      3.6,
+      8.25,
+      3.6
+    ],
+    "rMax": 2.546,
+    "triangles": 224,
+    "vertices": 122
+  },
+  "spec": {
+    "style": "coniferous_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

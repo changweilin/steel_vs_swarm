@@ -1,0 +1,30 @@
+{
+  "id": "building_roofcap_wc_51195784",
+  "sourceImage": "building/roofcap/wc_51195784",
+  "style": "industrial_brick_building",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 8405056,
+    "baseHex": 4210752,
+    "accentHex": 16711680,
+    "darkHex": 2105376,
+    "brightHex": 14737632,
+    "glassHex": 11184810
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_building_body",
+    "parapet_top",
+    "window_1",
+    "window_2",
+    "window_3",
+    "window_4",
+    "window_5",
+    "window_6",
+    "roof_base_foundation"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

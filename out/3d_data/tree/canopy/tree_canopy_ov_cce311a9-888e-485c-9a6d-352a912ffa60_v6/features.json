@@ -1,0 +1,25 @@
+{
+  "id": "tree_canopy_ov_cce311a9-888e-485c-9a6d-352a912ffa60",
+  "sourceImage": "tree/canopy/ov_cce311a9-888e-485c-9a6d-352a912ffa60",
+  "style": "botanical_sculpture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13421568,
+    "facadeHex": 8417350,
+    "baseHex": 5526272,
+    "accentHex": 16777100,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 10066329
+  },
+  "totalParts": 3,
+  "partNames": [
+    "trunk",
+    "main_canopy",
+    "canopy_highlight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

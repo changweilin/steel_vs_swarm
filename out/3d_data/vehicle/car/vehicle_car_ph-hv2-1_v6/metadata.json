@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_ph-hv2-1_v6",
+  "key": "vehicle/car_ph-hv2-1_66682f1a_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/ph-hv2-1.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\ph-hv2-1.jpg",
+  "created_at": "2026-08-20T15:26:45.067Z",
+  "bounds": {
+    "min": [
+      -1.27,
+      -0.17,
+      -2.15
+    ],
+    "max": [
+      1.27,
+      1.45,
+      2.22
+    ],
+    "size": [
+      2.54,
+      1.62,
+      4.37
+    ],
+    "rMax": 2.558,
+    "triangles": 416,
+    "vertices": 244
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "landmark_dish_ov_ea651899-beed-40c9-8e9e-617e88218cdb",
+  "sourceImage": "landmark/dish/ov_ea651899-beed-40c9-8e9e-617e88218cdb",
+  "style": "industrial_telecommunication_tower",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 12500670,
+    "facadeHex": 10526880,
+    "baseHex": 5592405,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 4621730
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_mast",
+    "lower_dish",
+    "upper_dish",
+    "central_hub",
+    "antenna_arm_left",
+    "antenna_arm_right",
+    "lower_dish_support",
+    "upper_dish_feed"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "conical_frustum",
+    "box"
+  ]
+}

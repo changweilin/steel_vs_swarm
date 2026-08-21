@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_600_0e22036ae47633cc17a7c569e53cc66f_v6",
+  "key": "rock/main_600_0e22036ae47633cc17a7c569e53cc66f_15b601ab_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_monolith",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the towering rock monolith with a rugged, jagged profile tapering towards the top. Used multiple dodecahedral and icosahedral rock shards along with polygonal prisms for the main core, anchored at y=0, and added lush vegetation layers on top matching the natural environment.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/600_0e22036ae47633cc17a7c569e53cc66f.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\600_0e22036ae47633cc17a7c569e53cc66f~0.png",
+  "created_at": "2026-08-20T16:17:13.422Z",
+  "bounds": {
+    "min": [
+      -4.5354,
+      3.5,
+      -4.3872
+    ],
+    "max": [
+      4.5,
+      24,
+      4.3872
+    ],
+    "size": [
+      9.035,
+      20.5,
+      8.774
+    ],
+    "rMax": 6.31,
+    "triangles": 468,
+    "vertices": 284
+  },
+  "spec": {
+    "style": "natural_rock_monolith"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

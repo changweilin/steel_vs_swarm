@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c_1_v6",
+  "key": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_304496fb_v6",
+  "family": "tree",
+  "subpart": "sp_acacia",
+  "style": "natural_savanna_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the iconic flat-topped umbrella acacia tree structure. The trunk is represented by a slightly tapering conical_frustum, and the expansive, flat canopy is modeled using a large, flattened ellipsoid_sphere. The proportions reflect the typical height and width of an acacia in the savanna, with the base anchored at y=0. The color palette adheres to the 7-Zone system, using facadeHex for the trunk and roofHex for the canopy foliage.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_acacia/ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_acacia\\ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1.png",
+  "created_at": "2026-08-20T17:03:51.026Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      -0.1,
+      -4.2798
+    ],
+    "max": [
+      4.5,
+      8,
+      4.2798
+    ],
+    "size": [
+      9,
+      8.1,
+      8.56
+    ],
+    "rMax": 6.21,
+    "triangles": 528,
+    "vertices": 323
+  },
+  "spec": {
+    "style": "natural_savanna_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

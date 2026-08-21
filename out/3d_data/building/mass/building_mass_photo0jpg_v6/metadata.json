@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_photo0jpg_v6",
+  "key": "building/mass_photo0jpg_53404736_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Tibetan Palace Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model reconstructs the iconic Potala Palace complex, capturing its tiered structure built into the hillside. It features the central Red Palace (maroon facade) flanked by the White Palace wings (white facades) with sloping trapezoidal base walls. The golden roofs are represented with frustum pyramids and wedges sloping outward and downward. Windows are detailed as dark and glass-toned boxes slightly offset from the walls to prevent Z-fighting. The rear and side structures are fully closed and mirrored to ensure a solid 3D volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/photo0jpg.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\photo0jpg~0.png",
+  "created_at": "2026-08-21T07:00:44.003Z",
+  "bounds": {
+    "min": [
+      -50,
+      5,
+      -42.4264
+    ],
+    "max": [
+      52.6,
+      62,
+      42.4264
+    ],
+    "size": [
+      102.6,
+      57,
+      84.853
+    ],
+    "rMax": 67.578,
+    "triangles": 376,
+    "vertices": 240
+  },
+  "spec": {
+    "style": "Tibetan Palace Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

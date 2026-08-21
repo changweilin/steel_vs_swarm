@@ -1,0 +1,26 @@
+{
+  "id": "tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1",
+  "sourceImage": "tree/sp_acacia/ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1",
+  "style": "natural_savanna_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4505600,
+    "facadeHex": 8417356,
+    "baseHex": 5329233,
+    "accentHex": 16777215,
+    "darkHex": 3947580,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 4,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "canopy_detail",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

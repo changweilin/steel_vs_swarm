@@ -1,0 +1,47 @@
+{
+  "id": "rock_mg_marble_ov_795b025b-a174-4be2-a7a1-66deecad9401",
+  "sourceImage": "rock/mg_marble/ov_795b025b-a174-4be2-a7a1-66deecad9401",
+  "style": "rock_pagoda_sculpture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7372895,
+    "facadeHex": 11184810,
+    "baseHex": 4210752,
+    "accentHex": 14540253,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 3368652
+  },
+  "totalParts": 21,
+  "partNames": [
+    "pagoda_base",
+    "pagoda_tier_1_body",
+    "pagoda_tier_1_roof",
+    "pagoda_tier_2_body",
+    "pagoda_tier_2_roof",
+    "pagoda_tier_3_body",
+    "pagoda_tier_3_roof",
+    "pagoda_tier_4_body",
+    "pagoda_tier_4_roof",
+    "pagoda_tier_5_body",
+    "pagoda_tier_5_roof",
+    "pagoda_tier_6_body",
+    "pagoda_tier_6_roof",
+    "pagoda_spire",
+    "foreground_rock_base",
+    "foreground_rock_cluster_1",
+    "foreground_rock_cluster_2",
+    "foreground_rock_top",
+    "buddha_statue",
+    "left_pillar",
+    "right_pillar"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "pyramid",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_Cybertruck-_-Cybertruck-__v6",
+  "key": "vehicle/car_Cybertruck-來了！限量-Cybertruck-模型台灣上架_f0ddba1a_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/Cybertruck-來了！限量-Cybertruck-模型台灣上架.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\Cybertruck-來了！限量-Cybertruck-模型台灣上架.jpg",
+  "created_at": "2026-08-20T15:24:13.488Z",
+  "bounds": {
+    "min": [
+      -1.54,
+      0.2,
+      -2.65
+    ],
+    "max": [
+      1.54,
+      1.8672,
+      2.6
+    ],
+    "size": [
+      3.08,
+      1.667,
+      5.25
+    ],
+    "rMax": 3.065,
+    "triangles": 340,
+    "vertices": 204
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

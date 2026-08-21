@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_v6",
+  "key": "vehicle/heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_7d713624_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "vehicle/heavy",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/heavy/big-truck-semitrailer-mockup-transportation-260nw-2623868179.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\big-truck-semitrailer-mockup-transportation-260nw-2623868179.jpg",
+  "created_at": "2026-08-20T15:32:56.132Z",
+  "bounds": {
+    "min": [
+      -6.75,
+      0.2,
+      -1.8
+    ],
+    "max": [
+      6.6,
+      3.245,
+      1.8
+    ],
+    "size": [
+      13.35,
+      3.045,
+      3.6
+    ],
+    "rMax": 6.986,
+    "triangles": 768,
+    "vertices": 426
+  },
+  "spec": {
+    "style": "vehicle/heavy"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "landmark_main_re_kv_sp",
+  "sourceImage": "landmark/main/re_kv_sp",
+  "style": "modern_landmark",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 13421772,
+    "baseHex": 8421504,
+    "accentHex": 16744192,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 8,
+  "partNames": [
+    "base_building",
+    "tower_base_bowl",
+    "main_tower_shaft",
+    "observation_deck",
+    "observation_glass",
+    "top_antenna_base",
+    "antenna_tip",
+    "window_grid_front"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "cylinder"
+  ]
+}

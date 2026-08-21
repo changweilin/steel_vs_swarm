@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree_v6",
+  "key": "tree/canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree_602a2a07_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "nature",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the massive General Sherman giant sequoia tree with a wide fluted base, towering tapered cylindrical trunk, and layered leafy canopy clusters at the top, along with the surrounding wooden fence enclosure and signage in the foreground.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree~0.png",
+  "created_at": "2026-08-20T16:49:21.133Z",
+  "bounds": {
+    "min": [
+      -12.5,
+      -0.5,
+      -12.5
+    ],
+    "max": [
+      14,
+      52,
+      12.5
+    ],
+    "size": [
+      26.5,
+      52.5,
+      25
+    ],
+    "rMax": 18.768,
+    "triangles": 912,
+    "vertices": 556
+  },
+  "spec": {
+    "style": "nature"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

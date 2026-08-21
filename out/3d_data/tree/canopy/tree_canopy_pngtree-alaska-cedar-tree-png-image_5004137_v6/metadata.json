@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137_v6",
+  "key": "tree/canopy_pngtree-alaska-cedar-tree-png-image_5004137_015312d8_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "coniferous_tree",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree is reconstructed using a central trunk and five distinct layers of conical frustums to represent the pine foliage. The proportions match the reference image, with the trunk tapering slightly and the foliage layers increasing in diameter towards the base. The vertical stacking creates a realistic silhouette.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-alaska-cedar-tree-png-image_5004137~0.png",
+  "created_at": "2026-08-20T17:02:49.843Z",
+  "bounds": {
+    "min": [
+      -1.2,
+      0,
+      -1.0392
+    ],
+    "max": [
+      1.2,
+      3.9,
+      1.0392
+    ],
+    "size": [
+      2.4,
+      3.9,
+      2.078
+    ],
+    "rMax": 1.587,
+    "triangles": 152,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "coniferous_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

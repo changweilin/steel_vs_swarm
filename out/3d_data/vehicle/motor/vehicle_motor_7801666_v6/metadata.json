@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_motor_7801666_v6",
+  "key": "vehicle/motor_7801666_ace34d8b_v6",
+  "family": "vehicle",
+  "subpart": "motor",
+  "style": "motorcycle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/motor/7801666.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\7801666.jpg",
+  "created_at": "2026-08-20T15:37:30.290Z",
+  "bounds": {
+    "min": [
+      -0.44,
+      -0.2,
+      -1.3185
+    ],
+    "max": [
+      0.44,
+      1.35,
+      1.309
+    ],
+    "size": [
+      0.88,
+      1.55,
+      2.627
+    ],
+    "rMax": 1.39,
+    "triangles": 784,
+    "vertices": 465
+  },
+  "spec": {
+    "style": "motorcycle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_162562917953",
+  "sourceImage": "building/mass/162562917953",
+  "style": "Modern Architectural Residential",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 8417382,
+    "baseHex": 4605510,
+    "accentHex": 12632256,
+    "darkHex": 2631720,
+    "brightHex": 15790320,
+    "glassHex": 11184810
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_structure",
+    "roof_frame",
+    "balcony_1",
+    "balcony_2",
+    "balcony_3",
+    "garage_door",
+    "glass_railing_1",
+    "glass_railing_2",
+    "glass_railing_3",
+    "top_glass_railing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

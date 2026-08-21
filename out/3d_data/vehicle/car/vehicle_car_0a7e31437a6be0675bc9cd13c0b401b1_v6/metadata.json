@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6",
+  "key": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_70eef89f_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately reconstructs the modern sedan (Toyota Corolla Altis style) with a white body, black grille, accurate wheel orientation, distinct glass windshields, side mirrors, and proper symmetrical placement along the vehicle's longitudinal axis.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/0a7e31437a6be0675bc9cd13c0b401b1.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\0a7e31437a6be0675bc9cd13c0b401b1~0.png",
+  "created_at": "2026-08-20T17:22:23.971Z",
+  "bounds": {
+    "min": [
+      -1.35,
+      0.13,
+      -2.2
+    ],
+    "max": [
+      1.35,
+      1.4931,
+      2.21
+    ],
+    "size": [
+      2.7,
+      1.363,
+      4.41
+    ],
+    "rMax": 2.59,
+    "triangles": 856,
+    "vertices": 536
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

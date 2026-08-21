@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_10__v6",
+  "key": "building/mass_images (10)_c8a23145_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Architectural",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the multi-level massing of the modern building, including the central vertical decorative tower, the recessed glass windows, and the rooftop terrace. All components are tightly integrated with appropriate offsets to prevent Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (10).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (10)~0.png",
+  "created_at": "2026-08-21T08:06:11.295Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -3.1
+    ],
+    "max": [
+      4.1,
+      8,
+      4
+    ],
+    "size": [
+      8.1,
+      8,
+      7.1
+    ],
+    "rMax": 5.728,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "Modern Architectural"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

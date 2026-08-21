@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull_id13750938-558191",
+  "sourceImage": "ship/hull/id13750938-558191",
+  "style": "modern_warship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 14211288,
+    "baseHex": 6579300,
+    "accentHex": 16777215,
+    "darkHex": 3158064,
+    "brightHex": 15790320,
+    "glassHex": 4621730
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "hull_base",
+    "superstructure_base",
+    "bridge_windows",
+    "main_mast_base",
+    "radar_dome",
+    "main_gun",
+    "vls_cells",
+    "aft_superstructure",
+    "funnel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

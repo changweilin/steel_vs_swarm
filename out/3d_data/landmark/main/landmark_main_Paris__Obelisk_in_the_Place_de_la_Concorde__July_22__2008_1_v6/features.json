@@ -1,0 +1,52 @@
+{
+  "id": "landmark_main_Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008~1",
+  "sourceImage": "landmark/main/Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008~1",
+  "style": "historical_monument",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13938487,
+    "facadeHex": 13155742,
+    "baseHex": 10393486,
+    "accentHex": 13938487,
+    "darkHex": 3814188,
+    "brightHex": 16769126,
+    "glassHex": 5930394
+  },
+  "totalParts": 28,
+  "partNames": [
+    "ground_sub_base_layer_1",
+    "ground_sub_base_layer_2",
+    "ground_sub_base_layer_3",
+    "pedestal_base_plinth",
+    "pedestal_lower_torus",
+    "pedestal_main_shaft",
+    "pedestal_inscription_north",
+    "pedestal_inscription_south",
+    "pedestal_inscription_east",
+    "pedestal_inscription_west",
+    "pedestal_cornice_lower",
+    "pedestal_cornice_top_slab",
+    "obelisk_die_support",
+    "obelisk_shaft_lower_collar",
+    "obelisk_main_shaft",
+    "shaft_hieroglyph_front_panel",
+    "shaft_hieroglyph_back_panel",
+    "shaft_hieroglyph_right_panel",
+    "shaft_hieroglyph_left_panel",
+    "pyramidion_golden_cap",
+    "base_fence_post_ne",
+    "base_fence_post_nw",
+    "base_fence_post_se",
+    "base_fence_post_sw",
+    "base_fence_rail_north",
+    "base_fence_rail_south",
+    "base_fence_rail_east",
+    "base_fence_rail_west"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "pyramid",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "building_roofcap_ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff",
+  "sourceImage": "building/roofcap/ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff",
+  "style": "historic_commercial_building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14211288,
+    "baseHex": 10526880,
+    "accentHex": 16711680,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 4956380
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_building_body",
+    "roof_cornice",
+    "window_grid_1",
+    "window_grid_2",
+    "window_grid_3",
+    "window_grid_4",
+    "ground_storefront_left",
+    "ground_storefront_right",
+    "brick_building_rear",
+    "signage_moore"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

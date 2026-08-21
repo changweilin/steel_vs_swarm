@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c",
+  "sourceImage": "ship/hull/c85048fc4c49c7444019ec75c0f06fb04a030e7c",
+  "style": "industrial_maritime",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 13421772,
+    "baseHex": 32768,
+    "accentHex": 16711680,
+    "darkHex": 4210752,
+    "brightHex": 15790320,
+    "glassHex": 8421631
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_hull_lower",
+    "main_hull_upper",
+    "bow_wedge",
+    "bottom_base",
+    "bridge_structure",
+    "bridge_windows",
+    "funnel",
+    "lifeboat",
+    "radar_mast"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

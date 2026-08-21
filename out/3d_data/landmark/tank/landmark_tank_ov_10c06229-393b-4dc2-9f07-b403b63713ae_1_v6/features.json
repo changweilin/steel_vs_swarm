@@ -1,0 +1,28 @@
+{
+  "id": "landmark_tank_ov_10c06229-393b-4dc2-9f07-b403b63713ae~1",
+  "sourceImage": "landmark/tank/ov_10c06229-393b-4dc2-9f07-b403b63713ae~1",
+  "style": "Industrial Landmark Water Tower",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 16777215,
+    "accentHex": 16777215,
+    "darkHex": 16777215,
+    "brightHex": 16777215,
+    "glassHex": 1976635
+  },
+  "totalParts": 5,
+  "partNames": [
+    "main_tank_body",
+    "support_column",
+    "york_sign_plate",
+    "tank_neck_base",
+    "top_vent"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "cylinder",
+    "box"
+  ]
+}

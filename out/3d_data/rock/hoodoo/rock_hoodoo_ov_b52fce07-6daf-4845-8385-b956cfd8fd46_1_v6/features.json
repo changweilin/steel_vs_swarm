@@ -1,0 +1,36 @@
+{
+  "id": "rock_hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1",
+  "sourceImage": "rock/hoodoo/ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1",
+  "style": "rock_hoodoo_landscape",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14522453,
+    "facadeHex": 13998725,
+    "baseHex": 10842217,
+    "accentHex": 16238210,
+    "darkHex": 4607817,
+    "brightHex": 16773325,
+    "glassHex": 3823472
+  },
+  "totalParts": 11,
+  "partNames": [
+    "ground_base",
+    "main_hoodoo_left_1",
+    "main_hoodoo_left_2",
+    "foreground_hoodoo_1",
+    "foreground_hoodoo_2",
+    "right_cliff_foreground",
+    "canyon_wall_mid_1",
+    "canyon_wall_mid_2",
+    "canyon_wall_mid_3",
+    "distant_plateau",
+    "rock_debris_center"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

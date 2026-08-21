@@ -1,0 +1,31 @@
+{
+  "id": "tree_canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932",
+  "sourceImage": "tree/canopy/pngtree-a-bonsai-tree-in-pot-png-image_19036932",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 45056,
+    "facadeHex": 5916487,
+    "baseHex": 4602936,
+    "accentHex": 16777215,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 9,
+  "partNames": [
+    "pot",
+    "soil",
+    "trunk_base",
+    "trunk_mid",
+    "trunk_top",
+    "canopy_top",
+    "canopy_mid_left",
+    "canopy_mid_right",
+    "canopy_low_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

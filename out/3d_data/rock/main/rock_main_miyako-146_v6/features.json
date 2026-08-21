@@ -1,0 +1,31 @@
+{
+  "id": "rock_main_miyako-146",
+  "sourceImage": "rock/main/miyako-146",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8553090,
+    "facadeHex": 7895160,
+    "baseHex": 4611130,
+    "accentHex": 3947580,
+    "darkHex": 2631720,
+    "brightHex": 11184810,
+    "glassHex": 3355443
+  },
+  "totalParts": 7,
+  "partNames": [
+    "ground_base_rock",
+    "main_stalk_lower",
+    "overhang_rock_top",
+    "rock_extension_left",
+    "rock_extension_right",
+    "top_marker_pillar",
+    "foreground_small_rock"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

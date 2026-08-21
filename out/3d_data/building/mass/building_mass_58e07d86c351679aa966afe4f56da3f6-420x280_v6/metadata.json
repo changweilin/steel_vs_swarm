@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_58e07d86c351679aa966afe4f56da3f6-420x280_v6",
+  "key": "building/mass_58e07d86c351679aa966afe4f56da3f6-420x280_9615675b_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Japanese Castle Architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the multi-tiered roof structure, the stone base (ishigaki), and the central tower. The roof slopes are correctly oriented outward and downward. Windows and architectural details are represented as distinct parts with appropriate color coding. The 360-degree structure is inferred from the visible front and side profiles.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/58e07d86c351679aa966afe4f56da3f6-420x280.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\58e07d86c351679aa966afe4f56da3f6-420x280~0.png",
+  "created_at": "2026-08-21T10:10:15.423Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -4
+    ],
+    "max": [
+      4,
+      17.75,
+      5.75
+    ],
+    "size": [
+      8,
+      17.75,
+      9.75
+    ],
+    "rMax": 7.004,
+    "triangles": 132,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "Japanese Castle Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_800x_1__v6",
+  "key": "vehicle/bike_800x (1)_dfbe4fd9_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the road bicycle with proper diamond frame geometry, handlebar assembly, aero seatpost, saddle, and both wheelsets accurately positioned along the longitudinal axis without clipping or floating parts.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/800x (1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\800x (1)~0.png",
+  "created_at": "2026-08-20T17:20:13.900Z",
+  "bounds": {
+    "min": [
+      -0.875,
+      0.095,
+      -0.3566
+    ],
+    "max": [
+      0.875,
+      0.905,
+      0.3566
+    ],
+    "size": [
+      1.75,
+      0.81,
+      0.713
+    ],
+    "rMax": 0.945,
+    "triangles": 736,
+    "vertices": 441
+  },
+  "spec": {
+    "style": "vehicle/bike"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

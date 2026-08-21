@@ -1,0 +1,40 @@
+{
+  "id": "building_window_ov_864569fb-56ef-4684-97df-6a18597be0dc_v6",
+  "key": "building/window_ov_864569fb-56ef-4684-97df-6a18597be0dc_dda19011_v6",
+  "family": "building",
+  "subpart": "window",
+  "style": "Art Nouveau Stained Glass Window",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The object is a circular stained glass window featuring a stylized portrait. I have reconstructed this as a circular frame containing a flat, multi-layered relief representing the glass panel. The depth is simulated with slight offsets to represent the leaded glass structure, maintaining the 2D artistic intent within a 3D geometric framework.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/window/ov_864569fb-56ef-4684-97df-6a18597be0dc.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\window\\ov_864569fb-56ef-4684-97df-6a18597be0dc~0.png",
+  "created_at": "2026-08-21T09:34:16.935Z",
+  "bounds": {
+    "min": [
+      -1.05,
+      -1.0004,
+      -0.9986
+    ],
+    "max": [
+      1.05,
+      1.0004,
+      0.9986
+    ],
+    "size": [
+      2.1,
+      2.001,
+      1.997
+    ],
+    "rMax": 1.449,
+    "triangles": 720,
+    "vertices": 421
+  },
+  "spec": {
+    "style": "Art Nouveau Stained Glass Window"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_Methanier_aspher_LNGRIVERS_v6",
+  "key": "ship/hull_Methanier_aspher_LNGRIVERS_59740126_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "industrial_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The LNG carrier is reconstructed with a focus on the distinct spherical cargo tanks, the aft superstructure, and the green hull. The hull is modeled as a large box with a wedge bow. The spherical tanks are represented by hemispheres and cylinders. The bridge and superstructure are built with stacked boxes and prisms. All parts are tightly joined, and the color palette follows the 7-Zone requirement.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/Methanier_aspher_LNGRIVERS.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\Methanier_aspher_LNGRIVERS~0.png",
+  "created_at": "2026-08-20T16:19:10.782Z",
+  "bounds": {
+    "min": [
+      -50,
+      0,
+      -7.5
+    ],
+    "max": [
+      55,
+      16.5,
+      7.6
+    ],
+    "size": [
+      105,
+      16.5,
+      15.1
+    ],
+    "rMax": 55.523,
+    "triangles": 610,
+    "vertices": 364
+  },
+  "spec": {
+    "style": "industrial_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

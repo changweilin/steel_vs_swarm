@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_ea928273145f45cbb50e9db4",
+  "sourceImage": "building/mass/ea928273145f45cbb50e9db4",
+  "style": "Modern Minimalist Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14211288,
+    "baseHex": 11184810,
+    "accentHex": 8421504,
+    "darkHex": 5592405,
+    "brightHex": 16777215,
+    "glassHex": 11584767
+  },
+  "totalParts": 9,
+  "partNames": [
+    "MainLivingBlock",
+    "GarageBlock",
+    "UpperLevelBlock",
+    "CantileverRoof",
+    "SupportColumn",
+    "GarageDoor",
+    "MainGlassWindow",
+    "BalconyRailing",
+    "DrivewayRamp"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_tower_manual__Run-in-taipei-1920x1080_v6",
+  "key": "building/bld_tower_manual__Run-in-taipei-1920x1080_76b3675e_v6",
+  "family": "building",
+  "subpart": "bld_tower",
+  "style": "modern_skyscraper_taipei101",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the iconic Taipei 101 skyscraper. It captures the multi-tiered pagoda-like structure (8 segments of inverted frustum pyramids), the massive base podium, the transition sections, the circular decorative elements on the sides, and the distinct spire at the top. All parts are tightly integrated with no gaps, and the glass facade is correctly assigned to the glassHex color zone.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_tower/manual__Run-in-taipei-1920x1080.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_tower\\manual__Run-in-taipei-1920x1080~0.png",
+  "created_at": "2026-08-21T06:34:14.888Z",
+  "bounds": {
+    "min": [
+      -60,
+      0,
+      -60
+    ],
+    "max": [
+      60,
+      369.5,
+      60
+    ],
+    "size": [
+      120,
+      369.5,
+      120
+    ],
+    "rMax": 84.853,
+    "triangles": 544,
+    "vertices": 312
+  },
+  "spec": {
+    "style": "modern_skyscraper_taipei101"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

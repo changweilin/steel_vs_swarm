@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_1_1_v6",
+  "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)~1_16ef6d99_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "botanical_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The 3D model accurately captures the vertical layered structure of the evergreen tree, featuring a central trunk and multiple conical canopies decreasing in size towards the top, with proper color zoning.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)~1.png",
+  "created_at": "2026-08-20T16:47:20.040Z",
+  "bounds": {
+    "min": [
+      -2.2,
+      0,
+      -2.2
+    ],
+    "max": [
+      2.2,
+      6.8,
+      2.2
+    ],
+    "size": [
+      4.4,
+      6.8,
+      4.4
+    ],
+    "rMax": 3.111,
+    "triangles": 216,
+    "vertices": 122
+  },
+  "spec": {
+    "style": "botanical_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

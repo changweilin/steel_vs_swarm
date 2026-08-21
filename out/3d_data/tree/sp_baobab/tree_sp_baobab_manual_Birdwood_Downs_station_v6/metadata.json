@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_manual_Birdwood_Downs_station_v6",
+  "key": "tree/sp_baobab_manual_Birdwood_Downs_station_e895ab95_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "natural_baobab_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the iconic massive, hollowed-out trunk of the Boab tree using a combination of ellipsoids and cylinders. The canopy is represented by multiple overlapping ellipsoids to simulate the sparse, spreading foliage characteristic of the species. The hollow cavity is represented by a dark-colored cylinder/box hybrid to create depth. The overall proportions and the rugged, bulbous nature of the trunk are well-represented.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/manual_Birdwood_Downs_station.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\manual_Birdwood_Downs_station~0.png",
+  "created_at": "2026-08-20T17:04:45.164Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.2,
+      -2.8532
+    ],
+    "max": [
+      5.5,
+      9.5,
+      2.8532
+    ],
+    "size": [
+      11.5,
+      9.7,
+      5.706
+    ],
+    "rMax": 6.644,
+    "triangles": 740,
+    "vertices": 452
+  },
+  "spec": {
+    "style": "natural_baobab_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

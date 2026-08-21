@@ -1,0 +1,32 @@
+{
+  "id": "rock_tor_ov_43802293-e834-4d23-8f72-935935cf9c85",
+  "sourceImage": "rock/tor/ov_43802293-e834-4d23-8f72-935935cf9c85",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 8553090,
+    "baseHex": 4605510,
+    "accentHex": 6579300,
+    "darkHex": 2105376,
+    "brightHex": 12566463,
+    "glassHex": 3289650
+  },
+  "totalParts": 8,
+  "partNames": [
+    "ground_rock_base_1",
+    "ground_rock_base_2",
+    "ground_rock_base_3",
+    "mid_cluster_rock_1",
+    "mid_cluster_rock_2",
+    "mid_cluster_rock_3",
+    "upper_neck_rock",
+    "top_boulder_main"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "polygonal_prism"
+  ]
+}

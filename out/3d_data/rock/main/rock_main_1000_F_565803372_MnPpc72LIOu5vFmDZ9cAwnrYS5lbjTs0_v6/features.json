@@ -1,0 +1,29 @@
+{
+  "id": "rock_main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0",
+  "sourceImage": "rock/main/1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 8421504,
+    "baseHex": 5263440,
+    "accentHex": 10519360,
+    "darkHex": 3158064,
+    "brightHex": 14540253,
+    "glassHex": 3292261
+  },
+  "totalParts": 6,
+  "partNames": [
+    "rock_base",
+    "rock_main_peak",
+    "rock_side_left",
+    "rock_side_right",
+    "rock_front_wedge",
+    "rock_pebble_front"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

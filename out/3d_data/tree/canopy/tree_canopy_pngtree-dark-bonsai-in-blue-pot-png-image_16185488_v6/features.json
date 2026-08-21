@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_pngtree-dark-bonsai-in-blue-pot-png-image_16185488",
+  "sourceImage": "tree/canopy/pngtree-dark-bonsai-in-blue-pot-png-image_16185488",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4500000,
+    "facadeHex": 604020,
+    "baseHex": 302010,
+    "accentHex": 809030,
+    "darkHex": 202020,
+    "brightHex": 909090,
+    "glassHex": 102030
+  },
+  "totalParts": 7,
+  "partNames": [
+    "pot_base",
+    "main_trunk",
+    "branch_left",
+    "branch_right",
+    "canopy_top",
+    "canopy_left",
+    "canopy_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_images_3__v6",
+  "key": "rock/main_images (3)_5dece30a_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed rock model captures the asymmetrical, organic, and faceted characteristics of the natural stone shown in the image by combining multiple polyhedral rock masses with varied scales and rotations anchored firmly to the ground at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/images (3).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\images (3)~0.png",
+  "created_at": "2026-08-20T16:21:14.094Z",
+  "bounds": {
+    "min": [
+      -0.9664,
+      -0.3,
+      -0.9
+    ],
+    "max": [
+      1.1072,
+      1.394,
+      0.9
+    ],
+    "size": [
+      2.074,
+      1.694,
+      1.8
+    ],
+    "rMax": 1.427,
+    "triangles": 164,
+    "vertices": 96
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

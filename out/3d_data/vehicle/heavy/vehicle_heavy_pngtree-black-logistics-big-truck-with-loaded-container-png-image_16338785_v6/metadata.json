@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_v6",
+  "key": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/heavy/pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785.png",
+  "created_at": "2026-08-20T15:34:54.955Z",
+  "bounds": {
+    "min": [
+      -1.72,
+      0,
+      -5.5
+    ],
+    "max": [
+      1.72,
+      3.65,
+      5.5
+    ],
+    "size": [
+      3.44,
+      3.65,
+      11
+    ],
+    "rMax": 5.763,
+    "triangles": 640,
+    "vertices": 358
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

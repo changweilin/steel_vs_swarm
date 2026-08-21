@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_178670843535945_P35065317_0_v6",
+  "key": "building/mass_178670843535945_P35065317~0_f3c61ee0_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the dual modern high-rise residential towers with detailed recessed balconies, glass facades, and cantilevered roof features. Maintained structural adherence and multi-tier modular balconies matching the photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/178670843535945_P35065317.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\178670843535945_P35065317~0.png",
+  "created_at": "2026-08-20T17:21:32.381Z",
+  "bounds": {
+    "min": [
+      -14.5,
+      0,
+      -5.5
+    ],
+    "max": [
+      7,
+      52,
+      8
+    ],
+    "size": [
+      21.5,
+      52,
+      13.5
+    ],
+    "rMax": 15.508,
+    "triangles": 132,
+    "vertices": 88
+  },
+  "spec": {
+    "style": "Modern Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

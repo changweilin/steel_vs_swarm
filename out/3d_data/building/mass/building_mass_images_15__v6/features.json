@@ -1,0 +1,34 @@
+{
+  "id": "building_mass_images (15)",
+  "sourceImage": "building/mass/images (15)",
+  "style": "Traditional Chinese Architecture (Temple of Heaven)",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 11546645,
+    "baseHex": 14211288,
+    "accentHex": 16766720,
+    "darkHex": 3947580,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_platform",
+    "lower_wall",
+    "lower_eave",
+    "middle_wall",
+    "middle_eave",
+    "upper_wall",
+    "upper_roof",
+    "spire_top",
+    "door_main",
+    "plaque"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "frustum_pyramid",
+    "cone"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2_v6",
+  "key": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_30a411fe_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vintage_automobile",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the vintage open-top touring car with correct proportions, accurate wheel orientations, vintage folded soft top, characteristic upright windshield with glass texture, round headlights, running boards, and front bumper crank handle.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/1926-FORD-MODEL-T-TOURING-CAR-2.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\1926-FORD-MODEL-T-TOURING-CAR-2~0.png",
+  "created_at": "2026-08-20T17:24:32.161Z",
+  "bounds": {
+    "min": [
+      -1.15,
+      -0.09,
+      -1.7185
+    ],
+    "max": [
+      1.15,
+      1.7,
+      1.95
+    ],
+    "size": [
+      2.3,
+      1.79,
+      3.668
+    ],
+    "rMax": 2.264,
+    "triangles": 1260,
+    "vertices": 763
+  },
+  "spec": {
+    "style": "vintage_automobile"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

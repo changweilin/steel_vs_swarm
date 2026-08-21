@@ -1,0 +1,36 @@
+{
+  "id": "building_dwg_civic_wc_34469337",
+  "sourceImage": "building/dwg_civic/wc_34469337",
+  "style": "Classical Colonial Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14737632,
+    "baseHex": 10526880,
+    "accentHex": 8421504,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 12,
+  "partNames": [
+    "MainBody",
+    "TowerBase",
+    "Roof",
+    "Window_1",
+    "Window_2",
+    "Window_3",
+    "Window_4",
+    "Window_5",
+    "Door_1",
+    "Door_2",
+    "Cornice",
+    "TowerWindow"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "cylinder"
+  ]
+}

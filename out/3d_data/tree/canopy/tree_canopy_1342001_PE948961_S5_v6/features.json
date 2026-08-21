@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_1342001_PE948961_S5",
+  "sourceImage": "tree/canopy/1342001_PE948961_S5",
+  "style": "potted_cactus",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2245120,
+    "facadeHex": 2835760,
+    "baseHex": 15658734,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 8421504
+  },
+  "totalParts": 6,
+  "partNames": [
+    "pot",
+    "soil",
+    "main_stem",
+    "left_branch",
+    "right_branch",
+    "center_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "pyramid"
+  ]
+}

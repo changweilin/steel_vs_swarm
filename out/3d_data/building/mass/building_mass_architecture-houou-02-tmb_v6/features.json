@@ -1,0 +1,36 @@
+{
+  "id": "building_mass_architecture-houou-02-tmb",
+  "sourceImage": "building/mass/architecture-houou-02-tmb",
+  "style": "Traditional Japanese Temple Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4605510,
+    "facadeHex": 12596768,
+    "baseHex": 13421772,
+    "accentHex": 16766720,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 49484
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_base",
+    "central_chamber",
+    "left_wing",
+    "right_wing",
+    "main_roof",
+    "central_buddha_glass",
+    "left_roof",
+    "right_roof",
+    "pillar_1",
+    "pillar_2",
+    "ornament_left",
+    "ornament_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "pyramid"
+  ]
+}

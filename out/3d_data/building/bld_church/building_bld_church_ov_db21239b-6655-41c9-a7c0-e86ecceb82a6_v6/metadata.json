@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_church_ov_db21239b-6655-41c9-a7c0-e86ecceb82a6_v6",
+  "key": "building/bld_church_ov_db21239b-6655-41c9-a7c0-e86ecceb82a6_300e4027_v6",
+  "family": "building",
+  "subpart": "bld_church",
+  "style": "building/bld_church",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the classic white-sided church architecture, including the central bell tower with a pyramidal shingled roof, arched stained glass windows, the entrance canopy with steps, and the symmetrical side wings. Roof overhangs and geometry follow strict outward-sloping rules.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_church/ov_db21239b-6655-41c9-a7c0-e86ecceb82a6.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_church\\ov_db21239b-6655-41c9-a7c0-e86ecceb82a6~0.png",
+  "created_at": "2026-08-20T17:25:13.812Z",
+  "bounds": {
+    "min": [
+      -5.7381,
+      0,
+      -6.3
+    ],
+    "max": [
+      5.7381,
+      13,
+      8.2
+    ],
+    "size": [
+      11.476,
+      13,
+      14.5
+    ],
+    "rMax": 10.008,
+    "triangles": 260,
+    "vertices": 162
+  },
+  "spec": {
+    "style": "building/bld_church"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

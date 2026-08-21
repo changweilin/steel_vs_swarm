@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58",
+  "sourceImage": "ship/hull/7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58",
+  "style": "fishing_vessel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 255,
+    "baseHex": 128,
+    "accentHex": 16711680,
+    "darkHex": 32896,
+    "brightHex": 16777215,
+    "glassHex": 8421631
+  },
+  "totalParts": 11,
+  "partNames": [
+    "hull_base",
+    "hull_upper",
+    "bow_wedge",
+    "bridge_main",
+    "bridge_window",
+    "mast_main",
+    "tire_1",
+    "tire_2",
+    "tire_3",
+    "tire_4",
+    "flag"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "torus_ring"
+  ]
+}

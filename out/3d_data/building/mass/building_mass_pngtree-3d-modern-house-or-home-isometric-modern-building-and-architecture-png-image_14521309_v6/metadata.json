@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521309_v6",
+  "key": "building/mass_pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521309_306fbb2d_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the multi-level modern villa structure, including the cantilevered balconies, glass curtain walls, and the rooftop penthouse. The proportions are consistent with a 2-story residential scale. All glass elements are correctly colored, and the base is anchored to the ground plane.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521309.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521309~0.png",
+  "created_at": "2026-08-21T08:50:13.779Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.2,
+      -6
+    ],
+    "max": [
+      6,
+      8.35,
+      6
+    ],
+    "size": [
+      12,
+      8.55,
+      12
+    ],
+    "rMax": 8.485,
+    "triangles": 428,
+    "vertices": 270
+  },
+  "spec": {
+    "style": "Modern Minimalist Villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

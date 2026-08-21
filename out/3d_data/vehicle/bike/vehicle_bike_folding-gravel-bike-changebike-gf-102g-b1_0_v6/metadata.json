@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_0_v6",
+  "key": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1~0_dfd17ffa_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the rear triangle, chainstay, seatstay, rear wheel with tire, crankset, and derailleur of the bicycle with precise proportions and proper color coordination corresponding to the reference image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\folding-gravel-bike-changebike-gf-102g-b1~0.png",
+  "created_at": "2026-08-20T17:20:44.840Z",
+  "bounds": {
+    "min": [
+      -0.9843,
+      -0.05,
+      -1.035
+    ],
+    "max": [
+      0.9843,
+      1.0236,
+      1.035
+    ],
+    "size": [
+      1.969,
+      1.074,
+      2.07
+    ],
+    "rMax": 1.428,
+    "triangles": 988,
+    "vertices": 541
+  },
+  "spec": {
+    "style": "vehicle/bike"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

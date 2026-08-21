@@ -1,0 +1,42 @@
+{
+  "id": "vehicle_heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785",
+  "sourceImage": "vehicle/heavy/pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2236962,
+    "facadeHex": 2236962,
+    "baseHex": 1184274,
+    "accentHex": 4473924,
+    "darkHex": 657930,
+    "brightHex": 14540253,
+    "glassHex": 3822295
+  },
+  "totalParts": 19,
+  "partNames": [
+    "chassis",
+    "cab_main",
+    "cab_roof",
+    "windshield",
+    "left_window",
+    "right_window",
+    "front_grille",
+    "front_bumper",
+    "headlight_left",
+    "headlight_right",
+    "container",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel_1",
+    "rear_right_wheel_1",
+    "rear_left_wheel_2",
+    "rear_right_wheel_2",
+    "rear_left_wheel_3",
+    "rear_right_wheel_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1_v6",
+  "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af~1_26ca6168_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D bicycle front suspension, wheel, tire, disc brake, and downtube precisely match the visual features of the provided photo with correct geometric alignment and part sizing.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\e5823366c7ed43f3b8e2c62ce0bc59af~1.png",
+  "created_at": "2026-08-20T17:20:36.489Z",
+  "bounds": {
+    "min": [
+      -0.4,
+      0.4,
+      -0.3804
+    ],
+    "max": [
+      0.4,
+      1.6265,
+      0.3804
+    ],
+    "size": [
+      0.8,
+      1.227,
+      0.761
+    ],
+    "rMax": 0.552,
+    "triangles": 532,
+    "vertices": 301
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

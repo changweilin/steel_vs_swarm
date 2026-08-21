@@ -1,0 +1,31 @@
+{
+  "id": "building_dwg_house_wc_33743891",
+  "sourceImage": "building/dwg_house/wc_33743891",
+  "style": "Spanish Colonial Revival Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14737632,
+    "baseHex": 10526880,
+    "accentHex": 8421504,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_base_block",
+    "upper_stepped_block",
+    "parapet_top",
+    "arched_entryway",
+    "window_set_1",
+    "window_set_2",
+    "upper_window_large",
+    "decorative_trim_horizontal",
+    "side_parapet_extension",
+    "chimney_stack"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

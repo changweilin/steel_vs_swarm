@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_dome_ov_f1c5fb26-30f1-4b78-a0ca-069c65f45669_v6",
+  "key": "rock/mg_dome_ov_f1c5fb26-30f1-4b78-a0ca-069c65f45669_a527b61d_v6",
+  "family": "rock",
+  "subpart": "mg_dome",
+  "style": "rock_sculpture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the 3D model featuring a flat blue vertical backing panel with a curved top and a multi-layered low-poly rock terrain resting on a base, matching the provided blue monochromatic CAD model reference.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_dome/ov_f1c5fb26-30f1-4b78-a0ca-069c65f45669.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_dome\\ov_f1c5fb26-30f1-4b78-a0ca-069c65f45669~0.png",
+  "created_at": "2026-08-20T16:24:13.982Z",
+  "bounds": {
+    "min": [
+      -0.8204,
+      -0.0671,
+      -0.7671
+    ],
+    "max": [
+      0.8204,
+      2.4,
+      1
+    ],
+    "size": [
+      1.641,
+      2.467,
+      1.767
+    ],
+    "rMax": 1.293,
+    "triangles": 224,
+    "vertices": 128
+  },
+  "spec": {
+    "style": "rock_sculpture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

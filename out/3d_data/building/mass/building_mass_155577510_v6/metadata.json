@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_155577510_v6",
+  "key": "building/mass_155577510_b3ab210e_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Traditional Japanese Temple Architecture (Byodo-in style)",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the complex multi-winged structure of the temple. The central hall, side corridors, and corner towers are represented with correct geometric proportions. Roof slopes are correctly oriented outward and downward. The base platform and structural pillars are aligned to maintain a cohesive, closed 3D volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/155577510.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\155577510~0.png",
+  "created_at": "2026-08-21T09:52:12.180Z",
+  "bounds": {
+    "min": [
+      -7.0607,
+      0,
+      -3
+    ],
+    "max": [
+      7.0607,
+      3.75,
+      3
+    ],
+    "size": [
+      14.121,
+      3.75,
+      6
+    ],
+    "rMax": 7.672,
+    "triangles": 220,
+    "vertices": 138
+  },
+  "spec": {
+    "style": "Traditional Japanese Temple Architecture (Byodo-in style)"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

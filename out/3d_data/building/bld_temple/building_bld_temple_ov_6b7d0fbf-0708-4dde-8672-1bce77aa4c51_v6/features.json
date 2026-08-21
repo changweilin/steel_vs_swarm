@@ -1,0 +1,35 @@
+{
+  "id": "building_bld_temple_ov_6b7d0fbf-0708-4dde-8672-1bce77aa4c51",
+  "sourceImage": "building/bld_temple/ov_6b7d0fbf-0708-4dde-8672-1bce77aa4c51",
+  "style": "Japanese Temple Gate (Nio-mon)",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4539712,
+    "facadeHex": 8417360,
+    "baseHex": 6579300,
+    "accentHex": 12345678,
+    "darkHex": 2236962,
+    "brightHex": 14540253,
+    "glassHex": 3355647
+  },
+  "totalParts": 12,
+  "partNames": [
+    "MainPlatform",
+    "CentralGateBody",
+    "MainRoof",
+    "LeftWall",
+    "RightWall",
+    "LeftRoof",
+    "RightRoof",
+    "FrontStairs",
+    "LeftFence",
+    "RightFence",
+    "GateColumnLeft",
+    "GateColumnRight"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

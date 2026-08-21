@@ -1,0 +1,30 @@
+{
+  "id": "landmark_tank_ov_10c06229-393b-4dc2-9f07-b403b63713ae",
+  "sourceImage": "landmark/tank/ov_10c06229-393b-4dc2-9f07-b403b63713ae",
+  "style": "industrial_landmark",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16711680,
+    "facadeHex": 16777215,
+    "baseHex": 10066329,
+    "accentHex": 255,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 8421504
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_tank_body",
+    "tank_neck",
+    "tank_base_support",
+    "tank_base_foundation",
+    "york_sign_plate",
+    "top_vent"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "cylinder",
+    "conical_frustum",
+    "box"
+  ]
+}

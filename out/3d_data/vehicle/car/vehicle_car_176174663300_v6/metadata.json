@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_176174663300_v6",
+  "key": "vehicle/car_176174663300_5d9aff4e_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "modern_electric_van",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately reconstructs the electric van with a boxy main body, distinctive curved dark front fascia, distinct cabin windows in glassHex, integrated side mirrors, and correctly oriented wheels.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/176174663300.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\176174663300~0.png",
+  "created_at": "2026-08-20T17:24:09.350Z",
+  "bounds": {
+    "min": [
+      -1.54,
+      0.1,
+      -2.2
+    ],
+    "max": [
+      1.54,
+      2.3815,
+      2.24
+    ],
+    "size": [
+      3.08,
+      2.281,
+      4.44
+    ],
+    "rMax": 2.718,
+    "triangles": 888,
+    "vertices": 556
+  },
+  "spec": {
+    "style": "modern_electric_van"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

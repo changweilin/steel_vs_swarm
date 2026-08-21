@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_1711950770028207_600_400_0_v6",
+  "key": "vehicle/car_1711950770028207_600_400~0_3a000af3_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The reconstructed 3D model accurately captures the distinctive two-tone boxy van structure, including the pale green lower body, white upper roof and hood, integrated front headlights, side windows with correct segmentation, dual-tone bumpers, and correctly oriented wheels.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/1711950770028207_600_400.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\1711950770028207_600_400~0.png",
+  "created_at": "2026-08-20T17:23:03.523Z",
+  "bounds": {
+    "min": [
+      -1.04,
+      0.03,
+      -1.9
+    ],
+    "max": [
+      1.04,
+      1.8585,
+      2.085
+    ],
+    "size": [
+      2.08,
+      1.829,
+      3.985
+    ],
+    "rMax": 2.33,
+    "triangles": 728,
+    "vertices": 416
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

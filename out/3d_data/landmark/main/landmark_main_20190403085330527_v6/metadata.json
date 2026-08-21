@@ -1,0 +1,40 @@
+{
+  "id": "landmark_main_20190403085330527_v6",
+  "key": "landmark/main_20190403085330527_3c1787e7_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "neoclassical_architecture_with_modern_glass_pyramid",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the central Louvre Pyramid and the surrounding symmetrical neoclassical wings. The pyramid is modeled as a large pyramid with glass panels, and the side buildings are constructed using boxes and prisms to represent the classical facade, columns, and roofs. The scale is set to reflect the grand plaza environment.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/20190403085330527.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\main\\20190403085330527~0.png",
+  "created_at": "2026-08-20T16:19:16.720Z",
+  "bounds": {
+    "min": [
+      -50,
+      -1,
+      -25
+    ],
+    "max": [
+      50,
+      16,
+      25
+    ],
+    "size": [
+      100,
+      17,
+      50
+    ],
+    "rMax": 55.902,
+    "triangles": 164,
+    "vertices": 102
+  },
+  "spec": {
+    "style": "neoclassical_architecture_with_modern_glass_pyramid"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

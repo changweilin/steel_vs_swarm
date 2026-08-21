@@ -1,0 +1,33 @@
+{
+  "id": "rock_main_600_0e22036ae47633cc17a7c569e53cc66f",
+  "sourceImage": "rock/main/600_0e22036ae47633cc17a7c569e53cc66f",
+  "style": "natural_rock_monolith",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3822645,
+    "facadeHex": 5262438,
+    "baseHex": 2632221,
+    "accentHex": 3432757,
+    "darkHex": 1973790,
+    "brightHex": 8421504,
+    "glassHex": 2831200
+  },
+  "totalParts": 8,
+  "partNames": [
+    "Rock_Base",
+    "Rock_Middle_Body",
+    "Rock_Upper_Taper",
+    "Rock_Peak_Wedge",
+    "Rock_Shard_Left",
+    "Rock_Shard_Right",
+    "Vegetation_Top_Cluster",
+    "Vegetation_Side_Bush"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "ellipsoid_sphere"
+  ]
+}

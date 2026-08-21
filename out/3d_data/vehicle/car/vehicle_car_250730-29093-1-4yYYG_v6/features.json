@@ -1,0 +1,43 @@
+{
+  "id": "vehicle_car_250730-29093-1-4yYYG",
+  "sourceImage": "vehicle/car/250730-29093-1-4yYYG",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2105376,
+    "facadeHex": 2181585,
+    "baseHex": 1973790,
+    "accentHex": 3289650,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 3822240
+  },
+  "totalParts": 20,
+  "partNames": [
+    "chassis_base",
+    "body_main",
+    "roof",
+    "hood",
+    "front_windshield",
+    "rear_windshield",
+    "left_side_window",
+    "right_side_window",
+    "front_grille",
+    "left_headlight",
+    "right_headlight",
+    "left_rear_light",
+    "right_rear_light",
+    "left_mirror",
+    "right_mirror",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel",
+    "rear_right_wheel",
+    "front_bumper_lip"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

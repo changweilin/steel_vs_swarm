@@ -1,0 +1,33 @@
+{
+  "id": "building_chimney_ov_57fcec1d-e061-425d-8b1d-f4f81c3537db",
+  "sourceImage": "building/chimney/ov_57fcec1d-e061-425d-8b1d-f4f81c3537db",
+  "style": "industrial_ruin",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 804020,
+    "facadeHex": 904525,
+    "baseHex": 603015,
+    "accentHex": 502510,
+    "darkHex": 301505,
+    "brightHex": 909090,
+    "glassHex": 102030
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_building_body",
+    "chimney_base",
+    "chimney_top",
+    "window_1",
+    "window_2",
+    "window_3",
+    "window_4",
+    "window_5",
+    "lower_window_1",
+    "lower_window_2",
+    "lower_window_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "conical_frustum"
+  ]
+}

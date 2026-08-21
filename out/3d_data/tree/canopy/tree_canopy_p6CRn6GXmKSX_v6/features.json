@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_p6CRn6GXmKSX",
+  "sourceImage": "tree/canopy/p6CRn6GXmKSX",
+  "style": "Giant Sequoia Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 345621,
+    "facadeHex": 884422,
+    "baseHex": 553311,
+    "accentHex": 996633,
+    "darkHex": 221100,
+    "brightHex": 776655,
+    "glassHex": 112233
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "trunk_base",
+    "canopy_lower",
+    "canopy_middle",
+    "canopy_top",
+    "branch_cluster_1",
+    "branch_cluster_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "dodecahedron_polyhedron"
+  ]
+}

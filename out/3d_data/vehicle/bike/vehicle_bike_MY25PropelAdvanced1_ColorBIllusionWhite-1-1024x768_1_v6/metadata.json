@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_1_v6",
+  "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~1_086a3b67_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the front wheel and fork section of the bicycle using a torus ring for the tire, a cylinder for the carbon rim, and angled cylinders for the front fork tubes, achieving high fidelity to the source image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~1.png",
+  "created_at": "2026-08-20T17:21:08.697Z",
+  "bounds": {
+    "min": [
+      -0.5,
+      -0.585,
+      -0.9843
+    ],
+    "max": [
+      0.53,
+      1.485,
+      0.9843
+    ],
+    "size": [
+      1.03,
+      2.07,
+      1.969
+    ],
+    "rMax": 1.118,
+    "triangles": 548,
+    "vertices": 303
+  },
+  "spec": {
+    "style": "vehicle/bike"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

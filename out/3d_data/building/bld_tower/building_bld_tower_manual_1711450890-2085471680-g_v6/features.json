@@ -1,0 +1,31 @@
+{
+  "id": "building_bld_tower_manual_1711450890-2085471680-g",
+  "sourceImage": "building/bld_tower/manual_1711450890-2085471680-g",
+  "style": "modern_highrise_residential",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14211288,
+    "baseHex": 11184810,
+    "accentHex": 5592405,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 9,
+  "partNames": [
+    "tower_left_body",
+    "tower_right_body",
+    "roof_crown_left",
+    "roof_crown_right",
+    "balcony_layer_1",
+    "balcony_layer_2",
+    "window_panel_left",
+    "window_panel_right",
+    "base_platform"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid"
+  ]
+}

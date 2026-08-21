@@ -1,0 +1,49 @@
+{
+  "id": "vehicle_car_176174663300",
+  "sourceImage": "vehicle/car/176174663300",
+  "style": "modern_electric_van",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3622478,
+    "facadeHex": 3953474,
+    "baseHex": 1974059,
+    "accentHex": 12566463,
+    "darkHex": 1974059,
+    "brightHex": 14540253,
+    "glassHex": 1581079
+  },
+  "totalParts": 26,
+  "partNames": [
+    "chassis_base",
+    "main_body_facade",
+    "roof_top",
+    "front_dark_fascia",
+    "front_windshield",
+    "left_front_window",
+    "right_front_window",
+    "left_rear_window",
+    "right_rear_window",
+    "front_bumper_lower",
+    "front_bumper_accent",
+    "license_plate_front",
+    "left_mirror",
+    "right_mirror",
+    "front_left_wheel_tire",
+    "front_left_wheel_rim",
+    "front_right_wheel_tire",
+    "front_right_wheel_rim",
+    "rear_left_wheel_tire",
+    "rear_left_wheel_rim",
+    "rear_right_wheel_tire",
+    "rear_right_wheel_rim",
+    "front_left_wheel_arch",
+    "front_right_wheel_arch",
+    "rear_left_wheel_arch",
+    "rear_right_wheel_arch"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "torus_ring",
+    "cylinder"
+  ]
+}

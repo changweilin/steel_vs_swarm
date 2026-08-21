@@ -1,0 +1,49 @@
+{
+  "id": "vehicle_car_2017091364238789",
+  "sourceImage": "vehicle/car/2017091364238789",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 2049339,
+    "baseHex": 1054743,
+    "accentHex": 14540253,
+    "darkHex": 1973790,
+    "brightHex": 15658734,
+    "glassHex": 3362175
+  },
+  "totalParts": 25,
+  "partNames": [
+    "chassis_base",
+    "lower_body_front",
+    "lower_body_main",
+    "upper_body_front_v",
+    "upper_body_sides",
+    "roof",
+    "front_windshield_left",
+    "front_windshield_right",
+    "side_window_driver",
+    "side_window_passenger_1",
+    "side_window_passenger_2",
+    "side_window_passenger_3",
+    "side_window_passenger_4",
+    "headlight_left",
+    "headlight_right",
+    "indicator_light_left",
+    "indicator_light_right",
+    "vw_emblem",
+    "front_bumper",
+    "rear_view_mirror_left",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "belt_line_trim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "torus_ring"
+  ]
+}

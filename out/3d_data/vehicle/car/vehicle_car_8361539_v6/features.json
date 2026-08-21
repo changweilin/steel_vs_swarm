@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_8361539",
+  "sourceImage": "vehicle/car/8361539",
+  "style": "modern_crossover_suv",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 14211288,
+    "baseHex": 2105376,
+    "accentHex": 3158064,
+    "darkHex": 1052688,
+    "brightHex": 16777215,
+    "glassHex": 2636892
+  },
+  "totalParts": 17,
+  "partNames": [
+    "chassis_base",
+    "main_body_facade",
+    "cabin_roof",
+    "hood_slope",
+    "front_windshield",
+    "rear_windshield",
+    "side_glass_left",
+    "side_glass_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "headlight_left",
+    "headlight_right",
+    "front_grille",
+    "mirror_left",
+    "mirror_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

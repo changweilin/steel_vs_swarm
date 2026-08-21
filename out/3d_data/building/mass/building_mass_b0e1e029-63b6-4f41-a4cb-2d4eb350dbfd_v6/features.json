@@ -1,0 +1,34 @@
+{
+  "id": "building_mass_b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd",
+  "sourceImage": "building/mass/b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd",
+  "style": "Tudor Revival Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 6579300,
+    "facadeHex": 14536350,
+    "baseHex": 11184810,
+    "accentHex": 3947580,
+    "darkHex": 2631720,
+    "brightHex": 15790320,
+    "glassHex": 4621730
+  },
+  "totalParts": 12,
+  "partNames": [
+    "MainFacade",
+    "CentralGable",
+    "LeftWing",
+    "RightWing",
+    "LeftArch",
+    "CenterArch",
+    "RightArch",
+    "WindowSet1",
+    "WindowSet2",
+    "GableWindow",
+    "ChimneyStack",
+    "TimberFrameAccent"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

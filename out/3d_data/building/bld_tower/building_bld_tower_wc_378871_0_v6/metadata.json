@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_tower_wc_378871_0_v6",
+  "key": "building/bld_tower_wc_378871~0_b433fa67_v6",
+  "family": "building",
+  "subpart": "bld_tower",
+  "style": "Modernist Office Building",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the dark glass curtain wall facade, the rooftop mechanical equipment, and the water towers. The proportions of the building massing and the placement of rooftop elements align well with the perspective. Minor details like the rooftop railing and HVAC units are represented as distinct geometric components.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_tower/wc_378871.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_tower\\wc_378871~0.png",
+  "created_at": "2026-08-21T07:15:13.272Z",
+  "bounds": {
+    "min": [
+      -10.1,
+      0,
+      -7.6
+    ],
+    "max": [
+      10.1,
+      33,
+      7.75
+    ],
+    "size": [
+      20.2,
+      33,
+      15.35
+    ],
+    "rMax": 12.731,
+    "triangles": 212,
+    "vertices": 124
+  },
+  "spec": {
+    "style": "Modernist Office Building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

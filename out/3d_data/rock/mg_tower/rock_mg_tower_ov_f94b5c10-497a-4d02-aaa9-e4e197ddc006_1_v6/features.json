@@ -1,0 +1,30 @@
+{
+  "id": "rock_mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~1",
+  "sourceImage": "rock/mg_tower/ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~1",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7237230,
+    "facadeHex": 5921370,
+    "baseHex": 3947580,
+    "accentHex": 8553090,
+    "darkHex": 2631720,
+    "brightHex": 11184810,
+    "glassHex": 2045550
+  },
+  "totalParts": 7,
+  "partNames": [
+    "Main_Columnar_Tower",
+    "Top_Dome_Cap",
+    "Base_Rock_1",
+    "Base_Rock_2",
+    "Base_Rock_3",
+    "Mid_Rock_Detail_1",
+    "Mid_Rock_Detail_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

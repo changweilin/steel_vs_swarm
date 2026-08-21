@@ -1,0 +1,33 @@
+{
+  "id": "tree_gt_dragontree_wc_43408118~0",
+  "sourceImage": "tree/gt_dragontree/wc_43408118~0",
+  "style": "traditional_woodcut_sculpture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3486780,
+    "facadeHex": 11053224,
+    "baseHex": 4210752,
+    "accentHex": 14540253,
+    "darkHex": 1644825,
+    "brightHex": 15658734,
+    "glassHex": 33023
+  },
+  "totalParts": 8,
+  "partNames": [
+    "pedestal_base",
+    "pedestal_tier2",
+    "figure_body",
+    "figure_head",
+    "halo_backdrop",
+    "tree_foliage_cluster",
+    "tree_foliage_left",
+    "tree_foliage_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "box",
+    "ellipsoid_sphere",
+    "cylinder",
+    "dodecahedron_polyhedron"
+  ]
+}

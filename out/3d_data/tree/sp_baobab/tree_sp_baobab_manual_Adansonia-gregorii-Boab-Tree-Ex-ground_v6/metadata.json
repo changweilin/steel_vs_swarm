@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_v6",
+  "key": "tree/sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_c82ed33d_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "nature_botanical_baobab",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the iconic bottle-shaped trunk of the Boab tree using a conical_frustum. The canopy is represented by multiple ellipsoid_sphere components to mimic the sparse, spreading branches and foliage clusters characteristic of this species. The scale is set to approximately 12 meters in height, consistent with mature Boab trees.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/manual_Adansonia-gregorii-Boab-Tree-Ex-ground.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\manual_Adansonia-gregorii-Boab-Tree-Ex-ground~0.png",
+  "created_at": "2026-08-20T17:04:10.426Z",
+  "bounds": {
+    "min": [
+      -2.7,
+      0,
+      -2.3776
+    ],
+    "max": [
+      3.5,
+      12.5,
+      2.4266
+    ],
+    "size": [
+      6.2,
+      12.5,
+      4.804
+    ],
+    "rMax": 4.259,
+    "triangles": 624,
+    "vertices": 375
+  },
+  "spec": {
+    "style": "nature_botanical_baobab"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

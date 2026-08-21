@@ -1,0 +1,51 @@
+{
+  "id": "building_bld_civic_ov_cf9db9ae-c981-4201-9d2b-b8d0452ee9f9",
+  "sourceImage": "building/bld_civic/ov_cf9db9ae-c981-4201-9d2b-b8d0452ee9f9",
+  "style": "Neoclassical Civic Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 10507812,
+    "facadeHex": 14201777,
+    "baseHex": 11374465,
+    "accentHex": 5263616,
+    "darkHex": 2105376,
+    "brightHex": 15132390,
+    "glassHex": 1974839
+  },
+  "totalParts": 25,
+  "partNames": [
+    "main_building_base",
+    "roof_gable_main",
+    "left_tower_base",
+    "right_tower_base",
+    "left_tower_roof_ornament",
+    "right_tower_roof_ornament",
+    "central_clock",
+    "clock_hand_1",
+    "clock_hand_2",
+    "top_center_pediment",
+    "window_upper_left",
+    "window_upper_right",
+    "window_mid_left",
+    "window_mid_center",
+    "window_mid_right",
+    "window_lower_left",
+    "window_lower_center",
+    "window_lower_right",
+    "planter_left",
+    "planter_left_flowers",
+    "planter_right",
+    "planter_right_flowers",
+    "sculptural_pinnacle_left",
+    "sculptural_pinnacle_right",
+    "portico_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "frustum_pyramid",
+    "cylinder",
+    "pyramid",
+    "ellipsoid_sphere"
+  ]
+}

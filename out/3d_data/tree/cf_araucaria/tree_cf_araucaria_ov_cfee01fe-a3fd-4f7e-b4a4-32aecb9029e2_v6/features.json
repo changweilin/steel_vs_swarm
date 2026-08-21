@@ -1,0 +1,34 @@
+{
+  "id": "tree_cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2",
+  "sourceImage": "tree/cf_araucaria/ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2",
+  "style": "botanical_reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 362412,
+    "facadeHex": 594632,
+    "baseHex": 453825,
+    "accentHex": 889977,
+    "darkHex": 151515,
+    "brightHex": 999999,
+    "glassHex": 204050
+  },
+  "totalParts": 9,
+  "partNames": [
+    "trunk",
+    "crown_layer_1",
+    "crown_layer_2",
+    "crown_layer_3",
+    "crown_layer_4",
+    "crown_top",
+    "greenhouse_base",
+    "greenhouse_roof",
+    "greenhouse_glass"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "frustum_pyramid",
+    "pyramid",
+    "box",
+    "wedge"
+  ]
+}

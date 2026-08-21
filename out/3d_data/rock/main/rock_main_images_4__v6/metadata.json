@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_images_4__v6",
+  "key": "rock/main_images (4)_51153f72_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The generated multi-faceted polyhedron accurately captures the elongated, organic, and weathered shape of the boulder bench shown in the image. Using a combination of icosahedron, dodecahedron, and boxes, the rock maintains a solid grounding at y=0 with realistic natural proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/images (4).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\images (4)~0.png",
+  "created_at": "2026-08-20T16:21:21.601Z",
+  "bounds": {
+    "min": [
+      -1.5433,
+      -0.2199,
+      -0.9929
+    ],
+    "max": [
+      1.4868,
+      1.0182,
+      1.0465
+    ],
+    "size": [
+      3.03,
+      1.238,
+      2.039
+    ],
+    "rMax": 1.835,
+    "triangles": 168,
+    "vertices": 98
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

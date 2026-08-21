@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_pngtree-modern-two-story-house-architectural-3d-model-rendering-with-balconies-and-png-image_21138844_v6",
+  "key": "building/mass_pngtree-modern-two-story-house-architectural-3d-model-rendering-with-balconies-and-png-image_21138844_d04251a3_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Minimalist Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 95,
+  "similarityReview": "The model accurately captures the multi-level modular structure of the modern villa. The primary massing, including the recessed balconies, the external staircase, and the flat roof terraces, is reconstructed using precise box primitives. Glass elements are correctly identified and set to glassHex. The base platform provides a stable anchor at y=0. The overall proportions and spatial layout match the source image closely.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/pngtree-modern-two-story-house-architectural-3d-model-rendering-with-balconies-and-png-image_21138844.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\pngtree-modern-two-story-house-architectural-3d-model-rendering-with-balconies-and-png-image_21138844~0.png",
+  "created_at": "2026-08-21T09:13:19.641Z",
+  "bounds": {
+    "min": [
+      -5,
+      0,
+      -5
+    ],
+    "max": [
+      5,
+      6,
+      5
+    ],
+    "size": [
+      10,
+      6,
+      10
+    ],
+    "rMax": 7.071,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "Modern Minimalist Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

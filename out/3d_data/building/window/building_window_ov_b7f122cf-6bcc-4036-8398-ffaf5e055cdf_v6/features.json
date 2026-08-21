@@ -1,0 +1,32 @@
+{
+  "id": "building_window_ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf",
+  "sourceImage": "building/window/ov_b7f122cf-6bcc-4036-8398-ffaf5e055cdf",
+  "style": "Art Nouveau decorative window frame",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16755370,
+    "facadeHex": 15654350,
+    "baseHex": 12042950,
+    "accentHex": 16744576,
+    "darkHex": 4605510,
+    "brightHex": 16777215,
+    "glassHex": 10535167
+  },
+  "totalParts": 8,
+  "partNames": [
+    "outer_square_frame",
+    "circular_frame_ring",
+    "corner_decoration_tl",
+    "corner_decoration_tr",
+    "corner_decoration_bl",
+    "corner_decoration_br",
+    "central_relief_base",
+    "glass_panel_insert"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "torus_ring",
+    "wedge",
+    "cylinder"
+  ]
+}

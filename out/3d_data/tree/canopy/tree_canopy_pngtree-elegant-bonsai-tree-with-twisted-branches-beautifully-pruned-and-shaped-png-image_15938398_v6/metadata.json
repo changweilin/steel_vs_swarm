@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398_v6",
+  "key": "tree/canopy_pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398_3ccb49a5_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The bonsai tree is reconstructed using a central curved trunk (conical_frustum) and multiple layered canopy clusters (ellipsoid_sphere). The base is a shallow oval pot (box/cylinder combination). The trunk's curvature and the asymmetrical distribution of the foliage layers closely match the reference image. The scale is set to approximately 0.8m in height.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398~0.png",
+  "created_at": "2026-08-20T16:13:51.651Z",
+  "bounds": {
+    "min": [
+      -0.45,
+      0,
+      -0.2
+    ],
+    "max": [
+      0.43,
+      0.95,
+      0.2
+    ],
+    "size": [
+      0.88,
+      0.95,
+      0.4
+    ],
+    "rMax": 0.492,
+    "triangles": 908,
+    "vertices": 555
+  },
+  "spec": {
+    "style": "Bonsai Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

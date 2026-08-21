@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_getImage-3-4",
+  "sourceImage": "tree/canopy/getImage-3-4",
+  "style": "Dragon Blood Tree forest",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4552250,
+    "facadeHex": 13487550,
+    "baseHex": 11184810,
+    "accentHex": 5592405,
+    "darkHex": 3355443,
+    "brightHex": 15790320,
+    "glassHex": 16777215
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "root_flare",
+    "canopy_main",
+    "canopy_detail_top",
+    "branch_cluster_1",
+    "branch_cluster_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

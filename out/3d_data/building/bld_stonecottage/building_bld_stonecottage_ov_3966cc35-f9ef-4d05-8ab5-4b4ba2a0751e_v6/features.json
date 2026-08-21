@@ -1,0 +1,32 @@
+{
+  "id": "building_bld_stonecottage_ov_3966cc35-f9ef-4d05-8ab5-4b4ba2a0751e",
+  "sourceImage": "building/bld_stonecottage/ov_3966cc35-f9ef-4d05-8ab5-4b4ba2a0751e",
+  "style": "Rustic Stone Cottage",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12015938,
+    "facadeHex": 10522485,
+    "baseHex": 7564630,
+    "accentHex": 5916468,
+    "darkHex": 3156264,
+    "brightHex": 14210245,
+    "glassHex": 2242383
+  },
+  "totalParts": 10,
+  "partNames": [
+    "foundation_base",
+    "main_stone_body",
+    "gable_wall_front",
+    "gable_wall_back",
+    "roof_slope_left",
+    "roof_slope_right",
+    "wooden_window_front",
+    "ground_opening_front",
+    "stone_buttress_right",
+    "chimney_back"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

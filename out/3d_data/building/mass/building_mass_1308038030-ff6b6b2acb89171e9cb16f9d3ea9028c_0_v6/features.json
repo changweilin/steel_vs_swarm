@@ -1,0 +1,22 @@
+{
+  "id": "building_mass_1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c~0",
+  "sourceImage": "building/mass/1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c~0",
+  "style": "landscape_field",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 10066278,
+    "facadeHex": 8437888,
+    "baseHex": 4473924,
+    "accentHex": 16777215,
+    "darkHex": 2899536,
+    "brightHex": 16777215,
+    "glassHex": 4473924
+  },
+  "totalParts": 1,
+  "partNames": [
+    "ground_plane"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

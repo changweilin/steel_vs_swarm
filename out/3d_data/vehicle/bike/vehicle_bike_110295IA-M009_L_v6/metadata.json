@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_110295IA-M009_L_v6",
+  "key": "vehicle/bike_110295IA-M009_L_ed77bbab_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "modern_racing_bicycle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the high-performance carbon road bicycle with an integrated aero frame, deep-dish aero wheels, drop handlebars, saddle, and crankset. All tube junctions (head tube, bottom bracket, seat cluster) connect cleanly without floating gaps or excessive clipping.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/110295IA-M009_L.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\110295IA-M009_L~0.png",
+  "created_at": "2026-08-20T17:18:49.072Z",
+  "bounds": {
+    "min": [
+      -1.335,
+      0.0293,
+      -0.3662
+    ],
+    "max": [
+      1.335,
+      1.06,
+      0.3662
+    ],
+    "size": [
+      2.67,
+      1.031,
+      0.732
+    ],
+    "rMax": 1.384,
+    "triangles": 1072,
+    "vertices": 600
+  },
+  "spec": {
+    "style": "modern_racing_bicycle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

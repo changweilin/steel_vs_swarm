@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_wc_36649979_v6",
+  "key": "tree/sp_baobab_wc_36649979_6dbb8623_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "natural_botanical",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The 3D model accurately captures the massive, wide-spreading baobab tree with a robust, tapered main trunk, sprawling heavy lateral branches, and layered ellipsoid foliage clusters. Proportions and ground anchoring are realistically positioned in meters.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/wc_36649979.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\wc_36649979~0.png",
+  "created_at": "2026-08-20T17:23:23.538Z",
+  "bounds": {
+    "min": [
+      -10.8,
+      -0.2093,
+      -3.8042
+    ],
+    "max": [
+      10.8,
+      10,
+      3.8042
+    ],
+    "size": [
+      21.6,
+      10.209,
+      7.608
+    ],
+    "rMax": 11.45,
+    "triangles": 1336,
+    "vertices": 813
+  },
+  "spec": {
+    "style": "natural_botanical"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

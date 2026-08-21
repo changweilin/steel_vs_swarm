@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_pagoda_ov_95cd02d8-9f45-4aa0-9717-d4b154247d9d_v6",
+  "key": "building/bld_pagoda_ov_95cd02d8-9f45-4aa0-9717-d4b154247d9d_0356ef49_v6",
+  "family": "building",
+  "subpart": "bld_pagoda",
+  "style": "Japanese Pagoda Gate (Niomon)",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the iconic Kiyomizu-dera Niomon gate. It features the massive stone base platform, the grand central staircase, the main vermilion wooden gate structure with detailed columns and beams, the double-layered curved hip-and-gable roofs (using frustum_pyramid with topR < botR to ensure correct outward-downward slope), the central decorative spire (sorin), and the front stone lanterns and protective railings. All parts are tightly integrated to form a solid, closed volume with symmetrical backing.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_pagoda/ov_95cd02d8-9f45-4aa0-9717-d4b154247d9d.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_pagoda\\ov_95cd02d8-9f45-4aa0-9717-d4b154247d9d~0.png",
+  "created_at": "2026-08-21T07:05:16.617Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -5
+    ],
+    "max": [
+      6,
+      12.9,
+      8.5
+    ],
+    "size": [
+      12,
+      12.9,
+      13.5
+    ],
+    "rMax": 10.404,
+    "triangles": 632,
+    "vertices": 380
+  },
+  "spec": {
+    "style": "Japanese Pagoda Gate (Niomon)"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

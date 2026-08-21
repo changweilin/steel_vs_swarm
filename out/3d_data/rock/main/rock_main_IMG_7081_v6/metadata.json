@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_IMG_7081_v6",
+  "key": "rock/main_IMG_7081_93833aba_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the dual coastal rock formations with irregular dodecahedral and icosahedral stone polyhedrons, anchored on the ground at y=0, capturing the jagged, layered aesthetic of the reference image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/IMG_7081.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\IMG_7081~0.png",
+  "created_at": "2026-08-20T16:22:38.326Z",
+  "bounds": {
+    "min": [
+      -5.9163,
+      -1.0003,
+      -2.6973
+    ],
+    "max": [
+      6.1451,
+      5.1744,
+      2.0973
+    ],
+    "size": [
+      12.061,
+      6.175,
+      4.795
+    ],
+    "rMax": 6.502,
+    "triangles": 164,
+    "vertices": 96
+  },
+  "spec": {
+    "style": "rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

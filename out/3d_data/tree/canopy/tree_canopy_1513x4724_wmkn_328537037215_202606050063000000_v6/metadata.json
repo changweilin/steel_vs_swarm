@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_1513x4724_wmkn_328537037215_202606050063000000_v6",
+  "key": "tree/canopy_1513x4724_wmkn_328537037215_202606050063000000_1634859c_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Naturalistic Giant Conifer",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the extreme height-to-width ratio of the giant conifer. The trunk is modeled as a tall, slightly tapering cylinder, and the canopy is represented by multiple layers of frustum_pyramid components to simulate the tiered structure of a redwood-like tree. The base is anchored at y=0 with a wider baseHex section to represent the root flare. The overall verticality and scale are consistent with the provided image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/1513x4724_wmkn_328537037215_202606050063000000.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\1513x4724_wmkn_328537037215_202606050063000000~0.png",
+  "created_at": "2026-08-20T16:18:19.563Z",
+  "bounds": {
+    "min": [
+      -6,
+      1,
+      -6
+    ],
+    "max": [
+      6,
+      85.5,
+      6
+    ],
+    "size": [
+      12,
+      84.5,
+      12
+    ],
+    "rMax": 8.485,
+    "triangles": 296,
+    "vertices": 162
+  },
+  "spec": {
+    "style": "Naturalistic Giant Conifer"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

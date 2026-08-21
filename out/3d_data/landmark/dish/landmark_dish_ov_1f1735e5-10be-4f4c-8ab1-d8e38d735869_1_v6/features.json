@@ -1,0 +1,31 @@
+{
+  "id": "landmark_dish_ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869~1",
+  "sourceImage": "landmark/dish/ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869~1",
+  "style": "industrial_telecommunications",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 12632256,
+    "baseHex": 8421504,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 49344
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_dish",
+    "dish_back_support",
+    "support_strut_1",
+    "support_strut_2",
+    "feed_arm",
+    "feed_horn",
+    "main_mast",
+    "roof_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "box"
+  ]
+}

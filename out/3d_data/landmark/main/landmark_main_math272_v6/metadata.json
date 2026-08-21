@@ -1,0 +1,38 @@
+{
+  "id": "landmark_main_math272_v6",
+  "key": "landmark/main_math272_ec8ffcdf_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "ancient_monument",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/math272.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\math272.png",
+  "created_at": "2026-08-20T15:27:52.850Z",
+  "bounds": {
+    "min": [
+      -115,
+      -12.0126,
+      -115
+    ],
+    "max": [
+      115,
+      70.5,
+      115
+    ],
+    "size": [
+      230,
+      82.513,
+      230
+    ],
+    "rMax": 162.635,
+    "triangles": 104,
+    "vertices": 64
+  },
+  "spec": {
+    "style": "ancient_monument"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

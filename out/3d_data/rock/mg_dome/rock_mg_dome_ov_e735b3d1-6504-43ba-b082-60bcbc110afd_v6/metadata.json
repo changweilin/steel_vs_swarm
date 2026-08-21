@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_dome_ov_e735b3d1-6504-43ba-b082-60bcbc110afd_v6",
+  "key": "rock/mg_dome_ov_e735b3d1-6504-43ba-b082-60bcbc110afd_c97382b6_v6",
+  "family": "rock",
+  "subpart": "mg_dome",
+  "style": "rock_sculpture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D model accurately represents the blue rock/mountain display stand with a vertical backing wall, a sloping layered rocky topography on top of a solid base, utilizing stacked and angled polyhedron components.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_dome/ov_e735b3d1-6504-43ba-b082-60bcbc110afd.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_dome\\ov_e735b3d1-6504-43ba-b082-60bcbc110afd~0.png",
+  "created_at": "2026-08-20T16:24:07.788Z",
+  "bounds": {
+    "min": [
+      -0.6464,
+      0,
+      -0.475
+    ],
+    "max": [
+      0.6382,
+      2,
+      0.6645
+    ],
+    "size": [
+      1.285,
+      2,
+      1.139
+    ],
+    "rMax": 0.921,
+    "triangles": 100,
+    "vertices": 62
+  },
+  "spec": {
+    "style": "rock_sculpture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

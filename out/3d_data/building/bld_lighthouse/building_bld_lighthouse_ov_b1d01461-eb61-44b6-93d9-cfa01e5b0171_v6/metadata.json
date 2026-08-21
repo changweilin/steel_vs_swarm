@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_lighthouse_ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171_v6",
+  "key": "building/bld_lighthouse_ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171_673ebbc4_v6",
+  "family": "building",
+  "subpart": "bld_lighthouse",
+  "style": "bld_lighthouse",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the iconic white lighthouse from the image. It features a tapered cylindrical tower base, a mid-level balcony with red railings, a glass-enclosed lantern room, and a dome roof with a spire. All parts are tightly integrated with correct real-world scale and orientation.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_lighthouse/ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_lighthouse\\ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171~0.png",
+  "created_at": "2026-08-21T07:04:06.051Z",
+  "bounds": {
+    "min": [
+      -3.4,
+      0,
+      -3.4
+    ],
+    "max": [
+      3.4,
+      22.25,
+      3.55
+    ],
+    "size": [
+      6.8,
+      22.25,
+      6.95
+    ],
+    "rMax": 4.916,
+    "triangles": 738,
+    "vertices": 414
+  },
+  "spec": {
+    "style": "bld_lighthouse"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

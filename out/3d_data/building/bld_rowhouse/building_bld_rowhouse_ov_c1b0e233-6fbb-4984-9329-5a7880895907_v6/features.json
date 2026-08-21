@@ -1,0 +1,49 @@
+{
+  "id": "building_bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907",
+  "sourceImage": "building/bld_rowhouse/ov_c1b0e233-6fbb-4984-9329-5a7880895907",
+  "style": "Victorian Romanesque Revival Rowhouse Turret",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 5515044,
+    "facadeHex": 9124134,
+    "baseHex": 6825248,
+    "accentHex": 12553530,
+    "darkHex": 2631720,
+    "brightHex": 15066597,
+    "glassHex": 1851463
+  },
+  "totalParts": 24,
+  "partNames": [
+    "main_building_body",
+    "turret_lower_cylinder",
+    "turret_upper_cylinder",
+    "turret_roof_dome",
+    "pediment_base",
+    "pediment_roof_left",
+    "pediment_roof_right",
+    "lower_center_window_frame",
+    "lower_center_window_glass",
+    "lower_left_window_frame",
+    "lower_left_window_glass",
+    "lower_right_window_frame",
+    "lower_right_window_glass",
+    "upper_center_window_frame",
+    "upper_center_window_glass",
+    "upper_left_window_frame",
+    "upper_left_window_glass",
+    "upper_right_window_frame",
+    "upper_right_window_glass",
+    "mid_cornice_band",
+    "top_cornice_band",
+    "decorative_tile_panel",
+    "decorative_tile_accent",
+    "foundation_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "hemisphere_dome",
+    "wedge",
+    "frustum_pyramid"
+  ]
+}

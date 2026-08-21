@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_heavy_product_4714426807346_3",
+  "sourceImage": "vehicle/heavy/product_4714426807346_3",
+  "style": "toy vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 255,
+    "facadeHex": 29877,
+    "baseHex": 8421504,
+    "accentHex": 16776960,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 3355443
+  },
+  "totalParts": 15,
+  "partNames": [
+    "chassis",
+    "cab_body",
+    "cab_roof",
+    "windshield",
+    "left_window",
+    "right_window",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel_1",
+    "rear_right_wheel_1",
+    "rear_left_wheel_2",
+    "rear_right_wheel_2",
+    "mixer_drum",
+    "mixer_frame",
+    "front_grille"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "conical_frustum"
+  ]
+}

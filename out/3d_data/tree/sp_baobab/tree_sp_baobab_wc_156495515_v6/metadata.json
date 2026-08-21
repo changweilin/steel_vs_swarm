@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_wc_156495515_v6",
+  "key": "tree/sp_baobab_wc_156495515_bc954f18_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "Impressionist Oil Painting Tree Reconstruction",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The reconstruction captures the massive, gnarled structure of the central Baobab tree using a combination of conical frustums for the thick, buttressed trunk and multiple ellipsoid spheres to represent the complex, spreading canopy. The proportions reflect the scale of the original painting, with the trunk base anchored at y=0. The color palette is mapped to the requested 7-Zone system to maintain consistency.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/wc_156495515.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\wc_156495515~0.png",
+  "created_at": "2026-08-20T16:16:47.102Z",
+  "bounds": {
+    "min": [
+      -7,
+      0,
+      -3.3287
+    ],
+    "max": [
+      7,
+      10.5,
+      3.3287
+    ],
+    "size": [
+      14,
+      10.5,
+      6.657
+    ],
+    "rMax": 7.751,
+    "triangles": 592,
+    "vertices": 361
+  },
+  "spec": {
+    "style": "Impressionist Oil Painting Tree Reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

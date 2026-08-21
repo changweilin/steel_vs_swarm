@@ -1,0 +1,32 @@
+{
+  "id": "rock_tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb",
+  "sourceImage": "rock/tor/ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb",
+  "style": "architectural stone gateway facade",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 13421772,
+    "baseHex": 9868950,
+    "accentHex": 6710886,
+    "darkHex": 3355443,
+    "brightHex": 15790320,
+    "glassHex": 43520
+  },
+  "totalParts": 10,
+  "partNames": [
+    "central_base",
+    "left_wing",
+    "right_wing",
+    "central_arch_cutout",
+    "left_door",
+    "right_door",
+    "left_window",
+    "right_window",
+    "left_pillar_1",
+    "right_pillar_1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

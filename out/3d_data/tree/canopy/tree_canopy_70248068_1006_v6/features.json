@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_70248068_1006",
+  "sourceImage": "tree/canopy/70248068_1006",
+  "style": "natural_baobab_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 456789,
+    "facadeHex": 123456,
+    "baseHex": 789012,
+    "accentHex": 345678,
+    "darkHex": 567890,
+    "brightHex": 234567,
+    "glassHex": 901234
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "canopy_left",
+    "canopy_right",
+    "root_base",
+    "branch_node_1",
+    "branch_node_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

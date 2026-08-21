@@ -1,0 +1,37 @@
+{
+  "id": "rock_mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~1",
+  "sourceImage": "rock/mg_mesa/ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~1",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8553090,
+    "facadeHex": 7303023,
+    "baseHex": 4013373,
+    "accentHex": 9868950,
+    "darkHex": 2631720,
+    "brightHex": 11184810,
+    "glassHex": 3355443
+  },
+  "totalParts": 11,
+  "partNames": [
+    "mesa_base",
+    "mesa_middle_stratum",
+    "mesa_top_plateau",
+    "rock_boulder_left",
+    "rock_boulder_right",
+    "cliff_wedge_front",
+    "crystal_outcrop",
+    "eroded_pillar",
+    "eroded_pillar_top",
+    "debris_rock_1",
+    "debris_rock_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "polygonal_prism",
+    "frustum_pyramid"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_images (16)~1",
+  "sourceImage": "building/mass/images (16)~1",
+  "style": "modern minimalist architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 13158600,
+    "accentHex": 8421504,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_structure_block",
+    "stepped_terrace_level",
+    "balcony_glass_front",
+    "balcony_railing_frame",
+    "lower_balcony_glass",
+    "rooftop_tree_trunk",
+    "rooftop_tree_canopy",
+    "side_wall_extension",
+    "window_frame_accent"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "vehicle_bike_T-806_blue~1",
+  "sourceImage": "vehicle/bike/T-806_blue~1",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13434879,
+    "facadeHex": 11195638,
+    "baseHex": 3355443,
+    "accentHex": 11195638,
+    "darkHex": 2236962,
+    "brightHex": 14540253,
+    "glassHex": 8900331
+  },
+  "totalParts": 13,
+  "partNames": [
+    "down_tube",
+    "head_tube",
+    "fork_left",
+    "fork_right",
+    "handlebar_stem",
+    "handlebar",
+    "grip_left",
+    "grip_right",
+    "front_wheel_tire",
+    "front_wheel_rim",
+    "front_fender",
+    "brake_caliper",
+    "brake_cable"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "torus_ring",
+    "box"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_warehouse_ov_488a02ed-800b-4aa3-a10d-271ad79caa7d_v6",
+  "key": "building/bld_warehouse_ov_488a02ed-800b-4aa3-a10d-271ad79caa7d_b64b388a_v6",
+  "family": "building",
+  "subpart": "bld_warehouse",
+  "style": "Meiji-era industrial brick and corrugated metal warehouse",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the central corrugated metal tower and the flanking warehouse wings. The roof slopes are correctly oriented, and the balcony railings and windows are placed as distinct, slightly offset components to avoid Z-fighting. The symmetry is maintained for the rear and side structures based on the visible architectural logic.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_warehouse/ov_488a02ed-800b-4aa3-a10d-271ad79caa7d.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_warehouse\\ov_488a02ed-800b-4aa3-a10d-271ad79caa7d~0.png",
+  "created_at": "2026-08-21T07:19:14.891Z",
+  "bounds": {
+    "min": [
+      -10,
+      0,
+      -2.5
+    ],
+    "max": [
+      10,
+      14.5,
+      2.65
+    ],
+    "size": [
+      20,
+      14.5,
+      5.15
+    ],
+    "rMax": 10.345,
+    "triangles": 148,
+    "vertices": 96
+  },
+  "spec": {
+    "style": "Meiji-era industrial brick and corrugated metal warehouse"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

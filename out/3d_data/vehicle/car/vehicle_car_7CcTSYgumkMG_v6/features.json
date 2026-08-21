@@ -1,0 +1,51 @@
+{
+  "id": "vehicle_car_7CcTSYgumkMG",
+  "sourceImage": "vehicle/car/7CcTSYgumkMG",
+  "style": "automotive_vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2237916,
+    "facadeHex": 1459695,
+    "baseHex": 197379,
+    "accentHex": 1184274,
+    "darkHex": 657930,
+    "brightHex": 14540253,
+    "glassHex": 3365260
+  },
+  "totalParts": 28,
+  "partNames": [
+    "chassis_base",
+    "main_body",
+    "roof_top",
+    "hood",
+    "trunk",
+    "front_windshield",
+    "rear_windshield",
+    "left_front_window",
+    "right_front_window",
+    "left_rear_window",
+    "right_rear_window",
+    "front_bumper",
+    "rear_bumper",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_mirror",
+    "right_mirror",
+    "left_headlight",
+    "right_headlight",
+    "rear_taillight",
+    "front_grille",
+    "left_front_air_intake",
+    "right_front_air_intake",
+    "toyota_logo_front",
+    "left_door_handle",
+    "right_door_handle"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

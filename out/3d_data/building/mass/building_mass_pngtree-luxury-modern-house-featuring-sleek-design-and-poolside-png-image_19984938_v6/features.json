@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_pngtree-luxury-modern-house-featuring-sleek-design-and-poolside-png-image_19984938",
+  "sourceImage": "building/mass/pngtree-luxury-modern-house-featuring-sleek-design-and-poolside-png-image_19984938",
+  "style": "Modern Minimalist Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14803425,
+    "baseHex": 12632256,
+    "accentHex": 8421504,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 9,
+  "partNames": [
+    "GroundBase",
+    "Pool",
+    "GroundFloorMain",
+    "UpperFloorMain",
+    "GroundGlassFront",
+    "UpperGlassFront",
+    "RoofSlab",
+    "BalconyFloor",
+    "BalconyRailing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

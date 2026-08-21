@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_0_v6",
+  "key": "building/mass_0_32764840_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_iconic_architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The Burj Al Arab's iconic sail-like structure is reconstructed using a combination of a large wedge for the main sail profile and a vertical box for the rear mast. The glass facade is represented by a series of stacked boxes with glassHex. The helipad and restaurant protrusions are modeled as cylinders and boxes. The overall silhouette captures the characteristic curvature and verticality of the building.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/0.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\0~0.png",
+  "created_at": "2026-08-21T09:42:13.939Z",
+  "bounds": {
+    "min": [
+      -25,
+      0,
+      -35
+    ],
+    "max": [
+      25,
+      220,
+      35
+    ],
+    "size": [
+      50,
+      220,
+      70
+    ],
+    "rMax": 43.012,
+    "triangles": 180,
+    "vertices": 104
+  },
+  "spec": {
+    "style": "modern_iconic_architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

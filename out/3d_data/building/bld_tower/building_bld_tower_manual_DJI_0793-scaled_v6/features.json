@@ -1,0 +1,30 @@
+{
+  "id": "building_bld_tower_manual_DJI_0793-scaled",
+  "sourceImage": "building/bld_tower/manual_DJI_0793-scaled",
+  "style": "Modern High-rise Residential Complex",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16448250,
+    "facadeHex": 13158600,
+    "baseHex": 10526880,
+    "accentHex": 15790320,
+    "darkHex": 3947580,
+    "brightHex": 16777215,
+    "glassHex": 4613750
+  },
+  "totalParts": 8,
+  "partNames": [
+    "CentralTowerMainBody",
+    "CentralTowerCrown",
+    "CentralTowerLogo",
+    "WindowGrid",
+    "LeftTowerMain",
+    "RightTowerMain",
+    "PodiumBase",
+    "BalconyDetail"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

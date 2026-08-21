@@ -1,0 +1,28 @@
+{
+  "id": "building_mass_images (2)",
+  "sourceImage": "building/mass/images (2)",
+  "style": "Modern Minimalist Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 13158600,
+    "accentHex": 9856560,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8953599
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_building_block",
+    "rear_tower_block",
+    "front_balcony_ledge",
+    "car_port_roof",
+    "front_window_glass",
+    "boundary_wall",
+    "car_object"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

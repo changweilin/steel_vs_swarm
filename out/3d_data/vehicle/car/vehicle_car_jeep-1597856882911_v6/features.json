@@ -1,0 +1,51 @@
+{
+  "id": "vehicle_car_jeep-1597856882911",
+  "sourceImage": "vehicle/car/jeep-1597856882911",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16711680,
+    "facadeHex": 14483472,
+    "baseHex": 2105376,
+    "accentHex": 1315860,
+    "darkHex": 1052688,
+    "brightHex": 14540253,
+    "glassHex": 3314815
+  },
+  "totalParts": 28,
+  "partNames": [
+    "chassis_base",
+    "main_body",
+    "front_hood",
+    "front_grille",
+    "left_headlight",
+    "right_headlight",
+    "front_windshield",
+    "roll_cage_top",
+    "roll_cage_pillar_front",
+    "roll_cage_pillar_front_r",
+    "roll_cage_pillar_rear",
+    "roll_cage_pillar_rear_r",
+    "rear_door_panel",
+    "left_taillight",
+    "right_taillight",
+    "spare_tire_mount",
+    "spare_tire_rim",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel",
+    "rear_right_wheel",
+    "fender_flair_fl",
+    "fender_flair_fr",
+    "fender_flair_rl",
+    "fender_flair_rr",
+    "driver_seat",
+    "passenger_seat",
+    "rear_bench"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

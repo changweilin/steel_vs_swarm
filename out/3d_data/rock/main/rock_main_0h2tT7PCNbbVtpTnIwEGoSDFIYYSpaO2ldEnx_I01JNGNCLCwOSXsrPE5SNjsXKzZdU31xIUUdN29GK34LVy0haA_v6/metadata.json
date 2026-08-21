@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_v6",
+  "key": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_2473da7e_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The massive coastal rock formation is accurately reconstructed using a combination of dodecahedron and icosahedron polyhedron units for the irregular cliff body, with an ellipsoid crown and mossy green vegetation on top. The base sits firmly at y=0 with dark coastal rocks, adhering strictly to real-world proportions and avoiding Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA~0.png",
+  "created_at": "2026-08-20T16:16:29.821Z",
+  "bounds": {
+    "min": [
+      -4.25,
+      0,
+      -3.0268
+    ],
+    "max": [
+      4.4614,
+      6.6159,
+      3.0268
+    ],
+    "size": [
+      8.711,
+      6.616,
+      6.054
+    ],
+    "rMax": 5.391,
+    "triangles": 456,
+    "vertices": 280
+  },
+  "spec": {
+    "style": "natural_rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

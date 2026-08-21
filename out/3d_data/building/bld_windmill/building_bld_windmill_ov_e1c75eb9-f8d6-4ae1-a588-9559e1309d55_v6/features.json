@@ -1,0 +1,34 @@
+{
+  "id": "building_bld_windmill_ov_e1c75eb9-f8d6-4ae1-a588-9559e1309d55",
+  "sourceImage": "building/bld_windmill/ov_e1c75eb9-f8d6-4ae1-a588-9559e1309d55",
+  "style": "Dutch Windmill Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 4822858,
+    "baseHex": 8421504,
+    "accentHex": 16711680,
+    "darkHex": 2236962,
+    "brightHex": 15790320,
+    "glassHex": 11075583
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_tower_base",
+    "main_roof",
+    "blade_hub",
+    "blade_arm_1",
+    "blade_arm_2",
+    "blade_arm_3",
+    "blade_arm_4",
+    "window_front",
+    "foundation_base",
+    "side_extension"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "cylinder",
+    "box",
+    "wedge"
+  ]
+}

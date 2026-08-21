@@ -1,0 +1,40 @@
+{
+  "id": "rock_st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f_1_v6",
+  "key": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~1_3d1f7f2d_v6",
+  "family": "rock",
+  "subpart": "st_dolmen",
+  "style": "ancient_megalith",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the central standing megalith along with its supporting base stone ring and adjacent standing monoliths. The forms use a combination of dodecahedrons, boxes, and polygonal prisms to accurately capture the irregular, weathered, and volumetric nature of ancient stone pillars in a natural setting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/st_dolmen/ov_12575b8c-d342-40c6-a3eb-a97da9f7310f.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\st_dolmen\\ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~1.png",
+  "created_at": "2026-08-20T16:28:30.120Z",
+  "bounds": {
+    "min": [
+      -0.9622,
+      -0.1484,
+      -0.913
+    ],
+    "max": [
+      2.2664,
+      3.826,
+      0.9849
+    ],
+    "size": [
+      3.229,
+      3.974,
+      1.898
+    ],
+    "rMax": 2.471,
+    "triangles": 236,
+    "vertices": 136
+  },
+  "spec": {
+    "style": "ancient_megalith"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,34 @@
+{
+  "id": "ship_hull_GettyImages-630597388-compressor",
+  "sourceImage": "ship/hull/GettyImages-630597388-compressor",
+  "style": "military_aircraft_carrier",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 10526880,
+    "baseHex": 4210752,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 14737632,
+    "glassHex": 4621730
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "flight_deck",
+    "island_base",
+    "bridge_windows",
+    "radar_dome",
+    "main_mast",
+    "hull_bottom",
+    "aircraft_1",
+    "aircraft_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "hemisphere_dome",
+    "cylinder"
+  ]
+}

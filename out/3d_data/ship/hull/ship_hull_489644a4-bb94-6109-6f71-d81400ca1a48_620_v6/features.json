@@ -1,0 +1,32 @@
+{
+  "id": "ship_hull_489644a4-bb94-6109-6f71-d81400ca1a48_620",
+  "sourceImage": "ship/hull/489644a4-bb94-6109-6f71-d81400ca1a48_620",
+  "style": "container_ship",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 2631720,
+    "baseHex": 855309,
+    "accentHex": 16711680,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 4621735
+  },
+  "totalParts": 9,
+  "partNames": [
+    "hull_main",
+    "bow_wedge",
+    "bridge_structure",
+    "bridge_windows",
+    "container_stack_1",
+    "container_stack_2",
+    "funnel",
+    "life_ring_port",
+    "life_ring_starboard"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "torus_ring"
+  ]
+}

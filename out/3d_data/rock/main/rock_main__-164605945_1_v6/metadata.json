@@ -1,0 +1,40 @@
+{
+  "id": "rock_main__-164605945_1_v6",
+  "key": "rock/main_南犹他州巨岩山-164605945~1_2607b8d5_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The generated 3D polyhedron assembly accurately captures the massive scale, vertical columnar cliffs, layered geological strata, and the prominent tilted dome structure of the sandstone formation shown in the photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/南犹他州巨岩山-164605945.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\南犹他州巨岩山-164605945~1.png",
+  "created_at": "2026-08-20T16:30:08.339Z",
+  "bounds": {
+    "min": [
+      -8,
+      -0.0955,
+      -6
+    ],
+    "max": [
+      9.5,
+      21.8714,
+      6.4033
+    ],
+    "size": [
+      17.5,
+      21.967,
+      12.403
+    ],
+    "rMax": 11.457,
+    "triangles": 132,
+    "vertices": 82
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

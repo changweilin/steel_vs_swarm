@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_motor_11871715_O_m_v6",
+  "key": "vehicle/motor_11871715_O_m_746ddcdc_v6",
+  "family": "vehicle",
+  "subpart": "motor",
+  "style": "scooter",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/motor/11871715_O_m.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\11871715_O_m.webp",
+  "created_at": "2026-08-20T15:36:22.877Z",
+  "bounds": {
+    "min": [
+      -0.71,
+      0.12,
+      -1.0734
+    ],
+    "max": [
+      0.69,
+      1.63,
+      0.8424
+    ],
+    "size": [
+      1.4,
+      1.51,
+      1.916
+    ],
+    "rMax": 1.287,
+    "triangles": 804,
+    "vertices": 494
+  },
+  "spec": {
+    "style": "scooter"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

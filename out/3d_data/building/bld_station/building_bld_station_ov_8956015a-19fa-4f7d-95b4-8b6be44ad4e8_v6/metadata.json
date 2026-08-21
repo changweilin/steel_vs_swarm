@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_station_ov_8956015a-19fa-4f7d-95b4-8b6be44ad4e8_v6",
+  "key": "building/bld_station_ov_8956015a-19fa-4f7d-95b4-8b6be44ad4e8_785e6793_v6",
+  "family": "building",
+  "subpart": "bld_station",
+  "style": "building_station_hastings",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately reconstructs the Hastings Station building. It features the main rectangular corrugated metal cabin, the attached open-sided waiting shelter canopy on the right, the prominent blue and orange station sign, the white safety railings in front, and the wall-mounted air conditioning units. The roof slopes slightly downwards towards the rear, and all elements are tightly integrated to prevent gaps, with the sign and AC units slightly offset to avoid Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_station/ov_8956015a-19fa-4f7d-95b4-8b6be44ad4e8.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_station\\ov_8956015a-19fa-4f7d-95b4-8b6be44ad4e8~0.png",
+  "created_at": "2026-08-21T01:03:14.346Z",
+  "bounds": {
+    "min": [
+      -6.05,
+      0,
+      -2.25
+    ],
+    "max": [
+      6,
+      3.15,
+      2.54
+    ],
+    "size": [
+      12.05,
+      3.15,
+      4.79
+    ],
+    "rMax": 6.515,
+    "triangles": 324,
+    "vertices": 210
+  },
+  "spec": {
+    "style": "building_station_hastings"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

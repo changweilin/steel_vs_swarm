@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466_v6",
+  "key": "tree/canopy_pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466_3fcc3ef3_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The bonsai tree is reconstructed using a central trunk and multiple ellipsoid clusters to represent the foliage. The white ceramic pot is modeled as a box with rounded proportions. The floral accents are represented by smaller spheres. The overall structure captures the asymmetrical, artistic flow of the bonsai.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466~0.png",
+  "created_at": "2026-08-20T16:12:49.294Z",
+  "bounds": {
+    "min": [
+      -0.55,
+      -0.05,
+      -0.2378
+    ],
+    "max": [
+      0.55,
+      0.95,
+      0.2378
+    ],
+    "size": [
+      1.1,
+      1,
+      0.476
+    ],
+    "rMax": 0.599,
+    "triangles": 1116,
+    "vertices": 680
+  },
+  "spec": {
+    "style": "Bonsai Tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

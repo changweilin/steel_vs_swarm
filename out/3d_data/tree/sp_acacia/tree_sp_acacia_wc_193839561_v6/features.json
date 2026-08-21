@@ -1,0 +1,30 @@
+{
+  "id": "tree_sp_acacia_wc_193839561",
+  "sourceImage": "tree/sp_acacia/wc_193839561",
+  "style": "Acacia tree in savanna",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 456732,
+    "facadeHex": 564433,
+    "baseHex": 332211,
+    "accentHex": 778855,
+    "darkHex": 221100,
+    "brightHex": 999999,
+    "glassHex": 1976635
+  },
+  "totalParts": 7,
+  "partNames": [
+    "trunk",
+    "main_canopy",
+    "branch_1",
+    "branch_2",
+    "branch_3",
+    "branch_4",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

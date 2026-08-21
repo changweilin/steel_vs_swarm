@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_boab-trees (1)",
+  "sourceImage": "tree/canopy/boab-trees (1)",
+  "style": "Baobab Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6582345,
+    "facadeHex": 11575950,
+    "baseHex": 8548940,
+    "accentHex": 16777215,
+    "darkHex": 4605510,
+    "brightHex": 13421772,
+    "glassHex": 10066329
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "canopy_left",
+    "canopy_right",
+    "root_base",
+    "branch_stub_1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "rock_facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e",
+  "sourceImage": "rock/facet/ov_fa013cfc-3b8c-47f7-a131-819810d74d4e",
+  "style": "nature_rock_moss",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8363830,
+    "facadeHex": 6516256,
+    "baseHex": 4014115,
+    "accentHex": 14261565,
+    "darkHex": 2041122,
+    "brightHex": 14211288,
+    "glassHex": 33023
+  },
+  "totalParts": 5,
+  "partNames": [
+    "rock_base",
+    "moss_cushion",
+    "rock_facet_left",
+    "rock_facet_top",
+    "lichen_patch_orange"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "ellipsoid_sphere",
+    "icosahedron_polyhedron",
+    "box"
+  ]
+}

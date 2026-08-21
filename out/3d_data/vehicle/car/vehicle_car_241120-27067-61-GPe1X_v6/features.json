@@ -1,0 +1,46 @@
+{
+  "id": "vehicle_car_241120-27067-61-GPe1X",
+  "sourceImage": "vehicle/car/241120-27067-61-GPe1X",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 15783456,
+    "facadeHex": 15783456,
+    "baseHex": 3289650,
+    "accentHex": 2105376,
+    "darkHex": 1315860,
+    "brightHex": 15658734,
+    "glassHex": 1978895
+  },
+  "totalParts": 24,
+  "partNames": [
+    "chassis_base",
+    "main_body",
+    "roof",
+    "hood",
+    "front_bumper",
+    "front_grille",
+    "left_headlight",
+    "right_headlight",
+    "front_windshield",
+    "rear_windshield",
+    "left_front_window",
+    "right_front_window",
+    "left_rear_window",
+    "right_rear_window",
+    "left_mirror",
+    "right_mirror",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "fender_front_left",
+    "fender_front_right",
+    "fender_rear_left",
+    "fender_rear_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

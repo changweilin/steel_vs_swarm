@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_柑竹時尚華廈3D建築外觀浮-02-scaled",
+  "sourceImage": "building/mass/柑竹時尚華廈3D建築外觀浮-02-scaled",
+  "style": "modern_residential_building",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 8421504,
+    "baseHex": 5592405,
+    "accentHex": 11184810,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 11599871
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_body",
+    "white_frame_left",
+    "white_frame_right",
+    "roof_top_beam",
+    "balcony_1",
+    "balcony_2",
+    "balcony_3",
+    "balcony_4",
+    "balcony_5",
+    "ground_floor_base",
+    "window_left_1",
+    "window_right_1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

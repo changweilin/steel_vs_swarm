@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_71W8rWv9TvL._AC_UF894_1000_QL80__v6",
+  "key": "rock/main_71W8rWv9TvL._AC_UF894,1000_QL80__a90fdaaf_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The reconstructed 3D geometric model accurately captures the stacked rock formation, jagged multi-layered structure, greyish color tones, and natural rock contours seen in the image, maintaining tight grounding at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/71W8rWv9TvL._AC_UF894,1000_QL80_.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\71W8rWv9TvL._AC_UF894,1000_QL80_~0.png",
+  "created_at": "2026-08-20T16:17:45.020Z",
+  "bounds": {
+    "min": [
+      -0.8951,
+      -0.2542,
+      -0.761
+    ],
+    "max": [
+      0.7663,
+      1.3729,
+      0.7829
+    ],
+    "size": [
+      1.661,
+      1.627,
+      1.544
+    ],
+    "rMax": 1.175,
+    "triangles": 164,
+    "vertices": 96
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_family-house-in-druskininkai-laurynas-zakevicius-architects_12",
+  "sourceImage": "building/mass/family-house-in-druskininkai-laurynas-zakevicius-architects_12",
+  "style": "Modern Scandinavian Cabin",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 6579300,
+    "facadeHex": 11175760,
+    "baseHex": 13421772,
+    "accentHex": 4473924,
+    "darkHex": 2236962,
+    "brightHex": 15658734,
+    "glassHex": 10079487
+  },
+  "totalParts": 10,
+  "partNames": [
+    "MainBuildingBase",
+    "RoofLowerSection",
+    "RoofUpperSection",
+    "GlassFacadeFront",
+    "WindowFrame",
+    "Foundation",
+    "RoofTrim",
+    "SideWallLeft",
+    "SideWallRight",
+    "RearWall"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

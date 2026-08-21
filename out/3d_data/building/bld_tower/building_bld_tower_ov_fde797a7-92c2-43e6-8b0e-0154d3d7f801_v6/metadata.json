@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_tower_ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801_v6",
+  "key": "building/bld_tower_ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801_e290c2e6_v6",
+  "family": "building",
+  "subpart": "bld_tower",
+  "style": "brutalist_modernist_office_tower",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the Earle Cabell Federal Building. It captures the massive, blocky modernist design with a prominent pinkish-brown granite base, a tall main tower body characterized by alternating vertical white marble piers and dark glass window strips, and a distinctive recessed top attic story with deep vertical columns. The model is fully enclosed and symmetric, ensuring 360-degree structural integrity without any gaps or Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_tower/ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_tower\\ov_fde797a7-92c2-43e6-8b0e-0154d3d7f801~0.png",
+  "created_at": "2026-08-21T07:12:39.677Z",
+  "bounds": {
+    "min": [
+      -30.05,
+      0,
+      -30.05
+    ],
+    "max": [
+      30.05,
+      67,
+      30.05
+    ],
+    "size": [
+      60.1,
+      67,
+      60.1
+    ],
+    "rMax": 42.497,
+    "triangles": 1008,
+    "vertices": 672
+  },
+  "spec": {
+    "style": "brutalist_modernist_office_tower"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

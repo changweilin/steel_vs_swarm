@@ -1,0 +1,40 @@
+{
+  "id": "rock_hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_v6",
+  "key": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_9fe68976_v6",
+  "family": "rock",
+  "subpart": "hoodoo",
+  "style": "rock_hoodoos",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the three hoodoo rock formations (earth pyramids) on the hillside. Each hoodoo features a vertical pillar of weathered sedimentary rock with distinctive caps/capsules on top, faithfully replicating the proportion and shapes seen in the photograph.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/hoodoo/ov_929bc3d9-0f01-401b-8834-49c26d838e8b.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\hoodoo\\ov_929bc3d9-0f01-401b-8834-49c26d838e8b~0.png",
+  "created_at": "2026-08-20T16:19:56.090Z",
+  "bounds": {
+    "min": [
+      -4,
+      0,
+      -2
+    ],
+    "max": [
+      4,
+      5.6507,
+      2
+    ],
+    "size": [
+      8,
+      5.651,
+      4
+    ],
+    "rMax": 4.472,
+    "triangles": 264,
+    "vertices": 152
+  },
+  "spec": {
+    "style": "rock_hoodoos"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_132_images_v6",
+  "key": "rock/main_132 images_5e5e835a_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the stacked boulder formation with three main rock tiers sitting on a natural stone base, using polyhedra to emulate the rough irregular natural rock contours and weathering.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/132 images.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\132 images~0.png",
+  "created_at": "2026-08-20T16:16:41.814Z",
+  "bounds": {
+    "min": [
+      -2.1694,
+      -1.7449,
+      -2.081
+    ],
+    "max": [
+      2.3979,
+      5.03,
+      2.081
+    ],
+    "size": [
+      4.567,
+      6.775,
+      4.162
+    ],
+    "rMax": 3.175,
+    "triangles": 144,
+    "vertices": 84
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

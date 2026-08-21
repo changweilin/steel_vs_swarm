@@ -1,0 +1,34 @@
+{
+  "id": "rock_mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~0",
+  "sourceImage": "rock/mg_mesa/ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~0",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 8546142,
+    "baseHex": 5917482,
+    "accentHex": 12560536,
+    "darkHex": 3944738,
+    "brightHex": 14540253,
+    "glassHex": 33023
+  },
+  "totalParts": 9,
+  "partNames": [
+    "base_mesa_stratum",
+    "middle_canyon_cliff",
+    "upper_plateau_layer",
+    "right_prominent_peak_base",
+    "right_prominent_peak_mid",
+    "right_prominent_peak_top",
+    "rock_detail_chunk_1",
+    "rock_detail_chunk_2",
+    "rock_detail_chunk_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "frustum_pyramid",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

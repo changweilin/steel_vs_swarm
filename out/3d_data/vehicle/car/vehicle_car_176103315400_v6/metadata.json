@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_176103315400_v6",
+  "key": "vehicle/car_176103315400_706df679_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the boxy SUV stance, distinct circular LED headlights, rugged front bumper, side fenders, snorkel, roof rack with cargo boxes, and matching off-road wheels.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/176103315400.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\176103315400~0.png",
+  "created_at": "2026-08-20T17:23:59.398Z",
+  "bounds": {
+    "min": [
+      -1.66,
+      0,
+      -1.9
+    ],
+    "max": [
+      1.66,
+      2.35,
+      2.16
+    ],
+    "size": [
+      3.32,
+      2.35,
+      4.06
+    ],
+    "rMax": 2.724,
+    "triangles": 1220,
+    "vertices": 738
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

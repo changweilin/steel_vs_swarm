@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_174340740201_v6",
+  "key": "ship/hull_174340740201_3769a5c6_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "modern cruise ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the cruise ship's hull, the distinctive forward-leaning bridge structure, the multi-level deck architecture, and the rear funnel stacks. The use of wedge and box primitives effectively replicates the ship's profile. Symmetry is maintained for the hull and superstructure, ensuring a complete 360-degree representation.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/174340740201.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\174340740201~0.png",
+  "created_at": "2026-08-20T16:06:17.554Z",
+  "bounds": {
+    "min": [
+      -15,
+      -0.5,
+      -75
+    ],
+    "max": [
+      15,
+      25,
+      95
+    ],
+    "size": [
+      30,
+      25.5,
+      170
+    ],
+    "rMax": 96.177,
+    "triangles": 536,
+    "vertices": 314
+  },
+  "spec": {
+    "style": "modern cruise ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,44 @@
+{
+  "id": "vehicle_heavy_slide-02",
+  "sourceImage": "vehicle/heavy/slide-02",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16766720,
+    "facadeHex": 255,
+    "baseHex": 2039583,
+    "accentHex": 16773120,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 33145
+  },
+  "totalParts": 21,
+  "partNames": [
+    "chassis_base",
+    "cab_body",
+    "cab_windshield",
+    "cab_side_window_left",
+    "cab_side_window_right",
+    "crane_turntable",
+    "crane_boom_base",
+    "crane_boom_ext",
+    "crane_truss_left",
+    "crane_truss_right",
+    "crane_hook_block",
+    "outrigger_front_left",
+    "outrigger_front_right",
+    "outrigger_rear_left",
+    "outrigger_rear_right",
+    "wheel_fl",
+    "wheel_fr",
+    "wheel_ml",
+    "wheel_mr",
+    "wheel_rl",
+    "wheel_rr"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

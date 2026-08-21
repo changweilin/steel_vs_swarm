@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_v6",
+  "key": "building/mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_b15129d5_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Institutional Architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the large rectangular massing of the building, the elevated roof structure, and the rhythmic column facade. The roof-top mechanical units and green roof patches are represented. The column-supported ground floor is modeled with correct proportions, and the overall 3D volume is closed and consistent with the architectural style.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/4b36cf76-bdea-7886-fd39-5a3269b6047e.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\4b36cf76-bdea-7886-fd39-5a3269b6047e~0.png",
+  "created_at": "2026-08-21T10:06:14.333Z",
+  "bounds": {
+    "min": [
+      -31,
+      2.5,
+      -16
+    ],
+    "max": [
+      31,
+      15.5,
+      16
+    ],
+    "size": [
+      62,
+      13,
+      32
+    ],
+    "rMax": 34.886,
+    "triangles": 276,
+    "vertices": 164
+  },
+  "spec": {
+    "style": "Modern Institutional Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

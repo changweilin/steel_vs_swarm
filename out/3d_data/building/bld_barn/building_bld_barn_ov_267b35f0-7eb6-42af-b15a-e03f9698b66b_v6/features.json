@@ -1,0 +1,38 @@
+{
+  "id": "building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b",
+  "sourceImage": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b",
+  "style": "building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6579300,
+    "facadeHex": 11801655,
+    "baseHex": 10066329,
+    "accentHex": 16777215,
+    "darkHex": 2039583,
+    "brightHex": 14540253,
+    "glassHex": 3368652
+  },
+  "totalParts": 16,
+  "partNames": [
+    "main_barn_base",
+    "stone_foundation_main",
+    "main_barn_roof",
+    "secondary_barn_base",
+    "stone_foundation_sec",
+    "secondary_barn_roof",
+    "annex_base",
+    "annex_roof",
+    "main_door_large",
+    "main_door_trim",
+    "side_door_red",
+    "window_1",
+    "window_2",
+    "window_3",
+    "window_4",
+    "upper_gable_window"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

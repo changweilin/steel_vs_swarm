@@ -1,0 +1,34 @@
+{
+  "id": "tree_canopy_images (4)",
+  "sourceImage": "tree/canopy/images (4)",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2263842,
+    "facadeHex": 5260856,
+    "baseHex": 13421772,
+    "accentHex": 8421504,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 10,
+  "partNames": [
+    "pot_base",
+    "pot_feet_left",
+    "pot_feet_right",
+    "soil_mound",
+    "trunk_main",
+    "foliage_top",
+    "foliage_left",
+    "foliage_right",
+    "rock_left",
+    "rock_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "conical_frustum",
+    "dodecahedron_polyhedron"
+  ]
+}

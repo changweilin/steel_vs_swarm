@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637_v6",
+  "key": "ship/hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637_0828c162_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "fishing_boat",
+  "symmetryMode": "symmetric",
+  "similarityScore": 88,
+  "similarityReview": "The model accurately captures the primary hull shape, the raised cabin structure, and the mast assembly. The color palette follows the 7-zone requirement. The hull is modeled as a closed, watertight entity with symmetric features mirrored to ensure 360-degree integrity. Minor details like the lifebuoys and windows are offset to prevent Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637~0.png",
+  "created_at": "2026-08-20T16:06:04.688Z",
+  "bounds": {
+    "min": [
+      -1.75,
+      0,
+      -4
+    ],
+    "max": [
+      1.75,
+      4,
+      4
+    ],
+    "size": [
+      3.5,
+      4,
+      8
+    ],
+    "rMax": 4.366,
+    "triangles": 376,
+    "vertices": 240
+  },
+  "spec": {
+    "style": "fishing_boat"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

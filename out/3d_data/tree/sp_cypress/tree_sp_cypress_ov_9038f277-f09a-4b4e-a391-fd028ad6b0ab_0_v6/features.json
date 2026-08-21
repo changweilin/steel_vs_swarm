@@ -1,0 +1,27 @@
+{
+  "id": "tree_sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~0",
+  "sourceImage": "tree/sp_cypress/ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~0",
+  "style": "sketch_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 12089973,
+    "facadeHex": 9856340,
+    "baseHex": 7885120,
+    "accentHex": 13408600,
+    "darkHex": 5913640,
+    "brightHex": 15790320,
+    "glassHex": 16777215
+  },
+  "totalParts": 5,
+  "partNames": [
+    "main_trunk",
+    "canopy_top",
+    "canopy_mid",
+    "canopy_lower",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

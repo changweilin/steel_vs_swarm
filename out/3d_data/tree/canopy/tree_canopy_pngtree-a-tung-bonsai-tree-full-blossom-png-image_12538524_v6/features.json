@@ -1,0 +1,31 @@
+{
+  "id": "tree_canopy_pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524",
+  "sourceImage": "tree/canopy/pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524",
+  "style": "Bonsai Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 8417364,
+    "baseHex": 4605510,
+    "accentHex": 16753920,
+    "darkHex": 3947580,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 8,
+  "partNames": [
+    "pot",
+    "trunk",
+    "canopy_top",
+    "canopy_left",
+    "canopy_right",
+    "flower_cluster_1",
+    "flower_cluster_2",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

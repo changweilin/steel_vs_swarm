@@ -1,0 +1,34 @@
+{
+  "id": "rock_mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f",
+  "sourceImage": "rock/mg_slab/ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f",
+  "style": "ancient megalithic monument",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 7368816,
+    "baseHex": 5263440,
+    "accentHex": 9474192,
+    "darkHex": 3158064,
+    "brightHex": 11184810,
+    "glassHex": 3295593
+  },
+  "totalParts": 10,
+  "partNames": [
+    "ground_base",
+    "upright_stone_left_1",
+    "upright_stone_left_2",
+    "lintel_left",
+    "upright_stone_right_1",
+    "upright_stone_right_2",
+    "lintel_right",
+    "slanted_megalith_main",
+    "foreground_boulder_1",
+    "foreground_boulder_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "ship_hull_2-5-1024x768_v6",
+  "key": "ship/hull_2-5-1024x768_03ffcd60_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "ship_reconstruction",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/2-5-1024x768.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\ship\\2-5-1024x768.jpg",
+  "created_at": "2026-08-20T15:22:50.034Z",
+  "bounds": {
+    "min": [
+      -2.53,
+      0,
+      -12
+    ],
+    "max": [
+      2.53,
+      9,
+      15
+    ],
+    "size": [
+      5.06,
+      9,
+      27
+    ],
+    "rMax": 15.212,
+    "triangles": 392,
+    "vertices": 250
+  },
+  "spec": {
+    "style": "ship_reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

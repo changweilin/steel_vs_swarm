@@ -1,0 +1,31 @@
+{
+  "id": "tree_canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677",
+  "sourceImage": "tree/canopy/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677",
+  "style": "realistic_conifer",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3421234,
+    "facadeHex": 5644332,
+    "baseHex": 223311,
+    "accentHex": 889977,
+    "darkHex": 111111,
+    "brightHex": 999999,
+    "glassHex": 112233
+  },
+  "totalParts": 7,
+  "partNames": [
+    "trunk",
+    "base_mound",
+    "foliage_layer_1",
+    "foliage_layer_2",
+    "foliage_layer_3",
+    "foliage_layer_4",
+    "foliage_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere",
+    "frustum_pyramid",
+    "pyramid"
+  ]
+}

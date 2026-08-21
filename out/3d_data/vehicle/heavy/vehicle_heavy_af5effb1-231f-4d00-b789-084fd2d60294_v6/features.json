@@ -1,0 +1,35 @@
+{
+  "id": "vehicle_heavy_af5effb1-231f-4d00-b789-084fd2d60294",
+  "sourceImage": "vehicle/heavy/af5effb1-231f-4d00-b789-084fd2d60294",
+  "style": "vehicle/fire_truck",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16711680,
+    "baseHex": 8421504,
+    "accentHex": 16776960,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 49344
+  },
+  "totalParts": 13,
+  "partNames": [
+    "chassis_base",
+    "cabin_main",
+    "windshield",
+    "front_bumper",
+    "ladder_boom",
+    "front_left_wheel",
+    "front_right_wheel",
+    "rear_left_wheel",
+    "rear_right_wheel",
+    "headlight_left",
+    "headlight_right",
+    "side_mirror_left",
+    "side_mirror_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "torus_ring"
+  ]
+}

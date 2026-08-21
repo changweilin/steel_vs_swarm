@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_heavy_product_4714426807346_3_v6",
+  "key": "vehicle/heavy_product_4714426807346_3_b3043b34_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "toy vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/heavy/product_4714426807346_3.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\product_4714426807346_3.jpg",
+  "created_at": "2026-08-20T15:35:06.464Z",
+  "bounds": {
+    "min": [
+      -1.84,
+      0.225,
+      -1.05
+    ],
+    "max": [
+      1.8,
+      2.1,
+      1.05
+    ],
+    "size": [
+      3.64,
+      1.875,
+      2.1
+    ],
+    "rMax": 2.119,
+    "triangles": 576,
+    "vertices": 318
+  },
+  "spec": {
+    "style": "toy vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_29766035_v6",
+  "key": "tree/gt_dragontree_wc_29766035_f4eca61c_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The dragon tree's iconic umbrella-shaped canopy is represented by a large flattened ellipsoid, while the complex branching structure is approximated by a central trunk and a secondary layer of dodecahedron volumes to simulate the dense, fractal-like branch network. The base is anchored at y=0 with surrounding rock-like dodecahedrons.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_29766035.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_29766035~0.png",
+  "created_at": "2026-08-20T16:58:17.227Z",
+  "bounds": {
+    "min": [
+      -4.5,
+      -1.071,
+      -4.2798
+    ],
+    "max": [
+      4.5,
+      6.4696,
+      4.2798
+    ],
+    "size": [
+      9,
+      7.541,
+      8.56
+    ],
+    "rMax": 6.21,
+    "triangles": 352,
+    "vertices": 205
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

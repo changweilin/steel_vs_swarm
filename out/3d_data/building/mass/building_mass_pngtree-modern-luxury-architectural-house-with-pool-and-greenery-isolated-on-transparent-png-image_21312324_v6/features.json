@@ -1,0 +1,34 @@
+{
+  "id": "building_mass_pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324",
+  "sourceImage": "building/mass/pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324",
+  "style": "Modern Minimalist Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 12632256,
+    "accentHex": 16777215,
+    "darkHex": 3355443,
+    "brightHex": 16777215,
+    "glassHex": 8454143
+  },
+  "totalParts": 11,
+  "partNames": [
+    "BasePlatform",
+    "GroundFloorWall",
+    "FirstFloorTerrace",
+    "SecondFloorMain",
+    "RoofParapet",
+    "GlassFacadeFront",
+    "SwimmingPool",
+    "Stairs",
+    "Bush1",
+    "Bush2",
+    "PlantPot1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

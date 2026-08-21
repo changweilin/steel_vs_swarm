@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_pisa-1056568_960_720",
+  "sourceImage": "building/mass/pisa-1056568_960_720",
+  "style": "Romanesque architecture, Leaning Tower of Pisa",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14211288,
+    "facadeHex": 16777215,
+    "baseHex": 13421772,
+    "accentHex": 11184810,
+    "darkHex": 5592405,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_foundation",
+    "main_body_tier1",
+    "tier2_colonnade",
+    "tier3_colonnade",
+    "tier4_colonnade",
+    "tier5_colonnade",
+    "tier6_colonnade",
+    "bell_chamber",
+    "bell_chamber_roof",
+    "arch_detail_ring"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "frustum_pyramid",
+    "torus_ring"
+  ]
+}

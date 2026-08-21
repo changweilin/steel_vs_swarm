@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_images (15)",
+  "sourceImage": "tree/canopy/images (15)",
+  "style": "stylized_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 45056,
+    "facadeHex": 8410675,
+    "baseHex": 5585435,
+    "accentHex": 16777215,
+    "darkHex": 4602910,
+    "brightHex": 11375965,
+    "glassHex": 16777215
+  },
+  "totalParts": 7,
+  "partNames": [
+    "trunk_base",
+    "trunk_spiral_1",
+    "trunk_spiral_2",
+    "main_branch",
+    "canopy_main",
+    "canopy_left",
+    "canopy_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

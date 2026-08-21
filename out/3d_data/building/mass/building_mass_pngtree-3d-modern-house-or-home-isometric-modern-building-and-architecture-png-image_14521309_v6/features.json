@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521309",
+  "sourceImage": "building/mass/pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521309",
+  "style": "Modern Minimalist Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14803425,
+    "baseHex": 10526880,
+    "accentHex": 4210752,
+    "darkHex": 2631720,
+    "brightHex": 15790320,
+    "glassHex": 8438271
+  },
+  "totalParts": 11,
+  "partNames": [
+    "ground_base",
+    "first_floor_main",
+    "second_floor_main",
+    "rooftop_penthouse",
+    "glass_wall_front_1",
+    "glass_wall_front_2",
+    "balcony_railing_front",
+    "roof_overhang",
+    "entrance_stairs",
+    "shrubbery_left",
+    "shrubbery_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere"
+  ]
+}

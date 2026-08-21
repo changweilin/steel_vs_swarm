@@ -1,0 +1,31 @@
+{
+  "id": "rock_collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5",
+  "sourceImage": "rock/collapse/ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5",
+  "style": "nature_rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4349479,
+    "facadeHex": 5921350,
+    "baseHex": 3618615,
+    "accentHex": 6053457,
+    "darkHex": 2303022,
+    "brightHex": 8092539,
+    "glassHex": 2041130
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_boulder_core",
+    "rock_extension_left",
+    "rock_extension_right",
+    "moss_patch_top",
+    "rock_face_front",
+    "rock_top_crest",
+    "ground_anchor_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "box"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "building_mass_images (8)",
+  "sourceImage": "building/mass/images (8)",
+  "style": "Modernist Architectural Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14211288,
+    "baseHex": 12632256,
+    "accentHex": 8421504,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 8,
+  "partNames": [
+    "base_platform",
+    "main_body_lower",
+    "chimney_stack",
+    "upper_roof_slab",
+    "glass_wall_front",
+    "side_terrace_frame",
+    "pergola_slats",
+    "dark_side_panel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

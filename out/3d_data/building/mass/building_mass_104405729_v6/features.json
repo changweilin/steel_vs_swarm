@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_104405729",
+  "sourceImage": "building/mass/104405729",
+  "style": "Japanese Castle Architecture (Himeji-style)",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14211288,
+    "facadeHex": 16777215,
+    "baseHex": 8417364,
+    "accentHex": 6579300,
+    "darkHex": 3355443,
+    "brightHex": 15790320,
+    "glassHex": 4621720
+  },
+  "totalParts": 8,
+  "partNames": [
+    "stone_base_main",
+    "main_keep_body",
+    "main_roof_tier1",
+    "secondary_tower_base",
+    "secondary_tower_body",
+    "window_main_1",
+    "window_main_2",
+    "wooden_base_plate"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "wedge"
+  ]
+}

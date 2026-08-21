@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_admin_51_1680233914_9ARlI77I3P.jpg!t1000",
+  "sourceImage": "building/mass/admin_51_1680233914_9ARlI77I3P.jpg!t1000",
+  "style": "modern_building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 15790320,
+    "baseHex": 10526880,
+    "accentHex": 5263440,
+    "darkHex": 3289650,
+    "brightHex": 16777215,
+    "glassHex": 8047022
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_building_body",
+    "roof_flat",
+    "carport_frame",
+    "carport_roof_glass",
+    "balcony_level_3",
+    "balcony_glass_3",
+    "balcony_level_2",
+    "balcony_glass_2",
+    "vertical_louvers_left",
+    "front_gate",
+    "boundary_wall_left"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

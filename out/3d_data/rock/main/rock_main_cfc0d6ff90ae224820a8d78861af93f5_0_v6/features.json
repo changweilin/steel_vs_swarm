@@ -1,0 +1,30 @@
+{
+  "id": "rock_main_cfc0d6ff90ae224820a8d78861af93f5~0",
+  "sourceImage": "rock/main/cfc0d6ff90ae224820a8d78861af93f5~0",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3093583,
+    "facadeHex": 4352085,
+    "baseHex": 1978393,
+    "accentHex": 6523992,
+    "darkHex": 1319207,
+    "brightHex": 11252199,
+    "glassHex": 2181535
+  },
+  "totalParts": 5,
+  "partNames": [
+    "ground_base",
+    "rock_cluster_main",
+    "rock_cluster_secondary",
+    "rock_wedge_slope",
+    "rock_detail_prism"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "polygonal_prism"
+  ]
+}

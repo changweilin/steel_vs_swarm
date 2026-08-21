@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_20240301000865",
+  "sourceImage": "ship/hull/20240301000865",
+  "style": "military_submarine",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4013823,
+    "facadeHex": 5264465,
+    "baseHex": 2631720,
+    "accentHex": 11184810,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 6589695
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_hull",
+    "bow_cone",
+    "stern_cone",
+    "sail_tower",
+    "bridge_window",
+    "stern_propeller",
+    "diving_plane_starboard",
+    "diving_plane_port",
+    "stern_fin_top",
+    "stern_fin_bottom"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "conical_frustum",
+    "box",
+    "torus_ring",
+    "wedge"
+  ]
+}

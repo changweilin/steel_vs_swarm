@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_dome_ov_5711989c-b571-4ac0-a219-af3f6f060f8b_v6",
+  "key": "rock/mg_dome_ov_5711989c-b571-4ac0-a219-af3f6f060f8b_4a80fedb_v6",
+  "family": "rock",
+  "subpart": "mg_dome",
+  "style": "low_poly_sculpture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D model successfully captures the blue low-poly mountain terrain standing against a flat vertical backing board. The multi-faceted geometry accurately reflects the layered rocky features and overall proportions shown in the reference image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_dome/ov_5711989c-b571-4ac0-a219-af3f6f060f8b.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_dome\\ov_5711989c-b571-4ac0-a219-af3f6f060f8b~0.png",
+  "created_at": "2026-08-20T16:23:41.098Z",
+  "bounds": {
+    "min": [
+      -0.7,
+      -0.056,
+      -0.45
+    ],
+    "max": [
+      0.7285,
+      2.1,
+      0.6797
+    ],
+    "size": [
+      1.429,
+      2.156,
+      1.13
+    ],
+    "rMax": 0.996,
+    "triangles": 144,
+    "vertices": 86
+  },
+  "spec": {
+    "style": "low_poly_sculpture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

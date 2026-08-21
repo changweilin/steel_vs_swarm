@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a_v6",
+  "key": "tree/sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a_20a058d6_v6",
+  "family": "tree",
+  "subpart": "sp_cypress",
+  "style": "lithograph_landscape",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the two distinct cypress tree forms: the left cluster of broad, layered foliage and the right tall, slender conical cypress. The stone basin is represented as a circular base. The scale and verticality are consistent with the lithograph's composition.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_cypress/ov_4b111732-01e7-4037-bfb5-1bed4585568a.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_cypress\\ov_4b111732-01e7-4037-bfb5-1bed4585568a~0.png",
+  "created_at": "2026-08-20T16:17:37.822Z",
+  "bounds": {
+    "min": [
+      -4,
+      -0.25,
+      -2.3776
+    ],
+    "max": [
+      3.5,
+      9.5,
+      2.3776
+    ],
+    "size": [
+      7.5,
+      9.75,
+      4.755
+    ],
+    "rMax": 4.653,
+    "triangles": 640,
+    "vertices": 368
+  },
+  "spec": {
+    "style": "lithograph_landscape"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

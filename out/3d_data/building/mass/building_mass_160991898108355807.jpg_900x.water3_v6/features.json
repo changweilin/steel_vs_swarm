@@ -1,0 +1,51 @@
+{
+  "id": "building_mass_160991898108355807.jpg!900x.water3",
+  "sourceImage": "building/mass/160991898108355807.jpg!900x.water3",
+  "style": "modern_building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 5592405,
+    "baseHex": 2236962,
+    "accentHex": 11105372,
+    "darkHex": 1118481,
+    "brightHex": 14540253,
+    "glassHex": 2243431
+  },
+  "totalParts": 28,
+  "partNames": [
+    "main_building_base",
+    "ground_floor_base",
+    "upper_tower_step",
+    "roof_top_element",
+    "balcony_column_1",
+    "balcony_column_2",
+    "balcony_column_3",
+    "balcony_column_4",
+    "window_grid_1",
+    "window_grid_2",
+    "window_grid_3",
+    "window_grid_4",
+    "window_grid_5",
+    "window_grid_6",
+    "window_grid_7",
+    "window_grid_8",
+    "window_grid_9",
+    "window_grid_10",
+    "window_grid_11",
+    "window_grid_12",
+    "window_grid_13",
+    "window_grid_14",
+    "window_grid_15",
+    "entrance_door",
+    "garage_gate_left",
+    "garage_gate_right",
+    "tree_foliage_1",
+    "tree_trunk_1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

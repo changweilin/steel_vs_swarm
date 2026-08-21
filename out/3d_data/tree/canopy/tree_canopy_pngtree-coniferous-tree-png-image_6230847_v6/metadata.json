@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-coniferous-tree-png-image_6230847_v6",
+  "key": "tree/canopy_pngtree-coniferous-tree-png-image_6230847_9f438333_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "coniferous_tree",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree is modeled as a central trunk with five distinct layers of conical foliage. The frustum_pyramid parts accurately represent the downward-sloping branches of a coniferous tree. The proportions match the reference image, with the trunk extending from the ground to the top, and foliage layers increasing in size towards the base.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-coniferous-tree-png-image_6230847.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-coniferous-tree-png-image_6230847~0.png",
+  "created_at": "2026-08-20T17:03:04.021Z",
+  "bounds": {
+    "min": [
+      -2,
+      1.9,
+      -2
+    ],
+    "max": [
+      2,
+      7,
+      2
+    ],
+    "size": [
+      4,
+      5.1,
+      4
+    ],
+    "rMax": 2.828,
+    "triangles": 208,
+    "vertices": 116
+  },
+  "spec": {
+    "style": "coniferous_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

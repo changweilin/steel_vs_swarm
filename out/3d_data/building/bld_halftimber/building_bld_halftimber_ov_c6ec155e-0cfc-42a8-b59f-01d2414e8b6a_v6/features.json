@@ -1,0 +1,47 @@
+{
+  "id": "building_bld_halftimber_ov_c6ec155e-0cfc-42a8-b59f-01d2414e8b6a",
+  "sourceImage": "building/bld_halftimber/ov_c6ec155e-0cfc-42a8-b59f-01d2414e8b6a",
+  "style": "building/bld_halftimber",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7342894,
+    "facadeHex": 14207914,
+    "baseHex": 9868950,
+    "accentHex": 4010531,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 33023
+  },
+  "totalParts": 24,
+  "partNames": [
+    "ground_base_left",
+    "ground_base_right",
+    "upper_floor_left",
+    "upper_floor_right",
+    "roof_left",
+    "roof_right",
+    "arcade_col_1",
+    "arcade_col_2",
+    "arcade_col_3",
+    "arcade_col_4",
+    "arcade_col_5",
+    "arcade_col_6",
+    "arcade_col_7",
+    "window_left_1",
+    "window_left_2",
+    "window_left_3",
+    "window_right_1",
+    "window_right_2",
+    "window_right_3",
+    "shutter_l1",
+    "shutter_l2",
+    "timber_brace_1",
+    "timber_brace_2",
+    "drainpipe"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

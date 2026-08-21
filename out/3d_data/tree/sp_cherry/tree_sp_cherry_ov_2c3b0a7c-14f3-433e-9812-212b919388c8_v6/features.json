@@ -1,0 +1,29 @@
+{
+  "id": "tree_sp_cherry_ov_2c3b0a7c-14f3-433e-9812-212b919388c8",
+  "sourceImage": "tree/sp_cherry/ov_2c3b0a7c-14f3-433e-9812-212b919388c8",
+  "style": "Ukiyo-e woodblock print style, stylized nature",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4587520,
+    "facadeHex": 8545330,
+    "baseHex": 5395026,
+    "accentHex": 16750848,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 1118481
+  },
+  "totalParts": 6,
+  "partNames": [
+    "PineTreeTrunk",
+    "PineTreeCrown1",
+    "PineTreeCrown2",
+    "CherryTreeTrunk",
+    "CherryBlossomCluster1",
+    "CherryBlossomCluster2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

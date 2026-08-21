@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_depositphotos_415995326-stock-photo-house-modern-architecture-illustration",
+  "sourceImage": "building/mass/depositphotos_415995326-stock-photo-house-modern-architecture-illustration",
+  "style": "modern architectural sketch",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 15790320,
+    "baseHex": 14540253,
+    "accentHex": 10526880,
+    "darkHex": 6710886,
+    "brightHex": 16777215,
+    "glassHex": 13434879
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_building_body",
+    "main_roof",
+    "terrace_base",
+    "pergola_slats",
+    "window_upper",
+    "window_lower",
+    "car_body",
+    "terrace_railing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "id": "vehicle_bike_800x (1)",
+  "sourceImage": "vehicle/bike/800x (1)",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2041262,
+    "facadeHex": 1973790,
+    "baseHex": 1315860,
+    "accentHex": 3289650,
+    "darkHex": 986895,
+    "brightHex": 12566463,
+    "glassHex": 2041262
+  },
+  "totalParts": 14,
+  "partNames": [
+    "rear_wheel_tire",
+    "front_wheel_tire",
+    "downtube",
+    "toptube",
+    "seattube",
+    "seatpost",
+    "saddle",
+    "headtube",
+    "fork",
+    "chainstay",
+    "seatstay",
+    "crankset",
+    "handlebar_stem",
+    "handlebar_drop"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_1586238562_v6",
+  "key": "rock/main_1586238562_ae157ab0_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the large monolithic rock formation (Peñón de Ifach) along with its lower vegetated hillside base. Used a combination of dodecahedrons, polygonal prisms, and boxes to approximate the rugged cliffs and sloping terrain, anchored at ground level.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/1586238562.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\1586238562~0.png",
+  "created_at": "2026-08-20T16:16:54.111Z",
+  "bounds": {
+    "min": [
+      -60,
+      0,
+      -40
+    ],
+    "max": [
+      60,
+      91.8151,
+      40
+    ],
+    "size": [
+      120,
+      91.815,
+      80
+    ],
+    "rMax": 72.111,
+    "triangles": 144,
+    "vertices": 84
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

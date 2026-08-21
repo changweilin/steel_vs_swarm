@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_4f5ee370c1564cadabc47ce365c4f353",
+  "sourceImage": "building/mass/4f5ee370c1564cadabc47ce365c4f353",
+  "style": "Modern Rustic Timber Frame House",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 11177300,
+    "baseHex": 6710886,
+    "accentHex": 13408512,
+    "darkHex": 2236962,
+    "brightHex": 16777215,
+    "glassHex": 10092543
+  },
+  "totalParts": 12,
+  "partNames": [
+    "main_body",
+    "main_roof",
+    "front_gable_porch",
+    "stone_base_left",
+    "stone_base_right",
+    "timber_post_left",
+    "main_window_arch",
+    "side_window_1",
+    "side_window_2",
+    "chimney",
+    "garage_wing",
+    "garage_roof"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

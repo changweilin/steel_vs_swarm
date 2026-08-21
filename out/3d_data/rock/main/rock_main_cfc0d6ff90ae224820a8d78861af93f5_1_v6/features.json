@@ -1,0 +1,39 @@
+{
+  "id": "rock_main_cfc0d6ff90ae224820a8d78861af93f5~1",
+  "sourceImage": "rock/main/cfc0d6ff90ae224820a8d78861af93f5~1",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 5921370,
+    "baseHex": 3290317,
+    "accentHex": 14540253,
+    "darkHex": 1973790,
+    "brightHex": 16777215,
+    "glassHex": 48777
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_rock_base",
+    "mid_rock_body",
+    "upper_rock_dome",
+    "rock_fracture_detail_1",
+    "rock_fracture_detail_2",
+    "staircase_wedge_cut",
+    "top_platform_base",
+    "observation_building",
+    "observation_tower",
+    "tower_roof",
+    "window_band"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "frustum_pyramid",
+    "pyramid",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "box",
+    "cylinder"
+  ]
+}

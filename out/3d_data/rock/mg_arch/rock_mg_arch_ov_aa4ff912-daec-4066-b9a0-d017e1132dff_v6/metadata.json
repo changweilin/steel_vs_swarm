@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_arch_ov_aa4ff912-daec-4066-b9a0-d017e1132dff_v6",
+  "key": "rock/mg_arch_ov_aa4ff912-daec-4066-b9a0-d017e1132dff_596051fc_v6",
+  "family": "rock",
+  "subpart": "mg_arch",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the primary layered rock formations and large foreground cliff structures with precise dodecahedral and wedge volumes resting accurately on the ground plane, maintaining solid interlocking contact without Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_arch/ov_aa4ff912-daec-4066-b9a0-d017e1132dff.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_arch\\ov_aa4ff912-daec-4066-b9a0-d017e1132dff~0.png",
+  "created_at": "2026-08-20T16:23:09.793Z",
+  "bounds": {
+    "min": [
+      -5,
+      -0.3795,
+      -6
+    ],
+    "max": [
+      5.6718,
+      6.3412,
+      4
+    ],
+    "size": [
+      10.672,
+      6.721,
+      10
+    ],
+    "rMax": 7.81,
+    "triangles": 172,
+    "vertices": 102
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

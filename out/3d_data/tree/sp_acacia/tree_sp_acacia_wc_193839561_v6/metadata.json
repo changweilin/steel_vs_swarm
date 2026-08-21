@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_acacia_wc_193839561_v6",
+  "key": "tree/sp_acacia_wc_193839561_ba893e5f_v6",
+  "family": "tree",
+  "subpart": "sp_acacia",
+  "style": "Acacia tree in savanna",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the iconic flat-topped canopy of the Acacia tree using a large flattened ellipsoid, supported by a central trunk and a network of branching cylinders. The proportions reflect the wide, spreading nature of the canopy relative to the trunk height.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_acacia/wc_193839561.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_acacia\\wc_193839561~0.png",
+  "created_at": "2026-08-20T16:15:06.675Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.1,
+      -4.7553
+    ],
+    "max": [
+      6,
+      6.5,
+      4.7553
+    ],
+    "size": [
+      12,
+      6.6,
+      9.511
+    ],
+    "rMax": 7.656,
+    "triangles": 560,
+    "vertices": 328
+  },
+  "spec": {
+    "style": "Acacia tree in savanna"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

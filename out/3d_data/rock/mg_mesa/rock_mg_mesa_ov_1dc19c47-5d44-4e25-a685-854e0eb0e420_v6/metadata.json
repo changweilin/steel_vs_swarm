@@ -1,0 +1,40 @@
+{
+  "id": "rock_mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_v6",
+  "key": "rock/mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_4f3e86ef_v6",
+  "family": "rock",
+  "subpart": "mg_mesa",
+  "style": "rock_mesa_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully isolated and reconstructed the prominent mesa rock formation visible in the background, utilizing faceted dodecahedron and polygonal prism geometries to accurately represent the stratified red sandstone cliffs and plateau top, anchored at ground level y = 0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/mg_mesa/ov_1dc19c47-5d44-4e25-a685-854e0eb0e420.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\mg_mesa\\ov_1dc19c47-5d44-4e25-a685-854e0eb0e420~0.png",
+  "created_at": "2026-08-20T16:24:34.669Z",
+  "bounds": {
+    "min": [
+      -20,
+      -0.8552,
+      -63
+    ],
+    "max": [
+      20,
+      38.5,
+      -9.9448
+    ],
+    "size": [
+      40,
+      39.355,
+      53.055
+    ],
+    "rMax": 66.098,
+    "triangles": 136,
+    "vertices": 80
+  },
+  "spec": {
+    "style": "rock_mesa_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

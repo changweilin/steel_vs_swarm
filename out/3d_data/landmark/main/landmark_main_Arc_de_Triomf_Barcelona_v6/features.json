@@ -1,0 +1,38 @@
+{
+  "id": "landmark_main_Arc_de_Triomf_Barcelona",
+  "sourceImage": "landmark/main/Arc_de_Triomf_Barcelona",
+  "style": "Neo-Mudéjar Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13938988,
+    "facadeHex": 15777460,
+    "baseHex": 10526880,
+    "accentHex": 16766720,
+    "darkHex": 3947580,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 14,
+  "partNames": [
+    "LeftPier",
+    "RightPier",
+    "ArchStructure",
+    "ArchOpening",
+    "LeftTower1",
+    "LeftTower2",
+    "RightTower1",
+    "RightTower2",
+    "LeftTowerCap1",
+    "LeftTowerCap2",
+    "RightTowerCap1",
+    "RightTowerCap2",
+    "FriezePanel",
+    "BasePlinth"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "polygonal_prism",
+    "frustum_pyramid"
+  ]
+}

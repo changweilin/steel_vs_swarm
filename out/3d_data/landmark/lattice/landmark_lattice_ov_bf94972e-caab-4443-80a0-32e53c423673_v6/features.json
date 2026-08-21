@@ -1,0 +1,33 @@
+{
+  "id": "landmark_lattice_ov_bf94972e-caab-4443-80a0-32e53c423673",
+  "sourceImage": "landmark/lattice/ov_bf94972e-caab-4443-80a0-32e53c423673",
+  "style": "industrial_lattice_tower",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16711680,
+    "facadeHex": 16777215,
+    "baseHex": 16711680,
+    "accentHex": 16777215,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8421504
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_structure",
+    "mid_structure",
+    "top_cross_arm_left",
+    "top_cross_arm_right",
+    "insulator_left",
+    "insulator_right",
+    "leg_support_1",
+    "leg_support_2",
+    "leg_support_3",
+    "leg_support_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "box",
+    "cylinder"
+  ]
+}

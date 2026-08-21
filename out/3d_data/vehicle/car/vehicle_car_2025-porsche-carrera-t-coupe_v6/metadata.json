@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_2025-porsche-carrera-t-coupe_v6",
+  "key": "vehicle/car_2025-porsche-carrera-t-coupe_7eb676c1_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "automotive",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/2025-porsche-carrera-t-coupe.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\2025-porsche-carrera-t-coupe.jpg",
+  "created_at": "2026-08-20T15:19:47.010Z",
+  "bounds": {
+    "min": [
+      -1.35,
+      0,
+      -2.1
+    ],
+    "max": [
+      1.35,
+      1.525,
+      2.2
+    ],
+    "size": [
+      2.7,
+      1.525,
+      4.3
+    ],
+    "rMax": 2.581,
+    "triangles": 636,
+    "vertices": 352
+  },
+  "spec": {
+    "style": "automotive"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

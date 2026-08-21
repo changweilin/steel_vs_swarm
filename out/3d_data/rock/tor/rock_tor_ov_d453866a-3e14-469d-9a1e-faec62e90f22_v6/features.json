@@ -1,0 +1,33 @@
+{
+  "id": "rock_tor_ov_d453866a-3e14-469d-9a1e-faec62e90f22",
+  "sourceImage": "rock/tor/ov_d453866a-3e14-469d-9a1e-faec62e90f22",
+  "style": "natural_rock_tor",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8553090,
+    "facadeHex": 7368816,
+    "baseHex": 5263440,
+    "accentHex": 9868950,
+    "darkHex": 2631720,
+    "brightHex": 11184810,
+    "glassHex": 32903
+  },
+  "totalParts": 9,
+  "partNames": [
+    "MainRockBase",
+    "RockBlockTop",
+    "RockFacetFront",
+    "RockFacetSide",
+    "DebrisRock1",
+    "DebrisRock2",
+    "DebrisRock3",
+    "DebrisRock4",
+    "GroundOutcrop"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "wedge",
+    "icosahedron_polyhedron",
+    "box"
+  ]
+}

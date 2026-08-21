@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_1513x4724_wmkn_328537037215_202606050063000000",
+  "sourceImage": "tree/canopy/1513x4724_wmkn_328537037215_202606050063000000",
+  "style": "Naturalistic Giant Conifer",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3684288,
+    "facadeHex": 8417376,
+    "baseHex": 4603936,
+    "accentHex": 16766720,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 4473924
+  },
+  "totalParts": 7,
+  "partNames": [
+    "root_base",
+    "main_trunk",
+    "upper_trunk",
+    "canopy_layer_1",
+    "canopy_layer_2",
+    "canopy_layer_3",
+    "tree_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "frustum_pyramid",
+    "pyramid"
+  ]
+}

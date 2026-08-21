@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_v6",
+  "key": "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_0c05ae0e_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_landscape_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model successfully captures the twisted, gnarled trunk structure and the layered, sprawling canopy characteristic of high-altitude alpine trees. The base rock formation is represented by a dodecahedron, and the canopy is composed of multiple ellipsoid spheres to mimic the dense, irregular foliage. The overall proportions and the dramatic lean of the tree are well-preserved.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94~0.png",
+  "created_at": "2026-08-20T16:21:45.792Z",
+  "bounds": {
+    "min": [
+      -4,
+      -0.621,
+      -2.3776
+    ],
+    "max": [
+      3.5,
+      5.7,
+      2.3776
+    ],
+    "size": [
+      7.5,
+      6.321,
+      4.755
+    ],
+    "rMax": 4.653,
+    "triangles": 708,
+    "vertices": 434
+  },
+  "spec": {
+    "style": "natural_landscape_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

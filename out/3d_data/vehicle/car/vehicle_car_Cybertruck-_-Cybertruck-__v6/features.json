@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_Cybertruck-來了！限量-Cybertruck-模型台灣上架",
+  "sourceImage": "vehicle/car/Cybertruck-來了！限量-Cybertruck-模型台灣上架",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3881787,
+    "facadeHex": 12434877,
+    "baseHex": 2105376,
+    "accentHex": 14540253,
+    "darkHex": 1315860,
+    "brightHex": 15790320,
+    "glassHex": 1975881
+  },
+  "totalParts": 17,
+  "partNames": [
+    "chassis_base",
+    "main_body",
+    "hood_slope",
+    "windshield",
+    "roof_glass",
+    "rear_bed_slope",
+    "front_light_bar",
+    "side_window_left",
+    "side_window_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right",
+    "fender_flair_front_left",
+    "fender_flair_front_right",
+    "fender_flair_rear_left",
+    "fender_flair_rear_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

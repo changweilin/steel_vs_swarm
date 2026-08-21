@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_wc_182669735_v6",
+  "key": "tree/canopy_wc_182669735_a35a2e48_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "realistic",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the large winter tree with its thick trunk, complex canopy structure represented by ellipsoids and polyhedrons, and the adjacent snowy ground and bridge elements.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/canopy/wc_182669735.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\canopy\\wc_182669735~0.png",
+  "created_at": "2026-08-20T16:37:12.998Z",
+  "bounds": {
+    "min": [
+      -10,
+      0,
+      -10
+    ],
+    "max": [
+      10,
+      15,
+      10
+    ],
+    "size": [
+      20,
+      15,
+      20
+    ],
+    "rMax": 14.142,
+    "triangles": 520,
+    "vertices": 316
+  },
+  "spec": {
+    "style": "realistic"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

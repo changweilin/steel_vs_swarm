@@ -1,0 +1,40 @@
+{
+  "id": "rock_facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_v6",
+  "key": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_0d08ca6a_v6",
+  "family": "rock",
+  "subpart": "facet",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D rock formation accurately captures the irregular massive bulk of the main sea stack and the smaller adjacent boulder protruding from the water line (y=0). Multi-faceted dodecahedrons and icosahedrons combined with wedge fragments correctly represent the rugged texture, natural overhangs, and asymmetrical silhouette observed in the photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/facet/ov_e8344366-5513-4cd8-9d33-5cb394fe2609.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\facet\\ov_e8344366-5513-4cd8-9d33-5cb394fe2609~0.png",
+  "created_at": "2026-08-20T16:19:16.332Z",
+  "bounds": {
+    "min": [
+      -3.469,
+      -0.4276,
+      -2.0552
+    ],
+    "max": [
+      3.5276,
+      5.721,
+      2.0552
+    ],
+    "size": [
+      6.997,
+      6.149,
+      4.11
+    ],
+    "rMax": 4.083,
+    "triangles": 188,
+    "vertices": 112
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

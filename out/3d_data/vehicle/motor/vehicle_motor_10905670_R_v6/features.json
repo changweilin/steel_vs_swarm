@@ -1,0 +1,32 @@
+{
+  "id": "vehicle_motor_10905670_R",
+  "sourceImage": "vehicle/motor/10905670_R",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 10526880,
+    "baseHex": 2105376,
+    "accentHex": 1579032,
+    "darkHex": 1052688,
+    "brightHex": 14540253,
+    "glassHex": 33023
+  },
+  "totalParts": 9,
+  "partNames": [
+    "front_wheel",
+    "rear_wheel",
+    "chassis_base",
+    "body_shield",
+    "seat",
+    "handlebars",
+    "headlight",
+    "left_mirror",
+    "right_mirror"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "box",
+    "cylinder"
+  ]
+}

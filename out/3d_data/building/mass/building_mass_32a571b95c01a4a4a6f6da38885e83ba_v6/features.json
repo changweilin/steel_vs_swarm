@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_32a571b95c01a4a4a6f6da38885e83ba",
+  "sourceImage": "building/mass/32a571b95c01a4a4a6f6da38885e83ba",
+  "style": "Neoclassical High-rise",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12500670,
+    "facadeHex": 14540253,
+    "baseHex": 10526880,
+    "accentHex": 8421504,
+    "darkHex": 2236962,
+    "brightHex": 16777215,
+    "glassHex": 3355443
+  },
+  "totalParts": 10,
+  "partNames": [
+    "MainTowerBody",
+    "CentralGlassColumn",
+    "TopCircularFeature",
+    "StructuralColumnLeft",
+    "StructuralColumnRight",
+    "WindowRow1",
+    "WindowRow2",
+    "WindowRow3",
+    "WindowRow4",
+    "BasePlinth"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "torus_ring"
+  ]
+}

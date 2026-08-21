@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_2025-porsche-carrera-t-coupe_1_v6",
+  "key": "vehicle/car_2025-porsche-carrera-t-coupe~1_7d678b7d_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "automotive",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the sleek profile of the sports car front and cabin, including the iconic round headlights, curved windshield, side mirrors, and smooth body lines, adhering strictly to the 7-zone color and orientation rules.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/2025-porsche-carrera-t-coupe.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\2025-porsche-carrera-t-coupe~1.png",
+  "created_at": "2026-08-20T17:26:26.765Z",
+  "bounds": {
+    "min": [
+      -1.45,
+      0.1,
+      -2.1
+    ],
+    "max": [
+      1.45,
+      1.45,
+      2.1
+    ],
+    "size": [
+      2.9,
+      1.35,
+      4.2
+    ],
+    "rMax": 2.552,
+    "triangles": 1004,
+    "vertices": 626
+  },
+  "spec": {
+    "style": "automotive"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

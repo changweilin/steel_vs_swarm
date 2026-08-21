@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_wc_13126536_v6",
+  "key": "tree/sp_baobab_wc_13126536_0240b835_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "natural_baobab_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the massive, thick trunk of the baobab tree using a conical frustum and the dense, rounded canopy using a large ellipsoid. The proportions reflect the characteristic wide, bulbous trunk and the expansive, spherical foliage typical of a mature baobab. The base is anchored at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/wc_13126536.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\wc_13126536~0.png",
+  "created_at": "2026-08-20T17:06:14.257Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      0,
+      -6.1819
+    ],
+    "max": [
+      6.5,
+      15.5,
+      6.1819
+    ],
+    "size": [
+      13,
+      15.5,
+      12.364
+    ],
+    "rMax": 8.97,
+    "triangles": 768,
+    "vertices": 464
+  },
+  "spec": {
+    "style": "natural_baobab_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

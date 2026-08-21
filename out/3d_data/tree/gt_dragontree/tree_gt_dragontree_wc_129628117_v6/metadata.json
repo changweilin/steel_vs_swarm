@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_129628117_v6",
+  "key": "tree/gt_dragontree_wc_129628117_2c880eb7_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "Dragon Tree (Dracaena draco) botanical reconstruction",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the complex, multi-branched structure of the Dragon Tree. The main trunk is represented by a central conical_frustum, with multiple cylinder branches extending outwards. The characteristic umbrella-shaped canopy clusters are modeled using ellipsoid_sphere components to mimic the dense, sword-like leaf clusters. The overall branching pattern and vertical scale are consistent with the provided image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_129628117.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_129628117~0.png",
+  "created_at": "2026-08-20T16:54:29.495Z",
+  "bounds": {
+    "min": [
+      -1.9,
+      -0.1,
+      -1.1657
+    ],
+    "max": [
+      1.8,
+      4.5,
+      1.3706
+    ],
+    "size": [
+      3.7,
+      4.6,
+      2.536
+    ],
+    "rMax": 2.262,
+    "triangles": 752,
+    "vertices": 458
+  },
+  "spec": {
+    "style": "Dragon Tree (Dracaena draco) botanical reconstruction"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_B16A00_P_05_02_v6",
+  "key": "building/mass_B16A00_P_05_02_4c25395f_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Neo-Classical Residential Towers",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the twin-tower structure with a shared podium base. The facade grid, balcony recesses, and roof crown features are represented using modular box and prism components. The symmetry is maintained for the rear and side facades to ensure a 360-degree solid volume. Minor details like ground-level storefronts and entrance arches are included to match the visual scale.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/B16A00_P_05_02.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\B16A00_P_05_02~0.png",
+  "created_at": "2026-08-21T10:18:31.488Z",
+  "bounds": {
+    "min": [
+      -15,
+      0,
+      -7
+    ],
+    "max": [
+      15,
+      52.5,
+      7.15
+    ],
+    "size": [
+      30,
+      52.5,
+      14.15
+    ],
+    "rMax": 16.617,
+    "triangles": 128,
+    "vertices": 84
+  },
+  "spec": {
+    "style": "Modern Neo-Classical Residential Towers"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

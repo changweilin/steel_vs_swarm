@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_d0cec1f4425528fa_v6",
+  "key": "tree/canopy_d0cec1f4425528fa_229c5151_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree is modeled with a central trunk and a large, wide-spreading canopy represented by a primary ellipsoid and several smaller overlapping ellipsoids to capture the irregular, dense foliage structure. The trunk is split into two main branches to match the visual reference. The base is anchored at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/d0cec1f4425528fa.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\d0cec1f4425528fa~0.png",
+  "created_at": "2026-08-20T16:48:31.180Z",
+  "bounds": {
+    "min": [
+      -3.5,
+      0,
+      -3.3287
+    ],
+    "max": [
+      3.8,
+      6,
+      3.3287
+    ],
+    "size": [
+      7.3,
+      6,
+      6.657
+    ],
+    "rMax": 5.052,
+    "triangles": 720,
+    "vertices": 442
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

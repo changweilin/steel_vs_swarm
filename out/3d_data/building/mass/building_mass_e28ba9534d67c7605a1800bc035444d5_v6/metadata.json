@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_e28ba9534d67c7605a1800bc035444d5_v6",
+  "key": "building/mass_e28ba9534d67c7605a1800bc035444d5_272f1629_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "European-style cottage with stone base and yellow facade",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the main structure, including the stone base, yellow facade, and the two dormer windows. The roof slope and dormer placement follow the geometric constraints. The entrance area and window details are represented as distinct parts. The rear and side structures are mirrored to ensure a complete 360-degree building volume.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/e28ba9534d67c7605a1800bc035444d5.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\e28ba9534d67c7605a1800bc035444d5~0.png",
+  "created_at": "2026-08-21T10:44:28.798Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      0,
+      -4.5
+    ],
+    "max": [
+      6.5,
+      8,
+      5.5
+    ],
+    "size": [
+      13,
+      8,
+      10
+    ],
+    "rMax": 8.515,
+    "triangles": 144,
+    "vertices": 98
+  },
+  "spec": {
+    "style": "European-style cottage with stone base and yellow facade"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

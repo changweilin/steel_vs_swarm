@@ -1,0 +1,30 @@
+{
+  "id": "rock_facet_ov_05933c12-551a-40e6-b2e6-977a30ea4551",
+  "sourceImage": "rock/facet/ov_05933c12-551a-40e6-b2e6-977a30ea4551",
+  "style": "natural_rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7306330,
+    "facadeHex": 6053472,
+    "baseHex": 3818552,
+    "accentHex": 8421504,
+    "darkHex": 2105376,
+    "brightHex": 11184810,
+    "glassHex": 3355443
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_boulder_body",
+    "upper_rock_peak",
+    "front_facet_wedge",
+    "side_facet_right",
+    "rock_base_anchoring",
+    "moss_patch_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "icosahedron_polyhedron",
+    "dodecahedron_polyhedron",
+    "wedge",
+    "box"
+  ]
+}

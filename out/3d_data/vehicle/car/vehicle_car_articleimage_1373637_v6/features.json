@@ -1,0 +1,46 @@
+{
+  "id": "vehicle_car_articleimage_1373637",
+  "sourceImage": "vehicle/car/articleimage_1373637",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 10531518,
+    "baseHex": 2171169,
+    "accentHex": 4210752,
+    "darkHex": 1118481,
+    "brightHex": 15790320,
+    "glassHex": 2636916
+  },
+  "totalParts": 24,
+  "partNames": [
+    "chassis_base",
+    "main_body",
+    "roof_top",
+    "front_windshield",
+    "side_window_front_left",
+    "side_window_front_right",
+    "side_window_mid_left",
+    "side_window_mid_right",
+    "side_window_rear_left",
+    "side_window_rear_right",
+    "front_grille_accent",
+    "headlight_left",
+    "headlight_right",
+    "front_bumper",
+    "rear_window",
+    "rear_bumper",
+    "taillight_left",
+    "taillight_right",
+    "mirror_left",
+    "mirror_right",
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

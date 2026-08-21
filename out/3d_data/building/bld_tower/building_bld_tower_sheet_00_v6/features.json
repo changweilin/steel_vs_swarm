@@ -1,0 +1,33 @@
+{
+  "id": "building_bld_tower_sheet_00",
+  "sourceImage": "building/bld_tower/sheet_00",
+  "style": "architectural",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 1454025,
+    "facadeHex": 11184810,
+    "baseHex": 4210752,
+    "accentHex": 16766720,
+    "darkHex": 1644825,
+    "brightHex": 14540253,
+    "glassHex": 3368652
+  },
+  "totalParts": 10,
+  "partNames": [
+    "Main_Base_Podium",
+    "Mid_Tower_Body",
+    "Upper_Tower_Setback",
+    "Spire_Base",
+    "Spire_Needle",
+    "Facade_Rib_Front",
+    "Facade_Rib_Back",
+    "Facade_Rib_Left",
+    "Facade_Rib_Right",
+    "Roof_Cornice_Tier1"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "frustum_pyramid"
+  ]
+}

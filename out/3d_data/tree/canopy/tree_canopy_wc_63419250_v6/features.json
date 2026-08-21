@@ -1,0 +1,30 @@
+{
+  "id": "tree_canopy_wc_63419250",
+  "sourceImage": "tree/canopy/wc_63419250",
+  "style": "natural_landscape_trees",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 2039583,
+    "baseHex": 1052688,
+    "accentHex": 5592405,
+    "darkHex": 2899536,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 8,
+  "partNames": [
+    "trunk_left",
+    "canopy_left_main",
+    "trunk_right",
+    "canopy_right_main",
+    "canopy_left_secondary",
+    "canopy_right_secondary",
+    "root_base_left",
+    "root_base_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

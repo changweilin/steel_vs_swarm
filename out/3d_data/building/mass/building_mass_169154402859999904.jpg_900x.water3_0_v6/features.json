@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_169154402859999904.jpg!900x.water3~0",
+  "sourceImage": "building/mass/169154402859999904.jpg!900x.water3~0",
+  "style": "architectural",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4872658,
+    "facadeHex": 6056555,
+    "baseHex": 3292490,
+    "accentHex": 9869605,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 3105753
+  },
+  "totalParts": 8,
+  "partNames": [
+    "building_base",
+    "main_facade",
+    "roof_wedge_front",
+    "roof_wedge_back",
+    "glass_facade_front",
+    "glass_facade_back",
+    "entrance_door",
+    "accent_trim_top"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

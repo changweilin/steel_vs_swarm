@@ -1,0 +1,31 @@
+{
+  "id": "building_dormer_wc_14646619",
+  "sourceImage": "building/dormer/wc_14646619",
+  "style": "architectural_dormer",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8343836,
+    "facadeHex": 13421772,
+    "baseHex": 10066329,
+    "accentHex": 16777215,
+    "darkHex": 5592405,
+    "brightHex": 15790320,
+    "glassHex": 3355443
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_roof_base",
+    "dormer_roof",
+    "dormer_front_face",
+    "window_frame_outer",
+    "window_glass_upper",
+    "window_glass_lower",
+    "dormer_side_left",
+    "dormer_side_right",
+    "eave_trim"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "tree_gt_dragontree_wc_31914293",
+  "sourceImage": "tree/gt_dragontree/wc_31914293",
+  "style": "Dragon Blood Tree (Dracaena cinnabari) landscape",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4505600,
+    "facadeHex": 8553062,
+    "baseHex": 5263440,
+    "accentHex": 16777215,
+    "darkHex": 2105376,
+    "brightHex": 12632256,
+    "glassHex": 1976635
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "main_canopy",
+    "root_base",
+    "secondary_tree_trunk",
+    "secondary_tree_canopy",
+    "far_tree_trunk",
+    "far_tree_canopy"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

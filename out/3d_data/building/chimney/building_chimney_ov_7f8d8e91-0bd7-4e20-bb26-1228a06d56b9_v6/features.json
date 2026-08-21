@@ -1,0 +1,33 @@
+{
+  "id": "building_chimney_ov_7f8d8e91-0bd7-4e20-bb26-1228a06d56b9",
+  "sourceImage": "building/chimney/ov_7f8d8e91-0bd7-4e20-bb26-1228a06d56b9",
+  "style": "Victorian Brick Chimney Stack",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 10515540,
+    "facadeHex": 12545620,
+    "baseHex": 8540400,
+    "accentHex": 14560700,
+    "darkHex": 303030,
+    "brightHex": 200200200,
+    "glassHex": 4560750
+  },
+  "totalParts": 10,
+  "partNames": [
+    "base_platform",
+    "chimney_shaft_left",
+    "chimney_shaft_center",
+    "chimney_shaft_right",
+    "corbel_left",
+    "corbel_center",
+    "corbel_right",
+    "pot_left",
+    "pot_center",
+    "pot_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "cylinder"
+  ]
+}

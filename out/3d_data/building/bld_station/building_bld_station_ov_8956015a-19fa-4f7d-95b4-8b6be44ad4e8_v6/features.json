@@ -1,0 +1,47 @@
+{
+  "id": "building_bld_station_ov_8956015a-19fa-4f7d-95b4-8b6be44ad4e8",
+  "sourceImage": "building/bld_station/ov_8956015a-19fa-4f7d-95b4-8b6be44ad4e8",
+  "style": "building_station_hastings",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 5594710,
+    "facadeHex": 7832178,
+    "baseHex": 4870478,
+    "accentHex": 1130087,
+    "darkHex": 3158064,
+    "brightHex": 15132390,
+    "glassHex": 2244431
+  },
+  "totalParts": 24,
+  "partNames": [
+    "concrete_foundation",
+    "main_cabin_body",
+    "main_roof_slope",
+    "canopy_roof",
+    "canopy_support_pillar_front",
+    "canopy_support_pillar_back",
+    "station_sign_board",
+    "station_sign_orange_stripe",
+    "station_sign_posts",
+    "cabin_door",
+    "ac_unit_right",
+    "ac_unit_right_grille",
+    "ac_unit_left",
+    "ac_unit_left_grille",
+    "railing_top_bar_1",
+    "railing_post_1a",
+    "railing_post_1b",
+    "railing_post_1c",
+    "railing_post_1d",
+    "railing_top_bar_2",
+    "railing_post_2a",
+    "railing_post_2b",
+    "side_window_1",
+    "side_window_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_66fc7920151e4d6b915aeaacc1502afd",
+  "sourceImage": "building/mass/66fc7920151e4d6b915aeaacc1502afd",
+  "style": "Rustic Log Cabin Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8417350,
+    "facadeHex": 10585670,
+    "baseHex": 7895160,
+    "accentHex": 5917470,
+    "darkHex": 3947580,
+    "brightHex": 14540253,
+    "glassHex": 10079487
+  },
+  "totalParts": 8,
+  "partNames": [
+    "MainCabinBody",
+    "StoneChimney",
+    "MainRoof",
+    "PorchRoof",
+    "PorchSupportColumn",
+    "FrontWindow",
+    "StoneFoundation",
+    "PorchBeam"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

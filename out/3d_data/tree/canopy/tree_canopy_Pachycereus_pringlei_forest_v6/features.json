@@ -1,0 +1,34 @@
+{
+  "id": "tree_canopy_Pachycereus_pringlei_forest",
+  "sourceImage": "tree/canopy/Pachycereus_pringlei_forest",
+  "style": "nature",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6523992,
+    "facadeHex": 5863242,
+    "baseHex": 4342557,
+    "accentHex": 7244122,
+    "darkHex": 3292446,
+    "brightHex": 9349272,
+    "glassHex": 2969966
+  },
+  "totalParts": 12,
+  "partNames": [
+    "MainRootBase",
+    "CentralTrunkLower",
+    "CentralTrunkUpper",
+    "CentralTrunkTip",
+    "ArmLeft1_Base",
+    "ArmLeft1_Vertical",
+    "ArmLeft2_Base",
+    "ArmLeft2_Vertical",
+    "ArmRight1_Base",
+    "ArmRight1_Vertical",
+    "ArmRight2_Vertical",
+    "ArmRight3_Vertical"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "conical_frustum"
+  ]
+}

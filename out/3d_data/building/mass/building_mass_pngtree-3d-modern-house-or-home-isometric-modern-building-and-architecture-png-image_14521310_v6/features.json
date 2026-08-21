@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521310",
+  "sourceImage": "building/mass/pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521310",
+  "style": "Modern Luxury Villa",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 12632256,
+    "baseHex": 5592405,
+    "accentHex": 3355443,
+    "darkHex": 2236962,
+    "brightHex": 15658734,
+    "glassHex": 8438271
+  },
+  "totalParts": 11,
+  "partNames": [
+    "base_platform",
+    "ground_floor_main",
+    "upper_floor_cantilever",
+    "rooftop_penthouse",
+    "ground_floor_glass",
+    "upper_floor_glass",
+    "balcony_railing",
+    "penthouse_skylight_1",
+    "penthouse_skylight_2",
+    "tree_left",
+    "tree_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere"
+  ]
+}

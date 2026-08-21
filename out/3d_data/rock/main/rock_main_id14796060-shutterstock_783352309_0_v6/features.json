@@ -1,0 +1,35 @@
+{
+  "id": "rock_main_id14796060-shutterstock_783352309~0",
+  "sourceImage": "rock/main/id14796060-shutterstock_783352309~0",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7232338,
+    "facadeHex": 6572885,
+    "baseHex": 4340798,
+    "accentHex": 8876159,
+    "darkHex": 2501923,
+    "brightHex": 11842740,
+    "glassHex": 3233385
+  },
+  "totalParts": 11,
+  "partNames": [
+    "ground_sand_plane",
+    "main_boulder_foreground_right",
+    "main_boulder_foreground_right_detail",
+    "boulder_mid_center",
+    "boulder_mid_center_detail",
+    "boulder_mid_left",
+    "boulder_far_left",
+    "boulder_cluster_back_1",
+    "boulder_cluster_back_2",
+    "boulder_cluster_back_3",
+    "puddle_water_surface"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron"
+  ]
+}

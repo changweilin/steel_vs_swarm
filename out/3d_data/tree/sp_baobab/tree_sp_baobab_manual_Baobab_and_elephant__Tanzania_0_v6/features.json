@@ -1,0 +1,29 @@
+{
+  "id": "tree_sp_baobab_manual_Baobab_and_elephant__Tanzania~0",
+  "sourceImage": "tree/sp_baobab/manual_Baobab_and_elephant__Tanzania~0",
+  "style": "natural_savanna_vegetation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4684288,
+    "facadeHex": 8545350,
+    "baseHex": 5329200,
+    "accentHex": 16777215,
+    "darkHex": 3947580,
+    "brightHex": 14540253,
+    "glassHex": 11184810
+  },
+  "totalParts": 6,
+  "partNames": [
+    "shrub_main_body",
+    "shrub_base_trunk",
+    "baobab_trunk",
+    "baobab_canopy",
+    "shrub_detail_cluster_1",
+    "shrub_detail_cluster_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "cylinder",
+    "conical_frustum"
+  ]
+}

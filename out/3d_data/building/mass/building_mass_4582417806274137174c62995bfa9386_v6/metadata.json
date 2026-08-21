@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_4582417806274137174c62995bfa9386_v6",
+  "key": "building/mass_4582417806274137174c62995bfa9386_e06fab9f_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Neoclassical Skyscraper",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The building is reconstructed as a high-rise tower with a central core and symmetrical wings. The facade grid, balcony recesses, and the top crown feature are modeled to match the neoclassical aesthetic. The depth of the windows and the structural columns are represented by layered boxes to ensure no Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/4582417806274137174c62995bfa9386.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\4582417806274137174c62995bfa9386~0.png",
+  "created_at": "2026-08-21T10:04:12.878Z",
+  "bounds": {
+    "min": [
+      -14,
+      0,
+      -9
+    ],
+    "max": [
+      14,
+      125,
+      9
+    ],
+    "size": [
+      28,
+      125,
+      18
+    ],
+    "rMax": 16.643,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "Neoclassical Skyscraper"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68_v6",
+  "key": "tree/gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68_340d5f2d_v6",
+  "family": "tree",
+  "subpart": "gt_cryptomeria",
+  "style": "Ukiyo-e woodblock print landscape",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The 3D model successfully captures the massive scale of the central Japanese cedar (Cryptomeria) with a thick conical trunk and layered canopy. The proportions of the trunk relative to the human figures are accurate. The canopy is represented by multiple ellipsoid layers to mimic the dense, irregular foliage of the original print. The ground and background hills are simplified into geometric planes to maintain focus on the tree.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_cryptomeria/ov_ef085512-f1b2-4415-bb2a-4bad15affd68.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_cryptomeria\\ov_ef085512-f1b2-4415-bb2a-4bad15affd68~0.png",
+  "created_at": "2026-08-20T16:09:02.527Z",
+  "bounds": {
+    "min": [
+      -13.397,
+      -0.3,
+      -10
+    ],
+    "max": [
+      10,
+      17.5,
+      10
+    ],
+    "size": [
+      23.397,
+      17.8,
+      20
+    ],
+    "rMax": 16.718,
+    "triangles": 548,
+    "vertices": 337
+  },
+  "spec": {
+    "style": "Ukiyo-e woodblock print landscape"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

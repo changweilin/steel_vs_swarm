@@ -1,0 +1,33 @@
+{
+  "id": "rock_main_d087b40c-1b1a-4f8a-a620-c0aafe41056d",
+  "sourceImage": "rock/main/d087b40c-1b1a-4f8a-a620-c0aafe41056d",
+  "style": "megalithic_monument",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8553090,
+    "facadeHex": 7895160,
+    "baseHex": 4605510,
+    "accentHex": 9868950,
+    "darkHex": 2105376,
+    "brightHex": 11184810,
+    "glassHex": 32903
+  },
+  "totalParts": 8,
+  "partNames": [
+    "ground_base_patch",
+    "main_monolith_base",
+    "monolith_mid_body",
+    "monolith_upper_taper",
+    "monolith_peak_apex",
+    "rock_bulge_left",
+    "rock_bulge_right",
+    "weathered_crest_detail"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

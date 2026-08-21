@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_Farizon-SV-3_v6",
+  "key": "vehicle/car_Farizon-SV-3_1e2f4407_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/Farizon-SV-3.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\Farizon-SV-3.jpg",
+  "created_at": "2026-08-20T15:24:30.103Z",
+  "bounds": {
+    "min": [
+      -1.33,
+      0,
+      -2.45
+    ],
+    "max": [
+      1.33,
+      2.15,
+      2.45
+    ],
+    "size": [
+      2.66,
+      2.15,
+      4.9
+    ],
+    "rMax": 2.788,
+    "triangles": 384,
+    "vertices": 222
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "ship_hull_img-1478851082-74949",
+  "sourceImage": "ship/hull/img-1478851082-74949",
+  "style": "modern luxury motor yacht",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16436850,
+    "facadeHex": 2577545,
+    "baseHex": 1315860,
+    "accentHex": 16777215,
+    "darkHex": 328965,
+    "brightHex": 14540253,
+    "glassHex": 4621735
+  },
+  "totalParts": 8,
+  "partNames": [
+    "main_hull",
+    "hull_base",
+    "teak_deck",
+    "cockpit_windshield",
+    "cockpit_seating",
+    "stern_platform",
+    "propeller_housing_left",
+    "propeller_housing_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "cylinder"
+  ]
+}

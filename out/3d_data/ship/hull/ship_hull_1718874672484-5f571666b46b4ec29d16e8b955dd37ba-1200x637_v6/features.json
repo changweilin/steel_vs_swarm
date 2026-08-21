@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637",
+  "sourceImage": "ship/hull/1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637",
+  "style": "fishing_boat",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4684287,
+    "facadeHex": 8445695,
+    "baseHex": 2105376,
+    "accentHex": 16744448,
+    "darkHex": 394758,
+    "brightHex": 14540253,
+    "glassHex": 4621735
+  },
+  "totalParts": 11,
+  "partNames": [
+    "hull_main",
+    "hull_base",
+    "cabin_main",
+    "cabin_roof",
+    "front_window",
+    "side_window_left",
+    "side_window_right",
+    "mast_main",
+    "lifebuoy_left",
+    "lifebuoy_right",
+    "propeller_shaft"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "id": "building_bld_lighthouse_ov_a2f6edb9-4915-485a-bff7-5090f6c6277f",
+  "sourceImage": "building/bld_lighthouse/ov_a2f6edb9-4915-485a-bff7-5090f6c6277f",
+  "style": "building/bld_lighthouse",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11158596,
+    "facadeHex": 15064540,
+    "baseHex": 4473924,
+    "accentHex": 13395476,
+    "darkHex": 2236962,
+    "brightHex": 16777215,
+    "glassHex": 11591910
+  },
+  "totalParts": 21,
+  "partNames": [
+    "rocky_base_main",
+    "rocky_base_sub1",
+    "rocky_base_sub2",
+    "tower_foundation",
+    "tower_shaft",
+    "tower_window_1",
+    "tower_window_2",
+    "tower_window_3",
+    "gallery_support",
+    "gallery_deck",
+    "gallery_railing",
+    "lantern_base",
+    "lantern_glass",
+    "lantern_struts",
+    "lantern_roof_trim",
+    "lantern_dome",
+    "finial_stem",
+    "finial_ball",
+    "spiral_stairs_1",
+    "spiral_stairs_2",
+    "spiral_stairs_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "cylinder",
+    "box",
+    "conical_frustum",
+    "hemisphere_dome",
+    "ellipsoid_sphere"
+  ]
+}

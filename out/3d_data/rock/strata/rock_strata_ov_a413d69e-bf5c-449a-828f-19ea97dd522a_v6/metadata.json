@@ -1,0 +1,40 @@
+{
+  "id": "rock_strata_ov_a413d69e-bf5c-449a-828f-19ea97dd522a_v6",
+  "key": "rock/strata_ov_a413d69e-bf5c-449a-828f-19ea97dd522a_f72de574_v6",
+  "family": "rock",
+  "subpart": "strata",
+  "style": "nature",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The reconstructed 3D model successfully captures the angled layered rock strata and craggy mountain ridge features seen in the photograph, using rotated wedge and polyhedron elements to simulate natural rock formations.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/strata/ov_a413d69e-bf5c-449a-828f-19ea97dd522a.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\strata\\ov_a413d69e-bf5c-449a-828f-19ea97dd522a~0.png",
+  "created_at": "2026-08-20T16:28:03.864Z",
+  "bounds": {
+    "min": [
+      -8,
+      -2.6892,
+      -7
+    ],
+    "max": [
+      8,
+      11.8092,
+      7
+    ],
+    "size": [
+      16,
+      14.498,
+      14
+    ],
+    "rMax": 10.63,
+    "triangles": 100,
+    "vertices": 64
+  },
+  "spec": {
+    "style": "nature"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

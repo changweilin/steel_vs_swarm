@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_v6",
+  "key": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_f872d3ab_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The reconstructed 3D model accurately captures the jagged, multi-faceted rock formation depicted in the image. Using a combination of dodecahedron and icosahedron polyhedra with varied rotation and positioning successfully mimics the natural weathering and interlocking jagged planes of a large boulder, anchored securely at y = 0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0~0.png",
+  "created_at": "2026-08-20T16:16:36.148Z",
+  "bounds": {
+    "min": [
+      -1.7679,
+      -0.6013,
+      -1.3242
+    ],
+    "max": [
+      1.8834,
+      3.0605,
+      1.7158
+    ],
+    "size": [
+      3.651,
+      3.662,
+      3.04
+    ],
+    "rMax": 2.548,
+    "triangles": 156,
+    "vertices": 90
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_170465060_v6",
+  "key": "tree/gt_dragontree_wc_170465060_292ddfe8_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "realistic",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The dragon tree next to the church is successfully modeled with a trunk and layered multi-cluster foliage, positioned accurately near the architecture.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_170465060.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_170465060~0.png",
+  "created_at": "2026-08-20T16:57:05.008Z",
+  "bounds": {
+    "min": [
+      -6,
+      0,
+      -5
+    ],
+    "max": [
+      6,
+      4.4,
+      5
+    ],
+    "size": [
+      12,
+      4.4,
+      10
+    ],
+    "rMax": 7.81,
+    "triangles": 524,
+    "vertices": 323
+  },
+  "spec": {
+    "style": "realistic"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_images_6__v6",
+  "key": "building/mass_images (6)_86444d06_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_minimalist_villa",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the L-shaped modern villa structure, including the two-story main mass and the flat roof design. The windows and glass elements are placed with correct depth offsets. The surrounding landscape elements (trees and lawn) are represented as geometric primitives to maintain the isometric composition.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/images (6).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\images (6)~0.png",
+  "created_at": "2026-08-21T08:34:15.691Z",
+  "bounds": {
+    "min": [
+      -5,
+      -0.1,
+      -5
+    ],
+    "max": [
+      5,
+      4.6,
+      5
+    ],
+    "size": [
+      10,
+      4.7,
+      10
+    ],
+    "rMax": 7.071,
+    "triangles": 468,
+    "vertices": 290
+  },
+  "spec": {
+    "style": "modern_minimalist_villa"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

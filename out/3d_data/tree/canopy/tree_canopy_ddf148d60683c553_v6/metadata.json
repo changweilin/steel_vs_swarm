@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_ddf148d60683c553_v6",
+  "key": "tree/canopy_ddf148d60683c553_02e9cc58_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "naturalistic_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree is modeled with a central trunk and a large, wide-spreading canopy using an ellipsoid to capture the dense, rounded foliage characteristic of the species. The trunk is represented by a conical frustum to reflect natural tapering. The proportions match the wide, low-hanging canopy seen in the reference image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/ddf148d60683c553.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\ddf148d60683c553~0.png",
+  "created_at": "2026-08-20T16:48:44.897Z",
+  "bounds": {
+    "min": [
+      -6,
+      -0.1,
+      -5.7063
+    ],
+    "max": [
+      6,
+      9,
+      5.7063
+    ],
+    "size": [
+      12,
+      9.1,
+      11.413
+    ],
+    "rMax": 8.28,
+    "triangles": 368,
+    "vertices": 224
+  },
+  "spec": {
+    "style": "naturalistic_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

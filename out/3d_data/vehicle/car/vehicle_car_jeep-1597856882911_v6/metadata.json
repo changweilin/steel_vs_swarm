@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_jeep-1597856882911_v6",
+  "key": "vehicle/car_jeep-1597856882911_8d77f457_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/jeep-1597856882911.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\jeep-1597856882911.jpg",
+  "created_at": "2026-08-20T15:25:09.686Z",
+  "bounds": {
+    "min": [
+      -1.4,
+      0.2,
+      -2.2255
+    ],
+    "max": [
+      1.4,
+      2.0395,
+      2.05
+    ],
+    "size": [
+      2.8,
+      1.839,
+      4.275
+    ],
+    "rMax": 2.629,
+    "triangles": 968,
+    "vertices": 555
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

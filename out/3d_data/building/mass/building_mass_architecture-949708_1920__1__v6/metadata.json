@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_architecture-949708_1920__1__v6",
+  "key": "building/mass_architecture-949708_1920_(1)_471d8530_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Architecture",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the stacked geometric house volumes featuring dark facades and prominent sloped glass gables characteristic of the VitraHaus design. All main glass sections, dark monolithic volumes, and wooden base details are positioned meticulously to reflect the photographic proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/architecture-949708_1920_(1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\architecture-949708_1920_(1)~0.png",
+  "created_at": "2026-08-20T17:22:39.961Z",
+  "bounds": {
+    "min": [
+      -8,
+      0,
+      -4
+    ],
+    "max": [
+      8,
+      12.25,
+      4.1
+    ],
+    "size": [
+      16,
+      12.25,
+      8.1
+    ],
+    "rMax": 8.989,
+    "triangles": 176,
+    "vertices": 120
+  },
+  "spec": {
+    "style": "Modern Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

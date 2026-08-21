@@ -1,0 +1,39 @@
+{
+  "id": "building_mass_14beauty-well-ugly-slide-4QC3-master1050",
+  "sourceImage": "building/mass/14beauty-well-ugly-slide-4QC3-master1050",
+  "style": "brutalist architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 11842740,
+    "baseHex": 6579300,
+    "accentHex": 9868950,
+    "darkHex": 3289650,
+    "brightHex": 14540253,
+    "glassHex": 4352210
+  },
+  "totalParts": 18,
+  "partNames": [
+    "main_base_structure",
+    "ground_floor_recess",
+    "central_tall_window_module",
+    "top_center_protrusion",
+    "top_center_window",
+    "upper_left_box",
+    "upper_left_window",
+    "upper_right_box",
+    "upper_right_window",
+    "lower_left_module",
+    "lower_left_window",
+    "lower_right_module",
+    "lower_right_window",
+    "roof_slab_main",
+    "ground_support_column_1",
+    "ground_support_column_2",
+    "ground_support_column_3",
+    "ground_support_column_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

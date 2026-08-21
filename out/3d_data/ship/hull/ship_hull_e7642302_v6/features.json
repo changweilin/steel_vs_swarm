@@ -1,0 +1,33 @@
+{
+  "id": "ship_hull_e7642302",
+  "sourceImage": "ship/hull/e7642302",
+  "style": "military_aircraft_carrier",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12632256,
+    "facadeHex": 10526880,
+    "baseHex": 8421504,
+    "accentHex": 16711680,
+    "darkHex": 3158064,
+    "brightHex": 15790320,
+    "glassHex": 4621730
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "flight_deck",
+    "underwater_hull",
+    "island_base",
+    "bridge_windows",
+    "radar_mast",
+    "radar_dome",
+    "ski_jump_ramp"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

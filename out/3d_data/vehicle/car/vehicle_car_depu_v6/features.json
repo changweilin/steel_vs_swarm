@@ -1,0 +1,47 @@
+{
+  "id": "vehicle_car_depu",
+  "sourceImage": "vehicle/car/depu",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3028300,
+    "facadeHex": 3028300,
+    "baseHex": 1513240,
+    "accentHex": 13400593,
+    "darkHex": 1052688,
+    "brightHex": 14540253,
+    "glassHex": 3362140
+  },
+  "totalParts": 24,
+  "partNames": [
+    "chassis",
+    "cabin_body",
+    "hood_slope",
+    "front_bumper_guard",
+    "front_grille",
+    "front_emblem",
+    "left_headlight",
+    "right_headlight",
+    "windshield",
+    "left_side_window",
+    "right_side_window",
+    "left_door",
+    "right_door",
+    "left_mirror",
+    "right_mirror",
+    "cargo_bed_floor",
+    "cargo_side_left",
+    "cargo_side_right",
+    "cargo_tailgate",
+    "cargo_headache_rack",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

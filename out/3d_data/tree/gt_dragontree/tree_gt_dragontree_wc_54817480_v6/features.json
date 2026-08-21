@@ -1,0 +1,30 @@
+{
+  "id": "tree_gt_dragontree_wc_54817480",
+  "sourceImage": "tree/gt_dragontree/wc_54817480",
+  "style": "naturalistic_botanical",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 456789,
+    "facadeHex": 887766,
+    "baseHex": 554433,
+    "accentHex": 998877,
+    "darkHex": 332211,
+    "brightHex": 15528177,
+    "glassHex": 223344
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk_base",
+    "branch_1",
+    "branch_2",
+    "canopy_1",
+    "canopy_2",
+    "stone_path",
+    "ground_foliage"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

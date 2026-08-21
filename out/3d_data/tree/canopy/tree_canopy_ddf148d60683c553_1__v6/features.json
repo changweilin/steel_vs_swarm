@@ -1,0 +1,25 @@
+{
+  "id": "tree_canopy_ddf148d60683c553 (1)",
+  "sourceImage": "tree/canopy/ddf148d60683c553 (1)",
+  "style": "Naturalistic Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2263808,
+    "facadeHex": 5917488,
+    "baseHex": 3944736,
+    "accentHex": 16777215,
+    "darkHex": 3289650,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 3,
+  "partNames": [
+    "trunk",
+    "main_canopy",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

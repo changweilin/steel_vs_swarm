@@ -1,0 +1,29 @@
+{
+  "id": "tree_sp_baobab_ov_3ccffb3c-85b3-4937-aca8-4e158951ba67",
+  "sourceImage": "tree/sp_baobab/ov_3ccffb3c-85b3-4937-aca8-4e158951ba67",
+  "style": "engraving_style_oak_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3421232,
+    "facadeHex": 5263440,
+    "baseHex": 2631720,
+    "accentHex": 10526880,
+    "darkHex": 1315860,
+    "brightHex": 16777215,
+    "glassHex": 1976635
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_trunk",
+    "root_flare",
+    "canopy_main",
+    "canopy_left",
+    "canopy_right",
+    "canopy_top",
+    "canopy_front_detail"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

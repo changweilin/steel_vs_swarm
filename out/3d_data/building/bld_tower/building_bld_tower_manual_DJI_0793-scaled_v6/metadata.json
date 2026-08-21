@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_tower_manual_DJI_0793-scaled_v6",
+  "key": "building/bld_tower_manual_DJI_0793-scaled_fd866a15_v6",
+  "family": "building",
+  "subpart": "bld_tower",
+  "style": "Modern High-rise Residential Complex",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The central tower is reconstructed with high fidelity, capturing the vertical grid structure, the recessed balcony patterns, and the distinct crown feature. The surrounding towers are modeled to reflect the architectural rhythm of the complex. The use of glassHex for windows and facadeHex for the stone-clad structure maintains the visual consistency of the original image.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_tower/manual_DJI_0793-scaled.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_tower\\manual_DJI_0793-scaled~0.png",
+  "created_at": "2026-08-21T10:22:13.128Z",
+  "bounds": {
+    "min": [
+      -60,
+      0,
+      -40
+    ],
+    "max": [
+      60,
+      95,
+      40
+    ],
+    "size": [
+      120,
+      95,
+      80
+    ],
+    "rMax": 72.111,
+    "triangles": 212,
+    "vertices": 122
+  },
+  "spec": {
+    "style": "Modern High-rise Residential Complex"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_202512251310033872_v6",
+  "key": "ship/hull_202512251310033872_5795cf80_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "industrial_military_submarine",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The submarine hull is modeled as a large ellipsoid-based structure with a central sail (conning tower). The support cradle system is represented by yellow box structures on blue wheeled bogies. The overall proportions and the industrial setting are captured accurately.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/202512251310033872.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\202512251310033872~0.png",
+  "created_at": "2026-08-20T16:09:13.119Z",
+  "bounds": {
+    "min": [
+      -3.5,
+      -8,
+      -4.6657
+    ],
+    "max": [
+      3.75,
+      16,
+      4.6657
+    ],
+    "size": [
+      7.25,
+      24,
+      9.331
+    ],
+    "rMax": 5.986,
+    "triangles": 732,
+    "vertices": 465
+  },
+  "spec": {
+    "style": "industrial_military_submarine"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

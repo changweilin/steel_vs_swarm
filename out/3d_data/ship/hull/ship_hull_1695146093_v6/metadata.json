@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_1695146093_v6",
+  "key": "ship/hull_1695146093_23c5c052_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "cruise_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the cruise ship's hull, tiered superstructure, and iconic funnel. The bow wedge, deck levels, and bridge glass are represented with correct proportions. Symmetry is maintained for the hull and superstructure, ensuring a complete 360-degree representation.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/1695146093.png",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\1695146093~0.png",
+  "created_at": "2026-08-20T16:05:55.941Z",
+  "bounds": {
+    "min": [
+      -15,
+      0,
+      -100
+    ],
+    "max": [
+      15,
+      48,
+      110
+    ],
+    "size": [
+      30,
+      48,
+      210
+    ],
+    "rMax": 111.018,
+    "triangles": 310,
+    "vertices": 188
+  },
+  "spec": {
+    "style": "cruise_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

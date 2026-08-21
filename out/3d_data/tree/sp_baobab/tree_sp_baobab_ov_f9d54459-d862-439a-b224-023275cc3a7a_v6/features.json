@@ -1,0 +1,27 @@
+{
+  "id": "tree_sp_baobab_ov_f9d54459-d862-439a-b224-023275cc3a7a",
+  "sourceImage": "tree/sp_baobab/ov_f9d54459-d862-439a-b224-023275cc3a7a",
+  "style": "botanical_illustration_reconstruction",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 454545,
+    "facadeHex": 655040,
+    "baseHex": 302010,
+    "accentHex": 807060,
+    "darkHex": 101010,
+    "brightHex": 909090,
+    "glassHex": 203040
+  },
+  "totalParts": 5,
+  "partNames": [
+    "main_trunk",
+    "lower_foliage",
+    "upper_foliage",
+    "fruit_cluster",
+    "root_base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere"
+  ]
+}

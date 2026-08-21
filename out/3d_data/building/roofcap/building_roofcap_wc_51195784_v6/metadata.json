@@ -1,0 +1,40 @@
+{
+  "id": "building_roofcap_wc_51195784_v6",
+  "key": "building/roofcap_wc_51195784_6eaa17b4_v6",
+  "family": "building",
+  "subpart": "roofcap",
+  "style": "industrial_brick_building",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the brick building's main mass, the parapet wall, and the window distribution. The fire-affected area is represented by the building's structural geometry. The rooftop parapet is modeled as a solid, closed structure with correct orientation. The fire truck and ladder are excluded as per the focus on the building structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/roofcap/wc_51195784.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\roofcap\\wc_51195784~0.png",
+  "created_at": "2026-08-21T04:55:15.362Z",
+  "bounds": {
+    "min": [
+      -8,
+      -1,
+      -10.5
+    ],
+    "max": [
+      8,
+      20.4,
+      10.5
+    ],
+    "size": [
+      16,
+      21.4,
+      21
+    ],
+    "rMax": 13.2,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "industrial_brick_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

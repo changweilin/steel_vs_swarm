@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531_v6",
+  "key": "tree/canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531_b5ba31b4_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "stylized_conifer",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the layered conical structure of the pine tree using stacked frustum_pyramid components. The trunk is represented by a conical_frustum to maintain realistic proportions. The color palette adheres to the 7-Zone system, and the vertical stacking ensures a natural, non-overlapping appearance.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531~0.png",
+  "created_at": "2026-08-20T17:02:56.966Z",
+  "bounds": {
+    "min": [
+      -0.9,
+      0,
+      -0.9
+    ],
+    "max": [
+      0.9,
+      4.8,
+      0.9
+    ],
+    "size": [
+      1.8,
+      4.8,
+      1.8
+    ],
+    "rMax": 1.273,
+    "triangles": 240,
+    "vertices": 134
+  },
+  "spec": {
+    "style": "stylized_conifer"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

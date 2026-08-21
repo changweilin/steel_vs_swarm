@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_phoenix-tower_rotated_270_v6",
+  "key": "building/mass_phoenix-tower_rotated_270_fcf80e15_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Chinese Pagoda",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The 3D model accurately reconstructs the multi-tiered octagonal pagoda. It features a solid base, multiple stacked octagonal prism body segments, and outward-flaring frustum pyramid eaves at each level. Arched windows are placed symmetrically on the facades, and the structure is topped with a characteristic multi-stage spire. All parts are tightly integrated with no gaps, and the back is fully mirrored to ensure 360-degree completeness.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/phoenix-tower_rotated_270.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\phoenix-tower_rotated_270~0.png",
+  "created_at": "2026-08-21T07:00:29.826Z",
+  "bounds": {
+    "min": [
+      -4.7,
+      1,
+      -4.7
+    ],
+    "max": [
+      4.7,
+      38.9,
+      4.7
+    ],
+    "size": [
+      9.4,
+      37.9,
+      9.4
+    ],
+    "rMax": 6.647,
+    "triangles": 1170,
+    "vertices": 689
+  },
+  "spec": {
+    "style": "Chinese Pagoda"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

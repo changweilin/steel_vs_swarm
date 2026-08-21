@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_110296IA-M009_L_v6",
+  "key": "vehicle/bike_110296IA-M009_L_45e1cb14_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the high-performance full-suspension mountain bike based on the provided image, including the precise diamond frame geometry, dual suspension setup, front fork with gold stanchions, seatpost, saddle, handlebars, drivetrain components, and dual 29-inch wheels with aggressive tires, adhering strictly to real-world metric dimensions and color guidelines.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/110296IA-M009_L.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\110296IA-M009_L~0.png",
+  "created_at": "2026-08-20T17:19:00.664Z",
+  "bounds": {
+    "min": [
+      -1.2515,
+      0.03,
+      -0.3819
+    ],
+    "max": [
+      1.2515,
+      1.056,
+      0.3819
+    ],
+    "size": [
+      2.503,
+      1.026,
+      0.764
+    ],
+    "rMax": 1.308,
+    "triangles": 1212,
+    "vertices": 686
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

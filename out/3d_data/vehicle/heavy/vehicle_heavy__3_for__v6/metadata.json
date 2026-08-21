@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_heavy__3_for__v6",
+  "key": "vehicle/heavy_規格表3大圖合for官網_09a45474_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/heavy/規格表3大圖合for官網.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\規格表3大圖合for官網.jpg",
+  "created_at": "2026-08-20T15:35:42.633Z",
+  "bounds": {
+    "min": [
+      -1.72,
+      0,
+      -3.6
+    ],
+    "max": [
+      1.72,
+      3.4,
+      3.6
+    ],
+    "size": [
+      3.44,
+      3.4,
+      7.2
+    ],
+    "rMax": 3.99,
+    "triangles": 520,
+    "vertices": 286
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

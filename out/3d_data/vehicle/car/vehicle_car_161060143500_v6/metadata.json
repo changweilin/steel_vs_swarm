@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_car_161060143500_v6",
+  "key": "vehicle/car_161060143500_d658f5fd_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "modern_off_road_vehicle",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the robust off-road vehicle with precise box and cylinder modules, including front bumper, prominent fender flares, black body panels, and aligned wheels. Glass areas are colored with glassHex and wheels are correctly oriented along the vehicle's lateral axis.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/161060143500.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\car\\161060143500~0.png",
+  "created_at": "2026-08-20T17:22:34.252Z",
+  "bounds": {
+    "min": [
+      -1.3405,
+      -0.22,
+      -2.2
+    ],
+    "max": [
+      1.3405,
+      2.4,
+      2.47
+    ],
+    "size": [
+      2.681,
+      2.62,
+      4.67
+    ],
+    "rMax": 2.81,
+    "triangles": 824,
+    "vertices": 520
+  },
+  "spec": {
+    "style": "modern_off_road_vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

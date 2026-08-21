@@ -1,0 +1,32 @@
+{
+  "id": "tree_sp_baobab_ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a",
+  "sourceImage": "tree/sp_baobab/ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a",
+  "style": "industrial_infrastructure",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 8421504,
+    "baseHex": 4210752,
+    "accentHex": 12632256,
+    "darkHex": 2105376,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_pole",
+    "pole_cap",
+    "lamp_1",
+    "lamp_2",
+    "lamp_3",
+    "lamp_4",
+    "glass_1",
+    "glass_2",
+    "glass_3",
+    "glass_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "box"
+  ]
+}

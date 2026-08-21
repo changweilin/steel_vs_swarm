@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_v6",
+  "key": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_676a3024_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "naturalistic_botanical",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The baobab tree is reconstructed with a massive, barrel-shaped trunk using a conical_frustum and multiple ellipsoid_sphere parts to represent the sprawling, sparse canopy typical of Adansonia. The proportions capture the iconic thick trunk and wide-reaching branches. The color palette adheres to the 7-Zone system, with facadeHex for the trunk and roofHex for the canopy foliage.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\Adansonia-Fony-600-x-338-Fony-Baobab-tree~0.png",
+  "created_at": "2026-08-20T16:21:02.986Z",
+  "bounds": {
+    "min": [
+      -8,
+      0,
+      -5.7063
+    ],
+    "max": [
+      8,
+      11,
+      5.7063
+    ],
+    "size": [
+      16,
+      11,
+      11.413
+    ],
+    "rMax": 9.827,
+    "triangles": 624,
+    "vertices": 375
+  },
+  "spec": {
+    "style": "naturalistic_botanical"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

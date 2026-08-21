@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_tower_ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4_v6",
+  "key": "building/bld_tower_ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4_b01fe9af_v6",
+  "family": "building",
+  "subpart": "bld_tower",
+  "style": "Brutalist concrete tower under demolition",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the core structural geometry of the concrete tower, including the main vertical support columns and the collapsing upper section. The floor slabs are represented as stacked boxes to simulate the exposed interior. The demolition dust and debris are implied by the structural arrangement. The overall proportions and the brutalist aesthetic are maintained.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_tower/ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_tower\\ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4~0.png",
+  "created_at": "2026-08-21T07:10:11.760Z",
+  "bounds": {
+    "min": [
+      -4.7079,
+      0,
+      -4
+    ],
+    "max": [
+      10,
+      39.0481,
+      4.5
+    ],
+    "size": [
+      14.708,
+      39.048,
+      8.5
+    ],
+    "rMax": 10.966,
+    "triangles": 116,
+    "vertices": 78
+  },
+  "spec": {
+    "style": "Brutalist concrete tower under demolition"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

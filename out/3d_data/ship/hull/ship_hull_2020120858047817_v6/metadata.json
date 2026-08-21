@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_2020120858047817_v6",
+  "key": "ship/hull_2020120858047817_08a17622_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "fishing_vessel",
+  "symmetryMode": "symmetric",
+  "similarityScore": 85,
+  "similarityReview": "The 3D model accurately captures the elongated hull shape, the raised bridge structure, and the distinct tiered deck layout of the fishing vessel. The bow wedge and stern sections are correctly proportioned. The color palette aligns with the white hull, dark base, and teal accents observed in the photo. The bridge windows are represented as distinct glass elements.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/2020120858047817.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\2020120858047817~0.png",
+  "created_at": "2026-08-20T16:08:08.398Z",
+  "bounds": {
+    "min": [
+      -2,
+      0,
+      -7.5
+    ],
+    "max": [
+      2,
+      10.5,
+      9
+    ],
+    "size": [
+      4,
+      10.5,
+      16.5
+    ],
+    "rMax": 9.22,
+    "triangles": 538,
+    "vertices": 334
+  },
+  "spec": {
+    "style": "fishing_vessel"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

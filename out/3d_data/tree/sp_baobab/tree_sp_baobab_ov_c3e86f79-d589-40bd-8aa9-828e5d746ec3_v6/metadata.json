@@ -1,0 +1,40 @@
+{
+  "id": "tree_sp_baobab_ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3_v6",
+  "key": "tree/sp_baobab_ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3_e3f867f1_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "engraving_style_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The tree is modeled with a central conical trunk and a large, multi-layered ellipsoid canopy to capture the dense, spreading nature of the oak-like tree in the image. The base is widened to represent the root flare. The proportions align well with the provided engraving style.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/sp_baobab/ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\sp_baobab\\ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3~0.png",
+  "created_at": "2026-08-20T16:16:04.562Z",
+  "bounds": {
+    "min": [
+      -5,
+      -0.2,
+      -4.2798
+    ],
+    "max": [
+      5,
+      8,
+      4.2798
+    ],
+    "size": [
+      10,
+      8.2,
+      8.56
+    ],
+    "rMax": 6.582,
+    "triangles": 752,
+    "vertices": 456
+  },
+  "spec": {
+    "style": "engraving_style_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

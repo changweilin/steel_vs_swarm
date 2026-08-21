@@ -1,0 +1,32 @@
+{
+  "id": "tree_canopy_images (2)",
+  "sourceImage": "tree/canopy/images (2)",
+  "style": "Bonsai-style Coniferous Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2263845,
+    "facadeHex": 5329200,
+    "baseHex": 3289650,
+    "accentHex": 16777215,
+    "darkHex": 2631720,
+    "brightHex": 16777215,
+    "glassHex": 16777215
+  },
+  "totalParts": 9,
+  "partNames": [
+    "trunk",
+    "canopy_top",
+    "canopy_upper_left",
+    "canopy_upper_right",
+    "canopy_mid_left",
+    "canopy_mid_right",
+    "canopy_lower_left",
+    "canopy_lower_right",
+    "base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

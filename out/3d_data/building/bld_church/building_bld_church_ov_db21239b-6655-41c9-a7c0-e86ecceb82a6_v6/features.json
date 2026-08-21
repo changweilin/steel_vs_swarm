@@ -1,0 +1,41 @@
+{
+  "id": "building_bld_church_ov_db21239b-6655-41c9-a7c0-e86ecceb82a6",
+  "sourceImage": "building/bld_church/ov_db21239b-6655-41c9-a7c0-e86ecceb82a6",
+  "style": "building/bld_church",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 5263440,
+    "facadeHex": 15790320,
+    "baseHex": 11184810,
+    "accentHex": 3355443,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 3105370
+  },
+  "totalParts": 16,
+  "partNames": [
+    "church_base",
+    "main_façade",
+    "tower_structure",
+    "tower_roof_overhang",
+    "tower_roof_spire",
+    "main_roof_left",
+    "main_roof_right",
+    "left_window_glass",
+    "right_window_glass",
+    "tower_arch_window",
+    "tower_louver",
+    "entrance_door",
+    "entrance_canopy",
+    "entrance_steps",
+    "left_canopy_post",
+    "right_canopy_post"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "frustum_pyramid",
+    "pyramid",
+    "wedge",
+    "cylinder"
+  ]
+}

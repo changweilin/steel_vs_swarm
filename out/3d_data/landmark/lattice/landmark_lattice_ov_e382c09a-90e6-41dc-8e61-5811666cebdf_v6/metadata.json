@@ -1,0 +1,38 @@
+{
+  "id": "landmark_lattice_ov_e382c09a-90e6-41dc-8e61-5811666cebdf_v6",
+  "key": "landmark/lattice_ov_e382c09a-90e6-41dc-8e61-5811666cebdf_22ada4cc_v6",
+  "family": "landmark",
+  "subpart": "lattice",
+  "style": "industrial_lattice_tower",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/lattice/ov_e382c09a-90e6-41dc-8e61-5811666cebdf.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\lattice\\ov_e382c09a-90e6-41dc-8e61-5811666cebdf.jpg",
+  "created_at": "2026-08-20T15:27:37.022Z",
+  "bounds": {
+    "min": [
+      -9,
+      0,
+      -4
+    ],
+    "max": [
+      9,
+      30.25,
+      4
+    ],
+    "size": [
+      18,
+      30.25,
+      8
+    ],
+    "rMax": 9.849,
+    "triangles": 124,
+    "vertices": 82
+  },
+  "spec": {
+    "style": "industrial_lattice_tower"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

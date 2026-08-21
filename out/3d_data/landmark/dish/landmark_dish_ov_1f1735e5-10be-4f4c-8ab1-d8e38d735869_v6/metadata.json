@@ -1,0 +1,38 @@
+{
+  "id": "landmark_dish_ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869_v6",
+  "key": "landmark/dish_ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869_efcb9cfd_v6",
+  "family": "landmark",
+  "subpart": "dish",
+  "style": "industrial_satellite_dish",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/dish/ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\landmark\\dish\\ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869.jpg",
+  "created_at": "2026-08-20T15:25:13.609Z",
+  "bounds": {
+    "min": [
+      -2,
+      0,
+      -2
+    ],
+    "max": [
+      2,
+      3.6061,
+      2
+    ],
+    "size": [
+      4,
+      3.606,
+      4
+    ],
+    "rMax": 2.828,
+    "triangles": 260,
+    "vertices": 142
+  },
+  "spec": {
+    "style": "industrial_satellite_dish"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,30 @@
+{
+  "id": "tree_sp_acacia_ov_4181513d-1acc-4d23-a817-709b1d24f3c2",
+  "sourceImage": "tree/sp_acacia/ov_4181513d-1acc-4d23-a817-709b1d24f3c2",
+  "style": "botanical_acacia_branch",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 856000,
+    "facadeHex": 9807270,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
+    "glassHex": 1976635
+  },
+  "totalParts": 7,
+  "partNames": [
+    "main_stem",
+    "thorn_1",
+    "thorn_2",
+    "leaf_cluster_1",
+    "leaf_cluster_2",
+    "leaf_cluster_3",
+    "leaf_cluster_4"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "cone",
+    "box"
+  ]
+}

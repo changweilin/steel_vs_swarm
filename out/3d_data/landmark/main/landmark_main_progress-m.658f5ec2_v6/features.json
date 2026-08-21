@@ -1,0 +1,33 @@
+{
+  "id": "landmark_main_progress-m.658f5ec2",
+  "sourceImage": "landmark/main/progress-m.658f5ec2",
+  "style": "modern_skyscraper_complex",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 12632256,
+    "baseHex": 8421504,
+    "accentHex": 16777215,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 8388607
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_tower_base",
+    "main_tower_mid",
+    "main_tower_top",
+    "spire",
+    "podium_left",
+    "podium_right",
+    "side_building_1",
+    "side_building_2",
+    "side_building_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "cylinder",
+    "wedge",
+    "box"
+  ]
+}

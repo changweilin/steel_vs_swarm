@@ -1,0 +1,31 @@
+{
+  "id": "tree_canopy_20210316155158__33",
+  "sourceImage": "tree/canopy/20210316155158__33",
+  "style": "Shinto Shrine Sacred Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4500000,
+    "facadeHex": 807060,
+    "baseHex": 504030,
+    "accentHex": 16711935,
+    "darkHex": 303030,
+    "brightHex": 16777215,
+    "glassHex": 10000000
+  },
+  "totalParts": 8,
+  "partNames": [
+    "Main Trunk",
+    "Canopy Main",
+    "Canopy Secondary",
+    "Torii Left Post",
+    "Torii Right Post",
+    "Torii Top Beam",
+    "Heart Ornament",
+    "Root Base"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

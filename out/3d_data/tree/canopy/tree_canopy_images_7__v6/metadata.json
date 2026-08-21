@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_7__v6",
+  "key": "tree/canopy_images (7)_e48263c2_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "fantasy_tree_island",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model successfully captures the massive tree trunk with its root system, the floating island base, and the dense canopy. The lanterns are represented as small boxes, and the door is a box integrated into the trunk. The scale is set to approximately 6 meters for the tree height.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (7).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (7)~0.png",
+  "created_at": "2026-08-20T16:12:00.766Z",
+  "bounds": {
+    "min": [
+      -3.5,
+      0,
+      -3.3287
+    ],
+    "max": [
+      3.5,
+      8,
+      3.3287
+    ],
+    "size": [
+      7,
+      8,
+      6.657
+    ],
+    "rMax": 4.83,
+    "triangles": 416,
+    "vertices": 256
+  },
+  "spec": {
+    "style": "fantasy_tree_island"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

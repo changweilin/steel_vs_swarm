@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_6621n_v6",
+  "key": "ship/hull_6621n_5dbc986b_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "Research Vessel",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "The model accurately captures the research vessel's hull profile, the distinct red-and-white color scheme, the bridge superstructure, and the rear A-frame crane structure. The proportions of the bow, deck, and mast are consistent with the original image. Minor details like lifeboats and radar domes are included to ensure 360-degree completeness.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/6621n.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\6621n~0.png",
+  "created_at": "2026-08-20T16:11:16.669Z",
+  "bounds": {
+    "min": [
+      -22.5,
+      0,
+      -5.1
+    ],
+    "max": [
+      25.004,
+      17.5,
+      5.1
+    ],
+    "size": [
+      47.504,
+      17.5,
+      10.2
+    ],
+    "rMax": 25.519,
+    "triangles": 298,
+    "vertices": 180
+  },
+  "spec": {
+    "style": "Research Vessel"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_174893026464574001.jpg_900x.water3_v6",
+  "key": "building/mass_174893026464574001.jpg!900x.water3_9aff9512_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Residential Building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The building's complex L-shaped massing, grid-based facade, and recessed balcony sections are accurately captured using modular box components. The color palette follows the 7-Zone system, and the structural integrity is maintained by ensuring all walls and roof sections are closed volumes. The glass windows and balcony details are slightly offset to prevent Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/174893026464574001.jpg!900x.water3.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\174893026464574001.jpg!900x.water3.webp",
+  "created_at": "2026-08-20T17:04:13.118Z",
+  "bounds": {
+    "min": [
+      -13,
+      0,
+      -6
+    ],
+    "max": [
+      16,
+      34,
+      22
+    ],
+    "size": [
+      29,
+      34,
+      28
+    ],
+    "rMax": 27.203,
+    "triangles": 108,
+    "vertices": 72
+  },
+  "spec": {
+    "style": "Modern Residential Building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "ship_hull_Capture-3139_v6",
+  "key": "ship/hull_Capture-3139_53bfea36_v6",
+  "family": "ship",
+  "subpart": "hull",
+  "style": "container_ship",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the container ship's hull, the tiered container stacks, and the bridge superstructure. The bow wedge and stern profile are correctly proportioned. Glass elements are represented with the specified color key, and all parts are integrated into a watertight hull structure.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "ship/Capture-3139.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\ship\\main\\Capture-3139~0.png",
+  "created_at": "2026-08-20T16:12:56.305Z",
+  "bounds": {
+    "min": [
+      -40,
+      -1,
+      -7.5
+    ],
+    "max": [
+      47.504,
+      15,
+      8.1206
+    ],
+    "size": [
+      87.504,
+      16,
+      15.621
+    ],
+    "rMax": 48.193,
+    "triangles": 402,
+    "vertices": 249
+  },
+  "spec": {
+    "style": "container_ship"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_v6",
+  "key": "building/bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_cdaed869_v6",
+  "family": "building",
+  "subpart": "bld_apartment",
+  "style": "modern_apartment",
+  "symmetryMode": "symmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the distinctive pink facade, repetitive balconies with glass/railing details, orderly rows of windows, and the overhanging roof structure characteristic of the apartment building in the photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_apartment/ov_3f2c5daa-8615-4849-b459-ecfb801e2284.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_apartment\\ov_3f2c5daa-8615-4849-b459-ecfb801e2284~0.png",
+  "created_at": "2026-08-20T17:23:55.901Z",
+  "bounds": {
+    "min": [
+      -6.5,
+      -1,
+      -4.5
+    ],
+    "max": [
+      6.5,
+      14,
+      4.9
+    ],
+    "size": [
+      13,
+      15,
+      9.4
+    ],
+    "rMax": 8.14,
+    "triangles": 164,
+    "vertices": 110
+  },
+  "spec": {
+    "style": "modern_apartment"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

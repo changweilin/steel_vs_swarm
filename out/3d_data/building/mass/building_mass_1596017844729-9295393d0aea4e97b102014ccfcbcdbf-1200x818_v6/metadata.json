@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6",
+  "key": "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Suburban House",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D model accurately captures the multi-gable roof profile, main facade structure, garage and living room window layouts, front pillars, and lit entrance porch. Roof overhangs and directional slopes match the required outward-slanting rules.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0.png",
+  "created_at": "2026-08-20T17:19:14.181Z",
+  "bounds": {
+    "min": [
+      -7.5,
+      0,
+      -4.5
+    ],
+    "max": [
+      7.5,
+      7.75,
+      4.5
+    ],
+    "size": [
+      15,
+      7.75,
+      9
+    ],
+    "rMax": 8.746,
+    "triangles": 228,
+    "vertices": 154
+  },
+  "spec": {
+    "style": "Modern Suburban House"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

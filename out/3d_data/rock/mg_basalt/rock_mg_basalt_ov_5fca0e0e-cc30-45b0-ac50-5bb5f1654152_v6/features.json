@@ -1,0 +1,32 @@
+{
+  "id": "rock_mg_basalt_ov_5fca0e0e-cc30-45b0-ac50-5bb5f1654152",
+  "sourceImage": "rock/mg_basalt/ov_5fca0e0e-cc30-45b0-ac50-5bb5f1654152",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7303023,
+    "facadeHex": 5524278,
+    "baseHex": 3091234,
+    "accentHex": 6578762,
+    "darkHex": 1973790,
+    "brightHex": 9868950,
+    "glassHex": 2041200
+  },
+  "totalParts": 7,
+  "partNames": [
+    "base_cliff_mass",
+    "mid_sedimentary_layer",
+    "upper_basalt_columns",
+    "foreground_rock_pillar",
+    "rock_boulder_1",
+    "rock_boulder_2",
+    "steep_slope_wedge"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

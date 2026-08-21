@@ -1,0 +1,40 @@
+{
+  "id": "rock_hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46_1_v6",
+  "key": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_64c3fb28_v6",
+  "family": "rock",
+  "subpart": "hoodoo",
+  "style": "rock_hoodoo_landscape",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The reconstructed 3D scene captures the majestic canyon landscape with towering hoodoos, stratified rock pillars, and eroded rock formations using varied polyhedral elements. Clustered pillars and crystalline structures create an authentic canyon geological depth and silhouette.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/hoodoo/ov_b52fce07-6daf-4845-8385-b956cfd8fd46.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\hoodoo\\ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1.png",
+  "created_at": "2026-08-20T16:20:29.797Z",
+  "bounds": {
+    "min": [
+      -8,
+      -2,
+      -11.589
+    ],
+    "max": [
+      9.2548,
+      12,
+      8
+    ],
+    "size": [
+      17.255,
+      14,
+      19.589
+    ],
+    "rMax": 14.082,
+    "triangles": 196,
+    "vertices": 120
+  },
+  "spec": {
+    "style": "rock_hoodoo_landscape"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "tree_canopy_images (5)",
+  "sourceImage": "tree/canopy/images (5)",
+  "style": "Bonsai Juniper Tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 468234,
+    "facadeHex": 876543,
+    "baseHex": 654321,
+    "accentHex": 228822,
+    "darkHex": 333333,
+    "brightHex": 999999,
+    "glassHex": 1976635
+  },
+  "totalParts": 9,
+  "partNames": [
+    "main_trunk_base",
+    "trunk_curve_mid",
+    "trunk_upper_branch",
+    "canopy_top_left",
+    "canopy_top_right",
+    "canopy_lower_right",
+    "rock_base_1",
+    "rock_base_2",
+    "rock_base_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere",
+    "dodecahedron_polyhedron"
+  ]
+}

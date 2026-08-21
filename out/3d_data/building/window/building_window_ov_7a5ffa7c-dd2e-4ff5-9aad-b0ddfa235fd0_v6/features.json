@@ -1,0 +1,31 @@
+{
+  "id": "building_window_ov_7a5ffa7c-dd2e-4ff5-9aad-b0ddfa235fd0",
+  "sourceImage": "building/window/ov_7a5ffa7c-dd2e-4ff5-9aad-b0ddfa235fd0",
+  "style": "Art Nouveau Illustration",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11184810,
+    "facadeHex": 16772070,
+    "baseHex": 14474460,
+    "accentHex": 8405056,
+    "darkHex": 3947580,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 7,
+  "partNames": [
+    "CircularFrameOuter",
+    "CircularFrameInner",
+    "ReliefProfileBase",
+    "HairLayer",
+    "GearOrnament1",
+    "GearOrnament2",
+    "GlassPanel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

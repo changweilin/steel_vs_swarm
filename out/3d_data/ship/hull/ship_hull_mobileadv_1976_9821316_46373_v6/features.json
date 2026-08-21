@@ -1,0 +1,35 @@
+{
+  "id": "ship_hull_mobileadv_1976_9821316_46373",
+  "sourceImage": "ship/hull/mobileadv_1976_9821316_46373",
+  "style": "scientific_research_vessel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 3355443,
+    "accentHex": 16744200,
+    "darkHex": 1052688,
+    "brightHex": 14540253,
+    "glassHex": 4621735
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull",
+    "bow_wedge",
+    "hull_bottom",
+    "superstructure_base",
+    "bridge_windows",
+    "mast_base",
+    "radar_dome",
+    "lifeboat_port",
+    "lifeboat_starboard",
+    "stern_a_frame",
+    "deck_railing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder",
+    "hemisphere_dome"
+  ]
+}

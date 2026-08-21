@@ -1,0 +1,36 @@
+{
+  "id": "ship_hull_20210430002927_47",
+  "sourceImage": "ship/hull/20210430002927_47",
+  "style": "yacht",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 2631720,
+    "accentHex": 16729344,
+    "darkHex": 3355443,
+    "brightHex": 14540253,
+    "glassHex": 4621730
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull_wedge",
+    "hull_base",
+    "superstructure_base",
+    "bridge_cabin",
+    "bridge_window_front",
+    "side_window_left",
+    "side_window_right",
+    "radar_dome",
+    "life_ring_left",
+    "life_ring_right",
+    "railing_front"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "hemisphere_dome",
+    "torus_ring",
+    "cylinder"
+  ]
+}

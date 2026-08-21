@@ -1,0 +1,31 @@
+{
+  "id": "rock_talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4",
+  "sourceImage": "rock/talus/ov_3b0b1110-2abf-4255-bd74-9c26304653d4",
+  "style": "nature_rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 7895160,
+    "facadeHex": 5921370,
+    "baseHex": 3289650,
+    "accentHex": 9868950,
+    "darkHex": 1973790,
+    "brightHex": 12500670,
+    "glassHex": 4545119
+  },
+  "totalParts": 6,
+  "partNames": [
+    "ground_base_rock",
+    "main_boulder_cluster",
+    "rugged_rock_1",
+    "angular_rock_2",
+    "peak_rock_shard",
+    "fragment_rock_small"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge",
+    "polygonal_prism"
+  ]
+}

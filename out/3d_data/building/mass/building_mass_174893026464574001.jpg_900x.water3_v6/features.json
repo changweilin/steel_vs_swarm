@@ -1,0 +1,30 @@
+{
+  "id": "building_mass_174893026464574001.jpg!900x.water3",
+  "sourceImage": "building/mass/174893026464574001.jpg!900x.water3",
+  "style": "Modern Residential Building",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 10526880,
+    "facadeHex": 13476740,
+    "baseHex": 8413770,
+    "accentHex": 5592405,
+    "darkHex": 4473924,
+    "brightHex": 16777215,
+    "glassHex": 11184810
+  },
+  "totalParts": 9,
+  "partNames": [
+    "Main_Mass_Left",
+    "Main_Mass_Right",
+    "Central_Column",
+    "Roof_Top_Structure",
+    "Window_Grid_Left",
+    "Balcony_Section_Right",
+    "Ground_Floor_Base",
+    "Entrance_Glass",
+    "Structural_Frame_Vertical"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

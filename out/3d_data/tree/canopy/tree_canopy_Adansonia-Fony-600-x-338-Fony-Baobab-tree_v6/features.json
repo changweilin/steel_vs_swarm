@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
+  "sourceImage": "tree/canopy/Adansonia-Fony-600-x-338-Fony-Baobab-tree",
+  "style": "naturalistic_botanical",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 65280,
+    "facadeHex": 11184810,
+    "baseHex": 8421504,
+    "accentHex": 16777215,
+    "darkHex": 5592405,
+    "brightHex": 14540253,
+    "glassHex": 1976635
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "canopy_main",
+    "branch_left",
+    "branch_right",
+    "canopy_left",
+    "canopy_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "cylinder"
+  ]
+}

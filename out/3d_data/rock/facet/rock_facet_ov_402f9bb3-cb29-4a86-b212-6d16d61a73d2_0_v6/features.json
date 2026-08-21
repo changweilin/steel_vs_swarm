@@ -1,0 +1,34 @@
+{
+  "id": "rock_facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0",
+  "sourceImage": "rock/facet/ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 9868950,
+    "facadeHex": 8023393,
+    "baseHex": 5263440,
+    "accentHex": 3289650,
+    "darkHex": 2631720,
+    "brightHex": 11184810,
+    "glassHex": 13421772
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_boulder_core",
+    "boulder_upper_facet",
+    "boulder_lower_base",
+    "rock_accent_front",
+    "rock_accent_side",
+    "hat_brim",
+    "hat_crown",
+    "surrounding_rock_1",
+    "surrounding_rock_2",
+    "surrounding_rock_3"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "torus_ring",
+    "cylinder"
+  ]
+}

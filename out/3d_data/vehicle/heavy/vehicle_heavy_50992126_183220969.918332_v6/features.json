@@ -1,0 +1,42 @@
+{
+  "id": "vehicle_heavy_50992126_183220969.918332",
+  "sourceImage": "vehicle/heavy/50992126_183220969.918332",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2045951,
+    "facadeHex": 2045951,
+    "baseHex": 210609,
+    "accentHex": 16766720,
+    "darkHex": 1315860,
+    "brightHex": 15658734,
+    "glassHex": 2640263
+  },
+  "totalParts": 20,
+  "partNames": [
+    "chassis_base",
+    "bus_body",
+    "bus_roof",
+    "front_windshield",
+    "front_bumper",
+    "headlight_left",
+    "headlight_right",
+    "front_grille",
+    "front_license_plate",
+    "front_destination_sign",
+    "left_front_wheel",
+    "right_front_wheel",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_side_windows",
+    "right_side_windows",
+    "rear_windshield",
+    "rear_bumper",
+    "left_side_mirror",
+    "right_side_mirror"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

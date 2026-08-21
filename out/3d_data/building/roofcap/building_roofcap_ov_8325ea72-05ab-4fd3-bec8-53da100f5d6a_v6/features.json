@@ -1,0 +1,32 @@
+{
+  "id": "building_roofcap_ov_8325ea72-05ab-4fd3-bec8-53da100f5d6a",
+  "sourceImage": "building/roofcap/ov_8325ea72-05ab-4fd3-bec8-53da100f5d6a",
+  "style": "Gothic architecture gargoyle and parapet",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 10526880,
+    "facadeHex": 12632256,
+    "baseHex": 8421504,
+    "accentHex": 14737632,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 49151
+  },
+  "totalParts": 8,
+  "partNames": [
+    "parapet_base",
+    "ledge_top",
+    "gargoyle_body",
+    "gargoyle_head",
+    "gargoyle_horn",
+    "gargoyle_arm",
+    "gargoyle_hand",
+    "support_pillar"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cone",
+    "cylinder"
+  ]
+}

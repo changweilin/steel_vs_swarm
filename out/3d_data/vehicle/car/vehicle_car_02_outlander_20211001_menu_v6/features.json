@@ -1,0 +1,46 @@
+{
+  "id": "vehicle_car_02_outlander_20211001_menu",
+  "sourceImage": "vehicle/car/02_outlander_20211001_menu",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3815994,
+    "facadeHex": 5197655,
+    "baseHex": 1973790,
+    "accentHex": 13816530,
+    "darkHex": 1315860,
+    "brightHex": 14540253,
+    "glassHex": 1977150
+  },
+  "totalParts": 24,
+  "partNames": [
+    "chassis_base",
+    "car_body",
+    "car_roof",
+    "front_hood",
+    "front_windshield",
+    "left_front_window",
+    "right_front_window",
+    "left_rear_window",
+    "right_rear_window",
+    "front_grille_base",
+    "grille_chrome_left",
+    "grille_chrome_right",
+    "headlight_left",
+    "headlight_right",
+    "front_bumper",
+    "license_plate",
+    "left_mirror",
+    "right_mirror",
+    "left_front_tire",
+    "right_front_tire",
+    "left_rear_tire",
+    "right_rear_tire",
+    "roof_rail_left",
+    "roof_rail_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "torus_ring"
+  ]
+}

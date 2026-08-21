@@ -1,0 +1,32 @@
+{
+  "id": "building_mass_211",
+  "sourceImage": "building/mass/211",
+  "style": "modern_urban_landmark",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 12500670,
+    "facadeHex": 14211288,
+    "baseHex": 8421504,
+    "accentHex": 16766720,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 4621730
+  },
+  "totalParts": 8,
+  "partNames": [
+    "skytree_base",
+    "skytree_mid",
+    "skytree_top",
+    "golden_building_body",
+    "golden_building_roof_detail",
+    "left_building_base",
+    "left_building_glass",
+    "ground_plane"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "polygonal_prism",
+    "cylinder",
+    "box",
+    "wedge"
+  ]
+}

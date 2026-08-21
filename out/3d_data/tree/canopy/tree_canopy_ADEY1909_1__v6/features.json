@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_ADEY1909 (1)",
+  "sourceImage": "tree/canopy/ADEY1909 (1)",
+  "style": "organic_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4500000,
+    "facadeHex": 807060,
+    "baseHex": 504030,
+    "accentHex": 12000000,
+    "darkHex": 202020,
+    "brightHex": 15000000,
+    "glassHex": 1976635
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "branch_left",
+    "branch_right",
+    "canopy_main",
+    "canopy_detail_top",
+    "flower_bed"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "ellipsoid_sphere",
+    "box"
+  ]
+}

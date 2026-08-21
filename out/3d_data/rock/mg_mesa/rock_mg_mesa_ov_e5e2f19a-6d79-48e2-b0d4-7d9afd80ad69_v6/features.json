@@ -1,0 +1,35 @@
+{
+  "id": "rock_mg_mesa_ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69",
+  "sourceImage": "rock/mg_mesa/ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 11822409,
+    "facadeHex": 10506353,
+    "baseHex": 7155018,
+    "accentHex": 13398935,
+    "darkHex": 4010543,
+    "brightHex": 15527148,
+    "glassHex": 3095995
+  },
+  "totalParts": 12,
+  "partNames": [
+    "mesa_base_plateau",
+    "mesa_upper_cliff",
+    "talus_slope_front",
+    "talus_slope_left",
+    "talus_slope_right",
+    "rock_buttress_1",
+    "rock_buttress_2",
+    "rock_buttress_3",
+    "rock_buttress_4",
+    "distant_butte_left",
+    "distant_butte_right",
+    "terrain_ground_plane"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "dodecahedron_polyhedron"
+  ]
+}

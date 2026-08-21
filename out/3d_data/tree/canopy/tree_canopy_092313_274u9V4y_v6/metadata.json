@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_092313_274u9V4y_v6",
+  "key": "tree/canopy_092313_274u9V4y_71741fd4_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "natural_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree was reconstructed using a central trunk and multiple ellipsoid clusters to represent the wide, spreading canopy. The asymmetric branch structure is captured by offsetting the canopy clusters. The trunk is modeled as a conical frustum to reflect natural tapering. The overall silhouette matches the reference photo's wide, umbrella-like canopy shape.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/092313_274u9V4y.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\092313_274u9V4y~0.png",
+  "created_at": "2026-08-20T16:18:00.205Z",
+  "bounds": {
+    "min": [
+      -7,
+      -0.1,
+      -4.7553
+    ],
+    "max": [
+      7,
+      10,
+      4.7553
+    ],
+    "size": [
+      14,
+      10.1,
+      9.511
+    ],
+    "rMax": 8.462,
+    "triangles": 688,
+    "vertices": 422
+  },
+  "spec": {
+    "style": "natural_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

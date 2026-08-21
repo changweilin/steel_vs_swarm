@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_images_132_v6",
+  "key": "rock/main_images 132_9d5b4c6e_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "The generated rock structure accurately captures the stacked boulder formation with an expansive base rock, balanced mid-tier boulders, and a massive overhanging top boulder mirroring the visual weight and precarious balance seen in the original photo.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/images 132.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\images 132~0.png",
+  "created_at": "2026-08-20T16:21:49.727Z",
+  "bounds": {
+    "min": [
+      -2.3801,
+      -1.2449,
+      -2.2895
+    ],
+    "max": [
+      3.0633,
+      7.2223,
+      2.6936
+    ],
+    "size": [
+      5.443,
+      8.467,
+      4.983
+    ],
+    "rMax": 4.079,
+    "triangles": 204,
+    "vertices": 116
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

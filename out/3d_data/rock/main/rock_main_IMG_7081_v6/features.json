@@ -1,0 +1,30 @@
+{
+  "id": "rock_main_IMG_7081",
+  "sourceImage": "rock/main/IMG_7081",
+  "style": "rock_formation",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4210752,
+    "facadeHex": 3289650,
+    "baseHex": 1973790,
+    "accentHex": 5263440,
+    "darkHex": 1315860,
+    "brightHex": 6579300,
+    "glassHex": 1315860
+  },
+  "totalParts": 7,
+  "partNames": [
+    "left_rock_base",
+    "left_rock_peak",
+    "left_rock_sub",
+    "right_rock_base",
+    "right_rock_peak",
+    "right_rock_wing",
+    "center_bridge_rock"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "dodecahedron_polyhedron",
+    "icosahedron_polyhedron",
+    "wedge"
+  ]
+}

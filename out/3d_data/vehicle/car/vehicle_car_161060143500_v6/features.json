@@ -1,0 +1,47 @@
+{
+  "id": "vehicle_car_161060143500",
+  "sourceImage": "vehicle/car/161060143500",
+  "style": "modern_off_road_vehicle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 1644825,
+    "facadeHex": 1973790,
+    "baseHex": 6579300,
+    "accentHex": 13158600,
+    "darkHex": 986895,
+    "brightHex": 15790320,
+    "glassHex": 3368652
+  },
+  "totalParts": 24,
+  "partNames": [
+    "chassis_base",
+    "lower_body",
+    "cabin_body",
+    "roof",
+    "front_hood",
+    "hood_scoop",
+    "front_bumper",
+    "skid_plate",
+    "front_windshield",
+    "side_window_front_left",
+    "side_window_front_right",
+    "side_window_rear_left",
+    "side_window_rear_right",
+    "rear_window",
+    "left_fender_flare_front",
+    "right_fender_flare_front",
+    "left_fender_flare_rear",
+    "right_fender_flare_rear",
+    "left_headlight",
+    "right_headlight",
+    "left_rear_wheel",
+    "right_rear_wheel",
+    "left_front_wheel",
+    "right_front_wheel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder",
+    "torus_ring"
+  ]
+}

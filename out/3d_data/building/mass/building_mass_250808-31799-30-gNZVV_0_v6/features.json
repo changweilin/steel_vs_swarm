@@ -1,0 +1,33 @@
+{
+  "id": "building_mass_250808-31799-30-gNZVV~0",
+  "sourceImage": "building/mass/250808-31799-30-gNZVV~0",
+  "style": "Japanese Colonial Wooden Architecture",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 8421504,
+    "facadeHex": 13935965,
+    "baseHex": 8545339,
+    "accentHex": 16777215,
+    "darkHex": 4210752,
+    "brightHex": 16777215,
+    "glassHex": 11068390
+  },
+  "totalParts": 10,
+  "partNames": [
+    "MainBuildingBody",
+    "BrickBase",
+    "MainRoof",
+    "SideWingRoof",
+    "Window1",
+    "Window2",
+    "Door",
+    "Chimney1",
+    "Chimney2",
+    "BrickColumn"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "wedge",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_4f5ee370c1564cadabc47ce365c4f353_v6",
+  "key": "building/mass_4f5ee370c1564cadabc47ce365c4f353_cc53ac99_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "Modern Rustic Timber Frame House",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The model accurately captures the complex roofline, timber-framed porch structure, and the stone-base foundation. The multi-gabled roof is constructed using wedges and prisms to ensure correct downward slope. Glass elements are represented with glassHex. The overall massing reflects the original architecture's proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/4f5ee370c1564cadabc47ce365c4f353.jpeg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\4f5ee370c1564cadabc47ce365c4f353~0.png",
+  "created_at": "2026-08-21T10:08:20.438Z",
+  "bounds": {
+    "min": [
+      -9,
+      0,
+      -5
+    ],
+    "max": [
+      13.5,
+      11,
+      6
+    ],
+    "size": [
+      22.5,
+      11,
+      11
+    ],
+    "rMax": 14.773,
+    "triangles": 152,
+    "vertices": 100
+  },
+  "spec": {
+    "style": "Modern Rustic Timber Frame House"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

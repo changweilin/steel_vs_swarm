@@ -1,0 +1,40 @@
+{
+  "id": "landmark_main_Arc_de_Triomf_Barcelona_v6",
+  "key": "landmark/main_Arc_de_Triomf_Barcelona_ae62a4f5_v6",
+  "family": "landmark",
+  "subpart": "main",
+  "style": "Neo-Mudéjar Architecture",
+  "symmetryMode": "symmetric",
+  "similarityScore": 95,
+  "similarityReview": "The Arc de Triomf is reconstructed with high fidelity, focusing on the massive brick piers, the central arch, and the decorative towers. The symmetry is maintained across the central axis. The proportions of the towers and the arch opening are aligned with real-world scale, and the decorative elements are slightly offset to avoid Z-fighting.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "landmark/Arc_de_Triomf_Barcelona.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\landmark\\main\\Arc_de_Triomf_Barcelona~0.png",
+  "created_at": "2026-08-20T16:34:27.004Z",
+  "bounds": {
+    "min": [
+      -7.8,
+      0,
+      -4.5
+    ],
+    "max": [
+      7.8,
+      21.5,
+      4.5
+    ],
+    "size": [
+      15.6,
+      21.5,
+      9
+    ],
+    "rMax": 9.005,
+    "triangles": 444,
+    "vertices": 250
+  },
+  "spec": {
+    "style": "Neo-Mudéjar Architecture"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

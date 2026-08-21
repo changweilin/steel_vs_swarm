@@ -1,0 +1,51 @@
+{
+  "id": "building_bld_medit_ov_f42bb333-5736-49e6-a13c-9a15bc80d31f",
+  "sourceImage": "building/bld_medit/ov_f42bb333-5736-49e6-a13c-9a15bc80d31f",
+  "style": "Mediterranean Santorini Church",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2257919,
+    "facadeHex": 16119285,
+    "baseHex": 15066597,
+    "accentHex": 15366271,
+    "darkHex": 3158064,
+    "brightHex": 16777215,
+    "glassHex": 1139147
+  },
+  "totalParts": 26,
+  "partNames": [
+    "Main Church Base",
+    "Main Church Octagonal Drum",
+    "Blue Dome",
+    "Dome Cross Base",
+    "Dome Cross Vertical",
+    "Dome Cross Horizontal",
+    "Window Front Left",
+    "Window Front Right",
+    "Window Left",
+    "Window Right",
+    "Bell Tower Base Wall",
+    "Bell Tower Arch Support Left",
+    "Bell Tower Arch Support Right",
+    "Bell Tower Arch Top",
+    "Bell Tower Mid Cornice",
+    "Bell Tower Upper Arch Left",
+    "Bell Tower Upper Arch Right",
+    "Bell Tower Upper Arch Top",
+    "Bell Tower Top Dome",
+    "Bell Tower Finial",
+    "Bell Tower Column Front Left",
+    "Bell Tower Column Front Right",
+    "Bell Hanging",
+    "Terrace Wall Left",
+    "Terrace Planter",
+    "Bougainvillea Foliage"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "polygonal_prism",
+    "hemisphere_dome",
+    "cylinder",
+    "ellipsoid_sphere"
+  ]
+}

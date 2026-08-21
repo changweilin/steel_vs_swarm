@@ -1,0 +1,40 @@
+{
+  "id": "building_mass_171860464927014009.jpg_900x.water3_v6",
+  "key": "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6",
+  "family": "building",
+  "subpart": "mass",
+  "style": "modern_building",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The 3D geometric model accurately captures the main high-rise residential building with its characteristic dark grey tile facade, prominent white frame features, stacked balconies with glass railings, wood-toned vertical accents, and the top multi-layered roof structure. Proportions and alignment follow real-world architectural dimensions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/171860464927014009.jpg!900x.water3.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\171860464927014009.jpg!900x.water3~0.png",
+  "created_at": "2026-08-20T17:20:25.583Z",
+  "bounds": {
+    "min": [
+      -7.5,
+      0,
+      -13.5
+    ],
+    "max": [
+      15,
+      23.25,
+      3.95
+    ],
+    "size": [
+      22.5,
+      23.25,
+      17.45
+    ],
+    "rMax": 15.511,
+    "triangles": 284,
+    "vertices": 190
+  },
+  "spec": {
+    "style": "modern_building"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

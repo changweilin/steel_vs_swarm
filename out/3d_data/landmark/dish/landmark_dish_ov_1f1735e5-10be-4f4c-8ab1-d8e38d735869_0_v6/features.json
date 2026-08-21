@@ -1,0 +1,30 @@
+{
+  "id": "landmark_dish_ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869~0",
+  "sourceImage": "landmark/dish/ov_1f1735e5-10be-4f4c-8ab1-d8e38d735869~0",
+  "style": "Mediterranean Tile Roof",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 13938985,
+    "facadeHex": 16767675,
+    "baseHex": 12566463,
+    "accentHex": 11184810,
+    "darkHex": 6708019,
+    "brightHex": 16777215,
+    "glassHex": 8438200
+  },
+  "totalParts": 7,
+  "partNames": [
+    "RoofBase",
+    "RidgeTile",
+    "TileRow1",
+    "TileRow2",
+    "TileRow3",
+    "TileRow4",
+    "WallTop"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "cylinder",
+    "box"
+  ]
+}

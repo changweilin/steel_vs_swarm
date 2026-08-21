@@ -1,0 +1,38 @@
+{
+  "id": "vehicle_car_jspace-pu_20241108_menu_v6",
+  "key": "vehicle/car_jspace-pu_20241108_menu_f9d0505b_v6",
+  "family": "vehicle",
+  "subpart": "car",
+  "style": "vehicle",
+  "symmetryMode": "symmetric",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/car/jspace-pu_20241108_menu.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\car\\jspace-pu_20241108_menu.jpg",
+  "created_at": "2026-08-20T15:25:18.903Z",
+  "bounds": {
+    "min": [
+      -1.17,
+      0.225,
+      -1.9
+    ],
+    "max": [
+      1.17,
+      1.975,
+      2.09
+    ],
+    "size": [
+      2.34,
+      1.75,
+      3.99
+    ],
+    "rMax": 2.395,
+    "triangles": 444,
+    "vertices": 262
+  },
+  "spec": {
+    "style": "vehicle"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

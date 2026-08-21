@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_id14796060-shutterstock_783352309_0_v6",
+  "key": "rock/main_id14796060-shutterstock_783352309~0_65ec3042_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "natural_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the cluster of spherical boulders resembling Moeraki Boulders on a sandy beach. Used ellipsoid_sphere and dodecahedron_polyhedron to capture the rounded yet cracked texture of the boulders, placing them realistically with correct relative positioning and anchoring to the ground plane at y=0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/id14796060-shutterstock_783352309.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\id14796060-shutterstock_783352309~0.png",
+  "created_at": "2026-08-20T16:20:37.760Z",
+  "bounds": {
+    "min": [
+      -12.5,
+      -0.5,
+      -12.5
+    ],
+    "max": [
+      12.5,
+      2.4,
+      12.5
+    ],
+    "size": [
+      25,
+      2.9,
+      25
+    ],
+    "rMax": 17.678,
+    "triangles": 1200,
+    "vertices": 741
+  },
+  "spec": {
+    "style": "natural_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

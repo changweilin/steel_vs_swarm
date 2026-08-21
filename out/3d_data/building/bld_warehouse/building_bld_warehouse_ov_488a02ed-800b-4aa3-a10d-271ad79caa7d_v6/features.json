@@ -1,0 +1,35 @@
+{
+  "id": "building_bld_warehouse_ov_488a02ed-800b-4aa3-a10d-271ad79caa7d",
+  "sourceImage": "building/bld_warehouse/ov_488a02ed-800b-4aa3-a10d-271ad79caa7d",
+  "style": "Meiji-era industrial brick and corrugated metal warehouse",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 4605510,
+    "facadeHex": 9453640,
+    "baseHex": 3289650,
+    "accentHex": 12632256,
+    "darkHex": 2105376,
+    "brightHex": 14540253,
+    "glassHex": 6586540
+  },
+  "totalParts": 11,
+  "partNames": [
+    "MainTowerBase",
+    "TowerRoof",
+    "LeftWing",
+    "RightWing",
+    "LeftRoof",
+    "RightRoof",
+    "TowerWindow1",
+    "TowerWindow2",
+    "TowerWindow3",
+    "BalconyRailLeft",
+    "Spire"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "pyramid",
+    "wedge",
+    "cylinder"
+  ]
+}

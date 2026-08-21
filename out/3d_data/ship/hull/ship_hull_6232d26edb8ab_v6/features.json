@@ -1,0 +1,36 @@
+{
+  "id": "ship_hull_6232d26edb8ab",
+  "sourceImage": "ship/hull/6232d26edb8ab",
+  "style": "Fishing Vessel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 16777215,
+    "baseHex": 13382400,
+    "accentHex": 16737792,
+    "darkHex": 4210752,
+    "brightHex": 15658734,
+    "glassHex": 4621730
+  },
+  "totalParts": 11,
+  "partNames": [
+    "main_hull_base",
+    "main_deck_body",
+    "bridge_structure",
+    "bridge_windows",
+    "bow_mast",
+    "radar_dome",
+    "storage_barrels_left",
+    "storage_barrels_right",
+    "life_ring_port",
+    "life_ring_starboard",
+    "rear_deck_railing"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "wedge",
+    "box",
+    "cylinder",
+    "hemisphere_dome",
+    "torus_ring"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": "vehicle_motor_180512-10030-2-uyEK9",
+  "sourceImage": "vehicle/motor/180512-10030-2-uyEK9",
+  "style": "custom_blue_chopper_motorcycle",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 21120,
+    "baseHex": 1052688,
+    "accentHex": 13408512,
+    "darkHex": 2105376,
+    "brightHex": 16766720,
+    "glassHex": 40127
+  },
+  "totalParts": 20,
+  "partNames": [
+    "rear_tire_left",
+    "rear_tire_right",
+    "front_tire_left",
+    "front_tire_right",
+    "rear_rim_left",
+    "rear_rim_right",
+    "front_rim_left",
+    "front_rim_right",
+    "main_frame",
+    "fuel_tank",
+    "engine_block",
+    "exhaust_pipe_left",
+    "exhaust_pipe_right",
+    "front_headlight",
+    "front_fork_left",
+    "front_fork_right",
+    "handlebars",
+    "seat",
+    "rear_fender",
+    "front_skirt_cowl"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box",
+    "ellipsoid_sphere",
+    "wedge"
+  ]
+}

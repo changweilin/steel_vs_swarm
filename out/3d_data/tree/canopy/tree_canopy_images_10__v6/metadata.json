@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_images_10__v6",
+  "key": "tree/canopy_images (10)_c0e7586f_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "cartoon_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The tree is modeled with a central thick trunk using a conical_frustum and multiple ellipsoid_sphere components to represent the dense, layered canopy. The proportions match the reference image's wide, spreading structure. The base is anchored at y=0 with root-like extensions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/images (10).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\images (10)~0.png",
+  "created_at": "2026-08-20T16:09:45.338Z",
+  "bounds": {
+    "min": [
+      -4,
+      -0.1,
+      -2.3776
+    ],
+    "max": [
+      4,
+      6.3,
+      2.3776
+    ],
+    "size": [
+      8,
+      6.4,
+      4.755
+    ],
+    "rMax": 4.653,
+    "triangles": 1104,
+    "vertices": 672
+  },
+  "spec": {
+    "style": "cartoon_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

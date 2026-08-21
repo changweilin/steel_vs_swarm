@@ -1,0 +1,31 @@
+{
+  "id": "building_mass_images (3)",
+  "sourceImage": "building/mass/images (3)",
+  "style": "Modern Minimalist Residential",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 16777215,
+    "facadeHex": 14540253,
+    "baseHex": 10066329,
+    "accentHex": 5592405,
+    "darkHex": 3355443,
+    "brightHex": 15658734,
+    "glassHex": 8438271
+  },
+  "totalParts": 10,
+  "partNames": [
+    "main_structure",
+    "garage_roof_slab",
+    "ground_floor_window",
+    "second_floor_window",
+    "wood_accent_panel",
+    "balcony_railing",
+    "terrace_railing",
+    "garage_gate",
+    "fence_base",
+    "side_column"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box"
+  ]
+}

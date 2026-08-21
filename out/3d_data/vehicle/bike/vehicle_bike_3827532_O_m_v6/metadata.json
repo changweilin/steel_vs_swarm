@@ -1,0 +1,40 @@
+{
+  "id": "vehicle_bike_3827532_O_m_v6",
+  "key": "vehicle/bike_3827532_O_m_595e3b28_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "vehicle/bike",
+  "symmetryMode": "symmetric",
+  "similarityScore": 90,
+  "similarityReview": "Successfully reconstructed the mountain bike with diamond frame, front and rear wheels, handlebars, seat, and drivetrain elements tightly connected at joints and oriented correctly along the longitudinal axis.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "vehicle/bike/3827532_O_m.webp",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\vehicle\\bike\\3827532_O_m~0.png",
+  "created_at": "2026-08-20T17:19:45.885Z",
+  "bounds": {
+    "min": [
+      -1.335,
+      -0.16,
+      -0.3662
+    ],
+    "max": [
+      1.335,
+      1.0652,
+      0.3662
+    ],
+    "size": [
+      2.67,
+      1.225,
+      0.732
+    ],
+    "rMax": 1.384,
+    "triangles": 900,
+    "vertices": 514
+  },
+  "spec": {
+    "style": "vehicle/bike"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

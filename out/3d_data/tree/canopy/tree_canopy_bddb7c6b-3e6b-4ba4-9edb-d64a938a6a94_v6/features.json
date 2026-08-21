@@ -1,0 +1,29 @@
+{
+  "id": "tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94",
+  "sourceImage": "tree/canopy/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94",
+  "style": "natural_landscape_tree",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 8417374,
+    "baseHex": 10526880,
+    "accentHex": 16744576,
+    "darkHex": 2105376,
+    "brightHex": 13158600,
+    "glassHex": 16777215
+  },
+  "totalParts": 6,
+  "partNames": [
+    "main_trunk",
+    "main_canopy",
+    "secondary_canopy",
+    "base_rock",
+    "lower_foliage",
+    "flower_cluster"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "ellipsoid_sphere",
+    "dodecahedron_polyhedron"
+  ]
+}

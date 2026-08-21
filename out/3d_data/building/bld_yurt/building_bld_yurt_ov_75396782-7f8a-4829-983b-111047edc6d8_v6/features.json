@@ -1,0 +1,30 @@
+{
+  "id": "building_bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8",
+  "sourceImage": "building/bld_yurt/ov_75396782-7f8a-4829-983b-111047edc6d8",
+  "style": "traditional_yurt",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 14540253,
+    "facadeHex": 13816530,
+    "baseHex": 10526880,
+    "accentHex": 5592405,
+    "darkHex": 2236962,
+    "brightHex": 15790320,
+    "glassHex": 49484
+  },
+  "totalParts": 7,
+  "partNames": [
+    "yurt_base",
+    "yurt_roof",
+    "door_frame",
+    "door_panel",
+    "chimney",
+    "solar_panel_stand",
+    "solar_panel"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "cylinder",
+    "frustum_pyramid",
+    "box"
+  ]
+}

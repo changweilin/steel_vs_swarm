@@ -1,0 +1,40 @@
+{
+  "id": "rock_facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2_2_v6",
+  "key": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~2_e7c87b07_v6",
+  "family": "rock",
+  "subpart": "facet",
+  "style": "geological_rock_formation",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The primary boulder is accurately represented using a combination of dodecahedral and ellipsoidal primitives to capture its massive, rounded yet faceted eroded structure. Surrounding smaller rocks and the distinct hat object on top have been faithfully reconstructed with proportional placement.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/facet/ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\facet\\ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~2.png",
+  "created_at": "2026-08-20T16:18:58.087Z",
+  "bounds": {
+    "min": [
+      -2.1203,
+      -0.4267,
+      -1.2229
+    ],
+    "max": [
+      1.7153,
+      2.5647,
+      1.8167
+    ],
+    "size": [
+      3.836,
+      2.991,
+      3.04
+    ],
+    "rMax": 2.499,
+    "triangles": 340,
+    "vertices": 192
+  },
+  "spec": {
+    "style": "geological_rock_formation"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

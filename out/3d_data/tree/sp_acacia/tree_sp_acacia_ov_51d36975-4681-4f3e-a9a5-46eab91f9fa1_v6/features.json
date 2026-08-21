@@ -1,0 +1,29 @@
+{
+  "id": "tree_sp_acacia_ov_51d36975-4681-4f3e-a9a5-46eab91f9fa1",
+  "sourceImage": "tree/sp_acacia/ov_51d36975-4681-4f3e-a9a5-46eab91f9fa1",
+  "style": "animal_feeding_scene",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 828473,
+    "facadeHex": 12558400,
+    "baseHex": 4605510,
+    "accentHex": 16766720,
+    "darkHex": 2631720,
+    "brightHex": 14540253,
+    "glassHex": 462173
+  },
+  "totalParts": 6,
+  "partNames": [
+    "giraffe_head",
+    "giraffe_muzzle",
+    "giraffe_neck",
+    "hay_feeder_frame",
+    "hay_content",
+    "feeder_support"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "ellipsoid_sphere",
+    "cylinder",
+    "box"
+  ]
+}

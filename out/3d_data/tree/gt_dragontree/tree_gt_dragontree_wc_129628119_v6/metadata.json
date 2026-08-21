@@ -1,0 +1,40 @@
+{
+  "id": "tree_gt_dragontree_wc_129628119_v6",
+  "key": "tree/gt_dragontree_wc_129628119_15511d98_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "organic_tree_structure",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The model captures the complex, sprawling, and segmented nature of the Dragon Tree branches using a series of cylinders and conical frustums. The organic, twisting geometry is represented by interconnected segments. While the exact chaotic nature of every leaf cluster is simplified into ellipsoidal volumes, the overall structural density and branch distribution match the reference photo well.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/gt_dragontree/wc_129628119.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\gt_dragontree\\wc_129628119~0.png",
+  "created_at": "2026-08-20T16:54:52.392Z",
+  "bounds": {
+    "min": [
+      -1.4,
+      0,
+      -1.0706
+    ],
+    "max": [
+      1.4,
+      3,
+      1.0706
+    ],
+    "size": [
+      2.8,
+      3,
+      2.141
+    ],
+    "rMax": 1.762,
+    "triangles": 720,
+    "vertices": 427
+  },
+  "spec": {
+    "style": "organic_tree_structure"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

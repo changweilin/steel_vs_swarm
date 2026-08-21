@@ -1,0 +1,35 @@
+{
+  "id": "building_mass_4b36cf76-bdea-7886-fd39-5a3269b6047e",
+  "sourceImage": "building/mass/4b36cf76-bdea-7886-fd39-5a3269b6047e",
+  "style": "Modern Institutional Architecture",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 3355443,
+    "facadeHex": 12632256,
+    "baseHex": 10066329,
+    "accentHex": 16777215,
+    "darkHex": 2236962,
+    "brightHex": 15790320,
+    "glassHex": 4473924
+  },
+  "totalParts": 13,
+  "partNames": [
+    "MainBuildingBody",
+    "RoofPlatform",
+    "RoofMechanicalUnit1",
+    "RoofMechanicalUnit2",
+    "GlassFacade",
+    "Column_01",
+    "Column_02",
+    "Column_03",
+    "Column_04",
+    "Column_05",
+    "Column_06",
+    "GreenRoofPatch_1",
+    "GreenRoofPatch_2"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "cylinder"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6",
+  "key": "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_7505851c_v6",
+  "family": "building",
+  "subpart": "bld_adobe",
+  "style": "building/bld_adobe",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "Successfully reconstructed the historic adobe building based on the etching, capturing the main structure, stone/mud facade texture tones, protruding sloping tile roof, front windows/doors, leaning ladder accessory, and the surrounding ground plane with accurate proportions.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_adobe\\ov_84cbe77f-b99e-4b22-852b-336e128a4d06~0.png",
+  "created_at": "2026-08-20T17:23:39.080Z",
+  "bounds": {
+    "min": [
+      -6.3,
+      0,
+      -2.85
+    ],
+    "max": [
+      6.3,
+      5,
+      2.85
+    ],
+    "size": [
+      12.6,
+      5,
+      5.7
+    ],
+    "rMax": 6.915,
+    "triangles": 92,
+    "vertices": 62
+  },
+  "spec": {
+    "style": "building/bld_adobe"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

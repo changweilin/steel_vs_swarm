@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_images_7__v6",
+  "key": "rock/main_images (7)_681911b8_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 92,
+  "similarityReview": "The generated 3D polygonal model accurately captures the irregular, weathered blocky structure of the boulder shown in the image. The composition uses multiple interconnected polyhedral fragments to simulate the complex facets, flat top surface, and rugged side textures of the natural rock while maintaining a solid base at y = 0.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/images (7).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\images (7)~0.png",
+  "created_at": "2026-08-20T16:21:42.716Z",
+  "bounds": {
+    "min": [
+      -1.0948,
+      -0.0667,
+      -0.8086
+    ],
+    "max": [
+      1.0127,
+      1.4,
+      1.0358
+    ],
+    "size": [
+      2.107,
+      1.467,
+      1.844
+    ],
+    "rMax": 1.449,
+    "triangles": 136,
+    "vertices": 84
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

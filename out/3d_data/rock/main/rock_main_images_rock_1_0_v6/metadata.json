@@ -1,0 +1,40 @@
+{
+  "id": "rock_main_images_rock_1_0_v6",
+  "key": "rock/main_images rock (1)~0_5df65cde_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "rock",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The reconstructed 3D rock cluster accurately captures the rugged, layered texture of the photographed mountain rock formation using polyhedral geometries and an organic distribution of dodecahedron and icosahedron parts anchored at the base.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "rock/images rock (1).jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\rock\\main\\images rock (1)~0.png",
+  "created_at": "2026-08-20T16:21:56.544Z",
+  "bounds": {
+    "min": [
+      -2.7312,
+      -0.8354,
+      -2.3354
+    ],
+    "max": [
+      3.2855,
+      6.5208,
+      2.3802
+    ],
+    "size": [
+      6.017,
+      7.356,
+      4.716
+    ],
+    "rMax": 4.057,
+    "triangles": 120,
+    "vertices": 70
+  },
+  "spec": {
+    "style": "rock"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}

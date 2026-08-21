@@ -1,0 +1,40 @@
+{
+  "id": "tree_canopy_FB_IMG_1786818411804_v6",
+  "key": "tree/canopy_FB_IMG_1786818411804_d632065b_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "naturalistic_bonsai_tree",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 85,
+  "similarityReview": "The twisted trunk is modeled using a series of cylinders and conical_frustums to mimic the gnarled, weathered texture. The canopy is represented by multiple dodecahedron_polyhedron clusters to capture the irregular, fractal-like distribution of the pine needles. The overall silhouette and the dramatic curvature of the trunk are well-preserved.",
+  "version": 6,
+  "verStr": "v6",
+  "source_image": "tree/FB_IMG_1786818411804.jpg",
+  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\tree\\main\\FB_IMG_1786818411804~0.png",
+  "created_at": "2026-08-20T16:51:05.482Z",
+  "bounds": {
+    "min": [
+      -0.6,
+      -0.1,
+      -0.8539
+    ],
+    "max": [
+      1.8539,
+      4.3605,
+      0.7605
+    ],
+    "size": [
+      2.454,
+      4.46,
+      1.614
+    ],
+    "rMax": 2.004,
+    "triangles": 364,
+    "vertices": 213
+  },
+  "spec": {
+    "style": "naturalistic_bonsai_tree"
+  },
+  "method": "gemini_v6",
+  "status": "ingested"
+}
