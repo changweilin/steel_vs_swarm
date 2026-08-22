@@ -16,7 +16,7 @@ import {
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
-  reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow,
+  reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
   CREEP_UPG, DISSOLVE, dissolveOutAt,
@@ -3031,9 +3031,10 @@ export class BattleClient {
         ent.act = !!e.act;   // 主視野機(三機小隊只有一架):觀戰玩家視角的跟隨名冊只收它
         ent.kcd = e.kcd;   // 無人機自殺攻擊機冷卻(HUD 顯示用;非無人機為 undefined)
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
-        // NPC BOSS 段位(有這一格 = 這是 BOSS):血條外圍光暈顏色由它決定(黑>青>銀>金)。
+        // NPC BOSS 段位(有這一格 = 這是 BOSS):血條外圍光暈顏色與體型縮放由它決定。
         // 純表現層 —— 段位本身、狂暴化、恢復規則全在伺服器(見 sim._bossSync)。
         ent.bossSeg = e.bs;
+        if (ent.bossSeg != null && ent.mesh) ent.mesh.scale.setScalar(bossScaleF(ent.bossSeg));
         ent.inv = e.iv || 0;   // 無敵幀剩餘秒(伺服器完全免傷 → 本地命中回饋改跳 -0,不誤導)
         // 觀戰玩家資訊面板(2026-08-02 使用者需求「會顯示該玩家所有資訊,包括商店升級」):
         // 這些欄位**伺服器本來就發**(見 sim._serializeEnt 的 o.act 區塊),客戶端只是留存下來 ——
@@ -3238,6 +3239,7 @@ export class BattleClient {
     const { group, mixer } = makeUnit(key, civ ? e.cs : e.s,
       { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' && e.k !== 'hyper', dissolve: true });
     if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 護衛自殺機衝出:SIZE_F(1/2)體型
+    if (e.bs != null) group.scale.setScalar(bossScaleF(e.bs));      // NPC BOSS 階段體型縮放
     const hero = HERO_KINDS.has(e.k);
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
     const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
@@ -4199,6 +4201,15 @@ export class BattleClient {
       // **只有敵方那一階才演出** —— 自己這邊的 BOSS 倒下播一段勝利者的對白等於幫對手慶祝。
       // 演出本身住 main.js(它才知道現在打的是哪一章、哪一個陣營),這裡只上拋。
       if (ev.side !== this.side) this.onSiege?.(ev.stage, ev.side);
+    } else if (ev.e === 'bossSeg') {
+      // 劇情戰役 BOSS 進入新階段:播放護盾補滿與對應血條框顏色特效
+      const col = new THREE.Color(bossGlow(ev.seg)).getHex();
+      for (const ent of this.ents.values()) {
+        if (ent.pid === ev.pid && ent.mesh) {
+          shockRing(this.scene, this.effects, ent.mesh.position.x, ent.mesh.position.y, ent.mesh.position.z, 22 * bossScaleF(ev.seg), col);
+          starburst(this.scene, this.effects, ent.mesh.position.x, ent.mesh.position.y + (ent.dimH || 4) * 0.5, ent.mesh.position.z, 14 * bossScaleF(ev.seg), col);
+        }
+      }
     } else if (ev.e === 'plasma') {
       // 他人施放電漿扇形(自己那份已在 _tryFire 本地畫過)
       if (ev.pid !== this.youId) {

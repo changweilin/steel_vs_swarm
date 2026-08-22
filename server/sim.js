@@ -14,7 +14,7 @@ import {
   ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
-  BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF,
+  BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP,
@@ -1498,9 +1498,14 @@ export class BattleSim {
     const seg = max > 0 ? bossSegOf(hp / max) : 0;
     if (seg <= sq.bossSeg) return;
     for (let k = sq.bossSeg; k < seg; k++) this._bossEnrage(sq);
-    // 進段 ⇒ **護盾補滿**(2026-08-14 使用者)。MUST 排在狂暴之後:`sp` 軌剛把 maxSp 加大,
-    // 先補後升就是補到舊上限(見 data.js BOSS 檔頭 ⑥㋒)。陣亡的機體不補(它不重生)。
-    for (const b of sq.bodies) if (!b.dead) b.sp = b.maxSp;
+    // 進入新階段 ⇒ **無敵時間**(第2/3/4階段為 2/3/4 秒)與**護盾補滿**(MUST 排在狂暴之後)
+    const invS = bossInvulnS(seg);
+    for (const b of sq.bodies) {
+      if (!b.dead) {
+        b.sp = b.maxSp;
+        if (invS > 0) b.invUntil = Math.max(b.invUntil || 0, this.t + invS);
+      }
+    }
     sq.bossSeg = seg;
     this.events.push({ e: 'bossSeg', pid: sq.pid, side: sq.side, seg });
   }
@@ -1737,7 +1742,9 @@ export class BattleSim {
 
   /** 填彈/冷卻時間:武器基準 × 招式增益(2026-07-20:填彈折減併入武器階級,無獨立精通;客戶端 HUD 同一條公式) */
   _reloadT(h, def) {
-    return def.reload * this._buffMul(h, 'reload');
+    let r = def.reload * this._buffMul(h, 'reload');
+    if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) r *= BOSS.ENRAGE_RELOAD_F;
+    return r;
   }
 
   /**
@@ -1760,7 +1767,8 @@ export class BattleSim {
     // 重武器射擊路徑上不該再存在任何跳過彈夾/電力/射速閘的分支。
     this._refillIfDone(h, id, def);                                // 填彈完成 → 補滿(單一縫)
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
-    if (now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
+    const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1);
+    if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * (lenient ? 1.5 : 1))) return false;
     if (h.ammo[id] == null) h.ammo[id] = def.mag;
     // 超載(t02「同步率 100%」):時窗內免裝填 —— 見底就地補滿,不進填彈計時器。
     // MUST 排在「打空 → 開始填彈」之前,否則彈匣一見底就先被推進填彈窗,免裝填等於沒有。
@@ -1820,7 +1828,9 @@ export class BattleSim {
    *  2026-08-02:對建築的額外加成(舊 grenadeBuildingMul)已整組移除,MUST NOT 復辟。
    *  護盾/裝甲分軌剋制**不在這裡** —— 那要看目標當下的護盾水位,只能在 _damage 分層時結算。 */
   _heroDmg(h, def, targetKind) {
-    return def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg');
+    let dmg = def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg');
+    if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) dmg *= BOSS.ENRAGE_DMG_F;
+    return dmg;
   }
 
   /** 空中判定:無人機/直升機/集束轟炸機/護衛機/極音速飛彈恆算飛行;其餘以高度 ≥ AA_MIN_ALT 論 */
@@ -3187,7 +3197,8 @@ export class BattleSim {
       }
     } else { x = h.x; z = h.z; }
     h.mp -= mpc;
-    h.acd[slot] = this.t + A.cd;
+    const cdMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_CD_F : 1);
+    h.acd[slot] = this.t + A.cd * cdMul;
     if (A.fx !== 'stealth' && A.fx !== 'vision' && A.fx !== 'rally' && A.fx !== 'recon') h.stealthUntil = 0;   // 出手即現形
     // 招式載具遞送(2026-08-06 大招 / 2026-08-07 小招也收進來):**兩個槽位一律不在此結算** ——
     // 發射該機種形式的載具(kami×N / 集束轟炸機 / 極音速飛彈)或派出跟隨主機的輔助機隊,
@@ -3892,6 +3903,9 @@ export class BattleSim {
     // 被拆掉、階段照樣推進,鎖血等於沒有發生。
     floorHp = Math.max(floorHp, this.siegeHpFloor(t));
     dmg *= this._allyBotDmgF(t, by);               // 我方電腦玩家對 BOSS ×10% / 對建築 ×25%
+    if (t.sq?.boss && (t.sq.bossSeg || 0) >= 3 && (!by || !by.hero)) {
+      dmg *= BOSS.ENRAGE_NPC_DMG_F;                // 狂暴模式:受到兵波NPC/砲塔/主堡的傷害減少至25%
+    }
     if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
     // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減

@@ -36,11 +36,14 @@ import {
   STORY_MAP, MINI, FULL_STAGES, TEAM, SIEGE, UNITS, GAME, ECON, OTHER_SIDE, CHARACTERS,
   mapPlan, mapArg, mapScaleF, miniScaleF, laneChainOf, laneChainF, laneCountFor, towerStages,
   solveTowerSites, siteCPs, siegeSiteStages, towerLayoutAudit, edgeBufferM, llToXZ,
-  waveSpacingM, siegeTalkS, allyBotDmgF, isBotId,
+  waveSpacingM, siegeTalkS, allyBotDmgF, isBotId, hitH, hitR, HERO_HIT_R, heroTargetH, heroWeapon, heroAbility,
+  heroMobility, vsMult,
   BOSS, bossSegN, bossSegCapF, bossSegOf, bossGlow, bossZoneR, bossSlotPlan, bossSlotOff, bossHealF,
+  bossScaleF, bossInvulnS,
 } from '../public/js/data.js';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { BattleSim } from '../server/sim.js';
+import { BotBrain } from '../server/bots.js';
 
 const ARG = new Set(process.argv.slice(2));
 const BRK = {
@@ -49,6 +52,10 @@ const BRK = {
   team: ARG.has('--break-team'),
   prefill: ARG.has('--break-prefill'), sp: ARG.has('--break-sp'),
   hpscale: ARG.has('--break-hpscale'), allybot: ARG.has('--break-allybot'),
+  invuln: ARG.has('--break-invuln'), scale: ARG.has('--break-scale'),
+  enrageNpc: ARG.has('--break-enrage-npc'), enrageSpd: ARG.has('--break-enrage-spd'),
+  enrageDmg: ARG.has('--break-enrage-dmg'), enrageCd: ARG.has('--break-enrage-cd'),
+  enrageRate: ARG.has('--break-enrage-rate'),
 };
 // 壞版:開場預置退回「兩側一律取較小者」。做法 = 在 `_prefillLanes` 執行期間把 defSide 藏起來
 // (那正是舊制的行為),不必抄一份舊實作 —— 抄的那一份會自己過期。
@@ -62,6 +69,13 @@ if (BRK.prefill) {
 if (BRK.hpmul) BOSS.SEG_W = [1, 2, 3, 4, 5];
 // 壞版:敵方只剩一階塔(照抄迷你地圖的階數 ⇒ 沒有中段砲塔可打,而地圖大小自己會跟著縮)
 if (BRK.stage) STORY_MAP.DEF_STAGES = MINI.STAGES;
+if (BRK.invuln) BOSS.INVULN_S = [0, 0, 0, 0];
+if (BRK.scale) BOSS.SCALE_F = [1.0, 1.0, 1.0, 1.0];
+if (BRK.enrageNpc) BOSS.ENRAGE_NPC_DMG_F = 1.0;
+if (BRK.enrageSpd) BOSS.ENRAGE_SPD_F = 1.0;
+if (BRK.enrageDmg) BOSS.ENRAGE_DMG_F = 1.0;
+if (BRK.enrageCd) { BOSS.ENRAGE_CD_F = 1.0; BOSS.ENRAGE_RELOAD_F = 1.0; }
+if (BRK.enrageRate) BOSS.ENRAGE_RATE_F = 1.0;
 
 let pass = 0, fail = 0;
 const t = (n, ok, extra = '') => { ok ? (pass++, console.log(`  ✓ ${n}`)) : (fail++, console.log(`  ✗ ${n} ${extra}`)); };
@@ -234,6 +248,16 @@ console.log('\n■ Ⅳ BOSS 數值:全部推導,名額表是使用者指定的�
   t('段權重由薄到厚(使用者:先打掉的是 ×1 那一段)',
     BOSS.SEG_W.every((w, i) => i === 0 || w > BOSS.SEG_W[i - 1]));
   t('光暈色數 = 段數(黑 > 青 > 銀 > 金)', BOSS.GLOW.length === bossSegN());
+  t('無敵時間表 = [0, 2, 3, 4]s(第2/3/4階段有 2/3/4 秒無敵時間)',
+    JSON.stringify(BOSS.INVULN_S) === JSON.stringify([0, 2, 3, 4])
+    && [0, 1, 2, 3].every((k) => bossInvulnS(k) === BOSS.INVULN_S[k]));
+  t('體型縮放表 = [1.0, 1.2, 1.5, 2.0](大小增加 0%/20%/50%/100%)',
+    JSON.stringify(BOSS.SCALE_F) === JSON.stringify([1.0, 1.2, 1.5, 2.0])
+    && [0, 1, 2, 3].every((k) => bossScaleF(k) === BOSS.SCALE_F[k]));
+  t('第 4 階段狂暴模式常數齊備(NPC減傷25%/移速減半/攻速+25%/換彈+25%/技能CD+25%/傷害+25%)',
+    BOSS.ENRAGE_NPC_DMG_F === 0.25 && BOSS.ENRAGE_SPD_F === 0.5
+    && BOSS.ENRAGE_RATE_F === 1.25 && BOSS.ENRAGE_RELOAD_F === 1.25
+    && BOSS.ENRAGE_CD_F === 1.25 && BOSS.ENRAGE_DMG_F === 1.25);
   t('天花板 capF:0 段 = 1、末段 = 0、且嚴格遞減',
     bossSegCapF(0) === 1 && near(bossSegCapF(bossSegN()), 0)
     && Array.from({ length: bossSegN() }, (_, k) => bossSegCapF(k) > bossSegCapF(k + 1)).every(Boolean));
@@ -333,15 +357,21 @@ console.log('\n■ Ⅴ 行為直測(跑真品 BattleSim:塔、BOSS、鎖血、�
   }
   const COMBAT = Object.entries(ECON.UPGRADES).filter(([, u]) => u.abil).map(([k]) => k);
   const DEFENCE = Object.keys(ECON.UPGRADES).filter((k) => !COMBAT.includes(k));
-  let enrageOk = true, defOk = true, spOk = true, ratioOk = true;
+  let enrageOk = true, defOk = true, spOk = true, ratioOk = true, invulnOk = true, scaleOk = true;
   for (let k = 1; k < bossSegN(); k++) {
     const want = bossSegCapF(k) - 1e-4;                       // 進段當下的 HP 比例
     for (const b of sq0.bodies) { b.hp = b.maxHp * want; b.sp = 0; }
+    const tBefore = sim.t;
     sim._bossSync(sq0);
     if (sq0.bossSeg !== k) enrageOk = false;
     if (!COMBAT.every((it) => (h0.upg[it] || 0) === Math.min(ECON.UPGRADES[it].max, k))) enrageOk = false;
     if (!DEFENCE.every((it) => (h0.upg[it] || 0) === Math.min(ECON.UPGRADES[it].max, k))) defOk = false;
     if (!sq0.bodies.every((b) => b.sp === b.maxSp)) spOk = false;
+    // 進入第 2/3/4 階段:獲得 2/3/4 秒無敵時間
+    if (!sq0.bodies.every((b) => (b.invUntil || 0) >= tBefore + BOSS.INVULN_S[k] - 1e-6)) invulnOk = false;
+    // 體型大小增加 20%/50%/100%:命中量體 hitH/hitR 等比放大
+    if (!sq0.bodies.every((b) => near(hitH(b), heroTargetH(b.kind, b.ch) * BOSS.SCALE_F[k])
+      && near(hitR(b), heroTargetH(b.kind, b.ch) * HERO_HIT_R[b.kind] * BOSS.SCALE_F[k]))) scaleOk = false;
     // 裝甲上限升級 MUST 等比放大當下 HP ⇒ 段位比例逐位元(容 round)不變
     if (!sq0.bodies.every((b) => near(b.hp / b.maxHp, want, 2e-3))) ratioOk = false;
   }
@@ -355,8 +385,58 @@ console.log('\n■ Ⅴ 行為直測(跑真品 BattleSim:塔、BOSS、鎖血、�
     sim.creepUpg[DEF].every((l) => l === 0));
   t('進段補滿護盾(MUST 排在狂暴之後 —— sp 軌剛把 maxSp 加大)',
     spOk && sq0.bodies.some((b) => b.maxSp > 0), sq0.bodies.map((b) => `${b.sp}/${b.maxSp}`).join(' '));
+  t('進入第 2/3/4 階段分別獲得 2/3/4 秒無敵時間(完全免傷)',
+    invulnOk, sq0.bodies.map((b) => `${b.invUntil - sim.t}s`).join(' '));
+  t('進入第 2/3/4 階段體型分別增加 20%/50%/100%(hitH/hitR 同步放大)',
+    scaleOk, sq0.bodies.map((b) => `${hitH(b).toFixed(2)}m`).join(' '));
   t('裝甲上限升級 MUST 等比放大當下 HP(補滿那一截 = 段位被推回上一階;只放大上限 = 連鎖狂暴到頂)',
     ratioOk, sq0.bodies.map((b) => (b.hp / b.maxHp).toFixed(4)).join(' '));
+
+  // ---- 第 4 階段狂暴模式行為直測 ----
+  const brain0 = new BotBrain(sim, p0, DEF, 0);
+  brain0.diff = { tactic: true, elite: true };
+  brain0.tac = { PULL_HP: 0.3, BASE_HP: 0.2, PULL_SP: 0.5 };
+  t('第 4 階段狂暴:不撤退(_pullWant 回傳 null)', brain0._pullWant(h0, 0.1, 0) === null);
+  t('第 4 階段狂暴:解除活動範圍拘束(_zoneClamp 放行)',
+    JSON.stringify(brain0._zoneClamp(9999, 9999)) === JSON.stringify([9999, 9999]));
+  const normalSpd = heroMobility(h0.kind, CHARACTERS[h0.ch]?.mods, false);
+  t(`第 4 階段狂暴:移動速度減半(×${BOSS.ENRAGE_SPD_F})`,
+    near(brain0._speed(h0), normalSpd * BOSS.ENRAGE_SPD_F, 1e-3),
+    `${brain0._speed(h0)} vs ${normalSpd * BOSS.ENRAGE_SPD_F}`);
+
+  const wp0 = heroWeapon(h0.ch, 'light', h0.abil.light || 1, true);
+  const baseDmg0 = wp0.dmg * vsMult(wp0, 'creep');
+  t(`第 4 階段狂暴:傷害 +25%(×${BOSS.ENRAGE_DMG_F})`,
+    near(sim._heroDmg(h0, wp0, 'creep'), baseDmg0 * BOSS.ENRAGE_DMG_F, 1e-6),
+    `${sim._heroDmg(h0, wp0, 'creep')} vs ${baseDmg0 * BOSS.ENRAGE_DMG_F}`);
+  t(`第 4 階段狂暴:換彈時間 +25%(×${BOSS.ENRAGE_RELOAD_F})`,
+    near(sim._reloadT(h0, wp0), wp0.reload * BOSS.ENRAGE_RELOAD_F, 1e-6),
+    `${sim._reloadT(h0, wp0)} vs ${wp0.reload * BOSS.ENRAGE_RELOAD_F}`);
+
+  h0.mp = 999; h0.acd = {};
+  const abl0 = heroAbility(h0.ch, 'skill', h0.abil.skill || 1);
+  sim.heroCast(p0, 'skill', h0.x, h0.z);
+  t(`第 4 階段狂暴:技能 CD 時間 +25%(×${BOSS.ENRAGE_CD_F})`,
+    near(h0.acd.skill - sim.t, abl0.cd * BOSS.ENRAGE_CD_F, 1e-6),
+    `${(h0.acd.skill - sim.t).toFixed(2)}s vs ${(abl0.cd * BOSS.ENRAGE_CD_F).toFixed(2)}s`);
+
+  // 清除無敵時間後測試受擊減傷
+  for (const b of sq0.bodies) b.invUntil = 0;
+  const allyHero = sim.heroes.get(1);
+  h0.sp = 0; h0.hp = h0.maxHp;
+  const hpPreNpc = h0.hp;
+  const creepDummy = { kind: 'soldier', cu: 1 };
+  sim._damage(h0, 100, creepDummy, 999);
+  const creepDmgTaken = hpPreNpc - h0.hp;
+  h0.sp = 0; h0.hp = h0.maxHp;
+  const hpPreHero = h0.hp;
+  sim._damage(h0, 100, allyHero, 999);
+  const heroDmgTaken = hpPreHero - h0.hp;
+  t(`第 4 階段狂暴:受到兵波NPC/砲塔/主堡的傷害減少至 25%(減傷 75%)`,
+    near(creepDmgTaken, 100 * BOSS.ENRAGE_NPC_DMG_F, 1e-3),
+    `NPC傷害 ${creepDmgTaken} vs 期望 ${100 * BOSS.ENRAGE_NPC_DMG_F}`);
+  t('第 4 階段狂暴:受到真人玩家傷害不折減(100% 全額)',
+    near(heroDmgTaken, 100, 1e-3), `玩家傷害 ${heroDmgTaken} vs 100`);
   t('BOSS 買不到任何東西(權威閘門在 sim.buy)',
     typeof sim.buy(p0, 'hp') === 'string' && typeof sim.buy(p0, 'lw') === 'string'
     && typeof sim.buy(p0, 'creep', 0) === 'string' && sim.buy(1, 'hp') === null);
@@ -455,8 +535,8 @@ console.log('\n■ Ⅵ 電腦玩家:活動範圍夾在位置寫入的唯一縫�
     /_moveToward\(h, u, this\._home\(\), dt\)/.test(grabMethod(botSrc, 'update'))
     && /this\._rallyAt \|\| this\._home\(\)/.test(grabMethod(botSrc, '_rally'))
     && /this\._rallyAt = this\._home\(\); return;/.test(grabMethod(botSrc, '_pickRally')));
-  t('BOSS 不推線(照舊累加 prog 會被夾在圓緣上,`_stuck` 於是整場誤判撞牆)',
-    /sim\.bossHold\?\.has\(this\.pid\)\) this\._hold\(h, u, dt\)/.test(grabMethod(botSrc, 'update')));
+  t('BOSS 不推線(照舊累加 prog 會被夾在圓緣上,`_stuck` 於是整場誤判撞牆;狂暴前守據點)',
+    /sim\.bossHold\?\.has\(this\.pid\)( && !\([^)]+\))?\) this\._hold\(h, u, dt\)/.test(grabMethod(botSrc, 'update')));
   t('採購前置篩選帶 `sim.isBoss`(權威閘門仍在 sim.buy)',
     /!sim\.isBoss\(h\) &&/.test(grabMethod(botSrc, 'update')));
   t('`isBoss` 的判據是「這一場有防守方、而且它就是那一邊」(MUST NOT 判 bot id)',
