@@ -19,7 +19,7 @@ import {
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP,
   selfCollider, COLLIDE_KINDS,
-  ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
+  ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
 } from '../public/js/data.js';
 
@@ -3924,7 +3924,8 @@ export class BattleSim {
     }
     let dealt;   // 實際造成的護盾 + 裝甲損耗(吸血結算基準)
     if (t.hero) {
-      dmg *= this._buffMul(t, 'dmgTaken');   // 複合裝甲詞綴 / 護盾類招式
+      const wet = t.wet || (t.pid ? this.heroes.get(t.pid)?.wet : 0) || 0;
+      dmg *= this._buffMul(t, 'dmgTaken') * fluidFactor(wet);   // 複合裝甲詞綴 / 護盾招式 / 流體沉浸減傷(水域 1/2, 沼澤 1/4)
       t.lastHitAt = this.t;                  // 進入戰鬥:護盾回復重新計時
       this._stampSup(t, by);                 // 高地壓制:站得越高、挨這一發之後越打不準/閃不掉/跑不動
       this._breakOnHit(t);                   // 「挨一發就結束」的招式(t02 超載)在此撤銷
@@ -4308,38 +4309,31 @@ export class BattleSim {
     this._anchors = this._waveAnchors();
 
     // 小隊層級(每名玩家一次):電力回充 — mp 是三架共用的。
-    // 2026-07-17:被動收入停發(金錢只來自擊殺/助攻/物資);回充速度 × 充能等級(chargeF)。
+    // 2026-07-17:被動收入停發(金錢只來自擊殺/助攻/物資);回充速度 × 充能等級(chargeF) × 流體沉浸倍率(fluidFactor)。
     for (const h of this.heroes.values()) {
-      // 水域(領機泡水,h.wet===1):電子系統失效 —— 停止電力回充;滯留 WATER_FREEZE_S 後再凍結換彈與招式冷卻。
-      // reload/acd 是絕對 sim 時間 deadline(this.t 持續前進不會自停),凍結 = 每凍結 tick 把 deadline 往後推 dt。
-      const inWater = (h.wet || 0) === 1 && !h.dead;
-      if (!inWater && this._aliveN(h) > 0 && h.mp < h.maxMp) {
-        h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * chargeF(h.upg?.ch) * dt);
-      }
-      if (inWater && this.t - (h.wetT || 0) >= TERRAIN_FX.WATER_FREEZE_S) {
-        for (const id in h.reloadUntil) if (h.reloadUntil[id] > this.t) h.reloadUntil[id] += dt;
-        if ((h.acd?.skill || 0) > this.t) h.acd.skill += dt;
-        if ((h.acd?.ult || 0) > this.t) h.acd.ult += dt;
+      // 流體沉浸異常狀態(2026-08-22):電力回充速度減至 1/2(水域) / 1/4(沼澤)。
+      const wetMul = fluidFactor(h.wet || 0);
+      if (!h.dead && this._aliveN(h) > 0 && h.mp < h.maxMp) {
+        h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * chargeF(h.upg?.ch) * wetMul * dt);
       }
     }
     // 機體層級:重生 / 護盾脫戰回復 / 主堡修裝甲
     for (const sq of this.squads.values()) {
       const hh = this.heroes.get(sq.pid);
-      const swamp = (hh?.wet || 0) === 2;   // 沼澤只影響回報環境的領機(玩家所在機體)
       for (const b of sq.bodies) {
         if (b.dead) {
           if (this.t >= b.respawnAt && this._tickN > (b.deadTick || 0) + 1) this._respawn(b);
           continue;
         }
-        const bSwamp = swamp && b === hh;   // 沼澤:無法恢復/治療 護盾與裝甲(feature 7)
+        const bWet = b === hh ? (hh?.wet || 0) : 0;
+        const wetMul = fluidFactor(bWet);
         // 護盾:脫戰(OOC_S 秒沒受擊)自然回復;裝甲只能回主堡 / 治療招式。
-        // 回復速度 × 充能等級(chargeF;SP_REGEN_PS 是滿級規格)
-        // 恢復速度倍率(s12「滿天星座」的 rally;無招式時 rg 恆為 1 ⇒ 逐位元同舊制)
+        // 回復速度 × 充能等級(chargeF) × 護盾恢復倍率(rg) × 流體沉浸倍率(wetMul)
         const rg = b.hero ? this._buffMul(b, 'regen') : 1;
-        if (!bSwamp && b.sp < b.maxSp && this.t - b.lastHitAt > VITALS.OOC_S) {
-          b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * chargeF(b.upg?.ch) * rg * dt);
+        if (b.sp < b.maxSp && this.t - b.lastHitAt > VITALS.OOC_S) {
+          b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * chargeF(b.upg?.ch) * rg * wetMul * dt);
         }
-        if (!bSwamp && b.hp < b.maxHp) {
+        if (b.hp < b.maxHp) {
           const [bx, bz] = this.basePos[b.side];
           // 裝甲平時只有主堡修得回來;rally 生效期間**全場都修**(那正是這一招換來的東西),
           // 速率同吃 rg。MUST NOT 把「全場都修」寫成永久旗標 —— 它只活在 mods 的時窗裡。
@@ -4349,9 +4343,6 @@ export class BattleSim {
             this._healBody(b, UNITS[b.kind].regen * rg * dt, rg > 1 ? 'skill' : 'base');
           }
         }
-        // 沼澤滯留:緩慢扣血(火災 1/3 速率,走 _damage 護盾先擋;null 攻擊者 = 不記擊殺信用;
-        // floorHp=1 硬地板 → 最多扣到剩 1 滴不致死)
-        if (bSwamp && this.t - (hh.wetT || 0) >= TERRAIN_FX.SWAMP_DRAIN_S) this._damage(b, TERRAIN_FX.SWAMP_DRAIN_PS * dt, null, 0, 1);
       }
       if (hh.dead) this._promote(sq);   // 全滅後第一架回歸 → 接管主視野
     }

@@ -34,7 +34,7 @@ import {
   TOWER_SITE_N, frontKillHp, overflySurviveHp, waveDps, waveComp, blastFootprintR,
   kamiBlast, decoyBlast, decoyBombBlast, hyperBlast,
   SPECIAL, specialBudget, specialBlastR, hyperShare,
-  GAME,
+  GAME, fluidFactor,
 } from '../public/js/data.js';
 
 const src = readSrc('public', 'js', 'game.js');
@@ -406,9 +406,9 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
 console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬不上去 / 掉幅只由傷害決定)');
 // ---------------------------------------------------------------------------
 {
-  const proto = new Function('FLIGHT', 'airSinkM', 'liftMax', 'liftRegen', 'liftDrainPS', 'UNITS',
+  const proto = new Function('FLIGHT', 'airSinkM', 'liftMax', 'liftRegen', 'liftDrainPS', 'UNITS', 'fluidFactor',
     `return ({ ${grab('_stepLift')}, ${grab('_airSinkHit')}, ${grab('_liftMax')} });`)(
-    FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, UNITS);
+    FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, UNITS, fluidFactor);
   const u = { vspeed: UNITS.drone.vspeed, mpRegen: UNITS.drone.mpRegen };
   const mk = (over = {}) => Object.assign(Object.create(null), proto, {
     maxMp: UNITS.drone.mp, _mpAuth: true, heroKind: 'drone', upg: { ch: 0 }, hud: { feed: () => {} },
