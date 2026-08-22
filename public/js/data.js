@@ -2459,37 +2459,37 @@ export const WATER = {
   FULL_D: 5.0, SLOW_MIN: 0.25, SHORE: 0.05, SWAMP_BAND: 2.2, GRID_M: 20,
 };
 
-// ---- 地形環境效果(2026-07-19;水域/沼澤/火場對移動與狀態的影響)----
-// 移動減速純客戶端(領機客戶端權威);狀態結算純伺服器(客戶端只回報身處環境 env)。
-// SWAMP_SLOW:沼澤進場移動倍率(1/4);滯留越久越陷 → 到 SWAMP_DRAIN_S(扣血起算門檻)線性降到
-//   SWAMP_SLOW_MIN(1/8;純客戶端)—— 減速探底與開始扣血同時發生,單一門檻不重複手寫。
-// SWAMP_DRAIN_S:扣血起算門檻;SWAMP_DRAIN_PS:每秒扣血 = 火災 dot × SWAMP_DRAIN_FIRE_FRAC(HAZARDS 後推導,勿手寫),
-//   走 _damage(護盾先擋、剩餘吃裝甲),但硬地板 1 滴不致死(sim floorHp)。
-// WATER_FREEZE_S:水域滯留多久後凍結換彈/招式冷卻;FIRE_FOG_S/_MAX_S:火場滯留視野霧化起訖(純客戶端)。
-// WATER_EYE_F / SWAMP_EYE_F:異常狀態的觸發眼位係數(2026-07-23,見 envTrigger)。
+// ---- 地形環境效果(2026-08-22 重構;流體沉浸異常狀態:水域/沼澤為同種狀態但數值不同)----
+// 機體完全沉浸在水面下時觸發。
+// - 水域(WATER, wet===1): 數值減至 1/2
+// - 沼澤(SWAMP, wet===2): 數值減至 1/4
+// 涵蓋五大維度:受到傷害 / 水下移動速度 / 飛行動力回速 / 電力回充速度 / 護盾脫戰回復速度。
+// (舊制退場:WATER_FREEZE_S 凍結冷卻/換彈、SWAMP_DRAIN_* 沼澤扣血、SWAMP_SLOW_MIN 移動探底已全數退場)。
 export const TERRAIN_FX = {
-  SWAMP_SLOW: 1 / 4, SWAMP_SLOW_MIN: 1 / 8,
-  SWAMP_DRAIN_S: 3, SWAMP_DRAIN_FIRE_FRAC: 1 / 3, SWAMP_DRAIN_PS: 0,   // PS 由 HAZARDS.fire.dot 推導(見下方回填)
-  WATER_FREEZE_S: 3,
+  WATER_FACTOR: 1 / 2,   // 水域異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/2)
+  SWAMP_FACTOR: 1 / 4,   // 沼澤異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/4)
+  WATER_DMG_TAKEN: 1 / 2, SWAMP_DMG_TAKEN: 1 / 4,
+  WATER_SLOW: 1 / 2, SWAMP_SLOW: 1 / 4,
+  WATER_LIFT_REGEN: 1 / 2, SWAMP_LIFT_REGEN: 1 / 4,
+  WATER_MP_REGEN: 1 / 2, SWAMP_MP_REGEN: 1 / 4,
+  WATER_SP_REGEN: 1 / 2, SWAMP_SP_REGEN: 1 / 4,
   FIRE_FOG_S: 2.5, FIRE_FOG_MAX_S: 8,
-  WATER_EYE_F: 1, SWAMP_EYE_F: 1 / 2,
 };
 
+/** 流體沉浸異常狀態倍率(0 正常 / 1 水域 1/2 / 2 沼澤 1/4) */
+export const fluidFactor = (wet) => (wet === 1 ? TERRAIN_FX.WATER_FACTOR : (wet === 2 ? TERRAIN_FX.SWAMP_FACTOR : 1));
+
 /**
- * 地形異常狀態觸發(2026-07-23;唯一縫 —— 客戶端 _envAt 與水下帷幕共用同一把尺)。
- * 舊制「踩到水/沼格子就觸發」會讓 0.3m 淺灘也凍結電子系統,與「眼位沒入水面才變色」的水下帷幕
- * 對不上。新制改以**機體視線(座艙眼位)高度 vs 觸發水平面**判定 —— 看得到水下才算泡水(WYSIWYG):
- *   水域:眼位(footY + eyeH × WATER_EYE_F)低於水面 waterY
- *   沼澤:眼位一半(footY + eyeH × SWAMP_EYE_F)低於沼澤面 = waterY + WATER.SWAMP_BAND
- *         (沼澤帶上緣,與 terrainEnvCode 的分類界同一個數字,MUST NOT 另寫)
- * ⇒ 跳躍/蓄力跳躍把眼位抬離水平面的那段時間,異常狀態自然解除(呼叫端無需另設計時器)。
- * ground = terrainEnvCode 的地表分類(0 乾 / 1 水 / 2 沼);footY = 站立面絕對高;eyeH = 眼位離站立面高。
+ * 地形異常狀態觸發(2026-07-23 / 2026-08-22 整合重構;唯一縫 —— 客戶端 _envAt 與水下帷幕共用同一把尺)。
+ * 機體完全沉浸在水面/沼澤面下時觸發:
+ *   水域:機體頂部(footY + bodyH)低於水面 waterY
+ *   沼澤:機體頂部(footY + bodyH)低於沼澤面 = waterY + WATER.SWAMP_BAND
+ * ground = terrainEnvCode 的地表分類(0 乾 / 1 水 / 2 沼);footY = 站立面絕對高;bodyH = 機體全高。
  */
-export function envTrigger(ground, waterY, footY, eyeH) {
+export function envTrigger(ground, waterY, footY, bodyH) {
   if (!ground || waterY == null) return 0;
-  const eyeF = ground === 1 ? TERRAIN_FX.WATER_EYE_F : TERRAIN_FX.SWAMP_EYE_F;
   const planeY = ground === 1 ? waterY : waterY + WATER.SWAMP_BAND;
-  return footY + eyeH * eyeF < planeY ? ground : 0;
+  return footY + (bodyH || 0) < planeY ? ground : 0;
 }
 
 // ---- 地形坡度移動(2026-07-30 使用者需求;地面單位的上坡/下坡唯一縫)----
@@ -5522,9 +5522,6 @@ export const HAZARDS = {
   sacredtree:   { name: '神木',       biome: 'green', r: 9,   block: true, hp: 520, salvage: 0.75, hgt: 26 },
   boulder:      { name: '巨石',       biome: 'bare',  r: 8,   block: true, hp: 420, salvage: 0.7,  hgt: 13 },
 };
-
-// 沼澤扣血速率 = 火災 dot 的 SWAMP_DRAIN_FIRE_FRAC(1/3)—— 推導值回填(MUST NOT 手寫;單一真相 = 火災 dot)。
-TERRAIN_FX.SWAMP_DRAIN_PS = HAZARDS.fire.dot * TERRAIN_FX.SWAMP_DRAIN_FIRE_FRAC;
 
 // ---- 危險區生成參數(伺服器 sim._seedField)----
 export const FIELD = {
