@@ -35,7 +35,7 @@ import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeHitShell
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
-import { onCtrlChange } from './ctrlmode.js';
+import { onCtrlChange, viewMode, onViewModeChange } from './ctrlmode.js';
 import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
@@ -623,11 +623,15 @@ export class BattleClient {
     this._rmbDownAt = 0;              // 右鍵按下時刻(0 = 未按);達門檻 → 出招,短按放開 → 切換模式(見 _tickHoldAbility / _rmbUp)
     this._rmbAbilityFired = false;    // 本次按住右鍵是否已觸發專屬招(觸發後放開不再切換模式 → 切換/出招互不衝突)
 
+    this.viewMode = viewMode();       // 視角模式('fpv' 第一人稱 / 'tps' 第三人稱,單一真相在 ctrlmode.js)
+    this._offView = onViewModeChange((vm) => this._onViewModeChange(vm));
+
     this._initScene();
     this._initLanes();
     this._initInput();
     this._initMinimap();
     this._buildCockpit();
+    if (this.cockpit && this.viewMode === 'tps') this.cockpit.visible = false;
 
     // 出生點:己方主堡朝敵方主堡方向外推 GAME.HERO_SPAWN_OFF(避免卡在主堡模型裡),面向敵方
     this._spawnAt();
@@ -668,7 +672,11 @@ export class BattleClient {
         this.flight = false;
         this.charge = 0;
         this.baseFov = UNITS[this.heroKind].fov;
-        if (this.cockpit) { this.camera.remove(this.cockpit); this._buildCockpit(); }
+        if (this.cockpit) {
+          this.camera.remove(this.cockpit);
+          this._buildCockpit();
+          if (this.viewMode === 'tps') this.cockpit.visible = false;
+        }
       }
     }
     if (!this.ch || !this.side) return;
@@ -676,6 +684,17 @@ export class BattleClient {
       const def = heroWeapon(this.ch, slot, this.abil[slot] || 1, true);
       this.wdef[slot] = def;
       if (!this.wstate[slot] || refill) this.wstate[slot] = { ammo: def.mag, reloadEnd: 0 };
+    }
+  }
+
+  /** 視角模式即時切換(fpv 第一人稱 ⇄ tps 第三人稱) */
+  _onViewModeChange(vm) {
+    this.viewMode = vm;
+    if (this.cockpit) this.cockpit.visible = (vm === 'fpv');
+    for (const ent of this.ents.values()) {
+      if (ent.isSelf) {
+        ent.mesh.visible = (vm === 'tps' && !ent.dead);
+      }
     }
   }
 
@@ -3051,7 +3070,7 @@ export class BattleClient {
         // 三機小隊:主視野由伺服器指定(e.act);換機時整個座機狀態接管過去
         if (e.pid === this.youId && !!e.act !== ent.isSelf) this._takeOver(ent, e);
         if (wasDead && !e.dead && !ent.isSelf) ent._snapPos = true;
-        ent.mesh.visible = !e.dead && !ent.isSelf;
+        ent.mesh.visible = !e.dead && (!ent.isSelf || this.viewMode === 'tps');
         if (e.dc != null) ent.dock = !!e.dc;   // 餌機掛點:已組合就緒(組合/分離動畫)
         if (ent.isSelf) {
           this.decoyCd = e.dcd ?? 0;
@@ -3243,7 +3262,7 @@ export class BattleClient {
     const hero = HERO_KINDS.has(e.k);
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
     const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
-    if (isSelf) group.visible = false;
+    if (isSelf) group.visible = (this.viewMode === 'tps');
     this.scene.add(group);
     if (mixer) this.mixers.add(mixer);
     if (group.userData.spin) this.spinners.add(group);
@@ -6413,6 +6432,22 @@ export class BattleClient {
     this._gLaser = { group, beam, ring };
   }
 
+  _selfMuzzle(dir, rng = 100) {
+    if (this.viewMode === 'tps') {
+      const eyeH = this._eyeH();
+      const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+      const muz = this.pos.clone().add(new THREE.Vector3(0, eyeH, 0)).addScaledVector(fwd, 1.2);
+      if (dir) {
+        const targetPoint = this.camera.position.clone().add(dir.clone().multiplyScalar(rng));
+        dir.copy(targetPoint).sub(muz).normalize();
+      }
+      return muz;
+    }
+    return this.gunGroup
+      ? this.gunGroup.localToWorld(this._muzzle.clone())
+      : this.camera.position.clone().add(dir ? dir.clone().multiplyScalar(2) : new THREE.Vector3());
+  }
+
   _tryFire(now) {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
     const { id, def, st } = this._curWeapon();
@@ -6488,21 +6523,14 @@ export class BattleClient {
     // 重武器擊發:廣播離散事件,驅動第三人稱機體的掛點動畫(自己與他人皆可見)
     if (id === 'heavy') this.net?.send({ t: 'heavyFire' });
 
-    // 槍口與射向(座艙槍管末端,世界座標)
-    this.camera.updateMatrixWorld();
-    const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    const muzzle = this.gunGroup
-      ? this.gunGroup.localToWorld(this._muzzle.clone())
-      : this.camera.position.clone().add(dir.clone().multiplyScalar(2));
-
     // 這一發的有效射程(**唯一縫**:射程光暈 `_reachable` 吃的是同一個 `_effRange`)。
-    // 高度制空是**逐目標**的 ⇒ 先以機制上限解析準星目標,再以「對這個目標」的倍率定案 ——
-    // 打不到任何單位(對地/空放)時 ent=null ⇒ 倍率 1 = 基礎射程。
-    // 2026-08-01:舊制此處是 `def.range * _altRangeMul(def) * rMul`,而 `rMul` 早在巨砲移除
-    // (重砲窗 BARRAGE.RANGE_F)時就被刪掉 —— 留下的兩處引用是**未宣告變數**,beam 與 missile
-    // 一開火就 ReferenceError,整幀(含射程光暈/彈體更新/渲染)在 _tryFire 當場中斷。
     const rMul = this._altRangeTo(this._aimTarget(this._maxRange(def)));
     const rng = def.range * rMul;
+
+    // 槍口與射向(座艙槍管末端或 TPS 機體發射點,世界座標)
+    this.camera.updateMatrixWorld();
+    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const muzzle = this._selfMuzzle(dir, rng);
 
     // 後座力(依武器分級 def.recoil):視角上踢(準星上移)+ 偏擺 + 槍身後坐 + 鏡頭震動 + 位移擊退
     // 位移懲罰在 _updatePlayer 依 `_recoilMoveF()` 夾住(係數 ← 後座量);'back' 每發沿槍口反向擊退。
@@ -6648,12 +6676,10 @@ export class BattleClient {
    */
   _burstEchoSelf(def, id, prof) {
     if (!this.side || this.dead || !this.ch) return;
+    const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)));
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    const muzzle = this.gunGroup
-      ? this.gunGroup.localToWorld(this._muzzle.clone())
-      : this.camera.position.clone().add(dir.clone().multiplyScalar(2));
-    const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)));
+    const muzzle = this._selfMuzzle(dir, rng);
 
     // 逐發手感(見上方註):槍口焰 / 槍身後坐 / 鏡頭震動 / 準星上踢 / 擊退
     this.flash.visible = true;
@@ -7786,19 +7812,42 @@ export class BattleClient {
     // 晚一步就要等下一幀才看得到,鎖定會慢半拍。後座力/震動仍疊在合成那一行(刻意不抵銷)。
     this._tickViewLock(dt, now);
 
-    // 座艙視點 = 機體實高 × heroView(依機體形狀的頭艙位置):人形在胸腔/頸根、獸型在獸首
-    // (低且遠前)、飛行型在機鼻。與 models.js 的 heroTargetH 同一個縫,改角色護甲即連動。
-    // 蓄力中重心下沉(鏡頭跟著蹲)。
-    const vw = heroView(this.heroKind, this.ch, this._flying());
-    const eye = this._eyeH();          // 單一縫:地形異常狀態的視線高度判定共用同一式
-    const headF = this.selfH * vw.f;   // 沿正面方向前移(three:-z 為前)
-    this.camera.position.copy(this.pos).add(
-      new THREE.Vector3(-Math.sin(this.yaw) * headF, eye, -Math.cos(this.yaw) * headF));
-    this.camera.rotation.set(0, 0, 0);
-    this.camera.rotateY(this.yaw + this.recoil.y + shY);
-    this.camera.rotateX(this.pitch + this.recoil.p + shP);
-    this.camera.rotateZ(this.roll + shR);
-    this._cameraDeClip();   // 鏡頭防穿模:貼牆時退回障礙外緣,不看穿建物/神木/巨岩
+    // 視角模式:第一人稱(fpv) vs 第三人稱(tps)
+    if (this.viewMode === 'tps') {
+      if (this.cockpit && this.cockpit.visible) this.cockpit.visible = false;
+      const h = this.selfH;
+      const baseDist = Math.max(SPEC_CAM.MIN_DIST, h * SPEC_CAM.DIST_F);
+      const dist = this.aiming ? baseDist * 0.65 : baseDist;
+      const cp = Math.cos(this.pitch);
+      const aimY = this.pos.y + h * SPEC_CAM.AIM_F;
+      this.camera.position.set(
+        this.pos.x + Math.sin(this.yaw) * dist * cp,
+        aimY - Math.sin(this.pitch) * dist,
+        this.pos.z + Math.cos(this.yaw) * dist * cp,
+      );
+      const floor = this._surf(this.camera.position.x, this.camera.position.z, this.camera.position.y)
+        + SPEC_CAM.FLOOR_M;
+      if (this.camera.position.y < floor) this.camera.position.y = floor;
+      this.camera.rotation.set(0, 0, 0);
+      this.camera.rotateY(this.yaw + this.recoil.y + shY);
+      this.camera.rotateX(this.pitch + this.recoil.p + shP);
+      this.camera.rotateZ(this.roll + shR);
+      this._cameraDeClip();   // 鏡頭防穿模:退回障礙外緣,不看穿建物/神木/巨岩
+    } else {
+      // 座艙視點 = 機體實高 × heroView(依機體形狀的頭艙位置):人形在胸腔/頸根、獸型在獸首
+      // (低且遠前)、飛行型在機鼻。與 models.js 的 heroTargetH 同一個縫,改角色護甲即連動。
+      // 蓄力中重心下沉(鏡頭跟著蹲)。
+      const vw = heroView(this.heroKind, this.ch, this._flying());
+      const eye = this._eyeH();          // 單一縫:地形異常狀態的視線高度判定共用同一式
+      const headF = this.selfH * vw.f;   // 沿正面方向前移(three:-z 為前)
+      this.camera.position.copy(this.pos).add(
+        new THREE.Vector3(-Math.sin(this.yaw) * headF, eye, -Math.cos(this.yaw) * headF));
+      this.camera.rotation.set(0, 0, 0);
+      this.camera.rotateY(this.yaw + this.recoil.y + shY);
+      this.camera.rotateX(this.pitch + this.recoil.p + shP);
+      this.camera.rotateZ(this.roll + shR);
+      this._cameraDeClip();   // 鏡頭防穿模:貼牆時退回障礙外緣,不看穿建物/神木/巨岩
+    }
 
     // 瞄準縮放:右鍵切換拉近視角(FOV 越小越像瞄準鏡)
     const wantFov = this.aiming ? (UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : this.baseFov;
@@ -8315,7 +8364,18 @@ export class BattleClient {
   _updateEnts(dt, now) {
     for (const ent of this.ents.values()) {
       if (ent.isSelf) {
-        ent.mesh.position.copy(this.pos);
+        if (this.viewMode === 'tps') {
+          ent.mesh.visible = !ent.dead;
+          const px = ent.mesh.position.x, pz = ent.mesh.position.z, pyaw = ent.mesh.rotation.y;
+          ent.mesh.position.copy(this.pos);
+          ent.mesh.rotation.y = this.yaw + Math.PI;
+          if (ent.bar) ent.bar.lookAt(this.camera.position);
+          stepCombatFx(ent, now, dt);
+          stepLocomotion(ent, dt, now, px, pz, pyaw);
+        } else {
+          ent.mesh.visible = false;
+          ent.mesh.position.copy(this.pos);
+        }
         continue;
       }
       if (ent.isStatic) {
@@ -9318,6 +9378,8 @@ export class BattleClient {
     document.removeEventListener('pointerlockchange', this._onPlc);
     this._offCtrl?.();               // 操作方式訂閱 MUST 跟著戰局收掉(留著 = 下一局重建一個殭屍搖桿層)
     this._offCtrl = null;
+    this._offView?.();
+    this._offView = null;
     this.touch?.dispose();
     this.touch = null;
     document.body.classList.remove('mm-near');   // 小地圖模式的鈕面亮燈掛在 body,跟著戰局收掉

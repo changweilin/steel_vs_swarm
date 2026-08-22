@@ -48,14 +48,52 @@ export const CTRL_SCHEMES = {
 };
 export const CTRL_SCHEME_KEYS = ['kbm', 'pad'];
 
+/** 視角模式:第一人稱(預設) / 第三人稱 */
+export const VIEW_MODES = {
+  fpv: { key: 'fpv', icon: '🎯', label: '第一人稱', hint: '座艙第一人稱視角，臨場感強，準星與槍口一致。' },
+  tps: { key: 'tps', icon: '🤖', label: '第三人稱', hint: '機身後方第三人稱視角，視野更廣，可看見自機機體與動作。' },
+};
+export const VIEW_MODE_KEYS = ['fpv', 'tps'];
+export const DEFAULT_VIEW_MODE = 'fpv';
+
 const MODE_KEY = 'svs_ctrl_mode';    // 'any' | 'kbm' | 'pad'
 const PICK_KEY = 'svs_ctrl_pick';    // 'kbm' | 'pad'(不限定時玩家挑過的那一套)
+const VIEW_KEY = 'svs_view_mode';    // 'fpv' | 'tps'(視角模式)
 // 舊鍵(2026-07-31 前的「觸控版 強制開/強制關」):'1' → pad、'0' → kbm。只讀不寫,遷移用。
 const LEGACY_KEY = 'svs_touchui';
 
 /** localStorage 在無痕/檔案協定下可能整支拋例外 —— 操作方式不該因此開不了遊戲(比照 netmode.js)*/
 function ls(fn, fallback = null) {
   try { return fn(window.localStorage); } catch { return fallback; }
+}
+
+let _viewMode = null;
+const _viewSubs = new Set();
+
+/** 讀取目前視角模式(單一真相:localStorage svs_view_mode,預設 fpv)*/
+export function viewMode() {
+  if (_viewMode) return _viewMode;
+  const saved = ls((s) => s.getItem(VIEW_KEY));
+  _viewMode = VIEW_MODES[saved] ? saved : DEFAULT_VIEW_MODE;
+  return _viewMode;
+}
+
+/** 設定視角模式(fpv / tps),持久化並發送通知 */
+export function setViewMode(v) {
+  if (!VIEW_MODES[v]) return false;
+  if (viewMode() === v) return true;
+  _viewMode = v;
+  ls((s) => s.setItem(VIEW_KEY, v));
+  for (const fn of [..._viewSubs]) {
+    try { fn(v); } catch { /* 降級,不例外 */ }
+  }
+  return true;
+}
+
+/** 訂閱視角模式變更;回傳解除訂閱函式 */
+export function onViewModeChange(fn) {
+  _viewSubs.add(fn);
+  return () => _viewSubs.delete(fn);
 }
 
 /**

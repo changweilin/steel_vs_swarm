@@ -16,7 +16,7 @@ import * as THREE from 'three';
 import {
   CTRL_MODES, CTRL_MODE_KEYS, CTRL_SCHEMES, CTRL_SCHEME_KEYS, ctrlMode, ctrlPref, setCtrlPref,
   ctrlScheme, setCtrlScheme, ctrlLocked, ctrlMismatchText, onCtrlChange, usePad, deviceScheme,
-  touchCapable, ctrlModeText,
+  touchCapable, ctrlModeText, VIEW_MODES, VIEW_MODE_KEYS, viewMode, setViewMode, onViewModeChange,
 } from './ctrlmode.js';
 import { tipHTML } from './tip.js';
 
@@ -709,6 +709,21 @@ export function renderCtrlSettings(mount, opts = {}) {
       notice(`目前操控:${CTRL_SCHEMES[ctrlScheme()].label}`, 3000);
     });
   }
+
+  const viewRow = document.createElement('div');
+  viewRow.className = 'set-row';
+  viewRow.innerHTML = '<span class="set-label">視角模式</span><span class="seg seg-sm tset-view">'
+    + VIEW_MODE_KEYS.map((v) =>
+      `<button class="segb" type="button" data-view="${v}">${_esc(VIEW_MODES[v].icon)} ${_esc(VIEW_MODES[v].label)}</button>`).join('')
+    + '</span>' + _tipDot('tset-view-hint');
+  mount.appendChild(viewRow);
+  for (const b of viewRow.querySelectorAll('.segb')) {
+    b.addEventListener('click', () => {
+      setViewMode(b.dataset.view);
+      syncCtrlSettings();
+      notice(`視角模式:${VIEW_MODES[viewMode()].label}`, 3000);
+    });
+  }
   _ctrlMounts.push(mount);
   syncCtrlSettings();
 }
@@ -716,10 +731,12 @@ export function renderCtrlSettings(mount, opts = {}) {
 // 狀態一變(戰區定案 / 我的預設 / 目前操控)就把所有已渲染的操作方式 UI 同步一次。
 // 訂閱 MUST 住這裡而不是 installTouchUI —— 少了它,「房主改了選項變灰」要等下次開設定頁才生效。
 onCtrlChange(() => syncCtrlSettings());
+onViewModeChange(() => syncCtrlSettings());
 
 /** 把所有已渲染的操作方式 UI 同步到目前狀態(選取態 + 停用態 + 提示文字)*/
 export function syncCtrlSettings() {
   const mode = ctrlMode(), scheme = ctrlScheme(), locked = ctrlLocked();
+  const curView = viewMode();
   const warn = ctrlMismatchText();
   // ① 戰區畫面:三選一(房主可改;值恆是伺服器廣播的那一份)
   for (const mount of _modeMounts) {
@@ -733,7 +750,7 @@ export function syncCtrlSettings() {
         + CTRL_MODES[mode].hint + (warn ? ` ${warn}` : '');
     }
   }
-  // ② 設定頁:操作方式唯讀 + 目前操控三選一
+  // ② 設定頁:操作方式唯讀 + 目前操控三選一 + 視角模式二選一
   for (const mount of _ctrlMounts) {
     const mv = mount.querySelector('.tset-ctrl-val');
     if (mv) mv.textContent = `${CTRL_MODES[mode].icon} ${CTRL_MODES[mode].label}`;
@@ -751,6 +768,13 @@ export function syncCtrlSettings() {
       ph.dataset.tip = mode === 'any'
         ? `即時切換,不必重新載入。裝置判定為${CTRL_SCHEMES[deviceScheme()].label}。`
         : '已限定操作方式,遊戲中不可變更。';
+    }
+    for (const b of mount.querySelectorAll('.tset-view .segb')) {
+      b.classList.toggle('on', b.dataset.view === curView);
+    }
+    const vh = mount.querySelector('.tset-view-hint');
+    if (vh) {
+      vh.dataset.tip = VIEW_MODES[curView]?.hint || '視角切換:第一人稱(座艙)/第三人稱(機體後方)';
     }
   }
 }
