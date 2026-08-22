@@ -878,6 +878,7 @@ export const SOFT_KINDS = {
   // `amp` 在這一族的語意是**波陡**(波高 ÷ 波長)而不是「擺幅 ÷ 株高」,但算式同一條
   // (`uSoftAmp = amp × span`)⇒ span 傳波長就得到波高。0.014 × 64m = 0.9m(真實 0.45m 長浪)。
   sea:   { amp: 0.014, freq: 0.55, axis: 'w' },   // 海面 / 湖面 / 潟湖
+  swamp: { amp: 0.008, freq: 0.28, axis: 'w' },   // 沼澤水面:低頻慢速黏滯波
 };
 
 /**
@@ -885,6 +886,8 @@ export const SOFT_KINDS = {
  * **MUST NOT 在消費端手寫波長**:那樣改 `WIND.SEA_M` 只會動到分段數而波形留在原地。
  */
 export const seaSoft = () => ({ k: 'sea', span: WIND.SEA_M });
+/** 沼澤水面的軟性參數(單一縫):消費端 = `biomes.js` 的沼澤水盤 */
+export const swampSoft = () => ({ k: 'swamp', span: WIND.SEA_M });
 /** 水面網格的最大邊長(m):由波長與取樣率推導,MUST NOT 手寫段數 */
 export const seaSegM = () => WIND.SEA_M / WIND.SEA_SEG;
 

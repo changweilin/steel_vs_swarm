@@ -85,9 +85,10 @@ import { CARD, cardEnvelope, cardCount, planCards, cardRnd, leafSurfId } from '.
 // 葉子是硬切的、樹幹還是三階 ramp」,沒有任何錯誤訊息。一個場景 MUST 只有一套量化
 // (`audit_cel_pipeline` Ⅺ⑧ 的凍結名冊守著:名冊非空 ⇒ `celSchool` 的 def MUST NOT 是 'b')。
 import {
-  WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, celWindTime,
+  WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
+import { buildAquaticWorld } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 
@@ -5521,7 +5522,7 @@ function buildSwampSurface(group, terrain) {
   const cols = Math.min(320, Math.max(1, Math.ceil((maxX - minX) / 10)));   // ~10m 格(紫盤是濁沼,不需更細)
   const rows = Math.min(320, Math.max(1, Math.ceil((maxZ - minZ) / 10)));
   const cw = (maxX - minX) / cols, ch = (maxZ - minZ) / rows;
-  const pos = [], nrm = [], idx = [];
+  const pos = [], nrm = [], idx = [], fade = [];
   let base = 0;
   for (let i = 0; i < rows; i++) {
     const z0 = minZ + i * ch, z1 = z0 + ch, cz = z0 + ch / 2;
@@ -5531,6 +5532,8 @@ function buildSwampSurface(group, terrain) {
       pos.push(x0, swampY, z0, x1, swampY, z0, x1, swampY, z1, x0, swampY, z1);
       for (let k = 0; k < 4; k++) nrm.push(0, 1, 0);   // 水平面法線恆朝上(平坦,免 computeVertexNormals)
       idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+      const fd = terrain.seaFadeAtWorld ? terrain.seaFadeAtWorld(cx, cz) : 1.0;
+      for (let k = 0; k < 4; k++) fade.push(fd);
       base += 4;
     }
   }
@@ -5538,9 +5541,11 @@ function buildSwampSurface(group, terrain) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  geo.setAttribute('seaFade', new THREE.Float32BufferAttribute(fade, 1));
   geo.setIndex(idx);
-  const mesh = new THREE.Mesh(geo, toonPlain({
-    color: 0x4a3358, transparent: true, opacity: 0.72, side: THREE.DoubleSide,
+  const mesh = new THREE.Mesh(geo, envMat(0x4a3358, {
+    bands: 'soft', rim: 0, transparent: true, opacity: 0.76, side: THREE.DoubleSide,
+    soft: swampSoft(),
   }));
   mesh.frustumCulled = false;
   mesh.userData.noOutline = true;
@@ -10523,6 +10528,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 「建了但每幀不更新」不算 —— 那留著 draw call 與記憶體。
   const petalMode = PETAL_OFF ? null : petalSeason(season);
   const petalsBuilt = petalMode ? buildPetals(group, terrain, items, season, petalMode, dynamics, gseed) : 0;
+
+  // ---- 水下與沼澤生態、動態、動植物、遺跡與船艦 (aquatics.js) ----
+  if (terrain.waterY != null) {
+    const aquaticWorld = buildAquaticWorld(group, terrain, { season });
+    if (aquaticWorld?.step) {
+      dynamics.push((dt) => aquaticWorld.step(dt, celWindTime()));
+    }
+  }
 
   // ---- 世界文字(洞口匾額 / 橋名牌 / 地名標牌 / 建物招牌;2026-08-03)----
   // MUST 排在 buildRoads 與建物之後(位置全部取自它們已經定案的幾何),排在攀爬路線之前
