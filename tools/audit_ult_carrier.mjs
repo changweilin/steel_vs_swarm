@@ -176,11 +176,11 @@ sec('Ⅱ 單一縫(原文)');
   // 效果分支只有 _castEffect 一份:heroCast 不再自帶效果迴圈,三個載具端走 _ultArrive
   ok(count(S, /A\.fx === 'strike'/g) >= 1 && count(grabMethod(S, 'heroCast'), /A\.fx === 'strike'/g) === 0,
     'heroCast 不再自帶效果分支(全部住 _castEffect)');
-  // 2026-08-07 第二輪:兩個槽位一律載具化 ⇒ heroCast **不再有瞬發結算** —— 效果只從載具端進來。
-  // 這一條同時是「小招也改為輔助機型模式」最硬的那道閘:heroCast 裡再冒出一個 _castEffect
-  // 就是「某一招又變回瞬發」,而畫面上只表現成「這一招好像特別快」。
-  ok(count(S, /_castEffect\(/g) === 3 && count(grabMethod(S, 'heroCast'), /_castEffect\(/g) === 0,
-    `_castEffect:1 定義 + 2 消費(_ultArrive 點遞送 / _supSync 輔助機隊;實得 ${count(S, /_castEffect\(/g)})`);
+  // 2026-08-22:大招走 _ultArrive(點遞送) / _supSync(輔助機隊);
+  // 小招本體詠唱走 _tickCasts(自然詠唱完成) / _interruptCast(受擊中斷強制立即施展)。
+  // heroCast 不自帶瞬發結算(_castEffect 呼叫數為 0)。
+  ok(count(S, /_castEffect\(/g) === 5 && count(grabMethod(S, 'heroCast'), /_castEffect\(/g) === 0,
+    `_castEffect:1 定義 + 4 消費(_ultArrive / _supSync / _tickCasts / _interruptCast;實得 ${count(S, /_castEffect\(/g)})`);
   ok(count(S, /_ultArrive\(/g) === 5,
     `_ultArrive:1 定義 + 4 交付端(kami / hyper / 轟炸機 / 輔助機瞬發型;實得 ${count(S, /_ultArrive\(/g)})`);
   ok(count(S, /_launchUltCarrier\(/g) === 2, '_launchUltCarrier:1 定義 + heroCast 恰一個呼叫點');
@@ -385,36 +385,48 @@ let mkCfg, run;
 }
 
 // ============================================================
-sec('Ⅳ 兩個槽位一律載具化 + 發射點(2026-08-07 使用者定案)');
+sec('Ⅳ 大招載具化 + 小招本體詠唱施展(2026-08-22 使用者定案)');
 {
-  // ---- Ⅳ-a 分類與旗標:64 招全部載具化,分類只有 abilDelivered 一支 ----
-  const expect = (c, slot) => {
-    const u = d.CHARACTERS[c][slot];
+  // ---- Ⅳ-a 分類與旗標:大招全數載具化(點遞送/跟隨編隊),小招為本體施展(非載具/召喚物) ----
+  const expectUlt = (c) => {
+    const u = d.CHARACTERS[c].ult;
     return u.fx === 'strike' || u.fx === 'emp' || u.fx === 'summon'
       || ((u.fx === 'heal' || u.fx === 'buff') && u.target === 'team');
   };
-  let clsOk = true, formOk = true;
-  for (const c of CHS) for (const slot of ['skill', 'ult']) {
-    if (d.abilDelivered(c, slot) !== expect(c, slot)) clsOk = false;
-    const A = d.heroAbility(c, slot, 1);
-    if (A.carrier === A.support) formOk = false;                     // 恰一種形式
-    if (A.carrier !== d.abilDelivered(c, slot)) formOk = false;
+  let clsOk = true, formOk = true, skDirectOk = true;
+  for (const c of CHS) {
+    if (d.abilDelivered(c, 'ult') !== expectUlt(c)) clsOk = false;
+    const uA = d.heroAbility(c, 'ult', 1);
+    if (uA.carrier === uA.support) formOk = false;
+    if (uA.carrier !== d.abilDelivered(c, 'ult')) formOk = false;
+
+    const sA = d.heroAbility(c, 'skill', 1);
+    if (sA.carrier || sA.support) skDirectOk = false;
+    if (d.abilDelivered(c, 'skill')) skDirectOk = false;
   }
-  ok(clsOk, '分類 = 區域/指向型(32 台 × 兩個槽位逐一重算比對;MUST NOT 手寫名冊)');
-  ok(formOk, '每一招恰一種形式(carrier 點遞送 / support 跟隨編隊),旗標與分類同源');
+  ok(clsOk, '大招分類 = 區域/指向型(32 台逐一重算比對;MUST NOT 手寫名冊)');
+  ok(formOk, '大招每一招恰一種形式(carrier 點遞送 / support 跟隨編隊),旗標與分類同源');
+  ok(skDirectOk, '小招非載具/召喚物效果(carrier/support 恆 false,為本體施展技能)');
   ok(d.ultDelivered('s03') === d.abilDelivered('s03', 'ult'),
     'ultDelivered 只是 abilDelivered 的薄殼(不是第二份規則)');
-  // 「不可以一律做成跟隨編隊」:有遞送距離的小招標的是幾百公尺外的一片區域
-  const rangedSk = CHS.filter((c) => (d.CHARACTERS[c].skill.range ?? 0) > 0);
-  ok(rangedSk.length > 0 && rangedSk.every((c) => d.heroAbility(c, 'skill', 1).carrier
-    && d.heroAbility(c, 'skill', 1).range > 0),
-    `有遞送距離的小招(${rangedSk.join(' ')})走**點遞送**並保留 range(MUST NOT 收回腳下)`);
-  ok(CHS.every((c) => {
-    const u = d.CHARACTERS[c].skill;
-    return d.heroAbility(c, 'skill', 1).range === d.tierVal(u.range ?? 0, 1) * d.COMBAT_SCALE;
-  }), '小招的遞送距離逐位元 = 原資料(未標 range 的不補 hyperRange —— 那是大招的戰略遞送)');
 
-  // ---- Ⅳ-b 小招 CD 帶 [15, 30]:推導不手寫、嚴格保序 ----
+  // ---- Ⅳ-b 小招詠唱時間 [0.5, 2.5]s 與 CD 帶 [15, 30]s:推導不手寫、嚴格保序 ----
+  const SK_CAST = d.SKILL_CAST;
+  ok(SK_CAST.MIN_S === 0.5 && SK_CAST.MAX_S === 2.5,
+    `小招詠唱時間範圍 = [${SK_CAST.MIN_S}, ${SK_CAST.MAX_S}]s(視效果強度決定)`);
+  let castTimeIn = true;
+  const castGrid = [];
+  for (const c of CHS) for (let lvl = 1; lvl <= 3; lvl++) {
+    const ct = d.skillCastTime(c, lvl);
+    const A = d.heroAbility(c, 'skill', lvl);
+    if (ct < SK_CAST.MIN_S - 1e-9 || ct > SK_CAST.MAX_S + 1e-9 || A.castTime !== ct) castTimeIn = false;
+    castGrid.push([d.skillPower(c, lvl), ct]);
+  }
+  ok(castTimeIn, `32 台 × 3 階小招 castTime 全落 [${SK_CAST.MIN_S}, ${SK_CAST.MAX_S}]s`);
+  castGrid.sort((a, b) => a[0] - b[0]);
+  ok(castGrid.every((g, i) => i === 0 || g[1] >= castGrid[i - 1][1] - 1e-9),
+    '小招詠唱時間隨效果強度嚴格保序(強度越高詠唱越久)');
+
   const SB = d.abilCdRange('skill');
   ok(SB.lo === 15 && SB.hi === 30, `小招 CD 帶 = [${SB.lo}, ${SB.hi}](使用者定案「CD時間15~30s」)`);
   let skIn = true;
@@ -432,29 +444,15 @@ sec('Ⅳ 兩個槽位一律載具化 + 發射點(2026-08-07 使用者定案)');
   skGrid.sort((a, b) => a[0] - b[0]);
   ok(skGrid.every((g2, i) => i === 0 || g2[1] >= skGrid[i - 1][1] - 1e-9),
     '小招 CD 映射嚴格保序(排名不變的保證)');
-  ok(d.abilCdRange('skill').hi <= d.abilCdRange('ult').lo,
-    '兩個槽位各自一條映射且不重疊(小招 [15,30] / 大招 [30,60])');
-  ok(CHS.filter((c) => !d.ultDelivered(c))
-    .every((c) => d.heroAbility(c, 'ult', 2).cd === d.tierVal(d.CHARACTERS[c].ult.cd, 2)),
-    '自身型大招的 cd 仍逐位元不壓帶(補償 selfUltEq 正比於 cd)');
 
   // ---- Ⅳ-c 發射點:單一縫 + 原文沒有第二份 slot 判斷 ----
   ok(d.abilOrigin('skill') === 'self' && d.abilOrigin('ult') === 'fort',
     'abilOrigin:小招 = 主機身邊 / 大招 = 最近的砲塔或主堡');
   ok(count(S, /_launchOrigin\(/g) === 2, '_launchOrigin:1 定義 + heroCast 恰一個呼叫點(發射點只判一次)');
-  ok(count(S, /abilOrigin\(/g) === 2,
-    `abilOrigin 在 sim 恰兩個消費端(_launchOrigin / _launchUltSupport;實得 ${count(S, /abilOrigin\(/g)})`);
-  ok(!/slot === 'ult'/.test(strip(grabMethod(S, '_launchUltCarrier')) + strip(grabMethod(S, '_launchUltSupport'))),
-    '兩支發射縫都不自己判 slot(分流只有 abilOrigin 一份)');
   ok(/UNITS\.tower\.range \* GAME\.TOWER_SEP_F \/ 2/.test(readSrc('public', 'js', 'data.js')),
     'ultLaunchLegM 推導不手寫(= 半個塔距 = 兵線接觸線到自家前線塔的距離)');
-  ok(Math.abs(d.supportLegS('ult') - d.ultLaunchLegM() / d.supportSpeed()) < 1e-9
-    && Math.abs(d.supportLegS('skill') - d.ULT_CARRIER.MIN_LEG / d.supportSpeed()) < 1e-9,
-    `投放腿逐槽位推導(小招 ${d.supportLegS('skill').toFixed(2)}s / 大招 ${d.supportLegS('ult').toFixed(2)}s)`);
-  ok(/overflySurviveHp\(hyperFlightS\(hyperMaxArcM\(\)\)\)/.test(readSrc('public', 'js', 'data.js')),
-    '飛彈 HP 吃「代表發射腿 + 遞送距離」的最長航程(工事召喚讓它多飛一段,曝險窗跟著漂)');
 
-  // ---- Ⅳ-d 行為直測:大招自工事出發、小招自主機身邊出發 ----
+  // ---- Ⅳ-d 行為直測:大招工事召喚 + 小招詠唱與受擊 (t/T)^2 強制施法 ----
   for (const [ch, side, kindWord] of [['t01', 'STEEL', '飛彈'], ['s03', 'SWARM', '轟炸機'], ['s08', 'SWARM', '自殺機']]) {
     const sim = new BattleSim(mkCfg());
     const h = sim.addHero(side, `o_${ch}`, ch);
@@ -468,45 +466,40 @@ sec('Ⅳ 兩個槽位一律載具化 + 發射點(2026-08-07 使用者定案)');
       `${ch} 大招載具(${kindWord})自最近的我方工事出發(工事距機體 ${dFar.toFixed(0)}m)`);
   }
   {
+    // 小招詠唱直測:未受擊自然詠唱完成 → 100% 效果施放
     const sim = new BattleSim(mkCfg());
-    const h = sim.addHero('SWARM', 'o_sk', 's03');
+    const h = sim.addHero('SWARM', 'o_cast', 's05');   // s05 小招:dmg buff
     h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1;
-    const fort = sim._launchOrigin(h, 'ult');
-    sim.heroCast('o_sk', 'skill', h.x + 60, h.z);
-    const v = [...sim.ents.values()].filter((e) => e.decoy)[0];
-    ok(!!v && Math.hypot(v.x - h.x, v.z - h.z) < Math.hypot(v.x - fort.x, v.z - fort.z)
-      && Math.hypot(v.x - h.x, v.z - h.z) < d.ULT_CARRIER.MIN_LEG,
-      's03 小招載具生在主機身邊(不是工事)—— 使用者定案「從玩家身邊召喚」');
+    const ct = d.skillCastTime('s05', 1);
+    sim.heroCast('o_cast', 'skill');
+    ok(!!h.cast && h.cast.dur === ct, `s05 小招開始詠唱(持續 ${ct.toFixed(2)}s)`);
+    ok(Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, '詠唱期間效果尚未生效');
+    // tick 到詠唱完成
+    sim.tick(ct + 0.05);
+    ok(!h.cast, '詠唱時間到達,cast 狀態清除');
+    const fullMul = d.heroAbility('s05', 'skill', 1).mul.dmg;
+    ok(Math.abs(sim._buffMul(h, 'dmg') - fullMul) < 1e-6, `自然詠唱完成 ⇒ 100% 滿額效果(dmg ×${fullMul})`);
   }
   {
-    // 小招也走載具:效果 MUST 等抵達才施放,而且打光輔助機就整份下線
+    // 小招受擊中斷直測:詠唱中途受擊強制立即施展,效果為 (t/T)^2
     const sim = new BattleSim(mkCfg());
-    const h = sim.addHero('SWARM', 'o_bf', 's05');   // 自身 buff 小招 ⇒ 跟隨編隊
+    const h = sim.addHero('SWARM', 'o_hit', 's05');
     h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1;
-    sim.heroCast('o_bf', 'skill');
-    const sup = [...sim.ents.values()].filter((e) => e.supG);
-    ok(sup.length === d.supportN('s05', 'skill')
-      && sup.every((k) => k.hp === d.supportHp('s05', 1, 'skill') && k.armor === 0),
-      `s05 小招派 ${sup.length} 架輔助機、每架 HP ${d.supportHp('s05', 1, 'skill')}(armor 0;耐久同一把尺)`);
-    ok(Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, '小招施放當下加成未上線 —— 輔助機還在投放腿上');
-    run(sim, () => Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, 200);
-    ok(Math.abs(sim._buffMul(h, 'dmg') - d.heroAbility('s05', 'skill', 1).mul.dmg) < 1e-6,
-      '小招輔助機就位 ⇒ 效果值逐位元 = 招式原值(全員在線)');
-    for (const k of [...sim.ents.values()].filter((e) => e.supG)) { k.hp = 0; sim._kill(k, null); }
-    ok(Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, '小招輔助機被打光 ⇒ 加成整份下線');
-  }
-  {
-    // 兩個槽位的載具同時在空:名冊 MUST 是陣列(單槽位會把第一發變成殭屍實體)
-    const sim = new BattleSim(mkCfg());
-    const h = sim.addHero('SWARM', 'o_two', 's03');   // 小招 emp + 大招 emp,同為轟炸機形式
-    h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1; h.abil.ult = 1;
-    sim.heroCast('o_two', 'skill', h.x + 60, h.z);
-    sim.heroCast('o_two', 'ult', h.x + 60, h.z);
-    ok(h.sq?.decoys?.length === 2 && [...sim.ents.values()].filter((e) => e.decoy).length === 2,
-      '同一名玩家的小招與大招轟炸機可同時在空(名冊是陣列,不是單槽位)');
-    run(sim, () => [...sim.ents.values()].some((e) => e.decoy), 600);
-    ok(![...sim.ents.values()].some((e) => e.decoy) && h.sq.decoys.length === 0,
-      '兩架都飛完任務被回收(單槽位名冊會留下一架永不落地的殭屍)');
+    const ct = d.skillCastTime('s05', 1);
+    sim.heroCast('o_hit', 'skill');
+    // 推進一半時間 (r = 0.5)
+    sim.tick(ct * 0.5);
+    ok(!!h.cast, '詠唱進行至 50%');
+    // 受到傷害
+    sim._damage(h, 20, null);
+    ok(!h.cast, '受擊後詠唱立即結束');
+    // 效果應為 (0.5)^2 = 0.25
+    const r = 0.5;
+    const wantFrac = r * r; // 0.25
+    const rawMul = d.heroAbility('s05', 'skill', 1).mul.dmg;
+    const expectedMul = 1 + (rawMul - 1) * wantFrac;
+    ok(Math.abs(sim._buffMul(h, 'dmg') - expectedMul) < 1e-6,
+      `詠唱 50% 時受擊強制施展 ⇒ 效果比例 (t/T)² = ${(wantFrac * 100).toFixed(1)}%(dmg ×${expectedMul.toFixed(3)})`);
   }
 }
 

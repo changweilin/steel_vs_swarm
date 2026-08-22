@@ -698,40 +698,39 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
 }
 
 // ============================================================
-sec('Ⅵ 小招也是輔助機型模式(2026-08-07 使用者定案)');
+sec('Ⅵ 輔助機隊大招專屬 + 小招本體詠唱分流(2026-08-22 使用者定案)');
 {
-  // 使用者:「小招也改為輔助機型模式,CD 時間 15~30s,從玩家身邊召喚」。
-  // 這一段驗的是「同一套機制真的**兩個槽位共用**」——不是兩份長得很像的實作。
+  // 2026-08-22 使用者定案「小招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間,詠唱期間被攻擊時會強制立即施展(已詠唱時間比例平方的效果)」。
+  // 輔助機隊(ULT_SUPPORT)自此專屬大招(slot === 'ult'),小招一律為本體施展技能(非載具/輔助機)。
   const CHS2 = Object.keys(d.CHARACTERS);
-  // ① 分類/機數/節奏/耐久四支全部吃 slot,而且大招那一組**逐位元不動**(預設參數 = 'ult')
+  // ① 分類/機數/節奏/耐久四支在大招那一組逐位元不動(預設參數 = 'ult')
   ok(CHS2.every((c) => d.supportStackable(c, 'ult') === d.supportStackable(c)
     && d.supportN(c, 'ult') === d.supportN(c)
     && d.abilTempo(c, 'ult') === d.selfUltTempo(c)
     && d.supportHp(c, 1, 'ult') === d.supportHp(c, 1)),
     '四支推導的預設槽位 = ult ⇒ 既有呼叫端逐位元不變');
-  // ② 自身型小招:節奏三分都用得到、耐久 > 0 且與大招同一把尺
-  const supSk = CHS2.filter((c) => !d.abilDelivered(c, 'skill'));
-  ok(supSk.length > 0 && supSk.every((c) => d.heroAbility(c, 'skill', 1).support),
-    `自身/personal 型小招 ${supSk.length} 台走跟隨編隊`);
-  ok(new Set(supSk.map((c) => d.abilTempo(c, 'skill'))).size >= 2,
-    `小招的節奏不只一種(${[...new Set(supSk.map((c) => d.abilTempo(c, 'skill')))].join(' / ')})`);
-  let skHpOk = true;
-  for (const c of supSk) {
-    const n = d.supportN(c, 'skill'), tempo = d.abilTempo(c, 'skill');
-    const dur = d.tierVal(d.CHARACTERS[c].skill.dur ?? 0, 1);
-    const want = d.frontKillHp(d.supportLegS('skill') + d.supportTempoF(tempo) * dur / n);
-    if (d.supportHp(c, 1, 'skill') !== want || !(want > 0)) skHpOk = false;
+  // ② 自身強化型大招 9 台走跟隨編隊,節奏三分都用得到、耐久 > 0
+  const supUlt = CHS2.filter((c) => !d.abilDelivered(c, 'ult'));
+  ok(supUlt.length === 9 && supUlt.every((c) => d.heroAbility(c, 'ult', 1).support),
+    `自身強化型大招恰 9 台走跟隨編隊(實得 ${supUlt.length} 台)`);
+  ok(new Set(supUlt.map((c) => d.abilTempo(c, 'ult'))).size === 3,
+    `大招三種節奏皆在線(${[...new Set(supUlt.map((c) => d.abilTempo(c, 'ult')))].join(' / ')})`);
+  let ultHpOk = true;
+  for (const c of supUlt) {
+    const n = d.supportN(c, 'ult'), tempo = d.abilTempo(c, 'ult');
+    const dur = d.tierVal(d.CHARACTERS[c].ult.dur ?? 0, 1);
+    const want = d.frontKillHp(d.supportLegS('ult') + d.supportTempoF(tempo) * dur / n);
+    if (d.supportHp(c, 1, 'ult') !== want || !(want > 0)) ultHpOk = false;
   }
-  ok(skHpOk, '小招輔助機耐久 = 前線一組塔位 ×(小招投放腿 + 節奏係數 × dur ÷ 機數)(逐台獨立重算)');
-  // ③ 小招的投放腿**短於**大招(從玩家身邊 vs 從後方工事)—— 這就是兩者的設計差別
-  ok(d.supportLegS('skill') < d.supportLegS('ult'),
-    `小招投放腿 ${d.supportLegS('skill').toFixed(2)}s < 大招 ${d.supportLegS('ult').toFixed(2)}s(身邊召喚 vs 後方召喚)`);
-  // ④ 同 dur 時,大招那一組的輔助機**比較硬**(要飛比較遠 ⇒ 服務窗比較長)
-  {
-    const one = (slot, dur) => d.frontKillHp(d.supportLegS(slot) + d.supportTempoF('sustain') * dur);
-    ok(one('ult', 8) > one('skill', 8), `同 dur 大招機隊較硬(${one('ult', 8)} > ${one('skill', 8)});推導出來的,不是另外加的規則`);
-  }
-  // ⑤ 補償只給大招:小招 MUST NOT 領 selfUltEq(那份預算換的是被移除的機種絕招)
+  ok(ultHpOk, '大招輔助機耐久 = 前線一組塔位 ×(大招投放腿 + 節奏係數 × dur ÷ 機數)(逐台獨立重算)');
+
+  // ③ 小招全數非輔助機(carrier: false, support: false, castTime > 0)
+  ok(CHS2.every((c) => {
+    const A = d.heroAbility(c, 'skill', 1);
+    return !A.carrier && !A.support && A.castTime >= d.SKILL_CAST.MIN_S && A.castTime <= d.SKILL_CAST.MAX_S;
+  }), '32 台小招全數為本體施展技能(非載具/輔助機,castTime ∈ [0.5, 2.5]s)');
+
+  // ④ 補償只給大招:小招 MUST NOT 領 selfUltEq(那份預算換的是被移除的機種絕招)
   ok(CHS2.every((c) => d.selfUltEq(c, 1, { light: 1, heavy: 1 }) >= 0)
     && /A\.id === 'ult'/.test(strip(grabMethod(S, '_castEffect'))),
     '補償只在 A.id === ult 那一支取(小招不領 selfUltEq)');
