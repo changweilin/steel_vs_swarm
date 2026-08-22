@@ -1234,11 +1234,10 @@ export class BattleClient {
     }
   }
 
-  // ---------------- FPV 座艙(逐機體差異化 = 直接取那台機體自己的零件,3D 賽璐璐)----------------
-  // 座艙 = 從自己機體「頭/艙位」往正前方看出去的自身剪影,而那個剪影**就是機體本身的零件**:
-  // 結構走 `_cockBody`(複製 forge 真品零件)、武裝走 `_mountCockpitWeapon`(複製 rig.wpn 子樹),
-  // 變形者兩型態各取自己那一棵。2026-08-15 起座艙裡沒有任何一塊是手繪的 ——
-  // 手繪那一套畫的是舊版建模,而英雄機體 2026-08-14 起全面換成 forge(§6 退場清單)。
+  // ---------------- FPV 座艙(武器/彈藥與 HUD,3D 賽璐璐)----------------
+  // 2026-08-22 使用者定案:「第一人稱的駕駛艙除了武器/彈藥與HUD之外,其餘機體自身的物件從駕駛艙畫面移除」
+  // 武裝走 `_mountCockpitWeapon`(複製 rig.wpn 子樹),變形者兩型態各取自己那一棵。
+  // 機體自身結構件不再加進駕駛艙,保持畫面清爽只見武器、開火回饋與 HUD。
   // 取景一律按 fov 68(全機種統一,z=-0.8 處畫面邊緣 y≈±0.54):周邊件貼邊、不擋準星。
   _buildCockpit() {
     if (!this.side) return;
@@ -1294,11 +1293,7 @@ export class BattleClient {
       this.cockGround = new THREE.Group();
       this.cockAir = new THREE.Group();
       g.add(this.cockGround, this.cockAir);
-      this._cockBody(mp?.gg || unit3p, rig3p, spin3p, this.cockGround, false);
-      this._cockBody(mp?.ag || unit3p, unit3p.userData.rigAir || rig3p, spin3p, this.cockAir, true);
       this.cockAir.visible = false;
-    } else {
-      this._cockBody(unit3p, rig3p, spin3p, g, this.isDrone);   // 無人機恆為飛行型視點(_flying)
     }
     this._muzzles = { G: {}, A: {} };
     this._mountAudit = {};
