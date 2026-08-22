@@ -23,6 +23,7 @@ import {
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
+import { aquaticTransition } from './aquatics.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './models.js';
 import { applyEnvironment } from './environment.js';
 import { Pipeline } from './postfx.js';
@@ -3876,16 +3877,16 @@ export class BattleClient {
       const cam = this.camera.position;
       const wy = t.waterY;
       if (wy != null) {
-        // 水域帷幕在 waterY;沼澤帷幕在 swampY = waterY+SWAMP_BAND(= 沼澤水平面高,與 buildSwampSurface
-        // / envTrigger 同一條線)—— 視線沉進哪片濁面就變哪個色。
-        const code = terrainEnvCode(t, cam.x, cam.z);
-        const lineY = code === 2 ? wy + WATER.SWAMP_BAND : wy;
-        if (code && cam.y < lineY) {
+        // 水域帷幕在 waterY;沼澤帷幕在 swampY = waterY+SWAMP_BAND;過渡帶使用 aquaticTransition 漸進插值
+        const trans = aquaticTransition(t, cam.x, cam.z);
+        const lineY = trans.isSwamp ? wy + WATER.SWAMP_BAND : wy;
+        if ((trans.isWater || trans.isSwamp || trans.mix > 0) && cam.y < lineY) {
           const k = Math.min(1, (lineY - cam.y) / (WATER.FULL_D * 2));
           const mixc = (a, b) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
-          v = code === 2
-            ? { c: mixc([96, 66, 128], [22, 10, 34]), a: 0.55 + 0.42 * k }   // 沼澤水下:混濁紫 → 紫黑
-            : { c: mixc([26, 92, 142], [3, 8, 14]), a: 0.42 + 0.53 * k };    // 水下:藍 → 黑
+          const baseC = trans.veilCol;
+          const darkC = trans.mix > 0.5 ? [22, 10, 34] : [3, 8, 14];
+          const alpha = 0.42 + 0.13 * trans.mix + 0.45 * k;
+          v = { c: mixc(baseC, darkC), a: alpha };
         }
       }
       if (!v && this._env?.code === 2 && !this._flying() && !this.dead) {
