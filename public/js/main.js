@@ -2197,6 +2197,9 @@ async function enterLoading(cfg) {
       app.net?.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain), slabs, hgt: bakeHeightGrid(app.terrain) });
     }
     app.net?.send({ t: 'loaded' });
+    if ((app.lobby?.phase === 'game' || app.lobby?.phase === 'over') && !app.battle) {
+      enterGame();
+    }
   } catch (e) {
     console.error(e);
     setP(1, `❌ 地形建構失敗:${e.message}(檢查網路後重新整理)`);
