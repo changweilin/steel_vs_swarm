@@ -7827,6 +7827,9 @@ export class BattleClient {
     // 晚一步就要等下一幀才看得到,鎖定會慢半拍。後座力/震動仍疊在合成那一行(刻意不抵銷)。
     this._tickViewLock(dt, now);
 
+    // 座艙眼位高程(唯一縫:FPV 視點與 10Hz 位置回報的 ay 絕對視線高程共用同一式)
+    const eye = this._eyeH();
+
     // 視角模式:第一人稱(fpv) vs 第三人稱(tps)
     if (this.viewMode === 'tps') {
       if (this.cockpit && this.cockpit.visible) this.cockpit.visible = false;
@@ -7853,7 +7856,6 @@ export class BattleClient {
       // (低且遠前)、飛行型在機鼻。與 models.js 的 heroTargetH 同一個縫,改角色護甲即連動。
       // 蓄力中重心下沉(鏡頭跟著蹲)。
       const vw = heroView(this.heroKind, this.ch, this._flying());
-      const eye = this._eyeH();          // 單一縫:地形異常狀態的視線高度判定共用同一式
       const headF = this.selfH * vw.f;   // 沿正面方向前移(three:-z 為前)
       this.camera.position.copy(this.pos).add(
         new THREE.Vector3(-Math.sin(this.yaw) * headF, eye, -Math.cos(this.yaw) * headF));
