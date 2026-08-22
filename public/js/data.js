@@ -2769,7 +2769,10 @@ export const TARGET_H = {
  */
 export function hitH(e) {
   if (!e) return SOLDIER_H;
-  if (e.hero) return heroTargetH(e.kind, e.ch);
+  if (e.hero) {
+    const scale = (e.sq?.boss && e.sq.bossSeg != null ? bossScaleF(e.sq.bossSeg) : (e.bossSeg != null ? bossScaleF(e.bossSeg) : 1));
+    return heroTargetH(e.kind, e.ch) * scale;
+  }
   if (e.kind === 'base') return TARGET_H[`base:${e.side}`] ?? 44;
   if (e.civ) return TARGET_H.civ;
   return TARGET_H[`creep:${e.kind}`] ?? TARGET_H[e.kind] ?? SOLDIER_H * 1.6;
@@ -2798,7 +2801,10 @@ export const TARGET_R = {
  */
 export function hitR(e) {
   if (!e) return SOLDIER_H * 0.5;
-  if (e.hero) return heroTargetH(e.kind, e.ch) * (HERO_HIT_R[e.kind] ?? 0.43);
+  if (e.hero) {
+    const scale = (e.sq?.boss && e.sq.bossSeg != null ? bossScaleF(e.sq.bossSeg) : (e.bossSeg != null ? bossScaleF(e.bossSeg) : 1));
+    return heroTargetH(e.kind, e.ch) * (HERO_HIT_R[e.kind] ?? 0.43) * scale;
+  }
   if (e.kind === 'base') return TARGET_R[`base:${e.side}`] ?? 20;
   if (e.civ) return TARGET_R.civ;
   return TARGET_R[`creep:${e.kind}`] ?? TARGET_R[e.kind] ?? SOLDIER_H * 0.5;
@@ -5152,8 +5158,19 @@ export const BOSS = {
   HP_MUL: 0,        // 於下方 derive = Σ SEG_W(MUST NOT 手寫 10)
   // 血條外圍光暈:黑 > 青 > 銀 > 金(逐段;index = 已被擊破的段數)
   GLOW: ['#0b0e12', '#3fe0d0', '#c8d2dc', '#ffcc33'],
+  // 進入第 1/2/3/4 階段時的無敵時間 (秒;第2/3/4階段有 2/3/4 秒無敵時間)
+  INVULN_S: [0, 2, 3, 4],
+  // 逐段體型大小縮放 (第1/2/3/4階段大小增加 0%/20%/50%/100%)
+  SCALE_F: [1.0, 1.2, 1.5, 2.0],
   ZONE_F: 0.5,      // 活動半徑 = 砲塔射程 × 此值(使用者:半個塔射程)
   HEAL_SKILL_F: 0.5, // 技能 HP 恢復減半(其他來源恆 0)
+  // 第 4 階段額外狂暴模式參數:
+  ENRAGE_NPC_DMG_F: 0.25, // 受到兵波NPC/砲塔/主堡的傷害減少至25%
+  ENRAGE_SPD_F: 0.5,      // 移動速度減半 (×0.5)
+  ENRAGE_RATE_F: 1.25,    // 攻速 +25% (×1.25)
+  ENRAGE_RELOAD_F: 1.25,  // 換彈時間 +25% (×1.25)
+  ENRAGE_CD_F: 1.25,      // 技能 CD 時間 +25% (×1.25)
+  ENRAGE_DMG_F: 1.25,     // 傷害 +25% (×1.25)
   // 據點席次分配 [前, 中, 後](使用者指定;鍵 = BOSS 人數)
   SLOTS: { 3: [1, 1, 1], 5: [1, 2, 2] },
   SLOT_OFF_F: 1,    // 同一據點多名 BOSS 的橫向錯開 = TOWER_SIDE_OFF × 此值
@@ -5174,6 +5191,10 @@ export const bossSegOf = (frac) => {
 };
 /** 這一段的血條外圍光暈色 */
 export const bossGlow = (k) => BOSS.GLOW[Math.max(0, Math.min(BOSS.GLOW.length - 1, k | 0))];
+/** 這一段的 BOSS 機體大小縮放倍率 (第1/2/3/4階段: 1.0 / 1.2 / 1.5 / 2.0) */
+export const bossScaleF = (k) => BOSS.SCALE_F[Math.max(0, Math.min(BOSS.SCALE_F.length - 1, k | 0))] ?? 1.0;
+/** 進入這一段時的無敵時間秒數 (第1/2/3/4階段: 0s / 2s / 3s / 4s) */
+export const bossInvulnS = (k) => BOSS.INVULN_S[Math.max(0, Math.min(BOSS.INVULN_S.length - 1, k | 0))] ?? 0;
 /** BOSS 活動半徑(公尺)= 半個塔射程(推導,MUST NOT 手寫) */
 export const bossZoneR = () => UNITS.tower.range * BOSS.ZONE_F;
 /** 同一據點第 i 名 BOSS 的橫向錯開量(公尺;左右輪替,0 → 0、1 → +OFF、2 → −OFF …) */

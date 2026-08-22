@@ -4,7 +4,7 @@
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RALLY(退到砲塔後方等護盾)→ RETREAT(回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
 import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide,
-  CHARACTERS, heroMobility, highSupSpeedF,
+  CHARACTERS, heroMobility, highSupSpeedF, BOSS,
   VITALS,
   BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
@@ -89,7 +89,9 @@ export class BotBrain {
     // 高地壓制折速(2026-08-12;見 data.js HIGH_SUP ⑤):真人那一半住客戶端 `game._mobility`,
     // bot 的「客戶端」就是這裡 —— 兩端同一支 `highSupSpeedF`,伺服器不對真人再折一次。
     const sup = highSupSpeedF(this.sim._supF(h));
-    return heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h) * sup;
+    let spd = heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h) * sup;
+    if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) spd *= BOSS.ENRAGE_SPD_F;
+    return spd;
   }
 
   /** 這架機體的水平半視角(弧度);推導不手寫,見 data.js botFovHalf */
@@ -118,8 +120,11 @@ export class BotBrain {
    * 夾的是**想去的那個點**,不是夾結果 —— 夾完才交給 `solidResolve`,碰撞仍是唯一權威
    * (先解碰撞再硬拉回圓內的話,那一拉會把機體推進牆裡)。非 BOSS 恆原值回傳。
    * 圓心/半徑住 `sim.bossHold`(伺服器定案,見 sim._bossAnchor);bots.js MUST NOT 自己算。
+   * 第 4 階段狂暴模式解除範圍限制,持續向前進攻。
    */
   _zoneClamp(nx, nz) {
+    const sq = this.sim.squads?.get(this.pid);
+    if (sq?.boss && (sq.bossSeg || 0) >= 3) return [nx, nz];
     const z = this.sim.bossHold?.get(this.pid);
     if (!z) return [nx, nz];
     const dx = nx - z.x, dz = nz - z.z, d = Math.hypot(dx, dz);
@@ -237,7 +242,7 @@ export class BotBrain {
     if (this.state === 'RETREAT') this._moveToward(h, u, this._home(), dt);
     else if (this.state === 'RALLY') this._rally(h, u, target, dt);
     else if (this.state === 'ENGAGE') this._engage(h, u, target, dt);
-    else if (sim.bossHold?.has(this.pid)) this._hold(h, u, dt);   // NPC BOSS:不推線,守著據點
+    else if (sim.bossHold?.has(this.pid) && !(h.sq?.bossSeg >= 3)) this._hold(h, u, dt);   // NPC BOSS:不推線,守著據點 (狂暴後持續推進)
     else this._push(h, u, dt);
 
     // 視角:狀態機先寫下「想看哪裡」,受擊警戒可以搶走,最後統一以角速度上限轉一步。
@@ -334,6 +339,7 @@ export class BotBrain {
    * 沒有 tactic 旗標的難度(新手/低)只剩舊制那一條(門檻 PULL_HP、目的地主堡)⇒ 逐位元不變。
    */
   _pullWant(h, frac, spF) {
+    if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) return null;             // 狂暴模式:持續進攻不撤退
     if (!this.diff.tactic) return frac < this.tac.PULL_HP ? 'RETREAT' : null;
     if (frac < this.tac.BASE_HP) return 'RETREAT';
     if (this.state === 'RETREAT') return 'RETREAT';
