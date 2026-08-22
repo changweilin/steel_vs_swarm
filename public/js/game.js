@@ -4093,8 +4093,34 @@ export class BattleClient {
       // 極音速飛彈發射:彈體本身是伺服器實體(走 ents 渲染),這裡只播報 + 發射點後燄
       if (ev.pid === this.youId) {
         this.hud.feed?.(ev.slot === 'ult' ? '🚀 大招載具發射:飛彈自後方工事飛往落點!'
-          : ev.slot === 'skill' ? '🚀 小招載具發射:飛彈自機側飛往落點!'
           : ev.homing ? '🚀 極音速飛彈發射:鎖定目標,射後不理!' : '🚀 極音速飛彈發射:無鎖定,打向正前方');
+      }
+    } else if (ev.e === 'cast_start') {
+      // 詠唱開始:播報 + 施法動作
+      const c = CHARACTERS[ev.ch];
+      const a = c?.[ev.slot];
+      if (ev.pid === this.youId) {
+        this.hud.feed?.(`⏳ ${c?.code || ''}【${a?.name || '招式'}】詠唱中...(${ev.dur?.toFixed(1)}s)`);
+      }
+      const wx = ev.x, wz = -ev.z;
+      let casterPos = null;
+      if (ev.pid === this.youId) {
+        casterPos = () => this.pos;
+      } else {
+        let best = null, bd = Infinity;
+        for (const ent of this.ents.values()) {
+          if (ent.pid !== ev.pid || ent.isSelf || !ent.hero || !ent.mesh.visible) continue;
+          const d = (ent.mesh.position.x - wx) ** 2 + (ent.mesh.position.z - wz) ** 2;
+          if (d < bd) { bd = d; best = ent; }
+        }
+        if (best) casterPos = () => best.mesh.position;
+      }
+      const cpNow = casterPos ? casterPos() : null;
+      const dirCast = castDirF(ev.fx, cpNow && Math.hypot(wx - cpNow.x, wz - cpNow.z) > 12);
+      const castT0 = performance.now() / 1000;
+      for (const ent of this.ents.values()) {
+        if (ent.pid !== ev.pid || ent.isSelf || !ent.hero) continue;
+        ent.castFx = { t0: castT0, slot: ev.slot, dir: dirCast };
       }
     } else if (ev.e === 'cast') {
       // 招式施放:角色專屬演出(castfx.js:魔法陣/元素環繞/拳影劍氣/靈魂束縛……)+ 播報
@@ -4144,8 +4170,10 @@ export class BattleClient {
         this._pulseUntil = Math.max(this._pulseUntil, performance.now() / 1000 + abV);
       }
       if (a) {
+        const pct = Math.round((ev.frac ?? 1) * 100);
+        const tag = ev.interrupted ? `⚡ [受擊強制施展 ${pct}%]` : `✨`;
         this.hud.feed?.(ev.side === this.side
-          ? `✨ ${c.code}【${a.name}】`
+          ? `${tag} ${c.code}【${a.name}】`
           : `⚠️ 敵方 ${c.code} 施放【${a.name}】!`);
         // 立繪演出:自己的招式一律演;敵方只演大招(小招太頻繁會蓋住視野)
         const self = ev.pid === this.youId;

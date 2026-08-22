@@ -28,6 +28,7 @@ import {
   ULT_SUPPORT, supportN, supportHp, supportLegS, supportStackable, supportTempoF, selfUltTempo,
   kindParts, frontKillHp,
   TERRAIN_FX, fluidFactor, envTrigger, WATER, liftRegen,
+  SKILL_CAST, skillCastTime,
 } from '../public/js/data.js';
 // 劇情戰役開房那一段要真的地圖(旗標 defSide 由 venueConfig 帶進 battleConfig)
 import { VENUES, venueConfig } from '../public/js/venues.js';
@@ -1171,14 +1172,17 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       's02(點遞送)仍生 kami 載具、一架輔助機都沒有');
   }
 
-  log('— sim/data:小招也是輔助機型模式 + 大招自最近的砲塔/主堡召喚(2026-08-07 使用者定案)—');
+  log('— sim/data:小招詠唱機制 + 大招載具遞送(2026-08-22 使用者定案)—');
   {
-    // ① 兩個槽位一律載具化:64 招沒有任何一招在施放當下結算
+    // ① 大招 32 台全部載具化(點遞送 / 跟隨編隊),小招 32 台全數為本體施展技能(非載具/輔助機)
     const CHS2 = Object.keys(CHARACTERS);
-    assert(CHS2.every((c) => ['skill', 'ult'].every((sl) => {
-      const A = heroAbility(c, sl, 1);
-      return A.carrier !== A.support && A.carrier === abilDelivered(c, sl);
-    })), '32 台 × 兩個槽位:每一招恰一種載具形式(點遞送 / 跟隨編隊)');
+    assert(CHS2.every((c) => {
+      const uA = heroAbility(c, 'ult', 1);
+      const sA = heroAbility(c, 'skill', 1);
+      return (uA.carrier !== uA.support && uA.carrier === abilDelivered(c, 'ult'))
+        && (!sA.carrier && !sA.support && !abilDelivered(c, 'skill') && sA.castTime > 0);
+    }), '大招全數載具化、小招全數為本體施展技能(castTime > 0)');
+
     // ② 小招 CD 帶 [15,30] 且嚴格保序(排名不變的保證)
     const skCd = [];
     let skIn = true;
@@ -1193,38 +1197,35 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(abilOrigin('skill') === 'self' && abilOrigin('ult') === 'fort',
       '發射點單一縫:小招 = 主機身邊 / 大招 = 最近的我方砲塔或主堡');
 
-    // ③ 行為:同一台機體、同一個站位 —— 小招載具生在身邊、大招載具生在工事上
+    // ③ 大招自工事出發直測
     const sk = new BattleSim(fakeBattleConfig(1));
-    const hk = sk.addHero('SWARM', 'ab_o', 's03');   // 小招 emp + 大招 emp,同為轟炸機形式
+    const hk = sk.addHero('SWARM', 'ab_o', 's03');
     hk.x = 320; hk.z = 140; hk.mp = 999; hk.abil.skill = 1; hk.abil.ult = 1;
     const fortP = sk._launchOrigin(hk, 'ult');
     assert(Math.hypot(fortP.x - hk.x, fortP.z - hk.z) > ULT_CARRIER.MIN_LEG,
       `最近的我方工事離施放者 ${Math.hypot(fortP.x - hk.x, fortP.z - hk.z).toFixed(0)}m(不是就地生成)`);
-    sk.heroCast('ab_o', 'skill', hk.x + 60, hk.z);
-    const vSk = [...sk.ents.values()].filter((e) => e.decoy)[0];
-    assert(!!vSk && Math.hypot(vSk.x - hk.x, vSk.z - hk.z) < ULT_CARRIER.MIN_LEG,
-      '小招載具自主機身邊升空(「從玩家身邊召喚」)');
     sk.heroCast('ab_o', 'ult', hk.x + 60, hk.z);
-    const vUl = [...sk.ents.values()].filter((e) => e.decoy && e !== vSk)[0];
+    const vUl = [...sk.ents.values()].filter((e) => e.decoy)[0];
     assert(!!vUl && Math.hypot(vUl.x - fortP.x, vUl.z - fortP.z) < 1e-6,
       '大招載具自最近的我方工事升空(「從最近的砲塔或主堡召喚」)');
-    assert(hk.sq.decoys.length === 2, '兩個槽位的載具可同時在空(名冊是陣列)');
 
-    // ④ 自身型小招 = 跟隨編隊:施放當下沒有加成,輔助機就位才上線、被打光就整份下線
+    // ④ 小招詠唱機制直測:詠唱期間無加成、自然完成滿額、受擊立即觸發 (t/T)^2
     const sb = new BattleSim(fakeBattleConfig(1));
     const hb = sb.addHero('SWARM', 'ab_b', 's05');
     hb.x = 320; hb.z = 140; hb.mp = 999; hb.abil.skill = 1;
+    const ct = skillCastTime('s05', 1);
     sb.heroCast('ab_b', 'skill');
-    const fl = [...sb.ents.values()].filter((e) => e.supG);
-    assert(fl.length === supportN('s05', 'skill')
-      && fl.every((k) => k.hp === supportHp('s05', 1, 'skill') && k.armor === 0),
-      `s05 小招派 ${fl.length} 架輔助機(每架 ${supportHp('s05', 1, 'skill')} HP、armor 0)`);
-    assert(Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9, '小招施放當下加成未上線(輔助機還在投放腿上)');
-    for (let i = 0; i < 200 && Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9; i++) sb.tick(0.125);
-    assert(Math.abs(sb._buffMul(hb, 'dmg') - heroAbility('s05', 'skill', 1).mul.dmg) < 1e-6,
-      '小招輔助機就位 ⇒ 加成 = 招式原值(全員在線逐位元同舊制)');
-    for (const k of [...sb.ents.values()].filter((e) => e.supG)) { k.hp = 0; sb._kill(k, null); }
-    assert(Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9, '小招輔助機被打光 ⇒ 加成整份下線(效果可以被打斷)');
+    assert(!!hb.cast && hb.cast.dur === ct, `s05 小招開始詠唱(${ct.toFixed(2)}s)`);
+    assert(Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9, '小招詠唱中效果未生效');
+    // 詠唱至 50% 受擊
+    sb.tick(ct * 0.5);
+    sb._damage(hb, 10, null);
+    assert(!hb.cast, '受擊後立即結束詠唱強制施法');
+    const fExp = 0.25; // (0.5)^2
+    const rawMul = heroAbility('s05', 'skill', 1).mul.dmg;
+    const expMul = 1 + (rawMul - 1) * fExp;
+    assert(Math.abs(sb._buffMul(hb, 'dmg') - expMul) < 1e-6,
+      `受擊強制施展效果比例 (t/T)² = ${(fExp * 100).toFixed(0)}%(dmg ×${expMul.toFixed(3)})`);
   }
 
   log('— data:八軌升級階梯 = $75/$150/$300 + 戰鬥分數 0/20/100(2026-08-11)—');
@@ -1425,11 +1426,11 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     `施放小招:CD、電力 -${Math.round(A1.mp)}MP(隨招式階級,無精通折減)`);
   const mp1 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
-  assert(dr.mp === mp1, 'CD 中重複施放被拒(電力未扣)');
-  // 2026-08-07:小招也載具化(從玩家身邊召喚)⇒ 效果由載具**抵達**才施放,施放當下還在飛
-  assert(dr.mods.length === 0, '小招施放當下尚未掛 mods —— 載具還在投放腿上(有攔截窗)');
-  for (let i = 0; i < 400 && dr.mods.length === 0; i++) sim.tick(0.125);
-  assert(dr.mods.length > 0, '增益類小招載具抵達 ⇒ 掛上 mods(蜂群協奏)');
+  assert(dr.mp === mp1, 'CD/詠唱中重複施放被拒(電力未扣)');
+  // 2026-08-22:小招需要詠唱時間才會生效
+  assert(dr.mods.length === 0, '小招詠唱中尚未掛 mods');
+  sim.tick(A1.castTime + 0.1);
+  assert(dr.mods.length > 0, '增益類小招詠唱完成 ⇒ 掛上 mods(蜂群協奏)');
   const rb2 = sim.addHero('STEEL', 'p_r2', 't05');
   rb2.money = 999; rb2.kn = BATTLE_SCORE.MAX;
   assert(sim.buy('p_r2', 'hp') === null && rb2.maxHp > Math.round(UNITS.robot.hp * CHARACTERS.t05.mods.hp),

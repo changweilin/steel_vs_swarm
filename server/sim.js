@@ -37,7 +37,7 @@ const SQUAD_SHARED = [
   // 純自身型大招補償(2026-08-06;見 data.js SELF_ULT):免裝填時窗與破隱爆發窗都是**小隊共用**——
   // 彈匣本來就只有一份(ammo/reloadUntil 在上面),免裝填逐機體各記一份就會出現「主視野機免裝填、
   // 僚機照裝填」這種只有拿碼表才量得出來的分歧。
-  'noReloadUntil', 'alphaArm', 'alphaX',
+  'noReloadUntil', 'alphaArm', 'alphaX', 'cast',
 ];
 
 // ---- tick 內加速結構(2026-08-05 手機單機效能:索敵/推擠原是 O(N²) 全掃,實測佔 tick 近九成)----
@@ -1828,9 +1828,7 @@ export class BattleSim {
    *  2026-08-02:對建築的額外加成(舊 grenadeBuildingMul)已整組移除,MUST NOT 復辟。
    *  護盾/裝甲分軌剋制**不在這裡** —— 那要看目標當下的護盾水位,只能在 _damage 分層時結算。 */
   _heroDmg(h, def, targetKind) {
-    let dmg = def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg');
-    if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) dmg *= BOSS.ENRAGE_DMG_F;
-    return dmg;
+    return def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg');
   }
 
   /** 空中判定:無人機/直升機/集束轟炸機/護衛機/極音速飛彈恆算飛行;其餘以高度 ≥ AA_MIN_ALT 論 */
@@ -1928,6 +1926,7 @@ export class BattleSim {
         if (md.k === key) m *= md.m;
       }
     }
+    if (key === 'dmg' && h.sq?.boss && (h.sq.bossSeg || 0) >= 3) m *= BOSS.ENRAGE_DMG_F;
     return m;
   }
 
@@ -2728,6 +2727,23 @@ export class BattleSim {
     if (hit) h.noReloadUntil = 0;
   }
 
+  /**
+   * 詠唱中受擊強制立即施展(2026-08-22 使用者定案):
+   * 詠唱期間被攻擊時會強制立即施展(已詠唱時間比例平方的效果)。
+   * f = (t_elapsed / T_cast)^2
+   */
+  _interruptCast(h) {
+    const hero = h.pid ? this.heroes.get(h.pid) : h;
+    if (!hero || !hero.cast) return;
+    const c = hero.cast;
+    hero.cast = null;
+    const elapsed = Math.max(0, Math.min(c.dur, this.t - c.start));
+    const r = c.dur > 0 ? elapsed / c.dur : 1;
+    const f = r * r;
+    this._castEffect(hero, c.A, c.x, c.z, f, null, true);
+    this.events.push({ e: 'cast', pid: hero.pid, side: hero.side, ch: hero.ch, slot: 'skill', fx: c.A.fx, x: c.x, z: c.z, r: c.A.r, dur: c.A.dur, lvl: c.lvl, frac: f, interrupted: true });
+  }
+
   /** 目前仍有效的準星鎖定目標(存活、敵方、未過期);沒有 → null */
   _lockedTarget(sq) {
     if (this.t - sq.lockAt > LOCK.TTL) return null;
@@ -3184,6 +3200,7 @@ export class BattleSim {
     if (!lvl) return;                                  // 尚未解鎖
     if ((h.acd[slot] || 0) > this.t) return;           // 冷卻中
     if (this._jammed(h)) return;                       // 電磁癱瘓:招式一併離線
+    if (slot === 'skill' && h.cast) return;            // 詠唱中不重複發動
     const A = heroAbility(h.ch, slot, lvl);
     // 2026-07-20:招式冷卻/電力隨招式階級(小招 sk / 大招 ult)成長,無獨立精通折減
     const mpc = Math.round(A ? A.mp : 0);
@@ -3200,19 +3217,26 @@ export class BattleSim {
     const cdMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_CD_F : 1);
     h.acd[slot] = this.t + A.cd * cdMul;
     if (A.fx !== 'stealth' && A.fx !== 'vision' && A.fx !== 'rally' && A.fx !== 'recon') h.stealthUntil = 0;   // 出手即現形
-    // 招式載具遞送(2026-08-06 大招 / 2026-08-07 小招也收進來):**兩個槽位一律不在此結算** ——
+
+    // 2026-08-22 小招改制(本體詠唱施展):
+    // 小招非召喚物/載具模式,需要詠唱時間才會生效,被攻擊時強制立即施展(已詠唱時間比例平方的效果)。
+    if (slot === 'skill') {
+      h.cast = { slot: 'skill', start: this.t, dur: A.castTime, x, z, A, lvl };
+      this.events.push({ e: 'cast_start', pid, side: h.side, ch: h.ch, slot: 'skill', dur: A.castTime, x, z, fx: A.fx });
+      return;
+    }
+
+    // 大招載具遞送(2026-08-06 大招 / 2026-08-22 小招改為詠唱後大招專屬):
     // 發射該機種形式的載具(kami×N / 集束轟炸機 / 極音速飛彈)或派出跟隨主機的輔助機隊,
-    // 效果由載具**抵達時**經同一支 _castEffect 施放(單一縫;擊落 = 該份否定)。
-    // 發射點只有 `abilOrigin` 一份:小招 = 主機身邊、大招 = 最近的我方砲塔/主堡(見 _launchOrigin)。
-    // CD/MP 已於上方收訖;cast 事件帶 carrier 旗標 ⇒ 客戶端只演施法動作/立繪,落地演出等 ultfx。
+    // 效果由載具抵達時經同一支 _castEffect 施放(單一縫;擊落 = 該份否定)。
+    // 發射點只有 `abilOrigin` 一份(大招 = 最近的我方砲塔/主堡,見 _launchOrigin)。
     const org = this._launchOrigin(h, slot);
     if (A.carrier) {
       this._launchUltCarrier(h, A, x, z, org);
       this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1, ox: org.x, oz: org.z });
       return;
     }
-    // 自身強化型(2026-08-07 使用者定案;見 data.js ULT_SUPPORT):派出 supportN 架**跟隨玩家的
-    // 輔助機**,效果由它們就位後供輸、被打下來就少一份(疊加是加法)。
+    // 自身強化型大招:派出 supportN 架跟隨玩家的輔助機
     this._launchUltSupport(h, A, org, slot);
     this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 1, sup: supportN(h.ch, slot), ox: org.x, oz: org.z });
   }
@@ -3320,13 +3344,13 @@ export class BattleSim {
         // 空襲自天而降 → 爆點恆為地面層(lev 0):砸在隧道覆蓋段上方不會隔著山體炸到洞內
         // 重建的 def MUST 帶齊剋制欄位:漏抄 vsSp/vsHp/spPierce 的話,招式版與武器版
         // 會對同一個護盾軸有兩種行為(A34 的第二份拆分邏輯,只是換了個地方漏)。
-        this._blast(h, { dmg: A.dmg, r: A.r, vs: A.vs, pen: A.pen,
+        this._blast(h, { dmg: A.dmg * frac, r: A.r, vs: A.vs, pen: A.pen,
           vsSp: A.vsSp, vsHp: A.vsHp, spPierce: A.spPierce }, ix, iz, 0, 0);
         if (A.add) this._applyCC(h, A.add, ix, iz, A.r);   // 控場類追加效果:彈著區內敵人
       }
     } else if (A.fx === 'summon') {
       // 召喚中心 = 效果落點(瞬發 = 施放者位置;載具遞送 = 抵達點,單位就地投入最近兵線)
-      const nSum = nImp ?? A.count;
+      const nSum = nImp ?? Math.max(1, Math.round(A.count * frac));
       const { li, d } = this._nearestLane(x, z);
       const total = this._laneCum(li)[this._laneCum(li).length - 1];
       const comp = A.unit === 'squad'
@@ -3349,14 +3373,14 @@ export class BattleSim {
         if (e.hero && e.dead) continue;
         if (e.hero && this._buffVal(e, 'ccImm') > 0) continue;   // 異常免疫(s12「滿天星座」)
         if (dist2d(e.x, e.z, x, z) > A.r) continue;
-        e.empUntil = Math.max(e.empUntil || 0, this.t + A.dur);
+        e.empUntil = Math.max(e.empUntil || 0, this.t + A.dur * frac);
         (e.asst ||= {})[h.pid] = this.t;   // 施加負面狀態 = 助攻貢獻(與 _applyCC/_applyHitEmp 同規)
       }
-      if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
+      if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
     } else if (A.fx === 'vision') {
-      this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
+      this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
     } else if (A.fx === 'stealth') {
-      if (once) h.stealthUntil = this.t + A.dur;
+      if (once) h.stealthUntil = this.t + A.dur * frac;
       // 破隱爆發窗(m08「查無此人」;2026-08-06 使用者定案「破隱一秒內傷害增加」):這裡只**上膛**,
       // 真正開窗在 `_gateFire` 那一行 `stealthUntil = 0`(= 開火現形的唯一時刻)——
       // 在這裡就開窗的話,玩家躲著不開火也在燒那一秒,而畫面上只表現成「爆發好像沒生效」。
@@ -3389,17 +3413,18 @@ export class BattleSim {
       if (A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
     } else if (A.fx === 'intercept') {
       // 擊落半徑內所有敵方來襲飛彈(悼歌條款:擋子彈的,不是打人的)
+      const ir = A.r * Math.sqrt(Math.max(0.01, frac));
       for (let i = this.missiles.length - 1; i >= 0; i--) {
         const ms = this.missiles[i];
         if (ms.side === h.side) continue;
-        if (dist2d(ms.x, ms.z, h.x, h.z) > A.r) continue;
+        if (dist2d(ms.x, ms.z, h.x, h.z) > ir) continue;
         this.missiles.splice(i, 1);
         this.events.push({ e: 'boom', x: ms.x, z: ms.z, y: ms.y, r: 8, side: h.side, sam: true });
       }
-      if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
+      if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
     }
     // dash:位移在客戶端(位置本就客戶端回報),伺服器只管 CD/MP 與廣播特效
-    if (A.fx === 'buff' && A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
+    if (A.fx === 'buff' && A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
   }
 
   /**
@@ -3929,6 +3954,7 @@ export class BattleSim {
       t.lastHitAt = this.t;                  // 進入戰鬥:護盾回復重新計時
       this._stampSup(t, by);                 // 高地壓制:站得越高、挨這一發之後越打不準/閃不掉/跑不動
       this._breakOnHit(t);                   // 「挨一發就結束」的招式(t02 超載)在此撤銷
+      this._interruptCast(t);                // 詠唱中受擊:強制立即施展 (t/T)^2 效果(2026-08-22)
       // 雙層拆分走 shieldSplit 單一縫(反護盾 / 穿盾 / 反裝甲三型;中性參數 = 舊制的「護盾先吃、
       // 溢出進裝甲」)。護盾層恆不吃護甲減免 —— 能量護盾與裝甲板是兩套防護,這一點沒有改。
       const { toSp: toShield, toHp } = shieldSplit(wd, dmg, t.sp || 0);
@@ -4365,6 +4391,7 @@ export class BattleSim {
       }
     }
     this._tickSquads(dt);
+    this._tickCasts(dt);
     this._tickDecoys(dt);
     this._tickKamis(dt);
     this._tickHypers(dt);
@@ -4478,10 +4505,24 @@ export class BattleSim {
     b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {
       b.mp = b.maxMp;
-      b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0;
+      b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0; b.cast = null;
       b.ammo = {}; b.reloadUntil = {}; b.fireAt = {};   // 重生滿彈
     }
     this.events.push({ e: 'respawn', id: b.id, side: b.side, pid: b.pid });
+  }
+
+  /** 小招詠唱推進:時間到自然施展(100% 效果) */
+  _tickCasts(dt) {
+    for (const h of this.heroes.values()) {
+      if (!h.cast) continue;
+      if (h.dead) { h.cast = null; continue; }
+      if (this.t >= h.cast.start + h.cast.dur) {
+        const c = h.cast;
+        h.cast = null;
+        this._castEffect(h, c.A, c.x, c.z, 1, null, true);
+        this.events.push({ e: 'cast', pid: h.pid, side: h.side, ch: h.ch, slot: 'skill', fx: c.A.fx, x: c.x, z: c.z, r: c.A.r, dur: c.A.dur, lvl: c.lvl, frac: 1 });
+      }
+    }
   }
 
   // ---------- 僚機 AI(伺服器權威;主視野那架的位置由客戶端回報)----------

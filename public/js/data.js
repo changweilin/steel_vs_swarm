@@ -1616,28 +1616,18 @@ export const decoyHp = () => frontKillHp(decoyExposureS());
 //   ⇒ 依機種分批(擊落幾架就少幾份);emp/buff 是一段狀態時窗,分批會疊乘(mods 逐筆相乘)
 //   ⇒ 恆單一載具、攔截 = 完全否定。
 //
-// ---- 2026-08-07 使用者定案(兩句話,兩件事)----
-// ①「**小招也改為輔助機型模式,CD 時間 15~30s,從玩家身邊召喚**」
-//    ⇒ 載具制自此涵蓋**兩個槽位**:32 名角色 × 小招/大招 = 64 招全部由載具遞送,
-//      分類規則仍是同一支 `abilDelivered`(區域/指向型 = 點遞送、自身/personal 型 = 跟隨編隊)。
-//      **MUST NOT 把小招一律做成跟隨編隊**:三把 emp 小招(s03/t08/m05)標的是 250m 外的一片區域,
-//      改成貼著自己的編隊 = 效果圈當場搬回腳下 = 把那三招的身分刪掉(而且沒有任何錯誤訊息)。
-//    CD 帶 [SK_CD_LO, SK_CD_HI] 的映射方式與大招那一輪**同一支** `abilCarrierCd`(嚴格保序)。
-// ②「**大招改為從最近的砲塔或主堡召喚**」
-//    ⇒ 兩個槽位自此只差**發射點**(`abilOrigin`):小招 = 主機身邊、大招 = 最近的我方砲塔/主堡。
-//      這是整個改制的設計主軸:小招是隨身戰術(快 CD、就地生成、幾乎沒有前置),
-//      大招是後方戰略資產(慢 CD、要飛過來、整段航程都可以被打下來)。
-//      發射點只有 `abilOrigin` 一份,MUST NOT 在 sim / 模型 / 稽核任一端另寫 `slot === 'ult' ? …`。
+// ---- 2026-08-22 使用者定案(小招改制)----
+// 「小招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間,詠唱期間被攻擊時會強制立即施展(已詠唱時間比例平方的效果)」
+//   ⇒ 小招移除載具／輔助機隊遞送模式,改為本體詠唱(castTime 依效果強度推導 [0.5, 2.5]s);
+//   大招維持後方工事召喚載具/輔助機隊遞送(abilOrigin === 'fort')。
 export const ULT_CARRIER = {
   CD_LO: 30, CD_HI: 60,      // 大招 CD 帶(2026-08-06 使用者定案)
   SK_CD_LO: 15, SK_CD_HI: 30, // 小招 CD 帶(2026-08-07 使用者定案「CD時間15~30s」)
   // 最短飛行腿(公尺):使用者定案「需要飛行時間」——自身/團隊型招式瞄在腳邊時,遞送點仍
   // 推到面前這麼遠,保證每一發都有 ≥0.6s 的攔截窗(最慢載具 DECOY.SPEED 62m/s)。
-  // 支援型效果半徑(r 200~300)遠大於此 ⇒ 施放者自己仍在效果圈內,涵蓋不受影響。
-  // 2026-08-07 起這也是**小招的發射腿**(「從玩家身邊召喚」= 生成在主機身上,衝出這一段才就位)。
   MIN_LEG: 40,
 };
-/** 這一招由誰召喚(**發射點的唯一縫**;2026-08-07 使用者定案):
+/** 這一招由誰召喚(**發射點的唯一縫**):
  *  'self' = 主機身邊(小招)/ 'fort' = 最近的我方砲塔或主堡(大招)。 */
 export const abilOrigin = (slot) => (slot === 'ult' ? 'fort' : 'self');
 /**
@@ -1647,19 +1637,16 @@ export const abilOrigin = (slot) => (slot === 'ult' ? 'fort' : 'self');
  * 輔助機隊的耐久(supportHp)要有一個與站位無關的窗長,否則同一招的 HP 會隨玩家站哪裡漂移。
  */
 export const ultLaunchLegM = () => UNITS.tower.range * GAME.TOWER_SEP_F / 2;
-/** 這一槽位的載具發射腿(公尺):小招 = 主機身邊衝出 MIN_LEG;大招 = 後方工事飛過來(代表值)。 */
+/** 這一槽位的載具發射腿(公尺):小招 = 主機身邊 MIN_LEG;大招 = 後方工事飛過來(代表值)。 */
 export const abilLaunchLegM = (slot) =>
   (abilOrigin(slot) === 'fort' ? ultLaunchLegM() : ULT_CARRIER.MIN_LEG);
 /**
  * 這名角色的這一招是不是**點遞送**(**推導判定,MUST NOT 手寫名冊**):
+ * 2026-08-22:載具遞送只服務**大招**;小招改為本體詠唱施展。
  * 區域/指向型 = strike/emp/summon + 團隊 heal/buff;其餘(自身/personal 型)= 跟隨編隊。
- *
- * `dash` 小招(5 台)因此也歸跟隨編隊,而它在 `_castEffect` 是**空分支**(位移本就客戶端權威)
- * ⇒ 那一架輔助機飛完投放腿就功成身退、什麼都不交付。這是**刻意不開例外**:
- * 「哪些招式不需要載具」一旦寫成名冊就會漂(而漂掉的症狀是「這一招怎麼不用等」),
- * 而多生一架短命的小機沒有任何結算後果 —— 它連伺服器狀態都不碰。
  */
-export const abilDelivered = (ch, slot) => {
+export const abilDelivered = (ch, slot = 'ult') => {
+  if (slot !== 'ult') return false;
   const u = CHARACTERS[ch]?.[slot];
   if (!u) return false;
   return u.fx === 'strike' || u.fx === 'emp' || u.fx === 'summon'
@@ -1715,46 +1702,88 @@ export const ultParts = (kind, fx) => {
   return divisible ? kindParts(kind) : 1;
 };
 
+// ---- 小招詠唱機制 (2026-08-22 使用者定案「小招改成施展效果而不是召喚物效果,需要詠唱時間才會生效,視效果強度決定詠唱時間」) ----
+export const SKILL_CAST = {
+  MIN_S: 0.5,   // 最短詠唱時間(秒)—— 輕量走位/突進類
+  MAX_S: 2.5,   // 最長詠唱時間(秒)—— 重型全隊/大範圍控場類
+};
+
+/** 小招效果強度綜合評分(單一真相縫:推導不手寫) */
+export const skillPower = (ch, lvl = 1) => {
+  const u = CHARACTERS[ch]?.skill;
+  if (!u) return 0;
+  const t = (v) => tierVal(v, lvl);
+  let p = 0;
+  if (u.fx === 'dash') {
+    p = t(u.imp || 30) * 2;
+  } else if (u.fx === 'stealth') {
+    p = t(u.dur || 5) * 25;
+  } else if (u.fx === 'vision') {
+    p = t(u.vision || 7) * 20;
+  } else if (u.fx === 'intercept') {
+    p = t(u.r || 200) * 0.7;
+  } else if (u.fx === 'heal') {
+    const h = t(u.heal || 0);
+    p = (u.target === 'team' ? h * 1.8 : h * 0.6);
+  } else if (u.fx === 'emp') {
+    const dur = t(u.dur || 3);
+    const r = t(u.r || 130);
+    p = dur * (r / 10) * 7;
+  } else if (u.fx === 'summon') {
+    const cnt = t(u.count || 3);
+    p = cnt * 100;
+  } else if (u.fx === 'buff') {
+    const dur = t(u.dur || 6);
+    let mag = 0;
+    if (u.mul?.dmg) mag += (t(u.mul.dmg) - 1) * 300;
+    if (u.mul?.dmgTaken) mag += (1 - t(u.mul.dmgTaken)) * 300;
+    if (u.mul?.reload) mag += (1 - t(u.mul.reload)) * 200;
+    if (u.add?.f) mag += (t(u.add.f) - 1) * 150;
+    if (u.add?.fx === 'dodge' || u.add?.fx === 'mark') mag += 50;
+    if (mag <= 0) mag = 50;
+    p = dur * mag * (u.target === 'team' ? 0.35 : 0.2);
+  }
+  return p;
+};
+
+/** 全小招效果強度全距(memo) */
+let _skillPowerBand = null;
+export const skillPowerBand = () => {
+  if (_skillPowerBand) return _skillPowerBand;
+  let lo = Infinity, hi = -Infinity;
+  for (const id of Object.keys(CHARACTERS)) {
+    for (let lvl = 1; lvl <= 3; lvl++) {
+      const p = skillPower(id, lvl);
+      if (p < lo) lo = p;
+      if (p > hi) hi = p;
+    }
+  }
+  _skillPowerBand = { lo, hi };
+  return _skillPowerBand;
+};
+
+/** 視效果強度決定詠唱時間(秒;單一真相縫,嚴格保序映射至 [SKILL_CAST.MIN_S, SKILL_CAST.MAX_S]) */
+export const skillCastTime = (ch, lvl = 1) => {
+  const p = skillPower(ch, lvl);
+  const { lo, hi } = skillPowerBand();
+  const f = hi > lo ? (p - lo) / (hi - lo) : 0.5;
+  return +(SKILL_CAST.MIN_S + f * (SKILL_CAST.MAX_S - SKILL_CAST.MIN_S)).toFixed(2);
+};
+
 // ---- 自身強化型招式 = 跟隨玩家的輔助機隊(2026-08-07 使用者定案)----
-// 2026-08-07 第二輪:這一段自此**兩個槽位共用**(小招也改為輔助機型模式)——
-//   所有函式一律吃 `slot`(預設 'ult' = 既有呼叫端逐位元不變),分類仍走 `abilDelivered`。
-//   兩個槽位只差**發射點**(`abilOrigin`)與**投放腿**(`abilLaunchLegM`):
-//   小招從主機身邊衝出 MIN_LEG、大招從最近的我方砲塔/主堡飛過來(代表腿 = ultLaunchLegM)。
+// 2026-08-22:輔助機隊只服務大招(slot === 'ult');小招已改為本體詠唱施展。
 // 使用者兩句話:①「自身強化類的改成**跟隨玩家的輔助機型**進行提供加成」;
 //   ②「**某些招式換成多個輔助機型,多機型的狀態可以疊加**」;
 //   ③「持續型招式的輔助機型耐久會比瞬發型與間斷型高,**持續時間越久耐久也越高**」。
-// 這一輪把最後 9 台(純自身型)也收進載具制:32 台大招自此**全部**經載具遞送,只差形式 ——
+// 32 台大招自此**全部**經載具遞送,只差形式 ——
 //   點遞送(`ultDelivered`,23 台:飛出去、抵達即引爆) vs 跟隨編隊(這一段,9 台:留在身邊供輸)。
-// 效果因此不再是「按下去就一定拿到」:輔助機是 sim 實體(可鎖定、可擊落),被打掉幾架就少幾份加成。
-//
-// **疊加 = 加法不是相乘**(`supportF`):k 架在線 ⇒ 倍率 = 1 + (m − 1) × k/N。
-//   逐架各推一筆 mods 會被 `_buffMul` **相乘**((1+(m−1)/N)^N ≠ m)⇒ 全員在線時的效果會比舊制高,
-//   而且只在「剛好幾架活著」的瞬間對得上帳 —— 症狀是「這一招有時候特別強」,沒有任何錯誤訊息。
-//   核心不變式:**N 架全在線 = 逐位元同舊制的效果值**(k = N ⇒ f = 1 ⇒ 1 + (m−1) = m)。
-// **可疊加才分機**(`supportStackable`):二元狀態(匿蹤 / 免疫 / 免裝填)沒有「一半」可言 ⇒ 恆單機,
-//   這就是使用者說的「**某些**招式換成多個」——名冊 MUST 由 ult 欄位推導,MUST NOT 手寫。
-// **節奏三分**(`selfUltTempo`,同樣推導不手寫):
-//   瞬發 burst  = 沒有時窗(s11 大修:一次交付完就結束)—— 服務窗就只有投放腿那 0.6 秒;
-//   間斷 pulse  = 有時窗但**逐 tick 入帳**(s12 的 regen:補進去的血不會因為輔助機被打掉而吐回來)
-//                 ⇒ 撐不到底仍有交付,只要求撐住 `PULSE_F` 那一段;
-//   持續 sustain = 有時窗的**狀態**(傷害/減傷/匿蹤/射程…):撐不到底就是整段沒有 ⇒ 要求撐滿。
-// **耐久推導不手寫**(`supportHp`):機隊在**前線一組塔位**的火力下**剛好**在服務窗結束時被清空
-//   (同 kamiHp「塔位一次只打一架」的語意)⇒ 每架各撐 服務窗 ÷ 機數 秒。三招載具那把尺原封不動地
-//   延伸到第四種形式:砲塔數值一改,四種載具的 HP 一起漂,MUST NOT 手寫任何一個。
-//   使用者③兩條因此是**推導出來的結論**而不是另外加的規則:機隊總耐久 ≈ frontDps × 服務窗,
-//   而服務窗 = 投放腿 + 節奏係數 × dur ⇒ 持續型 > 間斷型 > 瞬發型、且 dur 越大越硬。
 export const ULT_SUPPORT = {
   SLOT_R: 7,      // 編隊半徑(公尺):輔助機環繞主機的站位圈(> 機體碰撞半徑,不擋自己的視線)
   SLOT_ALT: 4.5,  // 編隊離地高(公尺):高過步兵、低過屋頂 —— 打得到也看得到
   TURN_K: 4,      // 編隊收斂係數(1/s):越界就往站位點靠,MUST NOT 硬貼(硬貼 = 打不中的無敵護衛)
-  // 間斷型要撐住的窗佔比。**這是設計旋鈕不是推導值**(同 AOE_BUDGET.W / SPEED_COMP.K):
-  // 兩個端點 0(瞬發:沒有時窗)與 1(持續:狀態撐不到底就是整段沒有)都是**定義**,
-  // 只有中間這一格要校準 —— 校準錨 = bal ⑦f 的自身型組 EHP 當量/次。
-  // 語意:間斷型的每一份 tick 一落地就是永久入帳 ⇒ 撐半個窗 = 交付一半,而不是歸零。
   PULSE_F: 0.5,
 };
-/** 輔助機的飛行速度:與自殺攻擊機同一具小型載具(客戶端也共用 kami 那份縮小渲染)⇒ 同吃那一份速度。
- *  MUST NOT 另寫一個常數 —— 兩份速度會讓「投放腿要飛幾秒」與畫面上飛多快分家。 */
+/** 輔助機的飛行速度:與自殺攻擊機同一具小型載具(客戶端也共用 kami 那份縮小渲染)⇒ 同吃那一份速度。 */
 export const supportSpeed = () => UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL;
 /** 投放腿(秒)= 該槽位的發射腿 ÷ 飛行速度 ⇒ 每一次施放都有攔截窗(使用者 2026-08-06 定案
  *  「需要飛行時間」)。推導不手寫;大招那一段自 2026-08-07 起是**後方工事 → 主機**的代表距離。 */
@@ -1762,6 +1791,7 @@ export const supportLegS = (slot = 'ult') => abilLaunchLegM(slot) / supportSpeed
 /** 這一招的狀態可不可以「一半」(⇒ 可不可以拆成多架輔助機疊加)。
  *  純二元狀態(匿蹤 / 解除異常 / 免裝填)沒有半份可言 ⇒ 單機;有任何**純量**狀態即可疊加。 */
 export const supportStackable = (ch, slot = 'ult') => {
+  if (slot !== 'ult') return false;
   const a = CHARACTERS[ch]?.[slot];
   if (!a || abilDelivered(ch, slot)) return false;
   if (Object.keys(a.mul || {}).length) return true;
@@ -1777,7 +1807,8 @@ export const supportF = (ch, live, slot = 'ult') => {
   return n > 0 ? Math.max(0, Math.min(1, live / n)) : 0;
 };
 /** 自身強化型招式的節奏(burst / pulse / sustain);點遞送的那一群回 null。**推導不手寫**。 */
-export const abilTempo = (ch, slot) => {
+export const abilTempo = (ch, slot = 'ult') => {
+  if (slot !== 'ult') return null;
   const a = CHARACTERS[ch]?.[slot];
   if (!a || abilDelivered(ch, slot)) return null;
   if (!(tierVal(a.dur ?? 0, 1) > 0)) return 'burst';   // 沒有時窗 = 一次交付完
@@ -1789,8 +1820,7 @@ export const selfUltTempo = (ch) => abilTempo(ch, 'ult');
 /** 節奏 → 「要撐住效果時窗的多少」(0 / PULSE_F / 1;前後兩個是定義,中間那個是旋鈕) */
 export const supportTempoF = (tempo) =>
   tempo === 'sustain' ? 1 : tempo === 'pulse' ? ULT_SUPPORT.PULSE_F : 0;
-/** 輔助機隊的服務窗(秒)= 投放腿 + 節奏係數 × 效果時窗 —— 「這一招要機隊撐多久」。
- *  使用者③的兩條(持續 > 瞬發/間斷、dur 越久越硬)就住在這一行,其餘全是它的推論。 */
+/** 輔助機隊的服務窗(秒)= 投放腿 + 節奏係數 × 效果時窗 —— 「這一招要機隊撐多久」。 */
 export const supportServiceS = (ch, lvl = 1, slot = 'ult') => {
   const a = CHARACTERS[ch]?.[slot], tempo = abilTempo(ch, slot);
   if (!a || !tempo) return 0;
@@ -1798,12 +1828,9 @@ export const supportServiceS = (ch, lvl = 1, slot = 'ult') => {
 };
 /**
  * 單架輔助機的 HP。反解的是「在**前線一組塔位**的火力下,機隊剛好撐完服務窗」——
- * 但兩段窗的曝險方式不同,**MUST NOT 整段除以機數**:
+ * 兩段窗的曝險方式不同,**MUST NOT 整段除以機數**:
  *   ・投放腿:N 架**同時**在飛 ⇒ 每一架都各自扛完整的一段(平行曝險,不共享);
  *   ・效果窗:敵人一次點名一架(同 kamiHp「塔位一次只打一架」)⇒ 這一段才由機隊分攤(÷ N)。
- * 整段除以機數的下場:瞬發型(dur = 0)的每架 HP = 投放腿 ÷ N —— s11 實測 **20 點**,
- * 一顆步槍子彈就打掉四分之一份治療,而它在正式對局裡永遠站在自家兵線上(2026-08-07 實測:
- * 稽核場景的機隊在第一個 tick 就被路過的小兵清掉 3 架)。「瞬發型耐久最低」不等於「見光即死」。
  * armor / 護盾恆 0(同三種點遞送載具):校準要精確,EHP 就 MUST NOT 隨主機角色或升級漂移。
  */
 export const supportHp = (ch, lvl = 1, slot = 'ult') => {
@@ -3062,22 +3089,19 @@ export function heroAbility(ch, slot, lvl = 1) {
   // 未標 range 的支援型補上遞送距離 = hyperRange()(與機甲接戰距離同一把尺;不再 ×COMBAT_SCALE ——
   // hyperRange 已是縮好的遊戲公尺)。其餘欄位(dmg/heal/dur/mp/…)逐位元不動。
   // 2026-08-07:剩下 9 台自身強化型改由**跟隨玩家的輔助機隊**供輸(見 ULT_SUPPORT)⇒ 32 台大招
-  // 全數載具化,只差形式。`support` 是伺服器分流的旗標,其餘欄位(含 cd)逐位元不動 ——
-  // CD 帶 [30,60] 是 23 台「合併為一招」那一輪的仿射映射,把 9 台也壓進去會同時改掉 selfUltEq
-  // 的分子(補償 ∝ cd)⇒ 一個改動同時動兩個平衡面,MUST NOT 順手併進來。
-  // 2026-08-07 第二輪(使用者定案「小招也改為輔助機型模式,CD 時間 15~30s,從玩家身邊召喚;
-  //   大招改為從最近的砲塔或主堡召喚」):載具制自此涵蓋**兩個槽位** ⇒ carrier/support 不再
-  //   看 slot,只看 `abilDelivered` 這一支分類;差別全部收進 `abilOrigin`(發射點)與
-  //   `abilCdMapped`(cd 要不要壓進該槽位的帶)。
-  const carrier = abilDelivered(ch, slot);
-  const support = !carrier;
+  // 全數載具化,只差形式。`support` 是伺服器分流的旗標,其餘欄位(含 cd)逐位元不動。
+  // 2026-08-22(小招改制):小招改為本體詠唱施展(castTime 依效果強度推導 [0.5, 2.5]s),
+  // 不再是載具或輔助機(carrier/support 恆 false);大招維持載具/輔助機遞送(castTime 恆 0)。
+  const isUlt = slot === 'ult';
+  const carrier = isUlt && abilDelivered(ch, 'ult');
+  const support = isUlt && !carrier;
+  const castTime = isUlt ? 0 : skillCastTime(ch, lvl);
   // 遞送距離的預設值只給**大招**:它是「從後方工事送到指定點」的戰略遞送 ⇒ 未標 range 的支援型
-  //   要有一段可以指定的遞送距離(= hyperRange,與機甲接戰距離同一把尺)。小招從主機身邊召喚,
-  //   遞送距離就是招式本來的 range(未標 = 施放在腳下)—— 補一個 186m 的預設等於**憑空**
-  //   把三把團隊 buff / 兩把團隊治療小招變成遠端指定,那不是使用者要的(只換召喚方式)。
-  const deliverR = carrier && slot === 'ult' && !a.range;
+  //   要有一段可以指定的遞送距離(= hyperRange,與機甲接戰距離同一把尺)。小招從主機身邊施放,
+  //   遞送距離就是招式本來的 range(未標 = 施放在腳下)。
+  const deliverR = carrier && !a.range;
   return {
-    id: slot, name: a.name, fx: a.fx, desc: a.desc, carrier, support,
+    id: slot, name: a.name, fx: a.fx, desc: a.desc, carrier, support, castTime,
     cd: abilCdMapped(ch, slot) ? abilCarrierCd(slot, t(a.cd)) : t(a.cd),
     mp: t(a.mp), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
     dmg: t(a.dmg ?? 0) * counterDmgF(a), heal: t(a.heal ?? 0), count: t(a.count ?? 1),   // 折減見 heroWeapon 同欄註
