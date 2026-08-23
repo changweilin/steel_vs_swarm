@@ -224,6 +224,46 @@ Also:
 
 ---
 
+## L6b — Whole-scene geometry batching
+
+When thousands of static generated parts share one shader contract, append them through a
+turtle-style transform stack into spatially bounded `BufferGeometry` batches. This is the
+CPU assembly half of the pattern; `procedural-surface-shaders` owns the packed surface row
+and GPU decoding.
+
+The writer needs only five operations: `push`, `pop`, `translate/rotate/scale`, `mesh`, and
+`build`. While appending:
+
+- transform positions by the current matrix;
+- transform normals by its inverse transpose and renormalise;
+- offset incoming indices by the current vertex count;
+- copy every declared per-vertex attribute with exactly the same count;
+- choose `Uint16Array` or `Uint32Array` from the final vertex count;
+- compute the finished bounds after all geometry is appended.
+
+Cache primitive source geometries by their full parameter tuple. The batch owns copied vertex
+data, not those cached sources, so cached primitives remain reusable and must not be disposed
+with one scene rebuild.
+
+Do not create one batch for the entire world merely because it is possible. Partition by
+district or culling cell, then by render contract:
+
+| Separate batch when | Why |
+|---|---|
+| transparency / depth-write differs | draw order and depth state cannot be encoded per vertex |
+| vertex animation differs | static, sway, skinning and dissolve need different shader paths |
+| shadow participation differs | a shared shadow draw would include the wrong casters |
+| lifetime differs | one-shot objects must be disposable without rebuilding the district |
+| spatial bounds differ materially | a world-sized bound defeats frustum culling |
+
+Measure resident bytes as well as draw calls. Merging duplicates every transformed vertex;
+instancing shares one geometry. Use batching for heterogeneous static assemblies and instancing
+for repeated identical objects. A lower draw count is not automatically a lower memory cost.
+
+Reference: `winchxyz/bikini-bottom` `src/core/builder.js`.
+
+---
+
 ## L7 — When the assets are authored instead of generated
 
 If there is an artist and a glTF pipeline, the same discipline moves up a level:

@@ -532,10 +532,10 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   {
     const bioC = strip(bio);
     ok((bioC.match(/libGeo\(/g) || []).length === 3
-      && /const partGeo = \(p\) => \(p\.lib && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC)
-      && /const megaGeo = \(name\) => \{ const g2 = name \? libGeo\(name\) : null; return g2 \? g2\.clone\(\) : null; \};/.test(bioC)
+      && /const partGeo = \(p\) => \(p\.lib && isRuntimeEligibleNatureKey\(p\.lib\) && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC)
+      && /const megaGeo = \(name\) => \{\s+const g2 = name && isRuntimeEligibleNatureKey\(name\) \? libGeo\(name\) : null;\s+return g2 \? g2\.clone\(\) : null;\s+\};/.test(bioC)
       && /const bldGeo = \(key, i = 0\) => \{/.test(bioC) && /BLD_LIB\[key\]/.test(bioC),
-      'AI 零件庫解析恰三份:partGeo(宣告式零件表)+ megaGeo(命令式巨岩呼叫點守衛;'
+      'AI 零件庫解析恰三份:partGeo + megaGeo 皆先過 v1 自然物白名單守衛;'
       + '一律 clone —— 巨岩群組會過 bakeContactAO 就地烤頂點色,共用庫幾何被烤一次全場帶著別顆岩的 AO)'
       + '+ bldGeo(建物屋頂配件桶守衛;不 clone —— 配件桶不過 bakeContactAO,幾何唯讀共用)');
     {   // bldGeo 只住 buildBldBucket 桶建構表(凍結四桶:煙囪/水塔/空調機組/**整棟量體**),
@@ -549,8 +549,9 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         // 連剖面都沒宣告才退回單位方盒 —— 那是保險絲的保險絲
         + (bioC.match(/bldGeo\(key, i\) \|\| \(prof \? profGeo\(prof, MASS\.UVB\[key\] \|\| MASS\.UVB\.mass\) : new THREE\.BoxGeometry\(1, 1, 1\)\)/g) || []).length;
       const calls = (bioC.match(/buildBldBucket\.(?:chimney|tank|acbox|mass)\(/g) || []).length;
-      ok(uses === 4 && (bioC.match(/bldGeo\(/g) || []).length === 4 && calls === 4,
-        `bldGeo 只在 buildBldBucket 四桶且逐桶帶保險絲、遊戲內消費點恰 4 處(實得 ${uses}/${calls})`);
+      ok(uses === 4 && (bioC.match(/bldGeo\(/g) || []).length === 4 && calls === 3
+        && /makeApprovedBuildingBatch\(entry, rows\)/.test(bioC),
+        `舊 bldGeo 整棟量體消費端已退場；三個屋頂配件保留保險絲，正式建築走 runtime batch(實得 ${uses}/${calls})`);
       // 兩個整棟量體桶只差**名冊與挑選規則**,幾何/材質/保險絲同一份實作 ⇒ 桶建構表
       // MUST NOT 長出第二支;`buildBldBucket.masslow` 一出現就是「兩桶的保險絲不一樣」。
       ok(/mass: \(n, mat, i = 0, key = 'mass'\) =>/.test(bioC) && !/masslow: \(n/.test(bioC),
@@ -595,17 +596,16 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       //   拉伸過頭的那一棟會被跳過(退回方盒),額度留給下一棟。
       const pickBlk = bioM.slice(bioM.indexOf('const massPick = new Map();'), bioM.indexOf('for (const commercial of'));
       ok(pickBlk.length > 80 && !/rnd\(/.test(pickBlk)
-        && /if \(taken >= n\) break;/.test(pickBlk) && /MASS\.PICK_N\)/.test(pickBlk) && /MASS\.PICK_N_LOW\)/.test(pickBlk)
-        && /q\.h - p\.h \|\| p\.x - q\.x \|\| p\.z - q\.z/.test(pickBlk)
-        && /q\.w \* q\.d - p\.w \* p\.d \|\| p\.x - q\.x \|\| p\.z - q\.z/.test(pickBlk),
-        '整棟量體的挑選:零 rnd 消耗、兩桶各由自己的 pick_n 夾住、'
-        + '高層排最高/低矮排足跡面積、同值時以座標定序(跨客戶端逐位元同一組)');
+        && /for \(const b of generic\)/.test(pickBlk)
+        && /fitApprovedBuilding\(b\)/.test(pickBlk)
+        && /if \(fit\) massPick\.set\(b, fit\);/.test(pickBlk),
+        '正式建築挑選涵蓋全部 generic、零 rnd 消耗，單一轉呼 fitApprovedBuilding');
       // ①-b **挑選與「庫載到了沒」解耦**(2026-08-12;碰撞柱改吃剖面之後這一條是致命的):
       //     舊制的閘是 `if (ok.length)`,而它會讓「載到庫的客戶端登記剖面柱、沒載到的登記
       //     方盒柱」⇒ 權威幾何跨客戶端分家(A30 + §2.3),畫面上只表現成「你說你打中了,
       //     我這邊沒掉血」。挑選 MUST 只讀純資料;載入成敗只決定畫出來的是網格還是保險絲。
-      ok(!/bldGeo\(/.test(pickBlk) && !/libOk/.test(pickBlk) && /bldProfile\(key, k\)/.test(pickBlk),
-        '挑選只讀名冊純資料(bldProfile),不問庫載到了沒 —— 否則碰撞柱跨客戶端分家');
+      ok(!/bldGeo\(/.test(pickBlk) && !/libOk/.test(pickBlk) && /fitApprovedBuilding\(b\)/.test(pickBlk),
+        '挑選只讀 bundled runtime 目錄純資料，不問非同步 GLB 載入狀態');
       // ①-c **尺寸貼合**(使用者這一輪第 ①):實例縮放由剖面實測外廓推導(把網格撐滿基地),
       //     拉伸倍率超過 `ASPECT_MAX` 就不換這一棟。舊制直接拿 (w,h,d) 縮單位方盒,而節點
       //     只佔單位盒的 0.13~0.42 ⇒ 那幾棟塔樓縮在自己的空地中央、外面一圈看不見的碰撞盒。
@@ -613,23 +613,22 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         ? bioC.replace('        sx: (f.rot ? b.d : b.w) * 0.5 / p.hw,', '        sx: (f.rot ? b.d : b.w),')
           .replace('      if (!best || Math.exp(best.dist) > MASS.ASPECT_MAX) return null;', '      if (!best) return null;')
         : bioC;
-      const fitBlk = bioF.slice(bioF.indexOf('const fitNode = (key, b) =>'), bioF.indexOf('for (const commercial of'));
+      const fitBlk = bioF.slice(bioF.indexOf('const fitScale = (f, b) =>'), bioF.indexOf('for (const commercial of'));
       ok(/sx: \(f\.rot \? b\.d : b\.w\) \* 0\.5 \/ p\.hw,/.test(fitBlk)
         && /sy: b\.h \* 0\.5 \/ p\.hy,/.test(fitBlk)
         && /sz: \(f\.rot \? b\.w : b\.d\) \* 0\.5 \/ p\.hd,/.test(fitBlk)
-        && /Math\.exp\(best\.dist\) > MASS\.ASPECT_MAX\) return null;/.test(fitBlk),
-        '實例縮放由剖面外廓推導(網格撐滿基地)且拉伸夾在 ASPECT_MAX 內(超過就不換這一棟)');
+        && /prof: \{ hw: 0\.5, hd: 0\.5, hy: 0\.5/.test(readSrc('public', 'js', 'approvedBuildingModels.js')),
+        'runtime 幾何先正規化單位包絡，再由足跡與高度精確撐滿基地');
       // ②-a 兩桶**互斥**且共用同一個門檻:高層 = commercial && h > MIN_H、低矮 = h <= MIN_H。
       //     低矮那一邊漏掉門檻 ⇒ 同一棟樓可能被兩個名冊各挑一次(後挑的覆寫前一個),
       //     而預算是照「總共挑幾棟」算的 ⇒ 帳與畫面同時錯,兩邊都不報錯。
-      ok(/b\.commercial && b\.h > MASS\.MIN_H/.test(pickBlk) && /!b\.commercial && b\.h <= MASS\.MIN_H/.test(pickBlk),
-        '兩桶資格取自同兩個既有判準的對角線兩格(高層 commercial && h > MIN_H / '
-        + '低矮 !commercial && h <= MIN_H,互斥;另兩格刻意維持方盒)');
+      ok(/for \(const b of generic\)/.test(pickBlk) && !/MASS\.PICK_N/.test(pickBlk),
+        '正式 runtime 目錄涵蓋全部一般建物，不再只替換高層/低矮兩個舊子集');
       // ②-b 名冊沒宣告剖面 ⇒ `bldProfile` 回 null ⇒ `fitNode` 挑不到 ⇒ 那一桶一棟都不換
       //     ⇒ 逐位元同舊制(保險絲;**逐桶各自成立**)
-      ok(/const f = fitNode\(key, b\);\s*\r?\n\s*if \(!f\) continue;/.test(bioM)
-        && /if \(!best \|\| Math\.exp\(best\.dist\) > MASS\.ASPECT_MAX\) return null;/.test(bioM),
-        '名冊剖面缺席或拉伸過頭 ⇒ 該棟不換 ⇒ 主量體落回單位方盒(逐位元同舊制;逐桶各自成立)');
+      ok(/if \(fit\) massPick\.set\(b, fit\);/.test(bioM)
+        && /if \(!t\.lib\)/.test(bioM) && /new THREE\.BoxGeometry\(1, 1, 1\)/.test(bioM),
+        'runtime 目錄異常時該棟仍走單位方盒保險絲，不留下缺口');
       // ③色抖的雜湊吃原始序:拆桶後拿新索引去雜湊會讓其餘每一棟的配色跟著平移
       const emitBlk = bioM.slice(bioM.indexOf('const emitMass = (rows, mesh) =>'), bioM.indexOf('const boxRows = new Map()'));
       ok(/inst\.forEach\(\(t, i\) => \{ t\.ord = i; \}\);/.test(bioM)
@@ -748,10 +747,10 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         // 兩個庫節點桶都 MUST 傳帶(2026-08-12:高層那一桶原本刻意不傳,而那正是「窗格印在
         // 退縮頂的斜切面與尖塔上」的成因);方盒那條(FACADES 16 款)MUST NOT 傳
         // ⇒ `band = pband = 0` ⇒ `WW === H` ⇒ 既有 16 款與六支地標**逐位元不變**
-        ok(/pd\.roof, pd\.rf, MASS\.UVB\.masslow, pd\.win\)/.test(bioR)
-          && /band \? fd\.roof : 0, band \? 'flat' : '', band \? MASS\.UVB\.mass : null, fd\.win\)/.test(bioR)
-          && /wallOf\(rowsOf\(t\), true\)/.test(bioR) && /const wall = wallOf\(rw\);/.test(bioR),
-          '兩個庫節點桶都吃三帶,方盒那條不吃(⇒ 16 款與地標逐位元不變)');
+        ok(/makeApprovedBuildingBatch\(entry, rows\)/.test(bioR)
+          && /const wall = wallOf\(rw\);/.test(bioR)
+          && !/buildBldBucket\.mass\(/.test(bioR),
+          '正式建築保留零件台逐頂點色，不再套舊窗牆三帶；方盒保險絲仍吃既有立面');
         // 牆的繪製一律吃 `WW`(= H − 屋頂帶 − 素牆帶):殘留一個 `H` 就是基座暗帶/遮陽棚
         // 被帶蓋掉;而 `wallLayer` 吃 `WH`(素牆帶就是「這棟樓的牆,只是沒有窗」)
         const fx = bioR.slice(bioR.indexOf('function facadeTex('), bioR.indexOf('// 一般建物外牆色盤'));
@@ -835,11 +834,10 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
           `面板門檻與 tri_budget 的 planar_spec 同一份(${PN?.slice(1, 6).join(' / ')})`);
         // 幾何/材質/instance 分組 MUST 不動 —— 只換 uv;沒有跨面板共用頂點要拆的話,
         // 連 position/normal/index 都沿用**同一份** BufferAttribute(不是 clone)
-        ok(/im\.geometry = alignedGeo\(im\.geometry, g\.key, g\.grid\);/.test(bioC)
-          && /g2\.setAttribute\('position', c\.split \? new THREE\.Float32BufferAttribute\(c\.pos, 3\) : geo\.attributes\.position\);/.test(bioC)
-          && /g2\.setIndex\(c\.split \? new THREE\.BufferAttribute\(c\.idx, 1\) : geo\.index\);/.test(bioC)
-          && !/geo\.clone\(\)/.test(bioC),
-          '對齊只換 uv(沒有頂點要拆就連 position/normal/index 都沿用同一份 ⇒ draw call、三角形、分組逐位元不動)');
+        const approvedSrc = readSrc('public', 'js', 'approvedBuildingModels.js');
+        ok(/new THREE\.InstancedMesh\(approvedBuildingGeometry\(entry\), approvedBuildingMaterial\(\), rows\.length\)/.test(approvedSrc)
+          && /geometryCache/.test(approvedSrc) && /vertexColors: true/.test(approvedSrc),
+          '正式建築每款共用一顆快取 geometry + vertex-color 材質並以 InstancedMesh 發射');
         // 斜牆的面板可以比投影軸還寬 ⇒ u 有機會 > 1,立面貼圖因此 MUST 橫向環繞;
         // **縱向 MUST 維持 clamp** —— v 是三條帶,捲起來就是屋頂帶接在窗牆帶上面
         const fxW = bioC.slice(bioC.indexOf('function facadeTex('), bioC.indexOf('const PALETTE = {'));
@@ -1126,12 +1124,8 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         ok((bioC.match(/function facadeRows\(/g) || []).length === 1
           && /const rowsOf = \(t\) => facadeRows\(t\.bh \?\? t\.h, commercial\);/.test(bioC)
           && /bh: b\.h,/.test(bioC)
-          // 消費端家數會隨功能長(2026-08-13 的窗格對齊又多兩處)⇒ 釘的是**沒有第二條取值路**:
-          // `facadeRows(` 只准出現在定義、`facadeStyle` 的帶位、與 `rowsOf` 這三處
-          && (bioC.match(/facadeRows\(/g) || []).length === 3
-          && (bioC.match(/rowsOf\(/g) || []).length >= 3
-          && /facadeTex\(`\$\{fd\.key\}r\$\{rows\}\$\{band \? 'b' : ''\}`/.test(bioC) && /facadeTex\(`\$\{pd\.key\}r\$\{rw\}`/.test(bioC),
-          '列數只有 facadeRows 一份、逐件經 rowsOf(庫節點吃真樓高 bh)、貼圖快取鍵帶列數與帶位');
+          && /makeApprovedBuildingBatch\(entry, rows\)/.test(bioC),
+          '舊立面列數只服務方盒保險絲；正式 runtime 建築直接消費零件台色彩與幾何');
         // 舊制退場:款表不再帶 rows、樓高分桶表不得復辟
         ok(!/FACADE_BUCKETS/.test(bioC) && !/\{ key: '(?:res|com)\d', cols: \d+, rows:/.test(bioC),
           '款表不再自帶 rows、FACADE_BUCKETS 已退場(款只管窗長什麼樣,層高歸 STOREY)');

@@ -231,6 +231,58 @@ const storage = new Proxy(data, { set: (o, k, v) => (o[k] = v, save(o), true) })
 
 ---
 
+## L6 — Admit content against a measured memory budget
+
+Estimate the build before allocating the world. A quality preset that only changes render
+resolution can still exhaust memory on geometry, decoded audio, or shadow targets.
+
+Build the estimate from measured current output:
+
+```text
+predicted vertices = fixed terrain/roads
+                   + world area × weighted content densities
+resident bytes     = predicted vertices × measured bytes/vertex
+                   + indices + textures + render targets
+```
+
+- Measure bytes per vertex from the actual attribute schema; do not copy a generic constant.
+- Separate fixed costs from density-scaled costs so the solver does not pretend terrain can be
+  removed by lowering prop density.
+- If the request exceeds the declared budget, solve one uniform density factor, apply it before
+  generation, and report the requested and admitted values in the UI.
+- Keep a hard floor for essential gameplay and navigation content. Decorative families are the
+  first to scale down.
+- A quality tier should change content counts, shadow size, optional passes, audio registration,
+  and internal render scale together.
+
+This is admission control, not dynamic frame-rate adaptation. L4 still owns runtime DPR changes.
+
+## L7 — Cooperative construction and context-loss recovery
+
+Long procedural builds should be generators that yield `{ label, progress }`. Run them in a
+small visible-tab time slice (about 10 ms), update progress, then yield to the browser. A hidden
+tab may use a larger slice because rendering is throttled.
+
+Do not schedule the entire build as one promise chain: promises do not yield between CPU-heavy
+steps. The observable requirement is that the loading UI continues to animate and input remains
+responsive.
+
+Handle `webglcontextlost` explicitly:
+
+1. prevent the browser's default silent teardown;
+2. stop the render/build loop and show a specific diagnostic;
+3. persist a safe-settings marker;
+4. reload once with conservative quality and density values;
+5. clear the marker only after a complete successful frame.
+
+Cap automatic recovery to one attempt. Repeated reloads hide deterministic shader or allocation
+bugs and can trap the user in a loop.
+
+Method source: `winchxyz/bikini-bottom` `src/main.js` (quality/content presets, measured vertex
+admission, cooperative generator slices, and context-loss recovery).
+
+---
+
 ## Verification
 
 - **Test rotation, not just size.** The 500 ms iOS debounce, the safe-area padding and the
@@ -266,6 +318,9 @@ const storage = new Proxy(data, { set: (o, k, v) => (o[k] = v, save(o), true) })
 | Aliasing is still bad after enabling MSAA | Lines produced in a post pass are not geometry edges; supersample + FXAA |
 | Out-of-memory on older phones | Uncompressed textures, or a full decoded audio bank on the low tier |
 | The loading spinner freezes | Driven by JS on a main thread that is compiling shaders |
+| Loading progress freezes during world generation | CPU build never yields within a visible-tab time slice |
+| Context loss reloads forever | Recovery marker has no one-attempt stop condition |
+| Lower render scale still crashes | Geometry/audio admission was never budgeted; only fragment work changed |
 
 ---
 

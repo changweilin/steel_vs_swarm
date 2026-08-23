@@ -5,10 +5,11 @@ license: MIT
 compatibility: Offline repository toolchain (Node.js ES modules, Gemini 3.7 Flash/Pro / GPT 5.6 Luna API via native node:https, Three.js 0.160 CDN importmap; zero extra npm dependencies - A2 rule compliant)
 ---
 
-# LLM Img-to-3D: Multimodal Polyhedral Reconstruction Pipeline (v6)
+# LLM Img-to-3D: Versioned Polyhedral Reconstruction Pipeline
 
-This document defines the direct multimodal Large Language Model (Gemini 3.7 / GPT 5.6 Luna) **single-pass photo reading to declarative polyhedral 3D geometric reconstruction pipeline**.
-The v6 pipeline **fully replaces** the legacy (v5) workflow ("Python OpenCV CV feature extraction + heuristic template matching"), transitioning to direct vision semantic understanding and structured JSON polyhedral part list generation, while preserving atomic 4-file disk persistence, dual-version database coexistence, and real-time WebGL review capabilities.
+This document defines the versioned photo-to-declarative-polyhedron pipeline used by the parts review board and runtime catalog.
+
+**v5 and v6 are both production sources.** v6 supersedes v5 only when both records represent the same source target and consumer slot. Keep both records in the database and review board; resolve precedence only when building a runtime selection. Legacy v1 is runtime-eligible only for rocks and conifers.
 
 ---
 
@@ -34,36 +35,54 @@ The v6 pipeline **fully replaces** the legacy (v5) workflow ("Python OpenCV CV f
 
 ---
 
-## 1. Architectural Evolution: v6 vs Legacy v5 Method
+## 1. Production Versions and Runtime Precedence
 
 ```mermaid
 graph TD
-    subgraph "Legacy Method (v5.0 Pipeline - Replaced)"
+    subgraph "Production v5"
         IMG_OLD[Reference Photo] --> PY_CV[Python OpenCV/PIL<br>extract_image_features.py]
         PY_CV --> FEAT_JSON[24-slice Feature JSON]
         FEAT_JSON --> RULE_SYS[Node.js Hardcoded Classifier<br>30+ Static Templates]
         RULE_SYS --> GEO_V5[Geometry Synthesizer]
     end
 
-    subgraph "Current Method (v6.0 Multimodal Pipeline - Active Standard)"
+    subgraph "Production v6"
         IMG_NEW[Reference Photo] --> GEMINI_API[Gemini 3.7 / GPT 5.6 Luna API<br>Single-Pass Multimodal Vision]
         GEMINI_API --> STRUCT_JSON[Structured JSON Schema<br>Style + 7-Zone Palette + Parts Array]
         STRUCT_JSON --> GEO_V6[12-Primitive Geometry Synthesizer<br>direct_ingest_v6.mjs]
     end
 
+    GEO_V5 --> DB_SYNC
     GEO_V6 --> ATOMIC_SAVE[Atomic Persistence: 4 Files<br>model.json / features.json / metadata.json / model.obj]
     ATOMIC_SAVE --> DB_SYNC[Database & Ledger Sync<br>out/3d_database.json & parts_manifest.json]
     DB_SYNC --> REVIEW_BOARD[3D Parts Review Board<br>http://localhost:8622/]
 ```
 
-| Comparison Aspect | Legacy v5 Method (Replaced) | Active v6 Standard (Gemini 3.7 / GPT 5.6 Luna) |
+| Comparison Aspect | Production v5 | Production v6 (Gemini 3.7 / GPT 5.6 Luna) |
 |---|---|---|
 | **Core Engine** | Python OpenCV slice metrics + heuristic classifier | **Gemini 3.7 / GPT 5.6 Luna multimodal vision understanding** |
 | **Morphological Reasoning** | Restricted to 30 static templates (unmatched shapes degrade to generic boxes) | **First-principles semantic decomposition; accurately reconstructs arbitrary non-standard topologies** |
 | **Dependencies** | Requires Python 3.11/3.13 venv + OpenCV + NumPy + PIL | **Zero npm / Zero Python dependencies** (pure Node.js native `node:https`) |
 | **Color Extraction** | K-Means clustering (often polluted by sky/ground shadows) | **LLM semantic isolation** (isolates foreground object, rejects background clouds, separates glazing) |
 | **Throughput & Speed** | Dual-stage pipeline (~3.5s feature extraction + 0.5s synthesis) | **Single-pass end-to-end (API round-trip ~3–5s)** |
-| **Version Management** | `version: 5, verStr: 'v5'` | **`version: 6, verStr: 'v6'` (Coexists with v5 in database and viewer)** |
+| **Version Management** | `version: 5, verStr: 'v5'`; retained and runtime-eligible | `version: 6, verStr: 'v6'`; retained, and preferred only for a duplicate target |
+
+### 1.1 Selection is separate from persistence
+
+Do not delete, archive, or rewrite a v5 record merely because a v6 record exists. Persistence answers "what was produced and reviewed"; runtime selection answers "which approved record fills this slot".
+
+Build a canonical duplicate identity from stable source and consumer semantics, never from array order:
+
+```js
+canonicalTarget = `${family}/${subpart}|${primaryImageId}|${consumerSlot}`;
+```
+
+- If an approved v6 and approved v5 share `canonicalTarget`, select v6.
+- If only one approved production version exists, select it regardless of whether it is v5 or v6.
+- Different photos, subparts, or consumer slots are variants, not duplicates; keep both.
+- Never prefer a higher version over a human verdict. Only `status === 'ok'` is eligible.
+- Legacy v1 is eligible only when `family === 'rock'` or when the tree role is explicitly `conifer`. Broadleaf canopy, snag, building, beacon, vehicle, and NPC v1 records are excluded even if an old board state says `ok`.
+- Resolve this once in the catalog/intake seam. Renderers and scene builders consume the resolved roster and must not reimplement version precedence.
 
 ---
 
@@ -164,7 +183,7 @@ For every completed object, 4 discrete files are atomically written into `out/3d
 3. **`metadata.json`**: Provenance metadata (`id`, `key: <family>/<subpart>_<stem>_<hash>_v6`, `version: 6`, `verStr: 'v6'`, `method: 'gemini_v6'`, source image path, creation timestamp, bounds, triangle count).
 4. **`model.obj`**: Standard Wavefront OBJ 3D mesh format with explicit vertices (`v`), normals (`vn`), texture coordinates (`vt`), and faces (`f`).
 
-### Step 6: Database & Ledger Synchronization (Dual-Version Coexistence)
+### Step 6: Database, Ledger, and Runtime Roster Synchronization
 1. **`out/3d_database.json`**:
    - Reads existing database items, retains all v5 records, and merges newly generated v6 objects.
    - All v6 objects carry a distinct `_v6` suffix on `id` and `key` to prevent key collisions.
@@ -172,6 +191,10 @@ For every completed object, 4 discrete files are atomically written into `out/3d
    - Registers entries under `method: 'gemini_v6'`, `version: 6`, `verStr: 'v6'`, `keys: ['<partKey>_v6']`.
 3. **Resume Protocol**:
    - On startup, inspects `out/3d_database.json`. If a photo already possesses a valid `version === 6` record, it is skipped immediately to avoid redundant API consumption.
+4. **Runtime roster**:
+   - Join database records to `tools/parts_review/state.json`; only human-approved `ok` records enter the candidate set.
+   - Apply the v1 whitelist and v6-over-duplicate-v5 rule from §1.1.
+   - Emit or expose one resolved roster for all runtime consumers. Do not mutate the review ledger to express runtime precedence.
 
 ---
 
@@ -211,7 +234,7 @@ node tools/parts_review.mjs
 Open browser at: 👉 **`http://localhost:8622/`**
 
 **Review Board Capabilities**:
-1. **Version Filtering**: Switch the top filter dropdown to **`v6`** (view only Gemini 3.7 / GPT 5.6 Luna models), **`v5`**, or **`all`**.
+1. **Version Filtering**: Switch the top filter dropdown to **`v6`**, **`v5`**, legacy **`v1`**, or **`all`**. A filter is a review view, not runtime precedence.
 2. **Dual-Viewport Comparison**: Left viewport renders real-time 3D polyhedral models; right viewport renders baseline versions or reference photos.
 3. **Envelope & Wireframe Inspection**: Toggle bounding cylinders and mesh wireframes to inspect spatial clearances and collider alignment.
 4. **Metadata & Palette Card**: Inspect 7-Zone hex colors, triangle counts, bounding extents `[w, h, d]`, and vertex buffers.

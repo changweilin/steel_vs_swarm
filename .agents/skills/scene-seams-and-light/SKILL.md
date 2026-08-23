@@ -310,6 +310,38 @@ appearance during a transition uses a **dissolve**, never alpha — see
 
 ---
 
+## L7 — One district policy for roads, plots, terrain and density
+
+When a procedural world has named spatial regimes (town, settlement, approach, wild), encode
+them once as data and make every generator query that same policy. A district is not a colour
+label added after generation; it is a shared set of constraints:
+
+```js
+const DISTRICT_POLICY = Object.freeze({
+  town:       { roadDensity: 1.0, plotChance: 0.9, flatten: 1.0, propDensity: 0.8 },
+  settlement: { roadDensity: 0.6, plotChance: 0.55, flatten: 0.7, propDensity: 1.0 },
+  approach:   { roadDensity: 0.35, plotChance: 0.2, flatten: 0.35, propDensity: 0.7 },
+  wild:       { roadDensity: 0.08, plotChance: 0.0, flatten: 0.0, propDensity: 0.45 },
+});
+```
+
+The numbers are illustrative; measure them for the project. The invariant is that road growth,
+plot admission, terrain flattening, traffic eligibility and decorative density receive the same
+district id. Do not duplicate these thresholds in five modules.
+
+Evaluate policy from stable world-space fields or frozen authored boundaries. If a border needs
+softness, interpolate a deterministic influence value while retaining one categorical owner for
+identity and de-duplication. This prevents a plot from being admitted by the town rule while its
+foundation is shaped by the wild rule.
+
+Audit cross-consumer agreement at sampled points: district id, flatten weight, road permission
+and plot permission must be mutually compatible. Also render both sides of every boundary; a
+correct data classification can still produce an abrupt perceptual seam.
+
+Method source: `winchxyz/bikini-bottom` `src/gen/world.js` and `src/gen/city.js`.
+
+---
+
 ## Verification
 
 **Every seam bug in this skill threw nothing, logged nothing, and looked correct in a

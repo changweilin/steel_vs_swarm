@@ -228,6 +228,39 @@ ceiling strip.
 
 ---
 
+## L6 — Road traffic: one directed lane graph, lookahead steering
+
+Do not let every vehicle derive a route from rendered road meshes. Build one directed lane
+graph from the road authoring data and make generation, traffic and validation consume it.
+Each lane segment stores stable node ids, travel direction, width, speed class and outgoing
+edges. Intersections connect compatible lane ends explicitly; a nearest-road query is not an
+intersection policy.
+
+For each vehicle, keep only graph state and a short kinematic state:
+
+```js
+const agent = { edgeId, distance, speed, seed, nextEdgeId };
+```
+
+- Advance `distance` with frame-rate-independent acceleration and braking.
+- Aim at a point ahead on the current edge, not the closest point under the vehicle. Closest-
+  point steering oscillates at bends and chooses the wrong branch near intersections.
+- Choose `nextEdgeId` with the scene's seeded RNG when the current edge is entered, then retain
+  it. Never re-roll every frame.
+- Derive wheel spin and body yaw from travelled distance/tangent; do not integrate a second
+  visual velocity that can drift from the lane state.
+- Batch identical vehicle geometry and vary colour or surface identity by instance attributes.
+- Keep the lane graph visual-only unless the authoritative simulation explicitly owns it. Scene
+  traffic must not become an alternate movement or collision authority.
+
+Audit the graph before spawning agents: every non-terminal edge needs an outgoing edge, lane
+direction must agree with its tangent, and the selected lookahead point must remain on the chosen
+edge across a junction.
+
+Method source: `winchxyz/bikini-bottom` `src/gen/traffic.js`.
+
+---
+
 ## Symptom → cause
 
 | Observed | Cause |
@@ -247,6 +280,9 @@ ceiling strip.
 | Blinking has an obvious period | Intervals not coprime |
 | A wardrobe/mesh change hitches the frame | Whole geometry upload queue drained in one frame |
 | Small birds/animals read as dots | Under 0.3 m with no silhouette-carrying features |
+| Cars weave at every curve | Steering targets the closest lane point instead of a lookahead point |
+| Cars choose a different turn every frame | Junction choice is not latched on edge entry |
+| Traffic drives against the road | Rendered road mesh was queried instead of using a directed lane graph |
 
 ---
 

@@ -18,6 +18,9 @@ import { mat, outlineW, dim, bx, cyl, rbz } from './geo3d.js';
 // 鷹架住 forge/forge.js —— 遊戲本體與機體台從此吃**同一棵**零件樹。
 import { forgeMech, forgeMorphUnit, specOf } from './forge/forge.js';
 import { entryKey } from './forge/roster.js';
+// 非玩家單位新版宣告式建模；英雄機體仍只走 forge，兩條路徑不相交。
+import { buildNpcModel } from './npcModels.js';
+import { buildBuildingUnit, buildBuildingUnitTurret } from './buildingUnitModels.js';
 
 // 單位 → GLB 檔(Quaternius,CC0 1.0;None = 直接用程式生成)
 // ⚠ **英雄機體不在這張表裡**(2026-08-14 新版建模全面替換舊版):hero:robot / hero:drone /
@@ -31,8 +34,8 @@ export const MODEL_MANIFEST = Object.assign({
   'creep:howitzer':  null,                                        // 榴彈兵:程式生成
   'creep:heli':      null,                                        // 攻擊直升機:程式生成
   'tower':        null,                                          // 防禦塔:程式生成(賽璐璐重繪)
-  'base:SWARM':   'assets/models/quaternius/dome.glb',          // 蜂群主堡(穹頂)
-  'base:STEEL':   'assets/models/quaternius/structure.glb',     // 鋼鐵主堡(工業塔)
+  'base:SWARM':   null,                                         // 蜂群主堡:新版宣告式多面體
+  'base:STEEL':   null,                                         // 鋼鐵主堡:新版宣告式多面體
 }, (typeof window !== 'undefined' && window.MODEL_MANIFEST_EXTRA) || {});
 
 // ---- 尺度基準 / 機體高度 ----
@@ -1941,27 +1944,18 @@ function buildTowerTurret(side) {
 const FALLBACK = {
   decoy: (side, vis) => buildDecoy(side, vis),
   hyper: (side, vis) => buildHyperMissile(side, vis),
-  // NPC/塔陣營差異化:鋼鐵 = 履帶/輪式軍武;蜂群 = 懸浮/旋翼/機器人重塑版
-  // 人類步兵外觀雙方對調:蜂群 = 人類部隊、鋼鐵 = 機器人部隊(2026-07-11)
-  // 第三方(GUER/MILI,2026-07-17):非正規武裝專屬建模,剪影與雙陣營都不同
-  // 榴彈兵(2026-07-17 步兵化):雙陣營一律「步兵 + 手持榴彈槍」,不再是砲車/浮游平台
-  'creep:soldier': (side) => (isThirdSide(side) ? buildRebelTrooper(side, 'rifle')
-    : side === 'SWARM' ? buildSoldierFallback(side) : buildSwarmTrooper(side)),
-  'creep:apc': (side) => (side === 'SWARM' ? buildSwarmApc(side) : buildApc(side)),
-  'creep:tank': (side) => (isThirdSide(side) ? buildRebelTank(side)
-    : side === 'SWARM' ? buildSwarmTank(side) : buildTank(side)),
-  'creep:rocketeer': (side) => (isThirdSide(side) ? buildRebelTrooper(side, 'rpg')
-    : side === 'SWARM' ? buildRocketeerFallback(side) : buildSwarmTrooper(side, { rocket: true })),
-  'creep:howitzer': (side) => (isThirdSide(side) ? buildRebelTrooper(side, 'gl')
-    : side === 'SWARM' ? buildGrenadierFallback(side) : buildSwarmTrooper(side, { gl: true })),
-  'creep:heli': (side) => (isThirdSide(side) ? buildRebelHeli(side)
-    : side === 'SWARM' ? buildSwarmHeli(side) : buildHeliFallback(side)),
-  bunker: (side) => buildBunker(side),
+  'creep:soldier': (side) => buildNpcModel('creep:soldier', side),
+  'creep:apc': (side) => buildNpcModel('creep:apc', side),
+  'creep:tank': (side) => buildNpcModel('creep:tank', side),
+  'creep:rocketeer': (side) => buildNpcModel('creep:rocketeer', side),
+  'creep:howitzer': (side) => buildNpcModel('creep:howitzer', side),
+  'creep:heli': (side) => buildNpcModel('creep:heli', side),
+  bunker: (side) => buildNpcModel('bunker', side),
   // 平民/間諜(ch = 職業 index;陣營靠 side 決定 teamRing,外觀共用不分間諜)
-  civ: (side, vis, ch) => buildCivilian(side, ch | 0),
-  tower: (side) => (side === 'SWARM' ? buildSwarmTower(side) : buildTowerFallback(side)),
-  'base:SWARM': () => buildBaseFallback('SWARM'),
-  'base:STEEL': () => buildBaseFallback('STEEL'),
+  civ: (side, vis, ch) => buildNpcModel('civ', side, { profile: ch | 0 }),
+  tower: (side) => buildBuildingUnit('tower', side),
+  'base:SWARM': () => buildBuildingUnit('base:SWARM', 'SWARM'),
+  'base:STEEL': () => buildBuildingUnit('base:STEEL', 'STEEL'),
 };
 
 /** 找 walk / run 動畫,讓小兵走路(Quaternius 動畫角色) */
@@ -2201,7 +2195,7 @@ export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false 
 
   // 防禦塔:頂部加程序砲塔頭(每幀追蹤目標;見 game.js _aimTurret)
   if (kind === 'tower') {
-    const turret = buildTowerTurret(side);
+    const turret = buildBuildingUnitTurret(side);
     turret.position.y = target * 0.92;
     g.add(turret);
     g.userData.turret = turret;
