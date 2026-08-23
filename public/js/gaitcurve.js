@@ -106,6 +106,17 @@ export function hipDrive(u, duty) {
 // 縱軸 = 正規化屈曲量 0..1(0 = 這個週期裡最伸展、1 = 最屈曲),乘上逐機 `k` 才是角度。
 // ⚠ 兩段 MUST 在接縫上同值(st 末 = sw 首、sw 末 = st 首),否則每一步會有兩次角度跳變。
 const CURVES = {
+  // ══ 人類跑步:AMASS/SMPL + motion-ControlNet 側視關節軌跡的正規化形狀 ══
+  // 觸地後膝蓋先屈曲吸震、推離後快速收腿、觸地前再伸膝；腳踝在離地時蹠屈、
+  // 擺動期背屈清地。只取關節曲線形狀，不把模型、權重或執行期依賴帶入遊戲。
+  human: [
+    { st: [[0, 0.42], [0.18, 0.68], [0.58, 0.36], [1, 0.55]],
+      sw: [[0, 0.55], [0.28, 1.00], [0.70, 0.62], [1, 0.42]] },
+    { st: [[0, 0.38], [0.30, 0.58], [0.72, 0.44], [1, 0.82]],
+      sw: [[0, 0.82], [0.24, 0.34], [0.70, 0.24], [1, 0.38]] },
+    { st: [[0, 0.18], [0.55, 0.26], [0.88, 0.82], [1, 0.92]],
+      sw: [[0, 0.92], [0.24, 0.38], [0.68, 0.16], [1, 0.18]] },
+  ],
   // ══ 前肢:肱骨 → 橈尺骨 → 掌骨 ══
   fore: [
     // ① 肘(肱骨↔橈尺骨):承重時只給一點(前肢是柱不是彈簧),擺動相前段大屈收肢過障
@@ -157,6 +168,7 @@ const CURVES = {
 };
 export const ROLES = Object.keys(CURVES);
 export const JOINT_NAMES = {
+  human: ['膝(人類跑步)', '踝(人類跑步)', '蹠趾(人類跑步)'],
   fore: ['肘(肱↔橈尺)', '腕(橈尺↔掌)', '掌指(掌↔趾)'],
   hind: ['膝(股↔脛)', '跗/飛節(脛↔蹠)', '蹠趾(蹠↔趾)'],
   arthropod: ['股-脛', '脛-跗', '跗節'],
@@ -201,10 +213,12 @@ export function jointFlex(role, i, u, duty) {
 // 趾行(犬/貓/鳥)最大、蹄行(馬)腕鎖得更死而球節反而更大、柱狀(象)整條腿近乎直柱。
 //  reach = 逐節行程倍率(近端 → 遠端);lock = 支撐相把遠端往「鎖死」壓的比例(0 = 不壓)。
 export const POSTURE = {
-  plantigrade: { label: '蹠行(掌/蹠整片貼地)', reach: [1.00, 0.55, 0.40], lock: 0.35, bounce: 0.9 },
+  plantigrade: { label: '蹠行(掌/蹠整片貼地)', reach: [1.00, 0.78, 0.62], lock: 0.35, bounce: 0.9 },
   digitigrade: { label: '趾行(犬/貓/鳥)', reach: [1.00, 1.00, 0.90], lock: 0.15, bounce: 1.0 },
   unguligrade: { label: '蹄行(馬)', reach: [0.80, 0.85, 1.15], lock: 0.55, bounce: 0.85 },
-  columnar: { label: '柱狀(象/重載)', reach: [0.62, 0.42, 0.30], lock: 0.70, bounce: 0.5 },
+  // 柱狀不等於焊死：象肢的 ROM 較小，但膝/腕與踝/蹠仍會依次吸震、回彈與蹬離。
+  // 舊值同時把 reach 壓到 0.30~0.42 並以 lock 0.70 再壓一次，有效行程只剩約 9~13%。
+  columnar: { label: '柱狀(象/重載)', reach: [0.85, 0.68, 0.52], lock: 0.35, bounce: 0.65 },
   arthropod: { label: '節肢(昆蟲六足)', reach: [1.00, 0.95, 0.70], lock: 0.10, bounce: 0.6 },
   grasp: { label: '抓握(不承重前肢)', reach: [1.00, 0.85, 0.70], lock: 0, bounce: 0 },
 };
@@ -258,6 +272,40 @@ export function limbFlex(P, i, u, duty, amp) {
   // 靜止(amp → 0)⇒ 恆回 0 ⇒ 逐位元回到 base。負值 = 比站姿更伸展(蹬離那一段,是對的)。
   const a = amp < 0 ? 0 : amp > 1 ? 1 : amp;
   return (v - rest) * a * reach * FLEX_GAIN;
+}
+
+// ── 身體承重脈衝(與落腳相位同一把時鐘)──────────────────────────────
+// 軀幹起伏不能另寫 `sin(ph*n)`：n 一旦與步態落腳組數不同，每週期就會逐步錯拍。
+// 這裡直接對每條肢的觸地相位取窄脈衝，再取最大值：對角小跑/六足三角步態
+// 自然得到每週期兩拍，四拍慢步/爬行得到四拍，雙腿併蹬則自然合成一拍。
+export function bodyBounce(phases) {
+  let peak = 0;
+  for (const ph of phases) {
+    const u = cycleU(ph);
+    const c = 0.5 + 0.5 * Math.cos(2 * Math.PI * u);
+    peak = Math.max(peak, c * c * c * c);
+  }
+  return peak;
+}
+
+// ── 人類跑步根關節(AMASS / motion-ControlNet 離線參考)────────────────
+const HUMAN_HIP = {
+  st: [[0, -0.72], [0.20, -0.52], [0.58, 0.10], [1, 0.82]],
+  sw: [[0, 0.82], [0.28, 0.28], [0.68, -0.92], [1, -0.72]],
+};
+const HUMAN_ARM = {
+  st: [[0, -0.62], [0.28, -0.38], [0.72, 0.30], [1, 0.74]],
+  sw: [[0, 0.74], [0.32, 0.22], [0.72, -0.76], [1, -0.62]],
+};
+
+function phaseTableAt(curve, u, duty) {
+  const d = duty <= 0 ? 1e-3 : duty >= 1 ? 1 - 1e-3 : duty;
+  return u < d ? tableAt(curve.st, u / d) : tableAt(curve.sw, (u - d) / (1 - d));
+}
+
+/** 人類跑步的大腿/上臂擺動；屈膝與腳踝仍統一走 `limbFlex(role='human')`。 */
+export function humanRunPose(u, duty) {
+  return { hip: phaseTableAt(HUMAN_HIP, u, duty), arm: phaseTableAt(HUMAN_ARM, u, duty) };
 }
 
 // 正規化曲線(值域 ≈0.9)→ 弧度增量的總增益。取 1.6 讓**近端關節**的擺動相峰值

@@ -9,6 +9,8 @@
 // ⑤ 開火後座:fireFx 注入後 _kickL/_kickR/_kickB 任一 MUST > 0.02(輕重各驗)
 // ⑥ 戰鬥姿勢:有 gunR/gunL 的機體,靜止(交戰)時槍身 rotation.x MUST 收斂到 aim 角 ±0.25
 // ⑦ NPC:四陣營小兵/火箭/榴彈 + 車輛(砲塔 pitch 節點)+ 直升機(雙槍口輪替 + gunTilt)
+// ⑧ 運動射擊:地面奔跑/飛行高速移動中,輕重武器發射軸 MUST 保持朝機體正前(dot(+z) ≥ 0.9)
+// ⑨ 巨象/劍龍/半人馬:四肢的根節、第二節、掌/蹠節實際奔跑行程 MUST 全部 > 0.03rad
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
 
 // 埠可由 SVS_URL 覆寫:8620 上常常跑著**另一個 checkout**(工作區之間共用那個埠),
@@ -46,6 +48,48 @@ const report = await page.evaluate(async () => {
     }
     return t;
   };
+  const moveFire = (ent, mesh, frames, fire, speed) => {
+    let t = 200;
+    const dt = 1 / 60;
+    for (let i = 0; i < frames; i++) {
+      const px = mesh.position.x, pz = mesh.position.z, pyaw = mesh.rotation.y;
+      mesh.position.z += speed * dt;
+      t += dt;
+      ent.fireFx = { t0: t - 0.05, slot: fire };
+      stepCombatFx(ent, t, dt);
+      stepLocomotion(ent, dt, t, px, pz, pyaw);
+    }
+    mesh.updateMatrixWorld(true);
+    return t;
+  };
+  const limbMotion = (ent, mesh, frames, speed) => {
+    const rig = mesh.userData.rig;
+    const limbs = [
+      ['FL', rig.legFL, rig.chFL], ['FR', rig.legFR, rig.chFR],
+      ['HL', rig.legHL, rig.chHL], ['HR', rig.legHR, rig.chHR],
+    ];
+    const rows = limbs.map(([name, root, chain]) => {
+      const nodes = [root, ...(chain || []).slice(0, 2).map((j) => j.g)];
+      return { name, nodes, lo: nodes.map(() => Infinity), hi: nodes.map(() => -Infinity) };
+    });
+    let t = 300;
+    const dt = 1 / 60;
+    ent.fireFx = null; ent.heavyFx = null;
+    for (let i = 0; i < frames; i++) {
+      const px = mesh.position.x, pz = mesh.position.z, pyaw = mesh.rotation.y;
+      mesh.position.z += speed * dt;
+      t += dt;
+      stepCombatFx(ent, t, dt);
+      stepLocomotion(ent, dt, t, px, pz, pyaw);
+      for (const row of rows) row.nodes.forEach((n, j) => {
+        if (!n) return;
+        row.lo[j] = Math.min(row.lo[j], n.rotation.x);
+        row.hi[j] = Math.max(row.hi[j], n.rotation.x);
+      });
+    }
+    return rows.map((row) => ({ name: row.name,
+      ranges: row.nodes.map((n, j) => n ? row.hi[j] - row.lo[j] : -1) }));
+  };
 
   // ── ① 32 英雄 ──
   for (const [id, ch] of Object.entries(CHARACTERS)) {
@@ -76,6 +120,26 @@ const report = await page.evaluate(async () => {
         const o = set.ref.getWorldPosition(new THREE.Vector3());
         const proj = set.muz.getWorldPosition(new THREE.Vector3()).sub(o).dot(dir);
         if (!vlsUp && !tailGun && proj < -0.05) r.issues.push(`${slot} 槍口不在武器前端(投影 ${proj.toFixed(2)})`);
+      }
+      // ⑧ 地面奔跑射擊:靜態特徵可以是 VLS/尾砲/拳砲,但移動擊發必須進入前向攻擊姿態。
+      for (const slot of ['light', 'heavy']) {
+        ent.cfx = null; ent.fireFx = null; ent.heavyFx = null;
+        moveFire(ent, mesh, 120, slot, Math.max(6, (rig.top || 12) * 0.72));
+        const movingRig = mesh.userData.rig;
+        const set = movingRig?.wpn?.[slot];
+        if (!set?.ref) continue;
+        const dz = wpnDir(set).dot(Z);
+        const motion = movingRig.kind === 'aerial' ? '飛行射擊' : '奔跑射擊';
+        if (dz < 0.9) r.issues.push(`${motion} ${slot} 槍口未朝正前(dot=${dz.toFixed(2)})`);
+      }
+      // ⑨ 三台原始回報機體直測：s03/m06 為柱狀肢，s06 為蹄行，不能只驗柱狀共用曲線。
+      if (id === 's03' || id === 'm06' || id === 's06') {
+        const rows = limbMotion(ent, mesh, 180, Math.max(6, (rig.top || 12) * 0.72));
+        r.limbMotion = rows;
+        for (const row of rows) {
+          if (row.ranges.length < 3 || row.ranges.some((v) => v < 0.03))
+            r.issues.push(`${row.name} 根/第二/掌蹠節卡死(行程 ${row.ranges.map((v) => v.toFixed(3)).join('/')})`);
+        }
       }
       // 拳砲擊發前突(roo):蓄力把拳前伸鎖定 → 擊發瞬間拳口 MUST 前指
       // (走完整蓄力→擊發序列,取全程峰值;無蓄力直接注入 fire 量不到前伸相)
@@ -140,6 +204,15 @@ const report = await page.evaluate(async () => {
           const dz = wpnDir(set).dot(Z);
           if (dz < 0.75) r.issues.push(`飛行 ${slot} 槍口未朝航向(dot=${dz.toFixed(2)})`);
         }
+        for (const slot of ['light', 'heavy']) {
+          ent.cfx = null; ent.fireFx = null; ent.heavyFx = null;
+          const airRig = mesh.userData.rigAir || mesh.userData.rig;
+          moveFire(ent, mesh, 120, slot, Math.max(14, (airRig.top || 24) * 0.72));
+          const set = (mesh.userData.rigAir || mesh.userData.rig)?.wpn?.[slot];
+          if (!set?.ref) continue;
+          const dz = wpnDir(set).dot(Z);
+          if (dz < 0.9) r.issues.push(`飛行射擊 ${slot} 槍口未朝正前(dot=${dz.toFixed(2)})`);
+        }
       }
     } catch (e) { r.issues.push('例外:' + e.message); }
     out.push(r);
@@ -199,6 +272,8 @@ const report = await page.evaluate(async () => {
 let bad = 0;
 for (const r of report.heroes) {
   if (r.issues.length) { bad++; console.log(`❌ ${r.id}(${r.kind}):`); for (const i of r.issues) console.log('   -', i); }
+  if (r.limbMotion) console.log(`  ${r.id} 四肢根/第二/掌蹠節行程: `
+    + r.limbMotion.map((x) => `${x.name} ${x.ranges.map((v) => v.toFixed(3)).join('/')}`).join(' | '));
 }
 console.log(`英雄:${report.heroes.length - bad}/${report.heroes.length} 通過`);
 let badN = 0;
