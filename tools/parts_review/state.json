@@ -519,6 +519,166 @@
     "rock/main_20211010001701_88fab0a9_v6": {
       "status": "ok",
       "at": "2026-08-20T16:34:16.812Z"
+    },
+    "building/balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_dc5aaa76": {
+      "status": "purge",
+      "at": "2026-08-23T14:32:33.389Z"
+    },
+    "building/bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_91a31eb5": {
+      "status": "purge",
+      "at": "2026-08-23T14:32:57.772Z"
+    },
+    "building/bld_adobe_ov_a17c17a9-526b-42fa-96ec-d0fc87203636_786ce491": {
+      "status": "purge",
+      "at": "2026-08-23T14:33:01.413Z"
+    },
+    "building/bld_apartment_ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1_70ccd154": {
+      "status": "purge",
+      "at": "2026-08-23T14:33:14.330Z"
+    },
+    "building/bld_apartment_ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d_41b9d034": {
+      "status": "purge",
+      "at": "2026-08-23T14:33:18.911Z"
+    },
+    "building/bld_hanok_ov_ad4c1b7a-e581-4d3e-b2dc-d698da9bc642_d293fbea": {
+      "status": "regen",
+      "at": "2026-08-23T14:33:54.366Z"
+    },
+    "building/bld_temple_ov_1993f298-c141-4121-8a41-ca4421afd46c_8710011a": {
+      "status": "purge",
+      "at": "2026-08-23T14:34:13.788Z"
+    },
+    "building/bld_tower_manual_1711450890-2085471680-g_6952afb2": {
+      "status": "regen",
+      "at": "2026-08-23T14:34:24.416Z"
+    },
+    "building/roofcap_ov_8325ea72-05ab-4fd3-bec8-53da100f5d6a_b8f01adf": {
+      "status": "purge",
+      "at": "2026-08-23T14:34:48.597Z"
+    },
+    "building/acunit_wc_8061724_618600b3": {
+      "status": "purge",
+      "at": "2026-08-23T14:35:29.257Z"
+    },
+    "building/bld_civic_ov_483d72a6-b9d7-4103-b598-90de41fe2719_12e7b7e5": {
+      "status": "ok",
+      "at": "2026-08-23T14:35:53.341Z"
+    },
+    "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad": {
+      "status": "ok",
+      "at": "2026-08-23T14:36:16.292Z"
+    },
+    "building/bld_lighthouse_ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171_0682b09a": {
+      "status": "purge",
+      "at": "2026-08-23T14:36:19.943Z"
+    },
+    "building/bld_stonecottage_ov_3966cc35-f9ef-4d05-8ab5-4b4ba2a0751e_92c1332b": {
+      "status": "ok",
+      "at": "2026-08-23T14:36:47.337Z"
+    },
+    "building/bld_stonecottage_ov_7b76fc43-5e31-4372-84c8-d57f9ceb21a0_e7cf439a": {
+      "status": "purge",
+      "at": "2026-08-23T14:36:59.120Z"
+    },
+    "building/bld_stonecottage_ov_d273a40d-cf1b-45f8-acd7-66471d0e552c_5cc0caeb": {
+      "status": "ok",
+      "at": "2026-08-23T14:36:56.236Z"
+    },
+    "building/bld_temple_ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7_8ae63e1b": {
+      "status": "purge",
+      "at": "2026-08-23T14:37:07.067Z"
+    },
+    "building/bld_tower_manual__Run-in-taipei-1920x1080_8b3aa198": {
+      "status": "ok",
+      "at": "2026-08-23T14:37:16.815Z"
+    },
+    "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc": {
+      "status": "ok",
+      "at": "2026-08-23T14:37:20.835Z"
+    },
+    "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d": {
+      "status": "ok",
+      "at": "2026-08-23T14:37:30.422Z"
+    },
+    "building/bld_tower_ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4_c4606f20": {
+      "status": "purge",
+      "at": "2026-08-23T14:37:36.177Z"
+    },
+    "building/bld_tower_sheet_00_d7e598ce": {
+      "status": "purge",
+      "at": "2026-08-23T14:37:45.190Z"
+    },
+    "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01": {
+      "status": "ok",
+      "at": "2026-08-23T14:37:56.490Z"
+    },
+    "building/dwg_civic_ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e_209a732a": {
+      "status": "ok",
+      "at": "2026-08-23T14:38:22.557Z"
+    },
+    "building/mass_160991898108355807.jpg!900x.water3_a026bde4": {
+      "status": "ok",
+      "at": "2026-08-23T14:38:53.865Z"
+    },
+    "building/mass_162562917953_c02b017f": {
+      "status": "ok",
+      "at": "2026-08-23T14:38:57.821Z"
+    },
+    "building/mass_20250122003527_152e982f": {
+      "status": "ok",
+      "at": "2026-08-23T14:39:22.993Z"
+    },
+    "building/mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_7dd14440": {
+      "status": "ok",
+      "at": "2026-08-23T14:39:34.770Z"
+    },
+    "building/mass_architecture-houou-02-tmb_d29db730": {
+      "status": "ok",
+      "at": "2026-08-23T14:40:02.840Z"
+    },
+    "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c": {
+      "status": "ok",
+      "at": "2026-08-23T14:40:16.630Z"
+    },
+    "building/mass_e28ba9534d67c7605a1800bc035444d5_c725e79d": {
+      "status": "ok",
+      "at": "2026-08-23T14:40:22.945Z"
+    },
+    "building/mass_e8832594_5efc2387": {
+      "status": "ok",
+      "at": "2026-08-23T14:40:27.900Z"
+    },
+    "building/mass_ea928273145f45cbb50e9db4_f80c7b77": {
+      "status": "ok",
+      "at": "2026-08-23T14:40:31.345Z"
+    },
+    "building/mass_images (10)_af10e1fc": {
+      "status": "ok",
+      "at": "2026-08-23T14:40:39.522Z"
+    },
+    "building/mass_images (13)_483e2aac": {
+      "status": "ok",
+      "at": "2026-08-23T14:40:50.829Z"
+    },
+    "building/mass_images (16)_0ced51c0": {
+      "status": "ok",
+      "at": "2026-08-23T14:41:00.201Z"
+    },
+    "building/mass_images (18)_3f824d9e": {
+      "status": "ok",
+      "at": "2026-08-23T14:41:12.490Z"
+    },
+    "building/mass_images_3f8e0ebf": {
+      "status": "ok",
+      "at": "2026-08-23T14:41:33.027Z"
+    },
+    "building/mass_kyotoworldheritage_2.jpg_9d4c3fda": {
+      "status": "ok",
+      "at": "2026-08-23T14:41:40.872Z"
+    },
+    "beacon/pylon": {
+      "status": "ok",
+      "at": "2026-08-23T14:42:08.423Z"
     }
   }
 }
