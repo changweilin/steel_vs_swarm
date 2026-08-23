@@ -49,14 +49,13 @@
     </div>
 
     <!-- 連線機制:雲端 / 區網 Tailscale / 單機。
-         鈕面文字的**真相是 netmode.js 的 LINK_MODES**,main.js 進場時會覆寫這三顆的 textContent;
-         這裡照抄一份是為了讓版型稽核(main.js 沒跑時)量得到真實鈕寬 —— 兩份是否一致由
-         `node tools/audit_net_modes.mjs` 把關,MUST NOT 只改一邊。 -->
+         鈕面文字只由 netmode.js 的 LINK_MODES 提供,main.js 進場時灌入;
+         HTML 只保留結構與掛點,避免靜態文案與動態 UI 分成兩份。 -->
     <div class="divider">─── 連線機制 ───</div>
     <div class="row link-modes" id="linkModes">
-      <button id="link_cloud" class="btn link-btn">☁ 雲端伺服器</button>
-      <button id="link_lan" class="btn link-btn">🛰 區網對戰</button>
-      <button id="link_solo" class="btn link-btn">🖥 單機模式</button>
+      <button id="link_cloud" class="btn link-btn"></button>
+      <button id="link_lan" class="btn link-btn"></button>
+      <button id="link_solo" class="btn link-btn"></button>
     </div>
     <!-- 各機制的說明已改成該顆鈕自己的懸浮提示(main.js renderLinkModes → attachTip),
          MUST NOT 再放一行常駐文字 —— 三顆鈕下面掛一段長敘述會把「加入現有戰區」推出首屏。 -->

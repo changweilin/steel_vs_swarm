@@ -136,12 +136,14 @@ for (const k of LINK_MODE_KEYS) {
   ok(!/[（(]/.test(m.label), `機制鈕面「${m.label}」MUST NOT 含括號補述(見 audit_ui_layout 規則 0)`);
 }
 ok(DEFAULT_LINK_MODE === 'lan', '預設機制 = 區網(開出本頁的主機)');
-// index.html 的三顆靜態鈕(版型稽核要量得到)與 LINK_MODES **MUST** 逐字一致 —— 改文案只改一邊 = 版型量到舊寬度
+// index.html 只保留三顆結構鈕,文案由 main.js 從 LINK_MODES 灌入 —— 避免靜態/動態兩份文案漂移
 const html = read('public', 'index.html');
+const main = read('public', 'js', 'main.js');
+ok(/b\.textContent\s*=\s*`\$\{m\.icon\} \$\{m\.label\}`/.test(main),
+  'main.js MUST 從 LINK_MODES 灌入連線機制鈕面');
 for (const k of LINK_MODE_KEYS) {
   const m = html.match(new RegExp(`<button id="link_${k}"[^>]*>([^<]*)</button>`));
-  const want = `${LINK_MODES[k].icon} ${LINK_MODES[k].label}`;
-  ok(!!m && m[1].trim() === want, `index.html 的 #link_${k} 鈕面 = LINK_MODES 的「${want}」${m ? `(實際「${m[1].trim()}」)` : '(找不到)'}`);
+  ok(!!m && !m[1].trim(), `index.html 的 #link_${k} 只保留結構,不得內嵌連線機制文案`);
 }
 ok(soloOnly() === false, 'Node 環境沒有 location ⇒ 不會被誤判成靜態單機站台');
 ok(netMode() === 'lan', '無網址參數/無記憶 ⇒ 解析成預設的區網模式');

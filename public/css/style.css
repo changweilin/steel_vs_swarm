@@ -56,6 +56,8 @@ body[data-side="STEEL"] {
    整條縮成另一個比例,而且沒有任何錯誤訊息。既有的 `body.touch-ui input, select { font-size: 16px }`
    只擋住「聚焦時整頁放大」,擋不到這一條。MUST 掛在根層(裝置級,不是版型級)。 */
 html, body { height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* 模組初始化完成前不繪製任何畫面，避免先看到 index.html 的舊版初始狀態，再切到新 UI。 */
+html:not(.app-ready) .screen { visibility: hidden; }
 /* 底圖 = 鋼鐵藍(左上)× 蜂群黃(右下)沿斜線正面對撞,接縫爆出洋紅火花(電馭叛客衝突感)。
    純漸層 ⇒ 選角後不變;方位對齊 logo 與標題橫幔。 */
 body {
