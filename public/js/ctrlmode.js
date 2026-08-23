@@ -48,13 +48,13 @@ export const CTRL_SCHEMES = {
 };
 export const CTRL_SCHEME_KEYS = ['kbm', 'pad'];
 
-/** 視角模式:第一人稱(預設) / 第三人稱 */
+/** 視角模式:第三人稱(預設) / 第一人稱 */
 export const VIEW_MODES = {
   fpv: { key: 'fpv', icon: '🎯', label: '第一人稱', hint: '座艙第一人稱視角，臨場感強，準星與槍口一致。' },
-  tps: { key: 'tps', icon: '🤖', label: '第三人稱', hint: '機身後方第三人稱視角，視野更廣，可看見自機機體與動作。' },
+  tps: { key: 'tps', icon: '🤖', label: '第三人稱', hint: '偏肩後方第三人稱視角，機體完整可見且不佔準星；WASD 依鏡頭水平方向移動。' },
 };
 export const VIEW_MODE_KEYS = ['fpv', 'tps'];
-export const DEFAULT_VIEW_MODE = 'fpv';
+export const DEFAULT_VIEW_MODE = 'tps';
 
 const MODE_KEY = 'svs_ctrl_mode';    // 'any' | 'kbm' | 'pad'
 const PICK_KEY = 'svs_ctrl_pick';    // 'kbm' | 'pad'(不限定時玩家挑過的那一套)
@@ -70,7 +70,7 @@ function ls(fn, fallback = null) {
 let _viewMode = null;
 const _viewSubs = new Set();
 
-/** 讀取目前視角模式(單一真相:localStorage svs_view_mode,預設 fpv)*/
+/** 讀取目前視角模式(單一真相:localStorage svs_view_mode,預設 tps)*/
 export function viewMode() {
   if (_viewMode) return _viewMode;
   const saved = ls((s) => s.getItem(VIEW_KEY));

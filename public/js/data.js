@@ -1183,6 +1183,19 @@ export const viewLockStep = (d, dt) => {
   return Math.max(-cap, Math.min(cap, d * Math.min(1, VIEW_LOCK.EASE * dt)));
 };
 
+// ---- 玩家第三人稱相機(純客戶端表現/操作;不進伺服器平衡)----
+// 相機不是座艙的延伸:它站在機體後方偏肩位置,視線落在機體前方的空間,
+// 讓機體可見但不會佔住準星。距離仍以機體實高推導,避免小型無人機與大型機甲穿模。
+export const PLAYER_TPS = {
+  DIST_F: 6.5,
+  MIN_DIST: 12,
+  SHOULDER_F: 0.32,
+  HEIGHT_F: 0.86,
+  AIM_DISTANCE_M: 100,
+  FLOOR_M: 2,
+  BODY_TURN_K: 12,
+};
+
 // ---- 觀戰視角(2026-08-02 使用者需求:「上帝視角加入下降操作」+「玩家視角可切換
 //      第一人稱 / 第三人稱跟隨視角 / 第三人稱自由視角,運鏡時避免太晃」)----
 // **純客戶端視角工具**:不送任何訊息、不改任何權威狀態(與 VIEW_LOCK 同性質 ⇒ A1 不涉)。
