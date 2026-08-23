@@ -2160,7 +2160,7 @@ body.touch-ui.ori-portrait .tl-sys-l { left: calc(var(--tl-edge) + var(--tl-grip
 body.touch-ui.ori-portrait .tl-sys-r { right: calc(var(--tl-edge) + var(--tl-gripr) + var(--tl-gap)); bottom: calc(8px + var(--tl-sb)); }
 body.touch-ui.ori-portrait .lock-warn { top: 26%; }
 
-/* ---------- 左手模式:整個 L / R 分區左右鏡像(含各自的直條與 A / M)---------- */
+/* ---------- 按鍵慣用手:只鏡像虛擬按鍵與搖桿位置 ---------- */
 body.touch-ui.touch-lefty .tl-dpad, body.touch-ui.touch-lefty .tl-stick-move { left: auto; }
 body.touch-ui.touch-lefty .tl-gp, body.touch-ui.touch-lefty .tl-stick-look { right: auto; }
 body.touch-ui.touch-lefty.ori-landscape .tl-dpad {
@@ -2177,9 +2177,10 @@ body.touch-ui.touch-lefty.ori-landscape .tl-sys-l {
 body.touch-ui.touch-lefty.ori-landscape .tl-sys-r {
   right: auto; left: calc(var(--tl-gripr) + 14px + var(--tl-sl));
 }
-body.touch-ui.touch-lefty.ori-landscape .hud-self { left: auto; right: calc(8px + var(--tl-sr)); }
-body.touch-ui.touch-lefty.ori-landscape #minimap { right: auto; left: calc(8px + var(--tl-sl)); }
-body.touch-ui.touch-lefty.ori-landscape .kill-feed {
+/* ---------- 畫面慣用手:只鏡像 HUD / 小地圖,不影響按鍵 ---------- */
+body.touch-ui.touch-screen-lefty.ori-landscape .hud-self { left: auto; right: calc(8px + var(--tl-sr)); }
+body.touch-ui.touch-screen-lefty.ori-landscape #minimap { right: auto; left: calc(8px + var(--tl-sl)); }
+body.touch-ui.touch-screen-lefty.ori-landscape .kill-feed {
   left: calc(var(--tl-colr) + 20px + var(--tl-sl)); right: calc(var(--tl-coll) + 20px + var(--tl-sr));
 }
 body.touch-ui.touch-lefty.ori-portrait .tl-dpad { right: calc(var(--tl-edge) + max(0px, (var(--tl-stick) - var(--tl-dpad)) / 2)); }
@@ -2188,8 +2189,8 @@ body.touch-ui.touch-lefty.ori-portrait .tl-stick-look { left: calc(var(--tl-edge
 body.touch-ui.touch-lefty.ori-portrait .tl-gp { left: calc(var(--tl-edge) + max(0px, (var(--tl-rstick) - var(--tl-gp)) / 2)); }
 body.touch-ui.touch-lefty.ori-portrait .tl-sys-l { left: auto; right: calc(var(--tl-edge) + var(--tl-gripl) + var(--tl-gap)); }
 body.touch-ui.touch-lefty.ori-portrait .tl-sys-r { right: auto; left: calc(var(--tl-edge) + var(--tl-gripr) + var(--tl-gap)); }
-body.touch-ui.touch-lefty.ori-portrait .hud-self { left: auto; right: 8px; }
-body.touch-ui.touch-lefty.ori-portrait #minimap { right: auto; left: 8px; }
+body.touch-ui.touch-screen-lefty.ori-portrait .hud-self { left: auto; right: 8px; }
+body.touch-ui.touch-screen-lefty.ori-portrait #minimap { right: auto; left: 8px; }
 
 /* ---------- 手機操控面板(大廳)---------- */
 .touch-box { text-align: left; max-width: min(600px, 94vw); }

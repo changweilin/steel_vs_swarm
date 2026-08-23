@@ -36,7 +36,7 @@ import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeHitShell
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
-import { onCtrlChange, viewMode, onViewModeChange } from './ctrlmode.js';
+import { onCtrlChange, viewMode, setViewMode, onViewModeChange } from './ctrlmode.js';
 import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
@@ -622,6 +622,7 @@ export class BattleClient {
     this._gameOver = false;           // 已分出勝負(over overlay 顯示中,不跳暫停選單)
     this._crashSent = false;          // 撞擊引爆去重
     this.aiming = false;              // 右鍵短按切換瞄準(拉近視角、切換重武器);長按 = 機種專屬招
+    this._aimViewRestore = null;      // 狙擊期間暫存原本視角,退出後恢復
     this._rmbDownAt = 0;              // 右鍵按下時刻(0 = 未按);達門檻 → 出招,短按放開 → 切換模式(見 _tickHoldAbility / _rmbUp)
     this._rmbAbilityFired = false;    // 本次按住右鍵是否已觸發專屬招(觸發後放開不再切換模式 → 切換/出招互不衝突)
 
@@ -691,6 +692,11 @@ export class BattleClient {
 
   /** 視角模式即時切換(fpv 第一人稱 ⇄ tps 第三人稱) */
   _onViewModeChange(vm) {
+    if (this.aiming && vm === 'tps') {
+      this._aimViewRestore ||= 'tps';
+      setViewMode('fpv');
+      return;
+    }
     if (vm === 'tps') this.bodyYaw = this.yaw;
     else this.yaw = this.bodyYaw;
     this.viewMode = vm;
@@ -5573,6 +5579,11 @@ export class BattleClient {
     this.dead = true;
     this.firing = false;
     this.aiming = false;
+    if (this._aimViewRestore) {
+      const restore = this._aimViewRestore;
+      this._aimViewRestore = null;
+      setViewMode(restore);
+    }
     this._climb = null;   // 掛在梯上陣亡:狀態 MUST 清掉,否則重生後第一幀會被吸回原本那條路線
     this._airSink = 0;    // 死亡:清掉高待落帳(墜機過場自有物理,兩套下降會打架)
     this._fireDwell = 0; this._swampDwell = 0; this._scopeFog = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
@@ -7049,8 +7060,19 @@ export class BattleClient {
   /** 瞄準模式(右鍵點一下切換):拉近視角、切換重武器(伺服器另行把關開火權限) */
   _setAiming(on) {
     if (!this.side || this.aiming === on) return;
+    if (on && this.viewMode === 'tps') {
+      // 狙擊時回到第一人稱,但退出狙擊仍回到玩家原本選的第三人稱。
+      this.bodyYaw = this.yaw;
+      this._aimViewRestore = this.viewMode;
+      setViewMode('fpv');
+    }
     this.aiming = on;
     this.net.send({ t: 'aim', on });
+    if (!on && this._aimViewRestore) {
+      const restore = this._aimViewRestore;
+      this._aimViewRestore = null;
+      setViewMode(restore);
+    }
   }
 
   /** 長按右鍵 / 觸控 R 達 GAME.ABILITY_HOLD_S → 施放招式(見 _fireHoldAbility 的模式分流)。
@@ -7917,6 +7939,29 @@ export class BattleClient {
     if (Math.abs(this.camera.fov - wantFov) > 0.05) {
       this.camera.fov += (wantFov - this.camera.fov) * lerpFPS(10, dt);
       this.camera.updateProjectionMatrix();
+    }
+    if (this.viewMode === 'tps') {
+      // 第三人稱構圖以腳下光環為錨點；NDC -1 是畫面底部、0 是準星所在的畫面中心。
+      let ringY = null;
+      for (const ent of this.ents.values()) {
+        if (!ent.isSelf) continue;
+        const ring = ent.mesh.children.find((child) => child.userData?.teamRing);
+        if (ring) ringY = this.pos.y + ring.position.y;
+        break;
+      }
+      if (ringY != null) {
+        this.camera.updateMatrixWorld(true);
+        const ringView = _TMP_A.set(this.pos.x, ringY, this.pos.z)
+          .applyMatrix4(this.camera.matrixWorldInverse);
+        const proj = this.camera.projectionMatrix.elements;
+        const view = this.camera.matrixWorldInverse.elements;
+        const targetY = PLAYER_TPS.RING_NDC_Y;
+        const denom = targetY * view[9] + proj[5] * view[5];
+        if (Math.abs(denom) > 1e-6) {
+          const dy = (targetY * ringView.z + proj[5] * ringView.y) / denom;
+          if (Number.isFinite(dy)) this.camera.position.y += dy;
+        }
+      }
     }
     // 位置回報(10Hz;模擬 z=北)
     if (now - this.lastPosSend > 0.1) {

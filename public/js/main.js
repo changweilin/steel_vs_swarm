@@ -148,7 +148,8 @@ const app = {
   roomPoll: null,
 };
 
-// 觸控版版型(手機/平板):掛 body.touch-ui / .ori-portrait|.ori-landscape / .touch-lefty,
+// 觸控版版型(手機/平板):掛 body.touch-ui / .ori-portrait|.ori-landscape /
+// .touch-lefty(按鍵) / .touch-screen-lefty(HUD),
 // 並開始追蹤直式⇄橫式切換。CSS 全靠這幾個 class 分版型;戰場的觸控輸入層由 BattleClient 進場時才建。
 installTouchUI();
 // **MUST 是函式呼叫而非常數**:操作方式選「不限定」時,玩家在戰鬥中也能切換鍵鼠 ⇄ 搖桿
