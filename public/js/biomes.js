@@ -93,7 +93,7 @@ import {
 import { buildAquaticWorld } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
-import { isRuntimeEligibleNatureKey, legacyNatureKey } from './legacyNatureModels.js';
+import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -2700,7 +2700,7 @@ function rockProbe(g) {
 const MEGA_LIB = {
   // 渾圓/塊狀岩塊(marble 堆/崩落塊/伴生丘/疊石);2026-08-06 第 7 輪 +3 顆跨國地質實拍:
   // d 海蝕拱殘丘、e 平衡巨礫(花崗岩 tor)、f 砂岩刃脊塊
-  block: [legacyNatureKey('rock', 'megalith')].filter(Boolean),
+  block: ['rock/mega_a'].filter(isRuntimeEligibleNatureKey),
   tower: 'rock/tower_a',                                  // 火山頸整座(實拍魔鬼塔;崖錐 + 柱身同一顆)
   mesa: 'rock/mesa_a',                                    // 平頂岩體整座(實拍;裙狀崖錐 + 疊層同一顆)
   hoodoo: 'rock/hoodoo_a',                                // 蘑菇岩整柱(實拍帽岩+細頸,Hoodoo Basin)

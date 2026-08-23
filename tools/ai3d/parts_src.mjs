@@ -120,7 +120,12 @@ export function bioLibDescs(src = biomesSrc()) {
  * 預算走 `families.megalith`(一顆巨岩最多 29 件庫零件 ⇒ 逐件上限比 rock 族緊得多)。
  */
 export function megaLibDescs(src = biomesSrc()) {
-  const MEGA_LIB = new Function(`${blockOf(src, 'MEGA_LIB')}; return MEGA_LIB;`)();
+  // 零件台／入庫工具必須看見名冊中的候選節點，包含尚未通過 runtime 白名單的新追加件；
+  // 遊戲端仍以真實 isRuntimeEligibleNatureKey 過濾，這裡只替原文抽取器注入無副作用樁。
+  const MEGA_LIB = new Function(
+    'isRuntimeEligibleNatureKey',
+    `${blockOf(src, 'MEGA_LIB')}; return MEGA_LIB;`,
+  )(() => true);
   const names = Object.values(MEGA_LIB).flat().filter(Boolean);
   return {
     MEGA_LIB,

@@ -55,8 +55,14 @@ const arg = (n, d = null) => { const i = argv.indexOf(`--${n}`); return i >= 0 ?
 const LIMIT = Number(arg('limit', Infinity));
 const FAMILY_FILTER = arg('family');
 const ONLY_FILTER = arg('only');
+const REVIEW_STATUS = arg('review-status');
 const MODEL = arg('model', 'gemini-3.6-flash');
 const API_KEY = process.env.GEMINI_API_KEY || '';
+const PYTHON = arg('python', process.env.AI3D_PYTHON || join(ROOT, '.venv', 'Scripts', 'python.exe'));
+const MIN_SIMILARITY = Number(arg('min-similarity', 75));
+const MAX_GEOMETRY_RETRIES = Number(arg('geometry-retries', 2));
+
+const stableTargetOfKey = (key) => key.replace(/_[0-9a-f]{8}_v6$/, '');
 
 // ── 照片掃描 ──────────────────────────────────────────────────────────
 function findImages(dir) {
@@ -101,7 +107,7 @@ function readOptimizedImage(targetImgPath) {
 
   if (!existsSync(cachePath)) {
     try {
-      execFileSync('python', [
+      execFileSync(PYTHON, [
         '-c',
         'import sys; from PIL import Image; img=Image.open(sys.argv[1]); img.thumbnail((1600,1600)); img.convert("RGB").save(sys.argv[2], "JPEG", quality=85)',
         targetImgPath,
@@ -216,11 +222,73 @@ const GEMINI_RESPONSE_SCHEMA = {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+async function requestStructured(modelName, contentParts, systemText, responseSchema) {
+  const body = JSON.stringify({
+    contents: [{ parts: contentParts }],
+    systemInstruction: { parts: [{ text: systemText }] },
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema,
+      temperature: 0.2,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+  });
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${API_KEY}`;
+
+  return new Promise((resolvePromise, rejectPromise) => {
+    let settled = false;
+    const done = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn(value);
+    };
+    const parsed = new URL(url);
+    const req = httpsRequest({
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => {
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => {
+        const raw = Buffer.concat(chunks).toString();
+        try {
+          const json = JSON.parse(raw);
+          if (json.error) {
+            done(rejectPromise, new Error(`Gemini API 錯誤 (${modelName}): ${json.error.message || JSON.stringify(json.error)}`));
+            return;
+          }
+          const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) {
+            done(rejectPromise, new Error(`Gemini API (${modelName}) 回傳空白`));
+            return;
+          }
+          done(resolvePromise, JSON.parse(text));
+        } catch (error) {
+          done(rejectPromise, new Error(`Gemini 回應解析失敗 (${modelName}): ${error.message}\n回應片段: ${raw.slice(0, 300)}`));
+        }
+      });
+    });
+    const timer = setTimeout(() => {
+      const error = new Error(`Gemini API 逾時(60s) (${modelName})`);
+      req.destroy(error);
+      done(rejectPromise, error);
+    }, 60_000);
+    req.on('error', (error) => done(rejectPromise, error));
+    req.write(body);
+    req.end();
+  });
+}
+
 /**
  * 呼叫單一 Gemini 模型(node:https 原生,零 npm 依賴)。
  */
-async function callGeminiSingle(modelName, imageBase64, mimeType, family, subpart) {
+async function callGeminiSingle(modelName, imageBase64, mimeType, family, subpart, yoloFeatures, critique = '') {
   let userPrompt = `分析這張 ${family}/${subpart} 的照片,以多面體零件列精確重建其 3D 幾何。注意真實世界尺寸(公尺)。`;
+  userPrompt += `\n以下是已落盤的 YOLO26 Detection / Segmentation / Depth 目標特徵；不得重新猜測目標邊界：\n${JSON.stringify(yoloFeatures)}`;
+  if (critique) userPrompt += `\n上一輪獨立 3D 預覽複核未通過。逐項修正後重建：\n${critique}`;
   if (family === 'building') {
     userPrompt += `\n【building 建築幾何重建專項要求】:
 1. 先進行 Detection/Segmentation/Depth 分析，精確分離主要建築量體與地面/無關背景雜物。若有多目標需專注於目標物體主結構。
@@ -280,81 +348,16 @@ async function callGeminiSingle(modelName, imageBase64, mimeType, family, subpar
 6. 完成後進行 LLM 相似度自我檢查 (similarityScore >= 75)，不相似則檢討後重來。`;
   }
 
-  const body = JSON.stringify({
-    contents: [{
-      parts: [
-        { inlineData: { mimeType, data: imageBase64 } },
-        { text: userPrompt },
-      ],
-    }],
-    systemInstruction: { parts: [{ text: GEMINI_SYSTEM_PROMPT }] },
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: GEMINI_RESPONSE_SCHEMA,
-      temperature: 0.2,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  });
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${API_KEY}`;
-
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const done = (fn, arg) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      fn(arg);
-    };
-
-    const parsed = new URL(url);
-    const req = httpsRequest({
-      hostname: parsed.hostname,
-      path: parsed.pathname + parsed.search,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    }, (res) => {
-      const chunks = [];
-      res.on('data', (c) => chunks.push(c));
-      res.on('end', () => {
-        const raw = Buffer.concat(chunks).toString();
-        try {
-          const json = JSON.parse(raw);
-          if (json.error) {
-            done(reject, new Error(`Gemini API 錯誤 (${modelName}): ${json.error.message || JSON.stringify(json.error)}`));
-            return;
-          }
-          const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (!text) {
-            done(reject, new Error(`Gemini API (${modelName}) 回傳空白(可能被安全過濾或額度耗盡)`));
-            return;
-          }
-          done(resolve, JSON.parse(text));
-        } catch (e) {
-          done(reject, new Error(`Gemini 回應解析失敗 (${modelName}): ${e.message}\n回應片段: ${raw.slice(0, 300)}`));
-        }
-      });
-    });
-
-    const timer = setTimeout(() => {
-      const timeoutErr = new Error(`Gemini API 逾時(60s) (${modelName})`);
-      req.destroy(timeoutErr);
-      done(reject, timeoutErr);
-    }, 60_000);
-
-    req.on('error', (err) => done(reject, err));
-    req.write(body);
-    req.end();
-  });
+  return requestStructured(modelName, [
+    { inlineData: { mimeType, data: imageBase64 } },
+    { text: userPrompt },
+  ], GEMINI_SYSTEM_PROMPT, GEMINI_RESPONSE_SCHEMA);
 }
 
 /**
  * 具備快速備援模型與頻率限制退避的 Gemini 呼叫器
  */
-async function callGemini(imageBase64, mimeType, family, subpart) {
+async function callGemini(imageBase64, mimeType, family, subpart, yoloFeatures, critique = '') {
   const models = [MODEL, 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.7-flash'].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
   let lastErr = null;
 
@@ -363,7 +366,7 @@ async function callGemini(imageBase64, mimeType, family, subpart) {
     const MAX_RETRIES = 1;
     while (retries <= MAX_RETRIES) {
       try {
-        return await callGeminiSingle(m, imageBase64, mimeType, family, subpart);
+        return await callGeminiSingle(m, imageBase64, mimeType, family, subpart, yoloFeatures, critique);
       } catch (err) {
         lastErr = err;
         const msg = err.message || '';
@@ -391,6 +394,49 @@ async function callGemini(imageBase64, mimeType, family, subpart) {
   }
 
   throw lastErr || new Error('所有 Gemini 模型均告失敗');
+}
+
+const REVIEW_SCHEMA = {
+  type: 'object',
+  properties: {
+    similarityScore: { type: 'integer' },
+    verdict: { type: 'string', enum: ['pass', 'retry'] },
+    critique: { type: 'string' },
+    corrections: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['similarityScore', 'verdict', 'critique', 'corrections'],
+};
+
+async function reviewGeometry(imageBase64, mimeType, previewPath, family, subpart, yoloFeatures) {
+  const preview = readFileSync(previewPath).toString('base64');
+  const prompt = `第一張是 ${family}/${subpart} 的原始獨立目標，第二張是該 3D 模型固定 FRONT 3/4、SIDE、REAR 三視圖。依 YOLO26 特徵 ${JSON.stringify(yoloFeatures)} 嚴格比較輪廓、比例、深度、零件方向、接合、門窗玻璃、背面鏡像補全與細長結構。任何透視裸空、浮空、過度重疊、反向屋簷、錯向輪胎或缺失車架/枝幹都必須 retry。不得因同一模型自評而放寬。`;
+  const system = '你是獨立 3D 品質審查員。只比較來源目標與渲染後三視圖，不替生成器辯護。相似度低於門檻或任一硬性幾何缺陷存在時 verdict 必須是 retry，並提供可操作修正。';
+  const models = [MODEL, 'gemini-3.6-flash', 'gemini-3.5-flash'].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
+  let lastError = null;
+  for (const modelName of models) {
+    try {
+      return await requestStructured(modelName, [
+        { inlineData: { mimeType, data: imageBase64 } },
+        { inlineData: { mimeType: 'image/png', data: preview } },
+        { text: prompt },
+      ], system, REVIEW_SCHEMA);
+    } catch (error) {
+      lastError = error;
+      console.warn(`  ⚠ 複核模型 ${modelName} 失敗: ${error.message.slice(0, 120)}`);
+    }
+  }
+  throw lastError || new Error('所有 Gemini 複核模型均告失敗');
+}
+
+function renderPreview(modelJson, targetId) {
+  if (!existsSync(PYTHON)) throw new Error(`找不到 Python: ${PYTHON}`);
+  const dir = join(ROOT, 'out', 'review_previews');
+  mkdirSync(dir, { recursive: true });
+  const modelPath = join(dir, `${targetId}.model.json`);
+  const previewPath = join(dir, `${targetId}.png`);
+  writeFileSync(modelPath, JSON.stringify(modelJson), 'utf8');
+  execFileSync(PYTHON, [join(HERE, 'render_poly_preview.py'), modelPath, previewPath], { timeout: 30_000 });
+  return previewPath;
 }
 
 // ── 多面體幾何合成器(沿用 v5 全套 12 個生成器)──────────────────────
@@ -805,11 +851,24 @@ async function main() {
     }
   }
 
+  const stateJsonPath = join(ROOT, 'tools', 'parts_review', 'state.json');
+  let reviewState = { items: {} };
+  if (existsSync(stateJsonPath)) {
+    try { reviewState = JSON.parse(readFileSync(stateJsonPath, 'utf8')); } catch {}
+  }
+  const reviewTargets = new Map();
+  for (const [key, verdict] of Object.entries(reviewState.items || {})) {
+    if (!key.endsWith('_v6')) continue;
+    if (REVIEW_STATUS && verdict.status !== REVIEW_STATUS) continue;
+    reviewTargets.set(stableTargetOfKey(key), { key, verdict });
+  }
+
   // ── 篩選 ──
   const filtered = allImages.filter(({ path: imgPath, baseDir }) => {
-    const { family, subpart } = parseCategory(imgPath, baseDir);
+    const { family, subpart, stem } = parseCategory(imgPath, baseDir);
     if (FAMILY_FILTER && family !== FAMILY_FILTER) return false;
     if (ONLY_FILTER && `${family}/${subpart}` !== ONLY_FILTER) return false;
+    if (REVIEW_STATUS && !reviewTargets.has(`${family}/${subpart}_${stem}`)) return false;
     return true;
   });
 
@@ -825,6 +884,7 @@ async function main() {
   let processedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
+  let catalogDirty = false;
 
   function syncDatabaseToDisk() {
     let currentDbItems = [];
@@ -835,7 +895,10 @@ async function main() {
       } catch {}
     }
     const itemMap = new Map();
-    for (const it of currentDbItems) itemMap.set(it.key, it);
+    for (const it of currentDbItems) {
+      if (REVIEW_STATUS && reviewTargets.has(stableTargetOfKey(it.key || ''))) continue;
+      itemMap.set(it.key, it);
+    }
     for (const it of allDbItems) itemMap.set(it.key, it);
     const mergedDbItems = Array.from(itemMap.values());
 
@@ -857,6 +920,8 @@ async function main() {
     }
     const partMap = new Map();
     for (const p of (currentManifest.parts || [])) {
+      const keys = p.keys || (p.key ? [p.key] : []);
+      if (REVIEW_STATUS && keys.some((key) => reviewTargets.has(stableTargetOfKey(key)))) continue;
       const k = (p.keys && p.keys[0]) || p.key || JSON.stringify(p.imgs);
       partMap.set(k, p);
     }
@@ -869,14 +934,15 @@ async function main() {
   }
 
   // ── 載入審查黑名單 (已標註 purge / archive 者永不再入庫) ──
-  const stateJsonPath = join(ROOT, 'tools', 'parts_review', 'state.json');
   const purgedKeys = new Set();
-  if (existsSync(stateJsonPath)) {
+  for (const [key, verdict] of Object.entries(reviewState.items || {})) {
+    if (verdict.status === 'purge' || verdict.status === 'archive') purgedKeys.add(key);
+  }
+  const purgeLedgerPath = join(ROOT, 'tools', 'ai3d', 'v6_purge_manifest.json');
+  if (existsSync(purgeLedgerPath)) {
     try {
-      const st = JSON.parse(readFileSync(stateJsonPath, 'utf8'));
-      for (const [k, v] of Object.entries(st.items || {})) {
-        if (v.status === 'purge' || v.status === 'archive') purgedKeys.add(k);
-      }
+      const ledger = JSON.parse(readFileSync(purgeLedgerPath, 'utf8'));
+      for (const row of ledger.targets || []) if (row.stable) purgedKeys.add(row.stable);
     } catch {}
   }
   if (purgedKeys.size > 0) {
@@ -893,26 +959,53 @@ async function main() {
       const altPath = join(ROOT, 'out', 'yolo_features', family, 'main', `${stem}.json`);
       if (existsSync(altPath)) yoloFeaturePath = altPath;
     }
-    let targetList = [{ targetId: `${stem}~0`, targetImgPath: imgPath, targetRel: rel }];
-    if (existsSync(yoloFeaturePath)) {
-      try {
-        const yoloData = JSON.parse(readFileSync(yoloFeaturePath, 'utf8'));
-        if (Array.isArray(yoloData.targets) && yoloData.targets.length > 0) {
-          targetList = yoloData.targets.map((t) => {
-            const cropPath = join(ROOT, 'out', 'targets', t.targetFile || `${family}/${subpart}/${t.targetId}.png`);
-            return {
-              targetId: t.targetId,
-              targetImgPath: existsSync(cropPath) ? cropPath : imgPath,
-              targetRel: rel,
-              bbox: t.bbox,
-              aspectRatio: t.aspectRatio,
-              slices: t.slices,
-            };
-          });
-        }
-      } catch {}
+    if (!existsSync(yoloFeaturePath)) {
+      console.warn(`  ⚠ 缺少 YOLO26 快取，拒絕直接送 LLM: ${family}/${subpart}/${stem}`);
+      errorCount++;
+      continue;
+    }
+    let yoloData;
+    try { yoloData = JSON.parse(readFileSync(yoloFeaturePath, 'utf8')); } catch {
+      console.warn(`  ⚠ YOLO26 快取無法解析: ${yoloFeaturePath}`);
+      errorCount++;
+      continue;
+    }
+    const expectedModels = { detection: 'yolo26n.pt', segmentation: 'yolo26n-seg.pt', depth: 'yolo26n-depth.pt' };
+    if (yoloData.schemaVersion !== 2 || JSON.stringify(yoloData.models) !== JSON.stringify(expectedModels)
+      || !Array.isArray(yoloData.targets) || !yoloData.targets.length) {
+      console.warn(`  ⚠ YOLO26 快取版本/模型不符，拒絕直接送 LLM: ${yoloFeaturePath}`);
+      errorCount++;
+      continue;
+    }
+    const evidenceFiles = [yoloData.depth?.rawFile, yoloData.depth?.previewFile]
+      .map((file) => file && resolve(ROOT, file));
+    if (evidenceFiles.some((file) => !file || !existsSync(file))) {
+      console.warn(`  ⚠ YOLO26 深度證據不完整，拒絕直接送 LLM: ${yoloFeaturePath}`);
+      errorCount++;
+      continue;
+    }
+    const targetList = yoloData.targets.map((t) => {
+      const cropPath = resolve(ROOT, t.targetFile || `out/targets/${family}/${subpart}/${t.targetId}.png`);
+      const maskPath = t.maskFile ? resolve(ROOT, t.maskFile) : null;
+      return {
+        targetId: t.targetId,
+        targetImgPath: cropPath,
+        maskPath,
+        targetRel: rel,
+        features: {
+          className: t.className, confidence: t.confidence, bbox: t.bbox,
+          aspectRatio: t.aspectRatio, depth: t.depth, slices: t.slices,
+          sourceDepth: yoloData.depth?.summary,
+        },
+      };
+    }).filter((t) => existsSync(t.targetImgPath) && t.maskPath && existsSync(t.maskPath));
+    if (!targetList.length) {
+      console.warn(`  ⚠ YOLO26 目標裁圖不存在: ${family}/${subpart}/${stem}`);
+      errorCount++;
+      continue;
     }
 
+    const acceptedTargets = [];
     for (let tIdx = 0; tIdx < targetList.length; tIdx++) {
       const tgt = targetList[tIdx];
       const curStem = targetList.length > 1 ? tgt.targetId : stem;
@@ -921,13 +1014,14 @@ async function main() {
       const partKey = `${family}/${subpart}_${curStem}_${hash}_v6`;
 
       // 審查黑名單過濾 (已標註刪除者清理)
-      if (purgedKeys.has(partKey) || purgedKeys.has(`${family}/${subpart}_${stem}`) || purgedKeys.has(targetId)) {
+      const stableTarget = `${family}/${subpart}_${stem}`;
+      if ([...purgedKeys].some((key) => stableTargetOfKey(key) === stableTarget)) {
         skippedCount++;
         continue;
       }
 
       // 續跑:已有 v6 版本跳過
-      if (existingDb.has(partKey)) {
+      if (!REVIEW_STATUS && existingDb.has(partKey)) {
         skippedCount++;
         continue;
       }
@@ -946,47 +1040,38 @@ async function main() {
         continue;
       }
 
-      // ── 呼叫 Gemini ──
-      let geminiResult;
-      try {
-        geminiResult = await callGemini(imageBase64, mimeType, family, subpart);
-      } catch (e) {
-        console.warn(`  ⚠ Gemini API 失敗: ${e.message}`);
-        errorCount++;
-        continue;  // 降級不例外(原則 6)
+      // ── 生成 → 三視圖 → 獨立 LLM 複核；不相似就把檢討送回下一輪 ──
+      let geminiResult, geometry, review, previewPath, critique = '';
+      for (let attempt = 0; attempt <= MAX_GEOMETRY_RETRIES; attempt++) {
+        try {
+          geminiResult = await callGemini(imageBase64, mimeType, family, subpart, tgt.features, critique);
+          if (!geminiResult?.parts?.length) throw new Error('Gemini 回傳零件列為空');
+          geometry = buildGeometryFromParts(geminiResult, family, subpart, curStem);
+          previewPath = renderPreview(geometry.modelJson, targetId);
+          review = await reviewGeometry(imageBase64, mimeType, previewPath, family, subpart, tgt.features);
+        } catch (error) {
+          console.warn(`  ⚠ 第 ${attempt + 1} 輪生成/複核失敗: ${error.message}`);
+          if (attempt === MAX_GEOMETRY_RETRIES) break;
+          critique = error.message;
+          continue;
+        }
+        const score = Number(review.similarityScore);
+        console.log(`  ${review.verdict === 'pass' && score >= MIN_SIMILARITY ? '✓' : '⚠'} 獨立複核: ${score}/100 [${review.critique}]`);
+        if (review.verdict === 'pass' && score >= MIN_SIMILARITY) break;
+        critique = [review.critique, ...(review.corrections || [])].filter(Boolean).join('\n- ');
+        geometry = null;
       }
-
-      if (!geminiResult?.parts?.length) {
-        console.warn('  ⚠ Gemini 回傳零件列為空,跳過');
+      if (!geometry || review?.verdict !== 'pass' || Number(review.similarityScore) < MIN_SIMILARITY) {
+        console.warn(`  ⚠ 經 ${MAX_GEOMETRY_RETRIES + 1} 輪仍未通過獨立相似度閘，拒絕入庫`);
         errorCount++;
         continue;
       }
 
-      // ── 相似度自評檢核 (相似度 < 75 自動檢討重來) ──
-      let simScore = geminiResult.similarityScore ?? 85;
-      let simReview = geminiResult.similarityReview ?? '通過';
-      console.log(`  ✓ 相似度評估: ${simScore}/100 [${simReview}] | 零件數: ${geminiResult.parts.length} (Style: ${geminiResult.style})`);
-
-      let retrySimCount = 0;
-      while ((geminiResult.similarityScore || 0) < 75 && retrySimCount < 2) {
-        retrySimCount++;
-        console.warn(`  ⚠ 相似度未達標 (${geminiResult.similarityScore} < 75)，進行檢討並自動重新生成 (第 ${retrySimCount} 次)...`);
-        try {
-          const reResult = await callGemini(imageBase64, mimeType, family, subpart);
-          if (reResult?.parts?.length) {
-            geminiResult = reResult;
-            simScore = geminiResult.similarityScore ?? 85;
-            simReview = geminiResult.similarityReview ?? '通過';
-            console.log(`  ✓ 重新評估相似度: ${simScore}/100 [${simReview}] | 零件數: ${geminiResult.parts.length}`);
-          }
-        } catch (err) {
-          console.warn(`  ⚠ 重試生成失敗: ${err.message}`);
-          break;
-        }
-      }
-
-      // ── 幾何合成 ──
-      const { objContent, modelJson, featuresJson, bounds } = buildGeometryFromParts(geminiResult, family, subpart, curStem);
+      const { objContent, modelJson, featuresJson, bounds } = geometry;
+      const simScore = Number(review.similarityScore);
+      const simReview = review.critique;
+      featuresJson.yolo26 = tgt.features;
+      featuresJson.similarityReview = review;
 
       // ── 原子落盤 ──
       for (const outRoot of OUT_ROOTS) {
@@ -998,8 +1083,12 @@ async function main() {
         const metadata = {
           id: targetId, key: partKey, family, subpart,
           style: geminiResult.style, symmetryMode: geminiResult.symmetryMode,
-          similarityScore: geminiResult.similarityScore || 85,
-          similarityReview: geminiResult.similarityReview || '',
+          similarityScore: simScore,
+          similarityReview: simReview,
+          similarityVerdict: review.verdict,
+          similarityCorrections: review.corrections || [],
+          preview: relative(ROOT, previewPath).replace(/\\/g, '/'),
+          yolo26: tgt.features,
           version: 6, verStr: 'v6',
           source_image: rel, source_full_path: tgt.targetImgPath,
           created_at: new Date().toISOString(),
@@ -1013,18 +1102,23 @@ async function main() {
       const dbEntry = {
         id: targetId, key: partKey, family, subpart,
         style: geminiResult.style, symmetryMode: geminiResult.symmetryMode,
-        similarityScore: geminiResult.similarityScore || 85,
+        similarityScore: simScore,
         version: 6, verStr: 'v6',
         image: rel, bounds, spec: { style: geminiResult.style },
         triangles: bounds.triangles,
         outputDir: `out/3d_data/${family}/${subpart}/${targetId}`,
       };
-      allDbItems = allDbItems.filter((it) => it.key !== partKey);
+      const producedStableTarget = `${family}/${subpart}_${curStem}`;
+      const sourceStableTarget = `${family}/${subpart}_${stem}`;
+      allDbItems = allDbItems.filter((it) => ![producedStableTarget, sourceStableTarget].includes(stableTargetOfKey(it.key || '')));
       allDbItems.push(dbEntry);
       existingDb.add(partKey);
 
       // ── 來源帳 ──
-      if (!existingPartKeys.has(partKey)) {
+      partsManifest.parts = partsManifest.parts.filter((entry) =>
+        !(entry.keys || (entry.key ? [entry.key] : [])).some((key) =>
+          [producedStableTarget, sourceStableTarget].includes(stableTargetOfKey(key))));
+      if (!existingPartKeys.has(partKey) || REVIEW_STATUS) {
         partsManifest.parts.push({
           method: 'gemini_v6', version: 6, verStr: 'v6',
           consumer: `${family} catalog & partlib (${subpart})`,
@@ -1039,7 +1133,7 @@ async function main() {
             runner: 'tools/ai3d/direct_ingest_v6.mjs',
             params: `--model ${MODEL} --family ${family}`,
             machine: `Gemini API (${MODEL})`,
-            measured: `Triangles ${bounds.triangles}, Vertices ${bounds.vertices}, Similarity ${geminiResult.similarityScore || 85}/100`,
+            measured: `Triangles ${bounds.triangles}, Vertices ${bounds.vertices}, Similarity ${simScore}/100`,
           },
           post: {
             tool: 'tools/ai3d/direct_ingest_v6.mjs',
@@ -1052,26 +1146,42 @@ async function main() {
       }
 
       // 即時寫入磁碟確保斷點無損
+      catalogDirty = true;
       syncDatabaseToDisk();
 
+      acceptedTargets.push(partKey);
       processedCount++;
       console.log(`  ⚡ Triangles: ${bounds.triangles}, Vertices: ${bounds.vertices}, Size: [${bounds.size.join(', ')}]m (已入庫 v6 索引)`);
       await sleep(2500);
     }
+
+    // 同一來源圖的所有獨立目標都通過後，才清除舊 regen verdict。
+    if (REVIEW_STATUS && acceptedTargets.length === targetList.length) {
+      const sourceStableTarget = `${family}/${subpart}_${stem}`;
+      const old = reviewTargets.get(sourceStableTarget);
+      if (old) delete reviewState.items[old.key];
+      writeFileSync(stateJsonPath, `${JSON.stringify(reviewState, null, 2)}\n`, 'utf8');
+    }
   }
 
   // ── 最終寫入來源帳與資料庫 ──
-  syncDatabaseToDisk();
-  console.log(`\n✅ 已同步 parts_manifest.json (共 ${partsManifest.parts.length} 筆)`);
-  console.log(`✅ 已同步 3d_database.json (共 ${allDbItems.length} 筆,其中 v6: ${allDbItems.filter((i) => i.version === 6).length} 筆)`);
+  if (catalogDirty) {
+    syncDatabaseToDisk();
+    console.log(`\n✅ 已同步 parts_manifest.json (共 ${partsManifest.parts.length} 筆)`);
+    console.log(`✅ 已同步 3d_database.json (共 ${allDbItems.length} 筆,其中 v6: ${allDbItems.filter((i) => i.version === 6).length} 筆)`);
+  } else {
+    console.log('\nℹ 沒有通過獨立複核的新候選，不改寫資料庫或來源帳');
+  }
 
   // ── 更新 harvest_state ──
-  const harvestState = {
-    at: new Date().toISOString(),
-    completed_items: allDbItems.length,
-    status: `completed_v6_gemini_${processedCount}_items`,
-  };
-  writeFileSync(join(ROOT, 'tools', 'ai3d', 'harvest_state.json'), JSON.stringify(harvestState, null, 2), 'utf8');
+  if (catalogDirty) {
+    const harvestState = {
+      at: new Date().toISOString(),
+      completed_items: allDbItems.length,
+      status: `completed_v6_gemini_${processedCount}_items`,
+    };
+    writeFileSync(join(ROOT, 'tools', 'ai3d', 'harvest_state.json'), JSON.stringify(harvestState, null, 2), 'utf8');
+  }
 
   console.log('======================================================================');
   console.log(`🎉 v6 完成: 處理 ${processedCount} 張, 跳過 ${skippedCount} 張(已完成), 失敗 ${errorCount} 張`);

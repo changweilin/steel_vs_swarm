@@ -45,18 +45,10 @@
       "status": "ok",
       "at": "2026-08-14T17:16:44.097Z"
     },
-    "building/acunit_wc_8061724_618600b3_v6": {
-      "status": "purge",
-      "at": "2026-08-20T14:23:49.591Z"
-    },
     "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_91597873_v6": {
       "status": "regen",
       "note": "沒讀到窗戶,物件分離",
       "at": "2026-08-20T14:31:31.860Z"
-    },
-    "building/balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_dc5aaa76_v6": {
-      "status": "purge",
-      "at": "2026-08-20T14:31:41.847Z"
     },
     "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6": {
       "status": "ok",
@@ -66,22 +58,6 @@
       "status": "regen",
       "note": "修復閃爍問題,一片屋簷斜錯方向",
       "at": "2026-08-20T14:33:56.612Z"
-    },
-    "building/bld_adobe_ov_a17c17a9-526b-42fa-96ec-d0fc87203636_786ce491_v6": {
-      "status": "purge",
-      "at": "2026-08-20T14:32:47.456Z"
-    },
-    "building/bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_91a31eb5_v6": {
-      "status": "purge",
-      "at": "2026-08-20T14:32:55.058Z"
-    },
-    "building/bld_apartment_ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1_70ccd154_v6": {
-      "status": "purge",
-      "at": "2026-08-20T14:33:11.764Z"
-    },
-    "building/bld_apartment_ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d_41b9d034_v6": {
-      "status": "purge",
-      "at": "2026-08-20T14:33:18.161Z"
     },
     "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_128ab538_v6": {
       "status": "regen",
@@ -107,10 +83,6 @@
       "status": "regen",
       "note": "透視裸空",
       "at": "2026-08-20T14:35:29.071Z"
-    },
-    "building/bld_civic_ov_483d72a6-b9d7-4103-b598-90de41fe2719_12e7b7e5_v6": {
-      "status": "purge",
-      "at": "2026-08-20T14:35:59.921Z"
     },
     "building/bld_civic_ov_cf9db9ae-c981-4201-9d2b-b8d0452ee9f9_8cf985a3_v6": {
       "status": "archive",
@@ -291,10 +263,6 @@
     "building/dormer_wc_14646619_ae8804b7_v6": {
       "status": "archive",
       "at": "2026-08-20T15:27:33.213Z"
-    },
-    "building/dormer_wc_17456298_84b09ced_v6": {
-      "status": "purge",
-      "at": "2026-08-20T15:40:06.203Z"
     },
     "building/dwg_civic_ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e_209a732a_v6": {
       "status": "archive",

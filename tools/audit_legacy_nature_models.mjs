@@ -6,6 +6,7 @@
 //   --break-rock     從執行期岩石名冊移除一顆，岩石完整性 MUST 紅字。
 //   --break-conifer  把未審 cf1 樹冠塞入執行期名冊，針葉 fail-closed MUST 紅字。
 import { partKeys } from './ai3d/provenance.mjs';
+import { megaLibDescs } from './ai3d/parts_src.mjs';
 import { readSrc } from './audit_src.mjs';
 import {
   LEGACY_CONIFER_MODELS,
@@ -34,6 +35,7 @@ const review = JSON.parse(readSrc('tools', 'parts_review', 'state.json')).items 
 const manifest = JSON.parse(readSrc('tools', 'ai3d', 'parts_manifest.json')).parts || [];
 const manifestKeys = new Set(manifest.flatMap(partKeys));
 const source = readSrc('public', 'js', 'legacyNatureModels.js');
+const mega = megaLibDescs();
 
 const EXPECTED_ROCKS = Object.freeze([
   'rock/collapse_a',
@@ -76,6 +78,8 @@ ok(legacyNatureKey('rock', 'cairn-base') === 'rock/collapse_a'
 ok(legacyNatureKey('conifer', 'cf1') === null
   && legacyNatureKey('rock', 'unknown') === null
   && legacyNatureKey('tree', 'cf1') === null, '未知或未通過用途回 null');
+ok(JSON.stringify(mega.MEGA_LIB.block) === JSON.stringify(['rock/mega_a'])
+  && mega.rows.some((row) => row.name === 'rock/mega_a'), '零件台抽取器能解出巨岩候選名冊');
 ok(EXPECTED_ROCKS.every(isApprovedLegacyNatureKey)
   && CONIFER_CANDIDATES.every((key) => !isApprovedLegacyNatureKey(key)), '白名單判定不放行未審針葉');
 ok(!source.includes('Math.random(') && !source.includes('mulberry32('), '純資料映射零亂數消耗');
