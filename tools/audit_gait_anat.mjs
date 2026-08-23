@@ -27,11 +27,16 @@
 //  Ⅶ 跳躍分級 —— 大跳(蓄力跳)與小跳的落地深度與頂點收腿**不是同一組數**;
 //     舊制 airF 在 1.1m 飽和 ⇒ 兩者逐幀相同。
 //  Ⅷ 交戰姿態 —— 移動中開火收斂骨盆對轉(奔跑射擊)、飛行開火鳥類停拍而昆蟲**不停拍**。
+//  Ⅸ COM 起伏 —— 對稱步態每 stride 兩次、非對稱疾馳/併蹬每 stride 一次；落腳拍數不等於軀幹起伏數。
+//  Ⅹ 人類真實跑姿 —— 觸地屈膝、推離後收腿，膝在載重與擺動各有一峰。
+//  Ⅺ 柱狀肢不焊死 —— 巨象/劍龍仍要有可辨識的肘膝、腕踝、掌蹠三段相對行程。
 //
 // 跑法:`node tools/audit_gait_anat.mjs`
 // 反向驗證:`--break-lock`(腕改吃跗節曲線)/ `--break-duty`(佔空比恆 0.5)/
 //           `--break-hip`(髖改回純正弦)/ `--break-rest`(站姿疊靜態偏移)/
-//           `--break-posture`(站姿型全部退化成同一份行程)
+//           `--break-posture`(站姿型全部退化成同一份行程)/
+//           `--break-bounce`(軀幹退回固定倍頻)/ `--break-human`(人形退回通用正弦跑姿)/
+//           `--break-column`(柱狀肢恢復雙重壓縮的幾乎無行程版)
 import { readSrc } from './audit_src.mjs';
 import * as G from '../public/js/gaitcurve.js';
 
@@ -55,8 +60,18 @@ const limbFlex = (P, i, u, d, a) => G.limbFlex(P, i, u, d, a) + (BRK.has('rest')
 const limbProfile = (l) => {
   const p = G.limbProfile(l);
   if (BRK.has('posture')) { p.fore.reach = [1, 1, 1]; p.hind.reach = [1, 1, 1]; p.fore.lock = 0.2; p.hind.lock = 0.2; }
+  if (BRK.has('column') && (p.fore.posture === 'columnar' || p.hind.posture === 'columnar')) {
+    p.fore.reach = [0.62, 0.42, 0.30]; p.hind.reach = [0.62, 0.42, 0.30];
+    p.fore.lock = 0.70; p.hind.lock = 0.70;
+  }
   return p;
 };
+const bodyBounce = (ph, duty, asymF) => BRK.has('bounce')
+  ? 0.5 - 0.5 * Math.cos(ph * 4) : G.bodyBounce(ph, duty, asymF);
+const humanRunPose = (u, duty) => BRK.has('human')
+  ? { hip: Math.sin(2 * Math.PI * (u - 0.25)), arm: Math.sin(2 * Math.PI * (u - 0.25)) }
+  : G.humanRunPose(u, duty);
+const humanJoint = (i, u, duty) => G.jointFlex(BRK.has('human') ? 'hind' : 'human', i, u, duty);
 
 /** 一整個週期的取樣(N 點),分成支撐段與擺動段 */
 // LOAD_F:支撐相「真的在承重」的那一段(末段 15% 是卸載/蹬離,腕本來就在那時開始解鎖 ——
@@ -188,7 +203,7 @@ console.log('\nⅥ 接線(執行原文)');
 t('① locomotion 真的把 fore/hind 分開餵',
   /P:\s*LP\.fore,\s*duty/.test(locoSrc) && /P:\s*LP\.hind,\s*duty/.test(locoSrc));
 t('② flexChain 收下 profile 並改走 limbFlex', /function flexChain\([^)]*A = null\)/.test(locoSrc)
-  && /limbFlex\(A\.P, i, cycleU\(ph - j\.d\), A\.duty, a\)/.test(locoSrc));
+  && /let f = limbFlex\(A\.P, i, u, A\.duty, a\)/.test(locoSrc));
 t('③ 髖/肩驅動改吃 hipDrive(兩支步態各一處)',
   (locoSrc.match(/hipDrive\(cycleU\(p\), duty\)/g) || []).length === 2);
 t('④ 鷹架把 limb 交到 rig 上(四足 + 雙足各一)',
@@ -219,6 +234,71 @@ t('③ 鳥類撲翼**停拍**滑翔撲擊(頻率與振幅一起收)',
   /\(1 - 0\.8 \* atk\)/.test(locoSrc) && /1 - 0\.85 \* atk/.test(locoSrc));
 t('③b 昆蟲**不停拍**(升力全靠震翅;只收掃掠幅度)',
   /dt \* \(30 \+ k \* 16\);/.test(locoSrc) && /1 - 0\.25 \* atk/.test(locoSrc));
+
+console.log('\nⅨ 軀幹 COM 起伏(與完整 stride 同頻)');
+function bounceCount(asymF, N = 1440) {
+  const vals = [];
+  for (let n = 0; n < N; n++) {
+    const ph = n / N * Math.PI * 2;
+    vals.push(bodyBounce(ph, G.GAIT_DUTY.trot, asymF));
+  }
+  let count = 0;
+  for (let n = 0; n < N; n++) if (vals[(n + N - 1) % N] <= 0.8 && vals[n] > 0.8) count++;
+  return count;
+}
+const nSym = bounceCount(0);
+const nAsym = bounceCount(1);
+console.log(`    對稱步態 ${nSym} 次 ｜ 非對稱疾馳/併蹬 ${nAsym} 次`);
+t('① 對稱雙足/四足步態每 stride 產生兩次 COM 起伏', nSym === 2, `(${nSym})`);
+t('② 非對稱疾馳/併蹬每 stride 合成一次 COM 起伏', nAsym === 1, `(${nAsym})`);
+t('③ 雙足/四足軀幹共用 stride 相位，不以落腳拍數硬湊倍頻',
+  (locoSrc.match(/bodyBounce\(L\.ph, duty,/g) || []).length === 2);
+t('④ 四足軀幹俯仰與 COM 使用同一個對稱→疾馳連續混合',
+  /const axialWave =/.test(locoSrc) && (locoSrc.match(/axialWave\(/g) || []).length >= 5);
+
+console.log('\nⅩ 人類真實跑姿(AMASS / motion-ControlNet 離線參考)');
+const HD = G.GAIT_DUTY.gallop;
+const hContact = humanRunPose(0, HD).hip;
+const hToe = humanRunPose(HD - 1e-6, HD).hip;
+let hSwing = Infinity, kneeSt = -Infinity, kneeSw = -Infinity;
+for (let n = 0; n < 720; n++) {
+  const u = n / 720;
+  hSwing = u >= HD ? Math.min(hSwing, humanRunPose(u, HD).hip) : hSwing;
+  const k = humanJoint(0, u, HD);
+  if (u < HD) kneeSt = Math.max(kneeSt, k); else kneeSw = Math.max(kneeSw, k);
+}
+t('① 觸地時大腿在前、蹬離時伸展在後', hContact < -0.5 && hToe > 0.65,
+  `(觸地 ${f2(hContact)} / 蹬離 ${f2(hToe)})`);
+t('② 擺動期快速收大腿到身前', hSwing < -0.8, `(${f2(hSwing)})`);
+t('③ 膝在觸地載重與擺動收腿各有一峰', kneeSt > 0.62 && kneeSw > 0.95,
+  `(支撐 ${f2(kneeSt)} / 擺動 ${f2(kneeSw)})`);
+t('④ stepBiped 只對推導的人形蹠行拓樸混入 human 曲線',
+  /humanF = GAIT_ANAT/.test(locoSrc) && /role: 'human'/.test(locoSrc) && /humanRunPose\(cycleU/.test(locoSrc));
+
+console.log('\nⅪ 柱狀肢三段相對活動(巨象 / 劍龍)');
+const CP = limbProfile({ fore: 'columnar', hind: 'columnar' });
+const limbRange = (P, i) => {
+  const v = [];
+  for (let n = 0; n < 720; n++) v.push(limbFlex(P, i, n / 720, G.GAIT_DUTY.walk, 1));
+  return Math.max(...v) - Math.min(...v);
+};
+const colFore = [0, 1, 2].map((i) => limbRange(CP.fore, i));
+const colHind = [0, 1, 2].map((i) => limbRange(CP.hind, i));
+console.log(`    前肢 ${colFore.map(f2).join('/')} ｜ 後肢 ${colHind.map(f2).join('/')}`);
+t('① 前肢肘/腕/掌三段均有可辨識行程', colFore[0] > 1.0 && colFore[1] > 1.0 && colFore[2] > 0.5);
+t('② 後肢膝/踝/蹠三段均有可辨識行程', colHind[0] > 0.85 && colHind[1] > 0.7 && colHind[2] > 0.55);
+
+console.log('\nⅫ 運動射擊槍軸 post-pass');
+t('① 發射軸名冊由 wpn 宣告推導，無逐機例外',
+  /function weaponAimList\(g, wpn\)/.test(forgeSrc) && /rig\.aimForward = weaponAimList\(g, rig\.wpn\)/.test(forgeSrc));
+const morphCall = locoSrc.indexOf('if (mesh.userData.morph) morphPose(mesh.userData.morph);');
+const aimCall = locoSrc.indexOf('stepAimForward(rig);');
+t('② 槍軸校正排在步態/跳躍/變形之後', morphCall >= 0 && aimCall > morphCall);
+t('③ 舉槍權重沿用阻尼後的 aim，不用布林值瞬切',
+  /rig\._fireAim = C\.aim/.test(locoSrc) && !/rig\._fireAim \? 1/.test(locoSrc));
+t('④ 手臂/槍口/飛行變形全吃連續舉槍權重',
+  /slerp\(a\.qc, raise\)/.test(locoSrc)
+  && /idle \* \(1 - m\) \+ \(rig\._fireAim \|\| 0\)/.test(locoSrc));
 
 const brk = [...BRK];
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項${fail ? ` / 失敗 ${fail} 項` : ''}`

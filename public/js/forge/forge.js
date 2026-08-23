@@ -173,9 +173,52 @@ function stabList(g, nodes) {
   });
 }
 
+/**
+ * 開火槍軸名冊：從 `wpn.*.{nodes,ref,fwd}` 推導，不寫逐機例外。
+ * 每個發射節點的宣告軸都得到一個「對準機體 +z」的局部四元數；
+ * locomotion 在所有步態/飛行/跳躍/變形 post-pass 之後再換回父框架。
+ */
+function weaponAimList(g, wpn) {
+  if (!wpn) return null;
+  const depth = (n) => {
+    let d = 0;
+    for (let p = n; p && p !== g; p = p.parent) d++;
+    return d;
+  };
+  const axis = (name) => {
+    const s = name?.startsWith('-') ? -1 : 1;
+    const k = (name || 'z').replace('-', '');
+    return new THREE.Vector3(k === 'x' ? s : 0, k === 'y' ? s : 0, k === 'z' ? s : 0);
+  };
+  const Z = new THREE.Vector3(0, 0, 1);
+  const entries = new Map();
+  for (const slot of ['light', 'heavy']) {
+    const set = wpn[slot];
+    if (!set?.ref) continue;
+    const raw = [...new Set([...(set.nodes || []), set.ref])];
+    // 父子節點也各自入冊：父先校正、子再依更新後的父框架求解，最終每根發射軸都是正前。
+    // 只校最上層會讓帶獨立俯仰的子槍管仍殘留偏角。
+    const nodes = raw.filter((n) => n?.parent && n !== g).sort((a, b) => depth(a) - depth(b));
+    for (const n of nodes) {
+      let e = entries.get(n);
+      if (!e) {
+        e = {
+          g: n, ref: g, slots: [],
+          qf: new THREE.Quaternion().setFromUnitVectors(axis(set.fwd), Z),
+          qa: new THREE.Quaternion(), qb: new THREE.Quaternion(), qc: new THREE.Quaternion(),
+        };
+        entries.set(n, e);
+      }
+      if (!e.slots.includes(slot)) e.slots.push(slot);
+    }
+  }
+  return entries.size ? [...entries.values()] : null;
+}
+
 function finishRig(g, rig, W, K, H, D, ctx, F, spec) {
   rig.stab = stabList(g, W.stab);
   if (D.extra) D.extra(ctx, F, Object.assign(rig, { heavy: { glow: [], pivot: [] } }));
+  rig.aimForward = weaponAimList(g, rig.wpn);
   // 發光強度旋鈕:整棵樹的 emissiveIntensity ×accentF(在記錄 glow base 之前套用)
   if (K.accentF !== 1) g.traverse((o) => {
     if (o.isMesh && o.material?.emissiveIntensity) o.material.emissiveIntensity *= K.accentF;
