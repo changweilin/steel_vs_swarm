@@ -5988,6 +5988,11 @@ export class BattleClient {
     return { id, def: this.wdef[id], st: this.wstate[id] };
   }
 
+  /** 狙擊中重武器打空:保留冷卻,退出狙擊讓持續扳機接著走輕武器。 */
+  _fallbackFromEmptyHeavy(id, st) {
+    if (id === 'heavy' && this.aiming && st?.ammo <= 0) this._setAiming(false);
+  }
+
   /**
    * 高度差空戰(客戶端):**逐目標**的射程乘數,與伺服器 `sim._altRange`/`_altDh` 逐條同構
    * (曲線走 `data.js altRangeF` 這個唯一縫)。
@@ -6477,6 +6482,7 @@ export class BattleClient {
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
     if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
+    this._fallbackFromEmptyHeavy(id, st);
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
     // 重武器擊發需電力(伺服器 _gateFire 權威;此為本地預測 + HUD 提示)
@@ -6534,7 +6540,10 @@ export class BattleClient {
         this._settleUntil[id] = now + (prof.settle || 0.4);
       }
     }
-    if (st.ammo <= 0) this._startReload(id);
+    if (st.ammo <= 0) {
+      this._startReload(id);
+      this._fallbackFromEmptyHeavy(id, st);
+    }
     // 重武器擊發:廣播離散事件,驅動第三人稱機體的掛點動畫(自己與他人皆可見)
     if (id === 'heavy') this.net?.send({ t: 'heavyFire' });
 
