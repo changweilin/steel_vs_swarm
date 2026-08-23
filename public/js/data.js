@@ -3304,14 +3304,14 @@ export const CHARACTERS = {
     // 那幾個名字指的是機體上的**實體零件**,機體換了就不存在;數值(dmg/rate/mag/range/vs/vsSp…)
     // 一格未動 ⇒ bal 與 e2e 的期望值逐位元不變。武器本身仍是綁角色的(§2.1 角色機種),沒有搬給 s10。
     light: { name: '耳廓相位脈衝槍', rw: '耳廓相控陣・光速直擊', type: 'beam',
-      dmg: [15, 19, 24], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 190, crit: 0.06,
+      dmg: [15, 19, 24], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 220, crit: 0.06,
       vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
     // 護盾軸示範 ①【反護盾】:HPM 微波把能量灌進護盾場直接燒穿,對裝甲板卻幾乎只是加熱 ——
     // 開場兩發剝光對手護盾,之後就得換輕武器慢慢磨(見 data.js shieldSplit 上方註)。
     // **原本的 air 2.0 由夾制②自動歸 1**(反護盾不得有其他單位加成)—— 這裡刻意留著原值不手改:
     // 紀律是程式在管,寫死 1.0 反而看不出「這把武器本來被拿掉了什麼」。
     heavy: { name: '額隆高功率微波炮', rw: 'HPM 定向能・光速', type: 'beam',
-      dmg: [21, 31, 44], mag: 5, reload: 8, range: 280, emp: [0.8, 1.0, 1.2],
+      dmg: [21, 31, 44], mag: 5, reload: 8, range: 320, emp: [0.8, 1.0, 1.2],
       vsSp: 1.7, vsHp: 0.7,
       vs: { flesh: 0.7, armor: 0.8, air: 2.0, building: 0.4 } },
     skill: { name: '定向干擾', fx: 'emp', r: 120, dur: [2.5, 3, 3.5], range: 260,
@@ -3440,7 +3440,7 @@ export const CHARACTERS = {
     visual: { hue: 0xd7b8ff, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'minimal' },
     mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 8 },
     light: { name: '低功率脈衝雷射槍艙', rw: '抑制型雷射訊號步槍・光速直擊', type: 'beam',
-      dmg: [16, 20, 24], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 170, crit: 0.08,
+      dmg: [16, 20, 24], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 220, crit: 0.08,
       vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },
     heavy: { name: '訊號矛', rw: 'EMP 狙擊彈・初速 900m/s', type: 'gun', mv: 900,
       dmg: [42, 64, 94], mag: 3, reload: 9, range: 340, emp: [1.5, 2, 2.5],
@@ -3591,7 +3591,7 @@ export const CHARACTERS = {
       dmg: [16, 20, 25], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 200, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.8, air: 1.0, building: 0.5 } },
     heavy: { name: '原型脈衝雷射矛', rw: '仿生關節整合雷射・光速直擊', type: 'beam',
-      dmg: [37, 56, 83], mag: 5, reload: 8, range: 300, pen: [18, 22, 26],
+      dmg: [37, 56, 83], mag: 5, reload: 8, range: 320, pen: [18, 22, 26],
       vs: { flesh: 0.8, armor: 1.7, air: 0.6, building: 0.6 } },
     skill: { name: '結構自檢', fx: 'heal', target: 'self', heal: [200, 280, 360],
       cd: [22, 19, 16], mp: [35, 40, 45], desc: '仿生關節自我修復(掉漆的才是我的)' },
@@ -3643,12 +3643,12 @@ export const CHARACTERS = {
     visual: { hue: 0xffc7dd, frame: 'hexa', body: 'slab', form: 'avian', creature: 'dragon', paint: 'sakura' },
     mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 6 },
     light: { name: '共鳴脈衝步槍', rw: '聲電複合雷射・光速直擊', type: 'beam',
-      dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
+      dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 220, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     // 護盾軸示範 ②【反護盾】:諧振頻率對準護盾場的共振點,場一垮就沒戲唱了 —— 與 s03 同型,
     // 但削盾幅度小一點、主 HP 掉得少一點(同一個原型的兩種調校,不是同一把武器)。
     heavy: { name: '諧振波炮', rw: '定向聲電複合・光速', type: 'beam',
-      dmg: [23, 33, 45], mag: 5, reload: 8, range: 300, emp: [1.0, 1.5, 2.0],
+      dmg: [23, 33, 45], mag: 5, reload: 8, range: 320, emp: [1.0, 1.5, 2.0],
       vsSp: 1.55, vsHp: 0.78,
       vs: { flesh: 0.9, armor: 0.8, air: 1.8, building: 0.4 } },
     skill: { name: '搖籃曲', fx: 'emp', r: 140, dur: [2.5, 3, 3.5], range: 260,
@@ -3712,7 +3712,7 @@ export const CHARACTERS = {
     visual: { hue: 0xb8ffb0, pod: 'none', proto: 'colossus', paint: 'tattoo' },
     mods: { hp: 0.9, sp: 1.15, mp: 1.3, speed: 1.05, armor: 12 },
     light: { name: '掃描脈衝槍', rw: '低功率相位雷射・光速直擊', type: 'beam',
-      dmg: [13, 16, 20], rate: 10, mag: [40, 50, 60], reload: 1.8, range: 170, crit: 0.08,
+      dmg: [13, 16, 20], rate: 10, mag: [40, 50, 60], reload: 1.8, range: 220, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.5, air: 1.0, building: 0.4 } },
     heavy: { name: '標定脈衝砲', rw: 'EM 標定彈・初速 2500m/s', type: 'rail', mv: 2500,
       dmg: [53, 82, 122], mag: 2, reload: 8, range: 340, emp: [0.8, 1.0, 1.2],
@@ -3792,7 +3792,7 @@ export const CHARACTERS = {
     visual: { hue: 0x59c9a5, frame: 'wing', body: 'frame', form: 'fixed', wing: 'twinboom', paint: 'minimal' },
     mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
     light: { name: '護衛脈衝雷射艙', rw: '低功率防禦雷射・光速直擊', type: 'beam',
-      dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 175, crit: 0.07,
+      dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 220, crit: 0.07,
       vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },
     heavy: { name: '空投截擊彈', rw: 'APKWS 雷射導引・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
       dmg: [62, 95, 137], r: [11, 13, 15], mag: 3, reload: 12, range: 300, pen: 8,
