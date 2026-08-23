@@ -292,7 +292,7 @@ export function projectileMesh(def, { col = 0xffd27a, hue = col, heavy = false }
 /**
  * 餌機投彈的拋擲彈體(2026-07-22):依機體類型上色 + 專屬造型的手榴彈。
  * 幾何原點置中(呼叫端逐幀 tumble 自旋);不自行加入場景。
- * type: 'fire'|'freeze'|'poison'|'thunder'  color: DECOY_BOMB[type].color(彈殼識別色)
+ * type: 'fire'|'freeze'|'poison'|'thunder'  color: DECOY_BOMB[type].color(彈殼識別色;thunder = 閃光彈)
  */
 export function decoyBombMesh(type, color = 0xff6a2a) {
   const g = new THREE.Group();
@@ -335,7 +335,7 @@ export function decoyBombMesh(type, color = 0xff6a2a) {
       g.add(bulb);
     }
   } else if (type === 'thunder') {
-    // 雷爆彈:上下電極針
+    // 閃光彈:上下電極針
     for (let i = 0; i < 2; i++) {
       const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.02, 0.5, 6),
         toonMat(0xfff3a0, { emissive: 0xffe14f, emissiveIntensity: 0.7 }));
