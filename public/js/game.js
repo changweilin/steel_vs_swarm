@@ -17,7 +17,7 @@ import {
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
-  SPEC_CAM, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
+  SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
   CREEP_UPG, DISSOLVE, dissolveOutAt,
 } from './data.js';
@@ -529,6 +529,7 @@ export class BattleClient {
     this.effects = [];
     this.keys = {};
     this.yaw = 0; this.pitch = -0.1;
+    this.bodyYaw = 0;                 // TPS 機體朝向; yaw 保留給相機/準星
     this.vel = new THREE.Vector3();
     this.pos = new THREE.Vector3();
     this.hp = 0; this.maxHp = 1;
@@ -690,6 +691,8 @@ export class BattleClient {
 
   /** 視角模式即時切換(fpv 第一人稱 ⇄ tps 第三人稱) */
   _onViewModeChange(vm) {
+    if (vm === 'tps') this.bodyYaw = this.yaw;
+    else this.yaw = this.bodyYaw;
     this.viewMode = vm;
     if (this.cockpit) this.cockpit.visible = (vm === 'fpv');
     for (const ent of this.ents.values()) {
@@ -2220,6 +2223,19 @@ export class BattleClient {
     const k = this.keys;
     if (k.Space || k.KeyC || k.ControlLeft) return true;
     return this._moveAxis().mag > 0.02;
+  }
+
+  /** 第三人稱的機體朝向:移動時面向移動方向,瞄準/開火時面向相機視線。 */
+  _stepThirdPersonBody(dt, move) {
+    if (this.viewMode !== 'tps') {
+      this.bodyYaw = this.yaw;
+      return;
+    }
+    const moving = move.lengthSq() > 0.0004;
+    const target = this.aiming || this.firing
+      ? this.yaw
+      : (moving ? Math.atan2(-move.x, -move.z) : null);
+    if (target != null) this.bodyYaw = camAngleStep(this.bodyYaw, target, PLAYER_TPS.BODY_TURN_K, dt);
   }
 
   /**
@@ -4740,7 +4756,8 @@ export class BattleClient {
       d: new THREE.Vector3(), o: new THREE.Vector3(), t: -1, ent: null,
       pt: new THREE.Vector3(), from: new THREE.Vector3(),
     });
-    if (this.gunGroup) this.gunGroup.localToWorld(c.from.copy(this._muzzle));
+    if (this.viewMode === 'tps') c.from.copy(this._selfMuzzle(null, this._maxRange(def), 'heavy'));
+    else if (this.gunGroup) this.gunGroup.localToWorld(c.from.copy(this._muzzle));
     else c.from.copy(this.camera.position);
     const dir = this.camera.getWorldDirection(this._lobFwd || (this._lobFwd = new THREE.Vector3()));
     const t = performance.now();
@@ -5069,6 +5086,7 @@ export class BattleClient {
     this.vy = 0;
     const near = Math.hypot(wx - prevX, wz - prevZ) <= SQUAD.REGROUP_M;
     this.yaw = near ? prevYaw : (e.ry ?? this.yaw);
+    this.bodyYaw = this.yaw;
     this.firing = false;
     this._crashSent = false;
     this.trauma = 0.35;
@@ -5833,6 +5851,7 @@ export class BattleClient {
     // (見 _onSelfRespawn 的 this.lift = null)MUST 真的被拿來爬升,不然滿動力形同虛設。
     this.pos.set(sx, gy + (this.isDrone ? FLIGHT.HOVER_M : 0), sz);
     this.yaw = Math.atan2(-dx, -dz);   // 面向兵線前進方向(three:-z 前方)→ 看得到兵線箭頭
+    this.bodyYaw = this.yaw;
     this.pitch = -0.05;
     this.roll = 0;
     // 變形者:重生一律地面型態
@@ -6414,7 +6433,7 @@ export class BattleClient {
   _updateGuideLaser() {
     const showable = this.side && !this.dead && !this.shopOpen && this.aiming;
     const { def } = showable ? this._curWeapon() : {};
-    if (!showable || !def || trajClass(def) !== 'guide' || !this.gunGroup) {
+    if (!showable || !def || trajClass(def) !== 'guide') {
       if (this._gLaser) this._gLaser.group.visible = false;
       return;
     }
@@ -6423,7 +6442,9 @@ export class BattleClient {
     g.group.visible = true;
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    const from = this.gunGroup.localToWorld(this._muzzle.clone());
+    const from = this.viewMode === 'tps'
+      ? this._selfMuzzle(null, this._maxRange(def), 'heavy')
+      : this.gunGroup?.localToWorld(this._muzzle.clone()) || this.camera.position.clone();
     const { point } = this._resolveAim(this._maxRange(def));
     const seg = point.clone().sub(from);
     const len = Math.max(0.5, seg.length());
@@ -6452,11 +6473,17 @@ export class BattleClient {
     this._gLaser = { group, beam, ring };
   }
 
-  _selfMuzzle(dir, rng = 100) {
+  _selfMuzzle(dir, rng = 100, slot = 'light') {
     if (this.viewMode === 'tps') {
       const eyeH = this._eyeH();
-      const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-      const muz = this.pos.clone().add(new THREE.Vector3(0, eyeH, 0)).addScaledVector(fwd, 1.2);
+      let muz = null;
+      for (const ent of this.ents.values()) {
+        if (!ent.isSelf) continue;
+        const mz = ent.mesh?.userData?.rig?.muzzles?.[slot];
+        if (mz?.n && !mz.fxOnly) { muz = mz.n.getWorldPosition(new THREE.Vector3()); break; }
+      }
+      const fwd = new THREE.Vector3(-Math.sin(this.bodyYaw), 0, -Math.cos(this.bodyYaw));
+      muz ||= this.pos.clone().add(new THREE.Vector3(0, eyeH, 0)).addScaledVector(fwd, 1.2);
       if (dir) {
         const targetPoint = this.camera.position.clone().add(dir.clone().multiplyScalar(rng));
         dir.copy(targetPoint).sub(muz).normalize();
@@ -6554,7 +6581,7 @@ export class BattleClient {
     // 槍口與射向(座艙槍管末端或 TPS 機體發射點,世界座標)
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    const muzzle = this._selfMuzzle(dir, rng);
+    const muzzle = this._selfMuzzle(dir, rng, id);
 
     // 後座力(依武器分級 def.recoil):視角上踢(準星上移)+ 偏擺 + 槍身後坐 + 鏡頭震動 + 位移擊退
     // 位移懲罰在 _updatePlayer 依 `_recoilMoveF()` 夾住(係數 ← 後座量);'back' 每發沿槍口反向擊退。
@@ -6703,7 +6730,7 @@ export class BattleClient {
     const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)));
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    const muzzle = this._selfMuzzle(dir, rng);
+    const muzzle = this._selfMuzzle(dir, rng, id);
 
     // 逐發手感(見上方註):槍口焰 / 槍身後坐 / 鏡頭震動 / 準星上踢 / 擊退
     this.flash.visible = true;
@@ -7597,6 +7624,7 @@ export class BattleClient {
     const boost = ax.boost ? 1.35 : 1;
     const move = new THREE.Vector3().addScaledVector(fwd, ax.f).addScaledVector(right, ax.r);
     if (ax.mag > 1) move.multiplyScalar(1 / ax.mag);
+    this._stepThirdPersonBody(dt, move);
 
     // 攀爬(長梯/攀岩抓點/垂降技術繩)接管:掛在梯上時不吃重力、不吃地面加速,其餘(結構物硬碰撞 /
     // 天花 / _collide / 邊界 / 回報)照走下方共用路徑 —— MUST NOT 為攀爬另開一條位置回報。
@@ -7850,21 +7878,23 @@ export class BattleClient {
     if (this.viewMode === 'tps') {
       if (this.cockpit && this.cockpit.visible) this.cockpit.visible = false;
       const h = this.selfH;
-      const baseDist = Math.max(SPEC_CAM.MIN_DIST, h * SPEC_CAM.DIST_F);
-      const dist = this.aiming ? baseDist * 0.65 : baseDist;
+      const dist = Math.max(PLAYER_TPS.MIN_DIST, h * PLAYER_TPS.DIST_F);
+      const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+      const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
       const cp = Math.cos(this.pitch);
-      const aimY = this.pos.y + h * SPEC_CAM.AIM_F;
-      this.camera.position.set(
-        this.pos.x + Math.sin(this.yaw) * dist * cp,
-        aimY - Math.sin(this.pitch) * dist,
-        this.pos.z + Math.cos(this.yaw) * dist * cp,
+      const viewDir = new THREE.Vector3(
+        fwd.x * cp, Math.sin(this.pitch), fwd.z * cp,
       );
+      this.camera.position.copy(this.pos)
+        .addScaledVector(fwd, -dist * cp)
+        .addScaledVector(right, h * PLAYER_TPS.SHOULDER_F);
+      this.camera.position.y += h * PLAYER_TPS.HEIGHT_F - Math.sin(this.pitch) * dist;
       const floor = this._surf(this.camera.position.x, this.camera.position.z, this.camera.position.y)
-        + SPEC_CAM.FLOOR_M;
+        + PLAYER_TPS.FLOOR_M;
       if (this.camera.position.y < floor) this.camera.position.y = floor;
-      this.camera.rotation.set(0, 0, 0);
-      this.camera.rotateY(this.yaw + this.recoil.y + shY);
-      this.camera.rotateX(this.pitch + this.recoil.p + shP);
+      this.camera.lookAt(this.camera.position.clone().addScaledVector(viewDir, PLAYER_TPS.AIM_DISTANCE_M));
+      this.camera.rotateY(this.recoil.y + shY);
+      this.camera.rotateX(this.recoil.p + shP);
       this.camera.rotateZ(this.roll + shR);
       this._cameraDeClip();   // 鏡頭防穿模:退回障礙外緣,不看穿建物/神木/巨岩
     } else {
@@ -7919,7 +7949,7 @@ export class BattleClient {
         x: Math.round(this.pos.x * 10) / 10,
         y: Math.round(this._altAG * 10) / 10,
         z: Math.round(-this.pos.z * 10) / 10,
-        ry: Math.round(this.yaw * 100) / 100,
+        ry: Math.round((this.viewMode === 'tps' ? this.bodyYaw : this.yaw) * 100) / 100,
         wet: this._env.code,   // 地形異常狀態(0 無 / 1 水 / 2 沼):伺服器結算流體沉浸減傷與電力/護盾回充減速。
                                // 完全沉浸制 + 騰空歸零(見 _envAt)⇒ 跳躍/蓄力跳躍期間回報 0 = 狀態解除
         lev,
@@ -8401,7 +8431,7 @@ export class BattleClient {
           ent.mesh.visible = !ent.dead;
           const px = ent.mesh.position.x, pz = ent.mesh.position.z, pyaw = ent.mesh.rotation.y;
           ent.mesh.position.copy(this.pos);
-          ent.mesh.rotation.y = this.yaw + Math.PI;
+          ent.mesh.rotation.y = (this.viewMode === 'tps' ? this.bodyYaw : this.yaw) + Math.PI;
           if (ent.bar) ent.bar.lookAt(this.camera.position);
           stepCombatFx(ent, now, dt);
           stepLocomotion(ent, dt, now, px, pz, pyaw);
@@ -9093,7 +9123,7 @@ export class BattleClient {
       const [mx, my] = this._world2mm(this.pos.x, this.pos.z, w, h);
       ctx.save();
       ctx.translate(mx, my);
-      ctx.rotate(-this.yaw);   // 前方 = (−sinYaw,−cosYaw);世界→小地圖同號 ⇒ θ = −yaw(舊 +π 讓箭頭反向)
+      ctx.rotate(-(this.viewMode === 'tps' ? this.bodyYaw : this.yaw));   // 前方 = (−sinYaw,−cosYaw);世界→小地圖同號 ⇒ θ = −yaw(舊 +π 讓箭頭反向)
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.moveTo(0, -7); ctx.lineTo(4.5, 5); ctx.lineTo(-4.5, 5);
@@ -9245,7 +9275,7 @@ export class BattleClient {
         if (this._flashTtl <= 0) { this.flash.visible = false; this._flashTtl = null; }
         else this.flash.scale.setScalar((0.7 + Math.random() * 0.7) * (this._flashHeavy ? 2.3 : 1));
       }
-      this.cockpit.visible = !this.dead || !!this._deathSeq;   // 過場期間保留座艙,隨鏡頭傾倒/翻滾(第一人稱殉爆)
+      this.cockpit.visible = this.viewMode === 'fpv' && (!this.dead || !!this._deathSeq);   // 只在第一人稱顯示座艙;第三人稱死亡過場仍保留機體
     }
     this._updateWaterVeil();   // 水下/沼澤視野變色(最終 camera 定案後、render 前)
     // HUD 下帶的高是內容撐出來的(爬升條 / 觀戰面板 / 僚機列會增減)⇒ 逐幀量會強制 layout,
