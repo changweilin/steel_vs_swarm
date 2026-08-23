@@ -27,7 +27,7 @@
 //  Ⅶ 跳躍分級 —— 大跳(蓄力跳)與小跳的落地深度與頂點收腿**不是同一組數**;
 //     舊制 airF 在 1.1m 飽和 ⇒ 兩者逐幀相同。
 //  Ⅷ 交戰姿態 —— 移動中開火收斂骨盆對轉(奔跑射擊)、飛行開火鳥類停拍而昆蟲**不停拍**。
-//  Ⅸ 承重起伏 —— `bodyBounce` 直接取落腳相位：四拍慢步=4、對角小跑/三角步態=2、併蹬=1。
+//  Ⅸ COM 起伏 —— 對稱步態每 stride 兩次、非對稱疾馳/併蹬每 stride 一次；落腳拍數不等於軀幹起伏數。
 //  Ⅹ 人類真實跑姿 —— 觸地屈膝、推離後收腿，膝在載重與擺動各有一峰。
 //  Ⅺ 柱狀肢不焊死 —— 巨象/劍龍仍要有可辨識的肘膝、腕踝、掌蹠三段相對行程。
 //
@@ -66,8 +66,8 @@ const limbProfile = (l) => {
   }
   return p;
 };
-const bodyBounce = (phases) => BRK.has('bounce')
-  ? 0.5 - 0.5 * Math.cos(phases[0] * 2) : G.bodyBounce(phases);
+const bodyBounce = (ph, duty, asymF) => BRK.has('bounce')
+  ? 0.5 - 0.5 * Math.cos(ph * 4) : G.bodyBounce(ph, duty, asymF);
 const humanRunPose = (u, duty) => BRK.has('human')
   ? { hip: Math.sin(2 * Math.PI * (u - 0.25)), arm: Math.sin(2 * Math.PI * (u - 0.25)) }
   : G.humanRunPose(u, duty);
@@ -235,27 +235,26 @@ t('③ 鳥類撲翼**停拍**滑翔撲擊(頻率與振幅一起收)',
 t('③b 昆蟲**不停拍**(升力全靠震翅;只收掃掠幅度)',
   /dt \* \(30 \+ k \* 16\);/.test(locoSrc) && /1 - 0\.25 \* atk/.test(locoSrc));
 
-console.log('\nⅨ 軀幹承重起伏(與落腳事件同頻)');
-function bounceCount(offsets, N = 1440) {
+console.log('\nⅨ 軀幹 COM 起伏(與完整 stride 同頻)');
+function bounceCount(asymF, N = 1440) {
   const vals = [];
   for (let n = 0; n < N; n++) {
     const ph = n / N * Math.PI * 2;
-    vals.push(bodyBounce(offsets.map((o) => ph + o)));
+    vals.push(bodyBounce(ph, G.GAIT_DUTY.trot, asymF));
   }
   let count = 0;
   for (let n = 0; n < N; n++) if (vals[(n + N - 1) % N] <= 0.8 && vals[n] > 0.8) count++;
   return count;
 }
-const nWalk = bounceCount([-Math.PI / 2, Math.PI / 2, 0, Math.PI]);
-const nTrot = bounceCount([0, Math.PI, Math.PI, 0]);
-const nTripod = bounceCount([0, Math.PI, 0, Math.PI]);
-const nBound = bounceCount([0, 0]);
-console.log(`    慢步 ${nWalk} 拍 ｜ 對角小跑 ${nTrot} 拍 ｜ 三角步態 ${nTripod} 拍 ｜ 併蹬 ${nBound} 拍`);
-t('① 四拍慢步每次落腳都產生一次承重起伏', nWalk === 4, `(${nWalk})`);
-t('② 對角小跑/六足三角步態各為兩組承重', nTrot === 2 && nTripod === 2, `(${nTrot}/${nTripod})`);
-t('③ 雙腿併蹬合成一次承重起伏', nBound === 1, `(${nBound})`);
-t('④ 雙足/四足軀幹都轉呼 bodyBounce，不另寫固定倍頻',
-  (locoSrc.match(/bodyBounce\(\[/g) || []).length >= 2);
+const nSym = bounceCount(0);
+const nAsym = bounceCount(1);
+console.log(`    對稱步態 ${nSym} 次 ｜ 非對稱疾馳/併蹬 ${nAsym} 次`);
+t('① 對稱雙足/四足步態每 stride 產生兩次 COM 起伏', nSym === 2, `(${nSym})`);
+t('② 非對稱疾馳/併蹬每 stride 合成一次 COM 起伏', nAsym === 1, `(${nAsym})`);
+t('③ 雙足/四足軀幹共用 stride 相位，不以落腳拍數硬湊倍頻',
+  (locoSrc.match(/bodyBounce\(L\.ph, duty,/g) || []).length === 2);
+t('④ 四足軀幹俯仰與 COM 使用同一個對稱→疾馳連續混合',
+  /const axialWave =/.test(locoSrc) && (locoSrc.match(/axialWave\(/g) || []).length >= 5);
 
 console.log('\nⅩ 人類真實跑姿(AMASS / motion-ControlNet 離線參考)');
 const HD = G.GAIT_DUTY.gallop;
@@ -295,8 +294,11 @@ t('① 發射軸名冊由 wpn 宣告推導，無逐機例外',
 const morphCall = locoSrc.indexOf('if (mesh.userData.morph) morphPose(mesh.userData.morph);');
 const aimCall = locoSrc.indexOf('stepAimForward(rig);');
 t('② 槍軸校正排在步態/跳躍/變形之後', morphCall >= 0 && aimCall > morphCall);
-t('③ 奔跑/飛行開火手臂都吃即時發射姿，不被 (1-m) 在飛行時歸零',
-  /rig\._fireAim \? 1/.test(locoSrc) && /idle \* \(1 - m\) \+ \(rig\._fireAim/.test(locoSrc));
+t('③ 舉槍權重沿用阻尼後的 aim，不用布林值瞬切',
+  /rig\._fireAim = C\.aim/.test(locoSrc) && !/rig\._fireAim \? 1/.test(locoSrc));
+t('④ 手臂/槍口/飛行變形全吃連續舉槍權重',
+  /slerp\(a\.qc, raise\)/.test(locoSrc)
+  && /idle \* \(1 - m\) \+ \(rig\._fireAim \|\| 0\)/.test(locoSrc));
 
 const brk = [...BRK];
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項${fail ? ` / 失敗 ${fail} 項` : ''}`

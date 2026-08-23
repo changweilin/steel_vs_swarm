@@ -205,7 +205,7 @@ function weaponAimList(g, wpn) {
         e = {
           g: n, ref: g, slots: [],
           qf: new THREE.Quaternion().setFromUnitVectors(axis(set.fwd), Z),
-          qa: new THREE.Quaternion(), qb: new THREE.Quaternion(),
+          qa: new THREE.Quaternion(), qb: new THREE.Quaternion(), qc: new THREE.Quaternion(),
         };
         entries.set(n, e);
       }

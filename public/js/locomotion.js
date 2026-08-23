@@ -176,13 +176,15 @@ function stepStab(rig) {
  * local = inverse(parentWorld) * unitWorld * forwardLocal。沒有 Three import，暫存四元數由鍛造端配好。
  */
 function stepAimForward(rig) {
-  if (!rig._fireAim || !rig.aimForward) return;
+  const raise = clamp(rig._fireAim || 0, 0, 1);
+  if (raise <= 1e-4 || !rig.aimForward) return;
   const slot = rig._aimSlot || 'light';
   for (const a of rig.aimForward) {
     if (!a.slots.includes(slot)) continue;
     a.ref.getWorldQuaternion(a.qa);
     a.g.parent.getWorldQuaternion(a.qb);
-    a.g.quaternion.copy(a.qb).invert().multiply(a.qa).multiply(a.qf);
+    a.qc.copy(a.qb).invert().multiply(a.qa).multiply(a.qf);
+    a.g.quaternion.slerp(a.qc, raise);
   }
 }
 
@@ -244,7 +246,9 @@ export function stepCombatFx(ent, now, dt) {
   C.kB = damp(C.kB || 0, 0, 7, dt);
   C.lg = damp(C.lg, 0, 10, dt);
   rig._aim = C.aim; rig._aimH = C.hA; rig._kickL = C.kL; rig._kickR = C.kR; rig._kickB = C.kB; rig._chg = C.chg;
-  rig._fireAim = now < C.aimUntil || !!hf;
+  // 舉槍是連續權重，直接共用 C.aim 的幀率無關阻尼。舊制寫成布林值，
+  // 第一幀就把手臂與槍軸跳到 100%，觀感是切 pose 而不是舉槍。
+  rig._fireAim = C.aim;
   rig._aimSlot = C.slot || 'light';
   // 重武器掛點:蓄力 glow 增亮 / pivot 朝 deploy 展開;擊發 glow 強閃、pivot 以 −0.85 反向過衝
   // (蓄力怎麼展開,擊發就怎麼反向甩回 = 「蓄力動畫與開火相反」的通則,全機種共用)
@@ -649,7 +653,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   // 手持武器射擊姿勢(雙手托一把 / 雙槍 / 單手槍,由 aimPose 欄位有無決定):
   // 靜止(交戰)或開火保持(rig._aim)= 標準射擊姿勢 —— 移動中開火也舉槍,步態擺臂讓位;
   // 未開火的移動 = 交還步態擺臂(行軍持槍)。連續混成 → 停下/開火自然舉槍、起步自然放下。
-  const aimF = Math.min(1, idle + (rig._fireAim ? 1 : (rig._aim || 0)));
+  const aimF = Math.min(1, idle + (rig._fireAim || 0));
   if (rig.aimPose) {
     const ap = rig.aimPose;
     rig.armR.rotation.x += (ap.rShoulderX - rig.armR.rotation.x) * aimF;
@@ -680,8 +684,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   // grounded running(鴕鳥/迅猛龍):沒有騰空相的跑 —— 速度越快浮沉反而收斂,
   // 上下起伏被長腿的屈伸吃掉,軀幹像懸浮著平移(鴕鳥的招牌)
   const bobF = rig.grounded ? 1 - 0.55 * runF : 1;
-  hips.position.y = rig.hipsY0 - bodyBounce([phL, phR]) * (rig.bob || 0.06) * a * (1 - bnd) * bobF
-    + Math.sin(L.ph) * (rig.bob || 0.06) * 2.2 * a * bnd
+  hips.position.y = rig.hipsY0 - bodyBounce(L.ph, duty, bnd) * (rig.bob || 0.06) * a * bobF
     + idle * sg.breathK * Math.sin(now * 1.7 * sg.iF + L.ph) * 0.012   // 靜止呼吸微沉浮(性格化:狼/豹極淺、重裝深沉)
     - L.srg * 0.03 - L.brk * 0.025;   // 爆發起步下蹲驅離 / 急停壓低重心插地
   // 移動中開火(奔跑射擊):上身收成**穩定射擊台** —— 骨盆側移/滾轉/對轉一起收斂,
@@ -770,7 +773,7 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
     rig.armL.rotation.x += -kL * 0.15 + chg * (hv.armL || 0);
   }
   // 腕槍俯仰(roo 左腕雙管的迴旋槍架):據槍水平 + 每發後座槍口上跳
-  const hopAim = Math.min(1, idle + (rig._fireAim ? 1 : (rig._aim || 0)));
+  const hopAim = Math.min(1, idle + (rig._fireAim || 0));
   gunPitch(rig.gunR, hopAim, kR, chg, hv);
   gunPitch(rig.gunL, hopAim, kL, chg, hv);
   const hips = rig.hips;
@@ -1063,8 +1066,10 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   rig.spine.rotation.z = -L.roll * 0.14 + sway;
   rig.spine.position.x = sway * 1.4;
   // 脊椎波:動力由後髖生成向前傳導(腰 → 胸 → 頸 逐節相位延遲),鞭式屈伸;
-  // trot 一週期兩拍、walk/crawl 一週期一拍(慢而深的長浪)
-  const wave = G === 'trot' ? L.ph * 2 : L.ph;
+  // 軸向波與 COM 共用同一個 stride 節拍：對稱步態兩拍，襲步一拍。
+  // 混成兩條完整週期，不把頻率寫成 `2-gallop`，避免轉態期每週期漂相。
+  const axialWave = (shift = 0) => Math.sin(L.ph * 2 - shift) * (1 - gallop)
+    + Math.sin(L.ph - shift) * gallop;
   // 奔馳時脊椎屈伸放大:rotary(犬/豹)的拱背-伸展是 gallop 的引擎,幅度最大;
   // transverse(馬)平緩得多;騎乘型再收斂 —— 馬背要載人端槍
   // 迴旋襲步脊椎屈伸最劇(拱背-伸展是 gallop 的引擎;犬/豹 ROT 幅度最大),橫向襲步(馬)平緩,
@@ -1074,10 +1079,10 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   // 加速俯仰改走阻尼(spool:重型獸傾角落後於速度=柴油機起轉)+ 爆發前撲 / 急停後坐插腳
   L.qacc = damp(L.qacc ?? 0, clamp(L.accel * 0.012, -0.08, 0.1), 5 * (1 - 0.6 * sg.spool), dt);
   // 四足脊椎近水平:起步/煞停幾乎不改脊背俯仰(靠步幅、後肢驅動與垂直起伏,不把頭壓向地面);
-  // 拱背-伸展仍由步態(sin(wave)·pAmp)與奔馳 gallop 主導 —— 不再疊加大幅的爆發/煞停俯衝
-  const gaitPitch = Math.sin(wave) * pAmp * a;   // 純步態俯仰(頭部畫弧補償只吃這一項,不吃加減速前傾)
+  // 拱背-伸展仍由步態軸向波與奔馳 gallop 主導 —— 不再疊加大幅的爆發/煞停俯衝
+  const gaitPitch = axialWave() * pAmp * a;   // 純步態俯仰(頭部畫弧補償只吃這一項,不吃加減速前傾)
   rig.spine.rotation.x = gaitPitch + L.qacc + (L.srg - L.brk) * 0.02;
-  rig.chest.rotation.x = Math.sin(wave - 0.7) * pAmp * a;
+  rig.chest.rotation.x = axialWave(0.7) * pAmp * a;
   rig.chest.rotation.y = 0;   // 施法 post-pass(dance/swing)對此通道 += —— 不每幀重賦會跨幀永久累積
   // 機載武器開火反應(背砲/嘴砲/觸手莢,非騎乘):每發後座胸腔下沉後送、蓄力反向前壓抵住
   // —— 加在 chest 上,下方長頸主動反屈與頭部補償自動吃進去,射擊中頭仍鎖平
@@ -1088,10 +1093,8 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   }
   // 章魚:外套膜隨行進波緩慢蛇擺(左右蠕行),靜止時也以極慢的幅度游動
   rig.spine.rotation.y = G === 'crawl' ? Math.sin(L.ph * 0.5) * 0.12 * a + idle * Math.sin(now * 0.6) * 0.04 : 0;
-  // 縱向彈跳(gallop 越明顯;walk/crawl 幾乎貼地)+ 靜止呼吸微沉浮
-  // 承重起伏直接取四肢落腳相位：慢步/爬行四拍、對角小跑/三角步態兩拍、併蹬一拍。
-  // 上方 wave 只留給脊椎的長浪，MUST NOT 再當軀幹步頻。
-  const bob = bodyBounce([phFL, phFR, phHL, phHR]) * (rig.bob || 0.08) * a * (1 + gallop * 0.8);
+  // 縱向 COM 與軸向波同頻：慢步/小跑/三角步每 stride 兩次，襲步一次。
+  const bob = bodyBounce(L.ph, duty, gallop) * (rig.bob || 0.08) * a * (1 + gallop * 0.8);
   rig.spine.position.y = rig.hipsY0 - bob + idK * Math.sin(now * 1.4 * iF + L.ph) * 0.02
     - L.srg * 0.03 - L.brk * 0.03;   // 爆發起跑蓄力 / 急停壓低重心
   if (rig.rider) {
@@ -1102,7 +1105,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
     const hp = rig.spine.rotation.x + rig.chest.rotation.x;   // 馬軀俯仰
     const hr = rig.spine.rotation.z;                          // 馬軀滾轉
     // 腰彎:反吃 40% + 隨步態相位的微幅給彈(奔馳越明顯給得越多)
-    rig.neck.rotation.x = -hp * 0.4 + Math.sin(wave - 0.6) * 0.03 * a;
+    rig.neck.rotation.x = -hp * 0.4 + axialWave(0.6) * 0.03 * a;
     rig.neck.rotation.z = -hr * 0.5;
     rig.neck.position.y = rig.neckY0;
     rig.neck.position.x = 0;
@@ -1112,7 +1115,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
     const rkL = rig._kickL || 0, rkR = rig._kickR || 0;
     const rKick = Math.max(rkL, rkR), rChg = rig._chg || 0, rHv = rig.hvy || S0;
     if (rig.humChest) {
-      rig.humChest.rotation.x = -hp * 0.4 + Math.sin(wave - 1.3) * 0.022 * a
+      rig.humChest.rotation.x = -hp * 0.4 + axialWave(1.3) * 0.022 * a
         + idle * sg.breathK * Math.sin(now * 1.5) * 0.015
         + rChg * (rHv.chest || 0) - rKick * 0.06;
       rig.humChest.rotation.z = -hr * 0.3;
@@ -1142,7 +1145,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
     }
     // 騎槍俯仰(rig.gunR):行軍槍口微揚 ↔ 交戰(靜止/開火保持)據槍水平;
     // 後座上跳與蓄力反向同 stepBiped 的 gunPitch 一條式 —— 槍身動、騎士穩定台不動
-    gunPitch(rig.gunR, Math.min(1, idle + (rig._fireAim ? 1 : (rig._aim || 0))), rKick, rChg, rHv);
+    gunPitch(rig.gunR, Math.min(1, idle + (rig._fireAim || 0)), rKick, rChg, rHv);
   } else {
     // 非騎乘(獵犬/劍龍/克蘇魯):靈活長頸「主動反屈」吃掉大半脊椎俯仰(拱背再劇也把頭撐平),
     // 殘量交給頭;位移補償只吃步態俯仰的畫弧(加減速前傾不進補償,否則起跑頸被拋出),
@@ -1151,7 +1154,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
     // 係數 1.8 是「頭鎖平」的火候(獵犬實測頭部垂直位移 0.87→0.36m、頭俯仰 <2°、脊椎拱背仍 ±12.5°);
     // 小俯仰機種(劍龍/克蘇魯)乘上各自的小 spinePitch = 小幅反屈,行為幾乎不變
     const spinePitch = rig.spine.rotation.x + rig.chest.rotation.x;
-    rig.neck.rotation.x = -spinePitch * 1.8 + Math.sin(wave - 1.4) * 0.05 * a;
+    rig.neck.rotation.x = -spinePitch * 1.8 + axialWave(1.4) * 0.05 * a;
     rig.neck.position.y = rig.neckY0 + bob * 0.55 + clamp(headArc(rig, 0.9, gaitPitch), -0.28, 0.28);
     // 頭:反轉抵銷「脊椎波 + 胸 + 頸」的累計旋轉 ⇒ 身體在跑,頭卻鎖平(獵食者的視線穩定)
     stabilizeHead({ head: rig.head }, [
@@ -1303,7 +1306,7 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   const cKL = rig._kickL || 0, cKR = rig._kickR || 0;
   const cChg = (rig._chg || 0) * (1 - m), cHv = rig.hvy || S0;
   // 飛行開火也要把雙臂收到據槍姿；舊式把 `_aim` 乘上 (1-m)，正好在完全飛行時歸零。
-  const aimF = clamp(idle * (1 - m) + (rig._fireAim ? 1 : (rig._aim || 0)), 0, 1);
+  const aimF = clamp(idle * (1 - m) + (rig._fireAim || 0), 0, 1);
   if (rig.aimM) {
     const A = rig.aimM;
     const toAim = (g, t) => { if (g && t != null) g.rotation.x += (t - g.rotation.x) * aimF; };
@@ -1343,7 +1346,7 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
     // 象鼻槍交戰抬鼻(2026-07-22 規則 1):靜止(交戰)/開火保持把鼻管抬到據槍角
     // (rig.trunkAim,models.js 解算)→ 鼻端槍口水平朝前;行軍交還下垂擺動、飛行由 pose 收平
     if (rig.trunkAim && rig.trunkTip) {
-      const ta = clamp(idle + (rig._fireAim ? 1 : (rig._aim || 0)), 0, 1) * (1 - m);
+      const ta = clamp(idle + (rig._fireAim || 0), 0, 1) * (1 - m);
       rig.trunk.rotation.x += (rig.trunkAim[0] - rig.trunk.rotation.x) * ta;
       rig.trunkTip.rotation.x += (rig.trunkAim[1] - rig.trunkTip.rotation.x) * ta;
     }

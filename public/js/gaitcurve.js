@@ -274,18 +274,18 @@ export function limbFlex(P, i, u, duty, amp) {
   return (v - rest) * a * reach * FLEX_GAIN;
 }
 
-// ── 身體承重脈衝(與落腳相位同一把時鐘)──────────────────────────────
-// 軀幹起伏不能另寫 `sin(ph*n)`：n 一旦與步態落腳組數不同，每週期就會逐步錯拍。
-// 這裡直接對每條肢的觸地相位取窄脈衝，再取最大值：對角小跑/六足三角步態
-// 自然得到每週期兩拍，四拍慢步/爬行得到四拍，雙腿併蹬則自然合成一拍。
-export function bodyBounce(phases) {
-  let peak = 0;
-  for (const ph of phases) {
-    const u = cycleU(ph);
-    const c = 0.5 + 0.5 * Math.cos(2 * Math.PI * u);
-    peak = Math.max(peak, c * c * c * c);
-  }
-  return peak;
+// ── 身體重心起伏(與完整 stride 同步)────────────────────────────────
+// 對稱步態(雙足走/跑、四足慢步/小跑、六足三角步)每 stride 有兩次垂直 COM 振盪；
+// 非對稱步態(雙腿併蹬、四足襲步)每 stride 一次。舊制對每支腳觸地脈衝取 max，
+// 會把四拍慢步變成四次尖銳下沉，與脊椎長波錯拍。`asymF` 連續混成兩拍→一拍。
+export function bodyBounce(ph, duty, asymF = 0) {
+  const d = duty <= 0 ? 1e-3 : duty >= 1 ? 1 - 1e-3 : duty;
+  const a = asymF < 0 ? 0 : asymF > 1 ? 1 : asymF;
+  // cycleU 的觸地在 ph=-π/2；跑步 COM 在支撐相中段最低。
+  const mid = -Math.PI / 2 + d * Math.PI;
+  const symmetric = 0.5 + 0.5 * Math.cos((ph - mid) * 2);
+  const asymmetric = 0.5 + 0.5 * Math.cos(ph - mid);
+  return symmetric + (asymmetric - symmetric) * a;
 }
 
 // ── 人類跑步根關節(AMASS / motion-ControlNet 離線參考)────────────────
