@@ -1282,13 +1282,18 @@ export const DECOY = {
   // 一座砲塔火力下投得完 DROP_N 顆(墜毀補投的那一顆不算)—— HP 反解錨點,見 decoyHp()。
   DROP_N: 5,
 };
-// ---- 集束投彈:依機體類型的效果(復用 sim 既有 bleed/slow/EMP/stun,無新狀態欄位)----
-// fire/poison 走 bleed 逐體 DoT(owner 記功)、freeze 走 slow 減速、thunder 走 EMP(武器離線)+ stun 麻痺。
+// ---- 集束投彈:依機體類型的效果(狀態欄位由 sim 統一結算)----
+// fire/poison 走 bleed 逐體 DoT(owner 記功)、freeze 走 slow 減速、thunder 是真正的閃光彈。
+// 閃光彈不再借用 EMP/stun 冒充致盲;它有自己的 blindUntil 狀態,會讓受害者失去視野與火控。
+export const VISION_BLIND = {
+  DUR_S: 2.2,                    // 視野受阻秒數(伺服器權威狀態)
+  PEAK: 0.96,                    // 客戶端座艙過曝峰值
+};
 export const DECOY_BOMB = {
   fire:    { name: '燃燒彈', color: 0xff6a2a, dot: 22, dur: 4 },              // 灼燒 DoT
   freeze:  { name: '凍結彈', color: 0x8fd8ff, slow: 0.35, dur: 3 },          // 重減速(近凍結)
   poison:  { name: '毒霧彈', color: 0x8fe36a, dot: 15, dur: 5, slow: 0.7 },  // 毒 DoT + 微減速
-  thunder: { name: '雷爆彈', color: 0xffe14f, emp: 2.0, stun: 0.6 },         // 武器離線 + 短暫麻痺
+  thunder: { name: '閃光彈', color: 0xffe14f, blind: true },                  // 真正影響視野的狀態
 };
 /** 變形者角色 → 集束炸彈類型(四類各兩台,依機體/性格配置) */
 export const MORPH_BOMB = {
@@ -2602,7 +2607,7 @@ export const slopeSnapM = (run) => Math.tan(SLOPE.SNAP_DEG * Math.PI / 180) * Ma
 //   白幕長度固定 = HOLD_S(全白)+ FADE_S(漸淡),MUST NOT 隨狀態剩餘秒數延長 ——
 //   狀態本身的效果(禁移動/武器離線/操縱反轉)一律伺服器結算(A1),白幕只吃「上身瞬間」那一下。
 // PEAK 逐狀態列出致盲強度(1 = 全白):只有**光學/電子系**異常狀態進表 ——
-//   emp 雷爆閃光(閃光彈本體,最亮)> conf 纏擾致盲 > stun 電擊麻痺;
+//   emp 電磁閃光(EMP 招式,最亮)> conf 纏擾致盲 > stun 電擊麻痺;
 //   物理系(slow 緩速 / bleed 失血 / mark 被標定)MUST NOT 進表:那些不是光學事件,
 //   加進來 = 每次中招都白一次,分不出「被閃到」與「被咬到」。
 export const CC_FLASH = {

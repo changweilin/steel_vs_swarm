@@ -11,7 +11,7 @@ import {
   hyperClimbVx, hyperArcY, hyperTrackR,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
-  ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin,
+  ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
@@ -1598,7 +1598,7 @@ export class BattleSim {
         abil: { light: 1, heavy: 1, skill: 1, ult: 1 },
         acd: { skill: 0, ult: 0 }, kn: 0,   // kn = 戰鬥分數(八軌升級門檻;只增不減,見 data.BATTLE_SCORE)
         mods: [],                    // 招式增益 [{k, m, until}]
-        empUntil: 0, stealthUntil: 0, aiming: false, lastBurst: 0,
+        empUntil: 0, stealthUntil: 0, blindUntil: 0, aiming: false, lastBurst: 0,
         markUntil: 0,                // 定位標記(下一擊必中必爆;小隊共用 —— 任一架出手都算)
       },
     };
@@ -1713,6 +1713,7 @@ export class BattleSim {
     if (!sq || this.over) return;
     const h = this.heroes.get(pid);
     if (!h || h.dead) return;
+    if (this._blinded(h)) return;
     const t = this.ents.get(targetId);
     if (!t || t.neutral || t.gar || t.side === sq.side || t.hp <= 0 || (t.hero && t.dead)) return;
     // 射程閘門:用玩家當下手上那把武器(瞄準中 = 重武器),留與 heroHit 同一份彈道寬容
@@ -1933,6 +1934,9 @@ export class BattleSim {
   /** 電磁癱瘓中?(武器與招式全數離線) */
   _jammed(h) { return (h.empUntil || 0) > this.t; }
 
+  /** 閃光彈致盲中?(視野來源與火控皆暫停) */
+  _blinded(h) { return (h.blindUntil || 0) > this.t; }
+
   /** 招式增益的「數值型」欄位(吸血比例/完美迴避旗標):取生效中最大值,無則 0。
    *  與 _buffMul(乘數疊加)分開 —— 這類效果多來源取最強,不相乘。 */
   _buffVal(h, key) {
@@ -2086,6 +2090,7 @@ export class BattleSim {
   heroAim(pid, on) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
+    if (on && this._blinded(h)) return;
     // 退出瞄準的時刻(heroBurst 的飛行時間寬容用:已經合法離架的彈頭不該因為玩家收鏡而蒸發)
     if (h.aiming && !on) h.aimOffAt = this.t;
     h.aiming = !!on;
@@ -2132,6 +2137,7 @@ export class BattleSim {
     const h = this.heroes.get(pid);
     const t = this.ents.get(targetId);
     if (!h || h.dead || !t || t.gar || t.side === h.side || this.over) return;
+    if (this._blinded(h)) return;
     if (this._jammed(h)) return;   // 電磁癱瘓:武器離線
     const wp = this._heroWeapon(h, w);
     if (!wp || !wp.def.rate) return;
@@ -2201,6 +2207,7 @@ export class BattleSim {
   hitMissile(pid, missileId, w) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
+    if (this._blinded(h)) return;
     if (this._jammed(h)) return;
     const m = this.missiles.find((x) => x.id === missileId);
     if (!m || m.side === h.side) return;
@@ -2232,6 +2239,7 @@ export class BattleSim {
     const h = this.heroes.get(pid);
     const t = this.ents.get(targetId);
     if (!h || h.dead || !t || t.side === h.side || this.over) return false;
+    if (this._blinded(h)) return false;
     if (this._jammed(h)) return false;
     const wp = this._heroWeapon(h, w);
     if (!wp) return false;
@@ -2283,6 +2291,7 @@ export class BattleSim {
   heroBurst(pid, x, z, y = 0, lev = 0) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
+    if (this._blinded(h)) return;
     if (this._jammed(h)) return;
     y = Number.isFinite(y) ? Math.max(0, Math.min(400, y)) : 0;   // 引爆高度夾範圍(防作弊)
     lev = lev === 2 ? 2 : lev === 1 ? 1 : 0;   // 爆點結構層(客戶端彈道回報;_blast 隧道垂直隔離用)
@@ -2388,6 +2397,7 @@ export class BattleSim {
   heroPlasma(pid, dx, dz, slot = 'heavy', o = null) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over || !Number.isFinite(dx) || !Number.isFinite(dz)) return;
+    if (this._blinded(h)) return;
     if (this._jammed(h)) return;
     const wp = this._heroWeapon(h, slot === 'light' ? 'light' : 'heavy');
     if (!wp || !wp.def.fan) return;
@@ -2520,6 +2530,7 @@ export class BattleSim {
   heroLance(pid, o, d, len) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
+    if (this._blinded(h)) return;
     if (this._jammed(h)) return;
     if (!Array.isArray(o) || !Array.isArray(d)) return;
     const ox = +o[0], oz = +o[1], oy = +o[2];
@@ -2710,7 +2721,7 @@ export class BattleSim {
     b.sp = b.maxSp * f;
     b.lastHitAt = this.t;
     b.invUntil = this.t + SELF_ULT.REVIVE_INV_S;   // 站起來那一瞬不該被同一發爆風再收一次
-    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.asst = null;
+    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.blindUntil = 0; b.bleed = null; b.asst = null;
     b.supUntil = 0; b.supF = 0;   // 高地壓制:站起來那一刻不該還帶著倒下前的壓制
     b._trail = null;
     this.events.push({ e: 'respawn', id: b.id, side: b.side, pid: b.pid, revive: 1 });
@@ -3170,6 +3181,14 @@ export class BattleSim {
       if (b.slow) { t.slowUntil = Math.max(t.slowUntil || 0, this.t + (b.dur || 3)); t.slowF = Math.min(t.slowF ?? 1, b.slow); }   // 凍結/毒霧 減速(取較強 = 較小)
       if (b.emp) t.empUntil = Math.max(t.empUntil || 0, this.t + b.emp);   // 雷爆:武器離線(英雄與 NPC 皆吃)
       if (b.stun) t.stunUntil = Math.max(t.stunUntil || 0, this.t + b.stun);   // 雷爆:短暫麻痺
+      if (b.blind) {
+        if (t.hero && this._buffVal(t, 'ccImm') > 0) continue;   // 異常免疫不吃閃光
+        t.blindUntil = Math.max(t.blindUntil || 0, this.t + VISION_BLIND.DUR_S);
+        t.aiming = false;
+        const tsq = t.hero ? this.squads.get(t.pid) : null;
+        if (tsq) { tsq.lock = 0; tsq.lockAt = this.t; }
+        this._visMemo = null;   // 同 tick 後續索敵/快照不可沿用施加前的視野來源
+      }
     }
   }
 
@@ -4501,7 +4520,7 @@ export class BattleSim {
     b.y = b.kind === 'drone' ? FLIGHT.HOVER_M : 0;
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
-    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
+    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.blindUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
     b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {
       b.mp = b.maxMp;
@@ -5135,6 +5154,7 @@ export class BattleSim {
   /** 索敵合法性(單一縫:全掃 / 網格 / _acquireCached 快取沿用三路同吃;d = 已算好的 2D 距離)。
    *  回 true = 不可鎖定;條款自舊制 _acquireTarget 逐字搬入,語意一字未動。 */
   _tgBlockedD(e, u, wd, t, d) {
+    if (this._blinded(e)) return true;   // bot/NPC 被閃到時不能索敵
     if (t.side === e.side || t.neutral || t.hp <= 0) return true;   // 中立障礙不當目標
     if (this.siegeLocked(t)) return true;   // 鎖血建築不列入索敵(只擋傷害會把兵線卡死,見 siegeLocked)
     if (e.tp && t.tp) return true;   // 第三方不打第三方(游擊隊/民兵互不為敵,只防衛正規軍)
@@ -5321,6 +5341,7 @@ export class BattleSim {
       // 無人機護衛自殺機:CD 倒數(HUD;歸零 = 兩架護衛機重現)—— 只跟主視野機發一份
       if (o.act && e.sq && e.kind === 'drone') o.kcd = Math.max(0, Math.round((e.sq.kamiCd - this.t) * 10) / 10);
       if ((e.empUntil || 0) > this.t) o.emp = Math.round((e.empUntil - this.t) * 10) / 10;
+      if ((e.blindUntil || 0) > this.t) o.vb = Math.round((e.blindUntil - this.t) * 10) / 10;
       if ((e.stealthUntil || 0) > this.t) o.st = Math.round((e.stealthUntil - this.t) * 10) / 10;
       // 控場/追加效果剩餘秒(客戶端自鎖移動 / HUD;條件欄位,讀取端一律 || 0)
       if ((e.stunUntil || 0) > this.t) o.pz = Math.round((e.stunUntil - this.t) * 10) / 10;
@@ -5347,7 +5368,8 @@ export class BattleSim {
    *  同 tick 內狀態一變快取即失效(e2e 的「瞄準後立刻看得到」正是這個路徑)。 */
   _visMemoFor() {
     let fp = this.ents.size | 0;
-    for (const h of this.heroes.values()) fp = (fp * 31 + (h.aiming ? 2 : 0) + (h.dead ? 1 : 0)) | 0;
+    for (const h of this.heroes.values()) fp = (fp * 31 + (h.aiming ? 2 : 0) + (h.dead ? 1 : 0)
+      + (this._blinded(h) ? 4 : 0)) | 0;
     if (!this._visMemo || this._visMemo.tickN !== this._tickN || this._visMemo.fp !== fp) {
       this._visMemo = { tickN: this._tickN, fp, src: {}, vis: { SWARM: new Map(), STEEL: new Map() } };
     }
@@ -5362,6 +5384,7 @@ export class BattleSim {
     for (const e of this.ents.values()) {
       if (e.side !== side || e.hp <= 0) continue;
       if (e.decoy && e.lost) continue;   // 失聯的餌機不再回傳遙測 → 不提供視野
+      if (this._blinded(e)) continue;    // 閃光彈:受害單位不再提供視野
       const sight = UNITS[e.kind]?.sight;
       if (sight == null) continue;
       const r = e.hero && e.aiming ? sight * GAME.AIM_SIGHT_MULT : sight;

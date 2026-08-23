@@ -10,7 +10,7 @@ import {
   CHARACTERS, heroWeapon, heroAbility, castDirF, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
   heroMobility, highSupSpeedF,
   WATER, CJUMP, IFRAME, AIR, envTrigger, fluidFactor, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
-  altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
+  altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur, VISION_BLIND,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, worldCeilY, edgeWallInsetM,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
@@ -607,6 +607,7 @@ export class BattleClient {
     this.kn = 0;                      // 戰鬥分數(八軌升級的第二道門檻;伺服器權威,只增不減)
     this.cds = [0, 0];                // [小招, 大招] 冷卻(伺服器倒數)
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
+    this.blindLeft = 0;               // 閃光彈致盲剩餘秒數(伺服器權威視野狀態)
     this.stealthLeft = 0;
     // 異常狀態致盲白幕(純表現層;常數/曲線住 data.js CC_FLASH):狀態上身瞬間全白 → 漸淡
     this._ccFlashLeft = 0;            // 白幕剩餘秒數(由 ccFlashDur() 倒數)
@@ -2283,14 +2284,15 @@ export class BattleClient {
   /**
    * 控場/標記狀態的上升沿播報(比照 _empWarnAt 的自我節流模式;快照 8Hz 驅動)。
    * 上升沿同時是**致盲白幕**的觸發點(第三參數 = data.js CC_FLASH.PEAK 的鍵;省略 = 不致盲):
-   * 光學/電子系狀態(雷爆閃光 emp / 纏擾致盲 conf / 電擊麻痺 stun)才白幕,物理系不白(見 CC_FLASH)。
+   * 光學/電子系狀態(EMP / 纏擾致盲 conf / 電擊麻痺 stun)才白幕,物理系不白(見 CC_FLASH)。
    */
   _ccFeed() {
     const edge = (key, left, msg, flash) => {
       const on = (left || 0) > 0;
       if (on && !this[key]) {
         this.hud.feed?.(msg);
-        if (flash) this._blindFlash(CC_FLASH.PEAK[flash]);
+        const peak = typeof flash === 'number' ? flash : CC_FLASH.PEAK[flash];
+        if (peak) this._blindFlash(peak);
       }
       this[key] = on;
     };
@@ -2300,9 +2302,8 @@ export class BattleClient {
     edge('_bleedOn', this.bleedLeft, '🩸 裝甲破口:持續失血中!');
     edge('_markOn', this.markLeft, '🎯 定位完成:下一擊必中必爆!');
     edge('_invOn', this.invLeft, '🛡️ 相位護盾:1 秒無敵!');
-    // 電磁癱瘓(雷爆彈/EMP 招式)= 閃光彈本體:最強致盲。原本只在「試圖施放」時才有提示,
-    // 這裡補上上升沿播報,讓白幕與播報同一個縫(MUST NOT 在別處另判 empLeft 觸發白幕)。
-    edge('_empOn', this.empLeft, '⚡ 電磁閃光:武器系統離線(仍可移動)!', 'emp');
+    edge('_empOn', this.empLeft, '⚡ 電磁干擾:武器系統離線(仍可移動)!', 'emp');
+    edge('_blindOn', this.blindLeft, '💥 閃光彈:視野受阻!', VISION_BLIND.PEAK);
   }
 
   /**
@@ -2328,6 +2329,7 @@ export class BattleClient {
   /** 清除致盲白幕(陣亡/重生/換座機:白幕是上一具機體的感光反應,MUST NOT 留到下一條命) */
   _clearCcFlash() {
     this._ccFlashLeft = 0; this._ccFlashPeak = 0;
+    this._blindOn = false;
     this.hud.ccFlash?.(0);
   }
 
@@ -3115,6 +3117,7 @@ export class BattleClient {
           this.kn = e.kn ?? this.kn;
           this.cds = e.cds || this.cds;
           this.empLeft = e.emp || 0;
+          this.blindLeft = e.vb || 0;
           this.stealthLeft = e.st || 0;
           // 控場/追加效果狀態(伺服器權威剩餘秒;條件欄位缺省 = 已結束)
           this.stunLeft = e.pz || 0;
