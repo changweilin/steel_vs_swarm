@@ -64,7 +64,7 @@ export function touchDiagnostics() {
   ];
 }
 
-/* ---------------- 設定(持久化;陀螺儀/靈敏度/左手模式)---------------- */
+/* ---------------- 設定(持久化;陀螺儀/靈敏度/左右慣用手)---------------- */
 
 // 靈敏度基準:touch 每像素轉多少弧度、gyro 1:1(1.0 = 手機轉幾度視角就轉幾度)。
 // 這兩個係數是觸控手感的唯一真相,MUST NOT 在別處再乘一次。
@@ -117,17 +117,41 @@ export const TOUCH = {
   gyroSens: 1.0,      // 陀螺儀靈敏度倍率(0.4~2.5)
   gyroInvert: false,  // 陀螺儀垂直反轉
   lookSens: 1.0,      // 拖曳視角靈敏度倍率(0.4~2.5)
-  lefty: false,       // 左手模式(十字鍵與 ABXY 左右鏡像)
+  lefty: false,       // 慣用手鏡像旗標(相容既有 svs_touch 設定鍵)
+  screenLefty: false, // 畫面慣用手鏡像旗標(舊版 lefty 會在載入時遷移)
   haptic: true,       // 觸覺回饋(navigator.vibrate,不支援即無感)
 };
 
+export const HAND_KEYS = ['right', 'left'];
+export const HAND_LABEL = { right: '右手', left: '左手' };
+
+export function handedness() { return TOUCH.lefty ? 'left' : 'right'; }
+
+export function setHandedness(hand) {
+  if (!HAND_KEYS.includes(hand)) return false;
+  applyLefty(hand === 'left');
+  return true;
+}
+
+export function screenHandedness() { return TOUCH.screenLefty ? 'left' : 'right'; }
+
+export function setScreenHandedness(hand) {
+  if (!HAND_KEYS.includes(hand)) return false;
+  applyScreenLefty(hand === 'left');
+  return true;
+}
+
 function loadTouchPrefs() {
+  let j = {};
   try {
-    const j = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    j = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     for (const k of Object.keys(TOUCH)) if (j[k] !== undefined) TOUCH[k] = j[k];
   } catch { /* 壞資料忽略,用預設 */ }
+  if (j.screenLefty === undefined && j.lefty !== undefined) TOUCH.screenLefty = !!j.lefty;
   TOUCH.gyroSens = clamp(TOUCH.gyroSens, 0.4, 2.5);
   TOUCH.lookSens = clamp(TOUCH.lookSens, 0.4, 2.5);
+  TOUCH.lefty = !!TOUCH.lefty;
+  TOUCH.screenLefty = !!TOUCH.screenLefty;
   if (!GYRO_SRC.includes(TOUCH.gyroSrc)) TOUCH.gyroSrc = 'auto';
 }
 export function saveTouchPrefs() {
@@ -245,6 +269,7 @@ export function installTouchUI() {
   // 純滑鼠桌機 `touchCapable()` 恆 false ⇒ 逐位元同改制前。
   document.body.classList.toggle('touch-dev', touchCapable());
   document.body.classList.toggle('touch-lefty', on && TOUCH.lefty);
+  document.body.classList.toggle('touch-screen-lefty', on && TOUCH.screenLefty);
   syncOrientation();
   if (!_installed) {
     _installed = true;
@@ -261,6 +286,16 @@ export function applyLefty(on) {
   TOUCH.lefty = !!on;
   document.body.classList.toggle('touch-lefty', document.body.classList.contains('touch-ui') && TOUCH.lefty);
   saveTouchPrefs();
+  syncCtrlSettings();
+}
+
+/** 畫面慣用手即時套用:只鏡像 HUD / 小地圖,不改觸控按鍵位置 */
+export function applyScreenLefty(on) {
+  TOUCH.screenLefty = !!on;
+  document.body.classList.toggle('touch-screen-lefty',
+    document.body.classList.contains('touch-ui') && TOUCH.screenLefty);
+  saveTouchPrefs();
+  syncCtrlSettings();
 }
 
 /**
@@ -587,7 +622,6 @@ export const TOUCH_SETTINGS = [
   { key: 'gyroSens', type: 'range', label: '陀螺靈敏度', min: 40, max: 250 },
   { key: 'gyroInvert', type: 'switch', label: '陀螺垂直反轉', hint: '抬起手機 = 向下看' },
   { key: 'lookSens', type: 'range', label: '拖曳靈敏度', min: 40, max: 250 },
-  { key: 'lefty', type: 'switch', label: '左手模式', hint: '十字鍵與 ABXY 左右鏡像' },
   { key: 'haptic', type: 'switch', label: '觸覺回饋', hint: '按鈕震動(裝置不支援則無感)' },
 ];
 
@@ -724,6 +758,36 @@ export function renderCtrlSettings(mount, opts = {}) {
       notice(`視角模式:${VIEW_MODES[viewMode()].label}`, 3000);
     });
   }
+
+  const handRow = document.createElement('div');
+  handRow.className = 'set-row';
+  handRow.innerHTML = '<span class="set-label">按鍵慣用手</span><span class="seg seg-sm tset-hand">'
+    + HAND_KEYS.map((hand) =>
+      `<button class="segb" type="button" data-hand="${hand}">${_esc(HAND_LABEL[hand])}</button>`).join('')
+    + '</span>' + _tipDot('tset-hand-hint');
+  mount.appendChild(handRow);
+  for (const b of handRow.querySelectorAll('.segb')) {
+    b.addEventListener('click', () => {
+      setHandedness(b.dataset.hand);
+      syncCtrlSettings();
+      notice(`慣用手:${HAND_LABEL[handedness()]}`, 3000);
+    });
+  }
+
+  const screenHandRow = document.createElement('div');
+  screenHandRow.className = 'set-row';
+  screenHandRow.innerHTML = '<span class="set-label">畫面慣用手</span><span class="seg seg-sm tset-screen-hand">'
+    + HAND_KEYS.map((hand) =>
+      `<button class="segb" type="button" data-screen-hand="${hand}">${_esc(HAND_LABEL[hand])}</button>`).join('')
+    + '</span>' + _tipDot('tset-screen-hand-hint');
+  mount.appendChild(screenHandRow);
+  for (const b of screenHandRow.querySelectorAll('.segb')) {
+    b.addEventListener('click', () => {
+      setScreenHandedness(b.dataset.screenHand);
+      syncCtrlSettings();
+      notice(`畫面慣用手:${HAND_LABEL[screenHandedness()]}`, 3000);
+    });
+  }
   _ctrlMounts.push(mount);
   syncCtrlSettings();
 }
@@ -750,7 +814,7 @@ export function syncCtrlSettings() {
         + CTRL_MODES[mode].hint + (warn ? ` ${warn}` : '');
     }
   }
-  // ② 設定頁:操作方式唯讀 + 目前操控三選一 + 視角模式二選一
+  // ② 設定頁:操作方式唯讀 + 目前操控三選一 + 視角模式二選一 + 按鍵/畫面左右手
   for (const mount of _ctrlMounts) {
     const mv = mount.querySelector('.tset-ctrl-val');
     if (mv) mv.textContent = `${CTRL_MODES[mode].icon} ${CTRL_MODES[mode].label}`;
@@ -772,6 +836,16 @@ export function syncCtrlSettings() {
     for (const b of mount.querySelectorAll('.tset-view .segb')) {
       b.classList.toggle('on', b.dataset.view === curView);
     }
+    for (const b of mount.querySelectorAll('.tset-hand .segb')) {
+      b.classList.toggle('on', b.dataset.hand === handedness());
+    }
+    const hh = mount.querySelector('.tset-hand-hint');
+    if (hh) hh.dataset.tip = '只鏡像觸控按鍵位置；不影響 HUD / 小地圖。';
+    for (const b of mount.querySelectorAll('.tset-screen-hand .segb')) {
+      b.classList.toggle('on', b.dataset.screenHand === screenHandedness());
+    }
+    const sh = mount.querySelector('.tset-screen-hand-hint');
+    if (sh) sh.dataset.tip = '只鏡像觸控版 HUD / 小地圖位置；不影響按鍵位置。';
     const vh = mount.querySelector('.tset-view-hint');
     if (vh) {
       vh.dataset.tip = VIEW_MODES[curView]?.hint || '視角切換:第一人稱(座艙)/第三人稱(機體後方)';
@@ -804,8 +878,7 @@ export function renderTouchSettings(mount, opts = {}) {
         if (d.key === 'gyro') {
           const ok = await setGyroPref(on);
           if (on && !ok) notice(gyroBlockedReason() || gyroStatusText(), 6000);
-        } else if (d.key === 'lefty') applyLefty(on);
-        else { TOUCH[d.key] = on; saveTouchPrefs(); }
+        } else { TOUCH[d.key] = on; saveTouchPrefs(); }
         syncTouchSettings();
       });
     } else if (d.type === 'seg') {
@@ -1239,9 +1312,9 @@ export class TouchControls {
     if (act === 'gyro') { this.setGyro(!this.gyro.active); return true; }
     if (act === 'full') { toggleFullscreen(); return true; }
     if (act === 'lefty') {
-      applyLefty(!TOUCH.lefty);
+      setHandedness(TOUCH.lefty ? 'right' : 'left');
       el.classList.toggle('on', TOUCH.lefty);
-      this.client.hud?.feed?.(TOUCH.lefty ? '🖐 左手模式:已開啟' : '🖐 左手模式:已關閉');
+      this.client.hud?.feed?.(TOUCH.lefty ? '🖐 按鍵慣用手:左手' : '🖐 按鍵慣用手:右手');
       return true;
     }
     return false;

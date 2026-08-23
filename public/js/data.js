@@ -1190,7 +1190,8 @@ export const PLAYER_TPS = {
   DIST_F: 6.5,
   MIN_DIST: 12,
   SHOULDER_F: 0.32,
-  HEIGHT_F: 0.86,
+  HEIGHT_F: 1.25,
+  RING_NDC_Y: -0.5, // 腳下光環位於畫面底部往準星方向 1/2 的位置
   AIM_DISTANCE_M: 100,
   FLOOR_M: 2,
   BODY_TURN_K: 12,
