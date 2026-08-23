@@ -250,7 +250,7 @@ function renderLinkModes() {
     const b = $(`link_${key}`);
     if (!b) continue;
     const m = LINK_MODES[key];
-    b.textContent = `${m.icon} ${m.label}`;   // 鈕面文字的真相在 LINK_MODES(index.html 那份只是版型量測用的副本)
+    b.textContent = `${m.icon} ${m.label}`;   // 鈕面文字唯一來自 LINK_MODES
     b.classList.toggle('on', key === cur);
     b.disabled = locked && key !== cur;
     // 說明改掛在該顆鈕自己的懸浮提示上(常駐文字已移除);單機特化版另補一句「沒有伺服器可連」
@@ -3323,4 +3323,6 @@ window.addEventListener('DOMContentLoaded', () => {
   app.roomPoll = setInterval(() => {
     if (app.phaseShown === 'connect') refreshRooms();
   }, 5000);
+  // 所有初始 UI 與事件完成後才放行畫面，避免初始化期間閃出舊版 UI。
+  document.documentElement.classList.add('app-ready');
 });
