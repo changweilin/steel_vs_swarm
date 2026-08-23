@@ -5834,6 +5834,7 @@ export class BattleClient {
     this.pos.set(sx, gy + (this.isDrone ? FLIGHT.HOVER_M : 0), sz);
     this.yaw = Math.atan2(-dx, -dz);   // 面向兵線前進方向(three:-z 前方)→ 看得到兵線箭頭
     this.pitch = -0.05;
+    this.roll = 0;
     // 變形者:重生一律地面型態
     // 蓄力/騰空狀態一律歸零(robot 蓄力中陣亡 → 重生殘留 charge 會立刻誤觸蓄力跳)
     this.charge = 0;
@@ -7225,6 +7226,8 @@ export class BattleClient {
       const topple = tp * tp * (3 - 2 * tp);                    // smoothstep
       cam.position.copy(s.eye);
       cam.position.y -= topple * 1.2;                           // 隨傾覆下陷 ~1.2m
+      const minCamY = s.surf + 0.4;
+      if (cam.position.y < minCamY) cam.position.y = minCamY;   // 防鏡頭鑽入地表下
       cam.rotation.set(0, 0, 0);
       cam.rotateY(s.yaw + shY);
       cam.rotateX(s.pitch + topple * 0.35 + shP);               // pitch 次(~20°)
@@ -7261,6 +7264,8 @@ export class BattleClient {
       s.smokeAcc += dt;
       if (s.smokeAcc > 0.06) { s.smokeAcc = 0; this._crashSmoke(s.p.x, s.p.y, s.p.z, 1.0); }
       cam.position.copy(s.p);
+      const minCamY = this._surf(s.p.x, s.p.z, s.p.y) + 0.4;
+      if (cam.position.y < minCamY) cam.position.y = minCamY;   // 防鏡頭鑽入地表下
       cam.rotation.set(0, 0, 0);
       cam.rotateY(s.yaw); cam.rotateX(s.pitch); cam.rotateZ(s.roll);
       // 觸地偵測(_surf → 橋面/地表);逾時仍在空中則就地空中爆(不瞬移鏡頭到地面),時長有界
@@ -7286,6 +7291,8 @@ export class BattleClient {
       s.pitch += (-0.5 - s.pitch) * lerpFPS(3, dt);
       s.roll += (0 - s.roll) * lerpFPS(3, dt);
       cam.position.copy(s.p);
+      const minCamY = this._surf(s.p.x, s.p.z, s.p.y) + 0.4;
+      if (cam.position.y < minCamY) cam.position.y = minCamY;   // 防鏡頭鑽入地表下
       cam.rotation.set(0, 0, 0);
       cam.rotateY(s.yaw); cam.rotateX(s.pitch); cam.rotateZ(s.roll);
       s.smokeAcc += dt;
@@ -9323,7 +9330,7 @@ export class BattleClient {
   }
 
   /**
-   * 陣亡頁的「最前線砲塔視角」小視窗:離敵堡最近的存活我方砲塔往敵方看(無砲塔 → 我方主堡)。
+   * 陣亡頁的「最前線砲塔視角」小視窗:離敵堡最近的存活我方砲塔往敵方看(無砲塔 → 我方主堡;皆無 → 陣亡點俯瞰)。
    * 與 _renderPips 同法(scissor 在主 canvas 上重繪場景),但視窗位置對齊 DOM 框 #deadCam
    * (該框內部透明,外圈由 CSS box-shadow 打洞式變暗);共用 pipCam(陣亡時 _renderPips 早退不衝突)。
    */
@@ -9344,14 +9351,24 @@ export class BattleClient {
     if (!src) for (const e of this.ents.values()) {
       if (e.kind === 'base' && e.side === this.side && e.mesh) { src = e; break; }
     }
-    if (!src) return;
 
-    const m = src.mesh.position, cam = this.pipCam;
-    cam.position.set(m.x, m.y + (src.dimTop || 14) + 2, m.z);
-    cam.up.set(0, 1, 0);
-    // 朝敵堡方向 100m 外近地面看 → 自然俯瞰兵線來襲方向
-    const dx = ex - m.x, dz = ez - m.z, dl = Math.hypot(dx, dz) || 1;
-    cam.lookAt(m.x + dx / dl * 100, m.y + 1, m.z + dz / dl * 100);
+    const cam = this.pipCam;
+    if (src) {
+      const m = src.mesh.position;
+      cam.position.set(m.x, m.y + (src.dimTop || 14) + 2, m.z);
+      cam.up.set(0, 1, 0);
+      // 朝敵堡方向 100m 外近地面看 → 自然俯瞰兵線來襲方向
+      const dx = ex - m.x, dz = ez - m.z, dl = Math.hypot(dx, dz) || 1;
+      cam.lookAt(m.x + dx / dl * 100, m.y + 1, m.z + dz / dl * 100);
+    } else {
+      // 降級視角(無存活防禦塔與主堡時,如劇情戰役進攻方或殘局):由陣亡點高空俯瞰戰場
+      const px = this.pos.x, pz = this.pos.z;
+      const py = this._surf(px, pz, Infinity) + 18;
+      cam.position.set(px, py, pz);
+      cam.up.set(0, 1, 0);
+      const dx = ex - px, dz = ez - pz, dl = Math.hypot(dx, dz) || 1;
+      cam.lookAt(px + dx / dl * 80, py - 6, pz + dz / dl * 80);
+    }
 
     const r = this.renderer, canvas = this.canvas;
     const cr = canvas.getBoundingClientRect(), fr = frame.getBoundingClientRect();
@@ -9364,6 +9381,8 @@ export class BattleClient {
 
     const cockVis = this.cockpit?.visible;
     if (this.cockpit) this.cockpit.visible = false;
+    const srcVis = src?.mesh?.visible;
+    if (src?.mesh) src.mesh.visible = false;   // 隱藏自身模型,避免相機在幾何內部被遮擋穿模
     const clear0 = r.getClearColor(new THREE.Color()), alpha0 = r.getClearAlpha();
     r.setScissorTest(true);
     r.setViewport(px, y, pw, ph);
@@ -9372,6 +9391,7 @@ export class BattleClient {
     r.setScissorTest(false);
     r.setViewport(0, 0, canvas.clientWidth, canvas.clientHeight);
     r.setClearColor(clear0, alpha0);
+    if (src?.mesh) src.mesh.visible = srcVis;
     if (this.cockpit) this.cockpit.visible = cockVis;
   }
 

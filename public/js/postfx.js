@@ -902,7 +902,7 @@ export class Pipeline {
           float sf = ${WIPE.SOFT.toFixed(4)};
           float e1 = uW1 * ( 1.0 + 2.0 * sf ) - sf;
           float e2 = uW2 * ( 1.0 + 2.0 * sf ) - sf;
-          float a = smoothstep( e1, e1 - sf, s ) * smoothstep( e2, e2 + sf, s ) * uWipeA;
+          float a = ( 1.0 - smoothstep( e1 - sf, e1, s ) ) * smoothstep( e2, e2 + sf, s ) * uWipeA;
           gl_FragColor = vec4( mix( c, uWipeC, clamp( a, 0.0, 1.0 ) ), 1.0 );
         }`,
     });
