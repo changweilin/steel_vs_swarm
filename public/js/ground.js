@@ -130,6 +130,50 @@ export function footNear(a, b, gap) {
   return obbDist(c.x, c.z, o) < c.r + gap;
 }
 
+// 場景足跡的共用空間索引：道路、建物、植被、場地全部用 footNear 的同一份真實量體。
+export function makeFootprintIndex(feet = [], cell = 64) {
+  const grid = new Map();
+  const add = (foot) => {
+    const i0 = Math.floor((foot.x - foot.r) / cell), i1 = Math.floor((foot.x + foot.r) / cell);
+    const j0 = Math.floor((foot.z - foot.r) / cell), j1 = Math.floor((foot.z + foot.r) / cell);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const key = `${i},${j}`;
+      let arr = grid.get(key);
+      if (!arr) { arr = []; grid.set(key, arr); }
+      arr.push(foot);
+    }
+  };
+  for (const foot of feet) add(foot);
+  return {
+    add,
+    near(foot, gap = 0) {
+      const seen = new Set();
+      const R = foot.r + gap;
+      const i0 = Math.floor((foot.x - R) / cell), i1 = Math.floor((foot.x + R) / cell);
+      const j0 = Math.floor((foot.z - R) / cell), j1 = Math.floor((foot.z + R) / cell);
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const arr = grid.get(`${i},${j}`);
+        if (!arr) continue;
+        for (const other of arr) {
+          if (seen.has(other)) continue;
+          seen.add(other);
+          if (footNear(foot, other, gap)) return true;
+        }
+      }
+      return false;
+    },
+  };
+}
+
+// blockers 的盒／圓欄位轉成共用足跡格式；盒體 MUST 保留旋轉，不得退回外接圓。
+export function blockerFoot(b) {
+  if (b.hw2 != null && b.hd2 != null) {
+    return { x: b.x, z: b.z, hw: b.hw2, hd: b.hd2, ry: b.ry || 0,
+             r: b.r ?? Math.hypot(b.hw2, b.hd2) };
+  }
+  return { x: b.x, z: b.z, r: b.r };
+}
+
 function mulberry32(seed) {
   let a = seed >>> 0;
   return () => {
@@ -1568,6 +1612,12 @@ const REG = {
   miscanthus: 0, weed: 0, cabbage: 0, billboard: 0.85, planter: 0.6, hoop: 0.9,
   fish: 0, shell: 0, mushroom: 0,
 };
+
+// 基底為矩形的人造件：只要呼叫端未指定列陣角度，就恆走道路／街廓格網朝向。
+const RECT_BASE_DETAILS = new Set([
+  'logpile', 'plank', 'cabin', 'vinerow', 'ghouse', 'pipe', 'barrier', 'canopy', 'pump',
+  'container', 'carwreck', 'solarpanel', 'bench', 'headstone', 'crate', 'billboard', 'planter', 'hoop',
+]);
 
 // 3D 物件的水平足跡半徑(scale=1):**量零件實幾何**,MUST NOT 手寫 —— 零件表一改
 // (換模型/加零件)手寫值就靜默過期,而畫面上的症狀是「兩台貨櫃長在一起」
@@ -3017,10 +3067,11 @@ function borderTex(kind) {
  * @param opts.season / opts.seed / opts.rnd  決定性環境參數
  * @param opts.roadDirAt  (x,z)=>最近道路方位角(rad,atLocal 平面角)或 null(附近無路);
  *                        整齊件沿路擺放用,可缺席 = 全部隨機朝向(行為同舊版)
- * @param opts.roadClear  (x,z)=>是否落在道路走廊上(bool);特徵拼圖避開路面免 3D 件戳穿,
+ * @param opts.roadClear  (x,z,foot?)=>足跡是否碰到道路走廊(bool);特徵拼圖避開路面免 3D 件戳穿,
  *                        可缺席 = 不遮罩(行為同舊版)。查詢不吃 rnd(拒絕在首個 rnd() 前 = 序列不變)
+ * @param opts.reservedFootprints  其他獨立場地／植被足跡；與 blockers 合併後供拼圖及細節共用
  */
-export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys, surfaceField = null }) {
+export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys, reservedFootprints = [], surfaceField = null }) {
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
   const AQ_DET = new Set(['reed', 'lotuspad', 'fish']);   // 水生細節:免吃岸線高度淘汰、貼水面擺放
@@ -3029,6 +3080,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // 數字還淺)就不擺:魚半個身子插在泥裡比沒有魚還糟(§4 寧缺勿錯)
   const DIVE = { fish: 0.5 };
   const buckets = new Map();   // `${sub}#${variant}` -> 幾何桶
+  const occupied = makeFootprintIndex([...blockers.map(blockerFoot), ...reservedFootprints]);
   const det = {};
   for (const t in DETAIL_DEFS) det[t] = [];
   let detCount = 0;
@@ -3098,7 +3150,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
     const tl = TILT[type] || 0;   // 隨機傾角:每實例姿態互異
     // atLocal 平面角 → three.js rotation.y 取負(同 rows 的 ry=-rot 慣例)
-    det[type].push({ x: px, y, z: pz, s, sy, ry: ry ?? -orient(px, pz, REG[type] || 0, false),
+    det[type].push({ x: px, y, z: pz, s, sy,
+                     ry: ry ?? -orient(px, pz, REG[type] || 0, false, RECT_BASE_DETAILS.has(type)),
                      tx: (rnd() - 0.5) * 2 * tl, tz: (rnd() - 0.5) * 2 * tl, tint: tintHex });
     detPut(px, pz, dr);
     detCount++;
@@ -3864,6 +3917,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const me = { x: px, z: pz, r: dr };
       for (const f of il) if (f !== curInk && footNear(me, f, 0)) return false;
     }
+    if (occupied.near({ x: px, z: pz, r: dr }, DET_GAP)) return false;
     return true;
   };
   const detPut = (px, pz, dr) => {
@@ -3907,13 +3961,17 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     if (placed >= target) return false;
     if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) return false;
     if (isBlocked(x, z)) return false;
-    if (roadClear?.(x, z)) return false;   // 道路走廊上不鋪特徵拼圖(免細節件戳穿路面);與 isBlocked 同位、首個 rnd() 前 = 確定性不變
+    const def = DEFS[sub];
+    const foot = def.shape === 'rect'
+      ? { x, z, hw: r, hd: r * (def.aspect || 0.7), ry: rot, r: r * Math.hypot(1, def.aspect || 0.7) }
+      : { x, z, r: r * (BLOB_R.MIN + BLOB_R.JIT) };
+    if (roadClear?.(x, z, foot)) return false;   // 用完整足跡避路，不能只驗中心點
+    if (occupied.near(foot, PATCH_GAP)) return false;
     const zn = zoneAt(x, z);
     const enc = encAt(x, z);
     // 類型必須與所在圖資分區相符;enclave 格內另放行該組合樣式的地表(公園拼圖只准落在
     // 「市區內的小綠地」格上,不會因此漏到整片綠地 —— 放行閘只看 encAt 命中的格)
     if (!subZones.get(sub)?.has(zn) && !enc?.set.has(sub)) return false;
-    const def = DEFS[sub];
     // 田/停車場/球場…一律不得橫跨分界線(2026-08-11 使用者定案)。理由不只是「線被蓋住」——
     // 規律結構的 lift(.135↑)本來就高過帶(.126~.134)⇒ 它會**整片壓在界線上**;而一塊
     // 橫跨界線的水田同時也是「一側地貌滲透到另一側」。擋在這裡而不是讓界線讓路:界線是
@@ -3929,17 +3987,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       if (h > mx) mx = h;
     }
     if ((mn < 0.45 && !def.aq) || mx - mn > r * def.slope) return false;   // 水生拼圖(marsh/lotus/魚塭)可貼岸線
-    for (const bl of blockers) {
-      const dx = x - bl.x, dz = z - bl.z, rr = bl.r + r * 0.7;
-      if (dx * dx + dz * dz < rr * rr) return false;
-    }
     // 拼圖不疊置。**功能性區塊(ink)量真實足跡零重疊**(含陣列 tile 與家族延伸 —— 舊制
     // 的 `depth === 0` 把它們排除在外,於是沿街格陣與農田拼布之間可以互切);自然類彼此
     // 才走圓近似的邊緣互融(fade 邊互融是刻意的)
     const rEff = rEffOf(def, r);
-    const foot = def.shape === 'rect'
-      ? { x, z, hw: r, hd: r * (def.aspect || 0.7), ry: rot, r: r * Math.hypot(1, def.aspect || 0.7) }
-      : { x, z, r: r * (BLOB_R.MIN + BLOB_R.JIT) };
     if (overlapPs(x, z, rEff, foot, def.edge === 'ink')) return false;
 
     // 圖層優先(使用者定):規律(ink)疊不規律(fade)之上;規律再依所對齊道路分級抬高(大馬路>小馬路),

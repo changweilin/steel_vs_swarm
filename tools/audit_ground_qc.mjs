@@ -1,7 +1,7 @@
 // 地被準晶體/規律陣列改制稽核(2026-07-25)——鏡射 public/js/ground.js 的純數學,
 // 離線驗證不變式(buildGroundCover 需 THREE + canvas,無法直呼;full pipeline 走瀏覽器真開房)。
 // 驗:①底毯角點水密(pure(i,j))②位移 |d|≤0.45 不翻面 ③準晶體場決定性(同 seed 同值/異 seed 異值)
-//     ④主散佈點陣走訪雙射(qStride⊥nCells 每格恰一次)⑤ink 全分離係數 > 邊緣交疊係數
+//     ④主散佈點陣走訪雙射(qStride⊥nCells 每格恰一次)⑤全場真實足跡互斥
 //     ⑥細節疏密調變總量守恆(E[0.35+1.3q]=1)
 //     ⑦規律結構都市規劃朝向(2026-07-29:gridA 主方位執行原文 + ink 恆對齊三段退避靜態規則)
 //     ⑧田塊對齊 + 田埂(2026-08-13 使用者「田與田之間沒有整齊對準,沒對準也可以但要使用田埂
@@ -165,6 +165,7 @@ console.log('== ⑤ 功能性區塊 / 3D 物件不可互相重疊(2026-08-11 使
 {
   // 幾何全部**執行 ground.js 的原文**(自己抄一份公式去驗 = 只驗到自己抄對沒有)
   const gsrc = readSrc('public', 'js', 'ground.js');
+  const bsrc = readSrc('public', 'js', 'biomes.js');
   const pick = (re, name) => {
     const m = gsrc.match(re);
     if (!m) { bad(`ground.js 抽不到 ${name} 原文(漂移,請同步稽核)`); return ''; }
@@ -176,7 +177,8 @@ console.log('== ⑤ 功能性區塊 / 3D 物件不可互相重疊(2026-08-11 使
     pick(/export function obbDist\(px, pz, o\) \{[\s\S]*?\n\}/, 'obbDist'),
     pick(/export function obbNear\(a, b, gap\) \{[\s\S]*?\n\}/, 'obbNear'),
     pick(/export function footNear\(a, b, gap\) \{[\s\S]*?\n\}/, 'footNear'),
-  ].join('\n') + '\nreturn { PATCH_GAP, DET_GAP, obbDist, obbNear, footNear };')();
+    grabFn(gsrc, 'makeFootprintIndex').replace('export ', ''),
+  ].join('\n') + '\nreturn { PATCH_GAP, DET_GAP, obbDist, obbNear, footNear, makeFootprintIndex };')();
   const rect = (x, z, hw, hd, ry) => ({ x, z, hw, hd, ry, r: Math.hypot(hw, hd) });
   const circ = (x, z, r) => ({ x, z, r });
 
@@ -218,6 +220,11 @@ console.log('== ⑤ 功能性區塊 / 3D 物件不可互相重疊(2026-08-11 使
   // ⑤ 圓↔圓退化成距離判定
   (G.footNear(circ(0, 0, 3), circ(0, 5, 3), 0) && !G.footNear(circ(0, 0, 3), circ(0, 7, 3), 0))
     ? ok('blob ↔ blob 退化成圓距判定') : bad('圓↔圓判定不對');
+  // 共用索引必須保留旋轉盒精判；反向對照的中心點／等面積圓會漏掉長邊角落。
+  const fi = G.makeFootprintIndex([A2], 8);
+  (fi.near(B2, G.PATCH_GAP) && !fi.near(rect(40, 0, r0, r0 * asp, 0), G.PATCH_GAP))
+    ? ok('共用足跡索引擋下旋轉矩形互切並放行真正分離物件')
+    : bad('共用足跡索引未依 footNear 精判');
 
   // ⑥ 接線:功能性區塊只要**任一方**是 ink 就走真實足跡(舊制的 `depth === 0` 把陣列
   //    tile 與家族延伸排除在外 ⇒ 沿街格陣可以切穿農田);3D 物件足跡量零件實幾何
@@ -234,6 +241,18 @@ console.log('== ⑤ 功能性區塊 / 3D 物件不可互相重疊(2026-08-11 使
   /for \(const f of il\) if \(f !== curInk && footNear\(me, f, 0\)\) return false;/.test(gsrc)
     ? ok('3D 物件不得站進**別人的**功能性區塊(自己那一塊 curInk 豁免)')
     : bad('3D 物件可以站進別人的功能性區塊');
+  (gsrc.includes('const occupied = makeFootprintIndex([...blockers.map(blockerFoot), ...reservedFootprints])')
+    && gsrc.includes('if (occupied.near(foot, PATCH_GAP)) return false;')
+    && gsrc.includes('if (occupied.near({ x: px, z: pz, r: dr }, DET_GAP)) return false;')
+    && bsrc.includes('reservedFootprints,'))
+    ? ok('建物／植被／外部平面場地接入同一占用索引，拼圖與 3D 細節都會避讓')
+    : bad('外部獨立物件未完整接入 ground.js 共用占用索引');
+  (bsrc.includes('const roadFootIndex = makeFootprintIndex(roadFeet)')
+    && bsrc.includes('if (roadOccupied(foot) || vegFootIndex.near(foot)) return;')
+    && bsrc.includes('vegFootIndex.add(foot);')
+    && gsrc.includes('if (roadClear?.(x, z, foot)) return false;'))
+    ? ok('道路有向盒約束植被／巨型地物／完整場地，獨立植被彼此也不重疊')
+    : bad('道路或植被仍只檢查中心點／未登記已占足跡');
   // ⑦ 對照組(反向驗證):把 footNear 退回「一律圓近似」⇒ ② 的切穿案例必須又被放行
   const fnSrc = gsrc.match(/export function footNear\(a, b, gap\) \{[\s\S]*?\n\}/);
   const fnBad = fnSrc && fnSrc[0].replace(
@@ -346,6 +365,11 @@ console.log('== ⑦ 規律結構都市規劃朝向(球場/操場/停車場/太�
   (bsrc.includes('const roadDirAt = (x, z, r2 = RD_R2)') && bsrc.includes('Math.ceil(Math.sqrt(r2) / RD_CELL)'))
     ? ok('biomes.js roadDirAt 半徑可覆寫且掃描窗由半徑推導(預設行為 = 舊版 span 2)')
     : bad('roadDirAt 半徑參數/掃描窗推導缺失');
+  (gsrc.includes('RECT_BASE_DETAILS.has(type)')
+    && bsrc.includes('if (bd === Infinity) scan(allRoadSegs);')
+    && bsrc.includes('const ry = roadFacing ? (roadFacing(x, z) ?? s.ry) : s.ry;'))
+    ? ok('方形基底細節與建物恆沿最近道路／街廓排列，補間不再加隨機偏角')
+    : bad('方形基底仍可能退回隨機朝向或帶偏角');
 }
 
 // ==== ⑧ 田塊對齊 + 田埂(2026-08-13 使用者定案「修對齊 + 組合夠大片才加田埂」)====

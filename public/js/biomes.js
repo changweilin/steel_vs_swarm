@@ -36,7 +36,7 @@ import { geoGet, geoPut, geoKey } from './geocache.js';
 import { osmRelayKey } from './osmrelay.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
-import { buildGroundCover } from './ground.js';
+import { buildGroundCover, makeFootprintIndex } from './ground.js';
 import { buildLandField } from './landfield.js';
 import { setLandField } from './toon.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
@@ -120,6 +120,13 @@ const VEG_SCALE = {
   conifer2: 1.5, conifer3: 1.45, conifer4: 1.5,
   shrub: 1.2, silvergrass: 1.15, arrowbamboo: 1.2, succulent: 1.15, reed: 1.1,
   sapling: 1.2, redcap: 1.15, browncap: 1.1, parasol: 1.2, toadstool: 1.1,
+};
+// 植被可見外廓半徑係數(×最終實例 s)：建物、道路、外部場地共用，MUST NOT 各抄一份。
+const VEG_FOOT_R = {
+  bamboo: 2.2, broadleaf: 3.2, birch: 2.6, conifer: 2.2, deadtree: 2.4, mangrove: 2.8,
+  conifer2: 2.4, conifer3: 1.4, conifer4: 3.0,
+  shrub: 1.2, silvergrass: 0.9, arrowbamboo: 1.0, succulent: 0.8, reed: 0.8,
+  sapling: 1.0, redcap: 0.6, browncap: 0.6, parasol: 0.5, toadstool: 0.5,
 };
 // Overpass 鏡像輪替(2026-07-22 倫敦橋數浮動案):主站限流(429/504)是圖資逐局忽有忽無的
 // 主因之一 —— 限流回應是即時的,換鏡像重試幾乎不吃載入時間預算;逾時(abort)才放棄。
@@ -727,7 +734,7 @@ function giantCrownR(def) {
   return m;
 }
 
-function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
+function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadOccupied }) {
   const species = Object.keys(GIANT_DEFS);
   const centers = [];
   let trees = 0;
@@ -775,6 +782,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
       // (2026-08-01 金龍隧道真圖資實測:洞內卡著整根神木樹幹)。
       // 抽樣紀律(§2.3):淘汰檢查排在 s 抽樣**之後** —— foot 要有 s 才算得出來。
       if (!areaFree(blocked, gx, gz, foot)) continue;
+      if (roadOccupied?.({ x: gx, z: gz, r: foot })) continue;
       // 落底高度取「板根腳印周圈最低點」(sinkBaseY 單一縫):只取中心高度的話,
       // 陡坡/巨岩崖邊的樹根會整片懸空。
       const gy = sinkBaseY(terrain, gx, gz, foot);
@@ -4051,7 +4059,7 @@ const SYNTH_COL_R = 30;
  * 緊密的界線是「碰撞柱不互穿」(`dist ≥ r_i + r_j`):再密也不能長進彼此體內 —— 那是
  * 破圖,不是景觀。逐顆仍走既有的水域/淨空/平坦度/邊界四道閘(一顆放不下就少一顆)。
  */
-function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW }) {
+function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW, roadOccupied }) {
   const types = Object.keys(MEGALITHS);
   const start = Math.floor(rnd() * types.length);   // 每張圖不同起點,依序輪替求多樣
   const placedM = [];
@@ -4130,6 +4138,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW 
         || [[r * 0.7, 0], [-r * 0.7, 0], [0, r * 0.7], [0, -r * 0.7]]
           .some(([ox, oz]) => terrainEnvCode(terrain, x + ox, z + oz) !== 0)) continue;
       if (!areaFree(blocked, x, z, r + 6)) continue;
+      if (roadOccupied?.({ x, z, r: r + 6 })) continue;
       // 主堡退避:名岩公稱高即真實比例(放置後 90~160m),`blocked` 那圈 70m 是照**建物**
       // 尺度訂的 ⇒ 舊制只保證岩壁邊緣離主堡中心 `BASE_CLEAR_R + 6`,一座 160m 高的岩體
       // 站在 76m 外仰角就是 65° = 從主堡出生看出去整片天空被吃掉(2026-08-05 使用者回報)。
@@ -8672,7 +8681,7 @@ function densifyUrban({ seeds, generic, blocked, terrain, rnd, inb, occ, roadFac
         const d = (commercial ? 16 + rnd() * 16 : 10 + rnd() * 12) * OVER.bldXZ;
         const h = Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap);
         const jx = (rnd() - 0.5) * 2.4, jz = (rnd() - 0.5) * 2.4;   // 沿街微抖動
-        const jry = s.ry + (rnd() - 0.5) * 0.12;   // 抽樣先做保序列;實際朝向於落點後定
+        rnd();   // 保留舊版朝向抖動的亂數消耗；方形基底不再實際套用偏角
         const v = Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length);
         const vacant = rnd() < INFILL.skip;
         if (vacant) continue;
@@ -8689,7 +8698,7 @@ function densifyUrban({ seeds, generic, blocked, terrain, rnd, inb, occ, roadFac
         if (!occ.free(x, z, Math.max(w, d) / 2, INFILL.gap)) continue;
         if (!areaFree(blocked, x, z, r * 0.75)) continue;
         occ.add(x, z, Math.max(w, d) / 2);
-        const ry = roadFacing ? (roadFacing(x, z) ?? jry) : jry;   // 門朝最近道路;深街廓無鄰路 → 沿種子朝向(巷弄成直線)
+        const ry = roadFacing ? (roadFacing(x, z) ?? s.ry) : s.ry;
         generic.push({ x, z, w, d, h, ry, commercial, v });
         added++;
       }
@@ -8922,6 +8931,24 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const roadInput = osmRoads?.length
     ? osmRoads
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
+  // 地表道路足跡：所有獨立物件與地被共用同一批有向盒。橋／結構隧道有垂直分層，不占地面。
+  const roadFeet = [];
+  for (const way of roadInput) {
+    if (way.tags?.bridge || way.tags?.tunnel) continue;
+    const pts = (way.geometry || []).map((p) => llToWorld(p.lat, p.lon, center));
+    const hd = roadWidth(way.tags) / 2 + 1.5;
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, z0] = pts[i - 1], [x1, z1] = pts[i];
+      const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
+      if (len < 1e-3) continue;
+      const hw = len / 2;
+      roadFeet.push({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, hw, hd,
+                      ry: Math.atan2(dz, dx), r: Math.hypot(hw, hd) });
+    }
+  }
+  const roadFootIndex = makeFootprintIndex(roadFeet);
+  const roadOccupied = (foot) => roadFootIndex.near(foot);
+  const vegFootIndex = makeFootprintIndex();
   // ---- 道路路基整平(2026-07-31 使用者回報「兩側太陡時一邊懸空、一邊陷入地形」)----
   // 一般道路(非橋/非結構隧道/非步道)的乾地走廊橫向整成切填平台:上坡側切、下坡側填,
   // 路面緞帶與單位站的 heightAt 才在同一個平面上。MUST 排在 markGradeCorridors / 地物散布 /
@@ -8974,13 +9001,19 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const urbanPts = [];
   let placed = 0;
   const put = (type, x, z, s) => {
-    items[type] ??= [];
-    items[type].push({
-      x, y: terrain.heightAt(x, z), z, s: s * (VEG_SCALE[type] || 1),   // 超尺度植被
+    const actualS = s * (VEG_SCALE[type] || 1);
+    // 拒絕前仍固定抽完姿態亂數，地圖上的後續物件不因道路淘汰而漂移。
+    const item = {
+      x, y: terrain.heightAt(x, z), z, s: actualS,
       ry: rnd() * Math.PI * 2,
-      tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,   // 站姿微傾斜(每棵不同)
-      dj: rnd(),   // 細節種子(xform.js):零件半徑/自轉逐株走樣,針葉塔不再滿林同錐
-    });
+      tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,
+      dj: rnd(),
+    };
+    const foot = { x, z, r: (VEG_FOOT_R[type] ?? 1) * actualS };
+    if (roadOccupied(foot) || vegFootIndex.near(foot)) return;
+    items[type] ??= [];
+    items[type].push(item);
+    vegFootIndex.add(foot);
     placed++;
   };
 
@@ -9011,8 +9044,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   });
   // 國旗歸屬(地圖 30 : 駐軍 60 : 敵對 10)。純函式、零共享 rnd ⇒ 建在哪一行都不影響序列。
   const nation = makeNationPicker(cfg, basesW);
-  const megalithsBuilt = placeMegaliths({ group, terrain, blocked, blockers, rnd, sites: bareSites, basesW });
-  const giantTrees = placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites: greenSites });
+  const megalithsBuilt = placeMegaliths({
+    group, terrain, blocked, blockers, rnd, sites: bareSites, basesW, roadOccupied,
+  });
+  const giantTrees = placeGiantGroves({
+    terrain, blocked, blockers, items, rnd, sites: greenSites, roadOccupied,
+  });
   // 語意化地標(P2-C):排在一般植被之前 ⇒ blockArea 之後小植被自動避開;零共享 rnd 消耗,
   // 故插在這裡**不會**推移後面每一株植被/每一棟建物的亂數序列(§2.3)。
   const beaconsBuilt = placeBeacons({
@@ -9101,8 +9138,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 走廊已淨空,同樣不需重複。不耗共享 rnd(佈局亂數序列不變)。
   // 同一迴圈順便把道路線段收進桶索引:建物朝向對齊最近道路(nearestRoadAngle)用。
   const roadSegIdx = new Map();   // `${bx},${bz}`(64m 桶)-> [[x1,z1,x2,z2]…]
+  const allRoadSegs = [];         // 桶內查無時的全圖備援；方形基底不得退回隨機角
   const SEG_C = 64;
   const segBucketAdd = (x1, z1, x2, z2) => {
+    allRoadSegs.push([x1, z1, x2, z2]);
     // 線段掛進兩端桶(段長 ≤ 桶邊即涵蓋);兩端同桶只掛一次
     const k1 = `${Math.floor(x1 / SEG_C)},${Math.floor(z1 / SEG_C)}`;
     const k2 = `${Math.floor(x2 / SEG_C)},${Math.floor(z2 / SEG_C)}`;
@@ -9148,33 +9187,34 @@ export async function buildBiomes(cfg, terrain, onProgress) {
    * 建物 local +x 沿道路切線(順著道路方向整齊排列)、local +z = 門/正立面。取「朝路法線」(-dz,dx)
    * 並選指向最近路點的那一側 ⇒ 門朝街(不朝街背)、立面平行街道。ry 使世界 +z=(sinθ,cosθ) 對上該法線
    * ⇒ θ=atan2(n.x,n.z)(法線恰朝路時等同舊 atan2(-dz,dx),背街時翻 180° —— 立面仍平行街、+x 仍沿路)。
-   * 掃 ±1 桶(64m);沿街建物離路遠小於此,街廓深處查無 → null 由呼叫端 fallback(隨機/沿種子)。
+   * 先掃 ±1 桶(64m)；查無時掃全圖道路，確保任何方形基底都不退回隨機角。
    */
   const nearestRoadAngle = (x, z) => {
     const ci = Math.floor(x / SEG_C), cj = Math.floor(z / SEG_C);
     let bd = Infinity, bry = 0;
+    const scan = (a) => {
+      for (const [x1, z1, x2, z2] of a) {
+        const dx = x2 - x1, dz = z2 - z1;
+        const l2 = dx * dx + dz * dz;
+        if (!l2) continue;
+        let t = ((x - x1) * dx + (z - z1) * dz) / l2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const qx = x1 + dx * t, qz = z1 + dz * t;
+        const d = Math.hypot(x - qx, z - qz);
+        if (d >= bd) continue;
+        bd = d;
+        const s = ((-dz) * (qx - x) + dx * (qz - z)) >= 0 ? 1 : -1;
+        const l = Math.sqrt(l2);
+        bry = roadFaceRy(dx / l, dz / l, -s);
+      }
+    };
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
         const a = roadSegIdx.get(`${ci + i},${cj + j}`);
-        if (!a) continue;
-        for (const [x1, z1, x2, z2] of a) {
-          const dx = x2 - x1, dz = z2 - z1;
-          const l2 = dx * dx + dz * dz;
-          if (!l2) continue;
-          let t = ((x - x1) * dx + (z - z1) * dz) / l2;
-          t = t < 0 ? 0 : t > 1 ? 1 : t;
-          const qx = x1 + dx * t, qz = z1 + dz * t;   // 最近路點
-          const d = Math.hypot(x - qx, z - qz);
-          if (d < bd) {
-            bd = d;
-            // s = 讓 (-dz, dx)·s 指向道路的那一側 ⇒ 建物落在 −s 側
-            const s = ((-dz) * (qx - x) + dx * (qz - z)) >= 0 ? 1 : -1;
-            const l = Math.sqrt(l2);
-            bry = roadFaceRy(dx / l, dz / l, -s);   // 朝向公式單一縫(siteplan.js;臨街配置同吃)
-          }
-        }
+        if (a) scan(a);
       }
     }
+    if (bd === Infinity) scan(allRoadSegs);
     return bd === Infinity ? null : bry;
   };
 
@@ -9446,10 +9486,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (!a) rectG.set(k, a = []);
       a.push(b);
     }
-    // 鋪面型公設(停車場/運動場)同樣要拔植被 —— 柏油面與 PU 跑道上長出芒草不是自然,是漏濾。
-    // **公園刻意不列**:它的地被本來就該留著(園樹另由 CIVIC_TREES 補),整片拔掉會變成一塊禿地。
+    // 全部獨立公設都要拔除既有植被；公園綠意由 CIVIC_TREES 與鋪面本身負責，避免園樹互穿。
     for (const c of civics) {
-      if (c.kind === 'park') continue;
       const k = `${Math.floor(c.x / C)},${Math.floor(c.z / C)}`;
       let a = rectG.get(k);
       if (!a) rectG.set(k, a = []);
@@ -9478,18 +9516,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       for (const [lx, lz, lr] of lmC) if (Math.hypot(x - lx, z - lz) < lr + pad) return true;
       return false;
     };
-    // 樹冠半徑係數(×實例 s ≈ 冠緣到樹幹的水平距):喬木冠寬大,樹幹離牆面至少
-    // 一個冠半徑才不插牆;地被/草類貼牆自然,只留最小淨距
-    const CROWN_R = {
-      bamboo: 2.2, broadleaf: 3.2, birch: 2.6, conifer: 2.2, deadtree: 2.4, mangrove: 2.8,
-      conifer2: 2.4, conifer3: 1.4, conifer4: 3.0,
-      shrub: 1.2, silvergrass: 0.9, arrowbamboo: 1.0, succulent: 0.8, reed: 0.8,
-      sapling: 1.0, redcap: 0.6, browncap: 0.6, parasol: 0.5, toadstool: 0.5,
-    };
     for (const type in items) {
       // 神木不濾:已進 blocked(建物 areaFree 會避開),且登記了碰撞柱,拔掉會留隱形牆
       if (GIANT_DEFS[type]) continue;
-      const cr = CROWN_R[type] ?? 1;
+      const cr = VEG_FOOT_R[type] ?? 1;
       const kept = items[type].filter((it) =>
         Math.abs(it.y - terrain.heightAt(it.x, it.z)) > 4 || !hitsBld(it.x, it.z, cr * it.s));
       placed -= items[type].length - kept.length;
@@ -10242,20 +10272,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     return r < 0 ? 0 : r > 1 ? 1 : r;
   };
 
-  // ---- 道路走廊遮罩(2026-07-24):地被特徵拼圖/細節避開路面走廊 ⇒ 3D 件(作物/碎石/攤位)
-  // 不再坐在路面上戳穿(需求「道路恆在其他地貌之上」)。獨立線段索引(不吃 rdGrid 的 12m 稀疏取樣,
-  // 否則窄路遮罩會呈串珠縫),逐段點到線段距離 + 半寬 margin。64m 桶;純視覺查詢,零共享 rnd。----
-  const RM_CELL = 64;
-  const rmGrid = new Map();
-  const rmAdd = (x1, z1, x2, z2, hw) => {
-    const i0 = Math.floor(Math.min(x1, x2) / RM_CELL), i1 = Math.floor(Math.max(x1, x2) / RM_CELL);
-    const j0 = Math.floor(Math.min(z1, z2) / RM_CELL), j1 = Math.floor(Math.max(z1, z2) / RM_CELL);
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-      const k = `${i},${j}`;
-      let arr = rmGrid.get(k); if (!arr) { arr = []; rmGrid.set(k, arr); }
-      arr.push([x1, z1, x2, z2, hw]);
-    }
-  };
+  // ---- 道路走廊遮罩：直接重用地物散布前已定案的有向盒足跡索引。----
   const roadPolys = [];   // 沿街規律陣列走訪源:[世界折線 pts, 半寬 hw];roadInput 已 geocache 定案 ⇒ 跨客戶端同序
   for (const way of roadInput) {
     const g = way.geometry || [];
@@ -10263,24 +10280,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const hw = roadWidth(way.tags) / 2;
     const pts = g.map((p) => llToWorld(p.lat, p.lon, center));
     roadPolys.push([pts, hw]);
-    for (let i = 1; i < pts.length; i++) rmAdd(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], hw);
   }
-  const roadClearAt = (x, z) => {
-    const ci = Math.floor(x / RM_CELL), cj = Math.floor(z / RM_CELL);
-    for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
-      const arr = rmGrid.get(`${i},${j}`);
-      if (!arr) continue;
-      for (const s of arr) {
-        const ex = s[2] - s[0], ez = s[3] - s[1];
-        const L2 = ex * ex + ez * ez || 1;
-        let t = ((x - s[0]) * ex + (z - s[1]) * ez) / L2;
-        t = t < 0 ? 0 : t > 1 ? 1 : t;
-        const dx = x - (s[0] + ex * t), dz = z - (s[1] + ez * t), r = s[4] + 1.5;
-        if (dx * dx + dz * dz < r * r) return true;
-      }
-    }
-    return false;
-  };
+  const roadClearAt = (x, z, foot = { x, z, r: 0 }) => roadFootIndex.near(foot);
 
   // ---- 線工切面地貌場:地形本身著色，底毯不再另鋪一層皮 ----
   const gseed = (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0;
@@ -10298,6 +10299,20 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   await onProgress?.(0.88, '鋪設地表覆蓋層…');
   const grnd = mulberry32(gseed ^ 0x51AB);
   const gcStart = group.children.length;   // 洞口打洞用:此後加入 group 的都是地被層(底毯拼圖 + 細節實例)
+  // 已存在的獨立平面場地 + 貼地植被：ground.js 會再與 blockers 合併成單一占用索引。
+  const reservedFootprints = civics.map((c) => ({
+    x: c.x, z: c.z, hw: c.w / 2, hd: c.d / 2, ry: c.ry,
+    r: Math.hypot(c.w, c.d) / 2,
+  }));
+  for (const type in items) {
+    if (GIANT_DEFS[type]) continue;   // 神木幹已在 blockers；樹上附著物不占地面
+    const rr = VEG_FOOT_R[type] ?? 1;
+    for (const it of items[type]) {
+      if (Math.abs(it.y - terrain.heightAt(it.x, it.z)) <= 4) {
+        reservedFootprints.push({ x: it.x, z: it.z, r: rr * it.s });
+      }
+    }
+  }
   const ground = buildGroundCover(group, terrain, {
     isBlocked: (x, z) => blocked.has(cellKey(x, z)),
     classifyAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), mix, grnd),
@@ -10308,6 +10323,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
+    reservedFootprints,
     surfaceField: landField,
     // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
     // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
