@@ -18,6 +18,7 @@
 // 反向驗證(§0 原則 9;字面替換一律 CRLF 容忍 `\r?\n`,替換無效 MUST 當場 exit 1):
 //   --break-count   張數改成逐型手寫的固定值 ⇒ Ⅰ MUST 紅
 //   --break-fuse    包絡改讀 `partGeo(part)` 的解析結果(庫幾何)⇒ Ⅳ MUST 紅
+//   --break-partgate 拿掉 v1 自然零件資格閘 ⇒ Ⅳ MUST 紅
 //   --break-rnd     卡片抖動改吃呼叫端的共享 rnd ⇒ Ⅲ MUST 紅
 //   --break-mrtgate `leafCardOn` 的能力/群組閘拿掉 ⇒ Ⅴ MUST 紅
 import { readSrc, grabFn } from './audit_src.mjs';
@@ -27,6 +28,7 @@ import { CARD, cardEnvelope, envArea, cardHalf, cardCount, planCards, cardRnd, l
 const A = process.argv.slice(2);
 const BRK = {
   count: A.includes('--break-count'), fuse: A.includes('--break-fuse'),
+  partgate: A.includes('--break-partgate'),
   rnd: A.includes('--break-rnd'), mrtgate: A.includes('--break-mrtgate'),
 };
 let pass = 0, fail = 0;
@@ -41,7 +43,13 @@ const code = (s) => s.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, '')
 const count = (s, re) => (s.match(re) || []).length;
 
 const lcSrc = readSrc('public', 'js', 'leafcard.js');
-const bioSrc = readSrc('public', 'js', 'biomes.js');
+let bioSrc = readSrc('public', 'js', 'biomes.js');
+if (BRK.partgate) {
+  const before = bioSrc;
+  bioSrc = bioSrc.replace('p.lib && isRuntimeEligibleNatureKey(p.lib) && libGeo(p.lib)',
+    'p.lib && libGeo(p.lib)');
+  if (bioSrc === before) { console.log('x --break-partgate 的字面替換沒有生效(原文改了?)'); process.exit(1); }
+}
 const bioC = code(bioSrc);
 
 // 壞版本的張數 / 包絡(反向驗證用;**期望值 MUST NOT 隨 --break-* 改變**,§5.4 ㋑ ——
@@ -172,8 +180,8 @@ console.log('\nⅣ 佈局數學只讀保險絲 p.g(冠幅 / 擺幅 / 淨空 / �
   // 那一行解析縫一格未動(卡片是「畫什麼」的第三個結果,不是取代 partGeo)
   ok(/new THREE\.InstancedMesh\(partGeo\(part\)/.test(bioC),
     '`new THREE.InstancedMesh(partGeo(part)` 那一行原樣(lib > 卡片 > 保險絲 的優先序住 leafCardOn)');
-  ok(/const partGeo = \(p\) => \(p\.lib && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC),
-    'partGeo 本身一格未動');
+  ok(/const partGeo = \(p\) => \(p\.lib && isRuntimeEligibleNatureKey\(p\.lib\) && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC),
+    'partGeo 保留 lib → 保險絲優先序，並先通過 v1 自然零件資格閘');
   // A39:卡片判定沿用同一次 vegSoftKind 的結果,MUST NOT 另開名單
   ok(count(bioC, /vegSoftKind\(/g) === 1 && /leafCardOn\(part, sk\)/.test(bioC),
     '「這一列要不要換成卡片」由 `vegSoftKind` 的同一次結果推導(第二張名單遲早與季節換色分家)');
