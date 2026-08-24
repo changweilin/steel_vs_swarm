@@ -509,9 +509,10 @@ ok(/covV\[k\] && galAny\(k\)/.test(STRC),
   ok((BR.match(/const inTunBore = /g) || []).length === 1, 'Ⅲ-e 洞內判定 MUST 只有一份 inTunBore');
   ok(/const dropXZ = \(px, pz\) => !strc && !brg/.test(BR),
     'Ⅲ-e 判定 MUST 只作用在貼地路段 —— 結構自身路面(strc)與橋面(brg)MUST NOT 被丟掉');
-  ok(/if \(dropSeg\(i\)\) continue;/.test(BR), 'Ⅲ-e 路面緞帶 MUST 掛上判定');
+  ok(/if \(dropRoadSeg\(i\)\) continue;/.test(BR), 'Ⅲ-e 路面緞帶 MUST 掛上判定');
   ok(/if \(dropSeg\?\.\(i\)\) continue;/.test(BR), 'Ⅲ-e 縱向實線(emitLine)MUST 掛上判定');
-  ok(/if \(dropXZ\(px0, pz0\)\) continue;/.test(BR), 'Ⅲ-e 白虛線(dashLine)MUST 掛上判定');
+  ok(/if \(dropXZ\(px0, pz0\) \|\| inJunctionMarkCut\(ax0, az0\)/.test(BR),
+    'Ⅲ-e 白虛線(dashLine)MUST 掛上洞內判定(後續路口裁切可共用同一閘)');
   // 行為直測:抽出 inTunBore 原文跑真值(頂板之上放行 / 斷面之內攔下 / 走廊外放行 / 端點夾制)
   ok(/if \(y > bcy \|\| x < bx0 \|\| x > bx1 \|\| z < bz0 \|\| z > bz1\) return false;/.test(BR),
     'Ⅲ-e 全圖包圍盒早退 MUST 在(純加速;走廊清單可達數千段 × 每條路每小段一次)');

@@ -16,13 +16,15 @@
 //   Ⅳ 消費端單一縫 —— biomes.js 的接線:四道閘、量出來的碰撞柱、排在植被之前、不消耗 rnd
 //
 // 反向驗證(原則 9):`node tools/audit_beacons.mjs --break-extent` 把一件零件撐出 foot,
-// Ⅰ MUST 紅字;`--break-pad` 把預留餘裕歸零,Ⅲ 的預留斷言 MUST 紅字。
+// Ⅰ MUST 紅字;`--break-pad` 把預留餘裕歸零,Ⅲ 的預留斷言 MUST 紅字;
+// `--break-order` 把地標呼叫搬到大地標之前,Ⅳ 的建置順序斷言 MUST 紅字。
 import { readSrc } from './audit_src.mjs';
 import { makeVehicle } from '../public/js/vehicles.js';
 import { solveTowerSites } from '../public/js/data.js';
 
 const BREAK_EXTENT = process.argv.includes('--break-extent');
 const BREAK_PAD = process.argv.includes('--break-pad');
+const BREAK_ORDER = process.argv.includes('--break-order');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -208,7 +210,10 @@ console.log('\nⅣ 消費端單一縫(biomes.js)');
   const count = (s, re) => (s.match(re) || []).length;
   ok(count(bio, /function placeBeacons\(/g) === 1, 'placeBeacons 只有一份實作');
   // 呼叫點只數 buildBiomes 那一段(定義本身也長得像呼叫)
-  const body = bio.slice(bio.indexOf('export async function buildBiomes'));
+  let body = bio.slice(bio.indexOf('export async function buildBiomes'));
+  if (BREAK_ORDER) {
+    body = `/* break-order */\nplaceBeacons({\n${body.replace('placeBeacons({', 'placeBeaconsMoved({')}`;
+  }
   ok(count(body, /placeBeacons\(\{/g) === 1, 'placeBeacons 只有一個呼叫點');
   const fn = bio.slice(bio.indexOf('function placeBeacons('), bio.indexOf('function placeMegaliths('));
   // 四道閘缺一不可 —— 少了任何一道,地標就可能落進走廊/水裡/懸崖上/圖外
@@ -227,8 +232,9 @@ console.log('\nⅣ 消費端單一縫(biomes.js)');
   // 順序:MUST 排在一般植被散布之前,blockArea 才護得住
   const iB = body.indexOf('placeBeacons({'), iV = bioSrc.slice(bio.indexOf('export async function buildBiomes')).indexOf('鋪設植被地貌');
   ok(iB > 0 && iV > 0 && iB < iV, '呼叫排在一般植被散布之前(blockArea 之後小植被才會避開)');
-  const iM = body.indexOf('placeMegaliths({ group');
-  ok(iM > 0 && iB > iM, '排在巨岩/神木之後(大地標先佔位,語意地標補位)');
+  const iM = body.indexOf('placeMegaliths({');
+  const iG = body.indexOf('placeGiantGroves({');
+  ok(iM > 0 && iG > iM && iB > iG, '排在巨岩/神木之後(大地標先佔位,語意地標補位)');
   // 檔頭紀律④:不掛反轉外殼描邊(世界的線由 postfx 的螢幕空間勾線負責)
   ok(!/outlinify/.test(src), 'beacons.js 不掛反轉外殼描邊(一座電塔十幾個殼 = 十幾個 draw call)');
   ok(/mulberry32\(/.test(src) && /buildBeacon\(kind, seed/.test(src),
