@@ -49,13 +49,15 @@ import {
   planBufferProps, propParts, planBackdrop, backdropParts,
 } from './edgewall.js';
 import { libGeo } from './partlib.js';
+// 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
+import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
+import { approvedVehicleModelAt } from './approvedVehicleModels.js';
+import { makeRuntimePartModel } from './runtimePartModel.js';
 // 載具 / 擺件型錄(2026-08-16 序 10;純資料、零 import、零 THREE ⇒ 離線稽核吃得到同一份)
-import { makeVehicle } from './vehicles.js';
 // 鳥群(2026-08-16 序 11 ⑥-2;零 THREE 的積分器 —— 四項規則離線驗得到,見該檔檔頭)
 import { FLOCK, planFlockRoutes, flockInit, flockStep, flockHeading, wingAngle, birdParts } from './wildlife.js';
 // 平整垂直牆面板 + 窗格貼齊(2026-08-13;零 import 的純模組,離線工具吃同一支 —— 面板的
 // 定義只有一份,見該檔檔頭)
-import { wallPanels, splitByPanel, panelGridUV } from './wallpanel.js';
 // 場址配置規則(2026-08-03 使用者定案三條:市區都市計畫 / 綠地樹冠羞避 / 裸露地地質排列)——
 // 規則本體全在 siteplan.js(純幾何、零 THREE、離線可驗),本檔只負責「餵地形/淨空、收成果」。
 import {
@@ -91,6 +93,8 @@ import {
 import { buildAquaticWorld } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
+import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
+import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -1023,7 +1027,7 @@ const vegSoftKind = (part) => part.sf ?? SOFT_BY_VEG_KEY[part.key] ?? null;
 //   ② 庫幾何已 markShared(A25)且本迴圈不就地改幾何 ⇒ 不 clone;會 applyMatrix4 的
 //      消費端(beacons buildBeacon)才要 clone。
 //   ③ 查表是純函式,零共享 rnd 消耗(§2.3)。
-const partGeo = (p) => (p.lib && libGeo(p.lib)) || p.g;
+const partGeo = (p) => (p.lib && isRuntimeEligibleNatureKey(p.lib) && libGeo(p.lib)) || p.g;
 
 /**
  * 一株植被的公稱高度(擺動權重的分母)。**推導不手寫**:改任一零件的 y/幾何,
@@ -2697,7 +2701,7 @@ function rockProbe(g) {
 const MEGA_LIB = {
   // 渾圓/塊狀岩塊(marble 堆/崩落塊/伴生丘/疊石);2026-08-06 第 7 輪 +3 顆跨國地質實拍:
   // d 海蝕拱殘丘、e 平衡巨礫(花崗岩 tor)、f 砂岩刃脊塊
-  block: ['rock/mega_a', 'rock/mega_b', 'rock/mega_c', 'rock/mega_d', 'rock/mega_e', 'rock/mega_f'],
+  block: ['rock/mega_a'].filter(isRuntimeEligibleNatureKey),
   tower: 'rock/tower_a',                                  // 火山頸整座(實拍魔鬼塔;崖錐 + 柱身同一顆)
   mesa: 'rock/mesa_a',                                    // 平頂岩體整座(實拍;裙狀崖錐 + 疊層同一顆)
   hoodoo: 'rock/hoodoo_a',                                // 蘑菇岩整柱(實拍帽岩+細頸,Hoodoo Basin)
@@ -2710,7 +2714,10 @@ const MEGA_LIB = {
 // (partlib 紀律②);②佈局與碰撞(H/RX/RZ/col/anchor)的算式 MUST NOT 讀庫幾何 ——
 // 庫隨載入成敗而異,佈局讀它 = 跨客戶端分家(§2.3)。亂數紀律:呼叫端 MUST NOT 因
 // 庫的有無增減 rnd() 枚數(有無庫,共享序列逐位元同一條)。
-const megaGeo = (name) => { const g2 = name ? libGeo(name) : null; return g2 ? g2.clone() : null; };
+const megaGeo = (name) => {
+  const g2 = name && isRuntimeEligibleNatureKey(name) ? libGeo(name) : null;
+  return g2 ? g2.clone() : null;
+};
 // 輪替除數 MUST 由名冊長度推導(推導值 MUST NOT 手寫,§2.1):四個呼叫點原本各寫死 `% 3`,
 // 名冊一擴充,第 4 顆以後的節點就**永遠不會被取到** —— 檔案在、intake 綠、對照台有列,
 // 而遊戲裡一顆都沒出現過,沒有任何錯誤訊息。長度為 3 時逐位元同舊制。
@@ -4325,16 +4332,12 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW 
 /** OSM tags → 建物類型 */
 function buildingType(tags) {
   const b = tags.building, a = tags.amenity;
-  if (a === 'hospital' || b === 'hospital') return 'hospital';
-  if (a === 'school' || a === 'university' || a === 'college' || b === 'school' || b === 'university') return 'school';
-  if (b === 'train_station' || tags.railway === 'station' || a === 'bus_station') return 'station';
+  const native = nativeFunctionalKind(tags);
+  if (native) return native;
   if (a === 'place_of_worship') {
     const r = tags.religion;
     if (r === 'muslim') return 'mosque';
-    if (r === 'christian') return 'church';
-    return 'temple';
   }
-  if (tags.tourism === 'museum' || b === 'museum') return 'museum';
   if (tags.power === 'tower') return 'power';
   if (b === 'industrial' || b === 'factory' || b === 'warehouse') return 'factory';
   if (tags.historic === 'castle' || b === 'castle') return 'castle';
@@ -7900,21 +7903,20 @@ function buildRails(group, rails, terrain, center, dynamics, crossings) {
 // **零 `rnd()` 消耗**:形狀是 kind + opts 的純函式,同座標同結果(§2.3)。
 function vehGroup(kind, opts = {}) {
   const g = new THREE.Group();
-  for (const p of makeVehicle(kind, opts)) {
-    const [t, a, b, c, sg] = p.g;
-    const geo = t === 'box' ? new THREE.BoxGeometry(a, b, c)
-      : t === 'cyl' ? new THREE.CylinderGeometry(a, b, c, sg || 6)
-        : t === 'cone' ? new THREE.ConeGeometry(a, b, sg || 6)
-          : new THREE.IcosahedronGeometry(a, 0);
-    const m = new THREE.Mesh(geo, p.e
-      ? toonMat(p.c, { emissive: new THREE.Color(p.c), emissiveIntensity: 0.6 })
-      : toonMat(p.c));
-    const [px = 0, py = 0, pz = 0] = p.p || [];
-    m.position.set(px, py, pz);
-    const [rx = 0, ry = 0, rz = 0] = p.r || [];
-    if (rx || ry || rz) m.rotation.set(rx, ry, rz);
-    g.add(m);
-  }
+  const fit = opts.fit || { L: 4.4, W: 1.9, H: 1.55 };
+  const paintSeed = Number.isInteger(opts.paint) ? opts.paint : 0;
+  const atSeed = Math.round((opts.at?.[0] || 0) * 10) + Math.round((opts.at?.[2] || 0) * 10);
+  const cls = kind === 'railcar' ? ((opts.fit?.L || 0) > 10 ? 'bus' : 'cargo') : 'passenger';
+  const model = approvedVehicleModelAt((paintSeed ^ atSeed ^ Math.round(fit.L * 100)) | 0, cls);
+  const mesh = makeRuntimePartModel(model, { environment: true });
+  mesh.rotation.y = model.sceneBasis.rotationY;
+  const basis = new THREE.Group();
+  basis.add(mesh);
+  basis.scale.set(fit.L / model.dimensions.L, fit.H / model.dimensions.H, fit.W / model.dimensions.W);
+  basis.rotation.y = opts.ry || 0;
+  basis.position.fromArray(opts.at || [0, 0, 0]);
+  basis.userData.runtimePart = { key: model.key, version: model.version, family: 'vehicle' };
+  g.add(basis);
   return g;
 }
 
@@ -7928,7 +7930,7 @@ function makeTrain(metro) {
   const carL = 13.4, gap = 1.0;
   for (let c = 0; c < 3; c++) {
     // `railcar` 的鼻頭在 +x,而這一支的列車沿 **+z** 行駛(`trainDriver` 走 lookAt)
-    // ⇒ 整節車廂繞 y 轉 −90°,由 `makeVehicle` 的 `ry` 剛體處理(A27:MUST NOT 逐零件轉)
+    // ⇒ 整節車廂繞 y 轉 −90°,由核准零件組的 `ry` 剛體處理(A27:MUST NOT 逐零件轉)
     const car = vehGroup('railcar', {
       fit: { L: carL, W: 3.0, H: 4.3 }, paint: body, cabC: stripe,
       ry: -Math.PI / 2, at: [0, 0, c * (carL + gap)],
@@ -9532,72 +9534,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const tint = new THREE.Color();
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
-    // 整棟量體庫節點的**選取**:全圖一次定案,不是逐立面款各挑各的 —— 預算的除數是
-    // 「全圖挑中幾棟」(tri_budget families.building.mass.pick_n),逐款各挑會讓總數
-    // 隨款數翻倍。純函式:只讀 b.commercial/h/w/d/x/z(權威佈局資料)與**名冊裡的剖面**
-    // (純資料),**零 rnd() 消耗**(§2.3 / A4)。
-    // 排序尾巴帶 x/z 是為了跨客戶端逐位元同一組:等高的兩棟不能靠 sort 的實作穩定性決定。
-    // 兩桶**互斥**且各有各的排序:高層排「最高」、低矮排「足跡面積最大」(低矮建物在
-    // 畫面上最顯眼的是屋頂面積,不是高度)。等大時一律再以座標定序。
-    //
-    // ⚠ **2026-08-12:挑選與「庫載到了沒」解耦**。舊制的閘是 `if (ok.length)`(該族 GLB
-    //   載得到才挑)—— 那在碰撞柱還是單一方盒的年代無害(挑不挑中都登記同一根柱)。
-    //   這一輪碰撞柱改吃剖面之後它是**致命**的:載到庫的客戶端登記剖面柱、沒載到的登記
-    //   方盒柱 ⇒ 權威幾何跨客戶端分家,而畫面上只表現成「你說你打中了,我這邊沒掉血」
-    //   (A30 + §2.3)。⇒ 挑選只讀純資料,載入成敗只決定**畫出來的是網格還是保險絲**,
-    //   而保險絲(profGeo)與碰撞柱同源 ⇒ 兩台看到的與撞到的都一樣。
-    //
-    // 另一半是使用者這一輪的第 ① 條(尺寸):節點的自然平面長寬比是量出來的,把 0.276 的
-    // 薄板塞進正方形基地就是橫向拉 3.6 倍。⇒ 逐棟挑「拉伸最小」的那一顆(允許整顆轉 90°),
-    // **拉伸超過 `ASPECT_MAX` 就不換這一棟**(退回方盒,原則 6),再往名冊後面找下一棟。
+    // 全部一般建物都改吃通過零件台的正式 v5/v6 目錄；舊方盒只保留成目錄異常時的保險絲。
+    // 選款只讀座標、足跡與目錄純資料，零共享 rnd() 消耗；重複目標已在目錄縫由 v6 勝出。
     const massPick = new Map();
-    /**
-     * 這一棟該用名冊裡的哪一顆、要不要轉 90°、拉伸多少。純函式(零 rnd;`djAt` 是落點雜湊)。
-     * `rot` = 節點繞 Y 轉 90°(平面自然比取倒數)—— 名冊只有三顆,不給這個自由度的話
-     * 長寬比涵蓋範圍會剩下一半,密市區大半的長條基地一棟都換不到。
-     */
-    const fitNode = (key, b) => {
-      const n = bldLibN(key);
-      const T = Math.max(b.w, 1e-3) / Math.max(b.d, 1e-3);
-      let best = null;
-      for (let k = 0; k < n; k++) {
-        const p = bldProfile(key, k);
-        if (!p) continue;
-        for (const rot of [0, 1]) {
-          const A = rot ? p.hd / p.hw : p.hw / p.hd;
-          const dist = Math.abs(Math.log(T / A));
-          if (!best || dist < best.dist) best = { k, rot, dist, prof: p };
-        }
-      }
-      if (!best || Math.exp(best.dist) > MASS.ASPECT_MAX) return null;
-      // 同分帶內再由落點雜湊挑一顆:純取最小值的話同一種基地永遠拿到同一顆
-      const pool = [];
-      for (let k = 0; k < n; k++) {
-        const p = bldProfile(key, k);
-        if (!p) continue;
-        for (const rot of [0, 1]) {
-          const A = rot ? p.hd / p.hw : p.hw / p.hd;
-          const d = Math.abs(Math.log(T / A));
-          if (Math.exp(d) <= Math.exp(best.dist) * MASS.PICK_TOL) pool.push({ k, rot, prof: p });
-        }
-      }
-      const pick = pool[Math.floor(djAt(b.x + 7.1, b.z + 3.3) * pool.length) % pool.length] || best;
-      return { key, k: pick.k, rot: pick.rot, prof: pick.prof };
-    };
-    const take = (key, list, n) => {
-      let taken = 0;
-      for (const b of list) {
-        if (taken >= n) break;
-        const f = fitNode(key, b);
-        if (!f) continue;                       // 拉伸過頭 ⇒ 這一棟維持方盒,額度留給下一棟
-        massPick.set(b, f);
-        taken++;
-      }
-    };
-    take('mass', generic.filter((b) => b.commercial && b.h > MASS.MIN_H)
-      .sort((p, q) => q.h - p.h || p.x - q.x || p.z - q.z), MASS.PICK_N);
-    take('masslow', generic.filter((b) => !b.commercial && b.h <= MASS.MIN_H)
-      .sort((p, q) => q.w * q.d - p.w * p.d || p.x - q.x || p.z - q.z), MASS.PICK_N_LOW);
+    for (const b of generic) {
+      const fit = fitApprovedBuilding(b);
+      if (fit) massPick.set(b, fit);
+    }
     /**
      * 挑中的那一棟:**把網格撐滿基地**的逐實例縮放(使用者這一輪第 ① 條的兌現點)。
      * 舊制直接拿 (w, h, d) 縮單位方盒,而節點只佔單位盒的一部分(實測 hw 0.13~0.42)——
@@ -9655,6 +9598,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       return okBox.find((k) => y >= k.y0 && y <= k.y1)
         || [...okBox].reverse().find((k) => k.y1 <= y) || okBox[0];
     };
+    const approvedBatches = new Map();
     for (const commercial of [false, true]) {
       const cat = commercial ? 'commercial' : 'residential';
       // 立面款一個外迴圈(款只管窗長什麼樣);**列數逐件**再分一次桶(見 facadeRows:
@@ -9945,8 +9889,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             boxRows.get(rw).push(t);
             continue;
           }
-          const bk = `${t.lib.key}#${t.lib.k}`;
-          if (!libRows.has(bk)) libRows.set(bk, { key: t.lib.key, k: t.lib.k, rows: [] });
+          const bk = t.lib.entry.key;
+          if (!libRows.has(bk)) libRows.set(bk, { entry: t.lib.entry, rows: [] });
           libRows.get(bk).rows.push(t);
         }
         // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
@@ -9955,107 +9899,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           emitMass(rs, new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
             [wall, wall, roof, roof, wall, wall], rs.length));
         }
-        // 斜頂桶(`masslow`)**不吃這一款的立面貼圖** —— 見 FACADES_PITCHED 檔頭:庫節點是
-        // 單一材質群組,方盒那條路的屋頂材質對它不生效 ⇒ 玻璃帷幕會直接貼到斜屋頂上。
-        // 屋頂本身走**同一張貼圖的底部那一條**(`MASS.UVB.masslow.roof`;節點的朝上面被
-        // `--uvbands` 壓進去)⇒ 一個材質群組同時供牆與屋頂,draw call 一格都沒有多。
-        // 材質逐款建一次(貼圖本身有 `_facadeCache`),款式由**落點雜湊**選(零 rnd)。
-        // 列數同樣逐件取:低矮那一桶的高度跨到 MASS.MIN_H(55m),一款吃到底就是
-        // 「穀倉三層、五十米的教堂也三層」= 這一輪要修的那個東西。
-        const pitchMat = new Map();
-        const pitchWall = (t) => {
-          const pi = Math.floor(djAt(t.x + 3.7, t.z + 9.1) * FACADES_PITCHED.length) % FACADES_PITCHED.length;
-          const rw = rowsOf(t);
-          const mk = `${pi}|${rw}`;
-          if (!pitchMat.has(mk)) {
-            const pd = FACADES_PITCHED[pi];
-            const pf = facadeTex(`${pd.key}r${rw}`, pd.cols, rw, pd.winC, pd.lit, pd.style, pd.wall,
-              pd.roof, pd.rf, MASS.UVB.masslow, pd.win);
-            pitchMat.set(mk, bmat(0xffffff, {
-              map: pf.map,
-              emissiveMap: pf.emissiveMap,
-              emissive: new THREE.Color(night ? 0xffb45e : 0x000000),
-              emissiveIntensity: night ? 0.4 : 0,
-            }));
-          }
-          return pitchMat.get(mk);
-        };
-        /** 斜頂桶那一件的窗格網格(欄數 = 款自帶、列數逐件推導;與 `pitchWall` 同一組鍵) */
-        const pitchGrid = (t) => ({
-          cols: FACADES_PITCHED[Math.floor(djAt(t.x + 3.7, t.z + 9.1) * FACADES_PITCHED.length) % FACADES_PITCHED.length].cols,
-          rows: rowsOf(t),
-        });
-        /**
-         * **窗格貼齊面板**(2026-08-13 使用者「平面區域太小的話不渲染窗戶,窗戶會被裁切掉
-         * 的時候也不渲染」)。規則與量測全在 `wallpanel.js`(離線工具吃同一支);這裡只做
-         * 兩件事:把節點的面板切一次(逐節點快取)、逐材質桶烤一份對齊過的 uv。
-         *
-         * **幾何共用、只換 uv**:position / normal / index 三個屬性直接沿用同一份
-         * `BufferAttribute`(不是 clone)⇒ 記憶體只多一份 uv,`InstancedMesh` 的分組、
-         * draw call、三角形數全部逐位元不動。
-         */
-        const panelCache = new Map(), alignCache = new Map();
-        const alignedGeo = (geo, key, grid) => {
-          if (!geo?.attributes?.uv || !grid) return geo;
-          const ck = `${key}|${geo.uuid}|${grid.cols}|${grid.rows}`;
-          if (alignCache.has(ck)) return alignCache.get(ck);
-          const pos = geo.attributes.position.array;
-          const idx = geo.index ? geo.index.array : null;
-          if (!idx) return geo;                       // 非索引幾何不在這條路上
-          if (!panelCache.has(geo.uuid)) {
-            const r = wallPanels(pos, idx, MASS.PANEL);
-            // 跨面板的共用頂點先拆(見 wallpanel.js 檔頭 ⚠):不拆的話面板邊界上的那幾個
-            // 三角形會被另一片的 UV 拉歪,長出來的正是「被裁一半的窗」
-            panelCache.set(geo.uuid, {
-              ...r,
-              ...splitByPanel({ pos, nor: geo.attributes.normal?.array, uv: geo.attributes.uv.array }, idx, r.faceOf),
-            });
-          }
-          const c = panelCache.get(geo.uuid);
-          const uvNew = panelGridUV(c.pos, c.idx, c.uv, c.panels, c.faceOf, {
-            cols: grid.cols, rows: grid.rows,
-            roof: MASS.UVB[key].roof, plain: MASS.UVB[key].plain,
-            hx: Math.max(c.hi[0] - c.lo[0], c.hi[2] - c.lo[2]) / 2, hy: (c.hi[1] - c.lo[1]) / 2,
-          });
-          const g2 = new THREE.BufferGeometry();
-          // 沒有頂點要拆(`split === 0`)⇒ position/normal/index 沿用**同一份**屬性,
-          // 只多一份 uv;要拆才各長一點(三角形數與 draw call 兩種情況都不變)
-          g2.setAttribute('position', c.split ? new THREE.Float32BufferAttribute(c.pos, 3) : geo.attributes.position);
-          if (geo.attributes.normal) g2.setAttribute('normal', c.split && c.nor ? new THREE.Float32BufferAttribute(c.nor, 3) : geo.attributes.normal);
-          g2.setAttribute('uv', new THREE.Float32BufferAttribute(uvNew, 2));
-          g2.setIndex(c.split ? new THREE.BufferAttribute(c.idx, 1) : geo.index);
-          g2.boundingSphere = geo.boundingSphere;
-          g2.boundingBox = geo.boundingBox;
-          alignCache.set(ck, g2);
-          return g2;
-        };
-        // 先把「哪幾棟 × 哪個材質 × 哪一顆節點」攤平,**桶建構器仍只有一個呼叫點**
-        // (稽核釘住 4 處;分兩處呼叫等於這一桶有兩條生成路)。同一顆節點的那幾棟可能
-        // 分到不同的斜頂款 ⇒ 逐款再分一次桶,仍在 draw call 上界內(每一棟至多一個 mesh,
-        // 而挑中的總數就是 pick_n)。
-        // **材質桶就是窗格網格桶**(2026-08-13):窗格對齊要知道「這一桶的貼圖有幾欄幾列」,
-        // 而那正好是 `wallOf(rows)` / 斜頂款的鍵 ⇒ 分組一格不動,只多記一份 `grid`。
-        const libEmit = [];
-        for (const { key, k, rows } of libRows.values()) {
-          const byMat = new Map();
-          for (const t of rows) {
-            // 兩桶都吃**三帶**(2026-08-12):高層那一桶原本刻意共用方盒的無帶貼圖,而那
-            // 正是「窗格印在退縮頂的斜切面與尖塔上」的成因(使用者那一輪的第 ③ 條)。
-            const m = key === 'masslow' ? pitchWall(t) : wallOf(rowsOf(t), true);
-            if (!byMat.has(m)) byMat.set(m, { rows: [], grid: key === 'masslow' ? pitchGrid(t) : { cols: fd.cols, rows: rowsOf(t) } });
-            byMat.get(m).rows.push(t);
-          }
-          for (const [m, e] of byMat) libEmit.push({ rows: e.rows, mat: m, k, key, grid: e.grid });
-        }
-        for (const g of libEmit) {
-          const im = buildBldBucket.mass(g.rows.length, g.mat, g.k, g.key);
-          // **窗格貼齊面板**(使用者「平面區域太小的話不渲染窗戶,窗戶會被裁切掉的時候也不
-          // 渲染」)—— 幾何/材質/instance 分組全部不動,只換一份對齊過的 uv 屬性。
-          im.geometry = alignedGeo(im.geometry, g.key, g.grid);
-          emitMass(g.rows, im);
+        // 同一正式模型跨住宅/商辦/立面款先彙總，最後每款只發一顆 InstancedMesh。
+        for (const { entry, rows } of libRows.values()) {
+          if (!approvedBatches.has(entry.key)) approvedBatches.set(entry.key, { entry, rows: [] });
+          approvedBatches.get(entry.key).rows.push(...rows);
         }
       }
     }
+    for (const { entry, rows } of approvedBatches.values()) group.add(makeApprovedBuildingBatch(entry, rows));
     if (cornices.length) {
       // 簷口帶:比主體大一圈的薄板,tint = 該立面款的屋頂色(與屋頂同系 = 頂緣描一筆深色)
       const cm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0xffffff, { wash: 0.5 }), cornices.length);

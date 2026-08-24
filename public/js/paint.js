@@ -248,6 +248,14 @@ const PATTERNS = {
 
 export const PAINT_PATTERNS = Object.keys(PATTERNS);
 
+// 非玩家陣營單位共用識別語彙：圖樣與明暗階同時區分四個陣營，功能種類另由幾何生成器負責。
+export const FACTION_LIVERIES = Object.freeze({
+  SWARM: Object.freeze({ paint: 'totem', tone: 'dark' }),
+  STEEL: Object.freeze({ paint: 'minimal', tone: 'light' }),
+  GUER: Object.freeze({ paint: 'camo', tone: 'dark' }),
+  MILI: Object.freeze({ paint: 'flag', tone: 'light' }),
+});
+
 /**
  * 生成(或取快取)花紋貼圖;seed 取 hue → 同角色每次開局圖樣一致(不用 Math.random)。
  * single 徽記/國旗塗裝用 ClampToEdge:貼花窗外一律取透明邊 → 不重複、露出純色裝甲。
@@ -494,4 +502,14 @@ export function paintUnit(root, vis, side, tone = 'light') {
     applyPaint(m, { tex, matrix: M, scale, face: null });
   });
   return root;
+}
+
+/** 陣營小兵／碉堡／塔／主堡塗裝；不得用於玩家操控機甲。 */
+export function paintFactionUnit(root, side, kind) {
+  const livery = FACTION_LIVERIES[side] || FACTION_LIVERIES.STEEL;
+  root.userData.factionLivery = { side, kind, pattern: livery.paint };
+  return paintUnit(root, {
+    hue: SIDES[side]?.color ?? 0x99a3ad,
+    paint: livery.paint,
+  }, side, livery.tone);
 }

@@ -33,6 +33,7 @@
 import * as THREE from 'three';
 import { toonMat, envMat, bakeContactAO } from './toon.js';
 import { mulberry32 } from './rng.js';
+import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
 import { libGeo } from './partlib.js';
 import { makeVehicle } from './vehicles.js';
 
@@ -445,7 +446,10 @@ const _geo = (spec) => {
   const [t, a, b, c] = spec;
   // AI 零件庫:查無此名 ⇒ 原 primitive 描述子(spec[2])就是保險絲,MUST 留著。
   // `.clone()` 不可省 —— buildBeacon 會就地 `applyMatrix4`,共用庫幾何被改一次就全壞。
-  if (t === 'lib') { const g = libGeo(a); return g ? g.clone() : _geo(spec[2]); }
+  if (t === 'lib') {
+    const g = isRuntimeEligibleNatureKey(a) ? libGeo(a) : null;
+    return g ? g.clone() : _geo(spec[2]);
+  }
   if (t === 'box') return new THREE.BoxGeometry(a, b, c);
   if (t === 'cyl') return new THREE.CylinderGeometry(a, b, c, spec[4] || 6);
   if (t === 'cone') return new THREE.ConeGeometry(a, b, spec[3] || 6);

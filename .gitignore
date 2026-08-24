@@ -56,4 +56,6 @@ tools/ai3d/__pycache__/
 out/image_cache/
 out/targets/
 out/yolo_features/
+out/yolo_depth/
+out/yolo_masks/
 

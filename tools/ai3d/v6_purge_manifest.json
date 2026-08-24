@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "stable": "building/acunit_wc_8061724",
+      "reviewKey": "building/acunit_wc_8061724_618600b3_v6",
+      "source": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\acunit\\wc_8061724.jpg",
+      "note": null,
+      "purgedAt": "2026-08-23T19:57:43.765Z"
+    },
+    {
+      "stable": "building/balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8",
+      "reviewKey": "building/balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_dc5aaa76_v6",
+      "source": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\balcony\\ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8.jpg",
+      "note": null,
+      "purgedAt": "2026-08-23T19:57:43.768Z"
+    },
+    {
+      "stable": "building/bld_adobe_ov_a17c17a9-526b-42fa-96ec-d0fc87203636",
+      "reviewKey": "building/bld_adobe_ov_a17c17a9-526b-42fa-96ec-d0fc87203636_786ce491_v6",
+      "source": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_adobe\\ov_a17c17a9-526b-42fa-96ec-d0fc87203636.jpg",
+      "note": null,
+      "purgedAt": "2026-08-23T19:57:43.768Z"
+    },
+    {
+      "stable": "building/bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284",
+      "reviewKey": "building/bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_91a31eb5_v6",
+      "source": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_apartment\\ov_3f2c5daa-8615-4849-b459-ecfb801e2284.jpg",
+      "note": null,
+      "purgedAt": "2026-08-23T19:57:43.768Z"
+    },
+    {
+      "stable": "building/bld_apartment_ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1",
+      "reviewKey": "building/bld_apartment_ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1_70ccd154_v6",
+      "source": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_apartment\\ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1.jpg",
+      "note": null,
+      "purgedAt": "2026-08-23T19:57:43.768Z"
+    },
+    {
+      "stable": "building/bld_apartment_ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d",
+      "reviewKey": "building/bld_apartment_ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d_41b9d034_v6",
+      "source": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_apartment\\ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d.jpg",
+      "note": null,
+      "purgedAt": "2026-08-23T19:57:43.768Z"
+    },
+    {
+      "stable": "building/bld_civic_ov_483d72a6-b9d7-4103-b598-90de41fe2719",
+      "reviewKey": "building/bld_civic_ov_483d72a6-b9d7-4103-b598-90de41fe2719_12e7b7e5_v6",
+      "source": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_civic\\ov_483d72a6-b9d7-4103-b598-90de41fe2719.jpg",
+      "note": null,
+      "purgedAt": "2026-08-23T19:57:43.768Z"
+    },
+    {
+      "stable": "building/dormer_wc_17456298",
+      "reviewKey": "building/dormer_wc_17456298_84b09ced_v6",
+      "source": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\dormer\\wc_17456298.jpg",
+      "note": null,
+      "purgedAt": "2026-08-23T19:57:43.768Z"
+    }
+  ]
+}

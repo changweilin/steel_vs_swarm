@@ -237,6 +237,15 @@ only trust a timing you can reproduce across several alternating A/B runs in one
 session. Know your most expensive fixed cameras (a high vantage can cost 2× the ground
 views because nothing is culled) before blaming a change for a regression measured there.
 
+When a GPU-time claim matters, use `EXT_disjoint_timer_query_webgl2` around the exact pass or
+frame under test. Poll query availability on later frames, discard every sample while the GPU
+disjoint flag is set, warm up shader compilation first, and compare alternating A/B samples in
+the same page session. Never block waiting for a result; that turns an asynchronous measurement
+into a pipeline stall. Keep draw calls, resident geometry bytes and admitted vertex counts beside
+the timer result so a faster frame cannot hide a large memory regression.
+
+Method source: `winchxyz/bikini-bottom` development performance instrumentation.
+
 ---
 
 ## Order of operations

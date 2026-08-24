@@ -1,8 +1,8 @@
 {
   "version": 6,
   "verStr": "v6",
-  "generated_at": "2026-08-21T10:47:16.840Z",
-  "total_objects": 1313,
+  "generated_at": "2026-08-23T19:50:05.555Z",
+  "total_objects": 1303,
   "families": [
     "building",
     "landmark",
@@ -27751,42 +27751,6 @@
       "outputDir": "out/3d_data/building/dormer/building_dormer_wc_14646619_v6"
     },
     {
-      "id": "building_dormer_wc_17456298_v6",
-      "key": "building/dormer_wc_17456298_84b09ced_v6",
-      "family": "building",
-      "subpart": "dormer",
-      "style": "traditional_dormer",
-      "symmetryMode": "asymmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/dormer/wc_17456298.jpg",
-      "bounds": {
-        "min": [
-          -2.1216,
-          -0.121,
-          -2
-        ],
-        "max": [
-          2.1216,
-          4.121,
-          2
-        ],
-        "size": [
-          4.243,
-          4.242,
-          4
-        ],
-        "rMax": 2.916,
-        "triangles": 72,
-        "vertices": 46
-      },
-      "spec": {
-        "style": "traditional_dormer"
-      },
-      "triangles": 72,
-      "outputDir": "out/3d_data/building/dormer/building_dormer_wc_17456298_v6"
-    },
-    {
       "id": "building_dwg_civic_ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e_v6",
       "key": "building/dwg_civic_ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e_209a732a_v6",
       "family": "building",
@@ -29405,42 +29369,6 @@
       },
       "triangles": 556,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_0626fa11-e77d-47dd-a38c-0d5441425c53_v6"
-    },
-    {
-      "id": "vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6",
-      "key": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_492d571e_v6",
-      "family": "vehicle",
-      "subpart": "car",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/car/0a7e31437a6be0675bc9cd13c0b401b1.jpg",
-      "bounds": {
-        "min": [
-          -1.2,
-          0.1,
-          -2.22
-        ],
-        "max": [
-          1.2,
-          1.4,
-          2.205
-        ],
-        "size": [
-          2.4,
-          1.3,
-          4.425
-        ],
-        "rMax": 2.524,
-        "triangles": 720,
-        "vertices": 412
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 720,
-      "outputDir": "out/3d_data/vehicle/car/vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6"
     },
     {
       "id": "vehicle_car_161060143500_v6",
@@ -31889,42 +31817,6 @@
       },
       "triangles": 484,
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_20160119121809449_v6"
-    },
-    {
-      "id": "vehicle_heavy_2021070912244646524316_v6",
-      "key": "vehicle/heavy_2021070912244646524316_51ab54a3_v6",
-      "family": "vehicle",
-      "subpart": "heavy",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/heavy/2021070912244646524316.jpg",
-      "bounds": {
-        "min": [
-          -1.75,
-          0,
-          -5.61
-        ],
-        "max": [
-          1.75,
-          3.2,
-          5.61
-        ],
-        "size": [
-          3.5,
-          3.2,
-          11.22
-        ],
-        "rMax": 5.877,
-        "triangles": 400,
-        "vertices": 232
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 400,
-      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_2021070912244646524316_v6"
     },
     {
       "id": "vehicle_heavy_20250917103436615_v6",
@@ -40983,80 +40875,6 @@
       "outputDir": "out/3d_data/building/mass/building_mass_14beauty-well-ugly-slide-4QC3-master1050_v6"
     },
     {
-      "id": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6",
-      "key": "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "Modern Suburban House",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
-      "bounds": {
-        "min": [
-          -7.5,
-          0,
-          -4.5
-        ],
-        "max": [
-          7.5,
-          7.75,
-          4.5
-        ],
-        "size": [
-          15,
-          7.75,
-          9
-        ],
-        "rMax": 8.746,
-        "triangles": 228,
-        "vertices": 154
-      },
-      "spec": {
-        "style": "Modern Suburban House"
-      },
-      "triangles": 228,
-      "outputDir": "out/3d_data/building/mass/building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6"
-    },
-    {
-      "id": "building_mass_160991898108355807.jpg_900x.water3_v6",
-      "key": "building/mass_160991898108355807.jpg!900x.water3_9077e646_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "modern_building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/160991898108355807.jpg!900x.water3.jpg",
-      "bounds": {
-        "min": [
-          -9.5,
-          0,
-          -5.1
-        ],
-        "max": [
-          7.1,
-          27.4,
-          5.3776
-        ],
-        "size": [
-          16.6,
-          27.4,
-          10.478
-        ],
-        "rMax": 10.782,
-        "triangles": 504,
-        "vertices": 325
-      },
-      "spec": {
-        "style": "modern_building"
-      },
-      "triangles": 504,
-      "outputDir": "out/3d_data/building/mass/building_mass_160991898108355807.jpg_900x.water3_v6"
-    },
-    {
       "id": "building_mass_162562917953_0_v6",
       "key": "building/mass_162562917953~0_156fa230_v6",
       "family": "building",
@@ -41279,80 +41097,6 @@
       "outputDir": "out/3d_data/building/mass/building_mass_169890929387866207.jpg_338x252_v6"
     },
     {
-      "id": "building_mass_171860464927014009.jpg_900x.water3_v6",
-      "key": "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "modern_building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/171860464927014009.jpg!900x.water3.jpg",
-      "bounds": {
-        "min": [
-          -7.5,
-          0,
-          -13.5
-        ],
-        "max": [
-          15,
-          23.25,
-          3.95
-        ],
-        "size": [
-          22.5,
-          23.25,
-          17.45
-        ],
-        "rMax": 15.511,
-        "triangles": 284,
-        "vertices": 190
-      },
-      "spec": {
-        "style": "modern_building"
-      },
-      "triangles": 284,
-      "outputDir": "out/3d_data/building/mass/building_mass_171860464927014009.jpg_900x.water3_v6"
-    },
-    {
-      "id": "building_mass_173407398147386206.jpg_750x_v6",
-      "key": "building/mass_173407398147386206.jpg!750x_a1c88b78_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "Modern Architecture",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/173407398147386206.jpg!750x.jpg",
-      "bounds": {
-        "min": [
-          -7.2,
-          0,
-          -6.2
-        ],
-        "max": [
-          7.2,
-          32.8,
-          6.3
-        ],
-        "size": [
-          14.4,
-          32.8,
-          12.5
-        ],
-        "rMax": 9.567,
-        "triangles": 352,
-        "vertices": 234
-      },
-      "spec": {
-        "style": "Modern Architecture"
-      },
-      "triangles": 352,
-      "outputDir": "out/3d_data/building/mass/building_mass_173407398147386206.jpg_750x_v6"
-    },
-    {
       "id": "building_mass_174893026464574001.jpg_900x.water3_0_v6",
       "key": "building/mass_174893026464574001.jpg!900x.water3~0_ca992fed_v6",
       "family": "building",
@@ -41499,43 +41243,6 @@
       },
       "triangles": 88,
       "outputDir": "out/3d_data/building/mass/building_mass_175437636541282008.jpg_900x.water3_1_v6"
-    },
-    {
-      "id": "building_mass_176784033021147409.jpg_900x.water3_v6",
-      "key": "building/mass_176784033021147409.jpg!900x.water3_8693d9fc_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "modern_building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/176784033021147409.jpg!900x.water3.jpg",
-      "bounds": {
-        "min": [
-          -7,
-          0,
-          -5
-        ],
-        "max": [
-          7,
-          19.45,
-          5.825
-        ],
-        "size": [
-          14,
-          19.45,
-          10.825
-        ],
-        "rMax": 9.107,
-        "triangles": 348,
-        "vertices": 230
-      },
-      "spec": {
-        "style": "modern_building"
-      },
-      "triangles": 348,
-      "outputDir": "out/3d_data/building/mass/building_mass_176784033021147409.jpg_900x.water3_v6"
     },
     {
       "id": "building_mass_178670843535945_P35065317_0_v6",
@@ -41760,43 +41467,6 @@
       "outputDir": "out/3d_data/building/mass/building_mass_about-06_2_orig_v6"
     },
     {
-      "id": "building_acunit_wc_8061724_v6",
-      "key": "building/acunit_wc_8061724_ad9ef8e2_v6",
-      "family": "building",
-      "subpart": "acunit",
-      "style": "building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/acunit/wc_8061724.jpg",
-      "bounds": {
-        "min": [
-          -2.4317,
-          0,
-          -1.4
-        ],
-        "max": [
-          0.85,
-          3.9722,
-          0.4
-        ],
-        "size": [
-          3.282,
-          3.972,
-          1.8
-        ],
-        "rMax": 2.806,
-        "triangles": 252,
-        "vertices": 160
-      },
-      "spec": {
-        "style": "building"
-      },
-      "triangles": 252,
-      "outputDir": "out/3d_data/building/acunit/building_acunit_wc_8061724_v6"
-    },
-    {
       "id": "building_mass_admin_51_1680233914_9ARlI77I3P.jpg_t1000_v6",
       "key": "building/mass_admin_51_1680233914_9ARlI77I3P.jpg!t1000_39d8c43c_v6",
       "family": "building",
@@ -41908,117 +41578,6 @@
       "outputDir": "out/3d_data/building/mass/building_mass_b3e379243fd30275e809d93e81d22c8d_v6"
     },
     {
-      "id": "building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6",
-      "key": "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_22aa2c4c_v6",
-      "family": "building",
-      "subpart": "balcony",
-      "style": "Modern Brutalist Architecture",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
-      "bounds": {
-        "min": [
-          -5.1,
-          0,
-          -3
-        ],
-        "max": [
-          6.1,
-          11,
-          5.1
-        ],
-        "size": [
-          11.2,
-          11,
-          8.1
-        ],
-        "rMax": 7.951,
-        "triangles": 144,
-        "vertices": 98
-      },
-      "spec": {
-        "style": "Modern Brutalist Architecture"
-      },
-      "triangles": 144,
-      "outputDir": "out/3d_data/building/balcony/building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6"
-    },
-    {
-      "id": "building_balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_0_v6",
-      "key": "building/balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8~0_fec47d0e_v6",
-      "family": "building",
-      "subpart": "balcony",
-      "style": "modern_architecture",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/balcony/ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8.jpg",
-      "bounds": {
-        "min": [
-          -2.41,
-          0,
-          -2
-        ],
-        "max": [
-          2.41,
-          5,
-          3.53
-        ],
-        "size": [
-          4.82,
-          5,
-          5.53
-        ],
-        "rMax": 4.274,
-        "triangles": 132,
-        "vertices": 88
-      },
-      "spec": {
-        "style": "modern_architecture"
-      },
-      "triangles": 132,
-      "outputDir": "out/3d_data/building/balcony/building_balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_0_v6"
-    },
-    {
-      "id": "building_balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_1_v6",
-      "key": "building/balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8~1_de1b9190_v6",
-      "family": "building",
-      "subpart": "balcony",
-      "style": "modern_architecture",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/balcony/ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8.jpg",
-      "bounds": {
-        "min": [
-          -4.2,
-          -1,
-          -4.2
-        ],
-        "max": [
-          5,
-          22.5,
-          5
-        ],
-        "size": [
-          9.2,
-          23.5,
-          9.2
-        ],
-        "rMax": 7.071,
-        "triangles": 348,
-        "vertices": 232
-      },
-      "spec": {
-        "style": "modern_architecture"
-      },
-      "triangles": 348,
-      "outputDir": "out/3d_data/building/balcony/building_balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_1_v6"
-    },
-    {
       "id": "building_bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_v6",
       "key": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_c3fd0417_v6",
       "family": "building",
@@ -42056,376 +41615,6 @@
       "outputDir": "out/3d_data/building/bld_adobe/building_bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_v6"
     },
     {
-      "id": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6",
-      "key": "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_7505851c_v6",
-      "family": "building",
-      "subpart": "bld_adobe",
-      "style": "building/bld_adobe",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg",
-      "bounds": {
-        "min": [
-          -6.3,
-          0,
-          -2.85
-        ],
-        "max": [
-          6.3,
-          5,
-          2.85
-        ],
-        "size": [
-          12.6,
-          5,
-          5.7
-        ],
-        "rMax": 6.915,
-        "triangles": 92,
-        "vertices": 62
-      },
-      "spec": {
-        "style": "building/bld_adobe"
-      },
-      "triangles": 92,
-      "outputDir": "out/3d_data/building/bld_adobe/building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6"
-    },
-    {
-      "id": "building_bld_adobe_ov_a17c17a9-526b-42fa-96ec-d0fc87203636_v6",
-      "key": "building/bld_adobe_ov_a17c17a9-526b-42fa-96ec-d0fc87203636_1052c786_v6",
-      "family": "building",
-      "subpart": "bld_adobe",
-      "style": "building",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_adobe/ov_a17c17a9-526b-42fa-96ec-d0fc87203636.jpg",
-      "bounds": {
-        "min": [
-          -2.1,
-          0,
-          -1.35
-        ],
-        "max": [
-          3.25,
-          3.1168,
-          1.35
-        ],
-        "size": [
-          5.35,
-          3.117,
-          2.7
-        ],
-        "rMax": 3.519,
-        "triangles": 132,
-        "vertices": 82
-      },
-      "spec": {
-        "style": "building"
-      },
-      "triangles": 132,
-      "outputDir": "out/3d_data/building/bld_adobe/building_bld_adobe_ov_a17c17a9-526b-42fa-96ec-d0fc87203636_v6"
-    },
-    {
-      "id": "building_bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_v6",
-      "key": "building/bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_cdaed869_v6",
-      "family": "building",
-      "subpart": "bld_apartment",
-      "style": "modern_apartment",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_apartment/ov_3f2c5daa-8615-4849-b459-ecfb801e2284.jpg",
-      "bounds": {
-        "min": [
-          -6.5,
-          -1,
-          -4.5
-        ],
-        "max": [
-          6.5,
-          14,
-          4.9
-        ],
-        "size": [
-          13,
-          15,
-          9.4
-        ],
-        "rMax": 8.14,
-        "triangles": 164,
-        "vertices": 110
-      },
-      "spec": {
-        "style": "modern_apartment"
-      },
-      "triangles": 164,
-      "outputDir": "out/3d_data/building/bld_apartment/building_bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_v6"
-    },
-    {
-      "id": "building_bld_apartment_ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1_v6",
-      "key": "building/bld_apartment_ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1_7210b543_v6",
-      "family": "building",
-      "subpart": "bld_apartment",
-      "style": "building/bld_apartment",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_apartment/ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1.jpg",
-      "bounds": {
-        "min": [
-          -12.6,
-          0,
-          -7.5
-        ],
-        "max": [
-          12.6,
-          59.95,
-          7.65
-        ],
-        "size": [
-          25.2,
-          59.95,
-          15.15
-        ],
-        "rMax": 14.741,
-        "triangles": 156,
-        "vertices": 106
-      },
-      "spec": {
-        "style": "building/bld_apartment"
-      },
-      "triangles": 156,
-      "outputDir": "out/3d_data/building/bld_apartment/building_bld_apartment_ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1_v6"
-    },
-    {
-      "id": "building_bld_apartment_ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d_v6",
-      "key": "building/bld_apartment_ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d_be3f5ec4_v6",
-      "family": "building",
-      "subpart": "bld_apartment",
-      "style": "architectural",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_apartment/ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d.jpg",
-      "bounds": {
-        "min": [
-          -40,
-          -0.4,
-          -30
-        ],
-        "max": [
-          40,
-          40,
-          30
-        ],
-        "size": [
-          80,
-          40.4,
-          60
-        ],
-        "rMax": 50,
-        "triangles": 204,
-        "vertices": 136
-      },
-      "spec": {
-        "style": "architectural"
-      },
-      "triangles": 204,
-      "outputDir": "out/3d_data/building/bld_apartment/building_bld_apartment_ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d_v6"
-    },
-    {
-      "id": "building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6",
-      "key": "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_725f9c8f_v6",
-      "family": "building",
-      "subpart": "bld_barn",
-      "style": "building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.jpg",
-      "bounds": {
-        "min": [
-          -6.1,
-          0,
-          -2.7
-        ],
-        "max": [
-          5.7,
-          5.5,
-          3.75
-        ],
-        "size": [
-          11.8,
-          5.5,
-          6.45
-        ],
-        "rMax": 6.823,
-        "triangles": 180,
-        "vertices": 122
-      },
-      "spec": {
-        "style": "building"
-      },
-      "triangles": 180,
-      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6"
-    },
-    {
-      "id": "building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6",
-      "key": "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_b322f82c_v6",
-      "family": "building",
-      "subpart": "bld_barn",
-      "style": "architectural",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg",
-      "bounds": {
-        "min": [
-          -4.3359,
-          0,
-          -5.2
-        ],
-        "max": [
-          4.3359,
-          6.5781,
-          5.2
-        ],
-        "size": [
-          8.672,
-          6.578,
-          10.4
-        ],
-        "rMax": 6.771,
-        "triangles": 76,
-        "vertices": 52
-      },
-      "spec": {
-        "style": "architectural"
-      },
-      "triangles": 76,
-      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6"
-    },
-    {
-      "id": "building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6",
-      "key": "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_a52d3ee5_v6",
-      "family": "building",
-      "subpart": "bld_chalet",
-      "style": "Alpine Chalet Architecture",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg",
-      "bounds": {
-        "min": [
-          -4.6,
-          -0.25,
-          -3.5
-        ],
-        "max": [
-          11,
-          9.2,
-          4.15
-        ],
-        "size": [
-          15.6,
-          9.45,
-          7.65
-        ],
-        "rMax": 11.757,
-        "triangles": 180,
-        "vertices": 122
-      },
-      "spec": {
-        "style": "Alpine Chalet Architecture"
-      },
-      "triangles": 180,
-      "outputDir": "out/3d_data/building/bld_chalet/building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6"
-    },
-    {
-      "id": "building_bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_v6",
-      "key": "building/bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_d78a5af4_v6",
-      "family": "building",
-      "subpart": "bld_church",
-      "style": "historical_church",
-      "symmetryMode": "symmetric",
-      "similarityScore": 95,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_church/ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6.jpg",
-      "bounds": {
-        "min": [
-          -3.2723,
-          0,
-          -5.2
-        ],
-        "max": [
-          3.2723,
-          11,
-          6.8
-        ],
-        "size": [
-          6.545,
-          11,
-          12
-        ],
-        "rMax": 7.546,
-        "triangles": 296,
-        "vertices": 202
-      },
-      "spec": {
-        "style": "historical_church"
-      },
-      "triangles": 296,
-      "outputDir": "out/3d_data/building/bld_church/building_bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_v6"
-    },
-    {
-      "id": "building_bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_v6",
-      "key": "building/bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_b18be66c_v6",
-      "family": "building",
-      "subpart": "bld_church",
-      "style": "historical_church",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_church/ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991.jpg",
-      "bounds": {
-        "min": [
-          -7,
-          0,
-          -4.2
-        ],
-        "max": [
-          7,
-          24.25,
-          6
-        ],
-        "size": [
-          14,
-          24.25,
-          10.2
-        ],
-        "rMax": 9.22,
-        "triangles": 510,
-        "vertices": 312
-      },
-      "spec": {
-        "style": "historical_church"
-      },
-      "triangles": 510,
-      "outputDir": "out/3d_data/building/bld_church/building_bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_v6"
-    },
-    {
       "id": "building_bld_church_ov_db21239b-6655-41c9-a7c0-e86ecceb82a6_v6",
       "key": "building/bld_church_ov_db21239b-6655-41c9-a7c0-e86ecceb82a6_300e4027_v6",
       "family": "building",
@@ -42461,43 +41650,6 @@
       },
       "triangles": 260,
       "outputDir": "out/3d_data/building/bld_church/building_bld_church_ov_db21239b-6655-41c9-a7c0-e86ecceb82a6_v6"
-    },
-    {
-      "id": "building_bld_civic_ov_483d72a6-b9d7-4103-b598-90de41fe2719_v6",
-      "key": "building/bld_civic_ov_483d72a6-b9d7-4103-b598-90de41fe2719_a7803e17_v6",
-      "family": "building",
-      "subpart": "bld_civic",
-      "style": "building/bld_civic",
-      "symmetryMode": "symmetric",
-      "similarityScore": 95,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_civic/ov_483d72a6-b9d7-4103-b598-90de41fe2719.jpg",
-      "bounds": {
-        "min": [
-          -3.8,
-          0,
-          -3.8
-        ],
-        "max": [
-          3.8,
-          12.2,
-          3.8
-        ],
-        "size": [
-          7.6,
-          12.2,
-          7.6
-        ],
-        "rMax": 5.374,
-        "triangles": 682,
-        "vertices": 370
-      },
-      "spec": {
-        "style": "building/bld_civic"
-      },
-      "triangles": 682,
-      "outputDir": "out/3d_data/building/bld_civic/building_bld_civic_ov_483d72a6-b9d7-4103-b598-90de41fe2719_v6"
     },
     {
       "id": "building_bld_civic_ov_cf9db9ae-c981-4201-9d2b-b8d0452ee9f9_v6",
@@ -43830,43 +42982,6 @@
       },
       "triangles": 992,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_0626fa11-e77d-47dd-a38c-0d5441425c53_v6"
-    },
-    {
-      "id": "vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6",
-      "key": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_70eef89f_v6",
-      "family": "vehicle",
-      "subpart": "car",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/car/0a7e31437a6be0675bc9cd13c0b401b1.jpg",
-      "bounds": {
-        "min": [
-          -1.35,
-          0.13,
-          -2.2
-        ],
-        "max": [
-          1.35,
-          1.4931,
-          2.21
-        ],
-        "size": [
-          2.7,
-          1.363,
-          4.41
-        ],
-        "rMax": 2.59,
-        "triangles": 856,
-        "vertices": 536
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 856,
-      "outputDir": "out/3d_data/vehicle/car/vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6"
     },
     {
       "id": "vehicle_car_161060143500_v6",
@@ -46531,43 +45646,6 @@
       },
       "triangles": 104,
       "outputDir": "out/3d_data/building/dormer/building_dormer_wc_14646619_v6"
-    },
-    {
-      "id": "building_dormer_wc_17456298_v6",
-      "key": "building/dormer_wc_17456298_3723881f_v6",
-      "family": "building",
-      "subpart": "dormer",
-      "style": "Traditional European Dormer Architecture",
-      "symmetryMode": "symmetric",
-      "similarityScore": 95,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/dormer/wc_17456298.jpg",
-      "bounds": {
-        "min": [
-          -2.1216,
-          -0.121,
-          -2
-        ],
-        "max": [
-          2.1216,
-          4.2106,
-          2.05
-        ],
-        "size": [
-          4.243,
-          4.332,
-          4.05
-        ],
-        "rMax": 2.95,
-        "triangles": 84,
-        "vertices": 54
-      },
-      "spec": {
-        "style": "Traditional European Dormer Architecture"
-      },
-      "triangles": 84,
-      "outputDir": "out/3d_data/building/dormer/building_dormer_wc_17456298_v6"
     },
     {
       "id": "building_dwg_civic_ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e_v6",
@@ -49824,6 +48902,559 @@
       },
       "triangles": 116,
       "outputDir": "out/3d_data/building/mass/building_mass_list_1_v6"
+    },
+    {
+      "id": "vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6",
+      "key": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_492d571e_v6",
+      "family": "vehicle",
+      "subpart": "car",
+      "style": "vehicle",
+      "symmetryMode": "symmetric",
+      "version": 6,
+      "verStr": "v6",
+      "image": "vehicle/car/0a7e31437a6be0675bc9cd13c0b401b1.jpg",
+      "bounds": {
+        "min": [
+          -1.2,
+          0.1,
+          -2.22
+        ],
+        "max": [
+          1.2,
+          1.4,
+          2.205
+        ],
+        "size": [
+          2.4,
+          1.3,
+          4.425
+        ],
+        "rMax": 2.524,
+        "triangles": 720,
+        "vertices": 412
+      },
+      "spec": {
+        "style": "vehicle"
+      },
+      "triangles": 720,
+      "outputDir": "out/3d_data/vehicle/car/vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6"
+    },
+    {
+      "id": "vehicle_heavy_2021070912244646524316_v6",
+      "key": "vehicle/heavy_2021070912244646524316_51ab54a3_v6",
+      "family": "vehicle",
+      "subpart": "heavy",
+      "style": "vehicle",
+      "symmetryMode": "symmetric",
+      "version": 6,
+      "verStr": "v6",
+      "image": "vehicle/heavy/2021070912244646524316.jpg",
+      "bounds": {
+        "min": [
+          -1.75,
+          0,
+          -5.61
+        ],
+        "max": [
+          1.75,
+          3.2,
+          5.61
+        ],
+        "size": [
+          3.5,
+          3.2,
+          11.22
+        ],
+        "rMax": 5.877,
+        "triangles": 400,
+        "vertices": 232
+      },
+      "spec": {
+        "style": "vehicle"
+      },
+      "triangles": 400,
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_2021070912244646524316_v6"
+    },
+    {
+      "id": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6",
+      "key": "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "Modern Suburban House",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
+      "bounds": {
+        "min": [
+          -7.5,
+          0,
+          -4.5
+        ],
+        "max": [
+          7.5,
+          7.75,
+          4.5
+        ],
+        "size": [
+          15,
+          7.75,
+          9
+        ],
+        "rMax": 8.746,
+        "triangles": 228,
+        "vertices": 154
+      },
+      "spec": {
+        "style": "Modern Suburban House"
+      },
+      "triangles": 228,
+      "outputDir": "out/3d_data/building/mass/building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6"
+    },
+    {
+      "id": "building_mass_160991898108355807.jpg_900x.water3_v6",
+      "key": "building/mass_160991898108355807.jpg!900x.water3_9077e646_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "modern_building",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/160991898108355807.jpg!900x.water3.jpg",
+      "bounds": {
+        "min": [
+          -9.5,
+          0,
+          -5.1
+        ],
+        "max": [
+          7.1,
+          27.4,
+          5.3776
+        ],
+        "size": [
+          16.6,
+          27.4,
+          10.478
+        ],
+        "rMax": 10.782,
+        "triangles": 504,
+        "vertices": 325
+      },
+      "spec": {
+        "style": "modern_building"
+      },
+      "triangles": 504,
+      "outputDir": "out/3d_data/building/mass/building_mass_160991898108355807.jpg_900x.water3_v6"
+    },
+    {
+      "id": "building_mass_171860464927014009.jpg_900x.water3_v6",
+      "key": "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "modern_building",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/171860464927014009.jpg!900x.water3.jpg",
+      "bounds": {
+        "min": [
+          -7.5,
+          0,
+          -13.5
+        ],
+        "max": [
+          15,
+          23.25,
+          3.95
+        ],
+        "size": [
+          22.5,
+          23.25,
+          17.45
+        ],
+        "rMax": 15.511,
+        "triangles": 284,
+        "vertices": 190
+      },
+      "spec": {
+        "style": "modern_building"
+      },
+      "triangles": 284,
+      "outputDir": "out/3d_data/building/mass/building_mass_171860464927014009.jpg_900x.water3_v6"
+    },
+    {
+      "id": "building_mass_173407398147386206.jpg_750x_v6",
+      "key": "building/mass_173407398147386206.jpg!750x_a1c88b78_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "Modern Architecture",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/173407398147386206.jpg!750x.jpg",
+      "bounds": {
+        "min": [
+          -7.2,
+          0,
+          -6.2
+        ],
+        "max": [
+          7.2,
+          32.8,
+          6.3
+        ],
+        "size": [
+          14.4,
+          32.8,
+          12.5
+        ],
+        "rMax": 9.567,
+        "triangles": 352,
+        "vertices": 234
+      },
+      "spec": {
+        "style": "Modern Architecture"
+      },
+      "triangles": 352,
+      "outputDir": "out/3d_data/building/mass/building_mass_173407398147386206.jpg_750x_v6"
+    },
+    {
+      "id": "building_mass_176784033021147409.jpg_900x.water3_v6",
+      "key": "building/mass_176784033021147409.jpg!900x.water3_8693d9fc_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "modern_building",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/176784033021147409.jpg!900x.water3.jpg",
+      "bounds": {
+        "min": [
+          -7,
+          0,
+          -5
+        ],
+        "max": [
+          7,
+          19.45,
+          5.825
+        ],
+        "size": [
+          14,
+          19.45,
+          10.825
+        ],
+        "rMax": 9.107,
+        "triangles": 348,
+        "vertices": 230
+      },
+      "spec": {
+        "style": "modern_building"
+      },
+      "triangles": 348,
+      "outputDir": "out/3d_data/building/mass/building_mass_176784033021147409.jpg_900x.water3_v6"
+    },
+    {
+      "id": "building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6",
+      "key": "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_22aa2c4c_v6",
+      "family": "building",
+      "subpart": "balcony",
+      "style": "Modern Brutalist Architecture",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
+      "bounds": {
+        "min": [
+          -5.1,
+          0,
+          -3
+        ],
+        "max": [
+          6.1,
+          11,
+          5.1
+        ],
+        "size": [
+          11.2,
+          11,
+          8.1
+        ],
+        "rMax": 7.951,
+        "triangles": 144,
+        "vertices": 98
+      },
+      "spec": {
+        "style": "Modern Brutalist Architecture"
+      },
+      "triangles": 144,
+      "outputDir": "out/3d_data/building/balcony/building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6"
+    },
+    {
+      "id": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6",
+      "key": "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_7505851c_v6",
+      "family": "building",
+      "subpart": "bld_adobe",
+      "style": "building/bld_adobe",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg",
+      "bounds": {
+        "min": [
+          -6.3,
+          0,
+          -2.85
+        ],
+        "max": [
+          6.3,
+          5,
+          2.85
+        ],
+        "size": [
+          12.6,
+          5,
+          5.7
+        ],
+        "rMax": 6.915,
+        "triangles": 92,
+        "vertices": 62
+      },
+      "spec": {
+        "style": "building/bld_adobe"
+      },
+      "triangles": 92,
+      "outputDir": "out/3d_data/building/bld_adobe/building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6"
+    },
+    {
+      "id": "building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6",
+      "key": "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_725f9c8f_v6",
+      "family": "building",
+      "subpart": "bld_barn",
+      "style": "building",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.jpg",
+      "bounds": {
+        "min": [
+          -6.1,
+          0,
+          -2.7
+        ],
+        "max": [
+          5.7,
+          5.5,
+          3.75
+        ],
+        "size": [
+          11.8,
+          5.5,
+          6.45
+        ],
+        "rMax": 6.823,
+        "triangles": 180,
+        "vertices": 122
+      },
+      "spec": {
+        "style": "building"
+      },
+      "triangles": 180,
+      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6"
+    },
+    {
+      "id": "building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6",
+      "key": "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_b322f82c_v6",
+      "family": "building",
+      "subpart": "bld_barn",
+      "style": "architectural",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg",
+      "bounds": {
+        "min": [
+          -4.3359,
+          0,
+          -5.2
+        ],
+        "max": [
+          4.3359,
+          6.5781,
+          5.2
+        ],
+        "size": [
+          8.672,
+          6.578,
+          10.4
+        ],
+        "rMax": 6.771,
+        "triangles": 76,
+        "vertices": 52
+      },
+      "spec": {
+        "style": "architectural"
+      },
+      "triangles": 76,
+      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6"
+    },
+    {
+      "id": "building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6",
+      "key": "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_a52d3ee5_v6",
+      "family": "building",
+      "subpart": "bld_chalet",
+      "style": "Alpine Chalet Architecture",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg",
+      "bounds": {
+        "min": [
+          -4.6,
+          -0.25,
+          -3.5
+        ],
+        "max": [
+          11,
+          9.2,
+          4.15
+        ],
+        "size": [
+          15.6,
+          9.45,
+          7.65
+        ],
+        "rMax": 11.757,
+        "triangles": 180,
+        "vertices": 122
+      },
+      "spec": {
+        "style": "Alpine Chalet Architecture"
+      },
+      "triangles": 180,
+      "outputDir": "out/3d_data/building/bld_chalet/building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6"
+    },
+    {
+      "id": "building_bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_v6",
+      "key": "building/bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_d78a5af4_v6",
+      "family": "building",
+      "subpart": "bld_church",
+      "style": "historical_church",
+      "symmetryMode": "symmetric",
+      "similarityScore": 95,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_church/ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6.jpg",
+      "bounds": {
+        "min": [
+          -3.2723,
+          0,
+          -5.2
+        ],
+        "max": [
+          3.2723,
+          11,
+          6.8
+        ],
+        "size": [
+          6.545,
+          11,
+          12
+        ],
+        "rMax": 7.546,
+        "triangles": 296,
+        "vertices": 202
+      },
+      "spec": {
+        "style": "historical_church"
+      },
+      "triangles": 296,
+      "outputDir": "out/3d_data/building/bld_church/building_bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_v6"
+    },
+    {
+      "id": "building_bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_v6",
+      "key": "building/bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_b18be66c_v6",
+      "family": "building",
+      "subpart": "bld_church",
+      "style": "historical_church",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_church/ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991.jpg",
+      "bounds": {
+        "min": [
+          -7,
+          0,
+          -4.2
+        ],
+        "max": [
+          7,
+          24.25,
+          6
+        ],
+        "size": [
+          14,
+          24.25,
+          10.2
+        ],
+        "rMax": 9.22,
+        "triangles": 510,
+        "vertices": 312
+      },
+      "spec": {
+        "style": "historical_church"
+      },
+      "triangles": 510,
+      "outputDir": "out/3d_data/building/bld_church/building_bld_church_ov_6a635c8a-cf34-4db0-aa53-eca0b9a22991_v6"
+    },
+    {
+      "id": "vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6",
+      "key": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_70eef89f_v6",
+      "family": "vehicle",
+      "subpart": "car",
+      "style": "vehicle",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "vehicle/car/0a7e31437a6be0675bc9cd13c0b401b1.jpg",
+      "bounds": {
+        "min": [
+          -1.35,
+          0.13,
+          -2.2
+        ],
+        "max": [
+          1.35,
+          1.4931,
+          2.21
+        ],
+        "size": [
+          2.7,
+          1.363,
+          4.41
+        ],
+        "rMax": 2.59,
+        "triangles": 856,
+        "vertices": 536
+      },
+      "spec": {
+        "style": "vehicle"
+      },
+      "triangles": 856,
+      "outputDir": "out/3d_data/vehicle/car/vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6"
     }
   ]
 }
