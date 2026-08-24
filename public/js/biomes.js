@@ -31,7 +31,7 @@ import {
   CHARACTERS, INK_CTR,
 } from './data.js';
 import { llToWorld } from './terrain.js';
-import { quantizeRoads, GRID_HW } from './roadgrid.js';
+import { pruneRoads, quantizeRoads, GRID_HW } from './roadgrid.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { osmRelayKey } from './osmrelay.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
@@ -8810,6 +8810,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   await onProgress?.(0.02, '規劃兵線淨空走廊…');
   const naturePromise = loadNatureModels(season);   // Quaternius 植被:與散佈並行載入
   const blocked = buildClearance(cfg, center);
+  // 主堡世界座標:道路預整理、名岩退避與語意化地標的錨點同吃這一份(各算一次 = 第二份實作)
+  const basesW = ['SWARM', 'STEEL'].map((side) => {
+    const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
+    return { side, x, z };
+  });
   // 地物散布的邊界內縮 = 障礙環內緣(推導不手寫):舊制的 30 讓落點可以抽在環體 [34,40] 之內,
   // 樹幹/岩塊會長在牆裡。改吃同一支之後,散布範圍恰好就是「玩家進得去的那一塊」。
   const inb = edgeWallInsetM();
@@ -8825,7 +8830,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 讓 Esri 影像失敗連鎖放棄整組 Overpass → 道路/真橋整套換成兵線備援,圖資逐局忽有忽無。
   // 影像與路網是獨立服務,各自失敗各自降級;離線時 fetch 快速失敗,不拖載入。
   let [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
-  // ---- 道路格網量化(2026-08-10 使用者定案;唯一接線點)----
+  const roadPruneStats = {};
+  // ---- 道路圖資預整理 + 格網量化(唯一接線點)----
+  // 剪枝 MUST 在量化前:已決定不畫的糾纏小路不應參與節點鬆弛、把留下的主網拉歪。
+  // `pruneRoads` 跨過 degree=2 OSM tag 接縫，只剪完整走廊並保住連通 / 死路不變式；
+  // 寬度唯一真相由 `roadWidth` 注入；兩側重生點只影響安全候選的處理順序，不放寬剪除資格。
+  // 離線備援仍不動兵線:那是伺服器也在吃的權威幾何，客戶端不得單邊剪枝。
+  if (osmRoads?.length) {
+    osmRoads = pruneRoads(
+      osmRoads,
+      (p) => llToWorld(p.lat, p.lon, center),
+      (way) => roadWidth(way.tags || {}),
+      roadPruneStats,
+      basesW.map(({ x, z }) => [x, z]),
+    );
+  }
+  // ---- 道路格網量化(2026-08-10 使用者定案)----
   // 「將所有道路量化成 16 個方向」。MUST 排在**這裡** —— 也就是拿到圖資之後、任何消費端
   // (mergeGradeChains / 橋隧去重 / markGradeCorridors / carveTunnels / gradeRoadBeds /
   // buildRoads / roadPolys / nearestRoadAngle)之前:量化過的路網從此是唯一的一份,
@@ -9121,11 +9141,6 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     if (b === 'green' && greenSites.length < 20) greenSites.push([x, z]);
     else if (b === 'bare' && bareSites.length < 28) bareSites.push([x, z]);
   }
-  // 主堡世界座標:名岩退避與語意化地標的錨點同吃這一份(各算一次 = 第二份實作)
-  const basesW = ['SWARM', 'STEEL'].map((side) => {
-    const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
-    return { side, x, z };
-  });
   // 國旗歸屬(地圖 30 : 駐軍 60 : 敵對 10)。純函式、零共享 rnd ⇒ 建在哪一行都不影響序列。
   const nation = makeNationPicker(cfg, basesW);
   const megalithsBuilt = placeMegaliths({
@@ -10558,6 +10573,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     buildings: generic.length + landmarks.length,
     landmarks: landmarks.length,
     roads: roadsBuilt,
+    roadPrune: roadPruneStats,
     // 立體結構(橋 / 隧道 / 地下道 / 明隧道)的建置與剔除 —— 建置端無兵線距離判定,
     // 離兵線多遠一律照建;`strucDrop` 逐把刀記帳(見上方註解),少一座橋查得出原因。
     strucWays: strucN(roadInput),

@@ -5,10 +5,11 @@
 // 是**整個畫面**,沒有這組基準就等於沒有驗收。
 //
 // 機位是**推導的,不是手打座標**(手打的一改兵線就對不上,而且看不出來):
-//   spawn      兩座主堡,朝兵線方向       first_tower  各兵線第一座塔位
+//   spawn      兩座主堡,朝兵線方向       spawn_over  以主堡為中心俯查周遭路網
 //   lane_mid   各兵線中段                portal_a/b   第一座結構隧道的兩端洞口(有才拍)
 //   bridge     第一座橋的橋頭(有才拍)   hilltop      全圖最高點俯瞰兵線
 //   waterline  水岸(有水域才拍)         aerial       圖心高空俯瞰
+//   road_tangle 剪枝後窄路仍最密集的一格(只在即時 OSM 路網存在時拍)
 //   edge_wall  邊界牆(退一步看那一段是哪一款)   edge_far     邊界抬高看緩衝空間與視線邊界背景
 //
 // 圖層隔離:`--ink=0` / `--dof=0` / `--grade=0` / `--fxaa=0` / `--post=0` / `--curve=0` 各關一層,同一組機位再拍一次
@@ -214,6 +215,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
   const { buildBiomes } = await import('/public/js/biomes.js');
+  const { ROAD_PRUNE } = await import('/public/js/roadgrid.js');
   const { applyEnvironment } = await import('/public/js/environment.js');
   const { Pipeline } = await import('/public/js/postfx.js');
   const { updateCelLight, worldCurveOn } = await import('/public/js/toon.js');
@@ -320,6 +322,10 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
     const l0 = lanes[0] || [];
     const aim = l0.length ? l0[Math.floor(l0.length / 2)] : [0, 0];
     add(`spawn_${side}`, b, [aim[0], surf(aim[0], aim[1]) + EYE, aim[1]]);
+    const span = ROAD_PRUNE.TANGLE_CELL_M;
+    stations.push({ name: `spawn_over_${side}`,
+      p: [b[0], surf(b[0], b[1]) + span * 0.72, b[1] + span * 0.38],
+      look: [b[0], surf(b[0], b[1]), b[1]] });
   }
   const sites = solveTowerSites(lanes);
   sites.forEach((laneSites, li) => {
@@ -511,6 +517,15 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
     }
     if (found) add('waterline', found, [found[0] + 120, WATER.LEVEL, found[1]]);
   }
+  {
+    const d = ud.stats?.roadPrune?.denseAfter;
+    if (d) {
+      const span = ROAD_PRUNE.TANGLE_CELL_M;
+      stations.push({ name: 'road_tangle',
+        p: [d.x, surf(d.x, d.z) + span * 0.72, d.z + span * 0.38],
+        look: [d.x, surf(d.x, d.z), d.z] });
+    }
+  }
   // **世界邊界**(2026-08-11 邊界牆改吃型錄之後補的兩張):這一整套 —— 障礙環的 15 款型式、
   // 緩衝空間的地貌拼圖與 3D 物件、視線邊界的假山/假海/假森林/假城市 —— 全是**只有站在
   // 邊界往外看**才看得到的東西,而既有 11 個機位沒有任何一個朝那個方向。位置照樣是推導的:
@@ -600,6 +615,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
       p: [...st.p], look: [...st.look] });
   }
   return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor, glError,
+    roadPrune: ud.stats?.roadPrune || null,
     probeHits, curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
 }, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY, env: ENV, elapsed: ELAPSED, probe: PROBE });
 
@@ -617,6 +633,17 @@ console.log(`  地物 mesh ${shots.objN}・零件庫節點 ${shots.libN}${LAYERS
 console.log(`  世界曲面 ${shots.curveOn ? `已裝(拐點 ${Math.round(shots.curveKnee)}m / 地平線 ${Math.round(shots.curveHorizon)}m)`
   : (LAYERS.curve ? '⚠ 未裝(three 錨點對不上?)' : '關閉(--curve=0)')}`);
 console.log(`  真 GPU gl.getError() = ${shots.glError}`);
+if (shots.roadPrune?.edges) {
+  const p = shots.roadPrune;
+  console.log(`  道路剪枝 ${p.inputWays}→${p.outputWays} ways・${p.removedEdges}/${p.edges} edges・${p.removedM.toFixed(0)}m`
+    + `（支梢 ${p.spurM.toFixed(0)}m／迴路 ${p.cycleM.toFixed(0)}m）・死路 ${p.deadEndsBefore}→${p.deadEndsAfter}`);
+  console.log(`  道路種類 ${Object.entries(p.byHighway || {}).map(([k, v]) =>
+    `${k}:${v.before}→${v.after}(均${(v.beforeM / v.before).toFixed(0)}m)`).join('・')}`);
+  if (p.focusBefore?.length === p.focusAfter?.length) {
+    console.log(`  重生圈候選窄路 ${p.focusBefore.map((v, i) =>
+      `${['SWARM', 'STEEL'][i] || i}:${v.m.toFixed(0)}→${p.focusAfter[i].m.toFixed(0)}m`).join('・')}`);
+  }
+}
 for (const p of shots.probeHits) {
   console.log(`  射線 ${p.name} ndc=${p.ndc.join(',')}`);
   for (const h of p.hits) console.log(`      · ${h.type}${h.instanceId == null ? '' : `#${h.instanceId}`} ${h.material}`
@@ -639,7 +666,7 @@ fs.writeFileSync(join(OUT, `meta${SUFFIX}.json`), JSON.stringify({
   venue: VENUE, team: TEAM, layers: LAYERS, env: ENV,
   tunnels: shots.tunnels, decks: shots.decks, water: shots.water,
   objN: shots.objN, libN: shots.libN, biomeErr: shots.biomeErr, imagery: shots.imagery, glError: shots.glError,
-  probeHits: shots.probeHits,
+  probeHits: shots.probeHits, roadPrune: shots.roadPrune,
   stations: shots.shots.map((s) => ({ name: s.name, p: s.p, look: s.look })),
 }, null, 2));
 console.log(`\n${shots.shots.length} 張 → ${OUT}`);
