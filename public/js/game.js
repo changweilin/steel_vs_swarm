@@ -61,6 +61,13 @@ const ARC_MAXP = 384;
 // `_reachable`),逐敵人評估退化成純幾何掃描 ⇒ 舊的分幀預算 / TTL 快取(ARC_PER_FRAME /
 // RAY_PER_FRAME / TTL_S)整組退場,MUST NOT 復辟(那是「每個敵人各跑一次彈道積分」時代的節流)。
 const RANGE_GLOW = { SURF_TOL_M: 0.5 };
+// 第三人稱視線遮擋(純表現層):低頻檢查避免每幀對全場 Mesh 做 raycast;
+// 只淡化射線實際穿過的不透明件,離開視線後短暫保留避免鏡頭轉動時閃爍。
+const TPS_OCCLUSION = {
+  OPACITY_F: 0.24,
+  UPDATE_S: 0.05,
+  RELEASE_S: 0.12,
+};
 // 集束炸彈的投擲軌跡(純表現層;使用者需求「炸彈投擲軌跡同榴彈」)。
 // GRAV_F:比自由落體略重的墜落感(投擲解與逐幀積分 MUST 吃同一個值,否則畫出來的落點會偏)。
 // T:飛行時間 = 水平距離 / SPD,夾在 [MIN, MAX] ⇒ 近的快速甩出、遠的高拋,弧高隨距離自然變化。
@@ -525,6 +532,11 @@ export class BattleClient {
     Object.assign(this, opts);
     this.center = this.cfg.center;
     this.ents = new Map();
+    this._viewOcclusionMeshes = [];
+    this._viewOcclusionSet = new Set();
+    this._viewOcclusionSkip = new Set();
+    this._viewFades = new Map();
+    this._viewOcclusionNext = 0;
     this._dissolveGhosts = [];        // 純渲染殘影;MUST NOT 留在 ents / 鎖定 / 動畫消費端
     this.effects = [];
     this.keys = {};
@@ -702,6 +714,7 @@ export class BattleClient {
     else this.yaw = this.bodyYaw;
     this.viewMode = vm;
     if (this.cockpit) this.cockpit.visible = (vm === 'fpv');
+    if (vm !== 'tps') this._clearViewOcclusion();
     for (const ent of this.ents.values()) {
       if (ent.isSelf) {
         ent.mesh.visible = (vm === 'tps' && !ent.dead);
@@ -756,6 +769,10 @@ export class BattleClient {
     this._simT = 0;      // 伺服器權威經過秒數(快照 `time`);日夜時鐘的唯一來源
 
     this.scene.add(this.terrain.group);
+    // 地形本體是連續地表,不是應被淡化的場景物件;其餘可見地物不以描邊旗標代替遮擋資格。
+    const terrainSurface = this.terrain.group.children.find((o) => o.isMesh && o.receiveShadow);
+    if (terrainSurface) this._viewOcclusionSkip.add(terrainSurface);
+    this._registerViewOccluders(this.terrain.group);
 
     this._onResize = () => {
       const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
@@ -787,6 +804,7 @@ export class BattleClient {
     if (air) this.pipeline?.setAirFog(air.near, air.far, air.fogNear, air.fogFar);
 
     this.raycaster = new THREE.Raycaster();
+    this._viewRaycaster = new THREE.Raycaster();
     // 障礙碰撞柱空間索引(建物/神木/巨岩/橋墩):彈道/準星射線的遮蔽判定用。
     // 障礙有物理碰撞就不可讓砲火穿越 —— 與 _collide 用同一份 terrain.blockers,牆與彈道一致。
     this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);
@@ -2706,6 +2724,152 @@ export class BattleClient {
     if (maxT < dlen) { cam.x = ox + ux * maxT; cam.z = oz + uz * maxT; }
   }
 
+  /** 註冊第三人稱視線可淡化的 Mesh;描邊旗標與碰撞旗標彼此獨立。 */
+  _registerViewOccluders(root) {
+    root?.traverse?.((o) => {
+      if (!o.isMesh || this._viewOcclusionSkip.has(o)
+        || o.userData?.isOutline || o.userData?.noViewOcclusion) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      if (!mats.some((m) => m && !m.transparent)) return;
+      if (this._viewOcclusionSet.has(o)) return;
+      this._viewOcclusionSet.add(o);
+      this._viewOcclusionMeshes.push(o);
+    });
+  }
+
+  /** 移除短命單位的視線候選,並把其可能殘留的淡化材質還原。 */
+  _unregisterViewOccluders(root) {
+    const gone = [];
+    const descendants = new Set();
+    root?.traverse?.((o) => descendants.add(o));
+    for (const o of descendants) {
+      if (this._viewOcclusionSet.has(o)) gone.push(o);
+      this._restoreViewFade(o);                  // 描邊殼不在 raycast 名冊,仍要還原
+    }
+    for (const o of gone) {
+      this._viewOcclusionSet.delete(o);
+    }
+    if (gone.length) this._viewOcclusionMeshes = this._viewOcclusionMeshes.filter((o) => !gone.includes(o));
+  }
+
+  _isViewDescendant(o, root) {
+    for (let p = o; p; p = p.parent) if (p === root) return true;
+    return false;
+  }
+
+  /** 將命中的 Mesh 與其描邊殼一起換成獨立半透明材質,不污染共用材質。 */
+  _fadeViewMesh(mesh, now) {
+    if (!mesh?.isMesh || this._viewOcclusionSkip.has(mesh)) return;
+    const fade = (o) => {
+      if (!o.isMesh || this._viewFades.has(o)) return;
+      const base = o.material;
+      const mats = Array.isArray(base) ? base : [base];
+      const clones = [];
+      const cloned = new Map();
+      const faded = mats.map((m) => {
+        if (!m || m.transparent) return m;
+        let c = cloned.get(m);
+        if (!c) {
+          c = m.clone();
+          c.transparent = true;
+          c.opacity = (m.opacity ?? 1) * TPS_OCCLUSION.OPACITY_F;
+          c.depthWrite = false;
+          c.needsUpdate = true;
+          cloned.set(m, c);
+          clones.push(c);
+        }
+        return c;
+      });
+      if (!clones.length) return;
+      o.material = Array.isArray(base) ? faded : faded[0];
+      this._viewFades.set(o, { base, faded: o.material, clones, lastHit: now });
+    };
+    fade(mesh);
+    mesh.traverse?.((o) => { if (o.userData?.isOutline) fade(o); });
+  }
+
+  _restoreViewFade(mesh) {
+    const state = this._viewFades.get(mesh);
+    if (!state) return;
+    if (mesh.material === state.faded) mesh.material = state.base;
+    for (const m of state.clones) m.dispose();
+    this._viewFades.delete(mesh);
+  }
+
+  _clearViewOcclusion() {
+    for (const mesh of [...this._viewFades.keys()]) this._restoreViewFade(mesh);
+    this._viewOcclusionNext = 0;
+  }
+
+  /**
+   * 第三人稱相機完成定位後,從相機向機體包圍盒取 5 條視線。
+   * 命中的不透明 Mesh 進透明佇列且停止寫深度,因此機體仍可穿透讀取。
+   */
+  _updateViewOcclusion(now) {
+    if (this.viewMode !== 'tps' || !this.side || this.dead) {
+      this._clearViewOcclusion();
+      return;
+    }
+    if (now < this._viewOcclusionNext) return;
+    this._viewOcclusionNext = now + TPS_OCCLUSION.UPDATE_S;
+    const self = [...this.ents.values()].find((ent) => ent.isSelf && ent.mesh?.visible && !ent.dead);
+    if (!self || !this._viewOcclusionMeshes.length) {
+      this._clearViewOcclusion();
+      return;
+    }
+
+    this.camera.updateMatrixWorld(true);
+    self.mesh.updateWorldMatrix(true, true);
+    const box = new THREE.Box3();
+    self.mesh.traverse((o) => {
+      if (!o.isMesh || o.userData?.teamRing || o.userData?.isOutline || o.userData?.noOutline) return;
+      box.expandByObject(o);
+    });
+    if (box.isEmpty()) {
+      this._clearViewOcclusion();
+      return;
+    }
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    right.y = 0;
+    if (right.lengthSq() < 1e-6) right.set(1, 0, 0); else right.normalize();
+    const span = Math.max(0.15, Math.max(size.x, size.z) * 0.28);
+    const y0 = box.min.y, h = Math.max(size.y, this.selfH, 0.5);
+    const targets = [
+      new THREE.Vector3(center.x, y0 + h * 0.52, center.z),
+      new THREE.Vector3(center.x, y0 + h * 0.80, center.z),
+      new THREE.Vector3(center.x, y0 + h * 0.22, center.z),
+      center.clone().addScaledVector(right, span),
+      center.clone().addScaledVector(right, -span),
+    ];
+    const blocked = new Set();
+    const eye = this.camera.position;
+    for (const target of targets) {
+      const delta = target.clone().sub(eye);
+      const dist = delta.length();
+      if (dist <= 0.2) continue;
+      this._viewRaycaster.set(eye, delta.normalize());
+      this._viewRaycaster.near = 0.05;
+      this._viewRaycaster.far = Math.max(0.05, dist - 0.05);
+      const hits = this._viewRaycaster.intersectObjects(this._viewOcclusionMeshes, false);
+      for (const hit of hits) {
+        if (hit.distance >= dist - 0.05) break;
+        const mesh = hit.object;
+        if (!mesh.isMesh || this._isViewDescendant(mesh, self.mesh)) continue;
+        blocked.add(mesh);
+      }
+    }
+    for (const mesh of blocked) {
+      this._fadeViewMesh(mesh, now);
+      const state = this._viewFades.get(mesh);
+      if (state) state.lastHit = now;
+    }
+    for (const [mesh, state] of [...this._viewFades]) {
+      if (now - state.lastHit > TPS_OCCLUSION.RELEASE_S) this._restoreViewFade(mesh);
+    }
+  }
+
   // ---------------- 輸入 ----------------
   _initInput() {
     this._onKey = (e) => {
@@ -3215,6 +3379,7 @@ export class BattleClient {
       const r = (hazDef?.r ?? 6) * (e.sc || 1);
       const group = buildHazard(e.k, e.id, r);
       this.scene.add(group);
+      this._registerViewOccluders(group);
       const ent = {
         id: e.id, kind: e.k, side: null, mesh: group,
         tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
@@ -3285,6 +3450,7 @@ export class BattleClient {
     const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
     if (isSelf) group.visible = (this.viewMode === 'tps');
     this.scene.add(group);
+    this._registerViewOccluders(group);
     if (mixer) this.mixers.add(mixer);
     if (group.userData.spin) this.spinners.add(group);
     // 基準包圍盒:MUST 在掛受擊殼/血條/敵方標記之前量(它們都是 mesh 子節點,事後 Box3 會被
@@ -3446,6 +3612,7 @@ export class BattleClient {
     this.spinners.delete(ent.mesh);
     this.flamers.delete(ent.mesh);
     this.damaged.delete(ent);
+    this._unregisterViewOccluders(ent.mesh);
     this.ents.delete(id);
     // 戰鬥參照全部已在上面清掉,之後才能把 mesh 當純渲染殘影留在 scene。
     // 迷霧消失(dissolve=false)必須即時收起,不得洩漏視野外位置。
@@ -9241,6 +9408,7 @@ export class BattleClient {
     this._updatePlayer(dt, now);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);
+    this._updateViewOcclusion(now);
     this._updateDissolveGhosts(dt);   // 實體先摘出 ents,殘影只在這條純渲染路徑收尾
     this._updateRangeGlows();         // 這一發會傷到的單位才亮範圍光暈(鎖定目標另有 lockGlow)
     this._updateMoveAudio();          // 移動環境音(旋翼/引擎/振翅/震地;低功耗自動全關)
@@ -9484,6 +9652,7 @@ export class BattleClient {
 
   dispose() {
     this.disposed = true;
+    this._clearViewOcclusion();
     this.audio?.setScene('menu');   // 離開戰場 → BGM 交還大廳(audio 為 app 層物件,不在此銷毀)
     this.audio?._stopMove();        // 移動環境音聲道靜音(離場後 _updateMoveAudio 不再餵值 → 需主動收)
     this.cutin?.dispose();
