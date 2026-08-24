@@ -42,6 +42,7 @@
 //   --break-relax  節點鬆弛關掉       ⇒ Ⅵ「逐條路落格」MUST 紅(路口不動 ⇒ 長度重解整批退化)
 //   --break-prune  關掉剪枝候選寬度   ⇒ Ⅵ-b「小閉環真的有剪」MUST 紅
 //   --break-loop-area 小環面積門檻歸零 ⇒ Ⅵ-b「小閉環真的有剪」MUST 紅
+//   --break-near-close 關掉死端近接閉合 ⇒ Ⅵ-b「近接死路視為閉環」MUST 紅
 //   --break-rotbox 烘焙抓取範圍吃帶 rot 的 cfg ⇒ Ⅸ「冪等」MUST 紅(重烤會把角度越推越偏)
 //   --break-rotover 執行期量測不讓過已有的 rot ⇒ Ⅸ「不覆蓋烘焙值」MUST 紅
 import { readSrc, grabFn } from './audit_src.mjs';
@@ -71,6 +72,7 @@ if (argv.includes('--break-dense')) ROAD_GRID.DENSIFY_F = 0.02;
 if (argv.includes('--break-relax')) ROAD_GRID.RELAX_SWEEPS = 0;
 if (argv.includes('--break-prune')) ROAD_PRUNE.MAX_W_M = 0;
 if (argv.includes('--break-loop-area')) ROAD_PRUNE.MAX_LOOP_AREA_M2 = 0;
+if (argv.includes('--break-near-close')) ROAD_PRUNE.NEAR_CLOSE_W_F = 0;
 
 let pass = 0, fail = 0;
 const t = (n, ok, extra = '') => { ok ? (pass++, console.log(`  ✓ ${n}`)) : (fail++, console.log(`  ✗ ${n} ${extra}`)); };
@@ -417,7 +419,7 @@ sec('Ⅵ 量化的三個不變式:真的落格 / 路不走掉 / 路口不裂');
 }
 
 // =================================================================================
-sec('Ⅵ-b 路網預整理:小閉環 / 窄冗餘優先 / 不斷線 / 並排結構保留');
+sec('Ⅵ-b 路網預整理:小閉環 / 近接死端 / 窄冗餘優先 / 不斷線 / 並排結構保留');
 // ---------------------------------------------------------------------------------
 {
   const P = (x, z) => ({ lat: z, lon: x });
@@ -568,6 +570,44 @@ sec('Ⅵ-b 路網預整理:小閉環 / 窄冗餘優先 / 不斷線 / 並排結�
   t('小環統計:低於門檻的完整閉環數確實下降',
     stats.loopBefore.small > stats.loopAfter.small
     && stats.loopAfter.thresholdM2 === BASE_PRUNE.MAX_LOOP_AREA_M2);
+
+  // 死端與另一條道路只差短縫時，在分析圖虛擬閉合；不改輸出座標、不畫補線。
+  // 近接案例的完整面積仍低於門檻；遠距與大面積案例須照舊保留。
+  const nearStats = {};
+  const nearWays = [
+    W('近接死路候選', 2.2, [0, 0], [40, 4]),
+    W('近接左', 8, [0, 0], [0, 12]), W('近接頂', 8, [0, 12], [80, 12]),
+    W('近接右', 8, [80, 12], [80, 0]),
+    W('近接左尾', 8, [-20, 0], [0, 0]), W('近接右尾', 8, [80, 0], [100, 0]),
+    W('遠距死路保留', 2.2, [80, 0], [40, -10]),
+  ];
+  const nearOut = pruneRoads(nearWays, toXZ, widthOf, nearStats);
+  const nearNames = new Set(nearOut.map((w) => w.tags.name));
+  t('近接死路視為閉環:端點短距離能接另一道路且面積過小時剪除',
+    !nearNames.has('近接死路候選') && nearStats.nearClosed.links >= 1);
+  t('遠距死路仍保留:端點超過近接門檻不得假裝封閉', nearNames.has('遠距死路保留'));
+  t('近接閉合距離由候選最大路寬推導',
+    nearStats.nearClosed.maxGapM === BASE_PRUNE.MAX_W_M * BASE_PRUNE.NEAR_CLOSE_W_F);
+  t('虛擬閉合不新增道路幾何:輸出只可能是原 way 的連續片段',
+    nearOut.every((w) => nearWays.some((src) => w.tags.name === src.tags.name
+      && w.geometry.every((p) => src.geometry.some((q) => p.lat === q.lat && p.lon === q.lon)))));
+  t('近接死路剪枝只減少既有死端，不製造新死端', nearStats.deadEndsAfter < nearStats.deadEndsBefore,
+    `${nearStats.deadEndsBefore} → ${nearStats.deadEndsAfter}`);
+  const nearReversed = pruneRoads(nearWays.slice().reverse(), toXZ, widthOf);
+  t('近接閉合具決定性:輸入 way 重排不改變保留集合', canon(nearOut) === canon(nearReversed));
+
+  const gradeNearWays = nearWays.map((w) => w.tags.name === '近接頂'
+    ? { ...w, tags: { ...w.tags, bridge: 'yes' } } : w);
+  const gradeNearNames = new Set(pruneRoads(gradeNearWays, toXZ, widthOf).map((w) => w.tags.name));
+  t('近接閉合不跨一般／結構層級:死端不能假接到高架橋', gradeNearNames.has('近接死路候選'));
+
+  const nearLargeWays = [
+    W('近接大面死路', 2.2, [0, 0], [100, 0]),
+    W('大面左', 8, [0, 0], [0, 80]), W('大面斜頂', 8, [0, 80], [100, 8]),
+    W('大面左尾', 8, [-20, 0], [0, 0]), W('大面右尾', 8, [100, 8], [120, 8]),
+  ];
+  const nearLargeNames = new Set(pruneRoads(nearLargeWays, toXZ, widthOf).map((w) => w.tags.name));
+  t('近接死路仍受面積門檻限制:虛擬閉合但面積過大就保留', nearLargeNames.has('近接大面死路'));
 
   const parallelCase = (tag, label) => {
     const ws = [

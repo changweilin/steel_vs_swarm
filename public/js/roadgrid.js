@@ -11,7 +11,8 @@
 //      `ground.orient`),道路一被量化,那兩者自動落在同一組 16 方向 —— 本檔 MUST NOT 另外
 //      去碰建築(第二份對齊規則 = 兩套朝向打架)。
 //   ④ 圖資的糾纏小環先走 `pruneRoads()`：只剪完整的「真路口↔真路口」走廊，
-//      並以閉環面積 + 替代路徑 + 節點度數守住連通；不參與閉面的單純死端不剪。
+//      並以閉環面積 + 替代路徑 + 節點度數守住連通；短距離能接到另一條路的死端在
+//      分析圖視為閉合，其餘不參與閉面的單純死端不剪。
 //
 // **零 import**(同 `rng.js`/`vernacular.js`/`ctrlmode.js`):投影與經緯度一律由呼叫端以
 // `toXZ`/`toLL` 回呼注入 —— 這是離線稽核 `tools/audit_road_grid.mjs` 能直接吃真品的唯一理由。
@@ -34,10 +35,12 @@
 // ============ 道路圖資預整理(2026-08-24 使用者定案)============
 // 使用者原句:「刪除道路的指標更改為：道路圍成的封閉環的面積過小時剪枝，優先移除較窄、
 // 較冗餘的道路；一般道路與高架橋／地下道／明隧道／隧道並排時、或是雙向車道分隔，
-// 則不剪枝。」
+// 則不剪枝。」「如果有死路，短距離內能連到另一個道路的話視為封閉處理，其餘規則與
+// 先前相同。」
 //
 // 這裡剪的不是「折線的某一小段」，而是跨過 OSM tag 造成的 degree=2 way 接縫，重組成
-// 完整物理走廊後才原子判定：候選走廊 MUST 實際構成小面積幾何閉環；不參與閉面的
+// 完整物理走廊後才原子判定：候選走廊 MUST 實際構成小面積幾何閉環；死端若在短距離內
+// 接近另一條道路，只在分析圖補虛擬閉合邊，不移動或補畫輸出道路。不參與閉面的其餘
 // 單純死端、筆直支路與大環一律保留。通過面積門檻後才依「窄、閉面其餘周長比低」排序。
 // 每次刪除仍重驗替代路徑、端點度數與分量總額，不得新增死路或切斷路網。
 //
@@ -54,6 +57,7 @@ export const ROAD_PRUNE = {
   MAX_LOOP_SEARCH_M: 700,  // Dijkstra 局部上限；只限制搜尋成本，不參與候選排序
   MIN_FACE_SHARE_F: 0.05,  // 排除浮點擦邊；正常直路無閉面，不能靠提高此值替代面積判定
   NO_ALT_FACE_SHARE_F: 0.5,// 無 OSM 拓撲替代路時，至少半條走廊須實際構成幾何閉環
+  NEAR_CLOSE_W_F: 2,       // 死端近接閉合距離 = 候選最大路寬 × 此倍數（目前 12m）
   PARALLEL_GAP_M: 18,      // 結構並排 / 分隔車道最大橫向間距
   PARALLEL_OVERLAP_M: 12,  // 沿道路方向至少並行此長度，避免把交叉道路當並排
   PARALLEL_SHARE_F: 0.35,  // 並行須覆蓋較短走廊的實質比例，短暫擦肩不保護整條折線
@@ -176,7 +180,8 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
   }
   if (!edges.length) {
     if (stats) Object.assign(stats, { inputWays: ways.length, outputWays: ways.length, edges: 0,
-      candidates: 0, removedEdges: 0, removedM: 0, spurM: 0, cycleM: 0, deadEndsBefore: 0, deadEndsAfter: 0 });
+      candidates: 0, removedEdges: 0, removedM: 0, spurM: 0, cycleM: 0, deadEndsBefore: 0, deadEndsAfter: 0,
+      nearClosed: { maxGapM: ROAD_PRUNE.MAX_W_M * ROAD_PRUNE.NEAR_CLOSE_W_F, links: 0 } });
     return ways;
   }
 
@@ -217,7 +222,9 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
   };
   // ---- ③ 結構並排與雙向分隔車道保護 ----
   // 空間桶只加速幾何配對；共享節點與交叉角度會在精確判定排除。
-  const roadSegs = [], segBuckets = new Map(), segCell = ROAD_PRUNE.PARALLEL_GAP_M * 2;
+  const nearCloseM = ROAD_PRUNE.MAX_W_M * ROAD_PRUNE.NEAR_CLOSE_W_F;
+  const segPad = Math.max(ROAD_PRUNE.PARALLEL_GAP_M, nearCloseM);
+  const roadSegs = [], segBuckets = new Map(), segCell = segPad * 2;
   const segKey = (ix, iz) => `${ix},${iz}`;
   for (const e of edges) {
     const ch = chains[e.wi];
@@ -228,7 +235,7 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
       const sid = roadSegs.length;
       roadSegs.push({ eid: e.id, n0: a, n1: b, ax: nx[a], az: nz[a], bx: nx[b], bz: nz[b],
         len, ux: dx / len, uz: dz / len });
-      const pad = ROAD_PRUNE.PARALLEL_GAP_M;
+      const pad = segPad;
       const x0 = Math.floor((Math.min(nx[a], nx[b]) - pad) / segCell);
       const x1 = Math.floor((Math.max(nx[a], nx[b]) + pad) / segCell);
       const z0 = Math.floor((Math.min(nz[a], nz[b]) - pad) / segCell);
@@ -316,6 +323,45 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
       cuts[ai].push(clamp01(ta)); cuts[bi].push(clamp01(tb));
     }
   }
+
+  // OSM 的步道常在另一條道路前數公尺收尾。若死端與同類的「另一條 way」只差短縫，
+  // 僅在分析圖補一條虛擬邊，讓後續仍以完整閉面面積判定；真圖資與輸出幾何完全不動。
+  // 每個死端只接最近的一條，等距再以幾何簽章決勝，避免輸入 way 重排改變結果。
+  const nearLinks = [];
+  if (nearCloseM > 1e-6) for (let node = 0; node < adj.length; node++) {
+    if (degree(node) !== 1) continue;
+    const leafEid = adj[node].find((eid) => active[eid]);
+    const leaf = edges[leafEid];
+    if (!leaf || leaf.protected || leaf.width > ROAD_PRUNE.MAX_W_M) continue;
+    const bucket = segBuckets.get(segKey(Math.floor(nx[node] / segCell), Math.floor(nz[node] / segCell))) || [];
+    const seenSeg = new Set();
+    let best = null;
+    for (const sid of bucket) {
+      if (seenSeg.has(sid)) continue;
+      seenSeg.add(sid);
+      const s = roadSegs[sid], target = edges[s.eid];
+      if (s.eid === leafEid || target.wi === leaf.wi || target.grade !== leaf.grade
+        || s.n0 === node || s.n1 === node) continue;
+      const dx = s.bx - s.ax, dz = s.bz - s.az, dd = dx * dx + dz * dz;
+      const t = dd > 1e-12 ? clamp01(((nx[node] - s.ax) * dx + (nz[node] - s.az) * dz) / dd) : 0;
+      const x = s.ax + dx * t, z = s.az + dz * t;
+      const d2 = (nx[node] - x) ** 2 + (nz[node] - z) ** 2;
+      if (d2 <= 1e-8 || d2 > nearCloseM * nearCloseM + 1e-8) continue;
+      const a = `${s.ax.toFixed(6)},${s.az.toFixed(6)}`;
+      const b = `${s.bx.toFixed(6)},${s.bz.toFixed(6)}`;
+      const sig = `${target.sig}|${a < b ? `${a}>${b}` : `${b}>${a}`}`;
+      if (!best || d2 < best.d2 - 1e-8 || (Math.abs(d2 - best.d2) <= 1e-8 && sig < best.sig)) {
+        best = { node, leafEid, sid, t, x, z, d2, sig };
+      }
+    }
+    if (!best) continue;
+    cuts[best.sid].push(best.t);
+    const from = `${nx[node].toFixed(6)},${nz[node].toFixed(6)}`;
+    const to = `${best.x.toFixed(6)},${best.z.toFixed(6)}`;
+    nearLinks.push({ ...best, len: Math.sqrt(best.d2), sig: `virtual:${from}>${to}|${leaf.sig}|${best.sig}` });
+  }
+  nearLinks.sort((a, b) => a.sig.localeCompare(b.sig));
+
   const faceNodes = [], faceNodeMap = new Map();
   const faceNodeOf = (x, z) => {
     const key = `${x.toFixed(6)},${z.toFixed(6)}`;
@@ -338,13 +384,18 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
       if (a !== b) faceEdges.push({ a, b, eid: s.eid, len });
     }
   }
+  for (const link of nearLinks) {
+    const a = faceNodeOf(nx[link.node], nz[link.node]), b = faceNodeOf(link.x, link.z);
+    if (a !== b) faceEdges.push({ a, b, eid: -1, len: link.len, virtual: true, sig: link.sig });
+  }
   const half = [];
   for (const pe of faceEdges) {
     const a = faceNodes[pe.a], b = faceNodes[pe.b], h0 = half.length, h1 = h0 + 1;
+    const edgeSig = pe.virtual ? pe.sig : edges[pe.eid].sig;
     half.push({ from: pe.a, to: pe.b, twin: h1, eid: pe.eid, len: pe.len,
-      angle: Math.atan2(b.z - a.z, b.x - a.x), sig: `${a.key}>${b.key}|${edges[pe.eid].sig}` });
+      virtual: !!pe.virtual, angle: Math.atan2(b.z - a.z, b.x - a.x), sig: `${a.key}>${b.key}|${edgeSig}` });
     half.push({ from: pe.b, to: pe.a, twin: h0, eid: pe.eid, len: pe.len,
-      angle: Math.atan2(a.z - b.z, a.x - b.x), sig: `${b.key}>${a.key}|${edges[pe.eid].sig}` });
+      virtual: !!pe.virtual, angle: Math.atan2(a.z - b.z, a.x - b.x), sig: `${b.key}>${a.key}|${edgeSig}` });
     a.out.push(h0); b.out.push(h1);
   }
   for (const n of faceNodes) n.out.sort((ia, ib) => half[ia].angle - half[ib].angle
@@ -352,14 +403,16 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
   const halfUsed = new Uint8Array(half.length), planarFaces = [];
   for (let seed = 0; seed < half.length; seed++) {
     if (halfUsed[seed]) continue;
-    let h = seed, area2 = 0, perimeter = 0, fx = 0, fz = 0, vertices = 0, guard = 0;
+    let h = seed, area2 = 0, perimeter = 0, virtualM = 0, virtualN = 0;
+    let fx = 0, fz = 0, vertices = 0, guard = 0;
     const byEdge = new Map(), boundary = new Set();
     while (!halfUsed[h] && guard++ <= half.length) {
       halfUsed[h] = 1;
       const e = half[h], a = faceNodes[e.from], b = faceNodes[e.to];
       area2 += a.x * b.z - b.x * a.z; perimeter += e.len;
       fx += a.x; fz += a.z; vertices++;
-      byEdge.set(e.eid, (byEdge.get(e.eid) || 0) + e.len); boundary.add(e.eid);
+      if (e.virtual) { virtualM += e.len; virtualN++; }
+      else { byEdge.set(e.eid, (byEdge.get(e.eid) || 0) + e.len); boundary.add(e.eid); }
       const outs = faceNodes[e.to].out, ri = outs.indexOf(e.twin);
       if (ri < 0 || !outs.length) { h = -1; break; }
       h = outs[(ri - 1 + outs.length) % outs.length];
@@ -367,7 +420,7 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
     }
     const areaM2 = area2 * 0.5;
     if (h === seed && boundary.size >= 2 && areaM2 > 1e-4) {
-      planarFaces.push({ areaM2, perimeter, byEdge, boundary,
+      planarFaces.push({ areaM2, perimeter, virtualM, virtualN, byEdge, boundary,
         x: fx / Math.max(1, vertices), z: fz / Math.max(1, vertices) });
     }
   }
@@ -549,12 +602,13 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
     || (a.sig < b.sig ? -1 : a.sig > b.sig ? 1 : 0);
   const loopReport = () => {
     const values = [];
-    let small = 0, focusSmall = 0;
+    let small = 0, focusSmall = 0, nearClosedSmall = 0;
     for (const face of planarFaces) {
       if (!faceActive(face)) continue;
       values.push(face.areaM2);
       if (face.areaM2 < ROAD_PRUNE.MAX_LOOP_AREA_M2 - 1e-6) {
         small++;
+        if (face.virtualN > 0) nearClosedSmall++;
         if (focusPoints.some(([x, z]) => Math.hypot(face.x - x, face.z - z) < ROAD_PRUNE.TANGLE_CELL_M)) {
           focusSmall++;
         }
@@ -562,7 +616,7 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
     }
     values.sort((a, b) => a - b);
     return { thresholdM2: ROAD_PRUNE.MAX_LOOP_AREA_M2, faces: planarFaces.length,
-      closed: values.length, small, focusSmall,
+      closed: values.length, small, focusSmall, nearClosedSmall,
       p50M2: values.length ? values[Math.floor(values.length / 2)] : null };
   };
   const loopBefore = loopReport();
@@ -608,13 +662,14 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
 
   const loopAfter = loopReport();
   const parallelProtected = { structure: structureParallel.size, divided: dividedParallel.size };
+  const nearClosed = { maxGapM: nearCloseM, links: nearLinks.length };
 
   // ---- ⑤ 按原 way 重組連續片段；一個被剪邊必定從錨點到錨點 ----
   if (!removedEdges && !normalized) {
     if (stats) Object.assign(stats, { inputWays: ways.length, outputWays: ways.length, edges: edges.length,
       candidates: candidateSigs.size, removedEdges, removedM, spurM, cycleM, cycleChecks,
       deadEndsBefore, deadEndsAfter: deadEndsBefore, byHighway: byHighway(), denseBefore, denseAfter: denseBefore,
-      focusBefore, focusAfter: focusBefore, loopBefore, loopAfter, parallelProtected, rejected });
+      focusBefore, focusAfter: focusBefore, loopBefore, loopAfter, parallelProtected, nearClosed, rejected });
     return ways;
   }
   const out = [];
@@ -637,7 +692,7 @@ export function pruneRoads(ways, toXZ, widthOf, stats = null, focuses = []) {
   if (stats) Object.assign(stats, { inputWays: ways.length, outputWays: out.length, edges: edges.length,
     candidates: candidateSigs.size, removedEdges, removedM, spurM, cycleM, cycleChecks,
     deadEndsBefore, deadEndsAfter: deadEnds(), byHighway: byHighway(), denseBefore, denseAfter: densityPeak(true),
-    focusBefore, focusAfter: focusRoads(true), loopBefore, loopAfter, parallelProtected, rejected });
+    focusBefore, focusAfter: focusRoads(true), loopBefore, loopAfter, parallelProtected, nearClosed, rejected });
   return out;
 }
 

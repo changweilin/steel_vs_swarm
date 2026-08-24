@@ -665,6 +665,11 @@ if (shots.roadPrune?.edges) {
   if (p.parallelProtected) {
     console.log(`  並排保護 結構旁一般道路 ${p.parallelProtected.structure} edges・雙向分隔車道 ${p.parallelProtected.divided} edges`);
   }
+  if (p.nearClosed) {
+    const nearFaces = Number.isFinite(p.loopBefore?.nearClosedSmall) && Number.isFinite(p.loopAfter?.nearClosedSmall)
+      ? `・所成小環 ${p.loopBefore.nearClosedSmall}→${p.loopAfter.nearClosedSmall}` : '';
+    console.log(`  死端近接閉合 ${p.nearClosed.links} 處（最大間距 ${p.nearClosed.maxGapM.toFixed(1)}m，只用於面積分析）${nearFaces}`);
+  }
   if (p.rejected) console.log(`  小環候選未剪 ${Object.entries(p.rejected).map(([k, v]) => `${k}:${v}`).join('・')}`);
 }
 for (const p of shots.probeHits) {

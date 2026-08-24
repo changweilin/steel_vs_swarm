@@ -125,7 +125,7 @@ node tools/audit_layer_block.mjs     # 塗層雙面阻擋 + 隧道頂板(A6b)
 node tools/audit_open_tunnel.mjs     # 明隧道
 node tools/audit_underpass.mjs       # 地下道 + 結構資格閘
 node tools/audit_road_grid.mjs       # 道路拓撲剪枝 + 地圖主方位(旋轉)+ 16 方向量化
-#   ±--break-prune/--break-loop-area/--break-drift/--break-dense/--break-relax/--break-rotbox/--break-rotover
+#   ±--break-prune/--break-loop-area/--break-near-close/--break-drift/--break-dense/--break-relax/--break-rotbox/--break-rotover
 node tools/audit_road_joint.mjs      # 道路塗裝寬 / 結構接合 / 立體結構建置範圍
 node tools/audit_road_bed.mjs        # 道路路基整平
 node tools/audit_slope_move.mjs      # 地形坡度移動
@@ -344,7 +344,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 明隧道 | `audit_open_tunnel` + `audit_underpass` + `audit_slope_move` + `shot_tunnels`(㋓) |
 | 地下道 / 結構資格閘 | `audit_underpass` ±反向驗證(`gMinOf` 只量中心線 / 拿掉基準線收斂 / 拿掉全寬拆縫) |
 | 地圖主方位(`mapRot`/`rotXZ`/`llToXZ`/`xzToLL`/`battleRect`/`battleBBox`/`venueGrid.js`/`roadGridRotDeg`/`GRID_HW`/`main.resolveMapRot`/`biomes.fetchGridRoads`) | `audit_road_grid` ±`--break-drift`/`--break-dense`/`--break-relax`/`--break-rotbox`/`--break-rotover` + `audit_client_syntax`(㋖)+ 改角度推導或取樣面 MUST 跑 `bake_venue_grid --only manhattan,barcelona,chicago,kyoto,shibuya --dry`(㋓)並與 `venueGrid.js` 現值比對 —— **烘焙 MUST 冪等**,重烤跑出不同的值就是有人動到抓取範圍或量測框 + **`audit_world_edge`**(裙的原文沙箱自由變數清單要跟著走,漏一個就是 `ReferenceError` 而其餘原文斷言照樣全綠)+ `audit_ground_qc` ⑦ + `audit_weapon_gate` Ⅻ⑷(sim.js 的比例尺原文閘)+ `npm test`(**MUST 先重啟伺服器**)+ **`npm run bal` MUST 逐項不動**(旋轉是等距同構)+ 改 `gridAngle`/大馬路取樣面 MUST **重烤 `venueGrid.js`**(㋓)|
-| 道路拓撲剪枝 + 16 方向量化(`ROAD_PRUNE`/`pruneRoads`/`roadgrid.js` / `biomes.js` 的接線) | `audit_road_grid` ±`--break-prune`/`--break-loop-area`/`--break-drift`/`--break-dense`/`--break-relax` + `audit_road_joint`/`audit_road_bed`/`audit_underpass`/`audit_open_tunnel`/`audit_bridge_crossing`/`audit_water_skirt`(走廊/橋隧全部吃整理、量化後的同一份路網)+ `audit_siteplan`/`audit_ground_qc`(建物與擺件朝向取自道路)+ **`audit_traverse`(㋓:路網幾何動了,兵線與結構要仍走得通;沙箱降級的未驗結果 MUST NOT 當綠燈)** + `shot_scene --live` 或 `--scene-cache <同一份輸入>` 的 `--only spawn_over_SWARM,spawn_over_STEEL,road_tangle`(㋕；即時 Overpass 回空或前後不是同一份圖資，MUST NOT 當市區剪枝綠燈)|
+| 道路拓撲剪枝 + 16 方向量化(`ROAD_PRUNE`/`pruneRoads`/`roadgrid.js` / `biomes.js` 的接線) | `audit_road_grid` ±`--break-prune`/`--break-loop-area`/`--break-near-close`/`--break-drift`/`--break-dense`/`--break-relax` + `audit_road_joint`/`audit_road_bed`/`audit_underpass`/`audit_open_tunnel`/`audit_bridge_crossing`/`audit_water_skirt`(走廊/橋隧全部吃整理、量化後的同一份路網)+ `audit_siteplan`/`audit_ground_qc`(建物與擺件朝向取自道路)+ **`audit_traverse`(㋓:路網幾何動了,兵線與結構要仍走得通;沙箱降級的未驗結果 MUST NOT 當綠燈)** + `shot_scene --live` 或 `--scene-cache <同一份輸入>` 的 `--only spawn_over_SWARM,spawn_over_STEEL,road_tangle`(㋕；即時 Overpass 回空或前後不是同一份圖資，MUST NOT 當市區剪枝綠燈)|
 | 道路塗裝寬 / 結構接合 / 立體結構建置範圍 | `audit_road_joint` + `audit_underpass`/`audit_open_tunnel` 不變式 MUST 不動 |
 | 道路路基整平 | `audit_road_bed` + `audit_slope_move` + 隧道兩支不變式 |
 | 地形坡度移動 / `MAX_ROAD_GRADE_DEG` | `audit_slope_move` |
