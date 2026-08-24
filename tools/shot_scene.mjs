@@ -41,7 +41,7 @@
 //
 // 前置與 shot_tunnels.mjs 完全相同(Playwright + terrarium 高程 + 合成圖資),
 // **找不到 playwright 就印一行說明並以 0 結束**(A2:MUST NOT 寫進 package.json)。
-// 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--curve=0] [--lib=0] [--live]
+// 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--curve=0] [--lib=0] [--live|--scene-cache FILE]
 //                                [--pref inkMrt=on] [--pref lutSrc=baked]  ← 設定頁旋鈕
 //                                [--time day|dusk|night] [--season …] [--weather …]
 import fs from 'node:fs';
@@ -62,6 +62,10 @@ const VENUE = arg('--venue', 'taroko');
 const TEAM = +arg('--team', '1');
 const OUT = path.resolve(arg('--out', join(ROOT, 'tools', `.shots_scene/${VENUE}`)));
 const LIVE = has('--live');
+// `--scene-cache` 走 biomes.commitOsmIn 的正式中繼縫，固定同一份已處理 OSM 輸入。
+// Overpass 偶發回空時若直接接受，前後圖其實是兩個世界；那不能當道路剪枝證據。
+const SCENE_CACHE = arg('--scene-cache', '');
+const OSM_CACHE = SCENE_CACHE ? JSON.parse(fs.readFileSync(path.resolve(SCENE_CACHE), 'utf8')) : null;
 // `--stations <meta.json>`:**照抄前一輪推導出來的完整浮點機位**再拍一次。
 // 為什麼需要:機位是由**世界幾何**推導的(離兵線最近的那株喬木、最高點、第一座橋…),
 // 而 `--lib=0` 換掉的正是那些幾何 ⇒ 前後兩張其實**站在不同的地方、拍不同的樹**
@@ -210,11 +214,11 @@ await page.route(`${PROBE_URL}**`, (r) => r.fulfill({
 }));
 await page.goto(PROBE_NAV, { waitUntil: 'domcontentloaded' });
 
-const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, only, env, elapsed, probe }) => {
+const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, only, env, elapsed, probe, osmCache }) => {
   const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
-  const { buildBiomes } = await import('/public/js/biomes.js');
+  const { buildBiomes, commitOsmIn } = await import('/public/js/biomes.js');
   const { ROAD_PRUNE } = await import('/public/js/roadgrid.js');
   const { applyEnvironment } = await import('/public/js/environment.js');
   const { Pipeline } = await import('/public/js/postfx.js');
@@ -270,6 +274,16 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
   }
 
   const terrain = await buildTerrain(cfg, () => {});
+  if (osmCache?.roads?.length) {
+    commitOsmIn(terrain.bbox, {
+      roads: osmCache.roads,
+      feats: {
+        buildings: osmCache.buildings || [], rails: osmCache.rails || [], falls: osmCache.falls || [],
+        crossings: osmCache.crossings || [], pois: osmCache.pois || [], covers: osmCache.covers || [],
+        waters: osmCache.waters || [], boundaries: osmCache.boundaries || [],
+      },
+    });
+  }
   // buildBiomes 回傳的是 **group 本身**,結構清單住 group.userData(main.js 的 `ud` 就是它)
   let bio = null, biomeErr = null;
   try { bio = await buildBiomes(cfg, terrain, () => {}); } catch (e) { biomeErr = String(e && e.message || e); }
@@ -617,7 +631,8 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
   return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor, glError,
     roadPrune: ud.stats?.roadPrune || null,
     probeHits, curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
-}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY, env: ENV, elapsed: ELAPSED, probe: PROBE });
+}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY,
+  env: ENV, elapsed: ELAPSED, probe: PROBE, osmCache: OSM_CACHE });
 
 for (const s of shots.shots) {
   fs.writeFileSync(join(OUT, `${s.name}${SUFFIX}.png`), Buffer.from(s.png.split(',')[1], 'base64'));
@@ -636,13 +651,21 @@ console.log(`  真 GPU gl.getError() = ${shots.glError}`);
 if (shots.roadPrune?.edges) {
   const p = shots.roadPrune;
   console.log(`  道路剪枝 ${p.inputWays}→${p.outputWays} ways・${p.removedEdges}/${p.edges} edges・${p.removedM.toFixed(0)}m`
-    + `（支梢 ${p.spurM.toFixed(0)}m／迴路 ${p.cycleM.toFixed(0)}m）・死路 ${p.deadEndsBefore}→${p.deadEndsAfter}`);
+    + `（小環 ${p.cycleM.toFixed(0)}m）・死路 ${p.deadEndsBefore}→${p.deadEndsAfter}`);
   console.log(`  道路種類 ${Object.entries(p.byHighway || {}).map(([k, v]) =>
     `${k}:${v.before}→${v.after}(均${(v.beforeM / v.before).toFixed(0)}m)`).join('・')}`);
   if (p.focusBefore?.length === p.focusAfter?.length) {
     console.log(`  重生圈候選窄路 ${p.focusBefore.map((v, i) =>
       `${['SWARM', 'STEEL'][i] || i}:${v.m.toFixed(0)}→${p.focusAfter[i].m.toFixed(0)}m`).join('・')}`);
   }
+  if (p.loopBefore && p.loopAfter) {
+    console.log(`  面積 < ${p.loopAfter.thresholdM2}m² 的小閉環 ${p.loopBefore.small}→${p.loopAfter.small}`
+      + `（重生圈 ${p.loopBefore.focusSmall}→${p.loopAfter.focusSmall}）`);
+  }
+  if (p.parallelProtected) {
+    console.log(`  並排保護 結構旁一般道路 ${p.parallelProtected.structure} edges・雙向分隔車道 ${p.parallelProtected.divided} edges`);
+  }
+  if (p.rejected) console.log(`  小環候選未剪 ${Object.entries(p.rejected).map(([k, v]) => `${k}:${v}`).join('・')}`);
 }
 for (const p of shots.probeHits) {
   console.log(`  射線 ${p.name} ndc=${p.ndc.join(',')}`);

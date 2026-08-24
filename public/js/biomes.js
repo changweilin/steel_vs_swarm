@@ -8833,8 +8833,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const roadPruneStats = {};
   // ---- 道路圖資預整理 + 格網量化(唯一接線點)----
   // 剪枝 MUST 在量化前:已決定不畫的糾纏小路不應參與節點鬆弛、把留下的主網拉歪。
-  // `pruneRoads` 跨過 degree=2 OSM tag 接縫，只剪完整走廊並保住連通 / 死路不變式；
-  // 寬度唯一真相由 `roadWidth` 注入；兩側重生點只影響安全候選的處理順序，不放寬剪除資格。
+  // `pruneRoads` 跨過 degree=2 OSM tag 接縫，只剪小閉環的完整走廊並保住連通 / 死路不變式；
+  // 寬度唯一真相由 `roadWidth` 注入；結構道路並排與雙向分隔車道在剪枝前先受保護。
   // 離線備援仍不動兵線:那是伺服器也在吃的權威幾何，客戶端不得單邊剪枝。
   if (osmRoads?.length) {
     osmRoads = pruneRoads(

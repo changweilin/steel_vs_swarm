@@ -40,7 +40,8 @@
 //   --break-drift  位移上限放到 1e9   ⇒ Ⅵ「路不會走掉」(實測 90.6m)+「落格」MUST 紅
 //   --break-dense  量化前不細分       ⇒ Ⅵ「逐條路落格」MUST 紅(斜街整條 10.25° 沒被量化)
 //   --break-relax  節點鬆弛關掉       ⇒ Ⅵ「逐條路落格」MUST 紅(路口不動 ⇒ 長度重解整批退化)
-//   --break-prune  關掉剪枝候選寬度   ⇒ Ⅵ-b「窄短優先 / 真的有剪」MUST 紅
+//   --break-prune  關掉剪枝候選寬度   ⇒ Ⅵ-b「小閉環真的有剪」MUST 紅
+//   --break-loop-area 小環面積門檻歸零 ⇒ Ⅵ-b「小閉環真的有剪」MUST 紅
 //   --break-rotbox 烘焙抓取範圍吃帶 rot 的 cfg ⇒ Ⅸ「冪等」MUST 紅(重烤會把角度越推越偏)
 //   --break-rotover 執行期量測不讓過已有的 rot ⇒ Ⅸ「不覆蓋烘焙值」MUST 紅
 import { readSrc, grabFn } from './audit_src.mjs';
@@ -69,6 +70,7 @@ if (argv.includes('--break-drift')) ROAD_GRID.MAX_DRIFT_M = 1e9;
 if (argv.includes('--break-dense')) ROAD_GRID.DENSIFY_F = 0.02;
 if (argv.includes('--break-relax')) ROAD_GRID.RELAX_SWEEPS = 0;
 if (argv.includes('--break-prune')) ROAD_PRUNE.MAX_W_M = 0;
+if (argv.includes('--break-loop-area')) ROAD_PRUNE.MAX_LOOP_AREA_M2 = 0;
 
 let pass = 0, fail = 0;
 const t = (n, ok, extra = '') => { ok ? (pass++, console.log(`  ✓ ${n}`)) : (fail++, console.log(`  ✗ ${n} ${extra}`)); };
@@ -415,7 +417,7 @@ sec('Ⅵ 量化的三個不變式:真的落格 / 路不走掉 / 路口不裂');
 }
 
 // =================================================================================
-sec('Ⅵ-b 路網預整理:窄短優先 / 不斷線 / 不新增死路 / 結構保留');
+sec('Ⅵ-b 路網預整理:小閉環 / 窄冗餘優先 / 不斷線 / 並排結構保留');
 // ---------------------------------------------------------------------------------
 {
   const P = (x, z) => ({ lat: z, lon: x });
@@ -430,18 +432,23 @@ sec('Ⅵ-b 路網預整理:窄短優先 / 不斷線 / 不新增死路 / 結構�
     W('短突枝', 2.2, A, [-12, 0]),
     W('寬突枝', 8, B, [52, 0]),
     W('長小路', 2.2, C, [40, 160]),
-    // 同一條物理支梢被 OSM tag 邊界切成兩個 way；degree=2 接縫不可讓剪枝停在半路。
+    // 直線支路即使被 OSM tag 邊界切段也不是閉環，兩段都必須保留。
     W('切段突枝甲', 2.2, B, [55, 10]), W('切段突枝乙', 2.2, [55, 10], [68, 23]),
     W('步橋', 2.2, D, [-8, 40], { bridge: 'yes' }),
     // 兩端都有三個去向、但沒有替代路徑：只看度數會誤剪成兩座不相通的小樹。
     W('必要窄連線', 2.2, [100, 0], [120, 0]),
     W('E北', 8, [100, 0], [100, 20]), W('E南', 8, [100, 0], [100, -20]),
     W('F北', 8, [120, 0], [120, 20]), W('F南', 8, [120, 0], [120, -20]),
-    // 160m 窄邊超過舊 CYCLE_MAX_M，但兩端各有兩向且 226m 的局部替代路徑存在。
+    // 面積 6400m² 的大環即使有替代路徑也不剪。
     W('長窄糾纏邊甲', 2.2, [300, 0], [380, 0]),
     W('長窄糾纏邊乙', 2.2, [380, 0], [460, 0]),
     W('長迴路左', 8, [300, 0], [380, 80]), W('長迴路右', 8, [380, 80], [460, 0]),
     W('長迴路左尾', 8, [300, 0], [100, 0]), W('長迴路右尾', 8, [460, 0], [660, 0]),
+    // 面積 1200m² 的小環底邊被 tag 切成兩段；必須整條原子移除。
+    W('小環底甲', 2.2, [700, 0], [740, 0]), W('小環底乙', 2.2, [740, 0], [780, 0]),
+    W('小環左', 8, [700, 0], [700, 15]), W('小環頂', 8, [700, 15], [780, 15]),
+    W('小環右', 8, [780, 15], [780, 0]),
+    W('小環左尾', 8, [660, 0], [700, 0]), W('小環右尾', 8, [780, 0], [820, 0]),
   ];
   const toXZ = (p) => [p.lon, p.lat];
   const widthOf = (w) => w.tags.width;
@@ -450,22 +457,24 @@ sec('Ⅵ-b 路網預整理:窄短優先 / 不斷線 / 不新增死路 / 結構�
   const names = new Set(out.map((w) => w.tags.name));
   const removed = new Set(ways.map((w) => w.tags.name).filter((n) => !names.has(n)));
 
-  t('真的有剪:短突枝與至少一條窄斜線被移除',
-    removed.has('短突枝') && (removed.has('AC-窄斜線') || removed.has('BD-窄斜線')),
+  t('小閉環真的有剪:至少一條窄斜線與切段小環底邊被移除',
+    (removed.has('AC-窄斜線') || removed.has('BD-窄斜線'))
+    && removed.has('小環底甲') && removed.has('小環底乙'),
     `移除=${[...removed].join(',') || '(無)'}`);
-  t('OSM 分段支梢原子剪除:degree=2 tag 接縫不留下半截尖刺',
-    removed.has('切段突枝甲') && removed.has('切段突枝乙'));
-  t('窄短優先:同一分量先剪短突枝；長小路在總量預算不足時保留',
-    removed.has('短突枝') && names.has('長小路'));
+  t('非閉環的筆直小路全部保留，不再用長度或鄰近度誤刪',
+    ['短突枝', '長小路', '切段突枝甲', '切段突枝乙'].every((n) => names.has(n)));
+  t('OSM 分段小環原子剪除:degree=2 tag 接縫不留下半截道路',
+    removed.has('小環底甲') && removed.has('小環底乙'));
   t('較寬道路不進候選', names.has('寬突枝'));
-  t('OSM 分段的長窄糾纏走廊沒有硬長度豁免:有局部替代路徑就整條剪',
-    removed.has('長窄糾纏邊甲') && removed.has('長窄糾纏邊乙'));
-  t('橋 / 隧道類結構不進剪枝候選', names.has('步橋'));
+  t('大閉環保留:有替代路徑仍不得繞過面積門檻',
+    names.has('長窄糾纏邊甲') && names.has('長窄糾纏邊乙'));
+  t('單純橋不因窄短被刪；仍須先真的構成小閉環', names.has('步橋'));
   t('沒有替代路徑的必要窄連線保留', names.has('必要窄連線'));
-  t('不新增死路:剪後 degree=1 節點數只減不增', stats.deadEndsAfter <= stats.deadEndsBefore,
+  t('不新增死路:只剪閉環後 degree=1 節點數完全不變', stats.deadEndsAfter === stats.deadEndsBefore,
     `${stats.deadEndsBefore} → ${stats.deadEndsAfter}`);
-  t('支梢只用部分總額:SPUR_DROP_F < MAX_DROP_F < 1，迴路一定保有額度',
-    BASE_PRUNE.SPUR_DROP_F > 0 && BASE_PRUNE.SPUR_DROP_F < BASE_PRUNE.MAX_DROP_F && BASE_PRUNE.MAX_DROP_F < 1);
+  t('單純支梢剪枝已停用；剪除量只記在閉環', stats.spurM === 0 && stats.cycleM === stats.removedM);
+  t('小環門檻為正且小於正常街廓尺度',
+    BASE_PRUNE.MAX_LOOP_AREA_M2 > 0 && BASE_PRUNE.MAX_LOOP_AREA_M2 < 70 * 70);
   t('最密窄路格只會變疏:剪後密度峰值不高於剪前，且診斷座標有限',
     !!stats.denseBefore && !!stats.denseAfter
     && stats.denseAfter.m <= stats.denseBefore.m
@@ -498,24 +507,94 @@ sec('Ⅵ-b 路網預整理:窄短優先 / 不斷線 / 不新增死路 / 結構�
   const canon = (ws) => ws.map((w) => `${w.tags.name}:${w.geometry.map(key).join('>')}`).sort().join('|');
   t('決定性:輸入 way 重排後保留幾何集合不變', canon(out) === canon(reversed));
 
-  // 重生中心附近那條必須進入安全剪枝；資格與安全門不變，增額後仍不得吃掉半個分量。
+  // 重生中心附近仍只能剪小環；額外總額不得吃掉半個分量。
   const focusWays = [
-    W('外框南', 8, [0, 0], [100, 0]), W('外框東', 8, [100, 0], [100, 100]),
-    W('外框北', 8, [100, 100], [0, 100]), W('外框西', 8, [0, 100], [0, 0]),
-    W('遠斜線', 2.2, [0, 0], [100, 100]), W('重生圈斜線', 2.2, [100, 0], [0, 100]),
+    W('外框南', 8, [0, 0], [30, 0]), W('外框東', 8, [30, 0], [30, 30]),
+    W('外框北', 8, [30, 30], [0, 30]), W('外框西', 8, [0, 30], [0, 0]),
+    W('遠斜線', 2.2, [0, 0], [30, 30]), W('重生圈斜線', 2.2, [30, 0], [0, 30]),
   ];
   const focusStats = {};
-  const focusOut = pruneRoads(focusWays, toXZ, widthOf, focusStats, [[100, 0]]);
+  const focusOut = pruneRoads(focusWays, toXZ, widthOf, focusStats, [[30, 0]]);
   const focusNames = new Set(focusOut.map((w) => w.tags.name));
-  t('重生圈優先:中心附近的安全窄迴路確實被剪', !focusNames.has('重生圈斜線'));
+  t('重生圈的小閉環確實被剪', !focusNames.has('重生圈斜線'));
   t('重生圈增額仍低於半個連通分量',
-    BASE_PRUNE.MAX_DROP_F + BASE_PRUNE.SPUR_DROP_F < 0.5);
-  t('重生圈只放寬可接受繞行距離，不取消替代路徑門檻',
-    BASE_PRUNE.FOCUS_ALT_F > BASE_PRUNE.ALT_F && Number.isFinite(BASE_PRUNE.FOCUS_ALT_F));
+    BASE_PRUNE.MAX_DROP_F + BASE_PRUNE.FOCUS_DROP_F < 0.5);
+  t('重生圈只增加總額，不改寫小環面積門檻',
+    focusStats.loopBefore.thresholdM2 === BASE_PRUNE.MAX_LOOP_AREA_M2
+    && focusStats.loopAfter.thresholdM2 === BASE_PRUNE.MAX_LOOP_AREA_M2);
   t('重生圈量測:候選窄路長度只減不增', focusStats.focusBefore.length === 1
     && focusStats.focusAfter.length === 1 && focusStats.focusAfter[0].m < focusStats.focusBefore[0].m);
-  const focusReversed = pruneRoads(focusWays.slice().reverse(), toXZ, widthOf, null, [[100, 0]]);
+  const focusReversed = pruneRoads(focusWays.slice().reverse(), toXZ, widthOf, null, [[30, 0]]);
   t('重生圈優先仍具決定性:輸入 way 重排不改變保留集合', canon(focusOut) === canon(focusReversed));
+
+  // 同分量額度只夠剪一條：先比寬，再比替代路徑繞行比。
+  const widthWays = [
+    W('窄候選', 2.2, [0, 0], [100, 0]),
+    W('窄左', 8, [0, 0], [0, 10]), W('窄頂', 8, [0, 10], [100, 10]), W('窄右', 8, [100, 10], [100, 0]),
+    W('連接幹道', 8, [100, 0], [200, 0]),
+    W('寬候選', 5.5, [200, 0], [300, 0]),
+    W('寬左', 8, [200, 0], [200, 10]), W('寬頂', 8, [200, 10], [300, 10]), W('寬右', 8, [300, 10], [300, 0]),
+    W('左尾', 8, [-10, 0], [0, 0]), W('右尾', 8, [300, 0], [310, 0]),
+  ];
+  const widthNames = new Set(pruneRoads(widthWays, toXZ, widthOf).map((w) => w.tags.name));
+  t('寬度優先:同額度下先剪較窄的小環邊', !widthNames.has('窄候選') && widthNames.has('寬候選'));
+
+  const redundantWays = [
+    W('高冗餘候選', 2.2, [0, 0], [100, 0]),
+    W('高冗餘左', 8, [0, 0], [0, 8]), W('高冗餘頂', 8, [0, 8], [100, 8]), W('高冗餘右', 8, [100, 8], [100, 0]),
+    W('連接幹道', 8, [100, 0], [200, 0]),
+    W('低冗餘候選', 2.2, [200, 0], [300, 0]),
+    W('低冗餘左', 8, [200, 0], [200, 15]), W('低冗餘頂', 8, [200, 15], [300, 15]), W('低冗餘右', 8, [300, 15], [300, 0]),
+    W('左尾', 8, [-10, 0], [0, 0]), W('右尾', 8, [300, 0], [310, 0]),
+  ];
+  const redundantNames = new Set(pruneRoads(redundantWays, toXZ, widthOf).map((w) => w.tags.name));
+  t('冗餘度優先:同寬同額度下先剪替代路徑繞行比較低者',
+    !redundantNames.has('高冗餘候選') && redundantNames.has('低冗餘候選'));
+  // OSM 常有畫面上相交、資料卻未共用 node 的步道；面分析圖必須切真交點，否則最亂的
+  // 那批線在拓撲圖上全是「支梢」，面積指標永遠看不到。
+  const crossingStats = {};
+  const crossingWays = [
+    W('打結支梢', 2.2, [-10, 0], [100, 0]),
+    W('環左', 8, [0, -10], [0, 10]), W('環頂', 8, [0, 10], [40, 10]),
+    W('環右', 8, [40, 10], [40, -10]),
+    W('主網北', 8, [100, 0], [100, 200]), W('主網東', 8, [100, 0], [300, 0]),
+    W('正常直路', 2.2, [400, 0], [500, 0]),
+  ];
+  const crossingNames = new Set(pruneRoads(crossingWays, toXZ, widthOf, crossingStats).map((w) => w.tags.name));
+  t('非拓撲交叉仍能圍成小面:打結支梢剪除、孤立正常直路保留',
+    !crossingNames.has('打結支梢') && crossingNames.has('正常直路'));
+  t('幾何小面剪枝不新增死路', crossingStats.deadEndsAfter <= crossingStats.deadEndsBefore,
+    `${crossingStats.deadEndsBefore} → ${crossingStats.deadEndsAfter}`);
+  t('小環統計:低於門檻的完整閉環數確實下降',
+    stats.loopBefore.small > stats.loopAfter.small
+    && stats.loopAfter.thresholdM2 === BASE_PRUNE.MAX_LOOP_AREA_M2);
+
+  const parallelCase = (tag, label) => {
+    const ws = [
+      W('一般候選', 2.2, [0, 0], [80, 0]),
+      W('左', 8, [0, 0], [0, 12]), W('頂', 8, [0, 12], [80, 12]), W('右', 8, [80, 12], [80, 0]),
+      W('左尾', 8, [-10, 0], [0, 0]), W('右尾', 8, [80, 0], [90, 0]),
+      W(label, 2.2, [0, -8], [80, -8], tag),
+    ];
+    const s = {}, ns = new Set(pruneRoads(ws, toXZ, widthOf, s).map((w) => w.tags.name));
+    return ns.has('一般候選') && ns.has(label) && s.parallelProtected.structure > 0;
+  };
+  t('一般道路與高架橋並排時不剪枝', parallelCase({ bridge: 'yes' }, '高架橋'));
+  t('一般道路與地下道並排時不剪枝', parallelCase({ tunnel: 'yes', layer: '-1' }, '地下道'));
+  t('一般道路與明隧道並排時不剪枝', parallelCase({ covered: 'yes' }, '明隧道'));
+  t('一般道路與隧道並排時不剪枝', parallelCase({ tunnel: 'yes' }, '隧道'));
+
+  const dividedStats = {};
+  const dividedWays = [
+    W('分隔候選', 2.2, [0, 0], [80, 0], { highway: 'primary', oneway: 'yes' }),
+    W('左', 8, [0, 0], [0, 12]), W('頂', 8, [0, 12], [80, 12]), W('右', 8, [80, 12], [80, 0]),
+    W('左尾', 8, [-10, 0], [0, 0]), W('右尾', 8, [80, 0], [90, 0]),
+    W('反向分隔車道', 2.2, [80, -8], [0, -8], { highway: 'primary', oneway: 'yes' }),
+  ];
+  const dividedNames = new Set(pruneRoads(dividedWays, toXZ, widthOf, dividedStats).map((w) => w.tags.name));
+  t('雙向車道分隔時兩條 oneway 皆不剪枝',
+    dividedNames.has('分隔候選') && dividedNames.has('反向分隔車道')
+    && dividedStats.parallelProtected.divided >= 2);
 }
 
 // =================================================================================
@@ -659,6 +738,7 @@ for (const [flag, why] of [
   ['--break-dense', '量化前不細分 ⇒ Ⅵ「真的落格」MUST 紅'],
   ['--break-relax', '節點鬆弛關掉 ⇒ Ⅵ「真的落格」MUST 紅'],
   ['--break-prune', '剪枝候選寬度歸零 ⇒ Ⅵ-b「真的有剪」MUST 紅'],
+  ['--break-loop-area', '小環面積門檻歸零 ⇒ Ⅵ-b「小閉環真的有剪」MUST 紅'],
   ['--break-rotbox', '烘焙的抓取範圍改吃帶 rot 的 cfg ⇒ Ⅸ「冪等」MUST 紅'],
   ['--break-rotover', '執行期量測不再讓過已有的 rot ⇒ Ⅸ「不覆蓋烘焙值」MUST 紅'],
 ]) if (argv.includes(flag)) console.log(`(${flag}:${why})`);
