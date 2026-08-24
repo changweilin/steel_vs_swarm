@@ -11,7 +11,7 @@ import {
   SOLDIER_H, MORPH_HUMANOID, heroTargetH, TARGET_H,
 } from './data.js';
 import { toonify, outlinify, enableDissolve } from './toon.js';
-import { heroPalette, paintUnit } from './paint.js';
+import { heroPalette, paintUnit, paintFactionUnit } from './paint.js';
 // 程序生成幾何積木(全專案唯一縫;本檔與 mecha/geo.js、機體台舊版對照同吃一份)
 import { mat, outlineW, dim, bx, cyl, rbz } from './geo3d.js';
 // 英雄機體建構器(2026-08-14 新版建模全面替換舊版):逐機零件檔住 forge/mechs/,
@@ -2142,6 +2142,10 @@ export function makeUnit(kind, side, { ring = true, ch = null, dissolve = false 
     // 角色性格花紋(paint.js):MUST 在 fitToHeight/outlinify 之前 —— 靜止姿勢矩陣才是
     // 花紋的錨(縮放後仍成立:矩陣取的是「相對 built 根」的局部變換);描邊外殼不吃塗裝。
     if (vis) paintUnit(built, vis, side, 'light');
+    else if (kind === 'tower' || kind.startsWith('base:')
+      || kind.startsWith('creep:') || kind === 'bunker') {
+      paintFactionUnit(built, side, kind);
+    }
     fitToHeight(built, target);
     outlinify(built, outlineW(target));
     g.add(built);

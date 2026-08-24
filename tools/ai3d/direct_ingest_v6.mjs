@@ -28,6 +28,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { request as httpsRequest } from 'node:https';
 import { execFileSync } from 'node:child_process';
+import { isNativeFunctionalSubpart } from '../../public/js/nativeFunctionalBuildings.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
@@ -866,6 +867,7 @@ async function main() {
   // ── 篩選 ──
   const filtered = allImages.filter(({ path: imgPath, baseDir }) => {
     const { family, subpart, stem } = parseCategory(imgPath, baseDir);
+    if (isNativeFunctionalSubpart(family, subpart)) return false;
     if (FAMILY_FILTER && family !== FAMILY_FILTER) return false;
     if (ONLY_FILTER && `${family}/${subpart}` !== ONLY_FILTER) return false;
     if (REVIEW_STATUS && !reviewTargets.has(`${family}/${subpart}_${stem}`)) return false;

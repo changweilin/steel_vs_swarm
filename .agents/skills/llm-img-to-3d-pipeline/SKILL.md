@@ -12,6 +12,8 @@ This skill owns the orchestration and artifact contract for the versioned photo-
 
 Player-controlled mecha are out of scope by default. Do not read, regenerate, or modify `public/js/forge/**` for this workflow. Building units and NPCs are separate consumers and may be processed only when the request names them.
 
+Native functional buildings are also outside image-to-3D production. Temples, churches, hospitals, schools, stations, and museums must retain their project-native procedural generators because their gameplay-readable silhouettes and semantic collision profiles are part of the world contract. The shared exclusion policy is `public/js/nativeFunctionalBuildings.js`; import it in ingestion/catalog tools and never copy the category list into a second seam. Reference photos for these categories may remain as art study material, but must not enter the production runtime catalog.
+
 ## Required skill routing (single-owner, no overlap)
 
 Load this skill first, then load only the skill that owns the current stage. Do not copy its rules into this file or reimplement its seam.

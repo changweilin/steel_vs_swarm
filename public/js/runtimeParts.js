@@ -11,6 +11,14 @@ export const RUNTIME_PARTS_META = Object.freeze({
     "legacyV1Families": [
       "rock",
       "tree:conifer"
+    ],
+    "nativeFunctionalBuildings": [
+      "bld_hospital",
+      "bld_school",
+      "bld_station",
+      "bld_temple",
+      "bld_church",
+      "bld_museum"
     ]
   },
   "generatedFrom": {

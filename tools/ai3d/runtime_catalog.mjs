@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  NATIVE_FUNCTIONAL_SUBPARTS,
+  isNativeFunctionalSubpart,
+} from '../../public/js/nativeFunctionalBuildings.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '..', '..');
@@ -157,6 +161,10 @@ export function buildRuntimeCatalog(root = REPO_ROOT) {
   for (const database of databaseItems) {
     const review = reviewItems[database.key];
     if (review?.status !== 'ok') continue;
+    if (isNativeFunctionalSubpart(database.family, database.subpart)) {
+      excluded.push(exclusion(database.key, 'native-functional-building'));
+      continue;
+    }
     if (!runtimeVersionEligible(database)) {
       excluded.push(exclusion(database.key, 'version-policy', database.verStr || database.version));
       continue;
@@ -236,6 +244,7 @@ export function buildRuntimeCatalog(root = REPO_ROOT) {
       productionVersions: ['v5', 'v6'],
       duplicatePreference: 'v6',
       legacyV1Families: ['rock', 'tree:conifer'],
+      nativeFunctionalBuildings: [...NATIVE_FUNCTIONAL_SUBPARTS],
     },
     generatedFrom: { ...SOURCE_PATHS },
     counts,

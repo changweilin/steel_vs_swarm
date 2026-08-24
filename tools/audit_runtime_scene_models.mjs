@@ -1,22 +1,39 @@
 // 通過零件台的正式建模接線稽核。
-// 反向驗證：--break-building 破壞建築名冊；--break-wiring 破壞場景接線。
+// 反向驗證：--break-building／--break-wiring／--break-native／--break-faction／--break-national-models。
 import { readSrc } from './audit_src.mjs';
 import {
   BUILDING_PARTS,
   RUNTIME_PARTS_META,
   VEHICLE_PARTS,
 } from '../public/js/runtimeParts.js';
+import {
+  NATIVE_FUNCTIONAL_BUILDINGS,
+  NATIVE_FUNCTIONAL_KINDS,
+  NATIVE_FUNCTIONAL_SUBPARTS,
+  nativeFunctionalKind,
+} from '../public/js/nativeFunctionalBuildings.js';
 
 const BREAK_BUILDING = process.argv.includes('--break-building');
 const BREAK_WIRING = process.argv.includes('--break-wiring');
+const BREAK_NATIVE = process.argv.includes('--break-native');
+const BREAK_FACTION = process.argv.includes('--break-faction');
+const BREAK_NATIONAL_MODELS = process.argv.includes('--break-national-models');
 const buildings = BREAK_BUILDING ? BUILDING_PARTS.slice(1) : BUILDING_PARTS;
 let biomes = readSrc('public', 'js', 'biomes.js');
 if (BREAK_WIRING) biomes = biomes.replace('makeApprovedBuildingBatch(entry, rows)', 'makeLegacyBuildingBatch(entry, rows)');
-const models = readSrc('public', 'js', 'models.js');
+if (BREAK_NATIVE) biomes = biomes.replace('const native = nativeFunctionalKind(tags);', 'const native = null;');
+let models = readSrc('public', 'js', 'models.js');
+if (BREAK_FACTION) models = models.replace('paintFactionUnit(built, side, kind);', 'paintUnit(built, null, side);');
 const runtimeRenderer = readSrc('public', 'js', 'runtimePartModel.js');
-const npcModels = readSrc('public', 'js', 'npcModels.js');
-const buildingUnits = readSrc('public', 'js', 'buildingUnitModels.js');
+let npcModels = readSrc('public', 'js', 'npcModels.js');
+let buildingUnits = readSrc('public', 'js', 'buildingUnitModels.js');
+if (BREAK_NATIONAL_MODELS) {
+  npcModels = npcModels.replace("reference: 'BTR-4E'", "reference: 'K-17 Bumerang'");
+  buildingUnits = buildingUnits.replace("reference: '烏克蘭 36D6 機動雷達塔'", "reference: '蘇式裝甲海岸砲台'");
+}
 const partlib = readSrc('public', 'js', 'partlib.js');
+const runtimeCatalog = readSrc('tools', 'ai3d', 'runtime_catalog.mjs');
+const directIngest = readSrc('tools', 'ai3d', 'direct_ingest_v6.mjs');
 
 let pass = 0;
 let fail = 0;
@@ -43,6 +60,27 @@ ok(new Set(buildings.map((row) => row.canonicalTarget)).size === buildings.lengt
 ok(RUNTIME_PARTS_META.policy.duplicatePreference === 'v6'
   && RUNTIME_PARTS_META.policy.legacyV1Families.join('|') === 'rock|tree:conifer',
   '目錄政策固定為 v6 優先、v1 僅岩石／針葉');
+
+console.log('\nⅠ-b 原生功能性建築');
+const nativeKinds = BREAK_NATIVE ? NATIVE_FUNCTIONAL_KINDS.slice(1) : NATIVE_FUNCTIONAL_KINDS;
+ok(nativeKinds.length === 6 && NATIVE_FUNCTIONAL_SUBPARTS.length === 6,
+  '廟宇／教堂／醫院／學校／車站／博物館六類共用單一排除名冊');
+ok(Object.entries(NATIVE_FUNCTIONAL_BUILDINGS).every(([kind, subpart]) =>
+  subpart === `bld_${kind}`), '原生建築類型與照片分類可逆對應');
+ok(nativeFunctionalKind({ amenity: 'hospital' }) === 'hospital'
+  && nativeFunctionalKind({ amenity: 'school' }) === 'school'
+  && nativeFunctionalKind({ railway: 'station' }) === 'station'
+  && nativeFunctionalKind({ amenity: 'place_of_worship', religion: 'christian' }) === 'church'
+  && nativeFunctionalKind({ amenity: 'place_of_worship', religion: 'buddhist' }) === 'temple'
+  && nativeFunctionalKind({ tourism: 'museum' }) === 'museum', 'OSM 標籤回到六類原生生成器');
+ok(NATIVE_FUNCTIONAL_KINDS.every((kind) => biomes.includes(`${kind}: (`))
+  && biomes.includes('const native = nativeFunctionalKind(tags);'), '六類 LANDMARKS 仍存在且由共同分類縫呼叫');
+ok(BUILDING_PARTS.every((row) => !NATIVE_FUNCTIONAL_SUBPARTS.includes(row.subpart)),
+  '正式 img-to-3D 建築型錄未混入原生功能性建築');
+ok(RUNTIME_PARTS_META.policy.nativeFunctionalBuildings.join('|')
+  === NATIVE_FUNCTIONAL_SUBPARTS.join('|'), '產生後的執行期型錄保留同一份原生建築排除政策');
+ok(runtimeCatalog.includes('isNativeFunctionalSubpart(database.family, database.subpart)')
+  && directIngest.includes('isNativeFunctionalSubpart(family, subpart)'), 'v5/v6 型錄與 v6 匯入都執行原生建築排除政策');
 
 console.log('\nⅡ 通用幾何與場景接線');
 const usedTypes = new Set([...buildings, ...VEHICLE_PARTS].flatMap((row) => row.parts.map((part) => part.type)));
@@ -72,6 +110,33 @@ ok(npcModels.includes("'rig.kind=biped'") && npcModels.includes("'rig.kind=wheel
   'NPC 模型宣告四類既有動畫／槍口契約');
 ok(buildingUnits.includes('yaw.userData.pitch = pitch')
   && buildingUnits.includes('yaw.userData.muzzles = muzzles'), '新版砲塔保留俯仰與多槍口 API');
+ok(models.includes('paintFactionUnit(built, side, kind);')
+  && ['SWARM', 'STEEL', 'GUER', 'MILI'].every((side) => npcModels.includes(`side === '${side}'`)),
+  '陣營單位套用四套圖樣，NPC 另有四套組成零件語彙');
+const vehicleReferences = [
+  'BTR-4E', 'T-64BV', 'Mi-24PU2',
+  'K-17 Bumerang', 'T-14 Armata', 'Ka-52',
+  'Casspir Mk II', 'T-55AM', 'UH-1H',
+  'M1126 Stryker', 'M1A2 Abrams', 'AH-64D Apache',
+];
+ok(vehicleReferences.every((reference) => npcModels.includes(`reference: '${reference}'`))
+  && new Set(vehicleReferences).size === 12, '四陣營 APC／坦克／直升機各採不同國家與型號原型');
+ok(!npcModels.includes('const VEHICLE = Object.freeze')
+  && npcModels.includes("machineModel(side, 'apc')")
+  && npcModels.includes("machineModel(side, 'tank')")
+  && npcModels.includes("machineModel(side, 'heli')"), '機械單位主輪廓由型號資料列驅動，舊共用底盤已退場');
+const buildingReferences = [
+  '烏克蘭 36D6 機動雷達塔', '蘇式裝甲海岸砲台',
+  '烏克蘭加固機庫群與無人機管制塔', '蘇式潛艇堡與洲際飛彈井',
+];
+ok(buildingReferences.every((reference) => buildingUnits.includes(`reference: '${reference}'`))
+  && new Set(buildingReferences).size === 4, '雙陣營塔／主堡採四種獨立國家與工事原型');
+const professions = [
+  '醫師', '工程師', '商人', '廚師', '電工', '教師', '農夫', '記者', '郵差', '建築工',
+  '護理師', '藥師', '銀行員', '程式設計師', '會計師', '律師', '獸醫', '技師', '攤販', '心理師',
+];
+ok(professions.every((name) => npcModels.includes(`'${name}': Object.freeze({`))
+  && npcModels.includes('addProfessionKit(hips, row, cloth)'), '20 種平民職業各有頭飾／制服／手持件規格');
 const heroBranch = models.slice(models.indexOf('if (forged) {'), models.indexOf('} else if (entry) {'));
 ok(/forgeHero\(heroKind, ch, side\)/.test(models)
   && /const built = forged\.group;/.test(heroBranch)

@@ -3,7 +3,7 @@
 // 所有建物以同一張規格表驅動，避免塔身、砲塔與主堡各自長出不可稽核的尺寸副本。
 import * as THREE from 'three';
 import { SIDES } from './data.js';
-import { mat, bx, cyl, sph, torus, dim } from './geo3d.js';
+import { mat, bx, cyl, sph, torus, dim, rbz } from './geo3d.js';
 import { outlinify } from './toon.js';
 
 const TAU = Math.PI * 2;
@@ -19,15 +19,17 @@ export const BUILDING_UNIT_MODELS = Object.freeze({
         body: 0x514b3d,
         mid: 0x68604b,
         dark: 0x302f2b,
-        language: 'hive-relay',
+        reference: '烏克蘭 36D6 機動雷達塔',
+        language: 'ukrainian-lattice-radar',
       }),
       STEEL: Object.freeze({
-        facets: 8,
-        yaw: Math.PI / 8,
+        facets: 10,
+        yaw: Math.PI / 10,
         body: 0x667380,
         mid: 0x7d8995,
         dark: 0x343c45,
-        language: 'rail-bastion',
+        reference: '蘇式裝甲海岸砲台',
+        language: 'soviet-armored-battery',
       }),
     }),
   }),
@@ -38,7 +40,8 @@ export const BUILDING_UNIT_MODELS = Object.freeze({
     body: 0x554c39,
     mid: 0x706449,
     dark: 0x2d2b27,
-    language: 'brood-sanctum',
+    reference: '烏克蘭加固機庫群與無人機管制塔',
+    language: 'ukrainian-drone-airbase',
   }),
   'base:STEEL': Object.freeze({
     top: 34,
@@ -47,7 +50,8 @@ export const BUILDING_UNIT_MODELS = Object.freeze({
     body: 0x596774,
     mid: 0x74828e,
     dark: 0x303842,
-    language: 'split-citadel',
+    reference: '蘇式潛艇堡與洲際飛彈井',
+    language: 'soviet-silo-citadel',
   }),
 });
 
@@ -68,9 +72,18 @@ function addRadial(parent, n, radius, fn, phase = 0) {
   }
 }
 
+function addStrut(parent, a, b, r, color, opts) {
+  const p0 = new THREE.Vector3(...a), p1 = new THREE.Vector3(...b);
+  const d = p1.clone().sub(p0);
+  const m = cyl(parent, r, r, Math.max(0.001, d.length()), 6,
+    (p0.x + p1.x) * 0.5, (p0.y + p1.y) * 0.5, (p0.z + p1.z) * 0.5, color, opts);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+  return m;
+}
+
 /**
- * 防禦塔固定結構。塔頂座圈上緣嚴格位於全高 92%，供 models.js 掛載 yaw 砲塔。
- * 兩陣營共用同一組收分比例，只由表列 facet / palette / silhouette language 分流。
+ * 防禦塔固定介面。塔頂座圈嚴格位於全高 92%，供 models.js 掛載 yaw 砲塔；
+ * 塔身結構則由國家／型號資料列分流，蜂群走外露桁架、鋼鐵走實心砲廓。
  */
 function buildTower(side) {
   const frame = BUILDING_UNIT_MODELS.tower;
@@ -80,56 +93,56 @@ function buildTower(side) {
   const seatY = top * frame.turretSeatF;
   const g = new THREE.Group();
 
-  // 共同結構：地坪 → 三段收分塔身 → 砲塔座圈。最低點恆為 y=0。
-  addFacet(g, spec, 5.5, 6.5, 2.0, 1.0, spec.dark);
-  addFacet(g, spec, 4.6, 5.5, 1.4, 2.7, dim(spec.body, 0.88));
-  const segments = [
-    { y0: 3.4, y1: 8.1, rb: 4.2, rt: 3.35, c: spec.body },
-    { y0: 8.1, y1: 13.4, rb: 3.35, rt: 2.75, c: spec.mid },
-    { y0: 13.4, y1: seatY - 0.8, rb: 2.75, rt: 2.35, c: spec.body },
-  ];
-  segments.forEach((s, i) => {
-    const part = addFacet(g, spec, s.rt, s.rb, s.y1 - s.y0, (s.y0 + s.y1) * 0.5, s.c);
-    part.rotation.y += i % 2 ? Math.PI / spec.facets : 0;
-  });
-  addFacet(g, spec, 3.25, 2.45, 1.6, seatY - 0.8, spec.dark, { metalness: 0.65 });
-  addFacet(g, spec, 3.65, 3.65, 0.6, seatY - 0.3, spec.mid, { metalness: 0.65 });
-
-  if (spec.language === 'hive-relay') {
-    // 蜂群：外露蜂室與三支訊號角形成不對稱剪影；亮色只留在小面積節點。
-    addRadial(g, 6, 3.0, ({ i, a, x, z }) => {
-      for (let row = 0; row < 3; row++) {
-        const cell = cyl(g, 0.43, 0.43, 0.34, 6, x, 6.2 + row * 3.1, z,
-          (i + row) % 3 === 0 ? accent : spec.dark,
-          (i + row) % 3 === 0 ? { emissive: accent, emissiveIntensity: 0.85 } : undefined);
-        cell.rotation.set(Math.PI / 2, 0, -a);
-      }
-    }, Math.PI / 6);
-    [-1, 0, 1].forEach((k) => {
-      cyl(g, 0.07, 0.22, top - seatY, 5, 1.8 + k * 0.65,
-        (top + seatY) * 0.5, -1.4 - Math.abs(k) * 0.35, spec.dark);
-    });
-    for (const s of [-1, 1]) {
-      const perch = bx(g, 2.9, 0.24, 0.75, s * 3.15, 13.2 + s * 0.55, -0.45, spec.dark);
-      perch.rotation.z = s * 0.11;
-      sph(g, 0.25, s * 4.35, 13.45 + s * 0.55, -0.45, accent,
-        { emissive: accent, emissiveIntensity: 1.05 });
+  if (spec.language === 'ukrainian-lattice-radar') {
+    // 36D6 語彙：低基座、四腳外露桁架、大片負空間與偏置雷達架。
+    addFacet(g, spec, 5.7, 6.6, 1.2, 0.6, spec.dark);
+    bx(g, 10.2, 0.55, 8.8, 0, 1.45, 0, spec.body);
+    const feet = [[-4.0, 0, -3.2], [4.0, 0, -3.2], [-4.0, 0, 3.2], [4.0, 0, 3.2]];
+    const heads = [[-1.9, seatY - 1.0, -1.6], [1.9, seatY - 1.0, -1.6],
+      [-1.9, seatY - 1.0, 1.6], [1.9, seatY - 1.0, 1.6]];
+    for (let i = 0; i < feet.length; i++) {
+      const foot = feet[i], head = heads[i];
+      addStrut(g, [foot[0], 1.5, foot[2]], head, 0.24, spec.dark, { metalness: 0.66 });
+      const mid = [(foot[0] + head[0]) * 0.5, 9.2, (foot[2] + head[2]) * 0.5];
+      addStrut(g, [foot[0], 1.5, foot[2]], [-mid[0], mid[1], mid[2]], 0.11, spec.mid);
+      addStrut(g, [head[0], head[1], head[2]], [-mid[0], mid[1], mid[2]], 0.11, spec.mid);
     }
+    for (const y of [6.1, 10.7, 15.0]) {
+      const f = 1 - y / seatY * 0.48;
+      bx(g, 7.6 * f, 0.28, 0.35, 0, y, -2.5 * f, spec.mid);
+      bx(g, 7.6 * f, 0.28, 0.35, 0, y, 2.5 * f, spec.mid);
+      bx(g, 0.35, 0.28, 5.0 * f, -3.8 * f, y, 0, spec.mid);
+      bx(g, 0.35, 0.28, 5.0 * f, 3.8 * f, y, 0, spec.mid);
+    }
+    bx(g, 6.8, 0.65, 6.2, 0, seatY - 0.55, 0, spec.dark, { metalness: 0.62 });
+    cyl(g, 0.2, 0.28, 3.1, 8, 0, seatY - 2.15, 0, spec.dark);
+    // 偏置相位陣列與通訊環讓正面方向可讀。
+    const radar = bx(g, 4.5, 2.2, 0.22, -2.2, 13.7, 0.9, spec.mid);
+    radar.rotation.y = -0.24;
+    torus(g, 0.78, 0.09, 2.6, 14.2, -0.9, accent,
+      { emissive: accent, emissiveIntensity: 0.78 });
+    addStrut(g, [2.6, 12.2, -0.9], [2.6, 15.8, -0.9], 0.07, spec.dark);
   } else {
-    // 鋼鐵：成對裝甲脊與單側雷達桁架，遠距離仍讀得出正面與陣營。
-    for (const s of [-1, 1]) {
-      bx(g, 0.55, 8.4, 2.9, s * 2.75, 9.4, -0.15, spec.dark, { metalness: 0.7 });
-      bx(g, 0.16, 5.9, 0.36, s * 3.05, 9.6, 0.55, accent,
-        { emissive: accent, emissiveIntensity: 0.55 });
+    // 蘇式海岸砲台語彙：實心砲廓、外凸扶壁與厚重裝甲甲板。
+    bx(g, 12.6, 2.0, 10.8, 0, 1.0, 0, spec.dark, { metalness: 0.68 });
+    bx(g, 10.4, 3.8, 8.5, 0, 3.9, -0.25, spec.body, { metalness: 0.62 });
+    for (const x of [-4.9, 4.9]) {
+      const buttress = bx(g, 2.1, 8.8, 3.4, x, 7.2, -0.1, spec.dark, { metalness: 0.72 });
+      buttress.rotation.z = x < 0 ? -0.1 : 0.1;
+      bx(g, 0.18, 5.8, 0.42, x * 1.07, 7.8, 1.62, accent,
+        { emissive: accent, emissiveIntensity: 0.5 });
     }
-    bx(g, 1.1, 3.6, 1.7, 3.25, 13.4, -0.9, spec.dark, { metalness: 0.7 });
-    cyl(g, 0.09, 0.18, top - seatY, 6, -2.35, (top + seatY) * 0.5, -1.2, spec.dark);
-    torus(g, 0.72, 0.09, -2.35, top - 0.81, -1.2, accent,
-      { emissive: accent, emissiveIntensity: 0.85 });
+    addFacet(g, spec, 3.8, 5.2, 7.8, 11.5, spec.body, { metalness: 0.66 });
+    addFacet(g, spec, 3.25, 3.8, 2.9, 16.85, spec.mid, { metalness: 0.7 });
+    addFacet(g, spec, 4.2, 4.2, 0.65, seatY - 0.33, spec.dark, { metalness: 0.76 });
+    bx(g, 2.0, 3.8, 1.9, 4.45, 14.5, -1.3, spec.dark, { metalness: 0.72 });
+    torus(g, 0.75, 0.1, 4.45, 16.6, -1.3, accent,
+      { emissive: accent, emissiveIntensity: 0.78 });
   }
 
   g.userData.turretSeatF = frame.turretSeatF;
   g.userData.modelLanguage = spec.language;
+  g.userData.modelReference = spec.reference;
   return g;
 }
 
@@ -138,55 +151,58 @@ function buildBase(spec, side) {
   const accent = accentOf(side);
   const top = spec.top;
 
-  // 共同主堡家族：寬基壇、可讀的中央核心、周向支撐與極小陣營亮點。
-  addFacet(g, spec, 16.5, 19.5, 3.0, 1.5, spec.dark);
-  addFacet(g, spec, 14.5, 16.5, 2.2, 4.1, dim(spec.body, 0.86));
-
-  if (spec.language === 'brood-sanctum') {
-    addFacet(g, spec, 10.5, 14.0, 8.8, 9.6, spec.body);
-    addFacet(g, spec, 7.8, 10.5, 6.2, 17.1, spec.mid);
-    addFacet(g, spec, 4.2, 7.8, 5.3, 22.85, spec.body);
-    // 六支孵化瓣從基壇向外放射；各瓣的接點與軸向皆由同一半徑推導。
-    addRadial(g, 6, 11.8, ({ i, a, x, z }) => {
-      const p = new THREE.Group();
-      p.position.set(x, 5.5, z);
-      p.rotation.y = a;
-      g.add(p);
-      bx(p, 3.5, 2.4, 7.2, 0, 0, 0, i % 2 ? spec.body : spec.dark);
-      addFacet(p, { ...spec, facets: 6, yaw: Math.PI / 6 }, 1.05, 1.45, 4.5, 3.1, spec.mid);
-      sph(p, 0.38, 0, 5.6, 0, accent, { emissive: accent, emissiveIntensity: 0.95 });
+  if (spec.language === 'ukrainian-drone-airbase') {
+    // 低矮加固機庫群：六片分散機庫決定水平輪廓，中央管制塔只佔小面積。
+    addFacet(g, spec, 17.5, 20.0, 2.0, 1.0, spec.dark);
+    addRadial(g, 6, 12.3, ({ i, a, x, z }) => {
+      const hangar = new THREE.Group();
+      hangar.position.set(x, 3.5, z);
+      hangar.rotation.y = a;
+      g.add(hangar);
+      bx(hangar, 5.2, 3.8, 8.3, 0, 0, 0, i % 2 ? spec.body : dim(spec.body, 0.9));
+      const roofL = bx(hangar, 3.2, 0.42, 8.7, -1.35, 2.05, 0, spec.mid);
+      const roofR = bx(hangar, 3.2, 0.42, 8.7, 1.35, 2.05, 0, spec.mid);
+      roofL.rotation.z = 0.28; roofR.rotation.z = -0.28;
+      bx(hangar, 3.9, 2.4, 0.16, 0, -0.35, 4.15, spec.dark);
+      bx(hangar, 0.2, 0.65, 0.08, 1.85, -0.25, 4.27, accent,
+        { emissive: accent, emissiveIntensity: 0.65 });
     }, Math.PI / 6);
-    addRadial(g, 8, 7.7, ({ i, x, z }) => {
-      const node = cyl(g, 0.52, 0.52, 0.32, 6, x, 17.2 + (i % 2) * 1.5, z,
-        i % 3 === 0 ? accent : spec.dark,
-        i % 3 === 0 ? { emissive: accent, emissiveIntensity: 0.8 } : undefined);
-      node.rotation.x = Math.PI / 2;
-    });
-    // 信標球頂面 = top，讓 fitToHeight 的尺度只由規格表決定。
-    sph(g, 2.25, 0, top - 2.25, 0, accent, { emissive: accent, emissiveIntensity: 1.0 });
-  } else {
-    addFacet(g, spec, 11.5, 14.0, 10.5, 10.35, spec.body);
-    addFacet(g, spec, 8.4, 11.5, 6.0, 18.6, spec.mid);
-    // 分裂式雙塔與跨橋是鋼鐵主堡的遠距剪影；中心留出真實負空間。
-    for (const s of [-1, 1]) {
-      const pylon = new THREE.Group();
-      pylon.position.set(s * 6.0, 0, 0);
-      g.add(pylon);
-      cyl(pylon, 2.25, 3.7, 12.5, 8, 0, 22.1, 0, spec.dark, { metalness: 0.7 }).rotation.y = Math.PI / 8;
-      bx(pylon, 4.8, 1.1, 5.2, 0, 27.3, 0, spec.mid, { metalness: 0.65 });
-      bx(pylon, 0.18, 5.4, 0.4, s * 2.2, 22.0, 2.45, accent,
-        { emissive: accent, emissiveIntensity: 0.52 });
+    addFacet(g, spec, 6.2, 9.2, 7.2, 7.4, spec.body);
+    addFacet(g, spec, 3.3, 5.8, 8.0, 15.0, spec.mid);
+    // 四腳管制塔以桁架承載，與鋼鐵實心飛彈井形成負空間差。
+    for (const x of [-3.3, 3.3]) for (const z of [-3.3, 3.3]) {
+      addStrut(g, [x, 11.0, z], [x * 0.48, 26.8, z * 0.48], 0.17, spec.dark);
     }
-    bx(g, 9.1, 1.2, 3.2, 0, 24.3, 0, spec.mid, { metalness: 0.65 });
-    bx(g, 3.6, 3.8, 3.6, 0, 26.7, 0, spec.dark, { metalness: 0.75 });
-    sph(g, 1.45, 0, top - 1.45, 0, accent, { emissive: accent, emissiveIntensity: 1.05 });
-    // 單側維修塔打破左右完全對稱，提供方向性與尺度錨。
-    bx(g, 2.3, 6.3, 3.1, 11.1, 13.8, -4.1, spec.dark, { metalness: 0.7 });
-    torus(g, 1.05, 0.12, 11.1, 17.4, -4.1, accent,
-      { emissive: accent, emissiveIntensity: 0.75 });
+    bx(g, 7.0, 2.0, 7.0, 0, 27.3, 0, spec.body);
+    rbz(g, 5.3, 2.7, 5.3, 0, 29.55, 0, spec.mid);
+    for (const a of [0, Math.PI / 2]) {
+      const panel = bx(g, 5.2, 1.55, 0.16, Math.sin(a) * 3.4, 29.7, Math.cos(a) * 3.4, spec.dark);
+      panel.rotation.y = a;
+    }
+    sph(g, 1.25, 0, top - 1.25, 0, accent, { emissive: accent, emissiveIntensity: 0.95 });
+  } else {
+    // 蘇式潛艇堡／飛彈井：矩形厚牆、雙井筒與跨橋，幾乎沒有穿透負空間。
+    bx(g, 39.0, 3.2, 34.0, 0, 1.6, 0, spec.dark, { metalness: 0.68 });
+    bx(g, 31.0, 7.4, 27.0, 0, 6.9, -0.8, spec.body, { metalness: 0.62 });
+    for (const x of [-12.5, 12.5]) {
+      bx(g, 6.4, 13.0, 24.0, x, 13.6, -1.0, spec.dark, { metalness: 0.7 });
+      addFacet(g, spec, 4.2, 5.2, 12.5, 22.2, spec.body, { metalness: 0.72 }).position.x = x;
+      addFacet(g, spec, 4.6, 4.6, 1.0, 28.95, spec.mid, { metalness: 0.78 }).position.x = x;
+      torus(g, 2.65, 0.24, x, 29.55, 0, spec.dark, { metalness: 0.8 });
+    }
+    bx(g, 20.0, 2.1, 8.2, 0, 24.0, 0, spec.mid, { metalness: 0.7 });
+    bx(g, 6.4, 6.0, 6.4, 0, 27.8, 0, spec.dark, { metalness: 0.76 });
+    sph(g, 1.3, 0, top - 1.3, 0, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    // 正面三道大型發射井門，從遠距即可讀出水平方向。
+    for (const x of [-9, 0, 9]) {
+      bx(g, 6.2, 5.2, 0.32, x, 8.0, 12.85, spec.dark);
+      bx(g, 0.22, 3.4, 0.12, x, 8.0, 13.06, accent,
+        { emissive: accent, emissiveIntensity: 0.5 });
+    }
   }
 
   g.userData.modelLanguage = spec.language;
+  g.userData.modelReference = spec.reference;
   return g;
 }
 
@@ -248,6 +264,7 @@ export function buildBuildingUnitTurret(side) {
   yaw.userData.pitch = pitch;
   yaw.userData.muzzles = muzzles;
   yaw.userData.muzzleAxis = '+z';
+  yaw.userData.modelReference = spec.reference;
   outlinify(yaw, 0.1);
   return yaw;
 }

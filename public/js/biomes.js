@@ -94,6 +94,7 @@ import { buildAquaticWorld } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
+import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -4331,16 +4332,12 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW 
 /** OSM tags → 建物類型 */
 function buildingType(tags) {
   const b = tags.building, a = tags.amenity;
-  if (a === 'hospital' || b === 'hospital') return 'hospital';
-  if (a === 'school' || a === 'university' || a === 'college' || b === 'school' || b === 'university') return 'school';
-  if (b === 'train_station' || tags.railway === 'station' || a === 'bus_station') return 'station';
+  const native = nativeFunctionalKind(tags);
+  if (native) return native;
   if (a === 'place_of_worship') {
     const r = tags.religion;
     if (r === 'muslim') return 'mosque';
-    if (r === 'christian') return 'church';
-    return 'temple';
   }
-  if (tags.tourism === 'museum' || b === 'museum') return 'museum';
   if (tags.power === 'tower') return 'power';
   if (b === 'industrial' || b === 'factory' || b === 'warehouse') return 'factory';
   if (tags.historic === 'castle' || b === 'castle') return 'castle';
