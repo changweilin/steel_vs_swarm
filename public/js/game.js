@@ -769,7 +769,7 @@ export class BattleClient {
     this._simT = 0;      // 伺服器權威經過秒數(快照 `time`);日夜時鐘的唯一來源
 
     this.scene.add(this.terrain.group);
-    // 地形本體是連續地表,不是應被淡化的場景物件;地貌拼圖本身以 noOutline 排除。
+    // 地形本體是連續地表,不是應被淡化的場景物件;其餘可見地物不以描邊旗標代替遮擋資格。
     const terrainSurface = this.terrain.group.children.find((o) => o.isMesh && o.receiveShadow);
     if (terrainSurface) this._viewOcclusionSkip.add(terrainSurface);
     this._registerViewOccluders(this.terrain.group);
@@ -2724,11 +2724,11 @@ export class BattleClient {
     if (maxT < dlen) { cam.x = ox + ux * maxT; cam.z = oz + uz * maxT; }
   }
 
-  /** 註冊可被第三人稱視線穿過的 Mesh;透明件、地被與特效不進候選。 */
+  /** 註冊第三人稱視線可淡化的 Mesh;描邊旗標與碰撞旗標彼此獨立。 */
   _registerViewOccluders(root) {
     root?.traverse?.((o) => {
       if (!o.isMesh || this._viewOcclusionSkip.has(o)
-        || o.userData?.isOutline || o.userData?.noOutline || o.userData?.noViewOcclusion) return;
+        || o.userData?.isOutline || o.userData?.noViewOcclusion) return;
       const mats = Array.isArray(o.material) ? o.material : [o.material];
       if (!mats.some((m) => m && !m.transparent)) return;
       if (this._viewOcclusionSet.has(o)) return;
