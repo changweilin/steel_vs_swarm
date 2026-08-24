@@ -6445,19 +6445,22 @@ export class BattleClient {
    */
   _resolveAim(far, pierce = false) {
     this.raycaster.setFromCamera(_ZERO2, this.camera);
-    this.raycaster.far = far;
     const ro = this.raycaster.ray.origin, rd = this.raycaster.ray.direction;
+    const camDist = (this.viewMode === 'tps' && this.pos) ? ro.distanceTo(this.pos) : 0;
+    const totalFar = far + camDist;
+    this.raycaster.far = totalFar;
     // 只對單位/飛彈做 raycast(地貌植被是純視覺,不擋子彈也不吃效能);地形走解析高度場
     // (_terrainHitT);建物/神木/巨岩等「有物理碰撞的障礙」另以解析圓柱判定(_blockerHitT)——
     // 準星射線先撞到障礙 → 視同打在障礙上(看不到的單位就不能射擊/鎖定,beam/招式落點同樣被擋)。
     // 貫穿光束不吃單位 ⇒ 連逐三角 raycast 都不必付(A6 的效能紀律:能不掃就不掃)
-    const targets = pierce ? _NO_HITS : this._rayCandidates(ro, rd, far, this._rayBuf || (this._rayBuf = []));
+    const targets = pierce ? _NO_HITS : this._rayCandidates(ro, rd, totalFar, this._rayBuf || (this._rayBuf = []));
     const hits = targets.length ? this.raycaster.intersectObjects(targets, true) : _NO_HITS;
-    const rEnd = this.raycaster.ray.at(far, new THREE.Vector3());
+    const rEnd = this.raycaster.ray.at(totalFar, new THREE.Vector3());
     const dBlock = this._obstHitT(ro.x, ro.y, ro.z, rEnd.x, rEnd.y, rEnd.z);
-    const dTerr = this._terrainHitT(ro, rd, far);
+    const dTerr = this._terrainHitT(ro, rd, totalFar);
     // 地形/障礙都是解析距離:比它們更遠的單位命中一律不算(舊版靠 hits 已排序 + break 達成同效)
-    const dStop = Math.min(dBlock ?? Infinity, dTerr ?? Infinity);
+    let dStop = Math.min(dBlock ?? Infinity, dTerr ?? Infinity);
+    if (dStop < camDist * 0.8) dStop = Infinity;   // 忽略相機與自機之間(身後)的地貌/障礙截斷
     for (const h of hits) {
       if (h.distance > dStop) break;
       if (!raySolid(h.object)) continue;   // 光暈/招牌等表現層子件不參與準星解析(唯一縫 `raySolid`)
@@ -6824,11 +6827,15 @@ export class BattleClient {
         return;
       }
       // 輕武器光束:不屬重武器三分類 —— 維持單體直擊(heroHit)
+      const hitEnt = ent || (missileId == null ? this._aimTarget(rng) : null);
       this._tracer(muzzle, point, col, 0.35);
       this._muzzleBurst(muzzle, false, this.side);
       starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
       if (missileId != null) this._hitFeedback(def, null, point);
-      else if (ent) { this.net.send({ t: 'hit', id: ent.id, w: id }); this._hitFeedback(def, ent, point); }
+      else if (hitEnt && hitEnt.side !== this.side && !hitEnt.neutral && !hitEnt.dead) {
+        this.net.send({ t: 'hit', id: hitEnt.id, w: id });
+        this._hitFeedback(def, hitEnt, point);
+      }
       return;
     }
 

@@ -2141,7 +2141,8 @@ export class BattleSim {
     if (this._jammed(h)) return;   // 電磁癱瘓:武器離線
     const wp = this._heroWeapon(h, w);
     if (!wp || !wp.def.rate) return;
-    if (wp.def.needAim && !h.aiming) return;   // 重武器需瞄準模式才能開火
+    const cap = (trajClass(wp.def) === 'fnf' ? chaseCapS(wp.def) : flightCapS(wp.def)) || 0.5;
+    if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > cap) return;   // 重武器需瞄準模式才能開火(容差窗與 heroBurst 同縫)
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲/彈道飛行)
     // 量到目標**近側表面**(_surfD3):彈著本來就停在建築牆面上,量中心會讓砲塔/主堡吃掉整段寬容
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
@@ -2401,7 +2402,8 @@ export class BattleSim {
     if (this._jammed(h)) return;
     const wp = this._heroWeapon(h, slot === 'light' ? 'light' : 'heavy');
     if (!wp || !wp.def.fan) return;
-    if (wp.def.needAim && !h.aiming) return;
+    const cap = (trajClass(wp.def) === 'fnf' ? chaseCapS(wp.def) : flightCapS(wp.def)) || 0.5;
+    if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > cap) return;
     const len = Math.hypot(dx, dz) || 1;
     dx /= len; dz /= len;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
@@ -2538,7 +2540,8 @@ export class BattleSim {
     if (![ox, oz, oy, dx, dz, dy, +len].every(Number.isFinite)) return;
     const wp = this._heroWeapon(h, 'heavy');
     if (!wp || aoeClass(wp.def) !== 'line') return;
-    if (wp.def.needAim && !h.aiming) return;
+    const cap = (trajClass(wp.def) === 'fnf' ? chaseCapS(wp.def) : flightCapS(wp.def)) || 0.5;
+    if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > cap) return;
     // 槍口必須在自己身邊(防作弊:不能從任意座標放一條線)
     if (dist2d(h.x, h.z, ox, oz) > 12) return;
     const dl = Math.hypot(dx, dz, dy) || 1;
