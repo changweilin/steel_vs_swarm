@@ -5486,6 +5486,64 @@ function worldToLL(x, z, center) {
   return { lat, lon };
 }
 
+/**
+ * 兵線道路補片：OSM 路網查詢有額度上限，兵線所踩的某條住宅路／產業道路可能沒被回傳。
+ * 只補「沒有同向道路覆蓋」的乾地小段；已存在的 OSM 路面、橋隧與兵線跨水補橋都不重畫。
+ * 兵線本身不量化，因為它也是伺服器導航幾何；補片只補表現層路面，不反向修改 cfg.lanes。
+ */
+function missingLaneRoadWays(lanes, roads, terrain, center) {
+  if (!lanes?.length || !roads?.length) return [];
+  const CELL = 32, grid = new Map();
+  const cellKey = (i, j) => `${i},${j}`;
+  for (const way of roads) {
+    const pts = (way.geometry || []).map((p) => llToWorld(p.lat, p.lon, center));
+    const reach = roadWidth(way.tags || {}) / 2 + 1.5;
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+      const dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz);
+      if (len < 0.1) continue;
+      const seg = { ax, az, bx, bz, dx, dz, l2: len * len, ux: dx / len, uz: dz / len, reach };
+      const i0 = Math.floor((Math.min(ax, bx) - reach) / CELL), i1 = Math.floor((Math.max(ax, bx) + reach) / CELL);
+      const j0 = Math.floor((Math.min(az, bz) - reach) / CELL), j1 = Math.floor((Math.max(az, bz) + reach) / CELL);
+      for (let j = j0; j <= j1; j++) for (let k = i0; k <= i1; k++) {
+        const key = cellKey(k, j), arr = grid.get(key);
+        if (arr) arr.push(seg); else grid.set(key, [seg]);
+      }
+    }
+  }
+  const covered = (ax, az, bx, bz) => {
+    const mx = (ax + bx) / 2, mz = (az + bz) / 2;
+    const dl = Math.hypot(bx - ax, bz - az) || 1, ux = (bx - ax) / dl, uz = (bz - az) / dl;
+    for (const s of grid.get(cellKey(Math.floor(mx / CELL), Math.floor(mz / CELL))) || []) {
+      if (Math.abs(ux * s.ux + uz * s.uz) < 0.82) continue;   // 僅交叉、不共線，不算覆蓋
+      let t = ((mx - s.ax) * s.dx + (mz - s.az) * s.dz) / s.l2;
+      t = Math.max(0, Math.min(1, t));
+      const ex = mx - (s.ax + s.dx * t), ez = mz - (s.az + s.dz * t);
+      if (ex * ex + ez * ez <= s.reach * s.reach) return true;
+    }
+    return false;
+  };
+  const out = [];
+  for (const lane of lanes) {
+    const pts = densify(lane.map(([lat, lng]) => llToWorld(lat, lng, center)), ROAD_SEG);
+    let run = null;
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+      const wet = terrainEnvCode(terrain, (ax + bx) / 2, (az + bz) / 2) !== 0;
+      const missing = !wet && !covered(ax, az, bx, bz);
+      if (missing) {
+        if (!run) run = [[ax, az]];
+        run.push([bx, bz]);
+      } else if (run) {
+        if (run.length >= 2) out.push({ tags: { highway: 'primary', lanes: '2' }, geometry: run.map(([x, z]) => worldToLL(x, z, center)) });
+        run = null;
+      }
+    }
+    if (run?.length >= 2) out.push({ tags: { highway: 'primary', lanes: '2' }, geometry: run.map(([x, z]) => worldToLL(x, z, center)) });
+  }
+  return out;
+}
+
 /** 水面判定(高程低於水面 或 衛星影像水色;純色規則不吃場地 mix、不耗共享 rnd)*/
 function isWaterPt(terrain, x, z) {
   if (terrain.inDryBand?.(x, z)) return false;   // 兵線砲塔外接帶:強制乾地(壓過影像藍色水色,見 terrain.js 抬升)
@@ -6083,10 +6141,55 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   const tunnelSegs = [];   // 隧道/地下道小段:{路面 fy, 天花 cy, hw, open?} → main.js surfaceAt(洞內站路面)
                            // + 天花碰撞;open:true = 地下道引道露天路塹(只站立/側壁閘,不 slab/彈道/天花)
   const ceilSegs = [];     // 地下道不透明天花板小段(覆蓋段;擋住山體底面)
-  // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
-  // ≥3 才是路口;同時記各臂方向(斑馬線垂直路臂、紅綠燈立在轉角)
-  // dirs/armHw 逐臂平行(同一 push);main = 任一臂為主幹道 → 填面/縮減取主幹柏油色
+  // 路口偵測先完整跑一趟：標線建置時必須已知道所有路口，才能在接合面前截斷；邊畫邊收集會讓
+  // 陣列前面的道路不知道後面還有交叉臂，中心線／路緣線便穿過斑馬線與路口填面。
+  // dirs/armHw 逐臂平行；相同方向的重複 way 合併且保留最大半寬，避免假四岔與重複斑馬線。
   const nodeArms = new Map();   // key -> { x, z, arms, hw, main, dirs: [[dx,dz]…], armHw: [] }
+  for (const way of roads) {
+    const bridge = !!way.tags.bridge, tunnel = !!way.tags.tunnel;
+    const hwWay = Math.max(roadWidth(way.tags) / 2, bridge ? PASS_W / 2 : 0);
+    if (hwWay < 2 || bridge || tunnel) continue;
+    const n = way.geometry.length;
+    for (let i = 0; i < n; i++) {
+      const gpt = way.geometry[i], key = `${gpt.lat.toFixed(6)},${gpt.lon.toFixed(6)}`;
+      let rec = nodeArms.get(key);
+      if (!rec) {
+        const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
+        rec = { x, z, arms: 0, hw: 0, main: false, dirs: [], armHw: [] };
+        nodeArms.set(key, rec);
+      }
+      rec.hw = Math.max(rec.hw, hwWay);
+      rec.main = rec.main || MAIN_HW.test(way.tags.highway);
+      for (const j of [i - 1, i + 1]) {
+        if (j < 0 || j >= n) continue;
+        const [ax, az] = llToWorld(way.geometry[j].lat, way.geometry[j].lon, center);
+        const dl = Math.hypot(ax - rec.x, az - rec.z) || 1;
+        const dx = (ax - rec.x) / dl, dz = (az - rec.z) / dl;
+        const same = rec.dirs.findIndex(([ux, uz]) => ux * dx + uz * dz > 0.92);
+        if (same >= 0) rec.armHw[same] = Math.max(rec.armHw[same], hwWay);
+        else { rec.dirs.push([dx, dz]); rec.armHw.push(hwWay); }
+      }
+    }
+  }
+  for (const rec of nodeArms.values()) rec.arms = rec.dirs.length;
+  const junctionCuts = [...nodeArms.values()].filter((rec) => rec.arms >= 3);
+  const JCELL = 32, junctionGrid = new Map();
+  for (const rec of junctionCuts) {
+    const r = rec.hw + 0.8;
+    const i0 = Math.floor((rec.x - r) / JCELL), i1 = Math.floor((rec.x + r) / JCELL);
+    const j0 = Math.floor((rec.z - r) / JCELL), j1 = Math.floor((rec.z + r) / JCELL);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const key = `${i},${j}`, arr = junctionGrid.get(key);
+      if (arr) arr.push(rec); else junctionGrid.set(key, [rec]);
+    }
+  }
+  const inJunctionMarkCut = (x, z, pad = 0.8) => {
+    for (const rec of junctionGrid.get(`${Math.floor(x / JCELL)},${Math.floor(z / JCELL)}`) || []) {
+      const r = rec.hw + pad, dx = x - rec.x, dz = z - rec.z;
+      if (dx * dx + dz * dz < r * r) return true;
+    }
+    return false;
+  };
   const lights = [], lamps = [], roadTrees = [];   // 3D 附屬件實例
   // 建路段數上限隨地圖真實面積縮放(2026-07-17):固定 600 是第二層截斷 —— 查詢額度
   // 提高後照樣只畫前 600 段。計數單位是拆段後的 run(≈ way × 1.2~1.5,邊界裁切/跨水拆段),
@@ -6108,30 +6211,6 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     // 與「山體吞沒道路」的視覺轉換面脫節;且舊版「內側 14m 地形上升 2.2m」檢查在開挖後地形上
     // 評估,探測點已被 carve 壓平 → 真洞口幾乎全數被否決(里約實測全圖只建出 1 座門,還立在
     // 離覆蓋端點 68m 外)。改於覆蓋區間邊界立門 —— 見下方結構區段。
-    // 路口統計(車行道才算;步道/小徑不設斑馬線紅綠燈;橋/地下道不設)
-    if (hwWay >= 2 && !bridge && !tunnel) {
-      const n = way.geometry.length;
-      for (let i = 0; i < n; i++) {
-        const gpt = way.geometry[i];
-        const key = `${gpt.lat.toFixed(6)},${gpt.lon.toFixed(6)}`;
-        let rec = nodeArms.get(key);
-        if (!rec) {
-          const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
-          rec = { x, z, arms: 0, hw: 0, main: false, dirs: [], armHw: [] };
-          nodeArms.set(key, rec);
-        }
-        rec.arms += (i === 0 || i === n - 1) ? 1 : 2;
-        rec.hw = Math.max(rec.hw, hwWay);
-        rec.main = rec.main || main;
-        for (const j of [i - 1, i + 1]) {          // 各臂方向(指向鄰節點)+ 該臂半寬(縮減用)
-          if (j < 0 || j >= n) continue;
-          const [ax, az] = llToWorld(way.geometry[j].lat, way.geometry[j].lon, center);
-          const dl = Math.hypot(ax - rec.x, az - rec.z) || 1;
-          rec.dirs.push([(ax - rec.x) / dl, (az - rec.z) / dl]);
-          rec.armHw.push(hwWay);
-        }
-      }
-    }
     // 世界折線(超出邊界即切段)
     const runs = [];
     let cur = [];
@@ -6265,9 +6344,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 結構自己的路面(strc)與橋面(brg)當然不受此判:那是它們該在的地方。
       const dropXZ = (px, pz) => !strc && !brg
         && inTunBore(px, terrain.heightAt(px, pz) + ROAD_LIFT, pz);
-      const dropSeg = (i) => dropXZ((run[i][0] + run[i + 1][0]) / 2, (run[i][1] + run[i + 1][1]) / 2);
+      const dropRoadSeg = (i) => dropXZ((run[i][0] + run[i + 1][0]) / 2, (run[i][1] + run[i + 1][1]) / 2);
+      const dropMarkSeg = (i) => {
+        const x = (run[i][0] + run[i + 1][0]) / 2, z = (run[i][1] + run[i + 1][1]) / 2;
+        return dropXZ(x, z) || inJunctionMarkCut(x, z);
+      };
       for (let i = 0; i < nP - 1; i++) {
-        if (dropSeg(i)) continue;
+        if (dropRoadSeg(i)) continue;
         const k = vbase + i * 4;
         for (const o of [0, 1, 2]) {
           b.idx.push(k + o, k + o + 1, k + o + 4, k + o + 1, k + o + 5, k + o + 4);
@@ -6742,20 +6825,21 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         if (arterial) {
           // 槽化線:每側沿弧長每 HSTEP 一道由車道緣(laneHw)斜向結構緣(hw)的白條(≈45°、寬 0.36)
           const HSTEP = 3.4, inHw = laneHw + 0.2, outHw = hw - 0.2;
+          const HATCH_END_PAD = 2;
           for (const side of [1, -1]) {
-            for (let s = 4; s + 2 < total; s += HSTEP) {
+            for (let s = HATCH_END_PAD; s + HSTEP <= total - HATCH_END_PAD; s += HSTEP) {
               const [ax, az, adx, adz] = at(s);
-              const qx = adz, qz = -adx;
-              const skew = Math.min(HSTEP, total - s - 0.5);
-              const [bx, bz] = at(s + skew);
-              const ix = ax + qx * inHw * side, iz = az + qz * inHw * side;   // 內端 = 車道緣
-              const ox = bx + qx * outHw * side, oz = bz + qz * outHw * side;  // 外端 = 結構緣(偏 skew ⇒ 斜)
-              const yTop = (strc ? tFloorAt(s) + ROAD_LIFT : deckAt(s, ax, az)) + 0.13;
+              const [bx, bz, bdx, bdz] = at(s + HSTEP);
+              const aqx = adz, aqz = -adx, bqx = bdz, bqz = -bdx;
+              const ix = ax + aqx * inHw * side, iz = az + aqz * inHw * side;   // 內端 = 車道緣
+              const ox = bx + bqx * outHw * side, oz = bz + bqz * outHw * side; // 外端吃自己的截面，彎道不凸出
+              const yIn = (strc ? tFloorAt(s) + ROAD_LIFT : deckAt(s, ax, az)) + 0.13;
+              const yOut = (strc ? tFloorAt(s + HSTEP) + ROAD_LIFT : deckAt(s + HSTEP, bx, bz)) + 0.13;
               let ex = ox - ix, ez = oz - iz; const el = Math.hypot(ex, ez) || 1; ex /= el; ez /= el;
               const wx = ez * 0.18, wz = -ex * 0.18;   // 條寬的法向半量(頂點序仿 dashLine:大偏移在前 → 朝 +Y)
               const k = mark.base;
-              mark.pos.push(ix + wx, yTop, iz + wz, ix - wx, yTop, iz - wz,
-                            ox + wx, yTop, oz + wz, ox - wx, yTop, oz - wz);
+              mark.pos.push(ix + wx, yIn, iz + wz, ix - wx, yIn, iz - wz,
+                            ox + wx, yOut, oz + wz, ox - wx, yOut, oz - wz);
               for (let v = 0; v < 4; v++) { mark.nrm.push(0, 1, 0); mark.col.push(...MARK_W); }
               mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
               mark.base += 4;
@@ -6798,8 +6882,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 白虛線通用鋪法:偏移 off(0 = 中線)。off=0 逐位元同舊版中線(±0.28 = 0.56 寬)
         const dashLine = (off) => {
           for (let s = 5; s + 3.2 < total; s += 9.5) {
-            const [px0, pz0] = at(s + 1.6);
-            if (dropXZ(px0, pz0)) continue;        // 落進別條路的洞內斷面:整格虛線不畫
+            const [ax0, az0] = at(s), [bx0, bz0] = at(s + 3.2);
+            const px0 = (ax0 + bx0) / 2, pz0 = (az0 + bz0) / 2;
+            if (dropXZ(px0, pz0) || inJunctionMarkCut(ax0, az0) || inJunctionMarkCut(bx0, bz0)) continue;
             const k = mark.base;
             for (const d of [s, s + 3.2]) {
               const [ex, ez, ddx, ddz] = at(d);
@@ -6819,8 +6904,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           // 車道數由車道寬推導(單一縫 roadLaneN,不硬編各路):main 恆 ≥ 雙線道
           const lanes = Math.max(2, Math.round(roadLaneN(way.tags)));
           if (arterial) {                        // 幹道:雙黃實線分向
-            emitLine(run, mHw, 0.58, 0.33, 0.2, MARK_Y, markYB, dropSeg);
-            emitLine(run, mHw, 0.58, -0.33, 0.2, MARK_Y, markYB, dropSeg);
+            emitLine(run, mHw, 0.58, 0.33, 0.2, MARK_Y, markYB, dropMarkSeg);
+            emitLine(run, mHw, 0.58, -0.33, 0.2, MARK_Y, markYB, dropMarkSeg);
           } else {                               // 次要道:單白虛線
             dashLine(0);
           }
@@ -6833,8 +6918,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             }
           }
           // 路緣白邊線(車道外側,墨帶內)
-          emitLine(run, mHw, 0.56, mHw * 0.78, 0.18, MARK_W, markYB, dropSeg);
-          emitLine(run, mHw, 0.56, -mHw * 0.78, 0.18, MARK_W, markYB, dropSeg);
+          emitLine(run, mHw, 0.56, mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg);
+          emitLine(run, mHw, 0.56, -mHw * 0.78, 0.18, MARK_W, markYB, dropMarkSeg);
         }
         // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
         // 隧道不立(洞內照明是天花燈;路燈桿會戳穿天花板與山體);橋不立(橋燈另有一套沿橋面
@@ -6885,26 +6970,21 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     if (classify(terrain.sampleColor?.(rec.x, rec.z), h, null, rnd) !== 'urban') continue;
     if (junctions.some((j) => Math.hypot(j.x - rec.x, j.z - rec.z) < 70)) continue;
     junctions.push(rec);
-    // 相近方向的臂合併(雙向路的一進一出幾乎共線)
-    const arms2 = [];
-    for (const [dx, dz] of rec.dirs) {
-      if (arms2.some(([ax, az]) => ax * dx + az * dz > 0.86)) continue;
-      arms2.push([dx, dz]);
-      if (arms2.length >= 4) break;
-    }
-    const zw = rec.hw * 0.9;                       // 斑馬線半寬(略窄於路寬)
+    const arms2 = rec.dirs.slice(0, 4);            // 前置統計已合併相近方向，不在這裡再分家
     const hJ = terrain.heightAt(rec.x, rec.z);     // 路口中心高:白槓跟路面同一條夾高規則
-    for (const [dx, dz] of arms2) {
+    for (let ai = 0; ai < arms2.length; ai++) {
+      const [dx, dz] = arms2[ai], armHw = rec.armHw[ai];
       const qx = dz, qz = -dx;
-      const d0 = rec.hw + 1.8;                     // 條帶起點:離路口中心一個路寬
+      const d0 = rec.hw + 1.2;                     // 由最大臂定中央淨空，斑馬線不伸進路口填面
+      const zw = Math.max(0.75, armHw * 0.82);      // 各臂吃自己的寬，窄側路不被寬幹道橫向撐出路面
       // 白槓長軸沿行車方向(3.2m 深)、槓寬 0.5m / 間 0.5m,橫向重複鋪滿路寬
       for (let lo = -zw; lo + 0.5 <= zw + 0.01; lo += 1.0) {
         const kb = mark.base;
         for (const dd of [d0, d0 + 3.2]) {
           const cx2 = rec.x + dx * dd, cz2 = rec.z + dz * dd;
           // 頂點序同 emitLine(大偏移在前)→ 面朝 +y
-          putMark(cx2 + qx * (lo + 0.5), cz2 + qz * (lo + 0.5), 0.62, MARK_W, hJ);
-          putMark(cx2 + qx * lo, cz2 + qz * lo, 0.62, MARK_W, hJ);
+          putMark(cx2 + qx * (lo + 0.5), cz2 + qz * (lo + 0.5), 0.58, MARK_W, hJ);
+          putMark(cx2 + qx * lo, cz2 + qz * lo, 0.58, MARK_W, hJ);
         }
         mark.idx.push(kb, kb + 1, kb + 2, kb + 1, kb + 3, kb + 2);
         mark.base += 4;
@@ -8927,9 +9007,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 跨水路線 way 串接(一條路線上太靠近的兩座橋直接連成一座):MUST 排在 roadInput 定案**之前**
   // —— markGradeCorridors 與 buildRoads 吃同一份 way 陣列,分家的話走廊會與實際橋面對不上。
   if (osmRoads?.length) osmRoads = joinWaterRouteWays(osmRoads, terrain, center);
-  // 道路輸入在此定案(離線備援 = 兵線當主要道路):走廊計算與 buildRoads MUST 吃同一份
+  // 道路輸入在此定案(離線備援 = 兵線當主要道路):走廊計算與 buildRoads MUST 吃同一份。
+  // OSM 成功仍補上查詢額度漏掉的兵線乾地小段；覆蓋判定會排除已存在的同向路面，跨水段另由
+  // laneWetWays 建唯一一層橋，避免以完整兵線再壓一條重疊道路。
+  const laneRoadWays = osmRoads?.length ? missingLaneRoadWays(cfg.lanes, osmRoads, terrain, center) : [];
   const roadInput = osmRoads?.length
-    ? osmRoads
+    ? [...osmRoads.filter((w) => w.tags?.bridge || w.tags?.tunnel), ...laneRoadWays,
+       ...osmRoads.filter((w) => !w.tags?.bridge && !w.tags?.tunnel)]
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
   // 地表道路足跡：所有獨立物件與地被共用同一批有向盒。橋／結構隧道有垂直分層，不占地面。
   const roadFeet = [];

@@ -46,7 +46,19 @@
 //    `audit_underpass`。把它們寫成假斷言會讓「這裡有人在守」變成一句謊。
 import { readSrc } from './audit_src.mjs';
 
-const src = readSrc('public', 'js', 'biomes.js');
+let src = readSrc('public', 'js', 'biomes.js');
+const breakJunctionMark = process.argv.includes('--break-junction-mark');
+const breakLaneRoad = process.argv.includes('--break-lane-road');
+if (breakJunctionMark) {
+  const bad = src.replace('return dropXZ(x, z) || inJunctionMarkCut(x, z);', 'return dropXZ(x, z);');
+  if (bad === src) throw new Error('--break-junction-mark 未命中，稽核與原文已分家');
+  src = bad;
+}
+if (breakLaneRoad) {
+  const bad = src.replace("const missing = !wet && !covered(ax, az, bx, bz);", 'const missing = false;');
+  if (bad === src) throw new Error('--break-lane-road 未命中，稽核與原文已分家');
+  src = bad;
+}
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -317,6 +329,47 @@ console.log('Ⅴ 權威幾何不變(通行寬唯一縫仍是 strucHw)');
     '記帳表恰三欄 —— 新增第四把刀 MUST 同步記帳(不然結構少了查不出原因)');
   ok(/strucWays: strucN\(roadInput\)/.test(src) && /\bstrucDrop,/.test(src),
     'stats 帶出結構總數與逐把刀的剔除數(冒煙時看得到「這張圖有幾座橋、被砍了幾座、為什麼」)');
+}
+
+console.log('\nⅦ 兵線道路補片(OSM 成功也不得漏畫兵線)');
+{
+  const miss = slice('function missingLaneRoadWays(', '\n/** 水面判定', 'missingLaneRoadWays');
+  ok(/Math\.abs\(ux \* s\.ux \+ uz \* s\.uz\) < 0\.82/.test(miss),
+    '補片覆蓋 MUST 同時檢查方向；只有交叉的道路不得誤算成已覆蓋');
+  ok(/const missing = !wet && !covered\(ax, az, bx, bz\);/.test(miss),
+    '兵線乾地缺段 MUST 補畫；濕段交給 laneWetWays 唯一橋面');
+  ok(/densify\(lane\.map\([^\n]+\), ROAD_SEG\)/.test(miss),
+    '補片 MUST 與道路貼地取樣共用 ROAD_SEG，不以長弦跨過既有道路');
+  ok(/const laneRoadWays = osmRoads\?\.length \? missingLaneRoadWays\(cfg\.lanes, osmRoads, terrain, center\) : \[\];/.test(src),
+    'OSM 成功時 MUST 計算兵線缺段；離線備援不得重複補');
+  ok(/\? \[\.\.\.osmRoads\.filter\(\(w\) => w\.tags\?\.bridge \|\| w\.tags\?\.tunnel\), \.\.\.laneRoadWays,\s*\n\s*\.\.\.osmRoads\.filter/.test(src),
+    'roadInput 順序 MUST 是結構 → 兵線補片 → 一般道路，補片不得被 maxRuns 尾截');
+}
+
+console.log('\nⅧ 路口／槽化標線裁切');
+{
+  const build = slice('function buildRoads(', '  // ---- 路口:斑馬線', 'buildRoads 標線段');
+  ok(build.indexOf('for (const way of roads) {') < build.indexOf('let built = 0;'),
+    '路口臂 MUST 在鋪路前完整預掃，前段道路才能知道後段交叉臂');
+  ok(/const same = rec\.dirs\.findIndex\([^\n]+> 0\.92\);/.test(build)
+    && /rec\.arms = rec\.dirs\.length;/.test(build),
+  '重複同向臂 MUST 合併後再判路口，避免假路口與重複斑馬線');
+  ok(/return dropXZ\(x, z\) \|\| inJunctionMarkCut\(x, z\);/.test(build),
+    '實線 MUST 在路口填面前截斷，不得穿過斑馬線');
+  ok(/inJunctionMarkCut\(ax0, az0\) \|\| inJunctionMarkCut\(bx0, bz0\)/.test(build),
+    '虛線 MUST 以兩端裁切，僅檢查中心會讓半截伸進路口');
+  ok(/const \[bx, bz, bdx, bdz\] = at\(s \+ HSTEP\);/.test(build)
+    && /const aqx = adz, aqz = -adx, bqx = bdz, bqz = -bdx;/.test(build),
+  '槽化線兩端 MUST 各吃自己的道路截面，彎道外端不得沿用內端法線而凸出');
+  ok(/const yIn =[^\n]+\n\s*const yOut =/.test(build)
+    && /mark\.pos\.push\(ix \+ wx, yIn,[\s\S]{0,120}ox \+ wx, yOut,/.test(build),
+  '槽化線兩端 MUST 各吃自己的路面高，坡段不得整片懸空／插入');
+  ok(/const HATCH_END_PAD = 2;/.test(build)
+    && /s \+ HSTEP <= total - HATCH_END_PAD/.test(build),
+  '槽化線 MUST 留結構端距，條帶寬度不得伸出橋隧端面');
+  const junction = slice('  // ---- 路口:斑馬線', '\n  // ---- 路口填面', '斑馬線段');
+  ok(/armHw = rec\.armHw\[ai\]/.test(junction) && /armHw \* 0\.82/.test(junction),
+    '斑馬線橫寬 MUST 吃各自支路寬，窄支路不得被最大幹道寬撐出路面');
 }
 
 console.log(`\n道路接合稽核:${pass} 綠 / ${fail} 紅`);
