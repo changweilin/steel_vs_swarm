@@ -82,6 +82,24 @@ sec('Ⅱ 地下步道只留出入口');
   const closed = way('footway', [[0, 0], [20, 0], [20, 20], [0, 0]], { tunnel: 'yes', layer: '-1' });
   const c = plan([closed]);
   t('封閉地下環移除但不憑空捏造重合入口', c.roads.length === 0 && c.entrances.length === 0);
+
+  // 測試同站多出入口：統一樣式、同一站名、不同出口編號
+  const rRoad = way('residential', [[0, 0], [100, 0]]);
+  const multiEntry = [
+    { lat: 0, lng: 45, tags: { railway: 'subway_entrance' } },
+    { lat: 0, lng: 55, tags: { railway: 'subway_entrance' } },
+  ];
+  const mRes = plan([rRoad], { pois, entrances: multiEntry });
+  t('同站多出入口聚類成功產出 2 座', mRes.entrances.length === 2);
+  t('同站出入口共享相同樣式', mRes.entrances[0].archetype && mRes.entrances[0].archetype === mRes.entrances[1].archetype);
+  t('同站出入口共享相同站名', mRes.entrances[0].baseName === 'Victoria' && mRes.entrances[1].baseName === 'Victoria');
+  t('同站出入口擁有不同循序編號與標牌文字', mRes.entrances[0].exitNum !== mRes.entrances[1].exitNum
+    && mRes.entrances[0].signText !== mRes.entrances[1].signText);
+  t('出入口不背對道路 (朝向法線點積 <= 1e-5)', mRes.entrances.every((ent) => {
+    const ny = ent.z >= 0 ? 1 : -1;
+    const forwardY = Math.cos(ent.ry);
+    return forwardY * ny <= 1e-5;
+  }));
 }
 
 sec('Ⅲ 道路／鐵道旁步道統一規劃');

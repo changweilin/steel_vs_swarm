@@ -54,12 +54,12 @@
       "type": "box",
       "dimensions": [
         8,
-        3.2,
+        2.4,
         8
       ],
       "position": [
         0,
-        2.4,
+        2,
         0
       ],
       "rotation": [
@@ -75,12 +75,12 @@
       "type": "box",
       "dimensions": [
         2.5,
-        2.4,
+        2,
         0.1
       ],
       "position": [
         0,
-        2,
+        1.8,
         4.02
       ],
       "rotation": [
@@ -96,12 +96,12 @@
       "type": "box",
       "dimensions": [
         2.5,
-        2.4,
+        2,
         0.1
       ],
       "position": [
         0,
-        2,
+        1.8,
         -4.02
       ],
       "rotation": [
@@ -117,12 +117,12 @@
       "type": "box",
       "dimensions": [
         8.6,
-        0.6,
+        0.4,
         8.6
       ],
       "position": [
         0,
-        4.2,
+        3.4,
         0
       ],
       "rotation": [
@@ -141,10 +141,10 @@
         4,
         5.8
       ],
-      "height": 1,
+      "height": 0.6,
       "position": [
         0,
-        4.9,
+        3.9,
         0
       ],
       "rotation": [
@@ -160,12 +160,12 @@
       "type": "box",
       "dimensions": [
         7,
-        2.8,
+        2.4,
         7
       ],
       "position": [
         0,
-        6.7,
+        5.4,
         0
       ],
       "rotation": [
@@ -181,12 +181,12 @@
       "type": "box",
       "dimensions": [
         1.8,
-        1.6,
+        1.4,
         0.1
       ],
       "position": [
         0,
-        6.7,
+        5.4,
         3.52
       ],
       "rotation": [
@@ -202,12 +202,12 @@
       "type": "box",
       "dimensions": [
         1.8,
-        1.6,
+        1.4,
         0.1
       ],
       "position": [
         0,
-        6.7,
+        5.4,
         -3.52
       ],
       "rotation": [
@@ -223,12 +223,12 @@
       "type": "box",
       "dimensions": [
         7.5,
-        0.5,
+        0.4,
         7.5
       ],
       "position": [
         0,
-        8.3,
+        6.8,
         0
       ],
       "rotation": [
@@ -247,10 +247,10 @@
         3.5,
         5.1
       ],
-      "height": 1,
+      "height": 0.6,
       "position": [
         0,
-        8.9,
+        7.3,
         0
       ],
       "rotation": [
@@ -266,12 +266,12 @@
       "type": "box",
       "dimensions": [
         6,
-        2.5,
+        2.4,
         6
       ],
       "position": [
         0,
-        10.5,
+        8.8,
         0
       ],
       "rotation": [
@@ -292,7 +292,7 @@
       ],
       "position": [
         0,
-        10.5,
+        8.8,
         3.02
       ],
       "rotation": [
@@ -313,7 +313,7 @@
       ],
       "position": [
         0,
-        10.5,
+        8.8,
         -3.02
       ],
       "rotation": [
@@ -329,12 +329,12 @@
       "type": "box",
       "dimensions": [
         6.4,
-        0.5,
+        0.4,
         6.4
       ],
       "position": [
         0,
-        11.9,
+        10.2,
         0
       ],
       "rotation": [
@@ -353,10 +353,10 @@
         3,
         4.4
       ],
-      "height": 1,
+      "height": 0.6,
       "position": [
         0,
-        12.4,
+        10.7,
         0
       ],
       "rotation": [
@@ -372,12 +372,12 @@
       "type": "box",
       "dimensions": [
         5,
-        2.2,
+        2.4,
         5
       ],
       "position": [
         0,
-        13.8,
+        12.2,
         0
       ],
       "rotation": [
@@ -398,7 +398,7 @@
       ],
       "position": [
         0,
-        15,
+        13.6,
         0
       ],
       "rotation": [
@@ -417,10 +417,10 @@
         2.5,
         3.7
       ],
-      "height": 1,
+      "height": 0.6,
       "position": [
         0,
-        15.4,
+        14.1,
         0
       ],
       "rotation": [
@@ -436,12 +436,12 @@
       "type": "box",
       "dimensions": [
         4,
-        2,
+        2.4,
         4
       ],
       "position": [
         0,
-        16.7,
+        15.6,
         0
       ],
       "rotation": [
@@ -462,7 +462,7 @@
       ],
       "position": [
         0,
-        17.8,
+        17,
         0
       ],
       "rotation": [
@@ -481,10 +481,10 @@
         2,
         3
       ],
-      "height": 1,
+      "height": 0.6,
       "position": [
         0,
-        18.2,
+        17.5,
         0
       ],
       "rotation": [
@@ -503,10 +503,10 @@
         0.001,
         2
       ],
-      "height": 1,
+      "height": 0.8,
       "position": [
         0,
-        18.7,
+        18.2,
         0
       ],
       "rotation": [
@@ -525,10 +525,10 @@
         0.4,
         0.4
       ],
-      "height": 1,
+      "height": 0.6,
       "position": [
         0,
-        19.2,
+        18.9,
         0
       ],
       "rotation": [
@@ -547,10 +547,10 @@
         0.15,
         0.15
       ],
-      "height": 1,
+      "height": 4.5,
       "position": [
         0,
-        21.5,
+        21.45,
         0
       ],
       "rotation": [
@@ -569,10 +569,10 @@
         0.5,
         0.5
       ],
-      "height": 1,
+      "height": 2,
       "position": [
         0,
-        21,
+        20.8,
         0
       ],
       "rotation": [
@@ -591,10 +591,10 @@
         0.1,
         0.3
       ],
-      "height": 1,
+      "height": 0.8,
       "position": [
         0,
-        23.2,
+        22.8,
         0
       ],
       "rotation": [
@@ -615,7 +615,7 @@
       ],
       "position": [
         0,
-        24,
+        23.6,
         0
       ],
       "rotation": [

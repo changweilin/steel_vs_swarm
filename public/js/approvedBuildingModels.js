@@ -37,7 +37,12 @@ export function fitApprovedBuilding(building) {
     for (const rot of [0, 1]) {
       const aspect = rot ? size[2] / size[0] : size[0] / size[2];
       const stretch = Math.exp(Math.abs(Math.log(target / aspect)));
-      ranked.push({ entry, rot, score: Math.log(stretch) + semanticPenalty(entry, !!building.commercial) });
+      const heightRatio = Math.max(building.h || 10, 0.001) / Math.max(size[1], 0.001);
+      const heightStretch = Math.exp(Math.abs(Math.log(heightRatio)));
+      // 變形防線：平面拉伸不得超過 1.65x，高度拉伸不得超過 1.8x
+      // 杜絕將 4~10m 低矮建築暴力拉伸成 50~100m 摩天大樓導致門窗被縱向拉成細長條
+      if (stretch > 1.65 || heightStretch > 1.8) continue;
+      ranked.push({ entry, rot, score: Math.log(stretch) + Math.log(heightStretch) * 0.4 + semanticPenalty(entry, !!building.commercial) });
     }
   }
   ranked.sort((a, b) => a.score - b.score

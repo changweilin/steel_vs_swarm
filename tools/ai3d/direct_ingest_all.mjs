@@ -634,27 +634,30 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
       // 3 層重簷閣樓 (3-tier Upturned Flared Eaves)
       const numTiers = 3;
       const tierH = (dimensions.H - 5.5) / numTiers;
+      const chamberH = tierH * 0.65;
+      const eaveH = tierH * 0.25;
+      const capH = tierH * 0.10;
       for (let t = 0; t < numTiers; t++) {
         const yBase = 2.2 + t * tierH;
         const scale = 1.0 - t * 0.22;
         const bodyW = dimensions.W * 0.65 * scale;
         const bodyL = dimensions.L * 0.65 * scale;
 
-        addBox(bodyL, tierH * 0.62, bodyW, 0, yBase + tierH * 0.31, 0, 0, 0, 0, `pagoda_chamber_tier_${t+1}`, facadeCol);
+        addBox(bodyL, chamberH, bodyW, 0, yBase + chamberH / 2, 0, 0, 0, 0, `pagoda_chamber_tier_${t+1}`, facadeCol);
 
         for (const sx of [-1, 1]) {
           for (const sz of [-1, 1]) {
-            addCylinder(0.28, 0.28, tierH * 0.62, 8, sx * bodyL * 0.46, yBase + tierH * 0.31, sz * bodyW * 0.46, 0, 0, 0, `veranda_column_${t+1}_${sx}_${sz}`, accentCol);
+            addCylinder(0.28, 0.28, chamberH, 8, sx * bodyL * 0.46, yBase + chamberH / 2, sz * bodyW * 0.46, 0, 0, 0, `veranda_column_${t+1}_${sx}_${sz}`, accentCol);
           }
         }
 
         const eaveR_bot = (dimensions.W * 0.98 * scale) / Math.SQRT2;
         const eaveR_top = (dimensions.W * 0.55 * scale) / Math.SQRT2;
-        addFrustum(4, eaveR_top, eaveR_bot, 0.65, 0, yBase + tierH * 0.68, 0, 0, 0, 0, `curved_eaves_frustum_${t+1}`, roofCol);
-        addFrustum(4, eaveR_top * 0.9, eaveR_top * 1.1, 0.45, 0, yBase + tierH * 0.88, 0, 0, 0, 0, `eave_ridge_cap_${t+1}`, darkCol);
+        addFrustum(4, eaveR_top, eaveR_bot, eaveH, 0, yBase + chamberH + eaveH / 2, 0, 0, 0, 0, `curved_eaves_frustum_${t+1}`, roofCol);
+        addFrustum(4, eaveR_top * 0.9, eaveR_top * 1.1, capH, 0, yBase + chamberH + eaveH + capH / 2, 0, 0, 0, 0, `eave_ridge_cap_${t+1}`, darkCol);
       }
 
-      const spireBaseY = dimensions.H - 2.5;
+      const spireBaseY = 2.2 + numTiers * tierH;
       addPyramid(4, 1.8 / Math.SQRT2, 1.5, 0, spireBaseY + 0.75, 0, 0, 0, 0, 'apex_pyramid_roof', darkCol);
       addCylinder(0.08, 0.25, 4.8, 8, 0, spireBaseY + 3.8, 0, 0, 0, 0, 'finial_central_mast', brightCol);
       for (let k = 0; k < 5; k++) {

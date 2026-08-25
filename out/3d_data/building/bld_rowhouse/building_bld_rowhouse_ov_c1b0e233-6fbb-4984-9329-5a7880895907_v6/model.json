@@ -29,16 +29,37 @@
   },
   "parts": [
     {
+      "name": "foundation_base",
+      "type": "box",
+      "dimensions": [
+        4.8,
+        1,
+        3.2
+      ],
+      "position": [
+        0,
+        0.5,
+        -0.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6825248,
+      "triangles": 12
+    },
+    {
       "name": "main_building_body",
       "type": "box",
       "dimensions": [
         4.5,
-        9,
+        8,
         3
       ],
       "position": [
         0,
-        4.5,
+        5,
         -0.5
       ],
       "rotation": [
@@ -57,10 +78,32 @@
         1.5,
         1.5
       ],
-      "height": 1,
+      "height": 4.6,
       "position": [
         0,
-        3,
+        3.3,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 9124134,
+      "triangles": 48
+    },
+    {
+      "name": "mid_cornice_band",
+      "type": "frustum_pyramid",
+      "sides": 12,
+      "radii": [
+        1.45,
+        1.55
+      ],
+      "height": 0.4,
+      "position": [
+        0,
+        5.6,
         0.8
       ],
       "rotation": [
@@ -79,10 +122,32 @@
         1.4,
         1.4
       ],
-      "height": 1,
+      "height": 2.8,
       "position": [
         0,
-        7,
+        7.2,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 9124134,
+      "triangles": 48
+    },
+    {
+      "name": "top_cornice_band",
+      "type": "frustum_pyramid",
+      "sides": 12,
+      "radii": [
+        1.35,
+        1.45
+      ],
+      "height": 0.4,
+      "position": [
+        0,
+        8.6,
         0.8
       ],
       "rotation": [
@@ -103,7 +168,7 @@
       ],
       "position": [
         0,
-        9,
+        8.8,
         0.8
       ],
       "rotation": [
@@ -124,7 +189,7 @@
       ],
       "position": [
         0,
-        2,
+        1.4,
         1.6
       ],
       "rotation": [
@@ -145,7 +210,7 @@
       ],
       "position": [
         -0.8,
-        2.4,
+        1.8,
         1.6
       ],
       "rotation": [
@@ -166,7 +231,7 @@
       ],
       "position": [
         0.8,
-        2.4,
+        1.8,
         1.6
       ],
       "rotation": [
@@ -187,7 +252,7 @@
       ],
       "position": [
         0,
-        4.2,
+        3.6,
         2.22
       ],
       "rotation": [
@@ -208,7 +273,7 @@
       ],
       "position": [
         0,
-        4.2,
+        3.6,
         2.25
       ],
       "rotation": [
@@ -229,7 +294,7 @@
       ],
       "position": [
         -1,
-        4,
+        3.6,
         1.8
       ],
       "rotation": [
@@ -250,7 +315,7 @@
       ],
       "position": [
         -1.02,
-        4,
+        3.6,
         1.82
       ],
       "rotation": [
@@ -271,7 +336,7 @@
       ],
       "position": [
         1,
-        4,
+        3.6,
         1.8
       ],
       "rotation": [
@@ -292,7 +357,7 @@
       ],
       "position": [
         1.02,
-        4,
+        3.6,
         1.82
       ],
       "rotation": [
@@ -355,7 +420,7 @@
       ],
       "position": [
         -0.9,
-        7,
+        7.2,
         1.75
       ],
       "rotation": [
@@ -376,7 +441,7 @@
       ],
       "position": [
         -0.92,
-        7,
+        7.2,
         1.77
       ],
       "rotation": [
@@ -397,7 +462,7 @@
       ],
       "position": [
         0.9,
-        7,
+        7.2,
         1.75
       ],
       "rotation": [
@@ -418,7 +483,7 @@
       ],
       "position": [
         0.92,
-        7,
+        7.2,
         1.77
       ],
       "rotation": [
@@ -430,50 +495,6 @@
       "triangles": 12
     },
     {
-      "name": "mid_cornice_band",
-      "type": "frustum_pyramid",
-      "sides": 12,
-      "radii": [
-        1.45,
-        1.55
-      ],
-      "height": 1,
-      "position": [
-        0,
-        5.6,
-        0.8
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 9124134,
-      "triangles": 48
-    },
-    {
-      "name": "top_cornice_band",
-      "type": "frustum_pyramid",
-      "sides": 12,
-      "radii": [
-        1.35,
-        1.45
-      ],
-      "height": 1,
-      "position": [
-        0,
-        8.6,
-        0.8
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 9124134,
-      "triangles": 48
-    },
-    {
       "name": "decorative_tile_panel",
       "type": "box",
       "dimensions": [
@@ -483,7 +504,7 @@
       ],
       "position": [
         0,
-        2.3,
+        1.8,
         2.02
       ],
       "rotation": [
@@ -504,7 +525,7 @@
       ],
       "position": [
         0,
-        2.3,
+        1.8,
         2.05
       ],
       "rotation": [
@@ -513,27 +534,6 @@
         0
       ],
       "color": 12553530,
-      "triangles": 12
-    },
-    {
-      "name": "foundation_base",
-      "type": "box",
-      "dimensions": [
-        4.8,
-        1,
-        3.2
-      ],
-      "position": [
-        0,
-        0.5,
-        -0.5
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 6825248,
       "triangles": 12
     }
   ],

@@ -101,7 +101,7 @@
       ],
       "position": [
         -2.2,
-        5.2,
+        4,
         3.5
       ],
       "rotation": [
@@ -122,8 +122,29 @@
       ],
       "position": [
         -2.2,
-        5.7,
+        4.85,
         4.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3314560,
+      "triangles": 12
+    },
+    {
+      "name": "window_row_1",
+      "type": "box",
+      "dimensions": [
+        3,
+        1.8,
+        0.1
+      ],
+      "position": [
+        1.5,
+        4,
+        5.05
       ],
       "rotation": [
         0,
@@ -143,7 +164,7 @@
       ],
       "position": [
         -2.2,
-        9.2,
+        8,
         3.5
       ],
       "rotation": [
@@ -164,8 +185,29 @@
       ],
       "position": [
         -2.2,
-        9.7,
+        8.85,
         4.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3314560,
+      "triangles": 12
+    },
+    {
+      "name": "window_row_2",
+      "type": "box",
+      "dimensions": [
+        3,
+        1.8,
+        0.1
+      ],
+      "position": [
+        1.5,
+        8,
+        5.05
       ],
       "rotation": [
         0,
@@ -185,7 +227,7 @@
       ],
       "position": [
         -2.2,
-        13.2,
+        12,
         3.5
       ],
       "rotation": [
@@ -206,8 +248,29 @@
       ],
       "position": [
         -2.2,
-        13.7,
+        12.85,
         4.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3314560,
+      "triangles": 12
+    },
+    {
+      "name": "window_row_3",
+      "type": "box",
+      "dimensions": [
+        3,
+        1.8,
+        0.1
+      ],
+      "position": [
+        1.5,
+        12,
+        5.05
       ],
       "rotation": [
         0,
@@ -227,7 +290,7 @@
       ],
       "position": [
         -2.2,
-        17.2,
+        16,
         3.5
       ],
       "rotation": [
@@ -248,8 +311,29 @@
       ],
       "position": [
         -2.2,
-        17.7,
+        16.85,
         4.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3314560,
+      "triangles": 12
+    },
+    {
+      "name": "window_row_4",
+      "type": "box",
+      "dimensions": [
+        3,
+        1.8,
+        0.1
+      ],
+      "position": [
+        1.5,
+        16,
+        5.05
       ],
       "rotation": [
         0,
@@ -269,7 +353,7 @@
       ],
       "position": [
         -2.2,
-        21.2,
+        20,
         3.5
       ],
       "rotation": [
@@ -290,8 +374,50 @@
       ],
       "position": [
         -2.2,
-        21.7,
+        20.85,
         4.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3314560,
+      "triangles": 12
+    },
+    {
+      "name": "window_row_5",
+      "type": "box",
+      "dimensions": [
+        3,
+        1.8,
+        0.1
+      ],
+      "position": [
+        1.5,
+        20,
+        5.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3314560,
+      "triangles": 12
+    },
+    {
+      "name": "window_row_6",
+      "type": "box",
+      "dimensions": [
+        3,
+        1.8,
+        0.1
+      ],
+      "position": [
+        1.5,
+        24,
+        5.05
       ],
       "rotation": [
         0,
@@ -327,139 +453,13 @@
       "type": "box",
       "dimensions": [
         3,
-        3.5,
+        2,
         0.1
       ],
       "position": [
         1.5,
-        24.5,
+        26,
         4.6
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3314560,
-      "triangles": 12
-    },
-    {
-      "name": "window_row_1",
-      "type": "box",
-      "dimensions": [
-        3,
-        1.8,
-        0.1
-      ],
-      "position": [
-        1.5,
-        3.5,
-        5.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3314560,
-      "triangles": 12
-    },
-    {
-      "name": "window_row_2",
-      "type": "box",
-      "dimensions": [
-        3,
-        1.8,
-        0.1
-      ],
-      "position": [
-        1.5,
-        7.5,
-        5.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3314560,
-      "triangles": 12
-    },
-    {
-      "name": "window_row_3",
-      "type": "box",
-      "dimensions": [
-        3,
-        1.8,
-        0.1
-      ],
-      "position": [
-        1.5,
-        11.5,
-        5.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3314560,
-      "triangles": 12
-    },
-    {
-      "name": "window_row_4",
-      "type": "box",
-      "dimensions": [
-        3,
-        1.8,
-        0.1
-      ],
-      "position": [
-        1.5,
-        15.5,
-        5.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3314560,
-      "triangles": 12
-    },
-    {
-      "name": "window_row_5",
-      "type": "box",
-      "dimensions": [
-        3,
-        1.8,
-        0.1
-      ],
-      "position": [
-        1.5,
-        19.5,
-        5.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3314560,
-      "triangles": 12
-    },
-    {
-      "name": "window_row_6",
-      "type": "box",
-      "dimensions": [
-        3,
-        1.8,
-        0.1
-      ],
-      "position": [
-        1.5,
-        23.5,
-        5.05
       ],
       "rotation": [
         0,

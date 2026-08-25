@@ -57,10 +57,10 @@
         9,
         9
       ],
-      "height": 1,
+      "height": 5,
       "position": [
         0,
-        6,
+        5.5,
         0
       ],
       "rotation": [
@@ -79,10 +79,10 @@
         9,
         12
       ],
-      "height": 1,
+      "height": 1.2,
       "position": [
         0,
-        9,
+        8.6,
         0
       ],
       "rotation": [
@@ -101,10 +101,10 @@
         7,
         7
       ],
-      "height": 1,
+      "height": 4.8,
       "position": [
         0,
-        12,
+        11.6,
         0
       ],
       "rotation": [
@@ -123,10 +123,10 @@
         7,
         10
       ],
-      "height": 1,
+      "height": 1.2,
       "position": [
         0,
-        15,
+        14.6,
         0
       ],
       "rotation": [
@@ -145,10 +145,10 @@
         5,
         5
       ],
-      "height": 1,
+      "height": 4.8,
       "position": [
         0,
-        18,
+        17.6,
         0
       ],
       "rotation": [
@@ -167,7 +167,7 @@
         0.001,
         6
       ],
-      "height": 1,
+      "height": 4,
       "position": [
         0,
         22,
@@ -189,10 +189,10 @@
         0.5,
         0.5
       ],
-      "height": 1,
+      "height": 1.5,
       "position": [
         0,
-        24,
+        24.75,
         0
       ],
       "rotation": [
@@ -234,7 +234,7 @@
       ],
       "position": [
         0,
-        19,
+        17.6,
         5.02
       ],
       "rotation": [
