@@ -20,19 +20,43 @@ export const PED_PLAN = {
 
 // 一個生成器族 + 一張款式表；渲染端不得為每一款複製一套建模函式。
 export const PED_ARCHETYPES = Object.freeze({
-  station:              { w: 5.8, d: 7.2, h: 3.3, roof: 0x44687c, frame: 0xd8e0e3, wall: 0x91a6ad, style: 'canopy' },
-  station_modern:       { w: 6.0, d: 7.6, h: 3.4, roof: 0x3a5d73, frame: 0xe0e6eb, wall: 0x768c96, style: 'modern' },
-  station_canopy:       { w: 5.6, d: 7.2, h: 3.2, roof: 0x2e6b8a, frame: 0xd0d8de, wall: 0x85a2b0, style: 'canopy' },
-  station_pavilion:     { w: 6.2, d: 7.8, h: 3.6, roof: 0x5a4236, frame: 0xc8baa8, wall: 0x9e8a76, style: 'pavilion' },
-  underpass:            { w: 5.2, d: 6.4, h: 2.8, roof: 0x77736b, frame: 0xb7b4aa, wall: 0x8f8b82, style: 'cantilever' },
-  underpass_cantilever: { w: 5.4, d: 6.6, h: 3.0, roof: 0x485868, frame: 0xccd5dd, wall: 0x82919d, style: 'cantilever' },
-  underpass_concrete:   { w: 5.2, d: 6.4, h: 2.8, roof: 0x6e6a64, frame: 0x9c968e, wall: 0x8a847c, style: 'concrete' },
-  underpass_open:       { w: 4.8, d: 6.0, h: 2.2, roof: 0x505860, frame: 0xb8c0c8, wall: 0x707880, style: 'open' },
-  underpass_covered:    { w: 5.0, d: 6.2, h: 2.9, roof: 0x3d6652, frame: 0xb4c2ba, wall: 0x7d8e85, style: 'covered' },
+  // 基礎款與既有樣式
+  station:              { w: 5.8, d: 7.2, h: 3.3, roof: 0x44687c, frame: 0xd8e0e3, wall: 0x91a6ad, accent: 0xe0a030, style: 'canopy' },
+  station_modern:       { w: 6.0, d: 7.6, h: 3.4, roof: 0x3a5d73, frame: 0xe0e6eb, wall: 0x768c96, accent: 0x357899, style: 'modern' },
+  station_canopy:       { w: 5.6, d: 7.2, h: 3.2, roof: 0x2e6b8a, frame: 0xd0d8de, wall: 0x85a2b0, accent: 0x4a90e2, style: 'canopy' },
+  station_pavilion:     { w: 6.2, d: 7.8, h: 3.6, roof: 0x5a4236, frame: 0xc8baa8, wall: 0x9e8a76, accent: 0xd4a373, style: 'pavilion' },
+  underpass:            { w: 5.2, d: 6.4, h: 2.8, roof: 0x77736b, frame: 0xb7b4aa, wall: 0x8f8b82, accent: 0x9a9488, style: 'cantilever' },
+  underpass_cantilever: { w: 5.4, d: 6.6, h: 3.0, roof: 0x485868, frame: 0xccd5dd, wall: 0x82919d, accent: 0x5b7082, style: 'cantilever' },
+  underpass_concrete:   { w: 5.2, d: 6.4, h: 2.8, roof: 0x6e6a64, frame: 0x9c968e, wall: 0x8a847c, accent: 0xa89f91, style: 'concrete' },
+  underpass_open:       { w: 4.8, d: 6.0, h: 2.2, roof: 0x505860, frame: 0xb8c0c8, wall: 0x707880, accent: 0x3b82f6, style: 'open' },
+  underpass_covered:    { w: 5.0, d: 6.2, h: 2.9, roof: 0x3d6652, frame: 0xb4c2ba, wall: 0x7d8e85, accent: 0x2b8a5f, style: 'covered' },
+
+  // 各國代表性城市捷運／車站出入口
+  station_taipei:       { w: 6.2, d: 8.0, h: 3.6, roof: 0x247a8c, frame: 0xd8e4e8, wall: 0x6c96a3, accent: 0xf5b82e, style: 'arch_glass', city: 'taipei' },
+  station_tokyo:        { w: 5.8, d: 7.6, h: 3.4, roof: 0x282c34, frame: 0x4a515e, wall: 0x616a78, accent: 0xf0c644, style: 'tokyo_slate', city: 'tokyo' },
+  station_paris:        { w: 5.6, d: 7.2, h: 3.8, roof: 0x2b5443, frame: 0x1a382c, wall: 0x3a6652, accent: 0xe69138, style: 'art_nouveau', city: 'paris' },
+  station_london:       { w: 6.0, d: 7.6, h: 3.5, roof: 0x243342, frame: 0x7b1c1c, wall: 0x4f1212, accent: 0xd32f2f, style: 'oxblood_tube', city: 'london' },
+  station_nyc:          { w: 5.4, d: 7.0, h: 3.3, roof: 0x1f3b2c, frame: 0x14281e, wall: 0x264735, accent: 0x43a047, style: 'nyc_kiosk', city: 'nyc' },
+  station_berlin:       { w: 6.2, d: 7.6, h: 3.4, roof: 0x475569, frame: 0xf59e0b, wall: 0x1d4ed8, accent: 0xd97706, style: 'bauhaus_portal', city: 'berlin' },
+  station_fosterito:    { w: 6.4, d: 8.4, h: 3.8, roof: 0x48bb78, frame: 0xe2e8f0, wall: 0x94a3b8, accent: 0x0d9488, style: 'glass_cocoon', city: 'bilbao' },
+  station_seoul:        { w: 6.0, d: 7.8, h: 3.5, roof: 0x2563eb, frame: 0xcfd8dc, wall: 0x78909c, accent: 0x1d4ed8, style: 'metallic_gabled', city: 'seoul' },
+
+  // 各國代表性地下街／地下道出入口
+  underpass_chika_mall: { w: 6.6, d: 8.2, h: 3.6, roof: 0x334155, frame: 0xf1f5f9, wall: 0x64748b, accent: 0xf97316, style: 'mall_portal', city: 'mall' },
+  underpass_stone_arch: { w: 5.6, d: 7.0, h: 3.3, roof: 0x6b6357, frame: 0x998d7c, wall: 0x7d7263, accent: 0xbfa074, style: 'stone_arch', city: 'europe' },
+  underpass_origami:    { w: 5.6, d: 7.2, h: 3.3, roof: 0x334155, frame: 0xb0bec5, wall: 0x546e7a, accent: 0x06b6d4, style: 'origami', city: 'modern' },
+  underpass_glass_cube: { w: 5.4, d: 6.8, h: 3.2, roof: 0x5eead4, frame: 0x0f172a, wall: 0x2dd4bf, accent: 0x0f766e, style: 'glass_cube', city: 'nordic' },
 });
 
-const STATION_ARCHETYPES = ['station_modern', 'station_canopy', 'station_pavilion', 'station'];
-const UNDERPASS_ARCHETYPES = ['underpass_cantilever', 'underpass_concrete', 'underpass_open', 'underpass_covered', 'underpass'];
+const STATION_ARCHETYPES = [
+  'station_taipei', 'station_tokyo', 'station_paris', 'station_london',
+  'station_nyc', 'station_berlin', 'station_fosterito', 'station_seoul',
+  'station_modern', 'station_canopy', 'station_pavilion', 'station',
+];
+const UNDERPASS_ARCHETYPES = [
+  'underpass_chika_mall', 'underpass_stone_arch', 'underpass_origami', 'underpass_glass_cube',
+  'underpass_cantilever', 'underpass_concrete', 'underpass_open', 'underpass_covered', 'underpass',
+];
 
 const PED_HW = /^(footway|path|pedestrian|steps|cycleway|bridleway)$/;
 const on = (v) => v != null && !/^(?:no|false|0)$/.test(String(v));

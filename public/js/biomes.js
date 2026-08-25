@@ -5213,16 +5213,44 @@ function buildPedestrianEntrances(group, terrain, sites) {
   if (!rows.length) return { built: 0, signSpots: [] };
 
   const parts = [
-    { key: 'roof', lx: 0, ly: (d) => d.h - 0.16, lz: (d) => -d.d * 0.12,
-      sx: (d) => d.w + 0.45, sy: () => 0.28, sz: (d) => d.d * 0.82, color: 'roof' },
+    { key: 'roof', lx: 0, ly: (d) => d.h - 0.14, lz: (d) => -d.d * (d.style === 'tokyo_slate' ? 0.06 : 0.12),
+      sx: (d) => d.w + (d.style === 'mall_portal' ? 0.7 : d.style === 'arch_glass' ? 0.55 : 0.45),
+      sy: (d) => (d.style === 'stone_arch' || d.style === 'mall_portal' ? 0.38 : 0.26),
+      sz: (d) => d.d * (d.style === 'tokyo_slate' ? 0.94 : d.style === 'mall_portal' ? 0.90 : 0.84), color: 'roof' },
     { key: 'left', lx: (d) => -d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
-      sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
+      sx: (d) => (d.style === 'stone_arch' || d.style === 'bauhaus_portal' ? 0.36 : d.style === 'glass_cube' ? 0.16 : 0.24),
+      sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
     { key: 'right', lx: (d) => d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
-      sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
+      sx: (d) => (d.style === 'stone_arch' || d.style === 'bauhaus_portal' ? 0.36 : d.style === 'glass_cube' ? 0.16 : 0.24),
+      sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
     { key: 'back', lx: 0, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.53,
       sx: (d) => d.w, sy: (d) => d.h * 0.86, sz: () => 0.22, color: 'frame' },
     { key: 'lintel', lx: 0, ly: (d) => d.h * 0.78, lz: (d) => d.d * 0.31,
-      sx: (d) => d.w, sy: () => 0.3, sz: () => 0.28, color: 'frame' },
+      sx: (d) => d.w, sy: () => 0.30, sz: () => 0.28, color: 'frame' },
+    { key: 'fascia', lx: 0, ly: (d) => d.h * 0.87, lz: (d) => d.d * 0.33,
+      sx: (d) => d.w * 0.90, sy: () => 0.22, sz: () => 0.14, color: 'accent' },
+    { key: 'post_l', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.46, lz: (d) => d.d * 0.31,
+      sx: (d) => (d.style === 'stone_arch' || d.style === 'oxblood_tube' ? 0.34 : 0.22),
+      sy: (d) => d.h * 0.92,
+      sz: (d) => (d.style === 'stone_arch' || d.style === 'oxblood_tube' ? 0.34 : 0.22), color: 'frame' },
+    { key: 'post_r', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.46, lz: (d) => d.d * 0.31,
+      sx: (d) => (d.style === 'stone_arch' || d.style === 'oxblood_tube' ? 0.34 : 0.22),
+      sy: (d) => d.h * 0.92,
+      sz: (d) => (d.style === 'stone_arch' || d.style === 'oxblood_tube' ? 0.34 : 0.22), color: 'frame' },
+    { key: 'finial_l', lx: (d) => -d.w * 0.48, ly: (d) => d.h + 0.12, lz: (d) => d.d * 0.33,
+      sx: (d) => (d.style === 'nyc_kiosk' || d.style === 'art_nouveau' ? 0.34 : d.style === 'mall_portal' ? 0.38 : 0.22),
+      sy: (d) => (d.style === 'nyc_kiosk' || d.style === 'art_nouveau' ? 0.34 : 0.22),
+      sz: (d) => (d.style === 'nyc_kiosk' || d.style === 'art_nouveau' ? 0.34 : 0.22), color: 'accent' },
+    { key: 'finial_r', lx: (d) => d.w * 0.48, ly: (d) => d.h + 0.12, lz: (d) => d.d * 0.33,
+      sx: (d) => (d.style === 'nyc_kiosk' || d.style === 'art_nouveau' ? 0.34 : d.style === 'mall_portal' ? 0.38 : 0.22),
+      sy: (d) => (d.style === 'nyc_kiosk' || d.style === 'art_nouveau' ? 0.34 : 0.22),
+      sz: (d) => (d.style === 'nyc_kiosk' || d.style === 'art_nouveau' ? 0.34 : 0.22), color: 'accent' },
+    { key: 'plinth_l', lx: (d) => -d.w / 2, ly: () => 0.22, lz: (d) => -d.d * 0.12,
+      sx: (d) => (d.style === 'oxblood_tube' || d.style === 'stone_arch' ? 0.36 : 0.28),
+      sy: () => 0.44, sz: (d) => d.d * 0.84, color: 'frame' },
+    { key: 'plinth_r', lx: (d) => d.w / 2, ly: () => 0.22, lz: (d) => -d.d * 0.12,
+      sx: (d) => (d.style === 'oxblood_tube' || d.style === 'stone_arch' ? 0.36 : 0.28),
+      sy: () => 0.44, sz: (d) => d.d * 0.84, color: 'frame' },
     { key: 'stair', lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
       sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, fixed: 0x20272c },
   ];
@@ -5231,7 +5259,7 @@ function buildPedestrianEntrances(group, terrain, sites) {
     const list = rows.filter((r) => r.archKey === kind || (!r.archKey && r.kind === kind));
     if (!list.length) continue;
     for (const part of parts) {
-      const color = part.fixed ?? PED_ARCHETYPES[kind][part.color];
+      const color = part.fixed ?? PED_ARCHETYPES[kind][part.color] ?? PED_ARCHETYPES[kind].frame;
       const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
         envMat(color, { wash: part.key === 'stair' ? 0.08 : 0.3, cool: 0.45 }), list.length);
       mesh.name = `ped-entrance-${kind}-${part.key}`;
