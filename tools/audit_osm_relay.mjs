@@ -96,6 +96,7 @@ sec('Ⅰ payload 淨化:冪等 + 對真實圖資恆等 + 不可信輸入');
     buildings: [{ lat: ll(250412345), lng: ll(1215623456), tags: { building: 'yes', name: '中山大樓' } }],
     rails: [{ tags: { railway: 'rail' }, geometry: [{ lat: 25.04, lon: 121.56 }, { lat: 25.05, lon: 121.57 }] }],
     falls: [], crossings: [], pois: [{ lat: 25.05, lng: 121.58, tags: { place: 'suburb', name: '士林' } }],
+    entrances: [{ lat: 25.051, lng: 121.581, tags: { railway: 'subway_entrance', ref: '1' } }],
   };
   const raw = { bbox: BB, feats, roads: [way(12), way(30, { highway: 'primary' })] };
   const a = sanitizeOsmRelay(raw);
@@ -104,7 +105,11 @@ sec('Ⅰ payload 淨化:冪等 + 對真實圖資恆等 + 不可信輸入');
     JSON.stringify(a) === JSON.stringify(b));
   t('對真實 OSM 精度(1e-7 度)的座標是恆等 —— 開了中繼與退回自己抓建出同一張圖',
     JSON.stringify(a.roads) === JSON.stringify(raw.roads)
-    && JSON.stringify(a.feats.buildings) === JSON.stringify(raw.feats.buildings));
+    && JSON.stringify(a.feats.buildings) === JSON.stringify(raw.feats.buildings)
+    && JSON.stringify(a.feats.entrances) === JSON.stringify(raw.feats.entrances));
+  t('捷運／車站入口節點走獨立有界欄位，不混進具名 POI', a.feats.entrances.length === 1
+    && a.feats.entrances[0].tags.railway === 'subway_entrance'
+    && OSM_RELAY.MAX_ENTRANCE >= 120);
   t('DP = 7 = OSM 節點原生精度(調小可以砍 payload,但那會讓中繼與備援建出兩張圖)',
     OSM_RELAY.DP === 7);
 

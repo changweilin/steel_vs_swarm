@@ -13,8 +13,9 @@
 //   node tools/measure_osm_relay.mjs --venues paris,seoul --team 3
 import { readSrc, grabFn } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
-import { battleBBox } from '../public/js/data.js';
+import { battleBBox, llToXZ } from '../public/js/data.js';
 import { OSM_RELAY, sanitizeOsmRelay, osmRelayFit } from '../public/js/osmrelay.js';
+import { planPedestrianNetwork } from '../public/js/pedestrian.js';
 
 const OSM_UA = 'steel-vs-swarm/1.0 (relay payload measure)';
 const OVERPASS = [
@@ -61,7 +62,7 @@ async function overpass(q) {
 
 /** 逐字鏡射 fetchOsmFeatures 的分類(那一支住在 import 不了 three 的檔案裡) */
 function parseFeats(data) {
-  const buildings = [], rails = [], falls = [], crossings = [], pois = [];
+  const buildings = [], rails = [], falls = [], crossings = [], pois = [], entrances = [];
   const covers = [], waters = [], boundaries = [];
   for (const el of data.elements || []) {
     const tags = el.tags || {};
@@ -72,6 +73,10 @@ function parseFeats(data) {
     else if (el.type === 'way' && el.geometry && !tags.building) boundaries.push({ tags, geometry: el.geometry });
     else if (el.type === 'node' && tags.railway === 'level_crossing') crossings.push({ lat: el.lat, lng: el.lon, tags });
     else if (el.type === 'node' && tags.waterway === 'waterfall') falls.push({ lat: el.lat, lng: el.lon, tags });
+    else if (el.type === 'node' && (/^(subway_entrance|station_entrance)$/.test(tags.railway || '')
+      || (tags.entrance && /^(station|subway)$/.test(tags.public_transport || '')))) {
+      entrances.push({ lat: el.lat, lng: el.lon, tags });
+    }
     else if (el.type === 'node' && (tags.place || tags.natural === 'peak' || tags.highway === 'motorway_junction' || tags.railway)) {
       pois.push({ lat: el.lat, lng: el.lon, tags });
     } else {
@@ -79,7 +84,7 @@ function parseFeats(data) {
       if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
     }
   }
-  return { buildings, rails, falls, crossings, pois, covers, waters, boundaries };
+  return { buildings, rails, falls, crossings, pois, entrances, covers, waters, boundaries };
 }
 
 const argv = process.argv.slice(2);
@@ -88,7 +93,7 @@ const team = +arg('--team', 5);
 const ids = arg('--venues', 'barcelona,paris,manhattan,shibuya').split(',').filter(Boolean);
 
 console.log(`路網中繼 payload 實測(${team}v${team};上限 maxPayload 2048KB / MAX_BYTES ${kb(OSM_RELAY.MAX_BYTES)})\n`);
-console.log('場地        km²   道路way 建物 地被 水道 界線  原始JSON  中繼訊息  餘裕vs2MiB  fit');
+console.log('場地        km²   道路way 建物 地被 水道 界線 入口 原始JSON  中繼訊息  餘裕vs2MiB  fit');
 let worst = 0;
 let measured = 0;
 for (const id of ids) {
@@ -110,14 +115,25 @@ for (const id of ids) {
   const raw = bytes(JSON.stringify({ feats, roads }));
   const clean = sanitizeOsmRelay({ bbox, feats, roads });
   const fit = osmRelayFit(clean);
+  const ped = planPedestrianNetwork({
+    roads,
+    rails: feats.rails,
+    pois: feats.pois,
+    entrances: feats.entrances,
+    toXZ: (p) => llToXZ(p.lat, p.lng ?? p.lon, cfg.center),
+  });
   const msg = fit ? bytes(JSON.stringify(fit.msg)) : 0;
   measured++;
   worst = Math.max(worst, msg);
   console.log(`${id.padEnd(11)} ${km2.toFixed(2).padStart(5)} ${String(roads.length).padStart(6)} `
     + `${String(feats.buildings.length).padStart(6)} ${String(feats.covers.length).padStart(4)}`
-    + ` ${String(feats.waters.length).padStart(4)} ${String(feats.boundaries.length).padStart(4)} `
+    + ` ${String(feats.waters.length).padStart(4)} ${String(feats.boundaries.length).padStart(4)}`
+    + ` ${String(feats.entrances.length).padStart(4)} `
     + `${kb(raw).padStart(8)} ${kb(msg).padStart(9)} ${((2 * 1024 * 1024) / msg).toFixed(1).padStart(9)}× `
     + `${fit ? (fit.dropFeats ? '丟了 feats' : 'ok') : '整份放棄'}`);
+  console.log(`  行人規劃 天橋 ${ped.stats.footbridges}・地下路線移除 ${ped.stats.undergroundRemoved}`
+    + `・入口 ${ped.stats.entrances}・老街 ${ped.stats.oldstreet}`
+    + `・自行車道 ${ped.stats.cycleway}・商圈步道 ${ped.stats.promenade}`);
   await sleep(1500);
 }
 if (!measured) {

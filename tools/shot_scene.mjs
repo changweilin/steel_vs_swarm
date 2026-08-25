@@ -279,7 +279,8 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
       roads: osmCache.roads,
       feats: {
         buildings: osmCache.buildings || [], rails: osmCache.rails || [], falls: osmCache.falls || [],
-        crossings: osmCache.crossings || [], pois: osmCache.pois || [], covers: osmCache.covers || [],
+        crossings: osmCache.crossings || [], pois: osmCache.pois || [], entrances: osmCache.entrances || [],
+        covers: osmCache.covers || [],
         waters: osmCache.waters || [], boundaries: osmCache.boundaries || [],
       },
     });
@@ -367,6 +368,23 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
     stations.push({ name: 'bridge', p: [d.x1, surf(d.x1, d.z1) + EYE + 6, d.z1],
       look: [d.x2, surf(d.x2, d.z2) + EYE, d.z2] });
   }
+  // 行人設施機位從實際 instance 推導；固定看第一筆，前後比較不會因鏡頭手調而失真。
+  const firstInstancePosition = (names) => {
+    const o = names.map((name) => bio?.getObjectByName(name)).find((x) => x?.isInstancedMesh && x.count);
+    if (!o) return null;
+    const local = new THREE.Matrix4(), world = new THREE.Matrix4(), pos = new THREE.Vector3();
+    o.getMatrixAt(0, local);
+    world.multiplyMatrices(o.matrixWorld, local);
+    return pos.setFromMatrixPosition(world);
+  };
+  const entranceP = firstInstancePosition(['ped-entrance-station-roof', 'ped-entrance-underpass-roof']);
+  if (entranceP) stations.push({ name: 'ped_entrance',
+    p: [entranceP.x + 12, entranceP.y + 6, entranceP.z + 12],
+    look: [entranceP.x, entranceP.y - 1.4, entranceP.z] });
+  const footbridgeP = firstInstancePosition(['ped-footbridge-beams']);
+  if (footbridgeP) stations.push({ name: 'ped_footbridge',
+    p: [footbridgeP.x + 18, footbridgeP.y + 8, footbridgeP.z + 18],
+    look: [footbridgeP.x, footbridgeP.y - 1.5, footbridgeP.z] });
   // **喬木近景**(2026-08-08 §5z-t):勾線是**螢幕空間**的 pass,門檻吃「離相機多遠 + 掠射角」,
   // 而且**背景是天空(深度 = far)的那一格會早退** ⇒ 一棵孤零零站在空背景前的樹**畫不出線**
   // (`shot_veg` 實測 `--ink=1` 與 `--ink=0` 的 PNG **逐位元相同**)。「勾線對這個冠形是加分
@@ -629,7 +647,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
       p: [...st.p], look: [...st.look] });
   }
   return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor, glError,
-    roadPrune: ud.stats?.roadPrune || null,
+    roadPrune: ud.stats?.roadPrune || null, pedestrian: ud.stats?.pedestrian || null,
     probeHits, curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
 }, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY,
   env: ENV, elapsed: ELAPSED, probe: PROBE, osmCache: OSM_CACHE });
@@ -672,6 +690,11 @@ if (shots.roadPrune?.edges) {
   }
   if (p.rejected) console.log(`  小環候選未剪 ${Object.entries(p.rejected).map(([k, v]) => `${k}:${v}`).join('・')}`);
 }
+if (shots.pedestrian) {
+  const p = shots.pedestrian;
+  console.log(`  行人規劃 天橋 ${p.footbridges}・地下路線移除 ${p.undergroundRemoved}`
+    + `・入口 ${p.entrances}・老街 ${p.oldstreet}・自行車道 ${p.cycleway}・商圈步道 ${p.promenade}`);
+}
 for (const p of shots.probeHits) {
   console.log(`  射線 ${p.name} ndc=${p.ndc.join(',')}`);
   for (const h of p.hits) console.log(`      · ${h.type}${h.instanceId == null ? '' : `#${h.instanceId}`} ${h.material}`
@@ -694,7 +717,7 @@ fs.writeFileSync(join(OUT, `meta${SUFFIX}.json`), JSON.stringify({
   venue: VENUE, team: TEAM, layers: LAYERS, env: ENV,
   tunnels: shots.tunnels, decks: shots.decks, water: shots.water,
   objN: shots.objN, libN: shots.libN, biomeErr: shots.biomeErr, imagery: shots.imagery, glError: shots.glError,
-  probeHits: shots.probeHits, roadPrune: shots.roadPrune,
+  probeHits: shots.probeHits, roadPrune: shots.roadPrune, pedestrian: shots.pedestrian,
   stations: shots.shots.map((s) => ({ name: s.name, p: s.p, look: s.look })),
 }, null, 2));
 console.log(`\n${shots.shots.length} 張 → ${OUT}`);

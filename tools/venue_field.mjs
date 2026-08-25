@@ -19,6 +19,7 @@ import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MAPGEO, TERRAIN, WATER, GAME, LOS, solveTowerSites, llToXZ, xzToLL } from '../public/js/data.js';
+import { PED_PLAN, isPedestrianBridge, isPedestrianWay } from '../public/js/pedestrian.js';
 
 export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 export const CACHE = join(ROOT, 'tools', '.scen_cache');
@@ -96,19 +97,20 @@ export const underpassPlan = evalBlock('const UND = {', 'underpassPlan',
   { ROAD_SEG, WATER, densify, tunnelCoverIntervals, TUN_COV_MIN });
 // 結構隧道資格 —— 與遊戲同一份原文(人行/室內 tunnel way 不進結構管線 ⇒ 不成洞;
 // 2026-07-29 澀谷側壁破口案)。判定與候選診斷 MUST 同吃這個閘,否則稽核比執行期多洞。
-export const PED_HW = new Function(`return ${/const PED_HW = (\/[^\n]+\/);/.exec(bsrc)[1]};`)();
 export const strucTunnel = (() => {
   const m = /const strucTunnel = \(tags\) =>[\s\S]*?;\n/.exec(bsrc);
   if (!m) throw new Error('biomes.js 找不到 strucTunnel');
-  return new Function('PED_HW', `${m[0]}return strucTunnel;`)(PED_HW);
+  return new Function('isPedestrianWay', `${m[0]}return strucTunnel;`)(isPedestrianWay);
 })();
 export const roadWidth = (tags) => {
   const base = ROAD_W[tags.highway] || 4;
   const lanes = parseInt(tags.lanes, 10) || 0;
   return lanes ? Math.max(base, lanes * 3.2) : base;
 };
-/** 結構通行半寬(= biomes.buildRoads 的 hw:橋/結構隧道一律夾到 PASS_W/2 以上) */
-export const strucHw = (tags) => Math.max(roadWidth(tags) / 2, PASS_W / 2);
+/** 結構通行半寬：人行天橋只夾到單機體淨寬；車行結構維持 PASS_W。 */
+export const strucHw = (tags) => isPedestrianWay(tags)
+  ? Math.max(roadWidth(tags) / 2, PED_PLAN.FOOTBRIDGE_MIN_W_M / 2)
+  : Math.max(roadWidth(tags) / 2, PASS_W / 2);
 
 /**
  * 橋面剖面工廠(**執行 biomes.js `deckAt` 的原文**;閉包變數由外面餵)。
@@ -136,10 +138,10 @@ const runtimeSplitWaterPieces = new Function(
   `${grabFunctionSource('isWaterPt')}\n${grabFunctionSource('terrainEnvCode')}\n${grabFunctionSource('skirtWaterClips')}\n${grabFunctionSource('splitWaterPieces')}\nreturn splitWaterPieces;`,
 )(WATER, 30, 60, 72, 3, WATER.SPAN_MIN_M);
 export const markGradeCorridors = new Function(
-  'roadWidth', 'PASS_W', 'PED_HW', 'llToWorld', 'densify', 'splitWaterPieces', 'strucHw',
+  'roadWidth', 'PASS_W', 'isPedestrianWay', 'isPedestrianBridge', 'llToWorld', 'densify', 'splitWaterPieces', 'strucHw',
   'tunFloorAt', 'TUN', 'STRUCT_CLEAR_PAD', 'WATER', 'ROAD_SEG', 'tunnelWallProfile', 'blockArea',
   `${grabFunctionSource('markGradeCorridors')}\nreturn markGradeCorridors;`,
-)(roadWidth, PASS_W, PED_HW, llToWorld, densify, runtimeSplitWaterPieces, strucHw,
+)(roadWidth, PASS_W, isPedestrianWay, isPedestrianBridge, llToWorld, densify, runtimeSplitWaterPieces, strucHw,
   tunFloorAt, TUN, STRUCT_CLEAR_PAD, WATER, ROAD_SEG, tunnelWallProfile, blockArea);
 
 // ---- 極簡 PNG 解碼(terrarium 磚;A2:MUST NOT 新增 npm 依賴 ⇒ 只用 node:zlib)----

@@ -43,6 +43,7 @@ export const OSM_RELAY = {
   MAX_FALL: 40,          // 瀑布(額度 20)
   MAX_XING: 60,          // 平交道(額度 40)
   MAX_POI: 80,           // 具名點位(地名 24 + 山峰 12 + 交流道 12 + 車站 12)
+  MAX_ENTRANCE: 120,     // 捷運／車站入口(80 + public_transport 補查 40)
   MAX_COVER: 900,        // landuse / natural / leisure 面(線工切面 + 面標籤)
   MAX_WATERWAY: 120,     // 河川 / 溝渠線
   MAX_BOUNDARY: 500,     // 行政 relation 成員線 + 海岸線
@@ -167,6 +168,7 @@ export function sanitizeOsmRelay(m) {
       falls: nodesOf(f.falls, OSM_RELAY.MAX_FALL),
       crossings: nodesOf(f.crossings, OSM_RELAY.MAX_XING),
       pois: nodesOf(f.pois, OSM_RELAY.MAX_POI),
+      entrances: nodesOf(f.entrances, OSM_RELAY.MAX_ENTRANCE),
       covers: cv.out,
       waters: wa.out,
       boundaries: bd.out,
