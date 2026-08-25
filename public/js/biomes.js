@@ -4804,6 +4804,7 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
   return placedCount;
 }
 
+/** OSM tags → 建物類型 */
 /** 文化、宗教與古文明遺跡地標名冊 */
 export const CULTURAL_RELIC_LANDMARKS = Object.freeze([
   'shrine', 'mandir', 'stupa', 'synagogue', 'gurdwara', 'stave_church',
