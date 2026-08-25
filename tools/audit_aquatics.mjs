@@ -8,6 +8,7 @@
 //   --break-viscous (破壞沼澤波浪黏滯度)
 //   --break-bubble  (破壞氣泡上升速度分級)
 //   --break-collider(拔掉固定水下巨物碰撞接線)
+//   --break-cap     (把跨端世界碰撞名冊容量退回舊 4000)
 //   --break-wreck   (把沉船傾斜比例改成 20%)
 
 import { readSrc } from './audit_src.mjs';
@@ -19,6 +20,7 @@ const BREAK_VISCOUS = process.argv.includes('--break-viscous');
 const BREAK_BUBBLE = process.argv.includes('--break-bubble');
 const BREAK_RELIC = process.argv.includes('--break-relic');
 const BREAK_COLLIDER = process.argv.includes('--break-collider');
+const BREAK_CAP = process.argv.includes('--break-cap');
 const BREAK_WRECK = process.argv.includes('--break-wreck');
 
 let pass = 0, fail = 0;
@@ -40,6 +42,8 @@ const toonSrc = readSrc('public', 'js', 'toon.js');
 const biomesSrc = readSrc('public', 'js', 'biomes.js');
 const groundSrc = readSrc('public', 'js', 'ground.js');
 const gameSrc = readSrc('public', 'js', 'game.js');
+const dataSrc = readSrc('public', 'js', 'data.js');
+const serverSrc = readSrc('server', 'server.js');
 
 // ▍Ⅰ 模組匯出與常數架構 (AQUATIC)
 console.log('▍Ⅰ 模組匯出與常數架構');
@@ -161,6 +165,10 @@ ok(biomesSrc.includes('registerTreeTrunkColliders(items, blockers)'), '一般樹
 ok(biomesSrc.includes('relicCollider(relic, `relic_${kind}`)'), '荒野廢棄遺跡沿用同一幾何量尺');
 ok(groundSrc.includes("'container', 'carwreck'") && groundSrc.includes('const col = detailCollider(type, it);'),
   '固定交通殘骸與大型地表擺件以實際零件外廓登記碰撞');
+const occCapSrc = +(dataSrc.match(/MAX_OCC:\s*(\d+)/)?.[1] || 0);
+const occCap = BREAK_CAP ? 4000 : occCapSrc;
+ok(occCap >= 12000, `跨端世界碰撞名冊涵蓋 5v5 樹幹與固定擺件(實得 ${occCap})`);
+ok(/maxPayload:\s*4\s*<<\s*20/.test(serverSrc), 'WebSocket payload 容量同步涵蓋完整 world 訊息');
 ok(aquaticsSrc.includes('const missing = rnd() < 0.28') && aquaticsSrc.includes('rotMat'),
   '木造沉船具斷裂缺口與腐爛斑駁零件');
 

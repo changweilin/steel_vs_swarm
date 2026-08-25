@@ -2710,7 +2710,7 @@ export function bloodScreenUv(bearing, elev, halfH, halfV) {
 //              否則邊界上的合法傷害會被驗證後靜默丟棄(A30 家族),那比偶爾隔山打牛更糟。
 //   RIDGE_SKIP_M 兩端各跳過的長度:射手與目標本來就站在地面上,端點附近地表必然貼著射線,
 //              不跳過就是「每一發都被自己腳下的地擋住」。
-export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_CORR: 6000, MAX_SLAB: 6000, TUN_CLEAR_M: 8,
+export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 12000, CELL_M: 64, MAX_CORR: 6000, MAX_SLAB: 6000, TUN_CLEAR_M: 8,
   HGT_M: 32, HGT_MAX: 256, RIDGE_M: 3, RIDGE_SKIP_M: 24 };
 
 // 粗高程網格的字串編碼(**唯一縫**:main.js 烘烤端與 sim.js 解析端同吃這一組)。

@@ -2171,6 +2171,7 @@ async function enterLoading(cfg) {
       // 兩端分家的代價不是「差一點」而是靜默丟包:客戶端算命中、伺服器算被擋 ⇒ 傷害無聲蒸發。
       // 廣相仍走圓:盒的 r MUST 改成**外接**半對角(內切圓會讓牆角被 broad-phase 提早剔掉)。
       // ry 在 sim 座標(z=−three z)要反號:繞 Y 軸的旋轉在 z 鏡射下換手性。
+      // MAX_OCC 必須涵蓋完整靜態碰撞名冊：截掉尾端會讓客戶端真人撞得到、伺服器 bot 穿得過。
       const occ = (ud.blockers || []).slice(0, LOS.MAX_OCC).map((b) => (b.hw2 != null
         ? [rd(b.x), rd(-b.z), rd(Math.min(60, Math.hypot(b.hw2, b.hd2))), rd(Math.min(300, b.h)),
            rd(b.hw2), rd(b.hd2), Math.round(-b.ry * 1e3) / 1e3]
