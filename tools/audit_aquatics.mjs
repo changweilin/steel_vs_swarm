@@ -167,6 +167,13 @@ const expectedBuilders = [
   'buildCrashedAirframe',
   'buildDeepSeaComplex',
   'buildCargoGantryWreck',
+  'buildSunkenShrineTorii',
+  'buildSunkenStupaRuin',
+  'buildSunkenPyramidZiggurat',
+  'buildSunkenSlateRuin',
+  'buildSunkenEgyptianPylon',
+  'buildSunkenTongkonan',
+  'buildInuksukSite',
 ];
 
 for (const bName of expectedBuilders) {
@@ -177,6 +184,37 @@ for (const bName of expectedBuilders) {
 ok(biomesSrc.includes('buildRelicObject') && biomesSrc.includes('RELIC_KINDS'), 'biomes.js 引入 buildRelicObject 與 RELIC_KINDS');
 ok(biomesSrc.includes('placeWildernessRelics('), 'biomes.js 具備 placeWildernessRelics 荒野遺跡擺放系統');
 ok(biomesSrc.includes('relics: relicsBuilt'), 'biomes.js stats 正確回報陸地遺跡建置數量');
+
+// ▍Ⅷ 世界宗教、原住民與古文明地標建築 (World Religious & Indigenous Landmarks)
+console.log('\n▍Ⅷ 世界宗教、原住民與古文明地標建築');
+const expectedLandmarks = [
+  'shrine',
+  'mandir',
+  'stupa',
+  'synagogue',
+  'gurdwara',
+  'stave_church',
+  'pyramid',
+  'slate_house',
+  'tongkonan',
+  'egyptian_pylon',
+  'sahel_mosque',
+  'nuer_tukul',
+  'inuit_igloo',
+];
+
+for (const lName of expectedLandmarks) {
+  ok(biomesSrc.includes(`${lName}: (`), `biomes.js LANDMARKS 包含文化/原住民建築產生器: ${lName}`);
+  ok(biomesSrc.includes(`${lName}: { r:`), `biomes.js LANDMARK_COL 包含碰撞定義: ${lName}`);
+}
+
+ok(biomesSrc.includes("r === 'shinto'") && biomesSrc.includes("r === 'hindu'")
+  && biomesSrc.includes("r === 'jewish'") && biomesSrc.includes("r === 'sikh'"),
+  'buildingType 支援辨識 shinto, hindu, jewish, sikh 等真實 OSM 宗教標籤');
+ok(biomesSrc.includes('slate_house') && biomesSrc.includes('tongkonan')
+  && biomesSrc.includes('egyptian_pylon') && biomesSrc.includes('sahel_mosque')
+  && biomesSrc.includes('nuer_tukul') && biomesSrc.includes('inuit_igloo'),
+  'buildingType 支援辨識台灣石板屋、南島船形屋、古埃及塔門、薩赫爾清真寺、奴愛圓屋、因紐特冰屋等原住民風標籤');
 
 if (fail > 0) {
   console.error(`\n✗ 稽核失敗: ${fail} 項未通過`);

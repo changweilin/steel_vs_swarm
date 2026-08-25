@@ -703,6 +703,13 @@ export const RELIC_KINDS = {
   crashedAirframe: { name: '墜毀重型飛行器殘骸', underwater: true, land: true, weight: 1.0, colR: 12 },
   deepSeaComplex: { name: '多節點科研基地與地熱渦輪', underwater: true, land: true, weight: 0.9, colR: 13 },
   cargoGantry: { name: '沉沒貨櫃群與桁架吊臂殘骸', underwater: true, land: true, weight: 1.0, colR: 10 },
+  shrineTorii: { name: '沉沒鳥居水榭遺跡', underwater: true, land: true, weight: 1.0, colR: 9 },
+  stupaRuin: { name: '失落古代佛塔舍利殿', underwater: true, land: true, weight: 0.9, colR: 10 },
+  pyramidZiggurat: { name: '失落階梯金字塔神殿', underwater: true, land: true, weight: 1.0, colR: 14 },
+  sunkenSlateRuin: { name: '台灣原住民石板屋遺址', underwater: true, land: true, weight: 1.0, colR: 9 },
+  sunkenEgyptianPylon: { name: '古埃及沉沒塔門與紙莎草柱廳', underwater: true, land: true, weight: 0.9, colR: 13 },
+  sunkenTongkonan: { name: '南島語族失落巨舟形屋架', underwater: true, land: true, weight: 1.0, colR: 10 },
+  inuksukSite: { name: '極地/荒野守護石偶石陣', underwater: true, land: true, weight: 1.0, colR: 8 },
 };
 
 /** 依種類統一代碼建立遺跡/建築物件 */
@@ -719,6 +726,13 @@ export function buildRelicObject(kind, group, x, y, z, rnd, opts = {}) {
     case 'crashedAirframe': return buildCrashedAirframe(group, x, y, z, rnd, opts);
     case 'deepSeaComplex': return buildDeepSeaComplex(group, x, y, z, rnd, opts);
     case 'cargoGantry': return buildCargoGantryWreck(group, x, y, z, rnd, opts);
+    case 'shrineTorii': return buildSunkenShrineTorii(group, x, y, z, rnd, opts);
+    case 'stupaRuin': return buildSunkenStupaRuin(group, x, y, z, rnd, opts);
+    case 'pyramidZiggurat': return buildSunkenPyramidZiggurat(group, x, y, z, rnd, opts);
+    case 'sunkenSlateRuin': return buildSunkenSlateRuin(group, x, y, z, rnd, opts);
+    case 'sunkenEgyptianPylon': return buildSunkenEgyptianPylon(group, x, y, z, rnd, opts);
+    case 'sunkenTongkonan': return buildSunkenTongkonan(group, x, y, z, rnd, opts);
+    case 'inuksukSite': return buildInuksukSite(group, x, y, z, rnd, opts);
     default: return buildSunkenRuins(group, x, y, z, rnd, opts);
   }
 }
@@ -1358,6 +1372,329 @@ export function buildCargoGantryWreck(group, x, y, z, rnd, opts = {}) {
 
   group.add(gantryGroup);
   return gantryGroup;
+}
+
+/** 12. 建造沉沒鳥居水榭遺跡 (Sunken Shinto Torii & Water Shrine Relic) */
+export function buildSunkenShrineTorii(group, x, y, z, rnd, opts = {}) {
+  const toriiGroup = new THREE.Group();
+  toriiGroup.position.set(x, y, z);
+  toriiGroup.rotation.y = rnd() * Math.PI * 2;
+  toriiGroup.rotation.z = (rnd() - 0.5) * 0.16; // 輕微傾斜
+
+  const woodCol = opts.isLand ? PALETTE.woodWreck[1] : 0xb73a2b; // 沉水朱紅
+  const toriiMat = toonMat(woodCol, { bands: 'hard' });
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[0] : PALETTE.ruinsStone[0];
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
+
+  // 1. 水中半埋石基座 (Sunken Stone Plinth)
+  const baseGeo = new THREE.BoxGeometry(14.0, 0.8, 12.0);
+  const base = new THREE.Mesh(baseGeo, stoneMat);
+  toriiGroup.add(base);
+
+  // 2. 雙柱與笠木 (Torii Pillars & Kasagi)
+  const pGeo = new THREE.CylinderGeometry(0.4, 0.45, 7.2, 8);
+  for (const sx of [-3.4, 3.4]) {
+    const pillar = new THREE.Mesh(pGeo, toriiMat);
+    pillar.position.set(sx, 3.6, 0);
+    toriiGroup.add(pillar);
+  }
+
+  // 頂部彎曲笠木與島木
+  const kasagiGeo = new THREE.BoxGeometry(9.4, 0.6, 0.8);
+  kasagiGeo.translate(0, 7.3, 0);
+  const kasagi = new THREE.Mesh(kasagiGeo, toriiMat);
+  toriiGroup.add(kasagi);
+
+  const nukiGeo = new THREE.BoxGeometry(8.0, 0.4, 0.4);
+  nukiGeo.translate(0, 5.6, 0);
+  const nuki = new THREE.Mesh(nukiGeo, toriiMat);
+  toriiGroup.add(nuki);
+
+  // 3. 水底風化石燈籠與祭壇 (Sunken Toro Lantern)
+  for (const sx of [-4.2, 4.2]) {
+    const lanGeo = new THREE.CylinderGeometry(0.35, 0.45, 2.6, 6);
+    const lan = new THREE.Mesh(lanGeo, stoneMat);
+    lan.position.set(sx, 1.3, -3.2);
+    toriiGroup.add(lan);
+  }
+
+  group.add(toriiGroup);
+  return toriiGroup;
+}
+
+/** 13. 建造失落古代佛塔舍利殿 (Sunken Ancient Stupa Sanctuary) */
+export function buildSunkenStupaRuin(group, x, y, z, rnd, opts = {}) {
+  const stupaGroup = new THREE.Group();
+  stupaGroup.position.set(x, y, z);
+  stupaGroup.rotation.y = rnd() * Math.PI * 2;
+  stupaGroup.rotation.z = (rnd() - 0.5) * 0.18;
+
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[1] : PALETTE.ruinsStone[1];
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
+  const goldMat = toonMat(0xc7a13d, { celMetal: true });
+  const glowCol = opts.isLand ? PALETTE.relicGlowAmber : PALETTE.relicGlowCyan;
+  const glowMat = toonPlain({ color: glowCol, transparent: true, opacity: 0.85 });
+
+  // 1. 雙層風化多邊形基座
+  const plinth1 = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 8.5, 1.2, 8), stoneMat);
+  plinth1.position.y = 0.6;
+  stupaGroup.add(plinth1);
+
+  const plinth2 = new THREE.Mesh(new THREE.CylinderGeometry(5.8, 6.4, 1.0, 8), stoneMat);
+  plinth2.position.y = 1.7;
+  stupaGroup.add(plinth2);
+
+  // 2. 圓頂覆缽 (Dome Anda)
+  const domeGeo = new THREE.SphereGeometry(4.2, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  const dome = new THREE.Mesh(domeGeo, stoneMat);
+  dome.position.y = 2.2;
+  stupaGroup.add(dome);
+
+  // 3. 傾斜的金屬天宮與相輪剎 (Spire)
+  const harmika = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.4, 2.2), stoneMat);
+  harmika.position.set(0, 6.8, 0);
+  harmika.rotation.z = 0.25; // 斷裂傾斜
+  stupaGroup.add(harmika);
+
+  const mastGeo = new THREE.CylinderGeometry(0.2, 0.35, 5.2, 7);
+  mastGeo.rotateZ(0.25);
+  mastGeo.translate(0.6, 9.8, 0);
+  const mast = new THREE.Mesh(mastGeo, goldMat);
+  stupaGroup.add(mast);
+
+  // 舍利發光核心
+  const jewel = new THREE.Mesh(new THREE.SphereGeometry(0.8, 6, 6), glowMat);
+  jewel.position.set(0.6, 12.6, 0);
+  stupaGroup.add(jewel);
+
+  group.add(stupaGroup);
+  return stupaGroup;
+}
+
+/** 14. 建造失落階梯金字塔巨石神廟 (Sunken Stepped Ziggurat Pyramid) */
+export function buildSunkenPyramidZiggurat(group, x, y, z, rnd, opts = {}) {
+  const pyrGroup = new THREE.Group();
+  pyrGroup.position.set(x, y, z);
+  pyrGroup.rotation.y = rnd() * Math.PI * 2;
+
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[2] : PALETTE.ancientAltar[0];
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
+  const glowCol = opts.isLand ? PALETTE.relicGlowAmber : PALETTE.relicGlowCyan;
+  const runeMat = toonPlain({ color: glowCol, transparent: true, opacity: 0.85 });
+
+  // 1. 三層退縮巨石階梯 (Stepped Ziggurat Base)
+  const step1 = new THREE.Mesh(new THREE.BoxGeometry(22, 2.6, 22), stoneMat);
+  step1.position.y = 1.3;
+  pyrGroup.add(step1);
+
+  const step2 = new THREE.Mesh(new THREE.BoxGeometry(16, 2.6, 16), stoneMat);
+  step2.position.y = 3.9;
+  pyrGroup.add(step2);
+
+  const step3 = new THREE.Mesh(new THREE.BoxGeometry(11, 2.6, 11), stoneMat);
+  step3.position.y = 6.5;
+  pyrGroup.add(step3);
+
+  // 2. 頂層神殿房間 (Summit Temple)
+  const shrine = new THREE.Mesh(new THREE.BoxGeometry(6.8, 3.6, 6.8), stoneMat);
+  shrine.position.y = 9.6;
+  pyrGroup.add(shrine);
+
+  // 頂部發光符文眼飾 (Rune Portal Motif)
+  const rune = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 0.4), runeMat);
+  rune.position.set(0, 10.2, 3.5);
+  pyrGroup.add(rune);
+
+  // 3. 正面巨大通天石階 (Front Stone Staircase)
+  const stairGeo = new THREE.BoxGeometry(4.2, 10.5, 10.5);
+  stairGeo.rotateX(-0.6);
+  stairGeo.translate(0, 5.2, 6.2);
+  const stair = new THREE.Mesh(stairGeo, stoneMat);
+  pyrGroup.add(stair);
+
+  group.add(pyrGroup);
+  return pyrGroup;
+}
+
+/** 15. 建造台灣原住民石板屋遺址 (Sunken Indigenous Slate House Relic) */
+export function buildSunkenSlateRuin(group, x, y, z, rnd, opts = {}) {
+  const slateGroup = new THREE.Group();
+  slateGroup.position.set(x, y, z);
+  slateGroup.rotation.y = rnd() * Math.PI * 2;
+  slateGroup.rotation.z = (rnd() - 0.5) * 0.14;
+
+  const stoneCol = opts.isLand ? 0x2e3338 : 0x1f262b; // 黑色板岩
+  const slateMat = envMat(stoneCol, { bands: 'hard' });
+  const glowCol = opts.isLand ? PALETTE.relicGlowAmber : PALETTE.relicGlowCyan;
+  const runeMat = toonPlain({ color: glowCol, transparent: true, opacity: 0.85 });
+
+  // 1. 半埋疊砌板岩基座與崩塌殘牆
+  const base = new THREE.Mesh(new THREE.BoxGeometry(14, 0.6, 12), slateMat);
+  slateGroup.add(base);
+
+  const wallL = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 8.5), slateMat);
+  wallL.position.set(-5.2, 1.1, -1.0);
+  slateGroup.add(wallL);
+
+  const wallR = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.6, 8.5), slateMat);
+  wallR.position.set(5.2, 0.8, -1.0);
+  wallR.rotation.z = -0.15; // 傾倒殘牆
+  slateGroup.add(wallR);
+
+  // 2. 崩塌斜靠的巨型石板屋頂片 (Collapsed Slate Roof Slab)
+  const roofGeo = new THREE.BoxGeometry(12.0, 0.4, 9.0);
+  roofGeo.rotateX(0.35);
+  roofGeo.rotateZ(0.18);
+  roofGeo.translate(-1.0, 2.5, -1.5);
+  const roof = new THREE.Mesh(roofGeo, slateMat);
+  slateGroup.add(roof);
+
+  // 3. 祖靈圖騰石柱 (Ancestral Totem Pillar)
+  const totem = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 4.2, 6), slateMat);
+  totem.position.set(3.5, 2.1, 3.8);
+  totem.rotation.z = 0.12;
+  slateGroup.add(totem);
+
+  const eyeGlow = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.25, 0.8), runeMat);
+  eyeGlow.position.set(3.5, 3.4, 3.8);
+  slateGroup.add(eyeGlow);
+
+  group.add(slateGroup);
+  return slateGroup;
+}
+
+/** 16. 建造古埃及沉沒塔門與紙莎草柱廳 (Sunken Egyptian Pylon & Hypostyle Hall) */
+export function buildSunkenEgyptianPylon(group, x, y, z, rnd, opts = {}) {
+  const pylonGroup = new THREE.Group();
+  pylonGroup.position.set(x, y, z);
+  pylonGroup.rotation.y = rnd() * Math.PI * 2;
+
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[0] : PALETTE.ancientAltar[0];
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
+  const goldMat = toonMat(0xc7a13d, { celMetal: true });
+
+  // 1. 厚重梯形塔門 (單側殘存 + 另一側斷裂)
+  const pylonL = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 3.8, 12.0, 4), stoneMat);
+  pylonL.rotation.y = Math.PI / 4;
+  pylonL.position.set(-6.5, 6.0, 6.0);
+  pylonGroup.add(pylonL);
+
+  const pylonR = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 3.8, 6.5, 4), stoneMat);
+  pylonR.rotation.y = Math.PI / 4;
+  pylonR.rotation.z = 0.22; // 折斷傾覆
+  pylonR.position.set(6.5, 3.25, 6.0);
+  pylonGroup.add(pylonR);
+
+  // 2. 門楣太陽盤金飾殘片 (Winged Sun Disc Fragment)
+  const sun = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9), goldMat);
+  sun.position.set(-2.0, 7.5, 6.2);
+  pylonGroup.add(sun);
+
+  // 3. 紙莎草柱廳殘柱 (Papyrus Columns in Hall)
+  for (const [sx, sz] of [[-4.5, -3], [4.5, -3], [-4.5, 1], [4.5, 1]]) {
+    const colH = 6.0 + (sx < 0 ? 3.5 : 0);
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.65, colH, 8), stoneMat);
+    col.position.set(sx, colH / 2, sz);
+    pylonGroup.add(col);
+    if (sx < 0) { // 完整柱頭
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.6, 1.2, 8), stoneMat);
+      cap.position.set(sx, colH + 0.6, sz);
+      pylonGroup.add(cap);
+    }
+  }
+
+  group.add(pylonGroup);
+  return pylonGroup;
+}
+
+/** 17. 建造南島語族失落巨舟形屋架 (Sunken Austronesian Tongkonan Frame) */
+export function buildSunkenTongkonan(group, x, y, z, rnd, opts = {}) {
+  const tongGroup = new THREE.Group();
+  tongGroup.position.set(x, y, z);
+  tongGroup.rotation.y = rnd() * Math.PI * 2;
+  tongGroup.rotation.z = (rnd() - 0.5) * 0.16;
+
+  const woodCol = opts.isLand ? PALETTE.woodWreck[0] : PALETTE.woodWreck[1];
+  const woodMat = toonMat(woodCol, { bands: 'hard' });
+
+  // 1. 高架木樁排 (Stilt Posts)
+  for (const sx of [-2.8, 2.8]) {
+    for (const sz of [-4.0, 0, 4.0]) {
+      const stilt = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 4.2, 6), woodMat);
+      stilt.position.set(sx, 2.1, sz);
+      tongGroup.add(stilt);
+    }
+  }
+
+  // 2. 巨大弧形船骨架主樑 (Upswept Boat Keel & Rafters)
+  const keelGeo = new THREE.CylinderGeometry(3.6, 3.6, 18.0, 8, 1, false, 0, Math.PI);
+  keelGeo.rotateX(Math.PI / 2);
+  keelGeo.scale(0.8, 1.4, 0.8);
+  keelGeo.translate(0, 6.8, 0);
+  const keel = new THREE.Mesh(keelGeo, woodMat);
+  tongGroup.add(keel);
+
+  // 3. 上翹的巨形尖舟船首桅骨 (Soaring Boat Prows)
+  const prowF = new THREE.Mesh(new THREE.ConeGeometry(1.8, 6.8, 4), woodMat);
+  prowF.rotation.x = 0.72;
+  prowF.position.set(0, 9.8, 9.2);
+  tongGroup.add(prowF);
+
+  const prowB = new THREE.Mesh(new THREE.ConeGeometry(1.8, 4.8, 4), woodMat);
+  prowB.rotation.x = -0.65;
+  prowB.position.set(0, 8.8, -9.2);
+  tongGroup.add(prowB);
+
+  group.add(tongGroup);
+  return tongGroup;
+}
+
+/** 18. 建造極地/荒野守護石偶石陣 (Inuksuk Sentinel Cairns Site) */
+export function buildInuksukSite(group, x, y, z, rnd, opts = {}) {
+  const inuksukGroup = new THREE.Group();
+  inuksukGroup.position.set(x, y, z);
+  inuksukGroup.rotation.y = rnd() * Math.PI * 2;
+
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[1] : 0x37474f;
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
+  const glowCol = opts.isLand ? PALETTE.relicGlowAmber : PALETTE.relicGlowCyan;
+  const glowMat = toonPlain({ color: glowCol, transparent: true, opacity: 0.85 });
+
+  // 1. 中央巨型守護石偶 (Main Inuksuk / Inunnguaq)
+  const mainCairn = new THREE.Group();
+  for (const lx of [-0.6, 0.6]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.8, 0.8), stoneMat);
+    leg.position.set(lx, 0.9, 0);
+    mainCairn.add(leg);
+  }
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.4, 1.1), stoneMat);
+  torso.position.set(0, 2.5, 0);
+  mainCairn.add(torso);
+
+  const arms = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.5, 0.9), stoneMat);
+  arms.position.set(0, 3.45, 0);
+  mainCairn.add(arms);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), stoneMat);
+  head.position.set(0, 4.15, 0);
+  mainCairn.add(head);
+
+  // 頂部守護光石
+  const crownStone = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4), glowMat);
+  crownStone.position.set(0, 4.85, 0);
+  mainCairn.add(crownStone);
+
+  inuksukGroup.add(mainCairn);
+
+  // 2. 環繞小型導引石堆 (Satellite Votive Cairns)
+  for (const [sx, sz] of [[-4.5, -3.2], [4.8, -2.5], [0, 4.2]]) {
+    const subCairn = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 1.1, 2.2, 5), stoneMat);
+    subCairn.position.set(sx, 1.1, sz);
+    inuksukGroup.add(subCairn);
+  }
+
+  group.add(inuksukGroup);
+  return inuksukGroup;
 }
 
 /* =========================================================================
