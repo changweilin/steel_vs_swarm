@@ -5198,6 +5198,312 @@ function buildFootbridgeFrames(group, footbridgeFrames) {
   group.add(posts, beamsM);
 }
 
+// 靜態共享出入口幾何積木（半圓柱拱頂、拱券圓環、立柱圓柱、球形街燈、折板稜柱）
+let _pedEntranceGeos = null;
+function getPedEntranceGeos() {
+  if (_pedEntranceGeos) return _pedEntranceGeos;
+  const vaultG = new THREE.CylinderGeometry(1, 1, 1, 18, 1, false, 0, Math.PI);
+  vaultG.rotateX(Math.PI / 2);
+  const prismG = new THREE.CylinderGeometry(0, 1, 1, 4, 1);
+  prismG.rotateY(Math.PI / 4);
+  prismG.rotateX(Math.PI / 2);
+  _pedEntranceGeos = {
+    box: new THREE.BoxGeometry(1, 1, 1),
+    arch_vault: vaultG,
+    torus_arch: new THREE.TorusGeometry(1, 0.08, 8, 18, Math.PI),
+    torus_arch_heavy: new THREE.TorusGeometry(1, 0.20, 8, 18, Math.PI),
+    sphere: new THREE.SphereGeometry(1, 12, 10),
+    cyl: new THREE.CylinderGeometry(1, 1, 1, 10),
+    prism: prismG,
+  };
+  return _pedEntranceGeos;
+}
+
+const STYLE_PARTS = {
+  // 1. 台北/高雄捷運 (Taipei / Kaohsiung MRT - 鋼構拱形採光罩、藍綠玻璃天棚、亮黃出口標示)
+  arch_glass: [
+    { geo: 'arch_vault', color: 'roof', lx: 0, ly: (d) => d.h * 0.58, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.52, sy: (d) => d.h * 0.42, sz: (d) => d.d * 0.88, wash: 0.4 },
+    { geo: 'torus_arch', color: 'frame', lx: 0, ly: (d) => d.h * 0.58, lz: (d) => d.d * 0.35,
+      sx: (d) => d.w * 0.53, sy: (d) => d.h * 0.43, sz: () => 1.2 },
+    { geo: 'torus_arch', color: 'frame', lx: 0, ly: (d) => d.h * 0.58, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.53, sy: (d) => d.h * 0.43, sz: () => 1.2 },
+    { geo: 'torus_arch', color: 'frame', lx: 0, ly: (d) => d.h * 0.58, lz: (d) => -d.d * 0.51,
+      sx: (d) => d.w * 0.53, sy: (d) => d.h * 0.43, sz: () => 1.2 },
+    { geo: 'cyl', color: 'frame', lx: (d) => -d.w * 0.5, ly: (d) => d.h * 0.30, lz: (d) => d.d * 0.35,
+      sx: () => 0.14, sy: (d) => d.h * 0.60, sz: () => 0.14 },
+    { geo: 'cyl', color: 'frame', lx: (d) => d.w * 0.5, ly: (d) => d.h * 0.30, lz: (d) => d.d * 0.35,
+      sx: () => 0.14, sy: (d) => d.h * 0.60, sz: () => 0.14 },
+    { geo: 'cyl', color: 'frame', lx: (d) => -d.w * 0.5, ly: (d) => d.h * 0.30, lz: (d) => -d.d * 0.51,
+      sx: () => 0.14, sy: (d) => d.h * 0.60, sz: () => 0.14 },
+    { geo: 'cyl', color: 'frame', lx: (d) => d.w * 0.5, ly: (d) => d.h * 0.30, lz: (d) => -d.d * 0.51,
+      sx: () => 0.14, sy: (d) => d.h * 0.60, sz: () => 0.14 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.5, ly: (d) => d.h * 0.32, lz: (d) => -d.d * 0.08,
+      sx: () => 0.08, sy: (d) => d.h * 0.64, sz: (d) => d.d * 0.85, wash: 0.35 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.5, ly: (d) => d.h * 0.32, lz: (d) => -d.d * 0.08,
+      sx: () => 0.08, sy: (d) => d.h * 0.64, sz: (d) => d.d * 0.85, wash: 0.35 },
+    { geo: 'box', color: 'wall', lx: 0, ly: (d) => d.h * 0.32, lz: (d) => -d.d * 0.51,
+      sx: (d) => d.w, sy: (d) => d.h * 0.64, sz: () => 0.08, wash: 0.35 },
+    { geo: 'box', color: 'accent', lx: 0, ly: (d) => d.h * 0.62, lz: (d) => d.d * 0.35,
+      sx: (d) => d.w * 0.92, sy: () => 0.28, sz: () => 0.18 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.76, sy: () => 0.16, sz: (d) => d.d * 0.76, wash: 0.08 },
+  ],
+
+  // 2. 巴黎地鐵 (Paris Métro - Hector Guimard 新藝術風格銅綠鑄鐵與琥珀燈球)
+  art_nouveau: [
+    { geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h * 0.88, lz: (d) => d.d * 0.08,
+      sx: (d) => d.w * 1.12, sy: () => 0.16, sz: (d) => d.d * 0.65, rx: -0.18, wash: 0.35 },
+    { geo: 'torus_arch', color: 'frame', lx: 0, ly: (d) => d.h * 0.68, lz: (d) => d.d * 0.36,
+      sx: (d) => d.w * 0.48, sy: (d) => d.h * 0.38, sz: () => 1.4 },
+    { geo: 'cyl', color: 'frame', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.52, lz: (d) => d.d * 0.36,
+      sx: () => 0.16, sy: (d) => d.h * 1.04, sz: () => 0.16 },
+    { geo: 'cyl', color: 'frame', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.52, lz: (d) => d.d * 0.36,
+      sx: () => 0.16, sy: (d) => d.h * 1.04, sz: () => 0.16 },
+    { geo: 'sphere', color: 'accent', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 1.08, lz: (d) => d.d * 0.36,
+      sx: () => 0.34, sy: () => 0.34, sz: () => 0.34, wash: 0.6 },
+    { geo: 'sphere', color: 'accent', lx: (d) => d.w * 0.48, ly: (d) => d.h * 1.08, lz: (d) => d.d * 0.36,
+      sx: () => 0.34, sy: () => 0.34, sz: () => 0.34, wash: 0.6 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.24, lz: (d) => -d.d * 0.08,
+      sx: () => 0.16, sy: (d) => d.h * 0.48, sz: (d) => d.d * 0.86 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.24, lz: (d) => -d.d * 0.08,
+      sx: () => 0.16, sy: (d) => d.h * 0.48, sz: (d) => d.d * 0.86 },
+    { geo: 'box', color: 'wall', lx: 0, ly: (d) => d.h * 0.24, lz: (d) => -d.d * 0.51,
+      sx: (d) => d.w * 0.96, sy: (d) => d.h * 0.48, sz: () => 0.16 },
+    { geo: 'box', color: 'accent', lx: 0, ly: (d) => d.h * 0.84, lz: (d) => d.d * 0.36,
+      sx: (d) => d.w * 0.72, sy: () => 0.26, sz: () => 0.12 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.74, sy: () => 0.16, sz: (d) => d.d * 0.74, wash: 0.08 },
+  ],
+
+  // 3. 紐約地鐵 (NYC Subway - 墨綠鑄鐵欄杆與發光雙圓球街燈)
+  nyc_kiosk: [
+    { geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h * 0.70, lz: (d) => -d.d * 0.18,
+      sx: (d) => d.w * 0.98, sy: () => 0.14, sz: (d) => d.d * 0.72, rx: -0.22 },
+    { geo: 'cyl', color: 'frame', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.54, lz: (d) => d.d * 0.35,
+      sx: () => 0.15, sy: (d) => d.h * 1.08, sz: () => 0.15 },
+    { geo: 'cyl', color: 'frame', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.54, lz: (d) => d.d * 0.35,
+      sx: () => 0.15, sy: (d) => d.h * 1.08, sz: () => 0.15 },
+    { geo: 'sphere', color: 'accent', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 1.12, lz: (d) => d.d * 0.35,
+      sx: () => 0.36, sy: () => 0.36, sz: () => 0.36, wash: 0.5 },
+    { geo: 'sphere', color: 'accent', lx: (d) => d.w * 0.48, ly: (d) => d.h * 1.12, lz: (d) => d.d * 0.35,
+      sx: () => 0.36, sy: () => 0.36, sz: () => 0.36, wash: 0.5 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.28, lz: (d) => -d.d * 0.08,
+      sx: () => 0.12, sy: (d) => d.h * 0.56, sz: (d) => d.d * 0.86 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.28, lz: (d) => -d.d * 0.08,
+      sx: () => 0.12, sy: (d) => d.h * 0.56, sz: (d) => d.d * 0.86 },
+    { geo: 'box', color: 'wall', lx: 0, ly: (d) => d.h * 0.28, lz: (d) => -d.d * 0.51,
+      sx: (d) => d.w * 0.96, sy: (d) => d.h * 0.56, sz: () => 0.12 },
+    { geo: 'box', color: 'frame', lx: 0, ly: (d) => d.h * 0.72, lz: (d) => d.d * 0.35,
+      sx: (d) => d.w * 0.92, sy: () => 0.26, sz: () => 0.14 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.74, sy: () => 0.16, sz: (d) => d.d * 0.74, wash: 0.08 },
+  ],
+
+  // 4. 倫敦地鐵 (London Underground - Leslie Green 牛血紅陶磚與半圓懸臂雨棚)
+  oxblood_tube: [
+    { geo: 'arch_vault', color: 'roof', lx: 0, ly: (d) => d.h * 0.88, lz: (d) => d.d * 0.05,
+      sx: (d) => d.w * 0.55, sy: () => 0.22, sz: (d) => d.d * 0.75 },
+    { geo: 'box', color: 'frame', lx: (d) => -d.w * 0.46, ly: (d) => d.h * 0.48, lz: (d) => d.d * 0.34,
+      sx: () => 0.48, sy: (d) => d.h * 0.96, sz: () => 0.48 },
+    { geo: 'box', color: 'frame', lx: (d) => d.w * 0.46, ly: (d) => d.h * 0.48, lz: (d) => d.d * 0.34,
+      sx: () => 0.48, sy: (d) => d.h * 0.96, sz: () => 0.48 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.32, lz: (d) => -d.d * 0.10,
+      sx: () => 0.38, sy: (d) => d.h * 0.64, sz: (d) => d.d * 0.82 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.32, lz: (d) => -d.d * 0.10,
+      sx: () => 0.38, sy: (d) => d.h * 0.64, sz: (d) => d.d * 0.82 },
+    { geo: 'box', color: 'frame', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.74, lz: (d) => -d.d * 0.10,
+      sx: () => 0.18, sy: (d) => d.h * 0.24, sz: (d) => d.d * 0.80, wash: 0.4 },
+    { geo: 'box', color: 'frame', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.74, lz: (d) => -d.d * 0.10,
+      sx: () => 0.18, sy: (d) => d.h * 0.24, sz: (d) => d.d * 0.80, wash: 0.4 },
+    { geo: 'box', color: 'wall', lx: 0, ly: (d) => d.h * 0.44, lz: (d) => -d.d * 0.51,
+      sx: (d) => d.w, sy: (d) => d.h * 0.88, sz: () => 0.36 },
+    { geo: 'box', color: 'accent', lx: 0, ly: (d) => d.h * 0.82, lz: (d) => d.d * 0.36,
+      sx: (d) => d.w * 0.88, sy: () => 0.28, sz: () => 0.22 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, wash: 0.08 },
+  ],
+
+  // 5. 東京地下鐵 (Tokyo Metro - 消光鋼構懸臂雨遮與直櫺格柵)
+  tokyo_slate: [
+    { geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h * 0.90, lz: (d) => d.d * 0.05,
+      sx: (d) => d.w * 1.06, sy: () => 0.20, sz: (d) => d.d * 0.96, rx: -0.08 },
+    { geo: 'box', fixed: 0xf4f0e6, lx: 0, ly: (d) => d.h * 0.82, lz: (d) => d.d * 0.12,
+      sx: (d) => d.w * 0.86, sy: () => 0.06, sz: (d) => d.d * 0.68, wash: 0.6 },
+    { geo: 'box', color: 'frame', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.46, lz: (d) => d.d * 0.34,
+      sx: () => 0.26, sy: (d) => d.h * 0.92, sz: () => 0.26 },
+    { geo: 'box', color: 'frame', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.46, lz: (d) => d.d * 0.34,
+      sx: () => 0.26, sy: (d) => d.h * 0.92, sz: () => 0.26 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.42, lz: (d) => -d.d * 0.10,
+      sx: () => 0.16, sy: (d) => d.h * 0.84, sz: (d) => d.d * 0.82 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.42, lz: (d) => -d.d * 0.10,
+      sx: () => 0.16, sy: (d) => d.h * 0.84, sz: (d) => d.d * 0.82 },
+    { geo: 'box', color: 'wall', lx: 0, ly: (d) => d.h * 0.42, lz: (d) => -d.d * 0.51,
+      sx: (d) => d.w, sy: (d) => d.h * 0.84, sz: () => 0.18 },
+    { geo: 'box', color: 'accent', lx: 0, ly: (d) => d.h * 0.84, lz: (d) => d.d * 0.36,
+      sx: (d) => d.w * 0.82, sy: () => 0.24, sz: () => 0.16 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.74, sy: () => 0.16, sz: (d) => d.d * 0.74, wash: 0.08 },
+  ],
+
+  // 6. 畢爾包/新加坡 Foster 高科技透明流線玻璃穹頂 (Fosterito)
+  glass_cocoon: [
+    { geo: 'arch_vault', color: 'roof', lx: 0, ly: (d) => d.h * 0.52, lz: (d) => -d.d * 0.05,
+      sx: (d) => d.w * 0.54, sy: (d) => d.h * 0.48, sz: (d) => d.d * 0.94, wash: 0.45 },
+    { geo: 'torus_arch', color: 'frame', lx: 0, ly: (d) => d.h * 0.52, lz: (d) => d.d * 0.38,
+      sx: (d) => d.w * 0.55, sy: (d) => d.h * 0.49, sz: () => 1.2 },
+    { geo: 'torus_arch', color: 'frame', lx: 0, ly: (d) => d.h * 0.52, lz: (d) => d.d * 0.10,
+      sx: (d) => d.w * 0.55, sy: (d) => d.h * 0.49, sz: () => 1.2 },
+    { geo: 'torus_arch', color: 'frame', lx: 0, ly: (d) => d.h * 0.52, lz: (d) => -d.d * 0.18,
+      sx: (d) => d.w * 0.55, sy: (d) => d.h * 0.49, sz: () => 1.2 },
+    { geo: 'torus_arch', color: 'frame', lx: 0, ly: (d) => d.h * 0.52, lz: (d) => -d.d * 0.48,
+      sx: (d) => d.w * 0.55, sy: (d) => d.h * 0.49, sz: () => 1.2 },
+    { geo: 'box', color: 'frame', lx: (d) => -d.w * 0.52, ly: () => 0.22, lz: (d) => -d.d * 0.05,
+      sx: () => 0.22, sy: () => 0.44, sz: (d) => d.d * 0.94 },
+    { geo: 'box', color: 'frame', lx: (d) => d.w * 0.52, ly: () => 0.22, lz: (d) => -d.d * 0.05,
+      sx: () => 0.22, sy: () => 0.44, sz: (d) => d.d * 0.94 },
+    { geo: 'torus_arch', color: 'accent', lx: 0, ly: (d) => d.h * 0.52, lz: (d) => d.d * 0.40,
+      sx: (d) => d.w * 0.52, sy: (d) => d.h * 0.46, sz: () => 0.8, wash: 0.5 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.78, sy: () => 0.16, sz: (d) => d.d * 0.78, wash: 0.08 },
+  ],
+
+  // 7. 柏林/維也納包浩斯地鐵門廊 (Bauhaus Portal)
+  bauhaus_portal: [
+    { geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h * 0.92, lz: (d) => -d.d * 0.06,
+      sx: (d) => d.w * 1.08, sy: () => 0.32, sz: (d) => d.d * 0.92 },
+    { geo: 'box', color: 'frame', lx: 0, ly: (d) => d.h * 0.76, lz: (d) => d.d * 0.33,
+      sx: (d) => d.w * 0.96, sy: () => 0.28, sz: () => 0.24 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.44, lz: (d) => -d.d * 0.10,
+      sx: () => 0.42, sy: (d) => d.h * 0.88, sz: (d) => d.d * 0.82 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.44, lz: (d) => -d.d * 0.10,
+      sx: () => 0.42, sy: (d) => d.h * 0.88, sz: (d) => d.d * 0.82 },
+    { geo: 'box', color: 'wall', lx: 0, ly: (d) => d.h * 0.44, lz: (d) => -d.d * 0.51,
+      sx: (d) => d.w, sy: (d) => d.h * 0.88, sz: () => 0.36 },
+    { geo: 'box', color: 'accent', lx: (d) => d.w * 0.46, ly: (d) => d.h * 1.14, lz: (d) => d.d * 0.33,
+      sx: () => 0.48, sy: () => 0.48, sz: () => 0.48, wash: 0.5 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, wash: 0.08 },
+  ],
+
+  // 8. 首爾/香港雙坡鋁板現代採光罩 (Metallic Gabled)
+  metallic_gabled: [
+    { geo: 'prism', color: 'roof', lx: 0, ly: (d) => d.h * 0.82, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.52, sy: () => 0.65, sz: (d) => d.d * 0.88 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.38, lz: (d) => -d.d * 0.08,
+      sx: () => 0.10, sy: (d) => d.h * 0.76, sz: (d) => d.d * 0.85, wash: 0.35 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.38, lz: (d) => -d.d * 0.08,
+      sx: () => 0.10, sy: (d) => d.h * 0.76, sz: (d) => d.d * 0.85, wash: 0.35 },
+    { geo: 'box', color: 'frame', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.44, lz: (d) => d.d * 0.34,
+      sx: () => 0.28, sy: (d) => d.h * 0.88, sz: () => 0.28 },
+    { geo: 'box', color: 'frame', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.44, lz: (d) => d.d * 0.34,
+      sx: () => 0.28, sy: (d) => d.h * 0.88, sz: () => 0.28 },
+    { geo: 'box', color: 'accent', lx: 0, ly: (d) => d.h * 0.72, lz: (d) => d.d * 0.34,
+      sx: (d) => d.w * 0.88, sy: () => 0.24, sz: () => 0.16 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.74, sy: () => 0.16, sz: (d) => d.d * 0.74, wash: 0.08 },
+  ],
+
+  // 9. 大型地下街商場大門廊 (Mall Portal)
+  mall_portal: [
+    { geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h * 0.94, lz: (d) => d.d * 0.04,
+      sx: (d) => d.w * 1.15, sy: () => 0.22, sz: (d) => d.d * 0.95 },
+    { geo: 'box', color: 'frame', lx: 0, ly: (d) => d.h * 0.78, lz: (d) => d.d * 0.20,
+      sx: (d) => d.w * 1.05, sy: () => 0.16, sz: (d) => d.d * 0.45 },
+    { geo: 'box', color: 'accent', lx: (d) => d.w * 0.52, ly: (d) => d.h * 0.58, lz: (d) => d.d * 0.38,
+      sx: () => 0.48, sy: (d) => d.h * 1.16, sz: () => 0.48, wash: 0.4 },
+    { geo: 'sphere', color: 'accent', lx: (d) => d.w * 0.52, ly: (d) => d.h * 1.20, lz: (d) => d.d * 0.38,
+      sx: () => 0.32, sy: () => 0.32, sz: () => 0.32, wash: 0.6 },
+    { geo: 'box', color: 'frame', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.45, lz: (d) => d.d * 0.35,
+      sx: () => 0.36, sy: (d) => d.h * 0.90, sz: () => 0.36 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.40, lz: (d) => -d.d * 0.10,
+      sx: () => 0.12, sy: (d) => d.h * 0.80, sz: (d) => d.d * 0.80, wash: 0.35 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.40, lz: (d) => -d.d * 0.10,
+      sx: () => 0.12, sy: (d) => d.h * 0.80, sz: (d) => d.d * 0.80, wash: 0.35 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.80, sy: () => 0.16, sz: (d) => d.d * 0.80, wash: 0.08 },
+  ],
+
+  // 10. 歐洲古城石砌拱門地下道 (Stone Arch)
+  stone_arch: [
+    { geo: 'torus_arch_heavy', color: 'frame', lx: 0, ly: (d) => d.h * 0.58, lz: (d) => d.d * 0.32,
+      sx: (d) => d.w * 0.46, sy: (d) => d.h * 0.46, sz: () => 1.6 },
+    { geo: 'box', color: 'accent', lx: 0, ly: (d) => d.h * 1.02, lz: (d) => d.d * 0.34,
+      sx: () => 0.48, sy: () => 0.52, sz: () => 0.52 },
+    { geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h * 0.94, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 1.08, sy: () => 0.34, sz: (d) => d.d * 0.88 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.46, ly: (d) => d.h * 0.44, lz: (d) => -d.d * 0.10,
+      sx: () => 0.46, sy: (d) => d.h * 0.88, sz: (d) => d.d * 0.82 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.46, ly: (d) => d.h * 0.44, lz: (d) => -d.d * 0.10,
+      sx: () => 0.46, sy: (d) => d.h * 0.88, sz: (d) => d.d * 0.82 },
+    { geo: 'cyl', color: 'accent', lx: (d) => -d.w * 0.42, ly: (d) => d.h * 0.28, lz: (d) => -d.d * 0.08,
+      sx: () => 0.08, sy: (d) => d.d * 0.78, sz: () => 0.08, rx: Math.PI / 2 },
+    { geo: 'cyl', color: 'accent', lx: (d) => d.w * 0.42, ly: (d) => d.h * 0.28, lz: (d) => -d.d * 0.08,
+      sx: () => 0.08, sy: (d) => d.d * 0.78, sz: () => 0.08, rx: Math.PI / 2 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.70, sy: () => 0.16, sz: (d) => d.d * 0.70, wash: 0.08 },
+  ],
+
+  // 11. 現代幾何折板地下道 (Origami / Faceted Steel)
+  origami: [
+    { geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h * 0.88, lz: (d) => d.d * 0.04,
+      sx: (d) => d.w * 1.05, sy: () => 0.18, sz: (d) => d.d * 0.92, rx: -0.14, rz: 0.06 },
+    { geo: 'box', color: 'frame', lx: (d) => -d.w * 0.46, ly: (d) => d.h * 0.46, lz: (d) => d.d * 0.32,
+      sx: () => 0.22, sy: (d) => d.h * 0.92, sz: () => 0.22, rz: -0.12 },
+    { geo: 'box', color: 'frame', lx: (d) => d.w * 0.46, ly: (d) => d.h * 0.46, lz: (d) => d.d * 0.32,
+      sx: () => 0.22, sy: (d) => d.h * 0.92, sz: () => 0.22, rz: 0.12 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.40, lz: (d) => -d.d * 0.10,
+      sx: () => 0.18, sy: (d) => d.h * 0.80, sz: (d) => d.d * 0.80 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.40, lz: (d) => -d.d * 0.10,
+      sx: () => 0.18, sy: (d) => d.h * 0.80, sz: (d) => d.d * 0.80 },
+    { geo: 'box', color: 'accent', lx: 0, ly: (d) => d.h * 0.84, lz: (d) => d.d * 0.35,
+      sx: (d) => d.w * 0.88, sy: () => 0.14, sz: () => 0.14, rz: 0.06, wash: 0.5 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.74, sy: () => 0.16, sz: (d) => d.d * 0.74, wash: 0.08 },
+  ],
+
+  // 12. 北歐極簡全玻璃立方體 (Glass Cube)
+  glass_cube: [
+    { geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h * 0.96, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.98, sy: () => 0.12, sz: (d) => d.d * 0.88, wash: 0.4 },
+    { geo: 'cyl', color: 'frame', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.48, lz: (d) => d.d * 0.34,
+      sx: () => 0.08, sy: (d) => d.h * 0.96, sz: () => 0.08 },
+    { geo: 'cyl', color: 'frame', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.48, lz: (d) => d.d * 0.34,
+      sx: () => 0.08, sy: (d) => d.h * 0.96, sz: () => 0.08 },
+    { geo: 'cyl', color: 'frame', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.48, lz: (d) => -d.d * 0.50,
+      sx: () => 0.08, sy: (d) => d.h * 0.96, sz: () => 0.08 },
+    { geo: 'cyl', color: 'frame', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.48, lz: (d) => -d.d * 0.50,
+      sx: () => 0.08, sy: (d) => d.h * 0.96, sz: () => 0.08 },
+    { geo: 'box', color: 'wall', lx: (d) => -d.w * 0.48, ly: (d) => d.h * 0.48, lz: (d) => -d.d * 0.08,
+      sx: () => 0.06, sy: (d) => d.h * 0.96, sz: (d) => d.d * 0.84, wash: 0.45 },
+    { geo: 'box', color: 'wall', lx: (d) => d.w * 0.48, ly: (d) => d.h * 0.48, lz: (d) => -d.d * 0.08,
+      sx: () => 0.06, sy: (d) => d.h * 0.96, sz: (d) => d.d * 0.84, wash: 0.45 },
+    { geo: 'box', color: 'wall', lx: 0, ly: (d) => d.h * 0.48, lz: (d) => -d.d * 0.50,
+      sx: (d) => d.w * 0.96, sy: (d) => d.h * 0.96, sz: () => 0.06, wash: 0.45 },
+    { geo: 'box', color: 'accent', lx: 0, ly: () => 0.12, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.98, sy: () => 0.08, sz: (d) => d.d * 0.86, wash: 0.5 },
+    { geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.74, sy: () => 0.16, sz: (d) => d.d * 0.74, wash: 0.08 },
+  ],
+};
+
+const DEFAULT_PARTS = [
+  { key: 'roof', geo: 'box', color: 'roof', lx: 0, ly: (d) => d.h - 0.16, lz: (d) => -d.d * 0.12,
+    sx: (d) => d.w + 0.45, sy: () => 0.28, sz: (d) => d.d * 0.82 },
+  { key: 'left', geo: 'box', color: 'wall', lx: (d) => -d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
+    sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82 },
+  { key: 'right', geo: 'box', color: 'wall', lx: (d) => d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
+    sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82 },
+  { key: 'back', geo: 'box', color: 'frame', lx: 0, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.53,
+    sx: (d) => d.w, sy: (d) => d.h * 0.86, sz: () => 0.22 },
+  { key: 'lintel', geo: 'box', color: 'frame', lx: 0, ly: (d) => d.h * 0.78, lz: (d) => d.d * 0.31,
+    sx: (d) => d.w, sy: () => 0.30, sz: () => 0.28 },
+  { key: 'fascia', geo: 'box', color: 'accent', lx: 0, ly: (d) => d.h * 0.87, lz: (d) => d.d * 0.33,
+    sx: (d) => d.w * 0.90, sy: () => 0.22, sz: () => 0.14 },
+  { key: 'stair', geo: 'box', fixed: 0x20272c, lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+    sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, wash: 0.08 },
+];
+
 /** 地下步道／車站入口外觀。一個生成器吃 PED_ARCHETYPES 資料列；純表現層，不堵窄步道。 */
 function buildPedestrianEntrances(group, terrain, sites) {
   const rows = [];
@@ -5212,41 +5518,40 @@ function buildPedestrianEntrances(group, terrain, sites) {
   }
   if (!rows.length) return { built: 0, signSpots: [] };
 
-  const parts = [
-    { key: 'roof', lx: 0, ly: (d) => d.h - 0.16, lz: (d) => -d.d * 0.12,
-      sx: (d) => d.w + 0.45, sy: () => 0.28, sz: (d) => d.d * 0.82, color: 'roof' },
-    { key: 'left', lx: (d) => -d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
-      sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
-    { key: 'right', lx: (d) => d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
-      sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
-    { key: 'back', lx: 0, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.53,
-      sx: (d) => d.w, sy: (d) => d.h * 0.86, sz: () => 0.22, color: 'frame' },
-    { key: 'lintel', lx: 0, ly: (d) => d.h * 0.78, lz: (d) => d.d * 0.31,
-      sx: (d) => d.w, sy: () => 0.3, sz: () => 0.28, color: 'frame' },
-    { key: 'stair', lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
-      sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, fixed: 0x20272c },
-  ];
+  const geos = getPedEntranceGeos();
   const val = (v, d) => typeof v === 'function' ? v(d) : v;
+
   for (const kind of Object.keys(PED_ARCHETYPES)) {
     const list = rows.filter((r) => r.archKey === kind || (!r.archKey && r.kind === kind));
     if (!list.length) continue;
-    for (const part of parts) {
-      const color = part.fixed ?? PED_ARCHETYPES[kind][part.color];
-      const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
-        envMat(color, { wash: part.key === 'stair' ? 0.08 : 0.3, cool: 0.45 }), list.length);
-      mesh.name = `ped-entrance-${kind}-${part.key}`;
+    const def = PED_ARCHETYPES[kind];
+    const parts = STYLE_PARTS[def.style] || STYLE_PARTS[kind] || DEFAULT_PARTS;
+    for (let pi = 0; pi < parts.length; pi++) {
+      const part = parts[pi];
+      const color = part.fixed ?? def[part.color] ?? def.frame;
+      const baseGeo = geos[part.geo || 'box'] || geos.box;
+      const mesh = new THREE.InstancedMesh(baseGeo,
+        envMat(color, { wash: part.wash ?? (part.fixed ? 0.08 : 0.3), cool: part.cool ?? 0.45 }), list.length);
+      mesh.name = `ped-entrance-${kind}-${part.key || pi}`;
       const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
       const P = new THREE.Vector3(), S = new THREE.Vector3();
       list.forEach((r, i) => {
-        const d = r.def, lx = val(part.lx, d), lz = val(part.lz, d);
+        const d = r.def;
+        const lx = val(part.lx, d), ly = val(part.ly, d), lz = val(part.lz, d);
         const ca = Math.cos(r.ry), sa = Math.sin(r.ry);
-        E.set(0, r.ry, 0); Q.setFromEuler(E);
-        P.set(r.x + lx * ca + lz * sa, r.y + val(part.ly, d), r.z - lx * sa + lz * ca);
+        const px = r.x + lx * ca + lz * sa;
+        const py = r.y + ly;
+        const pz = r.z - lx * sa + lz * ca;
+        P.set(px, py, pz);
+        E.set(part.rx || 0, r.ry + (part.ry || 0), part.rz || 0, 'YXZ');
+        Q.setFromEuler(E);
         S.set(val(part.sx, d), val(part.sy, d), val(part.sz, d));
-        M.compose(P, Q, S); mesh.setMatrixAt(i, M);
+        M.compose(P, Q, S);
+        mesh.setMatrixAt(i, M);
       });
       mesh.instanceMatrix.needsUpdate = true;
-      mesh.castShadow = false; mesh.frustumCulled = false;
+      mesh.castShadow = false;
+      mesh.frustumCulled = false;
       group.add(mesh);
     }
   }
