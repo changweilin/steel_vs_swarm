@@ -215,6 +215,29 @@ ok(biomesSrc.includes('slate_house') && biomesSrc.includes('tongkonan')
   && biomesSrc.includes('egyptian_pylon') && biomesSrc.includes('sahel_mosque')
   && biomesSrc.includes('nuer_tukul') && biomesSrc.includes('inuit_igloo'),
   'buildingType 支援辨識台灣石板屋、南島船形屋、古埃及塔門、薩赫爾清真寺、奴愛圓屋、因紐特冰屋等原住民風標籤');
+ok(biomesSrc.includes('CULTURAL_RELIC_LANDMARKS') && biomesSrc.includes('matchedBuildingType'),
+  'biomes.js 具備 CULTURAL_RELIC_LANDMARKS 與 matchedBuildingType 結構');
+
+// 驗證 50% 相關對接 / 50% 多元非相關機率分佈 (離線模擬 1000 次抽樣)
+import { nativeFunctionalKind } from '../public/js/nativeFunctionalBuildings.js';
+const fnDef = biomesSrc
+  .slice(biomesSrc.indexOf('export const CULTURAL_RELIC_LANDMARKS'), biomesSrc.indexOf('function buildingHeight('))
+  .replace(/export\s+/g, '');
+const evalCode = `${fnDef}\nreturn { CULTURAL_RELIC_LANDMARKS, matchedBuildingType, buildingType };`;
+const { buildingType: testBuildingType, CULTURAL_RELIC_LANDMARKS: testRelicLandmarks } = new Function('nativeFunctionalKind', evalCode)(nativeFunctionalKind);
+
+let matchCount = 0;
+const N_SAMPLES = 1000;
+const testTags = { amenity: 'place_of_worship', religion: 'shinto' };
+for (let i = 1; i <= N_SAMPLES; i++) {
+  const t = testBuildingType(testTags, i * 7919);
+  if (t === 'shrine') matchCount++;
+}
+const matchRatio = matchCount / N_SAMPLES;
+ok(matchRatio >= 0.45 && matchRatio <= 0.55,
+  `遺跡/文化地標建築機率性出現：相關者佔比接近 50% (實測 ${(matchRatio * 100).toFixed(1)}%, 目標 50±5%)`);
+ok(testBuildingType(testTags, 0) === 'shrine',
+  '無 seed (seed=0) 呼叫時保持語意直接對接預設回傳');
 
 if (fail > 0) {
   console.error(`\n✗ 稽核失敗: ${fail} 項未通過`);

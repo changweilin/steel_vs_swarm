@@ -4804,8 +4804,15 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
   return placedCount;
 }
 
-/** OSM tags → 建物類型 */
-function buildingType(tags) {
+/** 文化、宗教與古文明遺跡地標名冊 */
+export const CULTURAL_RELIC_LANDMARKS = Object.freeze([
+  'shrine', 'mandir', 'stupa', 'synagogue', 'gurdwara', 'stave_church',
+  'pyramid', 'slate_house', 'tongkonan', 'egyptian_pylon', 'sahel_mosque',
+  'nuer_tukul', 'inuit_igloo', 'temple', 'church', 'mosque', 'pagoda', 'castle',
+]);
+
+/** 依 OSM tags 取得直接語意對應之建物類型 */
+export function matchedBuildingType(tags = {}) {
   const b = tags.building, a = tags.amenity;
   const native = nativeFunctionalKind(tags);
   if (native) return native;
@@ -4847,6 +4854,31 @@ function buildingType(tags) {
   if (b === 'stadium' || tags.leisure === 'stadium') return 'stadium';
   if (b === 'commercial' || b === 'office' || b === 'retail' || b === 'hotel' || b === 'apartments' && (+tags['building:levels'] || 0) >= 10) return 'commercial';
   return 'residential';
+}
+
+/**
+ * OSM tags → 建物類型 (支援 50% 相關對接 / 50% 多元非相關輪替機率)
+ * 遺跡與文化地標建築非直接 100% 綁定真實圖資，相關者佔 50%、其餘非相關者佔 50%。
+ */
+export function buildingType(tags, seed = 0) {
+  const matched = matchedBuildingType(tags);
+  if (!matched) return 'residential';
+
+  // 若為宗教、文化或古代遺跡類地標，且提供種子座標時，套用 50/50 機率原則
+  if (seed !== 0 && CULTURAL_RELIC_LANDMARKS.includes(matched)) {
+    const s = ((seed * 1597334677) >>> 0) ^ 0x6D2B79F5;
+    const prob = (s >>> 8) / 16777216; // [0, 1)
+    if (prob < 0.5) {
+      return matched; // 50% 相關者
+    } else {
+      // 50% 其餘非相關者 (從多元文化名冊其餘項目中均勻輪替)
+      const others = CULTURAL_RELIC_LANDMARKS.filter((k) => k !== matched);
+      const idx = ((seed * 2246822507) >>> 0) % others.length;
+      return others[idx] || matched;
+    }
+  }
+
+  return matched;
 }
 
 function buildingHeight(tags, type, rnd) {
@@ -10342,7 +10374,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     for (const el of osm) {
       const [x, z] = llToWorld(el.lat, el.lng, center);
       if (!tryPlace(x, z)) continue;
-      const type = buildingType(el.tags);
+      const coordSeed = (Math.imul(Math.round(x * 16) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 16) | 0, 0x85EBCA77)) ^ 0x3C6EF35F;
+      const type = buildingType(el.tags, coordSeed);
       if (LANDMARKS[type]) {
         // 地標放大後不能只驗中心格:以碰撞半徑掃走廊,牆面才不會侵入兵線
         const cr = (LANDMARK_COL[type]?.r || 10) * OVER.lm;
