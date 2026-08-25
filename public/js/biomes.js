@@ -5131,6 +5131,93 @@ function roadPropMeshes(group, parts, items) {
   }
 }
 
+// ---- 人行天橋門型鋼架：一個生成器族，所有橋只提供位置／寬度資料列 ----
+function buildFootbridgeFrames(group, footbridgeFrames) {
+  if (!footbridgeFrames.length) return;
+  const unit = new THREE.BoxGeometry(1, 1, 1);
+  const mat = envMat(0x6d858e, { wash: 0.28, cool: 0.5 });
+  const posts = new THREE.InstancedMesh(unit, mat, footbridgeFrames.length * 2);
+  const beamsM = new THREE.InstancedMesh(unit, mat, footbridgeFrames.length);
+  posts.name = 'ped-footbridge-posts'; beamsM.name = 'ped-footbridge-beams';
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+  const P = new THREE.Vector3(), S = new THREE.Vector3();
+  let pi = 0;
+  footbridgeFrames.forEach((f, fi) => {
+    E.set(0, f.ry, 0); Q.setFromEuler(E);
+    const rx = Math.cos(f.ry), rz = -Math.sin(f.ry);
+    for (const side of [1, -1]) {
+      P.set(f.x + rx * (f.w / 2 - 0.16) * side, f.y + 1.45, f.z + rz * (f.w / 2 - 0.16) * side);
+      S.set(0.22, 2.9, 0.22); M.compose(P, Q, S); posts.setMatrixAt(pi++, M);
+    }
+    P.set(f.x, f.y + 2.88, f.z); S.set(f.w, 0.24, 0.34);
+    M.compose(P, Q, S); beamsM.setMatrixAt(fi, M);
+  });
+  posts.instanceMatrix.needsUpdate = beamsM.instanceMatrix.needsUpdate = true;
+  posts.castShadow = beamsM.castShadow = false;
+  posts.frustumCulled = beamsM.frustumCulled = false;
+  group.add(posts, beamsM);
+}
+
+/** 地下步道／車站入口外觀。一個生成器吃 PED_ARCHETYPES 資料列；純表現層，不堵窄步道。 */
+function buildPedestrianEntrances(group, terrain, sites) {
+  const rows = [];
+  for (const site of sites || []) {
+    const def = PED_ARCHETYPES[site.kind] || PED_ARCHETYPES.underpass;
+    if (site.x < terrain.minX + 5 || site.x > terrain.maxX - 5
+      || site.z < terrain.minZ + 5 || site.z > terrain.maxZ - 5) continue;
+    const y = terrain.heightAt(site.x, site.z);
+    if (y < 0.4) continue;
+    rows.push({ ...site, def, y });
+  }
+  if (!rows.length) return { built: 0, signSpots: [] };
+
+  const parts = [
+    { key: 'roof', lx: 0, ly: (d) => d.h - 0.16, lz: (d) => -d.d * 0.12,
+      sx: (d) => d.w + 0.45, sy: () => 0.28, sz: (d) => d.d * 0.82, color: 'roof' },
+    { key: 'left', lx: (d) => -d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
+      sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
+    { key: 'right', lx: (d) => d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
+      sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
+    { key: 'back', lx: 0, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.53,
+      sx: (d) => d.w, sy: (d) => d.h * 0.86, sz: () => 0.22, color: 'frame' },
+    { key: 'lintel', lx: 0, ly: (d) => d.h * 0.78, lz: (d) => d.d * 0.31,
+      sx: (d) => d.w, sy: () => 0.3, sz: () => 0.28, color: 'frame' },
+    { key: 'stair', lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
+      sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, fixed: 0x20272c },
+  ];
+  const val = (v, d) => typeof v === 'function' ? v(d) : v;
+  for (const kind of Object.keys(PED_ARCHETYPES)) {
+    const list = rows.filter((r) => r.kind === kind);
+    if (!list.length) continue;
+    for (const part of parts) {
+      const color = part.fixed ?? PED_ARCHETYPES[kind][part.color];
+      const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
+        envMat(color, { wash: part.key === 'stair' ? 0.08 : 0.3, cool: 0.45 }), list.length);
+      mesh.name = `ped-entrance-${kind}-${part.key}`;
+      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+      const P = new THREE.Vector3(), S = new THREE.Vector3();
+      list.forEach((r, i) => {
+        const d = r.def, lx = val(part.lx, d), lz = val(part.lz, d);
+        const ca = Math.cos(r.ry), sa = Math.sin(r.ry);
+        E.set(0, r.ry, 0); Q.setFromEuler(E);
+        P.set(r.x + lx * ca + lz * sa, r.y + val(part.ly, d), r.z - lx * sa + lz * ca);
+        S.set(val(part.sx, d), val(part.sy, d), val(part.sz, d));
+        M.compose(P, Q, S); mesh.setMatrixAt(i, M);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.castShadow = false; mesh.frustumCulled = false;
+      group.add(mesh);
+    }
+  }
+  const signSpots = rows.filter((r) => r.kind === 'station').map((r) => {
+    const d = r.def, f = d.d * 0.34;
+    return { x: r.x + Math.sin(r.ry) * f, y: r.y + d.h * 0.76, z: r.z + Math.cos(r.ry) * f,
+      ry: r.ry, tags: r.stationTags || r.tags };
+  });
+  return { built: rows.length, signSpots };
+}
+
+
 /**
  * 隧道/橋樑分段合併:同類(tunnel/bridge)且共用端點節點的 way 併成一條完整鏈。
  * OSM 的長隧道/長橋常被切成多段,共用節點深在山體內/河面上 —— 不合併的話,
@@ -7244,30 +7331,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     group.add(m);
   }
   // ---- 人行天橋門型鋼架：一個生成器族，所有橋只提供位置／寬度資料列 ----
-  if (footbridgeFrames.length) {
-    const unit = new THREE.BoxGeometry(1, 1, 1);
-    const mat = envMat(0x6d858e, { wash: 0.28, cool: 0.5 });
-    const posts = new THREE.InstancedMesh(unit, mat, footbridgeFrames.length * 2);
-    const beamsM = new THREE.InstancedMesh(unit, mat, footbridgeFrames.length);
-    posts.name = 'ped-footbridge-posts'; beamsM.name = 'ped-footbridge-beams';
-    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
-    const P = new THREE.Vector3(), S = new THREE.Vector3();
-    let pi = 0;
-    footbridgeFrames.forEach((f, fi) => {
-      E.set(0, f.ry, 0); Q.setFromEuler(E);
-      const rx = Math.cos(f.ry), rz = -Math.sin(f.ry);
-      for (const side of [1, -1]) {
-        P.set(f.x + rx * (f.w / 2 - 0.16) * side, f.y + 1.45, f.z + rz * (f.w / 2 - 0.16) * side);
-        S.set(0.22, 2.9, 0.22); M.compose(P, Q, S); posts.setMatrixAt(pi++, M);
-      }
-      P.set(f.x, f.y + 2.88, f.z); S.set(f.w, 0.24, 0.34);
-      M.compose(P, Q, S); beamsM.setMatrixAt(fi, M);
-    });
-    posts.instanceMatrix.needsUpdate = beamsM.instanceMatrix.needsUpdate = true;
-    posts.castShadow = beamsM.castShadow = false;
-    posts.frustumCulled = beamsM.frustumCulled = false;
-    group.add(posts, beamsM);
-  }
+  buildFootbridgeFrames(group, footbridgeFrames);
+
   // ---- 地下道擋土牆(直立緞帶,雙面)+ 橫樑 ----
   if (wall.idx.length) {
     const geo = new THREE.BufferGeometry();
@@ -7638,65 +7703,6 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 站在橋上的機體 myBot == 柱頂,_collide 的嚴格不等式不會跳過 → 過橋時每 24m 被隱形柱側推。
   for (const p of piers) cols.push({ x: p.x, z: p.z, y: p.y0, r: p.r + 0.25, h: Math.max(1, p.y1 - 1.2 - p.y0) });
   return { built, decks, tunnels: tunnelSegs, cols, portals, signSpots };
-}
-
-/** 地下步道／車站入口外觀。一個生成器吃 PED_ARCHETYPES 資料列；純表現層，不堵窄步道。 */
-function buildPedestrianEntrances(group, terrain, sites) {
-  const rows = [];
-  for (const site of sites || []) {
-    const def = PED_ARCHETYPES[site.kind] || PED_ARCHETYPES.underpass;
-    if (site.x < terrain.minX + 5 || site.x > terrain.maxX - 5
-      || site.z < terrain.minZ + 5 || site.z > terrain.maxZ - 5) continue;
-    const y = terrain.heightAt(site.x, site.z);
-    if (y < 0.4) continue;
-    rows.push({ ...site, def, y });
-  }
-  if (!rows.length) return { built: 0, signSpots: [] };
-
-  const parts = [
-    { key: 'roof', lx: 0, ly: (d) => d.h - 0.16, lz: (d) => -d.d * 0.12,
-      sx: (d) => d.w + 0.45, sy: () => 0.28, sz: (d) => d.d * 0.82, color: 'roof' },
-    { key: 'left', lx: (d) => -d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
-      sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
-    { key: 'right', lx: (d) => d.w / 2, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.12,
-      sx: () => 0.24, sy: (d) => d.h * 0.86, sz: (d) => d.d * 0.82, color: 'wall' },
-    { key: 'back', lx: 0, ly: (d) => d.h * 0.43, lz: (d) => -d.d * 0.53,
-      sx: (d) => d.w, sy: (d) => d.h * 0.86, sz: () => 0.22, color: 'frame' },
-    { key: 'lintel', lx: 0, ly: (d) => d.h * 0.78, lz: (d) => d.d * 0.31,
-      sx: (d) => d.w, sy: () => 0.3, sz: () => 0.28, color: 'frame' },
-    { key: 'stair', lx: 0, ly: () => 0.08, lz: (d) => -d.d * 0.08,
-      sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, fixed: 0x20272c },
-  ];
-  const val = (v, d) => typeof v === 'function' ? v(d) : v;
-  for (const kind of Object.keys(PED_ARCHETYPES)) {
-    const list = rows.filter((r) => r.kind === kind);
-    if (!list.length) continue;
-    for (const part of parts) {
-      const color = part.fixed ?? PED_ARCHETYPES[kind][part.color];
-      const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
-        envMat(color, { wash: part.key === 'stair' ? 0.08 : 0.3, cool: 0.45 }), list.length);
-      mesh.name = `ped-entrance-${kind}-${part.key}`;
-      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
-      const P = new THREE.Vector3(), S = new THREE.Vector3();
-      list.forEach((r, i) => {
-        const d = r.def, lx = val(part.lx, d), lz = val(part.lz, d);
-        const ca = Math.cos(r.ry), sa = Math.sin(r.ry);
-        E.set(0, r.ry, 0); Q.setFromEuler(E);
-        P.set(r.x + lx * ca + lz * sa, r.y + val(part.ly, d), r.z - lx * sa + lz * ca);
-        S.set(val(part.sx, d), val(part.sy, d), val(part.sz, d));
-        M.compose(P, Q, S); mesh.setMatrixAt(i, M);
-      });
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.castShadow = false; mesh.frustumCulled = false;
-      group.add(mesh);
-    }
-  }
-  const signSpots = rows.filter((r) => r.kind === 'station').map((r) => {
-    const d = r.def, f = d.d * 0.34;
-    return { x: r.x + Math.sin(r.ry) * f, y: r.y + d.h * 0.76, z: r.z + Math.cos(r.ry) * f,
-      ry: r.ry, tags: r.stationTags || r.tags };
-  });
-  return { built: rows.length, signSpots };
 }
 
 // ---- 兵線砲塔跨橋墩座(2026-07-24 使用者需求)----
