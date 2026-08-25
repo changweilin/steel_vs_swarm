@@ -68,6 +68,19 @@ const pointSeg = (x, z, s) => {
   return { d2: (x - qx) ** 2 + (z - qz) ** 2, qx, qz };
 };
 
+const ROAD_W = {
+  motorway: 12, trunk: 11, primary: 10, secondary: 8, tertiary: 7,
+  unclassified: 5, residential: 5.5, living_street: 5, service: 4,
+  pedestrian: 4, track: 3.5, footway: 2.4, path: 2.2,
+};
+
+function roadHalfWidth(tags) {
+  const base = ROAD_W[tags?.highway] || 5.5;
+  const lanes = parseInt(tags?.lanes, 10) || 0;
+  const w = lanes ? Math.max(base, lanes * 3.2) : base;
+  return w / 2;
+}
+
 function projected(geometry, toXZ) {
   const out = [];
   for (const p of geometry || []) {
@@ -82,12 +95,13 @@ function segmentsOf(items, toXZ, kind, filter = null) {
   for (const item of items || []) {
     if (filter && !filter(item.tags || {})) continue;
     const pts = projected(item.geometry, toXZ);
+    const hw = roadHalfWidth(item.tags);
     for (let i = 1; i < pts.length; i++) {
       const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
       const len = Math.hypot(bx - ax, bz - az);
       if (len < 0.2) continue;
       out.push({ ax, az, bx, bz, ux: (bx - ax) / len, uz: (bz - az) / len,
-        len, kind, layer: layerOf(item.tags), tags: item.tags || {} });
+        len, kind, hw, layer: layerOf(item.tags), tags: item.tags || {} });
     }
   }
   return out;
@@ -142,13 +156,39 @@ function corridorTheme(way, pts, targets, stations) {
 
 function offsetBesideRoad(x, z, dx, dz, roadTargets) {
   if (!roadTargets || !roadTargets.length) return { x, z, ry: Math.atan2(dx, dz) };
-  const nearRoad = nearestPoint(x, z, roadTargets);
-  if (!nearRoad) return { x, z, ry: Math.atan2(dx, dz) };
-  const d = Math.sqrt(nearRoad.d2);
-  const roadHw = 4.5;
-  const minClearance = roadHw + 3.5 + 1.2; // 9.2m: 移至道路旁路緣/人行道,杜絕壓在車道上
+  
+  let posX = x, posZ = z;
+  let nearRoad = null;
 
-  let nx = x - nearRoad.qx, nz = z - nearRoad.qz;
+  // 多輪幾何鬆弛：確保出入口量體邊界與人行道緩衝完全退出所有鄰近車道路緣外
+  for (let iter = 0; iter < 3; iter++) {
+    nearRoad = nearestPoint(posX, posZ, roadTargets);
+    if (!nearRoad) break;
+    const d = Math.sqrt(nearRoad.d2);
+    const segHw = nearRoad.seg.hw || 4.5;
+    // 出入口量體半徑 (4.2m) + 人行道緩衝 (2.5m) + 車道半寬 (segHw)
+    const minClearance = segHw + 4.2 + 2.5;
+
+    if (d < minClearance) {
+      let nx = posX - nearRoad.qx, nz = posZ - nearRoad.qz;
+      let nl = Math.hypot(nx, nz);
+      if (nl < 0.1) {
+        nx = -nearRoad.seg.uz;
+        nz = nearRoad.seg.ux;
+        if (dx * nx + dz * nz < 0) { nx = -nx; nz = -nz; }
+        nl = 1;
+      }
+      nx /= nl;
+      nz /= nl;
+      posX = nearRoad.qx + nx * minClearance;
+      posZ = nearRoad.qz + nz * minClearance;
+    } else {
+      break;
+    }
+  }
+
+  if (!nearRoad) nearRoad = nearestPoint(posX, posZ, roadTargets);
+  let nx = posX - nearRoad.qx, nz = posZ - nearRoad.qz;
   let nl = Math.hypot(nx, nz);
   if (nl < 0.1) {
     nx = -nearRoad.seg.uz;
@@ -158,8 +198,6 @@ function offsetBesideRoad(x, z, dx, dz, roadTargets) {
   }
   nx /= nl;
   nz /= nl;
-  const posX = d < minClearance ? nearRoad.qx + nx * minClearance : x;
-  const posZ = d < minClearance ? nearRoad.qz + nz * minClearance : z;
 
   // 出入口朝向：正對道路（迎向路心）或側對道路（順路側方向），絕不背對道路
   // 迎向路心方向：[-nx, -nz]

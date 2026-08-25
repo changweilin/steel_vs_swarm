@@ -1817,7 +1817,7 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'pla
   // 也可以使用幾乎無間距的玻璃牆」):`[fw, fh]` = 窗在格內的寬高佔比,間距 = 1 − fh。
   // 沒給 ⇒ 走舊制那兩組 ⇒ 逐位元不變。y 偏移由 fh 反推**置中**(給了高卻讓它黏在上緣的話,
   // 窗越高裙板就越偏,而使用者要的正是「間距不一樣」而不是「窗往上跑」)。
-  const base = style === 'curtain' ? [0.07, 0.2, 0.86, 0.62] : [0.24, 0.28, 0.52, 0.48];
+  const base = style === 'curtain' ? [0.05, 0.10, 0.90, 0.80] : [0.18, 0.18, 0.64, 0.64];
   const [ox, oy, fw, fh] = win
     ? [(1 - win[0]) / 2, (1 - win[1]) / 2, win[0], win[1]]
     : base;
@@ -1863,22 +1863,27 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'pla
     cx.fillStyle = winC; cx.fillRect(0, gy0, W, gh);
     for (let r = 0; r <= rows; r++) {
       const y = R(12 + r * ch);
-      cx.fillStyle = 'rgba(255,255,255,0.22)'; cx.fillRect(0, y - 1, W, 1);       // 樓層橫框
-      cx.fillStyle = 'rgba(0,0,0,0.10)'; cx.fillRect(0, y, W, 1);
+      cx.fillStyle = 'rgba(255,255,255,0.30)'; cx.fillRect(0, y - 1, W, 1);       // 樓層橫框
+      cx.fillStyle = 'rgba(15,20,25,0.22)'; cx.fillRect(0, y, W, 1.5);
     }
-    for (let c = 0; c <= cols; c++) { cx.fillStyle = 'rgba(255,255,255,0.18)'; cx.fillRect(R(c * cw) - 1, gy0, 1, gh); }
+    for (let c = 0; c <= cols; c++) {
+      const x = R(c * cw);
+      cx.fillStyle = 'rgba(15,20,25,0.18)'; cx.fillRect(x, gy0, 1.5, gh);
+      cx.fillStyle = 'rgba(255,255,255,0.25)'; cx.fillRect(x - 1, gy0, 1, gh);
+    }
     for (let r = 0; r < rows; r++) {
       const y = R(12 + r * ch), y2 = R(12 + (r + 1) * ch);
-      cx.fillStyle = 'rgba(255,255,255,0.14)';
-      cx.fillRect(0, y + R(ch * 0.06), W, Math.max(1, R(ch * 0.14)));             // 反射帶
+      cx.fillStyle = 'rgba(255,255,255,0.18)';
+      cx.fillRect(0, y + R(ch * 0.08), W, Math.max(1, R(ch * 0.22)));             // 反射帶
       for (let c = 0; c < cols; c++) {
         const x = R(c * cw), x2 = R((c + 1) * cw);
         if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(x + 1, y + 1, Math.max(1, x2 - x - 2), Math.max(1, y2 - y - 2)); }
       }
     }
   } else if (style === 'hband') {                                        // 整層絲帶窗 + 豎框
+    const useFh = Math.max(0.55, fh);
     for (let r = 0; r < rows; r++) {
-      const [px, py, pw, ph] = pane(3, 12 + r * ch + ch * (0.5 - fh / 2), W - 6, ch * fh);
+      const [px, py, pw, ph] = pane(3, 12 + r * ch + ch * (0.5 - useFh / 2), W - 6, ch * useFh);
       cx.fillStyle = 'rgba(255,255,255,0.45)';
       for (let c = 1; c < cols; c++) cx.fillRect(R(c * cw) - 1, py, 2, ph);
       if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(px, py, pw, ph); }
@@ -1958,24 +1963,24 @@ const PALETTE = {
 // `glass` 是一種**立面**不是一組參數:整面玻璃 + 髮絲框、沒有裙板帶(見 facadeTex)。
 const FACADES = {
   residential: [
-    { key: 'res0', cols: 5, winC: '#3a4046', lit: 0.3,  style: 'shop',    wall: 'stucco',  roof: 0x9c8e7c, win: [0.50, 0.44] },
-    { key: 'res1', cols: 4, winC: '#46525e', lit: 0.22, style: 'balcony', wall: 'panel',   roof: 0x8a6f5a, win: [0.56, 0.38] },
-    { key: 'res2', cols: 6, winC: '#333b42', lit: 0.36, style: 'plain',   wall: 'brick',   roof: 0x7a8577, win: [0.44, 0.56] },
-    { key: 'res3', cols: 3, winC: '#4a3f38', lit: 0.26, style: 'balcony', wall: 'stucco',  roof: 0xa2543e, win: [0.62, 0.42] },
-    { key: 'res4', cols: 5, winC: '#3d4750', lit: 0.32, style: 'shop',    wall: 'panel',   roof: 0x6e7f8a, win: [0.48, 0.62] },
-    { key: 'res5', cols: 4, winC: '#3f4a3a', lit: 0.28, style: 'plain',   wall: 'boardh',  roof: 0xb98455, win: [0.36, 0.34] },
-    { key: 'res6', cols: 6, winC: '#52453c', lit: 0.24, style: 'balcony', wall: 'brick',   roof: 0x87795f, win: [0.52, 0.46] },
-    { key: 'res7', cols: 4, winC: '#43382e', lit: 0.3,  style: 'shop',    wall: 'boardv',  roof: 0x8a5a40, win: [0.58, 0.50] },
+    { key: 'res0', cols: 4, winC: '#3a4046', lit: 0.3,  style: 'shop',    wall: 'stucco',  roof: 0x9c8e7c, win: [0.65, 0.60] },
+    { key: 'res1', cols: 3, winC: '#46525e', lit: 0.22, style: 'balcony', wall: 'panel',   roof: 0x8a6f5a, win: [0.68, 0.58] },
+    { key: 'res2', cols: 4, winC: '#333b42', lit: 0.36, style: 'plain',   wall: 'brick',   roof: 0x7a8577, win: [0.62, 0.64] },
+    { key: 'res3', cols: 3, winC: '#4a3f38', lit: 0.26, style: 'balcony', wall: 'stucco',  roof: 0xa2543e, win: [0.70, 0.60] },
+    { key: 'res4', cols: 4, winC: '#3d4750', lit: 0.32, style: 'shop',    wall: 'panel',   roof: 0x6e7f8a, win: [0.64, 0.66] },
+    { key: 'res5', cols: 3, winC: '#3f4a3a', lit: 0.28, style: 'plain',   wall: 'boardh',  roof: 0xb98455, win: [0.64, 0.58] },
+    { key: 'res6', cols: 4, winC: '#52453c', lit: 0.24, style: 'balcony', wall: 'brick',   roof: 0x87795f, win: [0.65, 0.60] },
+    { key: 'res7', cols: 3, winC: '#43382e', lit: 0.3,  style: 'shop',    wall: 'boardv',  roof: 0x8a5a40, win: [0.68, 0.62] },
   ],
   commercial: [
-    { key: 'com0', cols: 7, winC: '#2e3c4a', lit: 0.55, style: 'plain',   wall: 'panel',    roof: 0x707c88, win: [0.62, 0.54] },
-    { key: 'com1', cols: 9, winC: '#243240', lit: 0.68, style: 'glass',   wall: 'spandrel', roof: 0x5c6874 },
-    { key: 'com2', cols: 6, winC: '#35424e', lit: 0.45, style: 'shop',    wall: 'brick',    roof: 0x86766a, win: [0.56, 0.46] },
-    { key: 'com3', cols: 5, winC: '#1f3a38', lit: 0.6,  style: 'hband',   wall: 'spandrel', roof: 0x4f6a66, win: [0.90, 0.38] },
-    { key: 'com4', cols: 8, winC: '#2c3350', lit: 0.5,  style: 'curtain', wall: 'panel',    roof: 0x5a5f7c, win: [0.90, 0.74] },
-    { key: 'com5', cols: 10, winC: '#1e2e3e', lit: 0.62, style: 'glass',  wall: 'panel',    roof: 0x6a7a6a },
-    { key: 'com6', cols: 6, winC: '#2a3a46', lit: 0.4,  style: 'shop',    wall: 'stucco',   roof: 0x7c6a58, win: [0.50, 0.60] },
-    { key: 'com7', cols: 7, winC: '#2e3d3a', lit: 0.48, style: 'hband',   wall: 'brick',    roof: 0x6a7468, win: [0.90, 0.28] },
+    { key: 'com0', cols: 4, winC: '#2e3c4a', lit: 0.55, style: 'plain',   wall: 'panel',    roof: 0x707c88, win: [0.72, 0.66] },
+    { key: 'com1', cols: 5, winC: '#243240', lit: 0.68, style: 'glass',   wall: 'spandrel', roof: 0x5c6874 },
+    { key: 'com2', cols: 4, winC: '#35424e', lit: 0.45, style: 'shop',    wall: 'brick',    roof: 0x86766a, win: [0.70, 0.62] },
+    { key: 'com3', cols: 3, winC: '#1f3a38', lit: 0.6,  style: 'hband',   wall: 'spandrel', roof: 0x4f6a66, win: [0.94, 0.62] },
+    { key: 'com4', cols: 4, winC: '#2c3350', lit: 0.5,  style: 'curtain', wall: 'panel',    roof: 0x5a5f7c, win: [0.92, 0.80] },
+    { key: 'com5', cols: 5, winC: '#1e2e3e', lit: 0.62, style: 'glass',  wall: 'panel',    roof: 0x6a7a6a },
+    { key: 'com6', cols: 4, winC: '#2a3a46', lit: 0.4,  style: 'shop',    wall: 'stucco',   roof: 0x7c6a58, win: [0.68, 0.66] },
+    { key: 'com7', cols: 4, winC: '#2e3d3a', lit: 0.48, style: 'hband',   wall: 'brick',    roof: 0x6a7468, win: [0.94, 0.60] },
   ],
 };
 
@@ -1990,12 +1995,12 @@ const FACADES = {
 // 這件事沒變)。這一輪把區分移進 UV(`MASS.UVB`),於是這張表多一個 `rf` 欄
 // —— 「屋頂形式」自此是真的屋頂形式,而不是牆的顏色換一換。
 const FACADES_PITCHED = [
-  { key: 'pit0', cols: 4, rows: 3, winC: '#3a2f28', lit: 0.12, style: 'plain', wall: 'boardv', roof: 0x8f9298, rf: 'metal', win: [0.34, 0.40] },    // 木板穀倉 + 鍍鋅浪板
-  { key: 'pit1', cols: 3, rows: 3, winC: '#44505c', lit: 0.16, style: 'plain', wall: 'boardh', roof: 0x4a4a48, rf: 'shingle', win: [0.30, 0.58] },  // 雨淋板教堂 + 深色木瓦(細長窗)
-  { key: 'pit2', cols: 3, rows: 2, winC: '#4a4238', lit: 0.18, style: 'plain', wall: 'stone',  roof: 0xa2543e, rf: 'pantile', win: [0.42, 0.36] },  // 石砌農舍 + 紅陶筒瓦
-  { key: 'pit3', cols: 4, rows: 3, winC: '#4e463c', lit: 0.2,  style: 'plain', wall: 'stucco', roof: 0x8a4a3a, rf: 'tile', win: [0.50, 0.48] },     // 灰泥民宅 + 平瓦
-  { key: 'pit4', cols: 5, rows: 3, winC: '#38404a', lit: 0.16, style: 'plain', wall: 'brick',  roof: 0x6a7078, rf: 'metal', win: [0.56, 0.30] },    // 磚造校舍/倉庫 + 金屬浪板(橫向長窗)
-  { key: 'pit5', cols: 3, rows: 3, winC: '#332c26', lit: 0.14, style: 'plain', wall: 'boardv', roof: 0x5e6e52, rf: 'shingle', win: [0.38, 0.52] },  // 深色木造 + 苔綠木瓦
+  { key: 'pit0', cols: 4, rows: 3, winC: '#3a2f28', lit: 0.12, style: 'plain', wall: 'boardv', roof: 0x8f9298, rf: 'metal', win: [0.52, 0.52] },    // 木板穀倉 + 鍍鋅浪板
+  { key: 'pit1', cols: 3, rows: 3, winC: '#44505c', lit: 0.16, style: 'plain', wall: 'boardh', roof: 0x4a4a48, rf: 'shingle', win: [0.52, 0.62] },  // 雨淋板教堂 + 深色木瓦(細長窗)
+  { key: 'pit2', cols: 3, rows: 2, winC: '#4a4238', lit: 0.18, style: 'plain', wall: 'stone',  roof: 0xa2543e, rf: 'pantile', win: [0.56, 0.54] },  // 石砌農舍 + 紅陶筒瓦
+  { key: 'pit3', cols: 4, rows: 3, winC: '#4e463c', lit: 0.2,  style: 'plain', wall: 'stucco', roof: 0x8a4a3a, rf: 'tile', win: [0.58, 0.56] },     // 灰泥民宅 + 平瓦
+  { key: 'pit4', cols: 5, rows: 3, winC: '#38404a', lit: 0.16, style: 'plain', wall: 'brick',  roof: 0x6a7078, rf: 'metal', win: [0.65, 0.54] },    // 磚造校舍/倉庫 + 金屬浪板(橫向長窗)
+  { key: 'pit5', cols: 3, rows: 3, winC: '#332c26', lit: 0.14, style: 'plain', wall: 'boardv', roof: 0x5e6e52, rf: 'shingle', win: [0.54, 0.60] },  // 深色木造 + 苔綠木瓦
 ];
 
 // ---- 街區色相家族(2026-08-05;sakura-crossing「變化要落在正確層級」)----
