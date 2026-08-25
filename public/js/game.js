@@ -3934,58 +3934,53 @@ export class BattleClient {
   }
 
   /**
-   * 變形者的濕地浮台面(2026-07-25;唯一縫):水域回水面 waterY、沼澤回沼面 swampY
-   * (= waterY + SWAMP_BAND,與 buildSwampSurface / 水下帷幕同一條線)、乾地回 null(照常規地面/涉水)。
-   * 變形者兩棲不潛水/不陷沼 —— 地面型停駐、觸地變形、蓄力彈射一律以此浮台為地板:
-   *   ①觸地變形停在**可見濕地表面**(WYSIWYG,非水底);②彈射初速的 +1m 抬升能真正脫離 LAND_M 觸地區
-   *   (舊制淺水的地面 gy = 河床沉在水面下,+1m 被水深吃掉 ⇒ 彈射下一幀即觸地變形回地面)。
-   * 只在 isMorph 時呼叫(其餘機種維持涉水沉至 FULL_D / 無人機水面下限)。
-   */
-  _wetSurfaceY(x, z) {
-    const wy = this.terrain.waterY;
-    if (wy == null) return null;
-    const code = terrainEnvCode(this.terrain, x, z);
-    return code === 1 ? wy : code === 2 ? wy + WATER.SWAMP_BAND : null;
-  }
-
-  /**
    * 領機當幀環境。回傳 { code, depth, ground, air }:
    *  - ground:腳下地表分類(0 乾 / 1 水 / 2 沼,biomes.terrainEnvCode 同規則 WYSIWYG)——
    *    驅動「涉水/陷沼」移動減速,只看有沒有踩在水沼裡。
    *  - code:**地形異常狀態**(0/1/2)= ground 再過 data.envTrigger 的完全沉浸門檻 ——
-   *    驅動 wet 回報(伺服器減傷/電力與護盾減速)、水下帷幕。淺灘/沼澤邊緣機體頂部在水平面之上
-   *    ⇒ code 0,不再「踩到就觸發」。
+   *    驅動 wet 回報(伺服器減傷/電力與護盾減速)、水下帷幕。
+   *    機體(含地面與飛行)進入水域/沼澤下沉至機頂在水面/沼澤面下時觸發異常狀態。
    *  - air:騰空(跳躍/蓄力跳躍離地)—— 一律當乾地零狀態,即「跳躍期間不吃地面傷害」。
-   * 飛行型態、站在橋面/結構物上(表面高於地形 >1.2m)同樣視為乾地。
+   * 空中飛行(在水面之上)、站在橋面/結構物上(表面高於地形 >1.2m)同樣視為乾地。
    * 每幀 _updatePlayer 開頭算一次存 this._env;移動減速、pos 回報、火場霧化皆讀它。
    */
   _envAt() {
     const DRY = { code: 0, depth: 0, ground: 0, air: false };
-    if (this._flying()) return DRY;
     const x = this.pos.x, z = this.pos.z;
     const s = this._surf(x, z, this.pos.y);
     const wy = this.terrain.waterY;
-    // 站立面(深水的有效地板 = 水面 − FULL_D,與 _updatePlayer 的 gy 同式):離地即騰空。
-    // 變形者兩棲浮台(水面/沼面)⇒ 停駐於濕地表面時不誤判為「離地 FULL_D」的騰空,狀態/減速與地板一致。
-    const wetY = this.isMorph ? this._wetSurfaceY(x, z) : null;
-    const floor = wetY != null ? wetY : (wy != null ? Math.max(s, wy - WATER.FULL_D) : s);
-    if (this.pos.y - floor > AIR.OFF_GROUND) return { ...DRY, air: true };
-    if (s - this.terrain.heightAt(x, z) > 1.2) return DRY;   // 橋面/結構物 = 乾
+    const floor = s;
     const ground = terrainEnvCode(this.terrain, x, z);
-    const depth = ground === 1 && wy != null ? Math.max(0, wy - s) : 0;
-    return { code: envTrigger(ground, wy, floor, this.selfH), depth, ground, air: false };
+    const planeY = ground === 1 ? wy : (ground === 2 && wy != null ? wy + WATER.SWAMP_BAND : null);
+    const depth = planeY != null ? Math.max(0, planeY - this.pos.y) : 0;
+    const code = envTrigger(ground, wy, this.pos.y, this.selfH);
+
+    // 飛行型態:沒入水面/沼面下 (code > 0) 觸發流體沉浸異常狀態;空中 (code === 0) 恆為乾地
+    if (this._flying()) {
+      if (code > 0) return { code, depth, ground, air: false };
+      return DRY;
+    }
+    // 地面型態:騰空跳躍 (離地且機頂未沒入流體) 視為乾地
+    if (this.pos.y - floor > AIR.OFF_GROUND) {
+      if (code > 0) return { code, depth, ground, air: false };
+      return { ...DRY, air: true };
+    }
+    if (s - this.terrain.heightAt(x, z) > 1.2) return DRY;   // 橋面/結構物 = 乾
+    return { code, depth, ground, air: false };
   }
 
   /**
    * 地形環境移動減速(2026-07-19 / 2026-08-22 重構):
    * 機體完全沉浸在水面/沼面下(code > 0)時,水下移動速度減至 1/2(水域) / 1/4(沼澤)。
-   * 未完全沉浸之涉水(ground === 1 && code === 0),維持淺水線性過渡減速。飛行型態不受影響。
+   * 未完全沉浸之涉水/淺沼(ground > 0 && code === 0),維持線性過渡減速。飛行型態不受影響。
    */
   _terrainSlowF() {
     const e = this._env;
     if (!e || e.ground === 0) return 1;
     if (e.code > 0) return fluidFactor(e.code);   // 完全沉浸異常狀態:水域 1/2, 沼澤 1/4
-    if (e.ground === 2) return TERRAIN_FX.SWAMP_SLOW;
+    if (e.ground === 2) {
+      return Math.min(1, 1 - (1 - TERRAIN_FX.SWAMP_SLOW) * Math.min(1, e.depth / WATER.SWAMP_BAND));
+    }
     // 水域淺水涉水:依深度插值
     return Math.min(WATER.SLOW, 1 - (1 - WATER.SLOW_MIN) * Math.min(1, e.depth / WATER.FULL_D));
   }
@@ -7845,8 +7840,9 @@ export class BattleClient {
       // 控場:垂直升降同樣折速(麻痺 = 禁移動含爬升/下降,否則被暈仍可垂直脫離)
       const ccF = this._ccMoveF();
       const tmag = target.length();
+      const tSlow = this._terrainSlowF();
       if (tmag > 0) target.multiplyScalar(spd * boost * this._recoilMoveF(true)
-        * ccF * this._modF('speed') / Math.max(1, tmag));
+        * ccF * this._modF('speed') * tSlow / Math.max(1, tmag));
       // 混亂(招式追加效果):水平操縱反轉 + 慢速航向漂移(垂直升降不反轉,免得直接砸地)
       if ((this.confLeft || 0) > 0) { target.x *= -1; target.z *= -1; this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
       // 無人機完美迴避(2026-07-21):戰鬥狀態(近 COMBAT_S 秒攻擊或被攻擊)下按空白鍵飛行 →
@@ -7860,8 +7856,8 @@ export class BattleClient {
         }
         this._spaceWas = this.keys.Space;
       }
-      if (this.keys.Space) target.y += u.vspeed * ccF;
-      if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed * ccF;
+      if (this.keys.Space) target.y += u.vspeed * ccF * tSlow;
+      if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed * ccF * tSlow;
       // 爬升動力(2026-07-30 使用者需求;唯一縫 data.js FLIGHT):**往上飛才耗動力** ——
       // 耗速 ∝ 爬升率(全速爬升 = liftDrainPS ⇒ 滿動力恰好撐 FLIGHT.DRAIN_S 秒),
       // 見底 = 爬不上去(上升分量歸零,水平/下降/懸停完全不受影響),不爬升即回充(∝ 電力回速)。
@@ -7879,11 +7875,8 @@ export class BattleClient {
         this._airSink -= d;
       }
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
-      // 水面是飛行下限(2026-07-15):海面下的海床不是可懸停的地板 —— 機體不潛水。
-      // 變形者兩棲浮台(水面/沼面)由 _wetSurfaceY 統一 ⇒ 觸地變形停在可見濕地表面(見該函式)。
-      const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
-      const gy = wetY != null ? wetY
-        : (this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY) : gyS);
+      // 飛行體(無人機/變形者)飛行基準面為實際地表 gyS,可沉入水面/沼面下飛行
+      const gy = gyS;
       // 無人機不貼地(下限 +HOVER_M);變形者允許降到地表 → 觸地即變形回地面型。
       // 上限兩道取嚴者:①離站立面 320m(既有的相對上限,防止在深谷上空一路飛出大氣層)
       // ②**遊戲最高高度**(2026-08-08 使用者定案的絕對天花板,見 `_ceilY`)。
@@ -7892,9 +7885,8 @@ export class BattleClient {
       // 真人那半住客戶端物理,bot 那半見 `_ceilY` 檔頭與稽核 Ⅴ)。
       this.pos.y = Math.max(gy + (this.isMorph ? 0 : FLIGHT.HOVER_M),
         Math.min(gy + 320, this._ceilY(), this.pos.y));
-      // 全滅頂深水上空不自動落地變形(水深 > FULL_D:降不到底,維持飛行);較淺水可落地涉水
-      const deepW = this.terrain.waterY != null && gyS < this.terrain.waterY - WATER.FULL_D;
-      if (this.isMorph && !deepW && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
+      // 變形者下降觸地著陸變形(進入水域/沼澤可著陸於水底/沼底地表)
+      if (this.isMorph && (this.vel.y <= 0) && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
       // FPV 側傾:橫移/轉向時機身壓坡度
       const lat = this.vel.x * right.x + this.vel.z * right.z;
       this.roll += (-lat / spd * 0.16 - this.roll) * lerpFPS(5, dt);
@@ -7917,13 +7909,8 @@ export class BattleClient {
       const fr = frictionFPS(this._lowG ? 0.8 : 6, dt);
       this.vel.x *= fr; this.vel.z *= fr; this.vel.y = 0;
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
-      // 水中有效地板(2026-07-19 可涉水改制):可下沉至「水面 − FULL_D(全滅頂深)」→ 深水可涉、
-      // 過深則半浮於 FULL_D(頭沒入水),不無限沉海床;淺水踩實際河床。深水不再是牆(passable 已放行)。
-      // 變形者例外:兩棲不潛水,地面型停在濕地表面浮台(_wetSurfaceY)⇒ 觸地變形不沉水底、
-      // 蓄力彈射從水面/沼面起跳(修正淺水/沼澤「彈射即觸地」與「落地判水底」)。
-      const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
-      const gy = wetY != null ? wetY
-        : (this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY - WATER.FULL_D) : gyS);
+      // 地面站立面:機體進入水域/沼澤踩至地底(河床/湖底/沼底 gyS),不卡在水面或 FULL_D 浮層
+      const gy = gyS;
       this.vy = this.vy ?? 0;
       // 觸地判定 MUST 吃「本幀地表在腳下掉了多少」(下坡步進落差)——
       // 走下坡時水平位移先發生、pos.y 仍留在上一幀高度,固定 0.05 容差會讓每一幀都判成騰空:
@@ -8159,11 +8146,7 @@ export class BattleClient {
       const dY2 = !inTun && sy > th + 1 ? this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0) : null;
       const onBridge = dY2 != null && Math.abs(sy - dY2) < 0.6;
       const yRef = (!inTun && !onBridge && sy > th + 1) ? th : sy;   // 障礙物頂 → 地形基準
-      // 變形者兩棲浮台:停在濕地表面(水面/沼面)⇒ 回報 y≈0 = 地面型(踩雷/型態判定一致),
-      // 不因涉水沉至 FULL_D 而誤報離地高;乾地/橋面/障礙頂維持 yRef 抬升(高度制空)。
-      const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
-      const sEff = wetY != null ? wetY
-        : (this.terrain.waterY != null ? Math.max(yRef, this.terrain.waterY - WATER.FULL_D) : yRef);
+      const sEff = yRef;
       this._altAG = this.pos.y - sEff;   // 離基準面高度(與回報伺服器的 y 同源;高度制空 _altRangeTo 的離地框用)
       const lev = inTun ? 2 : onBridge ? 1 : 0;
       this.net.send({
