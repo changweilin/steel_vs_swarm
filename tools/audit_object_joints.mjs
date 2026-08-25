@@ -225,6 +225,37 @@ function localSolid(g) {
     }
     return { type: 'box', planes, ends, verts, samples };
   }
+  if (g.t === 'frustum') {
+    const { w0, d0, w1, d1, h, sx = 0, sz = 0 } = g, hy = h / 2;
+    const b = [
+      [-w0 / 2, -hy, -d0 / 2], [w0 / 2, -hy, -d0 / 2],
+      [w0 / 2, -hy, d0 / 2], [-w0 / 2, -hy, d0 / 2],
+    ];
+    const t = [
+      [sx - w1 / 2, hy, sz - d1 / 2], [sx + w1 / 2, hy, sz - d1 / 2],
+      [sx + w1 / 2, hy, sz + d1 / 2], [sx - w1 / 2, hy, sz + d1 / 2],
+    ];
+    const verts = [...b, ...t];
+    const planes = hullPlanes(verts);
+    const ends = [];
+    for (const [y, w, d, dir, ox, oz] of [[-hy, w0, d0, 1, 0, 0], [hy, w1, d1, -1, sx, sz]]) {
+      const eu = w / 2, ev = d / 2;
+      const ring = (f) => Array.from({ length: K }, (_, i) => {
+        const phi = i * (Math.PI * 2 / K);
+        return [ox + Math.sin(phi) * eu * f, y, oz + Math.cos(phi) * ev * f];
+      });
+      ends.push({ probes: [...ring(1), ...ring(0.5)], axis: [0, dir, 0], center: [ox, y, oz], axial: true, r: Math.max(eu, ev) });
+    }
+    const faceCenters = [
+      [0, -hy, 0], [sx, hy, sz],
+      [(b[0][0] + b[1][0] + t[0][0] + t[1][0]) / 4, 0, (b[0][2] + b[1][2] + t[0][2] + t[1][2]) / 4],
+      [(b[2][0] + b[3][0] + t[2][0] + t[3][0]) / 4, 0, (b[2][2] + b[3][2] + t[2][2] + t[3][2]) / 4],
+      [(b[1][0] + b[2][0] + t[1][0] + t[2][0]) / 4, 0, (b[1][2] + b[2][2] + t[1][2] + t[2][2]) / 4],
+      [(b[0][0] + b[3][0] + t[0][0] + t[3][0]) / 4, 0, (b[0][2] + b[3][2] + t[0][2] + t[3][2]) / 4],
+    ];
+    const samples = [...verts, [sx / 2, 0, sz / 2], ...faceCenters];
+    return { type: 'frustum', planes, ends, verts, samples };
+  }
   if (g.t === 'sphere') {
     // three SphereGeometry(r, wSeg, hSeg):φ 繞 y 一圈、θ 自 +y 往下。**刻意建成多面體**
     // 而不是理想球:貼壁特徵的錨點半徑用理想球半徑算,就會浮在「小面內縮」那一段的外面
@@ -675,11 +706,12 @@ const megal = (() => {
   const box = (w, h, d, c, x = 0, y = 0, z = 0) => {
     const m = new THREE.Mesh({ t: 'box', w, h, d }); m.position.set(x, y + h / 2, z); return m;
   };
+  const rockFrustum = (w0, d0, w1, d1, h, sx = 0, sz = 0) => ({ t: 'frustum', w0, d0, w1, d1, h, sx, sz });
   // 高壓電塔本體的接合歸 LANDMARKS 稽核(不在本節範圍);此處只驗它有沒有站在岩頂上,
   // 故以「與真品同佔地」的樁件代表:LANDMARK_COL.power r=2.6 h=42(不消耗 rnd)
   const LANDMARKS = { power: (g) => { const m = new THREE.Mesh({ t: 'prism', r1: 2.6, r2: 2.6, h: 42, n: 4 }); m.position.set(0, 21, 0); g.add(m); } };
-  const mod = new Function('cyl', 'cone', 'ico', 'box', 'rockMat', 'toonMat', 'LANDMARKS', 'THREE', 'Math', 'libGeo', code)(
-    G.cyl, G.cone, G.ico, box, mat, mat, LANDMARKS, THREE, Math, () => null);
+  const mod = new Function('cyl', 'cone', 'ico', 'box', 'rockFrustum', 'rockMat', 'toonMat', 'LANDMARKS', 'THREE', 'Math', 'libGeo', code)(
+    G.cyl, G.cone, G.ico, box, rockFrustum, mat, mat, LANDMARKS, THREE, Math, () => null);
   return { ...mod, THREE };
 })();
 

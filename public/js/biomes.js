@@ -2333,6 +2333,36 @@ function rockMat(color, moss = 0) {
   m.userData.rock = true;   // 岩面材質標記:placeMegaliths 逐顆調色只認這面旗(不動綠冠/木門等)
   return m;
 }
+/**
+ * 楔台/錐台幾何 (tapered box / frustum):
+ * 底面 w0×d0、頂面 w1×d1、高 h、頂面偏移 (sx, sz)。
+ * 相鄰面夾角皆為鈍角/銳角，杜絕 90° 直角稜邊與立方體生硬感。
+ */
+function rockFrustum(w0, d0, w1, d1, h, sx = 0, sz = 0) {
+  const b = [
+    [-w0 / 2, -h / 2, -d0 / 2], [w0 / 2, -h / 2, -d0 / 2],
+    [w0 / 2, -h / 2, d0 / 2], [-w0 / 2, -h / 2, d0 / 2],
+  ];
+  const t = [
+    [sx - w1 / 2, h / 2, sz - d1 / 2], [sx + w1 / 2, h / 2, sz - d1 / 2],
+    [sx + w1 / 2, h / 2, sz + d1 / 2], [sx - w1 / 2, h / 2, sz + d1 / 2],
+  ];
+  const quads = [
+    [t[0], t[3], t[2], t[1]],   // 頂 +y
+    [b[0], b[1], b[2], b[3]],   // 底 −y
+    [b[3], b[2], t[2], t[3]],   // 前 +z
+    [b[1], b[0], t[0], t[1]],   // 後 −z
+    [b[2], b[1], t[1], t[2]],   // 右 +x
+    [b[0], b[3], t[3], t[0]],   // 左 −x
+  ];
+  const arr = [];
+  for (const [p0, p1, p2, p3] of quads) arr.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
 const MEGALITHS = {
   // col.r 一律涵蓋岩體實際外廓(含側肩/山腳錐):低估半徑 = 其他物件沉進崖錐
   // 2026-08-05 使用者定案「方形巨石非常不自然,請移除」:主量體是**素面大方盒**的兩座名岩
@@ -2537,14 +2567,16 @@ const MEGALITHS = {
   karst: { col: { r: 18, h: 104 }, s: [0.8, 1.4],
     anchor: { topY: 100, topR: 7, side: { y: [15, 85] } },
     build: (g, rnd) => {
-    // 張家界石柱:石英砂岩方柱疊層(上收 + 錯位微轉),崖頂綠冠環繞。
+    // 張家界石柱:石英砂岩方柱疊層(錐台微收 + 錯位微轉),崖頂綠冠環繞。
     // 2026-07-29:逐層寬深/軸心各自抽(層高不動,anchor.topY = 100 由層高總和推得)
     let y = 0;
     const w0 = 22;
     for (const [i, hh] of [20, 16, 18, 15, 17, 14].entries()) {
       const f = 1 - i * 0.08;
+      const wBot = w0 * f * (0.92 + rnd() * 0.16), dBot = w0 * 0.85 * f * (0.92 + rnd() * 0.16);
+      const wTop = wBot * 0.94, dTop = dBot * 0.94;
       const st = new THREE.Mesh(
-        new THREE.BoxGeometry(w0 * f * (0.92 + rnd() * 0.16), hh, w0 * 0.85 * f * (0.92 + rnd() * 0.16)),
+        rockFrustum(wBot, dBot, wTop, dTop, hh, 0.2, 0.2),
         rockMat(i % 2 ? 0x8a7a5e : 0x7a6a50, i % 2 ? 0.12 : 0));
       st.position.set((rnd() - 0.5) * 2.4, y + hh / 2, (rnd() - 0.5) * 2.4);
       st.rotation.y = (rnd() - 0.5) * 0.24; y += hh; g.add(st);
@@ -3321,7 +3353,7 @@ export function synthMegalith(g, rnd) {
   const chisel = (n, rx, rz, hh) => {
     for (let i = 0; i < n; i++) {
       const fw = 8 + rnd() * 12;
-      const facet = new THREE.Mesh(new THREE.BoxGeometry(fw, fw * 0.8, fw), rockMat(shade(0.04 + rnd() * 0.06), moss * 0.5));
+      const facet = new THREE.Mesh(rockFrustum(fw, fw * 0.8, fw * 0.5, fw * 0.4, fw * 0.8, 0.4, 0.4), rockMat(shade(0.04 + rnd() * 0.06), moss * 0.5));
       const a = rnd() * Math.PI * 2;
       facet.position.set(Math.cos(a) * rx * 0.7, hh * (0.3 + rnd() * 0.4), Math.sin(a) * rz * 0.7);
       facet.rotation.set(rnd() * 0.8, rnd() * Math.PI, rnd() * 0.8);
@@ -3337,9 +3369,9 @@ export function synthMegalith(g, rnd) {
     chisel(2 + Math.floor(rnd() * 2), RX, RZ, H);
   } else if (main === 'slab') {
     const w = 30 + rnd() * 26, h = 70 + rnd() * 50, d = 16 + rnd() * 12;
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), rockMat(shade(0), moss));
+    const m = new THREE.Mesh(rockFrustum(w, d, w * 0.82, d * 0.78, h, 1.2, 0.8), rockMat(shade(0), moss));
     m.position.y = h / 2; m.rotation.y = (rnd() - 0.5) * 0.2; g.add(m);
-    const nose = new THREE.Mesh(new THREE.BoxGeometry(w * 0.45, h * 0.8, d * 0.8), rockMat(shade(0.04), moss));
+    const nose = new THREE.Mesh(rockFrustum(w * 0.45, d * 0.8, w * 0.32, d * 0.6, h * 0.8, 0.8, 0.4), rockMat(shade(0.04), moss));
     nose.position.set(w * 0.36, h * 0.4, d * 0.2); nose.rotation.y = 0.45; g.add(nose);
     H = h; RX = w * 0.62; RZ = d * 0.8; topR = Math.min(w, d) * 0.32;
     sideDef = { y: [H * 0.25, H * 0.75] };
@@ -3374,13 +3406,13 @@ export function synthMegalith(g, rnd) {
     const span = 26 + rnd() * 14, ph = 34 + rnd() * 22, pw = 10 + rnd() * 5;
     const cols = [];
     for (const sgn of [-1, 1]) {
-      const pier = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, pw * 1.3), rockMat(shade(sgn * 0.03), moss));
+      const pier = new THREE.Mesh(rockFrustum(pw * 1.08, pw * 1.35, pw * 0.88, pw * 1.12, ph, sgn * 0.4, 0), rockMat(shade(sgn * 0.03), moss));
       pier.position.set(sgn * span / 2, ph / 2, 0); pier.rotation.y = sgn * 0.15; g.add(pier);
       // 兩座橋墩各自是可附著側壁(內縮吃掉 ±0.15 微轉),樹菇長在墩壁不掛拱洞
       cols.push({ px: sgn * span / 2, pz: 0, y: [ph * 0.15, ph * 0.8] });
     }
     sideDef = cols;
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(span + pw * 1.6, pw * 0.9, pw * 1.1), rockMat(shade(0.05), moss));
+    const beam = new THREE.Mesh(rockFrustum(span + pw * 1.6, pw * 1.1, span + pw * 1.35, pw * 0.9, pw * 0.9, 0, 0), rockMat(shade(0.05), moss));
     beam.position.y = ph + pw * 0.45; g.add(beam);
     const hump = new THREE.Mesh(new THREE.SphereGeometry(pw * 0.9, 8, 6), rockMat(shade(0.02), moss));
     hump.scale.set((span + pw) / (pw * 1.8), 0.7, 1); hump.position.y = ph + pw * 0.8; g.add(hump);
@@ -3440,7 +3472,7 @@ export function synthMegalith(g, rnd) {
       const f = 1 - Math.abs(i - (n - 1) / 2) / n;   // 中央最高
       const h = (55 + rnd() * 45) * (0.55 + f * 0.45), w = 12 + rnd() * 6, d = 5 + rnd() * 4;
       const bz = (rnd() - 0.5) * 6;
-      const blade = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), rockMat(shade((rnd() - 0.5) * 0.1), moss * f));
+      const blade = new THREE.Mesh(rockFrustum(w, d * 1.15, w * 0.85, d * 0.55, h, 0.6, 0), rockMat(shade((rnd() - 0.5) * 0.1), moss * f));
       blade.position.set(px, h / 2, bz);
       blade.rotation.y = (rnd() - 0.5) * 0.3;
       blade.rotation.z = (rnd() - 0.5) * 0.1;
@@ -3468,7 +3500,7 @@ export function synthMegalith(g, rnd) {
       // 同束柱形一致才像節理:六角為主、偶夾方柱/圓柱段;
       // 柱身向下多長 6m(埋進地基)→ 坡地上外圈柱也確實入土,不懸空
       const geo2 = t < 0.62 ? cyl(r, r * 1.04, h + 6, 6)
-        : t < 0.84 ? new THREE.BoxGeometry(r * 1.7, h + 6, r * 1.7)
+        : t < 0.84 ? rockFrustum(r * 1.8, r * 1.8, r * 1.48, r * 1.48, h + 6, 0.2, 0.2)
         : cyl(r, r * 1.04, h + 6, 10);
       // 色差收斂 ±0.02:同束節理是同一次岩漿冷卻,只該有風化深淺
       const col = new THREE.Mesh(geo2, rockMat(shade((rnd() - 0.5) * 0.04), moss * (d / R0) * 0.6));
@@ -3503,7 +3535,7 @@ export function synthMegalith(g, rnd) {
         const wB = nB === 1 ? wL : wL * (0.36 + rnd() * 0.24);
         const px = nB === 1 ? off0 : off0 + (b2 ? 1 : -1) * (wL / 2 - wB / 2) * 1.02;
         // 色差收斂 ±0.015:同一露頭的花崗岩色勻,只留極淡的塊間變化
-        const blk = new THREE.Mesh(new THREE.BoxGeometry(wB, hh, d0 * f), rockMat(shade((rnd() - 0.5) * 0.03), i === nL - 1 ? moss : 0));
+        const blk = new THREE.Mesh(rockFrustum(wB, d0 * f, wB * 0.88, (d0 * f) * 0.88, hh, 0.6, 0.6), rockMat(shade((rnd() - 0.5) * 0.03), i === nL - 1 ? moss : 0));
         blk.position.set(px, y + hh / 2, (rnd() - 0.5) * 2);
         blk.rotation.y = (rnd() - 0.5) * 0.07;      // 整齊拼接:僅極小微轉
         g.add(blk);
