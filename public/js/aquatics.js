@@ -73,11 +73,18 @@ const PALETTE = {
   lilyPad: [0x2d5a27, 0x386631, 0x1f421a],
   lotusFlower: [0xff80ab, 0xffffff, 0xffd54f],
   swampGlowFungus: [0x69f0ae, 0x64ffda, 0xeeff41, 0xb388ff],
-  // 沉船與潛艦
+  // 沉船、潛艦、殘骸與遺跡
   subHull: [0x263238, 0x37474f, 0x1e272c],
   woodWreck: [0x4e342e, 0x3e2723, 0x5d4037],
   ironWreck: [0x546e7a, 0x455a64, 0x78909c],
   ruinsStone: [0x90a4ae, 0x78909c, 0x607d8b, 0xb0bec5],
+  ancientAltar: [0x5c6b73, 0x47555e, 0x7b8f9a],
+  relicRust: [0x8d493a, 0xa0522d, 0x6e3b2b],
+  relicSteel: [0x3a4750, 0x4f5d68, 0x2c3539],
+  relicLandStone: [0x8d7b68, 0x9e8b77, 0x7a6c5d],
+  relicGlowCyan: 0x00e5ff,
+  relicGlowAmber: 0xffb74d,
+  relicContainer: [0xb71c1c, 0x0d47a1, 0xe65100, 0x2e7d32, 0x455a64, 0xf57f17],
   // 船艦
   patrolCamo: [0x37474f, 0x455a64, 0x263238],
   deckWood: [0xa1887f, 0x8d6e63, 0x6d4c41],
@@ -681,11 +688,43 @@ function createJellyfishFields(terrain, seed) {
 }
 
 /* =========================================================================
- * 5. 水下巨型物件、潛艦、沈船、古代遺跡與浸沒建築 (Sunken Features & Ruins)
+ * 5. 水下巨型物件、潛艦、沈船、古代遺跡與現代殘骸型錄 (Sunken Features & Relic Catalog)
  * ========================================================================= */
 
+export const RELIC_KINDS = {
+  submarine: { name: '潛艦與深潛探測器', underwater: true, land: false, weight: 1.0, colR: 10 },
+  ruins: { name: '古代神殿柱廊遺跡', underwater: true, land: true, weight: 1.2, colR: 11 },
+  shipwreck: { name: '沈船殘骸', underwater: true, land: true, weight: 1.1, colR: 12 },
+  habitat: { name: '水底科研艙房', underwater: true, land: true, weight: 1.0, colR: 9 },
+  obelisk: { name: '古代方尖碑祭壇石環', underwater: true, land: true, weight: 1.1, colR: 11 },
+  spire: { name: '廢棄哥德尖塔鐘樓', underwater: true, land: true, weight: 1.0, colR: 8 },
+  titan: { name: '巨神雕像與守護石手', underwater: true, land: true, weight: 1.0, colR: 10 },
+  battleship: { name: '鋼鐵戰艦船首與雙聯主砲', underwater: true, land: true, weight: 0.9, colR: 14 },
+  crashedAirframe: { name: '墜毀重型飛行器殘骸', underwater: true, land: true, weight: 1.0, colR: 12 },
+  deepSeaComplex: { name: '多節點科研基地與地熱渦輪', underwater: true, land: true, weight: 0.9, colR: 13 },
+  cargoGantry: { name: '沉沒貨櫃群與桁架吊臂殘骸', underwater: true, land: true, weight: 1.0, colR: 10 },
+};
+
+/** 依種類統一代碼建立遺跡/建築物件 */
+export function buildRelicObject(kind, group, x, y, z, rnd, opts = {}) {
+  switch (kind) {
+    case 'submarine': return buildSubmarine(group, x, y, z, rnd, opts);
+    case 'ruins': return buildSunkenRuins(group, x, y, z, rnd, opts);
+    case 'shipwreck': return buildShipwreck(group, x, y, z, rnd, opts);
+    case 'habitat': return buildSubmergedHabitat(group, x, y, z, rnd, opts);
+    case 'obelisk': return buildObeliskAltarRing(group, x, y, z, rnd, opts);
+    case 'spire': return buildSunkenSpire(group, x, y, z, rnd, opts);
+    case 'titan': return buildColossalTitanVisage(group, x, y, z, rnd, opts);
+    case 'battleship': return buildBattleshipWreck(group, x, y, z, rnd, opts);
+    case 'crashedAirframe': return buildCrashedAirframe(group, x, y, z, rnd, opts);
+    case 'deepSeaComplex': return buildDeepSeaComplex(group, x, y, z, rnd, opts);
+    case 'cargoGantry': return buildCargoGantryWreck(group, x, y, z, rnd, opts);
+    default: return buildSunkenRuins(group, x, y, z, rnd, opts);
+  }
+}
+
 /**
- * 建立水下世界之潛艦、木造/鋼鐵沈船、古代神殿柱廊遺跡與浸沒建築
+ * 建立水下世界之多元建築、潛艦、沈船、古代遺跡與現代殘骸
  */
 export function buildSunkenRelics(parentGroup, terrain, seed) {
   const wy = terrain?.waterY;
@@ -697,47 +736,33 @@ export function buildSunkenRelics(parentGroup, terrain, seed) {
 
   let relicCount = 0;
   const maxRelics = AQUATIC.MAX_UNDERWATER_PROPS;
+  const underwaterKinds = Object.keys(RELIC_KINDS).filter((k) => RELIC_KINDS[k].underwater);
 
-  for (let i = 0; i < 180 && relicCount < maxRelics; i++) {
+  for (let i = 0; i < 220 && relicCount < maxRelics; i++) {
     const x = minX + rnd() * wSpan;
     const z = minZ + rnd() * hSpan;
     const code = terrainEnvCode(terrain, x, z);
     const floorY = terrain.heightAt(x, z);
 
-    // 水下深水區 (code === 1 && depth >= 3.5m)
-    if (code === 1 && wy - floorY >= 3.5) {
-      const roll = rnd();
-
-      if (roll < 0.22) {
-        // A. 潛水艇 (Submarine / Mini-Sub)
-        buildSubmarine(parentGroup, x, floorY + 0.6, z, rnd);
-        relicCount++;
-      } else if (roll < 0.48) {
-        // B. 古代神廟沉沒柱廊遺跡 (Ancient Sunken Colonnade & Temple Ruins)
-        buildSunkenRuins(parentGroup, x, floorY, z, rnd);
-        relicCount++;
-      } else if (roll < 0.75) {
-        // C. 沈船殘骸 (Shipwreck - Wooden Galleon or Steel Freighter)
-        buildShipwreck(parentGroup, x, floorY, z, rnd);
-        relicCount++;
-      } else {
-        // D. 浸沒科研艙房與水底管線 (Submerged Habitat Pod & Pipelines)
-        buildSubmergedHabitat(parentGroup, x, floorY, z, rnd);
-        relicCount++;
-      }
+    // 水下深水區 (code === 1 && depth >= 3.0m)
+    if (code === 1 && wy - floorY >= 3.0) {
+      const kind = underwaterKinds[Math.floor(rnd() * underwaterKinds.length)];
+      buildRelicObject(kind, parentGroup, x, floorY, z, rnd, { isLand: false });
+      relicCount++;
     }
   }
 }
 
-/** 建造水下潛艦 */
-function buildSubmarine(group, x, y, z, rnd) {
+/** 1. 建造水下潛艦與深海探測器 */
+export function buildSubmarine(group, x, y, z, rnd, opts = {}) {
   const subGroup = new THREE.Group();
-  subGroup.position.set(x, y, z);
+  subGroup.position.set(x, y + 0.6, z);
   subGroup.rotation.y = rnd() * Math.PI * 2;
-  subGroup.rotation.z = (rnd() - 0.5) * 0.15; // 輕微擱淺傾斜
+  subGroup.rotation.z = (rnd() - 0.5) * 0.18; // 輕微擱淺傾斜
 
-  const hullMat = toonMat(PALETTE.subHull[0], { celMetal: true });
+  const hullMat = toonMat(opts.isLand ? PALETTE.relicRust[0] : PALETTE.subHull[0], { celMetal: true });
   const trimMat = toonMat(0xffb300, { bands: 'soft' });
+  const lightMat = toonPlain({ color: opts.isLand ? 0xffb74d : 0x00e5ff, transparent: true, opacity: 0.85 });
 
   // 主雪茄型艦體
   const hullGeo = new THREE.CapsuleGeometry(2.2, 14.0, 6, 12);
@@ -766,50 +791,74 @@ function buildSubmarine(group, x, y, z, rnd) {
   subGroup.add(hFin);
   subGroup.add(vFin);
 
+  // 艦首探照燈
+  const lightGeo = new THREE.CylinderGeometry(0.3, 0.4, 0.5, 6);
+  lightGeo.rotateX(Math.PI / 2);
+  lightGeo.translate(0, 0.4, 8.2);
+  const light = new THREE.Mesh(lightGeo, lightMat);
+  subGroup.add(light);
+
   group.add(subGroup);
+  return subGroup;
 }
 
-/** 建造古代沉沒遺跡（柱廊與方尖碑） */
-function buildSunkenRuins(group, x, y, z, rnd) {
+/** 2. 建造古代沉沒/荒野神廟柱廊遺跡 */
+export function buildSunkenRuins(group, x, y, z, rnd, opts = {}) {
   const ruinsGroup = new THREE.Group();
   ruinsGroup.position.set(x, y, z);
   ruinsGroup.rotation.y = rnd() * Math.PI * 2;
 
-  const stoneMat = envMat(PALETTE.ruinsStone[0], { bands: 'hard' });
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[0] : PALETTE.ruinsStone[0];
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
 
-  // 台基台階
-  const baseGeo = new THREE.BoxGeometry(16, 0.8, 12);
-  const base = new THREE.Mesh(baseGeo, stoneMat);
-  ruinsGroup.add(base);
+  // 雙層石造基座台階
+  const base1Geo = new THREE.BoxGeometry(16, 0.8, 12);
+  const base1 = new THREE.Mesh(base1Geo, stoneMat);
+  ruinsGroup.add(base1);
+
+  const base2Geo = new THREE.BoxGeometry(14, 0.6, 10);
+  base2Geo.translate(0, 0.7, 0);
+  const base2 = new THREE.Mesh(base2Geo, stoneMat);
+  ruinsGroup.add(base2);
 
   // 4~6 根石柱（部分站立、部分倒塌）
   const colGeo = new THREE.CylinderGeometry(0.65, 0.75, 5.5, 7);
   for (let c = 0; c < 6; c++) {
-    const cx = (c % 3 - 1) * 5.2;
-    const cz = (c < 3 ? -1 : 1) * 3.8;
-    const isToppled = (c === 2 || c === 5) && rnd() < 0.6;
+    const cx = (c % 3 - 1) * 5.0;
+    const cz = (c < 3 ? -1 : 1) * 3.6;
+    const isToppled = (c === 2 || c === 5) && rnd() < 0.65;
 
     const col = new THREE.Mesh(colGeo, stoneMat);
     if (isToppled) {
-      col.position.set(cx + 1.2, 0.8, cz);
+      col.position.set(cx + 1.2, 1.3, cz);
       col.rotation.set(Math.PI / 2, (rnd() - 0.5) * 0.4, 0);
     } else {
-      col.position.set(cx, 3.15, cz);
+      col.position.set(cx, 3.75, cz);
+      // 柱頂橫樑 (Architrave)
+      if (c % 3 === 0 && rnd() < 0.7) {
+        const archGeo = new THREE.BoxGeometry(5.2, 0.6, 1.2);
+        archGeo.translate(2.5, 6.75, cz);
+        const arch = new THREE.Mesh(archGeo, stoneMat);
+        ruinsGroup.add(arch);
+      }
     }
     ruinsGroup.add(col);
   }
 
   group.add(ruinsGroup);
+  return ruinsGroup;
 }
 
-/** 建造沈船殘骸 */
-function buildShipwreck(group, x, y, z, rnd) {
+/** 3. 建造沈船殘骸（木造帆船或鋼鐵骨架） */
+export function buildShipwreck(group, x, y, z, rnd, opts = {}) {
   const wreckGroup = new THREE.Group();
   wreckGroup.position.set(x, y, z);
   wreckGroup.rotation.y = rnd() * Math.PI * 2;
-  wreckGroup.rotation.z = 0.28; // 側翻在海床上
+  wreckGroup.rotation.z = 0.28; // 側翻在海床或地表上
 
-  const woodMat = envMat(PALETTE.woodWreck[0], { bands: 'hard' });
+  const woodCol = opts.isLand ? PALETTE.woodWreck[1] : PALETTE.woodWreck[0];
+  const woodMat = envMat(woodCol, { bands: 'hard' });
+  const ironMat = toonMat(PALETTE.ironWreck[0], { celMetal: true });
 
   // 船龍骨與彎曲肋骨排
   const keelGeo = new THREE.BoxGeometry(1.2, 0.8, 18);
@@ -832,23 +881,42 @@ function buildShipwreck(group, x, y, z, rnd) {
   const mast = new THREE.Mesh(mastGeo, woodMat);
   wreckGroup.add(mast);
 
+  // 巨大生鏽鐵錨 (Heavy Anchor)
+  const anchorGeo = new THREE.TorusGeometry(1.4, 0.2, 4, 8, Math.PI);
+  anchorGeo.rotateX(Math.PI / 2);
+  anchorGeo.translate(2.5, 0.4, 7.5);
+  const anchor = new THREE.Mesh(anchorGeo, ironMat);
+  wreckGroup.add(anchor);
+
   group.add(wreckGroup);
+  return wreckGroup;
 }
 
-/** 建造浸沒科研水底艙房與管線 */
-function buildSubmergedHabitat(group, x, y, z, rnd) {
+/** 4. 建造科研水底/荒野前哨艙房與管線 */
+export function buildSubmergedHabitat(group, x, y, z, rnd, opts = {}) {
   const habGroup = new THREE.Group();
   habGroup.position.set(x, y, z);
   habGroup.rotation.y = rnd() * Math.PI * 2;
 
-  const metalMat = toonMat(PALETTE.ironWreck[0], { celMetal: true });
-  const glowMat = toonPlain({ color: 0x00e5ff, transparent: true, opacity: 0.85 });
+  const metalMat = toonMat(opts.isLand ? PALETTE.relicSteel[0] : PALETTE.ironWreck[0], { celMetal: true });
+  const glowCol = opts.isLand ? PALETTE.relicGlowAmber : PALETTE.relicGlowCyan;
+  const glowMat = toonPlain({ color: glowCol, transparent: true, opacity: 0.85 });
 
   // 觀察半球穹頂艙 (Observation Dome)
   const domeGeo = new THREE.SphereGeometry(3.6, 10, 7, 0, Math.PI * 2, 0, Math.PI * 0.6);
   const dome = new THREE.Mesh(domeGeo, metalMat);
   dome.position.y = 1.2;
   habGroup.add(dome);
+
+  // 4 根加固支撐桁架腳 (Support Legs)
+  const legGeo = new THREE.CylinderGeometry(0.25, 0.35, 2.4, 5);
+  for (let l = 0; l < 4; l++) {
+    const la = (l / 4) * Math.PI * 2 + Math.PI / 4;
+    const leg = new THREE.Mesh(legGeo, metalMat);
+    leg.position.set(Math.cos(la) * 3.2, 0.4, Math.sin(la) * 3.2);
+    leg.rotation.z = (Math.cos(la) > 0 ? -1 : 1) * 0.2;
+    habGroup.add(leg);
+  }
 
   // 發光舷窗圈 (Glowing Portholes)
   const portGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 6);
@@ -869,6 +937,427 @@ function buildSubmergedHabitat(group, x, y, z, rnd) {
   habGroup.add(pipe);
 
   group.add(habGroup);
+  return habGroup;
+}
+
+/** 5. 建造古代方尖碑與巨石祭壇環 (Sunken Obelisk & Megalithic Stone Ring) */
+export function buildObeliskAltarRing(group, x, y, z, rnd, opts = {}) {
+  const obGroup = new THREE.Group();
+  obGroup.position.set(x, y, z);
+  obGroup.rotation.y = rnd() * Math.PI * 2;
+
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[1] : PALETTE.ancientAltar[0];
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
+  const glowCol = opts.isLand ? PALETTE.relicGlowAmber : PALETTE.relicGlowCyan;
+  const runeMat = toonPlain({ color: glowCol, transparent: true, opacity: 0.9 });
+
+  // 1. 八角形石造祭壇基座
+  const plinthGeo = new THREE.CylinderGeometry(8.5, 9.5, 1.2, 8);
+  const plinth = new THREE.Mesh(plinthGeo, stoneMat);
+  plinth.position.y = 0.6;
+  obGroup.add(plinth);
+
+  // 2. 中央四角刻紋方尖碑 (Tapered Obelisk)
+  const obeliskGeo = new THREE.CylinderGeometry(0.9, 1.8, 11.0, 4);
+  obeliskGeo.rotateY(Math.PI / 4);
+  obeliskGeo.translate(0, 6.2, 0);
+  const obelisk = new THREE.Mesh(obeliskGeo, stoneMat);
+  obGroup.add(obelisk);
+
+  // 尖頂錐金字塔頂 (Pyramidion Apex)
+  const pyrGeo = new THREE.ConeGeometry(1.28, 2.0, 4);
+  pyrGeo.rotateY(Math.PI / 4);
+  pyrGeo.translate(0, 12.4, 0);
+  const pyr = new THREE.Mesh(pyrGeo, stoneMat);
+  obGroup.add(pyr);
+
+  // 方尖碑符文發光環
+  const runeGeo = new THREE.BoxGeometry(2.3, 0.45, 2.3);
+  runeGeo.translate(0, 4.5, 0);
+  const runeRing = new THREE.Mesh(runeGeo, runeMat);
+  obGroup.add(runeRing);
+
+  // 3. 環形排列的 6 根巨石立柱與門楣 (Trilithons)
+  const megalithGeo = new THREE.BoxGeometry(1.4, 4.2, 1.0);
+  const lintelGeo = new THREE.BoxGeometry(3.6, 0.9, 1.2);
+
+  for (let m = 0; m < 6; m++) {
+    const ang = (m / 6) * Math.PI * 2;
+    const mx = Math.cos(ang) * 6.6;
+    const mz = Math.sin(ang) * 6.6;
+
+    const standing = new THREE.Mesh(megalithGeo, stoneMat);
+    standing.position.set(mx, 2.8, mz);
+    standing.rotation.y = -ang + Math.PI / 2 + (rnd() - 0.5) * 0.15;
+    if (m === 2 && rnd() < 0.6) {
+      // 倒塌的巨石
+      standing.position.y = 0.9;
+      standing.rotation.set(Math.PI / 2, 0, ang);
+    }
+    obGroup.add(standing);
+
+    // 每兩柱搭一片橫石板
+    if (m % 2 === 0 && m !== 2) {
+      const lintel = new THREE.Mesh(lintelGeo, stoneMat);
+      lintel.position.set(mx * 0.95, 5.2, mz * 0.95);
+      lintel.rotation.y = -ang;
+      obGroup.add(lintel);
+    }
+  }
+
+  group.add(obGroup);
+  return obGroup;
+}
+
+/** 6. 建造沈沒/廢棄哥德尖塔與鐘樓 (Sunken Spire & Gothic Watchtower) */
+export function buildSunkenSpire(group, x, y, z, rnd, opts = {}) {
+  const spireGroup = new THREE.Group();
+  spireGroup.position.set(x, y, z);
+  spireGroup.rotation.y = rnd() * Math.PI * 2;
+  spireGroup.rotation.z = (rnd() - 0.5) * 0.22; // 坍塌傾斜
+
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[2] : PALETTE.ruinsStone[1];
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
+  const woodMat = envMat(PALETTE.woodWreck[0], { bands: 'hard' });
+
+  // 1. 八角形厚重堡壘塔身 (Lower Tower Base)
+  const baseTowerGeo = new THREE.CylinderGeometry(3.6, 4.4, 7.5, 8);
+  baseTowerGeo.translate(0, 3.75, 0);
+  const baseTower = new THREE.Mesh(baseTowerGeo, stoneMat);
+  spireGroup.add(baseTower);
+
+  // 2. 塔身中段拱形觀測窗與壁龕 (Arched Windows)
+  const windowGeo = new THREE.BoxGeometry(0.8, 1.8, 1.2);
+  for (let w = 0; w < 4; w++) {
+    const wa = (w / 4) * Math.PI * 2;
+    const win = new THREE.Mesh(windowGeo, stoneMat);
+    win.position.set(Math.cos(wa) * 3.5, 4.8, Math.sin(wa) * 3.5);
+    win.rotation.y = -wa + Math.PI / 2;
+    spireGroup.add(win);
+  }
+
+  // 3. 塔頂外廊與雉堞垛口 (Crenellations)
+  const rimGeo = new THREE.CylinderGeometry(4.0, 3.6, 1.2, 8);
+  rimGeo.translate(0, 7.8, 0);
+  const rim = new THREE.Mesh(rimGeo, stoneMat);
+  spireGroup.add(rim);
+
+  // 4. 斷裂傾塌的木石錐型尖頂 (Collapsed Conical Spire)
+  const spireRoofGeo = new THREE.ConeGeometry(3.2, 8.0, 8);
+  spireRoofGeo.rotateZ(0.35); // 嚴重折斷
+  spireRoofGeo.translate(1.4, 11.5, 0);
+  const spireRoof = new THREE.Mesh(spireRoofGeo, stoneMat);
+  spireGroup.add(spireRoof);
+
+  // 露出的木質樑架 (Exposed Timber Ribs)
+  const beamGeo = new THREE.BoxGeometry(0.4, 5.5, 0.4);
+  beamGeo.rotateZ(0.5);
+  beamGeo.translate(0.5, 9.8, 1.0);
+  const beam = new THREE.Mesh(beamGeo, woodMat);
+  spireGroup.add(beam);
+
+  group.add(spireGroup);
+  return spireGroup;
+}
+
+/** 7. 建造巨神雕像與守護者石手 (Colossal Titan Visage & Guardian Relic) */
+export function buildColossalTitanVisage(group, x, y, z, rnd, opts = {}) {
+  const titanGroup = new THREE.Group();
+  titanGroup.position.set(x, y, z);
+  titanGroup.rotation.y = rnd() * Math.PI * 2;
+
+  const stoneCol = opts.isLand ? PALETTE.relicLandStone[0] : PALETTE.ruinsStone[2];
+  const stoneMat = envMat(stoneCol, { bands: 'hard' });
+  const eyeCol = opts.isLand ? PALETTE.relicGlowAmber : PALETTE.relicGlowCyan;
+  const eyeMat = toonPlain({ color: eyeCol, transparent: true, opacity: 0.85 });
+
+  // 1. 半埋於地表的巨神面具/石雕頭部 (Giant Head / Mask)
+  const headGroup = new THREE.Group();
+  headGroup.position.set(-1.8, 1.8, 0);
+  headGroup.rotation.set(-0.45, 0.25, -0.35); // 斜插在泥沙中
+
+  const skullGeo = new THREE.BoxGeometry(5.2, 6.8, 4.4);
+  const skull = new THREE.Mesh(skullGeo, stoneMat);
+  headGroup.add(skull);
+
+  // 眉骨與鼻樑浮雕
+  const browGeo = new THREE.BoxGeometry(4.8, 1.2, 1.4);
+  browGeo.translate(0, 1.4, 2.2);
+  const brow = new THREE.Mesh(browGeo, stoneMat);
+  headGroup.add(brow);
+
+  const noseGeo = new THREE.BoxGeometry(1.1, 2.8, 1.5);
+  noseGeo.translate(0, -0.2, 2.4);
+  const nose = new THREE.Mesh(noseGeo, stoneMat);
+  headGroup.add(nose);
+
+  // 發光石雕眼眸 (Glow Eyes)
+  const eyeGeo = new THREE.BoxGeometry(1.2, 0.5, 0.6);
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeL.position.set(-1.4, 1.0, 2.2);
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeR.position.set(1.4, 1.0, 2.2);
+  headGroup.add(eyeL);
+  headGroup.add(eyeR);
+
+  titanGroup.add(headGroup);
+
+  // 2. 伸出地面的古代守護石手與殘劍 (Colossal Stone Hand & Broken Blade)
+  const armGroup = new THREE.Group();
+  armGroup.position.set(4.5, 0, 1.5);
+  armGroup.rotation.set(0.2, 0, -0.3);
+
+  // 手腕巨石
+  const wristGeo = new THREE.CylinderGeometry(1.6, 2.0, 4.5, 6);
+  wristGeo.translate(0, 2.0, 0);
+  const wrist = new THREE.Mesh(wristGeo, stoneMat);
+  armGroup.add(wrist);
+
+  // 握拳手指 (Fingers)
+  const fingerGeo = new THREE.BoxGeometry(1.8, 1.2, 3.4);
+  fingerGeo.translate(0, 4.4, 0.4);
+  const fingers = new THREE.Mesh(fingerGeo, stoneMat);
+  armGroup.add(fingers);
+
+  // 斜插的斷劍石柱 (Shattered Giant Blade)
+  const swordGeo = new THREE.BoxGeometry(0.8, 8.5, 2.2);
+  swordGeo.rotateX(0.4);
+  swordGeo.translate(0, 4.2, 0);
+  const sword = new THREE.Mesh(swordGeo, stoneMat);
+  armGroup.add(sword);
+
+  titanGroup.add(armGroup);
+
+  group.add(titanGroup);
+  return titanGroup;
+}
+
+/** 8. 建造鋼鐵戰艦船首與雙聯主砲塔 (Sunken Battleship Forecastle & Heavy Turret) */
+export function buildBattleshipWreck(group, x, y, z, rnd, opts = {}) {
+  const shipGroup = new THREE.Group();
+  shipGroup.position.set(x, y, z);
+  shipGroup.rotation.y = rnd() * Math.PI * 2;
+  shipGroup.rotation.z = (rnd() - 0.5) * 0.15;
+
+  const steelCol = opts.isLand ? PALETTE.relicRust[0] : PALETTE.ironWreck[0];
+  const steelMat = toonMat(steelCol, { celMetal: true });
+  const darkMat = toonMat(PALETTE.subHull[0], { celMetal: true });
+
+  // 1. 楔形厚重裝甲船首 (Armored Prow)
+  const prowGeo = new THREE.BoxGeometry(5.8, 4.5, 14.0);
+  prowGeo.translate(0, 2.0, 2.0);
+  const prow = new THREE.Mesh(prowGeo, steelMat);
+  shipGroup.add(prow);
+
+  // 破浪前尖艏
+  const stemGeo = new THREE.ConeGeometry(3.0, 6.0, 4);
+  stemGeo.rotateX(Math.PI / 2);
+  stemGeo.translate(0, 2.0, 10.5);
+  const stem = new THREE.Mesh(stemGeo, steelMat);
+  shipGroup.add(stem);
+
+  // 2. 雙聯裝重型主砲塔 (Twin-Gun Turret)
+  const turretBaseGeo = new THREE.CylinderGeometry(2.6, 2.8, 1.2, 10);
+  turretBaseGeo.translate(0, 4.5, 0);
+  const turretBase = new THREE.Mesh(turretBaseGeo, darkMat);
+  shipGroup.add(turretBase);
+
+  const turretHouseGeo = new THREE.BoxGeometry(4.2, 2.2, 5.0);
+  turretHouseGeo.translate(0, 5.8, -0.4);
+  const turretHouse = new THREE.Mesh(turretHouseGeo, steelMat);
+  shipGroup.add(turretHouse);
+
+  // 雙聯長身管火砲（仰角朝天）
+  const barrelGeo = new THREE.CylinderGeometry(0.35, 0.45, 9.5, 8);
+  barrelGeo.rotateX(-Math.PI / 5); // 仰角 36 度
+  barrelGeo.translate(-1.1, 7.8, 3.8);
+  const barrelL = new THREE.Mesh(barrelGeo, darkMat);
+
+  const barrelR = new THREE.Mesh(barrelGeo.clone(), darkMat);
+  barrelR.position.x = 2.2;
+  shipGroup.add(barrelL);
+  shipGroup.add(barrelR);
+
+  // 3. 粗大鐵錨鏈 (Anchor Chain)
+  const chainGeo = new THREE.TorusGeometry(0.6, 0.15, 4, 6);
+  for (let c = 0; c < 4; c++) {
+    const link = new THREE.Mesh(chainGeo, darkMat);
+    link.position.set(2.4, 2.8 - c * 0.6, 7.2 + c * 0.5);
+    link.rotation.x = c * 0.8;
+    shipGroup.add(link);
+  }
+
+  group.add(shipGroup);
+  return shipGroup;
+}
+
+/** 9. 建造墜毀重型飛行器/運輸機殘骸 (Crashed Dropship / Aerial Wreckage) */
+export function buildCrashedAirframe(group, x, y, z, rnd, opts = {}) {
+  const wreckGroup = new THREE.Group();
+  wreckGroup.position.set(x, y, z);
+  wreckGroup.rotation.y = rnd() * Math.PI * 2;
+  wreckGroup.rotation.x = 0.22; // 墜地俯衝仰角
+  wreckGroup.rotation.z = -0.35; // 斷翼側翻
+
+  const armorCol = opts.isLand ? PALETTE.relicRust[1] : PALETTE.subHull[1];
+  const armorMat = toonMat(armorCol, { celMetal: true });
+  const engineMat = toonMat(PALETTE.relicSteel[0], { celMetal: true });
+  const canopyMat = toonPlain({ color: 0x80d8ff, transparent: true, opacity: 0.7 });
+
+  // 1. 三角稜面機身機頭 (Faceted Fuselage)
+  const noseGeo = new THREE.ConeGeometry(2.8, 12.0, 5);
+  noseGeo.rotateX(-Math.PI / 2);
+  noseGeo.translate(0, 1.8, 2.0);
+  const nose = new THREE.Mesh(noseGeo, armorMat);
+  wreckGroup.add(nose);
+
+  // 駕駛艙天窗 (Canopy Glass)
+  const canopyGeo = new THREE.BoxGeometry(1.6, 1.2, 3.6);
+  canopyGeo.rotateX(-0.3);
+  canopyGeo.translate(0, 3.2, 3.2);
+  const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+  wreckGroup.add(canopy);
+
+  // 2. 主翼（左翼完整、右翼折斷露出結構）
+  const leftWingGeo = new THREE.BoxGeometry(8.5, 0.4, 4.2);
+  leftWingGeo.translate(-4.8, 1.8, -1.5);
+  const leftWing = new THREE.Mesh(leftWingGeo, armorMat);
+  wreckGroup.add(leftWing);
+
+  const brokenWingGeo = new THREE.BoxGeometry(3.5, 0.4, 3.2);
+  brokenWingGeo.translate(2.2, 1.4, -1.2);
+  const brokenWing = new THREE.Mesh(brokenWingGeo, armorMat);
+  wreckGroup.add(brokenWing);
+
+  // 3. 雙渦輪噴射引擎短艙 (Turbine Engine Pods)
+  const engineGeo = new THREE.CylinderGeometry(1.1, 1.3, 5.5, 8);
+  engineGeo.rotateX(Math.PI / 2);
+  engineGeo.translate(-2.4, 2.2, -3.8);
+  const engineL = new THREE.Mesh(engineGeo, engineMat);
+  wreckGroup.add(engineL);
+
+  const engineR = new THREE.Mesh(engineGeo.clone(), engineMat);
+  engineR.position.x = 4.8;
+  wreckGroup.add(engineR);
+
+  // 尾部推進噴口
+  const nozzleGeo = new THREE.CylinderGeometry(0.8, 1.1, 1.2, 7);
+  nozzleGeo.rotateX(Math.PI / 2);
+  nozzleGeo.translate(-2.4, 2.2, -6.8);
+  const nozzle = new THREE.Mesh(nozzleGeo, engineMat);
+  wreckGroup.add(nozzle);
+
+  group.add(wreckGroup);
+  return wreckGroup;
+}
+
+/** 10. 建造多節點科研基地複合體與地熱渦輪 (Deep Sea Complex & Habitat Node) */
+export function buildDeepSeaComplex(group, x, y, z, rnd, opts = {}) {
+  const complexGroup = new THREE.Group();
+  complexGroup.position.set(x, y, z);
+  complexGroup.rotation.y = rnd() * Math.PI * 2;
+
+  const hullCol = opts.isLand ? PALETTE.relicSteel[1] : PALETTE.ironWreck[1];
+  const hullMat = toonMat(hullCol, { celMetal: true });
+  const glowCol = opts.isLand ? PALETTE.relicGlowAmber : PALETTE.relicGlowCyan;
+  const glowMat = toonPlain({ color: glowCol, transparent: true, opacity: 0.85 });
+
+  // 1. 中央六角主控核心模組 (Hex Central Hub)
+  const hubGeo = new THREE.CylinderGeometry(3.6, 4.2, 3.8, 6);
+  hubGeo.translate(0, 2.2, 0);
+  const hub = new THREE.Mesh(hubGeo, hullMat);
+  complexGroup.add(hub);
+
+  // 核心發光觀測環 (Observation Belt)
+  const ringGeo = new THREE.CylinderGeometry(3.8, 3.8, 0.6, 6);
+  ringGeo.translate(0, 2.8, 0);
+  const ring = new THREE.Mesh(ringGeo, glowMat);
+  complexGroup.add(ring);
+
+  // 2. 兩座外伸球型生活艙 (Flanking Bio-Domes)
+  const domeGeo = new THREE.SphereGeometry(2.4, 8, 6);
+  const tunnelGeo = new THREE.CylinderGeometry(0.75, 0.75, 5.0, 6);
+  tunnelGeo.rotateZ(Math.PI / 2);
+
+  for (const side of [-1, 1]) {
+    // 連通管廊
+    const tunnel = new THREE.Mesh(tunnelGeo, hullMat);
+    tunnel.position.set(side * 4.0, 1.8, 0);
+    complexGroup.add(tunnel);
+
+    // 生活球艙
+    const dome = new THREE.Mesh(domeGeo, hullMat);
+    dome.position.set(side * 6.8, 2.0, 0);
+    complexGroup.add(dome);
+
+    // 舷窗光圈
+    const domeGlow = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.3, 6), glowMat);
+    domeGlow.position.set(side * 6.8, 3.6, 0);
+    complexGroup.add(domeGlow);
+  }
+
+  // 3. 豎直地熱發電/抽水渦輪塔 (Power Turbine Stack)
+  const stackGeo = new THREE.CylinderGeometry(1.2, 1.8, 7.5, 8);
+  stackGeo.translate(0, 5.5, -4.5);
+  const stack = new THREE.Mesh(stackGeo, hullMat);
+  complexGroup.add(stack);
+
+  // 頂部旋翼散熱格柵 (Turbine Blades)
+  const bladeGeo = new THREE.BoxGeometry(4.4, 0.25, 1.0);
+  bladeGeo.translate(0, 9.4, -4.5);
+  const blade = new THREE.Mesh(bladeGeo, hullMat);
+  complexGroup.add(blade);
+
+  group.add(complexGroup);
+  return complexGroup;
+}
+
+/** 11. 建造沉沒貨櫃群與桁架吊臂殘骸 (Cargo Containers & Gantry Crane) */
+export function buildCargoGantryWreck(group, x, y, z, rnd, opts = {}) {
+  const gantryGroup = new THREE.Group();
+  gantryGroup.position.set(x, y, z);
+  gantryGroup.rotation.y = rnd() * Math.PI * 2;
+
+  const craneCol = opts.isLand ? PALETTE.relicRust[0] : PALETTE.ironWreck[0];
+  const craneMat = toonMat(craneCol, { celMetal: true });
+  const containerCols = PALETTE.relicContainer;
+
+  // 1. 錯落堆疊的 3~4 個標準貨櫃箱 (Standard Containers)
+  const boxGeo = new THREE.BoxGeometry(3.0, 2.6, 6.5);
+  for (let c = 0; c < 3; c++) {
+    const cCol = containerCols[(c + Math.floor(rnd() * containerCols.length)) % containerCols.length];
+    const cMat = toonMat(cCol, { bands: 'hard' });
+    const cont = new THREE.Mesh(boxGeo, cMat);
+
+    if (c === 0) {
+      cont.position.set(0, 1.3, 0);
+    } else if (c === 1) {
+      cont.position.set(2.8, 1.3, 0.8);
+      cont.rotation.y = 0.15;
+    } else {
+      cont.position.set(1.2, 3.8, -0.4);
+      cont.rotation.y = -0.22;
+      cont.rotation.z = 0.08; // 斜靠在上層
+    }
+    gantryGroup.add(cont);
+  }
+
+  // 2. 倒塌傾覆的重型鋼構桁架吊臂 (Twisted Lattice Gantry Arm)
+  const trussGeo = new THREE.BoxGeometry(1.6, 14.0, 1.6);
+  trussGeo.rotateZ(Math.PI / 3); // 60 度傾倒
+  trussGeo.translate(2.5, 4.0, -3.5);
+  const truss = new THREE.Mesh(trussGeo, craneMat);
+  gantryGroup.add(truss);
+
+  // 吊臂橫樑與捲揚滑輪組 (Winch Drum)
+  const drumGeo = new THREE.CylinderGeometry(0.9, 0.9, 1.8, 8);
+  drumGeo.rotateX(Math.PI / 2);
+  drumGeo.translate(6.5, 6.8, -3.5);
+  const drum = new THREE.Mesh(drumGeo, craneMat);
+  gantryGroup.add(drum);
+
+  group.add(gantryGroup);
+  return gantryGroup;
 }
 
 /* =========================================================================

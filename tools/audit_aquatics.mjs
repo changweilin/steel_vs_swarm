@@ -15,6 +15,7 @@ import { WATER } from '../public/js/data.js';
 const BREAK_TRANS = process.argv.includes('--break-trans');
 const BREAK_VISCOUS = process.argv.includes('--break-viscous');
 const BREAK_BUBBLE = process.argv.includes('--break-bubble');
+const BREAK_RELIC = process.argv.includes('--break-relic');
 
 let pass = 0, fail = 0;
 function ok(cond, msg) {
@@ -134,7 +135,6 @@ const s3 = aquaticSeed(124.00, -67.89);
 ok(s1 === s2, '同座標雜湊種子嚴格一致 (確定性)');
 ok(s1 !== s3, '不同座標雜湊種子離散分離');
 ok(!aquaticsSrc.includes('Math.random()'), 'aquatics.js 內零 Math.random() (A4)');
-
 // ▍Ⅵ biomes.js 與 game.js 接線契約
 console.log('\n▍Ⅵ 接線契約');
 ok(biomesSrc.includes('buildAquaticWorld('), 'biomes.js 接管 buildAquaticWorld 呼叫');
@@ -142,8 +142,44 @@ ok(biomesSrc.includes('buildSwampSurface'), 'biomes.js 具備 buildSwampSurface'
 ok(biomesSrc.includes('swampSoft()'), 'buildSwampSurface 採用 swampSoft 黏滯波');
 ok(gameSrc.includes('aquaticTransition('), 'game.js 在 _updateWaterVeil 呼叫 aquaticTransition');
 
+// ▍Ⅶ 建築、沉船、古代遺跡與現代殘骸多樣化型錄 (Relic & Architectural Diversity)
+console.log('\n▍Ⅶ 建築、沉船、古代遺跡與現代殘骸多樣化型錄');
+const RELIC_KINDS = grabObj(aquaticsSrc, 'export const RELIC_KINDS = {');
+let relicKindCount = RELIC_KINDS ? Object.keys(RELIC_KINDS).length : 0;
+if (BREAK_RELIC) {
+  relicKindCount = 3; // 故意破壞多樣性
+}
+
+ok(RELIC_KINDS !== null, 'RELIC_KINDS 型錄成功定義');
+ok(relicKindCount >= 10, `建築與遺跡原型種類數充足 (>= 10 款, 實得 ${relicKindCount} 款)`);
+ok(aquaticsSrc.includes('export function buildRelicObject('), 'aquatics.js 匯出 buildRelicObject 統一建構器');
+
+// 檢查各原型建構器均已匯出
+const expectedBuilders = [
+  'buildSubmarine',
+  'buildSunkenRuins',
+  'buildShipwreck',
+  'buildSubmergedHabitat',
+  'buildObeliskAltarRing',
+  'buildSunkenSpire',
+  'buildColossalTitanVisage',
+  'buildBattleshipWreck',
+  'buildCrashedAirframe',
+  'buildDeepSeaComplex',
+  'buildCargoGantryWreck',
+];
+
+for (const bName of expectedBuilders) {
+  ok(aquaticsSrc.includes(`export function ${bName}(`), `匯出建築/遺跡原型建構器: ${bName}`);
+}
+
+// 驗證陸地管線接線 (biomes.js placeWildernessRelics)
+ok(biomesSrc.includes('buildRelicObject') && biomesSrc.includes('RELIC_KINDS'), 'biomes.js 引入 buildRelicObject 與 RELIC_KINDS');
+ok(biomesSrc.includes('placeWildernessRelics('), 'biomes.js 具備 placeWildernessRelics 荒野遺跡擺放系統');
+ok(biomesSrc.includes('relics: relicsBuilt'), 'biomes.js stats 正確回報陸地遺跡建置數量');
+
 if (fail > 0) {
   console.error(`\n✗ 稽核失敗: ${fail} 項未通過`);
   process.exit(1);
 }
-console.log(`\n🎉 水下與沼澤生態動態稽核通過 (共 ${pass} 項)\n`);
+console.log(`\n🎉 水下與沼澤生態動態及遺跡系統稽核通過 (共 ${pass} 項)\n`);

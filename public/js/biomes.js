@@ -90,7 +90,7 @@ import {
   WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
-import { buildAquaticWorld } from './aquatics.js';
+import { buildAquaticWorld, buildRelicObject, RELIC_KINDS } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
@@ -4384,6 +4384,70 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
     }
   }
   return placedM.length;
+}
+
+/**
+ * 荒野遺跡與廢棄建築擺放系統 (placeWildernessRelics)
+ * 在地圖荒野 (bare / 邊緣開闊區) 擺放古代遺跡、巨神雕像、墜毀飛行器、鐘樓尖塔與貨櫃殘骸等物件。
+ * 遵循原則：
+ *   - 零共享 rnd() 消耗（使用座標雜湊與局部 mulberry32，不推移植被佈局序）
+ *   - 嚴格避開主堡圈 (BASE_CLEAR_R)、道網 (roadOccupied)、現有 blocked 區域
+ *   - 佔地登記 blockArea(blocked, x, z, r)，防止後續植被穿模
+ *   - 貼地 AO 與坡度落底防懸空
+ */
+function placeWildernessRelics({ group, terrain, blocked, blockers, sites, basesW, roadOccupied }) {
+  const landKinds = Object.keys(RELIC_KINDS).filter((k) => RELIC_KINDS[k].land);
+  if (!landKinds.length || !sites?.length) return 0;
+
+  let placedCount = 0;
+  const RELIC_MAX = 8;
+  const RELIC_SEP = 90; // 遺跡彼此間距 (m)
+  const placedList = [];
+
+  for (let i = 0; i < sites.length && placedCount < RELIC_MAX; i++) {
+    const [sx, sz] = sites[i];
+    const s = (Math.imul(Math.round(sx * 8) | 0, 0x9E3779B1) ^ Math.imul(Math.round(sz * 8) | 0, 0x85EBCA77)) ^ 0x7A4C19;
+    const localRnd = mulberry32(s >>> 0);
+
+    const kind = landKinds[Math.floor(localRnd() * landKinds.length)];
+    const def = RELIC_KINDS[kind];
+    const r = def?.colR ?? 10;
+
+    // 檢查邊界與高度
+    if (sx < terrain.minX + r + 30 || sx > terrain.maxX - r - 30
+      || sz < terrain.minZ + r + 30 || sz > terrain.maxZ - r - 30) continue;
+
+    let gy = terrain.heightAt(sx, sz);
+    if (gy < 0.6) continue; // 避開近水面
+
+    // 避開水域/沼澤
+    if (terrainEnvCode(terrain, sx, sz) !== 0) continue;
+
+    // 避開淨空、道路與主堡
+    if (!areaFree(blocked, sx, sz, r + 4)) continue;
+    if (roadOccupied?.({ x: sx, z: sz, r: r + 4 })) continue;
+    if (basesW?.some((b) => Math.hypot(sx - b.x, sz - b.z) < BASE_CLEAR_R + r * 2)) continue;
+    if (placedList.some((p) => Math.hypot(sx - p.x, sz - p.z) < RELIC_SEP)) continue;
+
+    // 落底防懸空：取腳印周圈最低點
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      gy = Math.min(gy, terrain.heightAt(sx + Math.cos(a) * r * 0.7, sz + Math.sin(a) * r * 0.7));
+    }
+
+    const g = new THREE.Group();
+    buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true });
+    g.position.set(sx, gy, sz);
+    bakeContactAO(g, 5);
+
+    group.add(g);
+    blockArea(blocked, sx, sz, r);
+    blockers?.push({ x: sx, z: sz, r, h: 8, name: `relic_${kind}` });
+    placedList.push({ x: sx, z: sz, r });
+    placedCount++;
+  }
+
+  return placedCount;
 }
 
 /** OSM tags → 建物類型 */
@@ -9668,18 +9732,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const bufferProps = buildBufferProps({ group, terrain });
   const backdropSegs = buildBackdrop({ group, terrain, ctr: INK_CTR.BACKDROP });
   const greenSites = [], bareSites = [];
-  for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 28); a++) {
+  for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 36); a++) {
     const x = rx(), z = rz();
     const h = terrain.heightAt(x, z);
     if (h < 0.4 || blocked.has(cellKey(x, z))) continue;
     const b = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
     if (b === 'green' && greenSites.length < 20) greenSites.push([x, z]);
-    else if (b === 'bare' && bareSites.length < 28) bareSites.push([x, z]);
+    else if (b === 'bare' && bareSites.length < 36) bareSites.push([x, z]);
   }
   // 國旗歸屬(地圖 30 : 駐軍 60 : 敵對 10)。純函式、零共享 rnd ⇒ 建在哪一行都不影響序列。
   const nation = makeNationPicker(cfg, basesW);
   const megalithsBuilt = placeMegaliths({
     group, terrain, blocked, blockers, rnd, sites: bareSites, basesW, roadOccupied,
+  });
+  // 荒野遺跡與廢棄建築：零共享 rnd 消耗，排在植被前登記 blockArea 防止穿模
+  const relicsBuilt = placeWildernessRelics({
+    group, terrain, blocked, blockers, sites: bareSites, basesW, roadOccupied,
   });
   const giantTrees = placeGiantGroves({
     terrain, blocked, blockers, items, rnd, sites: greenSites, roadOccupied,
@@ -11148,6 +11216,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     veg: placed,
     giantTrees,
     megaliths: megalithsBuilt,
+    relics: relicsBuilt,
     beacons: beaconsBuilt,
     baseFlags,
     ground: ground.patches,
