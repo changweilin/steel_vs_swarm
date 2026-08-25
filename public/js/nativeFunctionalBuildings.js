@@ -27,8 +27,10 @@ export function nativeFunctionalKind(tags = {}) {
     || building === 'school' || building === 'university') return 'school';
   if (building === 'train_station' || tags.railway === 'station' || amenity === 'bus_station') return 'station';
   if (amenity === 'place_of_worship') {
-    if (tags.religion === 'christian') return 'church';
-    if (tags.religion !== 'muslim') return 'temple';
+    if (tags.religion === 'christian' && tags.architecture !== 'stave') return 'church';
+    if (tags.religion === 'buddhist' && tags.building !== 'stupa' && tags.building !== 'pagoda') return 'temple';
+    if (tags.religion === 'taoist' || (!tags.religion && building !== 'shrine' && building !== 'synagogue' && building !== 'gurdwara' && building !== 'stupa')) return 'temple';
+    return null;
   }
   if (tags.tourism === 'museum' || building === 'museum') return 'museum';
   return null;

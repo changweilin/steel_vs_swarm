@@ -90,7 +90,7 @@ import {
   WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
-import { buildAquaticWorld } from './aquatics.js';
+import { buildAquaticWorld, buildRelicObject, RELIC_KINDS } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
@@ -2096,6 +2096,11 @@ const LANDMARK_COL = {
   museum: { r: 12, h: 12 }, power: { r: 2.6, h: 42 }, factory: { r: 13, h: 12 },
   castle: { r: 14, h: 24 }, lighthouse: { r: 6, h: 30 }, pagoda: { r: 8, h: 26 },
   stadium: { r: 18, h: 13 },
+  shrine: { r: 9, h: 14 }, mandir: { r: 10, h: 22 }, stupa: { r: 9, h: 18 },
+  synagogue: { r: 11, h: 17 }, gurdwara: { r: 12, h: 18 }, stave_church: { r: 8, h: 20 },
+  pyramid: { r: 16, h: 20 },
+  slate_house: { r: 8, h: 8 }, tongkonan: { r: 10, h: 18 }, egyptian_pylon: { r: 14, h: 20 },
+  sahel_mosque: { r: 11, h: 18 }, nuer_tukul: { r: 7, h: 10 }, inuit_igloo: { r: 7, h: 7 },
 };
 
 const LANDMARKS = {
@@ -2318,6 +2323,355 @@ const LANDMARKS = {
       lh.lookAt(0, 7, 0);                                       // 面向場心
       g.add(lh);
     }
+  },
+  // ---- 多元宗教與世界文化建築 (Religions & World Cultures) ----
+  shrine: (g, rnd) => {
+    // 日本神道教神社:石造參道 + 朱紅笠木鳥居 + 懸山頂拜殿 + 注連繩 + 左右石燈籠
+    g.add(box(16, 0.8, 20, 0xb0a898));                          // 石板參道台基
+    // 1. 前方朱紅鳥居 (Torii Gate at z = 7)
+    for (const sx of [-3.2, 3.2]) {
+      const p = new THREE.Mesh(cyl(0.35, 0.38, 6.2, 8), bmat(0xd93a2b));
+      p.position.set(sx, 3.1, 7); g.add(p);
+    }
+    g.add(box(8.6, 0.5, 0.7, 0x1e272c, 0, 6.2, 7));             // 笠木 (Kasagi) 頂黑瓦
+    g.add(box(8.2, 0.4, 0.6, 0xd93a2b, 0, 5.8, 7));             // 島木 (Shimaki)
+    g.add(box(7.2, 0.35, 0.35, 0xd93a2b, 0, 4.6, 7));           // 貫 (Nuki) 橫樑
+    // 2. 後方拜殿 (Haiden Hall at z = -4)
+    g.add(box(11, 1.2, 9, 0x7a5035, 0, 0.8, -4));               // 木造架高台
+    g.add(box(9.5, 4.6, 7.5, 0xd4c2a5, 0, 3.2, -4));            // 檜木殿身
+    const roof = new THREE.Mesh(cone(7.8, 3.2, 4), bmat(0x2d6a4f)); // 銅綠四阿頂/懸山頂
+    roof.rotation.y = Math.PI / 4; roof.scale.x = 0.82;
+    roof.position.set(0, 7.8, -4); g.add(roof);
+    // 屋脊千木與鰹木 (Chigi & Katsuogi)
+    for (const sx of [-3.6, 3.6]) {
+      const chigiL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.6, 0.3), bmat(0xd4c2a5));
+      chigiL.rotation.z = 0.4; chigiL.position.set(sx, 9.6, -4); g.add(chigiL);
+      const chigiR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.6, 0.3), bmat(0xd4c2a5));
+      chigiR.rotation.z = -0.4; chigiR.position.set(sx, 9.6, -4); g.add(chigiR);
+    }
+    // 3. 兩側石燈籠 (Toro Lanterns)
+    for (const sx of [-4.5, 4.5]) {
+      const lan = new THREE.Mesh(cyl(0.3, 0.35, 2.4, 6), bmat(0x9e988a));
+      lan.position.set(sx, 1.2, 2); g.add(lan);
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7),
+        bmat(0xffe082, { emissive: new THREE.Color(0xffa726), emissiveIntensity: 0.9 }));
+      lamp.position.set(sx, 2.5, 2); g.add(lamp);
+    }
+  },
+  mandir: (g, rnd) => {
+    // 印度教神廟:砂岩基座 (Jagati)+ 多層遞進希卡拉塔 (Shikhara)+ 柱廊前廳 (Mandapa)+ 金頂剎 (Kalasha)
+    g.add(box(18, 1.2, 20, 0xd89b65));                          // 紅砂岩台基
+    // 1. 後方主殿與希卡拉塔 (Shikhara at z = -4)
+    g.add(box(10, 6.5, 10, 0xbf7b45, 0, 1.2, -4));              // 聖所外壁 (Garbhagriha)
+    let ty = 7.7, tw = 9.2;
+    for (let t = 0; t < 5; t++) {                               // 5 階逐層退縮方錐塔
+      g.add(box(tw, 2.4, tw, 0xd88a4e, 0, ty, -4));
+      ty += 2.4; tw *= 0.82;
+    }
+    // 頂部水波扁圓石與金瓶 (Amalaka & Kalasha)
+    const amalaka = new THREE.Mesh(cyl(2.0, 2.0, 0.8, 12), bmat(0xd88a4e));
+    amalaka.position.set(0, ty + 0.4, -4); g.add(amalaka);
+    const kalasha = new THREE.Mesh(cone(1.0, 2.2, 8), bmat(0xc7a13d, { celMetal: true }));
+    kalasha.position.set(0, ty + 1.8, -4); g.add(kalasha);
+    // 2. 前方曼陀帕柱廊門殿 (Mandapa at z = 4)
+    g.add(box(12, 5.0, 8.5, 0xd89b65, 0, 1.2, 4));
+    const manRoof = new THREE.Mesh(cone(7.8, 3.4, 4), bmat(0xbf7b45));
+    manRoof.rotation.y = Math.PI / 4; manRoof.position.set(0, 7.8, 4); g.add(manRoof);
+    for (const sx of [-5.2, 5.2]) {                             // 門廊石柱
+      const col = new THREE.Mesh(cyl(0.45, 0.45, 5.0, 8), bmat(0xbf7b45));
+      col.position.set(sx, 3.6, 7.5); g.add(col);
+    }
+  },
+  stupa: (g, rnd) => {
+    // 佛教舍利佛塔:三層方階 (Medhi)+ 白堊圓頂 (Anda)+ 天宮方盒 (Harmika)+ 十三層相輪金頂
+    g.add(box(18, 0.8, 18, 0xd5d0c5));                          // 底層方基
+    g.add(box(15, 0.8, 15, 0xd5d0c5, 0, 0.8, 0));               // 中層方基
+    g.add(box(12, 0.8, 12, 0xd5d0c5, 0, 1.6, 0));               // 頂層方基
+    // 圓形基鼓與半球形白圓頂 (Anda)
+    const drum = new THREE.Mesh(cyl(5.6, 5.8, 1.4, 16), bmat(0xf5f3ee));
+    drum.position.y = 3.1; g.add(drum);
+    const anda = new THREE.Mesh(new THREE.SphereGeometry(5.2, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), bmat(0xf5f3ee));
+    anda.position.y = 3.8; g.add(anda);
+    // 天宮方盒 (Harmika)
+    g.add(box(2.8, 1.8, 2.8, 0xd89a38, 0, 9.6, 0));
+    // 十三層相輪法輪金頂 (Chattravali Spire)
+    const spireMast = new THREE.Mesh(cyl(0.3, 0.3, 6.5, 8), bmat(0xc7a13d, { celMetal: true }));
+    spireMast.position.y = 13.8; g.add(spireMast);
+    for (let i = 0; i < 5; i++) {
+      const ring = new THREE.Mesh(cyl(1.4 - i * 0.22, 1.4 - i * 0.22, 0.25, 10), bmat(0xc7a13d, { celMetal: true }));
+      ring.position.y = 11.2 + i * 0.9; g.add(ring);
+    }
+    // 頂部日月金珠 (Bindu Finial)
+    const jewel = new THREE.Mesh(ico(0.7), bmat(0xffd54f, { celMetal: true, emissive: new THREE.Color(0xffb300), emissiveIntensity: 0.8 }));
+    jewel.position.y = 17.4; g.add(jewel);
+  },
+  synagogue: (g, rnd) => {
+    // 猶太教猶太會堂:耶路撒冷石造立面 + 雙角塔拱頂 + 大衛之星彩繪花窗 + 十誡法板
+    const f = facadeTex('synagogue', 4, 3, '#4a5568', 0.2);
+    const main = box(18, 11, 16, 0xe2dac9); main.material.map = f.map; g.add(main);
+    // 兩側拱角塔 (Corner Turrets)
+    for (const sx of [-8.5, 8.5]) {
+      const tur = box(4.0, 14.5, 4.0, 0xd4cbb8, sx, 0, 6.5); g.add(tur);
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(2.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), bmat(0x457b6d));
+      dome.position.set(sx, 14.5, 6.5); g.add(dome);
+    }
+    // 正立面大圓花窗與大衛之星 (Star of David Rose Window)
+    const roseRing = new THREE.Mesh(new THREE.TorusGeometry(2.0, 0.3, 6, 12),
+      bmat(0x1976d2, { emissive: new THREE.Color(0x0d47a1), emissiveIntensity: 0.7 }));
+    roseRing.position.set(0, 7.8, 8.1); g.add(roseRing);
+    // 正面中央石階與木門
+    g.add(box(5.0, 4.2, 0.6, 0x4a3222, 0, 0, 8.2));
+    // 屋頂山牆上的十誡石板 (Decalogue Tablets)
+    const tabL = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1.4, 8), bmat(0xf0ebe1));
+    tabL.position.set(-0.6, 12.0, 7.8); g.add(tabL);
+    const tabR = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 1.4, 8), bmat(0xf0ebe1));
+    tabR.position.set(0.6, 12.0, 7.8); g.add(tabR);
+  },
+  gurdwara: (g, rnd) => {
+    // 錫克教謁師所:純白大理石殿堂 + 中央鍍金蓮花大圓頂 + 四角穹頂涼亭 (Chhatris)+ 日產旗桿
+    const main = box(22, 9, 18, 0xf4f6f8); g.add(main);
+    // 中央鍍金大圓頂 (Golden Lotus Dome at y = 9)
+    const lotusBase = new THREE.Mesh(cyl(5.2, 5.0, 0.8, 14), bmat(0xe2e8f0));
+    lotusBase.position.y = 9.4; g.add(lotusBase);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(4.6, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.65),
+      bmat(0xffc107, { celMetal: true }));
+    dome.position.y = 9.8; g.add(dome);
+    const finial = new THREE.Mesh(cyl(0.12, 0.12, 2.2, 6), bmat(0xffb300));
+    finial.position.y = 15.6; g.add(finial);
+    // 四角涼亭 (Chhatris at 4 corners)
+    for (const [sx, sz] of [[-9.5, -7.5], [9.5, -7.5], [-9.5, 7.5], [9.5, 7.5]]) {
+      for (const [cx, cz] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) {
+        const col = new THREE.Mesh(cyl(0.12, 0.12, 2.6, 6), bmat(0xf4f6f8));
+        col.position.set(sx + cx, 10.3, sz + cz); g.add(col);
+      }
+      const chDome = new THREE.Mesh(new THREE.SphereGeometry(1.3, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+        bmat(0xffc107, { celMetal: true }));
+      chDome.position.set(sx, 11.6, sz); g.add(chDome);
+    }
+    // 側邊錫克三角形旗 (Nishan Sahib Flag)
+    const pole = new THREE.Mesh(cyl(0.1, 0.1, 15, 6), bmat(0x94a3b8));
+    pole.position.set(-10, 7.5, 9.5); g.add(pole);
+    g.add(box(1.8, 1.0, 0.05, 0xff6f00, -9.0, 13.8, 9.5));
+  },
+  stave_church: (g, rnd) => {
+    // 北歐木板教堂:黑焦油木瓦 + 多層極陡坡屋面 + 龍頭簷角山牆 + 中央尖鐘塔
+    g.add(box(14, 0.8, 18, 0x2c221e));                          // 木枕基台
+    // 1. 下層本堂 (Nave)
+    g.add(box(10, 5.5, 14, 0x3d2e26, 0, 0.8, 0));
+    const r1 = new THREE.Mesh(cone(7.8, 4.5, 4), bmat(0x2b221d)); // 陡峭四坡木瓦
+    r1.rotation.y = Math.PI / 4; r1.scale.x = 0.75;
+    r1.position.set(0, 7.5, 0); g.add(r1);
+    // 2. 中層重簷天窗層 (Clerestory)
+    g.add(box(6, 4.2, 8, 0x3d2e26, 0, 7.5, -0.5));
+    const r2 = new THREE.Mesh(cone(5.5, 3.8, 4), bmat(0x2b221d));
+    r2.rotation.y = Math.PI / 4; r2.scale.x = 0.8;
+    r2.position.set(0, 12.0, -0.5); g.add(r2);
+    // 3. 頂部尖塔鐘樓 (Bell Spire)
+    const spire = new THREE.Mesh(cone(2.2, 6.0, 6), bmat(0x231a16));
+    spire.position.set(0, 16.5, -0.5); g.add(spire);
+    // 木雕十字頂 (Wooden Cross)
+    g.add(box(0.2, 1.8, 0.2, 0x6e5241, 0, 20.0, -0.5));
+    g.add(box(1.1, 0.2, 0.2, 0x6e5241, 0, 20.4, -0.5));
+    // 四角飛龍山牆飾 (Dragon Head Prows)
+    for (const [sx, sz] of [[-3.8, -4.5], [3.8, -4.5], [-3.8, 3.5], [3.8, 3.5]]) {
+      const dragon = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 1.2), bmat(0x5a4233));
+      dragon.rotation.x = 0.35; dragon.position.set(sx, 11.2, sz); g.add(dragon);
+    }
+  },
+  pyramid: (g, rnd) => {
+    // 美洲階梯金字塔:多層遞進巨石方錐 (Talud-Tablero)+ 正面中央通天石階 + 頂層神殿
+    const stepColors = [0x9e988a, 0x8f897c, 0x827c70, 0x767166];
+    let py = 0, pw = 26;
+    for (let s = 0; s < 4; s++) {                               // 4 層方錐台階
+      g.add(box(pw, 3.5, pw, stepColors[s], 0, py, 0));
+      py += 3.5; pw -= 5.0;
+    }
+    // 頂層神殿 (Summit Sanctuary)
+    g.add(box(8.5, 4.2, 8.5, 0xaba495, 0, py, 0));
+    g.add(box(9.2, 0.8, 9.2, 0x6d675c, 0, py + 4.2, 0));       // 神殿簷口
+    g.add(box(3.2, 3.0, 0.6, 0x2e2924, 0, py, 4.3));           // 門洞
+    // 正面中央通天巨石大台階 (Central Grand Staircase at +z)
+    const stairGeo = new THREE.BoxGeometry(5.2, 14.5, 14.5);
+    stairGeo.rotateX(-0.55);                                    // 依台階坡度傾斜
+    stairGeo.translate(0, 7.2, 7.5);
+    const stair = new THREE.Mesh(stairGeo, bmat(0x908a7e));
+    g.add(stair);
+    // 台階基部兩側羽蛇神首石雕 (Serpent Heads)
+    for (const sx of [-3.0, 3.0]) {
+      const serpent = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.4, 1.6), bmat(0x5a554a));
+      serpent.position.set(sx, 0.7, 13.5); g.add(serpent);
+    }
+  },
+  // ---- 台灣原住民、南島語族、古埃及、薩赫爾、奴愛、因紐特原住民與古文明建築 ----
+  slate_house: (g, rnd) => {
+    // 台灣原住民族石板屋:層疊黑灰板岩牆體 + 大斜面頁岩石板屋瓦 + 門前百步蛇祖靈立柱 + 石砌曬場前庭
+    g.add(box(16, 0.5, 14, 0x3a3f44));                          // 前庭石板曬場基座
+    // 1. 板岩矮牆屋身 (Slate Slab Walls)
+    g.add(box(12, 2.8, 9, 0x2e3338, 0, 0.5, -1.5));
+    // 2. 層疊大斜面板岩石板屋頂 (Layered Slate Roof)
+    const roofGeo = new THREE.BoxGeometry(14.5, 0.45, 11.5);
+    roofGeo.rotateX(0.22);                                      // 前低後高的排水大坡面
+    roofGeo.translate(0, 3.8, -1.5);
+    const roof = new THREE.Mesh(roofGeo, bmat(0x23272b));
+    g.add(roof);
+    // 屋脊壓頂石排 (Ridge Cap Stones)
+    for (let i = -5; i <= 5; i++) {
+      g.add(box(0.9, 0.35, 1.2, 0x1a1d20, i * 1.2, 5.0, -6.5));
+    }
+    // 3. 門前百步蛇與祖靈石柱 (Ancestral Totem Pillar at entrance)
+    const totem = new THREE.Mesh(cyl(0.35, 0.4, 3.6, 6), bmat(0x525960));
+    totem.position.set(2.4, 1.8, 3.2); g.add(totem);
+    // 祖靈石雕眼/百步蛇菱形飾 (emissive rune)
+    for (let y = 1.2; y <= 3.0; y += 0.8) {
+      const ring = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.25, 0.85),
+        bmat(0xffb74d, { emissive: new THREE.Color(0xd97706), emissiveIntensity: 0.6 }));
+      ring.position.set(2.4, y, 3.2); g.add(ring);
+    }
+    // 4. 石板矮門與側邊石椅 (Slate Seat)
+    g.add(box(1.8, 2.0, 0.4, 0x1c1f22, 0, 0.5, 3.1));          // 入口低矮木石門
+    g.add(box(3.2, 0.6, 1.2, 0x2a2e32, -4.5, 0.5, 3.2));       // 前廊聚會石椅
+  },
+  tongkonan: (g, rnd) => {
+    // 南島語族托拉賈船形屋:高架木樁 (Stilts)+ 懸空起居室 + 兩端極致上翹之巨型鞍形船首茅草弧頂 + 水牛角柱
+    // 1. 高架基柱 (Stilts)
+    for (const [sx, sz] of [[-3.5, -4.5], [3.5, -4.5], [-3.5, 0], [3.5, 0], [-3.5, 4.5], [3.5, 4.5]]) {
+      const stilt = new THREE.Mesh(cyl(0.32, 0.35, 4.5, 8), bmat(0x5c3d2e));
+      stilt.position.set(sx, 2.25, sz); g.add(stilt);
+    }
+    // 2. 懸空起居木艙 (Raised Living Chamber)
+    g.add(box(8.5, 4.0, 12.0, 0x8a5438, 0, 4.5, 0));
+    // 紅黑幾何彩繪山牆面板飾條 (Toraja Painted Facade Bands)
+    g.add(box(8.6, 0.6, 0.2, 0xb91c1c, 0, 5.2, 6.1));          // 硃砂紅飾帶
+    g.add(box(8.6, 0.6, 0.2, 0xfacc15, 0, 6.4, 6.1));          // 薑黃金飾帶
+    // 3. 巨型船型鞍狀上翹大屋頂 (Upswept Saddle Boat Roof)
+    const roofBase = new THREE.Mesh(cyl(4.8, 4.8, 22.0, 10, 1, false, 0, Math.PI), bmat(0x856638));
+    roofBase.rotation.x = Math.PI / 2;
+    roofBase.scale.set(1.0, 1.6, 1.0);
+    roofBase.position.set(0, 9.5, 0); g.add(roofBase);
+    // 前後翹起的巨大尖舟船首簷角 (Upswept Prows)
+    for (const [sz, dir] of [[11.0, 1], [-11.0, -1]]) {
+      const prow = new THREE.Mesh(cone(2.6, 7.5, 4), bmat(0x6e522b));
+      prow.rotation.x = dir * 0.75; prow.position.set(0, 13.2, sz); g.add(prow);
+    }
+    // 4. 正面水牛角立柱 (Buffalo Horn Column)
+    const hornPole = new THREE.Mesh(cyl(0.15, 0.15, 8.5, 6), bmat(0x4a3224));
+    hornPole.position.set(0, 5.0, 6.5); g.add(hornPole);
+    for (let y = 3.0; y <= 8.0; y += 1.0) {
+      const horn = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.1, 4, 8, Math.PI), bmat(0xd1d5db));
+      horn.rotation.z = Math.PI; horn.position.set(0, y, 6.6); g.add(horn);
+    }
+  },
+  egyptian_pylon: (g, rnd) => {
+    // 古埃及塔門神殿:厚重梯形雙塔門 (Pylon)+ 凹線簷口 + 羽翼太陽盤 + 後方紙莎草柱廳 (Hypostyle Hall)
+    g.add(box(24, 1.0, 22, 0xdfb17b));                          // 砂岩大台基
+    // 1. 梯形雙塔門 (Twin Pylon Towers at +z)
+    for (const sx of [-7.8, 7.8]) {
+      const pylon = new THREE.Mesh(cyl(3.8, 4.8, 14.0, 4), bmat(0xcda06c));
+      pylon.rotation.y = Math.PI / 4; pylon.position.set(sx, 7.5, 7.5); g.add(pylon);
+      // 塔頂凹線簷口 (Cavetto Cornice)
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(8.8, 0.9, 7.2), bmat(0xb88d59));
+      cap.position.set(sx, 14.8, 7.5); g.add(cap);
+    }
+    // 門楣羽翼太陽盤 (Winged Sun Disc Lintel)
+    const sunDisc = new THREE.Mesh(ico(0.9),
+      bmat(0xffc107, { celMetal: true, emissive: new THREE.Color(0xd97706), emissiveIntensity: 0.8 }));
+    sunDisc.position.set(0, 10.5, 7.5); g.add(sunDisc);
+    g.add(box(4.5, 0.4, 0.8, 0xc7a13d, 0, 10.5, 7.5));         // 金翼橫展
+    // 2. 後方紙莎草巨柱大廳 (Hypostyle Hall at -z)
+    for (const [sx, sz] of [[-6, -4], [6, -4], [-6, -1], [6, -1], [-6, 2], [6, 2]]) {
+      // 柱身
+      const col = new THREE.Mesh(cyl(0.7, 0.65, 10.5, 10), bmat(0xd9a873));
+      col.position.set(sx, 5.75, sz); g.add(col);
+      // 開敞紙莎草鐘形柱頭 (Papyrus Bell Capital)
+      const cap = new THREE.Mesh(cyl(1.3, 0.7, 1.4, 10), bmat(0xc89762));
+      cap.position.set(sx, 11.2, sz); g.add(cap);
+    }
+    // 柱頂橫樑 (Architrave)
+    g.add(box(16, 0.8, 2.0, 0xba8a55, 0, 12.3, -1));
+  },
+  sahel_mosque: (g, rnd) => {
+    // 薩赫爾泥造清真寺 (傑內大清真寺風格):日曬土泥磚曲面主體 + 突出的棕櫚木樁骨架 (Toron)+ 錐形泥塔與鴕鳥蛋陶頂
+    const main = box(18, 8.5, 16, 0xb87d4b); g.add(main);       // 泥磚大殿
+    // 1. 三座正面錐形宣禮泥塔 (Conical Adobe Minarets)
+    for (const sx of [-6.5, 0, 6.5]) {
+      const minaret = new THREE.Mesh(cyl(1.2, 2.4, 16.0, 8), bmat(0xb87d4b));
+      minaret.position.set(sx, 8.0, 8.2); g.add(minaret);
+      // 塔頂鴕鳥蛋陶頂 (Ostrich Egg Finial)
+      const egg = new THREE.Mesh(ico(0.75), bmat(0xf5ede0));
+      egg.position.set(sx, 16.6, 8.2); g.add(egg);
+    }
+    // 2. 外露橫突棕櫚木樁 (Toron Timber Sticks projecting from walls)
+    for (let y = 3.5; y <= 13.5; y += 2.0) {
+      for (const sx of [-6.5, 0, 6.5]) {
+        for (const dx of [-1.0, 1.0]) {
+          const stick = new THREE.Mesh(cyl(0.08, 0.08, 1.4, 5), bmat(0x3e2723));
+          stick.rotation.x = Math.PI / 2; stick.position.set(sx + dx, y, 9.2); g.add(stick);
+        }
+      }
+    }
+    // 側牆排柱與洩水陶管 (Gargoyles)
+    for (const s of [-1, 1]) {
+      for (const z of [-4, 0, 4]) {
+        const buttress = new THREE.Mesh(cyl(0.6, 1.2, 9.0, 6), bmat(0xa87142));
+        buttress.position.set(s * 9.4, 4.5, z); g.add(buttress);
+      }
+    }
+  },
+  nuer_tukul: (g, rnd) => {
+    // 東非奴愛族泥圓屋 (Tukul):圓柱泥編牆 + 高聳尖錐金黃茅草屋頂 + 環形牛欄與聖角神木
+    // 1. 泥圓屋本體 (Mud-and-wattle Tukul)
+    const tukul = new THREE.Mesh(cyl(4.2, 4.4, 3.2, 14), bmat(0xa67c52));
+    tukul.position.set(0, 1.6, -2); g.add(tukul);
+    // 2. 高挑尖錐茅草頂 (Steep Conical Thatch Roof)
+    const thatch = new THREE.Mesh(cone(5.4, 6.5, 14), bmat(0xd4af37));
+    thatch.position.set(0, 6.4, -2); g.add(thatch);
+    // 頂部編織草冠 (Apex Woven Crown)
+    const crown = new THREE.Mesh(ico(0.6), bmat(0x8a6d25));
+    crown.position.set(0, 9.8, -2); g.add(crown);
+    // 3. 前方木樁牛欄 (Cattle Kraal Fence at +z)
+    for (let a = 0; a < Math.PI * 2; a += 0.45) {
+      if (a > 2.7 && a < 3.6) continue; // 留出入口
+      const px = Math.cos(a) * 7.5, pz = Math.sin(a) * 7.5 + 4.5;
+      const post = new THREE.Mesh(cyl(0.1, 0.12, 2.2, 5), bmat(0x5d4037));
+      post.position.set(px, 1.1, pz); g.add(post);
+    }
+    // 4. 聖角立木神柱 (Sacred Cattle Horn Post)
+    const hornPost = new THREE.Mesh(cyl(0.18, 0.2, 4.2, 6), bmat(0x3e2723));
+    hornPost.position.set(0, 2.1, 4.5); g.add(hornPost);
+    const horns = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.15, 6, 10, Math.PI), bmat(0xf5f5f5));
+    horns.rotation.z = Math.PI; horns.position.set(0, 4.4, 4.5); g.add(horns);
+  },
+  inuit_igloo: (g, rnd) => {
+    // 北極因紐特雪磚冰屋 (Igloo)+ 防風隧道玄關 + 守護石偶 (Inuksuk)
+    // 1. 半球形螺旋雪磚冰屋主穹頂 (Snow Block Dome)
+    const iglooGeo = new THREE.SphereGeometry(4.8, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+    const iglooMat = bmat(0xe8f1f5, { emissive: new THREE.Color(0xb0bec5), emissiveIntensity: 0.2 });
+    const igloo = new THREE.Mesh(iglooGeo, iglooMat);
+    igloo.position.set(0, 0, -1); g.add(igloo);
+    // 2. 半圓拱雪磚隧道玄關 (Tunnel Vestibule at +z)
+    const tunGeo = new THREE.CylinderGeometry(1.6, 1.6, 4.2, 10, 1, false, 0, Math.PI);
+    tunGeo.rotateX(Math.PI / 2); tunGeo.translate(0, 1.6, 3.2);
+    const tunnel = new THREE.Mesh(tunGeo, iglooMat);
+    g.add(tunnel);
+    // 3. 守護指路石堆偶 (Inuksuk / Inunnguaq Stone Cairn beside igloo)
+    const cairnMat = envMat(0x60666d, { bands: 'hard' });
+    const cairnGroup = new THREE.Group();
+    cairnGroup.position.set(6.5, 0, 1.5);
+    // 雙腿石
+    for (const lx of [-0.4, 0.4]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.2, 0.6), cairnMat);
+      leg.position.set(lx, 0.6, 0); cairnGroup.add(leg);
+    }
+    // 軀幹石
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 0.8), cairnMat);
+    torso.position.set(0, 1.65, 0); cairnGroup.add(torso);
+    // 橫展雙臂石
+    const arms = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.4, 0.6), cairnMat);
+    arms.position.set(0, 2.3, 0); cairnGroup.add(arms);
+    // 頭部石
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.65), cairnMat);
+    head.position.set(0, 2.85, 0); cairnGroup.add(head);
+    g.add(cairnGroup);
   },
 };
 
@@ -4386,15 +4740,113 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
   return placedM.length;
 }
 
+/**
+ * 荒野遺跡與廢棄建築擺放系統 (placeWildernessRelics)
+ * 在地圖荒野 (bare / 邊緣開闊區) 擺放古代遺跡、巨神雕像、墜毀飛行器、鐘樓尖塔與貨櫃殘骸等物件。
+ * 遵循原則：
+ *   - 零共享 rnd() 消耗（使用座標雜湊與局部 mulberry32，不推移植被佈局序）
+ *   - 嚴格避開主堡圈 (BASE_CLEAR_R)、道網 (roadOccupied)、現有 blocked 區域
+ *   - 佔地登記 blockArea(blocked, x, z, r)，防止後續植被穿模
+ *   - 貼地 AO 與坡度落底防懸空
+ */
+function placeWildernessRelics({ group, terrain, blocked, blockers, sites, basesW, roadOccupied }) {
+  const landKinds = Object.keys(RELIC_KINDS).filter((k) => RELIC_KINDS[k].land);
+  if (!landKinds.length || !sites?.length) return 0;
+
+  let placedCount = 0;
+  const RELIC_MAX = 8;
+  const RELIC_SEP = 90; // 遺跡彼此間距 (m)
+  const placedList = [];
+
+  for (let i = 0; i < sites.length && placedCount < RELIC_MAX; i++) {
+    const [sx, sz] = sites[i];
+    const s = (Math.imul(Math.round(sx * 8) | 0, 0x9E3779B1) ^ Math.imul(Math.round(sz * 8) | 0, 0x85EBCA77)) ^ 0x7A4C19;
+    const localRnd = mulberry32(s >>> 0);
+
+    const kind = landKinds[Math.floor(localRnd() * landKinds.length)];
+    const def = RELIC_KINDS[kind];
+    const r = def?.colR ?? 10;
+
+    // 檢查邊界與高度
+    if (sx < terrain.minX + r + 30 || sx > terrain.maxX - r - 30
+      || sz < terrain.minZ + r + 30 || sz > terrain.maxZ - r - 30) continue;
+
+    let gy = terrain.heightAt(sx, sz);
+    if (gy < 0.6) continue; // 避開近水面
+
+    // 避開水域/沼澤
+    if (terrainEnvCode(terrain, sx, sz) !== 0) continue;
+
+    // 避開淨空、道路與主堡
+    if (!areaFree(blocked, sx, sz, r + 4)) continue;
+    if (roadOccupied?.({ x: sx, z: sz, r: r + 4 })) continue;
+    if (basesW?.some((b) => Math.hypot(sx - b.x, sz - b.z) < BASE_CLEAR_R + r * 2)) continue;
+    if (placedList.some((p) => Math.hypot(sx - p.x, sz - p.z) < RELIC_SEP)) continue;
+
+    // 落底防懸空：取腳印周圈最低點
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      gy = Math.min(gy, terrain.heightAt(sx + Math.cos(a) * r * 0.7, sz + Math.sin(a) * r * 0.7));
+    }
+
+    const g = new THREE.Group();
+    buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true });
+    g.position.set(sx, gy, sz);
+    bakeContactAO(g, 5);
+
+    group.add(g);
+    blockArea(blocked, sx, sz, r);
+    blockers?.push({ x: sx, z: sz, r, h: 8, name: `relic_${kind}` });
+    placedList.push({ x: sx, z: sz, r });
+    placedCount++;
+  }
+
+  return placedCount;
+}
+
 /** OSM tags → 建物類型 */
-function buildingType(tags) {
+/** 文化、宗教與古文明遺跡地標名冊 */
+export const CULTURAL_RELIC_LANDMARKS = Object.freeze([
+  'shrine', 'mandir', 'stupa', 'synagogue', 'gurdwara', 'stave_church',
+  'pyramid', 'slate_house', 'tongkonan', 'egyptian_pylon', 'sahel_mosque',
+  'nuer_tukul', 'inuit_igloo', 'temple', 'church', 'mosque', 'pagoda', 'castle',
+]);
+
+/** 依 OSM tags 取得直接語意對應之建物類型 */
+export function matchedBuildingType(tags = {}) {
   const b = tags.building, a = tags.amenity;
   const native = nativeFunctionalKind(tags);
   if (native) return native;
   if (a === 'place_of_worship') {
     const r = tags.religion;
     if (r === 'muslim') return 'mosque';
+    if (r === 'shinto') return 'shrine';
+    if (r === 'hindu') return 'mandir';
+    if (r === 'jewish') return 'synagogue';
+    if (r === 'sikh') return 'gurdwara';
+    if (r === 'buddhist') {
+      if (b === 'stupa' || tags.man_made === 'stupa') return 'stupa';
+      if (b === 'pagoda') return 'pagoda';
+      return 'temple';
+    }
+    if (r === 'christian') {
+      if (tags.architecture === 'stave' || b === 'stave_church') return 'stave_church';
+      return 'church';
+    }
   }
+  if (b === 'shrine' || tags.historic === 'wayside_shrine') return 'shrine';
+  if (b === 'temple' && tags.religion === 'hindu') return 'mandir';
+  if (b === 'stupa' || tags.man_made === 'stupa') return 'stupa';
+  if (b === 'synagogue') return 'synagogue';
+  if (b === 'gurdwara') return 'gurdwara';
+  if (b === 'stave_church' || tags.architecture === 'stave') return 'stave_church';
+  if (b === 'pyramid' || tags.historic === 'archaeological_site') return 'pyramid';
+  if (b === 'slate_house' || tags.architecture === 'slate_house' || tags.indigenous === 'taiwan') return 'slate_house';
+  if (b === 'tongkonan' || tags.architecture === 'tongkonan' || tags.traditional === 'austronesian') return 'tongkonan';
+  if (tags.historic === 'pylon' || tags.architecture === 'pylon' || tags.historic === 'egyptian_temple') return 'egyptian_pylon';
+  if (tags.architecture === 'sahel' || tags.architecture === 'adobe' || b === 'sahel_mosque') return 'sahel_mosque';
+  if (b === 'tukul' || b === 'hut' || tags.traditional === 'african') return 'nuer_tukul';
+  if (b === 'igloo' || tags.historic === 'inuksuk' || tags.traditional === 'inuit') return 'inuit_igloo';
   if (tags.power === 'tower') return 'power';
   if (b === 'industrial' || b === 'factory' || b === 'warehouse') return 'factory';
   if (tags.historic === 'castle' || b === 'castle') return 'castle';
@@ -4403,6 +4855,31 @@ function buildingType(tags) {
   if (b === 'stadium' || tags.leisure === 'stadium') return 'stadium';
   if (b === 'commercial' || b === 'office' || b === 'retail' || b === 'hotel' || b === 'apartments' && (+tags['building:levels'] || 0) >= 10) return 'commercial';
   return 'residential';
+}
+
+/**
+ * OSM tags → 建物類型 (支援 50% 相關對接 / 50% 多元非相關輪替機率)
+ * 遺跡與文化地標建築非直接 100% 綁定真實圖資，相關者佔 50%、其餘非相關者佔 50%。
+ */
+export function buildingType(tags, seed = 0) {
+  const matched = matchedBuildingType(tags);
+  if (!matched) return 'residential';
+
+  // 若為宗教、文化或古代遺跡類地標，且提供種子座標時，套用 50/50 機率原則
+  if (seed !== 0 && CULTURAL_RELIC_LANDMARKS.includes(matched)) {
+    const s = ((seed * 1597334677) >>> 0) ^ 0x6D2B79F5;
+    const prob = (s >>> 8) / 16777216; // [0, 1)
+    if (prob < 0.5) {
+      return matched; // 50% 相關者
+    } else {
+      // 50% 其餘非相關者 (從多元文化名冊其餘項目中均勻輪替)
+      const others = CULTURAL_RELIC_LANDMARKS.filter((k) => k !== matched);
+      const idx = ((seed * 2246822507) >>> 0) % others.length;
+      return others[idx] || matched;
+    }
+  }
+
+  return matched;
 }
 
 function buildingHeight(tags, type, rnd) {
@@ -9668,18 +10145,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const bufferProps = buildBufferProps({ group, terrain });
   const backdropSegs = buildBackdrop({ group, terrain, ctr: INK_CTR.BACKDROP });
   const greenSites = [], bareSites = [];
-  for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 28); a++) {
+  for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 36); a++) {
     const x = rx(), z = rz();
     const h = terrain.heightAt(x, z);
     if (h < 0.4 || blocked.has(cellKey(x, z))) continue;
     const b = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
     if (b === 'green' && greenSites.length < 20) greenSites.push([x, z]);
-    else if (b === 'bare' && bareSites.length < 28) bareSites.push([x, z]);
+    else if (b === 'bare' && bareSites.length < 36) bareSites.push([x, z]);
   }
   // 國旗歸屬(地圖 30 : 駐軍 60 : 敵對 10)。純函式、零共享 rnd ⇒ 建在哪一行都不影響序列。
   const nation = makeNationPicker(cfg, basesW);
   const megalithsBuilt = placeMegaliths({
     group, terrain, blocked, blockers, rnd, sites: bareSites, basesW, roadOccupied,
+  });
+  // 荒野遺跡與廢棄建築：零共享 rnd 消耗，排在植被前登記 blockArea 防止穿模
+  const relicsBuilt = placeWildernessRelics({
+    group, terrain, blocked, blockers, sites: bareSites, basesW, roadOccupied,
   });
   const giantTrees = placeGiantGroves({
     terrain, blocked, blockers, items, rnd, sites: greenSites, roadOccupied,
@@ -9894,7 +10375,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     for (const el of osm) {
       const [x, z] = llToWorld(el.lat, el.lng, center);
       if (!tryPlace(x, z)) continue;
-      const type = buildingType(el.tags);
+      const coordSeed = (Math.imul(Math.round(x * 16) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 16) | 0, 0x85EBCA77)) ^ 0x3C6EF35F;
+      const type = buildingType(el.tags, coordSeed);
       if (LANDMARKS[type]) {
         // 地標放大後不能只驗中心格:以碰撞半徑掃走廊,牆面才不會侵入兵線
         const cr = (LANDMARK_COL[type]?.r || 10) * OVER.lm;
@@ -11148,6 +11630,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     veg: placed,
     giantTrees,
     megaliths: megalithsBuilt,
+    relics: relicsBuilt,
     beacons: beaconsBuilt,
     baseFlags,
     ground: ground.patches,

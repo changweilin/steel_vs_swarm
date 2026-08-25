@@ -15,6 +15,7 @@ import { WATER } from '../public/js/data.js';
 const BREAK_TRANS = process.argv.includes('--break-trans');
 const BREAK_VISCOUS = process.argv.includes('--break-viscous');
 const BREAK_BUBBLE = process.argv.includes('--break-bubble');
+const BREAK_RELIC = process.argv.includes('--break-relic');
 
 let pass = 0, fail = 0;
 function ok(cond, msg) {
@@ -134,7 +135,6 @@ const s3 = aquaticSeed(124.00, -67.89);
 ok(s1 === s2, '同座標雜湊種子嚴格一致 (確定性)');
 ok(s1 !== s3, '不同座標雜湊種子離散分離');
 ok(!aquaticsSrc.includes('Math.random()'), 'aquatics.js 內零 Math.random() (A4)');
-
 // ▍Ⅵ biomes.js 與 game.js 接線契約
 console.log('\n▍Ⅵ 接線契約');
 ok(biomesSrc.includes('buildAquaticWorld('), 'biomes.js 接管 buildAquaticWorld 呼叫');
@@ -142,8 +142,105 @@ ok(biomesSrc.includes('buildSwampSurface'), 'biomes.js 具備 buildSwampSurface'
 ok(biomesSrc.includes('swampSoft()'), 'buildSwampSurface 採用 swampSoft 黏滯波');
 ok(gameSrc.includes('aquaticTransition('), 'game.js 在 _updateWaterVeil 呼叫 aquaticTransition');
 
+// ▍Ⅶ 建築、沉船、古代遺跡與現代殘骸多樣化型錄 (Relic & Architectural Diversity)
+console.log('\n▍Ⅶ 建築、沉船、古代遺跡與現代殘骸多樣化型錄');
+const RELIC_KINDS = grabObj(aquaticsSrc, 'export const RELIC_KINDS = {');
+let relicKindCount = RELIC_KINDS ? Object.keys(RELIC_KINDS).length : 0;
+if (BREAK_RELIC) {
+  relicKindCount = 3; // 故意破壞多樣性
+}
+
+ok(RELIC_KINDS !== null, 'RELIC_KINDS 型錄成功定義');
+ok(relicKindCount >= 10, `建築與遺跡原型種類數充足 (>= 10 款, 實得 ${relicKindCount} 款)`);
+ok(aquaticsSrc.includes('export function buildRelicObject('), 'aquatics.js 匯出 buildRelicObject 統一建構器');
+
+// 檢查各原型建構器均已匯出
+const expectedBuilders = [
+  'buildSubmarine',
+  'buildSunkenRuins',
+  'buildShipwreck',
+  'buildSubmergedHabitat',
+  'buildObeliskAltarRing',
+  'buildSunkenSpire',
+  'buildColossalTitanVisage',
+  'buildBattleshipWreck',
+  'buildCrashedAirframe',
+  'buildDeepSeaComplex',
+  'buildCargoGantryWreck',
+  'buildSunkenShrineTorii',
+  'buildSunkenStupaRuin',
+  'buildSunkenPyramidZiggurat',
+  'buildSunkenSlateRuin',
+  'buildSunkenEgyptianPylon',
+  'buildSunkenTongkonan',
+  'buildInuksukSite',
+];
+
+for (const bName of expectedBuilders) {
+  ok(aquaticsSrc.includes(`export function ${bName}(`), `匯出建築/遺跡原型建構器: ${bName}`);
+}
+
+// 驗證陸地管線接線 (biomes.js placeWildernessRelics)
+ok(biomesSrc.includes('buildRelicObject') && biomesSrc.includes('RELIC_KINDS'), 'biomes.js 引入 buildRelicObject 與 RELIC_KINDS');
+ok(biomesSrc.includes('placeWildernessRelics('), 'biomes.js 具備 placeWildernessRelics 荒野遺跡擺放系統');
+ok(biomesSrc.includes('relics: relicsBuilt'), 'biomes.js stats 正確回報陸地遺跡建置數量');
+
+// ▍Ⅷ 世界宗教、原住民與古文明地標建築 (World Religious & Indigenous Landmarks)
+console.log('\n▍Ⅷ 世界宗教、原住民與古文明地標建築');
+const expectedLandmarks = [
+  'shrine',
+  'mandir',
+  'stupa',
+  'synagogue',
+  'gurdwara',
+  'stave_church',
+  'pyramid',
+  'slate_house',
+  'tongkonan',
+  'egyptian_pylon',
+  'sahel_mosque',
+  'nuer_tukul',
+  'inuit_igloo',
+];
+
+for (const lName of expectedLandmarks) {
+  ok(biomesSrc.includes(`${lName}: (`), `biomes.js LANDMARKS 包含文化/原住民建築產生器: ${lName}`);
+  ok(biomesSrc.includes(`${lName}: { r:`), `biomes.js LANDMARK_COL 包含碰撞定義: ${lName}`);
+}
+
+ok(biomesSrc.includes("r === 'shinto'") && biomesSrc.includes("r === 'hindu'")
+  && biomesSrc.includes("r === 'jewish'") && biomesSrc.includes("r === 'sikh'"),
+  'buildingType 支援辨識 shinto, hindu, jewish, sikh 等真實 OSM 宗教標籤');
+ok(biomesSrc.includes('slate_house') && biomesSrc.includes('tongkonan')
+  && biomesSrc.includes('egyptian_pylon') && biomesSrc.includes('sahel_mosque')
+  && biomesSrc.includes('nuer_tukul') && biomesSrc.includes('inuit_igloo'),
+  'buildingType 支援辨識台灣石板屋、南島船形屋、古埃及塔門、薩赫爾清真寺、奴愛圓屋、因紐特冰屋等原住民風標籤');
+ok(biomesSrc.includes('CULTURAL_RELIC_LANDMARKS') && biomesSrc.includes('matchedBuildingType'),
+  'biomes.js 具備 CULTURAL_RELIC_LANDMARKS 與 matchedBuildingType 結構');
+
+// 驗證 50% 相關對接 / 50% 多元非相關機率分佈 (離線模擬 1000 次抽樣)
+import { nativeFunctionalKind } from '../public/js/nativeFunctionalBuildings.js';
+const fnDef = biomesSrc
+  .slice(biomesSrc.indexOf('export const CULTURAL_RELIC_LANDMARKS'), biomesSrc.indexOf('function buildingHeight('))
+  .replace(/export\s+/g, '');
+const evalCode = `${fnDef}\nreturn { CULTURAL_RELIC_LANDMARKS, matchedBuildingType, buildingType };`;
+const { buildingType: testBuildingType, CULTURAL_RELIC_LANDMARKS: testRelicLandmarks } = new Function('nativeFunctionalKind', evalCode)(nativeFunctionalKind);
+
+let matchCount = 0;
+const N_SAMPLES = 1000;
+const testTags = { amenity: 'place_of_worship', religion: 'shinto' };
+for (let i = 1; i <= N_SAMPLES; i++) {
+  const t = testBuildingType(testTags, i * 7919);
+  if (t === 'shrine') matchCount++;
+}
+const matchRatio = matchCount / N_SAMPLES;
+ok(matchRatio >= 0.45 && matchRatio <= 0.55,
+  `遺跡/文化地標建築機率性出現：相關者佔比接近 50% (實測 ${(matchRatio * 100).toFixed(1)}%, 目標 50±5%)`);
+ok(testBuildingType(testTags, 0) === 'shrine',
+  '無 seed (seed=0) 呼叫時保持語意直接對接預設回傳');
+
 if (fail > 0) {
   console.error(`\n✗ 稽核失敗: ${fail} 項未通過`);
   process.exit(1);
 }
-console.log(`\n🎉 水下與沼澤生態動態稽核通過 (共 ${pass} 項)\n`);
+console.log(`\n🎉 水下與沼澤生態動態及遺跡系統稽核通過 (共 ${pass} 項)\n`);
