@@ -39,7 +39,7 @@
 //   Ⅴ open 物理段:引道露天路塹(執行發射器原文)+ 消費端閘門(slab/彈道/天花/lev 濾 !open,
 //     surfaceAt 站立捕捉與移動側壁閘不濾)
 //   Ⅵ 結構隧道資格閘(2026-07-29 澀谷側壁破口案):strucTunnel 單一縫 —— 人行/自行車級
-//     (PED_HW)與室內(indoor)tunnel way MUST NOT 進結構管線(不開挖、不成洞、不建牆),
+//     (isPedestrianWay)與室內(indoor)tunnel way MUST NOT 進結構管線(不開挖、不成洞、不建牆),
 //     攤平成一般小徑;車行(含 building_passage)照舊。carve 入口、dedupeParallelTunnels 候選
 //     與場景稽核 MUST 同吃這個閘(去重不閘 = 不合格長 way 壓掉合格隧道,洞與路雙雙蒸發)。
 //     前科:澀谷站 indoor footway 閉環被判成山體隧道,敞開補集 hw+7 斜壁開挖 + 髮夾鄰腿
@@ -63,7 +63,7 @@
 // 把引道牆頂寫回 `yF + 0.15`、把門洞 slope 寫回瞬時斜率、把 carveTunnels 的 hw 寫回固定值、
 // 把 nearOf 寫回一律 `hw + 7`、拿掉 open 段的 `open: true`、拿掉 slab 上傳的 `!d.open` 過濾、
 // 拿掉 game.js 任一處 `!tn.open` 閘門、把 carve 入口寫回裸 `tags.tunnel`、把 strucTunnel 的
-// PED_HW / indoor 檢查拿掉、把 dedupeParallelTunnels 候選寫回裸 `tags.tunnel`、把 wallTopAt
+// isPedestrianWay / indoor 檢查拿掉、把 dedupeParallelTunnels 候選寫回裸 `tags.tunnel`、把 wallTopAt
 // 寫成恆 undefined(= 拿掉 by)、拿掉 game.js 的 tunnelWallCross 呼叫、把 wallCross 的
 //「內 → 外」判定反向,稽核 MUST 在對應條目紅字。
 //
@@ -84,6 +84,7 @@
 //     **同一個高度上的兩塊 MUST NOT 重疊**(否則是共面硬幣拋,渲染器每個機位挑一塊贏)、
 //     **蓋在別人上面的那一層 MUST 蓋滿**(否則是縫)。判斷是哪一種,看的是「兩塊在不在同一個高度」。
 import { LOS, WATER } from '../public/js/data.js';
+import { PED_PLAN, isPedestrianWay } from '../public/js/pedestrian.js';
 import { readSrc } from './audit_src.mjs';
 
 const src = readSrc('public', 'js', 'biomes.js');
@@ -577,8 +578,9 @@ function build(under = true, heightAt = null, natureAt = null) {
   ok((src.match(/const pieces = strc \? \[tw\.pts\]/g) || []).length === 2,
     'Ⅲ buildRoads 與 markGradeCorridors MUST 都吃 way._tun.pts');
   // 通行寬單一縫 + 開挖剖面吃逐段 hw
-  ok(/const strucHw = \(tags\) => Math\.max\(roadWidth\(tags\) \/ 2, PASS_W \/ 2\);/.test(src),
-    'Ⅲ 結構通行半寬 MUST 只有 strucHw 一份');
+  ok((src.match(/const strucHw = \(tags\) =>/g) || []).length === 1
+    && /isPedestrianWay\(tags\)[\s\S]{0,120}PED_PLAN\.FOOTBRIDGE_MIN_W_M \/ 2[\s\S]{0,120}PASS_W \/ 2/.test(src),
+  'Ⅲ 結構通行半寬 MUST 只有 strucHw 一份，並區分人行天橋／車行結構');
   ok((src.match(/strucHw\(/g) || []).length >= 3, 'Ⅲ buildRoads / markGradeCorridors / carve 指派 MUST 共用 strucHw');
   ok(/hw: hwWay/.test(src), 'Ⅲ 開挖 run MUST 帶自己的通行寬');
   ok(/const fullOf = \(r\) => \(r\.hw \?\? hw\) \+ 1;/.test(tsrc) && /const nearOf = \(r\) => \(r\.hw \?\? hw\) \+ \(r\.cut \? CUT_W : 7\);/.test(tsrc),
@@ -721,8 +723,7 @@ function build(under = true, heightAt = null, natureAt = null) {
   const m = /const strucTunnel = \(tags\) =>[\s\S]*?;\r?\n/.exec(src);
   ok(!!m, 'Ⅵ biomes.js MUST 有 strucTunnel 資格閘(單一縫)');
   if (m) {
-    const PED_HW = new Function(`return ${/const PED_HW = (\/[^\n]+\/);/.exec(src)[1]};`)();
-    const strucTunnel = new Function('PED_HW', `${m[0]}return strucTunnel;`)(PED_HW);
+    const strucTunnel = new Function('isPedestrianWay', `${m[0]}return strucTunnel;`)(isPedestrianWay);
     ok(strucTunnel({ tunnel: 'yes', highway: 'primary' }) === true,
       'Ⅵ 戶外車行 tunnel MUST 過資格閘(山體隧道/地下道行為不變)');
     ok(strucTunnel({ tunnel: 'building_passage', highway: 'unclassified' }) === true,
@@ -731,7 +732,7 @@ function build(under = true, heightAt = null, natureAt = null) {
       'Ⅵ 人行 tunnel MUST NOT 成洞 —— 澀谷站地下街閉環曾把覆蓋段側壁挖成可走破口');
     ok(strucTunnel({ tunnel: 'yes', highway: 'steps' }) === false
       && strucTunnel({ tunnel: 'yes', highway: 'cycleway' }) === false,
-      'Ⅵ 階梯/自行車道 tunnel MUST NOT 成洞(PED_HW 全家族)');
+      'Ⅵ 階梯/自行車道 tunnel MUST NOT 成洞(行人分類全家族)');
     ok(strucTunnel({ tunnel: 'yes', highway: 'primary', indoor: 'yes' }) === false,
       'Ⅵ indoor tunnel MUST NOT 成洞(室內通道不是地形結構)');
     ok(strucTunnel({ tunnel: 'yes', highway: 'primary', indoor: 'no' }) === true,
@@ -740,9 +741,14 @@ function build(under = true, heightAt = null, natureAt = null) {
     // 平行雙孔去重 MUST 同吃資格閘(執行原文 + 合成資料):不合格 way 不參與去重,
     // MUST NOT 以「長者優先」壓掉合格隧道(前科:澀谷 footway 閉環把玉川通り trunk 整條剔除
     // ⇒ 資格閘上線後洞與路雙雙蒸發);合格×合格的平行去重行為維持不變。
+    const auditRoadWidth = () => 8;
+    const auditStrucHw = (tags) => isPedestrianWay(tags)
+      ? Math.max(auditRoadWidth(tags) / 2, PED_PLAN.FOOTBRIDGE_MIN_W_M / 2)
+      : Math.max(auditRoadWidth(tags) / 2, 8);
     const dedupeParallelTunnels = evalBlock('const bridgeHw', 'dedupeParallelTunnels', {
       densify, ROAD_SEG, strucTunnel,
-      llToWorld: (lat, lon) => [lon, lat], roadWidth: () => 8, PASS_W: 16,
+      llToWorld: (lat, lon) => [lon, lat], roadWidth: auditRoadWidth, PASS_W: 16,
+      strucHw: auditStrucHw,
     });
     const mkWay = (highway, x1) => ({ tags: { highway, tunnel: 'yes' },
       geometry: [{ lat: 0, lon: 0 }, { lat: 0, lon: x1 }] });

@@ -5,10 +5,11 @@
 // 是**整個畫面**,沒有這組基準就等於沒有驗收。
 //
 // 機位是**推導的,不是手打座標**(手打的一改兵線就對不上,而且看不出來):
-//   spawn      兩座主堡,朝兵線方向       first_tower  各兵線第一座塔位
+//   spawn      兩座主堡,朝兵線方向       spawn_over  以主堡為中心俯查周遭路網
 //   lane_mid   各兵線中段                portal_a/b   第一座結構隧道的兩端洞口(有才拍)
 //   bridge     第一座橋的橋頭(有才拍)   hilltop      全圖最高點俯瞰兵線
 //   waterline  水岸(有水域才拍)         aerial       圖心高空俯瞰
+//   road_tangle 剪枝後窄路仍最密集的一格(只在即時 OSM 路網存在時拍)
 //   edge_wall  邊界牆(退一步看那一段是哪一款)   edge_far     邊界抬高看緩衝空間與視線邊界背景
 //
 // 圖層隔離:`--ink=0` / `--dof=0` / `--grade=0` / `--fxaa=0` / `--post=0` / `--curve=0` 各關一層,同一組機位再拍一次
@@ -40,7 +41,7 @@
 //
 // 前置與 shot_tunnels.mjs 完全相同(Playwright + terrarium 高程 + 合成圖資),
 // **找不到 playwright 就印一行說明並以 0 結束**(A2:MUST NOT 寫進 package.json)。
-// 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--curve=0] [--lib=0] [--live]
+// 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--curve=0] [--lib=0] [--live|--scene-cache FILE]
 //                                [--pref inkMrt=on] [--pref lutSrc=baked]  ← 設定頁旋鈕
 //                                [--time day|dusk|night] [--season …] [--weather …]
 import fs from 'node:fs';
@@ -61,6 +62,10 @@ const VENUE = arg('--venue', 'taroko');
 const TEAM = +arg('--team', '1');
 const OUT = path.resolve(arg('--out', join(ROOT, 'tools', `.shots_scene/${VENUE}`)));
 const LIVE = has('--live');
+// `--scene-cache` 走 biomes.commitOsmIn 的正式中繼縫，固定同一份已處理 OSM 輸入。
+// Overpass 偶發回空時若直接接受，前後圖其實是兩個世界；那不能當道路剪枝證據。
+const SCENE_CACHE = arg('--scene-cache', '');
+const OSM_CACHE = SCENE_CACHE ? JSON.parse(fs.readFileSync(path.resolve(SCENE_CACHE), 'utf8')) : null;
 // `--stations <meta.json>`:**照抄前一輪推導出來的完整浮點機位**再拍一次。
 // 為什麼需要:機位是由**世界幾何**推導的(離兵線最近的那株喬木、最高點、第一座橋…),
 // 而 `--lib=0` 換掉的正是那些幾何 ⇒ 前後兩張其實**站在不同的地方、拍不同的樹**
@@ -209,11 +214,12 @@ await page.route(`${PROBE_URL}**`, (r) => r.fulfill({
 }));
 await page.goto(PROBE_NAV, { waitUntil: 'domcontentloaded' });
 
-const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, only, env, elapsed, probe }) => {
+const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, only, env, elapsed, probe, osmCache }) => {
   const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
-  const { buildBiomes } = await import('/public/js/biomes.js');
+  const { buildBiomes, commitOsmIn } = await import('/public/js/biomes.js');
+  const { ROAD_PRUNE } = await import('/public/js/roadgrid.js');
   const { applyEnvironment } = await import('/public/js/environment.js');
   const { Pipeline } = await import('/public/js/postfx.js');
   const { updateCelLight, worldCurveOn } = await import('/public/js/toon.js');
@@ -268,6 +274,17 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
   }
 
   const terrain = await buildTerrain(cfg, () => {});
+  if (osmCache?.roads?.length) {
+    commitOsmIn(terrain.bbox, {
+      roads: osmCache.roads,
+      feats: {
+        buildings: osmCache.buildings || [], rails: osmCache.rails || [], falls: osmCache.falls || [],
+        crossings: osmCache.crossings || [], pois: osmCache.pois || [], entrances: osmCache.entrances || [],
+        covers: osmCache.covers || [],
+        waters: osmCache.waters || [], boundaries: osmCache.boundaries || [],
+      },
+    });
+  }
   // buildBiomes 回傳的是 **group 本身**,結構清單住 group.userData(main.js 的 `ud` 就是它)
   let bio = null, biomeErr = null;
   try { bio = await buildBiomes(cfg, terrain, () => {}); } catch (e) { biomeErr = String(e && e.message || e); }
@@ -320,6 +337,10 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
     const l0 = lanes[0] || [];
     const aim = l0.length ? l0[Math.floor(l0.length / 2)] : [0, 0];
     add(`spawn_${side}`, b, [aim[0], surf(aim[0], aim[1]) + EYE, aim[1]]);
+    const span = ROAD_PRUNE.TANGLE_CELL_M;
+    stations.push({ name: `spawn_over_${side}`,
+      p: [b[0], surf(b[0], b[1]) + span * 0.72, b[1] + span * 0.38],
+      look: [b[0], surf(b[0], b[1]), b[1]] });
   }
   const sites = solveTowerSites(lanes);
   sites.forEach((laneSites, li) => {
@@ -347,6 +368,23 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
     stations.push({ name: 'bridge', p: [d.x1, surf(d.x1, d.z1) + EYE + 6, d.z1],
       look: [d.x2, surf(d.x2, d.z2) + EYE, d.z2] });
   }
+  // 行人設施機位從實際 instance 推導；固定看第一筆，前後比較不會因鏡頭手調而失真。
+  const firstInstancePosition = (names) => {
+    const o = names.map((name) => bio?.getObjectByName(name)).find((x) => x?.isInstancedMesh && x.count);
+    if (!o) return null;
+    const local = new THREE.Matrix4(), world = new THREE.Matrix4(), pos = new THREE.Vector3();
+    o.getMatrixAt(0, local);
+    world.multiplyMatrices(o.matrixWorld, local);
+    return pos.setFromMatrixPosition(world);
+  };
+  const entranceP = firstInstancePosition(['ped-entrance-station-roof', 'ped-entrance-underpass-roof']);
+  if (entranceP) stations.push({ name: 'ped_entrance',
+    p: [entranceP.x + 12, entranceP.y + 6, entranceP.z + 12],
+    look: [entranceP.x, entranceP.y - 1.4, entranceP.z] });
+  const footbridgeP = firstInstancePosition(['ped-footbridge-beams']);
+  if (footbridgeP) stations.push({ name: 'ped_footbridge',
+    p: [footbridgeP.x + 18, footbridgeP.y + 8, footbridgeP.z + 18],
+    look: [footbridgeP.x, footbridgeP.y - 1.5, footbridgeP.z] });
   // **喬木近景**(2026-08-08 §5z-t):勾線是**螢幕空間**的 pass,門檻吃「離相機多遠 + 掠射角」,
   // 而且**背景是天空(深度 = far)的那一格會早退** ⇒ 一棵孤零零站在空背景前的樹**畫不出線**
   // (`shot_veg` 實測 `--ink=1` 與 `--ink=0` 的 PNG **逐位元相同**)。「勾線對這個冠形是加分
@@ -511,6 +549,15 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
     }
     if (found) add('waterline', found, [found[0] + 120, WATER.LEVEL, found[1]]);
   }
+  {
+    const d = ud.stats?.roadPrune?.denseAfter;
+    if (d) {
+      const span = ROAD_PRUNE.TANGLE_CELL_M;
+      stations.push({ name: 'road_tangle',
+        p: [d.x, surf(d.x, d.z) + span * 0.72, d.z + span * 0.38],
+        look: [d.x, surf(d.x, d.z), d.z] });
+    }
+  }
   // **世界邊界**(2026-08-11 邊界牆改吃型錄之後補的兩張):這一整套 —— 障礙環的 15 款型式、
   // 緩衝空間的地貌拼圖與 3D 物件、視線邊界的假山/假海/假森林/假城市 —— 全是**只有站在
   // 邊界往外看**才看得到的東西,而既有 11 個機位沒有任何一個朝那個方向。位置照樣是推導的:
@@ -600,8 +647,10 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
       p: [...st.p], look: [...st.look] });
   }
   return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor, glError,
+    roadPrune: ud.stats?.roadPrune || null, pedestrian: ud.stats?.pedestrian || null,
     probeHits, curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
-}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY, env: ENV, elapsed: ELAPSED, probe: PROBE });
+}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, only: ONLY,
+  env: ENV, elapsed: ELAPSED, probe: PROBE, osmCache: OSM_CACHE });
 
 for (const s of shots.shots) {
   fs.writeFileSync(join(OUT, `${s.name}${SUFFIX}.png`), Buffer.from(s.png.split(',')[1], 'base64'));
@@ -617,6 +666,35 @@ console.log(`  地物 mesh ${shots.objN}・零件庫節點 ${shots.libN}${LAYERS
 console.log(`  世界曲面 ${shots.curveOn ? `已裝(拐點 ${Math.round(shots.curveKnee)}m / 地平線 ${Math.round(shots.curveHorizon)}m)`
   : (LAYERS.curve ? '⚠ 未裝(three 錨點對不上?)' : '關閉(--curve=0)')}`);
 console.log(`  真 GPU gl.getError() = ${shots.glError}`);
+if (shots.roadPrune?.edges) {
+  const p = shots.roadPrune;
+  console.log(`  道路剪枝 ${p.inputWays}→${p.outputWays} ways・${p.removedEdges}/${p.edges} edges・${p.removedM.toFixed(0)}m`
+    + `（小環 ${p.cycleM.toFixed(0)}m）・死路 ${p.deadEndsBefore}→${p.deadEndsAfter}`);
+  console.log(`  道路種類 ${Object.entries(p.byHighway || {}).map(([k, v]) =>
+    `${k}:${v.before}→${v.after}(均${(v.beforeM / v.before).toFixed(0)}m)`).join('・')}`);
+  if (p.focusBefore?.length === p.focusAfter?.length) {
+    console.log(`  重生圈候選窄路 ${p.focusBefore.map((v, i) =>
+      `${['SWARM', 'STEEL'][i] || i}:${v.m.toFixed(0)}→${p.focusAfter[i].m.toFixed(0)}m`).join('・')}`);
+  }
+  if (p.loopBefore && p.loopAfter) {
+    console.log(`  面積 < ${p.loopAfter.thresholdM2}m² 的小閉環 ${p.loopBefore.small}→${p.loopAfter.small}`
+      + `（重生圈 ${p.loopBefore.focusSmall}→${p.loopAfter.focusSmall}）`);
+  }
+  if (p.parallelProtected) {
+    console.log(`  並排保護 結構旁一般道路 ${p.parallelProtected.structure} edges・雙向分隔車道 ${p.parallelProtected.divided} edges`);
+  }
+  if (p.nearClosed) {
+    const nearFaces = Number.isFinite(p.loopBefore?.nearClosedSmall) && Number.isFinite(p.loopAfter?.nearClosedSmall)
+      ? `・所成小環 ${p.loopBefore.nearClosedSmall}→${p.loopAfter.nearClosedSmall}` : '';
+    console.log(`  死端近接閉合 ${p.nearClosed.links} 處（最大間距 ${p.nearClosed.maxGapM.toFixed(1)}m，只用於面積分析）${nearFaces}`);
+  }
+  if (p.rejected) console.log(`  小環候選未剪 ${Object.entries(p.rejected).map(([k, v]) => `${k}:${v}`).join('・')}`);
+}
+if (shots.pedestrian) {
+  const p = shots.pedestrian;
+  console.log(`  行人規劃 天橋 ${p.footbridges}・地下路線移除 ${p.undergroundRemoved}`
+    + `・入口 ${p.entrances}・老街 ${p.oldstreet}・自行車道 ${p.cycleway}・商圈步道 ${p.promenade}`);
+}
 for (const p of shots.probeHits) {
   console.log(`  射線 ${p.name} ndc=${p.ndc.join(',')}`);
   for (const h of p.hits) console.log(`      · ${h.type}${h.instanceId == null ? '' : `#${h.instanceId}`} ${h.material}`
@@ -639,7 +717,7 @@ fs.writeFileSync(join(OUT, `meta${SUFFIX}.json`), JSON.stringify({
   venue: VENUE, team: TEAM, layers: LAYERS, env: ENV,
   tunnels: shots.tunnels, decks: shots.decks, water: shots.water,
   objN: shots.objN, libN: shots.libN, biomeErr: shots.biomeErr, imagery: shots.imagery, glError: shots.glError,
-  probeHits: shots.probeHits,
+  probeHits: shots.probeHits, roadPrune: shots.roadPrune, pedestrian: shots.pedestrian,
   stations: shots.shots.map((s) => ({ name: s.name, p: s.p, look: s.look })),
 }, null, 2));
 console.log(`\n${shots.shots.length} 張 → ${OUT}`);

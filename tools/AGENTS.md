@@ -2,11 +2,11 @@
 
 > 本檔規範 `tools/` 目錄結構、離線工具家族地圖與編寫稽核腳本之核心紀律。完整指令清單與驗證矩陣住 `.claude/rules/verification.md`。
 
-## 家族地圖 (133 項)
+## 家族地圖 (134 項)
 
 | 家族 | 數量 | 用途與邊界 |
 |---|---|---|
-| `audit_*.mjs` | 91 | **離線稽核**: 本專案正確性主防線 (無 runtime logger)。以**執行原文**驗真品，一律不需伺服器/瀏覽器/網路 (少數例外於 verification.md 標記 ㋓) |
+| `audit_*.mjs` | 92 | **離線稽核**: 本專案正確性主防線 (無 runtime logger)。以**執行原文**驗真品，一律不需伺服器/瀏覽器/網路 (少數例外於 verification.md 標記 ㋓) |
 | `shot_*.mjs` | 12 | 瀏覽器實拍圖錄 (定場照 / 立面 / 招牌 / 隧道 / 變形 / 界線)；需 Playwright (㋓) |
 | `bake_venue_*.mjs` | 3 | 烘焙表產出 (`venueLanes.js` / `venueGrid.js` / `venueText.js`)。重烤 MUST 分批指定 `ONLY=`，避免單一場地查詢超時導致全表覆蓋 |
 | `balance.mjs` / `duel.mjs` / `lanesim.mjs` | 3 | `npm run bal` 三大平衡模型 (核心不變式 / 對進戰勝率 / 前線交戰)；分工明確不合併 |

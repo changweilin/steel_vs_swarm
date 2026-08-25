@@ -90,7 +90,7 @@ const runPts = []; for (let x = -60; x <= 60; x += 6) runPts.push([x, 0]);
   ok(g0 > 0, 'Ⅵ 呼叫端 MUST 存在(roadInput 定案後整批收集)');
   const G = bsrc.slice(g0 - 800, g0 + 1600);
   ok(/way\.tags\?\.bridge\) continue/.test(G), 'Ⅵ 橋 MUST 不整地(橋面自己是平的)');
-  ok(/PED_HW\.test\(way\.tags\?\.highway/.test(G), 'Ⅵ 步道 MUST 不整地(1.5m 小徑不值得 8m 網格整地)');
+  ok(/isPedestrianWay\(way\.tags \|\| \{\}\)/.test(G), 'Ⅵ 步道 MUST 不整地(小徑不值得 8m 網格整地)');
   ok(/way\._tun\?\.\[ri\]\?\.intervals\.length\) continue/.test(G), 'Ⅵ 結構隧道/地下道 run MUST 不整地(carveTunnels 已處理)');
   ok(/piece\.wet === true/.test(G), 'Ⅵ 泡水段 MUST 不整地(那裡走橋)');
   ok(g0 < bsrc.indexOf('markGradeCorridors(roadInput'), 'Ⅵ 整平 MUST 排在 markGradeCorridors / 地物散布之前(高度先定案)');

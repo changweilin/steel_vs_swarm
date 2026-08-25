@@ -45,6 +45,7 @@
 // ⚠ 這兩列**刻意沒有做成斷言**:㋐ 的那個功能還不存在(沒有東西可以驗)、㋑ 的判定面在
 //    `audit_underpass`。把它們寫成假斷言會讓「這裡有人在守」變成一句謊。
 import { readSrc } from './audit_src.mjs';
+import { PED_PLAN, isPedestrianWay } from '../public/js/pedestrian.js';
 
 let src = readSrc('public', 'js', 'biomes.js');
 const breakJunctionMark = process.argv.includes('--break-junction-mark');
@@ -73,8 +74,9 @@ const slice = (a, b, what) => {
 const widthSrc = slice('const ROAD_W = {', '};', 'ROAD_W') + '};\n'
   + /const PASS_W = \d+(\.\d+)?;/.exec(src)[0] + '\n'
   + slice('function roadWidth(tags) {', '// 路面顏色(cel-shaded)', 'roadWidth…flareHw');
-const W = new Function(`${widthSrc}
-  return { ROAD_W, PASS_W, roadWidth, strucHw, carriageHw, flareHw, ROAD_FLARE_M };`)();
+const W = new Function('PED_PLAN', 'isPedestrianWay', `${widthSrc}
+  return { ROAD_W, PASS_W, roadWidth, strucHw, carriageHw, flareHw, ROAD_FLARE_M };`)(
+  PED_PLAN, isPedestrianWay);
 
 // 圖資 tag 樣本:ROAD_W 全家族 × lanes 變體(含把 base 撐過 PASS_W 的多車道)
 const TAGS = [];
@@ -94,11 +96,18 @@ console.log('Ⅰ 塗裝車道半寬單一縫(carriageHw:結構內外同一個值
   const narrow = TAGS.filter((t) => W.strucHw(t) < W.carriageHw(t));
   ok(narrow.length === 0, `Ⅰ 結構通行寬 MUST NOT 窄於塗裝車道寬(不符 ${narrow.length} 組)`);
   // 差額 = 避車道邊帶;結構夾寬生效時(窄路)差額 > 0、寬路(≥PASS_W)差額歸零 = 結構內外完全等寬
-  const clamped = TAGS.filter((t) => W.roadWidth(t) < W.PASS_W);
+  const driving = TAGS.filter((t) => !isPedestrianWay(t));
+  const clamped = driving.filter((t) => W.roadWidth(t) < W.PASS_W);
   ok(clamped.every((t) => W.strucHw(t) - W.carriageHw(t) > 0), 'Ⅰ 窄路進結構:差額 > 0(交給避車道 + 漸縮帶)');
-  const wide = TAGS.filter((t) => W.roadWidth(t) >= W.PASS_W);
+  const wide = driving.filter((t) => W.roadWidth(t) >= W.PASS_W);
   ok(wide.length > 0 && wide.every((t) => W.strucHw(t) === W.carriageHw(t)),
     `Ⅰ 寬路(≥PASS_W)進結構:通行寬 === 塗裝寬,零階差(樣本 ${wide.length})`);
+  const foot = TAGS.filter((t) => isPedestrianWay(t));
+  ok(foot.length > 0 && foot.every((t) => W.strucHw(t) >= W.carriageHw(t)
+    && W.strucHw(t) >= PED_PLAN.FOOTBRIDGE_MIN_W_M / 2),
+  'Ⅰ 人行天橋 MUST 不窄於原步道，並夾到 FOOTBRIDGE_MIN_W_M');
+  ok(W.strucHw({ highway: 'footway' }) < W.PASS_W / 2,
+    'Ⅰ 人行天橋 MUST NOT 被車行 PASS_W 撐成寬橋');
   // 主幹道全家族都畫得出標線(標線閘門 mHw >= 2 不得把真實道路整級刷掉)
   const MAIN_HW = /^(motorway|trunk|primary|secondary|tertiary)$/;
   const mains = TAGS.filter((t) => MAIN_HW.test(t.highway || ''));
@@ -137,7 +146,8 @@ console.log('Ⅲ 標線消費端單一縫 + 橋隧同款風格(原文)');
   ok((src.match(/markBaseAt\b/g) || []).length >= 4,
     'Ⅲ markYB(實線)與 dashLine(虛線)兩消費端 MUST 都吃 markBaseAt');
   ok(!/const yB = strc \? tFloorAt\(d\) : null;/.test(src), 'Ⅲ 虛線 MUST NOT 留舊版「只認結構」的基準高');
-  const emit = src.match(/emitLine\(run, [^)]*\)/g) || [];
+  const traffic = slice('      // ---- 交通標線', '      // ---- 沿道路／鐵道步行廊道', '交通標線段');
+  const emit = traffic.match(/emitLine\(run, [^)]*\)/g) || [];
   // `markYB` 之後還可以再帶參數(2026-08-01 起帶 dropSeg:落進別條路洞內斷面的那一格不成面),
   // 這條斷言管的是「基準高有沒有傳」,MUST NOT 因為多一個尾參數就紅字
   ok(emit.length >= 4 && emit.every((e) => /markYB[,)]/.test(e)),
@@ -273,8 +283,9 @@ console.log('Ⅳ 銜接漸縮帶(行為直測:執行原文區塊)');
 
 console.log('Ⅴ 權威幾何不變(通行寬唯一縫仍是 strucHw)');
 {
-  ok(/^const strucHw = \(tags\) => Math\.max\(roadWidth\(tags\) \/ 2, PASS_W \/ 2\);$/m.test(src),
-    'Ⅴ 結構通行半寬 MUST 只有 strucHw 一份');
+  ok((src.match(/const strucHw = \(tags\) =>/g) || []).length === 1
+    && /isPedestrianWay\(tags\)[\s\S]{0,120}PED_PLAN\.FOOTBRIDGE_MIN_W_M \/ 2[\s\S]{0,120}PASS_W \/ 2/.test(src),
+  'Ⅴ 結構通行半寬 MUST 只有 strucHw 一份，並區分人行／車行最小寬');
   ok(/const hw = \(brg \|\| strc\) \? strucHw\(way\.tags\) : hwWay;/.test(src),
     'Ⅴ buildRoads 的通行寬 MUST 仍吃 strucHw(decks / tunnelSegs / 牆 / 門洞全靠它)');
   ok(/const hw = \(bridge \|\| wet \|\| strc\) \? strucHw\(way\.tags \|\| \{\}\) : hwWay;/.test(src),
