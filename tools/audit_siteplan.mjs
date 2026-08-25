@@ -1122,7 +1122,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         // `t.h` 對庫節點那一列自 2026-08-12 起是**縮放係數**不是樓高(fitScale 把網格撐滿基地)
         // ⇒ 列數 MUST 改吃另存的真樓高 `t.bh`;吃錯的話那幾棟塔樓的層高會是「係數公尺」
         ok((bioC.match(/function facadeRows\(/g) || []).length === 1
-          && /const rowsOf = \(t\) => facadeRows\(t\.bh \?\? t\.h, commercial\);/.test(bioC)
+          && /const rowsOf = \(t\) => (?:t\.rows \?\? )?facadeRows\(t\.bh \?\? t\.h, commercial\);/.test(bioC)
           && /bh: b\.h,/.test(bioC)
           && /makeApprovedBuildingBatch\(entry, rows\)/.test(bioC),
           '舊立面列數只服務方盒保險絲；正式 runtime 建築直接消費零件台色彩與幾何');
@@ -1222,6 +1222,7 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     CIVIC_KINDS: M.CIVIC_KINDS, CIVIC_TREES: M.CIVIC_TREES, planBlocks: M.planBlocks,
     civicColliders: M.civicColliders, plotSeed: M.plotSeed, frac: M.frac,
     buildCivic: (kind) => ({ kind, position: { set() {} }, rotation: { y: 0 }, userData: {} }),
+    STOREY: { residential: 3.1, commercial: 3.9 }, isRoadClear: () => true,
   };
   const names = Object.keys(env);
   // 沙箱 MUST 是 **async**:這一段原文帶著階段回報的讓步點(`await onProgress?.(…)`,
@@ -1383,6 +1384,7 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
         // 那一款**:IN1 = 內縮 − edgeWallDeepM(),見 data.js WORLD_EDGE):
         // 這三支不注入的話原文一執行就 ReferenceError,而那會被讀成「這段程式碼壞了」
         WORLD_EDGE, edgeWallInsetM, edgeWallDeepM,
+        STOREY: { residential: 3.1, commercial: 3.9 },
       };
       const names = Object.keys(env);
       const fn = new Function(...names, `${helpers}\n${pbSrc}\n return placeBoundary;`)(

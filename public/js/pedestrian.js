@@ -130,7 +130,33 @@ function corridorTheme(way, pts, targets, stations) {
   return rail >= road ? 'cycleway' : 'promenade';
 }
 
-function endpointSites(way, pts, stations) {
+function offsetBesideRoad(x, z, dx, dz, roadTargets) {
+  if (!roadTargets || !roadTargets.length) return { x, z, ry: Math.atan2(dx, dz) };
+  const nearRoad = nearestPoint(x, z, roadTargets);
+  if (!nearRoad) return { x, z, ry: Math.atan2(dx, dz) };
+  const d = Math.sqrt(nearRoad.d2);
+  const roadHw = 4.5;
+  const minClearance = roadHw + 3.5 + 1.2; // 9.2m: 移至道路旁路緣/人行道,杜絕壓在車道上
+  if (d < minClearance) {
+    let nx = x - nearRoad.qx, nz = z - nearRoad.qz;
+    let nl = Math.hypot(nx, nz);
+    if (nl < 0.1) {
+      nx = -nearRoad.seg.uz;
+      nz = nearRoad.seg.ux;
+      if (dx * nx + dz * nz < 0) { nx = -nx; nz = -nz; }
+      nl = 1;
+    }
+    nx /= nl;
+    nz /= nl;
+    const nxPos = nearRoad.qx + nx * minClearance;
+    const nzPos = nearRoad.qz + nz * minClearance;
+    const ry = Math.atan2(nearRoad.seg.ux, nearRoad.seg.uz);
+    return { x: nxPos, z: nzPos, ry };
+  }
+  return { x, z, ry: Math.atan2(dx, dz) };
+}
+
+function endpointSites(way, pts, stations, roadTargets = null) {
   if (pts.length < 2) return [];
   // 封閉地下環沒有可辨識的地面端點；不得在重合起終點憑空捏造一座入口。
   if (dist2(pts[0], pts[pts.length - 1]) <= PED_PLAN.ENTRANCE_MERGE_M ** 2) return [];
@@ -138,8 +164,9 @@ function endpointSites(way, pts, stations) {
   return ends.map(([i, j]) => {
     const [x, z] = pts[i], [ix, iz] = pts[j];
     const dx = x - ix, dz = z - iz;
-    const station = nearestStation(x, z, stations);
-    return { x, z, ry: Math.atan2(dx, dz), kind: station ? 'station' : 'underpass',
+    const placed = offsetBesideRoad(x, z, dx, dz, roadTargets);
+    const station = nearestStation(placed.x, placed.z, stations);
+    return { x: placed.x, z: placed.z, ry: placed.ry, kind: station ? 'station' : 'underpass',
       tags: way.tags || {}, stationTags: station?.tags || null, source: 'underground-end' };
   });
 }
@@ -178,7 +205,7 @@ export function planPedestrianNetwork({ roads = [], rails = [], pois = [], entra
     const pts = projected(way.geometry, toXZ);
     if (isUndergroundPedestrian(way.tags || {})) {
       underground++;
-      sites.push(...endpointSites(way, pts, stations));
+      sites.push(...endpointSites(way, pts, stations, roadTargets));
       continue;
     }
     let theme = null, kind = 'path';
@@ -202,7 +229,8 @@ export function planPedestrianNetwork({ roads = [], rails = [], pois = [], entra
       if (dx * dx + dz * dz < 0.25) { dx = nearRoad.seg.uz; dz = -nearRoad.seg.ux; }
     }
     if (dx * dx + dz * dz < 0.25) { dx = 0; dz = 1; }
-    sites.push({ x, z, ry: Math.atan2(dx, dz), kind: 'station', tags: e.tags || {},
+    const placed = offsetBesideRoad(x, z, dx, dz, roadTargets);
+    sites.push({ x: placed.x, z: placed.z, ry: placed.ry, kind: 'station', tags: e.tags || {},
       stationTags: station?.tags || null, source: 'osm-entrance' });
   }
 

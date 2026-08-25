@@ -4371,7 +4371,10 @@ function buildingType(tags) {
 function buildingHeight(tags, type, rnd) {
   const real = parseFloat(tags.height) || (+tags['building:levels'] || 0) * 3.2;
   const h = real > 3 ? Math.min(real, 120) : (type === 'commercial' ? 24 + rnd() * 40 : 7 + rnd() * 9);
-  return Math.min(h * OVER.bldH, OVER.bldCap);   // 超尺度:比現實同座標建物更高大
+  const target = type === 'commercial' ? STOREY.commercial : STOREY.residential;
+  const scaled = Math.min(h * OVER.bldH, OVER.bldCap);
+  const floors = Math.max(1, Math.round(scaled / target));
+  return floors * target;   // 量化為整數倍標準層高,杜絕垂直層高跳動
 }
 
 /**
@@ -8680,9 +8683,12 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement }) {
         if (f < 0.45) continue;
         w *= f; dd *= f;
         const commercial = rnd() < 0.5;
+        const storeyTarget = commercial ? STOREY.commercial : STOREY.residential;
+        const rawH = Math.min(22 + rnd() * 48, OVER.bldCap);
+        const floors = Math.max(1, Math.round(rawH / storeyTarget));
         generic.push({
           x, z, w, d: dd,
-          h: Math.min(22 + rnd() * 48, OVER.bldCap),
+          h: floors * storeyTarget,
           ry: (e.dz ? Math.PI / 2 : 0) + (rnd() - 0.5) * 0.1,   // 沿邊排列成街牆
           commercial,
           v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),
@@ -8928,7 +8934,10 @@ function densifyUrban({ seeds, generic, blocked, terrain, rnd, inb, occ, roadFac
         const commercial = rnd() < 0.28;
         const w = (commercial ? 16 + rnd() * 16 : 10 + rnd() * 12) * OVER.bldXZ;
         const d = (commercial ? 16 + rnd() * 16 : 10 + rnd() * 12) * OVER.bldXZ;
-        const h = Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap);
+        const storeyTarget = commercial ? STOREY.commercial : STOREY.residential;
+        const rawH = Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap);
+        const floors = Math.max(1, Math.round(rawH / storeyTarget));
+        const h = floors * storeyTarget;
         const jx = (rnd() - 0.5) * 2.4, jz = (rnd() - 0.5) * 2.4;   // 沿街微抖動
         rnd();   // 保留舊版朝向抖動的亂數消耗；方形基底不再實際套用偏角
         const v = Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length);
@@ -9413,18 +9422,19 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 隧道(覆蓋段上方照常鋪地物)與橋樑(橋下走廊已在 blocked)跳過;離線備援 = 兵線,
   // 走廊已淨空,同樣不需重複。不耗共享 rnd(佈局亂數序列不變)。
   // 同一迴圈順便把道路線段收進桶索引:建物朝向對齊最近道路(nearestRoadAngle)用。
-  const roadSegIdx = new Map();   // `${bx},${bz}`(64m 桶)-> [[x1,z1,x2,z2]…]
+  const roadSegIdx = new Map();   // `${bx},${bz}`(64m 桶)-> [[x1,z1,x2,z2,hw]…]
   const allRoadSegs = [];         // 桶內查無時的全圖備援；方形基底不得退回隨機角
   const SEG_C = 64;
-  const segBucketAdd = (x1, z1, x2, z2) => {
-    allRoadSegs.push([x1, z1, x2, z2]);
+  const segBucketAdd = (x1, z1, x2, z2, hw = 4) => {
+    const entry = [x1, z1, x2, z2, hw];
+    allRoadSegs.push(entry);
     // 線段掛進兩端桶(段長 ≤ 桶邊即涵蓋);兩端同桶只掛一次
     const k1 = `${Math.floor(x1 / SEG_C)},${Math.floor(z1 / SEG_C)}`;
     const k2 = `${Math.floor(x2 / SEG_C)},${Math.floor(z2 / SEG_C)}`;
     for (const k of (k1 === k2 ? [k1] : [k1, k2])) {
       let a = roadSegIdx.get(k);
       if (!a) roadSegIdx.set(k, a = []);
-      a.push([x1, z1, x2, z2]);
+      a.push(entry);
     }
   };
   // 建物朝向/占位吃 roadInput(線上 = OSM 道路、離線 = 兵線當街道)⇒ 兩模式建物皆能門朝街
@@ -9450,7 +9460,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           const sx = px + (x - px) * (k - 1) / n, sz = pz + (z - pz) * (k - 1) / n;
           const ex = px + (x - px) * k / n, ez = pz + (z - pz) * k / n;
           occ.add(ex, ez, hw);
-          segBucketAdd(sx, sz, ex, ez);
+          segBucketAdd(sx, sz, ex, ez, hw);
         }
       } else {
         occ.add(x, z, hw);
@@ -9494,6 +9504,33 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     return bd === Infinity ? null : bry;
   };
 
+  /**
+   * 道路淨空檢驗(2026-08-25 使用者需求「道路上不可以有建築物」)。
+   * 建物外接矩形或半徑與鄰近道路車道段進行距離檢驗,禁止任何建物壓在車道上。
+   */
+  const isRoadClear = (x, z, w, d) => {
+    const ci = Math.floor(x / SEG_C), cj = Math.floor(z / SEG_C);
+    const toScan = [];
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const a = roadSegIdx.get(`${ci + i},${cj + j}`);
+        if (a) toScan.push(...a);
+      }
+    }
+    const list = toScan.length ? toScan : allRoadSegs;
+    const r = Math.min(w, d) * 0.45;
+    for (const [x1, z1, x2, z2, hw] of list) {
+      const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz;
+      if (!l2) continue;
+      let t = ((x - x1) * dx + (z - z1) * dz) / l2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const qx = x1 + dx * t, qz = z1 + dz * t;
+      const dist = Math.hypot(x - qx, z - qz);
+      if (dist < (hw || 4) + r + 0.5) return false;
+    }
+    return true;
+  };
+
   const tryPlace = (x, z) =>
     !blocked.has(cellKey(x, z))
     && x > terrain.minX + inb && x < terrain.maxX - inb
@@ -9525,6 +9562,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 佔地對齊現實比例後改用半對角掃走廊(單格驗證擋不住大樓牆面)
         if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) continue;
         if (!occ.free(x, z, Math.max(w, d) / 2, 1)) continue;   // 不與既收建物互穿
+        if (!isRoadClear(x, z, w, d)) continue;                 // 道路淨空防線:建物不得壓在道路上
         occ.add(x, z, Math.max(w, d) / 2);
         // 朝向對齊最近道路(2026-07-17):OSM 只給中心點,隨機朝向讓沿街建物歪斜壓路。
         // rnd 先抽(消耗固定枚數,查無路才用)—— 序列不因對齊與否漂移。
@@ -9568,11 +9606,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       const d = (commercial ? 16 + rnd() * 16 : 10 + rnd() * 12) * OVER.bldXZ;
       if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) return;
       if (!occ.free(x, z, Math.max(w, d) / 2, 1)) return;
+      if (!isRoadClear(x, z, w, d)) return;   // 道路淨空防線:建物不得壓在道路上
       occ.add(x, z, Math.max(w, d) / 2);
       const rndRy = rnd() * Math.PI;   // 先抽保序列固定;附近無路(街廓深處)時 nearestRoadAngle 回 null 才用
+      const storeyTarget = commercial ? STOREY.commercial : STOREY.residential;
+      const rawH = Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap);
+      const floors = Math.max(1, Math.round(rawH / storeyTarget));
       generic.push({
         x, z, w, d,
-        h: Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap),
+        h: floors * storeyTarget,
         ry: nearestRoadAngle(x, z) ?? rndRy, commercial,
         v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
       });
@@ -9687,9 +9729,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     for (const p of res.plots) {
       if (generic.length >= MAX_BUILDINGS + MAX_INFILL) break;
       const f = frac(p.seed, 5);
+      const storeyTarget = p.commercial ? STOREY.commercial : STOREY.residential;
+      const rawH = Math.min((p.commercial ? 24 + f * 40 : 7 + f * 9) * OVER.bldH, OVER.bldCap);
+      const floors = Math.max(1, Math.round(rawH / storeyTarget));
       generic.push({
         x: p.x, z: p.z, w: p.w, d: p.d,
-        h: Math.min((p.commercial ? 24 + f * 40 : 7 + f * 9) * OVER.bldH, OVER.bldCap),
+        h: floors * storeyTarget,
         ry: p.ry, commercial: p.commercial,
         v: Math.floor(frac(p.seed, 6) * FACADES[p.commercial ? 'commercial' : 'residential'].length),
       });
@@ -10003,22 +10048,33 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           const toW = (ox, oz) => [b.x + ox * ca + oz * sa, b.z - ox * sa + oz * ca];
           let crownTop = b.h;   // 天線/告示的落點(退縮頂塔時改放塔頂)
           let crownX = b.x, crownZ = b.z;
+          const storeyTarget = commercial ? STOREY.commercial : STOREY.residential;
+          const mainFloors = Math.max(1, Math.round(b.h / storeyTarget));
+          const floorH = b.h / mainFloors;
+
           if (commercial && b.h > 55 && rnd() < 0.6) {          // 退縮頂塔(夠高可再疊一階)
             // 頂塔偏心退縮(不再置中)= 婚禮蛋糕改成 BOTW 遺跡式不對稱剪影
-            const tw = b.w * 0.62, td = b.d * 0.62, th = b.h * 0.22;
+            const tw = b.w * 0.62, td = b.d * 0.62;
+            const rawTh = b.h * 0.22;
+            const thFloors = Math.max(1, Math.round(rawTh / floorH));
+            const th = thFloors * floorH;
             const ox = (rnd() - 0.5) * (b.w - tw) * 0.8, oz = (rnd() - 0.5) * (b.d - td) * 0.8;
             [crownX, crownZ] = toW(ox, oz);
-            vis(inst).push({ x: crownX, y: gy + crownTop + th / 2 - 0.5, z: crownZ, ry: b.ry, w: tw, h: th, d: td, c: palC });
+            vis(inst).push({ x: crownX, y: gy + crownTop + th / 2 - 0.5, z: crownZ, ry: b.ry, w: tw, h: th, d: td, c: palC, rows: thFloors });
             crownTop += th;
             if (b.h > 100 && rnd() < 0.55) {
-              const t2 = th * 0.7;
-              vis(inst).push({ x: crownX, y: gy + crownTop + t2 / 2 - 0.5, z: crownZ, ry: b.ry, w: tw * 0.62, h: t2, d: td * 0.62, c: palC });
+              const rawT2 = th * 0.7;
+              const t2Floors = Math.max(1, Math.round(rawT2 / floorH));
+              const t2 = t2Floors * floorH;
+              vis(inst).push({ x: crownX, y: gy + crownTop + t2 / 2 - 0.5, z: crownZ, ry: b.ry, w: tw * 0.62, h: t2, d: td * 0.62, c: palC, rows: t2Floors });
               crownTop += t2;
             }
           }
           if (commercial && rnd() < 0.4) {                      // 臨街裙樓
-            const ph = Math.max(6, b.h * 0.12);
-            inst.push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC });
+            const rawPh = Math.max(6, b.h * 0.12);
+            const phFloors = Math.max(2, Math.round(rawPh / floorH));
+            const ph = phFloors * floorH;
+            inst.push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC, rows: phFloors });
             // 裙樓比主體寬(1.4×1.28)且齊眼高 —— 另登記自己的碰撞盒(基座段),否則玩家/鏡頭鑽進裙樓看穿牆
             blockers.push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, cl: 'bld', hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8, ty: gy + ph - 0.5 });
           }
@@ -10026,8 +10082,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const tw = Math.min(b.w, b.d) * 0.3;
             const [tx, tz] = toW((b.w / 2 - tw / 2) * (rnd() < 0.5 ? 1 : -1),
                                  (b.d / 2 - tw / 2) * (rnd() < 0.5 ? 1 : -1));
-            const th = b.h * (1.1 + rnd() * 0.1);
-            inst.push({ x: tx, y: gy + th / 2 - 0.5, z: tz, ry: b.ry, w: tw, h: th, d: tw, c: palC });
+            const rawTh = b.h * (1.1 + rnd() * 0.1);
+            const stairFloors = Math.max(mainFloors + 1, Math.round(rawTh / floorH));
+            const th = stairFloors * floorH;
+            inst.push({ x: tx, y: gy + th / 2 - 0.5, z: tz, ry: b.ry, w: tw, h: th, d: tw, c: palC, rows: stairFloors });
           }
           let gable = false;
           // 低層住宅斜屋頂:同一枚亂數三分 —— 人字雙坡(第二剪影;sakura-crossing「一排錐是
@@ -10186,7 +10244,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 保險絲幾何(不是落回方盒桶):碰撞柱已經是剖面,落回方盒會讓看到的與撞到的分家。
         // **列數逐件取**(`t.h` 是這一件自己的高度:主量體 / 退縮頂塔 / 臨街裙樓各不相同;
         // 庫節點那一列的 `t.h` 是**縮放係數**不是樓高 ⇒ 另存 `bh` 供列數用)
-        const rowsOf = (t) => facadeRows(t.bh ?? t.h, commercial);
+        const rowsOf = (t) => t.rows ?? facadeRows(t.bh ?? t.h, commercial);
         const boxRows = new Map(), libRows = new Map();
         for (const t of inst) {
           if (!t.lib) {

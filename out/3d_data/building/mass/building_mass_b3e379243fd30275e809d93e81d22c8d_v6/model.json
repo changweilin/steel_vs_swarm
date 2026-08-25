@@ -33,12 +33,12 @@
       "type": "box",
       "dimensions": [
         8,
-        15,
+        14,
         7
       ],
       "position": [
         0,
-        8.5,
+        8.4,
         0
       ],
       "rotation": [
@@ -59,7 +59,7 @@
       ],
       "position": [
         0,
-        16.2,
+        15.6,
         0
       ],
       "rotation": [
@@ -75,12 +75,12 @@
       "type": "box",
       "dimensions": [
         0.5,
-        15.2,
+        14.6,
         7.2
       ],
       "position": [
         -4,
-        8.5,
+        8.3,
         0
       ],
       "rotation": [
@@ -96,12 +96,12 @@
       "type": "box",
       "dimensions": [
         0.5,
-        15.2,
+        14.6,
         7.2
       ],
       "position": [
         4,
-        8.5,
+        8.3,
         0
       ],
       "rotation": [
@@ -122,7 +122,7 @@
       ],
       "position": [
         2,
-        14.5,
+        14,
         3.6
       ],
       "rotation": [
@@ -131,132 +131,6 @@
         0
       ],
       "color": 16777215,
-      "triangles": 12
-    },
-    {
-      "name": "balcony_slab_1",
-      "type": "box",
-      "dimensions": [
-        5.2,
-        0.3,
-        1.2
-      ],
-      "position": [
-        -0.5,
-        12,
-        3.8
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 16777215,
-      "triangles": 12
-    },
-    {
-      "name": "balcony_glass_1",
-      "type": "box",
-      "dimensions": [
-        5,
-        0.9,
-        0.1
-      ],
-      "position": [
-        -0.5,
-        12.6,
-        4.3
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "balcony_slab_2",
-      "type": "box",
-      "dimensions": [
-        5.2,
-        0.3,
-        1.2
-      ],
-      "position": [
-        -0.5,
-        9.8,
-        3.8
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 16777215,
-      "triangles": 12
-    },
-    {
-      "name": "balcony_glass_2",
-      "type": "box",
-      "dimensions": [
-        5,
-        0.9,
-        0.1
-      ],
-      "position": [
-        -0.5,
-        10.4,
-        4.3
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "balcony_slab_3",
-      "type": "box",
-      "dimensions": [
-        5.2,
-        0.3,
-        1.2
-      ],
-      "position": [
-        -0.5,
-        7.6,
-        3.8
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 16777215,
-      "triangles": 12
-    },
-    {
-      "name": "balcony_glass_3",
-      "type": "box",
-      "dimensions": [
-        5,
-        0.9,
-        0.1
-      ],
-      "position": [
-        -0.5,
-        8.2,
-        4.3
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
       "triangles": 12
     },
     {
@@ -269,7 +143,7 @@
       ],
       "position": [
         -0.5,
-        5.4,
+        3.3,
         3.8
       ],
       "rotation": [
@@ -290,8 +164,302 @@
       ],
       "position": [
         -0.5,
-        6,
+        3.9,
         4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "right_column_window_4",
+      "type": "box",
+      "dimensions": [
+        1.8,
+        1.2,
+        0.1
+      ],
+      "position": [
+        2.8,
+        3.9,
+        3.55
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "left_side_window_4",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -4.05,
+        3.9,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "balcony_slab_3",
+      "type": "box",
+      "dimensions": [
+        5.2,
+        0.3,
+        1.2
+      ],
+      "position": [
+        -0.5,
+        6.3,
+        3.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    },
+    {
+      "name": "balcony_glass_3",
+      "type": "box",
+      "dimensions": [
+        5,
+        0.9,
+        0.1
+      ],
+      "position": [
+        -0.5,
+        6.9,
+        4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "right_column_window_3",
+      "type": "box",
+      "dimensions": [
+        1.8,
+        1.2,
+        0.1
+      ],
+      "position": [
+        2.8,
+        6.9,
+        3.55
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "left_side_window_3",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -4.05,
+        6.9,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "balcony_slab_2",
+      "type": "box",
+      "dimensions": [
+        5.2,
+        0.3,
+        1.2
+      ],
+      "position": [
+        -0.5,
+        9.3,
+        3.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    },
+    {
+      "name": "balcony_glass_2",
+      "type": "box",
+      "dimensions": [
+        5,
+        0.9,
+        0.1
+      ],
+      "position": [
+        -0.5,
+        9.9,
+        4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "right_column_window_2",
+      "type": "box",
+      "dimensions": [
+        1.8,
+        1.2,
+        0.1
+      ],
+      "position": [
+        2.8,
+        9.9,
+        3.55
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "left_side_window_2",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -4.05,
+        9.9,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "balcony_slab_1",
+      "type": "box",
+      "dimensions": [
+        5.2,
+        0.3,
+        1.2
+      ],
+      "position": [
+        -0.5,
+        12.3,
+        3.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    },
+    {
+      "name": "balcony_glass_1",
+      "type": "box",
+      "dimensions": [
+        5,
+        0.9,
+        0.1
+      ],
+      "position": [
+        -0.5,
+        12.9,
+        4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "right_column_window_1",
+      "type": "box",
+      "dimensions": [
+        1.8,
+        1.2,
+        0.1
+      ],
+      "position": [
+        2.8,
+        12.9,
+        3.55
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    },
+    {
+      "name": "left_side_window_1",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -4.05,
+        12.9,
+        1.5
       ],
       "rotation": [
         0,
@@ -311,7 +479,7 @@
       ],
       "position": [
         -2,
-        6.5,
+        5,
         3.7
       ],
       "rotation": [
@@ -320,174 +488,6 @@
         0
       ],
       "color": 16777215,
-      "triangles": 12
-    },
-    {
-      "name": "right_column_window_1",
-      "type": "box",
-      "dimensions": [
-        1.8,
-        0.8,
-        0.1
-      ],
-      "position": [
-        2.8,
-        13.5,
-        3.55
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "right_column_window_2",
-      "type": "box",
-      "dimensions": [
-        1.8,
-        0.8,
-        0.1
-      ],
-      "position": [
-        2.8,
-        10.8,
-        3.55
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "right_column_window_3",
-      "type": "box",
-      "dimensions": [
-        1.8,
-        0.8,
-        0.1
-      ],
-      "position": [
-        2.8,
-        8.1,
-        3.55
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "right_column_window_4",
-      "type": "box",
-      "dimensions": [
-        1.8,
-        0.8,
-        0.1
-      ],
-      "position": [
-        2.8,
-        5.4,
-        3.55
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "left_side_window_1",
-      "type": "box",
-      "dimensions": [
-        0.1,
-        0.8,
-        1.2
-      ],
-      "position": [
-        -4.05,
-        13.5,
-        1.5
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "left_side_window_2",
-      "type": "box",
-      "dimensions": [
-        0.1,
-        0.8,
-        1.2
-      ],
-      "position": [
-        -4.05,
-        10.8,
-        1.5
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "left_side_window_3",
-      "type": "box",
-      "dimensions": [
-        0.1,
-        0.8,
-        1.2
-      ],
-      "position": [
-        -4.05,
-        8.1,
-        1.5
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
-      "triangles": 12
-    },
-    {
-      "name": "left_side_window_4",
-      "type": "box",
-      "dimensions": [
-        0.1,
-        0.8,
-        1.2
-      ],
-      "position": [
-        -4.05,
-        5.4,
-        1.5
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "color": 3368652,
       "triangles": 12
     },
     {
