@@ -9,7 +9,8 @@
 //
 // 紀律與規範：
 //   - 零 npm 依賴、vanilla ES-module JS + Three.js 0.160
-//   - 表現層歸表現層：全部純視覺表現，不影響伺服器權威幾何與平衡判定
+//   - 生物/粒子/動態船艦維持純視覺；固定沉船、建築與遺跡由實際網格推導 blockers，
+//     與玩家推擠、彈道及伺服器 LOS 共用同一份幾何
 //   - 確定性散布：走 mulberry32 與落點雜湊 (aquaticSeed)，零共享 rnd() 消耗
 //   - 尺度：SOLDIER_H (1.8m) 真實世界尺度
 //   - 材質與描邊：整合 toonMat、toonPlain、envMat、markShared，正確釋放 GPU 資源
@@ -53,6 +54,12 @@ export const AQUATIC = {
 
   // 渲染限制
   MAX_UNDERWATER_PROPS: 48,
+
+  // 沉船姿態：固定三枚亂數決定是否傾斜、方向與角度，避免分支改變後續散布序列。
+  WRECK_TILT_SHARE: 0.8,
+  WRECK_TILT_MIN: 0.32,
+  WRECK_TILT_MAX: 0.62,
+  WRECK_BURY_F: 0.18,
 };
 
 /** 座標雜湊種子（零共享 rnd 消耗） */
@@ -737,10 +744,57 @@ export function buildRelicObject(kind, group, x, y, z, rnd, opts = {}) {
   }
 }
 
+const _relicBox = new THREE.Box3();
+const _meshBox = new THREE.Box3();
+const _relicFrame = new THREE.Matrix4();
+const _relicFrameInv = new THREE.Matrix4();
+const _relicPos = new THREE.Vector3();
+const _relicSize = new THREE.Vector3();
+
+/**
+ * 固定巨物碰撞的單一量尺：以物件 yaw 為盒軸，將傾斜、斷件與子零件姿態全部烤進外廓。
+ * 圓形 r 僅作 broad phase；移動、彈道與 LOS 均吃同一個 hw2/hd2/ry 有向盒(A30)。
+ */
+export function relicCollider(object, name = 'relic') {
+  if (!object) return null;
+  object.updateWorldMatrix(true, true);
+  object.getWorldPosition(_relicPos);
+  const ry = object.rotation.y;
+  _relicFrame.makeRotationY(ry).setPosition(_relicPos);
+  _relicFrameInv.copy(_relicFrame).invert();
+  _relicBox.makeEmpty();
+  object.traverse((node) => {
+    if (!node.isMesh || !node.geometry) return;
+    if (!node.geometry.boundingBox) node.geometry.computeBoundingBox();
+    _meshBox.copy(node.geometry.boundingBox).applyMatrix4(node.matrixWorld).applyMatrix4(_relicFrameInv);
+    _relicBox.union(_meshBox);
+  });
+  if (_relicBox.isEmpty()) return null;
+  _relicBox.getCenter(_relicPos).applyMatrix4(_relicFrame);
+  _relicBox.getSize(_relicSize);
+  const hw2 = _relicSize.x / 2, hd2 = _relicSize.z / 2;
+  return {
+    x: _relicPos.x, z: _relicPos.z, y: _relicPos.y - _relicSize.y / 2,
+    h: Math.max(0.1, _relicSize.y), hw2, hd2, ry,
+    r: Math.hypot(hw2, hd2), name,
+  };
+}
+
+function wreckPose(group, rnd, floorY, halfLength) {
+  const tilted = rnd() < AQUATIC.WRECK_TILT_SHARE;
+  const sign = rnd() < 0.5 ? -1 : 1;
+  const angle = AQUATIC.WRECK_TILT_MIN
+    + rnd() * (AQUATIC.WRECK_TILT_MAX - AQUATIC.WRECK_TILT_MIN);
+  const pitch = tilted ? sign * angle : 0;
+  group.rotation.x = pitch;
+  group.position.y = floorY - Math.sin(Math.abs(pitch)) * halfLength * AQUATIC.WRECK_BURY_F;
+  group.userData.wreckTilted = tilted;
+}
+
 /**
  * 建立水下世界之多元建築、潛艦、沈船、古代遺跡與現代殘骸
  */
-export function buildSunkenRelics(parentGroup, terrain, seed) {
+export function buildSunkenRelics(parentGroup, terrain, seed, blockers = []) {
   const wy = terrain?.waterY;
   if (wy == null) return;
   const rnd = mulberry32((seed ^ 0x62B710) >>> 0);
@@ -761,7 +815,9 @@ export function buildSunkenRelics(parentGroup, terrain, seed) {
     // 水下深水區 (code === 1 && depth >= 3.0m)
     if (code === 1 && wy - floorY >= 3.0) {
       const kind = underwaterKinds[Math.floor(rnd() * underwaterKinds.length)];
-      buildRelicObject(kind, parentGroup, x, floorY, z, rnd, { isLand: false });
+      const relic = buildRelicObject(kind, parentGroup, x, floorY, z, rnd, { isLand: false });
+      const col = relicCollider(relic, `aquatic_${kind}`);
+      if (col) blockers.push(col);
       relicCount++;
     }
   }
@@ -868,24 +924,41 @@ export function buildShipwreck(group, x, y, z, rnd, opts = {}) {
   const wreckGroup = new THREE.Group();
   wreckGroup.position.set(x, y, z);
   wreckGroup.rotation.y = rnd() * Math.PI * 2;
-  wreckGroup.rotation.z = 0.28; // 側翻在海床或地表上
+  wreckPose(wreckGroup, rnd, y, 9);
 
   const woodCol = opts.isLand ? PALETTE.woodWreck[1] : PALETTE.woodWreck[0];
   const woodMat = envMat(woodCol, { bands: 'hard' });
+  const rotMat = envMat(PALETTE.woodWreck[1], { bands: 'hard' });
   const ironMat = toonMat(PALETTE.ironWreck[0], { celMetal: true });
 
-  // 船龍骨與彎曲肋骨排
-  const keelGeo = new THREE.BoxGeometry(1.2, 0.8, 18);
-  const keel = new THREE.Mesh(keelGeo, woodMat);
-  wreckGroup.add(keel);
+  // 斷裂龍骨：兩段錯位且中央留破口，避免完整船殼讀成仍可航行的船。
+  for (const side of [-1, 1]) {
+    const keel = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 7.7), side < 0 ? woodMat : rotMat);
+    keel.position.set(side * 0.32, side * 0.18, side * 4.9);
+    keel.rotation.set(side * 0.05, side * 0.06, side * 0.08);
+    wreckGroup.add(keel);
+  }
 
   // 肋骨排 (Ribs)
   const ribGeo = new THREE.TorusGeometry(3.5, 0.35, 4, 8, Math.PI);
   ribGeo.rotateY(Math.PI / 2);
   for (let r = -6; r <= 6; r += 2) {
+    const missing = rnd() < 0.28;
+    const wear = rnd();
+    if (missing) continue;
     const rib = new THREE.Mesh(ribGeo, woodMat);
     rib.position.set(0, 1.2, r * 1.2);
+    rib.rotation.z = (wear - 0.5) * 0.14;
     wreckGroup.add(rib);
+  }
+
+  // 腐爛斑駁木片：深淺硬邊斑塊附著在殘存龍骨外側，不另開隨機散布系統。
+  for (let p = 0; p < 7; p++) {
+    const side = p & 1 ? -1 : 1;
+    const patch = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.06, 0.8 + rnd() * 1.4), rotMat);
+    patch.position.set(side * 0.06, 0.44, -6.2 + p * 2.05);
+    patch.rotation.y = (rnd() - 0.5) * 0.18;
+    wreckGroup.add(patch);
   }
 
   // 斷裂傾倒的主桅杆
@@ -1151,11 +1224,12 @@ export function buildBattleshipWreck(group, x, y, z, rnd, opts = {}) {
   const shipGroup = new THREE.Group();
   shipGroup.position.set(x, y, z);
   shipGroup.rotation.y = rnd() * Math.PI * 2;
-  shipGroup.rotation.z = (rnd() - 0.5) * 0.15;
+  wreckPose(shipGroup, rnd, y, 10.5);
 
   const steelCol = opts.isLand ? PALETTE.relicRust[0] : PALETTE.ironWreck[0];
   const steelMat = toonMat(steelCol, { celMetal: true });
   const darkMat = toonMat(PALETTE.subHull[0], { celMetal: true });
+  const rustMat = toonMat(PALETTE.relicRust[0], { celMetal: true });
 
   // 1. 楔形厚重裝甲船首 (Armored Prow)
   const prowGeo = new THREE.BoxGeometry(5.8, 4.5, 14.0);
@@ -1169,6 +1243,20 @@ export function buildBattleshipWreck(group, x, y, z, rnd, opts = {}) {
   stemGeo.translate(0, 2.0, 10.5);
   const stem = new THREE.Mesh(stemGeo, steelMat);
   shipGroup.add(stem);
+
+  // 裝甲破口與鏽蝕補丁：硬邊色塊 + 外露肋材，遠景也能讀出斷裂與斑駁。
+  for (let p = 0; p < 5; p++) {
+    const patch = new THREE.Mesh(new THREE.BoxGeometry(1.2 + rnd() * 1.8, 0.08, 1.0 + rnd() * 2.2), rustMat);
+    patch.position.set((rnd() - 0.5) * 4.8, 4.28, -2.5 + p * 2.7);
+    patch.rotation.y = (rnd() - 0.5) * 0.3;
+    shipGroup.add(patch);
+  }
+  for (const side of [-1, 1]) {
+    const rib = new THREE.Mesh(new THREE.BoxGeometry(0.35, 3.0, 4.4), darkMat);
+    rib.position.set(side * 2.55, 2.1, -5.8);
+    rib.rotation.z = side * 0.2;
+    shipGroup.add(rib);
+  }
 
   // 2. 雙聯裝重型主砲塔 (Twin-Gun Turret)
   const turretBaseGeo = new THREE.CylinderGeometry(2.6, 2.8, 1.2, 10);
@@ -1871,7 +1959,7 @@ function buildDinghyMesh() {
  * @param {object} env
  * @returns {object} { step(dt, time, camera), dispose() }
  */
-export function buildAquaticWorld(scene, terrain, env) {
+export function buildAquaticWorld(scene, terrain, env = {}) {
   const wy = terrain?.waterY;
   if (wy == null) {
     return {
@@ -1889,7 +1977,7 @@ export function buildAquaticWorld(scene, terrain, env) {
 
   // 1. 靜態地景：水生植物、珊瑚礁、沉船、潛艦、古代神殿遺跡、浸沒建築
   buildAquaticFlora(rootGroup, terrain, seed);
-  buildSunkenRelics(rootGroup, terrain, seed);
+  buildSunkenRelics(rootGroup, terrain, seed, env.blockers);
 
   // 2. 動態子系統：氣泡、懸浮微粒、魚群、水母群、水面船艦
   const bubbleSys = createBubbleSystem(terrain, seed);

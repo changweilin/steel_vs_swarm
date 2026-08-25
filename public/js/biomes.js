@@ -90,7 +90,7 @@ import {
   WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
-import { buildAquaticWorld, buildRelicObject, RELIC_KINDS } from './aquatics.js';
+import { buildAquaticWorld, buildRelicObject, relicCollider, RELIC_KINDS } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
@@ -391,6 +391,37 @@ const VEG_DEFS = {
                          { g: ico(1.3), y: 0.7, px: -1.9, pz: 1.1, sy: 0.7, j: 2, c: 0x968e7c },
                          { g: cone(2.2, 1.8, 7), y: 0.9, pz: -1.6, j: 2, c: 0x857e70 }] },
 };
+
+const TRUNK_TYPES = new Set([
+  'bamboo', 'broadleaf', 'birch', 'conifer', 'deadtree', 'mangrove',
+  'conifer2', 'conifer3', 'conifer4', 'sapling',
+]);
+
+/** 一般樹幹碰撞吃 VEG_DEFS 的木質首件與 vegPartXform，同畫面實例共用同一把變換尺。 */
+function registerTreeTrunkColliders(items, blockers) {
+  const box = new THREE.Box3(), size = new THREE.Vector3(), center = new THREE.Vector3();
+  const mat = new THREE.Matrix4(), pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
+  let count = 0;
+  for (const type of TRUNK_TYPES) {
+    const part = VEG_DEFS[type]?.parts?.[0];
+    if (!part) continue;
+    if (!part.g.boundingBox) part.g.computeBoundingBox();
+    for (const it of items[type] || []) {
+      const xf = vegPartXform(part, it);
+      pos.fromArray(xf.pos); quat.fromArray(xf.quat); scl.fromArray(xf.scl);
+      mat.compose(pos, quat, scl);
+      box.copy(part.g.boundingBox).applyMatrix4(mat);
+      box.getSize(size); box.getCenter(center);
+      const r = Math.max(size.x, size.z) / 2;
+      blockers.push({
+        x: center.x, z: center.z, y: box.min.y,
+        r: Math.max(0.05, r), h: Math.max(0.1, size.y), cl: 'tree', name: `trunk_${type}`,
+      });
+      count++;
+    }
+  }
+  return count;
+}
 
 // ---- 神木(全球實存 >65m 巨樹樹種;綠地超尺度地標植被)----
 //   紅杉(海岸紅杉 115m)/ 巨杉(世界爺 95m)/ 杏仁桉(澳洲王桉 100m)/
@@ -4790,13 +4821,14 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
     }
 
     const g = new THREE.Group();
-    buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true });
+    const relic = buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true });
     g.position.set(sx, gy, sz);
     bakeContactAO(g, 5);
 
     group.add(g);
     blockArea(blocked, sx, sz, r);
-    blockers?.push({ x: sx, z: sz, r, h: 8, name: `relic_${kind}` });
+    const col = relicCollider(relic, `relic_${kind}`);
+    if (col) blockers?.push(col);
     placedList.push({ x: sx, z: sz, r });
     placedCount++;
   }
@@ -11493,6 +11525,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
     // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
   });
+  // 落點與建物/地被淘汰全部定案後才追加：只增加物理，不反向推移既有世界佈局。
+  const trunkColliders = registerTreeTrunkColliders(items, blockers);
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
   await onProgress?.(0.9, '鋪設道路路面…');
@@ -11564,7 +11598,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // ---- 水下與沼澤生態、動態、動植物、遺跡與船艦 (aquatics.js) ----
   if (terrain.waterY != null) {
-    const aquaticWorld = buildAquaticWorld(group, terrain, { season });
+    const aquaticWorld = buildAquaticWorld(group, terrain, { season, blockers });
     if (aquaticWorld?.step) {
       dynamics.push((dt) => aquaticWorld.step(dt, celWindTime()));
     }
@@ -11629,6 +11663,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   group.userData.stats = {
     veg: placed,
     giantTrees,
+    trunkColliders,
     megaliths: megalithsBuilt,
     relics: relicsBuilt,
     beacons: beaconsBuilt,

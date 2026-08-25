@@ -7,6 +7,8 @@
 //   --break-trans   (破壞過渡帶插值)
 //   --break-viscous (破壞沼澤波浪黏滯度)
 //   --break-bubble  (破壞氣泡上升速度分級)
+//   --break-collider(拔掉固定水下巨物碰撞接線)
+//   --break-wreck   (把沉船傾斜比例改成 20%)
 
 import { readSrc } from './audit_src.mjs';
 import { mulberry32 } from '../public/js/rng.js';
@@ -16,6 +18,8 @@ const BREAK_TRANS = process.argv.includes('--break-trans');
 const BREAK_VISCOUS = process.argv.includes('--break-viscous');
 const BREAK_BUBBLE = process.argv.includes('--break-bubble');
 const BREAK_RELIC = process.argv.includes('--break-relic');
+const BREAK_COLLIDER = process.argv.includes('--break-collider');
+const BREAK_WRECK = process.argv.includes('--break-wreck');
 
 let pass = 0, fail = 0;
 function ok(cond, msg) {
@@ -34,6 +38,7 @@ console.log('== 水下與沼澤生態、動態與遺跡系統稽核 ==\n');
 const aquaticsSrc = readSrc('public', 'js', 'aquatics.js');
 const toonSrc = readSrc('public', 'js', 'toon.js');
 const biomesSrc = readSrc('public', 'js', 'biomes.js');
+const groundSrc = readSrc('public', 'js', 'ground.js');
 const gameSrc = readSrc('public', 'js', 'game.js');
 
 // ▍Ⅰ 模組匯出與常數架構 (AQUATIC)
@@ -52,6 +57,10 @@ ok(AQUATIC.BUBBLE_COUNT_WATER > 0 && AQUATIC.BUBBLE_COUNT_SWAMP > 0, '氣泡數�
 ok(AQUATIC.FISH_SCHOOLS_MAX >= 3, '魚群上限常數滿足生態密度');
 ok(AQUATIC.JELLYFISH_MAX >= 10, '水母群上限常數滿足生態密度');
 ok(AQUATIC.SHIP_CRUISE_SPD > 0, '巡弋船速常數正確定義');
+const wreckTiltShare = BREAK_WRECK ? 0.2 : AQUATIC.WRECK_TILT_SHARE;
+ok(wreckTiltShare === 0.8, `沉船 80% 採傾斜半埋姿態 (實得 ${(wreckTiltShare * 100).toFixed(0)}%)`);
+ok(AQUATIC.WRECK_TILT_MIN > 0 && AQUATIC.WRECK_TILT_MAX > AQUATIC.WRECK_TILT_MIN
+  && AQUATIC.WRECK_BURY_F > 0, '沉船傾角帶與另一端埋地係數皆為正');
 
 // ▍Ⅱ 沼澤水面黏滯波浪與軟性物質 (Viscous Swamp Waves & SOFT_KINDS)
 console.log('\n▍Ⅱ 沼澤水面黏滯波浪與軟性物質');
@@ -141,6 +150,19 @@ ok(biomesSrc.includes('buildAquaticWorld('), 'biomes.js 接管 buildAquaticWorld
 ok(biomesSrc.includes('buildSwampSurface'), 'biomes.js 具備 buildSwampSurface');
 ok(biomesSrc.includes('swampSoft()'), 'buildSwampSurface 採用 swampSoft 黏滯波');
 ok(gameSrc.includes('aquaticTransition('), 'game.js 在 _updateWaterVeil 呼叫 aquaticTransition');
+const colliderSrc = BREAK_COLLIDER ? aquaticsSrc.replace('if (col) blockers.push(col);', '') : aquaticsSrc;
+ok(colliderSrc.includes('export function relicCollider('), '固定遺跡碰撞由實際子網格外廓推導');
+ok(colliderSrc.includes('buildSunkenRelics(rootGroup, terrain, seed, env.blockers)'),
+  '水下建築、沉船與遺跡接入場景 blockers');
+ok(colliderSrc.includes('if (col) blockers.push(col);'), '每個固定水下巨物登記一顆有向盒');
+ok(biomesSrc.includes('buildAquaticWorld(group, terrain, { season, blockers })'),
+  'biomes.js 將移動/彈道/LOS 共用 blockers 注入水下系統');
+ok(biomesSrc.includes('registerTreeTrunkColliders(items, blockers)'), '一般樹幹在散布定案後登記物理碰撞');
+ok(biomesSrc.includes('relicCollider(relic, `relic_${kind}`)'), '荒野廢棄遺跡沿用同一幾何量尺');
+ok(groundSrc.includes("'container', 'carwreck'") && groundSrc.includes('const col = detailCollider(type, it);'),
+  '固定交通殘骸與大型地表擺件以實際零件外廓登記碰撞');
+ok(aquaticsSrc.includes('const missing = rnd() < 0.28') && aquaticsSrc.includes('rotMat'),
+  '木造沉船具斷裂缺口與腐爛斑駁零件');
 
 // ▍Ⅶ 建築、沉船、古代遺跡與現代殘骸多樣化型錄 (Relic & Architectural Diversity)
 console.log('\n▍Ⅶ 建築、沉船、古代遺跡與現代殘骸多樣化型錄');
