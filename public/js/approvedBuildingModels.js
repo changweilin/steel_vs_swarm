@@ -37,7 +37,8 @@ export function fitApprovedBuilding(building) {
     for (const rot of [0, 1]) {
       const aspect = rot ? size[2] / size[0] : size[0] / size[2];
       const stretch = Math.exp(Math.abs(Math.log(target / aspect)));
-      ranked.push({ entry, rot, score: Math.log(stretch) + semanticPenalty(entry, !!building.commercial) });
+      const heightStretch = Math.exp(Math.abs(Math.log(Math.max(building.h || 10, 0.001) / Math.max(size[1], 0.001))));
+      ranked.push({ entry, rot, score: Math.log(stretch) + Math.log(heightStretch) * 0.4 + semanticPenalty(entry, !!building.commercial) });
     }
   }
   ranked.sort((a, b) => a.score - b.score

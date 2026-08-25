@@ -223,6 +223,11 @@ async function auditPedestrianEntrancesBesideRoad() {
     if (breakVerge) ey = 0; // 故意壓在道路中心線
     const distToRoad = Math.abs(ey); // 道路在 z=0
     assert(distToRoad >= 4.5 + 3.2, `出入口 (x=${ent.x.toFixed(2)}, z=${ent.z.toFixed(2)}) 位於路旁 (距離中心線 ${distToRoad.toFixed(2)}m >= 7.7m)`);
+    // 驗證正面朝向迎向道路或順路側，絕不背對道路 (道路在 z=0, ent.z > 0 時背對為 cos(ry) > 0.5)
+    const forwardZ = Math.cos(ent.ry);
+    const roadDirZ = -Math.sign(ent.z || 1); // 迎向道路方向
+    assert(forwardZ * roadDirZ >= -0.01, `出入口 (ry=${ent.ry.toFixed(3)}) 正對或側對道路，絕不背對 (forwardZ*roadDirZ=${(forwardZ * roadDirZ).toFixed(3)} >= 0)`);
+    assert(ent.archetype && typeof ent.archetype === 'string', `出入口已分派 PED_ARCHETYPES 樣式 (${ent.archetype})`);
   }
 }
 

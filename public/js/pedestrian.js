@@ -20,9 +20,19 @@ export const PED_PLAN = {
 
 // 一個生成器族 + 一張款式表；渲染端不得為每一款複製一套建模函式。
 export const PED_ARCHETYPES = Object.freeze({
-  station:   { w: 5.8, d: 7.2, h: 3.3, roof: 0x44687c, frame: 0xd8e0e3, wall: 0x91a6ad },
-  underpass: { w: 5.2, d: 6.4, h: 2.8, roof: 0x77736b, frame: 0xb7b4aa, wall: 0x8f8b82 },
+  station:              { w: 5.8, d: 7.2, h: 3.3, roof: 0x44687c, frame: 0xd8e0e3, wall: 0x91a6ad, style: 'canopy' },
+  station_modern:       { w: 6.0, d: 7.6, h: 3.4, roof: 0x3a5d73, frame: 0xe0e6eb, wall: 0x768c96, style: 'modern' },
+  station_canopy:       { w: 5.6, d: 7.2, h: 3.2, roof: 0x2e6b8a, frame: 0xd0d8de, wall: 0x85a2b0, style: 'canopy' },
+  station_pavilion:     { w: 6.2, d: 7.8, h: 3.6, roof: 0x5a4236, frame: 0xc8baa8, wall: 0x9e8a76, style: 'pavilion' },
+  underpass:            { w: 5.2, d: 6.4, h: 2.8, roof: 0x77736b, frame: 0xb7b4aa, wall: 0x8f8b82, style: 'cantilever' },
+  underpass_cantilever: { w: 5.4, d: 6.6, h: 3.0, roof: 0x485868, frame: 0xccd5dd, wall: 0x82919d, style: 'cantilever' },
+  underpass_concrete:   { w: 5.2, d: 6.4, h: 2.8, roof: 0x6e6a64, frame: 0x9c968e, wall: 0x8a847c, style: 'concrete' },
+  underpass_open:       { w: 4.8, d: 6.0, h: 2.2, roof: 0x505860, frame: 0xb8c0c8, wall: 0x707880, style: 'open' },
+  underpass_covered:    { w: 5.0, d: 6.2, h: 2.9, roof: 0x3d6652, frame: 0xb4c2ba, wall: 0x7d8e85, style: 'covered' },
 });
+
+const STATION_ARCHETYPES = ['station_modern', 'station_canopy', 'station_pavilion', 'station'];
+const UNDERPASS_ARCHETYPES = ['underpass_cantilever', 'underpass_concrete', 'underpass_open', 'underpass_covered', 'underpass'];
 
 const PED_HW = /^(footway|path|pedestrian|steps|cycleway|bridleway)$/;
 const on = (v) => v != null && !/^(?:no|false|0)$/.test(String(v));
@@ -137,23 +147,35 @@ function offsetBesideRoad(x, z, dx, dz, roadTargets) {
   const d = Math.sqrt(nearRoad.d2);
   const roadHw = 4.5;
   const minClearance = roadHw + 3.5 + 1.2; // 9.2m: 移至道路旁路緣/人行道,杜絕壓在車道上
-  if (d < minClearance) {
-    let nx = x - nearRoad.qx, nz = z - nearRoad.qz;
-    let nl = Math.hypot(nx, nz);
-    if (nl < 0.1) {
-      nx = -nearRoad.seg.uz;
-      nz = nearRoad.seg.ux;
-      if (dx * nx + dz * nz < 0) { nx = -nx; nz = -nz; }
-      nl = 1;
-    }
-    nx /= nl;
-    nz /= nl;
-    const nxPos = nearRoad.qx + nx * minClearance;
-    const nzPos = nearRoad.qz + nz * minClearance;
-    const ry = Math.atan2(nearRoad.seg.ux, nearRoad.seg.uz);
-    return { x: nxPos, z: nzPos, ry };
+
+  let nx = x - nearRoad.qx, nz = z - nearRoad.qz;
+  let nl = Math.hypot(nx, nz);
+  if (nl < 0.1) {
+    nx = -nearRoad.seg.uz;
+    nz = nearRoad.seg.ux;
+    if (dx * nx + dz * nz < 0) { nx = -nx; nz = -nz; }
+    nl = 1;
   }
-  return { x, z, ry: Math.atan2(dx, dz) };
+  nx /= nl;
+  nz /= nl;
+  const posX = d < minClearance ? nearRoad.qx + nx * minClearance : x;
+  const posZ = d < minClearance ? nearRoad.qz + nz * minClearance : z;
+
+  // 出入口朝向：正對道路（迎向路心）或側對道路（順路側方向），絕不背對道路
+  // 迎向路心方向：[-nx, -nz]
+  // 順路側方向：[nearRoad.seg.ux, nearRoad.seg.uz] 或 [-nearRoad.seg.ux, -nearRoad.seg.uz]
+  const h = ((Math.round(posX * 10) * 73856093) ^ (Math.round(posZ * 10) * 19349663) ^ 101) >>> 0;
+  const faceMode = (h % 100) < 45 ? 'road' : 'side'; // 45% 正對道路, 55% 側對道路
+  let ry;
+  if (faceMode === 'road') {
+    ry = Math.atan2(-nx, -nz);
+  } else {
+    const ux = nearRoad.seg.ux, uz = nearRoad.seg.uz;
+    const dot = dx * ux + dz * uz;
+    const sign = dot < 0 ? -1 : 1;
+    ry = Math.atan2(ux * sign, uz * sign);
+  }
+  return { x: posX, z: posZ, ry };
 }
 
 function endpointSites(way, pts, stations, roadTargets = null) {
@@ -183,6 +205,70 @@ function mergeEntrances(sites) {
     }
   }
   return out;
+}
+
+function clusterAndBrandEntrances(entrances, stations) {
+  if (!entrances || !entrances.length) return entrances;
+  const visited = new Set();
+  const clusters = [];
+
+  for (let i = 0; i < entrances.length; i++) {
+    if (visited.has(i)) continue;
+    const cluster = [entrances[i]];
+    visited.add(i);
+    for (let j = i + 1; j < entrances.length; j++) {
+      if (visited.has(j)) continue;
+      const e1 = entrances[i], e2 = entrances[j];
+      const d2 = (e1.x - e2.x) ** 2 + (e1.z - e2.z) ** 2;
+      const sameStation = e1.stationTags && e2.stationTags && e1.stationTags === e2.stationTags;
+      if (sameStation || d2 <= PED_PLAN.STATION_NEAR_M ** 2) {
+        cluster.push(e2);
+        visited.add(j);
+      }
+    }
+    clusters.push(cluster);
+  }
+
+  for (const cluster of clusters) {
+    const isStat = cluster.some((e) => e.kind === 'station');
+    // 1. 同一區統一地名／站名
+    let baseName = null;
+    for (const e of cluster) {
+      const st = e.stationTags || e.tags;
+      const name = st?.name || st?.['name:zh'] || st?.['name:zh-Hant'] || st?.['name:en'];
+      if (name) { baseName = name; break; }
+    }
+    if (!baseName) {
+      baseName = isStat ? '捷運站' : '人行地下道';
+    }
+
+    // 2. 同一區統一外觀樣式 (由聚類中心與名稱雜湊決定)
+    const cx = cluster.reduce((sum, e) => sum + e.x, 0) / cluster.length;
+    const cz = cluster.reduce((sum, e) => sum + e.z, 0) / cluster.length;
+    let ch = ((Math.round(cx * 10) * 73856093) ^ (Math.round(cz * 10) * 19349663) ^ (baseName.length * 37)) >>> 0;
+    const stylePool = isStat ? STATION_ARCHETYPES : UNDERPASS_ARCHETYPES;
+    const styleKey = stylePool[ch % stylePool.length];
+
+    // 3. 循序幾何排序與編號分派
+    cluster.sort((a, b) => {
+      const angA = Math.atan2(a.z - cz, a.x - cx);
+      const angB = Math.atan2(b.z - cz, b.x - cx);
+      return angA - angB || a.x - b.x || a.z - b.z;
+    });
+
+    cluster.forEach((e, idx) => {
+      e.archetype = styleKey;
+      const ref = e.tags?.ref || String(idx + 1);
+      e.exitNum = ref;
+      e.baseName = baseName;
+      if (isStat) {
+        e.signText = `${baseName} 出口 ${ref}`;
+      } else {
+        e.signText = cluster.length > 1 ? `${baseName} ${ref}號出入口` : `${baseName}`;
+      }
+    });
+  }
+  return entrances;
 }
 
 /**
@@ -235,8 +321,10 @@ export function planPedestrianNetwork({ roads = [], rails = [], pois = [], entra
   }
 
   const merged = mergeEntrances(sites);
-  return { roads: kept, entrances: merged, stats: {
+  const branded = clusterAndBrandEntrances(merged, stations);
+  return { roads: kept, entrances: branded, stats: {
     inputWays: roads.length, outputWays: kept.length, undergroundRemoved: underground,
-    entrances: merged.length, footbridges, oldstreet, cycleway, promenade,
+    entrances: branded.length, footbridges, oldstreet, cycleway, promenade,
   } };
 }
+

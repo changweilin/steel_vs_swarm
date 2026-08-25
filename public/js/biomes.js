@@ -3795,10 +3795,10 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
     sheet.add({ text, x: s.x + Math.sin(s.ry) * 0.4, z: s.z + Math.cos(s.ry) * 0.4,
       y: s.y, ry: s.ry, h: Math.min(1.2, s.hw * 0.6 / 4), style: 'stone' });
   }
-  // ③ 車站／捷運入口：只用入口或最近車站的真實名稱；取不到就保留建築、不掛假牌。
+  // ③ 車站／捷運／地下道入口：只用入口或最近車站的真實名稱與編號；取不到就保留建築、不掛假牌。
   for (const s of entranceSigns) {
     if (sheet.full) break;
-    const text = resolveName(s.tags);
+    const text = s.signText || resolveName(s.tags);
     if (!text) continue;
     sheet.add({ text, x: s.x, y: s.y, z: s.z, ry: s.ry, h: 0.82, style: 'enamel' });
   }
@@ -5165,12 +5165,13 @@ function buildFootbridgeFrames(group, footbridgeFrames) {
 function buildPedestrianEntrances(group, terrain, sites) {
   const rows = [];
   for (const site of sites || []) {
-    const def = PED_ARCHETYPES[site.kind] || PED_ARCHETYPES.underpass;
+    const archKey = site.archetype || site.kind || 'underpass';
+    const def = PED_ARCHETYPES[archKey] || PED_ARCHETYPES[site.kind] || PED_ARCHETYPES.underpass;
     if (site.x < terrain.minX + 5 || site.x > terrain.maxX - 5
       || site.z < terrain.minZ + 5 || site.z > terrain.maxZ - 5) continue;
     const y = terrain.heightAt(site.x, site.z);
     if (y < 0.4) continue;
-    rows.push({ ...site, def, y });
+    rows.push({ ...site, def, archKey, y });
   }
   if (!rows.length) return { built: 0, signSpots: [] };
 
@@ -5190,7 +5191,7 @@ function buildPedestrianEntrances(group, terrain, sites) {
   ];
   const val = (v, d) => typeof v === 'function' ? v(d) : v;
   for (const kind of Object.keys(PED_ARCHETYPES)) {
-    const list = rows.filter((r) => r.kind === kind);
+    const list = rows.filter((r) => r.archKey === kind || (!r.archKey && r.kind === kind));
     if (!list.length) continue;
     for (const part of parts) {
       const color = part.fixed ?? PED_ARCHETYPES[kind][part.color];
@@ -5212,10 +5213,16 @@ function buildPedestrianEntrances(group, terrain, sites) {
       group.add(mesh);
     }
   }
-  const signSpots = rows.filter((r) => r.kind === 'station').map((r) => {
+  const signSpots = rows.map((r) => {
     const d = r.def, f = d.d * 0.34;
-    return { x: r.x + Math.sin(r.ry) * f, y: r.y + d.h * 0.76, z: r.z + Math.cos(r.ry) * f,
-      ry: r.ry, tags: r.stationTags || r.tags };
+    return {
+      x: r.x + Math.sin(r.ry) * f,
+      y: r.y + d.h * 0.76,
+      z: r.z + Math.cos(r.ry) * f,
+      ry: r.ry,
+      tags: { name: r.signText || (r.stationTags?.name || r.tags?.name || (r.kind === 'station' ? '捷運站' : '地下道')) },
+      signText: r.signText || (r.stationTags?.name || r.tags?.name),
+    };
   });
   return { built: rows.length, signSpots };
 }
