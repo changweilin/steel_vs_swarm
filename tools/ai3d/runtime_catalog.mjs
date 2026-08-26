@@ -17,7 +17,7 @@ const SOURCE_PATHS = Object.freeze({
 
 const PART_FIELDS = Object.freeze([
   'name', 'type', 'dimensions', 'radii', 'radius', 'height', 'sides', 'tube',
-  'position', 'rotation', 'color', 'triangles',
+  'position', 'rotation', 'color', 'colorKey', 'triangles',
 ]);
 const textCmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -51,15 +51,19 @@ export function runtimeVersionEligible(record) {
 
 function primaryImage(manifest, database) {
   const images = Array.isArray(manifest.imgs) ? manifest.imgs : [];
-  return images.find((image) => image?.role === 'primary') || images[0] || {
+  return images.find((image) => image?.role === 'primary') || images[0] || (database.image ? {
     id: database.image,
     file: database.image,
-  };
+  } : null);
 }
 
 export function canonicalTargetOf(database, manifest) {
+  if (database.version === 5 || database.verStr === 'v5') {
+    if (!manifest.consumer && !database.key) return null;
+    return `${database.family}/${database.subpart}|${database.key}|${manifest.consumer || 'catalog'}`;
+  }
   const image = primaryImage(manifest, database);
-  const imageId = image.id || image.file || database.image;
+  const imageId = image?.id || image?.file || database.image;
   if (!imageId || !manifest.consumer) return null;
   return `${database.family}/${database.subpart}|${imageId}|${manifest.consumer}`;
 }
@@ -89,11 +93,11 @@ function sanitizePart(part) {
 
 function sanitizeSource(image) {
   return {
-    id: image.id || null,
-    file: image.file || null,
-    license: image.license || null,
-    creator: image.creator || null,
-    sourceUrl: image.source_url || null,
+    id: image?.id || null,
+    file: image?.file || null,
+    license: image?.license || null,
+    creator: image?.creator || null,
+    sourceUrl: image?.source_url || null,
   };
 }
 
@@ -116,6 +120,7 @@ function sanitizeAsset(database, manifest, review, model, canonicalTarget) {
     bounds: model.bounds || database.bounds || null,
     spec: model.spec || database.spec || null,
     triangles: model.bounds?.triangles ?? database.triangles ?? null,
+    palettes: Array.isArray(model.palettes) && model.palettes.length ? model.palettes : (Array.isArray(database.palettes) && database.palettes.length ? database.palettes : []),
     provenance: {
       method: manifest.method || null,
       consumer: manifest.consumer || null,

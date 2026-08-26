@@ -87,12 +87,32 @@ export function runtimePrimitiveGeometry(part) {
   return geo;
 }
 
+export function resolvePalette(entry, options = {}) {
+  if (options?.palette && typeof options.palette === 'object') return options.palette;
+  const palettes = entry?.palettes || [];
+  if (!palettes.length) return null;
+  if (Number.isInteger(options?.paletteIndex) && options.paletteIndex >= 0 && options.paletteIndex < palettes.length) {
+    const p = palettes[options.paletteIndex];
+    return p?.colors || p;
+  }
+  if (Number.isFinite(options?.seed)) {
+    const idx = Math.abs(Math.floor(options.seed)) % palettes.length;
+    const p = palettes[idx];
+    return p?.colors || p;
+  }
+  const first = palettes[0];
+  return first?.colors || first;
+}
+
 /**
  * 把異質 primitive 烤成一顆非索引幾何；顏色寫進逐頂點屬性，材質維持單一。
+ * 支援透過 options.palette / options.paletteIndex / options.seed 動態套用配色清單。
  * @param {Array<object>} parts 零件台輸出的 parts 陣列
+ * @param {object} [options] 配色與母體設定
  */
-export function mergeRuntimeParts(parts) {
+export function mergeRuntimeParts(parts, options = {}) {
   if (!Array.isArray(parts) || !parts.length) throw new TypeError('執行期模型缺少 parts');
+  const palette = options?.palette || (options?.entry ? resolvePalette(options.entry, options) : null);
   const positions = [], normals = [], colors = [];
   const matrix = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -117,7 +137,14 @@ export function mergeRuntimeParts(parts) {
     const na = geo.attributes.normal.array;
     for (let i = 0; i < pa.length; i++) positions.push(pa[i]);
     for (let i = 0; i < na.length; i++) normals.push(na[i]);
-    color.setHex(Number.isInteger(part.color) ? part.color : 0x888888);
+
+    let partColor = part.color;
+    if (palette && part.colorKey) {
+      const key = part.colorKey;
+      if (palette[key + 'Hex'] !== undefined) partColor = palette[key + 'Hex'];
+      else if (palette[key] !== undefined) partColor = palette[key];
+    }
+    color.setHex(Number.isInteger(partColor) ? partColor : 0x888888);
     for (let i = 0; i < pa.length / 3; i++) colors.push(color.r, color.g, color.b);
     geo.dispose();
   }
@@ -132,10 +159,10 @@ export function mergeRuntimeParts(parts) {
 }
 
 /** 建立可複製的零件台物件；entry 必須是 resolved runtime roster 的正式列。 */
-export function makeRuntimePartModel(entry, { environment = true } = {}) {
+export function makeRuntimePartModel(entry, { environment = true, palette = null, paletteIndex = null, seed = null } = {}) {
   if (!entry?.parts?.length) throw new TypeError(`執行期目錄列缺少 parts:${entry?.key || 'unknown'}`);
   const material = (environment ? envMat : toonMat)(0xffffff, { vertexColors: true });
-  const mesh = new THREE.Mesh(mergeRuntimeParts(entry.parts), material);
+  const mesh = new THREE.Mesh(mergeRuntimeParts(entry.parts, { entry, palette, paletteIndex, seed }), material);
   mesh.name = `runtime:${entry.key}`;
   mesh.userData.runtimePart = {
     key: entry.key,

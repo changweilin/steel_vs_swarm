@@ -1,6 +1,6 @@
 {
   "id": "building_mass_state-capitol",
-  "sourceImage": "building/state-capitol.jpg",
+  "sourceImage": null,
   "style": "classical_dome_rotunda",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.901,

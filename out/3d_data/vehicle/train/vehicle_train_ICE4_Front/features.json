@@ -1,6 +1,6 @@
 {
   "id": "vehicle_train_ICE4_Front",
-  "sourceImage": "vehicle/train/ICE4_Front.jpg",
+  "sourceImage": null,
   "style": "freight_locomotive_train",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.807,

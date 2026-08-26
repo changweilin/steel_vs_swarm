@@ -1,6 +1,6 @@
 {
   "id": "vehicle_car_series-better-car",
-  "sourceImage": "vehicle/car/series-better-car.png",
+  "sourceImage": null,
   "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.883,

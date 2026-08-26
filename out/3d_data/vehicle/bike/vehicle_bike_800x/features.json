@@ -1,6 +1,6 @@
 {
   "id": "vehicle_bike_800x",
-  "sourceImage": "vehicle/bike/800x.jpg",
+  "sourceImage": null,
   "style": "precision_diamond_bicycle",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.865,

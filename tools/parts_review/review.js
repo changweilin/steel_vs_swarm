@@ -1038,6 +1038,22 @@ function featuresSection(r) {
       </div>` : ''}
     </div>` : '';
 
+  const palettes = r.palettes || feat?.palettes || [];
+  const palettesHtml = palettes.length ? `
+    <div style="margin:12px 0">
+      <div class="pr-dim"><b>收錄渲染配色清單 (${palettes.length} 套):</b></div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        ${palettes.map((p, idx) => `
+          <div style="border:1px solid #444;border-radius:4px;padding:4px 8px;display:flex;align-items:center;gap:4px;background:#1e1e1e" title="${esc(p.name || `Palette ${idx + 1}`)}">
+            <span class="pr-dim" style="font-size:11px">#${idx + 1}</span>
+            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#${hexStr(p.colors?.facadeHex)}" title="主體 #${hexStr(p.colors?.facadeHex)}"></span>
+            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#${hexStr(p.colors?.roofHex)}" title="頂部 #${hexStr(p.colors?.roofHex)}"></span>
+            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#${hexStr(p.colors?.accentHex)}" title="點綴 #${hexStr(p.colors?.accentHex)}"></span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '';
+
   const featList = (feat?.reconstructedFeatures || r.reconstructedFeatures || []);
   const featRows = featList.map((f) => `
     <tr>
@@ -1059,6 +1075,7 @@ function featuresSection(r) {
       ${featRows}
     </table>
     ${colorSwatches}
+    ${palettesHtml}
     ${partsList}
   </div>`;
 }
@@ -1111,8 +1128,8 @@ function renderBody() {
   ${verdictSection(r.key)}
 
   <div class="pr-sec"><h3>來源圖(img)</h3>
-    <div class="pr-imgs">${r.imgs.length ? r.imgs.map(imgCard).join('')
-    : '<div class="pr-none">來源帳裡沒有記載任何來源圖</div>'}</div></div>
+    <div class="pr-imgs">${r.imgs && r.imgs.length ? r.imgs.map(imgCard).join('')
+    : (r.verStr === 'v5' || r.version === 5 ? '<div class="pr-none">v5 為獨立多面體純幾何物件（無關照片）</div>' : '<div class="pr-none">來源帳裡沒有記載任何來源圖</div>')}</div></div>
 
   ${methodSection(r)}
   ${featuresSection(r)}

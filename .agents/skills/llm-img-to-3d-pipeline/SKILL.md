@@ -58,14 +58,11 @@ The routed skill is authoritative for its domain. This skill owns only target di
 
 ```mermaid
 graph TD
-    subgraph "Production v5"
-        IMG_OLD[Reference Photo] --> PY_CV[Python OpenCV/PIL<br>extract_image_features.py]
-        PY_CV --> FEAT_JSON[24-slice Feature JSON]
-        FEAT_JSON --> RULE_SYS[Node.js Hardcoded Classifier<br>30+ Static Templates]
-        RULE_SYS --> GEO_V5[Geometry Synthesizer]
+    subgraph "Production v5 (Photo-Independent Procedural)"
+        DECL_SPEC[Declarative Polyhedral Spec<br>30+ Heuristic Archetypes] --> GEO_V5[12-Primitive Geometry Synthesizer]
     end
 
-    subgraph "Production v6"
+    subgraph "Production v6 (Photo Multimodal Reconstruction)"
         IMG_NEW[Reference Photo] --> YOLO26[YOLO26 Detect + Segment + Metric Depth]
         YOLO26 --> TARGETS[Cached Independent Targets]
         TARGETS --> GEMINI_API[Gemini 3.7 / GPT 5.6 Luna<br>Target + Evidence to Geometry]
@@ -82,28 +79,25 @@ graph TD
     DB_SYNC --> REVIEW_BOARD[3D Parts Review Board<br>http://localhost:8622/]
 ```
 
-| Comparison Aspect | Production v5 | Production v6 (Gemini 3.7 / GPT 5.6 Luna) |
+| Comparison Aspect | Production v5 (Photo-Independent) | Production v6 (Gemini 3.7 / GPT 5.6 Luna Photo-Reconstruction) |
 |---|---|---|
-| **Core Engine** | Python OpenCV slice metrics + heuristic classifier | **YOLO26 evidence + Gemini 3.7 / GPT 5.6 Luna geometry + independent multimodal review** |
-| **Morphological Reasoning** | Restricted to 30 static templates (unmatched shapes degrade to generic boxes) | **First-principles semantic decomposition; accurately reconstructs arbitrary non-standard topologies** |
-| **Dependencies** | Requires Python 3.11/3.13 venv + OpenCV + NumPy + PIL | **Zero npm dependencies; Python Ultralytics/OpenCV/NumPy/Pillow for mandatory YOLO26 evidence; Node native `node:https` for LLM calls** |
-| **Color Extraction** | K-Means clustering (often polluted by sky/ground shadows) | **LLM semantic isolation** (isolates foreground object, rejects background clouds, separates glazing) |
-| **Throughput & Speed** | Dual-stage heuristic pipeline | **Cached YOLO26 preprocessing plus bounded generate/render/review retries** |
-| **Version Management** | `version: 5, verStr: 'v5'`; retained and runtime-eligible | `version: 6, verStr: 'v6'`; retained, and preferred only for a duplicate target |
+| **Core Engine** | Pure declarative polyhedral templates & procedural synthesis | **YOLO26 evidence + Gemini 3.7 / GPT 5.6 Luna geometry + independent multimodal review** |
+| **Photo Relation** | **None** (independent standalone polyhedral models, `imgs: []`, `image: null`) | **Strict 1:1 / multi-target photo reconstruction** with persistent evidence cache |
+| **Morphological Reasoning** | 30 static polyhedral archetypes | **First-principles semantic decomposition; accurately reconstructs arbitrary non-standard topologies** |
+| **Dependencies** | Zero external dependencies (pure Node.js) | **Zero npm dependencies; Python Ultralytics/OpenCV/NumPy/Pillow for mandatory YOLO26 evidence; Node native `node:https` for LLM calls** |
+| **Color Extraction** | Canonical 7-zone palette heuristics | **LLM semantic isolation** (isolates foreground object, rejects background clouds, separates glazing) |
+| **Throughput & Speed** | Instant declarative synthesis | **Cached YOLO26 preprocessing plus bounded generate/render/review retries** |
+| **Version Management** | `version: 5, verStr: 'v5'`; retained and runtime-eligible | `version: 6, verStr: 'v6'`; retained and runtime-eligible |
 
 ### 1.1 Selection is separate from persistence
 
-Do not delete, archive, or rewrite a v5 record merely because a v6 record exists. Persistence answers "what was produced and reviewed"; runtime selection answers "which approved record fills this slot".
+v5 objects are standalone procedural/declarative polyhedral models with no photo relationship. v6 objects are photo-derived reconstructions.
+Both v5 and v6 records coexist in the database and review board.
 
-Build a canonical duplicate identity from stable source and consumer semantics, never from array order:
+Canonical target identity:
+- For v6 (photo-derived): `canonicalTarget = ${family}/${subpart}|${primaryImageId}|${consumerSlot}`
+- For v5 (photo-independent): `canonicalTarget = ${family}/${subpart}|${key}|${consumerSlot}`
 
-```js
-canonicalTarget = `${family}/${subpart}|${primaryImageId}|${consumerSlot}`;
-```
-
-- If an approved v6 and approved v5 share `canonicalTarget`, select v6.
-- If only one approved production version exists, select it regardless of whether it is v5 or v6.
-- Different photos, subparts, or consumer slots are variants, not duplicates; keep both.
 - Never prefer a higher version over a human verdict. Only `status === 'ok'` is eligible.
 - Legacy v1 is eligible only when `family === 'rock'` or when the tree role is explicitly `conifer`. Broadleaf canopy, snag, building, beacon, vehicle, and NPC v1 records are excluded even if an old board state says `ok`.
 - Resolve this once in the catalog/intake seam. Renderers and scene builders consume the resolved roster and must not reimplement version precedence.

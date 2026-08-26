@@ -59,10 +59,11 @@ export function fitApprovedBuilding(building) {
   };
 }
 
-/** 把原始真實尺度模型正規化成 X/Z 中心、Y=0 落地的單位盒。 */
-export function approvedBuildingGeometry(entry) {
-  if (geometryCache.has(entry.key)) return geometryCache.get(entry.key);
-  const geo = mergeRuntimeParts(entry.parts);
+/** 把原始真實尺度模型正規化成 X/Z 中心、Y=0 落地的單位盒，支援依 paletteIndex 選取配色。 */
+export function approvedBuildingGeometry(entry, paletteIndex = null) {
+  const cacheKey = paletteIndex != null ? `${entry.key}_pal${paletteIndex}` : entry.key;
+  if (geometryCache.has(cacheKey)) return geometryCache.get(cacheKey);
+  const geo = mergeRuntimeParts(entry.parts, { entry, paletteIndex });
   const box = geo.boundingBox;
   const size = new THREE.Vector3();
   const center = new THREE.Vector3();
@@ -73,7 +74,7 @@ export function approvedBuildingGeometry(entry) {
   geo.scale(1 / size.x, 1 / size.y, 1 / size.z);
   geo.computeBoundingBox();
   geo.computeBoundingSphere();
-  geometryCache.set(entry.key, geo);
+  geometryCache.set(cacheKey, geo);
   return geo;
 }
 
@@ -82,28 +83,66 @@ export function approvedBuildingMaterial() {
   return sharedMaterial;
 }
 
-/** 每款一顆 InstancedMesh；同款跨立面來源先合併 rows 再呼叫。 */
+/** 每款一顆 InstancedMesh（若具備多套 palettes 則依座標雜湊隨機分組批次渲染）；同款跨立面來源先合併 rows 再呼叫。 */
 export function makeApprovedBuildingBatch(entry, rows) {
   if (!entry || !Array.isArray(rows) || !rows.length) throw new TypeError('建築批次缺少 entry/rows');
-  const mesh = new THREE.InstancedMesh(approvedBuildingGeometry(entry), approvedBuildingMaterial(), rows.length);
+  const numPalettes = Array.isArray(entry.palettes) && entry.palettes.length > 1 ? entry.palettes.length : 1;
+
+  if (numPalettes <= 1) {
+    const mesh = new THREE.InstancedMesh(approvedBuildingGeometry(entry), approvedBuildingMaterial(), rows.length);
+    const matrix = new THREE.Matrix4();
+    const quaternion = new THREE.Quaternion();
+    const euler = new THREE.Euler();
+    const position = new THREE.Vector3();
+    const scale = new THREE.Vector3();
+    rows.forEach((row, i) => {
+      euler.set(0, row.ry, 0);
+      quaternion.setFromEuler(euler);
+      position.set(row.x, row.y - row.h / 2, row.z); // 正規化模型由地面起算；既有 row.y 是中心。
+      scale.set(row.w, row.h, row.d);
+      matrix.compose(position, quaternion, scale);
+      mesh.setMatrixAt(i, matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.frustumCulled = false;
+    mesh.name = `approved-building:${entry.key}`;
+    mesh.userData.runtimePart = { key: entry.key, version: entry.version, family: 'building' };
+    return mesh;
+  }
+
+  // 跨多套配色依座標雜湊隨機分組批次渲染
+  const groups = new Map();
+  for (const row of rows) {
+    const palIdx = Math.floor(hash01(row.x, row.z, 79) * numPalettes);
+    if (!groups.has(palIdx)) groups.set(palIdx, []);
+    groups.get(palIdx).push(row);
+  }
+
+  const batchGroup = new THREE.Group();
+  batchGroup.name = `approved-building-group:${entry.key}`;
   const matrix = new THREE.Matrix4();
   const quaternion = new THREE.Quaternion();
   const euler = new THREE.Euler();
   const position = new THREE.Vector3();
   const scale = new THREE.Vector3();
-  rows.forEach((row, i) => {
-    euler.set(0, row.ry, 0);
-    quaternion.setFromEuler(euler);
-    position.set(row.x, row.y - row.h / 2, row.z); // 正規化模型由地面起算；既有 row.y 是中心。
-    scale.set(row.w, row.h, row.d);
-    matrix.compose(position, quaternion, scale);
-    mesh.setMatrixAt(i, matrix);
-  });
-  mesh.instanceMatrix.needsUpdate = true;
-  mesh.frustumCulled = false;
-  mesh.name = `approved-building:${entry.key}`;
-  mesh.userData.runtimePart = { key: entry.key, version: entry.version, family: 'building' };
-  return mesh;
+
+  for (const [palIdx, palRows] of groups.entries()) {
+    const mesh = new THREE.InstancedMesh(approvedBuildingGeometry(entry, palIdx), approvedBuildingMaterial(), palRows.length);
+    palRows.forEach((row, i) => {
+      euler.set(0, row.ry, 0);
+      quaternion.setFromEuler(euler);
+      position.set(row.x, row.y - row.h / 2, row.z);
+      scale.set(row.w, row.h, row.d);
+      matrix.compose(position, quaternion, scale);
+      mesh.setMatrixAt(i, matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.frustumCulled = false;
+    mesh.name = `approved-building:${entry.key}:pal${palIdx}`;
+    mesh.userData.runtimePart = { key: entry.key, version: entry.version, family: 'building', paletteIndex: palIdx };
+    batchGroup.add(mesh);
+  }
+  return batchGroup;
 }
 
 export const approvedBuildingCount = () => BUILDING_PARTS.length;

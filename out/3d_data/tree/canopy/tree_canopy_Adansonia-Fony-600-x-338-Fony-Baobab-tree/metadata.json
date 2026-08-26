@@ -7,8 +7,8 @@
   "symmetryMode": "asymmetric",
   "version": 5,
   "verStr": "v5",
-  "source_image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+  "source_image": null,
+  "source_full_path": null,
   "created_at": "2026-08-18T17:17:53.041Z",
   "bounds": {
     "min": [
@@ -36,6 +36,6 @@
     "H": 4.728656443121996,
     "style": "bonsai_twisted_trunk_and_cloud_pads"
   },
-  "method": "llm_fine_detail_parts_and_3d_geom",
+  "method": "declarative_polyhedral_geometry",
   "status": "ingested"
 }

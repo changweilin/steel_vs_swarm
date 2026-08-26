@@ -1,6 +1,6 @@
 {
   "id": "vehicle_heavy_CSPV-02_01",
-  "sourceImage": "vehicle/heavy/CSPV-02_01.png",
+  "sourceImage": null,
   "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.836,

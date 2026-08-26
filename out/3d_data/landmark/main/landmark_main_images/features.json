@@ -1,6 +1,6 @@
 {
   "id": "landmark_main_images",
-  "sourceImage": "landmark/images.jpg",
+  "sourceImage": null,
   "style": "industrial_installation_rig",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.948,

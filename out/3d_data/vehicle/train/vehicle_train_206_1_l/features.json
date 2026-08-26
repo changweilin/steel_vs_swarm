@@ -1,6 +1,6 @@
 {
   "id": "vehicle_train_206_1_l",
-  "sourceImage": "vehicle/train/206_1_l.jpg",
+  "sourceImage": null,
   "style": "freight_locomotive_train",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.776,

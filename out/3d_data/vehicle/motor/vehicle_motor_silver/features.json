@@ -1,6 +1,6 @@
 {
   "id": "vehicle_motor_silver",
-  "sourceImage": "vehicle/motor/silver.png",
+  "sourceImage": null,
   "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.74,

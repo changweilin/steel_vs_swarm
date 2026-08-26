@@ -1,6 +1,6 @@
 {
   "id": "building_mass_image-webp",
-  "sourceImage": "building/image-webp.webp",
+  "sourceImage": null,
   "style": "modern_stepped_skyscraper",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.831,

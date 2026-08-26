@@ -7,8 +7,8 @@
   "symmetryMode": "asymmetric",
   "version": 5,
   "verStr": "v5",
-  "source_image": "rock/mg_dome/ov_b5a115f2-95ac-400f-ae3c-99e1c30ccf07.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\mg_dome\\ov_b5a115f2-95ac-400f-ae3c-99e1c30ccf07.jpg",
+  "source_image": null,
+  "source_full_path": null,
   "created_at": "2026-08-18T17:17:52.608Z",
   "bounds": {
     "min": [
@@ -36,6 +36,6 @@
     "H": 6.827870603494317,
     "style": "faceted_erratic_boulder"
   },
-  "method": "llm_fine_detail_parts_and_3d_geom",
+  "method": "declarative_polyhedral_geometry",
   "status": "ingested"
 }
