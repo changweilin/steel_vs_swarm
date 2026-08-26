@@ -48,10 +48,10 @@ const ok = (condition, message) => {
 };
 
 console.log('\nⅠ 正式 v5/v6 目錄');
-ok(buildings.length === 39, `建築正式名冊 39 款（實得 ${buildings.length}）`);
+ok(buildings.length === 40, `建築正式名冊 40 款（實得 ${buildings.length}）`);
 ok(VEHICLE_PARTS.length === 14, `載具正式名冊 14 款（實得 ${VEHICLE_PARTS.length}）`);
-ok(buildings.filter((row) => row.version === 5).length === 23
-  && buildings.filter((row) => row.version === 6).length === 16, '建築 v5=23、v6=16 同時正式採用');
+ok(buildings.filter((row) => row.version === 5).length === 24
+  && buildings.filter((row) => row.version === 6).length === 16, '建築 v5=24、v6=16 同時正式採用');
 ok(buildings.every((row) => [5, 6].includes(row.version)
   && row.provenance?.review?.status === 'ok'), '建築只收 v5/v6 且每列通過零件台');
 ok(new Set(buildings.map((row) => row.key)).size === buildings.length, '建築 key 唯一');

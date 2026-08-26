@@ -1,6 +1,6 @@
 {
   "id": "vehicle_car_3列",
-  "sourceImage": "vehicle/car/3列.jpg",
+  "sourceImage": null,
   "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.755,

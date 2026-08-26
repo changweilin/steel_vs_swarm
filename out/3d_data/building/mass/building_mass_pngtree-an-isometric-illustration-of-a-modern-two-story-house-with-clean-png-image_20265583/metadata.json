@@ -7,8 +7,8 @@
   "symmetryMode": "symmetric",
   "version": 5,
   "verStr": "v5",
-  "source_image": "building/pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583.png",
-  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583.png",
+  "source_image": null,
+  "source_full_path": null,
   "created_at": "2026-08-18T17:17:52.438Z",
   "bounds": {
     "min": [
@@ -36,6 +36,6 @@
     "H": 32.09298847943847,
     "style": "oriental_pagoda_flared_eaves"
   },
-  "method": "llm_fine_detail_parts_and_3d_geom",
+  "method": "declarative_polyhedral_geometry",
   "status": "ingested"
 }

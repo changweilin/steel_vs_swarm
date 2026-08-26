@@ -1,6 +1,6 @@
 {
   "id": "ship_hull_k23",
-  "sourceImage": "ship/k23.jpg",
+  "sourceImage": null,
   "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.825,

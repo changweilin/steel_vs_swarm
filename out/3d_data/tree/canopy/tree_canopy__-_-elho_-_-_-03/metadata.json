@@ -7,8 +7,8 @@
   "symmetryMode": "asymmetric",
   "version": 5,
   "verStr": "v5",
-  "source_image": "tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg",
+  "source_image": null,
+  "source_full_path": null,
   "created_at": "2026-08-18T17:17:53.148Z",
   "bounds": {
     "min": [
@@ -36,6 +36,6 @@
     "H": 16.567757686732282,
     "style": "broadleaf_buttress_and_dome_canopies"
   },
-  "method": "llm_fine_detail_parts_and_3d_geom",
+  "method": "declarative_polyhedral_geometry",
   "status": "ingested"
 }

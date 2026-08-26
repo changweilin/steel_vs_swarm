@@ -51,15 +51,19 @@ export function runtimeVersionEligible(record) {
 
 function primaryImage(manifest, database) {
   const images = Array.isArray(manifest.imgs) ? manifest.imgs : [];
-  return images.find((image) => image?.role === 'primary') || images[0] || {
+  return images.find((image) => image?.role === 'primary') || images[0] || (database.image ? {
     id: database.image,
     file: database.image,
-  };
+  } : null);
 }
 
 export function canonicalTargetOf(database, manifest) {
+  if (database.version === 5 || database.verStr === 'v5') {
+    if (!manifest.consumer && !database.key) return null;
+    return `${database.family}/${database.subpart}|${database.key}|${manifest.consumer || 'catalog'}`;
+  }
   const image = primaryImage(manifest, database);
-  const imageId = image.id || image.file || database.image;
+  const imageId = image?.id || image?.file || database.image;
   if (!imageId || !manifest.consumer) return null;
   return `${database.family}/${database.subpart}|${imageId}|${manifest.consumer}`;
 }
@@ -89,11 +93,11 @@ function sanitizePart(part) {
 
 function sanitizeSource(image) {
   return {
-    id: image.id || null,
-    file: image.file || null,
-    license: image.license || null,
-    creator: image.creator || null,
-    sourceUrl: image.source_url || null,
+    id: image?.id || null,
+    file: image?.file || null,
+    license: image?.license || null,
+    creator: image?.creator || null,
+    sourceUrl: image?.source_url || null,
   };
 }
 

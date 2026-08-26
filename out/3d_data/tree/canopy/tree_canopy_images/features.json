@@ -1,6 +1,6 @@
 {
   "id": "tree_canopy_images",
-  "sourceImage": "tree/images.jpg",
+  "sourceImage": null,
   "style": "shrub_bush_mound",
   "symmetryMode": "asymmetric",
   "symmetryScore": 0.795,

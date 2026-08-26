@@ -7,8 +7,8 @@
   "symmetryMode": "symmetric",
   "version": 5,
   "verStr": "v5",
-  "source_image": "vehicle/heavy/149ff3_c62b92c0df064d42840a39204d5812ab~mv2.png",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\149ff3_c62b92c0df064d42840a39204d5812ab~mv2.png",
+  "source_image": null,
+  "source_full_path": null,
   "created_at": "2026-08-18T17:17:53.408Z",
   "bounds": {
     "min": [
@@ -37,6 +37,6 @@
     "R": 0.52,
     "style": "heavy_freight_tractor_semi"
   },
-  "method": "llm_fine_detail_parts_and_3d_geom",
+  "method": "declarative_polyhedral_geometry",
   "status": "ingested"
 }

@@ -1,6 +1,6 @@
 {
   "id": "vehicle_motor_A16A00_P_03_02",
-  "sourceImage": "vehicle/motor/A16A00_P_03_02.jpg",
+  "sourceImage": null,
   "style": "cruiser_standard_motor",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.821,

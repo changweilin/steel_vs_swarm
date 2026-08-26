@@ -21,6 +21,8 @@ image→3D GLB、小植被維持程序生成)。
 | `gen_manifest.json` | 帳本(產出後自動生成):每一張的 prompt / 來源 / 位元組數 / 時間 |
 | `masters/` | 新畫的設定稿(驗收通過後才搬進 `public/assets/cyberpunk_art/mechs/`) |
 | `drafts/{ch}/{slot}.jpg` | 逐槽位切圖 = image→3D 的輸入 |
+| `direct_ingest_all.mjs` | **v5 多面體幾何引擎**:獨立多面體純資料零件合成 (無關照片、零二進位負擔) |
+| `direct_ingest_v6.mjs` | **v6 照片重建引擎**:YOLO26 實例分割與深度證據 + LLM 多模態多面體重建 |
 | `fetch_photos.mjs` | **照片庫抓取器**(Track B §4.1):逐族查詢型錄、可續跑補缺、CC0 雙重硬閘、記帳。沙箱代理連不到 Openverse/Commons(㋓)⇒ 在 3060 真機或 Actions 上跑 |
 | `photo_manifest.json` | 照片帳本(產出後自動生成):`{source_url, license, creator, retrieved_at, …}` 一項不少 |
 | `photos/{family}/{part}/` | 照片本體(**勿入版控** —— 照片只是離線輸入,入庫的只有零件 GLB) |

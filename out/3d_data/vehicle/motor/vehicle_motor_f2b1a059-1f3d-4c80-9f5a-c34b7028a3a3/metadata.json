@@ -7,8 +7,8 @@
   "symmetryMode": "symmetric",
   "version": 5,
   "verStr": "v5",
-  "source_image": "vehicle/motor/f2b1a059-1f3d-4c80-9f5a-c34b7028a3a3.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\f2b1a059-1f3d-4c80-9f5a-c34b7028a3a3.jpg",
+  "source_image": null,
+  "source_full_path": null,
   "created_at": "2026-08-18T17:17:53.603Z",
   "bounds": {
     "min": [
@@ -37,6 +37,6 @@
     "R": 0.31,
     "style": "precision_motorcycle"
   },
-  "method": "llm_fine_detail_parts_and_3d_geom",
+  "method": "declarative_polyhedral_geometry",
   "status": "ingested"
 }

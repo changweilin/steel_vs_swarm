@@ -1,6 +1,6 @@
 {
   "id": "vehicle_heavy_4d54f379-07b7-453d-9e45-5fa076db88df",
-  "sourceImage": "vehicle/heavy/4d54f379-07b7-453d-9e45-5fa076db88df.jpg",
+  "sourceImage": null,
   "style": "heavy_freight_tractor",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.8,

@@ -1513,7 +1513,7 @@ function buildHighFidelity3DGeometry(family, subpart, stem, imgMeta) {
 
   const featuresJson = {
     id: `${family}_${subpart}_${stem}`,
-    sourceImage: imgMeta?.image || `${family}/${subpart}/${stem}`,
+    sourceImage: null,
     style,
     symmetryMode,
     symmetryScore: analysis.symmetryScore,
@@ -1610,12 +1610,12 @@ async function main() {
         symmetryMode,
         version: 5,
         verStr: 'v5',
-        source_image: rel,
-        source_full_path: imgPath,
+        source_image: null,
+        source_full_path: null,
         created_at: new Date().toISOString(),
         bounds,
         spec,
-        method: 'llm_fine_detail_parts_and_3d_geom',
+        method: 'declarative_polyhedral_geometry',
         status: 'ingested'
       };
       writeFileSync(join(targetDir, 'metadata.json'), JSON.stringify(metadata, null, 2), 'utf8');
@@ -1630,7 +1630,7 @@ async function main() {
       symmetryMode,
       version: 5,
       verStr: 'v5',
-      image: rel,
+      image: null,
       bounds,
       spec,
       triangles: bounds.triangles,
@@ -1645,22 +1645,9 @@ async function main() {
         consumer: `${family} catalog & partlib (${subpart})`,
         rev: 'HEAD',
         at: new Date().toISOString().slice(0, 10),
-        imgs: [
-          {
-            role: 'primary',
-            id: `img_${hash}`,
-            family,
-            part: subpart,
-            query: stem,
-            api: 'local_intake',
-            license: 'unverified(restricted/local)',
-            creator: null,
-            source_url: '',
-            file: rel
-          }
-        ],
+        imgs: [],
         gen: {
-          tool: 'Direct LLM-3D Polyhedral Synthesis Engine v5.0',
+          tool: 'Direct Declarative Polyhedral Synthesis Engine v5.0',
           runner: 'tools/ai3d/direct_ingest_all.mjs',
           params: `--family ${family} --subpart ${subpart} --style ${style} --symmetry ${symmetryMode}`,
           machine: 'Node.js Native Multi-Polyhedral 3D Engine',
@@ -1681,9 +1668,10 @@ async function main() {
       if (existing && existing.method === 'llm_parts') {
         existing.version = 5;
         existing.verStr = 'v5';
+        existing.imgs = [];
         existing.at = new Date().toISOString().slice(0, 10);
         if (existing.gen) {
-          existing.gen.tool = 'Direct LLM-3D Polyhedral Synthesis Engine v5.0';
+          existing.gen.tool = 'Direct Declarative Polyhedral Synthesis Engine v5.0';
           existing.gen.measured = `Triangles ${bounds.triangles}, Vertices ${bounds.vertices}`;
         }
       }

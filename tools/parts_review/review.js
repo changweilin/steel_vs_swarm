@@ -1111,8 +1111,8 @@ function renderBody() {
   ${verdictSection(r.key)}
 
   <div class="pr-sec"><h3>來源圖(img)</h3>
-    <div class="pr-imgs">${r.imgs.length ? r.imgs.map(imgCard).join('')
-    : '<div class="pr-none">來源帳裡沒有記載任何來源圖</div>'}</div></div>
+    <div class="pr-imgs">${r.imgs && r.imgs.length ? r.imgs.map(imgCard).join('')
+    : (r.verStr === 'v5' || r.version === 5 ? '<div class="pr-none">v5 為獨立多面體純幾何物件（無關照片）</div>' : '<div class="pr-none">來源帳裡沒有記載任何來源圖</div>')}</div></div>
 
   ${methodSection(r)}
   ${featuresSection(r)}

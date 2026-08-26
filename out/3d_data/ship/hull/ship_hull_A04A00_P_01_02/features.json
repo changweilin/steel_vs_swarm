@@ -1,6 +1,6 @@
 {
   "id": "ship_hull_A04A00_P_01_02",
-  "sourceImage": "ship/A04A00_P_01_02.jpg",
+  "sourceImage": null,
   "style": "general_cargo_vessel",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.717,

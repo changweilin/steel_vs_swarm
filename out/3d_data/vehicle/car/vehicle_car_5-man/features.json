@@ -1,6 +1,6 @@
 {
   "id": "vehicle_car_5-man",
-  "sourceImage": "vehicle/car/5-man.jpg",
+  "sourceImage": null,
   "style": "standard_passenger_automobile",
   "symmetryMode": "symmetric",
   "symmetryScore": 0.893,

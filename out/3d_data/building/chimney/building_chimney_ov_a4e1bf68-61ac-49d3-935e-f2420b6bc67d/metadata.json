@@ -7,8 +7,8 @@
   "symmetryMode": "symmetric",
   "version": 5,
   "verStr": "v5",
-  "source_image": "building/chimney/ov_a4e1bf68-61ac-49d3-935e-f2420b6bc67d.jpg",
-  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\chimney\\ov_a4e1bf68-61ac-49d3-935e-f2420b6bc67d.jpg",
+  "source_image": null,
+  "source_full_path": null,
   "created_at": "2026-08-18T17:17:52.349Z",
   "bounds": {
     "min": [
@@ -36,6 +36,6 @@
     "H": 17.18165865568017,
     "style": "pantheon_rotunda_with_grand_dome"
   },
-  "method": "llm_fine_detail_parts_and_3d_geom",
+  "method": "declarative_polyhedral_geometry",
   "status": "ingested"
 }
