@@ -475,6 +475,9 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
 
   const f4 = (n) => Number(Number(n).toFixed(4));
   const f3 = (n) => Number(Number(n).toFixed(3));
+  const flipFaces = (start, end = faces.length) => {
+    for (let i = start; i < end; i += 3) [faces[i + 1], faces[i + 2]] = [faces[i + 2], faces[i + 1]];
+  };
 
   // 1. Box
   function addBox(w, h, d, px, py, pz, rx, ry, rz, partName, color) {
@@ -497,6 +500,7 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
 
   // 2. Polygonal Prism
   function addPrism(sides, radius, h, px, py, pz, rx, ry, rz, partName, color) {
+    const faceStart = faces.length;
     const vBase = vertices.length / 3;
     const hh = h / 2;
     for (let i = 0; i < sides; i++) {
@@ -521,12 +525,14 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
       faces.push(bc, vBase + n, vBase + i);
       faces.push(tc, vBase + sides + i, vBase + sides + n);
     }
+    flipFaces(faceStart);
     partsOut.push({ name: partName, type: 'polygonal_prism', sides, radius: f3(radius), height: f3(h),
       position: [f3(px), f3(py), f3(pz)], rotation: [f3(rx), f3(ry), f3(rz)], color, triangles: 4 * sides });
   }
 
   // 3. Frustum Pyramid (也服務 pyramid/cylinder/conical_frustum/cone)
   function addFrustum(sides, topR, botR, h, px, py, pz, rx, ry, rz, partName, color, typeName = 'frustum_pyramid') {
+    const faceStart = faces.length;
     const vBase = vertices.length / 3;
     const hh = h / 2;
     for (let i = 0; i < sides; i++) {
@@ -551,12 +557,14 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
       if (botR > 0) faces.push(bc, vBase + n, vBase + i);
       if (topR > 0) faces.push(tc, vBase + sides + i, vBase + sides + n);
     }
+    flipFaces(faceStart);
     partsOut.push({ name: partName, type: typeName, sides, radii: [f3(topR), f3(botR)], height: f3(h),
       position: [f3(px), f3(py), f3(pz)], rotation: [f3(rx), f3(ry), f3(rz)], color, triangles: 4 * sides });
   }
 
   // 7. Sphere / Hemisphere / Ellipsoid
   function addSphere(rx, ry, rz, px, py, pz, rotX, rotY, rotZ, partName, color, isHemi = false) {
+    const faceStart = faces.length;
     const segsW = 10, segsH = 8;
     const vBase = vertices.length / 3;
     const maxLat = isHemi ? Math.PI / 2 : Math.PI;
@@ -578,6 +586,7 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
         faces.push(a, b, c); faces.push(a, c, d);
       }
     }
+    flipFaces(faceStart);
     if (isHemi) {
       const botC = vertices.length / 3;
       const [bx, by, bz] = transformPoint(0, 0, 0, px, py, pz, rotX, rotY, rotZ);
@@ -593,6 +602,7 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
 
   // 8. Torus
   function addTorus(R, r, px, py, pz, rx, ry, rz, partName, color) {
+    const faceStart = faces.length;
     const segsR = 10, segsT = 6;
     const vBase = vertices.length / 3;
     for (let j = 0; j <= segsR; j++) {
@@ -613,12 +623,14 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
         faces.push(a, b, c); faces.push(a, c, d);
       }
     }
+    flipFaces(faceStart);
     partsOut.push({ name: partName, type: 'torus_ring', radius: f3(R), tube: f3(r),
       position: [f3(px), f3(py), f3(pz)], rotation: [f3(rx), f3(ry), f3(rz)], color, triangles: segsR * segsT * 2 });
   }
 
   // 9. Wedge
   function addWedge(w, h, d, px, py, pz, rx, ry, rz, partName, color) {
+    const faceStart = faces.length;
     const hw = w / 2, hh = h / 2, hd = d / 2;
     const vBase = vertices.length / 3;
     const rawVerts = [[-hw,-hh,-hd],[hw,-hh,-hd],[hw,-hh,hd],[-hw,-hh,hd],[-hw,hh,-hd],[hw,hh,-hd]];
@@ -629,6 +641,7 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
     for (const [a, b, c] of [[0,2,1],[0,3,2],[0,1,5],[0,5,4],[2,3,4],[2,4,5],[0,4,3],[1,2,5]]) {
       faces.push(vBase + a, vBase + b, vBase + c);
     }
+    flipFaces(faceStart);
     partsOut.push({ name: partName, type: 'wedge', dimensions: [f3(w), f3(h), f3(d)],
       position: [f3(px), f3(py), f3(pz)], rotation: [f3(rx), f3(ry), f3(rz)], color, triangles: 8 });
   }
@@ -678,6 +691,7 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
 
   // 14. 矩形截面漸縮體：上、下環逐角相連，適合船橋與艙室，避免圓錐台的菱形截面。
   function addTaperedBox(w, h, d, tw, td, px, py, pz, rx, ry, rz, partName, color) {
+    const faceStart = faces.length;
     const vBase = vertices.length / 3;
     const rings = [
       [[-w/2,-h/2,-d/2],[w/2,-h/2,-d/2],[w/2,-h/2,d/2],[-w/2,-h/2,d/2]],
@@ -690,6 +704,7 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
     for (const [a,b,c] of [[0,2,1],[0,3,2],[4,5,6],[4,6,7],[0,1,5],[0,5,4],[1,2,6],[1,6,5],[2,3,7],[2,7,6],[3,0,4],[3,4,7]]) {
       faces.push(vBase + a, vBase + b, vBase + c);
     }
+    flipFaces(faceStart);
     partsOut.push({ name: partName, type: 'tapered_box', dimensions: [f3(w), f3(h), f3(d)],
       topDimensions: [f3(tw), f3(td)], position: [f3(px), f3(py), f3(pz)],
       rotation: [f3(rx), f3(ry), f3(rz)], color, triangles: 12 });

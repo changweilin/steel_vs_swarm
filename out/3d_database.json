@@ -70286,20 +70286,20 @@
           2.202
         ],
         "rMax": 4.943,
-        "triangles": 222,
-        "vertices": 127
+        "triangles": 210,
+        "vertices": 119
       },
       "spec": {
         "style": "modern motorboat"
       },
-      "triangles": 222,
+      "triangles": 210,
       "outputDir": "out/3d_data/ship/hull/ship_hull_0350p12000t3nb68kA8C8_v6",
       "realScale": {
         "className": "motorboat",
         "targetSize": [
           9,
           1.9,
-          2.201711384848714
+          2.201712199541529
         ],
         "confidence": "class_estimate"
       }
@@ -70323,29 +70323,29 @@
         ],
         "max": [
           9.3504,
-          3.2,
+          3.3195,
           2.2503
         ],
         "size": [
           20,
-          3.2,
+          3.32,
           4.501
         ],
         "rMax": 10.885,
-        "triangles": 130,
-        "vertices": 81
+        "triangles": 142,
+        "vertices": 89
       },
       "spec": {
         "style": "modern luxury yacht"
       },
-      "triangles": 130,
+      "triangles": 142,
       "outputDir": "out/3d_data/ship/hull/ship_hull_1593571989300_v6",
       "realScale": {
         "className": "yacht",
         "targetSize": [
           20,
-          3.2,
-          4.500636680360612
+          3.3195000000000006,
+          4.500637495053428
         ],
         "confidence": "class_estimate"
       }
@@ -70553,12 +70553,12 @@
         ],
         "max": [
           30,
-          11.5,
+          11.3,
           5
         ],
         "size": [
           60,
-          11.5,
+          11.3,
           10
         ],
         "rMax": 30.414,
@@ -70574,7 +70574,7 @@
         "className": "warship",
         "targetSize": [
           60,
-          11.5,
+          11.3,
           10
         ],
         "confidence": "class_estimate"
@@ -70691,12 +70691,12 @@
         ],
         "max": [
           65.5327,
-          17.225,
+          17.025,
           7
         ],
         "size": [
           135,
-          17.225,
+          17.025,
           14
         ],
         "rMax": 69.819,
@@ -70712,7 +70712,7 @@
         "className": "warship",
         "targetSize": [
           135,
-          17.225,
+          17.025,
           14
         ],
         "confidence": "class_estimate"
@@ -70921,12 +70921,12 @@
         ],
         "max": [
           90,
-          38.725,
+          38.525,
           15
         ],
         "size": [
           180,
-          38.725,
+          38.525,
           30
         ],
         "rMax": 91.241,
@@ -70942,7 +70942,7 @@
         "className": "industrial_ship",
         "targetSize": [
           180,
-          38.725,
+          38.525000000000006,
           30
         ],
         "confidence": "class_estimate"
@@ -70961,21 +70961,21 @@
       "image": "ship/20240301000865.png",
       "bounds": {
         "min": [
-          -49.6671,
-          0.0021,
+          -50.45,
+          0.0022,
           -3.5
         ],
         "max": [
-          20.3259,
-          9.1016,
+          19.5449,
+          9.1015,
           3.5
         ],
         "size": [
-          69.993,
+          69.995,
           9.099,
           7
         ],
-        "rMax": 49.79,
+        "rMax": 50.571,
         "triangles": 632,
         "vertices": 387
       },
@@ -71035,7 +71035,7 @@
         "targetSize": [
           285,
           38.8592,
-          45.676
+          45.716
         ],
         "confidence": "class_estimate"
       }
@@ -71054,18 +71054,18 @@
       "bounds": {
         "min": [
           -35.0008,
-          0.0539,
-          -3.8725
+          0.0536,
+          -3.8703
         ],
         "max": [
           35.0008,
-          9.1647,
-          3.8725
+          9.1001,
+          3.8703
         ],
         "size": [
           70.002,
-          9.111,
-          7.745
+          9.046,
+          7.741
         ],
         "rMax": 35.214,
         "triangles": 900,
@@ -71081,7 +71081,7 @@
         "targetSize": [
           70,
           9.1,
-          7.762784061979886
+          7.7407795816257154
         ],
         "confidence": "class_estimate"
       }
@@ -71105,12 +71105,12 @@
         ],
         "max": [
           40,
-          15.975,
+          15.775,
           5.2
         ],
         "size": [
           80,
-          15.975,
+          15.775,
           10.4
         ],
         "rMax": 40.337,
@@ -71126,7 +71126,7 @@
         "className": "industrial_ship",
         "targetSize": [
           80,
-          15.975,
+          15.774999999999999,
           10.4
         ],
         "confidence": "class_estimate"
@@ -71197,12 +71197,12 @@
         ],
         "max": [
           67.5,
-          20.725,
+          20.525,
           6.75
         ],
         "size": [
           135,
-          20.725,
+          20.525,
           13.5
         ],
         "rMax": 67.837,
@@ -71218,7 +71218,7 @@
         "className": "warship",
         "targetSize": [
           135,
-          20.725,
+          20.525,
           13.5
         ],
         "confidence": "class_estimate"
@@ -71329,21 +71329,21 @@
       "image": "ship/300gt-tuna-long-liner-boat_02.jpg",
       "bounds": {
         "min": [
-          -18.1791,
+          -18.1781,
           0,
           -4.4
         ],
         "max": [
-          21.6874,
+          21.6883,
           8.0045,
           4.4
         ],
         "size": [
-          39.867,
+          39.866,
           8.005,
           8.8
         ],
-        "rMax": 22.129,
+        "rMax": 22.13,
         "triangles": 724,
         "vertices": 442
       },
@@ -71519,12 +71519,12 @@
         ],
         "max": [
           30,
-          14.725,
+          14.525,
           5.1
         ],
         "size": [
           60,
-          14.725,
+          14.525,
           10.2
         ],
         "rMax": 30.43,
@@ -71540,7 +71540,7 @@
         "className": "research_vessel",
         "targetSize": [
           60,
-          14.725,
+          14.524999999999999,
           10.200000000000001
         ],
         "confidence": "class_estimate"
@@ -71651,12 +71651,12 @@
       "image": "ship/762bcd7026aa844c83ed2b0f5454b162.jpg",
       "bounds": {
         "min": [
-          -147.1221,
+          -147.1293,
           0,
           -22.084
         ],
         "max": [
-          137.8817,
+          137.8744,
           39.432,
           22.084
         ],
@@ -71665,7 +71665,7 @@
           39.432,
           44.168
         ],
-        "rMax": 148.77,
+        "rMax": 148.777,
         "triangles": 1002,
         "vertices": 583
       },
@@ -71679,7 +71679,7 @@
         "targetSize": [
           285,
           39.432,
-          44.218
+          44.25
         ],
         "confidence": "class_estimate"
       }
@@ -71745,19 +71745,19 @@
         "min": [
           -30.0061,
           0,
-          -6.0173
+          -6.0213
         ],
         "max": [
           30.0061,
-          16.2,
-          6.0173
+          16,
+          6.0213
         ],
         "size": [
           60.012,
-          16.2,
-          12.035
+          16,
+          12.043
         ],
-        "rMax": 30.603,
+        "rMax": 30.604,
         "triangles": 360,
         "vertices": 209
       },
@@ -71770,8 +71770,8 @@
         "className": "research_vessel",
         "targetSize": [
           60,
-          16.199999999999996,
-          12.032222179642273
+          16,
+          12.040222179476345
         ],
         "confidence": "class_estimate"
       }
@@ -72251,19 +72251,19 @@
         "min": [
           -152.281,
           0,
-          -49.0692
+          -49.0658
         ],
         "max": [
           152.281,
           37,
-          25.9308
+          25.9342
         ],
         "size": [
           304.562,
           37,
           75
         ],
-        "rMax": 159.992,
+        "rMax": 159.99,
         "triangles": 468,
         "vertices": 297
       },
@@ -72341,21 +72341,21 @@
       "image": "ship/img-1478851082-74949.jpg",
       "bounds": {
         "min": [
-          -0.2335,
+          -0.233,
           0,
           -1.6
         ],
         "max": [
-          9.767,
-          1.9,
+          9.7675,
+          2.06,
           1.6
         ],
         "size": [
-          10,
-          1.9,
+          10.001,
+          2.06,
           3.2
         ],
-        "rMax": 9.897,
+        "rMax": 9.898,
         "triangles": 158,
         "vertices": 93
       },
@@ -72368,7 +72368,7 @@
         "className": "yacht",
         "targetSize": [
           10,
-          1.9000000000000001,
+          2.06,
           3.2
         ],
         "confidence": "class_estimate"
@@ -72402,13 +72402,13 @@
           4
         ],
         "rMax": 10.665,
-        "triangles": 588,
-        "vertices": 355
+        "triangles": 600,
+        "vertices": 363
       },
       "spec": {
         "style": "modern_yacht"
       },
-      "triangles": 588,
+      "triangles": 600,
       "outputDir": "out/3d_data/ship/hull/ship_hull_k23_v6",
       "realScale": {
         "className": "yacht",
@@ -72531,12 +72531,12 @@
         ],
         "max": [
           30,
-          12.225,
+          12.025,
           5.1
         ],
         "size": [
           60,
-          12.225,
+          12.025,
           10.2
         ],
         "rMax": 30.43,
@@ -72552,7 +72552,7 @@
         "className": "research_vessel",
         "targetSize": [
           60,
-          12.225,
+          12.024999999999999,
           10.200000000000001
         ],
         "confidence": "class_estimate"
@@ -72770,13 +72770,13 @@
           5.401
         ],
         "rMax": 7.973,
-        "triangles": 490,
-        "vertices": 293
+        "triangles": 502,
+        "vertices": 301
       },
       "spec": {
         "style": "modern_catamaran_tour_boat"
       },
-      "triangles": 490,
+      "triangles": 502,
       "outputDir": "out/3d_data/ship/hull/ship_hull_s11_1667405441519_v6",
       "realScale": {
         "className": "catamaran",
@@ -72803,17 +72803,17 @@
         "min": [
           -4.5,
           0,
-          -1.3057
+          -1.3077
         ],
         "max": [
           4.5,
           2.25,
-          1.3057
+          1.3077
         ],
         "size": [
           9,
           2.25,
-          2.611
+          2.615
         ],
         "rMax": 4.686,
         "triangles": 346,
@@ -72829,7 +72829,7 @@
         "targetSize": [
           9,
           2.25,
-          2.6109185120136447
+          2.614919326623494
         ],
         "confidence": "class_estimate"
       }
@@ -72895,19 +72895,19 @@
         "min": [
           -167.8342,
           0,
-          -46.4474
+          -46.4394
         ],
         "max": [
           167.8342,
           40,
-          30.3526
+          30.3606
         ],
         "size": [
           335.668,
           40,
           76.8
         ],
-        "rMax": 174.143,
+        "rMax": 174.141,
         "triangles": 484,
         "vertices": 307
       },
@@ -72939,12 +72939,12 @@
       "image": "ship/Virginia_class_submarine.jpg",
       "bounds": {
         "min": [
-          -23.9159,
+          -25.112,
           0,
           -4.9265
         ],
         "max": [
-          90.8841,
+          89.688,
           13,
           4.9265
         ],
@@ -72953,7 +72953,7 @@
           13,
           9.853
         ],
-        "rMax": 91.018,
+        "rMax": 89.823,
         "triangles": 600,
         "vertices": 369
       },

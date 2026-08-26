@@ -17,14 +17,15 @@
     "main_hull_polyhedron",
     "teak_deck",
     "cockpit_windshield",
-    "cockpit_seating",
     "stern_platform",
     "propeller_housing_left",
-    "propeller_housing_right"
+    "propeller_housing_right",
+    "sealed_cockpit_enclosure"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",
     "box",
-    "cylinder"
+    "cylinder",
+    "tapered_box"
   ]
 }

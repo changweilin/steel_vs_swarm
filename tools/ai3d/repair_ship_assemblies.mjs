@@ -25,7 +25,7 @@ const OFFSET = Math.max(0, valueOf('--offset', 0));
 const LIMIT = Math.max(1, valueOf('--limit', 5));
 const DRY = args.includes('--dry-run');
 const EPS = 1e-6;
-const GENERATED_SHIP_DETAIL_RE = /^(landing_centerline|angled_landing_line|aircraft_elevator_|deck_edge_catwalk_|deck_aircraft_|ski_jump_ramp$|passenger_deck_tier_|upper_deck_core|balcony_|lifeboat_|disney_funnel_|forward_bridge_wing|aft_terrace_|lng_pipe_run_|lng_manifold_|cargo_hatch_[5-7]$|container_bay_|catamaran_bridge_tunnel|fishing_winch|aft_work_frame|vls_cell_|ciws_aft|stern_pumpjet_ring|stern_propulsor_hub)/i;
+const GENERATED_SHIP_DETAIL_RE = /^(landing_centerline|angled_landing_line|aircraft_elevator_|deck_edge_catwalk_|deck_aircraft_|ski_jump_ramp$|passenger_deck_tier_|upper_deck_core|balcony_|lifeboat_|disney_funnel_|forward_bridge_wing|aft_terrace_|lng_pipe_run_|lng_manifold_|cargo_hatch_[5-7]$|container_bay_|catamaran_bridge_tunnel|fishing_winch|aft_work_frame|vls_cell_|ciws_aft|stern_pumpjet_ring|stern_propulsor_hub|sealed_)/i;
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -539,6 +539,94 @@ function addShipClassDetails(parts, row, model) {
   for (const p of parts) if (/mast|funnel|stack/i.test(p.name) && /cylinder|conical_frustum/.test(p.type)) p.rot = [0,0,0];
 }
 
+function sealShipCabins(parts) {
+  for (let i=parts.length-1;i>=0;i--) {
+    if (/cockpit_seating|seat_row_|open_interior|cabin_interior|bridge_interior/i.test(parts[i].name)) parts.splice(i,1);
+  }
+  const hull = parts.find((part)=>/main_hull/i.test(part.name));
+  const wallColor = parts.find((part)=>/cabin|bridge|superstructure/i.test(part.name) && !/window|glass|roof/i.test(part.name))?.color
+    ?? hull?.color ?? 0x9aa7b2;
+  const structuralRoom = /cabin|bridge|superstructure|sealed_/i;
+  const roomDetail = /window|glass|roof|deck|wing|mast|radar/i;
+  const supportSurface = /deck|platform|hull|cabin|bridge|superstructure|sealed_/i;
+  const roofs = parts.filter((part)=>/^(canopy_roof|roof_canopy|rear_canopy_roof)$/i.test(part.name));
+
+  for (const roof of roofs) {
+    const roofBox = aabb(roof);
+    const alreadyClosed = parts.some((part)=>part!==roof && structuralRoom.test(part.name)
+      && (!roomDetail.test(part.name) || /^sealed_/i.test(part.name))
+      && horizontalOverlap(roofBox,aabb(part))>=0.52
+      && aabb(part).min[1]<roofBox.min[1]
+      && aabb(part).max[1]>=roofBox.min[1]-0.08);
+    if (alreadyClosed) continue;
+    const support = parts.filter((part)=>part!==roof && supportSurface.test(part.name) && !/roof|window|glass/i.test(part.name))
+      .filter((part)=>horizontalOverlap(roofBox,aabb(part))>=0.35 && aabb(part).max[1]<=roofBox.min[1]+0.08)
+      .sort((a,b)=>aabb(b).max[1]-aabb(a).max[1])[0] || hull;
+    if (!support) continue;
+    const supportTop = aabb(support).max[1]-0.025;
+    const height = Math.max(0.35,roofBox.min[1]-supportTop+0.05);
+    const worldLength = (roofBox.max[0]-roofBox.min[0])*0.92;
+    const worldBeam = (roofBox.max[2]-roofBox.min[2])*0.90;
+    parts.push({
+      name:`sealed_cabin_${roof.name.toLowerCase().replace(/[^a-z0-9]+/g,'_')}`,
+      type:'tapered_box', dimensions:[worldBeam,height,worldLength],
+      topDimensions:[worldBeam*0.90,worldLength*0.96],
+      pos:[(roofBox.min[0]+roofBox.max[0])*0.5,supportTop+height*0.5,(roofBox.min[2]+roofBox.max[2])*0.5],
+      rot:[0,Math.PI/2,0], color:wallColor,
+    });
+  }
+
+  const cockpit = parts.find((part)=>/cockpit_windshield/i.test(part.name));
+  if (cockpit && !parts.some((part)=>/cabin|bridge|superstructure|sealed_cockpit/i.test(part.name) && !/window|glass/i.test(part.name))) {
+    const cb = aabb(cockpit);
+    const deck = parts.filter((part)=>/deck|hull|platform/i.test(part.name))
+      .filter((part)=>horizontalOverlap(cb,aabb(part))>0 && aabb(part).max[1]<=cb.max[1])
+      .sort((a,b)=>aabb(b).max[1]-aabb(a).max[1])[0] || hull;
+    if (deck) {
+      const baseY = aabb(deck).max[1]-0.025;
+      const height = Math.max(0.45,cb.max[1]-baseY+0.16);
+      const worldLength = Math.max(1.2,(cb.max[0]-cb.min[0])*2.1);
+      const worldBeam = Math.max(1.0,(cb.max[2]-cb.min[2])*0.94);
+      parts.push({
+        name:'sealed_cockpit_enclosure', type:'tapered_box',
+        dimensions:[worldBeam,height,worldLength], topDimensions:[worldBeam*0.86,worldLength*0.82],
+        pos:[(cb.min[0]+cb.max[0])*0.5-worldLength*0.18,baseY+height*0.5,(cb.min[2]+cb.max[2])*0.5],
+        rot:[0,Math.PI/2,0], color:wallColor,
+      });
+    }
+  }
+
+  const glazing = parts.filter((part)=>/windshield|canopy_glass|side_window_(left|right|port|starboard)/i.test(part.name));
+  const hasOpaqueRoom = parts.some((part)=>structuralRoom.test(part.name)
+    && (!roomDetail.test(part.name) || /^sealed_/i.test(part.name)));
+  if (glazing.length && !hasOpaqueRoom) {
+    const glassBoxes = glazing.map(aabb);
+    const glassBox = {
+      min:[0,1,2].map((axis)=>Math.min(...glassBoxes.map((box)=>box.min[axis]))),
+      max:[0,1,2].map((axis)=>Math.max(...glassBoxes.map((box)=>box.max[axis]))),
+    };
+    const top = parts.find((part)=>/^(bimini_top|canopy_top)$/i.test(part.name));
+    const topBox = top ? aabb(top) : glassBox;
+    const footprint = top ? topBox : glassBox;
+    const support = parts.filter((part)=>/deck|platform|hull/i.test(part.name))
+      .filter((part)=>horizontalOverlap(footprint,aabb(part))>0.15 && aabb(part).max[1]<=topBox.max[1])
+      .sort((a,b)=>aabb(b).max[1]-aabb(a).max[1])[0] || hull;
+    if (support) {
+      const baseY = aabb(support).max[1]-0.025;
+      const roofY = top ? topBox.min[1]+0.05 : glassBox.max[1]+0.12;
+      const height = Math.max(0.45,roofY-baseY);
+      const worldLength = Math.max(1.2,(footprint.max[0]-footprint.min[0])*0.94);
+      const worldBeam = Math.max(1.0,(footprint.max[2]-footprint.min[2])*0.94);
+      parts.push({
+        name:'sealed_glazed_cabin_enclosure', type:'tapered_box',
+        dimensions:[worldBeam,height,worldLength], topDimensions:[worldBeam*0.90,worldLength*0.90],
+        pos:[(footprint.min[0]+footprint.max[0])*0.5,baseY+height*0.5,(footprint.min[2]+footprint.max[2])*0.5],
+        rot:[0,Math.PI/2,0], color:wallColor,
+      });
+    }
+  }
+}
+
 function applyWorldScale(parts, worldScale) {
   for (const p of parts) {
     const matrix = eulerAbsMatrix(p.rot || [0,0,0]);
@@ -597,6 +685,7 @@ for (const row of selected) {
   const baselineLength = existsSync(baselinePath) ? Math.max(...readJson(baselinePath).bounds.size.filter((_,i)=>i!==1)) : 0;
   const repaired = isSubmarine(old) ? repairSubmarine(old,baselineLength) : repairSurfaceShip(old);
   addShipClassDetails(repaired.parts,row,old);
+  sealShipCabins(repaired.parts);
   const detailBounds = repaired.parts.map(aabb);
   const measuredSize = [0,1,2].map((i)=>Math.max(...detailBounds.map((b)=>b.max[i]))-Math.min(...detailBounds.map((b)=>b.min[i])));
   const scaleSpec = resolveShipScale(row,old,measuredSize);

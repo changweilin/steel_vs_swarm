@@ -12,7 +12,7 @@
     "brightHex": 12632256,
     "glassHex": 8421631
   },
-  "totalParts": 10,
+  "totalParts": 11,
   "partNames": [
     "main_hull_port",
     "main_hull_starboard",
@@ -23,7 +23,8 @@
     "life_ring",
     "radar_dome",
     "mast",
-    "catamaran_bridge_tunnel"
+    "catamaran_bridge_tunnel",
+    "sealed_cabin_roof_canopy"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

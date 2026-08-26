@@ -12,7 +12,7 @@
     "brightHex": 15658734,
     "glassHex": 49344
   },
-  "totalParts": 9,
+  "totalParts": 10,
   "partNames": [
     "main_hull_polyhedron",
     "superstructure_base",
@@ -22,7 +22,8 @@
     "life_ring_port",
     "life_ring_starboard",
     "radar_dome",
-    "rear_supstarboard_pillar"
+    "rear_supstarboard_pillar",
+    "sealed_cabin_rear_canopy_roof"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

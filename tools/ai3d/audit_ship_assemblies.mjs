@@ -9,8 +9,9 @@
  * 3. 所有非船體零件均與船體支撐鏈接觸；接合公差為 max(0.08m, 船長 0.4%)。
  * 4. 主船體、甲板、上層、桅杆、武器間無明顯漂浮或過度互穿。
  * 5. 船體落在 y=0，並具艏艉收束體，避免只剩長方體平頭船殼。
+ * 6. 艙室由甲板封閉至艙頂；禁止裸露座椅、開放內裝或玻璃後方空洞。
  *
- * --break-floating / --break-degenerate 會在記憶體中製造壞例，且必須使對應
+ * --break-floating / --break-degenerate / --break-open / --break-winding 會在記憶體中製造壞例，且必須使對應
  * 斷言轉紅；若挑不到適用零件或沒有攔截到，腳本本身視為失敗。
  */
 
@@ -36,6 +37,10 @@ const TAPER_RE = /(bow|stern_cone|bow_cone|bow_taper|stern_taper|bulbous)/i;
 const DETAIL_RE = /(window|glass|stripe|trim|light|ring|buoy|tyre|tire|name_plate|flag|railing|fin|plane|aircraft|propeller|shaft|anchor|marking|centerline|landing_line|balcony_|funnel_plinth)/i;
 const STACK_RE = /(mast|funnel|radar|gun|turret|crane|support|pillar|stack|dome|roof|aircraft|lifeboat|raft|seat|canopy|motor)/i;
 const HULL_LAYER_RE = /(hull|waterline|bottom|base|stripe|bulge)/i;
+const WINDING_AUDIT_TYPES = new Set([
+  'box', 'tapered_box', 'polygonal_prism', 'frustum_pyramid', 'pyramid',
+  'cylinder', 'cone', 'conical_frustum', 'ellipsoid_sphere',
+]);
 
 function finiteVector(value, size) {
   return Array.isArray(value) && value.length >= size && value.slice(0, size).every(Number.isFinite);
@@ -191,6 +196,44 @@ function validatePartShape(part, issues) {
   return box;
 }
 
+function validateFaceWinding(model, parts, issues) {
+  const vertices = model.meshData?.vertices;
+  const faces = model.meshData?.faces;
+  if (!Array.isArray(vertices) || !Array.isArray(faces)) return;
+  let faceOffset = 0;
+  for (const part of parts) {
+    const triangleCount = Number.isInteger(part.triangles) ? part.triangles : 0;
+    const faceEnd = Math.min(faces.length, faceOffset + triangleCount * 3);
+    if (WINDING_AUDIT_TYPES.has(part.type)) {
+      const origin = partPosition(part);
+      let inward = 0;
+      let valid = 0;
+      for (let index = faceOffset; index + 2 < faceEnd; index += 3) {
+        const ia = faces[index] * 3, ib = faces[index + 1] * 3, ic = faces[index + 2] * 3;
+        const ax = vertices[ia], ay = vertices[ia + 1], az = vertices[ia + 2];
+        const abx = vertices[ib] - ax, aby = vertices[ib + 1] - ay, abz = vertices[ib + 2] - az;
+        const acx = vertices[ic] - ax, acy = vertices[ic + 1] - ay, acz = vertices[ic + 2] - az;
+        const nx = aby * acz - abz * acy;
+        const ny = abz * acx - abx * acz;
+        const nz = abx * acy - aby * acx;
+        const area2 = Math.hypot(nx, ny, nz);
+        if (area2 < 1e-9) continue;
+        const cx = (ax + vertices[ib] + vertices[ic]) / 3 - origin[0];
+        const cy = (ay + vertices[ib + 1] + vertices[ic + 1]) / 3 - origin[1];
+        const cz = (az + vertices[ib + 2] + vertices[ic + 2]) / 3 - origin[2];
+        valid += 1;
+        if ((nx * cx + ny * cy + nz * cz) < -area2 * 1e-7) inward += 1;
+      }
+      if (inward) {
+        issue(issues, 'error', 'INWARD_FACE', part,
+          `零件有 ${inward}/${valid} 個三角面朝內，FrontSide 材質由外側觀看會透明。`,
+          '交換錯誤三角面的第二、第三頂點，維持 FrontSide 與正確外向光照。');
+      }
+    }
+    faceOffset = faceEnd;
+  }
+}
+
 function validatePairs(parts, boxes, issues, beam, lateralAxis) {
   const groups = new Map();
   for (const part of parts) {
@@ -235,6 +278,7 @@ function validateAssembly(model, metadata) {
   }
   const boxes = new Map();
   for (const part of parts) boxes.set(part, validatePartShape(part, issues));
+  validateFaceWinding(model, parts, issues);
   const envelope = unionAabb([...boxes.values()]);
   if (!envelope) return { issues, envelope };
   const longAxis = envelope.size[0] >= envelope.size[2] ? 0 : 2;
@@ -243,6 +287,29 @@ function validateAssembly(model, metadata) {
   const beam = envelope.size[lateralAxis];
   const height = envelope.size[1];
   const tolerance = Math.max(0.08, length * 0.004);
+
+  for (const interior of parts.filter((part)=>/cockpit_seating|seat_row_|open_interior|cabin_interior|bridge_interior/i.test(part.name))) {
+    issue(issues, 'error', 'OPEN_CABIN', interior,
+      '艙室仍含可直接看見的內裝或開放座艙。', '移除內裝透視，並以封閉 box/tapered_box 包覆至頂板與甲板。');
+  }
+  const structuralRoom = /cabin|bridge|superstructure|sealed_/i;
+  const roomDetail = /window|glass|roof|deck|wing|mast|radar/i;
+  for (const roof of parts.filter((part)=>/^(canopy_roof|roof_canopy|rear_canopy_roof)$/i.test(part.name))) {
+    const roofBox = boxes.get(roof);
+    const closed = parts.some((part)=>part!==roof && boxes.get(part) && structuralRoom.test(part.name)
+      && (!roomDetail.test(part.name) || /^sealed_/i.test(part.name))
+      && overlapSize(roofBox,boxes.get(part))[0]*overlapSize(roofBox,boxes.get(part))[2]
+        >= roofBox.size[0]*roofBox.size[2]*0.50
+      && boxes.get(part).min[1]<roofBox.min[1]
+      && boxes.get(part).max[1]>=roofBox.min[1]-0.08);
+    if (!closed) issue(issues, 'error', 'OPEN_CABIN', roof,
+      '頂篷下方沒有連續封閉艙壁，可從側面透視內部。', '由甲板支撐面補到頂篷底面，使用四側封閉的 tapered_box 艙體。');
+  }
+  const glazing = parts.filter((part)=>/windshield|canopy_glass|side_window_(left|right|port|starboard)/i.test(part.name));
+  const opaqueRoom = parts.some((part)=>structuralRoom.test(part.name)
+    && (!roomDetail.test(part.name) || /^sealed_/i.test(part.name)));
+  if (glazing.length && !opaqueRoom) issue(issues, 'error', 'OPEN_CABIN', glazing[0],
+    '玻璃或擋風板後方沒有不透明封閉艙體，可透視座艙內部。', '以封閉 tapered_box 從甲板包覆至玻璃頂緣。');
 
   if (longAxis !== 0 || length < beam * 1.35) {
     issue(issues, 'error', 'WRONG_LONGITUDINAL_AXIS', null,
@@ -403,6 +470,33 @@ function injectBreak(entries) {
     if (!finiteVector(position, 3)) throw new Error('--break-floating 選中的零件沒有合法位置。');
     position[1] += 1000;
     markers.push({ entryId: entryId(entry), partName: part.name, expectedCode: 'FLOATING_PART' });
+  }
+  if (args.has('--break-open')) {
+    const entry = entries.find((candidate)=>(candidate.model.parts ?? []).length);
+    if (!entry) throw new Error('--break-open 找不到可注入開放座艙的模型。');
+    const part = { name:'cockpit_seating_break_case', type:'box', dimensions:[1,0.4,1], position:[0,2,0], rotation:[0,0,0] };
+    entry.model.parts.push(part);
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'OPEN_CABIN' });
+  }
+  if (args.has('--break-winding')) {
+    let selected = null;
+    for (const entry of entries) {
+      const faces = entry.model.meshData?.faces;
+      if (!Array.isArray(faces)) continue;
+      let faceOffset = 0;
+      for (const part of entry.model.parts ?? []) {
+        if (WINDING_AUDIT_TYPES.has(part.type) && Number.isInteger(part.triangles) && part.triangles > 0) {
+          selected = { entry, part, faces, faceOffset };
+          break;
+        }
+        faceOffset += (part.triangles ?? 0) * 3;
+      }
+      if (selected) break;
+    }
+    if (!selected) throw new Error('--break-winding 找不到可反轉的封閉 primitive。');
+    const { entry, part, faces, faceOffset } = selected;
+    [faces[faceOffset + 1], faces[faceOffset + 2]] = [faces[faceOffset + 2], faces[faceOffset + 1]];
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'INWARD_FACE' });
   }
   return markers;
 }

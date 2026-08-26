@@ -12,20 +12,20 @@
     "brightHex": 15528177,
     "glassHex": 1976635
   },
-  "totalParts": 8,
+  "totalParts": 7,
   "partNames": [
     "main_hull_polyhedron",
     "windshield",
     "bimini_top",
     "outboard_motor",
-    "seat_row_1",
-    "seat_row_2",
     "bimini_support_left",
-    "bimini_support_right"
+    "bimini_support_right",
+    "sealed_glazed_cabin_enclosure"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",
     "box",
-    "cylinder"
+    "cylinder",
+    "tapered_box"
   ]
 }

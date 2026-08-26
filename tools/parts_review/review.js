@@ -20,6 +20,11 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const n3 = (v) => (v == null ? '—' : (Math.round(v * 1000) / 1000).toString());
+const outwardWinding = (indices) => {
+  const out = [...indices];
+  for (let i = 0; i < out.length; i += 3) [out[i + 1], out[i + 2]] = [out[i + 2], out[i + 1]];
+  return out;
+};
 
 /**
  * 覆核狀態:每一個出口各自對得上 `tools/ai3d/apply_verdicts.mjs` 的**一個**動作。
@@ -245,7 +250,7 @@ function build(phase, src, kind, seed, builder = 'beacon') {
                 ];
                 geo = new gfx.THREE.BufferGeometry();
                 geo.setAttribute('position', new gfx.THREE.BufferAttribute(verts, 3));
-                geo.setIndex(indices);
+                geo.setIndex(outwardWinding(indices));
                 geo.computeVertexNormals();
               } else if (p.type === 'hull_polyhedron' && p.dimensions) {
                 const [w, h, d] = p.dimensions;
@@ -279,7 +284,7 @@ function build(phase, src, kind, seed, builder = 'beacon') {
                 const indices = [0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,1,2,6,1,6,5,2,3,7,2,7,6,3,0,4,3,4,7];
                 geo = new gfx.THREE.BufferGeometry();
                 geo.setAttribute('position', new gfx.THREE.BufferAttribute(verts, 3));
-                geo.setIndex(indices);
+                geo.setIndex(outwardWinding(indices));
                 geo.computeVertexNormals();
               }
               if (geo) {

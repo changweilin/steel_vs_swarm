@@ -30,10 +30,10 @@ function wedgeGeometry(dimensions) {
     -hw, hh, -hd, hw, hh, -hd,
   ], 3));
   geo.setIndex([
-    0, 2, 1, 0, 3, 2,
-    0, 1, 5, 0, 5, 4,
-    2, 3, 4, 2, 4, 5,
-    0, 4, 3, 1, 2, 5,
+    0, 1, 2, 0, 2, 3,
+    0, 5, 1, 0, 4, 5,
+    2, 4, 3, 2, 5, 4,
+    0, 3, 4, 1, 5, 2,
   ]);
   geo.computeVertexNormals();
   return geo;

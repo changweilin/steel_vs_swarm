@@ -12,7 +12,7 @@
     "brightHex": 16766720,
     "glassHex": 3355443
   },
-  "totalParts": 8,
+  "totalParts": 9,
   "partNames": [
     "main_hull_polyhedron",
     "canopy_glass",
@@ -21,10 +21,12 @@
     "rear_platform",
     "side_window_left",
     "side_window_right",
-    "rear_light_bar"
+    "rear_light_bar",
+    "sealed_glazed_cabin_enclosure"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",
-    "box"
+    "box",
+    "tapered_box"
   ]
 }
