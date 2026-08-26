@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:12:22.076Z",
   "bounds": {
     "min": [
-      -75.0019,
+      -112.5229,
       0,
-      -10
+      -15.75
     ],
     "max": [
-      75.0019,
+      112.5229,
       24.975,
-      10
+      15.75
     ],
     "size": [
-      150.004,
+      225.046,
       24.975,
-      20
+      31.5
     ],
-    "rMax": 75.666,
-    "triangles": 408,
-    "vertices": 235
+    "rMax": 113.62,
+    "triangles": 492,
+    "vertices": 291
   },
   "spec": {
     "style": "Bulk Carrier Ship"
@@ -43,9 +43,21 @@
     "rules": [
       "長軸維持 +X",
       "船殼 1→1",
-      "漸縮艙室 1",
+      "漸縮艙室 5",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 225.0×25.0×31.5m (class_estimate)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "bulk_carrier",
+    "targetSize": [
+      225,
+      24.975,
+      31.500000000000004
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 bulk_carrier 保守標準全長 225m。"
   }
 }

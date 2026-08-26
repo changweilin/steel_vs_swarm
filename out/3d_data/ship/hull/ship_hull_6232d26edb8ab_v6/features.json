@@ -12,7 +12,7 @@
     "brightHex": 15658734,
     "glassHex": 4621730
   },
-  "totalParts": 11,
+  "totalParts": 13,
   "partNames": [
     "main_hull_polyhedron",
     "main_deck_body",
@@ -24,7 +24,9 @@
     "storage_barrels_right",
     "life_ring_port",
     "life_ring_starboard",
-    "rear_deck_railing"
+    "rear_deck_railing",
+    "fishing_winch",
+    "aft_work_frame"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

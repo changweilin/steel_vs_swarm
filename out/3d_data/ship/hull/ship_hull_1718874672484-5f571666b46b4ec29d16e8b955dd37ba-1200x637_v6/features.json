@@ -12,7 +12,7 @@
     "brightHex": 15528177,
     "glassHex": 4621735
   },
-  "totalParts": 10,
+  "totalParts": 12,
   "partNames": [
     "main_hull_polyhedron",
     "cabin_main",
@@ -23,7 +23,9 @@
     "mast_main",
     "lifebuoy_left",
     "lifebuoy_right",
-    "propeller_shaft"
+    "propeller_shaft",
+    "fishing_winch",
+    "aft_work_frame"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

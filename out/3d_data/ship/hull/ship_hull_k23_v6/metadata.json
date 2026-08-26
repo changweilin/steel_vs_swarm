@@ -14,21 +14,21 @@
   "created_at": "2026-08-20T16:14:24.121Z",
   "bounds": {
     "min": [
-      -11,
+      -10.476,
       0,
       -2
     ],
     "max": [
-      10,
+      9.524,
       5.725,
       2
     ],
     "size": [
-      21,
+      20,
       5.725,
       4
     ],
-    "rMax": 11.18,
+    "rMax": 10.665,
     "triangles": 588,
     "vertices": 355
   },
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 1",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 20.0×5.7×4.0m (class_estimate)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "yacht",
+    "targetSize": [
+      20,
+      5.725,
+      4
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 yacht 保守標準全長 20m。"
   }
 }

@@ -12,7 +12,7 @@
     "brightHex": 10526880,
     "glassHex": 46217
   },
-  "totalParts": 10,
+  "totalParts": 26,
   "partNames": [
     "main_hull_polyhedron",
     "flight_deck",
@@ -23,13 +23,30 @@
     "aircraft_1",
     "aircraft_2",
     "aircraft_3",
-    "aircraft_4"
+    "aircraft_4",
+    "landing_centerline",
+    "angled_landing_line",
+    "aircraft_elevator_forward",
+    "aircraft_elevator_aft",
+    "deck_edge_catwalk_port",
+    "deck_edge_catwalk_starboard",
+    "deck_aircraft_01",
+    "deck_aircraft_02",
+    "deck_aircraft_03",
+    "deck_aircraft_04",
+    "deck_aircraft_05",
+    "deck_aircraft_06",
+    "deck_aircraft_07",
+    "deck_aircraft_08",
+    "deck_aircraft_09",
+    "deck_aircraft_10"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",
     "box",
     "tapered_box",
     "hemisphere_dome",
-    "cylinder"
+    "cylinder",
+    "wedge"
   ]
 }

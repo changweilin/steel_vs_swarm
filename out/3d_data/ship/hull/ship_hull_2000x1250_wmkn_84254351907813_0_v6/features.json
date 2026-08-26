@@ -12,7 +12,7 @@
     "brightHex": 15790320,
     "glassHex": 3368652
   },
-  "totalParts": 15,
+  "totalParts": 20,
   "partNames": [
     "main_hull_polyhedron",
     "main_deck",
@@ -28,7 +28,12 @@
     "funnel_block",
     "helipad_deck",
     "life_ring_port",
-    "life_ring_starboard"
+    "life_ring_starboard",
+    "vls_cell_1",
+    "vls_cell_2",
+    "vls_cell_3",
+    "vls_cell_4",
+    "ciws_aft"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

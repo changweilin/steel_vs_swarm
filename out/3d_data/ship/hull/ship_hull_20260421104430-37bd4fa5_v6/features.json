@@ -4,7 +4,7 @@
   "style": "industrial_cargo_ship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 4210752,
+    "roofHex": 8359053,
     "facadeHex": 2105376,
     "baseHex": 4210752,
     "accentHex": 15105570,
@@ -12,23 +12,38 @@
     "brightHex": 14737632,
     "glassHex": 8454143
   },
-  "totalParts": 10,
+  "totalParts": 25,
   "partNames": [
     "main_hull_polyhedron",
-    "container_deck_area",
     "superstructure_base",
     "bridge_level",
     "bridge_windows",
     "funnel",
     "radar_mast",
     "radar_dome",
-    "container_stack_front",
-    "container_stack_rear"
+    "container_bay_1_1",
+    "container_bay_1_2",
+    "container_bay_1_3",
+    "container_bay_2_1",
+    "container_bay_2_2",
+    "container_bay_2_3",
+    "container_bay_3_1",
+    "container_bay_3_2",
+    "container_bay_3_3",
+    "container_bay_4_1",
+    "container_bay_4_2",
+    "container_bay_4_3",
+    "container_bay_5_1",
+    "container_bay_5_2",
+    "container_bay_5_3",
+    "container_bay_6_1",
+    "container_bay_6_2",
+    "container_bay_6_3"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",
-    "box",
     "tapered_box",
+    "box",
     "cylinder",
     "hemisphere_dome"
   ]

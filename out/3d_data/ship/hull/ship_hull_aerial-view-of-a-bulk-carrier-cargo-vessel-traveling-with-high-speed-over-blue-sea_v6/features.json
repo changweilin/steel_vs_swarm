@@ -12,7 +12,7 @@
     "brightHex": 15658734,
     "glassHex": 8421631
   },
-  "totalParts": 9,
+  "totalParts": 16,
   "partNames": [
     "main_hull_polyhedron",
     "Deck",
@@ -22,7 +22,14 @@
     "Crane 2",
     "Crane 3",
     "Funnel",
-    "Radar Dome"
+    "Radar Dome",
+    "cargo_hatch_1",
+    "cargo_hatch_2",
+    "cargo_hatch_3",
+    "cargo_hatch_4",
+    "cargo_hatch_5",
+    "cargo_hatch_6",
+    "cargo_hatch_7"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

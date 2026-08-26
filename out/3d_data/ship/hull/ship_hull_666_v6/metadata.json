@@ -14,21 +14,21 @@
   "created_at": "2026-08-20T16:11:24.539Z",
   "bounds": {
     "min": [
-      -25,
+      -30,
       0,
-      -4
+      -5.1
     ],
     "max": [
-      25,
+      30,
       11.925,
-      4
+      5.1
     ],
     "size": [
-      50,
+      60,
       11.925,
-      8
+      10.2
     ],
-    "rMax": 25.318,
+    "rMax": 30.43,
     "triangles": 344,
     "vertices": 203
   },
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 1",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 60.0×11.9×10.2m (class_estimate)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "research_vessel",
+    "targetSize": [
+      60,
+      11.924999999999999,
+      10.200000000000001
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 research_vessel 保守標準全長 60m。"
   }
 }

@@ -16,21 +16,21 @@
     "min": [
       -20,
       0,
-      -4
+      -4.4
     ],
     "max": [
       20,
       13.725,
-      4
+      4.4
     ],
     "size": [
       40,
       13.725,
-      8
+      8.8
     ],
-    "rMax": 20.396,
-    "triangles": 552,
-    "vertices": 337
+    "rMax": 20.478,
+    "triangles": 604,
+    "vertices": 367
   },
   "spec": {
     "style": "industrial_fishing_vessel"
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 2",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 40.0×13.7×8.8m (class_estimate)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "fishing_vessel",
+    "targetSize": [
+      40,
+      13.725,
+      8.8
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 fishing_vessel 保守標準全長 40m。"
   }
 }

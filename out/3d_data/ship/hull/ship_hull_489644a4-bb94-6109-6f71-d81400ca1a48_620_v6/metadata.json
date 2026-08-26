@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:10:46.890Z",
   "bounds": {
     "min": [
-      -150,
+      -110,
       0,
-      -20.1732
+      -19.7764
     ],
     "max": [
-      150,
-      44.975,
-      20.1732
+      110,
+      41.798,
+      19.7764
     ],
     "size": [
-      300,
-      44.975,
-      40.346
+      220,
+      41.798,
+      39.553
     ],
-    "rMax": 151.35,
-    "triangles": 346,
-    "vertices": 219
+    "rMax": 111.764,
+    "triangles": 538,
+    "vertices": 347
   },
   "spec": {
     "style": "container_ship"
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 1",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 220.0×41.8×39.6m (class_estimate)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "cargo_ship",
+    "targetSize": [
+      220,
+      41.798,
+      39.599999999999994
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 cargo_ship 保守標準全長 220m。"
   }
 }

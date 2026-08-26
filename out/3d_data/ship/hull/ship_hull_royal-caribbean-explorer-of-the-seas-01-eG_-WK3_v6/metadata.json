@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:20:58.176Z",
   "bounds": {
     "min": [
-      -75,
+      -155,
       0,
-      -15.3508
+      -23.5
     ],
     "max": [
-      75,
-      48.95,
-      15.3508
+      155,
+      58,
+      23.5
     ],
     "size": [
-      150,
-      48.95,
-      30.702
+      310,
+      58,
+      47
     ],
-    "rMax": 76.555,
-    "triangles": 288,
-    "vertices": 173
+    "rMax": 156.771,
+    "triangles": 3004,
+    "vertices": 1861
   },
   "spec": {
     "style": "cruise_ship"
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 2",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 310.0×58.0×47.0m (exact)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "cruise_ship",
+    "targetSize": [
+      310,
+      58,
+      47
+    ],
+    "confidence": "exact",
+    "source": "Royal Caribbean Explorer Fact Sheet：長 310m、寬 47m、15 層甲板。"
   }
 }

@@ -10,6 +10,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildGeometryFromParts } from './direct_ingest_v6.mjs';
+import { resolveShipScale } from './ship_scale_catalog.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
@@ -24,6 +25,7 @@ const OFFSET = Math.max(0, valueOf('--offset', 0));
 const LIMIT = Math.max(1, valueOf('--limit', 5));
 const DRY = args.includes('--dry-run');
 const EPS = 1e-6;
+const GENERATED_SHIP_DETAIL_RE = /^(landing_centerline|angled_landing_line|aircraft_elevator_|deck_edge_catwalk_|deck_aircraft_|ski_jump_ramp$|passenger_deck_tier_|upper_deck_core|balcony_|lifeboat_|disney_funnel_|forward_bridge_wing|aft_terrace_|lng_pipe_run_|lng_manifold_|cargo_hatch_[5-7]$|container_bay_|catamaran_bridge_tunnel|fishing_winch|aft_work_frame|vls_cell_|ciws_aft|stern_pumpjet_ring|stern_propulsor_hub)/i;
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -196,7 +198,7 @@ function repairSurfaceShip(model) {
     const beam = Math.max(0.6, max[cross] - min[cross]);
     const h = Math.max(0.45, max[1] - min[1]);
     const len = Math.max(beam*2.4, max[axis] - min[axis]);
-    const pos = [0,min[1],0];
+    const pos = [0,0,0];
     pos[cross] = (min[cross]+max[cross])/2;
     pos[axis] = (min[axis]+max[axis])/2;
     let ry = Math.PI/2;
@@ -234,7 +236,7 @@ function repairSurfaceShip(model) {
     if (support) {
       const top = aabb(support).max[1];
       const gap = b.min[1] - top;
-      if (gap > 0.05 && gap < model.bounds.size[1]*0.55) p.pos[1] -= gap;
+      if (gap > 0.05 && gap < model.bounds.size[1]*0.80) p.pos[1] -= gap;
     } else {
       support = supports.filter((s)=> {
         const sb = aabb(s);
@@ -296,7 +298,7 @@ function repairSurfaceShip(model) {
     }
   }
 
-  const attachmentName = /window|glass|ring|buoy|railing|stripe|light|dome|roof|canopy|motor|ladder|wing|flag|anchor|crane_arm|pillar|seat/i;
+  const attachmentName = /window|glass|ring|buoy|railing|stripe|light|dome|roof|canopy|motor|ladder|wing|flag|anchor|crane_arm|pillar|seat|lifeboat|stabilizer/i;
   const attachmentSupports = parts.filter((p)=>!attachmentName.test(p.name) && !/propeller|shaft|aircraft/.test(p.name));
   for (const p of parts.filter((part)=>attachmentName.test(part.name))) {
     const pb = aabb(p);
@@ -308,6 +310,21 @@ function repairSurfaceShip(model) {
     if (gap > 0.05) {
       p.pos = p.pos.map((v,i)=>v+delta[i]);
     }
+  }
+
+  const portStabilizer = parts.find((p)=>/port.*stabilizer|stabilizer.*port/i.test(p.name));
+  const starboardStabilizer = parts.find((p)=>/starboard.*stabilizer|stabilizer.*starboard/i.test(p.name));
+  if (portStabilizer && starboardStabilizer) {
+    const x = (portStabilizer.pos[0]+starboardStabilizer.pos[0])*0.5;
+    const flightDeck = parts.find((p)=>/flight_deck/i.test(p.name));
+    const deckBox = flightDeck ? aabb(flightDeck) : null;
+    const y = deckBox ? (deckBox.min[1]+deckBox.max[1])*0.5 : (portStabilizer.pos[1]+starboardStabilizer.pos[1])*0.5;
+    const stabilizerHalfBeam = (aabb(portStabilizer).max[2]-aabb(portStabilizer).min[2])*0.5;
+    const z = deckBox ? Math.max(0.1,deckBox.max[2]-stabilizerHalfBeam+0.025) : (Math.abs(portStabilizer.pos[2])+Math.abs(starboardStabilizer.pos[2]))*0.5;
+    const portSign = Math.sign(portStabilizer.pos[2]) || 1;
+    portStabilizer.pos = [x,y,portSign*z];
+    starboardStabilizer.pos = [x,y,-portSign*z];
+    starboardStabilizer.rot = [-portStabilizer.rot[0],portStabilizer.rot[1],-portStabilizer.rot[2]];
   }
 
   const placeOn = (children, parents) => {
@@ -387,6 +404,174 @@ function repairSurfaceShip(model) {
   return { parts, changes:[canonical.rotated?'長軸 Z→+X':'長軸維持 +X', `船殼 ${structural.length}→${hullParts.length}`, `漸縮艙室 ${parts.filter((p)=>p.type==='tapered_box').length}`, `鏡像補件 ${parts.length-beforeMirror}`, `貼地 ${(-minY).toFixed(2)}m`] };
 }
 
+function addShipClassDetails(parts, row, model) {
+  const identity = `${row.key} ${model.style || ''}`;
+  for (let i=parts.length-1;i>=0;i--) if (GENERATED_SHIP_DETAIL_RE.test(parts[i].name)) parts.splice(i,1);
+  const bounds = parts.map(aabb);
+  const lo = [0,1,2].map((i)=>Math.min(...bounds.map((b)=>b.min[i])));
+  const hi = [0,1,2].map((i)=>Math.max(...bounds.map((b)=>b.max[i])));
+  const L = hi[0]-lo[0], H = hi[1]-lo[1], B = hi[2]-lo[2];
+  const hull = parts.find((p)=>/main_hull/i.test(p.name));
+  const deckCandidate = parts.filter((p)=>/flight_deck|main_deck|cargo_deck|weather_deck|deck$/i.test(p.name))
+    .reduce((best,p)=>!best || (aabb(p).max[0]-aabb(p).min[0])*(aabb(p).max[2]-aabb(p).min[2]) > (aabb(best).max[0]-aabb(best).min[0])*(aabb(best).max[2]-aabb(best).min[2]) ? p : best,null);
+  const deck = deckCandidate && aabb(deckCandidate).max[0]-aabb(deckCandidate).min[0] >= L*0.40 ? deckCandidate : hull;
+  const deckTop = deck ? aabb(deck).max[1] : H*0.25;
+  const hullColor = hull?.color ?? 0x8d99a6;
+  const deckColor = deck?.color ?? 0x4b5563;
+  const bright = parts.find((p)=>/radar|window/i.test(p.name))?.color ?? 0xe5e7eb;
+  const glass = parts.find((p)=>/window|glass/i.test(p.name))?.color ?? 0x17384a;
+  const add = (part) => {
+    if (!parts.some((p)=>p.name.toLowerCase()===part.name.toLowerCase())) parts.push(part);
+  };
+
+  if (/aircraft_carrier/i.test(identity)) {
+    const fd = parts.find((p)=>/flight_deck/i.test(p.name)) || deck;
+    const fb = fd ? aabb(fd) : { min:[-L/2,deckTop,-B/2], max:[L/2,deckTop,B/2] };
+    const top = fb.max[1];
+    add({ name:'landing_centerline', type:'box', dimensions:[0.45,0.05,L*0.62], pos:[L*0.02,top+0.025,0], rot:[0,Math.PI/2,0], color:0xf4f1de });
+    add({ name:'angled_landing_line', type:'box', dimensions:[0.38,0.055,L*0.46], pos:[-L*0.08,top+0.03,-B*0.12], rot:[0,Math.PI/2-0.12,0], color:0xf4f1de });
+    add({ name:'aircraft_elevator_forward', type:'box', dimensions:[B*0.18,0.08,L*0.075], pos:[L*0.23,top+0.04,B*0.28], rot:[0,Math.PI/2,0], color:0x606770 });
+    add({ name:'aircraft_elevator_aft', type:'box', dimensions:[B*0.17,0.08,L*0.07], pos:[-L*0.28,top+0.04,-B*0.28], rot:[0,Math.PI/2,0], color:0x606770 });
+    add({ name:'deck_edge_catwalk_port', type:'box', dimensions:[1.0,0.55,L*0.68], pos:[-L*0.02,top-0.25,fb.max[2]-0.45], rot:[0,Math.PI/2,0], color:hullColor });
+    add({ name:'deck_edge_catwalk_starboard', type:'box', dimensions:[1.0,0.55,L*0.68], pos:[-L*0.02,top-0.25,fb.min[2]+0.45], rot:[0,Math.PI/2,0], color:hullColor });
+    for (let i=0;i<10;i++) {
+      const x = -L*0.36 + (i%5)*L*0.075;
+      const z = (i<5 ? -1 : 1) * B*(0.27 + (i%2)*0.06);
+      add({ name:`deck_aircraft_${String(i+1).padStart(2,'0')}`, type:'wedge', dimensions:[B*0.075,L*0.002,L*0.025], pos:[x,top+L*0.002,z], rot:[0,Math.PI/2,0], color:0xb7c0ca });
+    }
+    if (/圖2-超日王號|e7642302|GettyImages/i.test(identity) && !parts.some((p)=>/ski_jump/i.test(p.name))) {
+      add({ name:'ski_jump_ramp', type:'wedge', dimensions:[B*0.72,H*0.07,L*0.13], pos:[L*0.42,top+H*0.025,0], rot:[0,Math.PI/2,0], color:deckColor });
+    }
+  }
+
+  if (/cruise_ship|cruise ship/i.test(identity)) {
+    const sideY = deckTop + Math.max(1,H*0.18);
+    for (let tier=0;tier<3;tier++) {
+      const tierY = sideY+tier*H*0.09;
+      const tierLength = L*(0.68-tier*0.05);
+      for (const side of [-1,1]) {
+        add({ name:`balcony_support_${tier+1}_${side<0?'port':'starboard'}`, type:'tapered_box', dimensions:[B*0.12,H*0.075,tierLength], topDimensions:[B*0.10,tierLength*0.97], pos:[-L*0.04,tierY,side*B*0.415], rot:[0,Math.PI/2,0], color:bright });
+        add({ name:`balcony_band_${tier+1}_${side<0?'port':'starboard'}`, type:'box', dimensions:[0.16,Math.max(0.35,H*0.025),tierLength], pos:[-L*0.04,tierY,side*B*0.47], rot:[0,Math.PI/2,0], color:glass });
+      }
+    }
+    for (let i=0;i<8;i++) for (const side of [-1,1]) {
+      add({ name:`lifeboat_${String(i+1).padStart(2,'0')}_${side<0?'port':'starboard'}`, type:'ellipsoid_sphere', radii:[Math.max(0.35,B*0.018),Math.max(0.35,H*0.018),Math.max(1,L*0.012)], pos:[-L*0.29+i*L*0.08,sideY,side*B*0.47], rot:[0,Math.PI/2,0], color:0xe9a23b });
+    }
+    if (/Disney%20Adventure|Disney Adventure/i.test(identity)) {
+      for (let i=0;i<4;i++) {
+        const x = -L*0.12+(i%2)*L*0.22;
+        const z = (i<2?-1:1)*B*0.11;
+        const supportTop = Math.max(deckTop,...parts.filter((p)=>!GENERATED_SHIP_DETAIL_RE.test(p.name)).map(aabb)
+          .filter((box)=>x>=box.min[0] && x<=box.max[0] && z>=box.min[2] && z<=box.max[2]).map((box)=>box.max[1]));
+        const plinthH = H*0.18, funnelH = H*0.18;
+        add({ name:`disney_funnel_plinth_${i+1}`, type:'box', dimensions:[B*0.10,plinthH,B*0.10], pos:[x,supportTop+plinthH*0.5,z], rot:[0,0,0], color:bright });
+        add({ name:`disney_funnel_${i+1}`, type:'cylinder', sides:8, radii:[B*0.045,B*0.06], height:funnelH, pos:[x,supportTop+plinthH+funnelH*0.5,z], rot:[0,0,0], color:0xb3262e });
+      }
+      add({ name:'forward_bridge_wing', type:'tapered_box', dimensions:[B*0.90,H*0.08,L*0.10], topDimensions:[B*0.78,L*0.08], pos:[L*0.32,deckTop+H*0.34,0], rot:[0,Math.PI/2,0], color:bright });
+    }
+    if (/explorer-of-the-seas/i.test(identity)) {
+      for (let i=0;i<3;i++) add({ name:`aft_terrace_${i+1}`, type:'tapered_box', dimensions:[B*(0.88-i*0.09),H*0.055,L*(0.14-i*0.018)], topDimensions:[B*(0.80-i*0.08),L*(0.12-i*0.016)], pos:[-L*(0.36-i*0.025),deckTop+H*(0.22+i*0.07),0], rot:[0,Math.PI/2,0], color:bright });
+    }
+  }
+
+  if (/LNG|methan/i.test(identity)) {
+    for (const z of [-B*0.16,0,B*0.16]) add({ name:`lng_pipe_run_${z<0?'port':z>0?'starboard':'center'}`, type:'cylinder', sides:8, radii:[Math.max(0.12,B*0.008),Math.max(0.12,B*0.008)], height:L*0.62, pos:[-L*0.03,deckTop+H*0.045,z], rot:[0,0,-Math.PI/2], color:0xd6dde5 });
+    for (let i=0;i<3;i++) add({ name:`lng_manifold_${i+1}`, type:'cylinder', sides:8, radii:[Math.max(0.10,B*0.006),Math.max(0.10,B*0.006)], height:B*0.42, pos:[-L*0.20+i*L*0.20,deckTop+H*0.045,0], rot:[Math.PI/2,0,0], color:0xd6dde5 });
+  }
+
+  if (/bulk/i.test(identity)) {
+    for (let i=0;i<7;i++) add({ name:`cargo_hatch_${i+1}`, type:'tapered_box', dimensions:[B*0.72,H*0.025,L*0.085], topDimensions:[B*0.66,L*0.078], pos:[-L*0.28+i*L*0.09,deckTop+H*0.012,0], rot:[0,Math.PI/2,0], color:0xc7c9c3 });
+  }
+
+  if (/container|cargo_ship/i.test(identity)) {
+    for (let i=parts.length-1;i>=0;i--) if (/container_stack|deck_containers|container_deck_area/i.test(parts[i].name)) parts.splice(i,1);
+    const obstacles = parts.filter((p)=>/bridge|superstructure|cabin|island/i.test(p.name)).map(aabb);
+    let bay = 0;
+    for (let candidate=0;candidate<11 && bay<6;candidate++) {
+      const x = -L*0.27+candidate*L*0.065;
+      const probe = { min:[x-L*0.034,deckTop,-B*0.40], max:[x+L*0.034,deckTop+H*0.13,B*0.40] };
+      if (obstacles.some((box)=>overlap1(probe.min[0],probe.max[0],box.min[0],box.max[0])>0 && overlap1(probe.min[2],probe.max[2],box.min[2],box.max[2])>0)) continue;
+      for (let rowZ=-1;rowZ<=1;rowZ++) add({ name:`container_bay_${bay+1}_${rowZ+2}`, type:'box', dimensions:[B*0.24,H*0.12,L*0.065], pos:[x,deckTop+H*0.06,rowZ*B*0.25], rot:[0,Math.PI/2,0], color:[0xb94b42,0x315c7d,0xc98b35][(bay+rowZ+3)%3] });
+      bay++;
+    }
+  }
+
+  if (/catamaran|TurboJET_Barca/i.test(identity)) {
+    const existingDemiHulls = parts.filter((p)=>/hull/i.test(p.name) && p.type==='hull_polyhedron' && Math.abs(p.pos[2])>B*0.08);
+    if (existingDemiHulls.length===2) {
+      existingDemiHulls.sort((a,b)=>b.pos[2]-a.pos[2]);
+      existingDemiHulls[0].name = 'main_hull_port';
+      existingDemiHulls[1].name = 'main_hull_starboard';
+    }
+    const hasTwinHull = parts.some((p)=>/main_hull.*port/i.test(p.name)) && parts.some((p)=>/main_hull.*starboard/i.test(p.name));
+    const rootIndex = hasTwinHull ? -1 : parts.findIndex((p)=>/main_hull_polyhedron/i.test(p.name));
+    if (!hasTwinHull && rootIndex >= 0) {
+      const root = parts[rootIndex];
+      const beam = root.dimensions[0];
+      const demi = { ...root, dimensions:[beam*0.34,root.dimensions[1],root.dimensions[2]], pos:[...root.pos] };
+      parts.splice(rootIndex,1,
+        { ...demi, name:'main_hull_port', pos:[demi.pos[0],demi.pos[1],B*0.28] },
+        { ...demi, name:'main_hull_starboard', pos:[demi.pos[0],demi.pos[1],-B*0.28] });
+    }
+    const deckBox = deck ? aabb(deck) : null;
+    const tunnelHeight = Math.max(0.2,H*0.025);
+    const tunnelY = deckBox ? deckBox.min[1]-tunnelHeight*0.5+0.02 : deckTop-H*0.04;
+    add({ name:'catamaran_bridge_tunnel', type:'box', dimensions:[B*0.62,tunnelHeight,L*0.34], pos:[L*0.02,tunnelY,0], rot:[0,Math.PI/2,0], color:hullColor });
+  }
+
+  if (/fishing/i.test(identity)) {
+    add({ name:'fishing_winch', type:'cylinder', sides:10, radii:[Math.max(0.15,B*0.045),Math.max(0.15,B*0.045)], height:Math.max(0.4,B*0.18), pos:[-L*0.20,deckTop+Math.max(0.15,B*0.045),0], rot:[Math.PI/2,0,0], color:0x46515d });
+    add({ name:'aft_work_frame', type:'box', dimensions:[Math.max(0.08,B*0.015),Math.max(0.5,H*0.22),Math.max(0.08,B*0.015)], pos:[-L*0.20,deckTop+H*0.11,0], rot:[0,0,0], color:0xd0d5da });
+  }
+
+  if (/warship|military_ship|naval/i.test(identity) && !/submarine|aircraft_carrier/i.test(identity)) {
+    for (let i=0;i<4;i++) add({ name:`vls_cell_${i+1}`, type:'box', dimensions:[B*0.09,H*0.018,L*0.025], pos:[L*(0.17+i*0.035),deckTop+H*0.01,(i%2?-1:1)*B*0.07], rot:[0,Math.PI/2,0], color:0x39434d });
+    add({ name:'ciws_aft', type:'cylinder', sides:10, radii:[B*0.025,B*0.032], height:H*0.07, pos:[0,deckTop+H*0.035,0], rot:[0,0,0], color:bright });
+  }
+
+  if (/submarine/i.test(identity)) {
+    const hb = hull ? aabb(hull) : { min:lo, max:hi };
+    const sternY = (hb.min[1]+hb.max[1])*0.5;
+    add({ name:'stern_pumpjet_ring', type:'torus_ring', radius:Math.max(0.5,B*0.34), tube:Math.max(0.08,B*0.045), pos:[hb.min[0],sternY,0], rot:[0,0,Math.PI/2], color:0x303841 });
+    add({ name:'stern_propulsor_hub', type:'cylinder', sides:12, radii:[Math.max(0.18,B*0.10),Math.max(0.18,B*0.10)], height:Math.max(0.5,L*0.025), pos:[hb.min[0],sternY,0], rot:[0,0,Math.PI/2], color:0x252b32 });
+  }
+
+  for (const p of parts) if (/mast|funnel|stack/i.test(p.name) && /cylinder|conical_frustum/.test(p.type)) p.rot = [0,0,0];
+}
+
+function applyWorldScale(parts, worldScale) {
+  for (const p of parts) {
+    const matrix = eulerAbsMatrix(p.rot || [0,0,0]);
+    const localScale = [0,1,2].map((axis)=>matrix[0][axis]*worldScale[0]+matrix[1][axis]*worldScale[1]+matrix[2][axis]*worldScale[2]);
+    p.pos = p.pos.map((v,i)=>v*worldScale[i]);
+    if (p.dimensions) p.dimensions = p.dimensions.map((v,i)=>v*localScale[i]);
+    if (p.topDimensions) p.topDimensions = [p.topDimensions[0]*localScale[0],p.topDimensions[1]*localScale[2]];
+    if (p.type === 'ellipsoid_sphere' || p.type === 'hemisphere_dome') p.radii = p.radii.map((v,i)=>v*localScale[i]);
+    else if (p.radii) p.radii = p.radii.map((v)=>v*(localScale[0]+localScale[2])/2);
+    if (Number.isFinite(p.height)) p.height *= localScale[1];
+    if (Number.isFinite(p.radius)) p.radius *= (localScale[0]+localScale[2])/2;
+    if (Number.isFinite(p.tube)) p.tube *= (localScale[0]+localScale[1]+localScale[2])/3;
+  }
+  for (const p of parts) {
+    if (!/mast|funnel|stack|periscope/i.test(p.name) || !/cylinder|conical_frustum/.test(p.type)) continue;
+    p.rot = [0,0,0];
+    const radius = Math.max(...(p.radii || [p.radius || 0]).map((value)=>Math.abs(Number(value)||0)));
+    p.height = Math.max(Number(p.height)||0,radius*2.4);
+  }
+  const minY = Math.min(...parts.map((p)=>aabb(p).min[1]));
+  for (const p of parts) p.pos[1] -= minY;
+}
+
+function scalePartsToSize(parts, targetSize) {
+  const before = parts.map(aabb);
+  const lo = [0,1,2].map((i)=>Math.min(...before.map((b)=>b.min[i])));
+  const hi = [0,1,2].map((i)=>Math.max(...before.map((b)=>b.max[i])));
+  const measured = hi.map((v,i)=>Math.max(EPS,v-lo[i]));
+  const worldScale = targetSize.map((v,i)=>v/measured[i]);
+  applyWorldScale(parts,worldScale);
+  return { measured, worldScale };
+}
+
 function colorsOf(parts) {
   const pick = (re, fallback) => parts.find((p)=>re.test(p.name))?.color ?? fallback;
   return {
@@ -407,9 +592,16 @@ for (const row of selected) {
   const modelPath = join(dir,'model.json');
   if (!existsSync(modelPath)) throw new Error(`缺 model.json: ${row.outputDir}`);
   const old = readJson(modelPath);
+  old.parts = old.parts.filter((part)=>!GENERATED_SHIP_DETAIL_RE.test(part.name));
   const baselinePath = join(dir.replace(/_v6$/,''),'model.json');
   const baselineLength = existsSync(baselinePath) ? Math.max(...readJson(baselinePath).bounds.size.filter((_,i)=>i!==1)) : 0;
   const repaired = isSubmarine(old) ? repairSubmarine(old,baselineLength) : repairSurfaceShip(old);
+  addShipClassDetails(repaired.parts,row,old);
+  const detailBounds = repaired.parts.map(aabb);
+  const measuredSize = [0,1,2].map((i)=>Math.max(...detailBounds.map((b)=>b.max[i]))-Math.min(...detailBounds.map((b)=>b.min[i])));
+  const scaleSpec = resolveShipScale(row,old,measuredSize);
+  scalePartsToSize(repaired.parts,scaleSpec.size);
+  repaired.changes.push(`實尺 ${scaleSpec.size.map((n)=>n.toFixed(1)).join('×')}m (${scaleSpec.confidence})`);
   const input = {
     style:old.style, symmetryMode:'symmetric', colors:colorsOf(old.parts), parts:repaired.parts,
   };
@@ -426,13 +618,15 @@ for (const row of selected) {
       metadata.bounds = built.bounds;
       metadata.symmetryMode = 'symmetric';
       metadata.geometryReview = { version:1, repaired:true, rules:repaired.changes };
+      metadata.realScale = { version:1, className:scaleSpec.className, targetSize:scaleSpec.size, confidence:scaleSpec.confidence, source:scaleSpec.source };
       writeFileSync(metadataPath, `${JSON.stringify(metadata,null,2)}\n`,'utf8');
     }
     row.bounds = built.bounds;
     row.triangles = built.bounds.triangles;
+    row.realScale = { className:scaleSpec.className, targetSize:scaleSpec.size, confidence:scaleSpec.confidence };
     const entry = manifest.parts.find((p)=>(p.keys || (p.key ? [p.key] : [])).includes(row.key));
     if (entry) {
-      entry.post = { ...(entry.post||{}), bounds:built.bounds.size, repair:'closed_hull_v1' };
+      entry.post = { ...(entry.post||{}), bounds:built.bounds.size, repair:'closed_hull_v2_real_scale', realScale:scaleSpec.size, scaleConfidence:scaleSpec.confidence };
       if (entry.gen) entry.gen.measured = `Triangles ${built.bounds.triangles}, Vertices ${built.bounds.vertices}, Similarity ${row.similarityScore || '?'} /100`;
     }
   }

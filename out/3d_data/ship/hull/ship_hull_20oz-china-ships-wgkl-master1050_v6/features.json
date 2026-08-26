@@ -12,7 +12,7 @@
     "brightHex": 16777215,
     "glassHex": 49151
   },
-  "totalParts": 9,
+  "totalParts": 14,
   "partNames": [
     "main_hull_polyhedron",
     "superstructure_base",
@@ -22,7 +22,12 @@
     "rear_hangar",
     "funnel",
     "life_buoy_port",
-    "life_buoy_starboard"
+    "life_buoy_starboard",
+    "vls_cell_1",
+    "vls_cell_2",
+    "vls_cell_3",
+    "vls_cell_4",
+    "ciws_aft"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

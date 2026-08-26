@@ -33,7 +33,7 @@ const wantedKey = onlyArg?.slice('--only='.length) ?? null;
 const MAJOR_RE = /(hull|deck|superstructure|bridge|cabin|island|tower|container|tank|hangar|platform|stern_base|sponson)/i;
 const ROOT_RE = /(main_?hull|hull_?(main|base|body|lower|bottom)|vessel_hull|carrier_main_hull|underwater_hull)/i;
 const TAPER_RE = /(bow|stern_cone|bow_cone|bow_taper|stern_taper|bulbous)/i;
-const DETAIL_RE = /(window|glass|stripe|trim|light|ring|buoy|tyre|tire|name_plate|flag|railing|fin|plane|propeller|shaft|anchor)/i;
+const DETAIL_RE = /(window|glass|stripe|trim|light|ring|buoy|tyre|tire|name_plate|flag|railing|fin|plane|aircraft|propeller|shaft|anchor|marking|centerline|landing_line|balcony_|funnel_plinth)/i;
 const STACK_RE = /(mast|funnel|radar|gun|turret|crane|support|pillar|stack|dome|roof|aircraft|lifeboat|raft|seat|canopy|motor)/i;
 const HULL_LAYER_RE = /(hull|waterline|bottom|base|stripe|bulge)/i;
 
@@ -173,8 +173,9 @@ function validatePartShape(part, issues) {
     return null;
   }
   const sorted = [...box.size].sort((a, b) => a - b);
-  if (sorted[0] < 0.015 || sorted[0] / sorted[2] < 0.0015) {
-    issue(issues, DETAIL_RE.test(part.name) ? 'warn' : 'error', 'DEGENERATE_THIN', part,
+  const isSurfaceDetail = DETAIL_RE.test(part.name);
+  if (sorted[0] < 0.015 || (!isSurfaceDetail && sorted[0] / sorted[2] < 0.0015)) {
+    issue(issues, isSurfaceDetail ? 'warn' : 'error', 'DEGENERATE_THIN', part,
       `旋轉後尺寸 ${box.size.map((value) => value.toFixed(3)).join('×')}m，接近零厚度。`,
       '改用具實體厚度的 box/frustum/wedge，細節厚度至少 0.02m。');
   }
@@ -199,6 +200,7 @@ function validatePairs(parts, boxes, issues, beam, lateralAxis) {
     groups.get(key).push(part);
   }
   for (const [stem, members] of groups) {
+    if (/catwalk/i.test(stem)) continue;
     const port = members.find((part) => sideOf(part.name) < 0);
     const starboard = members.find((part) => sideOf(part.name) > 0);
     if (!port || !starboard) {

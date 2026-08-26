@@ -12,7 +12,7 @@
     "brightHex": 14737632,
     "glassHex": 4621730
   },
-  "totalParts": 10,
+  "totalParts": 8,
   "partNames": [
     "main_hull_polyhedron",
     "main_deck",
@@ -21,8 +21,6 @@
     "bridge_windows",
     "mast_base",
     "radar_dome",
-    "lifeboat_port",
-    "lifeboat_starboard",
     "crane_base"
   ],
   "polyhedralPrimitivesUsed": [

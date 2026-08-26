@@ -12,7 +12,7 @@
     "brightHex": 16777215,
     "glassHex": 49151
   },
-  "totalParts": 10,
+  "totalParts": 36,
   "partNames": [
     "main_hull_polyhedron",
     "superstructure_base",
@@ -22,14 +22,41 @@
     "funnel_1",
     "funnel_2",
     "radar_dome",
-    "lifeboat_1",
-    "lifeboat_2"
+    "balcony_support_1_port",
+    "balcony_band_1_port",
+    "balcony_support_1_starboard",
+    "balcony_band_1_starboard",
+    "balcony_support_2_port",
+    "balcony_band_2_port",
+    "balcony_support_2_starboard",
+    "balcony_band_2_starboard",
+    "balcony_support_3_port",
+    "balcony_band_3_port",
+    "balcony_support_3_starboard",
+    "balcony_band_3_starboard",
+    "lifeboat_01_port",
+    "lifeboat_01_starboard",
+    "lifeboat_02_port",
+    "lifeboat_02_starboard",
+    "lifeboat_03_port",
+    "lifeboat_03_starboard",
+    "lifeboat_04_port",
+    "lifeboat_04_starboard",
+    "lifeboat_05_port",
+    "lifeboat_05_starboard",
+    "lifeboat_06_port",
+    "lifeboat_06_starboard",
+    "lifeboat_07_port",
+    "lifeboat_07_starboard",
+    "lifeboat_08_port",
+    "lifeboat_08_starboard"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",
     "tapered_box",
     "box",
     "cylinder",
-    "hemisphere_dome"
+    "hemisphere_dome",
+    "ellipsoid_sphere"
   ]
 }

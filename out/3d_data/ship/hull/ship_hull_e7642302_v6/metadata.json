@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:13:35.882Z",
   "bounds": {
     "min": [
-      -155.0076,
+      -157.5321,
       0,
-      -37.5316
+      -37.5
     ],
     "max": [
-      174.2115,
-      40.275,
-      37.5316
+      157.5321,
+      38,
+      37.5
     ],
     "size": [
-      329.219,
-      40.275,
-      75.063
+      315.064,
+      38,
+      75
     ],
-    "rMax": 178.208,
-    "triangles": 308,
-    "vertices": 181
+    "rMax": 161.934,
+    "triangles": 460,
+    "vertices": 289
   },
   "spec": {
     "style": "military_aircraft_carrier"
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 1",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 315.0×38.0×75.0m (identified_photo)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "ski_jump_aircraft_carrier",
+    "targetSize": [
+      315,
+      38,
+      75
+    ],
+    "confidence": "identified_photo",
+    "source": "照片辨識為山東艦滑躍航母；採公開主尺度近似。"
   }
 }

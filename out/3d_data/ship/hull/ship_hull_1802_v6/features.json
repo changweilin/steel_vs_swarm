@@ -12,7 +12,7 @@
     "brightHex": 14540253,
     "glassHex": 4621735
   },
-  "totalParts": 7,
+  "totalParts": 12,
   "partNames": [
     "main_hull_polyhedron",
     "superstructure_base",
@@ -20,7 +20,12 @@
     "forward_turret",
     "main_mast",
     "secondary_mast",
-    "radar_dome"
+    "radar_dome",
+    "vls_cell_1",
+    "vls_cell_2",
+    "vls_cell_3",
+    "vls_cell_4",
+    "ciws_aft"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

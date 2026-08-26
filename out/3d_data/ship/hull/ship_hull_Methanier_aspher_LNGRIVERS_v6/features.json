@@ -12,7 +12,7 @@
     "brightHex": 15528177,
     "glassHex": 8421631
   },
-  "totalParts": 8,
+  "totalParts": 14,
   "partNames": [
     "main_hull_polyhedron",
     "tank_1",
@@ -21,7 +21,13 @@
     "superstructure_base",
     "bridge_windows",
     "funnel",
-    "mast_top"
+    "mast_top",
+    "lng_pipe_run_port",
+    "lng_pipe_run_center",
+    "lng_pipe_run_starboard",
+    "lng_manifold_1",
+    "lng_manifold_2",
+    "lng_manifold_3"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:21:51.840Z",
   "bounds": {
     "min": [
-      -170.0097,
+      -167.8342,
       0,
-      -57.5346
+      -46.4474
     ],
     "max": [
-      170.0097,
-      39.85,
-      37.5346
+      167.8342,
+      40,
+      30.3526
     ],
     "size": [
-      340.019,
-      39.85,
-      95.069
+      335.668,
+      40,
+      76.8
     ],
-    "rMax": 179.481,
-    "triangles": 332,
-    "vertices": 199
+    "rMax": 174.143,
+    "triangles": 484,
+    "vertices": 307
   },
   "spec": {
     "style": "military_aircraft_carrier"
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 1",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 335.6×40.0×76.8m (exact)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "aircraft_carrier",
+    "targetSize": [
+      335.6,
+      40,
+      76.8
+    ],
+    "confidence": "exact",
+    "source": "US Naval History DANFS：CVN-65 長 1,101 呎、飛行甲板寬 252 呎。"
   }
 }

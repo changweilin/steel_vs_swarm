@@ -74474,17 +74474,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 932, Vertices 549, Similarity 92 /100"
+        "measured": "Triangles 1124, Vertices 657, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          280,
-          31.95,
-          40
+          285,
+          34.203,
+          42.75
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          285,
+          34.203,
+          42.75
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull__127290139_04alamy-pwtk4p_6684aed6_v6"
@@ -74516,17 +74522,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 344, Vertices 201, Similarity 92 /100"
+        "measured": "Triangles 432, Vertices 255, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          134,
-          13.775,
+          135,
+          13.5,
           14
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          13.5,
+          14
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_000-34TU8F7_eeffdce5_v6"
@@ -74558,17 +74570,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 528, Vertices 327, Similarity 92 /100"
+        "measured": "Triangles 680, Vertices 435, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          320.016,
-          20.975,
-          85.004
+          316.064,
+          38,
+          76.001
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          316,
+          38,
+          76
+        ],
+        "scaleConfidence": "identified_photo"
       },
       "keys": [
         "ship/hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050_95f6f49f_v6"
@@ -74606,11 +74624,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          6.5,
+          9,
           1.9,
-          2.201
+          2.202
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          1.9,
+          2.201711384848714
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_0350p12000t3nb68kA8C8_6a0a5762_v6"
@@ -74648,11 +74672,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          19.25,
-          2.325,
+          20,
+          3.2,
           4.501
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          20,
+          3.2,
+          4.500636680360612
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_1593571989300_f9faa83a_v6"
@@ -74684,17 +74714,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 336, Vertices 199, Similarity 90 /100"
+        "measured": "Triangles 3016, Vertices 1863, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          200,
+          250,
           37.95,
-          30.002
+          30
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          37.95,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_1695146093_23c5c052_v6"
@@ -74726,17 +74762,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 402, Vertices 251, Similarity 88 /100"
+        "measured": "Triangles 454, Vertices 281, Similarity 88 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          8.5,
-          4.125,
-          3.5
+          9,
+          3.416,
+          3.42
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          3.416,
+          3.42
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637_0828c162_v6"
@@ -74768,17 +74810,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 550, Vertices 317, Similarity 92 /100"
+        "measured": "Triangles 3254, Vertices 1997, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          151.031,
-          20.1,
+          250,
+          35,
           30
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          35,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_174340740201_3769a5c6_v6"
@@ -74810,17 +74858,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 308, Vertices 183, Similarity 85 /100"
+        "measured": "Triangles 500, Vertices 311, Similarity 85 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          90,
-          11,
-          12
+          120,
+          13.2,
+          14.4
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          120,
+          13.2,
+          14.4
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_1778437182_68368_6560f458_v6"
@@ -74852,17 +74906,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 368, Vertices 211, Similarity 90 /100"
+        "measured": "Triangles 456, Vertices 265, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
           60,
-          13.025,
+          11.5,
           10
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          11.5,
+          10
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_1802_ffc371dd_v6"
@@ -74894,7 +74954,7 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 552, Vertices 337, Similarity 88 /100"
+        "measured": "Triangles 604, Vertices 367, Similarity 88 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
@@ -74902,9 +74962,15 @@
         "bounds": [
           40,
           13.725,
-          8
+          8.8
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          40,
+          13.725,
+          8.8
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_2-5-1024x768~0_59d5ac5f_v6"
@@ -74936,17 +75002,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 790, Vertices 481, Similarity 92 /100"
+        "measured": "Triangles 878, Vertices 535, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          50,
-          19.15,
-          13
+          60,
+          11.997,
+          10.8
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          11.996999999999998,
+          10.799999999999999
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_2000x1250_wmkn_84254351907813_0_bf165635_v6"
@@ -74978,17 +75050,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 344, Vertices 203, Similarity 90 /100"
+        "measured": "Triangles 432, Vertices 257, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          123.603,
-          17.775,
+          135,
+          17.225,
           14
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          17.225,
+          14
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_2000x1429_wmkn_19056648845677_0_22cfeafa_v6"
@@ -75020,17 +75098,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 380, Vertices 223, Similarity 92 /100"
+        "measured": "Triangles 438, Vertices 256, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          20.001,
-          7.7,
-          7.004
+          47.51,
+          12,
+          11.802
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          47.5,
+          12,
+          11.8
+        ],
+        "scaleConfidence": "exact"
       },
       "keys": [
         "ship/hull_20090411-TurboJET_Barca_fbdd5a16_v6"
@@ -75062,17 +75146,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 552, Vertices 337, Similarity 85 /100"
+        "measured": "Triangles 604, Vertices 367, Similarity 85 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
           15,
-          9.45,
+          5.681,
           4
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          15,
+          5.680999999999999,
+          4
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_2020120858047817_08a17622_v6"
@@ -75111,10 +75201,16 @@
         "fit": 1,
         "bounds": [
           20,
-          6.95,
+          5.994,
           5
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          20,
+          5.993499999999999,
+          5
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_20210430002927_47_f8967c20_v6"
@@ -75146,17 +75242,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 528, Vertices 321, Similarity 88 /100"
+        "measured": "Triangles 580, Vertices 351, Similarity 88 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          20,
-          12.75,
-          6
+          15,
+          5.673,
+          5.7
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          15,
+          5.6725,
+          5.7
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_202135002-4_9ff3964a_v6"
@@ -75195,10 +75297,16 @@
         "fit": 1,
         "bounds": [
           180,
-          39.275,
+          38.725,
           30
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          180,
+          38.725,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_20230821004313_b99b2a33_v6"
@@ -75230,17 +75338,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 464, Vertices 284, Similarity 92 /100"
+        "measured": "Triangles 632, Vertices 387, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          46.127,
-          10.5,
+          69.993,
+          9.099,
           7
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          70,
+          9.1,
+          7
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_20240301000865_e2c0f8b7_v6"
@@ -75272,17 +75386,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 628, Vertices 369, Similarity 90 /100"
+        "measured": "Triangles 820, Vertices 477, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          150.103,
-          29.381,
-          30
+          285,
+          38.859,
+          45.616
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          285,
+          38.8592,
+          45.676
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_20250401005245_22de3ca2_v6"
@@ -75314,17 +75434,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 732, Vertices 465, Similarity 90 /100"
+        "measured": "Triangles 900, Vertices 568, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          33.387,
-          10.648,
-          7.079
+          70.002,
+          9.111,
+          7.745
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          70,
+          9.1,
+          7.762784061979886
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_202512251310033872_5795cf80_v6"
@@ -75362,11 +75488,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          50,
-          16.525,
-          8
+          80,
+          15.975,
+          10.4
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          80,
+          15.975,
+          10.4
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_202602131051276980_c9a78d66_v6"
@@ -75398,17 +75530,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 332, Vertices 199, Similarity 85 /100"
+        "measured": "Triangles 512, Vertices 319, Similarity 85 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          150,
-          31.75,
-          25
+          120,
+          22.5,
+          21.6
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          120,
+          22.4999,
+          21.599999999999998
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_20260421104430-37bd4fa5_86569231_v6"
@@ -75440,17 +75578,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 552, Vertices 337, Similarity 88 /100"
+        "measured": "Triangles 640, Vertices 391, Similarity 88 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          130,
-          21.275,
-          12
+          135,
+          20.725,
+          13.5
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          20.725,
+          13.5
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_20oz-china-ships-wgkl-master1050_4d61c27b_v6"
@@ -75488,11 +75632,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          60,
-          13.7,
-          12
+          90,
+          14.402,
+          15.3
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          90,
+          14.402,
+          15.3
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_22xp-boaty-master1050_4b429245_v6"
@@ -75524,17 +75674,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 512, Vertices 313, Similarity 85 /100"
+        "measured": "Triangles 564, Vertices 343, Similarity 85 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
           12,
-          6.45,
+          4.545,
           4
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          12,
+          4.544999999999999,
+          4
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_2798933_bb7f491f_v6"
@@ -75566,17 +75722,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 672, Vertices 412, Similarity 88 /100"
+        "measured": "Triangles 724, Vertices 442, Similarity 88 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          21.927,
-          7.15,
-          6
+          39.867,
+          8.005,
+          8.8
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          40,
+          8.0045,
+          8.8
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_300gt-tuna-long-liner-boat_02_1fff13d7_v6"
@@ -75608,17 +75770,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 536, Vertices 329, Similarity 92 /100"
+        "measured": "Triangles 624, Vertices 383, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          150,
-          13.775,
+          135,
+          13.5,
           16
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          13.5,
+          16
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_379b7bfc740ea9d22183f066b6e40ff8-600x400_0d077c82_v6"
@@ -75650,17 +75818,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 346, Vertices 219, Similarity 92 /100"
+        "measured": "Triangles 538, Vertices 347, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          300,
-          44.975,
-          40.346
+          220,
+          41.798,
+          39.553
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          220,
+          41.798,
+          39.599999999999994
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_489644a4-bb94-6109-6f71-d81400ca1a48_620_03744bc0_v6"
@@ -75692,17 +75866,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 632, Vertices 381, Similarity 88 /100"
+        "measured": "Triangles 684, Vertices 411, Similarity 88 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          18.001,
-          9.475,
-          6.004
+          15.003,
+          5.69,
+          5.701
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          15,
+          5.6899999999999995,
+          5.7
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_6232d26edb8ab_25dbb63d_v6"
@@ -75740,11 +75920,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          45,
-          15.275,
+          60,
+          14.725,
           10.2
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          14.725,
+          10.200000000000001
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_6621n_5dbc986b_v6"
@@ -75782,11 +75968,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          50,
+          60,
           11.925,
-          8
+          10.2
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          11.924999999999999,
+          10.200000000000001
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_666_44c92603_v6"
@@ -75818,17 +76010,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 416, Vertices 241, Similarity 92 /100"
+        "measured": "Triangles 3096, Vertices 1905, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          340,
+          250,
           49.175,
-          42
+          39.07
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          49.175000000000004,
+          39.07
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_668d6f418c667-870x500_036c559a_v6"
@@ -75860,17 +76058,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 810, Vertices 475, Similarity 92 /100"
+        "measured": "Triangles 1002, Vertices 583, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          155.002,
-          37.85,
-          30
+          285.004,
+          39.432,
+          44.168
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          285,
+          39.432,
+          44.218
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_762bcd7026aa844c83ed2b0f5454b162_7e99a959_v6"
@@ -75902,7 +76106,7 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 594, Vertices 375, Similarity 88 /100"
+        "measured": "Triangles 646, Vertices 405, Similarity 88 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
@@ -75910,9 +76114,15 @@
         "bounds": [
           12,
           4.475,
-          4.9
+          4.56
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          12,
+          4.475,
+          4.5600000000000005
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58_0f082121_v6"
@@ -75944,17 +76154,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 384, Vertices 225, Similarity 90 /100"
+        "measured": "Triangles 360, Vertices 209, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          60.002,
-          16.75,
-          12.012
+          60.012,
+          16.2,
+          12.035
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          16.199999999999996,
+          12.032222179642273
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_c8647947_v6"
@@ -75986,17 +76202,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 344, Vertices 207, Similarity 92 /100"
+        "measured": "Triangles 380, Vertices 231, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          290,
-          34.6,
-          30
+          299.7,
+          43,
+          50
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          299.7,
+          43,
+          50
+        ],
+        "scaleConfidence": "sister_ship"
       },
       "keys": [
         "ship/hull_中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧_cca69839_v6"
@@ -76028,17 +76250,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 360, Vertices 213, Similarity 88 /100"
+        "measured": "Triangles 512, Vertices 321, Similarity 88 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          280.409,
-          16.775,
-          62.01
+          283.558,
+          36,
+          61
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          283.5,
+          36,
+          61
+        ],
+        "scaleConfidence": "identified_photo"
       },
       "keys": [
         "ship/hull_圖2-超日王號_43b49e4e_v6"
@@ -76070,17 +76298,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 492, Vertices 303, Similarity 90 /100"
+        "measured": "Triangles 696, Vertices 439, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          200,
+          220,
           26.975,
           30
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          220,
+          26.975,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_A04A00_P_01_02_ee255c96_v6"
@@ -76112,17 +76346,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 408, Vertices 235, Similarity 92 /100"
+        "measured": "Triangles 492, Vertices 291, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          150.004,
+          225.046,
           24.975,
-          20
+          31.5
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          225,
+          24.975,
+          31.500000000000004
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_b8df87d6_v6"
@@ -76154,17 +76394,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 288, Vertices 173, Similarity 92 /100"
+        "measured": "Triangles 2992, Vertices 1853, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          150,
-          34.975,
+          250,
+          35,
           30
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          35,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_article-5ca19fe0e988a_e67f0e50_v6"
@@ -76202,11 +76448,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          200,
-          32.175,
-          31.427
+          180,
+          31.175,
+          31.499
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          180,
+          31.175000000000004,
+          31.573
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c_4f0fb5c6_v6"
@@ -76238,17 +76490,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 416, Vertices 252, Similarity 92 /100"
+        "measured": "Triangles 608, Vertices 380, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          80,
-          13.775,
-          15.137
+          220,
+          24.2,
+          26.434
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          220,
+          24.2,
+          26.462
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_Capture-3139_53bfea36_v6"
@@ -76280,17 +76538,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 308, Vertices 183, Similarity 92 /100"
+        "measured": "Triangles 512, Vertices 319, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          200,
-          21,
-          40
+          220,
+          24.201,
+          39.6
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          220,
+          24.200499999999998,
+          39.6
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_d5154891_bf50ff0d_v6"
@@ -76322,17 +76586,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 312, Vertices 183, Similarity 90 /100"
+        "measured": "Triangles 3180, Vertices 1959, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          150,
-          34.975,
-          32.002
+          342,
+          66,
+          46.4
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          342,
+          66,
+          46.4
+        ],
+        "scaleConfidence": "identified_ship"
       },
       "keys": [
         "ship/hull_Disney%20Adventure%20ship%201_4b913647_v6"
@@ -76364,17 +76634,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 308, Vertices 181, Similarity 92 /100"
+        "measured": "Triangles 460, Vertices 289, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          329.219,
-          40.275,
-          75.063
+          315.064,
+          38,
+          75
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          315,
+          38,
+          75
+        ],
+        "scaleConfidence": "identified_photo"
       },
       "keys": [
         "ship/hull_e7642302_80919ef8_v6"
@@ -76406,17 +76682,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 308, Vertices 183, Similarity 90 /100"
+        "measured": "Triangles 468, Vertices 297, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          300.01,
-          26.65,
-          50.061
+          304.562,
+          37,
+          75
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          304.5,
+          37,
+          75
+        ],
+        "scaleConfidence": "identified_photo"
       },
       "keys": [
         "ship/hull_GettyImages-630597388-compressor_9babfa3d_v6"
@@ -76448,17 +76730,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 320, Vertices 191, Similarity 92 /100"
+        "measured": "Triangles 408, Vertices 245, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          150,
-          20.775,
+          135,
+          20.584,
           18
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          20.584400000000002,
+          18
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_id13750938-558191_3b4910c3_v6"
@@ -76496,11 +76784,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          8.5,
+          10,
           1.9,
-          3.5
+          3.2
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          10,
+          1.9000000000000001,
+          3.2
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_img-1478851082-74949_5e21cd86_v6"
@@ -76538,11 +76832,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          21,
+          20,
           5.725,
           4
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          20,
+          5.725,
+          4
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_k23_3e23a8ab_v6"
@@ -76574,17 +76874,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 624, Vertices 367, Similarity 92 /100"
+        "measured": "Triangles 816, Vertices 475, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          100,
-          16.15,
-          15.1
+          285,
+          35.123,
+          42.75
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          285,
+          35.123,
+          42.75
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_Methanier_aspher_LNGRIVERS_59740126_v6"
@@ -76616,17 +76922,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 360, Vertices 228, Similarity 92 /100"
+        "measured": "Triangles 528, Vertices 331, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          84.879,
-          13,
-          10
+          75,
+          9.75,
+          9
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          75,
+          9.75,
+          9
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0_8cceca66_v6"
@@ -76658,17 +76970,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 336, Vertices 199, Similarity 92 /100"
+        "measured": "Triangles 312, Vertices 183, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          30,
-          12.775,
-          8.001
+          60,
+          12.225,
+          10.2
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          12.225,
+          10.200000000000001
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_mobileadv_1976_9821316_46373_01e23f67_v6"
@@ -76706,11 +77024,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          10.825,
+          9,
           2.5,
           3.05
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          2.5,
+          3.05
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_nzdnc7pepb9ltbpslhtv_23f3ac4b_v6"
@@ -76742,17 +77066,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 258, Vertices 160, Similarity 90 /100"
+        "measured": "Triangles 310, Vertices 190, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          8,
+          9,
           3.175,
           3
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          3.1750000000000003,
+          3
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_pngtree-a-small-fishing-boat-png-image_16296083_9dae274e_v6"
@@ -76790,11 +77120,17 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          8.425,
+          10,
           2.225,
           2.5
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          10,
+          2.2249999999999996,
+          2.5
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_pngtree-blue-and-white-speedboat-png-image_16228702_17dab541_v6"
@@ -76826,17 +77162,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 288, Vertices 173, Similarity 92 /100"
+        "measured": "Triangles 3004, Vertices 1861, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          150,
-          48.95,
-          30.702
+          310,
+          58,
+          47
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          310,
+          58,
+          47
+        ],
+        "scaleConfidence": "exact"
       },
       "keys": [
         "ship/hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_f749b0ad_v6"
@@ -76868,17 +77210,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 432, Vertices 260, Similarity 92 /100"
+        "measured": "Triangles 490, Vertices 293, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          12.001,
+          15.003,
           3.85,
-          6.002
+          5.401
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          15,
+          3.85,
+          5.3999999999999995
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_s11_1667405441519_c521b338_v6"
@@ -76918,9 +77266,15 @@
         "bounds": [
           9,
           2.25,
-          2.601
+          2.611
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          2.25,
+          2.6109185120136447
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_tkldbkxi3ftl5wewz3u2_7210a6d9_v6"
@@ -76952,17 +77306,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 628, Vertices 373, Similarity 92 /100"
+        "measured": "Triangles 3308, Vertices 2037, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          120,
-          26.95,
-          30.701
+          250,
+          35.016,
+          30
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          35.016000000000005,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
       },
       "keys": [
         "ship/hull_ttn1071_Cover0106~1_aa464459_v6"
@@ -76994,17 +77354,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 332, Vertices 199, Similarity 85 /100"
+        "measured": "Triangles 484, Vertices 307, Similarity 85 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          340.019,
-          39.85,
-          95.069
+          335.668,
+          40,
+          76.8
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          335.6,
+          40,
+          76.8
+        ],
+        "scaleConfidence": "exact"
       },
       "keys": [
         "ship/hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_fb3e0c01_v6"
@@ -77036,17 +77402,23 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 432, Vertices 266, Similarity 92 /100"
+        "measured": "Triangles 600, Vertices 369, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          35.057,
-          8,
-          4.755
+          114.8,
+          13,
+          9.853
         ],
-        "repair": "closed_hull_v1"
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          114.8,
+          13,
+          10.36
+        ],
+        "scaleConfidence": "exact"
       },
       "keys": [
         "ship/hull_Virginia_class_submarine_ff4f41f4_v6"

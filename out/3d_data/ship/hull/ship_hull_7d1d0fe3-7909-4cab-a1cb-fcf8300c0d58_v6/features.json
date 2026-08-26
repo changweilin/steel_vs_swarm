@@ -12,7 +12,7 @@
     "brightHex": 15528177,
     "glassHex": 8421631
   },
-  "totalParts": 9,
+  "totalParts": 11,
   "partNames": [
     "main_hull_polyhedron",
     "bridge_main",
@@ -22,7 +22,9 @@
     "tire_2",
     "tire_3",
     "tire_4",
-    "flag"
+    "flag",
+    "fishing_winch",
+    "aft_work_frame"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

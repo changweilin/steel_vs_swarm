@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:07:57.329Z",
   "bounds": {
     "min": [
-      -10.0007,
+      -23.7548,
       0,
-      -3.502
+      -5.9012
     ],
     "max": [
-      10.0007,
-      7.7004,
-      3.502
+      23.7548,
+      12.0002,
+      5.9012
     ],
     "size": [
-      20.001,
-      7.7,
-      7.004
+      47.51,
+      12,
+      11.802
     ],
-    "rMax": 10.596,
-    "triangles": 380,
-    "vertices": 223
+    "rMax": 24.477,
+    "triangles": 438,
+    "vertices": 256
   },
   "spec": {
     "style": "modern high-speed catamaran ferry"
@@ -42,10 +42,22 @@
     "repaired": true,
     "rules": [
       "長軸維持 +X",
-      "船殼 1→1",
+      "船殼 2→2",
       "漸縮艙室 1",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 47.5×12.0×11.8m (exact)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "fast_catamaran_ferry",
+    "targetSize": [
+      47.5,
+      12,
+      11.8
+    ],
+    "confidence": "exact",
+    "source": "TurboJET Austal Cat 規格：LOA 47.50m、船寬 11.8m。"
   }
 }

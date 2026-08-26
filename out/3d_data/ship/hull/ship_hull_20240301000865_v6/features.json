@@ -12,7 +12,7 @@
     "brightHex": 15528177,
     "glassHex": 6589695
   },
-  "totalParts": 10,
+  "totalParts": 12,
   "partNames": [
     "main_hull",
     "bow_cone",
@@ -23,13 +23,16 @@
     "diving_plane_starboard",
     "diving_plane_port",
     "stern_fin_top",
-    "stern_fin_bottom"
+    "stern_fin_bottom",
+    "stern_pumpjet_ring",
+    "stern_propulsor_hub"
   ],
   "polyhedralPrimitivesUsed": [
     "ellipsoid_sphere",
     "conical_frustum",
     "box",
     "torus_ring",
-    "wedge"
+    "wedge",
+    "cylinder"
   ]
 }

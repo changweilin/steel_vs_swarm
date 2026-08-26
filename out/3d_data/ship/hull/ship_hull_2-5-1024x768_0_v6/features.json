@@ -12,7 +12,7 @@
     "brightHex": 16777215,
     "glassHex": 4621730
   },
-  "totalParts": 9,
+  "totalParts": 11,
   "partNames": [
     "main_hull_polyhedron",
     "superstructure_base",
@@ -22,7 +22,9 @@
     "radar_dome",
     "life_ring_starboard",
     "life_ring_port",
-    "funnel"
+    "funnel",
+    "fishing_winch",
+    "aft_work_frame"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

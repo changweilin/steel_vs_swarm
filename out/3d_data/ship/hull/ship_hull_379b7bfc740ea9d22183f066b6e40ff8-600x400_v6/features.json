@@ -12,7 +12,7 @@
     "brightHex": 12632256,
     "glassHex": 4621735
   },
-  "totalParts": 9,
+  "totalParts": 14,
   "partNames": [
     "main_hull_polyhedron",
     "superstructure_lower",
@@ -22,7 +22,12 @@
     "gun_turret",
     "life_ring_port",
     "life_ring_starboard",
-    "funnel_structure"
+    "funnel_structure",
+    "vls_cell_1",
+    "vls_cell_2",
+    "vls_cell_3",
+    "vls_cell_4",
+    "ciws_aft"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

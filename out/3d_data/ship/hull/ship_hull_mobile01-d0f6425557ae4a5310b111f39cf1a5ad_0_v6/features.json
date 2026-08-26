@@ -12,7 +12,7 @@
     "brightHex": 15528177,
     "glassHex": 16777215
   },
-  "totalParts": 8,
+  "totalParts": 10,
   "partNames": [
     "main_hull",
     "bow_wedge",
@@ -21,7 +21,9 @@
     "stern_stabilizer_v",
     "stern_stabilizer_h",
     "propeller_hub",
-    "propeller_ring"
+    "propeller_ring",
+    "stern_pumpjet_ring",
+    "stern_propulsor_hub"
   ],
   "polyhedralPrimitivesUsed": [
     "ellipsoid_sphere",

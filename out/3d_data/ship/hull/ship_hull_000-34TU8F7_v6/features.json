@@ -12,7 +12,7 @@
     "brightHex": 12566463,
     "glassHex": 4621735
   },
-  "totalParts": 8,
+  "totalParts": 13,
   "partNames": [
     "main_hull_polyhedron",
     "superstructure_main",
@@ -21,7 +21,12 @@
     "radar_dome",
     "helicopter_deck",
     "funnel_structure",
-    "main_gun"
+    "main_gun",
+    "vls_cell_1",
+    "vls_cell_2",
+    "vls_cell_3",
+    "vls_cell_4",
+    "ciws_aft"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

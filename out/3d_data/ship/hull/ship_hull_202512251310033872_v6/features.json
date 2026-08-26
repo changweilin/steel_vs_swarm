@@ -12,7 +12,7 @@
     "brightHex": 15528177,
     "glassHex": 4621730
   },
-  "totalParts": 11,
+  "totalParts": 13,
   "partNames": [
     "main_hull",
     "conning_tower",
@@ -24,7 +24,9 @@
     "bogie_wheel_2",
     "bogie_wheel_3",
     "bogie_wheel_4",
-    "bridge_window"
+    "bridge_window",
+    "stern_pumpjet_ring",
+    "stern_propulsor_hub"
   ],
   "polyhedralPrimitivesUsed": [
     "ellipsoid_sphere",

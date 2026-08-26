@@ -12,7 +12,7 @@
     "brightHex": 14540253,
     "glassHex": 49151
   },
-  "totalParts": 8,
+  "totalParts": 10,
   "partNames": [
     "main_hull_polyhedron",
     "BulbousBow",
@@ -21,7 +21,9 @@
     "Mast",
     "RadarDome",
     "LifeBuoyPort",
-    "LifeBuoyStarboard"
+    "LifeBuoyStarboard",
+    "fishing_winch",
+    "aft_work_frame"
   ],
   "polyhedralPrimitivesUsed": [
     "hull_polyhedron",

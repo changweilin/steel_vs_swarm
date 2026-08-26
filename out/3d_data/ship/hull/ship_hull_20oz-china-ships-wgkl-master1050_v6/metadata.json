@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:09:42.167Z",
   "bounds": {
     "min": [
-      -65,
+      -67.5,
       0,
-      -6
+      -6.75
     ],
     "max": [
-      65,
-      21.275,
-      6
+      67.5,
+      20.725,
+      6.75
     ],
     "size": [
-      130,
-      21.275,
-      12
+      135,
+      20.725,
+      13.5
     ],
-    "rMax": 65.276,
-    "triangles": 552,
-    "vertices": 337
+    "rMax": 67.837,
+    "triangles": 640,
+    "vertices": 391
   },
   "spec": {
     "style": "modern_naval_warship"
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 1",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 135.0×20.7×13.5m (class_estimate)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "warship",
+    "targetSize": [
+      135,
+      20.725,
+      13.5
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 warship 保守標準全長 135m。"
   }
 }

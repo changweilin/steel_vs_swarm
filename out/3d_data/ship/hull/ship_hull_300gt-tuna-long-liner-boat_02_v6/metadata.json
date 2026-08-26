@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:10:14.809Z",
   "bounds": {
     "min": [
-      -10,
+      -18.1791,
       0,
-      -3
+      -4.4
     ],
     "max": [
-      11.9267,
-      7.15,
-      3
+      21.6874,
+      8.0045,
+      4.4
     ],
     "size": [
-      21.927,
-      7.15,
-      6
+      39.867,
+      8.005,
+      8.8
     ],
-    "rMax": 12.298,
-    "triangles": 672,
-    "vertices": 412
+    "rMax": 22.129,
+    "triangles": 724,
+    "vertices": 442
   },
   "spec": {
     "style": "Fishing Vessel"
@@ -45,7 +45,19 @@
       "船殼 1→1",
       "漸縮艙室 1",
       "鏡像補件 0",
-      "貼地 0.00m"
+      "貼地 0.00m",
+      "實尺 40.0×8.0×8.8m (class_estimate)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "fishing_vessel",
+    "targetSize": [
+      40,
+      8.0045,
+      8.8
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 fishing_vessel 保守標準全長 40m。"
   }
 }

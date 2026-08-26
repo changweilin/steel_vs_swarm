@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:19:19.353Z",
   "bounds": {
     "min": [
-      -29.8792,
+      -19.2571,
       0,
-      -5
+      -4.5
     ],
     "max": [
-      55,
-      13,
-      5
+      55.7429,
+      9.75,
+      4.5
     ],
     "size": [
-      84.879,
-      13,
-      10
+      75,
+      9.75,
+      9
     ],
-    "rMax": 55.227,
-    "triangles": 360,
-    "vertices": 228
+    "rMax": 55.924,
+    "triangles": 528,
+    "vertices": 331
   },
   "spec": {
     "style": "military_submarine"
@@ -43,7 +43,19 @@
     "rules": [
       "長軸維持 +X",
       "貼地位移 0.00m",
-      "潛艇改用封閉橢球耐壓殼"
+      "潛艇改用封閉橢球耐壓殼",
+      "實尺 75.0×9.8×9.0m (class_estimate)"
     ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "submarine",
+    "targetSize": [
+      75,
+      9.75,
+      9
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 submarine 保守標準全長 75m。"
   }
 }
