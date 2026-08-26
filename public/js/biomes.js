@@ -8524,14 +8524,21 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     g.position.set(p.x, p.y - 0.4, p.z);
     g.rotation.y = p.ry;
     group.add(g);
-    // 門洞立柱 + 翼牆 → 碰撞柱:額牆旁邊不能直接走穿,只有中央開口可通行
+    // 門洞立柱 + 翼牆 + 頂樑 → 精確有向盒:額牆旁邊不能直接走穿、飛行體不能穿頂樑，
+    // 只有中央開口可通行。量體逐件吃上方 BoxGeometry 的同一份尺寸/姿態；圓柱近似會在
+    // 斜翼牆外製造隱形牆、同時漏掉真正的牆角(A30 兩端同量體)。
     const ca = Math.cos(p.ry), sa = Math.sin(p.ry);
     const toW = (ox, oz) => [p.x + ox * ca + oz * sa, p.z - ox * sa + oz * ca];
+    const portalBox = (ox, oz, y, h, hw2, hd2, ry, name) => {
+      const [x, z] = toW(ox, oz);
+      return { x, z, y, h, hw2, hd2, ry, r: Math.hypot(hw2, hd2), name };
+    };
+    cols.push(portalBox(0, 0, p.y + H2 - 1.6, 3.2, (W + 3) / 2, 0.6, p.ry, 'tunnel_portal_lintel'));
     for (const s of [1, -1]) {
-      const [pxw, pzw] = toW(s * (W / 2 + 0.35), 0);
-      cols.push({ x: pxw, z: pzw, y: p.y - 0.6, r: 1.6, h: H2 + 2 });
-      const [wxw, wzw] = toW(s * (W / 2 + 1.8), 2.4);
-      cols.push({ x: wxw, z: wzw, y: p.y - 0.6, r: 1.7, h: H2 - 0.8 });
+      cols.push(portalBox(s * (W / 2 + 0.35), 0, p.y - 0.4, H2 - 1.2,
+        1.15, 0.6, p.ry, 'tunnel_portal_pillar'));
+      cols.push(portalBox(s * (W / 2 + 1.8), 2.4, p.y - 0.7, H2 - 0.8,
+        0.5, 3, p.ry + s * 0.5, 'tunnel_portal_wing'));
     }
   }
   // ---- 3D 附屬件:路燈 / 紅綠燈 / 行道樹(全 InstancedMesh)----

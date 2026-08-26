@@ -91,6 +91,7 @@ const src = readSrc('public', 'js', 'biomes.js');
 const tsrc = readSrc('public', 'js', 'terrain.js');
 const msrc = readSrc('public', 'js', 'main.js');
 const gsrc = readSrc('public', 'js', 'game.js');
+const BREAK_PORTAL = process.argv.includes('--break-portal');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -612,6 +613,19 @@ function build(under = true, heightAt = null, natureAt = null) {
   // ⑨ 驗的是公式,這條驗**發射端真的用了**那條公式(否則稽核綠、遊戲照樣拿瞬時斜率外推)
   ok(/slope: sIn === s \? 0 : \(tFloorAt\(sIn\) - tFloorAt\(s\)\) \/ Math\.abs\(sIn - s\)/.test(STRC),
     'Ⅲ 門洞 slope MUST 取整段走廊平均(洞口瞬時斜率在曲線剖面上會外推偏掉)');
+  const portalAt = src.indexOf("const portalBox = ");
+  const portalEnd = src.indexOf('// ---- 3D 附屬件', portalAt);
+  let portalSrc = portalAt >= 0 && portalEnd > portalAt ? src.slice(portalAt, portalEnd) : '';
+  if (BREAK_PORTAL) portalSrc = portalSrc.replace("'tunnel_portal_lintel'", "'removed_portal_lintel'");
+  ok(/return \{ x, z, y, h, hw2, hd2, ry, r: Math\.hypot\(hw2, hd2\), name \};/.test(portalSrc),
+    'Ⅲ 門洞碰撞 MUST 使用有向盒並由實際半寬推導 broad-phase 半徑');
+  ok(portalSrc.includes("'tunnel_portal_lintel'") && portalSrc.includes("'tunnel_portal_pillar'")
+    && portalSrc.includes("'tunnel_portal_wing'"),
+  'Ⅲ 門洞頂樑/立柱/斜翼牆 MUST 各自登記具名碰撞量體');
+  ok(portalSrc.includes('3.2, (W + 3) / 2, 0.6, p.ry')
+    && portalSrc.includes('p.y - 0.4, H2 - 1.2,\n        1.15, 0.6, p.ry')
+    && portalSrc.includes('p.y - 0.7, H2 - 0.8,\n        0.5, 3, p.ry + s * 0.5'),
+  'Ⅲ 門洞碰撞尺寸/姿態 MUST 與 BoxGeometry 逐件同量體，中央開口保持可通行');
   // 只有車行道
   ok(/const UND_HW = /.test(src) && /UND_HW\.test\(tags\?\.highway/.test(src),
     'Ⅲ 地下道 MUST 只建在車行道(人行地下道現實中是窄樓梯通道)');
