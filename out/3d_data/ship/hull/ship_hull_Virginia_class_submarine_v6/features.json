@@ -4,12 +4,12 @@
   "style": "modern_military_submarine",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 4473924,
+    "roofHex": 8359053,
     "facadeHex": 5592405,
-    "baseHex": 2236962,
-    "accentHex": 16777215,
-    "darkHex": 1118481,
-    "brightHex": 12632256,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
     "glassHex": 46217
   },
   "totalParts": 8,
@@ -24,9 +24,9 @@
     "stern_stabilizer_h"
   ],
   "polyhedralPrimitivesUsed": [
-    "cylinder",
     "ellipsoid_sphere",
     "box",
+    "cylinder",
     "cone"
   ]
 }

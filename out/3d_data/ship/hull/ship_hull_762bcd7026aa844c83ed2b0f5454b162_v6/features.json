@@ -4,19 +4,17 @@
   "style": "LNG Carrier Ship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
+    "roofHex": 8359053,
     "facadeHex": 1677721,
-    "baseHex": 11141120,
-    "accentHex": 16777215,
-    "darkHex": 2236962,
+    "baseHex": 1677721,
+    "accentHex": 15105570,
+    "darkHex": 1677721,
     "brightHex": 14540253,
     "glassHex": 4473924
   },
-  "totalParts": 11,
+  "totalParts": 9,
   "partNames": [
-    "hull_main",
-    "bow_wedge",
-    "hull_bottom",
+    "main_hull_polyhedron",
     "tank_1",
     "tank_2",
     "tank_3",
@@ -27,9 +25,10 @@
     "radar_mast"
   ],
   "polyhedralPrimitivesUsed": [
-    "box",
-    "wedge",
+    "hull_polyhedron",
     "hemisphere_dome",
+    "tapered_box",
+    "box",
     "cylinder"
   ]
 }

@@ -7,19 +7,15 @@
     "roofHex": 16777215,
     "facadeHex": 16777215,
     "baseHex": 3426654,
-    "accentHex": 16711680,
-    "darkHex": 3355443,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
     "brightHex": 12632256,
     "glassHex": 8421631
   },
-  "totalParts": 12,
+  "totalParts": 8,
   "partNames": [
-    "hull_left",
-    "hull_right",
-    "hull_base_left",
-    "hull_base_right",
+    "main_hull_polyhedron",
     "main_deck",
-    "bow_wedge",
     "bridge_structure",
     "bridge_window_front",
     "roof_canopy",
@@ -28,8 +24,9 @@
     "mast"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
     "box",
-    "wedge",
+    "tapered_box",
     "torus_ring",
     "hemisphere_dome",
     "cylinder"

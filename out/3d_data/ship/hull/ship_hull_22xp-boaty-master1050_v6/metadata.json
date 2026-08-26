@@ -14,27 +14,38 @@
   "created_at": "2026-08-20T16:09:52.830Z",
   "bounds": {
     "min": [
-      -6,
-      -0.25,
-      -30
+      -30,
+      0,
+      -6
     ],
     "max": [
-      6,
-      16.5,
-      35
+      30,
+      13.7,
+      6
     ],
     "size": [
-      12,
-      16.75,
-      65
+      60,
+      13.7,
+      12
     ],
-    "rMax": 35.511,
-    "triangles": 274,
-    "vertices": 170
+    "rMax": 30.594,
+    "triangles": 288,
+    "vertices": 173
   },
   "spec": {
     "style": "modern icebreaker research vessel"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 2",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

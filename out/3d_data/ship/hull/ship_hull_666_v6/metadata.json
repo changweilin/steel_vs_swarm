@@ -16,25 +16,36 @@
     "min": [
       -25,
       0,
-      -5.0032
+      -4
     ],
     "max": [
       25,
-      13,
-      5.0032
+      11.925,
+      4
     ],
     "size": [
       50,
-      13,
-      10.006
+      11.925,
+      8
     ],
-    "rMax": 25.496,
-    "triangles": 306,
-    "vertices": 186
+    "rMax": 25.318,
+    "triangles": 344,
+    "vertices": 203
   },
   "spec": {
     "style": "modern research vessel"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

@@ -5,18 +5,16 @@
   "symmetryMode": "symmetric",
   "colors": {
     "roofHex": 16777215,
-    "facadeHex": 16711680,
-    "baseHex": 2105376,
-    "accentHex": 16777215,
-    "darkHex": 3355443,
+    "facadeHex": 2105376,
+    "baseHex": 16711680,
+    "accentHex": 15105570,
+    "darkHex": 16711680,
     "brightHex": 14540253,
     "glassHex": 49151
   },
-  "totalParts": 10,
+  "totalParts": 8,
   "partNames": [
-    "main_hull",
-    "bulbous_bow",
-    "lower_hull",
+    "main_hull_polyhedron",
     "superstructure_base",
     "bridge_windows",
     "funnel_structure",
@@ -26,8 +24,9 @@
     "deck_containers"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "box",
-    "wedge",
     "cylinder",
     "hemisphere_dome"
   ]

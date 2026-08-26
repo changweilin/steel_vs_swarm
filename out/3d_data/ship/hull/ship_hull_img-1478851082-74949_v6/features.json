@@ -6,16 +6,15 @@
   "colors": {
     "roofHex": 16436850,
     "facadeHex": 2577545,
-    "baseHex": 1315860,
-    "accentHex": 16777215,
-    "darkHex": 328965,
-    "brightHex": 14540253,
-    "glassHex": 4621735
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
+    "glassHex": 1976635
   },
-  "totalParts": 8,
+  "totalParts": 7,
   "partNames": [
-    "main_hull",
-    "hull_base",
+    "main_hull_polyhedron",
     "teak_deck",
     "cockpit_windshield",
     "cockpit_seating",
@@ -24,7 +23,7 @@
     "propeller_housing_right"
   ],
   "polyhedralPrimitivesUsed": [
-    "wedge",
+    "hull_polyhedron",
     "box",
     "cylinder"
   ]

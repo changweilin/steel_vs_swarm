@@ -14,27 +14,38 @@
   "created_at": "2026-08-20T16:21:36.950Z",
   "bounds": {
     "min": [
-      -15.35,
+      -60,
       0,
-      -60
+      -15.3506
     ],
     "max": [
-      15.35,
-      30,
-      70
+      60,
+      26.95,
+      15.3506
     ],
     "size": [
-      30.7,
-      30,
-      130
+      120,
+      26.95,
+      30.701
     ],
-    "rMax": 71.663,
-    "triangles": 602,
-    "vertices": 362
+    "rMax": 61.933,
+    "triangles": 628,
+    "vertices": 373
   },
   "spec": {
     "style": "cruise_ship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

@@ -5,18 +5,16 @@
   "symmetryMode": "symmetric",
   "colors": {
     "roofHex": 16777215,
-    "facadeHex": 16711680,
-    "baseHex": 128,
-    "accentHex": 16776960,
+    "facadeHex": 128,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
     "darkHex": 3355443,
     "brightHex": 15658734,
     "glassHex": 8421631
   },
-  "totalParts": 11,
+  "totalParts": 9,
   "partNames": [
-    "Main Hull Base",
-    "Upper Hull Black Section",
-    "Bow Wedge",
+    "main_hull_polyhedron",
     "Deck",
     "Superstructure",
     "Bridge Windows",
@@ -27,8 +25,9 @@
     "Radar Dome"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
     "box",
-    "wedge",
+    "tapered_box",
     "cylinder",
     "hemisphere_dome"
   ]

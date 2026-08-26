@@ -4,18 +4,17 @@
   "style": "modern luxury yacht",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
+    "roofHex": 8445695,
     "facadeHex": 8445695,
-    "baseHex": 2105376,
-    "accentHex": 16766720,
-    "darkHex": 526344,
-    "brightHex": 14540253,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 16766720,
     "glassHex": 3355443
   },
-  "totalParts": 9,
+  "totalParts": 8,
   "partNames": [
-    "main_hull",
-    "hull_base",
+    "main_hull_polyhedron",
     "canopy_glass",
     "aft_deck_tier1",
     "aft_deck_tier2",
@@ -25,7 +24,7 @@
     "rear_light_bar"
   ],
   "polyhedralPrimitivesUsed": [
-    "wedge",
+    "hull_polyhedron",
     "box"
   ]
 }

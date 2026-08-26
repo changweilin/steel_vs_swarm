@@ -14,27 +14,38 @@
   "created_at": "2026-08-20T16:20:21.435Z",
   "bounds": {
     "min": [
-      -1.525,
-      -0.25,
-      -5.9
+      -5.825,
+      0,
+      -1.525
     ],
     "max": [
-      1.525,
-      2.25,
-      5
+      5,
+      2.5,
+      1.525
     ],
     "size": [
-      3.05,
+      10.825,
       2.5,
-      10.9
+      3.05
     ],
-    "rMax": 6.094,
-    "triangles": 184,
-    "vertices": 112
+    "rMax": 6.021,
+    "triangles": 202,
+    "vertices": 117
   },
   "spec": {
     "style": "modern speedboat"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

@@ -1899,38 +1899,100 @@ export function createSurfaceVessels(terrain, seed) {
   };
 }
 
+/**
+ * 以等點數截面建立封閉多面體；相鄰段共用同一圈頂點，避免船首另插幾何造成台階與破縫。
+ * 截面點由左上沿船底走到右上，從船首看為逆時針。
+ */
+function loftGeometry(sections) {
+  const ringN = sections[0].ring.length;
+  const pos = [];
+  for (const section of sections) {
+    if (section.ring.length !== ringN) throw new Error('loftGeometry 截面頂點數不一致');
+    for (const [x, y] of section.ring) pos.push(x, y, section.z);
+  }
+
+  const idx = [];
+  for (let s = 0; s < sections.length - 1; s++) {
+    const a0 = s * ringN, b0 = (s + 1) * ringN;
+    for (let j = 0; j < ringN; j++) {
+      const k = (j + 1) % ringN;
+      idx.push(a0 + j, a0 + k, b0 + k, a0 + j, b0 + k, b0 + j);
+    }
+  }
+  for (let j = 1; j < ringN - 1; j++) idx.push(j + 1, j, 0);
+  const front = (sections.length - 1) * ringN;
+  for (let j = 1; j < ringN - 1; j++) idx.push(front, front + j, front + j + 1);
+
+  const indexed = new THREE.BufferGeometry();
+  indexed.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  indexed.setIndex(idx);
+  const geo = indexed.toNonIndexed();
+  indexed.dispose();
+  geo.computeVertexNormals();
+  geo.computeBoundingBox();
+  geo.computeBoundingSphere();
+  return geo;
+}
+
+const hullRing = (halfW, deckY, chineY, keelY) => [
+  [-halfW, deckY], [-halfW * 0.82, chineY], [0, keelY],
+  [halfW * 0.82, chineY], [halfW, deckY],
+];
+
 /** 建造現代巡邏艇幾何群 */
-function buildPatrolShipMesh() {
+export function buildPatrolShipMesh() {
   const g = new THREE.Group();
   const hullMat = toonMat(PALETTE.patrolCamo[0], { celMetal: true });
   const cabinMat = toonMat(PALETTE.patrolCamo[1], { celMetal: true });
+  const glassMat = toonMat(0x17384a, { bands: 'hard' });
   const trimMat = toonMat(0xff9800, { bands: 'hard' });
 
-  // 船體 (V-Hull)
-  const hullGeo = new THREE.BoxGeometry(3.6, 1.8, 12.0);
-  hullGeo.translate(0, 0.4, 0);
+  // 船體、船艏與 V 底是一張連續外板；+Z 為船首，尾波固定落在 -Z。
+  const hullGeo = loftGeometry([
+    { z: -6.0, ring: hullRing(1.55, 1.05, 0.18, -0.72) },
+    { z: -4.8, ring: hullRing(1.78, 1.05, 0.10, -0.88) },
+    { z:  2.7, ring: hullRing(1.80, 1.08, 0.06, -0.92) },
+    { z:  5.4, ring: hullRing(0.92, 1.24, 0.18, -0.66) },
+    { z:  7.0, ring: hullRing(0.06, 1.48, 0.48, -0.12) },
+  ]);
   const hull = new THREE.Mesh(hullGeo, hullMat);
   g.add(hull);
 
-  // 船艏銳角破浪錐
-  const bowGeo = new THREE.ConeGeometry(1.8, 3.8, 4);
-  bowGeo.rotateY(Math.PI / 4);
-  bowGeo.rotateX(-Math.PI / 2);
-  bowGeo.translate(0, 0.4, 6.8);
-  const bow = new THREE.Mesh(bowGeo, hullMat);
-  g.add(bow);
-
-  // 駕駛艙上層建築
-  const cabinGeo = new THREE.BoxGeometry(2.6, 1.6, 4.8);
-  cabinGeo.translate(0, 1.8, -0.6);
+  // 艙體前窄後寬，底圈直接壓入甲板 0.07m；斜舷與船體方向一致。
+  const cabinRoofY = 2.92;
+  const cabinGeo = loftGeometry([
+    { z: -2.7, ring: [[-1.28, 0.98], [-1.12, 2.62], [-0.84, cabinRoofY], [0.84, cabinRoofY], [1.12, 2.62], [1.28, 0.98]] },
+    { z:  0.7, ring: [[-1.23, 0.98], [-1.04, 2.58], [-0.78, cabinRoofY], [0.78, cabinRoofY], [1.04, 2.58], [1.23, 0.98]] },
+    { z:  1.5, ring: [[-0.98, 1.02], [-0.88, 2.48], [-0.66, 2.78], [0.66, 2.78], [0.88, 2.48], [0.98, 1.02]] },
+  ]);
   const cabin = new THREE.Mesh(cabinGeo, cabinMat);
   g.add(cabin);
 
-  // 雷達桅杆
+  // 正面觀測窗略微外凸，方向固定朝船首，避免藏進艙壁或反向貼在船尾。
+  const windshieldGeo = new THREE.PlaneGeometry(1.48, 0.62);
+  windshieldGeo.translate(0, 2.34, 1.515);
+  const windshield = new THREE.Mesh(windshieldGeo, glassMat);
+  g.add(windshield);
+
+  // 側窗貼在收分舷面之外；厚度只負責消除共面閃爍。
+  for (const side of [-1, 1]) {
+    for (const [z, halfW] of [[-1.75, 1.14], [-0.72, 1.12], [0.28, 1.10]]) {
+      const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.58, 0.76), glassMat);
+      sideWindow.position.set(side * (halfW + 0.015), 2.22, z);
+      sideWindow.rotation.z = side * 0.10;
+      g.add(sideWindow);
+    }
+  }
+
+  // 桅杆底端與艙頂共面，所有高度由 cabinRoofY 推導。
   const mastGeo = new THREE.CylinderGeometry(0.1, 0.14, 2.2, 5);
-  mastGeo.translate(0, 3.2, 0);
+  mastGeo.translate(0, cabinRoofY + 1.1, -0.55);
   const mast = new THREE.Mesh(mastGeo, trimMat);
   g.add(mast);
+
+  const radar = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.22), trimMat);
+  radar.position.set(0, cabinRoofY + 2.18, -0.55);
+  g.add(radar);
 
   return g;
 }

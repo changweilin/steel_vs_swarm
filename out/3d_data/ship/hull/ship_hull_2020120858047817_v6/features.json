@@ -6,17 +6,15 @@
   "colors": {
     "roofHex": 16777215,
     "facadeHex": 16777215,
-    "baseHex": 8421504,
-    "accentHex": 32768,
-    "darkHex": 2105376,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
     "brightHex": 12632256,
     "glassHex": 49151
   },
-  "totalParts": 11,
+  "totalParts": 9,
   "partNames": [
-    "main_hull",
-    "bow_wedge",
-    "hull_base",
+    "main_hull_polyhedron",
     "bridge_structure",
     "bridge_windows",
     "roof_deck",
@@ -27,8 +25,9 @@
     "life_ring_starboard"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "box",
-    "wedge",
     "cylinder",
     "hemisphere_dome",
     "torus_ring"

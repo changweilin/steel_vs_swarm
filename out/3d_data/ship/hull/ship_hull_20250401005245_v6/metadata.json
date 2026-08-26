@@ -14,27 +14,38 @@
   "created_at": "2026-08-20T16:08:56.083Z",
   "bounds": {
     "min": [
-      -15,
-      -1,
-      -80
+      -75.001,
+      0,
+      -15
     ],
     "max": [
-      15,
-      30.5,
-      75.1
+      75.1015,
+      29.381,
+      15
     ],
     "size": [
-      30,
-      31.5,
-      155.1
+      150.103,
+      29.381,
+      30
     ],
-    "rMax": 81.394,
-    "triangles": 610,
-    "vertices": 364
+    "rMax": 76.585,
+    "triangles": 628,
+    "vertices": 369
   },
   "spec": {
     "style": "LNG Carrier Ship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 0",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

@@ -14,27 +14,38 @@
   "created_at": "2026-08-20T16:14:11.468Z",
   "bounds": {
     "min": [
-      -1.75,
-      -0.1,
-      0
+      -0.2,
+      0,
+      -1.75
     ],
     "max": [
-      1.75,
-      1.8,
-      8
+      8.3002,
+      1.9,
+      1.75
     ],
     "size": [
-      3.5,
+      8.5,
       1.9,
-      8
+      3.5
     ],
-    "rMax": 8.189,
-    "triangles": 132,
-    "vertices": 82
+    "rMax": 8.483,
+    "triangles": 158,
+    "vertices": 93
   },
   "spec": {
     "style": "modern luxury motor yacht"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 0",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

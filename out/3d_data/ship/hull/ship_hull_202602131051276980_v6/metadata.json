@@ -15,26 +15,37 @@
   "bounds": {
     "min": [
       -25,
-      -0.75,
+      0,
       -4
     ],
     "max": [
       25,
-      16,
+      16.525,
       4
     ],
     "size": [
       50,
-      16.75,
+      16.525,
       8
     ],
     "rMax": 25.318,
-    "triangles": 522,
-    "vertices": 326
+    "triangles": 536,
+    "vertices": 329
   },
   "spec": {
     "style": "maritime_vessel"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

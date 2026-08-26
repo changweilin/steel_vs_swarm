@@ -14,8 +14,8 @@
   "created_at": "2026-08-20T16:19:19.353Z",
   "bounds": {
     "min": [
-      -55.2,
-      -0.0004,
+      -29.8792,
+      0,
       -5
     ],
     "max": [
@@ -24,17 +24,26 @@
       5
     ],
     "size": [
-      110.2,
+      84.879,
       13,
       10
     ],
-    "rMax": 55.426,
-    "triangles": 264,
-    "vertices": 163
+    "rMax": 55.227,
+    "triangles": 360,
+    "vertices": 228
   },
   "spec": {
     "style": "military_submarine"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "貼地位移 0.00m",
+      "潛艇改用封閉橢球耐壓殼"
+    ]
+  }
 }

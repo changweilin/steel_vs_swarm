@@ -1,15 +1,15 @@
 {
-  "id": "ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0",
-  "sourceImage": "ship/hull/mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0",
+  "id": "ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad_0",
+  "sourceImage": "ship/hull/mobile01-d0f6425557ae4a5310b111f39cf1a5ad_0",
   "style": "military_submarine",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 1644825,
+    "roofHex": 8359053,
     "facadeHex": 4210752,
-    "baseHex": 2105376,
-    "accentHex": 8421504,
-    "darkHex": 526344,
-    "brightHex": 12632256,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
     "glassHex": 16777215
   },
   "totalParts": 8,
@@ -24,9 +24,10 @@
     "propeller_ring"
   ],
   "polyhedralPrimitivesUsed": [
-    "cylinder",
+    "ellipsoid_sphere",
     "wedge",
     "box",
+    "cylinder",
     "torus_ring"
   ]
 }

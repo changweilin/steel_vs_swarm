@@ -19,22 +19,33 @@
       -7.5
     ],
     "max": [
-      55,
-      16.5,
+      50,
+      16.15,
       7.6
     ],
     "size": [
-      105,
-      16.5,
+      100,
+      16.15,
       15.1
     ],
-    "rMax": 55.523,
-    "triangles": 610,
-    "vertices": 364
+    "rMax": 50.574,
+    "triangles": 624,
+    "vertices": 367
   },
   "spec": {
     "style": "industrial_ship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

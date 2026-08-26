@@ -4,19 +4,17 @@
   "style": "fishing_vessel",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
-    "facadeHex": 255,
-    "baseHex": 128,
-    "accentHex": 16711680,
-    "darkHex": 32896,
-    "brightHex": 16777215,
+    "roofHex": 8359053,
+    "facadeHex": 128,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
     "glassHex": 8421631
   },
-  "totalParts": 11,
+  "totalParts": 9,
   "partNames": [
-    "hull_base",
-    "hull_upper",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "bridge_main",
     "bridge_window",
     "mast_main",
@@ -27,8 +25,9 @@
     "flag"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "box",
-    "wedge",
     "cylinder",
     "torus_ring"
   ]

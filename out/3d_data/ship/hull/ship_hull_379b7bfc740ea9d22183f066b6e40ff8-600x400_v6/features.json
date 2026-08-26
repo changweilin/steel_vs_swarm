@@ -4,18 +4,17 @@
   "style": "military_warship_destroyer",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 12632256,
+    "roofHex": 8359053,
     "facadeHex": 9868950,
-    "baseHex": 4210752,
-    "accentHex": 16711680,
-    "darkHex": 2105376,
-    "brightHex": 15790320,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 9868950,
+    "brightHex": 12632256,
     "glassHex": 4621735
   },
-  "totalParts": 10,
+  "totalParts": 9,
   "partNames": [
-    "main_hull",
-    "hull_base",
+    "main_hull_polyhedron",
     "superstructure_lower",
     "bridge_windows",
     "main_mast",
@@ -26,7 +25,8 @@
     "funnel_structure"
   ],
   "polyhedralPrimitivesUsed": [
-    "wedge",
+    "hull_polyhedron",
+    "tapered_box",
     "box",
     "cylinder",
     "hemisphere_dome",

@@ -6,7 +6,7 @@
  *   v5 = Python CV 萃取特徵 → 手寫規則匹配樣板 → 幾何合成
  *   v6 = Gemini API 直讀照片 → 結構化輸出回傳多面體零件列 → 幾何合成
  *
- * 幾何合成器(12 個多面體生成器)、落盤格式(model.json/features.json/metadata.json/model.obj)、
+ * 幾何合成器(14 個多面體生成器)、落盤格式(model.json/features.json/metadata.json/model.obj)、
  * 資料庫索引(3d_database.json / parts_manifest.json)全部沿用 v5 — 零件台、稽核、消費端無感。
  *
  * 三條紀律:
@@ -25,7 +25,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, extname, basename, relative, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { request as httpsRequest } from 'node:https';
 import { execFileSync } from 'node:child_process';
 import { isNativeFunctionalSubpart } from '../../public/js/nativeFunctionalBuildings.js';
@@ -166,6 +166,8 @@ const GEMINI_SYSTEM_PROMPT = `你是一位專精於 3D 多面體幾何重建的�
 | dodecahedron_polyhedron | radius | 巨石碎塊、結晶 |
 | icosahedron_polyhedron | radius | 粗糙礦石、珊瑚 |
 | wedge | dimensions: [w, h, d] | 山牆斜屋頂(頂脊在頂端向外斜)、船首楔 |
+| hull_polyhedron | dimensions: [beam, height, length] | 封閉左右對稱船殼，船首/船尾在平面與水線同步收尖 |
+| tapered_box | dimensions: [bottomW, height, bottomD], topDimensions: [topW, topD] | 船橋、艙室、煙囪等矩形截面漸縮量體 |
 
 ## 色彩紀律(7-Zone)
 每個零件的 colorKey 必須是以下七個之一:
@@ -205,6 +207,7 @@ const GEMINI_RESPONSE_SCHEMA = {
           name: { type: 'string', description: '零件名稱' },
           type: { type: 'string', description: '多面體類型' },
           dimensions: { type: 'array', items: { type: 'number' }, description: '[w,h,d] for box/wedge' },
+          topDimensions: { type: 'array', items: { type: 'number' }, description: '[topW,topD] for tapered_box' },
           radius: { type: 'number', description: 'prism/dodecahedron/icosahedron' },
           radii: { type: 'array', items: { type: 'number' }, description: '[topR,botR] or [rx,ry,rz]' },
           height: { type: 'number' },
@@ -440,8 +443,8 @@ function renderPreview(modelJson, targetId) {
   return previewPath;
 }
 
-// ── 多面體幾何合成器(沿用 v5 全套 12 個生成器)──────────────────────
-function buildGeometryFromParts(geminiResult, family, subpart, stem) {
+// ── 多面體幾何合成器(v5 的 12 個生成器 + 船殼專用 2 個)──────────────
+export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
   const vertices = [];
   const normals = [];
   const uvs = [];
@@ -630,6 +633,68 @@ function buildGeometryFromParts(geminiResult, family, subpart, stem) {
       position: [f3(px), f3(py), f3(pz)], rotation: [f3(rx), f3(ry), f3(rz)], color, triangles: 8 });
   }
 
+  // 13. 船殼放樣多面體：縱向分段與左右舷共用同一組截面，構造上保證雙側完整且無接縫。
+  function addHull(w, h, d, px, py, pz, rx, ry, rz, partName, color) {
+    const vBase = vertices.length / 3;
+    const sections = [
+      [-0.50, 0.58, 0.42],
+      [-0.38, 0.92, 0.58],
+      [ 0.18, 1.00, 0.62],
+      [ 0.36, 0.82, 0.50],
+      [ 0.50, 0.035, 0.015],
+    ];
+    for (const [zf, deckF, chineF] of sections) {
+      const z = zf * d;
+      const deck = deckF * w * 0.5;
+      const chine = chineF * w * 0.5;
+      const ring = [
+        [-deck, h, z], [deck, h, z],
+        [chine, h * 0.24, z], [-chine, h * 0.24, z],
+        [0, 0, z],
+      ];
+      for (const [vx, vy, vz] of ring) {
+        const [x, y, z1] = transformPoint(vx, vy, vz, px, py, pz, rx, ry, rz);
+        vertices.push(f4(x), f4(y), f4(z1)); uvs.push(0.5, 0.5); normals.push(0, 1, 0);
+      }
+    }
+    for (let s = 0; s < sections.length - 1; s++) {
+      const a = vBase + s * 5, b = a + 5;
+      for (const [i, j] of [[0,1],[1,2],[2,4],[4,3],[3,0]]) {
+        faces.push(a + i, b + i, b + j, a + i, b + j, a + j);
+      }
+    }
+    const cap = (base, reverse) => {
+      const tris = [[0,2,1],[0,3,2],[3,4,2]];
+      for (const tri of tris) {
+        const [a, b, c] = reverse ? [tri[0], tri[2], tri[1]] : tri;
+        faces.push(base + a, base + b, base + c);
+      }
+    };
+    cap(vBase, true);
+    cap(vBase + (sections.length - 1) * 5, false);
+    partsOut.push({ name: partName, type: 'hull_polyhedron', dimensions: [f3(w), f3(h), f3(d)],
+      position: [f3(px), f3(py), f3(pz)], rotation: [f3(rx), f3(ry), f3(rz)], color, triangles: 46 });
+  }
+
+  // 14. 矩形截面漸縮體：上、下環逐角相連，適合船橋與艙室，避免圓錐台的菱形截面。
+  function addTaperedBox(w, h, d, tw, td, px, py, pz, rx, ry, rz, partName, color) {
+    const vBase = vertices.length / 3;
+    const rings = [
+      [[-w/2,-h/2,-d/2],[w/2,-h/2,-d/2],[w/2,-h/2,d/2],[-w/2,-h/2,d/2]],
+      [[-tw/2,h/2,-td/2],[tw/2,h/2,-td/2],[tw/2,h/2,td/2],[-tw/2,h/2,td/2]],
+    ];
+    for (const ring of rings) for (const [vx, vy, vz] of ring) {
+      const [x, y, z] = transformPoint(vx, vy, vz, px, py, pz, rx, ry, rz);
+      vertices.push(f4(x), f4(y), f4(z)); uvs.push(0.5, 0.5); normals.push(0, 1, 0);
+    }
+    for (const [a,b,c] of [[0,2,1],[0,3,2],[4,5,6],[4,6,7],[0,1,5],[0,5,4],[1,2,6],[1,6,5],[2,3,7],[2,7,6],[3,0,4],[3,4,7]]) {
+      faces.push(vBase + a, vBase + b, vBase + c);
+    }
+    partsOut.push({ name: partName, type: 'tapered_box', dimensions: [f3(w), f3(h), f3(d)],
+      topDimensions: [f3(tw), f3(td)], position: [f3(px), f3(py), f3(pz)],
+      rotation: [f3(rx), f3(ry), f3(rz)], color, triangles: 12 });
+  }
+
   // 10. Dodecahedron
   function addDodecahedron(r, px, py, pz, rx, ry, rz, partName, color) {
     const vBase = vertices.length / 3;
@@ -681,7 +746,7 @@ function buildGeometryFromParts(geminiResult, family, subpart, stem) {
   for (const p of gParts) {
     const pos = p.pos || [0, 0, 0];
     const rot = p.rot || [0, 0, 0];
-    const col = colorMap[p.colorKey] || colorMap.facadeHex;
+    const col = Number.isFinite(p.color) ? p.color : (colorMap[p.colorKey] || colorMap.facadeHex);
     const px = pos[0] || 0, py = pos[1] || 0, pz = pos[2] || 0;
     const rx = rot[0] || 0, ry = rot[1] || 0, rz = rot[2] || 0;
     const nm = p.name || 'part';
@@ -745,6 +810,17 @@ function buildGeometryFromParts(geminiResult, family, subpart, stem) {
       case 'wedge': {
         const d = p.dimensions || [1, 1, 1];
         addWedge(d[0], d[1], d[2], px, py, pz, rx, ry, rz, nm, col);
+        break;
+      }
+      case 'hull_polyhedron': {
+        const d = p.dimensions || [1, 1, 1];
+        addHull(d[0], d[1], d[2], px, py, pz, rx, ry, rz, nm, col);
+        break;
+      }
+      case 'tapered_box': {
+        const d = p.dimensions || [1, 1, 1];
+        const t = p.topDimensions || [d[0] * 0.82, d[2] * 0.82];
+        addTaperedBox(d[0], d[1], d[2], t[0], t[1], px, py, pz, rx, ry, rz, nm, col);
         break;
       }
       default:
@@ -1190,7 +1266,9 @@ async function main() {
   console.log('======================================================================');
 }
 
-main().catch((err) => {
-  console.error('❌ 執行失敗:', err);
-  process.exit(1);
-});
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error('❌ 執行失敗:', err);
+    process.exit(1);
+  });
+}

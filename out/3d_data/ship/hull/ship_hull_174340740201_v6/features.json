@@ -4,30 +4,29 @@
   "style": "modern cruise ship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
+    "roofHex": 14540253,
     "facadeHex": 16777215,
-    "baseHex": 10066329,
-    "accentHex": 16753920,
-    "darkHex": 3355443,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 16777215,
     "brightHex": 14540253,
     "glassHex": 4621730
   },
-  "totalParts": 10,
+  "totalParts": 8,
   "partNames": [
-    "main_hull",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "bridge_structure",
     "bridge_windows",
     "funnel_stack_1",
     "funnel_stack_2",
     "radar_dome_1",
     "radar_dome_2",
-    "deck_railing_front",
-    "hull_base"
+    "deck_railing_front"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "box",
-    "wedge",
     "cylinder",
     "hemisphere_dome"
   ]

@@ -14,27 +14,38 @@
   "created_at": "2026-08-20T16:11:53.481Z",
   "bounds": {
     "min": [
-      -2.45,
+      -6,
       0,
-      -6
+      -2.45
     ],
     "max": [
-      2.45,
-      4.75,
-      7.5
+      6,
+      4.475,
+      2.45
     ],
     "size": [
-      4.9,
-      4.75,
-      13.5
+      12,
+      4.475,
+      4.9
     ],
-    "rMax": 7.89,
-    "triangles": 580,
-    "vertices": 372
+    "rMax": 6.481,
+    "triangles": 594,
+    "vertices": 375
   },
   "spec": {
     "style": "fishing_vessel"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

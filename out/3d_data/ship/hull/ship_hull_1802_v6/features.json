@@ -4,29 +4,28 @@
   "style": "military_warship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 12632256,
+    "roofHex": 8359053,
     "facadeHex": 11184810,
-    "baseHex": 6710886,
-    "accentHex": 16777215,
-    "darkHex": 3355443,
+    "baseHex": 11184810,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
     "brightHex": 14540253,
     "glassHex": 4621735
   },
-  "totalParts": 9,
+  "totalParts": 7,
   "partNames": [
-    "main_hull",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "superstructure_base",
     "bridge_windows",
     "forward_turret",
     "main_mast",
     "secondary_mast",
-    "radar_dome",
-    "hull_bottom"
+    "radar_dome"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "box",
-    "wedge",
     "cylinder",
     "hemisphere_dome"
   ]

@@ -4,18 +4,17 @@
   "style": "container_ship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
+    "roofHex": 8359053,
     "facadeHex": 2631720,
-    "baseHex": 855309,
-    "accentHex": 16711680,
-    "darkHex": 2105376,
-    "brightHex": 14540253,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 855309,
+    "brightHex": 15528177,
     "glassHex": 4621735
   },
-  "totalParts": 9,
+  "totalParts": 8,
   "partNames": [
-    "hull_main",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "bridge_structure",
     "bridge_windows",
     "container_stack_1",
@@ -25,8 +24,9 @@
     "life_ring_starboard"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "box",
-    "wedge",
     "torus_ring"
   ]
 }

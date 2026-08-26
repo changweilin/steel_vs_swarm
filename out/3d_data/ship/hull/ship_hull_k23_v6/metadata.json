@@ -15,26 +15,37 @@
   "bounds": {
     "min": [
       -11,
-      -0.25,
-      -2.5016
+      0,
+      -2
     ],
     "max": [
-      12.002,
-      7,
-      2.5016
+      10,
+      5.725,
+      2
     ],
     "size": [
-      23.002,
-      7.25,
-      5.003
+      21,
+      5.725,
+      4
     ],
-    "rMax": 12.26,
-    "triangles": 526,
-    "vertices": 326
+    "rMax": 11.18,
+    "triangles": 588,
+    "vertices": 355
   },
   "spec": {
     "style": "modern_yacht"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

@@ -19,22 +19,33 @@
       -1.25
     ],
     "max": [
-      5.4,
-      2.45,
+      4.425,
+      2.225,
       1.25
     ],
     "size": [
-      9.4,
-      2.45,
+      8.425,
+      2.225,
       2.5
     ],
-    "rMax": 5.543,
-    "triangles": 136,
-    "vertices": 88
+    "rMax": 4.598,
+    "triangles": 150,
+    "vertices": 91
   },
   "spec": {
     "style": "modern motor yacht"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 0",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

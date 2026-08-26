@@ -6,18 +6,16 @@
   "colors": {
     "roofHex": 12632256,
     "facadeHex": 10526880,
-    "baseHex": 8421504,
-    "accentHex": 16711680,
-    "darkHex": 3158064,
-    "brightHex": 15790320,
+    "baseHex": 10526880,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 12632256,
     "glassHex": 4621730
   },
-  "totalParts": 9,
+  "totalParts": 7,
   "partNames": [
-    "main_hull",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "flight_deck",
-    "underwater_hull",
     "island_base",
     "bridge_windows",
     "radar_mast",
@@ -25,9 +23,11 @@
     "ski_jump_ramp"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
     "box",
-    "wedge",
+    "tapered_box",
     "cylinder",
-    "hemisphere_dome"
+    "hemisphere_dome",
+    "wedge"
   ]
 }

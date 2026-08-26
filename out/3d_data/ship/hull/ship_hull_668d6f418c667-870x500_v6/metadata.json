@@ -19,22 +19,33 @@
       -21
     ],
     "max": [
-      190.0159,
-      43,
+      170,
+      49.175,
       21
     ],
     "size": [
-      360.016,
-      43,
+      340,
+      49.175,
       42
     ],
-    "rMax": 191.173,
-    "triangles": 390,
-    "vertices": 230
+    "rMax": 171.292,
+    "triangles": 416,
+    "vertices": 241
   },
   "spec": {
     "style": "cruise_ship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 2",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

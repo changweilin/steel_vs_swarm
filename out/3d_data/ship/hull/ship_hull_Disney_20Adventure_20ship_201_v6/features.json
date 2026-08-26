@@ -1,21 +1,20 @@
 {
-  "id": "ship_hull_Disney%20Adventure%20ship%201",
-  "sourceImage": "ship/hull/Disney%20Adventure%20ship%201",
+  "id": "ship_hull_Disney_20Adventure_20ship_201",
+  "sourceImage": "ship/hull/Disney_20Adventure_20ship_201",
   "style": "cruise_ship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
-    "facadeHex": 16777215,
-    "baseHex": 2105664,
-    "accentHex": 16766720,
+    "roofHex": 8359053,
+    "facadeHex": 2105664,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
     "darkHex": 328965,
-    "brightHex": 14540253,
-    "glassHex": 4621735
+    "brightHex": 16777215,
+    "glassHex": 1976635
   },
-  "totalParts": 8,
+  "totalParts": 7,
   "partNames": [
-    "hull_base",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "superstructure_main",
     "bridge_front",
     "funnel_1",
@@ -24,8 +23,9 @@
     "radar_dome"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "box",
-    "wedge",
     "cylinder",
     "hemisphere_dome"
   ]

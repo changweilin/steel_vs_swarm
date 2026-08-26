@@ -14,27 +14,38 @@
   "created_at": "2026-08-20T16:13:49.049Z",
   "bounds": {
     "min": [
-      -15,
-      -2.5,
-      -150
+      -150.0051,
+      0,
+      -35.0306
     ],
     "max": [
-      35,
-      28.5,
-      180
+      150.0051,
+      26.65,
+      15.0306
     ],
     "size": [
-      50,
-      31,
-      330
+      300.01,
+      26.65,
+      50.061
     ],
-    "rMax": 183.371,
-    "triangles": 294,
-    "vertices": 180
+    "rMax": 154.041,
+    "triangles": 308,
+    "vertices": 183
   },
   "spec": {
     "style": "military_aircraft_carrier"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

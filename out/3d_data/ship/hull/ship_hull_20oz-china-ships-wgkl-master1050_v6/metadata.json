@@ -14,27 +14,38 @@
   "created_at": "2026-08-20T16:09:42.167Z",
   "bounds": {
     "min": [
-      -6,
-      -0.5,
-      -65
+      -65,
+      0,
+      -6
     ],
     "max": [
-      6,
-      22,
-      72.5
+      65,
+      21.275,
+      6
     ],
     "size": [
-      12,
-      22.5,
-      137.5
+      130,
+      21.275,
+      12
     ],
-    "rMax": 72.748,
-    "triangles": 538,
-    "vertices": 334
+    "rMax": 65.276,
+    "triangles": 552,
+    "vertices": 337
   },
   "spec": {
     "style": "modern_naval_warship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }

@@ -19,22 +19,33 @@
       -4
     ],
     "max": [
-      24.0024,
-      13.8,
+      20,
+      13.725,
       4
     ],
     "size": [
-      44.002,
-      13.8,
+      40,
+      13.725,
       8
     ],
-    "rMax": 24.333,
-    "triangles": 538,
-    "vertices": 334
+    "rMax": 20.396,
+    "triangles": 552,
+    "vertices": 337
   },
   "spec": {
     "style": "industrial_fishing_vessel"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 2",
+      "鏡像補件 0",
+      "貼地 0.00m"
+    ]
+  }
 }
