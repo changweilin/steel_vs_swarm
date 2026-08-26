@@ -96,7 +96,8 @@ import { LORE } from './lore.js';
 import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
 import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
 import {
-  PED_PLAN, PED_ARCHETYPES, isPedestrianWay, isPedestrianBridge, planPedestrianNetwork,
+  PED_PLAN, PED_ARCHETYPES, pedestrianEntranceCollider,
+  isPedestrianWay, isPedestrianBridge, planPedestrianNetwork,
 } from './pedestrian.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
@@ -6013,7 +6014,7 @@ const DEFAULT_PARTS = [
     sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, wash: 0.08 },
 ];
 
-/** 地下步道／車站入口外觀。一個生成器吃 PED_ARCHETYPES 資料列；純表現層，不堵窄步道。 */
+/** 地下步道／車站入口。一個生成器吃 PED_ARCHETYPES 資料列；名目尺寸同時產生外觀與碰撞盒。 */
 function buildPedestrianEntrances(group, terrain, sites) {
   const rows = [];
   for (const site of sites || []) {
@@ -6025,7 +6026,7 @@ function buildPedestrianEntrances(group, terrain, sites) {
     if (y < 0.4) continue;
     rows.push({ ...site, def, archKey, y });
   }
-  if (!rows.length) return { built: 0, signSpots: [] };
+  if (!rows.length) return { built: 0, signSpots: [], cols: [] };
 
   const geos = getPedEntranceGeos();
   const val = (v, d) => typeof v === 'function' ? v(d) : v;
@@ -6075,7 +6076,10 @@ function buildPedestrianEntrances(group, terrain, sites) {
       signText: r.signText || (r.stationTags?.name || r.tags?.name),
     };
   });
-  return { built: rows.length, signSpots };
+  // 入口不是可進入的實際地下關卡：前方階梯只是地面建築外觀。每座以 PED_ARCHETYPES 的同一份
+  // 名目寬／深／高登記完整 OBB，避免機體從開口鑽入後穿過背牆，也避免款式零件表各自再抄一份量體。
+  const cols = rows.map((r) => pedestrianEntranceCollider(r, r.y));
+  return { built: rows.length, signSpots, cols };
 }
 
 
@@ -11544,6 +11548,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 離線備援(roadInput = 兵線本身)吃 inclSwamp ⇒ 跨沼段也升橋;真 OSM 道路維持水域限定
   const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes, !osmRoads?.length, gradeCorridors);
   const pedestrianEntrances = buildPedestrianEntrances(group, terrain, pedestrianPlan.entrances);
+  blockers.push(...pedestrianEntrances.cols);   // 地下道／捷運入口建築：玩家、NPC、彈道共用同一 blockers 縫
   // ---- 兵線跨水補橋(2026-07-22 確定性改制,幾何定案於前段 laneWetWays):每個兵線泡水段
   // 一律建全跨橋。不再查真橋覆蓋率(舊 DECK_COVER 去重使兵線橋數隨 Overpass 逐局浮動,
   // 部分覆蓋時全跨補橋疊在殘缺真橋上 = 上下兩層);與兵線走廊側向重疊的真橋已於

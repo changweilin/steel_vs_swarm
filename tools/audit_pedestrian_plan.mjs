@@ -10,6 +10,7 @@
 //   --break-underground  關掉 tunnel 地下分類       ⇒ Ⅱ MUST 紅
 //   --break-footbridge   關掉 bridge=yes 分類       ⇒ Ⅰ MUST 紅
 //   --break-adjacent     平行覆蓋門檻調成不可能達成 ⇒ Ⅲ MUST 紅
+//   --break-collision    拔掉入口碰撞接線           ⇒ Ⅳ MUST 紅
 import { readSrc } from './audit_src.mjs';
 
 const argv = process.argv;
@@ -31,7 +32,10 @@ if (argv.includes('--break-adjacent')) {
   replaceOne(/MIN_PARALLEL_F: 0\.42/, 'MIN_PARALLEL_F: 2', 'adjacent');
 }
 const M = await import(`data:text/javascript;base64,${Buffer.from(src).toString('base64')}`);
-const bioSrc = readSrc('public', 'js', 'biomes.js');
+let bioSrc = readSrc('public', 'js', 'biomes.js');
+if (argv.includes('--break-collision')) {
+  bioSrc = bioSrc.replace('blockers.push(...pedestrianEntrances.cols);', '// 入口碰撞接線已移除');
+}
 const relaySrc = readSrc('public', 'js', 'osmrelay.js');
 
 let pass = 0, fail = 0;
@@ -143,6 +147,16 @@ sec('Ⅳ 消費端單一接線');
     && /for \(const s of entranceSigns\)/.test(bioSrc));
   t('入口外觀走一個生成器與 PED_ARCHETYPES 資料列', /function buildPedestrianEntrances/.test(bioSrc)
     && /for \(const kind of Object\.keys\(PED_ARCHETYPES\)\)/.test(bioSrc));
+  t('入口名目尺寸產生同朝向 OBB 並接入全域 blockers',
+    /hw2: def\.w \/ 2, hd2: def\.d \/ 2, ry: site\.ry/.test(src)
+    && /r: Math\.hypot\(def\.w, def\.d\) \/ 2/.test(src)
+    && /rows\.map\(\(r\) => pedestrianEntranceCollider\(r, r\.y\)\)/.test(bioSrc)
+    && /blockers\.push\(\.\.\.pedestrianEntrances\.cols\)/.test(bioSrc));
+  const col = M.pedestrianEntranceCollider({ x: 12, z: -8, ry: 0.7, archetype: 'underpass_glass_cube' }, 4);
+  t('入口碰撞值由款式真品推導且保留世界姿態', col.x === 12 && col.z === -8 && col.y === 3.9
+    && col.hw2 === M.PED_ARCHETYPES.underpass_glass_cube.w / 2
+    && col.hd2 === M.PED_ARCHETYPES.underpass_glass_cube.d / 2 && col.ry === 0.7
+    && col.h === M.PED_ARCHETYPES.underpass_glass_cube.h + 0.2);
 }
 
 sec('Ⅴ 決定性與重排不變');
