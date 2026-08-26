@@ -90,13 +90,14 @@ import {
   WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
-import { buildAquaticWorld, buildRelicObject, RELIC_KINDS } from './aquatics.js';
+import { buildAquaticWorld, buildRelicObject, relicCollider, RELIC_KINDS } from './aquatics.js';
 import { visualPref } from './visualPrefs.js';
 import { LORE } from './lore.js';
 import { isRuntimeEligibleNatureKey } from './legacyNatureModels.js';
 import { nativeFunctionalKind } from './nativeFunctionalBuildings.js';
 import {
-  PED_PLAN, PED_ARCHETYPES, isPedestrianWay, isPedestrianBridge, planPedestrianNetwork,
+  PED_PLAN, PED_ARCHETYPES, pedestrianEntranceCollider,
+  isPedestrianWay, isPedestrianBridge, planPedestrianNetwork,
 } from './pedestrian.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
@@ -391,6 +392,37 @@ const VEG_DEFS = {
                          { g: ico(1.3), y: 0.7, px: -1.9, pz: 1.1, sy: 0.7, j: 2, c: 0x968e7c },
                          { g: cone(2.2, 1.8, 7), y: 0.9, pz: -1.6, j: 2, c: 0x857e70 }] },
 };
+
+const TRUNK_TYPES = new Set([
+  'bamboo', 'broadleaf', 'birch', 'conifer', 'deadtree', 'mangrove',
+  'conifer2', 'conifer3', 'conifer4', 'sapling',
+]);
+
+/** 一般樹幹碰撞吃 VEG_DEFS 的木質首件與 vegPartXform，同畫面實例共用同一把變換尺。 */
+function registerTreeTrunkColliders(items, blockers) {
+  const box = new THREE.Box3(), size = new THREE.Vector3(), center = new THREE.Vector3();
+  const mat = new THREE.Matrix4(), pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
+  let count = 0;
+  for (const type of TRUNK_TYPES) {
+    const part = VEG_DEFS[type]?.parts?.[0];
+    if (!part) continue;
+    if (!part.g.boundingBox) part.g.computeBoundingBox();
+    for (const it of items[type] || []) {
+      const xf = vegPartXform(part, it);
+      pos.fromArray(xf.pos); quat.fromArray(xf.quat); scl.fromArray(xf.scl);
+      mat.compose(pos, quat, scl);
+      box.copy(part.g.boundingBox).applyMatrix4(mat);
+      box.getSize(size); box.getCenter(center);
+      const r = Math.max(size.x, size.z) / 2;
+      blockers.push({
+        x: center.x, z: center.z, y: box.min.y,
+        r: Math.max(0.05, r), h: Math.max(0.1, size.y), cl: 'tree', name: `trunk_${type}`,
+      });
+      count++;
+    }
+  }
+  return count;
+}
 
 // ---- 神木(全球實存 >65m 巨樹樹種;綠地超尺度地標植被)----
 //   紅杉(海岸紅杉 115m)/ 巨杉(世界爺 95m)/ 杏仁桉(澳洲王桉 100m)/
@@ -4790,13 +4822,14 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
     }
 
     const g = new THREE.Group();
-    buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true });
+    const relic = buildRelicObject(kind, g, 0, 0, 0, localRnd, { isLand: true });
     g.position.set(sx, gy, sz);
     bakeContactAO(g, 5);
 
     group.add(g);
     blockArea(blocked, sx, sz, r);
-    blockers?.push({ x: sx, z: sz, r, h: 8, name: `relic_${kind}` });
+    const col = relicCollider(relic, `relic_${kind}`);
+    if (col) blockers?.push(col);
     placedList.push({ x: sx, z: sz, r });
     placedCount++;
   }
@@ -5981,7 +6014,7 @@ const DEFAULT_PARTS = [
     sx: (d) => d.w * 0.72, sy: () => 0.16, sz: (d) => d.d * 0.72, wash: 0.08 },
 ];
 
-/** 地下步道／車站入口外觀。一個生成器吃 PED_ARCHETYPES 資料列；純表現層，不堵窄步道。 */
+/** 地下步道／車站入口。一個生成器吃 PED_ARCHETYPES 資料列；名目尺寸同時產生外觀與碰撞盒。 */
 function buildPedestrianEntrances(group, terrain, sites) {
   const rows = [];
   for (const site of sites || []) {
@@ -5993,7 +6026,7 @@ function buildPedestrianEntrances(group, terrain, sites) {
     if (y < 0.4) continue;
     rows.push({ ...site, def, archKey, y });
   }
-  if (!rows.length) return { built: 0, signSpots: [] };
+  if (!rows.length) return { built: 0, signSpots: [], cols: [] };
 
   const geos = getPedEntranceGeos();
   const val = (v, d) => typeof v === 'function' ? v(d) : v;
@@ -6043,7 +6076,10 @@ function buildPedestrianEntrances(group, terrain, sites) {
       signText: r.signText || (r.stationTags?.name || r.tags?.name),
     };
   });
-  return { built: rows.length, signSpots };
+  // 入口不是可進入的實際地下關卡：前方階梯只是地面建築外觀。每座以 PED_ARCHETYPES 的同一份
+  // 名目寬／深／高登記完整 OBB，避免機體從開口鑽入後穿過背牆，也避免款式零件表各自再抄一份量體。
+  const cols = rows.map((r) => pedestrianEntranceCollider(r, r.y));
+  return { built: rows.length, signSpots, cols };
 }
 
 
@@ -8492,14 +8528,21 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     g.position.set(p.x, p.y - 0.4, p.z);
     g.rotation.y = p.ry;
     group.add(g);
-    // 門洞立柱 + 翼牆 → 碰撞柱:額牆旁邊不能直接走穿,只有中央開口可通行
+    // 門洞立柱 + 翼牆 + 頂樑 → 精確有向盒:額牆旁邊不能直接走穿、飛行體不能穿頂樑，
+    // 只有中央開口可通行。量體逐件吃上方 BoxGeometry 的同一份尺寸/姿態；圓柱近似會在
+    // 斜翼牆外製造隱形牆、同時漏掉真正的牆角(A30 兩端同量體)。
     const ca = Math.cos(p.ry), sa = Math.sin(p.ry);
     const toW = (ox, oz) => [p.x + ox * ca + oz * sa, p.z - ox * sa + oz * ca];
+    const portalBox = (ox, oz, y, h, hw2, hd2, ry, name) => {
+      const [x, z] = toW(ox, oz);
+      return { x, z, y, h, hw2, hd2, ry, r: Math.hypot(hw2, hd2), name };
+    };
+    cols.push(portalBox(0, 0, p.y + H2 - 1.6, 3.2, (W + 3) / 2, 0.6, p.ry, 'tunnel_portal_lintel'));
     for (const s of [1, -1]) {
-      const [pxw, pzw] = toW(s * (W / 2 + 0.35), 0);
-      cols.push({ x: pxw, z: pzw, y: p.y - 0.6, r: 1.6, h: H2 + 2 });
-      const [wxw, wzw] = toW(s * (W / 2 + 1.8), 2.4);
-      cols.push({ x: wxw, z: wzw, y: p.y - 0.6, r: 1.7, h: H2 - 0.8 });
+      cols.push(portalBox(s * (W / 2 + 0.35), 0, p.y - 0.4, H2 - 1.2,
+        1.15, 0.6, p.ry, 'tunnel_portal_pillar'));
+      cols.push(portalBox(s * (W / 2 + 1.8), 2.4, p.y - 0.7, H2 - 0.8,
+        0.5, 3, p.ry + s * 0.5, 'tunnel_portal_wing'));
     }
   }
   // ---- 3D 附屬件:路燈 / 紅綠燈 / 行道樹(全 InstancedMesh)----
@@ -11493,6 +11536,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
     // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
   });
+  // 落點與建物/地被淘汰全部定案後才追加：只增加物理，不反向推移既有世界佈局。
+  const trunkColliders = registerTreeTrunkColliders(items, blockers);
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
   await onProgress?.(0.9, '鋪設道路路面…');
@@ -11503,6 +11548,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 離線備援(roadInput = 兵線本身)吃 inclSwamp ⇒ 跨沼段也升橋;真 OSM 道路維持水域限定
   const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes, !osmRoads?.length, gradeCorridors);
   const pedestrianEntrances = buildPedestrianEntrances(group, terrain, pedestrianPlan.entrances);
+  blockers.push(...pedestrianEntrances.cols);   // 地下道／捷運入口建築：玩家、NPC、彈道共用同一 blockers 縫
   // ---- 兵線跨水補橋(2026-07-22 確定性改制,幾何定案於前段 laneWetWays):每個兵線泡水段
   // 一律建全跨橋。不再查真橋覆蓋率(舊 DECK_COVER 去重使兵線橋數隨 Overpass 逐局浮動,
   // 部分覆蓋時全跨補橋疊在殘缺真橋上 = 上下兩層);與兵線走廊側向重疊的真橋已於
@@ -11564,7 +11610,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // ---- 水下與沼澤生態、動態、動植物、遺跡與船艦 (aquatics.js) ----
   if (terrain.waterY != null) {
-    const aquaticWorld = buildAquaticWorld(group, terrain, { season });
+    const aquaticWorld = buildAquaticWorld(group, terrain, { season, blockers });
     if (aquaticWorld?.step) {
       dynamics.push((dt) => aquaticWorld.step(dt, celWindTime()));
     }
@@ -11629,6 +11675,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   group.userData.stats = {
     veg: placed,
     giantTrees,
+    trunkColliders,
     megaliths: megalithsBuilt,
     relics: relicsBuilt,
     beacons: beaconsBuilt,

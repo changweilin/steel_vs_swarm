@@ -48,6 +48,18 @@ export const PED_ARCHETYPES = Object.freeze({
   underpass_glass_cube: { w: 5.4, d: 6.8, h: 3.2, roof: 0x5eead4, frame: 0x0f172a, wall: 0x2dd4bf, accent: 0x0f766e, style: 'glass_cube', city: 'nordic' },
 });
 
+/** 地下道／車站入口的名目外廓；渲染與玩家／NPC／彈道碰撞共用 PED_ARCHETYPES 尺寸。 */
+export function pedestrianEntranceCollider(site, y) {
+  const archKey = site?.archetype || site?.kind || 'underpass';
+  const def = PED_ARCHETYPES[archKey] || PED_ARCHETYPES[site?.kind] || PED_ARCHETYPES.underpass;
+  return {
+    x: site.x, z: site.z, y: y - 0.1,
+    hw2: def.w / 2, hd2: def.d / 2, ry: site.ry,
+    r: Math.hypot(def.w, def.d) / 2,
+    h: def.h + 0.2, name: 'pedestrian_entrance',
+  };
+}
+
 const STATION_ARCHETYPES = [
   'station_taipei', 'station_tokyo', 'station_paris', 'station_london',
   'station_nyc', 'station_berlin', 'station_fosterito', 'station_seoul',

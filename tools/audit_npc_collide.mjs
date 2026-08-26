@@ -33,6 +33,7 @@
 //     `--break-sweep`   拿掉單位掃掠            ⇒ Ⅴ / Ⅵ① 紅
 // 退出碼:0 = 全綠;1 = 有紅字
 import { readSrc, grabMethod, grabFn } from './audit_src.mjs';
+import { pedestrianEntranceCollider } from '../public/js/pedestrian.js';
 
 const ARGV = new Set(process.argv.slice(2));
 const BREAK_RATCHET = ARGV.has('--break-ratchet');
@@ -342,6 +343,30 @@ sec('Ⅵ 行為直測:機體 ⇄ NPC 不穿透、不被推進牆裡');
     env.pos.x = 15;
     env._collide(-15, 0);
     ok(env.pos.x === 15, 'Ⅵ⑥ 自己的僚機不碰撞(逐位元不動)');
+  }
+  // ⑦ 地下道／車站入口真品 OBB：正面高速橫越與側面慢速駛入都必須停在建築外。
+  {
+    const entrance = pedestrianEntranceCollider(
+      { x: 0, z: 0, ry: Math.PI / 5, archetype: 'underpass_glass_cube' }, 0,
+    );
+    const env = mkEnv([], [entrance]);
+    const ca = Math.cos(entrance.ry), sa = Math.sin(entrance.ry);
+    env.pos.x = -20 * sa; env.pos.z = -20 * ca;
+    const x0 = env.pos.x, z0 = env.pos.z;
+    env.pos.x = 20 * sa; env.pos.z = 20 * ca;
+    env._collide(x0, z0);
+    const localZ = (env.pos.x - entrance.x) * sa + (env.pos.z - entrance.z) * ca;
+    ok(localZ < 0 && Math.abs(localZ) >= entrance.hd2 + myR - 0.31,
+      `Ⅵ⑦ 地下道入口正面高速橫越被夾在近側(localZ=${localZ.toFixed(3)})`);
+
+    env.pos.x = -(entrance.hw2 + myR + 0.2) * ca;
+    env.pos.z = (entrance.hw2 + myR + 0.2) * sa;
+    const sx = env.pos.x, sz = env.pos.z;
+    env.pos.x += 0.4 * ca; env.pos.z -= 0.4 * sa;
+    env._collide(sx, sz);
+    const localX = (env.pos.x - entrance.x) * ca + (env.pos.z - entrance.z) * -sa;
+    ok(Math.abs(localX) >= entrance.hw2 + myR - 1e-6,
+      `Ⅵ⑦ 地下道入口側面慢速駛入被推出(localX=${localX.toFixed(3)})`);
   }
 }
 

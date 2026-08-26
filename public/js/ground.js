@@ -1619,6 +1619,37 @@ const RECT_BASE_DETAILS = new Set([
   'container', 'carwreck', 'solarpanel', 'bench', 'headstone', 'crate', 'billboard', 'planter', 'hoop',
 ]);
 
+// 只收具有可讀實體量體的固定擺件；草、招牌薄片與可跨越小物不製造隱形牆。
+const PHYSICAL_DETAILS = new Set([
+  'log', 'stump', 'logpile', 'cabin', 'ghouse', 'slab', 'pipe', 'barrier',
+  'canopy', 'container', 'carwreck', 'boulder', 'crate',
+]);
+
+function detailCollider(type, it) {
+  const bounds = new THREE.Box3().makeEmpty();
+  const partBox = new THREE.Box3();
+  const actual = new THREE.Matrix4(), frame = new THREE.Matrix4(), invFrame = new THREE.Matrix4();
+  const pos = new THREE.Vector3(it.x, it.y, it.z), center = new THREE.Vector3(), size = new THREE.Vector3();
+  const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(it.tx || 0, it.ry, it.tz || 0));
+  frame.makeRotationY(it.ry).setPosition(pos);
+  invFrame.copy(frame).invert();
+  for (const part of DETAIL_DEFS[type]) {
+    if (!part.geo.boundingBox) part.geo.computeBoundingBox();
+    actual.compose(pos, quat, new THREE.Vector3(it.s, it.s * (part.sy ?? 1) * it.sy, it.s));
+    partBox.copy(part.geo.boundingBox).applyMatrix4(actual).applyMatrix4(invFrame);
+    bounds.union(partBox);
+  }
+  if (bounds.isEmpty()) return null;
+  bounds.getCenter(center).applyMatrix4(frame);
+  bounds.getSize(size);
+  const hw2 = size.x / 2, hd2 = size.z / 2;
+  return {
+    x: center.x, z: center.z, y: center.y - size.y / 2,
+    h: Math.max(0.1, size.y), hw2, hd2, ry: it.ry,
+    r: Math.hypot(hw2, hd2), name: `detail_${type}`,
+  };
+}
+
 // 3D 物件的水平足跡半徑(scale=1):**量零件實幾何**,MUST NOT 手寫 —— 零件表一改
 // (換模型/加零件)手寫值就靜默過期,而畫面上的症狀是「兩台貨櫃長在一起」
 const _detR = new Map();
@@ -5046,6 +5077,13 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       m.castShadow = false;
       m.frustumCulled = false;
       group.add(m);
+    }
+  }
+  // 擺放全數定案後才登記碰撞，避免 collider 反過來改變同一批細節的淘汰順序。
+  for (const type of PHYSICAL_DETAILS) {
+    for (const it of det[type] || []) {
+      const col = detailCollider(type, it);
+      if (col) blockers.push(col);
     }
   }
   // orphans = 找不到主人格的地形四邊形數(結構上應恆為 0:抖動 < 0.45 格 ⇒ 主人恆在 3×3 內。
