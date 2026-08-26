@@ -51,7 +51,8 @@
         0
       ],
       "color": 16777215,
-      "triangles": 16
+      "triangles": 16,
+      "colorKey": "roof"
     },
     {
       "name": "stylobate_plinth_tier_2",
@@ -73,7 +74,8 @@
         0
       ],
       "color": 16777215,
-      "triangles": 16
+      "triangles": 16,
+      "colorKey": "roof"
     },
     {
       "name": "stylobate_plinth_tier_3",
@@ -95,7 +97,8 @@
         0
       ],
       "color": 16777215,
-      "triangles": 16
+      "triangles": 16,
+      "colorKey": "roof"
     },
     {
       "name": "sanctuary_cella_wall",
@@ -116,7 +119,8 @@
         0
       ],
       "color": 7829362,
-      "triangles": 12
+      "triangles": 12,
+      "colorKey": "facade"
     },
     {
       "name": "peristyle_column_0_n",
@@ -135,7 +139,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_0_s",
@@ -154,7 +159,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_1_n",
@@ -173,7 +179,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_1_s",
@@ -192,7 +199,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_2_n",
@@ -211,7 +219,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_2_s",
@@ -230,7 +239,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_3_n",
@@ -249,7 +259,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_3_s",
@@ -268,7 +279,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_4_n",
@@ -287,7 +299,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_4_s",
@@ -306,7 +319,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_5_n",
@@ -325,7 +339,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_5_s",
@@ -344,7 +359,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_6_n",
@@ -363,7 +379,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_6_s",
@@ -382,7 +399,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_7_n",
@@ -401,7 +419,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "peristyle_column_7_s",
@@ -420,7 +439,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 32
+      "triangles": 32,
+      "colorKey": "bright"
     },
     {
       "name": "classical_entablature",
@@ -441,7 +461,8 @@
         0
       ],
       "color": 3421485,
-      "triangles": 12
+      "triangles": 12,
+      "colorKey": "accent"
     },
     {
       "name": "pantheon_rotunda_dome",
@@ -462,7 +483,8 @@
         0
       ],
       "color": 16777215,
-      "triangles": 336
+      "triangles": 336,
+      "colorKey": "roof"
     },
     {
       "name": "dome_oculus_ring",
@@ -480,7 +502,8 @@
         0
       ],
       "color": 16711422,
-      "triangles": 144
+      "triangles": 144,
+      "colorKey": "bright"
     }
   ],
   "reconstructedFeatures": [
@@ -8600,5 +8623,3269 @@
       612,
       605
     ]
-  }
+  },
+  "palettes": [
+    {
+      "id": "pal_0",
+      "name": "Palette 1",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 3246537,
+        "facadeHex": 6469607,
+        "baseHex": 9219746,
+        "accentHex": 3313614,
+        "darkHex": 2240553,
+        "brightHex": 14215667,
+        "glassHex": 3313614
+      }
+    },
+    {
+      "id": "pal_1",
+      "name": "Palette 2",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 10999034,
+        "facadeHex": 13297403,
+        "baseHex": 7763802,
+        "accentHex": 11459066,
+        "darkHex": 1843737,
+        "brightHex": 14872825,
+        "glassHex": 11459066
+      }
+    },
+    {
+      "id": "pal_2",
+      "name": "Palette 3",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 6002645,
+        "facadeHex": 6380897,
+        "baseHex": 5329230,
+        "accentHex": 6855891,
+        "darkHex": 1053208,
+        "brightHex": 10138838,
+        "glassHex": 3882570
+      }
+    },
+    {
+      "id": "pal_3",
+      "name": "Palette 4",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 13815993,
+        "facadeHex": 13815993,
+        "baseHex": 13815993,
+        "accentHex": 13750201,
+        "darkHex": 2368546,
+        "brightHex": 14935782,
+        "glassHex": 2368546
+      }
+    },
+    {
+      "id": "pal_4",
+      "name": "Palette 5",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 13817834,
+        "facadeHex": 10665694,
+        "baseHex": 10981511,
+        "accentHex": 11256545,
+        "darkHex": 2565159,
+        "brightHex": 14014953,
+        "glassHex": 11256545
+      }
+    },
+    {
+      "id": "pal_5",
+      "name": "Palette 6",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 7829362,
+        "baseHex": 16777215,
+        "accentHex": 3421485,
+        "darkHex": 3421485,
+        "brightHex": 16711422,
+        "glassHex": 3421485
+      }
+    },
+    {
+      "id": "pal_6",
+      "name": "Palette 7",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 9358843,
+        "facadeHex": 10927788,
+        "baseHex": 10009999,
+        "accentHex": 8900347,
+        "darkHex": 2631720,
+        "brightHex": 16316921,
+        "glassHex": 8900347
+      }
+    },
+    {
+      "id": "pal_7",
+      "name": "Palette 8",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 15855598,
+        "facadeHex": 5918523,
+        "baseHex": 7760448,
+        "accentHex": 2826771,
+        "darkHex": 2826771,
+        "brightHex": 15921134,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_8",
+      "name": "Palette 9",
+      "variantCount": 3,
+      "colors": {
+        "roofHex": 7715538,
+        "facadeHex": 11325917,
+        "baseHex": 10262927,
+        "accentHex": 7452880,
+        "darkHex": 5524802,
+        "brightHex": 14673893,
+        "glassHex": 11064029
+      }
+    },
+    {
+      "id": "pal_9",
+      "name": "Palette 10",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 3228549,
+        "facadeHex": 6579065,
+        "baseHex": 4011823,
+        "accentHex": 2965372,
+        "darkHex": 3222823,
+        "brightHex": 12693948,
+        "glassHex": 2965372
+      }
+    },
+    {
+      "id": "pal_10",
+      "name": "Palette 11",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 3227492,
+        "facadeHex": 4413315,
+        "baseHex": 6841948,
+        "accentHex": 3952256,
+        "darkHex": 2237730,
+        "brightHex": 13618373,
+        "glassHex": 3489363
+      }
+    },
+    {
+      "id": "pal_11",
+      "name": "Palette 12",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 1078194,
+        "facadeHex": 2903116,
+        "baseHex": 1451550,
+        "accentHex": 550050,
+        "darkHex": 1648418,
+        "brightHex": 7254495,
+        "glassHex": 550050
+      }
+    },
+    {
+      "id": "pal_12",
+      "name": "Palette 13",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 3289911,
+        "facadeHex": 5790819,
+        "baseHex": 11445652,
+        "accentHex": 11377021,
+        "darkHex": 2894895,
+        "brightHex": 13752026,
+        "glassHex": 2894895
+      }
+    },
+    {
+      "id": "pal_13",
+      "name": "Palette 14",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6448233,
+        "facadeHex": 10329500,
+        "baseHex": 7038275,
+        "accentHex": 10916955,
+        "darkHex": 2039063,
+        "brightHex": 14671838,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_14",
+      "name": "Palette 15",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 4434661,
+        "facadeHex": 4618890,
+        "baseHex": 1913644,
+        "accentHex": 4433889,
+        "darkHex": 1386277,
+        "brightHex": 13941657,
+        "glassHex": 4433889
+      }
+    },
+    {
+      "id": "pal_15",
+      "name": "Palette 16",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 83867,
+        "facadeHex": 4809088,
+        "baseHex": 4144682,
+        "accentHex": 85409,
+        "darkHex": 1512723,
+        "brightHex": 14737370,
+        "glassHex": 85409
+      }
+    },
+    {
+      "id": "pal_16",
+      "name": "Palette 17",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12565932,
+        "facadeHex": 7760205,
+        "baseHex": 3484175,
+        "accentHex": 1511430,
+        "darkHex": 1511430,
+        "brightHex": 14211539,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_17",
+      "name": "Palette 18",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 15527148,
+        "facadeHex": 14737373,
+        "baseHex": 9211013,
+        "accentHex": 4539195,
+        "darkHex": 1315606,
+        "brightHex": 15395561,
+        "glassHex": 1315606
+      }
+    },
+    {
+      "id": "pal_18",
+      "name": "Palette 19",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 15658734,
+        "baseHex": 13421772,
+        "accentHex": 11184810,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 2241364
+      }
+    },
+    {
+      "id": "pal_19",
+      "name": "Palette 20",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8493483,
+        "facadeHex": 6184015,
+        "baseHex": 5658186,
+        "accentHex": 1922169,
+        "darkHex": 1515818,
+        "brightHex": 14479096,
+        "glassHex": 3556167
+      }
+    },
+    {
+      "id": "pal_20",
+      "name": "Palette 21",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10066329,
+        "facadeHex": 8947848,
+        "baseHex": 11053224,
+        "accentHex": 11053224,
+        "darkHex": 65793,
+        "brightHex": 12434877,
+        "glassHex": 65793
+      }
+    },
+    {
+      "id": "pal_21",
+      "name": "Palette 22",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 15193276,
+        "facadeHex": 12234388,
+        "baseHex": 15390916,
+        "accentHex": 13287072,
+        "darkHex": 5130561,
+        "brightHex": 15456708,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_22",
+      "name": "Palette 23",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11842740,
+        "facadeHex": 11184810,
+        "baseHex": 9868950,
+        "accentHex": 5921370,
+        "darkHex": 2105376,
+        "brightHex": 14540253,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_23",
+      "name": "Palette 24",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7231268,
+        "facadeHex": 11181440,
+        "baseHex": 5921370,
+        "accentHex": 3815994,
+        "darkHex": 2500134,
+        "brightHex": 13158600,
+        "glassHex": 2176337
+      }
+    },
+    {
+      "id": "pal_24",
+      "name": "Palette 25",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7500402,
+        "facadeHex": 7105644,
+        "baseHex": 8947848,
+        "accentHex": 12829635,
+        "darkHex": 723723,
+        "brightHex": 12829635,
+        "glassHex": 723723
+      }
+    },
+    {
+      "id": "pal_25",
+      "name": "Palette 26",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12566468,
+        "facadeHex": 7236460,
+        "baseHex": 5987676,
+        "accentHex": 460294,
+        "darkHex": 460294,
+        "brightHex": 16448250,
+        "glassHex": 460294
+      }
+    },
+    {
+      "id": "pal_26",
+      "name": "Palette 27",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8350305,
+        "facadeHex": 9394755,
+        "baseHex": 5058831,
+        "accentHex": 10372626,
+        "darkHex": 1450531,
+        "brightHex": 15002306,
+        "glassHex": 1450531
+      }
+    },
+    {
+      "id": "pal_27",
+      "name": "Palette 28",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10662073,
+        "facadeHex": 5066767,
+        "baseHex": 4352021,
+        "accentHex": 9178380,
+        "darkHex": 1386761,
+        "brightHex": 15199471,
+        "glassHex": 7441300
+      }
+    },
+    {
+      "id": "pal_28",
+      "name": "Palette 29",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6579300,
+        "facadeHex": 11801655,
+        "baseHex": 10066329,
+        "accentHex": 16777215,
+        "darkHex": 2039583,
+        "brightHex": 14540253,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_29",
+      "name": "Palette 30",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5803976,
+        "facadeHex": 7832658,
+        "baseHex": 3617802,
+        "accentHex": 1052675,
+        "darkHex": 1052675,
+        "brightHex": 8829137,
+        "glassHex": 6001865
+      }
+    },
+    {
+      "id": "pal_30",
+      "name": "Palette 31",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 11801696,
+        "baseHex": 6579304,
+        "accentHex": 14540253,
+        "darkHex": 2105376,
+        "brightHex": 15790320,
+        "glassHex": 33023
+      }
+    },
+    {
+      "id": "pal_31",
+      "name": "Palette 32",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 15199994,
+        "facadeHex": 7630440,
+        "baseHex": 3022869,
+        "accentHex": 8998439,
+        "darkHex": 722438,
+        "brightHex": 15134457,
+        "glassHex": 2961964
+      }
+    },
+    {
+      "id": "pal_32",
+      "name": "Palette 33",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5253165,
+        "facadeHex": 6828576,
+        "baseHex": 3810086,
+        "accentHex": 11814674,
+        "darkHex": 1973790,
+        "brightHex": 13421772,
+        "glassHex": 2640243
+      }
+    },
+    {
+      "id": "pal_33",
+      "name": "Palette 34",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4868682,
+        "facadeHex": 7105644,
+        "baseHex": 6052956,
+        "accentHex": 5000268,
+        "darkHex": 2899536,
+        "brightHex": 11908533,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_34",
+      "name": "Palette 35",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4218794,
+        "facadeHex": 7109771,
+        "baseHex": 9403227,
+        "accentHex": 4416172,
+        "darkHex": 1907739,
+        "brightHex": 13615535,
+        "glassHex": 4416172
+      }
+    },
+    {
+      "id": "pal_35",
+      "name": "Palette 36",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6579304,
+        "facadeHex": 15790320,
+        "baseHex": 4210752,
+        "accentHex": 11842740,
+        "darkHex": 2105376,
+        "brightHex": 15132390,
+        "glassHex": 4158864
+      }
+    },
+    {
+      "id": "pal_36",
+      "name": "Palette 37",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13959168,
+        "facadeHex": 11842740,
+        "baseHex": 9868950,
+        "accentHex": 5263440,
+        "darkHex": 2105376,
+        "brightHex": 16777215,
+        "glassHex": 3319400
+      }
+    },
+    {
+      "id": "pal_37",
+      "name": "Palette 38",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12371929,
+        "facadeHex": 11252668,
+        "baseHex": 5133120,
+        "accentHex": 1844762,
+        "darkHex": 1844762,
+        "brightHex": 14016232,
+        "glassHex": 8424340
+      }
+    },
+    {
+      "id": "pal_38",
+      "name": "Palette 39",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5263440,
+        "facadeHex": 15790320,
+        "baseHex": 11184810,
+        "accentHex": 3355443,
+        "darkHex": 2105376,
+        "brightHex": 14540253,
+        "glassHex": 3105370
+      }
+    },
+    {
+      "id": "pal_39",
+      "name": "Palette 40",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10507812,
+        "facadeHex": 14201777,
+        "baseHex": 11374465,
+        "accentHex": 5263616,
+        "darkHex": 2105376,
+        "brightHex": 15132390,
+        "glassHex": 1974839
+      }
+    },
+    {
+      "id": "pal_40",
+      "name": "Palette 41",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4546971,
+        "facadeHex": 6578518,
+        "baseHex": 10130313,
+        "accentHex": 4810143,
+        "darkHex": 2104862,
+        "brightHex": 14077633,
+        "glassHex": 4810143
+      }
+    },
+    {
+      "id": "pal_41",
+      "name": "Palette 42",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6581850,
+        "facadeHex": 7183011,
+        "baseHex": 4342338,
+        "accentHex": 9896756,
+        "darkHex": 2105376,
+        "brightHex": 14540253,
+        "glassHex": 3235252
+      }
+    },
+    {
+      "id": "pal_42",
+      "name": "Palette 43",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8691677,
+        "facadeHex": 9402985,
+        "baseHex": 10652536,
+        "accentHex": 4886491,
+        "darkHex": 3616545,
+        "brightHex": 14475497,
+        "glassHex": 10074601
+      }
+    },
+    {
+      "id": "pal_43",
+      "name": "Palette 44",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11035448,
+        "facadeHex": 15458768,
+        "baseHex": 9011548,
+        "accentHex": 4663848,
+        "darkHex": 3810076,
+        "brightHex": 15790320,
+        "glassHex": 3366520
+      }
+    },
+    {
+      "id": "pal_44",
+      "name": "Palette 45",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4167418,
+        "facadeHex": 6380369,
+        "baseHex": 13022113,
+        "accentHex": 4035831,
+        "darkHex": 2366489,
+        "brightHex": 15063237,
+        "glassHex": 4035831
+      }
+    },
+    {
+      "id": "pal_45",
+      "name": "Palette 46",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7342894,
+        "facadeHex": 14207914,
+        "baseHex": 9868950,
+        "accentHex": 4010531,
+        "darkHex": 2105376,
+        "brightHex": 16777215,
+        "glassHex": 33023
+      }
+    },
+    {
+      "id": "pal_46",
+      "name": "Palette 47",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 7625795,
+        "baseHex": 12033927,
+        "accentHex": 10906699,
+        "darkHex": 4273197,
+        "brightHex": 16579836,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_47",
+      "name": "Palette 48",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4474437,
+        "facadeHex": 13471822,
+        "baseHex": 10061943,
+        "accentHex": 1843230,
+        "darkHex": 3156524,
+        "brightHex": 15790320,
+        "glassHex": 2243642
+      }
+    },
+    {
+      "id": "pal_48",
+      "name": "Palette 49",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14145495,
+        "facadeHex": 7434609,
+        "baseHex": 10000536,
+        "accentHex": 14606046,
+        "darkHex": 657930,
+        "brightHex": 14606046,
+        "glassHex": 657930
+      }
+    },
+    {
+      "id": "pal_49",
+      "name": "Palette 50",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5127216,
+        "facadeHex": 7033160,
+        "baseHex": 10063736,
+        "accentHex": 4404004,
+        "darkHex": 2630174,
+        "brightHex": 14211288,
+        "glassHex": 2243642
+      }
+    },
+    {
+      "id": "pal_50",
+      "name": "Palette 51",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16053492,
+        "facadeHex": 16053492,
+        "baseHex": 16053492,
+        "accentHex": 6447715,
+        "darkHex": 921102,
+        "brightHex": 16053491,
+        "glassHex": 921102
+      }
+    },
+    {
+      "id": "pal_51",
+      "name": "Palette 52",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16053492,
+        "facadeHex": 16053492,
+        "baseHex": 16053492,
+        "accentHex": 16053492,
+        "darkHex": 921102,
+        "brightHex": 16053492,
+        "glassHex": 921102
+      }
+    },
+    {
+      "id": "pal_52",
+      "name": "Palette 53",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3158064,
+        "facadeHex": 15066597,
+        "baseHex": 5592405,
+        "accentHex": 4473924,
+        "darkHex": 2236962,
+        "brightHex": 16777215,
+        "glassHex": 11200240
+      }
+    },
+    {
+      "id": "pal_53",
+      "name": "Palette 54",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14737632,
+        "baseHex": 5592405,
+        "accentHex": 15105570,
+        "darkHex": 2236962,
+        "brightHex": 16777215,
+        "glassHex": 8454143
+      }
+    },
+    {
+      "id": "pal_54",
+      "name": "Palette 55",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11158596,
+        "facadeHex": 15064540,
+        "baseHex": 4473924,
+        "accentHex": 13395476,
+        "darkHex": 2236962,
+        "brightHex": 16777215,
+        "glassHex": 11591910
+      }
+    },
+    {
+      "id": "pal_55",
+      "name": "Palette 56",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 15790320,
+        "baseHex": 11184810,
+        "accentHex": 11542564,
+        "darkHex": 3289650,
+        "brightHex": 16777215,
+        "glassHex": 2246753
+      }
+    },
+    {
+      "id": "pal_56",
+      "name": "Palette 57",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4687046,
+        "facadeHex": 4356529,
+        "baseHex": 6179411,
+        "accentHex": 4620995,
+        "darkHex": 2498320,
+        "brightHex": 15658733,
+        "glassHex": 4620995
+      }
+    },
+    {
+      "id": "pal_57",
+      "name": "Palette 58",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2257919,
+        "facadeHex": 16119285,
+        "baseHex": 15066597,
+        "accentHex": 15366271,
+        "darkHex": 3158064,
+        "brightHex": 16777215,
+        "glassHex": 1139147
+      }
+    },
+    {
+      "id": "pal_58",
+      "name": "Palette 59",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8888020,
+        "facadeHex": 8089181,
+        "baseHex": 5196358,
+        "accentHex": 1644045,
+        "darkHex": 1644045,
+        "brightHex": 12569575,
+        "glassHex": 8690899
+      }
+    },
+    {
+      "id": "pal_59",
+      "name": "Palette 60",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6852313,
+        "facadeHex": 7043458,
+        "baseHex": 4607780,
+        "accentHex": 8486454,
+        "darkHex": 1644823,
+        "brightHex": 9354227,
+        "glassHex": 1644823
+      }
+    },
+    {
+      "id": "pal_60",
+      "name": "Palette 61",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3818314,
+        "facadeHex": 11021344,
+        "baseHex": 11184810,
+        "accentHex": 14327872,
+        "darkHex": 2105376,
+        "brightHex": 15055931,
+        "glassHex": 1125915
+      }
+    },
+    {
+      "id": "pal_61",
+      "name": "Palette 62",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 70984,
+        "facadeHex": 2631483,
+        "baseHex": 4928286,
+        "accentHex": 6219,
+        "darkHex": 1838597,
+        "brightHex": 13547916,
+        "glassHex": 6219
+      }
+    },
+    {
+      "id": "pal_62",
+      "name": "Palette 63",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2434339,
+        "facadeHex": 14824738,
+        "baseHex": 6118231,
+        "accentHex": 15902750,
+        "darkHex": 1973790,
+        "brightHex": 16772270,
+        "glassHex": 1128515
+      }
+    },
+    {
+      "id": "pal_63",
+      "name": "Palette 64",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1273004,
+        "facadeHex": 3966140,
+        "baseHex": 3348233,
+        "accentHex": 1273004,
+        "darkHex": 2821382,
+        "brightHex": 15120242,
+        "glassHex": 1273004
+      }
+    },
+    {
+      "id": "pal_64",
+      "name": "Palette 65",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11151394,
+        "facadeHex": 12459040,
+        "baseHex": 3156264,
+        "accentHex": 14981152,
+        "darkHex": 2103324,
+        "brightHex": 16303424,
+        "glassHex": 1125160
+      }
+    },
+    {
+      "id": "pal_65",
+      "name": "Palette 66",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11315637,
+        "facadeHex": 9929085,
+        "baseHex": 8409157,
+        "accentHex": 3021335,
+        "darkHex": 3021335,
+        "brightHex": 13554654,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_66",
+      "name": "Palette 67",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5515044,
+        "facadeHex": 9124134,
+        "baseHex": 6825248,
+        "accentHex": 12553530,
+        "darkHex": 2631720,
+        "brightHex": 15066597,
+        "glassHex": 1851463
+      }
+    },
+    {
+      "id": "pal_67",
+      "name": "Palette 68",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12831442,
+        "facadeHex": 3158833,
+        "baseHex": 3684405,
+        "accentHex": 6118484,
+        "darkHex": 1974305,
+        "brightHex": 15199732,
+        "glassHex": 3487540
+      }
+    },
+    {
+      "id": "pal_68",
+      "name": "Palette 69",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13290707,
+        "facadeHex": 9471348,
+        "baseHex": 4544842,
+        "accentHex": 9142641,
+        "darkHex": 3358260,
+        "brightHex": 14343134,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_69",
+      "name": "Palette 70",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12015938,
+        "facadeHex": 10522485,
+        "baseHex": 7564630,
+        "accentHex": 5916468,
+        "darkHex": 3156264,
+        "brightHex": 14210245,
+        "glassHex": 2242383
+      }
+    },
+    {
+      "id": "pal_70",
+      "name": "Palette 71",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 15257778,
+        "facadeHex": 15121821,
+        "baseHex": 13272935,
+        "accentHex": 10247225,
+        "darkHex": 3749161,
+        "brightHex": 15389366,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_71",
+      "name": "Palette 72",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10055760,
+        "facadeHex": 13017244,
+        "baseHex": 8545864,
+        "accentHex": 6571574,
+        "darkHex": 3943454,
+        "brightHex": 15127478,
+        "glassHex": 2243650
+      }
+    },
+    {
+      "id": "pal_72",
+      "name": "Palette 73",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11318469,
+        "facadeHex": 9470281,
+        "baseHex": 7169591,
+        "accentHex": 15439179,
+        "darkHex": 3551262,
+        "brightHex": 11847136,
+        "glassHex": 11847136
+      }
+    },
+    {
+      "id": "pal_73",
+      "name": "Palette 74",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13983518,
+        "facadeHex": 7893091,
+        "baseHex": 5525574,
+        "accentHex": 14321240,
+        "darkHex": 3288874,
+        "brightHex": 15132390,
+        "glassHex": 3360600
+      }
+    },
+    {
+      "id": "pal_74",
+      "name": "Palette 75",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13351845,
+        "facadeHex": 8283996,
+        "baseHex": 11311753,
+        "accentHex": 4664359,
+        "darkHex": 4664359,
+        "brightHex": 15458509,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_75",
+      "name": "Palette 76",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11172985,
+        "facadeHex": 7218724,
+        "baseHex": 6578264,
+        "accentHex": 11811110,
+        "darkHex": 2630683,
+        "brightHex": 15321477,
+        "glassHex": 1125160
+      }
+    },
+    {
+      "id": "pal_76",
+      "name": "Palette 77",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4793634,
+        "facadeHex": 4269345,
+        "baseHex": 3151890,
+        "accentHex": 4397076,
+        "darkHex": 1576462,
+        "brightHex": 16382200,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_77",
+      "name": "Palette 78",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 9664867,
+        "facadeHex": 9204321,
+        "baseHex": 12495766,
+        "accentHex": 4071449,
+        "darkHex": 4071449,
+        "brightHex": 15458509,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_78",
+      "name": "Palette 79",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3824460,
+        "facadeHex": 4415572,
+        "baseHex": 2967362,
+        "accentHex": 5534560,
+        "darkHex": 1976868,
+        "brightHex": 11057584,
+        "glassHex": 15001321
+      }
+    },
+    {
+      "id": "pal_79",
+      "name": "Palette 80",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4539712,
+        "facadeHex": 8417360,
+        "baseHex": 6579300,
+        "accentHex": 12345678,
+        "darkHex": 2236962,
+        "brightHex": 14540253,
+        "glassHex": 3355647
+      }
+    },
+    {
+      "id": "pal_80",
+      "name": "Palette 81",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5091563,
+        "facadeHex": 7249303,
+        "baseHex": 6383180,
+        "accentHex": 4960490,
+        "darkHex": 2434592,
+        "brightHex": 15396582,
+        "glassHex": 4960490
+      }
+    },
+    {
+      "id": "pal_81",
+      "name": "Palette 82",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7649001,
+        "facadeHex": 8223615,
+        "baseHex": 8158285,
+        "accentHex": 8948533,
+        "darkHex": 2303273,
+        "brightHex": 13550519,
+        "glassHex": 10931177
+      }
+    },
+    {
+      "id": "pal_82",
+      "name": "Palette 83",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16448250,
+        "facadeHex": 13158600,
+        "baseHex": 10526880,
+        "accentHex": 15790320,
+        "darkHex": 3947580,
+        "brightHex": 16777215,
+        "glassHex": 4613750
+      }
+    },
+    {
+      "id": "pal_83",
+      "name": "Palette 84",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14609654,
+        "facadeHex": 12041406,
+        "baseHex": 8090731,
+        "accentHex": 11708049,
+        "darkHex": 2962996,
+        "brightHex": 14543086,
+        "glassHex": 10794171
+      }
+    },
+    {
+      "id": "pal_84",
+      "name": "Palette 85",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2246473,
+        "facadeHex": 3432532,
+        "baseHex": 5073237,
+        "accentHex": 14404245,
+        "darkHex": 1844766,
+        "brightHex": 15066597,
+        "glassHex": 2191476
+      }
+    },
+    {
+      "id": "pal_85",
+      "name": "Palette 86",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 165839,
+        "facadeHex": 423600,
+        "baseHex": 1582392,
+        "accentHex": 229828,
+        "darkHex": 660004,
+        "brightHex": 14340025,
+        "glassHex": 229828
+      }
+    },
+    {
+      "id": "pal_86",
+      "name": "Palette 87",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 4210752,
+        "baseHex": 2105376,
+        "accentHex": 13421772,
+        "darkHex": 1052688,
+        "brightHex": 16777215,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_87",
+      "name": "Palette 88",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 855314,
+        "facadeHex": 986386,
+        "baseHex": 722952,
+        "accentHex": 3813161,
+        "darkHex": 328709,
+        "brightHex": 14205875,
+        "glassHex": 920849
+      }
+    },
+    {
+      "id": "pal_88",
+      "name": "Palette 89",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13418413,
+        "facadeHex": 10061943,
+        "baseHex": 3156001,
+        "accentHex": 15062450,
+        "darkHex": 1578013,
+        "brightHex": 16773325,
+        "glassHex": 1122610
+      }
+    },
+    {
+      "id": "pal_89",
+      "name": "Palette 90",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4030654,
+        "facadeHex": 5607107,
+        "baseHex": 8299413,
+        "accentHex": 4424641,
+        "darkHex": 1776923,
+        "brightHex": 14603199,
+        "glassHex": 4424641
+      }
+    },
+    {
+      "id": "pal_90",
+      "name": "Palette 91",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4489883,
+        "facadeHex": 3358015,
+        "baseHex": 1382169,
+        "accentHex": 1278402,
+        "darkHex": 1184533,
+        "brightHex": 15856628,
+        "glassHex": 1184533
+      }
+    },
+    {
+      "id": "pal_91",
+      "name": "Palette 92",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 13421772,
+        "baseHex": 11184810,
+        "accentHex": 8421504,
+        "darkHex": 3355443,
+        "brightHex": 15658734,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_92",
+      "name": "Palette 93",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10526880,
+        "facadeHex": 11579568,
+        "baseHex": 8421504,
+        "accentHex": 13158600,
+        "darkHex": 3158064,
+        "brightHex": 15790320,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_93",
+      "name": "Palette 94",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 10460313,
+        "baseHex": 6838862,
+        "accentHex": 2367515,
+        "darkHex": 2367515,
+        "brightHex": 16645629,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_94",
+      "name": "Palette 95",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7240321,
+        "facadeHex": 9474925,
+        "baseHex": 4208942,
+        "accentHex": 12296049,
+        "darkHex": 1908254,
+        "brightHex": 14140060,
+        "glassHex": 1908254
+      }
+    },
+    {
+      "id": "pal_95",
+      "name": "Palette 96",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 13485744,
+        "baseHex": 10066329,
+        "accentHex": 1331244,
+        "darkHex": 3158064,
+        "brightHex": 15658734,
+        "glassHex": 3360600
+      }
+    },
+    {
+      "id": "pal_96",
+      "name": "Palette 97",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10058368,
+        "facadeHex": 14540253,
+        "baseHex": 9005424,
+        "accentHex": 7427171,
+        "darkHex": 3156520,
+        "brightHex": 15658734,
+        "glassHex": 2106414
+      }
+    },
+    {
+      "id": "pal_97",
+      "name": "Palette 98",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1454025,
+        "facadeHex": 11184810,
+        "baseHex": 4210752,
+        "accentHex": 16766720,
+        "darkHex": 1644825,
+        "brightHex": 14540253,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_98",
+      "name": "Palette 99",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3289650,
+        "facadeHex": 13485746,
+        "baseHex": 9867148,
+        "accentHex": 11174260,
+        "darkHex": 2105376,
+        "brightHex": 15658734,
+        "glassHex": 1716531
+      }
+    },
+    {
+      "id": "pal_99",
+      "name": "Palette 100",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4473924,
+        "facadeHex": 2631720,
+        "baseHex": 1579032,
+        "accentHex": 12632256,
+        "darkHex": 1052688,
+        "brightHex": 14540253,
+        "glassHex": 6586790
+      }
+    },
+    {
+      "id": "pal_100",
+      "name": "Palette 101",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 12566463,
+        "baseHex": 8421504,
+        "accentHex": 16777215,
+        "darkHex": 3158064,
+        "brightHex": 14540253,
+        "glassHex": 4621735
+      }
+    },
+    {
+      "id": "pal_101",
+      "name": "Palette 102",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5344180,
+        "facadeHex": 2697491,
+        "baseHex": 1184520,
+        "accentHex": 5924883,
+        "darkHex": 724998,
+        "brightHex": 10275814,
+        "glassHex": 10275814
+      }
+    },
+    {
+      "id": "pal_102",
+      "name": "Palette 103",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4605510,
+        "facadeHex": 9453640,
+        "baseHex": 3289650,
+        "accentHex": 12632256,
+        "darkHex": 2105376,
+        "brightHex": 14540253,
+        "glassHex": 6586540
+      }
+    },
+    {
+      "id": "pal_103",
+      "name": "Palette 104",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5197132,
+        "facadeHex": 5197132,
+        "baseHex": 1315601,
+        "accentHex": 591880,
+        "darkHex": 591880,
+        "brightHex": 10724005,
+        "glassHex": 591880
+      }
+    },
+    {
+      "id": "pal_104",
+      "name": "Palette 105",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4210752,
+        "facadeHex": 10526880,
+        "baseHex": 6316128,
+        "accentHex": 8421504,
+        "darkHex": 2105376,
+        "brightHex": 14737632,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_105",
+      "name": "Palette 106",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7633803,
+        "facadeHex": 7368566,
+        "baseHex": 7303731,
+        "accentHex": 7171633,
+        "darkHex": 3421226,
+        "brightHex": 13814208,
+        "glassHex": 5461856
+      }
+    },
+    {
+      "id": "pal_106",
+      "name": "Palette 107",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4354217,
+        "facadeHex": 9547203,
+        "baseHex": 6060155,
+        "accentHex": 8886826,
+        "darkHex": 4476975,
+        "brightHex": 13028811,
+        "glassHex": 3630740
+      }
+    },
+    {
+      "id": "pal_107",
+      "name": "Palette 108",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1658768,
+        "facadeHex": 3371444,
+        "baseHex": 5598002,
+        "accentHex": 1200276,
+        "darkHex": 2171414,
+        "brightHex": 14471866,
+        "glassHex": 1200276
+      }
+    },
+    {
+      "id": "pal_108",
+      "name": "Palette 109",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 4822858,
+        "baseHex": 8421504,
+        "accentHex": 16711680,
+        "darkHex": 2236962,
+        "brightHex": 15790320,
+        "glassHex": 11075583
+      }
+    },
+    {
+      "id": "pal_109",
+      "name": "Palette 110",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16251644,
+        "facadeHex": 8358823,
+        "baseHex": 6250008,
+        "accentHex": 6250009,
+        "darkHex": 3684656,
+        "brightHex": 16514300,
+        "glassHex": 7241899
+      }
+    },
+    {
+      "id": "pal_110",
+      "name": "Palette 111",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 686323,
+        "facadeHex": 2783413,
+        "baseHex": 8223851,
+        "accentHex": 359411,
+        "darkHex": 3413273,
+        "brightHex": 14995908,
+        "glassHex": 359411
+      }
+    },
+    {
+      "id": "pal_111",
+      "name": "Palette 112",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 12582912,
+        "baseHex": 8421504,
+        "accentHex": 16777215,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 8388608
+      }
+    },
+    {
+      "id": "pal_112",
+      "name": "Palette 113",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 804020,
+        "facadeHex": 904525,
+        "baseHex": 603015,
+        "accentHex": 502510,
+        "darkHex": 301505,
+        "brightHex": 909090,
+        "glassHex": 102030
+      }
+    },
+    {
+      "id": "pal_113",
+      "name": "Palette 114",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 946855,
+        "facadeHex": 4552100,
+        "baseHex": 10260912,
+        "accentHex": 1012646,
+        "darkHex": 4469804,
+        "brightHex": 12506072,
+        "glassHex": 1012646
+      }
+    },
+    {
+      "id": "pal_114",
+      "name": "Palette 115",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10515540,
+        "facadeHex": 12545620,
+        "baseHex": 8540400,
+        "accentHex": 14560700,
+        "darkHex": 303030,
+        "brightHex": 200200200,
+        "glassHex": 4560750
+      }
+    },
+    {
+      "id": "pal_115",
+      "name": "Palette 116",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10592673,
+        "facadeHex": 4144959,
+        "baseHex": 5197647,
+        "accentHex": 10461087,
+        "darkHex": 855309,
+        "brightHex": 11579568,
+        "glassHex": 2302755
+      }
+    },
+    {
+      "id": "pal_116",
+      "name": "Palette 117",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5865921,
+        "facadeHex": 9670515,
+        "baseHex": 11241302,
+        "accentHex": 2167820,
+        "darkHex": 2167820,
+        "brightHex": 13881798,
+        "glassHex": 6131919
+      }
+    },
+    {
+      "id": "pal_117",
+      "name": "Palette 118",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8359053,
+        "facadeHex": 1,
+        "baseHex": 2,
+        "accentHex": 3,
+        "darkHex": 5,
+        "brightHex": 6,
+        "glassHex": 4
+      }
+    },
+    {
+      "id": "pal_118",
+      "name": "Palette 119",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8368360,
+        "facadeHex": 7427923,
+        "baseHex": 7755085,
+        "accentHex": 8434159,
+        "darkHex": 2038560,
+        "brightHex": 15395565,
+        "glassHex": 8434159
+      }
+    },
+    {
+      "id": "pal_119",
+      "name": "Palette 120",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8343836,
+        "facadeHex": 13421772,
+        "baseHex": 10066329,
+        "accentHex": 16777215,
+        "darkHex": 5592405,
+        "brightHex": 15790320,
+        "glassHex": 3355443
+      }
+    },
+    {
+      "id": "pal_120",
+      "name": "Palette 121",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13561599,
+        "facadeHex": 9539725,
+        "baseHex": 6775127,
+        "accentHex": 5985864,
+        "darkHex": 2302497,
+        "brightHex": 13561598,
+        "glassHex": 13561598
+      }
+    },
+    {
+      "id": "pal_121",
+      "name": "Palette 122",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8289918,
+        "facadeHex": 14211288,
+        "baseHex": 13158600,
+        "accentHex": 14540253,
+        "darkHex": 1118481,
+        "brightHex": 16579836,
+        "glassHex": 1118481
+      }
+    },
+    {
+      "id": "pal_122",
+      "name": "Palette 123",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 16185078,
+        "baseHex": 592137,
+        "accentHex": 16119285,
+        "darkHex": 526344,
+        "brightHex": 16119285,
+        "glassHex": 526344
+      }
+    },
+    {
+      "id": "pal_123",
+      "name": "Palette 124",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 657930,
+        "facadeHex": 16185078,
+        "baseHex": 14145495,
+        "accentHex": 16119285,
+        "darkHex": 657930,
+        "brightHex": 16119285,
+        "glassHex": 657930
+      }
+    },
+    {
+      "id": "pal_124",
+      "name": "Palette 125",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 9343652,
+        "facadeHex": 10847078,
+        "baseHex": 5654858,
+        "accentHex": 12552544,
+        "darkHex": 1975340,
+        "brightHex": 14346210,
+        "glassHex": 1975340
+      }
+    },
+    {
+      "id": "pal_125",
+      "name": "Palette 126",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 12632256,
+        "baseHex": 8421504,
+        "accentHex": 16766720,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 49344
+      }
+    },
+    {
+      "id": "pal_126",
+      "name": "Palette 127",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5530955,
+        "facadeHex": 4345138,
+        "baseHex": 2370841,
+        "accentHex": 6714186,
+        "darkHex": 1186066,
+        "brightHex": 13488858,
+        "glassHex": 9809855
+      }
+    },
+    {
+      "id": "pal_127",
+      "name": "Palette 128",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 604627,
+        "facadeHex": 232220,
+        "baseHex": 454545,
+        "accentHex": 808080,
+        "darkHex": 101010,
+        "brightHex": 909090,
+        "glassHex": 102030
+      }
+    },
+    {
+      "id": "pal_128",
+      "name": "Palette 129",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14540253,
+        "baseHex": 3289650,
+        "accentHex": 2105376,
+        "darkHex": 1644825,
+        "brightHex": 15066597,
+        "glassHex": 4352230
+      }
+    },
+    {
+      "id": "pal_129",
+      "name": "Palette 130",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 9878669,
+        "facadeHex": 9878413,
+        "baseHex": 9878669,
+        "accentHex": 4532242,
+        "darkHex": 4532242,
+        "brightHex": 15987699,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_130",
+      "name": "Palette 131",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 11184810,
+        "baseHex": 4210752,
+        "accentHex": 9856550,
+        "darkHex": 2105376,
+        "brightHex": 16777215,
+        "glassHex": 33947
+      }
+    },
+    {
+      "id": "pal_131",
+      "name": "Palette 132",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14211288,
+        "facadeHex": 16777215,
+        "baseHex": 8417364,
+        "accentHex": 6579300,
+        "darkHex": 3355443,
+        "brightHex": 15790320,
+        "glassHex": 4621720
+      }
+    },
+    {
+      "id": "pal_132",
+      "name": "Palette 133",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7122140,
+        "facadeHex": 7122140,
+        "baseHex": 8686176,
+        "accentHex": 7122140,
+        "darkHex": 2368795,
+        "brightHex": 15855335,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_133",
+      "name": "Palette 134",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10506784,
+        "facadeHex": 14666138,
+        "baseHex": 12632256,
+        "accentHex": 8421504,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 4621720
+      }
+    },
+    {
+      "id": "pal_134",
+      "name": "Palette 135",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13560046,
+        "facadeHex": 11124316,
+        "baseHex": 10865491,
+        "accentHex": 11193943,
+        "darkHex": 1973775,
+        "brightHex": 14150893,
+        "glassHex": 10928572
+      }
+    },
+    {
+      "id": "pal_135",
+      "name": "Palette 136",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10066278,
+        "facadeHex": 8437888,
+        "baseHex": 4473924,
+        "accentHex": 16777215,
+        "darkHex": 2899536,
+        "brightHex": 16777215,
+        "glassHex": 4473924
+      }
+    },
+    {
+      "id": "pal_136",
+      "name": "Palette 137",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8347685,
+        "facadeHex": 14663535,
+        "baseHex": 10526880,
+        "accentHex": 6579300,
+        "darkHex": 3158064,
+        "brightHex": 15790320,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_137",
+      "name": "Palette 138",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7839465,
+        "facadeHex": 11379357,
+        "baseHex": 8950069,
+        "accentHex": 10063142,
+        "darkHex": 1578770,
+        "brightHex": 15002871,
+        "glassHex": 8365549
+      }
+    },
+    {
+      "id": "pal_138",
+      "name": "Palette 139",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 2105376,
+        "baseHex": 1052688,
+        "accentHex": 13467433,
+        "darkHex": 1052688,
+        "brightHex": 16777215,
+        "glassHex": 3314560
+      }
+    },
+    {
+      "id": "pal_139",
+      "name": "Palette 140",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 6837062,
+        "baseHex": 16777215,
+        "accentHex": 8207404,
+        "darkHex": 2697001,
+        "brightHex": 16711421,
+        "glassHex": 2697001
+      }
+    },
+    {
+      "id": "pal_140",
+      "name": "Palette 141",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8421504,
+        "facadeHex": 11141120,
+        "baseHex": 13421772,
+        "accentHex": 16766720,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 49344
+      }
+    },
+    {
+      "id": "pal_141",
+      "name": "Palette 142",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2697779,
+        "facadeHex": 11054235,
+        "baseHex": 7434609,
+        "accentHex": 4473924,
+        "darkHex": 1973790,
+        "brightHex": 16773055,
+        "glassHex": 3236750
+      }
+    },
+    {
+      "id": "pal_142",
+      "name": "Palette 143",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10396082,
+        "facadeHex": 9671840,
+        "baseHex": 3616819,
+        "accentHex": 1182996,
+        "darkHex": 1182996,
+        "brightHex": 15588305,
+        "glassHex": 3287603
+      }
+    },
+    {
+      "id": "pal_143",
+      "name": "Palette 144",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 9022174,
+        "facadeHex": 10859185,
+        "baseHex": 7176042,
+        "accentHex": 5988399,
+        "darkHex": 1843994,
+        "brightHex": 14607071,
+        "glassHex": 11584743
+      }
+    },
+    {
+      "id": "pal_144",
+      "name": "Palette 145",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5738935,
+        "facadeHex": 10533581,
+        "baseHex": 6060660,
+        "accentHex": 5082805,
+        "darkHex": 2369320,
+        "brightHex": 12963281,
+        "glassHex": 5082805
+      }
+    },
+    {
+      "id": "pal_145",
+      "name": "Palette 146",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 10267847,
+        "baseHex": 7637134,
+        "accentHex": 1342649,
+        "darkHex": 2700348,
+        "brightHex": 16580093,
+        "glassHex": 1342649
+      }
+    },
+    {
+      "id": "pal_146",
+      "name": "Palette 147",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13754612,
+        "facadeHex": 7637153,
+        "baseHex": 6449228,
+        "accentHex": 6454170,
+        "darkHex": 2435624,
+        "brightHex": 15199475,
+        "glassHex": 6454170
+      }
+    },
+    {
+      "id": "pal_147",
+      "name": "Palette 148",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 9221843,
+        "facadeHex": 10599870,
+        "baseHex": 8092538,
+        "accentHex": 8827088,
+        "darkHex": 1645590,
+        "brightHex": 14475750,
+        "glassHex": 12109777
+      }
+    },
+    {
+      "id": "pal_148",
+      "name": "Palette 149",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 107519,
+        "facadeHex": 8029312,
+        "baseHex": 10329244,
+        "accentHex": 237566,
+        "darkHex": 2562586,
+        "brightHex": 13354432,
+        "glassHex": 237566
+      }
+    },
+    {
+      "id": "pal_149",
+      "name": "Palette 150",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 10524049,
+        "baseHex": 16777215,
+        "accentHex": 4750890,
+        "darkHex": 1777428,
+        "brightHex": 16711422,
+        "glassHex": 3552557
+      }
+    },
+    {
+      "id": "pal_150",
+      "name": "Palette 151",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 12895427,
+        "baseHex": 13290186,
+        "accentHex": 5327171,
+        "darkHex": 2170398,
+        "brightHex": 14737632,
+        "glassHex": 2170398
+      }
+    },
+    {
+      "id": "pal_151",
+      "name": "Palette 152",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14738410,
+        "facadeHex": 11712941,
+        "baseHex": 3825672,
+        "accentHex": 4022793,
+        "darkHex": 989708,
+        "brightHex": 15263724,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_152",
+      "name": "Palette 153",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 832997,
+        "facadeHex": 9751789,
+        "baseHex": 11771750,
+        "accentHex": 1094883,
+        "darkHex": 5591617,
+        "brightHex": 15265775,
+        "glassHex": 1094883
+      }
+    },
+    {
+      "id": "pal_153",
+      "name": "Palette 154",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 5592405,
+        "baseHex": 2236962,
+        "accentHex": 11105372,
+        "darkHex": 1118481,
+        "brightHex": 14540253,
+        "glassHex": 2243431
+      }
+    },
+    {
+      "id": "pal_154",
+      "name": "Palette 155",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1250067,
+        "facadeHex": 5921370,
+        "baseHex": 2105376,
+        "accentHex": 4210752,
+        "darkHex": 1052688,
+        "brightHex": 14540253,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_155",
+      "name": "Palette 156",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2171169,
+        "facadeHex": 14540253,
+        "baseHex": 11184810,
+        "accentHex": 4210752,
+        "darkHex": 3289650,
+        "brightHex": 15790320,
+        "glassHex": 8042415
+      }
+    },
+    {
+      "id": "pal_156",
+      "name": "Palette 157",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 8417382,
+        "baseHex": 4605510,
+        "accentHex": 12632256,
+        "darkHex": 2631720,
+        "brightHex": 15790320,
+        "glassHex": 11184810
+      }
+    },
+    {
+      "id": "pal_157",
+      "name": "Palette 158",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4872658,
+        "facadeHex": 6056555,
+        "baseHex": 3292490,
+        "accentHex": 9869605,
+        "darkHex": 2105376,
+        "brightHex": 14540253,
+        "glassHex": 3105753
+      }
+    },
+    {
+      "id": "pal_158",
+      "name": "Palette 159",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 13421772,
+        "baseHex": 6710886,
+        "accentHex": 10040064,
+        "darkHex": 3355443,
+        "brightHex": 15658734,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_159",
+      "name": "Palette 160",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2041254,
+        "facadeHex": 14211288,
+        "baseHex": 16777215,
+        "accentHex": 4210752,
+        "darkHex": 2105376,
+        "brightHex": 15790320,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_160",
+      "name": "Palette 161",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2315167,
+        "facadeHex": 7641035,
+        "baseHex": 7039856,
+        "accentHex": 2512802,
+        "darkHex": 2039326,
+        "brightHex": 15526640,
+        "glassHex": 2512802
+      }
+    },
+    {
+      "id": "pal_161",
+      "name": "Palette 162",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8761038,
+        "facadeHex": 6125976,
+        "baseHex": 3757147,
+        "accentHex": 6525118,
+        "darkHex": 3097426,
+        "brightHex": 10997734,
+        "glassHex": 3097426
+      }
+    },
+    {
+      "id": "pal_162",
+      "name": "Palette 163",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 4600609,
+        "baseHex": 1973790,
+        "accentHex": 7895160,
+        "darkHex": 1315860,
+        "brightHex": 12566463,
+        "glassHex": 2184131
+      }
+    },
+    {
+      "id": "pal_163",
+      "name": "Palette 164",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 4603444,
+        "baseHex": 12632256,
+        "accentHex": 15790320,
+        "darkHex": 2631720,
+        "brightHex": 16777215,
+        "glassHex": 2115790
+      }
+    },
+    {
+      "id": "pal_164",
+      "name": "Palette 165",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 11822452,
+        "baseHex": 9868950,
+        "accentHex": 6579300,
+        "darkHex": 2105376,
+        "brightHex": 15066597,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_165",
+      "name": "Palette 166",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10526880,
+        "facadeHex": 13476740,
+        "baseHex": 8413770,
+        "accentHex": 5592405,
+        "darkHex": 4473924,
+        "brightHex": 16777215,
+        "glassHex": 11184810
+      }
+    },
+    {
+      "id": "pal_166",
+      "name": "Palette 167",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 4210752,
+        "baseHex": 2105376,
+        "accentHex": 10053120,
+        "darkHex": 3158064,
+        "brightHex": 15790320,
+        "glassHex": 8438271
+      }
+    },
+    {
+      "id": "pal_167",
+      "name": "Palette 168",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11192816,
+        "facadeHex": 12700896,
+        "baseHex": 6517593,
+        "accentHex": 6530018,
+        "darkHex": 1384489,
+        "brightHex": 15397111,
+        "glassHex": 3163218
+      }
+    },
+    {
+      "id": "pal_168",
+      "name": "Palette 169",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1213082,
+        "facadeHex": 5345696,
+        "baseHex": 3625002,
+        "accentHex": 1212824,
+        "darkHex": 1122316,
+        "brightHex": 13684934,
+        "glassHex": 4427422
+      }
+    },
+    {
+      "id": "pal_169",
+      "name": "Palette 170",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6586222,
+        "facadeHex": 9871503,
+        "baseHex": 4872036,
+        "accentHex": 3294025,
+        "darkHex": 2106419,
+        "brightHex": 14213340,
+        "glassHex": 3824559
+      }
+    },
+    {
+      "id": "pal_170",
+      "name": "Palette 171",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12500670,
+        "facadeHex": 14211288,
+        "baseHex": 8421504,
+        "accentHex": 16766720,
+        "darkHex": 3158064,
+        "brightHex": 16777215,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_171",
+      "name": "Palette 172",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8031838,
+        "facadeHex": 9212521,
+        "baseHex": 9274987,
+        "accentHex": 2847552,
+        "darkHex": 3552815,
+        "brightHex": 14345695,
+        "glassHex": 3552815
+      }
+    },
+    {
+      "id": "pal_172",
+      "name": "Palette 173",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8421504,
+        "facadeHex": 13935965,
+        "baseHex": 8545339,
+        "accentHex": 16777215,
+        "darkHex": 4210752,
+        "brightHex": 16777215,
+        "glassHex": 11068390
+      }
+    },
+    {
+      "id": "pal_173",
+      "name": "Palette 174",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6579300,
+        "facadeHex": 10053120,
+        "baseHex": 8540700,
+        "accentHex": 12000000,
+        "darkHex": 2000000,
+        "brightHex": 15000000,
+        "glassHex": 4000000
+      }
+    },
+    {
+      "id": "pal_174",
+      "name": "Palette 175",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12500670,
+        "facadeHex": 14540253,
+        "baseHex": 10526880,
+        "accentHex": 8421504,
+        "darkHex": 2236962,
+        "brightHex": 16777215,
+        "glassHex": 3355443
+      }
+    },
+    {
+      "id": "pal_175",
+      "name": "Palette 176",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11643292,
+        "facadeHex": 8221007,
+        "baseHex": 4868647,
+        "accentHex": 10586163,
+        "darkHex": 3093541,
+        "brightHex": 13156538,
+        "glassHex": 4807270
+      }
+    },
+    {
+      "id": "pal_176",
+      "name": "Palette 177",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 11177300,
+        "baseHex": 6710886,
+        "accentHex": 13408512,
+        "darkHex": 2236962,
+        "brightHex": 16777215,
+        "glassHex": 10092543
+      }
+    },
+    {
+      "id": "pal_177",
+      "name": "Palette 178",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16448250,
+        "facadeHex": 16777215,
+        "baseHex": 8421504,
+        "accentHex": 16711680,
+        "darkHex": 3355443,
+        "brightHex": 16766720,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_178",
+      "name": "Palette 179",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 13816530,
+        "baseHex": 4210752,
+        "accentHex": 8421504,
+        "darkHex": 2105376,
+        "brightHex": 16777215,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_179",
+      "name": "Palette 180",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8417350,
+        "facadeHex": 10585670,
+        "baseHex": 7895160,
+        "accentHex": 5917470,
+        "darkHex": 3947580,
+        "brightHex": 14540253,
+        "glassHex": 10079487
+      }
+    },
+    {
+      "id": "pal_180",
+      "name": "Palette 181",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 6381921,
+        "baseHex": 3815994,
+        "accentHex": 11184810,
+        "darkHex": 2105376,
+        "brightHex": 15790320,
+        "glassHex": 26367
+      }
+    },
+    {
+      "id": "pal_181",
+      "name": "Palette 182",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 2697513,
+        "baseHex": 7954516,
+        "accentHex": 11043444,
+        "darkHex": 1644825,
+        "brightHex": 14540253,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_182",
+      "name": "Palette 183",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6196158,
+        "facadeHex": 7229244,
+        "baseHex": 9014153,
+        "accentHex": 10966589,
+        "darkHex": 3283735,
+        "brightHex": 13551551,
+        "glassHex": 6460099
+      }
+    },
+    {
+      "id": "pal_183",
+      "name": "Palette 184",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4605510,
+        "facadeHex": 12596768,
+        "baseHex": 13421772,
+        "accentHex": 16766720,
+        "darkHex": 2631720,
+        "brightHex": 16777215,
+        "glassHex": 49484
+      }
+    },
+    {
+      "id": "pal_184",
+      "name": "Palette 185",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 15001317,
+        "facadeHex": 9073760,
+        "baseHex": 6058534,
+        "accentHex": 5796640,
+        "darkHex": 1447699,
+        "brightHex": 15132646,
+        "glassHex": 1447699
+      }
+    },
+    {
+      "id": "pal_185",
+      "name": "Palette 186",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6579300,
+        "facadeHex": 14536350,
+        "baseHex": 11184810,
+        "accentHex": 3947580,
+        "darkHex": 2631720,
+        "brightHex": 15790320,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_186",
+      "name": "Palette 187",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2631720,
+        "facadeHex": 2105376,
+        "baseHex": 14540253,
+        "accentHex": 16777215,
+        "darkHex": 1052688,
+        "brightHex": 14540253,
+        "glassHex": 3368652
+      }
+    },
+    {
+      "id": "pal_187",
+      "name": "Palette 188",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4210752,
+        "facadeHex": 8545338,
+        "baseHex": 12632256,
+        "accentHex": 16777215,
+        "darkHex": 2105376,
+        "brightHex": 14737632,
+        "glassHex": 8432080
+      }
+    },
+    {
+      "id": "pal_188",
+      "name": "Palette 189",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16250617,
+        "facadeHex": 7237684,
+        "baseHex": 8755756,
+        "accentHex": 8426260,
+        "darkHex": 1583138,
+        "brightHex": 16250615,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_189",
+      "name": "Palette 190",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4605510,
+        "facadeHex": 16773120,
+        "baseHex": 10066329,
+        "accentHex": 3355443,
+        "darkHex": 2236962,
+        "brightHex": 15790320,
+        "glassHex": 11184810
+      }
+    },
+    {
+      "id": "pal_190",
+      "name": "Palette 191",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10526880,
+        "facadeHex": 13158600,
+        "baseHex": 6710886,
+        "accentHex": 16777215,
+        "darkHex": 3355443,
+        "brightHex": 15658734,
+        "glassHex": 4621760
+      }
+    },
+    {
+      "id": "pal_191",
+      "name": "Palette 192",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6579300,
+        "facadeHex": 11175760,
+        "baseHex": 13421772,
+        "accentHex": 4473924,
+        "darkHex": 2236962,
+        "brightHex": 15658734,
+        "glassHex": 10079487
+      }
+    },
+    {
+      "id": "pal_192",
+      "name": "Palette 193",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 9482452,
+        "facadeHex": 10195090,
+        "baseHex": 5988925,
+        "accentHex": 13071964,
+        "darkHex": 2829092,
+        "brightHex": 14609652,
+        "glassHex": 9745368
+      }
+    },
+    {
+      "id": "pal_193",
+      "name": "Palette 194",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12500670,
+        "facadeHex": 10526880,
+        "baseHex": 8421504,
+        "accentHex": 13382400,
+        "darkHex": 3158064,
+        "brightHex": 16777215,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_194",
+      "name": "Palette 195",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 13224391,
+        "facadeHex": 13223873,
+        "baseHex": 6709603,
+        "accentHex": 7170660,
+        "darkHex": 4275518,
+        "brightHex": 16448250,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_195",
+      "name": "Palette 196",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3490114,
+        "facadeHex": 3490114,
+        "baseHex": 3490114,
+        "accentHex": 2239791,
+        "darkHex": 2899536,
+        "brightHex": 16382456,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_196",
+      "name": "Palette 197",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6509638,
+        "facadeHex": 6509638,
+        "baseHex": 6509638,
+        "accentHex": 7102292,
+        "darkHex": 2899536,
+        "brightHex": 16381414,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_197",
+      "name": "Palette 198",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 2762268,
+        "facadeHex": 7627337,
+        "baseHex": 7627337,
+        "accentHex": 3289624,
+        "darkHex": 2899536,
+        "brightHex": 14276043,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_198",
+      "name": "Palette 199",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5992834,
+        "facadeHex": 5992834,
+        "baseHex": 5992834,
+        "accentHex": 4097485,
+        "darkHex": 2899536,
+        "brightHex": 14605020,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_199",
+      "name": "Palette 200",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10989499,
+        "facadeHex": 10594999,
+        "baseHex": 4344373,
+        "accentHex": 9018032,
+        "darkHex": 1580571,
+        "brightHex": 12106691,
+        "glassHex": 9018032
+      }
+    },
+    {
+      "id": "pal_200",
+      "name": "Palette 201",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12245238,
+        "facadeHex": 6840867,
+        "baseHex": 6907445,
+        "accentHex": 11509797,
+        "darkHex": 2499606,
+        "brightHex": 12704245,
+        "glassHex": 12704245
+      }
+    },
+    {
+      "id": "pal_201",
+      "name": "Palette 202",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14671839,
+        "facadeHex": 7690561,
+        "baseHex": 2434619,
+        "accentHex": 12091472,
+        "darkHex": 1775139,
+        "brightHex": 15987699,
+        "glassHex": 2565946
+      }
+    },
+    {
+      "id": "pal_202",
+      "name": "Palette 203",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 15198183,
+        "facadeHex": 11898996,
+        "baseHex": 15198183,
+        "accentHex": 7952439,
+        "darkHex": 2762779,
+        "brightHex": 16645629,
+        "glassHex": 6973301
+      }
+    },
+    {
+      "id": "pal_203",
+      "name": "Palette 204",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 6519973,
+        "facadeHex": 8755642,
+        "baseHex": 5068835,
+        "accentHex": 6454181,
+        "darkHex": 2630169,
+        "brightHex": 13883616,
+        "glassHex": 6454181
+      }
+    },
+    {
+      "id": "pal_204",
+      "name": "Palette 205",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8347648,
+        "facadeHex": 15789530,
+        "baseHex": 4210752,
+        "accentHex": 13395456,
+        "darkHex": 2105376,
+        "brightHex": 16777215,
+        "glassHex": 8962815
+      }
+    },
+    {
+      "id": "pal_205",
+      "name": "Palette 206",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4603904,
+        "facadeHex": 10580550,
+        "baseHex": 3947580,
+        "accentHex": 7886440,
+        "darkHex": 2631720,
+        "brightHex": 14540253,
+        "glassHex": 10079487
+      }
+    },
+    {
+      "id": "pal_206",
+      "name": "Palette 207",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16579836,
+        "facadeHex": 12568515,
+        "baseHex": 16579836,
+        "accentHex": 2795960,
+        "darkHex": 2837337,
+        "brightHex": 16514043,
+        "glassHex": 2837337
+      }
+    },
+    {
+      "id": "pal_207",
+      "name": "Palette 208",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12109038,
+        "facadeHex": 10790307,
+        "baseHex": 8881020,
+        "accentHex": 12306159,
+        "darkHex": 4144187,
+        "brightHex": 14541037,
+        "glassHex": 12306159
+      }
+    },
+    {
+      "id": "pal_208",
+      "name": "Palette 209",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10011898,
+        "facadeHex": 11652080,
+        "baseHex": 2830630,
+        "accentHex": 8827383,
+        "darkHex": 1317142,
+        "brightHex": 13296633,
+        "glassHex": 13296633
+      }
+    },
+    {
+      "id": "pal_209",
+      "name": "Palette 210",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14211288,
+        "baseHex": 5592405,
+        "accentHex": 16777215,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 8438271
+      }
+    },
+    {
+      "id": "pal_210",
+      "name": "Palette 211",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 454040,
+        "facadeHex": 18012080,
+        "baseHex": 100100100,
+        "accentHex": 2005020,
+        "darkHex": 303030,
+        "brightHex": 220220220,
+        "glassHex": 204060
+      }
+    },
+    {
+      "id": "pal_211",
+      "name": "Palette 212",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 3223857,
+        "baseHex": 1052688,
+        "accentHex": 8545330,
+        "darkHex": 2631720,
+        "brightHex": 14540253,
+        "glassHex": 10079487
+      }
+    },
+    {
+      "id": "pal_212",
+      "name": "Palette 213",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4868682,
+        "facadeHex": 14210252,
+        "baseHex": 8551794,
+        "accentHex": 6116689,
+        "darkHex": 3289650,
+        "brightHex": 15790320,
+        "glassHex": 11583173
+      }
+    },
+    {
+      "id": "pal_213",
+      "name": "Palette 214",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 12632256,
+        "facadeHex": 5253120,
+        "baseHex": 13421772,
+        "accentHex": 16737792,
+        "darkHex": 2105376,
+        "brightHex": 16777215,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_214",
+      "name": "Palette 215",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 333333,
+        "facadeHex": 9807270,
+        "baseHex": 888888,
+        "accentHex": 15105570,
+        "darkHex": 111111,
+        "brightHex": 15528177,
+        "glassHex": 204060
+      }
+    },
+    {
+      "id": "pal_215",
+      "name": "Palette 216",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10526880,
+        "facadeHex": 16777215,
+        "baseHex": 12632256,
+        "accentHex": 16744448,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_216",
+      "name": "Palette 217",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 10997484,
+        "facadeHex": 5531988,
+        "baseHex": 5465159,
+        "accentHex": 8434261,
+        "darkHex": 1317908,
+        "brightHex": 14214638,
+        "glassHex": 9945053
+      }
+    },
+    {
+      "id": "pal_217",
+      "name": "Palette 218",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14274740,
+        "facadeHex": 15259834,
+        "baseHex": 11510664,
+        "accentHex": 16755264,
+        "darkHex": 4210231,
+        "brightHex": 16768350,
+        "glassHex": 33023
+      }
+    },
+    {
+      "id": "pal_218",
+      "name": "Palette 219",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14201136,
+        "facadeHex": 15263976,
+        "baseHex": 11184810,
+        "accentHex": 8134440,
+        "darkHex": 2104354,
+        "brightHex": 16766720,
+        "glassHex": 1122864
+      }
+    },
+    {
+      "id": "pal_219",
+      "name": "Palette 220",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1136815,
+        "facadeHex": 3965395,
+        "baseHex": 7896686,
+        "accentHex": 940982,
+        "darkHex": 2369569,
+        "brightHex": 14014681,
+        "glassHex": 940982
+      }
+    },
+    {
+      "id": "pal_220",
+      "name": "Palette 221",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 16777215,
+        "baseHex": 12632256,
+        "accentHex": 8421504,
+        "darkHex": 4210752,
+        "brightHex": 15790320,
+        "glassHex": 10092543
+      }
+    },
+    {
+      "id": "pal_221",
+      "name": "Palette 222",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16448250,
+        "facadeHex": 8421504,
+        "baseHex": 12632256,
+        "accentHex": 10053120,
+        "darkHex": 4210752,
+        "brightHex": 16777215,
+        "glassHex": 11060991
+      }
+    },
+    {
+      "id": "pal_222",
+      "name": "Palette 223",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5523456,
+        "facadeHex": 8543210,
+        "baseHex": 335544,
+        "accentHex": 112233,
+        "darkHex": 222222,
+        "brightHex": 15658734,
+        "glassHex": 12345678
+      }
+    },
+    {
+      "id": "pal_223",
+      "name": "Palette 224",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11166549,
+        "facadeHex": 13344143,
+        "baseHex": 10515568,
+        "accentHex": 14397576,
+        "darkHex": 4208186,
+        "brightHex": 15790320,
+        "glassHex": 3360614
+      }
+    },
+    {
+      "id": "pal_224",
+      "name": "Palette 225",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 8421504,
+        "baseHex": 5592405,
+        "accentHex": 11184810,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 11599871
+      }
+    },
+    {
+      "id": "pal_225",
+      "name": "Palette 226",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14211288,
+        "baseHex": 10526880,
+        "accentHex": 16711680,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 4956380
+      }
+    },
+    {
+      "id": "pal_226",
+      "name": "Palette 227",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 8405056,
+        "baseHex": 4210752,
+        "accentHex": 16711680,
+        "darkHex": 2105376,
+        "brightHex": 14737632,
+        "glassHex": 11184810
+      }
+    },
+    {
+      "id": "pal_227",
+      "name": "Palette 228",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 15724522,
+        "facadeHex": 14984315,
+        "baseHex": 15724523,
+        "accentHex": 1380361,
+        "darkHex": 1380361,
+        "brightHex": 15658730,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_228",
+      "name": "Palette 229",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 15724266,
+        "facadeHex": 15652033,
+        "baseHex": 15724266,
+        "accentHex": 1050119,
+        "darkHex": 1050119,
+        "brightHex": 15724266,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_229",
+      "name": "Palette 230",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16744272,
+        "facadeHex": 16767948,
+        "baseHex": 10053222,
+        "accentHex": 13369344,
+        "darkHex": 8388608,
+        "brightHex": 16777215,
+        "glassHex": 49560
+      }
+    },
+    {
+      "id": "pal_230",
+      "name": "Palette 231",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 16772070,
+        "baseHex": 14474460,
+        "accentHex": 8405056,
+        "darkHex": 3947580,
+        "brightHex": 16777215,
+        "glassHex": 4621730
+      }
+    },
+    {
+      "id": "pal_231",
+      "name": "Palette 232",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16753920,
+        "facadeHex": 16766660,
+        "baseHex": 10066329,
+        "accentHex": 13369344,
+        "darkHex": 3355443,
+        "brightHex": 16777215,
+        "glassHex": 11066879
+      }
+    },
+    {
+      "id": "pal_232",
+      "name": "Palette 233",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 16755370,
+        "facadeHex": 15654350,
+        "baseHex": 12042950,
+        "accentHex": 16744576,
+        "darkHex": 4605510,
+        "brightHex": 16777215,
+        "glassHex": 10535167
+      }
+    }
+  ]
 }

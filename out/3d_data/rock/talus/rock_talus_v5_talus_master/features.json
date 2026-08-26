@@ -1,0 +1,163 @@
+{
+  "id": "rock_talus_v5_talus_master",
+  "sourceImage": null,
+  "style": "faceted_erratic_boulder",
+  "symmetryMode": "organic",
+  "colors": {
+    "roofHex": 9807270,
+    "facadeHex": 8359053,
+    "baseHex": 5662067,
+    "accentHex": 3426654,
+    "darkHex": 2899536,
+    "brightHex": 12436423,
+    "glassHex": 1976635
+  },
+  "palettes": [
+    {
+      "id": "pal_0",
+      "name": "Palette 1",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 9807270,
+        "facadeHex": 8359053,
+        "baseHex": 5662067,
+        "accentHex": 3426654,
+        "darkHex": 2899536,
+        "brightHex": 12436423,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_1",
+      "name": "Palette 2",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 3426654,
+        "facadeHex": 2899536,
+        "baseHex": 1713455,
+        "accentHex": 4283254,
+        "darkHex": 1515562,
+        "brightHex": 6122878,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_2",
+      "name": "Palette 3",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14059792,
+        "facadeHex": 12154638,
+        "baseHex": 8278281,
+        "accentHex": 15965202,
+        "darkHex": 5650437,
+        "brightHex": 16303217,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_3",
+      "name": "Palette 4",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5822093,
+        "facadeHex": 6122878,
+        "baseHex": 3426654,
+        "accentHex": 2600544,
+        "darkHex": 2174781,
+        "brightHex": 11132863,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_4",
+      "name": "Palette 5",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 14015451,
+        "facadeHex": 15528177,
+        "baseHex": 10923183,
+        "accentHex": 16645886,
+        "darkHex": 8359053,
+        "brightHex": 16777215,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_5",
+      "name": "Palette 6",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8861184,
+        "facadeHex": 7220224,
+        "baseHex": 5120000,
+        "accentHex": 10502144,
+        "darkHex": 4069376,
+        "brightHex": 12208640,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_6",
+      "name": "Palette 7",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 7371644,
+        "facadeHex": 5331546,
+        "baseHex": 3422784,
+        "accentHex": 10068900,
+        "darkHex": 2172201,
+        "brightHex": 13685716,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_7",
+      "name": "Palette 8",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 11450047,
+        "facadeHex": 8753822,
+        "baseHex": 6122878,
+        "accentHex": 14014684,
+        "darkHex": 3426654,
+        "brightHex": 15396078,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_8",
+      "name": "Palette 9",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 9654550,
+        "facadeHex": 7881234,
+        "baseHex": 5320204,
+        "accentHex": 11493402,
+        "darkHex": 4006665,
+        "brightHex": 13266718,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_9",
+      "name": "Palette 10",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 5331546,
+        "facadeHex": 4344137,
+        "baseHex": 2830384,
+        "accentHex": 7371644,
+        "darkHex": 1777182,
+        "brightHex": 10068900,
+        "glassHex": 1976635
+      }
+    }
+  ],
+  "totalParts": 3,
+  "partNames": [
+    "erratic_boulder_core",
+    "talus_scree_facet_1",
+    "talus_scree_facet_2"
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "id": "tree_cf_araucaria_v5_cf_araucaria_master",
+  "sourceImage": null,
+  "style": "conifer_pine_spire",
+  "symmetryMode": "radial",
+  "colors": {
+    "roofHex": 1985835,
+    "facadeHex": 2582328,
+    "baseHex": 5125166,
+    "accentHex": 3046706,
+    "darkHex": 4073251,
+    "brightHex": 5025616,
+    "glassHex": 1976635
+  },
+  "palettes": [
+    {
+      "id": "pal_0",
+      "name": "Palette 1",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 1985835,
+        "facadeHex": 2582328,
+        "baseHex": 5125166,
+        "accentHex": 3046706,
+        "darkHex": 4073251,
+        "brightHex": 5025616,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_1",
+      "name": "Palette 2",
+      "variantCount": 2,
+      "colors": {
+        "roofHex": 1789775,
+        "facadeHex": 2321259,
+        "baseHex": 4073251,
+        "accentHex": 3050379,
+        "darkHex": 2496790,
+        "brightHex": 4770224,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_2",
+      "name": "Palette 3",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 1333810,
+        "facadeHex": 1999945,
+        "baseHex": 6111287,
+        "accentHex": 2600544,
+        "darkHex": 5125166,
+        "brightHex": 5422720,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_3",
+      "name": "Palette 4",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 8218120,
+        "facadeHex": 10124554,
+        "baseHex": 5125166,
+        "accentHex": 12031243,
+        "darkHex": 4073251,
+        "brightHex": 15844367,
+        "glassHex": 1976635
+      }
+    },
+    {
+      "id": "pal_4",
+      "name": "Palette 5",
+      "variantCount": 1,
+      "colors": {
+        "roofHex": 4019764,
+        "facadeHex": 5008193,
+        "baseHex": 5585963,
+        "accentHex": 6062671,
+        "darkHex": 4008735,
+        "brightHex": 8034923,
+        "glassHex": 1976635
+      }
+    }
+  ],
+  "totalParts": 7,
+  "partNames": [
+    "pine_tapered_trunk",
+    "pine_canopy_tier_1",
+    "pine_canopy_tier_2",
+    "pine_canopy_tier_3",
+    "pine_canopy_tier_4",
+    "pine_canopy_tier_5",
+    "pine_canopy_tier_6"
+  ]
+}

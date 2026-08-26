@@ -17,7 +17,7 @@ const SOURCE_PATHS = Object.freeze({
 
 const PART_FIELDS = Object.freeze([
   'name', 'type', 'dimensions', 'radii', 'radius', 'height', 'sides', 'tube',
-  'position', 'rotation', 'color', 'triangles',
+  'position', 'rotation', 'color', 'colorKey', 'triangles',
 ]);
 const textCmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -120,6 +120,7 @@ function sanitizeAsset(database, manifest, review, model, canonicalTarget) {
     bounds: model.bounds || database.bounds || null,
     spec: model.spec || database.spec || null,
     triangles: model.bounds?.triangles ?? database.triangles ?? null,
+    palettes: Array.isArray(model.palettes) && model.palettes.length ? model.palettes : (Array.isArray(database.palettes) && database.palettes.length ? database.palettes : []),
     provenance: {
       method: manifest.method || null,
       consumer: manifest.consumer || null,

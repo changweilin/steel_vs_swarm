@@ -48,10 +48,14 @@ const ok = (condition, message) => {
 };
 
 console.log('\nⅠ 正式 v5/v6 目錄');
-ok(buildings.length === 40, `建築正式名冊 40 款（實得 ${buildings.length}）`);
+ok(buildings.length === 29, `建築正式名冊 29 款（實得 ${buildings.length}）`);
 ok(VEHICLE_PARTS.length === 14, `載具正式名冊 14 款（實得 ${VEHICLE_PARTS.length}）`);
-ok(buildings.filter((row) => row.version === 5).length === 24
-  && buildings.filter((row) => row.version === 6).length === 16, '建築 v5=24、v6=16 同時正式採用');
+ok(buildings.filter((row) => row.version === 5).length === 13
+  && buildings.filter((row) => row.version === 6).length === 16, '建築 v5=13（母體原型）、v6=16 同時正式採用');
+ok(buildings.some((row) => row.version === 5 && Array.isArray(row.palettes) && row.palettes.length > 1),
+  'v5 母體建築包含多套配色清單 (palettes)');
+ok(buildings.every((row) => row.version !== 5 || row.parts.every((p) => typeof p.colorKey === 'string' && p.colorKey.length > 0)),
+  'v5 零件均標註語意著色鍵 colorKey');
 ok(buildings.every((row) => [5, 6].includes(row.version)
   && row.provenance?.review?.status === 'ok'), '建築只收 v5/v6 且每列通過零件台');
 ok(new Set(buildings.map((row) => row.key)).size === buildings.length, '建築 key 唯一');
