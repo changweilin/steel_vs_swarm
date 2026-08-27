@@ -1,38 +1,210 @@
 {
   "id": "building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b",
   "sourceImage": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b",
-  "style": "Alpine Chalet Architecture",
+  "style": "alpine timber chalet with flower balcony",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 5253165,
-    "facadeHex": 6828576,
-    "baseHex": 3810086,
-    "accentHex": 11814674,
-    "darkHex": 1973790,
-    "brightHex": 13421772,
-    "glassHex": 2640243
+    "roofHex": 3943469,
+    "facadeHex": 9132594,
+    "baseHex": 4929057,
+    "accentHex": 12950117,
+    "darkHex": 2366235,
+    "brightHex": 15851200,
+    "glassHex": 1586508
   },
-  "totalParts": 16,
+  "totalParts": 48,
   "partNames": [
-    "main_building_base",
-    "front_balcony_platform",
-    "front_balcony_railing",
-    "flower_box_front",
-    "gable_roof_front",
-    "roof_overhang_front",
-    "attic_window_center",
-    "attic_window_left",
-    "attic_window_right",
-    "ground_floor_window_left",
-    "ground_floor_window_center",
-    "ground_floor_window_right",
+    "chalet_foundation",
+    "main_chalet_body",
+    "upper_wood_mass",
+    "left_low_wing",
+    "right_low_wing",
+    "main_deep_gable_left",
+    "main_deep_gable_right",
+    "central_dormer_roof_left",
+    "central_dormer_roof_right",
+    "left_low_roof_left",
+    "left_low_roof_right",
+    "right_low_roof_left",
+    "right_low_roof_right",
+    "central_dormer_mass",
+    "dormer_eave",
+    "front_balcony_slab",
+    "front_balcony_rail_front",
+    "front_balcony_rail_back",
+    "front_balcony_post_l",
+    "front_balcony_post_r",
+    "dormer_window_-1.65_glass",
+    "dormer_window_-1.65_side_l",
+    "dormer_window_-1.65_side_r",
+    "dormer_window_-1.65_head",
+    "dormer_window_0_glass",
+    "dormer_window_0_side_l",
+    "dormer_window_0_side_r",
+    "dormer_window_0_head",
+    "dormer_window_1.65_glass",
+    "dormer_window_1.65_side_l",
+    "dormer_window_1.65_side_r",
+    "dormer_window_1.65_head",
+    "ground_window_-4_glass",
+    "ground_window_-4_side_l",
+    "ground_window_-4_side_r",
+    "ground_window_-4_head",
+    "ground_window_3.8_glass",
+    "ground_window_3.8_side_l",
+    "ground_window_3.8_side_r",
+    "ground_window_3.8_head",
+    "side_window_-1_ground",
+    "side_window_-1_upper",
+    "side_window_1_ground",
+    "side_window_1_upper",
     "chimney",
-    "side_building_right",
-    "side_roof_right",
-    "side_balcony_right"
+    "balcony_post_left",
+    "balcony_post_right",
+    "balcony_header"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
-    "wedge"
-  ]
+    "wedge",
+    "cylinder"
+  ],
+  "schemaVersion": 2,
+  "yolo26": {
+    "targetId": "ov_35100e42-2d06-4d2f-b187-33aea876309b~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1024,
+      683
+    ],
+    "width": 1024,
+    "height": 683,
+    "aspectRatio": 1.4993,
+    "targetFile": "out/targets/building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b~0.png",
+    "maskFile": "out/yolo_masks/building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b~0.png",
+    "depth": {
+      "minM": 6.97913,
+      "maxM": 42.17696,
+      "meanM": 22.11938,
+      "p05M": 7.99628,
+      "p25M": 10.43747,
+      "medianM": 18.75236,
+      "p75M": 40.17432,
+      "p95M": 41.12496
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.54898
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.69471
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.67869
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.59852
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.59097
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.40567
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 22.38313
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 21.25955
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 19.38923
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 14.07821
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 11.71105
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 9.92459
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 9.35719
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 8.58913
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 8.2775
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 8.18712
+      }
+    ]
+  },
+  "evidence": {
+    "featureFile": "out/yolo_features/building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.json",
+    "maskFile": "out/yolo_masks/building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b~0.png",
+    "depthFile": "out/yolo_depth/building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.npy"
+  },
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 75,
+    "critique": "主坡、中央 dormer、低翼與接合陽台已形成木屋辨識輪廓。",
+    "verdict": "pass",
+    "corrections": [],
+    "reviewer": "independent_parent_multimodal"
+  },
+  "reconstructionNote": "補正木屋兩側屋頂、窗戶與陽台欄杆，移除浮件。"
 }

@@ -3,38 +3,163 @@
   "key": "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6",
   "family": "building",
   "subpart": "mass",
-  "style": "Modern Suburban House",
-  "symmetryMode": "asymmetric",
-  "similarityScore": 92,
-  "similarityReview": "The 3D model accurately captures the multi-gable roof profile, main facade structure, garage and living room window layouts, front pillars, and lit entrance porch. Roof overhangs and directional slopes match the required outward-slanting rules.",
+  "style": "suburban gabled family house",
+  "symmetryMode": "symmetric",
+  "similarityScore": 76,
+  "similarityReview": "二樓、雙 dormer、多屋脊與橫向車庫已補齊。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
-  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0.png",
-  "created_at": "2026-08-20T17:19:14.181Z",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
+  "yolo26": {
+    "targetId": "1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1200,
+      818
+    ],
+    "width": 1200,
+    "height": 818,
+    "aspectRatio": 1.467,
+    "targetFile": "out/targets/building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0.png",
+    "maskFile": "out/yolo_masks/building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0.png",
+    "depth": {
+      "minM": 5.58281,
+      "maxM": 32.55164,
+      "meanM": 18.6749,
+      "p05M": 6.39557,
+      "p25M": 10.7474,
+      "medianM": 14.97196,
+      "p75M": 30.7085,
+      "p95M": 31.46143
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 31.01903
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 31.41866
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 31.21899
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 31.01573
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 30.55981
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 20.74413
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 15.62977
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 14.92925
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 14.72729
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 14.59574
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 14.24983
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 13.36925
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 10.17303
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 8.17585
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 7.01002
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 6.1934
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6.png",
   "bounds": {
     "min": [
-      -7.5,
+      -8.16,
       0,
-      -4.5
+      -8.4
     ],
     "max": [
-      7.5,
-      7.75,
-      4.5
+      8.16,
+      8.6,
+      6.35
     ],
     "size": [
-      15,
-      7.75,
-      9
+      16.32,
+      8.6,
+      14.75
     ],
-    "rMax": 8.746,
-    "triangles": 228,
-    "vertices": 154
+    "rMax": 11.711,
+    "triangles": 520,
+    "vertices": 352
   },
-  "spec": {
-    "style": "Modern Suburban House"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "修正住宅屋頂與車庫、入口玻璃，補齊左右及後立面。",
+  "created_at": "2026-08-27T10:45:23.040Z"
 }

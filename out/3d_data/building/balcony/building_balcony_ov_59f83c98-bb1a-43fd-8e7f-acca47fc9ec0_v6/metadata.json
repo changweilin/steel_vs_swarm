@@ -3,38 +3,163 @@
   "key": "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_22aa2c4c_v6",
   "family": "building",
   "subpart": "balcony",
-  "style": "Modern Brutalist Architecture",
-  "symmetryMode": "asymmetric",
-  "similarityScore": 92,
-  "similarityReview": "The reconstructed 3D building accurately captures the layered, cantilevered horizontal volumes, stark white facade, recessed dark ribbon windows, and cascading terraced structure seen in the architectural photograph.",
+  "style": "white stepped institutional balcony mass",
+  "symmetryMode": "symmetric",
+  "similarityScore": 78,
+  "similarityReview": "寬幅退台、多翼量體與長窗帶已建立；三視圖均為封閉實體。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
-  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\balcony\\ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0~0.png",
-  "created_at": "2026-08-20T17:23:01.192Z",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\balcony\\ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
+  "yolo26": {
+    "targetId": "ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1024,
+      684
+    ],
+    "width": 1024,
+    "height": 684,
+    "aspectRatio": 1.4971,
+    "targetFile": "out/targets/building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0~0.png",
+    "maskFile": "out/yolo_masks/building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0~0.png",
+    "depth": {
+      "minM": 4.10694,
+      "maxM": 19.3408,
+      "meanM": 11.73619,
+      "p05M": 4.57972,
+      "p25M": 5.82461,
+      "medianM": 12.78774,
+      "p75M": 16.98854,
+      "p95M": 17.89504
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.21959
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.71228
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.61748
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.37565
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 16.95126
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 15.84901
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 13.91248
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 13.7838
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 13.14975
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 12.6684
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 7.50593
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 6.41002
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 5.31657
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 5.17206
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 5.13994
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 4.93177
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6.png",
   "bounds": {
     "min": [
-      -5.1,
+      -9.9,
       0,
-      -3
+      -5.7
     ],
     "max": [
-      6.1,
-      11,
-      5.1
+      9.9,
+      17.25,
+      4.89
     ],
     "size": [
-      11.2,
-      11,
-      8.1
+      19.8,
+      17.25,
+      10.59
     ],
-    "rMax": 7.951,
-    "triangles": 144,
-    "vertices": 98
+    "rMax": 11.424,
+    "triangles": 516,
+    "vertices": 344
   },
-  "spec": {
-    "style": "Modern Brutalist Architecture"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "補齊玻璃窗帶、背面與左右層疊陽台，避免物件分離。",
+  "created_at": "2026-08-27T10:45:22.456Z"
 }

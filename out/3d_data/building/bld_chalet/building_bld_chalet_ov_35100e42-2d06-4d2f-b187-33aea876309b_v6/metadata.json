@@ -3,38 +3,163 @@
   "key": "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_a52d3ee5_v6",
   "family": "building",
   "subpart": "bld_chalet",
-  "style": "Alpine Chalet Architecture",
+  "style": "alpine timber chalet with flower balcony",
   "symmetryMode": "symmetric",
-  "similarityScore": 92,
-  "similarityReview": "The 3D model accurately captures the prominent wooden chalet architecture with deep overhang gabled roofs, distinct balcony structures adorned with floral details, multi-pane windows, and warm timber facades. All components are oriented properly with correct outward sloping roofs and balanced proportions.",
+  "similarityScore": 75,
+  "similarityReview": "主坡、中央 dormer、低翼與接合陽台已形成木屋辨識輪廓。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg",
-  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_chalet\\ov_35100e42-2d06-4d2f-b187-33aea876309b~0.png",
-  "created_at": "2026-08-20T17:24:41.725Z",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_chalet\\ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg",
+  "yolo26": {
+    "targetId": "ov_35100e42-2d06-4d2f-b187-33aea876309b~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1024,
+      683
+    ],
+    "width": 1024,
+    "height": 683,
+    "aspectRatio": 1.4993,
+    "targetFile": "out/targets/building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b~0.png",
+    "maskFile": "out/yolo_masks/building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b~0.png",
+    "depth": {
+      "minM": 6.97913,
+      "maxM": 42.17696,
+      "meanM": 22.11938,
+      "p05M": 7.99628,
+      "p25M": 10.43747,
+      "medianM": 18.75236,
+      "p75M": 40.17432,
+      "p95M": 41.12496
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.54898
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.69471
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.67869
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.59852
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.59097
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.40567
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 22.38313
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 21.25955
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 19.38923
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 14.07821
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 11.71105
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 9.92459
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 9.35719
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 8.58913
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 8.2775
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 8.18712
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6.png",
   "bounds": {
     "min": [
-      -4.6,
-      -0.25,
-      -3.5
+      -7.605,
+      0,
+      -4
     ],
     "max": [
-      11,
-      9.2,
-      4.15
+      7.605,
+      9,
+      4.64
     ],
     "size": [
-      15.6,
-      9.45,
-      7.65
+      15.21,
+      9,
+      8.64
     ],
-    "rMax": 11.757,
-    "triangles": 180,
-    "vertices": 122
+    "rMax": 8.909,
+    "triangles": 564,
+    "vertices": 378
   },
-  "spec": {
-    "style": "Alpine Chalet Architecture"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "補正木屋兩側屋頂、窗戶與陽台欄杆，移除浮件。",
+  "created_at": "2026-08-27T10:45:22.934Z"
 }

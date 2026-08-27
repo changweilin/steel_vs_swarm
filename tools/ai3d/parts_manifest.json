@@ -61648,90 +61648,6 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_312598c2",
-          "family": "building",
-          "part": "mass",
-          "query": "1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 228, Vertices 154, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          15,
-          7.75,
-          9
-        ],
-        "note": "Extents [15, 7.75, 9]m, rMax 8.746m"
-      },
-      "keys": [
-        "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (mass)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_9077e646",
-          "family": "building",
-          "part": "mass",
-          "query": "160991898108355807.jpg!900x.water3",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/160991898108355807.jpg!900x.water3.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 504, Vertices 325, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          16.6,
-          27.4,
-          10.478
-        ],
-        "note": "Extents [16.6, 27.4, 10.478]m, rMax 10.782m"
-      },
-      "keys": [
-        "building/mass_160991898108355807.jpg!900x.water3_9077e646_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (mass)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
           "id": "img_156fa230",
           "family": "building",
           "part": "mass",
@@ -61984,90 +61900,6 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_812d2226",
-          "family": "building",
-          "part": "mass",
-          "query": "171860464927014009.jpg!900x.water3",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/171860464927014009.jpg!900x.water3.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 284, Vertices 190, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          22.5,
-          23.25,
-          17.45
-        ],
-        "note": "Extents [22.5, 23.25, 17.45]m, rMax 15.511m"
-      },
-      "keys": [
-        "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (mass)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_a1c88b78",
-          "family": "building",
-          "part": "mass",
-          "query": "173407398147386206.jpg!750x",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/173407398147386206.jpg!750x.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 352, Vertices 234, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          14.4,
-          32.8,
-          12.5
-        ],
-        "note": "Extents [14.4, 32.8, 12.5]m, rMax 9.567m"
-      },
-      "keys": [
-        "building/mass_173407398147386206.jpg!750x_a1c88b78_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (mass)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
           "id": "img_ca992fed",
           "family": "building",
           "part": "mass",
@@ -62224,48 +62056,6 @@
       },
       "keys": [
         "building/mass_175437636541282008.jpg!900x.water3~1_84ce94b1_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (mass)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_8693d9fc",
-          "family": "building",
-          "part": "mass",
-          "query": "176784033021147409.jpg!900x.water3",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/176784033021147409.jpg!900x.water3.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 348, Vertices 230, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          14,
-          19.45,
-          10.825
-        ],
-        "note": "Extents [14, 19.45, 10.825]m, rMax 9.107m"
-      },
-      "keys": [
-        "building/mass_176784033021147409.jpg!900x.water3_8693d9fc_v6"
       ]
     },
     {
@@ -62650,48 +62440,6 @@
       "method": "gemini_v6",
       "version": 6,
       "verStr": "v6",
-      "consumer": "building catalog & partlib (balcony)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_22aa2c4c",
-          "family": "building",
-          "part": "balcony",
-          "query": "ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 144, Vertices 98, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          11.2,
-          11,
-          8.1
-        ],
-        "note": "Extents [11.2, 11, 8.1]m, rMax 7.951m"
-      },
-      "keys": [
-        "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_22aa2c4c_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
       "consumer": "building catalog & partlib (bld_adobe)",
       "rev": "HEAD",
       "at": "2026-08-20",
@@ -62728,174 +62476,6 @@
       },
       "keys": [
         "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_c3fd0417_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (bld_adobe)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_7505851c",
-          "family": "building",
-          "part": "bld_adobe",
-          "query": "ov_84cbe77f-b99e-4b22-852b-336e128a4d06",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 92, Vertices 62, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          12.6,
-          5,
-          5.7
-        ],
-        "note": "Extents [12.6, 5, 5.7]m, rMax 6.915m"
-      },
-      "keys": [
-        "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_7505851c_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (bld_barn)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_725f9c8f",
-          "family": "building",
-          "part": "bld_barn",
-          "query": "ov_267b35f0-7eb6-42af-b15a-e03f9698b66b",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 180, Vertices 122, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          11.8,
-          5.5,
-          6.45
-        ],
-        "note": "Extents [11.8, 5.5, 6.45]m, rMax 6.823m"
-      },
-      "keys": [
-        "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_725f9c8f_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (bld_barn)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_b322f82c",
-          "family": "building",
-          "part": "bld_barn",
-          "query": "ov_910e1b06-a62f-474d-b156-f3845aa1fd57",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 76, Vertices 52, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          8.672,
-          6.578,
-          10.4
-        ],
-        "note": "Extents [8.672, 6.578, 10.4]m, rMax 6.771m"
-      },
-      "keys": [
-        "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_b322f82c_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "building catalog & partlib (bld_chalet)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_a52d3ee5",
-          "family": "building",
-          "part": "bld_chalet",
-          "query": "ov_35100e42-2d06-4d2f-b187-33aea876309b",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family building",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 180, Vertices 122, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          15.6,
-          9.45,
-          7.65
-        ],
-        "note": "Extents [15.6, 9.45, 7.65]m, rMax 11.757m"
-      },
-      "keys": [
-        "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_a52d3ee5_v6"
       ]
     },
     {
@@ -74272,6 +73852,594 @@
       },
       "keys": [
         "ship/hull_Virginia_class_submarine_ff4f41f4_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (balcony)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_22aa2c4c",
+          "family": "building",
+          "part": "balcony",
+          "query": "ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 516, Vertices 344, Similarity 78/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          19.8,
+          17.25,
+          10.59
+        ],
+        "note": "Extents [19.8, 17.25, 10.59]m, rMax 11.424m"
+      },
+      "keys": [
+        "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_22aa2c4c_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (bld_adobe)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_7505851c",
+          "family": "building",
+          "part": "bld_adobe",
+          "query": "ov_84cbe77f-b99e-4b22-852b-336e128a4d06",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 292, Vertices 194, Similarity 76/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          14.11,
+          7.45,
+          8.26
+        ],
+        "note": "Extents [14.11, 7.45, 8.26]m, rMax 8.568m"
+      },
+      "keys": [
+        "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_7505851c_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (bld_barn)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_725f9c8f",
+          "family": "building",
+          "part": "bld_barn",
+          "query": "ov_267b35f0-7eb6-42af-b15a-e03f9698b66b",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 380, Vertices 260, Similarity 76/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          15.05,
+          6.39,
+          6.7
+        ],
+        "note": "Extents [15.05, 6.39, 6.7]m, rMax 8.765m"
+      },
+      "keys": [
+        "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_725f9c8f_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (bld_barn)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_b322f82c",
+          "family": "building",
+          "part": "bld_barn",
+          "query": "ov_910e1b06-a62f-474d-b156-f3845aa1fd57",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 148, Vertices 100, Similarity 80/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          9.02,
+          5.75,
+          6.8
+        ],
+        "note": "Extents [9.02, 5.75, 6.8]m, rMax 5.648m"
+      },
+      "keys": [
+        "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_b322f82c_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (bld_chalet)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_a52d3ee5",
+          "family": "building",
+          "part": "bld_chalet",
+          "query": "ov_35100e42-2d06-4d2f-b187-33aea876309b",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 564, Vertices 378, Similarity 75/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          15.21,
+          9,
+          8.64
+        ],
+        "note": "Extents [15.21, 9, 8.64]m, rMax 8.909m"
+      },
+      "keys": [
+        "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_a52d3ee5_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_312598c2",
+          "family": "building",
+          "part": "mass",
+          "query": "1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 520, Vertices 352, Similarity 76/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          16.32,
+          8.6,
+          14.75
+        ],
+        "note": "Extents [16.32, 8.6, 14.75]m, rMax 11.711m"
+      },
+      "keys": [
+        "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_9077e646",
+          "family": "building",
+          "part": "mass",
+          "query": "160991898108355807.jpg!900x.water3",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/160991898108355807.jpg!900x.water3.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2052, Vertices 1368, Similarity 82/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          14.5,
+          23.12,
+          10.855
+        ],
+        "note": "Extents [14.5, 23.12, 10.855]m, rMax 9.133m"
+      },
+      "keys": [
+        "building/mass_160991898108355807.jpg!900x.water3_9077e646_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_7f9ba979",
+          "family": "building",
+          "part": "mass",
+          "query": "162562917953",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/162562917953.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 648, Vertices 432, Similarity 80/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          7,
+          14.6,
+          7.725
+        ],
+        "note": "Extents [7, 14.6, 7.725]m, rMax 5.372m"
+      },
+      "keys": [
+        "building/mass_162562917953_7f9ba979_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_812d2226",
+          "family": "building",
+          "part": "mass",
+          "query": "171860464927014009.jpg!900x.water3",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/171860464927014009.jpg!900x.water3.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 1632, Vertices 1088, Similarity 76/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          15,
+          23.38,
+          11.15
+        ],
+        "note": "Extents [15, 23.38, 11.15]m, rMax 9.39m"
+      },
+      "keys": [
+        "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_a1c88b78",
+          "family": "building",
+          "part": "mass",
+          "query": "173407398147386206.jpg!750x",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/173407398147386206.jpg!750x.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2340, Vertices 1560, Similarity 81/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          15.6,
+          25,
+          12.105
+        ],
+        "note": "Extents [15.6, 25, 12.105]m, rMax 9.967m"
+      },
+      "keys": [
+        "building/mass_173407398147386206.jpg!750x_a1c88b78_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_9aff9512",
+          "family": "building",
+          "part": "mass",
+          "query": "174893026464574001.jpg!900x.water3",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/174893026464574001.jpg!900x.water3.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 1800, Vertices 1200, Similarity 82/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          17,
+          21.32,
+          11.8
+        ],
+        "note": "Extents [17, 21.32, 11.8]m, rMax 10.347m"
+      },
+      "keys": [
+        "building/mass_174893026464574001.jpg!900x.water3_9aff9512_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_6667106c",
+          "family": "building",
+          "part": "mass",
+          "query": "175437636541282008.jpg!900x.water3",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/175437636541282008.jpg!900x.water3.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 1020, Vertices 680, Similarity 80/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          14.4,
+          26.87,
+          10.505
+        ],
+        "note": "Extents [14.4, 26.87, 10.505]m, rMax 9.003m"
+      },
+      "keys": [
+        "building/mass_175437636541282008.jpg!900x.water3_6667106c_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_8693d9fc",
+          "family": "building",
+          "part": "mass",
+          "query": "176784033021147409.jpg!900x.water3",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/176784033021147409.jpg!900x.water3.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 1392, Vertices 928, Similarity 80/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          14,
+          20.04,
+          10.905
+        ],
+        "note": "Extents [14, 20.04, 10.905]m, rMax 9.094m"
+      },
+      "keys": [
+        "building/mass_176784033021147409.jpg!900x.water3_8693d9fc_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_local",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "building catalog & partlib (mass)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_2ea21f02",
+          "family": "building",
+          "part": "mass",
+          "query": "178670843535945_P35065317",
+          "api": "gpt-5.6-luna_local",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "building/178670843535945_P35065317.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna local multimodal reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2040, Vertices 1360, Similarity 78/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          19,
+          33.05,
+          13.6
+        ],
+        "note": "Extents [19, 33.05, 13.6]m, rMax 11.683m"
+      },
+      "keys": [
+        "building/mass_178670843535945_P35065317_2ea21f02_v6"
       ]
     }
   ]

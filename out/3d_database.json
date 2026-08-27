@@ -1,15 +1,14 @@
 {
   "version": 6,
   "verStr": "v6",
-  "generated_at": "2026-08-26T05:59:46.265Z",
-  "total_objects": 725,
+  "generated_at": "2026-08-27T10:45:24.101Z",
+  "total_objects": 729,
   "families": [
     "building",
+    "vehicle",
     "landmark",
-    "rock",
-    "ship",
     "tree",
-    "vehicle"
+    "ship"
   ],
   "items": [
     {
@@ -66427,376 +66426,6 @@
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_2021070912244646524316_v6"
     },
     {
-      "id": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6",
-      "key": "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "Modern Suburban House",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
-      "bounds": {
-        "min": [
-          -7.5,
-          0,
-          -4.5
-        ],
-        "max": [
-          7.5,
-          7.75,
-          4.5
-        ],
-        "size": [
-          15,
-          7.75,
-          9
-        ],
-        "rMax": 8.746,
-        "triangles": 228,
-        "vertices": 154
-      },
-      "spec": {
-        "style": "Modern Suburban House"
-      },
-      "triangles": 228,
-      "outputDir": "out/3d_data/building/mass/building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6"
-    },
-    {
-      "id": "building_mass_160991898108355807.jpg_900x.water3_v6",
-      "key": "building/mass_160991898108355807.jpg!900x.water3_9077e646_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "modern_building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/160991898108355807.jpg!900x.water3.jpg",
-      "bounds": {
-        "min": [
-          -9.5,
-          0,
-          -5.1
-        ],
-        "max": [
-          7.1,
-          27.4,
-          5.3776
-        ],
-        "size": [
-          16.6,
-          27.4,
-          10.478
-        ],
-        "rMax": 10.782,
-        "triangles": 504,
-        "vertices": 325
-      },
-      "spec": {
-        "style": "modern_building"
-      },
-      "triangles": 504,
-      "outputDir": "out/3d_data/building/mass/building_mass_160991898108355807.jpg_900x.water3_v6"
-    },
-    {
-      "id": "building_mass_171860464927014009.jpg_900x.water3_v6",
-      "key": "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "modern_building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/171860464927014009.jpg!900x.water3.jpg",
-      "bounds": {
-        "min": [
-          -7.5,
-          0,
-          -13.5
-        ],
-        "max": [
-          15,
-          23.25,
-          3.95
-        ],
-        "size": [
-          22.5,
-          23.25,
-          17.45
-        ],
-        "rMax": 15.511,
-        "triangles": 284,
-        "vertices": 190
-      },
-      "spec": {
-        "style": "modern_building"
-      },
-      "triangles": 284,
-      "outputDir": "out/3d_data/building/mass/building_mass_171860464927014009.jpg_900x.water3_v6"
-    },
-    {
-      "id": "building_mass_173407398147386206.jpg_750x_v6",
-      "key": "building/mass_173407398147386206.jpg!750x_a1c88b78_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "Modern Architecture",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/173407398147386206.jpg!750x.jpg",
-      "bounds": {
-        "min": [
-          -7.2,
-          0,
-          -6.2
-        ],
-        "max": [
-          7.2,
-          32.8,
-          6.3
-        ],
-        "size": [
-          14.4,
-          32.8,
-          12.5
-        ],
-        "rMax": 9.567,
-        "triangles": 352,
-        "vertices": 234
-      },
-      "spec": {
-        "style": "Modern Architecture"
-      },
-      "triangles": 352,
-      "outputDir": "out/3d_data/building/mass/building_mass_173407398147386206.jpg_750x_v6"
-    },
-    {
-      "id": "building_mass_176784033021147409.jpg_900x.water3_v6",
-      "key": "building/mass_176784033021147409.jpg!900x.water3_8693d9fc_v6",
-      "family": "building",
-      "subpart": "mass",
-      "style": "modern_building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/176784033021147409.jpg!900x.water3.jpg",
-      "bounds": {
-        "min": [
-          -7,
-          0,
-          -5
-        ],
-        "max": [
-          7,
-          19.45,
-          5.825
-        ],
-        "size": [
-          14,
-          19.45,
-          10.825
-        ],
-        "rMax": 9.107,
-        "triangles": 348,
-        "vertices": 230
-      },
-      "spec": {
-        "style": "modern_building"
-      },
-      "triangles": 348,
-      "outputDir": "out/3d_data/building/mass/building_mass_176784033021147409.jpg_900x.water3_v6"
-    },
-    {
-      "id": "building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6",
-      "key": "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_22aa2c4c_v6",
-      "family": "building",
-      "subpart": "balcony",
-      "style": "Modern Brutalist Architecture",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
-      "bounds": {
-        "min": [
-          -5.1,
-          0,
-          -3
-        ],
-        "max": [
-          6.1,
-          11,
-          5.1
-        ],
-        "size": [
-          11.2,
-          11,
-          8.1
-        ],
-        "rMax": 7.951,
-        "triangles": 144,
-        "vertices": 98
-      },
-      "spec": {
-        "style": "Modern Brutalist Architecture"
-      },
-      "triangles": 144,
-      "outputDir": "out/3d_data/building/balcony/building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6"
-    },
-    {
-      "id": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6",
-      "key": "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_7505851c_v6",
-      "family": "building",
-      "subpart": "bld_adobe",
-      "style": "building/bld_adobe",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg",
-      "bounds": {
-        "min": [
-          -6.3,
-          0,
-          -2.85
-        ],
-        "max": [
-          6.3,
-          5,
-          2.85
-        ],
-        "size": [
-          12.6,
-          5,
-          5.7
-        ],
-        "rMax": 6.915,
-        "triangles": 92,
-        "vertices": 62
-      },
-      "spec": {
-        "style": "building/bld_adobe"
-      },
-      "triangles": 92,
-      "outputDir": "out/3d_data/building/bld_adobe/building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6"
-    },
-    {
-      "id": "building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6",
-      "key": "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_725f9c8f_v6",
-      "family": "building",
-      "subpart": "bld_barn",
-      "style": "building",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.jpg",
-      "bounds": {
-        "min": [
-          -6.1,
-          0,
-          -2.7
-        ],
-        "max": [
-          5.7,
-          5.5,
-          3.75
-        ],
-        "size": [
-          11.8,
-          5.5,
-          6.45
-        ],
-        "rMax": 6.823,
-        "triangles": 180,
-        "vertices": 122
-      },
-      "spec": {
-        "style": "building"
-      },
-      "triangles": 180,
-      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6"
-    },
-    {
-      "id": "building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6",
-      "key": "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_b322f82c_v6",
-      "family": "building",
-      "subpart": "bld_barn",
-      "style": "architectural",
-      "symmetryMode": "asymmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg",
-      "bounds": {
-        "min": [
-          -4.3359,
-          0,
-          -5.2
-        ],
-        "max": [
-          4.3359,
-          6.5781,
-          5.2
-        ],
-        "size": [
-          8.672,
-          6.578,
-          10.4
-        ],
-        "rMax": 6.771,
-        "triangles": 76,
-        "vertices": 52
-      },
-      "spec": {
-        "style": "architectural"
-      },
-      "triangles": 76,
-      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6"
-    },
-    {
-      "id": "building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6",
-      "key": "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_a52d3ee5_v6",
-      "family": "building",
-      "subpart": "bld_chalet",
-      "style": "Alpine Chalet Architecture",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg",
-      "bounds": {
-        "min": [
-          -4.6,
-          -0.25,
-          -3.5
-        ],
-        "max": [
-          11,
-          9.2,
-          4.15
-        ],
-        "size": [
-          15.6,
-          9.45,
-          7.65
-        ],
-        "rMax": 11.757,
-        "triangles": 180,
-        "vertices": 122
-      },
-      "spec": {
-        "style": "Alpine Chalet Architecture"
-      },
-      "triangles": 180,
-      "outputDir": "out/3d_data/building/bld_chalet/building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6"
-    },
-    {
       "id": "building_bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_v6",
       "key": "building/bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_d78a5af4_v6",
       "family": "building",
@@ -69758,6 +69387,524 @@
         ],
         "confidence": "exact"
       }
+    },
+    {
+      "id": "building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6",
+      "key": "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_22aa2c4c_v6",
+      "family": "building",
+      "subpart": "balcony",
+      "style": "white stepped institutional balcony mass",
+      "symmetryMode": "symmetric",
+      "similarityScore": 78,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
+      "bounds": {
+        "min": [
+          -9.9,
+          0,
+          -5.7
+        ],
+        "max": [
+          9.9,
+          17.25,
+          4.89
+        ],
+        "size": [
+          19.8,
+          17.25,
+          10.59
+        ],
+        "rMax": 11.424,
+        "triangles": 516,
+        "vertices": 344
+      },
+      "spec": {
+        "style": "white stepped institutional balcony mass"
+      },
+      "triangles": 516,
+      "outputDir": "out/3d_data/building/balcony/building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6"
+    },
+    {
+      "id": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6",
+      "key": "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_7505851c_v6",
+      "family": "building",
+      "subpart": "bld_adobe",
+      "style": "weathered adobe ranch house",
+      "symmetryMode": "symmetric",
+      "similarityScore": 76,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg",
+      "bounds": {
+        "min": [
+          -6.705,
+          0,
+          -3.95
+        ],
+        "max": [
+          7.405,
+          7.45,
+          4.31
+        ],
+        "size": [
+          14.11,
+          7.45,
+          8.26
+        ],
+        "rMax": 8.568,
+        "triangles": 292,
+        "vertices": 194
+      },
+      "spec": {
+        "style": "weathered adobe ranch house"
+      },
+      "triangles": 292,
+      "outputDir": "out/3d_data/building/bld_adobe/building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6"
+    },
+    {
+      "id": "building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6",
+      "key": "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_725f9c8f_v6",
+      "family": "building",
+      "subpart": "bld_barn",
+      "style": "red dual-gabled farm barn with annex",
+      "symmetryMode": "symmetric",
+      "similarityScore": 76,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.jpg",
+      "bounds": {
+        "min": [
+          -8.1,
+          0,
+          -3.35
+        ],
+        "max": [
+          6.95,
+          6.39,
+          3.35
+        ],
+        "size": [
+          15.05,
+          6.39,
+          6.7
+        ],
+        "rMax": 8.765,
+        "triangles": 380,
+        "vertices": 260
+      },
+      "spec": {
+        "style": "red dual-gabled farm barn with annex"
+      },
+      "triangles": 380,
+      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6"
+    },
+    {
+      "id": "building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6",
+      "key": "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_b322f82c_v6",
+      "family": "building",
+      "subpart": "bld_barn",
+      "style": "isolated red gable barn",
+      "symmetryMode": "symmetric",
+      "similarityScore": 80,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg",
+      "bounds": {
+        "min": [
+          -4.51,
+          0,
+          -3.4
+        ],
+        "max": [
+          4.51,
+          5.75,
+          3.4
+        ],
+        "size": [
+          9.02,
+          5.75,
+          6.8
+        ],
+        "rMax": 5.648,
+        "triangles": 148,
+        "vertices": 100
+      },
+      "spec": {
+        "style": "isolated red gable barn"
+      },
+      "triangles": 148,
+      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6"
+    },
+    {
+      "id": "building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6",
+      "key": "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_a52d3ee5_v6",
+      "family": "building",
+      "subpart": "bld_chalet",
+      "style": "alpine timber chalet with flower balcony",
+      "symmetryMode": "symmetric",
+      "similarityScore": 75,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg",
+      "bounds": {
+        "min": [
+          -7.605,
+          0,
+          -4
+        ],
+        "max": [
+          7.605,
+          9,
+          4.64
+        ],
+        "size": [
+          15.21,
+          9,
+          8.64
+        ],
+        "rMax": 8.909,
+        "triangles": 564,
+        "vertices": 378
+      },
+      "spec": {
+        "style": "alpine timber chalet with flower balcony"
+      },
+      "triangles": 564,
+      "outputDir": "out/3d_data/building/bld_chalet/building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6"
+    },
+    {
+      "id": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6",
+      "key": "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "suburban gabled family house",
+      "symmetryMode": "symmetric",
+      "similarityScore": 76,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
+      "bounds": {
+        "min": [
+          -8.16,
+          0,
+          -8.4
+        ],
+        "max": [
+          8.16,
+          8.6,
+          6.35
+        ],
+        "size": [
+          16.32,
+          8.6,
+          14.75
+        ],
+        "rMax": 11.711,
+        "triangles": 520,
+        "vertices": 352
+      },
+      "spec": {
+        "style": "suburban gabled family house"
+      },
+      "triangles": 520,
+      "outputDir": "out/3d_data/building/mass/building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6"
+    },
+    {
+      "id": "building_mass_160991898108355807.jpg_900x.water3_v6",
+      "key": "building/mass_160991898108355807.jpg!900x.water3_9077e646_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "asymmetric stepped urban apartment with deep balconies",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 82,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/160991898108355807.jpg!900x.water3.jpg",
+      "bounds": {
+        "min": [
+          -7.25,
+          0,
+          -5.3
+        ],
+        "max": [
+          7.25,
+          23.12,
+          5.555
+        ],
+        "size": [
+          14.5,
+          23.12,
+          10.855
+        ],
+        "rMax": 9.133,
+        "triangles": 2052,
+        "vertices": 1368
+      },
+      "spec": {
+        "style": "asymmetric stepped urban apartment with deep balconies"
+      },
+      "triangles": 2052,
+      "outputDir": "out/3d_data/building/mass/building_mass_160991898108355807.jpg_900x.water3_v6"
+    },
+    {
+      "id": "building_mass_162562917953_v6",
+      "key": "building/mass_162562917953_7f9ba979_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "narrow four-storey house with offset terraces and pergola",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 80,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/162562917953.jpg",
+      "bounds": {
+        "min": [
+          -3.5,
+          0,
+          -3.65
+        ],
+        "max": [
+          3.5,
+          14.6,
+          4.075
+        ],
+        "size": [
+          7,
+          14.6,
+          7.725
+        ],
+        "rMax": 5.372,
+        "triangles": 648,
+        "vertices": 432
+      },
+      "spec": {
+        "style": "narrow four-storey house with offset terraces and pergola"
+      },
+      "triangles": 648,
+      "outputDir": "out/3d_data/building/mass/building_mass_162562917953_v6"
+    },
+    {
+      "id": "building_mass_171860464927014009.jpg_900x.water3_v6",
+      "key": "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "wide apartment tower with full white frame and central balcony stack",
+      "symmetryMode": "symmetric",
+      "similarityScore": 76,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/171860464927014009.jpg!900x.water3.jpg",
+      "bounds": {
+        "min": [
+          -7.5,
+          0,
+          -5.5
+        ],
+        "max": [
+          7.5,
+          23.38,
+          5.65
+        ],
+        "size": [
+          15,
+          23.38,
+          11.15
+        ],
+        "rMax": 9.39,
+        "triangles": 1632,
+        "vertices": 1088
+      },
+      "spec": {
+        "style": "wide apartment tower with full white frame and central balcony stack"
+      },
+      "triangles": 1632,
+      "outputDir": "out/3d_data/building/mass/building_mass_171860464927014009.jpg_900x.water3_v6"
+    },
+    {
+      "id": "building_mass_173407398147386206.jpg_750x_v6",
+      "key": "building/mass_173407398147386206.jpg!750x_a1c88b78_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "broad L-shaped brown apartment with interlocking towers",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 81,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/173407398147386206.jpg!750x.jpg",
+      "bounds": {
+        "min": [
+          -7.8,
+          0,
+          -5.9
+        ],
+        "max": [
+          7.8,
+          25,
+          6.205
+        ],
+        "size": [
+          15.6,
+          25,
+          12.105
+        ],
+        "rMax": 9.967,
+        "triangles": 2340,
+        "vertices": 1560
+      },
+      "spec": {
+        "style": "broad L-shaped brown apartment with interlocking towers"
+      },
+      "triangles": 2340,
+      "outputDir": "out/3d_data/building/mass/building_mass_173407398147386206.jpg_750x_v6"
+    },
+    {
+      "id": "building_mass_174893026464574001.jpg_900x.water3_v6",
+      "key": "building/mass_174893026464574001.jpg!900x.water3_9aff9512_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "red white U-shaped apartment with recessed balcony court",
+      "symmetryMode": "symmetric",
+      "similarityScore": 82,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/174893026464574001.jpg!900x.water3.webp",
+      "bounds": {
+        "min": [
+          -8.5,
+          0,
+          -5.9
+        ],
+        "max": [
+          8.5,
+          21.32,
+          5.9
+        ],
+        "size": [
+          17,
+          21.32,
+          11.8
+        ],
+        "rMax": 10.347,
+        "triangles": 1800,
+        "vertices": 1200
+      },
+      "spec": {
+        "style": "red white U-shaped apartment with recessed balcony court"
+      },
+      "triangles": 1800,
+      "outputDir": "out/3d_data/building/mass/building_mass_174893026464574001.jpg_900x.water3_v6"
+    },
+    {
+      "id": "building_mass_175437636541282008.jpg_900x.water3_v6",
+      "key": "building/mass_175437636541282008.jpg!900x.water3_6667106c_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "slender dark tower with white columns, wood fins and pergola crown",
+      "symmetryMode": "symmetric",
+      "similarityScore": 80,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/175437636541282008.jpg!900x.water3.jpg",
+      "bounds": {
+        "min": [
+          -7.2,
+          0,
+          -5.1
+        ],
+        "max": [
+          7.2,
+          26.87,
+          5.405
+        ],
+        "size": [
+          14.4,
+          26.87,
+          10.505
+        ],
+        "rMax": 9.003,
+        "triangles": 1020,
+        "vertices": 680
+      },
+      "spec": {
+        "style": "slender dark tower with white columns, wood fins and pergola crown"
+      },
+      "triangles": 1020,
+      "outputDir": "out/3d_data/building/mass/building_mass_175437636541282008.jpg_900x.water3_v6"
+    },
+    {
+      "id": "building_mass_176784033021147409.jpg_900x.water3_v6",
+      "key": "building/mass_176784033021147409.jpg!900x.water3_8693d9fc_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "split white apartment wings with central recessed slot",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 80,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/176784033021147409.jpg!900x.water3.jpg",
+      "bounds": {
+        "min": [
+          -7,
+          0,
+          -5.1
+        ],
+        "max": [
+          7,
+          20.04,
+          5.805
+        ],
+        "size": [
+          14,
+          20.04,
+          10.905
+        ],
+        "rMax": 9.094,
+        "triangles": 1392,
+        "vertices": 928
+      },
+      "spec": {
+        "style": "split white apartment wings with central recessed slot"
+      },
+      "triangles": 1392,
+      "outputDir": "out/3d_data/building/mass/building_mass_176784033021147409.jpg_900x.water3_v6"
+    },
+    {
+      "id": "building_mass_178670843535945_P35065317_v6",
+      "key": "building/mass_178670843535945_P35065317_2ea21f02_v6",
+      "family": "building",
+      "subpart": "mass",
+      "style": "paired residential towers with unequal heights and dense balconies",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 78,
+      "version": 6,
+      "verStr": "v6",
+      "image": "building/178670843535945_P35065317.jpg",
+      "bounds": {
+        "min": [
+          -9.5,
+          0,
+          -6.8
+        ],
+        "max": [
+          9.5,
+          33.05,
+          6.8
+        ],
+        "size": [
+          19,
+          33.05,
+          13.6
+        ],
+        "rMax": 11.683,
+        "triangles": 2040,
+        "vertices": 1360
+      },
+      "spec": {
+        "style": "paired residential towers with unequal heights and dense balconies"
+      },
+      "triangles": 2040,
+      "outputDir": "out/3d_data/building/mass/building_mass_178670843535945_P35065317_v6"
     }
   ]
 }

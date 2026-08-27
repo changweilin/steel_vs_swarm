@@ -3,38 +3,163 @@
   "key": "building/mass_176784033021147409.jpg!900x.water3_8693d9fc_v6",
   "family": "building",
   "subpart": "mass",
-  "style": "modern_building",
+  "style": "split white apartment wings with central recessed slot",
   "symmetryMode": "asymmetric",
-  "similarityScore": 92,
-  "similarityReview": "Successfully reconstructed the complex modern apartment building with stilt foundation, multi-tier vertical facade sections, recessed balconies, and wood-slat accent panels. The colors and proportion match the reference rendering closely.",
+  "similarityScore": 80,
+  "similarityReview": "左右分翼、中央凹槽、懸挑陽台與不同高度屋框成立。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/176784033021147409.jpg!900x.water3.jpg",
-  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\176784033021147409.jpg!900x.water3~0.png",
-  "created_at": "2026-08-20T17:21:23.582Z",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\176784033021147409.jpg!900x.water3.jpg",
+  "yolo26": {
+    "targetId": "176784033021147409.jpg!900x.water3~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      900,
+      675
+    ],
+    "width": 900,
+    "height": 675,
+    "aspectRatio": 1.3333,
+    "targetFile": "out/targets/building/mass/176784033021147409.jpg!900x.water3~0.png",
+    "maskFile": "out/yolo_masks/building/mass/176784033021147409.jpg!900x.water3~0.png",
+    "depth": {
+      "minM": 7.08491,
+      "maxM": 40.12445,
+      "meanM": 24.07413,
+      "p05M": 11.14272,
+      "p25M": 12.99857,
+      "medianM": 15.64717,
+      "p75M": 36.9037,
+      "p95M": 37.76122
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 37.79064
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 37.42411
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 36.90213
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 36.82758
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 36.6644
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 15.34363
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 14.6641
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 14.12114
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 13.71142
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 13.45847
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 13.28078
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 13.14237
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 12.9255
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 12.79614
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 13.06331
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 10.40534
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_mass_176784033021147409.jpg_900x.water3_v6.png",
   "bounds": {
     "min": [
       -7,
       0,
-      -5
+      -5.1
     ],
     "max": [
       7,
-      19.45,
-      5.825
+      20.04,
+      5.805
     ],
     "size": [
       14,
-      19.45,
-      10.825
+      20.04,
+      10.905
     ],
-    "rMax": 9.107,
-    "triangles": 348,
-    "vertices": 230
+    "rMax": 9.094,
+    "triangles": 1392,
+    "vertices": 928
   },
-  "spec": {
-    "style": "modern_building"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "左右翼採不同高度與前後偏移，中間凹槽、架空柱列與雙屋頂框補全。",
+  "created_at": "2026-08-27T10:45:23.956Z"
 }

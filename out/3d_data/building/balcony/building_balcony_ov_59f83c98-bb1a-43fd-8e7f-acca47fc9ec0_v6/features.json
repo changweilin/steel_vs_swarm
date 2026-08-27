@@ -1,35 +1,203 @@
 {
   "id": "building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0",
   "sourceImage": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0",
-  "style": "Modern Brutalist Architecture",
-  "symmetryMode": "asymmetric",
+  "style": "white stepped institutional balcony mass",
+  "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
-    "facadeHex": 15658734,
-    "baseHex": 13421772,
-    "accentHex": 11184810,
-    "darkHex": 3355443,
-    "brightHex": 16777215,
-    "glassHex": 2241364
+    "roofHex": 3359061,
+    "facadeHex": 15199730,
+    "baseHex": 6713477,
+    "accentHex": 10119747,
+    "darkHex": 1515571,
+    "brightHex": 16317180,
+    "glassHex": 1454671
   },
-  "totalParts": 13,
+  "totalParts": 43,
   "partNames": [
-    "main_core_block",
+    "ground_podium",
+    "main_core",
     "upper_tower",
-    "tier1_front_base",
-    "tier1_front_window",
-    "tier2_right_block",
-    "tier2_right_window",
-    "tier3_top_left_wing",
-    "tier3_top_left_window",
-    "tier3_top_right_wing",
-    "tier3_top_right_window",
-    "cantilever_overhang_front",
-    "cantilever_overhang_right",
-    "cantilever_overhang_topleft"
+    "tier_1_slab",
+    "tier_1_window_band",
+    "tier_2_slab",
+    "tier_2_window_band",
+    "tier_3_slab",
+    "tier_3_window_band",
+    "roof_cap",
+    "roof_plant_tower",
+    "side_stack_l",
+    "side_window_-1_0",
+    "side_window_-1_1",
+    "side_window_-1_2",
+    "side_stack_r",
+    "side_window_1_0",
+    "side_window_1_1",
+    "side_window_1_2",
+    "left_low_wing",
+    "right_mid_wing",
+    "rear_high_wing",
+    "central_upper_wing",
+    "long_fascia_front_0",
+    "long_fascia_rear_0",
+    "long_window_front_0",
+    "long_window_back_0",
+    "long_fascia_front_1",
+    "long_fascia_rear_1",
+    "long_window_front_1",
+    "long_window_back_1",
+    "long_fascia_front_2",
+    "long_fascia_rear_2",
+    "long_window_front_2",
+    "long_window_back_2",
+    "long_fascia_front_3",
+    "long_fascia_rear_3",
+    "long_window_front_3",
+    "long_window_back_3",
+    "long_fascia_front_4",
+    "long_fascia_rear_4",
+    "long_window_front_4",
+    "long_window_back_4"
   ],
   "polyhedralPrimitivesUsed": [
-    "box",
-    "wedge"
-  ]
+    "box"
+  ],
+  "schemaVersion": 2,
+  "yolo26": {
+    "targetId": "ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1024,
+      684
+    ],
+    "width": 1024,
+    "height": 684,
+    "aspectRatio": 1.4971,
+    "targetFile": "out/targets/building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0~0.png",
+    "maskFile": "out/yolo_masks/building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0~0.png",
+    "depth": {
+      "minM": 4.10694,
+      "maxM": 19.3408,
+      "meanM": 11.73619,
+      "p05M": 4.57972,
+      "p25M": 5.82461,
+      "medianM": 12.78774,
+      "p75M": 16.98854,
+      "p95M": 17.89504
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.21959
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.71228
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.61748
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.37565
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 16.95126
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 15.84901
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 13.91248
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 13.7838
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 13.14975
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 12.6684
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 7.50593
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 6.41002
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 5.31657
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 5.17206
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 5.13994
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 4.93177
+      }
+    ]
+  },
+  "evidence": {
+    "featureFile": "out/yolo_features/building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.json",
+    "maskFile": "out/yolo_masks/building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0~0.png",
+    "depthFile": "out/yolo_depth/building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.npy"
+  },
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 78,
+    "critique": "寬幅退台、多翼量體與長窗帶已建立；三視圖均為封閉實體。",
+    "verdict": "pass",
+    "corrections": [],
+    "reviewer": "independent_parent_multimodal"
+  },
+  "reconstructionNote": "補齊玻璃窗帶、背面與左右層疊陽台，避免物件分離。"
 }

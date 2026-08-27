@@ -1,29 +1,174 @@
 {
   "id": "building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57",
   "sourceImage": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57",
-  "style": "architectural",
-  "symmetryMode": "asymmetric",
+  "style": "isolated red gable barn",
+  "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 11184810,
-    "facadeHex": 11801696,
-    "baseHex": 6579304,
-    "accentHex": 14540253,
-    "darkHex": 2105376,
-    "brightHex": 15790320,
-    "glassHex": 33023
+    "roofHex": 3424340,
+    "facadeHex": 10366510,
+    "baseHex": 9138002,
+    "accentHex": 15984591,
+    "darkHex": 2826272,
+    "brightHex": 16777215,
+    "glassHex": 1651787
   },
-  "totalParts": 7,
+  "totalParts": 13,
   "partNames": [
-    "barn_base_box",
-    "side_wall_white",
-    "roof_left_wedge",
-    "roof_right_wedge",
-    "loft_window",
-    "loft_window_frame",
-    "facade_trim_horizontal"
+    "barn_base",
+    "white_side_wall",
+    "white_side_wall_mirror",
+    "main_roof_left",
+    "main_roof_right",
+    "gable_loft_front",
+    "gable_loft_back",
+    "barn_door_front",
+    "barn_door_back",
+    "side_window_l_front",
+    "side_window_l_back",
+    "side_window_r_front",
+    "side_window_r_back"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
     "wedge"
-  ]
+  ],
+  "schemaVersion": 2,
+  "yolo26": {
+    "targetId": "ov_910e1b06-a62f-474d-b156-f3845aa1fd57~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1024,
+      768
+    ],
+    "width": 1024,
+    "height": 768,
+    "aspectRatio": 1.3333,
+    "targetFile": "out/targets/building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57~0.png",
+    "maskFile": "out/yolo_masks/building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57~0.png",
+    "depth": {
+      "minM": 2.38703,
+      "maxM": 31.71378,
+      "meanM": 17.19816,
+      "p05M": 2.7946,
+      "p25M": 4.43672,
+      "medianM": 12.80396,
+      "p75M": 29.00128,
+      "p95M": 29.89115
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.0789
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.018
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.01316
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.0912
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.00124
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 28.85879
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 28.70303
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 28.59023
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 28.27521
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 11.54307
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 6.34023
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 4.46028
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 3.66991
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 3.24286
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 3.03503
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 2.89528
+      }
+    ]
+  },
+  "evidence": {
+    "featureFile": "out/yolo_features/building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.json",
+    "maskFile": "out/yolo_masks/building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57~0.png",
+    "depthFile": "out/yolo_depth/building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.npy"
+  },
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 80,
+    "critique": "標準山牆、白側牆、閣樓窗與完整背面符合來源。",
+    "verdict": "pass",
+    "corrections": [],
+    "reviewer": "independent_parent_multimodal"
+  },
+  "reconstructionNote": "雙面山牆、門、閣樓窗與側窗完整化，屋簷改為成對斜面。"
 }

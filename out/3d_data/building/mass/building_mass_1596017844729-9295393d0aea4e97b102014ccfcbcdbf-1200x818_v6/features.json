@@ -1,42 +1,207 @@
 {
   "id": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818",
   "sourceImage": "building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818",
-  "style": "Modern Suburban House",
-  "symmetryMode": "asymmetric",
+  "style": "suburban gabled family house",
+  "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 2697779,
-    "facadeHex": 11054235,
-    "baseHex": 7434609,
-    "accentHex": 4473924,
-    "darkHex": 1973790,
-    "brightHex": 16773055,
-    "glassHex": 3236750
+    "roofHex": 3359061,
+    "facadeHex": 15199730,
+    "baseHex": 6713477,
+    "accentHex": 10119747,
+    "darkHex": 1515571,
+    "brightHex": 16317180,
+    "glassHex": 1454671
   },
-  "totalParts": 20,
+  "totalParts": 46,
   "partNames": [
-    "main_body",
-    "stone_base_left",
-    "stone_base_right",
+    "stone_foundation",
+    "lower_house_mass",
+    "second_floor_mass",
+    "garage_block",
+    "right_main_gable_roof_left",
+    "right_main_gable_roof_right",
+    "left_garage_roof_left",
+    "left_garage_roof_right",
+    "front_dormer_mass_0",
+    "front_dormer_roof_0_left",
+    "front_dormer_roof_0_right",
+    "front_dormer_window_0_glass",
+    "front_dormer_window_0_side_l",
+    "front_dormer_window_0_side_r",
+    "front_dormer_window_0_head",
+    "front_dormer_mass_1",
+    "front_dormer_roof_1_left",
+    "front_dormer_roof_1_right",
+    "front_dormer_window_1_glass",
+    "front_dormer_window_1_side_l",
+    "front_dormer_window_1_side_r",
+    "front_dormer_window_1_head",
     "garage_door_left",
     "garage_door_right",
-    "front_door",
-    "front_door_glass",
-    "right_window",
-    "porch_pillar_left",
-    "porch_pillar_right",
-    "main_roof",
-    "front_gable_dormer",
-    "dormer_facade",
-    "dormer_window_left",
-    "dormer_window_center",
-    "dormer_window_right",
-    "left_side_roof_extension",
-    "chimney",
-    "porch_light_left",
-    "porch_light_right"
+    "garage_header",
+    "entry_canopy",
+    "front_entry_door",
+    "front_lower_window_-0.3_glass",
+    "front_lower_window_-0.3_side_l",
+    "front_lower_window_-0.3_side_r",
+    "front_lower_window_-0.3_head",
+    "front_lower_window_2.75_glass",
+    "front_lower_window_2.75_side_l",
+    "front_lower_window_2.75_side_r",
+    "front_lower_window_2.75_head",
+    "upper_front_window_-3.5",
+    "upper_front_window_0.2",
+    "upper_front_window_3.6",
+    "rear_side_window_-1",
+    "upper_side_window_-1",
+    "rear_side_window_1",
+    "upper_side_window_1",
+    "right_gable_trim",
+    "left_gable_trim",
+    "garage_side_return",
+    "entry_side_return"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
     "wedge"
-  ]
+  ],
+  "schemaVersion": 2,
+  "yolo26": {
+    "targetId": "1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1200,
+      818
+    ],
+    "width": 1200,
+    "height": 818,
+    "aspectRatio": 1.467,
+    "targetFile": "out/targets/building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0.png",
+    "maskFile": "out/yolo_masks/building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0.png",
+    "depth": {
+      "minM": 5.58281,
+      "maxM": 32.55164,
+      "meanM": 18.6749,
+      "p05M": 6.39557,
+      "p25M": 10.7474,
+      "medianM": 14.97196,
+      "p75M": 30.7085,
+      "p95M": 31.46143
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 31.01903
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 31.41866
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 31.21899
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 31.01573
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 30.55981
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 20.74413
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 15.62977
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 14.92925
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 14.72729
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 14.59574
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 14.24983
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 13.36925
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 10.17303
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 8.17585
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 7.01002
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0004,
+        "depthMedianM": 6.1934
+      }
+    ]
+  },
+  "evidence": {
+    "featureFile": "out/yolo_features/building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.json",
+    "maskFile": "out/yolo_masks/building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818~0.png",
+    "depthFile": "out/yolo_depth/building/mass/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.npy"
+  },
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 76,
+    "critique": "二樓、雙 dormer、多屋脊與橫向車庫已補齊。",
+    "verdict": "pass",
+    "corrections": [],
+    "reviewer": "independent_parent_multimodal"
+  },
+  "reconstructionNote": "修正住宅屋頂與車庫、入口玻璃，補齊左右及後立面。"
 }

@@ -3,38 +3,163 @@
   "key": "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6",
   "family": "building",
   "subpart": "mass",
-  "style": "modern_building",
-  "symmetryMode": "asymmetric",
-  "similarityScore": 92,
-  "similarityReview": "The 3D geometric model accurately captures the main high-rise residential building with its characteristic dark grey tile facade, prominent white frame features, stacked balconies with glass railings, wood-toned vertical accents, and the top multi-layered roof structure. Proportions and alignment follow real-world architectural dimensions.",
+  "style": "wide apartment tower with full white frame and central balcony stack",
+  "symmetryMode": "symmetric",
+  "similarityScore": 76,
+  "similarityReview": "全高外框、中央 recessed balcony stack 與兩側 bay 已建立。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/171860464927014009.jpg!900x.water3.jpg",
-  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\171860464927014009.jpg!900x.water3~0.png",
-  "created_at": "2026-08-20T17:20:25.583Z",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\171860464927014009.jpg!900x.water3.jpg",
+  "yolo26": {
+    "targetId": "171860464927014009.jpg!900x.water3~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      900,
+      675
+    ],
+    "width": 900,
+    "height": 675,
+    "aspectRatio": 1.3333,
+    "targetFile": "out/targets/building/mass/171860464927014009.jpg!900x.water3~0.png",
+    "maskFile": "out/yolo_masks/building/mass/171860464927014009.jpg!900x.water3~0.png",
+    "depth": {
+      "minM": 12.8015,
+      "maxM": 52.04155,
+      "meanM": 36.14058,
+      "p05M": 16.33582,
+      "p25M": 23.14785,
+      "medianM": 38.61767,
+      "p75M": 49.18997,
+      "p95M": 50.04276
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.06066
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.15975
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.14561
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.14412
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.15926
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.14779
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.18211
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.07787
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 49.00323
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 48.6786
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 31.89874
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 28.7916
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 27.70638
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 25.16244
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 19.81465
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 15.24751
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_mass_171860464927014009.jpg_900x.water3_v6.png",
   "bounds": {
     "min": [
       -7.5,
       0,
-      -13.5
+      -5.5
     ],
     "max": [
-      15,
-      23.25,
-      3.95
+      7.5,
+      23.38,
+      5.65
     ],
     "size": [
-      22.5,
-      23.25,
-      17.45
+      15,
+      23.38,
+      11.15
     ],
-    "rMax": 15.511,
-    "triangles": 284,
-    "vertices": 190
+    "rMax": 9.39,
+    "triangles": 1632,
+    "vertices": 1088
   },
-  "spec": {
-    "style": "modern_building"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "白色全高框、中央深陽台井、兩側深色 bay 與木色縱帶均獨立建模。",
+  "created_at": "2026-08-27T10:45:23.433Z"
 }

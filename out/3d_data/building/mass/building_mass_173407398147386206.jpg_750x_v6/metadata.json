@@ -3,38 +3,163 @@
   "key": "building/mass_173407398147386206.jpg!750x_a1c88b78_v6",
   "family": "building",
   "subpart": "mass",
-  "style": "Modern Architecture",
-  "symmetryMode": "symmetric",
-  "similarityScore": 92,
-  "similarityReview": "The 3D model accurately captures the brown and white modernist multi-story residential building. The main structural massing, distinctive white frame columns at the corners, recessed balconies with structured window patterns, and base-level glass storefronts are represented precisely using proper proportional primitives. The roof cornice and fenestrations comply strictly with architectural guidelines.",
+  "style": "broad L-shaped brown apartment with interlocking towers",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 81,
+  "similarityReview": "多厚塔交錯、垂直角框與屋頂窗帶符合棕色住宅塔。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/173407398147386206.jpg!750x.jpg",
-  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\main\\173407398147386206.jpg!750x~0.png",
-  "created_at": "2026-08-20T17:20:36.390Z",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\173407398147386206.jpg!750x.jpg",
+  "yolo26": {
+    "targetId": "173407398147386206.jpg!750x~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      750,
+      563
+    ],
+    "width": 750,
+    "height": 563,
+    "aspectRatio": 1.3321,
+    "targetFile": "out/targets/building/mass/173407398147386206.jpg!750x~0.png",
+    "maskFile": "out/yolo_masks/building/mass/173407398147386206.jpg!750x~0.png",
+    "depth": {
+      "minM": 11.35794,
+      "maxM": 54.89215,
+      "meanM": 40.6188,
+      "p05M": 21.51381,
+      "p25M": 28.69191,
+      "medianM": 46.63055,
+      "p75M": 50.81975,
+      "p95M": 53.65449
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 48.19049
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 49.85629
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 50.21701
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 49.667
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 49.52058
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 49.91133
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 50.09876
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 49.73009
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 49.04597
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 48.45835
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 47.88223
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 47.18774
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 34.90402
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 29.03147
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 26.13899
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0007,
+        "depthMedianM": 20.19807
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_mass_173407398147386206.jpg_750x_v6.png",
   "bounds": {
     "min": [
-      -7.2,
+      -7.8,
       0,
-      -6.2
+      -5.9
     ],
     "max": [
-      7.2,
-      32.8,
-      6.3
+      7.8,
+      25,
+      6.205
     ],
     "size": [
-      14.4,
-      32.8,
-      12.5
+      15.6,
+      25,
+      12.105
     ],
-    "rMax": 9.567,
-    "triangles": 352,
-    "vertices": 234
+    "rMax": 9.967,
+    "triangles": 2340,
+    "vertices": 1560
   },
-  "spec": {
-    "style": "Modern Architecture"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "左右厚塔前後錯位並以低連接量體相交，補白色角框與屋頂窗帶。",
+  "created_at": "2026-08-27T10:45:23.568Z"
 }
