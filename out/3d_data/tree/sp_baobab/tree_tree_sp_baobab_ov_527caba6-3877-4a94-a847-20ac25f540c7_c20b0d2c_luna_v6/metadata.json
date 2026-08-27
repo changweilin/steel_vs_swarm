@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_sp_baobab_ov_527caba6-3877-4a94-a847-20ac25f540c7_c20b0d2c_luna_v6",
+  "key": "tree/sp_baobab_ov_527caba6-3877-4a94-a847-20ac25f540c7_c20b0d2c_luna_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "baobab bottle trunk sparse umbrella crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 84,
+  "similarityReview": "依baobab樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/sp_baobab/ov_527caba6-3877-4a94-a847-20ac25f540c7.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\sp_baobab\\ov_527caba6-3877-4a94-a847-20ac25f540c7.png",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/sp_baobab/ov_527caba6-3877-4a94-a847-20ac25f540c7.json",
+    "target": {
+      "targetId": "ov_527caba6-3877-4a94-a847-20ac25f540c7~0",
+      "bbox": [
+        0,
+        0,
+        1300,
+        929
+      ],
+      "width": 1300,
+      "height": 929,
+      "aspectRatio": 1.399,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.126,
+          "centerOffset": -0.104
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.537,
+          "centerOffset": -0.028
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.595,
+          "centerOffset": -0.015
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.688,
+          "centerOffset": -0.019
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.771,
+          "centerOffset": -0.018
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.82,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.856,
+          "centerOffset": 0.003
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.879,
+          "centerOffset": -0.019
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.888,
+          "centerOffset": -0.014
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.872,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.884,
+          "centerOffset": 0.006
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.881,
+          "centerOffset": 0.012
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.707,
+          "centerOffset": -0.051
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.402,
+          "centerOffset": -0.151
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.478,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.373,
+          "centerOffset": -0.004
+        }
+      ],
+      "targetFile": "tree\\sp_baobab\\ov_527caba6-3877-4a94-a847-20ac25f540c7~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_sp_baobab_ov_527caba6-3877-4a94-a847-20ac25f540c7_c20b0d2c_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.5653,
+      0,
+      -3.6047
+    ],
+    "max": [
+      4.2973,
+      6.331,
+      3.6486
+    ],
+    "size": [
+      7.863,
+      6.331,
+      7.253
+    ],
+    "rMax": 5.637,
+    "triangles": 1408,
+    "vertices": 846
+  },
+  "reconstructionNote": "猴麵包樹特徵：瓶狀粗樹幹、低密度粗枝、枝端小傘冠，保留樹冠間空隙。",
+  "species": "baobab",
+  "created_at": "2026-08-27T14:39:21.726Z",
+  "humanVerdictPreserved": true
+}

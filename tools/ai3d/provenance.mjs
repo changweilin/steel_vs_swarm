@@ -81,6 +81,13 @@ export const METHODS = {
     short: 'Luna v6',
     doc: 'GPT-5.6 Luna 在工作樹內讀取 YOLO26 schema-v2 裁圖、遮罩與 metric-depth 證據，逐目標重建宣告式多面體；固定三視圖由獨立 reviewer 複核，不呼叫外部影像 API。',
   },
+  'gpt-5.6-luna_visual_direct': {
+    key: 'gpt-5.6-luna_visual_direct',
+    label: 'GPT-5.6 Luna 直接視覺 → 多面體零件列(v6)',
+    kind: 'parts',
+    short: 'Luna 直視 v6',
+    doc: '使用者明確授權的證據例外：YOLO26 schema-v2 不完整時直接讀來源圖重建；必須記錄 evidenceOverride 並在零件台重新人眼覆核，未判 ok 前不進 runtime。',
+  },
   procedural: {
     key: 'procedural',
     label: '純程序生成(未經 AI)',

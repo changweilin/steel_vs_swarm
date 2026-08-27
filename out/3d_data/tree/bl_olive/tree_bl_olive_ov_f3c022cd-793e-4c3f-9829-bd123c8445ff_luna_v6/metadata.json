@@ -1,0 +1,149 @@
+{
+  "id": "tree_bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_luna_v6",
+  "key": "tree/bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_0cef28df_luna_v6",
+  "family": "tree",
+  "subpart": "bl_olive",
+  "style": "ancient twisted multi-trunk olive with sparse silver canopy",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 84,
+  "similarityReview": "多幹低位扭結、左右不等高主枝與兩個枯梢清楚；二十個縮小扁長銀灰簇保留可讀空隙，未連成圓頂。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
+  "priorHumanVerdict": "archive",
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree\\bl_olive\\ov_f3c022cd-793e-4c3f-9829-bd123c8445ff.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\bl_olive\\ov_f3c022cd-793e-4c3f-9829-bd123c8445ff.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/bl_olive/ov_f3c022cd-793e-4c3f-9829-bd123c8445ff.json",
+    "target": {
+      "targetId": "ov_f3c022cd-793e-4c3f-9829-bd123c8445ff~0",
+      "bbox": [
+        0,
+        0,
+        826,
+        1024
+      ],
+      "width": 826,
+      "height": 1024,
+      "aspectRatio": 0.807,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.937,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.937,
+          "centerOffset": -0.006
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.937,
+          "centerOffset": -0.006
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.938,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.938,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.939,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.939,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.939,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.938,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.941,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.941,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.939,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.939,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.941,
+          "centerOffset": -0.003
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.943,
+          "centerOffset": -0.003
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.942,
+          "centerOffset": -0.002
+        }
+      ],
+      "targetFile": "tree\\bl_olive\\ov_f3c022cd-793e-4c3f-9829-bd123c8445ff~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "reason": "YOLO26 schema-v2 證據缺失，依使用者指示直接以來源圖進行 LLM 視覺重建。"
+  },
+  "preview": "out/review_previews/tree_bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_luna_v6.png",
+  "bounds": {
+    "min": [
+      -4.3806,
+      0,
+      -1.4304
+    ],
+    "max": [
+      4.1377,
+      8.4236,
+      1.4102
+    ],
+    "size": [
+      8.518,
+      8.424,
+      2.841
+    ],
+    "rMax": 4.608,
+    "triangles": 3700,
+    "vertices": 2262
+  },
+  "reconstructionNote": "橄欖：多幹扭曲分叉、冠層疏鬆銀灰且左右不規則；每個主冠由相鄰枝端承托。",
+  "created_at": "2026-08-27T12:37:29.157Z"
+}

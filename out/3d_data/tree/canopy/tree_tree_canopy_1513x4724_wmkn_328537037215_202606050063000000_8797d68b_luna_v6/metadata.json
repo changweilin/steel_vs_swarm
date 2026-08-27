@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_canopy_1513x4724_wmkn_328537037215_202606050063000000_8797d68b_luna_v6",
+  "key": "tree/canopy_1513x4724_wmkn_328537037215_202606050063000000_8797d68b_luna_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "broadleaf open radial crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 80,
+  "similarityReview": "依broadleaf樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/1513x4724_wmkn_328537037215_202606050063000000.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\1513x4724_wmkn_328537037215_202606050063000000.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/1513x4724_wmkn_328537037215_202606050063000000.json",
+    "target": {
+      "targetId": "1513x4724_wmkn_328537037215_202606050063000000~0",
+      "bbox": [
+        0,
+        0,
+        800,
+        2498
+      ],
+      "width": 800,
+      "height": 2498,
+      "aspectRatio": 0.32,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.14,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.487,
+          "centerOffset": 0.046
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.704,
+          "centerOffset": 0.147
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.943,
+          "centerOffset": 0.028
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.901,
+          "centerOffset": -0.049
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.896,
+          "centerOffset": -0.052
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.939,
+          "centerOffset": -0.031
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        }
+      ],
+      "targetFile": "tree\\main\\1513x4724_wmkn_328537037215_202606050063000000~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_canopy_1513x4724_wmkn_328537037215_202606050063000000_8797d68b_luna_v6.png",
+  "bounds": {
+    "min": [
+      -2.9905,
+      0,
+      -4.0655
+    ],
+    "max": [
+      3.5823,
+      7.2778,
+      3.5056
+    ],
+    "size": [
+      6.573,
+      7.278,
+      7.571
+    ],
+    "rMax": 5.047,
+    "triangles": 1968,
+    "vertices": 1191
+  },
+  "reconstructionNote": "闊葉樹特徵：中心樹幹向外分叉，枝端承托不等高葉冠簇。",
+  "species": "broadleaf",
+  "created_at": "2026-08-27T14:39:23.732Z",
+  "humanVerdictPreserved": true
+}

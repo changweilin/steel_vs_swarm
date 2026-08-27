@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_canopy_boab-tree-header-image-blog_73c93dba_luna_v6",
+  "key": "tree/canopy_boab-tree-header-image-blog_73c93dba_luna_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "baobab bottle trunk sparse umbrella crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 84,
+  "similarityReview": "依baobab樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/boab-tree-header-image-blog.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\boab-tree-header-image-blog.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/boab-tree-header-image-blog.json",
+    "target": {
+      "targetId": "boab-tree-header-image-blog~0",
+      "bbox": [
+        0,
+        0,
+        680,
+        406
+      ],
+      "width": 680,
+      "height": 406,
+      "aspectRatio": 1.675,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.313,
+          "centerOffset": 0.201
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.379,
+          "centerOffset": 0.232
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.426,
+          "centerOffset": 0.207
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.537,
+          "centerOffset": 0.174
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.596,
+          "centerOffset": 0.152
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.613,
+          "centerOffset": 0.129
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.588,
+          "centerOffset": 0.124
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.613,
+          "centerOffset": 0.14
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.641,
+          "centerOffset": 0.15
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.934,
+          "centerOffset": 0.018
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.981,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        }
+      ],
+      "targetFile": "tree\\main\\boab-tree-header-image-blog~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_canopy_boab-tree-header-image-blog_73c93dba_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.567,
+      0,
+      -3.5009
+    ],
+    "max": [
+      4.2814,
+      6.1852,
+      3.7971
+    ],
+    "size": [
+      7.848,
+      6.185,
+      7.298
+    ],
+    "rMax": 5.723,
+    "triangles": 1408,
+    "vertices": 846
+  },
+  "reconstructionNote": "猴麵包樹特徵：瓶狀粗樹幹、低密度粗枝、枝端小傘冠，保留樹冠間空隙。",
+  "species": "baobab",
+  "created_at": "2026-08-27T14:39:26.592Z",
+  "humanVerdictPreserved": true
+}

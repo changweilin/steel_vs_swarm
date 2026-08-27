@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c_0_9025755e_luna_v6",
+  "key": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+  "family": "tree",
+  "subpart": "sp_acacia",
+  "style": "acacia umbrella crown radial branches",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 82,
+  "similarityReview": "依acacia樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/sp_acacia/ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\sp_acacia\\ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/sp_acacia/ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c.json",
+    "target": {
+      "targetId": "ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0",
+      "bbox": [
+        0,
+        2173,
+        5376,
+        3024
+      ],
+      "width": 5376,
+      "height": 851,
+      "aspectRatio": 6.317,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.998,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 1,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.997,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 5,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 6,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 1,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\sp_acacia\\ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c_0_9025755e_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.3918,
+      0,
+      -3.8286
+    ],
+    "max": [
+      2.9395,
+      7.5837,
+      3.3166
+    ],
+    "size": [
+      6.331,
+      7.584,
+      7.145
+    ],
+    "rMax": 5.115,
+    "triangles": 1968,
+    "vertices": 1191
+  },
+  "reconstructionNote": "相思樹特徵：傘狀扁冠，枝條向外水平後微斜上，冠簇不重疊成球。",
+  "species": "acacia",
+  "created_at": "2026-08-27T14:39:37.863Z",
+  "humanVerdictPreserved": true
+}

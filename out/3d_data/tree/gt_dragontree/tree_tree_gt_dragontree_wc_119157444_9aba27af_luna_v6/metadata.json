@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_gt_dragontree_wc_119157444_9aba27af_luna_v6",
+  "key": "tree/gt_dragontree_wc_119157444_9aba27af_luna_v6",
+  "family": "tree",
+  "subpart": "gt_dragontree",
+  "style": "dragon tree high candelabra rosettes",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 82,
+  "similarityReview": "依dragon樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/gt_dragontree/wc_119157444.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\gt_dragontree\\wc_119157444.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/gt_dragontree/wc_119157444.json",
+    "target": {
+      "targetId": "wc_119157444~0",
+      "bbox": [
+        0,
+        0,
+        1600,
+        1067
+      ],
+      "width": 1600,
+      "height": 1067,
+      "aspectRatio": 1.5,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.817,
+          "centerOffset": 0.091
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.543,
+          "centerOffset": 0.228
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.86,
+          "centerOffset": 0.069
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.985,
+          "centerOffset": 0.007
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.908,
+          "centerOffset": 0.045
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.949,
+          "centerOffset": 0.025
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.986,
+          "centerOffset": 0.006
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\gt_dragontree\\wc_119157444~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_gt_dragontree_wc_119157444_9aba27af_luna_v6.png",
+  "bounds": {
+    "min": [
+      -2.6056,
+      0,
+      -1.9921
+    ],
+    "max": [
+      2.9268,
+      7.9852,
+      2.2807
+    ],
+    "size": [
+      5.532,
+      7.985,
+      4.273
+    ],
+    "rMax": 3.71,
+    "triangles": 1340,
+    "vertices": 808
+  },
+  "reconstructionNote": "龍血樹特徵：高位多頭燭台狀分叉，每一枝頭獨立承接劍葉 rosette。",
+  "species": "dragon",
+  "created_at": "2026-08-27T14:39:33.268Z",
+  "humanVerdictPreserved": true
+}

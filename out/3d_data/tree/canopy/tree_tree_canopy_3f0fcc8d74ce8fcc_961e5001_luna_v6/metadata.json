@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_canopy_3f0fcc8d74ce8fcc_961e5001_luna_v6",
+  "key": "tree/canopy_3f0fcc8d74ce8fcc_961e5001_luna_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "broadleaf open radial crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 80,
+  "similarityReview": "依broadleaf樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/3f0fcc8d74ce8fcc.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\3f0fcc8d74ce8fcc.webp",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/3f0fcc8d74ce8fcc.json",
+    "target": {
+      "targetId": "3f0fcc8d74ce8fcc~0",
+      "bbox": [
+        0,
+        0,
+        619,
+        503
+      ],
+      "width": 619,
+      "height": 503,
+      "aspectRatio": 1.231,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.283,
+          "centerOffset": 0.331
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.326,
+          "centerOffset": 0.309
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.772,
+          "centerOffset": 0.112
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.771,
+          "centerOffset": 0.113
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.816,
+          "centerOffset": 0.09
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.91,
+          "centerOffset": 0.04
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.934,
+          "centerOffset": 0.025
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.969,
+          "centerOffset": 0.006
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.934,
+          "centerOffset": -0.009
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.913,
+          "centerOffset": -0.026
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.848,
+          "centerOffset": -0.008
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.735,
+          "centerOffset": 0.023
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.628,
+          "centerOffset": 0.06
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.43,
+          "centerOffset": -0.014
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.407,
+          "centerOffset": -0.025
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.588,
+          "centerOffset": -0.025
+        }
+      ],
+      "targetFile": "tree\\main\\3f0fcc8d74ce8fcc~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_canopy_3f0fcc8d74ce8fcc_961e5001_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.7153,
+      0,
+      -3.6
+    ],
+    "max": [
+      3.1636,
+      8.6366,
+      3.2815
+    ],
+    "size": [
+      6.879,
+      8.637,
+      6.881
+    ],
+    "rMax": 5.173,
+    "triangles": 1968,
+    "vertices": 1191
+  },
+  "reconstructionNote": "闊葉樹特徵：中心樹幹向外分叉，枝端承托不等高葉冠簇。",
+  "species": "broadleaf",
+  "created_at": "2026-08-27T14:39:24.327Z",
+  "humanVerdictPreserved": true
+}

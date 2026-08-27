@@ -1,0 +1,172 @@
+{
+  "id": "tree_canopy_tree_canopy_pngtree-flowers-bonsai-tree-png-image_12485135",
+  "sourceImage": "tree/pngtree-flowers-bonsai-tree-png-image_12485135.png",
+  "style": "flowering broadleaf open umbrella crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2640433,
+    "facadeHex": 5208643,
+    "baseHex": 4861988,
+    "accentHex": 7903323,
+    "darkHex": 2892830,
+    "brightHex": 10860413,
+    "glassHex": 1976635
+  },
+  "totalParts": 24,
+  "partNames": [
+    "broadleaf_trunk",
+    "root_flare",
+    "flowering_primary_0",
+    "flowering_outer_0",
+    "flowering_crown_0",
+    "flowering_primary_1",
+    "flowering_outer_1",
+    "flowering_crown_1",
+    "flowering_primary_2",
+    "flowering_outer_2",
+    "flowering_crown_2",
+    "flowering_primary_3",
+    "flowering_outer_3",
+    "flowering_crown_3",
+    "flowering_primary_4",
+    "flowering_outer_4",
+    "flowering_crown_4",
+    "flowering_primary_5",
+    "flowering_outer_5",
+    "flowering_crown_5",
+    "flowering_primary_6",
+    "flowering_outer_6",
+    "flowering_crown_6",
+    "top_crown"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/pngtree-flowers-bonsai-tree-png-image_12485135.json",
+    "target": {
+      "targetId": "pngtree-flowers-bonsai-tree-png-image_12485135~0",
+      "bbox": [
+        0,
+        0,
+        640,
+        640
+      ],
+      "width": 640,
+      "height": 640,
+      "aspectRatio": 1,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.656,
+          "centerOffset": 0.155
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.703,
+          "centerOffset": 0.131
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.711,
+          "centerOffset": 0.091
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.708,
+          "centerOffset": -0.098
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.725,
+          "centerOffset": -0.089
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.747,
+          "centerOffset": -0.031
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.717,
+          "centerOffset": -0.015
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.692,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.303,
+          "centerOffset": -0.066
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.623,
+          "centerOffset": 0.171
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.714,
+          "centerOffset": 0.09
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.683,
+          "centerOffset": -0.11
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.653,
+          "centerOffset": -0.125
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.58,
+          "centerOffset": -0.045
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.606,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.445,
+          "centerOffset": -0.018
+        }
+      ],
+      "targetFile": "tree\\main\\pngtree-flowers-bonsai-tree-png-image_12485135~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "flowering",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "開花闊葉樹特徵：開放枝架、枝端分離花冠與不等高冠簇。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 81,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依flowering樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

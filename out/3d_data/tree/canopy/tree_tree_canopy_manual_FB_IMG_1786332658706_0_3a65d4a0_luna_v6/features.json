@@ -1,0 +1,175 @@
+{
+  "id": "tree_canopy_tree_canopy_manual_FB_IMG_1786332658706_0",
+  "sourceImage": "tree/canopy/manual_FB_IMG_1786332658706.jpg",
+  "style": "broadleaf open radial crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2640433,
+    "facadeHex": 5208643,
+    "baseHex": 4861988,
+    "accentHex": 7903323,
+    "darkHex": 2892830,
+    "brightHex": 10860413,
+    "glassHex": 1976635
+  },
+  "totalParts": 27,
+  "partNames": [
+    "broadleaf_trunk",
+    "root_flare",
+    "broadleaf_primary_0",
+    "broadleaf_outer_0",
+    "broadleaf_crown_0",
+    "broadleaf_primary_1",
+    "broadleaf_outer_1",
+    "broadleaf_crown_1",
+    "broadleaf_primary_2",
+    "broadleaf_outer_2",
+    "broadleaf_crown_2",
+    "broadleaf_primary_3",
+    "broadleaf_outer_3",
+    "broadleaf_crown_3",
+    "broadleaf_primary_4",
+    "broadleaf_outer_4",
+    "broadleaf_crown_4",
+    "broadleaf_primary_5",
+    "broadleaf_outer_5",
+    "broadleaf_crown_5",
+    "broadleaf_primary_6",
+    "broadleaf_outer_6",
+    "broadleaf_crown_6",
+    "broadleaf_primary_7",
+    "broadleaf_outer_7",
+    "broadleaf_crown_7",
+    "top_crown"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/canopy/manual_FB_IMG_1786332658706.json",
+    "target": {
+      "targetId": "manual_FB_IMG_1786332658706~0",
+      "bbox": [
+        0,
+        267,
+        1536,
+        2048
+      ],
+      "width": 1536,
+      "height": 1781,
+      "aspectRatio": 0.862,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.81,
+          "centerOffset": 0.094
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.818,
+          "centerOffset": 0.09
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.843,
+          "centerOffset": 0.078
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.844,
+          "centerOffset": 0.077
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.89,
+          "centerOffset": 0.054
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.938,
+          "centerOffset": 0.031
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.933,
+          "centerOffset": 0.033
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.916,
+          "centerOffset": 0.041
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.892,
+          "centerOffset": 0.053
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\canopy\\manual_FB_IMG_1786332658706~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "broadleaf",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "闊葉樹特徵：中心樹幹向外分叉，枝端承托不等高葉冠簇。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 80,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依broadleaf樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

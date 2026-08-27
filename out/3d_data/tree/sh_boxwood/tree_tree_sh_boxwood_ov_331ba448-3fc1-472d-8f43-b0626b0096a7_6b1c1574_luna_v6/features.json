@@ -1,0 +1,162 @@
+{
+  "id": "tree_sh_boxwood_tree_sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7",
+  "sourceImage": "tree/sh_boxwood/ov_331ba448-3fc1-472d-8f43-b0626b0096a7.jpg",
+  "style": "compact shrub irregular radial crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3234617,
+    "facadeHex": 6456401,
+    "baseHex": 5387560,
+    "accentHex": 9415271,
+    "darkHex": 2763554,
+    "brightHex": 12240523,
+    "glassHex": 1976635
+  },
+  "totalParts": 14,
+  "partNames": [
+    "shrub_central_stem",
+    "root_flare",
+    "shrub_branch_0",
+    "shrub_leaf_0",
+    "shrub_branch_1",
+    "shrub_leaf_1",
+    "shrub_branch_2",
+    "shrub_leaf_2",
+    "shrub_branch_3",
+    "shrub_leaf_3",
+    "shrub_branch_4",
+    "shrub_leaf_4",
+    "shrub_branch_5",
+    "shrub_leaf_5"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/sh_boxwood/ov_331ba448-3fc1-472d-8f43-b0626b0096a7.json",
+    "target": {
+      "targetId": "ov_331ba448-3fc1-472d-8f43-b0626b0096a7~0",
+      "bbox": [
+        0,
+        0,
+        4000,
+        2667
+      ],
+      "width": 4000,
+      "height": 2667,
+      "aspectRatio": 1.5,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.987,
+          "centerOffset": -0.006
+        },
+        {
+          "level": 1,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 3,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 4,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 5,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 6,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 1,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\sh_boxwood\\ov_331ba448-3fc1-472d-8f43-b0626b0096a7~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "shrub",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "灌木/盆景特徵：短主幹、多股近地分枝、稀疏但有層次的扁圓冠簇。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 79,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依shrub樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "id": "tree_sp_acacia_tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c_0",
+  "sourceImage": "tree/sp_acacia/ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c.jpg",
+  "style": "acacia umbrella crown radial branches",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2640433,
+    "facadeHex": 5208643,
+    "baseHex": 4861988,
+    "accentHex": 7903323,
+    "darkHex": 2892830,
+    "brightHex": 10860413,
+    "glassHex": 1976635
+  },
+  "totalParts": 27,
+  "partNames": [
+    "broadleaf_trunk",
+    "root_flare",
+    "acacia_primary_0",
+    "acacia_outer_0",
+    "acacia_crown_0",
+    "acacia_primary_1",
+    "acacia_outer_1",
+    "acacia_crown_1",
+    "acacia_primary_2",
+    "acacia_outer_2",
+    "acacia_crown_2",
+    "acacia_primary_3",
+    "acacia_outer_3",
+    "acacia_crown_3",
+    "acacia_primary_4",
+    "acacia_outer_4",
+    "acacia_crown_4",
+    "acacia_primary_5",
+    "acacia_outer_5",
+    "acacia_crown_5",
+    "acacia_primary_6",
+    "acacia_outer_6",
+    "acacia_crown_6",
+    "acacia_primary_7",
+    "acacia_outer_7",
+    "acacia_crown_7",
+    "top_crown"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/sp_acacia/ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c.json",
+    "target": {
+      "targetId": "ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0",
+      "bbox": [
+        0,
+        2173,
+        5376,
+        3024
+      ],
+      "width": 5376,
+      "height": 851,
+      "aspectRatio": 6.317,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.998,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 1,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.997,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 5,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 6,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 1,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\sp_acacia\\ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "acacia",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "相思樹特徵：傘狀扁冠，枝條向外水平後微斜上，冠簇不重疊成球。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 82,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依acacia樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

@@ -1,0 +1,220 @@
+{
+  "id": "tree_sp_cypress_tree_sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a",
+  "sourceImage": "tree/sp_cypress/ov_4b111732-01e7-4037-bfb5-1bed4585568a.jpg",
+  "style": "cypress narrow tiered crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 1588523,
+    "facadeHex": 3499334,
+    "baseHex": 4928552,
+    "accentHex": 7246431,
+    "darkHex": 1911587,
+    "brightHex": 10268535,
+    "glassHex": 1976635
+  },
+  "totalParts": 72,
+  "partNames": [
+    "trunk",
+    "upper_leader",
+    "root_flare",
+    "cypress_level_0_branch_0",
+    "cypress_crown_0_0",
+    "cypress_level_0_branch_1",
+    "cypress_crown_0_1",
+    "cypress_level_0_branch_2",
+    "cypress_crown_0_2",
+    "cypress_level_0_branch_3",
+    "cypress_crown_0_3",
+    "cypress_level_0_branch_4",
+    "cypress_crown_0_4",
+    "cypress_level_1_branch_0",
+    "cypress_crown_1_0",
+    "cypress_level_1_branch_1",
+    "cypress_crown_1_1",
+    "cypress_level_1_branch_2",
+    "cypress_crown_1_2",
+    "cypress_level_1_branch_3",
+    "cypress_crown_1_3",
+    "cypress_level_1_branch_4",
+    "cypress_crown_1_4",
+    "cypress_level_2_branch_0",
+    "cypress_crown_2_0",
+    "cypress_level_2_branch_1",
+    "cypress_crown_2_1",
+    "cypress_level_2_branch_2",
+    "cypress_crown_2_2",
+    "cypress_level_2_branch_3",
+    "cypress_crown_2_3",
+    "cypress_level_2_branch_4",
+    "cypress_crown_2_4",
+    "cypress_level_2_branch_5",
+    "cypress_crown_2_5",
+    "cypress_level_3_branch_0",
+    "cypress_crown_3_0",
+    "cypress_level_3_branch_1",
+    "cypress_crown_3_1",
+    "cypress_level_3_branch_2",
+    "cypress_crown_3_2",
+    "cypress_level_3_branch_3",
+    "cypress_crown_3_3",
+    "cypress_level_3_branch_4",
+    "cypress_crown_3_4",
+    "cypress_level_3_branch_5",
+    "cypress_crown_3_5",
+    "cypress_level_4_branch_0",
+    "cypress_crown_4_0",
+    "cypress_level_4_branch_1",
+    "cypress_crown_4_1",
+    "cypress_level_4_branch_2",
+    "cypress_crown_4_2",
+    "cypress_level_4_branch_3",
+    "cypress_crown_4_3",
+    "cypress_level_4_branch_4",
+    "cypress_crown_4_4",
+    "cypress_level_4_branch_5",
+    "cypress_crown_4_5",
+    "cypress_level_5_branch_0",
+    "cypress_crown_5_0",
+    "cypress_level_5_branch_1",
+    "cypress_crown_5_1",
+    "cypress_level_5_branch_2",
+    "cypress_crown_5_2",
+    "cypress_level_5_branch_3",
+    "cypress_crown_5_3",
+    "cypress_level_5_branch_4",
+    "cypress_crown_5_4",
+    "cypress_level_5_branch_5",
+    "cypress_crown_5_5",
+    "leader_crown"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/sp_cypress/ov_4b111732-01e7-4037-bfb5-1bed4585568a.json",
+    "target": {
+      "targetId": "ov_4b111732-01e7-4037-bfb5-1bed4585568a~0",
+      "bbox": [
+        0,
+        0,
+        1024,
+        730
+      ],
+      "width": 1024,
+      "height": 730,
+      "aspectRatio": 1.403,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.002,
+          "centerOffset": 0.242
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.57,
+          "centerOffset": 0.002
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.57,
+          "centerOffset": 0.002
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.571,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.771,
+          "centerOffset": -0.099
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.572,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.572,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.572,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.573,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.574,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.574,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.574,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.574,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.574,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.396,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.584,
+          "centerOffset": 0.204
+        }
+      ],
+      "targetFile": "tree\\sp_cypress\\ov_4b111732-01e7-4037-bfb5-1bed4585568a~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "cypress",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "cypress 特徵：窄柱形密冠，末端葉冠與枝頭相接。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 83,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依cypress樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

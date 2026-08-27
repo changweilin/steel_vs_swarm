@@ -70,6 +70,11 @@ const SEEDS = [1, 7, 10, 22];
  *       = PR147 的主角在台上**沒有任何一種取景看得到它**。
  *  三個症狀都沒有錯誤訊息,畫面上只表現成「AI 生成跟原版差不多」—— 這座台子最不能出現的假結論。 */
 const DISTS = { part: '零件', whole: '整件', lane: '兵線 22m' };
+const TREE_VIEWS = {
+  whole: '整件',
+  trunkBranch: '樹幹＋樹枝',
+  branch: '只看樹枝',
+};
 /** 包圍球塞進畫面時留的邊界餘裕(1 = 剛好貼滿較窄的那一軸) */
 const FIT_PAD = 1.3;
 
@@ -77,6 +82,7 @@ const app = {
   data: null, cur: null, filter: 'all', list: 'nodes',
   filterMethod: '', filterFamily: '', filterDate: '', filterPhotoDate: '', filterVersion: '',
   seed: SEEDS[0], dist: 'part', collider: true, spin: true,
+  treeView: 'whole', topView: false,
 };
 
 const FAMILY_LABELS = {
@@ -88,6 +94,30 @@ const FAMILY_LABELS = {
   tree: 'tree (植被/神木)',
   vehicle: 'vehicle (載具)',
 };
+
+const isTreeModelRow = (r) => r?.family === 'tree' && r?.view?.builder === 'model3d';
+function treeModelPartRole(name) {
+  const s = String(name || '').toLowerCase();
+  if (/(^|_)(crown|canopy|leaf|foliage)(_|$)/.test(s)) return 'canopy';
+  if (/(^|_)(branch|primary|outer|secondary|arm|candelabra|bough)(_|$)/.test(s)
+    || /gnarled_(trunk|bough)/.test(s)) return 'branch';
+  if (/(trunk|bole|leader|root|bottle)/.test(s)) return 'trunk';
+  return 'other';
+}
+
+/** 樹木 model.json 的旋轉沿用 direct_ingest_v6:先 X、再 Y、再 Z；用 quaternion
+ * 明確保留這個軸序，不能把它直接交給 Three.js 的 Euler XYZ 解讀。 */
+function applyModel3dTransform(mesh, part, manualOrder = false) {
+  const T = gfx.THREE;
+  if (part.position) mesh.position.set(...part.position);
+  if (!part.rotation) return;
+  if (!manualOrder) { mesh.rotation.set(...part.rotation); return; }
+  const [rx, ry, rz] = part.rotation;
+  const qx = new T.Quaternion().setFromAxisAngle(new T.Vector3(1, 0, 0), rx);
+  const qy = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), ry);
+  const qz = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), rz);
+  mesh.quaternion.copy(qz).multiply(qy).multiply(qx);
+}
 
 // ---- 資料 ------------------------------------------------------------------
 const api = async (body) => (await fetch('/api/parts', body
@@ -102,7 +132,7 @@ const gfx = {
   ready: false, error: null, THREE: null, beacons: null, aquatics: null, camera: null,
   mods: new Map(),      // 'now' | `rev:<sha>` → beacons 模組
   groups: new Map(),    // `${phase}|${src}|${kind}|${seed}` → Group(整場快取,不重建也不 dispose)
-  viewers: [],
+  viewers: [], topCamera: null, frameTop: null,
   orbit: { yaw: 0.9, pitch: 0.28 },
 };
 
@@ -141,6 +171,7 @@ async function initGfx(data) {
 
   // 共用相機:兩側同一顆,轉哪一邊另一邊跟著轉(不同角度的兩張圖沒有可比性)
   gfx.camera = new gfx.THREE.PerspectiveCamera(38, 1, 0.1, 500);
+  gfx.topCamera = new gfx.THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
   setCelSun(new gfx.THREE.Vector3(-0.5, 0.45, -0.75).normalize());   // 側後鍵光:暗面要在畫面上
   gfx.viewers = [makeViewer(), makeViewer()];
   gfx.ready = true;
@@ -294,8 +325,9 @@ function build(phase, src, kind, seed, builder = 'beacon') {
                   metalness: 0.1,
                 });
                 const mesh = new gfx.THREE.Mesh(geo, mat);
-                if (p.position) mesh.position.set(...p.position);
-                if (p.rotation) mesh.rotation.set(...p.rotation);
+                applyModel3dTransform(mesh, p, String(kind).startsWith('tree/'));
+                mesh.userData.modelPartName = p.name || '';
+                mesh.userData.treePartRole = treeModelPartRole(p.name);
                 g.add(mesh);
               }
             }
@@ -373,7 +405,10 @@ function makeViewer() {
 
   // 拖曳 = 兩側一起轉(orbit 是共用狀態);滾輪縮放同理
   let drag = null;
-  canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); app.spin = false; syncTools(); });
+  canvas.addEventListener('pointerdown', (e) => {
+    if (app.topView) { app.topView = false; syncTools(); }
+    drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); app.spin = false; syncTools();
+  });
   canvas.addEventListener('pointermove', (e) => {
     if (!drag) return;
     gfx.orbit.yaw -= (e.clientX - drag.x) * 0.008;
@@ -512,17 +547,34 @@ function seedsWith(r, v, bld) {
   });
 }
 
-/** 整件取景框 = 全部 mesh 的聯集包圍球(世界座標) */
-function frameOf(groups) {
+/** 整件取景框 = mesh 的聯集包圍球(世界座標);可選只量目前可見的 mesh。 */
+function frameOf(groups, visibleOnly = false) {
   const T = gfx.THREE;
   const acc = new T.Box3();
   for (const g of groups) {
     g.updateMatrixWorld(true);
-    acc.expandByObject(g);
+    if (!visibleOnly) acc.expandByObject(g);
+    else g.traverse((o) => { if (o.isMesh && o.visible) acc.expandByObject(o); });
   }
   if (acc.isEmpty()) return { c: { x: 0, y: 3, z: 0 }, r: 6 };
   const s = acc.getBoundingSphere(new T.Sphere());
   return { c: { x: s.center.x, y: s.center.y, z: s.center.z }, r: Math.max(0.4, s.radius) };
+}
+
+/** 正上方取景只看 X/Z 外廓,不讓樹高把枝條縮成一小團。 */
+function topFrameOf(groups) {
+  const T = gfx.THREE;
+  const acc = new T.Box3();
+  for (const g of groups) {
+    g.updateMatrixWorld(true);
+    g.traverse((o) => { if (o.isMesh && o.visible) acc.expandByObject(o); });
+  }
+  if (acc.isEmpty()) return { c: { x: 0, y: 3, z: 0 }, r: 6, h: 6 };
+  return {
+    c: { x: (acc.min.x + acc.max.x) / 2, y: (acc.min.y + acc.max.y) / 2, z: (acc.min.z + acc.max.z) / 2 },
+    r: Math.max(0.4, (acc.max.x - acc.min.x) / 2, (acc.max.z - acc.min.z) / 2),
+    h: Math.max(1, acc.max.y - acc.min.y),
+  };
 }
 
 /** 一株植被的實測外廓(包圍盒:水平最遠點 + 頂高)—— 只給取景與讀數用 */
@@ -541,7 +593,6 @@ function tick() {
   // 取景全部推導(見 DISTS);兩側同一顆相機 —— 不同角度的兩張圖沒有可比性。
   // 相機定位 MUST 排在 `aspect` 之後:塞得進畫面的那一軸是**較窄的那一軸**,直式視窗
   // 是水平那一軸 ⇒ 距離吃 aspect,先擺相機再改投影矩陣等於用上一格的比例算這一格。
-  const cam = gfx.camera;
   const { yaw, pitch } = gfx.orbit;
   const lane = app.dist === 'lane';
   const f = gfx.frame || { c: { x: 0, y: 3, z: 0 }, r: 6 };
@@ -550,23 +601,40 @@ function tick() {
     const w = v.canvas.clientWidth, ht = v.canvas.clientHeight;
     if (!w || !ht) continue;
     if (v.canvas.width !== w || v.canvas.height !== ht) v.renderer.setSize(w, ht, false);
-    cam.aspect = w / ht;
-    const vHalf = cam.fov * Math.PI / 360;
-    const fit = Math.min(vHalf, Math.atan(Math.tan(vHalf) * cam.aspect));
-    const z = (lane ? 22 : (f.r * FIT_PAD) / Math.sin(fit)) * (app.zoom || 1);
-    // 近遠平面 MUST 跟著距離走:290m 的露頭要退到 700m 外才框得住,而固定 far = 500 的
-    // 下場是**整格全黑**(什麼都沒畫錯,只是全被遠平面裁掉了 —— 看起來像「這一列建不起來」)
-    cam.near = Math.max(0.05, z / 5000);
-    cam.far = Math.max(500, z * 3);
-    cam.updateProjectionMatrix();
-    const ring = z * Math.cos(pitch);
-    if (lane) {
-      cam.position.set(Math.sin(yaw) * ring, 4.5 + Math.sin(pitch) * z * 0.7, Math.cos(yaw) * ring);
-      cam.lookAt(0, 4, 0);
+    let cam;
+    if (app.topView && gfx.topCamera) {
+      cam = gfx.topCamera;
+      const tf = gfx.frameTop || { c: { x: 0, y: 3, z: 0 }, r: 6, h: 6 };
+      const span = Math.max(0.8, tf.r * 2 * FIT_PAD) * (app.zoom || 1);
+      const halfH = span / 2;
+      cam.left = -halfH * (w / ht); cam.right = halfH * (w / ht);
+      cam.top = halfH; cam.bottom = -halfH;
+      const topDist = Math.max(20, tf.h * 3);
+      cam.near = 0.1; cam.far = Math.max(500, topDist * 3);
+      cam.position.set(tf.c.x, tf.c.y + topDist, tf.c.z);
+      cam.up.set(0, 0, -1);
+      cam.lookAt(tf.c.x, tf.c.y, tf.c.z);
     } else {
-      cam.position.set(f.c.x + Math.sin(yaw) * ring, f.c.y + Math.sin(pitch) * z, f.c.z + Math.cos(yaw) * ring);
-      cam.lookAt(f.c.x, f.c.y, f.c.z);
+      cam = gfx.camera;
+      cam.aspect = w / ht;
+      const vHalf = cam.fov * Math.PI / 360;
+      const fit = Math.min(vHalf, Math.atan(Math.tan(vHalf) * cam.aspect));
+      const z = (lane ? 22 : (f.r * FIT_PAD) / Math.sin(fit)) * (app.zoom || 1);
+      // 近遠平面 MUST 跟著距離走:290m 的露頭要退到 700m 外才框得住,而固定 far = 500 的
+      // 下場是**整格全黑**(什麼都沒畫錯,只是全被遠平面裁掉了 —— 看起來像「這一列建不起來」)
+      cam.near = Math.max(0.05, z / 5000);
+      cam.far = Math.max(500, z * 3);
+      cam.updateProjectionMatrix();
+      const ring = z * Math.cos(pitch);
+      if (lane) {
+        cam.position.set(Math.sin(yaw) * ring, 4.5 + Math.sin(pitch) * z * 0.7, Math.cos(yaw) * ring);
+        cam.lookAt(0, 4, 0);
+      } else {
+        cam.position.set(f.c.x + Math.sin(yaw) * ring, f.c.y + Math.sin(pitch) * z, f.c.z + Math.cos(yaw) * ring);
+        cam.lookAt(f.c.x, f.c.y, f.c.z);
+      }
     }
+    cam.updateMatrixWorld();
     v.renderer.render(v.scene, cam);
   }
 }
@@ -861,7 +929,11 @@ function renderStat() {
 
 
 // ---- 右側 ------------------------------------------------------------------
-function select(key) { app.cur = key; renderList(); renderBody(); }
+function select(key) {
+  const next = rowOf(key);
+  if (!isTreeModelRow(next)) { app.treeView = 'whole'; app.topView = false; }
+  app.cur = key; renderList(); renderBody();
+}
 
 /** 「零件」取景成不成立(單一縫:取景計算與鈕面的禁用狀態同吃)——
  *  條件只有「兩側各建得起一組、而且這一列真的有一顆 GLB 節點」;**MUST NOT 再看描述子有沒有
@@ -1341,6 +1413,10 @@ function renderBody() {
             ? ' disabled title="這一列沒有 GLB 節點可以隔離(純資料件的生成物就是整份零件表)⇒ 一律看整件"'
             : ''}>${v}</button>`;
         }).join('')}</div>
+        ${isTreeModelRow(r) ? `<span class="pr-dim">樹木檢視</span>
+        <div class="seg" id="prTreeView">${Object.entries(TREE_VIEWS).map(([k, v]) =>
+          `<button class="segb ${app.treeView === k ? 'on' : ''}" data-tree-view="${k}">${v}</button>`).join('')}</div>
+        <button class="segb ${app.topView ? 'on' : ''}" id="prTopView">正上方・正交</button>` : ''}
         <span class="pr-dim" id="prFrameNote"></span>
         <label><input type="checkbox" id="prCol" ${app.collider ? 'checked' : ''}>碰撞柱</label>
         <label><input type="checkbox" id="prSpin" ${app.spin ? 'checked' : ''}>自轉</label>
@@ -1377,6 +1453,16 @@ function renderBody() {
 
   for (const b of body.querySelectorAll('#prSeed .segb')) b.onclick = () => { app.seed = +b.dataset.seed; renderBody(); };
   for (const b of body.querySelectorAll('#prDist .segb')) b.onclick = () => { app.dist = b.dataset.dist; renderBody(); };
+  for (const b of body.querySelectorAll('#prTreeView .segb')) b.onclick = () => {
+    app.treeView = b.dataset.treeView;
+    renderBody();
+  };
+  const topView = $('prTopView');
+  if (topView) topView.onclick = () => {
+    app.topView = !app.topView;
+    if (app.topView) app.spin = false;
+    renderBody();
+  };
   $('prCol').onchange = (e) => { app.collider = e.target.checked; mountStage(r); };
   $('prSpin').onchange = (e) => { app.spin = e.target.checked; };
   bindVerdict(r.key);
@@ -1385,6 +1471,23 @@ function renderBody() {
 function syncTools() {
   const el = $('prSpin');
   if (el) el.checked = app.spin;
+  const top = $('prTopView');
+  if (top) top.classList.toggle('on', app.topView);
+}
+
+/** 樹木模型的檢視隔離只切換 mesh.visible,不重建也不修改模型幾何。 */
+function applyTreeView(sides, r) {
+  if (!isTreeModelRow(r) || app.treeView === 'whole') return true;
+  const meshes = sides.flatMap((side) => side.g ? meshesOf(side.g) : []);
+  const hasBranches = meshes.some((m) => m.userData.treePartRole === 'branch');
+  if (!hasBranches) return false;
+  for (const m of meshes) {
+    const role = m.userData.treePartRole;
+    m.visible = app.treeView === 'branch'
+      ? role === 'branch'
+      : role === 'branch' || role === 'trunk';
+  }
+  return true;
 }
 
 /** 把兩個 viewer 的 canvas 掛進當前這一列的兩側,並更新讀數 */
@@ -1452,9 +1555,11 @@ function mountStage(r) {
       meshesOf(side.g).forEach((m, k) => { m.visible = keep.includes(k); });
     });
   }
+  const treeViewApplied = applyTreeView(sides, r);
   gfx.frame = slice
     ? { c: slice.focus.center, r: Math.max(0.4, slice.focus.radius) }
-    : frameOf(groups);
+    : frameOf(groups, isTreeModelRow(r) && treeViewApplied);
+  gfx.frameTop = topFrameOf(groups);
   const note = $('prFrameNote');
   if (note) {
     // 退回整件時 MUST 講清楚是**哪一種**退回:「這顆座號沒用到這個節點」換個座號就看得到,
@@ -1468,8 +1573,12 @@ function mountStage(r) {
           : '(三顆座號都沒用到這個節點 —— 先看整件)')
         : '(兩側逐位元相同,沒有換到東西 —— 先看整件)';
     }
-    note.textContent = !want ? '' : slice ? `(只顯示換掉的 ${slice.per[1].length} 顆 mesh)`
+    const treeNote = isTreeModelRow(r)
+      ? `${app.topView ? '正上方正交' : '透視'} ・ ${TREE_VIEWS[app.treeView]}${treeViewApplied ? '' : '（模型沒有可辨識枝條零件）'}`
+      : '';
+    const distNote = !want ? '' : slice ? `(只顯示換掉的 ${slice.per[1].length} 顆 mesh)`
       : (diff ? why : '(這一列沒有 GLB 節點可以隔離)');
+    note.textContent = [treeNote, distNote].filter(Boolean).join(' ・ ');
   }
 }
 
