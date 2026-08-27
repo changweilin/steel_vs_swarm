@@ -15,10 +15,14 @@ const BREAK = process.argv.includes('--break-wet');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 function sourceUnderTest() {
-  const a = bio.indexOf('const TOWER_PAD_R = 10.5;');
-  const b = bio.indexOf('function buildBaseWaterPads');
-  if (a < 0 || b <= a) throw new Error('biomes.js 主堡承台切片標記找不到');
-  let src = bio.slice(a, b);
+  const towerA = bio.indexOf('const TOWER_PAD_R = 10.5;');
+  const towerB = bio.indexOf('function planTowerBridgePads', towerA);
+  const baseA = bio.indexOf('// ---- 水域／沼澤主堡承台 ----');
+  const baseB = bio.indexOf('function buildBaseWaterPads', baseA);
+  if (towerA < 0 || towerB <= towerA || baseA < 0 || baseB <= baseA) {
+    throw new Error('biomes.js 主堡承台切片標記找不到');
+  }
+  let src = `${bio.slice(towerA, towerB)}\n${bio.slice(baseA, baseB)}`;
   if (BREAK) {
     const bad = 'if (terrainEnvCode(terrain, base.x, base.z) !== 0) continue;';
     const good = 'if (terrainEnvCode(terrain, base.x, base.z) === 0) continue;';
@@ -61,6 +65,8 @@ ok(pad.y >= 20 + core.BASE_PAD_T, '台面取遍地形格點，最高峰不穿出
 ok(plan.piers.length === 9 && plan.cols.length === 9, `3×3 支撐柱與碰撞柱齊備：${plan.piers.length}/${plan.cols.length}`);
 
 console.log('Ⅲ 高度與淨空接線');
+ok(bio.indexOf('function planBaseWaterPads') > bio.indexOf('export function makeDeckIndex'),
+  '主堡承台材質位於凍結的 buildRoads → makeDeckIndex 授權區之外');
 ok(/buildBaseWaterPads\(group, basesW, terrain, roadRes\.decks, roadRes\.cols\)/.test(bio), '承台併入道路 decks／cols 單一縫');
 ok(/terrain\.basePadY\s*=/.test(main) && /biomes\.userData\.basePads/.test(main), 'main 安裝 basePadY');
 ok(/e\.k === 'base'\) ent\.padY = this\.terrain\.basePadY/.test(game), '主堡本體讀 basePadY');

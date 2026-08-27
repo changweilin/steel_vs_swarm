@@ -8712,6 +8712,58 @@ function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
   return pads;
 }
 
+/**
+ * 橋面高度查詢:把橋面小段丟進均勻網格,回傳 deckY(x, z) —— 沒有橋面回 null。
+ * 多層橋重疊時取最高面(上層橋才是站得住的那一面)。
+ */
+export function makeDeckIndex(decks) {
+  if (!decks?.length) return () => null;
+  const CELL = 16;
+  const grid = new Map();
+  const key = (i, j) => `${i},${j}`;
+  decks.forEach((d, n) => {
+    const pad = d.hw + 2;
+    const i0 = Math.floor((Math.min(d.x1, d.x2) - pad) / CELL), i1 = Math.floor((Math.max(d.x1, d.x2) + pad) / CELL);
+    const j0 = Math.floor((Math.min(d.z1, d.z2) - pad) / CELL), j1 = Math.floor((Math.max(d.z1, d.z2) + pad) / CELL);
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const k = key(i, j);
+        let arr = grid.get(k);
+        if (!arr) { arr = []; grid.set(k, arr); }
+        arr.push(n);
+      }
+    }
+  });
+  // margin:**側向**容差(遊戲公尺,垂直於橋段方向)。站立表面查詢帶 margin(讓機體貼近橋緣不掉下
+  // 窄橋面 → 上得了橋),天花碰撞查詢用 0(緊貼可見橋面,免橋緣外憑空撞頭)。
+  // margin MUST NOT 洩到「縱向」(沿橋段方向):相鄰橋段共用端點會自然接手,只需 LONG_TOL 微容差銜接。
+  // 前科(2026-07-18 倫敦案實測):舊版用 hypot(到夾制端點) > hw+margin 判定,margin=3 讓查詢點
+  // 縱向溢出到「相鄰較高橋段」的端點 → 斜引道上回報的橋面高度被高估近一整段(~2.5m)→ 上橋台階
+  // 超過 DECK_STEP → 爬到一半掉回地面、卡在橋下(=「無法走上去 / 破圖穿越」)。分離側向/縱向即修正。
+  const LONG_TOL = 1.0;   // 縱向端點外容差:遠低於橋段長(ROAD_SEG 6m),不會夠到相鄰段端點
+  return (x, z, margin = 0) => {
+    const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
+    if (!arr) return null;
+    let best = null;
+    for (const n of arr) {
+      const d = decks[n];
+      const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
+      const len2 = ex * ex + ez * ez || 1, len = Math.sqrt(len2);
+      const tRaw = ((x - d.x1) * ex + (z - d.z1) * ez) / len2;
+      // 縱向:超出線段兩端的距離只准 LONG_TOL(margin 不放寬縱向 → 斜引道橋面高度不被高估)
+      const over = (tRaw < 0 ? -tRaw : tRaw > 1 ? tRaw - 1 : 0) * len;
+      if (over > LONG_TOL) continue;
+      // 側向:點到橋段直線的垂距(叉積 / 段長),margin 只放寬這一維(貼橋緣不掉下)
+      const lat = Math.abs((x - d.x1) * ez - (z - d.z1) * ex) / len;
+      if (lat > d.hw + margin) continue;
+      const t = tRaw < 0 ? 0 : tRaw > 1 ? 1 : tRaw;
+      const y = d.y1 + (d.y2 - d.y1) * t;
+      if (best === null || y > best) best = y;
+    }
+    return best;
+  };
+}
+
 // ---- 水域／沼澤主堡承台 ----
 // 主堡若落在水域或沼澤，建立與砲塔墩座同語彙的大型平台。台面半徑由治癒光環推導，
 // 因而同時涵蓋 HERO_SPAWN_OFF / HERO_SPAWN_SIDE 定義的重生點；站立面併入 decks，
@@ -8778,58 +8830,6 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
   decks.push(...plan.newDecks);
   cols.push(...plan.cols);
   return plan.pads;
-}
-
-/**
- * 橋面高度查詢:把橋面小段丟進均勻網格,回傳 deckY(x, z) —— 沒有橋面回 null。
- * 多層橋重疊時取最高面(上層橋才是站得住的那一面)。
- */
-export function makeDeckIndex(decks) {
-  if (!decks?.length) return () => null;
-  const CELL = 16;
-  const grid = new Map();
-  const key = (i, j) => `${i},${j}`;
-  decks.forEach((d, n) => {
-    const pad = d.hw + 2;
-    const i0 = Math.floor((Math.min(d.x1, d.x2) - pad) / CELL), i1 = Math.floor((Math.max(d.x1, d.x2) + pad) / CELL);
-    const j0 = Math.floor((Math.min(d.z1, d.z2) - pad) / CELL), j1 = Math.floor((Math.max(d.z1, d.z2) + pad) / CELL);
-    for (let i = i0; i <= i1; i++) {
-      for (let j = j0; j <= j1; j++) {
-        const k = key(i, j);
-        let arr = grid.get(k);
-        if (!arr) { arr = []; grid.set(k, arr); }
-        arr.push(n);
-      }
-    }
-  });
-  // margin:**側向**容差(遊戲公尺,垂直於橋段方向)。站立表面查詢帶 margin(讓機體貼近橋緣不掉下
-  // 窄橋面 → 上得了橋),天花碰撞查詢用 0(緊貼可見橋面,免橋緣外憑空撞頭)。
-  // margin MUST NOT 洩到「縱向」(沿橋段方向):相鄰橋段共用端點會自然接手,只需 LONG_TOL 微容差銜接。
-  // 前科(2026-07-18 倫敦案實測):舊版用 hypot(到夾制端點) > hw+margin 判定,margin=3 讓查詢點
-  // 縱向溢出到「相鄰較高橋段」的端點 → 斜引道上回報的橋面高度被高估近一整段(~2.5m)→ 上橋台階
-  // 超過 DECK_STEP → 爬到一半掉回地面、卡在橋下(=「無法走上去 / 破圖穿越」)。分離側向/縱向即修正。
-  const LONG_TOL = 1.0;   // 縱向端點外容差:遠低於橋段長(ROAD_SEG 6m),不會夠到相鄰段端點
-  return (x, z, margin = 0) => {
-    const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
-    if (!arr) return null;
-    let best = null;
-    for (const n of arr) {
-      const d = decks[n];
-      const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
-      const len2 = ex * ex + ez * ez || 1, len = Math.sqrt(len2);
-      const tRaw = ((x - d.x1) * ex + (z - d.z1) * ez) / len2;
-      // 縱向:超出線段兩端的距離只准 LONG_TOL(margin 不放寬縱向 → 斜引道橋面高度不被高估)
-      const over = (tRaw < 0 ? -tRaw : tRaw > 1 ? tRaw - 1 : 0) * len;
-      if (over > LONG_TOL) continue;
-      // 側向:點到橋段直線的垂距(叉積 / 段長),margin 只放寬這一維(貼橋緣不掉下)
-      const lat = Math.abs((x - d.x1) * ez - (z - d.z1) * ex) / len;
-      if (lat > d.hw + margin) continue;
-      const t = tRaw < 0 ? 0 : tRaw > 1 ? 1 : tRaw;
-      const y = d.y1 + (d.y2 - d.y1) * t;
-      if (best === null || y > best) best = y;
-    }
-    return best;
-  };
 }
 
 /**
