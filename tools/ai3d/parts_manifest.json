@@ -74441,6 +74441,178 @@
       "keys": [
         "building/mass_178670843535945_P35065317_2ea21f02_v6"
       ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "tree catalog & partlib (gt_cryptomeria)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_66882f55",
+          "family": "tree",
+          "part": "gt_cryptomeria",
+          "query": "ov_ef085512-f1b2-4415-bb2a-4bad15affd68",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "tree\\gt_cryptomeria\\ov_ef085512-f1b2-4415-bb2a-4bad15affd68.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual polyhedral reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_tree_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "evidenceOverride": "llm_visual_direct",
+        "measured": "Triangles 2624, Vertices 1602, Similarity 82/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_tree_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          14.674,
+          17.77,
+          7.8
+        ],
+        "note": "Extents [14.674, 17.77, 7.8]m, rMax 8.523m；等待零件台人眼覆核。"
+      },
+      "keys": [
+        "tree/gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68_66882f55_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "tree catalog & partlib (cf_araucaria)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_6165449a",
+          "family": "tree",
+          "part": "cf_araucaria",
+          "query": "ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "tree\\cf_araucaria\\ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual polyhedral reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_tree_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "evidenceOverride": "llm_visual_direct",
+        "measured": "Triangles 13596, Vertices 8314, Similarity 80/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_tree_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          4.74,
+          8.65,
+          2.566
+        ],
+        "note": "Extents [4.74, 8.65, 2.566]m, rMax 2.695m；等待零件台人眼覆核。"
+      },
+      "keys": [
+        "tree/cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_6165449a_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "tree catalog & partlib (cf_araucaria)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_f85d916f",
+          "family": "tree",
+          "part": "cf_araucaria",
+          "query": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "tree\\cf_araucaria\\ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual polyhedral reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_tree_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "evidenceOverride": "llm_visual_direct",
+        "measured": "Triangles 16380, Vertices 9223, Similarity 84/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_tree_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          7.301,
+          11.2,
+          4.999
+        ],
+        "note": "Extents [7.301, 11.2, 4.999]m, rMax 4.506m；等待零件台人眼覆核。"
+      },
+      "keys": [
+        "tree/cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_f85d916f_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "tree catalog & partlib (bl_olive)",
+      "rev": "HEAD",
+      "at": "2026-08-27",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_0cef28df",
+          "family": "tree",
+          "part": "bl_olive",
+          "query": "ov_f3c022cd-793e-4c3f-9829-bd123c8445ff",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "tree\\bl_olive\\ov_f3c022cd-793e-4c3f-9829-bd123c8445ff.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual polyhedral reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_tree_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "evidenceOverride": "llm_visual_direct",
+        "measured": "Triangles 3700, Vertices 2262, Similarity 84/100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_tree_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          8.518,
+          8.424,
+          2.841
+        ],
+        "note": "Extents [8.518, 8.424, 2.841]m, rMax 4.608m；等待零件台人眼覆核。"
+      },
+      "keys": [
+        "tree/bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_0cef28df_luna_v6"
+      ]
     }
   ]
 }

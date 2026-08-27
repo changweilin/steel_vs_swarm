@@ -1,0 +1,149 @@
+{
+  "id": "tree_cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_luna_v6",
+  "key": "tree/cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_f85d916f_luna_v6",
+  "family": "tree",
+  "subpart": "cf_araucaria",
+  "style": "mature monkey-puzzle dense hooked whorls",
+  "symmetryMode": "symmetric",
+  "similarityScore": 84,
+  "similarityReview": "成熟 monkey-puzzle 以七向不規則輪生、三至四段粗節枝形成明確 U/J 回鉤；沿枝葉簇與鈍圓頂冠保留內部密度。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
+  "priorHumanVerdict": "archive",
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree\\cf_araucaria\\ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\cf_araucaria\\ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.json",
+    "target": {
+      "targetId": "ov_61a8c242-5841-4892-847c-ab6278bf0fce~0",
+      "bbox": [
+        0,
+        0,
+        680,
+        1024
+      ],
+      "width": 680,
+      "height": 1024,
+      "aspectRatio": 0.664,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.15,
+          "centerOffset": -0.044
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.297,
+          "centerOffset": -0.006
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.382,
+          "centerOffset": -0.01
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.538,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.64,
+          "centerOffset": -0.01
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.684,
+          "centerOffset": 0.01
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.809,
+          "centerOffset": 0.018
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.819,
+          "centerOffset": 0.008
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.934,
+          "centerOffset": 0.032
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.906,
+          "centerOffset": 0.046
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.897,
+          "centerOffset": 0.05
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        }
+      ],
+      "targetFile": "tree\\cf_araucaria\\ov_61a8c242-5841-4892-847c-ab6278bf0fce~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "reason": "YOLO26 schema-v2 證據缺失，依使用者指示直接以來源圖進行 LLM 視覺重建。"
+  },
+  "preview": "out/review_previews/tree_cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.5404,
+      0,
+      -2.5176
+    ],
+    "max": [
+      3.7611,
+      11.2,
+      2.4813
+    ],
+    "size": [
+      7.301,
+      11.2,
+      4.999
+    ],
+    "rMax": 4.506,
+    "triangles": 16380,
+    "vertices": 9223
+  },
+  "reconstructionNote": "南洋杉成熟株：粗繩狀枝條由內段接至下垂鉤曲外段，冠內較密，與 1903 照片不共用比例。",
+  "created_at": "2026-08-27T12:37:28.990Z"
+}

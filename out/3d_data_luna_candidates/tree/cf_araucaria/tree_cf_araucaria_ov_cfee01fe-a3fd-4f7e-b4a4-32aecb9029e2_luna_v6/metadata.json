@@ -1,0 +1,144 @@
+{
+  "id": "tree_cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_luna_v6",
+  "key": "tree/cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_6165449a_luna_v6",
+  "family": "tree",
+  "subpart": "cf_araucaria",
+  "style": "Norfolk pine regular horizontal whorls",
+  "symmetryMode": "symmetric",
+  "similarityScore": 80,
+  "similarityReview": "1903 Norfolk pine 的規整水平輪生與開放枝間距被保留，比例獨立於另一張南洋杉。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
+  "priorHumanVerdict": "archive",
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_tree_candidate",
+  "status": "candidate_unapproved",
+  "eligible": false,
+  "pipelineEligibility": "blocked_missing_yolo26_v2",
+  "source_image": "tree\\cf_araucaria\\ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\cf_araucaria\\ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/cf_araucaria/ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2.json",
+    "target": {
+      "targetId": "ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2~0",
+      "bbox": [
+        0,
+        0,
+        776,
+        1024
+      ],
+      "width": 776,
+      "height": 1024,
+      "aspectRatio": 0.758,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.985,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.919,
+          "centerOffset": 0.005
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.938,
+          "centerOffset": 0.018
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.934,
+          "centerOffset": 0.006
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.966,
+          "centerOffset": -0.01
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.936,
+          "centerOffset": -0.01
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.921,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.96,
+          "centerOffset": 0.008
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.997,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.927,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.959,
+          "centerOffset": 0.01
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.947,
+          "centerOffset": -0.014
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.957,
+          "centerOffset": -0.021
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.923,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.947,
+          "centerOffset": -0.015
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.939,
+          "centerOffset": 0.029
+        }
+      ],
+      "targetFile": "tree\\cf_araucaria\\ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2~0.png"
+    }
+  },
+  "preview": "out/review_previews/tree_cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_luna_v6.png",
+  "bounds": {
+    "min": [
+      -2.37,
+      0,
+      -1.2831
+    ],
+    "max": [
+      2.37,
+      8.65,
+      1.2831
+    ],
+    "size": [
+      4.74,
+      8.65,
+      2.566
+    ],
+    "rMax": 2.695,
+    "triangles": 13596,
+    "vertices": 8314
+  },
+  "reconstructionNote": "南洋杉 1903：規整開放水平輪生，窄高比例；每輪以八向枝段實接樹幹。",
+  "created_at": "2026-08-27T12:24:23.738Z"
+}

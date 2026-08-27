@@ -1,0 +1,177 @@
+{
+  "id": "tree_bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff",
+  "sourceImage": "tree/bl_olive/ov_f3c022cd-793e-4c3f-9829-bd123c8445ff",
+  "style": "ancient twisted multi-trunk olive with sparse silver canopy",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6847320,
+    "facadeHex": 8952688,
+    "baseHex": 4928807,
+    "accentHex": 11450261,
+    "darkHex": 2959651,
+    "brightHex": 12896423,
+    "glassHex": 2505003
+  },
+  "totalParts": 36,
+  "partNames": [
+    "root_flare",
+    "gnarled_member_0",
+    "gnarled_member_1",
+    "gnarled_member_2",
+    "gnarled_member_3",
+    "gnarled_member_4",
+    "gnarled_member_5",
+    "gnarled_member_6",
+    "gnarled_member_7",
+    "gnarled_member_8",
+    "gnarled_member_9",
+    "gnarled_member_10",
+    "gnarled_member_11",
+    "gnarled_member_12",
+    "silver_leaf_cluster_0",
+    "silver_leaf_cluster_1",
+    "silver_leaf_cluster_2",
+    "silver_leaf_cluster_3",
+    "silver_leaf_cluster_4",
+    "silver_leaf_cluster_5",
+    "silver_leaf_cluster_6",
+    "silver_leaf_cluster_7",
+    "silver_leaf_cluster_8",
+    "silver_leaf_cluster_9",
+    "silver_leaf_cluster_10",
+    "silver_leaf_cluster_11",
+    "silver_leaf_cluster_12",
+    "silver_leaf_cluster_13",
+    "silver_leaf_cluster_14",
+    "silver_leaf_cluster_15",
+    "silver_leaf_cluster_16",
+    "silver_leaf_cluster_17",
+    "silver_leaf_cluster_18",
+    "silver_leaf_cluster_19",
+    "dead_tip_left",
+    "dead_tip_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "eligible": false,
+  "pipelineEligibility": "blocked_missing_yolo26_v2",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/bl_olive/ov_f3c022cd-793e-4c3f-9829-bd123c8445ff.json",
+    "target": {
+      "targetId": "ov_f3c022cd-793e-4c3f-9829-bd123c8445ff~0",
+      "bbox": [
+        0,
+        0,
+        826,
+        1024
+      ],
+      "width": 826,
+      "height": 1024,
+      "aspectRatio": 0.807,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.937,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.937,
+          "centerOffset": -0.006
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.937,
+          "centerOffset": -0.006
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.938,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.938,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.939,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.939,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.939,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.938,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.941,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.941,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.939,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.939,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.941,
+          "centerOffset": -0.003
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.943,
+          "centerOffset": -0.003
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.942,
+          "centerOffset": -0.002
+        }
+      ],
+      "targetFile": "tree\\bl_olive\\ov_f3c022cd-793e-4c3f-9829-bd123c8445ff~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "reason": "YOLO26 schema-v2 證據缺失，依使用者指示直接以來源圖進行 LLM 視覺重建。"
+  },
+  "similarityReview": {
+    "similarityScore": 84,
+    "critique": "多幹低位扭結、左右不等高主枝與兩個枯梢清楚；二十個縮小扁長銀灰簇保留可讀空隙，未連成圓頂。",
+    "verdict": "pass",
+    "corrections": [],
+    "reviewer": "independent_parent_multimodal",
+    "priorHumanVerdict": "archive"
+  },
+  "reconstructionNote": "橄欖：多幹扭曲分叉、冠層疏鬆銀灰且左右不規則；每個主冠由相鄰枝端承托。",
+  "localModel": "gpt-5.6-luna"
+}

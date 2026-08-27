@@ -1,0 +1,200 @@
+{
+  "model": "gpt-5.6-luna",
+  "generatedAt": "2026-08-27T12:37:29.189Z",
+  "humanVerdictsPreserved": true,
+  "candidates": [
+    {
+      "target": "ov_51d36975-4681-4f3e-a9a5-46eab91f9fa1",
+      "status": "skipped",
+      "reason": "source_mismatch",
+      "priorHumanVerdict": "archive",
+      "eligible": false,
+      "pipelineEligibility": "blocked_source_mismatch",
+      "note": "母圖為長頸鹿與飼草架，無相思樹；fail-closed source mismatch。"
+    },
+    {
+      "target": "ov_ef085512-f1b2-4415-bb2a-4bad15affd68",
+      "status": "awaiting_human_review",
+      "targetId": "tree_gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68_luna_v6",
+      "key": "tree/gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68_66882f55_luna_v6",
+      "family": "tree",
+      "subpart": "gt_cryptomeria",
+      "style": "giant Japanese cedar high narrow layered crown",
+      "symmetryMode": "asymmetric",
+      "image": "tree\\gt_cryptomeria\\ov_ef085512-f1b2-4415-bb2a-4bad15affd68.jpg",
+      "featureEvidence": "legacy_feature_metadata_only",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 82,
+        "critique": "粗根張與厚古樹幹佔據下半部；斷裂雙主梢、左右不等高側冠與厚 Z 深度避免規整橢球塔。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal",
+        "priorHumanVerdict": "archive"
+      },
+      "outputDir": "out/3d_data/tree/gt_cryptomeria/tree_gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68_luna_v6",
+      "preview": "out/review_previews/tree_gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68_luna_v6.png",
+      "bounds": {
+        "min": [
+          -7.5916,
+          0,
+          -3.8731
+        ],
+        "max": [
+          7.082,
+          17.7698,
+          3.9268
+        ],
+        "size": [
+          14.674,
+          17.77,
+          7.8
+        ],
+        "rMax": 8.523,
+        "triangles": 2624,
+        "vertices": 1602
+      },
+      "parts": 26
+    },
+    {
+      "target": "ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2",
+      "status": "awaiting_human_review",
+      "targetId": "tree_cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_luna_v6",
+      "key": "tree/cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_6165449a_luna_v6",
+      "family": "tree",
+      "subpart": "cf_araucaria",
+      "style": "Norfolk pine regular horizontal whorls",
+      "symmetryMode": "symmetric",
+      "image": "tree\\cf_araucaria\\ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2.jpg",
+      "featureEvidence": "legacy_feature_metadata_only",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 80,
+        "critique": "1903 Norfolk pine 的規整水平輪生與開放枝間距被保留，比例獨立於另一張南洋杉。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal",
+        "priorHumanVerdict": "archive"
+      },
+      "outputDir": "out/3d_data/tree/cf_araucaria/tree_cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_luna_v6",
+      "preview": "out/review_previews/tree_cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_luna_v6.png",
+      "bounds": {
+        "min": [
+          -2.37,
+          0,
+          -1.2831
+        ],
+        "max": [
+          2.37,
+          8.65,
+          1.2831
+        ],
+        "size": [
+          4.74,
+          8.65,
+          2.566
+        ],
+        "rMax": 2.695,
+        "triangles": 13596,
+        "vertices": 8314
+      },
+      "parts": 146
+    },
+    {
+      "target": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+      "status": "awaiting_human_review",
+      "targetId": "tree_cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_luna_v6",
+      "key": "tree/cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_f85d916f_luna_v6",
+      "family": "tree",
+      "subpart": "cf_araucaria",
+      "style": "mature monkey-puzzle dense hooked whorls",
+      "symmetryMode": "symmetric",
+      "image": "tree\\cf_araucaria\\ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
+      "featureEvidence": "legacy_feature_metadata_only",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 84,
+        "critique": "成熟 monkey-puzzle 以七向不規則輪生、三至四段粗節枝形成明確 U/J 回鉤；沿枝葉簇與鈍圓頂冠保留內部密度。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal",
+        "priorHumanVerdict": "archive"
+      },
+      "outputDir": "out/3d_data/tree/cf_araucaria/tree_cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_luna_v6",
+      "preview": "out/review_previews/tree_cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_luna_v6.png",
+      "bounds": {
+        "min": [
+          -3.5404,
+          0,
+          -2.5176
+        ],
+        "max": [
+          3.7611,
+          11.2,
+          2.4813
+        ],
+        "size": [
+          7.301,
+          11.2,
+          4.999
+        ],
+        "rMax": 4.506,
+        "triangles": 16380,
+        "vertices": 9223
+      },
+      "parts": 508
+    },
+    {
+      "target": "ov_f3c022cd-793e-4c3f-9829-bd123c8445ff",
+      "status": "awaiting_human_review",
+      "targetId": "tree_bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_luna_v6",
+      "key": "tree/bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_0cef28df_luna_v6",
+      "family": "tree",
+      "subpart": "bl_olive",
+      "style": "ancient twisted multi-trunk olive with sparse silver canopy",
+      "symmetryMode": "asymmetric",
+      "image": "tree\\bl_olive\\ov_f3c022cd-793e-4c3f-9829-bd123c8445ff.jpg",
+      "featureEvidence": "legacy_feature_metadata_only",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 84,
+        "critique": "多幹低位扭結、左右不等高主枝與兩個枯梢清楚；二十個縮小扁長銀灰簇保留可讀空隙，未連成圓頂。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal",
+        "priorHumanVerdict": "archive"
+      },
+      "outputDir": "out/3d_data/tree/bl_olive/tree_bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_luna_v6",
+      "preview": "out/review_previews/tree_bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_luna_v6.png",
+      "bounds": {
+        "min": [
+          -4.3806,
+          0,
+          -1.4304
+        ],
+        "max": [
+          4.1377,
+          8.4236,
+          1.4102
+        ],
+        "size": [
+          8.518,
+          8.424,
+          2.841
+        ],
+        "rMax": 4.608,
+        "triangles": 3700,
+        "vertices": 2262
+      },
+      "parts": 36
+    }
+  ]
+}
