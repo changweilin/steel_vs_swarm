@@ -650,12 +650,11 @@ export async function buildTerrain(cfg, onProgress) {
     if (!bakeSeaDepth() || !blockers?.length) return 0;
     const n = seaN, tx = worldW / n, tz = worldH / n;
     let hit = 0;
+    const ext = FOAM.RANGE_M;
     for (const b of blockers) {
       if (!b || b.y + b.h <= waterY) continue;          // 整根都在水面以下 ⇒ 蓋了也看不到
       const rr = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;   // broad-phase = 外接半對角(A30)
       if (!(rr > 0)) continue;
-      const isRelic = b.name?.startsWith('aquatic_') || b.name?.startsWith('relic_');
-      const ext = isRelic ? 5.5 : FOAM.RANGE_M;
       const j0 = Math.max(0, Math.floor((b.x - rr - ext - minX) / tx)), j1 = Math.min(n - 1, Math.ceil((b.x + rr + ext - minX) / tx));
       const i0 = Math.max(0, Math.floor((b.z - rr - ext - minZ) / tz)), i1 = Math.min(n - 1, Math.ceil((b.z + rr + ext - minZ) / tz));
       // 有向盒的 local 軸:three Euler(0, ry, 0) 的反解 ⇒ `sn` 取 **−sin**(A30;

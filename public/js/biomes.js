@@ -6704,18 +6704,35 @@ function buildSwampSurface(group, terrain) {
   if (wy == null) return;
   const swampY = wy + WATER.SWAMP_BAND;
   const { minX, maxX, minZ, maxZ } = terrain;
-  const cols = Math.min(320, Math.max(1, Math.ceil((maxX - minX) / 10)));   // ~10m 格(紫盤是濁沼,不需更細)
-  const rows = Math.min(320, Math.max(1, Math.ceil((maxZ - minZ) / 10)));
+  const step = 4.0;   // ~4m 細分網格，確保頂點著色器能呈現波浪起伏與流暢過渡
+  const cols = Math.min(480, Math.max(1, Math.ceil((maxX - minX) / step)));
+  const rows = Math.min(480, Math.max(1, Math.ceil((maxZ - minZ) / step)));
   const cw = (maxX - minX) / cols, ch = (maxZ - minZ) / rows;
   const pos = [], nrm = [], idx = [], fade = [];
   let base = 0;
+
+  // 計算頂點高度 (若鄰近水域則平滑過渡至 waterY，消除斷層直邊)
+  const vertexH = (x, z) => {
+    const code = terrainEnvCode(terrain, x, z);
+    if (code === 2) return swampY;
+    if (code === 1) return wy;
+    const h = terrain.heightAt(x, z);
+    return Math.min(swampY, Math.max(wy, h));
+  };
+
   for (let i = 0; i < rows; i++) {
     const z0 = minZ + i * ch, z1 = z0 + ch, cz = z0 + ch / 2;
     for (let j = 0; j < cols; j++) {
       const x0 = minX + j * cw, x1 = x0 + cw, cx = x0 + cw / 2;
       if (terrainEnvCode(terrain, cx, cz) !== 2) continue;
-      pos.push(x0, swampY, z0, x1, swampY, z0, x1, swampY, z1, x0, swampY, z1);
-      for (let k = 0; k < 4; k++) nrm.push(0, 1, 0);   // 水平面法線恆朝上(平坦,免 computeVertexNormals)
+
+      const y00 = vertexH(x0, z0);
+      const y10 = vertexH(x1, z0);
+      const y11 = vertexH(x1, z1);
+      const y01 = vertexH(x0, z1);
+
+      pos.push(x0, y00, z0, x1, y10, z0, x1, y11, z1, x0, y01, z1);
+      for (let k = 0; k < 4; k++) nrm.push(0, 1, 0);   // 水平面法線恆朝上
       idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
       const fd = terrain.seaFadeAtWorld ? terrain.seaFadeAtWorld(cx, cz) : 1.0;
       for (let k = 0; k < 4; k++) fade.push(fd);

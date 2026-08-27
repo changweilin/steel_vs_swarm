@@ -1085,16 +1085,18 @@ const CEL_SEA_GLSL = `
                 * ( sin( uWindT * uSoftFreq + celMsp ) * 0.72
                   + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28 );
 
-          // 沼澤專屬公式 (低頻黏滯波 + 碎浪微擾動)
-          float celHSwamp = uSoftAmp * 0.42 * ( sin( uWindT * 0.75 + dot( celSxz, vec2( 0.22, 0.15 ) ) ) * 0.65
-                                              + cos( uWindT * 0.55 + dot( celSxz, vec2( -0.16, 0.24 ) ) ) * 0.35 );
+          // 沼澤專屬公式 (黏滯微波 + 二維微風擾動)
+          float celSwampWarp = sin( dot( celSxz, vec2( 0.092, 0.058 ) ) + uWindT * 0.55 ) * 0.8
+                             + cos( dot( celSxz, vec2( -0.065, 0.088 ) ) + uWindT * 0.42 ) * 0.4;
+          float celHSwamp = uSoftAmp * 0.85 * ( sin( uWindT * 0.95 + dot( celSxz, vec2( 0.18, 0.12 ) ) + celSwampWarp ) * 0.65
+                                              + cos( uWindT * 0.72 + dot( celSxz, vec2( -0.14, 0.21 ) ) ) * 0.35 );
 
           #ifdef CEL_SWAMP_RIPPLE
           float celH = celHSwamp;
           #else
           // 開闊水域在極淺水/沼澤邊界處依深度平滑過渡，確保水波高度嚴格連續無撕裂
           float celSwampBlend = 1.0 - celDepF; // 淺水邊界 [0, 1]
-          float celH = mix( celHSea, celHSwamp, celSwampBlend * 0.45 );
+          float celH = mix( celHSea, celHSwamp, celSwampBlend * 0.65 );
           #endif
 
           // ④ 沼澤與淺水小水域：破碎化微波擾動
@@ -2033,7 +2035,8 @@ ${CEL_SEA_GLSL}
           vec2 celFuv = clamp( ( celFxz - uSeaRect.xy ) * uSeaRect.zw, 0.0, 1.0 );
           float celFd = texture2D( uSeaField, celFuv ).r * ${FOAM.RANGE_M.toFixed(2)};
           float celFade = clamp( 1.0 - celFd / ${FOAM.RANGE_M.toFixed(2)}, 0.0, 1.0 );
-          if ( celFd <= 0.001 || celFade <= 0.0 ) return 0.0;
+          if ( celFade <= 0.0 ) return 0.0;
+          if ( celFd <= 0.001 ) return 0.0;
           float celFb = fract( ( celFd - celSeaH( celFxz ) ) / ${FOAM.BAND_M.toFixed(3)} );
           float celBand = max( 0.0, 4.0 * celFb * ( 1.0 - celFb ) );
           float celFp = pow( celBand, ${FOAM.SHAPE_K.toFixed(1)} ) * celFade
