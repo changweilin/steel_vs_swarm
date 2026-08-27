@@ -19,6 +19,7 @@ node_modules/three/
 
 # 定場鏡頭組出圖(V-A;隨時可重拍,勿入版控)
 tools/.shots_scene/
+tools/.shots_water_relics/
 
 # 在地文字語料烘焙的 Overpass 回應快取(可重新抓取;`venueText.js` 才是產物)
 tools/.text_cache/

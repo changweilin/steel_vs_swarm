@@ -40,7 +40,8 @@ const FOG_NEAR_C = new THREE.Color(0x4a3a2a);
 
 const DEMO_SCENES = [
   { id: 'mech', name: '🤖 機體' },
-  { id: 'shore', name: '🌊 水岸' },
+  { id: 'shore', name: '🏖️ 海灘遺跡' },
+  { id: 'swamp', name: '🌿 沼澤遺跡' },
   { id: 'tree', name: '🌲 樹鳥' },
   { id: 'biome', name: '🏞️ 地貌' },
 ];
@@ -130,56 +131,134 @@ export class MatSample {
     this._geos.push(pedGeo, mechChest.geometry);
     this._gMech.add(ped, mechChest);
 
-    // 2. 水岸與倒影
+    // 2. 海灘與水中遺跡 (純粹海灘、清澈海水，遺跡遠離海岸位於遠端水域)
     this._gShore = new THREE.Group();
     {
-      const shoreM = envMat(0x4a6042, { wash: 0.6, cool: 0.5, moss: { amount: 0.85 } });
-      const rockM = envMat(0x56524a, { wash: 0.5 });
-      const waterM = envMat(0x184458, { wash: 0.85, cool: 0.65 });
-      const beaconM = toonMat(0xd46830);
-      const foamM = toonMat(0xddf2f8);
-      const reflM = toonMat(0x844020);
-      this._mats.push(shoreM, rockM, waterM, beaconM, foamM, reflM);
+      const sandM = envMat(0xdac8a2, { wash: 0.5, cool: 0.35 });
+      const rockM = envMat(0x6c726a, { wash: 0.45, moss: { amount: 0.4 } });
+      const waterM = envMat(0x18485e, { wash: 0.85, cool: 0.7, transparent: true, opacity: 0.82 });
+      const relicM = toonMat(0x7e8884, { bands: 'soft' });
+      const hullM = toonMat(0x3e5262, { celMetal: true });
+      const foamM = toonMat(0xf0f8ff, { bands: 'soft', transparent: true, opacity: 0.95 });
+      const reflM = toonMat(0x283e4a, { transparent: true, opacity: 0.45 });
+      this._mats.push(sandM, rockM, waterM, relicM, hullM, foamM, reflM);
 
-      const shore = new THREE.Mesh(new THREE.BoxGeometry(11, 1.4, 24), shoreM);
-      shore.position.set(-5.5, 0.7, 0);
+      // 海灘沙地 (斜坡入水)
+      const beach = new THREE.Mesh(new THREE.BoxGeometry(11, 1.2, 24), sandM);
+      beach.position.set(-5.5, 0.6, 0);
 
-      const water = new THREE.Mesh(new THREE.PlaneGeometry(13, 24), waterM);
-      water.position.set(6.5, 0.5, 0);
+      // 水面 (純淨水體)
+      const water = new THREE.Mesh(new THREE.PlaneGeometry(16, 24), waterM);
+      water.position.set(8.0, 0.5, 0);
       water.rotation.x = -Math.PI / 2;
 
-      const rock1 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.6, 2.0), rockM);
-      rock1.position.set(-0.4, 1.0, 1.2);
-      rock1.rotation.set(0.2, 0.7, 0.1);
+      // 水中遺跡石柱 1 (遠離海岸，位於水體中央深處)
+      const pillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 3.2, 16), relicM);
+      pillar1.position.set(4.6, 1.4, -1.2);
 
-      const beaconPole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 3.6, 12), beaconM);
-      beaconPole.position.set(-1.4, 2.5, -0.4);
+      // 水中遺跡石柱 2 (傾斜半沉，遠離海岸)
+      const pillar2 = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 2.8, 16), relicM);
+      pillar2.position.set(6.2, 1.0, 1.8);
+      pillar2.rotation.z = 0.35;
 
-      const beaconTop = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), beaconM);
-      beaconTop.position.set(-1.4, 4.4, -0.4);
+      // 水下沉船/潛艇主體 (遠離海岸深水處，船身沿 yaw 朝向)
+      const subGeo = new THREE.CapsuleGeometry(0.9, 3.8, 8, 16);
+      subGeo.rotateX(Math.PI / 2);
+      const subHull = new THREE.Mesh(subGeo, hullM);
+      subHull.position.set(7.8, 0.6, -0.2);
+      subHull.rotation.set(0.12, -0.4, 0.08);
 
-      const foam1 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 20), foamM);
-      foam1.position.set(0.4, 0.52, 0);
-      foam1.rotation.x = -Math.PI / 2;
+      // 浪花帶 (沿沙灘水線)
+      const foamShore = new THREE.Mesh(new THREE.PlaneGeometry(0.65, 22), foamM);
+      foamShore.position.set(0.2, 0.52, 0);
+      foamShore.rotation.x = -Math.PI / 2;
 
-      const foam2 = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 18), foamM);
-      foam2.position.set(1.1, 0.52, 0);
-      foam2.rotation.x = -Math.PI / 2;
+      // 遺跡石柱周遭獨立同心浪花圈 (與海岸浪花清楚分開)
+      const foamRing1 = new THREE.Mesh(new THREE.RingGeometry(0.65, 1.1, 24), foamM);
+      foamRing1.position.set(4.6, 0.52, -1.2);
+      foamRing1.rotation.x = -Math.PI / 2;
 
-      const refl = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 6.0), reflM);
-      refl.position.set(0.8, 0.51, 1.5);
+      const foamRing2 = new THREE.Mesh(new THREE.RingGeometry(1.3, 1.6, 24), foamM);
+      foamRing2.position.set(4.6, 0.52, -1.2);
+      foamRing2.rotation.x = -Math.PI / 2;
+
+      const refl = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4.0), reflM);
+      refl.position.set(4.6, 0.51, 0.6);
       refl.rotation.x = -Math.PI / 2;
 
-      const bgCliff = new THREE.Mesh(new THREE.BoxGeometry(12, 4.0, 2), rockM);
-      bgCliff.position.set(-4.0, 2.0, BG_Z);
+      this._geos.push(
+        beach.geometry, water.geometry, pillar1.geometry, pillar2.geometry,
+        subGeo, foamShore.geometry, foamRing1.geometry, foamRing2.geometry, refl.geometry
+      );
+      this._gShore.add(beach, water, pillar1, pillar2, subHull, foamShore, foamRing1, foamRing2, refl);
+      this._foamMeshes = [foamShore, foamRing1, foamRing2];
+      this._reflMesh = refl;
+    }
+
+    // 3. 沼澤與水中遺跡 (泥濘濕地、墨綠死水、青苔古柱與呼吸隱現微浪)
+    this._gSwamp = new THREE.Group();
+    {
+      const mudM = envMat(0x363c2c, { wash: 0.65, moss: { amount: 0.95 } });
+      const swampWaterM = envMat(0x193622, { wash: 0.85, cool: 0.6, transparent: true, opacity: 0.86 });
+      const swampRelicM = toonMat(0x4c564a, { bands: 'soft' });
+      const swampHullM = toonMat(0x28382c, { celMetal: true });
+      const swampFoamM = toonMat(0xd0e8d4, { bands: 'soft', transparent: true, opacity: 0.75 });
+      const reedM = envMat(0x3e5e2a);
+      this._mats.push(mudM, swampWaterM, swampRelicM, swampHullM, swampFoamM, reedM);
+
+      // 泥濘濕地陸塊
+      const mudBank = new THREE.Mesh(new THREE.BoxGeometry(10, 1.1, 24), mudM);
+      mudBank.position.set(-5.0, 0.55, 0);
+
+      // 沼澤水體
+      const swampWater = new THREE.Mesh(new THREE.PlaneGeometry(16, 24), swampWaterM);
+      swampWater.position.set(8.0, 0.5, 0);
+      swampWater.rotation.x = -Math.PI / 2;
+
+      // 沼澤深處半沉古石柱 (長滿青苔)
+      const sPillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 3.2, 16), swampRelicM);
+      sPillar1.position.set(4.5, 1.2, -1.0);
+
+      const sPillar2 = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 2.6, 16), swampRelicM);
+      sPillar2.position.set(6.0, 0.9, 1.6);
+      sPillar2.rotation.z = 0.32;
+
+      // 沉沒銹蝕艙體
+      const sHullGeo = new THREE.CapsuleGeometry(0.85, 3.6, 8, 16);
+      sHullGeo.rotateX(Math.PI / 2);
+      const sHull = new THREE.Mesh(sHullGeo, swampHullM);
+      sHull.position.set(7.6, 0.55, -0.3);
+      sHull.rotation.set(0.12, -0.38, 0.08);
+
+      // 沼澤呼吸式隱現波紋環 (正號至微小負號)
+      const sFoamRing1 = new THREE.Mesh(new THREE.RingGeometry(0.65, 1.05, 24), swampFoamM);
+      sFoamRing1.position.set(4.5, 0.52, -1.0);
+      sFoamRing1.rotation.x = -Math.PI / 2;
+
+      const sFoamRing2 = new THREE.Mesh(new THREE.RingGeometry(1.25, 1.55, 24), swampFoamM);
+      sFoamRing2.position.set(4.5, 0.52, -1.0);
+      sFoamRing2.rotation.x = -Math.PI / 2;
+
+      // 蘆葦叢
+      const reeds = [];
+      const reedGeo = new THREE.CylinderGeometry(0.04, 0.06, 1.8, 6);
+      this._geos.push(reedGeo);
+      const reedPos = [
+        [0.6, 1.0, -2.0], [0.8, 1.1, -1.6], [0.5, 0.9, 2.2], [0.9, 1.0, 2.6],
+        [3.2, 0.8, -3.0], [5.8, 0.7, -2.5],
+      ];
+      for (const [rx, ry, rz] of reedPos) {
+        const rm = new THREE.Mesh(reedGeo, reedM);
+        rm.position.set(rx, ry, rz);
+        rm.rotation.set(0.1, Math.random() * 3, 0.1);
+        reeds.push(rm);
+      }
 
       this._geos.push(
-        shore.geometry, water.geometry, rock1.geometry, beaconPole.geometry,
-        beaconTop.geometry, foam1.geometry, foam2.geometry, refl.geometry, bgCliff.geometry
+        mudBank.geometry, swampWater.geometry, sPillar1.geometry, sPillar2.geometry,
+        sHull.geometry, sFoamRing1.geometry, sFoamRing2.geometry
       );
-      this._gShore.add(shore, water, rock1, beaconPole, beaconTop, foam1, foam2, refl, bgCliff);
-      this._foamMeshes = [foam1, foam2];
-      this._reflMesh = refl;
+      this._gSwamp.add(mudBank, swampWater, sPillar1, sPillar2, sHull, sFoamRing1, sFoamRing2, ...reeds);
     }
 
     // 3. 樹冠植被與鳥群
@@ -282,9 +361,10 @@ export class MatSample {
       this._seamMesh = seam;
     }
 
-    this._sceneGroups = [this._gMech, this._gShore, this._gTree, this._gBiome];
+    this._sceneGroups = [this._gMech, this._gShore, this._gSwamp, this._gTree, this._gBiome];
     this.scene.add(...this._sceneGroups);
     this._gShore.visible = false;
+    this._gSwamp.visible = false;
     this._gTree.visible = false;
     this._gBiome.visible = false;
 

@@ -1042,19 +1042,28 @@ const CEL_SEA_GLSL = `
         // 浪高(世界 XZ 的純函式)。**位移與法線 MUST 吃同一支** —— 兩邊各寫一份的話,
         // 光影的浪與幾何的浪會差半個波長,而畫面上只表現成「水面的亮帶跟浪對不上」。
         //
-        // 2026-08-26 水波空間變異化(純表現層,§0-4):
-        //   ① 空間多頻干涉與相位偏移:打破單一行波空間均勻性
-        //   ② 深度調變:uSeaField 淺水 → 波長壓縮 ×${(1 / WIND.SEA_DEPTH_LO).toFixed(2)} + 振幅 ×${WIND.SEA_DEPTH_AMP.toFixed(1)}
-        //   ③ 障礙衰減:深度場 0(蓋章)附近波幅 smoothstep 衰減
-        //   ④ 沼澤漣漪(CEL_SWAMP_RIPPLE):疊加局部圓形衰減波
+        // 程序化水波特效升級 (純表現層,§0-4):
+        //   ① 非筆直直線波前：領域扭曲 (Domain Warping) 與空間非線性有機彎曲擾動
+        //   ② 深度調變與破碎化微波：淺水與沼澤水面注入破碎化短波微紋理
+        //   ③ 遺跡/沈船切面同心波前：依 uSeaField 物件剖面等值線生成同心波，有機擾動且向外淡出
+        //   ④ 障礙物近場衰減與基礎行波合成
+        //   ⑤ 沼澤漣漪(CEL_SWAMP_RIPPLE):疊加局部圓形衰減波
         float celSeaH( vec2 celSxz ) {
-          float celSp = dot( celSxz, uWindK );
+          // ① 非直線波前：領域扭曲 (Domain Warping)，消除筆直條紋感
+          vec2 celWarp = vec2(
+            sin( celSxz.y * 0.038 + celSxz.x * 0.015 + uWindT * 0.16 ) * 5.2
+              + sin( celSxz.y * 0.082 - celSxz.x * 0.041 + 2.37 ) * 2.6,
+            cos( celSxz.x * 0.034 - celSxz.y * 0.019 + uWindT * 0.13 ) * 5.2
+              + cos( celSxz.x * 0.076 + celSxz.y * 0.043 + 1.19 ) * 2.6
+          );
+          vec2 celWxz = celSxz + celWarp;
+          float celSp = dot( celWxz, uWindK );
 
-          // ① 空間多頻干涉與相位偏移 (特徵尺度 ~${WIND.SEA_NOISE_M.toFixed(0)}m,打破單一行波空間均勻性)
-          float celSn = sin( dot( celSxz, vec2( 0.0523, 0.0321 ) ) ) * 0.62
-                      + sin( dot( celSxz, vec2( -0.0233, 0.0711 ) ) + 2.13 ) * 0.38;
-          float celSn2 = sin( dot( celSxz, vec2( 0.0951, -0.0583 ) ) + 4.31 ) * 0.58
-                       + sin( dot( celSxz, vec2( -0.0773, -0.1071 ) ) + 1.25 ) * 0.42;
+          // 空間多頻干涉與相位偏移 (特徵尺度 ~${WIND.SEA_NOISE_M.toFixed(0)}m,打破單一行波空間均勻性)
+          float celSn = sin( dot( celWxz, vec2( 0.0523, 0.0321 ) ) ) * 0.62
+                      + sin( dot( celWxz, vec2( -0.0233, 0.0711 ) ) + 2.13 ) * 0.38;
+          float celSn2 = sin( dot( celWxz, vec2( 0.0951, -0.0583 ) ) + 4.31 ) * 0.58
+                       + sin( dot( celWxz, vec2( -0.0773, -0.1071 ) ) + 1.25 ) * 0.42;
           float celAmpMod = 1.0 + celSn * ${WIND.SEA_NOISE_F.toFixed(3)};
           float celPhJit = celSn2 * 1.2;
 
@@ -1063,18 +1072,59 @@ const CEL_SEA_GLSL = `
           float celRawD = texture2D( uSeaField, celDuv ).r;
           float celDepF = smoothstep( 0.0, 0.5, celRawD );
 
-          // 淺水:波數增大(波長壓縮)、振幅增加(碎浪)
+          // 淺水與沼澤:波數增大(波長壓縮)、振幅增加(碎浪微紋理)
           float celWaveK = mix( ${(1 / WIND.SEA_DEPTH_LO).toFixed(3)}, 1.0, celDepF );
           float celAmpD = mix( ${WIND.SEA_DEPTH_AMP.toFixed(3)}, 1.0, celDepF );
 
-          // ③ 障礙物近場衰減:深度場 0 的位置附近波幅整體壓低
+          // ③ 障礙物近場衰減:深度場 0 的位置附近主波幅壓低 (留給同心切面波)
           float celObD = smoothstep( 0.0, 0.15, celRawD );
 
-          // 合成基礎行波
+          // 合成基礎行波 (非直線波前)
           float celMsp = celSp * celWaveK + celPhJit;
           float celH = uSoftAmp * celAmpD * celAmpMod * celObD * celGust( celSxz )
                * ( sin( uWindT * uSoftFreq + celMsp ) * 0.72
                  + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28 );
+
+          // ④ 沼澤與淺水小水域：破碎化微波擾動
+          float celFragW = ( 1.0 - celDepF ) * 0.65;
+          #ifdef CEL_SWAMP_RIPPLE
+          celFragW = max( celFragW, 0.85 );
+          #endif
+          if ( celFragW > 0.01 ) {
+            float celChop = sin( dot( celSxz, vec2( 0.38, 0.24 ) ) + uWindT * 1.4 )
+                          * cos( dot( celSxz, vec2( -0.27, 0.35 ) ) + uWindT * 1.1 )
+                          + sin( dot( celSxz, vec2( 0.61, -0.42 ) ) - uWindT * 1.8 ) * 0.5;
+            celH += uSoftAmp * 0.45 * celFragW * celChop;
+          }
+
+          // ⑤ 遺跡/沉船/橋墩周邊：環繞物件切面的同心波前 (水流方向隨機向內或向外，橋墩範圍約為遺跡一半，最外圈自然消失)
+          if ( celRawD > 0.001 && celRawD < 0.98 ) {
+            // 物件位置決定水流向內(-1)或向外(+1)
+            float celFlowSign = sign( sin( dot( floor( celSxz * 0.08 ), vec2( 12.9898, 78.233 ) ) * 43758.5453 ) );
+            if ( celFlowSign == 0.0 ) celFlowSign = 1.0;
+
+            // 判斷障礙物大小/類型: 大範圍遺跡/沉船 vs 橋墩 (橋墩浪花範圍約遺跡一半)
+            float isRelic = smoothstep( 0.04, 0.20, celRawD );
+            float waveExtent = mix( ${FOAM.RANGE_M.toFixed(2)} * 1.15, ${FOAM.RANGE_M.toFixed(2)} * 2.3, isRelic );
+            float relicDist = celRawD * waveExtent;
+
+            float relicJit = sin( dot( celSxz, vec2( 0.23, -0.31 ) ) + celRawD * 14.0 ) * 0.55
+                           + cos( dot( celSxz, vec2( -0.18, 0.37 ) ) + uWindT * 0.7 ) * 0.45;
+            float relicPhase = relicDist * 3.8 - uWindT * 2.4 * celFlowSign + relicJit;
+
+            // 越外圈自然消失 (指數衰減 + smoothstep 至 0)
+            float relicFade = exp( -relicDist * 0.95 ) * ( 1.0 - smoothstep( 0.15, 0.95, celRawD ) );
+            float relicWave = sin( relicPhase ) * relicFade * ( uSoftAmp * 1.1 );
+
+            #ifdef CEL_SWAMP_RIPPLE
+            // 沼澤/封閉水域：浪花變化改為正號到微小負號 (負號數值遠小於正號，負號時不顯示)
+            float swampWavePulse = sin( uWindT * 1.4 + relicDist * 2.0 ) * 0.54 + 0.46; // [-0.08, +1.00]
+            relicWave *= clamp( swampWavePulse, 0.0, 1.0 );
+            #endif
+
+            celH += relicWave;
+          }
+
           #ifdef CEL_SWAMP_RIPPLE
           celH += celSwampRipple( celSxz );
           #endif
@@ -1783,6 +1833,35 @@ ${CEL_SEA_GLSL}
             gl_FragColor.rgb = mix( gl_FragColor.rgb, uFoamC, celF );
             gl_FragColor.a = mix( gl_FragColor.a, 1.0, celF );
           }
+
+          // ---- 沼澤與小範圍水域破碎化波光粼粼 (Cel Shimmer & Sparkle Glints) ----
+          vec2 celShimmerUV = vCelWP.xz * 2.4 + vec2( sin( uWindT * 1.8 + vCelWP.z * 0.4 ), cos( uWindT * 1.5 + vCelWP.x * 0.4 ) ) * 0.35;
+          float celShN1 = celNoise( celShimmerUV );
+          float celShN2 = celNoise( celShimmerUV * 2.5 + vec2( 5.31, 11.17 ) + uWindT * 0.9 );
+          float celSparkle = pow( celShN1 * celShN2, 3.2 );
+          vec3 celWaterV = normalize( vViewPosition );
+          vec3 celWaterH = normalize( uCelLightDir + celWaterV );
+          float celWaterSpec = pow( max( 0.0, dot( normal, celWaterH ) ), 32.0 );
+
+          // 判斷深度(淺水/沼澤更強烈破碎波光)
+          vec2 celDuvFrag = clamp( ( vCelWP.xz - uSeaRect.xy ) * uSeaRect.zw, vec2( 0.0 ), vec2( 1.0 ) );
+          float celRawDFrag = texture2D( uSeaField, celDuvFrag ).r;
+          float celShallowF = smoothstep( 0.65, 0.05, celRawDFrag );
+          #ifdef CEL_SWAMP_RIPPLE
+          celShallowF = max( celShallowF, 0.85 );
+          #endif
+
+          if ( celShallowF > 0.05 ) {
+            float celGlint = step( 0.68, ( celWaterSpec * 0.65 + 0.35 ) * celSparkle * 4.5 ) * celShallowF * vSeaFade;
+            if ( celGlint > 0.0 ) {
+              #ifdef CEL_SWAMP_RIPPLE
+              vec3 glintColor = vec3( 0.82, 0.94, 0.72 ); // 沼澤青金碎波光
+              #else
+              vec3 glintColor = vec3( 0.94, 0.98, 1.0 );  // 清澈水域銀白晶亮波光
+              #endif
+              gl_FragColor.rgb = mix( gl_FragColor.rgb, glintColor, celGlint * 0.75 );
+            }
+          }
         }
         #endif
         // 勾線資訊緩衝(檔頭那一段):覆寫 opaque_fragment 寫下的「沒有資訊」。
@@ -1947,6 +2026,11 @@ ${CEL_SEA_GLSL}
           float celBand = max( 0.0, 4.0 * celFb * ( 1.0 - celFb ) );
           float celFp = pow( celBand, ${FOAM.SHAPE_K.toFixed(1)} ) * celFade
                       * mix( 0.45, 1.0, celNoise( celFxz / ${FOAM.NOISE_M.toFixed(2)} ) );
+          #ifdef CEL_SWAMP_RIPPLE
+          // 沼澤/池塘/封閉水域：浪花變化改為正號到微小負號 (負號數值遠小於正號，負號時不顯示)
+          float celSwampPulse = sin( uWindT * 1.5 + dot( celFxz, vec2( 0.45, 0.35 ) ) ) * 0.54 + 0.46; // [-0.08, +1.00]
+          celFp *= clamp( celSwampPulse, 0.0, 1.0 );
+          #endif
           return step( ${FOAM.STEP.toFixed(2)}, celFp );   // 硬邊(賽璐璐的泡沫不是柔霧)
         }
         #endif
