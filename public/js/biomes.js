@@ -53,9 +53,14 @@ import { libGeo } from './partlib.js';
 import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { approvedVehicleModelAt } from './approvedVehicleModels.js';
 import { makeRuntimePartModel } from './runtimePartModel.js';
-// 載具 / 擺件型錄(2026-08-16 序 10;純資料、零 import、零 THREE ⇒ 離線稽核吃得到同一份)
-// 鳥群(2026-08-16 序 11 ⑥-2;零 THREE 的積分器 —— 四項規則離線驗得到,見該檔檔頭)
-import { FLOCK, planFlockRoutes, flockInit, flockStep, flockHeading, wingAngle, birdParts } from './wildlife.js';
+// 鳥群 / 魚群 / 貓 / 狗 (2026-08-16 序 11 ⑥-2 / 2026-08-27 生態擴充; 零 THREE 的積分器)
+import {
+  FLOCK, FISH, CAT, DOG,
+  planFlockRoutes, planFishRoutes, planCatRoutes, planDogRoutes,
+  flockInit, flockStep, flockHeading, wingAngle, tailAngle, bounceOffset,
+  wildlifeInit, wildlifeStep, wildlifeHeading,
+  birdParts, fishParts, catParts, dogParts,
+} from './wildlife.js';
 // 平整垂直牆面板 + 窗格貼齊(2026-08-13;零 import 的純模組,離線工具吃同一支 —— 面板的
 // 定義只有一份,見該檔檔頭)
 // 場址配置規則(2026-08-03 使用者定案三條:市區都市計畫 / 綠地樹冠羞避 / 裸露地地質排列)——
@@ -1389,30 +1394,39 @@ function shoreRing(terrain) {
 }
 
 const BIRDS_OFF = typeof location !== 'undefined' && /[?&]birds=0/.test(location.search);
+const FISH_OFF = typeof location !== 'undefined' && /[?&]fish=0/.test(location.search);
+const CATS_OFF = typeof location !== 'undefined' && /[?&]cats=0/.test(location.search);
+const DOGS_OFF = typeof location !== 'undefined' && /[?&]dogs=0/.test(location.search);
 
-// ============ 鳥群(⑥-2;規則住 wildlife.js,本支只建 mesh + 接既有的 dynamics)============
-// 三件事在這裡而不是在 wildlife.js:①錨點由**已經定案的世界幾何**推導(水域 / 神木林候選地 /
-// 地標)②InstancedMesh 與逐幀矩陣 ③夾制線與天花板由呼叫端**注入**(同 edgewall 的坡度門檻)。
-// **零共享 `rnd()` 消耗**(§2.3):錨點是讀既有結果、逐鳥抖動走座標雜湊。
-// `birds = 0` ⇒ 一條曲線都不建(零 mesh、零 dynamics 條目);
-// `?birds=0` 是同一條的 killswitch(同 `?petal=0` / `?gait=0` / `?morph=0` 的慣例)。
+// ============ 生態動物群 (鳥群 / 魚群 / 貓 / 狗; 規則住 wildlife.js, 本支只建 mesh + 接既有的 dynamics) ============
+// 三件事在這裡而不是在 wildlife.js:①錨點由**已經定案的世界幾何**推導(水域 / 神木林候選地 / 地標 / 聚落)
+// ②InstancedMesh 與逐幀矩陣 ③夾制線與天花板由呼叫端**注入**(同 edgewall 的坡度門檻)。
+// **零共享 `rnd()` 消耗**(§2.3):錨點是讀既有結果、逐隻抖動走座標雜湊。
+// `birds = 0` 時不建曲線(零 mesh、零 dynamics 條目);預設密度由 visualPrefs 定案
 function buildFlocks(group, terrain, dynamics, { anchors, low }) {
   const dens = visualPref('birds');
   if (BIRDS_OFF || !(dens > 0)) return 0;
   const inset = edgeWallInsetM();
-  const routes = planFlockRoutes({
-    anchors,
-    probe: (x, z) => terrain.heightAt(x, z),
-    bounds: {
-      minX: terrain.minX + inset, maxX: terrain.maxX - inset,
-      minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset,
-    },
-    altMax: objHeightMax(),   // 飛出天花板 = 世界曲面把牠往下沉(看起來像鳥主動俯衝)
-    low,
-  });
-  if (!routes.length) return 0;   // 錨不到就不放(原則 6)—— MUST NOT 退回「戰場中央一條環」
+  const bounds = {
+    minX: terrain.minX + inset, maxX: terrain.maxX - inset,
+    minZ: terrain.minZ + inset, maxZ: terrain.maxZ - inset,
+  };
+  const probe = (x, z) => terrain.heightAt(x, z);
+  const altMax = objHeightMax();
 
-  const parts = birdParts();
+  const birdRoutes = planFlockRoutes({ anchors, probe, bounds, altMax, low });
+  const fishDens = visualPref('fish');
+  const fishRoutes = (FISH_OFF || !(fishDens > 0) || terrain.waterY == null) ? []
+    : planFishRoutes({ anchors, probe, bounds, waterY: terrain.waterY, low });
+  const catDens = visualPref('cats');
+  const catRoutes = (CATS_OFF || !(catDens > 0)) ? []
+    : planCatRoutes({ anchors, probe, bounds, low });
+  const dogDens = visualPref('dogs');
+  const dogRoutes = (DOGS_OFF || !(dogDens > 0)) ? []
+    : planDogRoutes({ anchors, probe, bounds, low });
+
+  if (!birdRoutes.length && !fishRoutes.length && !catRoutes.length && !dogRoutes.length) return 0;
+
   const geoOf = (rows) => {
     const geos = [], cols = [];
     for (const p of rows) {
@@ -1432,33 +1446,101 @@ function buildFlocks(group, terrain, dynamics, { anchors, low }) {
     }
     return mergeGeos(geos, cols);
   };
-  const bodyGeo = geoOf(parts.filter((p) => !p.wing));
-  const wingGeo = [1, -1].map((s) => geoOf(parts.filter((p) => p.wing === s)));
 
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), WQ = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1);
-  const FWD = new THREE.Vector3(0, 0, 1), DIR = new THREE.Vector3(), AXZ = new THREE.Vector3(0, 0, 1);
+  const FWD = new THREE.Vector3(0, 0, 1), DIR = new THREE.Vector3(), AXZ = new THREE.Vector3(0, 0, 1), AY = new THREE.Vector3(0, 1, 0);
   const H = [0, 0, 0];
-  const flocks = [];
+
+  // ① 鳥群
+  const birdPartsList = birdParts();
+  const birdBodyGeo = geoOf(birdPartsList.filter((p) => !p.wing));
+  const birdWingGeo = [1, -1].map((s) => geoOf(birdPartsList.filter((p) => p.wing === s)));
+  const birdFlocks = [];
   let total = 0;
-  for (const route of routes) {
+
+  for (const route of birdRoutes) {
     const st = flockInit(route);
     const mk = (geo) => {
-      // 逐鳥的密度由拉桿夾:`birds` 是**密度**不是開關,1.5 = 一群半
       const n = Math.max(1, Math.round(st.count * Math.min(1.5, dens)));
       const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
         vertexColors: true, wash: 0.3, cool: 0.45, rim: 0,
       }), n);
-      m.frustumCulled = false;   // 整群橫跨全圖,包圍球恆過期(同 makeClouds 的 grp)
-      m.castShadow = false;      // 投影旗標只有 makeUnit 與 buildGroundCover 兩個縫(§2.1 F)
+      m.frustumCulled = false;
+      m.castShadow = false;
       group.add(m);
       return m;
     };
-    flocks.push({ st, body: mk(bodyGeo), wing: [mk(wingGeo[0]), mk(wingGeo[1])] });
+    birdFlocks.push({ st, body: mk(birdBodyGeo), wing: [mk(birdWingGeo[0]), mk(birdWingGeo[1])] });
     total += st.count;
   }
+
+  // ② 魚群
+  const fishPartsList = fishParts();
+  const fishBodyGeo = geoOf(fishPartsList.filter((p) => !p.tail));
+  const fishTailGeo = geoOf(fishPartsList.filter((p) => p.tail));
+  const fishFlocks = [];
+  for (const route of fishRoutes) {
+    const st = wildlifeInit(route, FISH);
+    const mk = (geo) => {
+      const n = Math.max(1, Math.round(st.count * Math.min(1.5, fishDens)));
+      const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
+        vertexColors: true, wash: 0.4, cool: 0.6, rim: 0,
+      }), n);
+      m.frustumCulled = false;
+      m.castShadow = false;
+      group.add(m);
+      return m;
+    };
+    fishFlocks.push({ st, body: mk(fishBodyGeo), tail: mk(fishTailGeo) });
+    total += st.count;
+  }
+
+  // ③ 貓咪
+  const catPartsList = catParts();
+  const catBodyGeo = geoOf(catPartsList.filter((p) => !p.tail));
+  const catTailGeo = geoOf(catPartsList.filter((p) => p.tail));
+  const catFlocks = [];
+  for (const route of catRoutes) {
+    const st = wildlifeInit(route, CAT);
+    const mk = (geo) => {
+      const n = Math.max(1, Math.round(st.count * Math.min(1.5, catDens)));
+      const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
+        vertexColors: true, wash: 0.25, cool: 0.35, rim: 0,
+      }), n);
+      m.frustumCulled = false;
+      m.castShadow = false;
+      group.add(m);
+      return m;
+    };
+    catFlocks.push({ st, body: mk(catBodyGeo), tail: mk(catTailGeo) });
+    total += st.count;
+  }
+
+  // ④ 狗狗
+  const dogPartsList = dogParts();
+  const dogBodyGeo = geoOf(dogPartsList.filter((p) => !p.tail));
+  const dogTailGeo = geoOf(dogPartsList.filter((p) => p.tail));
+  const dogFlocks = [];
+  for (const route of dogRoutes) {
+    const st = wildlifeInit(route, DOG);
+    const mk = (geo) => {
+      const n = Math.max(1, Math.round(st.count * Math.min(1.5, dogDens)));
+      const m = new THREE.InstancedMesh(geo, envMat(0xffffff, {
+        vertexColors: true, wash: 0.25, cool: 0.35, rim: 0,
+      }), n);
+      m.frustumCulled = false;
+      m.castShadow = false;
+      group.add(m);
+      return m;
+    };
+    dogFlocks.push({ st, body: mk(dogBodyGeo), tail: mk(dogTailGeo) });
+    total += st.count;
+  }
+
   const write = (t) => {
-    for (const f of flocks) {
+    // 渲染鳥群
+    for (const f of birdFlocks) {
       const n = f.body.count;
       for (let i = 0; i < n; i++) {
         const j = (i % f.st.count) * 3;
@@ -1478,11 +1560,76 @@ function buildFlocks(group, terrain, dynamics, { anchors, low }) {
       f.body.instanceMatrix.needsUpdate = true;
       for (const w of f.wing) w.instanceMatrix.needsUpdate = true;
     }
+
+    // 渲染魚群 (水平擺尾)
+    for (const f of fishFlocks) {
+      const n = f.body.count;
+      for (let i = 0; i < n; i++) {
+        const j = (i % f.st.count) * 3;
+        P.set(f.st.pos[j], f.st.pos[j + 1], f.st.pos[j + 2]);
+        wildlifeHeading(f.st, i % f.st.count, H, FISH);
+        DIR.set(H[0], H[1], H[2]);
+        if (DIR.lengthSq() > 1e-9) Q.setFromUnitVectors(FWD, DIR.normalize());
+        M.compose(P, Q, S);
+        f.body.setMatrixAt(i, M);
+        const a = tailAngle(f.st, i % f.st.count, t, FISH);
+        WQ.setFromAxisAngle(AY, a);
+        M.compose(P, WQ.premultiply(Q), S);
+        f.tail.setMatrixAt(i, M);
+      }
+      f.body.instanceMatrix.needsUpdate = true;
+      f.tail.instanceMatrix.needsUpdate = true;
+    }
+
+    // 渲染貓咪 (慢速優雅擺尾)
+    for (const f of catFlocks) {
+      const n = f.body.count;
+      for (let i = 0; i < n; i++) {
+        const j = (i % f.st.count) * 3;
+        P.set(f.st.pos[j], f.st.pos[j + 1], f.st.pos[j + 2]);
+        wildlifeHeading(f.st, i % f.st.count, H, CAT);
+        DIR.set(H[0], 0, H[2]);
+        if (DIR.lengthSq() > 1e-9) Q.setFromUnitVectors(FWD, DIR.normalize());
+        M.compose(P, Q, S);
+        f.body.setMatrixAt(i, M);
+        const a = tailAngle(f.st, i % f.st.count, t, CAT);
+        WQ.setFromAxisAngle(AY, a);
+        M.compose(P, WQ.premultiply(Q), S);
+        f.tail.setMatrixAt(i, M);
+      }
+      f.body.instanceMatrix.needsUpdate = true;
+      f.tail.instanceMatrix.needsUpdate = true;
+    }
+
+    // 渲染狗狗 (快速搖尾 + 輕快小跑彈跳)
+    for (const f of dogFlocks) {
+      const n = f.body.count;
+      for (let i = 0; i < n; i++) {
+        const j = (i % f.st.count) * 3;
+        const bY = bounceOffset(f.st, i % f.st.count, t, DOG);
+        P.set(f.st.pos[j], f.st.pos[j + 1] + bY, f.st.pos[j + 2]);
+        wildlifeHeading(f.st, i % f.st.count, H, DOG);
+        DIR.set(H[0], 0, H[2]);
+        if (DIR.lengthSq() > 1e-9) Q.setFromUnitVectors(FWD, DIR.normalize());
+        M.compose(P, Q, S);
+        f.body.setMatrixAt(i, M);
+        const a = tailAngle(f.st, i % f.st.count, t, DOG);
+        WQ.setFromAxisAngle(AY, a);
+        M.compose(P, WQ.premultiply(Q), S);
+        f.tail.setMatrixAt(i, M);
+      }
+      f.body.instanceMatrix.needsUpdate = true;
+      f.tail.instanceMatrix.needsUpdate = true;
+    }
   };
+
   write(0);   // 首幀就位(dynamics 還沒跑時不會整批疊在原點)
   dynamics.push((dt) => {
     const t = celWindTime();   // 全場共用的風時鐘(雲 / 植被同一支)
-    for (const f of flocks) flockStep(f.st, t, dt);
+    for (const f of birdFlocks) flockStep(f.st, t, dt);
+    for (const f of fishFlocks) wildlifeStep(f.st, t, dt, FISH);
+    for (const f of catFlocks) wildlifeStep(f.st, t, dt, CAT);
+    for (const f of dogFlocks) wildlifeStep(f.st, t, dt, DOG);
     write(t);
   });
   return total;
@@ -11668,6 +11815,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       shore: shoreRing(terrain),
       groves: giantTrees ? greenSites.map(([x, z]) => ({ x, z, r: 26 })) : [],
       landmarks: landmarkG.map((l) => ({ x: l.x, z: l.z, r: l.r })),
+      settlements: (typeof civics !== 'undefined' && civics) ? civics.map((c) => ({ x: c.x, z: c.z, r: 18 })) : [],
+      streets: (typeof roadPolys !== 'undefined' && roadPolys?.length) ? roadPolys.slice(0, 8).map((rp) => ({ x: rp[0]?.[0]?.[0] || 0, z: rp[0]?.[0]?.[1] || 0, r: 20 })) : [],
     },
     low: lowPower(),
   });

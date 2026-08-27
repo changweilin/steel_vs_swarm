@@ -137,6 +137,18 @@ export const VISUAL_KNOBS = {
     label: '鳥群', def: 1, min: 0, max: 1.5, step: 0.05, unit: '%',
     hint: '水域岸線 / 神木林 / 地標上空的鳥群密度。**純表現層**:不進碰撞、不進 LOS、不擋任何一發子彈。0% = 沒有鳥。',
   },
+  fish: {
+    label: '魚群', def: 1, min: 0, max: 1.5, step: 0.05, unit: '%',
+    hint: '水體與水下沿岸的魚群密度。**純表現層**:水下游弋與擺尾游動。0% = 沒有魚。',
+  },
+  cats: {
+    label: '貓咪', def: 1, min: 0, max: 1.5, step: 0.05, unit: '%',
+    hint: '聚落、屋頂與巷弄的貓咪活動密度。**純表現層**:踱步巡遊與停歇。0% = 沒有貓。',
+  },
+  dogs: {
+    label: '狗狗', def: 1, min: 0, max: 1.5, step: 0.05, unit: '%',
+    hint: '街道、人行道與綠地的狗狗活動密度。**純表現層**:小跑巡邏與搖尾。0% = 沒有狗。',
+  },
   worldTextLang: {
     label: '世界文字語言', def: 'local', choices: ['local', 'zh', 'en'],
     choiceLabels: { local: '當地', zh: '中文', en: '英文' },
