@@ -3494,6 +3494,7 @@ export class BattleClient {
     }
     // 橋上砲塔:蓋在橋面墩座台上(biomes buildTowerBridgePads 定案;查無 = 一般貼地塔)
     if (e.k === 'tower') ent.padY = this.terrain.towerPadY?.(e.x, -e.z) ?? null;
+    else if (e.k === 'base') ent.padY = this.terrain.basePadY?.(e.x, -e.z) ?? null;
     group.position.set(e.x, ent.padY ?? this.terrain.heightAt(e.x, -e.z), -e.z);
     if (e.k === 'base') { this._addHealAura(ent, e); this._addBaseGuns(ent, e); }
     else if (isThirdSide(e.s)) this._addRangeRing(ent, e);   // 第三方(GUER/MILI)戰鬥單位與碉堡:貼地射程光暈
@@ -3525,7 +3526,7 @@ export class BattleClient {
   // 主堡治癒光環:標出 HERO_HEAL_R 範圍(貼地環,陣營色,緩慢脈動)
   _addHealAura(ent, e) {
     const R = GAME.HERO_HEAL_R;
-    const wx = e.x, wz = -e.z, y = this.terrain.heightAt(wx, wz) + 0.6;
+    const wx = e.x, wz = -e.z, y = (ent.padY ?? this.terrain.heightAt(wx, wz)) + 0.6;
     const col = SIDES[e.s].color;
     const g = new THREE.Group();
     g.position.set(wx, y, wz);

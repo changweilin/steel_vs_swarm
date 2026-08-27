@@ -8712,6 +8712,74 @@ function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
   return pads;
 }
 
+// ---- 水域／沼澤主堡承台 ----
+// 主堡若落在水域或沼澤，建立與砲塔墩座同語彙的大型平台。台面半徑由治癒光環推導，
+// 因而同時涵蓋 HERO_SPAWN_OFF / HERO_SPAWN_SIDE 定義的重生點；站立面併入 decks，
+// 主堡本體高度則經 basePads → main.basePadY → game.padY 單一縫取得。
+const BASE_PAD_R = Math.max(
+  GAME.HERO_HEAL_R,
+  Math.hypot(GAME.HERO_SPAWN_OFF, GAME.HERO_SPAWN_SIDE),
+) + TOWER_PAD_R;
+const BASE_PAD_T = TOWER_PAD_T;
+const BASE_PAD_SUPPORT_F = 0.62;
+
+function planBaseWaterPads(basesW, terrain) {
+  const pads = [], newDecks = [], cols = [], slabs = [], piers = [];
+  for (const base of basesW) {
+    if (terrainEnvCode(terrain, base.x, base.z) === 0) continue;
+
+    let top = terrain.waterY == null ? -Infinity : terrain.waterY + WATER.SWAMP_BAND;
+    const step = terrain.gridM || WATER.GRID_M;
+    const axisSamples = (c, min) => {
+      const out = [c - BASE_PAD_R, c + BASE_PAD_R];
+      for (let v = min + Math.ceil((c - BASE_PAD_R - min) / step) * step; v < c + BASE_PAD_R; v += step) out.push(v);
+      return out;
+    };
+    // heightAt 是格點三角面；採全域格線節點 + 台面四邊，台下最高點不會落在兩個探針之間。
+    const xs = axisSamples(base.x, terrain.minX), zs = axisSamples(base.z, terrain.minZ);
+    for (const z of zs) for (const x of xs) top = Math.max(top, terrain.heightAt(x, z));
+    top = Math.max(top, terrain.heightAt(base.x, base.z)) + BASE_PAD_T;
+
+    pads.push({ side: base.side, x: base.x, z: base.z, y: top });
+    slabs.push({ x: base.x, y: top - BASE_PAD_T / 2, z: base.z, size: BASE_PAD_R * 2 });
+    newDecks.push({
+      x1: base.x - BASE_PAD_R, z1: base.z, y1: top,
+      x2: base.x + BASE_PAD_R, z2: base.z, y2: top, hw: BASE_PAD_R,
+    });
+
+    const off = BASE_PAD_R * BASE_PAD_SUPPORT_F;
+    for (const ox of [-off, 0, off]) for (const oz of [-off, 0, off]) {
+      const x = base.x + ox, z = base.z + oz;
+      const floor = terrain.heightAt(x, z) - 0.6;
+      const h = top - BASE_PAD_T - floor;
+      if (h <= 0.5) continue;
+      piers.push({ x, y: floor + h / 2, z, h });
+      cols.push({ x, z, y: floor, r: TOWER_BASE_R, h });
+    }
+  }
+  return { pads, newDecks, cols, slabs, piers };
+}
+
+function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
+  const plan = planBaseWaterPads(basesW, terrain);
+  const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
+  const pierM = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
+  for (const sp of plan.slabs) {
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(sp.size, BASE_PAD_T, sp.size), slabM);
+    slab.position.set(sp.x, sp.y, sp.z);
+    group.add(slab);
+  }
+  for (const p of plan.piers) {
+    const pier = new THREE.Mesh(new THREE.CylinderGeometry(TOWER_BASE_R * 0.72, TOWER_BASE_R, p.h, 8), pierM);
+    pier.position.set(p.x, p.y, p.z);
+    pier.rotation.y = Math.PI / 8;
+    group.add(pier);
+  }
+  decks.push(...plan.newDecks);
+  cols.push(...plan.cols);
+  return plan.pads;
+}
+
 /**
  * 橋面高度查詢:把橋面小段丟進均勻網格,回傳 deckY(x, z) —— 沒有橋面回 null。
  * 多層橋重疊時取最高面(上層橋才是站得住的那一面)。
@@ -9862,6 +9930,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
     return { side, x, z };
   });
+  // 水域／沼澤主堡的大承台比既有主堡淨空圈寬；先登記完整台面，避免後續植被、地被與建物
+  // 從平台外圈穿出。乾地主堡維持原 BASE_CLEAR_R，既有場景佈局逐位元不動。
+  for (const base of basesW) {
+    if (terrainEnvCode(terrain, base.x, base.z) !== 0) blockArea(blocked, base.x, base.z, BASE_PAD_R);
+  }
   // 地物散布的邊界內縮 = 障礙環內緣(推導不手寫):舊制的 30 讓落點可以抽在環體 [34,40] 之內,
   // 樹幹/岩塊會長在牆裡。改吃同一支之後,散布範圍恰好就是「玩家進得去的那一塊」。
   const inb = edgeWallInsetM();
@@ -11566,8 +11639,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const towerPads = buildTowerBridgePads(
     group, (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
     roadRes.decks, terrain, roadRes.cols, mapArg(cfg));
+  const basePads = buildBaseWaterPads(group, basesW, terrain, roadRes.decks, roadRes.cols);
   const roadsBuilt = roadRes.built;
   group.userData.towerPads = towerPads;   // 橋上砲塔落位高度(main.js → terrain.towerPadY → game.js)
+  group.userData.basePads = basePads;     // 水域／沼澤主堡落位高度(main.js → terrain.basePadY → game.js)
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)
   group.userData.tunnels = roadRes.tunnels;   // 地下道路面 + 天花(main.js → terrain.tunnelAt/ceilingAt)
   group.userData.portals = roadRes.portals;   // 洞口門洞(稽核/冒煙測試用:數量與位置驗證)
