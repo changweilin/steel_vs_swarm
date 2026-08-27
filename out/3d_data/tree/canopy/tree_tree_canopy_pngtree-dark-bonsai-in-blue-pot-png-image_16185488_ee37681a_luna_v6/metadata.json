@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_canopy_pngtree-dark-bonsai-in-blue-pot-png-image_16185488_ee37681a_luna_v6.png",
   "bounds": {
     "min": [
-      -1.624,
+      -1.3264,
       0,
-      -1.8555
+      -1.676
     ],
     "max": [
-      2.2806,
-      3.5454,
-      1.5609
+      1.951,
+      3.4138,
+      1.409
     ],
     "size": [
-      3.905,
-      3.545,
-      3.416
+      3.277,
+      3.414,
+      3.085
     ],
-    "rMax": 2.764,
-    "triangles": 1176,
-    "vertices": 718
+    "rMax": 2.407,
+    "triangles": 1404,
+    "vertices": 846
   },
   "reconstructionNote": "灌木/盆景特徵：短主幹、多股近地分枝、稀疏但有層次的扁圓冠簇。",
   "species": "shrub",
-  "created_at": "2026-08-27T14:39:20.542Z",
+  "created_at": "2026-08-27T16:57:32.789Z",
   "humanVerdictPreserved": true
 }

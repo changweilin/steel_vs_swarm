@@ -132,20 +132,20 @@
     ],
     "max": [
       3.1201,
-      8.0276,
+      7.8932,
       3.7239
     ],
     "size": [
       6.084,
-      8.028,
+      7.893,
       7.311
     ],
     "rMax": 4.858,
-    "triangles": 1968,
-    "vertices": 1191
+    "triangles": 2292,
+    "vertices": 1371
   },
   "reconstructionNote": "闊葉樹特徵：中心樹幹向外分叉，枝端承托不等高葉冠簇。",
   "species": "broadleaf",
-  "created_at": "2026-08-27T14:39:24.736Z",
+  "created_at": "2026-08-27T16:57:43.287Z",
   "humanVerdictPreserved": true
 }

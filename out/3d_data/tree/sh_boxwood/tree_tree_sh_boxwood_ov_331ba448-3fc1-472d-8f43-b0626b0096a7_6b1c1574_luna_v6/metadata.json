@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7_6b1c1574_luna_v6.png",
   "bounds": {
     "min": [
-      -1.6852,
+      -1.3937,
       0,
-      -1.6718
+      -1.3862
     ],
     "max": [
-      2.1224,
-      3.4471,
-      1.8844
+      1.7939,
+      3.3301,
+      1.6069
     ],
     "size": [
-      3.808,
-      3.447,
-      3.556
+      3.188,
+      3.33,
+      2.993
     ],
-    "rMax": 2.838,
-    "triangles": 1176,
-    "vertices": 718
+    "rMax": 2.408,
+    "triangles": 1440,
+    "vertices": 866
   },
   "reconstructionNote": "灌木/盆景特徵：短主幹、多股近地分枝、稀疏但有層次的扁圓冠簇。",
   "species": "shrub",
-  "created_at": "2026-08-27T14:39:20.985Z",
+  "created_at": "2026-08-27T17:02:12.086Z",
   "humanVerdictPreserved": true
 }

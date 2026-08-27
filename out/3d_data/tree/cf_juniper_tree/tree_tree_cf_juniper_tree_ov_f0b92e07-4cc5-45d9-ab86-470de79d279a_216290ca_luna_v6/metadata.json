@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_cf_juniper_tree_ov_f0b92e07-4cc5-45d9-ab86-470de79d279a_216290ca_luna_v6.png",
   "bounds": {
     "min": [
-      -1.8969,
+      -1.694,
       0,
-      -1.7076
+      -1.5003
     ],
     "max": [
-      2.0145,
-      7.0482,
-      1.7713
+      1.8073,
+      6.9832,
+      1.5674
     ],
     "size": [
-      3.911,
-      7.048,
-      3.479
+      3.501,
+      6.983,
+      3.068
     ],
-    "rMax": 2.682,
-    "triangles": 6852,
-    "vertices": 4186
+    "rMax": 2.392,
+    "triangles": 19668,
+    "vertices": 12034
   },
   "reconstructionNote": "juniper 特徵：不規則疏層，末端葉冠與枝頭相接。",
   "species": "juniper",
-  "created_at": "2026-08-27T14:39:16.727Z",
+  "created_at": "2026-08-27T16:57:21.375Z",
   "humanVerdictPreserved": true
 }

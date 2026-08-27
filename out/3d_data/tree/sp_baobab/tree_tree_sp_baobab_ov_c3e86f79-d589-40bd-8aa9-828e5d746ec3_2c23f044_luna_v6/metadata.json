@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_sp_baobab_ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3_2c23f044_luna_v6.png",
   "bounds": {
     "min": [
-      -4.3661,
+      -4.364,
       0,
-      -3.3068
+      -3.5301
     ],
     "max": [
-      3.911,
-      6.292,
-      3.4698
+      3.9017,
+      6.168,
+      3.6233
     ],
     "size": [
-      8.277,
-      6.292,
-      6.777
+      8.266,
+      6.168,
+      7.153
     ],
-    "rMax": 5.477,
-    "triangles": 1408,
-    "vertices": 846
+    "rMax": 5.613,
+    "triangles": 1684,
+    "vertices": 972
   },
   "reconstructionNote": "猴麵包樹特徵：瓶狀粗樹幹、低密度粗枝、枝端小傘冠，保留樹冠間空隙。",
   "species": "baobab",
-  "created_at": "2026-08-27T14:39:21.856Z",
+  "created_at": "2026-08-27T16:58:18.869Z",
   "humanVerdictPreserved": true
 }

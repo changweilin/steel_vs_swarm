@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_canopy_pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561_cff3fe31_luna_v6.png",
   "bounds": {
     "min": [
-      -1.8513,
+      -1.5621,
       0,
-      -1.8339
+      -1.6427
     ],
     "max": [
-      2.0362,
-      3.233,
-      1.3921
+      1.7333,
+      3.0908,
+      1.2234
     ],
     "size": [
-      3.888,
-      3.233,
-      3.226
+      3.295,
+      3.091,
+      2.866
     ],
-    "rMax": 2.606,
-    "triangles": 1176,
-    "vertices": 718
+    "rMax": 2.267,
+    "triangles": 1404,
+    "vertices": 846
   },
   "reconstructionNote": "灌木/盆景特徵：短主幹、多股近地分枝、稀疏但有層次的扁圓冠簇。",
   "species": "shrub",
-  "created_at": "2026-08-27T14:39:20.226Z",
+  "created_at": "2026-08-27T16:57:31.445Z",
   "humanVerdictPreserved": true
 }

@@ -132,20 +132,20 @@
     ],
     "max": [
       3.0675,
-      12.1162,
+      11.9882,
       2.6876
     ],
     "size": [
       5.905,
-      12.116,
+      11.988,
       5.289
     ],
     "rMax": 4.078,
-    "triangles": 9484,
-    "vertices": 5796
+    "triangles": 11284,
+    "vertices": 6796
   },
   "reconstructionNote": "conifer 特徵：分層放射枝冠，末端葉冠與枝頭相接。",
   "species": "conifer",
-  "created_at": "2026-08-27T14:39:37.716Z",
+  "created_at": "2026-08-27T16:58:10.512Z",
   "humanVerdictPreserved": true
 }

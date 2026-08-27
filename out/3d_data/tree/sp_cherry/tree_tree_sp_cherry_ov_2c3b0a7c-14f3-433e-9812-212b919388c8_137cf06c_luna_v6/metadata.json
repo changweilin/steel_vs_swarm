@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_sp_cherry_ov_2c3b0a7c-14f3-433e-9812-212b919388c8_137cf06c_luna_v6.png",
   "bounds": {
     "min": [
-      -3.1675,
+      -2.9476,
       0,
-      -3.0653
+      -2.837
     ],
     "max": [
-      3.4178,
-      6.6474,
-      2.9042
+      3.1209,
+      6.638,
+      2.6235
     ],
     "size": [
-      6.585,
-      6.647,
-      5.97
+      6.069,
+      6.638,
+      5.46
     ],
-    "rMax": 4.485,
-    "triangles": 1752,
-    "vertices": 1060
+    "rMax": 4.091,
+    "triangles": 4600,
+    "vertices": 2804
   },
   "reconstructionNote": "開花闊葉樹特徵：開放枝架、枝端分離花冠與不等高冠簇。",
   "species": "flowering",
-  "created_at": "2026-08-27T14:39:22.420Z",
+  "created_at": "2026-08-27T16:57:37.196Z",
   "humanVerdictPreserved": true
 }

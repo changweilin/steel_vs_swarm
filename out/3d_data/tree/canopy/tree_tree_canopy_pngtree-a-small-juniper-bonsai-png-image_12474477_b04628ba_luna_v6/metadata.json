@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_canopy_pngtree-a-small-juniper-bonsai-png-image_12474477_b04628ba_luna_v6.png",
   "bounds": {
     "min": [
-      -1.9637,
+      -1.7539,
       0,
-      -1.766
+      -1.5503
     ],
     "max": [
-      2.1032,
-      5.8955,
-      1.854
+      1.8845,
+      5.8305,
+      1.6413
     ],
     "size": [
-      4.067,
-      5.896,
-      3.62
+      3.638,
+      5.83,
+      3.192
     ],
-    "rMax": 2.804,
-    "triangles": 6852,
-    "vertices": 4186
+    "rMax": 2.499,
+    "triangles": 19668,
+    "vertices": 12034
   },
   "reconstructionNote": "juniper 特徵：不規則疏層，末端葉冠與枝頭相接。",
   "species": "juniper",
-  "created_at": "2026-08-27T14:39:19.941Z",
+  "created_at": "2026-08-27T16:57:29.504Z",
   "humanVerdictPreserved": true
 }

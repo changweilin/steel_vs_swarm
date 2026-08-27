@@ -1,0 +1,171 @@
+{
+  "id": "tree_canopy_tree_canopy_pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned_030d4079",
+  "sourceImage": "tree/pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398.png",
+  "style": "compact shrub irregular radial crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3234617,
+    "facadeHex": 6456401,
+    "baseHex": 5387560,
+    "accentHex": 9415271,
+    "darkHex": 2763554,
+    "brightHex": 12240523,
+    "glassHex": 1976635
+  },
+  "totalParts": 21,
+  "partNames": [
+    "shrub_central_stem",
+    "root_flare",
+    "shrub_branch_0",
+    "shrub_leaf_0_boxwood_facet",
+    "shrub_leaf_0_boxwood_outer",
+    "shrub_branch_1",
+    "shrub_leaf_1_boxwood_facet",
+    "shrub_leaf_1_boxwood_outer",
+    "shrub_branch_2",
+    "shrub_leaf_2_boxwood_facet",
+    "shrub_leaf_2_boxwood_outer",
+    "shrub_branch_3",
+    "shrub_leaf_3_boxwood_facet",
+    "shrub_leaf_3_boxwood_outer",
+    "shrub_branch_4",
+    "shrub_leaf_4_boxwood_facet",
+    "shrub_leaf_4_boxwood_outer",
+    "shrub_branch_5",
+    "shrub_leaf_5_boxwood_facet",
+    "shrub_leaf_5_boxwood_outer",
+    "boxwood_dark_core"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "dodecahedron_polyhedron",
+    "ellipsoid_sphere",
+    "box"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398.json",
+    "target": {
+      "targetId": "pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398~0",
+      "bbox": [
+        0,
+        0,
+        640,
+        640
+      ],
+      "width": 640,
+      "height": 640,
+      "aspectRatio": 1,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.522,
+          "centerOffset": 0.222
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.598,
+          "centerOffset": 0.184
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.617,
+          "centerOffset": 0.138
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.652,
+          "centerOffset": -0.126
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.7,
+          "centerOffset": -0.102
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.606,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.7,
+          "centerOffset": -0.008
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.659,
+          "centerOffset": 0.013
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.747,
+          "centerOffset": 0.016
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.797,
+          "centerOffset": 0.084
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.823,
+          "centerOffset": 0.035
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.95,
+          "centerOffset": 0.013
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.916,
+          "centerOffset": -0.03
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.63,
+          "centerOffset": -0.02
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.636,
+          "centerOffset": -0.04
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.478,
+          "centerOffset": 0.022
+        }
+      ],
+      "targetFile": "tree\\main\\pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "shrub",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "灌木/盆景特徵：短主幹、多股近地分枝、稀疏但有層次的扁圓冠簇。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 79,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依shrub樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

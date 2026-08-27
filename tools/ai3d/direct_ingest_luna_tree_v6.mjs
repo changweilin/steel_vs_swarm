@@ -49,6 +49,8 @@ const FINALIZE = has('finalize');
 const ONLY = arg('only');
 const LIMIT = Number(arg('limit', Infinity));
 const PYTHON = arg('python', process.env.AI3D_PYTHON || join(ROOT, '.venv', 'Scripts', 'python.exe'));
+const UV_PREVIEW = has('uv-preview');
+const UV_PYTHON = arg('uv-python', '3.12');
 
 const PALETTES = {
   broadleaf: { roofHex: 0x284a31, facadeHex: 0x4f7a43, baseHex: 0x4a3024, accentHex: 0x78985b, darkHex: 0x2c241e, brightHex: 0xa5b77d },
@@ -70,8 +72,15 @@ const D = (name, rx, ry, rz, x, y, z, colorKey, rot = [0, 0, 0], role = 'canopy'
   P(name, 'ellipsoid_sphere', { radii: [rx, ry, rz] }, colorKey, [x, y, z], rot, role);
 const Q = (name, radius, x, y, z, colorKey, role = 'canopy') =>
   P(name, 'dodecahedron_polyhedron', { radius }, colorKey, [x, y, z], [0, 0, 0], role);
+const H = (name, rx, ry, rz, x, y, z, colorKey, rot = [0, 0, 0], role = 'canopy') =>
+  P(name, 'hemisphere_dome', { radii: [rx, ry, rz] }, colorKey, [x, y, z], rot, role);
 
-function safeName(value) { return String(value).replace(/[^a-zA-Z0-9._-]+/g, '_'); }
+function safeName(value) {
+  const normalized = String(value).replace(/[^a-zA-Z0-9._-]+/g, '_');
+  if (normalized.length <= 96) return normalized;
+  // Windows 預覽與輸出路徑保留 deterministic 短名，stable key 仍完整保存於 catalog。
+  return `${normalized.slice(0, 80)}_${hashSeed(normalized).toString(16).padStart(8, '0')}`;
+}
 function stableTargetOfKey(key) { return String(key || '').replace(/_[0-9a-f]{8}(?:_luna)?_v6$/, ''); }
 function hashSeed(value) {
   const hex = createHash('sha1').update(String(value)).digest('hex').slice(0, 8);
@@ -89,6 +98,28 @@ function rngFor(value) {
 }
 function between(rng, a, b) { return a + (b - a) * rng(); }
 function distance(a, b) { return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]); }
+function hash01(value) { return (hashSeed(value) >>> 0) / 4294967296; }
+
+function radialOffset(center, yaw, radius, lift = 0, side = 0) {
+  return [
+    center[0] + Math.cos(yaw) * radius - Math.sin(yaw) * side,
+    center[1] + lift,
+    center[2] + Math.sin(yaw) * radius + Math.cos(yaw) * side,
+  ];
+}
+function waitBriefly(milliseconds) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+function withRetry(action) {
+  let lastError;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try { return action(); } catch (error) {
+      lastError = error;
+      if (attempt < 4) waitBriefly(40 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
 
 // direct_ingest_v6 的 cylinder 軸向為 +Y；此旋轉將 +Y 對齊 a→b。
 function branch(parts, edges, name, a, b, radius, colorKey, sides = 7) {
@@ -103,8 +134,113 @@ function branch(parts, edges, name, a, b, radius, colorKey, sides = 7) {
   return b;
 }
 
-function crown(parts, name, radii, center, colorKey, rot = [0, 0, 0]) {
-  parts.push(D(name, radii[0], radii[1], radii[2], center[0], center[1], center[2], colorKey, rot));
+function crown(parts, name, radii, center, colorKey, rot = [0, 0, 0], profile = 'broadleaf') {
+  const [rx, ry, rz] = radii.map((value) => Math.max(0.08, value));
+  const yaw = Math.abs(rot[1]) > 0.001 ? rot[1] : Math.atan2(center[2], center[0]);
+  const phase = (hash01(`${name}|canopy`) - 0.5) * 0.18;
+  const facetRadius = Math.max(0.16, Math.min(rx, rz) * 0.28);
+  const tone = profile === 'olive' ? 'brightHex' : profile === 'flowering' ? 'accentHex' : 'accentHex';
+
+  // 葉冠不是單一球體：每個樹種只改這個冠部 recipe，枝條端點仍落在 center。
+  switch (profile) {
+    case 'flowering': {
+      // 紫薇/櫻花：枝端是疏鬆花團，不是連成一片的球。
+      parts.push(Q(`${name}_flower_core`, facetRadius * 0.82, center[0], center[1], center[2], tone));
+      for (let i = 0; i < 3; i++) {
+        const a = yaw + (i - 1) * 0.78 + phase;
+        const pos = radialOffset(center, a, rx * 0.32, (i - 1) * ry * 0.22);
+        parts.push(D(`${name}_flower_bloom_${i}`, rx * 0.42, Math.max(0.12, ry * 0.76), rz * 0.36,
+          pos[0], pos[1], pos[2], colorKey, [rot[0] + (i - 1) * 0.08, a, rot[2]]));
+      }
+      break;
+    }
+    case 'acacia': {
+      // 相思樹：扁傘冠由上蓋 + 薄底墊組成，邊緣保留不規則起伏。
+      parts.push(H(`${name}_umbrella_cap`, rx * 0.86, Math.max(0.14, ry * 0.92), rz * 0.82,
+        center[0], center[1] - ry * 0.58, center[2], colorKey, rot));
+      parts.push(D(`${name}_umbrella_pad`, rx, Math.max(0.12, ry * 0.42), rz,
+        center[0], center[1] + ry * 0.08, center[2], tone, rot));
+      parts.push(Q(`${name}_umbrella_facet`, facetRadius * 0.9, center[0], center[1] + ry * 0.30, center[2], 'brightHex'));
+      break;
+    }
+    case 'baobab': {
+      // 猴麵包樹：枝端小傘冠，中心有低多面體葉簇，樹冠之間保持空隙。
+      parts.push(H(`${name}_baobab_umbrella`, rx, Math.max(0.16, ry * 1.08), rz,
+        center[0], center[1] - ry * 0.66, center[2], colorKey, rot));
+      parts.push(Q(`${name}_baobab_facet`, facetRadius * 0.9, center[0], center[1] + ry * 0.12, center[2], tone));
+      break;
+    }
+    case 'cypress': {
+      // 柏樹：窄而有層次的半穹頂，不用重複的圓球串成柱子。
+      parts.push(H(`${name}_cypress_whorl`, rx, Math.max(0.14, ry * 0.94), rz,
+        center[0], center[1] - ry * 0.58, center[2], colorKey, [rot[0] + 0.04, rot[1], rot[2] - 0.03]));
+      parts.push(Q(`${name}_cypress_needle_break`, facetRadius * 0.78, center[0], center[1] + ry * 0.10, center[2], tone));
+      break;
+    }
+    case 'juniper': {
+      // 刺柏/古老杜松：中央針葉簇 + 三枚方向不同的稀疏枝端簇。
+      parts.push(Q(`${name}_juniper_core`, facetRadius * 1.18, center[0], center[1], center[2], tone));
+      for (let i = 0; i < 3; i++) {
+        const a = yaw + (i - 1) * 0.92 + phase;
+        const pos = radialOffset(center, a, rx * 0.28, (i === 1 ? 0.12 : -0.04) * ry);
+        parts.push(D(`${name}_juniper_tuft_${i}`, rx * 0.42, Math.max(0.11, ry * 0.72), rz * 0.30,
+          pos[0], pos[1], pos[2], i === 1 ? 'brightHex' : colorKey, [rot[0] - 0.05, a, rot[2] + 0.04]));
+      }
+      break;
+    }
+    case 'dragon': {
+      // 龍血樹：劍葉由 rosette 中心向四方放射，禁止退回扁圓葉團。
+      parts.push(Q(`${name}_rosette_core`, facetRadius * 0.92, center[0], center[1], center[2], tone));
+      for (let i = 0; i < 4; i++) {
+        const a = yaw + (i * Math.PI * 0.5) + phase;
+        const pos = radialOffset(center, a, Math.max(0.12, Math.min(rx, rz) * 0.22), ry * 0.28);
+        parts.push(D(`${name}_sword_leaf_${i}`, Math.max(0.10, rx * 0.17), Math.max(0.18, ry * 1.35),
+          Math.max(0.18, rz * 0.48), pos[0], pos[1], pos[2], i % 2 ? colorKey : 'brightHex',
+        [rot[0] + 0.12, a, rot[2] - 0.08]));
+      }
+      break;
+    }
+    case 'olive': {
+      // 橄欖樹：銀灰窄葉簇，三個小方向取代一顆大橢圓。
+      parts.push(Q(`${name}_olive_core`, facetRadius, center[0], center[1], center[2], tone));
+      for (let i = 0; i < 3; i++) {
+        const a = yaw + (i - 1) * 0.66 + phase;
+        const pos = radialOffset(center, a, rx * 0.18, (i - 1) * ry * 0.16);
+        parts.push(D(`${name}_olive_leaf_cluster_${i}`, rx * 0.40, Math.max(0.10, ry * 0.70), rz * 0.22,
+          pos[0], pos[1], pos[2], i === 1 ? colorKey : tone, [rot[0], a, rot[2] + 0.06]));
+      }
+      break;
+    }
+    case 'shrub': {
+      // 黃楊：外層以小多面體接在共享暗芯外，不讓葉冠讀成六顆孤立泡泡。
+      parts.push(Q(`${name}_boxwood_facet`, facetRadius * 0.9, center[0], center[1], center[2], colorKey));
+      parts.push(D(`${name}_boxwood_outer`, rx * 0.54, Math.max(0.14, ry * 0.62), rz * 0.48,
+        center[0], center[1] + ry * 0.08, center[2], tone, rot));
+      break;
+    }
+    case 'cactus': {
+      // 仙人掌：臂端用低多面體鈍帽，避免與樹冠共用葉片雲朵。
+      parts.push(Q(`${name}_cactus_cap`, Math.max(0.16, Math.min(rx, ry, rz) * 0.95), center[0], center[1], center[2], colorKey));
+      break;
+    }
+    case 'banyan': {
+      // 榕樹：厚葉團由主質量與偏心多面體邊緣組成，保留氣根間的負空間。
+      parts.push(D(`${name}_banyan_mass`, rx, ry, rz, center[0], center[1], center[2], colorKey, rot));
+      parts.push(Q(`${name}_banyan_edge`, facetRadius * 1.35, center[0] + rx * 0.34, center[1] + ry * 0.12,
+        center[2] - rz * 0.28, tone));
+      break;
+    }
+    case 'araucaria':
+    case 'conifer':
+    case 'sequoia':
+    default: {
+      // 一般針葉/南洋杉/紅杉：扁橢圓枝墊 + 多面體針葉破邊；輪生不使用單一圓錐。
+      parts.push(D(`${name}_needle_pad`, rx, Math.max(0.12, ry * 0.68), rz, center[0], center[1], center[2], colorKey, rot));
+      const edge = radialOffset(center, yaw + phase, Math.max(0.12, rx * 0.46), ry * 0.10);
+      parts.push(Q(`${name}_needle_facet`, facetRadius, edge[0], edge[1], edge[2], tone));
+      break;
+    }
+  }
 }
 function rootFlare(parts, radius, height = 0.45) {
   parts.push(C('root_flare', radius * 0.72, radius, height, 0, 0, 0, 'baseHex', 10, 'root'));
@@ -134,10 +270,10 @@ function makeConifer(kind, seed) {
       const end = [Math.cos(yaw) * span, y + between(rng, araucaria ? 0.02 : 0.08, araucaria ? 0.16 : 0.34), Math.sin(yaw) * span * (araucaria ? 0.72 : 0.82)];
       branch(p, edges, `${kind}_level_${i}_branch_${j}`, [0, y, 0], end, between(rng, 0.045, 0.085), i % 2 ? 'facadeHex' : 'roofHex');
       const leafR = araucaria ? [span * 0.43, between(rng, 0.18, 0.34), span * 0.26] : cypress ? [span * 0.62, 0.34, span * 0.38] : [span * 0.52, between(rng, 0.26, 0.46), span * 0.34];
-      crown(p, `${kind}_crown_${i}_${j}`, leafR, end, i % 3 === 0 ? 'roofHex' : i % 3 === 1 ? 'facadeHex' : 'accentHex', [between(rng, -0.10, 0.10), yaw, between(rng, -0.08, 0.08)]);
+      crown(p, `${kind}_crown_${i}_${j}`, leafR, end, i % 3 === 0 ? 'roofHex' : i % 3 === 1 ? 'facadeHex' : 'accentHex', [between(rng, -0.10, 0.10), yaw, between(rng, -0.08, 0.08)], araucaria ? 'araucaria' : cypress ? 'cypress' : juniper ? 'juniper' : kind === 'sequoia' ? 'sequoia' : 'conifer');
     }
   }
-  crown(p, 'leader_crown', [araucaria ? 0.65 : 0.72, 0.40, araucaria ? 0.52 : 0.64], [between(rng, -0.12, 0.12), height * 0.98, between(rng, -0.10, 0.10)], 'brightHex');
+  crown(p, 'leader_crown', [araucaria ? 0.65 : 0.72, 0.40, araucaria ? 0.52 : 0.64], [between(rng, -0.12, 0.12), height * 0.98, between(rng, -0.10, 0.10)], 'brightHex', [0, 0, 0], araucaria ? 'araucaria' : cypress ? 'cypress' : juniper ? 'juniper' : kind === 'sequoia' ? 'sequoia' : 'conifer');
   return {
     style: araucaria ? 'araucaria radial horizontal whorls' : cypress ? 'cypress narrow tiered crown' : juniper ? 'juniper irregular layered crown' : kind === 'sequoia' ? 'sequoia tall buttressed conifer crown' : 'conifer layered radial crown',
     symmetryMode: araucaria ? 'symmetric' : 'asymmetric', colors: PALETTES[araucaria ? 'araucaria' : 'conifer'], parts: p, edges,
@@ -159,7 +295,7 @@ function makeBaobab(seed) {
     const tip = [Math.cos(yaw) * tipRadius, mid[1] + between(rng, 0.32, 0.78), Math.sin(yaw) * tipRadius];
     branch(p, edges, `baobab_arm_${i}`, start, mid, 0.16, 'baseHex', 8);
     branch(p, edges, `baobab_arm_${i}_outer`, mid, tip, 0.105, 'baseHex', 7);
-    crown(p, `baobab_leaf_cluster_${i}`, [between(rng, 0.62, 0.95), between(rng, 0.30, 0.48), between(rng, 0.52, 0.82)], tip, i % 2 ? 'facadeHex' : 'roofHex');
+    crown(p, `baobab_leaf_cluster_${i}`, [between(rng, 0.62, 0.95), between(rng, 0.30, 0.48), between(rng, 0.52, 0.82)], tip, i % 2 ? 'facadeHex' : 'roofHex', [0, yaw, 0], 'baobab');
   }
   return { style: 'baobab bottle trunk sparse umbrella crown', symmetryMode: 'asymmetric', colors: PALETTES.baobab, parts: p, edges, note: '猴麵包樹特徵：瓶狀粗樹幹、低密度粗枝、枝端小傘冠，保留樹冠間空隙。' };
 }
@@ -179,9 +315,9 @@ function makeDragon(seed) {
     const tip = [Math.cos(yaw) * tipRadius, fork[1] + between(rng, 0.45, 0.95), Math.sin(yaw) * tipRadius];
     branch(p, edges, `dragon_candelabra_${i}`, [0, y, 0], fork, 0.13, 'baseHex', 8);
     branch(p, edges, `dragon_candelabra_${i}_tip`, fork, tip, 0.08, 'baseHex', 7);
-    crown(p, `dragon_rosette_${i}`, [between(rng, 0.60, 0.86), between(rng, 0.20, 0.32), between(rng, 0.60, 0.86)], tip, i % 2 ? 'facadeHex' : 'roofHex');
+    crown(p, `dragon_rosette_${i}`, [between(rng, 0.60, 0.86), between(rng, 0.20, 0.32), between(rng, 0.60, 0.86)], tip, i % 2 ? 'facadeHex' : 'roofHex', [0, yaw, 0], 'dragon');
   }
-  crown(p, 'dragon_terminal_rosette', [0.90, 0.30, 0.88], [0, height * 0.98, 0], 'accentHex');
+  crown(p, 'dragon_terminal_rosette', [0.90, 0.30, 0.88], [0, height * 0.98, 0], 'accentHex', [0, 0, 0], 'dragon');
   return { style: 'dragon tree high candelabra rosettes', symmetryMode: 'asymmetric', colors: PALETTES.dragon, parts: p, edges, note: '龍血樹特徵：高位多頭燭台狀分叉，每一枝頭獨立承接劍葉 rosette。' };
 }
 
@@ -200,7 +336,7 @@ function makeOlive(seed) {
     const tip = [Math.cos(yaw) * tipRadius, fork[1] + between(rng, 0.75, 1.45), Math.sin(yaw) * tipRadius];
     branch(p, edges, `olive_gnarled_trunk_${i}`, start, fork, 0.19, 'baseHex', 8);
     branch(p, edges, `olive_gnarled_bough_${i}`, fork, tip, 0.105, 'baseHex', 7);
-    crown(p, `olive_silver_crown_${i}`, [between(rng, 0.62, 1.05), between(rng, 0.26, 0.42), between(rng, 0.48, 0.82)], tip, i % 3 ? 'facadeHex' : 'brightHex', [between(rng, -0.18, 0.18), yaw, between(rng, -0.14, 0.14)]);
+    crown(p, `olive_silver_crown_${i}`, [between(rng, 0.62, 1.05), between(rng, 0.26, 0.42), between(rng, 0.48, 0.82)], tip, i % 3 ? 'facadeHex' : 'brightHex', [between(rng, -0.18, 0.18), yaw, between(rng, -0.14, 0.14)], 'olive');
   }
   return { style: 'ancient olive twisted multi trunk sparse silver canopy', symmetryMode: 'asymmetric', colors: PALETTES.olive, parts: p, edges, note: '橄欖特徵：低位多幹扭結、枝端斜上、銀灰疏冠，不堆成單一圓頂。' };
 }
@@ -218,7 +354,7 @@ function makeBanyan(seed) {
     const tip = [Math.cos(yaw) * tipRadius, fork[1] + between(rng, 0.55, 1.15), Math.sin(yaw) * tipRadius];
     branch(p, edges, `banyan_primary_${i}`, [0, y, 0], fork, 0.15, 'baseHex', 8);
     branch(p, edges, `banyan_secondary_${i}`, fork, tip, 0.09, 'baseHex', 7);
-    crown(p, `banyan_leaf_mass_${i}`, [between(rng, 1.0, 1.45), between(rng, 0.45, 0.72), between(rng, 0.85, 1.22)], tip, i % 2 ? 'facadeHex' : 'roofHex');
+    crown(p, `banyan_leaf_mass_${i}`, [between(rng, 1.0, 1.45), between(rng, 0.45, 0.72), between(rng, 0.85, 1.22)], tip, i % 2 ? 'facadeHex' : 'roofHex', [0, yaw, 0], 'banyan');
   }
   return { style: 'banyan broad crown with aerial-root silhouette', symmetryMode: 'asymmetric', colors: PALETTES.broadleaf, parts: p, edges, note: '榕樹特徵：厚樹幹向外伸展多層枝架，冠層分簇並保留氣根式垂直節奏。' };
 }
@@ -237,7 +373,7 @@ function makeCactus(seed) {
     const tip = [elbow[0], elbow[1] + between(rng, 0.85, 1.65), elbow[2]];
     branch(p, edges, `cactus_arm_${i}_out`, [0, y, 0], elbow, 0.16, 'facadeHex', 8);
     branch(p, edges, `cactus_arm_${i}_up`, elbow, tip, 0.14, 'facadeHex', 8);
-    crown(p, `cactus_arm_${i}_cap`, [0.18, 0.18, 0.18], tip, 'brightHex');
+    crown(p, `cactus_arm_${i}_cap`, [0.18, 0.18, 0.18], tip, 'brightHex', [0, yaw, 0], 'cactus');
   }
   return { style: 'saguaro cactus upright arms', symmetryMode: 'asymmetric', colors: PALETTES.cactus, parts: p, edges, note: '仙人掌特徵：主柱垂直，側臂先水平外伸再垂直上舉，接到圓鈍臂冠。' };
 }
@@ -258,9 +394,9 @@ function makeUmbrellaTree(kind, seed) {
     const tip = [Math.cos(yaw) * tipRadius, fork[1] + between(rng, 0.25, 0.75), Math.sin(yaw) * tipRadius];
     branch(p, edges, `${kind}_primary_${i}`, [0, y, 0], fork, 0.115, 'baseHex', 7);
     branch(p, edges, `${kind}_outer_${i}`, fork, tip, 0.068, 'darkHex', 7);
-    crown(p, `${kind}_crown_${i}`, [between(rng, 0.85, 1.40), between(rng, 0.24, 0.46), between(rng, 0.60, 1.10)], tip, flowering ? (i % 2 ? 'accentHex' : 'brightHex') : (i % 3 ? 'facadeHex' : 'roofHex'), [between(rng, -0.15, 0.15), yaw, between(rng, -0.12, 0.12)]);
+    crown(p, `${kind}_crown_${i}`, [between(rng, 0.85, 1.40), between(rng, 0.24, 0.46), between(rng, 0.60, 1.10)], tip, flowering ? (i % 2 ? 'accentHex' : 'brightHex') : (i % 3 ? 'facadeHex' : 'roofHex'), [between(rng, -0.15, 0.15), yaw, between(rng, -0.12, 0.12)], flowering ? 'flowering' : kind === 'acacia' ? 'acacia' : 'broadleaf');
   }
-  crown(p, 'top_crown', [1.0, 0.42, 0.84], [0, height * 0.92, 0], flowering ? 'accentHex' : 'facadeHex');
+  crown(p, 'top_crown', [1.0, 0.42, 0.84], [0, height * 0.92, 0], flowering ? 'accentHex' : 'facadeHex', [0, 0, 0], flowering ? 'flowering' : kind === 'acacia' ? 'acacia' : 'broadleaf');
   return { style: flowering ? 'flowering broadleaf open umbrella crown' : kind === 'acacia' ? 'acacia umbrella crown radial branches' : 'broadleaf open radial crown', symmetryMode: 'asymmetric', colors: PALETTES.broadleaf, parts: p, edges, note: flowering ? '開花闊葉樹特徵：開放枝架、枝端分離花冠與不等高冠簇。' : kind === 'acacia' ? '相思樹特徵：傘狀扁冠，枝條向外水平後微斜上，冠簇不重疊成球。' : '闊葉樹特徵：中心樹幹向外分叉，枝端承托不等高葉冠簇。' };
 }
 
@@ -275,8 +411,12 @@ function makeShrub(seed) {
     const tipRadius = between(rng, 0.85, 1.65);
     const tip = [Math.cos(yaw) * tipRadius, y + between(rng, 0.35, 0.85), Math.sin(yaw) * tipRadius];
     branch(p, edges, `shrub_branch_${i}`, [0, y, 0], tip, 0.045, 'darkHex', 6);
-    crown(p, `shrub_leaf_${i}`, [between(rng, 0.45, 0.75), between(rng, 0.30, 0.52), between(rng, 0.38, 0.68)], tip, i % 2 ? 'facadeHex' : 'roofHex');
+    crown(p, `shrub_leaf_${i}`, [between(rng, 0.45, 0.75), between(rng, 0.30, 0.52), between(rng, 0.38, 0.68)], tip, i % 2 ? 'facadeHex' : 'roofHex', [0, yaw, 0], 'shrub');
   }
+  p.push(P('boxwood_dark_core', 'box', {
+    dimensions: [Math.max(0.65, height * 0.18), Math.max(0.52, height * 0.15), Math.max(0.62, height * 0.17)],
+  }, 'darkHex', [0, height * 0.54, 0], [0, 0, 0], 'canopy'));
+  p.push(Q('boxwood_dark_facet', Math.max(0.72, height * 0.22), 0, height * 0.54, 0, 'darkHex'));
   return { style: 'compact shrub irregular radial crown', symmetryMode: 'asymmetric', colors: PALETTES.shrub, parts: p, edges, note: '灌木/盆景特徵：短主幹、多股近地分枝、稀疏但有層次的扁圓冠簇。' };
 }
 
@@ -446,7 +586,7 @@ function loadTargets() {
   const db = JSON.parse(readFileSync(DB_PATH, 'utf8'));
   const statuses = loadReviewStatuses();
   const rows = (db.items || [])
-    .filter((row) => row.family === 'tree' && row.version === 6)
+    .filter((row) => row.family === 'tree' && row.version === 6 && row.method === 'gpt-5.6-luna_visual_direct')
     .map((row) => ({ ...row, stable: stableTargetOfKey(row.key) }))
     .filter((row) => !['ok', 'archive', 'purge'].includes(statuses.get(row.stable) || null));
   const selected = ONLY ? rows.filter((row) => row.stable === ONLY || row.subpart === ONLY || row.key === ONLY) : rows;
@@ -455,8 +595,17 @@ function loadTargets() {
 
 function writeJsonAtomic(path, value) {
   const temp = `${path}.tmp`;
-  writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  renameSync(temp, path);
+  withRetry(() => {
+    writeFileSync(temp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    renameSync(temp, path);
+  });
+}
+function writeTextAtomic(path, value) {
+  const temp = `${path}.tmp`;
+  withRetry(() => {
+    writeFileSync(temp, value, 'utf8');
+    renameSync(temp, path);
+  });
 }
 function relativePath(path) { return relative(ROOT, path).replace(/\\/g, '/'); }
 function outputFor(target, hash) {
@@ -501,8 +650,11 @@ function processTarget(row, indexes) {
     mkdirSync(outDir, { recursive: true });
     mkdirSync(dirname(preview), { recursive: true });
     const previewModel = `${preview}.model.json`;
-    writeFileSync(previewModel, JSON.stringify(geometry.modelJson), 'utf8');
-    execFileSync(PYTHON, [PREVIEW_RENDERER, previewModel, preview], { timeout: 30_000 });
+    writeJsonAtomic(previewModel, geometry.modelJson);
+    const previewArgs = UV_PREVIEW
+      ? ['run', '--quiet', '--python', UV_PYTHON, '--with', 'Pillow', '--no-project', 'python', PREVIEW_RENDERER, previewModel, preview]
+      : [PREVIEW_RENDERER, previewModel, preview];
+    withRetry(() => execFileSync(PYTHON, previewArgs, { timeout: 30_000 }));
     const features = {
       ...geometry.featuresJson,
       schemaVersion: evidence.schemaVersion,
@@ -524,7 +676,7 @@ function processTarget(row, indexes) {
     writeJsonAtomic(join(outDir, 'model.json'), geometry.modelJson);
     writeJsonAtomic(join(outDir, 'features.json'), features);
     writeJsonAtomic(join(outDir, 'metadata.json'), metadata);
-    writeFileSync(join(outDir, 'model.obj'), geometry.objContent, 'utf8');
+    writeTextAtomic(join(outDir, 'model.obj'), geometry.objContent);
   }
   return {
     target: row.stable, status: DRY_RUN ? 'validated' : 'awaiting_human_review', targetId, key, family: 'tree', subpart: row.subpart,
@@ -543,7 +695,7 @@ function finalizeCatalog(results) {
   const db = JSON.parse(readFileSync(DB_PATH, 'utf8'));
   db.items = (db.items || []).filter((row) => {
     const stable = stableTargetOfKey(row.key);
-    if (stableTargets.has(stable)) return false;
+    if (row.method === 'gpt-5.6-luna_visual_direct' && stableTargets.has(stable)) return false;
     return !(archivedTargets.has(stable) && row.method === 'gpt-5.6-luna_visual_direct');
   });
   for (const result of accepted) {
@@ -564,7 +716,7 @@ function finalizeCatalog(results) {
   manifest.parts = (manifest.parts || []).filter((entry) => {
     const keys = entry.keys || (entry.key ? [entry.key] : []);
     const targets = keys.map((key) => stableTargetOfKey(key));
-    if (targets.some((target) => stableTargets.has(target))) return false;
+    if (entry.method === 'gpt-5.6-luna_visual_direct' && targets.some((target) => stableTargets.has(target))) return false;
     return !(entry.method === 'gpt-5.6-luna_visual_direct' && targets.some((target) => archivedTargets.has(target)));
   });
   for (const result of accepted) {

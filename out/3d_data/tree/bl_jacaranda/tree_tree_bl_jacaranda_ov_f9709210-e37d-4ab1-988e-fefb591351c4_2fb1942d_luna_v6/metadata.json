@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_bl_jacaranda_ov_f9709210-e37d-4ab1-988e-fefb591351c4_2fb1942d_luna_v6.png",
   "bounds": {
     "min": [
-      -3.5241,
+      -3.2476,
       0,
-      -3.5889
+      -3.317
     ],
     "max": [
-      2.9739,
-      6.4627,
-      2.6914
+      2.6324,
+      6.4533,
+      2.4278
     ],
     "size": [
-      6.498,
-      6.463,
-      6.28
+      5.88,
+      6.453,
+      5.745
     ],
-    "rMax": 5.03,
-    "triangles": 1752,
-    "vertices": 1060
+    "rMax": 4.642,
+    "triangles": 4600,
+    "vertices": 2804
   },
   "reconstructionNote": "開花闊葉樹特徵：開放枝架、枝端分離花冠與不等高冠簇。",
   "species": "flowering",
-  "created_at": "2026-08-27T14:39:14.468Z",
+  "created_at": "2026-08-27T16:57:01.734Z",
   "humanVerdictPreserved": true
 }
