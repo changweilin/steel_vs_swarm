@@ -2020,12 +2020,13 @@ ${CEL_SEA_GLSL}
         float celFoam( vec2 celFxz ) {
           vec2 celFuv = clamp( ( celFxz - uSeaRect.xy ) * uSeaRect.zw, 0.0, 1.0 );
           float celFd = texture2D( uSeaField, celFuv ).r * ${FOAM.RANGE_M.toFixed(2)};
-          float celFade = clamp( 1.0 - celFd / ${FOAM.RANGE_M.toFixed(2)}, 0.0, 1.0 );
+          float celFade = smoothstep( 0.02, 0.30, celFd ) * ( 1.0 - smoothstep( 0.55, ${FOAM.RANGE_M.toFixed(2)}, celFd ) );
           if ( celFade <= 0.0 ) return 0.0;
-          float celFb = fract( ( celFd - celSeaH( celFxz ) ) / ${FOAM.BAND_M.toFixed(3)} );
+          float celJit = ( celNoise( celFxz / ${FOAM.NOISE_M.toFixed(2)} ) - 0.5 ) * 0.20;
+          float celFb = fract( ( celFd - celSeaH( celFxz ) + celJit ) / ${FOAM.BAND_M.toFixed(3)} );
           float celBand = max( 0.0, 4.0 * celFb * ( 1.0 - celFb ) );
           float celFp = pow( celBand, ${FOAM.SHAPE_K.toFixed(1)} ) * celFade
-                      * mix( 0.45, 1.0, celNoise( celFxz / ${FOAM.NOISE_M.toFixed(2)} ) );
+                      * mix( 0.85, 1.0, celNoise( ( celFxz + vec2( 23.7, 41.3 ) ) / ${FOAM.NOISE_M.toFixed(2)} ) );
           #ifdef CEL_SWAMP_RIPPLE
           // 沼澤/池塘/封閉水域：浪花變化改為正號到微小負號 (負號數值遠小於正號，負號時不顯示)
           float celSwampPulse = sin( uWindT * 1.5 + dot( celFxz, vec2( 0.45, 0.35 ) ) ) * 0.54 + 0.46; // [-0.08, +1.00]
