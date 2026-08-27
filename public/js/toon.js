@@ -964,11 +964,11 @@ export function setSeaDepthField(data, size, bounds) {
 // 相位再減去 `celSeaH` ⇒ 浪一來泡沫沖上岸;繞過每一根柱子由蓋章那一步給。
 // **MUST NOT 在 terrain.js / biomes.js 手寫這些值**(同 `SEA_M`/`SEA_SEG` 的紀律)。
 export const FOAM = {
-  BAND_M: 0.55,     // 泡沫帶的深度節距(m):一條帶 = 深度差這麼多
+  BAND_M: 1.10,     // 泡沫帶的深度節距(m):一條帶 = 深度差這麼多 (放大 2 倍為 1.10m，水波條帶寬度倍增)
   STEP: 0.42,       // 硬邊門檻(賽璐璐的泡沫是白色硬邊,不是柔霧)
   SHAPE_K: 5,       // 帶心尖銳度:三角波直接 step 會讓每一道白條佔掉過半週期
-  NOISE_M: 3.4,     // 噪聲的空間尺度(m):讓帶緣碎掉,不是一圈同心圓
-  RANGE_M: 2.4,     // 只留潮緣近岸帶;6m 會在緩灘上鋪出十餘道道路標線般的白條
+  NOISE_M: 4.8,     // 噪聲的空間尺度(m):讓帶緣碎掉,不是一圈同心圓
+  RANGE_M: 4.8,     // 水波範圍 (放大 2 倍為 4.8m，向外擴散倍增)
   TEXEL_M: 1.5,     // 場的 texel 邊長(m);低功耗折半由 `seaFieldN` 推導
 };
 export const REFL = {
