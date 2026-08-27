@@ -53,13 +53,16 @@ const BREAK_MASS2 = process.argv.includes('--break-mass2');
 // 2026-08-12 三支(使用者「物理碰撞應該要與建模的 3D 外表一致」「調整目標物件到適合的大小」
 // 「不同建築使用窗戶圖層間距不要都一樣」):
 //   --break-prof  碰撞柱退回整顆方盒(剖面白量了)⇒ 碰撞剖面四條 MUST 紅字
-//   --break-fill  實例縮放退回直接吃 (w,h,d) 且拿掉拉伸夾制 ⇒ 尺寸貼合那一條 MUST 紅字
+//   --break-fill  實例縮放退回錯誤的單軸貼合 ⇒ 尺寸貼合那一條 MUST 紅字
 //   --break-glass 窗格覆寫整批拿掉 ⇒ 間距種類與玻璃牆那兩條 MUST 紅字
 //   --break-flat  平整那一條退回上一輪(窗牆帶只看傾角 / 招牌不篩平整段)⇒ ⑥-c 四條 MUST 紅字
 const BREAK_FLAT = process.argv.includes('--break-flat');
 const BREAK_PROF = process.argv.includes('--break-prof');
 const BREAK_FILL = process.argv.includes('--break-fill');
 const BREAK_GLASS = process.argv.includes('--break-glass');
+// 2026-08-27 非方盒構築等比例縮放:
+//   --break-proportional 兩個 InstancedMesh 發射點拿掉 setScalar ⇒ 等比例縮放 MUST 紅字
+const BREAK_PROPORTIONAL = process.argv.includes('--break-proportional');
 // 2026-08-14(使用者「相對周邊面積過小且角度差異沒有過大的區塊,與角度最接近的鄰居合併,
 // 最後收斂成多面柱體/錐台/角錐/圓柱/圓台/圓錐等幾何多面體構成」):
 //   --break-merge 整條 ㋗ 拿掉(退回第三輪)⇒ ⑥-e 五條 MUST 紅字
@@ -606,19 +609,27 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       //     我這邊沒掉血」。挑選 MUST 只讀純資料;載入成敗只決定畫出來的是網格還是保險絲。
       ok(!/bldGeo\(/.test(pickBlk) && !/libOk/.test(pickBlk) && /fitApprovedBuilding\(b\)/.test(pickBlk),
         '挑選只讀 bundled runtime 目錄純資料，不問非同步 GLB 載入狀態');
-      // ①-c **尺寸貼合**(使用者這一輪第 ①):實例縮放由剖面實測外廓推導(把網格撐滿基地),
-      //     拉伸倍率超過 `ASPECT_MAX` 就不換這一棟。舊制直接拿 (w,h,d) 縮單位方盒,而節點
-      //     只佔單位盒的 0.13~0.42 ⇒ 那幾棟塔樓縮在自己的空地中央、外面一圈看不見的碰撞盒。
+      // ①-c **尺寸貼合**(使用者這一輪第 ①):方盒構築由剖面實測外廓推導三軸縮放;
+      //     非方盒構築保留自然比例,三軸取同一個最小比例。拉伸倍率超過 `ASPECT_MAX`
+      //     就不換這一棟。舊制直接拿 (w,h,d) 縮單位方盒,而節點只佔單位盒的 0.13~0.42
+      //     ⇒ 那幾棟塔樓縮在自己的空地中央、外面一圈看不見的碰撞盒。
       const bioF = BREAK_FILL
-        ? bioC.replace('        sx: (f.rot ? b.d : b.w) * 0.5 / p.hw,', '        sx: (f.rot ? b.d : b.w),')
-          .replace('      if (!best || Math.exp(best.dist) > MASS.ASPECT_MAX) return null;', '      if (!best) return null;')
+        ? bioC.replace('      const sx = (f.rot ? b.d : b.w) * 0.5 / p.hw;', '      const sx = (f.rot ? b.d : b.w);')
         : bioC;
       const fitBlk = bioF.slice(bioF.indexOf('const fitScale = (f, b) =>'), bioF.indexOf('for (const commercial of'));
-      ok(/sx: \(f\.rot \? b\.d : b\.w\) \* 0\.5 \/ p\.hw,/.test(fitBlk)
-        && /sy: b\.h \* 0\.5 \/ p\.hy,/.test(fitBlk)
-        && /sz: \(f\.rot \? b\.w : b\.d\) \* 0\.5 \/ p\.hd,/.test(fitBlk)
-        && /prof: \{ hw: 0\.5, hd: 0\.5, hy: 0\.5/.test(readSrc('public', 'js', 'approvedBuildingModels.js')),
-        'runtime 幾何先正規化單位包絡，再由足跡與高度精確撐滿基地');
+      const approvedSrc = readSrc('public', 'js', 'approvedBuildingModels.js');
+      const scalarGuard = 'if (proportional) scale.setScalar(row.w); else scale.set(row.w, row.h, row.d);';
+      const approvedFitSrc = BREAK_PROPORTIONAL
+        ? approvedSrc.replaceAll(scalarGuard, 'scale.set(row.w, row.h, row.d);')
+        : approvedSrc;
+      ok(/const sx = \(f\.rot \? b\.d : b\.w\) \* 0\.5 \/ p\.hw;/.test(fitBlk)
+        && /const sy = b\.h \* 0\.5 \/ p\.hy;/.test(fitBlk)
+        && /const sz = \(f\.rot \? b\.w : b\.d\) \* 0\.5 \/ p\.hd;/.test(fitBlk)
+        && /if \(f\.proportional\) \{\s*const s = Math\.min\(sx, sy, sz\);\s*return \{ sx: s, sy: s, sz: s \};\s*\}/.test(fitBlk)
+        && /const isCuboidAssembly = \(entry\)/.test(approvedFitSrc)
+        && /if \(isCuboidAssembly\(entry\)\) geo\.scale\(1 \/ size\.x, 1 \/ size\.y, 1 \/ size\.z\);\s*else geo\.scale\(1 \/ size\.y, 1 \/ size\.y, 1 \/ size\.y\);/.test(approvedFitSrc)
+        && (approvedFitSrc.match(/if \(proportional\) scale\.setScalar\(row\.w\); else scale\.set\(row\.w, row\.h, row\.d\);/g) || []).length === 2,
+        '非方盒構築保留自然比例並以同一縮放值發射；方盒構築才可三軸貼合基地');
       // ②-a 兩桶**互斥**且共用同一個門檻:高層 = commercial && h > MIN_H、低矮 = h <= MIN_H。
       //     低矮那一邊漏掉門檻 ⇒ 同一棟樓可能被兩個名冊各挑一次(後挑的覆寫前一個),
       //     而預算是照「總共挑幾棟」算的 ⇒ 帳與畫面同時錯,兩邊都不報錯。
@@ -647,10 +658,10 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         const blkSeg = bioP.slice(bioP.indexOf('const cols = fit'), bioP.indexOf('if (fit) bldFaces.set(b,'));
         ok(/fit\.prof\.slabs\.map\(\(s, si\) => \{/.test(blkSeg) && /hw2: bx\.hw2, hd2: bx\.hd2, ry: b\.ry, ty: bx\.y1/.test(blkSeg),
           '挑中庫節點的那幾棟:碰撞柱逐段登記(有向盒仍是 A30 那一種,只是一顆變一疊)');
-        // 地面那一段 MUST 仍是整個足跡(剖面最寬的一段被 `fitScale` 撐到 OSM 足跡)⇒
-        // 街廓通行寬逐位元同舊制(`audit_traverse` 不動);收窄的只有上面的退縮階與山牆
+        // 方盒地面段仍是整個足跡;非方盒則與自然包絡同縮放,不另造一圈看不見的盒。
+        // 兩者都沉進地形 1m;方盒街廓通行寬逐位元同舊制(`audit_traverse` 不動)。
         ok(/const bot = si === 0 \? gy - 1 : bx\.y0;/.test(blkSeg),
-          '最底那一段仍沉進地形 1m(地面層的通行寬與舊制逐位元相同)');
+          '最底那一段仍沉進地形 1m(方盒地面層的通行寬與舊制逐位元相同)');
         // 每一段各帶自己的 ty ⇒ 退縮平台站得上去;h 一律比可見頂高 0.5m(同舊制那一條)
         ok(/h: bx\.y1 \+ 0\.5 - bot,/.test(blkSeg),
           '每一段的碰撞柱比自己的可見頂高 0.5m(站上退縮平台不被垂直閘推下去)');
@@ -715,8 +726,9 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
           && /for \(const c of cols\) blockers\.push\(c\);/.test(fSeg),
           '碰撞柱兩個 push 出口(主量體逐段 + 臨街裙樓)MUST NOT 走丟棄桶(不隨庫的有無增減)');
         // 主量體那一列自己也不能被分流掉 —— 它就是要被庫節點取代的那一列
-        ok(/\n\s+inst\.push\(\{\r?\n\s+x: b\.x, y: gy \+ b\.h \/ 2 - 0\.5, z: b\.z,/.test(fSeg),
-          '主量體那一列直接進 inst(它才是被庫節點取代的那一列,不進丟棄桶)');
+        ok(/const renderH = fsc \? fsc\.sy : b\.h;/.test(fSeg)
+          && /\n\s+inst\.push\(\{\r?\n\s+x: b\.x, y: gy \+ renderH \/ 2 - 0\.5, z: b\.z,/.test(fSeg),
+          '主量體那一列直接進 inst 且依實際縮放後高度落地(不進丟棄桶)');
         // ⑤-b **牆面直式招牌不再整批丟掉**(2026-08-12 使用者「招牌會懸空」)——
         //     它當初被丟的理由是「掛在方盒側面而節點比方盒瘦 ⇒ 浮在半空」,而落點改吃剖面
         //     之後那個理由消失了。丟著不管等於「最顯眼的十幾棟樓一塊招牌都沒有」。
@@ -1119,7 +1131,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
             `同一棟的附件件另外取列數(100m 主體 ${facadeRows(100, true)} 列、12m 裙樓 ${facadeRows(12, true)} 列)`);
         }
         // 單一縫:一份定義、三個消費端都經 `rowsOf`,而快取鍵 MUST 帶列數
-        // `t.h` 對庫節點那一列自 2026-08-12 起是**縮放係數**不是樓高(fitScale 把網格撐滿基地)
+        // `t.h` 對庫節點那一列自 2026-08-12 起是**縮放係數**不是樓高(fitScale 的實際縮放值)
         // ⇒ 列數 MUST 改吃另存的真樓高 `t.bh`;吃錯的話那幾棟塔樓的層高會是「係數公尺」
         ok((bioC.match(/function facadeRows\(/g) || []).length === 1
           && /const rowsOf = \(t\) => (?:t\.rows \?\? )?facadeRows\(t\.bh \?\? t\.h, commercial\);/.test(bioC)

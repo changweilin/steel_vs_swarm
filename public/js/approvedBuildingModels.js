@@ -23,6 +23,21 @@ const semanticPenalty = (entry, commercial) => {
   return 0;
 };
 
+const isCuboidAssembly = (entry) => Array.isArray(entry?.parts) && entry.parts.length > 0
+  && entry.parts.every((part) => part?.type === 'box');
+
+const profileOf = (entry) => {
+  const size = entry.bounds.size;
+  if (isCuboidAssembly(entry)) {
+    return { hw: 0.5, hd: 0.5, hy: 0.5, slabs: [[-0.5, 0.5, 0.5, 0.5, 1]] };
+  }
+  // 非方盒構築先以自然樓高正規化，保留原始長寬高比，實例階段只能等比例縮放。
+  const h = Math.max(size[1], 0.001);
+  const hw = size[0] / h * 0.5;
+  const hd = size[2] / h * 0.5;
+  return { hw, hd, hy: 0.5, slabs: [[-0.5, 0.5, hw, hd, 1]] };
+};
+
 /**
  * 依足跡比例選出拉伸最少的一列；前六名用座標雜湊輪替，零共享亂數消耗。
  * 回傳的 prof 只描述「正規化後完整包絡」，供既有碰撞盒與招牌縫共用。
@@ -51,15 +66,17 @@ export function fitApprovedBuilding(building) {
   if (!ranked.length) return null;
   const pool = ranked.slice(0, Math.min(6, ranked.length));
   const pick = pool[Math.floor(hash01(building.x, building.z, building.commercial ? 17 : 31) * pool.length)];
+  const proportional = !isCuboidAssembly(pick.entry);
   return {
     entry: pick.entry,
     key: pick.entry.key,
     rot: pick.rot,
-    prof: { hw: 0.5, hd: 0.5, hy: 0.5, slabs: [[-0.5, 0.5, 0.5, 0.5, 1]] },
+    proportional,
+    prof: profileOf(pick.entry),
   };
 }
 
-/** 把原始真實尺度模型正規化成 X/Z 中心、Y=0 落地的單位盒，支援依 paletteIndex 選取配色。 */
+/** 把模型正規化成 X/Z 中心、Y=0 落地；非方盒模型只按自然樓高正規化以保留比例。 */
 export function approvedBuildingGeometry(entry, paletteIndex = null) {
   const cacheKey = paletteIndex != null ? `${entry.key}_pal${paletteIndex}` : entry.key;
   if (geometryCache.has(cacheKey)) return geometryCache.get(cacheKey);
@@ -71,7 +88,8 @@ export function approvedBuildingGeometry(entry, paletteIndex = null) {
   box.getCenter(center);
   if (Math.min(size.x, size.y, size.z) <= 0) throw new RangeError(`建築包絡無效:${entry.key}`);
   geo.translate(-center.x, -box.min.y, -center.z);
-  geo.scale(1 / size.x, 1 / size.y, 1 / size.z);
+  if (isCuboidAssembly(entry)) geo.scale(1 / size.x, 1 / size.y, 1 / size.z);
+  else geo.scale(1 / size.y, 1 / size.y, 1 / size.y);
   geo.computeBoundingBox();
   geo.computeBoundingSphere();
   geometryCache.set(cacheKey, geo);
@@ -87,6 +105,7 @@ export function approvedBuildingMaterial() {
 export function makeApprovedBuildingBatch(entry, rows) {
   if (!entry || !Array.isArray(rows) || !rows.length) throw new TypeError('建築批次缺少 entry/rows');
   const numPalettes = Array.isArray(entry.palettes) && entry.palettes.length > 1 ? entry.palettes.length : 1;
+  const proportional = !isCuboidAssembly(entry);
 
   if (numPalettes <= 1) {
     const mesh = new THREE.InstancedMesh(approvedBuildingGeometry(entry), approvedBuildingMaterial(), rows.length);
@@ -99,7 +118,7 @@ export function makeApprovedBuildingBatch(entry, rows) {
       euler.set(0, row.ry, 0);
       quaternion.setFromEuler(euler);
       position.set(row.x, row.y - row.h / 2, row.z); // 正規化模型由地面起算；既有 row.y 是中心。
-      scale.set(row.w, row.h, row.d);
+      if (proportional) scale.setScalar(row.w); else scale.set(row.w, row.h, row.d);
       matrix.compose(position, quaternion, scale);
       mesh.setMatrixAt(i, matrix);
     });
@@ -132,7 +151,7 @@ export function makeApprovedBuildingBatch(entry, rows) {
       euler.set(0, row.ry, 0);
       quaternion.setFromEuler(euler);
       position.set(row.x, row.y - row.h / 2, row.z);
-      scale.set(row.w, row.h, row.d);
+      if (proportional) scale.setScalar(row.w); else scale.set(row.w, row.h, row.d);
       matrix.compose(position, quaternion, scale);
       mesh.setMatrixAt(i, matrix);
     });
