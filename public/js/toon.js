@@ -964,11 +964,11 @@ export function setSeaDepthField(data, size, bounds) {
 // 相位再減去 `celSeaH` ⇒ 浪一來泡沫沖上岸;繞過每一根柱子由蓋章那一步給。
 // **MUST NOT 在 terrain.js / biomes.js 手寫這些值**(同 `SEA_M`/`SEA_SEG` 的紀律)。
 export const FOAM = {
-  BAND_M: 1.10,     // 泡沫帶的深度節距(m):一條帶 = 深度差這麼多 (放大 2 倍為 1.10m，水波條帶寬度倍增)
+  BAND_M: 0.55,     // 泡沫帶的深度節距(m):一條帶 = 深度差這麼多
   STEP: 0.42,       // 硬邊門檻(賽璐璐的泡沫是白色硬邊,不是柔霧)
   SHAPE_K: 5,       // 帶心尖銳度:三角波直接 step 會讓每一道白條佔掉過半週期
-  NOISE_M: 4.8,     // 噪聲的空間尺度(m):讓帶緣碎掉,不是一圈同心圓
-  RANGE_M: 4.8,     // 水波範圍 (放大 2 倍為 4.8m，向外擴散倍增)
+  NOISE_M: 3.4,     // 噪聲的空間尺度(m):讓帶緣碎掉,不是一圈同心圓
+  RANGE_M: 2.4,     // 只留潮緣近岸帶;6m 會在緩灘上鋪出十餘道道路標線般的白條
   TEXEL_M: 1.5,     // 場的 texel 邊長(m);低功耗折半由 `seaFieldN` 推導
 };
 export const REFL = {
@@ -1111,36 +1111,36 @@ const CEL_SEA_GLSL = `
             celH += uSoftAmp * 0.45 * celFragW * celChop;
           }
 
-          // ⑤ 遺跡/沉船/橋墩周邊：環繞物件切面的同心波前與干涉條紋 (水波範圍與波長放大 2 倍，重疊時計算干涉條紋)
-          if ( celRawD > 0.001 && celRawD < 0.98 ) {
+          // ⑤ 遺跡/沉船/橋墩周邊：環繞物件切面的同心波前與干涉條紋 (波長與範圍全面比照岸邊海浪 16m 尺度)
+          if ( celRawD > 0.001 && celRawD < 0.999 ) {
             // 物件位置決定水流向內(-1)或向外(+1)
-            float celFlowSign = sign( sin( dot( floor( celSxz * 0.08 ), vec2( 12.9898, 78.233 ) ) * 43758.5453 ) );
+            float celFlowSign = sign( sin( dot( floor( celSxz * 0.04 ), vec2( 12.9898, 78.233 ) ) * 43758.5453 ) );
             if ( celFlowSign == 0.0 ) celFlowSign = 1.0;
 
-            // 判斷障礙物大小/類型: 大範圍遺跡/沉船 vs 橋墩 (水波範圍放大 2 倍)
-            float isRelic = smoothstep( 0.04, 0.20, celRawD );
-            float waveExtent = mix( ${FOAM.RANGE_M.toFixed(2)} * 2.3, ${FOAM.RANGE_M.toFixed(2)} * 4.6, isRelic );
+            // 實體向外擴散距離以海浪基準波長 (16.0m) 展開
+            float isRelic = smoothstep( 0.04, 0.25, celRawD );
+            float waveExtent = mix( ${WIND.WAVE_M.toFixed(1)} * 0.65, ${WIND.WAVE_M.toFixed(1)} * 1.35, isRelic );
             float relicDist = celRawD * waveExtent;
 
-            // 波長放大 2 倍 (波數 k 由 3.8 減半為 1.9，波長倍增)
-            float relicJit = sin( dot( celSxz, vec2( 0.12, -0.16 ) ) + celRawD * 7.0 ) * 0.55
-                           + cos( dot( celSxz, vec2( -0.09, 0.18 ) ) + uWindT * 0.5 ) * 0.45;
-            float relicPhase = relicDist * 1.9 - uWindT * 1.6 * celFlowSign + relicJit;
+            // 波長完全比照海浪 16.0m 基準 (k = 2pi / 16.0 = 0.3927)
+            float relicJit = sin( dot( celSxz, vec2( 0.08, -0.06 ) ) + celRawD * 4.0 ) * 0.55
+                           + cos( dot( celSxz, vec2( -0.06, 0.09 ) ) + uWindT * 0.4 ) * 0.45;
+            float relicPhase = relicDist * ( 6.28318 / ${WIND.WAVE_M.toFixed(1)} ) - uWindT * ( uSoftFreq * 1.8 ) * celFlowSign + relicJit;
 
-            // 越外圈自然消失 (衰減距離放大 2 倍: 0.95 -> 0.48)
-            float relicFade = exp( -relicDist * 0.48 ) * ( 1.0 - smoothstep( 0.15, 0.95, celRawD ) );
+            // 16m 外圈自然平滑衰減
+            float relicFade = ( 1.0 - smoothstep( 0.02, 0.98, celRawD ) );
             float relicWave = sin( relicPhase ) * relicFade * ( uSoftAmp * 1.25 );
 
             // ⑥ 水波重疊干涉條紋計算 (Interference Fringes: 相長/相消干涉)
             float seaPhase = celMsp + uWindT * uSoftFreq;
             float celInterference = cos( relicPhase - seaPhase )
-                                  + cos( relicPhase * 1.25 + dot( celSxz, vec2( 0.18, -0.14 ) ) - uWindT * 1.1 ) * 0.5;
-            float fringeWeight = relicFade * smoothstep( 0.04, 0.35, celRawD );
-            float interferenceFringes = celInterference * fringeWeight * ( uSoftAmp * 0.75 );
+                                  + cos( relicPhase * 1.25 + dot( celSxz, vec2( 0.09, -0.07 ) ) - uWindT * ( uSoftFreq * 1.2 ) ) * 0.5;
+            float fringeWeight = relicFade * smoothstep( 0.02, 0.35, celRawD );
+            float interferenceFringes = celInterference * fringeWeight * ( uSoftAmp * 0.85 );
 
             #ifdef CEL_SWAMP_RIPPLE
             // 沼澤/封閉水域：浪花變化改為正號到微小負號 (負號數值遠小於正號，負號時不顯示)
-            float swampWavePulse = sin( uWindT * 1.4 + relicDist * 1.0 ) * 0.54 + 0.46; // [-0.08, +1.00]
+            float swampWavePulse = sin( uWindT * 1.4 + relicDist * 0.5 ) * 0.54 + 0.46; // [-0.08, +1.00]
             relicWave *= clamp( swampWavePulse, 0.0, 1.0 );
             interferenceFringes *= clamp( swampWavePulse, 0.0, 1.0 );
             #endif
