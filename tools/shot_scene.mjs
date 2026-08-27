@@ -547,7 +547,41 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, on
         if (surf(x, z) > WATER.LEVEL + 1 && surf(x + 25, z) < WATER.LEVEL) { found = [x, z]; break; }
       }
     }
-    if (found) add('waterline', found, [found[0] + 120, WATER.LEVEL, found[1]]);
+    if (found) {
+      add('waterline', found, [found[0] + 120, WATER.LEVEL, found[1]]);
+      // 水岸高空俯瞰 (視覺確認水岸與淺水浪花)
+      stations.push({
+        name: 'water_shore_aerial',
+        p: [found[0] - 15, WATER.LEVEL + 35, found[1] - 15],
+        look: [found[0] + 25, WATER.LEVEL, found[1] + 25],
+      });
+    }
+
+    // 水中構造物/橋墩近景與高空俯瞰 (特寫與俯瞰水面切面同心波前)
+    if (ud.decks && ud.decks.length) {
+      const d = ud.decks[0];
+      const midX = (d.x1 + d.x2) / 2, midZ = (d.z1 + d.z2) / 2;
+      stations.push({
+        name: 'water_pier',
+        p: [midX - 16, WATER.LEVEL + 10, midZ - 16],
+        look: [midX, WATER.LEVEL, midZ],
+      });
+      stations.push({
+        name: 'water_pier_aerial',
+        p: [midX - 14, WATER.LEVEL + 32, midZ - 14],
+        look: [midX, WATER.LEVEL, midZ],
+      });
+    }
+
+    // 水下遺跡/沉船高空俯瞰
+    const wb = (ud.blockers || []).find((b) => b.cl?.startsWith('aquatic_'));
+    if (wb) {
+      stations.push({
+        name: 'water_relic_aerial',
+        p: [wb.x - 12, WATER.LEVEL + 28, wb.z - 12],
+        look: [wb.x, WATER.LEVEL, wb.z],
+      });
+    }
   }
   {
     const d = ud.stats?.roadPrune?.denseAfter;

@@ -790,29 +790,39 @@ const PAINTERS = {
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 5, y - 7 - rnd() * 7); g.stroke();
     }
   },
-  lotus(g, S, rnd) {                                   // 荷塘:深水 + 天光 + 水深暗影(荷葉 = 3D 實例)
+  lotus(g, S, rnd) {                                   // 荷塘/沼澤水域:深水 + 破碎波光粼粼 + 水深暗影(荷葉 = 3D 實例)
     g.fillStyle = baseFill(SUB_COL.lotus, rnd); g.fillRect(0, 0, S, S);
-    g.fillStyle = 'rgba(255,255,255,0.10)';
-    for (let i = 0; i < 10; i++) g.fillRect(rnd() * S, rnd() * S, 16 + rnd() * 30, 2);   // 水面天光
+    g.fillStyle = 'rgba(255,255,255,0.12)';
+    for (let i = 0; i < 8; i++) g.fillRect(rnd() * S, rnd() * S, 12 + rnd() * 24, 2);   // 水面天光
+    // 破碎化波光粼粼 (細碎微波斑點)
+    for (let i = 0; i < 22; i++) {
+      g.fillStyle = rnd() < 0.4 ? 'rgba(235,255,245,0.45)' : 'rgba(180,225,235,0.30)';
+      g.fillRect(rnd() * S, rnd() * S, 2 + rnd() * 3, 1.5 + rnd());
+    }
     for (let i = 0; i < 8; i++) {                      // 水下暗影:水深錯落
       g.fillStyle = `rgba(30,52,58,${0.15 + rnd() * 0.15})`;
       brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 14, rnd);
     }
   },
-  watertile(g, S, rnd) {                               // 水域(淺):亮藍波光弧 + 岸沫點 —— 一眼可辨「這是水」
+  watertile(g, S, rnd) {                               // 水域(淺):非直波光弧 + 破碎波光點 —— 一眼可辨「這是水」
     g.fillStyle = baseFill(SUB_COL.watertile, rnd); g.fillRect(0, 0, S, S);
     g.lineCap = 'round';
-    for (let i = 0; i < 16; i++) {                     // 波光弧(同向排列 = 水流感)
-      const x = rnd() * S, y = rnd() * S, r = 8 + rnd() * 16;
-      g.strokeStyle = `rgba(210,236,255,${0.35 + rnd() * 0.3})`; g.lineWidth = 1.6 + rnd();
-      g.beginPath(); g.arc(x, y, r, Math.PI * 1.1, Math.PI * 1.65); g.stroke();
+    for (let i = 0; i < 18; i++) {                     // 破碎波光弧 (加入曲率與長度隨機性)
+      const x = rnd() * S, y = rnd() * S, r = 6 + rnd() * 16;
+      const startA = Math.PI * (1.0 + rnd() * 0.25), endA = startA + Math.PI * (0.35 + rnd() * 0.4);
+      g.strokeStyle = `rgba(210,236,255,${0.35 + rnd() * 0.35})`; g.lineWidth = 1.4 + rnd() * 1.2;
+      g.beginPath(); g.arc(x, y, r, startA, endA); g.stroke();
     }
-    g.fillStyle = 'rgba(255,255,255,0.28)';
-    for (let i = 0; i < 26; i++) g.fillRect(rnd() * S, rnd() * S, 2 + rnd() * 3, 1.5);   // 碎浪沫
+    // 破碎化波光粼粼 (碎浪沫與晶亮閃光點)
+    for (let i = 0; i < 30; i++) {
+      g.fillStyle = rnd() < 0.3 ? 'rgba(255,255,255,0.65)' : 'rgba(220,242,255,0.38)';
+      const sx = rnd() * S, sy = rnd() * S, sz = 1.5 + rnd() * 2.5;
+      g.fillRect(sx, sy, sz, sz * (0.6 + rnd() * 0.6));
+    }
     g.fillStyle = 'rgba(24,58,84,0.30)';
     for (let i = 0; i < 6; i++) brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 14, rnd);   // 水色深斑
   },
-  deepwater(g, S, rnd) {                               // 水域(深):暗藍底 + 稀疏天光 —— 與淺水同語彙、更深沉
+  deepwater(g, S, rnd) {                               // 水域(深):暗藍底 + 稀疏天光與深波光 —— 與淺水同語彙、更深沉
     g.fillStyle = baseFill(SUB_COL.deepwater, rnd); g.fillRect(0, 0, S, S);
     g.fillStyle = 'rgba(190,224,246,0.16)';
     for (let i = 0; i < 8; i++) g.fillRect(rnd() * S, rnd() * S, 12 + rnd() * 26, 1.6);  // 稀疏天光
@@ -821,9 +831,10 @@ const PAINTERS = {
       brushBlob(g, rnd() * S, rnd() * S, 12 + rnd() * 18, rnd);
     }
     g.lineCap = 'round'; g.strokeStyle = 'rgba(150,196,224,0.22)'; g.lineWidth = 1.4;
-    for (let i = 0; i < 6; i++) {
-      const x = rnd() * S, y = rnd() * S, r = 10 + rnd() * 14;
-      g.beginPath(); g.arc(x, y, r, Math.PI * 1.15, Math.PI * 1.55); g.stroke();
+    for (let i = 0; i < 8; i++) {
+      const x = rnd() * S, y = rnd() * S, r = 8 + rnd() * 16;
+      const startA = Math.PI * (1.05 + rnd() * 0.2), endA = startA + Math.PI * (0.3 + rnd() * 0.35);
+      g.beginPath(); g.arc(x, y, r, startA, endA); g.stroke();
     }
   },
   // ======== 綠地擴充 ========

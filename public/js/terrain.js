@@ -650,12 +650,15 @@ export async function buildTerrain(cfg, onProgress) {
     if (!bakeSeaDepth() || !blockers?.length) return 0;
     const n = seaN, tx = worldW / n, tz = worldH / n;
     let hit = 0;
+    const ext = FOAM.RANGE_M;
     for (const b of blockers) {
       if (!b || b.y + b.h <= waterY) continue;          // 整根都在水面以下 ⇒ 蓋了也看不到
       const rr = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;   // broad-phase = 外接半對角(A30)
       if (!(rr > 0)) continue;
-      const j0 = Math.max(0, Math.floor((b.x - rr - minX) / tx)), j1 = Math.min(n - 1, Math.ceil((b.x + rr - minX) / tx));
-      const i0 = Math.max(0, Math.floor((b.z - rr - minZ) / tz)), i1 = Math.min(n - 1, Math.ceil((b.z + rr - minZ) / tz));
+      const volF = b.volFactor != null ? Math.max(0.65, Math.min(2.5, b.volFactor)) : 1.0;
+      const ext = FOAM.RANGE_M * volF;
+      const j0 = Math.max(0, Math.floor((b.x - rr - ext - minX) / tx)), j1 = Math.min(n - 1, Math.ceil((b.x + rr + ext - minX) / tx));
+      const i0 = Math.max(0, Math.floor((b.z - rr - ext - minZ) / tz)), i1 = Math.min(n - 1, Math.ceil((b.z + rr + ext - minZ) / tz));
       // 有向盒的 local 軸:three Euler(0, ry, 0) 的反解 ⇒ `sn` 取 **−sin**(A30;
       // 寫 +sin 就是「看得見的牆在這裡、泡沫繞過的牆在另一邊」)
       const cs = b.hw2 != null ? Math.cos(b.ry || 0) : 1, sn = b.hw2 != null ? -Math.sin(b.ry || 0) : 0;
@@ -663,11 +666,22 @@ export async function buildTerrain(cfg, onProgress) {
         const z = minZ + tz * (i + 0.5), oz = z - b.z;
         for (let j = j0; j <= j1; j++) {
           const x = minX + tx * (j + 0.5), ox = x - b.x;
+          let dist = 0;
           if (b.hw2 != null) {
             const lx = ox * cs + oz * sn, lz = -ox * sn + oz * cs;
-            if (Math.abs(lx) > b.hw2 || Math.abs(lz) > b.hd2) continue;
-          } else if (ox * ox + oz * oz > rr * rr) continue;
-          if (seaData[i * n + j]) { seaData[i * n + j] = 0; hit++; }
+            const dx = Math.max(0, Math.abs(lx) - b.hw2);
+            const dz = Math.max(0, Math.abs(lz) - b.hd2);
+            dist = Math.hypot(dx, dz);
+          } else {
+            dist = Math.max(0, Math.hypot(ox, oz) - (b.r || rr));
+          }
+          const idx = i * n + j;
+          if (dist === 0) {
+            if (seaData[idx]) { seaData[idx] = 0; hit++; }
+          } else if (dist < ext) {
+            const dVal = Math.round((dist / ext) * 255);
+            if (dVal < seaData[idx]) { seaData[idx] = dVal; }
+          }
         }
       }
     }

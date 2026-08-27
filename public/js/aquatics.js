@@ -752,10 +752,100 @@ const _relicPos = new THREE.Vector3();
 const _relicSize = new THREE.Vector3();
 
 /**
+ * 由物件幾何圖形與世界矩陣反向計算水面橫截面 (Analytical Waterline Slices)。
+ * 一個組合式遺跡物件 (例如多根神廟石柱、沉船主體與桅杆) 會精確產出多個獨立的水面橫截面區域，
+ * 徹底排除海底基座與沉沒底層。
+ */
+export function extractWaterlineSlices(object, waterY) {
+  if (!object || waterY == null) return [];
+  object.updateWorldMatrix(true, true);
+  const slices = [];
+  const _vTop = new THREE.Vector3(), _vBot = new THREE.Vector3(), _vMid = new THREE.Vector3();
+  const _euler = new THREE.Euler();
+
+  object.traverse((node) => {
+    if (!node.isMesh || !node.geometry) return;
+    const geom = node.geometry;
+    const params = geom.parameters;
+    if (!params) return;
+    const mat = node.matrixWorld;
+
+    if (params.radiusTop !== undefined || geom.type === 'CylinderGeometry') {
+      const rt = params.radiusTop ?? 1, rb = params.radiusBottom ?? 1, h = params.height ?? 1;
+      _vTop.set(0, h / 2, 0).applyMatrix4(mat);
+      _vBot.set(0, -h / 2, 0).applyMatrix4(mat);
+
+      const minY = Math.min(_vTop.y, _vBot.y), maxY = Math.max(_vTop.y, _vBot.y);
+      if (minY <= waterY && maxY >= waterY) {
+        const dy = _vTop.y - _vBot.y;
+        const t = Math.abs(dy) < 1e-4 ? 0.5 : (waterY - _vBot.y) / dy;
+        _vMid.lerpVectors(_vBot, _vTop, THREE.MathUtils.clamp(t, 0, 1));
+        const r = THREE.MathUtils.lerp(rb, rt, THREE.MathUtils.clamp(t, 0, 1));
+
+        // 水面下深度與體積反推 (圓台/圓柱水下排開體積)
+        const hSub = Math.max(0.01, waterY - minY);
+        const vSub = (Math.PI * hSub / 3) * (rb * rb + rb * r + r * r);
+        const volFactor = THREE.MathUtils.clamp(Math.sqrt(hSub / 2.0) * Math.pow(Math.max(0.1, vSub) / 2.0, 0.16), 0.7, 2.5);
+
+        slices.push({
+          x: _vMid.x, z: _vMid.z, y: waterY - 1.0, h: 4.0,
+          r: Math.max(0.35, r),
+          hSub, vSub, volFactor,
+          name: node.name || 'cylinder_slice',
+        });
+      }
+    } else if (params.width !== undefined || geom.type === 'BoxGeometry') {
+      const w = params.width ?? 1, h = params.height ?? 1, d = params.depth ?? 1;
+      _vMid.set(0, 0, 0).applyMatrix4(mat);
+      _euler.setFromRotationMatrix(mat, 'YXZ');
+      const ry = _euler.y;
+      const minY = _vMid.y - h / 2, maxY = _vMid.y + h / 2;
+      if (minY <= waterY && maxY >= waterY) {
+        // 水面下方塊體積與深度反推
+        const hSub = Math.max(0.01, waterY - minY);
+        const vSub = w * d * hSub;
+        const volFactor = THREE.MathUtils.clamp(Math.sqrt(hSub / 2.0) * Math.pow(Math.max(0.1, vSub) / 8.0, 0.16), 0.7, 2.5);
+
+        slices.push({
+          x: _vMid.x, z: _vMid.z, y: waterY - 1.0, h: 4.0,
+          hw2: Math.max(0.35, w / 2), hd2: Math.max(0.35, d / 2), ry,
+          r: Math.hypot(w / 2, d / 2),
+          hSub, vSub, volFactor,
+          name: node.name || 'box_slice',
+        });
+      }
+    } else if (params.radius !== undefined && params.length !== undefined) {
+      // 膠囊 (例如船體、潛艦艙體)
+      const r = params.radius ?? 1, len = params.length ?? 1;
+      _vMid.set(0, 0, 0).applyMatrix4(mat);
+      _euler.setFromRotationMatrix(mat, 'YXZ');
+      const ry = _euler.y;
+      const minY = _vMid.y - (len / 2 + r), maxY = _vMid.y + (len / 2 + r);
+      if (minY <= waterY && maxY >= waterY) {
+        // 水面下膠囊艦體排開體積與深度反推
+        const hSub = Math.max(0.01, waterY - minY);
+        const vSub = Math.PI * r * r * Math.min(2 * r, hSub) + 2 * r * len * Math.min(2 * r, hSub);
+        const volFactor = THREE.MathUtils.clamp(Math.sqrt(hSub / 2.0) * Math.pow(Math.max(0.1, vSub) / 15.0, 0.16), 0.8, 2.5);
+
+        slices.push({
+          x: _vMid.x, z: _vMid.z, y: waterY - 1.0, h: 4.0,
+          hw2: Math.max(0.4, r), hd2: Math.max(0.4, (len + 2 * r) / 2), ry,
+          r: Math.hypot(r, (len + 2 * r) / 2),
+          hSub, vSub, volFactor,
+          name: node.name || 'capsule_slice',
+        });
+      }
+    }
+  });
+
+  return slices;
+}
+
+/**
  * 固定巨物碰撞的單一量尺：以物件 yaw 為盒軸，將傾斜、斷件與子零件姿態全部烤進外廓。
  * 圓形 r 僅作 broad phase；移動、彈道與 LOS 均吃同一個 hw2/hd2/ry 有向盒(A30)。
  */
-export function relicCollider(object, name = 'relic') {
+export function relicCollider(object, name = 'relic', waterY = null) {
   if (!object) return null;
   object.updateWorldMatrix(true, true);
   object.getWorldPosition(_relicPos);
@@ -763,6 +853,28 @@ export function relicCollider(object, name = 'relic') {
   _relicFrame.makeRotationY(ry).setPosition(_relicPos);
   _relicFrameInv.copy(_relicFrame).invert();
   _relicBox.makeEmpty();
+
+  // 若提供 waterY，先嘗試以多區域幾何解析截面
+  if (waterY != null) {
+    const slices = extractWaterlineSlices(object, waterY);
+    if (slices.length === 1) return slices[0];
+    if (slices.length > 1) {
+      // 合併為包圍盒
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const s of slices) {
+        const sr = s.r || Math.hypot(s.hw2 || 0, s.hd2 || 0);
+        minX = Math.min(minX, s.x - sr); maxX = Math.max(maxX, s.x + sr);
+        minZ = Math.min(minZ, s.z - sr); maxZ = Math.max(maxZ, s.z + sr);
+      }
+      return {
+        x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, y: waterY - 1.0, h: 4.0,
+        hw2: Math.max(0.4, (maxX - minX) / 2), hd2: Math.max(0.4, (maxZ - minZ) / 2), ry,
+        r: Math.hypot((maxX - minX) / 2, (maxZ - minZ) / 2), name,
+      };
+    }
+    return null;
+  }
+
   object.traverse((node) => {
     if (!node.isMesh || !node.geometry) return;
     if (!node.geometry.boundingBox) node.geometry.computeBoundingBox();
@@ -816,8 +928,13 @@ export function buildSunkenRelics(parentGroup, terrain, seed, blockers = []) {
     if (code === 1 && wy - floorY >= 3.0) {
       const kind = underwaterKinds[Math.floor(rnd() * underwaterKinds.length)];
       const relic = buildRelicObject(kind, parentGroup, x, floorY, z, rnd, { isLand: false });
-      const col = relicCollider(relic, `aquatic_${kind}`);
-      if (col) blockers.push(col);
+      const slices = extractWaterlineSlices(relic, wy);
+      if (slices.length) {
+        for (const s of slices) blockers.push(s);
+      } else {
+        const col = relicCollider(relic, `aquatic_${kind}`, wy);
+        if (col) blockers.push(col);
+      }
       relicCount++;
     }
   }
