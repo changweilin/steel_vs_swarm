@@ -5322,7 +5322,8 @@ export class BattleClient {
    *  各寫一份就會出現「鎖得到卻瞄到腳邊」。`dimTop/dimH` 是 spawn 時量好的機體尺寸。 */
   _entAimPoint(ent) {
     const c = ent.mesh.position.clone();
-    c.y += (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 2);
+    const scale = ent.bossSeg != null ? bossScaleF(ent.bossSeg) : 1;
+    c.y += (ent.dimTop != null ? (ent.dimTop - ent.dimH * 0.5) * scale : 2 * scale);
     return c;
   }
 
@@ -6393,8 +6394,9 @@ export class BattleClient {
     out.length = 0;
     for (const ent of this.ents.values()) {
       if (ent.side === this.side || !ent.mesh.visible) continue;
+      const scale = ent.bossSeg != null ? bossScaleF(ent.bossSeg) : 1;
       const c = ent.heroCol || BattleClient.COLLIDER[ent.kind] || (ent.colR ? { r: ent.colR, h: ent.colH || 6 } : null);
-      const cr = c ? c.r : 12, chh = (c ? c.h : 12) * 0.5;
+      const cr = (c ? c.r : 12) * scale, chh = (c ? c.h : 12) * 0.5 * scale;
       const p = ent.mesh.position;
       // 包圍球:圓心抬到機體中段,半徑含 1.3 倍餘裕(動畫/骨架外擴、飛行體 heroY 位移)
       const R = Math.hypot(cr, chh) * 1.3 + 2;
@@ -6551,9 +6553,9 @@ export class BattleClient {
     return out.slice(0, LANCE.MAX);
   }
 
-  /** 單位水平量體(公尺):英雄已在 _makeEnt 由 heroCollider 推導,其餘查 data.js hitR */
+  /** 單位水平量體(公尺):走 data.js hitR 單一真相縫(含 BOSS 階段體型縮放) */
   _hitR(ent) {
-    return ent.heroCol ? ent.heroCol.r : hitR({ kind: ent.kind, side: ent.side, civ: ent.civ });
+    return hitR(ent);
   }
 
   /** 貫穿命中回饋:首個目標全額,之後逐個 ×LANCE.DECAY × 偏心遞減 offAxisFalloff(與伺服器 heroLance 同一條公式) */

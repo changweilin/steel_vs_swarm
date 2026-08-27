@@ -339,13 +339,23 @@ export class BotBrain {
    * 沒有 tactic 旗標的難度(新手/低)只剩舊制那一條(門檻 PULL_HP、目的地主堡)⇒ 逐位元不變。
    */
   _pullWant(h, frac, spF) {
-    if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) return null;             // 狂暴模式:持續進攻不撤退
+    if (h.sq?.boss) {
+      if ((h.sq.bossSeg || 0) >= 3) return null;             // 狂暴模式:持續進攻不撤退
+      if (frac < this.tac.BASE_HP) return 'RETREAT';
+      if (this.state === 'RETREAT') return 'RETREAT';
+      if (spF >= this.tac.PULL_SP) return null;
+      if (!this._inFight(h)) return null;                   // 已脫戰:護盾正在回,沒有危險
+      // BOSS 護盾快被打破才回防 (交戰中護盾剩餘低於 15% 觸發回防據點中心等盾回復)
+      if (spF <= 0.15) return 'RALLY';
+      return null;
+    }
     if (!this.diff.tactic) return frac < this.tac.PULL_HP ? 'RETREAT' : null;
     if (frac < this.tac.BASE_HP) return 'RETREAT';
     if (this.state === 'RETREAT') return 'RETREAT';
     if (spF >= this.tac.PULL_SP) return null;
     if (!this._inFight(h)) return null;                                   // 已脫戰:護盾正在回,沒有危險
     if (frac < this.tac.PULL_HP) return 'RALLY';                        // 中/高:裝甲也見底
+    if (spF <= 0.20) return 'RALLY';                                      // 戰術電腦玩家:交戰中護盾快被打破(≤20%)主動回防等盾
     if (this.diff.elite && this._recentDmg(h) >= this.tac.PULL_SP * (h.maxSp || 0)) return 'RALLY';
     return null;
   }
@@ -624,6 +634,7 @@ export class BotBrain {
     const wd = this._gun(h);
     const range = wd.range;
     const fovHalf = this._fovHalf(h);   // 前方視野半角(推導不手寫,見 data.js botFovHalf)
+    const bossHold = this.sim.bossHold?.get(this.pid);
     // 迷霧內的敵人 bot 一律看不見(不再全知作弊):己方視野外的單位不列入鎖定。
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 sim.snapshotFor / heroHit 同判定)。
     const pulse = this.sim.visionUntil?.[this.side] > this.sim.t;
@@ -634,11 +645,15 @@ export class BotBrain {
       if (this.sim.siegeLocked(t)) continue;   // 攻堅順序未到的建築完全免傷 ⇒ 不當目標(唯一縫 sim.siegeLocked)
       if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-      if (d > range * 1.15) continue;                    // 稍微超程也接近(移動中會進圈)
+      // BOSS 守備主動性:敵人在據點活動圈內(或射程內)即納入警戒,具備全向防衛能力
+      const inBossZone = bossHold && Math.hypot(t.x - bossHold.x, t.z - bossHold.z) <= bossHold.r * 1.1;
+      const maxAcq = inBossZone ? Math.max(range * 1.15, bossHold.r * 1.1) : range * 1.15;
+      if (d > maxAcq) continue;                    // 稍微超程也接近(移動中會進圈)
       // 前方視野錐(2026-08-02 使用者定案「不可以有全角度視野」):真人只看得到螢幕上那一塊,
       // bot 也只認機體正前方 ±botFovHalf。背後的敵人要嘛開火把它打醒(_alertLook 轉頭),
       // 要嘛自己走進錐內 —— MUST NOT 退回全角度掃描。塔/主堡同樣吃這一條(真人也得轉頭才看得到)。
-      if (Math.abs(this._bearing(h, t.x, t.z)) > fovHalf) continue;
+      // BOSS 守備範圍內的入侵者享有全向防衛感知。
+      if (!inBossZone && Math.abs(this._bearing(h, t.x, t.z)) > fovHalf) continue;
       // 便宜的射程/視野錐淘汰在前、_visibleTo(LOS 上線後含遮蔽 trace)在後 —— 打不到的目標不付視野成本
       if (sources && !this.sim._visibleTo(t, this.side, sources)) continue;   // 迷霧外 → 看不見,不鎖定
       // 類別折算走旋鈕(定位覆寫的落點:攻堅型把工事的加價收掉去咬塔、突襲型加得更兇去獵人)
