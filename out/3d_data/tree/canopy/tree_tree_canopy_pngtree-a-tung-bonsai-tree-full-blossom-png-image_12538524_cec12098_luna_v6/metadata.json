@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_canopy_pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524_cec12098_luna_v6.png",
   "bounds": {
     "min": [
-      -3.1875,
+      -2.9497,
       0,
-      -3.3396
+      -3.1093
     ],
     "max": [
-      3.4593,
-      6.2154,
-      4.015
+      3.0859,
+      6.206,
+      3.6987
     ],
     "size": [
-      6.647,
-      6.215,
-      7.355
+      6.036,
+      6.206,
+      6.808
     ],
-    "rMax": 5.3,
-    "triangles": 1752,
-    "vertices": 1060
+    "rMax": 4.817,
+    "triangles": 4600,
+    "vertices": 2804
   },
   "reconstructionNote": "開花闊葉樹特徵：開放枝架、枝端分離花冠與不等高冠簇。",
   "species": "flowering",
-  "created_at": "2026-08-27T14:39:20.085Z",
+  "created_at": "2026-08-27T16:57:30.537Z",
   "humanVerdictPreserved": true
 }

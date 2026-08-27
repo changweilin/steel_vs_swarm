@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_canopy_madagascar-baobab_078efb57_luna_v6.png",
   "bounds": {
     "min": [
-      -3.6737,
+      -3.6736,
       0,
-      -3.5396
+      -3.6829
     ],
     "max": [
-      4.3426,
-      6.1328,
-      3.702
+      4.3387,
+      5.9677,
+      3.9434
     ],
     "size": [
-      8.016,
-      6.133,
-      7.242
+      8.012,
+      5.968,
+      7.626
     ],
-    "rMax": 5.706,
-    "triangles": 1408,
-    "vertices": 846
+    "rMax": 5.863,
+    "triangles": 1684,
+    "vertices": 972
   },
   "reconstructionNote": "猴麵包樹特徵：瓶狀粗樹幹、低密度粗枝、枝端小傘冠，保留樹冠間空隙。",
   "species": "baobab",
-  "created_at": "2026-08-27T14:39:36.308Z",
+  "created_at": "2026-08-27T16:57:15.760Z",
   "humanVerdictPreserved": true
 }

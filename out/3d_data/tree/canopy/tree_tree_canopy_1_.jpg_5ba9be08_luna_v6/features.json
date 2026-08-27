@@ -12,30 +12,36 @@
     "brightHex": 10860413,
     "glassHex": 1976635
   },
-  "totalParts": 17,
+  "totalParts": 22,
   "partNames": [
     "banyan_bole",
     "root_flare",
     "banyan_primary_0",
     "banyan_secondary_0",
-    "banyan_leaf_mass_0",
+    "banyan_leaf_mass_0_banyan_mass",
+    "banyan_leaf_mass_0_banyan_edge",
     "banyan_primary_1",
     "banyan_secondary_1",
-    "banyan_leaf_mass_1",
+    "banyan_leaf_mass_1_banyan_mass",
+    "banyan_leaf_mass_1_banyan_edge",
     "banyan_primary_2",
     "banyan_secondary_2",
-    "banyan_leaf_mass_2",
+    "banyan_leaf_mass_2_banyan_mass",
+    "banyan_leaf_mass_2_banyan_edge",
     "banyan_primary_3",
     "banyan_secondary_3",
-    "banyan_leaf_mass_3",
+    "banyan_leaf_mass_3_banyan_mass",
+    "banyan_leaf_mass_3_banyan_edge",
     "banyan_primary_4",
     "banyan_secondary_4",
-    "banyan_leaf_mass_4"
+    "banyan_leaf_mass_4_banyan_mass",
+    "banyan_leaf_mass_4_banyan_edge"
   ],
   "polyhedralPrimitivesUsed": [
     "conical_frustum",
     "cylinder",
-    "ellipsoid_sphere"
+    "ellipsoid_sphere",
+    "dodecahedron_polyhedron"
   ],
   "schemaVersion": null,
   "evidenceStatus": "legacy_feature_metadata_only",

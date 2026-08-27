@@ -126,26 +126,26 @@
   "preview": "out/review_previews/tree_tree_gt_dragontree_wc_43408118_1_dc20500a_luna_v6.png",
   "bounds": {
     "min": [
-      -2.4775,
+      -2.153,
       0,
-      -2.604
+      -2.2869
     ],
     "max": [
-      2.4613,
-      7.5132,
-      2.4747
+      1.9131,
+      7.7019,
+      2.2052
     ],
     "size": [
-      4.939,
-      7.513,
-      5.079
+      4.066,
+      7.702,
+      4.492
     ],
-    "rMax": 3.594,
-    "triangles": 1340,
-    "vertices": 808
+    "rMax": 3.141,
+    "triangles": 4436,
+    "vertices": 2710
   },
   "reconstructionNote": "龍血樹特徵：高位多頭燭台狀分叉，每一枝頭獨立承接劍葉 rosette。",
   "species": "dragon",
-  "created_at": "2026-08-27T14:39:35.269Z",
+  "created_at": "2026-08-27T16:58:04.867Z",
   "humanVerdictPreserved": true
 }

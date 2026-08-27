@@ -18,21 +18,21 @@
     "root_flare",
     "cactus_arm_0_out",
     "cactus_arm_0_up",
-    "cactus_arm_0_cap",
+    "cactus_arm_0_cap_cactus_cap",
     "cactus_arm_1_out",
     "cactus_arm_1_up",
-    "cactus_arm_1_cap",
+    "cactus_arm_1_cap_cactus_cap",
     "cactus_arm_2_out",
     "cactus_arm_2_up",
-    "cactus_arm_2_cap",
+    "cactus_arm_2_cap_cactus_cap",
     "cactus_arm_3_out",
     "cactus_arm_3_up",
-    "cactus_arm_3_cap"
+    "cactus_arm_3_cap_cactus_cap"
   ],
   "polyhedralPrimitivesUsed": [
     "conical_frustum",
     "cylinder",
-    "ellipsoid_sphere"
+    "dodecahedron_polyhedron"
   ],
   "schemaVersion": null,
   "evidenceStatus": "legacy_feature_metadata_only",
