@@ -30,6 +30,7 @@
   "polyhedralPrimitivesUsed": [
     "ellipsoid_sphere",
     "conical_frustum",
+    "tapered_box",
     "box",
     "torus_ring",
     "wedge",

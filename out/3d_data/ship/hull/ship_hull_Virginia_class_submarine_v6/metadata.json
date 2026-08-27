@@ -6,7 +6,7 @@
   "style": "modern_military_submarine",
   "symmetryMode": "symmetric",
   "similarityScore": 92,
-  "similarityReview": "The submarine hull is modeled as a large cylinder with a rounded nose (ellipsoid) and a tapered stern. The sail (conning tower) is accurately placed with a box-like structure and a rounded top. The torpedo is modeled as a separate cylinder with a conical nose. All components are aligned to maintain the hydrodynamic profile of the vessel. The glass windows are represented as distinct navy-colored panels on the sail.",
+  "similarityReview": "The submarine hull is modeled as a large cylinder with a rounded nose (ellipsoid) and a tapered stern. The sail (conning tower) is accurately placed with a box-like structure and a rounded top. The launched torpedo visible in the reference image is excluded as a non-submarine external object. All submarine components are aligned to maintain the hydrodynamic profile of the vessel. The glass windows are represented as distinct navy-colored panels on the sail.",
   "version": 6,
   "verStr": "v6",
   "source_image": "ship/Virginia_class_submarine.jpg",
@@ -29,8 +29,8 @@
       9.853
     ],
     "rMax": 89.823,
-    "triangles": 600,
-    "vertices": 369
+    "triangles": 536,
+    "vertices": 333
   },
   "spec": {
     "style": "modern_military_submarine"
@@ -44,6 +44,7 @@
       "長軸維持 +X",
       "貼地位移 0.00m",
       "潛艇改用封閉橢球耐壓殼",
+      "潛艦耐壓殼直徑 7.90→9.43m（縮放前）",
       "實尺 114.8×13.0×10.4m (exact)"
     ]
   },

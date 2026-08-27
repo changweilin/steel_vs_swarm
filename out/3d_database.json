@@ -67749,17 +67749,17 @@
       "bounds": {
         "min": [
           -51.0493,
-          0.0022,
+          0,
           -3.5
         ],
         "max": [
-          18.9506,
-          9.1016,
+          18.9539,
+          9.3216,
           3.5
         ],
         "size": [
-          70,
-          9.099,
+          70.003,
+          9.322,
           7
         ],
         "rMax": 51.169,
@@ -67775,7 +67775,7 @@
         "className": "submarine",
         "targetSize": [
           70,
-          9.1,
+          9.32160234994118,
           7
         ],
         "confidence": "class_estimate"
@@ -67840,35 +67840,35 @@
       "image": "ship/202512251310033872.webp",
       "bounds": {
         "min": [
-          -35.0008,
-          0.0523,
-          -3.2726
+          -35.4321,
+          0,
+          -3.574
         ],
         "max": [
-          35.0008,
-          9.098,
-          3.1738
+          34.5679,
+          7.4883,
+          2.5903
         ],
         "size": [
-          70.002,
-          9.046,
-          6.446
+          70,
+          7.488,
+          6.164
         ],
-        "rMax": 35.153,
-        "triangles": 900,
-        "vertices": 568
+        "rMax": 35.612,
+        "triangles": 384,
+        "vertices": 236
       },
       "spec": {
         "style": "industrial_military_submarine"
       },
-      "triangles": 900,
+      "triangles": 384,
       "outputDir": "out/3d_data/ship/hull/ship_hull_202512251310033872_v6",
       "realScale": {
         "className": "submarine",
         "targetSize": [
           70,
-          9.094999999999999,
-          6.465356188156577
+          7.224500000000001,
+          6.3
         ],
         "confidence": "class_estimate"
       }
@@ -69272,12 +69272,12 @@
         ],
         "max": [
           55.7429,
-          9.75,
+          10.011,
           4.5
         ],
         "size": [
           75,
-          9.75,
+          10.011,
           9
         ],
         "rMax": 55.924,
@@ -69293,7 +69293,7 @@
         "className": "submarine",
         "targetSize": [
           75,
-          9.75,
+          10.011,
           9
         ],
         "confidence": "class_estimate"
@@ -69741,13 +69741,13 @@
           9.853
         ],
         "rMax": 89.823,
-        "triangles": 600,
-        "vertices": 369
+        "triangles": 536,
+        "vertices": 333
       },
       "spec": {
         "style": "modern_military_submarine"
       },
-      "triangles": 600,
+      "triangles": 536,
       "outputDir": "out/3d_data/ship/hull/ship_hull_Virginia_class_submarine_v6",
       "realScale": {
         "className": "attack_submarine",

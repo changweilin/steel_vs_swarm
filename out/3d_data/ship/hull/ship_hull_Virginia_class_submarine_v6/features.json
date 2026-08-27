@@ -12,14 +12,12 @@
     "brightHex": 15528177,
     "glassHex": 46217
   },
-  "totalParts": 10,
+  "totalParts": 8,
   "partNames": [
     "main_hull",
     "bow_nose",
     "sail_tower",
     "bridge_window",
-    "torpedo_body",
-    "torpedo_nose",
     "stern_stabilizer_v",
     "stern_stabilizer_h",
     "stern_pumpjet_ring",
@@ -27,9 +25,9 @@
   ],
   "polyhedralPrimitivesUsed": [
     "ellipsoid_sphere",
+    "tapered_box",
     "box",
-    "cylinder",
-    "cone",
-    "torus_ring"
+    "torus_ring",
+    "cylinder"
   ]
 }
