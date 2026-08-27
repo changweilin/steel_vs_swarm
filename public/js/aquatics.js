@@ -781,9 +781,16 @@ export function extractWaterlineSlices(object, waterY) {
         const t = Math.abs(dy) < 1e-4 ? 0.5 : (waterY - _vBot.y) / dy;
         _vMid.lerpVectors(_vBot, _vTop, THREE.MathUtils.clamp(t, 0, 1));
         const r = THREE.MathUtils.lerp(rb, rt, THREE.MathUtils.clamp(t, 0, 1));
+
+        // 水面下深度與體積反推 (圓台/圓柱水下排開體積)
+        const hSub = Math.max(0.01, waterY - minY);
+        const vSub = (Math.PI * hSub / 3) * (rb * rb + rb * r + r * r);
+        const volFactor = THREE.MathUtils.clamp(Math.sqrt(hSub / 2.0) * Math.pow(Math.max(0.1, vSub) / 2.0, 0.16), 0.7, 2.5);
+
         slices.push({
           x: _vMid.x, z: _vMid.z, y: waterY - 1.0, h: 4.0,
           r: Math.max(0.35, r),
+          hSub, vSub, volFactor,
           name: node.name || 'cylinder_slice',
         });
       }
@@ -792,11 +799,18 @@ export function extractWaterlineSlices(object, waterY) {
       _vMid.set(0, 0, 0).applyMatrix4(mat);
       _euler.setFromRotationMatrix(mat, 'YXZ');
       const ry = _euler.y;
-      if (_vMid.y - h / 2 <= waterY && _vMid.y + h / 2 >= waterY) {
+      const minY = _vMid.y - h / 2, maxY = _vMid.y + h / 2;
+      if (minY <= waterY && maxY >= waterY) {
+        // 水面下方塊體積與深度反推
+        const hSub = Math.max(0.01, waterY - minY);
+        const vSub = w * d * hSub;
+        const volFactor = THREE.MathUtils.clamp(Math.sqrt(hSub / 2.0) * Math.pow(Math.max(0.1, vSub) / 8.0, 0.16), 0.7, 2.5);
+
         slices.push({
           x: _vMid.x, z: _vMid.z, y: waterY - 1.0, h: 4.0,
           hw2: Math.max(0.35, w / 2), hd2: Math.max(0.35, d / 2), ry,
           r: Math.hypot(w / 2, d / 2),
+          hSub, vSub, volFactor,
           name: node.name || 'box_slice',
         });
       }
@@ -806,11 +820,18 @@ export function extractWaterlineSlices(object, waterY) {
       _vMid.set(0, 0, 0).applyMatrix4(mat);
       _euler.setFromRotationMatrix(mat, 'YXZ');
       const ry = _euler.y;
-      if (_vMid.y - (len / 2 + r) <= waterY && _vMid.y + (len / 2 + r) >= waterY) {
+      const minY = _vMid.y - (len / 2 + r), maxY = _vMid.y + (len / 2 + r);
+      if (minY <= waterY && maxY >= waterY) {
+        // 水面下膠囊艦體排開體積與深度反推
+        const hSub = Math.max(0.01, waterY - minY);
+        const vSub = Math.PI * r * r * Math.min(2 * r, hSub) + 2 * r * len * Math.min(2 * r, hSub);
+        const volFactor = THREE.MathUtils.clamp(Math.sqrt(hSub / 2.0) * Math.pow(Math.max(0.1, vSub) / 15.0, 0.16), 0.8, 2.5);
+
         slices.push({
           x: _vMid.x, z: _vMid.z, y: waterY - 1.0, h: 4.0,
           hw2: Math.max(0.4, r), hd2: Math.max(0.4, (len + 2 * r) / 2), ry,
           r: Math.hypot(r, (len + 2 * r) / 2),
+          hSub, vSub, volFactor,
           name: node.name || 'capsule_slice',
         });
       }

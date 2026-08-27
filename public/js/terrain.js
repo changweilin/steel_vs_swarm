@@ -655,6 +655,8 @@ export async function buildTerrain(cfg, onProgress) {
       if (!b || b.y + b.h <= waterY) continue;          // 整根都在水面以下 ⇒ 蓋了也看不到
       const rr = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;   // broad-phase = 外接半對角(A30)
       if (!(rr > 0)) continue;
+      const volF = b.volFactor != null ? Math.max(0.65, Math.min(2.5, b.volFactor)) : 1.0;
+      const ext = FOAM.RANGE_M * volF;
       const j0 = Math.max(0, Math.floor((b.x - rr - ext - minX) / tx)), j1 = Math.min(n - 1, Math.ceil((b.x + rr + ext - minX) / tx));
       const i0 = Math.max(0, Math.floor((b.z - rr - ext - minZ) / tz)), i1 = Math.min(n - 1, Math.ceil((b.z + rr + ext - minZ) / tz));
       // 有向盒的 local 軸:three Euler(0, ry, 0) 的反解 ⇒ `sn` 取 **−sin**(A30;
