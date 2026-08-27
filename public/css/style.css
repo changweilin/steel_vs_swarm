@@ -1709,7 +1709,7 @@ body:not(.touch-ui) .touch-layer { display: none; }
 /* 樣品是一顆真的 WebGL 畫布(matsample.js),尺寸由 JS 給的 260×140;這裡只負責版位。
    `max-width: 100%` 是必要的 —— 直式手機的設定頁欄寬會窄於 260px,不夾就把整頁撐出橫向捲軸
    (A20 家族:直排的失敗一律表現成「有東西被推出去」而不是報錯)。 */
-.vset { display: flex; flex-direction: column; gap: 12px; }
+.vset, .bset { display: flex; flex-direction: column; gap: 12px; }
 .vset-preview { display: flex; justify-content: center; }
 .vset-sample {
   display: block; width: 260px; max-width: 100%; height: auto; border-radius: 4px;

@@ -57,6 +57,7 @@ import {
 } from './mobile.js';
 import { CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange, deviceScheme } from './ctrlmode.js';
 import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault } from './visualPrefs.js';
+import { BALANCE_KNOBS, balancePref, setBalancePref, resetBalancePrefs, balancePrefsDefault } from './balancePrefs.js';
 import { MatSample } from './matsample.js';
 
 const $ = (id) => document.getElementById(id);
@@ -2709,7 +2710,7 @@ function switchPausePage(page) {
   document.querySelectorAll('#pauseTabs .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
   document.querySelectorAll('#pauseOverlay .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
   // 樣品是一顆真的 WebGL context:只在「設定」頁真的顯示時才建,離開這一頁立刻收
-  if (page === 'settings') { renderVisualSettings($('pauseVisualMount')); syncDevTools(); }
+  if (page === 'settings') { renderVisualSettings($('pauseVisualMount')); syncDevTools(); renderBalanceSettings($('pauseBalanceMount')); }
   else disposeVisualSettings();
 }
 document.querySelectorAll('#pauseTabs .pause-tab, #pauseOverlay .pause-back').forEach((b) => {
@@ -2867,6 +2868,100 @@ function renderVisualSettings(mount) {
 function disposeVisualSettings() {
   _matSample?.dispose();
   _matSample = null;
+}
+
+// ── 平衡性設定(全玩家八項升級曲線起終點 + 基礎數值倍率)──
+function renderBalanceSettings(mount) {
+  if (!mount) return;
+  mount.innerHTML = '';
+
+  const groups = [
+    {
+      id: 'upgrade',
+      title: '▎全玩家八項升級曲線起終點',
+      tip: '調整全玩家 8 項升級項目在初始與滿級時的倍率(0.1~10x)。',
+    },
+    {
+      id: 'stat',
+      title: '▎全玩家基礎數值倍率',
+      tip: '即時縮放全體玩家之移速、攻速、傷害、冷卻與射程等基礎數值(0.1~10x)。',
+    },
+  ];
+
+  const vals = [];
+
+  for (const grp of groups) {
+    const head = document.createElement('div');
+    head.className = 'set-sub';
+    head.textContent = grp.title;
+    attachTip(head, grp.tip);
+    mount.appendChild(head);
+
+    for (const [k, d] of Object.entries(BALANCE_KNOBS)) {
+      if (d.group !== grp.id) continue;
+      const row = document.createElement('div');
+      row.className = 'set-row';
+      row.dataset.bk = k;
+
+      const label = document.createElement('span');
+      label.className = 'set-label';
+      label.textContent = d.label;
+      attachTip(label, d.hint);
+      row.appendChild(label);
+
+      const slider = document.createElement('input');
+      slider.className = 'set-slider';
+      slider.type = 'range';
+      slider.min = String(d.min);
+      slider.max = String(d.max);
+      slider.step = String(d.step);
+      slider.setAttribute('aria-label', d.label);
+      slider.value = String(balancePref(k));
+
+      const val = document.createElement('span');
+      val.className = 'set-val';
+      val.textContent = `${balancePref(k).toFixed(1)}x`;
+
+      slider.addEventListener('input', (e) => {
+        const clamped = setBalancePref(k, Number(e.target.value));
+        val.textContent = `${clamped.toFixed(1)}x`;
+        syncReset();
+      });
+
+      vals.push({
+        k,
+        sync: () => {
+          slider.value = String(balancePref(k));
+          val.textContent = `${balancePref(k).toFixed(1)}x`;
+        },
+      });
+
+      row.appendChild(slider);
+      row.appendChild(val);
+      mount.appendChild(row);
+    }
+  }
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'row';
+  btnRow.style.justifyContent = 'center';
+  btnRow.style.marginTop = '10px';
+
+  const reset = document.createElement('button');
+  reset.className = 'btn small';
+  reset.type = 'button';
+  reset.textContent = '↺ 還原預設';
+  btnRow.appendChild(reset);
+  mount.appendChild(btnRow);
+
+  const syncReset = () => { reset.disabled = balancePrefsDefault(); };
+  reset.addEventListener('click', () => {
+    resetBalancePrefs();
+    for (const v of vals) v.sync();
+    syncReset();
+    app.audio?.ui('click');
+  });
+  syncReset();
 }
 
 // ── 開發工具(dev-only:只在本機開發環境出現)──────────────────────────────
@@ -3080,6 +3175,7 @@ function syncSettingsUi() {
   // 觸控/陀螺儀:渲染器與同步器住 mobile.js(大廳面板與此共用同一份)
   renderTouchSettings($('pauseTouchMount'), { onNotice: toast });
   syncTouchSettings();
+  renderBalanceSettings($('pauseBalanceMount'));
 }
 
 // 操作方式切換(只在「不限定」時發生):說明頁與戰場提示的鍵位敘述 MUST 跟著換一份 ——
@@ -3159,7 +3255,7 @@ $('touchCloseBtn')?.addEventListener('click', () => { $('touchOverlay').style.di
 function switchLobbyPage(page) {
   document.querySelectorAll('#lobbyMenu .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
   document.querySelectorAll('#lobbyMenu .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
-  if (page === 'settings') { renderVisualSettings($('lobbyVisualMount')); syncDevTools(); }
+  if (page === 'settings') { renderVisualSettings($('lobbyVisualMount')); syncDevTools(); renderBalanceSettings($('lobbyBalanceMount')); }
   else disposeVisualSettings();
 }
 function openLobbyMenu(page) {
@@ -3167,6 +3263,7 @@ function openLobbyMenu(page) {
   renderCtrlSettings($('lobbyMenuCtrlMount'), { onNotice: toast });     // 操作方式:桌機也要看得到
   renderTouchSettings($('lobbyMenuTouchMount'), { onNotice: toast });   // 桌機由 .touch-only 隱藏整區
   syncTouchSettings();
+  renderBalanceSettings($('lobbyBalanceMount'));
   switchLobbyPage(page);
   $('lobbyMenu').style.display = '';
 }
