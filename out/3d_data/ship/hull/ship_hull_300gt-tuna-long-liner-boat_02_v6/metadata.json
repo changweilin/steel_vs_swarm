@@ -14,21 +14,21 @@
   "created_at": "2026-08-20T16:10:14.809Z",
   "bounds": {
     "min": [
-      -18.1781,
+      -18.1748,
       0,
       -4.4
     ],
     "max": [
-      21.6883,
-      8.0045,
+      21.6913,
+      8,
       4.4
     ],
     "size": [
       39.866,
-      8.005,
+      8,
       8.8
     ],
-    "rMax": 22.13,
+    "rMax": 22.133,
     "triangles": 724,
     "vertices": 442
   },
@@ -54,7 +54,7 @@
     "className": "fishing_vessel",
     "targetSize": [
       40,
-      8.0045,
+      8,
       8.8
     ],
     "confidence": "class_estimate",

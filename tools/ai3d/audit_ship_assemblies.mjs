@@ -10,8 +10,13 @@
  * 4. 主船體、甲板、上層、桅杆、武器間無明顯漂浮或過度互穿。
  * 5. 船體落在 y=0，並具艏艉收束體，避免只剩長方體平頭船殼。
  * 6. 艙室由甲板封閉至艙頂；禁止裸露座椅、開放內裝或玻璃後方空洞。
+ * 7. 非航母甲板與艙室不得超出支撐面；上層艙室必須收在下層艙室內。
+ * 8. 每個零件須以不超過 0.08m 的接縫連回主船體。
+ * 9. 玻璃／標線片厚度依長邊夾制；玻璃須與艙室同高、貼面且角度一致。
+ * 10. 水面船船殼深度具最低長深比；LNG 船最低為船長 7%。
  *
- * --break-floating / --break-degenerate / --break-open / --break-winding 會在記憶體中製造壞例，且必須使對應
+ * --break-floating / --break-degenerate / --break-open / --break-winding / --break-fit / --break-upper-fit /
+ * --break-sheet / --break-sheet-angle / --break-sheet-height / --break-flat 會在記憶體中製造壞例，且必須使對應
  * 斷言轉紅；若挑不到適用零件或沒有攔截到，腳本本身視為失敗。
  */
 
@@ -37,6 +42,9 @@ const TAPER_RE = /(bow|stern_cone|bow_cone|bow_taper|stern_taper|bulbous)/i;
 const DETAIL_RE = /(window|glass|stripe|trim|light|ring|buoy|tyre|tire|name_plate|flag|railing|fin|plane|aircraft|propeller|shaft|anchor|marking|centerline|landing_line|balcony_|funnel_plinth)/i;
 const STACK_RE = /(mast|funnel|radar|gun|turret|crane|support|pillar|stack|dome|roof|aircraft|lifeboat|raft|seat|canopy|motor)/i;
 const HULL_LAYER_RE = /(hull|waterline|bottom|base|stripe|bulge)/i;
+const ROOM_RE = /superstructure|bridge|cabin|wheelhouse|island|hangar|sealed_/i;
+const DECK_RE = /deck|platform/i;
+const SHEET_RE = /glass|window|windshield|stripe|marking|landing_(center)?line/i;
 const WINDING_AUDIT_TYPES = new Set([
   'box', 'tapered_box', 'polygonal_prism', 'frustum_pyramid', 'pyramid',
   'cylinder', 'cone', 'conical_frustum', 'ellipsoid_sphere',
@@ -44,6 +52,10 @@ const WINDING_AUDIT_TYPES = new Set([
 
 function finiteVector(value, size) {
   return Array.isArray(value) && value.length >= size && value.slice(0, size).every(Number.isFinite);
+}
+
+function isCabinSupport(part) {
+  return ROOM_RE.test(part.name) && !DETAIL_RE.test(part.name) && !/tunnel|wing|deck|platform/i.test(part.name);
 }
 
 function partPosition(part) {
@@ -234,6 +246,96 @@ function validateFaceWinding(model, parts, issues) {
   }
 }
 
+function angleDelta(a, b) {
+  return Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));
+}
+
+function validateSheets(parts, boxes, issues) {
+  const supports = parts.filter((part)=>!DETAIL_RE.test(part.name) && /hull|deck|platform|superstructure|bridge|cabin|wheelhouse|island|hangar|sealed_/i.test(part.name));
+  for (const part of parts.filter((candidate)=>SHEET_RE.test(candidate.name) && finiteVector(candidate.dimensions,3))) {
+    const longest = Math.max(...part.dimensions);
+    const thickness = Math.min(...part.dimensions);
+    const glazing = /glass|window|windshield/i.test(part.name);
+    const maxThickness = glazing ? Math.min(0.08,Math.max(0.025,longest*0.004)) : Math.min(0.045,Math.max(0.015,longest*0.002));
+    if (thickness > maxThickness+0.002) {
+      issue(issues,'error','SHEET_TOO_THICK',part,
+        `片件厚 ${thickness.toFixed(3)}m，長邊 ${longest.toFixed(2)}m 的上限為 ${maxThickness.toFixed(3)}m。`,
+        '以最短尺寸作厚度，玻璃上限 0.08m、標線上限 0.045m，貼於支撐面而非嵌成厚塊。');
+    }
+    if (!glazing || !supports.length) continue;
+    const roomSupports = supports.filter(isCabinSupport);
+    const pool = roomSupports.length ? roomSupports : supports;
+    const support = pool.filter((candidate)=>candidate!==part && boxes.get(candidate))
+      .sort((a,b)=>aabbGap(boxes.get(part),boxes.get(a))-aabbGap(boxes.get(part),boxes.get(b)))[0];
+    if (!support) continue;
+    const partBox = boxes.get(part), supportBox = boxes.get(support);
+    const overlapY = Math.max(0,Math.min(partBox.max[1],supportBox.max[1])-Math.max(partBox.min[1],supportBox.min[1]));
+    const minHeight = Math.max(0.001,Math.min(partBox.size[1],supportBox.size[1]));
+    if (overlapY/minHeight < 0.5) {
+      issue(issues,'error','SHEET_HEIGHT_MISMATCH',part,
+        `玻璃與艙室 ${support.name} 的垂直重疊只有 ${(overlapY/minHeight*100).toFixed(1)}%。`,
+        '沿艙室支撐面重新安裝玻璃，將中心高度夾在艙室上下緣之內。');
+    }
+    const mountGap = aabbGap(partBox,supportBox);
+    if (mountGap > 0.05) {
+      issue(issues,'error','SHEET_NOT_MOUNTED',part,
+        `玻璃距艙室 ${support.name} ${mountGap.toFixed(3)}m。`,
+        '玻璃沿艙室外向法線留 0.02–0.05m 表面間距，不可漂浮或誤貼船殼。');
+    }
+    const rotation = partRotation(part), supportRotation = partRotation(support);
+    const mismatch = Math.max(...rotation.map((value,axis)=>angleDelta(value,supportRotation[axis])));
+    if (mismatch > 0.08) {
+      issue(issues,'error','SHEET_ANGLE_MISMATCH',part,
+        `玻璃與最近支撐件 ${support.name} 的旋轉差 ${(mismatch*180/Math.PI).toFixed(1)}°。`,
+        '沿支撐件局部表面法線放置玻璃，保留同一 Euler 基準，只以最短軸決定正面方向。');
+    }
+  }
+}
+
+function validateStackContainment(parts, boxes, issues, identity) {
+  const carrier = /aircraft_carrier/i.test(identity);
+  const twinHull = parts.filter((part)=>/^main_hull_(port|starboard)$/i.test(part.name)).length >= 2;
+  const structural = parts.filter((part)=>(ROOM_RE.test(part.name) || DECK_RE.test(part.name)) && !DETAIL_RE.test(part.name));
+  for (const child of structural) {
+    if (/catamaran_bridge_tunnel/i.test(child.name)) continue;
+    const childBox = boxes.get(child);
+    if (!childBox) continue;
+    const childCenterY = (childBox.min[1]+childBox.max[1])*0.5;
+    const lower = parts.filter((part)=>part!==child && !DETAIL_RE.test(part.name) && boxes.get(part) && /hull|deck|platform|superstructure|bridge|cabin|wheelhouse|island|hangar|sealed_/i.test(part.name))
+      .filter((part)=>(boxes.get(part).min[1]+boxes.get(part).max[1])*0.5 < childCenterY-0.01 && horizontalOverlapAudit(childBox,boxes.get(part))>0.001)
+      .sort((a,b)=>boxes.get(b).max[1]-boxes.get(a).max[1]);
+    const roomSupport = ROOM_RE.test(child.name) ? lower.find((part)=>isCabinSupport(part)
+      && boxes.get(part).max[1] <= childBox.min[1]+0.08 && horizontalOverlapAudit(childBox,boxes.get(part))>0.35) : null;
+    const baseSupport = /^main_deck$/i.test(child.name)
+      ? lower.find((part)=>ROOT_RE.test(part.name))
+      : ROOM_RE.test(child.name)
+        ? lower.find((part)=>DECK_RE.test(part.name) || ROOT_RE.test(part.name))
+        : lower[0];
+    const support = roomSupport || baseSupport;
+    if (!support) continue;
+    const carrierDeckOverhang = carrier && DECK_RE.test(child.name) && /flight|landing|elevator|catwalk|ski_jump/i.test(child.name);
+    const twinHullBridge = twinHull && /deck|platform|catamaran_bridge_tunnel/i.test(child.name);
+    if (carrierDeckOverhang || twinHullBridge) continue;
+    const supportBox = boxes.get(support);
+    const tolerance = Math.max(0.03,Math.min(0.12,(supportBox.size[2]||0)*0.006));
+    const overflow = Math.max(
+      supportBox.min[0]-childBox.min[0],childBox.max[0]-supportBox.max[0],
+      supportBox.min[2]-childBox.min[2],childBox.max[2]-supportBox.max[2],0,
+    );
+    if (overflow > tolerance) {
+      issue(issues,'error',ROOM_RE.test(child.name) && roomSupport ? 'UPPER_ROOM_OVERHANG' : 'DECK_OR_ROOM_OVERHANG',child,
+        `${child.name} 超出支撐件 ${support.name} ${overflow.toFixed(3)}m。`,
+        '以支撐件水平包絡夾制中心與長寬；上層艙室逐層向內收束，僅航母飛行甲板可外挑。');
+    }
+  }
+}
+
+function horizontalOverlapAudit(a, b) {
+  const x = Math.max(0,Math.min(a.max[0],b.max[0])-Math.max(a.min[0],b.min[0]));
+  const z = Math.max(0,Math.min(a.max[2],b.max[2])-Math.max(a.min[2],b.min[2]));
+  return x*z/Math.max(0.001,a.size[0]*a.size[2]);
+}
+
 function validatePairs(parts, boxes, issues, beam, lateralAxis) {
   const groups = new Map();
   for (const part of parts) {
@@ -279,6 +381,7 @@ function validateAssembly(model, metadata) {
   const boxes = new Map();
   for (const part of parts) boxes.set(part, validatePartShape(part, issues));
   validateFaceWinding(model, parts, issues);
+  validateSheets(parts,boxes,issues);
   const envelope = unionAabb([...boxes.values()]);
   if (!envelope) return { issues, envelope };
   const longAxis = envelope.size[0] >= envelope.size[2] ? 0 : 2;
@@ -287,6 +390,8 @@ function validateAssembly(model, metadata) {
   const beam = envelope.size[lateralAxis];
   const height = envelope.size[1];
   const tolerance = Math.max(0.08, length * 0.004);
+  const identity = `${metadata.key ?? ''} ${metadata.style ?? ''} ${model.style ?? ''}`;
+  validateStackContainment(parts,boxes,issues,identity);
 
   for (const interior of parts.filter((part)=>/cockpit_seating|seat_row_|open_interior|cabin_interior|bridge_interior/i.test(part.name))) {
     issue(issues, 'error', 'OPEN_CABIN', interior,
@@ -345,7 +450,7 @@ function validateAssembly(model, metadata) {
         `船艏中心 ${longAxis === 0 ? 'x' : 'z'}=${box.center[longAxis].toFixed(2)}m，未位於長軸正向前半部。`, '船艏統一指向長軸正向；轉入 canonical +X 時一併修正。');
     }
   }
-  const submarine = /submarine/i.test(`${metadata.style ?? ''} ${model.style ?? ''}`);
+  const submarine = /submarine/i.test(identity);
   if (!submarine && !parts.some((part) => TAPER_RE.test(part.name) || part.type === 'hull_polyhedron')) {
     issue(issues, 'error', 'NO_HULL_TAPER', null, '船體沒有可辨識的艏艉收束多面體。', '在主船體兩端接 wedge/frustum；艏端較尖、艉端較平。');
   }
@@ -355,18 +460,30 @@ function validateAssembly(model, metadata) {
       '主船體是長方體，端部沒有非 box 收束體。', '以中心箱體 + 艏 wedge + 艉 frustum 組成連續水線輪廓。');
   }
 
+  if (!submarine && structuralRoots.length) {
+    const hullBox = unionAabb(structuralRoots.map((part)=>boxes.get(part)));
+    const minimumRatio = /LNG|methan/i.test(identity) ? 0.070 : /bulk|container|cargo/i.test(identity) ? 0.055 : 0.045;
+    const ratio = hullBox.size[1]/Math.max(0.001,length);
+    if (ratio < minimumRatio) {
+      issue(issues,'error','FLAT_HULL',structuralRoots[0],
+        `船殼深度／船長 ${(ratio*100).toFixed(2)}%，低於此船型 ${(minimumRatio*100).toFixed(1)}%。`,
+        '提高 hull_polyhedron 型深並連帶抬升甲板支撐鏈；LNG 船殼至少為船長 7%。');
+    }
+  }
+
   validatePairs(parts, boxes, issues, beam, lateralAxis);
 
   const primaryRoot = structuralRoots.reduce((largest, part) =>
     !largest || volume(boxes.get(part)) > volume(boxes.get(largest)) ? part : largest, null);
   const rootSet = new Set(primaryRoot ? [primaryRoot] : []);
   const connected = new Set(rootSet);
+  const joinTolerance = Math.min(0.08,Math.max(0.035,length*0.00025));
   let changed = true;
   while (changed) {
     changed = false;
     for (const part of parts) {
       if (connected.has(part) || !boxes.get(part)) continue;
-      if ([...connected].some((support) => boxes.get(support) && aabbGap(boxes.get(part), boxes.get(support)) <= tolerance)) {
+      if ([...connected].some((support) => boxes.get(support) && aabbGap(boxes.get(part), boxes.get(support)) <= joinTolerance)) {
         connected.add(part);
         changed = true;
       }
@@ -378,7 +495,7 @@ function validateAssembly(model, metadata) {
     if (!connected.has(part)) {
       const nearest = Math.min(...[...connected].map((support) => aabbGap(box, boxes.get(support))));
       issue(issues, 'error', structuralRoots.includes(part) ? 'FLOATING_HULL_SEGMENT' : 'FLOATING_PART', part,
-        `離支撐鏈最近仍有 ${nearest.toFixed(3)}m 間隙（公差 ${tolerance.toFixed(3)}m）。`, '用命名 joint 共用接合座標；桅杆/武器底面直接等於支撐面頂高。');
+        `離支撐鏈最近仍有 ${nearest.toFixed(3)}m 間隙（公差 ${joinTolerance.toFixed(3)}m）。`, '用命名 joint 共用接合座標；桅杆/武器底面直接等於支撐面頂高。');
     }
   }
 
@@ -497,6 +614,70 @@ function injectBreak(entries) {
     const { entry, part, faces, faceOffset } = selected;
     [faces[faceOffset + 1], faces[faceOffset + 2]] = [faces[faceOffset + 2], faces[faceOffset + 1]];
     markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'INWARD_FACE' });
+  }
+  if (args.has('--break-fit')) {
+    const entry = entries.find((candidate)=>!(/aircraft_carrier/i.test(`${candidate.metadata.key} ${candidate.model.style}`))
+      && (candidate.model.parts ?? []).some((part)=>DECK_RE.test(part.name) && finiteVector(part.dimensions,3)));
+    const part = entry?.model.parts.find((candidate)=>DECK_RE.test(candidate.name) && finiteVector(candidate.dimensions,3));
+    if (!entry || !part) throw new Error('--break-fit 找不到可放大越界的甲板或艙室。');
+    part.dimensions[0] *= 8;
+    part.dimensions[2] *= 8;
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'DECK_OR_ROOM_OVERHANG' });
+  }
+  if (args.has('--break-upper-fit')) {
+    let entry = null, part = null, support = null;
+    for (const candidate of entries) {
+      const rooms = (candidate.model.parts ?? []).filter((room)=>isCabinSupport(room) && finiteVector(room.dimensions,3));
+      const boxes = new Map(rooms.map((room)=>[room,worldAabb(room)]));
+      part = rooms.find((upper)=> {
+        support = rooms.find((lower)=>lower!==upper && boxes.get(lower) && boxes.get(upper)
+          && boxes.get(lower).max[1] <= boxes.get(upper).min[1]+0.08
+          && horizontalOverlapAudit(boxes.get(upper),boxes.get(lower))>0.35) || null;
+        return support;
+      });
+      if (part) { entry = candidate; break; }
+    }
+    if (!entry || !part || !support) throw new Error('--break-upper-fit 找不到至少兩層艙室的模型。');
+    const upperBox = worldAabb(part), lowerBox = worldAabb(support);
+    const position = part.position ?? part.pos;
+    const axis = upperBox.size[0] <= upperBox.size[2] ? 0 : 2;
+    position[axis] += lowerBox.max[axis]-upperBox.max[axis]+upperBox.size[axis]*0.2;
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'UPPER_ROOM_OVERHANG' });
+  }
+  if (args.has('--break-sheet')) {
+    const entry = entries.find((candidate)=>(candidate.model.parts ?? []).some((part)=>SHEET_RE.test(part.name) && finiteVector(part.dimensions,3)));
+    const part = entry?.model.parts.find((candidate)=>SHEET_RE.test(candidate.name) && finiteVector(candidate.dimensions,3));
+    if (!entry || !part) throw new Error('--break-sheet 找不到片狀零件。');
+    const longest = Math.max(...part.dimensions);
+    const thinAxis = part.dimensions.indexOf(Math.min(...part.dimensions));
+    part.dimensions[thinAxis] = longest*0.5;
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'SHEET_TOO_THICK' });
+  }
+  if (args.has('--break-sheet-angle')) {
+    const entry = entries.find((candidate)=>(candidate.model.parts ?? []).some((part)=>/glass|window|windshield/i.test(part.name)));
+    const part = entry?.model.parts.find((candidate)=>/glass|window|windshield/i.test(candidate.name));
+    if (!entry || !part) throw new Error('--break-sheet-angle 找不到玻璃零件。');
+    const rotation = part.rotation ?? part.rot;
+    if (!finiteVector(rotation,3)) throw new Error('--break-sheet-angle 玻璃缺少旋轉。');
+    rotation[0] += 0.7;
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'SHEET_ANGLE_MISMATCH' });
+  }
+  if (args.has('--break-sheet-height')) {
+    const entry = entries.find((candidate)=>(candidate.model.parts ?? []).some((part)=>/glass|window|windshield/i.test(part.name)));
+    const part = entry?.model.parts.find((candidate)=>/glass|window|windshield/i.test(candidate.name));
+    if (!entry || !part) throw new Error('--break-sheet-height 找不到玻璃零件。');
+    const position = part.position ?? part.pos;
+    if (!finiteVector(position,3)) throw new Error('--break-sheet-height 玻璃缺少位置。');
+    position[1] += 100;
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'SHEET_HEIGHT_MISMATCH' });
+  }
+  if (args.has('--break-flat')) {
+    const entry = entries.find((candidate)=>/LNG|methan/i.test(`${candidate.metadata.key} ${candidate.model.style}`)
+      && (candidate.model.parts ?? []).some((part)=>part.type==='hull_polyhedron'));
+    const part = entry?.model.parts.find((candidate)=>candidate.type==='hull_polyhedron');
+    if (!entry || !part) throw new Error('--break-flat 找不到 LNG hull_polyhedron。');
+    part.dimensions[1] = 0.01;
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'FLAT_HULL' });
   }
   return markers;
 }

@@ -20,12 +20,12 @@
     ],
     "max": [
       125,
-      37.95,
+      37.8355,
       15
     ],
     "size": [
       250,
-      37.95,
+      37.836,
       30
     ],
     "rMax": 125.897,
@@ -46,7 +46,7 @@
       "漸縮艙室 2",
       "鏡像補件 0",
       "貼地 0.00m",
-      "實尺 250.0×38.0×30.0m (class_estimate)"
+      "實尺 250.0×37.8×30.0m (class_estimate)"
     ]
   },
   "realScale": {
@@ -54,7 +54,7 @@
     "className": "cruise_ship",
     "targetSize": [
       250,
-      37.95,
+      37.8355,
       30
     ],
     "confidence": "class_estimate",

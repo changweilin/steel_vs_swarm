@@ -20,12 +20,12 @@
     ],
     "max": [
       20,
-      13.725,
+      13.4694,
       4.4
     ],
     "size": [
       40,
-      13.725,
+      13.469,
       8.8
     ],
     "rMax": 20.478,
@@ -46,7 +46,7 @@
       "漸縮艙室 2",
       "鏡像補件 0",
       "貼地 0.00m",
-      "實尺 40.0×13.7×8.8m (class_estimate)"
+      "實尺 40.0×13.5×8.8m (class_estimate)"
     ]
   },
   "realScale": {
@@ -54,7 +54,7 @@
     "className": "fishing_vessel",
     "targetSize": [
       40,
-      13.725,
+      13.469500000000002,
       8.8
     ],
     "confidence": "class_estimate",

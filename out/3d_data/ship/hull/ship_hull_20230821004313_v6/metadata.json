@@ -20,12 +20,12 @@
     ],
     "max": [
       90,
-      38.525,
+      37.867,
       15
     ],
     "size": [
       180,
-      38.525,
+      37.867,
       30
     ],
     "rMax": 91.241,
@@ -46,7 +46,7 @@
       "漸縮艙室 1",
       "鏡像補件 0",
       "貼地 0.00m",
-      "實尺 180.0×38.5×30.0m (class_estimate)"
+      "實尺 180.0×37.9×30.0m (class_estimate)"
     ]
   },
   "realScale": {
@@ -54,7 +54,7 @@
     "className": "industrial_ship",
     "targetSize": [
       180,
-      38.525000000000006,
+      37.867,
       30
     ],
     "confidence": "class_estimate",

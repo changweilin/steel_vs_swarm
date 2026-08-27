@@ -20,12 +20,12 @@
     ],
     "max": [
       45,
-      14.402,
+      14.4,
       7.65
     ],
     "size": [
       90,
-      14.402,
+      14.4,
       15.3
     ],
     "rMax": 45.646,
@@ -54,7 +54,7 @@
     "className": "research_vessel",
     "targetSize": [
       90,
-      14.402,
+      14.4,
       15.3
     ],
     "confidence": "class_estimate",

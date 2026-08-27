@@ -20,7 +20,7 @@
     ],
     "max": [
       60,
-      13.2,
+      13.2005,
       7.2
     ],
     "size": [
@@ -54,7 +54,7 @@
     "className": "cargo_ship",
     "targetSize": [
       120,
-      13.2,
+      13.200499999999998,
       14.4
     ],
     "confidence": "class_estimate",

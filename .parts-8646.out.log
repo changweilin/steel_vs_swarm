@@ -1,0 +1,2 @@
+3D 零件對照台 → http://localhost:8646/
+  覆核結果寫入 tools\parts_review\state.json(記得 commit —— 容器回收後不留)

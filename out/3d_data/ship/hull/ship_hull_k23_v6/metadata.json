@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:14:24.121Z",
   "bounds": {
     "min": [
-      -10.476,
+      -10.05,
       0,
       -2
     ],
     "max": [
-      9.524,
-      5.725,
+      9.95,
+      4.3754,
       2
     ],
     "size": [
       20,
-      5.725,
+      4.375,
       4
     ],
-    "rMax": 10.665,
-    "triangles": 600,
-    "vertices": 363
+    "rMax": 10.247,
+    "triangles": 588,
+    "vertices": 355
   },
   "spec": {
     "style": "modern_yacht"
@@ -46,7 +46,7 @@
       "漸縮艙室 1",
       "鏡像補件 0",
       "貼地 0.00m",
-      "實尺 20.0×5.7×4.0m (class_estimate)"
+      "實尺 20.0×4.4×4.0m (class_estimate)"
     ]
   },
   "realScale": {
@@ -54,7 +54,7 @@
     "className": "yacht",
     "targetSize": [
       20,
-      5.725,
+      4.375500000000001,
       4
     ],
     "confidence": "class_estimate",

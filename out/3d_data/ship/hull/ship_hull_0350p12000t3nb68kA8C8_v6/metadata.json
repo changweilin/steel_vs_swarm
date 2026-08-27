@@ -20,17 +20,17 @@
     ],
     "max": [
       4.819,
-      1.9,
+      1.85,
       1.1011
     ],
     "size": [
       9,
-      1.9,
+      1.85,
       2.202
     ],
     "rMax": 4.943,
-    "triangles": 210,
-    "vertices": 119
+    "triangles": 146,
+    "vertices": 83
   },
   "spec": {
     "style": "modern motorboat"
@@ -54,8 +54,8 @@
     "className": "motorboat",
     "targetSize": [
       9,
-      1.9,
-      2.201712199541529
+      1.85,
+      2.2017148472931773
     ],
     "confidence": "class_estimate",
     "source": "依母照片可見船型採 motorboat 保守標準全長 9m。"

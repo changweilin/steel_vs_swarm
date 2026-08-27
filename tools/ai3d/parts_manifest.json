@@ -74481,13 +74481,13 @@
         "fit": 1,
         "bounds": [
           285,
-          34.203,
+          34.2,
           42.75
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           285,
-          34.203,
+          34.199999999999996,
           42.75
         ],
         "scaleConfidence": "class_estimate"
@@ -74529,7 +74529,7 @@
         "fit": 1,
         "bounds": [
           135,
-          13.5,
+          13.506,
           14
         ],
         "repair": "closed_hull_v2_real_scale",
@@ -74577,7 +74577,7 @@
         "fit": 1,
         "bounds": [
           316.064,
-          38,
+          36.239,
           76.001
         ],
         "repair": "closed_hull_v2_real_scale",
@@ -74618,21 +74618,21 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 210, Vertices 119, Similarity 90 /100"
+        "measured": "Triangles 146, Vertices 83, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
           9,
-          1.9,
+          1.85,
           2.202
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           9,
-          1.9,
-          2.201712199541529
+          1.85,
+          2.2017148472931773
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -74673,14 +74673,14 @@
         "fit": 1,
         "bounds": [
           20,
-          3.32,
+          3.502,
           4.501
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           20,
-          3.3195000000000006,
-          4.500637495053428
+          3.5025,
+          4.501
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -74721,13 +74721,13 @@
         "fit": 1,
         "bounds": [
           250,
-          37.95,
+          37.836,
           30
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           250,
-          37.95,
+          37.8355,
           30
         ],
         "scaleConfidence": "class_estimate"
@@ -74769,13 +74769,13 @@
         "fit": 1,
         "bounds": [
           9,
-          3.416,
+          3.34,
           3.42
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           9,
-          3.416,
+          3.3405,
           3.42
         ],
         "scaleConfidence": "class_estimate"
@@ -74871,7 +74871,7 @@
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           120,
-          13.2,
+          13.200499999999998,
           14.4
         ],
         "scaleConfidence": "class_estimate"
@@ -74913,13 +74913,13 @@
         "fit": 1,
         "bounds": [
           60,
-          11.3,
+          10.65,
           10
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           60,
-          11.3,
+          10.650000000000002,
           10
         ],
         "scaleConfidence": "class_estimate"
@@ -74961,13 +74961,13 @@
         "fit": 1,
         "bounds": [
           40,
-          13.725,
+          13.469,
           8.8
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           40,
-          13.725,
+          13.469500000000002,
           8.8
         ],
         "scaleConfidence": "class_estimate"
@@ -75009,13 +75009,13 @@
         "fit": 1,
         "bounds": [
           60,
-          11.997,
+          11.774,
           10.8
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           60,
-          11.996999999999998,
+          11.774,
           10.799999999999999
         ],
         "scaleConfidence": "class_estimate"
@@ -75057,13 +75057,13 @@
         "fit": 1,
         "bounds": [
           135,
-          17.025,
+          16.657,
           14
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           135,
-          17.025,
+          16.6496,
           14
         ],
         "scaleConfidence": "class_estimate"
@@ -75104,9 +75104,9 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          47.51,
+          47.5,
           12,
-          11.802
+          11.8
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
@@ -75153,13 +75153,13 @@
         "fit": 1,
         "bounds": [
           15,
-          5.681,
+          4.736,
           4
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           15,
-          5.680999999999999,
+          4.737500000000001,
           4
         ],
         "scaleConfidence": "class_estimate"
@@ -75201,13 +75201,13 @@
         "fit": 1,
         "bounds": [
           20,
-          5.994,
+          5.822,
           5
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           20,
-          5.993499999999999,
+          5.8225,
           5
         ],
         "scaleConfidence": "class_estimate"
@@ -75249,13 +75249,13 @@
         "fit": 1,
         "bounds": [
           15,
-          5.673,
+          5.499,
           5.7
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           15,
-          5.6725,
+          5.4990000000000006,
           5.7
         ],
         "scaleConfidence": "class_estimate"
@@ -75297,13 +75297,13 @@
         "fit": 1,
         "bounds": [
           180,
-          38.525,
+          37.867,
           30
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           180,
-          38.525000000000006,
+          37.867,
           30
         ],
         "scaleConfidence": "class_estimate"
@@ -75344,7 +75344,7 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          69.995,
+          70,
           9.099,
           7
         ],
@@ -75393,14 +75393,14 @@
         "fit": 1,
         "bounds": [
           285,
-          38.859,
+          43.537,
           45.616
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           285,
-          38.8592,
-          45.716
+          43.531499999999994,
+          45.874
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -75442,13 +75442,13 @@
         "bounds": [
           70.002,
           9.046,
-          7.741
+          6.446
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           70,
-          9.1,
-          7.7407795816257154
+          9.094999999999999,
+          6.465356188156577
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -75489,13 +75489,13 @@
         "fit": 1,
         "bounds": [
           80,
-          15.775,
+          15.125,
           10.4
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           80,
-          15.774999999999999,
+          15.125000000000002,
           10.4
         ],
         "scaleConfidence": "class_estimate"
@@ -75537,13 +75537,13 @@
         "fit": 1,
         "bounds": [
           120,
-          22.5,
+          22.243,
           21.6
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           120,
-          22.4999,
+          22.243000000000006,
           21.599999999999998
         ],
         "scaleConfidence": "class_estimate"
@@ -75585,13 +75585,13 @@
         "fit": 1,
         "bounds": [
           135,
-          20.525,
+          19.873,
           13.5
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           135,
-          20.525,
+          19.873,
           13.5
         ],
         "scaleConfidence": "class_estimate"
@@ -75633,13 +75633,13 @@
         "fit": 1,
         "bounds": [
           90,
-          14.402,
+          14.4,
           15.3
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           90,
-          14.402,
+          14.4,
           15.3
         ],
         "scaleConfidence": "class_estimate"
@@ -75681,13 +75681,13 @@
         "fit": 1,
         "bounds": [
           12,
-          4.545,
+          4.37,
           4
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           12,
-          4.544999999999999,
+          4.37,
           4
         ],
         "scaleConfidence": "class_estimate"
@@ -75729,13 +75729,13 @@
         "fit": 1,
         "bounds": [
           39.866,
-          8.005,
+          8,
           8.8
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           40,
-          8.0045,
+          8,
           8.8
         ],
         "scaleConfidence": "class_estimate"
@@ -75825,14 +75825,14 @@
         "fit": 1,
         "bounds": [
           220,
-          41.798,
-          39.553
+          41.78,
+          39.541
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           220,
-          41.798,
-          39.599999999999994
+          41.78,
+          39.586
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -75872,14 +75872,14 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          15.003,
-          5.69,
-          5.701
+          15,
+          3,
+          5.7
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           15,
-          5.6899999999999995,
+          3,
           5.7
         ],
         "scaleConfidence": "class_estimate"
@@ -75921,13 +75921,13 @@
         "fit": 1,
         "bounds": [
           60,
-          14.525,
+          14.112,
           10.2
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           60,
-          14.524999999999999,
+          14.107799999999997,
           10.200000000000001
         ],
         "scaleConfidence": "class_estimate"
@@ -75969,13 +75969,13 @@
         "fit": 1,
         "bounds": [
           60,
-          11.925,
+          11.742,
           10.2
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           60,
-          11.924999999999999,
+          11.741999999999997,
           10.200000000000001
         ],
         "scaleConfidence": "class_estimate"
@@ -76017,13 +76017,13 @@
         "fit": 1,
         "bounds": [
           250,
-          49.175,
+          49.144,
           39.07
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           250,
-          49.175000000000004,
+          49.144000000000005,
           39.07
         ],
         "scaleConfidence": "class_estimate"
@@ -76064,15 +76064,15 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          285.004,
-          39.432,
+          285.001,
+          39.426,
           44.168
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           285,
-          39.432,
-          44.25
+          39.426500000000004,
+          44.648
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -76113,14 +76113,14 @@
         "fit": 1,
         "bounds": [
           12,
-          4.475,
-          4.56
+          2.4,
+          4.528
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           12,
-          4.475,
-          4.5600000000000005
+          2.4000000000000004,
+          4.528151110127032
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -76160,15 +76160,15 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          60.012,
-          16,
-          12.043
+          60,
+          15.452,
+          12.042
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           60,
-          16,
-          12.040222179476345
+          15.452,
+          12.042
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -76257,7 +76257,7 @@
         "fit": 1,
         "bounds": [
           283.558,
-          36,
+          35.215,
           61
         ],
         "repair": "closed_hull_v2_real_scale",
@@ -76305,13 +76305,13 @@
         "fit": 1,
         "bounds": [
           220,
-          26.975,
+          26.872,
           30
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           220,
-          26.975,
+          26.871500000000005,
           30
         ],
         "scaleConfidence": "class_estimate"
@@ -76352,14 +76352,14 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          225.046,
-          24.975,
+          225,
+          25.39,
           31.5
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           225,
-          24.975,
+          25.389500000000005,
           31.500000000000004
         ],
         "scaleConfidence": "class_estimate"
@@ -76401,13 +76401,13 @@
         "fit": 1,
         "bounds": [
           250,
-          35,
+          36.87,
           30
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           250,
-          35,
+          36.8695,
           30
         ],
         "scaleConfidence": "class_estimate"
@@ -76449,13 +76449,13 @@
         "fit": 1,
         "bounds": [
           180,
-          31.175,
+          31.084,
           31.499
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           180,
-          31.175000000000004,
+          31.084000000000003,
           31.573
         ],
         "scaleConfidence": "class_estimate"
@@ -76498,13 +76498,13 @@
         "bounds": [
           220,
           24.2,
-          26.434
+          26.418
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           220,
           24.2,
-          26.462
+          26.442999999999998
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -76545,13 +76545,13 @@
         "fit": 1,
         "bounds": [
           220,
-          24.201,
+          24.2,
           39.6
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           220,
-          24.200499999999998,
+          24.200000000000003,
           39.6
         ],
         "scaleConfidence": "class_estimate"
@@ -76689,7 +76689,7 @@
         "fit": 1,
         "bounds": [
           304.562,
-          37,
+          36.007,
           75
         ],
         "repair": "closed_hull_v2_real_scale",
@@ -76737,13 +76737,13 @@
         "fit": 1,
         "bounds": [
           135,
-          20.584,
+          23.194,
           18
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           135,
-          20.584400000000002,
+          23.194000000000003,
           18
         ],
         "scaleConfidence": "class_estimate"
@@ -76785,13 +76785,13 @@
         "fit": 1,
         "bounds": [
           10.001,
-          2.06,
+          1.898,
           3.2
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           10,
-          2.06,
+          1.898,
           3.2
         ],
         "scaleConfidence": "class_estimate"
@@ -76826,20 +76826,20 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 600, Vertices 363, Similarity 90 /100"
+        "measured": "Triangles 588, Vertices 355, Similarity 90 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
           20,
-          5.725,
+          4.375,
           4
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           20,
-          5.725,
+          4.375500000000001,
           4
         ],
         "scaleConfidence": "class_estimate"
@@ -76881,13 +76881,13 @@
         "fit": 1,
         "bounds": [
           285,
-          35.123,
+          36.532,
           42.75
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           285,
-          35.123,
+          36.53050000000001,
           42.75
         ],
         "scaleConfidence": "class_estimate"
@@ -76977,13 +76977,13 @@
         "fit": 1,
         "bounds": [
           60,
-          12.025,
+          11.375,
           10.2
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           60,
-          12.024999999999999,
+          11.375,
           10.200000000000001
         ],
         "scaleConfidence": "class_estimate"
@@ -77025,13 +77025,13 @@
         "fit": 1,
         "bounds": [
           9,
-          2.5,
+          2.499,
           3.05
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           9,
-          2.5,
+          2.4995000000000003,
           3.05
         ],
         "scaleConfidence": "class_estimate"
@@ -77073,13 +77073,13 @@
         "fit": 1,
         "bounds": [
           9,
-          3.175,
+          3.08,
           3
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           9,
-          3.1750000000000003,
+          3.08,
           3
         ],
         "scaleConfidence": "class_estimate"
@@ -77121,14 +77121,14 @@
         "fit": 1,
         "bounds": [
           10,
-          2.225,
-          2.5
+          2.224,
+          2.501
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           10,
-          2.2249999999999996,
-          2.5
+          2.2239999999999998,
+          2.501
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -77216,14 +77216,14 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          15.003,
-          3.85,
-          5.401
+          15,
+          2.913,
+          5.4
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           15,
-          3.85,
+          2.9135,
           5.3999999999999995
         ],
         "scaleConfidence": "class_estimate"
@@ -77265,14 +77265,14 @@
         "fit": 1,
         "bounds": [
           9,
-          2.25,
-          2.615
+          2.249,
+          2.624
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           9,
-          2.25,
-          2.614919326623494
+          2.2495000000000003,
+          2.624
         ],
         "scaleConfidence": "class_estimate"
       },
@@ -77312,14 +77312,14 @@
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          250,
-          35.016,
+          250.025,
+          35.001,
           30
         ],
         "repair": "closed_hull_v2_real_scale",
         "realScale": [
           250,
-          35.016000000000005,
+          35.001000000000005,
           30
         ],
         "scaleConfidence": "class_estimate"
@@ -77361,7 +77361,7 @@
         "fit": 1,
         "bounds": [
           335.668,
-          40,
+          39.142,
           76.8
         ],
         "repair": "closed_hull_v2_real_scale",

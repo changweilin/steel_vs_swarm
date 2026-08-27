@@ -513,10 +513,17 @@ function addShipClassDetails(parts, row, model) {
         { ...demi, name:'main_hull_port', pos:[demi.pos[0],demi.pos[1],B*0.28] },
         { ...demi, name:'main_hull_starboard', pos:[demi.pos[0],demi.pos[1],-B*0.28] });
     }
+    const twinHulls = parts.filter((p)=>/^main_hull_(port|starboard)$/i.test(p.name));
+    const twinBox = twinHulls.length===2 ? unionBoxes(twinHulls.map(aabb)) : null;
+    const bridgeWidth = twinBox ? twinBox.max[2]-twinBox.min[2] : B*0.74;
+    for (const bridge of parts.filter((p)=>/main_deck|bridge_deck|catamaran_bridge/i.test(p.name) && p.dimensions)) {
+      bridge.pos[2] = 0;
+      bridge.dimensions[0] = Math.max(bridge.dimensions[0],bridgeWidth*0.96);
+    }
     const deckBox = deck ? aabb(deck) : null;
     const tunnelHeight = Math.max(0.2,H*0.025);
     const tunnelY = deckBox ? deckBox.min[1]-tunnelHeight*0.5+0.02 : deckTop-H*0.04;
-    add({ name:'catamaran_bridge_tunnel', type:'box', dimensions:[B*0.62,tunnelHeight,L*0.34], pos:[L*0.02,tunnelY,0], rot:[0,Math.PI/2,0], color:hullColor });
+    add({ name:'catamaran_bridge_tunnel', type:'box', dimensions:[bridgeWidth*0.96,tunnelHeight,L*0.34], pos:[L*0.02,tunnelY,0], rot:[0,Math.PI/2,0], color:hullColor });
   }
 
   if (/fishing/i.test(identity)) {
@@ -625,6 +632,289 @@ function sealShipCabins(parts) {
       });
     }
   }
+  if (parts.some((part)=>part.name==='sealed_glazed_cabin_enclosure')) {
+    for (let index=parts.length-1;index>=0;index--) {
+      if (/^bimini_support_(left|right)$/i.test(parts[index].name)) parts.splice(index,1);
+    }
+  }
+}
+
+const SHIP_ROOM_RE = /superstructure|bridge|cabin|wheelhouse|island|hangar|sealed_/i;
+const SHIP_DECK_RE = /deck|platform/i;
+const SHIP_SHEET_RE = /glass|window|windshield|stripe|marking|landing_(center)?line/i;
+const SHIP_DETAIL_RE = /glass|window|windshield|stripe|marking|light|ring|buoy|railing|flag|aircraft|propeller|shaft|anchor|lifeboat/i;
+
+function isShipCabinSupport(part) {
+  return SHIP_ROOM_RE.test(part.name) && !SHIP_DETAIL_RE.test(part.name) && !/tunnel|wing|deck|platform/i.test(part.name);
+}
+
+function unionBoxes(boxes) {
+  return {
+    min:[0,1,2].map((axis)=>Math.min(...boxes.map((box)=>box.min[axis]))),
+    max:[0,1,2].map((axis)=>Math.max(...boxes.map((box)=>box.max[axis]))),
+  };
+}
+
+function boxGap(a, b) {
+  return Math.hypot(...[0,1,2].map((axis)=>Math.max(0,a.min[axis]-b.max[axis],b.min[axis]-a.max[axis])));
+}
+
+function fitHorizontalInside(part, support, inset) {
+  const supportBox = aabb(support);
+  let partBox = aabb(part);
+  const allowed = [0,2].map((axis)=>Math.max(0.05,supportBox.max[axis]-supportBox.min[axis]-inset*2));
+  const span = [partBox.max[0]-partBox.min[0],partBox.max[2]-partBox.min[2]];
+  const factor = Math.min(1,allowed[0]/Math.max(EPS,span[0]),allowed[1]/Math.max(EPS,span[1]));
+  if (factor < 0.999) {
+    if (part.dimensions) {
+      part.dimensions[0] *= factor;
+      part.dimensions[2] *= factor;
+    }
+    if (part.topDimensions) part.topDimensions = part.topDimensions.map((value)=>value*factor);
+    if (/ellipsoid_sphere|hemisphere_dome/.test(part.type) && part.radii) {
+      part.radii[0] *= factor;
+      part.radii[2] *= factor;
+    }
+    partBox = aabb(part);
+  }
+  for (const axis of [0,2]) {
+    const lo = supportBox.min[axis]+inset-(partBox.min[axis]-part.pos[axis]);
+    const hi = supportBox.max[axis]-inset-(partBox.max[axis]-part.pos[axis]);
+    part.pos[axis] = lo <= hi ? Math.max(lo,Math.min(hi,part.pos[axis])) : (supportBox.min[axis]+supportBox.max[axis])*0.5;
+  }
+}
+
+function stackSupport(parts, child, roomOnly = false) {
+  const childBox = aabb(child);
+  const childCenterY = (childBox.min[1]+childBox.max[1])*0.5;
+  const candidates = parts.filter((part)=>part!==child && !SHIP_DETAIL_RE.test(part.name))
+    .filter((part)=>!roomOnly || isShipCabinSupport(part))
+    .filter((part)=>!/^main_deck$/i.test(child.name) || /main_hull|hull_poly/i.test(part.name))
+    .filter((part)=> {
+      const box = aabb(part);
+      const below = roomOnly ? box.max[1] <= childBox.min[1]+0.08 : (box.min[1]+box.max[1])*0.5 < childCenterY-0.01;
+      return below && horizontalOverlap(childBox,box)>(roomOnly ? 0.35 : 0.03);
+    })
+    .sort((a,b)=>aabb(b).max[1]-aabb(a).max[1]);
+  return candidates[0] || null;
+}
+
+function containDecksAndRooms(parts, identity) {
+  const carrier = /aircraft_carrier/i.test(identity);
+  const twinHull = parts.filter((part)=>/^main_hull_(port|starboard)$/i.test(part.name)).length >= 2;
+  const structural = parts.filter((part)=>(SHIP_ROOM_RE.test(part.name) || SHIP_DECK_RE.test(part.name)) && !SHIP_DETAIL_RE.test(part.name))
+    .sort((a,b)=>aabb(a).min[1]-aabb(b).min[1]);
+  const mainDeck = parts.find((part)=>/^main_deck$/i.test(part.name)) || null;
+  for (const part of structural) {
+    if (/catamaran_bridge_tunnel/i.test(part.name)) continue;
+    const buriedRoomDeck = mainDeck && isShipCabinSupport(part) && part!==mainDeck
+      && aabb(part).min[1] < aabb(mainDeck).max[1]+0.08
+      && horizontalOverlap(aabb(part),aabb(mainDeck))>0.03 ? mainDeck : null;
+    const upperRoomSupport = SHIP_ROOM_RE.test(part.name) ? stackSupport(parts,part,true) : null;
+    const support = upperRoomSupport || buriedRoomDeck || stackSupport(parts,part,false);
+    if (!support) continue;
+    const carrierDeckOverhang = carrier && SHIP_DECK_RE.test(part.name) && /flight|landing|elevator|catwalk|ski_jump/i.test(part.name);
+    const twinHullBridge = twinHull && /deck|platform|catamaran_bridge_tunnel/i.test(part.name);
+    if (!carrierDeckOverhang && !twinHullBridge) {
+      const supportBox = aabb(support);
+      const inset = Math.min(0.08,Math.max(0.015,(supportBox.max[2]-supportBox.min[2])*0.006));
+      fitHorizontalInside(part,support,inset);
+    }
+    part.pos[1] += aabb(support).max[1]-aabb(part).min[1]-0.015;
+  }
+}
+
+function normalizeSheets(parts) {
+  const supports = parts.filter((part)=>!SHIP_DETAIL_RE.test(part.name) && /hull|deck|platform|superstructure|bridge|cabin|wheelhouse|island|hangar|sealed_/i.test(part.name));
+  for (const part of parts.filter((candidate)=>SHIP_SHEET_RE.test(candidate.name) && candidate.dimensions)) {
+    const longest = Math.max(...part.dimensions);
+    const thinAxis = part.dimensions.indexOf(Math.min(...part.dimensions));
+    const glazing = /glass|window|windshield/i.test(part.name);
+    const maxThickness = glazing ? Math.min(0.08,Math.max(0.025,longest*0.004)) : Math.min(0.045,Math.max(0.015,longest*0.002));
+    part.dimensions[thinAxis] = Math.max(0.02,Math.min(part.dimensions[thinAxis],maxThickness));
+    const preferred = glazing
+      ? supports.filter(isShipCabinSupport)
+      : /landing|marking|centerline/i.test(part.name)
+        ? supports.filter((candidate)=>SHIP_DECK_RE.test(candidate.name))
+        : supports.filter((candidate)=>/hull/i.test(candidate.name));
+    const pool = preferred.length ? preferred : supports;
+    const partBoxBefore = aabb(part);
+    const support = pool.filter((candidate)=>candidate!==part)
+      .sort((a,b)=>boxGap(partBoxBefore,aabb(a))-boxGap(partBoxBefore,aabb(b)))[0];
+    if (!support) continue;
+
+    const supportBox = aabb(support);
+    const originalOffset = [0,1,2].map((axis)=>part.pos[axis]-(supportBox.min[axis]+supportBox.max[axis])*0.5);
+    part.rot = [...(support.rot || [0,0,0])];
+    if (glazing) fitHorizontalInside(part,support,0.015);
+    part.dimensions[thinAxis] = Math.max(0.02,Math.min(part.dimensions[thinAxis],maxThickness));
+
+    let partBox = aabb(part);
+    const supportCenterY = (supportBox.min[1]+supportBox.max[1])*0.5;
+    const paneHeight = partBox.max[1]-partBox.min[1];
+    const yInset = Math.min(0.03,(supportBox.max[1]-supportBox.min[1])*0.04);
+    const yLo = supportBox.min[1]+yInset-(partBox.min[1]-part.pos[1]);
+    const yHi = supportBox.max[1]-yInset-(partBox.max[1]-part.pos[1]);
+    part.pos[1] = yLo <= yHi ? Math.max(yLo,Math.min(yHi,part.pos[1])) : supportCenterY;
+
+    partBox = aabb(part);
+    const normalizedOffset = [0,1,2].map((axis)=>Math.abs(originalOffset[axis])/Math.max(0.05,(supportBox.max[axis]-supportBox.min[axis])*0.5));
+    const faceAxes = glazing ? [0,2] : [0,1,2];
+    const faceAxis = faceAxes.sort((a,b)=>normalizedOffset[b]-normalizedOffset[a])[0];
+    const direction = originalOffset[faceAxis] < 0 ? -1 : 1;
+    const halfSpan = (partBox.max[faceAxis]-partBox.min[faceAxis])*0.5;
+    part.pos[faceAxis] = (direction < 0 ? supportBox.min[faceAxis] : supportBox.max[faceAxis])+direction*(halfSpan-0.015);
+
+    // 船窗高度跟著艙室，不可因接合修復被推到艙頂或艙底之外。
+    if (glazing && paneHeight <= supportBox.max[1]-supportBox.min[1]+0.06) {
+      partBox = aabb(part);
+      const correctedLo = supportBox.min[1]+yInset-(partBox.min[1]-part.pos[1]);
+      const correctedHi = supportBox.max[1]-yInset-(partBox.max[1]-part.pos[1]);
+      part.pos[1] = correctedLo <= correctedHi ? Math.max(correctedLo,Math.min(correctedHi,part.pos[1])) : supportCenterY;
+    }
+  }
+}
+
+function fitCanopyRoofs(parts) {
+  for (const roof of parts.filter((part)=>/^(canopy_roof|roof_canopy|rear_canopy_roof)$/i.test(part.name))) {
+    const stem = roof.name.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+    const roofBox = aabb(roof);
+    const namedCabin = parts.find((part)=>part.name.toLowerCase()===`sealed_cabin_${stem}`) || null;
+    const cabin = namedCabin || parts.filter((part)=>part!==roof && isShipCabinSupport(part))
+      .filter((part)=>horizontalOverlap(roofBox,aabb(part))>0.03)
+      .sort((a,b)=>boxGap(roofBox,aabb(a))-boxGap(roofBox,aabb(b)) || aabb(b).max[1]-aabb(a).max[1])[0] || null;
+    if (!cabin) continue;
+    fitHorizontalInside(roof,cabin,0);
+    roof.pos[0] = cabin.pos[0];
+    roof.pos[2] = cabin.pos[2];
+    roof.pos[1] += aabb(cabin).max[1]-aabb(roof).min[1]-0.015;
+  }
+}
+
+function fitTwinHullBridge(parts) {
+  const deck = parts.find((part)=>/^main_deck$/i.test(part.name));
+  const tunnel = parts.find((part)=>/^catamaran_bridge_tunnel$/i.test(part.name));
+  if (!deck || !tunnel) return;
+  tunnel.pos[0] = deck.pos[0];
+  tunnel.pos[2] = deck.pos[2];
+  tunnel.pos[1] += aabb(deck).min[1]-aabb(tunnel).max[1]+0.015;
+  for (const cabin of parts.filter(isShipCabinSupport)) {
+    fitHorizontalInside(cabin,deck,0.015);
+    cabin.pos[1] += aabb(deck).max[1]-aabb(cabin).min[1]-0.015;
+  }
+}
+
+function stackNamedHardware(parts) {
+  const supportRe = /hull|deck|platform|superstructure|bridge|cabin|wheelhouse|island|hangar|sealed_|funnel|tower/i;
+  const processedMasts = [];
+  const masts = parts.filter((part)=>/mast|radar_tower|periscope/i.test(part.name) && !/window|glass/i.test(part.name))
+    .sort((a,b)=>(aabb(a).min[1]+aabb(a).max[1])-(aabb(b).min[1]+aabb(b).max[1]));
+  for (const mast of masts) {
+    const mastBox = aabb(mast);
+    const centerY = (mastBox.min[1]+mastBox.max[1])*0.5;
+    const baseSupports = parts.filter((part)=>part!==mast && supportRe.test(part.name) && !/mast|radar|window|glass/i.test(part.name));
+    const support = [...baseSupports,...processedMasts]
+      .filter((part)=>aabb(part).min[1] < centerY && horizontalOverlap(mastBox,aabb(part))>0.03)
+      .sort((a,b)=>aabb(b).max[1]-aabb(a).max[1])[0];
+    if (support) mast.pos[1] += aabb(support).max[1]-aabb(mast).min[1]-0.015;
+    processedMasts.push(mast);
+  }
+  for (const dome of parts.filter((part)=>/radar.*dome|dome/i.test(part.name))) {
+    const domeBox = aabb(dome);
+    const centerY = (domeBox.min[1]+domeBox.max[1])*0.5;
+    const support = parts.filter((part)=>part!==dome && /mast|radar_tower|funnel|superstructure|bridge|cabin|wheelhouse|island|deck|platform/i.test(part.name))
+      .filter((part)=>aabb(part).min[1] < centerY && horizontalOverlap(domeBox,aabb(part))>0.001)
+      .sort((a,b)=>aabb(b).max[1]-aabb(a).max[1])[0];
+    if (support) dome.pos[1] += aabb(support).max[1]-aabb(dome).min[1]-0.015;
+  }
+}
+
+function tightenAllParts(parts) {
+  const roots = parts.filter((part)=>/main_hull|hull_poly/i.test(part.name));
+  if (!roots.length) return;
+  const connected = new Set(roots);
+  const joinTolerance = 0.035;
+  while (connected.size < parts.length) {
+    let advanced = false;
+    for (const part of parts) {
+      if (connected.has(part)) continue;
+      if ([...connected].some((support)=>boxGap(aabb(part),aabb(support))<=joinTolerance)) {
+        connected.add(part);
+        advanced = true;
+      }
+    }
+    if (advanced) continue;
+    let selected = null;
+    for (const part of parts) {
+      if (connected.has(part) || SHIP_SHEET_RE.test(part.name)) continue;
+      for (const support of connected) {
+        const gap = boxGap(aabb(part),aabb(support));
+        if (!selected || gap < selected.gap) selected = { part, support, gap };
+      }
+    }
+    if (!selected) {
+      for (const part of parts) if (SHIP_SHEET_RE.test(part.name)) connected.add(part);
+      break;
+    }
+    const delta = gapVector(aabb(selected.part),aabb(selected.support),0.015);
+    selected.part.pos = selected.part.pos.map((value,axis)=>value+delta[axis]);
+    connected.add(selected.part);
+  }
+}
+
+function thickenHullForTarget(parts, identity, targetSize) {
+  if (/submarine/i.test(identity)) return null;
+  const hulls = parts.filter((part)=>/main_hull|hull_poly/i.test(part.name) && part.type==='hull_polyhedron');
+  if (!hulls.length) return null;
+  const hullBox = unionBoxes(hulls.map(aabb));
+  const allBox = unionBoxes(parts.map(aabb));
+  const oldHeight = hullBox.max[1]-hullBox.min[1];
+  const length = targetSize[0];
+  const floorRatio = /LNG|methan/i.test(identity) ? 0.075
+    : /bulk|container|cargo/i.test(identity) ? 0.060 : 0.050;
+  const desiredFinal = length*floorRatio;
+  const desiredShare = Math.min(0.72,desiredFinal/Math.max(EPS,targetSize[1]));
+  const aboveHull = Math.max(0.05,allBox.max[1]-hullBox.max[1]);
+  const desiredHeight = Math.max(oldHeight,desiredShare*aboveHull/Math.max(0.01,1-desiredShare));
+  const delta = desiredHeight-oldHeight;
+  if (delta <= 0.01) return { oldHeight, desiredHeight:oldHeight };
+  const beforeBoxes = new Map(parts.map((part)=>[part,aabb(part)]));
+  const raised = new Set(parts.filter((part)=>!hulls.includes(part))
+    .filter((part)=> {
+      const box = beforeBoxes.get(part);
+      return box.max[1] >= hullBox.max[1]-0.15
+        && hulls.some((hull)=>boxGap(box,beforeBoxes.get(hull))<=0.08);
+    }));
+  let expanded = true;
+  while (expanded) {
+    expanded = false;
+    for (const part of parts) {
+      if (hulls.includes(part) || raised.has(part)) continue;
+      if ([...raised].some((support)=>boxGap(beforeBoxes.get(part),beforeBoxes.get(support))<=0.08)) {
+        raised.add(part);
+        expanded = true;
+      }
+    }
+  }
+  for (const hull of hulls) hull.dimensions[1] += delta;
+  for (const part of raised) part.pos[1] += delta;
+  return { oldHeight, desiredHeight };
+}
+
+function normalizeShipAssembly(parts, identity, targetSize = null) {
+  const hullChange = targetSize ? thickenHullForTarget(parts,identity,targetSize) : null;
+  containDecksAndRooms(parts,identity);
+  fitTwinHullBridge(parts);
+  stackNamedHardware(parts);
+  fitCanopyRoofs(parts);
+  tightenAllParts(parts);
+  containDecksAndRooms(parts,identity);
+  fitTwinHullBridge(parts);
+  stackNamedHardware(parts);
+  fitCanopyRoofs(parts);
+  tightenAllParts(parts);
+  normalizeSheets(parts);
+  return hullChange;
 }
 
 function applyWorldScale(parts, worldScale) {
@@ -689,7 +979,13 @@ for (const row of selected) {
   const detailBounds = repaired.parts.map(aabb);
   const measuredSize = [0,1,2].map((i)=>Math.max(...detailBounds.map((b)=>b.max[i]))-Math.min(...detailBounds.map((b)=>b.min[i])));
   const scaleSpec = resolveShipScale(row,old,measuredSize);
+  const identity = `${row.key} ${row.style || ''} ${old.style || ''}`;
+  const hullChange = normalizeShipAssembly(repaired.parts,identity,scaleSpec.size);
   scalePartsToSize(repaired.parts,scaleSpec.size);
+  normalizeShipAssembly(repaired.parts,identity);
+  if (hullChange && hullChange.desiredHeight>hullChange.oldHeight+0.01) {
+    repaired.changes.push(`船身厚度 ${hullChange.oldHeight.toFixed(2)}→${hullChange.desiredHeight.toFixed(2)}（縮放前）`);
+  }
   repaired.changes.push(`實尺 ${scaleSpec.size.map((n)=>n.toFixed(1)).join('×')}m (${scaleSpec.confidence})`);
   const input = {
     style:old.style, symmetryMode:'symmetric', colors:colorsOf(old.parts), parts:repaired.parts,
