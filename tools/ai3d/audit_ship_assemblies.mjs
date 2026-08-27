@@ -16,6 +16,7 @@
  * 10. 水面船船殼深度具最低長深比；LNG 船最低為船長 7%。
  *
  * --break-floating / --break-degenerate / --break-open / --break-winding / --break-fit / --break-upper-fit /
+ * --break-external /
  * --break-sheet / --break-sheet-angle / --break-sheet-height / --break-flat 會在記憶體中製造壞例，且必須使對應
  * 斷言轉紅；若挑不到適用零件或沒有攔截到，腳本本身視為失敗。
  */
@@ -31,6 +32,7 @@ const SHIP_ROOT = path.join(REPO_ROOT, 'out', '3d_data', 'ship', 'hull');
 const args = new Set(process.argv.slice(2));
 const jsonOutput = args.has('--json');
 const quiet = args.has('--quiet');
+let brokeExternal = false;
 const versionArg = process.argv.find((value) => value.startsWith('--version='));
 const onlyArg = process.argv.find((value) => value.startsWith('--only='));
 const wantedVersion = versionArg?.split('=')[1] ?? 'all';
@@ -45,6 +47,7 @@ const HULL_LAYER_RE = /(hull|waterline|bottom|base|stripe|bulge)/i;
 const ROOM_RE = /superstructure|bridge|cabin|wheelhouse|island|hangar|sealed_/i;
 const DECK_RE = /deck|platform/i;
 const SHEET_RE = /glass|window|windshield|stripe|marking|landing_(center)?line/i;
+const EXTERNAL_SUBMARINE_OBJECT_RE = /^(?:torpedo_(?:body|nose|tail|fin|motor)|external_(?:torpedo|weapon)|launched_(?:torpedo|missile)|(?:missile|rocket|mine|drone|payload)(?:_|$))/i;
 const WINDING_AUDIT_TYPES = new Set([
   'box', 'tapered_box', 'polygonal_prism', 'frustum_pyramid', 'pyramid',
   'cylinder', 'cone', 'conical_frustum', 'ellipsoid_sphere',
@@ -451,6 +454,14 @@ function validateAssembly(model, metadata) {
     }
   }
   const submarine = /submarine/i.test(identity);
+  if (submarine) {
+    for (const part of parts) {
+      if (EXTERNAL_SUBMARINE_OBJECT_RE.test(part.name)) {
+        issue(issues, 'error', 'EXTERNAL_SUBMARINE_OBJECT', part,
+          `偵測到非潛艦本體零件「${part.name}」。`, '照片中的發射物、武器或載荷不得併入潛艦自身模型。');
+      }
+    }
+  }
   if (!submarine && !parts.some((part) => TAPER_RE.test(part.name) || part.type === 'hull_polyhedron')) {
     issue(issues, 'error', 'NO_HULL_TAPER', null, '船體沒有可辨識的艏艉收束多面體。', '在主船體兩端接 wedge/frustum；艏端較尖、艉端較平。');
   }
@@ -595,6 +606,14 @@ function injectBreak(entries) {
     entry.model.parts.push(part);
     markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'OPEN_CABIN' });
   }
+  if (args.has('--break-external')) {
+    const entry = entries.find((candidate) => /submarine/i.test(`${candidate.metadata.key} ${candidate.model.style}`));
+    if (!entry) throw new Error('--break-external 找不到潛艦模型。');
+    const part = { name:'external_torpedo_break_case', type:'cylinder', sides:8, radii:[0.5,0.5], height:2, position:[0,1,0], rotation:[0,0,0] };
+    entry.model.parts.push(part);
+    brokeExternal = true;
+    markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'EXTERNAL_SUBMARINE_OBJECT' });
+  }
   if (args.has('--break-winding')) {
     let selected = null;
     for (const entry of entries) {
@@ -684,6 +703,7 @@ function injectBreak(entries) {
 
 const entries = loadEntries();
 const breakMarkers = injectBreak(entries);
+if (args.has('--break-external') && !brokeExternal) throw new Error('--break-external 未找到可注入潛艦外部物件的模型。');
 const results = entries.map((entry) => ({
   id: entryId(entry),
   version: entry.metadata.verStr ?? 'unknown',

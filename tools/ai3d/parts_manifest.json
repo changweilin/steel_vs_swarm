@@ -74252,7 +74252,7 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--family ship",
         "machine": "Gemini API",
-        "measured": "Triangles 600, Vertices 369, Similarity 92 /100"
+        "measured": "Triangles 536, Vertices 333, Similarity 92 /100"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",

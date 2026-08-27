@@ -26,6 +26,7 @@ const LIMIT = Math.max(1, valueOf('--limit', 5));
 const DRY = args.includes('--dry-run');
 const EPS = 1e-6;
 const GENERATED_SHIP_DETAIL_RE = /^(landing_centerline|angled_landing_line|aircraft_elevator_|deck_edge_catwalk_|deck_aircraft_|ski_jump_ramp$|passenger_deck_tier_|upper_deck_core|balcony_|lifeboat_|disney_funnel_|forward_bridge_wing|aft_terrace_|lng_pipe_run_|lng_manifold_|cargo_hatch_[5-7]$|container_bay_|catamaran_bridge_tunnel|fishing_winch|aft_work_frame|vls_cell_|ciws_aft|stern_pumpjet_ring|stern_propulsor_hub|sealed_)/i;
+const EXTERNAL_SUBMARINE_OBJECT_RE = /^(?:torpedo_(?:body|nose|tail|fin|motor)|external_(?:torpedo|weapon)|launched_(?:torpedo|missile)|(?:missile|rocket|mine|drone|payload)(?:_|$))/i;
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -126,6 +127,8 @@ function canonicalParts(model) {
 function repairSubmarine(model, baselineLength = 0) {
   const canonical = canonicalParts(model);
   let parts = canonical.parts;
+  const externalParts = parts.filter((part) => EXTERNAL_SUBMARINE_OBJECT_RE.test(part.name));
+  if (externalParts.length) parts = parts.filter((part) => !EXTERNAL_SUBMARINE_OBJECT_RE.test(part.name));
   const root = parts.find((p)=>/main_hull/i.test(p.name));
   if (root) {
     const allBounds = parts.map(aabb);
@@ -159,10 +162,10 @@ function repairSubmarine(model, baselineLength = 0) {
   if (Number.isFinite(minY) && Math.abs(minY) > 0.001) for (const p of parts) p.pos[1] -= minY;
   for (const p of parts) {
     const n = p.name.toLowerCase();
-    if (/propeller|shaft|torpedo_body/.test(n) && /cylinder|conical_frustum/.test(p.type)) p.rot = [0,0,-Math.PI/2];
+    if (/propeller|shaft/.test(n) && /cylinder|conical_frustum/.test(p.type)) p.rot = [0,0,-Math.PI/2];
     if (/periscope|mast/.test(n) && /cylinder|conical_frustum/.test(p.type)) p.rot = [0,0,0];
   }
-  return { parts, changes:[canonical.rotated?'長軸 Z→+X':'長軸維持 +X', `貼地位移 ${(-minY).toFixed(2)}m`, '潛艇改用封閉橢球耐壓殼'] };
+  return { parts, changes:[canonical.rotated?'長軸 Z→+X':'長軸維持 +X', `貼地位移 ${(-minY).toFixed(2)}m`, '潛艇改用封閉橢球耐壓殼', ...(externalParts.length ? [`移除照片外非潛艦物件：${externalParts.map((part)=>part.name).join('、')}`] : [])] };
 }
 
 function repairSurfaceShip(model) {

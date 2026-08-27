@@ -69741,13 +69741,13 @@
           9.853
         ],
         "rMax": 89.823,
-        "triangles": 600,
-        "vertices": 369
+        "triangles": 536,
+        "vertices": 333
       },
       "spec": {
         "style": "modern_military_submarine"
       },
-      "triangles": 600,
+      "triangles": 536,
       "outputDir": "out/3d_data/ship/hull/ship_hull_Virginia_class_submarine_v6",
       "realScale": {
         "className": "attack_submarine",
