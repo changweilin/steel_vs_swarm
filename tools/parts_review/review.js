@@ -1123,6 +1123,187 @@ function featuresSection(r) {
   </div>`;
 }
 
+async function loadYoloData(r) {
+  const yoloVisualsEl = $('prYoloVisuals');
+  const yoloDataEl = $('prYoloData');
+  if (!yoloDataEl) return;
+
+  try {
+    const res = await fetch(`/api/yolo?key=${encodeURIComponent(r.key)}`).then((res) => (res.ok ? res.json() : null));
+    if (!res || !res.found) {
+      yoloDataEl.innerHTML = `
+        <div class="pr-sec" style="border-left: 2px solid var(--railS); padding-left: 8px;">
+          <h3>YOLO26 數據</h3>
+          <div class="pr-dim">${esc(res?.why || '此物件無 YOLO26 Detection / Segmentation / Depth 數據檔案')}</div>
+        </div>`;
+      if (yoloVisualsEl) yoloVisualsEl.innerHTML = '';
+      return;
+    }
+
+    // 1. 左側視覺區: 渲染 YOLO26 視覺切片、遮罩圖與深度圖
+    if (yoloVisualsEl) {
+      const thumbs = [];
+      for (let i = 0; i < (res.targets || []).length; i++) {
+        const t = res.targets[i];
+        if (t.targetUrl) {
+          thumbs.push(`
+            <div class="pr-yolo-thumb">
+              <img src="${t.targetUrl}" alt="" loading="lazy">
+              <div class="pr-yolo-cap"><b>目標 #${i + 1} 切片</b><br>${esc(t.className)} (${(t.confidence * 100).toFixed(1)}%)<br>${t.width}×${t.height} px</div>
+            </div>`);
+        }
+        if (t.maskUrl) {
+          thumbs.push(`
+            <div class="pr-yolo-thumb">
+              <img src="${t.maskUrl}" alt="" loading="lazy">
+              <div class="pr-yolo-cap"><b>目標 #${i + 1} 遮罩</b><br>Mask ${esc(t.targetId)}</div>
+            </div>`);
+        }
+      }
+      if (res.depth?.previewUrl) {
+        thumbs.push(`
+          <div class="pr-yolo-thumb">
+            <img src="${res.depth.previewUrl}" alt="" loading="lazy">
+            <div class="pr-yolo-cap"><b>度量深度預覽圖</b><br>${res.depth.summary ? `${res.depth.summary.minM}m ~ ${res.depth.summary.maxM}m` : 'Metric Depth'}</div>
+          </div>`);
+      }
+
+      if (thumbs.length) {
+        yoloVisualsEl.innerHTML = `
+          <div class="pr-yolo-visual-card">
+            <h4>
+              <span>✦ YOLO26 視覺切片與度量深度</span>
+              <span class="pr-dim">${esc(res.width)}×${esc(res.height)} px</span>
+            </h4>
+            <div class="pr-yolo-grid">${thumbs.join('')}</div>
+          </div>`;
+      } else {
+        yoloVisualsEl.innerHTML = '';
+      }
+    }
+
+    // 2. 右側數據區: 渲染 YOLO26 Detection / Segmentation / Depth 指標與原始檔案
+    const detObjects = res.detection?.objects || [];
+    const detTable = detObjects.length ? `
+      <div class="pr-yolo-sub">
+        <h4>🎯 Detection 目標偵測 (${detObjects.length} 個物件)</h4>
+        <table class="pr-tab">
+          <tr><th>類別 (Class)</th><th>信心度 (Conf)</th><th>邊界框 [x0, y0, x1, y1]</th><th>尺寸 (W×H)</th></tr>
+          ${detObjects.map((o) => {
+            const bbox = o.bbox || [];
+            const bw = Math.round((bbox[2] ?? 0) - (bbox[0] ?? 0));
+            const bh = Math.round((bbox[3] ?? 0) - (bbox[1] ?? 0));
+            return `<tr>
+              <td><b>${esc(o.className)}</b> <span class="pr-dim">#${o.classId}</span></td>
+              <td class="num pr-good">${(o.confidence * 100).toFixed(1)}%</td>
+              <td class="num pr-dim">[${bbox.map((v) => Math.round(v)).join(', ')}]</td>
+              <td class="num">${bw}×${bh}</td>
+            </tr>`;
+          }).join('')}
+        </table>
+      </div>` : '';
+
+    const targets = res.targets || [];
+    const segTable = targets.length ? `
+      <div class="pr-yolo-sub">
+        <h4>✂ Segmentation 實例分割 (${targets.length} 個獨立目標)</h4>
+        <table class="pr-tab">
+          <tr><th>目標 ID</th><th>類別</th><th>信心度</th><th>長寬比</th><th>深度中位數</th></tr>
+          ${targets.map((t) => `
+            <tr>
+              <td><code>${esc(t.targetId)}</code></td>
+              <td><b>${esc(t.className)}</b></td>
+              <td class="num pr-good">${(t.confidence * 100).toFixed(1)}%</td>
+              <td class="num">${t.aspectRatio ?? '—'}</td>
+              <td class="num pr-good">${t.depth?.medianM != null ? `${t.depth.medianM}m` : '—'}</td>
+            </tr>`).join('')}
+        </table>
+        ${targets.some((t) => t.slices?.length) ? `
+          <div style="margin-top:6px;">
+            <div class="pr-dim" style="margin-bottom:4px;"><b>16 階斷面切片特徵 (寬度佔比 & 深度中位數):</b></div>
+            <div class="pr-slice-list">
+              ${(targets[0].slices || []).map((s) => `
+                <div class="pr-slice-row">
+                  <span style="width:45px;">L${s.level}</span>
+                  <div class="pr-slice-bar-bg"><div class="pr-slice-bar-fill" style="width:${Math.round(s.widthRatio * 100)}%;"></div></div>
+                  <span style="width:45px;" class="num">${Math.round(s.widthRatio * 100)}%</span>
+                  <span style="width:70px;" class="num pr-dim">${s.depthMedianM != null ? `${s.depthMedianM.toFixed(2)}m` : '—'}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>` : ''}
+      </div>` : '';
+
+    const depthSum = res.depth?.summary;
+    const depthTable = depthSum ? `
+      <div class="pr-yolo-sub">
+        <h4>🌊 Metric Depth 度量深度指標 (單位: ${esc(res.depth?.units || 'meters')})</h4>
+        <table class="pr-tab">
+          <tr><th>指標</th><th>數值 (公尺)</th><th>統計意義</th></tr>
+          <tr><td>最小深度 (Min)</td><td class="num pr-good">${depthSum.minM}m</td><td class="pr-dim">前景最近距離</td></tr>
+          <tr><td>最大深度 (Max)</td><td class="num pr-dim">${depthSum.maxM}m</td><td class="pr-dim">背景最遠距離</td></tr>
+          <tr><td>平均深度 (Mean)</td><td class="num">${depthSum.meanM}m</td><td class="pr-dim">全景平均深度</td></tr>
+          <tr><td>中位數 (Median)</td><td class="num pr-good">${depthSum.medianM}m</td><td class="pr-good">主體深度參考基準</td></tr>
+          <tr><td>P05 ~ P95 區間</td><td class="num">${depthSum.p05M}m ~ ${depthSum.p95M}m</td><td class="pr-dim">去除極值後之主要主體深度帶</td></tr>
+        </table>
+      </div>` : '';
+
+    yoloDataEl.innerHTML = `
+      <div class="pr-yolo-panel">
+        <div class="pr-yolo-head">
+          <h3>YOLO26 Detection / Segmentation / Depth 數據分析</h3>
+          <div class="pr-yolo-badges">
+            <span class="pr-yolo-tag">模型: ${esc(res.models?.detection || 'yolo26n.pt')}</span>
+            <span class="pr-yolo-tag">分割: ${esc(res.models?.segmentation || 'yolo26n-seg.pt')}</span>
+            <span class="pr-yolo-tag">深度: ${esc(res.models?.depth || 'yolo26n-depth.pt')}</span>
+            <span class="pr-yolo-tag">解析度: ${res.width}×${res.height}</span>
+          </div>
+        </div>
+
+        ${detTable}
+        ${segTable}
+        ${depthTable}
+
+        <div class="pr-json-block">
+          <div class="pr-json-top">
+            <span>檔案路徑: <code>${esc(res.path || 'yolo_features.json')}</code></span>
+            <div style="display:flex;gap:4px;">
+              <button class="pr-json-btn" id="prYoloJsonToggle">展開 JSON</button>
+              <button class="pr-json-btn" id="prYoloJsonCopy">複製</button>
+            </div>
+          </div>
+          <pre class="pr-json-code" id="prYoloJsonPre" style="display:none;"><code>${esc(res.rawJson)}</code></pre>
+        </div>
+      </div>`;
+
+    // 綁定 JSON 展開與複製事件
+    const toggleBtn = $('prYoloJsonToggle');
+    const preEl = $('prYoloJsonPre');
+    const copyBtn = $('prYoloJsonCopy');
+    if (toggleBtn && preEl) {
+      toggleBtn.onclick = () => {
+        const isHidden = preEl.style.display === 'none';
+        preEl.style.display = isHidden ? 'block' : 'none';
+        toggleBtn.textContent = isHidden ? '收起 JSON' : '展開 JSON';
+      };
+    }
+    if (copyBtn) {
+      copyBtn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(res.rawJson);
+          copyBtn.textContent = '已複製 ✔';
+          setTimeout(() => { copyBtn.textContent = '複製'; }, 2000);
+        } catch {
+          copyBtn.textContent = '複製失敗';
+        }
+      };
+    }
+
+  } catch (err) {
+    yoloDataEl.innerHTML = `<div class="pr-sec pr-bad"><h3>YOLO26 數據載入異常</h3><div>${esc(err?.message || err)}</div></div>`;
+  }
+}
+
 function renderBody() {
   if (app.cur === RUN_KEY) return renderRunBody();
   if (String(app.cur).startsWith('arc:')) return renderArchiveBody(String(app.cur).slice(4));
@@ -1133,53 +1314,66 @@ function renderBody() {
   const [lLab, rLab] = paneLabels(r);
 
   body.innerHTML = `
-  <h2 class="pr-h2">${esc(r.title)}</h2>
-  <div class="pr-mline">${esc(r.method ? r.method.label : '未記載來源')}
-    ・ 版本 ${esc(r.verStr || `v${r.version || 1}`)}
-    ・ 消費端 ${esc(r.consumer || '—')}${r.glbPath ? ` ・ ${esc(r.glbPath)}` : ''}
-    ${r.missing ? ' ・ <span class="pr-bad">缺件:執行期整件走 fallback</span>' : ''}</div>
-  ${isWip(r) ? `<div class="pr-sec pr-warn"><h3>⚑ 半成品(台上預設收起)</h3>
-    <div>${r.flaws.map((f) => `<b>${esc(f.label)}</b>:${esc(f.detail)}`).join('<br>')}</div>
-    <div class="pr-dim">節點沒有被刪 —— 遊戲照舊吃它。判定住 <code>tools/ai3d/mesh_sym.mjs</code>
-      (<code>--flaws</code> 印同一份名單);要它回到台上,把網格封起來重新入庫即可。</div></div>` : ''}
-  ${r.notes?.length ? `<div class="pr-sec"><h3>附註</h3>
-    <div>${r.notes.map((n) => `<b>${esc(n.label)}</b>:${esc(n.detail)}`).join('<br>')}</div></div>` : ''}
-
-  <div class="pr-tools">
-    <span class="pr-dim">座號</span>
-    <div class="seg" id="prSeed">${SEEDS.map((s) => `<button class="segb ${s === app.seed ? 'on' : ''}" data-seed="${s}">#${s}</button>`).join('')}</div>
-    <span class="pr-dim">取景</span>
-    <div class="seg" id="prDist">${Object.entries(DISTS).map(([k, v]) => {
-    const off = k === 'part' && !partFramable(r);
-    return `<button class="segb ${k === effDist(r) ? 'on' : ''}" data-dist="${k}"${off
-      ? ' disabled title="這一列沒有 GLB 節點可以隔離(純資料件的生成物就是整份零件表)⇒ 一律看整件"'
-      : ''}>${v}</button>`;
-  }).join('')}</div>
-    <span class="pr-dim" id="prFrameNote"></span>
-    <label><input type="checkbox" id="prCol" ${app.collider ? 'checked' : ''}>碰撞柱</label>
-    <label><input type="checkbox" id="prSpin" ${app.spin ? 'checked' : ''}>自轉</label>
-    <span class="pr-dim">(拖曳任一側 = 兩側一起轉;滾輪縮放)</span>
+  <div class="pr-body-header">
+    <h2 class="pr-h2">${esc(r.title)}</h2>
+    <div class="pr-mline">${esc(r.method ? r.method.label : '未記載來源')}
+      ・ 版本 ${esc(r.verStr || `v${r.version || 1}`)}
+      ・ 消費端 ${esc(r.consumer || '—')}${r.glbPath ? ` ・ ${esc(r.glbPath)}` : ''}
+      ${r.missing ? ' ・ <span class="pr-bad">缺件:執行期整件走 fallback</span>' : ''}</div>
+    ${isWip(r) ? `<div class="pr-sec pr-warn"><h3>⚑ 半成品(台上預設收起)</h3>
+      <div>${r.flaws.map((f) => `<b>${esc(f.label)}</b>:${esc(f.detail)}`).join('<br>')}</div>
+      <div class="pr-dim">節點沒有被刪 —— 遊戲照舊吃它。判定住 <code>tools/ai3d/mesh_sym.mjs</code>
+        (<code>--flaws</code> 印同一份名單);要它回到台上,把網格封起來重新入庫即可。</div></div>` : ''}
+    ${r.notes?.length ? `<div class="pr-sec"><h3>附註</h3>
+      <div>${r.notes.map((n) => `<b>${esc(n.label)}</b>:${esc(n.detail)}`).join('<br>')}</div></div>` : ''}
   </div>
 
-  <div class="pr-stage" id="prStage">
-    ${lLab ? `<div class="pr-pane" id="prPaneL"><div class="pr-cap">◀ ${esc(lLab)}</div>
-      <div class="pr-slot"></div><div class="pr-read" id="prReadL"></div></div>` : ''}
-    <div class="pr-pane gen" id="prPaneR"><div class="pr-cap">▶ ${esc(rLab)}</div>
-      <div class="pr-slot"></div><div class="pr-read" id="prReadR"></div></div>
-  </div>
+  <div class="pr-detail-grid">
+    <!-- 左欄: 視覺元件欄 (上下並排: 3D圖 -> 工具/覆核 -> 原始圖 -> YOLO視覺切片) -->
+    <div class="pr-col-visual">
+      <div class="pr-tools">
+        <span class="pr-dim">座號</span>
+        <div class="seg" id="prSeed">${SEEDS.map((s) => `<button class="segb ${s === app.seed ? 'on' : ''}" data-seed="${s}">#${s}</button>`).join('')}</div>
+        <span class="pr-dim">取景</span>
+        <div class="seg" id="prDist">${Object.entries(DISTS).map(([k, v]) => {
+          const off = k === 'part' && !partFramable(r);
+          return `<button class="segb ${k === effDist(r) ? 'on' : ''}" data-dist="${k}"${off
+            ? ' disabled title="這一列沒有 GLB 節點可以隔離(純資料件的生成物就是整份零件表)⇒ 一律看整件"'
+            : ''}>${v}</button>`;
+        }).join('')}</div>
+        <span class="pr-dim" id="prFrameNote"></span>
+        <label><input type="checkbox" id="prCol" ${app.collider ? 'checked' : ''}>碰撞柱</label>
+        <label><input type="checkbox" id="prSpin" ${app.spin ? 'checked' : ''}>自轉</label>
+      </div>
 
-  ${verdictSection(r.key)}
+      <div class="pr-stage" id="prStage">
+        ${lLab ? `<div class="pr-pane" id="prPaneL"><div class="pr-cap">◀ ${esc(lLab)}</div>
+          <div class="pr-slot"></div><div class="pr-read" id="prReadL"></div></div>` : ''}
+        <div class="pr-pane gen" id="prPaneR"><div class="pr-cap">▶ ${esc(rLab)}</div>
+          <div class="pr-slot"></div><div class="pr-read" id="prReadR"></div></div>
+      </div>
 
-  <div class="pr-sec"><h3>來源圖(img)</h3>
-    <div class="pr-imgs">${r.imgs && r.imgs.length ? r.imgs.map(imgCard).join('')
-    : (r.verStr === 'v5' || r.version === 5 ? '<div class="pr-none">v5 為獨立多面體純幾何物件（無關照片）</div>' : '<div class="pr-none">來源帳裡沒有記載任何來源圖</div>')}</div></div>
+      ${verdictSection(r.key)}
 
-  ${methodSection(r)}
-  ${featuresSection(r)}
-  ${dataSection(r)}`;
+      <div class="pr-sec"><h3>來源圖(img)</h3>
+        <div class="pr-imgs">${r.imgs && r.imgs.length ? r.imgs.map(imgCard).join('')
+        : (r.verStr === 'v5' || r.version === 5 ? '<div class="pr-none">v5 為獨立多面體純幾何物件（無關照片）</div>' : '<div class="pr-none">來源帳裡沒有記載任何來源圖</div>')}</div></div>
+
+      <div id="prYoloVisuals"></div>
+    </div>
+
+    <!-- 右欄: 文字說明/標籤與數據欄 (幾何規格、量測對照、生成方法、特徵報告、YOLO26數據面板) -->
+    <div class="pr-col-info">
+      ${dataSection(r)}
+      ${methodSection(r)}
+      ${featuresSection(r)}
+      <div id="prYoloData"></div>
+    </div>
+  </div>`;
 
   mountStage(r);
   renderGaps();
+  loadYoloData(r);
 
   for (const b of body.querySelectorAll('#prSeed .segb')) b.onclick = () => { app.seed = +b.dataset.seed; renderBody(); };
   for (const b of body.querySelectorAll('#prDist .segb')) b.onclick = () => { app.dist = b.dataset.dist; renderBody(); };
@@ -1513,26 +1707,34 @@ function renderArchiveBody(key) {
   const a = (app.data.archive || []).find((x) => x.key === key);
   if (!a) { body.innerHTML = '<div class="pr-dim">← 左側挑一件封存的</div>'; return; }
   body.innerHTML = `
-  <h2 class="pr-h2">${esc(a.key)}</h2>
-  <div class="pr-mline">已封存 ${esc(String(a.at || '').replace('T', ' ').slice(0, 19))}
-    ・ ${esc(a.method?.label || '?')}${a.consumer ? ` ・ 原消費端 ${esc(a.consumer)}` : ''}</div>
-  <div class="pr-sec pr-warn"><h3>⊘ 已撤出遊戲</h3>
-    <div>${a.why ? esc(a.why) : '(覆核時沒有留下理由)'}</div>
-    <div class="pr-dim">節點已從 <code>${esc(a.family || '?')}.glb</code>、<code>biomes.js</code> 名冊、
-      來源帳三邊撤掉 ⇒ 遊戲裡沒有它,台上的生成物清單也沒有它。**來源圖留著**,
-      而且不再自動重跑(採集迴圈把「封存過」算成人眼已處置)。要再生一顆:把這張圖的
-      <code>screen</code> 判回 pass 之後手動跑一輪,或走 <code>⟳ 重生</code> 那條路。</div></div>
-  <div class="pr-sec"><h3>來源圖(img)</h3>
-    <div class="pr-imgs">${a.imgs?.length ? a.imgs.map(imgCard).join('')
-    : '<div class="pr-none">封存帳裡沒有記載任何來源圖</div>'}</div></div>
-  <div class="pr-sec"><h3>當時的生成參數</h3>
-    <div class="pr-kv">
-      <b>工具</b><div>${esc(a.gen?.tool || '—')}</div>
-      <b>參數</b><div>${esc(a.gen?.params || '—')}</div>
-      <b>產出</b><div>${esc([a.gen?.out_dir, a.gen?.out_index != null ? `第 ${a.gen.out_index} 顆` : ''].filter(Boolean).join(' ・ ') || '—')}</div>
-      <b>實測</b><div>${esc(a.gen?.measured || '—')}</div>
-      <b>出貨版本</b><div>${esc([a.rev, a.shipped_at].filter(Boolean).join(' ・ ') || '—')}</div>
-    </div></div>`;
+  <div class="pr-body-header">
+    <h2 class="pr-h2">${esc(a.key)}</h2>
+    <div class="pr-mline">已封存 ${esc(String(a.at || '').replace('T', ' ').slice(0, 19))}
+      ・ ${esc(a.method?.label || '?')}${a.consumer ? ` ・ 原消費端 ${esc(a.consumer)}` : ''}</div>
+    <div class="pr-sec pr-warn"><h3>⊘ 已撤出遊戲</h3>
+      <div>${a.why ? esc(a.why) : '(覆核時沒有留下理由)'}</div>
+      <div class="pr-dim">節點已從 <code>${esc(a.family || '?')}.glb</code>、<code>biomes.js</code> 名冊、
+        來源帳三邊撤掉 ⇒ 遊戲裡沒有它,台上的生成物清單也沒有它。**來源圖留著**,
+        而且不再自動重跑(採集迴圈把「封存過」算成人眼已處置)。要再生一顆:把這張圖的
+        <code>screen</code> 判回 pass 之後手動跑一輪,或走 <code>⟳ 重生</code> 那條路。</div></div>
+  </div>
+  <div class="pr-detail-grid">
+    <div class="pr-col-visual">
+      <div class="pr-sec"><h3>來源圖(img)</h3>
+        <div class="pr-imgs">${a.imgs?.length ? a.imgs.map(imgCard).join('')
+        : '<div class="pr-none">封存帳裡沒有記載任何來源圖</div>'}</div></div>
+    </div>
+    <div class="pr-col-info">
+      <div class="pr-sec"><h3>當時的生成參數</h3>
+        <div class="pr-kv">
+          <b>工具</b><div>${esc(a.gen?.tool || '—')}</div>
+          <b>參數</b><div>${esc(a.gen?.params || '—')}</div>
+          <b>產出</b><div>${esc([a.gen?.out_dir, a.gen?.out_index != null ? `第 ${a.gen.out_index} 顆` : ''].filter(Boolean).join(' ・ ') || '—')}</div>
+          <b>實測</b><div>${esc(a.gen?.measured || '—')}</div>
+          <b>出貨版本</b><div>${esc([a.rev, a.shipped_at].filter(Boolean).join(' ・ ') || '—')}</div>
+        </div></div>
+    </div>
+  </div>`;
 }
 
 /**

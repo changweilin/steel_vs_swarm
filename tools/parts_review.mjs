@@ -28,8 +28,8 @@
 import { createServer } from 'node:http';
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { extname, join, normalize, resolve, sep } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { basename, extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
 import {
@@ -59,6 +59,93 @@ const venvPython = (home) => {
 
 const argv = process.argv.slice(2);
 const arg = (k, d = null) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : d; };
+
+/** YOLO26 前處理與特徵檔案搜尋根目錄（涵蓋當前 worktree、姊妹 worktree 與本地資料目錄） */
+export function yoloSearchRoots() {
+  const roots = [
+    join(ROOT, 'out'),
+    'C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out',
+    'C:\\Users\\user\\Documents\\study\\ai3d_restricted\\out',
+    'C:\\Users\\user\\Documents\\steel_vs_swarm\\out',
+  ];
+  const mGemini = ROOT.replace(/\\/g, '/').match(/^(.*)\/\.gemini\/antigravity\/worktrees\/[^/]+\/[^/]+$/);
+  const mClaude = ROOT.replace(/\\/g, '/').match(/^(.*)\/\.claude\/worktrees\/[^/]+$/);
+  const main = mClaude ? mClaude[1] : (mGemini ? mGemini[1] : ROOT);
+  const wtGemini = join(main, '.gemini', 'antigravity', 'worktrees', 'steel_vs_swarm');
+  if (existsSync(wtGemini)) {
+    try {
+      for (const d of readdirSync(wtGemini)) {
+        const p = join(wtGemini, d, 'out');
+        if (existsSync(p) && !roots.includes(p)) roots.push(p);
+      }
+    } catch {}
+  }
+  const wtClaude = join(main, '.claude', 'worktrees');
+  if (existsSync(wtClaude)) {
+    try {
+      for (const d of readdirSync(wtClaude)) {
+        const p = join(wtClaude, d, 'out');
+        if (existsSync(p) && !roots.includes(p)) roots.push(p);
+      }
+    } catch {}
+  }
+  return [...new Set(roots)].filter((r) => existsSync(r));
+}
+
+/** 依據物件鍵值、分類、圖片清單與 3D 資料庫項目智慧尋找對應之 YOLO26 特徵檔案 */
+export function findYoloFeature(key, family, subpart, imgList = [], dbItem = null) {
+  const stems = new Set();
+  if (dbItem?.image) stems.add(basename(dbItem.image, extname(dbItem.image)));
+  if (dbItem?.source_image) stems.add(basename(dbItem.source_image, extname(dbItem.source_image)));
+  if (subpart) stems.add(subpart);
+  if (key) {
+    const p = key.split('/');
+    stems.add(p[p.length - 1]);
+  }
+  if (dbItem?.id) stems.add(dbItem.id);
+  for (const im of (imgList || [])) {
+    if (im.id) stems.add(im.id);
+    if (im.file) stems.add(basename(im.file, extname(im.file)));
+  }
+
+  const cleanStems = new Set();
+  for (const s of stems) {
+    if (!s) continue;
+    cleanStems.add(s);
+    const mOv = s.match(/(ov_[0-9a-f-]+)/i);
+    if (mOv) cleanStems.add(mOv[1]);
+    cleanStems.add(s.replace(/_[0-9a-f]{8}_v6$/, ''));
+    cleanStems.add(s.replace(/_v6$/, ''));
+    cleanStems.add(s.replace(/^mass_/, ''));
+    cleanStems.add(s.replace(/^[a-z_]+_ov_/, 'ov_'));
+    cleanStems.add(s.replace(/^[a-z_]+_/, ''));
+  }
+
+  const subparts = [subpart, 'main', 'mass', ''].filter((x) => x != null);
+  const fams = [family, key ? key.split('/')[0] : null, ''].filter((x) => x != null);
+
+  const roots = yoloSearchRoots();
+  for (const root of roots) {
+    for (const fam of fams) {
+      for (const sub of subparts) {
+        for (const s of cleanStems) {
+          const cand = sub
+            ? join(root, 'yolo_features', fam, sub, `${s}.json`)
+            : join(root, 'yolo_features', fam, `${s}.json`);
+          if (existsSync(cand)) {
+            try {
+              const data = JSON.parse(readFileSync(cand, 'utf8'));
+              return { found: true, path: cand, relPath: cand.replace(ROOT + sep, ''), data };
+            } catch (e) {
+              return { found: true, path: cand, relPath: cand.replace(ROOT + sep, ''), error: e.message };
+            }
+          }
+        }
+      }
+    }
+  }
+  return { found: false };
+}
 
 // ---- 對照表(伺服器端推導;頁面只負責畫)---------------------------------
 /**
@@ -408,6 +495,17 @@ export function manifest(items = {}, photosOpt = null) {
     const pDates = (r.imgs || []).map((im) => im.photoDate).filter(Boolean);
     r.photoDate = pDates[0] || null;
     r.photoDates = [...new Set(pDates)];
+    const dbItem = db3DMap.get(r.key) || null;
+    const yolo = findYoloFeature(r.key, r.family, r.node, r.imgs, dbItem);
+    r.hasYolo = yolo.found;
+    if (yolo.found && yolo.data) {
+      r.yoloSummary = {
+        path: yolo.relPath,
+        detections: yolo.data.detection?.count ?? yolo.data.yoloDetections ?? 0,
+        targets: (yolo.data.targets || []).length,
+        hasDepth: !!yolo.data.depth,
+      };
+    }
   }
 
   rows.sort((a, b) => (a.key < b.key ? -1 : 1));
@@ -730,6 +828,102 @@ async function serve() {
           }
         }
         return send(404, '{"error":"features not found"}');
+      }
+
+      // YOLO26 計算之 Detection / Segmentation / Depth 數據與特徵檔案
+      if (u.pathname === '/api/yolo') {
+        const key = u.searchParams.get('key');
+        const db3DPath = join(ROOT, 'out', '3d_database.json');
+        const db3D = existsSync(db3DPath) ? readJson(db3DPath, { items: [] }) : { items: [] };
+        const dbItem = db3D.items?.find((it) => it.key === key || it.id === key) || null;
+        const fam = dbItem?.family || (key ? key.split('/')[0] : null);
+        const sub = dbItem?.subpart || null;
+        const yolo = findYoloFeature(key, fam, sub, null, dbItem);
+        if (!yolo.found) {
+          return send(200, JSON.stringify({ ok: true, found: false, why: '尚未計算或找不到此物件的 YOLO26 特徵檔案' }));
+        }
+
+        const data = yolo.data;
+        const roots = yoloSearchRoots();
+        const resolveAssetUrl = (relPath, type = 'targets', id = null) => {
+          const candidates = [];
+          if (relPath) {
+            const cleanRel = String(relPath).replace(/\\/g, '/');
+            for (const rt of roots) {
+              candidates.push(join(rt, '..', cleanRel));
+              candidates.push(join(rt, cleanRel));
+              candidates.push(resolve(ROOT, cleanRel));
+            }
+          }
+          if (id) {
+            const fams = [data.family, fam, ''].filter(Boolean);
+            const subs = [data.subpart, sub, 'main', 'mass', ''].filter(Boolean);
+            for (const rt of roots) {
+              for (const f of fams) {
+                for (const s of subs) {
+                  candidates.push(join(rt, type, f, s, `${id}.png`));
+                  candidates.push(join(rt, type, f, `${id}.png`));
+                }
+              }
+            }
+          }
+          for (const cand of candidates) {
+            if (existsSync(cand) && statSync(cand).isFile()) {
+              return `/api/yolo_asset?p=${encodeURIComponent(cand)}`;
+            }
+          }
+          return null;
+        };
+
+        const targets = (data.targets || []).map((t) => ({
+          ...t,
+          targetUrl: resolveAssetUrl(t.targetFile, 'targets', t.targetId),
+          maskUrl: resolveAssetUrl(t.maskFile, 'yolo_masks', t.targetId),
+        }));
+
+        const depth = data.depth ? {
+          ...data.depth,
+          previewUrl: resolveAssetUrl(data.depth.previewFile, 'yolo_depth', data.stem),
+        } : resolveAssetUrl(null, 'yolo_depth', data.stem) ? {
+          previewUrl: resolveAssetUrl(null, 'yolo_depth', data.stem),
+          units: 'meters',
+        } : null;
+
+        return send(200, JSON.stringify({
+          ok: true,
+          found: true,
+          path: yolo.relPath || yolo.path,
+          sourceImage: data.sourceImage,
+          sourceFullPath: data.sourceFullPath,
+          family: data.family,
+          subpart: data.subpart,
+          stem: data.stem,
+          width: data.width,
+          height: data.height,
+          models: data.models,
+          detection: data.detection,
+          segmentation: data.segmentation,
+          depth,
+          targets,
+          rawJson: JSON.stringify(data, null, 2),
+        }));
+      }
+
+      // YOLO 目標切片圖、遮罩圖與深度圖安全靜態出口
+      if (u.pathname === '/api/yolo_asset') {
+        const p = u.searchParams.get('p');
+        if (!p) return send(400, '{"error":"missing p"}');
+        const normP = normalize(resolve(p));
+        const roots = [
+          ...yoloSearchRoots().map((r) => normalize(resolve(r))),
+          ...photoRoots(photos).map((r) => normalize(resolve(r))),
+          normalize(resolve(ROOT)),
+        ];
+        const allowed = roots.some((r) => normP.startsWith(r) || normP.startsWith(normalize(join(r, '..'))));
+        if (!allowed || !existsSync(normP) || !statSync(normP).isFile()) {
+          return send(404, 'not found', 'text/plain; charset=utf-8');
+        }
+        return send(200, readFileSync(normP), MIME[extname(normP).toLowerCase()] || 'application/octet-stream');
       }
 
       // 來源圖:客戶端只送 key + 索引,路徑一律由伺服器從來源帳解析(零信任;
