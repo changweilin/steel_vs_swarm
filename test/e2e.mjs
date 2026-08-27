@@ -852,6 +852,26 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   dr.rg = false;
   sim.heroes.set('p_d', dr); sq.act = 0;   // 主視野切回 dr,後續測試對它結算
 
+  log('— sim:機體重生倒數不同玩家分開計算(單機獨立計數)—');
+  {
+    const robotCh = charsOf('STEEL').find((c) => charKind(c) === 'robot');
+    const p1 = sim.addHero('STEEL', 'p_test1', robotCh);
+    const p2 = sim.addHero('STEEL', 'p_test2', robotCh);
+    const r = UNITS.robot.respawn;
+    const t0 = sim.t;
+    p1.hp = 0; sim._kill(p1, null);
+    const p1_rs1 = p1.respawnAt - t0;
+    assert(p1_rs1 === r.base + r.perDeath * 1, `p1 第 1 次陣亡倒數 = ${r.base + r.perDeath}s(實得 ${p1_rs1}s)`);
+    p1.hp = 0; sim._kill(p1, null);
+    p1.hp = 0; sim._kill(p1, null);
+    const p1_rs3 = p1.respawnAt - t0;
+    assert(p1_rs3 === r.base + r.perDeath * 3, `p1 第 3 次陣亡倒數 = ${r.base + r.perDeath * 3}s(實得 ${p1_rs3}s)`);
+    p2.hp = 0; sim._kill(p2, null);
+    const p2_rs1 = p2.respawnAt - t0;
+    assert(p2_rs1 === r.base + r.perDeath * 1,
+      `不同玩家重生倒數獨立計算:p2 首次陣亡倒數 ${r.base + r.perDeath}s,不受隊友 3 次陣亡影響(實得 ${p2_rs1}s)`);
+  }
+
   log('— sim:bot 飛行機體受擊掉高(真人那份住客戶端物理;掉幅 ∝ 實際護盾+裝甲損耗)—');
   {
     // bot 沒有客戶端 ⇒ 高度由伺服器寫;規則與客戶端共用同一支 airSinkM(MUST NOT 兩套係數)

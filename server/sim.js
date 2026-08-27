@@ -4283,8 +4283,11 @@ export class BattleSim {
           t.respawnAt = this.t + r.base;          // 尚有僚機存活 → 個別快速重生,不累加(玩家未真正陣亡,不罰金)
         }
       } else {
+        const sq = t.sq;
+        if (sq) sq.deaths = (sq.deaths || 0) + 1;
         t.deaths = (t.deaths || 0) + 1;
-        const rs = r.base + r.perDeath * this.stats[t.side].deaths;   // 重生倒數秒數(單機累計)
+        const playerDeaths = sq?.deaths ?? t.deaths;
+        const rs = r.base + r.perDeath * playerDeaths;   // 重生倒數秒數(該玩家單機獨立累計)
         t.respawnAt = this.t + rs;
         this._deathPenalty(t, rs);
       }
