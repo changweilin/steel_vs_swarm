@@ -750,10 +750,12 @@ export class BattleSim {
   /** 射手眼高(離地):塔的砲位過半塔身,能越過矮牆射擊 */
   _eyeY(e) { return (e.y || 0) + (e.kind === 'tower' ? LOS.TOWER_EYE_M : LOS.EYE_M); }
 
-  /** 目標取樣高(離地):塔/主堡是高聳工事,露頭就打得到 */
+  /** 目標取樣高(離地):塔/主堡是高聳工事,露頭就打得到;BOSS 體型巨大,取量體中點避免低矮掩體誤判遮蔽 */
   _tgtY(e) {
     if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
-    return (e.hero || e.kind === 'heli' || e.decoy || e.kami || e.hyper ? (e.y || 0) : 0) + LOS.TGT_M;
+    const base = (e.hero || e.kind === 'heli' || e.decoy || e.kami || e.hyper ? (e.y || 0) : 0);
+    if (e.hero && (e.boss || e.sq?.boss)) return base + hitH(e) * 0.5;
+    return base + LOS.TGT_M;
   }
 
   /** 機體垂直帶(離地):[腳底, 腳底 + 實體高度]。飛行體的腳底 = 回報高度,地面單位 = 0。 */
