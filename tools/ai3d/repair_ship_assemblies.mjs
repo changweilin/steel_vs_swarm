@@ -26,7 +26,10 @@ const LIMIT = Math.max(1, valueOf('--limit', 5));
 const DRY = args.includes('--dry-run');
 const EPS = 1e-6;
 const GENERATED_SHIP_DETAIL_RE = /^(landing_centerline|angled_landing_line|aircraft_elevator_|deck_edge_catwalk_|deck_aircraft_|ski_jump_ramp$|passenger_deck_tier_|upper_deck_core|balcony_|lifeboat_|disney_funnel_|forward_bridge_wing|aft_terrace_|lng_pipe_run_|lng_manifold_|cargo_hatch_[5-7]$|container_bay_|catamaran_bridge_tunnel|fishing_winch|aft_work_frame|vls_cell_|ciws_aft|stern_pumpjet_ring|stern_propulsor_hub|sealed_)/i;
-const EXTERNAL_SUBMARINE_OBJECT_RE = /^(?:torpedo_(?:body|nose|tail|fin|motor)|external_(?:torpedo|weapon)|launched_(?:torpedo|missile)|(?:missile|rocket|mine|drone|payload)(?:_|$))/i;
+const EXTERNAL_SUBMARINE_OBJECT_RE = /^(?:torpedo_(?:body|nose|tail|fin|motor)|external_(?:torpedo|weapon)|launched_(?:torpedo|missile)|(?:missile|rocket|mine|drone|payload|cradle_support|bogie_wheel|transport_cradle|shipping_frame|dolly|side_bulge)(?:_|$))/i;
+const SUBMARINE_BODY_BEAM_SHARE = 0.90;
+const SUBMARINE_TOWER_LENGTH_SHARE = 0.20;
+const SUBMARINE_TOWER_HEIGHT_SHARE = 0.42;
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -904,8 +907,56 @@ function thickenHullForTarget(parts, identity, targetSize) {
   return { oldHeight, desiredHeight };
 }
 
+function normalizeSubmarineProportions(parts, targetSize) {
+  const hull = parts.find((part) => /^main_hull$/i.test(part.name));
+  if (!hull || !Array.isArray(targetSize) || !Number.isFinite(targetSize[0]) || !Number.isFinite(targetSize[2])) return null;
+
+  const currentRadii = hull.type === 'ellipsoid_sphere' && Array.isArray(hull.radii)
+    ? [Math.abs(Number(hull.radii[1]) || 0), Math.abs(Number(hull.radii[2]) || 0)]
+    : null;
+  if (!currentRadii) return null;
+
+  const maxTowerLength = targetSize[0] * SUBMARINE_TOWER_LENGTH_SHARE;
+  const maxTowerHeight = targetSize[2] * SUBMARINE_BODY_BEAM_SHARE * SUBMARINE_TOWER_HEIGHT_SHARE;
+  for (const tower of parts.filter((part) => /^(?:sail_tower|conning_tower)$/i.test(part.name) && Array.isArray(part.dimensions))) {
+    const rotation = tower.rot || [0, 0, 0];
+    const horizontalLongAxis = Math.abs(Math.sin(rotation[1] || 0)) > 0.7 ? 2 : 0;
+    tower.dimensions[horizontalLongAxis] = Math.min(Math.abs(tower.dimensions[horizontalLongAxis]), maxTowerLength);
+    tower.dimensions[1] = Math.min(Math.abs(tower.dimensions[1]), maxTowerHeight);
+    if (tower.type === 'box') {
+      tower.type = 'tapered_box';
+      tower.topDimensions = [tower.dimensions[0] * 0.72, tower.dimensions[2] * 0.72];
+    }
+  }
+
+  const oldDiameter = Math.max(...currentRadii) * 2;
+  let desiredDiameter = Math.max(oldDiameter, targetSize[2] * SUBMARINE_BODY_BEAM_SHARE);
+  const desiredFinalDiameter = targetSize[2] * SUBMARINE_BODY_BEAM_SHARE;
+  for (let i = 0; i < 4; i += 1) {
+    const desiredRadius = desiredDiameter / 2;
+    hull.radii[1] = desiredRadius;
+    hull.radii[2] = desiredRadius;
+    const boxes = parts.map(aabb);
+    const measured = [0, 1, 2].map((axis) => Math.max(...boxes.map((box) => box.max[axis])) - Math.min(...boxes.map((box) => box.min[axis])));
+    const lateralScale = Math.min(targetSize[1] / Math.max(EPS, measured[1]), targetSize[2] / Math.max(EPS, measured[2]));
+    const correctedDiameter = desiredFinalDiameter / Math.max(EPS, lateralScale);
+    if (correctedDiameter <= desiredDiameter + 0.001) break;
+    desiredDiameter = correctedDiameter;
+  }
+  hull.radii[1] = desiredDiameter / 2;
+  hull.radii[2] = desiredDiameter / 2;
+  const hullBox = aabb(hull);
+  for (const tower of parts.filter((part) => /^(?:sail_tower|conning_tower)$/i.test(part.name))) {
+    const towerBox = aabb(tower);
+    if (towerBox.min[1] < hullBox.max[1]) tower.pos[1] += hullBox.max[1] - towerBox.min[1] - 0.05;
+  }
+  return { oldDiameter, desiredDiameter };
+}
+
 function normalizeShipAssembly(parts, identity, targetSize = null) {
-  const hullChange = targetSize ? thickenHullForTarget(parts,identity,targetSize) : null;
+  const hullChange = targetSize
+    ? (/submarine/i.test(identity) ? normalizeSubmarineProportions(parts,targetSize) : thickenHullForTarget(parts,identity,targetSize))
+    : null;
   containDecksAndRooms(parts,identity);
   fitTwinHullBridge(parts);
   stackNamedHardware(parts);
@@ -988,6 +1039,9 @@ for (const row of selected) {
   normalizeShipAssembly(repaired.parts,identity);
   if (hullChange && hullChange.desiredHeight>hullChange.oldHeight+0.01) {
     repaired.changes.push(`船身厚度 ${hullChange.oldHeight.toFixed(2)}→${hullChange.desiredHeight.toFixed(2)}（縮放前）`);
+  }
+  if (hullChange && hullChange.desiredDiameter>hullChange.oldDiameter+0.01) {
+    repaired.changes.push(`潛艦耐壓殼直徑 ${hullChange.oldDiameter.toFixed(2)}→${hullChange.desiredDiameter.toFixed(2)}m（縮放前）`);
   }
   repaired.changes.push(`實尺 ${scaleSpec.size.map((n)=>n.toFixed(1)).join('×')}m (${scaleSpec.confidence})`);
   const input = {

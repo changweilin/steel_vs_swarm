@@ -6,7 +6,7 @@
   "style": "industrial_military_submarine",
   "symmetryMode": "symmetric",
   "similarityScore": 90,
-  "similarityReview": "The submarine hull is modeled as a large ellipsoid-based structure with a central sail (conning tower). The support cradle system is represented by yellow box structures on blue wheeled bogies. The overall proportions and the industrial setting are captured accurately.",
+  "similarityReview": "The submarine hull is modeled as a large ellipsoid-based structure with a central sail (conning tower). The yellow transport cradle and blue wheeled bogies visible in the industrial reference image are excluded as external objects. The submarine proportions and attached components are retained.",
   "version": 6,
   "verStr": "v6",
   "source_image": "ship/202512251310033872.webp",
@@ -14,23 +14,23 @@
   "created_at": "2026-08-20T16:09:13.119Z",
   "bounds": {
     "min": [
-      -35.0008,
-      0.0523,
-      -3.2726
+      -35.4321,
+      0,
+      -3.574
     ],
     "max": [
-      35.0008,
-      9.098,
-      3.1738
+      34.5679,
+      7.4883,
+      2.5903
     ],
     "size": [
-      70.002,
-      9.046,
-      6.446
+      70,
+      7.488,
+      6.164
     ],
-    "rMax": 35.153,
-    "triangles": 900,
-    "vertices": 568
+    "rMax": 35.612,
+    "triangles": 384,
+    "vertices": 236
   },
   "spec": {
     "style": "industrial_military_submarine"
@@ -44,7 +44,8 @@
       "長軸維持 +X",
       "貼地位移 0.00m",
       "潛艇改用封閉橢球耐壓殼",
-      "實尺 70.0×9.1×6.5m (class_estimate)"
+      "潛艦耐壓殼直徑 4.45→6.44m（縮放前）",
+      "實尺 70.0×7.2×6.3m (class_estimate)"
     ]
   },
   "realScale": {
@@ -52,8 +53,8 @@
     "className": "submarine",
     "targetSize": [
       70,
-      9.094999999999999,
-      6.465356188156577
+      7.224500000000001,
+      6.3
     ],
     "confidence": "class_estimate",
     "source": "依母照片可見船型採 submarine 保守標準全長 70m。"

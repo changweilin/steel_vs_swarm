@@ -28,6 +28,7 @@
   "polyhedralPrimitivesUsed": [
     "ellipsoid_sphere",
     "wedge",
+    "tapered_box",
     "box",
     "cylinder",
     "torus_ring"

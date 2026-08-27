@@ -25,6 +25,7 @@
   ],
   "polyhedralPrimitivesUsed": [
     "ellipsoid_sphere",
+    "tapered_box",
     "box",
     "torus_ring",
     "cylinder"

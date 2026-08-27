@@ -16,7 +16,7 @@
  * 10. 水面船船殼深度具最低長深比；LNG 船最低為船長 7%。
  *
  * --break-floating / --break-degenerate / --break-open / --break-winding / --break-fit / --break-upper-fit /
- * --break-external /
+ * --break-external / --break-submarine-hull /
  * --break-sheet / --break-sheet-angle / --break-sheet-height / --break-flat 會在記憶體中製造壞例，且必須使對應
  * 斷言轉紅；若挑不到適用零件或沒有攔截到，腳本本身視為失敗。
  */
@@ -33,6 +33,7 @@ const args = new Set(process.argv.slice(2));
 const jsonOutput = args.has('--json');
 const quiet = args.has('--quiet');
 let brokeExternal = false;
+let brokeSubmarineHull = false;
 const versionArg = process.argv.find((value) => value.startsWith('--version='));
 const onlyArg = process.argv.find((value) => value.startsWith('--only='));
 const wantedVersion = versionArg?.split('=')[1] ?? 'all';
@@ -47,7 +48,7 @@ const HULL_LAYER_RE = /(hull|waterline|bottom|base|stripe|bulge)/i;
 const ROOM_RE = /superstructure|bridge|cabin|wheelhouse|island|hangar|sealed_/i;
 const DECK_RE = /deck|platform/i;
 const SHEET_RE = /glass|window|windshield|stripe|marking|landing_(center)?line/i;
-const EXTERNAL_SUBMARINE_OBJECT_RE = /^(?:torpedo_(?:body|nose|tail|fin|motor)|external_(?:torpedo|weapon)|launched_(?:torpedo|missile)|(?:missile|rocket|mine|drone|payload)(?:_|$))/i;
+const EXTERNAL_SUBMARINE_OBJECT_RE = /^(?:torpedo_(?:body|nose|tail|fin|motor)|external_(?:torpedo|weapon)|launched_(?:torpedo|missile)|(?:missile|rocket|mine|drone|payload|cradle_support|bogie_wheel|transport_cradle|shipping_frame|dolly|side_bulge)(?:_|$))/i;
 const WINDING_AUDIT_TYPES = new Set([
   'box', 'tapered_box', 'polygonal_prism', 'frustum_pyramid', 'pyramid',
   'cylinder', 'cone', 'conical_frustum', 'ellipsoid_sphere',
@@ -461,6 +462,13 @@ function validateAssembly(model, metadata) {
           `偵測到非潛艦本體零件「${part.name}」。`, '照片中的發射物、武器或載荷不得併入潛艦自身模型。');
       }
     }
+    const submarineHull = parts.find((part) => /^main_hull$/i.test(part.name));
+    const submarineHullBox = submarineHull ? boxes.get(submarineHull) : null;
+    const minimumDiameterRatio = 0.075;
+    if (submarineHullBox && length > 0 && Math.max(submarineHullBox.size[1], submarineHullBox.size[2]) / length < minimumDiameterRatio) {
+      issue(issues, 'error', 'SLENDER_SUBMARINE_HULL', submarineHull,
+        `主耐壓殼直徑／全長 ${(Math.max(submarineHullBox.size[1], submarineHullBox.size[2]) / length * 100).toFixed(2)}%，低於潛艦下限 ${(minimumDiameterRatio * 100).toFixed(1)}%。`, '依全長重算耐壓殼直徑，並同步收斂艦橋、穩定面與推進器比例。');
+    }
   }
   if (!submarine && !parts.some((part) => TAPER_RE.test(part.name) || part.type === 'hull_polyhedron')) {
     issue(issues, 'error', 'NO_HULL_TAPER', null, '船體沒有可辨識的艏艉收束多面體。', '在主船體兩端接 wedge/frustum；艏端較尖、艉端較平。');
@@ -614,6 +622,15 @@ function injectBreak(entries) {
     brokeExternal = true;
     markers.push({ entryId:entryId(entry), partName:part.name, expectedCode:'EXTERNAL_SUBMARINE_OBJECT' });
   }
+  if (args.has('--break-submarine-hull')) {
+    const entry = entries.find((candidate) => /submarine/i.test(`${candidate.metadata.key} ${candidate.model.style}`));
+    const hull = entry?.model.parts.find((part) => /^main_hull$/i.test(part.name) && Array.isArray(part.radii));
+    if (!entry || !hull) throw new Error('--break-submarine-hull 找不到潛艦主耐壓殼。');
+    hull.radii[1] = 0.1;
+    hull.radii[2] = 0.1;
+    brokeSubmarineHull = true;
+    markers.push({ entryId:entryId(entry), partName:hull.name, expectedCode:'SLENDER_SUBMARINE_HULL' });
+  }
   if (args.has('--break-winding')) {
     let selected = null;
     for (const entry of entries) {
@@ -704,6 +721,7 @@ function injectBreak(entries) {
 const entries = loadEntries();
 const breakMarkers = injectBreak(entries);
 if (args.has('--break-external') && !brokeExternal) throw new Error('--break-external 未找到可注入潛艦外部物件的模型。');
+if (args.has('--break-submarine-hull') && !brokeSubmarineHull) throw new Error('--break-submarine-hull 未找到可破壞潛艦主耐壓殼的模型。');
 const results = entries.map((entry) => ({
   id: entryId(entry),
   version: entry.metadata.verStr ?? 'unknown',

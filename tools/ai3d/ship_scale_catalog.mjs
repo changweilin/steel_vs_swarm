@@ -116,7 +116,7 @@ const LENGTH_BY_STEM = Object.freeze({
 
 const PROFILES = [
   { test:/aircraft_carrier/i, className:'aircraft_carrier', length:[280,338], fallback:310, beam:[0.19,0.25], height:[0.10,0.15] },
-  { test:/submarine/i, className:'submarine', length:[35,141], fallback:85, beam:[0.075,0.12], height:[0.08,0.13] },
+  { test:/submarine/i, className:'submarine', length:[35,141], fallback:85, beam:[0.09,0.12], height:[0.10,0.15] },
   { test:/cruise/i, className:'cruise_ship', length:[120,350], fallback:250, beam:[0.11,0.17], height:[0.14,0.22] },
   { test:/LNG|methan/i, className:'lng_carrier', length:[150,300], fallback:275, beam:[0.15,0.19], height:[0.12,0.19] },
   { test:/bulk/i, className:'bulk_carrier', length:[140,305], fallback:230, beam:[0.14,0.18], height:[0.10,0.17] },
