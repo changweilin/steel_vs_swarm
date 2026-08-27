@@ -3,38 +3,163 @@
   "key": "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_b322f82c_v6",
   "family": "building",
   "subpart": "bld_barn",
-  "style": "architectural",
-  "symmetryMode": "asymmetric",
-  "similarityScore": 92,
-  "similarityReview": "The 3D reconstruction successfully captures the classic red and white rural barn structure with accurate roof slopes and a distinct loft window. Proportions align well with the reference image.",
+  "style": "isolated red gable barn",
+  "symmetryMode": "symmetric",
+  "similarityScore": 80,
+  "similarityReview": "標準山牆、白側牆、閣樓窗與完整背面符合來源。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg",
-  "source_full_path": "C:\\Users\\user\\.gemini\\antigravity\\worktrees\\steel_vs_swarm\\llm_img3d_db_v6\\out\\targets\\building\\bld_barn\\ov_910e1b06-a62f-474d-b156-f3845aa1fd57~0.png",
-  "created_at": "2026-08-20T17:24:33.414Z",
+  "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\bld_barn\\ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg",
+  "yolo26": {
+    "targetId": "ov_910e1b06-a62f-474d-b156-f3845aa1fd57~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1024,
+      768
+    ],
+    "width": 1024,
+    "height": 768,
+    "aspectRatio": 1.3333,
+    "targetFile": "out/targets/building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57~0.png",
+    "maskFile": "out/yolo_masks/building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57~0.png",
+    "depth": {
+      "minM": 2.38703,
+      "maxM": 31.71378,
+      "meanM": 17.19816,
+      "p05M": 2.7946,
+      "p25M": 4.43672,
+      "medianM": 12.80396,
+      "p75M": 29.00128,
+      "p95M": 29.89115
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.0789
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.018
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.01316
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.0912
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 29.00124
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 28.85879
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 28.70303
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 28.59023
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 28.27521
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 11.54307
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 6.34023
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 4.46028
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 3.66991
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 3.24286
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 3.03503
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 2.89528
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6.png",
   "bounds": {
     "min": [
-      -4.3359,
+      -4.51,
       0,
-      -5.2
+      -3.4
     ],
     "max": [
-      4.3359,
-      6.5781,
-      5.2
+      4.51,
+      5.75,
+      3.4
     ],
     "size": [
-      8.672,
-      6.578,
-      10.4
+      9.02,
+      5.75,
+      6.8
     ],
-    "rMax": 6.771,
-    "triangles": 76,
-    "vertices": 52
+    "rMax": 5.648,
+    "triangles": 148,
+    "vertices": 100
   },
-  "spec": {
-    "style": "architectural"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "雙面山牆、門、閣樓窗與側窗完整化，屋簷改為成對斜面。",
+  "created_at": "2026-08-27T10:45:22.823Z"
 }

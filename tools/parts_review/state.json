@@ -45,34 +45,9 @@
       "status": "ok",
       "at": "2026-08-14T17:16:44.097Z"
     },
-    "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_91597873_v6": {
-      "status": "regen",
-      "note": "沒讀到窗戶,物件分離",
-      "at": "2026-08-20T14:31:31.860Z"
-    },
     "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6": {
       "status": "ok",
       "at": "2026-08-20T14:31:50.011Z"
-    },
-    "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_8d0765ca_v6": {
-      "status": "regen",
-      "note": "修復閃爍問題,一片屋簷斜錯方向",
-      "at": "2026-08-20T14:33:56.612Z"
-    },
-    "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_128ab538_v6": {
-      "status": "regen",
-      "note": "修復閃爍問題",
-      "at": "2026-08-20T14:34:52.485Z"
-    },
-    "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_dff95324_v6": {
-      "status": "regen",
-      "note": "修復閃爍問題",
-      "at": "2026-08-20T14:34:55.582Z"
-    },
-    "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_7167e8b8_v6": {
-      "status": "regen",
-      "note": "修復閃爍問題",
-      "at": "2026-08-20T14:35:01.337Z"
     },
     "building/bld_church_ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6_3c6ed731_v6": {
       "status": "regen",
@@ -108,21 +83,6 @@
       "status": "ok",
       "at": "2026-08-20T14:36:55.861Z"
     },
-    "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_df66f67d_v6": {
-      "status": "regen",
-      "note": "修復閃爍問題",
-      "at": "2026-08-20T14:37:03.776Z"
-    },
-    "building/mass_160991898108355807.jpg!900x.water3_a026bde4_v6": {
-      "status": "regen",
-      "note": "背面空白鏡像補特徵",
-      "at": "2026-08-20T14:37:34.651Z"
-    },
-    "building/mass_162562917953_c02b017f_v6": {
-      "status": "regen",
-      "note": "背面空白鏡像補特徵",
-      "at": "2026-08-20T14:38:10.267Z"
-    },
     "building/mass_169154402859999904.jpg!900x.water3_b92410c7_v6": {
       "status": "ok",
       "at": "2026-08-20T14:38:23.380Z"
@@ -130,35 +90,6 @@
     "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6": {
       "status": "ok",
       "at": "2026-08-20T14:38:27.839Z"
-    },
-    "building/mass_171860464927014009.jpg!900x.water3_59798672_v6": {
-      "status": "regen",
-      "note": "背面空白鏡像補特徵",
-      "at": "2026-08-20T14:38:37.558Z"
-    },
-    "building/mass_173407398147386206.jpg!750x_93c18dba_v6": {
-      "status": "regen",
-      "at": "2026-08-20T14:38:43.074Z"
-    },
-    "building/mass_174893026464574001.jpg!900x.water3_792d4cc4_v6": {
-      "status": "regen",
-      "note": "背面空白鏡像補特徵",
-      "at": "2026-08-20T14:38:56.768Z"
-    },
-    "building/mass_175437636541282008.jpg!900x.water3_679df177_v6": {
-      "status": "regen",
-      "note": "背面空白鏡像補特徵",
-      "at": "2026-08-20T14:39:05.749Z"
-    },
-    "building/mass_176784033021147409.jpg!900x.water3_4bc6c04f_v6": {
-      "status": "regen",
-      "note": "背面空白鏡像補特徵",
-      "at": "2026-08-20T14:39:12.040Z"
-    },
-    "building/mass_178670843535945_P35065317_cecdb557_v6": {
-      "status": "regen",
-      "note": "背面空白鏡像補特徵",
-      "at": "2026-08-20T14:39:18.648Z"
     },
     "building/mass_images (15)_f6c4e057_v6": {
       "status": "ok",

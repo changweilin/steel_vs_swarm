@@ -1,30 +1,186 @@
 {
   "id": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06",
   "sourceImage": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06",
-  "style": "building/bld_adobe",
-  "symmetryMode": "asymmetric",
+  "style": "weathered adobe ranch house",
+  "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 7231268,
-    "facadeHex": 11181440,
-    "baseHex": 5921370,
-    "accentHex": 3815994,
-    "darkHex": 2500134,
-    "brightHex": 13158600,
-    "glassHex": 2176337
+    "roofHex": 5652793,
+    "facadeHex": 10190944,
+    "baseHex": 6508862,
+    "accentHex": 3089437,
+    "darkHex": 3024415,
+    "brightHex": 14996923,
+    "glassHex": 2045768
   },
-  "totalParts": 8,
+  "totalParts": 24,
   "partNames": [
-    "main_base",
-    "adobe_facade_body",
-    "left_gable_roof",
-    "front_door",
-    "front_window_left",
-    "front_window_right",
-    "wall_ladder_left",
-    "side_pillar_detail"
+    "left_stone_foundation",
+    "left_stone_house",
+    "right_adobe_foundation",
+    "right_adobe_house",
+    "left_stone_roof_left",
+    "left_stone_roof_right",
+    "right_adobe_roof_left",
+    "right_adobe_roof_right",
+    "right_front_door",
+    "left_front_window_glass",
+    "left_front_window_side_l",
+    "left_front_window_side_r",
+    "left_front_window_head",
+    "right_front_window_glass",
+    "right_front_window_side_l",
+    "right_front_window_side_r",
+    "right_front_window_head",
+    "left_side_window",
+    "right_side_window",
+    "left_rear_window",
+    "right_rear_window",
+    "right_rear_chimney",
+    "left_entry_step",
+    "right_entry_step"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
-    "wedge"
-  ]
+    "wedge",
+    "cylinder"
+  ],
+  "schemaVersion": 2,
+  "yolo26": {
+    "targetId": "ov_84cbe77f-b99e-4b22-852b-336e128a4d06~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1024,
+      598
+    ],
+    "width": 1024,
+    "height": 598,
+    "aspectRatio": 1.7124,
+    "targetFile": "out/targets/building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06~0.png",
+    "maskFile": "out/yolo_masks/building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06~0.png",
+    "depth": {
+      "minM": 0.85095,
+      "maxM": 0.96104,
+      "meanM": 0.88605,
+      "p05M": 0.86016,
+      "p25M": 0.87111,
+      "medianM": 0.88102,
+      "p75M": 0.89559,
+      "p95M": 0.93486
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.94202
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.92077
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.90324
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.89614
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.89162
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.88839
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.8861
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.88447
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.88548
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.88306
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.88081
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.87646
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.87242
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.86984
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.86447
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 0.85892
+      }
+    ]
+  },
+  "evidence": {
+    "featureFile": "out/yolo_features/building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.json",
+    "maskFile": "out/yolo_masks/building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06~0.png",
+    "depthFile": "out/yolo_depth/building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.npy"
+  },
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 76,
+    "critique": "錯位雙量體、獨立屋脊與後置煙囪符合低矮土石屋輪廓。",
+    "verdict": "pass",
+    "corrections": [],
+    "reviewer": "independent_parent_multimodal"
+  },
+  "reconstructionNote": "修正雙側屋簷斜向並讓門窗離開牆面，補齊背面。"
 }

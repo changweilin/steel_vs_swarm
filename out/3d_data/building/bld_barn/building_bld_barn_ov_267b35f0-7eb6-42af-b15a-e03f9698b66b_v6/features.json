@@ -1,38 +1,196 @@
 {
   "id": "building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b",
   "sourceImage": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b",
-  "style": "building",
-  "symmetryMode": "asymmetric",
+  "style": "red dual-gabled farm barn with annex",
+  "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 6579300,
-    "facadeHex": 11801655,
-    "baseHex": 10066329,
-    "accentHex": 16777215,
-    "darkHex": 2039583,
-    "brightHex": 14540253,
-    "glassHex": 3368652
+    "roofHex": 3424340,
+    "facadeHex": 10366510,
+    "baseHex": 9138002,
+    "accentHex": 15984591,
+    "darkHex": 2826272,
+    "brightHex": 16777215,
+    "glassHex": 1651787
   },
-  "totalParts": 16,
+  "totalParts": 35,
   "partNames": [
-    "main_barn_base",
-    "stone_foundation_main",
-    "main_barn_roof",
-    "secondary_barn_base",
-    "stone_foundation_sec",
-    "secondary_barn_roof",
-    "annex_base",
-    "annex_roof",
-    "main_door_large",
-    "main_door_trim",
-    "side_door_red",
-    "window_1",
-    "window_2",
-    "window_3",
-    "window_4",
-    "upper_gable_window"
+    "stone_foundation",
+    "main_barn_body",
+    "rear_barn_body",
+    "annex_body",
+    "main_gambrel_lower_left",
+    "main_gambrel_lower_right",
+    "main_gambrel_upper_left",
+    "main_gambrel_upper_right",
+    "rear_cross_wing_roof_lower_left",
+    "rear_cross_wing_roof_lower_right",
+    "rear_cross_wing_roof_upper_left",
+    "rear_cross_wing_roof_upper_right",
+    "annex_roof_left",
+    "annex_roof_right",
+    "large_front_door",
+    "small_front_door",
+    "front_window_l_glass",
+    "front_window_l_side_l",
+    "front_window_l_side_r",
+    "front_window_l_head",
+    "front_window_r_glass",
+    "front_window_r_side_l",
+    "front_window_r_side_r",
+    "front_window_r_head",
+    "rear_door",
+    "loft_window_front",
+    "loft_window_rear",
+    "side_window_-1_0",
+    "side_window_-1_1",
+    "side_window_1_0",
+    "side_window_1_1",
+    "front_siding_beam_1.35",
+    "front_siding_beam_2.55",
+    "front_siding_beam_3.7",
+    "front_siding_beam_4.65"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
     "wedge"
-  ]
+  ],
+  "schemaVersion": 2,
+  "yolo26": {
+    "targetId": "ov_267b35f0-7eb6-42af-b15a-e03f9698b66b~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      1024,
+      769
+    ],
+    "width": 1024,
+    "height": 769,
+    "aspectRatio": 1.3316,
+    "targetFile": "out/targets/building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b~0.png",
+    "maskFile": "out/yolo_masks/building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b~0.png",
+    "depth": {
+      "minM": 5.0409,
+      "maxM": 43.38118,
+      "meanM": 22.04028,
+      "p05M": 6.02557,
+      "p25M": 7.84537,
+      "medianM": 16.43181,
+      "p75M": 40.42544,
+      "p95M": 40.98191
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.59144
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.81004
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.78016
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.90734
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 40.73825
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 30.65657
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 25.11416
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 23.09855
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 18.0014
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 13.63812
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 11.47662
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 9.01125
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 7.65677
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 6.90766
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 6.34754
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 5.89607
+      }
+    ]
+  },
+  "evidence": {
+    "featureFile": "out/yolo_features/building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.json",
+    "maskFile": "out/yolo_masks/building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b~0.png",
+    "depthFile": "out/yolo_depth/building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.npy"
+  },
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 76,
+    "critique": "主 gambrel、cross-wing 與低附屋形成來源的三階剪影。",
+    "verdict": "pass",
+    "corrections": [],
+    "reviewer": "independent_parent_multimodal"
+  },
+  "reconstructionNote": "雙側屋頂與後門窗鏡像，補足附屋與石基，消除閃爍。"
 }

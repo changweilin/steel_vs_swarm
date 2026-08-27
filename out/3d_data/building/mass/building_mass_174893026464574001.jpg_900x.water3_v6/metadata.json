@@ -3,38 +3,163 @@
   "key": "building/mass_174893026464574001.jpg!900x.water3_9aff9512_v6",
   "family": "building",
   "subpart": "mass",
-  "style": "Modern Residential Building",
-  "symmetryMode": "asymmetric",
-  "similarityScore": 92,
-  "similarityReview": "The building's complex L-shaped massing, grid-based facade, and recessed balcony sections are accurately captured using modular box components. The color palette follows the 7-Zone system, and the structural integrity is maintained by ensuring all walls and roof sections are closed volumes. The glass windows and balcony details are slightly offset to prevent Z-fighting.",
+  "style": "red white U-shaped apartment with recessed balcony court",
+  "symmetryMode": "symmetric",
+  "similarityScore": 82,
+  "similarityReview": "雙翼、中央凹槽與 roof penthouse 呈現 U 型紅白公寓。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/174893026464574001.jpg!900x.water3.webp",
   "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\174893026464574001.jpg!900x.water3.webp",
-  "created_at": "2026-08-20T17:04:13.118Z",
+  "yolo26": {
+    "targetId": "174893026464574001.jpg!900x.water3~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      900,
+      675
+    ],
+    "width": 900,
+    "height": 675,
+    "aspectRatio": 1.3333,
+    "targetFile": "out/targets/building/mass/174893026464574001.jpg!900x.water3~0.png",
+    "maskFile": "out/yolo_masks/building/mass/174893026464574001.jpg!900x.water3~0.png",
+    "depth": {
+      "minM": 10.53309,
+      "maxM": 42.7806,
+      "meanM": 26.22164,
+      "p05M": 12.84354,
+      "p25M": 19.01549,
+      "medianM": 20.72639,
+      "p75M": 40.24042,
+      "p95M": 41.4861
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 41.39116
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 41.04794
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 40.61394
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 22.61004
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 21.27701
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 20.79733
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 20.70871
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 20.42105
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 20.10442
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 19.88443
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 19.5139
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 18.94747
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 18.41008
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 17.62828
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 15.99111
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 12.31643
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_mass_174893026464574001.jpg_900x.water3_v6.png",
   "bounds": {
     "min": [
-      -13,
+      -8.5,
       0,
-      -6
+      -5.9
     ],
     "max": [
-      16,
-      34,
-      22
+      8.5,
+      21.32,
+      5.9
     ],
     "size": [
-      29,
-      34,
-      28
+      17,
+      21.32,
+      11.8
     ],
-    "rMax": 27.203,
-    "triangles": 108,
-    "vertices": 72
+    "rMax": 10.347,
+    "triangles": 1800,
+    "vertices": 1200
   },
-  "spec": {
-    "style": "Modern Residential Building"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "雙翼包住後退中央核心，中央陽台井與後方 penthouse 封閉完整。",
+  "created_at": "2026-08-27T10:45:23.710Z"
 }

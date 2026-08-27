@@ -1,38 +1,165 @@
 {
   "id": "building_mass_178670843535945_P35065317_v6",
-  "key": "building/mass_178670843535945_P35065317_cecdb557_v6",
+  "key": "building/mass_178670843535945_P35065317_2ea21f02_v6",
   "family": "building",
   "subpart": "mass",
-  "style": "modern_high_rise_building",
+  "style": "paired residential towers with unequal heights and dense balconies",
   "symmetryMode": "asymmetric",
+  "similarityScore": 78,
+  "similarityReview": "不等高雙塔、連接 podium 與密集陽台形成來源主輪廓。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/178670843535945_P35065317.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\178670843535945_P35065317.jpg",
-  "created_at": "2026-08-20T15:14:12.227Z",
+  "yolo26": {
+    "targetId": "178670843535945_P35065317~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      948,
+      1212
+    ],
+    "width": 948,
+    "height": 1212,
+    "aspectRatio": 0.7822,
+    "targetFile": "out/targets/building/mass/178670843535945_P35065317~0.png",
+    "maskFile": "out/yolo_masks/building/mass/178670843535945_P35065317~0.png",
+    "depth": {
+      "minM": 10.57663,
+      "maxM": 52.95321,
+      "meanM": 36.63755,
+      "p05M": 14.12125,
+      "p25M": 29.51342,
+      "medianM": 36.50692,
+      "p75M": 48.16504,
+      "p95M": 50.70257
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 37.33444
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 47.46895
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 47.80551
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 48.33999
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 46.71454
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 45.35924
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 44.97807
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 36.38816
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 36.33158
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 35.87856
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 35.15787
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 33.86998
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 32.32743
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 30.18998
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 17.68373
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0005,
+        "depthMedianM": 14.44197
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_mass_178670843535945_P35065317_v6.png",
   "bounds": {
     "min": [
-      -20,
+      -9.5,
       0,
-      -11.5
+      -6.8
     ],
     "max": [
-      8.5,
-      41,
-      9.5
+      9.5,
+      33.05,
+      6.8
     ],
     "size": [
-      28.5,
-      41,
-      21
+      19,
+      33.05,
+      13.6
     ],
-    "rMax": 23.071,
-    "triangles": 48,
-    "vertices": 32
+    "rMax": 11.683,
+    "triangles": 2040,
+    "vertices": 1360
   },
-  "spec": {
-    "style": "modern_high_rise_building"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "明確拆成不等高主塔/次塔與共享 podium，各自具 360 度窗列和長陽台。",
+  "created_at": "2026-08-27T10:45:24.094Z"
 }

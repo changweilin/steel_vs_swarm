@@ -1,31 +1,245 @@
 {
-  "id": "building_mass_175437636541282008.jpg!900x.water3",
-  "sourceImage": "building/mass/175437636541282008.jpg!900x.water3",
-  "style": "modern_residential_highrise",
+  "id": "building_mass_175437636541282008.jpg_900x.water3",
+  "sourceImage": "building/mass/175437636541282008.jpg_900x.water3",
+  "style": "slender dark tower with white columns, wood fins and pergola crown",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
-    "facadeHex": 4210752,
-    "baseHex": 2105376,
-    "accentHex": 10053120,
-    "darkHex": 3158064,
-    "brightHex": 15790320,
-    "glassHex": 8438271
+    "roofHex": 2503240,
+    "facadeHex": 9278107,
+    "baseHex": 3422531,
+    "accentHex": 12089415,
+    "darkHex": 2106675,
+    "brightHex": 16119802,
+    "glassHex": 1455699
   },
-  "totalParts": 10,
+  "totalParts": 85,
   "partNames": [
-    "main_structure",
-    "base_podium",
-    "roof_frame",
-    "balcony_stack_left",
-    "window_unit_1",
-    "window_unit_2",
-    "vertical_accent_strip",
-    "white_corner_column_left",
-    "white_corner_column_right",
-    "ground_floor_glass"
+    "dark_podium",
+    "slender_dark_tower_body",
+    "slender_dark_tower_band_0",
+    "slender_dark_tower_front_window_0_0",
+    "slender_dark_tower_back_window_0_0",
+    "slender_dark_tower_front_window_0_1",
+    "slender_dark_tower_back_window_0_1",
+    "slender_dark_tower_front_window_0_2",
+    "slender_dark_tower_back_window_0_2",
+    "slender_dark_tower_balcony_0_slab",
+    "slender_dark_tower_balcony_0_rail_front",
+    "slender_dark_tower_balcony_0_rail_back",
+    "slender_dark_tower_balcony_0_post_l",
+    "slender_dark_tower_balcony_0_post_r",
+    "slender_dark_tower_band_1",
+    "slender_dark_tower_front_window_1_0",
+    "slender_dark_tower_back_window_1_0",
+    "slender_dark_tower_front_window_1_1",
+    "slender_dark_tower_back_window_1_1",
+    "slender_dark_tower_front_window_1_2",
+    "slender_dark_tower_back_window_1_2",
+    "slender_dark_tower_band_2",
+    "slender_dark_tower_front_window_2_0",
+    "slender_dark_tower_back_window_2_0",
+    "slender_dark_tower_front_window_2_1",
+    "slender_dark_tower_back_window_2_1",
+    "slender_dark_tower_front_window_2_2",
+    "slender_dark_tower_back_window_2_2",
+    "slender_dark_tower_balcony_2_slab",
+    "slender_dark_tower_balcony_2_rail_front",
+    "slender_dark_tower_balcony_2_rail_back",
+    "slender_dark_tower_balcony_2_post_l",
+    "slender_dark_tower_balcony_2_post_r",
+    "slender_dark_tower_band_3",
+    "slender_dark_tower_front_window_3_0",
+    "slender_dark_tower_back_window_3_0",
+    "slender_dark_tower_front_window_3_1",
+    "slender_dark_tower_back_window_3_1",
+    "slender_dark_tower_front_window_3_2",
+    "slender_dark_tower_back_window_3_2",
+    "slender_dark_tower_band_4",
+    "slender_dark_tower_front_window_4_0",
+    "slender_dark_tower_back_window_4_0",
+    "slender_dark_tower_front_window_4_1",
+    "slender_dark_tower_back_window_4_1",
+    "slender_dark_tower_front_window_4_2",
+    "slender_dark_tower_back_window_4_2",
+    "slender_dark_tower_balcony_4_slab",
+    "slender_dark_tower_balcony_4_rail_front",
+    "slender_dark_tower_balcony_4_rail_back",
+    "slender_dark_tower_balcony_4_post_l",
+    "slender_dark_tower_balcony_4_post_r",
+    "slender_dark_tower_band_5",
+    "slender_dark_tower_front_window_5_0",
+    "slender_dark_tower_back_window_5_0",
+    "slender_dark_tower_front_window_5_1",
+    "slender_dark_tower_back_window_5_1",
+    "slender_dark_tower_front_window_5_2",
+    "slender_dark_tower_back_window_5_2",
+    "slender_dark_tower_band_6",
+    "slender_dark_tower_front_window_6_0",
+    "slender_dark_tower_back_window_6_0",
+    "slender_dark_tower_front_window_6_1",
+    "slender_dark_tower_back_window_6_1",
+    "slender_dark_tower_front_window_6_2",
+    "slender_dark_tower_back_window_6_2",
+    "slender_dark_tower_balcony_6_slab",
+    "slender_dark_tower_balcony_6_rail_front",
+    "slender_dark_tower_balcony_6_rail_back",
+    "slender_dark_tower_balcony_6_post_l",
+    "slender_dark_tower_balcony_6_post_r",
+    "slender_dark_tower_band_7",
+    "slender_dark_tower_front_window_7_0",
+    "slender_dark_tower_back_window_7_0",
+    "slender_dark_tower_front_window_7_1",
+    "slender_dark_tower_back_window_7_1",
+    "slender_dark_tower_front_window_7_2",
+    "slender_dark_tower_back_window_7_2",
+    "full_height_white_pillar_-6.15",
+    "full_height_white_pillar_6.15",
+    "wood_slatted_bay_-3.8",
+    "wood_slatted_bay_3.8",
+    "left_pergola_post",
+    "right_pergola_post",
+    "pergola_crown"
   ],
   "polyhedralPrimitivesUsed": [
     "box"
-  ]
+  ],
+  "schemaVersion": 2,
+  "yolo26": {
+    "targetId": "175437636541282008.jpg!900x.water3~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      900,
+      675
+    ],
+    "width": 900,
+    "height": 675,
+    "aspectRatio": 1.3333,
+    "targetFile": "out/targets/building/mass/175437636541282008.jpg!900x.water3~0.png",
+    "maskFile": "out/yolo_masks/building/mass/175437636541282008.jpg!900x.water3~0.png",
+    "depth": {
+      "minM": 11.96043,
+      "maxM": 60.37531,
+      "meanM": 37.85938,
+      "p05M": 17.43271,
+      "p25M": 27.20388,
+      "medianM": 33.74878,
+      "p75M": 52.3448,
+      "p95M": 53.85762
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 52.71811
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 52.62013
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 52.97174
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 52.73599
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 51.74104
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 51.45486
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 48.56963
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 47.08044
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 36.76305
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 34.04056
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 32.60047
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 31.06696
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 28.86672
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 25.52963
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 21.57902
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 17.24903
+      }
+    ]
+  },
+  "evidence": {
+    "featureFile": "out/yolo_features/building/mass/175437636541282008.jpg!900x.water3.json",
+    "maskFile": "out/yolo_masks/building/mass/175437636541282008.jpg!900x.water3~0.png",
+    "depthFile": "out/yolo_depth/building/mass/175437636541282008.jpg!900x.water3.npy"
+  },
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 80,
+    "critique": "暗色塔身、白色縱柱、木色直條與頂部 pergola 完整。",
+    "verdict": "pass",
+    "corrections": [],
+    "reviewer": "independent_parent_multimodal"
+  },
+  "reconstructionNote": "暗色細塔保留白色全高角柱、木色直條與左側 pergola crown。"
 }

@@ -1,0 +1,566 @@
+{
+  "model": "gpt-5.6-luna",
+  "generatedAt": "2026-08-27T10:45:24.125Z",
+  "candidates": [
+    {
+      "targetId": "building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6",
+      "key": "building/balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_22aa2c4c_v6",
+      "family": "building",
+      "subpart": "balcony",
+      "stem": "ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0",
+      "style": "white stepped institutional balcony mass",
+      "symmetryMode": "symmetric",
+      "image": "building/balcony/ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0.jpg",
+      "outputDir": "out/3d_data/building/balcony/building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6",
+      "preview": "out/review_previews/building_balcony_ov_59f83c98-bb1a-43fd-8e7f-acca47fc9ec0_v6.png",
+      "bounds": {
+        "min": [
+          -9.9,
+          0,
+          -5.7
+        ],
+        "max": [
+          9.9,
+          17.25,
+          4.89
+        ],
+        "size": [
+          19.8,
+          17.25,
+          10.59
+        ],
+        "rMax": 11.424,
+        "triangles": 516,
+        "vertices": 344
+      },
+      "parts": 43,
+      "review": {
+        "similarityScore": 78,
+        "critique": "寬幅退台、多翼量體與長窗帶已建立；三視圖均為封閉實體。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6",
+      "key": "building/bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_7505851c_v6",
+      "family": "building",
+      "subpart": "bld_adobe",
+      "stem": "ov_84cbe77f-b99e-4b22-852b-336e128a4d06",
+      "style": "weathered adobe ranch house",
+      "symmetryMode": "symmetric",
+      "image": "building/bld_adobe/ov_84cbe77f-b99e-4b22-852b-336e128a4d06.jpg",
+      "outputDir": "out/3d_data/building/bld_adobe/building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6",
+      "preview": "out/review_previews/building_bld_adobe_ov_84cbe77f-b99e-4b22-852b-336e128a4d06_v6.png",
+      "bounds": {
+        "min": [
+          -6.705,
+          0,
+          -3.95
+        ],
+        "max": [
+          7.405,
+          7.45,
+          4.31
+        ],
+        "size": [
+          14.11,
+          7.45,
+          8.26
+        ],
+        "rMax": 8.568,
+        "triangles": 292,
+        "vertices": 194
+      },
+      "parts": 24,
+      "review": {
+        "similarityScore": 76,
+        "critique": "錯位雙量體、獨立屋脊與後置煙囪符合低矮土石屋輪廓。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6",
+      "key": "building/bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_725f9c8f_v6",
+      "family": "building",
+      "subpart": "bld_barn",
+      "stem": "ov_267b35f0-7eb6-42af-b15a-e03f9698b66b",
+      "style": "red dual-gabled farm barn with annex",
+      "symmetryMode": "symmetric",
+      "image": "building/bld_barn/ov_267b35f0-7eb6-42af-b15a-e03f9698b66b.jpg",
+      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6",
+      "preview": "out/review_previews/building_bld_barn_ov_267b35f0-7eb6-42af-b15a-e03f9698b66b_v6.png",
+      "bounds": {
+        "min": [
+          -8.1,
+          0,
+          -3.35
+        ],
+        "max": [
+          6.95,
+          6.39,
+          3.35
+        ],
+        "size": [
+          15.05,
+          6.39,
+          6.7
+        ],
+        "rMax": 8.765,
+        "triangles": 380,
+        "vertices": 260
+      },
+      "parts": 35,
+      "review": {
+        "similarityScore": 76,
+        "critique": "主 gambrel、cross-wing 與低附屋形成來源的三階剪影。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6",
+      "key": "building/bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_b322f82c_v6",
+      "family": "building",
+      "subpart": "bld_barn",
+      "stem": "ov_910e1b06-a62f-474d-b156-f3845aa1fd57",
+      "style": "isolated red gable barn",
+      "symmetryMode": "symmetric",
+      "image": "building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg",
+      "outputDir": "out/3d_data/building/bld_barn/building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6",
+      "preview": "out/review_previews/building_bld_barn_ov_910e1b06-a62f-474d-b156-f3845aa1fd57_v6.png",
+      "bounds": {
+        "min": [
+          -4.51,
+          0,
+          -3.4
+        ],
+        "max": [
+          4.51,
+          5.75,
+          3.4
+        ],
+        "size": [
+          9.02,
+          5.75,
+          6.8
+        ],
+        "rMax": 5.648,
+        "triangles": 148,
+        "vertices": 100
+      },
+      "parts": 13,
+      "review": {
+        "similarityScore": 80,
+        "critique": "標準山牆、白側牆、閣樓窗與完整背面符合來源。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6",
+      "key": "building/bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_a52d3ee5_v6",
+      "family": "building",
+      "subpart": "bld_chalet",
+      "stem": "ov_35100e42-2d06-4d2f-b187-33aea876309b",
+      "style": "alpine timber chalet with flower balcony",
+      "symmetryMode": "symmetric",
+      "image": "building/bld_chalet/ov_35100e42-2d06-4d2f-b187-33aea876309b.jpg",
+      "outputDir": "out/3d_data/building/bld_chalet/building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6",
+      "preview": "out/review_previews/building_bld_chalet_ov_35100e42-2d06-4d2f-b187-33aea876309b_v6.png",
+      "bounds": {
+        "min": [
+          -7.605,
+          0,
+          -4
+        ],
+        "max": [
+          7.605,
+          9,
+          4.64
+        ],
+        "size": [
+          15.21,
+          9,
+          8.64
+        ],
+        "rMax": 8.909,
+        "triangles": 564,
+        "vertices": 378
+      },
+      "parts": 48,
+      "review": {
+        "similarityScore": 75,
+        "critique": "主坡、中央 dormer、低翼與接合陽台已形成木屋辨識輪廓。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6",
+      "key": "building/mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_312598c2_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818",
+      "style": "suburban gabled family house",
+      "symmetryMode": "symmetric",
+      "image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
+      "outputDir": "out/3d_data/building/mass/building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6",
+      "preview": "out/review_previews/building_mass_1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818_v6.png",
+      "bounds": {
+        "min": [
+          -8.16,
+          0,
+          -8.4
+        ],
+        "max": [
+          8.16,
+          8.6,
+          6.35
+        ],
+        "size": [
+          16.32,
+          8.6,
+          14.75
+        ],
+        "rMax": 11.711,
+        "triangles": 520,
+        "vertices": 352
+      },
+      "parts": 46,
+      "review": {
+        "similarityScore": 76,
+        "critique": "二樓、雙 dormer、多屋脊與橫向車庫已補齊。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_160991898108355807.jpg_900x.water3_v6",
+      "key": "building/mass_160991898108355807.jpg!900x.water3_9077e646_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "160991898108355807.jpg!900x.water3",
+      "style": "asymmetric stepped urban apartment with deep balconies",
+      "symmetryMode": "asymmetric",
+      "image": "building/160991898108355807.jpg!900x.water3.jpg",
+      "outputDir": "out/3d_data/building/mass/building_mass_160991898108355807.jpg_900x.water3_v6",
+      "preview": "out/review_previews/building_mass_160991898108355807.jpg_900x.water3_v6.png",
+      "bounds": {
+        "min": [
+          -7.25,
+          0,
+          -5.3
+        ],
+        "max": [
+          7.25,
+          23.12,
+          5.555
+        ],
+        "size": [
+          14.5,
+          23.12,
+          10.855
+        ],
+        "rMax": 9.133,
+        "triangles": 2052,
+        "vertices": 1368
+      },
+      "parts": 171,
+      "review": {
+        "similarityScore": 82,
+        "critique": "左高塔、右退台塔與低翼構成不對稱深度，背面完整。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_162562917953_v6",
+      "key": "building/mass_162562917953_7f9ba979_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "162562917953",
+      "style": "narrow four-storey house with offset terraces and pergola",
+      "symmetryMode": "asymmetric",
+      "image": "building/162562917953.jpg",
+      "outputDir": "out/3d_data/building/mass/building_mass_162562917953_v6",
+      "preview": "out/review_previews/building_mass_162562917953_v6.png",
+      "bounds": {
+        "min": [
+          -3.5,
+          0,
+          -3.65
+        ],
+        "max": [
+          3.5,
+          14.6,
+          4.075
+        ],
+        "size": [
+          7,
+          14.6,
+          7.725
+        ],
+        "rMax": 5.372,
+        "triangles": 648,
+        "vertices": 432
+      },
+      "parts": 54,
+      "review": {
+        "similarityScore": 80,
+        "critique": "交錯懸挑陽台、底層車庫與屋頂 pergola 均可辨識。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_171860464927014009.jpg_900x.water3_v6",
+      "key": "building/mass_171860464927014009.jpg!900x.water3_812d2226_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "171860464927014009.jpg!900x.water3",
+      "style": "wide apartment tower with full white frame and central balcony stack",
+      "symmetryMode": "symmetric",
+      "image": "building/171860464927014009.jpg!900x.water3.jpg",
+      "outputDir": "out/3d_data/building/mass/building_mass_171860464927014009.jpg_900x.water3_v6",
+      "preview": "out/review_previews/building_mass_171860464927014009.jpg_900x.water3_v6.png",
+      "bounds": {
+        "min": [
+          -7.5,
+          0,
+          -5.5
+        ],
+        "max": [
+          7.5,
+          23.38,
+          5.65
+        ],
+        "size": [
+          15,
+          23.38,
+          11.15
+        ],
+        "rMax": 9.39,
+        "triangles": 1632,
+        "vertices": 1088
+      },
+      "parts": 136,
+      "review": {
+        "similarityScore": 76,
+        "critique": "全高外框、中央 recessed balcony stack 與兩側 bay 已建立。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_173407398147386206.jpg_750x_v6",
+      "key": "building/mass_173407398147386206.jpg!750x_a1c88b78_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "173407398147386206.jpg!750x",
+      "style": "broad L-shaped brown apartment with interlocking towers",
+      "symmetryMode": "asymmetric",
+      "image": "building/173407398147386206.jpg!750x.jpg",
+      "outputDir": "out/3d_data/building/mass/building_mass_173407398147386206.jpg_750x_v6",
+      "preview": "out/review_previews/building_mass_173407398147386206.jpg_750x_v6.png",
+      "bounds": {
+        "min": [
+          -7.8,
+          0,
+          -5.9
+        ],
+        "max": [
+          7.8,
+          25,
+          6.205
+        ],
+        "size": [
+          15.6,
+          25,
+          12.105
+        ],
+        "rMax": 9.967,
+        "triangles": 2340,
+        "vertices": 1560
+      },
+      "parts": 195,
+      "review": {
+        "similarityScore": 81,
+        "critique": "多厚塔交錯、垂直角框與屋頂窗帶符合棕色住宅塔。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_174893026464574001.jpg_900x.water3_v6",
+      "key": "building/mass_174893026464574001.jpg!900x.water3_9aff9512_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "174893026464574001.jpg!900x.water3",
+      "style": "red white U-shaped apartment with recessed balcony court",
+      "symmetryMode": "symmetric",
+      "image": "building/174893026464574001.jpg!900x.water3.webp",
+      "outputDir": "out/3d_data/building/mass/building_mass_174893026464574001.jpg_900x.water3_v6",
+      "preview": "out/review_previews/building_mass_174893026464574001.jpg_900x.water3_v6.png",
+      "bounds": {
+        "min": [
+          -8.5,
+          0,
+          -5.9
+        ],
+        "max": [
+          8.5,
+          21.32,
+          5.9
+        ],
+        "size": [
+          17,
+          21.32,
+          11.8
+        ],
+        "rMax": 10.347,
+        "triangles": 1800,
+        "vertices": 1200
+      },
+      "parts": 150,
+      "review": {
+        "similarityScore": 82,
+        "critique": "雙翼、中央凹槽與 roof penthouse 呈現 U 型紅白公寓。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_175437636541282008.jpg_900x.water3_v6",
+      "key": "building/mass_175437636541282008.jpg!900x.water3_6667106c_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "175437636541282008.jpg!900x.water3",
+      "style": "slender dark tower with white columns, wood fins and pergola crown",
+      "symmetryMode": "symmetric",
+      "image": "building/175437636541282008.jpg!900x.water3.jpg",
+      "outputDir": "out/3d_data/building/mass/building_mass_175437636541282008.jpg_900x.water3_v6",
+      "preview": "out/review_previews/building_mass_175437636541282008.jpg_900x.water3_v6.png",
+      "bounds": {
+        "min": [
+          -7.2,
+          0,
+          -5.1
+        ],
+        "max": [
+          7.2,
+          26.87,
+          5.405
+        ],
+        "size": [
+          14.4,
+          26.87,
+          10.505
+        ],
+        "rMax": 9.003,
+        "triangles": 1020,
+        "vertices": 680
+      },
+      "parts": 85,
+      "review": {
+        "similarityScore": 80,
+        "critique": "暗色塔身、白色縱柱、木色直條與頂部 pergola 完整。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_176784033021147409.jpg_900x.water3_v6",
+      "key": "building/mass_176784033021147409.jpg!900x.water3_8693d9fc_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "176784033021147409.jpg!900x.water3",
+      "style": "split white apartment wings with central recessed slot",
+      "symmetryMode": "asymmetric",
+      "image": "building/176784033021147409.jpg!900x.water3.jpg",
+      "outputDir": "out/3d_data/building/mass/building_mass_176784033021147409.jpg_900x.water3_v6",
+      "preview": "out/review_previews/building_mass_176784033021147409.jpg_900x.water3_v6.png",
+      "bounds": {
+        "min": [
+          -7,
+          0,
+          -5.1
+        ],
+        "max": [
+          7,
+          20.04,
+          5.805
+        ],
+        "size": [
+          14,
+          20.04,
+          10.905
+        ],
+        "rMax": 9.094,
+        "triangles": 1392,
+        "vertices": 928
+      },
+      "parts": 116,
+      "review": {
+        "similarityScore": 80,
+        "critique": "左右分翼、中央凹槽、懸挑陽台與不同高度屋框成立。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    },
+    {
+      "targetId": "building_mass_178670843535945_P35065317_v6",
+      "key": "building/mass_178670843535945_P35065317_2ea21f02_v6",
+      "family": "building",
+      "subpart": "mass",
+      "stem": "178670843535945_P35065317",
+      "style": "paired residential towers with unequal heights and dense balconies",
+      "symmetryMode": "asymmetric",
+      "image": "building/178670843535945_P35065317.jpg",
+      "outputDir": "out/3d_data/building/mass/building_mass_178670843535945_P35065317_v6",
+      "preview": "out/review_previews/building_mass_178670843535945_P35065317_v6.png",
+      "bounds": {
+        "min": [
+          -9.5,
+          0,
+          -6.8
+        ],
+        "max": [
+          9.5,
+          33.05,
+          6.8
+        ],
+        "size": [
+          19,
+          33.05,
+          13.6
+        ],
+        "rMax": 11.683,
+        "triangles": 2040,
+        "vertices": 1360
+      },
+      "parts": 170,
+      "review": {
+        "similarityScore": 78,
+        "critique": "不等高雙塔、連接 podium 與密集陽台形成來源主輪廓。",
+        "verdict": "pass",
+        "corrections": [],
+        "reviewer": "independent_parent_multimodal"
+      }
+    }
+  ]
+}

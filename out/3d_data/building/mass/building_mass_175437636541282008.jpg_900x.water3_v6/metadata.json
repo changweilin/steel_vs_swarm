@@ -3,38 +3,163 @@
   "key": "building/mass_175437636541282008.jpg!900x.water3_6667106c_v6",
   "family": "building",
   "subpart": "mass",
-  "style": "modern_residential_highrise",
+  "style": "slender dark tower with white columns, wood fins and pergola crown",
   "symmetryMode": "symmetric",
-  "similarityScore": 92,
-  "similarityReview": "The building is reconstructed as a solid, multi-story block with a distinct base, vertical facade panels, and a roof structure. The balconies and windows are modeled as individual protruding elements to ensure depth. The symmetry is maintained for the rear and side facades based on the visible front and side profiles.",
+  "similarityScore": 80,
+  "similarityReview": "暗色塔身、白色縱柱、木色直條與頂部 pergola 完整。",
+  "similarityVerdict": "pass",
+  "similarityCorrections": [],
   "version": 6,
   "verStr": "v6",
+  "method": "gpt-5.6-luna_local",
+  "status": "ingested",
   "source_image": "building/175437636541282008.jpg!900x.water3.jpg",
   "source_full_path": "C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos\\building\\175437636541282008.jpg!900x.water3.jpg",
-  "created_at": "2026-08-20T17:11:24.175Z",
+  "yolo26": {
+    "targetId": "175437636541282008.jpg!900x.water3~0",
+    "className": "building",
+    "confidence": 1,
+    "bbox": [
+      0,
+      0,
+      900,
+      675
+    ],
+    "width": 900,
+    "height": 675,
+    "aspectRatio": 1.3333,
+    "targetFile": "out/targets/building/mass/175437636541282008.jpg!900x.water3~0.png",
+    "maskFile": "out/yolo_masks/building/mass/175437636541282008.jpg!900x.water3~0.png",
+    "depth": {
+      "minM": 11.96043,
+      "maxM": 60.37531,
+      "meanM": 37.85938,
+      "p05M": 17.43271,
+      "p25M": 27.20388,
+      "medianM": 33.74878,
+      "p75M": 52.3448,
+      "p95M": 53.85762
+    },
+    "slices": [
+      {
+        "level": 0,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 52.71811
+      },
+      {
+        "level": 1,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 52.62013
+      },
+      {
+        "level": 2,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 52.97174
+      },
+      {
+        "level": 3,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 52.73599
+      },
+      {
+        "level": 4,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 51.74104
+      },
+      {
+        "level": 5,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 51.45486
+      },
+      {
+        "level": 6,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 48.56963
+      },
+      {
+        "level": 7,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 47.08044
+      },
+      {
+        "level": 8,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 36.76305
+      },
+      {
+        "level": 9,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 34.04056
+      },
+      {
+        "level": 10,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 32.60047
+      },
+      {
+        "level": 11,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 31.06696
+      },
+      {
+        "level": 12,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 28.86672
+      },
+      {
+        "level": 13,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 25.52963
+      },
+      {
+        "level": 14,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 21.57902
+      },
+      {
+        "level": 15,
+        "widthRatio": 1,
+        "centerOffset": -0.0006,
+        "depthMedianM": 17.24903
+      }
+    ]
+  },
+  "preview": "out/review_previews/building_mass_175437636541282008.jpg_900x.water3_v6.png",
   "bounds": {
     "min": [
-      -7,
+      -7.2,
       0,
-      -6
+      -5.1
     ],
     "max": [
-      7,
-      35,
-      6.1
+      7.2,
+      26.87,
+      5.405
     ],
     "size": [
-      14,
-      35,
-      12.1
+      14.4,
+      26.87,
+      10.505
     ],
-    "rMax": 9.285,
-    "triangles": 120,
-    "vertices": 80
+    "rMax": 9.003,
+    "triangles": 1020,
+    "vertices": 680
   },
-  "spec": {
-    "style": "modern_residential_highrise"
-  },
-  "method": "gemini_v6",
-  "status": "ingested"
+  "reconstructionNote": "暗色細塔保留白色全高角柱、木色直條與左側 pergola crown。",
+  "created_at": "2026-08-27T10:45:23.826Z"
 }

@@ -74,6 +74,13 @@ export const METHODS = {
     short: 'Gemini v6',
     doc: 'Gemini 3.7 / GPT 5.6 Luna 直讀照片以結構化輸出回傳多面體零件列(取代 v5 的 Python CV + 手寫規則,與 v5 並存)',
   },
+  'gpt-5.6-luna_local': {
+    key: 'gpt-5.6-luna_local',
+    label: 'GPT-5.6 Luna 視覺 → 多面體零件列(v6)',
+    kind: 'parts',
+    short: 'Luna v6',
+    doc: 'GPT-5.6 Luna 在工作樹內讀取 YOLO26 schema-v2 裁圖、遮罩與 metric-depth 證據，逐目標重建宣告式多面體；固定三視圖由獨立 reviewer 複核，不呼叫外部影像 API。',
+  },
   procedural: {
     key: 'procedural',
     label: '純程序生成(未經 AI)',
