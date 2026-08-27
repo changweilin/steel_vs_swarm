@@ -852,6 +852,21 @@ export const WIND = {
   // 之後取樣率會掉到 Nyquist 以下,而畫面上只表現成「遠處的海在亂跳」。
   SEA_M: 64,         // 海浪波長(遊戲公尺;REAL_SCALE 2× ⇒ 真實 32m 的長浪)
   SEA_SEG: 8,        // 一個波長至少切幾段(= 取樣率;8 段對兩諧波合成後的最短波 1.6× 仍有 5 段)
+  // ---- 水波空間變異化(2026-08-26 使用者「不同位置的水波都很像…加入更多隨機差異」)----
+  // 三個機制打破 celSeaH 的空間均勻性:①噪聲擾動 ②深度調變 ③沼澤漣漪。
+  // 全部只動 GLSL 的 celSeaH,**純表現層**(§0-4);waterY / 涉水 / 碰撞一行不動。
+  SEA_NOISE_M: 120,    // 空間噪聲特徵尺度(m):振幅與相位的局部偏移。MUST ≫ SEA_M、< GUST_M
+  SEA_NOISE_F: 0.35,   // 噪聲調變深度:0 = 舊制等幅;0.35 = ±35% 振幅 + ±1.2 rad 相位抖動
+  // 淺水調變:復用 uSeaField 深度場(已有障礙物蓋章)。淺水波變短、變陡 = 碎浪前兆。
+  // 障礙物附近(深度場 0)自動衰減,不需另寫一份遮罩。
+  SEA_DEPTH_LO: 0.6,   // 淺水波長壓縮倍率:depth→0 時波數 ×(1/0.6) ≈ 1.67
+  SEA_DEPTH_AMP: 1.3,  // 淺水振幅增益:波陡增加 = 白浪碎波
+  // 沼澤局部漣漪(氣泡上浮 / 泥魚擾動):圓形衰減波,由確定性時鐘 + 世界座標雜湊驅動。
+  SWAMP_RIPPLE_N: 5,     // 活躍漣漪源數(uniform vec4 陣列長度)
+  SWAMP_RIPPLE_R: 8,     // 單一漣漪最大半徑(m)
+  SWAMP_RIPPLE_AMP: 0.08, // 漣漪振幅(m;只夠產生視覺紋理,不影響 seaFade 帶的接縫)
+  SWAMP_RIPPLE_SPD: 2.5,  // 漣漪擴散速率(m/s;黏滯液面慢波)
+  SWAMP_RIPPLE_LIFE: 4.0, // 漣漪壽命(s)
 };
 const WIND_DIR = [Math.cos(WIND.DIR_DEG * Math.PI / 180), Math.sin(WIND.DIR_DEG * Math.PI / 180)];
 
@@ -878,7 +893,7 @@ export const SOFT_KINDS = {
   // `amp` 在這一族的語意是**波陡**(波高 ÷ 波長)而不是「擺幅 ÷ 株高」,但算式同一條
   // (`uSoftAmp = amp × span`)⇒ span 傳波長就得到波高。0.014 × 64m = 0.9m(真實 0.45m 長浪)。
   sea:   { amp: 0.014, freq: 0.55, axis: 'w' },   // 海面 / 湖面 / 潟湖
-  swamp: { amp: 0.008, freq: 0.28, axis: 'w' },   // 沼澤水面:低頻慢速黏滯波
+  swamp: { amp: 0.008, freq: 0.28, axis: 'w', ripple: true },   // 沼澤水面:低頻慢速黏滯波 + 局部漣漪
 };
 
 /**
@@ -995,14 +1010,75 @@ const CEL_WIND_GLSL = `
         float celGust( vec2 celGxz ) {
           return 1.0 + ${WIND.GUST_F.toFixed(3)} * sin( uWindT * ${WIND.GUST_S.toFixed(3)} + dot( celGxz, uGustK ) );
         }`;
+
+// ---- 沼澤漣漪(2026-08-26):圓形衰減波,模擬沼氣泡上浮/泥魚/生物擾動 ----
+// 由 JS 端 stepSwampRipples() 每 2~5 秒更新一組漣漪源位置與啟動時間。
+// **零 Math.random()**:位置由 windT + 座標雜湊推導(同 aquaticSeed idiom)。
+const CEL_SWAMP_RIPPLE_GLSL = `
+        #ifdef CEL_SWAMP_RIPPLE
+        uniform vec4 uRipple[ ${WIND.SWAMP_RIPPLE_N} ];   // ( worldX, worldZ, startTime, amplitude )
+        float celSwampRipple( vec2 celRxz ) {
+          float celRsum = 0.0;
+          for ( int i = 0; i < ${WIND.SWAMP_RIPPLE_N}; i++ ) {
+            vec2 celRc = uRipple[ i ].xy;
+            float celRt0 = uRipple[ i ].z;
+            float celRa = uRipple[ i ].w;
+            float celRage = uWindT - celRt0;
+            if ( celRage < 0.0 || celRage > ${WIND.SWAMP_RIPPLE_LIFE.toFixed(1)} ) continue;
+            float celRr = length( celRxz - celRc );
+            float celRfront = celRage * ${WIND.SWAMP_RIPPLE_SPD.toFixed(1)};
+            float celRrd = abs( celRr - celRfront );
+            // 窄環波(寬 ≈ 0.8m)+ 空間衰減 + 時間衰減
+            float celRring = exp( -celRrd * celRrd * 6.0 )
+                           * exp( -celRr * celRr / ${(WIND.SWAMP_RIPPLE_R * WIND.SWAMP_RIPPLE_R).toFixed(1)} )
+                           * ( 1.0 - celRage / ${WIND.SWAMP_RIPPLE_LIFE.toFixed(1)} );
+            celRsum += celRa * celRring * sin( celRr * 5.0 - celRage * 8.0 );
+          }
+          return celRsum;
+        }
+        #endif`;
+
 const CEL_SEA_GLSL = `
         // 浪高(世界 XZ 的純函式)。**位移與法線 MUST 吃同一支** —— 兩邊各寫一份的話,
         // 光影的浪與幾何的浪會差半個波長,而畫面上只表現成「水面的亮帶跟浪對不上」。
+        //
+        // 2026-08-26 水波空間變異化(純表現層,§0-4):
+        //   ① 空間多頻干涉與相位偏移:打破單一行波空間均勻性
+        //   ② 深度調變:uSeaField 淺水 → 波長壓縮 ×${(1 / WIND.SEA_DEPTH_LO).toFixed(2)} + 振幅 ×${WIND.SEA_DEPTH_AMP.toFixed(1)}
+        //   ③ 障礙衰減:深度場 0(蓋章)附近波幅 smoothstep 衰減
+        //   ④ 沼澤漣漪(CEL_SWAMP_RIPPLE):疊加局部圓形衰減波
         float celSeaH( vec2 celSxz ) {
           float celSp = dot( celSxz, uWindK );
-          return uSoftAmp * celGust( celSxz )
-               * ( sin( uWindT * uSoftFreq + celSp ) * 0.72
-                 + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celSp * 1.6 + 1.7 ) * 0.28 );
+
+          // ① 空間多頻干涉與相位偏移 (特徵尺度 ~${WIND.SEA_NOISE_M.toFixed(0)}m,打破單一行波空間均勻性)
+          float celSn = sin( dot( celSxz, vec2( 0.0523, 0.0321 ) ) ) * 0.62
+                      + sin( dot( celSxz, vec2( -0.0233, 0.0711 ) ) + 2.13 ) * 0.38;
+          float celSn2 = sin( dot( celSxz, vec2( 0.0951, -0.0583 ) ) + 4.31 ) * 0.58
+                       + sin( dot( celSxz, vec2( -0.0773, -0.1071 ) ) + 1.25 ) * 0.42;
+          float celAmpMod = 1.0 + celSn * ${WIND.SEA_NOISE_F.toFixed(3)};
+          float celPhJit = celSn2 * 1.2;
+
+          // ② 深度調變:取樣同一張 uSeaField(含障礙物蓋章)
+          vec2 celDuv = clamp( ( celSxz - uSeaRect.xy ) * uSeaRect.zw, vec2( 0.0 ), vec2( 1.0 ) );
+          float celRawD = texture2D( uSeaField, celDuv ).r;
+          float celDepF = smoothstep( 0.0, 0.5, celRawD );
+
+          // 淺水:波數增大(波長壓縮)、振幅增加(碎浪)
+          float celWaveK = mix( ${(1 / WIND.SEA_DEPTH_LO).toFixed(3)}, 1.0, celDepF );
+          float celAmpD = mix( ${WIND.SEA_DEPTH_AMP.toFixed(3)}, 1.0, celDepF );
+
+          // ③ 障礙物近場衰減:深度場 0 的位置附近波幅整體壓低
+          float celObD = smoothstep( 0.0, 0.15, celRawD );
+
+          // 合成基礎行波
+          float celMsp = celSp * celWaveK + celPhJit;
+          float celH = uSoftAmp * celAmpD * celAmpMod * celObD * celGust( celSxz )
+               * ( sin( uWindT * uSoftFreq + celMsp ) * 0.72
+                 + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28 );
+          #ifdef CEL_SWAMP_RIPPLE
+          celH += celSwampRipple( celSxz );
+          #endif
+          return celH;
         }`;
 
 /**
@@ -1030,6 +1106,49 @@ export function setCelChar(list) {
     if (c) _charPos.value[i].set(c.x || 0, c.y || 0, c.z || 0);
     _charSpd.value[i] = c ? Math.max(0, c.spd || 0) : 0;
   }
+}
+
+// ---- 沼澤漣漪源(2026-08-26;§E)----
+// 共享 uniform 物件(同 _windT / _charPos idiom):一份物件餵給所有沼澤材質。
+// 初始 startTime = -999 ⇒ `uWindT - t0 < 0` ⇒ 著色器裡 continue 早退 ⇒ 零影響。
+const _ripple = {
+  value: Array.from({ length: WIND.SWAMP_RIPPLE_N },
+    () => new THREE.Vector4(0, 0, -999, 0)),
+};
+let _rippleIdx = 0;          // 循環寫入的位置
+let _rippleCD = 0;            // 到下一個漣漪的倒數(秒)
+
+/**
+ * 確定性雜湊:同 `aquatics.js aquaticSeed` idiom,零 `Math.random()` 消耗。
+ * 輸入是**時鐘的量化值**(每 2~5 秒一次)⇒ 同一次生成跑兩遍拿到同一個結果。
+ */
+function rippleHash(a) {
+  a = ((a >>> 0) ^ 0x5bd1e995) >>> 0;
+  a = (Math.imul(a, 0x5bd1e995) ^ (a >>> 15)) >>> 0;
+  return (a >>> 0) / 0x100000000;   // [0, 1)
+}
+
+/**
+ * 推進沼澤漣漪(唯一呼叫端 = `game.js` 主迴圈,MUST 排在 `stepCelWind` 之後)。
+ * 有沼澤水域才需要呼叫;無水 / 無沼澤 ⇒ game.js 那邊不呼叫。
+ * @param swampCells [{ x, z }, …] 沼澤格點(biomes 建完後拿得到)
+ */
+export function stepSwampRipples(swampCells, dt) {
+  if (!swampCells?.length) return;
+  _rippleCD -= Math.min(0.25, Math.max(0, dt || 0));
+  if (_rippleCD > 0) return;
+  // 下一個漣漪的冷卻:2~5 秒(確定性,吃時鐘的量化值)
+  const tSeed = Math.floor(_windT.value * 7.31) >>> 0;
+  _rippleCD = 2 + rippleHash(tSeed ^ 0xA7C3) * 3;
+  // 從沼澤格點裡挑一個位置(確定性選取)
+  const ci = Math.floor(rippleHash(tSeed ^ 0x3E91) * swampCells.length);
+  const cell = swampCells[ci % swampCells.length];
+  // 格內隨機偏移(±5m)
+  const ox = (rippleHash(tSeed ^ 0x17B5) - 0.5) * 10;
+  const oz = (rippleHash(tSeed ^ 0x92D4) - 0.5) * 10;
+  const slot = _ripple.value[_rippleIdx % WIND.SWAMP_RIPPLE_N];
+  slot.set(cell.x + ox, cell.z + oz, _windT.value, WIND.SWAMP_RIPPLE_AMP);
+  _rippleIdx++;
 }
 
 /**
@@ -1113,8 +1232,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   const inkAlpha = !mat.transparent;
   if (inkAlpha) { defines.CEL_INKA = ''; defines.CEL_INKB = ''; }
   if (sk && sk.amp > 0) {
-    if (sk.axis === 'w') defines.CEL_WAVE = '';   // 表面波(海浪):垂直位移 + 逐頂點相位
-    else {
+    if (sk.axis === 'w') {
+      defines.CEL_WAVE = '';   // 表面波(海浪):垂直位移 + 逐頂點相位
+      if (sk.ripple) defines.CEL_SWAMP_RIPPLE = '';   // 沼澤漣漪:圓形衰減波疊加
+    } else {
       defines.CEL_SWAY = '';
       if (sk.axis === 'x') defines.CEL_SWAY_H = '';
     }
@@ -1167,6 +1288,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uSeaRect = _seaRect;
     shader.uniforms.uFoamA = _foamA;
     shader.uniforms.uFoamC = _foamC;
+    shader.uniforms.uRipple = _ripple;   // 沼澤漣漪源(CEL_SWAMP_RIPPLE;無沼澤 ⇒ 初始值全早退)
     shader.uniforms.uWaterY = { value: (refl && refl.y) || 0 };
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
     // 地貌分區子帶的閘(序 4 ①-3):**共享 uniform** ⇒ 拉桿一動全場同一幀跟著換,
@@ -1269,6 +1391,9 @@ ${CEL_WIND_GLSL}
         // 水盤與緩衝空間外環水面共用同一份材質,而外環的網格粗到取樣不了波(邊長 53m >
         // 波長 64m 的 Nyquist)⇒ 讓它整片為 0,接縫兩側同為平面,沒有折痕也沒有遠處亂跳。
         attribute float seaFade;
+        uniform sampler2D uSeaField;
+        uniform vec4 uSeaRect;
+${CEL_SWAMP_RIPPLE_GLSL}
 ${CEL_SEA_GLSL}
         #endif
         #ifdef CEL_WAVE
@@ -1806,6 +1931,7 @@ ${INK_PACK_GLSL}
         uniform float uFoamA;
         uniform vec3 uFoamC;
 ${CEL_WIND_GLSL}
+${CEL_SWAMP_RIPPLE_GLSL}
 ${CEL_SEA_GLSL}
         // ---- 岸邊泡沫(S6)----
         // 驅動量是**水深**(烤好的深度場)不是岸線幾何:水面 fragment 拿不到場景深度
@@ -1861,7 +1987,7 @@ ${CEL_SEA_GLSL}
   // 漏掉 `card`/`surfAttr` 的症狀是「四個角都落在中心 ⇒ 整叢卡片塌成一個點」,
   // 而 `contrib`(uniform)進去的話就是每一個貢獻值編一支新程式(編譯尖峰 + 記憶體)。
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${coolOn ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${surfAttr ? 'A' : ''}${card ? 'K' : ''}${refl ? 'R' : ''}${inkAlpha ? 'B' : ''}${dissolve ? 'D' : ''}${landId ? 'Z' : ''}${landField ? 'X' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${coolOn ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${surfAttr ? 'A' : ''}${card ? 'K' : ''}${refl ? 'R' : ''}${inkAlpha ? 'B' : ''}${dissolve ? 'D' : ''}${sk?.ripple ? 'V' : ''}${landId ? 'Z' : ''}${landField ? 'X' : ''}${rim}`;
   return mat;
 }
 
