@@ -4,31 +4,36 @@
   "style": "industrial_ship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
+    "roofHex": 8359053,
     "facadeHex": 45678,
-    "baseHex": 12345,
-    "accentHex": 16766720,
-    "darkHex": 2236962,
-    "brightHex": 14540253,
+    "baseHex": 45678,
+    "accentHex": 15105570,
+    "darkHex": 16777215,
+    "brightHex": 15528177,
     "glassHex": 8421631
   },
-  "totalParts": 10,
+  "totalParts": 14,
   "partNames": [
-    "hull_main",
-    "hull_base",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "tank_1",
     "tank_2",
     "tank_3",
     "superstructure_base",
     "bridge_windows",
     "funnel",
-    "mast_top"
+    "mast_top",
+    "lng_pipe_run_port",
+    "lng_pipe_run_center",
+    "lng_pipe_run_starboard",
+    "lng_manifold_1",
+    "lng_manifold_2",
+    "lng_manifold_3"
   ],
   "polyhedralPrimitivesUsed": [
-    "box",
-    "wedge",
+    "hull_polyhedron",
     "hemisphere_dome",
+    "tapered_box",
+    "box",
     "cylinder"
   ]
 }

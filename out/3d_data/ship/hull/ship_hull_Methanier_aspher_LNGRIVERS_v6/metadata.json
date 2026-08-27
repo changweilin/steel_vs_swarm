@@ -14,27 +14,51 @@
   "created_at": "2026-08-20T16:19:10.782Z",
   "bounds": {
     "min": [
-      -50,
+      -142.5,
       0,
-      -7.5
+      -21.375
     ],
     "max": [
-      55,
-      16.5,
-      7.6
+      142.5,
+      36.5324,
+      21.375
     ],
     "size": [
-      105,
-      16.5,
-      15.1
+      285,
+      36.532,
+      42.75
     ],
-    "rMax": 55.523,
-    "triangles": 610,
-    "vertices": 364
+    "rMax": 144.094,
+    "triangles": 816,
+    "vertices": 475
   },
   "spec": {
     "style": "industrial_ship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m",
+      "船身厚度 21.37→21.38（縮放前）",
+      "實尺 285.0×36.5×42.8m (class_estimate)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "lng_carrier",
+    "targetSize": [
+      285,
+      36.53050000000001,
+      42.75
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 lng_carrier 保守標準全長 285m。"
+  }
 }

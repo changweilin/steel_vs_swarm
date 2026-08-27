@@ -20,6 +20,11 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const n3 = (v) => (v == null ? '—' : (Math.round(v * 1000) / 1000).toString());
+const outwardWinding = (indices) => {
+  const out = [...indices];
+  for (let i = 0; i < out.length; i += 3) [out[i + 1], out[i + 2]] = [out[i + 2], out[i + 1]];
+  return out;
+};
 
 /**
  * 覆核狀態:每一個出口各自對得上 `tools/ai3d/apply_verdicts.mjs` 的**一個**動作。
@@ -94,7 +99,7 @@ const itemOf = (key) => app.data?.state?.items?.[key] || null;
 
 // ---- 3D(全部集中在這一段;失敗只讓這一段停用)-------------------------------
 const gfx = {
-  ready: false, error: null, THREE: null, beacons: null, camera: null,
+  ready: false, error: null, THREE: null, beacons: null, aquatics: null, camera: null,
   mods: new Map(),      // 'now' | `rev:<sha>` → beacons 模組
   groups: new Map(),    // `${phase}|${src}|${kind}|${seed}` → Group(整場快取,不重建也不 dispose)
   viewers: [],
@@ -106,6 +111,7 @@ async function initGfx(data) {
   gfx.beacons = await import('/public/js/beacons.js');
   // 植被/神木那一半由 biomes 自己的 buildVegMeshes 建(同紀律 ①:台上沒有第二套組裝器)
   gfx.biomes = await import('/public/js/biomes.js');
+  gfx.aquatics = await import('/public/js/aquatics.js');
   gfx.rng = await import('/public/js/rng.js');
   const partlib = await import('/public/js/partlib.js');
   const { setCelSun, bakeContactAO } = await import('/public/js/toon.js');
@@ -184,6 +190,8 @@ function build(phase, src, kind, seed, builder = 'beacon') {
       const g = new gfx.THREE.Group();
       g.add(im);
       gfx.groups.set(key, g);
+    } else if (builder === 'aquatic' && kind === 'patrol_ship') {
+      gfx.groups.set(key, gfx.aquatics.buildPatrolShipMesh());
     } else if (builder === 'model3d') {
       const g = new gfx.THREE.Group();
       gfx.groups.set(key, g);
@@ -242,7 +250,41 @@ function build(phase, src, kind, seed, builder = 'beacon') {
                 ];
                 geo = new gfx.THREE.BufferGeometry();
                 geo.setAttribute('position', new gfx.THREE.BufferAttribute(verts, 3));
+                geo.setIndex(outwardWinding(indices));
+                geo.computeVertexNormals();
+              } else if (p.type === 'hull_polyhedron' && p.dimensions) {
+                const [w, h, d] = p.dimensions;
+                const sections = [[-0.50,0.58,0.42],[-0.38,0.92,0.58],[0.18,1,0.62],[0.36,0.82,0.50],[0.50,0.035,0.015]];
+                const verts = [];
+                const indices = [];
+                for (const [zf, deckF, chineF] of sections) {
+                  const z = zf * d, deck = deckF * w * 0.5, chine = chineF * w * 0.5;
+                  verts.push(-deck,h,z, deck,h,z, chine,h*0.24,z, -chine,h*0.24,z, 0,0,z);
+                }
+                for (let s = 0; s < sections.length - 1; s++) {
+                  const a = s * 5, b = a + 5;
+                  for (const [i, j] of [[0,1],[1,2],[2,4],[4,3],[3,0]]) {
+                    indices.push(a+i,b+i,b+j, a+i,b+j,a+j);
+                  }
+                }
+                indices.push(0,1,2, 0,2,3, 3,2,4);
+                const e = (sections.length - 1) * 5;
+                indices.push(e,e+2,e+1, e,e+3,e+2, e+3,e+4,e+2);
+                geo = new gfx.THREE.BufferGeometry();
+                geo.setAttribute('position', new gfx.THREE.Float32BufferAttribute(verts, 3));
                 geo.setIndex(indices);
+                geo.computeVertexNormals();
+              } else if (p.type === 'tapered_box' && p.dimensions) {
+                const [w, h, d] = p.dimensions;
+                const [tw, td] = p.topDimensions || [w * 0.82, d * 0.82];
+                const verts = new Float32Array([
+                  -w/2,-h/2,-d/2, w/2,-h/2,-d/2, w/2,-h/2,d/2, -w/2,-h/2,d/2,
+                  -tw/2,h/2,-td/2, tw/2,h/2,-td/2, tw/2,h/2,td/2, -tw/2,h/2,td/2,
+                ]);
+                const indices = [0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,1,2,6,1,6,5,2,3,7,2,7,6,3,0,4,3,4,7];
+                geo = new gfx.THREE.BufferGeometry();
+                geo.setAttribute('position', new gfx.THREE.BufferAttribute(verts, 3));
+                geo.setIndex(outwardWinding(indices));
                 geo.computeVertexNormals();
               }
               if (geo) {
@@ -357,12 +399,12 @@ function setViewerGroup(v, group, builder = 'beacon') {
   // 神木的碰撞柱不是由幾何量出來的(那是樹幹的登記柱,住 biomes 的散布端)⇒ 這裡照實
   // 改量包圍盒,MUST NOT 拿 beaconCollider 硬套一個看起來很像碰撞柱的東西上去。
   // 巨岩同理但反過來:它**有**登記柱(synthMegalith 回傳的 `col`),量包圍盒才是假的。
-  const col = (builder === 'veg' || builder === 'bld' || builder === 'model3d') ? vegExtent(group)
+  const col = (builder === 'veg' || builder === 'bld' || builder === 'model3d' || builder === 'aquatic') ? vegExtent(group)
     : builder === 'mega' ? group.userData.megaCol
       : gfx.beacons.beaconCollider(group);
   // 碰撞柱是**整件**的柱子(163m 的巨岩那一根尤其)⇒ 零件取景不畫它,否則畫面上只剩幾條
   // 從天到地的青線,而要看的那一顆零件在中間被切成兩半
-  if (app.collider && builder !== 'veg' && builder !== 'bld' && builder !== 'model3d' && app.dist !== 'part') {
+  if (app.collider && builder !== 'veg' && builder !== 'bld' && builder !== 'model3d' && builder !== 'aquatic' && app.dist !== 'part') {
     v.wire = new T.Mesh(
       new T.CylinderGeometry(col.r, col.r, col.h, 14, 1, true),
       new T.MeshBasicMaterial({ color: 0x2ee6d6, wireframe: true, transparent: true, opacity: 0.3 }),
@@ -387,6 +429,7 @@ const COL_WHAT = {
   veg: '外廓(包圍盒;碰撞柱住散布端)',
   mega: '碰撞柱(登記值 meta.col)',
   bld: '外廓(包圍盒;屋頂配件不掛碰撞柱,建物本體的碰撞盒在 blockers)',
+  aquatic: '外廓(包圍盒;動態船艦為純視覺)',
   model3d: '3D 幾何外廓(包圍盒)',
 };
 
@@ -1562,7 +1605,9 @@ catch (e) { gfx.error = e?.message || String(e); console.warn('3D 對照停用:'
 setupFilters();
 renderStat();
 renderList();
-select(app.data.rows.filter(keepRow)[0]?.key || app.data.rows[0]?.key);
+const wantedKey = new URLSearchParams(location.search).get('key');
+select(app.data.rows.find((r) => r.key === wantedKey && keepRow(r))?.key
+  || app.data.rows.filter(keepRow)[0]?.key || app.data.rows[0]?.key);
 for (const b of $('prFilter').querySelectorAll('.segb')) {
   b.onclick = () => {
     app.filter = b.dataset.f;

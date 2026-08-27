@@ -1,14 +1,14 @@
 {
   "version": 6,
   "verStr": "v6",
-  "generated_at": "2026-08-23T19:50:05.555Z",
-  "total_objects": 684,
+  "generated_at": "2026-08-26T05:59:46.265Z",
+  "total_objects": 746,
   "families": [
     "building",
     "landmark",
     "rock",
-    "tree",
     "ship",
+    "tree",
     "vehicle"
   ],
   "items": [
@@ -70119,6 +70119,2858 @@
       },
       "triangles": 856,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_v6"
+    },
+    {
+      "id": "ship_hull__127290139_04alamy-pwtk4p_v6",
+      "key": "ship/hull__127290139_04alamy-pwtk4p_6684aed6_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "LNG Carrier Ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/_127290139_04alamy-pwtk4p.png",
+      "bounds": {
+        "min": [
+          -142.5,
+          0,
+          -21.375
+        ],
+        "max": [
+          142.5,
+          34.2,
+          21.375
+        ],
+        "size": [
+          285,
+          34.2,
+          42.75
+        ],
+        "rMax": 144.094,
+        "triangles": 1124,
+        "vertices": 657
+      },
+      "spec": {
+        "style": "LNG Carrier Ship"
+      },
+      "triangles": 1124,
+      "outputDir": "out/3d_data/ship/hull/ship_hull__127290139_04alamy-pwtk4p_v6",
+      "realScale": {
+        "className": "lng_carrier",
+        "targetSize": [
+          285,
+          34.199999999999996,
+          42.75
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_000-34TU8F7_v6",
+      "key": "ship/hull_000-34TU8F7_eeffdce5_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern_warship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/000-34TU8F7.jpg",
+      "bounds": {
+        "min": [
+          -67.5,
+          0,
+          -7
+        ],
+        "max": [
+          67.5,
+          13.5058,
+          7
+        ],
+        "size": [
+          135,
+          13.506,
+          14
+        ],
+        "rMax": 67.862,
+        "triangles": 432,
+        "vertices": 255
+      },
+      "spec": {
+        "style": "modern_warship"
+      },
+      "triangles": 432,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_000-34TU8F7_v6",
+      "realScale": {
+        "className": "warship",
+        "targetSize": [
+          135,
+          13.5,
+          14
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050_v6",
+      "key": "ship/hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050_95f6f49f_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_aircraft_carrier",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg",
+      "bounds": {
+        "min": [
+          -158.0322,
+          0,
+          -38.0005
+        ],
+        "max": [
+          158.0322,
+          36.2394,
+          38.0005
+        ],
+        "size": [
+          316.064,
+          36.239,
+          76.001
+        ],
+        "rMax": 162.537,
+        "triangles": 680,
+        "vertices": 435
+      },
+      "spec": {
+        "style": "military_aircraft_carrier"
+      },
+      "triangles": 680,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050_v6",
+      "realScale": {
+        "className": "catobar_aircraft_carrier",
+        "targetSize": [
+          316,
+          38,
+          76
+        ],
+        "confidence": "identified_photo"
+      }
+    },
+    {
+      "id": "ship_hull_0350p12000t3nb68kA8C8_v6",
+      "key": "ship/hull_0350p12000t3nb68kA8C8_6a0a5762_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern motorboat",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/0350p12000t3nb68kA8C8.jpg",
+      "bounds": {
+        "min": [
+          -4.181,
+          0,
+          -1.1011
+        ],
+        "max": [
+          4.819,
+          1.85,
+          1.1011
+        ],
+        "size": [
+          9,
+          1.85,
+          2.202
+        ],
+        "rMax": 4.943,
+        "triangles": 146,
+        "vertices": 83
+      },
+      "spec": {
+        "style": "modern motorboat"
+      },
+      "triangles": 146,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_0350p12000t3nb68kA8C8_v6",
+      "realScale": {
+        "className": "motorboat",
+        "targetSize": [
+          9,
+          1.85,
+          2.2017148472931773
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_1593571989300_v6",
+      "key": "ship/hull_1593571989300_f9faa83a_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern luxury yacht",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/1593571989300.jpg",
+      "bounds": {
+        "min": [
+          -8.8307,
+          0,
+          -2.2505
+        ],
+        "max": [
+          11.1695,
+          3.5025,
+          2.2505
+        ],
+        "size": [
+          20,
+          3.502,
+          4.501
+        ],
+        "rMax": 11.394,
+        "triangles": 142,
+        "vertices": 89
+      },
+      "spec": {
+        "style": "modern luxury yacht"
+      },
+      "triangles": 142,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_1593571989300_v6",
+      "realScale": {
+        "className": "yacht",
+        "targetSize": [
+          20,
+          3.5025,
+          4.501
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_1695146093_v6",
+      "key": "ship/hull_1695146093_23c5c052_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "cruise_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/1695146093.png",
+      "bounds": {
+        "min": [
+          -125,
+          0,
+          -15
+        ],
+        "max": [
+          125,
+          37.8355,
+          15
+        ],
+        "size": [
+          250,
+          37.836,
+          30
+        ],
+        "rMax": 125.897,
+        "triangles": 3016,
+        "vertices": 1863
+      },
+      "spec": {
+        "style": "cruise_ship"
+      },
+      "triangles": 3016,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_1695146093_v6",
+      "realScale": {
+        "className": "cruise_ship",
+        "targetSize": [
+          250,
+          37.8355,
+          30
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637_v6",
+      "key": "ship/hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637_0828c162_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "fishing_boat",
+      "symmetryMode": "symmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637.webp",
+      "bounds": {
+        "min": [
+          -4.5532,
+          0,
+          -1.71
+        ],
+        "max": [
+          4.4468,
+          3.3404,
+          1.71
+        ],
+        "size": [
+          9,
+          3.34,
+          3.42
+        ],
+        "rMax": 4.864,
+        "triangles": 454,
+        "vertices": 281
+      },
+      "spec": {
+        "style": "fishing_boat"
+      },
+      "triangles": 454,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          9,
+          3.3405,
+          3.42
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_174340740201_v6",
+      "key": "ship/hull_174340740201_3769a5c6_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern cruise ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/174340740201.jpg",
+      "bounds": {
+        "min": [
+          -124.1613,
+          0,
+          -15
+        ],
+        "max": [
+          125.8389,
+          35,
+          15
+        ],
+        "size": [
+          250,
+          35,
+          30
+        ],
+        "rMax": 126.73,
+        "triangles": 3254,
+        "vertices": 1997
+      },
+      "spec": {
+        "style": "modern cruise ship"
+      },
+      "triangles": 3254,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_174340740201_v6",
+      "realScale": {
+        "className": "cruise_ship",
+        "targetSize": [
+          250,
+          35,
+          30
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_1778437182_68368_v6",
+      "key": "ship/hull_1778437182_68368_6560f458_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "cargo_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 85,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/1778437182_68368.jpg",
+      "bounds": {
+        "min": [
+          -60,
+          0,
+          -7.2
+        ],
+        "max": [
+          60,
+          13.2005,
+          7.2
+        ],
+        "size": [
+          120,
+          13.2,
+          14.4
+        ],
+        "rMax": 60.43,
+        "triangles": 500,
+        "vertices": 311
+      },
+      "spec": {
+        "style": "cargo_ship"
+      },
+      "triangles": 500,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_1778437182_68368_v6",
+      "realScale": {
+        "className": "cargo_ship",
+        "targetSize": [
+          120,
+          13.200499999999998,
+          14.4
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_1802_v6",
+      "key": "ship/hull_1802_ffc371dd_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_warship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/1802.jpg",
+      "bounds": {
+        "min": [
+          -30,
+          0,
+          -5
+        ],
+        "max": [
+          30,
+          10.6499,
+          5
+        ],
+        "size": [
+          60,
+          10.65,
+          10
+        ],
+        "rMax": 30.414,
+        "triangles": 456,
+        "vertices": 265
+      },
+      "spec": {
+        "style": "military_warship"
+      },
+      "triangles": 456,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_1802_v6",
+      "realScale": {
+        "className": "warship",
+        "targetSize": [
+          60,
+          10.650000000000002,
+          10
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_2-5-1024x768_0_v6",
+      "key": "ship/hull_2-5-1024x768~0_59d5ac5f_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "industrial_fishing_vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/2-5-1024x768.jpg",
+      "bounds": {
+        "min": [
+          -20,
+          0,
+          -4.4
+        ],
+        "max": [
+          20,
+          13.4694,
+          4.4
+        ],
+        "size": [
+          40,
+          13.469,
+          8.8
+        ],
+        "rMax": 20.478,
+        "triangles": 604,
+        "vertices": 367
+      },
+      "spec": {
+        "style": "industrial_fishing_vessel"
+      },
+      "triangles": 604,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_2-5-1024x768_0_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          40,
+          13.469500000000002,
+          8.8
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_2000x1250_wmkn_84254351907813_0_v6",
+      "key": "ship/hull_2000x1250_wmkn_84254351907813_0_bf165635_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/2000x1250_wmkn_84254351907813_0.jpg",
+      "bounds": {
+        "min": [
+          -30,
+          0,
+          -5.4
+        ],
+        "max": [
+          30,
+          11.7737,
+          5.4
+        ],
+        "size": [
+          60,
+          11.774,
+          10.8
+        ],
+        "rMax": 30.482,
+        "triangles": 878,
+        "vertices": 535
+      },
+      "spec": {
+        "style": "military_ship"
+      },
+      "triangles": 878,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_2000x1250_wmkn_84254351907813_0_v6",
+      "realScale": {
+        "className": "warship",
+        "targetSize": [
+          60,
+          11.774,
+          10.799999999999999
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_2000x1429_wmkn_19056648845677_0_v6",
+      "key": "ship/hull_2000x1429_wmkn_19056648845677_0_22cfeafa_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern_warship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/2000x1429_wmkn_19056648845677_0.jpg",
+      "bounds": {
+        "min": [
+          -69.4673,
+          0,
+          -7
+        ],
+        "max": [
+          65.5327,
+          16.6571,
+          7
+        ],
+        "size": [
+          135,
+          16.657,
+          14
+        ],
+        "rMax": 69.819,
+        "triangles": 432,
+        "vertices": 257
+      },
+      "spec": {
+        "style": "modern_warship"
+      },
+      "triangles": 432,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_2000x1429_wmkn_19056648845677_0_v6",
+      "realScale": {
+        "className": "warship",
+        "targetSize": [
+          135,
+          16.6496,
+          14
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_20090411-TurboJET_Barca_v6",
+      "key": "ship/hull_20090411-TurboJET_Barca_fbdd5a16_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern high-speed catamaran ferry",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/20090411-TurboJET_Barca.jpg",
+      "bounds": {
+        "min": [
+          -23.75,
+          0,
+          -5.9
+        ],
+        "max": [
+          23.75,
+          12,
+          5.9
+        ],
+        "size": [
+          47.5,
+          12,
+          11.8
+        ],
+        "rMax": 24.472,
+        "triangles": 438,
+        "vertices": 256
+      },
+      "spec": {
+        "style": "modern high-speed catamaran ferry"
+      },
+      "triangles": 438,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_20090411-TurboJET_Barca_v6",
+      "realScale": {
+        "className": "fast_catamaran_ferry",
+        "targetSize": [
+          47.5,
+          12,
+          11.8
+        ],
+        "confidence": "exact"
+      }
+    },
+    {
+      "id": "ship_hull_2020120858047817_v6",
+      "key": "ship/hull_2020120858047817_08a17622_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "fishing_vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 85,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/2020120858047817.jpg",
+      "bounds": {
+        "min": [
+          -7.5,
+          0,
+          -2
+        ],
+        "max": [
+          7.5,
+          4.7362,
+          2
+        ],
+        "size": [
+          15,
+          4.736,
+          4
+        ],
+        "rMax": 7.762,
+        "triangles": 604,
+        "vertices": 367
+      },
+      "spec": {
+        "style": "fishing_vessel"
+      },
+      "triangles": 604,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_2020120858047817_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          15,
+          4.737500000000001,
+          4
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_20210430002927_47_v6",
+      "key": "ship/hull_20210430002927_47_f8967c20_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "yacht",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/20210430002927_47.jpg",
+      "bounds": {
+        "min": [
+          -10,
+          0,
+          -2.5
+        ],
+        "max": [
+          10,
+          5.8223,
+          2.5
+        ],
+        "size": [
+          20,
+          5.822,
+          5
+        ],
+        "rMax": 10.308,
+        "triangles": 544,
+        "vertices": 335
+      },
+      "spec": {
+        "style": "yacht"
+      },
+      "triangles": 544,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_20210430002927_47_v6",
+      "realScale": {
+        "className": "yacht",
+        "targetSize": [
+          20,
+          5.8225,
+          5
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_202135002-4_v6",
+      "key": "ship/hull_202135002-4_9ff3964a_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "fishing_vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/202135002-4.jpg",
+      "bounds": {
+        "min": [
+          -7.5,
+          0,
+          -2.85
+        ],
+        "max": [
+          7.5,
+          5.4988,
+          2.85
+        ],
+        "size": [
+          15,
+          5.499,
+          5.7
+        ],
+        "rMax": 8.023,
+        "triangles": 580,
+        "vertices": 351
+      },
+      "spec": {
+        "style": "fishing_vessel"
+      },
+      "triangles": 580,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_202135002-4_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          15,
+          5.4990000000000006,
+          5.7
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_20230821004313_v6",
+      "key": "ship/hull_20230821004313_b99b2a33_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "industrial_maritime",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/20230821004313.jpg",
+      "bounds": {
+        "min": [
+          -90,
+          0,
+          -15
+        ],
+        "max": [
+          90,
+          37.867,
+          15
+        ],
+        "size": [
+          180,
+          37.867,
+          30
+        ],
+        "rMax": 91.241,
+        "triangles": 424,
+        "vertices": 243
+      },
+      "spec": {
+        "style": "industrial_maritime"
+      },
+      "triangles": 424,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_20230821004313_v6",
+      "realScale": {
+        "className": "industrial_ship",
+        "targetSize": [
+          180,
+          37.867,
+          30
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_20240301000865_v6",
+      "key": "ship/hull_20240301000865_e2c0f8b7_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_submarine",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/20240301000865.png",
+      "bounds": {
+        "min": [
+          -51.0493,
+          0.0022,
+          -3.5
+        ],
+        "max": [
+          18.9506,
+          9.1016,
+          3.5
+        ],
+        "size": [
+          70,
+          9.099,
+          7
+        ],
+        "rMax": 51.169,
+        "triangles": 632,
+        "vertices": 387
+      },
+      "spec": {
+        "style": "military_submarine"
+      },
+      "triangles": 632,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_20240301000865_v6",
+      "realScale": {
+        "className": "submarine",
+        "targetSize": [
+          70,
+          9.1,
+          7
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_20250401005245_v6",
+      "key": "ship/hull_20250401005245_22de3ca2_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "LNG Carrier Ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/20250401005245.jpg",
+      "bounds": {
+        "min": [
+          -142.5,
+          0,
+          -22.808
+        ],
+        "max": [
+          142.5,
+          43.5367,
+          22.808
+        ],
+        "size": [
+          285,
+          43.537,
+          45.616
+        ],
+        "rMax": 144.314,
+        "triangles": 820,
+        "vertices": 477
+      },
+      "spec": {
+        "style": "LNG Carrier Ship"
+      },
+      "triangles": 820,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_20250401005245_v6",
+      "realScale": {
+        "className": "lng_carrier",
+        "targetSize": [
+          285,
+          43.531499999999994,
+          45.874
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_202512251310033872_v6",
+      "key": "ship/hull_202512251310033872_5795cf80_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "industrial_military_submarine",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/202512251310033872.webp",
+      "bounds": {
+        "min": [
+          -35.0008,
+          0.0523,
+          -3.2726
+        ],
+        "max": [
+          35.0008,
+          9.098,
+          3.1738
+        ],
+        "size": [
+          70.002,
+          9.046,
+          6.446
+        ],
+        "rMax": 35.153,
+        "triangles": 900,
+        "vertices": 568
+      },
+      "spec": {
+        "style": "industrial_military_submarine"
+      },
+      "triangles": 900,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_202512251310033872_v6",
+      "realScale": {
+        "className": "submarine",
+        "targetSize": [
+          70,
+          9.094999999999999,
+          6.465356188156577
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_202602131051276980_v6",
+      "key": "ship/hull_202602131051276980_c9a78d66_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "maritime_vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/202602131051276980.webp",
+      "bounds": {
+        "min": [
+          -40,
+          0,
+          -5.2
+        ],
+        "max": [
+          40,
+          15.1249,
+          5.2
+        ],
+        "size": [
+          80,
+          15.125,
+          10.4
+        ],
+        "rMax": 40.337,
+        "triangles": 536,
+        "vertices": 329
+      },
+      "spec": {
+        "style": "maritime_vessel"
+      },
+      "triangles": 536,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_202602131051276980_v6",
+      "realScale": {
+        "className": "industrial_ship",
+        "targetSize": [
+          80,
+          15.125000000000002,
+          10.4
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_20260421104430-37bd4fa5_v6",
+      "key": "ship/hull_20260421104430-37bd4fa5_86569231_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "industrial_cargo_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 85,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/20260421104430-37bd4fa5.jpg",
+      "bounds": {
+        "min": [
+          -60,
+          0,
+          -10.8
+        ],
+        "max": [
+          60,
+          22.2429,
+          10.8
+        ],
+        "size": [
+          120,
+          22.243,
+          21.6
+        ],
+        "rMax": 60.964,
+        "triangles": 512,
+        "vertices": 319
+      },
+      "spec": {
+        "style": "industrial_cargo_ship"
+      },
+      "triangles": 512,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_20260421104430-37bd4fa5_v6",
+      "realScale": {
+        "className": "cargo_ship",
+        "targetSize": [
+          120,
+          22.243000000000006,
+          21.599999999999998
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_20oz-china-ships-wgkl-master1050_v6",
+      "key": "ship/hull_20oz-china-ships-wgkl-master1050_4d61c27b_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern_naval_warship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/20oz-china-ships-wgkl-master1050.jpg",
+      "bounds": {
+        "min": [
+          -67.5,
+          0,
+          -6.75
+        ],
+        "max": [
+          67.5,
+          19.8729,
+          6.75
+        ],
+        "size": [
+          135,
+          19.873,
+          13.5
+        ],
+        "rMax": 67.837,
+        "triangles": 640,
+        "vertices": 391
+      },
+      "spec": {
+        "style": "modern_naval_warship"
+      },
+      "triangles": 640,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_20oz-china-ships-wgkl-master1050_v6",
+      "realScale": {
+        "className": "warship",
+        "targetSize": [
+          135,
+          19.873,
+          13.5
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_22xp-boaty-master1050_v6",
+      "key": "ship/hull_22xp-boaty-master1050_4b429245_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern icebreaker research vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/22xp-boaty-master1050.jpg",
+      "bounds": {
+        "min": [
+          -45,
+          0,
+          -7.65
+        ],
+        "max": [
+          45,
+          14.4,
+          7.65
+        ],
+        "size": [
+          90,
+          14.4,
+          15.3
+        ],
+        "rMax": 45.646,
+        "triangles": 288,
+        "vertices": 173
+      },
+      "spec": {
+        "style": "modern icebreaker research vessel"
+      },
+      "triangles": 288,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_22xp-boaty-master1050_v6",
+      "realScale": {
+        "className": "research_vessel",
+        "targetSize": [
+          90,
+          14.4,
+          15.3
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_2798933_v6",
+      "key": "ship/hull_2798933_bb7f491f_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "fishing_vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 85,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/2798933.jpg",
+      "bounds": {
+        "min": [
+          -6,
+          0,
+          -2
+        ],
+        "max": [
+          6,
+          4.3698,
+          2
+        ],
+        "size": [
+          12,
+          4.37,
+          4
+        ],
+        "rMax": 6.325,
+        "triangles": 564,
+        "vertices": 343
+      },
+      "spec": {
+        "style": "fishing_vessel"
+      },
+      "triangles": 564,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_2798933_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          12,
+          4.37,
+          4
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_300gt-tuna-long-liner-boat_02_v6",
+      "key": "ship/hull_300gt-tuna-long-liner-boat_02_1fff13d7_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "Fishing Vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/300gt-tuna-long-liner-boat_02.jpg",
+      "bounds": {
+        "min": [
+          -18.1748,
+          0,
+          -4.4
+        ],
+        "max": [
+          21.6913,
+          8,
+          4.4
+        ],
+        "size": [
+          39.866,
+          8,
+          8.8
+        ],
+        "rMax": 22.133,
+        "triangles": 724,
+        "vertices": 442
+      },
+      "spec": {
+        "style": "Fishing Vessel"
+      },
+      "triangles": 724,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_300gt-tuna-long-liner-boat_02_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          40,
+          8,
+          8.8
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_379b7bfc740ea9d22183f066b6e40ff8-600x400_v6",
+      "key": "ship/hull_379b7bfc740ea9d22183f066b6e40ff8-600x400_0d077c82_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_warship_destroyer",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg",
+      "bounds": {
+        "min": [
+          -67.5,
+          0,
+          -8
+        ],
+        "max": [
+          67.5,
+          13.5,
+          8
+        ],
+        "size": [
+          135,
+          13.5,
+          16
+        ],
+        "rMax": 67.972,
+        "triangles": 624,
+        "vertices": 383
+      },
+      "spec": {
+        "style": "military_warship_destroyer"
+      },
+      "triangles": 624,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_379b7bfc740ea9d22183f066b6e40ff8-600x400_v6",
+      "realScale": {
+        "className": "warship",
+        "targetSize": [
+          135,
+          13.5,
+          16
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_489644a4-bb94-6109-6f71-d81400ca1a48_620_v6",
+      "key": "ship/hull_489644a4-bb94-6109-6f71-d81400ca1a48_620_03744bc0_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "container_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/489644a4-bb94-6109-6f71-d81400ca1a48_620.jpg",
+      "bounds": {
+        "min": [
+          -110,
+          0,
+          -19.7704
+        ],
+        "max": [
+          110,
+          41.78,
+          19.7704
+        ],
+        "size": [
+          220,
+          41.78,
+          39.541
+        ],
+        "rMax": 111.763,
+        "triangles": 538,
+        "vertices": 347
+      },
+      "spec": {
+        "style": "container_ship"
+      },
+      "triangles": 538,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_489644a4-bb94-6109-6f71-d81400ca1a48_620_v6",
+      "realScale": {
+        "className": "cargo_ship",
+        "targetSize": [
+          220,
+          41.78,
+          39.586
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_6232d26edb8ab_v6",
+      "key": "ship/hull_6232d26edb8ab_25dbb63d_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "Fishing Vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/6232d26edb8ab.jpg",
+      "bounds": {
+        "min": [
+          -7.5,
+          0,
+          -2.85
+        ],
+        "max": [
+          7.5,
+          2.9997,
+          2.85
+        ],
+        "size": [
+          15,
+          3,
+          5.7
+        ],
+        "rMax": 8.023,
+        "triangles": 684,
+        "vertices": 411
+      },
+      "spec": {
+        "style": "Fishing Vessel"
+      },
+      "triangles": 684,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_6232d26edb8ab_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          15,
+          3,
+          5.7
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_6621n_v6",
+      "key": "ship/hull_6621n_5dbc986b_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "Research Vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/6621n.jpg",
+      "bounds": {
+        "min": [
+          -30,
+          0,
+          -5.1
+        ],
+        "max": [
+          30,
+          14.1117,
+          5.1
+        ],
+        "size": [
+          60,
+          14.112,
+          10.2
+        ],
+        "rMax": 30.43,
+        "triangles": 312,
+        "vertices": 183
+      },
+      "spec": {
+        "style": "Research Vessel"
+      },
+      "triangles": 312,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_6621n_v6",
+      "realScale": {
+        "className": "research_vessel",
+        "targetSize": [
+          60,
+          14.107799999999997,
+          10.200000000000001
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_666_v6",
+      "key": "ship/hull_666_44c92603_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern research vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/666.jpg",
+      "bounds": {
+        "min": [
+          -30,
+          0,
+          -5.1
+        ],
+        "max": [
+          30,
+          11.7419,
+          5.1
+        ],
+        "size": [
+          60,
+          11.742,
+          10.2
+        ],
+        "rMax": 30.43,
+        "triangles": 344,
+        "vertices": 203
+      },
+      "spec": {
+        "style": "modern research vessel"
+      },
+      "triangles": 344,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_666_v6",
+      "realScale": {
+        "className": "research_vessel",
+        "targetSize": [
+          60,
+          11.741999999999997,
+          10.200000000000001
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_668d6f418c667-870x500_v6",
+      "key": "ship/hull_668d6f418c667-870x500_036c559a_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "cruise_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/668d6f418c667-870x500.webp",
+      "bounds": {
+        "min": [
+          -125,
+          0,
+          -19.535
+        ],
+        "max": [
+          125,
+          49.144,
+          19.535
+        ],
+        "size": [
+          250,
+          49.144,
+          39.07
+        ],
+        "rMax": 126.517,
+        "triangles": 3096,
+        "vertices": 1905
+      },
+      "spec": {
+        "style": "cruise_ship"
+      },
+      "triangles": 3096,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_668d6f418c667-870x500_v6",
+      "realScale": {
+        "className": "cruise_ship",
+        "targetSize": [
+          250,
+          49.144000000000005,
+          39.07
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_762bcd7026aa844c83ed2b0f5454b162_v6",
+      "key": "ship/hull_762bcd7026aa844c83ed2b0f5454b162_7e99a959_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "LNG Carrier Ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/762bcd7026aa844c83ed2b0f5454b162.jpg",
+      "bounds": {
+        "min": [
+          -146.2206,
+          0,
+          -22.084
+        ],
+        "max": [
+          138.7809,
+          39.4265,
+          22.084
+        ],
+        "size": [
+          285.001,
+          39.426,
+          44.168
+        ],
+        "rMax": 147.879,
+        "triangles": 1002,
+        "vertices": 583
+      },
+      "spec": {
+        "style": "LNG Carrier Ship"
+      },
+      "triangles": 1002,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_762bcd7026aa844c83ed2b0f5454b162_v6",
+      "realScale": {
+        "className": "lng_carrier",
+        "targetSize": [
+          285,
+          39.426500000000004,
+          44.648
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58_v6",
+      "key": "ship/hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58_0f082121_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "fishing_vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58.jpg",
+      "bounds": {
+        "min": [
+          -6,
+          0,
+          -2.2638
+        ],
+        "max": [
+          6,
+          2.3999,
+          2.2638
+        ],
+        "size": [
+          12,
+          2.4,
+          4.528
+        ],
+        "rMax": 6.413,
+        "triangles": 646,
+        "vertices": 405
+      },
+      "spec": {
+        "style": "fishing_vessel"
+      },
+      "triangles": 646,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          12,
+          2.4000000000000004,
+          4.528151110127032
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_v6",
+      "key": "ship/hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_c8647947_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern research vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/8eadcf6f-3d54-4ddf-92e6-a815be2b03c1.jpg",
+      "bounds": {
+        "min": [
+          -30,
+          0,
+          -6.021
+        ],
+        "max": [
+          30,
+          15.4519,
+          6.021
+        ],
+        "size": [
+          60,
+          15.452,
+          12.042
+        ],
+        "rMax": 30.598,
+        "triangles": 360,
+        "vertices": 209
+      },
+      "spec": {
+        "style": "modern research vessel"
+      },
+      "triangles": 360,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_v6",
+      "realScale": {
+        "className": "research_vessel",
+        "targetSize": [
+          60,
+          15.452,
+          12.042
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull__208000_-__v6",
+      "key": "ship/hull_中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧_cca69839_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "industrial_bulk_carrier",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧.jpg",
+      "bounds": {
+        "min": [
+          -149.85,
+          0,
+          -25
+        ],
+        "max": [
+          149.85,
+          43,
+          25
+        ],
+        "size": [
+          299.7,
+          43,
+          50
+        ],
+        "rMax": 151.921,
+        "triangles": 380,
+        "vertices": 231
+      },
+      "spec": {
+        "style": "industrial_bulk_carrier"
+      },
+      "triangles": 380,
+      "outputDir": "out/3d_data/ship/hull/ship_hull__208000_-__v6",
+      "realScale": {
+        "className": "capesize_bulk_carrier",
+        "targetSize": [
+          299.7,
+          43,
+          50
+        ],
+        "confidence": "sister_ship"
+      }
+    },
+    {
+      "id": "ship_hull__2-__v6",
+      "key": "ship/hull_圖2-超日王號_43b49e4e_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_aircraft_carrier",
+      "symmetryMode": "symmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/圖2-超日王號.jpg",
+      "bounds": {
+        "min": [
+          -141.7789,
+          0,
+          -30.5
+        ],
+        "max": [
+          141.7789,
+          35.2149,
+          30.5
+        ],
+        "size": [
+          283.558,
+          35.215,
+          61
+        ],
+        "rMax": 145.022,
+        "triangles": 512,
+        "vertices": 321
+      },
+      "spec": {
+        "style": "military_aircraft_carrier"
+      },
+      "triangles": 512,
+      "outputDir": "out/3d_data/ship/hull/ship_hull__2-__v6",
+      "realScale": {
+        "className": "ski_jump_aircraft_carrier",
+        "targetSize": [
+          283.5,
+          36,
+          61
+        ],
+        "confidence": "identified_photo"
+      }
+    },
+    {
+      "id": "ship_hull_A04A00_P_01_02_v6",
+      "key": "ship/hull_A04A00_P_01_02_ee255c96_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "container_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/A04A00_P_01_02.jpg",
+      "bounds": {
+        "min": [
+          -110,
+          0,
+          -15
+        ],
+        "max": [
+          110,
+          26.8715,
+          15
+        ],
+        "size": [
+          220,
+          26.872,
+          30
+        ],
+        "rMax": 111.018,
+        "triangles": 696,
+        "vertices": 439
+      },
+      "spec": {
+        "style": "container_ship"
+      },
+      "triangles": 696,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_A04A00_P_01_02_v6",
+      "realScale": {
+        "className": "cargo_ship",
+        "targetSize": [
+          220,
+          26.871500000000005,
+          30
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_v6",
+      "key": "ship/hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_b8df87d6_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "Bulk Carrier Ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
+      "bounds": {
+        "min": [
+          -112.5,
+          0,
+          -15.75
+        ],
+        "max": [
+          112.5,
+          25.3895,
+          15.75
+        ],
+        "size": [
+          225,
+          25.39,
+          31.5
+        ],
+        "rMax": 113.597,
+        "triangles": 492,
+        "vertices": 291
+      },
+      "spec": {
+        "style": "Bulk Carrier Ship"
+      },
+      "triangles": 492,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_v6",
+      "realScale": {
+        "className": "bulk_carrier",
+        "targetSize": [
+          225,
+          25.389500000000005,
+          31.500000000000004
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_article-5ca19fe0e988a_v6",
+      "key": "ship/hull_article-5ca19fe0e988a_e67f0e50_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern_cruise_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/article-5ca19fe0e988a.jpg",
+      "bounds": {
+        "min": [
+          -125,
+          0,
+          -15
+        ],
+        "max": [
+          125,
+          36.8695,
+          15
+        ],
+        "size": [
+          250,
+          36.87,
+          30
+        ],
+        "rMax": 125.897,
+        "triangles": 2992,
+        "vertices": 1853
+      },
+      "spec": {
+        "style": "modern_cruise_ship"
+      },
+      "triangles": 2992,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_article-5ca19fe0e988a_v6",
+      "realScale": {
+        "className": "cruise_ship",
+        "targetSize": [
+          250,
+          36.8695,
+          30
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c_v6",
+      "key": "ship/hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c_4f0fb5c6_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "industrial_maritime",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg",
+      "bounds": {
+        "min": [
+          -90,
+          0,
+          -15.035
+        ],
+        "max": [
+          90,
+          31.084,
+          16.4644
+        ],
+        "size": [
+          180,
+          31.084,
+          31.499
+        ],
+        "rMax": 91.494,
+        "triangles": 338,
+        "vertices": 200
+      },
+      "spec": {
+        "style": "industrial_maritime"
+      },
+      "triangles": 338,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c_v6",
+      "realScale": {
+        "className": "industrial_ship",
+        "targetSize": [
+          180,
+          31.084000000000003,
+          31.573
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_Capture-3139_v6",
+      "key": "ship/hull_Capture-3139_53bfea36_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "container_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/Capture-3139.jpg",
+      "bounds": {
+        "min": [
+          -110,
+          0,
+          -13.083
+        ],
+        "max": [
+          110,
+          24.2001,
+          13.3346
+        ],
+        "size": [
+          220,
+          24.2,
+          26.418
+        ],
+        "rMax": 110.805,
+        "triangles": 608,
+        "vertices": 380
+      },
+      "spec": {
+        "style": "container_ship"
+      },
+      "triangles": 608,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_Capture-3139_v6",
+      "realScale": {
+        "className": "cargo_ship",
+        "targetSize": [
+          220,
+          24.2,
+          26.442999999999998
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_d5154891_v6",
+      "key": "ship/hull_d5154891_bf50ff0d_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "container_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/d5154891.jpg",
+      "bounds": {
+        "min": [
+          -110,
+          0,
+          -19.8
+        ],
+        "max": [
+          110,
+          24.2,
+          19.8
+        ],
+        "size": [
+          220,
+          24.2,
+          39.6
+        ],
+        "rMax": 111.768,
+        "triangles": 512,
+        "vertices": 319
+      },
+      "spec": {
+        "style": "container_ship"
+      },
+      "triangles": 512,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_d5154891_v6",
+      "realScale": {
+        "className": "cargo_ship",
+        "targetSize": [
+          220,
+          24.200000000000003,
+          39.6
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_Disney_20Adventure_20ship_201_v6",
+      "key": "ship/hull_Disney%20Adventure%20ship%201_4b913647_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "cruise_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/Disney%20Adventure%20ship%201.jpg",
+      "bounds": {
+        "min": [
+          -171,
+          0,
+          -23.2
+        ],
+        "max": [
+          171,
+          66,
+          23.2
+        ],
+        "size": [
+          342,
+          66,
+          46.4
+        ],
+        "rMax": 172.567,
+        "triangles": 3180,
+        "vertices": 1959
+      },
+      "spec": {
+        "style": "cruise_ship"
+      },
+      "triangles": 3180,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_Disney_20Adventure_20ship_201_v6",
+      "realScale": {
+        "className": "mega_cruise_ship",
+        "targetSize": [
+          342,
+          66,
+          46.4
+        ],
+        "confidence": "identified_ship"
+      }
+    },
+    {
+      "id": "ship_hull_e7642302_v6",
+      "key": "ship/hull_e7642302_80919ef8_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_aircraft_carrier",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/e7642302.jpg",
+      "bounds": {
+        "min": [
+          -157.5321,
+          0,
+          -37.5
+        ],
+        "max": [
+          157.5321,
+          38,
+          37.5
+        ],
+        "size": [
+          315.064,
+          38,
+          75
+        ],
+        "rMax": 161.934,
+        "triangles": 460,
+        "vertices": 289
+      },
+      "spec": {
+        "style": "military_aircraft_carrier"
+      },
+      "triangles": 460,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_e7642302_v6",
+      "realScale": {
+        "className": "ski_jump_aircraft_carrier",
+        "targetSize": [
+          315,
+          38,
+          75
+        ],
+        "confidence": "identified_photo"
+      }
+    },
+    {
+      "id": "ship_hull_GettyImages-630597388-compressor_v6",
+      "key": "ship/hull_GettyImages-630597388-compressor_9babfa3d_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_aircraft_carrier",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/GettyImages-630597388-compressor.jpg",
+      "bounds": {
+        "min": [
+          -152.281,
+          0,
+          -49.0548
+        ],
+        "max": [
+          152.281,
+          36.0065,
+          25.9452
+        ],
+        "size": [
+          304.562,
+          36.007,
+          75
+        ],
+        "rMax": 159.987,
+        "triangles": 468,
+        "vertices": 297
+      },
+      "spec": {
+        "style": "military_aircraft_carrier"
+      },
+      "triangles": 468,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_GettyImages-630597388-compressor_v6",
+      "realScale": {
+        "className": "ski_jump_aircraft_carrier",
+        "targetSize": [
+          304.5,
+          37,
+          75
+        ],
+        "confidence": "identified_photo"
+      }
+    },
+    {
+      "id": "ship_hull_id13750938-558191_v6",
+      "key": "ship/hull_id13750938-558191_3b4910c3_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern_warship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/id13750938-558191.jpg",
+      "bounds": {
+        "min": [
+          -0.576,
+          0,
+          -9
+        ],
+        "max": [
+          134.424,
+          23.1939,
+          9
+        ],
+        "size": [
+          135,
+          23.194,
+          18
+        ],
+        "rMax": 134.725,
+        "triangles": 408,
+        "vertices": 245
+      },
+      "spec": {
+        "style": "modern_warship"
+      },
+      "triangles": 408,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_id13750938-558191_v6",
+      "realScale": {
+        "className": "warship",
+        "targetSize": [
+          135,
+          23.194000000000003,
+          18
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_img-1478851082-74949_v6",
+      "key": "ship/hull_img-1478851082-74949_5e21cd86_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern luxury motor yacht",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/img-1478851082-74949.jpg",
+      "bounds": {
+        "min": [
+          -0.231,
+          0,
+          -1.6
+        ],
+        "max": [
+          9.7695,
+          1.8977,
+          1.6
+        ],
+        "size": [
+          10.001,
+          1.898,
+          3.2
+        ],
+        "rMax": 9.9,
+        "triangles": 158,
+        "vertices": 93
+      },
+      "spec": {
+        "style": "modern luxury motor yacht"
+      },
+      "triangles": 158,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_img-1478851082-74949_v6",
+      "realScale": {
+        "className": "yacht",
+        "targetSize": [
+          10,
+          1.898,
+          3.2
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_k23_v6",
+      "key": "ship/hull_k23_3e23a8ab_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern_yacht",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/k23.jpg",
+      "bounds": {
+        "min": [
+          -10.05,
+          0,
+          -2
+        ],
+        "max": [
+          9.95,
+          4.3754,
+          2
+        ],
+        "size": [
+          20,
+          4.375,
+          4
+        ],
+        "rMax": 10.247,
+        "triangles": 588,
+        "vertices": 355
+      },
+      "spec": {
+        "style": "modern_yacht"
+      },
+      "triangles": 588,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_k23_v6",
+      "realScale": {
+        "className": "yacht",
+        "targetSize": [
+          20,
+          4.375500000000001,
+          4
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_Methanier_aspher_LNGRIVERS_v6",
+      "key": "ship/hull_Methanier_aspher_LNGRIVERS_59740126_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "industrial_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/Methanier_aspher_LNGRIVERS.jpg",
+      "bounds": {
+        "min": [
+          -142.5,
+          0,
+          -21.375
+        ],
+        "max": [
+          142.5,
+          36.5324,
+          21.375
+        ],
+        "size": [
+          285,
+          36.532,
+          42.75
+        ],
+        "rMax": 144.094,
+        "triangles": 816,
+        "vertices": 475
+      },
+      "spec": {
+        "style": "industrial_ship"
+      },
+      "triangles": 816,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_Methanier_aspher_LNGRIVERS_v6",
+      "realScale": {
+        "className": "lng_carrier",
+        "targetSize": [
+          285,
+          36.53050000000001,
+          42.75
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad_0_v6",
+      "key": "ship/hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0_8cceca66_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_submarine",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/mobile01-d0f6425557ae4a5310b111f39cf1a5ad.jpg",
+      "bounds": {
+        "min": [
+          -19.2571,
+          0,
+          -4.5
+        ],
+        "max": [
+          55.7429,
+          9.75,
+          4.5
+        ],
+        "size": [
+          75,
+          9.75,
+          9
+        ],
+        "rMax": 55.924,
+        "triangles": 528,
+        "vertices": 331
+      },
+      "spec": {
+        "style": "military_submarine"
+      },
+      "triangles": 528,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad_0_v6",
+      "realScale": {
+        "className": "submarine",
+        "targetSize": [
+          75,
+          9.75,
+          9
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_mobileadv_1976_9821316_46373_v6",
+      "key": "ship/hull_mobileadv_1976_9821316_46373_01e23f67_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "scientific_research_vessel",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/mobileadv_1976_9821316_46373.jpg",
+      "bounds": {
+        "min": [
+          -30,
+          0,
+          -5.1
+        ],
+        "max": [
+          30,
+          11.3749,
+          5.1
+        ],
+        "size": [
+          60,
+          11.375,
+          10.2
+        ],
+        "rMax": 30.43,
+        "triangles": 312,
+        "vertices": 183
+      },
+      "spec": {
+        "style": "scientific_research_vessel"
+      },
+      "triangles": 312,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_mobileadv_1976_9821316_46373_v6",
+      "realScale": {
+        "className": "research_vessel",
+        "targetSize": [
+          60,
+          11.375,
+          10.200000000000001
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_nzdnc7pepb9ltbpslhtv_v6",
+      "key": "ship/hull_nzdnc7pepb9ltbpslhtv_23f3ac4b_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern speedboat",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/nzdnc7pepb9ltbpslhtv.jpg",
+      "bounds": {
+        "min": [
+          -4.858,
+          0,
+          -1.525
+        ],
+        "max": [
+          4.142,
+          2.4995,
+          1.525
+        ],
+        "size": [
+          9,
+          2.499,
+          3.05
+        ],
+        "rMax": 5.092,
+        "triangles": 202,
+        "vertices": 117
+      },
+      "spec": {
+        "style": "modern speedboat"
+      },
+      "triangles": 202,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_nzdnc7pepb9ltbpslhtv_v6",
+      "realScale": {
+        "className": "motorboat",
+        "targetSize": [
+          9,
+          2.4995000000000003,
+          3.05
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_pngtree-a-small-fishing-boat-png-image_16296083_v6",
+      "key": "ship/hull_pngtree-a-small-fishing-boat-png-image_16296083_9dae274e_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "fishing_boat",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/pngtree-a-small-fishing-boat-png-image_16296083.png",
+      "bounds": {
+        "min": [
+          -4.5,
+          0,
+          -1.5
+        ],
+        "max": [
+          4.5,
+          3.0799,
+          1.5
+        ],
+        "size": [
+          9,
+          3.08,
+          3
+        ],
+        "rMax": 4.743,
+        "triangles": 310,
+        "vertices": 190
+      },
+      "spec": {
+        "style": "fishing_boat"
+      },
+      "triangles": 310,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_pngtree-a-small-fishing-boat-png-image_16296083_v6",
+      "realScale": {
+        "className": "fishing_vessel",
+        "targetSize": [
+          9,
+          3.08,
+          3
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_pngtree-blue-and-white-speedboat-png-image_16228702_v6",
+      "key": "ship/hull_pngtree-blue-and-white-speedboat-png-image_16228702_17dab541_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern motor yacht",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/pngtree-blue-and-white-speedboat-png-image_16228702.png",
+      "bounds": {
+        "min": [
+          -4.7478,
+          0,
+          -1.2505
+        ],
+        "max": [
+          5.2522,
+          2.224,
+          1.2505
+        ],
+        "size": [
+          10,
+          2.224,
+          2.501
+        ],
+        "rMax": 5.399,
+        "triangles": 150,
+        "vertices": 91
+      },
+      "spec": {
+        "style": "modern motor yacht"
+      },
+      "triangles": 150,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_pngtree-blue-and-white-speedboat-png-image_16228702_v6",
+      "realScale": {
+        "className": "yacht",
+        "targetSize": [
+          10,
+          2.2239999999999998,
+          2.501
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_v6",
+      "key": "ship/hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_f749b0ad_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "cruise_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
+      "bounds": {
+        "min": [
+          -155,
+          0,
+          -23.5
+        ],
+        "max": [
+          155,
+          58,
+          23.5
+        ],
+        "size": [
+          310,
+          58,
+          47
+        ],
+        "rMax": 156.771,
+        "triangles": 3004,
+        "vertices": 1861
+      },
+      "spec": {
+        "style": "cruise_ship"
+      },
+      "triangles": 3004,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_v6",
+      "realScale": {
+        "className": "cruise_ship",
+        "targetSize": [
+          310,
+          58,
+          47
+        ],
+        "confidence": "exact"
+      }
+    },
+    {
+      "id": "ship_hull_s11_1667405441519_v6",
+      "key": "ship/hull_s11_1667405441519_c521b338_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern_catamaran_tour_boat",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/s11_1667405441519.jpg",
+      "bounds": {
+        "min": [
+          -7.5,
+          0,
+          -2.7
+        ],
+        "max": [
+          7.5,
+          2.9135,
+          2.7
+        ],
+        "size": [
+          15,
+          2.913,
+          5.4
+        ],
+        "rMax": 7.971,
+        "triangles": 502,
+        "vertices": 301
+      },
+      "spec": {
+        "style": "modern_catamaran_tour_boat"
+      },
+      "triangles": 502,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_s11_1667405441519_v6",
+      "realScale": {
+        "className": "catamaran",
+        "targetSize": [
+          15,
+          2.9135,
+          5.3999999999999995
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_tkldbkxi3ftl5wewz3u2_v6",
+      "key": "ship/hull_tkldbkxi3ftl5wewz3u2_7210a6d9_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern speedboat",
+      "symmetryMode": "symmetric",
+      "similarityScore": 90,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/tkldbkxi3ftl5wewz3u2.jpg",
+      "bounds": {
+        "min": [
+          -4.5,
+          0,
+          -1.312
+        ],
+        "max": [
+          4.5,
+          2.2495,
+          1.312
+        ],
+        "size": [
+          9,
+          2.249,
+          2.624
+        ],
+        "rMax": 4.687,
+        "triangles": 346,
+        "vertices": 219
+      },
+      "spec": {
+        "style": "modern speedboat"
+      },
+      "triangles": 346,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_tkldbkxi3ftl5wewz3u2_v6",
+      "realScale": {
+        "className": "motorboat",
+        "targetSize": [
+          9,
+          2.2495000000000003,
+          2.624
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_ttn1071_Cover0106_1_v6",
+      "key": "ship/hull_ttn1071_Cover0106~1_aa464459_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "cruise_ship",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/ttn1071_Cover0106.jpg",
+      "bounds": {
+        "min": [
+          -124.7058,
+          0,
+          -15
+        ],
+        "max": [
+          125.3197,
+          35.001,
+          15
+        ],
+        "size": [
+          250.025,
+          35.001,
+          30
+        ],
+        "rMax": 126.214,
+        "triangles": 3308,
+        "vertices": 2037
+      },
+      "spec": {
+        "style": "cruise_ship"
+      },
+      "triangles": 3308,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_ttn1071_Cover0106_1_v6",
+      "realScale": {
+        "className": "cruise_ship",
+        "targetSize": [
+          250,
+          35.001000000000005,
+          30
+        ],
+        "confidence": "class_estimate"
+      }
+    },
+    {
+      "id": "ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise__CVN_65__is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_v6",
+      "key": "ship/hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_fb3e0c01_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "military_aircraft_carrier",
+      "symmetryMode": "symmetric",
+      "similarityScore": 85,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
+      "bounds": {
+        "min": [
+          -167.8342,
+          0,
+          -46.4134
+        ],
+        "max": [
+          167.8342,
+          39.1425,
+          30.3866
+        ],
+        "size": [
+          335.668,
+          39.142,
+          76.8
+        ],
+        "rMax": 174.134,
+        "triangles": 484,
+        "vertices": 307
+      },
+      "spec": {
+        "style": "military_aircraft_carrier"
+      },
+      "triangles": 484,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise__CVN_65__is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_v6",
+      "realScale": {
+        "className": "aircraft_carrier",
+        "targetSize": [
+          335.6,
+          40,
+          76.8
+        ],
+        "confidence": "exact"
+      }
+    },
+    {
+      "id": "ship_hull_Virginia_class_submarine_v6",
+      "key": "ship/hull_Virginia_class_submarine_ff4f41f4_v6",
+      "family": "ship",
+      "subpart": "hull",
+      "style": "modern_military_submarine",
+      "symmetryMode": "symmetric",
+      "similarityScore": 92,
+      "version": 6,
+      "verStr": "v6",
+      "image": "ship/Virginia_class_submarine.jpg",
+      "bounds": {
+        "min": [
+          -25.112,
+          0,
+          -4.9265
+        ],
+        "max": [
+          89.688,
+          13,
+          4.9265
+        ],
+        "size": [
+          114.8,
+          13,
+          9.853
+        ],
+        "rMax": 89.823,
+        "triangles": 600,
+        "vertices": 369
+      },
+      "spec": {
+        "style": "modern_military_submarine"
+      },
+      "triangles": 600,
+      "outputDir": "out/3d_data/ship/hull/ship_hull_Virginia_class_submarine_v6",
+      "realScale": {
+        "className": "attack_submarine",
+        "targetSize": [
+          114.8,
+          13,
+          10.36
+        ],
+        "confidence": "exact"
+      }
     }
   ]
 }

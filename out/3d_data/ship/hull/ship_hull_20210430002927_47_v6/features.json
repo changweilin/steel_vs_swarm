@@ -4,18 +4,17 @@
   "style": "yacht",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
+    "roofHex": 8359053,
     "facadeHex": 16777215,
-    "baseHex": 2631720,
-    "accentHex": 16729344,
-    "darkHex": 3355443,
+    "baseHex": 16777215,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
     "brightHex": 14540253,
     "glassHex": 4621730
   },
-  "totalParts": 11,
+  "totalParts": 10,
   "partNames": [
-    "main_hull_wedge",
-    "hull_base",
+    "main_hull_polyhedron",
     "superstructure_base",
     "bridge_cabin",
     "bridge_window_front",
@@ -27,6 +26,8 @@
     "railing_front"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "wedge",
     "box",
     "hemisphere_dome",

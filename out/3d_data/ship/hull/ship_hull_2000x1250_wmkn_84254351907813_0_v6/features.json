@@ -4,19 +4,17 @@
   "style": "military_ship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 11843250,
+    "roofHex": 9871523,
     "facadeHex": 9871523,
-    "baseHex": 3290165,
-    "accentHex": 14540253,
+    "baseHex": 9871523,
+    "accentHex": 15105570,
     "darkHex": 2105376,
     "brightHex": 15790320,
     "glassHex": 3368652
   },
-  "totalParts": 17,
+  "totalParts": 20,
   "partNames": [
-    "hull_base",
-    "hull_main",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "main_deck",
     "foredeck_gun",
     "superstructure_base",
@@ -30,12 +28,18 @@
     "funnel_block",
     "helipad_deck",
     "life_ring_port",
-    "life_ring_starboard"
+    "life_ring_starboard",
+    "vls_cell_1",
+    "vls_cell_2",
+    "vls_cell_3",
+    "vls_cell_4",
+    "ciws_aft"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
     "box",
-    "wedge",
     "cylinder",
+    "tapered_box",
     "frustum_pyramid",
     "hemisphere_dome",
     "torus_ring"

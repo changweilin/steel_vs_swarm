@@ -14,27 +14,51 @@
   "created_at": "2026-08-20T16:07:38.320Z",
   "bounds": {
     "min": [
-      -6.88,
-      -2,
-      -25
+      -30,
+      0,
+      -5.4
     ],
     "max": [
-      6.88,
-      17.25,
-      30.5
+      30,
+      11.7737,
+      5.4
     ],
     "size": [
-      13.76,
-      19.25,
-      55.5
+      60,
+      11.774,
+      10.8
     ],
-    "rMax": 31.266,
-    "triangles": 776,
-    "vertices": 478
+    "rMax": 30.482,
+    "triangles": 878,
+    "vertices": 535
   },
   "spec": {
     "style": "military_ship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 3",
+      "鏡像補件 0",
+      "貼地 0.00m",
+      "船身厚度 2.99→3.00（縮放前）",
+      "實尺 60.0×11.8×10.8m (class_estimate)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "warship",
+    "targetSize": [
+      60,
+      11.774,
+      10.799999999999999
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 warship 保守標準全長 60m。"
+  }
 }

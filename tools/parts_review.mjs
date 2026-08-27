@@ -234,7 +234,7 @@ export function manifest(items = {}, photosOpt = null) {
         }
         : null,
       item: items[name] || null,
-      replaces: p.replaces || null,
+      replaces: p?.replaces || null,
     });
   }
 
@@ -330,6 +330,49 @@ export function manifest(items = {}, photosOpt = null) {
       version: p?.version || dbItem?.version || 1,
       verStr: `v${p?.version || dbItem?.version || 1}`,
       item: items[rowKey] || null,
+    });
+  }
+
+  // ── (C) 遊戲內程序型錄 ──────────────────────────────────────────────────
+  // 這些物件沒有 GLB 與來源照片，台上直接呼叫遊戲自己的建構器；一款一列，禁止在 review.js
+  // 重抄幾何。名冊住此處，建構與尺寸仍以 public/js 消費端為唯一真相。
+  const proceduralCatalog = [
+    {
+      key: 'ship/patrol_surface',
+      title: '現代巡邏艇（連續多面體船殼）',
+      family: 'ship',
+      builder: 'aquatic',
+      kind: 'patrol_ship',
+      consumer: 'aquatics.createSurfaceVessels',
+      note: '船體、船首與 V 底由共用截面 loft 成單一封閉網格；艙體、窗面與桅杆接合皆由同一組高度推導。',
+    },
+  ];
+  for (const d of proceduralCatalog) {
+    const p = {
+      method: 'procedural', version: 1, consumer: d.consumer, rev: 'working-tree', at: '2026-08-26', imgs: [],
+      gen: {
+        tool: 'loftGeometry', runner: 'public/js/aquatics.js',
+        params: '五段船殼截面 + 三段艙體截面；+Z 船首；平面法線硬邊',
+        machine: '瀏覽器原生 Three.js BufferGeometry',
+      },
+      post: { tool: '無（執行期直接建構）' },
+      note: d.note,
+    };
+    rows.push({
+      key: d.key,
+      title: d.title,
+      family: d.family,
+      method: METHODS.procedural,
+      prov: p,
+      imgs: [],
+      flaws: [],
+      consumer: d.consumer,
+      view: { mode: 'now-only', builder: d.builder, kind: d.kind },
+      missing: false,
+      at: p.at,
+      version: p.version,
+      verStr: `v${p.version}`,
+      item: items[d.key] || null,
     });
   }
 

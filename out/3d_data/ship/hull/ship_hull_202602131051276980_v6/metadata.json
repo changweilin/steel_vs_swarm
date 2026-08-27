@@ -14,27 +14,51 @@
   "created_at": "2026-08-20T16:09:22.353Z",
   "bounds": {
     "min": [
-      -25,
-      -0.75,
-      -4
+      -40,
+      0,
+      -5.2
     ],
     "max": [
-      25,
-      16,
-      4
+      40,
+      15.1249,
+      5.2
     ],
     "size": [
-      50,
-      16.75,
-      8
+      80,
+      15.125,
+      10.4
     ],
-    "rMax": 25.318,
-    "triangles": 522,
-    "vertices": 326
+    "rMax": 40.337,
+    "triangles": 536,
+    "vertices": 329
   },
   "spec": {
     "style": "maritime_vessel"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m",
+      "船身厚度 3.99→4.00（縮放前）",
+      "實尺 80.0×15.1×10.4m (class_estimate)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "industrial_ship",
+    "targetSize": [
+      80,
+      15.125000000000002,
+      10.4
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 industrial_ship 保守標準全長 80m。"
+  }
 }

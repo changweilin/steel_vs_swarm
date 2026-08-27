@@ -14,27 +14,48 @@
   "created_at": "2026-08-20T16:22:00.688Z",
   "bounds": {
     "min": [
-      -12.25,
-      -2.5,
-      -2.5
+      -25.112,
+      0,
+      -4.9265
     ],
     "max": [
-      18.3,
-      5.5,
-      2.5
+      89.688,
+      13,
+      4.9265
     ],
     "size": [
-      30.55,
-      8,
-      5
+      114.8,
+      13,
+      9.853
     ],
-    "rMax": 18.47,
-    "triangles": 336,
-    "vertices": 201
+    "rMax": 89.823,
+    "triangles": 600,
+    "vertices": 369
   },
   "spec": {
     "style": "modern_military_submarine"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "貼地位移 0.00m",
+      "潛艇改用封閉橢球耐壓殼",
+      "實尺 114.8×13.0×10.4m (exact)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "attack_submarine",
+    "targetSize": [
+      114.8,
+      13,
+      10.36
+    ],
+    "confidence": "exact",
+    "source": "US Navy Fact File：Virginia 級長 377 呎、寬 34 呎。"
+  }
 }

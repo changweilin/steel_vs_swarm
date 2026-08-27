@@ -4,29 +4,26 @@
   "style": "modern motorboat",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 13631488,
+    "roofHex": 8359053,
     "facadeHex": 16777215,
-    "baseHex": 2236962,
-    "accentHex": 16753920,
-    "darkHex": 3355443,
-    "brightHex": 14540253,
-    "glassHex": 4621730
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
+    "glassHex": 1976635
   },
-  "totalParts": 9,
+  "totalParts": 5,
   "partNames": [
-    "hull_main",
-    "hull_bottom",
+    "main_hull_polyhedron",
     "windshield",
     "bimini_top",
     "outboard_motor",
-    "seat_row_1",
-    "seat_row_2",
-    "bimini_support_left",
-    "bimini_support_right"
+    "sealed_glazed_cabin_enclosure"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
     "box",
-    "wedge",
-    "cylinder"
+    "cylinder",
+    "tapered_box"
   ]
 }

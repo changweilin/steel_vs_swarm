@@ -14,27 +14,50 @@
   "created_at": "2026-08-20T16:05:13.910Z",
   "bounds": {
     "min": [
-      -42.5,
+      -158.0322,
       0,
-      -160
+      -38.0005
     ],
     "max": [
-      42.5,
-      27,
-      175
+      158.0322,
+      36.2394,
+      38.0005
     ],
     "size": [
-      85,
-      27,
-      335
+      316.064,
+      36.239,
+      76.001
     ],
-    "rMax": 180.087,
-    "triangles": 502,
-    "vertices": 316
+    "rMax": 162.537,
+    "triangles": 680,
+    "vertices": 435
   },
   "spec": {
     "style": "military_aircraft_carrier"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m",
+      "實尺 316.0×38.0×76.0m (identified_photo)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "catobar_aircraft_carrier",
+    "targetSize": [
+      316,
+      38,
+      76
+    ],
+    "confidence": "identified_photo",
+    "source": "照片辨識為福建艦 003 型平甲板航母；採公開主尺度近似。"
+  }
 }

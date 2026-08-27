@@ -4,18 +4,17 @@
   "style": "modern_warship",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 12632256,
+    "roofHex": 8359053,
     "facadeHex": 14211288,
-    "baseHex": 6579300,
-    "accentHex": 16777215,
-    "darkHex": 3158064,
-    "brightHex": 15790320,
+    "baseHex": 14211288,
+    "accentHex": 15105570,
+    "darkHex": 14211288,
+    "brightHex": 12632256,
     "glassHex": 4621730
   },
-  "totalParts": 10,
+  "totalParts": 14,
   "partNames": [
-    "main_hull",
-    "hull_base",
+    "main_hull_polyhedron",
     "superstructure_base",
     "bridge_windows",
     "main_mast_base",
@@ -23,10 +22,16 @@
     "main_gun",
     "vls_cells",
     "aft_superstructure",
-    "funnel"
+    "funnel",
+    "vls_cell_1",
+    "vls_cell_2",
+    "vls_cell_3",
+    "vls_cell_4",
+    "ciws_aft"
   ],
   "polyhedralPrimitivesUsed": [
-    "wedge",
+    "hull_polyhedron",
+    "tapered_box",
     "box",
     "cylinder",
     "hemisphere_dome"

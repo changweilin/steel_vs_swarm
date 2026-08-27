@@ -4,15 +4,15 @@
   "style": "industrial_military_submarine",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 8407080,
+    "roofHex": 8359053,
     "facadeHex": 8407080,
-    "baseHex": 16766720,
-    "accentHex": 16766720,
-    "darkHex": 2105376,
-    "brightHex": 12632256,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
     "glassHex": 4621730
   },
-  "totalParts": 11,
+  "totalParts": 13,
   "partNames": [
     "main_hull",
     "conning_tower",
@@ -24,7 +24,9 @@
     "bogie_wheel_2",
     "bogie_wheel_3",
     "bogie_wheel_4",
-    "bridge_window"
+    "bridge_window",
+    "stern_pumpjet_ring",
+    "stern_propulsor_hub"
   ],
   "polyhedralPrimitivesUsed": [
     "ellipsoid_sphere",

@@ -4,18 +4,18 @@
   "style": "modern high-speed catamaran ferry",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16711680,
-    "facadeHex": 16777215,
-    "baseHex": 4210752,
-    "accentHex": 16711680,
-    "darkHex": 2631720,
+    "roofHex": 16777215,
+    "facadeHex": 4210752,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
     "brightHex": 16777215,
     "glassHex": 255
   },
-  "totalParts": 11,
+  "totalParts": 12,
   "partNames": [
-    "hull_left",
-    "hull_right",
+    "main_hull_port",
+    "main_hull_starboard",
     "main_deck",
     "superstructure",
     "bridge_front",
@@ -24,10 +24,13 @@
     "side_windows_mirror",
     "life_raft_1",
     "life_raft_2",
-    "radar_dome"
+    "radar_dome",
+    "catamaran_bridge_tunnel"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
     "box",
+    "tapered_box",
     "wedge",
     "cylinder",
     "hemisphere_dome"

@@ -4,15 +4,15 @@
   "style": "military_submarine",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 4013823,
+    "roofHex": 8359053,
     "facadeHex": 5264465,
-    "baseHex": 2631720,
-    "accentHex": 11184810,
-    "darkHex": 1315860,
-    "brightHex": 14540253,
+    "baseHex": 5264465,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
     "glassHex": 6589695
   },
-  "totalParts": 10,
+  "totalParts": 12,
   "partNames": [
     "main_hull",
     "bow_cone",
@@ -23,13 +23,16 @@
     "diving_plane_starboard",
     "diving_plane_port",
     "stern_fin_top",
-    "stern_fin_bottom"
+    "stern_fin_bottom",
+    "stern_pumpjet_ring",
+    "stern_propulsor_hub"
   ],
   "polyhedralPrimitivesUsed": [
-    "cylinder",
+    "ellipsoid_sphere",
     "conical_frustum",
     "box",
     "torus_ring",
-    "wedge"
+    "wedge",
+    "cylinder"
   ]
 }

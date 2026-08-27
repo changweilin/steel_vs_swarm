@@ -14,27 +14,50 @@
   "created_at": "2026-08-20T16:05:55.941Z",
   "bounds": {
     "min": [
-      -15,
+      -125,
       0,
-      -100
+      -15
     ],
     "max": [
-      15,
-      48,
-      110
+      125,
+      37.8355,
+      15
     ],
     "size": [
-      30,
-      48,
-      210
+      250,
+      37.836,
+      30
     ],
-    "rMax": 111.018,
-    "triangles": 310,
-    "vertices": 188
+    "rMax": 125.897,
+    "triangles": 3016,
+    "vertices": 1863
   },
   "spec": {
     "style": "cruise_ship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 2",
+      "鏡像補件 0",
+      "貼地 0.00m",
+      "實尺 250.0×37.8×30.0m (class_estimate)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "cruise_ship",
+    "targetSize": [
+      250,
+      37.8355,
+      30
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 cruise_ship 保守標準全長 250m。"
+  }
 }

@@ -5,16 +5,16 @@
   "symmetryMode": "symmetric",
   "colors": {
     "roofHex": 16777215,
-    "facadeHex": 16777215,
-    "baseHex": 13382400,
-    "accentHex": 16737792,
-    "darkHex": 4210752,
+    "facadeHex": 13382400,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
     "brightHex": 15658734,
     "glassHex": 4621730
   },
-  "totalParts": 11,
+  "totalParts": 13,
   "partNames": [
-    "main_hull_base",
+    "main_hull_polyhedron",
     "main_deck_body",
     "bridge_structure",
     "bridge_windows",
@@ -24,11 +24,14 @@
     "storage_barrels_right",
     "life_ring_port",
     "life_ring_starboard",
-    "rear_deck_railing"
+    "rear_deck_railing",
+    "fishing_winch",
+    "aft_work_frame"
   ],
   "polyhedralPrimitivesUsed": [
-    "wedge",
+    "hull_polyhedron",
     "box",
+    "tapered_box",
     "cylinder",
     "hemisphere_dome",
     "torus_ring"

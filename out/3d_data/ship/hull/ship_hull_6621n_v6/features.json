@@ -4,29 +4,28 @@
   "style": "Research Vessel",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 16777215,
-    "facadeHex": 16711680,
-    "baseHex": 12632256,
-    "accentHex": 16776960,
-    "darkHex": 4210752,
+    "roofHex": 8359053,
+    "facadeHex": 4210752,
+    "baseHex": 16777215,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
     "brightHex": 16777215,
     "glassHex": 8421631
   },
-  "totalParts": 9,
+  "totalParts": 7,
   "partNames": [
-    "main_hull",
-    "bow_wedge",
+    "main_hull_polyhedron",
     "superstructure",
     "bridge_windows",
     "mast_base",
     "radar_dome",
     "aft_crane_frame",
-    "lifeboat",
-    "waterline_base"
+    "lifeboat"
   ],
   "polyhedralPrimitivesUsed": [
+    "hull_polyhedron",
+    "tapered_box",
     "box",
-    "wedge",
     "cylinder",
     "hemisphere_dome"
   ]

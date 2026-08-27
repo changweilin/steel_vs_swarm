@@ -14,27 +14,50 @@
   "created_at": "2026-08-20T16:20:50.103Z",
   "bounds": {
     "min": [
-      -4,
+      -4.7478,
       0,
-      -1.25
+      -1.2505
     ],
     "max": [
-      5.4,
-      2.45,
-      1.25
+      5.2522,
+      2.224,
+      1.2505
     ],
     "size": [
-      9.4,
-      2.45,
-      2.5
+      10,
+      2.224,
+      2.501
     ],
-    "rMax": 5.543,
-    "triangles": 136,
-    "vertices": 88
+    "rMax": 5.399,
+    "triangles": 150,
+    "vertices": 91
   },
   "spec": {
     "style": "modern motor yacht"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 0",
+      "鏡像補件 0",
+      "貼地 0.00m",
+      "實尺 10.0×2.2×2.5m (class_estimate)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "yacht",
+    "targetSize": [
+      10,
+      2.2239999999999998,
+      2.501
+    ],
+    "confidence": "class_estimate",
+    "source": "依母照片可見船型採 yacht 保守標準全長 10m。"
+  }
 }

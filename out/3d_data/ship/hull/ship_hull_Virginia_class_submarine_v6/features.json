@@ -4,15 +4,15 @@
   "style": "modern_military_submarine",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 4473924,
+    "roofHex": 8359053,
     "facadeHex": 5592405,
-    "baseHex": 2236962,
-    "accentHex": 16777215,
-    "darkHex": 1118481,
-    "brightHex": 12632256,
+    "baseHex": 3426654,
+    "accentHex": 15105570,
+    "darkHex": 2899536,
+    "brightHex": 15528177,
     "glassHex": 46217
   },
-  "totalParts": 8,
+  "totalParts": 10,
   "partNames": [
     "main_hull",
     "bow_nose",
@@ -21,12 +21,15 @@
     "torpedo_body",
     "torpedo_nose",
     "stern_stabilizer_v",
-    "stern_stabilizer_h"
+    "stern_stabilizer_h",
+    "stern_pumpjet_ring",
+    "stern_propulsor_hub"
   ],
   "polyhedralPrimitivesUsed": [
-    "cylinder",
     "ellipsoid_sphere",
     "box",
-    "cone"
+    "cylinder",
+    "cone",
+    "torus_ring"
   ]
 }

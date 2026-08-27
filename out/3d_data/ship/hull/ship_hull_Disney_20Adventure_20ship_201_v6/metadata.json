@@ -14,27 +14,50 @@
   "created_at": "2026-08-20T16:13:22.584Z",
   "bounds": {
     "min": [
-      -16,
+      -171,
       0,
-      -75
+      -23.2
     ],
     "max": [
-      16,
-      37.5,
-      85
+      171,
+      66,
+      23.2
     ],
     "size": [
-      32,
-      37.5,
-      160
+      342,
+      66,
+      46.4
     ],
-    "rMax": 86.493,
-    "triangles": 286,
-    "vertices": 172
+    "rMax": 172.567,
+    "triangles": 3180,
+    "vertices": 1959
   },
   "spec": {
     "style": "cruise_ship"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m",
+      "實尺 342.0×66.0×46.4m (identified_ship)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "mega_cruise_ship",
+    "targetSize": [
+      342,
+      66,
+      46.4
+    ],
+    "confidence": "identified_ship",
+    "source": "Disney Adventure（原 Global Dream 船體）公開主尺度；Disney 官方確認為船隊最大船並具四煙囪。"
+  }
 }

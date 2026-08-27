@@ -14,27 +14,50 @@
   "created_at": "2026-08-20T16:22:40.875Z",
   "bounds": {
     "min": [
-      -31,
-      -3.9003,
-      -140
+      -141.7789,
+      0,
+      -30.5
     ],
     "max": [
-      31,
-      24,
-      140
+      141.7789,
+      35.2149,
+      30.5
     ],
     "size": [
-      62,
-      27.9,
-      280
+      283.558,
+      35.215,
+      61
     ],
-    "rMax": 143.391,
-    "triangles": 326,
-    "vertices": 196
+    "rMax": 145.022,
+    "triangles": 512,
+    "vertices": 321
   },
   "spec": {
     "style": "military_aircraft_carrier"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "geometryReview": {
+    "version": 1,
+    "repaired": true,
+    "rules": [
+      "長軸維持 +X",
+      "船殼 1→1",
+      "漸縮艙室 1",
+      "鏡像補件 0",
+      "貼地 0.00m",
+      "實尺 283.5×36.0×61.0m (identified_photo)"
+    ]
+  },
+  "realScale": {
+    "version": 1,
+    "className": "ski_jump_aircraft_carrier",
+    "targetSize": [
+      283.5,
+      36,
+      61
+    ],
+    "confidence": "identified_photo",
+    "source": "照片辨識為 INS Vikramaditya／超日王號級外形；採該級公開主尺度。"
+  }
 }

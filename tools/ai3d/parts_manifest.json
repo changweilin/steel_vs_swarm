@@ -74447,6 +74447,2982 @@
       "keys": [
         "building/mass_list~1_9c424f71_v6"
       ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_f9c434fb",
+          "family": "ship",
+          "part": "hull",
+          "query": "_127290139_04alamy-pwtk4p.png",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/_127290139_04alamy-pwtk4p.png"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 1124, Vertices 657, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          285,
+          34.2,
+          42.75
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          285,
+          34.199999999999996,
+          42.75
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull__127290139_04alamy-pwtk4p_6684aed6_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_ac251efb",
+          "family": "ship",
+          "part": "hull",
+          "query": "000-34TU8F7.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/000-34TU8F7.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 432, Vertices 255, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          135,
+          13.506,
+          14
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          13.5,
+          14
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_000-34TU8F7_eeffdce5_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_6ef1343d",
+          "family": "ship",
+          "part": "hull",
+          "query": "00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 680, Vertices 435, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          316.064,
+          36.239,
+          76.001
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          316,
+          38,
+          76
+        ],
+        "scaleConfidence": "identified_photo"
+      },
+      "keys": [
+        "ship/hull_00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050_95f6f49f_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_04aac50a",
+          "family": "ship",
+          "part": "hull",
+          "query": "0350p12000t3nb68kA8C8.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/0350p12000t3nb68kA8C8.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 146, Vertices 83, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          9,
+          1.85,
+          2.202
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          1.85,
+          2.2017148472931773
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_0350p12000t3nb68kA8C8_6a0a5762_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_2c0fefbd",
+          "family": "ship",
+          "part": "hull",
+          "query": "1593571989300.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/1593571989300.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 142, Vertices 89, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          20,
+          3.502,
+          4.501
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          20,
+          3.5025,
+          4.501
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_1593571989300_f9faa83a_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_eb47b495",
+          "family": "ship",
+          "part": "hull",
+          "query": "1695146093.png",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/1695146093.png"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 3016, Vertices 1863, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          250,
+          37.836,
+          30
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          37.8355,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_1695146093_23c5c052_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_47bf9580",
+          "family": "ship",
+          "part": "hull",
+          "query": "1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637.webp",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637.webp"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 454, Vertices 281, Similarity 88 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          9,
+          3.34,
+          3.42
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          3.3405,
+          3.42
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637_0828c162_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_6b311848",
+          "family": "ship",
+          "part": "hull",
+          "query": "174340740201.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/174340740201.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 3254, Vertices 1997, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          250,
+          35,
+          30
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          35,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_174340740201_3769a5c6_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_5b5f54cb",
+          "family": "ship",
+          "part": "hull",
+          "query": "1778437182_68368.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/1778437182_68368.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 500, Vertices 311, Similarity 85 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          120,
+          13.2,
+          14.4
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          120,
+          13.200499999999998,
+          14.4
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_1778437182_68368_6560f458_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_5ee2b762",
+          "family": "ship",
+          "part": "hull",
+          "query": "1802.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/1802.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 456, Vertices 265, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          60,
+          10.65,
+          10
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          10.650000000000002,
+          10
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_1802_ffc371dd_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_03ffcd60",
+          "family": "ship",
+          "part": "hull",
+          "query": "2-5-1024x768.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/2-5-1024x768.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 604, Vertices 367, Similarity 88 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          40,
+          13.469,
+          8.8
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          40,
+          13.469500000000002,
+          8.8
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_2-5-1024x768~0_59d5ac5f_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_449ca1f3",
+          "family": "ship",
+          "part": "hull",
+          "query": "2000x1250_wmkn_84254351907813_0.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/2000x1250_wmkn_84254351907813_0.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 878, Vertices 535, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          60,
+          11.774,
+          10.8
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          11.774,
+          10.799999999999999
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_2000x1250_wmkn_84254351907813_0_bf165635_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_6e432c84",
+          "family": "ship",
+          "part": "hull",
+          "query": "2000x1429_wmkn_19056648845677_0.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/2000x1429_wmkn_19056648845677_0.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 432, Vertices 257, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          135,
+          16.657,
+          14
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          16.6496,
+          14
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_2000x1429_wmkn_19056648845677_0_22cfeafa_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_da4471af",
+          "family": "ship",
+          "part": "hull",
+          "query": "20090411-TurboJET_Barca.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/20090411-TurboJET_Barca.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 438, Vertices 256, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          47.5,
+          12,
+          11.8
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          47.5,
+          12,
+          11.8
+        ],
+        "scaleConfidence": "exact"
+      },
+      "keys": [
+        "ship/hull_20090411-TurboJET_Barca_fbdd5a16_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_4ab4126f",
+          "family": "ship",
+          "part": "hull",
+          "query": "2020120858047817.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/2020120858047817.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 604, Vertices 367, Similarity 85 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          15,
+          4.736,
+          4
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          15,
+          4.737500000000001,
+          4
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_2020120858047817_08a17622_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_5ea97b8f",
+          "family": "ship",
+          "part": "hull",
+          "query": "20210430002927_47.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/20210430002927_47.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 544, Vertices 335, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          20,
+          5.822,
+          5
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          20,
+          5.8225,
+          5
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_20210430002927_47_f8967c20_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_e1a91fcc",
+          "family": "ship",
+          "part": "hull",
+          "query": "202135002-4.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/202135002-4.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 580, Vertices 351, Similarity 88 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          15,
+          5.499,
+          5.7
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          15,
+          5.4990000000000006,
+          5.7
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_202135002-4_9ff3964a_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_d2114950",
+          "family": "ship",
+          "part": "hull",
+          "query": "20230821004313.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/20230821004313.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 424, Vertices 243, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          180,
+          37.867,
+          30
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          180,
+          37.867,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_20230821004313_b99b2a33_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_37acb8bf",
+          "family": "ship",
+          "part": "hull",
+          "query": "20240301000865.png",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/20240301000865.png"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 632, Vertices 387, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          70,
+          9.099,
+          7
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          70,
+          9.1,
+          7
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_20240301000865_e2c0f8b7_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_f90c1b55",
+          "family": "ship",
+          "part": "hull",
+          "query": "20250401005245.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/20250401005245.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 820, Vertices 477, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          285,
+          43.537,
+          45.616
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          285,
+          43.531499999999994,
+          45.874
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_20250401005245_22de3ca2_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_66101033",
+          "family": "ship",
+          "part": "hull",
+          "query": "202512251310033872.webp",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/202512251310033872.webp"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 900, Vertices 568, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          70.002,
+          9.046,
+          6.446
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          70,
+          9.094999999999999,
+          6.465356188156577
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_202512251310033872_5795cf80_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_9f4f387d",
+          "family": "ship",
+          "part": "hull",
+          "query": "202602131051276980.webp",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/202602131051276980.webp"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 536, Vertices 329, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          80,
+          15.125,
+          10.4
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          80,
+          15.125000000000002,
+          10.4
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_202602131051276980_c9a78d66_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_b322a525",
+          "family": "ship",
+          "part": "hull",
+          "query": "20260421104430-37bd4fa5.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/20260421104430-37bd4fa5.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 512, Vertices 319, Similarity 85 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          120,
+          22.243,
+          21.6
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          120,
+          22.243000000000006,
+          21.599999999999998
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_20260421104430-37bd4fa5_86569231_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_a5c7cd0b",
+          "family": "ship",
+          "part": "hull",
+          "query": "20oz-china-ships-wgkl-master1050.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/20oz-china-ships-wgkl-master1050.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 640, Vertices 391, Similarity 88 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          135,
+          19.873,
+          13.5
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          19.873,
+          13.5
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_20oz-china-ships-wgkl-master1050_4d61c27b_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_0e94733c",
+          "family": "ship",
+          "part": "hull",
+          "query": "22xp-boaty-master1050.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/22xp-boaty-master1050.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 288, Vertices 173, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          90,
+          14.4,
+          15.3
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          90,
+          14.4,
+          15.3
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_22xp-boaty-master1050_4b429245_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_d0dba09d",
+          "family": "ship",
+          "part": "hull",
+          "query": "2798933.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/2798933.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 564, Vertices 343, Similarity 85 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          12,
+          4.37,
+          4
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          12,
+          4.37,
+          4
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_2798933_bb7f491f_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_6d0de382",
+          "family": "ship",
+          "part": "hull",
+          "query": "300gt-tuna-long-liner-boat_02.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/300gt-tuna-long-liner-boat_02.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 724, Vertices 442, Similarity 88 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          39.866,
+          8,
+          8.8
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          40,
+          8,
+          8.8
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_300gt-tuna-long-liner-boat_02_1fff13d7_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_5277b253",
+          "family": "ship",
+          "part": "hull",
+          "query": "379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 624, Vertices 383, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          135,
+          13.5,
+          16
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          13.5,
+          16
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_379b7bfc740ea9d22183f066b6e40ff8-600x400_0d077c82_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_61d1d996",
+          "family": "ship",
+          "part": "hull",
+          "query": "489644a4-bb94-6109-6f71-d81400ca1a48_620.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/489644a4-bb94-6109-6f71-d81400ca1a48_620.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 538, Vertices 347, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          220,
+          41.78,
+          39.541
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          220,
+          41.78,
+          39.586
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_489644a4-bb94-6109-6f71-d81400ca1a48_620_03744bc0_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_18e2cb25",
+          "family": "ship",
+          "part": "hull",
+          "query": "6232d26edb8ab.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/6232d26edb8ab.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 684, Vertices 411, Similarity 88 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          15,
+          3,
+          5.7
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          15,
+          3,
+          5.7
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_6232d26edb8ab_25dbb63d_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_6a2567f9",
+          "family": "ship",
+          "part": "hull",
+          "query": "6621n.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/6621n.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 312, Vertices 183, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          60,
+          14.112,
+          10.2
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          14.107799999999997,
+          10.200000000000001
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_6621n_5dbc986b_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_e6e7d764",
+          "family": "ship",
+          "part": "hull",
+          "query": "666.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/666.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 344, Vertices 203, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          60,
+          11.742,
+          10.2
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          11.741999999999997,
+          10.200000000000001
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_666_44c92603_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_65b5299f",
+          "family": "ship",
+          "part": "hull",
+          "query": "668d6f418c667-870x500.webp",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/668d6f418c667-870x500.webp"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 3096, Vertices 1905, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          250,
+          49.144,
+          39.07
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          49.144000000000005,
+          39.07
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_668d6f418c667-870x500_036c559a_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_79fd9948",
+          "family": "ship",
+          "part": "hull",
+          "query": "762bcd7026aa844c83ed2b0f5454b162.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/762bcd7026aa844c83ed2b0f5454b162.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 1002, Vertices 583, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          285.001,
+          39.426,
+          44.168
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          285,
+          39.426500000000004,
+          44.648
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_762bcd7026aa844c83ed2b0f5454b162_7e99a959_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_14d63d76",
+          "family": "ship",
+          "part": "hull",
+          "query": "7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 646, Vertices 405, Similarity 88 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          12,
+          2.4,
+          4.528
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          12,
+          2.4000000000000004,
+          4.528151110127032
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58_0f082121_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_1a84fc87",
+          "family": "ship",
+          "part": "hull",
+          "query": "8eadcf6f-3d54-4ddf-92e6-a815be2b03c1.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/8eadcf6f-3d54-4ddf-92e6-a815be2b03c1.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 360, Vertices 209, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          60,
+          15.452,
+          12.042
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          15.452,
+          12.042
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_8eadcf6f-3d54-4ddf-92e6-a815be2b03c1_c8647947_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_17db1ce9",
+          "family": "ship",
+          "part": "hull",
+          "query": "中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 380, Vertices 231, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          299.7,
+          43,
+          50
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          299.7,
+          43,
+          50
+        ],
+        "scaleConfidence": "sister_ship"
+      },
+      "keys": [
+        "ship/hull_中鋼運通公司208000載重噸級散裝貨輪-中鋼和諧_cca69839_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_20ddb028",
+          "family": "ship",
+          "part": "hull",
+          "query": "圖2-超日王號.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/圖2-超日王號.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 512, Vertices 321, Similarity 88 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          283.558,
+          35.215,
+          61
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          283.5,
+          36,
+          61
+        ],
+        "scaleConfidence": "identified_photo"
+      },
+      "keys": [
+        "ship/hull_圖2-超日王號_43b49e4e_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_7f91124d",
+          "family": "ship",
+          "part": "hull",
+          "query": "A04A00_P_01_02.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/A04A00_P_01_02.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 696, Vertices 439, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          220,
+          26.872,
+          30
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          220,
+          26.871500000000005,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_A04A00_P_01_02_ee255c96_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_7dd0dbdc",
+          "family": "ship",
+          "part": "hull",
+          "query": "aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 492, Vertices 291, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          225,
+          25.39,
+          31.5
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          225,
+          25.389500000000005,
+          31.500000000000004
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_aerial-view-of-a-bulk-carrier-cargo-vessel-traveling-with-high-speed-over-blue-sea_b8df87d6_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_4b36e0ed",
+          "family": "ship",
+          "part": "hull",
+          "query": "article-5ca19fe0e988a.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/article-5ca19fe0e988a.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 2992, Vertices 1853, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          250,
+          36.87,
+          30
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          36.8695,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_article-5ca19fe0e988a_e67f0e50_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_08a5dce6",
+          "family": "ship",
+          "part": "hull",
+          "query": "c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 338, Vertices 200, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          180,
+          31.084,
+          31.499
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          180,
+          31.084000000000003,
+          31.573
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_c85048fc4c49c7444019ec75c0f06fb04a030e7c_4f0fb5c6_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_d72440ad",
+          "family": "ship",
+          "part": "hull",
+          "query": "Capture-3139.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/Capture-3139.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 608, Vertices 380, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          220,
+          24.2,
+          26.418
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          220,
+          24.2,
+          26.442999999999998
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_Capture-3139_53bfea36_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_a65e8d97",
+          "family": "ship",
+          "part": "hull",
+          "query": "d5154891.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/d5154891.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 512, Vertices 319, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          220,
+          24.2,
+          39.6
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          220,
+          24.200000000000003,
+          39.6
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_d5154891_bf50ff0d_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_1dd4290a",
+          "family": "ship",
+          "part": "hull",
+          "query": "Disney%20Adventure%20ship%201.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/Disney%20Adventure%20ship%201.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 3180, Vertices 1959, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          342,
+          66,
+          46.4
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          342,
+          66,
+          46.4
+        ],
+        "scaleConfidence": "identified_ship"
+      },
+      "keys": [
+        "ship/hull_Disney%20Adventure%20ship%201_4b913647_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_3db091cf",
+          "family": "ship",
+          "part": "hull",
+          "query": "e7642302.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/e7642302.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 460, Vertices 289, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          315.064,
+          38,
+          75
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          315,
+          38,
+          75
+        ],
+        "scaleConfidence": "identified_photo"
+      },
+      "keys": [
+        "ship/hull_e7642302_80919ef8_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_fc4b9d60",
+          "family": "ship",
+          "part": "hull",
+          "query": "GettyImages-630597388-compressor.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/GettyImages-630597388-compressor.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 468, Vertices 297, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          304.562,
+          36.007,
+          75
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          304.5,
+          37,
+          75
+        ],
+        "scaleConfidence": "identified_photo"
+      },
+      "keys": [
+        "ship/hull_GettyImages-630597388-compressor_9babfa3d_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_66594566",
+          "family": "ship",
+          "part": "hull",
+          "query": "id13750938-558191.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/id13750938-558191.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 408, Vertices 245, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          135,
+          23.194,
+          18
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          135,
+          23.194000000000003,
+          18
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_id13750938-558191_3b4910c3_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_8506fc36",
+          "family": "ship",
+          "part": "hull",
+          "query": "img-1478851082-74949.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/img-1478851082-74949.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 158, Vertices 93, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          10.001,
+          1.898,
+          3.2
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          10,
+          1.898,
+          3.2
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_img-1478851082-74949_5e21cd86_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_79890a7d",
+          "family": "ship",
+          "part": "hull",
+          "query": "k23.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/k23.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 588, Vertices 355, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          20,
+          4.375,
+          4
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          20,
+          4.375500000000001,
+          4
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_k23_3e23a8ab_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_bda91a0a",
+          "family": "ship",
+          "part": "hull",
+          "query": "Methanier_aspher_LNGRIVERS.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/Methanier_aspher_LNGRIVERS.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 816, Vertices 475, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          285,
+          36.532,
+          42.75
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          285,
+          36.53050000000001,
+          42.75
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_Methanier_aspher_LNGRIVERS_59740126_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_69050026",
+          "family": "ship",
+          "part": "hull",
+          "query": "mobile01-d0f6425557ae4a5310b111f39cf1a5ad.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/mobile01-d0f6425557ae4a5310b111f39cf1a5ad.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 528, Vertices 331, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          75,
+          9.75,
+          9
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          75,
+          9.75,
+          9
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_mobile01-d0f6425557ae4a5310b111f39cf1a5ad~0_8cceca66_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_39f9bce3",
+          "family": "ship",
+          "part": "hull",
+          "query": "mobileadv_1976_9821316_46373.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/mobileadv_1976_9821316_46373.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 312, Vertices 183, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          60,
+          11.375,
+          10.2
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          60,
+          11.375,
+          10.200000000000001
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_mobileadv_1976_9821316_46373_01e23f67_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_5642e4e3",
+          "family": "ship",
+          "part": "hull",
+          "query": "nzdnc7pepb9ltbpslhtv.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/nzdnc7pepb9ltbpslhtv.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 202, Vertices 117, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          9,
+          2.499,
+          3.05
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          2.4995000000000003,
+          3.05
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_nzdnc7pepb9ltbpslhtv_23f3ac4b_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_999a6ef2",
+          "family": "ship",
+          "part": "hull",
+          "query": "pngtree-a-small-fishing-boat-png-image_16296083.png",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/pngtree-a-small-fishing-boat-png-image_16296083.png"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 310, Vertices 190, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          9,
+          3.08,
+          3
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          3.08,
+          3
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_pngtree-a-small-fishing-boat-png-image_16296083_9dae274e_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_c1d3f1e6",
+          "family": "ship",
+          "part": "hull",
+          "query": "pngtree-blue-and-white-speedboat-png-image_16228702.png",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/pngtree-blue-and-white-speedboat-png-image_16228702.png"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 150, Vertices 91, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          10,
+          2.224,
+          2.501
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          10,
+          2.2239999999999998,
+          2.501
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_pngtree-blue-and-white-speedboat-png-image_16228702_17dab541_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_29b71f73",
+          "family": "ship",
+          "part": "hull",
+          "query": "royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 3004, Vertices 1861, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          310,
+          58,
+          47
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          310,
+          58,
+          47
+        ],
+        "scaleConfidence": "exact"
+      },
+      "keys": [
+        "ship/hull_royal-caribbean-explorer-of-the-seas-01-eG_-WK3_f749b0ad_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_981e2ef6",
+          "family": "ship",
+          "part": "hull",
+          "query": "s11_1667405441519.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/s11_1667405441519.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 502, Vertices 301, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          15,
+          2.913,
+          5.4
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          15,
+          2.9135,
+          5.3999999999999995
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_s11_1667405441519_c521b338_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_2876d456",
+          "family": "ship",
+          "part": "hull",
+          "query": "tkldbkxi3ftl5wewz3u2.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/tkldbkxi3ftl5wewz3u2.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 346, Vertices 219, Similarity 90 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          9,
+          2.249,
+          2.624
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          9,
+          2.2495000000000003,
+          2.624
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_tkldbkxi3ftl5wewz3u2_7210a6d9_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_49f440a4",
+          "family": "ship",
+          "part": "hull",
+          "query": "ttn1071_Cover0106.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/ttn1071_Cover0106.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 3308, Vertices 2037, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          250.025,
+          35.001,
+          30
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          250,
+          35.001000000000005,
+          30
+        ],
+        "scaleConfidence": "class_estimate"
+      },
+      "keys": [
+        "ship/hull_ttn1071_Cover0106~1_aa464459_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_ed0f78de",
+          "family": "ship",
+          "part": "hull",
+          "query": "US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 484, Vertices 307, Similarity 85 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          335.668,
+          39.142,
+          76.8
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          335.6,
+          40,
+          76.8
+        ],
+        "scaleConfidence": "exact"
+      },
+      "keys": [
+        "ship/hull_US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise_fb3e0c01_v6"
+      ]
+    },
+    {
+      "method": "gemini_v6",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "ship catalog & partlib (hull)",
+      "rev": "HEAD",
+      "at": "2026-08-20",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_10a64c5e",
+          "family": "ship",
+          "part": "hull",
+          "query": "Virginia_class_submarine.jpg",
+          "api": "gemini_v6",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "ship/Virginia_class_submarine.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Gemini v6 Polyhedral Reconstruction",
+        "runner": "tools/ai3d/direct_ingest_v6.mjs",
+        "params": "--family ship",
+        "machine": "Gemini API",
+        "measured": "Triangles 600, Vertices 369, Similarity 92 /100"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          114.8,
+          13,
+          9.853
+        ],
+        "repair": "closed_hull_v2_real_scale",
+        "realScale": [
+          114.8,
+          13,
+          10.36
+        ],
+        "scaleConfidence": "exact"
+      },
+      "keys": [
+        "ship/hull_Virginia_class_submarine_ff4f41f4_v6"
+      ]
     }
   ]
 }
