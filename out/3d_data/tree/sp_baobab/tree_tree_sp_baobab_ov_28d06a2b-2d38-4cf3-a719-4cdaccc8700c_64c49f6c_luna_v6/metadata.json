@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_sp_baobab_ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c_64c49f6c_luna_v6",
+  "key": "tree/sp_baobab_ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c_64c49f6c_luna_v6",
+  "family": "tree",
+  "subpart": "sp_baobab",
+  "style": "baobab bottle trunk sparse umbrella crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 84,
+  "similarityReview": "依baobab樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/sp_baobab/ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\sp_baobab\\ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c.png",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/sp_baobab/ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c.json",
+    "target": {
+      "targetId": "ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c~0",
+      "bbox": [
+        0,
+        0,
+        1300,
+        1300
+      ],
+      "width": 1300,
+      "height": 1300,
+      "aspectRatio": 1,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.131,
+          "centerOffset": 0.03
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.352,
+          "centerOffset": 0.002
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.528,
+          "centerOffset": 0.042
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.585,
+          "centerOffset": 0.048
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.693,
+          "centerOffset": -0.011
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.654,
+          "centerOffset": -0.071
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.787,
+          "centerOffset": 0.003
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.808,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.657,
+          "centerOffset": -0.062
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.578,
+          "centerOffset": -0.002
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.476,
+          "centerOffset": 0.05
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.353,
+          "centerOffset": 0.004
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.165,
+          "centerOffset": -0.031
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.368,
+          "centerOffset": -0.027
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.401,
+          "centerOffset": -0.043
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.331,
+          "centerOffset": -0.039
+        }
+      ],
+      "targetFile": "tree\\sp_baobab\\ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_sp_baobab_ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c_64c49f6c_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.6672,
+      0,
+      -3.7002
+    ],
+    "max": [
+      4.208,
+      6.2491,
+      3.2109
+    ],
+    "size": [
+      7.875,
+      6.249,
+      6.911
+    ],
+    "rMax": 5.293,
+    "triangles": 1408,
+    "vertices": 846
+  },
+  "reconstructionNote": "猴麵包樹特徵：瓶狀粗樹幹、低密度粗枝、枝端小傘冠，保留樹冠間空隙。",
+  "species": "baobab",
+  "created_at": "2026-08-27T14:39:21.411Z",
+  "humanVerdictPreserved": true
+}

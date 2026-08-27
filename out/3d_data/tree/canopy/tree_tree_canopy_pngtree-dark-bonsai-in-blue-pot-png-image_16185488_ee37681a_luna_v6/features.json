@@ -1,0 +1,162 @@
+{
+  "id": "tree_canopy_tree_canopy_pngtree-dark-bonsai-in-blue-pot-png-image_16185488",
+  "sourceImage": "tree/pngtree-dark-bonsai-in-blue-pot-png-image_16185488.png",
+  "style": "compact shrub irregular radial crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 3234617,
+    "facadeHex": 6456401,
+    "baseHex": 5387560,
+    "accentHex": 9415271,
+    "darkHex": 2763554,
+    "brightHex": 12240523,
+    "glassHex": 1976635
+  },
+  "totalParts": 14,
+  "partNames": [
+    "shrub_central_stem",
+    "root_flare",
+    "shrub_branch_0",
+    "shrub_leaf_0",
+    "shrub_branch_1",
+    "shrub_leaf_1",
+    "shrub_branch_2",
+    "shrub_leaf_2",
+    "shrub_branch_3",
+    "shrub_leaf_3",
+    "shrub_branch_4",
+    "shrub_leaf_4",
+    "shrub_branch_5",
+    "shrub_leaf_5"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/pngtree-dark-bonsai-in-blue-pot-png-image_16185488.json",
+    "target": {
+      "targetId": "pngtree-dark-bonsai-in-blue-pot-png-image_16185488~0",
+      "bbox": [
+        0,
+        0,
+        640,
+        640
+      ],
+      "width": 640,
+      "height": 640,
+      "aspectRatio": 1,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.516,
+          "centerOffset": 0.225
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.567,
+          "centerOffset": 0.199
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.57,
+          "centerOffset": 0.162
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.606,
+          "centerOffset": -0.148
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.7,
+          "centerOffset": -0.102
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.606,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.841,
+          "centerOffset": -0.031
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.933,
+          "centerOffset": 0.016
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.877,
+          "centerOffset": 0.045
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.609,
+          "centerOffset": 0.178
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.625,
+          "centerOffset": 0.134
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.703,
+          "centerOffset": -0.1
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.794,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.723,
+          "centerOffset": 0.027
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.747,
+          "centerOffset": 0.016
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.422,
+          "centerOffset": -0.006
+        }
+      ],
+      "targetFile": "tree\\main\\pngtree-dark-bonsai-in-blue-pot-png-image_16185488~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "shrub",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "灌木/盆景特徵：短主幹、多股近地分枝、稀疏但有層次的扁圓冠簇。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 79,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依shrub樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

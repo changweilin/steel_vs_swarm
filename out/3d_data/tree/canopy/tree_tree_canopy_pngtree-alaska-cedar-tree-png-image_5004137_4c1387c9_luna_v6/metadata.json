@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137_4c1387c9_luna_v6",
+  "key": "tree/canopy_pngtree-alaska-cedar-tree-png-image_5004137_4c1387c9_luna_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "conifer layered radial crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 81,
+  "similarityReview": "依conifer樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\pngtree-alaska-cedar-tree-png-image_5004137.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/pngtree-alaska-cedar-tree-png-image_5004137.json",
+    "target": {
+      "targetId": "pngtree-alaska-cedar-tree-png-image_5004137~0",
+      "bbox": [
+        0,
+        0,
+        1200,
+        1200
+      ],
+      "width": 1200,
+      "height": 1200,
+      "aspectRatio": 1,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.114,
+          "centerOffset": -0.044
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.118,
+          "centerOffset": -0.042
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.147,
+          "centerOffset": -0.052
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.259,
+          "centerOffset": -0.011
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.333,
+          "centerOffset": -0.015
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.322,
+          "centerOffset": -0.021
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.286,
+          "centerOffset": -0.028
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.383,
+          "centerOffset": 0.009
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.402,
+          "centerOffset": -0.004
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.379,
+          "centerOffset": -0.025
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.421,
+          "centerOffset": -0.01
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.447,
+          "centerOffset": -0.01
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.463,
+          "centerOffset": -0.006
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.469,
+          "centerOffset": -0.049
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.442,
+          "centerOffset": -0.05
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.223,
+          "centerOffset": 0.051
+        }
+      ],
+      "targetFile": "tree\\main\\pngtree-alaska-cedar-tree-png-image_5004137~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137_4c1387c9_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.2017,
+      0,
+      -2.9403
+    ],
+    "max": [
+      3.4954,
+      10.6406,
+      3.0649
+    ],
+    "size": [
+      6.697,
+      10.641,
+      6.005
+    ],
+    "rMax": 4.649,
+    "triangles": 9484,
+    "vertices": 5796
+  },
+  "reconstructionNote": "conifer 特徵：分層放射枝冠，末端葉冠與枝頭相接。",
+  "species": "conifer",
+  "created_at": "2026-08-27T14:39:36.824Z",
+  "humanVerdictPreserved": true
+}

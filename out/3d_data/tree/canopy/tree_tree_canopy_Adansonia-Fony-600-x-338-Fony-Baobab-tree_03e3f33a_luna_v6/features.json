@@ -1,0 +1,168 @@
+{
+  "id": "tree_canopy_tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree",
+  "sourceImage": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+  "style": "baobab bottle trunk sparse umbrella crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6585671,
+    "facadeHex": 9545836,
+    "baseHex": 7030320,
+    "accentHex": 11580537,
+    "darkHex": 3483167,
+    "brightHex": 13683089,
+    "glassHex": 1976635
+  },
+  "totalParts": 20,
+  "partNames": [
+    "bottle_bole",
+    "root_flare",
+    "baobab_arm_0",
+    "baobab_arm_0_outer",
+    "baobab_leaf_cluster_0",
+    "baobab_arm_1",
+    "baobab_arm_1_outer",
+    "baobab_leaf_cluster_1",
+    "baobab_arm_2",
+    "baobab_arm_2_outer",
+    "baobab_leaf_cluster_2",
+    "baobab_arm_3",
+    "baobab_arm_3_outer",
+    "baobab_leaf_cluster_3",
+    "baobab_arm_4",
+    "baobab_arm_4_outer",
+    "baobab_leaf_cluster_4",
+    "baobab_arm_5",
+    "baobab_arm_5_outer",
+    "baobab_leaf_cluster_5"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/Adansonia-Fony-600-x-338-Fony-Baobab-tree.json",
+    "target": {
+      "targetId": "Adansonia-Fony-600-x-338-Fony-Baobab-tree~0",
+      "bbox": [
+        0,
+        0,
+        600,
+        338
+      ],
+      "width": 600,
+      "height": 338,
+      "aspectRatio": 1.775,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.073,
+          "centerOffset": -0.083
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.168,
+          "centerOffset": -0.079
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.292,
+          "centerOffset": -0.021
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.598,
+          "centerOffset": 0.094
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.768,
+          "centerOffset": 0.007
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.795,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.778,
+          "centerOffset": -0.006
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.765,
+          "centerOffset": -0.013
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.57,
+          "centerOffset": -0.122
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.552,
+          "centerOffset": -0.101
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.363,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.298,
+          "centerOffset": 0.041
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.558,
+          "centerOffset": -0.086
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.693,
+          "centerOffset": -0.153
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        }
+      ],
+      "targetFile": "tree\\main\\Adansonia-Fony-600-x-338-Fony-Baobab-tree~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "baobab",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "猴麵包樹特徵：瓶狀粗樹幹、低密度粗枝、枝端小傘冠，保留樹冠間空隙。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 84,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依baobab樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

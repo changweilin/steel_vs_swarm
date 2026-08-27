@@ -1,0 +1,250 @@
+{
+  "id": "tree_canopy_tree_canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree",
+  "sourceImage": "tree/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg",
+  "style": "sequoia tall buttressed conifer crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 1588523,
+    "facadeHex": 3499334,
+    "baseHex": 4928552,
+    "accentHex": 7246431,
+    "darkHex": 1911587,
+    "brightHex": 10268535,
+    "glassHex": 1976635
+  },
+  "totalParts": 102,
+  "partNames": [
+    "trunk",
+    "upper_leader",
+    "root_flare",
+    "sequoia_level_0_branch_0",
+    "sequoia_crown_0_0",
+    "sequoia_level_0_branch_1",
+    "sequoia_crown_0_1",
+    "sequoia_level_0_branch_2",
+    "sequoia_crown_0_2",
+    "sequoia_level_0_branch_3",
+    "sequoia_crown_0_3",
+    "sequoia_level_0_branch_4",
+    "sequoia_crown_0_4",
+    "sequoia_level_0_branch_5",
+    "sequoia_crown_0_5",
+    "sequoia_level_0_branch_6",
+    "sequoia_crown_0_6",
+    "sequoia_level_1_branch_0",
+    "sequoia_crown_1_0",
+    "sequoia_level_1_branch_1",
+    "sequoia_crown_1_1",
+    "sequoia_level_1_branch_2",
+    "sequoia_crown_1_2",
+    "sequoia_level_1_branch_3",
+    "sequoia_crown_1_3",
+    "sequoia_level_1_branch_4",
+    "sequoia_crown_1_4",
+    "sequoia_level_1_branch_5",
+    "sequoia_crown_1_5",
+    "sequoia_level_1_branch_6",
+    "sequoia_crown_1_6",
+    "sequoia_level_2_branch_0",
+    "sequoia_crown_2_0",
+    "sequoia_level_2_branch_1",
+    "sequoia_crown_2_1",
+    "sequoia_level_2_branch_2",
+    "sequoia_crown_2_2",
+    "sequoia_level_2_branch_3",
+    "sequoia_crown_2_3",
+    "sequoia_level_2_branch_4",
+    "sequoia_crown_2_4",
+    "sequoia_level_2_branch_5",
+    "sequoia_crown_2_5",
+    "sequoia_level_2_branch_6",
+    "sequoia_crown_2_6",
+    "sequoia_level_3_branch_0",
+    "sequoia_crown_3_0",
+    "sequoia_level_3_branch_1",
+    "sequoia_crown_3_1",
+    "sequoia_level_3_branch_2",
+    "sequoia_crown_3_2",
+    "sequoia_level_3_branch_3",
+    "sequoia_crown_3_3",
+    "sequoia_level_3_branch_4",
+    "sequoia_crown_3_4",
+    "sequoia_level_3_branch_5",
+    "sequoia_crown_3_5",
+    "sequoia_level_3_branch_6",
+    "sequoia_crown_3_6",
+    "sequoia_level_4_branch_0",
+    "sequoia_crown_4_0",
+    "sequoia_level_4_branch_1",
+    "sequoia_crown_4_1",
+    "sequoia_level_4_branch_2",
+    "sequoia_crown_4_2",
+    "sequoia_level_4_branch_3",
+    "sequoia_crown_4_3",
+    "sequoia_level_4_branch_4",
+    "sequoia_crown_4_4",
+    "sequoia_level_4_branch_5",
+    "sequoia_crown_4_5",
+    "sequoia_level_4_branch_6",
+    "sequoia_crown_4_6",
+    "sequoia_level_5_branch_0",
+    "sequoia_crown_5_0",
+    "sequoia_level_5_branch_1",
+    "sequoia_crown_5_1",
+    "sequoia_level_5_branch_2",
+    "sequoia_crown_5_2",
+    "sequoia_level_5_branch_3",
+    "sequoia_crown_5_3",
+    "sequoia_level_5_branch_4",
+    "sequoia_crown_5_4",
+    "sequoia_level_5_branch_5",
+    "sequoia_crown_5_5",
+    "sequoia_level_5_branch_6",
+    "sequoia_crown_5_6",
+    "sequoia_level_6_branch_0",
+    "sequoia_crown_6_0",
+    "sequoia_level_6_branch_1",
+    "sequoia_crown_6_1",
+    "sequoia_level_6_branch_2",
+    "sequoia_crown_6_2",
+    "sequoia_level_6_branch_3",
+    "sequoia_crown_6_3",
+    "sequoia_level_6_branch_4",
+    "sequoia_crown_6_4",
+    "sequoia_level_6_branch_5",
+    "sequoia_crown_6_5",
+    "sequoia_level_6_branch_6",
+    "sequoia_crown_6_6",
+    "leader_crown"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.json",
+    "target": {
+      "targetId": "depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree~0",
+      "bbox": [
+        0,
+        0,
+        683,
+        1024
+      ],
+      "width": 683,
+      "height": 1024,
+      "aspectRatio": 0.667,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        }
+      ],
+      "targetFile": "tree\\main\\depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "sequoia",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "sequoia 特徵：分層放射枝冠，末端葉冠與枝頭相接。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 82,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依sequoia樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

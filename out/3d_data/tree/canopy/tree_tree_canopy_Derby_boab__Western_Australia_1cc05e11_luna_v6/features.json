@@ -1,0 +1,168 @@
+{
+  "id": "tree_canopy_tree_canopy_Derby_boab__Western_Australia",
+  "sourceImage": "tree/Derby_boab,_Western_Australia.jpg",
+  "style": "baobab bottle trunk sparse umbrella crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6585671,
+    "facadeHex": 9545836,
+    "baseHex": 7030320,
+    "accentHex": 11580537,
+    "darkHex": 3483167,
+    "brightHex": 13683089,
+    "glassHex": 1976635
+  },
+  "totalParts": 20,
+  "partNames": [
+    "bottle_bole",
+    "root_flare",
+    "baobab_arm_0",
+    "baobab_arm_0_outer",
+    "baobab_leaf_cluster_0",
+    "baobab_arm_1",
+    "baobab_arm_1_outer",
+    "baobab_leaf_cluster_1",
+    "baobab_arm_2",
+    "baobab_arm_2_outer",
+    "baobab_leaf_cluster_2",
+    "baobab_arm_3",
+    "baobab_arm_3_outer",
+    "baobab_leaf_cluster_3",
+    "baobab_arm_4",
+    "baobab_arm_4_outer",
+    "baobab_leaf_cluster_4",
+    "baobab_arm_5",
+    "baobab_arm_5_outer",
+    "baobab_leaf_cluster_5"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/Derby_boab,_Western_Australia.json",
+    "target": {
+      "targetId": "Derby_boab,_Western_Australia~0",
+      "bbox": [
+        0,
+        0,
+        1280,
+        960
+      ],
+      "width": 1280,
+      "height": 960,
+      "aspectRatio": 1.333,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.016,
+          "centerOffset": -0.492
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.364,
+          "centerOffset": 0.127
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.607,
+          "centerOffset": 0.095
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.762,
+          "centerOffset": 0.118
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.866,
+          "centerOffset": 0.066
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.988,
+          "centerOffset": 0.005
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.995,
+          "centerOffset": -0.003
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\main\\Derby_boab,_Western_Australia~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "baobab",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "猴麵包樹特徵：瓶狀粗樹幹、低密度粗枝、枝端小傘冠，保留樹冠間空隙。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 84,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依baobab樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

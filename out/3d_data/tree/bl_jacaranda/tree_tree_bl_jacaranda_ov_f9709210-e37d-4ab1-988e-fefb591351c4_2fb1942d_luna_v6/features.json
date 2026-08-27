@@ -1,0 +1,172 @@
+{
+  "id": "tree_bl_jacaranda_tree_bl_jacaranda_ov_f9709210-e37d-4ab1-988e-fefb591351c4",
+  "sourceImage": "tree/bl_jacaranda/ov_f9709210-e37d-4ab1-988e-fefb591351c4.jpg",
+  "style": "flowering broadleaf open umbrella crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 2640433,
+    "facadeHex": 5208643,
+    "baseHex": 4861988,
+    "accentHex": 7903323,
+    "darkHex": 2892830,
+    "brightHex": 10860413,
+    "glassHex": 1976635
+  },
+  "totalParts": 24,
+  "partNames": [
+    "broadleaf_trunk",
+    "root_flare",
+    "flowering_primary_0",
+    "flowering_outer_0",
+    "flowering_crown_0",
+    "flowering_primary_1",
+    "flowering_outer_1",
+    "flowering_crown_1",
+    "flowering_primary_2",
+    "flowering_outer_2",
+    "flowering_crown_2",
+    "flowering_primary_3",
+    "flowering_outer_3",
+    "flowering_crown_3",
+    "flowering_primary_4",
+    "flowering_outer_4",
+    "flowering_crown_4",
+    "flowering_primary_5",
+    "flowering_outer_5",
+    "flowering_crown_5",
+    "flowering_primary_6",
+    "flowering_outer_6",
+    "flowering_crown_6",
+    "top_crown"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/bl_jacaranda/ov_f9709210-e37d-4ab1-988e-fefb591351c4.json",
+    "target": {
+      "targetId": "ov_f9709210-e37d-4ab1-988e-fefb591351c4~0",
+      "bbox": [
+        0,
+        0,
+        1536,
+        2048
+      ],
+      "width": 1536,
+      "height": 2048,
+      "aspectRatio": 0.75,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 3,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.38,
+          "centerOffset": 0.098
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.607,
+          "centerOffset": 0.084
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.982,
+          "centerOffset": -0.009
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\bl_jacaranda\\ov_f9709210-e37d-4ab1-988e-fefb591351c4~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "flowering",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "開花闊葉樹特徵：開放枝架、枝端分離花冠與不等高冠簇。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 81,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依flowering樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

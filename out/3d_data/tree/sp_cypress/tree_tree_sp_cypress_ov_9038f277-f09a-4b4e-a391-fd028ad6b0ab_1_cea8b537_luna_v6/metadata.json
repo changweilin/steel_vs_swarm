@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab_1_cea8b537_luna_v6",
+  "key": "tree/sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~1_cea8b537_luna_v6",
+  "family": "tree",
+  "subpart": "sp_cypress",
+  "style": "cypress narrow tiered crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 83,
+  "similarityReview": "依cypress樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/sp_cypress/ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\sp_cypress\\ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/sp_cypress/ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab.json",
+    "target": {
+      "targetId": "ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~0",
+      "bbox": [
+        722,
+        171,
+        1024,
+        403
+      ],
+      "width": 302,
+      "height": 232,
+      "aspectRatio": 1.302,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.98,
+          "centerOffset": 0.003
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.96,
+          "centerOffset": 0.013
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.884,
+          "centerOffset": 0.051
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.894,
+          "centerOffset": 0.046
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.801,
+          "centerOffset": 0.093
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.725,
+          "centerOffset": 0.131
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.715,
+          "centerOffset": 0.136
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.768,
+          "centerOffset": 0.109
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.884,
+          "centerOffset": 0.051
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.921,
+          "centerOffset": 0.033
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.944,
+          "centerOffset": 0.018
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.94,
+          "centerOffset": 0.02
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.937,
+          "centerOffset": 0.022
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.99,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.987,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.987,
+          "centerOffset": -0.007
+        }
+      ],
+      "targetFile": "tree\\sp_cypress\\ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab_1_cea8b537_luna_v6.png",
+  "bounds": {
+    "min": [
+      -2.1148,
+      0,
+      -2.1462
+    ],
+    "max": [
+      2.4574,
+      8.9242,
+      1.9995
+    ],
+    "size": [
+      4.572,
+      8.924,
+      4.146
+    ],
+    "rMax": 3.168,
+    "triangles": 6664,
+    "vertices": 4071
+  },
+  "reconstructionNote": "cypress 特徵：窄柱形密冠，末端葉冠與枝頭相接。",
+  "species": "cypress",
+  "created_at": "2026-08-27T14:39:23.269Z",
+  "humanVerdictPreserved": true
+}

@@ -1,0 +1,162 @@
+{
+  "id": "tree_canopy_tree_canopy_Choosing-the-right-cactus_1",
+  "sourceImage": "tree/Choosing-the-right-cactus.jpg",
+  "style": "saguaro cactus upright arms",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 4029528,
+    "facadeHex": 6856807,
+    "baseHex": 7688762,
+    "accentHex": 10074996,
+    "darkHex": 2705976,
+    "brightHex": 12898188,
+    "glassHex": 1976635
+  },
+  "totalParts": 14,
+  "partNames": [
+    "cactus_column",
+    "root_flare",
+    "cactus_arm_0_out",
+    "cactus_arm_0_up",
+    "cactus_arm_0_cap",
+    "cactus_arm_1_out",
+    "cactus_arm_1_up",
+    "cactus_arm_1_cap",
+    "cactus_arm_2_out",
+    "cactus_arm_2_up",
+    "cactus_arm_2_cap",
+    "cactus_arm_3_out",
+    "cactus_arm_3_up",
+    "cactus_arm_3_cap"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/Choosing-the-right-cactus.json",
+    "target": {
+      "targetId": "Choosing-the-right-cactus~0",
+      "bbox": [
+        0,
+        285,
+        1080,
+        1080
+      ],
+      "width": 1080,
+      "height": 795,
+      "aspectRatio": 1.358,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.96,
+          "centerOffset": 0.019
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.923,
+          "centerOffset": 0.034
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.894,
+          "centerOffset": -0.053
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.924,
+          "centerOffset": -0.029
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.976,
+          "centerOffset": -0.011
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.955,
+          "centerOffset": -0.013
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.948,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.991,
+          "centerOffset": 0.004
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.931,
+          "centerOffset": 0.033
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.991,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\main\\Choosing-the-right-cactus~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "cactus",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "仙人掌特徵：主柱垂直，側臂先水平外伸再垂直上舉，接到圓鈍臂冠。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 80,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依cactus樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

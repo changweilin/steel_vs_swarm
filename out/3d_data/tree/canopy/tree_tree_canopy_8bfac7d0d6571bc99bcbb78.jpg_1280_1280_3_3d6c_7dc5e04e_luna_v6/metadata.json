@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_7dc5e04e_luna_v6",
+  "key": "tree/canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_7dc5e04e_luna_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "broadleaf open radial crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 80,
+  "similarityReview": "依broadleaf樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\tree\\8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.json",
+    "target": {
+      "targetId": "8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c~0",
+      "bbox": [
+        0,
+        0,
+        960,
+        1280
+      ],
+      "width": 960,
+      "height": 1280,
+      "aspectRatio": 0.75,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.495,
+          "centerOffset": 0.013
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.528,
+          "centerOffset": 0.001
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.553,
+          "centerOffset": -0.011
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.539,
+          "centerOffset": 0.003
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.386,
+          "centerOffset": 0.081
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.586,
+          "centerOffset": -0.014
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.593,
+          "centerOffset": -0.016
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.596,
+          "centerOffset": -0.019
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.625,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.697,
+          "centerOffset": 0.032
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.83,
+          "centerOffset": 0.084
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.872,
+          "centerOffset": 0.063
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": -0.001
+        }
+      ],
+      "targetFile": "tree\\main\\8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_7dc5e04e_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.7022,
+      0,
+      -3.2014
+    ],
+    "max": [
+      3.7439,
+      8.3069,
+      3.068
+    ],
+    "size": [
+      7.446,
+      8.307,
+      6.269
+    ],
+    "rMax": 4.894,
+    "triangles": 1968,
+    "vertices": 1191
+  },
+  "reconstructionNote": "闊葉樹特徵：中心樹幹向外分叉，枝端承托不等高葉冠簇。",
+  "species": "broadleaf",
+  "created_at": "2026-08-27T14:39:25.455Z",
+  "humanVerdictPreserved": true
+}

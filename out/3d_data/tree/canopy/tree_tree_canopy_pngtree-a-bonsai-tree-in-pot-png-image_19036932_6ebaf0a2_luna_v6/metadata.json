@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+  "key": "tree/canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "compact shrub irregular radial crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 79,
+  "similarityReview": "依shrub樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/pngtree-a-bonsai-tree-in-pot-png-image_19036932.json",
+    "target": {
+      "targetId": "pngtree-a-bonsai-tree-in-pot-png-image_19036932~0",
+      "bbox": [
+        0,
+        0,
+        640,
+        640
+      ],
+      "width": 640,
+      "height": 640,
+      "aspectRatio": 1,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.564,
+          "centerOffset": 0.202
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.606,
+          "centerOffset": 0.18
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.759,
+          "centerOffset": 0.119
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.916,
+          "centerOffset": 0.041
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.845,
+          "centerOffset": -0.032
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.891,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.889,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.844,
+          "centerOffset": -0.033
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.891,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.766,
+          "centerOffset": 0.102
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.656,
+          "centerOffset": 0.156
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.936,
+          "centerOffset": -0.032
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.742,
+          "centerOffset": -0.129
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.703,
+          "centerOffset": -0.103
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.748,
+          "centerOffset": -0.126
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.514,
+          "centerOffset": -0.102
+        }
+      ],
+      "targetFile": "tree\\main\\pngtree-a-bonsai-tree-in-pot-png-image_19036932~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6.png",
+  "bounds": {
+    "min": [
+      -1.7197,
+      0,
+      -1.8764
+    ],
+    "max": [
+      2.0565,
+      2.5023,
+      1.8928
+    ],
+    "size": [
+      3.776,
+      2.502,
+      3.769
+    ],
+    "rMax": 2.795,
+    "triangles": 1176,
+    "vertices": 718
+  },
+  "reconstructionNote": "灌木/盆景特徵：短主幹、多股近地分枝、稀疏但有層次的扁圓冠簇。",
+  "species": "shrub",
+  "created_at": "2026-08-27T14:39:19.748Z",
+  "humanVerdictPreserved": true
+}

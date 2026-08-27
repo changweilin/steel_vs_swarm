@@ -1,0 +1,222 @@
+{
+  "id": "tree_cf_juniper_tree_tree_cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69",
+  "sourceImage": "tree/cf_juniper_tree/ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69.jpg",
+  "style": "juniper irregular layered crown",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 1588523,
+    "facadeHex": 3499334,
+    "baseHex": 4928552,
+    "accentHex": 7246431,
+    "darkHex": 1911587,
+    "brightHex": 10268535,
+    "glassHex": 1976635
+  },
+  "totalParts": 74,
+  "partNames": [
+    "trunk",
+    "upper_leader",
+    "root_flare",
+    "juniper_level_0_branch_0",
+    "juniper_crown_0_0",
+    "juniper_level_0_branch_1",
+    "juniper_crown_0_1",
+    "juniper_level_0_branch_2",
+    "juniper_crown_0_2",
+    "juniper_level_0_branch_3",
+    "juniper_crown_0_3",
+    "juniper_level_0_branch_4",
+    "juniper_crown_0_4",
+    "juniper_level_0_branch_5",
+    "juniper_crown_0_5",
+    "juniper_level_0_branch_6",
+    "juniper_crown_0_6",
+    "juniper_level_1_branch_0",
+    "juniper_crown_1_0",
+    "juniper_level_1_branch_1",
+    "juniper_crown_1_1",
+    "juniper_level_1_branch_2",
+    "juniper_crown_1_2",
+    "juniper_level_1_branch_3",
+    "juniper_crown_1_3",
+    "juniper_level_1_branch_4",
+    "juniper_crown_1_4",
+    "juniper_level_1_branch_5",
+    "juniper_crown_1_5",
+    "juniper_level_1_branch_6",
+    "juniper_crown_1_6",
+    "juniper_level_2_branch_0",
+    "juniper_crown_2_0",
+    "juniper_level_2_branch_1",
+    "juniper_crown_2_1",
+    "juniper_level_2_branch_2",
+    "juniper_crown_2_2",
+    "juniper_level_2_branch_3",
+    "juniper_crown_2_3",
+    "juniper_level_2_branch_4",
+    "juniper_crown_2_4",
+    "juniper_level_2_branch_5",
+    "juniper_crown_2_5",
+    "juniper_level_2_branch_6",
+    "juniper_crown_2_6",
+    "juniper_level_3_branch_0",
+    "juniper_crown_3_0",
+    "juniper_level_3_branch_1",
+    "juniper_crown_3_1",
+    "juniper_level_3_branch_2",
+    "juniper_crown_3_2",
+    "juniper_level_3_branch_3",
+    "juniper_crown_3_3",
+    "juniper_level_3_branch_4",
+    "juniper_crown_3_4",
+    "juniper_level_3_branch_5",
+    "juniper_crown_3_5",
+    "juniper_level_3_branch_6",
+    "juniper_crown_3_6",
+    "juniper_level_4_branch_0",
+    "juniper_crown_4_0",
+    "juniper_level_4_branch_1",
+    "juniper_crown_4_1",
+    "juniper_level_4_branch_2",
+    "juniper_crown_4_2",
+    "juniper_level_4_branch_3",
+    "juniper_crown_4_3",
+    "juniper_level_4_branch_4",
+    "juniper_crown_4_4",
+    "juniper_level_4_branch_5",
+    "juniper_crown_4_5",
+    "juniper_level_4_branch_6",
+    "juniper_crown_4_6",
+    "leader_crown"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "conical_frustum",
+    "cylinder",
+    "ellipsoid_sphere"
+  ],
+  "schemaVersion": null,
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/cf_juniper_tree/ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69.json",
+    "target": {
+      "targetId": "ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69~0",
+      "bbox": [
+        0,
+        0,
+        1300,
+        868
+      ],
+      "width": 1300,
+      "height": 868,
+      "aspectRatio": 1.498,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.99,
+          "centerOffset": -0.005
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "tree\\cf_juniper_tree\\ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "species": "juniper",
+  "structuralContract": {
+    "radialTopView": true,
+    "horizontalOrUpwardBranches": true,
+    "branchEndsIntoCanopy": true
+  },
+  "reconstructionNote": "juniper 特徵：不規則疏層，末端葉冠與枝頭相接。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 80,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_tree_geometry_contract",
+    "critique": "依juniper樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。"
+  }
+}

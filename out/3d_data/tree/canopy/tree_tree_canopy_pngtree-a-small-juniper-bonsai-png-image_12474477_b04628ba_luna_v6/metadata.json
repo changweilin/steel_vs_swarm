@@ -1,0 +1,151 @@
+{
+  "id": "tree_tree_canopy_pngtree-a-small-juniper-bonsai-png-image_12474477_b04628ba_luna_v6",
+  "key": "tree/canopy_pngtree-a-small-juniper-bonsai-png-image_12474477_b04628ba_luna_v6",
+  "family": "tree",
+  "subpart": "canopy",
+  "style": "juniper irregular layered crown",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 80,
+  "similarityReview": "依juniper樹種輪廓重建；樹幹中心放射、枝段水平/斜上、枝端進入獨立葉冠。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "tree/pngtree-a-small-juniper-bonsai-png-image_12474477.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\tree\\pngtree-a-small-juniper-bonsai-png-image_12474477.png",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/tree/main/pngtree-a-small-juniper-bonsai-png-image_12474477.json",
+    "target": {
+      "targetId": "pngtree-a-small-juniper-bonsai-png-image_12474477~0",
+      "bbox": [
+        0,
+        0,
+        640,
+        640
+      ],
+      "width": 640,
+      "height": 640,
+      "aspectRatio": 1,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.516,
+          "centerOffset": 0.225
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.567,
+          "centerOffset": 0.199
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.57,
+          "centerOffset": 0.162
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.573,
+          "centerOffset": -0.165
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.7,
+          "centerOffset": -0.102
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.606,
+          "centerOffset": -0.055
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.7,
+          "centerOffset": -0.008
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.606,
+          "centerOffset": 0.039
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.548,
+          "centerOffset": -0.037
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.75,
+          "centerOffset": 0.108
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.57,
+          "centerOffset": 0.162
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.625,
+          "centerOffset": -0.139
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.7,
+          "centerOffset": -0.102
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.583,
+          "centerOffset": -0.043
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.559,
+          "centerOffset": -0.078
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.045,
+          "centerOffset": -0.195
+        }
+      ],
+      "targetFile": "tree\\main\\pngtree-a-small-juniper-bonsai-png-image_12474477~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批 v6 樹木依使用者指定以 GPT-5.6 Luna 視覺與樹種結構契約重建；YOLO26 schema-v2 缺失時不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/tree_tree_canopy_pngtree-a-small-juniper-bonsai-png-image_12474477_b04628ba_luna_v6.png",
+  "bounds": {
+    "min": [
+      -1.9637,
+      0,
+      -1.766
+    ],
+    "max": [
+      2.1032,
+      5.8955,
+      1.854
+    ],
+    "size": [
+      4.067,
+      5.896,
+      3.62
+    ],
+    "rMax": 2.804,
+    "triangles": 6852,
+    "vertices": 4186
+  },
+  "reconstructionNote": "juniper 特徵：不規則疏層，末端葉冠與枝頭相接。",
+  "species": "juniper",
+  "created_at": "2026-08-27T14:39:19.941Z",
+  "humanVerdictPreserved": true
+}
