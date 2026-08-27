@@ -10840,23 +10840,29 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (fit) massPick.set(b, fit);
     }
     /**
-     * 挑中的那一棟:**把網格撐滿基地**的逐實例縮放(使用者這一輪第 ① 條的兌現點)。
+     * 挑中的那一棟依構造分類縮放:方盒構築貼合基地,非方盒構築只取單一比例(使用者這一輪第 ① 條的兌現點)。
      * 舊制直接拿 (w, h, d) 縮單位方盒,而節點只佔單位盒的一部分(實測 hw 0.13~0.42)——
      * 症狀是那幾棟塔樓縮在自己的空地中央、四周一圈看不見的碰撞盒。
-     * 撐滿之後:最寬那一段恰好等於 OSM 足跡(⇒ 地面層的通行寬與舊制**逐位元相同**,
-     * `audit_traverse` 不動),上面的退縮階與山牆才是收窄的那幾段。
+     * 方盒貼合之後:最寬那一段恰好等於 OSM 足跡(⇒ 地面層的通行寬與舊制**逐位元相同**,
+     * `audit_traverse` 不動);非方盒則以完整自然包絡的最小比例放入基地,碰撞同步收縮。
+     * 上面的退縮階與山牆在兩種構造都保留各自的收窄形狀。
      * 縱向同理(節點收在 ±0.475 ⇒ 舊制的頂比 `b.h` 矮 5%,而屋頂附件掛在 `b.h` = §5ab-c
      * 那個「附件浮在半空」的成因本體)。
      */
     // 回傳的是**逐實例縮放**(節點局部軸;`M.compose` 是 T·R·S ⇒ S 吃的是局部軸)。
     // `rot` 把節點的局部 X 轉到基地的深度那一邊 ⇒ 兩軸的目標邊長跟著換手。
+    // 非方盒構築的幾何已保留自然長寬高比，三軸只能取同一個最小比例，避免把圓頂、斜屋頂
+    // 或多面體拉成不自然的形狀；方盒構築仍可依基地三軸貼合。
     const fitScale = (f, b) => {
       const p = f.prof;
-      return {
-        sx: (f.rot ? b.d : b.w) * 0.5 / p.hw,
-        sy: b.h * 0.5 / p.hy,
-        sz: (f.rot ? b.w : b.d) * 0.5 / p.hd,
-      };
+      const sx = (f.rot ? b.d : b.w) * 0.5 / p.hw;
+      const sy = b.h * 0.5 / p.hy;
+      const sz = (f.rot ? b.w : b.d) * 0.5 / p.hd;
+      if (f.proportional) {
+        const s = Math.min(sx, sy, sz);
+        return { sx: s, sy: s, sz: s };
+      }
+      return { sx, sy, sz };
     };
     /**
      * 剖面某一段的**建物座標**半跨與高度區間(碰撞柱與招牌落點同吃)。
@@ -10956,10 +10962,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           const vis = (arr) => (fit ? sink : arr);
           // `lib` 只掛在**主量體**這一列(退縮頂塔/裙樓/梯間塔仍走方盒:它們是主體的
           // 附加輪廓件,整棟節點本身已經帶著自己的頂部造型,兩者疊起來會長出第二頂帽子)
-          // 縮放:方盒走 (w,h,d) 照舊;庫節點走 `fitScale`(把網格撐滿基地,見該支檔頭)
+          // 縮放:方盒可走 (w,h,d);非方盒由 `fitScale` 取單一比例(保留自然形狀)
           const fsc = fit ? fitScale(fit, b) : null;
+          const renderH = fsc ? fsc.sy : b.h;
           inst.push({
-            x: b.x, y: gy + b.h / 2 - 0.5, z: b.z,
+            x: b.x, y: gy + renderH / 2 - 0.5, z: b.z,
             ry: b.ry + (fit?.rot ? Math.PI / 2 : 0),
             w: fsc ? fsc.sx : b.w, h: fsc ? fsc.sy : b.h, d: fsc ? fsc.sz : b.d,
             bh: b.h,                                   // 真樓高(縮放係數 ≠ 樓高;列數吃這個)
@@ -10973,9 +10980,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           // **挑中庫節點的那幾棟改登記剖面**(2026-08-12;使用者「物理碰撞應該要與建模的
           // 3D 外表一致」)—— 一段一根有向盒,三端(客戶端 `_collide`/`_blockerHitT`、
           // 伺服器 occ)一行都不用改(A30 只認有向盒與圓柱)。三條:
-          //   ㋐ **地面那一段恆等於整個足跡**(剖面最寬的一段被 `fitScale` 撐到 OSM 足跡)
-          //      ⇒ 街廓通行寬與舊制逐位元相同(`audit_traverse` 不動),收窄的只有上面的
-          //      退縮階與山牆 —— 舊制那裡是實心的方盒,而畫面上是空氣。
+          //   ㋐ 方盒地面段恆等於整個足跡;非方盒則與自然包絡同縮放,不另造一圈看不見的盒。
+          //      因此方盒街廓通行寬與舊制逐位元相同(`audit_traverse` 不動),非方盒的通行寬
+          //      跟著可見幾何保守收縮,收窄的只有上面的退縮階與山牆。
           //   ㋑ 每一段各帶自己的 `ty` ⇒ 退縮平台**站得上去**(`blockerTopAt` 取含入者的最高頂)。
           //   ㋒ 每一段的 `h` 一律比可見頂高 0.5m(與舊制同一條:站上屋頂不被垂直閘推下去)。
           const cols = fit
@@ -11118,14 +11125,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           if ((commercial || fd.style === 'shop') && b.h > 14 && rnd() < 0.35) {
             // 直式招牌:亞洲街景的垂直長條招牌,掛在牆面微凸 0.4m
             // 高度吃樓高、寬度由長寬比反推(同上:比例是硬約束,不是兩個各自的亂數)
-            const sh0 = Math.min(14, b.h * (0.45 + rnd() * 0.2));
+            const sh0 = Math.min(14, renderH * (0.45 + rnd() * 0.2));
             const face = Math.floor(rnd() * 4);              // 0:+x 1:−x 2:+z 3:−z
             const alongW = face < 2;
             const roff = rnd() - 0.5;
             // 掛牌的那一面:方盒吃整個足跡;庫節點吃**這個高度真的存在的那一段**的側面
             // (舊制掛在方盒側面,而節點在那個高度只有方盒的 0.2 倍寬 ⇒ 牌子浮在半空,
             //  §5ab-c 當時的處理是整批不掛 —— 那是繞過去不是修好)。
-            const sy = gy + b.h * 0.55 - 0.5;
+            const sy = gy + renderH * 0.55 - 0.5;
             const fw = bldFace(fit, b, gy, sy);
             const hwF = fw ? fw.hw2 : b.w / 2, hdF = fw ? fw.hd2 : b.d / 2;
             const off = roff * (alongW ? hdF : hwF) * 1.0;
