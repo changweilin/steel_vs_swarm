@@ -1111,32 +1111,41 @@ const CEL_SEA_GLSL = `
             celH += uSoftAmp * 0.45 * celFragW * celChop;
           }
 
-          // ⑤ 遺跡/沉船/橋墩周邊：環繞物件切面的同心波前 (水流方向隨機向內或向外，橋墩範圍約為遺跡一半，最外圈自然消失)
+          // ⑤ 遺跡/沉船/橋墩周邊：環繞物件切面的同心波前與干涉條紋 (水波範圍與波長放大 2 倍，重疊時計算干涉條紋)
           if ( celRawD > 0.001 && celRawD < 0.98 ) {
             // 物件位置決定水流向內(-1)或向外(+1)
             float celFlowSign = sign( sin( dot( floor( celSxz * 0.08 ), vec2( 12.9898, 78.233 ) ) * 43758.5453 ) );
             if ( celFlowSign == 0.0 ) celFlowSign = 1.0;
 
-            // 判斷障礙物大小/類型: 大範圍遺跡/沉船 vs 橋墩 (橋墩浪花範圍約遺跡一半)
+            // 判斷障礙物大小/類型: 大範圍遺跡/沉船 vs 橋墩 (水波範圍放大 2 倍)
             float isRelic = smoothstep( 0.04, 0.20, celRawD );
-            float waveExtent = mix( ${FOAM.RANGE_M.toFixed(2)} * 1.15, ${FOAM.RANGE_M.toFixed(2)} * 2.3, isRelic );
+            float waveExtent = mix( ${FOAM.RANGE_M.toFixed(2)} * 2.3, ${FOAM.RANGE_M.toFixed(2)} * 4.6, isRelic );
             float relicDist = celRawD * waveExtent;
 
-            float relicJit = sin( dot( celSxz, vec2( 0.23, -0.31 ) ) + celRawD * 14.0 ) * 0.55
-                           + cos( dot( celSxz, vec2( -0.18, 0.37 ) ) + uWindT * 0.7 ) * 0.45;
-            float relicPhase = relicDist * 3.8 - uWindT * 2.4 * celFlowSign + relicJit;
+            // 波長放大 2 倍 (波數 k 由 3.8 減半為 1.9，波長倍增)
+            float relicJit = sin( dot( celSxz, vec2( 0.12, -0.16 ) ) + celRawD * 7.0 ) * 0.55
+                           + cos( dot( celSxz, vec2( -0.09, 0.18 ) ) + uWindT * 0.5 ) * 0.45;
+            float relicPhase = relicDist * 1.9 - uWindT * 1.6 * celFlowSign + relicJit;
 
-            // 越外圈自然消失 (指數衰減 + smoothstep 至 0)
-            float relicFade = exp( -relicDist * 0.95 ) * ( 1.0 - smoothstep( 0.15, 0.95, celRawD ) );
-            float relicWave = sin( relicPhase ) * relicFade * ( uSoftAmp * 1.1 );
+            // 越外圈自然消失 (衰減距離放大 2 倍: 0.95 -> 0.48)
+            float relicFade = exp( -relicDist * 0.48 ) * ( 1.0 - smoothstep( 0.15, 0.95, celRawD ) );
+            float relicWave = sin( relicPhase ) * relicFade * ( uSoftAmp * 1.25 );
+
+            // ⑥ 水波重疊干涉條紋計算 (Interference Fringes: 相長/相消干涉)
+            float seaPhase = celMsp + uWindT * uSoftFreq;
+            float celInterference = cos( relicPhase - seaPhase )
+                                  + cos( relicPhase * 1.25 + dot( celSxz, vec2( 0.18, -0.14 ) ) - uWindT * 1.1 ) * 0.5;
+            float fringeWeight = relicFade * smoothstep( 0.04, 0.35, celRawD );
+            float interferenceFringes = celInterference * fringeWeight * ( uSoftAmp * 0.75 );
 
             #ifdef CEL_SWAMP_RIPPLE
             // 沼澤/封閉水域：浪花變化改為正號到微小負號 (負號數值遠小於正號，負號時不顯示)
-            float swampWavePulse = sin( uWindT * 1.4 + relicDist * 2.0 ) * 0.54 + 0.46; // [-0.08, +1.00]
+            float swampWavePulse = sin( uWindT * 1.4 + relicDist * 1.0 ) * 0.54 + 0.46; // [-0.08, +1.00]
             relicWave *= clamp( swampWavePulse, 0.0, 1.0 );
+            interferenceFringes *= clamp( swampWavePulse, 0.0, 1.0 );
             #endif
 
-            celH += relicWave;
+            celH += relicWave + interferenceFringes;
           }
 
           #ifdef CEL_SWAMP_RIPPLE
