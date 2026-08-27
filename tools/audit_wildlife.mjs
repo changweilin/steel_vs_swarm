@@ -264,6 +264,37 @@ console.log('\nⅥ 剪影下限(鳥在動漫背景裡是剪影)');
   const angs = new Set();
   for (let i = 0; i < st.count; i++) angs.add(W.wingAngle(st, i, 1.234).toFixed(6));
   ok(angs.size >= Math.min(4, st.count), `拍翼相位逐鳥不同(${angs.size}/${st.count} 個相異角)`);
+
+  // 魚群剪影
+  const fparts = W.fishParts();
+  const fbs = fparts.map(box);
+  const fspan = Math.max(...fbs.map((b) => b.z1)) - Math.min(...fbs.map((b) => b.z0));
+  ok(fspan >= 0.4, `魚身長度跨距 ${fspan.toFixed(2)}m ≥ 0.4m`);
+  ok(fparts.some((p) => p.key === 'dorsal') && fparts.some((p) => p.key === 'tail'), '魚有背鰭與擺動尾鰭');
+  ok(fparts.some((p) => p.key === 'pectoralL') && fparts.some((p) => p.key === 'pectoralR'), '魚有左右胸鰭');
+
+  // 貓咪剪影
+  const cparts = W.catParts();
+  ok(cparts.some((p) => p.key === 'earL') && cparts.some((p) => p.key === 'earR'), '貓咪具備立體尖耳');
+  ok(cparts.some((p) => p.key === 'tail' && p.tail === 1), '貓咪具備獨立擺動長尾');
+  ok(cparts.filter((p) => p.key?.startsWith('leg')).length === 4, '貓咪具備四足步態肢體');
+
+  // 狗狗剪影
+  const dparts = W.dogParts();
+  ok(dparts.some((p) => p.key === 'muzzle'), '狗狗具備突出犬吻部');
+  ok(dparts.some((p) => p.key === 'tail' && p.tail === 1), '狗狗具備興奮搖擺尾巴');
+  ok(dparts.filter((p) => p.key?.startsWith('leg')).length === 4, '狗狗具備四足步態肢體');
+
+  // 擺尾與彈跳相位獨立性
+  const fst = W.wildlifeInit(ROUTE, W.FISH);
+  const fangs = new Set();
+  for (let i = 0; i < fst.count; i++) fangs.add(W.tailAngle(fst, i, 2.5, W.FISH).toFixed(6));
+  ok(fangs.size >= Math.min(4, fst.count), `魚尾擺動相位逐隻不同(${fangs.size}/${fst.count} 個相異角)`);
+
+  const dst = W.wildlifeInit(ROUTE, W.DOG);
+  const dbounce = [];
+  for (let i = 0; i < dst.count; i++) dbounce.push(W.bounceOffset(dst, i, 3.14, W.DOG));
+  ok(dbounce.some((b) => b > 0), '狗狗小跑步態有垂直彈跳位移');
 }
 
 console.log('\nⅦ 幀率無關(摩擦走 frictionFPS 的直接推論)');
