@@ -28,7 +28,7 @@ import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './m
 import { applyEnvironment } from './environment.js';
 import { Pipeline } from './postfx.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
-import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, setDissolve, CHAR, disposeTree } from './toon.js';
+import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { animWeights } from './animweights.js';
@@ -9432,6 +9432,17 @@ export class BattleClient {
     // MUST 排在 `_updateEnts` **之後** —— 那時 `ent.mesh.position` 才是本幀插值完的值;
     // 也 MUST NOT 併進 `stepCelWind(dt)` 的簽章(`audit_soft_stroke` Ⅴ 釘死那一支的呼叫形狀)。
     setCelChar(this._charSlots());
+    // 沼澤漣漪(2026-08-26):推進沼澤水面的局部圓形漣漪(純表現層)。
+    // MUST 排在 stepCelWind 之後(漣漪吃 windT 作為生成時間戳)。
+    // 沼澤格點只在首次呼叫時建(地形在對局中不變);無沼澤 ⇒ 空陣列 ⇒ 早退。
+    if (!this._swampCells && this.terrain?.waterY != null) {
+      const sc = [], t = this.terrain, step = 20;
+      for (let z = t.minZ; z < t.maxZ; z += step)
+        for (let x = t.minX; x < t.maxX; x += step)
+          if (terrainEnvCode(t, x, z) === 2) sc.push({ x, z });
+      this._swampCells = sc;
+    }
+    stepSwampRipples(this._swampCells, dt);
     // 日夜循環:鐘點 = f(開場時段, **伺服器權威的經過秒數**)。快照 8Hz 且秒數取整 ⇒ 兩幀之間
     // 自己補 dt(48× 的速率下,1 秒的量化誤差 = 太陽轉 0.8°,補不補都看不出來;不補的話
     // 天色會以 8Hz 一格一格跳)。MUST NOT 改成純本地時鐘 —— 那會讓兩台客戶端的天色分家。
