@@ -755,7 +755,7 @@ const _relicSize = new THREE.Vector3();
  * 固定巨物碰撞的單一量尺：以物件 yaw 為盒軸，將傾斜、斷件與子零件姿態全部烤進外廓。
  * 圓形 r 僅作 broad phase；移動、彈道與 LOS 均吃同一個 hw2/hd2/ry 有向盒(A30)。
  */
-export function relicCollider(object, name = 'relic') {
+export function relicCollider(object, name = 'relic', waterY = null) {
   if (!object) return null;
   object.updateWorldMatrix(true, true);
   object.getWorldPosition(_relicPos);
@@ -763,6 +763,64 @@ export function relicCollider(object, name = 'relic') {
   _relicFrame.makeRotationY(ry).setPosition(_relicPos);
   _relicFrameInv.copy(_relicFrame).invert();
   _relicBox.makeEmpty();
+
+  // 若提供 waterY，則精確計算「水面橫截面」(排除海底寬大底座與完全沒入水下的組件)
+  if (waterY != null) {
+    const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
+    const _p = new THREE.Vector3();
+
+    object.traverse((node) => {
+      if (!node.isMesh || !node.geometry) return;
+      const geom = node.geometry;
+      const posAttr = geom.attributes?.position;
+      if (!posAttr) return;
+
+      if (!geom.boundingBox) geom.computeBoundingBox();
+      _meshBox.copy(geom.boundingBox).applyMatrix4(node.matrixWorld);
+      if (_meshBox.max.y < waterY || _meshBox.min.y > waterY + 4.0) return;
+
+      const index = geom.index;
+      const count = index ? index.count : posAttr.count;
+      const mat = node.matrixWorld;
+
+      for (let i = 0; i < count; i += 3) {
+        const i1 = index ? index.getX(i) : i;
+        const i2 = index ? index.getX(i + 1) : i + 1;
+        const i3 = index ? index.getX(i + 2) : i + 2;
+
+        _v1.fromBufferAttribute(posAttr, i1).applyMatrix4(mat);
+        _v2.fromBufferAttribute(posAttr, i2).applyMatrix4(mat);
+        _v3.fromBufferAttribute(posAttr, i3).applyMatrix4(mat);
+
+        const minY = Math.min(_v1.y, _v2.y, _v3.y);
+        const maxY = Math.max(_v1.y, _v2.y, _v3.y);
+        if (maxY < waterY || minY > waterY) continue;
+
+        const edges = [[_v1, _v2], [_v2, _v3], [_v3, _v1]];
+        for (const [va, vb] of edges) {
+          if ((va.y <= waterY && vb.y >= waterY) || (va.y >= waterY && vb.y <= waterY)) {
+            const dy = vb.y - va.y;
+            const t = Math.abs(dy) < 1e-6 ? 0.5 : (waterY - va.y) / dy;
+            _p.lerpVectors(va, vb, Math.max(0, Math.min(1, t)));
+            _p.applyMatrix4(_relicFrameInv);
+            _relicBox.expandByPoint(_p);
+          }
+        }
+      }
+    });
+
+    if (_relicBox.isEmpty()) return null; // 完全沉沒水底，不產生水面浪花圈
+    _relicBox.getCenter(_relicPos).applyMatrix4(_relicFrame);
+    _relicBox.getSize(_relicSize);
+    const hw2 = Math.max(0.4, _relicSize.x / 2);
+    const hd2 = Math.max(0.4, _relicSize.z / 2);
+    return {
+      x: _relicPos.x, z: _relicPos.z, y: waterY - 1.0,
+      h: 4.0, hw2, hd2, ry,
+      r: Math.hypot(hw2, hd2), name,
+    };
+  }
+
   object.traverse((node) => {
     if (!node.isMesh || !node.geometry) return;
     if (!node.geometry.boundingBox) node.geometry.computeBoundingBox();
@@ -816,7 +874,7 @@ export function buildSunkenRelics(parentGroup, terrain, seed, blockers = []) {
     if (code === 1 && wy - floorY >= 3.0) {
       const kind = underwaterKinds[Math.floor(rnd() * underwaterKinds.length)];
       const relic = buildRelicObject(kind, parentGroup, x, floorY, z, rnd, { isLand: false });
-      const col = relicCollider(relic, `aquatic_${kind}`);
+      const col = relicCollider(relic, `aquatic_${kind}`, wy);
       if (col) blockers.push(col);
       relicCount++;
     }

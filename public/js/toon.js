@@ -1079,11 +1079,23 @@ const CEL_SEA_GLSL = `
           // ③ 障礙物近場衰減:深度場 0 的位置附近主波幅壓低 (留給同心切面波)
           float celObD = smoothstep( 0.0, 0.15, celRawD );
 
-          // 合成基礎行波 (非直線波前)
+          // 合成基礎行波 (開闊水域行波公式 vs 沼澤黏滯微波公式，交界處平滑過渡連續)
           float celMsp = celSp * celWaveK + celPhJit;
-          float celH = uSoftAmp * celAmpD * celAmpMod * celObD * celGust( celSxz )
-               * ( sin( uWindT * uSoftFreq + celMsp ) * 0.72
-                 + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28 );
+          float celHSea = uSoftAmp * celAmpD * celAmpMod * celObD * celGust( celSxz )
+                * ( sin( uWindT * uSoftFreq + celMsp ) * 0.72
+                  + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28 );
+
+          // 沼澤專屬公式 (低頻黏滯波 + 碎浪微擾動)
+          float celHSwamp = uSoftAmp * 0.42 * ( sin( uWindT * 0.75 + dot( celSxz, vec2( 0.22, 0.15 ) ) ) * 0.65
+                                              + cos( uWindT * 0.55 + dot( celSxz, vec2( -0.16, 0.24 ) ) ) * 0.35 );
+
+          #ifdef CEL_SWAMP_RIPPLE
+          float celH = celHSwamp;
+          #else
+          // 開闊水域在極淺水/沼澤邊界處依深度平滑過渡，確保水波高度嚴格連續無撕裂
+          float celSwampBlend = 1.0 - celDepF; // 淺水邊界 [0, 1]
+          float celH = mix( celHSea, celHSwamp, celSwampBlend * 0.45 );
+          #endif
 
           // ④ 沼澤與淺水小水域：破碎化微波擾動
           float celFragW = ( 1.0 - celDepF ) * 0.65;
@@ -2020,13 +2032,12 @@ ${CEL_SEA_GLSL}
         float celFoam( vec2 celFxz ) {
           vec2 celFuv = clamp( ( celFxz - uSeaRect.xy ) * uSeaRect.zw, 0.0, 1.0 );
           float celFd = texture2D( uSeaField, celFuv ).r * ${FOAM.RANGE_M.toFixed(2)};
-          float celFade = smoothstep( 0.02, 0.30, celFd ) * ( 1.0 - smoothstep( 0.55, ${FOAM.RANGE_M.toFixed(2)}, celFd ) );
-          if ( celFade <= 0.0 ) return 0.0;
-          float celJit = ( celNoise( celFxz / ${FOAM.NOISE_M.toFixed(2)} ) - 0.5 ) * 0.20;
-          float celFb = fract( ( celFd - celSeaH( celFxz ) + celJit ) / ${FOAM.BAND_M.toFixed(3)} );
+          float celFade = clamp( 1.0 - celFd / ${FOAM.RANGE_M.toFixed(2)}, 0.0, 1.0 );
+          if ( celFd <= 0.001 || celFade <= 0.0 ) return 0.0;
+          float celFb = fract( ( celFd - celSeaH( celFxz ) ) / ${FOAM.BAND_M.toFixed(3)} );
           float celBand = max( 0.0, 4.0 * celFb * ( 1.0 - celFb ) );
           float celFp = pow( celBand, ${FOAM.SHAPE_K.toFixed(1)} ) * celFade
-                      * mix( 0.85, 1.0, celNoise( ( celFxz + vec2( 23.7, 41.3 ) ) / ${FOAM.NOISE_M.toFixed(2)} ) );
+                      * mix( 0.45, 1.0, celNoise( celFxz / ${FOAM.NOISE_M.toFixed(2)} ) );
           #ifdef CEL_SWAMP_RIPPLE
           // 沼澤/池塘/封閉水域：浪花變化改為正號到微小負號 (負號數值遠小於正號，負號時不顯示)
           float celSwampPulse = sin( uWindT * 1.5 + dot( celFxz, vec2( 0.45, 0.35 ) ) ) * 0.54 + 0.46; // [-0.08, +1.00]

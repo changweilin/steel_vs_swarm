@@ -6704,8 +6704,8 @@ function buildSwampSurface(group, terrain) {
   if (wy == null) return;
   const swampY = wy + WATER.SWAMP_BAND;
   const { minX, maxX, minZ, maxZ } = terrain;
-  const cols = Math.min(320, Math.max(1, Math.ceil((maxX - minX) / 5)));   // ~5m 格 (細分取樣頂點以呈現 swampSoft 碎波起伏)
-  const rows = Math.min(320, Math.max(1, Math.ceil((maxZ - minZ) / 5)));
+  const cols = Math.min(320, Math.max(1, Math.ceil((maxX - minX) / 10)));   // ~10m 格(紫盤是濁沼,不需更細)
+  const rows = Math.min(320, Math.max(1, Math.ceil((maxZ - minZ) / 10)));
   const cw = (maxX - minX) / cols, ch = (maxZ - minZ) / rows;
   const pos = [], nrm = [], idx = [], fade = [];
   let base = 0;
@@ -6715,7 +6715,7 @@ function buildSwampSurface(group, terrain) {
       const x0 = minX + j * cw, x1 = x0 + cw, cx = x0 + cw / 2;
       if (terrainEnvCode(terrain, cx, cz) !== 2) continue;
       pos.push(x0, swampY, z0, x1, swampY, z0, x1, swampY, z1, x0, swampY, z1);
-      for (let k = 0; k < 4; k++) nrm.push(0, 1, 0);   // 水平面法線恆朝上
+      for (let k = 0; k < 4; k++) nrm.push(0, 1, 0);   // 水平面法線恆朝上(平坦,免 computeVertexNormals)
       idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
       const fd = terrain.seaFadeAtWorld ? terrain.seaFadeAtWorld(cx, cz) : 1.0;
       for (let k = 0; k < 4; k++) fade.push(fd);
@@ -6728,9 +6728,9 @@ function buildSwampSurface(group, terrain) {
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
   geo.setAttribute('seaFade', new THREE.Float32BufferAttribute(fade, 1));
   geo.setIndex(idx);
-  const mesh = new THREE.Mesh(geo, envMat(0x1e3a28, {
-    bands: 'soft', rim: 0, transparent: true, opacity: 0.84, side: THREE.DoubleSide,
-    soft: swampSoft(), wash: 0.7, cool: 0.5,
+  const mesh = new THREE.Mesh(geo, envMat(0x4a3358, {
+    bands: 'soft', rim: 0, transparent: true, opacity: 0.76, side: THREE.DoubleSide,
+    soft: swampSoft(),
   }));
   mesh.frustumCulled = false;
   mesh.userData.noOutline = true;
