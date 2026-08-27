@@ -490,6 +490,7 @@
           <button class="segb set-tab on" type="button" data-setpage="audio">音訊</button>
           <button class="segb set-tab" type="button" data-setpage="ctrl">操控</button>
           <button class="segb set-tab" type="button" data-setpage="visual">畫面</button>
+          <button class="segb set-tab" type="button" data-setpage="balance">平衡性</button>
           <button class="segb set-tab" type="button" data-setpage="dev" hidden>開發</button>
         </div>
 
@@ -526,6 +527,12 @@
           <div class="set-panel" data-setpage="visual" hidden>
             <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
             <div id="pauseVisualMount" class="vset"></div>
+          </div>
+
+          <!-- 子分頁:平衡性 (全玩家升級曲線起終點 + 基礎數值倍率) -->
+          <div class="set-panel" data-setpage="balance" hidden>
+            <div class="set-sub">▎平衡性調整 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="balance">ⓘ</button></div>
+            <div id="pauseBalanceMount" class="bset"></div>
           </div>
 
           <!-- 子分頁:開發工具 (本機開發工具啟停) -->
@@ -684,6 +691,7 @@
         <button class="segb set-tab on" type="button" data-setpage="audio">音訊</button>
         <button class="segb set-tab" type="button" data-setpage="ctrl">操控</button>
         <button class="segb set-tab" type="button" data-setpage="visual">畫面</button>
+        <button class="segb set-tab" type="button" data-setpage="balance">平衡性</button>
         <button class="segb set-tab" type="button" data-setpage="dev" hidden>開發</button>
       </div>
       <div class="set-list">
@@ -719,6 +727,12 @@
         <div class="set-panel" data-setpage="visual" hidden>
           <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
           <div id="lobbyVisualMount" class="vset"></div>
+        </div>
+
+        <!-- 子分頁:平衡性 -->
+        <div class="set-panel" data-setpage="balance" hidden>
+          <div class="set-sub">▎平衡性調整 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="balance">ⓘ</button></div>
+          <div id="lobbyBalanceMount" class="bset"></div>
         </div>
 
         <!-- 子分頁:開發工具 -->
