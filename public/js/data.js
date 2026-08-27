@@ -3296,7 +3296,7 @@ export const CHARACTERS = {
     // 連 CLASS_SYM 的分組都不位移,只有兩人各自的 mods 換了對方那一組(bal ⑤ 需複驗離群列)。
     // 塗裝 paint:'tattoo' 仍留在她身上(角色欄):那張對稱線描羽紋徽是她自己畫的**私章**,
     // 不是機體識別 —— 換機之後她照樣把它噴在利維坦的囊體側面(見 lore.js)。
-    side: 'SWARM', kind: 'morph', name: '林翎', code: '半羽', machine: '「靜電」長耳可變訊號機',
+    side: 'SWARM', kind: 'morph', name: '林翎', code: '半羽', machine: '「利維坦」長耳可變訊號機',
     visual: { hue: 0x9ef2e6, pod: 'antenna', flight: 'levi', ground: 'elephant', bulk: 0.95, paint: 'tattoo' },
     mods: { hp: 0.9, sp: 1.2, mp: 1.3, speed: 1.05, armor: 8 },
     // 2026-08-03 換機體後的 dmg 校準(唯一合法的旋鈕,見 §2.1 三軸預算:「校準只走 dmg 階梯」)。

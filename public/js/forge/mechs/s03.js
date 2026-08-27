@@ -1,5 +1,5 @@
 // ============ s03 逐機零件檔(dev-only;仿生四足 D.kind 'quad')============
-// ── s03「靜電」長耳可變訊號機(**機械巨象 = 地面型**)──
+// ── s03「利維坦」長耳可變訊號機(**機械巨象 = 地面型**)──
 // 2D 定案圖:public/assets/cyberpunk_art/mechs/s03_ground_static.jpg / s03_flight_static.jpg
 // 幾何語彙一律取自 ../geo.js;MUST NOT 在本檔自建 BufferGeometry。
 //
@@ -170,7 +170,7 @@ const rAt = (z) => {
 };
 
 export default {
-  label: '靜電(s03 變形者・機械巨象)', kind: 'quad', height: 5.6,
+  label: '利維坦(s03 變形者・機械巨象)', kind: 'quad', height: 5.6,
   frame: {
     hipY: 2.66, legX: 1.02, fz: 1.30, hz: -1.20,
     chest: [0, 0.10, 1.05], neck: [0, -0.06, 0.88], head: [0, -0.18, 0.52],

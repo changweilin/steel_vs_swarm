@@ -1,16 +1,22 @@
 // ============ s03@flight 逐機零件檔(航空機體;dev-only)============
-// s03「靜電」長耳可變訊號機 —— **飛行型**(飛鯨浮空艦)。
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/s03_flight_static.jpg / s03_ground_static.jpg
+// s03「利維坦」長耳可變訊號機 —— **飛行型**(飛鯨浮空艦)。
+// 2D 定案圖:public/assets/cyberpunk_art/mechs/s03_flight_static.jpg
+// 幾何語彙一律取自 ../geo.js;MUST NOT 在本檔自建 BufferGeometry。
 //
 // 2026-08-13 使用者定案:「利維坦+巨像:**保持飛艇形象,加入飛鯨頭部與胸鰭特徵**;
-// 地面形態胸鰭充當象耳;飛行形態四肢象腿與象牙內縮,地面形態才展開;
-// 飛行形態象鼻變獨角鯨的角連帶武器挺直,地面形態象鼻保持柔軟持武器攻擊。」
-//   ⇒ 舊制那台的囊體/吊艙/耳板/鯨尾都是另畫的一份,而地面型(機械巨象)根本沒有建模。
-//     兩張 2D 定案圖其實是**同一具氣囊 + 同一顆鯨首**:本檔因此一顆自己的幾何都沒有,
-//     整台由 `s03.js` 的建構器組出來,四個旋鈕各轉一次就是另一個型態:
-//       earOut 1→0(象耳後掠成胸鰭)/ tuskOut 1→0(象牙內縮)/ trunkDown true→false
-//       (象鼻挺成獨角鯨的角,鼻端武器隨之同軸)/ 四肢上收進腹艙。
-//   ⇒ 升力來自浮力 ⇒ **沒有旋翼、沒有噴口**;只有兩具低速矢量推進器。
+// 飛行型改為一具完整的飛鯨浮空艦(囊背指揮塔+噴氣孔+額隆+側扁尾柄+水平尾鰭+垂直背鰭+
+// 腹下貨架與推進器);地面型變為四足站立的機械巨象(象腿落地+耳板立於頰側+長鼻捲武器)。」
+//
+// ── 兩態共用量體(同一座零件庫、旋鈕切換姿態)──
+// 兩態的「紡錘囊體 / 額隆鯨首 / 腹下貨架 / 指揮塔 / 頰側耳板 / 象牙 / 軟鼻 / 尾鰭 / 背鰭 /
+// 推進器」是同一份零件樹。飛行型旋鈕:
+//   ① 四足柱狀腿全數以 hip/knee/ankle 折收進腹艙(+y / +z 貼平);
+//   ② 頰側耳板(ear/flipper)放平(ry=±π/2、rz=±0.15)展開成後掠大胸鰭;
+//   ③ 象牙(tusk)水平收平(rx=0)貼在鯨首兩側;
+//   ④ 九節軟鼻(trunk)自下垂挺直為向前伸出的尖細「獨角/探針」(rx=0);
+//   ⑤ 水平尾鰭(fluke)全開(rx=0、ry=0)成雙側展開的水平鯨尾。
+//
+// 姿態矩陣由 _morph.js computeMorphFrame 推導;本檔只寫飛行型的靜態 override。
 import * as THREE from 'three';
 import { cylF, rotorF } from '../geo.js';
 import s03 from './s03.js';
@@ -20,7 +26,7 @@ const FR = s03.frame;
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
-  label: '靜電・飛行型(s03 飛鯨浮空艦)', kind: 'air', height: s03.height,
+  label: '利維坦・飛行型(s03 飛鯨浮空艦)', kind: 'air', height: s03.height,
   air: { tiltY: 3.0, bob: 0.11, top: 12, span: 3.6 },
   moveSig: { hover: 0.15, hoverF: 0.5, hoverA: 0.25, surge: 0.05, flare: 0.05, bank: 0.05 },
   castSig: { omni: 'roar', dir: 'swing' },
