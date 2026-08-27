@@ -2021,6 +2021,11 @@ function startPrebuild(cfg) {
       for (const p of towerPads) if (Math.abs(p.x - x) < 2 && Math.abs(p.z - z) < 2) return p.y;
       return null;
     };
+    const basePads = biomes.userData.basePads || [];
+    terrain.basePadY = (x, z) => {
+      for (const p of basePads) if (Math.abs(p.x - x) < 2 && Math.abs(p.z - z) < 2) return p.y;
+      return null;
+    };
     terrain.deckMargin = DECK_MARGIN; // 站立查詢側向容差(game.js NPC 水上站橋與 surfaceAt 同一值)
     // 大型障礙物頂面站立索引(建物/神木/巨岩;2026-07-22):碉堡淨空拆樓後 MUST 重建(game.js 呼叫)
     let blockerTop = makeBlockerTopIndex(terrain.blockers);

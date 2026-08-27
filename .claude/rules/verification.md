@@ -142,6 +142,7 @@ node tools/audit_bridge_crossing.mjs # 橋交會去重 + 橋墩帽梁不得蓋�
 #   ±--break-cap-sink                  # 帽梁退回共面版,Ⅷ MUST 紅
 node tools/audit_water_skirt.mjs     # 馬路橫切繞行
 node tools/audit_bridge_tower_pad.mjs# 橋上砲塔墩座
+node tools/audit_base_water_pad.mjs  # 水域／沼澤主堡承台、重生點與治癒光環高度接線
 node tools/audit_mini_map.mjs        # 迷你地圖(縮小比推導 / 只剩前線塔 / 緩衝 1/3 / 剪短保真 / 手機閘門)
 node tools/audit_map_rules.mjs       # 砲塔佈局 #4
 node tools/audit_lane_sep.mjs / audit_lane_grade_sep.mjs   # 兵線分離 / #5 洞口涵蓋

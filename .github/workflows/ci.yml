@@ -77,6 +77,7 @@ jobs:
           # 這一段 MUST 與 `.claude/rules/verification.md` §5.1(續)的清單同步:
           # 新增一支稽核卻沒有在這裡註冊 = 它只在人手跑的時候存在,而每一次 PR 都是綠的。
           node tools/audit_struct_ink.mjs
+          node tools/audit_base_water_pad.mjs
           node tools/audit_rock_ink.mjs
           node tools/audit_leaf_card.mjs
           node tools/audit_ambient_motion.mjs
