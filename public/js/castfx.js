@@ -21,6 +21,7 @@
 import * as THREE from 'three';
 import { CHARACTERS, SIDES } from './data.js';
 import { markShared, disposeTree } from './toon.js';
+import { spawnParticleCast } from './castparticles.js';
 
 const TAU = Math.PI * 2;
 
@@ -401,6 +402,26 @@ const GLYPH_ALIAS = {
   noise: 'rune', escapement: 'clock', crescent: 'star', starpath: 'star', artillery: 'frost',
   rain: 'poem', trench: 'shield', firefly: 'star', exclusion: 'hex', cloud: 'flame',
 };
+const STRUCTURE_ALIASES = {
+  ukrainian_score:'score', forge_anvil:'anvil', leviathan_ribs:'whale', shura_deadline:'deadline',
+  neon_synapse:'synapse', elegy_tally:'tally', proof_chords:'proof', krakow_rose:'rose', outback_brand:'brand',
+  spectrum_feather:'feather', watch_escapement:'escapement', crimea_starpath:'starpath', ural_artillery:'artillery',
+  neural_seventh:'seven', xianxia_furnace:'furnace', gru_feather:'feather', crane_blueprint:'blueprint',
+  qitian_cloudstaff:'staff', pterosaur_arrow:'arrow', dragon_aria:'dragon', persian_calligraphy:'calligraphy',
+  mukarnas_arch:'arch', trench_whistle:'whistle', firefly_network:'network', raven_batmoon:'moon',
+  titan_strata:'strata', alpine_aurora:'aurora', steppe_eagle:'eagle', blackout_breaker:'breaker',
+  carnival_rotor:'rotor', border_gate:'border', contract_empty:'empty_circle',
+};
+const FIELD_FORM_ALIASES = {
+  score_canopy:'score', forge_battlements:'anvil', whale_ellipse:'whale', broken_frame:'deadline',
+  pixel_lattice:'synapse', tomb_phalanx:'tomb', axiom_polygon:'proof', rose_vault:'rose', ranch_fence:'brand',
+  negative_screen:'noise', clockwork_cage:'escapement', constellation_door:'starpath', avalanche_wedge:'artillery',
+  seven_rings:'seven', cauldron_shell:'furnace', optical_cloak:'feather', assembly_gate:'blueprint', cloud_mandala:'cloud',
+  needle_sight:'arrow', resonance_bowl:'dragon', ink_rain:'rain', octant_vault:'arch', sandbag_line:'trench',
+  coordinate_mesh:'network', blood_moon:'moon', cornerstone_wall:'cornerstone', ice_crown:'aurora', wind_compass:'eagle',
+  thunder_cage:'thunder', flightdeck_fan:'rotor', exclusion_grid:'exclusion', folded_circle:'empty_circle',
+};
+const STRUCTURE_NAMES = Object.freeze(Object.keys(STRUCTURE_ALIASES));
 // 視覺簽名不是 alias：每個命名圖騰都先走自己的 CanvasTexture，再由舊圖騰作
 // 相容 fallback。這讓 whale 的十六肋、anvil 的砧座和 rose 的窗格不會退回 rune。
 const SIGNATURE_NAMES = Object.freeze([
@@ -413,6 +434,7 @@ const SIGNATURE_NAMES = Object.freeze([
   'thunder','carnival','rotor','border','exclusion','check','empty_circle','frost','bolt','coin','poem',
 ]);
 function drawSignature(ctx, name, S) {
+  name = FIELD_FORM_ALIASES[name] || STRUCTURE_ALIASES[name] || name;
   const c = S * 0.5, R = S * 0.39;
   ctx.save(); ctx.translate(c, c); ctx.strokeStyle = ctx.fillStyle = '#fff';
   ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = S * 0.035;
@@ -492,8 +514,112 @@ function drawSignature(ctx, name, S) {
 function signatureTex(name) {
   return cached(`sig:${name}`, 128, (ctx, S) => drawSignature(ctx, name, S));
 }
+
+/**
+ * 文化框架只採建築、工藝與民俗的幾何語彙，不畫經文或神祇肖像。
+ * 同一框架仍會疊該招 tellShape，因此「同國角色」也不會共用完整圖案。
+ */
+function drawCultureFrame(ctx, frame, S) {
+  const c = S / 2, R = S * 0.43;
+  ctx.save(); ctx.translate(c, c);
+  ctx.strokeStyle = ctx.fillStyle = '#fff';
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = S * 0.018;
+  const ring = (r, w = 1) => { ctx.lineWidth = S * 0.018 * w; ctx.beginPath(); ctx.arc(0, 0, R * r, 0, TAU); ctx.stroke(); };
+  const polygon = (n, r, rot = -Math.PI / 2) => { poly(ctx, n, R * r, rot); ctx.stroke(); };
+  const spokes = (n, r0 = 0.62, r1 = 0.95) => {
+    for (let i = 0; i < n; i++) { const a = i * TAU / n;
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * R * r0, Math.sin(a) * R * r0);
+      ctx.lineTo(Math.cos(a) * R * r1, Math.sin(a) * R * r1); ctx.stroke(); }
+  };
+  switch (frame) {
+    case 'baroque':
+      ring(0.96); ring(0.70, 0.6);
+      for (let i = 0; i < 8; i++) { ctx.save(); ctx.rotate(i * TAU / 8); ctx.beginPath();
+        ctx.moveTo(0, -R * 0.68); ctx.bezierCurveTo(R * 0.26, -R * 0.82, R * 0.22, -R, 0, -R * 1.03); ctx.stroke(); ctx.restore(); }
+      break;
+    case 'rivet':
+      polygon(8, 0.96); polygon(8, 0.72, -Math.PI / 8); spokes(8);
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8; ctx.beginPath(); ctx.arc(Math.cos(a) * R * 0.84, Math.sin(a) * R * 0.84, S * 0.025, 0, TAU); ctx.fill(); }
+      break;
+    case 'tao_cloud':
+      ring(0.94); ring(0.55, 0.6); spokes(8, 0.56, 0.88);
+      for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * Math.PI / 2); ctx.beginPath();
+        ctx.moveTo(-R * 0.36, -R * 0.72); ctx.bezierCurveTo(-R * 0.10, -R, R * 0.15, -R * 0.58, R * 0.42, -R * 0.78); ctx.stroke(); ctx.restore(); }
+      break;
+    case 'torii':
+      polygon(4, 0.92, Math.PI / 4); ring(0.64, 0.6);
+      for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * Math.PI / 2); ctx.fillRect(-R * 0.38, -R * 0.91, R * 0.76, S * 0.028); ctx.fillRect(-R * 0.24, -R * 0.82, R * 0.48, S * 0.018); ctx.restore(); }
+      break;
+    case 'cyber':
+      polygon(6, 0.96); polygon(3, 0.60); spokes(6, 0.62, 0.91);
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6; ctx.beginPath(); ctx.arc(Math.cos(a) * R * 0.78, Math.sin(a) * R * 0.78, S * 0.027, 0, TAU); ctx.fill(); }
+      break;
+    case 'jazz':
+      ring(0.94); for (let i = -3; i <= 3; i++) { const x = i * R * 0.22; ctx.beginPath();
+        ctx.moveTo(x, -R * (i % 2 ? 0.92 : 0.72)); ctx.lineTo(x + R * 0.12, R * (i % 3 ? 0.82 : 0.58)); ctx.stroke(); }
+      break;
+    case 'hexstar':
+      ring(0.96); polygon(6, 0.82); polygon(3, 0.70); polygon(3, 0.70, Math.PI / 2); spokes(12, 0.84, 0.95);
+      break;
+    case 'gothic':
+      ring(0.97); ring(0.70, 0.6);
+      for (let i = 0; i < 12; i++) { ctx.save(); ctx.rotate(i * TAU / 12); ctx.beginPath();
+        ctx.moveTo(0, -R * 0.28); ctx.quadraticCurveTo(R * 0.30, -R * 0.55, 0, -R * 0.86); ctx.quadraticCurveTo(-R * 0.30, -R * 0.55, 0, -R * 0.28); ctx.stroke(); ctx.restore(); }
+      break;
+    case 'frontier':
+      polygon(8, 0.96); spokes(16, 0.76, 0.96); ring(0.60, 0.6);
+      for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -R * 0.58); ctx.lineTo(R * 0.16, -R * 0.88); ctx.lineTo(-R * 0.16, -R * 0.88); ctx.closePath(); ctx.stroke(); ctx.restore(); }
+      break;
+    case 'runic':
+      polygon(12, 0.96); ring(0.66, 0.5); spokes(12, 0.68, 0.92);
+      for (let i = 0; i < 6; i++) { ctx.save(); ctx.rotate(i * TAU / 6); ctx.beginPath(); ctx.moveTo(-R * 0.08, -R * 0.72); ctx.lineTo(R * 0.10, -R * 0.84); ctx.lineTo(-R * 0.04, -R * 0.94); ctx.stroke(); ctx.restore(); }
+      break;
+    case 'clockwork':
+      ring(0.96); ring(0.74, 0.7); spokes(12, 0.72, 0.94);
+      for (let i = 0; i < 12; i++) { ctx.save(); ctx.rotate(i * TAU / 12); ctx.fillRect(-S * 0.018, -R, S * 0.036, R * 0.14); ctx.restore(); }
+      break;
+    case 'girih':
+      polygon(10, 0.96); polygon(5, 0.76); polygon(5, 0.76, Math.PI / 2); spokes(10, 0.42, 0.94); ring(0.40, 0.5);
+      break;
+    case 'constructivist':
+      polygon(4, 0.92, Math.PI / 4); for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(-R * 0.86, i * R * 0.28); ctx.lineTo(R * 0.86, i * R * 0.28 - R * 0.42); ctx.stroke(); }
+      break;
+    case 'trench':
+      polygon(6, 0.95); ctx.beginPath(); ctx.moveTo(-R * 0.88, -R * 0.36); ctx.lineTo(-R * 0.44, -R * 0.10); ctx.lineTo(-R * 0.12, -R * 0.42);
+      ctx.lineTo(R * 0.22, R * 0.08); ctx.lineTo(R * 0.72, -R * 0.10); ctx.lineTo(R * 0.88, R * 0.35); ctx.stroke(); break;
+    case 'folklore':
+      ring(0.96); for (let i = 0; i < 12; i++) { const a = i * TAU / 12, r = i % 2 ? 0.62 : 0.90; ctx.beginPath(); ctx.arc(Math.cos(a) * R * r, Math.sin(a) * R * r, S * (i % 2 ? 0.018 : 0.032), 0, TAU); ctx.fill(); } break;
+    case 'citadel':
+      polygon(8, 0.96); polygon(8, 0.72, Math.PI / 8); for (let i = 0; i < 8; i++) { ctx.save(); ctx.rotate(i * TAU / 8); ctx.strokeRect(-R * 0.09, -R * 0.97, R * 0.18, R * 0.22); ctx.restore(); } break;
+    case 'alpine':
+      polygon(6, 0.96); ctx.beginPath(); ctx.moveTo(-R * 0.92, R * 0.55); ctx.lineTo(-R * 0.38, -R * 0.50); ctx.lineTo(-R * 0.08, -R * 0.05); ctx.lineTo(R * 0.30, -R * 0.72); ctx.lineTo(R * 0.92, R * 0.55); ctx.stroke(); spokes(6, 0.68, 0.94); break;
+    case 'tengri':
+      ring(0.96); ring(0.32, 0.7); spokes(16, 0.35, 0.67); for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * Math.PI / 2); ctx.beginPath(); ctx.arc(0, -R * 0.79, R * 0.18, 0.1, Math.PI - 0.1); ctx.stroke(); ctx.restore(); } break;
+    case 'storm':
+      polygon(6, 0.96); for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * R * 0.22, -R * 0.86); ctx.lineTo((i - 1) * R * 0.18, -R * 0.08); ctx.lineTo((i + 0.5) * R * 0.12, R * 0.10); ctx.lineTo(i * R * 0.18, R * 0.86); ctx.stroke(); } break;
+    case 'carnival':
+      ring(0.94); for (let i = 0; i < 14; i++) { ctx.save(); ctx.rotate(i * TAU / 14); ctx.beginPath(); ctx.moveTo(0, -R * 0.40); ctx.quadraticCurveTo(R * 0.22, -R * 0.72, 0, -R); ctx.quadraticCurveTo(-R * 0.22, -R * 0.72, 0, -R * 0.40); ctx.stroke(); ctx.restore(); } break;
+    case 'stepped':
+      polygon(4, 0.96, Math.PI / 4); for (let i = 0; i < 4; i++) { ctx.save(); ctx.rotate(i * Math.PI / 2); ctx.beginPath(); ctx.moveTo(-R * 0.58, -R * 0.74); ctx.lineTo(-R * 0.18, -R * 0.74); ctx.lineTo(-R * 0.18, -R * 0.58); ctx.lineTo(R * 0.24, -R * 0.58); ctx.lineTo(R * 0.24, -R * 0.42); ctx.lineTo(R * 0.62, -R * 0.42); ctx.stroke(); ctx.restore(); } break;
+    case 'mandala':
+      ring(0.96); ring(0.50, 0.5); for (let i = 0; i < 12; i++) { ctx.save(); ctx.rotate(i * TAU / 12); ctx.beginPath(); ctx.moveTo(0, -R * 0.32); ctx.quadraticCurveTo(R * 0.32, -R * 0.62, 0, -R * 0.92); ctx.quadraticCurveTo(-R * 0.32, -R * 0.62, 0, -R * 0.32); ctx.stroke(); ctx.restore(); } break;
+    default: ring(0.96); polygon(6, 0.72); spokes(12, 0.74, 0.94);
+  }
+  ctx.restore();
+}
+
+/** 每招一張文化法陣白稿；64 × 256² 約 16 MiB，上限固定且全場快取共用。 */
+function culturalSealTex(P) {
+  const key = `culture:${P.profile.profileId}:${P.profile.frame}`;
+  return cached(key, 256, (ctx, S) => {
+    drawCultureFrame(ctx, P.profile.frame, S);
+    ctx.save(); ctx.translate(S * 0.22, S * 0.22);
+    drawSignature(ctx, P.profile.tellShape, S * 0.56);
+    ctx.restore();
+  });
+}
 function glyphTex(motif, i = 0) {
-  if (SIGNATURE_NAMES.includes(motif)) return signatureTex(motif);
+  if (SIGNATURE_NAMES.includes(motif) || STRUCTURE_NAMES.includes(motif)) return signatureTex(motif);
   const base = GLYPH_ALIAS[motif] || motif;
   const vi = (base === 'math' || base === 'rune') ? i : 0;
   return cached(`g:${motif}:${vi}`, 96, (ctx, S) => {
@@ -560,6 +686,8 @@ const CYL = markShared(new THREE.CylinderGeometry(1, 1, 1, 12, 1, true));       
 const OCT = markShared(new THREE.RingGeometry(0.82, 1, 8, 1));                            // 八角環(絕對領域)
 const DOME = markShared(new THREE.SphereGeometry(1, 24, 10, 0, TAU, 0, Math.PI / 2));     // 半球
 const SHELL = markShared(new THREE.SphereGeometry(1, 20, 12));                            // 相位殼
+const BOX = markShared(new THREE.BoxGeometry(1, 1, 0.08));                                // 盾牆／門框薄板
+const SPIRE = markShared(new THREE.ConeGeometry(1, 1, 4, 1, true));                       // 冰冠／祭柱尖塔
 
 const M = (map, color, o = 1) => {
   const m = new THREE.MeshBasicMaterial({
@@ -644,6 +772,63 @@ const LAYOUT_STYLE = {
   bands:1.57, compass:0, switches:1.57, columns:0, flightdeck:0.78, gates:0, grid:0,
   fold:0.78, negative:0, vortex:0.35, pillars:1.57, walls:0, curtains:0.35, wind:0,
   feast:0.78, wings:1.57,
+};
+// 機體文化層：主色仍來自 CHARACTERS.visual.hue，這裡只提供不影響權威的
+// 輔色與場域結構。shieldForm 每台機體唯一，禁止所有防護場域退回同一穹頂。
+const CULTURAL_PALETTES = {
+  s01:{culture:'烏克蘭軍樂', accent:0xf4c542, structure:'ukrainian_score', shieldForm:'score_canopy'},
+  s02:{culture:'工業鍛造', accent:0xff7b35, structure:'forge_anvil', shieldForm:'forge_battlements'},
+  s03:{culture:'台灣利維坦深海', accent:0x8ce7ee, structure:'leviathan_ribs', shieldForm:'whale_ellipse'},
+  s04:{culture:'日本修羅軍刀', accent:0xff4747, structure:'shura_deadline', shieldForm:'broken_frame'},
+  s05:{culture:'競速神經電競', accent:0x47d9ff, structure:'neon_synapse', shieldForm:'pixel_lattice'},
+  s06:{culture:'追悼護航拱券', accent:0xcfd6ff, structure:'elegy_tally', shieldForm:'tomb_phalanx'},
+  s07:{culture:'白板數學證明', accent:0xffc857, structure:'proof_chords', shieldForm:'axiom_polygon'},
+  s08:{culture:'克拉科夫晨鐘', accent:0xb8ffbe, structure:'krakow_rose', shieldForm:'rose_vault'},
+  s09:{culture:'澳洲牧場獵巡', accent:0xe49b52, structure:'outback_brand', shieldForm:'ranch_fence'},
+  s10:{culture:'終端始祖翼陣', accent:0xd8ff9f, structure:'spectrum_feather', shieldForm:'negative_screen'},
+  s11:{culture:'德國精密錶芯', accent:0xd8c690, structure:'watch_escapement', shieldForm:'clockwork_cage'},
+  s12:{culture:'克里米亞星圖', accent:0xc7a8ff, structure:'crimea_starpath', shieldForm:'constellation_door'},
+  t01:{culture:'烏拉爾閱兵砲兵', accent:0xff5b4d, structure:'ural_artillery', shieldForm:'avalanche_wedge'},
+  t02:{culture:'神經同步科幻', accent:0xd89cff, structure:'neural_seventh', shieldForm:'seven_rings'},
+  t03:{culture:'中式熔爐神話', accent:0xffa94f, structure:'xianxia_furnace', shieldForm:'cauldron_shell'},
+  t04:{culture:'格魯烏灰雁', accent:0x8294a8, structure:'gru_feather', shieldForm:'optical_cloak'},
+  t05:{culture:'兵工重工生產線', accent:0xf0d27c, structure:'crane_blueprint', shieldForm:'assembly_gate'},
+  t06:{culture:'齊天筋斗雲', accent:0xffc83d, structure:'qitian_cloudstaff', shieldForm:'cloud_mandala'},
+  t07:{culture:'翼龍終結狙擊', accent:0xc9b6ff, structure:'pterosaur_arrow', shieldForm:'needle_sight'},
+  t08:{culture:'聲電神龍', accent:0xff65d2, structure:'dragon_aria', shieldForm:'resonance_bowl'},
+  t09:{culture:'波斯火箭哀歌', accent:0xc49a5a, structure:'persian_calligraphy', shieldForm:'ink_rain'},
+  t10:{culture:'穆卡納斯庇護所', accent:0x6fe4c9, structure:'mukarnas_arch', shieldForm:'octant_vault'},
+  t11:{culture:'戰壕老兵', accent:0xb7a27a, structure:'trench_whistle', shieldForm:'sandbag_line'},
+  t12:{culture:'螢火神經悼亡', accent:0xbaff67, structure:'firefly_network', shieldForm:'coordinate_mesh'},
+  m01:{culture:'哥德渡鴉血月', accent:0xff435f, structure:'raven_batmoon', shieldForm:'blood_moon'},
+  m02:{culture:'泰坦岩層誓約', accent:0xd4aa70, structure:'titan_strata', shieldForm:'cornerstone_wall'},
+  m03:{culture:'阿爾卑斯極光', accent:0x79f5d0, structure:'alpine_aurora', shieldForm:'ice_crown'},
+  m04:{culture:'蒙古金鵰草原', accent:0xd9b45b, structure:'steppe_eagle', shieldForm:'wind_compass'},
+  m05:{culture:'工業斷路雷刑', accent:0xb58aff, structure:'blackout_breaker', shieldForm:'thunder_cage'},
+  m06:{culture:'巴西嘉年華艦隊', accent:0x54e8a3, structure:'carnival_rotor', shieldForm:'flightdeck_fan'},
+  m07:{culture:'邊境界碑拒止', accent:0x62e9ff, structure:'border_gate', shieldForm:'exclusion_grid'},
+  m08:{culture:'合約刺客水墨', accent:0xd0b36a, structure:'contract_empty', shieldForm:'folded_circle'},
+};
+// 文化外框決定法陣的建築／工藝語彙；角色技能簽名再疊於其上，避免同文化複製貼上。
+const CULTURE_FRAME = {
+  s01:'baroque', s02:'rivet', s03:'tao_cloud', s04:'torii', s05:'cyber', s06:'jazz',
+  s07:'hexstar', s08:'gothic', s09:'frontier', s10:'runic', s11:'clockwork', s12:'girih',
+  t01:'constructivist', t02:'cyber', t03:'tao_cloud', t04:'constructivist', t05:'rivet', t06:'tao_cloud',
+  t07:'torii', t08:'tao_cloud', t09:'girih', t10:'girih', t11:'trench', t12:'folklore',
+  m01:'gothic', m02:'citadel', m03:'alpine', m04:'tengri', m05:'storm', m06:'carnival',
+  m07:'stepped', m08:'mandala',
+};
+// 每種世界佈局都有結構型，不單靠縮放冒充不同場域。
+const LAYOUT_STRUCTURE = {
+  spiral:'score', airline:'banner', weld:'anvil', streams:'furnace', ears:'whale', ribs:'spectrum',
+  thrust:'arrow', frame:'deadline', chain:'synapse', funnel:'starfall', dome:'tally', phalanx:'tomb',
+  chord:'proof', inverse:'triangulation', pillar:'dropship', rose:'bell', track:'brand', net:'snare',
+  wing:'feather', waterfall:'noise', gear:'escapement', explode:'escapement', starpath:'crescent', door:'arch',
+  arrowline:'banner', azimuth:'artillery', nodes:'seven', rings:'seven', rows:'trench', cone:'eye', joints:'crane',
+  assembly:'blueprint', sweep:'cloud', split:'staff', membrane:'pterosaur', needle:'arrow', bars:'chord', throat:'dragon',
+  ribbons:'calligraphy', cloud:'rain', mirror:'parabola', octant:'arch', contour:'alpine', bands:'firefly', compass:'eagle',
+  switches:'breaker', columns:'thunder', flightdeck:'rotor', gates:'border', grid:'exclusion', fold:'check', negative:'empty_circle',
+  vortex:'furnace', pillars:'strata', walls:'cornerstone', curtains:'aurora', wind:'eagle', feast:'moon', wings:'bat',
 };
 // 運動表直接改變簽名層的路徑/包絡；每個名稱都來自 ability-vfx-direction.md。
 const MOTION_STYLE = {
@@ -814,6 +999,59 @@ function pillar(col, r, h, o = 0.35) {
   return p;
 }
 
+/** 固定數量的共享幾何實例；矩陣只在建立時寫入，逐幀僅動父群組。 */
+function instances(geo, mat, count, place) {
+  const mesh = new THREE.InstancedMesh(geo, mat, count);
+  const dummy = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    dummy.position.set(0, 0, 0);
+    dummy.rotation.set(0, 0, 0);
+    dummy.scale.set(1, 1, 1);
+    place(dummy, i, count);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.userData.noOutline = true;
+  return mesh;
+}
+
+/**
+ * 法陣的立體冠層：拱券文化用直立門片、機械文化用節點柱、自然／神話文化用尖塔。
+ * 每次施放只增加一個 instanced draw call，且不修改招式半徑。
+ */
+function culturalCrown(P, rv) {
+  const g = new THREE.Group();
+  const frame = P.profile.frame;
+  const arch = new Set(['baroque','torii','hexstar','gothic','girih','citadel','stepped','mandala']);
+  const machine = new Set(['rivet','cyber','clockwork','constructivist','storm']);
+  const n = P.big ? 8 : 6;
+  let mesh;
+  if (arch.has(frame)) {
+    mesh = instances(BOX, M(signatureTex(P.profile.structure), P.col2, 0.52), n, (d, i, count) => {
+      const a = i * TAU / count;
+      d.position.set(Math.cos(a) * rv * 0.68, rv * 0.23, Math.sin(a) * rv * 0.68);
+      d.rotation.y = Math.PI / 2 - a;
+      d.scale.set(rv * 0.22, rv * 0.46, 1);
+    });
+  } else if (machine.has(frame)) {
+    mesh = instances(CYL, M(pillarTex(), P.col2, 0.42), n, (d, i, count) => {
+      const a = i * TAU / count;
+      d.position.set(Math.cos(a) * rv * 0.68, rv * (0.16 + (i % 2) * 0.12), Math.sin(a) * rv * 0.68);
+      d.scale.set(rv * 0.055, rv * (0.32 + (i % 2) * 0.24), rv * 0.055);
+    });
+  } else {
+    mesh = instances(SPIRE, M(signatureTex(P.profile.structure), P.col2, 0.46), n, (d, i, count) => {
+      const a = i * TAU / count;
+      d.position.set(Math.cos(a) * rv * 0.68, rv * 0.20, Math.sin(a) * rv * 0.68);
+      d.rotation.y = -a;
+      d.scale.set(rv * 0.10, rv * (0.38 + (i % 3) * 0.11), rv * 0.10);
+    });
+  }
+  g.add(mesh);
+  return g;
+}
+
 /** 掛進 effects 陣列(群組直掛 scene,fade 每幀驅動 step) */
 function push(scene, effects, g, dur, step) {
   scene.add(g);
@@ -831,13 +1069,14 @@ function fxCircle(scene, effects, P) {
   const rv = clampR(P, P.big ? 2.8 : 2.2);
   const dur = fxDur(P, P.big ? 2.6 : 2.0);
   const g = new THREE.Group();
-  const main = flat(new THREE.Mesh(PLANE, M(circleTex(P.profile.accentMotif), P.col, 0.95)));
-  const inner = flat(new THREE.Mesh(PLANE, M(circleTex(P.profile.accentMotif), P.col2, 0.7)));
+  const main = flat(new THREE.Mesh(PLANE, M(culturalSealTex(P), P.col, 0.95)));
+  const inner = flat(new THREE.Mesh(PLANE, M(signatureTex(P.profile.layoutStructure), P.col2, 0.7)));
   inner.position.y = 0.25;
+  const crown = culturalCrown(P, rv);
   const pil = pillar(P.col, rv * 0.30, P.scale * (P.big ? 3.2 : 2.2), 0.30);
   const orb = makeOrbit(P.profile.accentMotif, P.col2, P.big ? 6 + P.variant % 5 : 4 + P.variant % 3,
     rv * (0.58 + (P.variant % 4) * 0.06), P.scale * (0.30 + (P.variant % 3) * 0.04), P.rand);
-  g.add(main, inner, pil, orb.g);
+  g.add(main, inner, crown, pil, orb.g);
   anchorCaster(g, P);
   push(scene, effects, g, dur, (t, dt) => {
     anchorCaster(g, P);
@@ -846,6 +1085,8 @@ function fxCircle(scene, effects, P) {
     inner.scale.setScalar(Math.max(0.01, rv * 0.55 * grow));
     main.rotation.z += dt * (0.35 + P.profile.tempo * 0.24);
     inner.rotation.z -= dt * (0.75 + P.profile.tempo * 0.4);
+    crown.rotation.y += dt * (0.22 + P.profile.tempo * 0.12);
+    crown.scale.y = 0.72 + 0.28 * grow;
     stepOrbit(orb, t, P.scale * 0.55);
     fadeAll(g, bell(t, dur));
     pil.material.opacity *= 0.75 + 0.25 * Math.sin(t * 9);
@@ -857,7 +1098,7 @@ function fxAura(scene, effects, P) {
   const rv = P.scale * (1.25 + (P.variant % 5) * 0.1);
   const dur = fxDur(P, 1.8 + P.profile.tempo * 0.55);
   const g = new THREE.Group();
-  const base = flat(new THREE.Mesh(PLANE, M(circleTex(P.profile.accentMotif), P.col, 0.8)));
+  const base = flat(new THREE.Mesh(PLANE, M(signatureTex(P.profile.structure), P.col, 0.8)));
   const orb = makeOrbit(P.profile.accentMotif, P.col, 5 + P.variant % 4, rv, P.scale * 0.36, P.rand);
   const orb2 = makeOrbit(P.profile.accentMotif, P.col2, 3 + P.variant % 3, rv * (0.48 + (P.variant % 3) * 0.08), P.scale * 0.25, P.rand);
   g.add(base, orb.g, orb2.g);
@@ -886,7 +1127,7 @@ function fxHeal(scene, effects, P) {
   // 大招附魔法陣底 + 雙螺旋
   const helix = [];
   if (P.big) {
-    const ring = flat(new THREE.Mesh(PLANE, M(circleTex(P.profile.accentMotif), P.col, 0.85)));
+    const ring = flat(new THREE.Mesh(PLANE, M(signatureTex(P.profile.layoutStructure), P.col, 0.85)));
     ring.position.y = 0.15;
     ring.scale.setScalar(rv);
     g.add(ring);
@@ -920,7 +1161,7 @@ function fxGate(scene, effects, P) {
   const rv = Math.min(Math.max(P.scale * 2.6, 14), P.cap);
   const dur = fxDur(P, 2.25 + P.profile.tempo * 0.5);
   const g = new THREE.Group();
-  const main = flat(new THREE.Mesh(PLANE, M(circleTex(P.profile.accentMotif), P.col, 0.95)));
+  const main = flat(new THREE.Mesh(PLANE, M(signatureTex(P.profile.structure), P.col, 0.95)));
   const wave = flat(new THREE.Mesh(PLANE, M(softRingTex(), P.col2, 0.8)));
   wave.position.y = 0.2;
   const beacons = [];
@@ -994,7 +1235,7 @@ function fxBind(scene, effects, P) {
   })));
   dark.material.userData.o = 0.5;
   dark.scale.setScalar(rv);
-  const ring = flat(new THREE.Mesh(PLANE, M(circleTex(P.profile.accentMotif), P.col, 0.9)));
+  const ring = flat(new THREE.Mesh(PLANE, M(signatureTex(P.profile.layoutStructure), P.col, 0.9)));
   ring.position.y = 0.2;
   // 鎖鏈:自外緣拱起收向中心上方,drawRange 逐節生長
   const chains = [];
@@ -1099,7 +1340,7 @@ function fxScan(scene, effects, P) {
   sweep.scale.setScalar(rv * 0.8);
   const glyph = new THREE.Sprite(SPM(glyphTex(P.profile.accentMotif, 2), P.col2, 0.95));
   glyph.scale.setScalar(P.scale * 0.9);
-  const base = flat(new THREE.Mesh(PLANE, M(circleTex(P.profile.accentMotif), P.col, 0.5)));
+  const base = flat(new THREE.Mesh(PLANE, M(signatureTex(P.profile.layoutStructure), P.col, 0.5)));
   base.scale.setScalar(rv * 0.5);
   g.add(sweep, glyph, base);
   anchorCaster(g, P);
@@ -1121,31 +1362,109 @@ function fxScan(scene, effects, P) {
   });
 }
 
-/** dome 攔截穹頂:六角能量半球 + 環腳波紋 + 頂點圖騰 */
+/** 七種防護場的體積語彙；僅聖所使用穹頂，其餘是盾牆、機械籠、熔爐、冰冠與界碑。 */
+function shieldField(P, rv, opacity) {
+  const g = new THREE.Group();
+  const tex = signatureTex(P.profile.fieldForm);
+  const form = P.profile.fieldForm;
+  let spin = 0;
+  if (form === 'tomb_phalanx') {
+    g.add(instances(BOX, M(tex, P.col, opacity), 7, (d, i) => {
+      const x = i - 3;
+      d.position.set(x * rv * 0.23, rv * (0.33 + (3 - Math.abs(x)) * 0.055), -Math.abs(x) * rv * 0.035);
+      d.rotation.y = x * 0.07;
+      d.scale.set(rv * 0.19, rv * (0.58 + (3 - Math.abs(x)) * 0.07), 1);
+    }));
+  } else if (form === 'clockwork_cage') {
+    g.add(instances(OCT, M(null, P.col, Math.min(0.8, opacity * 1.8)), 3, (d, i) => {
+      d.position.y = rv * 0.48;
+      if (i === 0) d.rotation.x = Math.PI / 2;
+      else if (i === 1) d.rotation.y = Math.PI / 2;
+      else d.rotation.set(Math.PI / 2, 0, Math.PI / 2);
+      d.scale.setScalar(rv * (0.72 + i * 0.10));
+    }));
+    spin = 0.55;
+  } else if (form === 'cauldron_shell') {
+    g.add(instances(CYL, M(tex, P.col, opacity), 3, (d, i) => {
+      d.position.y = rv * (0.14 + i * 0.20);
+      d.scale.set(rv * (0.96 - i * 0.18), rv * 0.20, rv * (0.96 - i * 0.18));
+    }));
+    const lid = flat(new THREE.Mesh(OCT, M(null, P.col2, 0.62)));
+    lid.position.y = rv * 0.72; lid.scale.setScalar(rv * 0.55); g.add(lid);
+    spin = -0.32;
+  } else if (form === 'octant_vault') {
+    const vault = new THREE.Mesh(DOME, M(tex, P.col, opacity * 0.72));
+    vault.scale.set(rv, rv * 0.88, rv); g.add(vault);
+    g.add(instances(CYL, M(pillarTex(), P.col2, opacity), 8, (d, i, count) => {
+      const a = i * TAU / count;
+      d.position.set(Math.cos(a) * rv * 0.82, rv * 0.34, Math.sin(a) * rv * 0.82);
+      d.scale.set(rv * 0.035, rv * 0.68, rv * 0.035);
+    }));
+    spin = 0.12;
+  } else if (form === 'cornerstone_wall') {
+    g.add(instances(BOX, M(tex, P.col, opacity), 4, (d, i) => {
+      const a = i * Math.PI / 2;
+      d.position.set(Math.cos(a) * rv * 0.58, rv * 0.34, Math.sin(a) * rv * 0.58);
+      d.rotation.y = -a;
+      d.scale.set(rv * 1.04, rv * 0.68, 1);
+    }));
+  } else if (form === 'ice_crown') {
+    g.add(instances(SPIRE, M(tex, P.col, opacity), 9, (d, i, count) => {
+      const a = i * TAU / count;
+      d.position.set(Math.cos(a) * rv * 0.70, rv * (0.22 + (i % 3) * 0.05), Math.sin(a) * rv * 0.70);
+      d.rotation.y = -a;
+      d.scale.set(rv * 0.16, rv * (0.52 + (i % 3) * 0.15), rv * 0.16);
+    }));
+    spin = 0.18;
+  } else if (form === 'exclusion_grid') {
+    g.add(instances(BOX, M(tex, P.col, opacity), 8, (d, i) => {
+      const side = i >> 1, end = i & 1, a = side * Math.PI / 2;
+      d.position.set(Math.cos(a) * rv * 0.72 + Math.sin(a) * (end ? rv * 0.38 : -rv * 0.38),
+        rv * 0.38, Math.sin(a) * rv * 0.72 - Math.cos(a) * (end ? rv * 0.38 : -rv * 0.38));
+      d.rotation.y = -a;
+      d.scale.set(rv * 0.12, rv * 0.76, 1);
+    }));
+    g.add(instances(PLANE, M(tex, P.col2, opacity * 0.62), 4, (d, i) => {
+      const a = i * Math.PI / 2;
+      d.position.set(Math.cos(a) * rv * 0.72, rv * 0.42, Math.sin(a) * rv * 0.72);
+      d.rotation.y = Math.PI / 2 - a;
+      d.scale.set(rv * 0.72, rv * 0.42, 1);
+    }));
+  } else {
+    g.add(instances(BOX, M(tex, P.col, opacity), 4, (d, i) => {
+      const a = i * Math.PI / 2;
+      d.position.set(Math.cos(a) * rv * 0.65, rv * 0.35, Math.sin(a) * rv * 0.65);
+      d.rotation.y = -a;
+      d.scale.set(rv, rv * 0.7, 1);
+    }));
+  }
+  return { g, spin };
+}
+
+/** dome 攔截場：依角色建築／工藝語彙生成不同的三維邊界。 */
 function fxDome(scene, effects, P) {
   const rv = clampR(P, 2.4, 70);
   const dur = fxDur(P, 2.0);
   const g = new THREE.Group();
-  // 六角格密度隨半徑等比(量化以免快取爆量):大穹頂的格子才不會被撐成巨格;
-  // 濃度隨半徑遞減 —— 大型攔截力場是「罩住半個戰場的薄膜」,個人護盾才是實感硬殼
-  const rep = Math.min(28, Math.max(6, Math.round(rv * 0.2) * 2));
+  // 大型場域降低透明度，避免透明層覆蓋率隨半徑平方失控。
   const dO = 0.35 * Math.min(1, Math.max(0.35, P.scale * 5 / rv));
-  const dome = new THREE.Mesh(DOME, M(hexPatRepeat(rep, Math.max(3, Math.round(rep * 0.4))), P.col, dO));
+  const field = shieldField(P, rv, dO);
   const rim = flat(new THREE.Mesh(PLANE, M(softRingTex(), P.col2, 0.85)));
   rim.position.y = 0.25;
-  const glyph = new THREE.Sprite(SPM(glyphTex(P.profile.accentMotif, 1), P.col2, 0.95));
+  const glyph = new THREE.Sprite(SPM(signatureTex(P.profile.structure), P.col2, 0.95));
   glyph.scale.setScalar(P.scale * 0.9);
-  g.add(dome, rim, glyph);
+  g.add(field.g, rim, glyph);
   anchorCaster(g, P);
   push(scene, effects, g, dur, (t, dt) => {
     anchorCaster(g, P);
     const grow = outBack(Math.min(1, t / 0.35));
-    dome.scale.set(rv * grow, rv * grow * 0.85, rv * grow);
-    dome.rotation.y += dt * 0.5;
+    field.g.scale.setScalar(grow);
+    field.g.rotation.y += dt * field.spin;
     rim.scale.setScalar(Math.max(0.01, rv * (1 + 0.06 * Math.sin(t * 8))));
     glyph.position.y = rv * grow * 0.9;
     fadeAll(g, bell(t, dur, 0.15, 0.55));
-    dome.material.opacity *= 0.8 + 0.2 * Math.sin(t * 12);
+    const flicker = 0.88 + 0.12 * Math.sin(t * 12);
+    field.g.traverse((o) => { if (o.material?.userData.o != null) o.material.opacity *= flicker; });
   });
 }
 
@@ -1261,32 +1580,43 @@ function fxSlash(scene, effects, P) {
   });
 }
 
-/** atfield 絕對領域:同心八角力場圈逐層展開 + 中央光柱(致敬 EVA) */
+/** atfield 絕對領域：三招分別為追悼盾牆、七重神經環、嘉年華飛行甲板。 */
 function fxAtfield(scene, effects, P) {
   const dur = fxDur(P, 2.2);
   const g = new THREE.Group();
-  const rings = [];
-  const rv = P.scale * 2.0;
-  for (let i = 0; i < 5; i++) {
-    const m = flat(new THREE.Mesh(OCT, M(null, i % 2 ? P.col2 : P.col, 0.85)));
-    m.position.y = 0.3 + i * P.scale * 0.5;
-    rings.push({ m, t0: i * 0.14 });
-    g.add(m);
+  let field;
+  if (P.profile.profileId === 's06.ult.undying_phalanx') {
+    field = instances(BOX, M(signatureTex('tomb'), P.col, 0.72), 7, (d, i) => {
+      const x = i - 3;
+      d.position.set(x * P.scale * 0.58, P.scale * (0.72 + (3 - Math.abs(x)) * 0.10), 0);
+      d.rotation.y = x * 0.06;
+      d.scale.set(P.scale * 0.48, P.scale * (1.34 + (3 - Math.abs(x)) * 0.16), 1);
+    });
+  } else if (P.profile.profileId === 't02.ult.galatea_fullsync') {
+    field = instances(OCT, M(null, P.col2, 0.82), 7, (d, i) => {
+      d.position.y = P.scale * (0.45 + i * 0.18);
+      d.rotation.set(i % 2 ? Math.PI / 2 : 0, i * Math.PI / 7, i % 3 ? 0 : Math.PI / 2);
+      d.scale.setScalar(P.scale * (1.65 - i * 0.11));
+    });
+  } else {
+    field = instances(BOX, M(signatureTex('rotor'), P.col, 0.66), 8, (d, i) => {
+      const a = i * TAU / 8;
+      d.position.set(Math.cos(a) * P.scale * 0.65, P.scale * (0.22 + (i % 2) * 0.18), Math.sin(a) * P.scale * 0.65);
+      d.rotation.y = -a;
+      d.scale.set(P.scale * 1.45, P.scale * 0.12, 1);
+    });
   }
+  g.add(field);
   const pil = pillar(P.col, P.scale * 0.5, P.scale * 3.4, 0.4);
   g.add(pil);
   anchorCaster(g, P);
   push(scene, effects, g, dur, (t, dt) => {
     anchorCaster(g, P);
-    for (const r of rings) {
-      const u = Math.max(0, t - r.t0);
-      const grow = outBack(Math.min(1, u / 0.3));
-      r.m.scale.setScalar(Math.max(0.01, rv * grow * (1 + u * 0.25)));
-      r.m.rotation.z += dt * 0.9;
-      // 力場閃爍:高頻明滅是 AT 力場的簽名
-      r.m.material.opacity = r.m.material.userData.o
-        * (0.55 + 0.45 * Math.sin(t * 16 + r.t0 * 20)) * bell(t, dur, 0.1, 0.5);
-    }
+    const grow = outBack(Math.min(1, t / 0.34));
+    field.scale.setScalar(Math.max(0.01, grow * (1 + t * 0.10)));
+    field.rotation.y += dt * (P.profile.profileId === 'm06.ult.helicopter_carnival' ? 1.8 : 0.32);
+    field.material.opacity = field.material.userData.o
+      * (0.62 + 0.38 * Math.sin(t * 16 + P.phase)) * bell(t, dur, 0.1, 0.5);
     pil.material.opacity = pil.material.userData.o * bell(t, dur, 0.2, 0.5);
   });
 }
@@ -1338,7 +1668,7 @@ function fxNotewave(scene, effects, P) {
   }
   const orb = makeOrbit(P.profile.accentMotif, P.col2, 8, P.scale * 1.6, P.scale * 0.5, P.rand);
   const pil = pillar(P.col, P.scale * 0.6, P.scale * 3, 0.35);
-  const base = flat(new THREE.Mesh(PLANE, M(circleTex(P.profile.accentMotif), P.col, 0.6)));
+  const base = flat(new THREE.Mesh(PLANE, M(signatureTex(P.profile.structure), P.col, 0.6)));
   base.scale.setScalar(rv * 0.4);
   g.add(orb.g, pil, base);
   anchorCaster(g, P);
@@ -1363,6 +1693,66 @@ const ARCHS = {
   bind: fxBind, veil: fxVeil, scan: fxScan, dome: fxDome, dash: fxDash,
   slash: fxSlash, atfield: fxAtfield, snipe: fxSnipe, notewave: fxNotewave,
 };
+
+/**
+ * 有界 profile 合成器：一般招式固定三個結構層；防護招式以最多兩個實例化
+ * 盾場層取代接觸層。連同兩個共用粒子層，每招固定落在 4–6 draw call 預算內。
+ */
+function profileCastCompositor(scene, effects, P) {
+  const dur = fxDur(P, P.big ? 2.4 : 1.8);
+  const rv = clampR(P, P.big ? 2.8 : 2.1);
+  const profile = P.profile;
+  const g = new THREE.Group();
+  const layers = [];
+  const addLayer = (name, mesh) => { mesh.userData.noOutline = true; g.add(mesh); layers.push(name); return mesh; };
+  const seal = addLayer('struct.culturalSeal', flat(new THREE.Mesh(PLANE, M(culturalSealTex(P), P.col, 0.78))));
+  seal.scale.setScalar(rv * 0.74);
+  const tell = addLayer('struct.layoutStructure', flat(new THREE.Mesh(PLANE, M(signatureTex(profile.layoutStructure), P.col2, 0.66))));
+  tell.scale.setScalar(rv * (0.42 + (LAYOUT_SCALE[profile.layout] || 1) * 0.22));
+  tell.rotation.z = LAYOUT_STYLE[profile.layout] || 0;
+  let field = null;
+  const fieldMaterials = [];
+  let accent = null;
+  if (profile.arch === 'dome') {
+    field = shieldField(P, rv, 0.30);
+    // 建立時收集一次；逐幀只走固定材質陣列，不巡覽場景樹。
+    field.g.traverse((o) => { if (o.material) fieldMaterials.push(o.material); });
+    field.g.userData.noOutline = true;
+    g.add(field.g);
+    layers.push('struct.shieldField');
+  } else {
+    accent = addLayer('struct.accentMotif', flat(new THREE.Mesh(PLANE, M(glyphTex(profile.accentMotif, profile.variant), P.col, 0.72))));
+    accent.scale.setScalar(P.scale * (0.34 + (profile.tempo - 0.82) * 0.18));
+    accent.rotation.z = (LAYOUT_STYLE[profile.layout] || 0) * 0.5 + profile.phase;
+  }
+  g.userData.castLayers = layers;
+  anchorCaster(g, P);
+  push(scene, effects, g, dur, (t, dt) => {
+    anchorCaster(g, P);
+    const env = bell(t, dur, 0.14, 0.42);
+    const motion = MOTION_STYLE[profile.motion] || {};
+    const contact = CONTACT_STYLE[profile.contact] || 'fade';
+    const hit = contact === 'flash' || contact === 'pulse' ? Math.max(0, 1 - Math.abs(t - dur * 0.58) * 8) : 0;
+    const amp = P.scale * 0.08;
+    seal.scale.setScalar(Math.max(0.01, rv * (0.66 + ease01(Math.min(1, t / 0.3)) * 0.16)));
+    seal.rotation.z += dt * (0.24 + profile.tempo * 0.12);
+    tell.position.x = Math.sin(profile.phase + t * profile.tempo) * amp * (motion.x || 0);
+    tell.position.y = (motion.y || 0) * amp * Math.sin(Math.min(1, t / 0.34) * Math.PI);
+    tell.scale.setScalar(Math.max(0.01, rv * (0.42 + (LAYOUT_SCALE[profile.layout] || 1) * 0.22) * (1 + (motion.scale || 0) * 0.12 * ease01(Math.min(1, t / 0.5)))));
+    tell.material.opacity = tell.material.userData.o * env;
+    seal.material.opacity = seal.material.userData.o * env;
+    if (accent) {
+      accent.position.y = P.scale * 0.24 + (motion.y || 0) * amp;
+      accent.rotation.z += dt * (0.5 + profile.tempo * 0.25);
+      accent.material.opacity = accent.material.userData.o * Math.max(env, hit);
+    }
+    if (field) {
+      field.g.scale.setScalar(Math.max(0.01, outBack(Math.min(1, t / 0.34)) * (1 + hit * 0.14)));
+      field.g.rotation.y += dt * (field.spin || 0.1) * (1 + profile.tempo * 0.2);
+      for (const material of fieldMaterials) material.opacity = material.userData.o * env;
+    }
+  });
+}
 
 // ---------------- 角色 → 唯一 profileId ----------------
 // 每列都是獨立的「輪廓 + 層次 + 節奏」契約；渲染器可以共享，但不得把 Q/E
@@ -1472,12 +1862,22 @@ const PROFILE_SIGNATURES = {
 const PROFILE_DEFS = Object.fromEntries(PROFILE_ROWS.map((row, i) => {
   const [profileId, ch, slot, arch, motif] = row;
   const signature = PROFILE_SIGNATURES[profileId];
-  return [profileId, { profileId, ch, slot, arch, motif, ...signature, variant: i, phase: i * 0.37,
+  const culture = CULTURAL_PALETTES[ch];
+  return [profileId, { profileId, ch, slot, arch, motif, ...signature, ...culture,
+    frame: CULTURE_FRAME[ch], fieldForm: culture.shieldForm, layoutStructure: LAYOUT_STRUCTURE[signature.layout], variant: i, phase: i * 0.37,
     layers: `${signature.tellShape}/${signature.layout}/${signature.motion}/${signature.contact}`, tempo: 0.82 + (i % 7) * 0.07 }];
 }));
 const CFX = {};
 for (const [profileId, ch, slot] of PROFILE_ROWS) (CFX[ch] ||= {})[slot] = profileId;
 export const CAST_PROFILE_IDS = Object.freeze(Object.keys(PROFILE_DEFS));
+const PARTICLE_RECIPES = Object.fromEntries(PROFILE_ROWS.map(([profileId], i) => {
+  const sig = PROFILE_SIGNATURES[profileId];
+  return [profileId, {
+    count: 64 + ((i * 17) % 65), system: i % 2,
+    shape: sig.tellShape, layout: sig.layout, motion: sig.motion, contact: sig.contact,
+    accentMotif: sig.accentMotif, phase: i * 0.37, tempo: 0.82 + (i % 7) * 0.07,
+  }];
+}));
 
 // fx 型別 fallback(表上查無 → 依 sim 語意選原型;新增角色不會沒演出)
 const ARCH_BY_FX = {
@@ -1512,7 +1912,6 @@ export function spawnCastFx(scene, effects, opts) {
     return;
   }
   const fx = opts.fx || CHARACTERS[opts.ch]?.[opts.slot]?.fx;
-  let arch = conf.arch;
   const col = new THREE.Color(conf.c ?? CHARACTERS[opts.ch]?.visual?.hue
     ?? (opts.side ? SIDES[opts.side].color : 0xffffff));
   // 亮度保底:加法混色下暗色會消失 → 主色拉到可讀亮度
@@ -1529,8 +1928,8 @@ export function spawnCastFx(scene, effects, opts) {
     variant: conf.variant,
     rand: seeded(conf.profileId),
     cap: opts.rvCap ?? Infinity,   // 呼叫端取景預算(展示台);戰場不設限
-    col, col2: new THREE.Color(conf.c2 ?? FX_ACCENT[fx] ?? 0xffffff),
+    col, col2: new THREE.Color(conf.c2 ?? conf.accent ?? FX_ACCENT[fx] ?? 0xffffff),
   };
-  fxCastBeat(scene, effects, P);
-  (ARCHS[arch] || fxAura)(scene, effects, P);
+  spawnParticleCast(scene, effects, P, PARTICLE_RECIPES[profileId]);
+  profileCastCompositor(scene, effects, P);
 }
