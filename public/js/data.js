@@ -6068,13 +6068,150 @@ export const ENV = {
     night: { name: '夜晚' },
   },
   weathers: {
-    clear:  { name: '晴朗' },
-    cloudy: { name: '陰天' },
-    rain:   { name: '降雨' },
-    snow:   { name: '降雪' },
-    fog:    { name: '濃霧' },
+    clear:      { name: '晴朗' },
+    cloudy:     { name: '多雲' },
+    drizzle:    { name: '細雨' },
+    rain:       { name: '降雨' },
+    heavy_rain: { name: '大雨' },
+    storm:      { name: '雷雨' },
+    snow:       { name: '降雪' },
+    blizzard:   { name: '暴雪' },
+    windy:      { name: '強風' },
+    sandstorm:  { name: '沙暴' },
+    fog:        { name: '濃霧' },
   },
 };
+
+// 四季常理天氣出現機率分配 (總和 100%;夏季降雪+暴雪率嚴格為 1.0%,細分細雨/中雨/大雨/雷雨/小雪/暴雪)
+export const SEASON_WEATHER_WEIGHTS = {
+  spring: {
+    clear: 30, cloudy: 18, drizzle: 16, rain: 12, heavy_rain: 6, storm: 4, windy: 6, fog: 5, snow: 2, blizzard: 1, sandstorm: 0,
+  },
+  summer: {
+    clear: 35, storm: 20, heavy_rain: 12, cloudy: 12, rain: 8, drizzle: 5, windy: 6, sandstorm: 1, fog: 0, snow: 0.8, blizzard: 0.2,
+  },
+  autumn: {
+    clear: 35, cloudy: 18, windy: 12, drizzle: 10, rain: 8, fog: 8, heavy_rain: 4, sandstorm: 3, storm: 1, snow: 0.8, blizzard: 0.2,
+  },
+  winter: {
+    snow: 28, blizzard: 16, cloudy: 20, clear: 16, windy: 10, fog: 6, drizzle: 3, rain: 1, heavy_rain: 0, storm: 0, sandstorm: 0,
+  },
+};
+
+// 天氣對環境表現層(樹木搖晃、旗幟飄動、水波大小與擴散速度)的動態影響係數
+export const WEATHER_DYNAMICS = {
+  clear:      { windAmp: 1.0,  windFreq: 1.0,  waveAmp: 1.0,  waveSpeed: 1.0 },
+  cloudy:     { windAmp: 1.1,  windFreq: 1.05, waveAmp: 1.1,  waveSpeed: 1.05 },
+  drizzle:    { windAmp: 1.15, windFreq: 1.1,  waveAmp: 1.1,  waveSpeed: 1.05 },
+  rain:       { windAmp: 1.35, windFreq: 1.25, waveAmp: 1.3,  waveSpeed: 1.2 },
+  heavy_rain: { windAmp: 1.8,  windFreq: 1.45, waveAmp: 1.65, waveSpeed: 1.5 },
+  storm:      { windAmp: 2.4,  windFreq: 1.7,  waveAmp: 2.1,  waveSpeed: 1.85 },
+  snow:       { windAmp: 1.15, windFreq: 1.05, waveAmp: 0.9,  waveSpeed: 0.9 },
+  blizzard:   { windAmp: 2.5,  windFreq: 1.75, waveAmp: 1.8,  waveSpeed: 1.6 },
+  windy:      { windAmp: 2.5,  windFreq: 1.7,  waveAmp: 2.2,  waveSpeed: 1.9 },
+  sandstorm:  { windAmp: 2.3,  windFreq: 1.65, waveAmp: 1.7,  waveSpeed: 1.6 },
+  fog:        { windAmp: 0.6,  windFreq: 0.8,  waveAmp: 0.6,  waveSpeed: 0.7 },
+};
+
+/** 依季節常理權重抽取天氣 */
+export function pickSeasonalWeather(season, roll01 = Math.random()) {
+  const weights = SEASON_WEATHER_WEIGHTS[season] || SEASON_WEATHER_WEIGHTS.summer;
+  const entries = Object.entries(weights);
+  const total = entries.reduce((sum, [_, w]) => sum + w, 0);
+  let r = roll01 * total;
+  for (const [wKey, weight] of entries) {
+    if (r < weight) return wKey;
+    r -= weight;
+  }
+  return entries[0][0];
+}
+
+/**
+ * 依緯度與季節計算天文日照時程 (公式化日出、日落、晝夜長度、曙暮光與時段錨點)
+ * @param {string} season 'spring' | 'summer' | 'autumn' | 'winter'
+ * @param {number} latDeg 緯度 (度, -65 ~ +65)
+ */
+export function computeSolarSchedule(season = 'summer', latDeg = 25.0) {
+  // 赤緯角 (度)
+  const declMap = { spring: 0, summer: 23.44, autumn: 0, winter: -23.44 };
+  const delta = (declMap[season] ?? 23.44) * Math.PI / 180;
+  const lat = Number.isFinite(latDeg) ? Math.max(-65, Math.min(65, latDeg)) : 25.0;
+  const phi = lat * Math.PI / 180;
+
+  // 日落半日角 (Hour angle)
+  let cosW = -Math.tan(phi) * Math.tan(delta);
+  cosW = Math.max(-0.92, Math.min(0.92, cosW)); // 限制在極限緯度內保證日夜循環
+  const w0 = Math.acos(cosW); // [0, pi]
+  const halfDayH = (w0 / Math.PI) * 12.0;
+
+  const riseH = 12.0 - halfDayH;
+  const setH = 12.0 + halfDayH;
+  const twilightH = 1.0 + 0.6 * (Math.abs(lat) / 60.0);
+
+  const phaseH = {
+    dawn: Number((riseH).toFixed(2)),
+    day: 12.0,
+    dusk: Number((setH).toFixed(2)),
+    night: Number(((setH + twilightH + 1.5) % 24).toFixed(2)),
+  };
+
+  const startH = {
+    dawn: Number(((riseH - twilightH * 0.75 + 24) % 24).toFixed(2)),
+    day: Number(((riseH + (12.0 - riseH) * 0.4)).toFixed(2)),
+    dusk: Number(((setH - twilightH * 0.5)).toFixed(2)),
+    night: Number(((setH + twilightH + 0.5)).toFixed(2)),
+  };
+
+  return { riseH, setH, twilightH, halfDayH, phaseH, startH };
+}
+
+/**
+ * 依季節、開場時段、開場天氣、經過秒數與種子確定性計算當前天氣。
+ * 每次時間流逝跨越日夜時段 (Dawn/Day/Dusk/Night) 邊界時:
+ *   - 50% 機率維持當前天氣
+ *   - 50% 機率依季節常理權重重新抽取新天氣
+ */
+export function weatherAtTime(season, startTime, startWeather, elapsedS = 0, seed = 0, latDeg = 25.0) {
+  const s = season && SEASON_WEATHER_WEIGHTS[season] ? season : 'summer';
+  let curWeather = startWeather && ENV.weathers[startWeather] ? startWeather : 'clear';
+  if (elapsedS <= 0) return curWeather;
+
+  // 24 小時內四個時段錨點 (由季節與緯度天文公式推導)
+  const sched = computeSolarSchedule(s, latDeg);
+  const anchors = Object.values(sched.phaseH).sort((a, b) => a - b);
+  const h0 = sched.startH[startTime] ?? DAYCLOCK.START_H[startTime] ?? DAYCLOCK.START_H.day;
+  const totalGameHours = elapsedS * dayHourRate();
+  const startDay = Math.floor(h0 / 24);
+  const endHour = h0 + totalGameHours;
+  const endDay = Math.floor(endHour / 24);
+
+  let stepIdx = 0;
+  for (let d = startDay; d <= endDay; d++) {
+    for (const a of anchors) {
+      const anchorH = d * 24 + a;
+      if (anchorH > h0 && anchorH <= endHour) {
+        stepIdx++;
+        // 確定性隨機數 (mulberry32 演算法推導)
+        let aSeed = ((seed ^ (stepIdx * 0x9E3779B9)) >>> 0);
+        aSeed |= 0; aSeed = (aSeed + 0x6D2B79F5) | 0;
+        let t = Math.imul(aSeed ^ (aSeed >>> 15), 1 | aSeed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        const r1 = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+
+        aSeed = (aSeed + 0x6D2B79F5) | 0;
+        t = Math.imul(aSeed ^ (aSeed >>> 15), 1 | aSeed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        const r2 = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+
+        // 50% 維持不變, 50% 改變天氣
+        if (r1 >= 0.50) {
+          curWeather = pickSeasonalWeather(s, r2);
+        }
+      }
+    }
+  }
+  return curWeather;
+}
 
 /**
  * 環境標籤(「夏・正午・晴」)——**全專案唯一縫**。
@@ -6093,10 +6230,11 @@ export function envLabel(env) {
 /** env = { season, time, weather };'random'/缺值 → 抽一個具體值 */
 export function resolveEnv(env = {}) {
   const pick = (obj, v) => (v && obj[v]) ? v : Object.keys(obj)[Math.floor(Math.random() * Object.keys(obj).length)];
+  const season = pick(ENV.seasons, env.season);
   return {
-    season: pick(ENV.seasons, env.season),
+    season,
     time: pick(ENV.times, env.time),
-    weather: pick(ENV.weathers, env.weather),
+    weather: (env.weather && ENV.weathers[env.weather]) ? env.weather : pickSeasonalWeather(season, Math.random()),
   };
 }
 
@@ -6132,12 +6270,20 @@ export const DAYCLOCK = {
   START_H: { dawn: 5.2, day: 9.5, dusk: 17.0, night: 21.5 },
 };
 
+let _currentSolarSchedule = null;
+
+/** 設定當前戰場的天文日照排程 (全域單一真相縫) */
+export function setSolarSchedule(sched) {
+  _currentSolarSchedule = sched || null;
+}
+
 /** 遊戲小時 / 真實秒 */
 export const dayHourRate = () => DAYCLOCK.GAME_H / DAYCLOCK.REAL_S;
 
 /** 當下鐘點 [0,24)。`elapsedS` = 伺服器快照的經過秒數(紀律 ①) */
-export function clockHour(time, elapsedS = 0) {
-  const h0 = DAYCLOCK.START_H[time] ?? DAYCLOCK.START_H.day;
+export function clockHour(time, elapsedS = 0, startHObj = null) {
+  const sMap = startHObj || _currentSolarSchedule?.startH || DAYCLOCK.START_H;
+  const h0 = sMap[time] ?? DAYCLOCK.START_H[time] ?? DAYCLOCK.START_H.day;
   return ((h0 + elapsedS * dayHourRate()) % 24 + 24) % 24;
 }
 
@@ -6152,13 +6298,14 @@ export function clockLabel(hour) {
  * 這一刻落在哪兩個基調之間 → `{ a, b, t }`(t 已過 smoothstep:過渡帶的兩端要平順接上,
  * 線性內插在錨點上有折角,天色會在那一秒「頓一下」)。錨點是環狀的(night → dawn 跨午夜)。
  */
-export function phaseBlend(hour) {
-  const ks = Object.keys(DAYCLOCK.PHASE_H).sort((x, y) => DAYCLOCK.PHASE_H[x] - DAYCLOCK.PHASE_H[y]);
+export function phaseBlend(hour, phaseHObj = null) {
+  const pMap = phaseHObj || _currentSolarSchedule?.phaseH || DAYCLOCK.PHASE_H;
+  const ks = Object.keys(pMap).sort((x, y) => pMap[x] - pMap[y]);
   const h = ((hour % 24) + 24) % 24;
   for (let i = 0; i < ks.length; i++) {
     const a = ks[i], b = ks[(i + 1) % ks.length];
-    const ha = DAYCLOCK.PHASE_H[a];
-    const hb = DAYCLOCK.PHASE_H[b] > ha ? DAYCLOCK.PHASE_H[b] : DAYCLOCK.PHASE_H[b] + 24;
+    const ha = pMap[a];
+    const hb = pMap[b] > ha ? pMap[b] : pMap[b] + 24;
     const x = h >= ha ? h : h + 24;
     if (x <= hb) { const t = (x - ha) / (hb - ha); return { a, b, t: t * t * (3 - 2 * t) }; }
   }
@@ -6170,12 +6317,15 @@ export function phaseBlend(hour) {
  * 仰角 = `MAX_ELEV × sin(2π(h−6)/24)` ⇒ 6/18 點恰在地平線(紀律 ③),週期恰 24 小時。
  * **月亮 = 同一支 +12 小時**,MUST NOT 另寫一份軌道。
  */
-export function sunDirAt(hour) {
-  const el = DAYCLOCK.MAX_ELEV_DEG * Math.PI / 180 * Math.sin(Math.PI * (hour - DAYCLOCK.RISE_H) / 12);
-  const az = Math.PI * (hour - DAYCLOCK.RISE_H) / 12;      // 0 = 正東升起,π = 正西落下
-  // 水平分量**先各自正規化再乘 cos(仰角)** —— 直接把 z 乘上偏斜再整體正規化的話,
-  // 縮掉的那一截會被分回 y 上,實得仰角比 MAX_ELEV 高一大截(實測 62° → 77°:
-  // 正午幾乎是正頂光,影子縮成一小圈,而 `MAX_ELEV_DEG` 這個旋鈕看起來完全沒作用)。
+export function sunDirAt(hour, riseH = null, setH = null) {
+  const rH = riseH ?? _currentSolarSchedule?.riseH ?? DAYCLOCK.RISE_H;
+  const sH = setH ?? _currentSolarSchedule?.setH ?? DAYCLOCK.SET_H;
+  const isDefaultRise = (rH === 6 && sH === 18);
+  const elAngle = isDefaultRise
+    ? Math.PI * (hour - DAYCLOCK.RISE_H) / 12
+    : Math.PI * (hour - rH) / (sH - rH || 12);
+  const el = DAYCLOCK.MAX_ELEV_DEG * Math.PI / 180 * Math.sin(elAngle);
+  const az = Math.PI * (hour - (isDefaultRise ? DAYCLOCK.RISE_H : rH)) / (isDefaultRise ? 12 : (sH - rH || 12));
   const hx = Math.cos(az), hz = Math.sin(az) * DAYCLOCK.AZ_TILT;
   const hn = Math.hypot(hx, hz) || 1;
   const ce = Math.cos(el);
