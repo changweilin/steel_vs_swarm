@@ -6,6 +6,7 @@
 // ③ morph 1.69m tap 小跳 MUST NOT 觸發變形(L.morph 保持 ~0)
 // ④ 差分洩漏:同角色對照組(從未施法)逐節點比對旋轉 —— 任何未每幀重賦的通道洩漏都會現形
 // ⑤ 靜止後包圍盒高度回歸基線 ±20%(aerial 免驗)
+// ⑥ 展示台共用 spawnCastFx 跑完整個 fade / cleanup 生命週期,攔截首幀 ReferenceError
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
 
 // 埠可由 SVS_URL 覆寫:8620 上常常跑著**另一個 checkout**(工作區之間共用那個埠),
@@ -13,13 +14,24 @@ import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_m
 const browser = await chromium.launch();
 const page = await browser.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR:', e.message));
+if (process.argv.includes('--break-vfx-ease')) {
+  await page.route('**/public/js/castfx.js', async (route) => {
+    const response = await route.fetch();
+    const src = await response.text();
+    const broken = src.replace(/const ease01 = \(p\) => p \* p \* \(3 - 2 \* p\);\r?\n/, '');
+    if (broken === src) throw new Error('--break-vfx-ease 無法製造壞版:ease01 定義不存在');
+    await route.fulfill({ response, body: broken });
+  });
+}
 await page.goto((process.env.SVS_URL || 'http://localhost:8620'), { waitUntil: 'networkidle' });
 
 const report = await page.evaluate(async () => {
   const THREE = await import('three');
   const { makeUnit } = await import('/public/js/models.js');
   const { stepLocomotion } = await import('/public/js/locomotion.js');
-  const { CHARACTERS, charKind } = await import('/public/js/data.js');
+  const { CHARACTERS, charKind, heroAbility } = await import('/public/js/data.js');
+  const { spawnCastFx } = await import('/public/js/castfx.js');
+  const { disposeTree } = await import('/public/js/toon.js');
 
   const box = new THREE.Box3();
   const out = [];
@@ -66,6 +78,39 @@ const report = await page.evaluate(async () => {
           if (A.castFx) { r.ok = false; r.issues.push(`castFx 未自清(${slot}/${dir ? '定向' : '全向'})`); A.castFx = null; }
           const nan = hasNaN(meshA);
           if (nan) { r.ok = false; r.issues.push(`施法 NaN @${nan}(${slot}/${dir ? '定向' : '全向'})`); }
+        }
+      }
+
+      // ⑥ 展示台招式 VFX:直接跑與 CharPreview._updateEffects 同一個生命週期。
+      // 只解析成功不夠；未定義 helper 會在第一個 fade 幀才拋錯，必須實際逐幀執行。
+      for (const slot of ['skill', 'ult']) {
+        const a = heroAbility(id, slot, 1);
+        const scene = new THREE.Scene();
+        const effects = [];
+        spawnCastFx(scene, effects, {
+          ch: id, slot, lvl: 1, fx: a.fx, side,
+          at: new THREE.Vector3(5, 0, 6),
+          casterPos: () => new THREE.Vector3(0, 3, 0),
+          groundY: () => 0,
+          r: Math.min(a.r || 8, 12), rvCap: 12, dur: a.dur, scale: 6,
+        });
+        for (let frame = 0; frame < 300 && effects.length; frame++) {
+          for (let i = effects.length - 1; i >= 0; i--) {
+            const e = effects[i];
+            e.ttl -= dt;
+            e.age = (e.age || 0) + dt;
+            const f = Math.max(0, e.ttl / (e.ttl + e.age));
+            e.fade?.(e.obj, f, dt);
+            if (e.ttl <= 0) {
+              scene.remove(e.obj);
+              if (e.dispose) e.dispose(); else disposeTree(e.obj);
+              effects.splice(i, 1);
+            }
+          }
+        }
+        if (effects.length) {
+          r.ok = false;
+          r.issues.push(`展示台 VFX 未自清(${slot},殘留 ${effects.length})`);
         }
       }
 

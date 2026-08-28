@@ -470,6 +470,7 @@ function fadeAll(group, k) {
 /** 進出場包絡:attack 秒淡入、release 秒淡出 */
 const bell = (t, dur, a = 0.18, r = 0.45) =>
   Math.max(0, Math.min(t / a, 1, (dur - t) / r));
+const ease01 = (p) => p * p * (3 - 2 * p);
 /** 回彈放大(魔法陣展開) */
 const outBack = (t) => {
   const p = Math.min(1, t) - 1;
