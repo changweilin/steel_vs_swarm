@@ -139,6 +139,7 @@ function numberTexture(num, color) {
 // **MUST NOT** 對這些共用幾何呼叫 dispose(整場共用一份)。
 const _UP = new THREE.Vector3(0, 1, 0);
 const _FWD = new THREE.Vector3(0, 0, 1);
+const _INST = new THREE.Object3D();
 const _unitGeo = new Map();
 const unitGeo = (key, make) => {
   let g = _unitGeo.get(key);
@@ -219,34 +220,44 @@ export function starburst(scene, effects, x, y, z, r, color = 0xffe27a) {
  */
 export function projectileMesh(def, { col = 0xffd27a, hue = col, heavy = false } = {}) {
   const ty = def?.type || 'gun';
-  const jetFlame = (g, z, r) => {   // 尾焰:加法混色小球(描邊剔除),飛行中恆亮
-    const jet = new THREE.Mesh(
-      new THREE.SphereGeometry(r, 8, 6),
-      new THREE.MeshBasicMaterial({
-        color: 0xffc36b, transparent: true, opacity: 0.9,
-        blending: THREE.AdditiveBlending, depthWrite: false,
-      }),
-    );
-    jet.position.z = z;
-    jet.scale.z = 1.8;
-    jet.userData.noOutline = true;
-    g.add(jet);
+  const jetFlame = (g, z, r) => {
+    // 尾焰與氣流只建兩層共享單位錐:白熱內芯 + 陣營色外暈。逐幀只改 scale/opacity,
+    // 不再沿航跡配置火花 sprite；飛彈群密集時 draw call 與垃圾量都有固定上限。
+    const jets = [];
+    const add = (color, opacity, rad, len, dz) => {
+      const jet = new THREE.Mesh(
+        unitGeo('projectileJet', () => new THREE.ConeGeometry(1, 1, 8, 1, true)),
+        new THREE.MeshBasicMaterial({
+          color, transparent: true, opacity,
+          blending: THREE.AdditiveBlending, depthWrite: false,
+        }),
+      );
+      jet.rotation.x = Math.PI / 2;
+      jet.position.z = z - dz;
+      jet.scale.set(rad, len, rad);
+      jet.userData.noOutline = true;
+      g.add(jet);
+      jets.push({ mesh: jet, rad, len, opacity });
+    };
+    add(col, 0.32, r * 1.45, r * (heavy ? 7.5 : 6.2), r * 2.4);   // 稀薄氣流外暈
+    add(0xfff1bd, 0.92, r * 0.72, r * (heavy ? 5.4 : 4.5), r * 1.7); // 白熱尾焰內芯
+    g.userData.projectileFx = { jets, phase: Math.random() * Math.PI * 2 };
   };
   if (ty === 'missile') {
     // 飛彈:彈身 + 發光導引頭 + 十字尾翼(對稱薄盒兩片斜置即成 X)
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.05, 8), toonMat(0xcfd6dd, { celMetal: true }));
+    const body = new THREE.Mesh(unitGeo('missileBody', () => new THREE.CylinderGeometry(0.09, 0.09, 1.05, 8)), toonMat(0xcfd6dd, { celMetal: true }));
     body.rotation.x = Math.PI / 2;
     g.add(body);
     const nose = new THREE.Mesh(
-      new THREE.ConeGeometry(0.095, 0.3, 8),
+      unitGeo('missileNose', () => new THREE.ConeGeometry(0.095, 0.3, 8)),
       toonMat(new THREE.Color(hue).multiplyScalar(0.9).getHex(), { emissive: hue, emissiveIntensity: 0.9 }),
     );
     nose.rotation.x = Math.PI / 2;
     nose.position.z = 0.66;
     g.add(nose);
     for (let i = 0; i < 2; i++) {
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.34, 0.2), toonMat(0x39424b));
+      const fin = new THREE.Mesh(unitGeo('missileFin', () => new THREE.BoxGeometry(0.02, 0.34, 0.2)), toonMat(0x39424b));
       fin.position.z = -0.42;
       fin.rotation.z = Math.PI / 4 + i * Math.PI / 2;
       g.add(fin);
@@ -258,18 +269,18 @@ export function projectileMesh(def, { col = 0xffd27a, hue = col, heavy = false }
   if (ty === 'launcher') {
     // 火箭/榴彈:短粗彈身 + 外露彈頭(podWeapon 溫壓彈頭同語彙)+ 小尾翼
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.6, 8), toonMat(0x39424b, { celMetal: true }));
+    const body = new THREE.Mesh(unitGeo('launcherBody', () => new THREE.CylinderGeometry(0.11, 0.1, 0.6, 8)), toonMat(0x39424b, { celMetal: true }));
     body.rotation.x = Math.PI / 2;
     g.add(body);
     const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.14, 8, 6),
+      unitGeo('launcherHead', () => new THREE.SphereGeometry(0.14, 8, 6)),
       toonMat(new THREE.Color(hue).multiplyScalar(0.9).getHex(), { emissive: hue, emissiveIntensity: 0.5 }),
     );
     head.scale.z = 1.5;
     head.position.z = 0.36;
     g.add(head);
     for (let i = 0; i < 2; i++) {
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.26, 0.14), toonMat(0x2b3239));
+      const fin = new THREE.Mesh(unitGeo('launcherFin', () => new THREE.BoxGeometry(0.016, 0.26, 0.14)), toonMat(0x2b3239));
       fin.position.z = -0.26;
       fin.rotation.z = Math.PI / 4 + i * Math.PI / 2;
       g.add(fin);
@@ -287,6 +298,22 @@ export function projectileMesh(def, { col = 0xffd27a, hue = col, heavy = false }
   );
   m.userData.noOutline = true;
   return m;
+}
+
+/**
+ * 飛行彈體尾焰唯一更新縫。只改既有子網格，不配置粒子、不影響彈道或命中。
+ * age 使用呼叫端既有飛行時間；speed 僅控制視覺拉伸，絕不回寫權威速度。
+ */
+export function stepProjectileFx(projectile, age = 0, speed = 0) {
+  const fx = projectile?.userData?.projectileFx;
+  if (!fx) return;
+  const thrust = 0.82 + Math.min(1, Math.max(0, speed) / 260) * 0.28;
+  for (let i = 0; i < fx.jets.length; i++) {
+    const j = fx.jets[i];
+    const flick = 1 + Math.sin(age * (31 + i * 7) + fx.phase + i * 1.9) * (i ? 0.09 : 0.15);
+    j.mesh.scale.set(j.rad * (0.92 + flick * 0.08), j.len * thrust * flick, j.rad * (0.92 + flick * 0.08));
+    j.mesh.material.opacity = j.opacity * (0.82 + flick * 0.18);
+  }
 }
 
 /**
@@ -454,26 +481,34 @@ export function gundamBeam(scene, effects, from, to, color, { r = 3.6, ttl = 0.5
     scene.add(cm);
     effects.push({ obj: cm, ttl: ttl * 1.15, fade(o, f) { o.material.opacity = 0.95 * f * f; o.scale.x = o.scale.z = cr * (0.2 + 0.8 * f); } });
   }
-  // 槍口衝擊環(面向射線)+ 沿軸行進的能量環
-  for (let i = 0; i <= rings; i++) {
-    const ring = new THREE.Mesh(unitRing('beamRing', 0.55, 0.95, 24), energyMat(i === 0 ? core : color, 0.9));
-    ring.userData.noOutline = true;
-    ring.quaternion.setFromUnitVectors(_FWD, axis);
-    ring.position.copy(from);
-    ring.scale.setScalar(r);
-    scene.add(ring);
-    const t0 = i / (rings + 1);                 // 出發位置:沿軸等距排開 = 連續脈衝感
-    const life = ttl * (i === 0 ? 0.45 : 0.9);
-    effects.push({
-      obj: ring, ttl: life,
-      fade(o, f) {
+  // 槍口衝擊環 + 沿軸能量環共用一個 InstancedMesh。環數硬上限 9，避免大範圍招式
+  // 以子網格數線性放大 draw call；第 0 環仍以白芯 instanceColor 區分。
+  const count = Math.max(1, Math.min(9, Math.round(rings) + 1));
+  const ring = new THREE.InstancedMesh(unitRing('beamRing', 0.55, 0.95, 24), energyMat(color, 0.9), count);
+  ring.userData.noOutline = true;
+  ring.frustumCulled = false;
+  ring.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  for (let i = 0; i < count; i++) ring.setColorAt(i, new THREE.Color(i === 0 ? core : color));
+  ring.instanceColor.needsUpdate = true;
+  scene.add(ring);
+  const ringFx = {
+    obj: ring, ttl: ttl * 0.9,
+    fade(o, f) {
+      for (let i = 0; i < count; i++) {
+        const t0 = i / count;
         const p = Math.min(1, t0 + (1 - f) * 1.15);
-        o.position.copy(from).addScaledVector(axis, p * len);
-        o.scale.setScalar(r * (1 + p * 0.9));    // 越飛越張(能量發散)
-        o.material.opacity = 0.9 * f;
-      },
-    });
-  }
+        _INST.position.copy(from).addScaledVector(axis, p * len);
+        _INST.quaternion.setFromUnitVectors(_FWD, axis);
+        _INST.scale.setScalar(r * (1 + p * 0.9));
+        _INST.updateMatrix();
+        o.setMatrixAt(i, _INST.matrix);
+      }
+      o.instanceMatrix.needsUpdate = true;
+      o.material.opacity = 0.9 * f;
+    },
+  };
+  ringFx.fade(ring, 1);
+  effects.push(ringFx);
   starburst(scene, effects, to.x, to.y, to.z, r * 1.6, core);
   starburst(scene, effects, to.x, to.y, to.z, r * 2.4, color);
 }
@@ -509,28 +544,44 @@ export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45
   // 螺旋纏繞能量帶:沿軸切段的小球排成螺線並逐幀旋進 = 吐息的翻騰感。
   // 螺線半徑刻意**大於喉部**(1.05→1.9×)⇒ 從側面看得到能量帶繞在噴流外,不是貼在管壁上的點。
   const SEG = 10;
-  for (let c = 0; c < coil; c++) {
-    const ph0 = (c / coil) * Math.PI * 2;
-    for (let i = 0; i < SEG; i++) {
-      const t0 = (i + 0.5) / SEG;
-      const bead = new THREE.Mesh(unitBead(), energyMat(c === 0 ? core : color, 0.8));
-      bead.scale.setScalar(r * (0.42 - 0.26 * t0));
-      bead.userData.noOutline = true;
-      scene.add(bead);
-      const rad = r * (1.9 - 1.35 * t0);          // 螺線半徑隨距離收束(吐息越遠越集中)
-      effects.push({
-        obj: bead, ttl: ttl * (0.7 + 0.3 * t0),
-        fade(o, f) {
-          const ph = ph0 + t0 * Math.PI * 3 + (1 - f) * 7;   // 旋進
-          o.position.copy(from).addScaledVector(axis, t0 * len)
-            .addScaledVector(nx, Math.cos(ph) * rad).addScaledVector(nz, Math.sin(ph) * rad);
-          o.material.opacity = 0.8 * f;
-        },
-      });
-    }
+  const coilN = Math.max(1, Math.min(4, Math.round(coil)));
+  const beadN = SEG * coilN;
+  const beads = new THREE.InstancedMesh(unitBead(), energyMat(color, 0.8), beadN);
+  beads.userData.noOutline = true;
+  beads.frustumCulled = false;
+  beads.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  for (let c = 0; c < coilN; c++) for (let i = 0; i < SEG; i++) {
+    beads.setColorAt(c * SEG + i, new THREE.Color(c === 0 ? core : color));
   }
+  beads.instanceColor.needsUpdate = true;
+  scene.add(beads);
+  const beadFx = {
+    obj: beads, ttl,
+    fade(o, f) {
+      for (let c = 0; c < coilN; c++) for (let i = 0; i < SEG; i++) {
+        const ix = c * SEG + i;
+        const t0 = (i + 0.5) / SEG;
+        const ph = (c / coilN) * Math.PI * 2 + t0 * Math.PI * 3 + (1 - f) * 7;
+        const rad = r * (1.9 - 1.35 * t0);
+        _INST.position.copy(from).addScaledVector(axis, t0 * len)
+          .addScaledVector(nx, Math.cos(ph) * rad).addScaledVector(nz, Math.sin(ph) * rad);
+        _INST.quaternion.identity();
+        _INST.scale.setScalar(r * (0.42 - 0.26 * t0));
+        _INST.updateMatrix();
+        o.setMatrixAt(ix, _INST.matrix);
+      }
+      o.instanceMatrix.needsUpdate = true;
+      o.material.opacity = 0.8 * f;
+    },
+  };
+  beadFx.fade(beads, 1);
+  effects.push(beadFx);
   // 放電弧:自噴流表面往外劈的短折線(離子吐息的招牌;近噴口最密最長)
-  for (let i = 0; i < 7; i++) {
+  const arcN = 7;
+  const arcs = new THREE.InstancedMesh(unitCylinder(10), energyMat(core, 0.9), arcN);
+  arcs.userData.noOutline = true;
+  arcs.frustumCulled = false;
+  for (let i = 0; i < arcN; i++) {
     const t0 = (i + 0.4) / 7;
     const ph = i * 2.3;
     const rad = r * (1.9 - 1.35 * t0);
@@ -540,9 +591,16 @@ export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45
       .addScaledVector(nx, Math.cos(ph + 0.6) * r * (1.5 - t0))
       .addScaledVector(nz, Math.sin(ph + 0.6) * r * (1.5 - t0))
       .addScaledVector(axis, (0.5 - (i % 2)) * r);
-    const arc = axisCylinder(p0, p1, r * 0.07, core, 0.9);
-    if (arc) { scene.add(arc); effects.push({ obj: arc, ttl: ttl * 0.45, fade(o, f) { o.material.opacity = 0.9 * f; } }); }
+    const d = p1.sub(p0);
+    _INST.position.copy(p0).addScaledVector(d, 0.5);
+    _INST.quaternion.setFromUnitVectors(_UP, d.clone().normalize());
+    _INST.scale.set(r * 0.07, d.length(), r * 0.07);
+    _INST.updateMatrix();
+    arcs.setMatrixAt(i, _INST.matrix);
   }
+  arcs.instanceMatrix.needsUpdate = true;
+  scene.add(arcs);
+  effects.push({ obj: arcs, ttl: ttl * 0.45, fade(o, f) { o.material.opacity = 0.9 * f; } });
   starburst(scene, effects, to.x, to.y, to.z, r * 2.0, core);
   starburst(scene, effects, from.x, from.y, from.z, r * 1.7, core);   // 噴口綻放
 }
@@ -568,6 +626,17 @@ export function shockRing(scene, effects, x, y, z, r, color = 0xffd27a) {
       o.material.opacity = 0.95 * f;
     },
   });
+}
+
+/**
+ * 命中節拍唯一入口:接觸白芯 → 色彩綻放 → 重擊衝擊環。所有尺寸皆由呼叫端既有
+ * 武器/招式演出半徑推導；不讀寫傷害、命中或鏡頭狀態。
+ */
+export function impactBurst(scene, effects, pos, { r = 1.6, color = 0xffd27a, core = 0xffffff, heavy = false } = {}) {
+  starburst(scene, effects, pos.x, pos.y, pos.z, r * (heavy ? 0.72 : 1), core);
+  if (!heavy) return;
+  starburst(scene, effects, pos.x, pos.y, pos.z, r, color);
+  shockRing(scene, effects, pos.x, pos.y, pos.z, r, color);
 }
 
 /** 浮動傷害數字:命中點上飄 + 微隨機橫移,0.6s 淡出。

@@ -13,8 +13,8 @@ import * as THREE from 'three';
 import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, castDirF } from './data.js';
 import { makeUnit, heroTargetH } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { updateCelLight } from './toon.js';
-import { starburst, shockRing, beamLine, projectileMesh } from './vfx.js';
+import { updateCelLight, disposeTree } from './toon.js';
+import { starburst, shockRing, impactBurst, beamLine, projectileMesh, stepProjectileFx } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 
 const SUN = new THREE.Vector3(0.4, 0.8, 0.4);
@@ -282,7 +282,10 @@ export class CharPreview {
       this.mixer = null;
       this._ent = null;   // loco 狀態綁 mesh,換機體一律重建
     }
-    for (const e of this.effects) { this.scene.remove(e.obj); e.dispose?.(); }
+    for (const e of this.effects) {
+      this.scene.remove(e.obj);
+      if (e.dispose) e.dispose(); else disposeTree(e.obj);
+    }
     this.effects.length = 0;
   }
 
@@ -461,9 +464,12 @@ export class CharPreview {
             const env = Math.sin(Math.min(1, u) * Math.PI);          // 頭尾貼合直線的擺動包絡
             o.position.copy(m).addScaledVector(v, u)
               .addScaledVector(weaving ? side : up, (weaving ? Math.sin(u * 6 * Math.PI) * 0.5 : 0.45) * R * env);
-            starburst(this.scene, this.effects, o.position.x, o.position.y, o.position.z, R * 0.05, 0xd8d8d8);
+            stepProjectileFx(o, u * T, v.length() / T);
           },
-          dispose: () => { if (this.trackObj === proj) { this.trackObj = null; this.wantR = this.fitR; } },
+          dispose: () => {
+            if (this.trackObj === proj) { this.trackObj = null; this.wantR = this.fitR; }
+            disposeTree(proj);
+          },
         });
         if (w.guide) beamLine(this.scene, this.effects, m, boomPos, 0xff5a5a, { ttl: 0.9, w: R * 0.008 });
         this.holder.position.z -= R * 0.06;
@@ -483,14 +489,15 @@ export class CharPreview {
         A.fired = 1;
       } else if (A.fired === 1 && A.t >= A.boomAt) {
         const p = A.boomPos;
-        starburst(this.scene, this.effects, p.x, p.y, p.z, Math.max(R * 0.5, (w.r || 0) * 0.5), 0xffaa33);
-        shockRing(this.scene, this.effects, p.x, 0, p.z, Math.max(R * 0.9, w.r || 0), 0xffaa33);
+        impactBurst(this.scene, this.effects, p,
+          { r: Math.max(R * 0.9, w.r || 0), color: 0xffaa33, core: 0xfff1bd, heavy: true });
         A.fired = 2;
       }
     } else if (A.fired === 0 && A.t >= 0.55) {
       // 動能重砲(gun):蓄力後單發重擊 + 象徵性衝擊環
       starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.30, 0xffd27a);
-      shockRing(this.scene, this.effects, aim.x, 0, aim.z, Math.max(R * 0.9, w.r || 0), 0xffd27a);
+      impactBurst(this.scene, this.effects, aim,
+        { r: Math.max(R * 0.9, w.r || 0), color: 0xffd27a, core: 0xfff2b8, heavy: true });
       this.holder.position.z -= R * 0.12;
       this.holder.rotation.x -= 0.10;
       this._fireCue(true);
@@ -680,7 +687,7 @@ export class CharPreview {
       e.fade?.(e.obj, f, dt);
       if (e.ttl <= 0) {
         this.scene.remove(e.obj);
-        e.dispose?.();
+        if (e.dispose) e.dispose(); else disposeTree(e.obj);
         this.effects.splice(i, 1);
       }
     }

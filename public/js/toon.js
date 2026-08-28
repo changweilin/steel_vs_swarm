@@ -2408,6 +2408,9 @@ export function markShared(geo) { _sharedGeo.add(geo); return geo; }
 /** 一次性物件樹的資源回收:幾何(非共用)+ 材質;貼圖一律不動(皆為快取共用) */
 export function disposeTree(root) {
   root.traverse((o) => {
+    // InstancedMesh 的 instanceMatrix / instanceColor 是物件自己的 GPU buffer，
+    // 不屬於 geometry；只釋放幾何與材質仍會留下這兩份配置。
+    if (o.isInstancedMesh) o.dispose();
     // Sprite.geometry 是 three 全域共用的一份,MUST NOT dispose(會打到全 app 的 sprite)
     if (!o.isSprite && o.geometry && !_sharedGeo.has(o.geometry)) o.geometry.dispose();
     const m = o.material;
