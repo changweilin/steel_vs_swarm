@@ -893,7 +893,7 @@ export const SOFT_KINDS = {
   // `amp` 在這一族的語意是**波陡**(波高 ÷ 波長)而不是「擺幅 ÷ 株高」,但算式同一條
   // (`uSoftAmp = amp × span`)⇒ span 傳波長就得到波高。0.014 × 64m = 0.9m(真實 0.45m 長浪)。
   sea:   { amp: 0.014, freq: 0.55, axis: 'w' },   // 海面 / 湖面 / 潟湖
-  swamp: { amp: 0.008, freq: 0.28, axis: 'w', ripple: true },   // 沼澤水面:低頻慢速黏滯波 + 局部漣漪
+  swamp: { amp: 0.004, freq: 0.32, axis: 'w', ripple: true },   // 沼澤水面:低頻慢速黏滯波 + 局部漣漪
 };
 
 /**
@@ -1085,11 +1085,14 @@ const CEL_SEA_GLSL = `
                 * ( sin( uWindT * uSoftFreq + celMsp ) * 0.72
                   + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28 );
 
-          // 沼澤專屬公式 (黏滯微波 + 二維微風擾動)
-          float celSwampWarp = sin( dot( celSxz, vec2( 0.092, 0.058 ) ) + uWindT * 0.55 ) * 0.8
-                             + cos( dot( celSxz, vec2( -0.065, 0.088 ) ) + uWindT * 0.42 ) * 0.4;
-          float celHSwamp = uSoftAmp * 0.85 * ( sin( uWindT * 0.95 + dot( celSxz, vec2( 0.18, 0.12 ) ) + celSwampWarp ) * 0.65
-                                              + cos( uWindT * 0.72 + dot( celSxz, vec2( -0.14, 0.21 ) ) ) * 0.35 );
+          // 沼澤專屬公式 (黏滯微波 + 多頻領域扭曲 + 碎浪微紋理)
+          float celSwampWarp = sin( dot( celSxz, vec2( 0.35, 0.24 ) ) + uWindT * 0.55 ) * 1.2
+                             + cos( dot( celSxz, vec2( -0.28, 0.36 ) ) + uWindT * 0.42 ) * 0.8;
+          float celHSwamp = uSoftAmp * (
+            sin( uWindT * 0.95 + dot( celSxz, vec2( 0.45, 0.32 ) ) + celSwampWarp ) * 0.45
+            + cos( uWindT * 0.72 + dot( celSxz, vec2( -0.36, 0.48 ) ) + celSwampWarp * 0.4 ) * 0.30
+            + sin( uWindT * 1.25 + dot( celSxz, vec2( 0.65, -0.55 ) ) ) * 0.15
+          );
 
           #ifdef CEL_SWAMP_RIPPLE
           // 沼澤水面網格：在水域交界處依水深平滑過渡至開闊水波，保證水面交界水波高度完全連續
@@ -1100,15 +1103,15 @@ const CEL_SEA_GLSL = `
           float celH = mix( celHSea, celHSwamp, celSwampBlend * 0.65 );
           #endif
 
-          // ④ 沼澤與淺水小水域：破碎化微波擾動
+          // ④ 沼澤與淺水小水域：破碎化微波擾動 (碎浪微波)
           float celFragW = ( 1.0 - celDepF ) * 0.65;
           #ifdef CEL_SWAMP_RIPPLE
-          celFragW = max( celFragW, 0.85 );
+          celFragW = max( celFragW, 0.95 );
           #endif
           if ( celFragW > 0.01 ) {
-            float celChop = sin( dot( celSxz, vec2( 0.38, 0.24 ) ) + uWindT * 1.4 )
-                          * cos( dot( celSxz, vec2( -0.27, 0.35 ) ) + uWindT * 1.1 )
-                          + sin( dot( celSxz, vec2( 0.61, -0.42 ) ) - uWindT * 1.8 ) * 0.5;
+            float celChop = sin( dot( celSxz, vec2( 0.95, 0.68 ) ) + uWindT * 1.5 + celSwampWarp * 0.6 )
+                          * cos( dot( celSxz, vec2( -0.72, 0.85 ) ) + uWindT * 1.2 )
+                          + sin( dot( celSxz, vec2( 1.45, -1.12 ) ) - uWindT * 1.8 ) * 0.4;
             celH += uSoftAmp * 0.45 * celFragW * celChop;
           }
 
@@ -1489,7 +1492,11 @@ ${CEL_SEA_GLSL}
           // 中央差分取斜率(解析微分要把兩個諧波各微一次 + 包絡的乘法律,寫兩份公式就是
           // 兩份會分家的實作;差分只吃 celSeaH 這一支,改波形不必回頭改法線)。
           vec2 seaN0 = ( modelMatrix * vec4( position, 1.0 ) ).xz;
+          #ifdef CEL_SWAMP_RIPPLE
+          float seaE = 0.50; // 沼澤破碎波紋細緻差分步長，捕捉碎波斜率以正確表現賽璐璐光影階梯
+          #else
           float seaE = ${(WIND.SEA_M / 16).toFixed(3)};
+          #endif
           vec3 seaNw = vec3(
             celSeaH( seaN0 - vec2( seaE, 0.0 ) ) - celSeaH( seaN0 + vec2( seaE, 0.0 ) ),
             2.0 * seaE,
@@ -1858,7 +1865,34 @@ ${CEL_SEA_GLSL}
             gl_FragColor.a = mix( gl_FragColor.a, 1.0, celF );
           }
 
-          // ---- 沼澤與小範圍水域破碎化波光粼粼 (Cel Shimmer & Sparkle Glints) ----
+          // ---- 沼澤水波破碎波紋與波光粼粼 (Cel Broken Wave Ripples & Sparkle Glints) ----
+          #ifdef CEL_SWAMP_RIPPLE
+          // 沼澤專屬破碎波紋光帶 (細緻破碎化賽璐璐水波紋，有機領域扭曲消除固定條紋感)
+          vec2 celWarpUV = vCelWP.xz + vec2(
+            sin( vCelWP.z * 0.28 + uWindT * 0.42 ) * 1.8 + cos( vCelWP.x * 0.45 + 1.7 ) * 1.0,
+            cos( vCelWP.x * 0.24 - uWindT * 0.38 ) * 1.8 + sin( vCelWP.z * 0.41 + 2.3 ) * 1.0
+          );
+          vec2 celSwRipUV = celWarpUV * 0.65;
+          float celRipN1 = celNoise( celSwRipUV * 2.0 + vec2( uWindT * 0.22, -uWindT * 0.18 ) );
+          float celRipN2 = celNoise( celSwRipUV * 3.8 - vec2( uWindT * 0.28, uWindT * 0.22 ) + 5.17 );
+          float celRipN3 = celNoise( celSwRipUV * 7.2 + vec2( -uWindT * 0.35, uWindT * 0.30 ) + 3.41 );
+          
+          // 破碎化多向波紋 (非線性彎曲、多向干涉、呈現有機破碎弧狀波痕)
+          float celWave1 = sin( dot( celWarpUV, vec2( 0.52, 0.36 ) ) * 2.2 + uWindT * 1.15 + celRipN1 * 3.6 ) * 0.5 + 0.5;
+          float celWave2 = cos( dot( celWarpUV, vec2( -0.42, 0.62 ) ) * 2.5 - uWindT * 0.95 + celRipN2 * 3.2 ) * 0.5 + 0.5;
+          float celWave3 = sin( dot( celWarpUV, vec2( 0.78, -0.65 ) ) * 3.1 + uWindT * 1.35 + celRipN3 * 2.4 ) * 0.5 + 0.5;
+          
+          // 破碎條紋：高階干涉 + 碎裂斷筆遮罩 (使波痕呈現自然破碎散佈的弧光)
+          float celBrokenBand = pow( celWave1 * celWave2 * 1.35, 2.4 ) + pow( celWave2 * celWave3 * 1.35, 2.6 ) * 0.8;
+          float celBreakMask = smoothstep( 0.25, 0.65, celRipN2 * 0.55 + celRipN3 * 0.45 );
+          float celSwampRippleLine = step( 0.60, celBrokenBand * celBreakMask ) * vSeaFade;
+          
+          if ( celSwampRippleLine > 0.0 ) {
+            vec3 swampRippleColor = vec3( 0.72, 0.86, 0.62 ); // 沼澤青翠碎波紋色相
+            gl_FragColor.rgb = mix( gl_FragColor.rgb, swampRippleColor, celSwampRippleLine * 0.45 );
+          }
+          #endif
+
           vec2 celShimmerUV = vCelWP.xz * 2.4 + vec2( sin( uWindT * 1.8 + vCelWP.z * 0.4 ), cos( uWindT * 1.5 + vCelWP.x * 0.4 ) ) * 0.35;
           float celShN1 = celNoise( celShimmerUV );
           float celShN2 = celNoise( celShimmerUV * 2.5 + vec2( 5.31, 11.17 ) + uWindT * 0.9 );
