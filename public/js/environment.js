@@ -6,9 +6,9 @@
 import * as THREE from 'three';
 import {
   clockHour, phaseBlend, sunDirAt, moonDirAt, bodyFade,
-  SHADOW, shadowRangeM,
+  SHADOW, shadowRangeM, weatherAtTime, WEATHER_DYNAMICS, computeSolarSchedule, setSolarSchedule,
 } from './data.js';
-import { setCelSun, WIND, celWindTime, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
+import { setCelSun, WIND, celWindTime, INK_INFO_DECL, INK_INFO_NONE, setWeatherDynamics } from './toon.js';
 import { mulberry32 } from './rng.js';
 
 // 環境標籤的唯一縫已抽到 `data.js`(它只是 ENV 的取名查表,而本檔 import three ⇒ Node 端載不動)。
@@ -52,11 +52,14 @@ const SEASONS = {
 // 霧距離放遠(2026-07-10):舊值 near 0.25×span 在小圖 400m 就開始洗白,
 // 中景地貌全變白;遠處靠 fogFar 前緣淡淡藍灰即可,地圖邊緣仍融入天色。
 const WEATHERS = {
-  clear:  { light: 1.0,  fogNear: 0.50, fogFar: 1.9 },
-  cloudy: { light: 0.55, fogNear: 0.40, fogFar: 1.6 },
-  rain:   { light: 0.45, fogNear: 0.20, fogFar: 1.0, particle: 'rain' },
-  snow:   { light: 0.60, fogNear: 0.22, fogFar: 1.1, particle: 'snow', fogTint: 0xcfd8dd },
-  fog:    { light: 0.50, fogNear: 0.04, fogFar: 0.35 },
+  clear:     { light: 1.0,  fogNear: 0.50, fogFar: 1.9 },
+  cloudy:    { light: 0.58, fogNear: 0.40, fogFar: 1.6 },
+  rain:      { light: 0.45, fogNear: 0.20, fogFar: 1.0, particle: 'rain' },
+  storm:     { light: 0.32, fogNear: 0.12, fogFar: 0.75, particle: 'storm', fogTint: 0x4a5568 },
+  windy:     { light: 0.85, fogNear: 0.35, fogFar: 1.5, particle: 'wind' },
+  sandstorm: { light: 0.38, fogNear: 0.08, fogFar: 0.55, particle: 'sand', fogTint: 0xc89858 },
+  fog:       { light: 0.50, fogNear: 0.04, fogFar: 0.35 },
+  snow:      { light: 0.60, fogNear: 0.22, fogFar: 1.1, particle: 'snow', fogTint: 0xcfd8dd },
 };
 
 // ---- 漸層天空穹頂(2026-08-03)----
@@ -308,139 +311,85 @@ function makeBodies(span) {
   };
 }
 
-/** 雨/雪粒子盒:跟著相機走,粒子落出底部就回頂部 */
-function makeParticles(kind) {
-  const N = kind === 'rain' ? 1600 : 1100;
-  const BOX = 260, H = 180;
-  const pos = new Float32Array(N * 3);
-  const seed = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    pos[i * 3] = (Math.random() - 0.5) * BOX;
-    pos[i * 3 + 1] = Math.random() * H;
-    pos[i * 3 + 2] = (Math.random() - 0.5) * BOX;
-    seed[i] = Math.random() * Math.PI * 2;
+function makeParticles() {
+  const systems = {}, kinds = ['drizzle', 'rain', 'heavy_rain', 'storm', 'snow', 'blizzard', 'sand', 'wind'], grp = new THREE.Group();
+  for (const k of kinds) {
+    let N = 1200, size = 0.6, speed = 85, color = 0xffffff;
+    if (k === 'drizzle')    { N = 900;  size = 0.45; speed = 55;  color = 0xb0c8dc; }
+    else if (k === 'rain')  { N = 1600; size = 0.55; speed = 85;  color = 0x9db8cc; }
+    else if (k === 'heavy_rain') { N = 2400; size = 0.70; speed = 120; color = 0x8ba4b8; }
+    else if (k === 'storm') { N = 2800; size = 0.85; speed = 150; color = 0x7d97aa; }
+    else if (k === 'snow')  { N = 1000; size = 1.15; speed = 9;   color = 0xffffff; }
+    else if (k === 'blizzard') { N = 2600; size = 1.35; speed = 38; color = 0xffffff; }
+    else if (k === 'sand')  { N = 2000; size = 1.25; speed = 45;  color = 0xd4a359; }
+    else if (k === 'wind')  { N = 600;  size = 0.90; speed = 25;  color = 0xd8e4ee; }
+    const BOX = 260, H = 180, pos = new Float32Array(N * 3), seed = new Float32Array(N);
+    for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * BOX; pos[i * 3 + 1] = Math.random() * H; pos[i * 3 + 2] = (Math.random() - 0.5) * BOX; seed[i] = Math.random() * Math.PI * 2; }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color, size, transparent: true, opacity: 0, sizeAttenuation: true, depthWrite: false });
+    const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.visible = false; grp.add(pts);
+    systems[k] = { pts, geo, mat, N, BOX, H, seed, speed };
   }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const mat = new THREE.PointsMaterial({
-    color: kind === 'rain' ? 0x9db8cc : 0xffffff,
-    size: kind === 'rain' ? 0.55 : 1.15,
-    transparent: true, opacity: kind === 'rain' ? 0.55 : 0.85,
-    sizeAttenuation: true, depthWrite: false,
-  });
-  const pts = new THREE.Points(geo, mat);
-  pts.frustumCulled = false;
-  const speed = kind === 'rain' ? 85 : 9;
   let t = 0;
   return {
-    obj: pts,
-    update(dt, camera) {
+    obj: grp,
+    update(dt, camera, activeKind) {
       t += dt;
-      pts.position.set(camera.position.x, camera.position.y - H * 0.45, camera.position.z);
-      const p = geo.attributes.position;
-      for (let i = 0; i < N; i++) {
-        let y = p.array[i * 3 + 1] - speed * dt;
-        if (kind === 'snow') {
-          p.array[i * 3] += Math.sin(t * 1.4 + seed[i]) * dt * 4;   // 雪花飄移
+      for (const [k, sys] of Object.entries(systems)) {
+        const isActive = (k === activeKind);
+        sys.pts.visible = isActive;
+        if (!isActive) continue;
+        if (k === 'drizzle') sys.mat.opacity = 0.45; else if (k === 'rain') sys.mat.opacity = 0.55; else if (k === 'heavy_rain') sys.mat.opacity = 0.70; else if (k === 'storm') sys.mat.opacity = 0.80; else if (k === 'snow') sys.mat.opacity = 0.85; else if (k === 'blizzard') sys.mat.opacity = 0.90; else if (k === 'sand') sys.mat.opacity = 0.65; else if (k === 'wind') sys.mat.opacity = 0.45;
+        sys.pts.position.set(camera.position.x, camera.position.y - sys.H * 0.45, camera.position.z);
+        const p = sys.geo.attributes.position;
+        for (let i = 0; i < sys.N; i++) {
+          let y = p.array[i * 3 + 1] - sys.speed * dt;
+          if (k === 'snow') p.array[i * 3] += Math.sin(t * 1.4 + sys.seed[i]) * dt * 4;
+          else if (k === 'blizzard') { p.array[i * 3] += 55 * dt + Math.sin(t * 2.5 + sys.seed[i]) * dt * 15; p.array[i * 3 + 2] += 30 * dt; }
+          else if (k === 'sand') { p.array[i * 3] += Math.cos(t * 2.0 + sys.seed[i]) * dt * 25 + 40 * dt; p.array[i * 3 + 2] += Math.sin(t * 2.0 + sys.seed[i]) * dt * 25 + 20 * dt; }
+          else if (k === 'heavy_rain') { p.array[i * 3] += 12 * dt; p.array[i * 3 + 2] += 7 * dt; }
+          else if (k === 'storm') { p.array[i * 3] += 22 * dt; p.array[i * 3 + 2] += 12 * dt; }
+          else if (k === 'wind') { p.array[i * 3] += 30 * dt; p.array[i * 3 + 2] += 15 * dt; }
+          if (y < 0) { y = sys.H; p.array[i * 3] = (Math.random() - 0.5) * sys.BOX; p.array[i * 3 + 2] = (Math.random() - 0.5) * sys.BOX; }
+          if (p.array[i * 3] > sys.BOX * 0.5) p.array[i * 3] -= sys.BOX; else if (p.array[i * 3] < -sys.BOX * 0.5) p.array[i * 3] += sys.BOX;
+          if (p.array[i * 3 + 2] > sys.BOX * 0.5) p.array[i * 3 + 2] -= sys.BOX; else if (p.array[i * 3 + 2] < -sys.BOX * 0.5) p.array[i * 3 + 2] += sys.BOX;
+          p.array[i * 3 + 1] = y;
         }
-        if (y < 0) {
-          y = H;
-          p.array[i * 3] = (Math.random() - 0.5) * BOX;
-          p.array[i * 3 + 2] = (Math.random() - 0.5) * BOX;
-        }
-        p.array[i * 3 + 1] = y;
+        sys.geo.attributes.position.needsUpdate = true;
       }
-      p.needsUpdate = true;
     },
+    dispose() { for (const sys of Object.values(systems)) { sys.geo.dispose(); sys.mat.dispose(); } },
   };
 }
 
-/**
- * 套用環境到場景(取代原本固定的天光/太陽/霧)。
- * 回傳 { air, hour, update(dt, camera, elapsedS), dispose() }。
- *
- * ---- 時間流逝(2026-08-14)----
- * 開場時段只決定**第 0 秒的鐘點**;之後每一幀都由 `clockHour(開場時段, 經過秒數)` 重算,
- * 整份調色盤在相鄰兩個基調之間內插。三條紀律:
- *   ① **經過秒數由呼叫端傳進來**,本檔不自己數(權威時鐘住伺服器快照 —— 自己數一份的話
- *      兩台客戶端的天色會慢慢分家,而畫面上只表現成「你那邊天比較亮」)。
- *   ② **每幀只改共享 uniform / 既有實例的欄位**,MUST NOT 重建穹頂、雲、燈或材質
- *      (與 visualPrefs 的紀律③同一條:重建就會變成幻燈片)。
- *   ③ 顏色的推導路徑**逐字沿用舊制**(skyC/fogC/sunC 三行的算式一格未動),
- *      改的只有「T 從哪來」—— 從查表變成內插。時間停在開場錨點時逐位元同舊制。
- */
 export function applyEnvironment(scene, terrain, env, opts = {}) {
-  const span = Math.max(terrain.worldW, terrain.worldH);
-  const startTime = TIMES[env?.time] ? env.time : 'day';
-  const S = SEASONS[env?.season] || SEASONS.summer;
-  const W = WEATHERS[env?.weather] || WEATHERS.clear;
-  const tintC = new THREE.Color(S.tint);
-
-  const T = newPhase();                       // 內插出來的當下基調(每幀就地覆寫)
-  const skyC = new THREE.Color(), fogC = new THREE.Color(), sunC = new THREE.Color();
-  const moonC = new THREE.Color();
-  scene.background = skyC;   // 穹頂沒畫到的像素(建構失敗/極端視角)仍是舊行為
-  scene.fog = new THREE.Fog(0x000000, span * W.fogNear, span * W.fogFar);
-
-  // 漸層穹頂 + 賽璐璐雲(顏色全由上面三張表推導,見 makeSkyDome 檔頭)
-  const dome = makeSkyDome(span, skyC, fogC, W);
-  scene.add(dome);
-  const clouds = makeClouds(span, skyC, W, Math.round((terrain.center?.lat ?? 0) * 1e4) * 31
-    + Math.round((terrain.center?.lng ?? 0) * 1e4));
-  if (clouds) scene.add(clouds.obj);
-  const bodies = makeBodies(span);
-  scene.add(bodies.obj);
-
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 1);
-  scene.add(hemi);
-
-  // 主光:白天是太陽、夜裡是月亮,**同一盞燈**換方向與顏色(兩盞的話換手那一刻會疊光)。
-  const sun = new THREE.DirectionalLight(0xffffff, 1);
-  scene.add(sun);
-  scene.add(sun.target);     // target 是獨立物件:不進場景的話它的世界矩陣不會更新
-
-  // ---- 影子 ----
-  // 正交框**跟著相機走**(全圖一張陰影圖的話每 texel 好幾公尺,機體的影子連一個像素都不到)。
-  // 開關由呼叫端給(visualPrefs `shadow` + `?shadow=0`):關著時這一整段等於不存在。
-  const shadowOn = !!opts.shadow;
-  const shSize = opts.lowPower ? SHADOW.SIZE_LOW : SHADOW.SIZE;
-  const shR = shadowRangeM(shSize);
+  const span = Math.max(terrain.worldW, terrain.worldH), startTime = TIMES[env?.time] ? env.time : 'day', startSeason = env?.season || 'summer', startWeather = env?.weather || 'clear', latDeg = terrain?.center?.lat ?? 25.0;
+  const seed = Math.round((terrain.center?.lat ?? 0) * 1e4) * 31 + Math.round((terrain.center?.lng ?? 0) * 1e4);
+  const sched = computeSolarSchedule(startSeason, latDeg), S = SEASONS[startSeason] || SEASONS.summer;
+  setSolarSchedule(sched);
+  let curWeather = startWeather, W = WEATHERS[curWeather] || WEATHERS.clear;
+  setWeatherDynamics(WEATHER_DYNAMICS[curWeather] || WEATHER_DYNAMICS.clear);
+  const tintC = new THREE.Color(S.tint), T = newPhase(), skyC = new THREE.Color(), fogC = new THREE.Color(), sunC = new THREE.Color(), moonC = new THREE.Color();
+  scene.background = skyC; scene.fog = new THREE.Fog(0x000000, span * W.fogNear, span * W.fogFar);
+  const dome = makeSkyDome(span, skyC, fogC, W); scene.add(dome);
+  const clouds = makeClouds(span, skyC, W, seed); if (clouds) scene.add(clouds.obj);
+  const bodies = makeBodies(span); scene.add(bodies.obj);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 1); scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xffffff, 1); scene.add(sun); scene.add(sun.target);
+  const shadowOn = !!opts.shadow, shSize = opts.lowPower ? SHADOW.SIZE_LOW : SHADOW.SIZE, shR = shadowRangeM(shSize);
   if (shadowOn) {
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(shSize, shSize);
-    const c = sun.shadow.camera;
-    c.left = -shR; c.right = shR; c.top = shR; c.bottom = -shR;
-    c.near = 1; c.far = shR * 6;
-    c.updateProjectionMatrix();
-    sun.shadow.bias = SHADOW.BIAS;
-    sun.shadow.normalBias = SHADOW.NORMAL_BIAS;
+    sun.castShadow = true; sun.shadow.mapSize.set(shSize, shSize);
+    const c = sun.shadow.camera; c.left = -shR; c.right = shR; c.top = shR; c.bottom = -shR; c.near = 1; c.far = shR * 6; c.updateProjectionMatrix();
+    sun.shadow.bias = SHADOW.BIAS; sun.shadow.normalBias = SHADOW.NORMAL_BIAS;
   }
-  const shTexel = (shR * 2) / shSize;   // 位置量化到 texel:不量化的話相機一動影子邊緣就爬行
-
-  let particles = null;
-  if (W.particle) {
-    particles = makeParticles(W.particle);
-    scene.add(particles.obj);
-  }
-
-  // 空氣透視(雙色霧)給後製管線的四個值。**近/遠色與 scene.fog 的兩段距離 MUST 一起給** ——
-  // 後製那一 pass 是用同一份 near/far 重算 fogFactor 再把近端色的差額補回去的(exact,
-  // 不是近似);距離對不上就會在遠景留一圈色帶,而那看起來像「霧壞掉了」。
-  // 物件識別**恆定**:呼叫端每幀拿同一個物件去餵 `pipeline.setAirFog`。
+  const shTexel = (shR * 2) / shSize, particles = makeParticles(); scene.add(particles.obj);
   const air = { near: new THREE.Color(), far: new THREE.Color(), fogNear: span * W.fogNear, fogFar: span * W.fogFar };
-
-  const _sunD = new THREE.Vector3(), _moonD = new THREE.Vector3(), _lit = new THREE.Vector3();
-  const _cam = new THREE.Object3D();   // 第一次 update 之前也要有相機位置(原點即可)
-  const _fwd = new THREE.Vector3();
-  const out = { air, hour: 0, sunUp: true };
-
-  /** 把整份調色盤 + 光向重算到鐘點 h(每幀一次;只寫既有實例) */
+  const _sunD = new THREE.Vector3(), _moonD = new THREE.Vector3(), _lit = new THREE.Vector3(), _cam = new THREE.Object3D(), _fwd = new THREE.Vector3();
+  const out = { air, hour: 0, sunUp: true, weather: curWeather };
   function setHour(h) {
-    out.hour = h;
+    out.hour = h; out.weather = curWeather;
     const { a, b, t } = phaseBlend(h);
     mixTime(T, a, b, t);
-
-    // 三行算式逐字沿用舊制(紀律③):只有 T 的來源換了
     skyC.copy(T.sky).multiply(tintC).multiplyScalar(W.light * 0.7 + 0.3);
     fogC.copy(W.fogTint !== undefined ? _tmpC.setHex(W.fogTint) : T.fogC).multiplyScalar(W.light * 0.6 + 0.4);
     sunC.copy(T.sun).multiply(tintC);
@@ -472,15 +421,30 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
     bodies.place(_cam, _sunD, _moonD, sunC, moonC, Math.max(0, Math.min(1, sd.y / 0.35)));
   }
 
-  setHour(clockHour(startTime, 0));
+  setHour(clockHour(startTime, 0, sched.startH));
   air.near.copy(nearFogColor(fogC, sunC, skyC, W)); air.far.copy(fogC);
 
   return Object.assign(out, {
     update(dt, camera, elapsedS = 0) {
       _cam.position.copy(camera.position);
-      setHour(clockHour(startTime, elapsedS));
-      // 空氣透視的兩個顏色跟著天色走(距離不變:那是地圖尺度,與時間無關)
-      air.near.copy(nearFogColor(fogC, sunC, skyC, W)); air.far.copy(fogC);
+
+      // 動態天氣演變 (跨越日夜時段時 50% 維持, 50% 依季節常理權重抽取)
+      const nextWeather = weatherAtTime(startSeason, startTime, startWeather, elapsedS, seed, latDeg);
+      if (nextWeather !== curWeather && WEATHERS[nextWeather]) {
+        curWeather = nextWeather;
+        W = WEATHERS[curWeather];
+        setWeatherDynamics(WEATHER_DYNAMICS[curWeather] || WEATHER_DYNAMICS.clear);
+      }
+
+      setHour(clockHour(startTime, elapsedS, sched.startH));
+
+      // 霧距離動態過渡
+      scene.fog.near = span * W.fogNear;
+      scene.fog.far = span * W.fogFar;
+      air.fogNear = span * W.fogNear;
+      air.fogFar = span * W.fogFar;
+      air.near.copy(nearFogColor(fogC, sunC, skyC, W));
+      air.far.copy(fogC);
 
       // 主光的位置:框心以相機為基準、**往視線前方推** `AHEAD_F`(玩家看的是前面,
       // 把框心放在腳底下等於把一半的 texel 花在背後),再沿光向退到框外。
@@ -496,7 +460,8 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       sun.target.position.set(cx, cy, cz);
       sun.position.set(cx + _lit.x * shR * 2.5, cy + _lit.y * shR * 2.5, cz + _lit.z * shR * 2.5);
 
-      particles?.update(dt, camera);
+      particles.update(dt, camera, W.particle);
+
       // 穹頂/雲**恆以相機為中心**:天空沒有視差,不然走到地圖邊緣會看到「天空的邊」
       dome.position.copy(camera.position);
       if (clouds) {
@@ -507,7 +472,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
     },
     dispose() {
       scene.remove(hemi); scene.remove(sun); scene.remove(sun.target);
-      if (particles) scene.remove(particles.obj);
+      scene.remove(particles.obj); particles.dispose();
       // A25:一次性 3D 物件移除 MUST 釋放 GPU 資源(貼圖是整場共用的快取,一律不動)
       scene.remove(dome);
       dome.geometry.dispose(); dome.material.dispose();

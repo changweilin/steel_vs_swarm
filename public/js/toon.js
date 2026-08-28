@@ -919,6 +919,25 @@ const _windK = {
 const _gustK = {
   value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.GUST_M),
 };
+// 天氣動態風浪影響共享 uniform(強風/沙暴/雷雨時動態放大樹木搖晃、旗幟飄動、水波高度與擴散速度)
+const _weatherWind = {
+  amp: { value: 1.0 },
+  freq: { value: 1.0 },
+  waveAmp: { value: 1.0 },
+  waveSpeed: { value: 1.0 },
+};
+
+/**
+ * 安裝當前天氣的風浪動態係數 (唯一寫入點;呼叫端 = environment.js / game.js)
+ * @param {{ windAmp?:number, windFreq?:number, waveAmp?:number, waveSpeed?:number }} dyn
+ */
+export function setWeatherDynamics(dyn) {
+  if (!dyn) return;
+  _weatherWind.amp.value = dyn.windAmp ?? 1.0;
+  _weatherWind.freq.value = dyn.windFreq ?? 1.0;
+  _weatherWind.waveAmp.value = dyn.waveAmp ?? 1.0;
+  _weatherWind.waveSpeed.value = dyn.waveSpeed ?? 1.0;
+}
 // 玩家位移擾動的兩支共享 uniform(同 `_windT` 的 idiom:一份物件餵給所有軟性材質)。
 // 全槽 `spd = 0` ⇒ 位移項在著色器裡早退 ⇒ **逐位元同舊制**。
 const _charPos = { value: Array.from({ length: CHAR.N }, () => new THREE.Vector3()) };
@@ -1004,6 +1023,10 @@ const CEL_WIND_GLSL = `
         uniform float uSoftSy;
         uniform float uSoftAmp;
         uniform float uSoftFreq;
+        uniform float uWeatherWindAmp;
+        uniform float uWeatherWindFreq;
+        uniform float uWeatherWaveAmp;
+        uniform float uWeatherWaveSpeed;
         // 陣風包絡(單一實作,擺動與海浪同吃)。振幅乘上一層「波長長一個量級、走得慢一半」
         // 的行波 ⇒ 掃到的那一帶倒得深、其餘幾乎靜止 = 眼睛讀得出「一道浪推過去」。
         // 平均值恆為 1 ⇒ 這一層**不改變平均擺幅**,只重新分配;GUST_F = 0 恆回 1.0(舊制)。
@@ -1104,7 +1127,7 @@ const CEL_SEA_GLSL = `
           float celSeaBed = celSeaBedError( celSxz );
           float seaBedWarp = celSeaBed * 0.25;
           float celMsp = ( celSp + seaBedWarp ) * celWaveK + celPhJit;
-          float celHSea = uSoftAmp * (
+          float celHSea = ( uSoftAmp * uWeatherWaveAmp ) * (
             celAmpD * celAmpMod * celObD * celGust( celSxz )
             * ( sin( uWindT * uSoftFreq + celMsp ) * 0.72
               + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celMsp * 1.6 + 1.7 ) * 0.28 )
@@ -1116,7 +1139,7 @@ const CEL_SEA_GLSL = `
           float celSwampWarp = sin( dot( celSxz, vec2( 0.35, 0.24 ) ) + uWindT * 0.55 ) * 1.2
                              + cos( dot( celSxz, vec2( -0.28, 0.36 ) ) + uWindT * 0.42 ) * 0.8
                              + vec2( cos( celBedErr * 3.14159 ), sin( celBedErr * 3.14159 ) ).x * 0.65;
-          float celHSwamp = uSoftAmp * (
+          float celHSwamp = ( uSoftAmp * uWeatherWaveAmp ) * (
             sin( uWindT * 0.95 + dot( celSxz, vec2( 0.45, 0.32 ) ) + celSwampWarp + celBedErr * 1.15 ) * 0.45
             + cos( uWindT * 0.72 + dot( celSxz, vec2( -0.36, 0.48 ) ) + celSwampWarp * 0.4 ) * 0.30
             + sin( uWindT * 1.25 + dot( celSxz, vec2( 0.65, -0.55 ) ) ) * 0.15
@@ -1192,7 +1215,8 @@ const CEL_SEA_GLSL = `
  * dt 夾在 [0, 0.25]:分頁切回來的那一幀 dt 可能是好幾秒,不夾的話整片林子會抽一下。
  */
 export function stepCelWind(dt) {
-  _windT.value += Math.min(0.25, Math.max(0, dt || 0));
+  const ws = _weatherWind.waveSpeed?.value ?? 1.0;
+  _windT.value += Math.min(0.25, Math.max(0, dt || 0)) * ws;
 }
 
 /** 目前的風時鐘(秒);雲朵那半(environment.js)與植被同吃一個時鐘 */
@@ -1421,6 +1445,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uWindDir = _windDir;
     shader.uniforms.uWindK = _windK;
     shader.uniforms.uGustK = _gustK;
+    shader.uniforms.uWeatherWindAmp = _weatherWind.amp;
+    shader.uniforms.uWeatherWindFreq = _weatherWind.freq;
+    shader.uniforms.uWeatherWaveAmp = _weatherWind.waveAmp;
+    shader.uniforms.uWeatherWaveSpeed = _weatherWind.waveSpeed;
     // 陰影偏色(P1-B):共享 uniform 物件 ⇒ 拉桿一動,全場材質同一幀跟著換
     // **兩派共用同一份色相**(同一張 `SHADOW_HUE`、同一根拉桿、同一條 mech/env 兩軌),
     // MUST NOT 為 School B 另建第二份 —— 那就是「兩派的陰影是兩種顏色」。
@@ -1590,7 +1618,7 @@ ${CEL_SEA_GLSL}
             swP -= sw * ${(0.8 * Math.PI * 2).toFixed(3)};
           #endif
           // 一個共用的雙頻波形；旗面另以實例原點雜湊取速率 / 相位，避免整圈旗陣像機械連桿。
-          float swRate = uSoftFreq;
+          float swRate = uSoftFreq * uWeatherWindFreq;
           float swPhase = swP;
           float swBeat = ${WIND.BEAT.toFixed(3)};
           float swSlowW = 0.72;
@@ -1618,10 +1646,10 @@ ${CEL_SEA_GLSL}
           // 陣風包絡吃**實例原點**的世界 XZ(與相位同一個點):逐頂點取的話同一株的根與梢
           // 會落在包絡的不同位置,強弱沿著株身變化 = 那株自己被拉長,不是被風吹。
           swOsc *= celGust( swO.xz );
-          float swA = sw * uSoftAmp * swOsc;
+          float swA = sw * ( uSoftAmp * uWeatherWindAmp ) * swOsc;
           transformed += swD * swA;
           // 擺出去時梢端略降(弧長守恆的一階近似)—— 少了這一項會看起來像整株在平移
-          transformed.y -= sw * uSoftAmp * abs( swOsc ) * 0.3;
+          transformed.y -= sw * ( uSoftAmp * uWeatherWindAmp ) * abs( swOsc ) * 0.3;
           // ---- 玩家位移擾動(S5;⑤-1)----
           // 距離是 **2.5D**:水平取**實例原點**(逐頂點取 XZ 會把整株拉歪)、垂直取這個頂點
           // 自己的株上高度 ⇒ 一台在地面走的機體構造上碰不到 6m 高的樹冠。
