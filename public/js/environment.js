@@ -160,10 +160,13 @@ function cloudTexture() {
  * 2. 雲朵動態: 隨風漂移、微幅隨機飄動、生命週期顯現/消失。
  * 3. 聚合與分散: 小雲聚合成大雲 (Clustering), 大雲分散為小雲 (Dispersal)。
  */
+const CLOUD_N = 26;        // 雲量基數;實際枚數與 WEATHERS[w].light 反比
 const CLOUD_BOB = 0.015;      // 逐朵上下起伏
 const CLOUD_BREATH = 0.08;    // 逐朵尺寸呼吸
-function makeClouds(span, skyC, seed) {
-  const rnd = mulberry32((seed ^ 0x93B7C1) >>> 0);
+function makeClouds(span, skyC, W, seed) {
+  const n = Math.max(0, Math.round(CLOUD_N * (1.05 - W.light)));
+  if (!n || W.fogNear <= 0.05) return null;
+  const rnd = mulberry32(((seed ?? 0) ^ 0x93B7C1) >>> 0);
   const grp = new THREE.Group();
   const tex = cloudTexture();
 
@@ -185,10 +188,11 @@ function makeClouds(span, skyC, seed) {
     const y = span * (0.20 + rnd() * 0.35);
     const speedScale = 0.85 + rnd() * 0.3;
     const phase = rnd() * Math.PI * 2;
-    clusters.push({ cx, cz, y, speedScale, phase });
+    clusters.push({ cx, cz, y, speedScale, phase, along: cx, side: cz });
   }
 
   const cloudItems = [];
+  const drift = [];
   for (let i = 0; i < totalClouds; i++) {
     const cIdx = i % numClusters;
     const c = clusters[cIdx];
@@ -201,7 +205,7 @@ function makeClouds(span, skyC, seed) {
     const lifePeriod = 18.0 + rnd() * 14.0;
     const lifePhase = rnd() * Math.PI * 2;
 
-    cloudItems.push({
+    const item = {
       sp,
       cIdx,
       offX: Math.cos(offA) * offR,
@@ -210,7 +214,9 @@ function makeClouds(span, skyC, seed) {
       lifePeriod,
       lifePhase,
       bobPhase: rnd() * Math.PI * 2,
-    });
+    };
+    cloudItems.push(item);
+    drift.push({ sp, along: c.cx + item.offX, side: c.cz + item.offZ, y: c.y, s: baseScale, ph: lifePhase });
   }
 
   grp.frustumCulled = false;
@@ -235,7 +241,7 @@ function makeClouds(span, skyC, seed) {
       driftOffset += WIND.CLOUD_MPS * windAmp * (dt || 0.016);
 
       // 雲色更新: >50% 時由亮白/天色過渡為烏雲黑灰色
-      const baseCloudColor = currentSkyC.clone().lerp(WHITE, 0.70);
+      const baseCloudColor = (currentSkyC || skyC).clone().lerp(WHITE, 0.70);
       if (dyn?.isDarkCloud) {
         baseCloudColor.lerp(DARK_CLOUD_COLOR, Math.min(1.0, darkness * 0.90));
       }
@@ -245,7 +251,10 @@ function makeClouds(span, skyC, seed) {
 
       for (let i = 0; i < cloudItems.length; i++) {
         const item = cloudItems[i];
+        const d = drift[i];
         const c = clusters[item.cIdx];
+
+        const a = ((d.along + WIND.CLOUD_MPS * t + WRAP * 0.5) % WRAP + WRAP) % WRAP - WRAP * 0.5;
 
         // 1. 生命週期淡入淡出 (顯現 / 消失)
         const life = Math.sin(t * (Math.PI * 2 / item.lifePeriod) + item.lifePhase) * 0.5 + 0.5;
@@ -259,14 +268,9 @@ function makeClouds(span, skyC, seed) {
         const curOffZ = item.offZ * (1.6 - clusterMerge * 0.9);
         const scaleMul = (0.7 + clusterMerge * 0.7) * (1 + Math.sin(t * 0.2 + item.bobPhase) * CLOUD_BREATH);
 
-        // 3. 隨風飄移向量與循環包裹
-        const along = (c.cx * windDir[0] + c.cz * windDir[1]) + driftOffset * c.speedScale;
-        const side = -c.cx * windDir[1] + c.cz * windDir[0];
-        const wrappedAlong = ((along + WRAP * 0.5) % WRAP + WRAP) % WRAP - WRAP * 0.5;
-
-        const posX = wrappedAlong * windDir[0] - side * windDir[1] + curOffX;
-        const posZ = wrappedAlong * windDir[1] + side * windDir[0] + curOffZ;
-        const posY = c.y + Math.sin(t * 0.14 + item.bobPhase) * span * CLOUD_BOB;
+        const posX = a * windDir[0] - d.side * windDir[1] + curOffX;
+        const posZ = a * windDir[1] + d.side * windDir[0] + curOffZ;
+        const posY = d.y + Math.sin(t * 0.14 + item.bobPhase) * span * CLOUD_BOB;
 
         item.sp.position.set(posX, posY, posZ);
         item.sp.scale.set(item.baseScale * 2 * scaleMul, item.baseScale * scaleMul, 1);
@@ -484,7 +488,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   const dome = makeSkyDome(span, skyC, fogC, curDyn);
   scene.add(dome);
 
-  const clouds = makeClouds(span, skyC, seed);
+  const clouds = makeClouds(span, skyC, curDyn, seed);
   if (clouds) scene.add(clouds.obj);
 
   const bodies = makeBodies(span);
@@ -524,40 +528,40 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
   const out = { air, hour: 0, sunUp: true, weather: curDyn.dominantWeather, weatherVec, dynamics: curDyn };
 
-  function setHour(h, dyn, flashBoost = 0) {
+  function setHour(h) {
     out.hour = h;
-    out.weather = dyn.dominantWeather;
+    out.weather = curDyn.dominantWeather;
     out.weatherVec = weatherVec;
-    out.dynamics = dyn;
+    out.dynamics = curDyn;
 
     const { a, b, t } = phaseBlend(h);
     mixTime(T, a, b, t);
 
-    skyC.copy(T.sky).multiply(tintC).multiplyScalar(dyn.light * 0.7 + 0.3);
+    skyC.copy(T.sky).multiply(tintC).multiplyScalar(curDyn.light * 0.7 + 0.3);
 
     // 沙塵暴與雪景微調
-    if (dyn.effectiveSand > 0.1) {
+    if (curDyn.effectiveSand > 0.1) {
       _tmpC.setHex(0xc89858);
-      fogC.copy(T.fogC).lerp(_tmpC, dyn.effectiveSand * 0.7).multiplyScalar(dyn.light * 0.6 + 0.4);
-    } else if (dyn.isFrozen) {
+      fogC.copy(T.fogC).lerp(_tmpC, curDyn.effectiveSand * 0.7).multiplyScalar(curDyn.light * 0.6 + 0.4);
+    } else if (curDyn.isFrozen) {
       _tmpC.setHex(0xd8e6f0);
-      fogC.copy(T.fogC).lerp(_tmpC, 0.4).multiplyScalar(dyn.light * 0.6 + 0.4);
+      fogC.copy(T.fogC).lerp(_tmpC, 0.4).multiplyScalar(curDyn.light * 0.6 + 0.4);
     } else {
-      fogC.copy(T.fogC).multiplyScalar(dyn.light * 0.6 + 0.4);
+      fogC.copy(T.fogC).multiplyScalar(curDyn.light * 0.6 + 0.4);
     }
 
     sunC.copy(T.sun).multiply(tintC);
 
     // 閃電強光頻閃
-    if (flashBoost > 0) {
-      skyC.lerp(FLASH_COLOR, Math.min(0.85, flashBoost * 0.75));
-      fogC.lerp(FLASH_COLOR, Math.min(0.80, flashBoost * 0.70));
-      sunC.lerp(FLASH_COLOR, Math.min(0.90, flashBoost * 0.85));
+    if (flashStrength > 0) {
+      skyC.lerp(FLASH_COLOR, Math.min(0.85, flashStrength * 0.75));
+      fogC.lerp(FLASH_COLOR, Math.min(0.80, flashStrength * 0.70));
+      sunC.lerp(FLASH_COLOR, Math.min(0.90, flashStrength * 0.85));
     }
 
     scene.fog.color.copy(fogC);
 
-    const stops = skyStops(skyC, fogC, dyn);
+    const stops = skyStops(skyC, fogC, curDyn);
     const u = dome.material.uniforms;
     u.uH.value.copy(stops.horiz);
     u.uM.value.copy(stops.mid);
@@ -565,7 +569,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
     hemi.color.copy(T.hemiSky);
     hemi.groundColor.copy(T.hemiGnd);
-    hemi.intensity = (T.hemiI * (dyn.light * 0.6 + 0.4) * S.mul) + (flashBoost * 3.5);
+    hemi.intensity = (T.hemiI * (curDyn.light * 0.6 + 0.4) * S.mul) + (flashStrength * 3.5);
 
     const sd = sunDirAt(h), md = moonDirAt(h);
     _sunD.set(sd.x, sd.y, sd.z);
@@ -575,14 +579,14 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
     _lit.copy(up ? _sunD : _moonD);
     const fade = bodyFade(up ? sd.y : md.y);
     sun.color.copy(sunC);
-    sun.intensity = (T.sunI * dyn.light * S.mul * fade) + (flashBoost * 5.0);
+    sun.intensity = (T.sunI * curDyn.light * S.mul * fade) + (flashStrength * 5.0);
     setCelSun(_lit);
 
     moonC.setHex(TIMES.night.sun).lerp(WHITE, 0.45);
     bodies.place(_cam, _sunD, _moonD, sunC, moonC, Math.max(0, Math.min(1, sd.y / 0.35)));
   }
 
-  setHour(clockHour(startTime, 0, sched.startH), curDyn, 0);
+  setHour(clockHour(startTime, 0, sched.startH));
   air.near.copy(nearFogColor(fogC, sunC, skyC, curDyn));
   air.far.copy(fogC);
 
@@ -611,7 +615,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
       // 3. 推進日照時段與更新光影
       const h = clockHour(startTime, elapsedS, sched.startH);
-      setHour(h, curDyn, flashStrength);
+      setHour(h);
 
       // 4. 能見度與空氣透視動態調整
       scene.fog.near = span * curDyn.fogNear;
@@ -649,8 +653,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       scene.remove(particles.obj);
       particles.dispose();
       scene.remove(dome);
-      dome.geometry.dispose();
-      dome.material.dispose();
+      dome.geometry.dispose(); dome.material.dispose();
       scene.remove(bodies.obj);
       bodies.dispose();
       if (clouds) {

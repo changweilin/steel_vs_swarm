@@ -916,9 +916,9 @@ const _windK = {
   value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.WAVE_M),
 };
 // 陣風包絡的波數向量:同一個風向、長一個量級的波長(推導,MUST NOT 另寫一份方向)
-const _gustK = {
+const _gustK = (_windDir.gustK = {
   value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.GUST_M),
-};
+});
 // 天氣動態風浪影響共享 uniform(強風/沙暴/雷雨時動態放大樹木搖晃、旗幟飄動、水波高度與擴散速度)
 const _weatherWind = {
   amp: { value: 1.0 },
@@ -941,12 +941,12 @@ export function setWeatherDynamics(dyn) {
   if (dyn.windDir && Array.isArray(dyn.windDir) && dyn.windDir.length >= 2) {
     _windDir.value.set(dyn.windDir[0], dyn.windDir[1]);
     _windK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.WAVE_M);
-    _gustK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.GUST_M);
+    _windDir.gustK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.GUST_M);
   } else if (typeof dyn.windDirDeg === 'number') {
     const rad = dyn.windDirDeg * Math.PI / 180;
     _windDir.value.set(Math.cos(rad), Math.sin(rad));
     _windK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.WAVE_M);
-    _gustK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.GUST_M);
+    _windDir.gustK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.GUST_M);
   }
 }
 // 玩家位移擾動的兩支共享 uniform(同 `_windT` 的 idiom:一份物件餵給所有軟性材質)。
