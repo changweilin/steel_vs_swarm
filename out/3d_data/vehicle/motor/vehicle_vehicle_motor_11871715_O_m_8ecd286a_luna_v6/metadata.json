@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6",
+  "key": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+  "family": "vehicle",
+  "subpart": "motor",
+  "style": "scooter",
+  "symmetryMode": "mirrored_bilateral",
+  "similarityScore": null,
+  "similarityReview": "scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "逐張對照來源圖與固定五方向視圖",
+    "確認車型特有零件、接點與前後輪徑"
+  ],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/motor/11871715_O_m.webp",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\11871715_O_m.webp",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6.png",
+  "bounds": {
+    "min": [
+      -0.89,
+      0.0135,
+      -0.4946
+    ],
+    "max": [
+      0.915,
+      1.2153,
+      0.4946
+    ],
+    "size": [
+      1.805,
+      1.202,
+      0.989
+    ],
+    "rMax": 1.04,
+    "triangles": 2220,
+    "vertices": 1358
+  },
+  "reconstructionNote": "踏板、前整流罩、擋風鏡、左右後視鏡、前叉、引擎、後搖臂、單側排氣管、側柱與前後不同輪徑均完整接合。",
+  "created_at": "2026-08-28T16:52:44.922Z",
+  "humanVerdictPreserved": true
+}

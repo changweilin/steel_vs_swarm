@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_4c5b16dd_luna_v6",
+  "key": "vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_4c5b16dd_luna_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "mountain_bicycle",
+  "symmetryMode": "mirrored_bilateral",
+  "similarityScore": 86,
+  "similarityReview": "mountain_bicycle：細長件由共享接點生成，車輪法線沿 Z、輪胎落地；固定三視圖供人工覆核。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/bike/5df81b4da9928fe4b137e2bc3acbae24.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\5df81b4da9928fe4b137e2bc3acbae24.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_4c5b16dd_luna_v6.png",
+  "bounds": {
+    "min": [
+      -0.93,
+      0.0181,
+      -0.3
+    ],
+    "max": [
+      0.93,
+      0.98,
+      0.3
+    ],
+    "size": [
+      1.86,
+      0.962,
+      0.6
+    ],
+    "rMax": 0.977,
+    "triangles": 2484,
+    "vertices": 1502
+  },
+  "reconstructionNote": "雙側前三角、鏈條上下段、曲柄踏板、前叉、輪圈、輪轂、輻條、煞車盤與纜線均以接點建模。",
+  "created_at": "2026-08-28T13:08:49.482Z",
+  "humanVerdictPreserved": true
+}

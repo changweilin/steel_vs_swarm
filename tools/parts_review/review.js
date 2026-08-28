@@ -144,6 +144,7 @@ async function initGfx(data) {
   gfx.aquatics = await import('/public/js/aquatics.js');
   gfx.rng = await import('/public/js/rng.js');
   const partlib = await import('/public/js/partlib.js');
+  gfx.runtimePartModel = await import('/public/js/runtimePartModel.js');
   const { setCelSun, bakeContactAO } = await import('/public/js/toon.js');
   gfx.bakeContactAO = bakeContactAO;
   gfx.mods.set('now', gfx.beacons);
@@ -230,7 +231,20 @@ function build(phase, src, kind, seed, builder = 'beacon') {
         .then((res) => (res.ok ? res.json() : null))
         .then((model) => {
           if (!model) return;
-          if (model.parts && model.parts.length) {
+          const row = rowOf(kind);
+          const sharedVehicleMesh = row?.family === 'vehicle' && model.meshData?.vertices?.length;
+          if (sharedVehicleMesh) {
+            // 載具直接走遊戲同一個 loader；不可在零件台另寫一份 primitive 對照器。
+            const mesh = gfx.runtimePartModel.makeRuntimePartModel({
+              ...model,
+              key: kind,
+              family: row.family,
+              version: row.version,
+              image: row.item?.image || row.prov?.source?.file || row.at,
+            }, { environment: true });
+            mesh.userData.modelPartName = kind;
+            g.add(mesh);
+          } else if (model.parts && model.parts.length) {
             for (const p of model.parts) {
               let geo = null;
               if (p.type === 'box' && p.dimensions) {
@@ -394,6 +408,7 @@ function makeViewer() {
   const T = gfx.THREE;
   const canvas = document.createElement('canvas');
   const renderer = new T.WebGLRenderer({ canvas, antialias: true });
+  renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.setClearColor(0x171b21, 1);
   const scene = new T.Scene();
   const SUN = new T.Vector3(-0.5, 0.45, -0.75).normalize();

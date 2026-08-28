@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+  "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "drop_bar_road_bicycle",
+  "symmetryMode": "mirrored_bilateral",
+  "similarityScore": null,
+  "similarityReview": "drop_bar_road_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "逐張對照來源圖與固定五方向視圖",
+    "確認車型特有零件、接點與前後輪徑"
+  ],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6.png",
+  "bounds": {
+    "min": [
+      -0.895,
+      0.0169,
+      -0.2082
+    ],
+    "max": [
+      0.895,
+      1.0625,
+      0.2082
+    ],
+    "size": [
+      1.79,
+      1.046,
+      0.416
+    ],
+    "rMax": 0.919,
+    "triangles": 2128,
+    "vertices": 1286
+  },
+  "reconstructionNote": "中心面前三角、雙側後下叉／後上叉、單側鏈條、曲柄踏板、前叉、輪圈、輪轂、輻條、煞車盤與纜線均以接點建模。",
+  "created_at": "2026-08-28T16:52:43.476Z",
+  "humanVerdictPreserved": true
+}

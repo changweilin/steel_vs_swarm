@@ -47446,846 +47446,6 @@
       "method": "gemini_v6",
       "version": 6,
       "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_61c03cf3",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "000001_1738650793",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/000001_1738650793.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.6-flash)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.6-flash --family vehicle",
-        "machine": "Gemini API (gemini-3.6-flash)",
-        "measured": "Triangles 1312, Vertices 737"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.16,
-          0.827,
-          0.723
-        ],
-        "note": "Extents [2.16, 0.827, 0.723]m, rMax 1.139m"
-      },
-      "keys": [
-        "vehicle/bike_000001_1738650793_61c03cf3_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_d6efffb7",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "003002_1725858476",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/003002_1725858476.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 628, Vertices 380"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.12,
-          1.24,
-          1
-        ],
-        "note": "Extents [2.12, 1.24, 1]m, rMax 1.172m"
-      },
-      "keys": [
-        "vehicle/bike_003002_1725858476_d6efffb7_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_20b94748",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "10012915_R3_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/10012915_R3_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 624, Vertices 374"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.47,
-          0.745,
-          0.732
-        ],
-        "note": "Extents [2.47, 0.745, 0.732]m, rMax 1.288m"
-      },
-      "keys": [
-        "vehicle/bike_10012915_R3_m_20b94748_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_d442e9ed",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "110295IA-M009_L",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/110295IA-M009_L.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 436, Vertices 270"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.98,
-          0.751,
-          0.742
-        ],
-        "note": "Extents [1.98, 0.751, 0.742]m, rMax 1.057m"
-      },
-      "keys": [
-        "vehicle/bike_110295IA-M009_L_d442e9ed_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_fca3d2f7",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "110296IA-M009_L",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/110296IA-M009_L.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1168, Vertices 654"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.49,
-          1.121,
-          0.751
-        ],
-        "note": "Extents [2.49, 1.121, 0.751]m, rMax 1.3m"
-      },
-      "keys": [
-        "vehicle/bike_110296IA-M009_L_fca3d2f7_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_a2969dc5",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "12544404_O_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/12544404_O_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1040, Vertices 626"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.95,
-          0.945,
-          2.632
-        ],
-        "note": "Extents [0.95, 0.945, 2.632]m, rMax 1.432m"
-      },
-      "keys": [
-        "vehicle/bike_12544404_O_m_a2969dc5_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_93a7ccd1",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "13226803_R_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/13226803_R_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 856, Vertices 517"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.69,
-          1.37,
-          0.704
-        ],
-        "note": "Extents [1.69, 1.37, 0.704]m, rMax 1.366m"
-      },
-      "keys": [
-        "vehicle/bike_13226803_R_m_93a7ccd1_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_fe9fa5f6",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 524, Vertices 316"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.63,
-          1.42,
-          0.504
-        ],
-        "note": "Extents [1.63, 1.42, 0.504]m, rMax 0.853m"
-      },
-      "keys": [
-        "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_fe9fa5f6_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_2edb1758",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "19e97a45118b4dedac318903f350414f_R",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/19e97a45118b4dedac318903f350414f_R.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1360, Vertices 762"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.75,
-          0.857,
-          2.073
-        ],
-        "note": "Extents [0.75, 0.857, 2.073]m, rMax 1.102m"
-      },
-      "keys": [
-        "vehicle/bike_19e97a45118b4dedac318903f350414f_R_2edb1758_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_5a95382c",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "3827532_O_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/3827532_O_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1008, Vertices 604"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.49,
-          1.55,
-          0.982
-        ],
-        "note": "Extents [2.49, 1.55, 0.982]m, rMax 1.362m"
-      },
-      "keys": [
-        "vehicle/bike_3827532_O_m_5a95382c_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_bbc285a7",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "5df81b4da9928fe4b137e2bc3acbae24",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/5df81b4da9928fe4b137e2bc3acbae24.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 744, Vertices 430"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.18,
-          1.011,
-          0.742
-        ],
-        "note": "Extents [2.18, 1.011, 0.742]m, rMax 1.151m"
-      },
-      "keys": [
-        "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_bbc285a7_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_4318f4c3",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "6756854_OR_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/6756854_OR_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 672, Vertices 398"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.8,
-          1.78,
-          2.8
-        ],
-        "note": "Extents [0.8, 1.78, 2.8]m, rMax 1.456m"
-      },
-      "keys": [
-        "vehicle/bike_6756854_OR_m_4318f4c3_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_dd41a20a",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "800x (1)",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/800x (1).jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 448, Vertices 278"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.03,
-          0.895,
-          0.742
-        ],
-        "note": "Extents [2.03, 0.895, 0.742]m, rMax 1.104m"
-      },
-      "keys": [
-        "vehicle/bike_800x (1)_dd41a20a_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_0f6397c9",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "800x",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/800x.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 732, Vertices 435"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.84,
-          0.805,
-          1.195
-        ],
-        "note": "Extents [0.84, 0.805, 1.195]m, rMax 1.002m"
-      },
-      "keys": [
-        "vehicle/bike_800x_0f6397c9_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_4a125c4d",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "e5823366c7ed43f3b8e2c62ce0bc59af",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 712, Vertices 416"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.1,
-          0.854,
-          0.761
-        ],
-        "note": "Extents [2.1, 0.854, 0.761]m, rMax 1.117m"
-      },
-      "keys": [
-        "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_4a125c4d_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_5015bbd8",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "folding-gravel-bike-changebike-gf-102g-b1",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 748, Vertices 436"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.77,
-          1.95,
-          2.132
-        ],
-        "note": "Extents [0.77, 1.95, 2.132]m, rMax 1.134m"
-      },
-      "keys": [
-        "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_5015bbd8_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_10f84c9f",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 736, Vertices 464"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.47,
-          0.903,
-          0.972
-        ],
-        "note": "Extents [2.47, 0.903, 0.972]m, rMax 1.327m"
-      },
-      "keys": [
-        "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_10f84c9f_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_ad4e6ee8",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "T-806_blue",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/T-806_blue.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 500, Vertices 300"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.11,
-          0.995,
-          0.723
-        ],
-        "note": "Extents [2.11, 0.995, 0.723]m, rMax 1.186m"
-      },
-      "keys": [
-        "vehicle/bike_T-806_blue_ad4e6ee8_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_2011fdd8",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 764, Vertices 450"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.05,
-          1.9,
-          0.732
-        ],
-        "note": "Extents [2.05, 1.9, 0.732]m, rMax 1.098m"
-      },
-      "keys": [
-        "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_2011fdd8_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_f2da84fa",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "兒童款-26-彎把公路車-rc-100-白色-btwin-8826164",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 748, Vertices 454"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.06,
-          0.95,
-          2.123
-        ],
-        "note": "Extents [1.06, 0.95, 2.123]m, rMax 1.186m"
-      },
-      "keys": [
-        "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f2da84fa_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
       "consumer": "vehicle catalog & partlib (car)",
       "rev": "HEAD",
       "at": "2026-08-20",
@@ -52696,636 +51856,6 @@
       "method": "gemini_v6",
       "version": 6,
       "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_34efdc65",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "000001_1672123300",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/000001_1672123300.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 304, Vertices 176"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1,
-          1.45,
-          2.28
-        ],
-        "note": "Extents [1, 1.45, 2.28]m, rMax 1.254m"
-      },
-      "keys": [
-        "vehicle/motor_000001_1672123300_34efdc65_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_798df443",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "000001_1742374978",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/000001_1742374978.png"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 436, Vertices 242"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1,
-          2.12,
-          2.09
-        ],
-        "note": "Extents [1, 2.12, 2.09]m, rMax 1.181m"
-      },
-      "keys": [
-        "vehicle/motor_000001_1742374978_798df443_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_644204de",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "000002_1645174811",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/000002_1645174811.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 260, Vertices 156"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.85,
-          1.7,
-          2.3
-        ],
-        "note": "Extents [0.85, 1.7, 2.3]m, rMax 1.226m"
-      },
-      "keys": [
-        "vehicle/motor_000002_1645174811_644204de_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_2d7604a8",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "10905670_R",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/10905670_R.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 344, Vertices 220"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.7,
-          1.279,
-          2.221
-        ],
-        "note": "Extents [0.7, 1.279, 2.221]m, rMax 1.236m"
-      },
-      "keys": [
-        "vehicle/motor_10905670_R_2d7604a8_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_746ddcdc",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "11871715_O_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/11871715_O_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 804, Vertices 494"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.4,
-          1.51,
-          1.916
-        ],
-        "note": "Extents [1.4, 1.51, 1.916]m, rMax 1.287m"
-      },
-      "keys": [
-        "vehicle/motor_11871715_O_m_746ddcdc_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_adb71ef1",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "14074013_OR_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/14074013_OR_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 276, Vertices 158"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.04,
-          1.796,
-          2.02
-        ],
-        "note": "Extents [1.04, 1.796, 2.02]m, rMax 1.235m"
-      },
-      "keys": [
-        "vehicle/motor_14074013_OR_m_adb71ef1_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_5f418366",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "14892810_OR_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/14892810_OR_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 320, Vertices 190"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1,
-          1.914,
-          2.18
-        ],
-        "note": "Extents [1, 1.914, 2.18]m, rMax 1.208m"
-      },
-      "keys": [
-        "vehicle/motor_14892810_OR_m_5f418366_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_38aee327",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "165019503901",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/165019503901.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 652, Vertices 382"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1,
-          1.526,
-          2.503
-        ],
-        "note": "Extents [1, 1.526, 2.503]m, rMax 1.37m"
-      },
-      "keys": [
-        "vehicle/motor_165019503901_38aee327_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_242bbe10",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "180512-10030-2-uyEK9",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/180512-10030-2-uyEK9.png"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1452, Vertices 877"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.76,
-          1.6,
-          3.594
-        ],
-        "note": "Extents [1.76, 1.6, 3.594]m, rMax 2.05m"
-      },
-      "keys": [
-        "vehicle/motor_180512-10030-2-uyEK9_242bbe10_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_364b3cae",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "24917349da43cda536c90d9b274f9e70_1200",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/24917349da43cda536c90d9b274f9e70_1200.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 652, Vertices 384"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.72,
-          1.44,
-          2.03
-        ],
-        "note": "Extents [0.72, 1.44, 2.03]m, rMax 1.138m"
-      },
-      "keys": [
-        "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_364b3cae_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_bc0b0c3c",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "54175397571_be4ab8de90_b",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/54175397571_be4ab8de90_b.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 352, Vertices 206"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1,
-          1.566,
-          2.57
-        ],
-        "note": "Extents [1, 1.566, 2.57]m, rMax 1.393m"
-      },
-      "keys": [
-        "vehicle/motor_54175397571_be4ab8de90_b_bc0b0c3c_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_1d9d6238",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 336, Vertices 188"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.305,
-          1.1,
-          2.67
-        ],
-        "note": "Extents [1.305, 1.1, 2.67]m, rMax 1.598m"
-      },
-      "keys": [
-        "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1d9d6238_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (motor)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_ace34d8b",
-          "family": "vehicle",
-          "part": "motor",
-          "query": "7801666",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/motor/7801666.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 784, Vertices 465"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.88,
-          1.55,
-          2.627
-        ],
-        "note": "Extents [0.88, 1.55, 2.627]m, rMax 1.39m"
-      },
-      "keys": [
-        "vehicle/motor_7801666_ace34d8b_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_e8f230ed",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "000001_1738650793",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/000001_1738650793.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-2.5-flash)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-2.5-flash --family vehicle",
-        "machine": "Gemini API (gemini-2.5-flash)",
-        "measured": "Triangles 832, Vertices 483, Similarity 95/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.55,
-          0.935,
-          0.713
-        ],
-        "note": "Extents [2.55, 0.935, 0.713]m, rMax 1.324m"
-      },
-      "keys": [
-        "vehicle/bike_000001_1738650793_e8f230ed_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_4cbaf01c",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "003002_1725858476",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/003002_1725858476.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-2.5-flash)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-2.5-flash --family vehicle",
-        "machine": "Gemini API (gemini-2.5-flash)",
-        "measured": "Triangles 488, Vertices 294, Similarity 95/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.92,
-          0.974,
-          0.685
-        ],
-        "note": "Extents [1.92, 0.974, 0.685]m, rMax 1.019m"
-      },
-      "keys": [
-        "vehicle/bike_003002_1725858476_4cbaf01c_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
       "consumer": "landmark catalog & partlib (main)",
       "rev": "HEAD",
       "at": "2026-08-20",
@@ -56092,972 +54622,6 @@
       },
       "keys": [
         "landmark/main_progress-m.658f5ec2_f2f31b26_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_d354fa66",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "10012915_R3_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/10012915_R3_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 740, Vertices 434, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.47,
-          1.24,
-          0.732
-        ],
-        "note": "Extents [2.47, 1.24, 0.732]m, rMax 1.288m"
-      },
-      "keys": [
-        "vehicle/bike_10012915_R3_m_d354fa66_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_ed77bbab",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "110295IA-M009_L",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/110295IA-M009_L.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1072, Vertices 600, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.67,
-          1.031,
-          0.732
-        ],
-        "note": "Extents [2.67, 1.031, 0.732]m, rMax 1.384m"
-      },
-      "keys": [
-        "vehicle/bike_110295IA-M009_L_ed77bbab_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_45e1cb14",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "110296IA-M009_L",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/110296IA-M009_L.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1212, Vertices 686, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.503,
-          1.026,
-          0.764
-        ],
-        "note": "Extents [2.503, 1.026, 0.764]m, rMax 1.308m"
-      },
-      "keys": [
-        "vehicle/bike_110296IA-M009_L_45e1cb14_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_f57a2f46",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "12544404_O_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/12544404_O_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1124, Vertices 653, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.73,
-          0.896,
-          0.732
-        ],
-        "note": "Extents [2.73, 0.896, 0.732]m, rMax 1.413m"
-      },
-      "keys": [
-        "vehicle/bike_12544404_O_m_f57a2f46_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_46abb265",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "13226803_R_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/13226803_R_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1088, Vertices 623, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.86,
-          0.737,
-          0.732
-        ],
-        "note": "Extents [1.86, 0.737, 0.732]m, rMax 1.004m"
-      },
-      "keys": [
-        "vehicle/bike_13226803_R_m_46abb265_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_fa8fa62b",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 680, Vertices 400, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.54,
-          1.02,
-          0.466
-        ],
-        "note": "Extents [1.54, 1.02, 0.466]m, rMax 0.828m"
-      },
-      "keys": [
-        "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_fa8fa62b_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_fe8ed5e4",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "19e97a45118b4dedac318903f350414f_R",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/19e97a45118b4dedac318903f350414f_R.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 576, Vertices 344, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.08,
-          1.04,
-          0.742
-        ],
-        "note": "Extents [2.08, 1.04, 0.742]m, rMax 1.104m"
-      },
-      "keys": [
-        "vehicle/bike_19e97a45118b4dedac318903f350414f_R_fe8ed5e4_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_595e3b28",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "3827532_O_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/3827532_O_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 900, Vertices 514, Similarity 90/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.67,
-          1.225,
-          0.732
-        ],
-        "note": "Extents [2.67, 1.225, 0.732]m, rMax 1.384m"
-      },
-      "keys": [
-        "vehicle/bike_3827532_O_m_595e3b28_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_840ae276",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "5df81b4da9928fe4b137e2bc3acbae24",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/5df81b4da9928fe4b137e2bc3acbae24.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 832, Vertices 486, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.85,
-          1.09,
-          0.713
-        ],
-        "note": "Extents [1.85, 1.09, 0.713]m, rMax 0.991m"
-      },
-      "keys": [
-        "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_840ae276_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_6b6c1577",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "6756854_OR_m",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/6756854_OR_m.webp"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1204, Vertices 688, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.81,
-          1.312,
-          2.67
-        ],
-        "note": "Extents [0.81, 1.312, 2.67]m, rMax 1.395m"
-      },
-      "keys": [
-        "vehicle/bike_6756854_OR_m_6b6c1577_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_dfbe4fd9",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "800x (1)",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/800x (1).jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 736, Vertices 441, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.75,
-          0.81,
-          0.713
-        ],
-        "note": "Extents [1.75, 0.81, 0.713]m, rMax 0.945m"
-      },
-      "keys": [
-        "vehicle/bike_800x (1)_dfbe4fd9_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_98bb8e0c",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "800x",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/800x.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 720, Vertices 392, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.86,
-          1.22,
-          1.06
-        ],
-        "note": "Extents [0.86, 1.22, 1.06]m, rMax 0.682m"
-      },
-      "keys": [
-        "vehicle/bike_800x_98bb8e0c_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_1a8818ab",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "e5823366c7ed43f3b8e2c62ce0bc59af~0",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 724, Vertices 407, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          3.053,
-          2.15,
-          2.207
-        ],
-        "note": "Extents [3.053, 2.15, 2.207]m, rMax 2.106m"
-      },
-      "keys": [
-        "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af~0_1a8818ab_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_26ca6168",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "e5823366c7ed43f3b8e2c62ce0bc59af~1",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 532, Vertices 301, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.8,
-          1.227,
-          0.761
-        ],
-        "note": "Extents [0.8, 1.227, 0.761]m, rMax 0.552m"
-      },
-      "keys": [
-        "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af~1_26ca6168_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_dfd17ffa",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "folding-gravel-bike-changebike-gf-102g-b1~0",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 988, Vertices 541, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.969,
-          1.074,
-          2.07
-        ],
-        "note": "Extents [1.969, 1.074, 2.07]m, rMax 1.428m"
-      },
-      "keys": [
-        "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1~0_dfd17ffa_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_a90206cb",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "folding-gravel-bike-changebike-gf-102g-b1~1",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1040, Vertices 563, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.095,
-          1.39,
-          0.896
-        ],
-        "note": "Extents [1.095, 1.39, 0.896]m, rMax 0.771m"
-      },
-      "keys": [
-        "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1~1_a90206cb_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_2b058e6e",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~0",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1228, Vertices 682, Similarity 90/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.07,
-          1.33,
-          0.896
-        ],
-        "note": "Extents [1.07, 1.33, 0.896]m, rMax 0.753m"
-      },
-      "keys": [
-        "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~0_2b058e6e_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_086a3b67",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~1",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 548, Vertices 303, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.03,
-          2.07,
-          1.969
-        ],
-        "note": "Extents [1.03, 2.07, 1.969]m, rMax 1.118m"
-      },
-      "keys": [
-        "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~1_086a3b67_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_d2ecf363",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "T-806_blue~0",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/T-806_blue.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 776, Vertices 429, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.78,
-          0.69,
-          0.746
-        ],
-        "note": "Extents [0.78, 0.69, 0.746]m, rMax 0.541m"
-      },
-      "keys": [
-        "vehicle/bike_T-806_blue~0_d2ecf363_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_aa7a2e6c",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "T-806_blue~1",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/T-806_blue.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 708, Vertices 395, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          0.84,
-          1.388,
-          0.71
-        ],
-        "note": "Extents [0.84, 1.388, 0.71]m, rMax 0.581m"
-      },
-      "keys": [
-        "vehicle/bike_T-806_blue~1_aa7a2e6c_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_394cf6bd",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 1064, Vertices 615, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.3,
-          0.89,
-          1.029
-        ],
-        "note": "Extents [2.3, 0.89, 1.029]m, rMax 1.357m"
-      },
-      "keys": [
-        "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_394cf6bd_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_4ada33d7",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~0",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 584, Vertices 337, Similarity 92/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          1.302,
-          0.905,
-          1.02
-        ],
-        "note": "Extents [1.302, 0.905, 1.02]m, rMax 1.016m"
-      },
-      "keys": [
-        "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~0_4ada33d7_v6"
-      ]
-    },
-    {
-      "method": "gemini_v6",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (bike)",
-      "rev": "HEAD",
-      "at": "2026-08-20",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_1d0d8858",
-          "family": "vehicle",
-          "part": "bike",
-          "query": "兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~1",
-          "api": "gemini_v6",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "Gemini v6 Polyhedral Reconstruction (gemini-3.5-flash-lite)",
-        "runner": "tools/ai3d/direct_ingest_v6.mjs",
-        "params": "--model gemini-3.5-flash-lite --family vehicle",
-        "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 736, Vertices 437, Similarity 90/100"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          2.304,
-          1.94,
-          2.07
-        ],
-        "note": "Extents [2.304, 1.94, 2.07]m, rMax 1.677m"
-      },
-      "keys": [
-        "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~1_1d0d8858_v6"
       ]
     },
     {
@@ -74440,6 +72004,1392 @@
       },
       "keys": [
         "tree/sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7_6b1c1574_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_9c52e91a",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_000001_1738650793",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/000001_1738650793.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2128, Vertices 1286, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "note": "drop_bar_road_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_000001_1738650793_9c52e91a_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_2e742f06",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_003002_1725858476",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/003002_1725858476.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_003002_1725858476_2e742f06_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_ab011d1f",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_10012915_R3_m",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/10012915_R3_m.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_10012915_R3_m_ab011d1f_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_50b4863e",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_110295IA-M009_L",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/110295IA-M009_L.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2128, Vertices 1286, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "note": "drop_bar_road_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_110295IA-M009_L_50b4863e_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_c6f0fe84",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_110296IA-M009_L",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/110296IA-M009_L.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_110296IA-M009_L_c6f0fe84_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_94f41003",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_12544404_O_m",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/12544404_O_m.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2128, Vertices 1286, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "note": "drop_bar_road_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_12544404_O_m_94f41003_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_6337be00",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_13226803_R_m",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/13226803_R_m.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_13226803_R_m_6337be00_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_55ff809f",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 1968, Vertices 1192, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.522,
+          0.966,
+          0.48
+        ],
+        "note": "folding_city_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_448ddf05",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_19e97a45118b4dedac318903f350414f_R",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/19e97a45118b4dedac318903f350414f_R.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_f5def028",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_3827532_O_m",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/3827532_O_m.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_3827532_O_m_f5def028_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_d209bdb4",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/5df81b4da9928fe4b137e2bc3acbae24.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_dc7aea7e",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_6756854_OR_m",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/6756854_OR_m.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_6756854_OR_m_dc7aea7e_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_4c4178d7",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_800x (1)",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/800x (1).jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2128, Vertices 1286, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "note": "drop_bar_road_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_800x (1)_4c4178d7_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_3285847d",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_800x",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/800x.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2256, Vertices 1368, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.44,
+          1.066,
+          0.67
+        ],
+        "note": "child_tricycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_800x_3285847d_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_1bd11220",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2432, Vertices 1480, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "note": "mountain_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_d88aada2",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2408, Vertices 1466, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.852,
+          1.025,
+          0.735
+        ],
+        "note": "folding_gravel_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_395cb773",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2128, Vertices 1286, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "note": "drop_bar_road_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_672b8c66",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_T-806_blue",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/T-806_blue.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2392, Vertices 1458, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.812,
+          1.026,
+          0.735
+        ],
+        "note": "city_utility_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_T-806_blue_672b8c66_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_323d68c6",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 3432, Vertices 2091, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.558,
+          1.065,
+          0.924
+        ],
+        "note": "training_wheel_city_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_88ea4c82",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_000001_1672123300",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/000001_1672123300.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "note": "scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_000001_1672123300_88ea4c82_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_4250286e",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_000001_1742374978",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/000001_1742374978.png"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.825,
+          1.201,
+          0.989
+        ],
+        "note": "retro_scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_000001_1742374978_4250286e_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_b1ef8e63",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_000002_1645174811",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/000002_1645174811.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.275,
+          0.989
+        ],
+        "note": "maxi_scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_58b9efa4",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_10905670_R",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/10905670_R.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "note": "scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_10905670_R_58b9efa4_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_8ecd286a",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_11871715_O_m",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/11871715_O_m.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "note": "scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_11871715_O_m_8ecd286a_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_15e668c8",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_14074013_OR_m",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/14074013_OR_m.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "note": "scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_14074013_OR_m_15e668c8_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_d4fb62a2",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_14892810_OR_m",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/14892810_OR_m.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.825,
+          1.201,
+          0.989
+        ],
+        "note": "retro_scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_c719b559",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_165019503901",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/165019503901.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2920, Vertices 1781, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          2.196,
+          1.254,
+          0.95
+        ],
+        "note": "sport_motorcycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_165019503901_c719b559_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_21c0827e",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_180512-10030-2-uyEK9",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/180512-10030-2-uyEK9.png"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2760, Vertices 1680, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          2.57,
+          1.201,
+          0.95
+        ],
+        "note": "chopper；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_5b880633",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/24917349da43cda536c90d9b274f9e70_1200.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "note": "scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_22934ea5",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_54175397571_be4ab8de90_b",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/54175397571_be4ab8de90_b.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.86,
+          1.275,
+          0.989
+        ],
+        "note": "maxi_scooter；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_1ce8d1f3",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2852, Vertices 1739, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          2.226,
+          1.148,
+          0.95
+        ],
+        "note": "classic_motorcycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (motor)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_3a47734e",
+          "family": "vehicle",
+          "part": "motor",
+          "query": "vehicle/motor_7801666",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/motor/7801666.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2852, Vertices 1739, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          2.226,
+          1.148,
+          0.95
+        ],
+        "note": "classic_motorcycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/motor_7801666_3a47734e_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (bike)",
+      "rev": "HEAD",
+      "at": "2026-08-28",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_f5a5031f",
+          "family": "vehicle",
+          "part": "bike",
+          "query": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 2128, Vertices 1286, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "note": "drop_bar_road_bicycle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f5a5031f_luna_v6"
       ]
     }
   ]

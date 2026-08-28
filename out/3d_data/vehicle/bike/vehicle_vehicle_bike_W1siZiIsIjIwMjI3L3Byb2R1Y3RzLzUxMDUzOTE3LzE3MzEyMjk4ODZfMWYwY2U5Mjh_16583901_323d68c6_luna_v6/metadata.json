@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_323d68c6_luna_v6",
+  "key": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "training_wheel_city_bicycle",
+  "symmetryMode": "explicit_training_wheel_pair",
+  "similarityScore": null,
+  "similarityReview": "training_wheel_city_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "逐張對照來源圖與固定五方向視圖",
+    "確認車型特有零件、接點與前後輪徑"
+  ],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_323d68c6_luna_v6.png",
+  "bounds": {
+    "min": [
+      -0.779,
+      0.0054,
+      -0.462
+    ],
+    "max": [
+      0.779,
+      1.07,
+      0.462
+    ],
+    "size": [
+      1.558,
+      1.065,
+      0.924
+    ],
+    "rMax": 0.906,
+    "triangles": 3432,
+    "vertices": 2091
+  },
+  "reconstructionNote": "前籃、鏈罩、前後擋泥板、穿越式車架與左右輔助輪完整建模，輔助輪軸與支架接回後車架。",
+  "created_at": "2026-08-28T16:52:43.924Z",
+  "humanVerdictPreserved": true
+}

@@ -1,0 +1,429 @@
+{
+  "id": "vehicle_motor_vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
+  "sourceImage": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf.jpg",
+  "style": "classic_motorcycle",
+  "symmetryMode": "mirrored_bilateral",
+  "colors": {
+    "roofHex": 1522536,
+    "facadeHex": 12698557,
+    "baseHex": 2435631,
+    "accentHex": 13215056,
+    "darkHex": 1251099,
+    "brightHex": 15986402,
+    "glassHex": 2833738
+  },
+  "totalParts": 70,
+  "partNames": [
+    "rear_wheel_tire",
+    "rear_wheel_rim",
+    "rear_wheel_hub",
+    "rear_wheel_spoke_left_0",
+    "rear_wheel_spoke_left_1",
+    "rear_wheel_spoke_left_2",
+    "rear_wheel_spoke_left_3",
+    "rear_wheel_spoke_left_4",
+    "rear_wheel_spoke_left_5",
+    "rear_wheel_spoke_left_6",
+    "rear_wheel_spoke_left_7",
+    "rear_wheel_spoke_right_0",
+    "rear_wheel_spoke_right_1",
+    "rear_wheel_spoke_right_2",
+    "rear_wheel_spoke_right_3",
+    "rear_wheel_spoke_right_4",
+    "rear_wheel_spoke_right_5",
+    "rear_wheel_spoke_right_6",
+    "rear_wheel_spoke_right_7",
+    "rear_wheel_brake_disc",
+    "front_wheel_tire",
+    "front_wheel_rim",
+    "front_wheel_hub",
+    "front_wheel_spoke_left_0",
+    "front_wheel_spoke_left_1",
+    "front_wheel_spoke_left_2",
+    "front_wheel_spoke_left_3",
+    "front_wheel_spoke_left_4",
+    "front_wheel_spoke_left_5",
+    "front_wheel_spoke_left_6",
+    "front_wheel_spoke_left_7",
+    "front_wheel_spoke_right_0",
+    "front_wheel_spoke_right_1",
+    "front_wheel_spoke_right_2",
+    "front_wheel_spoke_right_3",
+    "front_wheel_spoke_right_4",
+    "front_wheel_spoke_right_5",
+    "front_wheel_spoke_right_6",
+    "front_wheel_spoke_right_7",
+    "front_wheel_brake_disc",
+    "main_top_frame_left",
+    "main_top_frame_right",
+    "main_down_frame_left",
+    "main_down_frame_right",
+    "rear_frame_left",
+    "rear_frame_right",
+    "rear_swingarm_left",
+    "rear_swingarm_right",
+    "fuel_tank",
+    "engine",
+    "engine_head",
+    "seat",
+    "front_fork_left",
+    "front_fork_right",
+    "front_axle",
+    "handle_stem",
+    "handlebar",
+    "mirror_left",
+    "mirror_stem_left",
+    "mirror_right",
+    "mirror_stem_right",
+    "headlamp",
+    "front_brake_line",
+    "exhaust_left",
+    "muffler_left",
+    "front_fender",
+    "rear_shock_left",
+    "rear_shock_right",
+    "rear_fender",
+    "kickstand"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box",
+    "ellipsoid_sphere"
+  ],
+  "structuralContract": {
+    "coordinateFrame": {
+      "nose": "+X",
+      "up": "+Y",
+      "lateral": "+Z"
+    },
+    "thinMembersEndpointDerived": true,
+    "sharedJoints": [
+      {
+        "name": "main_top_frame_left",
+        "a": [
+          -0.35,
+          0.78,
+          -0.052
+        ],
+        "b": [
+          0.54,
+          0.8,
+          -0.052
+        ],
+        "radius": 0.034
+      },
+      {
+        "name": "main_top_frame_right",
+        "a": [
+          -0.35,
+          0.78,
+          0.052
+        ],
+        "b": [
+          0.54,
+          0.8,
+          0.052
+        ],
+        "radius": 0.034
+      },
+      {
+        "name": "main_down_frame_left",
+        "a": [
+          0.54,
+          0.8,
+          -0.052
+        ],
+        "b": [
+          0,
+          0.4,
+          -0.052
+        ],
+        "radius": 0.038
+      },
+      {
+        "name": "main_down_frame_right",
+        "a": [
+          0.54,
+          0.8,
+          0.052
+        ],
+        "b": [
+          0,
+          0.4,
+          0.052
+        ],
+        "radius": 0.038
+      },
+      {
+        "name": "rear_frame_left",
+        "a": [
+          -0.74,
+          0.34,
+          -0.052
+        ],
+        "b": [
+          -0.35,
+          0.78,
+          -0.052
+        ],
+        "radius": 0.03
+      },
+      {
+        "name": "rear_frame_right",
+        "a": [
+          -0.74,
+          0.34,
+          0.052
+        ],
+        "b": [
+          -0.35,
+          0.78,
+          0.052
+        ],
+        "radius": 0.03
+      },
+      {
+        "name": "rear_swingarm_left",
+        "a": [
+          -0.74,
+          0.34,
+          -0.052
+        ],
+        "b": [
+          0,
+          0.4,
+          -0.052
+        ],
+        "radius": 0.025
+      },
+      {
+        "name": "rear_swingarm_right",
+        "a": [
+          -0.74,
+          0.34,
+          0.052
+        ],
+        "b": [
+          0,
+          0.4,
+          0.052
+        ],
+        "radius": 0.025
+      },
+      {
+        "name": "front_fork_left",
+        "a": [
+          0.54,
+          0.8,
+          -0.052
+        ],
+        "b": [
+          0.74,
+          0.34,
+          -0.052
+        ],
+        "radius": 0.025
+      },
+      {
+        "name": "front_fork_right",
+        "a": [
+          0.54,
+          0.8,
+          0.052
+        ],
+        "b": [
+          0.74,
+          0.34,
+          0.052
+        ],
+        "radius": 0.025
+      },
+      {
+        "name": "handle_stem",
+        "a": [
+          0.54,
+          0.8,
+          0
+        ],
+        "b": [
+          0.56,
+          1.04,
+          0
+        ],
+        "radius": 0.018
+      },
+      {
+        "name": "mirror_stem_left",
+        "a": [
+          0.56,
+          1.04,
+          -0.310000000006
+        ],
+        "b": [
+          0.56,
+          1.14,
+          -0.38
+        ],
+        "radius": 0.01
+      },
+      {
+        "name": "mirror_stem_right",
+        "a": [
+          0.56,
+          1.04,
+          0.310000000006
+        ],
+        "b": [
+          0.56,
+          1.14,
+          0.38
+        ],
+        "radius": 0.01
+      },
+      {
+        "name": "front_brake_line",
+        "a": [
+          0.56,
+          1.04,
+          0
+        ],
+        "b": [
+          0.74,
+          0.46,
+          0
+        ],
+        "radius": 0.008
+      },
+      {
+        "name": "exhaust_left",
+        "a": [
+          0.03,
+          0.47,
+          -0.2
+        ],
+        "b": [
+          -0.72,
+          0.37,
+          -0.2
+        ],
+        "radius": 0.025
+      },
+      {
+        "name": "rear_shock_left",
+        "a": [
+          -0.74,
+          0.34,
+          0
+        ],
+        "b": [
+          -0.56,
+          0.74,
+          -0.18
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "rear_shock_right",
+        "a": [
+          -0.74,
+          0.34,
+          0
+        ],
+        "b": [
+          -0.56,
+          0.74,
+          0.18
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "kickstand",
+        "a": [
+          -0.1,
+          0.4,
+          0.15
+        ],
+        "b": [
+          -0.27,
+          0.035,
+          0.15
+        ],
+        "radius": 0.012
+      }
+    ],
+    "wheelContract": [
+      {
+        "name": "rear_wheel",
+        "center": [
+          -0.74,
+          0.34,
+          0
+        ],
+        "outerRadius": 0.34,
+        "tireTube": 0.055,
+        "axis": "z",
+        "tire": "rear_wheel_tire",
+        "rim": "rear_wheel_rim"
+      },
+      {
+        "name": "front_wheel",
+        "center": [
+          0.74,
+          0.34,
+          0
+        ],
+        "outerRadius": 0.34,
+        "tireTube": 0.055,
+        "axis": "z",
+        "tire": "front_wheel_tire",
+        "rim": "front_wheel_rim"
+      }
+    ],
+    "noGroundPenetrationExpected": true,
+    "mirroredBilateral": true,
+    "centerlineMembersSingle": true,
+    "sourceSpecificAssembly": true,
+    "visualReviewRequired": true
+  },
+  "schemaVersion": null,
+  "evidenceStatus": "missing_yolo26_schema_v2",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "reconstructionNote": "車架、油箱/車殼、引擎、依實車配置的排氣、前叉、後視鏡、頭燈、煞車線、擋泥板與側柱均以共享接點完成。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": null,
+    "verdict": "awaiting_human_review",
+    "corrections": [
+      "逐張對照來源圖與固定五方向視圖",
+      "確認車型特有零件、接點與前後輪徑"
+    ],
+    "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+    "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+    "independentMultimodalReview": "required",
+    "hardDefects": [
+      "human_visual_review_required"
+    ],
+    "fixedViews": [
+      "front_3_4",
+      "side_left",
+      "front",
+      "side_right",
+      "rear"
+    ],
+    "critique": "classic_motorcycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+  }
+}

@@ -122,6 +122,37 @@ function normalizePart(row, part, origin) {
   };
 }
 
+function normalizeMeshData(row, raw, origin) {
+  if (!raw || !Array.isArray(raw.vertices) || raw.vertices.length < 9 || raw.vertices.length % 3 !== 0
+    || !Array.isArray(raw.faces) || raw.faces.length < 3 || raw.faces.length % 3 !== 0) {
+    fail(`${row.key} 缺少可供三端共用的 meshData`);
+  }
+  const vertexCount = raw.vertices.length / 3;
+  if (!raw.faces.every((index) => Number.isInteger(index) && index >= 0 && index < vertexCount)) {
+    fail(`${row.key} meshData.faces 超出頂點範圍`);
+  }
+  if (!Array.isArray(raw.colors) || raw.colors.length !== raw.vertices.length
+    || !raw.colors.every(finite)) {
+    fail(`${row.key} meshData.colors 缺失或長度不符`);
+  }
+  if (raw.normals != null && (!Array.isArray(raw.normals) || raw.normals.length !== raw.vertices.length || !raw.normals.every(finite))) {
+    fail(`${row.key} meshData.normals 長度不符`);
+  }
+  if (raw.uvs != null && (!Array.isArray(raw.uvs) || raw.uvs.length !== vertexCount * 2 || !raw.uvs.every(finite))) {
+    fail(`${row.key} meshData.uvs 長度不符`);
+  }
+  const vertices = raw.vertices.map((value, index) => value - origin[index % 3]);
+  return {
+    vertexCount,
+    triangleCount: raw.faces.length / 3,
+    vertices,
+    ...(raw.normals ? { normals: [...raw.normals] } : {}),
+    ...(raw.uvs ? { uvs: [...raw.uvs] } : {}),
+    colors: [...raw.colors],
+    faces: [...raw.faces],
+  };
+}
+
 function adapt(row) {
   if (row.family !== 'vehicle' || row.version !== 6 || row.verStr !== 'v6') {
     fail(`${row.key} 不是正式 v6 vehicle row`);
@@ -138,6 +169,7 @@ function adapt(row) {
   const origin = [(min[0] + max[0]) * 0.5, min[1], (min[2] + max[2]) * 0.5];
   const axles = axleProfile(row, frame);
   const parts = row.parts.map((part) => normalizePart(row, part, origin));
+  const meshData = normalizeMeshData(row, row.meshData, origin);
   return {
     key: row.key,
     id: row.id,
@@ -167,6 +199,7 @@ function adapt(row) {
     axles,
     materials: [...new Set(parts.map((part) => part.materialRole))],
     parts,
+    meshData,
   };
 }
 

@@ -1,0 +1,281 @@
+{
+  "id": "vehicle_motor_vehicle_motor_14892810_OR_m",
+  "sourceImage": "vehicle/motor/14892810_OR_m.webp",
+  "style": "retro_scooter",
+  "symmetryMode": "mirrored_bilateral",
+  "colors": {
+    "roofHex": 13122871,
+    "facadeHex": 14853450,
+    "baseHex": 3420465,
+    "accentHex": 15848867,
+    "darkHex": 1906710,
+    "brightHex": 16775135,
+    "glassHex": 2505288
+  },
+  "totalParts": 61,
+  "partNames": [
+    "rear_wheel_tire",
+    "rear_wheel_rim",
+    "rear_wheel_hub",
+    "rear_wheel_spoke_left_0",
+    "rear_wheel_spoke_left_1",
+    "rear_wheel_spoke_left_2",
+    "rear_wheel_spoke_left_3",
+    "rear_wheel_spoke_left_4",
+    "rear_wheel_spoke_left_5",
+    "rear_wheel_spoke_left_6",
+    "rear_wheel_spoke_left_7",
+    "rear_wheel_spoke_right_0",
+    "rear_wheel_spoke_right_1",
+    "rear_wheel_spoke_right_2",
+    "rear_wheel_spoke_right_3",
+    "rear_wheel_spoke_right_4",
+    "rear_wheel_spoke_right_5",
+    "rear_wheel_spoke_right_6",
+    "rear_wheel_spoke_right_7",
+    "front_wheel_tire",
+    "front_wheel_rim",
+    "front_wheel_hub",
+    "front_wheel_spoke_left_0",
+    "front_wheel_spoke_left_1",
+    "front_wheel_spoke_left_2",
+    "front_wheel_spoke_left_3",
+    "front_wheel_spoke_left_4",
+    "front_wheel_spoke_left_5",
+    "front_wheel_spoke_left_6",
+    "front_wheel_spoke_left_7",
+    "front_wheel_spoke_right_0",
+    "front_wheel_spoke_right_1",
+    "front_wheel_spoke_right_2",
+    "front_wheel_spoke_right_3",
+    "front_wheel_spoke_right_4",
+    "front_wheel_spoke_right_5",
+    "front_wheel_spoke_right_6",
+    "front_wheel_spoke_right_7",
+    "front_wheel_brake_disc",
+    "underbody",
+    "footboard",
+    "front_cowling",
+    "rear_body",
+    "seat",
+    "seat_trim",
+    "front_fork_left",
+    "front_fork_right",
+    "front_axle",
+    "handle_stem",
+    "handlebar",
+    "mirror_left",
+    "mirror_stem_left",
+    "mirror_right",
+    "mirror_stem_right",
+    "headlamp",
+    "windshield",
+    "rear_swingarm",
+    "engine_case",
+    "exhaust_header",
+    "exhaust_muffler",
+    "kickstand"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder",
+    "box",
+    "wedge",
+    "ellipsoid_sphere"
+  ],
+  "structuralContract": {
+    "coordinateFrame": {
+      "nose": "+X",
+      "up": "+Y",
+      "lateral": "+Z"
+    },
+    "thinMembersEndpointDerived": true,
+    "sharedJoints": [
+      {
+        "name": "front_fork_left",
+        "a": [
+          0.38,
+          0.63,
+          -0.12
+        ],
+        "b": [
+          0.615,
+          0.31,
+          -0.12
+        ],
+        "radius": 0.022
+      },
+      {
+        "name": "front_fork_right",
+        "a": [
+          0.38,
+          0.63,
+          0.12
+        ],
+        "b": [
+          0.615,
+          0.31,
+          0.12
+        ],
+        "radius": 0.022
+      },
+      {
+        "name": "handle_stem",
+        "a": [
+          0.39,
+          0.78,
+          0
+        ],
+        "b": [
+          0.34,
+          1.03,
+          0
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "mirror_stem_left",
+        "a": [
+          0.34,
+          1.03,
+          -0.330000000018
+        ],
+        "b": [
+          0.34,
+          1.12,
+          -0.39
+        ],
+        "radius": 0.01
+      },
+      {
+        "name": "mirror_stem_right",
+        "a": [
+          0.34,
+          1.03,
+          0.330000000018
+        ],
+        "b": [
+          0.34,
+          1.12,
+          0.39
+        ],
+        "radius": 0.01
+      },
+      {
+        "name": "rear_swingarm",
+        "a": [
+          -0.615,
+          0.285,
+          0
+        ],
+        "b": [
+          -0.08,
+          0.42,
+          0
+        ],
+        "radius": 0.028
+      },
+      {
+        "name": "exhaust_header",
+        "a": [
+          -0.24,
+          0.45,
+          -0.2
+        ],
+        "b": [
+          -0.6,
+          0.38,
+          -0.2
+        ],
+        "radius": 0.025
+      },
+      {
+        "name": "kickstand",
+        "a": [
+          -0.16,
+          0.4,
+          0.16
+        ],
+        "b": [
+          -0.28,
+          0.035,
+          0.16
+        ],
+        "radius": 0.012
+      }
+    ],
+    "wheelContract": [
+      {
+        "name": "rear_wheel",
+        "center": [
+          -0.615,
+          0.285,
+          0
+        ],
+        "outerRadius": 0.285,
+        "tireTube": 0.065,
+        "axis": "z",
+        "tire": "rear_wheel_tire",
+        "rim": "rear_wheel_rim"
+      },
+      {
+        "name": "front_wheel",
+        "center": [
+          0.615,
+          0.31,
+          0
+        ],
+        "outerRadius": 0.31,
+        "tireTube": 0.065,
+        "axis": "z",
+        "tire": "front_wheel_tire",
+        "rim": "front_wheel_rim"
+      }
+    ],
+    "noGroundPenetrationExpected": true,
+    "mirroredBilateral": true,
+    "centerlineMembersSingle": true,
+    "sourceSpecificAssembly": true,
+    "visualReviewRequired": true
+  },
+  "schemaVersion": null,
+  "evidenceStatus": "missing_yolo26_schema_v2",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "reconstructionNote": "踏板、前整流罩、擋風鏡、左右後視鏡、前叉、引擎、後搖臂、單側排氣管、側柱與前後不同輪徑均完整接合。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": null,
+    "verdict": "awaiting_human_review",
+    "corrections": [
+      "逐張對照來源圖與固定五方向視圖",
+      "確認車型特有零件、接點與前後輪徑"
+    ],
+    "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+    "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+    "independentMultimodalReview": "required",
+    "hardDefects": [
+      "human_visual_review_required"
+    ],
+    "fixedViews": [
+      "front_3_4",
+      "side_left",
+      "front",
+      "side_right",
+      "rear"
+    ],
+    "critique": "retro_scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+  }
+}

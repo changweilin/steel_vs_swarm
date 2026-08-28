@@ -1,0 +1,2086 @@
+{
+  "model": "gpt-5.6-luna",
+  "generatedAt": "2026-08-28T16:52:46.883Z",
+  "humanVerdictsPreserved": true,
+  "candidates": [
+    {
+      "target": "vehicle/bike_000001_1738650793",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_000001_1738650793_9c52e91a_luna_v6",
+      "key": "vehicle/bike_000001_1738650793_9c52e91a_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/000001_1738650793.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "drop_bar_road_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_000001_1738650793_9c52e91a_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_000001_1738650793_9c52e91a_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "parts": 66,
+      "thinMembers": 21
+    },
+    {
+      "target": "vehicle/bike_003002_1725858476",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_003002_1725858476_2e742f06_luna_v6",
+      "key": "vehicle/bike_003002_1725858476_2e742f06_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/003002_1725858476.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_003002_1725858476_2e742f06_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_003002_1725858476_2e742f06_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_10012915_R3_m",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_10012915_R3_m_ab011d1f_luna_v6",
+      "key": "vehicle/bike_10012915_R3_m_ab011d1f_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/10012915_R3_m.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_10012915_R3_m_ab011d1f_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_10012915_R3_m_ab011d1f_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_110295IA-M009_L",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_110295IA-M009_L_50b4863e_luna_v6",
+      "key": "vehicle/bike_110295IA-M009_L_50b4863e_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/110295IA-M009_L.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "drop_bar_road_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_110295IA-M009_L_50b4863e_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_110295IA-M009_L_50b4863e_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "parts": 66,
+      "thinMembers": 21
+    },
+    {
+      "target": "vehicle/bike_110296IA-M009_L",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "key": "vehicle/bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/110296IA-M009_L.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_110296IA-M009_L_c6f0fe84_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_12544404_O_m",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_12544404_O_m_94f41003_luna_v6",
+      "key": "vehicle/bike_12544404_O_m_94f41003_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/12544404_O_m.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "drop_bar_road_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_12544404_O_m_94f41003_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_12544404_O_m_94f41003_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "parts": 66,
+      "thinMembers": 21
+    },
+    {
+      "target": "vehicle/bike_13226803_R_m",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_13226803_R_m_6337be00_luna_v6",
+      "key": "vehicle/bike_13226803_R_m_6337be00_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/13226803_R_m.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_13226803_R_m_6337be00_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_13226803_R_m_6337be00_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_14-_-900-_-_-btwin-8646464_55ff809f_luna_v6",
+      "key": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "folding_city_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "folding_city_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_14-_-900-_-_-btwin-8646464_55ff809f_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_14-_-900-_-_-btwin-8646464_55ff809f_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.761,
+          0.012,
+          -0.24
+        ],
+        "max": [
+          0.761,
+          0.9775,
+          0.24
+        ],
+        "size": [
+          1.522,
+          0.966,
+          0.48
+        ],
+        "rMax": 0.798,
+        "triangles": 1968,
+        "vertices": 1192
+      },
+      "parts": 59,
+      "thinMembers": 15
+    },
+    {
+      "target": "vehicle/bike_19e97a45118b4dedac318903f350414f_R",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "key": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/19e97a45118b4dedac318903f350414f_R.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_3827532_O_m",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_3827532_O_m_f5def028_luna_v6",
+      "key": "vehicle/bike_3827532_O_m_f5def028_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/3827532_O_m.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_3827532_O_m_f5def028_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_3827532_O_m_f5def028_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "key": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/5df81b4da9928fe4b137e2bc3acbae24.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_6756854_OR_m",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "key": "vehicle/bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/6756854_OR_m.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_6756854_OR_m_dc7aea7e_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_800x (1)",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_800x_1__4c4178d7_luna_v6",
+      "key": "vehicle/bike_800x (1)_4c4178d7_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/800x (1).jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "drop_bar_road_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_800x_1__4c4178d7_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_800x_1__4c4178d7_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "parts": 66,
+      "thinMembers": 21
+    },
+    {
+      "target": "vehicle/bike_800x",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_800x_3285847d_luna_v6",
+      "key": "vehicle/bike_800x_3285847d_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/800x.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "child_tricycle",
+      "symmetryMode": "explicit_three_wheel",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "child_tricycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_800x_3285847d_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_800x_3285847d_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.69,
+          0.0093,
+          -0.335
+        ],
+        "max": [
+          0.75,
+          1.075,
+          0.335
+        ],
+        "size": [
+          1.44,
+          1.066,
+          0.67
+        ],
+        "rMax": 0.821,
+        "triangles": 2256,
+        "vertices": 1368
+      },
+      "parts": 75,
+      "thinMembers": 10
+    },
+    {
+      "target": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "mountain_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "parts": 72,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "key": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "folding_gravel_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "folding_gravel_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.926,
+          0.0176,
+          -0.3675
+        ],
+        "max": [
+          0.926,
+          1.0425,
+          0.3675
+        ],
+        "size": [
+          1.852,
+          1.025,
+          0.735
+        ],
+        "rMax": 0.996,
+        "triangles": 2408,
+        "vertices": 1466
+      },
+      "parts": 71,
+      "thinMembers": 18
+    },
+    {
+      "target": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "drop_bar_road_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "parts": 66,
+      "thinMembers": 21
+    },
+    {
+      "target": "vehicle/bike_T-806_blue",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_T-806_blue_672b8c66_luna_v6",
+      "key": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/T-806_blue.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "city_utility_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "city_utility_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_T-806_blue_672b8c66_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_T-806_blue_672b8c66_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.906,
+          0.0166,
+          -0.3675
+        ],
+        "max": [
+          0.906,
+          1.0425,
+          0.3675
+        ],
+        "size": [
+          1.812,
+          1.026,
+          0.735
+        ],
+        "rMax": 0.978,
+        "triangles": 2392,
+        "vertices": 1458
+      },
+      "parts": 71,
+      "thinMembers": 19
+    },
+    {
+      "target": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_323d68c6_luna_v6",
+      "key": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "training_wheel_city_bicycle",
+      "symmetryMode": "explicit_training_wheel_pair",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "training_wheel_city_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_323d68c6_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_323d68c6_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.779,
+          0.0054,
+          -0.462
+        ],
+        "max": [
+          0.779,
+          1.07,
+          0.462
+        ],
+        "size": [
+          1.558,
+          1.065,
+          0.924
+        ],
+        "rMax": 0.906,
+        "triangles": 3432,
+        "vertices": 2091
+      },
+      "parts": 105,
+      "thinMembers": 20
+    },
+    {
+      "target": "vehicle/motor_000001_1672123300",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_000001_1672123300_88ea4c82_luna_v6",
+      "key": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/000001_1672123300.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000001_1672123300_88ea4c82_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_000001_1672123300_88ea4c82_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_000001_1742374978",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_000001_1742374978_4250286e_luna_v6",
+      "key": "vehicle/motor_000001_1742374978_4250286e_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/000001_1742374978.png",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "retro_scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "retro_scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000001_1742374978_4250286e_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_000001_1742374978_4250286e_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.9,
+          0.0139,
+          -0.4946
+        ],
+        "max": [
+          0.925,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.825,
+          1.201,
+          0.989
+        ],
+        "rMax": 1.049,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_000002_1645174811",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_000002_1645174811_b1ef8e63_luna_v6",
+      "key": "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/000002_1645174811.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "maxi_scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "maxi_scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000002_1645174811_b1ef8e63_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_000002_1645174811_b1ef8e63_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.915,
+          0.0147,
+          -0.4946
+        ],
+        "max": [
+          0.945,
+          1.2897,
+          0.4946
+        ],
+        "size": [
+          1.86,
+          1.275,
+          0.989
+        ],
+        "rMax": 1.067,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_10905670_R",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_10905670_R_58b9efa4_luna_v6",
+      "key": "vehicle/motor_10905670_R_58b9efa4_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/10905670_R.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_10905670_R_58b9efa4_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_10905670_R_58b9efa4_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_11871715_O_m",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6",
+      "key": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/11871715_O_m.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_14074013_OR_m",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_14074013_OR_m_15e668c8_luna_v6",
+      "key": "vehicle/motor_14074013_OR_m_15e668c8_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/14074013_OR_m.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_14074013_OR_m_15e668c8_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_14074013_OR_m_15e668c8_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_14892810_OR_m",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "key": "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/14892810_OR_m.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "retro_scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "retro_scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_14892810_OR_m_d4fb62a2_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.9,
+          0.0139,
+          -0.4946
+        ],
+        "max": [
+          0.925,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.825,
+          1.201,
+          0.989
+        ],
+        "rMax": 1.049,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_165019503901",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_165019503901_c719b559_luna_v6",
+      "key": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/165019503901.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "sport_motorcycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "sport_motorcycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_165019503901_c719b559_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_165019503901_c719b559_luna_v6.png",
+      "bounds": {
+        "min": [
+          -1.08,
+          0.0166,
+          -0.4751
+        ],
+        "max": [
+          1.116,
+          1.2701,
+          0.4751
+        ],
+        "size": [
+          2.196,
+          1.254,
+          0.95
+        ],
+        "rMax": 1.213,
+        "triangles": 2920,
+        "vertices": 1781
+      },
+      "parts": 74,
+      "thinMembers": 20
+    },
+    {
+      "target": "vehicle/motor_180512-10030-2-uyEK9",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "key": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/180512-10030-2-uyEK9.png",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "chopper",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "chopper：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_180512-10030-2-uyEK9_21c0827e_luna_v6.png",
+      "bounds": {
+        "min": [
+          -1.3,
+          0.0186,
+          -0.4751
+        ],
+        "max": [
+          1.27,
+          1.22,
+          0.4751
+        ],
+        "size": [
+          2.57,
+          1.201,
+          0.95
+        ],
+        "rMax": 1.384,
+        "triangles": 2760,
+        "vertices": 1680
+      },
+      "parts": 71,
+      "thinMembers": 18
+    },
+    {
+      "target": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "key": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/24917349da43cda536c90d9b274f9e70_1200.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_54175397571_be4ab8de90_b",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "key": "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/54175397571_be4ab8de90_b.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "maxi_scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "maxi_scooter：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_54175397571_be4ab8de90_b_22934ea5_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.915,
+          0.0147,
+          -0.4946
+        ],
+        "max": [
+          0.945,
+          1.2897,
+          0.4946
+        ],
+        "size": [
+          1.86,
+          1.275,
+          0.989
+        ],
+        "rMax": 1.067,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "parts": 61,
+      "thinMembers": 8
+    },
+    {
+      "target": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "key": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "classic_motorcycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "classic_motorcycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6.png",
+      "bounds": {
+        "min": [
+          -1.11,
+          0.0166,
+          -0.4751
+        ],
+        "max": [
+          1.116,
+          1.165,
+          0.4751
+        ],
+        "size": [
+          2.226,
+          1.148,
+          0.95
+        ],
+        "rMax": 1.213,
+        "triangles": 2852,
+        "vertices": 1739
+      },
+      "parts": 70,
+      "thinMembers": 18
+    },
+    {
+      "target": "vehicle/motor_7801666",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_motor_7801666_3a47734e_luna_v6",
+      "key": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "image": "vehicle/motor/7801666.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "classic_motorcycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "classic_motorcycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_7801666_3a47734e_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_motor_7801666_3a47734e_luna_v6.png",
+      "bounds": {
+        "min": [
+          -1.11,
+          0.0166,
+          -0.4751
+        ],
+        "max": [
+          1.116,
+          1.165,
+          0.4751
+        ],
+        "size": [
+          2.226,
+          1.148,
+          0.95
+        ],
+        "rMax": 1.213,
+        "triangles": 2852,
+        "vertices": 1739
+      },
+      "parts": 70,
+      "thinMembers": 18
+    },
+    {
+      "target": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_bike__-26-_-rc-100-_-btwin-8826164_f5a5031f_luna_v6",
+      "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f5a5031f_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "image": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "drop_bar_road_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike__-26-_-rc-100-_-btwin-8826164_f5a5031f_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_bike__-26-_-rc-100-_-btwin-8826164_f5a5031f_luna_v6.png",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "parts": 66,
+      "thinMembers": 21
+    }
+  ]
+}

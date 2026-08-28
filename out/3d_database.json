@@ -1,8 +1,8 @@
 {
   "version": 6,
   "verStr": "v6",
-  "generated_at": "2026-08-27T17:02:12.096Z",
-  "total_objects": 729,
+  "generated_at": "2026-08-28T16:52:46.849Z",
+  "total_objects": 704,
   "families": [
     "building",
     "vehicle",
@@ -46029,726 +46029,6 @@
       "outputDir": "out/3d_data/building/mass/building_mass_01_v6"
     },
     {
-      "id": "vehicle_bike_000001_1738650793_v6",
-      "key": "vehicle/bike_000001_1738650793_61c03cf3_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle_bicycle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/000001_1738650793.jpg",
-      "bounds": {
-        "min": [
-          -1.08,
-          0.1241,
-          -0.3614
-        ],
-        "max": [
-          1.08,
-          0.9509,
-          0.3614
-        ],
-        "size": [
-          2.16,
-          0.827,
-          0.723
-        ],
-        "rMax": 1.139,
-        "triangles": 1312,
-        "vertices": 737
-      },
-      "spec": {
-        "style": "vehicle_bicycle"
-      },
-      "triangles": 1312,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_000001_1738650793_v6"
-    },
-    {
-      "id": "vehicle_bike_003002_1725858476_v6",
-      "key": "vehicle/bike_003002_1725858476_d6efffb7_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/003002_1725858476.jpg",
-      "bounds": {
-        "min": [
-          -1.06,
-          0.16,
-          -0.5002
-        ],
-        "max": [
-          1.06,
-          1.4,
-          0.5002
-        ],
-        "size": [
-          2.12,
-          1.24,
-          1
-        ],
-        "rMax": 1.172,
-        "triangles": 628,
-        "vertices": 380
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 628,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_003002_1725858476_v6"
-    },
-    {
-      "id": "vehicle_bike_10012915_R3_m_v6",
-      "key": "vehicle/bike_10012915_R3_m_20b94748_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/10012915_R3_m.webp",
-      "bounds": {
-        "min": [
-          -1.235,
-          0.2029,
-          -0.3662
-        ],
-        "max": [
-          1.235,
-          0.9482,
-          0.3662
-        ],
-        "size": [
-          2.47,
-          0.745,
-          0.732
-        ],
-        "rMax": 1.288,
-        "triangles": 624,
-        "vertices": 374
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 624,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_10012915_R3_m_v6"
-    },
-    {
-      "id": "vehicle_bike_110295IA-M009_L_v6",
-      "key": "vehicle/bike_110295IA-M009_L_d442e9ed_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/110295IA-M009_L.jpg",
-      "bounds": {
-        "min": [
-          -0.99,
-          0.1986,
-          -0.3709
-        ],
-        "max": [
-          0.99,
-          0.95,
-          0.3709
-        ],
-        "size": [
-          1.98,
-          0.751,
-          0.742
-        ],
-        "rMax": 1.057,
-        "triangles": 436,
-        "vertices": 270
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 436,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_110295IA-M009_L_v6"
-    },
-    {
-      "id": "vehicle_bike_110296IA-M009_L_v6",
-      "key": "vehicle/bike_110296IA-M009_L_fca3d2f7_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/110296IA-M009_L.jpg",
-      "bounds": {
-        "min": [
-          -1.245,
-          0.144,
-          -0.3757
-        ],
-        "max": [
-          1.245,
-          1.265,
-          0.3757
-        ],
-        "size": [
-          2.49,
-          1.121,
-          0.751
-        ],
-        "rMax": 1.3,
-        "triangles": 1168,
-        "vertices": 654
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 1168,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_110296IA-M009_L_v6"
-    },
-    {
-      "id": "vehicle_bike_12544404_O_m_v6",
-      "key": "vehicle/bike_12544404_O_m_a2969dc5_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/12544404_O_m.webp",
-      "bounds": {
-        "min": [
-          -0.385,
-          0.16,
-          -1.3162
-        ],
-        "max": [
-          0.565,
-          1.105,
-          1.3162
-        ],
-        "size": [
-          0.95,
-          0.945,
-          2.632
-        ],
-        "rMax": 1.432,
-        "triangles": 1040,
-        "vertices": 626
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 1040,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_12544404_O_m_v6"
-    },
-    {
-      "id": "vehicle_bike_13226803_R_m_v6",
-      "key": "vehicle/bike_13226803_R_m_93a7ccd1_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/13226803_R_m.webp",
-      "bounds": {
-        "min": [
-          -0.37,
-          -0.15,
-          -0.3519
-        ],
-        "max": [
-          1.32,
-          1.22,
-          0.3519
-        ],
-        "size": [
-          1.69,
-          1.37,
-          0.704
-        ],
-        "rMax": 1.366,
-        "triangles": 856,
-        "vertices": 517
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 856,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_13226803_R_m_v6"
-    },
-    {
-      "id": "vehicle_bike_14-_-900-_-_-btwin-8646464_v6",
-      "key": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_fe9fa5f6_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
-      "bounds": {
-        "min": [
-          -0.815,
-          -0.27,
-          -0.252
-        ],
-        "max": [
-          0.815,
-          1.15,
-          0.252
-        ],
-        "size": [
-          1.63,
-          1.42,
-          0.504
-        ],
-        "rMax": 0.853,
-        "triangles": 524,
-        "vertices": 316
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 524,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_14-_-900-_-_-btwin-8646464_v6"
-    },
-    {
-      "id": "vehicle_bike_19e97a45118b4dedac318903f350414f_R_v6",
-      "key": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_2edb1758_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "realistic",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/19e97a45118b4dedac318903f350414f_R.webp",
-      "bounds": {
-        "min": [
-          -0.375,
-          0.0127,
-          -1.0366
-        ],
-        "max": [
-          0.375,
-          0.87,
-          1.0366
-        ],
-        "size": [
-          0.75,
-          0.857,
-          2.073
-        ],
-        "rMax": 1.102,
-        "triangles": 1360,
-        "vertices": 762
-      },
-      "spec": {
-        "style": "realistic"
-      },
-      "triangles": 1360,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_19e97a45118b4dedac318903f350414f_R_v6"
-    },
-    {
-      "id": "vehicle_bike_3827532_O_m_v6",
-      "key": "vehicle/bike_3827532_O_m_5a95382c_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/3827532_O_m.webp",
-      "bounds": {
-        "min": [
-          -1.22,
-          -0.17,
-          -0.4909
-        ],
-        "max": [
-          1.27,
-          1.38,
-          0.4909
-        ],
-        "size": [
-          2.49,
-          1.55,
-          0.982
-        ],
-        "rMax": 1.362,
-        "triangles": 1008,
-        "vertices": 604
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 1008,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_3827532_O_m_v6"
-    },
-    {
-      "id": "vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_v6",
-      "key": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_bbc285a7_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/5df81b4da9928fe4b137e2bc3acbae24.jpg",
-      "bounds": {
-        "min": [
-          -1.09,
-          0.0893,
-          -0.3709
-        ],
-        "max": [
-          1.09,
-          1.1002,
-          0.3709
-        ],
-        "size": [
-          2.18,
-          1.011,
-          0.742
-        ],
-        "rMax": 1.151,
-        "triangles": 744,
-        "vertices": 430
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 744,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_v6"
-    },
-    {
-      "id": "vehicle_bike_6756854_OR_m_v6",
-      "key": "vehicle/bike_6756854_OR_m_4318f4c3_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/6756854_OR_m.webp",
-      "bounds": {
-        "min": [
-          -0.4,
-          -0.08,
-          -1.4
-        ],
-        "max": [
-          0.4,
-          1.7,
-          1.4
-        ],
-        "size": [
-          0.8,
-          1.78,
-          2.8
-        ],
-        "rMax": 1.456,
-        "triangles": 672,
-        "vertices": 398
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 672,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_6756854_OR_m_v6"
-    },
-    {
-      "id": "vehicle_bike_800x_1__v6",
-      "key": "vehicle/bike_800x (1)_dd41a20a_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/800x (1).jpg",
-      "bounds": {
-        "min": [
-          -0.99,
-          0.2545,
-          -0.3709
-        ],
-        "max": [
-          1.04,
-          1.15,
-          0.3709
-        ],
-        "size": [
-          2.03,
-          0.895,
-          0.742
-        ],
-        "rMax": 1.104,
-        "triangles": 448,
-        "vertices": 278
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 448,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_800x_1__v6"
-    },
-    {
-      "id": "vehicle_bike_800x_v6",
-      "key": "vehicle/bike_800x_0f6397c9_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/800x.jpg",
-      "bounds": {
-        "min": [
-          -0.42,
-          0.1454,
-          -0.9092
-        ],
-        "max": [
-          0.42,
-          0.95,
-          0.2853
-        ],
-        "size": [
-          0.84,
-          0.805,
-          1.195
-        ],
-        "rMax": 1.002,
-        "triangles": 732,
-        "vertices": 435
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 732,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_800x_v6"
-    },
-    {
-      "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_v6",
-      "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_4a125c4d_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
-      "bounds": {
-        "min": [
-          -1.05,
-          0.1243,
-          -0.3804
-        ],
-        "max": [
-          1.05,
-          0.9781,
-          0.3804
-        ],
-        "size": [
-          2.1,
-          0.854,
-          0.761
-        ],
-        "rMax": 1.117,
-        "triangles": 712,
-        "vertices": 416
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 712,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_v6"
-    },
-    {
-      "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_v6",
-      "key": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_5015bbd8_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "asymmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg",
-      "bounds": {
-        "min": [
-          -0.385,
-          -0.15,
-          -1.0662
-        ],
-        "max": [
-          0.385,
-          1.8,
-          1.0662
-        ],
-        "size": [
-          0.77,
-          1.95,
-          2.132
-        ],
-        "rMax": 1.134,
-        "triangles": 748,
-        "vertices": 436
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 748,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_v6"
-    },
-    {
-      "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_v6",
-      "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_10f84c9f_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
-      "bounds": {
-        "min": [
-          -1.235,
-          0.1717,
-          -0.4862
-        ],
-        "max": [
-          1.235,
-          1.075,
-          0.4862
-        ],
-        "size": [
-          2.47,
-          0.903,
-          0.972
-        ],
-        "rMax": 1.327,
-        "triangles": 736,
-        "vertices": 464
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 736,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_v6"
-    },
-    {
-      "id": "vehicle_bike_T-806_blue_v6",
-      "key": "vehicle/bike_T-806_blue_ad4e6ee8_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/T-806_blue.jpg",
-      "bounds": {
-        "min": [
-          -0.98,
-          0.125,
-          -0.3614
-        ],
-        "max": [
-          1.13,
-          1.1202,
-          0.3614
-        ],
-        "size": [
-          2.11,
-          0.995,
-          0.723
-        ],
-        "rMax": 1.186,
-        "triangles": 500,
-        "vertices": 300
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 500,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_T-806_blue_v6"
-    },
-    {
-      "id": "vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_v6",
-      "key": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_2011fdd8_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
-      "bounds": {
-        "min": [
-          -1.015,
-          -0.38,
-          -0.3662
-        ],
-        "max": [
-          1.035,
-          1.52,
-          0.3662
-        ],
-        "size": [
-          2.05,
-          1.9,
-          0.732
-        ],
-        "rMax": 1.098,
-        "triangles": 764,
-        "vertices": 450
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 764,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_v6"
-    },
-    {
-      "id": "vehicle_bike__-26-_-rc-100-_-btwin-8826164_v6",
-      "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f2da84fa_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
-      "bounds": {
-        "min": [
-          -0.53,
-          0.225,
-          -1.0614
-        ],
-        "max": [
-          0.53,
-          1.175,
-          1.0614
-        ],
-        "size": [
-          1.06,
-          0.95,
-          2.123
-        ],
-        "rMax": 1.186,
-        "triangles": 748,
-        "vertices": 454
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 748,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike__-26-_-rc-100-_-btwin-8826164_v6"
-    },
-    {
       "id": "vehicle_car_02_outlander_20211001_menu_v6",
       "key": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
       "family": "vehicle",
@@ -50457,548 +49737,6 @@
       "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy__3_for__v6"
     },
     {
-      "id": "vehicle_motor_000001_1672123300_v6",
-      "key": "vehicle/motor_000001_1672123300_34efdc65_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/000001_1672123300.jpg",
-      "bounds": {
-        "min": [
-          -0.5,
-          0.0105,
-          -1.13
-        ],
-        "max": [
-          0.5,
-          1.46,
-          1.15
-        ],
-        "size": [
-          1,
-          1.45,
-          2.28
-        ],
-        "rMax": 1.254,
-        "triangles": 304,
-        "vertices": 176
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 304,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_000001_1672123300_v6"
-    },
-    {
-      "id": "vehicle_motor_000001_1742374978_v6",
-      "key": "vehicle/motor_000001_1742374978_798df443_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "scooter_retro",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/000001_1742374978.png",
-      "bounds": {
-        "min": [
-          -0.5,
-          0.13,
-          -1.07
-        ],
-        "max": [
-          0.5,
-          2.25,
-          1.0202
-        ],
-        "size": [
-          1,
-          2.12,
-          2.09
-        ],
-        "rMax": 1.181,
-        "triangles": 436,
-        "vertices": 242
-      },
-      "spec": {
-        "style": "scooter_retro"
-      },
-      "triangles": 436,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_000001_1742374978_v6"
-    },
-    {
-      "id": "vehicle_motor_000002_1645174811_v6",
-      "key": "vehicle/motor_000002_1645174811_644204de_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/000002_1645174811.jpg",
-      "bounds": {
-        "min": [
-          -0.425,
-          0,
-          -1.15
-        ],
-        "max": [
-          0.425,
-          1.7,
-          1.15
-        ],
-        "size": [
-          0.85,
-          1.7,
-          2.3
-        ],
-        "rMax": 1.226,
-        "triangles": 260,
-        "vertices": 156
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 260,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_000002_1645174811_v6"
-    },
-    {
-      "id": "vehicle_motor_10905670_R_v6",
-      "key": "vehicle/motor_10905670_R_2d7604a8_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/10905670_R.webp",
-      "bounds": {
-        "min": [
-          -0.35,
-          0.1807,
-          -1.0353
-        ],
-        "max": [
-          0.35,
-          1.46,
-          1.1853
-        ],
-        "size": [
-          0.7,
-          1.279,
-          2.221
-        ],
-        "rMax": 1.236,
-        "triangles": 344,
-        "vertices": 220
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 344,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_10905670_R_v6"
-    },
-    {
-      "id": "vehicle_motor_11871715_O_m_v6",
-      "key": "vehicle/motor_11871715_O_m_746ddcdc_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "scooter",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/11871715_O_m.webp",
-      "bounds": {
-        "min": [
-          -0.71,
-          0.12,
-          -1.0734
-        ],
-        "max": [
-          0.69,
-          1.63,
-          0.8424
-        ],
-        "size": [
-          1.4,
-          1.51,
-          1.916
-        ],
-        "rMax": 1.287,
-        "triangles": 804,
-        "vertices": 494
-      },
-      "spec": {
-        "style": "scooter"
-      },
-      "triangles": 804,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_11871715_O_m_v6"
-    },
-    {
-      "id": "vehicle_motor_14074013_OR_m_v6",
-      "key": "vehicle/motor_14074013_OR_m_adb71ef1_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/14074013_OR_m.webp",
-      "bounds": {
-        "min": [
-          -0.52,
-          -0.25,
-          -0.9
-        ],
-        "max": [
-          0.52,
-          1.5462,
-          1.12
-        ],
-        "size": [
-          1.04,
-          1.796,
-          2.02
-        ],
-        "rMax": 1.235,
-        "triangles": 276,
-        "vertices": 158
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 276,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_14074013_OR_m_v6"
-    },
-    {
-      "id": "vehicle_motor_14892810_OR_m_v6",
-      "key": "vehicle/motor_14892810_OR_m_5f418366_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/14892810_OR_m.webp",
-      "bounds": {
-        "min": [
-          -0.5,
-          0.02,
-          -1.08
-        ],
-        "max": [
-          0.5,
-          1.9344,
-          1.1
-        ],
-        "size": [
-          1,
-          1.914,
-          2.18
-        ],
-        "rMax": 1.208,
-        "triangles": 320,
-        "vertices": 190
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 320,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_14892810_OR_m_v6"
-    },
-    {
-      "id": "vehicle_motor_165019503901_v6",
-      "key": "vehicle/motor_165019503901_38aee327_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "realistic",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/165019503901.jpg",
-      "bounds": {
-        "min": [
-          -0.5,
-          -0.15,
-          -1.2755
-        ],
-        "max": [
-          0.5,
-          1.3758,
-          1.228
-        ],
-        "size": [
-          1,
-          1.526,
-          2.503
-        ],
-        "rMax": 1.37,
-        "triangles": 652,
-        "vertices": 382
-      },
-      "spec": {
-        "style": "realistic"
-      },
-      "triangles": 652,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_165019503901_v6"
-    },
-    {
-      "id": "vehicle_motor_180512-10030-2-uyEK9_v6",
-      "key": "vehicle/motor_180512-10030-2-uyEK9_242bbe10_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "custom_blue_chopper_motorcycle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/180512-10030-2-uyEK9.png",
-      "bounds": {
-        "min": [
-          -0.88,
-          0.05,
-          -1.7421
-        ],
-        "max": [
-          0.88,
-          1.65,
-          1.8516
-        ],
-        "size": [
-          1.76,
-          1.6,
-          3.594
-        ],
-        "rMax": 2.05,
-        "triangles": 1452,
-        "vertices": 877
-      },
-      "spec": {
-        "style": "custom_blue_chopper_motorcycle"
-      },
-      "triangles": 1452,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_180512-10030-2-uyEK9_v6"
-    },
-    {
-      "id": "vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_v6",
-      "key": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_364b3cae_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "realistic",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/24917349da43cda536c90d9b274f9e70_1200.jpg",
-      "bounds": {
-        "min": [
-          -0.36,
-          0.03,
-          -0.95
-        ],
-        "max": [
-          0.36,
-          1.47,
-          1.08
-        ],
-        "size": [
-          0.72,
-          1.44,
-          2.03
-        ],
-        "rMax": 1.138,
-        "triangles": 652,
-        "vertices": 384
-      },
-      "spec": {
-        "style": "realistic"
-      },
-      "triangles": 652,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_v6"
-    },
-    {
-      "id": "vehicle_motor_54175397571_be4ab8de90_b_v6",
-      "key": "vehicle/motor_54175397571_be4ab8de90_b_bc0b0c3c_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "motorcycle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/54175397571_be4ab8de90_b.jpg",
-      "bounds": {
-        "min": [
-          -0.5,
-          0.03,
-          -1.27
-        ],
-        "max": [
-          0.5,
-          1.5962,
-          1.3
-        ],
-        "size": [
-          1,
-          1.566,
-          2.57
-        ],
-        "rMax": 1.393,
-        "triangles": 352,
-        "vertices": 206
-      },
-      "spec": {
-        "style": "motorcycle"
-      },
-      "triangles": 352,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_54175397571_be4ab8de90_b_v6"
-    },
-    {
-      "id": "vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_v6",
-      "key": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1d9d6238_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf.jpg",
-      "bounds": {
-        "min": [
-          -0.45,
-          0.175,
-          -1.32
-        ],
-        "max": [
-          0.8552,
-          1.275,
-          1.35
-        ],
-        "size": [
-          1.305,
-          1.1,
-          2.67
-        ],
-        "rMax": 1.598,
-        "triangles": 336,
-        "vertices": 188
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 336,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_v6"
-    },
-    {
-      "id": "vehicle_motor_7801666_v6",
-      "key": "vehicle/motor_7801666_ace34d8b_v6",
-      "family": "vehicle",
-      "subpart": "motor",
-      "style": "motorcycle",
-      "symmetryMode": "symmetric",
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/motor/7801666.jpg",
-      "bounds": {
-        "min": [
-          -0.44,
-          -0.2,
-          -1.3185
-        ],
-        "max": [
-          0.44,
-          1.35,
-          1.309
-        ],
-        "size": [
-          0.88,
-          1.55,
-          2.627
-        ],
-        "rMax": 1.39,
-        "triangles": 784,
-        "vertices": 465
-      },
-      "spec": {
-        "style": "motorcycle"
-      },
-      "triangles": 784,
-      "outputDir": "out/3d_data/vehicle/motor/vehicle_motor_7801666_v6"
-    },
-    {
-      "id": "vehicle_bike_000001_1738650793_v6",
-      "key": "vehicle/bike_000001_1738650793_e8f230ed_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "road_bicycle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 95,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/000001_1738650793.jpg",
-      "bounds": {
-        "min": [
-          -1.275,
-          0.24,
-          -0.3566
-        ],
-        "max": [
-          1.275,
-          1.175,
-          0.3566
-        ],
-        "size": [
-          2.55,
-          0.935,
-          0.713
-        ],
-        "rMax": 1.324,
-        "triangles": 832,
-        "vertices": 483
-      },
-      "spec": {
-        "style": "road_bicycle"
-      },
-      "triangles": 832,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_000001_1738650793_v6"
-    },
-    {
-      "id": "vehicle_bike_003002_1725858476_v6",
-      "key": "vehicle/bike_003002_1725858476_4cbaf01c_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "Mountain Bicycle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 95,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/003002_1725858476.jpg",
-      "bounds": {
-        "min": [
-          -0.96,
-          0.275,
-          -0.3424
-        ],
-        "max": [
-          0.96,
-          1.249,
-          0.3424
-        ],
-        "size": [
-          1.92,
-          0.974,
-          0.685
-        ],
-        "rMax": 1.019,
-        "triangles": 488,
-        "vertices": 294
-      },
-      "spec": {
-        "style": "Mountain Bicycle"
-      },
-      "triangles": 488,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_003002_1725858476_v6"
-    },
-    {
       "id": "landmark_main_11CC20Geba88ude20Welt-Tianjin20Finance_20Centre-GettyImages-global_0_v6",
       "key": "landmark/main_11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global~0_c5b68e69_v6",
       "family": "landmark",
@@ -53365,857 +52103,6 @@
       },
       "triangles": 180,
       "outputDir": "out/3d_data/landmark/main/landmark_main_progress-m.658f5ec2_v6"
-    },
-    {
-      "id": "vehicle_bike_10012915_R3_m_v6",
-      "key": "vehicle/bike_10012915_R3_m_d354fa66_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/10012915_R3_m.webp",
-      "bounds": {
-        "min": [
-          -1.235,
-          0.04,
-          -0.3662
-        ],
-        "max": [
-          1.235,
-          1.28,
-          0.3662
-        ],
-        "size": [
-          2.47,
-          1.24,
-          0.732
-        ],
-        "rMax": 1.288,
-        "triangles": 740,
-        "vertices": 434
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 740,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_10012915_R3_m_v6"
-    },
-    {
-      "id": "vehicle_bike_110295IA-M009_L_v6",
-      "key": "vehicle/bike_110295IA-M009_L_ed77bbab_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "modern_racing_bicycle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/110295IA-M009_L.jpg",
-      "bounds": {
-        "min": [
-          -1.335,
-          0.0293,
-          -0.3662
-        ],
-        "max": [
-          1.335,
-          1.06,
-          0.3662
-        ],
-        "size": [
-          2.67,
-          1.031,
-          0.732
-        ],
-        "rMax": 1.384,
-        "triangles": 1072,
-        "vertices": 600
-      },
-      "spec": {
-        "style": "modern_racing_bicycle"
-      },
-      "triangles": 1072,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_110295IA-M009_L_v6"
-    },
-    {
-      "id": "vehicle_bike_110296IA-M009_L_v6",
-      "key": "vehicle/bike_110296IA-M009_L_45e1cb14_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/110296IA-M009_L.jpg",
-      "bounds": {
-        "min": [
-          -1.2515,
-          0.03,
-          -0.3819
-        ],
-        "max": [
-          1.2515,
-          1.056,
-          0.3819
-        ],
-        "size": [
-          2.503,
-          1.026,
-          0.764
-        ],
-        "rMax": 1.308,
-        "triangles": 1212,
-        "vertices": 686
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 1212,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_110296IA-M009_L_v6"
-    },
-    {
-      "id": "vehicle_bike_12544404_O_m_v6",
-      "key": "vehicle/bike_12544404_O_m_f57a2f46_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "Road Bicycle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/12544404_O_m.webp",
-      "bounds": {
-        "min": [
-          -1.365,
-          0.03,
-          -0.3662
-        ],
-        "max": [
-          1.365,
-          0.9264,
-          0.3662
-        ],
-        "size": [
-          2.73,
-          0.896,
-          0.732
-        ],
-        "rMax": 1.413,
-        "triangles": 1124,
-        "vertices": 653
-      },
-      "spec": {
-        "style": "Road Bicycle"
-      },
-      "triangles": 1124,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_12544404_O_m_v6"
-    },
-    {
-      "id": "vehicle_bike_13226803_R_m_v6",
-      "key": "vehicle/bike_13226803_R_m_46abb265_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/13226803_R_m.webp",
-      "bounds": {
-        "min": [
-          -0.935,
-          0.175,
-          -0.3662
-        ],
-        "max": [
-          0.925,
-          0.9123,
-          0.3662
-        ],
-        "size": [
-          1.86,
-          0.737,
-          0.732
-        ],
-        "rMax": 1.004,
-        "triangles": 1088,
-        "vertices": 623
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 1088,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_13226803_R_m_v6"
-    },
-    {
-      "id": "vehicle_bike_14-_-900-_-_-btwin-8646464_v6",
-      "key": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_fa8fa62b_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "transportation",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
-      "bounds": {
-        "min": [
-          -0.745,
-          0.05,
-          -0.233
-        ],
-        "max": [
-          0.795,
-          1.07,
-          0.233
-        ],
-        "size": [
-          1.54,
-          1.02,
-          0.466
-        ],
-        "rMax": 0.828,
-        "triangles": 680,
-        "vertices": 400
-      },
-      "spec": {
-        "style": "transportation"
-      },
-      "triangles": 680,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_14-_-900-_-_-btwin-8646464_v6"
-    },
-    {
-      "id": "vehicle_bike_19e97a45118b4dedac318903f350414f_R_v6",
-      "key": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_fe8ed5e4_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/19e97a45118b4dedac318903f350414f_R.webp",
-      "bounds": {
-        "min": [
-          -1.04,
-          0.185,
-          -0.3709
-        ],
-        "max": [
-          1.04,
-          1.225,
-          0.3709
-        ],
-        "size": [
-          2.08,
-          1.04,
-          0.742
-        ],
-        "rMax": 1.104,
-        "triangles": 576,
-        "vertices": 344
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 576,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_19e97a45118b4dedac318903f350414f_R_v6"
-    },
-    {
-      "id": "vehicle_bike_3827532_O_m_v6",
-      "key": "vehicle/bike_3827532_O_m_595e3b28_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 90,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/3827532_O_m.webp",
-      "bounds": {
-        "min": [
-          -1.335,
-          -0.16,
-          -0.3662
-        ],
-        "max": [
-          1.335,
-          1.0652,
-          0.3662
-        ],
-        "size": [
-          2.67,
-          1.225,
-          0.732
-        ],
-        "rMax": 1.384,
-        "triangles": 900,
-        "vertices": 514
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 900,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_3827532_O_m_v6"
-    },
-    {
-      "id": "vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_v6",
-      "key": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_840ae276_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/5df81b4da9928fe4b137e2bc3acbae24.jpg",
-      "bounds": {
-        "min": [
-          -0.925,
-          0.13,
-          -0.3566
-        ],
-        "max": [
-          0.925,
-          1.22,
-          0.3566
-        ],
-        "size": [
-          1.85,
-          1.09,
-          0.713
-        ],
-        "rMax": 0.991,
-        "triangles": 832,
-        "vertices": 486
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 832,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_v6"
-    },
-    {
-      "id": "vehicle_bike_6756854_OR_m_v6",
-      "key": "vehicle/bike_6756854_OR_m_6b6c1577_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/6756854_OR_m.webp",
-      "bounds": {
-        "min": [
-          -0.405,
-          -0.05,
-          -1.3352
-        ],
-        "max": [
-          0.405,
-          1.2621,
-          1.3352
-        ],
-        "size": [
-          0.81,
-          1.312,
-          2.67
-        ],
-        "rMax": 1.395,
-        "triangles": 1204,
-        "vertices": 688
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 1204,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_6756854_OR_m_v6"
-    },
-    {
-      "id": "vehicle_bike_800x_1__v6",
-      "key": "vehicle/bike_800x (1)_dfbe4fd9_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/800x (1).jpg",
-      "bounds": {
-        "min": [
-          -0.875,
-          0.095,
-          -0.3566
-        ],
-        "max": [
-          0.875,
-          0.905,
-          0.3566
-        ],
-        "size": [
-          1.75,
-          0.81,
-          0.713
-        ],
-        "rMax": 0.945,
-        "triangles": 736,
-        "vertices": 441
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 736,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_800x_1__v6"
-    },
-    {
-      "id": "vehicle_bike_800x_v6",
-      "key": "vehicle/bike_800x_98bb8e0c_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/800x.jpg",
-      "bounds": {
-        "min": [
-          -0.43,
-          -0.095,
-          -0.53
-        ],
-        "max": [
-          0.43,
-          1.125,
-          0.53
-        ],
-        "size": [
-          0.86,
-          1.22,
-          1.06
-        ],
-        "rMax": 0.682,
-        "triangles": 720,
-        "vertices": 392
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 720,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_800x_v6"
-    },
-    {
-      "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_0_v6",
-      "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af~0_1a8818ab_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "realistic",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
-      "bounds": {
-        "min": [
-          -1.8034,
-          -0.5232,
-          -1.087
-        ],
-        "max": [
-          1.25,
-          1.6266,
-          1.12
-        ],
-        "size": [
-          3.053,
-          2.15,
-          2.207
-        ],
-        "rMax": 2.106,
-        "triangles": 724,
-        "vertices": 407
-      },
-      "spec": {
-        "style": "realistic"
-      },
-      "triangles": 724,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_0_v6"
-    },
-    {
-      "id": "vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1_v6",
-      "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af~1_26ca6168_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
-      "bounds": {
-        "min": [
-          -0.4,
-          0.4,
-          -0.3804
-        ],
-        "max": [
-          0.4,
-          1.6265,
-          0.3804
-        ],
-        "size": [
-          0.8,
-          1.227,
-          0.761
-        ],
-        "rMax": 0.552,
-        "triangles": 532,
-        "vertices": 301
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 532,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1_v6"
-    },
-    {
-      "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_0_v6",
-      "key": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1~0_dfd17ffa_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg",
-      "bounds": {
-        "min": [
-          -0.9843,
-          -0.05,
-          -1.035
-        ],
-        "max": [
-          0.9843,
-          1.0236,
-          1.035
-        ],
-        "size": [
-          1.969,
-          1.074,
-          2.07
-        ],
-        "rMax": 1.428,
-        "triangles": 988,
-        "vertices": 541
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 988,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_0_v6"
-    },
-    {
-      "id": "vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_1_v6",
-      "key": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1~1_a90206cb_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "photorealistic",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg",
-      "bounds": {
-        "min": [
-          -0.535,
-          0.11,
-          -0.3662
-        ],
-        "max": [
-          0.56,
-          1.5,
-          0.5296
-        ],
-        "size": [
-          1.095,
-          1.39,
-          0.896
-        ],
-        "rMax": 0.771,
-        "triangles": 1040,
-        "vertices": 563
-      },
-      "spec": {
-        "style": "photorealistic"
-      },
-      "triangles": 1040,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_1_v6"
-    },
-    {
-      "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_0_v6",
-      "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~0_2b058e6e_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 90,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
-      "bounds": {
-        "min": [
-          -0.535,
-          -0.18,
-          -0.53
-        ],
-        "max": [
-          0.535,
-          1.15,
-          0.3662
-        ],
-        "size": [
-          1.07,
-          1.33,
-          0.896
-        ],
-        "rMax": 0.753,
-        "triangles": 1228,
-        "vertices": 682
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 1228,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_0_v6"
-    },
-    {
-      "id": "vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_1_v6",
-      "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768~1_086a3b67_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
-      "bounds": {
-        "min": [
-          -0.5,
-          -0.585,
-          -0.9843
-        ],
-        "max": [
-          0.53,
-          1.485,
-          0.9843
-        ],
-        "size": [
-          1.03,
-          2.07,
-          1.969
-        ],
-        "rMax": 1.118,
-        "triangles": 548,
-        "vertices": 303
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 548,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_1_v6"
-    },
-    {
-      "id": "vehicle_bike_T-806_blue_0_v6",
-      "key": "vehicle/bike_T-806_blue~0_d2ecf363_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "Industrial Design Vehicle Model",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/T-806_blue.jpg",
-      "bounds": {
-        "min": [
-          -0.39,
-          0.15,
-          -0.3709
-        ],
-        "max": [
-          0.39,
-          0.84,
-          0.375
-        ],
-        "size": [
-          0.78,
-          0.69,
-          0.746
-        ],
-        "rMax": 0.541,
-        "triangles": 776,
-        "vertices": 429
-      },
-      "spec": {
-        "style": "Industrial Design Vehicle Model"
-      },
-      "triangles": 776,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_T-806_blue_0_v6"
-    },
-    {
-      "id": "vehicle_bike_T-806_blue_1_v6",
-      "key": "vehicle/bike_T-806_blue~1_aa7a2e6c_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/T-806_blue.jpg",
-      "bounds": {
-        "min": [
-          -0.4604,
-          -0.0114,
-          -0.355
-        ],
-        "max": [
-          0.38,
-          1.3761,
-          0.355
-        ],
-        "size": [
-          0.84,
-          1.388,
-          0.71
-        ],
-        "rMax": 0.581,
-        "triangles": 708,
-        "vertices": 395
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 708,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_T-806_blue_1_v6"
-    },
-    {
-      "id": "vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_v6",
-      "key": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_394cf6bd_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "realistic",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
-      "bounds": {
-        "min": [
-          -1.15,
-          0.04,
-          -0.3091
-        ],
-        "max": [
-          1.15,
-          0.9298,
-          0.72
-        ],
-        "size": [
-          2.3,
-          0.89,
-          1.029
-        ],
-        "rMax": 1.357,
-        "triangles": 1064,
-        "vertices": 615
-      },
-      "spec": {
-        "style": "realistic"
-      },
-      "triangles": 1064,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_v6"
-    },
-    {
-      "id": "vehicle_bike__-26-_-rc-100-_-btwin-8826164_0_v6",
-      "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~0_4ada33d7_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle/bike",
-      "symmetryMode": "symmetric",
-      "similarityScore": 92,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
-      "bounds": {
-        "min": [
-          -0.885,
-          -0.03,
-          -0.5
-        ],
-        "max": [
-          0.4166,
-          0.875,
-          0.52
-        ],
-        "size": [
-          1.302,
-          0.905,
-          1.02
-        ],
-        "rMax": 1.016,
-        "triangles": 584,
-        "vertices": 337
-      },
-      "spec": {
-        "style": "vehicle/bike"
-      },
-      "triangles": 584,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike__-26-_-rc-100-_-btwin-8826164_0_v6"
-    },
-    {
-      "id": "vehicle_bike__-26-_-rc-100-_-btwin-8826164_1_v6",
-      "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164~1_1d0d8858_v6",
-      "family": "vehicle",
-      "subpart": "bike",
-      "style": "vehicle",
-      "symmetryMode": "symmetric",
-      "similarityScore": 90,
-      "version": 6,
-      "verStr": "v6",
-      "image": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
-      "bounds": {
-        "min": [
-          -1.32,
-          0.0099,
-          -1.035
-        ],
-        "max": [
-          0.9843,
-          1.9501,
-          1.035
-        ],
-        "size": [
-          2.304,
-          1.94,
-          2.07
-        ],
-        "rMax": 1.677,
-        "triangles": 736,
-        "vertices": 437
-      },
-      "spec": {
-        "style": "vehicle"
-      },
-      "triangles": 736,
-      "outputDir": "out/3d_data/vehicle/bike/vehicle_bike__-26-_-rc-100-_-btwin-8826164_1_v6"
     },
     {
       "id": "vehicle_car_02_outlander_20211001_menu_v6",
@@ -70901,6 +68788,1392 @@
       },
       "triangles": 1440,
       "outputDir": "out/3d_data/tree/sh_boxwood/tree_tree_sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7_6b1c1574_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_000001_1738650793_9c52e91a_luna_v6",
+      "key": "vehicle/bike_000001_1738650793_9c52e91a_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/000001_1738650793.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "spec": {
+        "style": "drop_bar_road_bicycle"
+      },
+      "triangles": 2128,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_000001_1738650793_9c52e91a_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_003002_1725858476_2e742f06_luna_v6",
+      "key": "vehicle/bike_003002_1725858476_2e742f06_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/003002_1725858476.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_003002_1725858476_2e742f06_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_10012915_R3_m_ab011d1f_luna_v6",
+      "key": "vehicle/bike_10012915_R3_m_ab011d1f_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/10012915_R3_m.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_10012915_R3_m_ab011d1f_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_110295IA-M009_L_50b4863e_luna_v6",
+      "key": "vehicle/bike_110295IA-M009_L_50b4863e_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/110295IA-M009_L.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "spec": {
+        "style": "drop_bar_road_bicycle"
+      },
+      "triangles": 2128,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_110295IA-M009_L_50b4863e_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "key": "vehicle/bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/110296IA-M009_L.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_110296IA-M009_L_c6f0fe84_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_12544404_O_m_94f41003_luna_v6",
+      "key": "vehicle/bike_12544404_O_m_94f41003_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/12544404_O_m.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "spec": {
+        "style": "drop_bar_road_bicycle"
+      },
+      "triangles": 2128,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_12544404_O_m_94f41003_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_13226803_R_m_6337be00_luna_v6",
+      "key": "vehicle/bike_13226803_R_m_6337be00_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/13226803_R_m.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_13226803_R_m_6337be00_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_14-_-900-_-_-btwin-8646464_55ff809f_luna_v6",
+      "key": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "folding_city_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.761,
+          0.012,
+          -0.24
+        ],
+        "max": [
+          0.761,
+          0.9775,
+          0.24
+        ],
+        "size": [
+          1.522,
+          0.966,
+          0.48
+        ],
+        "rMax": 0.798,
+        "triangles": 1968,
+        "vertices": 1192
+      },
+      "spec": {
+        "style": "folding_city_bicycle"
+      },
+      "triangles": 1968,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_14-_-900-_-_-btwin-8646464_55ff809f_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "key": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/19e97a45118b4dedac318903f350414f_R.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_3827532_O_m_f5def028_luna_v6",
+      "key": "vehicle/bike_3827532_O_m_f5def028_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/3827532_O_m.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_3827532_O_m_f5def028_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "key": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/5df81b4da9928fe4b137e2bc3acbae24.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "key": "vehicle/bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/6756854_OR_m.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_6756854_OR_m_dc7aea7e_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_800x_1__4c4178d7_luna_v6",
+      "key": "vehicle/bike_800x (1)_4c4178d7_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/800x (1).jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "spec": {
+        "style": "drop_bar_road_bicycle"
+      },
+      "triangles": 2128,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_800x_1__4c4178d7_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_800x_3285847d_luna_v6",
+      "key": "vehicle/bike_800x_3285847d_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "child_tricycle",
+      "symmetryMode": "explicit_three_wheel",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/800x.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.69,
+          0.0093,
+          -0.335
+        ],
+        "max": [
+          0.75,
+          1.075,
+          0.335
+        ],
+        "size": [
+          1.44,
+          1.066,
+          0.67
+        ],
+        "rMax": 0.821,
+        "triangles": 2256,
+        "vertices": 1368
+      },
+      "spec": {
+        "style": "child_tricycle"
+      },
+      "triangles": 2256,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_800x_3285847d_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "mountain_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/e5823366c7ed43f3b8e2c62ce0bc59af.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.93,
+          0.0181,
+          -0.3675
+        ],
+        "max": [
+          0.93,
+          1.0325,
+          0.3675
+        ],
+        "size": [
+          1.86,
+          1.014,
+          0.735
+        ],
+        "rMax": 1,
+        "triangles": 2432,
+        "vertices": 1480
+      },
+      "spec": {
+        "style": "mountain_bicycle"
+      },
+      "triangles": 2432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "key": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "folding_gravel_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/folding-gravel-bike-changebike-gf-102g-b1.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.926,
+          0.0176,
+          -0.3675
+        ],
+        "max": [
+          0.926,
+          1.0425,
+          0.3675
+        ],
+        "size": [
+          1.852,
+          1.025,
+          0.735
+        ],
+        "rMax": 0.996,
+        "triangles": 2408,
+        "vertices": 1466
+      },
+      "spec": {
+        "style": "folding_gravel_bicycle"
+      },
+      "triangles": 2408,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "spec": {
+        "style": "drop_bar_road_bicycle"
+      },
+      "triangles": 2128,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_T-806_blue_672b8c66_luna_v6",
+      "key": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "city_utility_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/T-806_blue.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.906,
+          0.0166,
+          -0.3675
+        ],
+        "max": [
+          0.906,
+          1.0425,
+          0.3675
+        ],
+        "size": [
+          1.812,
+          1.026,
+          0.735
+        ],
+        "rMax": 0.978,
+        "triangles": 2392,
+        "vertices": 1458
+      },
+      "spec": {
+        "style": "city_utility_bicycle"
+      },
+      "triangles": 2392,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_T-806_blue_672b8c66_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_323d68c6_luna_v6",
+      "key": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "training_wheel_city_bicycle",
+      "symmetryMode": "explicit_training_wheel_pair",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.779,
+          0.0054,
+          -0.462
+        ],
+        "max": [
+          0.779,
+          1.07,
+          0.462
+        ],
+        "size": [
+          1.558,
+          1.065,
+          0.924
+        ],
+        "rMax": 0.906,
+        "triangles": 3432,
+        "vertices": 2091
+      },
+      "spec": {
+        "style": "training_wheel_city_bicycle"
+      },
+      "triangles": 3432,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_323d68c6_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_000001_1672123300_88ea4c82_luna_v6",
+      "key": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/000001_1672123300.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000001_1672123300_88ea4c82_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_000001_1742374978_4250286e_luna_v6",
+      "key": "vehicle/motor_000001_1742374978_4250286e_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "retro_scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/000001_1742374978.png",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.9,
+          0.0139,
+          -0.4946
+        ],
+        "max": [
+          0.925,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.825,
+          1.201,
+          0.989
+        ],
+        "rMax": 1.049,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "retro_scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000001_1742374978_4250286e_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_000002_1645174811_b1ef8e63_luna_v6",
+      "key": "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "maxi_scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/000002_1645174811.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.915,
+          0.0147,
+          -0.4946
+        ],
+        "max": [
+          0.945,
+          1.2897,
+          0.4946
+        ],
+        "size": [
+          1.86,
+          1.275,
+          0.989
+        ],
+        "rMax": 1.067,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "maxi_scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000002_1645174811_b1ef8e63_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_10905670_R_58b9efa4_luna_v6",
+      "key": "vehicle/motor_10905670_R_58b9efa4_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/10905670_R.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_10905670_R_58b9efa4_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6",
+      "key": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/11871715_O_m.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_14074013_OR_m_15e668c8_luna_v6",
+      "key": "vehicle/motor_14074013_OR_m_15e668c8_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/14074013_OR_m.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_14074013_OR_m_15e668c8_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "key": "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "retro_scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/14892810_OR_m.webp",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.9,
+          0.0139,
+          -0.4946
+        ],
+        "max": [
+          0.925,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.825,
+          1.201,
+          0.989
+        ],
+        "rMax": 1.049,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "retro_scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_14892810_OR_m_d4fb62a2_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_165019503901_c719b559_luna_v6",
+      "key": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "sport_motorcycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/165019503901.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -1.08,
+          0.0166,
+          -0.4751
+        ],
+        "max": [
+          1.116,
+          1.2701,
+          0.4751
+        ],
+        "size": [
+          2.196,
+          1.254,
+          0.95
+        ],
+        "rMax": 1.213,
+        "triangles": 2920,
+        "vertices": 1781
+      },
+      "spec": {
+        "style": "sport_motorcycle"
+      },
+      "triangles": 2920,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_165019503901_c719b559_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "key": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "chopper",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/180512-10030-2-uyEK9.png",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -1.3,
+          0.0186,
+          -0.4751
+        ],
+        "max": [
+          1.27,
+          1.22,
+          0.4751
+        ],
+        "size": [
+          2.57,
+          1.201,
+          0.95
+        ],
+        "rMax": 1.384,
+        "triangles": 2760,
+        "vertices": 1680
+      },
+      "spec": {
+        "style": "chopper"
+      },
+      "triangles": 2760,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_180512-10030-2-uyEK9_21c0827e_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "key": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/24917349da43cda536c90d9b274f9e70_1200.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.89,
+          0.0135,
+          -0.4946
+        ],
+        "max": [
+          0.915,
+          1.2153,
+          0.4946
+        ],
+        "size": [
+          1.805,
+          1.202,
+          0.989
+        ],
+        "rMax": 1.04,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "key": "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "maxi_scooter",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/54175397571_be4ab8de90_b.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.915,
+          0.0147,
+          -0.4946
+        ],
+        "max": [
+          0.945,
+          1.2897,
+          0.4946
+        ],
+        "size": [
+          1.86,
+          1.275,
+          0.989
+        ],
+        "rMax": 1.067,
+        "triangles": 2220,
+        "vertices": 1358
+      },
+      "spec": {
+        "style": "maxi_scooter"
+      },
+      "triangles": 2220,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_54175397571_be4ab8de90_b_22934ea5_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "key": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "classic_motorcycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -1.11,
+          0.0166,
+          -0.4751
+        ],
+        "max": [
+          1.116,
+          1.165,
+          0.4751
+        ],
+        "size": [
+          2.226,
+          1.148,
+          0.95
+        ],
+        "rMax": 1.213,
+        "triangles": 2852,
+        "vertices": 1739
+      },
+      "spec": {
+        "style": "classic_motorcycle"
+      },
+      "triangles": 2852,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_motor_7801666_3a47734e_luna_v6",
+      "key": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "family": "vehicle",
+      "subpart": "motor",
+      "style": "classic_motorcycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/motor/7801666.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -1.11,
+          0.0166,
+          -0.4751
+        ],
+        "max": [
+          1.116,
+          1.165,
+          0.4751
+        ],
+        "size": [
+          2.226,
+          1.148,
+          0.95
+        ],
+        "rMax": 1.213,
+        "triangles": 2852,
+        "vertices": 1739
+      },
+      "spec": {
+        "style": "classic_motorcycle"
+      },
+      "triangles": 2852,
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_7801666_3a47734e_luna_v6"
+    },
+    {
+      "id": "vehicle_vehicle_bike__-26-_-rc-100-_-btwin-8826164_f5a5031f_luna_v6",
+      "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f5a5031f_luna_v6",
+      "family": "vehicle",
+      "subpart": "bike",
+      "style": "drop_bar_road_bicycle",
+      "symmetryMode": "mirrored_bilateral",
+      "similarityScore": null,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "status": "awaiting_human_review",
+      "image": "vehicle/bike/兒童款-26-彎把公路車-rc-100-白色-btwin-8826164.jpg",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -0.895,
+          0.0169,
+          -0.2082
+        ],
+        "max": [
+          0.895,
+          1.0625,
+          0.2082
+        ],
+        "size": [
+          1.79,
+          1.046,
+          0.416
+        ],
+        "rMax": 0.919,
+        "triangles": 2128,
+        "vertices": 1286
+      },
+      "spec": {
+        "style": "drop_bar_road_bicycle"
+      },
+      "triangles": 2128,
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike__-26-_-rc-100-_-btwin-8826164_f5a5031f_luna_v6"
     }
   ]
 }
