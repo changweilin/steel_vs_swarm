@@ -2,7 +2,7 @@
 // CPU 只在施放時寫入 spawn/data/color 欄位；生命週期、位移、尺寸與淡出由 GPU 計算。
 import * as THREE from 'three';
 import { lowPower } from './mobile.js';
-import { markShared } from './toon.js';
+import { markShared, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
 
 export const PARTICLE_CAPACITY_NORMAL = 1024;
 export const PARTICLE_CAPACITY_LOW = 512;
@@ -69,11 +69,13 @@ const VS = `
   }
 `;
 const FS = `
+  ${INK_INFO_DECL}
   varying vec4 vColor;
   varying vec2 vUv;
   void main() {
     float edge = 1.0 - smoothstep(0.28, 1.0, length(vUv - 0.5) * 2.0);
     gl_FragColor = vec4(vColor.rgb, vColor.a * edge);
+    ${INK_INFO_NONE}
   }
 `;
 

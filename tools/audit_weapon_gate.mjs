@@ -1461,8 +1461,9 @@ sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直�
     }
     const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
     const starburst = () => {};
+    const stepProjectileFx = () => {};
     const raySolid = (o) => o.isMesh === true;
-    const env = { THREE: { Vector3: V3 }, BALLISTIC, SEEK, seekTurn, ARC_MAXP, starburst, raySolid,
+    const env = { THREE: { Vector3: V3 }, BALLISTIC, SEEK, seekTurn, ARC_MAXP, starburst, stepProjectileFx, raySolid,
       shotV0, trajClass, lobMinRange, blastCoreR, altRangeF, LOS, altRangeMax,
       _TMP_A: new V3(), _TMP_B: new V3(), _TMP_C: new V3(), _FWD_Z: new V3(0, 0, 1) };
     const M = (n) => pickMethod(n, G, env);
