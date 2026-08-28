@@ -86,9 +86,10 @@ jobs:
           node tools/audit_wildlife.mjs
           node tools/audit_anim_weights.mjs
           node tools/audit_audio_layers.mjs
-          # 線工切面樁:不帶 --venue 時只跑離線那幾段(帶了要 Overpass,同 venue_biome 的理由)
           node tools/audit_zone_cut.mjs
           node tools/audit_damp_fps.mjs
+          node tools/audit_daynight.mjs
+          node tools/audit_weather_dynamics.mjs
 
       - name: 平衡不變式
         run: npm run bal

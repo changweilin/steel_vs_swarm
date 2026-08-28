@@ -1215,8 +1215,7 @@ const CEL_SEA_GLSL = `
  * dt 夾在 [0, 0.25]:分頁切回來的那一幀 dt 可能是好幾秒,不夾的話整片林子會抽一下。
  */
 export function stepCelWind(dt) {
-  const ws = _weatherWind.waveSpeed?.value ?? 1.0;
-  _windT.value += Math.min(0.25, Math.max(0, dt || 0)) * ws;
+  _windT.value += Math.min(0.25, Math.max(0, dt || 0));
 }
 
 /** 目前的風時鐘(秒);雲朵那半(environment.js)與植被同吃一個時鐘 */
