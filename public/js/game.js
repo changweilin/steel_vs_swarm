@@ -32,7 +32,7 @@ import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampR
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { animWeights } from './animweights.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
+import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
@@ -3790,7 +3790,7 @@ export class BattleClient {
         const mesh = projectileMesh({ type: 'missile' }, { hue: 0xff6633 });
         mesh.scale.setScalar(1.55);
         this.scene.add(mesh);
-        ms = { mesh, tgt: new THREE.Vector3(), prev: new THREE.Vector3() };
+        ms = { mesh, tgt: new THREE.Vector3(), prev: new THREE.Vector3(), age: 0 };
         const y0 = this.terrain.heightAt(s.x, -s.z) + s.y;
         mesh.position.set(s.x, y0, -s.z);
         ms.tgt.copy(mesh.position);
@@ -4077,6 +4077,7 @@ export class BattleClient {
 
   _updateMissiles(dt) {
     for (const ms of this.samMeshes.values()) {
+      ms.age += dt;
       const p = ms.mesh.position;
       p.lerp(ms.tgt, lerpFPS(10, dt));
       // 朝飛行方向 + 煙尾
@@ -4085,6 +4086,7 @@ export class BattleClient {
         // projectileMesh 幾何 +z 朝前(舊 SAM 錐是 +y;2026-07-22 彈藥同源後統一 +z)
         ms.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir.normalize());
       }
+      stepProjectileFx(ms.mesh, ms.age, 260);
       ms.smoke = (ms.smoke || 0) + dt;
       if (ms.smoke > 0.06) {
         ms.smoke = 0;
@@ -4711,7 +4713,7 @@ export class BattleClient {
     this._visShells.push({
       pos: from.clone(), vel,
       origin: from.clone(), max: (def.range || 300) * 1.35, mesh,   // 射程 = 以射擊點為中心的球面(與自機彈體同一把尺)
-      cyclone: null, cycAcc: 0, cycCol: this._shotCols(side).col,
+      cyclone: null, cycAcc: 0, cycCol: this._shotCols(side).col, age: 0,
     });
     return ldir;
   }
@@ -4720,6 +4722,7 @@ export class BattleClient {
   _updateVisShells(dt) {
     for (let i = this._visShells.length - 1; i >= 0; i--) {
       const b = this._visShells[i];
+      b.age += dt;
       const prev = b.pos.clone();
       b.vel.y -= BALLISTIC.G * dt;
       b.pos.addScaledVector(b.vel, dt);
@@ -4739,6 +4742,7 @@ export class BattleClient {
       }
       b.mesh.position.copy(b.pos);
       if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(_FWD_Z, seg.normalize());
+      stepProjectileFx(b.mesh, b.age, b.vel.length());
       if (b.cyclone) this._spinCyclone(b, dt);
     }
   }
@@ -7148,6 +7152,7 @@ export class BattleClient {
         // 彈體一律對準航向(2026-07-22 彈藥同源:火箭/飛彈也是有頭尾的彈體,不再是無方向灰球)
         // seg 在 len > 0.01 的分支已就地正規化;此處只補 0.001~0.01 的極短段
         if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(_FWD_Z, len > 0.01 ? seg : seg.normalize());
+        stepProjectileFx(b.mesh, b.age, b.mv);
         if (b.cyclone) this._spinCyclone(b, dt);
         continue;
       }
@@ -7358,22 +7363,21 @@ export class BattleClient {
     beamLine(this.scene, this.effects, from, to, col,
       heavy ? { ttl: 0.30, w: 0.30 } : { ttl: 0.13, w: 0.075 });
     if (heavy) beamLine(this.scene, this.effects, from, to, hot, { ttl: 0.18, w: 0.11 });  // 高熱內芯
-    if (impact) starburst(this.scene, this.effects, to.x, to.y, to.z, heavy ? 4.2 : 1.6, col);
+    if (impact) impactBurst(this.scene, this.effects, to,
+      { r: heavy ? 4.2 : 1.6, color: col, core: hot, heavy });
   }
 
   /** 槍口爆閃(世界座標):heavy 加一圈衝擊環 */
   _muzzleBurst(pos, heavy, side) {
     const { col, hot } = this._shotCols(side);
-    starburst(this.scene, this.effects, pos.x, pos.y, pos.z, heavy ? 3.4 : 1.3, hot);
-    if (heavy) {
-      starburst(this.scene, this.effects, pos.x, pos.y, pos.z, 1.8, col);
-      shockRing(this.scene, this.effects, pos.x, pos.y, pos.z, 2.6, col);
-    }
+    impactBurst(this.scene, this.effects, pos,
+      { r: heavy ? 2.6 : 1.3, color: col, core: hot, heavy });
   }
 
   _explosion(x, y, z, r, color) {
-    // 漫畫星爆閃光:150ms 硬邊放大淡出(所有爆炸共通的第一拍)
-    starburst(this.scene, this.effects, x, y, z, r * 1.7, color);
+    // 接觸白芯 → 色彩綻放 → 衝擊環，所有爆炸共用同一拍。
+    impactBurst(this.scene, this.effects, new THREE.Vector3(x, y, z),
+      { r, color, core: 0xfff3d0, heavy: true });
     const n = 26;
     const pos = new Float32Array(n * 3);
     const vels = [];

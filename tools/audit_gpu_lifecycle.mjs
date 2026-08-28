@@ -7,7 +7,7 @@
 //      (193² = 73,728 個三角形,three 每次逐面線性掃完 ⇒ 每顆子彈每幀 ~1ms)。
 //   ② 一次性 3D 物件從場景移除時 MUST 釋放 GPU 資源:`scene.remove` 不會 dispose 幾何/材質,
 //      three 靠 dispose 事件回收 —— 漏掉就是「打越久越卡」。彈體走物件池(_dropBullet)、
-//      特效走 _freeEffect。
+//      特效走 _freeEffect；InstancedMesh 另有 instance buffer，必須顯式 dispose。
 //   ③ 共用幾何 MUST 經 toon.js `markShared` 註冊(否則 disposeTree 會把整場共用的那份放掉,
 //      之後所有借用者變空白)。
 //   ④ 高頻特效 MUST NOT 每次新建幾何:beamLine / axisCylinder / shockRing / 能量珠一律
@@ -40,7 +40,9 @@ const gameSrc = [
   ['--break-resgov-flip', /if \(g\.flips >= RES_GOV\.FLIP_MAX\) g\.off = true;/, ''],
   ['--break-resgov-hidden', /if \(typeof document !== 'undefined' && document\.hidden\) return;/, ''],
 ].reduce((s, [tag, re, to]) => bend(s, tag, re, to), game);
-const G = code(gameSrc), V = code(vfx);
+const toonSrc = bend(toon, '--break-instance-dispose', /\n\s*if \(o\.isInstancedMesh\) o\.dispose\(\);/, '');
+const vfxSrc = bend(vfx, '--break-vfx-instance', /new THREE\.InstancedMesh/, 'new THREE.Mesh');
+const G = code(gameSrc), V = code(vfxSrc), T = code(toonSrc);
 
 console.log('== 表現層資源生命週期稽核 ==\n');
 
@@ -70,6 +72,8 @@ console.log('\n② 一次性物件回收');
   ok(/for \(const e of this\.effects\) this\._freeEffect\(e\)/.test(G),
     'dispose():離場時清空特效(不把上一局的緩衝帶進下一局)');
   ok(/this\._projPool/.test(G) && /disposeTree\(m\)/.test(G), 'dispose():彈體池一併釋放');
+  ok(/if \(o\.isInstancedMesh\) o\.dispose\(\)/.test(T),
+    'disposeTree 顯式釋放 InstancedMesh 自有的 instance buffer');
 }
 
 console.log('\n③ 共用幾何註冊');
@@ -113,6 +117,10 @@ console.log('\n④ 高頻特效不重配幾何');
   }
   ok(/const _numTex = new Map\(\)/.test(V), '傷害數字貼圖有快取(不再每發上傳一張)');
   ok(!/dispose\(\) \{ mat\.map\.dispose\(\)/.test(V), '快取貼圖 MUST NOT 被單次特效 dispose');
+  ok((fn('gundamBeam').match(/new THREE\.InstancedMesh/g) || []).length === 1,
+    '光束行進環合併為單一 InstancedMesh(draw call 不隨環數增加)');
+  ok((fn('ionBreath').match(/new THREE\.InstancedMesh/g) || []).length === 2,
+    '離子珠 / 電弧各合併為一個 InstancedMesh(draw call 固定為 2)');
 }
 
 console.log('\n⑤ 觸控裝置的填充率設定');

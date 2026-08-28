@@ -488,6 +488,30 @@ function anchorCaster(g, P, dy = null) {
  *  P.cap = 呼叫端取景預算 —— 展示台鏡頭框不住絕對下限,一律最後夾) */
 const clampR = (P, selfK, cap = 120) => Math.min(Math.max(P.r || 0, P.scale * selfK), cap, P.cap);
 
+/**
+ * 全招式共用的接觸節拍:短促收束後釋放，讓不同原型仍共享「蓄勢→命中→餘韻」語法。
+ * 尺寸只綁機體尺度，不冒充範圍判定；單一共享平面使每次施放只增加一個 draw call。
+ */
+function fxCastBeat(scene, effects, P) {
+  const m = flat(new THREE.Mesh(PLANE, M(softRingTex(), P.col, P.big ? 0.9 : 0.72)));
+  const rv = Math.min(P.cap, P.scale * (P.big ? 2.8 : 1.9));
+  m.position.copy(P.at);
+  m.position.y += 0.08;
+  m.userData.noOutline = true;
+  scene.add(m);
+  effects.push({
+    obj: m, ttl: P.big ? 0.46 : 0.34,
+    fade(o, f) {
+      const p = 1 - f;
+      const s = p < 0.22
+        ? 0.58 - ease01(p / 0.22) * 0.40
+        : 0.18 + ease01((p - 0.22) / 0.78) * 0.96;
+      o.scale.setScalar(rv * s);
+      o.material.opacity = o.material.userData.o * (p < 0.22 ? 0.72 : f);
+    },
+  });
+}
+
 /** 環繞 sprite 群(元素環繞/音符/雪花……) */
 function makeOrbit(motif, col, n, R, size) {
   const g = new THREE.Group();
@@ -1176,5 +1200,6 @@ export function spawnCastFx(scene, effects, opts) {
     cap: opts.rvCap ?? Infinity,   // 呼叫端取景預算(展示台);戰場不設限
     col, col2: new THREE.Color(conf.c2 ?? FX_ACCENT[fx] ?? 0xffffff),
   };
+  fxCastBeat(scene, effects, P);
   (ARCHS[arch] || fxAura)(scene, effects, P);
 }
