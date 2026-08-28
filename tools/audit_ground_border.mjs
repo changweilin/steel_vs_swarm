@@ -183,14 +183,19 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
   ZS.every((z) => !BORDER_STYLES[`${z}|${z}`])
     ? ok('表內無任何同地貌列(2026-08-11 定案:兩側相同地貌不需要分界線)')
     : bad('BORDER_STYLES 殘留同地貌列');
-  // 跨地貌 15 對 MUST 全數有解 —— 沒有哪一種地貌交界是畫不出來的
+  // 跨地貌：14 組水陸與陸陸對全數有專屬分界線；water|wet (水域↔沼澤) 均為水面不畫陸地界線
   const REP0 = { green: 'turf', bare: 'wild', urban: 'concrete', wet: 'marsh', water: 'watertile', alpine: 'plateau' };
   const miss = [];
   for (let a = 0; a < ZS.length; a++) for (let b = a + 1; b < ZS.length; b++) {
-    if (!borderKindOf(REP0[ZS[a]], REP0[ZS[b]], ZS[a], ZS[b])) miss.push(`${ZS[a]}|${ZS[b]}`);
+    const pair = `${ZS[a]}|${ZS[b]}`;
+    if (pair === 'water|wet') {
+      if (borderKindOf(REP0[ZS[a]], REP0[ZS[b]], ZS[a], ZS[b]) !== null) miss.push(pair);
+    } else {
+      if (!borderKindOf(REP0[ZS[a]], REP0[ZS[b]], ZS[a], ZS[b])) miss.push(pair);
+    }
   }
-  miss.length === 0 ? ok('15 個跨地貌對全數解得出分界線(無遺漏)')
-    : bad(`跨地貌對缺解:${miss.join(' ')}`);
+  miss.length === 0 ? ok('14 個跨地貌對全數解得出分界線，水沼交界為純水面無陸地界線(無遺漏)')
+    : bad(`跨地貌對異常:${miss.join(' ')}`);
 
   // ③ 對稱:交換兩側回傳相同(全分區對 × 代表地表)
   const REP = { green: 'turf', bare: 'wild', urban: 'concrete', wet: 'marsh', water: 'watertile', alpine: 'plateau' };

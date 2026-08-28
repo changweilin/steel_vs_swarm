@@ -2417,24 +2417,23 @@ export const BORDER_KINDS = {
 // 之間色距 ≥ `CARPET_DE.LINE` 的那幾對改走 `BORDER_SAME_ZONE`。這**不是**推翻上面那條定案 ——
 // 08-11 擋掉的是「逐款畫線」(綠地那一份清單裡任兩款都畫 = 網狀),這一條只圈住排序之後仍
 // 避不掉的大跳(現役 7 對,見 CARPET_DE 檔頭的實測清單)。
-// 15 個跨地貌對 MUST 全數有解(沒有哪一種交界是「畫不出來」的);水域交界一律貼水種類
-// (沙灘/岩塊/紅樹林),泡沫與潮間帶仍住 buildWaterEdges。
+// 跨地貌對樣式表：水域↔沼澤為連續流體水面（無陸地分界線）；水陸交界一律走對應水陸樣式
+// （沙灘/沿岸岩石/泥灘/溪流/溝渠），潮間帶與浪花泡沫另住 buildWaterEdges / celFoam。
 export const BORDER_STYLES = {
   'bare|green': 'gravelpath', 'green|urban': 'hedgerow',  'green|wet': 'stream',
   'green|water': 'beach',     'alpine|green': 'trail',
-  'bare|urban': 'fence',      'bare|wet': 'ditch',        'bare|water': 'rocks',
+  'bare|urban': 'fence',      'bare|wet': 'mudflat',      'bare|water': 'rocks',
   'alpine|bare': 'rocks',     'urban|wet': 'ditch',       'urban|water': 'rocks',
-  // 水域↔沼澤 = 專屬的泥灘過渡帶(2026-08-13 使用者定案;舊制是紅樹林)
-  'alpine|urban': 'fence',    'water|wet': 'mudflat',     'alpine|wet': 'rocks',
+  'alpine|urban': 'fence',                                'alpine|wet': 'rocks',
   'alpine|water': 'rocks',
 };
 // 地表級覆寫(某些底毯款式自帶專屬分界):sub 命中且「對側」地貌 ∈ vs 才作用
 // (市區界不覆寫 = 人工界優先)。`vs` **MUST NOT 含該 sub 自己的地貌** —— 同地貌不畫線,
 // 列進去只是永遠不會命中的死設定。表序即優先序,兩側同時命中取先命中列。
 export const BORDER_SUB_RULES = [
-  // 紅樹林在 2026-08-13 把 water|wet 讓給泥灘之後的家:蓮花池(熱帶水生)臨開闊水面那一格。
-  // 沼澤本體(marsh)↔ 水域走泥灘 —— 那正是使用者要的「專屬的泥地過渡帶」
-  { sub: 'lotus',       kind: 'mangrove',   vs: ['water'] },
+  // 紅樹林(潮間帶): 蓮花池(熱帶濕地)臨陸地(綠地/裸地)那一側走紅樹林
+  { sub: 'lotus',       kind: 'mangrove',   vs: ['green', 'bare'] },
+  // 沙地(陸地)臨水域/沼澤走沙灘
   { sub: 'sand',        kind: 'beach',      vs: ['water', 'wet'] },
   { sub: 'flowerfield', kind: 'fieldridge', vs: ['bare'] },
   { sub: 'arrowbamboo', kind: 'forestroad', vs: ['bare', 'alpine'] },
