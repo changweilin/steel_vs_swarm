@@ -1092,7 +1092,8 @@ const CEL_SEA_GLSL = `
                                               + cos( uWindT * 0.72 + dot( celSxz, vec2( -0.14, 0.21 ) ) ) * 0.35 );
 
           #ifdef CEL_SWAMP_RIPPLE
-          float celH = celHSwamp;
+          // 沼澤水面網格：在水域交界處依水深平滑過渡至開闊水波，保證水面交界水波高度完全連續
+          float celH = mix( celHSwamp, celHSea, celDepF * 0.65 );
           #else
           // 開闊水域在極淺水/沼澤邊界處依深度平滑過渡，確保水波高度嚴格連續無撕裂
           float celSwampBlend = 1.0 - celDepF; // 淺水邊界 [0, 1]
@@ -1878,9 +1879,9 @@ ${CEL_SEA_GLSL}
             float celGlint = step( 0.68, ( celWaterSpec * 0.65 + 0.35 ) * celSparkle * 4.5 ) * celShallowF * vSeaFade;
             if ( celGlint > 0.0 ) {
               #ifdef CEL_SWAMP_RIPPLE
-              vec3 glintColor = vec3( 0.82, 0.94, 0.72 ); // 沼澤青金碎波光
+              vec3 glintColor = mix( vec3( 0.82, 0.94, 0.72 ), vec3( 0.94, 0.98, 1.0 ), celRawDFrag ); // 沼澤青金碎波光向水域晶亮波光平滑過渡
               #else
-              vec3 glintColor = vec3( 0.94, 0.98, 1.0 );  // 清澈水域銀白晶亮波光
+              vec3 glintColor = mix( vec3( 0.94, 0.98, 1.0 ), vec3( 0.82, 0.94, 0.72 ), celShallowF * 0.5 );  // 清澈水域銀白晶亮波光向沼澤波光平滑過渡
               #endif
               gl_FragColor.rgb = mix( gl_FragColor.rgb, glintColor, celGlint * 0.75 );
             }
