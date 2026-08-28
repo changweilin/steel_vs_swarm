@@ -928,8 +928,8 @@ const _weatherWind = {
 };
 
 /**
- * 安裝當前天氣的風浪動態係數 (唯一寫入點;呼叫端 = environment.js / game.js)
- * @param {{ windAmp?:number, windFreq?:number, waveAmp?:number, waveSpeed?:number }} dyn
+ * 安裝當前天氣的風浪動態係數與即時風向 (唯一寫入點;呼叫端 = environment.js / game.js)
+ * @param {{ windAmp?:number, windFreq?:number, waveAmp?:number, waveSpeed?:number, windDir?:number[], windDirDeg?:number }} dyn
  */
 export function setWeatherDynamics(dyn) {
   if (!dyn) return;
@@ -937,6 +937,17 @@ export function setWeatherDynamics(dyn) {
   _weatherWind.freq.value = dyn.windFreq ?? 1.0;
   _weatherWind.waveAmp.value = dyn.waveAmp ?? 1.0;
   _weatherWind.waveSpeed.value = dyn.waveSpeed ?? 1.0;
+
+  if (dyn.windDir && Array.isArray(dyn.windDir) && dyn.windDir.length >= 2) {
+    _windDir.value.set(dyn.windDir[0], dyn.windDir[1]);
+    _windK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.WAVE_M);
+    _gustK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.GUST_M);
+  } else if (typeof dyn.windDirDeg === 'number') {
+    const rad = dyn.windDirDeg * Math.PI / 180;
+    _windDir.value.set(Math.cos(rad), Math.sin(rad));
+    _windK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.WAVE_M);
+    _gustK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.GUST_M);
+  }
 }
 // 玩家位移擾動的兩支共享 uniform(同 `_windT` 的 idiom:一份物件餵給所有軟性材質)。
 // 全槽 `spd = 0` ⇒ 位移項在著色器裡早退 ⇒ **逐位元同舊制**。

@@ -1981,7 +1981,9 @@ export function createSurfaceVessels(terrain, seed) {
 
   return {
     group: vesselGroup,
-    step(dt, time) {
+    step(dt, time, isFrozen = false) {
+      if (isFrozen) return; // 水波凍結，船隻停止移動
+
       // 1. 更新巡弋船艦位置、朝向與航跡
       for (const c of cruisers) {
         c.angle += (c.speed / c.radius) * c.rotDir * dt;
@@ -2187,12 +2189,12 @@ export function buildAquaticWorld(scene, terrain, env = {}) {
 
   return {
     group: rootGroup,
-    step(dt, time, camera) {
+    step(dt, time, camera, isFrozen = false) {
       if (bubbleSys) bubbleSys.step(dt, time);
       if (detritusSys) detritusSys.step(dt, time);
       if (fishSys) fishSys.step(dt, time);
       if (jellySys) jellySys.step(dt, time);
-      if (vesselSys) vesselSys.step(dt, time);
+      if (vesselSys) vesselSys.step(dt, time, isFrozen);
     },
     dispose() {
       if (bubbleSys) bubbleSys.dispose();
