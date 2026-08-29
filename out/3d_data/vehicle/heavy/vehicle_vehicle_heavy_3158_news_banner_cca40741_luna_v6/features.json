@@ -1,0 +1,348 @@
+{
+  "id": "vehicle_heavy_vehicle_heavy_3158_news_banner",
+  "sourceImage": "vehicle/heavy/3158_news_banner.jpg",
+  "style": "heavy_mixer_vehicle",
+  "symmetryMode": "mirrored_bilateral",
+  "colors": {
+    "roofHex": 12071470,
+    "facadeHex": 14970407,
+    "baseHex": 3811619,
+    "accentHex": 1645340,
+    "darkHex": 1381139,
+    "brightHex": 15975234,
+    "glassHex": 2111303
+  },
+  "totalParts": 61,
+  "partNames": [
+    "heavy_chassis",
+    "chassis_rail_left",
+    "chassis_rail_right",
+    "cab_body",
+    "cab_roof",
+    "cab_windshield",
+    "cab_rear_window",
+    "cab_side_window_left",
+    "cab_mirror_left",
+    "cab_mirror_stem_left",
+    "heavy_headlight_left",
+    "heavy_taillight_left",
+    "cab_side_window_right",
+    "cab_mirror_right",
+    "cab_mirror_stem_right",
+    "heavy_headlight_right",
+    "heavy_taillight_right",
+    "heavy_front_bumper",
+    "heavy_grille",
+    "heavy_front_plate",
+    "mixer_rear_deck",
+    "mixer_drum",
+    "mixer_drum_band_1",
+    "mixer_drum_band_2",
+    "mixer_rear_cone",
+    "mixer_side_guard_left",
+    "mixer_side_guard_right",
+    "axle_1_wheel_left_tire",
+    "axle_1_wheel_left_rim",
+    "axle_1_wheel_left_hub",
+    "axle_1_wheel_right_tire",
+    "axle_1_wheel_right_rim",
+    "axle_1_wheel_right_hub",
+    "axle_1_axle",
+    "axle_2_wheel_left_tire",
+    "axle_2_wheel_left_rim",
+    "axle_2_wheel_left_hub",
+    "axle_2_inner_wheel_left_tire",
+    "axle_2_inner_wheel_left_rim",
+    "axle_2_inner_wheel_left_hub",
+    "axle_2_wheel_right_tire",
+    "axle_2_wheel_right_rim",
+    "axle_2_wheel_right_hub",
+    "axle_2_inner_wheel_right_tire",
+    "axle_2_inner_wheel_right_rim",
+    "axle_2_inner_wheel_right_hub",
+    "axle_2_axle",
+    "axle_3_wheel_left_tire",
+    "axle_3_wheel_left_rim",
+    "axle_3_wheel_left_hub",
+    "axle_3_inner_wheel_left_tire",
+    "axle_3_inner_wheel_left_rim",
+    "axle_3_inner_wheel_left_hub",
+    "axle_3_wheel_right_tire",
+    "axle_3_wheel_right_rim",
+    "axle_3_wheel_right_hub",
+    "axle_3_inner_wheel_right_tire",
+    "axle_3_inner_wheel_right_rim",
+    "axle_3_inner_wheel_right_hub",
+    "axle_3_axle",
+    "fifth_wheel_coupling"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "ellipsoid_sphere",
+    "cylinder",
+    "torus_ring"
+  ],
+  "structuralContract": {
+    "coordinateFrame": {
+      "nose": "+X",
+      "up": "+Y",
+      "lateral": "+Z"
+    },
+    "thinMembersEndpointDerived": true,
+    "sharedJoints": [
+      {
+        "name": "cab_mirror_stem_left",
+        "a": [
+          4.025,
+          2.3558,
+          -1.315
+        ],
+        "b": [
+          4.105,
+          2.4311,
+          -1.4549999999999998
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "cab_mirror_stem_right",
+        "a": [
+          4.025,
+          2.3558,
+          1.315
+        ],
+        "b": [
+          4.105,
+          2.4311,
+          1.4549999999999998
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "mixer_side_guard_left",
+        "a": [
+          -3.55,
+          1,
+          -0.94
+        ],
+        "b": [
+          0.95,
+          1,
+          -0.94
+        ],
+        "radius": 0.035
+      },
+      {
+        "name": "mixer_side_guard_right",
+        "a": [
+          -3.55,
+          1,
+          0.94
+        ],
+        "b": [
+          0.95,
+          1,
+          0.94
+        ],
+        "radius": 0.035
+      }
+    ],
+    "wheelContract": [
+      {
+        "name": "axle_1_wheel_left",
+        "center": [
+          -2.45,
+          0.56,
+          -1.2149999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_1_wheel_left_tire",
+        "rim": "axle_1_wheel_left_rim"
+      },
+      {
+        "name": "axle_1_wheel_right",
+        "center": [
+          -2.45,
+          0.56,
+          1.2149999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_1_wheel_right_tire",
+        "rim": "axle_1_wheel_right_rim"
+      },
+      {
+        "name": "axle_2_wheel_left",
+        "center": [
+          -1.1,
+          0.56,
+          -1.2149999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_wheel_left_tire",
+        "rim": "axle_2_wheel_left_rim"
+      },
+      {
+        "name": "axle_2_inner_wheel_left",
+        "center": [
+          -1.1,
+          0.56,
+          -0.9949999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_inner_wheel_left_tire",
+        "rim": "axle_2_inner_wheel_left_rim"
+      },
+      {
+        "name": "axle_2_wheel_right",
+        "center": [
+          -1.1,
+          0.56,
+          1.2149999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_wheel_right_tire",
+        "rim": "axle_2_wheel_right_rim"
+      },
+      {
+        "name": "axle_2_inner_wheel_right",
+        "center": [
+          -1.1,
+          0.56,
+          0.9949999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_inner_wheel_right_tire",
+        "rim": "axle_2_inner_wheel_right_rim"
+      },
+      {
+        "name": "axle_3_wheel_left",
+        "center": [
+          2.48,
+          0.56,
+          -1.2149999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_wheel_left_tire",
+        "rim": "axle_3_wheel_left_rim"
+      },
+      {
+        "name": "axle_3_inner_wheel_left",
+        "center": [
+          2.48,
+          0.56,
+          -0.9949999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_inner_wheel_left_tire",
+        "rim": "axle_3_inner_wheel_left_rim"
+      },
+      {
+        "name": "axle_3_wheel_right",
+        "center": [
+          2.48,
+          0.56,
+          1.2149999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_wheel_right_tire",
+        "rim": "axle_3_wheel_right_rim"
+      },
+      {
+        "name": "axle_3_inner_wheel_right",
+        "center": [
+          2.48,
+          0.56,
+          0.9949999999999999
+        ],
+        "outerRadius": 0.56,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_inner_wheel_right_tire",
+        "rim": "axle_3_inner_wheel_right_rim"
+      }
+    ],
+    "noGroundPenetrationExpected": true,
+    "mirroredBilateral": true,
+    "symmetryContract": {
+      "lateralAxis": "+Z",
+      "mirrorPlane": "z=0",
+      "functionalAsymmetry": "chain, brake disc, kickstand and exhaust may remain single-sided"
+    },
+    "motorBodyPanelsExplicitBilateral": false,
+    "centerlineMembersSingle": true,
+    "sourceSpecificAssembly": true,
+    "visualReviewRequired": true
+  },
+  "schemaVersion": null,
+  "evidenceStatus": "missing_yolo26_schema_v2",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "reconstructionNote": "依來源影像特徵分流 striped_mixer；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": null,
+    "verdict": "awaiting_human_review",
+    "corrections": [
+      "逐張對照來源圖與固定五方向視圖",
+      "確認車型特有零件、接點與前後輪徑"
+    ],
+    "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+    "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+    "independentMultimodalReview": "required",
+    "hardDefects": [
+      "human_visual_review_required"
+    ],
+    "fixedViews": [
+      "front_3_4",
+      "side_left",
+      "front",
+      "side_right",
+      "rear"
+    ],
+    "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+  },
+  "semanticColorContract": {
+    "body": [
+      "roofHex",
+      "facadeHex",
+      "baseHex",
+      "accentHex",
+      "darkHex",
+      "brightHex"
+    ],
+    "glazing": "glassHex",
+    "backgroundRejected": true
+  },
+  "sourceVisualClass": "mixer",
+  "sourceVisualVariant": "striped_mixer"
+}

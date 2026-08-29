@@ -1,0 +1,449 @@
+{
+  "id": "vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6",
+  "key": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "heavy_crane_vehicle",
+  "symmetryMode": "mirrored_bilateral",
+  "similarityScore": null,
+  "similarityReview": "heavy_crane_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "逐張對照來源圖與固定五方向視圖",
+    "確認車型特有零件、接點與前後輪徑"
+  ],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/heavy/slide-02.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\slide-02.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6.png",
+  "bounds": {
+    "min": [
+      -5.18,
+      0.0284,
+      -1.6727
+    ],
+    "max": [
+      5.2225,
+      5.3859,
+      1.6727
+    ],
+    "size": [
+      10.402,
+      5.357,
+      3.345
+    ],
+    "rMax": 5.484,
+    "triangles": 4024,
+    "vertices": 2492
+  },
+  "reconstructionNote": "依來源影像特徵分流 lattice_crane；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
+  "sourceVisualVariant": "lattice_crane",
+  "created_at": "2026-08-29T04:25:46.860Z",
+  "humanVerdictPreserved": true,
+  "structuralContract": {
+    "coordinateFrame": {
+      "nose": "+X",
+      "up": "+Y",
+      "lateral": "+Z"
+    },
+    "thinMembersEndpointDerived": true,
+    "sharedJoints": [
+      {
+        "name": "cab_mirror_stem_left",
+        "a": [
+          4.75,
+          2.5671999999999997,
+          -1.3900000000000001
+        ],
+        "b": [
+          4.83,
+          2.6524,
+          -1.53
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "cab_mirror_stem_right",
+        "a": [
+          4.75,
+          2.5671999999999997,
+          1.3900000000000001
+        ],
+        "b": [
+          4.83,
+          2.6524,
+          1.53
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "crane_boom",
+        "a": [
+          -1,
+          1.58,
+          0
+        ],
+        "b": [
+          2.15,
+          5.12,
+          0
+        ],
+        "radius": 0.4
+      },
+      {
+        "name": "crane_hook_line",
+        "a": [
+          2.15,
+          5.12,
+          0
+        ],
+        "b": [
+          2.15,
+          4.35,
+          0
+        ],
+        "radius": 0.018
+      },
+      {
+        "name": "crane_lattice_rail_left",
+        "a": [
+          -1,
+          1.58,
+          -0.6210000000000001
+        ],
+        "b": [
+          2.15,
+          5.12,
+          -0.6210000000000001
+        ],
+        "radius": 0.065
+      },
+      {
+        "name": "crane_lattice_rail_right",
+        "a": [
+          -1,
+          1.58,
+          0.6210000000000001
+        ],
+        "b": [
+          2.15,
+          5.12,
+          0.6210000000000001
+        ],
+        "radius": 0.065
+      },
+      {
+        "name": "crane_lattice_diag_a_0",
+        "a": [
+          -1,
+          1.58,
+          -0.6210000000000001
+        ],
+        "b": [
+          -0.30700000000000005,
+          2.3588,
+          0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_b_0",
+        "a": [
+          -1,
+          1.58,
+          0.6210000000000001
+        ],
+        "b": [
+          -0.30700000000000005,
+          2.3588,
+          -0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_a_1",
+        "a": [
+          -0.30700000000000005,
+          2.3588,
+          -0.6210000000000001
+        ],
+        "b": [
+          0.3859999999999999,
+          3.1376,
+          0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_b_1",
+        "a": [
+          -0.30700000000000005,
+          2.3588,
+          0.6210000000000001
+        ],
+        "b": [
+          0.3859999999999999,
+          3.1376,
+          -0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_a_2",
+        "a": [
+          0.3859999999999999,
+          3.1376,
+          -0.6210000000000001
+        ],
+        "b": [
+          1.0790000000000002,
+          3.9164000000000003,
+          0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_b_2",
+        "a": [
+          0.3859999999999999,
+          3.1376,
+          0.6210000000000001
+        ],
+        "b": [
+          1.0790000000000002,
+          3.9164000000000003,
+          -0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_a_3",
+        "a": [
+          1.0790000000000002,
+          3.9164000000000003,
+          -0.6210000000000001
+        ],
+        "b": [
+          1.7719999999999998,
+          4.6952,
+          0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_b_3",
+        "a": [
+          1.0790000000000002,
+          3.9164000000000003,
+          0.6210000000000001
+        ],
+        "b": [
+          1.7719999999999998,
+          4.6952,
+          -0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_outrigger_left",
+        "a": [
+          -2.1,
+          1.16,
+          -1.0530000000000002
+        ],
+        "b": [
+          -2.1,
+          0.18,
+          -1.53
+        ],
+        "radius": 0.055
+      },
+      {
+        "name": "crane_outrigger_right",
+        "a": [
+          -2.1,
+          1.16,
+          1.0530000000000002
+        ],
+        "b": [
+          -2.1,
+          0.18,
+          1.53
+        ],
+        "radius": 0.055
+      }
+    ],
+    "wheelContract": [
+      {
+        "name": "axle_1_wheel_left",
+        "center": [
+          -2.9,
+          0.58,
+          -1.29
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_1_wheel_left_tire",
+        "rim": "axle_1_wheel_left_rim"
+      },
+      {
+        "name": "axle_1_wheel_right",
+        "center": [
+          -2.9,
+          0.58,
+          1.29
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_1_wheel_right_tire",
+        "rim": "axle_1_wheel_right_rim"
+      },
+      {
+        "name": "axle_2_wheel_left",
+        "center": [
+          -1.45,
+          0.58,
+          -1.29
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_wheel_left_tire",
+        "rim": "axle_2_wheel_left_rim"
+      },
+      {
+        "name": "axle_2_inner_wheel_left",
+        "center": [
+          -1.45,
+          0.58,
+          -1.07
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_inner_wheel_left_tire",
+        "rim": "axle_2_inner_wheel_left_rim"
+      },
+      {
+        "name": "axle_2_wheel_right",
+        "center": [
+          -1.45,
+          0.58,
+          1.29
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_wheel_right_tire",
+        "rim": "axle_2_wheel_right_rim"
+      },
+      {
+        "name": "axle_2_inner_wheel_right",
+        "center": [
+          -1.45,
+          0.58,
+          1.07
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_inner_wheel_right_tire",
+        "rim": "axle_2_inner_wheel_right_rim"
+      },
+      {
+        "name": "axle_3_wheel_left",
+        "center": [
+          2.75,
+          0.58,
+          -1.29
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_wheel_left_tire",
+        "rim": "axle_3_wheel_left_rim"
+      },
+      {
+        "name": "axle_3_inner_wheel_left",
+        "center": [
+          2.75,
+          0.58,
+          -1.07
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_inner_wheel_left_tire",
+        "rim": "axle_3_inner_wheel_left_rim"
+      },
+      {
+        "name": "axle_3_wheel_right",
+        "center": [
+          2.75,
+          0.58,
+          1.29
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_wheel_right_tire",
+        "rim": "axle_3_wheel_right_rim"
+      },
+      {
+        "name": "axle_3_inner_wheel_right",
+        "center": [
+          2.75,
+          0.58,
+          1.07
+        ],
+        "outerRadius": 0.58,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_inner_wheel_right_tire",
+        "rim": "axle_3_inner_wheel_right_rim"
+      }
+    ],
+    "noGroundPenetrationExpected": true,
+    "mirroredBilateral": true,
+    "symmetryContract": {
+      "lateralAxis": "+Z",
+      "mirrorPlane": "z=0",
+      "functionalAsymmetry": "chain, brake disc, kickstand and exhaust may remain single-sided"
+    },
+    "motorBodyPanelsExplicitBilateral": false,
+    "centerlineMembersSingle": true,
+    "sourceSpecificAssembly": true,
+    "visualReviewRequired": true
+  },
+  "semanticColorContract": {
+    "body": [
+      "roofHex",
+      "facadeHex",
+      "baseHex",
+      "accentHex",
+      "darkHex",
+      "brightHex"
+    ],
+    "glazing": "glassHex",
+    "backgroundRejected": true
+  }
+}

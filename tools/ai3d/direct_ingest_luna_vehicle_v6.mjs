@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * GPT-5.6 Luna 視覺直建：vehicle/bike、vehicle/motor v6。
+ * GPT-5.6 Luna 視覺直建：vehicle/bike、vehicle/motor、vehicle/car、vehicle/heavy v6。
  *
  * 這個 runner 只接管目前沒有 ok、archive、purge 標記的目標，並把同一張
  * 來源圖被錯拆成 ~0/~1 的碎片收斂成一個完整候選件。所有候選件保持
@@ -49,11 +49,16 @@ const arg = (name, fallback = null) => {
 };
 const DRY_RUN = has('dry-run');
 const FINALIZE = has('finalize');
+const FOUR_WHEEL = has('four-wheel') || arg('family') === 'car' || arg('family') === 'heavy';
 const ONLY = arg('only');
 const LIMIT = Number(arg('limit', Infinity));
 const PYTHON = arg('python', process.env.AI3D_PYTHON || join(ROOT, '.venv', 'Scripts', 'python.exe'));
 const UV_PREVIEW = has('uv-preview');
 const UV_PYTHON = arg('uv-python', '3.12');
+const FAMILY = arg('family');
+const ACTIVE_SUBPARTS = FAMILY === 'car' ? ['car']
+  : FAMILY === 'heavy' ? ['heavy']
+    : FOUR_WHEEL ? ['car', 'heavy'] : ['bike', 'motor'];
 
 const PI_2 = Math.PI * 0.5;
 const COLORS = {
@@ -67,6 +72,43 @@ const COLORS = {
   motorcycle: { roofHex: 0x235d9d, facadeHex: 0x1b2028, baseHex: 0x30343c, accentHex: 0xd7a842, darkHex: 0x111318, brightHex: 0xf1eee5, glassHex: 0x182c43 },
   classic: { roofHex: 0x173b68, facadeHex: 0xc1c3bd, baseHex: 0x252a2f, accentHex: 0xc9a550, darkHex: 0x13171b, brightHex: 0xf3eee2, glassHex: 0x2b3d4a },
   chopper: { roofHex: 0x3274bb, facadeHex: 0x1f2b39, baseHex: 0x333940, accentHex: 0xd09d43, darkHex: 0x121619, brightHex: 0xf6efe1, glassHex: 0x1b3248 },
+  vehicleSilver: { roofHex: 0x56616b, facadeHex: 0xc7ccd0, baseHex: 0x293039, accentHex: 0xe7edf0, darkHex: 0x11161b, brightHex: 0xf8fbff, glassHex: 0x183447 },
+  vehicleWhite: { roofHex: 0x68747b, facadeHex: 0xe7e9e6, baseHex: 0x303840, accentHex: 0xc9d2d5, darkHex: 0x12171b, brightHex: 0xffffff, glassHex: 0x18384a },
+  vehicleBlue: { roofHex: 0x1b4774, facadeHex: 0x2d76b4, baseHex: 0x1c2937, accentHex: 0x91c7e8, darkHex: 0x101820, brightHex: 0xf4fbff, glassHex: 0x16364c },
+  vehicleRed: { roofHex: 0x7e2028, facadeHex: 0xc7373b, baseHex: 0x2c2529, accentHex: 0xe7b04b, darkHex: 0x161316, brightHex: 0xfff7e9, glassHex: 0x203a4b },
+  vehicleGreen: { roofHex: 0x2d5541, facadeHex: 0x5b8a68, baseHex: 0x202b27, accentHex: 0xc4d1a0, darkHex: 0x101713, brightHex: 0xf1f4e2, glassHex: 0x183a3d },
+  vehicleBlack: { roofHex: 0x3c4650, facadeHex: 0x20272e, baseHex: 0x11161b, accentHex: 0x9eaab1, darkHex: 0x080b0e, brightHex: 0xe9edf0, glassHex: 0x132c42 },
+  vehicleYellow: { roofHex: 0x986d17, facadeHex: 0xd4a42e, baseHex: 0x363024, accentHex: 0xf0d36a, darkHex: 0x171914, brightHex: 0xfff5ce, glassHex: 0x193849 },
+  vehicleOrange: { roofHex: 0x8d3c17, facadeHex: 0xd86b25, baseHex: 0x3b2b24, accentHex: 0xf2c15f, darkHex: 0x17120f, brightHex: 0xfff1da, glassHex: 0x18384b },
+  vehicleTech: { roofHex: 0x20262e, facadeHex: 0xd9dde0, baseHex: 0x252c34, accentHex: 0x72d5d1, darkHex: 0x0d1218, brightHex: 0xf6ffff, glassHex: 0x163847 },
+  vehicleOffroad: { roofHex: 0x20262a, facadeHex: 0x4c514e, baseHex: 0x161a1b, accentHex: 0xc9783e, darkHex: 0x0d1011, brightHex: 0xf1f1e7, glassHex: 0x182d35 },
+  vehicleCrossover: { roofHex: 0x351d2c, facadeHex: 0xc93237, baseHex: 0x29252d, accentHex: 0xe8d7c7, darkHex: 0x12151b, brightHex: 0xfff7ed, glassHex: 0x1a3646 },
+  vehicleConcept: { roofHex: 0x5b1f2c, facadeHex: 0xe35b4b, baseHex: 0x2b2027, accentHex: 0xf2d59d, darkHex: 0x111318, brightHex: 0xfff5e6, glassHex: 0x19384a },
+  vehicleRugged: { roofHex: 0x30442f, facadeHex: 0x74864c, baseHex: 0x1e2820, accentHex: 0xc6d47b, darkHex: 0x0e1510, brightHex: 0xf3f3df, glassHex: 0x17393c },
+  vehicleEV: { roofHex: 0x253548, facadeHex: 0x45a5a1, baseHex: 0x1b252e, accentHex: 0xe4c55f, darkHex: 0x0c1117, brightHex: 0xf3ffff, glassHex: 0x153948 },
+  vehicleUrban: { roofHex: 0x173f62, facadeHex: 0x2d85b7, baseHex: 0x22303a, accentHex: 0xbde6f0, darkHex: 0x0d141c, brightHex: 0xf4fbff, glassHex: 0x163b4f },
+  vehicleMpv: { roofHex: 0x234866, facadeHex: 0x2f7cae, baseHex: 0x26323a, accentHex: 0xd7edf1, darkHex: 0x101820, brightHex: 0xf6faf6, glassHex: 0x16384a },
+  vehicleVan: { roofHex: 0x59656d, facadeHex: 0xcfd8d7, baseHex: 0x222a2f, accentHex: 0x8fd0c2, darkHex: 0x101519, brightHex: 0xf4f8f2, glassHex: 0x173b47 },
+  vehiclePickup: { roofHex: 0x1e3d64, facadeHex: 0x1d70bd, baseHex: 0x252b31, accentHex: 0x8ebbd3, darkHex: 0x111820, brightHex: 0xf6fbff, glassHex: 0x163a50 },
+  vehicleCyber: { roofHex: 0x23272d, facadeHex: 0xaeb7bd, baseHex: 0x171a1e, accentHex: 0xf0f3f4, darkHex: 0x090b0e, brightHex: 0xffffff, glassHex: 0x182b36 },
+  vehicleSport: { roofHex: 0x252a36, facadeHex: 0xd5d8dc, baseHex: 0x1b2029, accentHex: 0xe4b648, darkHex: 0x0d1118, brightHex: 0xffffff, glassHex: 0x162b3c },
+  vehicleClassic: { roofHex: 0x121416, facadeHex: 0x151719, baseHex: 0x30251d, accentHex: 0xc79d54, darkHex: 0x0d0e10, brightHex: 0xf7efe0, glassHex: 0x263440 },
+  heavyWhite: { roofHex: 0x6f777d, facadeHex: 0xe1e3df, baseHex: 0x343c42, accentHex: 0x97a1a8, darkHex: 0x11161a, brightHex: 0xffffff, glassHex: 0x17384b },
+  heavyBlue: { roofHex: 0x1b466a, facadeHex: 0x2d70a4, baseHex: 0x202a33, accentHex: 0x8eb9d5, darkHex: 0x11181e, brightHex: 0xf2fbff, glassHex: 0x16374b },
+  heavyRed: { roofHex: 0x772329, facadeHex: 0xc43b3b, baseHex: 0x30272a, accentHex: 0xf0c047, darkHex: 0x151316, brightHex: 0xfff7df, glassHex: 0x193849 },
+  heavyOrange: { roofHex: 0x8b4519, facadeHex: 0xd87825, baseHex: 0x393026, accentHex: 0xf4c55c, darkHex: 0x17140f, brightHex: 0xfff0d2, glassHex: 0x19394a },
+  heavyGreen: { roofHex: 0x24543c, facadeHex: 0x398050, baseHex: 0x202b25, accentHex: 0xc6d09a, darkHex: 0x101713, brightHex: 0xf1f5e3, glassHex: 0x173a3d },
+  heavyYellow: { roofHex: 0x956b13, facadeHex: 0xe0a62d, baseHex: 0x403625, accentHex: 0xf4d16b, darkHex: 0x191812, brightHex: 0xfff5ca, glassHex: 0x17394a },
+  heavyCraneBlue: { roofHex: 0xf0c62e, facadeHex: 0x1f69a1, baseHex: 0x172533, accentHex: 0xf0c62e, darkHex: 0x101820, brightHex: 0xf4f4e7, glassHex: 0x16374b },
+  heavyMixerGreen: { roofHex: 0xf2f2eb, facadeHex: 0x228b5b, baseHex: 0x38464a, accentHex: 0xc8d0cd, darkHex: 0x17251f, brightHex: 0xf7f8f0, glassHex: 0x173b43 },
+  heavyMixerSunset: { roofHex: 0xb8322e, facadeHex: 0xe46e27, baseHex: 0x3a2923, accentHex: 0x191b1c, darkHex: 0x151313, brightHex: 0xf3c342, glassHex: 0x203747 },
+  heavyMixerSafety: { roofHex: 0xf0a329, facadeHex: 0xc94a25, baseHex: 0x3a2923, accentHex: 0xf3d04c, darkHex: 0x171313, brightHex: 0xffefd5, glassHex: 0x203747 },
+  heavyMixerBlue: { roofHex: 0xf0f1ec, facadeHex: 0x1768cf, baseHex: 0x3d4b5b, accentHex: 0xf2c52e, darkHex: 0x172033, brightHex: 0xf8f8f1, glassHex: 0x173b59 },
+  heavyIce: { roofHex: 0x173a69, facadeHex: 0x216fd0, baseHex: 0x131e2d, accentHex: 0xf0d13f, darkHex: 0x0c121c, brightHex: 0xf3f6ff, glassHex: 0x17384f },
+  heavyLongHaul: { roofHex: 0x55202a, facadeHex: 0xb43d42, baseHex: 0x25272b, accentHex: 0xd8d8d1, darkHex: 0x111318, brightHex: 0xfff8e9, glassHex: 0x183346 },
+  heavyContainer: { roofHex: 0x252a30, facadeHex: 0x384f5a, baseHex: 0x151b20, accentHex: 0xe2a93c, darkHex: 0x0c1014, brightHex: 0xf0f3ed, glassHex: 0x173746 },
+  heavyDumpBlue: { roofHex: 0x1e4e87, facadeHex: 0x2678ca, baseHex: 0x242c31, accentHex: 0xa6bec9, darkHex: 0x11171d, brightHex: 0xf5fbff, glassHex: 0x16394c },
+  heavyBusBlue: { roofHex: 0xeff3f0, facadeHex: 0x2474c3, baseHex: 0x303b43, accentHex: 0xe9d85c, darkHex: 0x121820, brightHex: 0xffffff, glassHex: 0x17384c },
 };
 
 const P = (name, type, values, colorKey, pos, rot = [0, 0, 0], role = 'structure') => ({
@@ -511,6 +553,559 @@ function motorSpec(target) {
   return { style: kind, symmetryMode: 'mirrored_bilateral', colors: palette, parts, joints, wheels, note: '車架、油箱/車殼、引擎、依實車配置的排氣、前叉、後視鏡、頭燈、煞車線、擋泥板與側柱均以共享接點完成。' };
 }
 
+function fourWheelPalette(target, heavy = false) {
+  const s = `${target.stem} ${target.image || ''} ${target.style || ''}`.toLowerCase();
+  const table = heavy ? [
+    [['af5eff', '4d54', '5126', 'cspv', 'fire'], COLORS.heavyRed],
+    [['slide-02'], COLORS.heavyCraneBlue],
+    [['149ff3', 'crane'], COLORS.heavyYellow],
+    [['2c88'], COLORS.heavyMixerGreen],
+    [['3158'], COLORS.heavyMixerSunset],
+    [['mobile01'], COLORS.heavyMixerSafety],
+    [['product_471'], COLORS.heavyMixerBlue],
+    [['mixer'], COLORS.heavyOrange],
+    [['000001'], COLORS.heavyIce],
+    [['250px-peterbilt', 'long-haul'], COLORS.heavyLongHaul],
+    [['big-truck', 'pngtree', 'a33aa'], COLORS.heavyContainer],
+    [['483900'], COLORS.heavyDumpBlue],
+    [['201601', '202509', '673429', '7car-2017', '2760150', '規格表3', 'car.png', '文境', '202107'], COLORS.heavyBusBlue],
+    [['483900', '202605', 'd246', 'l5zf', '98016', 'dump'], COLORS.heavyYellow],
+    [['000001_170', '01242', '115576', '250px', '3d-render', 'a33aa', 'long-haul', 'big-truck'], COLORS.heavyBlue],
+    [['201601', '202509', '673429', '7car-2017', '2760150', '規格表3', 'car.png', '文境', '202107', 'bus'], COLORS.heavyRed],
+  ] : [
+    [['0626'], COLORS.vehicleTech],
+    [['161060', '240925_land', 'jeep'], COLORS.vehicleOffroad],
+    [['202409'], COLORS.vehicleConcept],
+    [['qadp'], COLORS.vehicleRugged],
+    [['qaoz'], COLORS.vehicleUrban],
+    [['49b849'], COLORS.vehicleEV],
+    [['168368', '202409', '22b670', '4590905'], COLORS.vehicleCrossover],
+    [['166735', '176174'], COLORS.vehicleMpv],
+    [['171195', '201709', '202007', '7car-202006', '9d6035', 'photooriginal'], COLORS.vehicleVan],
+    [['250730', '250px-honda', '2598949', 'jspace-pu', 'jsv', 'ou7'], COLORS.vehiclePickup],
+    [['49b849', '881e', 'img202601', 'md-ae', 'qadp', 'qaoz'], COLORS.vehicleCrossover],
+    [['cybertruck'], COLORS.vehicleCyber],
+    [['farizon', 'showcase2'], COLORS.vehicleWhite],
+    [['171695', '2025-porsche', 'series-better', 'teslam3', '7ccts', 'qaoz', '圖1'], COLORS.vehicleSport],
+    [['1926', '6841'], COLORS.vehicleClassic],
+    [['168368', '881e', '3列', 'series-better', 'teslam3', 'red'], COLORS.vehicleRed],
+    [['166735', '240203', '240521', '250730', '4590905', '7ccts', 'img2026', 'blue'], COLORS.vehicleBlue],
+    [['201709', '176103', '2598949', 'green', 'olive'], COLORS.vehicleGreen],
+    [['171195', '202007', '240710', 'articleimage', 'farizon', 'jspace', 'jsv', 'mobile01', 'ph-hv2', '9d6035'], COLORS.vehicleWhite],
+    [['171695', '6841', '5-man', 'showcase', 'qaOZ', 'black'], COLORS.vehicleBlack],
+    [['220809', 'purple'], { ...COLORS.vehicleBlue, facadeHex: 0x7561a7, roofHex: 0x40375e, accentHex: 0xc8a9f0 }],
+    [['241120', 'yellow'], COLORS.vehicleYellow],
+    [['圖1', 'orange'], COLORS.vehicleOrange],
+    [['1926', '250px-honda', 'classic'], COLORS.classic],
+  ];
+  for (const [tokens, palette] of table) if (tokens.some((token) => s.includes(token))) return palette;
+  return heavy ? COLORS.heavyWhite : COLORS.vehicleSilver;
+}
+
+function carClass(target) {
+  const s = `${target.stem} ${target.image || ''} ${target.style || ''}`.toLowerCase();
+  if (/(1926|6841|5-man|classic|model-t)/.test(s)) return 'classic';
+  if (/(cybertruck|depu|jspace|pickup|tn360|2598949|md_01|farizon|showcase2|3列|articleimage|mobile01|jsv|166735|171195|176174|201709|202007|250730|7car-202006|9d6035|ph-hv2|photooriginal|ou7)/.test(s)) return 'utility';
+  if (/(jeep|land-rover|161060|168368|202409|22b670|240203|240521|240710|241016|241120|php6|qadp|8361539|176103|4590905|49b849|881e|img202601|md-ae|qaoz)/.test(s)) return 'suv';
+  if (/(171695|圖1|porsche|series-better|teslam3|qaoz|7ccts|2025-porsche|sport)/.test(s)) return 'sport';
+  if (/(van|4x4|crossover|carr|automotive_suv)/.test(s)) return 'suv';
+  return 'sedan';
+}
+
+function carVisualVariant(target) {
+  const s = `${target.stem} ${target.image || ''} ${target.style || ''}`.toLowerCase();
+  if (s.includes('cybertruck')) return 'cybertruck';
+  if (/(farizon|showcase2)/.test(s)) return 'electric_panel_van';
+  if (/(171195|articleimage|ph-hv2|md_01|depu)/.test(s)) return 'panel_van';
+  if (/(166735|176174|3列)/.test(s)) return 'mpv_van';
+  if (/(7car-202006|9d6035|photooriginal)/.test(s)) return 'panel_van';
+  if (/(201709)/.test(s)) return 'light_box_truck';
+  if (/(202007)/.test(s)) return 'tarp_truck';
+  if (/(250730|250px-honda|2598949|jspace-pu|jsv|ou7)/.test(s)) return 'pickup';
+  if (/(161060|240925[_-]land-rover|jeep)/.test(s)) return 'offroad_suv';
+  if (/(202409)/.test(s)) return 'concept_suv';
+  if (/(qadp)/.test(s)) return 'rugged_crossover';
+  if (/(qaoz)/.test(s)) return 'urban_crossover';
+  if (/(49b849)/.test(s)) return 'ev_crossover';
+  if (/(168368|202409|22b670|240203|240521|240710|241016|241120|php6|8361539|4590905|49b849|881e|img202601|md-ae|qadp|qaoz)/.test(s)) return 'crossover_suv';
+  if (/(171695|圖1|2025-porsche|series-better|teslam3|7ccts|qaoz)/.test(s)) return 'sports_coupe';
+  if (/(1926|6841)/.test(s)) return 'classic_touring';
+  if (/(0626)/.test(s)) return 'tech_fastback';
+  if (/(220809|0a7e|4590905)/.test(s)) return 'hybrid_sedan';
+  return `${carClass(target)}_standard`;
+}
+
+function addFourWheel(parts, wheels, label, x, z, radius, tireTube, palette, wheelWidth = 0.22) {
+  const side = z < 0 ? 'left' : 'right';
+  const wheelName = `${label}_wheel_${side}`;
+  parts.push(T(`${wheelName}_tire`, radius - tireTube, tireTube, [x, radius, z], 'darkHex', [PI_2, 0, 0], 'wheel_tire'));
+  parts.push(T(`${wheelName}_rim`, radius - tireTube - 0.025, 0.018, [x, radius, z], 'accentHex', [PI_2, 0, 0], 'wheel_rim'));
+  axle(parts, `${wheelName}_hub`, x, radius, z, wheelWidth, 0.030, 'baseHex');
+  wheels.push({ name: wheelName, center: [x, radius, z], outerRadius: radius, tireTube, axis: 'z', tire: `${wheelName}_tire`, rim: `${wheelName}_rim` });
+}
+
+function addFourWheelAxle(parts, wheels, label, x, width, radius, tireTube, palette, dual = false) {
+  const outerZ = width / 2 - 0.06;
+  for (const side of [-1, 1]) {
+    addFourWheel(parts, wheels, label, x, side * outerZ, radius, tireTube, palette, dual ? 0.30 : 0.22);
+    if (dual) addFourWheel(parts, wheels, `${label}_inner`, x, side * (outerZ - 0.22), radius, tireTube, palette, 0.24);
+  }
+  axle(parts, `${label}_axle`, x, radius, 0, width * 0.90, 0.032, 'axle');
+}
+
+function carSpec(target) {
+  const kind = carClass(target);
+  const visualVariant = carVisualVariant(target);
+  const palette = fourWheelPalette(target);
+  const profiles = {
+    sedan: { L: 4.55, W: 1.84, R: 0.34, rear: -1.48, front: 1.48, sill: 0.40, waist: 0.92, roof: 1.48, cabRear: -1.15, cabFront: 0.84 },
+    suv: { L: 4.75, W: 1.92, R: 0.39, rear: -1.55, front: 1.55, sill: 0.45, waist: 1.06, roof: 1.72, cabRear: -1.27, cabFront: 0.93 },
+    utility: { L: 4.80, W: 1.90, R: 0.37, rear: -1.58, front: 1.58, sill: 0.43, waist: 1.04, roof: 1.82, cabRear: -1.32, cabFront: 0.90 },
+    sport: { L: 4.55, W: 1.90, R: 0.33, rear: -1.42, front: 1.42, sill: 0.36, waist: 0.78, roof: 1.20, cabRear: -1.00, cabFront: 0.76 },
+    classic: { L: 4.02, W: 1.58, R: 0.38, rear: -1.24, front: 1.24, sill: 0.36, waist: 0.90, roof: 1.48, cabRear: -1.08, cabFront: 0.38 },
+  }[kind];
+  const parts = [], joints = [], wheels = [];
+  const cabinL = profiles.cabFront - profiles.cabRear;
+  const cabinH = profiles.roof - profiles.waist;
+  const cabinCenter = (profiles.cabFront + profiles.cabRear) / 2;
+  const windowH = Math.max(0.28, cabinH - 0.18);
+  const sideZ = profiles.W * 0.90 / 2 + 0.025;
+
+  parts.push(B('chassis_base', profiles.L - 0.16, 0.24, profiles.W * 0.82, [0, profiles.R + 0.10, 0], 'baseHex', [0, 0, 0], 'chassis'));
+  parts.push(B('underbody_pan', profiles.L * 0.78, 0.16, profiles.W * 0.78, [-0.10, profiles.R + 0.015, 0], 'darkHex', [0, 0, 0], 'underbody'));
+  parts.push(B('lower_body', profiles.L * 0.90, profiles.waist - profiles.sill, profiles.W * 0.94, [0, (profiles.sill + profiles.waist) / 2, 0], 'facadeHex', [0, 0, 0], 'body'));
+  const hoodL = Math.max(0.75, profiles.L / 2 - profiles.cabFront + 0.10);
+  const hoodX = profiles.L / 2 - hoodL / 2 - 0.06;
+  parts.push(B('front_hood', hoodL, 0.22, profiles.W * 0.88,
+    [hoodX, profiles.waist + 0.06, 0], 'facadeHex', [0, 0, 0], 'body'));
+  parts.push(P('cabin_shell', 'tapered_box', { dimensions: [cabinL, cabinH, profiles.W * 0.90], topDimensions: [cabinL * 0.88, profiles.W * 0.82] },
+    'roofHex', [cabinCenter, profiles.waist + cabinH / 2, 0], [0, 0, 0], 'body'));
+  parts.push(B('roof_cap', cabinL * 0.90, 0.10, profiles.W * 0.84, [cabinCenter, profiles.roof + 0.025, 0], 'roofHex', [0, 0, 0], 'roof'));
+
+  parts.push(B('front_windshield', 0.045, windowH, profiles.W * 0.78, [profiles.cabFront + 0.025, profiles.waist + windowH / 2 + 0.03, 0], 'glassHex', [0, 0, 0], 'glass'));
+  parts.push(B('rear_windshield', 0.045, windowH * 0.88, profiles.W * 0.76, [profiles.cabRear - 0.025, profiles.waist + windowH * 0.46 + 0.03, 0], 'glassHex', [0, 0, 0], 'glass'));
+  for (const side of [-1, 1]) {
+    const sideName = side < 0 ? 'left' : 'right';
+    parts.push(B(`front_side_window_${sideName}`, cabinL * 0.42, windowH * 0.82, 0.040,
+      [cabinCenter + cabinL * 0.20, profiles.waist + windowH * 0.47 + 0.03, side * sideZ], 'glassHex', [0, 0, 0], 'glass'));
+    parts.push(B(`rear_side_window_${sideName}`, cabinL * 0.40, windowH * 0.78, 0.040,
+      [cabinCenter - cabinL * 0.20, profiles.waist + windowH * 0.45 + 0.03, side * sideZ], 'glassHex', [0, 0, 0], 'glass'));
+    parts.push(B(`side_sill_${sideName}`, profiles.L * 0.58, 0.075, 0.050, [-0.12, profiles.sill + 0.035, side * (profiles.W * 0.47 + 0.018)], 'baseHex', [0, 0, 0], 'sill'));
+    parts.push(E(`side_mirror_${sideName}`, 0.065, 0.055, 0.13, [profiles.cabFront + 0.08, profiles.waist + windowH * 0.48, side * (profiles.W / 2 + 0.16)], 'brightHex', [0, 0, 0], 'mirror'));
+    strut(parts, joints, `mirror_stem_${sideName}`, [profiles.cabFront - 0.01, profiles.waist + windowH * 0.43, side * (profiles.W / 2 + 0.03)],
+      [profiles.cabFront + 0.08, profiles.waist + windowH * 0.48, side * (profiles.W / 2 + 0.16)], 0.012, 'baseHex', 6, 'mirror');
+    parts.push(B(`headlight_${sideName}`, 0.10, 0.18, 0.28, [profiles.L / 2 + 0.015, 0.78, side * profiles.W * 0.29], 'brightHex', [0, 0, 0], 'lamp'));
+    parts.push(B(`taillight_${sideName}`, 0.08, 0.20, 0.26, [-profiles.L / 2 - 0.015, 0.72, side * profiles.W * 0.30], 'accentHex', [0, 0, 0], 'lamp'));
+  }
+  parts.push(B('front_bumper', 0.16, 0.25, profiles.W * 0.96, [profiles.L / 2 - 0.04, 0.50, 0], 'baseHex', [0, 0, 0], 'bumper'));
+  parts.push(B('rear_bumper', 0.16, 0.22, profiles.W * 0.94, [-profiles.L / 2 + 0.04, 0.50, 0], 'baseHex', [0, 0, 0], 'bumper'));
+  parts.push(B('front_grille', 0.035, 0.28, kind === 'sport' ? profiles.W * 0.52 : profiles.W * 0.62, [profiles.L / 2 + 0.045, 0.70, 0], 'darkHex', [0, 0, 0], 'grille'));
+  parts.push(B('front_license_plate', 0.035, 0.12, 0.52, [profiles.L / 2 + 0.062, 0.58, 0], 'brightHex', [0, 0, 0], 'plate'));
+  parts.push(B('rear_license_plate', 0.035, 0.12, 0.52, [-profiles.L / 2 - 0.062, 0.60, 0], 'brightHex', [0, 0, 0], 'plate'));
+
+  for (const x of [profiles.rear, profiles.front]) addFourWheelAxle(parts, wheels, x === profiles.front ? 'front' : 'rear', x, profiles.W, profiles.R, kind === 'sport' ? 0.085 : 0.095, palette, false);
+  if (kind === 'sport') {
+    parts.push(B('front_splitter', 0.16, 0.07, profiles.W * 0.86, [profiles.L / 2 - 0.08, 0.36, 0], 'darkHex', [0, 0, 0], 'aero'));
+    if (visualVariant === 'sports_coupe') {
+      parts.push(B('rear_spoiler', 0.62, 0.055, 0.14, [-profiles.L / 2 + 0.24, profiles.waist + 0.24, 0], 'accentHex', [0, 0, 0], 'aero'));
+      strutPair(parts, joints, 'rear_spoiler_stay', [-profiles.L / 2 + 0.22, profiles.waist + 0.15, 0.27],
+        [-profiles.L / 2 + 0.24, profiles.waist + 0.23, 0.27], 0.014, 'baseHex', 6, 'aero');
+      for (const side of [-1, 1]) parts.push(B(`sports_side_skirt_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.60, 0.07, 0.08,
+        [-0.05, profiles.sill + 0.015, side * (profiles.W / 2 + 0.035)], 'darkHex', [0, 0, 0], 'aero'));
+    }
+  }
+  const utilityVan = ['panel_van', 'electric_panel_van', 'mpv_van'].includes(visualVariant);
+  const utilityLightBox = ['light_box_truck', 'tarp_truck'].includes(visualVariant);
+  if (kind === 'utility' && !utilityVan && !utilityLightBox) {
+    const rearBodyEdge = -profiles.L / 2 + 0.10;
+    const bedL = Math.min(profiles.L * 0.28, profiles.cabRear - rearBodyEdge);
+    const bedX = (profiles.cabRear + rearBodyEdge) / 2;
+    parts.push(B('rear_load_floor', bedL, 0.18, profiles.W * 0.86, [bedX, profiles.waist + 0.02, 0], 'baseHex', [0, 0, 0], 'cargo'));
+    for (const side of [-1, 1]) parts.push(B(`load_wall_${side < 0 ? 'left' : 'right'}`, bedL, 0.42, 0.06, [bedX, profiles.waist + 0.23, side * profiles.W * 0.42], 'facadeHex', [0, 0, 0], 'cargo'));
+  }
+  if (kind === 'utility' && utilityVan) {
+    const rearBodyEdge = -profiles.L / 2 + 0.10;
+    const cargoL = profiles.cabRear - rearBodyEdge;
+    const cargoX = (profiles.cabRear + rearBodyEdge) / 2;
+    const cargoH = profiles.roof - profiles.waist - 0.04;
+    parts.push(B('van_cargo_upper', cargoL, cargoH, profiles.W * 0.90,
+      [cargoX, profiles.waist + cargoH / 2 + 0.015, 0], 'facadeHex', [0, 0, 0], 'cargo'));
+    parts.push(B('van_cargo_roof', cargoL * 0.96, 0.10, profiles.W * 0.88,
+      [cargoX, profiles.roof + 0.015, 0], 'roofHex', [0, 0, 0], 'cargo'));
+    parts.push(B('van_rear_door', 0.04, cargoH * 0.78, profiles.W * 0.76,
+      [rearBodyEdge - 0.025, profiles.waist + cargoH * 0.50, 0], 'baseHex', [0, 0, 0], 'cargo'));
+    if (visualVariant === 'mpv_van') {
+      for (const side of [-1, 1]) parts.push(B(`van_cargo_window_${side < 0 ? 'left' : 'right'}`, cargoL * 0.66, cargoH * 0.48, 0.040,
+        [cargoX, profiles.waist + cargoH * 0.60, side * (profiles.W * 0.90 / 2 + 0.025)], 'glassHex', [0, 0, 0], 'glass'));
+    }
+  }
+  if (kind === 'utility' && utilityLightBox) {
+    const rearBodyEdge = -profiles.L / 2 + 0.08;
+    const cargoL = profiles.cabRear - rearBodyEdge;
+    const cargoX = (profiles.cabRear + rearBodyEdge) / 2;
+    if (visualVariant === 'light_box_truck') {
+      const cargoH = profiles.roof - profiles.waist - 0.12;
+      parts.push(B('light_box_cargo', cargoL, cargoH, profiles.W * 0.88,
+        [cargoX, profiles.waist + cargoH / 2 + 0.05, 0], 'brightHex', [0, 0, 0], 'cargo'));
+      parts.push(B('light_box_roof', cargoL * 0.96, 0.08, profiles.W * 0.90,
+        [cargoX, profiles.roof - 0.05, 0], 'roofHex', [0, 0, 0], 'cargo'));
+    } else {
+      parts.push(B('tarp_load_floor', cargoL, 0.14, profiles.W * 0.84,
+        [cargoX, profiles.waist + 0.02, 0], 'baseHex', [0, 0, 0], 'cargo'));
+      strutPair(parts, joints, 'tarp_side_post', [rearBodyEdge + 0.08, profiles.waist + 0.12, profiles.W * 0.39],
+        [profiles.cabRear - 0.08, profiles.roof - 0.12, profiles.W * 0.39], 0.018, 'accentHex', 6, 'cargo');
+      parts.push(B('tarp_cover', cargoL * 0.96, 0.08, profiles.W * 0.82,
+        [cargoX, profiles.roof - 0.10, 0], 'roofHex', [0, 0, 0], 'cargo'));
+    }
+  }
+  if (visualVariant === 'cybertruck') {
+    parts.push(W('cybertruck_front_fascia', 0.58, 0.40, profiles.W * 0.82,
+      [profiles.L / 2 - 0.32, profiles.waist + 0.16, 0], 'facadeHex', [0, 0, 0], 'body'));
+    parts.push(B('cybertruck_bed_cover', 1.18, 0.07, profiles.W * 0.78,
+      [-profiles.L / 2 + 0.68, profiles.roof - 0.12, 0], 'roofHex', [0, 0, 0], 'cargo'));
+    strutPair(parts, joints, 'cybertruck_bed_rail', [-profiles.L / 2 + 0.12, profiles.waist + 0.36, 0.70],
+      [-profiles.L / 2 + 1.18, profiles.waist + 0.36, 0.70], 0.020, 'darkHex', 6, 'cargo');
+  }
+  if (kind === 'suv' || kind === 'utility') {
+    for (const side of [-1, 1]) strut(parts, joints, `roof_rail_${side < 0 ? 'left' : 'right'}`,
+      [profiles.cabRear + 0.10, profiles.roof + 0.11, side * profiles.W * 0.32],
+      [profiles.cabFront - 0.10, profiles.roof + 0.11, side * profiles.W * 0.32], 0.018, 'accentHex', 6, 'roof_rail');
+  }
+  if (visualVariant === 'offroad_suv') {
+    parts.push(B('offroad_front_bullbar', 0.10, 0.11, profiles.W * 1.02,
+      [profiles.L / 2 + 0.015, profiles.R + 0.18, 0], 'accentHex', [0, 0, 0], 'equipment'));
+    strutPair(parts, joints, 'offroad_bullbar_stay', [profiles.L / 2 - 0.18, profiles.R + 0.18, 0.42],
+      [profiles.L / 2 + 0.02, profiles.R + 0.55, 0.50], 0.022, 'accentHex', 6, 'equipment');
+    for (const side of [-1, 1]) parts.push(B(`offroad_side_step_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.54, 0.08, 0.12,
+      [-0.05, profiles.sill - 0.01, side * (profiles.W / 2 + 0.07)], 'baseHex', [0, 0, 0], 'equipment'));
+    parts.push(E('offroad_rear_spare_cover', 0.09, 0.32, 0.32,
+      [-profiles.L / 2 - 0.035, profiles.waist + 0.12, 0], 'darkHex', [0, 0, 0], 'equipment'));
+  }
+  if (visualVariant === 'crossover_suv') {
+    parts.push(B('crossover_front_skid', 0.08, 0.10, profiles.W * 0.72,
+      [profiles.L / 2 - 0.10, profiles.R + 0.10, 0], 'accentHex', [0, 0, 0], 'equipment'));
+    for (const side of [-1, 1]) parts.push(B(`crossover_lower_cladding_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.54, 0.10, 0.055,
+      [-0.08, profiles.sill + 0.06, side * (profiles.W * 0.48 + 0.02)], 'baseHex', [0, 0, 0], 'body'));
+  }
+  if (visualVariant === 'concept_suv') {
+    parts.push(B('concept_front_lightbar', 0.04, 0.09, profiles.W * 0.78,
+      [profiles.L / 2 + 0.05, profiles.waist + 0.16, 0], 'accentHex', [0, 0, 0], 'lamp'));
+    parts.push(B('concept_rear_spoiler', 0.52, 0.06, profiles.W * 0.56,
+      [-profiles.L / 2 + 0.24, profiles.roof + 0.12, 0], 'accentHex', [0, 0, 0], 'aero'));
+    strutPair(parts, joints, 'concept_spoiler_stay', [-profiles.L / 2 + 0.22, profiles.roof + 0.02, 0.26],
+      [-profiles.L / 2 + 0.24, profiles.roof + 0.11, 0.26], 0.014, 'baseHex', 6, 'aero');
+  }
+  if (visualVariant === 'rugged_crossover') {
+    parts.push(E('rugged_rear_spare_cover', 0.09, 0.31, 0.31,
+      [-profiles.L / 2 - 0.035, profiles.waist + 0.10, 0], 'darkHex', [0, 0, 0], 'equipment'));
+    for (const side of [-1, 1]) parts.push(B(`rugged_fender_cladding_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.48, 0.10, 0.065,
+      [-0.08, profiles.sill + 0.14, side * (profiles.W * 0.49 + 0.035)], 'accentHex', [0, 0, 0], 'equipment'));
+    strutPair(parts, joints, 'rugged_roof_crossbar', [profiles.cabRear + 0.14, profiles.roof + 0.14, 0.30],
+      [profiles.cabFront - 0.14, profiles.roof + 0.14, 0.30], 0.022, 'accentHex', 6, 'roof_rail');
+  }
+  if (visualVariant === 'urban_crossover') {
+    parts.push(B('urban_front_grille_bar', 0.04, 0.18, profiles.W * 0.70,
+      [profiles.L / 2 + 0.05, profiles.waist + 0.02, 0], 'accentHex', [0, 0, 0], 'grille'));
+    parts.push(B('urban_rear_lightbar', 0.04, 0.10, profiles.W * 0.60,
+      [-profiles.L / 2 - 0.05, profiles.waist + 0.10, 0], 'accentHex', [0, 0, 0], 'lamp'));
+    for (const side of [-1, 1]) parts.push(B(`urban_side_sill_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.56, 0.055, 0.05,
+      [-0.04, profiles.sill + 0.13, side * (profiles.W * 0.49 + 0.03)], 'accentHex', [0, 0, 0], 'body'));
+  }
+  if (visualVariant === 'ev_crossover') {
+    parts.push(W('ev_smooth_front_nose', 0.48, 0.34, profiles.W * 0.80,
+      [profiles.L / 2 - 0.28, profiles.waist + 0.18, 0], 'facadeHex', [0, 0, 0], 'body'));
+    parts.push(B('ev_front_lightbar', 0.04, 0.07, profiles.W * 0.74,
+      [profiles.L / 2 + 0.05, profiles.waist + 0.15, 0], 'accentHex', [0, 0, 0], 'lamp'));
+    parts.push(B('ev_roof_glass', cabinL * 0.72, 0.025, profiles.W * 0.58,
+      [cabinCenter, profiles.roof + 0.085, 0], 'glassHex', [0, 0, 0], 'glass'));
+    for (const side of [-1, 1]) parts.push(B(`ev_side_aero_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.38, 0.06, 0.045,
+      [0.08, profiles.sill + 0.05, side * (profiles.W * 0.49 + 0.025)], 'accentHex', [0, 0, 0], 'body'));
+  }
+  if (visualVariant === 'tech_fastback') {
+    parts.push(B('tech_front_light_bar', 0.035, 0.08, profiles.W * 0.62,
+      [profiles.L / 2 + 0.045, profiles.waist + 0.06, 0], 'accentHex', [0, 0, 0], 'lamp'));
+    parts.push(B('tech_roof_glass', cabinL * 0.70, 0.025, profiles.W * 0.60,
+      [cabinCenter, profiles.roof + 0.082, 0], 'glassHex', [0, 0, 0], 'glass'));
+    for (const side of [-1, 1]) parts.push(B(`tech_side_blade_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.34, 0.055, 0.045,
+      [0.34, profiles.waist + 0.04, side * (profiles.W * 0.48 + 0.02)], 'accentHex', [0, 0, 0], 'body'));
+  }
+  if (visualVariant === 'hybrid_sedan') {
+    parts.push(B('hybrid_front_grille_bar', 0.035, 0.08, profiles.W * 0.58,
+      [profiles.L / 2 + 0.045, profiles.waist + 0.08, 0], 'accentHex', [0, 0, 0], 'grille'));
+    strutPair(parts, joints, 'hybrid_side_character_line', [profiles.cabRear + 0.10, profiles.waist + 0.08, 0.82],
+      [profiles.cabFront - 0.12, profiles.waist + 0.08, 0.82], 0.012, 'accentHex', 6, 'body');
+  }
+  if (visualVariant === 'classic_touring') {
+    for (const side of [-1, 1]) {
+      parts.push(B(`classic_running_board_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.54, 0.07, 0.13,
+        [-0.02, profiles.sill + 0.04, side * (profiles.W / 2 + 0.08)], 'baseHex', [0, 0, 0], 'body'));
+      parts.push(E(`classic_front_fender_${side < 0 ? 'left' : 'right'}`, 0.62, 0.08, 0.16,
+        [profiles.front, profiles.R + 0.22, side * (profiles.W / 2 + 0.03)], 'brightHex', [0, 0, 0], 'fender'));
+      parts.push(E(`classic_rear_fender_${side < 0 ? 'left' : 'right'}`, 0.62, 0.08, 0.16,
+        [profiles.rear, profiles.R + 0.22, side * (profiles.W / 2 + 0.03)], 'brightHex', [0, 0, 0], 'fender'));
+    }
+  }
+  if (kind === 'sedan' && visualVariant === 'sedan_standard') {
+    parts.push(B('sedan_rear_lip', 0.36, 0.05, profiles.W * 0.56,
+      [-profiles.L / 2 + 0.24, profiles.waist + 0.22, 0], 'accentHex', [0, 0, 0], 'body'));
+  }
+  const envelopeWidth = ['offroad_suv', 'cybertruck'].includes(visualVariant) ? profiles.W + 0.76 : profiles.W + 0.60;
+  const envelopeLengthExtra = ['offroad_suv', 'rugged_crossover', 'cybertruck'].includes(visualVariant) ? 0.22 : 0.16;
+  return { style: `${kind}_four_wheel_vehicle`, visualVariant, symmetryMode: 'mirrored_bilateral', colors: palette, parts, joints, wheels,
+    envelope: [profiles.L + envelopeLengthExtra, profiles.roof + 0.22, envelopeWidth],
+    note: `依來源影像特徵分流 ${visualVariant}；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。` };
+}
+
+function heavyClass(target) {
+  const s = `${target.stem} ${target.image || ''} ${target.style || ''}`.toLowerCase();
+  if (/(af5eff|4d54|5126|cspv|fire)/.test(s)) return 'fire';
+  if (/(149ff3|slide-02|crane)/.test(s)) return 'crane';
+  if (/(2c88|3158|mobile01|product_471|mixer)/.test(s)) return 'mixer';
+  if (/(483900|202605|d246|l5zf|98016|dump)/.test(s)) return 'dump';
+  if (/(201601|202509|673429|7car-2017|2760150|規格表3|car\.png|文境|202107|bus)/.test(s)) return 'bus';
+  return 'freight';
+}
+
+function heavyVisualVariant(target) {
+  const s = `${target.stem} ${target.image || ''} ${target.style || ''}`.toLowerCase();
+  if (s.includes('149ff3')) return 'mobile_crane';
+  if (s.includes('slide-02')) return 'lattice_crane';
+  if (s.includes('2c88')) return 'green_mixer';
+  if (s.includes('3158')) return 'striped_mixer';
+  if (s.includes('mobile01')) return 'safety_mixer';
+  if (s.includes('product_471')) return 'toy_mixer';
+  const kind = heavyClass(target);
+  if (kind === 'fire') return /(?:af5eff|cspv)/.test(s) ? 'aerial_fire' : 'rescue_fire';
+  if (kind === 'bus') {
+    if (/(201601|202509|文境)/.test(s)) return 'tour_bus';
+    if (/(2760150|規格表3)/.test(s)) return 'city_bus';
+    return 'coach_bus';
+  }
+  if (kind === 'dump') {
+    if (s.includes('483900')) return 'ribbed_dump';
+    if (s.includes('202605')) return 'dump_mixer_support';
+    return 'construction_dump';
+  }
+  if (kind === 'freight') {
+    if (s.includes('000001')) return 'ice_cream_freight';
+    if (s.includes('115576')) return 'flatbed_freight';
+    if (/(250px-peterbilt|long-haul)/.test(s)) return 'longhaul_freight';
+    if (/(161840|big-truck|pngtree|a33aa)/.test(s)) return 'container_freight';
+    if (s.includes('167155')) return 'fleet_box_freight';
+    if (/(3d-render|1208367|01242)/.test(s)) return 'box_freight';
+    return 'fleet_freight';
+  }
+  return kind;
+}
+
+function pointAlongX(center, angle, offset) {
+  return [center[0] + offset * Math.cos(angle), center[1] + offset * Math.sin(angle), center[2]];
+}
+
+function heavySpec(target) {
+  const kind = heavyClass(target);
+  const visualVariant = heavyVisualVariant(target);
+  const palette = fourWheelPalette(target, true);
+  const profiles = {
+    bus: { L: 12.0, W: 2.55, R: 0.52, H: 3.40, axles: [-3.70, 3.85], cabL: 2.35, cargoH: 2.30, dual: true },
+    fire: { L: 8.60, W: 2.55, R: 0.55, H: 3.55, axles: [-2.55, -0.95, 2.45], cabL: 2.55, cargoH: 1.75, dual: true },
+    crane: { L: 10.20, W: 2.70, R: 0.58, H: 4.00, axles: [-2.90, -1.45, 2.75], cabL: 2.55, cargoH: 1.35, dual: true },
+    mixer: { L: 8.75, W: 2.55, R: 0.56, H: 3.65, axles: [-2.45, -1.10, 2.48], cabL: 2.45, cargoH: 1.55, dual: true },
+    dump: { L: 9.20, W: 2.95, R: 0.73, H: 4.05, axles: [-2.70, -1.30, 2.65], cabL: 2.55, cargoH: 1.65, dual: true },
+    freight: { L: 9.40, W: 2.55, R: 0.55, H: 3.70, axles: [-2.75, -1.25, 2.65], cabL: 2.55, cargoH: 2.05, dual: true },
+  }[kind];
+  const parts = [], joints = [], wheels = [];
+  const frontX = profiles.L / 2 - 0.35;
+  const cabCenter = frontX - profiles.cabL / 2;
+  const cabBottom = profiles.R + 0.34;
+  const cabTop = profiles.H - 0.24;
+  const cabH = cabTop - cabBottom;
+  const cabRear = cabCenter - profiles.cabL / 2;
+  const cabFront = cabCenter + profiles.cabL / 2;
+  const sideZ = profiles.W * 0.92 / 2 + 0.025;
+
+  parts.push(B('heavy_chassis', profiles.L - 0.30, 0.30, profiles.W * 0.80, [0, profiles.R + 0.17, 0], 'baseHex', [0, 0, 0], 'chassis'));
+  for (const side of [-1, 1]) parts.push(B(`chassis_rail_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.82, 0.18, 0.12, [-0.10, profiles.R + 0.36, side * profiles.W * 0.34], 'darkHex', [0, 0, 0], 'chassis'));
+  parts.push(B('cab_body', profiles.cabL, cabH, profiles.W * 0.92, [cabCenter, cabBottom + cabH / 2, 0], 'facadeHex', [0, 0, 0], 'cab'));
+  parts.push(B('cab_roof', profiles.cabL * 0.96, 0.16, profiles.W * 0.94, [cabCenter, cabTop + 0.08, 0], 'roofHex', [0, 0, 0], 'roof'));
+  const windshieldH = Math.max(0.70, cabH * 0.42);
+  parts.push(B('cab_windshield', 0.045, windshieldH, profiles.W * 0.78, [cabFront + 0.025, cabBottom + cabH * 0.66, 0], 'glassHex', [0, 0, 0], 'glass'));
+  parts.push(B('cab_rear_window', 0.040, windshieldH * 0.82, profiles.W * 0.70, [cabRear - 0.025, cabBottom + cabH * 0.63, 0], 'glassHex', [0, 0, 0], 'glass'));
+  for (const side of [-1, 1]) {
+    const sideName = side < 0 ? 'left' : 'right';
+    parts.push(B(`cab_side_window_${sideName}`, profiles.cabL * 0.66, windshieldH * 0.82, 0.045,
+      [cabCenter, cabBottom + cabH * 0.64, side * sideZ], 'glassHex', [0, 0, 0], 'glass'));
+    parts.push(E(`cab_mirror_${sideName}`, 0.075, 0.065, 0.15, [cabFront + 0.08, cabBottom + cabH * 0.61, side * (profiles.W / 2 + 0.18)], 'brightHex', [0, 0, 0], 'mirror'));
+    strut(parts, joints, `cab_mirror_stem_${sideName}`, [cabFront, cabBottom + cabH * 0.58, side * (profiles.W / 2 + 0.04)],
+      [cabFront + 0.08, cabBottom + cabH * 0.61, side * (profiles.W / 2 + 0.18)], 0.014, 'baseHex', 6, 'mirror');
+    parts.push(B(`heavy_headlight_${sideName}`, 0.12, 0.24, 0.32, [profiles.L / 2 + 0.02, cabBottom + 0.33, side * profiles.W * 0.30], 'brightHex', [0, 0, 0], 'lamp'));
+    parts.push(B(`heavy_taillight_${sideName}`, 0.12, 0.28, 0.30, [-profiles.L / 2 - 0.02, profiles.R + 0.82, side * profiles.W * 0.34], 'accentHex', [0, 0, 0], 'lamp'));
+  }
+  parts.push(B('heavy_front_bumper', 0.24, 0.38, profiles.W * 0.98, [profiles.L / 2 - 0.05, profiles.R + 0.30, 0], 'baseHex', [0, 0, 0], 'bumper'));
+  parts.push(B('heavy_grille', 0.045, 0.52, profiles.W * 0.62, [profiles.L / 2 + 0.075, cabBottom + 0.30, 0], 'darkHex', [0, 0, 0], 'grille'));
+  parts.push(B('heavy_front_plate', 0.045, 0.14, 0.60, [profiles.L / 2 + 0.10, cabBottom + 0.12, 0], 'brightHex', [0, 0, 0], 'plate'));
+
+  if (kind === 'bus') {
+    const bodyL = profiles.L * 0.72;
+    const bodyX = -0.40;
+    parts.push(B('passenger_body', bodyL, profiles.cargoH, profiles.W * 0.93, [bodyX, profiles.R + 0.38 + profiles.cargoH / 2, 0], 'facadeHex', [0, 0, 0], 'body'));
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 5; i++) parts.push(B(`passenger_window_${i}_${side < 0 ? 'left' : 'right'}`, 1.20, 0.78, 0.045,
+        [-3.55 + i * 1.35, profiles.R + 1.72, side * (profiles.W * 0.93 / 2 + 0.025)], 'glassHex', [0, 0, 0], 'glass'));
+    }
+    parts.push(B('bus_front_destination', 0.045, 0.20, profiles.W * 0.52,
+      [profiles.L / 2 - 0.48, profiles.R + 0.38 + profiles.cargoH - 0.30, 0], 'darkHex', [0, 0, 0], 'detail'));
+    parts.push(B('bus_roof_aircon', 1.05, 0.16, 0.62,
+      [bodyX - 0.10, profiles.R + 0.38 + profiles.cargoH + 0.08, 0], 'baseHex', [0, 0, 0], 'equipment'));
+    if (visualVariant === 'tour_bus') {
+      strutPair(parts, joints, 'bus_luggage_rail', [-3.70, profiles.R + 2.86, 0.68],
+        [2.60, profiles.R + 2.86, 0.68], 0.018, 'accentHex', 6, 'equipment');
+    } else if (visualVariant === 'city_bus') {
+      for (const side of [-1, 1]) parts.push(B(`bus_lower_guard_${side < 0 ? 'left' : 'right'}`, profiles.L * 0.60, 0.10, 0.06,
+        [-0.55, profiles.R + 0.62, side * (profiles.W * 0.47 + 0.03)], 'accentHex', [0, 0, 0], 'equipment'));
+    }
+  } else if (kind === 'crane') {
+    parts.push(B('crane_rear_deck', profiles.L * 0.47, 0.20, profiles.W * 0.88, [-1.15, profiles.R + 0.54, 0], 'baseHex', [0, 0, 0], 'equipment'));
+    parts.push(C('crane_pivot', 0.42, 0.34, [-1.00, profiles.R + 0.82, 0], 'accentHex', 10, [0, 0, 0], 'equipment'));
+    const boomBase = [-1.00, profiles.R + 1.00, 0];
+    const boomTip = [2.15, profiles.H + 1.12, 0];
+    strut(parts, joints, 'crane_boom', boomBase, boomTip, 0.40, 'accentHex', 8, 'equipment');
+    strut(parts, joints, 'crane_hook_line', boomTip, [2.15, profiles.H + 0.35, 0], 0.018, 'darkHex', 6, 'equipment');
+    if (visualVariant === 'lattice_crane') {
+      const latticeZ = profiles.W * 0.23;
+      const boomPoint = (t, z) => [
+        boomBase[0] + (boomTip[0] - boomBase[0]) * t,
+        boomBase[1] + (boomTip[1] - boomBase[1]) * t,
+        z,
+      ];
+      for (const side of [-1, 1]) strut(parts, joints, `crane_lattice_rail_${side < 0 ? 'left' : 'right'}`,
+        boomPoint(0, side * latticeZ), boomPoint(1, side * latticeZ), 0.065, 'accentHex', 6, 'equipment');
+      for (const [index, [from, to]] of [[0, 0.22], [0.22, 0.44], [0.44, 0.66], [0.66, 0.88]].entries()) {
+        strut(parts, joints, `crane_lattice_diag_a_${index}`, boomPoint(from, -latticeZ), boomPoint(to, latticeZ), 0.045, 'accentHex', 6, 'equipment');
+        strut(parts, joints, `crane_lattice_diag_b_${index}`, boomPoint(from, latticeZ), boomPoint(to, -latticeZ), 0.045, 'accentHex', 6, 'equipment');
+      }
+      parts.push(B('crane_lattice_counterweight', 1.55, 0.86, profiles.W * 0.84, [-3.72, profiles.R + 0.98, 0], 'roofHex', [0, 0, 0], 'equipment'));
+    } else if (visualVariant === 'mobile_crane') {
+      parts.push(B('crane_mobile_counterweight', 1.25, 0.72, profiles.W * 0.74, [-3.55, profiles.R + 0.96, 0], 'baseHex', [0, 0, 0], 'equipment'));
+    }
+    for (const side of [-1, 1]) {
+      const outriggerBase = [-2.10, profiles.R + 0.58, side * profiles.W * 0.39];
+      const outriggerFoot = [-2.10, 0.18, side * (profiles.W / 2 + 0.18)];
+      strut(parts, joints, `crane_outrigger_${side < 0 ? 'left' : 'right'}`, outriggerBase, outriggerFoot, 0.055, 'accentHex', 8, 'equipment');
+      parts.push(C(`crane_outrigger_pad_${side < 0 ? 'left' : 'right'}`, 0.14, 0.16,
+        [outriggerFoot[0], 0.12, outriggerFoot[2]], 'baseHex', 10, [0, 0, 0], 'equipment'));
+    }
+  } else if (kind === 'mixer') {
+    parts.push(B('mixer_rear_deck', profiles.L * 0.56, 0.20, profiles.W * 0.88, [-1.20, profiles.R + 0.56, 0], 'baseHex', [0, 0, 0], 'equipment'));
+    const mixerTilt = -Math.PI / 12;
+    const mixerScale = 4 / 3;
+    const mixerRx = profiles.L * 0.22 * mixerScale;
+    const mixerRy = 1.20 * mixerScale;
+    const mixerRz = profiles.W * 0.40 * mixerScale;
+    const mixerDeckTop = profiles.R + 0.56 + 0.10;
+    const mixerVerticalExtent = Math.hypot(mixerRx * Math.sin(mixerTilt), mixerRy * Math.cos(mixerTilt));
+    const mixerDrumCenter = [-1.05, mixerDeckTop + mixerVerticalExtent, 0];
+    const mixerRearOffset = mixerRx * 0.78;
+    const mixerRearCone = [
+      mixerDrumCenter[0] - mixerRearOffset * Math.cos(mixerTilt),
+      mixerDrumCenter[1] - mixerRearOffset * Math.sin(mixerTilt),
+      0,
+    ];
+    const mixerDrumColor = ['green_mixer', 'toy_mixer'].includes(visualVariant) ? 'brightHex' : 'facadeHex';
+    const mixerBandRadius = mixerRz * 0.80;
+    parts.push(E('mixer_drum', mixerRx, mixerRy, mixerRz, mixerDrumCenter, mixerDrumColor, [0, 0, mixerTilt], 'cargo'));
+    for (const [index, offset] of [-mixerRx * 0.46, mixerRx * 0.46].entries()) {
+      parts.push(T(`mixer_drum_band_${index + 1}`, mixerBandRadius, 0.06,
+        pointAlongX(mixerDrumCenter, mixerTilt, offset), 'accentHex', [0, 0, mixerTilt - PI_2], 'detail'));
+    }
+    parts.push(C('mixer_rear_cone', 0.42, 0.42, mixerRearCone, 'accentHex', 10, [0, 0, PI_2 + mixerTilt], 'equipment'));
+    if (visualVariant === 'green_mixer') {
+      parts.push(C('mixer_roof_water_tank', 0.22, 0.90, [1.72, cabTop + 0.18, 0], 'facadeHex', 10, [0, 0, PI_2], 'equipment'));
+      for (const side of [-1, 1]) strut(parts, joints, `mixer_rear_ladder_${side < 0 ? 'left' : 'right'}`,
+        [-3.55, profiles.R + 0.78, side * 0.58], [-3.55, profiles.R + 2.76, side * 0.58], 0.035, 'accentHex', 6, 'equipment');
+      for (const [index, y] of [1.65, 2.10, 2.55].entries()) parts.push(B(`mixer_rear_ladder_step_${index + 1}`, 0.07, 0.045, 1.20,
+        [-3.55, y, 0], 'accentHex', [0, 0, 0], 'equipment'));
+    } else if (visualVariant === 'striped_mixer') {
+      strutPair(parts, joints, 'mixer_side_guard', [-3.55, profiles.R + 0.44, 0.94], [0.95, profiles.R + 0.44, 0.94], 0.035, 'accentHex', 6, 'equipment');
+    } else if (visualVariant === 'safety_mixer') {
+      strutPair(parts, joints, 'mixer_safety_rail', [-3.48, profiles.R + 0.52, 1.00], [0.78, profiles.R + 0.52, 1.00], 0.040, 'brightHex', 6, 'equipment');
+      strutPair(parts, joints, 'mixer_rear_guard', [-3.46, profiles.R + 0.54, 0.82], [-3.46, profiles.R + 2.16, 0.82], 0.035, 'accentHex', 6, 'equipment');
+    } else if (visualVariant === 'toy_mixer') {
+      const chuteEnd = [-3.18, profiles.R + 0.82, 0];
+      strut(parts, joints, 'mixer_chute_support', mixerRearCone, chuteEnd, 0.055, 'accentHex', 8, 'equipment');
+      parts.push(W('mixer_discharge_chute', 0.72, 0.22, 0.48, [-3.18, profiles.R + 0.70, 0], 'accentHex', [0, 0, mixerTilt], 'cargo'));
+    }
+  } else if (kind === 'dump') {
+    parts.push(P('dump_bed', 'tapered_box', { dimensions: [profiles.L * 0.55, profiles.cargoH, profiles.W * 0.92], topDimensions: [profiles.L * 0.48, profiles.W * 0.82] },
+      'facadeHex', [-1.10, profiles.R + 0.48 + profiles.cargoH / 2, 0], [0, 0, 0], 'cargo'));
+    for (const side of [-1, 1]) strut(parts, joints, `dump_bed_rail_${side < 0 ? 'left' : 'right'}`,
+      [-2.85, profiles.R + 1.18, side * profiles.W * 0.40], [-0.15, profiles.R + 1.18, side * profiles.W * 0.40], 0.022, 'accentHex', 6, 'cargo');
+    strut(parts, joints, 'dump_hydraulic_ram', [-0.38, profiles.R + 0.50, 0], [-1.00, profiles.R + 1.42, 0], 0.055, 'baseHex', 8, 'equipment');
+    parts.push(C('dump_rear_hinge', 0.12, 0.32, [-3.58, profiles.R + 0.78, 0], 'baseHex', 8, [PI_2, 0, 0], 'equipment'));
+    if (visualVariant === 'ribbed_dump') {
+      for (const [index, x] of [-2.70, -2.10, -1.50, -0.90, -0.30].entries()) strutPair(parts, joints, `dump_bed_rib_${index + 1}`,
+        [x, profiles.R + 0.70, 0.43], [x, profiles.R + 2.42, 0.43], 0.025, 'accentHex', 6, 'cargo');
+    } else if (visualVariant === 'dump_mixer_support') {
+      parts.push(C('dump_hydraulic_pump', 0.16, 0.28, [-2.55, profiles.R + 0.60, 0], 'accentHex', 8, [PI_2, 0, 0], 'equipment'));
+    }
+  } else {
+    const cargoL = profiles.L * 0.52;
+    const cargoX = -1.35;
+    const cargoCenterY = profiles.R + 0.42 + profiles.cargoH / 2;
+    const cargoRearX = cargoX - cargoL / 2 - 0.025;
+    if (visualVariant === 'flatbed_freight') {
+      parts.push(B('flatbed_deck', cargoL, 0.14, profiles.W * 0.90,
+        [cargoX, profiles.R + 0.42, 0], 'baseHex', [0, 0, 0], 'cargo'));
+      strutPair(parts, joints, 'flatbed_side_rail', [cargoX - cargoL * 0.46, profiles.R + 0.62, 0.44],
+        [cargoX + cargoL * 0.46, profiles.R + 0.62, 0.44], 0.022, 'accentHex', 6, 'cargo');
+      for (const [index, x] of [-3.30, -2.30, -1.30, -0.30].entries()) strutPair(parts, joints, `flatbed_stake_${index + 1}`,
+        [x, profiles.R + 0.42, 0.44], [x, profiles.R + 1.02, 0.44], 0.020, 'accentHex', 6, 'cargo');
+    } else {
+      parts.push(B('cargo_box', cargoL, profiles.cargoH, profiles.W * 0.92, [cargoX, cargoCenterY, 0], 'facadeHex', [0, 0, 0], 'cargo'));
+      parts.push(B('cargo_roof', cargoL * 0.98, 0.12, profiles.W * 0.94, [cargoX, profiles.R + 0.42 + profiles.cargoH + 0.07, 0], 'roofHex', [0, 0, 0], 'cargo'));
+      parts.push(B('freight_rear_door', 0.045, profiles.cargoH * 0.82, profiles.W * 0.78,
+        [cargoRearX, cargoCenterY, 0], 'baseHex', [0, 0, 0], 'cargo'));
+    }
+    if (visualVariant === 'ice_cream_freight') {
+      parts.push(B('ice_cream_trailer_seam', 0.035, profiles.cargoH * 0.90, profiles.W * 0.88,
+        [cargoX + 0.08, cargoCenterY, 0], 'accentHex', [0, 0, 0], 'cargo'));
+      parts.push(B('ice_cream_roof_unit', 0.62, 0.16, 0.58,
+        [cargoX + cargoL * 0.20, profiles.R + 0.42 + profiles.cargoH + 0.20, 0], 'brightHex', [0, 0, 0], 'equipment'));
+    } else if (visualVariant === 'longhaul_freight') {
+      for (const side of [-1, 1]) parts.push(B(`longhaul_cab_fairing_${side < 0 ? 'left' : 'right'}`, 0.34, cabH * 0.42, 0.06,
+        [cabFront - 0.20, cabBottom + cabH * 0.42, side * (profiles.W * 0.47 + 0.03)], 'roofHex', [0, 0, 0], 'body'));
+      parts.push(B('longhaul_roof_deflector', 0.62, 0.13, profiles.W * 0.76,
+        [cabRear - 0.12, cabTop + 0.15, 0], 'roofHex', [0, 0, 0], 'equipment'));
+    } else if (visualVariant === 'container_freight') {
+      strutPair(parts, joints, 'container_side_rail', [cargoX - cargoL * 0.42, profiles.R + 0.55, 0.44],
+        [cargoX + cargoL * 0.42, profiles.R + 0.55, 0.44], 0.022, 'accentHex', 6, 'cargo');
+    } else if (['box_freight', 'fleet_box_freight'].includes(visualVariant)) {
+      parts.push(B('box_freight_refrigeration_unit', 0.52, 0.20, 0.56,
+        [cargoX + cargoL * 0.30, profiles.R + 0.42 + profiles.cargoH + 0.19, 0], 'brightHex', [0, 0, 0], 'equipment'));
+    }
+  }
+  if (kind === 'freight' || kind === 'fire') {
+    for (const side of [-1, 1]) parts.push(C(`exhaust_stack_${side < 0 ? 'left' : 'right'}`, 0.075, 1.05,
+      [cabRear - 0.08, cabTop + 0.54, side * profiles.W * 0.38], 'darkHex', 8, [0, 0, 0], 'exhaust'));
+  }
+  if (kind === 'fire') {
+    parts.push(B('fire_equipment_body', profiles.L * 0.46, 1.55, profiles.W * 0.90, [-1.18, profiles.R + 1.18, 0], 'facadeHex', [0, 0, 0], 'equipment'));
+    parts.push(B('fire_roof_rail', profiles.L * 0.45, 0.12, profiles.W * 0.92, [-1.18, profiles.R + 2.00, 0], 'accentHex', [0, 0, 0], 'equipment'));
+    parts.push(B('fire_lightbar', 0.72, 0.10, 0.20, [cabCenter, cabTop + 0.18, 0], 'accentHex', [0, 0, 0], 'equipment'));
+    parts.push(C('fire_hose_reel', 0.25, 0.14, [-1.15, profiles.R + 2.28, 0], 'darkHex', 10, [PI_2, 0, 0], 'equipment'));
+    strutPair(parts, joints, 'fire_roof_ladder', [-2.35, profiles.R + 2.18, 0.36], [0.10, profiles.R + 2.18, 0.36], 0.022, 'brightHex', 6, 'equipment');
+    if (visualVariant === 'aerial_fire') strutPair(parts, joints, 'fire_aerial_ladder', [-1.95, profiles.R + 2.25, 0.36],
+      [2.05, profiles.H + 0.42, 0.36], 0.038, 'brightHex', 8, 'equipment');
+  }
+  for (const [index, x] of profiles.axles.entries()) addFourWheelAxle(parts, wheels, `axle_${index + 1}`, x, profiles.W, profiles.R, kind === 'dump' ? 0.125 : 0.105, palette, index > 0 && profiles.dual);
+  parts.push(C('fifth_wheel_coupling', 0.48, 0.16, [-2.0, profiles.R + 0.42, 0], 'darkHex', 10, [PI_2, 0, 0], 'coupling'));
+  return { style: `heavy_${kind}_vehicle`, visualVariant, symmetryMode: 'mirrored_bilateral', colors: palette, parts, joints, wheels,
+    envelope: [profiles.L + (kind === 'crane' ? 0.30 : 0.20),
+      profiles.H + (kind === 'crane' ? 1.55 : (kind === 'mixer' ? 1.00 : (kind === 'freight' || kind === 'fire' ? 0.90 : 0.20))),
+      profiles.W + 0.70],
+    note: `依來源影像特徵分流 ${visualVariant}；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。` };
+}
+
 function stableTargetOfKey(key) {
   return String(key || '')
     .replace(/_[0-9a-f]{8}(?:_luna)?_v6$/, '')
@@ -581,7 +1176,7 @@ function loadTargets() {
   const statuses = loadReviewStatuses();
   const grouped = new Map();
   for (const row of db.items || []) {
-    if (row.family !== 'vehicle' || !['bike', 'motor'].includes(row.subpart) || row.version !== 6) continue;
+    if (row.family !== 'vehicle' || !ACTIVE_SUBPARTS.includes(row.subpart) || row.version !== 6) continue;
     const canonical = canonicalFromImage(row);
     const current = grouped.get(canonical);
     if (!current || String(row.image || '').length > String(current.image || '').length) {
@@ -632,6 +1227,14 @@ function assertVehicleContract(spec, target) {
       .map((part) => part.name);
     if (bodyPanelNames.length && bodyPanelNames.length % 2 !== 0) throw new Error(`${target.stable}: 機車左右車身面板數量不成對`);
   }
+  if (['car', 'heavy'].includes(target.subpart)) {
+    if (spec.wheels.length < 4) throw new Error(`${target.stable}: 四輪/重型載具輪數不足`);
+    const wheelGroups = new Set(spec.wheels.map((wheel) => Math.round(wheel.center[0] * 1000) / 1000));
+    if (wheelGroups.size < 2) throw new Error(`${target.stable}: 車輪沒有至少兩組前後輪軸`);
+    if (spec.parts.some((part) => /(?:windshield|window|glass)/i.test(part.name) && part.colorKey !== 'glassHex')) {
+      throw new Error(`${target.stable}: 玻璃零件未獨立使用 glassHex`);
+    }
+  }
 }
 
 function addContracts(geometry, spec) {
@@ -680,14 +1283,27 @@ function renderPreview(model, preview) {
 }
 
 function processTarget(row, indexes) {
-  const spec = row.subpart === 'bike' ? bikeSpec(row) : motorSpec(row);
+  const spec = row.subpart === 'bike' ? bikeSpec(row)
+    : row.subpart === 'motor' ? motorSpec(row)
+      : row.subpart === 'car' ? carSpec(row)
+        : heavySpec(row);
   assertVehicleContract(spec, row);
   const geometry = buildGeometryFromParts({ style: spec.style, symmetryMode: spec.symmetryMode, colors: spec.colors, parts: spec.parts }, 'vehicle', row.subpart, safeName(row.stable));
+  geometry.modelJson.visualVariant = spec.visualVariant || spec.style;
   geometry.modelJson.parts.forEach((part, index) => {
     part.role = spec.parts[index]?.role || 'structure';
+    part.colorKey = spec.parts[index]?.colorKey || 'facadeHex';
   });
   const symmetry = vehicleSymmetryReport(geometry.modelJson, geometry.modelJson.meshData);
   if (!symmetry.ok) throw new Error(`${row.stable}: 左右對稱契約失敗 ${JSON.stringify(symmetry.issues)}`);
+  if (spec.envelope) {
+    const [maxL, maxH, maxW] = spec.envelope;
+    const b = geometry.bounds;
+    if (b.min[1] < -0.025) throw new Error(`${row.stable}: 幾何穿地 ${b.min[1].toFixed(3)}m`);
+    if (b.size[0] > maxL + 0.02 || b.size[1] > maxH + 0.02 || b.size[2] > maxW + 0.02) {
+      throw new Error(`${row.stable}: 幾何超出來源車型包絡 ${b.size.join('x')} > ${spec.envelope.join('x')}m`);
+    }
+  }
   addContracts(geometry, spec);
   geometry.objContent = geometry.objContent.replaceAll('v6 Gemini', 'v6 GPT-5.6 Luna');
   const evidence = readEvidence(row, indexes.evidence);
@@ -713,6 +1329,9 @@ function processTarget(row, indexes) {
       yolo26: { schemaVersion: evidence.schemaVersion, evidenceStatus: evidence.status, featureFile: evidenceRelative, target: evidence.target },
       evidenceOverride, eligible: false, pipelineEligibility: 'awaiting_human_review', sourceImage,
       reconstructionNote: spec.note, localModel: 'gpt-5.6-luna', similarityReview: review,
+      semanticColorContract: { body: ['roofHex', 'facadeHex', 'baseHex', 'accentHex', 'darkHex', 'brightHex'], glazing: 'glassHex', backgroundRejected: true },
+      sourceVisualClass: row.subpart === 'car' ? carClass(row) : heavyClass(row),
+      sourceVisualVariant: spec.visualVariant || spec.style,
     };
     const metadata = {
       id: targetId, key, family: 'vehicle', subpart: row.subpart, style: spec.style, symmetryMode: spec.symmetryMode,
@@ -720,7 +1339,8 @@ function processTarget(row, indexes) {
       similarityCorrections: review.corrections, version: 6, verStr: 'v6', method: 'gpt-5.6-luna_visual_direct',
       status: 'awaiting_human_review', eligible: false, pipelineEligibility: 'awaiting_human_review', source_image: sourceImage,
       source_full_path: source, yolo26: features.yolo26, evidenceOverride, preview: relativePath(preview), bounds: geometry.bounds,
-      reconstructionNote: spec.note, created_at: new Date().toISOString(), humanVerdictPreserved: true,
+      reconstructionNote: spec.note, sourceVisualVariant: spec.visualVariant || spec.style, created_at: new Date().toISOString(), humanVerdictPreserved: true,
+      structuralContract: geometry.modelJson.structuralContract, semanticColorContract: features.semanticColorContract,
     };
     writeJsonAtomic(join(outDir, 'model.json'), geometry.modelJson);
     writeJsonAtomic(join(outDir, 'features.json'), features);
@@ -730,6 +1350,7 @@ function processTarget(row, indexes) {
   return {
     target: row.stable, status: DRY_RUN ? 'validated' : 'awaiting_human_review', targetId, key, family: 'vehicle', subpart: row.subpart,
     image: sourceImage, sourceFound: Boolean(source), staleRowsCollapsed: row.staleKeys.length, style: spec.style,
+    visualVariant: spec.visualVariant || spec.style,
     symmetryMode: spec.symmetryMode, featureEvidence: evidence.status, evidenceOverride: evidenceOverride.type, eligible: false,
     pipelineEligibility: 'awaiting_human_review', similarityReview: review, outputDir: relativePath(outDir), preview: relativePath(preview),
     bounds: geometry.bounds, parts: geometry.modelJson.parts.length, thinMembers: spec.joints.length,
@@ -739,11 +1360,11 @@ function processTarget(row, indexes) {
 function entryCanonical(entry) {
   for (const key of entry.keys || (entry.key ? [entry.key] : [])) {
     const canonical = canonicalFromKey(key);
-    if (/^vehicle\/(bike|motor)_/.test(canonical)) return canonical;
+    if (/^vehicle\/(bike|motor|car|heavy)_/.test(canonical)) return canonical;
   }
   for (const image of entry.imgs || []) {
     const file = image.file || '';
-    const match = file.match(/^vehicle\/(bike|motor)\/([^/]+)$/i);
+    const match = file.match(/^vehicle\/(bike|motor|car|heavy)\/([^/]+)$/i);
     if (match) return `vehicle/${match[1]}_${basename(match[2], extname(match[2]))}`;
   }
   return null;
@@ -753,13 +1374,13 @@ function finalizeCatalog(results) {
   if (!accepted.length) return;
   const targets = new Set(accepted.map((result) => result.target));
   const db = JSON.parse(readFileSync(DB_PATH, 'utf8'));
-  db.items = (db.items || []).filter((row) => !(row.family === 'vehicle' && ['bike', 'motor'].includes(row.subpart) && row.version === 6 && targets.has(canonicalFromImage(row))));
+  db.items = (db.items || []).filter((row) => !(row.family === 'vehicle' && ACTIVE_SUBPARTS.includes(row.subpart) && row.version === 6 && targets.has(canonicalFromImage(row))));
   for (const result of accepted) {
     db.items.push({
       id: result.targetId, key: result.key, family: 'vehicle', subpart: result.subpart, style: result.style, symmetryMode: result.symmetryMode,
       similarityScore: result.similarityReview.similarityScore, version: 6, verStr: 'v6', method: 'gpt-5.6-luna_visual_direct', status: 'awaiting_human_review',
       image: result.image, evidenceOverride: result.evidenceOverride, eligible: false, pipelineEligibility: 'awaiting_human_review', bounds: result.bounds,
-      spec: { style: result.style }, triangles: result.bounds.triangles, outputDir: result.outputDir,
+      spec: { style: result.style, visualVariant: result.visualVariant }, triangles: result.bounds.triangles, outputDir: result.outputDir,
     });
   }
   db.generated_at = new Date().toISOString();
@@ -790,7 +1411,7 @@ function writeReport(results) {
     try { prior = JSON.parse(readFileSync(path, 'utf8')).candidates || []; } catch { prior = []; }
   }
   const canonicalReportTarget = (target) => String(target)
-    .replace(/^vehicle_(bike|motor)_/, 'vehicle/$1_');
+    .replace(/^vehicle_(bike|motor|car|heavy)_/, 'vehicle/$1_');
   const replaced = new Set(results.map((result) => result.target));
   const merged = new Map();
   for (const result of prior) {
@@ -805,8 +1426,8 @@ function main() {
   if (!DRY_RUN && !existsSync(PYTHON)) throw new Error(`找不到 Python: ${PYTHON}`);
   const { rows, totalEligible } = loadTargets();
   const indexes = { sources: sourceIndex(), evidence: evidenceIndex() };
-  console.log(`vehicle/bike+motor v6 未標記目標: ${totalEligible}；本次處理: ${rows.length}；模式: ${DRY_RUN ? 'dry-run' : FINALIZE ? 'finalize' : 'candidate'}`);
-  if (!rows.length) throw new Error('沒有符合條件的 vehicle/bike 或 vehicle/motor v6 目標');
+  console.log(`vehicle/${ACTIVE_SUBPARTS.join('+')} v6 未標記目標: ${totalEligible}；本次處理: ${rows.length}；模式: ${DRY_RUN ? 'dry-run' : FINALIZE ? 'finalize' : 'candidate'}`);
+  if (!rows.length) throw new Error(`沒有符合條件的 vehicle/${ACTIVE_SUBPARTS.join(' 或 vehicle/')} v6 目標`);
   const results = [];
   const counts = {};
   for (const row of rows) {

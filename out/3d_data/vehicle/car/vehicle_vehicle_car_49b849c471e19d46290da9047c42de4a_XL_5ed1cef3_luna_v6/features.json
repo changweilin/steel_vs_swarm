@@ -1,0 +1,259 @@
+{
+  "id": "vehicle_car_vehicle_car_49b849c471e19d46290da9047c42de4a_XL",
+  "sourceImage": "vehicle/car/49b849c471e19d46290da9047c42de4a_XL.jpg",
+  "style": "suv_four_wheel_vehicle",
+  "symmetryMode": "mirrored_bilateral",
+  "colors": {
+    "roofHex": 2438472,
+    "facadeHex": 4564385,
+    "baseHex": 1778990,
+    "accentHex": 14992735,
+    "darkHex": 790807,
+    "brightHex": 15990783,
+    "glassHex": 1390920
+  },
+  "totalParts": 48,
+  "partNames": [
+    "chassis_base",
+    "underbody_pan",
+    "lower_body",
+    "front_hood",
+    "cabin_shell",
+    "roof_cap",
+    "front_windshield",
+    "rear_windshield",
+    "front_side_window_left",
+    "rear_side_window_left",
+    "side_sill_left",
+    "side_mirror_left",
+    "mirror_stem_left",
+    "headlight_left",
+    "taillight_left",
+    "front_side_window_right",
+    "rear_side_window_right",
+    "side_sill_right",
+    "side_mirror_right",
+    "mirror_stem_right",
+    "headlight_right",
+    "taillight_right",
+    "front_bumper",
+    "rear_bumper",
+    "front_grille",
+    "front_license_plate",
+    "rear_license_plate",
+    "rear_wheel_left_tire",
+    "rear_wheel_left_rim",
+    "rear_wheel_left_hub",
+    "rear_wheel_right_tire",
+    "rear_wheel_right_rim",
+    "rear_wheel_right_hub",
+    "rear_axle",
+    "front_wheel_left_tire",
+    "front_wheel_left_rim",
+    "front_wheel_left_hub",
+    "front_wheel_right_tire",
+    "front_wheel_right_rim",
+    "front_wheel_right_hub",
+    "front_axle",
+    "roof_rail_left",
+    "roof_rail_right",
+    "ev_smooth_front_nose",
+    "ev_front_lightbar",
+    "ev_roof_glass",
+    "ev_side_aero_left",
+    "ev_side_aero_right"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "box",
+    "tapered_box",
+    "ellipsoid_sphere",
+    "cylinder",
+    "torus_ring",
+    "wedge"
+  ],
+  "structuralContract": {
+    "coordinateFrame": {
+      "nose": "+X",
+      "up": "+Y",
+      "lateral": "+Z"
+    },
+    "thinMembersEndpointDerived": true,
+    "sharedJoints": [
+      {
+        "name": "mirror_stem_left",
+        "a": [
+          0.92,
+          1.2664,
+          -0.99
+        ],
+        "b": [
+          1.01,
+          1.2904,
+          -1.1199999999999999
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "mirror_stem_right",
+        "a": [
+          0.92,
+          1.2664,
+          0.99
+        ],
+        "b": [
+          1.01,
+          1.2904,
+          1.1199999999999999
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "roof_rail_left",
+        "a": [
+          -1.17,
+          1.83,
+          -0.6144
+        ],
+        "b": [
+          0.8300000000000001,
+          1.83,
+          -0.6144
+        ],
+        "radius": 0.018
+      },
+      {
+        "name": "roof_rail_right",
+        "a": [
+          -1.17,
+          1.83,
+          0.6144
+        ],
+        "b": [
+          0.8300000000000001,
+          1.83,
+          0.6144
+        ],
+        "radius": 0.018
+      }
+    ],
+    "wheelContract": [
+      {
+        "name": "rear_wheel_left",
+        "center": [
+          -1.55,
+          0.39,
+          -0.8999999999999999
+        ],
+        "outerRadius": 0.39,
+        "tireTube": 0.095,
+        "axis": "z",
+        "tire": "rear_wheel_left_tire",
+        "rim": "rear_wheel_left_rim"
+      },
+      {
+        "name": "rear_wheel_right",
+        "center": [
+          -1.55,
+          0.39,
+          0.8999999999999999
+        ],
+        "outerRadius": 0.39,
+        "tireTube": 0.095,
+        "axis": "z",
+        "tire": "rear_wheel_right_tire",
+        "rim": "rear_wheel_right_rim"
+      },
+      {
+        "name": "front_wheel_left",
+        "center": [
+          1.55,
+          0.39,
+          -0.8999999999999999
+        ],
+        "outerRadius": 0.39,
+        "tireTube": 0.095,
+        "axis": "z",
+        "tire": "front_wheel_left_tire",
+        "rim": "front_wheel_left_rim"
+      },
+      {
+        "name": "front_wheel_right",
+        "center": [
+          1.55,
+          0.39,
+          0.8999999999999999
+        ],
+        "outerRadius": 0.39,
+        "tireTube": 0.095,
+        "axis": "z",
+        "tire": "front_wheel_right_tire",
+        "rim": "front_wheel_right_rim"
+      }
+    ],
+    "noGroundPenetrationExpected": true,
+    "mirroredBilateral": true,
+    "symmetryContract": {
+      "lateralAxis": "+Z",
+      "mirrorPlane": "z=0",
+      "functionalAsymmetry": "chain, brake disc, kickstand and exhaust may remain single-sided"
+    },
+    "motorBodyPanelsExplicitBilateral": false,
+    "centerlineMembersSingle": true,
+    "sourceSpecificAssembly": true,
+    "visualReviewRequired": true
+  },
+  "schemaVersion": null,
+  "evidenceStatus": "missing_yolo26_schema_v2",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "reconstructionNote": "依來源影像特徵分流 ev_crossover；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": null,
+    "verdict": "awaiting_human_review",
+    "corrections": [
+      "逐張對照來源圖與固定五方向視圖",
+      "確認車型特有零件、接點與前後輪徑"
+    ],
+    "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+    "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+    "independentMultimodalReview": "required",
+    "hardDefects": [
+      "human_visual_review_required"
+    ],
+    "fixedViews": [
+      "front_3_4",
+      "side_left",
+      "front",
+      "side_right",
+      "rear"
+    ],
+    "critique": "suv_four_wheel_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+  },
+  "semanticColorContract": {
+    "body": [
+      "roofHex",
+      "facadeHex",
+      "baseHex",
+      "accentHex",
+      "darkHex",
+      "brightHex"
+    ],
+    "glazing": "glassHex",
+    "backgroundRejected": true
+  },
+  "sourceVisualClass": "suv",
+  "sourceVisualVariant": "ev_crossover"
+}
