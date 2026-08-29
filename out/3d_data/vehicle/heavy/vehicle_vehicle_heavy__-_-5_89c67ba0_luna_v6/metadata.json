@@ -1,0 +1,252 @@
+{
+  "id": "vehicle_vehicle_heavy__-_-5_89c67ba0_luna_v6",
+  "key": "vehicle/heavy_文境旅遊-賓士豪華大客車-5_89c67ba0_luna_v6",
+  "family": "vehicle",
+  "subpart": "heavy",
+  "style": "heavy_freight_vehicle",
+  "symmetryMode": "mirrored_bilateral",
+  "similarityScore": null,
+  "similarityReview": "heavy_freight_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "逐張對照來源圖與固定五方向視圖",
+    "確認車型特有零件、接點與前後輪徑"
+  ],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/heavy/文境旅遊-賓士豪華大客車-5.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\heavy\\文境旅遊-賓士豪華大客車-5.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_heavy__-_-5_89c67ba0_luna_v6.png",
+  "bounds": {
+    "min": [
+      -4.78,
+      0.0269,
+      -1.5977
+    ],
+    "max": [
+      4.8225,
+      4.525,
+      1.5977
+    ],
+    "size": [
+      9.602,
+      4.498,
+      3.195
+    ],
+    "rMax": 5.08,
+    "triangles": 3608,
+    "vertices": 2254
+  },
+  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "created_at": "2026-08-29T02:33:28.006Z",
+  "humanVerdictPreserved": true,
+  "structuralContract": {
+    "coordinateFrame": {
+      "nose": "+X",
+      "up": "+Y",
+      "lateral": "+Z"
+    },
+    "thinMembersEndpointDerived": true,
+    "sharedJoints": [
+      {
+        "name": "cab_mirror_stem_left",
+        "a": [
+          4.3500000000000005,
+          2.3806,
+          -1.315
+        ],
+        "b": [
+          4.430000000000001,
+          2.4577,
+          -1.4549999999999998
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "cab_mirror_stem_right",
+        "a": [
+          4.3500000000000005,
+          2.3806,
+          1.315
+        ],
+        "b": [
+          4.430000000000001,
+          2.4577,
+          1.4549999999999998
+        ],
+        "radius": 0.014
+      }
+    ],
+    "wheelContract": [
+      {
+        "name": "axle_1_wheel_left",
+        "center": [
+          -2.75,
+          0.55,
+          -1.2149999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_1_wheel_left_tire",
+        "rim": "axle_1_wheel_left_rim"
+      },
+      {
+        "name": "axle_1_wheel_right",
+        "center": [
+          -2.75,
+          0.55,
+          1.2149999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_1_wheel_right_tire",
+        "rim": "axle_1_wheel_right_rim"
+      },
+      {
+        "name": "axle_2_wheel_left",
+        "center": [
+          -1.25,
+          0.55,
+          -1.2149999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_wheel_left_tire",
+        "rim": "axle_2_wheel_left_rim"
+      },
+      {
+        "name": "axle_2_inner_wheel_left",
+        "center": [
+          -1.25,
+          0.55,
+          -0.9949999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_inner_wheel_left_tire",
+        "rim": "axle_2_inner_wheel_left_rim"
+      },
+      {
+        "name": "axle_2_wheel_right",
+        "center": [
+          -1.25,
+          0.55,
+          1.2149999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_wheel_right_tire",
+        "rim": "axle_2_wheel_right_rim"
+      },
+      {
+        "name": "axle_2_inner_wheel_right",
+        "center": [
+          -1.25,
+          0.55,
+          0.9949999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_2_inner_wheel_right_tire",
+        "rim": "axle_2_inner_wheel_right_rim"
+      },
+      {
+        "name": "axle_3_wheel_left",
+        "center": [
+          2.65,
+          0.55,
+          -1.2149999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_wheel_left_tire",
+        "rim": "axle_3_wheel_left_rim"
+      },
+      {
+        "name": "axle_3_inner_wheel_left",
+        "center": [
+          2.65,
+          0.55,
+          -0.9949999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_inner_wheel_left_tire",
+        "rim": "axle_3_inner_wheel_left_rim"
+      },
+      {
+        "name": "axle_3_wheel_right",
+        "center": [
+          2.65,
+          0.55,
+          1.2149999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_wheel_right_tire",
+        "rim": "axle_3_wheel_right_rim"
+      },
+      {
+        "name": "axle_3_inner_wheel_right",
+        "center": [
+          2.65,
+          0.55,
+          0.9949999999999999
+        ],
+        "outerRadius": 0.55,
+        "tireTube": 0.105,
+        "axis": "z",
+        "tire": "axle_3_inner_wheel_right_tire",
+        "rim": "axle_3_inner_wheel_right_rim"
+      }
+    ],
+    "noGroundPenetrationExpected": true,
+    "mirroredBilateral": true,
+    "symmetryContract": {
+      "lateralAxis": "+Z",
+      "mirrorPlane": "z=0",
+      "functionalAsymmetry": "chain, brake disc, kickstand and exhaust may remain single-sided"
+    },
+    "motorBodyPanelsExplicitBilateral": false,
+    "centerlineMembersSingle": true,
+    "sourceSpecificAssembly": true,
+    "visualReviewRequired": true
+  },
+  "semanticColorContract": {
+    "body": [
+      "roofHex",
+      "facadeHex",
+      "baseHex",
+      "accentHex",
+      "darkHex",
+      "brightHex"
+    ],
+    "glazing": "glassHex",
+    "backgroundRejected": true
+  }
+}
