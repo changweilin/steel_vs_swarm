@@ -1,0 +1,290 @@
+{
+  "id": "rock_mg_tower_rock_mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420",
+  "sourceImage": "rock/mg_tower/ov_1dc19c47-5d44-4e25-a685-854e0eb0e420.jpg",
+  "style": "stacked geological monument with attached observation detail",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6964528,
+    "facadeHex": 10119749,
+    "baseHex": 6767665,
+    "accentHex": 12683864,
+    "darkHex": 4861992,
+    "brightHex": 14859137,
+    "glassHex": 2307908
+  },
+  "totalParts": 10,
+  "partNames": [
+    "ground_contact_anchor",
+    "monument_base",
+    "monument_lower_tower",
+    "monument_upper_tower",
+    "monument_capstone",
+    "monument_front_face",
+    "attached_observation_platform",
+    "attached_observation_roof",
+    "attached_waterline_foam",
+    "attached_tide_band"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "polygonal_prism",
+    "dodecahedron_polyhedron",
+    "wedge"
+  ],
+  "schemaVersion": 1,
+  "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\mg_tower\\ov_1dc19c47-5d44-4e25-a685-854e0eb0e420.jpg",
+  "oldV6": {
+    "key": "rock/mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_8c1d6767_v6",
+    "style": "rock_monument",
+    "bounds": {
+      "min": [
+        -12.5,
+        -1,
+        -18
+      ],
+      "max": [
+        12.5,
+        5.25,
+        2
+      ],
+      "size": [
+        25,
+        6.25,
+        20
+      ],
+      "rMax": 21.915,
+      "triangles": 204,
+      "vertices": 124
+    },
+    "partNames": [
+      "MainMesaBase",
+      "MainMesaTop",
+      "SpirePillar",
+      "LeftMesaBase",
+      "LeftMesaTop",
+      "RightMesaBase",
+      "DistantMesa",
+      "ForegroundRockCluster1",
+      "ForegroundRockCluster2",
+      "ForegroundRockCluster3",
+      "GroundTerrainBed"
+    ]
+  },
+  "lunaVisualFeatures": {
+    "path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\mg_tower\\ov_1dc19c47-5d44-4e25-a685-854e0eb0e420.jpg",
+    "status": "ok",
+    "width": 1024,
+    "height": 768,
+    "aspectRatio": 1.3333,
+    "meanRgb": [
+      171.82,
+      134.29,
+      118.96
+    ],
+    "luminance": {
+      "mean": 141.16,
+      "range": 231.6,
+      "topMean": 166.5,
+      "bottomMean": 108.26
+    },
+    "coverage": {
+      "green": 0.00122,
+      "waterSky": 0.13281,
+      "warmEarth": 0.65104,
+      "neutralRock": 0.27799,
+      "dark": 0.01929
+    },
+    "edgeDensity": {
+      "horizontal": 0.0148,
+      "vertical": 0.02217,
+      "combined": 0.01848
+    },
+    "dominantColors": [
+      {
+        "rgb": [
+          160,
+          96,
+          64
+        ],
+        "ratio": 0.15519
+      },
+      {
+        "rgb": [
+          192,
+          96,
+          64
+        ],
+        "ratio": 0.09041
+      },
+      {
+        "rgb": [
+          192,
+          192,
+          192
+        ],
+        "ratio": 0.06567
+      },
+      {
+        "rgb": [
+          160,
+          160,
+          160
+        ],
+        "ratio": 0.06453
+      },
+      {
+        "rgb": [
+          160,
+          64,
+          32
+        ],
+        "ratio": 0.05347
+      },
+      {
+        "rgb": [
+          192,
+          160,
+          160
+        ],
+        "ratio": 0.04744
+      }
+    ],
+    "capture": {
+      "model": "gpt-5.6-luna",
+      "mode": "local_visual_feature_capture",
+      "downsample": [
+        128,
+        96
+      ],
+      "deterministic": true
+    }
+  },
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/rock/mg_mesa/ov_1dc19c47-5d44-4e25-a685-854e0eb0e420.json",
+    "target": {
+      "targetId": "ov_1dc19c47-5d44-4e25-a685-854e0eb0e420~0",
+      "bbox": [
+        0,
+        0,
+        1024,
+        768
+      ],
+      "width": 1024,
+      "height": 768,
+      "aspectRatio": 1.333,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.985,
+          "centerOffset": 0.006
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.866,
+          "centerOffset": 0.066
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.978,
+          "centerOffset": 0.01
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.988,
+          "centerOffset": 0.005
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.974,
+          "centerOffset": -0.013
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "rock\\mg_mesa\\ov_1dc19c47-5d44-4e25-a685-854e0eb0e420~0.png"
+    }
+  },
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批岩石依使用者指定以 GPT-5.6 Luna 視覺特徵與多面體岩石契約重建；缺少 YOLO26 schema-v2 時不提升 runtime 資格。"
+  },
+  "attachments": {
+    "vegetation": false,
+    "waterline": true,
+    "strata": false,
+    "stain": false,
+    "stairs": false,
+    "observation": true,
+    "hat": false,
+    "profile": "tower"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 75,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_local_visual_feature_contract",
+    "critique": "視覺特徵與tower幾何契約已對齊；10 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。"
+  },
+  "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「tower」；以多層多面體重建輪廓，保留waterline、observation附著特徵。"
+}

@@ -1,0 +1,249 @@
+{
+  "id": "rock_rock_main_Ballinagree_6e5f4893_luna_v6",
+  "key": "rock/main_Ballinagree_6e5f4893_luna_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "coastal layered rock with waterline attachment",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 84,
+  "similarityReview": "視覺特徵與water_formation幾何契約已對齊；13 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "rock/Ballinagree.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\Ballinagree.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/rock/main/Ballinagree.json",
+    "target": {
+      "targetId": "Ballinagree~0",
+      "bbox": [
+        0,
+        0,
+        1648,
+        946
+      ],
+      "width": 1648,
+      "height": 946,
+      "aspectRatio": 1.742,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 3,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 4,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.05,
+          "centerOffset": 0.208
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.277,
+          "centerOffset": 0.096
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.732,
+          "centerOffset": -0.134
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.845,
+          "centerOffset": -0.078
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "rock\\main\\Ballinagree~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批岩石依使用者指定以 GPT-5.6 Luna 視覺特徵與多面體岩石契約重建；缺少 YOLO26 schema-v2 時不提升 runtime 資格。"
+  },
+  "lunaVisualFeatures": {
+    "path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\Ballinagree.jpg",
+    "status": "ok",
+    "width": 1648,
+    "height": 946,
+    "aspectRatio": 1.7421,
+    "meanRgb": [
+      131.96,
+      141,
+      139.58
+    ],
+    "luminance": {
+      "mean": 138.97,
+      "range": 224.43,
+      "topMean": 212.23,
+      "bottomMean": 59.7
+    },
+    "coverage": {
+      "green": 0.08615,
+      "waterSky": 0.41695,
+      "warmEarth": 0.14458,
+      "neutralRock": 0.58754,
+      "dark": 0.06582
+    },
+    "edgeDensity": {
+      "horizontal": 0.00586,
+      "vertical": 0.01339,
+      "combined": 0.00963
+    },
+    "dominantColors": [
+      {
+        "rgb": [
+          64,
+          64,
+          32
+        ],
+        "ratio": 0.1311
+      },
+      {
+        "rgb": [
+          192,
+          224,
+          224
+        ],
+        "ratio": 0.10274
+      },
+      {
+        "rgb": [
+          32,
+          32,
+          32
+        ],
+        "ratio": 0.09835
+      },
+      {
+        "rgb": [
+          192,
+          192,
+          192
+        ],
+        "ratio": 0.07812
+      },
+      {
+        "rgb": [
+          160,
+          160,
+          192
+        ],
+        "ratio": 0.06999
+      },
+      {
+        "rgb": [
+          32,
+          32,
+          0
+        ],
+        "ratio": 0.04998
+      }
+    ],
+    "capture": {
+      "model": "gpt-5.6-luna",
+      "mode": "local_visual_feature_capture",
+      "downsample": [
+        128,
+        73
+      ],
+      "deterministic": true
+    }
+  },
+  "attachments": {
+    "vegetation": true,
+    "waterline": true,
+    "strata": false,
+    "stain": false,
+    "stairs": false,
+    "observation": false,
+    "hat": false,
+    "profile": "water_formation"
+  },
+  "preview": "out/review_previews/rock_rock_main_Ballinagree_6e5f4893_luna_v6.png",
+  "bounds": {
+    "min": [
+      -1.359,
+      0,
+      -1.359
+    ],
+    "max": [
+      1.359,
+      3.3525,
+      1.359
+    ],
+    "size": [
+      2.718,
+      3.353,
+      2.718
+    ],
+    "rMax": 1.922,
+    "triangles": 514,
+    "vertices": 296
+  },
+  "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「water_formation」；以多層多面體重建輪廓，保留vegetation、waterline附著特徵。",
+  "created_at": "2026-08-29T05:29:39.890Z",
+  "humanVerdictPreserved": true
+}

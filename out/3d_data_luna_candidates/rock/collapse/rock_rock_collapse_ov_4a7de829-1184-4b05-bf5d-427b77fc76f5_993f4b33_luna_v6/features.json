@@ -1,0 +1,289 @@
+{
+  "id": "rock_collapse_rock_collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5",
+  "sourceImage": "rock/collapse/ov_4a7de829-1184-4b05-bf5d-427b77fc76f5.jpg",
+  "style": "faceted weathered erratic boulder",
+  "symmetryMode": "asymmetric",
+  "colors": {
+    "roofHex": 6964528,
+    "facadeHex": 10119749,
+    "baseHex": 6767665,
+    "accentHex": 5602375,
+    "darkHex": 4861992,
+    "brightHex": 10467954,
+    "glassHex": 2307908
+  },
+  "totalParts": 11,
+  "partNames": [
+    "ground_contact_anchor",
+    "faceted_lower_foot",
+    "weathered_main_mass",
+    "front_angular_face",
+    "upper_crest_facet",
+    "left_weathered_shoulder",
+    "right_weathered_shoulder",
+    "front_shear_plane",
+    "top_cap_fragment",
+    "attached_lichen_canopy",
+    "attached_moss_facet"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "ellipsoid_sphere",
+    "icosahedron_polyhedron",
+    "dodecahedron_polyhedron",
+    "wedge",
+    "hemisphere_dome"
+  ],
+  "schemaVersion": 1,
+  "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\collapse\\ov_4a7de829-1184-4b05-bf5d-427b77fc76f5.jpg",
+  "oldV6": {
+    "key": "rock/collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_3c230bec_v6",
+    "style": "rock_boulder",
+    "bounds": {
+      "min": [
+        -1.7671,
+        -0.1671,
+        -1.1048
+      ],
+      "max": [
+        1.4521,
+        2.5104,
+        2.0671
+      ],
+      "size": [
+        3.219,
+        2.678,
+        3.172
+      ],
+      "rMax": 2.526,
+      "triangles": 168,
+      "vertices": 98
+    },
+    "partNames": [
+      "main_boulder_core",
+      "boulder_top_peak",
+      "boulder_left_bulge",
+      "boulder_right_slope",
+      "boulder_front_face",
+      "ground_base_anchor",
+      "secondary_small_rock"
+    ]
+  },
+  "lunaVisualFeatures": {
+    "path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\collapse\\ov_4a7de829-1184-4b05-bf5d-427b77fc76f5.jpg",
+    "status": "ok",
+    "width": 8368,
+    "height": 5584,
+    "aspectRatio": 1.4986,
+    "meanRgb": [
+      110.48,
+      105.35,
+      89.06
+    ],
+    "luminance": {
+      "mean": 105.26,
+      "range": 209.59,
+      "topMean": 123.26,
+      "bottomMean": 97.09
+    },
+    "coverage": {
+      "green": 0.10432,
+      "waterSky": 0.07335,
+      "warmEarth": 0.53272,
+      "neutralRock": 0.70083,
+      "dark": 0.02408
+    },
+    "edgeDensity": {
+      "horizontal": 0.02971,
+      "vertical": 0.0267,
+      "combined": 0.0282
+    },
+    "dominantColors": [
+      {
+        "rgb": [
+          64,
+          64,
+          64
+        ],
+        "ratio": 0.15864
+      },
+      {
+        "rgb": [
+          96,
+          96,
+          64
+        ],
+        "ratio": 0.11452
+      },
+      {
+        "rgb": [
+          96,
+          96,
+          96
+        ],
+        "ratio": 0.09926
+      },
+      {
+        "rgb": [
+          96,
+          64,
+          64
+        ],
+        "ratio": 0.06746
+      },
+      {
+        "rgb": [
+          128,
+          128,
+          96
+        ],
+        "ratio": 0.06278
+      },
+      {
+        "rgb": [
+          64,
+          64,
+          32
+        ],
+        "ratio": 0.05772
+      }
+    ],
+    "capture": {
+      "model": "gpt-5.6-luna",
+      "mode": "local_visual_feature_capture",
+      "downsample": [
+        128,
+        85
+      ],
+      "deterministic": true
+    }
+  },
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/rock/collapse/ov_4a7de829-1184-4b05-bf5d-427b77fc76f5.json",
+    "target": {
+      "targetId": "ov_4a7de829-1184-4b05-bf5d-427b77fc76f5~0",
+      "bbox": [
+        0,
+        0,
+        8368,
+        5584
+      ],
+      "width": 8368,
+      "height": 5584,
+      "aspectRatio": 1.499,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 3,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 4,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 5,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 6,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 1,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "rock\\collapse\\ov_4a7de829-1184-4b05-bf5d-427b77fc76f5~0.png"
+    }
+  },
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批岩石依使用者指定以 GPT-5.6 Luna 視覺特徵與多面體岩石契約重建；缺少 YOLO26 schema-v2 時不提升 runtime 資格。"
+  },
+  "attachments": {
+    "vegetation": true,
+    "waterline": false,
+    "strata": false,
+    "stain": false,
+    "stairs": false,
+    "observation": false,
+    "hat": false,
+    "profile": "boulder"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 75,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_local_visual_feature_contract",
+    "critique": "視覺特徵與boulder幾何契約已對齊；11 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。"
+  },
+  "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「boulder」；以多層多面體重建輪廓，保留vegetation附著特徵。"
+}

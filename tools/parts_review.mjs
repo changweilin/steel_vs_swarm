@@ -42,6 +42,53 @@ import { METHODS, loadArchive, loadProvenance, partKeys, photoRoots, resolvePhot
 import { topoStats, nodeFlaws } from './ai3d/mesh_sym.mjs';
 
 const STATE_FILE = join(ROOT, 'tools', 'parts_review', 'state.json');
+const LUNA_ROCK_CANDIDATE_ROOT = join(ROOT, 'out', '3d_data_luna_candidates', 'rock');
+const LUNA_ROCK_CANDIDATE_REPORT = join(ROOT, 'out', 'review_previews', 'rock_luna_v6_candidates.json');
+
+/**
+ * 本輪 Luna 岩石只供開發者覆核，不是正式 manifest/database 的一部分。
+ * 候選根目錄與檔名由伺服器驗證，瀏覽器只能用穩定 key 取檔，不能提交任意路徑。
+ */
+function loadLunaRockCandidates() {
+  const report = readJson(LUNA_ROCK_CANDIDATE_REPORT, null);
+  if (!Array.isArray(report?.candidates)) return [];
+  return report.candidates.filter((row) => row?.family === 'rock'
+    && typeof row.key === 'string' && row.key.startsWith('rock/')
+    && typeof row.outputDir === 'string');
+}
+
+function lunaCandidateFile(candidate, name) {
+  if (!candidate || !/^(model|features|metadata)\.json$/.test(name)) return null;
+  const root = resolve(LUNA_ROCK_CANDIDATE_ROOT);
+  const dir = resolve(ROOT, candidate.outputDir);
+  if (!(dir === root || dir.startsWith(root + sep))) return null;
+  const file = resolve(dir, name);
+  return file.startsWith(dir + sep) ? file : null;
+}
+
+function lunaCandidateJson(candidate, name) {
+  const file = lunaCandidateFile(candidate, name);
+  if (!file || !existsSync(file)) return null;
+  try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
+}
+
+function findLunaRockCandidate(key) {
+  return loadLunaRockCandidates().find((row) => row.key === key || row.targetId === key) || null;
+}
+
+function lunaCandidateSourceFile(candidate) {
+  const metadata = lunaCandidateJson(candidate, 'metadata.json');
+  const source = candidate?.sourcePath || metadata?.source_full_path;
+  const rel = String(metadata?.source_image || candidate?.image || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!source || !rel || !/^[a-z]:[\\/]/i.test(source)) return null;
+  const abs = resolve(source);
+  const slash = abs.replace(/\\/g, '/');
+  const marker = '/tools/ai3d/photos/';
+  const at = slash.toLowerCase().lastIndexOf(marker);
+  if (at < 0 || slash.slice(at + marker.length).toLowerCase() !== rel.toLowerCase()) return null;
+  if (!existsSync(abs)) return null;
+  try { return statSync(abs).isFile() ? abs : null; } catch { return null; }
+}
 
 /** 這支自己的預設埠 —— **它是這個數字的唯一真相**(同 codex_review:`dev_supervisor` MUST import) */
 export const DEFAULT_PORT = 8622;
@@ -429,6 +476,106 @@ export function manifest(items = {}, photosOpt = null) {
     });
   }
 
+  // ── (B2) 本輪 Luna 直視 v6 候選 ────────────────────────────────────────
+  // 候選不寫入正式 manifest/database；但開發者必須能在同一座台子看模型、來源圖與方法。
+  // 這裡只接受報告列與候選根目錄內的四件原子產物，覆核鍵仍沿用候選自己的 stable key。
+  const candidateKeys = new Set(rows.map((r) => r.key));
+  for (const candidate of loadLunaRockCandidates()) {
+    const key = candidate.key;
+    if (candidateKeys.has(key)) continue;
+    const metadata = lunaCandidateJson(candidate, 'metadata.json');
+    const model = lunaCandidateJson(candidate, 'model.json');
+    const features = lunaCandidateJson(candidate, 'features.json');
+    if (!metadata || !model || !features || metadata.key !== key) continue;
+
+    const methodKey = metadata.method || 'gpt-5.6-luna_visual_direct';
+    const method = METHODS[methodKey] || { key: methodKey, label: methodKey, short: methodKey, kind: 'parts' };
+    const sourceImage = metadata.source_image || candidate.image || null;
+    const sourceFile = lunaCandidateSourceFile(candidate);
+    const sourceImgs = sourceImage ? [{
+      id: basename(sourceImage, extname(sourceImage)),
+      file: sourceImage,
+      role: 'reference',
+    }] : [];
+    const bounds = metadata.bounds || candidate.bounds || null;
+    const measured = bounds ? {
+      tris: bounds.triangles || 0,
+      verts: bounds.vertices || 0,
+      rMax: bounds.rMax || 1,
+      yMin: bounds.min?.[1] ?? 0,
+      yMax: bounds.max?.[1] ?? bounds.size?.[1] ?? 1,
+    } : null;
+    const createdAt = metadata.created_at || candidate.created_at || null;
+    const at = createdAt ? String(createdAt).slice(0, 10) : null;
+    const profile = candidate.profile || metadata.profile || 'rock';
+    const provCandidate = {
+      method: methodKey,
+      version: 6,
+      verStr: 'v6',
+      at,
+      consumer: 'rock candidate review',
+      imgs: sourceImgs,
+      gen: {
+        tool: 'direct_ingest_luna_rock_v6.mjs',
+        runner: 'tools/ai3d/direct_ingest_luna_rock_v6.mjs',
+        params: `${profile} ・ 複合多面體岩石與附著物`,
+        machine: 'GPT-5.6 Luna 視覺特徵捕捉 + 確定性 Node.js 幾何組合',
+        measured: '候選產物已完成結構量測；仍待開發者人眼覆核',
+        note: '本輪候選只供零件台審核，不改正式 manifest、資料庫或 runtime roster。',
+      },
+      post: {
+        tool: 'candidate-only atomic output',
+        note: 'YOLO26 schema-v2 不完整時保留 evidenceOverride；人眼判定 ok 前不可進 runtime。',
+      },
+      note: `Luna 直視 v6 候選・${metadata.status || candidate.status || 'awaiting_human_review'}`,
+    };
+    rows.push({
+      key,
+      title: `${metadata.family || 'rock'}/${metadata.subpart || candidate.subpart || 'main'} (${metadata.id || candidate.targetId || key})`,
+      family: metadata.family || 'rock',
+      node: null,
+      method,
+      prov: provCandidate,
+      imgs: sourceImgs.map((im, index) => {
+        const downloadedAt = sourceFile && index === 0 ? statSync(sourceFile).mtime.toISOString() : null;
+        return {
+          ...im,
+          has: !!sourceFile && index === 0,
+          downloaded_at: downloadedAt,
+          photoDate: downloadedAt ? downloadedAt.slice(0, 10) : null,
+          url: sourceFile && index === 0 ? `/api/img?key=${encodeURIComponent(key)}&i=${index}` : null,
+        };
+      }),
+      flaws: [],
+      notes: [{
+        code: 'candidate',
+        label: 'Luna 直視 v6 候選',
+        detail: '開發者覆核專用；此列尚未進正式零件庫，判定只會記錄在零件台覆核帳。',
+      }],
+      siblings: [],
+      consumer: 'rock candidate review',
+      view: { mode: 'now-only', builder: 'model3d', kind: key, key, modelPath: `/api/model3d?key=${encodeURIComponent(key)}` },
+      missing: !model,
+      measured,
+      env: bounds ? { r: bounds.rMax || 1, hy: (bounds.size?.[1] || 1) / 2 } : null,
+      bounds,
+      spec: null,
+      features,
+      style: metadata.style || features.style || null,
+      symmetryMode: metadata.symmetryMode || features.symmetryMode || null,
+      now: bounds ? { parts: candidate.parts || model.parts?.length || 0, foot: bounds.size || [1, 1, 1], extent: bounds.rMax || 1 } : null,
+      base: null,
+      baseErr: null,
+      at,
+      version: 6,
+      verStr: 'v6',
+      item: items[key] || null,
+      candidate: true,
+      candidateOutputDir: candidate.outputDir,
+    });
+    candidateKeys.add(key);
+  }
+
   // ── (C) 遊戲內程序型錄 ──────────────────────────────────────────────────
   // 這些物件沒有 GLB 與來源照片，台上直接呼叫遊戲自己的建構器；一款一列，禁止在 review.js
   // 重抄幾何。名冊住此處，建構與尺寸仍以 public/js 消費端為唯一真相。
@@ -506,7 +653,8 @@ export function manifest(items = {}, photosOpt = null) {
     r.photoDate = pDates[0] || null;
     r.photoDates = [...new Set(pDates)];
     const dbItem = db3DMap.get(r.key) || null;
-    const yolo = findYoloFeature(r.key, r.family, r.node, r.imgs, dbItem);
+    // Luna 候選已有 legacy feature metadata，但不把它冒充成可驗證的 YOLO26 schema-v2。
+    const yolo = r.candidate ? { found: false } : findYoloFeature(r.key, r.family, r.node, r.imgs, dbItem);
     r.hasYolo = yolo.found;
     if (yolo.found && yolo.data) {
       r.yoloSummary = {
@@ -817,6 +965,11 @@ async function serve() {
             }
           }
         }
+        const candidate = findLunaRockCandidate(key);
+        const candidateModel = lunaCandidateFile(candidate, 'model.json');
+        if (candidateModel && existsSync(candidateModel)) {
+          return send(200, readFileSync(candidateModel), 'application/json; charset=utf-8');
+        }
         return send(404, '{"error":"model not found"}');
       }
 
@@ -836,6 +989,11 @@ async function serve() {
               return send(200, readFileSync(featFile), 'application/json; charset=utf-8');
             }
           }
+        }
+        const candidate = findLunaRockCandidate(key);
+        const candidateFeatures = lunaCandidateFile(candidate, 'features.json');
+        if (candidateFeatures && existsSync(candidateFeatures)) {
+          return send(200, readFileSync(candidateFeatures), 'application/json; charset=utf-8');
         }
         return send(404, '{"error":"features not found"}');
       }
@@ -943,8 +1101,11 @@ async function serve() {
         // 封存的那幾件在來源帳裡已經沒有了(墓碑帳才有)⇒ 兩本都問,否則封存區那一頁
         // 的來源圖會整批變成「原圖不在本機」,而檔案其實好端端地躺在那裡
         const rec = loadProvenance().byKey.get(key) || loadArchive().byKey.get(key);
-        const im = rec?.imgs?.[Number(u.searchParams.get('i'))];
-        const hit = im && resolvePhoto(im.file, photoRoots(photos));
+        const candidate = findLunaRockCandidate(key);
+        const index = Number(u.searchParams.get('i'));
+        const im = rec?.imgs?.[index] || (candidate && index === 0 ? { file: candidate.image } : null);
+        const candidateHit = candidate && index === 0 ? lunaCandidateSourceFile(candidate) : null;
+        const hit = candidateHit ? { path: candidateHit } : im && resolvePhoto(im.file, photoRoots(photos));
         if (!hit) return send(404, 'not found', 'text/plain; charset=utf-8');
         return send(200, readFileSync(hit.path), MIME[extname(hit.path).toLowerCase()] || 'application/octet-stream');
       }
