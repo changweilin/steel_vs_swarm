@@ -19,6 +19,10 @@ console.log('\n▍Ⅰ 天氣型錄與 8 大開局初始值預設 (7維屬性: �
   ];
   ok(expectedPresets.every((w) => !!ENV.weathers[w]),
     `ENV.weathers 包含 8 大開局天氣預設 (${expectedPresets.join(', ')})`);
+  ok(Object.keys(ENV.weathers).length === 8,
+    `ENV.weathers 嚴格維持 8 種天氣 (實得 ${Object.keys(ENV.weathers).length} 種)`);
+  ok(Object.keys(WEATHER_PRESETS).length === 8,
+    `WEATHER_PRESETS 嚴格維持 8 大開局預設 (實得 ${Object.keys(WEATHER_PRESETS).length} 種)`);
 
   ok(WEATHER_ATTRS.length === 7 &&
      ['clouds', 'fog', 'wind', 'rain', 'sand', 'snow', 'thunder'].every((a) => WEATHER_ATTRS.includes(a)),
@@ -33,10 +37,12 @@ console.log('\n▍Ⅰ 天氣型錄與 8 大開局初始值預設 (7維屬性: �
   for (const [season, weights] of Object.entries(SEASON_WEATHER_WEIGHTS)) {
     const sum = Number(Object.values(weights).reduce((a, b) => a + b, 0).toFixed(6));
     ok(sum === 100, `季節 ${season} 機率總和為 100% (實得 ${sum}%)`);
+    ok(Object.keys(weights).every((w) => expectedPresets.includes(w)),
+      `季節 ${season} 之天氣鍵值全數收斂於 8 大天氣內`);
   }
 
-  const summerSnowTotal = SEASON_WEATHER_WEIGHTS.summer.snow + SEASON_WEATHER_WEIGHTS.summer.blizzard;
-  ok(Math.abs(summerSnowTotal - 1.0) < 1e-6, `夏季降雪+暴雪率嚴格為 1.0% (小雪 ${SEASON_WEATHER_WEIGHTS.summer.snow}% + 暴雪 ${SEASON_WEATHER_WEIGHTS.summer.blizzard}%)`);
+  const summerSnowTotal = SEASON_WEATHER_WEIGHTS.summer.snow;
+  ok(Math.abs(summerSnowTotal - 1.0) < 1e-6, `夏季降雪率嚴格為 1.0% (大雪 ${SEASON_WEATHER_WEIGHTS.summer.snow}%)`);
 }
 
 // Ⅱ 抽樣分佈驗證
@@ -93,22 +99,23 @@ console.log('\n▍Ⅲ 天文日照時程公式化驗證 (computeSolarSchedule)')
 }
 
 // Ⅳ 動態風浪係數與環境物理影響
-console.log('\n▍Ⅳ 動態風浪係數與環境物理影響 (細雨/大雨/雷雨/小雪/暴雪/強風/沙暴)');
+console.log('\n▍Ⅳ 動態風浪係數與環境物理影響 (大雨/雷雨/大雪凍結/強風/沙暴)');
 {
   const requiredFields = ['windAmp', 'windFreq', 'waveAmp', 'waveSpeed'];
+  ok(Object.keys(WEATHER_DYNAMICS).length === 8,
+    `WEATHER_DYNAMICS 嚴格維持 8 種天氣動態 (實得 ${Object.keys(WEATHER_DYNAMICS).length} 種)`);
+
   for (const [w, dyn] of Object.entries(WEATHER_DYNAMICS)) {
-    ok(requiredFields.every((f) => typeof dyn[f] === 'number' && dyn[f] > 0),
+    ok(requiredFields.every((f) => typeof dyn[f] === 'number' && (dyn[f] > 0 || (w === 'snow' && dyn[f] === 0))),
       `天氣 ${w.padEnd(10)} 包含完整的風浪動態係數 (windAmp=${dyn.windAmp}, waveAmp=${dyn.waveAmp})`);
   }
 
-  ok(WEATHER_DYNAMICS.drizzle.windAmp < WEATHER_DYNAMICS.rain.windAmp &&
-     WEATHER_DYNAMICS.rain.windAmp < WEATHER_DYNAMICS.heavy_rain.windAmp &&
-     WEATHER_DYNAMICS.heavy_rain.windAmp < WEATHER_DYNAMICS.storm.windAmp,
-    '降雨階梯風浪強度遞增 (細雨 1.15x < 降雨 1.35x < 大雨 1.8x < 雷雨 2.4x)');
+  ok(WEATHER_DYNAMICS.heavy_rain.windAmp < WEATHER_DYNAMICS.storm.windAmp &&
+     WEATHER_DYNAMICS.heavy_rain.waveAmp < WEATHER_DYNAMICS.storm.waveAmp,
+    '降雨階梯風浪強度遞增 (大雨 1.8x/1.65x < 雷雨 2.4x/2.1x)');
 
-  ok(WEATHER_DYNAMICS.snow.windAmp < WEATHER_DYNAMICS.blizzard.windAmp &&
-     WEATHER_DYNAMICS.snow.waveAmp < WEATHER_DYNAMICS.blizzard.waveAmp,
-    '降雪階梯風浪強度遞增 (降雪 1.15x < 暴雪 2.5x, 波高 0.9x < 1.8x)');
+  ok(WEATHER_DYNAMICS.snow.waveAmp === 0 && WEATHER_DYNAMICS.snow.waveSpeed === 0 && WEATHER_DYNAMICS.snow.isFrozen === true,
+    '大雪 (snow) 參數設置水面凍結 (waveAmp=0, waveSpeed=0, isFrozen=true)');
 
   ok(WEATHER_DYNAMICS.windy.windAmp >= 2.5 && WEATHER_DYNAMICS.windy.waveAmp >= 2.2,
     '強風 (windy) 顯著放大樹木/旗幟擺幅與海浪高度 (windAmp 2.5x, waveAmp 2.2x)');

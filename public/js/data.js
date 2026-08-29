@@ -6076,17 +6076,13 @@ export const ENV = {
     windy:      { name: '強風' },
     snow:       { name: '大雪' },
     sandstorm:  { name: '沙暴' },
-    // 向後相容別名
-    drizzle:    { name: '細雨' },
-    rain:       { name: '降雨' },
-    blizzard:   { name: '暴雪' },
   },
 };
 
 // 7 維天氣屬性定義 (0~100%)
 export const WEATHER_ATTRS = ['clouds', 'fog', 'wind', 'rain', 'sand', 'snow', 'thunder'];
 
-// 8 大開局初始值預設設定 (以及向後相容別名)
+// 8 大開局初始值預設設定
 export const WEATHER_PRESETS = {
   clear:      { clouds: 10, fog: 5,  wind: 15, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   cloudy:     { clouds: 70, fog: 20, wind: 25, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
@@ -6096,25 +6092,21 @@ export const WEATHER_PRESETS = {
   windy:      { clouds: 35, fog: 10, wind: 90, rain: 10, sand: 20, snow: 0,  thunder: 0 },
   snow:       { clouds: 85, fog: 40, wind: 65, rain: 0,  sand: 0,  snow: 95, thunder: 0 },
   sandstorm:  { clouds: 30, fog: 30, wind: 85, rain: 0,  sand: 90, snow: 0,  thunder: 0 },
-  // 相容別名
-  drizzle:    { clouds: 60, fog: 25, wind: 20, rain: 45, sand: 0,  snow: 0,  thunder: 0 },
-  rain:       { clouds: 80, fog: 35, wind: 45, rain: 70, sand: 0,  snow: 0,  thunder: 10 },
-  blizzard:   { clouds: 95, fog: 60, wind: 90, rain: 0,  sand: 0,  snow: 95, thunder: 0 },
 };
 
-// 四季常理天氣出現機率分配 (總和 100%;夏季降雪+暴雪率嚴格為 1.0%,細分細雨/中雨/大雨/雷雨/小雪/暴雪)
+// 四季常理天氣出現機率分配 (總和 100%;夏季降雪率嚴格為 1.0%)
 export const SEASON_WEATHER_WEIGHTS = {
   spring: {
-    clear: 30, cloudy: 18, drizzle: 16, rain: 12, heavy_rain: 6, storm: 4, windy: 6, fog: 5, snow: 2, blizzard: 1, sandstorm: 0,
+    clear: 30, cloudy: 18, heavy_rain: 34, storm: 4, windy: 6, fog: 5, snow: 3, sandstorm: 0,
   },
   summer: {
-    clear: 35, storm: 20, heavy_rain: 12, cloudy: 12, rain: 8, drizzle: 5, windy: 6, sandstorm: 1, fog: 0, snow: 0.8, blizzard: 0.2,
+    clear: 35, storm: 20, heavy_rain: 25, cloudy: 12, windy: 6, sandstorm: 1, fog: 0, snow: 1.0,
   },
   autumn: {
-    clear: 35, cloudy: 18, windy: 12, drizzle: 10, rain: 8, fog: 8, heavy_rain: 4, sandstorm: 3, storm: 1, snow: 0.8, blizzard: 0.2,
+    clear: 35, cloudy: 18, heavy_rain: 22, windy: 12, fog: 8, sandstorm: 3, storm: 1, snow: 1.0,
   },
   winter: {
-    snow: 28, blizzard: 16, cloudy: 20, clear: 16, windy: 10, fog: 6, drizzle: 3, rain: 1, heavy_rain: 0, storm: 0, sandstorm: 0,
+    snow: 44, cloudy: 20, clear: 16, windy: 10, fog: 6, heavy_rain: 4, storm: 0, sandstorm: 0,
   },
 };
 
@@ -6150,12 +6142,9 @@ export const SEASON_TIME_BIAS = {
 export const WEATHER_DYNAMICS = {
   clear:      { windAmp: 1.0,  windFreq: 1.0,  waveAmp: 1.0,  waveSpeed: 1.0 },
   cloudy:     { windAmp: 1.1,  windFreq: 1.05, waveAmp: 1.1,  waveSpeed: 1.05 },
-  drizzle:    { windAmp: 1.15, windFreq: 1.1,  waveAmp: 1.1,  waveSpeed: 1.05 },
-  rain:       { windAmp: 1.35, windFreq: 1.25, waveAmp: 1.3,  waveSpeed: 1.2 },
   heavy_rain: { windAmp: 1.8,  windFreq: 1.45, waveAmp: 1.65, waveSpeed: 1.5 },
   storm:      { windAmp: 2.4,  windFreq: 1.7,  waveAmp: 2.1,  waveSpeed: 1.85 },
-  snow:       { windAmp: 1.15, windFreq: 1.05, waveAmp: 0.9,  waveSpeed: 0.9 },
-  blizzard:   { windAmp: 2.5,  windFreq: 1.75, waveAmp: 1.8,  waveSpeed: 1.6 },
+  snow:       { windAmp: 1.15, windFreq: 1.05, waveAmp: 0.0,  waveSpeed: 0.0, isFrozen: true },
   windy:      { windAmp: 2.5,  windFreq: 1.7,  waveAmp: 2.2,  waveSpeed: 1.9 },
   sandstorm:  { windAmp: 2.3,  windFreq: 1.65, waveAmp: 1.7,  waveSpeed: 1.6 },
   fog:        { windAmp: 0.6,  windFreq: 0.8,  waveAmp: 0.6,  waveSpeed: 0.7 },
