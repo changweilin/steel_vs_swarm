@@ -12,7 +12,7 @@
     "brightHex": 16055295,
     "glassHex": 1455692
   },
-  "totalParts": 41,
+  "totalParts": 44,
   "partNames": [
     "chassis_base",
     "underbody_pan",
@@ -54,7 +54,10 @@
     "front_wheel_right_tire",
     "front_wheel_right_rim",
     "front_wheel_right_hub",
-    "front_axle"
+    "front_axle",
+    "hybrid_front_grille_bar",
+    "hybrid_side_character_line_left",
+    "hybrid_side_character_line_right"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
@@ -96,6 +99,34 @@
           0.9199999999999999,
           1.1024,
           1.08
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "hybrid_side_character_line_left",
+        "a": [
+          -1.0499999999999998,
+          1,
+          -0.82
+        ],
+        "b": [
+          0.72,
+          1,
+          -0.82
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "hybrid_side_character_line_right",
+        "a": [
+          -1.0499999999999998,
+          1,
+          0.82
+        ],
+        "b": [
+          0.72,
+          1,
+          0.82
         ],
         "radius": 0.012
       }
@@ -182,7 +213,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
+  "reconstructionNote": "依來源影像特徵分流 hybrid_sedan；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -218,5 +249,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "sedan"
+  "sourceVisualClass": "sedan",
+  "sourceVisualVariant": "hybrid_sedan"
 }

@@ -12,7 +12,7 @@
     "brightHex": 16317439,
     "glassHex": 1586247
   },
-  "totalParts": 43,
+  "totalParts": 46,
   "partNames": [
     "chassis_base",
     "underbody_pan",
@@ -56,7 +56,10 @@
     "front_wheel_right_hub",
     "front_axle",
     "roof_rail_left",
-    "roof_rail_right"
+    "roof_rail_right",
+    "crossover_front_skid",
+    "crossover_lower_cladding_left",
+    "crossover_lower_cladding_right"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
@@ -212,7 +215,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
+  "reconstructionNote": "依來源影像特徵分流 crossover_suv；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -248,5 +251,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "suv"
+  "sourceVisualClass": "suv",
+  "sourceVisualVariant": "crossover_suv"
 }

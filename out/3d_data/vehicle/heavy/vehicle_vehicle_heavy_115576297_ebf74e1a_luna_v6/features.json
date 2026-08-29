@@ -12,7 +12,7 @@
     "brightHex": 15924223,
     "glassHex": 1455947
   },
-  "totalParts": 58,
+  "totalParts": 67,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -34,8 +34,17 @@
     "heavy_front_bumper",
     "heavy_grille",
     "heavy_front_plate",
-    "cargo_box",
-    "cargo_roof",
+    "flatbed_deck",
+    "flatbed_side_rail_left",
+    "flatbed_side_rail_right",
+    "flatbed_stake_1_left",
+    "flatbed_stake_1_right",
+    "flatbed_stake_2_left",
+    "flatbed_stake_2_right",
+    "flatbed_stake_3_left",
+    "flatbed_stake_3_right",
+    "flatbed_stake_4_left",
+    "flatbed_stake_4_right",
     "exhaust_stack_left",
     "exhaust_stack_right",
     "axle_1_wheel_left_tire",
@@ -114,6 +123,146 @@
           1.4549999999999998
         ],
         "radius": 0.014
+      },
+      {
+        "name": "flatbed_side_rail_left",
+        "a": [
+          -3.5984800000000003,
+          1.17,
+          -0.44
+        ],
+        "b": [
+          0.8984800000000002,
+          1.17,
+          -0.44
+        ],
+        "radius": 0.022
+      },
+      {
+        "name": "flatbed_side_rail_right",
+        "a": [
+          -3.5984800000000003,
+          1.17,
+          0.44
+        ],
+        "b": [
+          0.8984800000000002,
+          1.17,
+          0.44
+        ],
+        "radius": 0.022
+      },
+      {
+        "name": "flatbed_stake_1_left",
+        "a": [
+          -3.3,
+          0.97,
+          -0.44
+        ],
+        "b": [
+          -3.3,
+          1.57,
+          -0.44
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "flatbed_stake_1_right",
+        "a": [
+          -3.3,
+          0.97,
+          0.44
+        ],
+        "b": [
+          -3.3,
+          1.57,
+          0.44
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "flatbed_stake_2_left",
+        "a": [
+          -2.3,
+          0.97,
+          -0.44
+        ],
+        "b": [
+          -2.3,
+          1.57,
+          -0.44
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "flatbed_stake_2_right",
+        "a": [
+          -2.3,
+          0.97,
+          0.44
+        ],
+        "b": [
+          -2.3,
+          1.57,
+          0.44
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "flatbed_stake_3_left",
+        "a": [
+          -1.3,
+          0.97,
+          -0.44
+        ],
+        "b": [
+          -1.3,
+          1.57,
+          -0.44
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "flatbed_stake_3_right",
+        "a": [
+          -1.3,
+          0.97,
+          0.44
+        ],
+        "b": [
+          -1.3,
+          1.57,
+          0.44
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "flatbed_stake_4_left",
+        "a": [
+          -0.3,
+          0.97,
+          -0.44
+        ],
+        "b": [
+          -0.3,
+          1.57,
+          -0.44
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "flatbed_stake_4_right",
+        "a": [
+          -0.3,
+          0.97,
+          0.44
+        ],
+        "b": [
+          -0.3,
+          1.57,
+          0.44
+        ],
+        "radius": 0.02
       }
     ],
     "wheelContract": [
@@ -276,7 +425,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 flatbed_freight；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -312,5 +461,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "freight"
+  "sourceVisualClass": "freight",
+  "sourceVisualVariant": "flatbed_freight"
 }

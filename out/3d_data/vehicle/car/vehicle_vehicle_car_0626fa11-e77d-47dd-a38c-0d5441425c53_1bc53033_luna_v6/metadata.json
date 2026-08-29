@@ -41,20 +41,21 @@
     ],
     "max": [
       2.3545,
-      1.555,
+      1.5745,
       1.2036
     ],
     "size": [
       4.709,
-      1.538,
+      1.558,
       2.407
     ],
     "rMax": 2.644,
-    "triangles": 1844,
-    "vertices": 1158
+    "triangles": 1892,
+    "vertices": 1190
   },
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
-  "created_at": "2026-08-29T02:33:10.830Z",
+  "reconstructionNote": "依來源影像特徵分流 tech_fastback；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
+  "sourceVisualVariant": "tech_fastback",
+  "created_at": "2026-08-29T04:25:28.913Z",
   "humanVerdictPreserved": true,
   "structuralContract": {
     "coordinateFrame": {

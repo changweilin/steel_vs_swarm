@@ -35,7 +35,7 @@
   "preview": "out/review_previews/vehicle_vehicle_car_jeep-1597856882911_5f1e43d5_luna_v6.png",
   "bounds": {
     "min": [
-      -2.4545,
+      -2.5,
       0.0191,
       -1.2436
     ],
@@ -45,16 +45,17 @@
       1.2436
     ],
     "size": [
-      4.909,
+      4.954,
       1.827,
       2.487
     ],
-    "rMax": 2.752,
-    "triangles": 1892,
-    "vertices": 1186
+    "rMax": 2.792,
+    "triangles": 2136,
+    "vertices": 1337
   },
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
-  "created_at": "2026-08-29T02:33:17.794Z",
+  "reconstructionNote": "依來源影像特徵分流 offroad_suv；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
+  "sourceVisualVariant": "offroad_suv",
+  "created_at": "2026-08-29T04:25:36.220Z",
   "humanVerdictPreserved": true,
   "structuralContract": {
     "coordinateFrame": {
@@ -119,6 +120,34 @@
           0.6144
         ],
         "radius": 0.018
+      },
+      {
+        "name": "offroad_bullbar_stay_left",
+        "a": [
+          2.195,
+          0.5700000000000001,
+          -0.5
+        ],
+        "b": [
+          2.395,
+          0.9400000000000001,
+          -0.5
+        ],
+        "radius": 0.022
+      },
+      {
+        "name": "offroad_bullbar_stay_right",
+        "a": [
+          2.195,
+          0.5700000000000001,
+          0.5
+        ],
+        "b": [
+          2.395,
+          0.9400000000000001,
+          0.5
+        ],
+        "radius": 0.022
       }
     ],
     "wheelContract": [

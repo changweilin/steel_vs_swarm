@@ -4,13 +4,13 @@
   "style": "utility_four_wheel_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 3950160,
-    "facadeHex": 2107182,
-    "baseHex": 1119771,
-    "accentHex": 10398385,
-    "darkHex": 527118,
-    "brightHex": 15330800,
-    "glassHex": 1256514
+    "roofHex": 6845563,
+    "facadeHex": 15198694,
+    "baseHex": 3160128,
+    "accentHex": 13226709,
+    "darkHex": 1185563,
+    "brightHex": 16777215,
+    "glassHex": 1587274
   },
   "totalParts": 46,
   "partNames": [
@@ -55,9 +55,9 @@
     "front_wheel_right_rim",
     "front_wheel_right_hub",
     "front_axle",
-    "rear_load_floor",
-    "load_wall_left",
-    "load_wall_right",
+    "van_cargo_upper",
+    "van_cargo_roof",
+    "van_rear_door",
     "roof_rail_left",
     "roof_rail_right"
   ],
@@ -215,7 +215,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
+  "reconstructionNote": "依來源影像特徵分流 electric_panel_van；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -251,5 +251,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "utility"
+  "sourceVisualClass": "utility",
+  "sourceVisualVariant": "electric_panel_van"
 }

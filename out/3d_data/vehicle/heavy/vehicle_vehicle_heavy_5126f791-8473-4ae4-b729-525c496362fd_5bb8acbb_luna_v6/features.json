@@ -12,7 +12,7 @@
     "brightHex": 16775135,
     "glassHex": 1652809
   },
-  "totalParts": 60,
+  "totalParts": 65,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -36,10 +36,15 @@
     "heavy_front_plate",
     "cargo_box",
     "cargo_roof",
+    "freight_rear_door",
     "exhaust_stack_left",
     "exhaust_stack_right",
     "fire_equipment_body",
     "fire_roof_rail",
+    "fire_lightbar",
+    "fire_hose_reel",
+    "fire_roof_ladder_left",
+    "fire_roof_ladder_right",
     "axle_1_wheel_left_tire",
     "axle_1_wheel_left_rim",
     "axle_1_wheel_left_hub",
@@ -116,6 +121,34 @@
           1.4549999999999998
         ],
         "radius": 0.014
+      },
+      {
+        "name": "fire_roof_ladder_left",
+        "a": [
+          -2.35,
+          2.7300000000000004,
+          -0.36
+        ],
+        "b": [
+          0.1,
+          2.7300000000000004,
+          -0.36
+        ],
+        "radius": 0.022
+      },
+      {
+        "name": "fire_roof_ladder_right",
+        "a": [
+          -2.35,
+          2.7300000000000004,
+          0.36
+        ],
+        "b": [
+          0.1,
+          2.7300000000000004,
+          0.36
+        ],
+        "radius": 0.022
       }
     ],
     "wheelContract": [
@@ -278,7 +311,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 rescue_fire；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -314,5 +347,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "fire"
+  "sourceVisualClass": "fire",
+  "sourceVisualVariant": "rescue_fire"
 }

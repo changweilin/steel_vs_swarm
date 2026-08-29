@@ -4,15 +4,15 @@
   "style": "classic_four_wheel_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 1522536,
-    "facadeHex": 12698557,
-    "baseHex": 2435631,
-    "accentHex": 13215056,
-    "darkHex": 1251099,
-    "brightHex": 15986402,
-    "glassHex": 2833738
+    "roofHex": 1184790,
+    "facadeHex": 1382169,
+    "baseHex": 3155229,
+    "accentHex": 13081940,
+    "darkHex": 855568,
+    "brightHex": 16248800,
+    "glassHex": 2503744
   },
-  "totalParts": 41,
+  "totalParts": 47,
   "partNames": [
     "chassis_base",
     "underbody_pan",
@@ -54,7 +54,13 @@
     "front_wheel_right_tire",
     "front_wheel_right_rim",
     "front_wheel_right_hub",
-    "front_axle"
+    "front_axle",
+    "classic_running_board_left",
+    "classic_front_fender_left",
+    "classic_rear_fender_left",
+    "classic_running_board_right",
+    "classic_front_fender_right",
+    "classic_rear_fender_right"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
@@ -182,7 +188,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
+  "reconstructionNote": "依來源影像特徵分流 classic_touring；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -218,5 +224,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "classic"
+  "sourceVisualClass": "classic",
+  "sourceVisualVariant": "classic_touring"
 }

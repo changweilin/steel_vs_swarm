@@ -4,15 +4,15 @@
   "style": "heavy_freight_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 1787498,
-    "facadeHex": 2977956,
-    "baseHex": 2107955,
-    "accentHex": 9353685,
-    "darkHex": 1120286,
-    "brightHex": 15924223,
-    "glassHex": 1455947
+    "roofHex": 5578794,
+    "facadeHex": 11812162,
+    "baseHex": 2434859,
+    "accentHex": 14211281,
+    "darkHex": 1119000,
+    "brightHex": 16775401,
+    "glassHex": 1585990
   },
-  "totalParts": 58,
+  "totalParts": 62,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -36,6 +36,10 @@
     "heavy_front_plate",
     "cargo_box",
     "cargo_roof",
+    "freight_rear_door",
+    "longhaul_cab_fairing_left",
+    "longhaul_cab_fairing_right",
+    "longhaul_roof_deflector",
     "exhaust_stack_left",
     "exhaust_stack_right",
     "axle_1_wheel_left_tire",
@@ -276,7 +280,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 longhaul_freight；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -312,5 +316,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "freight"
+  "sourceVisualClass": "freight",
+  "sourceVisualVariant": "longhaul_freight"
 }

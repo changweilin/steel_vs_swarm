@@ -12,7 +12,7 @@
     "brightHex": 16774602,
     "glassHex": 1521994
   },
-  "totalParts": 57,
+  "totalParts": 60,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -37,6 +37,9 @@
     "dump_bed",
     "dump_bed_rail_left",
     "dump_bed_rail_right",
+    "dump_hydraulic_ram",
+    "dump_rear_hinge",
+    "dump_hydraulic_pump",
     "axle_1_wheel_left_tire",
     "axle_1_wheel_left_rim",
     "axle_1_wheel_left_hub",
@@ -142,6 +145,20 @@
           1.1800000000000002
         ],
         "radius": 0.022
+      },
+      {
+        "name": "dump_hydraulic_ram",
+        "a": [
+          -0.38,
+          1.23,
+          0
+        ],
+        "b": [
+          -1,
+          2.15,
+          0
+        ],
+        "radius": 0.055
       }
     ],
     "wheelContract": [
@@ -304,7 +321,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 dump_mixer_support；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -340,5 +357,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "dump"
+  "sourceVisualClass": "dump",
+  "sourceVisualVariant": "dump_mixer_support"
 }

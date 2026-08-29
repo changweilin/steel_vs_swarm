@@ -12,7 +12,7 @@
     "brightHex": 16774602,
     "glassHex": 1521994
   },
-  "totalParts": 58,
+  "totalParts": 63,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -38,6 +38,11 @@
     "crane_pivot",
     "crane_boom",
     "crane_hook_line",
+    "crane_mobile_counterweight",
+    "crane_outrigger_left",
+    "crane_outrigger_pad_left",
+    "crane_outrigger_right",
+    "crane_outrigger_pad_right",
     "axle_1_wheel_left_tire",
     "axle_1_wheel_left_rim",
     "axle_1_wheel_left_hub",
@@ -142,6 +147,34 @@
           0
         ],
         "radius": 0.018
+      },
+      {
+        "name": "crane_outrigger_left",
+        "a": [
+          -2.1,
+          1.16,
+          -1.0530000000000002
+        ],
+        "b": [
+          -2.1,
+          0.18,
+          -1.53
+        ],
+        "radius": 0.055
+      },
+      {
+        "name": "crane_outrigger_right",
+        "a": [
+          -2.1,
+          1.16,
+          1.0530000000000002
+        ],
+        "b": [
+          -2.1,
+          0.18,
+          1.53
+        ],
+        "radius": 0.055
       }
     ],
     "wheelContract": [
@@ -304,7 +337,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 mobile_crane；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -340,5 +373,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "crane"
+  "sourceVisualClass": "crane",
+  "sourceVisualVariant": "mobile_crane"
 }

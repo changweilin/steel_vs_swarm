@@ -4,15 +4,15 @@
   "style": "heavy_mixer_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 9127193,
-    "facadeHex": 14186533,
-    "baseHex": 3747878,
-    "accentHex": 16041308,
-    "darkHex": 1512463,
-    "brightHex": 16773330,
-    "glassHex": 1653066
+    "roofHex": 15921899,
+    "facadeHex": 2263899,
+    "baseHex": 3688010,
+    "accentHex": 13160653,
+    "darkHex": 1516831,
+    "brightHex": 16251120,
+    "glassHex": 1522499
   },
-  "totalParts": 57,
+  "totalParts": 65,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -36,7 +36,15 @@
     "heavy_front_plate",
     "mixer_rear_deck",
     "mixer_drum",
+    "mixer_drum_band_1",
+    "mixer_drum_band_2",
     "mixer_rear_cone",
+    "mixer_roof_water_tank",
+    "mixer_rear_ladder_left",
+    "mixer_rear_ladder_right",
+    "mixer_rear_ladder_step_1",
+    "mixer_rear_ladder_step_2",
+    "mixer_rear_ladder_step_3",
     "axle_1_wheel_left_tire",
     "axle_1_wheel_left_rim",
     "axle_1_wheel_left_hub",
@@ -113,6 +121,34 @@
           1.4549999999999998
         ],
         "radius": 0.014
+      },
+      {
+        "name": "mixer_rear_ladder_left",
+        "a": [
+          -3.55,
+          1.34,
+          -0.58
+        ],
+        "b": [
+          -3.55,
+          3.32,
+          -0.58
+        ],
+        "radius": 0.035
+      },
+      {
+        "name": "mixer_rear_ladder_right",
+        "a": [
+          -3.55,
+          1.34,
+          0.58
+        ],
+        "b": [
+          -3.55,
+          3.32,
+          0.58
+        ],
+        "radius": 0.035
       }
     ],
     "wheelContract": [
@@ -275,7 +311,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 green_mixer；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -311,5 +347,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "mixer"
+  "sourceVisualClass": "mixer",
+  "sourceVisualVariant": "green_mixer"
 }

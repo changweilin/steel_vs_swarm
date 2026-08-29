@@ -12,7 +12,7 @@
     "brightHex": 16777215,
     "glassHex": 1521739
   },
-  "totalParts": 58,
+  "totalParts": 61,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -36,6 +36,9 @@
     "heavy_front_plate",
     "cargo_box",
     "cargo_roof",
+    "freight_rear_door",
+    "container_side_rail_left",
+    "container_side_rail_right",
     "exhaust_stack_left",
     "exhaust_stack_right",
     "axle_1_wheel_left_tire",
@@ -114,6 +117,34 @@
           1.4549999999999998
         ],
         "radius": 0.014
+      },
+      {
+        "name": "container_side_rail_left",
+        "a": [
+          -3.40296,
+          1.1,
+          -0.44
+        ],
+        "b": [
+          0.70296,
+          1.1,
+          -0.44
+        ],
+        "radius": 0.022
+      },
+      {
+        "name": "container_side_rail_right",
+        "a": [
+          -3.40296,
+          1.1,
+          0.44
+        ],
+        "b": [
+          0.70296,
+          1.1,
+          0.44
+        ],
+        "radius": 0.022
       }
     ],
     "wheelContract": [
@@ -276,7 +307,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 container_freight；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -312,5 +343,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "freight"
+  "sourceVisualClass": "freight",
+  "sourceVisualVariant": "container_freight"
 }

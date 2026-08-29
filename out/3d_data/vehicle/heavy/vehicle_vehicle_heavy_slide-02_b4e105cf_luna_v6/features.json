@@ -4,15 +4,15 @@
   "style": "heavy_crane_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 9792275,
-    "facadeHex": 14722605,
-    "baseHex": 4208165,
-    "accentHex": 16044395,
-    "darkHex": 1644562,
-    "brightHex": 16774602,
-    "glassHex": 1521994
+    "roofHex": 15779374,
+    "facadeHex": 2058657,
+    "baseHex": 1516851,
+    "accentHex": 15779374,
+    "darkHex": 1054752,
+    "brightHex": 16053479,
+    "glassHex": 1455947
   },
-  "totalParts": 58,
+  "totalParts": 73,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -38,6 +38,21 @@
     "crane_pivot",
     "crane_boom",
     "crane_hook_line",
+    "crane_lattice_rail_left",
+    "crane_lattice_rail_right",
+    "crane_lattice_diag_a_0",
+    "crane_lattice_diag_b_0",
+    "crane_lattice_diag_a_1",
+    "crane_lattice_diag_b_1",
+    "crane_lattice_diag_a_2",
+    "crane_lattice_diag_b_2",
+    "crane_lattice_diag_a_3",
+    "crane_lattice_diag_b_3",
+    "crane_lattice_counterweight",
+    "crane_outrigger_left",
+    "crane_outrigger_pad_left",
+    "crane_outrigger_right",
+    "crane_outrigger_pad_right",
     "axle_1_wheel_left_tire",
     "axle_1_wheel_left_rim",
     "axle_1_wheel_left_hub",
@@ -142,6 +157,174 @@
           0
         ],
         "radius": 0.018
+      },
+      {
+        "name": "crane_lattice_rail_left",
+        "a": [
+          -1,
+          1.58,
+          -0.6210000000000001
+        ],
+        "b": [
+          2.15,
+          5.12,
+          -0.6210000000000001
+        ],
+        "radius": 0.065
+      },
+      {
+        "name": "crane_lattice_rail_right",
+        "a": [
+          -1,
+          1.58,
+          0.6210000000000001
+        ],
+        "b": [
+          2.15,
+          5.12,
+          0.6210000000000001
+        ],
+        "radius": 0.065
+      },
+      {
+        "name": "crane_lattice_diag_a_0",
+        "a": [
+          -1,
+          1.58,
+          -0.6210000000000001
+        ],
+        "b": [
+          -0.30700000000000005,
+          2.3588,
+          0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_b_0",
+        "a": [
+          -1,
+          1.58,
+          0.6210000000000001
+        ],
+        "b": [
+          -0.30700000000000005,
+          2.3588,
+          -0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_a_1",
+        "a": [
+          -0.30700000000000005,
+          2.3588,
+          -0.6210000000000001
+        ],
+        "b": [
+          0.3859999999999999,
+          3.1376,
+          0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_b_1",
+        "a": [
+          -0.30700000000000005,
+          2.3588,
+          0.6210000000000001
+        ],
+        "b": [
+          0.3859999999999999,
+          3.1376,
+          -0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_a_2",
+        "a": [
+          0.3859999999999999,
+          3.1376,
+          -0.6210000000000001
+        ],
+        "b": [
+          1.0790000000000002,
+          3.9164000000000003,
+          0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_b_2",
+        "a": [
+          0.3859999999999999,
+          3.1376,
+          0.6210000000000001
+        ],
+        "b": [
+          1.0790000000000002,
+          3.9164000000000003,
+          -0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_a_3",
+        "a": [
+          1.0790000000000002,
+          3.9164000000000003,
+          -0.6210000000000001
+        ],
+        "b": [
+          1.7719999999999998,
+          4.6952,
+          0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_lattice_diag_b_3",
+        "a": [
+          1.0790000000000002,
+          3.9164000000000003,
+          0.6210000000000001
+        ],
+        "b": [
+          1.7719999999999998,
+          4.6952,
+          -0.6210000000000001
+        ],
+        "radius": 0.045
+      },
+      {
+        "name": "crane_outrigger_left",
+        "a": [
+          -2.1,
+          1.16,
+          -1.0530000000000002
+        ],
+        "b": [
+          -2.1,
+          0.18,
+          -1.53
+        ],
+        "radius": 0.055
+      },
+      {
+        "name": "crane_outrigger_right",
+        "a": [
+          -2.1,
+          1.16,
+          1.0530000000000002
+        ],
+        "b": [
+          -2.1,
+          0.18,
+          1.53
+        ],
+        "radius": 0.055
       }
     ],
     "wheelContract": [
@@ -304,7 +487,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 lattice_crane；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -340,5 +523,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "crane"
+  "sourceVisualClass": "crane",
+  "sourceVisualVariant": "lattice_crane"
 }

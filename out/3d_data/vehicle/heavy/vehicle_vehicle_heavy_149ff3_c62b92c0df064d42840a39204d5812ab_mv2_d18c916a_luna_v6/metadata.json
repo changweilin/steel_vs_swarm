@@ -50,11 +50,12 @@
       3.345
     ],
     "rMax": 5.484,
-    "triangles": 3628,
-    "vertices": 2264
+    "triangles": 3784,
+    "vertices": 2352
   },
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
-  "created_at": "2026-08-29T03:19:05.586Z",
+  "reconstructionNote": "依來源影像特徵分流 mobile_crane；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
+  "sourceVisualVariant": "mobile_crane",
+  "created_at": "2026-08-29T04:25:46.604Z",
   "humanVerdictPreserved": true,
   "structuralContract": {
     "coordinateFrame": {
@@ -119,6 +120,34 @@
           0
         ],
         "radius": 0.018
+      },
+      {
+        "name": "crane_outrigger_left",
+        "a": [
+          -2.1,
+          1.16,
+          -1.0530000000000002
+        ],
+        "b": [
+          -2.1,
+          0.18,
+          -1.53
+        ],
+        "radius": 0.055
+      },
+      {
+        "name": "crane_outrigger_right",
+        "a": [
+          -2.1,
+          1.16,
+          1.0530000000000002
+        ],
+        "b": [
+          -2.1,
+          0.18,
+          1.53
+        ],
+        "radius": 0.055
       }
     ],
     "wheelContract": [

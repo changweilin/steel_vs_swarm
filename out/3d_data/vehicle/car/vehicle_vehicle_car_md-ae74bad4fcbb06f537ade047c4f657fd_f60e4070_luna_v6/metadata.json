@@ -50,11 +50,12 @@
       2.407
     ],
     "rMax": 2.644,
-    "triangles": 1844,
-    "vertices": 1158
+    "triangles": 1856,
+    "vertices": 1166
   },
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
-  "created_at": "2026-08-29T02:33:18.342Z",
+  "reconstructionNote": "依來源影像特徵分流 sedan_standard；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
+  "sourceVisualVariant": "sedan_standard",
+  "created_at": "2026-08-29T04:08:15.298Z",
   "humanVerdictPreserved": true,
   "structuralContract": {
     "coordinateFrame": {

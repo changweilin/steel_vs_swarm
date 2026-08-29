@@ -12,7 +12,7 @@
     "brightHex": 16775145,
     "glassHex": 2112075
   },
-  "totalParts": 46,
+  "totalParts": 48,
   "partNames": [
     "chassis_base",
     "underbody_pan",
@@ -55,9 +55,11 @@
     "front_wheel_right_rim",
     "front_wheel_right_hub",
     "front_axle",
-    "rear_load_floor",
-    "load_wall_left",
-    "load_wall_right",
+    "van_cargo_upper",
+    "van_cargo_roof",
+    "van_rear_door",
+    "van_cargo_window_left",
+    "van_cargo_window_right",
     "roof_rail_left",
     "roof_rail_right"
   ],
@@ -215,7 +217,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
+  "reconstructionNote": "依來源影像特徵分流 mpv_van；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -251,5 +253,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "utility"
+  "sourceVisualClass": "utility",
+  "sourceVisualVariant": "mpv_van"
 }

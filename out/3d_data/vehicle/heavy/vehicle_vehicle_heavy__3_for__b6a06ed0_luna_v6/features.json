@@ -4,15 +4,15 @@
   "style": "heavy_bus_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 7807785,
-    "facadeHex": 12860219,
-    "baseHex": 3155754,
-    "accentHex": 15777863,
-    "darkHex": 1381142,
-    "brightHex": 16775135,
-    "glassHex": 1652809
+    "roofHex": 15725552,
+    "facadeHex": 2389187,
+    "baseHex": 3160899,
+    "accentHex": 15325276,
+    "darkHex": 1185824,
+    "brightHex": 16777215,
+    "glassHex": 1521740
   },
-  "totalParts": 52,
+  "totalParts": 56,
   "partNames": [
     "heavy_chassis",
     "chassis_rail_left",
@@ -45,6 +45,10 @@
     "passenger_window_2_right",
     "passenger_window_3_right",
     "passenger_window_4_right",
+    "bus_front_destination",
+    "bus_roof_aircon",
+    "bus_lower_guard_left",
+    "bus_lower_guard_right",
     "axle_1_wheel_left_tire",
     "axle_1_wheel_left_rim",
     "axle_1_wheel_left_hub",
@@ -218,7 +222,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
+  "reconstructionNote": "依來源影像特徵分流 city_bus；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -254,5 +258,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "bus"
+  "sourceVisualClass": "bus",
+  "sourceVisualVariant": "city_bus"
 }

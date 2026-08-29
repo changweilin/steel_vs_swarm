@@ -68798,14 +68798,14 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1892, Vertices 1190, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           4.709,
-          1.538,
+          1.558,
           2.407
         ],
         "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
@@ -68840,13 +68840,13 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 2136, Vertices 1337, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.909,
+          4.954,
           1.827,
           2.487
         ],
@@ -68866,7 +68866,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_2018d5a1",
+          "id": "img_f82915ff",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_1667357469403862_600_400",
@@ -68882,20 +68882,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1952, Vertices 1226, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_1667357469403862_600_400_2018d5a1_luna_v6"
+        "vehicle/car_1667357469403862_600_400_f82915ff_luna_v6"
       ]
     },
     {
@@ -68908,7 +68908,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_87f36c38",
+          "id": "img_3a88c91a",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_1683687307801401_600_400",
@@ -68924,20 +68924,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.909,
+          1.827,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_1683687307801401_600_400_87f36c38_luna_v6"
+        "vehicle/car_1683687307801401_600_400_3a88c91a_luna_v6"
       ]
     },
     {
@@ -68950,7 +68950,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_f04d47d7",
+          "id": "img_27fc1d09",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_1711950770028207_600_400",
@@ -68966,20 +68966,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_1711950770028207_600_400_f04d47d7_luna_v6"
+        "vehicle/car_1711950770028207_600_400_27fc1d09_luna_v6"
       ]
     },
     {
@@ -68992,7 +68992,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_a95fbb8f",
+          "id": "img_41f2032c",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_1716951305013100_1400_0",
@@ -69008,20 +69008,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1940, Vertices 1218, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           4.709,
-          1.538,
-          2.407
+          1.259,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "sport_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_1716951305013100_1400_0_a95fbb8f_luna_v6"
+        "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6"
       ]
     },
     {
@@ -69076,7 +69076,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_f3d6e11b",
+          "id": "img_7552c714",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_176174663300",
@@ -69092,20 +69092,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 1952, Vertices 1226, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.909,
-          1.827,
-          2.487
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_176174663300_f3d6e11b_luna_v6"
+        "vehicle/car_176174663300_7552c714_luna_v6"
       ]
     },
     {
@@ -69134,7 +69134,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 2508, Vertices 1570, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69160,7 +69160,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_ce39ba1e",
+          "id": "img_cb832536",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_2017091364238789",
@@ -69176,20 +69176,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1916, Vertices 1202, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_2017091364238789_ce39ba1e_luna_v6"
+        "vehicle/car_2017091364238789_cb832536_luna_v6"
       ]
     },
     {
@@ -69202,7 +69202,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_b08a7fd2",
+          "id": "img_93e623cc",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_20200710700113",
@@ -69218,62 +69218,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1964, Vertices 1230, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_20200710700113_b08a7fd2_luna_v6"
-      ]
-    },
-    {
-      "method": "gpt-5.6-luna_visual_direct",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (car)",
-      "rev": "HEAD",
-      "at": "2026-08-29",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_024c110c",
-          "family": "vehicle",
-          "part": "car",
-          "query": "vehicle/car_202409251527451",
-          "api": "gpt-5.6-luna_visual_direct",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/car/202409251527451.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
-        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "params": "--finalize",
-        "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          4.709,
-          1.538,
-          2.407
-        ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
-      },
-      "keys": [
-        "vehicle/car_202409251527451_024c110c_luna_v6"
+        "vehicle/car_20200710700113_93e623cc_luna_v6"
       ]
     },
     {
@@ -69302,7 +69260,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1856, Vertices 1166, Similarity pending independent visual review"
+        "measured": "Triangles 1940, Vertices 1218, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69344,7 +69302,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1904, Vertices 1194, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69370,7 +69328,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_d7cad609",
+          "id": "img_22885ee1",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL",
@@ -69386,20 +69344,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.909,
+          1.827,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_d7cad609_luna_v6"
+        "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_22885ee1_luna_v6"
       ]
     },
     {
@@ -69428,7 +69386,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69470,7 +69428,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69512,7 +69470,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69554,13 +69512,13 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 2136, Vertices 1337, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.909,
+          4.954,
           1.827,
           2.487
         ],
@@ -69596,7 +69554,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69638,7 +69596,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69664,7 +69622,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_16ba8ac7",
+          "id": "img_07e978cb",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_250730-29093-1-4yYYG",
@@ -69680,20 +69638,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_250730-29093-1-4yYYG_16ba8ac7_luna_v6"
+        "vehicle/car_250730-29093-1-4yYYG_07e978cb_luna_v6"
       ]
     },
     {
@@ -69806,7 +69764,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
+        "measured": "Triangles 1952, Vertices 1226, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69832,7 +69790,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_7d91b8e4",
+          "id": "img_49e8b6b2",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_4590905_001_M",
@@ -69848,20 +69806,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.909,
+          1.827,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_4590905_001_M_7d91b8e4_luna_v6"
+        "vehicle/car_4590905_001_M_49e8b6b2_luna_v6"
       ]
     },
     {
@@ -69874,7 +69832,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_8d1399a4",
+          "id": "img_5ed1cef3",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL",
@@ -69890,20 +69848,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1948, Vertices 1224, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.909,
+          1.827,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_8d1399a4_luna_v6"
+        "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6"
       ]
     },
     {
@@ -69932,7 +69890,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 2508, Vertices 1570, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -69958,7 +69916,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_20ae2a42",
+          "id": "img_10cab506",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_7car-202006291136-3",
@@ -69974,20 +69932,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_7car-202006291136-3_20ae2a42_luna_v6"
+        "vehicle/car_7car-202006291136-3_10cab506_luna_v6"
       ]
     },
     {
@@ -70016,7 +69974,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1856, Vertices 1166, Similarity pending independent visual review"
+        "measured": "Triangles 1940, Vertices 1218, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -70058,7 +70016,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -70084,7 +70042,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_8afcbaf8",
+          "id": "img_1875b156",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_881e58ddc9cd0cc82af65be198476506",
@@ -70100,20 +70058,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.909,
+          1.827,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_881e58ddc9cd0cc82af65be198476506_8afcbaf8_luna_v6"
+        "vehicle/car_881e58ddc9cd0cc82af65be198476506_1875b156_luna_v6"
       ]
     },
     {
@@ -70126,7 +70084,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_44318b43",
+          "id": "img_3ab543e3",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_9d6035f40faac95805c9c47f572ebe3f",
@@ -70142,20 +70100,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_9d6035f40faac95805c9c47f572ebe3f_44318b43_luna_v6"
+        "vehicle/car_9d6035f40faac95805c9c47f572ebe3f_3ab543e3_luna_v6"
       ]
     },
     {
@@ -70226,7 +70184,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
+        "measured": "Triangles 1996, Vertices 1252, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -70336,7 +70294,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_1a104d0a",
+          "id": "img_41e01507",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_IMG20260102180810I92509U2349",
@@ -70352,20 +70310,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.909,
+          1.827,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_IMG20260102180810I92509U2349_1a104d0a_luna_v6"
+        "vehicle/car_IMG20260102180810I92509U2349_41e01507_luna_v6"
       ]
     },
     {
@@ -70394,13 +70352,13 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 2136, Vertices 1337, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.909,
+          4.954,
           1.827,
           2.487
         ],
@@ -70504,7 +70462,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_f60e4070",
+          "id": "img_d0d1db58",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd",
@@ -70520,20 +70478,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.909,
+          1.827,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_f60e4070_luna_v6"
+        "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_d0d1db58_luna_v6"
       ]
     },
     {
@@ -70630,7 +70588,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_9f1c7a5e",
+          "id": "img_8c5f1a99",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_Ou7KZDwD3jVNttR",
@@ -70646,20 +70604,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_Ou7KZDwD3jVNttR_9f1c7a5e_luna_v6"
+        "vehicle/car_Ou7KZDwD3jVNttR_8c5f1a99_luna_v6"
       ]
     },
     {
@@ -70672,7 +70630,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_d462edcd",
+          "id": "img_47157c08",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_ph-hv2-1",
@@ -70688,20 +70646,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_ph-hv2-1_d462edcd_luna_v6"
+        "vehicle/car_ph-hv2-1_47157c08_luna_v6"
       ]
     },
     {
@@ -70714,7 +70672,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_2ee04241",
+          "id": "img_1c9d8e4f",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_photooriginal-2022408-29vqn",
@@ -70730,20 +70688,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.959,
+          1.927,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "utility_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_photooriginal-2022408-29vqn_2ee04241_luna_v6"
+        "vehicle/car_photooriginal-2022408-29vqn_1c9d8e4f_luna_v6"
       ]
     },
     {
@@ -70772,7 +70730,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1892, Vertices 1186, Similarity pending independent visual review"
+        "measured": "Triangles 1928, Vertices 1210, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -70798,7 +70756,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_9b0beea6",
+          "id": "img_b537b3ae",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_qaDPp5eY29jQ2M2cng",
@@ -70814,20 +70772,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 2124, Vertices 1329, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.954,
+          1.86,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_qaDPp5eY29jQ2M2cng_9b0beea6_luna_v6"
+        "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6"
       ]
     },
     {
@@ -70840,7 +70798,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_319478e5",
+          "id": "img_2175e6bf",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_qaOZnp2Y26im18zO1A",
@@ -70856,20 +70814,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1940, Vertices 1218, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          4.709,
-          1.538,
-          2.407
+          4.909,
+          1.827,
+          2.487
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_qaOZnp2Y26im18zO1A_319478e5_luna_v6"
+        "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6"
       ]
     },
     {
@@ -70898,7 +70856,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1856, Vertices 1166, Similarity pending independent visual review"
+        "measured": "Triangles 1940, Vertices 1218, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -70982,7 +70940,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1856, Vertices 1166, Similarity pending independent visual review"
+        "measured": "Triangles 1940, Vertices 1218, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71008,7 +70966,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_6bbdb306",
+          "id": "img_07be3b04",
           "family": "vehicle",
           "part": "car",
           "query": "vehicle/car_圖1",
@@ -71024,20 +70982,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1940, Vertices 1218, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           4.709,
-          1.538,
-          2.407
+          1.259,
+          2.467
         ],
-        "note": "sedan_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "sport_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/car_圖1_6bbdb306_luna_v6"
+        "vehicle/car_圖1_07be3b04_luna_v6"
       ]
     },
     {
@@ -71066,7 +71024,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3644, Vertices 2278, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71108,7 +71066,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3644, Vertices 2278, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71150,7 +71108,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3632, Vertices 2270, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71192,7 +71150,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3836, Vertices 2386, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71234,7 +71192,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3632, Vertices 2270, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71276,7 +71234,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3668, Vertices 2290, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71318,7 +71276,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3632, Vertices 2270, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71360,14 +71318,14 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2492, Vertices 1564, Similarity pending independent visual review"
+        "measured": "Triangles 2564, Vertices 1608, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           12.203,
-          3.294,
+          3.37,
           3.195
         ],
         "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
@@ -71402,14 +71360,14 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2492, Vertices 1564, Similarity pending independent visual review"
+        "measured": "Triangles 2564, Vertices 1608, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           12.203,
-          3.294,
+          3.37,
           3.195
         ],
         "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
@@ -71444,7 +71402,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3580, Vertices 2238, Similarity pending independent visual review"
+        "measured": "Triangles 3676, Vertices 2292, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71486,7 +71444,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3656, Vertices 2286, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71528,7 +71486,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3632, Vertices 2270, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71570,7 +71528,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3580, Vertices 2238, Similarity pending independent visual review"
+        "measured": "Triangles 3884, Vertices 2414, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71612,7 +71570,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3632, Vertices 2270, Similarity pending independent visual review"
+        "measured": "Triangles 3744, Vertices 2336, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71654,7 +71612,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3632, Vertices 2270, Similarity pending independent visual review"
+        "measured": "Triangles 3744, Vertices 2336, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71696,14 +71654,14 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2492, Vertices 1564, Similarity pending independent visual review"
+        "measured": "Triangles 2516, Vertices 1580, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           12.203,
-          3.294,
+          3.334,
           3.195
         ],
         "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
@@ -71738,14 +71696,14 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2492, Vertices 1564, Similarity pending independent visual review"
+        "measured": "Triangles 2516, Vertices 1580, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           12.203,
-          3.294,
+          3.334,
           3.195
         ],
         "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
@@ -71780,7 +71738,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3668, Vertices 2290, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71822,7 +71780,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3632, Vertices 2270, Similarity pending independent visual review"
+        "measured": "Triangles 3808, Vertices 2372, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71864,7 +71822,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3668, Vertices 2290, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71890,7 +71848,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_79bf0ea5",
+          "id": "img_a58be0ee",
           "family": "vehicle",
           "part": "heavy",
           "query": "vehicle/heavy_car",
@@ -71906,20 +71864,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 2516, Vertices 1580, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          9.602,
-          4.498,
+          12.203,
+          3.334,
           3.195
         ],
-        "note": "heavy_freight_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/heavy_car_79bf0ea5_luna_v6"
+        "vehicle/heavy_car_a58be0ee_luna_v6"
       ]
     },
     {
@@ -71948,7 +71906,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3632, Vertices 2270, Similarity pending independent visual review"
+        "measured": "Triangles 3808, Vertices 2372, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -71990,7 +71948,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3580, Vertices 2238, Similarity pending independent visual review"
+        "measured": "Triangles 3644, Vertices 2274, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72032,7 +71990,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3580, Vertices 2238, Similarity pending independent visual review"
+        "measured": "Triangles 3644, Vertices 2274, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72074,7 +72032,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 3656, Vertices 2286, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72116,14 +72074,14 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2492, Vertices 1564, Similarity pending independent visual review"
+        "measured": "Triangles 2540, Vertices 1596, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           12.203,
-          3.294,
+          3.334,
           3.195
         ],
         "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
@@ -72158,7 +72116,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3580, Vertices 2238, Similarity pending independent visual review"
+        "measured": "Triangles 3644, Vertices 2274, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72184,7 +72142,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_89c67ba0",
+          "id": "img_c5cbdaf5",
           "family": "vehicle",
           "part": "heavy",
           "query": "vehicle/heavy_文境旅遊-賓士豪華大客車-5",
@@ -72200,20 +72158,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 2564, Vertices 1608, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          9.602,
-          4.498,
+          12.203,
+          3.37,
           3.195
         ],
-        "note": "heavy_freight_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/heavy_文境旅遊-賓士豪華大客車-5_89c67ba0_luna_v6"
+        "vehicle/heavy_文境旅遊-賓士豪華大客車-5_c5cbdaf5_luna_v6"
       ]
     },
     {
@@ -72242,14 +72200,14 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2492, Vertices 1564, Similarity pending independent visual review"
+        "measured": "Triangles 2540, Vertices 1596, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
           12.203,
-          3.294,
+          3.334,
           3.195
         ],
         "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
@@ -72284,7 +72242,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1844, Vertices 1158, Similarity pending independent visual review"
+        "measured": "Triangles 1904, Vertices 1194, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72310,7 +72268,7 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_bc441626",
+          "id": "img_56c23978",
           "family": "vehicle",
           "part": "heavy",
           "query": "vehicle/heavy_2021070912244646524316",
@@ -72326,20 +72284,20 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3608, Vertices 2254, Similarity pending independent visual review"
+        "measured": "Triangles 2516, Vertices 1580, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "fit": 1,
         "bounds": [
-          9.602,
-          4.498,
+          12.203,
+          3.334,
           3.195
         ],
-        "note": "heavy_freight_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+        "note": "heavy_bus_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
       },
       "keys": [
-        "vehicle/heavy_2021070912244646524316_bc441626_luna_v6"
+        "vehicle/heavy_2021070912244646524316_56c23978_luna_v6"
       ]
     },
     {
@@ -72368,7 +72326,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3628, Vertices 2264, Similarity pending independent visual review"
+        "measured": "Triangles 3784, Vertices 2352, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72410,7 +72368,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3628, Vertices 2264, Similarity pending independent visual review"
+        "measured": "Triangles 4024, Vertices 2492, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72452,7 +72410,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
+        "measured": "Triangles 4096, Vertices 2559, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72494,7 +72452,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
+        "measured": "Triangles 4020, Vertices 2513, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72536,7 +72494,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
+        "measured": "Triangles 4068, Vertices 2541, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72578,7 +72536,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
+        "measured": "Triangles 4012, Vertices 2509, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72592,6 +72550,48 @@
       },
       "keys": [
         "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (car)",
+      "rev": "HEAD",
+      "at": "2026-08-29",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_77ad7ab6",
+          "family": "vehicle",
+          "part": "car",
+          "query": "vehicle/car_202409251527451",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/car/202409251527451.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 1964, Vertices 1230, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          4.909,
+          1.851,
+          2.487
+        ],
+        "note": "suv_four_wheel_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/car_202409251527451_77ad7ab6_luna_v6"
       ]
     }
   ]

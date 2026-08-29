@@ -4,15 +4,15 @@
   "style": "sport_four_wheel_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 5661035,
-    "facadeHex": 13094096,
-    "baseHex": 2699321,
-    "accentHex": 15199728,
-    "darkHex": 1119771,
-    "brightHex": 16317439,
-    "glassHex": 1586247
+    "roofHex": 2435638,
+    "facadeHex": 14014684,
+    "baseHex": 1777705,
+    "accentHex": 14988872,
+    "darkHex": 856344,
+    "brightHex": 16777215,
+    "glassHex": 1452860
   },
-  "totalParts": 42,
+  "totalParts": 47,
   "partNames": [
     "chassis_base",
     "underbody_pan",
@@ -55,7 +55,12 @@
     "front_wheel_right_rim",
     "front_wheel_right_hub",
     "front_axle",
-    "front_splitter"
+    "front_splitter",
+    "rear_spoiler",
+    "rear_spoiler_stay_left",
+    "rear_spoiler_stay_right",
+    "sports_side_skirt_left",
+    "sports_side_skirt_right"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
@@ -99,6 +104,34 @@
           1.1099999999999999
         ],
         "radius": 0.012
+      },
+      {
+        "name": "rear_spoiler_stay_left",
+        "a": [
+          -2.0549999999999997,
+          0.93,
+          -0.27
+        ],
+        "b": [
+          -2.035,
+          1.01,
+          -0.27
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "rear_spoiler_stay_right",
+        "a": [
+          -2.0549999999999997,
+          0.93,
+          0.27
+        ],
+        "b": [
+          -2.035,
+          1.01,
+          0.27
+        ],
+        "radius": 0.014
       }
     ],
     "wheelContract": [
@@ -183,7 +216,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
+  "reconstructionNote": "依來源影像特徵分流 sports_coupe；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -219,5 +252,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "sport"
+  "sourceVisualClass": "sport",
+  "sourceVisualVariant": "sports_coupe"
 }

@@ -50,11 +50,12 @@
       3.195
     ],
     "rMax": 4.773,
-    "triangles": 3732,
-    "vertices": 2331
+    "triangles": 4012,
+    "vertices": 2509
   },
-  "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
-  "created_at": "2026-08-29T03:19:07.374Z",
+  "reconstructionNote": "依來源影像特徵分流 toy_mixer；重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立，功能性設備以接點接合。",
+  "sourceVisualVariant": "toy_mixer",
+  "created_at": "2026-08-29T04:25:47.878Z",
   "humanVerdictPreserved": true,
   "structuralContract": {
     "coordinateFrame": {
@@ -91,6 +92,20 @@
           1.4549999999999998
         ],
         "radius": 0.014
+      },
+      {
+        "name": "mixer_chute_support",
+        "a": [
+          -2.983783504230715,
+          3.4203596251852444,
+          0
+        ],
+        "b": [
+          -3.18,
+          1.38,
+          0
+        ],
+        "radius": 0.055
       }
     ],
     "wheelContract": [

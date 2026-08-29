@@ -50,11 +50,12 @@
       2.467
     ],
     "rMax": 2.658,
-    "triangles": 1856,
-    "vertices": 1166
+    "triangles": 1940,
+    "vertices": 1218
   },
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
-  "created_at": "2026-08-29T02:33:19.988Z",
+  "reconstructionNote": "依來源影像特徵分流 sports_coupe；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
+  "sourceVisualVariant": "sports_coupe",
+  "created_at": "2026-08-29T04:25:38.535Z",
   "humanVerdictPreserved": true,
   "structuralContract": {
     "coordinateFrame": {
@@ -91,6 +92,34 @@
           1.1099999999999999
         ],
         "radius": 0.012
+      },
+      {
+        "name": "rear_spoiler_stay_left",
+        "a": [
+          -2.0549999999999997,
+          0.93,
+          -0.27
+        ],
+        "b": [
+          -2.035,
+          1.01,
+          -0.27
+        ],
+        "radius": 0.014
+      },
+      {
+        "name": "rear_spoiler_stay_right",
+        "a": [
+          -2.0549999999999997,
+          0.93,
+          0.27
+        ],
+        "b": [
+          -2.035,
+          1.01,
+          0.27
+        ],
+        "radius": 0.014
       }
     ],
     "wheelContract": [

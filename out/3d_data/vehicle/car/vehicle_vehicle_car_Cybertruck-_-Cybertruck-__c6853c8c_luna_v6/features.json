@@ -4,15 +4,15 @@
   "style": "utility_four_wheel_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 5661035,
-    "facadeHex": 13094096,
-    "baseHex": 2699321,
-    "accentHex": 15199728,
-    "darkHex": 1119771,
-    "brightHex": 16317439,
-    "glassHex": 1586247
+    "roofHex": 2303789,
+    "facadeHex": 11450301,
+    "baseHex": 1514014,
+    "accentHex": 15791092,
+    "darkHex": 592654,
+    "brightHex": 16777215,
+    "glassHex": 1583926
   },
-  "totalParts": 46,
+  "totalParts": 50,
   "partNames": [
     "chassis_base",
     "underbody_pan",
@@ -58,6 +58,10 @@
     "rear_load_floor",
     "load_wall_left",
     "load_wall_right",
+    "cybertruck_front_fascia",
+    "cybertruck_bed_cover",
+    "cybertruck_bed_rail_left",
+    "cybertruck_bed_rail_right",
     "roof_rail_left",
     "roof_rail_right"
   ],
@@ -66,7 +70,8 @@
     "tapered_box",
     "ellipsoid_sphere",
     "cylinder",
-    "torus_ring"
+    "torus_ring",
+    "wedge"
   ],
   "structuralContract": {
     "coordinateFrame": {
@@ -103,6 +108,34 @@
           1.1099999999999999
         ],
         "radius": 0.012
+      },
+      {
+        "name": "cybertruck_bed_rail_left",
+        "a": [
+          -2.28,
+          1.4,
+          -0.7
+        ],
+        "b": [
+          -1.22,
+          1.4,
+          -0.7
+        ],
+        "radius": 0.02
+      },
+      {
+        "name": "cybertruck_bed_rail_right",
+        "a": [
+          -2.28,
+          1.4,
+          0.7
+        ],
+        "b": [
+          -1.22,
+          1.4,
+          0.7
+        ],
+        "radius": 0.02
       },
       {
         "name": "roof_rail_left",
@@ -215,7 +248,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
+  "reconstructionNote": "依來源影像特徵分流 cybertruck；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -251,5 +284,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "utility"
+  "sourceVisualClass": "utility",
+  "sourceVisualVariant": "cybertruck"
 }

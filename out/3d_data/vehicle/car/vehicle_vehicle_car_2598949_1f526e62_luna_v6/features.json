@@ -4,13 +4,13 @@
   "style": "utility_four_wheel_vehicle",
   "symmetryMode": "mirrored_bilateral",
   "colors": {
-    "roofHex": 2970945,
-    "facadeHex": 5999208,
-    "baseHex": 2108199,
-    "accentHex": 12898720,
-    "darkHex": 1054483,
-    "brightHex": 15856866,
-    "glassHex": 1587773
+    "roofHex": 1981796,
+    "facadeHex": 1929405,
+    "baseHex": 2435889,
+    "accentHex": 9354195,
+    "darkHex": 1120288,
+    "brightHex": 16186367,
+    "glassHex": 1456720
   },
   "totalParts": 46,
   "partNames": [
@@ -215,7 +215,7 @@
   },
   "eligible": false,
   "pipelineEligibility": "awaiting_human_review",
-  "reconstructionNote": "依來源車型分解車身、獨立冷色玻璃、前後燈具、左右後視鏡與四輪；車身基礎、輪拱外廓與所有成對側件以 Z=0 雙側鏡像完成，貨斗僅保留功能性外掛。",
+  "reconstructionNote": "依來源影像特徵分流 pickup；車身、冷色玻璃、前後燈具、左右後視鏡與四輪以共享底盤接點建立，功能上裝與配色不混用背景或玻璃色。",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
     "similarityScore": null,
@@ -251,5 +251,6 @@
     "glazing": "glassHex",
     "backgroundRejected": true
   },
-  "sourceVisualClass": "utility"
+  "sourceVisualClass": "utility",
+  "sourceVisualVariant": "pickup"
 }
