@@ -1932,7 +1932,7 @@ ${CEL_SEA_GLSL}
           // (硬邊被階梯切成兩段、陰影裡的泡沫變灰),而使用者要的是白色硬邊。
           // alpha 推向 1 也正是「泡沫是不透明的、蓋住水底」。
           // 中性深度場(1×1 = 很深)⇒ celFoam 恆 0 ⇒ 這一段早退 ⇒ **逐位元同舊制**。
-          float celF = celFoam( vCelWP.xz ) * vSeaFade * uFoamA * min( 1.0, uWeatherWaveAmp * 2.0 );
+          float celF = celFoam( vCelWP.xz ) * vSeaFade * uFoamA;
           if ( celF > 0.0 ) {
             gl_FragColor.rgb = mix( gl_FragColor.rgb, uFoamC, celF );
             gl_FragColor.a = mix( gl_FragColor.a, 1.0, celF );

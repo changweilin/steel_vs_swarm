@@ -2067,10 +2067,10 @@ function startPrebuild(cfg) {
       const bt = blockerTop(x, z, BLK_MARGIN);
       if (bt != null && bt > s && curY >= bt - DECK_STEP) s = bt;
       // 結冰水面/沼澤: 水面凍結時可在上方行走; 原先在水面下時無法突破水面; 卡中間時只能上不能下
-      if (isWeatherFrozen() && terrain.waterY != null) {
-        const code = terrain.envCodeAt ? terrain.envCodeAt(x, z) : terrainEnvCode(terrain, x, z);
+      if (typeof isWeatherFrozen === 'function' && isWeatherFrozen() && terrain.waterY != null) {
+        const code = terrain.envCodeAt ? terrain.envCodeAt(x, z) : (typeof terrainEnvCode === 'function' ? terrainEnvCode(terrain, x, z) : 0);
         if (code > 0) {
-          const planeY = code === 1 ? terrain.waterY : terrain.waterY + WATER.SWAMP_BAND;
+          const planeY = code === 1 ? terrain.waterY : terrain.waterY + (typeof WATER !== 'undefined' ? WATER.SWAMP_BAND : 2.2);
           if (planeY > s) {
             if (curY >= planeY - DECK_STEP) {
               s = planeY;
@@ -2095,10 +2095,10 @@ function startPrebuild(cfg) {
         if (under - terrain.heightAt(x, z) >= MAX_MECH_H && (c == null || under < c)) c = under;
       }
       // 結冰水面天花板: 原先在水面下(curY + 2.0 < planeY)無法突破水面; 若頭部已在水面之上則不擋向上脫困
-      if (isWeatherFrozen() && terrain.waterY != null) {
-        const code = terrain.envCodeAt ? terrain.envCodeAt(x, z) : terrainEnvCode(terrain, x, z);
+      if (typeof isWeatherFrozen === 'function' && isWeatherFrozen() && terrain.waterY != null) {
+        const code = terrain.envCodeAt ? terrain.envCodeAt(x, z) : (typeof terrainEnvCode === 'function' ? terrainEnvCode(terrain, x, z) : 0);
         if (code > 0) {
-          const planeY = code === 1 ? terrain.waterY : terrain.waterY + WATER.SWAMP_BAND;
+          const planeY = code === 1 ? terrain.waterY : terrain.waterY + (typeof WATER !== 'undefined' ? WATER.SWAMP_BAND : 2.2);
           if (curY + 2.0 < planeY && (c == null || planeY < c)) {
             c = planeY;
           }
