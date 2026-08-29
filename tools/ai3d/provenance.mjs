@@ -85,7 +85,7 @@ export const METHODS = {
     key: 'gpt-5.6-luna_visual_direct',
     label: 'GPT-5.6 Luna 直接視覺 → 多面體零件列(v6)',
     kind: 'parts',
-    short: 'Luna 直視 v6',
+    short: 'luna 直接 v6',
     doc: '使用者明確授權的證據例外：YOLO26 schema-v2 不完整時直接讀來源圖重建；必須記錄 evidenceOverride 並在零件台重新人眼覆核，未判 ok 前不進 runtime。',
   },
   procedural: {

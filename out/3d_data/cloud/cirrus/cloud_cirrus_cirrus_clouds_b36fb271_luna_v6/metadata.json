@@ -1,0 +1,96 @@
+{
+  "id": "cloud_cirrus_cirrus_clouds_b36fb271_luna_v6",
+  "key": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+  "canonicalTarget": "cloud/cirrus_cirrus_clouds",
+  "family": "cloud",
+  "subpart": "cirrus",
+  "stem": "cirrus_clouds",
+  "style": "feathered cirrus cloud with branching filaments",
+  "symmetryMode": "asymmetric",
+  "cloudProfile": "cirrus",
+  "silhouette": "長羽毛主脊、向兩側分叉的細絲與分散尖端",
+  "pureCloudOnly": true,
+  "cloudSemantic": {
+    "glassHex": "cloud_highlight",
+    "noWindowSemantics": true,
+    "noSunLandscapePeopleAnimals": true
+  },
+  "colors": {
+    "roofHex": 7904208,
+    "facadeHex": 12177903,
+    "baseHex": 5141165,
+    "accentHex": 14478591,
+    "glassHex": 15858175,
+    "darkHex": 4614562,
+    "brightHex": 16777215
+  },
+  "similarityScore": 89,
+  "similarityReview": "soft pass 已把細長 wedge 刀片全面拆成密接微型 dodeca/icosa 雲絲鏈；主脊與支絲維持後掠分枝，但尖端改為細軟羽絮而非銳利薄片。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "雲絲鏈節徑維持 0.08–0.15m，禁止重新出現長楔片",
+    "分叉採不規則曲率、節距與淡色階，端視圖保持細軟雲束"
+  ],
+  "similarityReviewRecord": {
+    "similarityScore": 89,
+    "verdict": "awaiting_human_review",
+    "reviewer": "gpt-5.6-luna_visual_direct",
+    "reviewStage": "retry_2_three_view_visual_review",
+    "retry": 2,
+    "critique": "soft pass 已把細長 wedge 刀片全面拆成密接微型 dodeca/icosa 雲絲鏈；主脊與支絲維持後掠分枝，但尖端改為細軟羽絮而非銳利薄片。",
+    "corrections": [
+      "雲絲鏈節徑維持 0.08–0.15m，禁止重新出現長楔片",
+      "分叉採不規則曲率、節距與淡色階，端視圖保持細軟雲束"
+    ]
+  },
+  "model": "gpt-5.6-luna",
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "generationTag": "luna 直接 v6",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "cloud/cirrus/cirrus_clouds.jpg",
+  "source_full_path": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\cirrus\\cirrus_clouds.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "eligible": false,
+    "pipelineEligibility": "awaiting_human_review",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批五件純雲目標依使用者指定由 GPT-5.6 Luna 直接逐張目視重建；缺少 YOLO26 schema-v2 時保持不可入 runtime。"
+  },
+  "preview": "out/review_previews/cloud_cirrus_cirrus_clouds_b36fb271_luna_v6.png",
+  "previewModel": "out/review_previews/cloud_cirrus_cirrus_clouds_b36fb271_luna_v6.png.model.json",
+  "bounds": {
+    "min": [
+      -5.0443,
+      1.1341,
+      -0.4231
+    ],
+    "max": [
+      4.4661,
+      1.6095,
+      0.9342
+    ],
+    "size": [
+      9.51,
+      0.475,
+      1.357
+    ],
+    "rMax": 5.062,
+    "triangles": 5616,
+    "vertices": 3203
+  },
+  "parts": 189,
+  "reconstructionNote": "照片特徵「長羽毛主脊、向兩側分叉的細絲與分散尖端」以 189 個連接多面體重建；ellipsoid 僅為嵌入核心，外輪廓由 faceted lobes/ridges/fibres 打破。",
+  "created_at": "2026-08-29T10:47:10.108Z",
+  "humanVerdictPreserved": true
+}

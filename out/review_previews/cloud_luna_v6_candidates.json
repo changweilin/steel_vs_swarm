@@ -1,0 +1,382 @@
+{
+  "model": "gpt-5.6-luna",
+  "method": "gpt-5.6-luna_visual_direct",
+  "version": 6,
+  "verStr": "v6",
+  "generationTag": "luna 直接 v6",
+  "generatedAt": "2026-08-29T10:47:10.605Z",
+  "humanVerdictsPreserved": true,
+  "runtimeEligible": false,
+  "evidenceStatus": "missing_yolo26_schema_v2",
+  "pipelineEligibility": "awaiting_human_review",
+  "candidates": [
+    {
+      "target": "cloud/cumulus_gfp_one_puffy_cloud",
+      "targetId": "cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "key": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "family": "cloud",
+      "subpart": "cumulus",
+      "stem": "gfp_one_puffy_cloud",
+      "image": "cloud/cumulus/gfp_one_puffy_cloud.jpg",
+      "sourcePath": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\cumulus\\gfp_one_puffy_cloud.jpg",
+      "sourceFound": true,
+      "profile": "cumulus",
+      "style": "flat-bottom cauliflower cumulus cloud",
+      "silhouette": "扁底與花椰菜狀上緣，單一藍天中的蓬鬆雲團",
+      "model": "gpt-5.6-luna",
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "generationTag": "luna 直接 v6",
+      "yolo26": {
+        "schemaVersion": null,
+        "evidenceStatus": "missing_yolo26_schema_v2",
+        "eligible": false,
+        "pipelineEligibility": "awaiting_human_review",
+        "featureFile": null,
+        "target": null
+      },
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 88,
+        "verdict": "awaiting_human_review",
+        "reviewer": "gpt-5.6-luna_visual_direct",
+        "reviewStage": "retry_2_three_view_visual_review",
+        "retry": 2,
+        "critique": "soft pass 三視圖以交疊小瓣包覆原有大瓣邊界，扁底仍完整但尖角密度下降，整體改讀成輕盈棉花糖狀花椰菜輪廓。",
+        "corrections": [
+          "中央裂溝維持局部且不跨全寬",
+          "外輪廓以次級 cotton fringe 打散大面體尖角，不引入單一平滑球殼"
+        ]
+      },
+      "outputDir": "out/3d_data/cloud/cumulus/cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "preview": "out/review_previews/cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6.png",
+      "previewModel": "out/review_previews/cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6.png.model.json",
+      "bounds": {
+        "min": [
+          -4.2946,
+          0.1068,
+          -1.27
+        ],
+        "max": [
+          4.275,
+          3.2993,
+          1.4045
+        ],
+        "size": [
+          8.57,
+          3.192,
+          2.675
+        ],
+        "rMax": 4.5,
+        "triangles": 2716,
+        "vertices": 1559
+      },
+      "parts": 92,
+      "triangles": 2716,
+      "vertices": 1559,
+      "primitiveTypes": [
+        "ellipsoid_sphere",
+        "dodecahedron_polyhedron",
+        "icosahedron_polyhedron"
+      ],
+      "status": "awaiting_human_review"
+    },
+    {
+      "target": "cloud/mammatus_mammatus_clouds1",
+      "targetId": "cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "key": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "family": "cloud",
+      "subpart": "mammatus",
+      "stem": "mammatus_clouds1",
+      "image": "cloud/mammatus/mammatus_clouds1.jpg",
+      "sourcePath": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\mammatus\\mammatus_clouds1.jpg",
+      "sourceFound": true,
+      "profile": "mammatus",
+      "style": "continuous layered mammatus cloud with hanging pouches",
+      "silhouette": "連續灰暗上層與多排下垂囊袋，囊袋大小與深度有節奏差",
+      "model": "gpt-5.6-luna",
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "generationTag": "luna 直接 v6",
+      "yolo26": {
+        "schemaVersion": null,
+        "evidenceStatus": "missing_yolo26_schema_v2",
+        "eligible": false,
+        "pipelineEligibility": "awaiting_human_review",
+        "featureFile": null,
+        "target": null
+      },
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 89,
+        "verdict": "awaiting_human_review",
+        "reviewer": "gpt-5.6-luna_visual_direct",
+        "reviewStage": "retry_2_three_view_visual_review",
+        "retry": 2,
+        "critique": "soft pass 以較小交疊瓣柔化棚層與囊袋邊角；所有乳狀囊仍連接主棚，輪廓更蓬鬆且不再像沉重岩塊。",
+        "corrections": [
+          "每個囊袋頸部持續埋入上層，避免細柱與浮空側瓣",
+          "暗灰與乳白 facet 只在囊袋底/上層裂縫分區，保留照片的厚重層次"
+        ]
+      },
+      "outputDir": "out/3d_data/cloud/mammatus/cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "preview": "out/review_previews/cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6.png",
+      "previewModel": "out/review_previews/cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6.png.model.json",
+      "bounds": {
+        "min": [
+          -5.2226,
+          0.0697,
+          -1.0981
+        ],
+        "max": [
+          5.0764,
+          3.9595,
+          1.5759
+        ],
+        "size": [
+          10.299,
+          3.89,
+          2.674
+        ],
+        "rMax": 5.337,
+        "triangles": 3416,
+        "vertices": 1947
+      },
+      "parts": 111,
+      "triangles": 3416,
+      "vertices": 1947,
+      "primitiveTypes": [
+        "ellipsoid_sphere",
+        "dodecahedron_polyhedron",
+        "icosahedron_polyhedron"
+      ],
+      "status": "awaiting_human_review"
+    },
+    {
+      "target": "cloud/cirrus_cirrus_clouds",
+      "targetId": "cloud_cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "key": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "family": "cloud",
+      "subpart": "cirrus",
+      "stem": "cirrus_clouds",
+      "image": "cloud/cirrus/cirrus_clouds.jpg",
+      "sourcePath": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\cirrus\\cirrus_clouds.jpg",
+      "sourceFound": true,
+      "profile": "cirrus",
+      "style": "feathered cirrus cloud with branching filaments",
+      "silhouette": "長羽毛主脊、向兩側分叉的細絲與分散尖端",
+      "model": "gpt-5.6-luna",
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "generationTag": "luna 直接 v6",
+      "yolo26": {
+        "schemaVersion": null,
+        "evidenceStatus": "missing_yolo26_schema_v2",
+        "eligible": false,
+        "pipelineEligibility": "awaiting_human_review",
+        "featureFile": null,
+        "target": null
+      },
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 89,
+        "verdict": "awaiting_human_review",
+        "reviewer": "gpt-5.6-luna_visual_direct",
+        "reviewStage": "retry_2_three_view_visual_review",
+        "retry": 2,
+        "critique": "soft pass 已把細長 wedge 刀片全面拆成密接微型 dodeca/icosa 雲絲鏈；主脊與支絲維持後掠分枝，但尖端改為細軟羽絮而非銳利薄片。",
+        "corrections": [
+          "雲絲鏈節徑維持 0.08–0.15m，禁止重新出現長楔片",
+          "分叉採不規則曲率、節距與淡色階，端視圖保持細軟雲束"
+        ]
+      },
+      "outputDir": "out/3d_data/cloud/cirrus/cloud_cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "preview": "out/review_previews/cloud_cirrus_cirrus_clouds_b36fb271_luna_v6.png",
+      "previewModel": "out/review_previews/cloud_cirrus_cirrus_clouds_b36fb271_luna_v6.png.model.json",
+      "bounds": {
+        "min": [
+          -5.0443,
+          1.1341,
+          -0.4231
+        ],
+        "max": [
+          4.4661,
+          1.6095,
+          0.9342
+        ],
+        "size": [
+          9.51,
+          0.475,
+          1.357
+        ],
+        "rMax": 5.062,
+        "triangles": 5616,
+        "vertices": 3203
+      },
+      "parts": 189,
+      "triangles": 5616,
+      "vertices": 3203,
+      "primitiveTypes": [
+        "ellipsoid_sphere",
+        "dodecahedron_polyhedron",
+        "icosahedron_polyhedron"
+      ],
+      "status": "awaiting_human_review"
+    },
+    {
+      "target": "cloud/altocumulus_altocumulus_006",
+      "targetId": "cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "key": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "family": "cloud",
+      "subpart": "altocumulus",
+      "stem": "altocumulus_006",
+      "image": "cloud/altocumulus/altocumulus_006.jpg",
+      "sourcePath": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\altocumulus\\altocumulus_006.jpg",
+      "sourceFound": true,
+      "profile": "altocumulus",
+      "style": "perspective-dense altocumulus wavelet field",
+      "silhouette": "前中後錯列的成排小雲片與低起伏波紋，後排密度更高更薄",
+      "model": "gpt-5.6-luna",
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "generationTag": "luna 直接 v6",
+      "yolo26": {
+        "schemaVersion": null,
+        "evidenceStatus": "missing_yolo26_schema_v2",
+        "eligible": false,
+        "pipelineEligibility": "awaiting_human_review",
+        "featureFile": null,
+        "target": null
+      },
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 88,
+        "verdict": "awaiting_human_review",
+        "reviewer": "gpt-5.6-luna_visual_direct",
+        "reviewStage": "retry_2_three_view_visual_review",
+        "retry": 2,
+        "critique": "soft pass 將 wavelet 接縫改成小瓣鏈並加入次級蓬鬆外緣；五排仍前大後小、保留透視縫，但個別雲片更像棉絮而非卵石。",
+        "corrections": [
+          "相鄰 row 使用非對齊 x 座標與 z 漂移，保留照片的透視密度",
+          "每個 wavelet 保持短 wedge 局部接縫，避免整排重新融合成薄盤"
+        ]
+      },
+      "outputDir": "out/3d_data/cloud/altocumulus/cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "preview": "out/review_previews/cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6.png",
+      "previewModel": "out/review_previews/cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6.png.model.json",
+      "bounds": {
+        "min": [
+          -5.2544,
+          1.0034,
+          -2.3889
+        ],
+        "max": [
+          5.1714,
+          2.4778,
+          2.6742
+        ],
+        "size": [
+          10.426,
+          1.474,
+          5.063
+        ],
+        "rMax": 5.822,
+        "triangles": 5528,
+        "vertices": 3128
+      },
+      "parts": 182,
+      "triangles": 5528,
+      "vertices": 3128,
+      "primitiveTypes": [
+        "dodecahedron_polyhedron",
+        "icosahedron_polyhedron"
+      ],
+      "status": "awaiting_human_review"
+    },
+    {
+      "target": "cloud/congestus_dark_clouds",
+      "targetId": "cloud_congestus_dark_clouds_2b6ba642_luna_v6",
+      "key": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "family": "cloud",
+      "subpart": "congestus",
+      "stem": "dark_clouds",
+      "image": "cloud/congestus/dark_clouds.jpg",
+      "sourcePath": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\congestus\\dark_clouds.jpg",
+      "sourceFound": true,
+      "profile": "congestus",
+      "style": "towering congestus cloud with dark core and bright rim",
+      "silhouette": "高聳塔狀厚雲，右側暗芯、左側亮邊與不規則隆起",
+      "model": "gpt-5.6-luna",
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "generationTag": "luna 直接 v6",
+      "yolo26": {
+        "schemaVersion": null,
+        "evidenceStatus": "missing_yolo26_schema_v2",
+        "eligible": false,
+        "pipelineEligibility": "awaiting_human_review",
+        "featureFile": null,
+        "target": null
+      },
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": 91,
+        "verdict": "awaiting_human_review",
+        "reviewer": "gpt-5.6-luna_visual_direct",
+        "reviewStage": "retry_2_three_view_visual_review",
+        "retry": 2,
+        "critique": "soft pass 以次級小瓣柔化高塔外緣並降低暗面對比；塔狀厚度與左側亮邊仍保留，外觀更輕盈蓬鬆。",
+        "corrections": [
+          "各 tier 以不同半徑與水平偏移維持塔狀收窄，不讓單一 lobe 佔主體",
+          "亮邊只能沿左側/前緣，右內層保持多瓣暗芯而不恢復大 core"
+        ]
+      },
+      "outputDir": "out/3d_data/cloud/congestus/cloud_congestus_dark_clouds_2b6ba642_luna_v6",
+      "preview": "out/review_previews/cloud_congestus_dark_clouds_2b6ba642_luna_v6.png",
+      "previewModel": "out/review_previews/cloud_congestus_dark_clouds_2b6ba642_luna_v6.png.model.json",
+      "bounds": {
+        "min": [
+          -3.1107,
+          0.0667,
+          -1.0461
+        ],
+        "max": [
+          3.0226,
+          6.0967,
+          1.4312
+        ],
+        "size": [
+          6.133,
+          6.03,
+          2.477
+        ],
+        "rMax": 3.344,
+        "triangles": 1972,
+        "vertices": 1124
+      },
+      "parts": 69,
+      "triangles": 1972,
+      "vertices": 1124,
+      "primitiveTypes": [
+        "dodecahedron_polyhedron",
+        "icosahedron_polyhedron"
+      ],
+      "status": "awaiting_human_review"
+    }
+  ]
+}

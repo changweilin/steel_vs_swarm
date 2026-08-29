@@ -1,0 +1,96 @@
+{
+  "id": "cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+  "key": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+  "canonicalTarget": "cloud/mammatus_mammatus_clouds1",
+  "family": "cloud",
+  "subpart": "mammatus",
+  "stem": "mammatus_clouds1",
+  "style": "continuous layered mammatus cloud with hanging pouches",
+  "symmetryMode": "asymmetric",
+  "cloudProfile": "mammatus",
+  "silhouette": "連續灰暗上層與多排下垂囊袋，囊袋大小與深度有節奏差",
+  "pureCloudOnly": true,
+  "cloudSemantic": {
+    "glassHex": "cloud_highlight",
+    "noWindowSemantics": true,
+    "noSunLandscapePeopleAnimals": true
+  },
+  "colors": {
+    "roofHex": 9870244,
+    "facadeHex": 12566979,
+    "baseHex": 7633799,
+    "accentHex": 14144975,
+    "glassHex": 15789026,
+    "darkHex": 5397353,
+    "brightHex": 16775405
+  },
+  "similarityScore": 89,
+  "similarityReview": "soft pass 以較小交疊瓣柔化棚層與囊袋邊角；所有乳狀囊仍連接主棚，輪廓更蓬鬆且不再像沉重岩塊。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "每個囊袋頸部持續埋入上層，避免細柱與浮空側瓣",
+    "暗灰與乳白 facet 只在囊袋底/上層裂縫分區，保留照片的厚重層次"
+  ],
+  "similarityReviewRecord": {
+    "similarityScore": 89,
+    "verdict": "awaiting_human_review",
+    "reviewer": "gpt-5.6-luna_visual_direct",
+    "reviewStage": "retry_2_three_view_visual_review",
+    "retry": 2,
+    "critique": "soft pass 以較小交疊瓣柔化棚層與囊袋邊角；所有乳狀囊仍連接主棚，輪廓更蓬鬆且不再像沉重岩塊。",
+    "corrections": [
+      "每個囊袋頸部持續埋入上層，避免細柱與浮空側瓣",
+      "暗灰與乳白 facet 只在囊袋底/上層裂縫分區，保留照片的厚重層次"
+    ]
+  },
+  "model": "gpt-5.6-luna",
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "generationTag": "luna 直接 v6",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "cloud/mammatus/mammatus_clouds1.jpg",
+  "source_full_path": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\mammatus\\mammatus_clouds1.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "eligible": false,
+    "pipelineEligibility": "awaiting_human_review",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批五件純雲目標依使用者指定由 GPT-5.6 Luna 直接逐張目視重建；缺少 YOLO26 schema-v2 時保持不可入 runtime。"
+  },
+  "preview": "out/review_previews/cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6.png",
+  "previewModel": "out/review_previews/cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6.png.model.json",
+  "bounds": {
+    "min": [
+      -5.2226,
+      0.0697,
+      -1.0981
+    ],
+    "max": [
+      5.0764,
+      3.9595,
+      1.5759
+    ],
+    "size": [
+      10.299,
+      3.89,
+      2.674
+    ],
+    "rMax": 5.337,
+    "triangles": 3416,
+    "vertices": 1947
+  },
+  "parts": 111,
+  "reconstructionNote": "照片特徵「連續灰暗上層與多排下垂囊袋，囊袋大小與深度有節奏差」以 111 個連接多面體重建；ellipsoid 僅為嵌入核心，外輪廓由 faceted lobes/ridges/fibres 打破。",
+  "created_at": "2026-08-29T10:47:09.822Z",
+  "humanVerdictPreserved": true
+}
