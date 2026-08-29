@@ -157,17 +157,17 @@ function cloudTexture() {
  * 2. 雲朵動態: 隨風漂移、微幅隨機飄動、生命週期顯現/消失。
  * 3. 聚合與分散: 小雲聚合成大雲 (Clustering), 大雲分散為小雲 (Dispersal)。
  */
-const CLOUD_N = 26;        // 雲量基數;實際枚數與 WEATHERS[w].light 反比
+const CLOUD_N = 28;        // 雲量基數;實際枚數與 WEATHERS[w].light 反比
 const CLOUD_BOB = 0.015;      // 逐朵上下起伏
 const CLOUD_BREATH = 0.08;    // 逐朵尺寸呼吸
 function makeClouds(span, skyC, W, seed) {
-  const n = Math.max(0, Math.round(CLOUD_N * (1.05 - W.light)));
-  if (!n || W.fogNear <= 0.05) return null;
+  const n = Math.max(0, Math.round(CLOUD_N * (1.05 - (W?.light ?? 1.0))));
+  if (!n || (W?.fogNear ?? 0.55) <= 0.05) return null;
   const rnd = mulberry32(((seed ?? 0) ^ 0x93B7C1) >>> 0);
   const grp = new THREE.Group();
   const tex = cloudTexture();
 
-  const numClusters = 7;
+  const numClusters = 8;
   const spritesPerCluster = 6;
   const totalClouds = numClusters * spritesPerCluster;
 
@@ -179,10 +179,10 @@ function makeClouds(span, skyC, W, seed) {
   const clusters = [];
   for (let c = 0; c < numClusters; c++) {
     const a = (c / numClusters) * Math.PI * 2 + rnd() * 0.4;
-    const r = span * (0.45 + rnd() * 0.85);
+    const r = span * (0.40 + rnd() * 0.90);
     const cx = Math.cos(a) * r;
     const cz = Math.sin(a) * r;
-    const y = span * (0.20 + rnd() * 0.35);
+    const y = span * (0.22 + rnd() * 0.28);
     const speedScale = 0.85 + rnd() * 0.3;
     const phase = rnd() * Math.PI * 2;
     clusters.push({ cx, cz, y, speedScale, phase, along: cx, side: cz });
@@ -227,10 +227,11 @@ function makeClouds(span, skyC, W, seed) {
      * @param {number} t 風時鐘
      * @param {number} dt 幀時間差
      * @param {THREE.Color} currentSkyC 天空顏色
-     * @param {{ clouds:number, isDarkCloud:boolean, cloudDarkness:number, windDir:number[], windAmp:number }} dyn
+     * @param {{ clouds:number, fog:number, effectiveFog:number, isDarkCloud:boolean, cloudDarkness:number, windDir:number[], windAmp:number }} dyn
      */
     step(t, dt, currentSkyC, dyn) {
       const cloudsPct = dyn?.clouds ?? 50;
+      const fogPct = dyn?.fog ?? 0;
       const darkness = dyn?.cloudDarkness ?? 0;
       const windDir = dyn?.windDir ?? [1, 0];
       const windAmp = dyn?.windAmp ?? 1.0;
@@ -243,8 +244,16 @@ function makeClouds(span, skyC, W, seed) {
         baseCloudColor.lerp(DARK_CLOUD_COLOR, Math.min(1.0, darkness * 0.90));
       }
 
-      // 可見雲數比例 (0% 雲量時極少/淡, 100% 雲量時全滿/厚)
-      const cloudCoverage = Math.max(0.05, Math.min(1.0, cloudsPct / 100));
+      // 1. 雲量影響水平密度 (0% 雲量極稀疏/少, 100% 雲量高密度群聚)
+      const horizDensity = Math.max(0.06, Math.min(1.0, cloudsPct / 100));
+
+      // 2. 雲層水平分佈廣度與雲量相應增加 (分佈廣時有效雲量與覆蓋率同步增加)
+      const spreadFactor = 0.60 + (cloudsPct / 100) * 0.65;
+      const cloudCoverage = Math.max(0.05, Math.min(1.0, horizDensity * (0.65 + spreadFactor * 0.35)));
+
+      // 3. 霧量影響雲層分佈的高低 (高霧量時近地水氣重，雲底壓低貼近地平線；低霧量時雲層高掛於高空)
+      const fogAltitudeFactor = 1.0 - (fogPct / 100) * 0.52;
+      const baseAltitudeShift = span * (0.34 * fogAltitudeFactor + 0.08);
 
       for (let i = 0; i < cloudItems.length; i++) {
         const item = cloudItems[i];
@@ -253,21 +262,24 @@ function makeClouds(span, skyC, W, seed) {
 
         const a = ((d.along + WIND.CLOUD_MPS * t + WRAP * 0.5) % WRAP + WRAP) % WRAP - WRAP * 0.5;
 
-        // 1. 生命週期淡入淡出 (顯現 / 消失)
+        // 生命週期淡入淡出 (顯現 / 消失)
         const life = Math.sin(t * (Math.PI * 2 / item.lifePeriod) + item.lifePhase) * 0.5 + 0.5;
         const fadeAlpha = Math.max(0, Math.min(1, life * 1.5 - 0.2)) * cloudCoverage;
 
-        // 2. 小雲匯聚成大雲 (Clustering) 與 大雲分散為小雲 (Dispersal)
+        // 小雲匯聚成大雲 (Clustering) 與 大雲分散為小雲 (Dispersal)
         const clusterPulse = Math.sin(t * 0.12 + c.phase) * 0.5 + 0.5; // [0, 1] 聚合 -> 分散循環
         const clusterMerge = (cloudsPct > 50 ? 0.35 : 0.65) * clusterPulse + (cloudsPct > 50 ? 0.45 : 0.15);
-        // 匯聚時 offset 縮小且 scale 放大; 分散時 offset 擴散且 scale 縮小
-        const curOffX = item.offX * (1.6 - clusterMerge * 0.9);
-        const curOffZ = item.offZ * (1.6 - clusterMerge * 0.9);
+
+        // 水平偏移受水平廣度與密度調整
+        const curOffX = item.offX * (1.6 - clusterMerge * 0.9) * spreadFactor;
+        const curOffZ = item.offZ * (1.6 - clusterMerge * 0.9) * spreadFactor;
         const scaleMul = (0.7 + clusterMerge * 0.7) * (1 + Math.sin(t * 0.2 + item.bobPhase) * CLOUD_BREATH);
 
         const posX = a * windDir[0] - d.side * windDir[1] + curOffX;
         const posZ = a * windDir[1] + d.side * windDir[0] + curOffZ;
-        const posY = d.y + Math.sin(t * 0.14 + item.bobPhase) * span * CLOUD_BOB;
+
+        // 雲層垂直高度: 霧量越高高度越低，且伴隨輕微起伏
+        const posY = baseAltitudeShift + (d.y - span * 0.22) * fogAltitudeFactor + Math.sin(t * 0.14 + item.bobPhase) * span * CLOUD_BOB;
 
         item.sp.position.set(posX, posY, posZ);
         item.sp.scale.set(item.baseScale * 2 * scaleMul, item.baseScale * scaleMul, 1);

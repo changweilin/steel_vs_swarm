@@ -162,6 +162,16 @@ console.log('\n▍Ⅴ 7 維多元天氣屬性與連續布朗運動演化 (weathe
   ok(maxDelta < 2.0, `布朗運動演化平滑連續 (單秒最大跳變量 ${maxDelta.toFixed(3)}% < 2.0%)`);
   ok(typeof lastVec.windDirDeg === 'number' && lastVec.windDirDeg >= 0 && lastVec.windDirDeg <= 360,
     `動態風向角合法於 [0, 360]° (實得 ${lastVec.windDirDeg}°)`);
+
+  // 驗證高數值區間 / 低數值區間停留時之反向機率與恢復力擺盪
+  const highVecs = [];
+  for (let t = 0; t <= 400; t += 20) {
+    highVecs.push(weatherVectorAt('summer', 'day', 'storm', t, 999).thunder);
+  }
+  const minThunder = Math.min(...highVecs);
+  const maxThunder = Math.max(...highVecs);
+  ok(maxThunder > 75 && minThunder < 85,
+    `高數值區間停留累積反向推力，產生動態反彈擺盪 (max: ${maxThunder}%, min: ${minThunder}%)`);
 }
 
 // Ⅵ 各維度條件觸發與物理連動判定 (resolveWeatherDynamics)
@@ -214,7 +224,15 @@ console.log('\n▍Ⅵ 各維度條件觸發與物理連動判定 (resolveWeather
   ok(dThunderLow.effectiveThunder === 0, '雷量 70% (<75%) 不打雷 (effectiveThunder=0)');
   ok(dThunderHigh.effectiveThunder === 0.6, '雷量 90% (≥75%) 正常觸發打雷閃電 (effectiveThunder=0.60)');
 
-  // 7. 風量與風向連動
+  // 7. 霧量條件: 75% 以上才會開始起霧 (0~1.0 倍率)
+  const dFogLow = resolveWeatherDynamics({ clouds: 30, fog: 70, wind: 10 });
+  const dFogHigh = resolveWeatherDynamics({ clouds: 30, fog: 90, wind: 10 });
+  ok(dFogLow.effectiveFog === 0 && dFogLow.fogNear === 0.55 && dFogLow.fogFar === 1.90,
+    '霧量 70% (<75%) 不起霧 (effectiveFog=0, fogNear=0.55, fogFar=1.90)');
+  ok(dFogHigh.effectiveFog === 0.6 && dFogHigh.fogNear < 0.30 && dFogHigh.fogFar < 1.0 && dFogHigh.dominantWeather === 'fog',
+    '霧量 90% (≥75%) 正常起霧並壓縮能見度 (effectiveFog=0.60, dominant=fog)');
+
+  // 8. 風量與風向連動
   const dWind = resolveWeatherDynamics({ clouds: 30, fog: 10, wind: 80, rain: 0, sand: 0, snow: 0, thunder: 0, windDirDeg: 90 });
   ok(dWind.windAmp > 2.0 && dWind.waveAmp > 1.8, '風量 80% 正確放大風浪係數 (windAmp > 2.0, waveAmp > 1.8)');
   ok(Math.abs(dWind.windDir[0] - 0) < 1e-3 && Math.abs(dWind.windDir[1] - 1) < 1e-3,
