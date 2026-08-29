@@ -4,12 +4,15 @@
 //
 // 跑法: node tools/audit_aquatics.mjs
 // 反向驗證:
-//   --break-trans   (破壞過渡帶插值)
-//   --break-viscous (破壞沼澤波浪黏滯度)
-//   --break-bubble  (破壞氣泡上升速度分級)
-//   --break-collider(拔掉固定水下巨物碰撞接線)
-//   --break-cap     (把跨端世界碰撞名冊容量退回舊 4000)
-//   --break-wreck   (把沉船傾斜比例改成 20%)
+//   --break-trans       (破壞過渡帶插值)
+//   --break-viscous     (破壞沼澤波浪黏滯度)
+//   --break-bubble      (破壞氣泡上升速度分級)
+//   --break-collider    (拔掉固定水下巨物碰撞接線)
+//   --break-cap         (把跨端世界碰撞名冊容量退回舊 4000)
+//   --break-wreck       (把沉船傾斜比例改成 20%)
+//   --break-wake        (破壞巡邏艇尾波或錯誤加入潛艦尾波)
+//   --break-ship-heading(破壞船隻運動朝向對齊切線)
+//   --break-civ-bound   (拔除平民運動邊界保護)
 
 import { readSrc } from './audit_src.mjs';
 import { mulberry32 } from '../public/js/rng.js';
@@ -22,6 +25,9 @@ const BREAK_RELIC = process.argv.includes('--break-relic');
 const BREAK_COLLIDER = process.argv.includes('--break-collider');
 const BREAK_CAP = process.argv.includes('--break-cap');
 const BREAK_WRECK = process.argv.includes('--break-wreck');
+const BREAK_WAKE = process.argv.includes('--break-wake');
+const BREAK_SHIP_HEADING = process.argv.includes('--break-ship-heading');
+const BREAK_CIV_BOUND = process.argv.includes('--break-civ-bound');
 
 let pass = 0, fail = 0;
 function ok(cond, msg) {
@@ -44,6 +50,7 @@ const groundSrc = readSrc('public', 'js', 'ground.js');
 const gameSrc = readSrc('public', 'js', 'game.js');
 const dataSrc = readSrc('public', 'js', 'data.js');
 const serverSrc = readSrc('server', 'server.js');
+const simSrc = readSrc('server', 'sim.js');
 
 // ▍Ⅰ 模組匯出與常數架構 (AQUATIC)
 console.log('▍Ⅰ 模組匯出與常數架構');
@@ -268,6 +275,25 @@ ok(matchRatio >= 0.45 && matchRatio <= 0.55,
   `遺跡/文化地標建築機率性出現：相關者佔比接近 50% (實測 ${(matchRatio * 100).toFixed(1)}%, 目標 50±5%)`);
 ok(testBuildingType(testTags, 0) === 'shrine',
   '無 seed (seed=0) 呼叫時保持語意直接對接預設回傳');
+
+// ▍Ⅸ 水面船艦與平民運動邊界、朝向與尾波系統 (Surface Vessels & Civilian Boundaries, Tangent Heading, Ship Wakes)
+console.log('\n▍Ⅸ 水面船艦與平民運動邊界、朝向與尾波系統');
+
+const hasWakeBuilder = BREAK_WAKE ? false : (aquaticsSrc.includes('export function buildShipWakeGroup(') && aquaticsSrc.includes('buildShipWakeGroup()'));
+ok(hasWakeBuilder, '巡邏艇具備專屬水面尾波與破浪建構器 (buildShipWakeGroup)');
+
+const subFnStr = /export function buildSubmarine\([\s\S]*?\n\}/.exec(aquaticsSrc)?.[0] || '';
+const subNoWake = BREAK_WAKE ? subFnStr.includes('ship_wake') : (!subFnStr.includes('buildShipWakeGroup') && !subFnStr.includes('ship_wake'));
+ok(subNoWake, '潛艦 (Submarine) 為水下遺跡/探測器，嚴格不產生水面尾波 (潛艦不用)');
+
+const headingCheck = BREAK_SHIP_HEADING ? false : (aquaticsSrc.includes('Math.atan2(dx, dz)') && aquaticsSrc.includes('c.mesh.rotation.y = heading'));
+ok(headingCheck, '水面巡弋船艦航行朝向嚴格指向軌跡前進切線方向 (Math.atan2(dx, dz))');
+
+const shipMarginCheck = aquaticsSrc.includes('SHIP_MARGIN') && aquaticsSrc.includes('clampMinX') && aquaticsSrc.includes('clampMaxX');
+ok(shipMarginCheck, '巡邏艇與停泊小艇巡航與生成範圍受 SHIP_MARGIN 地圖安全邊界嚴格保護');
+
+const civBoundCheck = BREAK_CIV_BOUND ? false : (simSrc.includes('this._inBounds(x, z, 4)') && simSrc.includes('const margin = 4.0;') && simSrc.includes('this.bounds.minX + margin'));
+ok(civBoundCheck, '伺服器權威平民生成(_civPoint)、徘徊(_civWander)與移動(_moveCiv)嚴格受邊界餘量保護');
 
 if (fail > 0) {
   console.error(`\n✗ 稽核失敗: ${fail} 項未通過`);
