@@ -9704,6 +9704,7 @@ function buildBufferProps({ group, terrain }) {
 function buildBackdrop({ group, terrain, ctr }) {
   if (!terrain.bufferHeightAt) return 0;
   const wy = terrain.waterY;
+  const season = terrain.season || 'summer';
   const probe = (x, z) => {
     if (wy != null && terrain.heightAt(x, z) < wy + WATER.SHORE) return 'water';
     return classifyImg(terrain.sampleColor?.(x, z)) || 'bare';
@@ -9721,7 +9722,7 @@ function buildBackdrop({ group, terrain, ctr }) {
       const y = terrain.bufferHeightAt(x, z);
       return wy != null && b.kind === 'sea' ? Math.max(y, wy) - 1 : y;
     };
-    emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed }),
+    emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed, season }),
       b.x, gy(b.x, b.z), b.z, b.ry, 1, gy);
   }
   // 遠景:洗白拉高、冷色重一點(大氣透視)⇒ 與近處的世界分得開,不會誤讀成可以走過去的地形。
@@ -10423,6 +10424,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 緩衝空間布景與視線邊界背景:純表現層(不進 blockers/occ/LOS)、零共享 rnd ⇒ 插在這裡
   // 不會推移任何一株植被的佈局,也不影響 occ 上傳的段數。
   const bufferProps = buildBufferProps({ group, terrain });
+  terrain.season = season;
   const backdropSegs = buildBackdrop({ group, terrain, ctr: INK_CTR.BACKDROP });
   const greenSites = [], bareSites = [];
   for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 36); a++) {
