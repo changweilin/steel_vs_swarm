@@ -1,0 +1,50 @@
+{
+  "id": "houju_sacred_jewel_d51c06ce",
+  "role": "houju_sacred_jewel",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|1,1,1|0",
+  "canonical": {
+    "objectKey": "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d",
+    "name": "houju_sacred_jewel",
+    "part": {
+      "name": "houju_sacred_jewel",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.35,
+        0.35,
+        0.35
+      ],
+      "position": [
+        0,
+        35.477419354838716,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14603199,
+      "triangles": 96,
+      "colorKey": "bright"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d",
+      "name": "houju_sacred_jewel",
+      "position": [
+        0,
+        35.477419354838716,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "bright",
+      "color": 14603199
+    }
+  ]
+}

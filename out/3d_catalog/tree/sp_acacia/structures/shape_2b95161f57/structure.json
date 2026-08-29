@@ -1,0 +1,856 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_2b95161f57",
+  "canonicalKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+    "bounds": {
+      "min": [
+        -3.3918,
+        0,
+        -3.8286
+      ],
+      "max": [
+        2.9395,
+        7.4875,
+        3.3166
+      ],
+      "size": [
+        6.331,
+        7.487,
+        7.145
+      ],
+      "rMax": 5.115,
+      "triangles": 3822,
+      "vertices": 2271
+    },
+    "parts": [
+      {
+        "name": "broadleaf_trunk",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.25,
+          0.7
+        ],
+        "height": 5.606,
+        "position": [
+          0,
+          2.803,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 40
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.562,
+          0.78
+        ],
+        "height": 0.5,
+        "position": [
+          0,
+          0.25,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 40
+      },
+      {
+        "name": "acacia_primary_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.81,
+        "position": [
+          0.359,
+          5.196,
+          0.07
+        ],
+        "rotation": [
+          1.128,
+          1.377,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_outer_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 0.99,
+        "position": [
+          1.163,
+          5.569,
+          0.228
+        ],
+        "rotation": [
+          1.157,
+          1.377,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_crown_0_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.176,
+          0.12,
+          0.877
+        ],
+        "position": [
+          1.607,
+          5.788,
+          0.315
+        ],
+        "rotation": [
+          0.105,
+          0.194,
+          -0.094
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "acacia_crown_0_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.221,
+        "position": [
+          1.607,
+          5.842,
+          0.315
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      },
+      {
+        "name": "acacia_primary_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.63,
+        "position": [
+          0.224,
+          4.805,
+          0.209
+        ],
+        "rotation": [
+          1.332,
+          0.82,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_outer_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 2.031,
+        "position": [
+          1.182,
+          5.023,
+          1.104
+        ],
+        "rotation": [
+          1.429,
+          0.82,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_crown_1_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.177,
+          0.12,
+          0.817
+        ],
+        "position": [
+          1.917,
+          5.185,
+          1.789
+        ],
+        "rotation": [
+          0.131,
+          0.751,
+          0.1
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "acacia_crown_1_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.206,
+        "position": [
+          1.917,
+          5.239,
+          1.789
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      },
+      {
+        "name": "acacia_primary_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.692,
+        "position": [
+          -0.053,
+          4.75,
+          0.329
+        ],
+        "rotation": [
+          1.299,
+          -0.16,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_outer_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.856,
+        "position": [
+          -0.252,
+          5.005,
+          1.561
+        ],
+        "rotation": [
+          1.396,
+          -0.16,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_crown_2_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.864,
+          0.168,
+          0.627
+        ],
+        "position": [
+          -0.397,
+          5.198,
+          2.463
+        ],
+        "rotation": [
+          -0.095,
+          1.731,
+          0.004
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "acacia_crown_2_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.158,
+        "position": [
+          -0.397,
+          5.286,
+          2.463
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      },
+      {
+        "name": "acacia_primary_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.524,
+        "position": [
+          -0.205,
+          5.08,
+          0.15
+        ],
+        "rotation": [
+          1.32,
+          -0.938,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_outer_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 2.27,
+        "position": [
+          -1.297,
+          5.424,
+          0.951
+        ],
+        "rotation": [
+          1.323,
+          -0.938,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_crown_3_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.216,
+          0.153,
+          1.019
+        ],
+        "position": [
+          -2.184,
+          5.731,
+          1.602
+        ],
+        "rotation": [
+          0,
+          2.509,
+          0.063
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "acacia_crown_3_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.257,
+        "position": [
+          -2.184,
+          5.811,
+          1.602
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      },
+      {
+        "name": "acacia_primary_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.585,
+        "position": [
+          -0.26,
+          5.098,
+          -0.05
+        ],
+        "rotation": [
+          1.129,
+          -1.762,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_outer_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.731,
+        "position": [
+          -1.304,
+          5.556,
+          -0.252
+        ],
+        "rotation": [
+          1.176,
+          -1.762,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_crown_4_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.334,
+          0.122,
+          1
+        ],
+        "position": [
+          -2.088,
+          5.912,
+          -0.403
+        ],
+        "rotation": [
+          -0.07,
+          3.332,
+          0.098
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "acacia_crown_4_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.252,
+        "position": [
+          -2.088,
+          5.976,
+          -0.403
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      },
+      {
+        "name": "acacia_primary_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.745,
+        "position": [
+          -0.213,
+          5.069,
+          -0.296
+        ],
+        "rotation": [
+          1.364,
+          -2.517,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_outer_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.907,
+        "position": [
+          -0.969,
+          5.368,
+          -1.343
+        ],
+        "rotation": [
+          1.335,
+          -2.517,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_crown_5_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.227,
+          0.167,
+          0.934
+        ],
+        "position": [
+          -1.512,
+          5.622,
+          -2.096
+        ],
+        "rotation": [
+          0.001,
+          4.087,
+          -0.082
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "acacia_crown_5_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.235,
+        "position": [
+          -1.512,
+          5.71,
+          -2.096
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      },
+      {
+        "name": "acacia_primary_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.908,
+        "position": [
+          -0.018,
+          4.847,
+          -0.42
+        ],
+        "rotation": [
+          1.186,
+          -3.1,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_outer_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.886,
+        "position": [
+          -0.074,
+          5.252,
+          -1.753
+        ],
+        "rotation": [
+          1.32,
+          -3.1,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_crown_6_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.164,
+          0.12,
+          0.747
+        ],
+        "position": [
+          -0.112,
+          5.508,
+          -2.666
+        ],
+        "rotation": [
+          -0.051,
+          4.67,
+          -0.044
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "acacia_crown_6_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.188,
+        "position": [
+          -0.112,
+          5.566,
+          -2.666
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      },
+      {
+        "name": "acacia_primary_7",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.661,
+        "position": [
+          0.205,
+          5.339,
+          -0.235
+        ],
+        "rotation": [
+          1.238,
+          2.426,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_outer_7",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.398,
+        "position": [
+          0.837,
+          5.701,
+          -0.963
+        ],
+        "rotation": [
+          1.199,
+          2.426,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "acacia_crown_7_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.02,
+          0.145,
+          1.061
+        ],
+        "position": [
+          1.265,
+          5.982,
+          -1.454
+        ],
+        "rotation": [
+          -0.066,
+          5.428,
+          0.08
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "acacia_crown_7_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.257,
+        "position": [
+          1.265,
+          6.058,
+          -1.454
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      },
+      {
+        "name": "top_crown_umbrella_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1,
+          0.176,
+          0.84
+        ],
+        "position": [
+          0,
+          7.197,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "top_crown_umbrella_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.212,
+        "position": [
+          0,
+          7.29,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10860413,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_acacia/tree_tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c_0_9025755e_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_e193c57d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_acacia/tree_tree_sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c_1_e193c57d_luna_v6",
+      "similarity": 78,
+      "scale": [
+        1.1232,
+        0.98744,
+        0.90861
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/sp_acacia_ov_1ac0914a-b376-4386-ab74-ae79d96e8485_5175fbe7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_acacia/tree_tree_sp_acacia_ov_1ac0914a-b376-4386-ab74-ae79d96e8485_5175fbe7_luna_v6",
+      "similarity": 73,
+      "scale": [
+        1.0248,
+        1.08695,
+        0.91057
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/sp_acacia_ov_4181513d-1acc-4d23-a817-709b1d24f3c2_bf46f112_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_acacia/tree_tree_sp_acacia_ov_4181513d-1acc-4d23-a817-709b1d24f3c2_bf46f112_luna_v6",
+      "similarity": 95,
+      "scale": [
+        1.1052,
+        1.09683,
+        1.07166
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/sp_acacia_wc_193839561_361312fc_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_acacia/tree_tree_sp_acacia_wc_193839561_361312fc_luna_v6",
+      "similarity": 85,
+      "scale": [
+        1.00979,
+        0.91999,
+        1.02099
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    }
+  ]
+}

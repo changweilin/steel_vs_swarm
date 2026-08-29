@@ -1,0 +1,178 @@
+{
+  "id": "lamp_cfddeb9f",
+  "role": "lamp",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|0.75,0.625,1|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+    "name": "headlamp",
+    "part": {
+      "name": "headlamp",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.095,
+        0.085,
+        0.13
+      ],
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15919574,
+      "triangles": 160,
+      "role": "lamp"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15919574
+    },
+    {
+      "objectKey": "vehicle/motor_000001_1742374978_4250286e_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16775135
+    },
+    {
+      "objectKey": "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15919574
+    },
+    {
+      "objectKey": "vehicle/motor_10905670_R_58b9efa4_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15919574
+    },
+    {
+      "objectKey": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15919574
+    },
+    {
+      "objectKey": "vehicle/motor_14074013_OR_m_15e668c8_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15919574
+    },
+    {
+      "objectKey": "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16775135
+    },
+    {
+      "objectKey": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15919574
+    },
+    {
+      "objectKey": "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.66,
+        0.82,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15919574
+    }
+  ]
+}

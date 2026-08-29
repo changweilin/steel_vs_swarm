@@ -1,0 +1,49 @@
+{
+  "id": "antenna_243bac43",
+  "role": "antenna",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|0.625,1,0.625|0",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+    "name": "finial_jewel",
+    "part": {
+      "name": "finial_jewel",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.15,
+        0.25,
+        0.15
+      ],
+      "position": [
+        0,
+        23.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15055931,
+      "triangles": 160
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "finial_jewel",
+      "position": [
+        0,
+        23.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15055931
+    }
+  ]
+}

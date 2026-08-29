@@ -1,0 +1,194 @@
+{
+  "id": "exhaust_a43888cb",
+  "role": "exhaust",
+  "type": "box",
+  "signature": "box|1,0.25,0.25|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+    "name": "exhaust_muffler",
+    "part": {
+      "name": "exhaust_muffler",
+      "type": "box",
+      "dimensions": [
+        0.42,
+        0.09,
+        0.1
+      ],
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 12830917,
+      "triangles": 12,
+      "role": "exhaust"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12830917
+    },
+    {
+      "objectKey": "vehicle/motor_000001_1742374978_4250286e_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15848867
+    },
+    {
+      "objectKey": "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12830917
+    },
+    {
+      "objectKey": "vehicle/motor_10905670_R_58b9efa4_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12830917
+    },
+    {
+      "objectKey": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12830917
+    },
+    {
+      "objectKey": "vehicle/motor_14074013_OR_m_15e668c8_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12830917
+    },
+    {
+      "objectKey": "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15848867
+    },
+    {
+      "objectKey": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12830917
+    },
+    {
+      "objectKey": "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "name": "exhaust_muffler",
+      "position": [
+        -0.42,
+        0.37,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12830917
+    },
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "muffler_left",
+      "position": [
+        -0.52,
+        0.35,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14133314
+    }
+  ]
+}

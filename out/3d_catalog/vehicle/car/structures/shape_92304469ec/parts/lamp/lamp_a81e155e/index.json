@@ -1,0 +1,67 @@
+{
+  "id": "lamp_a81e155e",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|0,0,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+    "name": "ev_front_lightbar",
+    "part": {
+      "name": "ev_front_lightbar",
+      "type": "box",
+      "dimensions": [
+        0.04,
+        0.07,
+        1.421
+      ],
+      "position": [
+        2.425,
+        1.21,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14992735,
+      "triangles": 12,
+      "role": "lamp",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+      "name": "ev_front_lightbar",
+      "position": [
+        2.425,
+        1.21,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 14992735
+    },
+    {
+      "objectKey": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+      "name": "concept_front_lightbar",
+      "position": [
+        2.425,
+        1.22,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15914397
+    }
+  ]
+}

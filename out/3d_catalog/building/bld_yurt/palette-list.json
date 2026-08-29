@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "building",
+  "subcategory": "bld_yurt",
+  "palettes": [
+    {
+      "id": "palette_43efcd88",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 13816530,
+        "baseHex": 10526880,
+        "accentHex": 5592405,
+        "glassHex": 49484,
+        "darkHex": 2236962,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

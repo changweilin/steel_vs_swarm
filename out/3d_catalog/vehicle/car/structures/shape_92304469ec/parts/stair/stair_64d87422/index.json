@@ -1,0 +1,65 @@
+{
+  "id": "stair_64d87422",
+  "role": "stair",
+  "type": "box",
+  "signature": "box|0.25,0,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+    "name": "side_step_left",
+    "part": {
+      "name": "side_step_left",
+      "type": "box",
+      "dimensions": [
+        0.25,
+        0.06,
+        1.2
+      ],
+      "position": [
+        -0.92,
+        0.25,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1315860,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "side_step_left",
+      "position": [
+        -0.92,
+        0.25,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    },
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "side_step_right",
+      "position": [
+        0.92,
+        0.25,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    }
+  ]
+}

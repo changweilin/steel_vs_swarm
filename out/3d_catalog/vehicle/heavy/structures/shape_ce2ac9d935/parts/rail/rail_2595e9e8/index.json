@@ -1,0 +1,1059 @@
+{
+  "id": "rail_2595e9e8",
+  "role": "rail",
+  "type": "box",
+  "signature": "box|1,0,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_2021070912244646524316_56c23978_luna_v6",
+    "name": "chassis_rail_left",
+    "part": {
+      "name": "chassis_rail_left",
+      "type": "box",
+      "dimensions": [
+        9.84,
+        0.18,
+        0.12
+      ],
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1185824,
+      "triangles": 12,
+      "role": "chassis",
+      "colorKey": "darkHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_2021070912244646524316_56c23978_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_2021070912244646524316_56c23978_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_67342910-48b4-49b9-b2ab-bfd617a28c76_c2587f9c_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_67342910-48b4-49b9-b2ab-bfd617a28c76_c2587f9c_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_7car-201702220825-1_61cdd88b_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_7car-201702220825-1_61cdd88b_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_car_a58be0ee_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_car_a58be0ee_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_photooriginal-2760150-ffEPQ_0dca381c_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_photooriginal-2760150-ffEPQ_0dca381c_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_規格表3大圖合for官網_b6a06ed0_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_規格表3大圖合for官網_b6a06ed0_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_20160119121809449_b987405b_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_20160119121809449_b987405b_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_20250917103436615_3c5db894_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_20250917103436615_3c5db894_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_文境旅遊-賓士豪華大客車-5_c5cbdaf5_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.88,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_文境旅遊-賓士豪華大客車-5_c5cbdaf5_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.88,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1185824
+    },
+    {
+      "objectKey": "vehicle/heavy_01242_a6847600_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1120286
+    },
+    {
+      "objectKey": "vehicle/heavy_01242_a6847600_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1120286
+    },
+    {
+      "objectKey": "vehicle/heavy_1208367-1024x1024_11f751d0_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119770
+    },
+    {
+      "objectKey": "vehicle/heavy_1208367-1024x1024_11f751d0_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119770
+    },
+    {
+      "objectKey": "vehicle/heavy_167155193720_e0f6f03f_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119770
+    },
+    {
+      "objectKey": "vehicle/heavy_167155193720_e0f6f03f_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119770
+    },
+    {
+      "objectKey": "vehicle/heavy_3d-render-cargo-delivery-truck_1048-5605_47611ef6_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1120286
+    },
+    {
+      "objectKey": "vehicle/heavy_3d-render-cargo-delivery-truck_1048-5605_47611ef6_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1120286
+    },
+    {
+      "objectKey": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 791068
+    },
+    {
+      "objectKey": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 791068
+    },
+    {
+      "objectKey": "vehicle/heavy_000001_1776155963_1c5cb2e7_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 791068
+    },
+    {
+      "objectKey": "vehicle/heavy_000001_1776155963_1c5cb2e7_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 791068
+    },
+    {
+      "objectKey": "vehicle/heavy_d2462cec993f618a_30498ed7_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        1.09,
+        -1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_d2462cec993f618a_30498ed7_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        1.09,
+        1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP_a03e65f8_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        1.09,
+        -1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP_a03e65f8_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        1.09,
+        1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_photooriginal-98016-XUIGz_15f63811_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        1.09,
+        -1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_photooriginal-98016-XUIGz_15f63811_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        1.09,
+        1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_cfcd90c9_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119000
+    },
+    {
+      "objectKey": "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_cfcd90c9_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119000
+    },
+    {
+      "objectKey": "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_fde9c283_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119000
+    },
+    {
+      "objectKey": "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_fde9c283_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119000
+    },
+    {
+      "objectKey": "vehicle/heavy_1618404544235416926_1eadc9df_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119770
+    },
+    {
+      "objectKey": "vehicle/heavy_1618404544235416926_1eadc9df_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1119770
+    },
+    {
+      "objectKey": "vehicle/heavy_a33aa25d56bf3c88be759c9623090c9b_617de547_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 790548
+    },
+    {
+      "objectKey": "vehicle/heavy_a33aa25d56bf3c88be759c9623090c9b_617de547_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 790548
+    },
+    {
+      "objectKey": "vehicle/heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_17051d78_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 790548
+    },
+    {
+      "objectKey": "vehicle/heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_17051d78_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 790548
+    },
+    {
+      "objectKey": "vehicle/heavy_20260514234220_58_5e037c56_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        1.09,
+        -1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_20260514234220_58_5e037c56_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        1.09,
+        1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_4d54f379-07b7-453d-9e45-5fa076db88df_3199e89d_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1381142
+    },
+    {
+      "objectKey": "vehicle/heavy_4d54f379-07b7-453d-9e45-5fa076db88df_3199e89d_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1381142
+    },
+    {
+      "objectKey": "vehicle/heavy_5126f791-8473-4ae4-b729-525c496362fd_5bb8acbb_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1381142
+    },
+    {
+      "objectKey": "vehicle/heavy_5126f791-8473-4ae4-b729-525c496362fd_5bb8acbb_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1381142
+    },
+    {
+      "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.94,
+        -0.918
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.94,
+        0.918
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1644562
+    },
+    {
+      "objectKey": "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1381142
+    },
+    {
+      "objectKey": "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1381142
+    },
+    {
+      "objectKey": "vehicle/heavy_CSPV-02_01_5ef67224_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1381142
+    },
+    {
+      "objectKey": "vehicle/heavy_CSPV-02_01_5ef67224_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1381142
+    },
+    {
+      "objectKey": "vehicle/heavy_115576297_ebf74e1a_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.91,
+        -0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1120286
+    },
+    {
+      "objectKey": "vehicle/heavy_115576297_ebf74e1a_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.91,
+        0.867
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1120286
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        1.09,
+        -1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1120029
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        1.09,
+        1.003
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1120029
+    },
+    {
+      "objectKey": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "name": "chassis_rail_left",
+      "position": [
+        -0.1,
+        0.94,
+        -0.918
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1054752
+    },
+    {
+      "objectKey": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "name": "chassis_rail_right",
+      "position": [
+        -0.1,
+        0.94,
+        0.918
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 1054752
+    }
+  ]
+}

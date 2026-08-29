@@ -1,0 +1,66 @@
+{
+  "id": "mirror_783625d0",
+  "role": "mirror",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|0.75,0.25,1|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+    "name": "mirror_left",
+    "part": {
+      "name": "mirror_left",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.075,
+        0.025,
+        0.1
+      ],
+      "position": [
+        0.56,
+        1.14,
+        -0.38
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15855333,
+      "triangles": 160,
+      "role": "mirror"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "mirror_left",
+      "position": [
+        0.56,
+        1.14,
+        -0.38
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15855333
+    },
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "mirror_right",
+      "position": [
+        0.56,
+        1.14,
+        0.38
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15855333
+    }
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "id": "equipment_f4df41f6",
+  "role": "equipment",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "vehicle/heavy_d2462cec993f618a_30498ed7_luna_v6",
+    "name": "dump_hydraulic_ram",
+    "part": {
+      "name": "dump_hydraulic_ram",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.055,
+        0.055
+      ],
+      "height": 1.109,
+      "position": [
+        -0.69,
+        1.69,
+        0
+      ],
+      "rotation": [
+        0.593,
+        -1.571,
+        0
+      ],
+      "color": 4208165,
+      "triangles": 32,
+      "role": "equipment",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_d2462cec993f618a_30498ed7_luna_v6",
+      "name": "dump_hydraulic_ram",
+      "position": [
+        -0.69,
+        1.69,
+        0
+      ],
+      "rotation": [
+        0.593,
+        -1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 4208165
+    },
+    {
+      "objectKey": "vehicle/heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP_a03e65f8_luna_v6",
+      "name": "dump_hydraulic_ram",
+      "position": [
+        -0.69,
+        1.69,
+        0
+      ],
+      "rotation": [
+        0.593,
+        -1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 4208165
+    },
+    {
+      "objectKey": "vehicle/heavy_photooriginal-98016-XUIGz_15f63811_luna_v6",
+      "name": "dump_hydraulic_ram",
+      "position": [
+        -0.69,
+        1.69,
+        0
+      ],
+      "rotation": [
+        0.593,
+        -1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 4208165
+    },
+    {
+      "objectKey": "vehicle/heavy_20260514234220_58_5e037c56_luna_v6",
+      "name": "dump_hydraulic_ram",
+      "position": [
+        -0.69,
+        1.69,
+        0
+      ],
+      "rotation": [
+        0.593,
+        -1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 4208165
+    },
+    {
+      "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "name": "crane_outrigger_left",
+      "position": [
+        -2.1,
+        0.67,
+        -1.292
+      ],
+      "rotation": [
+        2.689,
+        3.142,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 16044395
+    },
+    {
+      "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "name": "crane_outrigger_right",
+      "position": [
+        -2.1,
+        0.67,
+        1.292
+      ],
+      "rotation": [
+        2.689,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 16044395
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_hydraulic_ram",
+      "position": [
+        -0.69,
+        1.69,
+        0
+      ],
+      "rotation": [
+        0.593,
+        -1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2370609
+    },
+    {
+      "objectKey": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "name": "crane_boom",
+      "position": [
+        0.575,
+        3.35,
+        0
+      ],
+      "rotation": [
+        0.727,
+        1.571,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15779374
+    },
+    {
+      "objectKey": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "name": "crane_outrigger_left",
+      "position": [
+        -2.1,
+        0.67,
+        -1.292
+      ],
+      "rotation": [
+        2.689,
+        3.142,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15779374
+    },
+    {
+      "objectKey": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "name": "crane_outrigger_right",
+      "position": [
+        -2.1,
+        0.67,
+        1.292
+      ],
+      "rotation": [
+        2.689,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15779374
+    }
+  ]
+}

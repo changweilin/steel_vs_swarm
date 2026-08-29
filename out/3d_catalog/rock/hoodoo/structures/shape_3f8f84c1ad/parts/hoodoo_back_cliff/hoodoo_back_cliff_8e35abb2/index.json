@@ -1,0 +1,49 @@
+{
+  "id": "hoodoo_back_cliff_8e35abb2",
+  "role": "hoodoo_back_cliff",
+  "type": "wedge",
+  "signature": "wedge|1,0.75,0.625|0",
+  "canonical": {
+    "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+    "name": "hoodoo_back_cliff",
+    "part": {
+      "name": "hoodoo_back_cliff",
+      "type": "wedge",
+      "dimensions": [
+        7.247,
+        5.04,
+        4.701
+      ],
+      "position": [
+        0.518,
+        3.5,
+        -5.093
+      ],
+      "rotation": [
+        0.04,
+        -0.16,
+        0.05
+      ],
+      "color": 4861992,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+      "name": "hoodoo_back_cliff",
+      "position": [
+        0.518,
+        3.5,
+        -5.093
+      ],
+      "rotation": [
+        0.04,
+        -0.16,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 4861992
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_37092b4082",
+  "canonicalKey": "rock/main_20211010001701_88fab0a9_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/main_20211010001701_88fab0a9_v6",
+    "bounds": {
+      "min": [
+        -4.9116,
+        -0.5482,
+        -2.6502
+      ],
+      "max": [
+        4.4,
+        8.0713,
+        3.7086
+      ],
+      "size": [
+        9.312,
+        8.62,
+        6.359
+      ],
+      "rMax": 5.754,
+      "triangles": 144,
+      "vertices": 86
+    },
+    "parts": [
+      {
+        "name": "main_monolith_base",
+        "type": "box",
+        "dimensions": [
+          5.5,
+          5,
+          4.5
+        ],
+        "position": [
+          0,
+          2.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0.1,
+          0
+        ],
+        "color": 13732410,
+        "triangles": 12
+      },
+      {
+        "name": "upper_rock_crown",
+        "type": "dodecahedron_polyhedron",
+        "radius": 2.6,
+        "position": [
+          -0.2,
+          5.6,
+          -0.2
+        ],
+        "rotation": [
+          0.2,
+          0.3,
+          0.1
+        ],
+        "color": 14258770,
+        "triangles": 36
+      },
+      {
+        "name": "foreground_boulder_one",
+        "type": "icosahedron_polyhedron",
+        "radius": 1.2,
+        "position": [
+          -1,
+          0.6,
+          2.2
+        ],
+        "rotation": [
+          0.4,
+          0.1,
+          0.5
+        ],
+        "color": 11043394,
+        "triangles": 20
+      },
+      {
+        "name": "foreground_boulder_two",
+        "type": "dodecahedron_polyhedron",
+        "radius": 1,
+        "position": [
+          0.5,
+          0.4,
+          2.8
+        ],
+        "rotation": [
+          -0.2,
+          0.4,
+          0.2
+        ],
+        "color": 11043394,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/main_20211010001701_88fab0a9_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_20211010001701_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_cdae816d"
+      ]
+    },
+    {
+      "key": "rock/main_images~0_3d1d941b_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_images_0_v6",
+      "similarity": 31,
+      "scale": [
+        0.56293,
+        0.40986,
+        0.5504
+      ],
+      "paletteIds": [
+        "palette_de8a6d4e"
+      ]
+    }
+  ]
+}

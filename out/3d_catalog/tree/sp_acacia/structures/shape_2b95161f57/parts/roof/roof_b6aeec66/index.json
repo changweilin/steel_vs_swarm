@@ -1,0 +1,129 @@
+{
+  "id": "roof_b6aeec66",
+  "role": "roof",
+  "type": "hemisphere_dome",
+  "signature": "hemisphere_dome|1,0.5,0.75|0",
+  "canonical": {
+    "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+    "name": "acacia_crown_2_umbrella_cap",
+    "part": {
+      "name": "acacia_crown_2_umbrella_cap",
+      "type": "hemisphere_dome",
+      "radii": [
+        0.743,
+        0.367,
+        0.514
+      ],
+      "position": [
+        -0.397,
+        4.935,
+        2.463
+      ],
+      "rotation": [
+        -0.095,
+        1.731,
+        0.004
+      ],
+      "color": 5208643,
+      "triangles": 170
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+      "name": "acacia_crown_2_umbrella_cap",
+      "position": [
+        -0.397,
+        4.935,
+        2.463
+      ],
+      "rotation": [
+        -0.095,
+        1.731,
+        0.004
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+      "name": "top_crown_umbrella_cap",
+      "position": [
+        0,
+        6.92,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_e193c57d_luna_v6",
+      "name": "top_crown_umbrella_cap",
+      "position": [
+        0,
+        6.825,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_1ac0914a-b376-4386-ab74-ae79d96e8485_5175fbe7_luna_v6",
+      "name": "top_crown_umbrella_cap",
+      "position": [
+        0,
+        7.571,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_4181513d-1acc-4d23-a817-709b1d24f3c2_bf46f112_luna_v6",
+      "name": "top_crown_umbrella_cap",
+      "position": [
+        0,
+        7.645,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_wc_193839561_361312fc_luna_v6",
+      "name": "top_crown_umbrella_cap",
+      "position": [
+        0,
+        6.321,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5208643
+    }
+  ]
+}

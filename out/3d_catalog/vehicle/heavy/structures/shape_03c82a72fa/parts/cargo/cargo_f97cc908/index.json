@@ -1,0 +1,51 @@
+{
+  "id": "cargo_f97cc908",
+  "role": "cargo",
+  "type": "wedge",
+  "signature": "wedge|1,0.25,0.625|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "mixer_discharge_chute",
+    "part": {
+      "name": "mixer_discharge_chute",
+      "type": "wedge",
+      "dimensions": [
+        0.72,
+        0.22,
+        0.48
+      ],
+      "position": [
+        -3.18,
+        1.26,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.262
+      ],
+      "color": 15910190,
+      "triangles": 8,
+      "role": "cargo",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "mixer_discharge_chute",
+      "position": [
+        -3.18,
+        1.26,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.262
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    }
+  ]
+}

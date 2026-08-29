@@ -1,0 +1,157 @@
+{
+  "id": "support_fragment_3a8d8807",
+  "role": "support_fragment",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+    "name": "rear_support_fragment",
+    "part": {
+      "name": "rear_support_fragment",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.708,
+      "position": [
+        -1.279,
+        1.491,
+        -1.04
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "color": 3160123,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -1.279,
+        1.491,
+        -1.04
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -1.12,
+        1.135,
+        -0.75
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -3.36,
+        1.978,
+        -3
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -0.678,
+        0.764,
+        -0.548
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -1.928,
+        1.215,
+        -1.041
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 6767665
+    },
+    {
+      "objectKey": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -2.439,
+        1.456,
+        -1.514
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_images (1)_88ee1ac8_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -1.26,
+        0.754,
+        -1.125
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_images (5)_ba4fb3a0_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -0.891,
+        0.414,
+        -0.465
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "lamp_4656cb69",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|1,0.875,0.25|0",
+  "canonical": {
+    "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+    "name": "headlight_left",
+    "part": {
+      "name": "headlight_left",
+      "type": "box",
+      "dimensions": [
+        0.3,
+        0.25,
+        0.08
+      ],
+      "position": [
+        -0.65,
+        1.1,
+        1.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14540253,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+      "name": "headlight_left",
+      "position": [
+        -0.65,
+        1.1,
+        1.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14540253
+    },
+    {
+      "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+      "name": "headlight_right",
+      "position": [
+        0.65,
+        1.1,
+        1.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14540253
+    }
+  ]
+}

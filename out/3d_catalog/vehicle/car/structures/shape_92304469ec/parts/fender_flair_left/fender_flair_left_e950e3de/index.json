@@ -1,0 +1,65 @@
+{
+  "id": "fender_flair_left_e950e3de",
+  "role": "fender_flair_left",
+  "type": "box",
+  "signature": "box|0.25,0.5,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+    "name": "fender_flair_front_left",
+    "part": {
+      "name": "fender_flair_front_left",
+      "type": "box",
+      "dimensions": [
+        0.18,
+        0.45,
+        0.9
+      ],
+      "position": [
+        -0.92,
+        0.78,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1315860,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "fender_flair_front_left",
+      "position": [
+        -0.92,
+        0.78,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    },
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "fender_flair_rear_left",
+      "position": [
+        -0.92,
+        0.78,
+        -1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    }
+  ]
+}

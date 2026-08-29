@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_f769c179ad",
+  "canonicalKey": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+    "bounds": {
+      "min": [
+        -1.8231,
+        0,
+        -1.1999
+      ],
+      "max": [
+        1.8261,
+        5.6538,
+        1.8353
+      ],
+      "size": [
+        3.649,
+        5.654,
+        3.035
+      ],
+      "rMax": 2.589,
+      "triangles": 402,
+      "vertices": 231
+    },
+    "parts": [
+      {
+        "name": "arch_pillar_left_lower",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.391,
+          0.501
+        ],
+        "height": 4.023,
+        "position": [
+          -1.279,
+          2.071,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "arch_pillar_left_facet",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.592,
+        "position": [
+          -1.279,
+          2.172,
+          0.094
+        ],
+        "rotation": [
+          0.12,
+          -0.16,
+          0.04
+        ],
+        "color": 5200224,
+        "triangles": 20
+      },
+      {
+        "name": "arch_pillar_right_lower",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.391,
+          0.501
+        ],
+        "height": 4.023,
+        "position": [
+          1.279,
+          2.071,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 32
+      },
+      {
+        "name": "arch_pillar_right_facet",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.592,
+        "position": [
+          1.279,
+          2.172,
+          0.094
+        ],
+        "rotation": [
+          0.12,
+          0.16,
+          0.04
+        ],
+        "color": 5200224,
+        "triangles": 20
+      },
+      {
+        "name": "arch_top_bridge",
+        "type": "wedge",
+        "dimensions": [
+          2.558,
+          1.264,
+          1.63
+        ],
+        "position": [
+          0,
+          4.483,
+          0
+        ],
+        "rotation": [
+          0,
+          0.02,
+          0
+        ],
+        "color": 2370353,
+        "triangles": 8
+      },
+      {
+        "name": "arch_left_keystone",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.439,
+        "position": [
+          -0.639,
+          4.483,
+          0.251
+        ],
+        "rotation": [
+          0.04,
+          -0.1,
+          0.06
+        ],
+        "color": 6911354,
+        "triangles": 36
+      },
+      {
+        "name": "arch_right_keystone",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.407,
+        "position": [
+          0.682,
+          4.368,
+          0.251
+        ],
+        "rotation": [
+          -0.06,
+          0.14,
+          -0.04
+        ],
+        "color": 3160123,
+        "triangles": 20
+      },
+      {
+        "name": "arch_inner_shadow",
+        "type": "wedge",
+        "dimensions": [
+          1.151,
+          0.69,
+          0.251
+        ],
+        "position": [
+          0,
+          3.276,
+          0.846
+        ],
+        "rotation": [
+          0.02,
+          0,
+          0
+        ],
+        "color": 2106664,
+        "triangles": 8
+      },
+      {
+        "name": "tor_left_cap",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.627,
+        "position": [
+          -1.023,
+          5.057,
+          -0.125
+        ],
+        "rotation": [
+          0.15,
+          -0.18,
+          0.1
+        ],
+        "color": 2370353,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/tor/rock_rock_tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/tor_ov_d453866a-3e14-469d-9a1e-faec62e90f22_e4bb51ce_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/tor/rock_rock_tor_ov_d453866a-3e14-469d-9a1e-faec62e90f22_e4bb51ce_luna_v6",
+      "similarity": 63,
+      "scale": [
+        1.19457,
+        0.99133,
+        1.35091
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/tor_wc_12044342_e535f838_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/tor/rock_rock_tor_wc_12044342_e535f838_luna_v6",
+      "similarity": 33,
+      "scale": [
+        2.18087,
+        1.13548,
+        1.5944
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

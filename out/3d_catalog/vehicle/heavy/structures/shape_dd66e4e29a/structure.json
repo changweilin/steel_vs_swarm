@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_dd66e4e29a",
+  "canonicalKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+    "bounds": {
+      "min": [
+        -1.55,
+        0,
+        -5
+      ],
+      "max": [
+        1.55,
+        3.3,
+        5.12
+      ],
+      "size": [
+        3.1,
+        3.3,
+        10.12
+      ],
+      "rMax": 5.349,
+      "triangles": 400,
+      "vertices": 232
+    },
+    "parts": [
+      {
+        "name": "bus_chassis",
+        "type": "box",
+        "dimensions": [
+          2.5,
+          0.4,
+          10
+        ],
+        "position": [
+          0,
+          0.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2105376,
+        "triangles": 12
+      },
+      {
+        "name": "bus_body",
+        "type": "box",
+        "dimensions": [
+          2.5,
+          2.4,
+          10
+        ],
+        "position": [
+          0,
+          1.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 16766720,
+        "triangles": 12
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "vehicle/heavy_1668138443926_1f2093f2_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_1668138443926_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_2ea282e7"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_news442315o_6ef31cdb_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_news442315o_v6",
+      "similarity": 83,
+      "scale": [
+        0.93548,
+        0.86364,
+        0.71146
+      ],
+      "paletteIds": [
+        "palette_0addca38"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_50992126_183220969.918332_v6",
+      "similarity": 96,
+      "scale": [
+        0.96806,
+        0.9697,
+        1.03903
+      ],
+      "paletteIds": [
+        "palette_13c5c956"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_99NzsCYgrt_433feb63_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_99NzsCYgrt_v6",
+      "similarity": 61,
+      "scale": [
+        0.93548,
+        0.98485,
+        0.74111
+      ],
+      "paletteIds": [
+        "palette_0af203cc"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_規格表2大圖合for官網_5e037079_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy__2_for__v6",
+      "similarity": 67,
+      "scale": [
+        0.96774,
+        1.15152,
+        0.88933
+      ],
+      "paletteIds": [
+        "palette_d073d5e8"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_v6",
+      "similarity": 75,
+      "scale": [
+        1.10968,
+        1.10606,
+        1.08696
+      ],
+      "paletteIds": [
+        "palette_6dce29ba"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_mainCoverImage1_1180859_v6",
+      "similarity": 72,
+      "scale": [
+        0.79032,
+        0.71212,
+        0.64229
+      ],
+      "paletteIds": [
+        "palette_851b80f3"
+      ]
+    }
+  ]
+}

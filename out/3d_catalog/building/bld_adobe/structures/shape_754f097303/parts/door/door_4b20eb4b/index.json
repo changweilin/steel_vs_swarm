@@ -1,0 +1,65 @@
+{
+  "id": "door_4b20eb4b",
+  "role": "door",
+  "type": "box",
+  "signature": "box|0.5,1,0|0",
+  "canonical": {
+    "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+    "name": "door_left_2",
+    "part": {
+      "name": "door_left_2",
+      "type": "box",
+      "dimensions": [
+        0.8,
+        1.8,
+        0.05
+      ],
+      "position": [
+        -2.8,
+        1.9,
+        3.28
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+      "name": "door_left_2",
+      "position": [
+        -2.8,
+        1.9,
+        3.28
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+      "name": "door_left_2_frame",
+      "position": [
+        -2.8,
+        1.9,
+        3.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5921370
+    }
+  ]
+}

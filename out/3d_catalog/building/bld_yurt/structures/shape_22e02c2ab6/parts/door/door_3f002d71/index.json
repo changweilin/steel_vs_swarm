@@ -1,0 +1,49 @@
+{
+  "id": "door_3f002d71",
+  "role": "door",
+  "type": "box",
+  "signature": "box|0.125,1,0.625|0",
+  "canonical": {
+    "objectKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+    "name": "door_frame",
+    "part": {
+      "name": "door_frame",
+      "type": "box",
+      "dimensions": [
+        0.2,
+        2,
+        1.2
+      ],
+      "position": [
+        1.8,
+        1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5592405,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+      "name": "door_frame",
+      "position": [
+        1.8,
+        1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5592405
+    }
+  ]
+}

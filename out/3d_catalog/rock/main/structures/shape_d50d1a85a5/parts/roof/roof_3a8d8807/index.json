@@ -1,0 +1,45 @@
+{
+  "id": "roof_3a8d8807",
+  "role": "roof",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_images~1_fc359b00_v6",
+    "name": "rock_capping_fragment",
+    "part": {
+      "name": "rock_capping_fragment",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.6,
+      "position": [
+        0.1,
+        4,
+        0.1
+      ],
+      "rotation": [
+        -0.5,
+        0.2,
+        0.4
+      ],
+      "color": 11842740,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_images~1_fc359b00_v6",
+      "name": "rock_capping_fragment",
+      "position": [
+        0.1,
+        4,
+        0.1
+      ],
+      "rotation": [
+        -0.5,
+        0.2,
+        0.4
+      ],
+      "colorKey": null,
+      "color": 11842740
+    }
+  ]
+}

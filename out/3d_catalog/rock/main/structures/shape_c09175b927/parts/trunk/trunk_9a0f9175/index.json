@@ -1,0 +1,49 @@
+{
+  "id": "trunk_9a0f9175",
+  "role": "trunk",
+  "type": "wedge",
+  "signature": "wedge|1,1,0.5|0",
+  "canonical": {
+    "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+    "name": "right_buttress",
+    "part": {
+      "name": "right_buttress",
+      "type": "wedge",
+      "dimensions": [
+        1.997,
+        2.098,
+        1.124
+      ],
+      "position": [
+        2.065,
+        1.546,
+        0.167
+      ],
+      "rotation": [
+        -0.06,
+        -0.14,
+        0.12
+      ],
+      "color": 10119749,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "right_buttress",
+      "position": [
+        2.065,
+        1.546,
+        0.167
+      ],
+      "rotation": [
+        -0.06,
+        -0.14,
+        0.12
+      ],
+      "colorKey": null,
+      "color": 10119749
+    }
+  ]
+}

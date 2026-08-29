@@ -1,0 +1,77 @@
+{
+  "id": "crest_facet_3a8d8807",
+  "role": "crest_facet",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+    "name": "upper_crest_facet",
+    "part": {
+      "name": "upper_crest_facet",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.76,
+      "position": [
+        -0.056,
+        2.856,
+        0.057
+      ],
+      "rotation": [
+        0.12,
+        0.18,
+        0.04
+      ],
+      "color": 2370353,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+      "name": "upper_crest_facet",
+      "position": [
+        -0.056,
+        2.856,
+        0.057
+      ],
+      "rotation": [
+        0.12,
+        0.18,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 2370353
+    },
+    {
+      "objectKey": "rock/main_id14796060-shutterstock_783352309~1_80a40c51_luna_v6",
+      "name": "upper_crest_facet",
+      "position": [
+        0.213,
+        2.706,
+        -0.03
+      ],
+      "rotation": [
+        0.12,
+        0.18,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 2370353
+    },
+    {
+      "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+      "name": "upper_crest_facet",
+      "position": [
+        -0.027,
+        2.657,
+        0.136
+      ],
+      "rotation": [
+        0.12,
+        0.18,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 6964528
+    }
+  ]
+}

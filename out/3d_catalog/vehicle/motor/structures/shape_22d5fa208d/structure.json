@@ -1,0 +1,400 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_22d5fa208d",
+  "canonicalKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+    "bounds": {
+      "min": [
+        -1.3,
+        0.0186,
+        -0.4751
+      ],
+      "max": [
+        1.27,
+        1.22,
+        0.4751
+      ],
+      "size": [
+        2.57,
+        1.201,
+        0.95
+      ],
+      "rMax": 1.384,
+      "triangles": 2760,
+      "vertices": 1680
+    },
+    "parts": [
+      {
+        "name": "main_top_frame_left",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.034,
+          0.034
+        ],
+        "height": 1.204,
+        "position": [
+          0.12,
+          0.75,
+          -0.052
+        ],
+        "rotation": [
+          1.488,
+          1.571,
+          0
+        ],
+        "color": 3306683,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "main_top_frame_right",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.034,
+          0.034
+        ],
+        "height": 1.204,
+        "position": [
+          0.12,
+          0.75,
+          0.052
+        ],
+        "rotation": [
+          1.488,
+          1.571,
+          0
+        ],
+        "color": 3306683,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "main_down_frame_left",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.038,
+          0.038
+        ],
+        "height": 0.824,
+        "position": [
+          0.36,
+          0.6,
+          -0.052
+        ],
+        "rotation": [
+          2.078,
+          -1.571,
+          0
+        ],
+        "color": 2042681,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "main_down_frame_right",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.038,
+          0.038
+        ],
+        "height": 0.824,
+        "position": [
+          0.36,
+          0.6,
+          0.052
+        ],
+        "rotation": [
+          2.078,
+          -1.571,
+          0
+        ],
+        "color": 2042681,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "rear_frame_left",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.03,
+          0.03
+        ],
+        "height": 0.514,
+        "position": [
+          -0.685,
+          0.545,
+          -0.052
+        ],
+        "rotation": [
+          0.923,
+          1.571,
+          0
+        ],
+        "color": 3356992,
+        "triangles": 28,
+        "role": "frame"
+      },
+      {
+        "name": "rear_frame_right",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.03,
+          0.03
+        ],
+        "height": 0.514,
+        "position": [
+          -0.685,
+          0.545,
+          0.052
+        ],
+        "rotation": [
+          0.923,
+          1.571,
+          0
+        ],
+        "color": 3356992,
+        "triangles": 28,
+        "role": "frame"
+      },
+      {
+        "name": "fuel_tank",
+        "type": "box",
+        "dimensions": [
+          0.48,
+          0.28,
+          0.4
+        ],
+        "position": [
+          0.03,
+          0.76,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          -0.08
+        ],
+        "color": 3306683,
+        "triangles": 12,
+        "role": "tank"
+      },
+      {
+        "name": "engine",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.27,
+          0.25,
+          0.22
+        ],
+        "position": [
+          0,
+          0.49,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3356992,
+        "triangles": 160,
+        "role": "engine"
+      },
+      {
+        "name": "engine_head",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.18,
+          0.18
+        ],
+        "height": 0.22,
+        "position": [
+          0,
+          0.68,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 13671747,
+        "triangles": 32,
+        "role": "engine"
+      },
+      {
+        "name": "seat",
+        "type": "box",
+        "dimensions": [
+          0.7,
+          0.1,
+          0.34
+        ],
+        "position": [
+          -0.52,
+          0.75,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 1185305,
+        "triangles": 12,
+        "role": "body"
+      },
+      {
+        "name": "front_brake_line",
+        "type": "cylinder",
+        "sides": 5,
+        "radii": [
+          0.008,
+          0.008
+        ],
+        "height": 0.56,
+        "position": [
+          0.815,
+          0.77,
+          0
+        ],
+        "rotation": [
+          2.871,
+          1.571,
+          0
+        ],
+        "color": 1185305,
+        "triangles": 20,
+        "role": "cable"
+      },
+      {
+        "name": "muffler_left",
+        "type": "box",
+        "dimensions": [
+          0.4,
+          0.09,
+          0.09
+        ],
+        "position": [
+          -0.52,
+          0.35,
+          -0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 13671747,
+        "triangles": 12,
+        "role": "exhaust"
+      },
+      {
+        "name": "rear_fender",
+        "type": "box",
+        "dimensions": [
+          0.74,
+          0.025,
+          0.34
+        ],
+        "position": [
+          -0.93,
+          0.67,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 16183265,
+        "triangles": 12,
+        "role": "fender"
+      },
+      {
+        "name": "sissy_bar",
+        "type": "box",
+        "dimensions": [
+          0.035,
+          0.52,
+          0.035
+        ],
+        "position": [
+          -1.09,
+          0.96,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 13671747,
+        "triangles": 12,
+        "role": "frame"
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_3c4247dd"
+      ]
+    },
+    {
+      "key": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "similarity": 82,
+      "scale": [
+        0.86615,
+        0.95587,
+        1
+      ],
+      "paletteIds": [
+        "palette_29a11b66"
+      ]
+    },
+    {
+      "key": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_7801666_3a47734e_luna_v6",
+      "similarity": 82,
+      "scale": [
+        0.86615,
+        0.95587,
+        1
+      ],
+      "paletteIds": [
+        "palette_29a11b66"
+      ]
+    }
+  ]
+}

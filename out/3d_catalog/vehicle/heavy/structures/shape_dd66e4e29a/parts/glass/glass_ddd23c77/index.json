@@ -1,0 +1,113 @@
+{
+  "id": "glass_ddd23c77",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.5,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_news442315o_6ef31cdb_v6",
+    "name": "rear_windshield",
+    "part": {
+      "name": "rear_windshield",
+      "type": "box",
+      "dimensions": [
+        2.2,
+        1.2,
+        0.05
+      ],
+      "position": [
+        0,
+        2,
+        -3.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_news442315o_6ef31cdb_v6",
+      "name": "rear_windshield",
+      "position": [
+        0,
+        2,
+        -3.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "rear_windshield",
+      "position": [
+        0,
+        2.2,
+        -5.12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2640263
+    },
+    {
+      "objectKey": "vehicle/heavy_99NzsCYgrt_433feb63_v6",
+      "name": "windshield",
+      "position": [
+        0,
+        2.3,
+        2.92
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 33023
+    },
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "windshield",
+      "position": [
+        0,
+        2.2,
+        4.31
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3822295
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "windshield",
+      "position": [
+        0,
+        1.3,
+        -2.98
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4356495
+    }
+  ]
+}

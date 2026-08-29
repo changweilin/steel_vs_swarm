@@ -1,0 +1,1585 @@
+{
+  "id": "glass_38fe6239",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.375,0|0",
+  "canonical": {
+    "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+    "name": "rear_window",
+    "part": {
+      "name": "rear_window",
+      "type": "box",
+      "dimensions": [
+        1.4,
+        0.6,
+        0.05
+      ],
+      "position": [
+        0,
+        1.35,
+        -1.58
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3298829,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+      "name": "rear_window",
+      "position": [
+        0,
+        1.35,
+        -1.58
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3298829
+    },
+    {
+      "objectKey": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.243,
+        1.129,
+        -0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456199
+    },
+    {
+      "objectKey": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.553,
+        1.121,
+        -0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456199
+    },
+    {
+      "objectKey": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.243,
+        1.129,
+        0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456199
+    },
+    {
+      "objectKey": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.553,
+        1.121,
+        0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456199
+    },
+    {
+      "objectKey": "vehicle/car_176103315400 (1)_2163e4b0_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1587773
+    },
+    {
+      "objectKey": "vehicle/car_176103315400 (1)_2163e4b0_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1587773
+    },
+    {
+      "objectKey": "vehicle/car_176103315400 (1)_2163e4b0_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1587773
+    },
+    {
+      "objectKey": "vehicle/car_176103315400 (1)_2163e4b0_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1587773
+    },
+    {
+      "objectKey": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.243,
+        1.129,
+        -0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.553,
+        1.121,
+        -0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.243,
+        1.129,
+        0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.553,
+        1.121,
+        0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_220809-20941-15-q0oDy_956bd2ba_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.243,
+        1.129,
+        -0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_220809-20941-15-q0oDy_956bd2ba_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.553,
+        1.121,
+        -0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_220809-20941-15-q0oDy_956bd2ba_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.243,
+        1.129,
+        0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_220809-20941-15-q0oDy_956bd2ba_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.553,
+        1.121,
+        0.853
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_1683687307801401_600_400_3a88c91a_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_1683687307801401_600_400_3a88c91a_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_1683687307801401_600_400_3a88c91a_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_1683687307801401_600_400_3a88c91a_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_22885ee1_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_22885ee1_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_22885ee1_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_22885ee1_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_240203_FordExplorerFacelift_fromFord-07_e3eb1a89_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_240203_FordExplorerFacelift_fromFord-07_e3eb1a89_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_240203_FordExplorerFacelift_fromFord-07_e3eb1a89_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_240203_FordExplorerFacelift_fromFord-07_e3eb1a89_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_240521-25714-10-CT9mc_bfc73edf_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_240521-25714-10-CT9mc_bfc73edf_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_240521-25714-10-CT9mc_bfc73edf_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_240521-25714-10-CT9mc_bfc73edf_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1455692
+    },
+    {
+      "objectKey": "vehicle/car_240710-26084-40-oeQ5G_8b3a9ba3_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1587274
+    },
+    {
+      "objectKey": "vehicle/car_240710-26084-40-oeQ5G_8b3a9ba3_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1587274
+    },
+    {
+      "objectKey": "vehicle/car_240710-26084-40-oeQ5G_8b3a9ba3_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1587274
+    },
+    {
+      "objectKey": "vehicle/car_240710-26084-40-oeQ5G_8b3a9ba3_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1587274
+    },
+    {
+      "objectKey": "vehicle/car_241016-26812-1-UmpVe_96a298e4_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_241016-26812-1-UmpVe_96a298e4_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_241016-26812-1-UmpVe_96a298e4_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_241016-26812-1-UmpVe_96a298e4_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_241120-27067-61-GPe1X_05fdffc4_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1652809
+    },
+    {
+      "objectKey": "vehicle/car_241120-27067-61-GPe1X_05fdffc4_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1652809
+    },
+    {
+      "objectKey": "vehicle/car_241120-27067-61-GPe1X_05fdffc4_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1652809
+    },
+    {
+      "objectKey": "vehicle/car_241120-27067-61-GPe1X_05fdffc4_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1652809
+    },
+    {
+      "objectKey": "vehicle/car_4590905_001_M_49e8b6b2_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_4590905_001_M_49e8b6b2_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_4590905_001_M_49e8b6b2_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_4590905_001_M_49e8b6b2_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_8361539_e123eb1d_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_8361539_e123eb1d_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_8361539_e123eb1d_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_8361539_e123eb1d_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_881e58ddc9cd0cc82af65be198476506_1875b156_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_881e58ddc9cd0cc82af65be198476506_1875b156_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_881e58ddc9cd0cc82af65be198476506_1875b156_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_881e58ddc9cd0cc82af65be198476506_1875b156_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_IMG20260102180810I92509U2349_41e01507_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_IMG20260102180810I92509U2349_41e01507_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_IMG20260102180810I92509U2349_41e01507_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_IMG20260102180810I92509U2349_41e01507_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_d0d1db58_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_d0d1db58_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_d0d1db58_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_d0d1db58_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1717830
+    },
+    {
+      "objectKey": "vehicle/car_php6z4pvZ_5a214b83_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_php6z4pvZ_5a214b83_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_php6z4pvZ_5a214b83_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_php6z4pvZ_5a214b83_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1586247
+    },
+    {
+      "objectKey": "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456975
+    },
+    {
+      "objectKey": "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456975
+    },
+    {
+      "objectKey": "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456975
+    },
+    {
+      "objectKey": "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456975
+    },
+    {
+      "objectKey": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1390920
+    },
+    {
+      "objectKey": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1390920
+    },
+    {
+      "objectKey": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1390920
+    },
+    {
+      "objectKey": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1390920
+    },
+    {
+      "objectKey": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1652810
+    },
+    {
+      "objectKey": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1652810
+    },
+    {
+      "objectKey": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1652810
+    },
+    {
+      "objectKey": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1652810
+    },
+    {
+      "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1521980
+    },
+    {
+      "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1521980
+    },
+    {
+      "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1521980
+    },
+    {
+      "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1521980
+    },
+    {
+      "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.27,
+        1.316,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.61,
+        1.306,
+        -0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.27,
+        1.316,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    },
+    {
+      "objectKey": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.61,
+        1.306,
+        0.889
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1584437
+    }
+  ]
+}

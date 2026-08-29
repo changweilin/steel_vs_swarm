@@ -1,0 +1,178 @@
+{
+  "id": "hoodoo_band_9951d699",
+  "role": "hoodoo_band",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+    "name": "hoodoo_band_0",
+    "part": {
+      "name": "hoodoo_band_0",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.484,
+        0.588
+      ],
+      "height": 0.198,
+      "position": [
+        -2.24,
+        2.082,
+        -0.12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 8739389,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "name": "hoodoo_band_0",
+      "position": [
+        -2.24,
+        2.082,
+        -0.12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "name": "hoodoo_band_1",
+      "position": [
+        0,
+        2.628,
+        0.16
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "name": "hoodoo_band_2",
+      "position": [
+        2.16,
+        1.916,
+        -0.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0_edfd0d51_luna_v6",
+      "name": "hoodoo_band_0",
+      "position": [
+        -3.097,
+        2.967,
+        -0.211
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0_edfd0d51_luna_v6",
+      "name": "hoodoo_band_1",
+      "position": [
+        0,
+        3.745,
+        0.281
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0_edfd0d51_luna_v6",
+      "name": "hoodoo_band_2",
+      "position": [
+        2.986,
+        2.73,
+        -0.14
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+      "name": "hoodoo_band_0",
+      "position": [
+        -4.831,
+        5.159,
+        -0.588
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+      "name": "hoodoo_band_1",
+      "position": [
+        0,
+        6.511,
+        0.784
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+      "name": "hoodoo_band_2",
+      "position": [
+        4.659,
+        4.747,
+        -0.392
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    }
+  ]
+}

@@ -1,0 +1,3072 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_b9c7605a35",
+  "canonicalKey": "tree/sp_conifer_wc_133471453_b962e994_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/sp_conifer_wc_133471453_b962e994_luna_v6",
+    "bounds": {
+      "min": [
+        -3.1661,
+        0,
+        -2.8393
+      ],
+      "max": [
+        3.3588,
+        12.4994,
+        2.9493
+      ],
+      "size": [
+        6.525,
+        12.499,
+        5.789
+      ],
+      "rMax": 4.47,
+      "triangles": 11284,
+      "vertices": 6796
+    },
+    "parts": [
+      {
+        "name": "trunk",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.24,
+          0.62
+        ],
+        "height": 8.983,
+        "position": [
+          0,
+          4.492,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4928552,
+        "triangles": 40
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.446,
+          0.62
+        ],
+        "height": 0.48,
+        "position": [
+          0,
+          0.24,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4928552,
+        "triangles": 40
+      },
+      {
+        "name": "conifer_level_0_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.069
+        ],
+        "height": 2.225,
+        "position": [
+          1.106,
+          2.971,
+          -0.066
+        ],
+        "rotation": [
+          1.48,
+          1.63,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_0_0_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.153,
+          0.22,
+          0.754
+        ],
+        "position": [
+          2.212,
+          3.072,
+          -0.132
+        ],
+        "rotation": [
+          -0.09,
+          -0.073,
+          0.072
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_0_0_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.211,
+        "position": [
+          2.736,
+          3.104,
+          -0.21
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_0_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.037,
+          0.051
+        ],
+        "height": 2.041,
+        "position": [
+          0.766,
+          3.021,
+          0.657
+        ],
+        "rotation": [
+          1.422,
+          0.861,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_0_1_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.153,
+          0.228,
+          0.754
+        ],
+        "position": [
+          1.532,
+          3.172,
+          1.315
+        ],
+        "rotation": [
+          -0.086,
+          0.808,
+          -0.069
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_0_1_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.211,
+        "position": [
+          1.914,
+          3.205,
+          1.683
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_0_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.042,
+          0.059
+        ],
+        "height": 1.83,
+        "position": [
+          -0.135,
+          2.938,
+          0.902
+        ],
+        "rotation": [
+          1.496,
+          -0.149,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_0_2_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.153,
+          0.178,
+          0.754
+        ],
+        "position": [
+          -0.27,
+          3.006,
+          1.805
+        ],
+        "rotation": [
+          -0.041,
+          1.693,
+          0.05
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_0_2_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.211,
+        "position": [
+          -0.378,
+          3.032,
+          2.324
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_0_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 2.143,
+        "position": [
+          -0.983,
+          2.941,
+          0.421
+        ],
+        "rotation": [
+          1.504,
+          -1.166,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_0_3_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.153,
+          0.204,
+          0.754
+        ],
+        "position": [
+          -1.965,
+          3.013,
+          0.843
+        ],
+        "rotation": [
+          -0.089,
+          2.66,
+          0.026
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_0_3_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.211,
+        "position": [
+          -2.433,
+          3.043,
+          1.093
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_0_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.056,
+          0.078
+        ],
+        "height": 2.201,
+        "position": [
+          -1.042,
+          3.039,
+          -0.311
+        ],
+        "rotation": [
+          1.416,
+          -1.861,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_0_4_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.153,
+          0.206,
+          0.754
+        ],
+        "position": [
+          -2.084,
+          3.208,
+          -0.622
+        ],
+        "rotation": [
+          -0.084,
+          3.491,
+          -0.05
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_0_4_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.211,
+        "position": [
+          -2.586,
+          3.239,
+          -0.791
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_0_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.057,
+          0.079
+        ],
+        "height": 1.881,
+        "position": [
+          -0.327,
+          3.022,
+          -0.869
+        ],
+        "rotation": [
+          1.408,
+          -2.782,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_0_5_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.153,
+          0.285,
+          0.754
+        ],
+        "position": [
+          -0.654,
+          3.175,
+          -1.737
+        ],
+        "rotation": [
+          -0.078,
+          4.413,
+          0.004
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_0_5_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.211,
+        "position": [
+          -0.797,
+          3.217,
+          -2.248
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_0_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.038,
+          0.052
+        ],
+        "height": 1.959,
+        "position": [
+          0.612,
+          2.968,
+          -0.758
+        ],
+        "rotation": [
+          1.47,
+          2.463,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_0_6_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.153,
+          0.299,
+          0.754
+        ],
+        "position": [
+          1.224,
+          3.066,
+          -1.516
+        ],
+        "rotation": [
+          -0.093,
+          5.297,
+          0.067
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_0_6_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.211,
+        "position": [
+          1.487,
+          3.11,
+          -1.977
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_1_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.06,
+          0.084
+        ],
+        "height": 1.768,
+        "position": [
+          0.872,
+          4.212,
+          0.136
+        ],
+        "rotation": [
+          1.511,
+          1.416,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_1_0_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.923,
+          0.287,
+          0.604
+        ],
+        "position": [
+          1.744,
+          4.264,
+          0.271
+        ],
+        "rotation": [
+          0.095,
+          0.188,
+          -0.069
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_1_0_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.169,
+        "position": [
+          2.162,
+          4.306,
+          0.349
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_1_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.033,
+          0.046
+        ],
+        "height": 1.564,
+        "position": [
+          0.464,
+          4.266,
+          0.621
+        ],
+        "rotation": [
+          1.434,
+          0.642,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_1_1_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.923,
+          0.216,
+          0.604
+        ],
+        "position": [
+          0.927,
+          4.373,
+          1.241
+        ],
+        "rotation": [
+          0.024,
+          1.021,
+          -0.062
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_1_1_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.169,
+        "position": [
+          1.123,
+          4.405,
+          1.618
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_1_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.034,
+          0.047
+        ],
+        "height": 1.543,
+        "position": [
+          -0.38,
+          4.294,
+          0.658
+        ],
+        "rotation": [
+          1.395,
+          -0.524,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_1_2_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.923,
+          0.272,
+          0.604
+        ],
+        "position": [
+          -0.761,
+          4.429,
+          1.315
+        ],
+        "rotation": [
+          -0.042,
+          2.014,
+          0.037
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_1_2_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.169,
+        "position": [
+          -0.947,
+          4.469,
+          1.697
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_1_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.061,
+          0.084
+        ],
+        "height": 1.761,
+        "position": [
+          -0.851,
+          4.253,
+          0.208
+        ],
+        "rotation": [
+          1.464,
+          -1.331,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_1_3_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.923,
+          0.199,
+          0.604
+        ],
+        "position": [
+          -1.701,
+          4.346,
+          0.416
+        ],
+        "rotation": [
+          -0.026,
+          2.852,
+          -0.064
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_1_3_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.169,
+        "position": [
+          -2.1,
+          4.376,
+          0.561
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_1_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.042,
+          0.058
+        ],
+        "height": 1.698,
+        "position": [
+          -0.725,
+          4.298,
+          -0.421
+        ],
+        "rotation": [
+          1.406,
+          -2.097,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_1_4_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.923,
+          0.244,
+          0.604
+        ],
+        "position": [
+          -1.449,
+          4.437,
+          -0.841
+        ],
+        "rotation": [
+          0.01,
+          3.758,
+          -0.054
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_1_4_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.169,
+        "position": [
+          -1.794,
+          4.473,
+          -1.089
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_1_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.048,
+          0.067
+        ],
+        "height": 1.492,
+        "position": [
+          -0.046,
+          4.321,
+          -0.727
+        ],
+        "rotation": [
+          1.352,
+          -3.079,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_1_5_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.923,
+          0.241,
+          0.604
+        ],
+        "position": [
+          -0.091,
+          4.482,
+          -1.454
+        ],
+        "rotation": [
+          0.095,
+          4.661,
+          -0.048
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_1_5_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.169,
+        "position": [
+          -0.076,
+          4.518,
+          -1.878
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_1_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.035,
+          0.048
+        ],
+        "height": 1.669,
+        "position": [
+          0.689,
+          4.262,
+          -0.459
+        ],
+        "rotation": [
+          1.447,
+          2.158,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_1_6_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.923,
+          0.302,
+          0.604
+        ],
+        "position": [
+          1.379,
+          4.364,
+          -0.917
+        ],
+        "rotation": [
+          -0.07,
+          5.602,
+          -0.056
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_1_6_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.169,
+        "position": [
+          1.72,
+          4.409,
+          -1.17
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_2_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.042,
+          0.058
+        ],
+        "height": 1.692,
+        "position": [
+          0.833,
+          5.575,
+          -0.076
+        ],
+        "rotation": [
+          1.421,
+          1.661,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_2_0_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.872,
+          0.31,
+          0.57
+        ],
+        "position": [
+          1.666,
+          5.701,
+          -0.151
+        ],
+        "rotation": [
+          0.063,
+          -0.11,
+          0.057
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_2_0_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          2.062,
+          5.747,
+          -0.215
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_2_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.05,
+          0.069
+        ],
+        "height": 1.523,
+        "position": [
+          0.566,
+          5.495,
+          0.507
+        ],
+        "rotation": [
+          1.509,
+          0.841,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_2_1_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.872,
+          0.302,
+          0.57
+        ],
+        "position": [
+          1.133,
+          5.542,
+          1.013
+        ],
+        "rotation": [
+          0.098,
+          0.829,
+          -0.028
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_2_1_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          1.401,
+          5.586,
+          1.311
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_2_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.061,
+          0.084
+        ],
+        "height": 1.416,
+        "position": [
+          -0.156,
+          5.592,
+          0.675
+        ],
+        "rotation": [
+          1.366,
+          -0.228,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_2_2_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.872,
+          0.181,
+          0.57
+        ],
+        "position": [
+          -0.313,
+          5.736,
+          1.35
+        ],
+        "rotation": [
+          -0.032,
+          1.758,
+          0.007
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_2_2_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.353,
+          5.762,
+          1.749
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_2_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.069
+        ],
+        "height": 1.632,
+        "position": [
+          -0.712,
+          5.615,
+          0.362
+        ],
+        "rotation": [
+          1.365,
+          -1.1,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_2_3_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.872,
+          0.283,
+          0.57
+        ],
+        "position": [
+          -1.424,
+          5.782,
+          0.725
+        ],
+        "rotation": [
+          -0.09,
+          2.586,
+          0.061
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_2_3_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -1.771,
+          5.823,
+          0.927
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_2_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.038,
+          0.053
+        ],
+        "height": 1.649,
+        "position": [
+          -0.777,
+          5.547,
+          -0.257
+        ],
+        "rotation": [
+          1.45,
+          -1.89,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_2_4_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.872,
+          0.263,
+          0.57
+        ],
+        "position": [
+          -1.554,
+          5.647,
+          -0.514
+        ],
+        "rotation": [
+          -0.08,
+          3.525,
+          0.074
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_2_4_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -1.931,
+          5.685,
+          -0.653
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_2_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.036,
+          0.051
+        ],
+        "height": 1.409,
+        "position": [
+          -0.224,
+          5.535,
+          -0.662
+        ],
+        "rotation": [
+          1.447,
+          -2.815,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_2_5_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.872,
+          0.308,
+          0.57
+        ],
+        "position": [
+          -0.449,
+          5.622,
+          -1.324
+        ],
+        "rotation": [
+          0.036,
+          4.441,
+          0.075
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_2_5_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.548,
+          5.668,
+          -1.713
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_2_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.057,
+          0.079
+        ],
+        "height": 1.52,
+        "position": [
+          0.494,
+          5.607,
+          -0.555
+        ],
+        "rotation": [
+          1.36,
+          2.414,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_2_6_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.872,
+          0.309,
+          0.57
+        ],
+        "position": [
+          0.989,
+          5.766,
+          -1.11
+        ],
+        "rotation": [
+          0.05,
+          5.343,
+          -0.033
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_2_6_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          1.202,
+          5.812,
+          -1.449
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_3_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.053,
+          0.073
+        ],
+        "height": 1.279,
+        "position": [
+          0.627,
+          6.832,
+          0.082
+        ],
+        "rotation": [
+          1.423,
+          1.44,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_3_0_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.66,
+          0.275,
+          0.432
+        ],
+        "position": [
+          1.254,
+          6.926,
+          0.165
+        ],
+        "rotation": [
+          0.068,
+          0.159,
+          -0.013
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_3_0_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          1.553,
+          6.966,
+          0.219
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_3_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.058,
+          0.081
+        ],
+        "height": 1.104,
+        "position": [
+          0.305,
+          6.792,
+          0.457
+        ],
+        "rotation": [
+          1.473,
+          0.589,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_3_1_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.66,
+          0.195,
+          0.432
+        ],
+        "position": [
+          0.61,
+          6.846,
+          0.913
+        ],
+        "rotation": [
+          -0.085,
+          1.07,
+          0.057
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_3_1_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          0.743,
+          6.874,
+          1.187
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_3_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.058,
+          0.081
+        ],
+        "height": 1.118,
+        "position": [
+          -0.253,
+          6.88,
+          0.477
+        ],
+        "rotation": [
+          1.313,
+          -0.488,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_3_2_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.66,
+          0.219,
+          0.432
+        ],
+        "position": [
+          -0.506,
+          7.023,
+          0.955
+        ],
+        "rotation": [
+          0.053,
+          1.981,
+          -0.078
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_3_2_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.616,
+          7.055,
+          1.238
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_3_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.054,
+          0.075
+        ],
+        "height": 1.266,
+        "position": [
+          -0.618,
+          6.806,
+          0.118
+        ],
+        "rotation": [
+          1.463,
+          -1.382,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_3_3_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.66,
+          0.245,
+          0.432
+        ],
+        "position": [
+          -1.237,
+          6.873,
+          0.237
+        ],
+        "rotation": [
+          -0.053,
+          2.912,
+          0.009
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_3_3_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -1.536,
+          6.91,
+          0.291
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_3_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.033,
+          0.045
+        ],
+        "height": 1.227,
+        "position": [
+          -0.503,
+          6.886,
+          -0.317
+        ],
+        "rotation": [
+          1.326,
+          -2.133,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_3_4_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.66,
+          0.309,
+          0.432
+        ],
+        "position": [
+          -1.007,
+          7.034,
+          -0.635
+        ],
+        "rotation": [
+          0.012,
+          3.797,
+          0.044
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_3_4_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -1.263,
+          7.08,
+          -0.798
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_3_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.038,
+          0.053
+        ],
+        "height": 1.059,
+        "position": [
+          -0.046,
+          6.83,
+          -0.519
+        ],
+        "rotation": [
+          1.395,
+          -3.053,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_3_5_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.66,
+          0.206,
+          0.432
+        ],
+        "position": [
+          -0.092,
+          6.923,
+          -1.039
+        ],
+        "rotation": [
+          -0.041,
+          4.64,
+          -0.006
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_3_5_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.105,
+          6.953,
+          -1.342
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_3_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.042,
+          0.058
+        ],
+        "height": 1.208,
+        "position": [
+          0.459,
+          6.895,
+          -0.36
+        ],
+        "rotation": [
+          1.306,
+          2.236,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_3_6_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.66,
+          0.236,
+          0.432
+        ],
+        "position": [
+          0.917,
+          7.053,
+          -0.72
+        ],
+        "rotation": [
+          -0.096,
+          5.52,
+          -0.048
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_3_6_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          1.145,
+          7.088,
+          -0.921
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_4_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.045,
+          0.062
+        ],
+        "height": 1.116,
+        "position": [
+          0.545,
+          8.143,
+          -0.028
+        ],
+        "rotation": [
+          1.362,
+          1.622,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_4_0_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.568,
+          0.254,
+          0.371
+        ],
+        "position": [
+          1.09,
+          8.258,
+          -0.055
+        ],
+        "rotation": [
+          -0.084,
+          -0.062,
+          -0.014
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_4_0_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          1.35,
+          8.296,
+          -0.086
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_4_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.039,
+          0.055
+        ],
+        "height": 1.009,
+        "position": [
+          0.393,
+          8.086,
+          0.311
+        ],
+        "rotation": [
+          1.454,
+          0.9,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_4_1_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.568,
+          0.261,
+          0.371
+        ],
+        "position": [
+          0.785,
+          8.145,
+          0.623
+        ],
+        "rotation": [
+          -0.06,
+          0.769,
+          -0.048
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_4_1_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          0.985,
+          8.183,
+          0.791
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_4_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.059,
+          0.082
+        ],
+        "height": 0.923,
+        "position": [
+          -0.092,
+          8.125,
+          0.442
+        ],
+        "rotation": [
+          1.356,
+          -0.205,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_4_2_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.568,
+          0.254,
+          0.371
+        ],
+        "position": [
+          -0.184,
+          8.223,
+          0.883
+        ],
+        "rotation": [
+          0.098,
+          1.74,
+          -0.067
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_4_2_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.25,
+          8.261,
+          1.136
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_4_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.035,
+          0.049
+        ],
+        "height": 1.061,
+        "position": [
+          -0.471,
+          8.117,
+          0.227
+        ],
+        "rotation": [
+          1.4,
+          -1.122,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_4_3_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.568,
+          0.262,
+          0.371
+        ],
+        "position": [
+          -0.942,
+          8.207,
+          0.454
+        ],
+        "rotation": [
+          0.002,
+          2.61,
+          -0.02
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_4_3_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -1.158,
+          8.245,
+          0.601
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_4_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.043,
+          0.06
+        ],
+        "height": 1.078,
+        "position": [
+          -0.512,
+          8.092,
+          -0.156
+        ],
+        "rotation": [
+          1.449,
+          -1.866,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_4_4_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.568,
+          0.311,
+          0.371
+        ],
+        "position": [
+          -1.024,
+          8.158,
+          -0.312
+        ],
+        "rotation": [
+          0.042,
+          3.497,
+          -0.065
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_4_4_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -1.272,
+          8.204,
+          -0.393
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_4_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 0.967,
+        "position": [
+          -0.153,
+          8.187,
+          -0.43
+        ],
+        "rotation": [
+          1.234,
+          -2.799,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_4_5_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.568,
+          0.292,
+          0.371
+        ],
+        "position": [
+          -0.307,
+          8.347,
+          -0.86
+        ],
+        "rotation": [
+          -0.076,
+          4.428,
+          0.038
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_4_5_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.371,
+          8.39,
+          -1.113
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_4_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.047,
+          0.065
+        ],
+        "height": 0.979,
+        "position": [
+          0.326,
+          8.092,
+          -0.36
+        ],
+        "rotation": [
+          1.436,
+          2.406,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_4_6_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.568,
+          0.209,
+          0.371
+        ],
+        "position": [
+          0.651,
+          8.158,
+          -0.719
+        ],
+        "rotation": [
+          0.099,
+          5.351,
+          0.004
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_4_6_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          0.806,
+          8.189,
+          -0.93
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_5_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.047,
+          0.066
+        ],
+        "height": 0.849,
+        "position": [
+          0.416,
+          9.356,
+          0.076
+        ],
+        "rotation": [
+          1.476,
+          1.391,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_5_0_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.443,
+          0.207,
+          0.29
+        ],
+        "position": [
+          0.832,
+          9.396,
+          0.152
+        ],
+        "rotation": [
+          -0.031,
+          0.219,
+          -0.059
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_5_0_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          1.033,
+          9.427,
+          0.182
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_5_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.056,
+          0.078
+        ],
+        "height": 0.747,
+        "position": [
+          0.212,
+          9.369,
+          0.303
+        ],
+        "rotation": [
+          1.43,
+          0.609,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_5_1_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.443,
+          0.289,
+          0.29
+        ],
+        "position": [
+          0.423,
+          9.421,
+          0.606
+        ],
+        "rotation": [
+          -0.082,
+          1.051,
+          -0.066
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_5_1_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          0.523,
+          9.464,
+          0.784
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_5_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.052,
+          0.072
+        ],
+        "height": 0.729,
+        "position": [
+          -0.15,
+          9.375,
+          0.327
+        ],
+        "rotation": [
+          1.408,
+          -0.431,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_5_2_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.443,
+          0.229,
+          0.29
+        ],
+        "position": [
+          -0.301,
+          9.434,
+          0.654
+        ],
+        "rotation": [
+          -0.098,
+          1.931,
+          0.035
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_5_2_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.378,
+          9.468,
+          0.843
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_5_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.054,
+          0.075
+        ],
+        "height": 0.866,
+        "position": [
+          -0.404,
+          9.425,
+          0.111
+        ],
+        "rotation": [
+          1.316,
+          -1.302,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_5_3_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.443,
+          0.278,
+          0.29
+        ],
+        "position": [
+          -0.808,
+          9.535,
+          0.222
+        ],
+        "rotation": [
+          -0.026,
+          2.818,
+          0.041
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_5_3_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -1.001,
+          9.576,
+          0.288
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_5_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.053,
+          0.074
+        ],
+        "height": 0.861,
+        "position": [
+          -0.346,
+          9.472,
+          -0.204
+        ],
+        "rotation": [
+          1.201,
+          -2.103,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_5_4_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.443,
+          0.195,
+          0.29
+        ],
+        "position": [
+          -0.692,
+          9.627,
+          -0.408
+        ],
+        "rotation": [
+          -0.06,
+          3.764,
+          0.019
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_5_4_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.867,
+          9.656,
+          -0.513
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_5_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.058,
+          0.08
+        ],
+        "height": 0.723,
+        "position": [
+          -0.022,
+          9.407,
+          -0.349
+        ],
+        "rotation": [
+          1.316,
+          -3.079,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_5_5_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.443,
+          0.251,
+          0.29
+        ],
+        "position": [
+          -0.044,
+          9.499,
+          -0.698
+        ],
+        "rotation": [
+          -0.022,
+          4.661,
+          -0.017
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_5_5_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.051,
+          9.535,
+          -0.902
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_5_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.033,
+          0.046
+        ],
+        "height": 0.839,
+        "position": [
+          0.311,
+          9.464,
+          -0.239
+        ],
+        "rotation": [
+          1.209,
+          2.225,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_5_6_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.443,
+          0.196,
+          0.29
+        ],
+        "position": [
+          0.622,
+          9.613,
+          -0.477
+        ],
+        "rotation": [
+          -0.01,
+          5.531,
+          0.071
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_5_6_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          0.763,
+          9.642,
+          -0.625
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_6_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.056,
+          0.078
+        ],
+        "height": 0.587,
+        "position": [
+          0.255,
+          10.749,
+          -0.025
+        ],
+        "rotation": [
+          1.06,
+          1.667,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_6_0_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.267,
+          0.252,
+          0.174
+        ],
+        "position": [
+          0.51,
+          10.892,
+          -0.049
+        ],
+        "rotation": [
+          -0.032,
+          -0.118,
+          -0.068
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_6_0_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          0.632,
+          10.929,
+          -0.063
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_6_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.057,
+          0.079
+        ],
+        "height": 0.51,
+        "position": [
+          0.17,
+          10.712,
+          0.158
+        ],
+        "rotation": [
+          1.141,
+          0.823,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_6_1_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.267,
+          0.276,
+          0.174
+        ],
+        "position": [
+          0.34,
+          10.818,
+          0.315
+        ],
+        "rotation": [
+          -0.044,
+          0.847,
+          -0.035
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_6_1_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          0.419,
+          10.859,
+          0.409
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_6_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.033,
+          0.046
+        ],
+        "height": 0.432,
+        "position": [
+          -0.039,
+          10.649,
+          0.208
+        ],
+        "rotation": [
+          1.367,
+          -0.187,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_6_2_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.267,
+          0.257,
+          0.174
+        ],
+        "position": [
+          -0.079,
+          10.693,
+          0.416
+        ],
+        "rotation": [
+          0.088,
+          1.725,
+          -0.015
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_6_2_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.097,
+          10.731,
+          0.537
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_6_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.053,
+          0.074
+        ],
+        "height": 0.56,
+        "position": [
+          -0.221,
+          10.74,
+          0.107
+        ],
+        "rotation": [
+          1.068,
+          -1.121,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_6_3_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.267,
+          0.199,
+          0.174
+        ],
+        "position": [
+          -0.442,
+          10.876,
+          0.214
+        ],
+        "rotation": [
+          -0.072,
+          2.609,
+          -0.068
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_6_3_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.542,
+          10.905,
+          0.284
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_6_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.039,
+          0.054
+        ],
+        "height": 0.603,
+        "position": [
+          -0.238,
+          10.773,
+          -0.079
+        ],
+        "rotation": [
+          0.98,
+          -1.893,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_6_4_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.267,
+          0.208,
+          0.174
+        ],
+        "position": [
+          -0.475,
+          10.941,
+          -0.159
+        ],
+        "rotation": [
+          -0.068,
+          3.528,
+          0.04
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_6_4_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.592,
+          10.972,
+          -0.198
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_6_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.042,
+          0.058
+        ],
+        "height": 0.44,
+        "position": [
+          -0.076,
+          10.651,
+          -0.201
+        ],
+        "rotation": [
+          1.36,
+          -2.78,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_6_5_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.267,
+          0.287,
+          0.174
+        ],
+        "position": [
+          -0.152,
+          10.698,
+          -0.402
+        ],
+        "rotation": [
+          -0.084,
+          4.411,
+          0.044
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_6_5_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          -0.19,
+          10.74,
+          -0.519
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "conifer_level_6_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.057,
+          0.079
+        ],
+        "height": 0.491,
+        "position": [
+          0.135,
+          10.705,
+          -0.179
+        ],
+        "rotation": [
+          1.153,
+          2.493,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "conifer_crown_6_6_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.267,
+          0.217,
+          0.174
+        ],
+        "position": [
+          0.271,
+          10.804,
+          -0.357
+        ],
+        "rotation": [
+          -0.004,
+          5.268,
+          0.024
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "conifer_crown_6_6_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.16,
+        "position": [
+          0.329,
+          10.836,
+          -0.466
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "leader_crown_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.72,
+          0.272,
+          0.64
+        ],
+        "position": [
+          0.089,
+          12.227,
+          0.057
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "leader_crown_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.179,
+        "position": [
+          0.363,
+          12.267,
+          0.244
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/sp_conifer_wc_133471453_b962e994_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_conifer/tree_tree_sp_conifer_wc_133471453_b962e994_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    }
+  ]
+}

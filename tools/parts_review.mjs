@@ -37,6 +37,7 @@ import {
   parseGlb, nodeExtent, glbPath, triBudget,
 } from './ai3d/parts_src.mjs';
 import { METHODS, loadArchive, loadProvenance, partKeys, photoRoots, resolvePhoto } from './ai3d/provenance.mjs';
+import { buildCatalogTree, catalogReviewView, REMOVED_STATUSES } from './ai3d/catalog_tree.mjs';
 // 半成品判定的唯一縫(使用者 2026-08-09「零件台清掉半成品」+「不要在零件台顯示,不是刪除」)。
 // 規則與兩個常數的語意見 mesh_sym.mjs 檔頭那一段;`mesh_sym --flaws` 印的就是這裡隱藏的那幾顆。
 import { topoStats, nodeFlaws } from './ai3d/mesh_sym.mjs';
@@ -210,6 +211,7 @@ export function findYoloFeature(key, family, subpart, imgList = [], dbItem = nul
  */
 export function manifest(items = {}, photosOpt = null) {
   const prov = loadProvenance();
+  const catalog = buildCatalogTree(ROOT, { reviewItems: items });
   const roots = photoRoots(photosOpt);
   const budget = triBudget();
   const B = beaconsPure(beaconsSrc());
@@ -619,6 +621,76 @@ export function manifest(items = {}, photosOpt = null) {
     });
   }
 
+  // 已通過的舊原子產物可能沒有 provenance/DB 列；型錄已從 metadata.json 找回它們。
+  // 零件台補一列唯讀視圖，否則實體型錄 447 件而畫面只剩 417 件，兩邊再次分叉。
+  const catalogMembers = new Map();
+  for (const subcategory of Object.values(catalog.subcategories)) {
+    for (const structure of subcategory.structures) {
+      for (const member of structure.members) catalogMembers.set(member.key, member);
+    }
+  }
+  const rowKeys = new Set(rows.map((row) => row.key));
+  for (const [key, ref] of Object.entries(catalog.objects)) {
+    if (rowKeys.has(key)) continue;
+    const member = catalogMembers.get(key);
+    const outputDir = member?.outputDir || null;
+    const model = outputDir ? readJson(join(ROOT, outputDir, 'model.json'), null) : null;
+    const metadata = outputDir ? readJson(join(ROOT, outputDir, 'metadata.json'), null) : null;
+    const features = outputDir ? readJson(join(ROOT, outputDir, 'features.json'), null) : null;
+    const bounds = model?.bounds || metadata?.bounds || null;
+    const methodKey = member?.method || metadata?.method || null;
+    rows.push({
+      key,
+      title: `${ref.category}/${ref.subcategory} (${metadata?.id || key})`,
+      family: ref.category,
+      node: ref.subcategory,
+      method: methodKey ? (METHODS[methodKey] || { key: methodKey, label: methodKey, short: methodKey, kind: 'parts' }) : null,
+      prov: null,
+      imgs: [],
+      flaws: [],
+      notes: [{
+        code: 'catalog-recovered',
+        label: '型錄回收列',
+        detail: '此物件已通過覆核；零件台由原子產物 metadata.json 回收，正式來源帳仍缺列。',
+      }],
+      siblings: [],
+      consumer: '3D 型錄（已通過歷史物件）',
+      view: model
+        ? { mode: 'now-only', builder: 'model3d', kind: key, key, modelPath: `/${outputDir.replace(/\\/g, '/')}/model.json` }
+        : { mode: 'now-only', builder: 'model3d', kind: key, key },
+      missing: !model,
+      measured: bounds ? {
+        tris: bounds.triangles || 0,
+        verts: bounds.vertices || 0,
+        rMax: bounds.rMax || 1,
+        yMin: bounds.min?.[1] ?? 0,
+        yMax: bounds.max?.[1] ?? bounds.size?.[1] ?? 1,
+      } : null,
+      env: bounds ? { r: bounds.rMax || 1, hy: (bounds.size?.[1] || 1) / 2 } : null,
+      bounds,
+      spec: metadata?.spec || null,
+      features,
+      style: metadata?.style || features?.style || null,
+      symmetryMode: metadata?.symmetryMode || features?.symmetryMode || null,
+      now: bounds ? { parts: model?.parts?.length || 0, foot: bounds.size || [1, 1, 1], extent: bounds.rMax || 1 } : null,
+      base: null,
+      baseErr: null,
+      at: metadata?.created_at ? String(metadata.created_at).slice(0, 10) : null,
+      version: metadata?.version || 6,
+      verStr: metadata?.verStr || `v${metadata?.version || 6}`,
+      item: items[key] || null,
+      catalogRecovered: true,
+    });
+    rowKeys.add(key);
+  }
+
+  // 最新規則：archive/purge 是完整撤下，零件台不得再由 DB/manifest 的殘列讀回。
+  const removedKeys = new Set(Object.entries(items)
+    .filter(([, item]) => REMOVED_STATUSES.has(item?.status)).map(([key]) => key));
+  for (let index = rows.length - 1; index >= 0; index--) {
+    if (removedKeys.has(rows[index].key)) rows.splice(index, 1);
+  }
+
   // ── 缺口三種,一種都不准藏 ─────────────────────────────────────────────
   const orphans = [];
   for (const [fam, f] of families) {
@@ -649,6 +721,7 @@ export function manifest(items = {}, photosOpt = null) {
 
   for (const r of rows) {
     r.category = reviewCategory(r.family, r.node, r.key);
+    r.catalog = catalog.objects[r.key] || null;
     const pDates = (r.imgs || []).map((im) => im.photoDate).filter(Boolean);
     r.photoDate = pDates[0] || null;
     r.photoDates = [...new Set(pDates)];
@@ -688,6 +761,7 @@ export function manifest(items = {}, photosOpt = null) {
     dates: uniqueDates,
     photoDates: uniquePhotoDates,
     versions: uniqueVersions,
+    catalog: catalogReviewView(catalog),
   };
 }
 

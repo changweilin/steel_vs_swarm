@@ -1,0 +1,68 @@
+{
+  "id": "equipment_b3950323",
+  "role": "equipment",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.375,1|10",
+  "canonical": {
+    "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+    "name": "crane_pivot",
+    "part": {
+      "name": "crane_pivot",
+      "type": "cylinder",
+      "sides": 10,
+      "radii": [
+        0.42,
+        0.42
+      ],
+      "height": 0.34,
+      "position": [
+        -1,
+        1.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16044395,
+      "triangles": 40,
+      "role": "equipment",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "name": "crane_pivot",
+      "position": [
+        -1,
+        1.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 16044395
+    },
+    {
+      "objectKey": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "name": "crane_pivot",
+      "position": [
+        -1,
+        1.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15779374
+    }
+  ]
+}

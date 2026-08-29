@@ -1,0 +1,46 @@
+{
+  "id": "wheel_1531c36c",
+  "role": "wheel",
+  "type": "torus_ring",
+  "signature": "torus_ring|1,1,0.125|0",
+  "canonical": {
+    "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+    "name": "wagon_wheel_right",
+    "part": {
+      "name": "wagon_wheel_right",
+      "type": "torus_ring",
+      "radius": 0.7,
+      "tube": 0.05,
+      "position": [
+        6.2,
+        0.6,
+        5.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2105376,
+      "triangles": 120
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+      "name": "wagon_wheel_right",
+      "position": [
+        6.2,
+        0.6,
+        5.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    }
+  ]
+}

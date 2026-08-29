@@ -59,10 +59,6 @@
       "note": "透視裸空",
       "at": "2026-08-20T14:35:29.071Z"
     },
-    "building/bld_civic_ov_cf9db9ae-c981-4201-9d2b-b8d0452ee9f9_8cf985a3_v6": {
-      "status": "archive",
-      "at": "2026-08-20T14:36:07.474Z"
-    },
     "building/mass_01_0a6db86c_v6": {
       "status": "ok",
       "at": "2026-08-20T14:36:35.832Z"
@@ -95,10 +91,6 @@
       "status": "ok",
       "at": "2026-08-20T14:47:04.810Z"
     },
-    "building/bld_lighthouse_ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171_0682b09a_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:17:26.720Z"
-    },
     "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6": {
       "status": "ok",
       "at": "2026-08-20T15:17:37.780Z"
@@ -110,18 +102,6 @@
     "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6": {
       "status": "ok",
       "at": "2026-08-20T15:17:55.065Z"
-    },
-    "building/bld_temple_ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7_8ae63e1b_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:18:20.929Z"
-    },
-    "building/bld_tower_ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4_c4606f20_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:18:45.941Z"
-    },
-    "building/bld_tower_sheet_00_d7e598ce_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:18:58.293Z"
     },
     "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6": {
       "status": "ok",
@@ -143,73 +123,9 @@
       "status": "ok",
       "at": "2026-08-20T15:24:44.095Z"
     },
-    "building/bld_lighthouse_ov_235a93b9-b57e-439f-94aa-a2c084f9edea_0f1c48a9_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:24:52.413Z"
-    },
-    "building/bld_lighthouse_ov_a2f6edb9-4915-485a-bff7-5090f6c6277f_fcecf187_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:24:59.147Z"
-    },
-    "building/bld_temple_ov_1993f298-c141-4121-8a41-ca4421afd46c_8710011a_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:25:52.470Z"
-    },
-    "building/bld_temple_ov_6b7d0fbf-0708-4dde-8672-1bce77aa4c51_1f436471_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:26:04.441Z"
-    },
-    "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:26:11.327Z"
-    },
-    "building/bld_tower_ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9_9edbe20e_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:26:15.788Z"
-    },
-    "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:26:21.876Z"
-    },
-    "building/bld_tower_ov_f7730e98-728d-478f-a9e7-8af4d2e77750_0fdebb88_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:26:30.894Z"
-    },
-    "building/bld_tower_wc_156266417_ad806f78_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:26:40.942Z"
-    },
-    "building/bld_tower_wc_378871_13d752eb_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:26:46.594Z"
-    },
-    "building/chimney_ov_551789bb-eab2-42b8-8861-b76ef732d2e4_d2ef6ae5_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:27:08.871Z"
-    },
-    "building/chimney_ov_c49f7be0-9e6b-412f-b186-67d6ae037940_91241dba_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:27:28.306Z"
-    },
-    "building/dormer_wc_14646619_ae8804b7_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:27:33.213Z"
-    },
-    "building/dwg_civic_ov_dc769773-3e7d-47af-a3f6-5bbcdbc1da2e_209a732a_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:27:43.114Z"
-    },
-    "building/dwg_civic_wc_34469337_c0c7f5ac_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:27:47.984Z"
-    },
     "building/dwg_house_wc_33743891_ccdb01ea_v6": {
       "status": "ok",
       "at": "2026-08-20T15:27:57.579Z"
-    },
-    "building/dwg_house_wc_33743892_914dfe81_v6": {
-      "status": "archive",
-      "at": "2026-08-20T15:28:02.316Z"
     },
     "building/mass_b3e379243fd30275e809d93e81d22c8d_abcc6755_v6": {
       "status": "ok",
@@ -271,62 +187,6 @@
       "status": "ok",
       "at": "2026-08-20T15:38:47.467Z"
     },
-    "building/bld_halftimber_ov_616f4939-a5c8-4a87-b24d-be105f81d2dc_92a0cc71_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:20:18.121Z"
-    },
-    "building/bld_halftimber_ov_c6ec155e-0cfc-42a8-b59f-01d2414e8b6a_cdbb78d2_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:20:24.582Z"
-    },
-    "building/bld_stonecottage_ov_7b76fc43-5e31-4372-84c8-d57f9ceb21a0_e7cf439a_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:20:49.272Z"
-    },
-    "tree/sp_acacia_ov_51d36975-4681-4f3e-a9a5-46eab91f9fa1_7bbd4528_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:27:45.316Z"
-    },
-    "tree/gt_cryptomeria_ov_ef085512-f1b2-4415-bb2a-4bad15affd68_340d5f2d_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:28:02.675Z"
-    },
-    "tree/cf_araucaria_ov_cfee01fe-a3fd-4f7e-b4a4-32aecb9029e2_cb4f6353_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:28:22.158Z"
-    },
-    "tree/cf_araucaria_ov_61a8c242-5841-4892-847c-ab6278bf0fce_a59699b8_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:28:26.363Z"
-    },
-    "tree/.sheet_sheet_03_f1eb1b90_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:29:38.370Z"
-    },
-    "tree/bl_olive_ov_f3c022cd-793e-4c3f-9829-bd123c8445ff_bd209033_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:29:45.183Z"
-    },
-    "tree/.sheet_sheet_02_ef798ccd_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:29:49.009Z"
-    },
-    "tree/.sheet_sheet_01_69f61467_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:29:53.216Z"
-    },
-    "tree/.sheet_sheet_00_7d655a3f_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:29:55.550Z"
-    },
-    "rock/mg_basalt_ov_5fca0e0e-cc30-45b0-ac50-5bb5f1654152_4d2e7b88_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:30:23.767Z"
-    },
-    "rock/mg_arch_ov_aa4ff912-daec-4066-b9a0-d017e1132dff_596051fc_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:30:33.898Z"
-    },
     "rock/main_d087b40c-1b1a-4f8a-a620-c0aafe41056d_749bd224_v6": {
       "status": "ok",
       "at": "2026-08-20T16:31:08.412Z"
@@ -334,26 +194,6 @@
     "rock/mg_marble_ov_795b025b-a174-4be2-a7a1-66deecad9401_9bd67eb8_v6": {
       "status": "ok",
       "at": "2026-08-20T16:31:26.301Z"
-    },
-    "rock/mg_dome_ov_939627e7-42d0-453b-9fc4-de3bd7f24ccf_421bf51b_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:31:36.055Z"
-    },
-    "rock/mg_dome_ov_b5a115f2-95ac-400f-ae3c-99e1c30ccf07_28b32cfc_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:31:38.434Z"
-    },
-    "rock/mg_dome_ov_f1c5fb26-30f1-4b78-a0ca-069c65f45669_a527b61d_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:31:40.509Z"
-    },
-    "rock/mg_dome_ov_e735b3d1-6504-43ba-b082-60bcbc110afd_c97382b6_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:31:42.918Z"
-    },
-    "rock/mg_dome_ov_5711989c-b571-4ac0-a219-af3f6f060f8b_4a80fedb_v6": {
-      "status": "archive",
-      "at": "2026-08-20T16:31:47.036Z"
     },
     "rock/mg_arch_ov_c7a58b73-0787-4153-9dca-1a6fb3a3bf40_19d878c1_v6": {
       "status": "ok",
@@ -419,45 +259,13 @@
       "status": "ok",
       "at": "2026-08-20T16:34:16.812Z"
     },
-    "building/balcony_ov_e9a64f2b-279f-4ee8-ba69-0368cadd6bf8_dc5aaa76": {
-      "status": "purge",
-      "at": "2026-08-23T14:32:33.389Z"
-    },
-    "building/bld_apartment_ov_3f2c5daa-8615-4849-b459-ecfb801e2284_91a31eb5": {
-      "status": "purge",
-      "at": "2026-08-23T14:32:57.772Z"
-    },
-    "building/bld_adobe_ov_a17c17a9-526b-42fa-96ec-d0fc87203636_786ce491": {
-      "status": "purge",
-      "at": "2026-08-23T14:33:01.413Z"
-    },
-    "building/bld_apartment_ov_6212d5c5-41b9-4330-bd0b-aacc97daf5d1_70ccd154": {
-      "status": "purge",
-      "at": "2026-08-23T14:33:14.330Z"
-    },
-    "building/bld_apartment_ov_e6d35a2a-c64d-4abe-a08c-0da4c78a4f2d_41b9d034": {
-      "status": "purge",
-      "at": "2026-08-23T14:33:18.911Z"
-    },
     "building/bld_hanok_ov_ad4c1b7a-e581-4d3e-b2dc-d698da9bc642_d293fbea": {
       "status": "regen",
       "at": "2026-08-23T14:33:54.366Z"
     },
-    "building/bld_temple_ov_1993f298-c141-4121-8a41-ca4421afd46c_8710011a": {
-      "status": "purge",
-      "at": "2026-08-23T14:34:13.788Z"
-    },
     "building/bld_tower_manual_1711450890-2085471680-g_6952afb2": {
       "status": "regen",
       "at": "2026-08-23T14:34:24.416Z"
-    },
-    "building/roofcap_ov_8325ea72-05ab-4fd3-bec8-53da100f5d6a_b8f01adf": {
-      "status": "purge",
-      "at": "2026-08-23T14:34:48.597Z"
-    },
-    "building/acunit_wc_8061724_618600b3": {
-      "status": "purge",
-      "at": "2026-08-23T14:35:29.257Z"
     },
     "building/bld_civic_ov_483d72a6-b9d7-4103-b598-90de41fe2719_12e7b7e5": {
       "status": "ok",
@@ -467,25 +275,13 @@
       "status": "ok",
       "at": "2026-08-23T14:36:16.292Z"
     },
-    "building/bld_lighthouse_ov_b1d01461-eb61-44b6-93d9-cfa01e5b0171_0682b09a": {
-      "status": "purge",
-      "at": "2026-08-23T14:36:19.943Z"
-    },
     "building/bld_stonecottage_ov_3966cc35-f9ef-4d05-8ab5-4b4ba2a0751e_92c1332b": {
       "status": "ok",
       "at": "2026-08-23T14:36:47.337Z"
     },
-    "building/bld_stonecottage_ov_7b76fc43-5e31-4372-84c8-d57f9ceb21a0_e7cf439a": {
-      "status": "purge",
-      "at": "2026-08-23T14:36:59.120Z"
-    },
     "building/bld_stonecottage_ov_d273a40d-cf1b-45f8-acd7-66471d0e552c_5cc0caeb": {
       "status": "ok",
       "at": "2026-08-23T14:36:56.236Z"
-    },
-    "building/bld_temple_ov_59cb11dd-0b5f-47c0-b6d0-e159c4f1aff7_8ae63e1b": {
-      "status": "purge",
-      "at": "2026-08-23T14:37:07.067Z"
     },
     "building/bld_tower_manual__Run-in-taipei-1920x1080_8b3aa198": {
       "status": "ok",
@@ -498,14 +294,6 @@
     "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d": {
       "status": "ok",
       "at": "2026-08-23T14:37:30.422Z"
-    },
-    "building/bld_tower_ov_c343cdcb-4202-47b0-8e94-28e1782d6cb4_c4606f20": {
-      "status": "purge",
-      "at": "2026-08-23T14:37:36.177Z"
-    },
-    "building/bld_tower_sheet_00_d7e598ce": {
-      "status": "purge",
-      "at": "2026-08-23T14:37:45.190Z"
     },
     "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01": {
       "status": "ok",

@@ -1,0 +1,66 @@
+{
+  "id": "wheel_819e3769",
+  "role": "wheel",
+  "type": "cylinder",
+  "signature": "cylinder|1,1,1|16",
+  "canonical": {
+    "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+    "name": "front_left_wheel",
+    "part": {
+      "name": "front_left_wheel",
+      "type": "cylinder",
+      "sides": 16,
+      "radii": [
+        0.5,
+        0.5
+      ],
+      "height": 1,
+      "position": [
+        -1.22,
+        0.5,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "color": 657930,
+      "triangles": 64
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "front_left_wheel",
+      "position": [
+        -1.22,
+        0.5,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "front_right_wheel",
+      "position": [
+        1.22,
+        0.5,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    }
+  ]
+}

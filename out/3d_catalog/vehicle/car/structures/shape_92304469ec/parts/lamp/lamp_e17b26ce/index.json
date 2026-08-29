@@ -1,0 +1,51 @@
+{
+  "id": "lamp_e17b26ce",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|0.625,0.375,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_2017091364238789_cb832536_luna_v6",
+    "name": "light_box_cargo",
+    "part": {
+      "name": "light_box_cargo",
+      "type": "box",
+      "dimensions": [
+        1,
+        0.66,
+        1.672
+      ],
+      "position": [
+        -1.82,
+        1.42,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16054514,
+      "triangles": 12,
+      "role": "cargo",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_2017091364238789_cb832536_luna_v6",
+      "name": "light_box_cargo",
+      "position": [
+        -1.82,
+        1.42,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16054514
+    }
+  ]
+}

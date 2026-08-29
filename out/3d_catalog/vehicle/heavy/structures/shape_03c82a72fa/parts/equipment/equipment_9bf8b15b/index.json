@@ -1,0 +1,100 @@
+{
+  "id": "equipment_9bf8b15b",
+  "role": "equipment",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.5,1|10",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "mixer_rear_cone",
+    "part": {
+      "name": "mixer_rear_cone",
+      "type": "cylinder",
+      "sides": 10,
+      "radii": [
+        0.42,
+        0.42
+      ],
+      "height": 0.42,
+      "position": [
+        -2.984,
+        3.42,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        1.309
+      ],
+      "color": 15910190,
+      "triangles": 40,
+      "role": "equipment",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "mixer_rear_cone",
+      "position": [
+        -2.984,
+        3.42,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        1.309
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "mixer_rear_cone",
+      "position": [
+        -2.984,
+        3.42,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        1.309
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "mixer_rear_cone",
+      "position": [
+        -2.984,
+        3.42,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        1.309
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "mixer_rear_cone",
+      "position": [
+        -2.984,
+        3.42,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        1.309
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    }
+  ]
+}

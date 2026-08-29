@@ -1,0 +1,641 @@
+{
+  "schemaVersion": 1,
+  "category": "vehicle",
+  "subcategory": "car",
+  "palettes": [
+    {
+      "id": "palette_029d24f4",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2438472,
+        "facadeHex": 4564385,
+        "baseHex": 1778990,
+        "accentHex": 14992735,
+        "glassHex": 1390920,
+        "darkHex": 790807,
+        "brightHex": 15990783
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_0fabc417",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1981796,
+        "facadeHex": 1929405,
+        "baseHex": 2435889,
+        "accentHex": 9354195,
+        "glassHex": 1456720,
+        "darkHex": 1120288,
+        "brightHex": 16186367
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_250730-29093-1-4yYYG_07e978cb_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_250px-Honda-TN360_dac89bc5_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_2598949_1f526e62_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_jspace-pu_20241108_menu_3b80890b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_JSV_01_d2274679_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_Ou7KZDwD3jVNttR_8c5f1a99_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_16b6c43c",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2312294,
+        "facadeHex": 3112110,
+        "baseHex": 2503226,
+        "accentHex": 14151153,
+        "glassHex": 1456202,
+        "darkHex": 1054752,
+        "brightHex": 16186102
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_1667357469403862_600_400_f82915ff_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_176174663300_7552c714_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_1f7c005d",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 11184810,
+        "baseHex": 1644825,
+        "accentHex": 13421772,
+        "glassHex": 3368652,
+        "darkHex": 2105376,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_176103315400_b84cb3e4_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_2dd68743",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1787764,
+        "facadeHex": 2979508,
+        "baseHex": 1845559,
+        "accentHex": 9553896,
+        "glassHex": 1455692,
+        "darkHex": 1054752,
+        "brightHex": 16055295
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_240203_FordExplorerFacelift_fromFord-07_e3eb1a89_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_240521-25714-10-CT9mc_bfc73edf_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_40ab7dd6",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2970945,
+        "facadeHex": 5999208,
+        "baseHex": 2108199,
+        "accentHex": 12898720,
+        "glassHex": 1587773,
+        "darkHex": 1054483,
+        "brightHex": 15856866
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_176103315400 (1)_2163e4b0_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_5156e107",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1184790,
+        "facadeHex": 1382169,
+        "baseHex": 3155229,
+        "accentHex": 13081940,
+        "glassHex": 2503744,
+        "darkHex": 855568,
+        "brightHex": 16248800
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2 (1)_78de4396_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_6841_rd_0682ab55_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_5626df26",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 5971756,
+        "facadeHex": 14900043,
+        "baseHex": 2826279,
+        "accentHex": 15914397,
+        "glassHex": 1652810,
+        "darkHex": 1119000,
+        "brightHex": 16774630
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_58aaa423",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 4208478,
+        "facadeHex": 7692711,
+        "baseHex": 1845559,
+        "accentHex": 13150704,
+        "glassHex": 1455692,
+        "darkHex": 1054752,
+        "brightHex": 16055295
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_220809-20941-15-q0oDy_956bd2ba_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_5b78d2c3",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6845563,
+        "facadeHex": 15198694,
+        "baseHex": 3160128,
+        "accentHex": 13226709,
+        "glassHex": 1587274,
+        "darkHex": 1185563,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_240710-26084-40-oeQ5G_8b3a9ba3_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_articleimage_1373637_86e7cfbe_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_Farizon-SV-3_1ca541cc_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_mobile01-78b0b061843ca71c35cd47caeccc4c93_e7258079_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_ph-hv2-1_47157c08_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_showcase2_edeliver5_h1_720x414_fea117e4_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_6041ac57",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 5858669,
+        "facadeHex": 13621463,
+        "baseHex": 2239023,
+        "accentHex": 9425090,
+        "glassHex": 1522503,
+        "darkHex": 1053977,
+        "brightHex": 16054514
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_1711950770028207_600_400_27fc1d09_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_2017091364238789_cb832536_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_20200710700113_93e623cc_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_7car-202006291136-3_10cab506_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_9d6035f40faac95805c9c47f572ebe3f_3ab543e3_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_photooriginal-2022408-29vqn_1c9d8e4f_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_6c9b6781",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2303789,
+        "facadeHex": 11450301,
+        "baseHex": 1514014,
+        "accentHex": 15791092,
+        "glassHex": 1583926,
+        "darkHex": 592654,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_Cybertruck-來了！限量-Cybertruck-模型台灣上架_c6853c8c_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_831a443f",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14565376,
+        "baseHex": 2631720,
+        "accentHex": 16777215,
+        "glassHex": 3368652,
+        "darkHex": 2039583,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_7car-202401030308-3_38a5ca9a_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_88e5ddb2",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3815994,
+        "facadeHex": 5197655,
+        "baseHex": 1973790,
+        "accentHex": 13816530,
+        "glassHex": 1977150,
+        "darkHex": 1315860,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_8c2f4bde",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2435638,
+        "facadeHex": 14014684,
+        "baseHex": 1777705,
+        "accentHex": 14988872,
+        "glassHex": 1452860,
+        "darkHex": 856344,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_圖1_07be3b04_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_9233523f",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2106922,
+        "facadeHex": 5001550,
+        "baseHex": 1448475,
+        "accentHex": 13203518,
+        "glassHex": 1584437,
+        "darkHex": 856081,
+        "brightHex": 15856103
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_161060143500_896f4c33_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_a6bd62c2",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 8265768,
+        "facadeHex": 13055803,
+        "baseHex": 2893097,
+        "accentHex": 15183947,
+        "glassHex": 2112075,
+        "darkHex": 1446678,
+        "brightHex": 16775145
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_3列_e3f7e1e0_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c367bddf",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 5661035,
+        "facadeHex": 13094096,
+        "baseHex": 2699321,
+        "accentHex": 15199728,
+        "glassHex": 1586247,
+        "darkHex": 1119771,
+        "brightHex": 16317439
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_241016-26812-1-UmpVe_96a298e4_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_8361539_e123eb1d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_depu_12cc1903_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_MD_01_5x7_74dd9fe1_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_php6z4pvZ_5a214b83_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c679cc61",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1523554,
+        "facadeHex": 2983351,
+        "baseHex": 2240570,
+        "accentHex": 12445424,
+        "glassHex": 1456975,
+        "darkHex": 857116,
+        "brightHex": 16055295
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_d4a87066",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2039583,
+        "facadeHex": 16773030,
+        "baseHex": 2302755,
+        "accentHex": 3355443,
+        "glassHex": 3298829,
+        "darkHex": 1052688,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_202504061134_33848a5a_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_d629580a",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 1644825,
+        "baseHex": 657930,
+        "accentHex": 3289650,
+        "glassHex": 3368652,
+        "darkHex": 328965,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_d93ff8f7",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3163183,
+        "facadeHex": 7636556,
+        "baseHex": 1976352,
+        "accentHex": 13030523,
+        "glassHex": 1521980,
+        "darkHex": 922896,
+        "brightHex": 15987679
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_eb296c99",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3480876,
+        "facadeHex": 13185591,
+        "baseHex": 2696493,
+        "accentHex": 15259591,
+        "glassHex": 1717830,
+        "darkHex": 1185051,
+        "brightHex": 16775149
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_1683687307801401_600_400_3a88c91a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_22885ee1_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_4590905_001_M_49e8b6b2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_881e58ddc9cd0cc82af65be198476506_1875b156_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_IMG20260102180810I92509U2349_41e01507_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_d0d1db58_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_ed32ed0f",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3882562,
+        "facadeHex": 4014145,
+        "baseHex": 1973790,
+        "accentHex": 5987163,
+        "glassHex": 2174310,
+        "darkHex": 1315860,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_5-man_da4a0c78_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_f4af01e2",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2106926,
+        "facadeHex": 14278112,
+        "baseHex": 2436148,
+        "accentHex": 7525841,
+        "glassHex": 1456199,
+        "darkHex": 856600,
+        "brightHex": 16187391
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_fac19782",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 9989399,
+        "facadeHex": 13935662,
+        "baseHex": 3551268,
+        "accentHex": 15782762,
+        "glassHex": 1652809,
+        "darkHex": 1513748,
+        "brightHex": 16774606
+      },
+      "objects": [
+        {
+          "key": "vehicle/car_241120-27067-61-GPe1X_05fdffc4_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

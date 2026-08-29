@@ -1,0 +1,49 @@
+{
+  "id": "monolith_peak_apex_8c7b4a94",
+  "role": "monolith_peak_apex",
+  "type": "wedge",
+  "signature": "wedge|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_d087b40c-1b1a-4f8a-a620-c0aafe41056d_749bd224_v6",
+    "name": "monolith_peak_apex",
+    "part": {
+      "name": "monolith_peak_apex",
+      "type": "wedge",
+      "dimensions": [
+        0.8,
+        0.8,
+        0.8
+      ],
+      "position": [
+        0,
+        4.4,
+        0
+      ],
+      "rotation": [
+        0.1,
+        0.3,
+        -0.1
+      ],
+      "color": 8553090,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_d087b40c-1b1a-4f8a-a620-c0aafe41056d_749bd224_v6",
+      "name": "monolith_peak_apex",
+      "position": [
+        0,
+        4.4,
+        0
+      ],
+      "rotation": [
+        0.1,
+        0.3,
+        -0.1
+      ],
+      "colorKey": null,
+      "color": 8553090
+    }
+  ]
+}

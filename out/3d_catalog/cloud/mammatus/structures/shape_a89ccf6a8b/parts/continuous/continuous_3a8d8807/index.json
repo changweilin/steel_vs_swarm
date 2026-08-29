@@ -1,0 +1,95 @@
+{
+  "id": "continuous_3a8d8807",
+  "role": "continuous",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+    "name": "mammatus_continuous_upper_dode_0",
+    "part": {
+      "name": "mammatus_continuous_upper_dode_0",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.72,
+      "position": [
+        -4.55,
+        1.74,
+        -0.3
+      ],
+      "rotation": [
+        0.08,
+        0,
+        -0.06
+      ],
+      "color": 16775405,
+      "triangles": 36,
+      "role": "continuous_upper",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_dode_0",
+      "position": [
+        -4.55,
+        1.74,
+        -0.3
+      ],
+      "rotation": [
+        0.08,
+        0,
+        -0.06
+      ],
+      "colorKey": "brightHex",
+      "color": 16775405
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_dode_8",
+      "position": [
+        4.28,
+        1.8,
+        -0.22
+      ],
+      "rotation": [
+        0.08,
+        2.48,
+        -0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 9870244
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_dode_10",
+      "position": [
+        -1.62,
+        2.62,
+        -0.46
+      ],
+      "rotation": [
+        0.08,
+        3.1,
+        -0.06
+      ],
+      "colorKey": "brightHex",
+      "color": 16775405
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_dode_12",
+      "position": [
+        2.52,
+        2.5,
+        -0.48
+      ],
+      "rotation": [
+        0.08,
+        3.72,
+        -0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 9870244
+    }
+  ]
+}

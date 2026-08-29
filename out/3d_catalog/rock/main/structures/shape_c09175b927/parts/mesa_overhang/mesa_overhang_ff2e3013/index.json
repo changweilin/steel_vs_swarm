@@ -1,0 +1,49 @@
+{
+  "id": "mesa_overhang_ff2e3013",
+  "role": "mesa_overhang",
+  "type": "wedge",
+  "signature": "wedge|1,0.125,0.375|0",
+  "canonical": {
+    "objectKey": "rock/main_images (4)_1eb4a48a_luna_v6",
+    "name": "mesa_front_overhang",
+    "part": {
+      "name": "mesa_front_overhang",
+      "type": "wedge",
+      "dimensions": [
+        1.636,
+        0.27,
+        0.551
+      ],
+      "position": [
+        0.061,
+        0.93,
+        0.571
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "color": 6911354,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_images (4)_1eb4a48a_luna_v6",
+      "name": "mesa_front_overhang",
+      "position": [
+        0.061,
+        0.93,
+        0.571
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 6911354
+    }
+  ]
+}

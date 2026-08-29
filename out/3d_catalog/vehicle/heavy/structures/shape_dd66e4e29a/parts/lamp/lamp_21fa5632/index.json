@@ -1,0 +1,65 @@
+{
+  "id": "lamp_21fa5632",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|1,0.625,0.25|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+    "name": "left_headlight",
+    "part": {
+      "name": "left_headlight",
+      "type": "box",
+      "dimensions": [
+        0.5,
+        0.3,
+        0.1
+      ],
+      "position": [
+        -0.8,
+        0.9,
+        5.06
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+      "name": "left_headlight",
+      "position": [
+        -0.8,
+        0.9,
+        5.06
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    },
+    {
+      "objectKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+      "name": "right_headlight",
+      "position": [
+        0.8,
+        0.9,
+        5.06
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

@@ -1,0 +1,243 @@
+{
+  "id": "cargo_e17b26ce",
+  "role": "cargo",
+  "type": "box",
+  "signature": "box|0.625,0.375,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_1711950770028207_600_400_27fc1d09_luna_v6",
+    "name": "van_cargo_upper",
+    "part": {
+      "name": "van_cargo_upper",
+      "type": "box",
+      "dimensions": [
+        0.98,
+        0.74,
+        1.71
+      ],
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 13621463,
+      "triangles": 12,
+      "role": "cargo",
+      "colorKey": "facadeHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1711950770028207_600_400_27fc1d09_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 13621463
+    },
+    {
+      "objectKey": "vehicle/car_7car-202006291136-3_10cab506_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 13621463
+    },
+    {
+      "objectKey": "vehicle/car_9d6035f40faac95805c9c47f572ebe3f_3ab543e3_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 13621463
+    },
+    {
+      "objectKey": "vehicle/car_articleimage_1373637_86e7cfbe_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 15198694
+    },
+    {
+      "objectKey": "vehicle/car_depu_12cc1903_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 13094096
+    },
+    {
+      "objectKey": "vehicle/car_Farizon-SV-3_1ca541cc_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 15198694
+    },
+    {
+      "objectKey": "vehicle/car_MD_01_5x7_74dd9fe1_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 13094096
+    },
+    {
+      "objectKey": "vehicle/car_ph-hv2-1_47157c08_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 15198694
+    },
+    {
+      "objectKey": "vehicle/car_photooriginal-2022408-29vqn_1c9d8e4f_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 13621463
+    },
+    {
+      "objectKey": "vehicle/car_showcase2_edeliver5_h1_720x414_fea117e4_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 15198694
+    },
+    {
+      "objectKey": "vehicle/car_1667357469403862_600_400_f82915ff_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 3112110
+    },
+    {
+      "objectKey": "vehicle/car_176174663300_7552c714_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 3112110
+    },
+    {
+      "objectKey": "vehicle/car_3列_e3f7e1e0_luna_v6",
+      "name": "van_cargo_upper",
+      "position": [
+        -1.81,
+        1.425,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 13055803
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "id": "roof_afa20441",
+  "role": "roof",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.375,1|8",
+  "canonical": {
+    "objectKey": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+    "name": "top_cap_fragment",
+    "part": {
+      "name": "top_cap_fragment",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.395,
+        0.699
+      ],
+      "height": 0.439,
+      "position": [
+        -0.365,
+        2.966,
+        -0.243
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4344656,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.365,
+        2.966,
+        -0.243
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_id14796060-shutterstock_783352309~1_80a40c51_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.496,
+        2.81,
+        -0.227
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.328,
+        2.759,
+        -0.166
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    }
+  ]
+}

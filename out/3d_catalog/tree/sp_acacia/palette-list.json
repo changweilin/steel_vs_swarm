@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "sp_acacia",
+  "palettes": [
+    {
+      "id": "palette_e550d590",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2640433,
+        "facadeHex": 5208643,
+        "baseHex": 4861988,
+        "accentHex": 7903323,
+        "glassHex": 1976635,
+        "darkHex": 2892830,
+        "brightHex": 10860413
+      },
+      "objects": [
+        {
+          "key": "tree/sp_acacia_ov_1ac0914a-b376-4386-ab74-ae79d96e8485_5175fbe7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_acacia_wc_193839561_361312fc_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_e193c57d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_acacia_ov_4181513d-1acc-4d23-a817-709b1d24f3c2_bf46f112_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

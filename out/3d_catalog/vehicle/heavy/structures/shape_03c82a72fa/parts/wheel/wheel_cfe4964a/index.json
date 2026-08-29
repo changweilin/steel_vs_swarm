@@ -1,0 +1,672 @@
+{
+  "id": "wheel_cfe4964a",
+  "role": "wheel",
+  "type": "torus_ring",
+  "signature": "torus_ring|1,1,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "axle_1_wheel_left_rim",
+    "part": {
+      "name": "axle_1_wheel_left_rim",
+      "type": "torus_ring",
+      "radius": 0.43,
+      "tube": 0.018,
+      "position": [
+        -2.45,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 15910190,
+      "triangles": 120,
+      "role": "wheel_rim",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_1_wheel_left_rim",
+      "position": [
+        -2.45,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_1_wheel_right_rim",
+      "position": [
+        -2.45,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_2_wheel_left_rim",
+      "position": [
+        -1.1,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_2_inner_wheel_left_rim",
+      "position": [
+        -1.1,
+        0.56,
+        -0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_2_wheel_right_rim",
+      "position": [
+        -1.1,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_2_inner_wheel_right_rim",
+      "position": [
+        -1.1,
+        0.56,
+        0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_3_wheel_left_rim",
+      "position": [
+        2.48,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_3_inner_wheel_left_rim",
+      "position": [
+        2.48,
+        0.56,
+        -0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_3_wheel_right_rim",
+      "position": [
+        2.48,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_3_inner_wheel_right_rim",
+      "position": [
+        2.48,
+        0.56,
+        0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_1_wheel_left_rim",
+      "position": [
+        -2.45,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_1_wheel_right_rim",
+      "position": [
+        -2.45,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_2_wheel_left_rim",
+      "position": [
+        -1.1,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_2_inner_wheel_left_rim",
+      "position": [
+        -1.1,
+        0.56,
+        -0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_2_wheel_right_rim",
+      "position": [
+        -1.1,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_2_inner_wheel_right_rim",
+      "position": [
+        -1.1,
+        0.56,
+        0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_3_wheel_left_rim",
+      "position": [
+        2.48,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_3_inner_wheel_left_rim",
+      "position": [
+        2.48,
+        0.56,
+        -0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_3_wheel_right_rim",
+      "position": [
+        2.48,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_3_inner_wheel_right_rim",
+      "position": [
+        2.48,
+        0.56,
+        0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_1_wheel_left_rim",
+      "position": [
+        -2.45,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_1_wheel_right_rim",
+      "position": [
+        -2.45,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_2_wheel_left_rim",
+      "position": [
+        -1.1,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_2_inner_wheel_left_rim",
+      "position": [
+        -1.1,
+        0.56,
+        -0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_2_wheel_right_rim",
+      "position": [
+        -1.1,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_2_inner_wheel_right_rim",
+      "position": [
+        -1.1,
+        0.56,
+        0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_3_wheel_left_rim",
+      "position": [
+        2.48,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_3_inner_wheel_left_rim",
+      "position": [
+        2.48,
+        0.56,
+        -0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_3_wheel_right_rim",
+      "position": [
+        2.48,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_3_inner_wheel_right_rim",
+      "position": [
+        2.48,
+        0.56,
+        0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_1_wheel_left_rim",
+      "position": [
+        -2.45,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_1_wheel_right_rim",
+      "position": [
+        -2.45,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_2_wheel_left_rim",
+      "position": [
+        -1.1,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_2_inner_wheel_left_rim",
+      "position": [
+        -1.1,
+        0.56,
+        -0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_2_wheel_right_rim",
+      "position": [
+        -1.1,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_2_inner_wheel_right_rim",
+      "position": [
+        -1.1,
+        0.56,
+        0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_3_wheel_left_rim",
+      "position": [
+        2.48,
+        0.56,
+        -1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_3_inner_wheel_left_rim",
+      "position": [
+        2.48,
+        0.56,
+        -0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_3_wheel_right_rim",
+      "position": [
+        2.48,
+        0.56,
+        1.215
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_3_inner_wheel_right_rim",
+      "position": [
+        2.48,
+        0.56,
+        0.995
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    }
+  ]
+}

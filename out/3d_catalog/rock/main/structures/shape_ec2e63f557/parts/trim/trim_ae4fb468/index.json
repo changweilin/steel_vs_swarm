@@ -1,0 +1,49 @@
+{
+  "id": "trim_ae4fb468",
+  "role": "trim",
+  "type": "box",
+  "signature": "box|1,0.125,0.625|0",
+  "canonical": {
+    "objectKey": "rock/main_69353_01_abb820ea_v6",
+    "name": "rock_top_plateau",
+    "part": {
+      "name": "rock_top_plateau",
+      "type": "box",
+      "dimensions": [
+        45,
+        6,
+        28
+      ],
+      "position": [
+        0,
+        31,
+        2
+      ],
+      "rotation": [
+        0.05,
+        0.1,
+        0
+      ],
+      "color": 11149363,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_69353_01_abb820ea_v6",
+      "name": "rock_top_plateau",
+      "position": [
+        0,
+        31,
+        2
+      ],
+      "rotation": [
+        0.05,
+        0.1,
+        0
+      ],
+      "colorKey": null,
+      "color": 11149363
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "id": "overlay_d2137888",
+  "role": "overlay",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0.125,1|10",
+  "canonical": {
+    "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+    "name": "attached_waterline_foam",
+    "part": {
+      "name": "attached_waterline_foam",
+      "type": "polygonal_prism",
+      "sides": 9,
+      "radius": 2.32,
+      "height": 0.643,
+      "position": [
+        0,
+        0.965,
+        2.4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6767665,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.965,
+        2.4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    },
+    {
+      "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.887,
+        1.705
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14082258
+    },
+    {
+      "objectKey": "rock/main_images rock (1)~0_fd270a13_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.386,
+        1.415
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14213084
+    }
+  ]
+}

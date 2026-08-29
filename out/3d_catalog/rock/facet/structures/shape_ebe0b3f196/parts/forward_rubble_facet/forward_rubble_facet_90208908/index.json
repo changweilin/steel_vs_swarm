@@ -1,0 +1,77 @@
+{
+  "id": "forward_rubble_facet_90208908",
+  "role": "forward_rubble_facet",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+    "name": "forward_rubble_facet",
+    "part": {
+      "name": "forward_rubble_facet",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.747,
+      "position": [
+        1.734,
+        1.343,
+        1.401
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "color": 5602375,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        1.734,
+        1.343,
+        1.401
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        2.146,
+        1.435,
+        1.865
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~2_4ff4c0fb_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        0.921,
+        0.718,
+        0.912
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 5602375
+    }
+  ]
+}

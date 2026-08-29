@@ -1,0 +1,49 @@
+{
+  "id": "canopy_bc4b7df7",
+  "role": "canopy",
+  "type": "hemisphere_dome",
+  "signature": "hemisphere_dome|1,0.375,0.625|0",
+  "canonical": {
+    "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+    "name": "attached_lichen_canopy",
+    "part": {
+      "name": "attached_lichen_canopy",
+      "type": "hemisphere_dome",
+      "radii": [
+        0.624,
+        0.221,
+        0.354
+      ],
+      "position": [
+        -0.098,
+        3.065,
+        -0.042
+      ],
+      "rotation": [
+        0,
+        0.08,
+        0
+      ],
+      "color": 6717267,
+      "triangles": 170
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+      "name": "attached_lichen_canopy",
+      "position": [
+        -0.098,
+        3.065,
+        -0.042
+      ],
+      "rotation": [
+        0,
+        0.08,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    }
+  ]
+}

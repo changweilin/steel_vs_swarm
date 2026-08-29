@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "tor",
+  "palettes": [
+    {
+      "id": "palette_c37ca1af",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 6911354,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 11187637
+      },
+      "objects": [
+        {
+          "key": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/tor_ov_d453866a-3e14-469d-9a1e-faec62e90f22_e4bb51ce_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/tor_wc_12044342_e535f838_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

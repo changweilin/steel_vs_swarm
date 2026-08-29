@@ -1,0 +1,228 @@
+{
+  "id": "axle_26fb7edb",
+  "role": "axle",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|10",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "axle_1_axle",
+    "part": {
+      "name": "axle_1_axle",
+      "type": "cylinder",
+      "sides": 10,
+      "radii": [
+        0.032,
+        0.032
+      ],
+      "height": 2.295,
+      "position": [
+        -2.45,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 1534159,
+      "triangles": 40,
+      "role": "axle",
+      "colorKey": "axle"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_1_axle",
+      "position": [
+        -2.45,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 1534159
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_2_axle",
+      "position": [
+        -1.1,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 1534159
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "axle_3_axle",
+      "position": [
+        2.48,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 1534159
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_1_axle",
+      "position": [
+        -2.45,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 14970407
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_2_axle",
+      "position": [
+        -1.1,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 14970407
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "axle_3_axle",
+      "position": [
+        2.48,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 14970407
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_1_axle",
+      "position": [
+        -2.45,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 13191717
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_2_axle",
+      "position": [
+        -1.1,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 13191717
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "axle_3_axle",
+      "position": [
+        2.48,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 13191717
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_1_axle",
+      "position": [
+        -2.45,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 2263899
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_2_axle",
+      "position": [
+        -1.1,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 2263899
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "axle_3_axle",
+      "position": [
+        2.48,
+        0.56,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "axle",
+      "color": 2263899
+    }
+  ]
+}

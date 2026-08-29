@@ -1,0 +1,65 @@
+{
+  "id": "lamp_baaff79f",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|1,0.625,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+    "name": "left_headlight",
+    "part": {
+      "name": "left_headlight",
+      "type": "box",
+      "dimensions": [
+        0.3,
+        0.2,
+        0.05
+      ],
+      "position": [
+        -0.85,
+        0.8,
+        -3.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14540253,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "left_headlight",
+      "position": [
+        -0.85,
+        0.8,
+        -3.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14540253
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "right_headlight",
+      "position": [
+        0.85,
+        0.8,
+        -3.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14540253
+    }
+  ]
+}

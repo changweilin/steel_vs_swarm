@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "cloud",
+  "subcategory": "congestus",
+  "palettes": [
+    {
+      "id": "palette_2f8c6a3d",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6189192,
+        "facadeHex": 9675702,
+        "baseHex": 4608352,
+        "accentHex": 13095642,
+        "glassHex": 14937846,
+        "darkHex": 2897218,
+        "brightHex": 16317437
+      },
+      "objects": [
+        {
+          "key": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

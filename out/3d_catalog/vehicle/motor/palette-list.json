@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "category": "vehicle",
+  "subcategory": "motor",
+  "palettes": [
+    {
+      "id": "palette_29a11b66",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1522536,
+        "facadeHex": 12698557,
+        "baseHex": 2435631,
+        "accentHex": 13215056,
+        "glassHex": 2833738,
+        "darkHex": 1251099,
+        "brightHex": 15986402
+      },
+      "objects": [
+        {
+          "key": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/motor_7801666_3a47734e_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_3c4247dd",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3306683,
+        "facadeHex": 2042681,
+        "baseHex": 3356992,
+        "accentHex": 13671747,
+        "glassHex": 1782344,
+        "darkHex": 1185305,
+        "brightHex": 16183265
+      },
+      "objects": [
+        {
+          "key": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_5dcf05de",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7901339,
+        "facadeHex": 2239025,
+        "baseHex": 1448736,
+        "accentHex": 12830917,
+        "glassHex": 1652804,
+        "darkHex": 856340,
+        "brightHex": 15919574
+      },
+      "objects": [
+        {
+          "key": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/motor_10905670_R_58b9efa4_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/motor_14074013_OR_m_15e668c8_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_66ff4d4a",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 13122871,
+        "facadeHex": 14853450,
+        "baseHex": 3420465,
+        "accentHex": 15848867,
+        "glassHex": 2505288,
+        "darkHex": 1906710,
+        "brightHex": 16775135
+      },
+      "objects": [
+        {
+          "key": "vehicle/motor_000001_1742374978_4250286e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c21c98d1",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2317725,
+        "facadeHex": 1777704,
+        "baseHex": 3159100,
+        "accentHex": 14133314,
+        "glassHex": 1584195,
+        "darkHex": 1119000,
+        "brightHex": 15855333
+      },
+      "objects": [
+        {
+          "key": "vehicle/motor_165019503901_c719b559_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

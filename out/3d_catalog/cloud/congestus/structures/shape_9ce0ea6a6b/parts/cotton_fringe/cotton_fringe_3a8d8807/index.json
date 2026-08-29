@@ -1,0 +1,175 @@
+{
+  "id": "cotton_fringe_3a8d8807",
+  "role": "cotton_fringe",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+    "name": "congestus_tier_0_dode_2_cotton_fringe",
+    "part": {
+      "name": "congestus_tier_0_dode_2_cotton_fringe",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.326,
+      "position": [
+        0.475,
+        1.199,
+        -0.051
+      ],
+      "rotation": [
+        0.08,
+        0.58,
+        0.04
+      ],
+      "color": 14937846,
+      "triangles": 36,
+      "role": "cotton_fringe",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_0_dode_2_cotton_fringe",
+      "position": [
+        0.475,
+        1.199,
+        -0.051
+      ],
+      "rotation": [
+        0.08,
+        0.58,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_1_dode_1_cotton_fringe",
+      "position": [
+        -1.53,
+        1.478,
+        -0.438
+      ],
+      "rotation": [
+        0.08,
+        1.74,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_2_dode_0_cotton_fringe",
+      "position": [
+        -2.415,
+        2.211,
+        -0.34
+      ],
+      "rotation": [
+        0.08,
+        2.9,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_2_dode_4_cotton_fringe",
+      "position": [
+        2.453,
+        2.197,
+        -0.189
+      ],
+      "rotation": [
+        0.08,
+        4.06,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_3_dode_3_cotton_fringe",
+      "position": [
+        1.375,
+        2.991,
+        -0.381
+      ],
+      "rotation": [
+        0.08,
+        5.22,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_4_dode_2_cotton_fringe",
+      "position": [
+        0.598,
+        3.798,
+        -0.3
+      ],
+      "rotation": [
+        0.08,
+        6.38,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_5_dode_1_cotton_fringe",
+      "position": [
+        -0.782,
+        4.51,
+        -0.084
+      ],
+      "rotation": [
+        0.08,
+        7.54,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_6_dode_1_cotton_fringe",
+      "position": [
+        -0.39,
+        5.23,
+        0.16
+      ],
+      "rotation": [
+        0.08,
+        8.7,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_bright_left_rim_2_cotton_fringe",
+      "position": [
+        -2.739,
+        2.883,
+        0.525
+      ],
+      "rotation": [
+        0.08,
+        11.02,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 14937846
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "id": "detail_cfe4964a",
+  "role": "detail",
+  "type": "torus_ring",
+  "signature": "torus_ring|1,1,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "mixer_drum_band_1",
+    "part": {
+      "name": "mixer_drum_band_1",
+      "type": "torus_ring",
+      "radius": 1.088,
+      "tube": 0.06,
+      "position": [
+        -2.19,
+        3.208,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "color": 15910190,
+      "triangles": 120,
+      "role": "detail",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "mixer_drum_band_1",
+      "position": [
+        -2.19,
+        3.208,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "mixer_drum_band_2",
+      "position": [
+        0.09,
+        2.597,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "mixer_drum_band_1",
+      "position": [
+        -2.19,
+        3.208,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "mixer_drum_band_2",
+      "position": [
+        0.09,
+        2.597,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "colorKey": "accentHex",
+      "color": 1645340
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "mixer_drum_band_1",
+      "position": [
+        -2.19,
+        3.208,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "mixer_drum_band_2",
+      "position": [
+        0.09,
+        2.597,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "colorKey": "accentHex",
+      "color": 15978572
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "mixer_drum_band_1",
+      "position": [
+        -2.19,
+        3.208,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "mixer_drum_band_2",
+      "position": [
+        0.09,
+        2.597,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -1.833
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    }
+  ]
+}

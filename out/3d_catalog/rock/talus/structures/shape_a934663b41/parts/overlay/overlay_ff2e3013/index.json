@@ -1,0 +1,49 @@
+{
+  "id": "overlay_ff2e3013",
+  "role": "overlay",
+  "type": "wedge",
+  "signature": "wedge|1,0.125,0.375|0",
+  "canonical": {
+    "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+    "name": "attached_lichen_shear_facet",
+    "part": {
+      "name": "attached_lichen_shear_facet",
+      "type": "wedge",
+      "dimensions": [
+        1.06,
+        0.179,
+        0.398
+      ],
+      "position": [
+        -0.159,
+        2.654,
+        0.332
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "color": 10119749,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+      "name": "attached_lichen_shear_facet",
+      "position": [
+        -0.159,
+        2.654,
+        0.332
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 10119749
+    }
+  ]
+}

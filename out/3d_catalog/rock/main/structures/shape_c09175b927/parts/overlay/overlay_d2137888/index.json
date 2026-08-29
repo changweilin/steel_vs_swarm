@@ -1,0 +1,159 @@
+{
+  "id": "overlay_d2137888",
+  "role": "overlay",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0.125,1|10",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "attached_waterline_foam",
+    "part": {
+      "name": "attached_waterline_foam",
+      "type": "polygonal_prism",
+      "sides": 9,
+      "radius": 1.517,
+      "height": 0.209,
+      "position": [
+        0,
+        0.314,
+        1.569
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.314,
+        1.569
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.193,
+        0.903
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.356,
+        1.249
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.271,
+        0.9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.182,
+        0.658
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        1.153,
+        3.721
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    },
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.29,
+        1.249
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    },
+    {
+      "objectKey": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.347,
+        1.816
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14082258
+    }
+  ]
+}

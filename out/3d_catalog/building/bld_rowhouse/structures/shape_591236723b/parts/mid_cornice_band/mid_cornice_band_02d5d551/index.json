@@ -1,0 +1,50 @@
+{
+  "id": "mid_cornice_band_02d5d551",
+  "role": "mid_cornice_band",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|12",
+  "canonical": {
+    "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+    "name": "mid_cornice_band",
+    "part": {
+      "name": "mid_cornice_band",
+      "type": "frustum_pyramid",
+      "sides": 12,
+      "radii": [
+        1.45,
+        1.55
+      ],
+      "height": 0.4,
+      "position": [
+        0,
+        5.6,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 9124134,
+      "triangles": 48
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "mid_cornice_band",
+      "position": [
+        0,
+        5.6,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 9124134
+    }
+  ]
+}

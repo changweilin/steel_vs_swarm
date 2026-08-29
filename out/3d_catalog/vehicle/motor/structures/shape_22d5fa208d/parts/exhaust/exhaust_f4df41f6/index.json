@@ -1,0 +1,99 @@
+{
+  "id": "exhaust_f4df41f6",
+  "role": "exhaust",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+    "name": "exhaust_left",
+    "part": {
+      "name": "exhaust_left",
+      "type": "cylinder",
+      "sides": 7,
+      "radii": [
+        0.025,
+        0.025
+      ],
+      "height": 0.757,
+      "position": [
+        -0.345,
+        0.42,
+        -0.2
+      ],
+      "rotation": [
+        1.703,
+        -1.571,
+        0
+      ],
+      "color": 13671747,
+      "triangles": 28,
+      "role": "exhaust"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "exhaust_left",
+      "position": [
+        -0.345,
+        0.42,
+        -0.2
+      ],
+      "rotation": [
+        1.703,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 13671747
+    },
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "exhaust_right",
+      "position": [
+        -0.345,
+        0.42,
+        0.2
+      ],
+      "rotation": [
+        1.703,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 13671747
+    },
+    {
+      "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "name": "exhaust_left",
+      "position": [
+        -0.345,
+        0.42,
+        -0.2
+      ],
+      "rotation": [
+        1.703,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 13215056
+    },
+    {
+      "objectKey": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "name": "exhaust_left",
+      "position": [
+        -0.345,
+        0.42,
+        -0.2
+      ],
+      "rotation": [
+        1.703,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 13215056
+    }
+  ]
+}

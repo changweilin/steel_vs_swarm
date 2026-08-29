@@ -1,0 +1,95 @@
+{
+  "id": "bright_rim_3a8d8807",
+  "role": "bright_rim",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+    "name": "congestus_bright_left_rim_0",
+    "part": {
+      "name": "congestus_bright_left_rim_0",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.46,
+      "position": [
+        -2.68,
+        1.1,
+        0.42
+      ],
+      "rotation": [
+        0.08,
+        0,
+        0.04
+      ],
+      "color": 13095642,
+      "triangles": 36,
+      "role": "bright_rim",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_bright_left_rim_0",
+      "position": [
+        -2.68,
+        1.1,
+        0.42
+      ],
+      "rotation": [
+        0.08,
+        0,
+        0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 13095642
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_bright_left_rim_2",
+      "position": [
+        -2.48,
+        2.72,
+        0.4
+      ],
+      "rotation": [
+        0.08,
+        0.54,
+        0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 13095642
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_bright_left_rim_4",
+      "position": [
+        -2,
+        4.36,
+        0.38
+      ],
+      "rotation": [
+        0.08,
+        1.08,
+        0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 13095642
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_bright_left_rim_6",
+      "position": [
+        -1.12,
+        5.7,
+        0.28
+      ],
+      "rotation": [
+        0.08,
+        1.62,
+        0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 13095642
+    }
+  ]
+}

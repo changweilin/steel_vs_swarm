@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_f4f9fbbf0b",
+  "canonicalKey": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+    "bounds": {
+      "min": [
+        -5.2984,
+        0,
+        -3.5
+      ],
+      "max": [
+        4.2296,
+        6.5766,
+        5.8559
+      ],
+      "size": [
+        9.528,
+        6.577,
+        9.356
+      ],
+      "rMax": 7.224,
+      "triangles": 422,
+      "vertices": 241
+    },
+    "parts": [
+      {
+        "name": "ground_contact_anchor",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          2.73,
+          3.5
+        ],
+        "height": 0.77,
+        "position": [
+          0,
+          0.385,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "standing_stone_left",
+        "type": "frustum_pyramid",
+        "sides": 6,
+        "radii": [
+          1.3,
+          1.8
+        ],
+        "height": 3.32,
+        "position": [
+          -2.43,
+          1.71,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 24
+      },
+      {
+        "name": "standing_stone_cap_left",
+        "type": "dodecahedron_polyhedron",
+        "radius": 1.5,
+        "position": [
+          -2.43,
+          4.32,
+          -0.3
+        ],
+        "rotation": [
+          0.1,
+          -0.17,
+          0
+        ],
+        "color": 5602375,
+        "triangles": 36
+      },
+      {
+        "name": "standing_stone_right",
+        "type": "frustum_pyramid",
+        "sides": 6,
+        "radii": [
+          1.3,
+          1.8
+        ],
+        "height": 3.32,
+        "position": [
+          2.43,
+          1.71,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 24
+      },
+      {
+        "name": "dolmen_lintel",
+        "type": "wedge",
+        "dimensions": [
+          8.018,
+          1.277,
+          3.8
+        ],
+        "position": [
+          0,
+          3.984,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0.06
+        ],
+        "color": 2370353,
+        "triangles": 8
+      },
+      {
+        "name": "dolmen_lintel_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 2.2,
+        "position": [
+          0.607,
+          4.495,
+          -0.3
+        ],
+        "rotation": [
+          0.16,
+          0.12,
+          -0.08
+        ],
+        "color": 5200224,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/st_dolmen/rock_rock_st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+      "similarity": 74,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0_b19ff617_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/st_dolmen/rock_rock_st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f_0_b19ff617_luna_v6",
+      "similarity": 100,
+      "scale": [
+        0.42895,
+        0.43211,
+        0.39525
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/st_dolmen_ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4_72f05d37_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/st_dolmen/rock_rock_st_dolmen_ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4_72f05d37_luna_v6",
+      "similarity": 67,
+      "scale": [
+        2.07389,
+        1.66079,
+        2.05515
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    }
+  ]
+}

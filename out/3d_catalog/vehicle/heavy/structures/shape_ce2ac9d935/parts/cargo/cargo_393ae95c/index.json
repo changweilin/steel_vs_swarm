@@ -1,0 +1,119 @@
+{
+  "id": "cargo_393ae95c",
+  "role": "cargo",
+  "type": "tapered_box",
+  "signature": "tapered_box|0,0,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_d2462cec993f618a_30498ed7_luna_v6",
+    "name": "dump_bed",
+    "part": {
+      "name": "dump_bed",
+      "type": "tapered_box",
+      "dimensions": [
+        5.06,
+        1.65,
+        2.714
+      ],
+      "topDimensions": [
+        4.416,
+        2.419
+      ],
+      "position": [
+        -1.1,
+        2.035,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14722605,
+      "triangles": 12,
+      "role": "cargo",
+      "colorKey": "facadeHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_d2462cec993f618a_30498ed7_luna_v6",
+      "name": "dump_bed",
+      "position": [
+        -1.1,
+        2.035,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 14722605
+    },
+    {
+      "objectKey": "vehicle/heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP_a03e65f8_luna_v6",
+      "name": "dump_bed",
+      "position": [
+        -1.1,
+        2.035,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 14722605
+    },
+    {
+      "objectKey": "vehicle/heavy_photooriginal-98016-XUIGz_15f63811_luna_v6",
+      "name": "dump_bed",
+      "position": [
+        -1.1,
+        2.035,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 14722605
+    },
+    {
+      "objectKey": "vehicle/heavy_20260514234220_58_5e037c56_luna_v6",
+      "name": "dump_bed",
+      "position": [
+        -1.1,
+        2.035,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 14722605
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed",
+      "position": [
+        -1.1,
+        2.035,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facadeHex",
+      "color": 2521290
+    }
+  ]
+}

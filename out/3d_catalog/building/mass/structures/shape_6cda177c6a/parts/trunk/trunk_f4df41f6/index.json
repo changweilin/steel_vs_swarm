@@ -1,0 +1,50 @@
+{
+  "id": "trunk_f4df41f6",
+  "role": "trunk",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "building/mass_about-06_2_orig_30b3c7c0_v6",
+    "name": "tree_trunk",
+    "part": {
+      "name": "tree_trunk",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.4,
+        0.6
+      ],
+      "height": 7,
+      "position": [
+        4,
+        3.5,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6381921,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_about-06_2_orig_30b3c7c0_v6",
+      "name": "tree_trunk",
+      "position": [
+        4,
+        3.5,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6381921
+    }
+  ]
+}

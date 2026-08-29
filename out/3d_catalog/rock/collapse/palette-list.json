@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "collapse",
+  "palettes": [
+    {
+      "id": "palette_815aeacd",
+      "name": "執行期繼承配色",
+      "colors": null,
+      "objects": [
+        {
+          "key": "rock/collapse_a",
+          "source": "runtime-consumer"
+        }
+      ]
+    },
+    {
+      "id": "palette_8b1e3742",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 5602375,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 10467954
+      },
+      "objects": [
+        {
+          "key": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_993f4b33_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5_c39af10b_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

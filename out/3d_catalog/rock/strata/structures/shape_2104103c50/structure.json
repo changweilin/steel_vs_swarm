@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_2104103c50",
+  "canonicalKey": "rock/strata_ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9_7d0472ba_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/strata_ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9_7d0472ba_luna_v6",
+    "bounds": {
+      "min": [
+        -1.647,
+        0,
+        -1.5946
+      ],
+      "max": [
+        1.54,
+        4.6331,
+        2.5766
+      ],
+      "size": [
+        3.187,
+        4.633,
+        4.171
+      ],
+      "rMax": 3.002,
+      "triangles": 384,
+      "vertices": 218
+    },
+    "parts": [
+      {
+        "name": "ground_contact_anchor",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.201,
+          1.54
+        ],
+        "height": 0.339,
+        "position": [
+          0,
+          0.169,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6120799,
+        "triangles": 32
+      },
+      {
+        "name": "strata_mass_0",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.037,
+          1.419
+        ],
+        "height": 0.745,
+        "position": [
+          -0.176,
+          0.704,
+          -0.176
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 8488055,
+        "triangles": 32
+      },
+      {
+        "name": "strata_mass_1",
+        "type": "frustum_pyramid",
+        "sides": 9,
+        "radii": [
+          0.978,
+          1.338
+        ],
+        "height": 0.745,
+        "position": [
+          0.176,
+          1.407,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 8488055,
+        "triangles": 36
+      },
+      {
+        "name": "strata_mass_2",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.92,
+          1.258
+        ],
+        "height": 0.745,
+        "position": [
+          -0.176,
+          2.111,
+          0.176
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 8488055,
+        "triangles": 32
+      },
+      {
+        "name": "strata_mass_3",
+        "type": "frustum_pyramid",
+        "sides": 9,
+        "radii": [
+          0.861,
+          1.178
+        ],
+        "height": 0.745,
+        "position": [
+          0.176,
+          2.815,
+          -0.176
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 8488055,
+        "triangles": 36
+      },
+      {
+        "name": "strata_mass_4",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.803,
+          1.098
+        ],
+        "height": 0.745,
+        "position": [
+          -0.176,
+          3.518,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 8488055,
+        "triangles": 32
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/strata_ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9_7d0472ba_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/strata/rock_rock_strata_ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9_7d0472ba_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_25e6426a"
+      ]
+    },
+    {
+      "key": "rock/strata_ov_a413d69e-bf5c-449a-828f-19ea97dd522a_ce7157e6_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/strata/rock_rock_strata_ov_a413d69e-bf5c-449a-828f-19ea97dd522a_ce7157e6_luna_v6",
+      "similarity": 65,
+      "scale": [
+        3.31723,
+        3.44572,
+        2.56581
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

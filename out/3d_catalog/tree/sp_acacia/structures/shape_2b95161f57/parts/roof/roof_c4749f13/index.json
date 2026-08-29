@@ -1,0 +1,49 @@
+{
+  "id": "roof_c4749f13",
+  "role": "roof",
+  "type": "hemisphere_dome",
+  "signature": "hemisphere_dome|1,0.375,1|0",
+  "canonical": {
+    "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+    "name": "acacia_crown_7_umbrella_cap",
+    "part": {
+      "name": "acacia_crown_7_umbrella_cap",
+      "type": "hemisphere_dome",
+      "radii": [
+        0.877,
+        0.317,
+        0.87
+      ],
+      "position": [
+        1.265,
+        5.755,
+        -1.454
+      ],
+      "rotation": [
+        -0.066,
+        5.428,
+        0.08
+      ],
+      "color": 5208643,
+      "triangles": 170
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+      "name": "acacia_crown_7_umbrella_cap",
+      "position": [
+        1.265,
+        5.755,
+        -1.454
+      ],
+      "rotation": [
+        -0.066,
+        5.428,
+        0.08
+      ],
+      "colorKey": null,
+      "color": 5208643
+    }
+  ]
+}

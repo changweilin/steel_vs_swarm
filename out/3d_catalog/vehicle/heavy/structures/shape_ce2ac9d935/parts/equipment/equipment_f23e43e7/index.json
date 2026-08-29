@@ -1,0 +1,100 @@
+{
+  "id": "equipment_f23e43e7",
+  "role": "equipment",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.625,1|10",
+  "canonical": {
+    "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+    "name": "crane_outrigger_pad_left",
+    "part": {
+      "name": "crane_outrigger_pad_left",
+      "type": "cylinder",
+      "sides": 10,
+      "radii": [
+        0.14,
+        0.14
+      ],
+      "height": 0.16,
+      "position": [
+        -2.1,
+        0.12,
+        -1.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4208165,
+      "triangles": 40,
+      "role": "equipment",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "name": "crane_outrigger_pad_left",
+      "position": [
+        -2.1,
+        0.12,
+        -1.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 4208165
+    },
+    {
+      "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "name": "crane_outrigger_pad_right",
+      "position": [
+        -2.1,
+        0.12,
+        1.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 4208165
+    },
+    {
+      "objectKey": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "name": "crane_outrigger_pad_left",
+      "position": [
+        -2.1,
+        0.12,
+        -1.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1516851
+    },
+    {
+      "objectKey": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "name": "crane_outrigger_pad_right",
+      "position": [
+        -2.1,
+        0.12,
+        1.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1516851
+    }
+  ]
+}

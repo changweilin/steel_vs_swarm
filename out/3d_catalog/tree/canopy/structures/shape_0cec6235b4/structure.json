@@ -1,0 +1,2034 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_0cec6235b4",
+  "canonicalKey": "tree/canopy_1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg_5ba9be08_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/canopy_1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg_5ba9be08_luna_v6",
+    "bounds": {
+      "min": [
+        -3.5581,
+        0,
+        -3.1608
+      ],
+      "max": [
+        4.6547,
+        5.7112,
+        3.2562
+      ],
+      "size": [
+        8.213,
+        5.711,
+        6.417
+      ],
+      "rMax": 5.681,
+      "triangles": 1364,
+      "vertices": 811
+    },
+    "parts": [
+      {
+        "name": "banyan_bole",
+        "type": "conical_frustum",
+        "sides": 11,
+        "radii": [
+          0.62,
+          1.15
+        ],
+        "height": 5.3,
+        "position": [
+          0,
+          2.65,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 44
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.972,
+          1.35
+        ],
+        "height": 0.58,
+        "position": [
+          0,
+          0.29,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 40
+      },
+      {
+        "name": "banyan_primary_0",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.108,
+          0.15
+        ],
+        "height": 0.99,
+        "position": [
+          0.488,
+          3.973,
+          0.016
+        ],
+        "rotation": [
+          1.41,
+          1.537,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 32
+      },
+      {
+        "name": "banyan_secondary_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.065,
+          0.09
+        ],
+        "height": 2.489,
+        "position": [
+          2.172,
+          4.395,
+          0.073
+        ],
+        "rotation": [
+          1.292,
+          1.537,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "banyan_leaf_mass_0_banyan_mass",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.288,
+          0.661,
+          0.99
+        ],
+        "position": [
+          3.368,
+          4.737,
+          0.114
+        ],
+        "rotation": [
+          0,
+          0.034,
+          0
+        ],
+        "color": 2640433,
+        "triangles": 160
+      },
+      {
+        "name": "banyan_leaf_mass_0_banyan_edge",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.374,
+        "position": [
+          3.805,
+          4.816,
+          -0.164
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "banyan_primary_1",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.108,
+          0.15
+        ],
+        "height": 1.107,
+        "position": [
+          0.249,
+          3.439,
+          0.48
+        ],
+        "rotation": [
+          1.354,
+          0.479,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 32
+      },
+      {
+        "name": "banyan_secondary_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.065,
+          0.09
+        ],
+        "height": 1.59,
+        "position": [
+          0.77,
+          4.092,
+          1.482
+        ],
+        "rotation": [
+          0.834,
+          0.479,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "banyan_leaf_mass_1_banyan_mass",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.345,
+          0.715,
+          1.056
+        ],
+        "position": [
+          1.042,
+          4.626,
+          2.005
+        ],
+        "rotation": [
+          0,
+          1.091,
+          0
+        ],
+        "color": 5208643,
+        "triangles": 160
+      },
+      {
+        "name": "banyan_leaf_mass_1_banyan_edge",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.399,
+        "position": [
+          1.499,
+          4.712,
+          1.709
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "banyan_primary_2",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.108,
+          0.15
+        ],
+        "height": 1.047,
+        "position": [
+          -0.4,
+          3.772,
+          0.29
+        ],
+        "rotation": [
+          1.231,
+          -0.944,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 32
+      },
+      {
+        "name": "banyan_secondary_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.065,
+          0.09
+        ],
+        "height": 2.053,
+        "position": [
+          -1.592,
+          4.258,
+          1.153
+        ],
+        "rotation": [
+          1.263,
+          -0.944,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "banyan_leaf_mass_2_banyan_mass",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.248,
+          0.587,
+          1.033
+        ],
+        "position": [
+          -2.384,
+          4.569,
+          1.726
+        ],
+        "rotation": [
+          0,
+          2.515,
+          0
+        ],
+        "color": 2640433,
+        "triangles": 160
+      },
+      {
+        "name": "banyan_leaf_mass_2_banyan_edge",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.391,
+        "position": [
+          -1.96,
+          4.639,
+          1.437
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "banyan_primary_3",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.108,
+          0.15
+        ],
+        "height": 0.782,
+        "position": [
+          -0.265,
+          4.34,
+          -0.246
+        ],
+        "rotation": [
+          1.181,
+          -2.32,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 32
+      },
+      {
+        "name": "banyan_secondary_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.065,
+          0.09
+        ],
+        "height": 1.613,
+        "position": [
+          -1.077,
+          4.791,
+          -1.002
+        ],
+        "rotation": [
+          1.187,
+          -2.32,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "banyan_leaf_mass_3_banyan_mass",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.374,
+          0.452,
+          0.941
+        ],
+        "position": [
+          -1.625,
+          5.093,
+          -1.511
+        ],
+        "rotation": [
+          0,
+          3.891,
+          0
+        ],
+        "color": 5208643,
+        "triangles": 160
+      },
+      {
+        "name": "banyan_leaf_mass_3_banyan_edge",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.356,
+        "position": [
+          -1.158,
+          5.147,
+          -1.774
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "banyan_primary_4",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.108,
+          0.15
+        ],
+        "height": 1.012,
+        "position": [
+          0.212,
+          4.313,
+          -0.448
+        ],
+        "rotation": [
+          1.374,
+          2.7,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 32
+      },
+      {
+        "name": "banyan_secondary_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.065,
+          0.09
+        ],
+        "height": 1.626,
+        "position": [
+          0.728,
+          4.806,
+          -1.539
+        ],
+        "rotation": [
+          1.064,
+          2.7,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "banyan_leaf_mass_4_banyan_mass",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.02,
+          0.51,
+          0.927
+        ],
+        "position": [
+          1.032,
+          5.201,
+          -2.182
+        ],
+        "rotation": [
+          0,
+          5.154,
+          0
+        ],
+        "color": 2640433,
+        "triangles": 160
+      },
+      {
+        "name": "banyan_leaf_mass_4_banyan_edge",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.35,
+        "position": [
+          1.379,
+          5.262,
+          -2.441
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/canopy_1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg_5ba9be08_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_1_.jpg_5ba9be08_luna_v6",
+      "similarity": 31,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree_e80b117b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree_e80b117b_luna_v6",
+      "similarity": 6,
+      "scale": [
+        0.77767,
+        2.25757,
+        0.89045
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466_5ab1822d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flower_a7fe3a1b_5ab1822d_luna_v6",
+      "similarity": 60,
+      "scale": [
+        0.66772,
+        1.27491,
+        0.88795
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524_cec12098_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524_cec12098_luna_v6",
+      "similarity": 57,
+      "scale": [
+        0.73493,
+        1.08667,
+        1.06093
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-flowers-bonsai-tree-png-image_12485135_6d52aee2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-flowers-bonsai-tree-png-image_12485135_6d52aee2_luna_v6",
+      "similarity": 62,
+      "scale": [
+        0.64861,
+        1.22693,
+        0.9093
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)~1_9854096b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_1_1_9854096b_luna_v6",
+      "similarity": 19,
+      "scale": [
+        0.67892,
+        1.67134,
+        0.77341
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)~2_8f7a3b6b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_1_2_8f7a3b6b_luna_v6",
+      "similarity": 20,
+      "scale": [
+        0.73445,
+        1.76694,
+        0.84479
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree~0_924dda00_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_0_924dda00_luna_v6",
+      "similarity": 20,
+      "scale": [
+        0.79082,
+        1.9065,
+        0.89793
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree~1_2ef3ca15_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_1_2ef3ca15_luna_v6",
+      "similarity": 14,
+      "scale": [
+        0.79898,
+        2.10874,
+        0.9132
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree~2_95bcd0e0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree_2_95bcd0e0_luna_v6",
+      "similarity": 19,
+      "scale": [
+        0.71862,
+        1.74068,
+        0.81876
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166_ef0fe5ae_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant_ba4870e7_ef0fe5ae_luna_v6",
+      "similarity": 24,
+      "scale": [
+        0.76976,
+        1.71826,
+        0.87424
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi_37a0117f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi_37a0117f_luna_v6",
+      "similarity": 19,
+      "scale": [
+        0.76099,
+        1.79356,
+        0.86209
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-alaska-cedar-tree-png-image_5004137_4c1387c9_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-alaska-cedar-tree-png-image_5004137_4c1387c9_luna_v6",
+      "similarity": 23,
+      "scale": [
+        0.81541,
+        1.84083,
+        0.9358
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531_738f4f47_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531_738f4f47_luna_v6",
+      "similarity": 10,
+      "scale": [
+        0.73712,
+        2.02451,
+        0.84229
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-coniferous-tree-png-image_6230847_52c12fc1_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-coniferous-tree-png-image_6230847_52c12fc1_luna_v6",
+      "similarity": 11,
+      "scale": [
+        0.77755,
+        2.09823,
+        0.87814
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677_5bc2394a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677_5bc2394a_luna_v6",
+      "similarity": 16,
+      "scale": [
+        0.77073,
+        1.95955,
+        0.8744
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957_82e8ecde_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957_82e8ecde_luna_v6",
+      "similarity": 6,
+      "scale": [
+        0.71898,
+        2.09911,
+        0.82422
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_092313_274u9V4y_873aaab3_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_092313_274u9V4y_873aaab3_luna_v6",
+      "similarity": 100,
+      "scale": [
+        0.76805,
+        1.40693,
+        1.09225
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_1342001_PE948961_S5_924eb792_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_1342001_PE948961_S5_924eb792_luna_v6",
+      "similarity": 72,
+      "scale": [
+        0.81237,
+        1.21975,
+        0.88936
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_1513x4724_wmkn_328537037215_202606050063000000_8797d68b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_1513x4724_wmkn_328537037215_202606050063000000_8797d68b_luna_v6",
+      "similarity": 76,
+      "scale": [
+        0.80032,
+        1.25074,
+        1.17983
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_15dc1b1d19bccbbf_946cbc5f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_15dc1b1d19bccbbf_946cbc5f_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.76087,
+        1.44546,
+        1.07402
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_20210316155158__33_2e56b5c2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_20210316155158__33_2e56b5c2_luna_v6",
+      "similarity": 87,
+      "scale": [
+        0.69804,
+        1.42269,
+        1.11158
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_3f0fcc8d74ce8fcc_961e5001_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_3f0fcc8d74ce8fcc_961e5001_luna_v6",
+      "similarity": 88,
+      "scale": [
+        0.83757,
+        1.48871,
+        1.07231
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_495849468_5eb52f46_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_495849468_5eb52f46_luna_v6",
+      "similarity": 81,
+      "scale": [
+        0.74967,
+        1.34565,
+        0.91336
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_51YNHnO1PXL_635efe40_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_51YNHnO1PXL_635efe40_luna_v6",
+      "similarity": 73,
+      "scale": [
+        0.75551,
+        1.18316,
+        1.06483
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_5D11CCA4-7909-424_2dc7bfb5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_5D11CCA4-7909-424_2dc7bfb5_luna_v6",
+      "similarity": 89,
+      "scale": [
+        0.74078,
+        1.38207,
+        1.13932
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_700x1024_wmkn_0_C20250121000185_54f12d15_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_700x1024_wmkn_0_C20250121000185_54f12d15_luna_v6",
+      "similarity": 76,
+      "scale": [
+        0.7202,
+        1.15759,
+        1.10254
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_70248068_1006_59d28cf9_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_70248068_1006_59d28cf9_luna_v6",
+      "similarity": 75,
+      "scale": [
+        0.89346,
+        1.42392,
+        0.97585
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_7d535472ae45d3eb_2d1835d4_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_7d535472ae45d3eb_2d1835d4_luna_v6",
+      "similarity": 65,
+      "scale": [
+        0.86205,
+        1.19926,
+        1.04192
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_800_eb53c296eb6fc1ac757c290a1f6444b8_5e360641_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_800_eb53c296eb6fc1ac757c290a1f6444b8_5e360641_luna_v6",
+      "similarity": 82,
+      "scale": [
+        0.68806,
+        1.44843,
+        1.08415
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_7dc5e04e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_7dc5e04e_luna_v6",
+      "similarity": 75,
+      "scale": [
+        0.90661,
+        1.43092,
+        0.97694
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_abc3c15b66b89dff_f7d67c3a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_abc3c15b66b89dff_f7d67c3a_luna_v6",
+      "similarity": 80,
+      "scale": [
+        0.81395,
+        1.40151,
+        0.94265
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ADEY1909 (1)_19cd356c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ADEY1909_1__19cd356c_luna_v6",
+      "similarity": 81,
+      "scale": [
+        0.80823,
+        1.3903,
+        0.95808
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ADEY1909_78a80c1f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ADEY1909_78a80c1f_luna_v6",
+      "similarity": 89,
+      "scale": [
+        0.80056,
+        1.3973,
+        1.01995
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1)_ce922689_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_1__ce922689_luna_v6",
+      "similarity": 87,
+      "scale": [
+        0.79618,
+        1.33584,
+        1.08446
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_5636d1fb_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_5636d1fb_luna_v6",
+      "similarity": 71,
+      "scale": [
+        0.73932,
+        1.44721,
+        0.8931
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_d0cec1f4425528fa_20c37e64_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_d0cec1f4425528fa_20c37e64_luna_v6",
+      "similarity": 81,
+      "scale": [
+        0.73676,
+        1.19489,
+        0.97974
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ddf148d60683c553 (1)_24d9da8d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ddf148d60683c553_1__24d9da8d_luna_v6",
+      "similarity": 71,
+      "scale": [
+        0.83149,
+        1.27211,
+        1.11579
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ddf148d60683c553_a231758c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ddf148d60683c553_a231758c_luna_v6",
+      "similarity": 65,
+      "scale": [
+        0.87276,
+        1.26808,
+        1.08742
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_e7838fe5b8bde5ad90_3df9643c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_e7838fe5b8bde5ad90_3df9643c_luna_v6",
+      "similarity": 74,
+      "scale": [
+        0.85255,
+        1.29434,
+        0.94
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_FB_IMG_1786332532197 (2)_f1be2ac0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_FB_IMG_1786332532197_2__f1be2ac0_luna_v6",
+      "similarity": 67,
+      "scale": [
+        0.91964,
+        1.33514,
+        0.97055
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_FB_IMG_1786333297321_662d7715_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_FB_IMG_1786333297321_662d7715_luna_v6",
+      "similarity": 92,
+      "scale": [
+        0.81712,
+        1.46524,
+        1.10379
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_FB_IMG_1786333300422_b9d07c81_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_FB_IMG_1786333300422_b9d07c81_luna_v6",
+      "similarity": 82,
+      "scale": [
+        0.70072,
+        1.40676,
+        1.05517
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_FB_IMG_1786818411804_b80de3bf_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_FB_IMG_1786818411804_b80de3bf_luna_v6",
+      "similarity": 72,
+      "scale": [
+        0.77499,
+        1.18088,
+        0.89263
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_getImage-2-4_99a42d17_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_getImage-2-4_99a42d17_luna_v6",
+      "similarity": 88,
+      "scale": [
+        0.76854,
+        1.32639,
+        1.08961
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_getImage-3-4_48c2e79c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_getImage-3-4_48c2e79c_luna_v6",
+      "similarity": 78,
+      "scale": [
+        0.74662,
+        1.21327,
+        1.11002
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_id13801237-shutterstock_1868040619s_078185eb_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_id13801237-shutterstock_1868040619s_078185eb_luna_v6",
+      "similarity": 68,
+      "scale": [
+        0.82808,
+        1.16214,
+        0.96182
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (1)_713e5d6b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_1__713e5d6b_luna_v6",
+      "similarity": 84,
+      "scale": [
+        0.78753,
+        1.31938,
+        0.96011
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (10)_740c582d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_10__740c582d_luna_v6",
+      "similarity": 64,
+      "scale": [
+        0.78692,
+        1.14726,
+        1.01699
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (11)_41725965_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_11__41725965_luna_v6",
+      "similarity": 68,
+      "scale": [
+        0.88457,
+        1.22868,
+        0.98535
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (12)_b6cde53d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_12__b6cde53d_luna_v6",
+      "similarity": 69,
+      "scale": [
+        0.82053,
+        1.23463,
+        1.10254
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (13)_cb2a2a7a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_13__cb2a2a7a_luna_v6",
+      "similarity": 83,
+      "scale": [
+        0.77243,
+        1.41937,
+        0.97678
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (14)_066ffa39_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_14__066ffa39_luna_v6",
+      "similarity": 67,
+      "scale": [
+        0.92585,
+        1.3066,
+        1.04535
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (15)_a08b0eaa_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_15__a08b0eaa_luna_v6",
+      "similarity": 65,
+      "scale": [
+        0.77877,
+        1.14726,
+        1.01403
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (16)_307a907b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_16__307a907b_luna_v6",
+      "similarity": 85,
+      "scale": [
+        0.7325,
+        1.3889,
+        0.98535
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (2)_ebb7bf0d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_2__ebb7bf0d_luna_v6",
+      "similarity": 72,
+      "scale": [
+        0.91477,
+        1.35055,
+        1.05283
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (3)_0f124ac2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_3__0f124ac2_luna_v6",
+      "similarity": 71,
+      "scale": [
+        0.7952,
+        1.16267,
+        1.11454
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (4)_fcbe8335_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_4__fcbe8335_luna_v6",
+      "similarity": 66,
+      "scale": [
+        0.85146,
+        1.45946,
+        0.84681
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (5)_f1232344_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_5__f1232344_luna_v6",
+      "similarity": 87,
+      "scale": [
+        0.79764,
+        1.38715,
+        1.03974
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (6)_daf4c5ab_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_6__daf4c5ab_luna_v6",
+      "similarity": 75,
+      "scale": [
+        0.86314,
+        1.29942,
+        1.02634
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (7)_0a00a507_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_7__0a00a507_luna_v6",
+      "similarity": 88,
+      "scale": [
+        0.73091,
+        1.2553,
+        0.94172
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (8)_4f1f3fd0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_8__4f1f3fd0_luna_v6",
+      "similarity": 68,
+      "scale": [
+        0.92573,
+        1.32394,
+        1.04987
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images (9)_c2f2b4ad_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_9__c2f2b4ad_luna_v6",
+      "similarity": 82,
+      "scale": [
+        0.81882,
+        1.3931,
+        0.95855
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_images_4a941b1c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_images_4a941b1c_luna_v6",
+      "similarity": 72,
+      "scale": [
+        0.85097,
+        1.25985,
+        0.97522
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_manual_FB_IMG_1786332532197_ef33de0b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_manual_FB_IMG_1786332532197_ef33de0b_luna_v6",
+      "similarity": 78,
+      "scale": [
+        0.80762,
+        1.42077,
+        0.92099
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_manual_FB_IMG_1786332658706~0_3a65d4a0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_manual_FB_IMG_1786332658706_0_3a65d4a0_luna_v6",
+      "similarity": 86,
+      "scale": [
+        0.78668,
+        1.32446,
+        1.09833
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_manual_FB_IMG_1786332658706~1_395b0441_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_manual_FB_IMG_1786332658706_1_395b0441_luna_v6",
+      "similarity": 69,
+      "scale": [
+        0.87617,
+        1.26563,
+        1.03101
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_06b3b326-cdae-4e29-847f-4baba4266519_a2ef1a85_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_06b3b326-cdae-4e29-847f-4baba4266519_a2ef1a85_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.76257,
+        1.32586,
+        1.0533
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_26750ed5-e0a1-4a46-a301-68040c9d4075_7837fd24_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_26750ed5-e0a1-4a46-a301-68040c9d4075_7837fd24_luna_v6",
+      "similarity": 73,
+      "scale": [
+        0.79496,
+        1.33164,
+        0.85959
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_3b61c08f-fc59-4b3b-be6f-dce89b643599_f6ad0d4c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_3b61c08f-fc59-4b3b-be6f-dce89b643599_f6ad0d4c_luna_v6",
+      "similarity": 77,
+      "scale": [
+        0.71436,
+        1.44721,
+        0.95621
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_4e78d273-4403-467b-8ec3-439619a55e01_c5b3023f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_4e78d273-4403-467b-8ec3-439619a55e01_c5b3023f_luna_v6",
+      "similarity": 86,
+      "scale": [
+        0.78242,
+        1.346,
+        1.09724
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_52cfa19d-01af-4783-a884-9bd7ce684c3b_eb2e589d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_52cfa19d-01af-4783-a884-9bd7ce684c3b_eb2e589d_luna_v6",
+      "similarity": 86,
+      "scale": [
+        0.7879,
+        1.30678,
+        0.98644
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4_767bbc82_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4_767bbc82_luna_v6",
+      "similarity": 67,
+      "scale": [
+        0.80397,
+        1.14884,
+        0.88795
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_71b76588-800c-4b51-892d-fb42f7067fb5_4649966e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_71b76588-800c-4b51-892d-fb42f7067fb5_4649966e_luna_v6",
+      "similarity": 86,
+      "scale": [
+        0.78327,
+        1.44055,
+        1.03958
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_b1917d71-440a-4499-9172-d65dcf7d9676_78a1b2d0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_b1917d71-440a-4499-9172-d65dcf7d9676_78a1b2d0_luna_v6",
+      "similarity": 64,
+      "scale": [
+        0.85499,
+        1.15321,
+        1.01325
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_c59c55e0-5a05-4bdc-9e7b-06e08c98f46c_2f396ea9_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_c59c55e0-5a05-4bdc-9e7b-06e08c98f46c_2f396ea9_luna_v6",
+      "similarity": 76,
+      "scale": [
+        0.85352,
+        1.35003,
+        1.14306
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_cce311a9-888e-485c-9a6d-352a912ffa60_9432faa0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_cce311a9-888e-485c-9a6d-352a912ffa60_9432faa0_luna_v6",
+      "similarity": 69,
+      "scale": [
+        0.88676,
+        1.46577,
+        0.92084
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb~0_eca3ac05_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb_0_eca3ac05_luna_v6",
+      "similarity": 86,
+      "scale": [
+        0.79252,
+        1.41779,
+        1.03319
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb~1_6d908343_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb_1_6d908343_luna_v6",
+      "similarity": 85,
+      "scale": [
+        0.72556,
+        1.24584,
+        1.03584
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_p6CRn6GXmKSX_135cbc83_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_p6CRn6GXmKSX_135cbc83_luna_v6",
+      "similarity": 82,
+      "scale": [
+        0.83343,
+        1.33759,
+        1.09584
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_Pachycereus_pringlei_forest_7d3d7f99_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_Pachycereus_pringlei_forest_7d3d7f99_luna_v6",
+      "similarity": 63,
+      "scale": [
+        0.95178,
+        1.21993,
+        1.01496
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_wc_115895229_eccf085a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_wc_115895229_eccf085a_luna_v6",
+      "similarity": 84,
+      "scale": [
+        0.81408,
+        1.38172,
+        0.988
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_wc_182669735_cc8b8557_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_wc_182669735_cc8b8557_luna_v6",
+      "similarity": 86,
+      "scale": [
+        0.84512,
+        1.41499,
+        1.03647
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_wc_32016498_5cb9c575_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_wc_32016498_5cb9c575_luna_v6",
+      "similarity": 86,
+      "scale": [
+        0.85937,
+        1.43425,
+        1.10909
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_wc_38576339_6bf574da_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_wc_38576339_6bf574da_luna_v6",
+      "similarity": 84,
+      "scale": [
+        0.8036,
+        1.37787,
+        0.97772
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_wc_63419250_69a865f9_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_wc_63419250_69a865f9_luna_v6",
+      "similarity": 76,
+      "scale": [
+        0.81274,
+        1.2651,
+        1.06904
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_wc_63419309_33388c2e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_wc_63419309_33388c2e_luna_v6",
+      "similarity": 80,
+      "scale": [
+        0.80336,
+        1.43915,
+        0.95948
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_wc_81063742_2b82b17f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_wc_81063742_2b82b17f_luna_v6",
+      "similarity": 78,
+      "scale": [
+        0.7661,
+        1.19051,
+        0.9665
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_wc_89358297_d368e7f0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_wc_89358297_d368e7f0_luna_v6",
+      "similarity": 75,
+      "scale": [
+        0.87191,
+        1.33164,
+        1.11781
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-a-small-juniper-bonsai-png-image_12474477_b04628ba_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-a-small-juniper-bonsai-png-image_12474477_b04628ba_luna_v6",
+      "similarity": 17,
+      "scale": [
+        0.44296,
+        1.02084,
+        0.49743
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-chinese-juniper-isolated-on-white-background-png-image_320181_0b06504f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-chinese-juniper-isolated-on-white-background-png-image_320181_0b06504f_luna_v6",
+      "similarity": 9,
+      "scale": [
+        0.46366,
+        1.16932,
+        0.51551
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    }
+  ]
+}

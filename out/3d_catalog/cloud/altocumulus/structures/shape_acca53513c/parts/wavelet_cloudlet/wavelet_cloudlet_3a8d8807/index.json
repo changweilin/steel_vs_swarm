@@ -1,0 +1,431 @@
+{
+  "id": "wavelet_cloudlet_3a8d8807",
+  "role": "wavelet_cloudlet",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+    "name": "altocumulus_wavelet_back_0",
+    "part": {
+      "name": "altocumulus_wavelet_back_0",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.329,
+      "position": [
+        -4.947,
+        1.6,
+        1.98
+      ],
+      "rotation": [
+        0.08,
+        0,
+        0.06
+      ],
+      "color": 13817823,
+      "triangles": 36,
+      "role": "wavelet_cloudlet",
+      "colorKey": "facadeHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_0",
+      "position": [
+        -4.947,
+        1.6,
+        1.98
+      ],
+      "rotation": [
+        0.08,
+        0,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_1",
+      "position": [
+        -3.138,
+        1.67,
+        1.8
+      ],
+      "rotation": [
+        0.08,
+        0.21,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_3",
+      "position": [
+        0.792,
+        1.77,
+        1.76
+      ],
+      "rotation": [
+        0.08,
+        0.63,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_5",
+      "position": [
+        3.973,
+        1.57,
+        1.82
+      ],
+      "rotation": [
+        0.08,
+        1.05,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_6",
+      "position": [
+        -4.083,
+        1.72,
+        0.78
+      ],
+      "rotation": [
+        0.08,
+        1.26,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_7",
+      "position": [
+        -2.013,
+        1.79,
+        0.96
+      ],
+      "rotation": [
+        0.08,
+        1.47,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_8",
+      "position": [
+        -0.193,
+        1.8,
+        0.82
+      ],
+      "rotation": [
+        0.08,
+        1.68,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_9",
+      "position": [
+        1.176,
+        1.76,
+        0.98
+      ],
+      "rotation": [
+        0.08,
+        1.89,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_10",
+      "position": [
+        3.357,
+        1.71,
+        0.8
+      ],
+      "rotation": [
+        0.08,
+        2.1,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_11",
+      "position": [
+        -4.604,
+        1.8,
+        -0.06
+      ],
+      "rotation": [
+        0.08,
+        2.31,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_12",
+      "position": [
+        -2.905,
+        1.86,
+        -0.22
+      ],
+      "rotation": [
+        0.08,
+        2.52,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_13",
+      "position": [
+        -0.834,
+        1.87,
+        0
+      ],
+      "rotation": [
+        0.08,
+        2.73,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_14",
+      "position": [
+        0.806,
+        1.93,
+        -0.18
+      ],
+      "rotation": [
+        0.08,
+        2.94,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_15",
+      "position": [
+        2.655,
+        1.83,
+        -0.04
+      ],
+      "rotation": [
+        0.08,
+        3.15,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_16",
+      "position": [
+        4.316,
+        1.75,
+        -0.16
+      ],
+      "rotation": [
+        0.08,
+        3.36,
+        0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13817823
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_17",
+      "position": [
+        -3.694,
+        1.96,
+        -1.04
+      ],
+      "rotation": [
+        0.08,
+        3.57,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_18",
+      "position": [
+        -1.913,
+        2.02,
+        -1.18
+      ],
+      "rotation": [
+        0.08,
+        3.78,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_19",
+      "position": [
+        0.156,
+        2.03,
+        -1.06
+      ],
+      "rotation": [
+        0.08,
+        3.99,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_20",
+      "position": [
+        1.777,
+        2,
+        -1.24
+      ],
+      "rotation": [
+        0.08,
+        4.2,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_21",
+      "position": [
+        3.356,
+        1.93,
+        -1.08
+      ],
+      "rotation": [
+        0.08,
+        4.41,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_22",
+      "position": [
+        -4.157,
+        2.1,
+        -2.15
+      ],
+      "rotation": [
+        0.08,
+        4.62,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_23",
+      "position": [
+        -2.268,
+        2.13,
+        -2.02
+      ],
+      "rotation": [
+        0.08,
+        4.83,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_24",
+      "position": [
+        -0.137,
+        2.14,
+        -2.2
+      ],
+      "rotation": [
+        0.08,
+        5.04,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_25",
+      "position": [
+        2.093,
+        2.12,
+        -2.04
+      ],
+      "rotation": [
+        0.08,
+        5.25,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    },
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_wavelet_back_26",
+      "position": [
+        3.793,
+        2.07,
+        -2.13
+      ],
+      "rotation": [
+        0.08,
+        5.46,
+        0.06
+      ],
+      "colorKey": "roofHex",
+      "color": 11318464
+    }
+  ]
+}

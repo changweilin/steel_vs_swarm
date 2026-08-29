@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "cloud",
+  "subcategory": "altocumulus",
+  "palettes": [
+    {
+      "id": "palette_9d7a64a1",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 11318464,
+        "facadeHex": 13817823,
+        "baseHex": 9608105,
+        "accentHex": 15196380,
+        "glassHex": 16118260,
+        "darkHex": 7832209,
+        "brightHex": 16775409
+      },
+      "objects": [
+        {
+          "key": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

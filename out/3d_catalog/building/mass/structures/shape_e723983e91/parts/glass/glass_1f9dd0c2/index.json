@@ -1,0 +1,97 @@
+{
+  "id": "glass_1f9dd0c2",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0.125,1,1|0",
+  "canonical": {
+    "objectKey": "building/mass_b3e379243fd30275e809d93e81d22c8d_abcc6755_v6",
+    "name": "left_side_window_4",
+    "part": {
+      "name": "left_side_window_4",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -4.05,
+        3.9,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_b3e379243fd30275e809d93e81d22c8d_abcc6755_v6",
+      "name": "left_side_window_4",
+      "position": [
+        -4.05,
+        3.9,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_b3e379243fd30275e809d93e81d22c8d_abcc6755_v6",
+      "name": "left_side_window_3",
+      "position": [
+        -4.05,
+        6.9,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_b3e379243fd30275e809d93e81d22c8d_abcc6755_v6",
+      "name": "left_side_window_2",
+      "position": [
+        -4.05,
+        9.9,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_b3e379243fd30275e809d93e81d22c8d_abcc6755_v6",
+      "name": "left_side_window_1",
+      "position": [
+        -4.05,
+        12.9,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    }
+  ]
+}

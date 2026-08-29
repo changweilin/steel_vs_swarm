@@ -1,0 +1,178 @@
+{
+  "id": "canopy_9951d699",
+  "role": "canopy",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "attached_lichen_canopy_polyhedron",
+    "part": {
+      "name": "attached_lichen_canopy_polyhedron",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.687,
+        1.305
+      ],
+      "height": 0.389,
+      "position": [
+        -0.206,
+        5.189,
+        -0.105
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.206,
+        5.189,
+        -0.105
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.137,
+        3.183,
+        -0.06
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.36,
+        3.984,
+        -0.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.78,
+        20.82,
+        -0.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_e5540b76_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.78,
+        20.82,
+        -0.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_61bc69d997822_24ae0dc8_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.78,
+        18.131,
+        -0.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    },
+    {
+      "objectKey": "rock/main_images (2)_56b743a2_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.073,
+        1.371,
+        -0.036
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    },
+    {
+      "objectKey": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.261,
+        5.739,
+        -0.121
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    },
+    {
+      "objectKey": "rock/main_images (6)_fd534896_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.075,
+        1.608,
+        -0.036
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    }
+  ]
+}

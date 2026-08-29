@@ -1,0 +1,162 @@
+{
+  "id": "wheel_fe02369d",
+  "role": "wheel",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.625,1|16",
+  "canonical": {
+    "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+    "name": "front_left_wheel",
+    "part": {
+      "name": "front_left_wheel",
+      "type": "cylinder",
+      "sides": 16,
+      "radii": [
+        0.35,
+        0.35
+      ],
+      "height": 0.4,
+      "position": [
+        -1.02,
+        0.35,
+        -2.2
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "color": 657930,
+      "triangles": 64
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "front_left_wheel",
+      "position": [
+        -1.02,
+        0.35,
+        -2.2
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "front_right_wheel",
+      "position": [
+        1.02,
+        0.35,
+        -2.2
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "mid_left_wheel",
+      "position": [
+        -1.02,
+        0.35,
+        -0.6
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "mid_right_wheel",
+      "position": [
+        1.02,
+        0.35,
+        -0.6
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "rear_left_wheel_1",
+      "position": [
+        -1.05,
+        0.35,
+        1.8
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "rear_right_wheel_1",
+      "position": [
+        1.05,
+        0.35,
+        1.8
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "rear_left_wheel_2",
+      "position": [
+        -1.05,
+        0.35,
+        2.4
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "rear_right_wheel_2",
+      "position": [
+        1.05,
+        0.35,
+        2.4
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    }
+  ]
+}

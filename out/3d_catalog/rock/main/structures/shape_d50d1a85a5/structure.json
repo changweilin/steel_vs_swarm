@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d50d1a85a5",
+  "canonicalKey": "rock/main_images rock (1)~1_113c241e_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/main_images rock (1)~1_113c241e_v6",
+    "bounds": {
+      "min": [
+        -3.7367,
+        -2.2367,
+        -3.7367
+      ],
+      "max": [
+        4.0237,
+        8.3683,
+        3.7367
+      ],
+      "size": [
+        7.76,
+        10.605,
+        7.473
+      ],
+      "rMax": 5.491,
+      "triangles": 100,
+      "vertices": 58
+    },
+    "parts": [
+      {
+        "name": "rock_base",
+        "type": "dodecahedron_polyhedron",
+        "radius": 4,
+        "position": [
+          0,
+          1.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4210752,
+        "triangles": 36
+      },
+      {
+        "name": "rock_middle_layer",
+        "type": "icosahedron_polyhedron",
+        "radius": 3,
+        "position": [
+          0.5,
+          4,
+          -0.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6316128,
+        "triangles": 20
+      },
+      {
+        "name": "rock_peak",
+        "type": "dodecahedron_polyhedron",
+        "radius": 2,
+        "position": [
+          -0.2,
+          6.5,
+          -0.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 8421504,
+        "triangles": 36
+      },
+      {
+        "name": "rock_side_outcrop",
+        "type": "wedge",
+        "dimensions": [
+          3,
+          2.5,
+          3
+        ],
+        "position": [
+          2.5,
+          2,
+          0.5
+        ],
+        "rotation": [
+          0.1,
+          0.3,
+          -0.2
+        ],
+        "color": 6316128,
+        "triangles": 8
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/main_images rock (1)~1_113c241e_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_images_rock_1_1_v6",
+      "similarity": 27,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_59845035"
+      ]
+    },
+    {
+      "key": "rock/main_images~1_fc359b00_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_images_1_v6",
+      "similarity": 34,
+      "scale": [
+        0.51585,
+        0.49222,
+        0.37977
+      ],
+      "paletteIds": [
+        "palette_67fe2cff"
+      ]
+    },
+    {
+      "key": "rock/main_images 132_9d5b4c6e_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_images_132_v6",
+      "similarity": 39,
+      "scale": [
+        0.70142,
+        0.7984,
+        0.6668
+      ],
+      "paletteIds": [
+        "palette_9dd475bd"
+      ]
+    },
+    {
+      "key": "rock/main_600_0e22036ae47633cc17a7c569e53cc66f_15b601ab_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_600_0e22036ae47633cc17a7c569e53cc66f_v6",
+      "similarity": 100,
+      "scale": [
+        1.1643,
+        1.93305,
+        1.17409
+      ],
+      "paletteIds": [
+        "palette_c503e4ee"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "id": "mirror_05878f7b",
+  "role": "mirror",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|0.5,0.375,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "cab_mirror_left",
+    "part": {
+      "name": "cab_mirror_left",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.075,
+        0.065,
+        0.15
+      ],
+      "position": [
+        4.105,
+        2.431,
+        -1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16316657,
+      "triangles": 160,
+      "role": "mirror",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "cab_mirror_left",
+      "position": [
+        4.105,
+        2.431,
+        -1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16316657
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "cab_mirror_right",
+      "position": [
+        4.105,
+        2.431,
+        1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16316657
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "cab_mirror_left",
+      "position": [
+        4.105,
+        2.431,
+        -1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15975234
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "cab_mirror_right",
+      "position": [
+        4.105,
+        2.431,
+        1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15975234
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "cab_mirror_left",
+      "position": [
+        4.105,
+        2.431,
+        -1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16773077
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "cab_mirror_right",
+      "position": [
+        4.105,
+        2.431,
+        1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16773077
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "cab_mirror_left",
+      "position": [
+        4.105,
+        2.431,
+        -1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16251120
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "cab_mirror_right",
+      "position": [
+        4.105,
+        2.431,
+        1.455
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16251120
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "destination_sign_5926e52d",
+  "role": "destination_sign",
+  "type": "box",
+  "signature": "box|1,0.125,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+    "name": "front_destination_sign",
+    "part": {
+      "name": "front_destination_sign",
+      "type": "box",
+      "dimensions": [
+        1.8,
+        0.3,
+        0.08
+      ],
+      "position": [
+        0,
+        3,
+        5.15
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16766720,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "front_destination_sign",
+      "position": [
+        0,
+        3,
+        5.15
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16766720
+    }
+  ]
+}

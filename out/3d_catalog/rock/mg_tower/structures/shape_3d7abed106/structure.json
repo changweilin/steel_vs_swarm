@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_3d7abed106",
+  "canonicalKey": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~0_9823d365_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~0_9823d365_luna_v6",
+    "bounds": {
+      "min": [
+        -13.52,
+        0,
+        -13.52
+      ],
+      "max": [
+        13.52,
+        26.4368,
+        15.2255
+      ],
+      "size": [
+        27.04,
+        26.437,
+        28.745
+      ],
+      "rMax": 20.362,
+      "triangles": 264,
+      "vertices": 152
+    },
+    "parts": [
+      {
+        "name": "monument_base",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          8.84,
+          13.52
+        ],
+        "height": 4.8,
+        "position": [
+          0,
+          2.45,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "monument_lower_tower",
+        "type": "polygonal_prism",
+        "sides": 7,
+        "radius": 7.8,
+        "height": 8.4,
+        "position": [
+          -1.04,
+          8.76,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 28
+      },
+      {
+        "name": "monument_upper_tower",
+        "type": "frustum_pyramid",
+        "sides": 7,
+        "radii": [
+          5.72,
+          7.54
+        ],
+        "height": 7.2,
+        "position": [
+          0.78,
+          16.56,
+          -0.52
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2370353,
+        "triangles": 28
+      },
+      {
+        "name": "monument_capstone",
+        "type": "dodecahedron_polyhedron",
+        "radius": 5.72,
+        "position": [
+          0.78,
+          21.12,
+          0
+        ],
+        "rotation": [
+          0.1,
+          0.2,
+          0
+        ],
+        "color": 6911354,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~0_9823d365_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_tower/rock_rock_mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006_0_9823d365_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/mg_tower_ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1_b8168d3e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_tower/rock_rock_mg_tower_ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1_b8168d3e_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_50415ae5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_tower/rock_rock_mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_50415ae5_luna_v6",
+      "similarity": 15,
+      "scale": [
+        0.76923,
+        0.36275,
+        0.76925
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

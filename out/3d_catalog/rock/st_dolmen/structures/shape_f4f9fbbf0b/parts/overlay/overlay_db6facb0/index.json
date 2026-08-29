@@ -1,0 +1,47 @@
+{
+  "id": "overlay_db6facb0",
+  "role": "overlay",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0,1|10",
+  "canonical": {
+    "objectKey": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+    "name": "attached_waterline_foam",
+    "part": {
+      "name": "attached_waterline_foam",
+      "type": "polygonal_prism",
+      "sides": 9,
+      "radius": 2.9,
+      "height": 0.179,
+      "position": [
+        0,
+        0.268,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.268,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

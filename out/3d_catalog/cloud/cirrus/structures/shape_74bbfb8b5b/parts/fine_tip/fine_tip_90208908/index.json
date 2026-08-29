@@ -1,0 +1,303 @@
+{
+  "id": "fine_tip_90208908",
+  "role": "fine_tip",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+    "name": "cirrus_tapered_tip_0_soft_1",
+    "part": {
+      "name": "cirrus_tapered_tip_0_soft_1",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.063,
+      "position": [
+        -4.306,
+        1.393,
+        0.634
+      ],
+      "rotation": [
+        0.08,
+        0.65,
+        0.021
+      ],
+      "color": 15858175,
+      "triangles": 20,
+      "role": "fine_tip",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_0_soft_1",
+      "position": [
+        -4.306,
+        1.393,
+        0.634
+      ],
+      "rotation": [
+        0.08,
+        0.65,
+        0.021
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_0_soft_3",
+      "position": [
+        -3.951,
+        1.406,
+        0.513
+      ],
+      "rotation": [
+        0.08,
+        1.27,
+        0.021
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_0_soft_5",
+      "position": [
+        -3.597,
+        1.448,
+        0.379
+      ],
+      "rotation": [
+        0.08,
+        1.89,
+        0.021
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_1_soft_1",
+      "position": [
+        -2.874,
+        1.48,
+        0.729
+      ],
+      "rotation": [
+        0.08,
+        0.87,
+        -0.017
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_1_soft_3",
+      "position": [
+        -2.526,
+        1.45,
+        0.515
+      ],
+      "rotation": [
+        0.08,
+        1.49,
+        -0.017
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_2_soft_1",
+      "position": [
+        -1.734,
+        1.301,
+        0.539
+      ],
+      "rotation": [
+        0.08,
+        0.58,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_2_soft_3",
+      "position": [
+        -1.306,
+        1.309,
+        0.425
+      ],
+      "rotation": [
+        0.08,
+        1.2,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_3_soft_1",
+      "position": [
+        -0.362,
+        1.363,
+        0.788
+      ],
+      "rotation": [
+        0.08,
+        0.81,
+        -0.025
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_3_soft_3",
+      "position": [
+        -0.038,
+        1.328,
+        0.616
+      ],
+      "rotation": [
+        0.08,
+        1.43,
+        -0.025
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_4_soft_1",
+      "position": [
+        0.88,
+        1.38,
+        0.622
+      ],
+      "rotation": [
+        0.08,
+        0.61,
+        0.017
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_4_soft_3",
+      "position": [
+        1.28,
+        1.391,
+        0.502
+      ],
+      "rotation": [
+        0.08,
+        1.23,
+        0.017
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_5_soft_1",
+      "position": [
+        2.189,
+        1.367,
+        0.559
+      ],
+      "rotation": [
+        0.08,
+        0.89,
+        -0.014
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_5_soft_3",
+      "position": [
+        2.491,
+        1.343,
+        0.365
+      ],
+      "rotation": [
+        0.08,
+        1.51,
+        -0.014
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_6_soft_1",
+      "position": [
+        3.352,
+        1.298,
+        0.422
+      ],
+      "rotation": [
+        0.08,
+        0.53,
+        0.021
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_6_soft_3",
+      "position": [
+        3.728,
+        1.312,
+        0.342
+      ],
+      "rotation": [
+        0.08,
+        1.15,
+        0.021
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_7_soft_1",
+      "position": [
+        3.799,
+        1.285,
+        0.266
+      ],
+      "rotation": [
+        0.08,
+        0.75,
+        -0.01
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_tapered_tip_7_soft_3",
+      "position": [
+        4.081,
+        1.266,
+        0.138
+      ],
+      "rotation": [
+        0.08,
+        1.37,
+        -0.01
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    }
+  ]
+}

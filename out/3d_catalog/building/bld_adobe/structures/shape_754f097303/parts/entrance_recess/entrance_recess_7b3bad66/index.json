@@ -1,0 +1,49 @@
+{
+  "id": "entrance_recess_7b3bad66",
+  "role": "entrance_recess",
+  "type": "box",
+  "signature": "box|1,1,0.375|0",
+  "canonical": {
+    "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+    "name": "entrance_recess",
+    "part": {
+      "name": "entrance_recess",
+      "type": "box",
+      "dimensions": [
+        1.5,
+        1.6,
+        0.5
+      ],
+      "position": [
+        2.5,
+        0.8,
+        5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2105376,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+      "name": "entrance_recess",
+      "position": [
+        2.5,
+        0.8,
+        5.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    }
+  ]
+}

@@ -1,0 +1,989 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_50ce731bfd",
+  "canonicalKey": "tree/gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_b609778d_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_b609778d_luna_v6",
+    "bounds": {
+      "min": [
+        -1.9199,
+        0,
+        -2.2216
+      ],
+      "max": [
+        2.0727,
+        7.3148,
+        2.1581
+      ],
+      "size": [
+        3.993,
+        7.315,
+        4.38
+      ],
+      "rMax": 2.992,
+      "triangles": 4436,
+      "vertices": 2710
+    },
+    "parts": [
+      {
+        "name": "dragon_bole",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.3,
+          0.78
+        ],
+        "height": 5.294,
+        "position": [
+          0,
+          2.647,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5584935,
+        "triangles": 40
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.612,
+          0.85
+        ],
+        "height": 0.55,
+        "position": [
+          0,
+          0.275,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5584935,
+        "triangles": 40
+      },
+      {
+        "name": "dragon_rosette_0_sword_leaf_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.107,
+          0.422,
+          0.352
+        ],
+        "position": [
+          1.843,
+          5.912,
+          -0.265
+        ],
+        "rotation": [
+          0.12,
+          -0.22,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_0_sword_leaf_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.107,
+          0.422,
+          0.352
+        ],
+        "position": [
+          1.739,
+          5.912,
+          -0.101
+        ],
+        "rotation": [
+          0.12,
+          1.351,
+          -0.08
+        ],
+        "color": 2383940,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_0_sword_leaf_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.107,
+          0.422,
+          0.352
+        ],
+        "position": [
+          1.574,
+          5.912,
+          -0.205
+        ],
+        "rotation": [
+          0.12,
+          2.922,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_0_sword_leaf_3",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.107,
+          0.422,
+          0.352
+        ],
+        "position": [
+          1.679,
+          5.912,
+          -0.37
+        ],
+        "rotation": [
+          0.12,
+          4.492,
+          -0.08
+        ],
+        "color": 2383940,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_1_sword_leaf_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.108,
+          0.429,
+          0.363
+        ],
+        "position": [
+          0.334,
+          5.627,
+          1.92
+        ],
+        "rotation": [
+          0.12,
+          1.33,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_1_sword_leaf_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.108,
+          0.429,
+          0.363
+        ],
+        "position": [
+          0.165,
+          5.627,
+          1.818
+        ],
+        "rotation": [
+          0.12,
+          2.901,
+          -0.08
+        ],
+        "color": 5212749,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_1_sword_leaf_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.108,
+          0.429,
+          0.363
+        ],
+        "position": [
+          0.268,
+          5.627,
+          1.648
+        ],
+        "rotation": [
+          0.12,
+          4.472,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_1_sword_leaf_3",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.108,
+          0.429,
+          0.363
+        ],
+        "position": [
+          0.437,
+          5.627,
+          1.751
+        ],
+        "rotation": [
+          0.12,
+          6.042,
+          -0.08
+        ],
+        "color": 5212749,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_2_sword_leaf_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.135,
+          0.328,
+          0.38
+        ],
+        "position": [
+          -1.425,
+          5.403,
+          1.158
+        ],
+        "rotation": [
+          0.12,
+          2.436,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_2_sword_leaf_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.135,
+          0.328,
+          0.38
+        ],
+        "position": [
+          -1.405,
+          5.403,
+          0.912
+        ],
+        "rotation": [
+          0.12,
+          4.007,
+          -0.08
+        ],
+        "color": 2383940,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_2_sword_leaf_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.135,
+          0.328,
+          0.38
+        ],
+        "position": [
+          -1.16,
+          5.403,
+          0.932
+        ],
+        "rotation": [
+          0.12,
+          5.578,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_2_sword_leaf_3",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.135,
+          0.328,
+          0.38
+        ],
+        "position": [
+          -1.179,
+          5.403,
+          1.178
+        ],
+        "rotation": [
+          0.12,
+          7.148,
+          -0.08
+        ],
+        "color": 2383940,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_3_sword_leaf_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.122,
+          0.355,
+          0.29
+        ],
+        "position": [
+          -1.698,
+          5.252,
+          -1.448
+        ],
+        "rotation": [
+          0.12,
+          3.9,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_3_sword_leaf_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.122,
+          0.355,
+          0.29
+        ],
+        "position": [
+          -1.51,
+          5.252,
+          -1.453
+        ],
+        "rotation": [
+          0.12,
+          5.471,
+          -0.08
+        ],
+        "color": 5212749,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_3_sword_leaf_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.122,
+          0.355,
+          0.29
+        ],
+        "position": [
+          -1.505,
+          5.252,
+          -1.265
+        ],
+        "rotation": [
+          0.12,
+          7.042,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_3_sword_leaf_3",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.122,
+          0.355,
+          0.29
+        ],
+        "position": [
+          -1.693,
+          5.252,
+          -1.26
+        ],
+        "rotation": [
+          0.12,
+          8.612,
+          -0.08
+        ],
+        "color": 5212749,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_4_sword_leaf_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.14,
+          0.386,
+          0.337
+        ],
+        "position": [
+          0.92,
+          5.07,
+          -1.998
+        ],
+        "rotation": [
+          0.12,
+          5.077,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_4_sword_leaf_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.14,
+          0.386,
+          0.337
+        ],
+        "position": [
+          1.01,
+          5.07,
+          -1.799
+        ],
+        "rotation": [
+          0.12,
+          6.648,
+          -0.08
+        ],
+        "color": 2383940,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_4_sword_leaf_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.14,
+          0.386,
+          0.337
+        ],
+        "position": [
+          0.81,
+          5.07,
+          -1.71
+        ],
+        "rotation": [
+          0.12,
+          8.218,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_rosette_4_sword_leaf_3",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.14,
+          0.386,
+          0.337
+        ],
+        "position": [
+          0.721,
+          5.07,
+          -1.909
+        ],
+        "rotation": [
+          0.12,
+          9.789,
+          -0.08
+        ],
+        "color": 2383940,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_terminal_rosette_sword_leaf_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.153,
+          0.405,
+          0.422
+        ],
+        "position": [
+          0.194,
+          6.91,
+          0.001
+        ],
+        "rotation": [
+          0.12,
+          0.003,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_terminal_rosette_sword_leaf_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.153,
+          0.405,
+          0.422
+        ],
+        "position": [
+          -0.001,
+          6.91,
+          0.194
+        ],
+        "rotation": [
+          0.12,
+          1.574,
+          -0.08
+        ],
+        "color": 9547096,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_terminal_rosette_sword_leaf_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.153,
+          0.405,
+          0.422
+        ],
+        "position": [
+          -0.194,
+          6.91,
+          -0.001
+        ],
+        "rotation": [
+          0.12,
+          3.145,
+          -0.08
+        ],
+        "color": 12175481,
+        "triangles": 160
+      },
+      {
+        "name": "dragon_terminal_rosette_sword_leaf_3",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.153,
+          0.405,
+          0.422
+        ],
+        "position": [
+          0.001,
+          6.91,
+          -0.194
+        ],
+        "rotation": [
+          0.12,
+          4.715,
+          -0.08
+        ],
+        "color": 9547096,
+        "triangles": 160
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_b609778d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_b609778d_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_ov_9e639bd4-0ca0-4ff9-9270-ffee5ae02aa6_2f312194_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_ov_9e639bd4-0ca0-4ff9-9270-ffee5ae02aa6_2f312194_luna_v6",
+      "similarity": 81,
+      "scale": [
+        1.08991,
+        1.10526,
+        0.87283
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233_133d6dcd_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233_133d6dcd_luna_v6",
+      "similarity": 71,
+      "scale": [
+        0.98898,
+        1.16036,
+        0.80982
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_ov_f9b7d32e-f7d1-4312-9583-a9401da9228a_caa33652_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_ov_f9b7d32e-f7d1-4312-9583-a9401da9228a_caa33652_luna_v6",
+      "similarity": 85,
+      "scale": [
+        0.80867,
+        0.97867,
+        0.90548
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_119157444_9aba27af_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_119157444_9aba27af_luna_v6",
+      "similarity": 77,
+      "scale": [
+        1.16654,
+        1.11743,
+        0.83447
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_129628116_da60337c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_129628116_da60337c_luna_v6",
+      "similarity": 93,
+      "scale": [
+        1.07739,
+        1.00602,
+        1.04954
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_129628117_4f09a53d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_129628117_4f09a53d_luna_v6",
+      "similarity": 90,
+      "scale": [
+        1.10669,
+        1.01258,
+        0.94315
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_129628119_97d84b9e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_129628119_97d84b9e_luna_v6",
+      "similarity": 95,
+      "scale": [
+        0.96193,
+        0.97881,
+        1.02306
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_145806133~0_0b144f2f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_145806133_0_0b144f2f_luna_v6",
+      "similarity": 83,
+      "scale": [
+        0.85324,
+        1.01408,
+        0.88059
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_145806133~1_0e82124c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_145806133_1_0e82124c_luna_v6",
+      "similarity": 92,
+      "scale": [
+        0.98097,
+        1.03363,
+        1.02671
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_14826433_5a0289c7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_14826433_5a0289c7_luna_v6",
+      "similarity": 72,
+      "scale": [
+        0.91235,
+        1.16254,
+        0.87717
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_168194741_3de13669_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_168194741_3de13669_luna_v6",
+      "similarity": 85,
+      "scale": [
+        1.1415,
+        1.06001,
+        0.89726
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_170465060_61440e10_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_170465060_61440e10_luna_v6",
+      "similarity": 75,
+      "scale": [
+        1.11495,
+        1.03199,
+        0.75205
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_192515746_3e3d7835_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_192515746_3e3d7835_luna_v6",
+      "similarity": 91,
+      "scale": [
+        0.8878,
+        0.97826,
+        0.92717
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_29765656_1380f82d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_29765656_1380f82d_luna_v6",
+      "similarity": 85,
+      "scale": [
+        0.91059,
+        1.0745,
+        0.97352
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_29766035_f56426ca_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_29766035_f56426ca_luna_v6",
+      "similarity": 81,
+      "scale": [
+        1.10143,
+        1.05414,
+        0.84155
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_31914293_badfa19f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_31914293_badfa19f_luna_v6",
+      "similarity": 80,
+      "scale": [
+        0.78613,
+        1.03267,
+        0.9742
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_36576288_12d9cbbc_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_36576288_12d9cbbc_luna_v6",
+      "similarity": 81,
+      "scale": [
+        0.92612,
+        1.10786,
+        0.95708
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_43408118~0_476f1780_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_43408118_0_476f1780_luna_v6",
+      "similarity": 70,
+      "scale": [
+        0.91685,
+        1.14436,
+        0.8121
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_43408118~1_dc20500a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_43408118_1_dc20500a_luna_v6",
+      "similarity": 96,
+      "scale": [
+        1.01828,
+        1.0529,
+        1.02557
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_54027335_0193e2dc_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_54027335_0193e2dc_luna_v6",
+      "similarity": 95,
+      "scale": [
+        1.06987,
+        1.01176,
+        1.00023
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_54027346_d6988bb7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_54027346_d6988bb7_luna_v6",
+      "similarity": 81,
+      "scale": [
+        0.81217,
+        0.97457,
+        0.83927
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_54817480_73f63f12_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_54817480_73f63f12_luna_v6",
+      "similarity": 94,
+      "scale": [
+        0.8883,
+        0.94764,
+        0.94155
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    },
+    {
+      "key": "tree/gt_dragontree_wc_55064976_808197a4_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/gt_dragontree/tree_tree_gt_dragontree_wc_55064976_808197a4_luna_v6",
+      "similarity": 87,
+      "scale": [
+        0.9151,
+        0.9419,
+        0.80342
+      ],
+      "paletteIds": [
+        "palette_ab76cbb7"
+      ]
+    }
+  ]
+}

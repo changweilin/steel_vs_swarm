@@ -1,0 +1,51 @@
+{
+  "id": "antenna_cb63361e",
+  "role": "antenna",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d",
+    "name": "finial_central_mast",
+    "part": {
+      "name": "finial_central_mast",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        0.08,
+        0.25
+      ],
+      "height": 4.8,
+      "position": [
+        0,
+        33.07741935483871,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14603199,
+      "triangles": 32,
+      "colorKey": "bright"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d",
+      "name": "finial_central_mast",
+      "position": [
+        0,
+        33.07741935483871,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "bright",
+      "color": 14603199
+    }
+  ]
+}

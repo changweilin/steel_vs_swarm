@@ -1,0 +1,65 @@
+{
+  "id": "roof_d3e878ae",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|0.75,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+    "name": "car_roof",
+    "part": {
+      "name": "car_roof",
+      "type": "box",
+      "dimensions": [
+        1.75,
+        0.35,
+        2.3
+      ],
+      "position": [
+        0,
+        1.55,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3815994,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+      "name": "car_roof",
+      "position": [
+        0,
+        1.55,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3815994
+    },
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "roof",
+      "position": [
+        0,
+        1.65,
+        -0.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3882562
+    }
+  ]
+}

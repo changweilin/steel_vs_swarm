@@ -1,0 +1,386 @@
+{
+  "id": "exposed_stratum_b5b91628",
+  "role": "exposed_stratum",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0,1|8",
+  "canonical": {
+    "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+    "name": "exposed_stratum_0",
+    "part": {
+      "name": "exposed_stratum_0",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.964,
+        1.445
+      ],
+      "height": 0.128,
+      "position": [
+        -0.137,
+        0.725,
+        0.422
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3291453,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "exposed_stratum_0",
+      "position": [
+        -0.137,
+        0.725,
+        0.422
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "exposed_stratum_1",
+      "position": [
+        0.137,
+        1.312,
+        0.422
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "exposed_stratum_2",
+      "position": [
+        -0.137,
+        1.899,
+        0.422
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "exposed_stratum_3",
+      "position": [
+        0.137,
+        2.486,
+        0.422
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "exposed_stratum_0",
+      "position": [
+        -0.137,
+        1.338,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "exposed_stratum_1",
+      "position": [
+        0.137,
+        2.422,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "exposed_stratum_0",
+      "position": [
+        -0.36,
+        0.907,
+        1.68
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4212792
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "exposed_stratum_1",
+      "position": [
+        0.36,
+        1.642,
+        1.68
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5660743
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "exposed_stratum_2",
+      "position": [
+        -0.36,
+        2.376,
+        1.68
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4212792
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "exposed_stratum_3",
+      "position": [
+        0.36,
+        3.111,
+        1.68
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5660743
+    },
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "exposed_stratum_0",
+      "position": [
+        -0.207,
+        1.091,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6899251
+    },
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "exposed_stratum_1",
+      "position": [
+        0.207,
+        1.974,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "exposed_stratum_2",
+      "position": [
+        -0.207,
+        2.858,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6899251
+    },
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "exposed_stratum_3",
+      "position": [
+        0.207,
+        3.741,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/main_images (1)_88ee1ac8_luna_v6",
+      "name": "exposed_stratum_0",
+      "position": [
+        -0.135,
+        0.578,
+        0.63
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_images (1)_88ee1ac8_luna_v6",
+      "name": "exposed_stratum_1",
+      "position": [
+        0.135,
+        1.046,
+        0.63
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_images (1)_88ee1ac8_luna_v6",
+      "name": "exposed_stratum_2",
+      "position": [
+        -0.135,
+        1.515,
+        0.63
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_images (1)_88ee1ac8_luna_v6",
+      "name": "exposed_stratum_3",
+      "position": [
+        0.135,
+        1.983,
+        0.63
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_images (5)_ba4fb3a0_luna_v6",
+      "name": "exposed_stratum_0",
+      "position": [
+        -0.095,
+        0.372,
+        0.26
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_images (5)_ba4fb3a0_luna_v6",
+      "name": "exposed_stratum_1",
+      "position": [
+        0.095,
+        0.674,
+        0.26
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_images (5)_ba4fb3a0_luna_v6",
+      "name": "exposed_stratum_2",
+      "position": [
+        -0.095,
+        0.975,
+        0.26
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_images (5)_ba4fb3a0_luna_v6",
+      "name": "exposed_stratum_3",
+      "position": [
+        0.095,
+        1.276,
+        0.26
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    }
+  ]
+}

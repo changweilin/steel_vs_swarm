@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "facet",
+  "palettes": [
+    {
+      "id": "palette_34416769",
+      "name": "執行期繼承配色",
+      "colors": null,
+      "objects": [
+        {
+          "key": "rock/facet_b",
+          "source": "runtime-consumer"
+        }
+      ]
+    },
+    {
+      "id": "palette_64959f26",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6964528,
+        "facadeHex": 10119749,
+        "baseHex": 6767665,
+        "accentHex": 5602375,
+        "glassHex": 2307908,
+        "darkHex": 4861992,
+        "brightHex": 10467954
+      },
+      "objects": [
+        {
+          "key": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_8b1e3742",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 5602375,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 10467954
+      },
+      "objects": [
+        {
+          "key": "rock/facet_ov_05933c12-551a-40e6-b2e6-977a30ea4551_71c3325e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~2_4ff4c0fb_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_be49e23b",
+      "name": "執行期繼承配色",
+      "colors": null,
+      "objects": [
+        {
+          "key": "rock/facet_a",
+          "source": "runtime-consumer"
+        }
+      ]
+    },
+    {
+      "id": "palette_c37ca1af",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 6911354,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 11187637
+      },
+      "objects": [
+        {
+          "key": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~1_fcd26e23_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_55df19cd_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/facet_ov_f7e1cc51-e247-42b9-a51c-c775ad831804_11e14f1f_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

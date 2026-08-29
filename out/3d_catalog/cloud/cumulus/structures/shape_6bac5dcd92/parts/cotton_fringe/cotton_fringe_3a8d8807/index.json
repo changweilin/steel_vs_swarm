@@ -1,0 +1,159 @@
+{
+  "id": "cotton_fringe_3a8d8807",
+  "role": "cotton_fringe",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+    "name": "cumulus_flat_underside_icosa_1_cotton_fringe",
+    "part": {
+      "name": "cumulus_flat_underside_icosa_1_cotton_fringe",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.215,
+      "position": [
+        -2.813,
+        0.897,
+        0.371
+      ],
+      "rotation": [
+        0.08,
+        0.58,
+        0.04
+      ],
+      "color": 16186111,
+      "triangles": 36,
+      "role": "cotton_fringe",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_flat_underside_icosa_1_cotton_fringe",
+      "position": [
+        -2.813,
+        0.897,
+        0.371
+      ],
+      "rotation": [
+        0.08,
+        0.58,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 16186111
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_flat_underside_icosa_5_cotton_fringe",
+      "position": [
+        1.868,
+        0.894,
+        0.102
+      ],
+      "rotation": [
+        0.08,
+        1.74,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 16186111
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_1_cotton_fringe",
+      "position": [
+        -3.339,
+        1.625,
+        -0.227
+      ],
+      "rotation": [
+        0.08,
+        8.7,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 16186111
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_5_cotton_fringe",
+      "position": [
+        0.608,
+        2.82,
+        -0.04
+      ],
+      "rotation": [
+        0.08,
+        9.86,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 16186111
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_9_cotton_fringe",
+      "position": [
+        3.576,
+        1.564,
+        0.112
+      ],
+      "rotation": [
+        0.08,
+        11.02,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 16186111
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_13_cotton_fringe",
+      "position": [
+        -0.487,
+        2.111,
+        -0.837
+      ],
+      "rotation": [
+        0.08,
+        12.18,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 16186111
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_17_cotton_fringe",
+      "position": [
+        -3.077,
+        1.567,
+        0.72
+      ],
+      "rotation": [
+        0.08,
+        13.34,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 16186111
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_21_cotton_fringe",
+      "position": [
+        3.461,
+        1.547,
+        0.815
+      ],
+      "rotation": [
+        0.08,
+        14.5,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 16186111
+    }
+  ]
+}

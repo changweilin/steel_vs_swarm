@@ -1,0 +1,65 @@
+{
+  "id": "roof_64d87422",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|0.25,0,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+    "name": "bus_roof",
+    "part": {
+      "name": "bus_roof",
+      "type": "box",
+      "dimensions": [
+        2.5,
+        0.2,
+        10
+      ],
+      "position": [
+        0,
+        3.1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16766720,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+      "name": "bus_roof",
+      "position": [
+        0,
+        3.1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16766720
+    },
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "bus_roof",
+      "position": [
+        0,
+        3,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2045951
+    }
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "id": "aero_ee4cf4bd",
+  "role": "aero",
+  "type": "cylinder",
+  "signature": "cylinder|0.375,1,0.375|6",
+  "canonical": {
+    "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+    "name": "rear_spoiler_stay_left",
+    "part": {
+      "name": "rear_spoiler_stay_left",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.014,
+        0.014
+      ],
+      "height": 0.082,
+      "position": [
+        -2.045,
+        0.97,
+        -0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "color": 1777705,
+      "triangles": 24,
+      "role": "aero",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "rear_spoiler_stay_left",
+      "position": [
+        -2.045,
+        0.97,
+        -0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "rear_spoiler_stay_right",
+      "position": [
+        -2.045,
+        0.97,
+        0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "rear_spoiler_stay_left",
+      "position": [
+        -2.045,
+        0.97,
+        -0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "rear_spoiler_stay_right",
+      "position": [
+        -2.045,
+        0.97,
+        0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "rear_spoiler_stay_left",
+      "position": [
+        -2.045,
+        0.97,
+        -0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "rear_spoiler_stay_right",
+      "position": [
+        -2.045,
+        0.97,
+        0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "rear_spoiler_stay_left",
+      "position": [
+        -2.045,
+        0.97,
+        -0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "rear_spoiler_stay_right",
+      "position": [
+        -2.045,
+        0.97,
+        0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "rear_spoiler_stay_left",
+      "position": [
+        -2.045,
+        0.97,
+        -0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "rear_spoiler_stay_right",
+      "position": [
+        -2.045,
+        0.97,
+        0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "rear_spoiler_stay_left",
+      "position": [
+        -2.045,
+        0.97,
+        -0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "rear_spoiler_stay_right",
+      "position": [
+        -2.045,
+        0.97,
+        0.27
+      ],
+      "rotation": [
+        0.245,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1777705
+    }
+  ]
+}

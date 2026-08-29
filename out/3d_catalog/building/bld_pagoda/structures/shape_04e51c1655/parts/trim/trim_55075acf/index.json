@@ -1,0 +1,49 @@
+{
+  "id": "trim_55075acf",
+  "role": "trim",
+  "type": "box",
+  "signature": "box|1,0.125,1|0",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+    "name": "finial_base_plate",
+    "part": {
+      "name": "finial_base_plate",
+      "type": "box",
+      "dimensions": [
+        1.2,
+        0.2,
+        1.2
+      ],
+      "position": [
+        0,
+        18.1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15055931,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "finial_base_plate",
+      "position": [
+        0,
+        18.1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15055931
+    }
+  ]
+}

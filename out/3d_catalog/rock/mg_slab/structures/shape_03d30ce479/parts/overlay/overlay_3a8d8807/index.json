@@ -1,0 +1,45 @@
+{
+  "id": "overlay_3a8d8807",
+  "role": "overlay",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_7ca2bda5_luna_v6",
+    "name": "strata_top_fragment",
+    "part": {
+      "name": "strata_top_fragment",
+      "type": "dodecahedron_polyhedron",
+      "radius": 1.4,
+      "position": [
+        -1.26,
+        5.44,
+        -0.35
+      ],
+      "rotation": [
+        0.14,
+        -0.14,
+        0.04
+      ],
+      "color": 6911354,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_7ca2bda5_luna_v6",
+      "name": "strata_top_fragment",
+      "position": [
+        -1.26,
+        5.44,
+        -0.35
+      ],
+      "rotation": [
+        0.14,
+        -0.14,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 6911354
+    }
+  ]
+}

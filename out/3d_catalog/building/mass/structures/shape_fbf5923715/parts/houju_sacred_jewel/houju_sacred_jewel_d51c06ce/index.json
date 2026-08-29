@@ -1,0 +1,81 @@
+{
+  "id": "houju_sacred_jewel_d51c06ce",
+  "role": "houju_sacred_jewel",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|1,1,1|0",
+  "canonical": {
+    "objectKey": "building/mass_architecture-houou-02-tmb_d29db730",
+    "name": "houju_sacred_jewel",
+    "part": {
+      "name": "houju_sacred_jewel",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.35,
+        0.35,
+        0.35
+      ],
+      "position": [
+        0,
+        34.54354838709678,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 13551551,
+      "triangles": 96
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_architecture-houou-02-tmb_d29db730",
+      "name": "houju_sacred_jewel",
+      "position": [
+        0,
+        34.54354838709678,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13551551
+    },
+    {
+      "objectKey": "building/mass_images_3f8e0ebf",
+      "name": "houju_sacred_jewel",
+      "position": [
+        0,
+        35.283870967741926,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "bright",
+      "color": 11781598
+    },
+    {
+      "objectKey": "building/mass_kyotoworldheritage_2.jpg_9d4c3fda",
+      "name": "houju_sacred_jewel",
+      "position": [
+        0,
+        31.33548387096774,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12704245
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "roof_de1096bc",
+  "role": "roof",
+  "type": "wedge",
+  "signature": "wedge|1,0.375,0.875|0",
+  "canonical": {
+    "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+    "name": "attached_observation_roof",
+    "part": {
+      "name": "attached_observation_roof",
+      "type": "wedge",
+      "dimensions": [
+        6.24,
+        2.16,
+        5.2
+      ],
+      "position": [
+        0.52,
+        21.36,
+        2.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 11647370,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+      "name": "attached_observation_roof",
+      "position": [
+        0.52,
+        21.36,
+        2.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 11647370
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_e5540b76_luna_v6",
+      "name": "attached_observation_roof",
+      "position": [
+        0.52,
+        21.36,
+        2.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 11647370
+    }
+  ]
+}

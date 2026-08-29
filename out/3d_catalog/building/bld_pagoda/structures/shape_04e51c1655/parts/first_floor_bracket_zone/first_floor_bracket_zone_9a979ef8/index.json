@@ -1,0 +1,49 @@
+{
+  "id": "first_floor_bracket_zone_9a979ef8",
+  "role": "first_floor_bracket_zone",
+  "type": "box",
+  "signature": "box|1,0,1|0",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+    "name": "first_floor_bracket_zone",
+    "part": {
+      "name": "first_floor_bracket_zone",
+      "type": "box",
+      "dimensions": [
+        8.6,
+        0.4,
+        8.6
+      ],
+      "position": [
+        0,
+        3.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14981152,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+      "name": "first_floor_bracket_zone",
+      "position": [
+        0,
+        3.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14981152
+    }
+  ]
+}

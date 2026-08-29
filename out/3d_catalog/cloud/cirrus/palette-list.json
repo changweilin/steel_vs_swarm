@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "cloud",
+  "subcategory": "cirrus",
+  "palettes": [
+    {
+      "id": "palette_880e20a7",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7904208,
+        "facadeHex": 12177903,
+        "baseHex": 5141165,
+        "accentHex": 14478591,
+        "glassHex": 15858175,
+        "darkHex": 4614562,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

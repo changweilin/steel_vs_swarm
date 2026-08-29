@@ -1,0 +1,98 @@
+{
+  "id": "overlay_9951d699",
+  "role": "overlay",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+    "name": "mesa_strata_0",
+    "part": {
+      "name": "mesa_strata_0",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        4.713,
+        5.953
+      ],
+      "height": 0.769,
+      "position": [
+        0,
+        6.316,
+        2.233
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6899251,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "name": "mesa_strata_0",
+      "position": [
+        0,
+        6.316,
+        2.233
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6899251
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "name": "mesa_strata_1",
+      "position": [
+        0,
+        8.732,
+        2.233
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "name": "mesa_strata_2",
+      "position": [
+        0,
+        11.148,
+        2.233
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6899251
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "name": "mesa_strata_3",
+      "position": [
+        0,
+        13.565,
+        2.233
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    }
+  ]
+}

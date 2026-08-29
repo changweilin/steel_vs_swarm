@@ -1,0 +1,45 @@
+{
+  "id": "angular_face_90208908",
+  "role": "angular_face",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+    "name": "front_angular_face",
+    "part": {
+      "name": "front_angular_face",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.562,
+      "position": [
+        0.066,
+        1.499,
+        0.624
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        -0.05
+      ],
+      "color": 10119749,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+      "name": "front_angular_face",
+      "position": [
+        0.066,
+        1.499,
+        0.624
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        -0.05
+      ],
+      "colorKey": null,
+      "color": 10119749
+    }
+  ]
+}

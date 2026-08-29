@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_04e51c1655",
+  "canonicalKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+    "bounds": {
+      "min": [
+        -6,
+        0,
+        -6
+      ],
+      "max": [
+        6,
+        24.35,
+        6
+      ],
+      "size": [
+        12,
+        24.35,
+        12
+      ],
+      "rMax": 8.485,
+      "triangles": 604,
+      "vertices": 375
+    },
+    "parts": [
+      {
+        "name": "stone_foundation",
+        "type": "box",
+        "dimensions": [
+          12,
+          0.8,
+          12
+        ],
+        "position": [
+          0,
+          0.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3156264,
+        "triangles": 12
+      },
+      {
+        "name": "first_floor_walls",
+        "type": "box",
+        "dimensions": [
+          8,
+          2.4,
+          8
+        ],
+        "position": [
+          0,
+          2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 12459040,
+        "triangles": 12
+      },
+      {
+        "name": "first_roof",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          4,
+          5.8
+        ],
+        "height": 0.6,
+        "position": [
+          0,
+          3.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11151394,
+        "triangles": 16
+      },
+      {
+        "name": "second_floor_walls",
+        "type": "box",
+        "dimensions": [
+          7,
+          2.4,
+          7
+        ],
+        "position": [
+          0,
+          5.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 12459040,
+        "triangles": 12
+      },
+      {
+        "name": "second_roof",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          3.5,
+          5.1
+        ],
+        "height": 0.6,
+        "position": [
+          0,
+          7.3,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11151394,
+        "triangles": 16
+      },
+      {
+        "name": "third_floor_walls",
+        "type": "box",
+        "dimensions": [
+          6,
+          2.4,
+          6
+        ],
+        "position": [
+          0,
+          8.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 12459040,
+        "triangles": 12
+      },
+      {
+        "name": "third_roof",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          3,
+          4.4
+        ],
+        "height": 0.6,
+        "position": [
+          0,
+          10.7,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11151394,
+        "triangles": 16
+      },
+      {
+        "name": "fourth_floor_walls",
+        "type": "box",
+        "dimensions": [
+          5,
+          2.4,
+          5
+        ],
+        "position": [
+          0,
+          12.2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 12459040,
+        "triangles": 12
+      },
+      {
+        "name": "fourth_roof",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          2.5,
+          3.7
+        ],
+        "height": 0.6,
+        "position": [
+          0,
+          14.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11151394,
+        "triangles": 16
+      },
+      {
+        "name": "fifth_floor_walls",
+        "type": "box",
+        "dimensions": [
+          4,
+          2.4,
+          4
+        ],
+        "position": [
+          0,
+          15.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 12459040,
+        "triangles": 12
+      },
+      {
+        "name": "fifth_roof",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          2,
+          3
+        ],
+        "height": 0.6,
+        "position": [
+          0,
+          17.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11151394,
+        "triangles": 16
+      },
+      {
+        "name": "roof_top_pyramid",
+        "type": "pyramid",
+        "sides": 4,
+        "radii": [
+          0.001,
+          2
+        ],
+        "height": 0.8,
+        "position": [
+          0,
+          18.2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11151394,
+        "triangles": 16
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/bld_pagoda/building_bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_v6",
+      "similarity": 80,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_3a976c5f"
+      ]
+    },
+    {
+      "key": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/bld_pagoda/building_bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        0.91786,
+        1
+      ],
+      "paletteIds": [
+        "palette_ba6bb803"
+      ]
+    }
+  ]
+}

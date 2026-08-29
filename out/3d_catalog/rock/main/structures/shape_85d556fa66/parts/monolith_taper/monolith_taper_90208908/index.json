@@ -1,0 +1,45 @@
+{
+  "id": "monolith_taper_90208908",
+  "role": "monolith_taper",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_d087b40c-1b1a-4f8a-a620-c0aafe41056d_749bd224_v6",
+    "name": "monolith_upper_taper",
+    "part": {
+      "name": "monolith_upper_taper",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.9,
+      "position": [
+        0.05,
+        3.6,
+        0.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 9868950,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_d087b40c-1b1a-4f8a-a620-c0aafe41056d_749bd224_v6",
+      "name": "monolith_upper_taper",
+      "position": [
+        0.05,
+        3.6,
+        0.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 9868950
+    }
+  ]
+}

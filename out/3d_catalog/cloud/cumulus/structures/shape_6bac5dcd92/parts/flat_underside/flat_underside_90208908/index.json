@@ -1,0 +1,223 @@
+{
+  "id": "flat_underside_90208908",
+  "role": "flat_underside",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+    "name": "cumulus_flat_underside_icosa_5",
+    "part": {
+      "name": "cumulus_flat_underside_icosa_5",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.57,
+      "position": [
+        1.56,
+        0.7,
+        0.25
+      ],
+      "rotation": [
+        0.1,
+        1.4,
+        -0.04
+      ],
+      "color": 9544634,
+      "triangles": 20,
+      "role": "flat_underside",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_flat_underside_icosa_5",
+      "position": [
+        1.56,
+        0.7,
+        0.25
+      ],
+      "rotation": [
+        0.1,
+        1.4,
+        -0.04
+      ],
+      "colorKey": "baseHex",
+      "color": 9544634
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_flat_underside_icosa_7",
+      "position": [
+        3.5,
+        0.71,
+        0.28
+      ],
+      "rotation": [
+        0.1,
+        1.96,
+        -0.04
+      ],
+      "colorKey": "baseHex",
+      "color": 9544634
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_0_soft_1",
+      "position": [
+        -3.19,
+        0.78,
+        -0.22
+      ],
+      "rotation": [
+        0.08,
+        0.31,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 7637670
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_0_soft_3",
+      "position": [
+        -2.429,
+        0.746,
+        -0.205
+      ],
+      "rotation": [
+        0.08,
+        0.93,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 7637670
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_1_soft_1",
+      "position": [
+        -1.69,
+        0.78,
+        0.277
+      ],
+      "rotation": [
+        0.08,
+        0.4,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 9544634
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_1_soft_3",
+      "position": [
+        -0.931,
+        0.746,
+        0.224
+      ],
+      "rotation": [
+        0.08,
+        1.02,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 9544634
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_2_soft_1",
+      "position": [
+        -0.187,
+        0.78,
+        -0.186
+      ],
+      "rotation": [
+        0.08,
+        0.49,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 7637670
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_2_soft_3",
+      "position": [
+        0.562,
+        0.746,
+        -0.307
+      ],
+      "rotation": [
+        0.08,
+        1.11,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 7637670
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_3_soft_1",
+      "position": [
+        1.316,
+        0.78,
+        0.311
+      ],
+      "rotation": [
+        0.08,
+        0.58,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 9544634
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_3_soft_3",
+      "position": [
+        2.051,
+        0.746,
+        0.123
+      ],
+      "rotation": [
+        0.08,
+        1.2,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 9544634
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_4_soft_1",
+      "position": [
+        2.822,
+        0.78,
+        -0.153
+      ],
+      "rotation": [
+        0.08,
+        0.67,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 7637670
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_underside_join_4_soft_3",
+      "position": [
+        3.535,
+        0.746,
+        -0.406
+      ],
+      "rotation": [
+        0.08,
+        1.29,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 7637670
+    }
+  ]
+}

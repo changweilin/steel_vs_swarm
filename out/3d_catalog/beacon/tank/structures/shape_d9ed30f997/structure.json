@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d9ed30f997",
+  "canonicalKey": "beacon/tank",
+  "mainStructure": {
+    "kind": "runtime-reference",
+    "sourceKey": "beacon/tank",
+    "bounds": null,
+    "parts": []
+  },
+  "members": [
+    {
+      "key": "beacon/tank",
+      "selection": "approved",
+      "method": "llm_parts",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": null,
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_a294846d"
+      ]
+    }
+  ]
+}

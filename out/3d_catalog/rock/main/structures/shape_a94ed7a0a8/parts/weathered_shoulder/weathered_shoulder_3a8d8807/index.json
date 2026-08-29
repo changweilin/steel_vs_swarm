@@ -1,0 +1,109 @@
+{
+  "id": "weathered_shoulder_3a8d8807",
+  "role": "weathered_shoulder",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+    "name": "right_weathered_shoulder",
+    "part": {
+      "name": "right_weathered_shoulder",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.608,
+      "position": [
+        0.986,
+        1.392,
+        -0.182
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "color": 5200224,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        0.986,
+        1.392,
+        -0.182
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_id14796060-shutterstock_783352309~1_80a40c51_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        1.34,
+        1.318,
+        -0.17
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_images (7)_fd2b4348_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        0.569,
+        0.57,
+        -0.111
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_pngtree-big-boulder-transparent-png-image_13387881_08d60c0a_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        0.809,
+        0.85,
+        -0.182
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        0.886,
+        1.294,
+        -0.125
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 10119749
+    }
+  ]
+}

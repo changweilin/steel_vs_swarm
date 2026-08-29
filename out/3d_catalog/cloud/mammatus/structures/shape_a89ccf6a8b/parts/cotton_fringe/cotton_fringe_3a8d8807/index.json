@@ -1,0 +1,111 @@
+{
+  "id": "cotton_fringe_3a8d8807",
+  "role": "cotton_fringe",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+    "name": "mammatus_continuous_upper_icosa_1_cotton_fringe",
+    "part": {
+      "name": "mammatus_continuous_upper_icosa_1_cotton_fringe",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.296,
+      "position": [
+        -4.132,
+        2.292,
+        0.288
+      ],
+      "rotation": [
+        0.08,
+        0.58,
+        0.04
+      ],
+      "color": 15789026,
+      "triangles": 36,
+      "role": "cotton_fringe",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_icosa_1_cotton_fringe",
+      "position": [
+        -4.132,
+        2.292,
+        0.288
+      ],
+      "rotation": [
+        0.08,
+        0.58,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_icosa_5_cotton_fringe",
+      "position": [
+        1.451,
+        2.609,
+        -0.117
+      ],
+      "rotation": [
+        0.08,
+        1.74,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_icosa_9_cotton_fringe",
+      "position": [
+        -3.863,
+        2.667,
+        -0.52
+      ],
+      "rotation": [
+        0.08,
+        2.9,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_pouch_wide_neck_0_cotton_fringe",
+      "position": [
+        -4.428,
+        1.506,
+        0.97
+      ],
+      "rotation": [
+        0.08,
+        6.38,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_pouch_wide_neck_12_cotton_fringe",
+      "position": [
+        -0.348,
+        1.506,
+        -0.27
+      ],
+      "rotation": [
+        0.08,
+        16.82,
+        0.04
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    }
+  ]
+}

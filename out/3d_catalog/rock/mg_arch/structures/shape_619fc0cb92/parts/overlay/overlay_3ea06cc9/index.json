@@ -1,0 +1,49 @@
+{
+  "id": "overlay_3ea06cc9",
+  "role": "overlay",
+  "type": "wedge",
+  "signature": "wedge|1,0.125,0.25|0",
+  "canonical": {
+    "objectKey": "rock/mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3_21877047_luna_v6",
+    "name": "attached_lichen_shear_facet",
+    "part": {
+      "name": "attached_lichen_shear_facet",
+      "type": "wedge",
+      "dimensions": [
+        1.774,
+        0.329,
+        0.501
+      ],
+      "position": [
+        -0.266,
+        4.884,
+        0.417
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "color": 11452549,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3_21877047_luna_v6",
+      "name": "attached_lichen_shear_facet",
+      "position": [
+        -0.266,
+        4.884,
+        0.417
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 11452549
+    }
+  ]
+}

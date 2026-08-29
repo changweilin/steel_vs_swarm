@@ -1,0 +1,50 @@
+{
+  "id": "canopy_e619f76b",
+  "role": "canopy",
+  "type": "wedge",
+  "signature": "wedge|1,0,0.25|0",
+  "canonical": {
+    "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+    "name": "grand_entrance_canopy",
+    "part": {
+      "name": "grand_entrance_canopy",
+      "type": "wedge",
+      "dimensions": [
+        14.589,
+        0.4,
+        4.5
+      ],
+      "position": [
+        0,
+        4.8,
+        13.438
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 229828,
+      "triangles": 8,
+      "colorKey": "accent"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "grand_entrance_canopy",
+      "position": [
+        0,
+        4.8,
+        13.438
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "weathered_main_polyhedron_b979be3d",
+  "role": "weathered_main_polyhedron",
+  "type": "hull_polyhedron",
+  "signature": "hull_polyhedron|0,0,0|0",
+  "canonical": {
+    "objectKey": "rock/main_images (6)_fd534896_luna_v6",
+    "name": "weathered_main_polyhedron",
+    "part": {
+      "name": "weathered_main_polyhedron",
+      "type": "hull_polyhedron",
+      "dimensions": [
+        2.092,
+        1.335,
+        1.44
+      ],
+      "position": [
+        0,
+        0.297,
+        0
+      ],
+      "rotation": [
+        0.02,
+        0.08,
+        -0.04
+      ],
+      "color": 5200224,
+      "triangles": 46
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_images (6)_fd534896_luna_v6",
+      "name": "weathered_main_polyhedron",
+      "position": [
+        0,
+        0.297,
+        0
+      ],
+      "rotation": [
+        0.02,
+        0.08,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

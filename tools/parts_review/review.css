@@ -53,6 +53,21 @@ body.pr::before, body.pr::after { display: none; }
 .pr-row .pr-rn b { display: block; font-size: 12px; word-break: break-all; }
 .pr-row .pr-rn span { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
 
+/* 型錄樹：類別 → 子類別 → 共用主結構；物件列只住最末層。 */
+.pr-tree { border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+.pr-tree > summary {
+  display: flex; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none;
+  padding: 6px 8px; font-family: var(--mono); color: var(--railW); background: rgba(255, 255, 255, 0.025);
+}
+.pr-tree > summary::-webkit-details-marker { display: none; }
+.pr-tree > summary::before { content: '▸'; color: var(--dim); margin-right: 4px; }
+.pr-tree[open] > summary::before { content: '▾'; }
+.pr-tree > summary i { color: var(--dim); font-size: 9px; font-style: normal; white-space: nowrap; }
+.pr-tree-sub > summary { padding-left: 17px; color: #a9c8ff; }
+.pr-tree-shape > summary { padding-left: 28px; color: #d8b8ff; font-size: 10px; }
+.pr-tree-shape .pr-row { padding-left: 39px; }
+.pr-tree-canonical { padding: 2px 8px 5px 39px; color: var(--dim); font: 9px var(--mono); word-break: break-all; }
+
 /* 附註標籤(清單上只留標籤,整句進 title 懸浮看 —— 一列塞三句話會把清單撐爆) */
 .pr-row .pr-notes { display: block; margin-top: 2px; }
 .pr-note {
@@ -102,6 +117,17 @@ body.pr::before, body.pr::after { display: none; }
 .pr-kv { display: grid; grid-template-columns: 96px 1fr; gap: 3px 10px; font-size: 11.5px; line-height: 1.65; }
 .pr-kv > b { font-family: var(--mono); font-size: 10px; color: var(--dim); font-weight: 400; }
 .pr-kv a { color: #a9c8ff; }
+.pr-cat-detail { margin-top: 8px; border: 1px solid var(--railS); border-radius: 3px; }
+.pr-cat-detail > summary, .pr-cat-branch > summary {
+  cursor: pointer; padding: 5px 7px; font: 10px var(--mono); color: #a9c8ff;
+}
+.pr-cat-branch { margin: 0 7px 5px; }
+.pr-cat-branch > summary i { color: var(--dim); font-style: normal; }
+.pr-cat-branch > div { padding: 2px 8px; color: var(--dim); font: 9.5px var(--mono); }
+.pr-cat-palettes { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px; padding: 7px; max-height: 300px; overflow-y: auto; }
+.pr-cat-palette { display: grid; grid-template-columns: 86px 1fr auto; align-items: center; gap: 5px; font: 9px var(--mono); color: var(--dim); }
+.pr-cat-palette code { overflow: hidden; text-overflow: ellipsis; }
+.pr-cat-swatch { display: inline-block; width: 11px; height: 11px; border-radius: 2px; border: 1px solid rgba(255, 255, 255, 0.18); margin-right: 2px; }
 .pr-h2 { margin: 0 0 2px; font-size: 17px; word-break: break-all; }
 .pr-mline { font-family: var(--mono); font-size: 10.5px; color: var(--dim); margin-bottom: 6px; }
 

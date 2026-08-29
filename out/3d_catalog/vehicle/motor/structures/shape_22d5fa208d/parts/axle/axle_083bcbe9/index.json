@@ -1,0 +1,83 @@
+{
+  "id": "axle_083bcbe9",
+  "role": "axle",
+  "type": "cylinder",
+  "signature": "cylinder|0.25,1,0.25|10",
+  "canonical": {
+    "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+    "name": "front_axle",
+    "part": {
+      "name": "front_axle",
+      "type": "cylinder",
+      "sides": 10,
+      "radii": [
+        0.025,
+        0.025
+      ],
+      "height": 0.2,
+      "position": [
+        0.89,
+        0.38,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 3356992,
+      "triangles": 40,
+      "role": "axle"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "front_axle",
+      "position": [
+        0.89,
+        0.38,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3356992
+    },
+    {
+      "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "name": "front_axle",
+      "position": [
+        0.74,
+        0.34,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435631
+    },
+    {
+      "objectKey": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "name": "front_axle",
+      "position": [
+        0.74,
+        0.34,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435631
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "id": "mesa_crag_3a8d8807",
+  "role": "mesa_crag",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+    "name": "mesa_right_crag",
+    "part": {
+      "name": "mesa_right_crag",
+      "type": "dodecahedron_polyhedron",
+      "radius": 1.44,
+      "position": [
+        4.323,
+        6.431,
+        -0.64
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "color": 10119749,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        4.323,
+        6.431,
+        -0.64
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 10119749
+    },
+    {
+      "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        2.121,
+        5.915,
+        -0.455
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "id": "rail_418ee831",
+  "role": "rail",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|6",
+  "canonical": {
+    "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+    "name": "mixer_safety_rail_left",
+    "part": {
+      "name": "mixer_safety_rail_left",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.04,
+        0.04
+      ],
+      "height": 4.26,
+      "position": [
+        -1.35,
+        1.08,
+        -1
+      ],
+      "rotation": [
+        1.571,
+        1.571,
+        0
+      ],
+      "color": 16773077,
+      "triangles": 24,
+      "role": "equipment",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "mixer_safety_rail_left",
+      "position": [
+        -1.35,
+        1.08,
+        -1
+      ],
+      "rotation": [
+        1.571,
+        1.571,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16773077
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "mixer_safety_rail_right",
+      "position": [
+        -1.35,
+        1.08,
+        1
+      ],
+      "rotation": [
+        1.571,
+        1.571,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16773077
+    }
+  ]
+}

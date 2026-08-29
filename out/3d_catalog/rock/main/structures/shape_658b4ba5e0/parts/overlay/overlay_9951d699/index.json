@@ -1,0 +1,162 @@
+{
+  "id": "overlay_9951d699",
+  "role": "overlay",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+    "name": "mesa_strata_0",
+    "part": {
+      "name": "mesa_strata_0",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        3.04,
+        3.84
+      ],
+      "height": 0.643,
+      "position": [
+        0,
+        5.283,
+        1.44
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6899251,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "name": "mesa_strata_0",
+      "position": [
+        0,
+        5.283,
+        1.44
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6899251
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "name": "mesa_strata_1",
+      "position": [
+        0,
+        7.304,
+        1.44
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "name": "mesa_strata_2",
+      "position": [
+        0,
+        9.325,
+        1.44
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6899251
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "name": "mesa_strata_3",
+      "position": [
+        0,
+        11.346,
+        1.44
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8739389
+    },
+    {
+      "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "name": "mesa_strata_0",
+      "position": [
+        0,
+        4.859,
+        1.023
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "name": "mesa_strata_1",
+      "position": [
+        0,
+        6.718,
+        1.023
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "name": "mesa_strata_2",
+      "position": [
+        0,
+        8.577,
+        1.023
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "name": "mesa_strata_3",
+      "position": [
+        0,
+        10.436,
+        1.023
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    }
+  ]
+}

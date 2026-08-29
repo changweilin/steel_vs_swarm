@@ -1,0 +1,788 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_a5ec094b23",
+  "canonicalKey": "tree/bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1_93ffd54f_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1_93ffd54f_luna_v6",
+    "bounds": {
+      "min": [
+        -3.4215,
+        0,
+        -3.5418
+      ],
+      "max": [
+        2.5859,
+        6.953,
+        3.4899
+      ],
+      "size": [
+        6.007,
+        6.953,
+        7.032
+      ],
+      "rMax": 4.925,
+      "triangles": 2292,
+      "vertices": 1371
+    },
+    "parts": [
+      {
+        "name": "broadleaf_trunk",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.25,
+          0.7
+        ],
+        "height": 5.218,
+        "position": [
+          0,
+          2.609,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 40
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.562,
+          0.78
+        ],
+        "height": 0.5,
+        "position": [
+          0,
+          0.25,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 40
+      },
+      {
+        "name": "broadleaf_primary_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.889,
+        "position": [
+          0.412,
+          4.512,
+          -0.032
+        ],
+        "rotation": [
+          1.197,
+          1.649,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_outer_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.061,
+        "position": [
+          1.206,
+          5.041,
+          -0.095
+        ],
+        "rotation": [
+          0.807,
+          1.649,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_crown_0_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.007,
+          0.224,
+          0.672
+        ],
+        "position": [
+          1.588,
+          5.408,
+          -0.125
+        ],
+        "rotation": [
+          0.057,
+          -0.078,
+          -0.106
+        ],
+        "color": 2640433,
+        "triangles": 160
+      },
+      {
+        "name": "broadleaf_crown_0_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.188,
+        "position": [
+          2.047,
+          5.441,
+          -0.189
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "broadleaf_primary_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.531,
+        "position": [
+          0.191,
+          4.407,
+          0.143
+        ],
+        "rotation": [
+          1.116,
+          0.928,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_outer_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.514,
+        "position": [
+          0.975,
+          4.674,
+          0.731
+        ],
+        "rotation": [
+          1.371,
+          0.928,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_crown_1_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.968,
+          0.253,
+          0.643
+        ],
+        "position": [
+          1.569,
+          4.825,
+          1.176
+        ],
+        "rotation": [
+          0.06,
+          0.643,
+          -0.1
+        ],
+        "color": 5208643,
+        "triangles": 160
+      },
+      {
+        "name": "broadleaf_crown_1_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.18,
+        "position": [
+          1.918,
+          4.862,
+          1.452
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "broadleaf_primary_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.599,
+        "position": [
+          -0.05,
+          5.151,
+          0.263
+        ],
+        "rotation": [
+          1.104,
+          -0.187,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_outer_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 2.169,
+        "position": [
+          -0.299,
+          5.466,
+          1.576
+        ],
+        "rotation": [
+          1.404,
+          -0.187,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_crown_2_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.879,
+          0.198,
+          1.046
+        ],
+        "position": [
+          -0.498,
+          5.646,
+          2.627
+        ],
+        "rotation": [
+          -0.065,
+          1.758,
+          -0.043
+        ],
+        "color": 5208643,
+        "triangles": 160
+      },
+      {
+        "name": "broadleaf_crown_2_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.246,
+        "position": [
+          -0.593,
+          5.675,
+          3.019
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "broadleaf_primary_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.781,
+        "position": [
+          -0.292,
+          4.266,
+          0.252
+        ],
+        "rotation": [
+          1.416,
+          -0.86,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_outer_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 2.014,
+        "position": [
+          -1.339,
+          4.484,
+          1.152
+        ],
+        "rotation": [
+          1.414,
+          -0.86,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_crown_3_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.199,
+          0.282,
+          1.06
+        ],
+        "position": [
+          -2.092,
+          4.641,
+          1.8
+        ],
+        "rotation": [
+          -0.059,
+          2.431,
+          -0.071
+        ],
+        "color": 2640433,
+        "triangles": 160
+      },
+      {
+        "name": "broadleaf_crown_3_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.297,
+        "position": [
+          -2.48,
+          4.682,
+          2.193
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "broadleaf_primary_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.821,
+        "position": [
+          -0.384,
+          4.755,
+          0.064
+        ],
+        "rotation": [
+          1.249,
+          -1.405,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_outer_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.435,
+        "position": [
+          -1.429,
+          5.14,
+          0.239
+        ],
+        "rotation": [
+          1.206,
+          -1.405,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_crown_4_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.351,
+          0.304,
+          0.758
+        ],
+        "position": [
+          -2.09,
+          5.396,
+          0.349
+        ],
+        "rotation": [
+          -0.038,
+          2.976,
+          0.025
+        ],
+        "color": 5208643,
+        "triangles": 160
+      },
+      {
+        "name": "broadleaf_crown_4_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.212,
+        "position": [
+          -2.708,
+          5.441,
+          0.411
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "broadleaf_primary_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.91,
+        "position": [
+          -0.255,
+          4.869,
+          -0.338
+        ],
+        "rotation": [
+          1.199,
+          -2.496,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_outer_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.416,
+        "position": [
+          -0.911,
+          5.273,
+          -1.209
+        ],
+        "rotation": [
+          1.226,
+          -2.496,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_crown_5_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.129,
+          0.296,
+          0.859
+        ],
+        "position": [
+          -1.312,
+          5.512,
+          -1.741
+        ],
+        "rotation": [
+          -0.051,
+          4.066,
+          -0.027
+        ],
+        "color": 5208643,
+        "triangles": 160
+      },
+      {
+        "name": "broadleaf_crown_5_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.24,
+        "position": [
+          -1.646,
+          5.556,
+          -2.139
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "broadleaf_primary_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.543,
+        "position": [
+          -0.015,
+          4.58,
+          -0.257
+        ],
+        "rotation": [
+          1.254,
+          -3.084,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_outer_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 2.12,
+        "position": [
+          -0.089,
+          4.841,
+          -1.558
+        ],
+        "rotation": [
+          1.404,
+          -3.084,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_crown_6_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.942,
+          0.282,
+          0.865
+        ],
+        "position": [
+          -0.149,
+          5.016,
+          -2.602
+        ],
+        "rotation": [
+          0.005,
+          4.655,
+          -0.09
+        ],
+        "color": 2640433,
+        "triangles": 160
+      },
+      {
+        "name": "broadleaf_crown_6_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.242,
+        "position": [
+          -0.185,
+          5.058,
+          -3.033
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "broadleaf_primary_7",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.704,
+        "position": [
+          0.202,
+          4.761,
+          -0.28
+        ],
+        "rotation": [
+          1.367,
+          2.517,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_outer_7",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.019,
+        "position": [
+          0.69,
+          4.975,
+          -0.956
+        ],
+        "rotation": [
+          1.288,
+          2.517,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "broadleaf_crown_7_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.071,
+          0.195,
+          0.743
+        ],
+        "position": [
+          0.976,
+          5.117,
+          -1.353
+        ],
+        "rotation": [
+          0.111,
+          5.337,
+          -0.071
+        ],
+        "color": 5208643,
+        "triangles": 160
+      },
+      {
+        "name": "broadleaf_crown_7_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.208,
+        "position": [
+          1.279,
+          5.146,
+          -1.741
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "top_crown_needle_pad",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1,
+          0.286,
+          0.84
+        ],
+        "position": [
+          0,
+          6.667,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5208643,
+        "triangles": 160
+      },
+      {
+        "name": "top_crown_needle_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.235,
+        "position": [
+          0.458,
+          6.709,
+          -0.038
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1_93ffd54f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/bl_camphor/tree_tree_bl_camphor_manual_a60sjC9DzjJJJoo9rE8Yc7rCKzbpYPHEtMQqA9Ut__1673_1_93ffd54f_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    }
+  ]
+}

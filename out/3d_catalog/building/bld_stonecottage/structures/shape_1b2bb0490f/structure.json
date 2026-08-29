@@ -1,0 +1,764 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_1b2bb0490f",
+  "canonicalKey": "building/bld_stonecottage_ov_3966cc35-f9ef-4d05-8ab5-4b4ba2a0751e_92c1332b",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "building/bld_stonecottage_ov_3966cc35-f9ef-4d05-8ab5-4b4ba2a0751e_92c1332b",
+    "bounds": {
+      "min": [
+        -11.1536,
+        0,
+        -11.1536
+      ],
+      "max": [
+        11.1536,
+        30.843,
+        11.1536
+      ],
+      "size": [
+        22.307,
+        30.843,
+        22.307
+      ],
+      "rMax": 15.774,
+      "triangles": 1276,
+      "vertices": 786
+    },
+    "parts": [
+      {
+        "name": "pagoda_stone_podium",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          14.271,
+          15.774
+        ],
+        "height": 2.2,
+        "position": [
+          0,
+          1.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4544842,
+        "triangles": 16,
+        "colorKey": "base"
+      },
+      {
+        "name": "pagoda_chamber_tier_1",
+        "type": "box",
+        "dimensions": [
+          13.809,
+          4.6137,
+          14.046
+        ],
+        "position": [
+          0,
+          4.50685,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9471348,
+        "triangles": 12,
+        "colorKey": "facade"
+      },
+      {
+        "name": "veranda_column_1_-1_-1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          -6.352,
+          4.50685,
+          -6.461
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_1_-1_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          -6.352,
+          4.50685,
+          6.461
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_1_1_-1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          6.352,
+          4.50685,
+          -6.461
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_1_1_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          6.352,
+          4.50685,
+          6.461
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "curved_eaves_frustum_1",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          8.404,
+          14.975
+        ],
+        "height": 1.7744999999999997,
+        "position": [
+          0,
+          7.70095,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 13290707,
+        "triangles": 16,
+        "colorKey": "roof"
+      },
+      {
+        "name": "eave_ridge_cap_1",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          7.564,
+          9.245
+        ],
+        "height": 0.7098,
+        "position": [
+          0,
+          8.943100000000001,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3358260,
+        "triangles": 16,
+        "colorKey": "dark"
+      },
+      {
+        "name": "veranda_column_2_-1_-1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          -4.955,
+          11.604849999999999,
+          -5.04
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_2_-1_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          -4.955,
+          11.604849999999999,
+          5.04
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_2_1_-1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          4.955,
+          11.604849999999999,
+          -5.04
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_2_1_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          4.955,
+          11.604849999999999,
+          5.04
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "curved_eaves_frustum_2",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          6.555,
+          11.68
+        ],
+        "height": 1.7744999999999997,
+        "position": [
+          0,
+          14.798949999999998,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 13290707,
+        "triangles": 16,
+        "colorKey": "roof"
+      },
+      {
+        "name": "eave_ridge_cap_2",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          5.9,
+          7.211
+        ],
+        "height": 0.7098,
+        "position": [
+          0,
+          16.041099999999997,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3358260,
+        "triangles": 16,
+        "colorKey": "dark"
+      },
+      {
+        "name": "veranda_column_3_-1_-1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          -3.557,
+          18.702849999999998,
+          -3.618
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_3_-1_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          -3.557,
+          18.702849999999998,
+          3.618
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_3_1_-1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          3.557,
+          18.702849999999998,
+          -3.618
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "veranda_column_3_1_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.28,
+          0.28
+        ],
+        "height": 4.6137,
+        "position": [
+          3.557,
+          18.702849999999998,
+          3.618
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9142641,
+        "triangles": 32,
+        "colorKey": "accent"
+      },
+      {
+        "name": "curved_eaves_frustum_3",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          4.706,
+          8.386
+        ],
+        "height": 1.7744999999999997,
+        "position": [
+          0,
+          21.896949999999997,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 13290707,
+        "triangles": 16,
+        "colorKey": "roof"
+      },
+      {
+        "name": "eave_ridge_cap_3",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          4.236,
+          5.177
+        ],
+        "height": 0.7098,
+        "position": [
+          0,
+          23.139099999999996,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3358260,
+        "triangles": 16,
+        "colorKey": "dark"
+      },
+      {
+        "name": "apex_pyramid_roof",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          0.001,
+          1.273
+        ],
+        "height": 1.5,
+        "position": [
+          0,
+          24.243999999999996,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3358260,
+        "triangles": 16,
+        "colorKey": "dark"
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "building/bld_stonecottage_ov_3966cc35-f9ef-4d05-8ab5-4b4ba2a0751e_92c1332b",
+      "selection": "approved",
+      "method": "llm_parts",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/bld_stonecottage/building_bld_stonecottage_ov_3966cc35-f9ef-4d05-8ab5-4b4ba2a0751e",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_5497fca5",
+        "palette_1a657419",
+        "palette_d54ee82a",
+        "palette_6be42c70",
+        "palette_e2d13516",
+        "palette_696c7499",
+        "palette_b21d796d",
+        "palette_c9316d99",
+        "palette_1a6f509f",
+        "palette_25b22ca4",
+        "palette_a62592ff",
+        "palette_7c00fe2f",
+        "palette_40238fee",
+        "palette_8d131ad6",
+        "palette_6db7e477",
+        "palette_24e6ecf7",
+        "palette_5272c7df",
+        "palette_b7f9b764",
+        "palette_881afc4c",
+        "palette_88cab675",
+        "palette_ec278a15",
+        "palette_21aaec48",
+        "palette_a7ea0970",
+        "palette_2fddb28b",
+        "palette_70d2be3d",
+        "palette_9d343f87",
+        "palette_1f99ce7c",
+        "palette_b2aeaa39",
+        "palette_59589e6e",
+        "palette_2a8a8a65",
+        "palette_245f8a4d",
+        "palette_fbf43322",
+        "palette_b2a4521c",
+        "palette_67c60011",
+        "palette_97aa1f2e",
+        "palette_4f98c5a4",
+        "palette_01406f7d",
+        "palette_a0a721c5",
+        "palette_4f5f2955",
+        "palette_57a88e31",
+        "palette_8a6e98e3",
+        "palette_ea7a37e6",
+        "palette_dba7bbb6",
+        "palette_65c2990e",
+        "palette_128bda0c",
+        "palette_74f17598",
+        "palette_ba6bb803",
+        "palette_23f5bb3b",
+        "palette_0e5850bd",
+        "palette_1f85da09",
+        "palette_3a976c5f",
+        "palette_4129658a",
+        "palette_3f778cb9",
+        "palette_93b3a85b",
+        "palette_5aa6fc6c",
+        "palette_a2a32d1c",
+        "palette_e2ebdfe4",
+        "palette_faa3ade9",
+        "palette_24fbce87",
+        "palette_0c02de1f",
+        "palette_8a4994f4",
+        "palette_15a05337",
+        "palette_4cd75645",
+        "palette_347e7cc0",
+        "palette_6ca00e61",
+        "palette_2f3340a1",
+        "palette_d0996bcc",
+        "palette_ed82ba93",
+        "palette_a8e0f027",
+        "palette_14bbc0c5",
+        "palette_c9d3698a",
+        "palette_ff9f3460",
+        "palette_15116895",
+        "palette_07fe3dab",
+        "palette_9a3a121b",
+        "palette_d9521ed8",
+        "palette_aa28c0d6",
+        "palette_f5630b53",
+        "palette_b71d1c5e",
+        "palette_2bb81430",
+        "palette_d4d5eda8",
+        "palette_31ae15e0",
+        "palette_998cb7e3",
+        "palette_8d6cd69f",
+        "palette_774c7eed",
+        "palette_2444633b",
+        "palette_eaf0c289",
+        "palette_82a769e0",
+        "palette_09cb1417",
+        "palette_360ad742",
+        "palette_0c99fa3c",
+        "palette_90db8ea3",
+        "palette_d7253f04",
+        "palette_6fc22a6f",
+        "palette_c906a315",
+        "palette_f10a41d3",
+        "palette_555133a8",
+        "palette_04c8a093",
+        "palette_20494c4a",
+        "palette_2797bf4d",
+        "palette_123387a8",
+        "palette_cb295eb2",
+        "palette_9be693d9",
+        "palette_429ec20b",
+        "palette_c900bad9",
+        "palette_0ec69f19",
+        "palette_c11b1961",
+        "palette_7da02d51",
+        "palette_097dd3c8",
+        "palette_2032b8c2",
+        "palette_f28ddb43",
+        "palette_bea33d09",
+        "palette_370f548a",
+        "palette_bc4a48c4",
+        "palette_abaec90f",
+        "palette_1015f63f",
+        "palette_fd954cfc",
+        "palette_d481deb6",
+        "palette_daf035d3",
+        "palette_936ae1d5",
+        "palette_ea935c4c",
+        "palette_feed533a",
+        "palette_953ba451",
+        "palette_2de91793",
+        "palette_d68cbd8a",
+        "palette_0e3a3d6c",
+        "palette_507f4b69",
+        "palette_c5ee8967",
+        "palette_d15ff253",
+        "palette_2011dbe6",
+        "palette_0be3319c",
+        "palette_920ab569",
+        "palette_38426ba8",
+        "palette_62a2bb59",
+        "palette_6f0d39c2",
+        "palette_d9741cfc",
+        "palette_b6f0a9e2",
+        "palette_2663a6df",
+        "palette_c21c48fe",
+        "palette_121fdb46",
+        "palette_e9b17d81",
+        "palette_ef6b3afc",
+        "palette_71fd0fc2",
+        "palette_d045cdcc",
+        "palette_a73381a5",
+        "palette_6c2f0d3b",
+        "palette_1b23771d",
+        "palette_a4b300b8",
+        "palette_51a8e431",
+        "palette_a8dfd82a",
+        "palette_c51c98be",
+        "palette_21586e8e",
+        "palette_94193788",
+        "palette_a2e48a10",
+        "palette_9aae4ab5",
+        "palette_1d9b1250",
+        "palette_79d6ec25",
+        "palette_d5af3f9c",
+        "palette_3603c1fa",
+        "palette_1e8d8aa0",
+        "palette_2bffc8be",
+        "palette_ef7d9149",
+        "palette_513f189a",
+        "palette_ef86dd0a",
+        "palette_39299fb8",
+        "palette_9c368b19",
+        "palette_b5e91a5b",
+        "palette_77a62387",
+        "palette_4b3b6be8",
+        "palette_695435f4",
+        "palette_d0b0e998",
+        "palette_f60922ff",
+        "palette_8c6b5182",
+        "palette_d5a0a31a",
+        "palette_43b53df4",
+        "palette_3fa069df",
+        "palette_105d732a",
+        "palette_747eedce",
+        "palette_6c8c904f",
+        "palette_383fdf92",
+        "palette_2b96e6c8",
+        "palette_feb433d3",
+        "palette_ba2c3692",
+        "palette_a140a997",
+        "palette_b399fedb",
+        "palette_5af11908",
+        "palette_4939d00f",
+        "palette_b9ee650e",
+        "palette_8961d5c0",
+        "palette_8779d9d8",
+        "palette_a9b8de1c",
+        "palette_61afcd2b",
+        "palette_caf2be57",
+        "palette_1c964e69",
+        "palette_3ecd0b32",
+        "palette_83f317d3",
+        "palette_d645eab5",
+        "palette_1db66f44",
+        "palette_bee4fa28",
+        "palette_73313ac8",
+        "palette_dc210a67",
+        "palette_85478c40",
+        "palette_0947da9a",
+        "palette_08786a2e",
+        "palette_4fa7da87",
+        "palette_673e5143",
+        "palette_048eae07",
+        "palette_4fb7981e",
+        "palette_2bbfb0be",
+        "palette_f09cfb5a",
+        "palette_4853f8cd",
+        "palette_41820ee3",
+        "palette_321b425f",
+        "palette_eb490dd7",
+        "palette_8bd2e743",
+        "palette_97130a08",
+        "palette_ee2a9908",
+        "palette_558f377b",
+        "palette_6ca2a7e4",
+        "palette_abeaefd3",
+        "palette_1f99c0bb",
+        "palette_d55bfd12",
+        "palette_00203833",
+        "palette_474f8f2b",
+        "palette_92a29c4a",
+        "palette_f60afe64",
+        "palette_bb40857f",
+        "palette_c268e94f",
+        "palette_ddff46c6",
+        "palette_187457e0",
+        "palette_f6b4fde4",
+        "palette_6484103f",
+        "palette_d2c079e9"
+      ]
+    }
+  ]
+}

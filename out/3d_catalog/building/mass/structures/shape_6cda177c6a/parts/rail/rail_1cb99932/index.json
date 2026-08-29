@@ -1,0 +1,49 @@
+{
+  "id": "rail_1cb99932",
+  "role": "rail",
+  "type": "box",
+  "signature": "box|0,0.125,1|0",
+  "canonical": {
+    "objectKey": "building/mass_101330_f4de6359_v6",
+    "name": "fence_side",
+    "part": {
+      "name": "fence_side",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1.6,
+        16
+      ],
+      "position": [
+        7.8,
+        0.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_101330_f4de6359_v6",
+      "name": "fence_side",
+      "position": [
+        7.8,
+        0.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

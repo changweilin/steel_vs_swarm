@@ -1,0 +1,49 @@
+{
+  "id": "roof_e32fabba",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|0.875,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_image_1740103474992_00815e4a_v6",
+    "name": "cab_roof",
+    "part": {
+      "name": "cab_roof",
+      "type": "box",
+      "dimensions": [
+        1.7,
+        0.3,
+        1.9
+      ],
+      "position": [
+        -4.2,
+        2.3,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2029584,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_image_1740103474992_00815e4a_v6",
+      "name": "cab_roof",
+      "position": [
+        -4.2,
+        2.3,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2029584
+    }
+  ]
+}

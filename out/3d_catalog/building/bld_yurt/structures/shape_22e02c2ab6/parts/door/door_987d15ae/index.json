@@ -1,0 +1,49 @@
+{
+  "id": "door_987d15ae",
+  "role": "door",
+  "type": "box",
+  "signature": "box|0,1,0.5|0",
+  "canonical": {
+    "objectKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+    "name": "door_panel",
+    "part": {
+      "name": "door_panel",
+      "type": "box",
+      "dimensions": [
+        0.05,
+        1.8,
+        1
+      ],
+      "position": [
+        1.9,
+        1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 49484,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+      "name": "door_panel",
+      "position": [
+        1.9,
+        1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 49484
+    }
+  ]
+}

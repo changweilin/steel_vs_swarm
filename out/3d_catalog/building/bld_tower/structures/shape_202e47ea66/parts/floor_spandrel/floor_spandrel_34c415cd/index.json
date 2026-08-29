@@ -1,0 +1,258 @@
+{
+  "id": "floor_spandrel_34c415cd",
+  "role": "floor_spandrel",
+  "type": "box",
+  "signature": "box|1,0,0.75|0",
+  "canonical": {
+    "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+    "name": "floor_spandrel_1",
+    "part": {
+      "name": "floor_spandrel_1",
+      "type": "box",
+      "dimensions": [
+        25.968,
+        0.35,
+        20.716
+      ],
+      "position": [
+        0,
+        3.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 229828,
+      "triangles": 12,
+      "colorKey": "accent"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_1",
+      "position": [
+        0,
+        3.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_2",
+      "position": [
+        0,
+        7.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_3",
+      "position": [
+        0,
+        11.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_4",
+      "position": [
+        0,
+        15.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_5",
+      "position": [
+        0,
+        19,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_6",
+      "position": [
+        0,
+        22.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_7",
+      "position": [
+        0,
+        26.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_8",
+      "position": [
+        0,
+        30.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_9",
+      "position": [
+        0,
+        34.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_10",
+      "position": [
+        0,
+        38,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_11",
+      "position": [
+        0,
+        41.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_12",
+      "position": [
+        0,
+        45.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_13",
+      "position": [
+        0,
+        49.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    },
+    {
+      "objectKey": "building/bld_tower_ov_38b02277-9baa-4af2-81ae-80fc56bd2272_8c3424fc",
+      "name": "floor_spandrel_14",
+      "position": [
+        0,
+        53.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 229828
+    }
+  ]
+}

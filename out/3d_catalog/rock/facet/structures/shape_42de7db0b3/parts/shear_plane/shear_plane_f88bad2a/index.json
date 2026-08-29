@@ -1,0 +1,49 @@
+{
+  "id": "shear_plane_f88bad2a",
+  "role": "shear_plane",
+  "type": "wedge",
+  "signature": "wedge|1,0.5,0.875|0",
+  "canonical": {
+    "objectKey": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+    "name": "front_shear_plane",
+    "part": {
+      "name": "front_shear_plane",
+      "type": "wedge",
+      "dimensions": [
+        0.641,
+        0.318,
+        0.55
+      ],
+      "position": [
+        0.094,
+        0.826,
+        0.55
+      ],
+      "rotation": [
+        0.08,
+        0,
+        -0.1
+      ],
+      "color": 4861992,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+      "name": "front_shear_plane",
+      "position": [
+        0.094,
+        0.826,
+        0.55
+      ],
+      "rotation": [
+        0.08,
+        0,
+        -0.1
+      ],
+      "colorKey": null,
+      "color": 4861992
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": "peak_cluster_90208908",
+  "role": "peak_cluster",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_images rock (1)~2_18dc0971_v6",
+    "name": "Upper_Peak_Cluster",
+    "part": {
+      "name": "Upper_Peak_Cluster",
+      "type": "icosahedron_polyhedron",
+      "radius": 3,
+      "position": [
+        0.1,
+        14,
+        0.1
+      ],
+      "rotation": [
+        0.1,
+        0.5,
+        -0.2
+      ],
+      "color": 4342338,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_images rock (1)~2_18dc0971_v6",
+      "name": "Upper_Peak_Cluster",
+      "position": [
+        0.1,
+        14,
+        0.1
+      ],
+      "rotation": [
+        0.1,
+        0.5,
+        -0.2
+      ],
+      "colorKey": null,
+      "color": 4342338
+    }
+  ]
+}

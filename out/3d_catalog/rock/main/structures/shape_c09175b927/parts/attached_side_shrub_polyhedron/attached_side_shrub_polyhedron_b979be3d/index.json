@@ -1,0 +1,113 @@
+{
+  "id": "attached_side_shrub_polyhedron_b979be3d",
+  "role": "attached_side_shrub_polyhedron",
+  "type": "hull_polyhedron",
+  "signature": "hull_polyhedron|0,0,0|0",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "attached_side_shrub_polyhedron",
+    "part": {
+      "name": "attached_side_shrub_polyhedron",
+      "type": "hull_polyhedron",
+      "dimensions": [
+        2.199,
+        1.555,
+        1.779
+      ],
+      "position": [
+        -1.855,
+        2.871,
+        0.262
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 46
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "attached_side_shrub_polyhedron",
+      "position": [
+        -1.855,
+        2.871,
+        0.262
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "attached_side_shrub_polyhedron",
+      "position": [
+        -3.24,
+        2.204,
+        0.6
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+      "name": "attached_side_shrub_polyhedron",
+      "position": [
+        -7.02,
+        11.52,
+        1.3
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_e5540b76_luna_v6",
+      "name": "attached_side_shrub_polyhedron",
+      "position": [
+        -7.02,
+        11.52,
+        1.3
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_images (2)_56b743a2_luna_v6",
+      "name": "attached_side_shrub_polyhedron",
+      "position": [
+        -0.661,
+        0.758,
+        0.09
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    }
+  ]
+}

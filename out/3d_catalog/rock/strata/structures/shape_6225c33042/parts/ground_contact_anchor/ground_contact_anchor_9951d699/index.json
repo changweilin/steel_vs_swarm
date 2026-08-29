@@ -1,0 +1,50 @@
+{
+  "id": "ground_contact_anchor_9951d699",
+  "role": "ground_contact_anchor",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/strata_ov_deb2f87f-fb18-40ae-b47c-2447e06afa96_f15f3728_luna_v6",
+    "name": "ground_contact_anchor",
+    "part": {
+      "name": "ground_contact_anchor",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        1.618,
+        2.074
+      ],
+      "height": 0.456,
+      "position": [
+        0,
+        0.228,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6767665,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/strata_ov_deb2f87f-fb18-40ae-b47c-2447e06afa96_f15f3728_luna_v6",
+      "name": "ground_contact_anchor",
+      "position": [
+        0,
+        0.228,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    }
+  ]
+}

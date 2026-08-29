@@ -1,0 +1,49 @@
+{
+  "id": "grille_panel_38fe6239",
+  "role": "grille_panel",
+  "type": "box",
+  "signature": "box|1,0.375,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_news442315o_6ef31cdb_v6",
+    "name": "front_grille_panel",
+    "part": {
+      "name": "front_grille_panel",
+      "type": "box",
+      "dimensions": [
+        1.6,
+        0.5,
+        0.08
+      ],
+      "position": [
+        0,
+        0.85,
+        3.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2105376,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_news442315o_6ef31cdb_v6",
+      "name": "front_grille_panel",
+      "position": [
+        0,
+        0.85,
+        3.53
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    }
+  ]
+}

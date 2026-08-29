@@ -1,0 +1,49 @@
+{
+  "id": "ground_base_34c415cd",
+  "role": "ground_base",
+  "type": "box",
+  "signature": "box|1,0,0.75|0",
+  "canonical": {
+    "objectKey": "rock/main_69353_01_abb820ea_v6",
+    "name": "ground_base",
+    "part": {
+      "name": "ground_base",
+      "type": "box",
+      "dimensions": [
+        120,
+        1,
+        90
+      ],
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4337440,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_69353_01_abb820ea_v6",
+      "name": "ground_base",
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4337440
+    }
+  ]
+}

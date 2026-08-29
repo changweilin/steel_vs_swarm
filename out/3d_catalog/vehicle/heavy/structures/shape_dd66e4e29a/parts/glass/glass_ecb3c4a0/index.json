@@ -1,0 +1,65 @@
+{
+  "id": "glass_ecb3c4a0",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.625,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_news442315o_6ef31cdb_v6",
+    "name": "front_windshield",
+    "part": {
+      "name": "front_windshield",
+      "type": "box",
+      "dimensions": [
+        2.2,
+        1.4,
+        0.05
+      ],
+      "position": [
+        0,
+        2,
+        3.48
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_news442315o_6ef31cdb_v6",
+      "name": "front_windshield",
+      "position": [
+        0,
+        2,
+        3.48
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "front_windshield",
+      "position": [
+        0,
+        2.3,
+        5.12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2640263
+    }
+  ]
+}

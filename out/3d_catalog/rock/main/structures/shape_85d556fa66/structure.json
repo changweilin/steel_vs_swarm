@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_85d556fa66",
+  "canonicalKey": "rock/main_images (3)_5dece30a_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/main_images (3)_5dece30a_v6",
+    "bounds": {
+      "min": [
+        -0.9664,
+        -0.3,
+        -0.9
+      ],
+      "max": [
+        1.1072,
+        1.394,
+        0.9
+      ],
+      "size": [
+        2.074,
+        1.694,
+        1.8
+      ],
+      "rMax": 1.427,
+      "triangles": 164,
+      "vertices": 96
+    },
+    "parts": [
+      {
+        "name": "main_rock_body",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.85,
+        "position": [
+          0,
+          0.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9868950,
+        "triangles": 36
+      },
+      {
+        "name": "rock_extension_left",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.55,
+        "position": [
+          -0.5,
+          0.45,
+          0.1
+        ],
+        "rotation": [
+          0.2,
+          0.3,
+          -0.4
+        ],
+        "color": 9868950,
+        "triangles": 20
+      },
+      {
+        "name": "rock_extension_right",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.6,
+        "position": [
+          0.55,
+          0.5,
+          -0.1
+        ],
+        "rotation": [
+          -0.3,
+          0.4,
+          0.2
+        ],
+        "color": 9868950,
+        "triangles": 20
+      },
+      {
+        "name": "rock_peak_crest",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.42,
+        "position": [
+          -0.2,
+          0.95,
+          -0.05
+        ],
+        "rotation": [
+          0.1,
+          -0.2,
+          0.3
+        ],
+        "color": 11184810,
+        "triangles": 36
+      },
+      {
+        "name": "rock_base_foundation",
+        "type": "polygonal_prism",
+        "sides": 8,
+        "radius": 0.9,
+        "height": 1,
+        "position": [
+          0,
+          0.2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6579300,
+        "triangles": 32
+      },
+      {
+        "name": "rock_detail_wedge",
+        "type": "wedge",
+        "dimensions": [
+          0.5,
+          0.4,
+          0.4
+        ],
+        "position": [
+          -0.35,
+          0.3,
+          0.3
+        ],
+        "rotation": [
+          -0.4,
+          0.5,
+          -0.2
+        ],
+        "color": 12500670,
+        "triangles": 8
+      },
+      {
+        "name": "rock_dark_crevice",
+        "type": "box",
+        "dimensions": [
+          0.4,
+          0.3,
+          0.3
+        ],
+        "position": [
+          0.2,
+          0.25,
+          0.35
+        ],
+        "rotation": [
+          0.3,
+          -0.4,
+          0.1
+        ],
+        "color": 3947580,
+        "triangles": 12
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/main_images (3)_5dece30a_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_images_3__v6",
+      "similarity": 33,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_23a0147a"
+      ]
+    },
+    {
+      "key": "rock/main_d087b40c-1b1a-4f8a-a620-c0aafe41056d_749bd224_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_d087b40c-1b1a-4f8a-a620-c0aafe41056d_v6",
+      "similarity": 100,
+      "scale": [
+        2.16972,
+        2.88371,
+        2.5
+      ],
+      "paletteIds": [
+        "palette_535e331a"
+      ]
+    },
+    {
+      "key": "rock/main_images rock (1)~2_18dc0971_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/main/rock_main_images_rock_1_2_v6",
+      "similarity": 27,
+      "scale": [
+        8.66152,
+        12.20366,
+        7.06278
+      ],
+      "paletteIds": [
+        "palette_6eb3d89d"
+      ]
+    }
+  ]
+}

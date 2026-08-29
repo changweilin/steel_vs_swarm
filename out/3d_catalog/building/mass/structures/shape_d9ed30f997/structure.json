@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d9ed30f997",
+  "canonicalKey": "building/mass_01_0a6db86c_v6",
+  "mainStructure": {
+    "kind": "runtime-reference",
+    "sourceKey": "building/mass_01_0a6db86c_v6",
+    "bounds": null,
+    "parts": []
+  },
+  "members": [
+    {
+      "key": "building/mass_01_0a6db86c_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": null,
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_cc4afe9f"
+      ]
+    }
+  ]
+}

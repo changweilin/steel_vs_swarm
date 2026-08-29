@@ -1,0 +1,65 @@
+{
+  "id": "mirror_82e608ae",
+  "role": "mirror",
+  "type": "box",
+  "signature": "box|0.75,0.75,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+    "name": "rear_mirror_left",
+    "part": {
+      "name": "rear_mirror_left",
+      "type": "box",
+      "dimensions": [
+        0.15,
+        0.15,
+        0.2
+      ],
+      "position": [
+        -0.9,
+        1.35,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1052688,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+      "name": "rear_mirror_left",
+      "position": [
+        -0.9,
+        1.35,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1052688
+    },
+    {
+      "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+      "name": "rear_mirror_right",
+      "position": [
+        0.9,
+        1.35,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1052688
+    }
+  ]
+}

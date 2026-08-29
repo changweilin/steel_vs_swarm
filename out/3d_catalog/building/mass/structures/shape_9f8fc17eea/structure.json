@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_9f8fc17eea",
+  "canonicalKey": "building/mass_images (15)_f6c4e057_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "building/mass_images (15)_f6c4e057_v6",
+    "bounds": {
+      "min": [
+        -12.5,
+        0,
+        -12.5
+      ],
+      "max": [
+        12.5,
+        24.5,
+        12.5
+      ],
+      "size": [
+        25,
+        24.5,
+        25
+      ],
+      "rMax": 17.678,
+      "triangles": 868,
+      "vertices": 454
+    },
+    "parts": [
+      {
+        "name": "base_platform",
+        "type": "box",
+        "dimensions": [
+          25,
+          3,
+          25
+        ],
+        "position": [
+          0,
+          1.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 14211288,
+        "triangles": 12
+      },
+      {
+        "name": "lower_wall",
+        "type": "cylinder",
+        "sides": 32,
+        "radii": [
+          9,
+          9
+        ],
+        "height": 5,
+        "position": [
+          0,
+          5.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11546645,
+        "triangles": 128
+      },
+      {
+        "name": "lower_eave",
+        "type": "frustum_pyramid",
+        "sides": 32,
+        "radii": [
+          9,
+          12
+        ],
+        "height": 1.2,
+        "position": [
+          0,
+          8.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 1644825,
+        "triangles": 128
+      },
+      {
+        "name": "middle_wall",
+        "type": "cylinder",
+        "sides": 32,
+        "radii": [
+          7,
+          7
+        ],
+        "height": 4.8,
+        "position": [
+          0,
+          11.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11546645,
+        "triangles": 128
+      },
+      {
+        "name": "middle_eave",
+        "type": "frustum_pyramid",
+        "sides": 32,
+        "radii": [
+          7,
+          10
+        ],
+        "height": 1.2,
+        "position": [
+          0,
+          14.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 1644825,
+        "triangles": 128
+      },
+      {
+        "name": "upper_wall",
+        "type": "cylinder",
+        "sides": 32,
+        "radii": [
+          5,
+          5
+        ],
+        "height": 4.8,
+        "position": [
+          0,
+          17.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11546645,
+        "triangles": 128
+      },
+      {
+        "name": "upper_roof",
+        "type": "cone",
+        "sides": 32,
+        "radii": [
+          0.001,
+          6
+        ],
+        "height": 4,
+        "position": [
+          0,
+          22,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 1644825,
+        "triangles": 128
+      },
+      {
+        "name": "spire_top",
+        "type": "cylinder",
+        "sides": 16,
+        "radii": [
+          0.5,
+          0.5
+        ],
+        "height": 1.5,
+        "position": [
+          0,
+          24.75,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 16777215,
+        "triangles": 64
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "building/mass_images (15)_f6c4e057_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/mass/building_mass_images_15__v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_cfddac88"
+      ]
+    }
+  ]
+}

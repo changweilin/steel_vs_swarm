@@ -1,0 +1,82 @@
+{
+  "id": "ground_contact_anchor_9951d699",
+  "role": "ground_contact_anchor",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+    "name": "ground_contact_anchor",
+    "part": {
+      "name": "ground_contact_anchor",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        2.184,
+        2.8
+      ],
+      "height": 0.616,
+      "position": [
+        0,
+        0.308,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6767665,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "name": "ground_contact_anchor",
+      "position": [
+        0,
+        0.308,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    },
+    {
+      "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "name": "ground_contact_anchor",
+      "position": [
+        0,
+        0.219,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_images rock (1)~0_fd270a13_luna_v6",
+      "name": "ground_contact_anchor",
+      "position": [
+        0,
+        0.182,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

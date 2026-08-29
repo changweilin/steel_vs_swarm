@@ -1,0 +1,50 @@
+{
+  "id": "shrub_central_stem_100f6c28",
+  "role": "shrub_central_stem",
+  "type": "conical_frustum",
+  "signature": "conical_frustum|0.375,1,0.375|8",
+  "canonical": {
+    "objectKey": "tree/canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+    "name": "shrub_central_stem",
+    "part": {
+      "name": "shrub_central_stem",
+      "type": "conical_frustum",
+      "sides": 8,
+      "radii": [
+        0.12,
+        0.3
+      ],
+      "height": 1.869,
+      "position": [
+        0,
+        0.934,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5387560,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+      "name": "shrub_central_stem",
+      "position": [
+        0,
+        0.934,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5387560
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "cloud",
+  "subcategory": "cumulus",
+  "palettes": [
+    {
+      "id": "palette_d3ef2369",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 11452373,
+        "facadeHex": 13885164,
+        "baseHex": 9544634,
+        "accentHex": 15199992,
+        "glassHex": 16186111,
+        "darkHex": 7637670,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

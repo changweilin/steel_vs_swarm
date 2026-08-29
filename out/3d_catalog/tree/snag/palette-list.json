@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "snag",
+  "palettes": [
+    {
+      "id": "palette_ed80279a",
+      "name": "執行期繼承配色",
+      "colors": null,
+      "objects": [
+        {
+          "key": "tree/snag_a",
+          "source": "runtime-consumer"
+        }
+      ]
+    }
+  ]
+}

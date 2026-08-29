@@ -1,0 +1,49 @@
+{
+  "id": "solar_panel_b42bdf58",
+  "role": "solar_panel",
+  "type": "box",
+  "signature": "box|0.125,1,0.75|0",
+  "canonical": {
+    "objectKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+    "name": "solar_panel",
+    "part": {
+      "name": "solar_panel",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1,
+        0.8
+      ],
+      "position": [
+        1.8,
+        2.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0.5
+      ],
+      "color": 49484,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+      "name": "solar_panel",
+      "position": [
+        1.8,
+        2.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0.5
+      ],
+      "colorKey": null,
+      "color": 49484
+    }
+  ]
+}

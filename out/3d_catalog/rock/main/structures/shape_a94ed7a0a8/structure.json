@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_a94ed7a0a8",
+  "canonicalKey": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+    "bounds": {
+      "min": [
+        -1.5801,
+        0,
+        -1.437
+      ],
+      "max": [
+        1.5908,
+        3.5719,
+        1.7802
+      ],
+      "size": [
+        3.171,
+        3.572,
+        3.217
+      ],
+      "rMax": 2.387,
+      "triangles": 444,
+      "vertices": 261
+    },
+    "parts": [
+      {
+        "name": "faceted_lower_foot",
+        "type": "frustum_pyramid",
+        "sides": 9,
+        "radii": [
+          1.034,
+          1.459
+        ],
+        "height": 0.806,
+        "position": [
+          0,
+          0.769,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 36
+      },
+      {
+        "name": "weathered_main_mass",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          1.533,
+          1.538,
+          1.216
+        ],
+        "position": [
+          0,
+          1.831,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 160
+      },
+      {
+        "name": "front_angular_face",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.821,
+        "position": [
+          0.073,
+          1.611,
+          0.912
+        ],
+        "rotation": [
+          0.08,
+          0.24,
+          -0.05
+        ],
+        "color": 5200224,
+        "triangles": 20
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_id14796060-shutterstock_783352309~1_80a40c51_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_id14796060-shutterstock_783352309_1_80a40c51_luna_v6",
+      "similarity": 62,
+      "scale": [
+        1.31473,
+        1.04367,
+        0.93348
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_images (7)_fd2b4348_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_images_7__fd2b4348_luna_v6",
+      "similarity": 60,
+      "scale": [
+        0.58814,
+        0.44961,
+        0.57662
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_pngtree-big-boulder-transparent-png-image_13387881_08d60c0a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_pngtree-big-boulder-transparent-png-image_13387881_08d60c0a_luna_v6",
+      "similarity": 53,
+      "scale": [
+        0.89372,
+        0.68589,
+        0.94001
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_pngtree-mesmerizing-high-contrast-composition-featuring-one-_4116c78d_68d88926_luna_v6",
+      "similarity": 50,
+      "scale": [
+        0.86944,
+        0.92021,
+        0.65092
+      ],
+      "paletteIds": [
+        "palette_64959f26"
+      ]
+    }
+  ]
+}

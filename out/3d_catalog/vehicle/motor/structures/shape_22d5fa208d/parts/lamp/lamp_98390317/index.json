@@ -1,0 +1,82 @@
+{
+  "id": "lamp_98390317",
+  "role": "lamp",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|0.75,0.75,1|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+    "name": "headlamp",
+    "part": {
+      "name": "headlamp",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.11,
+        0.1,
+        0.14
+      ],
+      "position": [
+        0.92,
+        0.9,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16183265,
+      "triangles": 160,
+      "role": "lamp"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.92,
+        0.9,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16183265
+    },
+    {
+      "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.74,
+        0.9,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15986402
+    },
+    {
+      "objectKey": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "name": "headlamp",
+      "position": [
+        0.74,
+        0.9,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15986402
+    }
+  ]
+}

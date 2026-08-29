@@ -1,0 +1,82 @@
+{
+  "id": "shrub_central_stem_a2a366c8",
+  "role": "shrub_central_stem",
+  "type": "conical_frustum",
+  "signature": "conical_frustum|0.25,1,0.25|8",
+  "canonical": {
+    "objectKey": "tree/canopy_pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561_cff3fe31_luna_v6",
+    "name": "shrub_central_stem",
+    "part": {
+      "name": "shrub_central_stem",
+      "type": "conical_frustum",
+      "sides": 8,
+      "radii": [
+        0.12,
+        0.3
+      ],
+      "height": 2.194,
+      "position": [
+        0,
+        1.097,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5387560,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/canopy_pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561_cff3fe31_luna_v6",
+      "name": "shrub_central_stem",
+      "position": [
+        0,
+        1.097,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5387560
+    },
+    {
+      "objectKey": "tree/canopy_pngtree-dark-bonsai-in-blue-pot-png-image_16185488_ee37681a_luna_v6",
+      "name": "shrub_central_stem",
+      "position": [
+        0,
+        1.29,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5387560
+    },
+    {
+      "objectKey": "tree/canopy_pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398_997e5234_luna_v6",
+      "name": "shrub_central_stem",
+      "position": [
+        0,
+        1.025,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5387560
+    }
+  ]
+}

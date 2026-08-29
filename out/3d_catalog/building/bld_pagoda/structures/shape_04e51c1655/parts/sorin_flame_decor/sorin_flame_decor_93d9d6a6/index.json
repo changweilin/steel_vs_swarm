@@ -1,0 +1,50 @@
+{
+  "id": "sorin_flame_decor_93d9d6a6",
+  "role": "sorin_flame_decor",
+  "type": "conical_frustum",
+  "signature": "conical_frustum|0.75,1,0.75|8",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+    "name": "sorin_flame_decor",
+    "part": {
+      "name": "sorin_flame_decor",
+      "type": "conical_frustum",
+      "sides": 8,
+      "radii": [
+        0.1,
+        0.3
+      ],
+      "height": 0.8,
+      "position": [
+        0,
+        22.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16303424,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+      "name": "sorin_flame_decor",
+      "position": [
+        0,
+        22.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16303424
+    }
+  ]
+}

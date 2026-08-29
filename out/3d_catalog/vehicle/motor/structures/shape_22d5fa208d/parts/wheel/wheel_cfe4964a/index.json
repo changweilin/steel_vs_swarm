@@ -1,0 +1,127 @@
+{
+  "id": "wheel_cfe4964a",
+  "role": "wheel",
+  "type": "torus_ring",
+  "signature": "torus_ring|1,1,0|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+    "name": "rear_wheel_rim",
+    "part": {
+      "name": "rear_wheel_rim",
+      "type": "torus_ring",
+      "radius": 0.305,
+      "tube": 0.014,
+      "position": [
+        -0.89,
+        0.39,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 13671747,
+      "triangles": 120,
+      "role": "wheel_rim"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "rear_wheel_rim",
+      "position": [
+        -0.89,
+        0.39,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13671747
+    },
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "front_wheel_rim",
+      "position": [
+        0.89,
+        0.38,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13671747
+    },
+    {
+      "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "name": "rear_wheel_rim",
+      "position": [
+        -0.74,
+        0.34,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13215056
+    },
+    {
+      "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "name": "front_wheel_rim",
+      "position": [
+        0.74,
+        0.34,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13215056
+    },
+    {
+      "objectKey": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "name": "rear_wheel_rim",
+      "position": [
+        -0.74,
+        0.34,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13215056
+    },
+    {
+      "objectKey": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "name": "front_wheel_rim",
+      "position": [
+        0.74,
+        0.34,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13215056
+    }
+  ]
+}

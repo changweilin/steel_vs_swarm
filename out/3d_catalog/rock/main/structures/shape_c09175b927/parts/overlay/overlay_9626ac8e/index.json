@@ -1,0 +1,49 @@
+{
+  "id": "overlay_9626ac8e",
+  "role": "overlay",
+  "type": "wedge",
+  "signature": "wedge|1,0.625,0.625|0",
+  "canonical": {
+    "objectKey": "rock/main_61bc69d997822_24ae0dc8_luna_v6",
+    "name": "strata_front_break",
+    "part": {
+      "name": "strata_front_break",
+      "type": "wedge",
+      "dimensions": [
+        7.8,
+        4.598,
+        4.68
+      ],
+      "position": [
+        3.12,
+        9.196,
+        7.8
+      ],
+      "rotation": [
+        0.04,
+        0.1,
+        -0.08
+      ],
+      "color": 2106664,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_61bc69d997822_24ae0dc8_luna_v6",
+      "name": "strata_front_break",
+      "position": [
+        3.12,
+        9.196,
+        7.8
+      ],
+      "rotation": [
+        0.04,
+        0.1,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 2106664
+    }
+  ]
+}

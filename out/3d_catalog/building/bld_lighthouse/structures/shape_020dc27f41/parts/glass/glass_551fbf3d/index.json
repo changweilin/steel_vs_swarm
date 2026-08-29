@@ -1,0 +1,50 @@
+{
+  "id": "glass_551fbf3d",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0.875,0.25,1|0",
+  "canonical": {
+    "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+    "name": "podium_lobby_glass",
+    "part": {
+      "name": "podium_lobby_glass",
+      "type": "box",
+      "dimensions": [
+        23.968,
+        7.6,
+        25.836
+      ],
+      "position": [
+        0,
+        3.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16053492,
+      "triangles": 12,
+      "colorKey": "roof"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "podium_lobby_glass",
+      "position": [
+        0,
+        3.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roof",
+      "color": 16053492
+    }
+  ]
+}

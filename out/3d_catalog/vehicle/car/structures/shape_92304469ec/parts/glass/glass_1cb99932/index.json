@@ -1,0 +1,131 @@
+{
+  "id": "glass_1cb99932",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+    "name": "rear_windshield",
+    "part": {
+      "name": "rear_windshield",
+      "type": "box",
+      "dimensions": [
+        0.045,
+        0.246,
+        1.444
+      ],
+      "position": [
+        -1.025,
+        0.939,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1452860,
+      "triangles": 12,
+      "role": "glass",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "rear_windshield",
+      "position": [
+        -1.025,
+        0.939,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "rear_windshield",
+      "position": [
+        -1.025,
+        0.939,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "rear_windshield",
+      "position": [
+        -1.025,
+        0.939,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "rear_windshield",
+      "position": [
+        -1.025,
+        0.939,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "rear_windshield",
+      "position": [
+        -1.025,
+        0.939,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "rear_windshield",
+      "position": [
+        -1.025,
+        0.939,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    }
+  ]
+}

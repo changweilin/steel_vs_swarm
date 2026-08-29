@@ -1,0 +1,50 @@
+{
+  "id": "antenna_5f158db3",
+  "role": "antenna",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|6",
+  "canonical": {
+    "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+    "name": "finial_stem",
+    "part": {
+      "name": "finial_stem",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.05,
+        0.05
+      ],
+      "height": 0.6,
+      "position": [
+        0,
+        10.7,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 24
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+      "name": "finial_stem",
+      "position": [
+        0,
+        10.7,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

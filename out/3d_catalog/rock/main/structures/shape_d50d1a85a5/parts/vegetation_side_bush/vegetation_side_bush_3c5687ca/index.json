@@ -1,0 +1,49 @@
+{
+  "id": "vegetation_side_bush_3c5687ca",
+  "role": "vegetation_side_bush",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|1,0.75,0.875|0",
+  "canonical": {
+    "objectKey": "rock/main_600_0e22036ae47633cc17a7c569e53cc66f_15b601ab_v6",
+    "name": "Vegetation_Side_Bush",
+    "part": {
+      "name": "Vegetation_Side_Bush",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        1.4,
+        1,
+        1.2
+      ],
+      "position": [
+        1.5,
+        17.5,
+        0.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3822645,
+      "triangles": 160
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_600_0e22036ae47633cc17a7c569e53cc66f_15b601ab_v6",
+      "name": "Vegetation_Side_Bush",
+      "position": [
+        1.5,
+        17.5,
+        0.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3822645
+    }
+  ]
+}

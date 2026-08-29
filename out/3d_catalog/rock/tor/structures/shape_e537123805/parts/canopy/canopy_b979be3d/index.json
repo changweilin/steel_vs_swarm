@@ -1,0 +1,49 @@
+{
+  "id": "canopy_b979be3d",
+  "role": "canopy",
+  "type": "hull_polyhedron",
+  "signature": "hull_polyhedron|0,0,0|0",
+  "canonical": {
+    "objectKey": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+    "name": "arch_weathered_crown_polyhedron",
+    "part": {
+      "name": "arch_weathered_crown_polyhedron",
+      "type": "hull_polyhedron",
+      "dimensions": [
+        12.16,
+        2.25,
+        2.72
+      ],
+      "position": [
+        0,
+        4.5,
+        -0.08
+      ],
+      "rotation": [
+        0,
+        0.08,
+        0
+      ],
+      "color": 5200224,
+      "triangles": 46
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+      "name": "arch_weathered_crown_polyhedron",
+      "position": [
+        0,
+        4.5,
+        -0.08
+      ],
+      "rotation": [
+        0,
+        0.08,
+        0
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

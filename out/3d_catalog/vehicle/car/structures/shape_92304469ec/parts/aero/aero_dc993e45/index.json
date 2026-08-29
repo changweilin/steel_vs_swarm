@@ -1,0 +1,131 @@
+{
+  "id": "aero_dc993e45",
+  "role": "aero",
+  "type": "box",
+  "signature": "box|1,0.125,0.25|0",
+  "canonical": {
+    "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+    "name": "rear_spoiler",
+    "part": {
+      "name": "rear_spoiler",
+      "type": "box",
+      "dimensions": [
+        0.62,
+        0.055,
+        0.14
+      ],
+      "position": [
+        -2.035,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14988872,
+      "triangles": 12,
+      "role": "aero",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "rear_spoiler",
+      "position": [
+        -2.035,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 14988872
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "rear_spoiler",
+      "position": [
+        -2.035,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 14988872
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "rear_spoiler",
+      "position": [
+        -2.035,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 14988872
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "rear_spoiler",
+      "position": [
+        -2.035,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 14988872
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "rear_spoiler",
+      "position": [
+        -2.035,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 14988872
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "rear_spoiler",
+      "position": [
+        -2.035,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 14988872
+    }
+  ]
+}

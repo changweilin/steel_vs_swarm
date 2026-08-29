@@ -1,0 +1,49 @@
+{
+  "id": "decorative_tile_panel_5926e52d",
+  "role": "decorative_tile_panel",
+  "type": "box",
+  "signature": "box|1,0.125,0|0",
+  "canonical": {
+    "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+    "name": "decorative_tile_panel",
+    "part": {
+      "name": "decorative_tile_panel",
+      "type": "box",
+      "dimensions": [
+        1.6,
+        0.3,
+        0.05
+      ],
+      "position": [
+        0,
+        1.8,
+        2.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2631720,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "decorative_tile_panel",
+      "position": [
+        0,
+        1.8,
+        2.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2631720
+    }
+  ]
+}

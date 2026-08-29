@@ -1,0 +1,163 @@
+{
+  "id": "lamp_7f529270",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|0.375,0.75,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "heavy_headlight_left",
+    "part": {
+      "name": "heavy_headlight_left",
+      "type": "box",
+      "dimensions": [
+        0.12,
+        0.24,
+        0.32
+      ],
+      "position": [
+        4.395,
+        1.23,
+        -0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16316657,
+      "triangles": 12,
+      "role": "lamp",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "heavy_headlight_left",
+      "position": [
+        4.395,
+        1.23,
+        -0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16316657
+    },
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "heavy_headlight_right",
+      "position": [
+        4.395,
+        1.23,
+        0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16316657
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "heavy_headlight_left",
+      "position": [
+        4.395,
+        1.23,
+        -0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15975234
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "heavy_headlight_right",
+      "position": [
+        4.395,
+        1.23,
+        0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15975234
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "heavy_headlight_left",
+      "position": [
+        4.395,
+        1.23,
+        -0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16773077
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "heavy_headlight_right",
+      "position": [
+        4.395,
+        1.23,
+        0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16773077
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "heavy_headlight_left",
+      "position": [
+        4.395,
+        1.23,
+        -0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16251120
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "heavy_headlight_right",
+      "position": [
+        4.395,
+        1.23,
+        0.765
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16251120
+    }
+  ]
+}

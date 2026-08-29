@@ -1,0 +1,45 @@
+{
+  "id": "dolmen_marker_90208908",
+  "role": "dolmen_marker",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_132_0da6c49f_luna_v6",
+    "name": "dolmen_front_marker",
+    "part": {
+      "name": "dolmen_front_marker",
+      "type": "icosahedron_polyhedron",
+      "radius": 3.38,
+      "position": [
+        0,
+        3.806,
+        7.02
+      ],
+      "rotation": [
+        0.2,
+        0.2,
+        0.05
+      ],
+      "color": 5602375,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_132_0da6c49f_luna_v6",
+      "name": "dolmen_front_marker",
+      "position": [
+        0,
+        3.806,
+        7.02
+      ],
+      "rotation": [
+        0.2,
+        0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 5602375
+    }
+  ]
+}

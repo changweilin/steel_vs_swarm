@@ -1,0 +1,50 @@
+{
+  "id": "canopy_17c1e780",
+  "role": "canopy",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.5,1|8",
+  "canonical": {
+    "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+    "name": "attached_hat_crown",
+    "part": {
+      "name": "attached_hat_crown",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        0.497,
+        0.688
+      ],
+      "height": 0.645,
+      "position": [
+        0,
+        3.873,
+        0.07
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2370353,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+      "name": "attached_hat_crown",
+      "position": [
+        0,
+        3.873,
+        0.07
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2370353
+    }
+  ]
+}

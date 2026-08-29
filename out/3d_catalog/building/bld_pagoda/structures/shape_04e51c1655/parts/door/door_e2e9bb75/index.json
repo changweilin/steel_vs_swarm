@@ -1,0 +1,49 @@
+{
+  "id": "door_e2e9bb75",
+  "role": "door",
+  "type": "box",
+  "signature": "box|1,1,0|0",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+    "name": "first_story_door_front",
+    "part": {
+      "name": "first_story_door_front",
+      "type": "box",
+      "dimensions": [
+        2,
+        2,
+        0.1
+      ],
+      "position": [
+        0,
+        2,
+        4.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2105376,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "first_story_door_front",
+      "position": [
+        0,
+        2,
+        4.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    }
+  ]
+}

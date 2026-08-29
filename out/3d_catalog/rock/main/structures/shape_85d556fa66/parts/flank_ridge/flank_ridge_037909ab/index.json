@@ -1,0 +1,49 @@
+{
+  "id": "flank_ridge_037909ab",
+  "role": "flank_ridge",
+  "type": "wedge",
+  "signature": "wedge|0.625,0.75,1|0",
+  "canonical": {
+    "objectKey": "rock/main_images rock (1)~2_18dc0971_v6",
+    "name": "Flank_Ridge_Right",
+    "part": {
+      "name": "Flank_Ridge_Right",
+      "type": "wedge",
+      "dimensions": [
+        4.5,
+        6,
+        7.5
+      ],
+      "position": [
+        4.8,
+        7,
+        0.2
+      ],
+      "rotation": [
+        -0.2,
+        -0.4,
+        0.7
+      ],
+      "color": 3881787,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_images rock (1)~2_18dc0971_v6",
+      "name": "Flank_Ridge_Right",
+      "position": [
+        4.8,
+        7,
+        0.2
+      ],
+      "rotation": [
+        -0.2,
+        -0.4,
+        0.7
+      ],
+      "colorKey": null,
+      "color": 3881787
+    }
+  ]
+}

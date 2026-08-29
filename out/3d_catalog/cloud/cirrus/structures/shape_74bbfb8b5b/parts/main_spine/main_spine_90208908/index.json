@@ -1,0 +1,95 @@
+{
+  "id": "main_spine_90208908",
+  "role": "main_spine",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+    "name": "cirrus_main_spine_1_soft_5",
+    "part": {
+      "name": "cirrus_main_spine_1_soft_5",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.104,
+      "position": [
+        -2.604,
+        1.337,
+        0.025
+      ],
+      "rotation": [
+        0.08,
+        1.68,
+        -0.014
+      ],
+      "color": 12177903,
+      "triangles": 20,
+      "role": "main_spine",
+      "colorKey": "facadeHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_main_spine_1_soft_5",
+      "position": [
+        -2.604,
+        1.337,
+        0.025
+      ],
+      "rotation": [
+        0.08,
+        1.68,
+        -0.014
+      ],
+      "colorKey": "facadeHex",
+      "color": 12177903
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_main_spine_2_soft_7",
+      "position": [
+        -1.271,
+        1.424,
+        -0.094
+      ],
+      "rotation": [
+        0.08,
+        2.25,
+        0.017
+      ],
+      "colorKey": "facadeHex",
+      "color": 12177903
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_main_spine_5_soft_5",
+      "position": [
+        2.098,
+        1.442,
+        0.082
+      ],
+      "rotation": [
+        0.08,
+        1.69,
+        -0.017
+      ],
+      "colorKey": "facadeHex",
+      "color": 12177903
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_main_spine_6_soft_7",
+      "position": [
+        3.429,
+        1.409,
+        0.022
+      ],
+      "rotation": [
+        0.08,
+        2.29,
+        0.021
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    }
+  ]
+}

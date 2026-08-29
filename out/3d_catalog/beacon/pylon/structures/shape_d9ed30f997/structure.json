@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d9ed30f997",
+  "canonicalKey": "beacon/pylon",
+  "mainStructure": {
+    "kind": "runtime-reference",
+    "sourceKey": "beacon/pylon",
+    "bounds": null,
+    "parts": []
+  },
+  "members": [
+    {
+      "key": "beacon/pylon",
+      "selection": "approved",
+      "method": "llm_parts",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": null,
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_9dd0059e"
+      ]
+    }
+  ]
+}

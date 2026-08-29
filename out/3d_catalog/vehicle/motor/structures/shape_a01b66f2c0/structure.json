@@ -1,0 +1,357 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_a01b66f2c0",
+  "canonicalKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+    "bounds": {
+      "min": [
+        -0.89,
+        0.0135,
+        -0.4946
+      ],
+      "max": [
+        0.915,
+        1.2153,
+        0.4946
+      ],
+      "size": [
+        1.805,
+        1.202,
+        0.989
+      ],
+      "rMax": 1.04,
+      "triangles": 2252,
+      "vertices": 1378
+    },
+    "parts": [
+      {
+        "name": "underbody",
+        "type": "box",
+        "dimensions": [
+          0.98,
+          0.18,
+          0.46
+        ],
+        "position": [
+          -0.03,
+          0.37,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 1448736,
+        "triangles": 12,
+        "role": "body"
+      },
+      {
+        "name": "footboard",
+        "type": "box",
+        "dimensions": [
+          0.78,
+          0.11,
+          0.4
+        ],
+        "position": [
+          -0.08,
+          0.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 856340,
+        "triangles": 12,
+        "role": "body"
+      },
+      {
+        "name": "front_cowling_left",
+        "type": "box",
+        "dimensions": [
+          0.48,
+          0.66,
+          0.26
+        ],
+        "position": [
+          0.43,
+          0.72,
+          -0.13
+        ],
+        "rotation": [
+          0,
+          0,
+          -0.12
+        ],
+        "color": 7901339,
+        "triangles": 12,
+        "role": "body"
+      },
+      {
+        "name": "front_cowling_right",
+        "type": "box",
+        "dimensions": [
+          0.48,
+          0.66,
+          0.26
+        ],
+        "position": [
+          0.43,
+          0.72,
+          0.13
+        ],
+        "rotation": [
+          0,
+          0,
+          -0.12
+        ],
+        "color": 7901339,
+        "triangles": 12,
+        "role": "body"
+      },
+      {
+        "name": "rear_body_left",
+        "type": "box",
+        "dimensions": [
+          0.55,
+          0.43,
+          0.24
+        ],
+        "position": [
+          -0.44,
+          0.63,
+          -0.12
+        ],
+        "rotation": [
+          0,
+          0,
+          0.08
+        ],
+        "color": 2239025,
+        "triangles": 12,
+        "role": "body"
+      },
+      {
+        "name": "rear_body_right",
+        "type": "box",
+        "dimensions": [
+          0.55,
+          0.43,
+          0.24
+        ],
+        "position": [
+          -0.44,
+          0.63,
+          0.12
+        ],
+        "rotation": [
+          0,
+          0,
+          0.08
+        ],
+        "color": 2239025,
+        "triangles": 12,
+        "role": "body"
+      },
+      {
+        "name": "seat",
+        "type": "box",
+        "dimensions": [
+          0.58,
+          0.12,
+          0.4
+        ],
+        "position": [
+          -0.28,
+          0.82,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 856340,
+        "triangles": 12,
+        "role": "body"
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000001_1672123300_88ea4c82_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_5dcf05de"
+      ]
+    },
+    {
+      "key": "vehicle/motor_000001_1742374978_4250286e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000001_1742374978_4250286e_luna_v6",
+      "similarity": 98,
+      "scale": [
+        1.01108,
+        0.99917,
+        1
+      ],
+      "paletteIds": [
+        "palette_66ff4d4a"
+      ]
+    },
+    {
+      "key": "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000002_1645174811_b1ef8e63_luna_v6",
+      "similarity": 96,
+      "scale": [
+        1.03047,
+        1.06073,
+        1
+      ],
+      "paletteIds": [
+        "palette_5dcf05de"
+      ]
+    },
+    {
+      "key": "vehicle/motor_10905670_R_58b9efa4_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_10905670_R_58b9efa4_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_5dcf05de"
+      ]
+    },
+    {
+      "key": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_5dcf05de"
+      ]
+    },
+    {
+      "key": "vehicle/motor_14074013_OR_m_15e668c8_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_14074013_OR_m_15e668c8_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_5dcf05de"
+      ]
+    },
+    {
+      "key": "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "similarity": 98,
+      "scale": [
+        1.01108,
+        0.99917,
+        1
+      ],
+      "paletteIds": [
+        "palette_66ff4d4a"
+      ]
+    },
+    {
+      "key": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_5dcf05de"
+      ]
+    },
+    {
+      "key": "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "similarity": 96,
+      "scale": [
+        1.03047,
+        1.06073,
+        1
+      ],
+      "paletteIds": [
+        "palette_5dcf05de"
+      ]
+    },
+    {
+      "key": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_165019503901_c719b559_luna_v6",
+      "similarity": 41,
+      "scale": [
+        1.21662,
+        1.04326,
+        0.96057
+      ],
+      "paletteIds": [
+        "palette_c21c98d1"
+      ]
+    }
+  ]
+}

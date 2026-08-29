@@ -1,0 +1,99 @@
+{
+  "id": "door_38b7b9bf",
+  "role": "door",
+  "type": "box",
+  "signature": "box|0,0.75,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_4d54f379-07b7-453d-9e45-5fa076db88df_3199e89d_luna_v6",
+    "name": "freight_rear_door",
+    "part": {
+      "name": "freight_rear_door",
+      "type": "box",
+      "dimensions": [
+        0.045,
+        1.435,
+        1.989
+      ],
+      "position": [
+        -3.611,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3155754,
+      "triangles": 12,
+      "role": "cargo",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_4d54f379-07b7-453d-9e45-5fa076db88df_3199e89d_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.611,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3155754
+    },
+    {
+      "objectKey": "vehicle/heavy_5126f791-8473-4ae4-b729-525c496362fd_5bb8acbb_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.611,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3155754
+    },
+    {
+      "objectKey": "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.611,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3155754
+    },
+    {
+      "objectKey": "vehicle/heavy_CSPV-02_01_5ef67224_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.611,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3155754
+    }
+  ]
+}

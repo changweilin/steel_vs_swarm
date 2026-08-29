@@ -1,0 +1,68 @@
+{
+  "id": "aero_4a4da0da",
+  "role": "aero",
+  "type": "cylinder",
+  "signature": "cylinder|0.25,1,0.25|6",
+  "canonical": {
+    "objectKey": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+    "name": "concept_spoiler_stay_left",
+    "part": {
+      "name": "concept_spoiler_stay_left",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.014,
+        0.014
+      ],
+      "height": 0.092,
+      "position": [
+        -2.145,
+        1.785,
+        -0.26
+      ],
+      "rotation": [
+        0.219,
+        1.571,
+        0
+      ],
+      "color": 2826279,
+      "triangles": 24,
+      "role": "aero",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+      "name": "concept_spoiler_stay_left",
+      "position": [
+        -2.145,
+        1.785,
+        -0.26
+      ],
+      "rotation": [
+        0.219,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2826279
+    },
+    {
+      "objectKey": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+      "name": "concept_spoiler_stay_right",
+      "position": [
+        -2.145,
+        1.785,
+        0.26
+      ],
+      "rotation": [
+        0.219,
+        1.571,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2826279
+    }
+  ]
+}

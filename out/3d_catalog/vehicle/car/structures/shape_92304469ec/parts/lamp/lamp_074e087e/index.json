@@ -1,0 +1,65 @@
+{
+  "id": "lamp_074e087e",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|0.25,1,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+    "name": "taillight_left",
+    "part": {
+      "name": "taillight_left",
+      "type": "box",
+      "dimensions": [
+        0.15,
+        0.5,
+        0.08
+      ],
+      "position": [
+        -0.75,
+        1.2,
+        -1.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3355443,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+      "name": "taillight_left",
+      "position": [
+        -0.75,
+        1.2,
+        -1.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3355443
+    },
+    {
+      "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+      "name": "taillight_right",
+      "position": [
+        0.75,
+        1.2,
+        -1.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3355443
+    }
+  ]
+}

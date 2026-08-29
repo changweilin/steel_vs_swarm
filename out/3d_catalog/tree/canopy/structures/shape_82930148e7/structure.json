@@ -1,0 +1,504 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_82930148e7",
+  "canonicalKey": "tree/canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+    "bounds": {
+      "min": [
+        -1.4565,
+        0,
+        -1.7775
+      ],
+      "max": [
+        1.8134,
+        2.3605,
+        1.7448
+      ],
+      "size": [
+        3.27,
+        2.361,
+        3.522
+      ],
+      "rMax": 2.516,
+      "triangles": 1404,
+      "vertices": 846
+    },
+    "parts": [
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.245,
+          0.34
+        ],
+        "height": 0.28,
+        "position": [
+          0,
+          0.14,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5387560,
+        "triangles": 40
+      },
+      {
+        "name": "shrub_branch_0",
+        "type": "cylinder",
+        "sides": 6,
+        "radii": [
+          0.032,
+          0.045
+        ],
+        "height": 1.632,
+        "position": [
+          0.767,
+          1.776,
+          0.116
+        ],
+        "rotation": [
+          1.257,
+          1.421,
+          0
+        ],
+        "color": 2763554,
+        "triangles": 24
+      },
+      {
+        "name": "shrub_leaf_0_boxwood_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.144,
+        "position": [
+          1.535,
+          2.028,
+          0.232
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3234617,
+        "triangles": 36
+      },
+      {
+        "name": "shrub_leaf_0_boxwood_outer",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.294,
+          0.319
+        ],
+        "position": [
+          1.535,
+          2.066,
+          0.232
+        ],
+        "rotation": [
+          0,
+          0.15,
+          0
+        ],
+        "color": 9415271,
+        "triangles": 160
+      },
+      {
+        "name": "shrub_branch_1",
+        "type": "cylinder",
+        "sides": 6,
+        "radii": [
+          0.032,
+          0.045
+        ],
+        "height": 1.634,
+        "position": [
+          0.348,
+          1.804,
+          0.704
+        ],
+        "rotation": [
+          1.291,
+          0.459,
+          0
+        ],
+        "color": 2763554,
+        "triangles": 24
+      },
+      {
+        "name": "shrub_leaf_1_boxwood_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.144,
+        "position": [
+          0.695,
+          2.03,
+          1.409
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6456401,
+        "triangles": 36
+      },
+      {
+        "name": "shrub_leaf_1_boxwood_outer",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.375,
+          0.293,
+          0.244
+        ],
+        "position": [
+          0.695,
+          2.068,
+          1.409
+        ],
+        "rotation": [
+          0,
+          1.112,
+          0
+        ],
+        "color": 9415271,
+        "triangles": 160
+      },
+      {
+        "name": "shrub_branch_2",
+        "type": "cylinder",
+        "sides": 6,
+        "radii": [
+          0.032,
+          0.045
+        ],
+        "height": 1.174,
+        "position": [
+          -0.249,
+          1.504,
+          0.458
+        ],
+        "rotation": [
+          1.093,
+          -0.499,
+          0
+        ],
+        "color": 2763554,
+        "triangles": 24
+      },
+      {
+        "name": "shrub_leaf_2_boxwood_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.144,
+        "position": [
+          -0.499,
+          1.774,
+          0.915
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3234617,
+        "triangles": 36
+      },
+      {
+        "name": "shrub_leaf_2_boxwood_outer",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.251,
+          0.189,
+          0.256
+        ],
+        "position": [
+          -0.499,
+          1.798,
+          0.915
+        ],
+        "rotation": [
+          0,
+          2.07,
+          0
+        ],
+        "color": 9415271,
+        "triangles": 160
+      },
+      {
+        "name": "shrub_branch_3",
+        "type": "cylinder",
+        "sides": 6,
+        "radii": [
+          0.032,
+          0.045
+        ],
+        "height": 1.258,
+        "position": [
+          -0.575,
+          1.314,
+          0.047
+        ],
+        "rotation": [
+          1.161,
+          -1.489,
+          0
+        ],
+        "color": 2763554,
+        "triangles": 24
+      },
+      {
+        "name": "shrub_leaf_3_boxwood_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.144,
+        "position": [
+          -1.15,
+          1.565,
+          0.094
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6456401,
+        "triangles": 36
+      },
+      {
+        "name": "shrub_leaf_3_boxwood_outer",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.308,
+          0.268,
+          0.274
+        ],
+        "position": [
+          -1.15,
+          1.599,
+          0.094
+        ],
+        "rotation": [
+          0,
+          3.06,
+          0
+        ],
+        "color": 9415271,
+        "triangles": 160
+      },
+      {
+        "name": "shrub_branch_4",
+        "type": "cylinder",
+        "sides": 6,
+        "radii": [
+          0.032,
+          0.045
+        ],
+        "height": 1.322,
+        "position": [
+          -0.26,
+          1.63,
+          -0.575
+        ],
+        "rotation": [
+          1.27,
+          -2.718,
+          0
+        ],
+        "color": 2763554,
+        "triangles": 24
+      },
+      {
+        "name": "shrub_leaf_4_boxwood_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.144,
+        "position": [
+          -0.52,
+          1.826,
+          -1.151
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3234617,
+        "triangles": 36
+      },
+      {
+        "name": "shrub_leaf_4_boxwood_outer",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.344,
+          0.237,
+          0.227
+        ],
+        "position": [
+          -0.52,
+          1.856,
+          -1.151
+        ],
+        "rotation": [
+          0,
+          4.288,
+          0
+        ],
+        "color": 9415271,
+        "triangles": 160
+      },
+      {
+        "name": "shrub_branch_5",
+        "type": "cylinder",
+        "sides": 6,
+        "radii": [
+          0.032,
+          0.045
+        ],
+        "height": 1.709,
+        "position": [
+          0.3,
+          1.765,
+          -0.741
+        ],
+        "rotation": [
+          1.209,
+          2.756,
+          0
+        ],
+        "color": 2763554,
+        "triangles": 24
+      },
+      {
+        "name": "shrub_leaf_5_boxwood_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.144,
+        "position": [
+          0.601,
+          2.067,
+          -1.481
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6456401,
+        "triangles": 36
+      },
+      {
+        "name": "shrub_leaf_5_boxwood_outer",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.32,
+          0.192,
+          0.2
+        ],
+        "position": [
+          0.601,
+          2.092,
+          -1.481
+        ],
+        "rotation": [
+          0,
+          5.098,
+          0
+        ],
+        "color": 9415271,
+        "triangles": 160
+      },
+      {
+        "name": "boxwood_dark_core",
+        "type": "box",
+        "dimensions": [
+          1.704,
+          0.934,
+          1.539
+        ],
+        "position": [
+          0,
+          1.512,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2763554,
+        "triangles": 12
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_0adace6d"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561_cff3fe31_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561_cff3fe31_luna_v6",
+      "similarity": 52,
+      "scale": [
+        1.00765,
+        1.30919,
+        0.81374
+      ],
+      "paletteIds": [
+        "palette_0adace6d"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-dark-bonsai-in-blue-pot-png-image_16185488_ee37681a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-dark-bonsai-in-blue-pot-png-image_16185488_ee37681a_luna_v6",
+      "similarity": 39,
+      "scale": [
+        1.00214,
+        1.446,
+        0.87592
+      ],
+      "paletteIds": [
+        "palette_0adace6d"
+      ]
+    },
+    {
+      "key": "tree/canopy_pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398_997e5234_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned_030d4079_997e5234_luna_v6",
+      "similarity": 49,
+      "scale": [
+        0.90489,
+        1.23083,
+        0.83106
+      ],
+      "paletteIds": [
+        "palette_0adace6d"
+      ]
+    }
+  ]
+}

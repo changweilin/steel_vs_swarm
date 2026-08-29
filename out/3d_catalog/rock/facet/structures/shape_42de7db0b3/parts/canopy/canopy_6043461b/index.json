@@ -1,0 +1,49 @@
+{
+  "id": "canopy_6043461b",
+  "role": "canopy",
+  "type": "hemisphere_dome",
+  "signature": "hemisphere_dome|1,0.375,0.875|0",
+  "canonical": {
+    "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+    "name": "attached_lichen_canopy",
+    "part": {
+      "name": "attached_lichen_canopy",
+      "type": "hemisphere_dome",
+      "radii": [
+        0.726,
+        0.262,
+        0.598
+      ],
+      "position": [
+        -0.115,
+        3.631,
+        -0.07
+      ],
+      "rotation": [
+        0,
+        0.08,
+        0
+      ],
+      "color": 6717267,
+      "triangles": 170
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+      "name": "attached_lichen_canopy",
+      "position": [
+        -0.115,
+        3.631,
+        -0.07
+      ],
+      "rotation": [
+        0,
+        0.08,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    }
+  ]
+}

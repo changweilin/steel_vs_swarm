@@ -1,0 +1,559 @@
+{
+  "id": "branch_3a8d8807",
+  "role": "branch",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+    "name": "cirrus_branch_fibre_0_soft_0",
+    "part": {
+      "name": "cirrus_branch_fibre_0_soft_0",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.083,
+      "position": [
+        -4.319,
+        1.336,
+        0.424
+      ],
+      "rotation": [
+        0.06,
+        0.35,
+        0.017
+      ],
+      "color": 15858175,
+      "triangles": 36,
+      "role": "branch_fibre",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_0_soft_0",
+      "position": [
+        -4.319,
+        1.336,
+        0.424
+      ],
+      "rotation": [
+        0.06,
+        0.35,
+        0.017
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_0_soft_2",
+      "position": [
+        -3.92,
+        1.382,
+        0.267
+      ],
+      "rotation": [
+        0.06,
+        0.89,
+        0.017
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_0_soft_4",
+      "position": [
+        -3.52,
+        1.391,
+        0.127
+      ],
+      "rotation": [
+        0.06,
+        1.43,
+        0.017
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_0_soft_6",
+      "position": [
+        -3.121,
+        1.4,
+        -0.013
+      ],
+      "rotation": [
+        0.06,
+        1.97,
+        0.017
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_1_soft_0",
+      "position": [
+        -3.551,
+        1.433,
+        0.259
+      ],
+      "rotation": [
+        0.06,
+        0.52,
+        -0.014
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_1_soft_4",
+      "position": [
+        -2.809,
+        1.413,
+        -0.173
+      ],
+      "rotation": [
+        0.06,
+        1.6,
+        -0.014
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_2_soft_0",
+      "position": [
+        -3.137,
+        1.302,
+        0.093
+      ],
+      "rotation": [
+        0.06,
+        0.28,
+        0.025
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_2_soft_8",
+      "position": [
+        -1.703,
+        1.438,
+        -0.333
+      ],
+      "rotation": [
+        0.06,
+        2.44,
+        0.025
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_3_soft_0",
+      "position": [
+        -2.149,
+        1.312,
+        0.3
+      ],
+      "rotation": [
+        0.06,
+        0.57,
+        -0.021
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_4_soft_0",
+      "position": [
+        -1.605,
+        1.28,
+        0.379
+      ],
+      "rotation": [
+        0.06,
+        0.32,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_4_soft_2",
+      "position": [
+        -1.237,
+        1.321,
+        0.246
+      ],
+      "rotation": [
+        0.06,
+        0.86,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_4_soft_4",
+      "position": [
+        -0.868,
+        1.324,
+        0.129
+      ],
+      "rotation": [
+        0.06,
+        1.4,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_4_soft_6",
+      "position": [
+        -0.499,
+        1.327,
+        0.013
+      ],
+      "rotation": [
+        0.06,
+        1.94,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_5_soft_0",
+      "position": [
+        -0.788,
+        1.357,
+        0.167
+      ],
+      "rotation": [
+        0.06,
+        0.5,
+        -0.017
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_5_soft_4",
+      "position": [
+        -0.052,
+        1.329,
+        -0.241
+      ],
+      "rotation": [
+        0.06,
+        1.58,
+        -0.017
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_6_soft_0",
+      "position": [
+        -0.306,
+        1.306,
+        0.297
+      ],
+      "rotation": [
+        0.06,
+        0.25,
+        0.021
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_6_soft_6",
+      "position": [
+        0.946,
+        1.383,
+        -0.023
+      ],
+      "rotation": [
+        0.06,
+        1.87,
+        0.021
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_7_soft_0",
+      "position": [
+        0.478,
+        1.446,
+        0.239
+      ],
+      "rotation": [
+        0.06,
+        0.54,
+        -0.025
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_8_soft_0",
+      "position": [
+        0.881,
+        1.399,
+        0.443
+      ],
+      "rotation": [
+        0.06,
+        0.31,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_8_soft_2",
+      "position": [
+        1.269,
+        1.44,
+        0.308
+      ],
+      "rotation": [
+        0.06,
+        0.85,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_8_soft_4",
+      "position": [
+        1.657,
+        1.444,
+        0.189
+      ],
+      "rotation": [
+        0.06,
+        1.39,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_8_soft_6",
+      "position": [
+        2.045,
+        1.448,
+        0.07
+      ],
+      "rotation": [
+        0.06,
+        1.93,
+        0.014
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_9_soft_0",
+      "position": [
+        1.72,
+        1.392,
+        0.272
+      ],
+      "rotation": [
+        0.06,
+        0.6,
+        -0.021
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_9_soft_4",
+      "position": [
+        2.44,
+        1.354,
+        -0.226
+      ],
+      "rotation": [
+        0.06,
+        1.68,
+        -0.021
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_10_soft_0",
+      "position": [
+        2.21,
+        1.309,
+        0.337
+      ],
+      "rotation": [
+        0.06,
+        0.29,
+        0.021
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_10_soft_6",
+      "position": [
+        3.35,
+        1.38,
+        -0.003
+      ],
+      "rotation": [
+        0.06,
+        1.91,
+        0.021
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_11_soft_0",
+      "position": [
+        2.812,
+        1.334,
+        0.159
+      ],
+      "rotation": [
+        0.06,
+        0.5,
+        -0.017
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_11_soft_4",
+      "position": [
+        3.548,
+        1.309,
+        -0.251
+      ],
+      "rotation": [
+        0.06,
+        1.58,
+        -0.017
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_12_soft_0",
+      "position": [
+        3.138,
+        1.272,
+        0.253
+      ],
+      "rotation": [
+        0.06,
+        0.24,
+        0.01
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_12_soft_2",
+      "position": [
+        3.556,
+        1.309,
+        0.14
+      ],
+      "rotation": [
+        0.06,
+        0.78,
+        0.01
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_12_soft_4",
+      "position": [
+        3.973,
+        1.31,
+        0.043
+      ],
+      "rotation": [
+        0.06,
+        1.32,
+        0.01
+      ],
+      "colorKey": "glassHex",
+      "color": 15858175
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_13_soft_0",
+      "position": [
+        3.567,
+        1.282,
+        0.081
+      ],
+      "rotation": [
+        0.06,
+        0.46,
+        -0.014
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    },
+    {
+      "objectKey": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "name": "cirrus_branch_fibre_13_soft_4",
+      "position": [
+        4.273,
+        1.264,
+        -0.275
+      ],
+      "rotation": [
+        0.06,
+        1.54,
+        -0.014
+      ],
+      "colorKey": "accentHex",
+      "color": 14478591
+    }
+  ]
+}

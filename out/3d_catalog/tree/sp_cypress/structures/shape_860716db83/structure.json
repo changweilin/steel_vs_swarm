@@ -1,0 +1,2206 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_860716db83",
+  "canonicalKey": "tree/sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a_257ef9be_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a_257ef9be_luna_v6",
+    "bounds": {
+      "min": [
+        -2.1345,
+        0,
+        -2.1867
+      ],
+      "max": [
+        2.5067,
+        8.3495,
+        2.0521
+      ],
+      "size": [
+        4.641,
+        8.35,
+        4.239
+      ],
+      "rMax": 3.24,
+      "triangles": 8274,
+      "vertices": 4806
+    },
+    "parts": [
+      {
+        "name": "trunk",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.28,
+          0.72
+        ],
+        "height": 6.009,
+        "position": [
+          0,
+          3.005,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4928552,
+        "triangles": 40
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.518,
+          0.72
+        ],
+        "height": 0.48,
+        "position": [
+          0,
+          0.24,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4928552,
+        "triangles": 40
+      },
+      {
+        "name": "cypress_level_0_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.05,
+          0.07
+        ],
+        "height": 1.567,
+        "position": [
+          0.774,
+          2.034,
+          -0.045
+        ],
+        "rotation": [
+          1.424,
+          1.628,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_0_0_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.962,
+          0.32,
+          0.59
+        ],
+        "position": [
+          1.548,
+          1.951,
+          -0.089
+        ],
+        "rotation": [
+          0.066,
+          -0.07,
+          -0.041
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_0_0_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.129,
+        "position": [
+          1.548,
+          2.182,
+          -0.089
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_0_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.045,
+          0.063
+        ],
+        "height": 1.357,
+        "position": [
+          0.307,
+          2.076,
+          0.584
+        ],
+        "rotation": [
+          1.338,
+          0.484,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_0_1_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.962,
+          0.32,
+          0.59
+        ],
+        "position": [
+          0.614,
+          2.035,
+          1.169
+        ],
+        "rotation": [
+          0.055,
+          1.164,
+          -0.028
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_0_1_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.129,
+        "position": [
+          0.614,
+          2.266,
+          1.169
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_0_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.043,
+          0.06
+        ],
+        "height": 1.472,
+        "position": [
+          -0.591,
+          2.07,
+          0.412
+        ],
+        "rotation": [
+          1.365,
+          -0.961,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_0_2_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.962,
+          0.32,
+          0.59
+        ],
+        "position": [
+          -1.181,
+          2.023,
+          0.825
+        ],
+        "rotation": [
+          0.089,
+          2.436,
+          -0.085
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_0_2_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.129,
+        "position": [
+          -1.181,
+          2.254,
+          0.825
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_0_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.06,
+          0.083
+        ],
+        "height": 1.485,
+        "position": [
+          -0.647,
+          2.015,
+          -0.351
+        ],
+        "rotation": [
+          1.442,
+          -2.067,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_0_3_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.962,
+          0.32,
+          0.59
+        ],
+        "position": [
+          -1.295,
+          1.913,
+          -0.701
+        ],
+        "rotation": [
+          -0.038,
+          3.725,
+          -0.029
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_0_3_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.129,
+        "position": [
+          -1.295,
+          2.145,
+          -0.701
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_0_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.053,
+          0.073
+        ],
+        "height": 1.323,
+        "position": [
+          0.16,
+          2.076,
+          -0.623
+        ],
+        "rotation": [
+          1.332,
+          2.891,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_0_4_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.962,
+          0.32,
+          0.59
+        ],
+        "position": [
+          0.319,
+          2.035,
+          -1.245
+        ],
+        "rotation": [
+          0.025,
+          4.92,
+          0.048
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_0_4_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.129,
+        "position": [
+          0.319,
+          2.267,
+          -1.245
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_1_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.034,
+          0.047
+        ],
+        "height": 1.225,
+        "position": [
+          0.583,
+          3.116,
+          0.097
+        ],
+        "rotation": [
+          1.304,
+          1.407,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_1_0_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.737,
+          0.32,
+          0.452
+        ],
+        "position": [
+          1.166,
+          3.08,
+          0.193
+        ],
+        "rotation": [
+          0.016,
+          0.199,
+          -0.003
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_1_0_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          1.166,
+          3.311,
+          0.193
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_1_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.034,
+          0.048
+        ],
+        "height": 1.013,
+        "position": [
+          0.072,
+          3.085,
+          0.484
+        ],
+        "rotation": [
+          1.311,
+          0.148,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_1_1_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.737,
+          0.32,
+          0.452
+        ],
+        "position": [
+          0.145,
+          3.018,
+          0.968
+        ],
+        "rotation": [
+          0.102,
+          1.449,
+          -0.087
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_1_1_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.145,
+          3.249,
+          0.968
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_1_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.069
+        ],
+        "height": 1.183,
+        "position": [
+          -0.528,
+          3.1,
+          0.225
+        ],
+        "rotation": [
+          1.323,
+          -1.168,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_1_2_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.737,
+          0.32,
+          0.452
+        ],
+        "position": [
+          -1.056,
+          3.048,
+          0.45
+        ],
+        "rotation": [
+          -0.058,
+          2.663,
+          0.015
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_1_2_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -1.056,
+          3.279,
+          0.45
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_1_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.058,
+          0.081
+        ],
+        "height": 1.095,
+        "position": [
+          -0.415,
+          3.027,
+          -0.349
+        ],
+        "rotation": [
+          1.438,
+          -2.269,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_1_3_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.737,
+          0.32,
+          0.452
+        ],
+        "position": [
+          -0.831,
+          2.902,
+          -0.698
+        ],
+        "rotation": [
+          0.026,
+          3.939,
+          -0.108
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_1_3_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.831,
+          3.134,
+          -0.698
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_1_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.037,
+          0.052
+        ],
+        "height": 1.062,
+        "position": [
+          0.271,
+          3.097,
+          -0.434
+        ],
+        "rotation": [
+          1.299,
+          2.584,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_1_4_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.737,
+          0.32,
+          0.452
+        ],
+        "position": [
+          0.541,
+          3.043,
+          -0.869
+        ],
+        "rotation": [
+          0.018,
+          5.185,
+          -0.068
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_1_4_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.541,
+          3.274,
+          -0.869
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_2_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.046,
+          0.063
+        ],
+        "height": 1.172,
+        "position": [
+          0.565,
+          4.135,
+          -0.052
+        ],
+        "rotation": [
+          1.319,
+          1.663,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_2_0_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.706,
+          0.32,
+          0.432
+        ],
+        "position": [
+          1.131,
+          4.084,
+          -0.105
+        ],
+        "rotation": [
+          -0.045,
+          -0.112,
+          -0.004
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_2_0_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          1.131,
+          4.315,
+          -0.105
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_2_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.057,
+          0.079
+        ],
+        "height": 1.019,
+        "position": [
+          0.331,
+          4.066,
+          0.379
+        ],
+        "rotation": [
+          1.419,
+          0.718,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_2_1_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.706,
+          0.32,
+          0.432
+        ],
+        "position": [
+          0.663,
+          3.946,
+          0.759
+        ],
+        "rotation": [
+          0.023,
+          0.949,
+          -0.031
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_2_1_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.663,
+          4.177,
+          0.759
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_2_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.041,
+          0.057
+        ],
+        "height": 1.02,
+        "position": [
+          -0.236,
+          4.146,
+          0.425
+        ],
+        "rotation": [
+          1.259,
+          -0.507,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_2_2_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.706,
+          0.32,
+          0.432
+        ],
+        "position": [
+          -0.472,
+          4.105,
+          0.849
+        ],
+        "rotation": [
+          0.087,
+          1.998,
+          -0.072
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_2_2_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.472,
+          4.336,
+          0.849
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_2_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.044,
+          0.061
+        ],
+        "height": 1.14,
+        "position": [
+          -0.566,
+          4.036,
+          0.049
+        ],
+        "rotation": [
+          1.488,
+          -1.485,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_2_3_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.706,
+          0.32,
+          0.432
+        ],
+        "position": [
+          -1.132,
+          3.886,
+          0.097
+        ],
+        "rotation": [
+          0.041,
+          3.037,
+          -0.021
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_2_3_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -1.132,
+          4.117,
+          0.097
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_2_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.047,
+          0.066
+        ],
+        "height": 1.029,
+        "position": [
+          -0.344,
+          4.08,
+          -0.371
+        ],
+        "rotation": [
+          1.393,
+          -2.394,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_2_4_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.706,
+          0.32,
+          0.432
+        ],
+        "position": [
+          -0.689,
+          3.974,
+          -0.743
+        ],
+        "rotation": [
+          -0.049,
+          4.062,
+          -0.108
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_2_4_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.689,
+          4.205,
+          -0.743
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_2_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.037,
+          0.051
+        ],
+        "height": 0.993,
+        "position": [
+          0.252,
+          4.079,
+          -0.418
+        ],
+        "rotation": [
+          1.39,
+          2.6,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_2_5_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.706,
+          0.32,
+          0.432
+        ],
+        "position": [
+          0.503,
+          3.971,
+          -0.837
+        ],
+        "rotation": [
+          -0.044,
+          5.171,
+          -0.087
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_2_5_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.503,
+          4.202,
+          -0.837
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_3_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.041,
+          0.056
+        ],
+        "height": 0.896,
+        "position": [
+          0.438,
+          5.099,
+          0.056
+        ],
+        "rotation": [
+          1.403,
+          1.445,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_3_0_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.55,
+          0.32,
+          0.337
+        ],
+        "position": [
+          0.876,
+          4.977,
+          0.111
+        ],
+        "rotation": [
+          0.016,
+          0.154,
+          -0.026
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_3_0_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.876,
+          5.208,
+          0.111
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_3_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.054,
+          0.074
+        ],
+        "height": 0.776,
+        "position": [
+          0.15,
+          5.13,
+          0.342
+        ],
+        "rotation": [
+          1.295,
+          0.412,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_3_1_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.55,
+          0.32,
+          0.337
+        ],
+        "position": [
+          0.299,
+          5.039,
+          0.684
+        ],
+        "rotation": [
+          0.138,
+          1.227,
+          -0.107
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_3_1_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.299,
+          5.27,
+          0.684
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_3_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.036,
+          0.05
+        ],
+        "height": 0.86,
+        "position": [
+          -0.291,
+          5.182,
+          0.274
+        ],
+        "rotation": [
+          1.194,
+          -0.816,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_3_2_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.55,
+          0.32,
+          0.337
+        ],
+        "position": [
+          -0.583,
+          5.143,
+          0.548
+        ],
+        "rotation": [
+          0.134,
+          2.288,
+          -0.067
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_3_2_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.583,
+          5.374,
+          0.548
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_3_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.046,
+          0.064
+        ],
+        "height": 0.891,
+        "position": [
+          -0.439,
+          5.082,
+          -0.051
+        ],
+        "rotation": [
+          1.44,
+          -1.687,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_3_3_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.55,
+          0.32,
+          0.337
+        ],
+        "position": [
+          -0.878,
+          4.943,
+          -0.103
+        ],
+        "rotation": [
+          0.085,
+          3.284,
+          -0.101
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_3_3_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.878,
+          5.174,
+          -0.103
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_3_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.037,
+          0.051
+        ],
+        "height": 0.764,
+        "position": [
+          -0.16,
+          5.098,
+          -0.339
+        ],
+        "rotation": [
+          1.376,
+          -2.7,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_3_4_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.55,
+          0.32,
+          0.337
+        ],
+        "position": [
+          -0.32,
+          4.975,
+          -0.678
+        ],
+        "rotation": [
+          0.024,
+          4.343,
+          -0.008
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_3_4_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.32,
+          5.206,
+          -0.678
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_3_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.044,
+          0.061
+        ],
+        "height": 0.829,
+        "position": [
+          0.266,
+          5.153,
+          -0.29
+        ],
+        "rotation": [
+          1.256,
+          2.399,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_3_5_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.55,
+          0.32,
+          0.337
+        ],
+        "position": [
+          0.533,
+          5.084,
+          -0.581
+        ],
+        "rotation": [
+          0.05,
+          5.357,
+          -0.097
+        ],
+        "color": 1588523,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_3_5_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.533,
+          5.315,
+          -0.581
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_4_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.033,
+          0.046
+        ],
+        "height": 0.719,
+        "position": [
+          0.345,
+          6.156,
+          -0.026
+        ],
+        "rotation": [
+          1.297,
+          1.645,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_4_0_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.429,
+          0.32,
+          0.263
+        ],
+        "position": [
+          0.69,
+          6.056,
+          -0.051
+        ],
+        "rotation": [
+          0.084,
+          -0.09,
+          -0.033
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_4_0_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.69,
+          6.288,
+          -0.051
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_4_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.06,
+          0.084
+        ],
+        "height": 0.638,
+        "position": [
+          0.202,
+          6.148,
+          0.231
+        ],
+        "rotation": [
+          1.288,
+          0.718,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_4_1_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.429,
+          0.32,
+          0.263
+        ],
+        "position": [
+          0.403,
+          6.04,
+          0.462
+        ],
+        "rotation": [
+          -0.025,
+          0.949,
+          -0.049
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_4_1_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.403,
+          6.271,
+          0.462
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_4_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.041,
+          0.056
+        ],
+        "height": 0.65,
+        "position": [
+          -0.15,
+          6.192,
+          0.256
+        ],
+        "rotation": [
+          1.15,
+          -0.531,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_4_2_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.429,
+          0.32,
+          0.263
+        ],
+        "position": [
+          -0.301,
+          6.128,
+          0.512
+        ],
+        "rotation": [
+          0.022,
+          2.02,
+          0.006
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_4_2_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.301,
+          6.359,
+          0.512
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_4_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.037,
+          0.052
+        ],
+        "height": 0.755,
+        "position": [
+          -0.344,
+          6.211,
+          0.032
+        ],
+        "rotation": [
+          1.156,
+          -1.479,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_4_3_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.429,
+          0.32,
+          0.263
+        ],
+        "position": [
+          -0.688,
+          6.166,
+          0.063
+        ],
+        "rotation": [
+          0.018,
+          3.03,
+          -0.004
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_4_3_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.688,
+          6.397,
+          0.063
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_4_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.046,
+          0.064
+        ],
+        "height": 0.693,
+        "position": [
+          -0.183,
+          6.227,
+          -0.241
+        ],
+        "rotation": [
+          1.064,
+          -2.491,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_4_4_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.429,
+          0.32,
+          0.263
+        ],
+        "position": [
+          -0.367,
+          6.198,
+          -0.482
+        ],
+        "rotation": [
+          -0.012,
+          4.154,
+          0.041
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_4_4_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.367,
+          6.429,
+          -0.482
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_4_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.05,
+          0.069
+        ],
+        "height": 0.632,
+        "position": [
+          0.141,
+          6.171,
+          -0.259
+        ],
+        "rotation": [
+          1.208,
+          2.642,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_4_5_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.429,
+          0.32,
+          0.263
+        ],
+        "position": [
+          0.283,
+          6.086,
+          -0.519
+        ],
+        "rotation": [
+          -0.04,
+          5.133,
+          -0.099
+        ],
+        "color": 3499334,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_4_5_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.283,
+          6.317,
+          -0.519
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_5_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.033,
+          0.045
+        ],
+        "height": 0.509,
+        "position": [
+          0.214,
+          7.226,
+          0.037
+        ],
+        "rotation": [
+          1.024,
+          1.399,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_5_0_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.271,
+          0.32,
+          0.166
+        ],
+        "position": [
+          0.428,
+          7.161,
+          0.074
+        ],
+        "rotation": [
+          -0.013,
+          0.208,
+          -0.075
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_5_0_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.428,
+          7.392,
+          0.074
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_5_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.059,
+          0.082
+        ],
+        "height": 0.414,
+        "position": [
+          0.065,
+          7.19,
+          0.171
+        ],
+        "rotation": [
+          1.088,
+          0.365,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_5_1_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.271,
+          0.32,
+          0.166
+        ],
+        "position": [
+          0.131,
+          7.089,
+          0.342
+        ],
+        "rotation": [
+          0,
+          1.267,
+          -0.025
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_5_1_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.131,
+          7.32,
+          0.342
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_5_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.045,
+          0.062
+        ],
+        "height": 0.489,
+        "position": [
+          -0.135,
+          7.241,
+          0.141
+        ],
+        "rotation": [
+          0.926,
+          -0.766,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_5_2_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.271,
+          0.32,
+          0.166
+        ],
+        "position": [
+          -0.271,
+          7.191,
+          0.282
+        ],
+        "rotation": [
+          0.097,
+          2.239,
+          -0.103
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_5_2_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.271,
+          7.422,
+          0.282
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_5_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.045,
+          0.063
+        ],
+        "height": 0.446,
+        "position": [
+          -0.214,
+          7.146,
+          -0.038
+        ],
+        "rotation": [
+          1.336,
+          -1.747,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_5_3_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.271,
+          0.32,
+          0.166
+        ],
+        "position": [
+          -0.427,
+          7.001,
+          -0.076
+        ],
+        "rotation": [
+          0.001,
+          3.356,
+          -0.096
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_5_3_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.427,
+          7.232,
+          -0.076
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_5_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.046,
+          0.064
+        ],
+        "height": 0.398,
+        "position": [
+          -0.082,
+          7.167,
+          -0.166
+        ],
+        "rotation": [
+          1.196,
+          -2.685,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_5_4_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.271,
+          0.32,
+          0.166
+        ],
+        "position": [
+          -0.164,
+          7.043,
+          -0.333
+        ],
+        "rotation": [
+          0.082,
+          4.329,
+          -0.003
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_5_4_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          -0.164,
+          7.274,
+          -0.333
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "cypress_level_5_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.039,
+          0.054
+        ],
+        "height": 0.424,
+        "position": [
+          0.138,
+          7.175,
+          -0.139
+        ],
+        "rotation": [
+          1.179,
+          2.358,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "cypress_crown_5_5_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.271,
+          0.32,
+          0.166
+        ],
+        "position": [
+          0.277,
+          7.059,
+          -0.278
+        ],
+        "rotation": [
+          0.107,
+          5.397,
+          0.002
+        ],
+        "color": 7246431,
+        "triangles": 170
+      },
+      {
+        "name": "cypress_crown_5_5_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.125,
+        "position": [
+          0.277,
+          7.29,
+          -0.278
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "leader_crown_cypress_whorl",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.72,
+          0.376,
+          0.64
+        ],
+        "position": [
+          -0.059,
+          7.947,
+          0.007
+        ],
+        "rotation": [
+          0.04,
+          0,
+          -0.03
+        ],
+        "color": 10268535,
+        "triangles": 170
+      },
+      {
+        "name": "leader_crown_cypress_needle_break",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.14,
+        "position": [
+          -0.059,
+          8.219,
+          0.007
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a_257ef9be_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_cypress/tree_tree_sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a_257ef9be_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~0_b94f0386_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_cypress/tree_tree_sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab_0_b94f0386_luna_v6",
+      "similarity": 93,
+      "scale": [
+        0.97824,
+        1.03293,
+        0.97429
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~1_cea8b537_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_cypress/tree_tree_sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab_1_cea8b537_luna_v6",
+      "similarity": 94,
+      "scale": [
+        0.98513,
+        1.04168,
+        0.97806
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    }
+  ]
+}

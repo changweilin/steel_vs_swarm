@@ -1,0 +1,498 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "canopy",
+  "palettes": [
+    {
+      "id": "palette_0adace6d",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3234617,
+        "facadeHex": 6456401,
+        "baseHex": 5387560,
+        "accentHex": 9415271,
+        "glassHex": 1976635,
+        "darkHex": 2763554,
+        "brightHex": 12240523
+      },
+      "objects": [
+        {
+          "key": "tree/canopy_pngtree-a-bonsai-tree-in-pot-png-image_19036932_6ebaf0a2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561_cff3fe31_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-dark-bonsai-in-blue-pot-png-image_16185488_ee37681a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398_997e5234_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_19053b39",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6585671,
+        "facadeHex": 9545836,
+        "baseHex": 7030320,
+        "accentHex": 11580537,
+        "glassHex": 1976635,
+        "darkHex": 3483167,
+        "brightHex": 13683089
+      },
+      "objects": [
+        {
+          "key": "tree/canopy_boab-tree-header-image-blog_73c93dba_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_boab-trees (1)_d718dec4_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_Derby_boab,_Western_Australia_1cc05e11_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)_49ff75fa_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_madagascar-baobab_078efb57_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_03e3f33a_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_6d145a91",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 4029528,
+        "facadeHex": 6856807,
+        "baseHex": 7688762,
+        "accentHex": 10074996,
+        "glassHex": 1976635,
+        "darkHex": 2705976,
+        "brightHex": 12898188
+      },
+      "objects": [
+        {
+          "key": "tree/canopy_Cardon_Pachycereus_pringlei_7ae981b3_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_Choosing-the-right-cactus~0_40dc6b34_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_Choosing-the-right-cactus~1_e16bc31d_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_85181bc7",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1588523,
+        "facadeHex": 3499334,
+        "baseHex": 4928552,
+        "accentHex": 7246431,
+        "glassHex": 1976635,
+        "darkHex": 1911587,
+        "brightHex": 10268535
+      },
+      "objects": [
+        {
+          "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)~1_9854096b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1)~2_8f7a3b6b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree~0_924dda00_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree~1_2ef3ca15_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree~2_95bcd0e0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree_e80b117b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi_37a0117f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-a-small-juniper-bonsai-png-image_12474477_b04628ba_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-chinese-juniper-isolated-on-white-background-png-image_320181_0b06504f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-alaska-cedar-tree-png-image_5004137_4c1387c9_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531_738f4f47_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-coniferous-tree-png-image_6230847_52c12fc1_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677_5bc2394a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957_82e8ecde_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166_ef0fe5ae_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_e550d590",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2640433,
+        "facadeHex": 5208643,
+        "baseHex": 4861988,
+        "accentHex": 7903323,
+        "glassHex": 1976635,
+        "darkHex": 2892830,
+        "brightHex": 10860413
+      },
+      "objects": [
+        {
+          "key": "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1)_ce922689_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94_5636d1fb_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_d0cec1f4425528fa_20c37e64_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ddf148d60683c553 (1)_24d9da8d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_e7838fe5b8bde5ad90_3df9643c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_FB_IMG_1786332532197 (2)_f1be2ac0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_FB_IMG_1786333300422_b9d07c81_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_FB_IMG_1786818411804_b80de3bf_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_getImage-2-4_99a42d17_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_getImage-3-4_48c2e79c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_06b3b326-cdae-4e29-847f-4baba4266519_a2ef1a85_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_26750ed5-e0a1-4a46-a301-68040c9d4075_7837fd24_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_3b61c08f-fc59-4b3b-be6f-dce89b643599_f6ad0d4c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_4e78d273-4403-467b-8ec3-439619a55e01_c5b3023f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_52cfa19d-01af-4783-a884-9bd7ce684c3b_eb2e589d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (1)_713e5d6b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (10)_740c582d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (11)_41725965_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (12)_b6cde53d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (13)_cb2a2a7a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (14)_066ffa39_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_092313_274u9V4y_873aaab3_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_1342001_PE948961_S5_924eb792_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_1513x4724_wmkn_328537037215_202606050063000000_8797d68b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_15dc1b1d19bccbbf_946cbc5f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_id13801237-shutterstock_1868040619s_078185eb_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_p6CRn6GXmKSX_135cbc83_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4_767bbc82_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_71b76588-800c-4b51-892d-fb42f7067fb5_4649966e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_b1917d71-440a-4499-9172-d65dcf7d9676_78a1b2d0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_c59c55e0-5a05-4bdc-9e7b-06e08c98f46c_2f396ea9_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_cce311a9-888e-485c-9a6d-352a912ffa60_9432faa0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (15)_a08b0eaa_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (16)_307a907b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (2)_ebb7bf0d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (3)_0f124ac2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (4)_fcbe8335_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (5)_f1232344_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (6)_daf4c5ab_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (7)_0a00a507_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (8)_4f1f3fd0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images (9)_c2f2b4ad_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_images_4a941b1c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524_cec12098_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-flowers-bonsai-tree-png-image_12485135_6d52aee2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_3f0fcc8d74ce8fcc_961e5001_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_495849468_5eb52f46_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_51YNHnO1PXL_635efe40_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_5D11CCA4-7909-424_2dc7bfb5_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_700x1024_wmkn_0_C20250121000185_54f12d15_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_70248068_1006_59d28cf9_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_7d535472ae45d3eb_2d1835d4_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_manual_FB_IMG_1786332532197_ef33de0b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_manual_FB_IMG_1786332658706~0_3a65d4a0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_manual_FB_IMG_1786332658706~1_395b0441_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb~0_eca3ac05_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ov_e4024883-ae51-4e9d-bd1d-681376ebc4cb~1_6d908343_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_wc_115895229_eccf085a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_wc_182669735_cc8b8557_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_wc_32016498_5cb9c575_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_wc_38576339_6bf574da_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_wc_63419250_69a865f9_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_wc_63419309_33388c2e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_wc_81063742_2b82b17f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_wc_89358297_d368e7f0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ddf148d60683c553_a231758c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_FB_IMG_1786333297321_662d7715_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_Pachycereus_pringlei_forest_7d3d7f99_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466_5ab1822d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg_5ba9be08_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_20210316155158__33_2e56b5c2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_800_eb53c296eb6fc1ac757c290a1f6444b8_5e360641_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c_7dc5e04e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_abc3c15b66b89dff_f7d67c3a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ADEY1909 (1)_19cd356c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/canopy_ADEY1909_78a80c1f_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

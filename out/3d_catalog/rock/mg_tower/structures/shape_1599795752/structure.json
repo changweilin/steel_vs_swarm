@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_1599795752",
+  "canonicalKey": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~1_0ed64ef8_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~1_0ed64ef8_luna_v6",
+    "bounds": {
+      "min": [
+        -3.667,
+        0,
+        -3.667
+      ],
+      "max": [
+        3.667,
+        13.455,
+        4.1296
+      ],
+      "size": [
+        7.334,
+        13.455,
+        7.797
+      ],
+      "rMax": 5.523,
+      "triangles": 264,
+      "vertices": 152
+    },
+    "parts": [
+      {
+        "name": "monument_base",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          2.398,
+          3.667
+        ],
+        "height": 2.73,
+        "position": [
+          0,
+          1.415,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "monument_lower_tower",
+        "type": "polygonal_prism",
+        "sides": 7,
+        "radius": 2.116,
+        "height": 4.778,
+        "position": [
+          -0.337,
+          4.983,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 28
+      },
+      {
+        "name": "monument_upper_tower",
+        "type": "frustum_pyramid",
+        "sides": 7,
+        "radii": [
+          1.551,
+          2.045
+        ],
+        "height": 4.095,
+        "position": [
+          0.253,
+          9.419,
+          -0.141
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2370353,
+        "triangles": 28
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~1_0ed64ef8_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_tower/rock_rock_mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006_1_0ed64ef8_luna_v6",
+      "similarity": 80,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_tower/rock_rock_mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+      "similarity": 100,
+      "scale": [
+        0.34688,
+        0.39941,
+        0.32012
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

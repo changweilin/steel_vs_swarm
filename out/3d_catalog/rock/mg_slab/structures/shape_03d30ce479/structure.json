@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_03d30ce479",
+  "canonicalKey": "rock/mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_7ca2bda5_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_7ca2bda5_luna_v6",
+    "bounds": {
+      "min": [
+        -2.6202,
+        0,
+        -2.5368
+      ],
+      "max": [
+        2.45,
+        6.7527,
+        2.8053
+      ],
+      "size": [
+        5.07,
+        6.753,
+        5.342
+      ],
+      "rMax": 3.725,
+      "triangles": 244,
+      "vertices": 138
+    },
+    "parts": [
+      {
+        "name": "ground_contact_anchor",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.911,
+          2.45
+        ],
+        "height": 0.539,
+        "position": [
+          0,
+          0.269,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "strata_mass_0",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.649,
+          2.257
+        ],
+        "height": 1.064,
+        "position": [
+          -0.28,
+          1.005,
+          -0.28
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4344656,
+        "triangles": 32
+      },
+      {
+        "name": "strata_mass_1",
+        "type": "frustum_pyramid",
+        "sides": 9,
+        "radii": [
+          1.556,
+          2.129
+        ],
+        "height": 1.064,
+        "position": [
+          0.28,
+          2.01,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4344656,
+        "triangles": 36
+      },
+      {
+        "name": "strata_mass_2",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.463,
+          2.002
+        ],
+        "height": 1.064,
+        "position": [
+          -0.28,
+          3.016,
+          0.28
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4344656,
+        "triangles": 32
+      },
+      {
+        "name": "strata_mass_3",
+        "type": "frustum_pyramid",
+        "sides": 9,
+        "radii": [
+          1.37,
+          1.875
+        ],
+        "height": 1.064,
+        "position": [
+          0.28,
+          4.021,
+          -0.28
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4344656,
+        "triangles": 36
+      },
+      {
+        "name": "strata_mass_4",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.277,
+          1.747
+        ],
+        "height": 1.064,
+        "position": [
+          -0.28,
+          5.026,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4344656,
+        "triangles": 32
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_7ca2bda5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_slab/rock_rock_mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_7ca2bda5_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_3f8f84c1ad",
+  "canonicalKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+    "bounds": {
+      "min": [
+        -3.5812,
+        0,
+        -2.8
+      ],
+      "max": [
+        3.6269,
+        6.3274,
+        2.8
+      ],
+      "size": [
+        7.208,
+        6.327,
+        5.6
+      ],
+      "rMax": 4.582,
+      "triangles": 484,
+      "vertices": 274
+    },
+    "parts": [
+      {
+        "name": "eroded_slope_base",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.92,
+          2.8
+        ],
+        "height": 1.017,
+        "position": [
+          0,
+          0.589,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6767665,
+        "triangles": 32
+      },
+      {
+        "name": "hoodoo_pillar_0",
+        "type": "frustum_pyramid",
+        "sides": 7,
+        "radii": [
+          0.374,
+          0.52
+        ],
+        "height": 3.108,
+        "position": [
+          -2.24,
+          2.232,
+          -0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6767665,
+        "triangles": 28
+      },
+      {
+        "name": "hoodoo_pillar_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.432,
+          0.6
+        ],
+        "height": 4.408,
+        "position": [
+          0,
+          2.882,
+          0.08
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10119749,
+        "triangles": 32
+      },
+      {
+        "name": "hoodoo_cap_1",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.93,
+        "position": [
+          0,
+          5.446,
+          0.08
+        ],
+        "rotation": [
+          0.1,
+          0.18,
+          -0.06
+        ],
+        "color": 6964528,
+        "triangles": 36
+      },
+      {
+        "name": "hoodoo_pillar_2",
+        "type": "frustum_pyramid",
+        "sides": 9,
+        "radii": [
+          0.374,
+          0.52
+        ],
+        "height": 2.712,
+        "position": [
+          2.16,
+          2.034,
+          -0.16
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6767665,
+        "triangles": 36
+      },
+      {
+        "name": "hoodoo_back_cliff",
+        "type": "wedge",
+        "dimensions": [
+          3.36,
+          2.034,
+          0.96
+        ],
+        "position": [
+          0.24,
+          1.413,
+          -1.04
+        ],
+        "rotation": [
+          0.04,
+          -0.16,
+          0.05
+        ],
+        "color": 4861992,
+        "triangles": 8
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/hoodoo/rock_rock_hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c4c6a19c"
+      ]
+    },
+    {
+      "key": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0_edfd0d51_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/hoodoo/rock_rock_hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46_0_edfd0d51_luna_v6",
+      "similarity": 66,
+      "scale": [
+        1.4366,
+        1.48996,
+        1.75571
+      ],
+      "paletteIds": [
+        "palette_c4c6a19c"
+      ]
+    },
+    {
+      "key": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/hoodoo/rock_rock_hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46_1_2c0ec652_luna_v6",
+      "similarity": 51,
+      "scale": [
+        3.35142,
+        2.838,
+        4.31375
+      ],
+      "paletteIds": [
+        "palette_c4c6a19c"
+      ]
+    }
+  ]
+}

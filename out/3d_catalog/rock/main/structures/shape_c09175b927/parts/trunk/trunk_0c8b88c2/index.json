@@ -1,0 +1,81 @@
+{
+  "id": "trunk_0c8b88c2",
+  "role": "trunk",
+  "type": "wedge",
+  "signature": "wedge|1,1,0.625|0",
+  "canonical": {
+    "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+    "name": "right_buttress",
+    "part": {
+      "name": "right_buttress",
+      "type": "wedge",
+      "dimensions": [
+        1.323,
+        1.394,
+        0.813
+      ],
+      "position": [
+        1.369,
+        1.027,
+        0.12
+      ],
+      "rotation": [
+        -0.06,
+        -0.14,
+        0.12
+      ],
+      "color": 5200224,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "right_buttress",
+      "position": [
+        1.369,
+        1.027,
+        0.12
+      ],
+      "rotation": [
+        -0.06,
+        -0.14,
+        0.12
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "name": "left_buttress",
+      "position": [
+        -2.7,
+        1.985,
+        -0.242
+      ],
+      "rotation": [
+        0.02,
+        0.18,
+        -0.09
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "name": "right_buttress",
+      "position": [
+        2.613,
+        1.852,
+        0.242
+      ],
+      "rotation": [
+        -0.06,
+        -0.14,
+        0.12
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

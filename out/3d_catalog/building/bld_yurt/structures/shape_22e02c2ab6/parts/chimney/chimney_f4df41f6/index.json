@@ -1,0 +1,50 @@
+{
+  "id": "chimney_f4df41f6",
+  "role": "chimney",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+    "name": "chimney",
+    "part": {
+      "name": "chimney",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.1,
+        0.1
+      ],
+      "height": 1.2,
+      "position": [
+        0.5,
+        3.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2236962,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+      "name": "chimney",
+      "position": [
+        0.5,
+        3.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2236962
+    }
+  ]
+}

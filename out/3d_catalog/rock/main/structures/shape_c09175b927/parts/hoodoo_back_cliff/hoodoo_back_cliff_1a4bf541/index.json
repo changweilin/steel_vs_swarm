@@ -1,0 +1,49 @@
+{
+  "id": "hoodoo_back_cliff_1a4bf541",
+  "role": "hoodoo_back_cliff",
+  "type": "wedge",
+  "signature": "wedge|1,0.75,0.375|0",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "hoodoo_back_cliff",
+    "part": {
+      "name": "hoodoo_back_cliff",
+      "type": "wedge",
+      "dimensions": [
+        2.886,
+        2.153,
+        1.255
+      ],
+      "position": [
+        0.206,
+        1.495,
+        -1.36
+      ],
+      "rotation": [
+        0.04,
+        -0.16,
+        0.05
+      ],
+      "color": 2106664,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "hoodoo_back_cliff",
+      "position": [
+        0.206,
+        1.495,
+        -1.36
+      ],
+      "rotation": [
+        0.04,
+        -0.16,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 2106664
+    }
+  ]
+}

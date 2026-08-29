@@ -1,0 +1,52 @@
+{
+  "id": "roof_19cae803",
+  "role": "roof",
+  "type": "cylinder",
+  "signature": "cylinder|0.5,1,0.5|10",
+  "canonical": {
+    "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+    "name": "mixer_roof_water_tank",
+    "part": {
+      "name": "mixer_roof_water_tank",
+      "type": "cylinder",
+      "sides": 10,
+      "radii": [
+        0.22,
+        0.22
+      ],
+      "height": 0.9,
+      "position": [
+        1.72,
+        3.59,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "color": 2263899,
+      "triangles": 40,
+      "role": "equipment",
+      "colorKey": "facadeHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "mixer_roof_water_tank",
+      "position": [
+        1.72,
+        3.59,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": "facadeHex",
+      "color": 2263899
+    }
+  ]
+}

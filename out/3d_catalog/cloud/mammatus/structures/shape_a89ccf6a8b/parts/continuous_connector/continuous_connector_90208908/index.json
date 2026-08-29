@@ -1,0 +1,159 @@
+{
+  "id": "continuous_connector_90208908",
+  "role": "continuous_connector",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+    "name": "mammatus_lower_connector_0_soft_1",
+    "part": {
+      "name": "mammatus_lower_connector_0_soft_1",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.186,
+      "position": [
+        -3.625,
+        1.513,
+        0.34
+      ],
+      "rotation": [
+        0.08,
+        0.31,
+        0.007
+      ],
+      "color": 15789026,
+      "triangles": 20,
+      "role": "continuous_connector",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_lower_connector_0_soft_1",
+      "position": [
+        -3.625,
+        1.513,
+        0.34
+      ],
+      "rotation": [
+        0.08,
+        0.31,
+        0.007
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_lower_connector_0_soft_3",
+      "position": [
+        -2.975,
+        1.501,
+        0.351
+      ],
+      "rotation": [
+        0.08,
+        0.93,
+        0.007
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_lower_connector_1_soft_1",
+      "position": [
+        -1.423,
+        1.513,
+        -0.274
+      ],
+      "rotation": [
+        0.08,
+        0.42,
+        0.007
+      ],
+      "colorKey": "accentHex",
+      "color": 14144975
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_lower_connector_1_soft_3",
+      "position": [
+        -0.777,
+        1.501,
+        -0.334
+      ],
+      "rotation": [
+        0.08,
+        1.04,
+        0.007
+      ],
+      "colorKey": "accentHex",
+      "color": 14144975
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_lower_connector_2_soft_1",
+      "position": [
+        0.782,
+        1.513,
+        0.411
+      ],
+      "rotation": [
+        0.08,
+        0.53,
+        0.007
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_lower_connector_2_soft_3",
+      "position": [
+        1.418,
+        1.501,
+        0.28
+      ],
+      "rotation": [
+        0.08,
+        1.15,
+        0.007
+      ],
+      "colorKey": "glassHex",
+      "color": 15789026
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_lower_connector_3_soft_1",
+      "position": [
+        2.992,
+        1.513,
+        -0.205
+      ],
+      "rotation": [
+        0.08,
+        0.64,
+        0.007
+      ],
+      "colorKey": "accentHex",
+      "color": 14144975
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_lower_connector_3_soft_3",
+      "position": [
+        3.608,
+        1.501,
+        -0.404
+      ],
+      "rotation": [
+        0.08,
+        1.26,
+        0.007
+      ],
+      "colorKey": "accentHex",
+      "color": 14144975
+    }
+  ]
+}

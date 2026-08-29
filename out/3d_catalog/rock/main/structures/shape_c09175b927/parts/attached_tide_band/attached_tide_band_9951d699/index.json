@@ -1,0 +1,226 @@
+{
+  "id": "attached_tide_band_9951d699",
+  "role": "attached_tide_band",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "attached_tide_band",
+    "part": {
+      "name": "attached_tide_band",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        1.412,
+        1.726
+      ],
+      "height": 0.299,
+      "position": [
+        0,
+        0.568,
+        0.418
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.568,
+        0.418
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.349,
+        0.241
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.644,
+        0.333
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.49,
+        0.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.33,
+        0.175
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        2.28,
+        2.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_e5540b76_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        2.28,
+        2.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_1586238562_48266950_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        2.28,
+        2.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1713196
+    },
+    {
+      "objectKey": "rock/main_image-1-206_1ca054a2_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        2.28,
+        2.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        2.087,
+        0.992
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    },
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.525,
+        0.333
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    },
+    {
+      "objectKey": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.629,
+        0.484
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1713196
+    }
+  ]
+}

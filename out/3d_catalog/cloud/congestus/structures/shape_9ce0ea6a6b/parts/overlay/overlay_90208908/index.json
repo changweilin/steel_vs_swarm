@@ -1,0 +1,63 @@
+{
+  "id": "overlay_90208908",
+  "role": "overlay",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+    "name": "congestus_inner_gap_fill_icosa_1",
+    "part": {
+      "name": "congestus_inner_gap_fill_icosa_1",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.34,
+      "position": [
+        0.72,
+        3.26,
+        0.44
+      ],
+      "rotation": [
+        0.1,
+        0.22,
+        -0.04
+      ],
+      "color": 4608352,
+      "triangles": 20,
+      "role": "inner_shadow_lobe",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_inner_gap_fill_icosa_1",
+      "position": [
+        0.72,
+        3.26,
+        0.44
+      ],
+      "rotation": [
+        0.1,
+        0.22,
+        -0.04
+      ],
+      "colorKey": "baseHex",
+      "color": 4608352
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_inner_gap_fill_icosa_3",
+      "position": [
+        1.1,
+        4.68,
+        0.38
+      ],
+      "rotation": [
+        0.1,
+        0.66,
+        -0.04
+      ],
+      "colorKey": "roofHex",
+      "color": 6189192
+    }
+  ]
+}

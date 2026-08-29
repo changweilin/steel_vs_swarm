@@ -1,0 +1,66 @@
+{
+  "id": "roof_b2f92800",
+  "role": "roof",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.25,1|8",
+  "canonical": {
+    "objectKey": "rock/main_images (7)_fd2b4348_luna_v6",
+    "name": "top_cap_fragment",
+    "part": {
+      "name": "top_cap_fragment",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.24,
+        0.424
+      ],
+      "height": 0.18,
+      "position": [
+        -0.211,
+        1.215,
+        -0.148
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4344656,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_images (7)_fd2b4348_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.211,
+        1.215,
+        -0.148
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_pngtree-big-boulder-transparent-png-image_13387881_08d60c0a_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.3,
+        1.812,
+        -0.242
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "dark_block_6ba11ed7",
+  "role": "dark_block",
+  "type": "box",
+  "signature": "box|0.375,1,0|0",
+  "canonical": {
+    "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+    "name": "front_dark_block_lower",
+    "part": {
+      "name": "front_dark_block_lower",
+      "type": "box",
+      "dimensions": [
+        2.6,
+        6,
+        0.2
+      ],
+      "position": [
+        -0.8,
+        6,
+        3.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2105376,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "front_dark_block_lower",
+      "position": [
+        -0.8,
+        6,
+        3.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "front_dark_block_upper",
+      "position": [
+        -0.8,
+        15,
+        3.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    }
+  ]
+}

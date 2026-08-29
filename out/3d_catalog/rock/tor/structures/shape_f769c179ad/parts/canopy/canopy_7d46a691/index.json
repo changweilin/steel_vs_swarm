@@ -1,0 +1,49 @@
+{
+  "id": "canopy_7d46a691",
+  "role": "canopy",
+  "type": "wedge",
+  "signature": "wedge|1,0.25,0.375|0",
+  "canonical": {
+    "objectKey": "rock/tor_wc_12044342_e535f838_luna_v6",
+    "name": "arch_crown_shear_facet",
+    "part": {
+      "name": "arch_crown_shear_facet",
+      "type": "wedge",
+      "dimensions": [
+        3.628,
+        0.916,
+        1.318
+      ],
+      "position": [
+        0.403,
+        4.642,
+        1.318
+      ],
+      "rotation": [
+        0.06,
+        -0.08,
+        0.04
+      ],
+      "color": 2106664,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/tor_wc_12044342_e535f838_luna_v6",
+      "name": "arch_crown_shear_facet",
+      "position": [
+        0.403,
+        4.642,
+        1.318
+      ],
+      "rotation": [
+        0.06,
+        -0.08,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 2106664
+    }
+  ]
+}

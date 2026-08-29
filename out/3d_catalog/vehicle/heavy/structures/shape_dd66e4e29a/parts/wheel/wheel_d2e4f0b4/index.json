@@ -1,0 +1,130 @@
+{
+  "id": "wheel_d2e4f0b4",
+  "role": "wheel",
+  "type": "cylinder",
+  "signature": "cylinder|0.875,1,0.875|16",
+  "canonical": {
+    "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+    "name": "rear_left_wheel_1",
+    "part": {
+      "name": "rear_left_wheel_1",
+      "type": "cylinder",
+      "sides": 16,
+      "radii": [
+        0.45,
+        0.45
+      ],
+      "height": 1,
+      "position": [
+        -1.22,
+        0.5,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "color": 657930,
+      "triangles": 64
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "rear_left_wheel_1",
+      "position": [
+        -1.22,
+        0.5,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "rear_right_wheel_1",
+      "position": [
+        1.22,
+        0.5,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "rear_left_wheel_2",
+      "position": [
+        -1.22,
+        0.5,
+        -3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "rear_right_wheel_2",
+      "position": [
+        1.22,
+        0.5,
+        -3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "rear_left_wheel_3",
+      "position": [
+        -1.22,
+        0.5,
+        -4.7
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    },
+    {
+      "objectKey": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+      "name": "rear_right_wheel_3",
+      "position": [
+        1.22,
+        0.5,
+        -4.7
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 657930
+    }
+  ]
+}

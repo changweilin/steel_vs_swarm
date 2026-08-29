@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "sp_baobab",
+  "palettes": [
+    {
+      "id": "palette_19053b39",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6585671,
+        "facadeHex": 9545836,
+        "baseHex": 7030320,
+        "accentHex": 11580537,
+        "glassHex": 1976635,
+        "darkHex": 3483167,
+        "brightHex": 13683089
+      },
+      "objects": [
+        {
+          "key": "tree/sp_baobab_ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c_64c49f6c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_ov_3ccffb3c-85b3-4937-aca8-4e158951ba67_6c1c0871_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_ov_f8ebc741-c981-4fed-bdbc-937db7444a69_8229271c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_ov_f9d54459-d862-439a-b224-023275cc3a7a_3e7a6acb_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_wc_156495515_cce6d6f7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_6704e773_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_manual_Baobab_and_elephant__Tanzania~0_3d8dfdbf_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_manual_Baobab_and_elephant__Tanzania~1_a2542e27_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_manual_Birdwood_Downs_station_165c2c31_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED_82d20543_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a_756bfa25_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_wc_13126536_ac8aa41a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_wc_192778142_cc4e4965_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_wc_3206087~0_67eb30af_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_wc_3206087~1_c6d99314_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_wc_3646805_73fd98c7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_ov_527caba6-3877-4a94-a847-20ac25f540c7_c20b0d2c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_baobab_ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3_2c23f044_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

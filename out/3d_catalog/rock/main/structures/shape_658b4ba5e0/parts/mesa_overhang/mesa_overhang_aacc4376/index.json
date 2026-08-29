@@ -1,0 +1,49 @@
+{
+  "id": "mesa_overhang_aacc4376",
+  "role": "mesa_overhang",
+  "type": "wedge",
+  "signature": "wedge|1,0.5,0.25|0",
+  "canonical": {
+    "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+    "name": "mesa_front_overhang",
+    "part": {
+      "name": "mesa_front_overhang",
+      "type": "wedge",
+      "dimensions": [
+        7.53,
+        3.307,
+        2.16
+      ],
+      "position": [
+        0.279,
+        11.392,
+        2.24
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "color": 12683864,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "name": "mesa_front_overhang",
+      "position": [
+        0.279,
+        11.392,
+        2.24
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 12683864
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "pagoda_chamber_tier_bc0caa9a",
+  "role": "pagoda_chamber_tier",
+  "type": "box",
+  "signature": "box|1,0.625,0.875|0",
+  "canonical": {
+    "objectKey": "building/mass_architecture-houou-02-tmb_d29db730",
+    "name": "pagoda_chamber_tier_3",
+    "part": {
+      "name": "pagoda_chamber_tier_3",
+      "type": "box",
+      "dimensions": [
+        8.59,
+        5.664435483870968,
+        7.384
+      ],
+      "position": [
+        0,
+        22.46125,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 7229244,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_architecture-houou-02-tmb_d29db730",
+      "name": "pagoda_chamber_tier_3",
+      "position": [
+        0,
+        22.46125,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 7229244
+    }
+  ]
+}

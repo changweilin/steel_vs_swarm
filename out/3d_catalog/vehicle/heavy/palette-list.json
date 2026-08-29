@@ -1,0 +1,513 @@
+{
+  "schemaVersion": 1,
+  "category": "vehicle",
+  "subcategory": "heavy",
+  "palettes": [
+    {
+      "id": "palette_06894d18",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2029584,
+        "facadeHex": 2029584,
+        "baseHex": 2039588,
+        "accentHex": 16777215,
+        "glassHex": 4352158,
+        "darkHex": 2105376,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_image_1740103474992_00815e4a_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_0addca38",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 15790320,
+        "facadeHex": 12632256,
+        "baseHex": 3355443,
+        "accentHex": 16753920,
+        "glassHex": 3368652,
+        "darkHex": 2105376,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_news442315o_6ef31cdb_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_0af203cc",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 14223403,
+        "facadeHex": 14751793,
+        "baseHex": 2105376,
+        "accentHex": 3355443,
+        "glassHex": 33023,
+        "darkHex": 1052688,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_99NzsCYgrt_433feb63_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_0ee1cc4f",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 15779374,
+        "facadeHex": 2058657,
+        "baseHex": 1516851,
+        "accentHex": 15779374,
+        "glassHex": 1455947,
+        "darkHex": 1054752,
+        "brightHex": 16053479
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_13c5c956",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2045951,
+        "facadeHex": 2045951,
+        "baseHex": 210609,
+        "accentHex": 16766720,
+        "glassHex": 2640263,
+        "darkHex": 1315860,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_1ff892d3",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7305085,
+        "facadeHex": 14803935,
+        "baseHex": 3423298,
+        "accentHex": 9937320,
+        "glassHex": 1521739,
+        "darkHex": 1119770,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_1208367-1024x1024_11f751d0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_1618404544235416926_1eadc9df_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_167155193720_e0f6f03f_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_28fa24d1",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 15790572,
+        "facadeHex": 1534159,
+        "baseHex": 4016987,
+        "accentHex": 15910190,
+        "glassHex": 1522521,
+        "darkHex": 1515571,
+        "brightHex": 16316657
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_29f0394e",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 5578794,
+        "facadeHex": 11812162,
+        "baseHex": 2434859,
+        "accentHex": 14211281,
+        "glassHex": 1585990,
+        "darkHex": 1119000,
+        "brightHex": 16775401
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_cfcd90c9_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_fde9c283_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_2ea282e7",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 16766720,
+        "facadeHex": 16766720,
+        "baseHex": 2105376,
+        "accentHex": 30366,
+        "glassHex": 32988,
+        "darkHex": 1315860,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_1668138443926_1f2093f2_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_49f064a5",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 15921899,
+        "facadeHex": 2263899,
+        "baseHex": 3688010,
+        "accentHex": 13160653,
+        "glassHex": 1522499,
+        "darkHex": 1516831,
+        "brightHex": 16251120
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_5db41e46",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2435632,
+        "facadeHex": 3690330,
+        "baseHex": 1383200,
+        "accentHex": 14854460,
+        "glassHex": 1521478,
+        "darkHex": 790548,
+        "brightHex": 15791085
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_a33aa25d56bf3c88be759c9623090c9b_617de547_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_17051d78_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_6dce29ba",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2236962,
+        "facadeHex": 2236962,
+        "baseHex": 1184274,
+        "accentHex": 4473924,
+        "glassHex": 3822295,
+        "darkHex": 657930,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_pngtree-black-logistics-big-truck-with-loaded-container-png-image_16338785_0ca23306_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_7f75a67a",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1986183,
+        "facadeHex": 2521290,
+        "baseHex": 2370609,
+        "accentHex": 10927817,
+        "glassHex": 1456460,
+        "darkHex": 1120029,
+        "brightHex": 16120831
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_851b80f3",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2555985,
+        "facadeHex": 2505417,
+        "baseHex": 1644825,
+        "accentHex": 16777215,
+        "glassHex": 4356495,
+        "darkHex": 657930,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_904b8f4c",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 12071470,
+        "facadeHex": 14970407,
+        "baseHex": 3811619,
+        "accentHex": 1645340,
+        "glassHex": 2111303,
+        "darkHex": 1381139,
+        "brightHex": 15975234
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_b8ee2367",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7807785,
+        "facadeHex": 12860219,
+        "baseHex": 3155754,
+        "accentHex": 15777863,
+        "glassHex": 1652809,
+        "darkHex": 1381142,
+        "brightHex": 16775135
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_4d54f379-07b7-453d-9e45-5fa076db88df_3199e89d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_5126f791-8473-4ae4-b729-525c496362fd_5bb8acbb_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_CSPV-02_01_5ef67224_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_be79edca",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 15725552,
+        "facadeHex": 2389187,
+        "baseHex": 3160899,
+        "accentHex": 15325276,
+        "glassHex": 1521740,
+        "darkHex": 1185824,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_20160119121809449_b987405b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_20250917103436615_3c5db894_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_67342910-48b4-49b9-b2ab-bfd617a28c76_c2587f9c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_7car-201702220825-1_61cdd88b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_car_a58be0ee_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_photooriginal-2760150-ffEPQ_0dca381c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_文境旅遊-賓士豪華大客車-5_c5cbdaf5_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_規格表3大圖合for官網_b6a06ed0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_2021070912244646524316_56c23978_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_d073d5e8",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 13421772,
+        "facadeHex": 12632256,
+        "baseHex": 3355443,
+        "accentHex": 2236962,
+        "glassHex": 3368652,
+        "darkHex": 1052688,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_規格表2大圖合for官網_5e037079_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_d9701a77",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1522281,
+        "facadeHex": 2191312,
+        "baseHex": 1252909,
+        "accentHex": 15782207,
+        "glassHex": 1521743,
+        "darkHex": 791068,
+        "brightHex": 15988479
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_000001_1776155963_1c5cb2e7_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_fb43fa73",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1787498,
+        "facadeHex": 2977956,
+        "baseHex": 2107955,
+        "accentHex": 9353685,
+        "glassHex": 1455947,
+        "darkHex": 1120286,
+        "brightHex": 15924223
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_01242_a6847600_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_115576297_ebf74e1a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_3d-render-cargo-delivery-truck_1048-5605_47611ef6_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_ffd881c9",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 15770409,
+        "facadeHex": 13191717,
+        "baseHex": 3811619,
+        "accentHex": 15978572,
+        "glassHex": 2111303,
+        "darkHex": 1512211,
+        "brightHex": 16773077
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_ffef2281",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 9792275,
+        "facadeHex": 14722605,
+        "baseHex": 4208165,
+        "accentHex": 16044395,
+        "glassHex": 1521994,
+        "darkHex": 1644562,
+        "brightHex": 16774602
+      },
+      "objects": [
+        {
+          "key": "vehicle/heavy_20260514234220_58_5e037c56_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_d2462cec993f618a_30498ed7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP_a03e65f8_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_photooriginal-98016-XUIGz_15f63811_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

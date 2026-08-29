@@ -1,0 +1,111 @@
+{
+  "id": "cauliflower_lobe_90208908",
+  "role": "cauliflower_lobe",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+    "name": "cumulus_cauli_lobe_icosa_11",
+    "part": {
+      "name": "cumulus_cauli_lobe_icosa_11",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.58,
+      "position": [
+        -2.65,
+        1.52,
+        -0.66
+      ],
+      "rotation": [
+        0.12,
+        2.53,
+        -0.06
+      ],
+      "color": 13885164,
+      "triangles": 20,
+      "role": "cauliflower_lobe",
+      "colorKey": "facadeHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_11",
+      "position": [
+        -2.65,
+        1.52,
+        -0.66
+      ],
+      "rotation": [
+        0.12,
+        2.53,
+        -0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13885164
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_15",
+      "position": [
+        2.46,
+        1.54,
+        -0.68
+      ],
+      "rotation": [
+        0.12,
+        3.45,
+        -0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13885164
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_17",
+      "position": [
+        -2.78,
+        1.38,
+        0.72
+      ],
+      "rotation": [
+        0.12,
+        3.91,
+        -0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13885164
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_icosa_21",
+      "position": [
+        3.18,
+        1.37,
+        0.68
+      ],
+      "rotation": [
+        0.12,
+        4.83,
+        -0.06
+      ],
+      "colorKey": "facadeHex",
+      "color": 13885164
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_left_edge_lobe",
+      "position": [
+        -3.82,
+        0.92,
+        0.22
+      ],
+      "rotation": [
+        0.18,
+        -0.26,
+        0.05
+      ],
+      "colorKey": "baseHex",
+      "color": 9544634
+    }
+  ]
+}

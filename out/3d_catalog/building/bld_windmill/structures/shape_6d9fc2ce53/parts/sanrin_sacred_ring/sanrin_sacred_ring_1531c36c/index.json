@@ -1,0 +1,63 @@
+{
+  "id": "sanrin_sacred_ring_1531c36c",
+  "role": "sanrin_sacred_ring",
+  "type": "torus_ring",
+  "signature": "torus_ring|1,1,0.125|0",
+  "canonical": {
+    "objectKey": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+    "name": "sanrin_sacred_ring_1",
+    "part": {
+      "name": "sanrin_sacred_ring_1",
+      "type": "torus_ring",
+      "radius": 0.55,
+      "tube": 0.09,
+      "position": [
+        0,
+        31.709677419354843,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 13814208,
+      "triangles": 120,
+      "colorKey": "bright"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+      "name": "sanrin_sacred_ring_1",
+      "position": [
+        0,
+        31.709677419354843,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "bright",
+      "color": 13814208
+    },
+    {
+      "objectKey": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+      "name": "sanrin_sacred_ring_2",
+      "position": [
+        0,
+        32.30967741935484,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "bright",
+      "color": 13814208
+    }
+  ]
+}

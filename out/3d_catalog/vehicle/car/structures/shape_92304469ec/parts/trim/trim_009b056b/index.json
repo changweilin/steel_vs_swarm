@@ -1,0 +1,65 @@
+{
+  "id": "trim_009b056b",
+  "role": "trim",
+  "type": "box",
+  "signature": "box|1,0.25,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+    "name": "license_plate",
+    "part": {
+      "name": "license_plate",
+      "type": "box",
+      "dimensions": [
+        0.5,
+        0.15,
+        0.05
+      ],
+      "position": [
+        0,
+        0.62,
+        2.11
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1315860,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+      "name": "license_plate",
+      "position": [
+        0,
+        0.62,
+        2.11
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    },
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "front_license_plate_box",
+      "position": [
+        0,
+        0.55,
+        1.99
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5987163
+    }
+  ]
+}

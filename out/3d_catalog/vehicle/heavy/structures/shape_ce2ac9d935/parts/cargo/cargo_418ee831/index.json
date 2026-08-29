@@ -1,0 +1,196 @@
+{
+  "id": "cargo_418ee831",
+  "role": "cargo",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|6",
+  "canonical": {
+    "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+    "name": "dump_bed_rib_1_left",
+    "part": {
+      "name": "dump_bed_rib_1_left",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.025,
+        0.025
+      ],
+      "height": 1.72,
+      "position": [
+        -2.7,
+        2.29,
+        -0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 10927817,
+      "triangles": 24,
+      "role": "cargo",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_1_left",
+      "position": [
+        -2.7,
+        2.29,
+        -0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_1_right",
+      "position": [
+        -2.7,
+        2.29,
+        0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_2_left",
+      "position": [
+        -2.1,
+        2.29,
+        -0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_2_right",
+      "position": [
+        -2.1,
+        2.29,
+        0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_3_left",
+      "position": [
+        -1.5,
+        2.29,
+        -0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_3_right",
+      "position": [
+        -1.5,
+        2.29,
+        0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_4_left",
+      "position": [
+        -0.9,
+        2.29,
+        -0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_4_right",
+      "position": [
+        -0.9,
+        2.29,
+        0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_5_left",
+      "position": [
+        -0.3,
+        2.29,
+        -0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    },
+    {
+      "objectKey": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "name": "dump_bed_rib_5_right",
+      "position": [
+        -0.3,
+        2.29,
+        0.43
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 10927817
+    }
+  ]
+}

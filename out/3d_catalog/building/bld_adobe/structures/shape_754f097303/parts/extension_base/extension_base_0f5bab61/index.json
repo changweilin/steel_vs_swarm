@@ -1,0 +1,49 @@
+{
+  "id": "extension_base_0f5bab61",
+  "role": "extension_base",
+  "type": "box",
+  "signature": "box|1,0.375,0.5|0",
+  "canonical": {
+    "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+    "name": "front_extension_base",
+    "part": {
+      "name": "front_extension_base",
+      "type": "box",
+      "dimensions": [
+        5,
+        2,
+        2.5
+      ],
+      "position": [
+        3.2,
+        1,
+        4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 11184810,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+      "name": "front_extension_base",
+      "position": [
+        3.2,
+        1,
+        4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 11184810
+    }
+  ]
+}

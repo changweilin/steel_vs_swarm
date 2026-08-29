@@ -1,0 +1,50 @@
+{
+  "id": "sorin_rings_31f3d0d9",
+  "role": "sorin_rings",
+  "type": "cylinder",
+  "signature": "cylinder|0.5,1,0.5|12",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+    "name": "sorin_rings",
+    "part": {
+      "name": "sorin_rings",
+      "type": "cylinder",
+      "sides": 12,
+      "radii": [
+        0.5,
+        0.5
+      ],
+      "height": 2,
+      "position": [
+        0,
+        20.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16303424,
+      "triangles": 48
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+      "name": "sorin_rings",
+      "position": [
+        0,
+        20.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16303424
+    }
+  ]
+}

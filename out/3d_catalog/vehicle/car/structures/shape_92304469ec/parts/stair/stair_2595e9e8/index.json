@@ -1,0 +1,131 @@
+{
+  "id": "stair_2595e9e8",
+  "role": "stair",
+  "type": "box",
+  "signature": "box|1,0,0|0",
+  "canonical": {
+    "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+    "name": "offroad_side_step_left",
+    "part": {
+      "name": "offroad_side_step_left",
+      "type": "box",
+      "dimensions": [
+        2.565,
+        0.08,
+        0.12
+      ],
+      "position": [
+        -0.05,
+        0.44,
+        -1.03
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1448475,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "name": "offroad_side_step_left",
+      "position": [
+        -0.05,
+        0.44,
+        -1.03
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1448475
+    },
+    {
+      "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "name": "offroad_side_step_right",
+      "position": [
+        -0.05,
+        0.44,
+        1.03
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1448475
+    },
+    {
+      "objectKey": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "name": "offroad_side_step_left",
+      "position": [
+        -0.05,
+        0.44,
+        -1.03
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1448475
+    },
+    {
+      "objectKey": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "name": "offroad_side_step_right",
+      "position": [
+        -0.05,
+        0.44,
+        1.03
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1448475
+    },
+    {
+      "objectKey": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "name": "offroad_side_step_left",
+      "position": [
+        -0.05,
+        0.44,
+        -1.03
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1448475
+    },
+    {
+      "objectKey": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "name": "offroad_side_step_right",
+      "position": [
+        -0.05,
+        0.44,
+        1.03
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1448475
+    }
+  ]
+}

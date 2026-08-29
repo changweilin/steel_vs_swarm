@@ -1,0 +1,100 @@
+{
+  "id": "stair_3a0e33ca",
+  "role": "stair",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|8",
+  "canonical": {
+    "objectKey": "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+    "name": "fire_aerial_ladder_left",
+    "part": {
+      "name": "fire_aerial_ladder_left",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.038,
+        0.038
+      ],
+      "height": 4.168,
+      "position": [
+        0.05,
+        3.385,
+        -0.36
+      ],
+      "rotation": [
+        1.286,
+        1.571,
+        0
+      ],
+      "color": 16775135,
+      "triangles": 32,
+      "role": "equipment",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+      "name": "fire_aerial_ladder_left",
+      "position": [
+        0.05,
+        3.385,
+        -0.36
+      ],
+      "rotation": [
+        1.286,
+        1.571,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16775135
+    },
+    {
+      "objectKey": "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+      "name": "fire_aerial_ladder_right",
+      "position": [
+        0.05,
+        3.385,
+        0.36
+      ],
+      "rotation": [
+        1.286,
+        1.571,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16775135
+    },
+    {
+      "objectKey": "vehicle/heavy_CSPV-02_01_5ef67224_luna_v6",
+      "name": "fire_aerial_ladder_left",
+      "position": [
+        0.05,
+        3.385,
+        -0.36
+      ],
+      "rotation": [
+        1.286,
+        1.571,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16775135
+    },
+    {
+      "objectKey": "vehicle/heavy_CSPV-02_01_5ef67224_luna_v6",
+      "name": "fire_aerial_ladder_right",
+      "position": [
+        0.05,
+        3.385,
+        0.36
+      ],
+      "rotation": [
+        1.286,
+        1.571,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16775135
+    }
+  ]
+}

@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_c09175b927",
+  "canonicalKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "bounds": {
+      "min": [
+        -3.6617,
+        0,
+        -3.6617
+      ],
+      "max": [
+        3.6617,
+        7.0065,
+        3.6617
+      ],
+      "size": [
+        7.323,
+        7.006,
+        7.323
+      ],
+      "rMax": 5.178,
+      "triangles": 622,
+      "vertices": 353
+    },
+    "parts": [
+      {
+        "name": "eroded_slope_base",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          2.511,
+          3.662
+        ],
+        "height": 1.077,
+        "position": [
+          0,
+          0.618,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "hoodoo_pillar_0",
+        "type": "frustum_pyramid",
+        "sides": 7,
+        "radii": [
+          0.49,
+          0.68
+        ],
+        "height": 3.29,
+        "position": [
+          -1.924,
+          2.362,
+          -0.262
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 28
+      },
+      {
+        "name": "hoodoo_cap_0",
+        "type": "dodecahedron_polyhedron",
+        "radius": 1.054,
+        "position": [
+          -1.139,
+          4.415,
+          -0.262
+        ],
+        "rotation": [
+          0.1,
+          0,
+          -0.06
+        ],
+        "color": 5200224,
+        "triangles": 36
+      },
+      {
+        "name": "hoodoo_pillar_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.565,
+          0.785
+        ],
+        "height": 4.665,
+        "position": [
+          0,
+          3.05,
+          0.105
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 32
+      },
+      {
+        "name": "hoodoo_cap_1",
+        "type": "dodecahedron_polyhedron",
+        "radius": 1.216,
+        "position": [
+          0,
+          5.854,
+          0.105
+        ],
+        "rotation": [
+          0.1,
+          0.18,
+          -0.06
+        ],
+        "color": 2370353,
+        "triangles": 36
+      },
+      {
+        "name": "hoodoo_pillar_2",
+        "type": "frustum_pyramid",
+        "sides": 9,
+        "radii": [
+          0.49,
+          0.68
+        ],
+        "height": 2.871,
+        "position": [
+          1.855,
+          2.153,
+          -0.209
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_miyako-146_a92c86ba_luna_v6",
+      "similarity": 68,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_pic_9576_12_1_38832e59_luna_v6",
+      "similarity": 92,
+      "scale": [
+        0.60317,
+        0.53169,
+        0.5099
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_132 images_a068c0cc_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_132_images_a068c0cc_luna_v6",
+      "similarity": 55,
+      "scale": [
+        0.70477,
+        0.92949,
+        0.70477
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_pic_9576_12_0_ea24d2ec_luna_v6",
+      "similarity": 54,
+      "scale": [
+        0.54199,
+        0.70154,
+        0.50799
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_cfc0d6ff90ae224820a8d78861af93f5_0_04c47389_luna_v6",
+      "similarity": 30,
+      "scale": [
+        2.03195,
+        0.97359,
+        2.03195
+      ],
+      "paletteIds": [
+        "palette_3a747a57"
+      ]
+    },
+    {
+      "key": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_Ballinagree_6e5f4893_luna_v6",
+      "similarity": 48,
+      "scale": [
+        0.37116,
+        0.47859,
+        0.37116
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+      "similarity": 35,
+      "scale": [
+        3.69248,
+        3.77348,
+        3.9253
+      ],
+      "paletteIds": [
+        "palette_3a747a57"
+      ]
+    },
+    {
+      "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_e5540b76_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_cfc0d6ff90ae224820a8d78861af93f5_1_e5540b76_luna_v6",
+      "similarity": 35,
+      "scale": [
+        3.69248,
+        3.77348,
+        3.9253
+      ],
+      "paletteIds": [
+        "palette_3a747a57"
+      ]
+    },
+    {
+      "key": "rock/main_61bc69d997822_24ae0dc8_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_61bc69d997822_24ae0dc8_luna_v6",
+      "similarity": 44,
+      "scale": [
+        2.57162,
+        3.44048,
+        3.36583
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_1586238562_48266950_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_1586238562_48266950_luna_v6",
+      "similarity": 49,
+      "scale": [
+        4.54459,
+        2.74051,
+        4.61559
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_image-1-206_1ca054a2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_image-1-206_1ca054a2_luna_v6",
+      "similarity": 49,
+      "scale": [
+        4.54459,
+        2.74051,
+        4.61559
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main__-164605945_1_1fc29f59_luna_v6",
+      "similarity": 53,
+      "scale": [
+        2.16796,
+        2.50842,
+        2.20183
+      ],
+      "paletteIds": [
+        "palette_c4c6a19c"
+      ]
+    },
+    {
+      "key": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_php1uNn7p_1d49d066_luna_v6",
+      "similarity": 83,
+      "scale": [
+        0.90769,
+        0.78633,
+        0.7049
+      ],
+      "paletteIds": [
+        "palette_c4c6a19c"
+      ]
+    },
+    {
+      "key": "rock/main_images (2)_56b743a2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_images_2__56b743a2_luna_v6",
+      "similarity": 54,
+      "scale": [
+        0.31463,
+        0.20525,
+        0.31463
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNj_6c345ef7_366483c8_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.15117,
+        0.98216,
+        1.02513
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_images (1)_88ee1ac8_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_images_1__88ee1ac8_luna_v6",
+      "similarity": 62,
+      "scale": [
+        0.76198,
+        0.50271,
+        0.76198
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_images (5)_ba4fb3a0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_images_5__ba4fb3a0_luna_v6",
+      "similarity": 68,
+      "scale": [
+        0.41527,
+        0.28476,
+        0.3149
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_images (6)_fd534896_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_images_6__fd534896_luna_v6",
+      "similarity": 18,
+      "scale": [
+        0.2925,
+        0.26691,
+        0.2473
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_132_0da6c49f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_132_0da6c49f_luna_v6",
+      "similarity": 3,
+      "scale": [
+        2.69835,
+        1.55909,
+        2.6257
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_images rock_15704dbb_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_images_rock_15704dbb_luna_v6",
+      "similarity": 48,
+      "scale": [
+        0.19295,
+        0.24522,
+        0.18858
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/main_images (4)_1eb4a48a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_images_4__1eb4a48a_luna_v6",
+      "similarity": 35,
+      "scale": [
+        0.36092,
+        0.17128,
+        0.35641
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

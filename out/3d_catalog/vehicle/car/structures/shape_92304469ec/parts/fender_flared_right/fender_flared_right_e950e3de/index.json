@@ -1,0 +1,65 @@
+{
+  "id": "fender_flared_right_e950e3de",
+  "role": "fender_flared_right",
+  "type": "box",
+  "signature": "box|0.25,0.5,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_176103315400_b84cb3e4_v6",
+    "name": "fender_flared_front_right",
+    "part": {
+      "name": "fender_flared_front_right",
+      "type": "box",
+      "dimensions": [
+        0.2,
+        0.5,
+        0.9
+      ],
+      "position": [
+        -0.98,
+        0.8,
+        1.15
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2105376,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_176103315400_b84cb3e4_v6",
+      "name": "fender_flared_front_right",
+      "position": [
+        -0.98,
+        0.8,
+        1.15
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    },
+    {
+      "objectKey": "vehicle/car_176103315400_b84cb3e4_v6",
+      "name": "fender_flared_rear_right",
+      "position": [
+        -0.98,
+        0.8,
+        -1.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    }
+  ]
+}

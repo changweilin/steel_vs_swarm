@@ -1,0 +1,49 @@
+{
+  "id": "plaque_5b96fdd0",
+  "role": "plaque",
+  "type": "box",
+  "signature": "box|0.625,1,0|0",
+  "canonical": {
+    "objectKey": "building/mass_images (15)_f6c4e057_v6",
+    "name": "plaque",
+    "part": {
+      "name": "plaque",
+      "type": "box",
+      "dimensions": [
+        1.5,
+        2.5,
+        0.05
+      ],
+      "position": [
+        0,
+        17.6,
+        5.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4621730,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_images (15)_f6c4e057_v6",
+      "name": "plaque",
+      "position": [
+        0,
+        17.6,
+        5.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4621730
+    }
+  ]
+}

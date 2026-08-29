@@ -1,0 +1,49 @@
+{
+  "id": "ridge_wedge_south_8fe148d2",
+  "role": "ridge_wedge_south",
+  "type": "wedge",
+  "signature": "wedge|1,0.5,0.5|0",
+  "canonical": {
+    "objectKey": "rock/main_69353_01_abb820ea_v6",
+    "name": "ridge_wedge_south",
+    "part": {
+      "name": "ridge_wedge_south",
+      "type": "wedge",
+      "dimensions": [
+        40,
+        22,
+        18
+      ],
+      "position": [
+        0,
+        20,
+        18
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 10237970,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_69353_01_abb820ea_v6",
+      "name": "ridge_wedge_south",
+      "position": [
+        0,
+        20,
+        18
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10237970
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "id": "balcony_tier_adee7e4c",
+  "role": "balcony_tier",
+  "type": "box",
+  "signature": "box|1,0.25,0.625|0",
+  "canonical": {
+    "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+    "name": "balcony_tier_1",
+    "part": {
+      "name": "balcony_tier_1",
+      "type": "box",
+      "dimensions": [
+        4.2,
+        0.8,
+        2.5
+      ],
+      "position": [
+        -2.2,
+        4,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 13467433,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+      "name": "balcony_tier_1",
+      "position": [
+        -2.2,
+        4,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13467433
+    },
+    {
+      "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+      "name": "balcony_tier_2",
+      "position": [
+        -2.2,
+        8,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13467433
+    },
+    {
+      "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+      "name": "balcony_tier_3",
+      "position": [
+        -2.2,
+        12,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13467433
+    },
+    {
+      "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+      "name": "balcony_tier_4",
+      "position": [
+        -2.2,
+        16,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13467433
+    },
+    {
+      "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+      "name": "balcony_tier_5",
+      "position": [
+        -2.2,
+        20,
+        3.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13467433
+    }
+  ]
+}

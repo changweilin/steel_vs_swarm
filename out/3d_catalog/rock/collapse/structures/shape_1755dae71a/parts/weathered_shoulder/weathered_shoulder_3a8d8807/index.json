@@ -1,0 +1,77 @@
+{
+  "id": "weathered_shoulder_3a8d8807",
+  "role": "weathered_shoulder",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+    "name": "right_weathered_shoulder",
+    "part": {
+      "name": "right_weathered_shoulder",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.6,
+      "position": [
+        1.063,
+        1.137,
+        -0.18
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "color": 5200224,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        1.063,
+        1.137,
+        -0.18
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_993f4b33_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        0.869,
+        1.018,
+        -0.19
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5_c39af10b_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        0.486,
+        0.57,
+        -0.108
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

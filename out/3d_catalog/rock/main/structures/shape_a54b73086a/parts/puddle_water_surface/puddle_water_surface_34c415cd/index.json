@@ -1,0 +1,49 @@
+{
+  "id": "puddle_water_surface_34c415cd",
+  "role": "puddle_water_surface",
+  "type": "box",
+  "signature": "box|1,0,0.75|0",
+  "canonical": {
+    "objectKey": "rock/main_id14796060-shutterstock_783352309~0_65ec3042_v6",
+    "name": "puddle_water_surface",
+    "part": {
+      "name": "puddle_water_surface",
+      "type": "box",
+      "dimensions": [
+        3,
+        0.01,
+        2.2
+      ],
+      "position": [
+        0.3,
+        0.02,
+        1.2
+      ],
+      "rotation": [
+        0,
+        0.1,
+        0
+      ],
+      "color": 3233385,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_id14796060-shutterstock_783352309~0_65ec3042_v6",
+      "name": "puddle_water_surface",
+      "position": [
+        0.3,
+        0.02,
+        1.2
+      ],
+      "rotation": [
+        0,
+        0.1,
+        0
+      ],
+      "colorKey": null,
+      "color": 3233385
+    }
+  ]
+}

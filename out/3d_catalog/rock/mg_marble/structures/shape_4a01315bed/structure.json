@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_4a01315bed",
+  "canonicalKey": "rock/mg_marble_ov_795b025b-a174-4be2-a7a1-66deecad9401_9bd67eb8_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/mg_marble_ov_795b025b-a174-4be2-a7a1-66deecad9401_9bd67eb8_v6",
+    "bounds": {
+      "min": [
+        -2.9,
+        -0.6013,
+        -2.8284
+      ],
+      "max": [
+        2.9,
+        10.9,
+        3.4013
+      ],
+      "size": [
+        5.8,
+        11.501,
+        6.23
+      ],
+      "rMax": 4.47,
+      "triangles": 364,
+      "vertices": 224
+    },
+    "parts": [
+      {
+        "name": "pagoda_base",
+        "type": "box",
+        "dimensions": [
+          4,
+          1,
+          4
+        ],
+        "position": [
+          0,
+          0.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4210752,
+        "triangles": 12
+      },
+      {
+        "name": "pagoda_tier_1_body",
+        "type": "box",
+        "dimensions": [
+          3.2,
+          2,
+          3.2
+        ],
+        "position": [
+          0,
+          2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      },
+      {
+        "name": "pagoda_tier_1_roof",
+        "type": "frustum_pyramid",
+        "sides": 4,
+        "radii": [
+          2.2,
+          4
+        ],
+        "height": 0.6,
+        "position": [
+          0,
+          3.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7372895,
+        "triangles": 16
+      },
+      {
+        "name": "pagoda_tier_2_body",
+        "type": "box",
+        "dimensions": [
+          2.8,
+          1.6,
+          2.8
+        ],
+        "position": [
+          0,
+          3.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      },
+      {
+        "name": "pagoda_tier_3_body",
+        "type": "box",
+        "dimensions": [
+          2.4,
+          1.4,
+          2.4
+        ],
+        "position": [
+          0,
+          5.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      },
+      {
+        "name": "pagoda_tier_4_body",
+        "type": "box",
+        "dimensions": [
+          2,
+          1.2,
+          2
+        ],
+        "position": [
+          0,
+          7,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      },
+      {
+        "name": "pagoda_tier_5_body",
+        "type": "box",
+        "dimensions": [
+          1.6,
+          1,
+          1.6
+        ],
+        "position": [
+          0,
+          8.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      },
+      {
+        "name": "pagoda_tier_6_body",
+        "type": "box",
+        "dimensions": [
+          1.2,
+          0.8,
+          1.2
+        ],
+        "position": [
+          0,
+          9.6,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      },
+      {
+        "name": "foreground_rock_base",
+        "type": "dodecahedron_polyhedron",
+        "radius": 1.5,
+        "position": [
+          0.2,
+          0.8,
+          2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4210752,
+        "triangles": 36
+      },
+      {
+        "name": "foreground_rock_cluster_1",
+        "type": "icosahedron_polyhedron",
+        "radius": 1.2,
+        "position": [
+          -0.5,
+          1.5,
+          1.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 20
+      },
+      {
+        "name": "foreground_rock_cluster_2",
+        "type": "dodecahedron_polyhedron",
+        "radius": 1,
+        "position": [
+          0.8,
+          2,
+          1.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2105376,
+        "triangles": 36
+      },
+      {
+        "name": "foreground_rock_top",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.8,
+        "position": [
+          0.1,
+          2.8,
+          1.7
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 20
+      },
+      {
+        "name": "left_pillar",
+        "type": "box",
+        "dimensions": [
+          0.8,
+          3,
+          0.8
+        ],
+        "position": [
+          -2.5,
+          1.5,
+          2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      },
+      {
+        "name": "right_pillar",
+        "type": "box",
+        "dimensions": [
+          0.8,
+          3,
+          0.8
+        ],
+        "position": [
+          2.5,
+          1.5,
+          2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/mg_marble_ov_795b025b-a174-4be2-a7a1-66deecad9401_9bd67eb8_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/rock/mg_marble/rock_mg_marble_ov_795b025b-a174-4be2-a7a1-66deecad9401_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_772027f5"
+      ]
+    }
+  ]
+}

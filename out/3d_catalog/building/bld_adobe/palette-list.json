@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "building",
+  "subcategory": "bld_adobe",
+  "palettes": [
+    {
+      "id": "palette_c9316d99",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 11842740,
+        "facadeHex": 11184810,
+        "baseHex": 9868950,
+        "accentHex": 5921370,
+        "glassHex": 3368652,
+        "darkHex": 2105376,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

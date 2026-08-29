@@ -1,0 +1,49 @@
+{
+  "id": "grille_base_9f708a42",
+  "role": "grille_base",
+  "type": "box",
+  "signature": "box|1,0.375,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+    "name": "front_grille_base",
+    "part": {
+      "name": "front_grille_base",
+      "type": "box",
+      "dimensions": [
+        1.5,
+        0.6,
+        0.1
+      ],
+      "position": [
+        0,
+        0.85,
+        2.06
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1315860,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+      "name": "front_grille_base",
+      "position": [
+        0,
+        0.85,
+        2.06
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "id": "forward_rubble_facet_90208908",
+  "role": "forward_rubble_facet",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+    "name": "forward_rubble_facet",
+    "part": {
+      "name": "forward_rubble_facet",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.482,
+      "position": [
+        1.095,
+        0.881,
+        0.903
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "color": 5602375,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        1.095,
+        0.881,
+        0.903
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        1.096,
+        1.626,
+        1.249
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        0.96,
+        1.238,
+        0.9
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        2.88,
+        2.17,
+        3.6
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 8361565
+    },
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        0.581,
+        0.833,
+        0.658
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/main_php1uNn7p_1d49d066_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        1.652,
+        1.325,
+        1.249
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 12683864
+    },
+    {
+      "objectKey": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        2.091,
+        1.588,
+        1.816
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/main_images (1)_88ee1ac8_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        1.08,
+        0.826,
+        1.35
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 6911354
+    },
+    {
+      "objectKey": "rock/main_images (5)_ba4fb3a0_luna_v6",
+      "name": "forward_rubble_facet",
+      "position": [
+        0.764,
+        0.452,
+        0.558
+      ],
+      "rotation": [
+        0.15,
+        0.22,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 6911354
+    }
+  ]
+}

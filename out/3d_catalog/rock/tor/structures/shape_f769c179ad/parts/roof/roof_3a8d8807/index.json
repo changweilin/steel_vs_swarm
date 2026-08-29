@@ -1,0 +1,93 @@
+{
+  "id": "roof_3a8d8807",
+  "role": "roof",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+    "name": "tor_right_cap",
+    "part": {
+      "name": "tor_right_cap",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.564,
+      "position": [
+        1.023,
+        4.827,
+        0.125
+      ],
+      "rotation": [
+        -0.1,
+        0.19,
+        -0.06
+      ],
+      "color": 2370353,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+      "name": "tor_right_cap",
+      "position": [
+        1.023,
+        4.827,
+        0.125
+      ],
+      "rotation": [
+        -0.1,
+        0.19,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 2370353
+    },
+    {
+      "objectKey": "rock/tor_ov_d453866a-3e14-469d-9a1e-faec62e90f22_e4bb51ce_luna_v6",
+      "name": "tor_right_cap",
+      "position": [
+        1.152,
+        4.578,
+        0.17
+      ],
+      "rotation": [
+        -0.1,
+        0.19,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 2370353
+    },
+    {
+      "objectKey": "rock/tor_wc_12044342_e535f838_luna_v6",
+      "name": "tor_left_cap",
+      "position": [
+        -2.418,
+        5.375,
+        -0.22
+      ],
+      "rotation": [
+        0.15,
+        -0.18,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 2370353
+    },
+    {
+      "objectKey": "rock/tor_wc_12044342_e535f838_luna_v6",
+      "name": "tor_right_cap",
+      "position": [
+        2.418,
+        5.131,
+        0.22
+      ],
+      "rotation": [
+        -0.1,
+        0.19,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 2370353
+    }
+  ]
+}

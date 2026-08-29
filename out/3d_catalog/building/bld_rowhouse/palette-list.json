@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "building",
+  "subcategory": "bld_rowhouse",
+  "palettes": [
+    {
+      "id": "palette_3f778cb9",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 5515044,
+        "facadeHex": 9124134,
+        "baseHex": 6825248,
+        "accentHex": 12553530,
+        "glassHex": 1851463,
+        "darkHex": 2631720,
+        "brightHex": 15066597
+      },
+      "objects": [
+        {
+          "key": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

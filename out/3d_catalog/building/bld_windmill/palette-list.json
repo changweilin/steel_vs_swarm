@@ -1,0 +1,4434 @@
+{
+  "schemaVersion": 1,
+  "category": "building",
+  "subcategory": "bld_windmill",
+  "palettes": [
+    {
+      "id": "palette_00203833",
+      "name": "Palette 223",
+      "colors": {
+        "roofHex": 5523456,
+        "facadeHex": 8543210,
+        "baseHex": 335544,
+        "accentHex": 112233,
+        "glassHex": 12345678,
+        "darkHex": 222222,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_01406f7d",
+      "name": "Palette 39",
+      "colors": {
+        "roofHex": 16053492,
+        "facadeHex": 16053492,
+        "baseHex": 16053492,
+        "accentHex": 6447715,
+        "glassHex": 921102,
+        "darkHex": 921102,
+        "brightHex": 16053491
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_048eae07",
+      "name": "Palette 207",
+      "colors": {
+        "roofHex": 9358843,
+        "facadeHex": 10927788,
+        "baseHex": 10009999,
+        "accentHex": 8900347,
+        "glassHex": 8900347,
+        "darkHex": 2631720,
+        "brightHex": 16316921
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_04c8a093",
+      "name": "Palette 98",
+      "colors": {
+        "roofHex": 804020,
+        "facadeHex": 904525,
+        "baseHex": 603015,
+        "accentHex": 502510,
+        "glassHex": 102030,
+        "darkHex": 301505,
+        "brightHex": 909090
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_07fe3dab",
+      "name": "Palette 77",
+      "colors": {
+        "roofHex": 13418413,
+        "facadeHex": 10061943,
+        "baseHex": 3156001,
+        "accentHex": 15062450,
+        "glassHex": 1122610,
+        "darkHex": 1578013,
+        "brightHex": 16773325
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_08786a2e",
+      "name": "Palette 204",
+      "colors": {
+        "roofHex": 10011898,
+        "facadeHex": 11652080,
+        "baseHex": 2830630,
+        "accentHex": 8827383,
+        "glassHex": 13296633,
+        "darkHex": 1317142,
+        "brightHex": 13296633
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_0947da9a",
+      "name": "Palette 203",
+      "colors": {
+        "roofHex": 12109038,
+        "facadeHex": 10790307,
+        "baseHex": 8881020,
+        "accentHex": 12306159,
+        "glassHex": 12306159,
+        "darkHex": 4144187,
+        "brightHex": 14541037
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_097dd3c8",
+      "name": "Palette 109",
+      "colors": {
+        "roofHex": 657930,
+        "facadeHex": 16185078,
+        "baseHex": 14145495,
+        "accentHex": 16119285,
+        "glassHex": 657930,
+        "darkHex": 657930,
+        "brightHex": 16119285
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_09cb1417",
+      "name": "Palette 92",
+      "colors": {
+        "roofHex": 5197132,
+        "facadeHex": 5197132,
+        "baseHex": 1315601,
+        "accentHex": 591880,
+        "glassHex": 591880,
+        "darkHex": 591880,
+        "brightHex": 10724005
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_0be3319c",
+      "name": "Palette 131",
+      "colors": {
+        "roofHex": 10396082,
+        "facadeHex": 9671840,
+        "baseHex": 3616819,
+        "accentHex": 1182996,
+        "glassHex": 3287603,
+        "darkHex": 1182996,
+        "brightHex": 15588305
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_0c02de1f",
+      "name": "Palette 63",
+      "colors": {
+        "roofHex": 13351845,
+        "facadeHex": 8283996,
+        "baseHex": 11311753,
+        "accentHex": 4664359,
+        "glassHex": 1976635,
+        "darkHex": 4664359,
+        "brightHex": 15458509
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_0c99fa3c",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7633803,
+        "facadeHex": 7368566,
+        "baseHex": 7303731,
+        "accentHex": 7171633,
+        "glassHex": 5461856,
+        "darkHex": 3421226,
+        "brightHex": 13814208
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_0e3a3d6c",
+      "name": "Palette 126",
+      "colors": {
+        "roofHex": 7839465,
+        "facadeHex": 11379357,
+        "baseHex": 8950069,
+        "accentHex": 10063142,
+        "glassHex": 8365549,
+        "darkHex": 1578770,
+        "brightHex": 15002871
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_0e5850bd",
+      "name": "Palette 51",
+      "colors": {
+        "roofHex": 2434339,
+        "facadeHex": 14824738,
+        "baseHex": 6118231,
+        "accentHex": 15902750,
+        "glassHex": 1128515,
+        "darkHex": 1973790,
+        "brightHex": 16772270
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_0ec69f19",
+      "name": "Palette 106",
+      "colors": {
+        "roofHex": 13561599,
+        "facadeHex": 9539725,
+        "baseHex": 6775127,
+        "accentHex": 5985864,
+        "glassHex": 13561598,
+        "darkHex": 2302497,
+        "brightHex": 13561598
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1015f63f",
+      "name": "Palette 116",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14540253,
+        "baseHex": 3289650,
+        "accentHex": 2105376,
+        "glassHex": 4352230,
+        "darkHex": 1644825,
+        "brightHex": 15066597
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_105d732a",
+      "name": "Palette 177",
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 2697513,
+        "baseHex": 7954516,
+        "accentHex": 11043444,
+        "glassHex": 3368652,
+        "darkHex": 1644825,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_121fdb46",
+      "name": "Palette 140",
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 12895427,
+        "baseHex": 13290186,
+        "accentHex": 5327171,
+        "glassHex": 2170398,
+        "darkHex": 2170398,
+        "brightHex": 14737632
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_123387a8",
+      "name": "Palette 101",
+      "colors": {
+        "roofHex": 10592673,
+        "facadeHex": 4144959,
+        "baseHex": 5197647,
+        "accentHex": 10461087,
+        "glassHex": 2302755,
+        "darkHex": 855309,
+        "brightHex": 11579568
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_128bda0c",
+      "name": "Palette 47",
+      "colors": {
+        "roofHex": 8888020,
+        "facadeHex": 8089181,
+        "baseHex": 5196358,
+        "accentHex": 1644045,
+        "glassHex": 8690899,
+        "darkHex": 1644045,
+        "brightHex": 12569575
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_14bbc0c5",
+      "name": "Palette 73",
+      "colors": {
+        "roofHex": 2246473,
+        "facadeHex": 3432532,
+        "baseHex": 5073237,
+        "accentHex": 14404245,
+        "glassHex": 2191476,
+        "darkHex": 1844766,
+        "brightHex": 15066597
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_15116895",
+      "name": "Palette 76",
+      "colors": {
+        "roofHex": 855314,
+        "facadeHex": 986386,
+        "baseHex": 722952,
+        "accentHex": 3813161,
+        "glassHex": 920849,
+        "darkHex": 328709,
+        "brightHex": 14205875
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_15a05337",
+      "name": "Palette 65",
+      "colors": {
+        "roofHex": 4793634,
+        "facadeHex": 4269345,
+        "baseHex": 3151890,
+        "accentHex": 4397076,
+        "glassHex": 1976635,
+        "darkHex": 1576462,
+        "brightHex": 16382200
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_187457e0",
+      "name": "Palette 230",
+      "colors": {
+        "roofHex": 16744272,
+        "facadeHex": 16767948,
+        "baseHex": 10053222,
+        "accentHex": 13369344,
+        "glassHex": 49560,
+        "darkHex": 8388608,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1a657419",
+      "name": "Palette 4",
+      "colors": {
+        "roofHex": 12565932,
+        "facadeHex": 7760205,
+        "baseHex": 3484175,
+        "accentHex": 1511430,
+        "glassHex": 1976635,
+        "darkHex": 1511430,
+        "brightHex": 14211539
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1a6f509f",
+      "name": "Palette 11",
+      "colors": {
+        "roofHex": 7231268,
+        "facadeHex": 11181440,
+        "baseHex": 5921370,
+        "accentHex": 3815994,
+        "glassHex": 2176337,
+        "darkHex": 2500134,
+        "brightHex": 13158600
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1b23771d",
+      "name": "Palette 147",
+      "colors": {
+        "roofHex": 2171169,
+        "facadeHex": 14540253,
+        "baseHex": 11184810,
+        "accentHex": 4210752,
+        "glassHex": 8042415,
+        "darkHex": 3289650,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1c964e69",
+      "name": "Palette 194",
+      "colors": {
+        "roofHex": 5992834,
+        "facadeHex": 5992834,
+        "baseHex": 5992834,
+        "accentHex": 4097485,
+        "glassHex": 1976635,
+        "darkHex": 2899536,
+        "brightHex": 14605020
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1d9b1250",
+      "name": "Palette 156",
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 4603444,
+        "baseHex": 12632256,
+        "accentHex": 15790320,
+        "glassHex": 2115790,
+        "darkHex": 2631720,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1db66f44",
+      "name": "Palette 198",
+      "colors": {
+        "roofHex": 15198183,
+        "facadeHex": 11898996,
+        "baseHex": 15198183,
+        "accentHex": 7952439,
+        "glassHex": 6973301,
+        "darkHex": 2762779,
+        "brightHex": 16645629
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1e8d8aa0",
+      "name": "Palette 160",
+      "colors": {
+        "roofHex": 11192816,
+        "facadeHex": 12700896,
+        "baseHex": 6517593,
+        "accentHex": 6530018,
+        "glassHex": 3163218,
+        "darkHex": 1384489,
+        "brightHex": 15397111
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1f85da09",
+      "name": "Palette 52",
+      "colors": {
+        "roofHex": 1273004,
+        "facadeHex": 3966140,
+        "baseHex": 3348233,
+        "accentHex": 1273004,
+        "glassHex": 1273004,
+        "darkHex": 2821382,
+        "brightHex": 15120242
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1f99c0bb",
+      "name": "Palette 221",
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 16777215,
+        "baseHex": 12632256,
+        "accentHex": 8421504,
+        "glassHex": 10092543,
+        "darkHex": 4210752,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_1f99ce7c",
+      "name": "Palette 29",
+      "colors": {
+        "roofHex": 4546971,
+        "facadeHex": 6578518,
+        "baseHex": 10130313,
+        "accentHex": 4810143,
+        "glassHex": 4810143,
+        "darkHex": 2104862,
+        "brightHex": 14077633
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2011dbe6",
+      "name": "Palette 130",
+      "colors": {
+        "roofHex": 2697779,
+        "facadeHex": 11054235,
+        "baseHex": 7434609,
+        "accentHex": 4473924,
+        "glassHex": 3236750,
+        "darkHex": 1973790,
+        "brightHex": 16773055
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2032b8c2",
+      "name": "Palette 110",
+      "colors": {
+        "roofHex": 9343652,
+        "facadeHex": 10847078,
+        "baseHex": 5654858,
+        "accentHex": 12552544,
+        "glassHex": 1975340,
+        "darkHex": 1975340,
+        "brightHex": 14346210
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_20494c4a",
+      "name": "Palette 99",
+      "colors": {
+        "roofHex": 946855,
+        "facadeHex": 4552100,
+        "baseHex": 10260912,
+        "accentHex": 1012646,
+        "glassHex": 1012646,
+        "darkHex": 4469804,
+        "brightHex": 12506072
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_21586e8e",
+      "name": "Palette 152",
+      "colors": {
+        "roofHex": 2041254,
+        "facadeHex": 14211288,
+        "baseHex": 16777215,
+        "accentHex": 4210752,
+        "glassHex": 3368652,
+        "darkHex": 2105376,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_21aaec48",
+      "name": "Palette 24",
+      "colors": {
+        "roofHex": 6579304,
+        "facadeHex": 15790320,
+        "baseHex": 4210752,
+        "accentHex": 11842740,
+        "glassHex": 4158864,
+        "darkHex": 2105376,
+        "brightHex": 15132390
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_23f5bb3b",
+      "name": "Palette 50",
+      "colors": {
+        "roofHex": 70984,
+        "facadeHex": 2631483,
+        "baseHex": 4928286,
+        "accentHex": 6219,
+        "glassHex": 6219,
+        "darkHex": 1838597,
+        "brightHex": 13547916
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2444633b",
+      "name": "Palette 89",
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 12566463,
+        "baseHex": 8421504,
+        "accentHex": 16777215,
+        "glassHex": 4621735,
+        "darkHex": 3158064,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_245f8a4d",
+      "name": "Palette 33",
+      "colors": {
+        "roofHex": 4167418,
+        "facadeHex": 6380369,
+        "baseHex": 13022113,
+        "accentHex": 4035831,
+        "glassHex": 4035831,
+        "darkHex": 2366489,
+        "brightHex": 15063237
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_24e6ecf7",
+      "name": "Palette 18",
+      "colors": {
+        "roofHex": 5803976,
+        "facadeHex": 7832658,
+        "baseHex": 3617802,
+        "accentHex": 1052675,
+        "glassHex": 6001865,
+        "darkHex": 1052675,
+        "brightHex": 8829137
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_24fbce87",
+      "name": "Palette 62",
+      "colors": {
+        "roofHex": 13983518,
+        "facadeHex": 7893091,
+        "baseHex": 5525574,
+        "accentHex": 14321240,
+        "glassHex": 3360600,
+        "darkHex": 3288874,
+        "brightHex": 15132390
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_25b22ca4",
+      "name": "Palette 12",
+      "colors": {
+        "roofHex": 7500402,
+        "facadeHex": 7105644,
+        "baseHex": 8947848,
+        "accentHex": 12829635,
+        "glassHex": 723723,
+        "darkHex": 723723,
+        "brightHex": 12829635
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2663a6df",
+      "name": "Palette 138",
+      "colors": {
+        "roofHex": 107519,
+        "facadeHex": 8029312,
+        "baseHex": 10329244,
+        "accentHex": 237566,
+        "glassHex": 237566,
+        "darkHex": 2562586,
+        "brightHex": 13354432
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2797bf4d",
+      "name": "Palette 100",
+      "colors": {
+        "roofHex": 10515540,
+        "facadeHex": 12545620,
+        "baseHex": 8540400,
+        "accentHex": 14560700,
+        "glassHex": 4560750,
+        "darkHex": 303030,
+        "brightHex": 200200200
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2a8a8a65",
+      "name": "Palette 32",
+      "colors": {
+        "roofHex": 11035448,
+        "facadeHex": 15458768,
+        "baseHex": 9011548,
+        "accentHex": 4663848,
+        "glassHex": 3366520,
+        "darkHex": 3810076,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2b96e6c8",
+      "name": "Palette 181",
+      "colors": {
+        "roofHex": 6579300,
+        "facadeHex": 14536350,
+        "baseHex": 11184810,
+        "accentHex": 3947580,
+        "glassHex": 4621730,
+        "darkHex": 2631720,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2bb81430",
+      "name": "Palette 83",
+      "colors": {
+        "roofHex": 7240321,
+        "facadeHex": 9474925,
+        "baseHex": 4208942,
+        "accentHex": 12296049,
+        "glassHex": 1908254,
+        "darkHex": 1908254,
+        "brightHex": 14140060
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2bbfb0be",
+      "name": "Palette 209",
+      "colors": {
+        "roofHex": 83867,
+        "facadeHex": 4809088,
+        "baseHex": 4144682,
+        "accentHex": 85409,
+        "glassHex": 85409,
+        "darkHex": 1512723,
+        "brightHex": 14737370
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2bffc8be",
+      "name": "Palette 161",
+      "colors": {
+        "roofHex": 1213082,
+        "facadeHex": 5345696,
+        "baseHex": 3625002,
+        "accentHex": 1212824,
+        "glassHex": 4427422,
+        "darkHex": 1122316,
+        "brightHex": 13684934
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2de91793",
+      "name": "Palette 124",
+      "colors": {
+        "roofHex": 10066278,
+        "facadeHex": 8437888,
+        "baseHex": 4473924,
+        "accentHex": 16777215,
+        "glassHex": 4473924,
+        "darkHex": 2899536,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2f3340a1",
+      "name": "Palette 69",
+      "colors": {
+        "roofHex": 5091563,
+        "facadeHex": 7249303,
+        "baseHex": 6383180,
+        "accentHex": 4960490,
+        "glassHex": 4960490,
+        "darkHex": 2434592,
+        "brightHex": 15396582
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_2fddb28b",
+      "name": "Palette 26",
+      "colors": {
+        "roofHex": 12371929,
+        "facadeHex": 11252668,
+        "baseHex": 5133120,
+        "accentHex": 1844762,
+        "glassHex": 8424340,
+        "darkHex": 1844762,
+        "brightHex": 14016232
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_31ae15e0",
+      "name": "Palette 85",
+      "colors": {
+        "roofHex": 10058368,
+        "facadeHex": 14540253,
+        "baseHex": 9005424,
+        "accentHex": 7427171,
+        "glassHex": 2106414,
+        "darkHex": 3156520,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_321b425f",
+      "name": "Palette 213",
+      "colors": {
+        "roofHex": 4868682,
+        "facadeHex": 14210252,
+        "baseHex": 8551794,
+        "accentHex": 6116689,
+        "glassHex": 11583173,
+        "darkHex": 3289650,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_347e7cc0",
+      "name": "Palette 67",
+      "colors": {
+        "roofHex": 3824460,
+        "facadeHex": 4415572,
+        "baseHex": 2967362,
+        "accentHex": 5534560,
+        "glassHex": 15001321,
+        "darkHex": 1976868,
+        "brightHex": 11057584
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_3603c1fa",
+      "name": "Palette 159",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 4210752,
+        "baseHex": 2105376,
+        "accentHex": 10053120,
+        "glassHex": 8438271,
+        "darkHex": 3158064,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_360ad742",
+      "name": "Palette 93",
+      "colors": {
+        "roofHex": 4210752,
+        "facadeHex": 10526880,
+        "baseHex": 6316128,
+        "accentHex": 8421504,
+        "glassHex": 3368652,
+        "darkHex": 2105376,
+        "brightHex": 14737632
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_370f548a",
+      "name": "Palette 113",
+      "colors": {
+        "roofHex": 3246537,
+        "facadeHex": 6469607,
+        "baseHex": 9219746,
+        "accentHex": 3313614,
+        "glassHex": 3313614,
+        "darkHex": 2240553,
+        "brightHex": 14215667
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_383fdf92",
+      "name": "Palette 180",
+      "colors": {
+        "roofHex": 15001317,
+        "facadeHex": 9073760,
+        "baseHex": 6058534,
+        "accentHex": 5796640,
+        "glassHex": 1447699,
+        "darkHex": 1447699,
+        "brightHex": 15132646
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_38426ba8",
+      "name": "Palette 133",
+      "colors": {
+        "roofHex": 5738935,
+        "facadeHex": 10533581,
+        "baseHex": 6060660,
+        "accentHex": 5082805,
+        "glassHex": 5082805,
+        "darkHex": 2369320,
+        "brightHex": 12963281
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_39299fb8",
+      "name": "Palette 165",
+      "colors": {
+        "roofHex": 8421504,
+        "facadeHex": 13935965,
+        "baseHex": 8545339,
+        "accentHex": 16777215,
+        "glassHex": 11068390,
+        "darkHex": 4210752,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_3a976c5f",
+      "name": "Palette 53",
+      "colors": {
+        "roofHex": 11151394,
+        "facadeHex": 12459040,
+        "baseHex": 3156264,
+        "accentHex": 14981152,
+        "glassHex": 1125160,
+        "darkHex": 2103324,
+        "brightHex": 16303424
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_3ecd0b32",
+      "name": "Palette 195",
+      "colors": {
+        "roofHex": 10989499,
+        "facadeHex": 10594999,
+        "baseHex": 4344373,
+        "accentHex": 9018032,
+        "glassHex": 9018032,
+        "darkHex": 1580571,
+        "brightHex": 12106691
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_3f778cb9",
+      "name": "Palette 55",
+      "colors": {
+        "roofHex": 5515044,
+        "facadeHex": 9124134,
+        "baseHex": 6825248,
+        "accentHex": 12553530,
+        "glassHex": 1851463,
+        "darkHex": 2631720,
+        "brightHex": 15066597
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_3fa069df",
+      "name": "Palette 176",
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 6381921,
+        "baseHex": 3815994,
+        "accentHex": 11184810,
+        "glassHex": 26367,
+        "darkHex": 2105376,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_40238fee",
+      "name": "Palette 15",
+      "colors": {
+        "roofHex": 8350305,
+        "facadeHex": 9394755,
+        "baseHex": 5058831,
+        "accentHex": 10372626,
+        "glassHex": 1450531,
+        "darkHex": 1450531,
+        "brightHex": 15002306
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4129658a",
+      "name": "Palette 54",
+      "colors": {
+        "roofHex": 11315637,
+        "facadeHex": 9929085,
+        "baseHex": 8409157,
+        "accentHex": 3021335,
+        "glassHex": 1976635,
+        "darkHex": 3021335,
+        "brightHex": 13554654
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_41820ee3",
+      "name": "Palette 212",
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 3223857,
+        "baseHex": 1052688,
+        "accentHex": 8545330,
+        "glassHex": 10079487,
+        "darkHex": 2631720,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_429ec20b",
+      "name": "Palette 104",
+      "colors": {
+        "roofHex": 8368360,
+        "facadeHex": 7427923,
+        "baseHex": 7755085,
+        "accentHex": 8434159,
+        "glassHex": 8434159,
+        "darkHex": 2038560,
+        "brightHex": 15395565
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_43b53df4",
+      "name": "Palette 175",
+      "colors": {
+        "roofHex": 8417350,
+        "facadeHex": 10585670,
+        "baseHex": 7895160,
+        "accentHex": 5917470,
+        "glassHex": 10079487,
+        "darkHex": 3947580,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_474f8f2b",
+      "name": "Palette 224",
+      "colors": {
+        "roofHex": 11166549,
+        "facadeHex": 13344143,
+        "baseHex": 10515568,
+        "accentHex": 14397576,
+        "glassHex": 3360614,
+        "darkHex": 4208186,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4853f8cd",
+      "name": "Palette 211",
+      "colors": {
+        "roofHex": 454040,
+        "facadeHex": 18012080,
+        "baseHex": 100100100,
+        "accentHex": 2005020,
+        "glassHex": 204060,
+        "darkHex": 303030,
+        "brightHex": 220220220
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4939d00f",
+      "name": "Palette 187",
+      "colors": {
+        "roofHex": 6579300,
+        "facadeHex": 11175760,
+        "baseHex": 13421772,
+        "accentHex": 4473924,
+        "glassHex": 10079487,
+        "darkHex": 2236962,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4b3b6be8",
+      "name": "Palette 169",
+      "colors": {
+        "roofHex": 11643292,
+        "facadeHex": 8221007,
+        "baseHex": 4868647,
+        "accentHex": 10586163,
+        "glassHex": 4807270,
+        "darkHex": 3093541,
+        "brightHex": 13156538
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4cd75645",
+      "name": "Palette 66",
+      "colors": {
+        "roofHex": 9664867,
+        "facadeHex": 9204321,
+        "baseHex": 12495766,
+        "accentHex": 4071449,
+        "glassHex": 1976635,
+        "darkHex": 4071449,
+        "brightHex": 15458509
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4f5f2955",
+      "name": "Palette 41",
+      "colors": {
+        "roofHex": 3158064,
+        "facadeHex": 15066597,
+        "baseHex": 5592405,
+        "accentHex": 4473924,
+        "glassHex": 11200240,
+        "darkHex": 2236962,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4f98c5a4",
+      "name": "Palette 38",
+      "colors": {
+        "roofHex": 5127216,
+        "facadeHex": 7033160,
+        "baseHex": 10063736,
+        "accentHex": 4404004,
+        "glassHex": 2243642,
+        "darkHex": 2630174,
+        "brightHex": 14211288
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4fa7da87",
+      "name": "Palette 205",
+      "colors": {
+        "roofHex": 13815993,
+        "facadeHex": 13815993,
+        "baseHex": 13815993,
+        "accentHex": 13750201,
+        "glassHex": 2368546,
+        "darkHex": 2368546,
+        "brightHex": 14935782
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_4fb7981e",
+      "name": "Palette 208",
+      "colors": {
+        "roofHex": 4434661,
+        "facadeHex": 4618890,
+        "baseHex": 1913644,
+        "accentHex": 4433889,
+        "glassHex": 4433889,
+        "darkHex": 1386277,
+        "brightHex": 13941657
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_507f4b69",
+      "name": "Palette 127",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 2105376,
+        "baseHex": 1052688,
+        "accentHex": 13467433,
+        "glassHex": 3314560,
+        "darkHex": 1052688,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_513f189a",
+      "name": "Palette 163",
+      "colors": {
+        "roofHex": 12500670,
+        "facadeHex": 14211288,
+        "baseHex": 8421504,
+        "accentHex": 16766720,
+        "glassHex": 4621730,
+        "darkHex": 3158064,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_51a8e431",
+      "name": "Palette 149",
+      "colors": {
+        "roofHex": 4872658,
+        "facadeHex": 6056555,
+        "baseHex": 3292490,
+        "accentHex": 9869605,
+        "glassHex": 3105753,
+        "darkHex": 2105376,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_5272c7df",
+      "name": "Palette 19",
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 11801696,
+        "baseHex": 6579304,
+        "accentHex": 14540253,
+        "glassHex": 33023,
+        "darkHex": 2105376,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_5497fca5",
+      "name": "Palette 57",
+      "colors": {
+        "roofHex": 13290707,
+        "facadeHex": 9471348,
+        "baseHex": 4544842,
+        "accentHex": 9142641,
+        "glassHex": 1976635,
+        "darkHex": 3358260,
+        "brightHex": 14343134
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_555133a8",
+      "name": "Palette 97",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 12582912,
+        "baseHex": 8421504,
+        "accentHex": 16777215,
+        "glassHex": 8388608,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_558f377b",
+      "name": "Palette 218",
+      "colors": {
+        "roofHex": 14274740,
+        "facadeHex": 15259834,
+        "baseHex": 11510664,
+        "accentHex": 16755264,
+        "glassHex": 33023,
+        "darkHex": 4210231,
+        "brightHex": 16768350
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_57a88e31",
+      "name": "Palette 42",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14737632,
+        "baseHex": 5592405,
+        "accentHex": 15105570,
+        "glassHex": 8454143,
+        "darkHex": 2236962,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_59589e6e",
+      "name": "Palette 31",
+      "colors": {
+        "roofHex": 8691677,
+        "facadeHex": 9402985,
+        "baseHex": 10652536,
+        "accentHex": 4886491,
+        "glassHex": 10074601,
+        "darkHex": 3616545,
+        "brightHex": 14475497
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_5aa6fc6c",
+      "name": "Palette 58",
+      "colors": {
+        "roofHex": 12015938,
+        "facadeHex": 10522485,
+        "baseHex": 7564630,
+        "accentHex": 5916468,
+        "glassHex": 2242383,
+        "darkHex": 3156264,
+        "brightHex": 14210245
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_5af11908",
+      "name": "Palette 186",
+      "colors": {
+        "roofHex": 10526880,
+        "facadeHex": 13158600,
+        "baseHex": 6710886,
+        "accentHex": 16777215,
+        "glassHex": 4621760,
+        "darkHex": 3355443,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_61afcd2b",
+      "name": "Palette 192",
+      "colors": {
+        "roofHex": 6509638,
+        "facadeHex": 6509638,
+        "baseHex": 6509638,
+        "accentHex": 7102292,
+        "glassHex": 1976635,
+        "darkHex": 2899536,
+        "brightHex": 16381414
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_62a2bb59",
+      "name": "Palette 134",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 10267847,
+        "baseHex": 7637134,
+        "accentHex": 1342649,
+        "glassHex": 1342649,
+        "darkHex": 2700348,
+        "brightHex": 16580093
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6484103f",
+      "name": "Palette 232",
+      "colors": {
+        "roofHex": 16753920,
+        "facadeHex": 16766660,
+        "baseHex": 10066329,
+        "accentHex": 13369344,
+        "glassHex": 11066879,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_65c2990e",
+      "name": "Palette 46",
+      "colors": {
+        "roofHex": 2257919,
+        "facadeHex": 16119285,
+        "baseHex": 15066597,
+        "accentHex": 15366271,
+        "glassHex": 1139147,
+        "darkHex": 3158064,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_673e5143",
+      "name": "Palette 206",
+      "colors": {
+        "roofHex": 13817834,
+        "facadeHex": 10665694,
+        "baseHex": 10981511,
+        "accentHex": 11256545,
+        "glassHex": 11256545,
+        "darkHex": 2565159,
+        "brightHex": 14014953
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_67c60011",
+      "name": "Palette 36",
+      "colors": {
+        "roofHex": 4474437,
+        "facadeHex": 13471822,
+        "baseHex": 10061943,
+        "accentHex": 1843230,
+        "glassHex": 2243642,
+        "darkHex": 3156524,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_695435f4",
+      "name": "Palette 170",
+      "colors": {
+        "roofHex": 1078194,
+        "facadeHex": 2903116,
+        "baseHex": 1451550,
+        "accentHex": 550050,
+        "glassHex": 550050,
+        "darkHex": 1648418,
+        "brightHex": 7254495
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_696c7499",
+      "name": "Palette 8",
+      "colors": {
+        "roofHex": 10066329,
+        "facadeHex": 8947848,
+        "baseHex": 11053224,
+        "accentHex": 11053224,
+        "glassHex": 65793,
+        "darkHex": 65793,
+        "brightHex": 12434877
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6be42c70",
+      "name": "Palette 6",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 15658734,
+        "baseHex": 13421772,
+        "accentHex": 11184810,
+        "glassHex": 2241364,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6c2f0d3b",
+      "name": "Palette 146",
+      "colors": {
+        "roofHex": 1250067,
+        "facadeHex": 5921370,
+        "baseHex": 2105376,
+        "accentHex": 4210752,
+        "glassHex": 3368652,
+        "darkHex": 1052688,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6c8c904f",
+      "name": "Palette 179",
+      "colors": {
+        "roofHex": 4605510,
+        "facadeHex": 12596768,
+        "baseHex": 13421772,
+        "accentHex": 16766720,
+        "glassHex": 49484,
+        "darkHex": 2631720,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6ca00e61",
+      "name": "Palette 68",
+      "colors": {
+        "roofHex": 4539712,
+        "facadeHex": 8417360,
+        "baseHex": 6579300,
+        "accentHex": 12345678,
+        "glassHex": 3355647,
+        "darkHex": 2236962,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6ca2a7e4",
+      "name": "Palette 219",
+      "colors": {
+        "roofHex": 14201136,
+        "facadeHex": 15263976,
+        "baseHex": 11184810,
+        "accentHex": 8134440,
+        "glassHex": 1122864,
+        "darkHex": 2104354,
+        "brightHex": 16766720
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6db7e477",
+      "name": "Palette 17",
+      "colors": {
+        "roofHex": 6579300,
+        "facadeHex": 11801655,
+        "baseHex": 10066329,
+        "accentHex": 16777215,
+        "glassHex": 3368652,
+        "darkHex": 2039583,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6f0d39c2",
+      "name": "Palette 135",
+      "colors": {
+        "roofHex": 13754612,
+        "facadeHex": 7637153,
+        "baseHex": 6449228,
+        "accentHex": 6454170,
+        "glassHex": 6454170,
+        "darkHex": 2435624,
+        "brightHex": 15199475
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_6fc22a6f",
+      "name": "Palette 94",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 4822858,
+        "baseHex": 8421504,
+        "accentHex": 16711680,
+        "glassHex": 11075583,
+        "darkHex": 2236962,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_70d2be3d",
+      "name": "Palette 27",
+      "colors": {
+        "roofHex": 5263440,
+        "facadeHex": 15790320,
+        "baseHex": 11184810,
+        "accentHex": 3355443,
+        "glassHex": 3105370,
+        "darkHex": 2105376,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_71fd0fc2",
+      "name": "Palette 143",
+      "colors": {
+        "roofHex": 6657486,
+        "facadeHex": 5329208,
+        "baseHex": 6842687,
+        "accentHex": 6131144,
+        "glassHex": 6131144,
+        "darkHex": 1644303,
+        "brightHex": 12167060
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_73313ac8",
+      "name": "Palette 200",
+      "colors": {
+        "roofHex": 8347648,
+        "facadeHex": 15789530,
+        "baseHex": 4210752,
+        "accentHex": 13395456,
+        "glassHex": 8962815,
+        "darkHex": 2105376,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_747eedce",
+      "name": "Palette 178",
+      "colors": {
+        "roofHex": 6196158,
+        "facadeHex": 7229244,
+        "baseHex": 9014153,
+        "accentHex": 10966589,
+        "glassHex": 6460099,
+        "darkHex": 3283735,
+        "brightHex": 13551551
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_74f17598",
+      "name": "Palette 48",
+      "colors": {
+        "roofHex": 6852313,
+        "facadeHex": 7043458,
+        "baseHex": 4607780,
+        "accentHex": 8486454,
+        "glassHex": 1644823,
+        "darkHex": 1644823,
+        "brightHex": 9354227
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_774c7eed",
+      "name": "Palette 88",
+      "colors": {
+        "roofHex": 4473924,
+        "facadeHex": 2631720,
+        "baseHex": 1579032,
+        "accentHex": 12632256,
+        "glassHex": 6586790,
+        "darkHex": 1052688,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_77a62387",
+      "name": "Palette 168",
+      "colors": {
+        "roofHex": 12500670,
+        "facadeHex": 14540253,
+        "baseHex": 10526880,
+        "accentHex": 8421504,
+        "glassHex": 3355443,
+        "darkHex": 2236962,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_79d6ec25",
+      "name": "Palette 157",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 11822452,
+        "baseHex": 9868950,
+        "accentHex": 6579300,
+        "glassHex": 3368652,
+        "darkHex": 2105376,
+        "brightHex": 15066597
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_7c00fe2f",
+      "name": "Palette 14",
+      "colors": {
+        "roofHex": 12566468,
+        "facadeHex": 7236460,
+        "baseHex": 5987676,
+        "accentHex": 460294,
+        "glassHex": 460294,
+        "darkHex": 460294,
+        "brightHex": 16448250
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_7da02d51",
+      "name": "Palette 108",
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 16185078,
+        "baseHex": 592137,
+        "accentHex": 16119285,
+        "glassHex": 526344,
+        "darkHex": 526344,
+        "brightHex": 16119285
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_82a769e0",
+      "name": "Palette 91",
+      "colors": {
+        "roofHex": 4605510,
+        "facadeHex": 9453640,
+        "baseHex": 3289650,
+        "accentHex": 12632256,
+        "glassHex": 6586540,
+        "darkHex": 2105376,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_83f317d3",
+      "name": "Palette 196",
+      "colors": {
+        "roofHex": 12245238,
+        "facadeHex": 6840867,
+        "baseHex": 6907445,
+        "accentHex": 11509797,
+        "glassHex": 12704245,
+        "darkHex": 2499606,
+        "brightHex": 12704245
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_85478c40",
+      "name": "Palette 202",
+      "colors": {
+        "roofHex": 16579836,
+        "facadeHex": 12568515,
+        "baseHex": 16579836,
+        "accentHex": 2795960,
+        "glassHex": 2837337,
+        "darkHex": 2837337,
+        "brightHex": 16514043
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_8779d9d8",
+      "name": "Palette 190",
+      "colors": {
+        "roofHex": 13224391,
+        "facadeHex": 13223873,
+        "baseHex": 6709603,
+        "accentHex": 7170660,
+        "glassHex": 1976635,
+        "darkHex": 4275518,
+        "brightHex": 16448250
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_881afc4c",
+      "name": "Palette 21",
+      "colors": {
+        "roofHex": 5253165,
+        "facadeHex": 6828576,
+        "baseHex": 3810086,
+        "accentHex": 11814674,
+        "glassHex": 2640243,
+        "darkHex": 1973790,
+        "brightHex": 13421772
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_88cab675",
+      "name": "Palette 22",
+      "colors": {
+        "roofHex": 4868682,
+        "facadeHex": 7105644,
+        "baseHex": 6052956,
+        "accentHex": 5000268,
+        "glassHex": 1976635,
+        "darkHex": 2899536,
+        "brightHex": 11908533
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_8961d5c0",
+      "name": "Palette 189",
+      "colors": {
+        "roofHex": 12500670,
+        "facadeHex": 10526880,
+        "baseHex": 8421504,
+        "accentHex": 13382400,
+        "glassHex": 4621730,
+        "darkHex": 3158064,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_8a4994f4",
+      "name": "Palette 64",
+      "colors": {
+        "roofHex": 11172985,
+        "facadeHex": 7218724,
+        "baseHex": 6578264,
+        "accentHex": 11811110,
+        "glassHex": 1125160,
+        "darkHex": 2630683,
+        "brightHex": 15321477
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_8a6e98e3",
+      "name": "Palette 43",
+      "colors": {
+        "roofHex": 11158596,
+        "facadeHex": 15064540,
+        "baseHex": 4473924,
+        "accentHex": 13395476,
+        "glassHex": 11591910,
+        "darkHex": 2236962,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_8bd2e743",
+      "name": "Palette 215",
+      "colors": {
+        "roofHex": 333333,
+        "facadeHex": 9807270,
+        "baseHex": 888888,
+        "accentHex": 15105570,
+        "glassHex": 204060,
+        "darkHex": 111111,
+        "brightHex": 15528177
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_8c6b5182",
+      "name": "Palette 173",
+      "colors": {
+        "roofHex": 16448250,
+        "facadeHex": 16777215,
+        "baseHex": 8421504,
+        "accentHex": 16711680,
+        "glassHex": 4621730,
+        "darkHex": 3355443,
+        "brightHex": 16766720
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_8d131ad6",
+      "name": "Palette 16",
+      "colors": {
+        "roofHex": 10662073,
+        "facadeHex": 5066767,
+        "baseHex": 4352021,
+        "accentHex": 9178380,
+        "glassHex": 7441300,
+        "darkHex": 1386761,
+        "brightHex": 15199471
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_8d6cd69f",
+      "name": "Palette 87",
+      "colors": {
+        "roofHex": 3289650,
+        "facadeHex": 13485746,
+        "baseHex": 9867148,
+        "accentHex": 11174260,
+        "glassHex": 1716531,
+        "darkHex": 2105376,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_90db8ea3",
+      "name": "Palette 2",
+      "colors": {
+        "roofHex": 4354217,
+        "facadeHex": 9547203,
+        "baseHex": 6060155,
+        "accentHex": 8886826,
+        "glassHex": 3630740,
+        "darkHex": 4476975,
+        "brightHex": 13028811
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_920ab569",
+      "name": "Palette 132",
+      "colors": {
+        "roofHex": 9022174,
+        "facadeHex": 10859185,
+        "baseHex": 7176042,
+        "accentHex": 5988399,
+        "glassHex": 11584743,
+        "darkHex": 1843994,
+        "brightHex": 14607071
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_92a29c4a",
+      "name": "Palette 225",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 8421504,
+        "baseHex": 5592405,
+        "accentHex": 11184810,
+        "glassHex": 11599871,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_936ae1d5",
+      "name": "Palette 120",
+      "colors": {
+        "roofHex": 14211288,
+        "facadeHex": 16777215,
+        "baseHex": 8417364,
+        "accentHex": 6579300,
+        "glassHex": 4621720,
+        "darkHex": 3355443,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_93b3a85b",
+      "name": "Palette 56",
+      "colors": {
+        "roofHex": 12831442,
+        "facadeHex": 3158833,
+        "baseHex": 3684405,
+        "accentHex": 6118484,
+        "glassHex": 3487540,
+        "darkHex": 1974305,
+        "brightHex": 15199732
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_94193788",
+      "name": "Palette 153",
+      "colors": {
+        "roofHex": 2315167,
+        "facadeHex": 7641035,
+        "baseHex": 7039856,
+        "accentHex": 2512802,
+        "glassHex": 2512802,
+        "darkHex": 2039326,
+        "brightHex": 15526640
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_953ba451",
+      "name": "Palette 123",
+      "colors": {
+        "roofHex": 13560046,
+        "facadeHex": 11124316,
+        "baseHex": 10865491,
+        "accentHex": 11193943,
+        "glassHex": 10928572,
+        "darkHex": 1973775,
+        "brightHex": 14150893
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_97130a08",
+      "name": "Palette 216",
+      "colors": {
+        "roofHex": 10526880,
+        "facadeHex": 16777215,
+        "baseHex": 12632256,
+        "accentHex": 16744448,
+        "glassHex": 4621730,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_97aa1f2e",
+      "name": "Palette 37",
+      "colors": {
+        "roofHex": 14145495,
+        "facadeHex": 7434609,
+        "baseHex": 10000536,
+        "accentHex": 14606046,
+        "glassHex": 657930,
+        "darkHex": 657930,
+        "brightHex": 14606046
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_998cb7e3",
+      "name": "Palette 86",
+      "colors": {
+        "roofHex": 1454025,
+        "facadeHex": 11184810,
+        "baseHex": 4210752,
+        "accentHex": 16766720,
+        "glassHex": 3368652,
+        "darkHex": 1644825,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_9a3a121b",
+      "name": "Palette 78",
+      "colors": {
+        "roofHex": 4030654,
+        "facadeHex": 5607107,
+        "baseHex": 8299413,
+        "accentHex": 4424641,
+        "glassHex": 4424641,
+        "darkHex": 1776923,
+        "brightHex": 14603199
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_9aae4ab5",
+      "name": "Palette 155",
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 4600609,
+        "baseHex": 1973790,
+        "accentHex": 7895160,
+        "glassHex": 2184131,
+        "darkHex": 1315860,
+        "brightHex": 12566463
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_9be693d9",
+      "name": "Palette 103",
+      "colors": {
+        "roofHex": 8359053,
+        "facadeHex": 1,
+        "baseHex": 2,
+        "accentHex": 3,
+        "glassHex": 4,
+        "darkHex": 5,
+        "brightHex": 6
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_9c368b19",
+      "name": "Palette 166",
+      "colors": {
+        "roofHex": 6579300,
+        "facadeHex": 10053120,
+        "baseHex": 8540700,
+        "accentHex": 12000000,
+        "glassHex": 4000000,
+        "darkHex": 2000000,
+        "brightHex": 15000000
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_9d343f87",
+      "name": "Palette 28",
+      "colors": {
+        "roofHex": 10507812,
+        "facadeHex": 14201777,
+        "baseHex": 11374465,
+        "accentHex": 5263616,
+        "glassHex": 1974839,
+        "darkHex": 2105376,
+        "brightHex": 15132390
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a0a721c5",
+      "name": "Palette 40",
+      "colors": {
+        "roofHex": 16053492,
+        "facadeHex": 16053492,
+        "baseHex": 16053492,
+        "accentHex": 16053492,
+        "glassHex": 921102,
+        "darkHex": 921102,
+        "brightHex": 16053492
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a140a997",
+      "name": "Palette 184",
+      "colors": {
+        "roofHex": 16250617,
+        "facadeHex": 7237684,
+        "baseHex": 8755756,
+        "accentHex": 8426260,
+        "glassHex": 1976635,
+        "darkHex": 1583138,
+        "brightHex": 16250615
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a2a32d1c",
+      "name": "Palette 59",
+      "colors": {
+        "roofHex": 15257778,
+        "facadeHex": 15121821,
+        "baseHex": 13272935,
+        "accentHex": 10247225,
+        "glassHex": 1976635,
+        "darkHex": 3749161,
+        "brightHex": 15389366
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a2e48a10",
+      "name": "Palette 154",
+      "colors": {
+        "roofHex": 8761038,
+        "facadeHex": 6125976,
+        "baseHex": 3757147,
+        "accentHex": 6525118,
+        "glassHex": 3097426,
+        "darkHex": 3097426,
+        "brightHex": 10997734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a4b300b8",
+      "name": "Palette 148",
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 8417382,
+        "baseHex": 4605510,
+        "accentHex": 12632256,
+        "glassHex": 11184810,
+        "darkHex": 2631720,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a62592ff",
+      "name": "Palette 13",
+      "colors": {
+        "roofHex": 9424349,
+        "facadeHex": 10407647,
+        "baseHex": 11057336,
+        "accentHex": 9949408,
+        "glassHex": 9949408,
+        "darkHex": 4276548,
+        "brightHex": 14273480
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a73381a5",
+      "name": "Palette 145",
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 5592405,
+        "baseHex": 2236962,
+        "accentHex": 11105372,
+        "glassHex": 2243431,
+        "darkHex": 1118481,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a7ea0970",
+      "name": "Palette 25",
+      "colors": {
+        "roofHex": 13959168,
+        "facadeHex": 11842740,
+        "baseHex": 9868950,
+        "accentHex": 5263440,
+        "glassHex": 3319400,
+        "darkHex": 2105376,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a8dfd82a",
+      "name": "Palette 150",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 13421772,
+        "baseHex": 6710886,
+        "accentHex": 10040064,
+        "glassHex": 4621730,
+        "darkHex": 3355443,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a8e0f027",
+      "name": "Palette 72",
+      "colors": {
+        "roofHex": 14609654,
+        "facadeHex": 12041406,
+        "baseHex": 8090731,
+        "accentHex": 11708049,
+        "glassHex": 10794171,
+        "darkHex": 2962996,
+        "brightHex": 14543086
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_a9b8de1c",
+      "name": "Palette 191",
+      "colors": {
+        "roofHex": 3490114,
+        "facadeHex": 3490114,
+        "baseHex": 3490114,
+        "accentHex": 2239791,
+        "glassHex": 1976635,
+        "darkHex": 2899536,
+        "brightHex": 16382456
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_aa28c0d6",
+      "name": "Palette 80",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 13421772,
+        "baseHex": 11184810,
+        "accentHex": 8421504,
+        "glassHex": 4621730,
+        "darkHex": 3355443,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_abaec90f",
+      "name": "Palette 115",
+      "colors": {
+        "roofHex": 604627,
+        "facadeHex": 232220,
+        "baseHex": 454545,
+        "accentHex": 808080,
+        "glassHex": 102030,
+        "darkHex": 101010,
+        "brightHex": 909090
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_abeaefd3",
+      "name": "Palette 220",
+      "colors": {
+        "roofHex": 1136815,
+        "facadeHex": 3965395,
+        "baseHex": 7896686,
+        "accentHex": 940982,
+        "glassHex": 940982,
+        "darkHex": 2369569,
+        "brightHex": 14014681
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b21d796d",
+      "name": "Palette 9",
+      "colors": {
+        "roofHex": 15193276,
+        "facadeHex": 12234388,
+        "baseHex": 15390916,
+        "accentHex": 13287072,
+        "glassHex": 1976635,
+        "darkHex": 5130561,
+        "brightHex": 15456708
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b2a4521c",
+      "name": "Palette 35",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 7625795,
+        "baseHex": 12033927,
+        "accentHex": 10906699,
+        "glassHex": 1976635,
+        "darkHex": 4273197,
+        "brightHex": 16579836
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b2aeaa39",
+      "name": "Palette 30",
+      "colors": {
+        "roofHex": 6581850,
+        "facadeHex": 7183011,
+        "baseHex": 4342338,
+        "accentHex": 9896756,
+        "glassHex": 3235252,
+        "darkHex": 2105376,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b399fedb",
+      "name": "Palette 185",
+      "colors": {
+        "roofHex": 4605510,
+        "facadeHex": 16773120,
+        "baseHex": 10066329,
+        "accentHex": 3355443,
+        "glassHex": 11184810,
+        "darkHex": 2236962,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b5e91a5b",
+      "name": "Palette 167",
+      "colors": {
+        "roofHex": 3227492,
+        "facadeHex": 4413315,
+        "baseHex": 6841948,
+        "accentHex": 3952256,
+        "glassHex": 3489363,
+        "darkHex": 2237730,
+        "brightHex": 13618373
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b6f0a9e2",
+      "name": "Palette 137",
+      "colors": {
+        "roofHex": 9221843,
+        "facadeHex": 10599870,
+        "baseHex": 8092538,
+        "accentHex": 8827088,
+        "glassHex": 12109777,
+        "darkHex": 1645590,
+        "brightHex": 14475750
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b71d1c5e",
+      "name": "Palette 82",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 10460313,
+        "baseHex": 6838862,
+        "accentHex": 2367515,
+        "glassHex": 1976635,
+        "darkHex": 2367515,
+        "brightHex": 16645629
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b7f9b764",
+      "name": "Palette 20",
+      "colors": {
+        "roofHex": 15199994,
+        "facadeHex": 7630440,
+        "baseHex": 3022869,
+        "accentHex": 8998439,
+        "glassHex": 2961964,
+        "darkHex": 722438,
+        "brightHex": 15134457
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_b9ee650e",
+      "name": "Palette 188",
+      "colors": {
+        "roofHex": 9482452,
+        "facadeHex": 10195090,
+        "baseHex": 5988925,
+        "accentHex": 13071964,
+        "glassHex": 9745368,
+        "darkHex": 2829092,
+        "brightHex": 14609652
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ba2c3692",
+      "name": "Palette 183",
+      "colors": {
+        "roofHex": 4210752,
+        "facadeHex": 8545338,
+        "baseHex": 12632256,
+        "accentHex": 16777215,
+        "glassHex": 8432080,
+        "darkHex": 2105376,
+        "brightHex": 14737632
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ba6bb803",
+      "name": "Palette 49",
+      "colors": {
+        "roofHex": 3818314,
+        "facadeHex": 11021344,
+        "baseHex": 11184810,
+        "accentHex": 14327872,
+        "glassHex": 1125915,
+        "darkHex": 2105376,
+        "brightHex": 15055931
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_bb40857f",
+      "name": "Palette 227",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 8405056,
+        "baseHex": 4210752,
+        "accentHex": 16711680,
+        "glassHex": 11184810,
+        "darkHex": 2105376,
+        "brightHex": 14737632
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_bc4a48c4",
+      "name": "Palette 114",
+      "colors": {
+        "roofHex": 5530955,
+        "facadeHex": 4345138,
+        "baseHex": 2370841,
+        "accentHex": 6714186,
+        "glassHex": 9809855,
+        "darkHex": 1186066,
+        "brightHex": 13488858
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_bea33d09",
+      "name": "Palette 112",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 12632256,
+        "baseHex": 8421504,
+        "accentHex": 16766720,
+        "glassHex": 49344,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_bee4fa28",
+      "name": "Palette 199",
+      "colors": {
+        "roofHex": 6519973,
+        "facadeHex": 8755642,
+        "baseHex": 5068835,
+        "accentHex": 6454181,
+        "glassHex": 6454181,
+        "darkHex": 2630169,
+        "brightHex": 13883616
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c11b1961",
+      "name": "Palette 107",
+      "colors": {
+        "roofHex": 8289918,
+        "facadeHex": 14211288,
+        "baseHex": 13158600,
+        "accentHex": 14540253,
+        "glassHex": 1118481,
+        "darkHex": 1118481,
+        "brightHex": 16579836
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c21c48fe",
+      "name": "Palette 139",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 10524049,
+        "baseHex": 16777215,
+        "accentHex": 4750890,
+        "glassHex": 3552557,
+        "darkHex": 1777428,
+        "brightHex": 16711422
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c268e94f",
+      "name": "Palette 228",
+      "colors": {
+        "roofHex": 15724522,
+        "facadeHex": 14984315,
+        "baseHex": 15724523,
+        "accentHex": 1380361,
+        "glassHex": 1976635,
+        "darkHex": 1380361,
+        "brightHex": 15658730
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c51c98be",
+      "name": "Palette 151",
+      "colors": {
+        "roofHex": 10999034,
+        "facadeHex": 13297403,
+        "baseHex": 7763802,
+        "accentHex": 11459066,
+        "glassHex": 11459066,
+        "darkHex": 1843737,
+        "brightHex": 14872825
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c5ee8967",
+      "name": "Palette 128",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 6837062,
+        "baseHex": 16777215,
+        "accentHex": 8207404,
+        "glassHex": 2697001,
+        "darkHex": 2697001,
+        "brightHex": 16711421
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c900bad9",
+      "name": "Palette 105",
+      "colors": {
+        "roofHex": 8343836,
+        "facadeHex": 13421772,
+        "baseHex": 10066329,
+        "accentHex": 16777215,
+        "glassHex": 3355443,
+        "darkHex": 5592405,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c906a315",
+      "name": "Palette 95",
+      "colors": {
+        "roofHex": 16251644,
+        "facadeHex": 8358823,
+        "baseHex": 6250008,
+        "accentHex": 6250009,
+        "glassHex": 7241899,
+        "darkHex": 3684656,
+        "brightHex": 16514300
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c9316d99",
+      "name": "Palette 10",
+      "colors": {
+        "roofHex": 11842740,
+        "facadeHex": 11184810,
+        "baseHex": 9868950,
+        "accentHex": 5921370,
+        "glassHex": 3368652,
+        "darkHex": 2105376,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_c9d3698a",
+      "name": "Palette 74",
+      "colors": {
+        "roofHex": 165839,
+        "facadeHex": 423600,
+        "baseHex": 1582392,
+        "accentHex": 229828,
+        "glassHex": 229828,
+        "darkHex": 660004,
+        "brightHex": 14340025
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_caf2be57",
+      "name": "Palette 193",
+      "colors": {
+        "roofHex": 2762268,
+        "facadeHex": 7627337,
+        "baseHex": 7627337,
+        "accentHex": 3289624,
+        "glassHex": 1976635,
+        "darkHex": 2899536,
+        "brightHex": 14276043
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_cb295eb2",
+      "name": "Palette 102",
+      "colors": {
+        "roofHex": 5865921,
+        "facadeHex": 9670515,
+        "baseHex": 11241302,
+        "accentHex": 2167820,
+        "glassHex": 6131919,
+        "darkHex": 2167820,
+        "brightHex": 13881798
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d045cdcc",
+      "name": "Palette 144",
+      "colors": {
+        "roofHex": 16448250,
+        "facadeHex": 6310972,
+        "baseHex": 10786161,
+        "accentHex": 1380364,
+        "glassHex": 1976635,
+        "darkHex": 1380364,
+        "brightHex": 16316665
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d0996bcc",
+      "name": "Palette 70",
+      "colors": {
+        "roofHex": 7649001,
+        "facadeHex": 8223615,
+        "baseHex": 8158285,
+        "accentHex": 8948533,
+        "glassHex": 10931177,
+        "darkHex": 2303273,
+        "brightHex": 13550519
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d0b0e998",
+      "name": "Palette 171",
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 11177300,
+        "baseHex": 6710886,
+        "accentHex": 13408512,
+        "glassHex": 10092543,
+        "darkHex": 2236962,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d15ff253",
+      "name": "Palette 129",
+      "colors": {
+        "roofHex": 8421504,
+        "facadeHex": 11141120,
+        "baseHex": 13421772,
+        "accentHex": 16766720,
+        "glassHex": 49344,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d2c079e9",
+      "name": "Palette 233",
+      "colors": {
+        "roofHex": 16755370,
+        "facadeHex": 15654350,
+        "baseHex": 12042950,
+        "accentHex": 16744576,
+        "glassHex": 10535167,
+        "darkHex": 4605510,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d481deb6",
+      "name": "Palette 118",
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 11184810,
+        "baseHex": 4210752,
+        "accentHex": 9856550,
+        "glassHex": 33947,
+        "darkHex": 2105376,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d4d5eda8",
+      "name": "Palette 84",
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 13485744,
+        "baseHex": 10066329,
+        "accentHex": 1331244,
+        "glassHex": 3360600,
+        "darkHex": 3158064,
+        "brightHex": 15658734
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d54ee82a",
+      "name": "Palette 5",
+      "colors": {
+        "roofHex": 15527148,
+        "facadeHex": 14737373,
+        "baseHex": 9211013,
+        "accentHex": 4539195,
+        "glassHex": 1315606,
+        "darkHex": 1315606,
+        "brightHex": 15395561
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d55bfd12",
+      "name": "Palette 222",
+      "colors": {
+        "roofHex": 16448250,
+        "facadeHex": 8421504,
+        "baseHex": 12632256,
+        "accentHex": 10053120,
+        "glassHex": 11060991,
+        "darkHex": 4210752,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d5a0a31a",
+      "name": "Palette 174",
+      "colors": {
+        "roofHex": 3355443,
+        "facadeHex": 13816530,
+        "baseHex": 4210752,
+        "accentHex": 8421504,
+        "glassHex": 3368652,
+        "darkHex": 2105376,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d5af3f9c",
+      "name": "Palette 158",
+      "colors": {
+        "roofHex": 10526880,
+        "facadeHex": 13476740,
+        "baseHex": 8413770,
+        "accentHex": 5592405,
+        "glassHex": 11184810,
+        "darkHex": 4473924,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d645eab5",
+      "name": "Palette 197",
+      "colors": {
+        "roofHex": 14671839,
+        "facadeHex": 7690561,
+        "baseHex": 2434619,
+        "accentHex": 12091472,
+        "glassHex": 2565946,
+        "darkHex": 1775139,
+        "brightHex": 15987699
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d68cbd8a",
+      "name": "Palette 125",
+      "colors": {
+        "roofHex": 8347685,
+        "facadeHex": 14663535,
+        "baseHex": 10526880,
+        "accentHex": 6579300,
+        "glassHex": 4621730,
+        "darkHex": 3158064,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d7253f04",
+      "name": "Palette 3",
+      "colors": {
+        "roofHex": 1658768,
+        "facadeHex": 3371444,
+        "baseHex": 5598002,
+        "accentHex": 1200276,
+        "glassHex": 1200276,
+        "darkHex": 2171414,
+        "brightHex": 14471866
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d9521ed8",
+      "name": "Palette 79",
+      "colors": {
+        "roofHex": 4489883,
+        "facadeHex": 3358015,
+        "baseHex": 1382169,
+        "accentHex": 1278402,
+        "glassHex": 1184533,
+        "darkHex": 1184533,
+        "brightHex": 15856628
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_d9741cfc",
+      "name": "Palette 136",
+      "colors": {
+        "roofHex": 8955846,
+        "facadeHex": 12042449,
+        "baseHex": 11579567,
+        "accentHex": 7642050,
+        "glassHex": 10862291,
+        "darkHex": 3224625,
+        "brightHex": 13554907
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_daf035d3",
+      "name": "Palette 119",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 8353654,
+        "baseHex": 16777215,
+        "accentHex": 11694662,
+        "glassHex": 2895927,
+        "darkHex": 2895927,
+        "brightHex": 16645886
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_dba7bbb6",
+      "name": "Palette 45",
+      "colors": {
+        "roofHex": 4687046,
+        "facadeHex": 4356529,
+        "baseHex": 6179411,
+        "accentHex": 4620995,
+        "glassHex": 4620995,
+        "darkHex": 2498320,
+        "brightHex": 15658733
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_dc210a67",
+      "name": "Palette 201",
+      "colors": {
+        "roofHex": 4603904,
+        "facadeHex": 10580550,
+        "baseHex": 3947580,
+        "accentHex": 7886440,
+        "glassHex": 10079487,
+        "darkHex": 2631720,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ddff46c6",
+      "name": "Palette 229",
+      "colors": {
+        "roofHex": 15724266,
+        "facadeHex": 15652033,
+        "baseHex": 15724266,
+        "accentHex": 1050119,
+        "glassHex": 1976635,
+        "darkHex": 1050119,
+        "brightHex": 15724266
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_e2d13516",
+      "name": "Palette 7",
+      "colors": {
+        "roofHex": 8493483,
+        "facadeHex": 6184015,
+        "baseHex": 5658186,
+        "accentHex": 1922169,
+        "glassHex": 3556167,
+        "darkHex": 1515818,
+        "brightHex": 14479096
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_e2ebdfe4",
+      "name": "Palette 60",
+      "colors": {
+        "roofHex": 10055760,
+        "facadeHex": 13017244,
+        "baseHex": 8545864,
+        "accentHex": 6571574,
+        "glassHex": 2243650,
+        "darkHex": 3943454,
+        "brightHex": 15127478
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_e9b17d81",
+      "name": "Palette 141",
+      "colors": {
+        "roofHex": 14738410,
+        "facadeHex": 11712941,
+        "baseHex": 3825672,
+        "accentHex": 4022793,
+        "glassHex": 1976635,
+        "darkHex": 989708,
+        "brightHex": 15263724
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ea7a37e6",
+      "name": "Palette 44",
+      "colors": {
+        "roofHex": 14540253,
+        "facadeHex": 15790320,
+        "baseHex": 11184810,
+        "accentHex": 11542564,
+        "glassHex": 2246753,
+        "darkHex": 3289650,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ea935c4c",
+      "name": "Palette 121",
+      "colors": {
+        "roofHex": 7122140,
+        "facadeHex": 7122140,
+        "baseHex": 8686176,
+        "accentHex": 7122140,
+        "glassHex": 1976635,
+        "darkHex": 2368795,
+        "brightHex": 15855335
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_eaf0c289",
+      "name": "Palette 90",
+      "colors": {
+        "roofHex": 5344180,
+        "facadeHex": 2697491,
+        "baseHex": 1184520,
+        "accentHex": 5924883,
+        "glassHex": 10275814,
+        "darkHex": 724998,
+        "brightHex": 10275814
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_eb490dd7",
+      "name": "Palette 214",
+      "colors": {
+        "roofHex": 12632256,
+        "facadeHex": 5253120,
+        "baseHex": 13421772,
+        "accentHex": 16737792,
+        "glassHex": 4621730,
+        "darkHex": 2105376,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ec278a15",
+      "name": "Palette 23",
+      "colors": {
+        "roofHex": 4218794,
+        "facadeHex": 7109771,
+        "baseHex": 9403227,
+        "accentHex": 4416172,
+        "glassHex": 4416172,
+        "darkHex": 1907739,
+        "brightHex": 13615535
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ed82ba93",
+      "name": "Palette 71",
+      "colors": {
+        "roofHex": 16448250,
+        "facadeHex": 13158600,
+        "baseHex": 10526880,
+        "accentHex": 15790320,
+        "glassHex": 4613750,
+        "darkHex": 3947580,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ee2a9908",
+      "name": "Palette 217",
+      "colors": {
+        "roofHex": 10997484,
+        "facadeHex": 5531988,
+        "baseHex": 5465159,
+        "accentHex": 8434261,
+        "glassHex": 9945053,
+        "darkHex": 1317908,
+        "brightHex": 14214638
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ef6b3afc",
+      "name": "Palette 142",
+      "colors": {
+        "roofHex": 832997,
+        "facadeHex": 9751789,
+        "baseHex": 11771750,
+        "accentHex": 1094883,
+        "glassHex": 1094883,
+        "darkHex": 5591617,
+        "brightHex": 15265775
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ef7d9149",
+      "name": "Palette 162",
+      "colors": {
+        "roofHex": 6586222,
+        "facadeHex": 9871503,
+        "baseHex": 4872036,
+        "accentHex": 3294025,
+        "glassHex": 3824559,
+        "darkHex": 2106419,
+        "brightHex": 14213340
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ef86dd0a",
+      "name": "Palette 164",
+      "colors": {
+        "roofHex": 8031838,
+        "facadeHex": 9212521,
+        "baseHex": 9274987,
+        "accentHex": 2847552,
+        "glassHex": 3552815,
+        "darkHex": 3552815,
+        "brightHex": 14345695
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_f09cfb5a",
+      "name": "Palette 210",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14211288,
+        "baseHex": 5592405,
+        "accentHex": 16777215,
+        "glassHex": 8438271,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_f10a41d3",
+      "name": "Palette 96",
+      "colors": {
+        "roofHex": 686323,
+        "facadeHex": 2783413,
+        "baseHex": 8223851,
+        "accentHex": 359411,
+        "glassHex": 359411,
+        "darkHex": 3413273,
+        "brightHex": 14995908
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_f28ddb43",
+      "name": "Palette 111",
+      "colors": {
+        "roofHex": 3228549,
+        "facadeHex": 6579065,
+        "baseHex": 4011823,
+        "accentHex": 2965372,
+        "glassHex": 2965372,
+        "darkHex": 3222823,
+        "brightHex": 12693948
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_f5630b53",
+      "name": "Palette 81",
+      "colors": {
+        "roofHex": 10526880,
+        "facadeHex": 11579568,
+        "baseHex": 8421504,
+        "accentHex": 13158600,
+        "glassHex": 4621730,
+        "darkHex": 3158064,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_f60922ff",
+      "name": "Palette 172",
+      "colors": {
+        "roofHex": 3289911,
+        "facadeHex": 5790819,
+        "baseHex": 11445652,
+        "accentHex": 11377021,
+        "glassHex": 2894895,
+        "darkHex": 2894895,
+        "brightHex": 13752026
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_f60afe64",
+      "name": "Palette 226",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14211288,
+        "baseHex": 10526880,
+        "accentHex": 16711680,
+        "glassHex": 4956380,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_f6b4fde4",
+      "name": "Palette 231",
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 16772070,
+        "baseHex": 14474460,
+        "accentHex": 8405056,
+        "glassHex": 4621730,
+        "darkHex": 3947580,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_faa3ade9",
+      "name": "Palette 61",
+      "colors": {
+        "roofHex": 11318469,
+        "facadeHex": 9470281,
+        "baseHex": 7169591,
+        "accentHex": 15439179,
+        "glassHex": 11847136,
+        "darkHex": 3551262,
+        "brightHex": 11847136
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_fbf43322",
+      "name": "Palette 34",
+      "colors": {
+        "roofHex": 7342894,
+        "facadeHex": 14207914,
+        "baseHex": 9868950,
+        "accentHex": 4010531,
+        "glassHex": 33023,
+        "darkHex": 2105376,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_fd954cfc",
+      "name": "Palette 117",
+      "colors": {
+        "roofHex": 9878669,
+        "facadeHex": 9878413,
+        "baseHex": 9878669,
+        "accentHex": 4532242,
+        "glassHex": 1976635,
+        "darkHex": 4532242,
+        "brightHex": 15987699
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_feb433d3",
+      "name": "Palette 182",
+      "colors": {
+        "roofHex": 2631720,
+        "facadeHex": 2105376,
+        "baseHex": 14540253,
+        "accentHex": 16777215,
+        "glassHex": 3368652,
+        "darkHex": 1052688,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_feed533a",
+      "name": "Palette 122",
+      "colors": {
+        "roofHex": 10506784,
+        "facadeHex": 14666138,
+        "baseHex": 12632256,
+        "accentHex": 8421504,
+        "glassHex": 4621720,
+        "darkHex": 3355443,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    },
+    {
+      "id": "palette_ff9f3460",
+      "name": "Palette 75",
+      "colors": {
+        "roofHex": 1644825,
+        "facadeHex": 4210752,
+        "baseHex": 2105376,
+        "accentHex": 13421772,
+        "glassHex": 3368652,
+        "darkHex": 1052688,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+          "source": "palettes"
+        }
+      ]
+    }
+  ]
+}

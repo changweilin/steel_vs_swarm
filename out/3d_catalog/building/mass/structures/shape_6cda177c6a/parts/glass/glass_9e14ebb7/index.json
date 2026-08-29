@@ -1,0 +1,49 @@
+{
+  "id": "glass_9e14ebb7",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.25,0|0",
+  "canonical": {
+    "objectKey": "building/mass_about-06_2_orig_30b3c7c0_v6",
+    "name": "ground_floor_glazing_front",
+    "part": {
+      "name": "ground_floor_glazing_front",
+      "type": "box",
+      "dimensions": [
+        13,
+        3.5,
+        0.1
+      ],
+      "position": [
+        -3,
+        2,
+        6.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 26367,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_about-06_2_orig_30b3c7c0_v6",
+      "name": "ground_floor_glazing_front",
+      "position": [
+        -3,
+        2,
+        6.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 26367
+    }
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_1755dae71a",
+  "canonicalKey": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+    "bounds": {
+      "min": [
+        -1.6498,
+        0,
+        -1.4181
+      ],
+      "max": [
+        1.771,
+        3.0391,
+        1.7568
+      ],
+      "size": [
+        3.421,
+        3.039,
+        3.175
+      ],
+      "rMax": 2.495,
+      "triangles": 478,
+      "vertices": 273
+    },
+    "parts": [
+      {
+        "name": "faceted_lower_foot",
+        "type": "frustum_pyramid",
+        "sides": 9,
+        "radii": [
+          1.02,
+          1.44
+        ],
+        "height": 0.658,
+        "position": [
+          0,
+          0.628,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 36
+      },
+      {
+        "name": "weathered_main_lower_facet",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.87,
+          1.29
+        ],
+        "height": 0.359,
+        "position": [
+          -0.118,
+          0.867,
+          0.06
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "weathered_main_crown_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.72,
+        "position": [
+          -0.197,
+          2.333,
+          -0.12
+        ],
+        "rotation": [
+          0.14,
+          0.22,
+          0.02
+        ],
+        "color": 2370353,
+        "triangles": 36
+      },
+      {
+        "name": "front_angular_face",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.81,
+        "position": [
+          0.079,
+          1.316,
+          0.9
+        ],
+        "rotation": [
+          0.08,
+          0.24,
+          -0.05
+        ],
+        "color": 5200224,
+        "triangles": 20
+      },
+      {
+        "name": "upper_crest_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.75,
+        "position": [
+          -0.083,
+          2.333,
+          -0.015
+        ],
+        "rotation": [
+          0.12,
+          0.18,
+          0.04
+        ],
+        "color": 2370353,
+        "triangles": 36
+      },
+      {
+        "name": "left_weathered_shoulder",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.66,
+        "position": [
+          -1.063,
+          1.286,
+          0.09
+        ],
+        "rotation": [
+          0.18,
+          -0.12,
+          0.12
+        ],
+        "color": 3160123,
+        "triangles": 20
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/collapse/rock_rock_collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_993f4b33_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/collapse/rock_rock_collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_993f4b33_luna_v6",
+      "similarity": 85,
+      "scale": [
+        0.88044,
+        0.9332,
+        1.00504
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5_c39af10b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/collapse/rock_rock_collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5_c39af10b_luna_v6",
+      "similarity": 84,
+      "scale": [
+        0.49752,
+        0.52451,
+        0.57039
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "hood_adee7e4c",
+  "role": "hood",
+  "type": "box",
+  "signature": "box|1,0.25,0.625|0",
+  "canonical": {
+    "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+    "name": "front_hood",
+    "part": {
+      "name": "front_hood",
+      "type": "box",
+      "dimensions": [
+        1.8,
+        0.4,
+        1.2
+      ],
+      "position": [
+        0,
+        1.1,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5197655,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+      "name": "front_hood",
+      "position": [
+        0,
+        1.1,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5197655
+    }
+  ]
+}

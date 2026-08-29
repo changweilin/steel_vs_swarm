@@ -1,0 +1,163 @@
+{
+  "id": "roof_55075acf",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|1,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+    "name": "roof_cap",
+    "part": {
+      "name": "roof_cap",
+      "type": "box",
+      "dimensions": [
+        1.584,
+        0.1,
+        1.596
+      ],
+      "position": [
+        -0.12,
+        1.225,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2435638,
+      "triangles": 12,
+      "role": "roof",
+      "colorKey": "roofHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.12,
+        1.225,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2435638
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.12,
+        1.225,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2435638
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.12,
+        1.225,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2435638
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.12,
+        1.225,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2435638
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.12,
+        1.225,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2435638
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.12,
+        1.225,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2435638
+    },
+    {
+      "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2 (1)_78de4396_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.35,
+        1.505,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 1184790
+    },
+    {
+      "objectKey": "vehicle/car_6841_rd_0682ab55_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.35,
+        1.505,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 1184790
+    }
+  ]
+}

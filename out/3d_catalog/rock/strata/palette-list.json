@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "strata",
+  "palettes": [
+    {
+      "id": "palette_25e6426a",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6712681,
+        "facadeHex": 10197640,
+        "baseHex": 6120799,
+        "accentHex": 5602375,
+        "glassHex": 2110523,
+        "darkHex": 3488825,
+        "brightHex": 10467954
+      },
+      "objects": [
+        {
+          "key": "rock/strata_ov_1294e755-2dfc-4eee-960e-7fdd8eb6b9c9_7d0472ba_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c37ca1af",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 6911354,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 11187637
+      },
+      "objects": [
+        {
+          "key": "rock/strata_ov_a413d69e-bf5c-449a-828f-19ea97dd522a_ce7157e6_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c4c6a19c",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6964528,
+        "facadeHex": 10119749,
+        "baseHex": 6767665,
+        "accentHex": 12683864,
+        "glassHex": 2307908,
+        "darkHex": 4861992,
+        "brightHex": 14859137
+      },
+      "objects": [
+        {
+          "key": "rock/strata_ov_deb2f87f-fb18-40ae-b47c-2447e06afa96_f15f3728_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

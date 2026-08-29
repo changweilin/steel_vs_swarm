@@ -1,0 +1,49 @@
+{
+  "id": "roof_f10ea571",
+  "role": "roof",
+  "type": "wedge",
+  "signature": "wedge|1,0.875,0.875|0",
+  "canonical": {
+    "objectKey": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+    "name": "attached_observation_roof",
+    "part": {
+      "name": "attached_observation_roof",
+      "type": "wedge",
+      "dimensions": [
+        0.576,
+        0.499,
+        0.48
+      ],
+      "position": [
+        0.134,
+        4.939,
+        0.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 11187637,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+      "name": "attached_observation_roof",
+      "position": [
+        0.134,
+        4.939,
+        0.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 11187637
+    }
+  ]
+}

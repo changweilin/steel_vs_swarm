@@ -1,0 +1,1112 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_92304469ec",
+  "canonicalKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+    "bounds": {
+      "min": [
+        -1.51,
+        0.2241,
+        -2.1
+      ],
+      "max": [
+        1.51,
+        1.825,
+        2.135
+      ],
+      "size": [
+        3.02,
+        1.601,
+        4.235
+      ],
+      "rMax": 2.615,
+      "triangles": 720,
+      "vertices": 468
+    },
+    "parts": [
+      {
+        "name": "chassis_base",
+        "type": "box",
+        "dimensions": [
+          1.9,
+          0.3,
+          4.2
+        ],
+        "position": [
+          0,
+          0.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 1973790,
+        "triangles": 12
+      },
+      {
+        "name": "car_body",
+        "type": "box",
+        "dimensions": [
+          1.88,
+          1,
+          4.1
+        ],
+        "position": [
+          0,
+          0.9,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5197655,
+        "triangles": 12
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_car_02_outlander_20211001_menu_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_88e5ddb2"
+      ]
+    },
+    {
+      "key": "vehicle/car_176103315400_b84cb3e4_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_car_176103315400_v6",
+      "similarity": 66,
+      "scale": [
+        1.09934,
+        1.46783,
+        0.95868
+      ],
+      "paletteIds": [
+        "palette_1f7c005d"
+      ]
+    },
+    {
+      "key": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2_v6",
+      "similarity": 64,
+      "scale": [
+        0.76159,
+        1.11805,
+        0.86612
+      ],
+      "paletteIds": [
+        "palette_d629580a"
+      ]
+    },
+    {
+      "key": "vehicle/car_5-man_da4a0c78_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_car_5-man_v6",
+      "similarity": 68,
+      "scale": [
+        0.74834,
+        1.17114,
+        0.90909
+      ],
+      "paletteIds": [
+        "palette_ed32ed0f"
+      ]
+    },
+    {
+      "key": "vehicle/car_202504061134_33848a5a_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_car_202504061134_v6",
+      "similarity": 68,
+      "scale": [
+        0.6457,
+        1.1243,
+        0.77568
+      ],
+      "paletteIds": [
+        "palette_d4a87066"
+      ]
+    },
+    {
+      "key": "vehicle/car_7car-202401030308-3_38a5ca9a_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_car_7car-202401030308-3_v6",
+      "similarity": 49,
+      "scale": [
+        0.67881,
+        1.62399,
+        1.00826
+      ],
+      "paletteIds": [
+        "palette_831a443f"
+      ]
+    },
+    {
+      "key": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.55927,
+        0.97314,
+        0.56836
+      ],
+      "paletteIds": [
+        "palette_f4af01e2"
+      ]
+    },
+    {
+      "key": "vehicle/car_176103315400 (1)_2163e4b0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_176103315400_1__2163e4b0_luna_v6",
+      "similarity": 15,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_40ab7dd6"
+      ]
+    },
+    {
+      "key": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.55927,
+        0.96065,
+        0.56836
+      ],
+      "paletteIds": [
+        "palette_c367bddf"
+      ]
+    },
+    {
+      "key": "vehicle/car_220809-20941-15-q0oDy_956bd2ba_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_220809-20941-15-q0oDy_956bd2ba_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.55927,
+        0.96065,
+        0.56836
+      ],
+      "paletteIds": [
+        "palette_58aaa423"
+      ]
+    },
+    {
+      "key": "vehicle/car_2017091364238789_cb832536_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_2017091364238789_cb832536_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_6041ac57"
+      ]
+    },
+    {
+      "key": "vehicle/car_1683687307801401_600_400_3a88c91a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_1683687307801401_600_400_3a88c91a_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_eb296c99"
+      ]
+    },
+    {
+      "key": "vehicle/car_1711950770028207_600_400_27fc1d09_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_1711950770028207_600_400_27fc1d09_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_6041ac57"
+      ]
+    },
+    {
+      "key": "vehicle/car_22b670d6d16ae4eac09410b9e8f2eac7_XL_22885ee1_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_22b670d6d16ae4eac09410b9e8f2eac7_XL_22885ee1_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_eb296c99"
+      ]
+    },
+    {
+      "key": "vehicle/car_240203_FordExplorerFacelift_fromFord-07_e3eb1a89_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_240203_FordExplorerFacelift_fromFord-07_e3eb1a89_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_2dd68743"
+      ]
+    },
+    {
+      "key": "vehicle/car_240521-25714-10-CT9mc_bfc73edf_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_240521-25714-10-CT9mc_bfc73edf_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_2dd68743"
+      ]
+    },
+    {
+      "key": "vehicle/car_240710-26084-40-oeQ5G_8b3a9ba3_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_240710-26084-40-oeQ5G_8b3a9ba3_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_5b78d2c3"
+      ]
+    },
+    {
+      "key": "vehicle/car_241016-26812-1-UmpVe_96a298e4_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_241016-26812-1-UmpVe_96a298e4_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_c367bddf"
+      ]
+    },
+    {
+      "key": "vehicle/car_241120-27067-61-GPe1X_05fdffc4_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_241120-27067-61-GPe1X_05fdffc4_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_fac19782"
+      ]
+    },
+    {
+      "key": "vehicle/car_250730-29093-1-4yYYG_07e978cb_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_250730-29093-1-4yYYG_07e978cb_luna_v6",
+      "similarity": 12,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_0fabc417"
+      ]
+    },
+    {
+      "key": "vehicle/car_250px-Honda-TN360_dac89bc5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_250px-Honda-TN360_dac89bc5_luna_v6",
+      "similarity": 12,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_0fabc417"
+      ]
+    },
+    {
+      "key": "vehicle/car_2598949_1f526e62_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_2598949_1f526e62_luna_v6",
+      "similarity": 12,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_0fabc417"
+      ]
+    },
+    {
+      "key": "vehicle/car_4590905_001_M_49e8b6b2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_4590905_001_M_49e8b6b2_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_eb296c99"
+      ]
+    },
+    {
+      "key": "vehicle/car_7car-202006291136-3_10cab506_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_7car-202006291136-3_10cab506_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_6041ac57"
+      ]
+    },
+    {
+      "key": "vehicle/car_8361539_e123eb1d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_8361539_e123eb1d_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_c367bddf"
+      ]
+    },
+    {
+      "key": "vehicle/car_881e58ddc9cd0cc82af65be198476506_1875b156_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_881e58ddc9cd0cc82af65be198476506_1875b156_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_eb296c99"
+      ]
+    },
+    {
+      "key": "vehicle/car_9d6035f40faac95805c9c47f572ebe3f_3ab543e3_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_9d6035f40faac95805c9c47f572ebe3f_3ab543e3_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_6041ac57"
+      ]
+    },
+    {
+      "key": "vehicle/car_articleimage_1373637_86e7cfbe_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_articleimage_1373637_86e7cfbe_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_5b78d2c3"
+      ]
+    },
+    {
+      "key": "vehicle/car_depu_12cc1903_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_depu_12cc1903_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_c367bddf"
+      ]
+    },
+    {
+      "key": "vehicle/car_Farizon-SV-3_1ca541cc_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_Farizon-SV-3_1ca541cc_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_5b78d2c3"
+      ]
+    },
+    {
+      "key": "vehicle/car_IMG20260102180810I92509U2349_41e01507_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_IMG20260102180810I92509U2349_41e01507_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_eb296c99"
+      ]
+    },
+    {
+      "key": "vehicle/car_jspace-pu_20241108_menu_3b80890b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_jspace-pu_20241108_menu_3b80890b_luna_v6",
+      "similarity": 12,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_0fabc417"
+      ]
+    },
+    {
+      "key": "vehicle/car_JSV_01_d2274679_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_JSV_01_d2274679_luna_v6",
+      "similarity": 12,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_0fabc417"
+      ]
+    },
+    {
+      "key": "vehicle/car_MD_01_5x7_74dd9fe1_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_MD_01_5x7_74dd9fe1_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_c367bddf"
+      ]
+    },
+    {
+      "key": "vehicle/car_md-ae74bad4fcbb06f537ade047c4f657fd_d0d1db58_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_md-ae74bad4fcbb06f537ade047c4f657fd_d0d1db58_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_eb296c99"
+      ]
+    },
+    {
+      "key": "vehicle/car_mobile01-78b0b061843ca71c35cd47caeccc4c93_e7258079_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_mobile01-78b0b061843ca71c35cd47caeccc4c93_e7258079_luna_v6",
+      "similarity": 12,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_5b78d2c3"
+      ]
+    },
+    {
+      "key": "vehicle/car_Ou7KZDwD3jVNttR_8c5f1a99_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_Ou7KZDwD3jVNttR_8c5f1a99_luna_v6",
+      "similarity": 12,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_0fabc417"
+      ]
+    },
+    {
+      "key": "vehicle/car_ph-hv2-1_47157c08_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_ph-hv2-1_47157c08_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_5b78d2c3"
+      ]
+    },
+    {
+      "key": "vehicle/car_photooriginal-2022408-29vqn_1c9d8e4f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_photooriginal-2022408-29vqn_1c9d8e4f_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_6041ac57"
+      ]
+    },
+    {
+      "key": "vehicle/car_php6z4pvZ_5a214b83_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_php6z4pvZ_5a214b83_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_c367bddf"
+      ]
+    },
+    {
+      "key": "vehicle/car_showcase2_edeliver5_h1_720x414_fea117e4_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_showcase2_edeliver5_h1_720x414_fea117e4_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_5b78d2c3"
+      ]
+    },
+    {
+      "key": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "similarity": 15,
+      "scale": [
+        1.55927,
+        0.78638,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_8c2f4bde"
+      ]
+    },
+    {
+      "key": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "similarity": 15,
+      "scale": [
+        1.55927,
+        0.78638,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_8c2f4bde"
+      ]
+    },
+    {
+      "key": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_7CcTSYgumkMG_70f59136_luna_v6",
+      "similarity": 15,
+      "scale": [
+        1.55927,
+        0.78638,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_8c2f4bde"
+      ]
+    },
+    {
+      "key": "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+      "similarity": 13,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_c679cc61"
+      ]
+    },
+    {
+      "key": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_series-better-car_381bc6ea_luna_v6",
+      "similarity": 15,
+      "scale": [
+        1.55927,
+        0.78638,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_8c2f4bde"
+      ]
+    },
+    {
+      "key": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_teslam3-960_9dc405fc_luna_v6",
+      "similarity": 15,
+      "scale": [
+        1.55927,
+        0.78638,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_8c2f4bde"
+      ]
+    },
+    {
+      "key": "vehicle/car_圖1_07be3b04_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car__1_07be3b04_luna_v6",
+      "similarity": 15,
+      "scale": [
+        1.55927,
+        0.78638,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_8c2f4bde"
+      ]
+    },
+    {
+      "key": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+      "similarity": 12,
+      "scale": [
+        1.6255,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_029d24f4"
+      ]
+    },
+    {
+      "key": "vehicle/car_1667357469403862_600_400_f82915ff_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_1667357469403862_600_400_f82915ff_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_16b6c43c"
+      ]
+    },
+    {
+      "key": "vehicle/car_176174663300_7552c714_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_176174663300_7552c714_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_16b6c43c"
+      ]
+    },
+    {
+      "key": "vehicle/car_3列_e3f7e1e0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_3__e3f7e1e0_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_a6bd62c2"
+      ]
+    },
+    {
+      "key": "vehicle/car_20200710700113_93e623cc_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_20200710700113_93e623cc_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_6041ac57"
+      ]
+    },
+    {
+      "key": "vehicle/car_202409251527451_77ad7ab6_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_202409251527451_77ad7ab6_luna_v6",
+      "similarity": 15,
+      "scale": [
+        1.6255,
+        1.15615,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_5626df26"
+      ]
+    },
+    {
+      "key": "vehicle/car_Cybertruck-來了！限量-Cybertruck-模型台灣上架_c6853c8c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_Cybertruck-_-Cybertruck-__c6853c8c_luna_v6",
+      "similarity": 10,
+      "scale": [
+        1.64205,
+        1.20362,
+        0.58253
+      ],
+      "paletteIds": [
+        "palette_6c9b6781"
+      ]
+    },
+    {
+      "key": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.6404,
+        1.16177,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_d93ff8f7"
+      ]
+    },
+    {
+      "key": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_161060143500_896f4c33_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.6404,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_9233523f"
+      ]
+    },
+    {
+      "key": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.6404,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_9233523f"
+      ]
+    },
+    {
+      "key": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.6404,
+        1.14116,
+        0.58725
+      ],
+      "paletteIds": [
+        "palette_9233523f"
+      ]
+    },
+    {
+      "key": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2 (1)_78de4396_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_1926-FORD-MODEL-T-TOURING-CAR-2_1__78de4396_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.38377,
+        0.9594,
+        0.50697
+      ],
+      "paletteIds": [
+        "palette_5156e107"
+      ]
+    },
+    {
+      "key": "vehicle/car_6841_rd_0682ab55_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_6841_rd_0682ab55_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.38377,
+        0.9594,
+        0.50697
+      ],
+      "paletteIds": [
+        "palette_5156e107"
+      ]
+    }
+  ]
+}

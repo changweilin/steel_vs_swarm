@@ -1,0 +1,79 @@
+{
+  "id": "bright_rim_90208908",
+  "role": "bright_rim",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+    "name": "congestus_bright_left_rim_1",
+    "part": {
+      "name": "congestus_bright_left_rim_1",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.5,
+      "position": [
+        -2.64,
+        1.9,
+        0.34
+      ],
+      "rotation": [
+        0.1,
+        0.22,
+        -0.04
+      ],
+      "color": 16317437,
+      "triangles": 20,
+      "role": "bright_rim",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_bright_left_rim_1",
+      "position": [
+        -2.64,
+        1.9,
+        0.34
+      ],
+      "rotation": [
+        0.1,
+        0.22,
+        -0.04
+      ],
+      "colorKey": "brightHex",
+      "color": 16317437
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_bright_left_rim_3",
+      "position": [
+        -2.28,
+        3.56,
+        0.34
+      ],
+      "rotation": [
+        0.1,
+        0.66,
+        -0.04
+      ],
+      "colorKey": "brightHex",
+      "color": 16317437
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_bright_left_rim_5",
+      "position": [
+        -1.62,
+        5.1,
+        0.34
+      ],
+      "rotation": [
+        0.1,
+        1.1,
+        -0.04
+      ],
+      "colorKey": "brightHex",
+      "color": 16317437
+    }
+  ]
+}

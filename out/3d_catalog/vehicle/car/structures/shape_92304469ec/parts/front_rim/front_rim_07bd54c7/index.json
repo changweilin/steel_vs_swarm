@@ -1,0 +1,66 @@
+{
+  "id": "front_rim_07bd54c7",
+  "role": "front_rim",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.25,1|16",
+  "canonical": {
+    "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+    "name": "left_front_rim",
+    "part": {
+      "name": "left_front_rim",
+      "type": "cylinder",
+      "sides": 16,
+      "radii": [
+        0.28,
+        0.28
+      ],
+      "height": 0.12,
+      "position": [
+        -0.85,
+        0.35,
+        1.25
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "color": 14540253,
+      "triangles": 64
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+      "name": "left_front_rim",
+      "position": [
+        -0.85,
+        0.35,
+        1.25
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 14540253
+    },
+    {
+      "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+      "name": "right_front_rim",
+      "position": [
+        0.85,
+        0.35,
+        1.25
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 14540253
+    }
+  ]
+}

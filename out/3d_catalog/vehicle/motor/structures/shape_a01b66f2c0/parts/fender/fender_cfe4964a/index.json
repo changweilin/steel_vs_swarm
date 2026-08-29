@@ -1,0 +1,47 @@
+{
+  "id": "fender_cfe4964a",
+  "role": "fender",
+  "type": "torus_ring",
+  "signature": "torus_ring|1,1,0|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+    "name": "front_fender",
+    "part": {
+      "name": "front_fender",
+      "type": "torus_ring",
+      "radius": 0.362,
+      "tube": 0.014,
+      "position": [
+        0.74,
+        0.378,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 2317725,
+      "triangles": 120,
+      "role": "fender"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "front_fender",
+      "position": [
+        0.74,
+        0.378,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2317725
+    }
+  ]
+}

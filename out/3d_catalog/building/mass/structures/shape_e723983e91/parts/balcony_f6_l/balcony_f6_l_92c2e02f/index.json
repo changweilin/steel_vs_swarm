@@ -1,0 +1,146 @@
+{
+  "id": "balcony_f6_l_92c2e02f",
+  "role": "balcony_f6_l",
+  "type": "box",
+  "signature": "box|1,0.125,0.125|0",
+  "canonical": {
+    "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+    "name": "front_balcony_f6_l",
+    "part": {
+      "name": "front_balcony_f6_l",
+      "type": "box",
+      "dimensions": [
+        9.21,
+        1.15,
+        1.3
+      ],
+      "position": [
+        -7.163,
+        22.65,
+        9.64
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1182996,
+      "triangles": 12,
+      "colorKey": "accent"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "front_balcony_f6_l",
+      "position": [
+        -7.163,
+        22.65,
+        9.64
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "front_balcony_f6_l",
+      "position": [
+        -6.358,
+        22.65,
+        10.523
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "front_balcony_f6_l",
+      "position": [
+        -6.63,
+        22.65,
+        10.563
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1342649
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "front_balcony_f6_l",
+      "position": [
+        -6.214,
+        22.65,
+        9.161
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5988399
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "front_balcony_f6_l",
+      "position": [
+        -6.455,
+        22.65,
+        9.733
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13355463
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "front_balcony_f6_l",
+      "position": [
+        -5.64,
+        22.65,
+        10.369
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 7642050
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "front_balcony_f6_l",
+      "position": [
+        -6.686,
+        22.65,
+        8.352
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6454170
+    }
+  ]
+}

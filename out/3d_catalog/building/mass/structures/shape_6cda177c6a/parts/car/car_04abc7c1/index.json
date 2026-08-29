@@ -1,0 +1,65 @@
+{
+  "id": "car_04abc7c1",
+  "role": "car",
+  "type": "box",
+  "signature": "box|0.5,0.375,1|0",
+  "canonical": {
+    "objectKey": "building/mass_101330_f4de6359_v6",
+    "name": "car_1",
+    "part": {
+      "name": "car_1",
+      "type": "box",
+      "dimensions": [
+        1.8,
+        1.2,
+        3.8
+      ],
+      "position": [
+        -2,
+        0.6,
+        -1.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_101330_f4de6359_v6",
+      "name": "car_1",
+      "position": [
+        -2,
+        0.6,
+        -1.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    },
+    {
+      "objectKey": "building/mass_101330_f4de6359_v6",
+      "name": "car_2",
+      "position": [
+        2.2,
+        0.6,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "id": "stylobate_plinth_tier_c6d809e6",
+  "role": "stylobate_plinth_tier",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0,1|4",
+  "canonical": {
+    "objectKey": "building/mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_7dd14440",
+    "name": "stylobate_plinth_tier_2",
+    "part": {
+      "name": "stylobate_plinth_tier_2",
+      "type": "frustum_pyramid",
+      "sides": 4,
+      "radii": [
+        22.013,
+        22.295
+      ],
+      "height": 0.45,
+      "position": [
+        0,
+        0.675,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4868647,
+      "triangles": 16
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_7dd14440",
+      "name": "stylobate_plinth_tier_2",
+      "position": [
+        0,
+        0.675,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4868647
+    },
+    {
+      "objectKey": "building/mass_4b36cf76-bdea-7886-fd39-5a3269b6047e_7dd14440",
+      "name": "stylobate_plinth_tier_3",
+      "position": [
+        0,
+        1.125,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4868647
+    },
+    {
+      "objectKey": "building/mass_e28ba9534d67c7605a1800bc035444d5_c725e79d",
+      "name": "stylobate_plinth_tier_2",
+      "position": [
+        0,
+        0.675,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8755756
+    },
+    {
+      "objectKey": "building/mass_e28ba9534d67c7605a1800bc035444d5_c725e79d",
+      "name": "stylobate_plinth_tier_3",
+      "position": [
+        0,
+        1.125,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 8755756
+    },
+    {
+      "objectKey": "building/mass_images (10)_af10e1fc",
+      "name": "stylobate_plinth_tier_2",
+      "position": [
+        0,
+        0.675,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "base",
+      "color": 16777215
+    },
+    {
+      "objectKey": "building/mass_images (10)_af10e1fc",
+      "name": "stylobate_plinth_tier_3",
+      "position": [
+        0,
+        1.125,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "base",
+      "color": 16777215
+    }
+  ]
+}

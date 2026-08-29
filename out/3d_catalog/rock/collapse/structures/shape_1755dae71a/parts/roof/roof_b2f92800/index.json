@@ -1,0 +1,82 @@
+{
+  "id": "roof_b2f92800",
+  "role": "roof",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.25,1|8",
+  "canonical": {
+    "objectKey": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+    "name": "top_cap_fragment",
+    "part": {
+      "name": "top_cap_fragment",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.39,
+        0.69
+      ],
+      "height": 0.359,
+      "position": [
+        -0.394,
+        2.423,
+        -0.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4344656,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/collapse_ov_0012000f-fdcf-4695-b48c-52910d3ea6f5_1e10b34f_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.394,
+        2.423,
+        -0.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_993f4b33_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.322,
+        2.169,
+        -0.254
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5_c39af10b_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.18,
+        1.215,
+        -0.144
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    }
+  ]
+}

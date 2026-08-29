@@ -1,0 +1,77 @@
+{
+  "id": "hoodoo_debris_90208908",
+  "role": "hoodoo_debris",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+    "name": "hoodoo_debris_left",
+    "part": {
+      "name": "hoodoo_debris_left",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.6,
+      "position": [
+        -3.04,
+        0.904,
+        0.88
+      ],
+      "rotation": [
+        0.2,
+        0.1,
+        0.05
+      ],
+      "color": 12683864,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "name": "hoodoo_debris_left",
+      "position": [
+        -3.04,
+        0.904,
+        0.88
+      ],
+      "rotation": [
+        0.2,
+        0.1,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 12683864
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0_edfd0d51_luna_v6",
+      "name": "hoodoo_debris_left",
+      "position": [
+        -4.202,
+        1.288,
+        1.545
+      ],
+      "rotation": [
+        0.2,
+        0.1,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 12683864
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+      "name": "hoodoo_debris_left",
+      "position": [
+        -6.557,
+        2.919,
+        4.31
+      ],
+      "rotation": [
+        0.2,
+        0.1,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 12683864
+    }
+  ]
+}

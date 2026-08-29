@@ -1,0 +1,99 @@
+{
+  "id": "roof_55075acf",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|1,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "cab_roof",
+    "part": {
+      "name": "cab_roof",
+      "type": "box",
+      "dimensions": [
+        2.352,
+        0.16,
+        2.397
+      ],
+      "position": [
+        2.8,
+        3.49,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15790572,
+      "triangles": 12,
+      "role": "roof",
+      "colorKey": "roofHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "cab_roof",
+      "position": [
+        2.8,
+        3.49,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 15790572
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "cab_roof",
+      "position": [
+        2.8,
+        3.49,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 12071470
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "cab_roof",
+      "position": [
+        2.8,
+        3.49,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 15770409
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "cab_roof",
+      "position": [
+        2.8,
+        3.49,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 15921899
+    }
+  ]
+}

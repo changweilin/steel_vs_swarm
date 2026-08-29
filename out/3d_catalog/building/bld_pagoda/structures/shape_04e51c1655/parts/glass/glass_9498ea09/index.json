@@ -1,0 +1,97 @@
+{
+  "id": "glass_9498ea09",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.75,0|0",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+    "name": "second_floor_windows_front",
+    "part": {
+      "name": "second_floor_windows_front",
+      "type": "box",
+      "dimensions": [
+        1.8,
+        1.4,
+        0.1
+      ],
+      "position": [
+        0,
+        5.4,
+        3.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1125160,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+      "name": "second_floor_windows_front",
+      "position": [
+        0,
+        5.4,
+        3.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125160
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+      "name": "second_floor_windows_back",
+      "position": [
+        0,
+        5.4,
+        -3.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125160
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "second_story_window_f",
+      "position": [
+        0,
+        5.6,
+        3.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125915
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "second_story_window_b",
+      "position": [
+        0,
+        5.6,
+        -3.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125915
+    }
+  ]
+}

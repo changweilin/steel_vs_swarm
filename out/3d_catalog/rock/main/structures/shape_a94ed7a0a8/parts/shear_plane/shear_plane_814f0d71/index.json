@@ -1,0 +1,49 @@
+{
+  "id": "shear_plane_814f0d71",
+  "role": "shear_plane",
+  "type": "wedge",
+  "signature": "wedge|1,0.625,0.5|0",
+  "canonical": {
+    "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+    "name": "front_shear_plane",
+    "part": {
+      "name": "front_shear_plane",
+      "type": "wedge",
+      "dimensions": [
+        1.116,
+        0.681,
+        0.583
+      ],
+      "position": [
+        0.164,
+        1.771,
+        0.583
+      ],
+      "rotation": [
+        0.08,
+        0,
+        -0.1
+      ],
+      "color": 4861992,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+      "name": "front_shear_plane",
+      "position": [
+        0.164,
+        1.771,
+        0.583
+      ],
+      "rotation": [
+        0.08,
+        0,
+        -0.1
+      ],
+      "colorKey": null,
+      "color": 4861992
+    }
+  ]
+}

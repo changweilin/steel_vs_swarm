@@ -1,0 +1,67 @@
+{
+  "id": "fork_5f158db3",
+  "role": "fork",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|6",
+  "canonical": {
+    "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+    "name": "fork_inner_left",
+    "part": {
+      "name": "fork_inner_left",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.014,
+        0.014
+      ],
+      "height": 0.394,
+      "position": [
+        0.64,
+        0.63,
+        -0.052
+      ],
+      "rotation": [
+        2.61,
+        1.571,
+        0
+      ],
+      "color": 15855333,
+      "triangles": 24,
+      "role": "fork"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "fork_inner_left",
+      "position": [
+        0.64,
+        0.63,
+        -0.052
+      ],
+      "rotation": [
+        2.61,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 15855333
+    },
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "fork_inner_right",
+      "position": [
+        0.64,
+        0.63,
+        0.052
+      ],
+      "rotation": [
+        2.61,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 15855333
+    }
+  ]
+}

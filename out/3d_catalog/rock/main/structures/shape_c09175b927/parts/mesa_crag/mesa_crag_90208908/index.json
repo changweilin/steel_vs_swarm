@@ -1,0 +1,109 @@
+{
+  "id": "mesa_crag_90208908",
+  "role": "mesa_crag",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_1586238562_48266950_luna_v6",
+    "name": "mesa_left_crag",
+    "part": {
+      "name": "mesa_left_crag",
+      "type": "icosahedron_polyhedron",
+      "radius": 4.94,
+      "position": [
+        -8.32,
+        9.6,
+        2.08
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "color": 3160123,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_1586238562_48266950_luna_v6",
+      "name": "mesa_left_crag",
+      "position": [
+        -8.32,
+        9.6,
+        2.08
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_image-1-206_1ca054a2_luna_v6",
+      "name": "mesa_left_crag",
+      "position": [
+        -8.32,
+        9.6,
+        2.08
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "name": "mesa_left_crag",
+      "position": [
+        -5.6,
+        8.787,
+        0.992
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 6767665
+    },
+    {
+      "objectKey": "rock/main_images (2)_56b743a2_luna_v6",
+      "name": "mesa_left_crag",
+      "position": [
+        -0.784,
+        0.632,
+        0.144
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_images (4)_1eb4a48a_luna_v6",
+      "name": "mesa_left_crag",
+      "position": [
+        -0.97,
+        0.6,
+        0.163
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

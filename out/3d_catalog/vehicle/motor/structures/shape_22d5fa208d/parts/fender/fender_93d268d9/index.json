@@ -1,0 +1,66 @@
+{
+  "id": "fender_93d268d9",
+  "role": "fender",
+  "type": "box",
+  "signature": "box|1,0,0.5|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+    "name": "rear_fender",
+    "part": {
+      "name": "rear_fender",
+      "type": "box",
+      "dimensions": [
+        0.7,
+        0.025,
+        0.34
+      ],
+      "position": [
+        -0.76,
+        0.61,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15986402,
+      "triangles": 12,
+      "role": "fender"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "name": "rear_fender",
+      "position": [
+        -0.76,
+        0.61,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15986402
+    },
+    {
+      "objectKey": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "name": "rear_fender",
+      "position": [
+        -0.76,
+        0.61,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15986402
+    }
+  ]
+}

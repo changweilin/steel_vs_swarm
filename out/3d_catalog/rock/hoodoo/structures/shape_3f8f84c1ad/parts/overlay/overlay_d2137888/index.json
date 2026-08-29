@@ -1,0 +1,47 @@
+{
+  "id": "overlay_d2137888",
+  "role": "overlay",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0.125,1|10",
+  "canonical": {
+    "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+    "name": "attached_waterline_foam",
+    "part": {
+      "name": "attached_waterline_foam",
+      "type": "polygonal_prism",
+      "sides": 9,
+      "radius": 1.16,
+      "height": 0.198,
+      "position": [
+        0,
+        0.297,
+        1.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6767665,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.297,
+        1.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "grille_and_bumper_9f708a42",
+  "role": "grille_and_bumper",
+  "type": "box",
+  "signature": "box|1,0.375,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_99NzsCYgrt_433feb63_v6",
+    "name": "grille_and_bumper",
+    "part": {
+      "name": "grille_and_bumper",
+      "type": "box",
+      "dimensions": [
+        2.2,
+        0.9,
+        0.15
+      ],
+      "position": [
+        0,
+        1,
+        2.95
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14751793,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_99NzsCYgrt_433feb63_v6",
+      "name": "grille_and_bumper",
+      "position": [
+        0,
+        1,
+        2.95
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14751793
+    }
+  ]
+}

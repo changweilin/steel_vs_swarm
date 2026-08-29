@@ -1,0 +1,67 @@
+{
+  "id": "roof_0a120115",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|1,0.25,0.875|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+    "name": "ice_cream_roof_unit",
+    "part": {
+      "name": "ice_cream_roof_unit",
+      "type": "box",
+      "dimensions": [
+        0.62,
+        0.16,
+        0.58
+      ],
+      "position": [
+        -0.372,
+        3.22,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15988479,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+      "name": "ice_cream_roof_unit",
+      "position": [
+        -0.372,
+        3.22,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15988479
+    },
+    {
+      "objectKey": "vehicle/heavy_000001_1776155963_1c5cb2e7_luna_v6",
+      "name": "ice_cream_roof_unit",
+      "position": [
+        -0.372,
+        3.22,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15988479
+    }
+  ]
+}

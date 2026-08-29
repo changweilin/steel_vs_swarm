@@ -1,0 +1,97 @@
+{
+  "id": "mesa_overhang_fc341d77",
+  "role": "mesa_overhang",
+  "type": "wedge",
+  "signature": "wedge|1,0.25,0.5|0",
+  "canonical": {
+    "objectKey": "rock/mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_7423b75e_luna_v6",
+    "name": "mesa_front_overhang",
+    "part": {
+      "name": "mesa_front_overhang",
+      "type": "wedge",
+      "dimensions": [
+        14.04,
+        4.32,
+        7.02
+      ],
+      "position": [
+        0.52,
+        14.88,
+        7.28
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "color": 6911354,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_7423b75e_luna_v6",
+      "name": "mesa_front_overhang",
+      "position": [
+        0.52,
+        14.88,
+        7.28
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 6911354
+    },
+    {
+      "objectKey": "rock/mg_mesa_ov_4fd3870a-5515-45ce-a000-8b1866bfe861_0b806362_luna_v6",
+      "name": "mesa_front_overhang",
+      "position": [
+        0.52,
+        14.88,
+        7.28
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 6911354
+    },
+    {
+      "objectKey": "rock/mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~0_e2518966_luna_v6",
+      "name": "mesa_front_overhang",
+      "position": [
+        0.52,
+        14.264,
+        7.28
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 6911354
+    },
+    {
+      "objectKey": "rock/mg_mesa_ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69_17cc8dd8_luna_v6",
+      "name": "mesa_front_overhang",
+      "position": [
+        0.52,
+        14.88,
+        7.28
+      ],
+      "rotation": [
+        0.06,
+        0.02,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 6911354
+    }
+  ]
+}

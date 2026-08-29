@@ -1,0 +1,45 @@
+{
+  "id": "hoodoo_debris_90208908",
+  "role": "hoodoo_debris",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "hoodoo_debris_left",
+    "part": {
+      "name": "hoodoo_debris_left",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.785,
+      "position": [
+        -2.611,
+        0.957,
+        1.151
+      ],
+      "rotation": [
+        0.2,
+        0.1,
+        0.05
+      ],
+      "color": 5602375,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "hoodoo_debris_left",
+      "position": [
+        -2.611,
+        0.957,
+        1.151
+      ],
+      "rotation": [
+        0.2,
+        0.1,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 5602375
+    }
+  ]
+}

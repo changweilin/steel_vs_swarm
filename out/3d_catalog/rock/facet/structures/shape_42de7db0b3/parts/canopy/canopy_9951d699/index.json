@@ -1,0 +1,50 @@
+{
+  "id": "canopy_9951d699",
+  "role": "canopy",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+    "name": "attached_lichen_canopy_polyhedron",
+    "part": {
+      "name": "attached_lichen_canopy_polyhedron",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.188,
+        0.358
+      ],
+      "height": 0.103,
+      "position": [
+        -0.057,
+        1.378,
+        -0.039
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6717267,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.057,
+        1.378,
+        -0.039
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    }
+  ]
+}

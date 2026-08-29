@@ -1,0 +1,50 @@
+{
+  "id": "glass_35ff699d",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0.125,1,0.875|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+    "name": "windscreen",
+    "part": {
+      "name": "windscreen",
+      "type": "box",
+      "dimensions": [
+        0.035,
+        0.34,
+        0.3
+      ],
+      "position": [
+        0.6,
+        1.1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.2
+      ],
+      "color": 1584195,
+      "triangles": 12,
+      "role": "glass"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "windscreen",
+      "position": [
+        0.6,
+        1.1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.2
+      ],
+      "colorKey": null,
+      "color": 1584195
+    }
+  ]
+}

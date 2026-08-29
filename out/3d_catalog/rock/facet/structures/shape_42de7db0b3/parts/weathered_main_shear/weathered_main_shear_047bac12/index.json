@@ -1,0 +1,49 @@
+{
+  "id": "weathered_main_shear_047bac12",
+  "role": "weathered_main_shear",
+  "type": "wedge",
+  "signature": "wedge|1,0.375,0.625|0",
+  "canonical": {
+    "objectKey": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+    "name": "weathered_main_front_shear",
+    "part": {
+      "name": "weathered_main_front_shear",
+      "type": "wedge",
+      "dimensions": [
+        0.904,
+        0.365,
+        0.511
+      ],
+      "position": [
+        0.075,
+        0.858,
+        0.53
+      ],
+      "rotation": [
+        0.06,
+        0.1,
+        -0.08
+      ],
+      "color": 4861992,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+      "name": "weathered_main_front_shear",
+      "position": [
+        0.075,
+        0.858,
+        0.53
+      ],
+      "rotation": [
+        0.06,
+        0.1,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 4861992
+    }
+  ]
+}

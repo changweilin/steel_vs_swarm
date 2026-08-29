@@ -1,0 +1,66 @@
+{
+  "id": "ground_contact_anchor_9951d699",
+  "role": "ground_contact_anchor",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_d11887e2_luna_v6",
+    "name": "ground_contact_anchor",
+    "part": {
+      "name": "ground_contact_anchor",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        3.315,
+        4.25
+      ],
+      "height": 0.935,
+      "position": [
+        0,
+        0.468,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_d11887e2_luna_v6",
+      "name": "ground_contact_anchor",
+      "position": [
+        0,
+        0.468,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3_21877047_luna_v6",
+      "name": "ground_contact_anchor",
+      "position": [
+        0,
+        0.161,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

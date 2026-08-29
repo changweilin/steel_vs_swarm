@@ -1,0 +1,99 @@
+{
+  "id": "trim_b7954f46",
+  "role": "trim",
+  "type": "box",
+  "signature": "box|0.125,0.25,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "heavy_front_plate",
+    "part": {
+      "name": "heavy_front_plate",
+      "type": "box",
+      "dimensions": [
+        0.045,
+        0.14,
+        0.6
+      ],
+      "position": [
+        4.475,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16316657,
+      "triangles": 12,
+      "role": "plate",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "heavy_front_plate",
+      "position": [
+        4.475,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16316657
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "heavy_front_plate",
+      "position": [
+        4.475,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15975234
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "heavy_front_plate",
+      "position": [
+        4.475,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16773077
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "heavy_front_plate",
+      "position": [
+        4.475,
+        1.02,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16251120
+    }
+  ]
+}

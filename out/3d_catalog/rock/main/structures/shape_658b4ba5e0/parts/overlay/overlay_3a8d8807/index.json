@@ -1,0 +1,61 @@
+{
+  "id": "overlay_3a8d8807",
+  "role": "overlay",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+    "name": "attached_moss_facet",
+    "part": {
+      "name": "attached_moss_facet",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.483,
+      "position": [
+        1.095,
+        13.013,
+        1.136
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "color": 11452549,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        1.095,
+        13.013,
+        1.136
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    },
+    {
+      "objectKey": "rock/main_images rock (1)~0_fd270a13_luna_v6",
+      "name": "strata_top_fragment",
+      "position": [
+        -1.083,
+        6.768,
+        -0.236
+      ],
+      "rotation": [
+        0.14,
+        -0.14,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 6911354
+    }
+  ]
+}

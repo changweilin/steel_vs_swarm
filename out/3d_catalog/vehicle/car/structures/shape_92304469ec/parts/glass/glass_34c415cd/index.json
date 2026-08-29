@@ -1,0 +1,67 @@
+{
+  "id": "glass_34c415cd",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0,0.75|0",
+  "canonical": {
+    "objectKey": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+    "name": "tech_roof_glass",
+    "part": {
+      "name": "tech_roof_glass",
+      "type": "box",
+      "dimensions": [
+        1.393,
+        0.025,
+        1.104
+      ],
+      "position": [
+        -0.155,
+        1.562,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1456199,
+      "triangles": 12,
+      "role": "glass",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+      "name": "tech_roof_glass",
+      "position": [
+        -0.155,
+        1.562,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1456199
+    },
+    {
+      "objectKey": "vehicle/car_49b849c471e19d46290da9047c42de4a_XL_5ed1cef3_luna_v6",
+      "name": "ev_roof_glass",
+      "position": [
+        -0.17,
+        1.805,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1390920
+    }
+  ]
+}

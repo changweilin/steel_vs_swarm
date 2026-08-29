@@ -1,0 +1,83 @@
+{
+  "id": "grille_1cb99932",
+  "role": "grille",
+  "type": "box",
+  "signature": "box|0,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+    "name": "hybrid_front_grille_bar",
+    "part": {
+      "name": "hybrid_front_grille_bar",
+      "type": "box",
+      "dimensions": [
+        0.035,
+        0.08,
+        1.067
+      ],
+      "position": [
+        2.32,
+        1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15199728,
+      "triangles": 12,
+      "role": "grille",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_0a7e31437a6be0675bc9cd13c0b401b1_4ba191d5_luna_v6",
+      "name": "hybrid_front_grille_bar",
+      "position": [
+        2.32,
+        1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15199728
+    },
+    {
+      "objectKey": "vehicle/car_220809-20941-15-q0oDy_956bd2ba_luna_v6",
+      "name": "hybrid_front_grille_bar",
+      "position": [
+        2.32,
+        1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13150704
+    },
+    {
+      "objectKey": "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+      "name": "urban_front_grille_bar",
+      "position": [
+        2.425,
+        1.08,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 12445424
+    }
+  ]
+}

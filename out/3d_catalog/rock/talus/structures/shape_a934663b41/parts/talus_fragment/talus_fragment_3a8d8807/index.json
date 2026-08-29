@@ -1,0 +1,141 @@
+{
+  "id": "talus_fragment_3a8d8807",
+  "role": "talus_fragment",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_16428fab_luna_v6",
+    "name": "talus_fragment_3",
+    "part": {
+      "name": "talus_fragment_3",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.707,
+      "position": [
+        -1.096,
+        0.766,
+        1.59
+      ],
+      "rotation": [
+        0.12,
+        2.174,
+        0.06
+      ],
+      "color": 6911354,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_16428fab_luna_v6",
+      "name": "talus_fragment_3",
+      "position": [
+        -1.096,
+        0.766,
+        1.59
+      ],
+      "rotation": [
+        0.12,
+        2.174,
+        0.06
+      ],
+      "colorKey": null,
+      "color": 6911354
+    },
+    {
+      "objectKey": "rock/talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_16428fab_luna_v6",
+      "name": "talus_fragment_5",
+      "position": [
+        -2.541,
+        0.618,
+        -0.845
+      ],
+      "rotation": [
+        0.12,
+        3.463,
+        0.06
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_16428fab_luna_v6",
+      "name": "talus_fragment_7",
+      "position": [
+        0.263,
+        0.783,
+        -2.012
+      ],
+      "rotation": [
+        0.12,
+        4.843,
+        0.06
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+      "name": "talus_fragment_1",
+      "position": [
+        1.559,
+        0.626,
+        0.79
+      ],
+      "rotation": [
+        0.12,
+        0.544,
+        0.06
+      ],
+      "colorKey": null,
+      "color": 10119749
+    },
+    {
+      "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+      "name": "talus_fragment_3",
+      "position": [
+        -0.53,
+        0.523,
+        1.015
+      ],
+      "rotation": [
+        0.12,
+        2.052,
+        0.06
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+      "name": "talus_fragment_5",
+      "position": [
+        -1.092,
+        0.44,
+        -0.254
+      ],
+      "rotation": [
+        0.12,
+        3.37,
+        0.06
+      ],
+      "colorKey": null,
+      "color": 10119749
+    },
+    {
+      "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+      "name": "talus_fragment_7",
+      "position": [
+        0.159,
+        0.485,
+        -1.014
+      ],
+      "rotation": [
+        0.12,
+        4.868,
+        0.06
+      ],
+      "colorKey": null,
+      "color": 10119749
+    }
+  ]
+}

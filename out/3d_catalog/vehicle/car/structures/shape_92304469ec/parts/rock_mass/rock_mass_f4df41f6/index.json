@@ -1,0 +1,50 @@
+{
+  "id": "rock_mass_f4df41f6",
+  "role": "rock_mass",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+    "name": "steering_column",
+    "part": {
+      "name": "steering_column",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.03,
+        0.03
+      ],
+      "height": 0.5,
+      "position": [
+        -0.2,
+        0.9,
+        0.1
+      ],
+      "rotation": [
+        0.7,
+        -0.4,
+        0
+      ],
+      "color": 14540253,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+      "name": "steering_column",
+      "position": [
+        -0.2,
+        0.9,
+        0.1
+      ],
+      "rotation": [
+        0.7,
+        -0.4,
+        0
+      ],
+      "colorKey": null,
+      "color": 14540253
+    }
+  ]
+}

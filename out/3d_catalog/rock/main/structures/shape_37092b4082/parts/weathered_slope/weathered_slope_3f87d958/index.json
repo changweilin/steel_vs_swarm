@@ -1,0 +1,49 @@
+{
+  "id": "weathered_slope_3f87d958",
+  "role": "weathered_slope",
+  "type": "wedge",
+  "signature": "wedge|0.625,0.875,1|0",
+  "canonical": {
+    "objectKey": "rock/main_20211010001701_88fab0a9_v6",
+    "name": "left_weathered_slope",
+    "part": {
+      "name": "left_weathered_slope",
+      "type": "wedge",
+      "dimensions": [
+        2.8,
+        4.2,
+        4.6
+      ],
+      "position": [
+        -2.8,
+        2.2,
+        0.1
+      ],
+      "rotation": [
+        0.1,
+        -0.2,
+        -0.15
+      ],
+      "color": 11043394,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_20211010001701_88fab0a9_v6",
+      "name": "left_weathered_slope",
+      "position": [
+        -2.8,
+        2.2,
+        0.1
+      ],
+      "rotation": [
+        0.1,
+        -0.2,
+        -0.15
+      ],
+      "colorKey": null,
+      "color": 11043394
+    }
+  ]
+}

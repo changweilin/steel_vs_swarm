@@ -1,0 +1,51 @@
+{
+  "id": "equipment_e17b26ce",
+  "role": "equipment",
+  "type": "box",
+  "signature": "box|0.625,0.375,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+    "name": "crane_mobile_counterweight",
+    "part": {
+      "name": "crane_mobile_counterweight",
+      "type": "box",
+      "dimensions": [
+        1.25,
+        0.72,
+        1.998
+      ],
+      "position": [
+        -3.55,
+        1.54,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4208165,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "name": "crane_mobile_counterweight",
+      "position": [
+        -3.55,
+        1.54,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 4208165
+    }
+  ]
+}

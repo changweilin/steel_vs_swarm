@@ -1,0 +1,50 @@
+{
+  "id": "lantern_base_a4aece17",
+  "role": "lantern_base",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.25,1|12",
+  "canonical": {
+    "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+    "name": "lantern_base",
+    "part": {
+      "name": "lantern_base",
+      "type": "cylinder",
+      "sides": 12,
+      "radii": [
+        0.9,
+        0.9
+      ],
+      "height": 0.4,
+      "position": [
+        0,
+        8.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15066597,
+      "triangles": 48
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+      "name": "lantern_base",
+      "position": [
+        0,
+        8.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15066597
+    }
+  ]
+}

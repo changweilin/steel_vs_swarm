@@ -1,0 +1,49 @@
+{
+  "id": "ground_base_plinth_dae158f3",
+  "role": "ground_base_plinth",
+  "type": "box",
+  "signature": "box|1,0.125,0.875|0",
+  "canonical": {
+    "objectKey": "building/mass_169154402859999904.jpg!900x.water3_b92410c7_v6",
+    "name": "ground_base_plinth",
+    "part": {
+      "name": "ground_base_plinth",
+      "type": "box",
+      "dimensions": [
+        14,
+        1,
+        12
+      ],
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6710886,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_169154402859999904.jpg!900x.water3_b92410c7_v6",
+      "name": "ground_base_plinth",
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6710886
+    }
+  ]
+}

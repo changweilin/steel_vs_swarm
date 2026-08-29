@@ -1,0 +1,49 @@
+{
+  "id": "trim_9f708a42",
+  "role": "trim",
+  "type": "box",
+  "signature": "box|1,0.375,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+    "name": "front_license_plate",
+    "part": {
+      "name": "front_license_plate",
+      "type": "box",
+      "dimensions": [
+        0.4,
+        0.15,
+        0.05
+      ],
+      "position": [
+        0,
+        0.35,
+        5.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15658734,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "front_license_plate",
+      "position": [
+        0,
+        0.35,
+        5.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15658734
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "id": "continuous_90208908",
+  "role": "continuous",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+    "name": "mammatus_continuous_upper_icosa_9",
+    "part": {
+      "name": "mammatus_continuous_upper_icosa_9",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.58,
+      "position": [
+        -3.55,
+        2.47,
+        -0.52
+      ],
+      "rotation": [
+        0.12,
+        2.07,
+        0.04
+      ],
+      "color": 12566979,
+      "triangles": 20,
+      "role": "continuous_upper",
+      "colorKey": "facadeHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_icosa_9",
+      "position": [
+        -3.55,
+        2.47,
+        -0.52
+      ],
+      "rotation": [
+        0.12,
+        2.07,
+        0.04
+      ],
+      "colorKey": "facadeHex",
+      "color": 12566979
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_icosa_11",
+      "position": [
+        0.48,
+        2.66,
+        -0.42
+      ],
+      "rotation": [
+        0.12,
+        2.53,
+        0.04
+      ],
+      "colorKey": "facadeHex",
+      "color": 12566979
+    }
+  ]
+}

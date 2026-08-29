@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_03c82a72fa",
+  "canonicalKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "bounds": {
+      "min": [
+        -4.455,
+        0.0274,
+        -1.5977
+      ],
+      "max": [
+        4.4975,
+        4.5843,
+        1.5977
+      ],
+      "size": [
+        8.953,
+        4.557,
+        3.195
+      ],
+      "rMax": 4.773,
+      "triangles": 4012,
+      "vertices": 2509
+    },
+    "parts": [
+      {
+        "name": "heavy_chassis",
+        "type": "box",
+        "dimensions": [
+          8.45,
+          0.3,
+          2.04
+        ],
+        "position": [
+          0,
+          0.73,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4016987,
+        "triangles": 12,
+        "role": "chassis",
+        "colorKey": "baseHex"
+      },
+      {
+        "name": "cab_body",
+        "type": "box",
+        "dimensions": [
+          2.45,
+          2.51,
+          2.346
+        ],
+        "position": [
+          2.8,
+          2.155,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 1534159,
+        "triangles": 12,
+        "role": "cab",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "mixer_drum",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          2.567,
+          1.6,
+          1.36
+        ],
+        "position": [
+          -1.05,
+          2.902,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          -0.262
+        ],
+        "color": 16316657,
+        "triangles": 160,
+        "role": "cargo",
+        "colorKey": "brightHex"
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_28fa24d1"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_3158_news_banner_cca40741_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_904b8f4c"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_ffd881c9"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_49f064a5"
+      ]
+    }
+  ]
+}

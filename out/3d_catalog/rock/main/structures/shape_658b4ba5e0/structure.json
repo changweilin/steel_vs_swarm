@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_658b4ba5e0",
+  "canonicalKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+    "bounds": {
+      "min": [
+        -5.9081,
+        0,
+        -5.12
+      ],
+      "max": [
+        5.7387,
+        14.6992,
+        5.28
+      ],
+      "size": [
+        11.647,
+        14.699,
+        10.4
+      ],
+      "rMax": 7.818,
+      "triangles": 388,
+      "vertices": 220
+    },
+    "parts": [
+      {
+        "name": "mesa_lower_slope",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          3.52,
+          5.12
+        ],
+        "height": 4.042,
+        "position": [
+          0,
+          2.101,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6767665,
+        "triangles": 32
+      },
+      {
+        "name": "mesa_cliff_body",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          2.96,
+          3.6
+        ],
+        "height": 8.085,
+        "position": [
+          -0.279,
+          8.268,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10119749,
+        "triangles": 32
+      },
+      {
+        "name": "mesa_flat_cap",
+        "type": "polygonal_prism",
+        "sides": 8,
+        "radius": 3.04,
+        "height": 2.389,
+        "position": [
+          0.279,
+          13.505,
+          -0.16
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6964528,
+        "triangles": 32
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main__-164605945_0_89533efb_luna_v6",
+      "similarity": 44,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c4c6a19c"
+      ]
+    },
+    {
+      "key": "rock/main_61bc69c388977_976e3200_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_61bc69c388977_976e3200_luna_v6",
+      "similarity": 100,
+      "scale": [
+        0.62445,
+        1.03619,
+        0.71029
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/main_images rock (1)~0_fd270a13_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/main/rock_rock_main_images_rock_1_0_fd270a13_luna_v6",
+      "similarity": 68,
+      "scale": [
+        0.31759,
+        0.52058,
+        0.4299
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

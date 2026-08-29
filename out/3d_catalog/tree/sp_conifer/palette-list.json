@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "sp_conifer",
+  "palettes": [
+    {
+      "id": "palette_85181bc7",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1588523,
+        "facadeHex": 3499334,
+        "baseHex": 4928552,
+        "accentHex": 7246431,
+        "glassHex": 1976635,
+        "darkHex": 1911587,
+        "brightHex": 10268535
+      },
+      "objects": [
+        {
+          "key": "tree/sp_conifer_wc_133471453_b962e994_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

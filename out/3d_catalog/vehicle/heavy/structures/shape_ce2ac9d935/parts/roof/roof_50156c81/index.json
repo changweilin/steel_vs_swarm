@@ -1,0 +1,67 @@
+{
+  "id": "roof_50156c81",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|0.375,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_cfcd90c9_luna_v6",
+    "name": "longhaul_roof_deflector",
+    "part": {
+      "name": "longhaul_roof_deflector",
+      "type": "box",
+      "dimensions": [
+        0.62,
+        0.13,
+        1.938
+      ],
+      "position": [
+        1.68,
+        3.61,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5578794,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "roofHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_cfcd90c9_luna_v6",
+      "name": "longhaul_roof_deflector",
+      "position": [
+        1.68,
+        3.61,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5578794
+    },
+    {
+      "objectKey": "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_fde9c283_luna_v6",
+      "name": "longhaul_roof_deflector",
+      "position": [
+        1.68,
+        3.61,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5578794
+    }
+  ]
+}

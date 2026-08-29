@@ -1,0 +1,49 @@
+{
+  "id": "cleavage_crack_recess_35ff699d",
+  "role": "cleavage_crack_recess",
+  "type": "box",
+  "signature": "box|0.125,1,0.875|0",
+  "canonical": {
+    "objectKey": "rock/main_20211010001701_88fab0a9_v6",
+    "name": "cleavage_crack_recess",
+    "part": {
+      "name": "cleavage_crack_recess",
+      "type": "box",
+      "dimensions": [
+        0.4,
+        4.8,
+        4.2
+      ],
+      "position": [
+        1.2,
+        3,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0.05
+      ],
+      "color": 4600609,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_20211010001701_88fab0a9_v6",
+      "name": "cleavage_crack_recess",
+      "position": [
+        1.2,
+        3,
+        -0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 4600609
+    }
+  ]
+}

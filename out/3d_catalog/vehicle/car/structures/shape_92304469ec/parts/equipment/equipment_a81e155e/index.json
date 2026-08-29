@@ -1,0 +1,83 @@
+{
+  "id": "equipment_a81e155e",
+  "role": "equipment",
+  "type": "box",
+  "signature": "box|0,0,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+    "name": "offroad_front_bullbar",
+    "part": {
+      "name": "offroad_front_bullbar",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        0.11,
+        1.958
+      ],
+      "position": [
+        2.39,
+        0.57,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 13203518,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "name": "offroad_front_bullbar",
+      "position": [
+        2.39,
+        0.57,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13203518
+    },
+    {
+      "objectKey": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "name": "offroad_front_bullbar",
+      "position": [
+        2.39,
+        0.57,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13203518
+    },
+    {
+      "objectKey": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "name": "offroad_front_bullbar",
+      "position": [
+        2.39,
+        0.57,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13203518
+    }
+  ]
+}

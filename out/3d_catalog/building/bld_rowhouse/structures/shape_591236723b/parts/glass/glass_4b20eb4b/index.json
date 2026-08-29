@@ -1,0 +1,129 @@
+{
+  "id": "glass_4b20eb4b",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0.5,1,0|0",
+  "canonical": {
+    "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+    "name": "lower_center_window_glass",
+    "part": {
+      "name": "lower_center_window_glass",
+      "type": "box",
+      "dimensions": [
+        0.8,
+        1.5,
+        0.05
+      ],
+      "position": [
+        0,
+        3.6,
+        2.25
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1851463,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "lower_center_window_glass",
+      "position": [
+        0,
+        3.6,
+        2.25
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1851463
+    },
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "lower_left_window_glass",
+      "position": [
+        -1.02,
+        3.6,
+        1.82
+      ],
+      "rotation": [
+        0,
+        -0.6,
+        0
+      ],
+      "colorKey": null,
+      "color": 1851463
+    },
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "lower_right_window_glass",
+      "position": [
+        1.02,
+        3.6,
+        1.82
+      ],
+      "rotation": [
+        0,
+        0.6,
+        0
+      ],
+      "colorKey": null,
+      "color": 1851463
+    },
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "upper_center_window_glass",
+      "position": [
+        0,
+        7.2,
+        2.15
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1851463
+    },
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "upper_left_window_glass",
+      "position": [
+        -0.92,
+        7.2,
+        1.77
+      ],
+      "rotation": [
+        0,
+        -0.6,
+        0
+      ],
+      "colorKey": null,
+      "color": 1851463
+    },
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "upper_right_window_glass",
+      "position": [
+        0.92,
+        7.2,
+        1.77
+      ],
+      "rotation": [
+        0,
+        0.6,
+        0
+      ],
+      "colorKey": null,
+      "color": 1851463
+    }
+  ]
+}

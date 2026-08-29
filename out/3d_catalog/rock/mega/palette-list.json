@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "mega",
+  "palettes": [
+    {
+      "id": "palette_617b9fc3",
+      "name": "執行期繼承配色",
+      "colors": null,
+      "objects": [
+        {
+          "key": "rock/mega_a",
+          "source": "runtime-consumer"
+        }
+      ]
+    }
+  ]
+}

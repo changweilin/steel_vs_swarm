@@ -1,0 +1,45 @@
+{
+  "id": "formation_top_block_3a8d8807",
+  "role": "formation_top_block",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+    "name": "formation_top_block",
+    "part": {
+      "name": "formation_top_block",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.614,
+      "position": [
+        0.097,
+        2.778,
+        -0.066
+      ],
+      "rotation": [
+        0.1,
+        0.2,
+        0.02
+      ],
+      "color": 2370353,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "formation_top_block",
+      "position": [
+        0.097,
+        2.778,
+        -0.066
+      ],
+      "rotation": [
+        0.1,
+        0.2,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 2370353
+    }
+  ]
+}

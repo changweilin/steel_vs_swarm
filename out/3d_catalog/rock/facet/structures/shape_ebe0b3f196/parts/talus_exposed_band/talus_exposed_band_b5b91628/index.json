@@ -1,0 +1,50 @@
+{
+  "id": "talus_exposed_band_b5b91628",
+  "role": "talus_exposed_band",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0,1|8",
+  "canonical": {
+    "objectKey": "rock/facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_55df19cd_luna_v6",
+    "name": "talus_exposed_band",
+    "part": {
+      "name": "talus_exposed_band",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        0.868,
+        1.336
+      ],
+      "height": 0.06,
+      "position": [
+        0,
+        0.405,
+        0.768
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4344656,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_55df19cd_luna_v6",
+      "name": "talus_exposed_band",
+      "position": [
+        0,
+        0.405,
+        0.768
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    }
+  ]
+}

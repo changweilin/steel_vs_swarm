@@ -1,0 +1,99 @@
+{
+  "id": "equipment_70cfd9b0",
+  "role": "equipment",
+  "type": "box",
+  "signature": "box|0.875,0.375,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_01242_a6847600_luna_v6",
+    "name": "box_freight_refrigeration_unit",
+    "part": {
+      "name": "box_freight_refrigeration_unit",
+      "type": "box",
+      "dimensions": [
+        0.52,
+        0.2,
+        0.56
+      ],
+      "position": [
+        0.116,
+        3.21,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15924223,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_01242_a6847600_luna_v6",
+      "name": "box_freight_refrigeration_unit",
+      "position": [
+        0.116,
+        3.21,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15924223
+    },
+    {
+      "objectKey": "vehicle/heavy_1208367-1024x1024_11f751d0_luna_v6",
+      "name": "box_freight_refrigeration_unit",
+      "position": [
+        0.116,
+        3.21,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "vehicle/heavy_167155193720_e0f6f03f_luna_v6",
+      "name": "box_freight_refrigeration_unit",
+      "position": [
+        0.116,
+        3.21,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "vehicle/heavy_3d-render-cargo-delivery-truck_1048-5605_47611ef6_luna_v6",
+      "name": "box_freight_refrigeration_unit",
+      "position": [
+        0.116,
+        3.21,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "brightHex",
+      "color": 15924223
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "id": "roof_3a8d8807",
+  "role": "roof",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+    "name": "hoodoo_cap_0",
+    "part": {
+      "name": "hoodoo_cap_0",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.806,
+      "position": [
+        -1.64,
+        4.098,
+        -0.2
+      ],
+      "rotation": [
+        0.1,
+        0,
+        -0.06
+      ],
+      "color": 10119749,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "name": "hoodoo_cap_0",
+      "position": [
+        -1.64,
+        4.098,
+        -0.2
+      ],
+      "rotation": [
+        0.1,
+        0,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 10119749
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+      "name": "hoodoo_cap_2",
+      "position": [
+        1.68,
+        3.703,
+        -0.16
+      ],
+      "rotation": [
+        0.1,
+        0.36,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 10119749
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0_edfd0d51_luna_v6",
+      "name": "hoodoo_cap_2",
+      "position": [
+        2.143,
+        5.379,
+        -0.281
+      ],
+      "rotation": [
+        0.1,
+        0.36,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 10119749
+    },
+    {
+      "objectKey": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+      "name": "hoodoo_cap_2",
+      "position": [
+        2.588,
+        9.746,
+        -0.784
+      ],
+      "rotation": [
+        0.1,
+        0.36,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 10119749
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": "hoodoo_debris_3a8d8807",
+  "role": "hoodoo_debris",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "hoodoo_debris_right",
+    "part": {
+      "name": "hoodoo_debris_right",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.68,
+      "position": [
+        2.68,
+        0.837,
+        0.942
+      ],
+      "rotation": [
+        -0.1,
+        0.2,
+        0.12
+      ],
+      "color": 3160123,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "hoodoo_debris_right",
+      "position": [
+        2.68,
+        0.837,
+        0.942
+      ],
+      "rotation": [
+        -0.1,
+        0.2,
+        0.12
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

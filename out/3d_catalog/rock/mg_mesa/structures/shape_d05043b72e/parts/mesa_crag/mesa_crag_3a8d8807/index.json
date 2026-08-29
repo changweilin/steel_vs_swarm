@@ -1,0 +1,109 @@
+{
+  "id": "mesa_crag_3a8d8807",
+  "role": "mesa_crag",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_7423b75e_luna_v6",
+    "name": "mesa_right_crag",
+    "part": {
+      "name": "mesa_right_crag",
+      "type": "dodecahedron_polyhedron",
+      "radius": 4.68,
+      "position": [
+        8.06,
+        8.4,
+        -2.08
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "color": 5200224,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_7423b75e_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        8.06,
+        8.4,
+        -2.08
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/mg_mesa_ov_4fd3870a-5515-45ce-a000-8b1866bfe861_0b806362_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        8.06,
+        8.4,
+        -2.08
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~0_e2518966_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        8.06,
+        8.052,
+        -2.08
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~1_bfe77c1c_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        2.844,
+        1.904,
+        -0.526
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/mg_mesa_ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69_17cc8dd8_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        8.06,
+        8.4,
+        -2.08
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

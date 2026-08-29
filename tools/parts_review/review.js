@@ -19,6 +19,11 @@
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const hexStr = (val, fallback = '888888') => {
+  if (val == null) return fallback;
+  if (typeof val === 'number') return val.toString(16).padStart(6, '0');
+  return String(val).replace('#', '').padStart(6, '0');
+};
 const n3 = (v) => (v == null ? '—' : (Math.round(v * 1000) / 1000).toString());
 const outwardWinding = (indices) => {
   const out = [...indices];
@@ -899,7 +904,7 @@ function renderList() {
   if (app.list === 'archive') return renderArchiveList();
   if (app.list !== 'nodes') return renderPhotoList();
   const rows = app.data.rows.filter(keepRow);
-  $('prList').innerHTML = rows.map((r) => {
+  const rowHtml = (r) => {
     const s = statOf(r);
     const pill = isWip(r) ? '<span class="pr-pill miss">半成品</span>'
       : r.missing ? '<span class="pr-pill miss">缺件</span>'
@@ -913,7 +918,42 @@ function renderList() {
       <div class="pr-rn"><b>${esc(r.key)}</b><span>${esc(r.consumer || '—')}</span>
         ${noteLine(r)}</div>
       ${verPill}${meth}${pill}</div>`;
-  }).join('') || '<div class="pr-dim" style="padding:12px">(這個篩選沒有結果)</div>';
+  };
+  const structured = rows.filter((r) => r.catalog);
+  const loose = rows.filter((r) => !r.catalog);
+  const categoryMap = new Map();
+  for (const row of structured) {
+    const { category, subcategory, structureId, canonicalKey } = row.catalog;
+    if (!categoryMap.has(category)) categoryMap.set(category, new Map());
+    const subMap = categoryMap.get(category);
+    if (!subMap.has(subcategory)) subMap.set(subcategory, new Map());
+    const structures = subMap.get(subcategory);
+    if (!structures.has(structureId)) structures.set(structureId, { canonicalKey, rows: [] });
+    structures.get(structureId).rows.push(row);
+  }
+  const treeHtml = [...categoryMap].sort(([a], [b]) => a.localeCompare(b)).map(([category, subMap]) => {
+    const catRows = [...subMap.values()].flatMap((structures) => [...structures.values()].flatMap((group) => group.rows));
+    const catOpen = catRows.some((row) => row.key === app.cur);
+    const subs = [...subMap].sort(([a], [b]) => a.localeCompare(b)).map(([subcategory, structures]) => {
+      const subRows = [...structures.values()].flatMap((group) => group.rows);
+      const subOpen = subRows.some((row) => row.key === app.cur);
+      const shapes = [...structures].sort(([a], [b]) => a.localeCompare(b)).map(([shapeId, group]) => {
+        const shapeOpen = group.rows.some((row) => row.key === app.cur);
+        return `<details class="pr-tree pr-tree-shape" ${shapeOpen ? 'open' : ''}>
+          <summary><span>主結構 ${esc(shapeId)}</span><i>${group.rows.length} 件</i></summary>
+          <div class="pr-tree-canonical">共用主結構：${esc(group.canonicalKey)}</div>
+          ${group.rows.sort((a, b) => a.key.localeCompare(b.key)).map(rowHtml).join('')}</details>`;
+      }).join('');
+      return `<details class="pr-tree pr-tree-sub" ${subOpen ? 'open' : ''}>
+        <summary><span>${esc(subcategory)}</span><i>${subRows.length} 件・${structures.size} 主結構</i></summary>${shapes}</details>`;
+    }).join('');
+    return `<details class="pr-tree pr-tree-cat" ${catOpen ? 'open' : ''}>
+      <summary><span>${esc(FAMILY_LABELS[category] || category)}</span><i>${catRows.length} 件・${subMap.size} 子類別</i></summary>${subs}</details>`;
+  }).join('');
+  const looseHtml = loose.length ? `<details class="pr-tree pr-tree-cat" ${loose.some((row) => row.key === app.cur) ? 'open' : ''}>
+    <summary><span>待分類／非入選物件</span><i>${loose.length} 件</i></summary>${loose.map(rowHtml).join('')}</details>` : '';
+  $('prList').innerHTML = treeHtml || looseHtml ? `${treeHtml}${looseHtml}`
+    : '<div class="pr-dim" style="padding:12px">(這個篩選沒有結果)</div>';
   for (const el of $('prList').querySelectorAll('.pr-row')) el.onclick = () => select(el.dataset.key);
 }
 
@@ -1124,12 +1164,6 @@ function featuresSection(r) {
   const asp = feat?.aspectRatio != null ? feat.aspectRatio.toFixed(2) : (r.bounds?.size ? (r.bounds.size[0] / Math.max(0.1, r.bounds.size[1])).toFixed(2) : '—');
   const colors = feat?.colors;
 
-  const hexStr = (val, fallback = '888888') => {
-    if (val == null) return fallback;
-    if (typeof val === 'number') return val.toString(16).padStart(6, '0');
-    return String(val).replace('#', '').padStart(6, '0');
-  };
-
   const colorSwatches = colors ? `
     <div style="display:flex;gap:12px;margin:8px 0;align-items:center;flex-wrap:wrap">
       ${colors.facadeHex != null ? `
@@ -1222,6 +1256,40 @@ function featuresSection(r) {
     ${colorSwatches}
     ${palettesHtml}
     ${partsList}
+  </div>`;
+}
+
+function catalogSection(r) {
+  const ref = r.catalog;
+  const sub = ref ? app.data.catalog?.subcategories?.[ref.subcategoryId] : null;
+  const structure = sub?.structures?.find((row) => row.id === ref.structureId);
+  if (!ref || !sub || !structure) {
+    return `<div class="pr-sec"><h3>樹狀型錄</h3><div class="pr-dim">尚未入選：型錄只收人眼通過或標記為 luna 直接 v6 的物件。</div></div>`;
+  }
+  const partRoles = new Map();
+  for (const group of structure.partGroups || []) {
+    if (!partRoles.has(group.role)) partRoles.set(group.role, []);
+    partRoles.get(group.role).push(group);
+  }
+  const partsHtml = [...partRoles].sort(([a], [b]) => a.localeCompare(b)).map(([role, groups]) => `
+    <details class="pr-cat-branch"><summary>${esc(role)} <i>${groups.length} 種相似形</i></summary>
+      ${groups.map((group) => `<div><code>${esc(group.id)}</code> ・ ${esc(group.type)} ・ ${group.count} 零件 / ${group.objectCount} 物件</div>`).join('')}
+    </details>`).join('') || '<div class="pr-dim">這個主結構沒有獨立的非主結構零件。</div>';
+  const palettesHtml = (sub.palettes || []).map((palette) => {
+    const colors = palette.colors;
+    const swatches = colors ? Object.entries(colors).map(([zone, color]) =>
+      `<i class="pr-cat-swatch" style="background:#${hexStr(color)}" title="${esc(zone)} #${hexStr(color)}"></i>`).join('')
+      : '<span class="pr-dim">執行期繼承</span>';
+    return `<div class="pr-cat-palette"><code>${esc(palette.id)}</code><span>${swatches}</span><i>${palette.objects.length} 物件</i></div>`;
+  }).join('');
+  return `<div class="pr-sec"><h3>樹狀型錄</h3>
+    <div class="pr-kv"><b>目錄</b><span><code>out/3d_catalog/${esc(ref.path)}</code></span></div>
+    <div class="pr-kv"><b>階層</b><span>${esc(ref.category)} → ${esc(ref.subcategory)} → ${esc(ref.structureId)}</span></div>
+    <div class="pr-kv"><b>共用主結構</b><span>${esc(ref.canonicalKey)}${ref.canonicalKey === r.key ? '（本件）' : ''}</span></div>
+    <div class="pr-kv"><b>結構相似度</b><span>${ref.similarity}% ・ 同組 ${structure.members.length} 件</span></div>
+    <details class="pr-cat-detail"><summary>非主結構零件樹 ${structure.partGroups.length} 群</summary>${partsHtml}</details>
+    <details class="pr-cat-detail"><summary>${esc(ref.category)}/${esc(ref.subcategory)} 配色清單 ${sub.palettes.length} 組</summary>
+      <div class="pr-cat-palettes">${palettesHtml}</div></details>
   </div>`;
 }
 
@@ -1471,6 +1539,7 @@ function renderBody() {
 
     <!-- 右欄: 文字說明/標籤與數據欄 (幾何規格、量測對照、生成方法、特徵報告、YOLO26數據面板) -->
     <div class="pr-col-info">
+      ${catalogSection(r)}
       ${dataSection(r)}
       ${methodSection(r)}
       ${featuresSection(r)}
@@ -1728,8 +1797,6 @@ function renderHarvest() {
     <button class="pr-hst" data-st="nodes" aria-pressed="${app.list === 'nodes'}"
       title="回到生成物清單(節點與純資料件)">生成物</button>
     ${pills}
-    <button class="pr-hst arc" data-st="archive" aria-pressed="${app.list === 'archive'}"
-      title="判過「⊘ 移除」而撤出遊戲的那些(來源圖留著)">封存區 ${app.data?.archive?.length ?? 0}</button>
     <span class="pr-grow"></span>
     ${/* 非出貨語料家 MUST 標出來 —— 它與正式語料長得一模一樣,不標的話台上兩份混在一起 */
     p?.corpus && p.corpus.shipping === false

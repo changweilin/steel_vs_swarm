@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "hoodoo",
+  "palettes": [
+    {
+      "id": "palette_c4c6a19c",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6964528,
+        "facadeHex": 10119749,
+        "baseHex": 6767665,
+        "accentHex": 12683864,
+        "glassHex": 2307908,
+        "darkHex": 4861992,
+        "brightHex": 14859137
+      },
+      "objects": [
+        {
+          "key": "rock/hoodoo_ov_929bc3d9-0f01-401b-8834-49c26d838e8b_29eeb686_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~0_edfd0d51_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/hoodoo_ov_b52fce07-6daf-4845-8385-b956cfd8fd46~1_2c0ec652_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_591236723b",
+  "canonicalKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+    "bounds": {
+      "min": [
+        -2.4,
+        0,
+        -2.1
+      ],
+      "max": [
+        2.4,
+        9.8,
+        2.35
+      ],
+      "size": [
+        4.8,
+        9.8,
+        4.45
+      ],
+      "rMax": 3.359,
+      "triangles": 582,
+      "vertices": 352
+    },
+    "parts": [
+      {
+        "name": "main_building_body",
+        "type": "box",
+        "dimensions": [
+          4.5,
+          8,
+          3
+        ],
+        "position": [
+          0,
+          5,
+          -0.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9124134,
+        "triangles": 12
+      },
+      {
+        "name": "turret_lower_cylinder",
+        "type": "cylinder",
+        "sides": 12,
+        "radii": [
+          1.5,
+          1.5
+        ],
+        "height": 4.6,
+        "position": [
+          0,
+          3.3,
+          0.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 9124134,
+        "triangles": 48
+      },
+      {
+        "name": "turret_roof_dome",
+        "type": "hemisphere_dome",
+        "radii": [
+          1.4,
+          0.8,
+          1.4
+        ],
+        "position": [
+          0,
+          8.8,
+          0.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5515044,
+        "triangles": 170
+      },
+      {
+        "name": "pediment_roof_left",
+        "type": "wedge",
+        "dimensions": [
+          1.6,
+          0.4,
+          0.4
+        ],
+        "position": [
+          -0.8,
+          1.8,
+          1.6
+        ],
+        "rotation": [
+          0,
+          0,
+          -0.25
+        ],
+        "color": 15066597,
+        "triangles": 8
+      },
+      {
+        "name": "pediment_roof_right",
+        "type": "wedge",
+        "dimensions": [
+          1.6,
+          0.4,
+          0.4
+        ],
+        "position": [
+          0.8,
+          1.8,
+          1.6
+        ],
+        "rotation": [
+          0,
+          0,
+          0.25
+        ],
+        "color": 15066597,
+        "triangles": 8
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/bld_rowhouse/building_bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_3f778cb9"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,687 @@
+{
+  "id": "wheel_tire_1531c36c",
+  "role": "wheel_tire",
+  "type": "torus_ring",
+  "signature": "torus_ring|1,1,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+    "name": "rear_wheel_tire",
+    "part": {
+      "name": "rear_wheel_tire",
+      "type": "torus_ring",
+      "radius": 0.205,
+      "tube": 0.04,
+      "position": [
+        -0.49,
+        0.245,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 2569009,
+      "triangles": 120,
+      "role": "wheel_tire"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.49,
+        0.245,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2569009
+    },
+    {
+      "objectKey": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.49,
+        0.245,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2569009
+    },
+    {
+      "objectKey": "vehicle/bike_000001_1738650793_9c52e91a_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_000001_1738650793_9c52e91a_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_110295IA-M009_L_50b4863e_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_110295IA-M009_L_50b4863e_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_12544404_O_m_94f41003_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_12544404_O_m_94f41003_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_800x (1)_4c4178d7_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_800x (1)_4c4178d7_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f5a5031f_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f5a5031f_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.55,
+        0.345,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1053206
+    },
+    {
+      "objectKey": "vehicle/bike_800x_3285847d_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.48,
+        0.27,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1581095
+    },
+    {
+      "objectKey": "vehicle/bike_800x_3285847d_luna_v6",
+      "name": "rear_wheel_left_tire",
+      "position": [
+        -0.48,
+        0.19,
+        -0.28
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1581095
+    },
+    {
+      "objectKey": "vehicle/bike_800x_3285847d_luna_v6",
+      "name": "rear_wheel_right_tire",
+      "position": [
+        -0.48,
+        0.19,
+        0.28
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1581095
+    },
+    {
+      "objectKey": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.54,
+        0.34,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2569009
+    },
+    {
+      "objectKey": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.54,
+        0.34,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2569009
+    },
+    {
+      "objectKey": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.54,
+        0.36,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2569009
+    },
+    {
+      "objectKey": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.54,
+        0.36,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2569009
+    },
+    {
+      "objectKey": "vehicle/bike_003002_1725858476_2e742f06_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_003002_1725858476_2e742f06_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_10012915_R3_m_ab011d1f_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_10012915_R3_m_ab011d1f_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_13226803_R_m_6337be00_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_13226803_R_m_6337be00_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_3827532_O_m_f5def028_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_3827532_O_m_f5def028_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 988434
+    },
+    {
+      "objectKey": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 988434
+    },
+    {
+      "objectKey": "vehicle/bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.56,
+        0.37,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1119254
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "rear_wheel_tire",
+      "position": [
+        -0.5,
+        0.255,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2569009
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "front_wheel_tire",
+      "position": [
+        0.5,
+        0.255,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2569009
+    }
+  ]
+}

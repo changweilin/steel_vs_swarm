@@ -1,0 +1,49 @@
+{
+  "id": "vegetation_top_cluster_442c6b30",
+  "role": "vegetation_top_cluster",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|1,0.625,1|0",
+  "canonical": {
+    "objectKey": "rock/main_600_0e22036ae47633cc17a7c569e53cc66f_15b601ab_v6",
+    "name": "Vegetation_Top_Cluster",
+    "part": {
+      "name": "Vegetation_Top_Cluster",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        1.8,
+        1.2,
+        1.8
+      ],
+      "position": [
+        -0.4,
+        22.8,
+        0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3822645,
+      "triangles": 160
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_600_0e22036ae47633cc17a7c569e53cc66f_15b601ab_v6",
+      "name": "Vegetation_Top_Cluster",
+      "position": [
+        -0.4,
+        22.8,
+        0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3822645
+    }
+  ]
+}

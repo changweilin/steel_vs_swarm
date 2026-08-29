@@ -1,0 +1,82 @@
+{
+  "id": "attached_tide_band_9951d699",
+  "role": "attached_tide_band",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+    "name": "attached_tide_band",
+    "part": {
+      "name": "attached_tide_band",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        1.11,
+        1.356
+      ],
+      "height": 0.307,
+      "position": [
+        0,
+        0.584,
+        0.329
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1713196,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.584,
+        0.329
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1713196
+    },
+    {
+      "objectKey": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.532,
+        0.374
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1713196
+    },
+    {
+      "objectKey": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.568,
+        0.497
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1713196
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "weathered_main_shear_0ee22146",
+  "role": "weathered_main_shear",
+  "type": "wedge",
+  "signature": "wedge|1,0.375,0.5|0",
+  "canonical": {
+    "objectKey": "rock/collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_993f4b33_luna_v6",
+    "name": "weathered_main_front_shear",
+    "part": {
+      "name": "weathered_main_front_shear",
+      "type": "wedge",
+      "dimensions": [
+        1.545,
+        0.616,
+        0.825
+      ],
+      "position": [
+        0.129,
+        1.446,
+        0.856
+      ],
+      "rotation": [
+        0.06,
+        0.1,
+        -0.08
+      ],
+      "color": 2106664,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/collapse_ov_4a7de829-1184-4b05-bf5d-427b77fc76f5_993f4b33_luna_v6",
+      "name": "weathered_main_front_shear",
+      "position": [
+        0.129,
+        1.446,
+        0.856
+      ],
+      "rotation": [
+        0.06,
+        0.1,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 2106664
+    },
+    {
+      "objectKey": "rock/collapse_ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5_c39af10b_luna_v6",
+      "name": "weathered_main_front_shear",
+      "position": [
+        0.072,
+        0.81,
+        0.486
+      ],
+      "rotation": [
+        0.06,
+        0.1,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 2106664
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "grille_9f708a42",
+  "role": "grille",
+  "type": "box",
+  "signature": "box|1,0.375,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+    "name": "front_grille",
+    "part": {
+      "name": "front_grille",
+      "type": "box",
+      "dimensions": [
+        0.6,
+        0.2,
+        0.05
+      ],
+      "position": [
+        0,
+        0.6,
+        5.22
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1315860,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "front_grille",
+      "position": [
+        0,
+        0.6,
+        5.22
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    }
+  ]
+}

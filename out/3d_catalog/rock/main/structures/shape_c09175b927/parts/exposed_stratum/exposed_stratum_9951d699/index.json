@@ -1,0 +1,130 @@
+{
+  "id": "exposed_stratum_9951d699",
+  "role": "exposed_stratum",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+    "name": "exposed_stratum_2",
+    "part": {
+      "name": "exposed_stratum_2",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        1.232,
+        1.873
+      ],
+      "height": 0.237,
+      "position": [
+        -0.137,
+        3.506,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3291453,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "exposed_stratum_2",
+      "position": [
+        -0.137,
+        3.506,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "exposed_stratum_3",
+      "position": [
+        0.137,
+        4.59,
+        0.583
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "exposed_stratum_0",
+      "position": [
+        -0.12,
+        1.019,
+        0.42
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "exposed_stratum_1",
+      "position": [
+        0.12,
+        1.845,
+        0.42
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "exposed_stratum_2",
+      "position": [
+        -0.12,
+        2.67,
+        0.42
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3291453
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "exposed_stratum_3",
+      "position": [
+        0.12,
+        3.496,
+        0.42
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "id": "fork_5f158db3",
+  "role": "fork",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|6",
+  "canonical": {
+    "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+    "name": "chopper_rake_brace",
+    "part": {
+      "name": "chopper_rake_brace",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.014,
+        0.014
+      ],
+      "height": 0.362,
+      "position": [
+        0.805,
+        0.64,
+        0
+      ],
+      "rotation": [
+        2.653,
+        1.571,
+        0
+      ],
+      "color": 13671747,
+      "triangles": 24,
+      "role": "fork"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "chopper_rake_brace",
+      "position": [
+        0.805,
+        0.64,
+        0
+      ],
+      "rotation": [
+        2.653,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 13671747
+    }
+  ]
+}

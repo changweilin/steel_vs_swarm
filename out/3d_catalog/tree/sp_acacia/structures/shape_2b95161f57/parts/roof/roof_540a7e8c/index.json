@@ -1,0 +1,97 @@
+{
+  "id": "roof_540a7e8c",
+  "role": "roof",
+  "type": "hemisphere_dome",
+  "signature": "hemisphere_dome|1,0.375,0.5|0",
+  "canonical": {
+    "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_e193c57d_luna_v6",
+    "name": "acacia_crown_7_umbrella_cap",
+    "part": {
+      "name": "acacia_crown_7_umbrella_cap",
+      "type": "hemisphere_dome",
+      "radii": [
+        0.93,
+        0.295,
+        0.502
+      ],
+      "position": [
+        1.433,
+        5.766,
+        -1.933
+      ],
+      "rotation": [
+        0.131,
+        5.35,
+        -0.042
+      ],
+      "color": 5208643,
+      "triangles": 170
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_e193c57d_luna_v6",
+      "name": "acacia_crown_7_umbrella_cap",
+      "position": [
+        1.433,
+        5.766,
+        -1.933
+      ],
+      "rotation": [
+        0.131,
+        5.35,
+        -0.042
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_1ac0914a-b376-4386-ab74-ae79d96e8485_5175fbe7_luna_v6",
+      "name": "acacia_crown_5_umbrella_cap",
+      "position": [
+        -2.153,
+        5.85,
+        -1.438
+      ],
+      "rotation": [
+        -0.115,
+        3.73,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_wc_193839561_361312fc_luna_v6",
+      "name": "acacia_crown_2_umbrella_cap",
+      "position": [
+        -0.08,
+        5.179,
+        2.785
+      ],
+      "rotation": [
+        -0.147,
+        1.6,
+        0.026
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_wc_193839561_361312fc_luna_v6",
+      "name": "acacia_crown_3_umbrella_cap",
+      "position": [
+        -1.328,
+        5.067,
+        1.708
+      ],
+      "rotation": [
+        -0.098,
+        2.232,
+        0.048
+      ],
+      "colorKey": null,
+      "color": 2640433
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "depth_anchor_3a8d8807",
+  "role": "depth_anchor",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+    "name": "altocumulus_left_depth_anchor",
+    "part": {
+      "name": "altocumulus_left_depth_anchor",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.36,
+      "position": [
+        -4.7,
+        1.55,
+        -1.98
+      ],
+      "rotation": [
+        0.14,
+        -0.2,
+        0.04
+      ],
+      "color": 9608105,
+      "triangles": 36,
+      "role": "depth_anchor",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "name": "altocumulus_left_depth_anchor",
+      "position": [
+        -4.7,
+        1.55,
+        -1.98
+      ],
+      "rotation": [
+        0.14,
+        -0.2,
+        0.04
+      ],
+      "colorKey": "baseHex",
+      "color": 9608105
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "id": "pagoda_chamber_tier_f013435a",
+  "role": "pagoda_chamber_tier",
+  "type": "box",
+  "signature": "box|0.875,0.625,1|0",
+  "canonical": {
+    "objectKey": "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d",
+    "name": "pagoda_chamber_tier_3",
+    "part": {
+      "name": "pagoda_chamber_tier_3",
+      "type": "box",
+      "dimensions": [
+        7.669,
+        5.866774193548388,
+        8.691
+      ],
+      "position": [
+        0,
+        23.185000000000002,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5607107,
+      "triangles": 12,
+      "colorKey": "facade"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_tower_ov_8811db29-201d-4640-9aa8-3deebbc7df35_1b1be50d",
+      "name": "pagoda_chamber_tier_3",
+      "position": [
+        0,
+        23.185000000000002,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "facade",
+      "color": 5607107
+    }
+  ]
+}

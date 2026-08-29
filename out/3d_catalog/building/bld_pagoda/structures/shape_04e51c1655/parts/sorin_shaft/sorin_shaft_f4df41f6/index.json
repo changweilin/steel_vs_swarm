@@ -1,0 +1,50 @@
+{
+  "id": "sorin_shaft_f4df41f6",
+  "role": "sorin_shaft",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+    "name": "sorin_shaft",
+    "part": {
+      "name": "sorin_shaft",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.15,
+        0.15
+      ],
+      "height": 4.5,
+      "position": [
+        0,
+        21.45,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16303424,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+      "name": "sorin_shaft",
+      "position": [
+        0,
+        21.45,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16303424
+    }
+  ]
+}

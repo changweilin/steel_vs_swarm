@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "category": "vehicle",
+  "subcategory": "bike",
+  "palettes": [
+    {
+      "id": "palette_3cdce13b",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 15855848,
+        "facadeHex": 14433084,
+        "baseHex": 2503997,
+        "accentHex": 5617868,
+        "glassHex": 2910580,
+        "darkHex": 1581095,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "vehicle/bike_800x_3285847d_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_8d5810e3",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7710811,
+        "facadeHex": 2502698,
+        "baseHex": 1712413,
+        "accentHex": 14214080,
+        "glassHex": 1915707,
+        "darkHex": 988434,
+        "brightHex": 15397084
+      },
+      "objects": [
+        {
+          "key": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_a4782e60",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 8896432,
+        "facadeHex": 15130320,
+        "baseHex": 6057577,
+        "accentHex": 10907472,
+        "glassHex": 2509906,
+        "darkHex": 2569009,
+        "brightHex": 16052447
+      },
+      "objects": [
+        {
+          "key": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_b6a4b4f0",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 13909813,
+        "facadeHex": 2238515,
+        "baseHex": 1382691,
+        "accentHex": 15001838,
+        "glassHex": 1583931,
+        "darkHex": 1053206,
+        "brightHex": 16052444
+      },
+      "objects": [
+        {
+          "key": "vehicle/bike_000001_1738650793_9c52e91a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_110295IA-M009_L_50b4863e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_12544404_O_m_94f41003_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_800x (1)_4c4178d7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f5a5031f_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c8f75e5f",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2502713,
+        "facadeHex": 4684401,
+        "baseHex": 1382685,
+        "accentHex": 11912386,
+        "glassHex": 1652548,
+        "darkHex": 1119254,
+        "brightHex": 15002591
+      },
+      "objects": [
+        {
+          "key": "vehicle/bike_003002_1725858476_2e742f06_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_10012915_R3_m_ab011d1f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_110296IA-M009_L_c6f0fe84_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_13226803_R_m_6337be00_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_3827532_O_m_f5def028_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_6756854_OR_m_dc7aea7e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

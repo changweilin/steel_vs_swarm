@@ -1,0 +1,195 @@
+{
+  "id": "trim_f4df41f6",
+  "role": "trim",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+    "name": "handle_stem",
+    "part": {
+      "name": "handle_stem",
+      "type": "cylinder",
+      "sides": 7,
+      "radii": [
+        0.02,
+        0.02
+      ],
+      "height": 0.255,
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "color": 1448736,
+      "triangles": 28,
+      "role": "handlebar"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 1448736
+    },
+    {
+      "objectKey": "vehicle/motor_000001_1742374978_4250286e_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 3420465
+    },
+    {
+      "objectKey": "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 1448736
+    },
+    {
+      "objectKey": "vehicle/motor_10905670_R_58b9efa4_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 1448736
+    },
+    {
+      "objectKey": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 1448736
+    },
+    {
+      "objectKey": "vehicle/motor_14074013_OR_m_15e668c8_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 1448736
+    },
+    {
+      "objectKey": "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 3420465
+    },
+    {
+      "objectKey": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 1448736
+    },
+    {
+      "objectKey": "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.365,
+        0.905,
+        0
+      ],
+      "rotation": [
+        0.197,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 1448736
+    },
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "handle_stem",
+      "position": [
+        0.55,
+        0.92,
+        0
+      ],
+      "rotation": [
+        0.083,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 3159100
+    }
+  ]
+}

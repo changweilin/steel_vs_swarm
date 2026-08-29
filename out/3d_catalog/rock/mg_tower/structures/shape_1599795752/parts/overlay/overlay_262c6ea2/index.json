@@ -1,0 +1,49 @@
+{
+  "id": "overlay_262c6ea2",
+  "role": "overlay",
+  "type": "wedge",
+  "signature": "wedge|1,0.625,0.125|0",
+  "canonical": {
+    "objectKey": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+    "name": "surface_graffiti_or_mineral_stain",
+    "part": {
+      "name": "surface_graffiti_or_mineral_stain",
+      "type": "wedge",
+      "dimensions": [
+        1.34,
+        0.777,
+        0.144
+      ],
+      "position": [
+        0.268,
+        2.497,
+        0.744
+      ],
+      "rotation": [
+        0.03,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+      "name": "surface_graffiti_or_mineral_stain",
+      "position": [
+        0.268,
+        2.497,
+        0.744
+      ],
+      "rotation": [
+        0.03,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

@@ -1,0 +1,418 @@
+{
+  "id": "dragon_candelabra_2_tip_f4df41f6",
+  "role": "dragon_candelabra_2_tip",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|8",
+  "canonical": {
+    "objectKey": "tree/gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_b609778d_luna_v6",
+    "name": "dragon_candelabra_2_tip",
+    "part": {
+      "name": "dragon_candelabra_2_tip",
+      "type": "cylinder",
+      "sides": 7,
+      "radii": [
+        0.058,
+        0.08
+      ],
+      "height": 1.381,
+      "position": [
+        -0.84,
+        4.963,
+        0.679
+      ],
+      "rotation": [
+        1.003,
+        -0.891,
+        0
+      ],
+      "color": 5584935,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_b609778d_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.84,
+        4.963,
+        0.679
+      ],
+      "rotation": [
+        1.003,
+        -0.891,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_ov_9e639bd4-0ca0-4ff9-9270-ffee5ae02aa6_2f312194_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.844,
+        6.22,
+        0.624
+      ],
+      "rotation": [
+        0.634,
+        -0.934,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233_133d6dcd_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.764,
+        5.576,
+        0.605
+      ],
+      "rotation": [
+        0.711,
+        -0.901,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_ov_f9b7d32e-f7d1-4312-9583-a9401da9228a_caa33652_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.716,
+        4.642,
+        0.59
+      ],
+      "rotation": [
+        0.914,
+        -0.882,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_119157444_9aba27af_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.976,
+        5.486,
+        0.615
+      ],
+      "rotation": [
+        0.928,
+        -1.008,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_129628116_da60337c_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.991,
+        5.152,
+        0.678
+      ],
+      "rotation": [
+        1.205,
+        -0.971,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_129628117_4f09a53d_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -1.09,
+        5.386,
+        0.707
+      ],
+      "rotation": [
+        1.022,
+        -0.995,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_129628119_97d84b9e_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -1.144,
+        5.057,
+        0.792
+      ],
+      "rotation": [
+        1.107,
+        -0.965,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_145806133~0_0b144f2f_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.767,
+        5.402,
+        0.72
+      ],
+      "rotation": [
+        0.765,
+        -0.817,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_145806133~1_0e82124c_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.831,
+        4.978,
+        0.506
+      ],
+      "rotation": [
+        0.76,
+        -1.024,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_14826433_5a0289c7_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.912,
+        6.274,
+        0.576
+      ],
+      "rotation": [
+        0.877,
+        -1.007,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_168194741_3de13669_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.766,
+        5.855,
+        0.692
+      ],
+      "rotation": [
+        0.522,
+        -0.836,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_170465060_61440e10_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -1.06,
+        5.266,
+        0.632
+      ],
+      "rotation": [
+        1.045,
+        -1.033,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_192515746_3e3d7835_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.973,
+        5.245,
+        0.697
+      ],
+      "rotation": [
+        0.986,
+        -0.949,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_29765656_1380f82d_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.817,
+        5.219,
+        0.757
+      ],
+      "rotation": [
+        0.67,
+        -0.824,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_29766035_f56426ca_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.926,
+        4.995,
+        0.623
+      ],
+      "rotation": [
+        1.054,
+        -0.978,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_31914293_badfa19f_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.843,
+        5.335,
+        0.441
+      ],
+      "rotation": [
+        0.672,
+        -1.089,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_36576288_12d9cbbc_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -1.078,
+        5.593,
+        0.625
+      ],
+      "rotation": [
+        1.163,
+        -1.045,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_43408118~0_476f1780_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.737,
+        6.001,
+        0.66
+      ],
+      "rotation": [
+        0.513,
+        -0.841,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_43408118~1_dc20500a_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.808,
+        5.643,
+        0.637
+      ],
+      "rotation": [
+        0.702,
+        -0.903,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_54027335_0193e2dc_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.979,
+        5.161,
+        0.776
+      ],
+      "rotation": [
+        1.046,
+        -0.901,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_54027346_d6988bb7_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.726,
+        4.777,
+        0.704
+      ],
+      "rotation": [
+        0.916,
+        -0.801,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_54817480_73f63f12_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.977,
+        4.96,
+        0.67
+      ],
+      "rotation": [
+        0.903,
+        -0.97,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_55064976_808197a4_luna_v6",
+      "name": "dragon_candelabra_2_tip",
+      "position": [
+        -0.818,
+        4.711,
+        0.701
+      ],
+      "rotation": [
+        0.99,
+        -0.862,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    }
+  ]
+}

@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_619fc0cb92",
+  "canonicalKey": "rock/mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_d11887e2_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_d11887e2_luna_v6",
+    "bounds": {
+      "min": [
+        -6.284,
+        0,
+        -4.6052
+      ],
+      "max": [
+        6.2977,
+        11.8549,
+        7.1115
+      ],
+      "size": [
+        12.582,
+        11.855,
+        11.717
+      ],
+      "rMax": 9.499,
+      "triangles": 498,
+      "vertices": 287
+    },
+    "parts": [
+      {
+        "name": "arch_pillar_left_lower",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.8,
+          2.307
+        ],
+        "height": 8.105,
+        "position": [
+          -3.78,
+          4.112,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "arch_pillar_left_facet",
+        "type": "icosahedron_polyhedron",
+        "radius": 2.723,
+        "position": [
+          -3.78,
+          4.377,
+          0.364
+        ],
+        "rotation": [
+          0.12,
+          -0.16,
+          0.04
+        ],
+        "color": 5200224,
+        "triangles": 20
+      },
+      {
+        "name": "arch_pillar_right_lower",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.8,
+          2.307
+        ],
+        "height": 8.105,
+        "position": [
+          3.78,
+          4.112,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 32
+      },
+      {
+        "name": "arch_pillar_right_facet",
+        "type": "icosahedron_polyhedron",
+        "radius": 2.723,
+        "position": [
+          3.78,
+          4.377,
+          0.364
+        ],
+        "rotation": [
+          0.12,
+          0.16,
+          0.04
+        ],
+        "color": 5200224,
+        "triangles": 20
+      },
+      {
+        "name": "arch_top_bridge",
+        "type": "wedge",
+        "dimensions": [
+          8.4,
+          2.876,
+          6.315
+        ],
+        "position": [
+          0,
+          10.196,
+          0
+        ],
+        "rotation": [
+          0,
+          0.02,
+          0
+        ],
+        "color": 2370353,
+        "triangles": 8
+      },
+      {
+        "name": "arch_left_keystone",
+        "type": "dodecahedron_polyhedron",
+        "radius": 1.7,
+        "position": [
+          -2.1,
+          10.196,
+          0.972
+        ],
+        "rotation": [
+          0.04,
+          -0.1,
+          0.06
+        ],
+        "color": 5602375,
+        "triangles": 36
+      },
+      {
+        "name": "arch_right_keystone",
+        "type": "icosahedron_polyhedron",
+        "radius": 1.579,
+        "position": [
+          2.24,
+          9.935,
+          0.972
+        ],
+        "rotation": [
+          -0.06,
+          0.14,
+          -0.04
+        ],
+        "color": 3160123,
+        "triangles": 20
+      },
+      {
+        "name": "arch_inner_shadow",
+        "type": "wedge",
+        "dimensions": [
+          3.78,
+          1.569,
+          0.972
+        ],
+        "position": [
+          0,
+          7.451,
+          3.279
+        ],
+        "rotation": [
+          0.02,
+          0,
+          0
+        ],
+        "color": 2106664,
+        "triangles": 8
+      },
+      {
+        "name": "arch_stratum_0",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          3.036,
+          4.493
+        ],
+        "height": 0.392,
+        "position": [
+          0,
+          3.072,
+          1.457
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3291453,
+        "triangles": 32
+      },
+      {
+        "name": "arch_stratum_1",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          2.854,
+          4.275
+        ],
+        "height": 0.392,
+        "position": [
+          0,
+          5.294,
+          1.457
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4344656,
+        "triangles": 32
+      },
+      {
+        "name": "arch_stratum_2",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          2.672,
+          4.056
+        ],
+        "height": 0.392,
+        "position": [
+          0,
+          7.516,
+          1.457
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3291453,
+        "triangles": 32
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_d11887e2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_arch/rock_rock_mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_d11887e2_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3_21877047_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_arch/rock_rock_mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3_21877047_luna_v6",
+      "similarity": 42,
+      "scale": [
+        0.5341,
+        0.43054,
+        0.35589
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    }
+  ]
+}

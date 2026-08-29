@@ -1,0 +1,52 @@
+{
+  "id": "equipment_fcc3f9ff",
+  "role": "equipment",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.875,1|8",
+  "canonical": {
+    "objectKey": "vehicle/heavy_20260514234220_58_5e037c56_luna_v6",
+    "name": "dump_hydraulic_pump",
+    "part": {
+      "name": "dump_hydraulic_pump",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.16,
+        0.16
+      ],
+      "height": 0.28,
+      "position": [
+        -2.55,
+        1.33,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 16044395,
+      "triangles": 32,
+      "role": "equipment",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_20260514234220_58_5e037c56_luna_v6",
+      "name": "dump_hydraulic_pump",
+      "position": [
+        -2.55,
+        1.33,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 16044395
+    }
+  ]
+}

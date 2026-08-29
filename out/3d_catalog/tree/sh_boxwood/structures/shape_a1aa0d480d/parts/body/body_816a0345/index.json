@@ -1,0 +1,49 @@
+{
+  "id": "body_816a0345",
+  "role": "body",
+  "type": "box",
+  "signature": "box|1,0.875,1|0",
+  "canonical": {
+    "objectKey": "tree/sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7_6b1c1574_luna_v6",
+    "name": "boxwood_dark_core",
+    "part": {
+      "name": "boxwood_dark_core",
+      "type": "box",
+      "dimensions": [
+        0.694,
+        0.578,
+        0.655
+      ],
+      "position": [
+        0,
+        2.082,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2763554,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7_6b1c1574_luna_v6",
+      "name": "boxwood_dark_core",
+      "position": [
+        0,
+        2.082,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2763554
+    }
+  ]
+}

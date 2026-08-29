@@ -1,0 +1,866 @@
+{
+  "id": "fire_platform_f_e53a3c8e",
+  "role": "fire_platform_f",
+  "type": "box",
+  "signature": "box|1,0.125,0.5|0",
+  "canonical": {
+    "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+    "name": "rear_fire_platform_f1",
+    "part": {
+      "name": "rear_fire_platform_f1",
+      "type": "box",
+      "dimensions": [
+        3.4,
+        0.22,
+        1.6
+      ],
+      "position": [
+        -5.628,
+        5.1,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1182996,
+      "triangles": 12,
+      "colorKey": "accent"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_platform_f1",
+      "position": [
+        -5.628,
+        5.1,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_platform_f2",
+      "position": [
+        -5.628,
+        8.5,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_platform_f3",
+      "position": [
+        -5.628,
+        11.9,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_platform_f4",
+      "position": [
+        -5.628,
+        15.3,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_platform_f5",
+      "position": [
+        -5.628,
+        18.7,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_platform_f6",
+      "position": [
+        -5.628,
+        22.1,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_platform_f1",
+      "position": [
+        -4.996,
+        5.1,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_platform_f2",
+      "position": [
+        -4.996,
+        8.5,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_platform_f3",
+      "position": [
+        -4.996,
+        11.9,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_platform_f4",
+      "position": [
+        -4.996,
+        15.3,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_platform_f5",
+      "position": [
+        -4.996,
+        18.7,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_platform_f6",
+      "position": [
+        -4.996,
+        22.1,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_platform_f1",
+      "position": [
+        -5.209,
+        5.1,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_platform_f2",
+      "position": [
+        -5.209,
+        8.5,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_platform_f3",
+      "position": [
+        -5.209,
+        11.9,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_platform_f4",
+      "position": [
+        -5.209,
+        15.3,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_platform_f5",
+      "position": [
+        -5.209,
+        18.7,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_platform_f6",
+      "position": [
+        -5.209,
+        22.1,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_platform_f7",
+      "position": [
+        -5.209,
+        25.5,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_platform_f1",
+      "position": [
+        -4.883,
+        5.1,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_platform_f2",
+      "position": [
+        -4.883,
+        8.5,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_platform_f3",
+      "position": [
+        -4.883,
+        11.9,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_platform_f4",
+      "position": [
+        -4.883,
+        15.3,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_platform_f5",
+      "position": [
+        -4.883,
+        18.7,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_platform_f6",
+      "position": [
+        -4.883,
+        22.1,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_platform_f7",
+      "position": [
+        -4.883,
+        25.5,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_platform_f8",
+      "position": [
+        -4.883,
+        28.9,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_platform_f1",
+      "position": [
+        -5.072,
+        5.1,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_platform_f2",
+      "position": [
+        -5.072,
+        8.5,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_platform_f3",
+      "position": [
+        -5.072,
+        11.9,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_platform_f4",
+      "position": [
+        -5.072,
+        15.3,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_platform_f5",
+      "position": [
+        -5.072,
+        18.7,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_platform_f6",
+      "position": [
+        -5.072,
+        22.1,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_platform_f7",
+      "position": [
+        -5.072,
+        25.5,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_platform_f8",
+      "position": [
+        -5.072,
+        28.9,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_platform_f1",
+      "position": [
+        -4.432,
+        5.1,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_platform_f2",
+      "position": [
+        -4.432,
+        8.5,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_platform_f3",
+      "position": [
+        -4.432,
+        11.9,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_platform_f4",
+      "position": [
+        -4.432,
+        15.3,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_platform_f5",
+      "position": [
+        -4.432,
+        18.7,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_platform_f6",
+      "position": [
+        -4.432,
+        22.1,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_platform_f7",
+      "position": [
+        -4.432,
+        25.5,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_platform_f8",
+      "position": [
+        -4.432,
+        28.9,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f1",
+      "position": [
+        -5.254,
+        5.1,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f2",
+      "position": [
+        -5.254,
+        8.5,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f3",
+      "position": [
+        -5.254,
+        11.9,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f4",
+      "position": [
+        -5.254,
+        15.3,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f5",
+      "position": [
+        -5.254,
+        18.7,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f6",
+      "position": [
+        -5.254,
+        22.1,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f7",
+      "position": [
+        -5.254,
+        25.5,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f8",
+      "position": [
+        -5.254,
+        28.9,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_platform_f9",
+      "position": [
+        -5.254,
+        32.3,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2435624
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+{
+  "id": "door_a4d6cefb",
+  "role": "door",
+  "type": "box",
+  "signature": "box|0,0.875,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_01242_a6847600_luna_v6",
+    "name": "freight_rear_door",
+    "part": {
+      "name": "freight_rear_door",
+      "type": "box",
+      "dimensions": [
+        0.045,
+        1.681,
+        1.989
+      ],
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2107955,
+      "triangles": 12,
+      "role": "cargo",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_01242_a6847600_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2107955
+    },
+    {
+      "objectKey": "vehicle/heavy_1208367-1024x1024_11f751d0_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3423298
+    },
+    {
+      "objectKey": "vehicle/heavy_167155193720_e0f6f03f_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3423298
+    },
+    {
+      "objectKey": "vehicle/heavy_3d-render-cargo-delivery-truck_1048-5605_47611ef6_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2107955
+    },
+    {
+      "objectKey": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1252909
+    },
+    {
+      "objectKey": "vehicle/heavy_000001_1776155963_1c5cb2e7_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1252909
+    },
+    {
+      "objectKey": "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_cfcd90c9_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2434859
+    },
+    {
+      "objectKey": "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_fde9c283_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2434859
+    },
+    {
+      "objectKey": "vehicle/heavy_1618404544235416926_1eadc9df_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3423298
+    },
+    {
+      "objectKey": "vehicle/heavy_a33aa25d56bf3c88be759c9623090c9b_617de547_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1383200
+    },
+    {
+      "objectKey": "vehicle/heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_17051d78_luna_v6",
+      "name": "freight_rear_door",
+      "position": [
+        -3.819,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1383200
+    }
+  ]
+}

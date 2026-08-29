@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_e537123805",
+  "canonicalKey": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+    "bounds": {
+      "min": [
+        -6.0214,
+        0,
+        -1.7175
+      ],
+      "max": [
+        6.0997,
+        7.3613,
+        1.6341
+      ],
+      "size": [
+        12.121,
+        7.361,
+        3.352
+      ],
+      "rMax": 6.315,
+      "triangles": 334,
+      "vertices": 193
+    },
+    "parts": [
+      {
+        "name": "arch_pillar_left_lower",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.499,
+          0.64
+        ],
+        "height": 5.25,
+        "position": [
+          -4.8,
+          2.685,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "arch_pillar_left_facet",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.755,
+        "position": [
+          -4.8,
+          2.835,
+          0.12
+        ],
+        "rotation": [
+          0.12,
+          -0.16,
+          0.04
+        ],
+        "color": 5200224,
+        "triangles": 20
+      },
+      {
+        "name": "arch_pillar_right_lower",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          0.499,
+          0.64
+        ],
+        "height": 5.25,
+        "position": [
+          4.8,
+          2.685,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 32
+      },
+      {
+        "name": "arch_pillar_right_facet",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.755,
+        "position": [
+          4.8,
+          2.835,
+          0.12
+        ],
+        "rotation": [
+          0.12,
+          0.16,
+          0.04
+        ],
+        "color": 5200224,
+        "triangles": 20
+      },
+      {
+        "name": "arch_top_bridge",
+        "type": "wedge",
+        "dimensions": [
+          9.6,
+          1.65,
+          2.08
+        ],
+        "position": [
+          0,
+          5.85,
+          0
+        ],
+        "rotation": [
+          0,
+          0.02,
+          0
+        ],
+        "color": 2370353,
+        "triangles": 8
+      },
+      {
+        "name": "arch_left_keystone",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.56,
+        "position": [
+          -2.4,
+          5.85,
+          0.32
+        ],
+        "rotation": [
+          0.04,
+          -0.1,
+          0.06
+        ],
+        "color": 6911354,
+        "triangles": 36
+      },
+      {
+        "name": "arch_right_keystone",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.52,
+        "position": [
+          2.56,
+          5.7,
+          0.32
+        ],
+        "rotation": [
+          -0.06,
+          0.14,
+          -0.04
+        ],
+        "color": 3160123,
+        "triangles": 20
+      },
+      {
+        "name": "arch_inner_shadow",
+        "type": "wedge",
+        "dimensions": [
+          4.32,
+          0.9,
+          0.32
+        ],
+        "position": [
+          0,
+          4.275,
+          1.08
+        ],
+        "rotation": [
+          0.02,
+          0,
+          0
+        ],
+        "color": 2106664,
+        "triangles": 8
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/tor/rock_rock_tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

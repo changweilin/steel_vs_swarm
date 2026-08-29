@@ -1,0 +1,178 @@
+{
+  "id": "glass_1f9dd0c2",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0.125,1,1|0",
+  "canonical": {
+    "objectKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+    "name": "windshield",
+    "part": {
+      "name": "windshield",
+      "type": "box",
+      "dimensions": [
+        0.035,
+        0.35,
+        0.34
+      ],
+      "position": [
+        0.5,
+        1.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "color": 1652804,
+      "triangles": 12,
+      "role": "glass"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_000001_1672123300_88ea4c82_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 1652804
+    },
+    {
+      "objectKey": "vehicle/motor_000001_1742374978_4250286e_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 2505288
+    },
+    {
+      "objectKey": "vehicle/motor_000002_1645174811_b1ef8e63_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.08,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 1652804
+    },
+    {
+      "objectKey": "vehicle/motor_10905670_R_58b9efa4_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 1652804
+    },
+    {
+      "objectKey": "vehicle/motor_11871715_O_m_8ecd286a_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 1652804
+    },
+    {
+      "objectKey": "vehicle/motor_14074013_OR_m_15e668c8_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 1652804
+    },
+    {
+      "objectKey": "vehicle/motor_14892810_OR_m_d4fb62a2_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 2505288
+    },
+    {
+      "objectKey": "vehicle/motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.04,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 1652804
+    },
+    {
+      "objectKey": "vehicle/motor_54175397571_be4ab8de90_b_22934ea5_luna_v6",
+      "name": "windshield",
+      "position": [
+        0.5,
+        1.08,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.18
+      ],
+      "colorKey": null,
+      "color": 1652804
+    }
+  ]
+}

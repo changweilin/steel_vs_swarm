@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "sp_cypress",
+  "palettes": [
+    {
+      "id": "palette_85181bc7",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1588523,
+        "facadeHex": 3499334,
+        "baseHex": 4928552,
+        "accentHex": 7246431,
+        "glassHex": 1976635,
+        "darkHex": 1911587,
+        "brightHex": 10268535
+      },
+      "objects": [
+        {
+          "key": "tree/sp_cypress_ov_4b111732-01e7-4037-bfb5-1bed4585568a_257ef9be_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~0_b94f0386_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/sp_cypress_ov_9038f277-f09a-4b4e-a391-fd028ad6b0ab~1_cea8b537_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

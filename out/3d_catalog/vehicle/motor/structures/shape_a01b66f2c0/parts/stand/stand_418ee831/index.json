@@ -1,0 +1,51 @@
+{
+  "id": "stand_418ee831",
+  "role": "stand",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|6",
+  "canonical": {
+    "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+    "name": "kickstand",
+    "part": {
+      "name": "kickstand",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.012,
+        0.012
+      ],
+      "height": 0.403,
+      "position": [
+        -0.185,
+        0.218,
+        0.15
+      ],
+      "rotation": [
+        2.706,
+        -1.571,
+        0
+      ],
+      "color": 3159100,
+      "triangles": 24,
+      "role": "stand"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_165019503901_c719b559_luna_v6",
+      "name": "kickstand",
+      "position": [
+        -0.185,
+        0.218,
+        0.15
+      ],
+      "rotation": [
+        2.706,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 3159100
+    }
+  ]
+}

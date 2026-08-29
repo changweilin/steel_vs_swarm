@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d9ed30f997",
+  "canonicalKey": "tree/snag_a",
+  "mainStructure": {
+    "kind": "runtime-reference",
+    "sourceKey": "tree/snag_a",
+    "bounds": null,
+    "parts": []
+  },
+  "members": [
+    {
+      "key": "tree/snag_a",
+      "selection": "approved",
+      "method": null,
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": null,
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_ed80279a"
+      ]
+    }
+  ]
+}

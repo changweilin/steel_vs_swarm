@@ -1,0 +1,657 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_ce2ac9d935",
+  "canonicalKey": "vehicle/heavy_image_1740103474992_00815e4a_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "vehicle/heavy_image_1740103474992_00815e4a_v6",
+    "bounds": {
+      "min": [
+        -5.17,
+        0,
+        -1.25
+      ],
+      "max": [
+        3.9,
+        3.4,
+        1.25
+      ],
+      "size": [
+        9.07,
+        3.4,
+        2.5
+      ],
+      "rMax": 5.319,
+      "triangles": 668,
+      "vertices": 376
+    },
+    "parts": [
+      {
+        "name": "cab_body",
+        "type": "box",
+        "dimensions": [
+          1.8,
+          1.8,
+          2
+        ],
+        "position": [
+          -4.2,
+          1.3,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2029584,
+        "triangles": 12
+      },
+      {
+        "name": "chassis_base",
+        "type": "box",
+        "dimensions": [
+          7.8,
+          0.6,
+          2.1
+        ],
+        "position": [
+          -0.5,
+          0.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2039588,
+        "triangles": 12
+      },
+      {
+        "name": "container_body",
+        "type": "box",
+        "dimensions": [
+          6.8,
+          2.2,
+          2.3
+        ],
+        "position": [
+          0.5,
+          2.3,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2029584,
+        "triangles": 12
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "vehicle/heavy_image_1740103474992_00815e4a_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_heavy_image_1740103474992_v6",
+      "similarity": 80,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_06894d18"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_2021070912244646524316_56c23978_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_2021070912244646524316_56c23978_luna_v6",
+      "similarity": 68,
+      "scale": [
+        1.34542,
+        0.98059,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_67342910-48b4-49b9-b2ab-bfd617a28c76_c2587f9c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_67342910-48b4-49b9-b2ab-bfd617a28c76_c2587f9c_luna_v6",
+      "similarity": 68,
+      "scale": [
+        1.34542,
+        0.98059,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_7car-201702220825-1_61cdd88b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_7car-201702220825-1_61cdd88b_luna_v6",
+      "similarity": 68,
+      "scale": [
+        1.34542,
+        0.98059,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_car_a58be0ee_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_car_a58be0ee_luna_v6",
+      "similarity": 68,
+      "scale": [
+        1.34542,
+        0.98059,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_photooriginal-2760150-ffEPQ_0dca381c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_photooriginal-2760150-ffEPQ_0dca381c_luna_v6",
+      "similarity": 68,
+      "scale": [
+        1.34542,
+        0.98059,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_規格表3大圖合for官網_b6a06ed0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy__3_for__b6a06ed0_luna_v6",
+      "similarity": 68,
+      "scale": [
+        1.34542,
+        0.98059,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_20160119121809449_b987405b_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_20160119121809449_b987405b_luna_v6",
+      "similarity": 69,
+      "scale": [
+        1.34542,
+        0.99118,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_20250917103436615_3c5db894_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_20250917103436615_3c5db894_luna_v6",
+      "similarity": 69,
+      "scale": [
+        1.34542,
+        0.99118,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_文境旅遊-賓士豪華大客車-5_c5cbdaf5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy__-_-5_c5cbdaf5_luna_v6",
+      "similarity": 69,
+      "scale": [
+        1.34542,
+        0.99118,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_be79edca"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_01242_a6847600_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_01242_a6847600_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_fb43fa73"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_1208367-1024x1024_11f751d0_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_1208367-1024x1024_11f751d0_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_1ff892d3"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_167155193720_e0f6f03f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_167155193720_e0f6f03f_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_1ff892d3"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_3d-render-cargo-delivery-truck_1048-5605_47611ef6_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_3d-render-cargo-delivery-truck_1048-5605_47611ef6_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_fb43fa73"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_000001_1706597927_78326e0e_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_d9701a77"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_000001_1776155963_1c5cb2e7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_000001_1776155963_1c5cb2e7_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_d9701a77"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_d2462cec993f618a_30498ed7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_d2462cec993f618a_30498ed7_luna_v6",
+      "similarity": 66,
+      "scale": [
+        1.0366,
+        1.15706,
+        1.438
+      ],
+      "paletteIds": [
+        "palette_ffef2281"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP_a03e65f8_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_l5zF0cXNkZuRpJnNw1D9AZTV0dKP_a03e65f8_luna_v6",
+      "similarity": 66,
+      "scale": [
+        1.0366,
+        1.15706,
+        1.438
+      ],
+      "paletteIds": [
+        "palette_ffef2281"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_photooriginal-98016-XUIGz_15f63811_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_photooriginal-98016-XUIGz_15f63811_luna_v6",
+      "similarity": 66,
+      "scale": [
+        1.0366,
+        1.15706,
+        1.438
+      ],
+      "paletteIds": [
+        "palette_ffef2281"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_cfcd90c9_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_250px-Peterbilt_tractor-trailer_rig__Loveland__Colorado_cfcd90c9_luna_v6",
+      "similarity": 89,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_29f0394e"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_long-haul-semi-truck-on-260nw-2742073731_fde9c283_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_long-haul-semi-truck-on-260nw-2742073731_fde9c283_luna_v6",
+      "similarity": 89,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_29f0394e"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_1618404544235416926_1eadc9df_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_1618404544235416926_1eadc9df_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_1ff892d3"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_a33aa25d56bf3c88be759c9623090c9b_617de547_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_a33aa25d56bf3c88be759c9623090c9b_617de547_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_5db41e46"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_17051d78_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_big-truck-semitrailer-mockup-transportation-260nw-2623868179_17051d78_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_5db41e46"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_20260514234220_58_5e037c56_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_20260514234220_58_5e037c56_luna_v6",
+      "similarity": 66,
+      "scale": [
+        1.0366,
+        1.15706,
+        1.438
+      ],
+      "paletteIds": [
+        "palette_ffef2281"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_4d54f379-07b7-453d-9e45-5fa076db88df_3199e89d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_4d54f379-07b7-453d-9e45-5fa076db88df_3199e89d_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.97056,
+        1.27882,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_b8ee2367"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_5126f791-8473-4ae4-b729-525c496362fd_5bb8acbb_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_5126f791-8473-4ae4-b729-525c496362fd_5bb8acbb_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.97056,
+        1.27882,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_b8ee2367"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2_d18c916a_luna_v6",
+      "similarity": 65,
+      "scale": [
+        1.14686,
+        1.57559,
+        1.338
+      ],
+      "paletteIds": [
+        "palette_ffef2281"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_af5effb1-231f-4d00-b789-084fd2d60294_83be02b6_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.97056,
+        1.27882,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_b8ee2367"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_CSPV-02_01_5ef67224_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_CSPV-02_01_5ef67224_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.97056,
+        1.27882,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_b8ee2367"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_115576297_ebf74e1a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_115576297_ebf74e1a_luna_v6",
+      "similarity": 69,
+      "scale": [
+        1.05865,
+        1.32294,
+        1.278
+      ],
+      "paletteIds": [
+        "palette_fb43fa73"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_48390093819aa890_5a1855fd_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_48390093819aa890_5a1855fd_luna_v6",
+      "similarity": 66,
+      "scale": [
+        1.0366,
+        1.15706,
+        1.438
+      ],
+      "paletteIds": [
+        "palette_7f75a67a"
+      ]
+    },
+    {
+      "key": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6",
+      "similarity": 78,
+      "scale": [
+        1.14686,
+        1.57559,
+        1.338
+      ],
+      "paletteIds": [
+        "palette_0ee1cc4f"
+      ]
+    }
+  ]
+}

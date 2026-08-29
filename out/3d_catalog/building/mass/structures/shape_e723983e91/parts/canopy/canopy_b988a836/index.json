@@ -1,0 +1,50 @@
+{
+  "id": "canopy_b988a836",
+  "role": "canopy",
+  "type": "cone",
+  "signature": "cone|0.875,1,0.875|8",
+  "canonical": {
+    "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+    "name": "tree_canopy_3",
+    "part": {
+      "name": "tree_canopy_3",
+      "type": "cone",
+      "sides": 7,
+      "radii": [
+        0.001,
+        0.42
+      ],
+      "height": 1,
+      "position": [
+        0.9,
+        2.3,
+        4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "tree_canopy_3",
+      "position": [
+        0.9,
+        2.3,
+        4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "id": "overlay_3a8d8807",
+  "role": "overlay",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+    "name": "congestus_inner_gap_fill_dode_0",
+    "part": {
+      "name": "congestus_inner_gap_fill_dode_0",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.36,
+      "position": [
+        0.02,
+        2.58,
+        0.5
+      ],
+      "rotation": [
+        0.08,
+        0,
+        0.05
+      ],
+      "color": 2897218,
+      "triangles": 36,
+      "role": "inner_shadow_lobe",
+      "colorKey": "darkHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_inner_gap_fill_dode_0",
+      "position": [
+        0.02,
+        2.58,
+        0.5
+      ],
+      "rotation": [
+        0.08,
+        0,
+        0.05
+      ],
+      "colorKey": "darkHex",
+      "color": 2897218
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_inner_gap_fill_dode_2",
+      "position": [
+        -0.34,
+        4.06,
+        0.34
+      ],
+      "rotation": [
+        0.08,
+        0.54,
+        0.05
+      ],
+      "colorKey": "darkHex",
+      "color": 2897218
+    }
+  ]
+}

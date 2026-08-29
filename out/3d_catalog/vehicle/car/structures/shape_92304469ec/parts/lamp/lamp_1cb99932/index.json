@@ -1,0 +1,67 @@
+{
+  "id": "lamp_1cb99932",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|0,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+    "name": "tech_front_light_bar",
+    "part": {
+      "name": "tech_front_light_bar",
+      "type": "box",
+      "dimensions": [
+        0.035,
+        0.08,
+        1.141
+      ],
+      "position": [
+        2.32,
+        0.98,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 7525841,
+      "triangles": 12,
+      "role": "lamp",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_0626fa11-e77d-47dd-a38c-0d5441425c53_1bc53033_luna_v6",
+      "name": "tech_front_light_bar",
+      "position": [
+        2.32,
+        0.98,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 7525841
+    },
+    {
+      "objectKey": "vehicle/car_qaOZnp2Y26im18zO1A_2175e6bf_luna_v6",
+      "name": "urban_rear_lightbar",
+      "position": [
+        -2.425,
+        1.16,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 12445424
+    }
+  ]
+}

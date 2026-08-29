@@ -1,0 +1,45 @@
+{
+  "id": "weathered_shoulder_90208908",
+  "role": "weathered_shoulder",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+    "name": "left_weathered_shoulder",
+    "part": {
+      "name": "left_weathered_shoulder",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.773,
+      "position": [
+        -1.032,
+        1.735,
+        0.105
+      ],
+      "rotation": [
+        0.18,
+        -0.12,
+        0.12
+      ],
+      "color": 3160123,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+      "name": "left_weathered_shoulder",
+      "position": [
+        -1.032,
+        1.735,
+        0.105
+      ],
+      "rotation": [
+        0.18,
+        -0.12,
+        0.12
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

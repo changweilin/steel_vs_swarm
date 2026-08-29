@@ -1,0 +1,50 @@
+{
+  "id": "vw_logo_e8ad97a6",
+  "role": "vw_logo",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.125,1|24",
+  "canonical": {
+    "objectKey": "vehicle/car_7car-202401030308-3_38a5ca9a_v6",
+    "name": "front_vw_logo",
+    "part": {
+      "name": "front_vw_logo",
+      "type": "cylinder",
+      "sides": 24,
+      "radii": [
+        0.25,
+        0.25
+      ],
+      "height": 0.05,
+      "position": [
+        0,
+        1.1,
+        2.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14540253,
+      "triangles": 96
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_7car-202401030308-3_38a5ca9a_v6",
+      "name": "front_vw_logo",
+      "position": [
+        0,
+        1.1,
+        2.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14540253
+    }
+  ]
+}

@@ -1,0 +1,502 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "main",
+  "palettes": [
+    {
+      "id": "palette_019d9ac9",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 4210752,
+        "facadeHex": 3289650,
+        "baseHex": 1973790,
+        "accentHex": 5263440,
+        "glassHex": 1315860,
+        "darkHex": 1315860,
+        "brightHex": 6579300
+      },
+      "objects": [
+        {
+          "key": "rock/main_IMG_7081_93833aba_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_23a0147a",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 9868950,
+        "baseHex": 6579300,
+        "accentHex": 12500670,
+        "glassHex": 4210752,
+        "darkHex": 3947580,
+        "brightHex": 13158600
+      },
+      "objects": [
+        {
+          "key": "rock/main_images (3)_5dece30a_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_3a747a57",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3164984,
+        "facadeHex": 6123602,
+        "baseHex": 5065016,
+        "accentHex": 8361565,
+        "glassHex": 1587510,
+        "darkHex": 2699048,
+        "brightHex": 11647370
+      },
+      "objects": [
+        {
+          "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_e5540b76_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_535e331a",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 8553090,
+        "facadeHex": 7895160,
+        "baseHex": 4605510,
+        "accentHex": 9868950,
+        "glassHex": 32903,
+        "darkHex": 2105376,
+        "brightHex": 11184810
+      },
+      "objects": [
+        {
+          "key": "rock/main_d087b40c-1b1a-4f8a-a620-c0aafe41056d_749bd224_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_55892a97",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 11149363,
+        "facadeHex": 10237970,
+        "baseHex": 4337440,
+        "accentHex": 11822168,
+        "glassHex": 3033182,
+        "darkHex": 2038031,
+        "brightHex": 14211288
+      },
+      "objects": [
+        {
+          "key": "rock/main_69353_01_abb820ea_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_59845035",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 8421504,
+        "facadeHex": 6316128,
+        "baseHex": 4210752,
+        "accentHex": 10526880,
+        "glassHex": 3355443,
+        "darkHex": 2105376,
+        "brightHex": 12632256
+      },
+      "objects": [
+        {
+          "key": "rock/main_images rock (1)~1_113c241e_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_64959f26",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6964528,
+        "facadeHex": 10119749,
+        "baseHex": 6767665,
+        "accentHex": 5602375,
+        "glassHex": 2307908,
+        "darkHex": 4861992,
+        "brightHex": 10467954
+      },
+      "objects": [
+        {
+          "key": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_67fe2cff",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7895160,
+        "facadeHex": 6579300,
+        "baseHex": 3947580,
+        "accentHex": 9868950,
+        "glassHex": 32985,
+        "darkHex": 2631720,
+        "brightHex": 11842740
+      },
+      "objects": [
+        {
+          "key": "rock/main_images~1_fc359b00_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_6cd1db18",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7232338,
+        "facadeHex": 6572885,
+        "baseHex": 4340798,
+        "accentHex": 8876159,
+        "glassHex": 3233385,
+        "darkHex": 2501923,
+        "brightHex": 11842740
+      },
+      "objects": [
+        {
+          "key": "rock/main_id14796060-shutterstock_783352309~0_65ec3042_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_6e4171e1",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 11184810,
+        "facadeHex": 5921370,
+        "baseHex": 3289650,
+        "accentHex": 8421504,
+        "glassHex": 2112423,
+        "darkHex": 1973790,
+        "brightHex": 13421772
+      },
+      "objects": [
+        {
+          "key": "rock/main_large-heavy-rock-stone-isolated-on-background-png_1e942906_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_6eb3d89d",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 4342338,
+        "facadeHex": 3881787,
+        "baseHex": 2303531,
+        "accentHex": 6579304,
+        "glassHex": 3298835,
+        "darkHex": 1447446,
+        "brightHex": 9868950
+      },
+      "objects": [
+        {
+          "key": "rock/main_images rock (1)~2_18dc0971_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_8b1e3742",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 5602375,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 10467954
+      },
+      "objects": [
+        {
+          "key": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_132 images_a068c0cc_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_132_0da6c49f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_61bc69c388977_976e3200_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_61bc69d997822_24ae0dc8_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_Ballinagree_6e5f4893_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_images (2)_56b743a2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_images (6)_fd534896_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_miyako-146_a92c86ba_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_9dd475bd",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 11118485,
+        "facadeHex": 9408643,
+        "baseHex": 7434079,
+        "accentHex": 12434313,
+        "glassHex": 3355443,
+        "darkHex": 4605510,
+        "brightHex": 13421772
+      },
+      "objects": [
+        {
+          "key": "rock/main_images 132_9d5b4c6e_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_ab574ebc",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 13816528,
+        "facadeHex": 9868950,
+        "baseHex": 6579300,
+        "accentHex": 11842740,
+        "glassHex": 4543595,
+        "darkHex": 3947580,
+        "brightHex": 15790320
+      },
+      "objects": [
+        {
+          "key": "rock/main_45523a13a3e80fe783a5b65867b29c15_2c3515ae_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c37ca1af",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 6911354,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 11187637
+      },
+      "objects": [
+        {
+          "key": "rock/main_1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0_919d329f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_1586238562_48266950_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_id14796060-shutterstock_783352309~1_80a40c51_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_image-1-206_1ca054a2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_images (1)_88ee1ac8_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_images (4)_1eb4a48a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_images (5)_ba4fb3a0_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_images (7)_fd2b4348_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_images rock (1)~0_fd270a13_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_images rock_15704dbb_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_pngtree-big-boulder-transparent-png-image_13387881_08d60c0a_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c4c6a19c",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6964528,
+        "facadeHex": 10119749,
+        "baseHex": 6767665,
+        "accentHex": 12683864,
+        "glassHex": 2307908,
+        "darkHex": 4861992,
+        "brightHex": 14859137
+      },
+      "objects": [
+        {
+          "key": "rock/main_南犹他州巨岩山-164605945~0_89533efb_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/main_php1uNn7p_1d49d066_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c503e4ee",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3822645,
+        "facadeHex": 5262438,
+        "baseHex": 2632221,
+        "accentHex": 3432757,
+        "glassHex": 2831200,
+        "darkHex": 1973790,
+        "brightHex": 8421504
+      },
+      "objects": [
+        {
+          "key": "rock/main_600_0e22036ae47633cc17a7c569e53cc66f_15b601ab_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_cdae816d",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 14258770,
+        "facadeHex": 13732410,
+        "baseHex": 11043394,
+        "accentHex": 15515784,
+        "glassHex": 40960,
+        "darkHex": 4600609,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "rock/main_20211010001701_88fab0a9_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_d38b6306",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 8421504,
+        "facadeHex": 6316128,
+        "baseHex": 4210752,
+        "accentHex": 10526880,
+        "glassHex": 3158064,
+        "darkHex": 2105376,
+        "brightHex": 12632256
+      },
+      "objects": [
+        {
+          "key": "rock/main_71W8rWv9TvL._AC_UF894,1000_QL80__a90fdaaf_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_de8a6d4e",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 7368816,
+        "facadeHex": 6579300,
+        "baseHex": 4016156,
+        "accentHex": 9211020,
+        "glassHex": 3355443,
+        "darkHex": 2631720,
+        "brightHex": 11184810
+      },
+      "objects": [
+        {
+          "key": "rock/main_images~0_3d1d941b_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_e0f0e52f",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 12500670,
+        "facadeHex": 8421504,
+        "baseHex": 4210752,
+        "accentHex": 10526880,
+        "glassHex": 3355443,
+        "darkHex": 2105376,
+        "brightHex": 14540253
+      },
+      "objects": [
+        {
+          "key": "rock/main_714USfuK4oL._AC_UF894,1000_QL80__a47ac400_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

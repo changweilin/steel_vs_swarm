@@ -1,0 +1,50 @@
+{
+  "id": "canopy_85bddb02",
+  "role": "canopy",
+  "type": "wedge",
+  "signature": "wedge|1,0,0.375|0",
+  "canonical": {
+    "objectKey": "building/mass_images (13)_483e2aac",
+    "name": "grand_entrance_canopy",
+    "part": {
+      "name": "grand_entrance_canopy",
+      "type": "wedge",
+      "dimensions": [
+        12.789,
+        0.4,
+        4.5
+      ],
+      "position": [
+        0,
+        4.8,
+        14.13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2795960,
+      "triangles": 8,
+      "colorKey": "accent"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_images (13)_483e2aac",
+      "name": "grand_entrance_canopy",
+      "position": [
+        0,
+        4.8,
+        14.13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 2795960
+    }
+  ]
+}

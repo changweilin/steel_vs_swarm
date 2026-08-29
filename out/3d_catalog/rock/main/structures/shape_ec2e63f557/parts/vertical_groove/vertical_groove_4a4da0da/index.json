@@ -1,0 +1,82 @@
+{
+  "id": "vertical_groove_4a4da0da",
+  "role": "vertical_groove",
+  "type": "cylinder",
+  "signature": "cylinder|0.25,1,0.25|6",
+  "canonical": {
+    "objectKey": "rock/main_69353_01_abb820ea_v6",
+    "name": "vertical_groove_1",
+    "part": {
+      "name": "vertical_groove_1",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        2.5,
+        3.5
+      ],
+      "height": 26,
+      "position": [
+        -10,
+        16,
+        14
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2038031,
+      "triangles": 24
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_69353_01_abb820ea_v6",
+      "name": "vertical_groove_1",
+      "position": [
+        -10,
+        16,
+        14
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2038031
+    },
+    {
+      "objectKey": "rock/main_69353_01_abb820ea_v6",
+      "name": "vertical_groove_2",
+      "position": [
+        5,
+        17,
+        15
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2038031
+    },
+    {
+      "objectKey": "rock/main_69353_01_abb820ea_v6",
+      "name": "vertical_groove_3",
+      "position": [
+        16,
+        15,
+        8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2038031
+    }
+  ]
+}

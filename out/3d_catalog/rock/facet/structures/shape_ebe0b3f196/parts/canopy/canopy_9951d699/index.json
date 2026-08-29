@@ -1,0 +1,82 @@
+{
+  "id": "canopy_9951d699",
+  "role": "canopy",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+    "name": "attached_lichen_canopy_polyhedron",
+    "part": {
+      "name": "attached_lichen_canopy_polyhedron",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.723,
+        1.373
+      ],
+      "height": 0.364,
+      "position": [
+        -0.217,
+        4.855,
+        -0.093
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6717267,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.217,
+        4.855,
+        -0.093
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    },
+    {
+      "objectKey": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.268,
+        5.187,
+        -0.124
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    },
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~2_4ff4c0fb_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.115,
+        2.595,
+        -0.061
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    }
+  ]
+}

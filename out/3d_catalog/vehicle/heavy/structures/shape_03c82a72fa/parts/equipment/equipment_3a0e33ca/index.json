@@ -1,0 +1,52 @@
+{
+  "id": "equipment_3a0e33ca",
+  "role": "equipment",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|8",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "mixer_chute_support",
+    "part": {
+      "name": "mixer_chute_support",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.055,
+        0.055
+      ],
+      "height": 2.05,
+      "position": [
+        -3.082,
+        2.4,
+        0
+      ],
+      "rotation": [
+        3.046,
+        -1.571,
+        0
+      ],
+      "color": 15910190,
+      "triangles": 32,
+      "role": "equipment",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "mixer_chute_support",
+      "position": [
+        -3.082,
+        2.4,
+        0
+      ],
+      "rotation": [
+        3.046,
+        -1.571,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15910190
+    }
+  ]
+}

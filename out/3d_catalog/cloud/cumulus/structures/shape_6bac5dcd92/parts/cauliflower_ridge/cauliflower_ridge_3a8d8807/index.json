@@ -1,0 +1,191 @@
+{
+  "id": "cauliflower_ridge_3a8d8807",
+  "role": "cauliflower_ridge",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+    "name": "cumulus_cauliflower_ridge_0_soft_0",
+    "part": {
+      "name": "cumulus_cauliflower_ridge_0_soft_0",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.258,
+      "position": [
+        -3.064,
+        2.095,
+        0.211
+      ],
+      "rotation": [
+        0.06,
+        -0.2,
+        0.021
+      ],
+      "color": 11452373,
+      "triangles": 36,
+      "role": "cauliflower_ridge",
+      "colorKey": "roofHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_0_soft_0",
+      "position": [
+        -3.064,
+        2.095,
+        0.211
+      ],
+      "rotation": [
+        0.06,
+        -0.2,
+        0.021
+      ],
+      "colorKey": "roofHex",
+      "color": 11452373
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_0_soft_2",
+      "position": [
+        -2.379,
+        2.204,
+        0.32
+      ],
+      "rotation": [
+        0.06,
+        0.34,
+        0.021
+      ],
+      "colorKey": "roofHex",
+      "color": 11452373
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_1_soft_0",
+      "position": [
+        -1.771,
+        2.278,
+        0.063
+      ],
+      "rotation": [
+        0.06,
+        -0.1,
+        -0.021
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_1_soft_2",
+      "position": [
+        -1.076,
+        2.303,
+        0.102
+      ],
+      "rotation": [
+        0.06,
+        0.44,
+        -0.021
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_2_soft_0",
+      "position": [
+        -0.474,
+        2.095,
+        -0.085
+      ],
+      "rotation": [
+        0.06,
+        0,
+        0.021
+      ],
+      "colorKey": "roofHex",
+      "color": 11452373
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_2_soft_2",
+      "position": [
+        0.225,
+        2.204,
+        -0.115
+      ],
+      "rotation": [
+        0.06,
+        0.54,
+        0.021
+      ],
+      "colorKey": "roofHex",
+      "color": 11452373
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_3_soft_0",
+      "position": [
+        0.819,
+        2.278,
+        0.367
+      ],
+      "rotation": [
+        0.06,
+        0.1,
+        -0.021
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_3_soft_2",
+      "position": [
+        1.514,
+        2.303,
+        0.268
+      ],
+      "rotation": [
+        0.06,
+        0.64,
+        -0.021
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_4_soft_0",
+      "position": [
+        2.066,
+        2.095,
+        0.219
+      ],
+      "rotation": [
+        0.06,
+        0.2,
+        0.021
+      ],
+      "colorKey": "roofHex",
+      "color": 11452373
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauliflower_ridge_4_soft_2",
+      "position": [
+        2.751,
+        2.204,
+        0.05
+      ],
+      "rotation": [
+        0.06,
+        0.74,
+        0.021
+      ],
+      "colorKey": "roofHex",
+      "color": 11452373
+    }
+  ]
+}

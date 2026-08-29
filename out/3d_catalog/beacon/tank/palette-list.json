@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "category": "beacon",
+  "subcategory": "tank",
+  "palettes": [
+    {
+      "id": "palette_a294846d",
+      "name": "執行期繼承配色",
+      "colors": null,
+      "objects": [
+        {
+          "key": "beacon/tank",
+          "source": "runtime-consumer"
+        }
+      ]
+    }
+  ]
+}

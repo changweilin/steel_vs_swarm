@@ -1,0 +1,67 @@
+{
+  "id": "equipment_2595e9e8",
+  "role": "equipment",
+  "type": "box",
+  "signature": "box|1,0,0|0",
+  "canonical": {
+    "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+    "name": "rugged_fender_cladding_left",
+    "part": {
+      "name": "rugged_fender_cladding_left",
+      "type": "box",
+      "dimensions": [
+        2.28,
+        0.1,
+        0.065
+      ],
+      "position": [
+        -0.08,
+        0.59,
+        -0.976
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 13030523,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "name": "rugged_fender_cladding_left",
+      "position": [
+        -0.08,
+        0.59,
+        -0.976
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13030523
+    },
+    {
+      "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "name": "rugged_fender_cladding_right",
+      "position": [
+        -0.08,
+        0.59,
+        0.976
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13030523
+    }
+  ]
+}

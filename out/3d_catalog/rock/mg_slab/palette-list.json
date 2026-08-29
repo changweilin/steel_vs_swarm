@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "mg_slab",
+  "palettes": [
+    {
+      "id": "palette_c37ca1af",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 6911354,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 11187637
+      },
+      "objects": [
+        {
+          "key": "rock/mg_slab_ov_4c5bc00a-719f-43ae-85a1-a02c4fb10c0f_7ca2bda5_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

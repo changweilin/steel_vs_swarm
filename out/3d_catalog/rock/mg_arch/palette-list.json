@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "mg_arch",
+  "palettes": [
+    {
+      "id": "palette_8b1e3742",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 5602375,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 10467954
+      },
+      "objects": [
+        {
+          "key": "rock/mg_arch_ov_95d9c227-032e-415a-8ae3-2faea55fead7_d11887e2_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/mg_arch_ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3_21877047_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_fe76ac08",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 8546870,
+        "facadeHex": 6378553,
+        "baseHex": 3616550,
+        "accentHex": 11043435,
+        "glassHex": 3033189,
+        "darkHex": 2039583,
+        "brightHex": 14534595
+      },
+      "objects": [
+        {
+          "key": "rock/mg_arch_ov_c7a58b73-0787-4153-9dca-1a6fb3a3bf40_19d878c1_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

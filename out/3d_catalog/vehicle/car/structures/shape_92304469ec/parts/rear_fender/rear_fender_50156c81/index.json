@@ -1,0 +1,65 @@
+{
+  "id": "rear_fender_50156c81",
+  "role": "rear_fender",
+  "type": "box",
+  "signature": "box|0.375,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+    "name": "left_rear_fender",
+    "part": {
+      "name": "left_rear_fender",
+      "type": "box",
+      "dimensions": [
+        0.4,
+        0.15,
+        1
+      ],
+      "position": [
+        -0.95,
+        0.65,
+        -1.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1644825,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+      "name": "left_rear_fender",
+      "position": [
+        -0.95,
+        0.65,
+        -1.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1644825
+    },
+    {
+      "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+      "name": "right_rear_fender",
+      "position": [
+        0.95,
+        0.65,
+        -1.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1644825
+    }
+  ]
+}

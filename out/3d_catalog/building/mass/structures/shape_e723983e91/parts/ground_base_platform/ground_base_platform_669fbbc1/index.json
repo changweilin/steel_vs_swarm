@@ -1,0 +1,49 @@
+{
+  "id": "ground_base_platform_669fbbc1",
+  "role": "ground_base_platform",
+  "type": "box",
+  "signature": "box|0.75,0,1|0",
+  "canonical": {
+    "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+    "name": "ground_base_platform",
+    "part": {
+      "name": "ground_base_platform",
+      "type": "box",
+      "dimensions": [
+        8.4,
+        0.4,
+        10.4
+      ],
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1052688,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+      "name": "ground_base_platform",
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1052688
+    }
+  ]
+}

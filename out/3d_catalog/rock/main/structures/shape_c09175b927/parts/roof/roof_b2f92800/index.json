@@ -1,0 +1,50 @@
+{
+  "id": "roof_b2f92800",
+  "role": "roof",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.25,1|8",
+  "canonical": {
+    "objectKey": "rock/main_images (6)_fd534896_luna_v6",
+    "name": "top_cap_fragment",
+    "part": {
+      "name": "top_cap_fragment",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.234,
+        0.414
+      ],
+      "height": 0.222,
+      "position": [
+        -0.249,
+        1.502,
+        -0.144
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4344656,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_images (6)_fd534896_luna_v6",
+      "name": "top_cap_fragment",
+      "position": [
+        -0.249,
+        1.502,
+        -0.144
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    }
+  ]
+}

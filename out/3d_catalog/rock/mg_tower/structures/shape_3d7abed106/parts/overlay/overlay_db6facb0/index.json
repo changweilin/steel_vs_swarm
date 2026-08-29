@@ -1,0 +1,79 @@
+{
+  "id": "overlay_db6facb0",
+  "role": "overlay",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0,1|10",
+  "canonical": {
+    "objectKey": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~0_9823d365_luna_v6",
+    "name": "attached_waterline_foam",
+    "part": {
+      "name": "attached_waterline_foam",
+      "type": "polygonal_prism",
+      "sides": 9,
+      "radius": 7.54,
+      "height": 0.84,
+      "position": [
+        0,
+        1.26,
+        7.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~0_9823d365_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        1.26,
+        7.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/mg_tower_ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1_b8168d3e_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        1.26,
+        7.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_50415ae5_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.328,
+        6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

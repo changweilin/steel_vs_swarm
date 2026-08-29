@@ -1,0 +1,49 @@
+{
+  "id": "glass_ecb3c4a0",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.625,0|0",
+  "canonical": {
+    "objectKey": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73_v6",
+    "name": "top_center_window",
+    "part": {
+      "name": "top_center_window",
+      "type": "box",
+      "dimensions": [
+        4.2,
+        2.4,
+        0.2
+      ],
+      "position": [
+        0,
+        8.5,
+        3.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4352210,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73_v6",
+      "name": "top_center_window",
+      "position": [
+        0,
+        8.5,
+        3.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4352210
+    }
+  ]
+}

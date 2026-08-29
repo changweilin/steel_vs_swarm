@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "talus",
+  "palettes": [
+    {
+      "id": "palette_64959f26",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 6964528,
+        "facadeHex": 10119749,
+        "baseHex": 6767665,
+        "accentHex": 5602375,
+        "glassHex": 2307908,
+        "darkHex": 4861992,
+        "brightHex": 10467954
+      },
+      "objects": [
+        {
+          "key": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_c37ca1af",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 6911354,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 11187637
+      },
+      "objects": [
+        {
+          "key": "rock/talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_16428fab_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

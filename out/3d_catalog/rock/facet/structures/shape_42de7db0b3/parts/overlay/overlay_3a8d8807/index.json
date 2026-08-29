@@ -1,0 +1,77 @@
+{
+  "id": "overlay_3a8d8807",
+  "role": "overlay",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/facet_ov_05933c12-551a-40e6-b2e6-977a30ea4551_71c3325e_luna_v6",
+    "name": "attached_moss_facet",
+    "part": {
+      "name": "attached_moss_facet",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.231,
+      "position": [
+        0.537,
+        3.147,
+        0.545
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "color": 11452549,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_05933c12-551a-40e6-b2e6-977a30ea4551_71c3325e_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.537,
+        3.147,
+        0.545
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    },
+    {
+      "objectKey": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.301,
+        1.223,
+        0.393
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    },
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.611,
+        3.106,
+        0.703
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    }
+  ]
+}

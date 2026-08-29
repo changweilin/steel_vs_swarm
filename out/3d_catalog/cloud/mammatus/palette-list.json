@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "cloud",
+  "subcategory": "mammatus",
+  "palettes": [
+    {
+      "id": "palette_18c61a54",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 9870244,
+        "facadeHex": 12566979,
+        "baseHex": 7633799,
+        "accentHex": 14144975,
+        "glassHex": 15789026,
+        "darkHex": 5397353,
+        "brightHex": 16775405
+      },
+      "objects": [
+        {
+          "key": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

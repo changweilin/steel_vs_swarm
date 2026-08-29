@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_a1bf413ea6",
+  "canonicalKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+    "bounds": {
+      "min": [
+        -2.5,
+        -0.5973,
+        -2.3776
+      ],
+      "max": [
+        2.5,
+        11,
+        2.3776
+      ],
+      "size": [
+        5,
+        11.597,
+        4.755
+      ],
+      "rMax": 3.45,
+      "triangles": 1070,
+      "vertices": 616
+    },
+    "parts": [
+      {
+        "name": "rocky_base_main",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          2.5,
+          0.4,
+          2.5
+        ],
+        "position": [
+          0,
+          0.2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5592405,
+        "triangles": 160
+      },
+      {
+        "name": "rocky_base_sub1",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.8,
+        "position": [
+          1.2,
+          0.15,
+          -0.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5592405,
+        "triangles": 36
+      },
+      {
+        "name": "rocky_base_sub2",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.7,
+        "position": [
+          -1,
+          0.1,
+          1
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5592405,
+        "triangles": 36
+      },
+      {
+        "name": "tower_body",
+        "type": "conical_frustum",
+        "sides": 16,
+        "radii": [
+          0.9,
+          1.3
+        ],
+        "height": 7,
+        "position": [
+          0,
+          4.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 15066597,
+        "triangles": 64
+      },
+      {
+        "name": "lantern_dome",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.9,
+          0.6,
+          0.9
+        ],
+        "position": [
+          0,
+          9.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3158064,
+        "triangles": 170
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/bld_lighthouse/building_bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_4f5f2955"
+      ]
+    }
+  ]
+}

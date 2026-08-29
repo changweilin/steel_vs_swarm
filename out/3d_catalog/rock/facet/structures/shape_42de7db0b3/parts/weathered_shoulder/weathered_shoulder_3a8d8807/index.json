@@ -1,0 +1,77 @@
+{
+  "id": "weathered_shoulder_3a8d8807",
+  "role": "weathered_shoulder",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/facet_ov_05933c12-551a-40e6-b2e6-977a30ea4551_71c3325e_luna_v6",
+    "name": "right_weathered_shoulder",
+    "part": {
+      "name": "right_weathered_shoulder",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.545,
+      "position": [
+        0.906,
+        1.553,
+        -0.163
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "color": 5200224,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_05933c12-551a-40e6-b2e6-977a30ea4551_71c3325e_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        0.906,
+        1.553,
+        -0.163
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/facet_ov_fa013cfc-3b8c-47f7-a131-819810d74d4e_daa0f29c_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        0.509,
+        0.603,
+        -0.118
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 10119749
+    },
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+      "name": "right_weathered_shoulder",
+      "position": [
+        1.032,
+        1.533,
+        -0.211
+      ],
+      "rotation": [
+        -0.08,
+        0.28,
+        -0.08
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

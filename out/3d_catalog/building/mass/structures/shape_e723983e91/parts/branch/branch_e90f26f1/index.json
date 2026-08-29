@@ -1,0 +1,49 @@
+{
+  "id": "branch_e90f26f1",
+  "role": "branch",
+  "type": "box",
+  "signature": "box|0.875,0,1|0",
+  "canonical": {
+    "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+    "name": "white_outer_frame_top",
+    "part": {
+      "name": "white_outer_frame_top",
+      "type": "box",
+      "dimensions": [
+        8.6,
+        0.4,
+        10.2
+      ],
+      "position": [
+        0,
+        28.3,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_14863_1_b_a7daf5ac_v6",
+      "name": "white_outer_frame_top",
+      "position": [
+        0,
+        28.3,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

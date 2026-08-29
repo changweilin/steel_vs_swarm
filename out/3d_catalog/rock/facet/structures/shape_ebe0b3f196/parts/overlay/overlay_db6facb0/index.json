@@ -1,0 +1,63 @@
+{
+  "id": "overlay_db6facb0",
+  "role": "overlay",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0,1|10",
+  "canonical": {
+    "objectKey": "rock/facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_55df19cd_luna_v6",
+    "name": "attached_waterline_foam",
+    "part": {
+      "name": "attached_waterline_foam",
+      "type": "polygonal_prism",
+      "sides": 9,
+      "radius": 0.969,
+      "height": 0.053,
+      "position": [
+        0,
+        0.079,
+        1.002
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_55df19cd_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.079,
+        1.002
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.314,
+        1.865
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14082258
+    }
+  ]
+}

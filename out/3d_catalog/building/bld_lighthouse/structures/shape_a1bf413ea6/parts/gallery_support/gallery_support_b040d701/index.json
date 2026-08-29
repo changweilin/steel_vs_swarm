@@ -1,0 +1,50 @@
+{
+  "id": "gallery_support_b040d701",
+  "role": "gallery_support",
+  "type": "conical_frustum",
+  "signature": "conical_frustum|1,0.125,1|16",
+  "canonical": {
+    "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+    "name": "gallery_support",
+    "part": {
+      "name": "gallery_support",
+      "type": "conical_frustum",
+      "sides": 16,
+      "radii": [
+        1.1,
+        0.9
+      ],
+      "height": 0.4,
+      "position": [
+        0,
+        7.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15066597,
+      "triangles": 64
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad_v6",
+      "name": "gallery_support",
+      "position": [
+        0,
+        7.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15066597
+    }
+  ]
+}

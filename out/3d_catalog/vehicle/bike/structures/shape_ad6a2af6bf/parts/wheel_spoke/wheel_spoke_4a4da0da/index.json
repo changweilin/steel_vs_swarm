@@ -1,0 +1,547 @@
+{
+  "id": "wheel_spoke_4a4da0da",
+  "role": "wheel_spoke",
+  "type": "cylinder",
+  "signature": "cylinder|0.25,1,0.25|6",
+  "canonical": {
+    "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+    "name": "training_wheel_left_spoke_left_0",
+    "part": {
+      "name": "training_wheel_left_spoke_left_0",
+      "type": "cylinder",
+      "sides": 5,
+      "radii": [
+        0.006,
+        0.006
+      ],
+      "height": 0.045,
+      "position": [
+        -0.427,
+        0.11,
+        -0.456
+      ],
+      "rotation": [
+        1.571,
+        1.571,
+        0
+      ],
+      "color": 10907472,
+      "triangles": 20,
+      "role": "wheel_spoke"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_left_0",
+      "position": [
+        -0.427,
+        0.11,
+        -0.456
+      ],
+      "rotation": [
+        1.571,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_left_1",
+      "position": [
+        -0.434,
+        0.126,
+        -0.456
+      ],
+      "rotation": [
+        0.785,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_left_2",
+      "position": [
+        -0.45,
+        0.133,
+        -0.456
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_left_3",
+      "position": [
+        -0.466,
+        0.126,
+        -0.456
+      ],
+      "rotation": [
+        0.785,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_left_4",
+      "position": [
+        -0.473,
+        0.11,
+        -0.456
+      ],
+      "rotation": [
+        1.571,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_left_5",
+      "position": [
+        -0.466,
+        0.094,
+        -0.456
+      ],
+      "rotation": [
+        2.356,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_left_6",
+      "position": [
+        -0.45,
+        0.087,
+        -0.456
+      ],
+      "rotation": [
+        3.142,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_left_7",
+      "position": [
+        -0.434,
+        0.094,
+        -0.456
+      ],
+      "rotation": [
+        2.356,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_right_0",
+      "position": [
+        -0.427,
+        0.11,
+        -0.384
+      ],
+      "rotation": [
+        1.571,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_right_1",
+      "position": [
+        -0.434,
+        0.126,
+        -0.384
+      ],
+      "rotation": [
+        0.785,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_right_2",
+      "position": [
+        -0.45,
+        0.133,
+        -0.384
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_right_3",
+      "position": [
+        -0.466,
+        0.126,
+        -0.384
+      ],
+      "rotation": [
+        0.785,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_right_4",
+      "position": [
+        -0.473,
+        0.11,
+        -0.384
+      ],
+      "rotation": [
+        1.571,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_right_5",
+      "position": [
+        -0.466,
+        0.094,
+        -0.384
+      ],
+      "rotation": [
+        2.356,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_right_6",
+      "position": [
+        -0.45,
+        0.087,
+        -0.384
+      ],
+      "rotation": [
+        3.142,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_left_spoke_right_7",
+      "position": [
+        -0.434,
+        0.094,
+        -0.384
+      ],
+      "rotation": [
+        2.356,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_left_0",
+      "position": [
+        -0.427,
+        0.11,
+        0.384
+      ],
+      "rotation": [
+        1.571,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_left_1",
+      "position": [
+        -0.434,
+        0.126,
+        0.384
+      ],
+      "rotation": [
+        0.785,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_left_2",
+      "position": [
+        -0.45,
+        0.133,
+        0.384
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_left_3",
+      "position": [
+        -0.466,
+        0.126,
+        0.384
+      ],
+      "rotation": [
+        0.785,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_left_4",
+      "position": [
+        -0.473,
+        0.11,
+        0.384
+      ],
+      "rotation": [
+        1.571,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_left_5",
+      "position": [
+        -0.466,
+        0.094,
+        0.384
+      ],
+      "rotation": [
+        2.356,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_left_6",
+      "position": [
+        -0.45,
+        0.087,
+        0.384
+      ],
+      "rotation": [
+        3.142,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_left_7",
+      "position": [
+        -0.434,
+        0.094,
+        0.384
+      ],
+      "rotation": [
+        2.356,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_right_0",
+      "position": [
+        -0.427,
+        0.11,
+        0.456
+      ],
+      "rotation": [
+        1.571,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_right_1",
+      "position": [
+        -0.434,
+        0.126,
+        0.456
+      ],
+      "rotation": [
+        0.785,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_right_2",
+      "position": [
+        -0.45,
+        0.133,
+        0.456
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_right_3",
+      "position": [
+        -0.466,
+        0.126,
+        0.456
+      ],
+      "rotation": [
+        0.785,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_right_4",
+      "position": [
+        -0.473,
+        0.11,
+        0.456
+      ],
+      "rotation": [
+        1.571,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_right_5",
+      "position": [
+        -0.466,
+        0.094,
+        0.456
+      ],
+      "rotation": [
+        2.356,
+        -1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_right_6",
+      "position": [
+        -0.45,
+        0.087,
+        0.456
+      ],
+      "rotation": [
+        3.142,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "name": "training_wheel_right_spoke_right_7",
+      "position": [
+        -0.434,
+        0.094,
+        0.456
+      ],
+      "rotation": [
+        2.356,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    }
+  ]
+}

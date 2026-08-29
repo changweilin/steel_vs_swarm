@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d9ed30f997",
+  "canonicalKey": "rock/facet_a",
+  "mainStructure": {
+    "kind": "runtime-reference",
+    "sourceKey": "rock/facet_a",
+    "bounds": null,
+    "parts": []
+  },
+  "members": [
+    {
+      "key": "rock/facet_a",
+      "selection": "approved",
+      "method": "sf3d",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": null,
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_be49e23b"
+      ]
+    },
+    {
+      "key": "rock/facet_b",
+      "selection": "approved",
+      "method": "sf3d",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": null,
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_34416769"
+      ]
+    }
+  ]
+}

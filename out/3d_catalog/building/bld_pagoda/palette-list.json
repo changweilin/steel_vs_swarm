@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "category": "building",
+  "subcategory": "bld_pagoda",
+  "palettes": [
+    {
+      "id": "palette_3a976c5f",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 11151394,
+        "facadeHex": 12459040,
+        "baseHex": 3156264,
+        "accentHex": 14981152,
+        "glassHex": 1125160,
+        "darkHex": 2103324,
+        "brightHex": 16303424
+      },
+      "objects": [
+        {
+          "key": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+          "source": "features.colors"
+        }
+      ]
+    },
+    {
+      "id": "palette_ba6bb803",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3818314,
+        "facadeHex": 11021344,
+        "baseHex": 11184810,
+        "accentHex": 14327872,
+        "glassHex": 1125915,
+        "darkHex": 2105376,
+        "brightHex": 15055931
+      },
+      "objects": [
+        {
+          "key": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

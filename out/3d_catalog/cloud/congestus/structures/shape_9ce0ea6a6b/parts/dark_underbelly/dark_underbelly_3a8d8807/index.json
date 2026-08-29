@@ -1,0 +1,95 @@
+{
+  "id": "dark_underbelly_3a8d8807",
+  "role": "dark_underbelly",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+    "name": "congestus_dark_underbelly_0",
+    "part": {
+      "name": "congestus_dark_underbelly_0",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.42,
+      "position": [
+        -1.72,
+        0.58,
+        1.02
+      ],
+      "rotation": [
+        0.16,
+        0,
+        0.03
+      ],
+      "color": 4608352,
+      "triangles": 36,
+      "role": "dark_underbelly",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_dark_underbelly_0",
+      "position": [
+        -1.72,
+        0.58,
+        1.02
+      ],
+      "rotation": [
+        0.16,
+        0,
+        0.03
+      ],
+      "colorKey": "baseHex",
+      "color": 4608352
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_dark_underbelly_1",
+      "position": [
+        -0.58,
+        0.66,
+        1.02
+      ],
+      "rotation": [
+        0.16,
+        0.33,
+        0.03
+      ],
+      "colorKey": "darkHex",
+      "color": 2897218
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_dark_underbelly_2",
+      "position": [
+        0.58,
+        0.58,
+        1.02
+      ],
+      "rotation": [
+        0.16,
+        0.66,
+        0.03
+      ],
+      "colorKey": "baseHex",
+      "color": 4608352
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_dark_underbelly_3",
+      "position": [
+        1.72,
+        0.66,
+        1.02
+      ],
+      "rotation": [
+        0.16,
+        0.99,
+        0.03
+      ],
+      "colorKey": "darkHex",
+      "color": 2897218
+    }
+  ]
+}

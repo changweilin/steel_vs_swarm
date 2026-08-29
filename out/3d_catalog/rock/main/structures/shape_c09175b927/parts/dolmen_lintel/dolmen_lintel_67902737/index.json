@@ -1,0 +1,49 @@
+{
+  "id": "dolmen_lintel_67902737",
+  "role": "dolmen_lintel",
+  "type": "wedge",
+  "signature": "wedge|1,0.125,0.625|0",
+  "canonical": {
+    "objectKey": "rock/main_132_0da6c49f_luna_v6",
+    "name": "dolmen_lintel",
+    "part": {
+      "name": "dolmen_lintel",
+      "type": "wedge",
+      "dimensions": [
+        17.16,
+        1.298,
+        9.88
+      ],
+      "position": [
+        0,
+        4.049,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0.06
+      ],
+      "color": 2370353,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_132_0da6c49f_luna_v6",
+      "name": "dolmen_lintel",
+      "position": [
+        0,
+        4.049,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0.06
+      ],
+      "colorKey": null,
+      "color": 2370353
+    }
+  ]
+}

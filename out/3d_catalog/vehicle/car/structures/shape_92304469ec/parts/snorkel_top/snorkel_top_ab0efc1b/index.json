@@ -1,0 +1,49 @@
+{
+  "id": "snorkel_top_ab0efc1b",
+  "role": "snorkel_top",
+  "type": "box",
+  "signature": "box|0.625,0.625,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_176103315400_b84cb3e4_v6",
+    "name": "snorkel_top",
+    "part": {
+      "name": "snorkel_top",
+      "type": "box",
+      "dimensions": [
+        0.15,
+        0.15,
+        0.25
+      ],
+      "position": [
+        0.95,
+        2.05,
+        0.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2105376,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_176103315400_b84cb3e4_v6",
+      "name": "snorkel_top",
+      "position": [
+        0.95,
+        2.05,
+        0.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    }
+  ]
+}

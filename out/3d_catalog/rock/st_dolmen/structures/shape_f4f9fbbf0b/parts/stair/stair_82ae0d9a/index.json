@@ -1,0 +1,97 @@
+{
+  "id": "stair_82ae0d9a",
+  "role": "stair",
+  "type": "wedge",
+  "signature": "wedge|1,0.125,0.875|0",
+  "canonical": {
+    "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0_b19ff617_luna_v6",
+    "name": "attached_stone_step_0",
+    "part": {
+      "name": "attached_stone_step_0",
+      "type": "wedge",
+      "dimensions": [
+        0.8,
+        0.092,
+        0.65
+      ],
+      "position": [
+        -0.8,
+        0.164,
+        1.45
+      ],
+      "rotation": [
+        0,
+        0.04,
+        0
+      ],
+      "color": 5602375,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0_b19ff617_luna_v6",
+      "name": "attached_stone_step_0",
+      "position": [
+        -0.8,
+        0.164,
+        1.45
+      ],
+      "rotation": [
+        0,
+        0.04,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0_b19ff617_luna_v6",
+      "name": "attached_stone_step_1",
+      "position": [
+        -0.8,
+        0.256,
+        1.175
+      ],
+      "rotation": [
+        0,
+        0.04,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0_b19ff617_luna_v6",
+      "name": "attached_stone_step_2",
+      "position": [
+        -0.8,
+        0.348,
+        0.9
+      ],
+      "rotation": [
+        0,
+        0.04,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0_b19ff617_luna_v6",
+      "name": "attached_stone_step_3",
+      "position": [
+        -0.8,
+        0.44,
+        0.625
+      ],
+      "rotation": [
+        0,
+        0.04,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    }
+  ]
+}

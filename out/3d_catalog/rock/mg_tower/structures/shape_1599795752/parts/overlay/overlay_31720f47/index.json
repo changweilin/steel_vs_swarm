@@ -1,0 +1,49 @@
+{
+  "id": "overlay_31720f47",
+  "role": "overlay",
+  "type": "wedge",
+  "signature": "wedge|1,0.875,0.125|0",
+  "canonical": {
+    "objectKey": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+    "name": "attached_surface_stain",
+    "part": {
+      "name": "attached_surface_stain",
+      "type": "wedge",
+      "dimensions": [
+        1.206,
+        0.999,
+        0.108
+      ],
+      "position": [
+        -0.67,
+        2.664,
+        0.864
+      ],
+      "rotation": [
+        0.08,
+        0.05,
+        -0.04
+      ],
+      "color": 3160123,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+      "name": "attached_surface_stain",
+      "position": [
+        -0.67,
+        2.664,
+        0.864
+      ],
+      "rotation": [
+        0.08,
+        0.05,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

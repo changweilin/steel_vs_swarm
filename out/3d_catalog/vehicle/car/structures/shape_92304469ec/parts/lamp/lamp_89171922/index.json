@@ -1,0 +1,65 @@
+{
+  "id": "lamp_89171922",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|1,0.5,0.25|0",
+  "canonical": {
+    "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+    "name": "headlight_left",
+    "part": {
+      "name": "headlight_left",
+      "type": "box",
+      "dimensions": [
+        0.4,
+        0.2,
+        0.1
+      ],
+      "position": [
+        -0.75,
+        1.05,
+        2.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14540253,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+      "name": "headlight_left",
+      "position": [
+        -0.75,
+        1.05,
+        2.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14540253
+    },
+    {
+      "objectKey": "vehicle/car_02_outlander_20211001_menu_6f8ec1d7_v6",
+      "name": "headlight_right",
+      "position": [
+        0.75,
+        1.05,
+        2.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14540253
+    }
+  ]
+}

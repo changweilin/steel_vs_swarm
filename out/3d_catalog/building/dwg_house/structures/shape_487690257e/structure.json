@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_487690257e",
+  "canonicalKey": "building/dwg_house_wc_33743891_ccdb01ea_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "building/dwg_house_wc_33743891_ccdb01ea_v6",
+    "bounds": {
+      "min": [
+        -6,
+        0,
+        -3
+      ],
+      "max": [
+        6,
+        12,
+        3.1
+      ],
+      "size": [
+        12,
+        12,
+        6.1
+      ],
+      "rMax": 6.754,
+      "triangles": 120,
+      "vertices": 80
+    },
+    "parts": [
+      {
+        "name": "main_base_block",
+        "type": "box",
+        "dimensions": [
+          12,
+          7,
+          6
+        ],
+        "position": [
+          0,
+          3.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 14737632,
+        "triangles": 12
+      },
+      {
+        "name": "arched_entryway",
+        "type": "box",
+        "dimensions": [
+          2,
+          3,
+          0.1
+        ],
+        "position": [
+          3,
+          1.5,
+          3.05
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "building/dwg_house_wc_33743891_ccdb01ea_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/dwg_house/building_dwg_house_wc_33743891_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_4d392d5b"
+      ]
+    }
+  ]
+}

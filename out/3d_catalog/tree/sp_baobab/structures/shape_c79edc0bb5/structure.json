@@ -1,0 +1,875 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_c79edc0bb5",
+  "canonicalKey": "tree/sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_6704e773_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_6704e773_luna_v6",
+    "bounds": {
+      "min": [
+        -4.5491,
+        0,
+        -3.8948
+      ],
+      "max": [
+        3.4285,
+        6.0752,
+        4.1213
+      ],
+      "size": [
+        7.978,
+        6.075,
+        8.016
+      ],
+      "rMax": 5.989,
+      "triangles": 1684,
+      "vertices": 972
+    },
+    "parts": [
+      {
+        "name": "bottle_bole",
+        "type": "conical_frustum",
+        "sides": 12,
+        "radii": [
+          0.72,
+          1.58
+        ],
+        "height": 5.25,
+        "position": [
+          0,
+          2.625,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 48
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          1.188,
+          1.65
+        ],
+        "height": 0.62,
+        "position": [
+          0,
+          0.31,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 40
+      },
+      {
+        "name": "baobab_arm_0",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 1.073,
+        "position": [
+          0.502,
+          4.366,
+          0.09
+        ],
+        "rotation": [
+          1.259,
+          1.393,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_0_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 1.907,
+        "position": [
+          1.897,
+          4.827,
+          0.341
+        ],
+        "rotation": [
+          1.254,
+          1.393,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_0_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.651,
+          0.406,
+          0.596
+        ],
+        "position": [
+          2.788,
+          4.876,
+          0.501
+        ],
+        "rotation": [
+          0,
+          0.178,
+          0
+        ],
+        "color": 6585671,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_0_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.15,
+        "position": [
+          2.788,
+          5.17,
+          0.501
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_1",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 1.179,
+        "position": [
+          0.294,
+          4.677,
+          0.467
+        ],
+        "rotation": [
+          1.211,
+          0.561,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_1_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 1.851,
+        "position": [
+          1.064,
+          5.114,
+          1.694
+        ],
+        "rotation": [
+          1.321,
+          0.561,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_1_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.635,
+          0.329,
+          0.602
+        ],
+        "position": [
+          1.542,
+          5.141,
+          2.453
+        ],
+        "rotation": [
+          0,
+          1.01,
+          0
+        ],
+        "color": 9545836,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_1_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.152,
+        "position": [
+          1.542,
+          5.379,
+          2.453
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_2",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 1.083,
+        "position": [
+          -0.21,
+          5.12,
+          0.466
+        ],
+        "rotation": [
+          1.235,
+          -0.422,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_2_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 2.789,
+        "position": [
+          -0.978,
+          5.595,
+          2.175
+        ],
+        "rotation": [
+          1.356,
+          -0.422,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_2_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.771,
+          0.433,
+          0.524
+        ],
+        "position": [
+          -1.536,
+          5.628,
+          3.418
+        ],
+        "rotation": [
+          0,
+          1.993,
+          0
+        ],
+        "color": 6585671,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_2_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.144,
+        "position": [
+          -1.536,
+          5.941,
+          3.418
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_3",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 0.903,
+        "position": [
+          -0.416,
+          4.435,
+          0.063
+        ],
+        "rotation": [
+          1.202,
+          -1.419,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_3_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 2.921,
+        "position": [
+          -2.261,
+          4.808,
+          0.345
+        ],
+        "rotation": [
+          1.426,
+          -1.419,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_3_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.869,
+          0.498,
+          0.574
+        ],
+        "position": [
+          -3.69,
+          4.713,
+          0.563
+        ],
+        "rotation": [
+          0,
+          2.99,
+          0
+        ],
+        "color": 9545836,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_3_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.145,
+        "position": [
+          -3.69,
+          5.073,
+          0.563
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_4",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 0.812,
+        "position": [
+          -0.191,
+          4.635,
+          -0.333
+        ],
+        "rotation": [
+          1.241,
+          -2.62,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_4_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 2.875,
+        "position": [
+          -1.073,
+          5.143,
+          -1.869
+        ],
+        "rotation": [
+          1.306,
+          -2.62,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_4_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.87,
+          0.484,
+          0.723
+        ],
+        "position": [
+          -1.764,
+          5.223,
+          -3.073
+        ],
+        "rotation": [
+          0,
+          4.191,
+          0
+        ],
+        "color": 6585671,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_4_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.182,
+        "position": [
+          -1.764,
+          5.573,
+          -3.073
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_5",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 1.08,
+        "position": [
+          0.246,
+          4.47,
+          -0.408
+        ],
+        "rotation": [
+          1.082,
+          2.599,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_5_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 1.89,
+        "position": [
+          0.948,
+          5.06,
+          -1.573
+        ],
+        "rotation": [
+          1.207,
+          2.599,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_5_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.903,
+          0.443,
+          0.776
+        ],
+        "position": [
+          1.404,
+          5.126,
+          -2.33
+        ],
+        "rotation": [
+          0,
+          5.255,
+          0
+        ],
+        "color": 9545836,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_5_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.196,
+        "position": [
+          1.404,
+          5.445,
+          -2.33
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_6704e773_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_manual_Adansonia-gregorii-Boab-Tree-Ex-ground_6704e773_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_manual_Baobab_and_elephant__Tanzania~0_3d8dfdbf_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_manual_Baobab_and_elephant__Tanzania_0_3d8dfdbf_luna_v6",
+      "similarity": 67,
+      "scale": [
+        1.08574,
+        1.03325,
+        0.84144
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_manual_Baobab_and_elephant__Tanzania~1_a2542e27_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_manual_Baobab_and_elephant__Tanzania_1_a2542e27_luna_v6",
+      "similarity": 96,
+      "scale": [
+        0.96139,
+        0.9837,
+        0.96307
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_manual_Birdwood_Downs_station_165c2c31_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_manual_Birdwood_Downs_station_165c2c31_luna_v6",
+      "similarity": 94,
+      "scale": [
+        1.02858,
+        1.00296,
+        0.98852
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED_82d20543_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_manual_kZhZYZvVvCTiVuDWGFFKED_82d20543_luna_v6",
+      "similarity": 84,
+      "scale": [
+        0.89032,
+        1.01053,
+        1.00299
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c_64c49f6c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_ov_28d06a2b-2d38-4cf3-a719-4cdaccc8700c_64c49f6c_luna_v6",
+      "similarity": 88,
+      "scale": [
+        0.98584,
+        0.99934,
+        0.90369
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_ov_3ccffb3c-85b3-4937-aca8-4e158951ba67_6c1c0871_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_ov_3ccffb3c-85b3-4937-aca8-4e158951ba67_6c1c0871_luna_v6",
+      "similarity": 85,
+      "scale": [
+        0.96277,
+        1.02305,
+        0.87737
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_ov_527caba6-3877-4a94-a847-20ac25f540c7_c20b0d2c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_ov_527caba6-3877-4a94-a847-20ac25f540c7_c20b0d2c_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.98446,
+        1.01811,
+        0.9254
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a_756bfa25_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_ov_8e6e930c-e6dc-4e80-b7ce-1799fbf18f2a_756bfa25_luna_v6",
+      "similarity": 77,
+      "scale": [
+        0.87704,
+        1.03276,
+        0.83807
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3_2c23f044_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_ov_c3e86f79-d589-40bd-8aa9-828e5d746ec3_2c23f044_luna_v6",
+      "similarity": 80,
+      "scale": [
+        1.0361,
+        1.01531,
+        0.89234
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_ov_f8ebc741-c981-4fed-bdbc-937db7444a69_8229271c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_ov_f8ebc741-c981-4fed-bdbc-937db7444a69_8229271c_luna_v6",
+      "similarity": 81,
+      "scale": [
+        1.02143,
+        0.97992,
+        0.88286
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_ov_f9d54459-d862-439a-b224-023275cc3a7a_3e7a6acb_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_ov_f9d54459-d862-439a-b224-023275cc3a7a_3e7a6acb_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.94109,
+        1.03539,
+        0.95571
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_wc_13126536_ac8aa41a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_wc_13126536_ac8aa41a_luna_v6",
+      "similarity": 78,
+      "scale": [
+        1.12823,
+        1.01218,
+        0.97705
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_wc_156495515_cce6d6f7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_wc_156495515_cce6d6f7_luna_v6",
+      "similarity": 82,
+      "scale": [
+        0.89321,
+        1.02008,
+        0.85766
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_wc_192778142_cc4e4965_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_wc_192778142_cc4e4965_luna_v6",
+      "similarity": 79,
+      "scale": [
+        0.94861,
+        1.03095,
+        0.82597
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_wc_3206087~0_67eb30af_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_wc_3206087_0_67eb30af_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.97293,
+        1.00971,
+        0.91218
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_wc_3206087~1_c6d99314_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_wc_3206087_1_c6d99314_luna_v6",
+      "similarity": 87,
+      "scale": [
+        0.96227,
+        1.00247,
+        0.88186
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/sp_baobab_wc_3646805_73fd98c7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_baobab/tree_tree_sp_baobab_wc_3646805_73fd98c7_luna_v6",
+      "similarity": 85,
+      "scale": [
+        0.87691,
+        0.99292,
+        0.88997
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "glass_a3fa7157",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0.625,1,0.125|0",
+  "canonical": {
+    "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+    "name": "lower_center_window_frame",
+    "part": {
+      "name": "lower_center_window_frame",
+      "type": "box",
+      "dimensions": [
+        0.9,
+        1.6,
+        0.1
+      ],
+      "position": [
+        0,
+        3.6,
+        2.22
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 12553530,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "lower_center_window_frame",
+      "position": [
+        0,
+        3.6,
+        2.22
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12553530
+    },
+    {
+      "objectKey": "building/bld_rowhouse_ov_c1b0e233-6fbb-4984-9329-5a7880895907_faf8e8d5_v6",
+      "name": "upper_center_window_frame",
+      "position": [
+        0,
+        7.2,
+        2.12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 12553530
+    }
+  ]
+}

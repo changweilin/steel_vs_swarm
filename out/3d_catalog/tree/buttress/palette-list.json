@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "buttress",
+  "palettes": [
+    {
+      "id": "palette_e550d590",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2640433,
+        "facadeHex": 5208643,
+        "baseHex": 4861988,
+        "accentHex": 7903323,
+        "glassHex": 1976635,
+        "darkHex": 2892830,
+        "brightHex": 10860413
+      },
+      "objects": [
+        {
+          "key": "tree/buttress_wc_3448263_d7cd82d5_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/buttress_wc_3518249_5f4cae14_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/buttress_wc_4063079_ea0fd950_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

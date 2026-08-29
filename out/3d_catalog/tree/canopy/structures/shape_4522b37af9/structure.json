@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_4522b37af9",
+  "canonicalKey": "tree/canopy_Cardon_Pachycereus_pringlei_7ae981b3_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/canopy_Cardon_Pachycereus_pringlei_7ae981b3_luna_v6",
+    "bounds": {
+      "min": [
+        -0.7411,
+        0,
+        -0.8039
+      ],
+      "max": [
+        0.927,
+        6.8805,
+        0.8549
+      ],
+      "size": [
+        1.668,
+        6.88,
+        1.659
+      ],
+      "rMax": 1.261,
+      "triangles": 380,
+      "vertices": 212
+    },
+    "parts": [
+      {
+        "name": "cactus_column",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.34,
+          0.52
+        ],
+        "height": 6.881,
+        "position": [
+          0,
+          3.44,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6856807,
+        "triangles": 40
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.389,
+          0.54
+        ],
+        "height": 0.3,
+        "position": [
+          0,
+          0.15,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7688762,
+        "triangles": 40
+      },
+      {
+        "name": "cactus_arm_0_out",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 0.776,
+        "position": [
+          0.384,
+          2.151,
+          -0.057
+        ],
+        "rotation": [
+          1.571,
+          1.717,
+          0
+        ],
+        "color": 6856807,
+        "triangles": 32
+      },
+      {
+        "name": "cactus_arm_0_up",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.101,
+          0.14
+        ],
+        "height": 1.293,
+        "position": [
+          0.767,
+          2.798,
+          -0.113
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6856807,
+        "triangles": 32
+      },
+      {
+        "name": "cactus_arm_1_out",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 0.906,
+        "position": [
+          -0.291,
+          4.784,
+          0.348
+        ],
+        "rotation": [
+          1.571,
+          -0.696,
+          0
+        ],
+        "color": 6856807,
+        "triangles": 32
+      },
+      {
+        "name": "cactus_arm_1_up",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.101,
+          0.14
+        ],
+        "height": 1.542,
+        "position": [
+          -0.581,
+          5.555,
+          0.695
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6856807,
+        "triangles": 32
+      },
+      {
+        "name": "cactus_arm_2_out",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 0.781,
+        "position": [
+          -0.221,
+          3.118,
+          -0.322
+        ],
+        "rotation": [
+          1.571,
+          -2.541,
+          0
+        ],
+        "color": 6856807,
+        "triangles": 32
+      },
+      {
+        "name": "cactus_arm_2_up",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.101,
+          0.14
+        ],
+        "height": 1.401,
+        "position": [
+          -0.441,
+          3.819,
+          -0.644
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6856807,
+        "triangles": 32
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/canopy_Cardon_Pachycereus_pringlei_7ae981b3_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_Cardon_Pachycereus_pringlei_7ae981b3_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_6d145a91"
+      ]
+    },
+    {
+      "key": "tree/canopy_Choosing-the-right-cactus~0_40dc6b34_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_Choosing-the-right-cactus_0_40dc6b34_luna_v6",
+      "similarity": 93,
+      "scale": [
+        0.76978,
+        0.93866,
+        0.91621
+      ],
+      "paletteIds": [
+        "palette_6d145a91"
+      ]
+    },
+    {
+      "key": "tree/canopy_Choosing-the-right-cactus~1_e16bc31d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_Choosing-the-right-cactus_1_e16bc31d_luna_v6",
+      "similarity": 91,
+      "scale": [
+        0.97902,
+        0.89593,
+        1.01326
+      ],
+      "paletteIds": [
+        "palette_6d145a91"
+      ]
+    }
+  ]
+}

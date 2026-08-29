@@ -1,0 +1,81 @@
+{
+  "id": "overlay_0ee22146",
+  "role": "overlay",
+  "type": "wedge",
+  "signature": "wedge|1,0.375,0.5|0",
+  "canonical": {
+    "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+    "name": "attached_lichen_shear_facet",
+    "part": {
+      "name": "attached_lichen_shear_facet",
+      "type": "wedge",
+      "dimensions": [
+        0.913,
+        0.396,
+        0.499
+      ],
+      "position": [
+        -0.137,
+        5.886,
+        0.416
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "color": 5200224,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "attached_lichen_shear_facet",
+      "position": [
+        -0.137,
+        5.886,
+        0.416
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "attached_lichen_shear_facet",
+      "position": [
+        -0.12,
+        4.483,
+        0.3
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "attached_lichen_shear_facet",
+      "position": [
+        -0.073,
+        3.016,
+        0.219
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 11452549
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "rail_483ef0f5",
+  "role": "rail",
+  "type": "box",
+  "signature": "box|1,0.75,0.5|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+    "name": "rear_trailer_section",
+    "part": {
+      "name": "rear_trailer_section",
+      "type": "box",
+      "dimensions": [
+        2.12,
+        1.6,
+        1
+      ],
+      "position": [
+        0,
+        1.55,
+        2.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_mainCoverImage1_1180859_a53d215c_v6",
+      "name": "rear_trailer_section",
+      "position": [
+        0,
+        1.55,
+        2.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

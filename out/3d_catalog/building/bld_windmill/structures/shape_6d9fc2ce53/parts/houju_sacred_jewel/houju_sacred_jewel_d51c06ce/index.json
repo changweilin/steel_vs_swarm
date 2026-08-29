@@ -1,0 +1,50 @@
+{
+  "id": "houju_sacred_jewel_d51c06ce",
+  "role": "houju_sacred_jewel",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|1,1,1|0",
+  "canonical": {
+    "objectKey": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+    "name": "houju_sacred_jewel",
+    "part": {
+      "name": "houju_sacred_jewel",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.35,
+        0.35,
+        0.35
+      ],
+      "position": [
+        0,
+        35.70967741935485,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 13814208,
+      "triangles": 96,
+      "colorKey": "bright"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_windmill_ov_ce84750c-9ba0-424e-9005-d55c57fb101b_86e0cd01",
+      "name": "houju_sacred_jewel",
+      "position": [
+        0,
+        35.70967741935485,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "bright",
+      "color": 13814208
+    }
+  ]
+}

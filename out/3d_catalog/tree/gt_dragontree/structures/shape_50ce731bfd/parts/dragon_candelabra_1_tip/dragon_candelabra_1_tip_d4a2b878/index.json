@@ -1,0 +1,50 @@
+{
+  "id": "dragon_candelabra_1_tip_d4a2b878",
+  "role": "dragon_candelabra_1_tip",
+  "type": "cylinder",
+  "signature": "cylinder|0.25,1,0.25|8",
+  "canonical": {
+    "objectKey": "tree/gt_dragontree_wc_14826433_5a0289c7_luna_v6",
+    "name": "dragon_candelabra_1_tip",
+    "part": {
+      "name": "dragon_candelabra_1_tip",
+      "type": "cylinder",
+      "sides": 7,
+      "radii": [
+        0.058,
+        0.08
+      ],
+      "height": 0.844,
+      "position": [
+        0.415,
+        5.501,
+        0.963
+      ],
+      "rotation": [
+        0.997,
+        0.407,
+        0
+      ],
+      "color": 5584935,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/gt_dragontree_wc_14826433_5a0289c7_luna_v6",
+      "name": "dragon_candelabra_1_tip",
+      "position": [
+        0.415,
+        5.501,
+        0.963
+      ],
+      "rotation": [
+        0.997,
+        0.407,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    }
+  ]
+}

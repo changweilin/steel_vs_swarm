@@ -1,0 +1,49 @@
+{
+  "id": "radiator_shell_baaff79f",
+  "role": "radiator_shell",
+  "type": "box",
+  "signature": "box|1,0.625,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+    "name": "radiator_shell",
+    "part": {
+      "name": "radiator_shell",
+      "type": "box",
+      "dimensions": [
+        1.1,
+        0.65,
+        0.2
+      ],
+      "position": [
+        0,
+        0.75,
+        1.65
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1644825,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1926-FORD-MODEL-T-TOURING-CAR-2_cb4ecf5d_v6",
+      "name": "radiator_shell",
+      "position": [
+        0,
+        0.75,
+        1.65
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1644825
+    }
+  ]
+}

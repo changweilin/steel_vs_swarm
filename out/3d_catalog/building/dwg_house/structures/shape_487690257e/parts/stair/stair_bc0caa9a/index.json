@@ -1,0 +1,49 @@
+{
+  "id": "stair_bc0caa9a",
+  "role": "stair",
+  "type": "box",
+  "signature": "box|1,0.625,0.875|0",
+  "canonical": {
+    "objectKey": "building/dwg_house_wc_33743891_ccdb01ea_v6",
+    "name": "upper_stepped_block",
+    "part": {
+      "name": "upper_stepped_block",
+      "type": "box",
+      "dimensions": [
+        6,
+        4,
+        5
+      ],
+      "position": [
+        1,
+        7.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14737632,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/dwg_house_wc_33743891_ccdb01ea_v6",
+      "name": "upper_stepped_block",
+      "position": [
+        1,
+        7.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14737632
+    }
+  ]
+}

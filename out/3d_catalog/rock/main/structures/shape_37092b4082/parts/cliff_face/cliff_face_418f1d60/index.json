@@ -1,0 +1,47 @@
+{
+  "id": "cliff_face_418f1d60",
+  "role": "cliff_face",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0.25,1|6",
+  "canonical": {
+    "objectKey": "rock/main_20211010001701_88fab0a9_v6",
+    "name": "right_cliff_face",
+    "part": {
+      "name": "right_cliff_face",
+      "type": "polygonal_prism",
+      "sides": 5,
+      "radius": 2.2,
+      "height": 1,
+      "position": [
+        2.2,
+        2.8,
+        0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 13732410,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_20211010001701_88fab0a9_v6",
+      "name": "right_cliff_face",
+      "position": [
+        2.2,
+        2.8,
+        0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13732410
+    }
+  ]
+}

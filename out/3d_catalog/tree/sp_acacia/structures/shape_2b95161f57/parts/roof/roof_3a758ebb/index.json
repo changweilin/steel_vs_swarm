@@ -1,0 +1,161 @@
+{
+  "id": "roof_3a758ebb",
+  "role": "roof",
+  "type": "hemisphere_dome",
+  "signature": "hemisphere_dome|1,0.25,0.75|0",
+  "canonical": {
+    "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+    "name": "acacia_crown_0_umbrella_cap",
+    "part": {
+      "name": "acacia_crown_0_umbrella_cap",
+      "type": "hemisphere_dome",
+      "radii": [
+        1.012,
+        0.225,
+        0.719
+      ],
+      "position": [
+        1.607,
+        5.626,
+        0.315
+      ],
+      "rotation": [
+        0.105,
+        0.194,
+        -0.094
+      ],
+      "color": 2640433,
+      "triangles": 170
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+      "name": "acacia_crown_0_umbrella_cap",
+      "position": [
+        1.607,
+        5.626,
+        0.315
+      ],
+      "rotation": [
+        0.105,
+        0.194,
+        -0.094
+      ],
+      "colorKey": null,
+      "color": 2640433
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~0_9025755e_luna_v6",
+      "name": "acacia_crown_4_umbrella_cap",
+      "position": [
+        -2.088,
+        5.72,
+        -0.403
+      ],
+      "rotation": [
+        -0.07,
+        3.332,
+        0.098
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_e193c57d_luna_v6",
+      "name": "acacia_crown_1_umbrella_cap",
+      "position": [
+        2.11,
+        5.121,
+        1.641
+      ],
+      "rotation": [
+        -0.103,
+        0.661,
+        -0.021
+      ],
+      "colorKey": null,
+      "color": 5208643
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_e193c57d_luna_v6",
+      "name": "acacia_crown_3_umbrella_cap",
+      "position": [
+        -1.238,
+        5.327,
+        1.435
+      ],
+      "rotation": [
+        0.13,
+        2.283,
+        0.11
+      ],
+      "colorKey": null,
+      "color": 2640433
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_042e661d-6dcc-4bac-a62f-4bd4c808ec2c~1_e193c57d_luna_v6",
+      "name": "acacia_crown_6_umbrella_cap",
+      "position": [
+        0.261,
+        5.1,
+        -2.31
+      ],
+      "rotation": [
+        -0.14,
+        4.825,
+        0.103
+      ],
+      "colorKey": null,
+      "color": 2640433
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_1ac0914a-b376-4386-ab74-ae79d96e8485_5175fbe7_luna_v6",
+      "name": "acacia_crown_0_umbrella_cap",
+      "position": [
+        1.934,
+        5.859,
+        -0.242
+      ],
+      "rotation": [
+        -0.039,
+        -0.125,
+        -0.041
+      ],
+      "colorKey": null,
+      "color": 2640433
+    },
+    {
+      "objectKey": "tree/sp_acacia_ov_4181513d-1acc-4d23-a817-709b1d24f3c2_bf46f112_luna_v6",
+      "name": "acacia_crown_0_umbrella_cap",
+      "position": [
+        2.026,
+        5.896,
+        -0.202
+      ],
+      "rotation": [
+        -0.066,
+        -0.099,
+        0.084
+      ],
+      "colorKey": null,
+      "color": 2640433
+    },
+    {
+      "objectKey": "tree/sp_acacia_wc_193839561_361312fc_luna_v6",
+      "name": "acacia_crown_6_umbrella_cap",
+      "position": [
+        -0.339,
+        5.245,
+        -2.247
+      ],
+      "rotation": [
+        0.094,
+        4.563,
+        0.085
+      ],
+      "colorKey": null,
+      "color": 2640433
+    }
+  ]
+}

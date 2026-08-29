@@ -1,0 +1,147 @@
+{
+  "id": "exhaust_duct_flue_2e884ac6",
+  "role": "exhaust_duct_flue",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|0,1,0|8",
+  "canonical": {
+    "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+    "name": "rear_exhaust_duct_flue",
+    "part": {
+      "name": "rear_exhaust_duct_flue",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        0.42,
+        0.42
+      ],
+      "height": 23.58,
+      "position": [
+        8.187,
+        12.326,
+        -9.44
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15588305,
+      "triangles": 32,
+      "colorKey": "bright"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_exhaust_duct_flue",
+      "position": [
+        8.187,
+        12.326,
+        -9.44
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "bright",
+      "color": 15588305
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_exhaust_duct_flue",
+      "position": [
+        7.266,
+        12.612,
+        -10.323
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16316665
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_exhaust_duct_flue",
+      "position": [
+        7.577,
+        14.258,
+        -10.363
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16580093
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_exhaust_duct_flue",
+      "position": [
+        7.102,
+        15.262,
+        -8.961
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14607071
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_exhaust_duct_flue",
+      "position": [
+        7.377,
+        15.052,
+        -9.533
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16711422
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_exhaust_duct_flue",
+      "position": [
+        6.446,
+        14.846,
+        -10.169
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 13554907
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_exhaust_duct_flue",
+      "position": [
+        7.642,
+        16.169,
+        -8.152
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15199475
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "id": "trim_a4d6cefb",
+  "role": "trim",
+  "type": "box",
+  "signature": "box|0,0.875,1|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+    "name": "ice_cream_trailer_seam",
+    "part": {
+      "name": "ice_cream_trailer_seam",
+      "type": "box",
+      "dimensions": [
+        0.035,
+        1.845,
+        2.244
+      ],
+      "position": [
+        -1.27,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15782207,
+      "triangles": 12,
+      "role": "cargo",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_000001_1706597927_78326e0e_luna_v6",
+      "name": "ice_cream_trailer_seam",
+      "position": [
+        -1.27,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15782207
+    },
+    {
+      "objectKey": "vehicle/heavy_000001_1776155963_1c5cb2e7_luna_v6",
+      "name": "ice_cream_trailer_seam",
+      "position": [
+        -1.27,
+        1.995,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 15782207
+    }
+  ]
+}

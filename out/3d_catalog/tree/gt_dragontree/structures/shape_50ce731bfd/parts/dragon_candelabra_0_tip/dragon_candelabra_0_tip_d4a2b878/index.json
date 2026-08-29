@@ -1,0 +1,114 @@
+{
+  "id": "dragon_candelabra_0_tip_d4a2b878",
+  "role": "dragon_candelabra_0_tip",
+  "type": "cylinder",
+  "signature": "cylinder|0.25,1,0.25|8",
+  "canonical": {
+    "objectKey": "tree/gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233_133d6dcd_luna_v6",
+    "name": "dragon_candelabra_0_tip",
+    "part": {
+      "name": "dragon_candelabra_0_tip",
+      "type": "cylinder",
+      "sides": 7,
+      "radii": [
+        0.058,
+        0.08
+      ],
+      "height": 0.791,
+      "position": [
+        1.117,
+        6.172,
+        0.116
+      ],
+      "rotation": [
+        0.907,
+        1.467,
+        0
+      ],
+      "color": 5584935,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "tree/gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233_133d6dcd_luna_v6",
+      "name": "dragon_candelabra_0_tip",
+      "position": [
+        1.117,
+        6.172,
+        0.116
+      ],
+      "rotation": [
+        0.907,
+        1.467,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_14826433_5a0289c7_luna_v6",
+      "name": "dragon_candelabra_0_tip",
+      "position": [
+        1.025,
+        5.841,
+        0.061
+      ],
+      "rotation": [
+        0.683,
+        1.512,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_31914293_badfa19f_luna_v6",
+      "name": "dragon_candelabra_0_tip",
+      "position": [
+        1.039,
+        5.355,
+        -0.09
+      ],
+      "rotation": [
+        0.561,
+        1.657,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_36576288_12d9cbbc_luna_v6",
+      "name": "dragon_candelabra_0_tip",
+      "position": [
+        1.001,
+        5.949,
+        -0.012
+      ],
+      "rotation": [
+        0.743,
+        1.583,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    },
+    {
+      "objectKey": "tree/gt_dragontree_wc_43408118~0_476f1780_luna_v6",
+      "name": "dragon_candelabra_0_tip",
+      "position": [
+        0.983,
+        5.671,
+        -0.086
+      ],
+      "rotation": [
+        0.772,
+        1.658,
+        0
+      ],
+      "colorKey": null,
+      "color": 5584935
+    }
+  ]
+}

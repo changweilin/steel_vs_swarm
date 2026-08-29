@@ -1,0 +1,211 @@
+{
+  "id": "trim_26fb7edb",
+  "role": "trim",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|10",
+  "canonical": {
+    "objectKey": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+    "name": "flat_handlebar",
+    "part": {
+      "name": "flat_handlebar",
+      "type": "cylinder",
+      "sides": 10,
+      "radii": [
+        0.016,
+        0.016
+      ],
+      "height": 0.6,
+      "position": [
+        0.47,
+        1,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "color": 6057577,
+      "triangles": 40,
+      "role": "handlebar"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        1,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6057577
+    },
+    {
+      "objectKey": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        1,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6057577
+    },
+    {
+      "objectKey": "vehicle/bike_003002_1725858476_2e742f06_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1382685
+    },
+    {
+      "objectKey": "vehicle/bike_10012915_R3_m_ab011d1f_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1382685
+    },
+    {
+      "objectKey": "vehicle/bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1382685
+    },
+    {
+      "objectKey": "vehicle/bike_13226803_R_m_6337be00_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1382685
+    },
+    {
+      "objectKey": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1382685
+    },
+    {
+      "objectKey": "vehicle/bike_3827532_O_m_f5def028_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1382685
+    },
+    {
+      "objectKey": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1712413
+    },
+    {
+      "objectKey": "vehicle/bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1382685
+    },
+    {
+      "objectKey": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "name": "flat_handlebar",
+      "position": [
+        0.47,
+        0.92,
+        0
+      ],
+      "rotation": [
+        1.571,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1382685
+    }
+  ]
+}

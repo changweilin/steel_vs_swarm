@@ -1,0 +1,49 @@
+{
+  "id": "balcony_stack_0f461628",
+  "role": "balcony_stack",
+  "type": "box",
+  "signature": "box|0.125,1,0.125|0",
+  "canonical": {
+    "objectKey": "building/mass_169154402859999904.jpg!900x.water3_b92410c7_v6",
+    "name": "balcony_stack_1",
+    "part": {
+      "name": "balcony_stack_1",
+      "type": "box",
+      "dimensions": [
+        2,
+        28,
+        2
+      ],
+      "position": [
+        4,
+        15,
+        5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 10040064,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_169154402859999904.jpg!900x.water3_b92410c7_v6",
+      "name": "balcony_stack_1",
+      "position": [
+        4,
+        15,
+        5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10040064
+    }
+  ]
+}

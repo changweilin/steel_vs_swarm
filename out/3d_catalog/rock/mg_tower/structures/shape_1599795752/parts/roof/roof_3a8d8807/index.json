@@ -1,0 +1,61 @@
+{
+  "id": "roof_3a8d8807",
+  "role": "roof",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~1_0ed64ef8_luna_v6",
+    "name": "monument_capstone",
+    "part": {
+      "name": "monument_capstone",
+      "type": "dodecahedron_polyhedron",
+      "radius": 1.551,
+      "position": [
+        0.253,
+        12.013,
+        0
+      ],
+      "rotation": [
+        0.1,
+        0.2,
+        0
+      ],
+      "color": 6911354,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~1_0ed64ef8_luna_v6",
+      "name": "monument_capstone",
+      "position": [
+        0.253,
+        12.013,
+        0
+      ],
+      "rotation": [
+        0.1,
+        0.2,
+        0
+      ],
+      "colorKey": null,
+      "color": 6911354
+    },
+    {
+      "objectKey": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+      "name": "monument_capstone",
+      "position": [
+        0.201,
+        4.883,
+        0
+      ],
+      "rotation": [
+        0.1,
+        0.2,
+        0
+      ],
+      "colorKey": null,
+      "color": 6911354
+    }
+  ]
+}

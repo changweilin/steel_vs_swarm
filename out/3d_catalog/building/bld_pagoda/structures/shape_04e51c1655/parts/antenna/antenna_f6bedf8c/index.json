@@ -1,0 +1,50 @@
+{
+  "id": "antenna_f6bedf8c",
+  "role": "antenna",
+  "type": "cone",
+  "signature": "cone|1,1,1|8",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+    "name": "finial_canopy",
+    "part": {
+      "name": "finial_canopy",
+      "type": "cone",
+      "sides": 8,
+      "radii": [
+        0.001,
+        0.3
+      ],
+      "height": 0.6,
+      "position": [
+        0,
+        22.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15055931,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "finial_canopy",
+      "position": [
+        0,
+        22.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15055931
+    }
+  ]
+}

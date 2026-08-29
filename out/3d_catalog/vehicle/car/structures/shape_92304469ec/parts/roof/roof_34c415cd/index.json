@@ -1,0 +1,403 @@
+{
+  "id": "roof_34c415cd",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|1,0,0.75|0",
+  "canonical": {
+    "objectKey": "vehicle/car_2017091364238789_cb832536_luna_v6",
+    "name": "roof_cap",
+    "part": {
+      "name": "roof_cap",
+      "type": "box",
+      "dimensions": [
+        1.998,
+        0.1,
+        1.596
+      ],
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5858669,
+      "triangles": 12,
+      "role": "roof",
+      "colorKey": "roofHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_2017091364238789_cb832536_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5858669
+    },
+    {
+      "objectKey": "vehicle/car_1711950770028207_600_400_27fc1d09_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5858669
+    },
+    {
+      "objectKey": "vehicle/car_250730-29093-1-4yYYG_07e978cb_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 1981796
+    },
+    {
+      "objectKey": "vehicle/car_250px-Honda-TN360_dac89bc5_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 1981796
+    },
+    {
+      "objectKey": "vehicle/car_2598949_1f526e62_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 1981796
+    },
+    {
+      "objectKey": "vehicle/car_7car-202006291136-3_10cab506_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5858669
+    },
+    {
+      "objectKey": "vehicle/car_9d6035f40faac95805c9c47f572ebe3f_3ab543e3_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5858669
+    },
+    {
+      "objectKey": "vehicle/car_articleimage_1373637_86e7cfbe_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 6845563
+    },
+    {
+      "objectKey": "vehicle/car_depu_12cc1903_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5661035
+    },
+    {
+      "objectKey": "vehicle/car_Farizon-SV-3_1ca541cc_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 6845563
+    },
+    {
+      "objectKey": "vehicle/car_jspace-pu_20241108_menu_3b80890b_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 1981796
+    },
+    {
+      "objectKey": "vehicle/car_JSV_01_d2274679_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 1981796
+    },
+    {
+      "objectKey": "vehicle/car_MD_01_5x7_74dd9fe1_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5661035
+    },
+    {
+      "objectKey": "vehicle/car_mobile01-78b0b061843ca71c35cd47caeccc4c93_e7258079_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 6845563
+    },
+    {
+      "objectKey": "vehicle/car_Ou7KZDwD3jVNttR_8c5f1a99_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 1981796
+    },
+    {
+      "objectKey": "vehicle/car_ph-hv2-1_47157c08_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 6845563
+    },
+    {
+      "objectKey": "vehicle/car_photooriginal-2022408-29vqn_1c9d8e4f_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5858669
+    },
+    {
+      "objectKey": "vehicle/car_showcase2_edeliver5_h1_720x414_fea117e4_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 6845563
+    },
+    {
+      "objectKey": "vehicle/car_1667357469403862_600_400_f82915ff_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2312294
+    },
+    {
+      "objectKey": "vehicle/car_176174663300_7552c714_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2312294
+    },
+    {
+      "objectKey": "vehicle/car_3列_e3f7e1e0_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 8265768
+    },
+    {
+      "objectKey": "vehicle/car_20200710700113_93e623cc_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 5858669
+    },
+    {
+      "objectKey": "vehicle/car_Cybertruck-來了！限量-Cybertruck-模型台灣上架_c6853c8c_luna_v6",
+      "name": "roof_cap",
+      "position": [
+        -0.21,
+        1.845,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "roofHex",
+      "color": 2303789
+    }
+  ]
+}

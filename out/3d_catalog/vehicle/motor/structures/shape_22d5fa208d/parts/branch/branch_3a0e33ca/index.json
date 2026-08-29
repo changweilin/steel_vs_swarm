@@ -1,0 +1,67 @@
+{
+  "id": "branch_3a0e33ca",
+  "role": "branch",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|8",
+  "canonical": {
+    "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+    "name": "rear_swingarm_left",
+    "part": {
+      "name": "rear_swingarm_left",
+      "type": "cylinder",
+      "sides": 7,
+      "radii": [
+        0.025,
+        0.025
+      ],
+      "height": 0.89,
+      "position": [
+        -0.445,
+        0.395,
+        -0.052
+      ],
+      "rotation": [
+        1.56,
+        1.571,
+        0
+      ],
+      "color": 3356992,
+      "triangles": 28,
+      "role": "swingarm"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "rear_swingarm_left",
+      "position": [
+        -0.445,
+        0.395,
+        -0.052
+      ],
+      "rotation": [
+        1.56,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 3356992
+    },
+    {
+      "objectKey": "vehicle/motor_180512-10030-2-uyEK9_21c0827e_luna_v6",
+      "name": "rear_swingarm_right",
+      "position": [
+        -0.445,
+        0.395,
+        0.052
+      ],
+      "rotation": [
+        1.56,
+        1.571,
+        0
+      ],
+      "colorKey": null,
+      "color": 3356992
+    }
+  ]
+}

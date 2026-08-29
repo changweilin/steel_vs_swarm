@@ -1,0 +1,866 @@
+{
+  "id": "stair_64ab0626",
+  "role": "stair",
+  "type": "box",
+  "signature": "box|0.125,1,0.5|0",
+  "canonical": {
+    "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+    "name": "rear_fire_stair_f1",
+    "part": {
+      "name": "rear_fire_stair_f1",
+      "type": "box",
+      "dimensions": [
+        0.25,
+        3.4,
+        1.5
+      ],
+      "position": [
+        -6.928,
+        6.8,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "color": 1182996,
+      "triangles": 12,
+      "colorKey": "accent"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_stair_f1",
+      "position": [
+        -6.928,
+        6.8,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_stair_f2",
+      "position": [
+        -4.328,
+        10.2,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_stair_f3",
+      "position": [
+        -6.928,
+        13.6,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_stair_f4",
+      "position": [
+        -4.328,
+        17,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_stair_f5",
+      "position": [
+        -6.928,
+        20.4,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_160991898108355807.jpg!900x.water3_a026bde4",
+      "name": "rear_fire_stair_f6",
+      "position": [
+        -4.328,
+        23.8,
+        -9.79
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": "accent",
+      "color": 1182996
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_stair_f1",
+      "position": [
+        -6.296,
+        6.8,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_stair_f2",
+      "position": [
+        -3.696,
+        10.2,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_stair_f3",
+      "position": [
+        -6.296,
+        13.6,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_stair_f4",
+      "position": [
+        -3.696,
+        17,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_stair_f5",
+      "position": [
+        -6.296,
+        20.4,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_cf7c3f08fa949ce468837181b8de14d4.webp_a121265c",
+      "name": "rear_fire_stair_f6",
+      "position": [
+        -3.696,
+        23.8,
+        -10.673
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 1380364
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_stair_f1",
+      "position": [
+        -6.509,
+        6.8,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_stair_f2",
+      "position": [
+        -3.909,
+        10.2,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_stair_f3",
+      "position": [
+        -6.509,
+        13.6,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_stair_f4",
+      "position": [
+        -3.909,
+        17,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_stair_f5",
+      "position": [
+        -6.509,
+        20.4,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_stair_f6",
+      "position": [
+        -3.909,
+        23.8,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_20250122003527_152e982f",
+      "name": "rear_fire_stair_f7",
+      "position": [
+        -6.509,
+        27.2,
+        -10.713
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2700348
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_stair_f1",
+      "position": [
+        -6.183,
+        6.8,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_stair_f2",
+      "position": [
+        -3.583,
+        10.2,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_stair_f3",
+      "position": [
+        -6.183,
+        13.6,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_stair_f4",
+      "position": [
+        -3.583,
+        17,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_stair_f5",
+      "position": [
+        -6.183,
+        20.4,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_stair_f6",
+      "position": [
+        -3.583,
+        23.8,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_stair_f7",
+      "position": [
+        -6.183,
+        27.2,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_162562917953_c02b017f",
+      "name": "rear_fire_stair_f8",
+      "position": [
+        -3.583,
+        30.6,
+        -9.311
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 1843994
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_stair_f1",
+      "position": [
+        -6.372,
+        6.8,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_stair_f2",
+      "position": [
+        -3.772,
+        10.2,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_stair_f3",
+      "position": [
+        -6.372,
+        13.6,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_stair_f4",
+      "position": [
+        -3.772,
+        17,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_stair_f5",
+      "position": [
+        -6.372,
+        20.4,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_stair_f6",
+      "position": [
+        -3.772,
+        23.8,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_stair_f7",
+      "position": [
+        -6.372,
+        27.2,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_ea928273145f45cbb50e9db4_f80c7b77",
+      "name": "rear_fire_stair_f8",
+      "position": [
+        -3.772,
+        30.6,
+        -9.883
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 5855577
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_stair_f1",
+      "position": [
+        -5.732,
+        6.8,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_stair_f2",
+      "position": [
+        -3.132,
+        10.2,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_stair_f3",
+      "position": [
+        -5.732,
+        13.6,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_stair_f4",
+      "position": [
+        -3.132,
+        17,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_stair_f5",
+      "position": [
+        -5.732,
+        20.4,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_stair_f6",
+      "position": [
+        -3.132,
+        23.8,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_stair_f7",
+      "position": [
+        -5.732,
+        27.2,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_images (16)_0ced51c0",
+      "name": "rear_fire_stair_f8",
+      "position": [
+        -3.132,
+        30.6,
+        -10.519
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 3224625
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f1",
+      "position": [
+        -6.554,
+        6.8,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f2",
+      "position": [
+        -3.954,
+        10.2,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f3",
+      "position": [
+        -6.554,
+        13.6,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f4",
+      "position": [
+        -3.954,
+        17,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f5",
+      "position": [
+        -6.554,
+        20.4,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f6",
+      "position": [
+        -3.954,
+        23.8,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f7",
+      "position": [
+        -6.554,
+        27.2,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f8",
+      "position": [
+        -3.954,
+        30.6,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    },
+    {
+      "objectKey": "building/mass_e8832594_5efc2387",
+      "name": "rear_fire_stair_f9",
+      "position": [
+        -6.554,
+        34,
+        -8.502
+      ],
+      "rotation": [
+        0,
+        0,
+        -0.38
+      ],
+      "colorKey": null,
+      "color": 2435624
+    }
+  ]
+}

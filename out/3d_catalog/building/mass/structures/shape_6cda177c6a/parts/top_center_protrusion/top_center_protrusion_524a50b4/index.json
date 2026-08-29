@@ -1,0 +1,49 @@
+{
+  "id": "top_center_protrusion_524a50b4",
+  "role": "top_center_protrusion",
+  "type": "box",
+  "signature": "box|0.875,0.5,1|0",
+  "canonical": {
+    "objectKey": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73_v6",
+    "name": "top_center_protrusion",
+    "part": {
+      "name": "top_center_protrusion",
+      "type": "box",
+      "dimensions": [
+        5,
+        3,
+        6
+      ],
+      "position": [
+        0,
+        8.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 11842740,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73_v6",
+      "name": "top_center_protrusion",
+      "position": [
+        0,
+        8.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 11842740
+    }
+  ]
+}

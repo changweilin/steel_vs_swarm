@@ -1,0 +1,179 @@
+{
+  "id": "roof_ae4fb468",
+  "role": "roof",
+  "type": "box",
+  "signature": "box|1,0.125,0.625|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_2021070912244646524316_56c23978_luna_v6",
+    "name": "bus_roof_aircon",
+    "part": {
+      "name": "bus_roof_aircon",
+      "type": "box",
+      "dimensions": [
+        1.05,
+        0.16,
+        0.62
+      ],
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160899,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_2021070912244646524316_56c23978_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    },
+    {
+      "objectKey": "vehicle/heavy_67342910-48b4-49b9-b2ab-bfd617a28c76_c2587f9c_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    },
+    {
+      "objectKey": "vehicle/heavy_7car-201702220825-1_61cdd88b_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    },
+    {
+      "objectKey": "vehicle/heavy_car_a58be0ee_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    },
+    {
+      "objectKey": "vehicle/heavy_photooriginal-2760150-ffEPQ_0dca381c_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    },
+    {
+      "objectKey": "vehicle/heavy_規格表3大圖合for官網_b6a06ed0_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    },
+    {
+      "objectKey": "vehicle/heavy_20160119121809449_b987405b_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    },
+    {
+      "objectKey": "vehicle/heavy_20250917103436615_3c5db894_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    },
+    {
+      "objectKey": "vehicle/heavy_文境旅遊-賓士豪華大客車-5_c5cbdaf5_luna_v6",
+      "name": "bus_roof_aircon",
+      "position": [
+        -0.5,
+        3.28,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160899
+    }
+  ]
+}

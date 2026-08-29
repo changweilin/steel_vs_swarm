@@ -1,0 +1,66 @@
+{
+  "id": "rim_left_1e9e6db3",
+  "role": "rim_left",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.375,1|12",
+  "canonical": {
+    "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+    "name": "rim_front_left",
+    "part": {
+      "name": "rim_front_left",
+      "type": "cylinder",
+      "sides": 12,
+      "radii": [
+        0.28,
+        0.28
+      ],
+      "height": 0.22,
+      "position": [
+        -1.02,
+        0.45,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "color": 14540253,
+      "triangles": 48
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "rim_front_left",
+      "position": [
+        -1.02,
+        0.45,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 14540253
+    },
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "rim_rear_left",
+      "position": [
+        -1.02,
+        0.45,
+        -1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        1.571
+      ],
+      "colorKey": null,
+      "color": 14540253
+    }
+  ]
+}

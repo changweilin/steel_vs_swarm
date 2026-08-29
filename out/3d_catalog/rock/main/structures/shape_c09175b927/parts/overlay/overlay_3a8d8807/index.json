@@ -1,0 +1,269 @@
+{
+  "id": "overlay_3a8d8807",
+  "role": "overlay",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "attached_moss_facet",
+    "part": {
+      "name": "attached_moss_facet",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.445,
+      "position": [
+        1.099,
+        4.605,
+        1.046
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "color": 5200224,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        1.099,
+        4.605,
+        1.046
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~1_38832e59_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.73,
+        2.825,
+        0.602
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.731,
+        5.217,
+        0.832
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.64,
+        3.973,
+        0.6
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        1.92,
+        3.536,
+        2.4
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 6123602
+    },
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.388,
+        2.673,
+        0.438
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        4.16,
+        18.48,
+        5.2
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 6123602
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_e5540b76_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        4.16,
+        18.48,
+        5.2
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 6123602
+    },
+    {
+      "objectKey": "rock/main_61bc69d997822_24ae0dc8_luna_v6",
+      "name": "strata_top_fragment",
+      "position": [
+        -4.68,
+        19.228,
+        -1.3
+      ],
+      "rotation": [
+        0.14,
+        -0.14,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/main_61bc69d997822_24ae0dc8_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        4.16,
+        16.093,
+        5.2
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    },
+    {
+      "objectKey": "rock/main_images (2)_56b743a2_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.392,
+        1.217,
+        0.36
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    },
+    {
+      "objectKey": "rock/main_0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA_366483c8_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        1.394,
+        5.094,
+        1.211
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    },
+    {
+      "objectKey": "rock/main_images (6)_fd534896_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.398,
+        1.428,
+        0.36
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    },
+    {
+      "objectKey": "rock/main_132_0da6c49f_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        4.16,
+        3.997,
+        5.2
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_images rock_15704dbb_luna_v6",
+      "name": "strata_top_fragment",
+      "position": [
+        -0.414,
+        1.38,
+        -0.09
+      ],
+      "rotation": [
+        0.14,
+        -0.14,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 6911354
+    }
+  ]
+}

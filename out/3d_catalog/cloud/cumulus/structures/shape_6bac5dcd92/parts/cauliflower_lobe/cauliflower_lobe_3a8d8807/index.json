@@ -1,0 +1,79 @@
+{
+  "id": "cauliflower_lobe_3a8d8807",
+  "role": "cauliflower_lobe",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+    "name": "cumulus_cauli_lobe_dode_10",
+    "part": {
+      "name": "cumulus_cauli_lobe_dode_10",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.48,
+      "position": [
+        -3.72,
+        1.15,
+        -0.72
+      ],
+      "rotation": [
+        0.08,
+        2.9,
+        0.04
+      ],
+      "color": 15199992,
+      "triangles": 36,
+      "role": "cauliflower_lobe",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_dode_10",
+      "position": [
+        -3.72,
+        1.15,
+        -0.72
+      ],
+      "rotation": [
+        0.08,
+        2.9,
+        0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 15199992
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_cauli_lobe_dode_16",
+      "position": [
+        3.58,
+        1.2,
+        -0.62
+      ],
+      "rotation": [
+        0.08,
+        4.64,
+        0.04
+      ],
+      "colorKey": "brightHex",
+      "color": 16777215
+    },
+    {
+      "objectKey": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "name": "cumulus_right_edge_lobe",
+      "position": [
+        3.8,
+        0.98,
+        0.18
+      ],
+      "rotation": [
+        -0.08,
+        0.22,
+        -0.04
+      ],
+      "colorKey": "facadeHex",
+      "color": 13885164
+    }
+  ]
+}

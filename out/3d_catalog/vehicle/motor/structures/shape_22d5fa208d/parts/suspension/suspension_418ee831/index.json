@@ -1,0 +1,99 @@
+{
+  "id": "suspension_418ee831",
+  "role": "suspension",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|6",
+  "canonical": {
+    "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+    "name": "rear_shock_left",
+    "part": {
+      "name": "rear_shock_left",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.014,
+        0.014
+      ],
+      "height": 0.474,
+      "position": [
+        -0.65,
+        0.54,
+        -0.09
+      ],
+      "rotation": [
+        0.567,
+        2.356,
+        0
+      ],
+      "color": 15986402,
+      "triangles": 24,
+      "role": "suspension"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "name": "rear_shock_left",
+      "position": [
+        -0.65,
+        0.54,
+        -0.09
+      ],
+      "rotation": [
+        0.567,
+        2.356,
+        0
+      ],
+      "colorKey": null,
+      "color": 15986402
+    },
+    {
+      "objectKey": "vehicle/motor_5bdf5c8b-fdad-4d7e-8d30-6d7523b01ecf_1ce8d1f3_luna_v6",
+      "name": "rear_shock_right",
+      "position": [
+        -0.65,
+        0.54,
+        0.09
+      ],
+      "rotation": [
+        0.567,
+        0.785,
+        0
+      ],
+      "colorKey": null,
+      "color": 15986402
+    },
+    {
+      "objectKey": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "name": "rear_shock_left",
+      "position": [
+        -0.65,
+        0.54,
+        -0.09
+      ],
+      "rotation": [
+        0.567,
+        2.356,
+        0
+      ],
+      "colorKey": null,
+      "color": 15986402
+    },
+    {
+      "objectKey": "vehicle/motor_7801666_3a47734e_luna_v6",
+      "name": "rear_shock_right",
+      "position": [
+        -0.65,
+        0.54,
+        0.09
+      ],
+      "rotation": [
+        0.567,
+        0.785,
+        0
+      ],
+      "colorKey": null,
+      "color": 15986402
+    }
+  ]
+}

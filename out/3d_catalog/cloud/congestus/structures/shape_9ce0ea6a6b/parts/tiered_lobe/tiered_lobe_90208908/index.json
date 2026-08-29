@@ -1,0 +1,159 @@
+{
+  "id": "tiered_lobe_90208908",
+  "role": "tiered_lobe",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+    "name": "congestus_tier_3_icosa_0",
+    "part": {
+      "name": "congestus_tier_3_icosa_0",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.56,
+      "position": [
+        -1.84,
+        2.78,
+        0.36
+      ],
+      "rotation": [
+        0.1,
+        3.45,
+        -0.04
+      ],
+      "color": 16317437,
+      "triangles": 20,
+      "role": "tiered_lobe",
+      "colorKey": "brightHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_3_icosa_0",
+      "position": [
+        -1.84,
+        2.78,
+        0.36
+      ],
+      "rotation": [
+        0.1,
+        3.45,
+        -0.04
+      ],
+      "colorKey": "brightHex",
+      "color": 16317437
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_3_icosa_4",
+      "position": [
+        1.92,
+        2.78,
+        0.36
+      ],
+      "rotation": [
+        0.1,
+        4.37,
+        -0.04
+      ],
+      "colorKey": "baseHex",
+      "color": 4608352
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_4_icosa_3",
+      "position": [
+        1.06,
+        3.56,
+        0.28
+      ],
+      "rotation": [
+        0.1,
+        5.29,
+        -0.04
+      ],
+      "colorKey": "roofHex",
+      "color": 6189192
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_5_icosa_0",
+      "position": [
+        -1.4,
+        4.32,
+        0.35
+      ],
+      "rotation": [
+        0.1,
+        5.75,
+        -0.04
+      ],
+      "colorKey": "brightHex",
+      "color": 16317437
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_6_icosa_0",
+      "position": [
+        -1.02,
+        5.06,
+        -0.29
+      ],
+      "rotation": [
+        0.1,
+        6.67,
+        -0.04
+      ],
+      "colorKey": "brightHex",
+      "color": 16317437
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_6_icosa_2",
+      "position": [
+        0.72,
+        5.06,
+        -0.29
+      ],
+      "rotation": [
+        0.1,
+        7.13,
+        -0.04
+      ],
+      "colorKey": "baseHex",
+      "color": 4608352
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_7_icosa_0",
+      "position": [
+        -0.52,
+        5.7,
+        0.32
+      ],
+      "rotation": [
+        0.1,
+        7.59,
+        -0.04
+      ],
+      "colorKey": "facadeHex",
+      "color": 9675702
+    },
+    {
+      "objectKey": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "name": "congestus_tier_7_icosa_2",
+      "position": [
+        0.98,
+        5.7,
+        0.32
+      ],
+      "rotation": [
+        0.1,
+        8.05,
+        -0.04
+      ],
+      "colorKey": "baseHex",
+      "color": 4608352
+    }
+  ]
+}

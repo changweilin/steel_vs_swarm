@@ -1,0 +1,82 @@
+{
+  "id": "canopy_eea9cb87",
+  "role": "canopy",
+  "type": "cone",
+  "signature": "cone|0.75,1,0.75|8",
+  "canonical": {
+    "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+    "name": "tree_canopy_1",
+    "part": {
+      "name": "tree_canopy_1",
+      "type": "cone",
+      "sides": 7,
+      "radii": [
+        0.001,
+        0.4
+      ],
+      "height": 1,
+      "position": [
+        -0.5,
+        2.2,
+        4.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "tree_canopy_1",
+      "position": [
+        -0.5,
+        2.2,
+        4.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    },
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "tree_canopy_2",
+      "position": [
+        0.2,
+        2.2,
+        4.4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    },
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "tree_canopy_4",
+      "position": [
+        1.8,
+        2.2,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

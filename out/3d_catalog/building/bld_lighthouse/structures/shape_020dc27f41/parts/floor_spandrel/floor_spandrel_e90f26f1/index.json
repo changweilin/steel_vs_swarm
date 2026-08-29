@@ -1,0 +1,290 @@
+{
+  "id": "floor_spandrel_e90f26f1",
+  "role": "floor_spandrel",
+  "type": "box",
+  "signature": "box|0.875,0,1|0",
+  "canonical": {
+    "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+    "name": "floor_spandrel_1",
+    "part": {
+      "name": "floor_spandrel_1",
+      "type": "box",
+      "dimensions": [
+        21.331,
+        0.35,
+        22.994
+      ],
+      "position": [
+        0,
+        3.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 6447715,
+      "triangles": 12,
+      "colorKey": "accent"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_1",
+      "position": [
+        0,
+        3.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_2",
+      "position": [
+        0,
+        7.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_3",
+      "position": [
+        0,
+        11.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_4",
+      "position": [
+        0,
+        15.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_5",
+      "position": [
+        0,
+        19,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_6",
+      "position": [
+        0,
+        22.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_7",
+      "position": [
+        0,
+        26.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_8",
+      "position": [
+        0,
+        30.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_9",
+      "position": [
+        0,
+        34.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_10",
+      "position": [
+        0,
+        38,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_11",
+      "position": [
+        0,
+        41.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_12",
+      "position": [
+        0,
+        45.6,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_13",
+      "position": [
+        0,
+        49.4,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_14",
+      "position": [
+        0,
+        53.2,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_15",
+      "position": [
+        0,
+        57,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    },
+    {
+      "objectKey": "building/bld_lighthouse_ov_024ac479-c873-4c6e-9546-604a07f993a0_d9cc9fad",
+      "name": "floor_spandrel_16",
+      "position": [
+        0,
+        60.8,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accent",
+      "color": 6447715
+    }
+  ]
+}

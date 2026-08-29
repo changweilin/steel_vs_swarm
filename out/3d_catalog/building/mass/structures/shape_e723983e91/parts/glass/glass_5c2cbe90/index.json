@@ -1,0 +1,193 @@
+{
+  "id": "glass_5c2cbe90",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0,0.375,1|0",
+  "canonical": {
+    "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+    "name": "side_window_5",
+    "part": {
+      "name": "side_window_5",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1.2,
+        3.5
+      ],
+      "position": [
+        2.28,
+        4.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3368652,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "side_window_5",
+      "position": [
+        2.28,
+        4.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "balcony_glass_4",
+      "position": [
+        2.7,
+        4.3,
+        -1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "side_window_4",
+      "position": [
+        2.28,
+        7.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "balcony_glass_3",
+      "position": [
+        2.7,
+        7.3,
+        -1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "side_window_3",
+      "position": [
+        2.28,
+        10.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "balcony_glass_2",
+      "position": [
+        2.7,
+        10.3,
+        -1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "side_window_2",
+      "position": [
+        2.28,
+        13.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "balcony_glass_1",
+      "position": [
+        2.7,
+        13.3,
+        -1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "side_window_1",
+      "position": [
+        2.28,
+        16.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    },
+    {
+      "objectKey": "building/mass_169890929387866207.jpg!338x252_23c6fab1_v6",
+      "name": "side_window_6",
+      "position": [
+        2.28,
+        19.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3368652
+    }
+  ]
+}

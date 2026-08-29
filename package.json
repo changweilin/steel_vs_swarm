@@ -18,6 +18,8 @@
     "audit:net": "node tools/audit_net_modes.mjs",
     "codex": "node tools/codex_review.mjs",
     "parts": "node tools/parts_review.mjs",
+    "parts:catalog": "node tools/ai3d/catalog_tree.mjs --write",
+    "audit:catalog": "node tools/ai3d/audit_catalog_tree.mjs",
     "story": "node tools/story_book.mjs"
   },
   "dependencies": {

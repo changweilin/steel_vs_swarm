@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "gt_dragontree",
+  "palettes": [
+    {
+      "id": "palette_ab76cbb7",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2383940,
+        "facadeHex": 5212749,
+        "baseHex": 5584935,
+        "accentHex": 9547096,
+        "glassHex": 1976635,
+        "darkHex": 2176554,
+        "brightHex": 12175481
+      },
+      "objects": [
+        {
+          "key": "tree/gt_dragontree_ov_737d2395-17ee-4db1-8c64-a019dbf02f3a_b609778d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_ov_ca9ebae3-973a-4246-a370-45f7a0991233_133d6dcd_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_ov_9e639bd4-0ca0-4ff9-9270-ffee5ae02aa6_2f312194_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_ov_f9b7d32e-f7d1-4312-9583-a9401da9228a_caa33652_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_119157444_9aba27af_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_129628116_da60337c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_129628117_4f09a53d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_129628119_97d84b9e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_145806133~0_0b144f2f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_145806133~1_0e82124c_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_14826433_5a0289c7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_168194741_3de13669_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_170465060_61440e10_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_192515746_3e3d7835_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_29765656_1380f82d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_29766035_f56426ca_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_31914293_badfa19f_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_36576288_12d9cbbc_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_43408118~0_476f1780_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_43408118~1_dc20500a_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_54027335_0193e2dc_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_54027346_d6988bb7_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_54817480_73f63f12_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_dragontree_wc_55064976_808197a4_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

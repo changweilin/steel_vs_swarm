@@ -1,0 +1,129 @@
+{
+  "id": "glass_e2e9bb75",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,1,0|0",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+    "name": "first_story_window_fl",
+    "part": {
+      "name": "first_story_window_fl",
+      "type": "box",
+      "dimensions": [
+        1.2,
+        1.2,
+        0.05
+      ],
+      "position": [
+        -2.5,
+        2.2,
+        4.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1125915,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "first_story_window_fl",
+      "position": [
+        -2.5,
+        2.2,
+        4.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125915
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "first_story_window_fr",
+      "position": [
+        2.5,
+        2.2,
+        4.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125915
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "first_story_window_bl",
+      "position": [
+        -2.5,
+        2.2,
+        -4.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125915
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "first_story_window_br",
+      "position": [
+        2.5,
+        2.2,
+        -4.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125915
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "fourth_story_window_f",
+      "position": [
+        0,
+        12.4,
+        2.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125915
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "fourth_story_window_b",
+      "position": [
+        0,
+        12.4,
+        -2.52
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1125915
+    }
+  ]
+}

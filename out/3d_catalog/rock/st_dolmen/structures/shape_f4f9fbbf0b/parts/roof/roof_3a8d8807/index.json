@@ -1,0 +1,77 @@
+{
+  "id": "roof_3a8d8807",
+  "role": "roof",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+    "name": "standing_stone_cap_right",
+    "part": {
+      "name": "standing_stone_cap_right",
+      "type": "dodecahedron_polyhedron",
+      "radius": 1.5,
+      "position": [
+        2.43,
+        4.32,
+        0.3
+      ],
+      "rotation": [
+        0.1,
+        0.17,
+        0
+      ],
+      "color": 5602375,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+      "name": "standing_stone_cap_right",
+      "position": [
+        2.43,
+        4.32,
+        0.3
+      ],
+      "rotation": [
+        0.1,
+        0.17,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0_b19ff617_luna_v6",
+      "name": "standing_stone_cap_right",
+      "position": [
+        1,
+        1.831,
+        0.15
+      ],
+      "rotation": [
+        0.1,
+        0.17,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    },
+    {
+      "objectKey": "rock/st_dolmen_ov_8014a4d8-7f19-4ed5-b422-c4fd8a5bf3b4_72f05d37_luna_v6",
+      "name": "standing_stone_cap_right",
+      "position": [
+        5.2,
+        6.063,
+        0.78
+      ],
+      "rotation": [
+        0.1,
+        0.17,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": "overlay_3a8d8807",
+  "role": "overlay",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+    "name": "attached_moss_facet",
+    "part": {
+      "name": "attached_moss_facet",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.177,
+      "position": [
+        0.525,
+        2.623,
+        0.416
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "color": 11452549,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243_68d88926_luna_v6",
+      "name": "attached_moss_facet",
+      "position": [
+        0.525,
+        2.623,
+        0.416
+      ],
+      "rotation": [
+        0.08,
+        0.24,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 11452549
+    }
+  ]
+}

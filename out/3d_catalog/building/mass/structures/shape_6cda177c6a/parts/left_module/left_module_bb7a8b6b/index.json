@@ -1,0 +1,49 @@
+{
+  "id": "left_module_bb7a8b6b",
+  "role": "left_module",
+  "type": "box",
+  "signature": "box|1,0.5,0.875|0",
+  "canonical": {
+    "objectKey": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73_v6",
+    "name": "lower_left_module",
+    "part": {
+      "name": "lower_left_module",
+      "type": "box",
+      "dimensions": [
+        7,
+        3.2,
+        6.5
+      ],
+      "position": [
+        -5.5,
+        4.5,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 11842740,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73_v6",
+      "name": "lower_left_module",
+      "position": [
+        -5.5,
+        4.5,
+        0.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 11842740
+    }
+  ]
+}

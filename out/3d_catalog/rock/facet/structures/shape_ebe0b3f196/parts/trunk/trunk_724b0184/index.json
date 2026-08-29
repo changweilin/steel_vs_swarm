@@ -1,0 +1,65 @@
+{
+  "id": "trunk_724b0184",
+  "role": "trunk",
+  "type": "wedge",
+  "signature": "wedge|1,0.875,0.625|0",
+  "canonical": {
+    "objectKey": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+    "name": "left_buttress",
+    "part": {
+      "name": "left_buttress",
+      "type": "wedge",
+      "dimensions": [
+        2.772,
+        2.571,
+        1.865
+      ],
+      "position": [
+        -2.772,
+        1.794,
+        -0.249
+      ],
+      "rotation": [
+        0.02,
+        0.18,
+        -0.09
+      ],
+      "color": 3160123,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+      "name": "left_buttress",
+      "position": [
+        -2.772,
+        1.794,
+        -0.249
+      ],
+      "rotation": [
+        0.02,
+        0.18,
+        -0.09
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+      "name": "right_buttress",
+      "position": [
+        2.683,
+        1.674,
+        0.249
+      ],
+      "rotation": [
+        -0.06,
+        -0.14,
+        0.12
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

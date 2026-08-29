@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_22e02c2ab6",
+  "canonicalKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+    "bounds": {
+      "min": [
+        -2.5,
+        0,
+        -2.5
+      ],
+      "max": [
+        2.5,
+        4,
+        2.5
+      ],
+      "size": [
+        5,
+        4,
+        5
+      ],
+      "rMax": 3.536,
+      "triangles": 340,
+      "vertices": 184
+    },
+    "parts": [
+      {
+        "name": "yurt_base",
+        "type": "cylinder",
+        "sides": 32,
+        "radii": [
+          2.5,
+          2.5
+        ],
+        "height": 2.2,
+        "position": [
+          0,
+          1.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 13816530,
+        "triangles": 128
+      },
+      {
+        "name": "yurt_roof",
+        "type": "frustum_pyramid",
+        "sides": 32,
+        "radii": [
+          0.5,
+          2.5
+        ],
+        "height": 1.2,
+        "position": [
+          0,
+          2.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 14540253,
+        "triangles": 128
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "building/bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_830d5aa3_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/bld_yurt/building_bld_yurt_ov_75396782-7f8a-4829-983b-111047edc6d8_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_43efcd88"
+      ]
+    }
+  ]
+}

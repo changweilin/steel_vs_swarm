@@ -1,0 +1,99 @@
+{
+  "id": "equipment_78023411",
+  "role": "equipment",
+  "type": "ellipsoid_sphere",
+  "signature": "ellipsoid_sphere|0.25,1,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+    "name": "rugged_rear_spare_cover",
+    "part": {
+      "name": "rugged_rear_spare_cover",
+      "type": "ellipsoid_sphere",
+      "radii": [
+        0.09,
+        0.31,
+        0.31
+      ],
+      "position": [
+        -2.41,
+        1.16,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 922896,
+      "triangles": 160,
+      "role": "equipment",
+      "colorKey": "darkHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_qaDPp5eY29jQ2M2cng_b537b3ae_luna_v6",
+      "name": "rugged_rear_spare_cover",
+      "position": [
+        -2.41,
+        1.16,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 922896
+    },
+    {
+      "objectKey": "vehicle/car_161060143500_896f4c33_luna_v6",
+      "name": "offroad_rear_spare_cover",
+      "position": [
+        -2.41,
+        1.18,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 856081
+    },
+    {
+      "objectKey": "vehicle/car_240925_land-rover-world-ender_from-Apocalypse-Manufacturing-003_dd25cf77_luna_v6",
+      "name": "offroad_rear_spare_cover",
+      "position": [
+        -2.41,
+        1.18,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 856081
+    },
+    {
+      "objectKey": "vehicle/car_jeep-1597856882911_5f1e43d5_luna_v6",
+      "name": "offroad_rear_spare_cover",
+      "position": [
+        -2.41,
+        1.18,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "darkHex",
+      "color": 856081
+    }
+  ]
+}

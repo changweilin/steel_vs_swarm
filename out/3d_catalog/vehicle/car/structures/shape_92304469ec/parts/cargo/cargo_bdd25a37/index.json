@@ -1,0 +1,179 @@
+{
+  "id": "cargo_bdd25a37",
+  "role": "cargo",
+  "type": "box",
+  "signature": "box|0.625,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_250730-29093-1-4yYYG_07e978cb_luna_v6",
+    "name": "rear_load_floor",
+    "part": {
+      "name": "rear_load_floor",
+      "type": "box",
+      "dimensions": [
+        0.98,
+        0.18,
+        1.634
+      ],
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2435889,
+      "triangles": 12,
+      "role": "cargo",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_250730-29093-1-4yYYG_07e978cb_luna_v6",
+      "name": "rear_load_floor",
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2435889
+    },
+    {
+      "objectKey": "vehicle/car_250px-Honda-TN360_dac89bc5_luna_v6",
+      "name": "rear_load_floor",
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2435889
+    },
+    {
+      "objectKey": "vehicle/car_2598949_1f526e62_luna_v6",
+      "name": "rear_load_floor",
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2435889
+    },
+    {
+      "objectKey": "vehicle/car_jspace-pu_20241108_menu_3b80890b_luna_v6",
+      "name": "rear_load_floor",
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2435889
+    },
+    {
+      "objectKey": "vehicle/car_JSV_01_d2274679_luna_v6",
+      "name": "rear_load_floor",
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2435889
+    },
+    {
+      "objectKey": "vehicle/car_mobile01-78b0b061843ca71c35cd47caeccc4c93_e7258079_luna_v6",
+      "name": "rear_load_floor",
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3160128
+    },
+    {
+      "objectKey": "vehicle/car_Ou7KZDwD3jVNttR_8c5f1a99_luna_v6",
+      "name": "rear_load_floor",
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2435889
+    },
+    {
+      "objectKey": "vehicle/car_20200710700113_93e623cc_luna_v6",
+      "name": "tarp_load_floor",
+      "position": [
+        -1.82,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 2239023
+    },
+    {
+      "objectKey": "vehicle/car_Cybertruck-來了！限量-Cybertruck-模型台灣上架_c6853c8c_luna_v6",
+      "name": "rear_load_floor",
+      "position": [
+        -1.81,
+        1.06,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 1514014
+    }
+  ]
+}

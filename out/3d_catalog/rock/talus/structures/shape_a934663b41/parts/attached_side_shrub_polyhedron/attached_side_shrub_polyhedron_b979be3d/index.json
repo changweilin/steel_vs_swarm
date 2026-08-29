@@ -1,0 +1,49 @@
+{
+  "id": "attached_side_shrub_polyhedron_b979be3d",
+  "role": "attached_side_shrub_polyhedron",
+  "type": "hull_polyhedron",
+  "signature": "hull_polyhedron|0,0,0|0",
+  "canonical": {
+    "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+    "name": "attached_side_shrub_polyhedron",
+    "part": {
+      "name": "attached_side_shrub_polyhedron",
+      "type": "hull_polyhedron",
+      "dimensions": [
+        1.696,
+        0.794,
+        1.128
+      ],
+      "position": [
+        -1.431,
+        1.466,
+        0.166
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "color": 6767665,
+      "triangles": 46
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+      "name": "attached_side_shrub_polyhedron",
+      "position": [
+        -1.431,
+        1.466,
+        0.166
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "colorKey": null,
+      "color": 6767665
+    }
+  ]
+}

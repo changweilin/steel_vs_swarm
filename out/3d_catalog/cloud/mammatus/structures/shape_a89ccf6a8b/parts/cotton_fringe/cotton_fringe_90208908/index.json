@@ -1,0 +1,95 @@
+{
+  "id": "cotton_fringe_90208908",
+  "role": "cotton_fringe",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+    "name": "mammatus_continuous_upper_icosa_3_cotton_fringe",
+    "part": {
+      "name": "mammatus_continuous_upper_icosa_3_cotton_fringe",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.301,
+      "position": [
+        -1.946,
+        2.606,
+        0.15
+      ],
+      "rotation": [
+        0.1,
+        0.92,
+        -0.04
+      ],
+      "color": 14144975,
+      "triangles": 20,
+      "role": "cotton_fringe",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_icosa_3_cotton_fringe",
+      "position": [
+        -1.946,
+        2.606,
+        0.15
+      ],
+      "rotation": [
+        0.1,
+        0.92,
+        -0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 14144975
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_icosa_7_cotton_fringe",
+      "position": [
+        3.692,
+        2.292,
+        0.308
+      ],
+      "rotation": [
+        0.1,
+        1.84,
+        -0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 14144975
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_continuous_upper_icosa_11_cotton_fringe",
+      "position": [
+        0.858,
+        2.898,
+        -0.602
+      ],
+      "rotation": [
+        0.1,
+        2.76,
+        -0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 14144975
+    },
+    {
+      "objectKey": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "name": "mammatus_pouch_wide_neck_6_cotton_fringe",
+      "position": [
+        2.428,
+        1.506,
+        0.77
+      ],
+      "rotation": [
+        0.1,
+        9.2,
+        -0.04
+      ],
+      "colorKey": "accentHex",
+      "color": 14144975
+    }
+  ]
+}

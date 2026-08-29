@@ -1,0 +1,50 @@
+{
+  "id": "sorin_base_c2ea623f",
+  "role": "sorin_base",
+  "type": "cylinder",
+  "signature": "cylinder|1,0.75,1|8",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+    "name": "sorin_base",
+    "part": {
+      "name": "sorin_base",
+      "type": "cylinder",
+      "sides": 8,
+      "radii": [
+        0.4,
+        0.4
+      ],
+      "height": 0.6,
+      "position": [
+        0,
+        18.9,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16303424,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_e3bdfbad-4b43-48e6-b832-31d4f69721e5_94c149dd_v6",
+      "name": "sorin_base",
+      "position": [
+        0,
+        18.9,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16303424
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "hood_f97cc908",
+  "role": "hood",
+  "type": "wedge",
+  "signature": "wedge|1,0.25,0.625|0",
+  "canonical": {
+    "objectKey": "vehicle/car_176103315400_b84cb3e4_v6",
+    "name": "front_hood",
+    "part": {
+      "name": "front_hood",
+      "type": "wedge",
+      "dimensions": [
+        1.78,
+        0.35,
+        1.1
+      ],
+      "position": [
+        0,
+        1.3,
+        1.3
+      ],
+      "rotation": [
+        0,
+        3.142,
+        0
+      ],
+      "color": 11184810,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_176103315400_b84cb3e4_v6",
+      "name": "front_hood",
+      "position": [
+        0,
+        1.3,
+        1.3
+      ],
+      "rotation": [
+        0,
+        3.142,
+        0
+      ],
+      "colorKey": null,
+      "color": 11184810
+    }
+  ]
+}

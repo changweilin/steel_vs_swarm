@@ -1,0 +1,65 @@
+{
+  "id": "attached_side_shrub_polyhedron_b979be3d",
+  "role": "attached_side_shrub_polyhedron",
+  "type": "hull_polyhedron",
+  "signature": "hull_polyhedron|0,0,0|0",
+  "canonical": {
+    "objectKey": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+    "name": "attached_side_shrub_polyhedron",
+    "part": {
+      "name": "attached_side_shrub_polyhedron",
+      "type": "hull_polyhedron",
+      "dimensions": [
+        3.887,
+        1.328,
+        3.4
+      ],
+      "position": [
+        -3.28,
+        2.452,
+        0.5
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 46
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/st_dolmen_ov_91f63e91-c931-41b2-b844-78e092ca98cf_7cdf26bf_luna_v6",
+      "name": "attached_side_shrub_polyhedron",
+      "position": [
+        -3.28,
+        2.452,
+        0.5
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0_b19ff617_luna_v6",
+      "name": "attached_side_shrub_polyhedron",
+      "position": [
+        -1.35,
+        0.983,
+        0.25
+      ],
+      "rotation": [
+        0.1,
+        -0.12,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "id": "roof_3a8d8807",
+  "role": "roof",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+    "name": "tor_left_cap",
+    "part": {
+      "name": "tor_left_cap",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.8,
+      "position": [
+        -3.84,
+        6.6,
+        -0.16
+      ],
+      "rotation": [
+        0.15,
+        -0.18,
+        0.1
+      ],
+      "color": 2370353,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+      "name": "tor_left_cap",
+      "position": [
+        -3.84,
+        6.6,
+        -0.16
+      ],
+      "rotation": [
+        0.15,
+        -0.18,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 2370353
+    },
+    {
+      "objectKey": "rock/tor_ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb_727eb4b7_luna_v6",
+      "name": "tor_right_cap",
+      "position": [
+        3.84,
+        6.3,
+        0.16
+      ],
+      "rotation": [
+        -0.1,
+        0.19,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 2370353
+    }
+  ]
+}

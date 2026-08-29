@@ -1,0 +1,49 @@
+{
+  "id": "pool_water_34c415cd",
+  "role": "pool_water",
+  "type": "box",
+  "signature": "box|1,0,0.75|0",
+  "canonical": {
+    "objectKey": "building/mass_101330_f4de6359_v6",
+    "name": "pool_water",
+    "part": {
+      "name": "pool_water",
+      "type": "box",
+      "dimensions": [
+        4.8,
+        0.2,
+        3.8
+      ],
+      "position": [
+        -4.5,
+        0.2,
+        -3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 33947,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_101330_f4de6359_v6",
+      "name": "pool_water",
+      "position": [
+        -4.5,
+        0.2,
+        -3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 33947
+    }
+  ]
+}

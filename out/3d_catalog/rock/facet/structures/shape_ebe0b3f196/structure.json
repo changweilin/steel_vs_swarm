@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_ebe0b3f196",
+  "canonicalKey": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+    "bounds": {
+      "min": [
+        -2.9818,
+        0,
+        -2.6304
+      ],
+      "max": [
+        2.8964,
+        4.9192,
+        2.7126
+      ],
+      "size": [
+        5.878,
+        4.919,
+        5.343
+      ],
+      "rMax": 3.976,
+      "triangles": 396,
+      "vertices": 226
+    },
+    "parts": [
+      {
+        "name": "mesa_lower_slope",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.808,
+          2.63
+        ],
+        "height": 1.353,
+        "position": [
+          0,
+          0.756,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "mesa_cliff_body",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          1.521,
+          1.85
+        ],
+        "height": 2.706,
+        "position": [
+          -0.14,
+          2.767,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 32
+      },
+      {
+        "name": "mesa_flat_cap",
+        "type": "polygonal_prism",
+        "sides": 8,
+        "radius": 1.562,
+        "height": 0.799,
+        "position": [
+          0.14,
+          4.52,
+          -0.082
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2370353,
+        "triangles": 32
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/facet/rock_rock_facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+      "similarity": 42,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_55df19cd_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/facet/rock_rock_facet_ov_7a4ea103-3ca7-43f9-ad18-f62e3ba96fc0_55df19cd_luna_v6",
+      "similarity": 49,
+      "scale": [
+        0.66808,
+        0.19049,
+        0.77597
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/facet/rock_rock_facet_wc_153807366_dad9b3c5_luna_v6",
+      "similarity": 36,
+      "scale": [
+        1.18765,
+        1.15918,
+        1.08404
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/facet_wc_18724201_4ee2ce69_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/facet/rock_rock_facet_wc_18724201_4ee2ce69_luna_v6",
+      "similarity": 46,
+      "scale": [
+        1.46649,
+        1.30392,
+        1.44282
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~2_4ff4c0fb_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/facet/rock_rock_facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2_2_4ff4c0fb_luna_v6",
+      "similarity": 35,
+      "scale": [
+        0.64597,
+        0.64851,
+        0.7056
+      ],
+      "paletteIds": [
+        "palette_8b1e3742"
+      ]
+    },
+    {
+      "key": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~1_fcd26e23_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/facet/rock_rock_facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2_1_fcd26e23_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.50698,
+        0.92824,
+        1.7537
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/facet_ov_f7e1cc51-e247-42b9-a51c-c775ad831804_11e14f1f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/facet/rock_rock_facet_ov_f7e1cc51-e247-42b9-a51c-c775ad831804_11e14f1f_luna_v6",
+      "similarity": 66,
+      "scale": [
+        1.06159,
+        0.80585,
+        1.16788
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

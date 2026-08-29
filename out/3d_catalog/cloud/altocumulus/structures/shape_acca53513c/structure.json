@@ -1,0 +1,1076 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_acca53513c",
+  "canonicalKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+    "bounds": {
+      "min": [
+        -5.2544,
+        1.0034,
+        -2.3889
+      ],
+      "max": [
+        5.1714,
+        2.4778,
+        2.6742
+      ],
+      "size": [
+        10.426,
+        1.474,
+        5.063
+      ],
+      "rMax": 5.822,
+      "triangles": 5528,
+      "vertices": 3128
+    },
+    "parts": [
+      {
+        "name": "altocumulus_wavelet_core_0",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.53,
+        "position": [
+          -4.64,
+          1.54,
+          2.1
+        ],
+        "rotation": [
+          0.06,
+          0,
+          0.04
+        ],
+        "color": 16775409,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_1",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.6,
+        "position": [
+          -2.79,
+          1.63,
+          1.92
+        ],
+        "rotation": [
+          0.06,
+          0.29,
+          0.04
+        ],
+        "color": 15196380,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_front_1",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.408,
+        "position": [
+          -2.418,
+          1.625,
+          2.04
+        ],
+        "rotation": [
+          0.1,
+          0.23,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_2",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.67,
+        "position": [
+          -1.01,
+          1.65,
+          2.06
+        ],
+        "rotation": [
+          0.06,
+          0.58,
+          0.04
+        ],
+        "color": 15196380,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_front_2",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.456,
+        "position": [
+          -0.595,
+          1.62,
+          2.18
+        ],
+        "rotation": [
+          0.1,
+          0.46,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_back_2",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.415,
+        "position": [
+          -1.399,
+          1.67,
+          1.94
+        ],
+        "rotation": [
+          0.08,
+          0.42,
+          0.06
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_3",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.565,
+        "position": [
+          1.12,
+          1.71,
+          1.88
+        ],
+        "rotation": [
+          0.06,
+          0.87,
+          0.04
+        ],
+        "color": 15196380,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_front_3",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.384,
+        "position": [
+          1.47,
+          1.705,
+          2
+        ],
+        "rotation": [
+          0.1,
+          0.69,
+          -0.04
+        ],
+        "color": 16775409,
+        "triangles": 20,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_4",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.635,
+        "position": [
+          2.65,
+          1.6,
+          2.04
+        ],
+        "rotation": [
+          0.06,
+          1.16,
+          0.04
+        ],
+        "color": 16775409,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_front_4",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.432,
+        "position": [
+          3.044,
+          1.57,
+          2.16
+        ],
+        "rotation": [
+          0.1,
+          0.92,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_back_4",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.394,
+        "position": [
+          2.282,
+          1.64,
+          1.92
+        ],
+        "rotation": [
+          0.08,
+          0.84,
+          0.06
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_5",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.53,
+        "position": [
+          4.28,
+          1.55,
+          1.94
+        ],
+        "rotation": [
+          0.06,
+          1.45,
+          0.04
+        ],
+        "color": 15196380,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_6",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.575,
+        "position": [
+          -3.75,
+          1.66,
+          0.9
+        ],
+        "rotation": [
+          0.06,
+          1.74,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_front_6",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.391,
+        "position": [
+          -3.393,
+          1.63,
+          1.02
+        ],
+        "rotation": [
+          0.1,
+          1.38,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_7",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.47,
+        "position": [
+          -1.74,
+          1.75,
+          1.08
+        ],
+        "rotation": [
+          0.06,
+          2.03,
+          0.04
+        ],
+        "color": 16775409,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_8",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.54,
+        "position": [
+          0.12,
+          1.78,
+          0.94
+        ],
+        "rotation": [
+          0.06,
+          2.32,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_9",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.61,
+        "position": [
+          1.53,
+          1.7,
+          1.1
+        ],
+        "rotation": [
+          0.06,
+          2.61,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_front_9",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.415,
+        "position": [
+          1.908,
+          1.695,
+          1.22
+        ],
+        "rotation": [
+          0.1,
+          2.07,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "wavelet_cloudlet",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_10",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.505,
+        "position": [
+          3.65,
+          1.67,
+          0.92
+        ],
+        "rotation": [
+          0.06,
+          2.9,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_11",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.455,
+        "position": [
+          -4.34,
+          1.74,
+          0.06
+        ],
+        "rotation": [
+          0.06,
+          3.19,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_12",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.525,
+        "position": [
+          -2.6,
+          1.82,
+          -0.1
+        ],
+        "rotation": [
+          0.06,
+          3.48,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_13",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.42,
+        "position": [
+          -0.59,
+          1.85,
+          0.12
+        ],
+        "rotation": [
+          0.06,
+          3.77,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_14",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.49,
+        "position": [
+          1.09,
+          1.87,
+          -0.06
+        ],
+        "rotation": [
+          0.06,
+          4.06,
+          0.04
+        ],
+        "color": 16775409,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_15",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.56,
+        "position": [
+          2.98,
+          1.79,
+          0.08
+        ],
+        "rotation": [
+          0.06,
+          4.35,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_front_15",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.381,
+        "position": [
+          3.327,
+          1.76,
+          0.2
+        ],
+        "rotation": [
+          0.1,
+          3.45,
+          -0.04
+        ],
+        "color": 16775409,
+        "triangles": 20,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_16",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.455,
+        "position": [
+          4.58,
+          1.73,
+          -0.04
+        ],
+        "rotation": [
+          0.06,
+          4.64,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_17",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.49,
+        "position": [
+          -3.41,
+          1.9,
+          -0.92
+        ],
+        "rotation": [
+          0.06,
+          4.93,
+          0.04
+        ],
+        "color": 16775409,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_18",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.385,
+        "position": [
+          -1.69,
+          1.98,
+          -1.06
+        ],
+        "rotation": [
+          0.06,
+          5.22,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_19",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.455,
+        "position": [
+          0.42,
+          2.01,
+          -0.94
+        ],
+        "rotation": [
+          0.06,
+          5.51,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_20",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.35,
+        "position": [
+          1.98,
+          1.94,
+          -1.12
+        ],
+        "rotation": [
+          0.06,
+          5.8,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_21",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.42,
+        "position": [
+          3.6,
+          1.89,
+          -0.96
+        ],
+        "rotation": [
+          0.06,
+          6.09,
+          0.04
+        ],
+        "color": 16775409,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_22",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.34,
+        "position": [
+          -3.96,
+          2.04,
+          -2.03
+        ],
+        "rotation": [
+          0.06,
+          6.38,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_23",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.41,
+        "position": [
+          -2.03,
+          2.09,
+          -1.9
+        ],
+        "rotation": [
+          0.06,
+          6.67,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_24",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.305,
+        "position": [
+          0.04,
+          2.12,
+          -2.08
+        ],
+        "rotation": [
+          0.06,
+          6.96,
+          0.04
+        ],
+        "color": 16775409,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "brightHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_25",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.375,
+        "position": [
+          2.31,
+          2.06,
+          -1.92
+        ],
+        "rotation": [
+          0.06,
+          7.25,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_26",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.27,
+        "position": [
+          3.95,
+          2.03,
+          -2.01
+        ],
+        "rotation": [
+          0.06,
+          7.54,
+          0.04
+        ],
+        "color": 13817823,
+        "triangles": 36,
+        "role": "wavelet_cloudlet",
+        "colorKey": "facadeHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_0_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.159,
+        "position": [
+          -4.926,
+          1.72,
+          1.962
+        ],
+        "rotation": [
+          0.1,
+          0,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_1_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.18,
+        "position": [
+          -3.114,
+          1.834,
+          1.764
+        ],
+        "rotation": [
+          0.08,
+          1.74,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_2_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.201,
+        "position": [
+          -1.372,
+          1.878,
+          1.886
+        ],
+        "rotation": [
+          0.1,
+          2.76,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_3_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.169,
+        "position": [
+          1.425,
+          1.902,
+          1.733
+        ],
+        "rotation": [
+          0.08,
+          5.22,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_4_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.191,
+        "position": [
+          2.993,
+          1.816,
+          1.875
+        ],
+        "rotation": [
+          0.1,
+          5.52,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_5_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.159,
+        "position": [
+          4.566,
+          1.73,
+          1.802
+        ],
+        "rotation": [
+          0.08,
+          8.7,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_6_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.173,
+        "position": [
+          -4.061,
+          1.855,
+          0.75
+        ],
+        "rotation": [
+          0.1,
+          8.28,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_7_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.141,
+        "position": [
+          -1.994,
+          1.91,
+          0.958
+        ],
+        "rotation": [
+          0.08,
+          12.18,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_8_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.162,
+        "position": [
+          0.412,
+          1.964,
+          0.8
+        ],
+        "rotation": [
+          0.1,
+          11.04,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_9_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.183,
+        "position": [
+          1.859,
+          1.907,
+          0.941
+        ],
+        "rotation": [
+          0.08,
+          15.66,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_10_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.151,
+        "position": [
+          3.923,
+          1.842,
+          0.789
+        ],
+        "rotation": [
+          0.1,
+          13.8,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_11_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.136,
+        "position": [
+          -4.586,
+          1.895,
+          -0.058
+        ],
+        "rotation": [
+          0.08,
+          19.14,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_12_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.158,
+        "position": [
+          -2.884,
+          1.999,
+          -0.237
+        ],
+        "rotation": [
+          0.1,
+          16.56,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_14_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.147,
+        "position": [
+          1.355,
+          2.037,
+          -0.187
+        ],
+        "rotation": [
+          0.1,
+          19.32,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_15_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.168,
+        "position": [
+          3.282,
+          1.98,
+          -0.066
+        ],
+        "rotation": [
+          0.08,
+          26.1,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_16_cotton_fringe",
+        "type": "icosahedron_polyhedron",
+        "radius": 0.136,
+        "position": [
+          4.826,
+          1.885,
+          -0.158
+        ],
+        "rotation": [
+          0.1,
+          22.08,
+          -0.04
+        ],
+        "color": 15196380,
+        "triangles": 20,
+        "role": "cotton_fringe",
+        "colorKey": "accentHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_17_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.147,
+        "position": [
+          -3.675,
+          2.067,
+          -1.047
+        ],
+        "rotation": [
+          0.08,
+          29.58,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      },
+      {
+        "name": "altocumulus_wavelet_core_19_cotton_fringe",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.136,
+        "position": [
+          0.666,
+          2.165,
+          -1.058
+        ],
+        "rotation": [
+          0.08,
+          33.06,
+          0.04
+        ],
+        "color": 16118260,
+        "triangles": 36,
+        "role": "cotton_fringe",
+        "colorKey": "glassHex"
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/cloud/altocumulus/cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_9d7a64a1"
+      ]
+    }
+  ]
+}

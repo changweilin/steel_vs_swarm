@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d05043b72e",
+  "canonicalKey": "rock/mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_7423b75e_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "rock/mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_7423b75e_luna_v6",
+    "bounds": {
+      "min": [
+        -16.64,
+        0,
+        -16.64
+      ],
+      "max": [
+        16.64,
+        19.2,
+        17.16
+      ],
+      "size": [
+        33.28,
+        19.2,
+        33.8
+      ],
+      "rMax": 23.903,
+      "triangles": 388,
+      "vertices": 220
+    },
+    "parts": [
+      {
+        "name": "mesa_lower_slope",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          11.44,
+          16.64
+        ],
+        "height": 5.28,
+        "position": [
+          0,
+          2.72,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 3160123,
+        "triangles": 32
+      },
+      {
+        "name": "mesa_cliff_body",
+        "type": "frustum_pyramid",
+        "sides": 8,
+        "radii": [
+          9.62,
+          11.7
+        ],
+        "height": 10.56,
+        "position": [
+          -0.52,
+          10.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 5200224,
+        "triangles": 32
+      },
+      {
+        "name": "mesa_flat_cap",
+        "type": "polygonal_prism",
+        "sides": 8,
+        "radius": 9.88,
+        "height": 3.12,
+        "position": [
+          0.52,
+          17.64,
+          -0.52
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 2370353,
+        "triangles": 32
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "rock/mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_7423b75e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_mesa/rock_rock_mg_mesa_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_7423b75e_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/mg_mesa_ov_4fd3870a-5515-45ce-a000-8b1866bfe861_0b806362_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_mesa/rock_rock_mg_mesa_ov_4fd3870a-5515-45ce-a000-8b1866bfe861_0b806362_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~0_e2518966_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_mesa/rock_rock_mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467_0_e2518966_luna_v6",
+      "similarity": 84,
+      "scale": [
+        1,
+        0.95859,
+        1
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467~1_bfe77c1c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_mesa/rock_rock_mg_mesa_ov_e8d32c1b-8772-4e48-af5e-7a78a9bde467_1_bfe77c1c_luna_v6",
+      "similarity": 91,
+      "scale": [
+        0.25297,
+        0.22672,
+        0.24908
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    },
+    {
+      "key": "rock/mg_mesa_ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69_17cc8dd8_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "candidate",
+      "outputDir": "out/3d_data_luna_candidates/rock/mg_mesa/rock_rock_mg_mesa_ov_e5e2f19a-6d79-48e2-b0d4-7d9afd80ad69_17cc8dd8_luna_v6",
+      "similarity": 97,
+      "scale": [
+        1,
+        1,
+        0.98462
+      ],
+      "paletteIds": [
+        "palette_c37ca1af"
+      ]
+    }
+  ]
+}

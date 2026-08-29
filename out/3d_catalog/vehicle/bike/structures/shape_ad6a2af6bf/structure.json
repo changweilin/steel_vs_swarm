@@ -1,0 +1,838 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_ad6a2af6bf",
+  "canonicalKey": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+    "bounds": {
+      "min": [
+        -0.761,
+        0.012,
+        -0.24
+      ],
+      "max": [
+        0.761,
+        0.9775,
+        0.24
+      ],
+      "size": [
+        1.522,
+        0.966,
+        0.48
+      ],
+      "rMax": 0.798,
+      "triangles": 2016,
+      "vertices": 1220
+    },
+    "parts": [
+      {
+        "name": "rear_wheel_rim",
+        "type": "torus_ring",
+        "radius": 0.18,
+        "tube": 0.014,
+        "position": [
+          -0.49,
+          0.245,
+          0
+        ],
+        "rotation": [
+          1.571,
+          0,
+          0
+        ],
+        "color": 10907472,
+        "triangles": 120,
+        "role": "wheel_rim"
+      },
+      {
+        "name": "rear_wheel_hub",
+        "type": "cylinder",
+        "sides": 10,
+        "radii": [
+          0.025,
+          0.025
+        ],
+        "height": 0.16,
+        "position": [
+          -0.49,
+          0.245,
+          0
+        ],
+        "rotation": [
+          1.571,
+          0,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 40,
+        "role": "axle"
+      },
+      {
+        "name": "front_wheel_rim",
+        "type": "torus_ring",
+        "radius": 0.18,
+        "tube": 0.014,
+        "position": [
+          0.49,
+          0.245,
+          0
+        ],
+        "rotation": [
+          1.571,
+          0,
+          0
+        ],
+        "color": 10907472,
+        "triangles": 120,
+        "role": "wheel_rim"
+      },
+      {
+        "name": "front_wheel_hub",
+        "type": "cylinder",
+        "sides": 10,
+        "radii": [
+          0.025,
+          0.025
+        ],
+        "height": 0.16,
+        "position": [
+          0.49,
+          0.245,
+          0
+        ],
+        "rotation": [
+          1.571,
+          0,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 40,
+        "role": "axle"
+      },
+      {
+        "name": "stepthrough_lower",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.036,
+          0.036
+        ],
+        "height": 0.519,
+        "position": [
+          -0.235,
+          0.292,
+          0
+        ],
+        "rotation": [
+          1.387,
+          1.571,
+          0
+        ],
+        "color": 8896432,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "stepthrough_hinge",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.036,
+          0.036
+        ],
+        "height": 0.143,
+        "position": [
+          0.05,
+          0.405,
+          0
+        ],
+        "rotation": [
+          0.432,
+          1.571,
+          0
+        ],
+        "color": 8896432,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "seat_support",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.033,
+          0.033
+        ],
+        "height": 0.427,
+        "position": [
+          -0.1,
+          0.585,
+          0
+        ],
+        "rotation": [
+          1.002,
+          -1.571,
+          0
+        ],
+        "color": 8896432,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "top_stepthrough",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.03,
+          0.03
+        ],
+        "height": 0.65,
+        "position": [
+          0.045,
+          0.7,
+          0
+        ],
+        "rotation": [
+          1.571,
+          1.571,
+          0
+        ],
+        "color": 15130320,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "head_down",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.032,
+          0.032
+        ],
+        "height": 0.233,
+        "position": [
+          0.31,
+          0.6,
+          0
+        ],
+        "rotation": [
+          2.601,
+          -1.571,
+          0
+        ],
+        "color": 15130320,
+        "triangles": 32,
+        "role": "frame"
+      },
+      {
+        "name": "rear_chainstay_left",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.026,
+          0.026
+        ],
+        "height": 0.519,
+        "position": [
+          -0.235,
+          0.292,
+          -0.052
+        ],
+        "rotation": [
+          1.387,
+          1.571,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 28,
+        "role": "stay"
+      },
+      {
+        "name": "rear_chainstay_right",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.026,
+          0.026
+        ],
+        "height": 0.519,
+        "position": [
+          -0.235,
+          0.292,
+          0.052
+        ],
+        "rotation": [
+          1.387,
+          1.571,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 28,
+        "role": "stay"
+      },
+      {
+        "name": "rear_seatstay_left",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.022,
+          0.022
+        ],
+        "height": 0.501,
+        "position": [
+          -0.385,
+          0.472,
+          -0.052
+        ],
+        "rotation": [
+          0.432,
+          1.571,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 28,
+        "role": "stay"
+      },
+      {
+        "name": "rear_seatstay_right",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.022,
+          0.022
+        ],
+        "height": 0.501,
+        "position": [
+          -0.385,
+          0.472,
+          0.052
+        ],
+        "rotation": [
+          0.432,
+          1.571,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 28,
+        "role": "stay"
+      },
+      {
+        "name": "fold_hinge",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.055,
+          0.055
+        ],
+        "height": 0.12,
+        "position": [
+          0.08,
+          0.47,
+          0
+        ],
+        "rotation": [
+          1.571,
+          0,
+          0
+        ],
+        "color": 10907472,
+        "triangles": 32,
+        "role": "hinge"
+      },
+      {
+        "name": "front_fork_left",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.021,
+          0.021
+        ],
+        "height": 0.35,
+        "position": [
+          0.37,
+          0.372,
+          -0.052
+        ],
+        "rotation": [
+          2.386,
+          1.571,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 28,
+        "role": "fork"
+      },
+      {
+        "name": "front_fork_right",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.021,
+          0.021
+        ],
+        "height": 0.35,
+        "position": [
+          0.37,
+          0.372,
+          0.052
+        ],
+        "rotation": [
+          2.386,
+          1.571,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 28,
+        "role": "fork"
+      },
+      {
+        "name": "seat",
+        "type": "box",
+        "dimensions": [
+          0.25,
+          0.055,
+          0.13
+        ],
+        "position": [
+          -0.28,
+          0.95,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 6057577,
+        "triangles": 12,
+        "role": "body"
+      },
+      {
+        "name": "rear_fender",
+        "type": "torus_ring",
+        "radius": 0.259,
+        "tube": 0.012,
+        "position": [
+          -0.49,
+          0.273,
+          0
+        ],
+        "rotation": [
+          1.571,
+          0,
+          0
+        ],
+        "color": 16052447,
+        "triangles": 120,
+        "role": "fender"
+      },
+      {
+        "name": "front_fender",
+        "type": "torus_ring",
+        "radius": 0.259,
+        "tube": 0.012,
+        "position": [
+          0.49,
+          0.273,
+          0
+        ],
+        "rotation": [
+          1.571,
+          0,
+          0
+        ],
+        "color": 16052447,
+        "triangles": 120,
+        "role": "fender"
+      },
+      {
+        "name": "rear_rack_upper_left",
+        "type": "cylinder",
+        "sides": 6,
+        "radii": [
+          0.012,
+          0.012
+        ],
+        "height": 0.59,
+        "position": [
+          -0.245,
+          0.68,
+          -0.15
+        ],
+        "rotation": [
+          1.571,
+          1.571,
+          0
+        ],
+        "color": 10907472,
+        "triangles": 24,
+        "role": "rack"
+      },
+      {
+        "name": "rear_basket",
+        "type": "box",
+        "dimensions": [
+          0.3,
+          0.22,
+          0.32
+        ],
+        "position": [
+          -0.57,
+          0.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 10907472,
+        "triangles": 12,
+        "role": "basket"
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "vehicle/bike_14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464_55ff809f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_14-_-900-_-_-btwin-8646464_55ff809f_luna_v6",
+      "similarity": 2,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_a4782e60"
+      ]
+    },
+    {
+      "key": "vehicle/bike_000001_1738650793_9c52e91a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_000001_1738650793_9c52e91a_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.17608,
+        1.08282,
+        0.86667
+      ],
+      "paletteIds": [
+        "palette_b6a4b4f0"
+      ]
+    },
+    {
+      "key": "vehicle/bike_110295IA-M009_L_50b4863e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_110295IA-M009_L_50b4863e_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.17608,
+        1.08282,
+        0.86667
+      ],
+      "paletteIds": [
+        "palette_b6a4b4f0"
+      ]
+    },
+    {
+      "key": "vehicle/bike_12544404_O_m_94f41003_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_12544404_O_m_94f41003_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.17608,
+        1.08282,
+        0.86667
+      ],
+      "paletteIds": [
+        "palette_b6a4b4f0"
+      ]
+    },
+    {
+      "key": "vehicle/bike_800x (1)_4c4178d7_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_800x_1__4c4178d7_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.17608,
+        1.08282,
+        0.86667
+      ],
+      "paletteIds": [
+        "palette_b6a4b4f0"
+      ]
+    },
+    {
+      "key": "vehicle/bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_MY25PropelAdvanced1_ColorBIllusionWhite-1-1024x768_395cb773_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.17608,
+        1.08282,
+        0.86667
+      ],
+      "paletteIds": [
+        "palette_b6a4b4f0"
+      ]
+    },
+    {
+      "key": "vehicle/bike_兒童款-26-彎把公路車-rc-100-白色-btwin-8826164_f5a5031f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike__-26-_-rc-100-_-btwin-8826164_f5a5031f_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1.17608,
+        1.08282,
+        0.86667
+      ],
+      "paletteIds": [
+        "palette_b6a4b4f0"
+      ]
+    },
+    {
+      "key": "vehicle/bike_800x_3285847d_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_800x_3285847d_luna_v6",
+      "similarity": 5,
+      "scale": [
+        0.94612,
+        1.10352,
+        1.39583
+      ],
+      "paletteIds": [
+        "palette_3cdce13b"
+      ]
+    },
+    {
+      "key": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_T-806_blue_672b8c66_luna_v6",
+      "similarity": 14,
+      "scale": [
+        1.19054,
+        1.06211,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_a4782e60"
+      ]
+    },
+    {
+      "key": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "similarity": 73,
+      "scale": [
+        1.21682,
+        1.06108,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_a4782e60"
+      ]
+    },
+    {
+      "key": "vehicle/bike_003002_1725858476_2e742f06_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_003002_1725858476_2e742f06_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_c8f75e5f"
+      ]
+    },
+    {
+      "key": "vehicle/bike_10012915_R3_m_ab011d1f_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_10012915_R3_m_ab011d1f_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_c8f75e5f"
+      ]
+    },
+    {
+      "key": "vehicle/bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_110296IA-M009_L_c6f0fe84_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_c8f75e5f"
+      ]
+    },
+    {
+      "key": "vehicle/bike_13226803_R_m_6337be00_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_13226803_R_m_6337be00_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_c8f75e5f"
+      ]
+    },
+    {
+      "key": "vehicle/bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_19e97a45118b4dedac318903f350414f_R_448ddf05_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_c8f75e5f"
+      ]
+    },
+    {
+      "key": "vehicle/bike_3827532_O_m_f5def028_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_3827532_O_m_f5def028_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_c8f75e5f"
+      ]
+    },
+    {
+      "key": "vehicle/bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_5df81b4da9928fe4b137e2bc3acbae24_d209bdb4_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_8d5810e3"
+      ]
+    },
+    {
+      "key": "vehicle/bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_6756854_OR_m_dc7aea7e_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_c8f75e5f"
+      ]
+    },
+    {
+      "key": "vehicle/bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_e5823366c7ed43f3b8e2c62ce0bc59af_1bd11220_luna_v6",
+      "similarity": 53,
+      "scale": [
+        1.22208,
+        1.04969,
+        1.53125
+      ],
+      "paletteIds": [
+        "palette_c8f75e5f"
+      ]
+    },
+    {
+      "key": "vehicle/bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_323d68c6_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_323d68c6_luna_v6",
+      "similarity": 2,
+      "scale": [
+        1.02365,
+        1.10248,
+        1.925
+      ],
+      "paletteIds": [
+        "palette_a4782e60"
+      ]
+    }
+  ]
+}

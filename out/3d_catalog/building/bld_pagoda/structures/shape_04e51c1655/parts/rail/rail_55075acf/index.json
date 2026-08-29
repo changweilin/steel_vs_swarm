@@ -1,0 +1,97 @@
+{
+  "id": "rail_55075acf",
+  "role": "rail",
+  "type": "box",
+  "signature": "box|1,0.125,1|0",
+  "canonical": {
+    "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+    "name": "second_story_balustrade",
+    "part": {
+      "name": "second_story_balustrade",
+      "type": "box",
+      "dimensions": [
+        7.6,
+        0.5,
+        7.6
+      ],
+      "position": [
+        0,
+        4.65,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 14327872,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "second_story_balustrade",
+      "position": [
+        0,
+        4.65,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14327872
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "third_story_balustrade",
+      "position": [
+        0,
+        8.05,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14327872
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "fourth_story_balustrade",
+      "position": [
+        0,
+        11.45,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14327872
+    },
+    {
+      "objectKey": "building/bld_pagoda_ov_288821e7-4f79-407b-b95f-8cc9a7156ee7_96062286_v6",
+      "name": "fifth_story_balustrade",
+      "position": [
+        0,
+        14.85,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14327872
+    }
+  ]
+}

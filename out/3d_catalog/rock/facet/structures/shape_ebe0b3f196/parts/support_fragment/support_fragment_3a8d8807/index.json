@@ -1,0 +1,61 @@
+{
+  "id": "support_fragment_3a8d8807",
+  "role": "support_fragment",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+    "name": "rear_support_fragment",
+    "part": {
+      "name": "rear_support_fragment",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.794,
+      "position": [
+        -2.023,
+        1.231,
+        -1.168
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "color": 3160123,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_wc_153807366_dad9b3c5_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -2.023,
+        1.231,
+        -1.168
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~2_4ff4c0fb_luna_v6",
+      "name": "rear_support_fragment",
+      "position": [
+        -1.074,
+        0.658,
+        -0.76
+      ],
+      "rotation": [
+        0.2,
+        -0.2,
+        0.05
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

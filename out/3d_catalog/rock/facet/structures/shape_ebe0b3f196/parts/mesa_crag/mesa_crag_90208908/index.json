@@ -1,0 +1,77 @@
+{
+  "id": "mesa_crag_90208908",
+  "role": "mesa_crag",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+    "name": "mesa_left_crag",
+    "part": {
+      "name": "mesa_left_crag",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.781,
+      "position": [
+        -2.239,
+        2.46,
+        0.329
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "color": 3160123,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_e8344366-5513-4cd8-9d33-5cb394fe2609_a4ba22ec_luna_v6",
+      "name": "mesa_left_crag",
+      "position": [
+        -2.239,
+        2.46,
+        0.329
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~1_fcd26e23_luna_v6",
+      "name": "mesa_left_crag",
+      "position": [
+        -2.214,
+        2.283,
+        0.72
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/facet_ov_f7e1cc51-e247-42b9-a51c-c775ad831804_11e14f1f_luna_v6",
+      "name": "mesa_left_crag",
+      "position": [
+        -1.845,
+        1.982,
+        0.39
+      ],
+      "rotation": [
+        0.1,
+        0.24,
+        0.1
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "glass_6ecfff15",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|0,0.625,1|0",
+  "canonical": {
+    "objectKey": "building/mass_101330_f4de6359_v6",
+    "name": "glass_window_side",
+    "part": {
+      "name": "glass_window_side",
+      "type": "box",
+      "dimensions": [
+        0.1,
+        1.8,
+        3
+      ],
+      "position": [
+        4.1,
+        1.5,
+        0.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 33947,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_101330_f4de6359_v6",
+      "name": "glass_window_side",
+      "position": [
+        4.1,
+        1.5,
+        0.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 33947
+    }
+  ]
+}

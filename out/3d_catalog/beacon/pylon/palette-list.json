@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "category": "beacon",
+  "subcategory": "pylon",
+  "palettes": [
+    {
+      "id": "palette_9dd0059e",
+      "name": "執行期繼承配色",
+      "colors": null,
+      "objects": [
+        {
+          "key": "beacon/pylon",
+          "source": "runtime-consumer"
+        }
+      ]
+    }
+  ]
+}

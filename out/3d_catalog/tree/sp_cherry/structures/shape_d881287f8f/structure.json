@@ -1,0 +1,1042 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d881287f8f",
+  "canonicalKey": "tree/sp_cherry_ov_2c3b0a7c-14f3-433e-9812-212b919388c8_137cf06c_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/sp_cherry_ov_2c3b0a7c-14f3-433e-9812-212b919388c8_137cf06c_luna_v6",
+    "bounds": {
+      "min": [
+        -2.9476,
+        0,
+        -2.837
+      ],
+      "max": [
+        3.1209,
+        6.638,
+        2.6235
+      ],
+      "size": [
+        6.069,
+        6.638,
+        5.46
+      ],
+      "rMax": 4.091,
+      "triangles": 4600,
+      "vertices": 2804
+    },
+    "parts": [
+      {
+        "name": "broadleaf_trunk",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.25,
+          0.7
+        ],
+        "height": 4.874,
+        "position": [
+          0,
+          2.437,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 40
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.562,
+          0.78
+        ],
+        "height": 0.5,
+        "position": [
+          0,
+          0.25,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 40
+      },
+      {
+        "name": "flowering_primary_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.837,
+        "position": [
+          0.404,
+          4.481,
+          0.049
+        ],
+        "rotation": [
+          1.334,
+          1.45,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_outer_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.619,
+        "position": [
+          1.531,
+          4.933,
+          0.186
+        ],
+        "rotation": [
+          1.119,
+          1.45,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_crown_0_flower_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.142,
+        "position": [
+          2.254,
+          5.287,
+          0.273
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "flowering_crown_0_flower_bloom_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.493,
+          0.256,
+          0.223
+        ],
+        "position": [
+          2.531,
+          5.212,
+          0.02
+        ],
+        "rotation": [
+          -0.146,
+          -0.74,
+          -0.02
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_0_flower_bloom_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.493,
+          0.256,
+          0.223
+        ],
+        "position": [
+          2.629,
+          5.287,
+          0.288
+        ],
+        "rotation": [
+          -0.066,
+          0.04,
+          -0.02
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_0_flower_bloom_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.493,
+          0.256,
+          0.223
+        ],
+        "position": [
+          2.51,
+          5.361,
+          0.548
+        ],
+        "rotation": [
+          0.014,
+          0.82,
+          -0.02
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_primary_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.678,
+        "position": [
+          0.214,
+          4.393,
+          0.248
+        ],
+        "rotation": [
+          1.313,
+          0.712,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_outer_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 2.011,
+        "position": [
+          1.042,
+          4.838,
+          1.207
+        ],
+        "rotation": [
+          1.206,
+          0.712,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_crown_1_flower_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.22,
+        "position": [
+          1.656,
+          5.197,
+          1.918
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "flowering_crown_1_flower_bloom_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.404,
+          0.344,
+          0.345
+        ],
+        "position": [
+          1.96,
+          5.097,
+          1.967
+        ],
+        "rotation": [
+          -0.145,
+          0.157,
+          -0.035
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_1_flower_bloom_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.404,
+          0.344,
+          0.345
+        ],
+        "position": [
+          1.838,
+          5.197,
+          2.167
+        ],
+        "rotation": [
+          -0.065,
+          0.937,
+          -0.035
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_1_flower_bloom_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.404,
+          0.344,
+          0.345
+        ],
+        "position": [
+          1.611,
+          5.296,
+          2.223
+        ],
+        "rotation": [
+          0.015,
+          1.717,
+          -0.035
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_primary_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.524,
+        "position": [
+          -0.093,
+          4.643,
+          0.208
+        ],
+        "rotation": [
+          1.055,
+          -0.421,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_outer_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.424,
+        "position": [
+          -0.466,
+          4.974,
+          1.039
+        ],
+        "rotation": [
+          1.283,
+          -0.421,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_crown_2_flower_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.242,
+        "position": [
+          -0.745,
+          5.176,
+          1.662
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "flowering_crown_2_flower_bloom_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.563,
+          0.278,
+          0.379
+        ],
+        "position": [
+          -0.592,
+          5.096,
+          2.063
+        ],
+        "rotation": [
+          -0.196,
+          1.205,
+          -0.053
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_2_flower_bloom_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.563,
+          0.278,
+          0.379
+        ],
+        "position": [
+          -0.918,
+          5.176,
+          2.055
+        ],
+        "rotation": [
+          -0.116,
+          1.985,
+          -0.053
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_2_flower_bloom_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.563,
+          0.278,
+          0.379
+        ],
+        "position": [
+          -1.144,
+          5.257,
+          1.82
+        ],
+        "rotation": [
+          -0.036,
+          2.765,
+          -0.053
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_primary_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.671,
+        "position": [
+          -0.282,
+          4.684,
+          0.126
+        ],
+        "rotation": [
+          1.172,
+          -1.15,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_outer_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.9,
+        "position": [
+          -1.407,
+          5.04,
+          0.629
+        ],
+        "rotation": [
+          1.331,
+          -1.15,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_crown_3_flower_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.185,
+        "position": [
+          -2.25,
+          5.266,
+          1.006
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "flowering_crown_3_flower_bloom_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.414,
+          0.277,
+          0.29
+        ],
+        "position": [
+          -2.341,
+          5.186,
+          1.307
+        ],
+        "rotation": [
+          -0.106,
+          1.865,
+          -0.095
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_3_flower_bloom_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.414,
+          0.277,
+          0.29
+        ],
+        "position": [
+          -2.527,
+          5.266,
+          1.156
+        ],
+        "rotation": [
+          -0.026,
+          2.645,
+          -0.095
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_3_flower_bloom_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.414,
+          0.277,
+          0.29
+        ],
+        "position": [
+          -2.552,
+          5.346,
+          0.917
+        ],
+        "rotation": [
+          0.054,
+          3.425,
+          -0.095
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_primary_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.762,
+        "position": [
+          -0.325,
+          4.499,
+          -0.159
+        ],
+        "rotation": [
+          1.255,
+          -2.026,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_outer_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.294,
+        "position": [
+          -1.171,
+          4.906,
+          -0.573
+        ],
+        "rotation": [
+          1.109,
+          -2.026,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_crown_4_flower_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.237,
+        "position": [
+          -1.691,
+          5.194,
+          -0.828
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "flowering_crown_4_flower_bloom_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.483,
+          0.227,
+          0.372
+        ],
+        "position": [
+          -2.041,
+          5.128,
+          -0.713
+        ],
+        "rotation": [
+          0.049,
+          2.824,
+          -0.089
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_4_flower_bloom_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.483,
+          0.227,
+          0.372
+        ],
+        "position": [
+          -2.02,
+          5.194,
+          -0.992
+        ],
+        "rotation": [
+          0.129,
+          3.604,
+          -0.089
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_4_flower_bloom_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.483,
+          0.227,
+          0.372
+        ],
+        "position": [
+          -1.81,
+          5.26,
+          -1.176
+        ],
+        "rotation": [
+          0.209,
+          4.384,
+          -0.089
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_primary_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.841,
+        "position": [
+          -0.099,
+          4.182,
+          -0.4
+        ],
+        "rotation": [
+          1.367,
+          -2.898,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_outer_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.552,
+        "position": [
+          -0.366,
+          4.615,
+          -1.472
+        ],
+        "rotation": [
+          1.106,
+          -2.898,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_crown_5_flower_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.192,
+        "position": [
+          -0.534,
+          4.962,
+          -2.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "flowering_crown_5_flower_bloom_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.398,
+          0.262,
+          0.301
+        ],
+        "position": [
+          -0.78,
+          4.887,
+          -2.322
+        ],
+        "rotation": [
+          -0.112,
+          3.765,
+          0.097
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_5_flower_bloom_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.398,
+          0.262,
+          0.301
+        ],
+        "position": [
+          -0.584,
+          4.962,
+          -2.444
+        ],
+        "rotation": [
+          -0.032,
+          4.545,
+          0.097
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_5_flower_bloom_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.398,
+          0.262,
+          0.301
+        ],
+        "position": [
+          -0.359,
+          5.038,
+          -2.394
+        ],
+        "rotation": [
+          0.048,
+          5.325,
+          0.097
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_primary_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.083,
+          0.115
+        ],
+        "height": 0.494,
+        "position": [
+          0.116,
+          4.368,
+          -0.209
+        ],
+        "rotation": [
+          1.318,
+          2.636,
+          0
+        ],
+        "color": 4861988,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_outer_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.068
+        ],
+        "height": 1.432,
+        "position": [
+          0.53,
+          4.794,
+          -0.958
+        ],
+        "rotation": [
+          1.038,
+          2.636,
+          0
+        ],
+        "color": 2892830,
+        "triangles": 28
+      },
+      {
+        "name": "flowering_crown_6_flower_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.217,
+        "position": [
+          0.829,
+          5.158,
+          -1.498
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "flowering_crown_6_flower_bloom_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.563,
+          0.303,
+          0.341
+        ],
+        "position": [
+          0.68,
+          5.07,
+          -1.9
+        ],
+        "rotation": [
+          -0.153,
+          4.359,
+          -0.083
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_6_flower_bloom_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.563,
+          0.303,
+          0.341
+        ],
+        "position": [
+          1.006,
+          5.158,
+          -1.888
+        ],
+        "rotation": [
+          -0.073,
+          5.139,
+          -0.083
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "flowering_crown_6_flower_bloom_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.563,
+          0.303,
+          0.341
+        ],
+        "position": [
+          1.23,
+          5.246,
+          -1.651
+        ],
+        "rotation": [
+          0.007,
+          5.919,
+          -0.083
+        ],
+        "color": 10860413,
+        "triangles": 160
+      },
+      {
+        "name": "top_crown_flower_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.193,
+        "position": [
+          0,
+          6.227,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 36
+      },
+      {
+        "name": "top_crown_flower_bloom_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.42,
+          0.319,
+          0.302
+        ],
+        "position": [
+          0.208,
+          6.135,
+          -0.243
+        ],
+        "rotation": [
+          -0.08,
+          -0.863,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "top_crown_flower_bloom_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.42,
+          0.319,
+          0.302
+        ],
+        "position": [
+          0.319,
+          6.227,
+          -0.026
+        ],
+        "rotation": [
+          0,
+          -0.083,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 160
+      },
+      {
+        "name": "top_crown_flower_bloom_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.42,
+          0.319,
+          0.302
+        ],
+        "position": [
+          0.245,
+          6.32,
+          0.205
+        ],
+        "rotation": [
+          0.08,
+          0.697,
+          0
+        ],
+        "color": 7903323,
+        "triangles": 160
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/sp_cherry_ov_2c3b0a7c-14f3-433e-9812-212b919388c8_137cf06c_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/sp_cherry/tree_tree_sp_cherry_ov_2c3b0a7c-14f3-433e-9812-212b919388c8_137cf06c_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_e550d590"
+      ]
+    }
+  ]
+}

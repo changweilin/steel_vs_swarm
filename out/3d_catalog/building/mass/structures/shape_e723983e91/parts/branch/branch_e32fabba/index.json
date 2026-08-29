@@ -1,0 +1,49 @@
+{
+  "id": "branch_e32fabba",
+  "role": "branch",
+  "type": "box",
+  "signature": "box|0.875,0.125,1|0",
+  "canonical": {
+    "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+    "name": "white_outer_frame_top",
+    "part": {
+      "name": "white_outer_frame_top",
+      "type": "box",
+      "dimensions": [
+        5.2,
+        0.6,
+        6.4
+      ],
+      "position": [
+        -0.1,
+        16.2,
+        0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "white_outer_frame_top",
+      "position": [
+        -0.1,
+        16.2,
+        0.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

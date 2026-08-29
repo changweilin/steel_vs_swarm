@@ -1,0 +1,127 @@
+{
+  "id": "overlay_db6facb0",
+  "role": "overlay",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0,1|10",
+  "canonical": {
+    "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+    "name": "attached_waterline_foam",
+    "part": {
+      "name": "attached_waterline_foam",
+      "type": "polygonal_prism",
+      "sides": 9,
+      "radius": 3.48,
+      "height": 0.161,
+      "position": [
+        0,
+        0.241,
+        3.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5065016,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~0_04c47389_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        0.241,
+        3.6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5_1ee97b1b_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        1.26,
+        7.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_cfc0d6ff90ae224820a8d78861af93f5~1_e5540b76_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        1.26,
+        7.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5065016
+    },
+    {
+      "objectKey": "rock/main_61bc69d997822_24ae0dc8_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        1.097,
+        7.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14082258
+    },
+    {
+      "objectKey": "rock/main_1586238562_48266950_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        1.26,
+        7.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 14213084
+    },
+    {
+      "objectKey": "rock/main_image-1-206_1ca054a2_luna_v6",
+      "name": "attached_waterline_foam",
+      "position": [
+        0,
+        1.26,
+        7.8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

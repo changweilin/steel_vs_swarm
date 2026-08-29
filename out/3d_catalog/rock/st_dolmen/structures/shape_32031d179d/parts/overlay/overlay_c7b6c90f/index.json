@@ -1,0 +1,49 @@
+{
+  "id": "overlay_c7b6c90f",
+  "role": "overlay",
+  "type": "wedge",
+  "signature": "wedge|1,0.375,0.375|0",
+  "canonical": {
+    "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~1_6aa8affd_luna_v6",
+    "name": "attached_lichen_shear_facet",
+    "part": {
+      "name": "attached_lichen_shear_facet",
+      "type": "wedge",
+      "dimensions": [
+        0.646,
+        0.232,
+        0.228
+      ],
+      "position": [
+        -0.097,
+        3.453,
+        0.19
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "color": 5200224,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~1_6aa8affd_luna_v6",
+      "name": "attached_lichen_shear_facet",
+      "position": [
+        -0.097,
+        3.453,
+        0.19
+      ],
+      "rotation": [
+        0.08,
+        0.12,
+        -0.04
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

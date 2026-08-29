@@ -1,0 +1,109 @@
+{
+  "id": "mesa_crag_3a8d8807",
+  "role": "mesa_crag",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_1586238562_48266950_luna_v6",
+    "name": "mesa_right_crag",
+    "part": {
+      "name": "mesa_right_crag",
+      "type": "dodecahedron_polyhedron",
+      "radius": 4.68,
+      "position": [
+        8.06,
+        8.4,
+        -2.08
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "color": 5200224,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_1586238562_48266950_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        8.06,
+        8.4,
+        -2.08
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_image-1-206_1ca054a2_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        8.06,
+        8.4,
+        -2.08
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_南犹他州巨岩山-164605945~1_1fc29f59_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        5.425,
+        7.688,
+        -0.992
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 10119749
+    },
+    {
+      "objectKey": "rock/main_images (2)_56b743a2_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        0.759,
+        0.553,
+        -0.144
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_images (4)_1eb4a48a_luna_v6",
+      "name": "mesa_right_crag",
+      "position": [
+        0.939,
+        0.525,
+        -0.163
+      ],
+      "rotation": [
+        -0.1,
+        -0.18,
+        0.02
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

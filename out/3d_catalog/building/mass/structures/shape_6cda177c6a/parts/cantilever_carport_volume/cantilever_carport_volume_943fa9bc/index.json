@@ -1,0 +1,49 @@
+{
+  "id": "cantilever_carport_volume_943fa9bc",
+  "role": "cantilever_carport_volume",
+  "type": "box",
+  "signature": "box|0.75,0.375,1|0",
+  "canonical": {
+    "objectKey": "building/mass_101330_f4de6359_v6",
+    "name": "cantilever_carport_volume",
+    "part": {
+      "name": "cantilever_carport_volume",
+      "type": "box",
+      "dimensions": [
+        4,
+        1.6,
+        5
+      ],
+      "position": [
+        -2.5,
+        2.2,
+        -1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 2105376,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_101330_f4de6359_v6",
+      "name": "cantilever_carport_volume",
+      "position": [
+        -2.5,
+        2.2,
+        -1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 2105376
+    }
+  ]
+}

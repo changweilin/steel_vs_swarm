@@ -1,0 +1,65 @@
+{
+  "id": "mirror_06ad5116",
+  "role": "mirror",
+  "type": "box",
+  "signature": "box|0.5,1,0.75|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+    "name": "left_side_mirror",
+    "part": {
+      "name": "left_side_mirror",
+      "type": "box",
+      "dimensions": [
+        0.2,
+        0.4,
+        0.3
+      ],
+      "position": [
+        -1.4,
+        2.5,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1315860,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "left_side_mirror",
+      "position": [
+        -1.4,
+        2.5,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    },
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "right_side_mirror",
+      "position": [
+        1.4,
+        2.5,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 1315860
+    }
+  ]
+}

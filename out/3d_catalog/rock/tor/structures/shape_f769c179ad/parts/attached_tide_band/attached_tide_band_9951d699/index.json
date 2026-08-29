@@ -1,0 +1,66 @@
+{
+  "id": "attached_tide_band_9951d699",
+  "role": "attached_tide_band",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+    "name": "attached_tide_band",
+    "part": {
+      "name": "attached_tide_band",
+      "type": "frustum_pyramid",
+      "sides": 8,
+      "radii": [
+        0.846,
+        1.034
+      ],
+      "height": 0.287,
+      "position": [
+        0,
+        0.546,
+        0.251
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/tor_ov_43802293-e834-4d23-8f72-935935cf9c85_6a9e08c7_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.546,
+        0.251
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/tor_ov_d453866a-3e14-469d-9a1e-faec62e90f22_e4bb51ce_luna_v6",
+      "name": "attached_tide_band",
+      "position": [
+        0,
+        0.518,
+        0.34
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    }
+  ]
+}

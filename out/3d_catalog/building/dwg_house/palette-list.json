@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "building",
+  "subcategory": "dwg_house",
+  "palettes": [
+    {
+      "id": "palette_4d392d5b",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 16777215,
+        "facadeHex": 14737632,
+        "baseHex": 10526880,
+        "accentHex": 8421504,
+        "glassHex": 11184810,
+        "darkHex": 4210752,
+        "brightHex": 16777215
+      },
+      "objects": [
+        {
+          "key": "building/dwg_house_wc_33743891_ccdb01ea_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

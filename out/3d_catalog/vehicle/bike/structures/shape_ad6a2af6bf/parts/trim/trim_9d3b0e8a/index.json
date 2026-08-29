@@ -1,0 +1,66 @@
+{
+  "id": "trim_9d3b0e8a",
+  "role": "trim",
+  "type": "box",
+  "signature": "box|1,0.25,0.5|0",
+  "canonical": {
+    "objectKey": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+    "name": "folding_gravel_hinge_plate_left",
+    "part": {
+      "name": "folding_gravel_hinge_plate_left",
+      "type": "box",
+      "dimensions": [
+        0.18,
+        0.035,
+        0.08
+      ],
+      "position": [
+        0.05,
+        0.52,
+        -0.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 10907472,
+      "triangles": 12,
+      "role": "hinge"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "name": "folding_gravel_hinge_plate_left",
+      "position": [
+        0.05,
+        0.52,
+        -0.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    },
+    {
+      "objectKey": "vehicle/bike_folding-gravel-bike-changebike-gf-102g-b1_d88aada2_luna_v6",
+      "name": "folding_gravel_hinge_plate_right",
+      "position": [
+        0.05,
+        0.52,
+        0.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 10907472
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "id": "hoodoo_band_9951d699",
+  "role": "hoodoo_band",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "hoodoo_band_0",
+    "part": {
+      "name": "hoodoo_band_0",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.632,
+        0.768
+      ],
+      "height": 0.209,
+      "position": [
+        -1.924,
+        2.204,
+        -0.157
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4344656,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "hoodoo_band_0",
+      "position": [
+        -1.924,
+        2.204,
+        -0.157
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "hoodoo_band_1",
+      "position": [
+        0,
+        2.782,
+        0.209
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    },
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "hoodoo_band_2",
+      "position": [
+        1.855,
+        2.028,
+        -0.105
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4344656
+    }
+  ]
+}

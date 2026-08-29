@@ -1,0 +1,49 @@
+{
+  "id": "hood_top_bump_e32fabba",
+  "role": "hood_top_bump",
+  "type": "box",
+  "signature": "box|0.875,0.125,1|0",
+  "canonical": {
+    "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+    "name": "hood_top_bump",
+    "part": {
+      "name": "hood_top_bump",
+      "type": "box",
+      "dimensions": [
+        0.6,
+        0.08,
+        0.7
+      ],
+      "position": [
+        0.2,
+        1.22,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4014145,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_5-man_da4a0c78_v6",
+      "name": "hood_top_bump",
+      "position": [
+        0.2,
+        1.22,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4014145
+    }
+  ]
+}

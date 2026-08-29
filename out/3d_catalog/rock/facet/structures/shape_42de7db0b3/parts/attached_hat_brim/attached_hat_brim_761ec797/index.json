@@ -1,0 +1,47 @@
+{
+  "id": "attached_hat_brim_761ec797",
+  "role": "attached_hat_brim",
+  "type": "polygonal_prism",
+  "signature": "polygonal_prism|1,0.125,1|8",
+  "canonical": {
+    "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+    "name": "attached_hat_brim",
+    "part": {
+      "name": "attached_hat_brim",
+      "type": "polygonal_prism",
+      "sides": 8,
+      "radius": 0.955,
+      "height": 0.161,
+      "position": [
+        0,
+        3.469,
+        0.07
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 5602375,
+      "triangles": 32
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/facet_ov_402f9bb3-cb29-4a86-b212-6d16d61a73d2~0_63985ece_luna_v6",
+      "name": "attached_hat_brim",
+      "position": [
+        0,
+        3.469,
+        0.07
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    }
+  ]
+}

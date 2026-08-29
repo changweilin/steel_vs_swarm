@@ -1,0 +1,3761 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_04941c4ac5",
+  "canonicalKey": "tree/cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69_055f3776_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69_055f3776_luna_v6",
+    "bounds": {
+      "min": [
+        -1.8145,
+        0,
+        -1.6597
+      ],
+      "max": [
+        1.9739,
+        7.0982,
+        1.7222
+      ],
+      "size": [
+        3.788,
+        7.098,
+        3.382
+      ],
+      "rMax": 2.62,
+      "triangles": 19668,
+      "vertices": 12034
+    },
+    "parts": [
+      {
+        "name": "trunk",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.24,
+          0.62
+        ],
+        "height": 4.968,
+        "position": [
+          0,
+          2.484,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4928552,
+        "triangles": 40
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          0.446,
+          0.62
+        ],
+        "height": 0.48,
+        "position": [
+          0,
+          0.24,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 4928552,
+        "triangles": 40
+      },
+      {
+        "name": "juniper_level_0_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.059,
+          0.082
+        ],
+        "height": 1.464,
+        "position": [
+          0.725,
+          1.662,
+          -0.069
+        ],
+        "rotation": [
+          1.469,
+          1.665,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_0_0_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          1.45,
+          1.736,
+          -0.137
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_0_0_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.249,
+          0.149
+        ],
+        "position": [
+          1.55,
+          1.722,
+          -0.324
+        ],
+        "rotation": [
+          -0.142,
+          -1.079,
+          0.021
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_0_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.249,
+          0.149
+        ],
+        "position": [
+          1.659,
+          1.778,
+          -0.171
+        ],
+        "rotation": [
+          -0.142,
+          -0.159,
+          0.021
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_0_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.249,
+          0.149
+        ],
+        "position": [
+          1.603,
+          1.722,
+          0.009
+        ],
+        "rotation": [
+          -0.142,
+          0.761,
+          0.021
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_0_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.051,
+          0.071
+        ],
+        "height": 1.353,
+        "position": [
+          0.49,
+          1.733,
+          0.443
+        ],
+        "rotation": [
+          1.353,
+          0.835,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_0_1_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.98,
+          1.879,
+          0.887
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_0_1_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.33,
+          0.149
+        ],
+        "position": [
+          1.19,
+          1.861,
+          0.855
+        ],
+        "rotation": [
+          -0.006,
+          -0.149,
+          0.108
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_1_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.33,
+          0.149
+        ],
+        "position": [
+          1.132,
+          1.934,
+          1.035
+        ],
+        "rotation": [
+          -0.006,
+          0.771,
+          0.108
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_1_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.33,
+          0.149
+        ],
+        "position": [
+          0.954,
+          1.861,
+          1.098
+        ],
+        "rotation": [
+          -0.006,
+          1.691,
+          0.108
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_0_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.044,
+          0.061
+        ],
+        "height": 1.204,
+        "position": [
+          -0.069,
+          1.643,
+          0.596
+        ],
+        "rotation": [
+          1.478,
+          -0.115,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_0_2_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.138,
+          1.699,
+          1.191
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_0_2_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.294,
+          0.149
+        ],
+        "position": [
+          0.029,
+          1.683,
+          1.323
+        ],
+        "rotation": [
+          -0.12,
+          0.668,
+          0.087
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_2_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.294,
+          0.149
+        ],
+        "position": [
+          -0.142,
+          1.748,
+          1.404
+        ],
+        "rotation": [
+          -0.12,
+          1.588,
+          0.087
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_2_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.294,
+          0.149
+        ],
+        "position": [
+          -0.309,
+          1.683,
+          1.317
+        ],
+        "rotation": [
+          -0.12,
+          2.508,
+          0.087
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_0_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.037,
+          0.051
+        ],
+        "height": 1.417,
+        "position": [
+          -0.646,
+          1.671,
+          0.277
+        ],
+        "rotation": [
+          1.452,
+          -1.166,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_0_3_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -1.293,
+          1.755,
+          0.555
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_0_3_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.316,
+          0.149
+        ],
+        "position": [
+          -1.33,
+          1.737,
+          0.764
+        ],
+        "rotation": [
+          -0.017,
+          1.745,
+          0.031
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_3_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.316,
+          0.149
+        ],
+        "position": [
+          -1.482,
+          1.807,
+          0.652
+        ],
+        "rotation": [
+          -0.017,
+          2.665,
+          0.031
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_3_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.316,
+          0.149
+        ],
+        "position": [
+          -1.485,
+          1.737,
+          0.463
+        ],
+        "rotation": [
+          -0.017,
+          3.585,
+          0.031
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_0_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.039,
+          0.054
+        ],
+        "height": 1.434,
+        "position": [
+          -0.669,
+          1.683,
+          -0.238
+        ],
+        "rotation": [
+          1.436,
+          -1.913,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_0_4_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -1.338,
+          1.779,
+          -0.477
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_0_4_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.294,
+          0.149
+        ],
+        "position": [
+          -1.528,
+          1.763,
+          -0.381
+        ],
+        "rotation": [
+          0.021,
+          2.677,
+          0.086
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_4_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.294,
+          0.149
+        ],
+        "position": [
+          -1.529,
+          1.829,
+          -0.57
+        ],
+        "rotation": [
+          0.021,
+          3.597,
+          0.086
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_4_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.294,
+          0.149
+        ],
+        "position": [
+          -1.38,
+          1.763,
+          -0.685
+        ],
+        "rotation": [
+          0.021,
+          4.517,
+          0.086
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_0_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.042,
+          0.058
+        ],
+        "height": 1.225,
+        "position": [
+          -0.19,
+          1.66,
+          -0.578
+        ],
+        "rotation": [
+          1.451,
+          -2.825,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_0_5_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.379,
+          1.733,
+          -1.155
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_0_5_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.269,
+          0.149
+        ],
+        "position": [
+          -0.58,
+          1.718,
+          -1.225
+        ],
+        "rotation": [
+          0.037,
+          3.473,
+          0.003
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_5_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.269,
+          0.149
+        ],
+        "position": [
+          -0.446,
+          1.778,
+          -1.357
+        ],
+        "rotation": [
+          0.037,
+          4.393,
+          0.003
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_5_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.269,
+          0.149
+        ],
+        "position": [
+          -0.259,
+          1.718,
+          -1.331
+        ],
+        "rotation": [
+          0.037,
+          5.313,
+          0.003
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_0_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.034,
+          0.047
+        ],
+        "height": 1.277,
+        "position": [
+          0.378,
+          1.638,
+          -0.512
+        ],
+        "rotation": [
+          1.49,
+          2.505,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_0_6_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.757,
+          1.69,
+          -1.023
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_0_6_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.291,
+          0.149
+        ],
+        "position": [
+          0.679,
+          1.674,
+          -1.221
+        ],
+        "rotation": [
+          -0.039,
+          4.338,
+          0.042
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_6_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.291,
+          0.149
+        ],
+        "position": [
+          0.867,
+          1.738,
+          -1.205
+        ],
+        "rotation": [
+          -0.039,
+          5.258,
+          0.042
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_0_6_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.319,
+          0.291,
+          0.149
+        ],
+        "position": [
+          0.968,
+          1.674,
+          -1.045
+        ],
+        "rotation": [
+          -0.039,
+          6.178,
+          0.042
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_1_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.046,
+          0.064
+        ],
+        "height": 1.294,
+        "position": [
+          0.639,
+          2.73,
+          0.07
+        ],
+        "rotation": [
+          1.457,
+          1.462,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_1_0_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          1.278,
+          2.804,
+          0.14
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_1_0_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.19,
+          0.132
+        ],
+        "position": [
+          1.404,
+          2.794,
+          0.001
+        ],
+        "rotation": [
+          -0.049,
+          -0.838,
+          0.057
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_0_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.19,
+          0.132
+        ],
+        "position": [
+          1.466,
+          2.836,
+          0.156
+        ],
+        "rotation": [
+          -0.049,
+          0.082,
+          0.057
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_0_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.19,
+          0.132
+        ],
+        "position": [
+          1.379,
+          2.794,
+          0.298
+        ],
+        "rotation": [
+          -0.049,
+          1.002,
+          0.057
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_1_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.048,
+          0.066
+        ],
+        "height": 1.122,
+        "position": [
+          0.308,
+          2.719,
+          0.464
+        ],
+        "rotation": [
+          1.46,
+          0.586,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_1_1_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.617,
+          2.781,
+          0.929
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_1_1_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.25,
+          0.132
+        ],
+        "position": [
+          0.803,
+          2.767,
+          0.95
+        ],
+        "rotation": [
+          0.025,
+          0.111,
+          0.098
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_1_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.25,
+          0.132
+        ],
+        "position": [
+          0.713,
+          2.822,
+          1.09
+        ],
+        "rotation": [
+          0.025,
+          1.031,
+          0.098
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_1_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.25,
+          0.132
+        ],
+        "position": [
+          0.547,
+          2.767,
+          1.103
+        ],
+        "rotation": [
+          0.025,
+          1.951,
+          0.098
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_1_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.059,
+          0.082
+        ],
+        "height": 1.122,
+        "position": [
+          -0.228,
+          2.791,
+          0.495
+        ],
+        "rotation": [
+          1.329,
+          -0.432,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_1_2_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.456,
+          2.925,
+          0.989
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_1_2_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.237,
+          0.132
+        ],
+        "position": [
+          -0.363,
+          2.912,
+          1.153
+        ],
+        "rotation": [
+          -0.09,
+          1.054,
+          0.004
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_2_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.237,
+          0.132
+        ],
+        "position": [
+          -0.529,
+          2.965,
+          1.162
+        ],
+        "rotation": [
+          -0.09,
+          1.974,
+          0.004
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_2_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.237,
+          0.132
+        ],
+        "position": [
+          -0.638,
+          2.912,
+          1.035
+        ],
+        "rotation": [
+          -0.09,
+          2.894,
+          0.004
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_1_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.047,
+          0.065
+        ],
+        "height": 1.285,
+        "position": [
+          -0.619,
+          2.745,
+          0.148
+        ],
+        "rotation": [
+          1.432,
+          -1.337,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_1_3_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -1.238,
+          2.834,
+          0.295
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_1_3_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.298,
+          0.132
+        ],
+        "position": [
+          -1.315,
+          2.818,
+          0.467
+        ],
+        "rotation": [
+          -0.048,
+          1.991,
+          0.014
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_3_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.298,
+          0.132
+        ],
+        "position": [
+          -1.421,
+          2.884,
+          0.338
+        ],
+        "rotation": [
+          -0.048,
+          2.911,
+          0.014
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_3_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.298,
+          0.132
+        ],
+        "position": [
+          -1.383,
+          2.818,
+          0.176
+        ],
+        "rotation": [
+          -0.048,
+          3.831,
+          0.014
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_1_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.046,
+          0.064
+        ],
+        "height": 1.254,
+        "position": [
+          -0.523,
+          2.812,
+          -0.309
+        ],
+        "rotation": [
+          1.321,
+          -2.105,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_1_4_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -1.046,
+          2.967,
+          -0.619
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_1_4_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.21,
+          0.132
+        ],
+        "position": [
+          -1.222,
+          2.955,
+          -0.553
+        ],
+        "rotation": [
+          -0.099,
+          2.781,
+          0.077
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_4_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.21,
+          0.132
+        ],
+        "position": [
+          -1.205,
+          3.002,
+          -0.719
+        ],
+        "rotation": [
+          -0.099,
+          3.701,
+          0.077
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_4_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.21,
+          0.132
+        ],
+        "position": [
+          -1.063,
+          2.955,
+          -0.806
+        ],
+        "rotation": [
+          -0.099,
+          4.621,
+          0.077
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_1_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.042,
+          0.059
+        ],
+        "height": 1.062,
+        "position": [
+          -0.042,
+          2.701,
+          -0.528
+        ],
+        "rotation": [
+          1.488,
+          -3.061,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_1_5_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.085,
+          2.744,
+          -1.055
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_1_5_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.317,
+          0.132
+        ],
+        "position": [
+          -0.249,
+          2.727,
+          -1.147
+        ],
+        "rotation": [
+          -0.008,
+          3.652,
+          0.065
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_5_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.317,
+          0.132
+        ],
+        "position": [
+          -0.111,
+          2.797,
+          -1.241
+        ],
+        "rotation": [
+          -0.008,
+          4.572,
+          0.065
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_5_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.317,
+          0.132
+        ],
+        "position": [
+          0.047,
+          2.727,
+          -1.189
+        ],
+        "rotation": [
+          -0.008,
+          5.492,
+          0.065
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_1_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.041,
+          0.057
+        ],
+        "height": 1.231,
+        "position": [
+          0.481,
+          2.81,
+          -0.352
+        ],
+        "rotation": [
+          1.319,
+          2.202,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_1_6_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.963,
+          2.963,
+          -0.704
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_1_6_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.212,
+          0.132
+        ],
+        "position": [
+          0.948,
+          2.952,
+          -0.891
+        ],
+        "rotation": [
+          -0.02,
+          4.635,
+          0.053
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_6_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.212,
+          0.132
+        ],
+        "position": [
+          1.103,
+          2.999,
+          -0.828
+        ],
+        "rotation": [
+          -0.02,
+          5.555,
+          0.053
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_1_6_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.282,
+          0.212,
+          0.132
+        ],
+        "position": [
+          1.147,
+          2.952,
+          -0.668
+        ],
+        "rotation": [
+          -0.02,
+          6.475,
+          0.053
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_2_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.051,
+          0.071
+        ],
+        "height": 1.018,
+        "position": [
+          0.501,
+          3.815,
+          -0.021
+        ],
+        "rotation": [
+          1.396,
+          1.612,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_2_0_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          1.002,
+          3.903,
+          -0.042
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_2_0_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.2,
+          0.102
+        ],
+        "position": [
+          1.088,
+          3.892,
+          -0.159
+        ],
+        "rotation": [
+          -0.069,
+          -0.935,
+          -0.024
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_0_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.2,
+          0.102
+        ],
+        "position": [
+          1.148,
+          3.937,
+          -0.044
+        ],
+        "rotation": [
+          -0.069,
+          -0.015,
+          -0.024
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_0_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.2,
+          0.102
+        ],
+        "position": [
+          1.092,
+          3.892,
+          0.073
+        ],
+        "rotation": [
+          -0.069,
+          0.905,
+          -0.024
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_2_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.055,
+          0.077
+        ],
+        "height": 0.919,
+        "position": [
+          0.335,
+          3.798,
+          0.306
+        ],
+        "rotation": [
+          1.415,
+          0.832,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_2_1_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.671,
+          3.869,
+          0.612
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_2_1_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.3,
+          0.102
+        ],
+        "position": [
+          0.816,
+          3.852,
+          0.594
+        ],
+        "rotation": [
+          -0.061,
+          -0.122,
+          0.001
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_1_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.3,
+          0.102
+        ],
+        "position": [
+          0.773,
+          3.919,
+          0.716
+        ],
+        "rotation": [
+          -0.061,
+          0.798,
+          0.001
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_1_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.3,
+          0.102
+        ],
+        "position": [
+          0.649,
+          3.852,
+          0.756
+        ],
+        "rotation": [
+          -0.061,
+          1.718,
+          0.001
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_2_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.037,
+          0.052
+        ],
+        "height": 0.882,
+        "position": [
+          -0.063,
+          3.881,
+          0.408
+        ],
+        "rotation": [
+          1.211,
+          -0.153,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_2_2_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.126,
+          4.037,
+          0.816
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_2_2_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.275,
+          0.102
+        ],
+        "position": [
+          -0.018,
+          4.021,
+          0.915
+        ],
+        "rotation": [
+          -0.04,
+          0.743,
+          0.096
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_2_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.275,
+          0.102
+        ],
+        "position": [
+          -0.139,
+          4.082,
+          0.961
+        ],
+        "rotation": [
+          -0.04,
+          1.663,
+          0.096
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_2_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.275,
+          0.102
+        ],
+        "position": [
+          -0.25,
+          4.021,
+          0.893
+        ],
+        "rotation": [
+          -0.04,
+          2.583,
+          0.096
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_2_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.048,
+          0.067
+        ],
+        "height": 0.972,
+        "position": [
+          -0.441,
+          3.784,
+          0.196
+        ],
+        "rotation": [
+          1.452,
+          -1.153,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_2_3_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.882,
+          3.841,
+          0.391
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_2_3_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.194,
+          0.102
+        ],
+        "position": [
+          -0.899,
+          3.83,
+          0.536
+        ],
+        "rotation": [
+          0.009,
+          1.683,
+          0.028
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_3_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.194,
+          0.102
+        ],
+        "position": [
+          -1.008,
+          3.874,
+          0.466
+        ],
+        "rotation": [
+          0.009,
+          2.603,
+          0.028
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_3_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.194,
+          0.102
+        ],
+        "position": [
+          -1.018,
+          3.83,
+          0.337
+        ],
+        "rotation": [
+          0.009,
+          3.523,
+          0.028
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_2_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.045,
+          0.063
+        ],
+        "height": 0.991,
+        "position": [
+          -0.463,
+          3.805,
+          -0.158
+        ],
+        "rotation": [
+          1.412,
+          -1.899,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_2_4_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.927,
+          3.883,
+          -0.315
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_2_4_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.273,
+          0.102
+        ],
+        "position": [
+          -1.05,
+          3.868,
+          -0.237
+        ],
+        "rotation": [
+          -0.014,
+          2.576,
+          -0.015
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_4_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.273,
+          0.102
+        ],
+        "position": [
+          -1.064,
+          3.928,
+          -0.366
+        ],
+        "rotation": [
+          -0.014,
+          3.496,
+          -0.015
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_4_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.273,
+          0.102
+        ],
+        "position": [
+          -0.969,
+          3.868,
+          -0.455
+        ],
+        "rotation": [
+          -0.014,
+          4.416,
+          -0.015
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_2_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.04,
+          0.055
+        ],
+        "height": 0.87,
+        "position": [
+          -0.14,
+          3.844,
+          -0.395
+        ],
+        "rotation": [
+          1.297,
+          -2.801,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_2_5_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.28,
+          3.962,
+          -0.79
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_2_5_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.204,
+          0.102
+        ],
+        "position": [
+          -0.418,
+          3.95,
+          -0.838
+        ],
+        "rotation": [
+          -0.113,
+          3.477,
+          0.105
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_5_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.204,
+          0.102
+        ],
+        "position": [
+          -0.325,
+          3.996,
+          -0.929
+        ],
+        "rotation": [
+          -0.113,
+          4.397,
+          0.105
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_5_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.204,
+          0.102
+        ],
+        "position": [
+          -0.197,
+          3.95,
+          -0.91
+        ],
+        "rotation": [
+          -0.113,
+          5.317,
+          0.105
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_2_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.035,
+          0.049
+        ],
+        "height": 0.901,
+        "position": [
+          0.269,
+          3.828,
+          -0.347
+        ],
+        "rotation": [
+          1.343,
+          2.483,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_2_6_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.537,
+          3.93,
+          -0.695
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_2_6_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.245,
+          0.102
+        ],
+        "position": [
+          0.478,
+          3.916,
+          -0.828
+        ],
+        "rotation": [
+          -0.137,
+          4.292,
+          -0.035
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_6_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.245,
+          0.102
+        ],
+        "position": [
+          0.607,
+          3.971,
+          -0.823
+        ],
+        "rotation": [
+          -0.137,
+          5.212,
+          -0.035
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_2_6_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.219,
+          0.245,
+          0.102
+        ],
+        "position": [
+          0.682,
+          3.916,
+          -0.717
+        ],
+        "rotation": [
+          -0.137,
+          6.132,
+          -0.035
+        ],
+        "color": 7246431,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_3_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.043,
+          0.06
+        ],
+        "height": 0.804,
+        "position": [
+          0.375,
+          4.934,
+          0.046
+        ],
+        "rotation": [
+          1.221,
+          1.449,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_3_0_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.75,
+          5.071,
+          0.092
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_3_0_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.3,
+          0.077
+        ],
+        "position": [
+          0.834,
+          5.055,
+          0.021
+        ],
+        "rotation": [
+          -0.129,
+          -0.701,
+          0.034
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_0_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.3,
+          0.077
+        ],
+        "position": [
+          0.858,
+          5.121,
+          0.116
+        ],
+        "rotation": [
+          -0.129,
+          0.219,
+          0.034
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_0_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.3,
+          0.077
+        ],
+        "position": [
+          0.796,
+          5.055,
+          0.192
+        ],
+        "rotation": [
+          -0.129,
+          1.139,
+          0.034
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_3_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.044,
+          0.061
+        ],
+        "height": 0.676,
+        "position": [
+          0.193,
+          4.868,
+          0.268
+        ],
+        "rotation": [
+          1.355,
+          0.624,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_3_1_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.386,
+          4.941,
+          0.535
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_3_1_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.279,
+          0.077
+        ],
+        "position": [
+          0.496,
+          4.925,
+          0.543
+        ],
+        "rotation": [
+          -0.036,
+          0.071,
+          0.013
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_1_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.279,
+          0.077
+        ],
+        "position": [
+          0.446,
+          4.987,
+          0.628
+        ],
+        "rotation": [
+          -0.036,
+          0.991,
+          0.013
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_1_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.279,
+          0.077
+        ],
+        "position": [
+          0.349,
+          4.925,
+          0.639
+        ],
+        "rotation": [
+          -0.036,
+          1.911,
+          0.013
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_3_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.048,
+          0.067
+        ],
+        "height": 0.702,
+        "position": [
+          -0.133,
+          4.94,
+          0.291
+        ],
+        "rotation": [
+          1.148,
+          -0.43,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_3_2_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.267,
+          5.084,
+          0.582
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_3_2_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.301,
+          0.077
+        ],
+        "position": [
+          -0.216,
+          5.067,
+          0.68
+        ],
+        "rotation": [
+          0.035,
+          1.094,
+          0.012
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_2_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.301,
+          0.077
+        ],
+        "position": [
+          -0.314,
+          5.134,
+          0.682
+        ],
+        "rotation": [
+          0.035,
+          2.014,
+          0.012
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_2_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.301,
+          0.077
+        ],
+        "position": [
+          -0.375,
+          5.067,
+          0.605
+        ],
+        "rotation": [
+          0.035,
+          2.934,
+          0.012
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_3_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.037,
+          0.051
+        ],
+        "height": 0.782,
+        "position": [
+          -0.363,
+          4.91,
+          0.088
+        ],
+        "rotation": [
+          1.275,
+          -1.332,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_3_3_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.727,
+          5.024,
+          0.177
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_3_3_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.319,
+          0.077
+        ],
+        "position": [
+          -0.765,
+          5.006,
+          0.281
+        ],
+        "rotation": [
+          -0.093,
+          1.919,
+          0.022
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_3_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.319,
+          0.077
+        ],
+        "position": [
+          -0.832,
+          5.077,
+          0.21
+        ],
+        "rotation": [
+          -0.093,
+          2.839,
+          0.022
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_3_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.319,
+          0.077
+        ],
+        "position": [
+          -0.817,
+          5.006,
+          0.113
+        ],
+        "rotation": [
+          -0.093,
+          3.759,
+          0.022
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_3_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.056,
+          0.077
+        ],
+        "height": 0.721,
+        "position": [
+          -0.3,
+          4.857,
+          -0.191
+        ],
+        "rotation": [
+          1.401,
+          -2.137,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_3_4_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.599,
+          4.918,
+          -0.381
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_3_4_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.236,
+          0.077
+        ],
+        "position": [
+          -0.708,
+          4.905,
+          -0.36
+        ],
+        "rotation": [
+          0.041,
+          2.947,
+          0.049
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_4_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.236,
+          0.077
+        ],
+        "position": [
+          -0.682,
+          4.957,
+          -0.454
+        ],
+        "rotation": [
+          0.041,
+          3.867,
+          0.049
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_4_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.236,
+          0.077
+        ],
+        "position": [
+          -0.591,
+          4.905,
+          -0.491
+        ],
+        "rotation": [
+          0.041,
+          4.787,
+          0.049
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_3_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.069
+        ],
+        "height": 0.656,
+        "position": [
+          -0.006,
+          4.899,
+          -0.311
+        ],
+        "rotation": [
+          1.249,
+          -3.123,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_3_5_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.012,
+          5.003,
+          -0.622
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_3_5_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.236,
+          0.077
+        ],
+        "position": [
+          -0.095,
+          4.99,
+          -0.695
+        ],
+        "rotation": [
+          -0.147,
+          3.861,
+          0.118
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_5_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.236,
+          0.077
+        ],
+        "position": [
+          -0.004,
+          5.042,
+          -0.732
+        ],
+        "rotation": [
+          -0.147,
+          4.781,
+          0.118
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_5_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.236,
+          0.077
+        ],
+        "position": [
+          0.081,
+          4.99,
+          -0.682
+        ],
+        "rotation": [
+          -0.147,
+          5.701,
+          0.118
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_3_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.044,
+          0.061
+        ],
+        "height": 0.765,
+        "position": [
+          0.294,
+          4.942,
+          -0.196
+        ],
+        "rotation": [
+          1.179,
+          2.159,
+          0
+        ],
+        "color": 3499334,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_3_6_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.588,
+          5.088,
+          -0.392
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_3_6_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.271,
+          0.077
+        ],
+        "position": [
+          0.586,
+          5.073,
+          -0.503
+        ],
+        "rotation": [
+          -0.034,
+          4.692,
+          0.056
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_6_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.271,
+          0.077
+        ],
+        "position": [
+          0.675,
+          5.133,
+          -0.461
+        ],
+        "rotation": [
+          -0.034,
+          5.612,
+          0.056
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_3_6_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.166,
+          0.271,
+          0.077
+        ],
+        "position": [
+          0.695,
+          5.073,
+          -0.365
+        ],
+        "rotation": [
+          -0.034,
+          6.532,
+          0.056
+        ],
+        "color": 1588523,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_4_branch_0",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.035,
+          0.048
+        ],
+        "height": 0.51,
+        "position": [
+          0.214,
+          6.004,
+          -0.012
+        ],
+        "rotation": [
+          0.997,
+          1.628,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_4_0_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.428,
+          6.142,
+          -0.025
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_4_0_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.272,
+          0.044
+        ],
+        "position": [
+          0.465,
+          6.127,
+          -0.074
+        ],
+        "rotation": [
+          -0.134,
+          -0.92,
+          0.092
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_0_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.272,
+          0.044
+        ],
+        "position": [
+          0.49,
+          6.187,
+          -0.025
+        ],
+        "rotation": [
+          -0.134,
+          0,
+          0.092
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_0_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.272,
+          0.044
+        ],
+        "position": [
+          0.465,
+          6.127,
+          0.025
+        ],
+        "rotation": [
+          -0.134,
+          0.92,
+          0.092
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_4_branch_1",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.059,
+          0.083
+        ],
+        "height": 0.406,
+        "position": [
+          0.153,
+          5.917,
+          0.123
+        ],
+        "rotation": [
+          1.312,
+          0.891,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_4_1_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.305,
+          5.969,
+          0.247
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_4_1_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.251,
+          0.044
+        ],
+        "position": [
+          0.368,
+          5.955,
+          0.242
+        ],
+        "rotation": [
+          -0.119,
+          -0.07,
+          -0.035
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_1_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.251,
+          0.044
+        ],
+        "position": [
+          0.347,
+          6.011,
+          0.294
+        ],
+        "rotation": [
+          -0.119,
+          0.85,
+          -0.035
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_1_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.251,
+          0.044
+        ],
+        "position": [
+          0.293,
+          5.955,
+          0.308
+        ],
+        "rotation": [
+          -0.119,
+          1.77,
+          -0.035
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_4_branch_2",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.055,
+          0.076
+        ],
+        "height": 0.434,
+        "position": [
+          -0.034,
+          5.991,
+          0.174
+        ],
+        "rotation": [
+          0.952,
+          -0.192,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_4_2_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.067,
+          6.117,
+          0.347
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_4_2_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.318,
+          0.044
+        ],
+        "position": [
+          -0.026,
+          6.099,
+          0.393
+        ],
+        "rotation": [
+          -0.081,
+          0.838,
+          0.059
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_2_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.318,
+          0.044
+        ],
+        "position": [
+          -0.079,
+          6.17,
+          0.408
+        ],
+        "rotation": [
+          -0.081,
+          1.758,
+          0.059
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_2_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.318,
+          0.044
+        ],
+        "position": [
+          -0.123,
+          6.099,
+          0.375
+        ],
+        "rotation": [
+          -0.081,
+          2.678,
+          0.059
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_4_branch_3",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.047,
+          0.065
+        ],
+        "height": 0.454,
+        "position": [
+          -0.184,
+          5.963,
+          0.09
+        ],
+        "rotation": [
+          1.124,
+          -1.116,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_4_3_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.368,
+          6.062,
+          0.18
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_4_3_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.256,
+          0.044
+        ],
+        "position": [
+          -0.372,
+          6.047,
+          0.242
+        ],
+        "rotation": [
+          0.013,
+          1.639,
+          -0.038
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_3_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.256,
+          0.044
+        ],
+        "position": [
+          -0.42,
+          6.104,
+          0.214
+        ],
+        "rotation": [
+          0.013,
+          2.559,
+          -0.038
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_3_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.256,
+          0.044
+        ],
+        "position": [
+          -0.427,
+          6.047,
+          0.159
+        ],
+        "rotation": [
+          0.013,
+          3.479,
+          -0.038
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_4_branch_4",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.056,
+          0.078
+        ],
+        "height": 0.509,
+        "position": [
+          -0.202,
+          6.009,
+          -0.059
+        ],
+        "rotation": [
+          0.973,
+          -1.854,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_4_4_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.404,
+          6.152,
+          -0.117
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_4_4_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.293,
+          0.044
+        ],
+        "position": [
+          -0.455,
+          6.135,
+          -0.082
+        ],
+        "rotation": [
+          -0.143,
+          2.537,
+          0.071
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_4_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.293,
+          0.044
+        ],
+        "position": [
+          -0.463,
+          6.201,
+          -0.137
+        ],
+        "rotation": [
+          -0.143,
+          3.457,
+          0.071
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_4_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.293,
+          0.044
+        ],
+        "position": [
+          -0.425,
+          6.135,
+          -0.176
+        ],
+        "rotation": [
+          -0.143,
+          4.377,
+          0.071
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_4_branch_5",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.049,
+          0.069
+        ],
+        "height": 0.442,
+        "position": [
+          -0.073,
+          5.992,
+          -0.165
+        ],
+        "rotation": [
+          0.958,
+          -2.726,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_4_5_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          -0.146,
+          6.119,
+          -0.331
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_4_5_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.323,
+          0.044
+        ],
+        "position": [
+          -0.207,
+          6.102,
+          -0.345
+        ],
+        "rotation": [
+          -0.03,
+          3.37,
+          -0.036
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_5_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.323,
+          0.044
+        ],
+        "position": [
+          -0.171,
+          6.173,
+          -0.387
+        ],
+        "rotation": [
+          -0.03,
+          4.29,
+          -0.036
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_5_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.323,
+          0.044
+        ],
+        "position": [
+          -0.116,
+          6.102,
+          -0.385
+        ],
+        "rotation": [
+          -0.03,
+          5.21,
+          -0.036
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_level_4_branch_6",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.036,
+          0.05
+        ],
+        "height": 0.439,
+        "position": [
+          0.119,
+          5.978,
+          -0.146
+        ],
+        "rotation": [
+          1.032,
+          2.458,
+          0
+        ],
+        "color": 1588523,
+        "triangles": 28
+      },
+      {
+        "name": "juniper_crown_4_6_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.189,
+        "position": [
+          0.238,
+          6.091,
+          -0.292
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "juniper_crown_4_6_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.301,
+          0.044
+        ],
+        "position": [
+          0.213,
+          6.074,
+          -0.35
+        ],
+        "rotation": [
+          -0.06,
+          4.302,
+          0.044
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_6_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.301,
+          0.044
+        ],
+        "position": [
+          0.268,
+          6.141,
+          -0.347
+        ],
+        "rotation": [
+          -0.06,
+          5.222,
+          0.044
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "juniper_crown_4_6_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.094,
+          0.301,
+          0.044
+        ],
+        "position": [
+          0.3,
+          6.074,
+          -0.301
+        ],
+        "rotation": [
+          -0.06,
+          6.142,
+          0.044
+        ],
+        "color": 3499334,
+        "triangles": 160
+      },
+      {
+        "name": "leader_crown_juniper_core",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.211,
+        "position": [
+          -0.03,
+          6.762,
+          -0.035
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7246431,
+        "triangles": 36
+      },
+      {
+        "name": "leader_crown_juniper_tuft_0",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.302,
+          0.288,
+          0.192
+        ],
+        "position": [
+          -0.232,
+          6.746,
+          -0.031
+        ],
+        "rotation": [
+          -0.05,
+          -3.165,
+          0.04
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "leader_crown_juniper_tuft_1",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.302,
+          0.288,
+          0.192
+        ],
+        "position": [
+          -0.156,
+          6.81,
+          -0.193
+        ],
+        "rotation": [
+          -0.05,
+          -2.245,
+          0.04
+        ],
+        "color": 10268535,
+        "triangles": 160
+      },
+      {
+        "name": "leader_crown_juniper_tuft_2",
+        "type": "ellipsoid_sphere",
+        "radii": [
+          0.302,
+          0.288,
+          0.192
+        ],
+        "position": [
+          0.019,
+          6.746,
+          -0.231
+        ],
+        "rotation": [
+          -0.05,
+          -1.325,
+          0.04
+        ],
+        "color": 10268535,
+        "triangles": 160
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69_055f3776_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/cf_juniper_tree/tree_tree_cf_juniper_tree_ov_626b9eab-cbb4-4a0d-9153-2a37a07fca69_055f3776_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    },
+    {
+      "key": "tree/cf_juniper_tree_ov_f0b92e07-4cc5-45d9-ab86-470de79d279a_216290ca_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/cf_juniper_tree/tree_tree_cf_juniper_tree_ov_f0b92e07-4cc5-45d9-ab86-470de79d279a_216290ca_luna_v6",
+      "similarity": 92,
+      "scale": [
+        0.92423,
+        0.9838,
+        0.90716
+      ],
+      "paletteIds": [
+        "palette_85181bc7"
+      ]
+    }
+  ]
+}

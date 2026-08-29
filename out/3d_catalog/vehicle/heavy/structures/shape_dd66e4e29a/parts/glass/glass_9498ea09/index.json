@@ -1,0 +1,49 @@
+{
+  "id": "glass_9498ea09",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.75,0|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+    "name": "front_windshield",
+    "part": {
+      "name": "front_windshield",
+      "type": "box",
+      "dimensions": [
+        2.3,
+        1.8,
+        0.1
+      ],
+      "position": [
+        0,
+        2.4,
+        4.95
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 32988,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_1668138443926_1f2093f2_v6",
+      "name": "front_windshield",
+      "position": [
+        0,
+        2.4,
+        4.95
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 32988
+    }
+  ]
+}

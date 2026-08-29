@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "sh_boxwood",
+  "palettes": [
+    {
+      "id": "palette_0adace6d",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 3234617,
+        "facadeHex": 6456401,
+        "baseHex": 5387560,
+        "accentHex": 9415271,
+        "glassHex": 1976635,
+        "darkHex": 2763554,
+        "brightHex": 12240523
+      },
+      "objects": [
+        {
+          "key": "tree/sh_boxwood_ov_331ba448-3fc1-472d-8f43-b0626b0096a7_6b1c1574_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "category": "rock",
+  "subcategory": "mg_tower",
+  "palettes": [
+    {
+      "id": "palette_c37ca1af",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2370353,
+        "facadeHex": 5200224,
+        "baseHex": 3160123,
+        "accentHex": 6911354,
+        "glassHex": 1518643,
+        "darkHex": 2106664,
+        "brightHex": 11187637
+      },
+      "objects": [
+        {
+          "key": "rock/mg_tower_ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1_b8168d3e_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/mg_tower_ov_1dc19c47-5d44-4e25-a685-854e0eb0e420_50415ae5_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/mg_tower_ov_b44cd820-d44f-48fa-af35-d2920fab9d2a_dda44bac_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~0_9823d365_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "rock/mg_tower_ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006~1_0ed64ef8_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

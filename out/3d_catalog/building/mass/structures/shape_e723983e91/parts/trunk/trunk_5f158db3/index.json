@@ -1,0 +1,98 @@
+{
+  "id": "trunk_5f158db3",
+  "role": "trunk",
+  "type": "cylinder",
+  "signature": "cylinder|0.125,1,0.125|6",
+  "canonical": {
+    "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+    "name": "tree_trunk_1",
+    "part": {
+      "name": "tree_trunk_1",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.08,
+        0.08
+      ],
+      "height": 1,
+      "position": [
+        -0.5,
+        1,
+        4.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3289650,
+      "triangles": 24
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "tree_trunk_1",
+      "position": [
+        -0.5,
+        1,
+        4.2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3289650
+    },
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "tree_trunk_2",
+      "position": [
+        0.2,
+        1,
+        4.4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3289650
+    },
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "tree_trunk_3",
+      "position": [
+        0.9,
+        1,
+        4.3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3289650
+    },
+    {
+      "objectKey": "building/mass_0b480f6369f166b3c884ddb5940ca2e8_a26ffc7b_v6",
+      "name": "tree_trunk_4",
+      "position": [
+        1.8,
+        1,
+        4.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3289650
+    }
+  ]
+}

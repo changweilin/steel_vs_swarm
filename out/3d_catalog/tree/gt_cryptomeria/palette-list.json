@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "gt_cryptomeria",
+  "palettes": [
+    {
+      "id": "palette_85181bc7",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 1588523,
+        "facadeHex": 3499334,
+        "baseHex": 4928552,
+        "accentHex": 7246431,
+        "glassHex": 1976635,
+        "darkHex": 1911587,
+        "brightHex": 10268535
+      },
+      "objects": [
+        {
+          "key": "tree/gt_cryptomeria_manual_FB_IMG_1786333453208_b549588d_luna_v6",
+          "source": "features.colors"
+        },
+        {
+          "key": "tree/gt_cryptomeria_manual_twFir_s_2ba45319_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

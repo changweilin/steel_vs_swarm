@@ -1,0 +1,61 @@
+{
+  "id": "roof_3a8d8807",
+  "role": "roof",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+    "name": "hoodoo_cap_2",
+    "part": {
+      "name": "hoodoo_cap_2",
+      "type": "dodecahedron_polyhedron",
+      "radius": 1.054,
+      "position": [
+        1.227,
+        3.997,
+        -0.209
+      ],
+      "rotation": [
+        0.1,
+        0.36,
+        -0.06
+      ],
+      "color": 5200224,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_miyako-146_a92c86ba_luna_v6",
+      "name": "hoodoo_cap_2",
+      "position": [
+        1.227,
+        3.997,
+        -0.209
+      ],
+      "rotation": [
+        0.1,
+        0.36,
+        -0.06
+      ],
+      "colorKey": null,
+      "color": 5200224
+    },
+    {
+      "objectKey": "rock/main_132_0da6c49f_luna_v6",
+      "name": "standing_stone_cap_right",
+      "position": [
+        5.2,
+        5.974,
+        0.78
+      ],
+      "rotation": [
+        0.1,
+        0.17,
+        0
+      ],
+      "colorKey": null,
+      "color": 5602375
+    }
+  ]
+}

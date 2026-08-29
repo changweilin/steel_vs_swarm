@@ -1,0 +1,419 @@
+{
+  "id": "glass_9e14ebb7",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.25,0|0",
+  "canonical": {
+    "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+    "name": "front_side_window_left",
+    "part": {
+      "name": "front_side_window_left",
+      "type": "box",
+      "dimensions": [
+        0.739,
+        0.23,
+        0.04
+      ],
+      "position": [
+        0.232,
+        0.942,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 1452860,
+      "triangles": 12,
+      "role": "glass",
+      "colorKey": "glassHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.232,
+        0.942,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.472,
+        0.936,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.232,
+        0.942,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_1716951305013100_1400_0_41f2032c_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.472,
+        0.936,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.232,
+        0.942,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.472,
+        0.936,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.232,
+        0.942,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_2025-porsche-carrera-t-coupe_7f9458c2_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.472,
+        0.936,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.232,
+        0.942,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.472,
+        0.936,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.232,
+        0.942,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_7CcTSYgumkMG_70f59136_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.472,
+        0.936,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.232,
+        0.942,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.472,
+        0.936,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.232,
+        0.942,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_series-better-car_381bc6ea_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.472,
+        0.936,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.232,
+        0.942,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.472,
+        0.936,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.232,
+        0.942,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_teslam3-960_9dc405fc_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.472,
+        0.936,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "front_side_window_left",
+      "position": [
+        0.232,
+        0.942,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "rear_side_window_left",
+      "position": [
+        -0.472,
+        0.936,
+        -0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "front_side_window_right",
+      "position": [
+        0.232,
+        0.942,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    },
+    {
+      "objectKey": "vehicle/car_圖1_07be3b04_luna_v6",
+      "name": "rear_side_window_right",
+      "position": [
+        -0.472,
+        0.936,
+        0.88
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "glassHex",
+      "color": 1452860
+    }
+  ]
+}

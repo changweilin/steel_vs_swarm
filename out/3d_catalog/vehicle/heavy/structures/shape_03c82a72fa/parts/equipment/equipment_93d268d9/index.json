@@ -1,0 +1,99 @@
+{
+  "id": "equipment_93d268d9",
+  "role": "equipment",
+  "type": "box",
+  "signature": "box|1,0,0.5|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+    "name": "mixer_rear_deck",
+    "part": {
+      "name": "mixer_rear_deck",
+      "type": "box",
+      "dimensions": [
+        4.9,
+        0.2,
+        2.244
+      ],
+      "position": [
+        -1.2,
+        1.12,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4016987,
+      "triangles": 12,
+      "role": "equipment",
+      "colorKey": "baseHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "name": "mixer_rear_deck",
+      "position": [
+        -1.2,
+        1.12,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 4016987
+    },
+    {
+      "objectKey": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "name": "mixer_rear_deck",
+      "position": [
+        -1.2,
+        1.12,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3811619
+    },
+    {
+      "objectKey": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "name": "mixer_rear_deck",
+      "position": [
+        -1.2,
+        1.12,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3811619
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "mixer_rear_deck",
+      "position": [
+        -1.2,
+        1.12,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "baseHex",
+      "color": 3688010
+    }
+  ]
+}

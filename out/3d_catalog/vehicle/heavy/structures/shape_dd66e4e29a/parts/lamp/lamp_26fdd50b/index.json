@@ -1,0 +1,65 @@
+{
+  "id": "lamp_26fdd50b",
+  "role": "lamp",
+  "type": "box",
+  "signature": "box|1,0.75,0.125|0",
+  "canonical": {
+    "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+    "name": "headlight_left",
+    "part": {
+      "name": "headlight_left",
+      "type": "box",
+      "dimensions": [
+        0.4,
+        0.3,
+        0.05
+      ],
+      "position": [
+        -1,
+        0.8,
+        5.22
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 15658734,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "headlight_left",
+      "position": [
+        -1,
+        0.8,
+        5.22
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15658734
+    },
+    {
+      "objectKey": "vehicle/heavy_50992126_183220969.918332_526bae3d_v6",
+      "name": "headlight_right",
+      "position": [
+        1,
+        0.8,
+        5.22
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 15658734
+    }
+  ]
+}

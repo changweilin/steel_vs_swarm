@@ -1,0 +1,49 @@
+{
+  "id": "door_6605a09f",
+  "role": "door",
+  "type": "box",
+  "signature": "box|0.75,1,0|0",
+  "canonical": {
+    "objectKey": "building/mass_images (15)_f6c4e057_v6",
+    "name": "door_main",
+    "part": {
+      "name": "door_main",
+      "type": "box",
+      "dimensions": [
+        3,
+        4,
+        0.05
+      ],
+      "position": [
+        0,
+        5,
+        9.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 4621730,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_images (15)_f6c4e057_v6",
+      "name": "door_main",
+      "position": [
+        0,
+        5,
+        9.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4621730
+    }
+  ]
+}

@@ -1,0 +1,671 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_3c2183bc99",
+  "canonicalKey": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_03e3f33a_luna_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_03e3f33a_luna_v6",
+    "bounds": {
+      "min": [
+        -3.5696,
+        0,
+        -3.692
+      ],
+      "max": [
+        4.1112,
+        6.0935,
+        3.2415
+      ],
+      "size": [
+        7.681,
+        6.093,
+        6.934
+      ],
+      "rMax": 5.235,
+      "triangles": 1684,
+      "vertices": 972
+    },
+    "parts": [
+      {
+        "name": "bottle_bole",
+        "type": "conical_frustum",
+        "sides": 12,
+        "radii": [
+          0.72,
+          1.58
+        ],
+        "height": 5.25,
+        "position": [
+          0,
+          2.625,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 48
+      },
+      {
+        "name": "root_flare",
+        "type": "conical_frustum",
+        "sides": 10,
+        "radii": [
+          1.188,
+          1.65
+        ],
+        "height": 0.62,
+        "position": [
+          0,
+          0.31,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 40
+      },
+      {
+        "name": "baobab_arm_0",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 1.156,
+        "position": [
+          0.568,
+          4.933,
+          -0.043
+        ],
+        "rotation": [
+          1.396,
+          1.647,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_0_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 2.389,
+        "position": [
+          2.304,
+          5.262,
+          -0.175
+        ],
+        "rotation": [
+          1.379,
+          1.647,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_0_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.639,
+          0.431,
+          0.679
+        ],
+        "position": [
+          3.474,
+          5.227,
+          -0.264
+        ],
+        "rotation": [
+          0,
+          -0.076,
+          0
+        ],
+        "color": 6585671,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_0_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.161,
+        "position": [
+          3.474,
+          5.538,
+          -0.264
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_1",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 0.915,
+        "position": [
+          0.254,
+          5.067,
+          0.336
+        ],
+        "rotation": [
+          1.168,
+          0.648,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_1_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 2.389,
+        "position": [
+          1.202,
+          5.571,
+          1.588
+        ],
+        "rotation": [
+          1.296,
+          0.648,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_1_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.798,
+          0.451,
+          0.628
+        ],
+        "position": [
+          1.896,
+          5.62,
+          2.504
+        ],
+        "rotation": [
+          0,
+          0.923,
+          0
+        ],
+        "color": 9545836,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_1_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.158,
+        "position": [
+          1.896,
+          5.946,
+          2.504
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_2",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 1.106,
+        "position": [
+          -0.319,
+          5.059,
+          0.427
+        ],
+        "rotation": [
+          1.302,
+          -0.641,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_2_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 1.733,
+        "position": [
+          -1.135,
+          5.448,
+          1.522
+        ],
+        "rotation": [
+          1.287,
+          -0.641,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_2_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.93,
+          0.347,
+          0.742
+        ],
+        "position": [
+          -1.632,
+          5.479,
+          2.189
+        ],
+        "rotation": [
+          0,
+          2.212,
+          0
+        ],
+        "color": 6585671,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_2_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.187,
+        "position": [
+          -1.632,
+          5.729,
+          2.189
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_3",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 0.926,
+        "position": [
+          -0.443,
+          4.698,
+          0.05
+        ],
+        "rotation": [
+          1.299,
+          -1.459,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_3_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 2.04,
+        "position": [
+          -1.843,
+          5.158,
+          0.207
+        ],
+        "rotation": [
+          1.235,
+          -1.459,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_3_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.775,
+          0.332,
+          0.719
+        ],
+        "position": [
+          -2.8,
+          5.292,
+          0.314
+        ],
+        "rotation": [
+          0,
+          3.03,
+          0
+        ],
+        "color": 9545836,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_3_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.181,
+        "position": [
+          -2.8,
+          5.531,
+          0.314
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_4",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 1.018,
+        "position": [
+          -0.298,
+          4.988,
+          -0.357
+        ],
+        "rotation": [
+          1.15,
+          -2.446,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_4_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 1.989,
+        "position": [
+          -1.21,
+          5.46,
+          -1.449
+        ],
+        "rotation": [
+          1.302,
+          -2.446,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_4_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.935,
+          0.481,
+          0.674
+        ],
+        "position": [
+          -1.824,
+          5.43,
+          -2.185
+        ],
+        "rotation": [
+          0,
+          4.017,
+          0
+        ],
+        "color": 6585671,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_4_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.17,
+        "position": [
+          -1.824,
+          5.777,
+          -2.185
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      },
+      {
+        "name": "baobab_arm_5",
+        "type": "cylinder",
+        "sides": 8,
+        "radii": [
+          0.115,
+          0.16
+        ],
+        "height": 0.862,
+        "position": [
+          0.233,
+          4.726,
+          -0.299
+        ],
+        "rotation": [
+          1.074,
+          2.481,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 32
+      },
+      {
+        "name": "baobab_arm_5_outer",
+        "type": "cylinder",
+        "sides": 7,
+        "radii": [
+          0.076,
+          0.105
+        ],
+        "height": 3.076,
+        "position": [
+          1.382,
+          5.302,
+          -1.777
+        ],
+        "rotation": [
+          1.328,
+          2.481,
+          0
+        ],
+        "color": 7030320,
+        "triangles": 28
+      },
+      {
+        "name": "baobab_leaf_cluster_5_baobab_umbrella",
+        "type": "hemisphere_dome",
+        "radii": [
+          0.737,
+          0.369,
+          0.739
+        ],
+        "position": [
+          2.298,
+          5.446,
+          -2.955
+        ],
+        "rotation": [
+          0,
+          5.373,
+          0
+        ],
+        "color": 9545836,
+        "triangles": 170
+      },
+      {
+        "name": "baobab_leaf_cluster_5_baobab_facet",
+        "type": "dodecahedron_polyhedron",
+        "radius": 0.186,
+        "position": [
+          2.298,
+          5.712,
+          -2.955
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11580537,
+        "triangles": 36
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "tree/canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_03e3f33a_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_Adansonia-Fony-600-x-338-Fony-Baobab-tree_03e3f33a_luna_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/canopy_boab-tree-header-image-blog_73c93dba_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_boab-tree-header-image-blog_73c93dba_luna_v6",
+      "similarity": 93,
+      "scale": [
+        1.02122,
+        0.98408,
+        1.06519
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/canopy_boab-trees (1)_d718dec4_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_boab-trees_1__d718dec4_luna_v6",
+      "similarity": 90,
+      "scale": [
+        0.99583,
+        0.98917,
+        1.06995
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/canopy_Derby_boab,_Western_Australia_1cc05e11_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_Derby_boab__Western_Australia_1cc05e11_luna_v6",
+      "similarity": 67,
+      "scale": [
+        1.16586,
+        0.96603,
+        0.9377
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/canopy_Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1)_49ff75fa_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_Green_baobab_at_sunny_day._Madagascar_dreamstime_xxl_46207442_1__49ff75fa_luna_v6",
+      "similarity": 82,
+      "scale": [
+        0.9379,
+        0.95323,
+        1.11119
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    },
+    {
+      "key": "tree/canopy_madagascar-baobab_078efb57_luna_v6",
+      "selection": "luna-direct-v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "reviewStatus": "awaiting_human_review",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/tree/canopy/tree_tree_canopy_madagascar-baobab_078efb57_luna_v6",
+      "similarity": 90,
+      "scale": [
+        1.04309,
+        0.97948,
+        1.0998
+      ],
+      "paletteIds": [
+        "palette_19053b39"
+      ]
+    }
+  ]
+}

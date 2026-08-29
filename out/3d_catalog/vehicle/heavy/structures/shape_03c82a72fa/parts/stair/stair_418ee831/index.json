@@ -1,0 +1,68 @@
+{
+  "id": "stair_418ee831",
+  "role": "stair",
+  "type": "cylinder",
+  "signature": "cylinder|0,1,0|6",
+  "canonical": {
+    "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+    "name": "mixer_rear_ladder_left",
+    "part": {
+      "name": "mixer_rear_ladder_left",
+      "type": "cylinder",
+      "sides": 6,
+      "radii": [
+        0.035,
+        0.035
+      ],
+      "height": 1.98,
+      "position": [
+        -3.55,
+        2.33,
+        -0.58
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 13160653,
+      "triangles": 24,
+      "role": "equipment",
+      "colorKey": "accentHex"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "mixer_rear_ladder_left",
+      "position": [
+        -3.55,
+        2.33,
+        -0.58
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    },
+    {
+      "objectKey": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "name": "mixer_rear_ladder_right",
+      "position": [
+        -3.55,
+        2.33,
+        0.58
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "accentHex",
+      "color": 13160653
+    }
+  ]
+}

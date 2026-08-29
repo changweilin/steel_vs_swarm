@@ -1,0 +1,49 @@
+{
+  "id": "glass_8fe148d2",
+  "role": "glass",
+  "type": "wedge",
+  "signature": "wedge|1,0.5,0.5|0",
+  "canonical": {
+    "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+    "name": "front_windshield",
+    "part": {
+      "name": "front_windshield",
+      "type": "wedge",
+      "dimensions": [
+        1.5,
+        0.7,
+        0.8
+      ],
+      "position": [
+        0,
+        1.45,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3298829,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "vehicle/car_202504061134_33848a5a_v6",
+      "name": "front_windshield",
+      "position": [
+        0,
+        1.45,
+        1.1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3298829
+    }
+  ]
+}

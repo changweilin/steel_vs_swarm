@@ -1,0 +1,45 @@
+{
+  "id": "attached_side_shrub_facet_90208908",
+  "role": "attached_side_shrub_facet",
+  "type": "icosahedron_polyhedron",
+  "signature": "icosahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+    "name": "attached_side_shrub_facet",
+    "part": {
+      "name": "attached_side_shrub_facet",
+      "type": "icosahedron_polyhedron",
+      "radius": 0.249,
+      "position": [
+        -1.431,
+        2.139,
+        0.166
+      ],
+      "rotation": [
+        0.12,
+        -0.18,
+        0.04
+      ],
+      "color": 10119749,
+      "triangles": 20
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/talus_ov_959f863c-5134-4c5f-ab7e-7a66f4051e3a_aaeee069_luna_v6",
+      "name": "attached_side_shrub_facet",
+      "position": [
+        -1.431,
+        2.139,
+        0.166
+      ],
+      "rotation": [
+        0.12,
+        -0.18,
+        0.04
+      ],
+      "colorKey": null,
+      "color": 10119749
+    }
+  ]
+}

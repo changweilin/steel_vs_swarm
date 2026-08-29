@@ -1,0 +1,81 @@
+{
+  "id": "glass_38fe6239",
+  "role": "glass",
+  "type": "box",
+  "signature": "box|1,0.375,0|0",
+  "canonical": {
+    "objectKey": "building/mass_about-06_2_orig_30b3c7c0_v6",
+    "name": "penthouse_window_front",
+    "part": {
+      "name": "penthouse_window_front",
+      "type": "box",
+      "dimensions": [
+        8,
+        2.5,
+        0.1
+      ],
+      "position": [
+        -2,
+        13,
+        3.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 26367,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/mass_about-06_2_orig_30b3c7c0_v6",
+      "name": "penthouse_window_front",
+      "position": [
+        -2,
+        13,
+        3.05
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 26367
+    },
+    {
+      "objectKey": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73_v6",
+      "name": "lower_left_window",
+      "position": [
+        -5.5,
+        4.5,
+        4.07
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4352210
+    },
+    {
+      "objectKey": "building/mass_14beauty-well-ugly-slide-4QC3-master1050_5a9a4f73_v6",
+      "name": "lower_right_window",
+      "position": [
+        5.5,
+        4.5,
+        4.07
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 4352210
+    }
+  ]
+}

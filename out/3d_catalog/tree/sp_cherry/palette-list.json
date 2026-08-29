@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "tree",
+  "subcategory": "sp_cherry",
+  "palettes": [
+    {
+      "id": "palette_e550d590",
+      "name": "原始渲染配色",
+      "colors": {
+        "roofHex": 2640433,
+        "facadeHex": 5208643,
+        "baseHex": 4861988,
+        "accentHex": 7903323,
+        "glassHex": 1976635,
+        "darkHex": 2892830,
+        "brightHex": 10860413
+      },
+      "objects": [
+        {
+          "key": "tree/sp_cherry_ov_2c3b0a7c-14f3-433e-9812-212b919388c8_137cf06c_luna_v6",
+          "source": "features.colors"
+        }
+      ]
+    }
+  ]
+}

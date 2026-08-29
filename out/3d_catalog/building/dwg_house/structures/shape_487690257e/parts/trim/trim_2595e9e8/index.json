@@ -1,0 +1,49 @@
+{
+  "id": "trim_2595e9e8",
+  "role": "trim",
+  "type": "box",
+  "signature": "box|1,0,0|0",
+  "canonical": {
+    "objectKey": "building/dwg_house_wc_33743891_ccdb01ea_v6",
+    "name": "decorative_trim_horizontal",
+    "part": {
+      "name": "decorative_trim_horizontal",
+      "type": "box",
+      "dimensions": [
+        12,
+        0.2,
+        0.1
+      ],
+      "position": [
+        0,
+        5.5,
+        3.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 16777215,
+      "triangles": 12
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/dwg_house_wc_33743891_ccdb01ea_v6",
+      "name": "decorative_trim_horizontal",
+      "position": [
+        0,
+        5.5,
+        3.02
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 16777215
+    }
+  ]
+}

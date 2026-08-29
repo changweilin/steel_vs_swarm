@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_754f097303",
+  "canonicalKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+  "mainStructure": {
+    "kind": "declarative-parts",
+    "sourceKey": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+    "bounds": {
+      "min": [
+        -6.25,
+        0,
+        -3.35
+      ],
+      "max": [
+        6.95,
+        3.8,
+        5.9133
+      ],
+      "size": [
+        13.2,
+        3.8,
+        9.263
+      ],
+      "rMax": 9.125,
+      "triangles": 516,
+      "vertices": 338
+    },
+    "parts": [
+      {
+        "name": "main_building_body",
+        "type": "box",
+        "dimensions": [
+          12,
+          3.6,
+          6.5
+        ],
+        "position": [
+          0,
+          1.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11184810,
+        "triangles": 12
+      },
+      {
+        "name": "roof_parapet",
+        "type": "box",
+        "dimensions": [
+          12.2,
+          0.3,
+          6.7
+        ],
+        "position": [
+          0,
+          3.65,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11842740,
+        "triangles": 12
+      },
+      {
+        "name": "front_extension_roof",
+        "type": "box",
+        "dimensions": [
+          5.2,
+          0.2,
+          2.7
+        ],
+        "position": [
+          3.2,
+          2.05,
+          4.3
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "color": 11842740,
+        "triangles": 12
+      }
+    ]
+  },
+  "members": [
+    {
+      "key": "building/bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_604cb859_v6",
+      "selection": "approved",
+      "method": "gemini_v6",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": "out/3d_data/building/bld_adobe/building_bld_adobe_ov_7ddf0b38-0498-471a-af95-d50274648109_v6",
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_c9316d99"
+      ]
+    }
+  ]
+}

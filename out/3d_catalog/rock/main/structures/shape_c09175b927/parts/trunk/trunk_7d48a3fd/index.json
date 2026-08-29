@@ -1,0 +1,65 @@
+{
+  "id": "trunk_7d48a3fd",
+  "role": "trunk",
+  "type": "wedge",
+  "signature": "wedge|0.5,1,0.5|0",
+  "canonical": {
+    "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+    "name": "left_buttress",
+    "part": {
+      "name": "left_buttress",
+      "type": "wedge",
+      "dimensions": [
+        0.751,
+        1.493,
+        0.658
+      ],
+      "position": [
+        -0.751,
+        1.042,
+        -0.088
+      ],
+      "rotation": [
+        0.02,
+        0.18,
+        -0.09
+      ],
+      "color": 3160123,
+      "triangles": 8
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "left_buttress",
+      "position": [
+        -0.751,
+        1.042,
+        -0.088
+      ],
+      "rotation": [
+        0.02,
+        0.18,
+        -0.09
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "right_buttress",
+      "position": [
+        0.727,
+        0.972,
+        0.088
+      ],
+      "rotation": [
+        -0.06,
+        -0.14,
+        0.12
+      ],
+      "colorKey": null,
+      "color": 5200224
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "shape_d9ed30f997",
+  "canonicalKey": "rock/collapse_a",
+  "mainStructure": {
+    "kind": "runtime-reference",
+    "sourceKey": "rock/collapse_a",
+    "bounds": null,
+    "parts": []
+  },
+  "members": [
+    {
+      "key": "rock/collapse_a",
+      "selection": "approved",
+      "method": "sf3d",
+      "reviewStatus": "ok",
+      "sourceKind": "database",
+      "outputDir": null,
+      "similarity": 100,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "paletteIds": [
+        "palette_815aeacd"
+      ]
+    }
+  ]
+}

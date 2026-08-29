@@ -1,0 +1,45 @@
+{
+  "id": "lower_facet_3a8d8807",
+  "role": "lower_facet",
+  "type": "dodecahedron_polyhedron",
+  "signature": "dodecahedron_polyhedron|1,1,1|0",
+  "canonical": {
+    "objectKey": "rock/main_large-heavy-rock-stone-isolated-on-background-png_1e942906_v6",
+    "name": "right_lower_facet",
+    "part": {
+      "name": "right_lower_facet",
+      "type": "dodecahedron_polyhedron",
+      "radius": 0.7,
+      "position": [
+        0.9,
+        0.3,
+        0.2
+      ],
+      "rotation": [
+        -0.1,
+        -0.6,
+        0.3
+      ],
+      "color": 5921370,
+      "triangles": 36
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_large-heavy-rock-stone-isolated-on-background-png_1e942906_v6",
+      "name": "right_lower_facet",
+      "position": [
+        0.9,
+        0.3,
+        0.2
+      ],
+      "rotation": [
+        -0.1,
+        -0.6,
+        0.3
+      ],
+      "colorKey": null,
+      "color": 5921370
+    }
+  ]
+}

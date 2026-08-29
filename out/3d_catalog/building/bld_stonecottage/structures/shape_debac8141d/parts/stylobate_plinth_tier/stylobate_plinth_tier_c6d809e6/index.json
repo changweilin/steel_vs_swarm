@@ -1,0 +1,67 @@
+{
+  "id": "stylobate_plinth_tier_c6d809e6",
+  "role": "stylobate_plinth_tier",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0,1|4",
+  "canonical": {
+    "objectKey": "building/bld_stonecottage_ov_d273a40d-cf1b-45f8-acd7-66471d0e552c_5cc0caeb",
+    "name": "stylobate_plinth_tier_2",
+    "part": {
+      "name": "stylobate_plinth_tier_2",
+      "type": "frustum_pyramid",
+      "sides": 4,
+      "radii": [
+        21.577,
+        21.86
+      ],
+      "height": 0.45,
+      "position": [
+        0,
+        0.675,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 7169591,
+      "triangles": 16,
+      "colorKey": "base"
+    }
+  },
+  "members": [
+    {
+      "objectKey": "building/bld_stonecottage_ov_d273a40d-cf1b-45f8-acd7-66471d0e552c_5cc0caeb",
+      "name": "stylobate_plinth_tier_2",
+      "position": [
+        0,
+        0.675,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "base",
+      "color": 7169591
+    },
+    {
+      "objectKey": "building/bld_stonecottage_ov_d273a40d-cf1b-45f8-acd7-66471d0e552c_5cc0caeb",
+      "name": "stylobate_plinth_tier_3",
+      "position": [
+        0,
+        1.125,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": "base",
+      "color": 7169591
+    }
+  ]
+}

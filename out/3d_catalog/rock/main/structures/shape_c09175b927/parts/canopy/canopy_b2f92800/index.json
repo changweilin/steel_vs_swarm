@@ -1,0 +1,82 @@
+{
+  "id": "canopy_b2f92800",
+  "role": "canopy",
+  "type": "frustum_pyramid",
+  "signature": "frustum_pyramid|1,0.25,1|8",
+  "canonical": {
+    "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+    "name": "attached_lichen_canopy_polyhedron",
+    "part": {
+      "name": "attached_lichen_canopy_polyhedron",
+      "type": "frustum_pyramid",
+      "sides": 7,
+      "radii": [
+        0.457,
+        0.868
+      ],
+      "height": 0.44,
+      "position": [
+        -0.137,
+        5.877,
+        -0.083
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": 3160123,
+      "triangles": 28
+    }
+  },
+  "members": [
+    {
+      "objectKey": "rock/main_132 images_a068c0cc_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.137,
+        5.877,
+        -0.083
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_pic_9576_12~0_ea24d2ec_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.12,
+        4.476,
+        -0.06
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 3160123
+    },
+    {
+      "objectKey": "rock/main_Ballinagree_6e5f4893_luna_v6",
+      "name": "attached_lichen_canopy_polyhedron",
+      "position": [
+        -0.073,
+        3.012,
+        -0.044
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "colorKey": null,
+      "color": 6717267
+    }
+  ]
+}
