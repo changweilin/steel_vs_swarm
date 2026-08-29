@@ -2444,11 +2444,14 @@ export const WATER = {
 // 機體完全沉浸在水面下時觸發。
 // - 水域(WATER, wet===1): 數值減至 1/2
 // - 沼澤(SWAMP, wet===2): 數值減至 1/4
+// - 凍結(FROZEN, wet===3): 大雪時部分沒入水中觸發,數值減至 1/8 並持續扣血至死
 // 涵蓋五大維度:受到傷害 / 水下移動速度 / 飛行動力回速 / 電力回充速度 / 護盾脫戰回復速度。
 // (舊制退場:WATER_FREEZE_S 凍結冷卻/換彈、SWAMP_DRAIN_* 沼澤扣血、SWAMP_SLOW_MIN 移動探底已全數退場)。
 export const TERRAIN_FX = {
   WATER_FACTOR: 1 / 2,   // 水域異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/2)
   SWAMP_FACTOR: 1 / 4,   // 沼澤異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/4)
+  FROZEN_FACTOR: 1 / 8,  // 凍結異常狀態倍率(受到傷害/移動速度/飛行動力/電力/護盾恢復皆為 1/8)
+  FROZEN_DOT: 40,        // 凍結異常狀態扣血速度 (HP+SP/s，持續扣血直到死亡)
   WATER_DMG_TAKEN: 1 / 2, SWAMP_DMG_TAKEN: 1 / 4,
   WATER_SLOW: 1 / 2, SWAMP_SLOW: 1 / 4,
   WATER_LIFT_REGEN: 1 / 2, SWAMP_LIFT_REGEN: 1 / 4,
@@ -2457,19 +2460,28 @@ export const TERRAIN_FX = {
   FIRE_FOG_S: 2.5, FIRE_FOG_MAX_S: 8,
 };
 
-/** 流體沉浸異常狀態倍率(0 正常 / 1 水域 1/2 / 2 沼澤 1/4) */
-export const fluidFactor = (wet) => (wet === 1 ? TERRAIN_FX.WATER_FACTOR : (wet === 2 ? TERRAIN_FX.SWAMP_FACTOR : 1));
+/** 流體沉浸異常狀態倍率(0 正常 / 1 水域 1/2 / 2 沼澤 1/4 / 3 凍結 1/8) */
+export const fluidFactor = (wet) => (
+  wet === 3 ? TERRAIN_FX.FROZEN_FACTOR :
+  wet === 1 ? TERRAIN_FX.WATER_FACTOR :
+  wet === 2 ? TERRAIN_FX.SWAMP_FACTOR :
+  1
+);
 
 /**
  * 地形異常狀態觸發(2026-07-23 / 2026-08-22 整合重構;唯一縫 —— 客戶端 _envAt 與水下帷幕共用同一把尺)。
- * 機體完全沉浸在水面/沼澤面下時觸發:
- *   水域:機體頂部(footY + bodyH)低於水面 waterY
- *   沼澤:機體頂部(footY + bodyH)低於沼澤面 = waterY + WATER.SWAMP_BAND
- * ground = terrainEnvCode 的地表分類(0 乾 / 1 水 / 2 沼);footY = 站立面絕對高;bodyH = 機體全高。
+ * 機體沉浸在水面/沼澤面下時觸發:
+ *   水域:機體頂部(footY + bodyH)低於水面 waterY (凍結時:只要機體有部分在水面下 footY < waterY)
+ *   沼澤:機體頂部(footY + bodyH)低於沼澤面 = waterY + WATER.SWAMP_BAND (凍結時:只要 footY < 沼澤面)
+ * ground = terrainEnvCode 的地表分類(0 乾 / 1 水 / 2 沼);footY = 站立面絕對高;bodyH = 機體全高;isFrozen = 天氣是否結冰。
  */
-export function envTrigger(ground, waterY, footY, bodyH) {
+export function envTrigger(ground, waterY, footY, bodyH, isFrozen) {
   if (!ground || waterY == null) return 0;
   const planeY = ground === 1 ? waterY : waterY + WATER.SWAMP_BAND;
+  if (isFrozen) {
+    // 大雪凍結時:只要機體有部分在水面下 (footY < planeY) 即觸發凍結異常狀態 (3)
+    return footY < planeY ? 3 : 0;
+  }
   return footY + (bodyH || 0) < planeY ? ground : 0;
 }
 
@@ -6018,10 +6030,10 @@ export const WEATHER_ATTRS = ['clouds', 'fog', 'wind', 'rain', 'sand', 'snow', '
 export const WEATHER_PRESETS = {
   clear:      { clouds: 10, fog: 5,  wind: 15, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   cloudy:     { clouds: 70, fog: 20, wind: 25, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-  heavy_rain: { clouds: 90, fog: 45, wind: 60, rain: 85, sand: 0,  snow: 0,  thunder: 30 },
-  storm:      { clouds: 95, fog: 50, wind: 80, rain: 90, sand: 0,  snow: 0,  thunder: 90 },
-  fog:        { clouds: 40, fog: 90, wind: 10, rain: 15, sand: 0,  snow: 0,  thunder: 0 },
-  windy:      { clouds: 35, fog: 10, wind: 90, rain: 10, sand: 20, snow: 0,  thunder: 0 },
+  heavy_rain: { clouds: 90, fog: 45, wind: 60, rain: 90, sand: 0,  snow: 0,  thunder: 0 },
+  storm:      { clouds: 95, fog: 50, wind: 80, rain: 95, sand: 0,  snow: 0,  thunder: 90 },
+  fog:        { clouds: 40, fog: 90, wind: 10, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+  windy:      { clouds: 35, fog: 10, wind: 90, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   snow:       { clouds: 85, fog: 40, wind: 65, rain: 0,  sand: 0,  snow: 95, thunder: 0 },
   sandstorm:  { clouds: 30, fog: 30, wind: 85, rain: 0,  sand: 90, snow: 0,  thunder: 0 },
 };
@@ -6045,22 +6057,22 @@ export const SEASON_WEATHER_WEIGHTS = {
 // 四季 × 四時段 (16種時空狀態) 之 7 維氣候均值傾向目標 (μ)
 export const SEASON_TIME_BIAS = {
   spring: {
-    dawn:  { clouds: 40, fog: 65, wind: 20, rain: 25, sand: 0,  snow: 0,  thunder: 0 },
-    day:   { clouds: 25, fog: 10, wind: 30, rain: 10, sand: 0,  snow: 0,  thunder: 0 },
-    dusk:  { clouds: 45, fog: 25, wind: 35, rain: 35, sand: 0,  snow: 0,  thunder: 5 },
-    night: { clouds: 35, fog: 40, wind: 20, rain: 20, sand: 0,  snow: 0,  thunder: 0 },
+    dawn:  { clouds: 40, fog: 65, wind: 20, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    day:   { clouds: 25, fog: 10, wind: 30, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    dusk:  { clouds: 45, fog: 25, wind: 35, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    night: { clouds: 35, fog: 40, wind: 20, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   },
   summer: {
     dawn:  { clouds: 20, fog: 10, wind: 15, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    day:   { clouds: 75, fog: 20, wind: 60, rain: 80, sand: 5,  snow: 0,  thunder: 80 },
-    dusk:  { clouds: 65, fog: 30, wind: 50, rain: 60, sand: 0,  snow: 0,  thunder: 50 },
-    night: { clouds: 25, fog: 15, wind: 25, rain: 10, sand: 0,  snow: 0,  thunder: 0 },
+    day:   { clouds: 85, fog: 20, wind: 60, rain: 85, sand: 0,  snow: 0,  thunder: 85 },
+    dusk:  { clouds: 60, fog: 30, wind: 50, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    night: { clouds: 25, fog: 15, wind: 25, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   },
   autumn: {
-    dawn:  { clouds: 30, fog: 45, wind: 35, rain: 10, sand: 5,  snow: 0,  thunder: 0 },
-    day:   { clouds: 35, fog: 10, wind: 75, rain: 10, sand: 35, snow: 0,  thunder: 0 },
-    dusk:  { clouds: 45, fog: 20, wind: 70, rain: 15, sand: 25, snow: 0,  thunder: 0 },
-    night: { clouds: 20, fog: 25, wind: 50, rain: 5,  sand: 10, snow: 0,  thunder: 0 },
+    dawn:  { clouds: 30, fog: 45, wind: 35, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    day:   { clouds: 35, fog: 10, wind: 75, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    dusk:  { clouds: 45, fog: 20, wind: 70, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    night: { clouds: 20, fog: 25, wind: 50, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   },
   winter: {
     dawn:  { clouds: 65, fog: 55, wind: 40, rain: 0,  sand: 0,  snow: 80, thunder: 0 },
@@ -6206,8 +6218,8 @@ export function resolveWeatherDynamics(weatherVec) {
   const isDarkCloud = clouds > 50;
   const cloudDarkness = isDarkCloud ? Math.min(1.0, (clouds - 50) / 50) : 0;
 
-  // 2. 雨量: 烏雲時 (>50%) 才會真的下雨
-  const effectiveRain = isDarkCloud ? (rain / 100) * cloudDarkness : 0;
+  // 2. 雨量: 75% 且烏雲時 (>50%) 才會真的下雨
+  const effectiveRain = (rain >= 75 && isDarkCloud) ? ((rain - 75) / 25) * cloudDarkness : 0;
 
   // 3. 沙量: 75% 以上才會開始顯現
   const effectiveSand = sand >= 75 ? (sand - 75) / 25 : 0;

@@ -28,7 +28,7 @@ import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './m
 import { applyEnvironment } from './environment.js';
 import { Pipeline } from './postfx.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
-import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree } from './toon.js';
+import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { animWeights } from './animweights.js';
@@ -3954,7 +3954,8 @@ export class BattleClient {
     const ground = terrainEnvCode(this.terrain, x, z);
     const planeY = ground === 1 ? wy : (ground === 2 && wy != null ? wy + WATER.SWAMP_BAND : null);
     const depth = planeY != null ? Math.max(0, planeY - this.pos.y) : 0;
-    const code = envTrigger(ground, wy, this.pos.y, this.selfH);
+    const isFrozen = isWeatherFrozen();
+    const code = envTrigger(ground, wy, this.pos.y, this.selfH, isFrozen);
 
     // 飛行型態:沒入水面/沼面下 (code > 0) 觸發流體沉浸異常狀態;空中 (code === 0) 恆為乾地
     if (this._flying()) {
@@ -3966,19 +3967,20 @@ export class BattleClient {
       if (code > 0) return { code, depth, ground, air: false };
       return { ...DRY, air: true };
     }
-    if (s - this.terrain.heightAt(x, z) > 1.2) return DRY;   // 橋面/結構物 = 乾
+    if (s - this.terrain.heightAt(x, z) > 1.2) return DRY;   // 橋面/結構物/冰面 = 乾
     return { code, depth, ground, air: false };
   }
 
   /**
    * 地形環境移動減速(2026-07-19 / 2026-08-22 重構):
-   * 機體完全沉浸在水面/沼面下(code > 0)時,水下移動速度減至 1/2(水域) / 1/4(沼澤)。
-   * 未完全沉浸之涉水/淺沼(ground > 0 && code === 0),維持線性過渡減速。飛行型態不受影響。
+   * 機體沉浸在水面/沼面下(code > 0)時,水下移動速度減至 1/2(水域) / 1/4(沼澤) / 1/8(凍結)。
+   * 結冰水面上行走(code === 0)維持全速; 未完全沉浸之涉水/淺沼,維持線性過渡減速。飛行型態不受影響。
    */
   _terrainSlowF() {
     const e = this._env;
     if (!e || e.ground === 0) return 1;
-    if (e.code > 0) return fluidFactor(e.code);   // 完全沉浸異常狀態:水域 1/2, 沼澤 1/4
+    if (e.code > 0) return fluidFactor(e.code);   // 完全沉浸/凍結異常狀態:水域 1/2, 沼澤 1/4, 凍結 1/8
+    if (isWeatherFrozen()) return 1;              // 結冰水面上行走維持全速
     if (e.ground === 2) {
       return Math.min(1, 1 - (1 - TERRAIN_FX.SWAMP_SLOW) * Math.min(1, e.depth / WATER.SWAMP_BAND));
     }
@@ -4165,6 +4167,11 @@ export class BattleClient {
       if (ev.pid === this.youId) {
         this.trauma = Math.min(1, this.trauma + 0.25);
         this.hud.feed?.('🔥 你在火場中持續受創,快離開!');
+      }
+    } else if (ev.e === 'freeze') {
+      if (ev.pid === this.youId) {
+        this.trauma = Math.min(1, this.trauma + 0.25);
+        this.hud.feed?.('❄️ 機體沒入冰凍水面! 受到凍結異常狀態(行動力 1/8)並持續受創!');
       }
     } else if (ev.e === 'loot') {
       if (ev.pid === this.youId) {

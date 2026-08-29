@@ -949,6 +949,11 @@ export function setWeatherDynamics(dyn) {
     _windDir.gustK.value.copy(_windDir.value).multiplyScalar(Math.PI * 2 / WIND.GUST_M);
   }
 }
+
+/** 查詢水面是否處於凍結/結冰狀態 (唯一判定來源) */
+export function isWeatherFrozen() {
+  return _weatherWind.waveAmp.value <= 0.001;
+}
 // 玩家位移擾動的兩支共享 uniform(同 `_windT` 的 idiom:一份物件餵給所有軟性材質)。
 // 全槽 `spd = 0` ⇒ 位移項在著色器裡早退 ⇒ **逐位元同舊制**。
 const _charPos = { value: Array.from({ length: CHAR.N }, () => new THREE.Vector3()) };
@@ -1104,6 +1109,7 @@ const CEL_SEA_GLSL = `
         //   ④ 障礙物近場衰減與基礎行波合成
         //   ⑤ 沼澤漣漪(CEL_SWAMP_RIPPLE):疊加局部圓形衰減波
         float celSeaH( vec2 celSxz ) {
+          if ( uWeatherWaveAmp <= 0.001 ) return 0.0;
           // ① 非直線波前：領域扭曲 (Domain Warping)，消除筆直條紋感
           vec2 celWarp = vec2(
             sin( celSxz.y * 0.038 + celSxz.x * 0.015 + uWindT * 0.16 ) * 5.2
@@ -1953,7 +1959,7 @@ ${CEL_SEA_GLSL}
           // 破碎條紋：高階干涉 + 碎裂斷筆遮罩 (使波痕呈現自然破碎散佈的弧光)
           float celBrokenBand = pow( celWave1 * celWave2 * 1.35, 2.4 ) + pow( celWave2 * celWave3 * 1.35, 2.6 ) * 0.8;
           float celBreakMask = smoothstep( 0.25, 0.65, celRipN2 * 0.55 + celRipN3 * 0.45 );
-          float celSwampRippleLine = step( 0.60, celBrokenBand * celBreakMask ) * vSeaFade;
+          float celSwampRippleLine = step( 0.60, celBrokenBand * celBreakMask ) * vSeaFade * min( 1.0, uWeatherWaveAmp * 2.0 );
           
           if ( celSwampRippleLine > 0.0 ) {
             vec3 swampRippleColor = vec3( 0.72, 0.86, 0.62 ); // 沼澤青翠碎波紋色相
@@ -1995,7 +2001,7 @@ ${CEL_SEA_GLSL}
           #endif
 
           if ( celShallowF > 0.05 ) {
-            float celGlint = step( 0.68, ( celWaterSpec * 0.65 + 0.35 ) * celSparkle * 4.5 ) * celShallowF * vSeaFade;
+            float celGlint = step( 0.68, ( celWaterSpec * 0.65 + 0.35 ) * celSparkle * 4.5 ) * celShallowF * vSeaFade * min( 1.0, uWeatherWaveAmp * 2.0 );
             if ( celGlint > 0.0 ) {
               #ifdef CEL_SWAMP_RIPPLE
               vec3 glintColor = mix( vec3( 0.82, 0.94, 0.72 ), vec3( 0.94, 0.98, 1.0 ), celRawDFrag ); // 沼澤青金碎波光向水域晶亮波光平滑過渡

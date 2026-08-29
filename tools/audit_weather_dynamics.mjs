@@ -4,6 +4,7 @@ import {
   ENV, SEASON_WEATHER_WEIGHTS, WEATHER_DYNAMICS, pickSeasonalWeather,
   weatherAtTime, resolveEnv, computeSolarSchedule, clockHour, phaseBlend, sunDirAt,
   WEATHER_ATTRS, WEATHER_PRESETS, SEASON_TIME_BIAS, weatherVectorAt, resolveWeatherDynamics,
+  envTrigger, fluidFactor, TERRAIN_FX,
 } from '../public/js/data.js';
 
 let pass = 0, fail = 0;
@@ -172,9 +173,13 @@ console.log('\n▍Ⅵ 各維度條件觸發與物理連動判定 (resolveWeather
   ok(!dClear.isDarkCloud && dClear.cloudDarkness === 0, '雲量 30% 保持白雲 (isDarkCloud=false, darkness=0)');
   ok(dDark.isDarkCloud && dDark.cloudDarkness === 0.6, '雲量 80% 轉為烏雲 (isDarkCloud=true, darkness=0.60)');
 
-  // 2. 雨量條件: 烏雲時 (>50%) 才會真的下雨
-  ok(dClear.effectiveRain === 0, '少雲時 (30% 雲量) 即使 rain=90 也不下雨 (effectiveRain=0)');
-  ok(dDark.effectiveRain > 0.5, '烏雲時 (80% 雲量) rain=90 正常降雨 (effectiveRain=0.54)');
+  // 2. 雨量條件: 75% 且烏雲時 (>50%) 才會真的下雨
+  const dRainNoCloud = resolveWeatherDynamics({ clouds: 30, rain: 90, sand: 0, snow: 0, thunder: 0, wind: 20 });
+  const dRainLow = resolveWeatherDynamics({ clouds: 80, rain: 70, sand: 0, snow: 0, thunder: 0, wind: 20 });
+  const dRainValid = resolveWeatherDynamics({ clouds: 80, rain: 90, sand: 0, snow: 0, thunder: 0, wind: 20 });
+  ok(dRainNoCloud.effectiveRain === 0, '少雲時 (30% 雲量) 即使 rain=90 也不下雨 (effectiveRain=0)');
+  ok(dRainLow.effectiveRain === 0, '烏雲 (80% 雲量) 但雨量不足 70% (<75%) 不下雨 (effectiveRain=0)');
+  ok(dRainValid.effectiveRain > 0.3, '烏雲 (80% 雲量) 且 rain=90 正常降雨 (effectiveRain=0.36)');
 
   // 3. 沙量條件: 75% 以上才會開始顯現
   const dSandLow = resolveWeatherDynamics({ clouds: 20, rain: 0, sand: 70, snow: 0, thunder: 0, wind: 40 });
@@ -190,10 +195,18 @@ console.log('\n▍Ⅵ 各維度條件觸發與物理連動判定 (resolveWeather
   ok(dSnowLow.effectiveSnow === 0, '烏雲 (80% 雲) 但雪量不足 70% 不下雪 (effectiveSnow=0)');
   ok(dSnowValid.effectiveSnow > 0.2, '烏雲 (80% 雲) 且雪量 85% 正常下雪 (effectiveSnow=0.24)');
 
-  // 5. 凍結條件: 雪量 90% 時水波凍結 (waveAmp=0, waveSpeed=0) 與船隻停止
+  // 5. 凍結條件: 雪量 90% 時水波凍結 (waveAmp=0, waveSpeed=0) 與水面行走 / 水中凍結異常狀態 (行動力 1/8)
   const dFreeze = resolveWeatherDynamics({ clouds: 85, rain: 0, sand: 0, snow: 95, thunder: 0, wind: 70 });
   ok(dFreeze.isFrozen && dFreeze.waveAmp === 0 && dFreeze.waveSpeed === 0,
     '雪量 ≥ 90% 觸發水波凍結 (isFrozen=true, waveAmp=0, waveSpeed=0)');
+  ok(envTrigger(1, 0, -1, 6, dFreeze.isFrozen) === 3,
+    '大雪結冰時機體部分在水面下觸發凍結異常狀態 (footY=-1 < waterY=0 => wet=3)');
+  ok(envTrigger(1, 0, 0, 6, dFreeze.isFrozen) === 0,
+    '大雪結冰時機體站在冰面上為乾地狀態 (footY=0 >= waterY=0 => wet=0)');
+  ok(fluidFactor(3) === 0.125,
+    '凍結異常狀態行動力折減為 1/8 (fluidFactor(3) = 0.125)');
+  ok(TERRAIN_FX.FROZEN_DOT >= 30,
+    '凍結異常狀態具備每秒扣血參數 (TERRAIN_FX.FROZEN_DOT >= 30)');
 
   // 6. 打雷條件: 75% 以上才會開始打雷
   const dThunderLow = resolveWeatherDynamics({ clouds: 90, rain: 80, sand: 0, snow: 0, thunder: 70, wind: 60 });

@@ -628,17 +628,22 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 
   log('— sim/data:流體沉浸異常狀態整合(水域 1/2、沼澤 1/4;減傷/減速/飛行動力/電力/護盾)—');
   {
-    // ① 觸發判定:機體完全沉浸在水面下(footY + bodyH < planeY)
+    // ① 觸發判定:平時完全沉浸(footY + bodyH < planeY)、大雪結冰時部分沉浸(footY < planeY)
     assert(envTrigger(1, 0, -10, 6) === 1, '水域:機頂高 -4 < 水面 0 觸發沉浸(wet=1)');
     assert(envTrigger(1, 0, -5, 6) === 0, '水域:機頂高 1 >= 水面 0 未完全沉浸(wet=0)');
     assert(envTrigger(2, 0, -1, 3) === 2, '沼澤:機頂高 2 < 沼面 2.2 觸發沉浸(wet=2)');
     assert(envTrigger(2, 0, 0, 3) === 0, '沼澤:機頂高 3 >= 沼面 2.2 未完全沉浸(wet=0)');
     assert(envTrigger(0, 0, -10, 6) === 0, '乾地:不觸發異常狀態(wet=0)');
+    assert(envTrigger(1, 0, -1, 6, true) === 3, '結冰水域:腳高 -1 < 水面 0 部分沒入觸發凍結(wet=3)');
+    assert(envTrigger(1, 0, 0, 6, true) === 0, '結冰水域:腳高 0 >= 水面 0 站立於冰面上(wet=0)');
+    assert(envTrigger(2, 0, 1.5, 3, true) === 3, '結冰沼澤:腳高 1.5 < 沼面 2.2 部分沒入觸發凍結(wet=3)');
+    assert(envTrigger(2, 0, 2.2, 3, true) === 0, '結冰沼澤:腳高 2.2 >= 沼面 2.2 站立於冰面上(wet=0)');
 
     // ② fluidFactor 單一真相縫數值
     assert(fluidFactor(0) === 1.0, '正常狀態倍率 = 1.0');
     assert(fluidFactor(1) === 0.5, '水域沉浸倍率 = 1/2 (0.5)');
     assert(fluidFactor(2) === 0.25, '沼澤沉浸倍率 = 1/4 (0.25)');
+    assert(fluidFactor(3) === 0.125, '凍結異常狀態倍率 = 1/8 (0.125)');
 
     // ③ 受到傷害減半 / 減至 1/4 (伺服器 _damage 權威結算)
     const testSim = new BattleSim(fakeBattleConfig(1));
@@ -646,9 +651,11 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     const heroDry = testSim.addHero('STEEL', 'h_dry', 't01');
     const heroWater = testSim.addHero('STEEL', 'h_water', 't01');
     const heroSwamp = testSim.addHero('STEEL', 'h_swamp', 't01');
-    heroDry.wet = 0; heroWater.wet = 1; heroSwamp.wet = 2;
-    heroDry.sp = 500; heroWater.sp = 500; heroSwamp.sp = 500;
-    heroDry.maxSp = 500; heroWater.maxSp = 500; heroSwamp.maxSp = 500;
+    const heroFrozen = testSim.addHero('STEEL', 'h_frozen', 't01');
+    heroDry.wet = 0; heroWater.wet = 1; heroSwamp.wet = 2; heroFrozen.wet = 3;
+    heroDry.sp = 500; heroWater.sp = 500; heroSwamp.sp = 500; heroFrozen.sp = 500;
+    heroDry.maxSp = 500; heroWater.maxSp = 500; heroSwamp.maxSp = 500; heroFrozen.maxSp = 500;
+    heroFrozen.hp = 100; heroFrozen.maxHp = 100;
     testSim._damage(heroDry, 100, null, 0);
     testSim._damage(heroWater, 100, null, 0);
     testSim._damage(heroSwamp, 100, null, 0);
@@ -670,12 +677,19 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(Math.abs(heroWater.sp / (heroDry.sp || 1) - 0.5) < 0.05, `水域沉浸護盾回復速度減至 1/2 (實得 ${heroWater.sp.toFixed(1)} vs 乾地 ${heroDry.sp.toFixed(1)})`);
     assert(Math.abs(heroSwamp.sp / (heroDry.sp || 1) - 0.25) < 0.05, `沼澤沉浸護盾回復速度減至 1/4 (實得 ${heroSwamp.sp.toFixed(1)} vs 乾地 ${heroDry.sp.toFixed(1)})`);
 
-    // ⑤ 飛行動力回速
+    // ⑤ 凍結異常狀態: 持續扣血直到死亡
+    assert(heroFrozen.hp < 100 && heroFrozen.sp < 500, '凍結異常狀態(wet=3)在 tick 中持續扣除 HP 與護盾');
+    // 步進至扣光致死
+    testSim.tick(20.0);
+    assert(heroFrozen.dead || heroFrozen.hp <= 0, '凍結異常狀態持續扣血至死');
+
+    // ⑥ 飛行動力回速
     const regenDry = liftRegen(10, 0) * fluidFactor(0);
     const regenWater = liftRegen(10, 0) * fluidFactor(1);
     const regenSwamp = liftRegen(10, 0) * fluidFactor(2);
-    assert(Math.abs(regenWater / regenDry - 0.5) < 1e-9 && Math.abs(regenSwamp / regenDry - 0.25) < 1e-9,
-      `飛行動力回充速度:水域 1/2 (${regenWater})、沼澤 1/4 (${regenSwamp})`);
+    const regenFrozen = liftRegen(10, 0) * fluidFactor(3);
+    assert(Math.abs(regenWater / regenDry - 0.5) < 1e-9 && Math.abs(regenSwamp / regenDry - 0.25) < 1e-9 && Math.abs(regenFrozen / regenDry - 0.125) < 1e-9,
+      `飛行動力回充速度:水域 1/2 (${regenWater})、沼澤 1/4 (${regenSwamp})、凍結 1/8 (${regenFrozen})`);
   }
 
   log('— sim/data:建築加乘移除 + 護盾分軌剋制(2026-08-02 使用者定案)—');
