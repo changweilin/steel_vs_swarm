@@ -102,22 +102,20 @@ console.log('迷你地圖稽核(規格 = data.js MINI;禁令 = CLAUDE.md A47)');
 // ============ Ⅰ 規格與推導 ============
 console.log('\nⅠ 規格:四件事全是同一個布林的推論,而縮小比是推導不是旋鈕');
 {
-  t(`只開放 ${MINI.TEAM_MAX}v${MINI.TEAM_MAX} 以下(使用者:只有 1vs1/2vs2)`, MINI.TEAM_MAX === 2);
-  t('迷你地圖恆為單兵線(TEAM_MAX 反推 lanesFor = 1)—— 剪短兵線的兩端就是兩座主堡,靠的是這一條',
+  t(`只開放 ${MINI.TEAM_MAX}v${MINI.TEAM_MAX} 以下(1 兵線地圖為 1v1/2v2)`, MINI.TEAM_MAX === 2);
+  t('1 兵線地圖恆為單兵線(TEAM_MAX 反推 lanesFor = 1)—— 剪短兵線的兩端就是兩座主堡,靠的是這一條',
     lanesFor(MINI.TEAM_MAX) === 1 && miniAllowed(MINI.TEAM_MAX) && !miniAllowed(MINI.TEAM_MAX + 1));
-  t(`每側只有前線砲塔(towerStages 迷你 ${towerStages(true)} / 完整 ${towerStages(false)})`,
-    towerStages(true) === MINI.STAGES && towerStages(false) === FULL_STAGES && MINI.STAGES === 1);
-  t(`塔鏈需求 = 2·stages + 1(完整 ${laneChainF(FULL_STAGES)} SEP / 迷你 ${laneChainF(MINI.STAGES)} SEP)`,
-    laneChainF(2) === 5 && laneChainF(1) === 3);
+  t(`每側只有前線砲塔(towerStages 1 兵線 ${towerStages(true)} / 標準 ${towerStages(false)})`,
+    towerStages(true) === MINI.STAGES && towerStages(false) === FULL_STAGES && MINI.STAGES === 1 && FULL_STAGES === 1);
+  t(`塔鏈需求 = 2·stages + 1(標準 ${laneChainF(FULL_STAGES)} SEP / 1 兵線 ${laneChainF(MINI.STAGES)} SEP)`,
+    laneChainF(FULL_STAGES) === 3 && laneChainF(MINI.STAGES) === 3);
   t(`縮小比 = 塔鏈需求比(${miniScaleF()})—— 推導不手寫`,
     near(miniScaleF(), laneChainF(MINI.STAGES) / laneChainF(FULL_STAGES)));
-  // 原文閘:實作 MUST 由 laneChainF 組成。手寫 0.6 的話「改 STAGES 之後地圖大小留在原地」,
-  // 而畫面上只表現成「這張圖的塔擠在一起」——沒有任何錯誤訊息,既有斷言也全綠。
   const miniScaleSrc = /export const miniScaleF = \(\) => ([^;]+);/.exec(dataCode)?.[1] || '';
   t('縮小比的實作由 laneChainF 組成,且不出現任何字面比值', /laneChainF\(MINI\.STAGES\)/.test(miniScaleSrc)
     && /laneChainF\(FULL_STAGES\)/.test(miniScaleSrc) && !/\d\.\d/.test(miniScaleSrc), `（${miniScaleSrc}）`);
-  t('邊緣緩衝倍率 = 1/3(使用者指定的數字,不是推導值)', near(MINI.BUFFER_F, 1 / 3));
-  t('手機閘門是「裝置判定 → 只准迷你」的純述詞(裝置判定本身住 ctrlmode.js)',
+  t('緩衝深度全圖統一(BUFFER_F = 0.5,邊界緩衝區減半)', near(WORLD_EDGE.BUFFER_F, 0.5));
+  t('手機閘門是「裝置判定 → 只准 1 兵線」的純述詞(裝置判定本身住 ctrlmode.js)',
     miniOnlyFor('pad') === true && miniOnlyFor('kbm') === false && miniOnlyFor(undefined) === false);
 }
 
@@ -180,12 +178,9 @@ console.log('\nⅣ 地圖 / 據點距離 / 邊緣緩衝');
 {
   const f = { side: sideMFor(1), dist: targetDistFor(1), buf: edgeBufferM() };
   const m = { side: sideMFor(1, true), dist: targetDistFor(1, true), buf: edgeBufferM(true) };
-  t(`地圖邊長縮小(${f.side}m → ${m.side.toFixed(0)}m,比 ${(m.side / f.side).toFixed(3)})`,
-    near(m.side / f.side, miniScaleF()));
-  t(`據點距離同一個係數(${f.dist.toFixed(0)}m → ${m.dist.toFixed(0)}m)—— 邊長與兩堡距離是同一條公式的兩端`,
-    near(m.dist / f.dist, miniScaleF()));
-  t(`邊緣緩衝縮到 1/3(${f.buf.toFixed(1)}m → ${m.buf.toFixed(1)}m)`,
-    near(m.buf, f.buf * MINI.BUFFER_F) && near(m.buf / f.buf, 1 / 3));
+  t(`地圖邊長(L1=${f.side}m)`, near(m.side / f.side, miniScaleF()));
+  t(`據點距離(L1=${f.dist.toFixed(0)}m)`, near(m.dist / f.dist, miniScaleF()));
+  t(`邊緣緩衝減半(${f.buf.toFixed(1)}m)`, near(m.buf, f.buf) && near(m.buf, curveHorizonM() * 0.5));
   // 深度只准有一個數:裙自己算完交出 bufferM,消費端一律讀它
   t('裙的深度吃 edgeBufferM(mini) 並對外交出 bufferM',
     /const B = edgeBufferM\(mapArg\(cfg\)\)/.test(terrSrc) && /bufferM = B;/.test(terrSrc) && /bufferM,/.test(terrSrc));
@@ -312,11 +307,10 @@ console.log('\nⅨ 行為直測(跑真品 BattleSim):砲塔真的少了一排,�
   const cfgF = { ...venueConfig(VENUES[0], 2, false), env: { season: 'summer', time: 'day', weather: 'clear' } };
   const m = count(cfgM), f = count(cfgF);
   const L = cfgM.lanes.length;
-  t(`迷你:每線每方 1 個塔位 × 左右 2 座 × 兩陣營 = ${L * 4} 座(實得 ${m.tower})`, m.tower === L * 4);
-  t(`完整:兩階塔 ⇒ ${L * 8} 座(實得 ${f.tower})—— 兩者不同,上面那一條才不是恆真`,
-    f.tower === L * 8 && m.tower !== f.tower);
-  t('主堡兩座照舊(使用者:兵線只有前線砲塔 + 主堡)', m.base === 2 && f.base === 2);
-  t('sim.towerSites 與生成的塔逐一對得上(_prefillLanes 吃同一份解)', m.sites * 4 === m.tower);
+  t(`每線每方 1 個塔位 × 左右 2 座 × 兩陣營 = ${L * 4} 座(實得 mini ${m.tower} / standard ${f.tower})`,
+    m.tower === L * 4 && f.tower === L * 4);
+  t('主堡兩座照舊(兵線配置前線砲塔 + 主堡)', m.base === 2 && f.base === 2);
+  t('sim.towerSites 與生成的塔逐一對得上(_prefillLanes 吃同一份解)', m.sites * 4 === m.tower && f.sites * 4 === f.tower);
 }
 
 console.log(`\n${fail ? '❌' : '🎉'} 迷你地圖稽核:${pass} 通過 / ${fail} 失敗`);

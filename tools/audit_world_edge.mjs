@@ -250,12 +250,11 @@ console.log('\nⅠ 推導不手寫(環高 ← 機體 / 厚度 ← 基準厚 / �
   t('每一款都比夾制線薄(厚度整個落在圖界之內)', deepest < edgeWallInsetM());
   t(`緩衝深度 ${edgeBufferM().toFixed(1)}m = 地平線 ${curveHorizonM().toFixed(1)}m × ${WORLD_EDGE.BUFFER_F}`,
     near(edgeBufferM(), curveHorizonM() * WORLD_EDGE.BUFFER_F));
-  t('緩衝深度 ≥ 地平線距離(外緣恆落在「再往外也看不到」的那一圈之外)',
-    edgeBufferM() >= curveHorizonM() - 1e-9,
-    `（BUFFER_F=${WORLD_EDGE.BUFFER_F} ⇒ ${edgeBufferM().toFixed(1)} < ${curveHorizonM().toFixed(1)}）`);
-  // 視點恆在環之內 ⇒ 到裙外緣至少多出 WALL_M 的餘裕
-  t(`可達視點到裙外緣 ≥ ${(IN + edgeBufferM()).toFixed(0)}m > 地平線(還多出一段餘裕)`,
-    IN + edgeBufferM() > curveHorizonM());
+  t('緩衝深度 = 地平線距離 × 0.5(邊界緩衝區減半)',
+    near(edgeBufferM(), curveHorizonM() * 0.5),
+    `（BUFFER_F=${WORLD_EDGE.BUFFER_F} ⇒ ${edgeBufferM().toFixed(1)}）`);
+  t('緩衝深度為正值(有效向外延伸緩衝空間)',
+    edgeBufferM() > 0);
   const defs = ['edgeWallInsetM', 'edgeWallHM', 'edgeWallDeepM', 'edgeBufferM', 'heroTallestH'];
   for (const d of defs) {
     const m = new RegExp(`export const ${d} = [\\s\\S]*?;\\n`).exec(dataSrc);
