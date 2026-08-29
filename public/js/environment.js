@@ -104,6 +104,7 @@ function skyStops(skyC, fogC, W) {
   return { horiz, mid, zen };
 }
 
+/** 穹頂刻意不吃世界曲面:天空在無限遠,不彎是對的 */
 function makeSkyDome(span, skyC, fogC, W) {
   const { horiz, mid, zen } = skyStops(skyC, fogC, W);
   const mat = new THREE.ShaderMaterial({
