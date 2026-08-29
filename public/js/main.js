@@ -456,15 +456,12 @@ function setTeamSize(n) {
 
 function updateTsInfo() { $('tsInfo').textContent = tsInfoText(); }
 
-/** 人數/迷你摘要一行(兩處設定畫面共用同一份文字,MUST NOT 各寫一套)*/
+/** 人數/兵線/地圖規模摘要一行(兩處設定畫面共用同一份文字,MUST NOT 各寫一套)*/
 function tsInfoText() {
-  const mini = miniOn();
   const L = lanesFor(app.teamSize);
-  const size = sideMFor(L, mini);
-  return `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km)`
-    + (mini ? ` ・ 迷你地圖:每側只有前線砲塔,尺度縮到 ${Math.round(miniScalePct())}%、邊緣緩衝縮到 1/3`
-      : '')
-    + (miniLocked() ? ' ・ 本裝置判定為手機,一律使用迷你地圖' : '');
+  const size = sideMFor(L);
+  return `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km) ・ 每線各陣營一對砲塔`
+    + (miniLocked() ? ' ・ 本裝置判定為手機,鎖定單兵線戰場' : '');
 }
 
 // 場地鈕的路線/地形說明:2026-08-02 起走 tip.js 的懸浮提示單一縫(觸控長按也看得到);

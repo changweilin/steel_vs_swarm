@@ -410,7 +410,7 @@ export function venueConfig(venue, teamSize, mapA = false) {
   // 三階降級(寧缺勿錯,原則 6):①這個尺度自己的烘焙路線 → ②完整版路線剪短 → ③合成弧。
   // ② 只在 ① 缺席時才走 —— 它是 2026-08-13~14 的過渡路徑,留著是因為新烤一張圖需要外網,
   // 而「沒烤到的場地整張不能玩」比「路線沒被規則重驗過」更糟。
-  const ownRaw = VENUE_LANES[venue.id]?.[venueLaneKey(L, mapA)];
+  const ownRaw = VENUE_LANES[venue.id]?.[venueLaneKey(L, mapA)] || (L === 1 ? VENUE_LANES[venue.id]?.m1 : null);
   const bakedRaw = (ownRaw && bakedLanesSeparated(ownRaw)) ? ownRaw : VENUE_LANES[venue.id]?.[L];
   const baked = bakedRaw && bakedLanesSeparated(bakedRaw) ? bakedRaw : null;
   let A, B, lanes, maxOverlap, synthetic;

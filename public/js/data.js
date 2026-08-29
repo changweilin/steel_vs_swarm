@@ -37,83 +37,29 @@ export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
 
-// ============ 迷你地圖(2026-08-13 使用者定案)============
-// 使用者原句:「為了讓手機版更順暢,新增迷你地圖:只有 1vs1/2vs2,兵線只有前線砲塔 + 主堡,
-// 地圖對應縮小,邊緣緩衝縮小到 1/3,必要的話也縮小據點之間的距離。手機版只允許連線遊玩
-// 迷你地圖,桌機版不限制」。
+// ============ 1 兵線地圖(原迷你地圖規格標準化)============
+// 使用者定案:「邊界緩衝區減半。迷你地圖正式轉為1兵線地圖,2/3兵線地圖以同樣比例調整(兵線砲塔數同樣縮減為各陣營一對)」。
 //
-// **這是同一個旗標的四個推論,不是四個旋鈕** —— `battleConfig.mini` 一個布林,由它推導出
-// 塔位階數、地圖邊長、據點距離、緩衝深度。四者各自寫死的下場是「塔拆了但地圖沒縮」這種
-// 半套狀態,而每一條既有斷言照樣全綠。
-//
-// ①**只有 1v1 / 2v2**:`TEAM_MAX = 2` ⇒ `lanesFor(2) = 1` ⇒ 迷你地圖恆為**單兵線**。
-//   兩件事因此是構造保證而不是額外的判斷:兵線分離規則無事可做、剪短兵線的兩端就是兩座主堡。
-// ②**每側只剩前線砲塔**:`STAGES = 1`(完整版 `FULL_STAGES = 2`)。這一格餵 `solveTowerSites`
-//   的第二趟(後塔)—— 直接不跑,而不是解完再丟掉:biomes 淨空 / beacons 錨點 / 橋上墩座
-//   全吃同一份解,解出來卻不生成 = 建物繞著一座不存在的塔讓路。
-// ③**地圖縮小比 MUST 推導**(`miniScaleF()`):尺就是塔鏈本身 —— 一條兵線要塞得下
-//   「每側 stages 座塔各佔一個敵我塔距 SEP + 中線那半個 SEP ×2」⇒ `laneChainF(stages)
-//   = 2·stages + 1`(完整 5、迷你 3)。縮小比 = 3/5 = 0.6,而且**改 STAGES 它自己跟著走**。
-//   MUST NOT 手寫 0.6:手寫的下場是日後把迷你版改成兩階塔(或完整版改成三階)之後,地圖
-//   大小留在原地 —— 症狀只是「這張圖的塔擠在一起」,沒有任何錯誤訊息。
-//   ⇒ 使用者那句「必要的話也縮小據點之間的距離」是**同一個係數**:邊長與兩堡距離是同一條
-//   公式的兩端(`targetDistFor = sideMFor × 0.85 × √2`),縮邊長就是縮據點距離。
-// ④**邊緣緩衝縮到 1/3**(`BUFFER_F`,使用者指定的數字,不是推導值)。⚠ 這一格**明知故犯**地
-//   放棄了 `WORLD_EDGE` 檔頭那條「裙的外緣恰好落在地平線 ⇒ 地圖結構性地不會露出硬邊」的
-//   保證 —— 緩衝深度是逐邊 `edgeBufferM()` 的一圈裙,而迷你地圖的可玩區只有完整版的
-//   七成,裙反而佔掉建構期與繪製量的大頭。使用者要的就是拿「站在邊界往外看得到世界盡頭」
-//   換手機的幀率。MUST NOT 因為看到 `audit_world_edge` 那條不等式就「修」回 1。
-//
-// 手機閘門(`miniOnlyFor`)刻意**只住客戶端**:那是「這台裝置畫不動」的裝置能力判斷,不是
-// 權威狀態也不是防作弊(A1 管的是後者)—— 伺服器根本無從知道對面是不是手機,真要驗也只能
-// 驗一個客戶端自己宣告的欄位。桌機不限制,所以這一格恆是「少數裝置自我設限」而非規則。
+// 1v1 / 2v2 (L=1) 正式對齊緊湊戰場尺度(真實邊長 240m),兵線每陣營各 1 座前線砲塔 + 主堡(各陣營一對)。
+// 2/3 兵線地圖(L=2, L=3)亦依 3/5 比例等比縮小(邊長 300m / 360m),砲塔數同樣為每線各陣營一對。
 export const MINI = {
-  TEAM_MAX: 2,      // 只有 1v1 / 2v2(使用者指定)⇒ 恆為單兵線
+  TEAM_MAX: 2,      // 1 兵線地圖為 1v1 / 2v2
   STAGES: 1,        // 每側塔位數:只有前線砲塔
-  BUFFER_F: 1 / 3,  // 邊緣緩衝深度倍率(使用者指定)
+  BUFFER_F: 1,      // 緩衝深度全圖統一吃 WORLD_EDGE.BUFFER_F
 };
-/** 完整戰場每側塔位數(= `solveTowerSites` 的兩趟:前線 + 後方) */
-export const FULL_STAGES = 2;
+/** 戰場每側塔位數:每條兵線各陣營各 1 座砲塔(各陣營一對) */
+export const FULL_STAGES = 1;
 
 // ============ 劇情戰役地圖(2026-08-13 使用者定案)============
-// 使用者原句:「劇情戰役地圖調整:同迷你地圖大小,一律單兵線,敵方主堡+中段砲塔+前線砲塔,
-// 我方前線就是主堡。敵方電腦玩家變成 NPC BOSS,限制移動區域在主堡/砲塔周圍……」
-//
-// **旗標只有一個** —— `battleConfig.defSide`(防守方 = BOSS 那一邊的陣營 id;一般對戰恆 null)。
-// 刻意不是布林:布林還要另一格說「誰在守」,而兩格必須同時設對才成立 = 又一種「半套狀態」
-// (A47 ① 那條的同一個坑)。一個 side 字串同時是旗標與內容 ⇒ 結構上設不出半套。
-// 由它推導出來的東西(消費端 MUST NOT 各自寫死):
-//   ①**單兵線**(`laneCountFor`):劇情戰役不看人數(前五章 3v3、終章 5v5 照樣一條線)。
-//   ②**敵方兩階塔 + 主堡 / 我方零塔**(`mapPlan().atkStages/defStages`)—— 「我方前線就是主堡」
-//     的字面意思就是攻方 stages = 0,而**攻方主堡遞補了「對面那座前線塔」的角色**:前線塔的
-//     位置照樣由「敵我對距 ≥ SEP(不對射)」定出來,只是對照物換成了主堡(見 solveTowerSites)。
-//   ③**同迷你地圖大小**(`mapScaleF`)—— 這一格是**推導出來的巧合而不是抄過來的數字**:
-//     塔鏈需求 = 攻方 stages + 守方 stages + 1(中間那一段)⇒ 完整 2+2+1 = 5、迷你 1+1+1 = 3、
-//     劇情 0+2+1 = 3。劇情與迷你同為 3 ⇒ 縮小比同為 3/5。改 `DEF_STAGES` 它自己跟著走,
-//     MUST NOT 改成「劇情就沿用 miniScaleF()」(那是把推導寫成別名,`DEF_STAGES` 一動就分家)。
-//     ⇒ 使用者追問定案:「**不管人數多少都跟迷你地圖 2vs2 一樣大小**」。這一句是 ① 與 ③ 的
-//     合成結果而不是第三個旋鈕:人數只准經 `laneCountFor` 影響**兵線數**,而尺度函式(`realSideMFor`
-//     ~ `overlapCellM`)只吃 L 不吃人數 ⇒ 劇情恆 L=1 ⇒ 邊長 / 對角 / 兩堡距離 / 主堡座標 / 兵線折線
-//     與「迷你 2v2」**逐位元相同**,3v3 與 5v5 一格都不會長大。這是本區塊最容易被日後改動拆掉的
-//     一條(把劇情改多兵線、或讓尺度公式讀 teamSize,兩者任一都會讓它靜默失效)⇒ 稽核
-//     `audit_story_map` Ⅰ 直接釘整份幾何的逐位元相等,而不是只驗那個倍率。
-//   ④**攻堅鎖血**(`cfg.siege`)由 rooms.js 自 defSide 推導,MUST NOT 再由客戶端各送一格。
-// **邊緣緩衝刻意不跟著縮**:`MINI.BUFFER_F` 是拿「站在邊界看得到世界盡頭」換手機幀率的
-// 明知故犯(見 MINI 檔頭 ④),使用者這一輪講的是「地圖大小」而不是緩衝 ⇒ 劇情戰役維持整圈裙。
+// 劇情戰役一律單兵線(L=1),敵方兩階塔 + 主堡 / 我方前線即主堡(零塔)。
+// 塔鏈需求:攻方 0 + 守方 2 + 1 = 3 SEP,與標準 1 兵線地圖(1+1+1 = 3 SEP)同尺度。
 export const STORY_MAP = {
   LANES: 1,                  // 一律單兵線(使用者指定)
   ATK_STAGES: 0,             // 我方前線就是主堡 ⇒ 攻方零座塔
-  DEF_STAGES: FULL_STAGES,   // 敵方:前線砲塔 + 中段砲塔(+ 主堡 = SIEGE 的三階)
-  // ---- 開場預置兵線(2026-08-14 使用者:「劇情戰役開場敵方兵線 NPC 要補到前線砲塔」)----
-  // 對稱戰場的預置上限是**兩側取較小者**(見 sim._prefillLanes:非對稱地圖逐側各用各的深度,
-  // 會變成「守方三十幾隻兵已經上路、攻方一隻都沒有」)。劇情戰役刻意破例:守方(BOSS 方)填到
-  // **自己那座前線砲塔**、攻方仍吃那個較小值 —— 這一場本來就不是對稱的,守方是「已經佈好防線」
-  // 的那一邊,而攻方是剛推進到接觸線的那一邊。旗標只有 defSide 一格(沒有第二個開關)⇒
-  // 一般對戰的 `_prefillLanes` 逐位元同舊制。實作見 sim._prefillLanes。
-  // ---- 我方電腦玩家的傷害折減(2026-08-14 使用者:「我方電腦玩家對敵方 BOSS 傷害減至 10%,
-  // 對建築減至 25%」)。劇情戰役是**玩家自己的關卡** —— 僚機 AI 火力全開時,BOSS 與砲塔會在
-  // 玩家還沒進入射程前就被拆完。折減只作用在「攻方的 bot 英雄 → 守方的 BOSS / 建築」這一格:
-  // 真人玩家、敵方 BOSS 的輸出、小兵與第三方一律不吃(判據見 sim._allyBotDmgF)。
+  DEF_STAGES: 2,             // 敵方:前線砲塔 + 中段砲塔(+ 主堡 = SIEGE 的三階)
+  // ---- 開場預置兵線 ----
+  // 對稱戰場的預置上限是兩側取較小者。劇情戰役守方(BOSS 方)填到自己那座前線砲塔、攻方仍吃較小值。
+  // ---- 我方電腦玩家的傷害折減 ----
   ALLY_BOT_BOSS_F: 0.10,
   ALLY_BOT_BLD_F: 0.25,
 };
@@ -126,15 +72,13 @@ export const allyBotDmgF = (kind) =>
 
 /**
  * 地圖型態(尺度 / 塔位 / 兵線數 / 緩衝共用的**唯一入口**)。參數 `m` 三態:
- *   falsy             → 'full'  完整戰場
- *   true              → 'mini'  迷你地圖
+ *   falsy             → 'full'  標準戰場
+ *   true              → 'mini'  1 兵線緊湊戰場(相容舊 mini 旗標)
  *   'SWARM' / 'STEEL' → 'story' 劇情戰役,**值本身就是防守方(BOSS 方)**
- * 省略 ⇒ 'full' ⇒ 一切推導逐位元同舊制(IEEE754:5/5 === 1、x * 1 === x)。
+ * 省略 ⇒ 'full' ⇒ 一切推導逐位元同舊制(IEEE754:3/3 === 1、x * 1 === x)。
  */
 export const mapPlan = (m) => (m === 'SWARM' || m === 'STEEL'
   ? { mode: 'story', def: m, atkStages: STORY_MAP.ATK_STAGES, defStages: STORY_MAP.DEF_STAGES }
-  // 迷你只認 `true`(`mapArg` 交出來的就是布林)。**MUST NOT 寫成 truthy** —— 認不得的字串
-  // (客戶端送上來的 defSide 亂填)會被判成迷你地圖:塔位、尺度、緩衝整組換掉,而且不報錯。
   : m === true
     ? { mode: 'mini', def: null, atkStages: MINI.STAGES, defStages: MINI.STAGES }
     : { mode: 'full', def: null, atkStages: FULL_STAGES, defStages: FULL_STAGES });
@@ -149,14 +93,14 @@ export const towerStages = (m) => mapPlan(m).defStages;
 export const laneChainF = (stages) => 2 * stages + 1;
 /** 這一場的兵線長度需求(非對稱地圖用):攻方 + 守方各自的塔,加上中間那一段 */
 export const laneChainOf = (m) => { const p = mapPlan(m); return p.atkStages + p.defStages + 1; };
-/** 迷你地圖的尺度縮小比(推導,MUST NOT 手寫)= 塔鏈需求比 = 3/5 */
+/** 1 兵線地圖的尺度縮小比(推導,MUST NOT 手寫)= 塔鏈需求比 = 3/3 = 1 */
 export const miniScaleF = () => laneChainF(MINI.STAGES) / laneChainF(FULL_STAGES);
-/** 這一場的地圖尺度倍率(邊長 / 兩堡距離共用同一個);完整 = 5/5 = 1 ⇒ 逐位元同舊制 */
+/** 這一場的地圖尺度倍率(邊長 / 兩堡距離共用同一個);標準 = 3/3 = 1 ⇒ 逐位元同舊制 */
 export const mapScaleF = (m) => laneChainOf(m) / laneChainOf(false);
 /** 這一場幾條兵線(劇情戰役恆單線,不看人數) */
 export const laneCountFor = (teamSize, m) =>
   (mapPlan(m).mode === 'story' ? STORY_MAP.LANES : lanesFor(teamSize));
-/** 這個人數開得成迷你地圖嗎(1v1 / 2v2) */
+/** 這個人數開得成 1 兵線地圖嗎(1v1 / 2v2) */
 export const miniAllowed = (teamSize) => teamSize <= MINI.TEAM_MAX;
 /**
  * 一個塔位上**實際會生成砲塔**的控制點(帶 side)。劇情戰役我方無塔 ⇒ 只有防守方那一個。
@@ -192,25 +136,16 @@ export const MAPGEO = {
   // 主堡距離目標 ≈ 0.85 × 地圖對角線(> 題目要求的 80%)
   BASE_DIST_FRAC: 0.85,
   MIN_DIST_FRAC: 0.80,
-  // 地圖真實世界邊長 = BASE + PER_LANE × L (km) = 0.3 + 0.1×L(L1/L2/L3 = 0.4/0.5/0.6 km)。
-  // 大小只綁人數。兩堡真實距離 = 邊長 × 0.85 × √2 = 0.48/0.60/0.72 km,
-  // 全部落在市區導航路網走得出來的尺度內(兵線 MUST 與現實導航路線相符,見 venues.js LANES)。
-  REAL_SIDE_BASE_KM: 0.3,
-  REAL_SIDE_PER_LANE_KM: 0.1,
+  // 地圖真實世界邊長 = BASE + PER_LANE × L (km) = 0.18 + 0.06×L (L1/L2/L3 = 0.24/0.30/0.36 km)。
+  // 依 3/5 比例等比縮小(1 兵線為 240m 緊湊尺度,2/3 兵線同比例 300m/360m)。
+  REAL_SIDE_BASE_KM: 0.18,
+  REAL_SIDE_PER_LANE_KM: 0.06,
   // 真實↔遊戲世界比例尺:真實地理距離 = 遊戲距離 × REAL_SCALE。
   // 改制 2026-07-10(三):REAL_SCALE 0.5 —— 遊戲世界 = 真實世界 ×2(遊戲空間放大兩倍)。
-  //   沿革:0.125(放大 8×,街廓成荒野)→ 1(1:1,戰場太緊湊、武器相對射程過長)
-  //         → 0.5(1:2:兵線走廊拉開一倍,武器/視野的「遊戲公尺」值不動 ⇒ 相對射程減半)。
-  // 為何動 REAL_SCALE 而非放大真實邊長:realDistFor 與 REAL_SCALE 無關(公式裡相消),
-  //   ⇒ OSM 查詢半徑不變、venueLanes.js 的真實道路兵線原封不動有效,重烤純離線(見 venues.js)。
-  //   放大真實邊長則需以 2× 半徑重抓 Overpass(改選不同的真實道路),非必要且依賴網路。
-  // 武器射程/移動速度/視野等遊戲公尺數值不隨尺度改動(見 #INC-104)。
   REAL_SCALE: 0.5,
   // 尺度版本:改動比例尺 / 尺寸模型時 +1,用於偵測過期的「我的最愛」並重算(見 venues.js)
-  // ver5:邊長公式改 0.3 + 0.1×L,且預設場地兵線改用真實 OSRM 導航路線
-  // ver6:REAL_SCALE 0.125 → 1(遊戲世界 = 真實世界 1:1)
-  // ver7:REAL_SCALE 1 → 0.5(遊戲空間放大 2×,真實道路兵線不變)
-  GEO_SCALE_VER: 7,
+  // ver8:地圖邊長等比縮減為 0.18 + 0.06×L(km),兵線砲塔縮減為各陣營一對(FULL_STAGES=1),邊界緩衝減半
+  GEO_SCALE_VER: 8,
   // 地圖外擴倍率(2026-07-17):battleBBox 繞中心等比放大,**兵線/主堡/塔位一律不動**。
   // 目的:第三方野營的佈營硬約束(離每座砲塔 ≥ 射程×CLEAR_F=388m)在真實地圖尺寸
   //   (L1 兩堡遊戲距離 ≈962m)下,舊 5% pad 幾乎無側翼合法區 → L1 完全不生成野營。
@@ -2957,7 +2892,7 @@ export const WORLD_EDGE = {
   WALL_H_F: 1.6,     // 環高**下界** = 最高機體全高 × 此比(> 1 ⇒ 沒有任何機體看得到自己越過它)
   SEG_M: 24,         // 單段長度(公尺)= 一根碰撞柱;perimeter/SEG_M ≈ 200 段 ≪ LOS.MAX_OCC
   SEG_LAP_F: 1.06,   // 段長重疊係數(> 1 ⇒ 相鄰段互相咬住,環上結構性地沒有縫)
-  BUFFER_F: 1,       // 緩衝深度 = 地平線距離 × 此比(MUST ≥ 1,見上)
+  BUFFER_F: 0.5,     // 緩衝深度 = 地平線距離 × 此比(使用者定案:邊界緩衝區減半)
 };
 /** 障礙環內緣 = 不可進入界線的內縮量(公尺)。`game.js` 的 x/z 夾制與環體佈置同吃這一支 */
 export const edgeWallInsetM = () => WORLD_EDGE.WALL_M;
@@ -2976,11 +2911,8 @@ export const edgeWallHM = () => Math.min(objHeightMax(), heroTallestH() * WORLD_
 export const edgeWallDeepM = () => WORLD_EDGE.WALL_T * WORLD_EDGE.WALL_T_F;
 /**
  * 緩衝空間深度(公尺):地形範圍再往外鋪這麼遠的地。推導不手寫,見檔頭。
- * 迷你地圖另乘 `MINI.BUFFER_F`(1/3,使用者指定)—— 這一格**明知故犯**地放棄上面那條
- * 「裙的外緣落在地平線 ⇒ 不會露出硬邊」的保證,換手機的建構期與繪製量,見 `MINI` 檔頭 ④。
+ * 邊界緩衝區減半(BUFFER_F = 0.5)。
  * 省略參數 ⇒ 倍率 1 ⇒ 逐位元同舊制。
- * **劇情戰役刻意不縮**(`mapPlan().mode === 'story'` 不吃這一格):地圖雖然同迷你大小,但
- * BUFFER_F 換的是手機幀率,而使用者這一輪講的是地圖大小 —— 見 `STORY_MAP` 檔頭末段。
  */
 export const edgeBufferM = (m) =>
   curveHorizonM() * WORLD_EDGE.BUFFER_F * (mapPlan(m).mode === 'mini' ? MINI.BUFFER_F : 1);
