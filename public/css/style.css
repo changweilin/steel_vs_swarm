@@ -1059,8 +1059,8 @@ body[data-screen="game"] .fs-toggle-btn { display: none; }
 /* ── 設定:子分頁 + 各類開關(switch)+ 音量滑桿 ── */
 .set-tabs { justify-content: center; gap: 5px; margin-bottom: 2px; flex-wrap: wrap; }
 .set-list {
-  display: flex; flex-direction: column; gap: 14px; text-align: left; min-width: min(468px, 84vw);
-  max-height: min(480px, 52vh); overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: 14px; text-align: left; min-width: min(540px, 88vw);
+  max-height: min(540px, 62vh); overflow-y: auto; overflow-x: hidden;
   padding: 4px 6px 4px 0; -webkit-overflow-scrolling: touch;
   scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
 }
@@ -1716,6 +1716,7 @@ body:not(.touch-ui) .touch-layer { display: none; }
   padding: 6px 0 8px; margin: -4px 0 4px 0;
   border-bottom: 1px solid rgba(var(--railW-rgb), 0.25);
   display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 100%;
 }
 .vset-scenes { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
 .vset-scene-btn {
@@ -1729,8 +1730,52 @@ body:not(.touch-ui) .touch-layer { display: none; }
   color: #fff; font-weight: bold;
 }
 .vset-sample {
-  display: block; width: 260px; max-width: 100%; height: auto; border-radius: 4px;
+  display: block; width: 480px; max-width: 100%; aspect-ratio: 16 / 9; height: auto; border-radius: 4px;
   border: 1px solid rgba(var(--railW-rgb), 0.35); background: #0f1622;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- 平衡性調整(升級曲線與數值倍率兩兩左右並排) ---------- */
+.bset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+.bset-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(var(--railW-rgb), 0.16);
+  border-radius: 2px;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  transition: border-color 0.12s, background 0.12s;
+}
+.bset-item:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(var(--railW-rgb), 0.35);
+}
+.bset-item .set-label {
+  font-size: 11px;
+  letter-spacing: 1px;
+  min-width: 82px;
+  white-space: nowrap;
+  cursor: help;
+}
+.bset-item .set-slider {
+  flex: 1;
+  min-width: 44px;
+}
+.bset-item .set-val {
+  font-size: 11px;
+  min-width: 34px;
+  text-align: right;
+}
+@media (max-width: 520px) {
+  .bset-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- 虛擬搖桿骨架 ---------- */

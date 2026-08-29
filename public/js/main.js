@@ -2902,72 +2902,111 @@ function renderBalanceSettings(mount) {
   if (!mount) return;
   mount.innerHTML = '';
 
-  const groups = [
-    {
-      id: 'upgrade',
-      title: '▎全玩家八項升級曲線起終點',
-      tip: '調整全玩家 8 項升級項目在初始與滿級時的倍率(0.1~10x)。',
-    },
-    {
-      id: 'stat',
-      title: '▎全玩家基礎數值倍率',
-      tip: '即時縮放全體玩家之移速、攻速、傷害、冷卻與射程等基礎數值(0.1~10x)。',
-    },
+  const vals = [];
+  const syncReset = () => { reset.disabled = balancePrefsDefault(); };
+
+  const createKnobItem = (k, d) => {
+    const item = document.createElement('div');
+    item.className = 'bset-item';
+    item.dataset.bk = k;
+
+    const label = document.createElement('span');
+    label.className = 'set-label';
+    label.textContent = d.label;
+    attachTip(label, d.hint);
+    item.appendChild(label);
+
+    const slider = document.createElement('input');
+    slider.className = 'set-slider';
+    slider.type = 'range';
+    slider.min = String(d.min);
+    slider.max = String(d.max);
+    slider.step = String(d.step);
+    slider.setAttribute('aria-label', d.label);
+    slider.value = String(balancePref(k));
+
+    const val = document.createElement('span');
+    val.className = 'set-val';
+    val.textContent = `${balancePref(k).toFixed(1)}x`;
+
+    slider.addEventListener('input', (e) => {
+      const clamped = setBalancePref(k, Number(e.target.value));
+      val.textContent = `${clamped.toFixed(1)}x`;
+      syncReset();
+    });
+
+    vals.push({
+      k,
+      sync: () => {
+        slider.value = String(balancePref(k));
+        val.textContent = `${balancePref(k).toFixed(1)}x`;
+      },
+    });
+
+    item.appendChild(slider);
+    item.appendChild(val);
+    return item;
+  };
+
+  // 1. 全玩家八項升級曲線起終點 (同項目起終點兩兩左右並排)
+  const upgHead = document.createElement('div');
+  upgHead.className = 'set-sub';
+  upgHead.textContent = '▎全玩家八項升級曲線起終點';
+  attachTip(upgHead, '調整全玩家 8 項升級項目在初始與滿級時的倍率(0.1~10x)，同項目起點與終點成對左右並排。');
+  mount.appendChild(upgHead);
+
+  const upgGrid = document.createElement('div');
+  upgGrid.className = 'bset-grid';
+
+  const UPGRADE_TRACKS = [
+    { id: 'lw', name: '輕武器' },
+    { id: 'hw', name: '重武器' },
+    { id: 'sk', name: '小招威力' },
+    { id: 'ult', name: '大招威力' },
+    { id: 'hp', name: '裝甲上限' },
+    { id: 'ar', name: '複合裝甲' },
+    { id: 'sp', name: '護盾上限' },
+    { id: 'ch', name: '充能回速' },
   ];
 
-  const vals = [];
+  for (const trk of UPGRADE_TRACKS) {
+    const sKey = `upg_${trk.id}_start`;
+    const eKey = `upg_${trk.id}_end`;
+    if (BALANCE_KNOBS[sKey]) upgGrid.appendChild(createKnobItem(sKey, BALANCE_KNOBS[sKey]));
+    if (BALANCE_KNOBS[eKey]) upgGrid.appendChild(createKnobItem(eKey, BALANCE_KNOBS[eKey]));
+  }
+  mount.appendChild(upgGrid);
 
-  for (const grp of groups) {
-    const head = document.createElement('div');
-    head.className = 'set-sub';
-    head.textContent = grp.title;
-    attachTip(head, grp.tip);
-    mount.appendChild(head);
+  // 2. 全玩家基礎數值倍率 (性質相似項目兩兩左右並排)
+  const statHead = document.createElement('div');
+  statHead.className = 'set-sub';
+  statHead.textContent = '▎全玩家基礎數值倍率';
+  attachTip(statHead, '即時縮放全體玩家之移速、攻速、傷害、冷卻與射程等基礎數值(0.1~10x)，性質相近項目兩兩成對並排。');
+  mount.appendChild(statHead);
 
-    for (const [k, d] of Object.entries(BALANCE_KNOBS)) {
-      if (d.group !== grp.id) continue;
-      const row = document.createElement('div');
-      row.className = 'set-row';
-      row.dataset.bk = k;
+  const statGrid = document.createElement('div');
+  statGrid.className = 'bset-grid';
 
-      const label = document.createElement('span');
-      label.className = 'set-label';
-      label.textContent = d.label;
-      attachTip(label, d.hint);
-      row.appendChild(label);
+  // 性質相近項目成對排序:
+  // 輸出火力組: 傷害 + 射速
+  // 作戰距離組: 射程 + 視野
+  // 技能循環組: 冷卻 + 耗能
+  // 戰場節奏組: 移速 + 重生
+  // 經濟成長組: 資金收益
+  const STAT_PAIRS = [
+    'stat_dmg', 'stat_rate',
+    'stat_range', 'stat_sight',
+    'stat_cd', 'stat_mpCost',
+    'stat_speed', 'stat_respawn',
+    'stat_bounty',
+  ];
 
-      const slider = document.createElement('input');
-      slider.className = 'set-slider';
-      slider.type = 'range';
-      slider.min = String(d.min);
-      slider.max = String(d.max);
-      slider.step = String(d.step);
-      slider.setAttribute('aria-label', d.label);
-      slider.value = String(balancePref(k));
-
-      const val = document.createElement('span');
-      val.className = 'set-val';
-      val.textContent = `${balancePref(k).toFixed(1)}x`;
-
-      slider.addEventListener('input', (e) => {
-        const clamped = setBalancePref(k, Number(e.target.value));
-        val.textContent = `${clamped.toFixed(1)}x`;
-        syncReset();
-      });
-
-      vals.push({
-        k,
-        sync: () => {
-          slider.value = String(balancePref(k));
-          val.textContent = `${balancePref(k).toFixed(1)}x`;
-        },
-      });
-
-      row.appendChild(slider);
-      row.appendChild(val);
-      mount.appendChild(row);
+  for (const k of STAT_PAIRS) {
+    if (BALANCE_KNOBS[k]) {
+      statGrid.appendChild(createKnobItem(k, BALANCE_KNOBS[k]));
     }
   }
+  mount.appendChild(statGrid);
 
   const btnRow = document.createElement('div');
   btnRow.className = 'row';
@@ -2981,7 +3020,6 @@ function renderBalanceSettings(mount) {
   btnRow.appendChild(reset);
   mount.appendChild(btnRow);
 
-  const syncReset = () => { reset.disabled = balancePrefsDefault(); };
   reset.addEventListener('click', () => {
     resetBalancePrefs();
     for (const v of vals) v.sync();
