@@ -1,6 +1,6 @@
 {
   "model": "gpt-5.6-luna",
-  "generatedAt": "2026-08-29T02:33:28.669Z",
+  "generatedAt": "2026-08-29T03:19:07.419Z",
   "humanVerdictsPreserved": true,
   "candidates": [
     {
@@ -5800,69 +5800,6 @@
       "thinMembers": 2
     },
     {
-      "target": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2",
-      "status": "awaiting_human_review",
-      "targetId": "vehicle_vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2_d18c916a_luna_v6",
-      "key": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
-      "family": "vehicle",
-      "subpart": "heavy",
-      "image": "vehicle/heavy/149ff3_c62b92c0df064d42840a39204d5812ab~mv2.png",
-      "sourceFound": true,
-      "staleRowsCollapsed": 1,
-      "style": "heavy_crane_vehicle",
-      "symmetryMode": "mirrored_bilateral",
-      "featureEvidence": "missing_yolo26_schema_v2",
-      "evidenceOverride": "llm_visual_direct",
-      "eligible": false,
-      "pipelineEligibility": "awaiting_human_review",
-      "similarityReview": {
-        "similarityScore": null,
-        "verdict": "awaiting_human_review",
-        "corrections": [
-          "逐張對照來源圖與固定五方向視圖",
-          "確認車型特有零件、接點與前後輪徑"
-        ],
-        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
-        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
-        "independentMultimodalReview": "required",
-        "hardDefects": [
-          "human_visual_review_required"
-        ],
-        "fixedViews": [
-          "front_3_4",
-          "side_left",
-          "front",
-          "side_right",
-          "rear"
-        ],
-        "critique": "heavy_crane_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
-      },
-      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2_d18c916a_luna_v6",
-      "preview": "out/review_previews/vehicle_vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2_d18c916a_luna_v6.png",
-      "bounds": {
-        "min": [
-          -5.18,
-          0.0284,
-          -1.6727
-        ],
-        "max": [
-          5.2225,
-          5.2064,
-          1.6727
-        ],
-        "size": [
-          10.402,
-          5.178,
-          3.345
-        ],
-        "rMax": 5.484,
-        "triangles": 3628,
-        "vertices": 2264
-      },
-      "parts": 58,
-      "thinMembers": 4
-    },
-    {
       "target": "vehicle/heavy_1618404544235416926",
       "status": "awaiting_human_review",
       "targetId": "vehicle_vehicle_heavy_1618404544235416926_1eadc9df_luna_v6",
@@ -6238,132 +6175,6 @@
         "vertices": 2254
       },
       "parts": 58,
-      "thinMembers": 2
-    },
-    {
-      "target": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg",
-      "status": "awaiting_human_review",
-      "targetId": "vehicle_vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
-      "key": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
-      "family": "vehicle",
-      "subpart": "heavy",
-      "image": "vehicle/heavy/2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg.webp",
-      "sourceFound": true,
-      "staleRowsCollapsed": 1,
-      "style": "heavy_mixer_vehicle",
-      "symmetryMode": "mirrored_bilateral",
-      "featureEvidence": "missing_yolo26_schema_v2",
-      "evidenceOverride": "llm_visual_direct",
-      "eligible": false,
-      "pipelineEligibility": "awaiting_human_review",
-      "similarityReview": {
-        "similarityScore": null,
-        "verdict": "awaiting_human_review",
-        "corrections": [
-          "逐張對照來源圖與固定五方向視圖",
-          "確認車型特有零件、接點與前後輪徑"
-        ],
-        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
-        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
-        "independentMultimodalReview": "required",
-        "hardDefects": [
-          "human_visual_review_required"
-        ],
-        "fixedViews": [
-          "front_3_4",
-          "side_left",
-          "front",
-          "side_right",
-          "rear"
-        ],
-        "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
-      },
-      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
-      "preview": "out/review_previews/vehicle_vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6.png",
-      "bounds": {
-        "min": [
-          -4.455,
-          0.0274,
-          -1.5977
-        ],
-        "max": [
-          4.4975,
-          3.57,
-          1.5977
-        ],
-        "size": [
-          8.953,
-          3.543,
-          3.195
-        ],
-        "rMax": 4.773,
-        "triangles": 3732,
-        "vertices": 2331
-      },
-      "parts": 57,
-      "thinMembers": 2
-    },
-    {
-      "target": "vehicle/heavy_3158_news_banner",
-      "status": "awaiting_human_review",
-      "targetId": "vehicle_vehicle_heavy_3158_news_banner_cca40741_luna_v6",
-      "key": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
-      "family": "vehicle",
-      "subpart": "heavy",
-      "image": "vehicle/heavy/3158_news_banner.jpg",
-      "sourceFound": true,
-      "staleRowsCollapsed": 1,
-      "style": "heavy_mixer_vehicle",
-      "symmetryMode": "mirrored_bilateral",
-      "featureEvidence": "missing_yolo26_schema_v2",
-      "evidenceOverride": "llm_visual_direct",
-      "eligible": false,
-      "pipelineEligibility": "awaiting_human_review",
-      "similarityReview": {
-        "similarityScore": null,
-        "verdict": "awaiting_human_review",
-        "corrections": [
-          "逐張對照來源圖與固定五方向視圖",
-          "確認車型特有零件、接點與前後輪徑"
-        ],
-        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
-        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
-        "independentMultimodalReview": "required",
-        "hardDefects": [
-          "human_visual_review_required"
-        ],
-        "fixedViews": [
-          "front_3_4",
-          "side_left",
-          "front",
-          "side_right",
-          "rear"
-        ],
-        "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
-      },
-      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_3158_news_banner_cca40741_luna_v6",
-      "preview": "out/review_previews/vehicle_vehicle_heavy_3158_news_banner_cca40741_luna_v6.png",
-      "bounds": {
-        "min": [
-          -4.455,
-          0.0274,
-          -1.5977
-        ],
-        "max": [
-          4.4975,
-          3.57,
-          1.5977
-        ],
-        "size": [
-          8.953,
-          3.543,
-          3.195
-        ],
-        "rMax": 4.773,
-        "triangles": 3732,
-        "vertices": 2331
-      },
-      "parts": 57,
       "thinMembers": 2
     },
     {
@@ -7249,69 +7060,6 @@
       "thinMembers": 2
     },
     {
-      "target": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef",
-      "status": "awaiting_human_review",
-      "targetId": "vehicle_vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
-      "key": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
-      "family": "vehicle",
-      "subpart": "heavy",
-      "image": "vehicle/heavy/mobile01-fddc2c1557ae9d63f48dec40bc203eef.jpg",
-      "sourceFound": true,
-      "staleRowsCollapsed": 1,
-      "style": "heavy_mixer_vehicle",
-      "symmetryMode": "mirrored_bilateral",
-      "featureEvidence": "missing_yolo26_schema_v2",
-      "evidenceOverride": "llm_visual_direct",
-      "eligible": false,
-      "pipelineEligibility": "awaiting_human_review",
-      "similarityReview": {
-        "similarityScore": null,
-        "verdict": "awaiting_human_review",
-        "corrections": [
-          "逐張對照來源圖與固定五方向視圖",
-          "確認車型特有零件、接點與前後輪徑"
-        ],
-        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
-        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
-        "independentMultimodalReview": "required",
-        "hardDefects": [
-          "human_visual_review_required"
-        ],
-        "fixedViews": [
-          "front_3_4",
-          "side_left",
-          "front",
-          "side_right",
-          "rear"
-        ],
-        "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
-      },
-      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
-      "preview": "out/review_previews/vehicle_vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6.png",
-      "bounds": {
-        "min": [
-          -4.455,
-          0.0274,
-          -1.5977
-        ],
-        "max": [
-          4.4975,
-          3.57,
-          1.5977
-        ],
-        "size": [
-          8.953,
-          3.543,
-          3.195
-        ],
-        "rMax": 4.773,
-        "triangles": 3732,
-        "vertices": 2331
-      },
-      "parts": 57,
-      "thinMembers": 2
-    },
-    {
       "target": "vehicle/heavy_photooriginal-2760150-ffEPQ",
       "status": "awaiting_human_review",
       "targetId": "vehicle_vehicle_heavy_photooriginal-2760150-ffEPQ_0dca381c_luna_v6",
@@ -7435,132 +7183,6 @@
         "vertices": 2238
       },
       "parts": 57,
-      "thinMembers": 4
-    },
-    {
-      "target": "vehicle/heavy_product_4714426807346_3",
-      "status": "awaiting_human_review",
-      "targetId": "vehicle_vehicle_heavy_product_4714426807346_3_c3e3d961_luna_v6",
-      "key": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
-      "family": "vehicle",
-      "subpart": "heavy",
-      "image": "vehicle/heavy/product_4714426807346_3.jpg",
-      "sourceFound": true,
-      "staleRowsCollapsed": 1,
-      "style": "heavy_mixer_vehicle",
-      "symmetryMode": "mirrored_bilateral",
-      "featureEvidence": "missing_yolo26_schema_v2",
-      "evidenceOverride": "llm_visual_direct",
-      "eligible": false,
-      "pipelineEligibility": "awaiting_human_review",
-      "similarityReview": {
-        "similarityScore": null,
-        "verdict": "awaiting_human_review",
-        "corrections": [
-          "逐張對照來源圖與固定五方向視圖",
-          "確認車型特有零件、接點與前後輪徑"
-        ],
-        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
-        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
-        "independentMultimodalReview": "required",
-        "hardDefects": [
-          "human_visual_review_required"
-        ],
-        "fixedViews": [
-          "front_3_4",
-          "side_left",
-          "front",
-          "side_right",
-          "rear"
-        ],
-        "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
-      },
-      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_product_4714426807346_3_c3e3d961_luna_v6",
-      "preview": "out/review_previews/vehicle_vehicle_heavy_product_4714426807346_3_c3e3d961_luna_v6.png",
-      "bounds": {
-        "min": [
-          -4.455,
-          0.0274,
-          -1.5977
-        ],
-        "max": [
-          4.4975,
-          3.57,
-          1.5977
-        ],
-        "size": [
-          8.953,
-          3.543,
-          3.195
-        ],
-        "rMax": 4.773,
-        "triangles": 3732,
-        "vertices": 2331
-      },
-      "parts": 57,
-      "thinMembers": 2
-    },
-    {
-      "target": "vehicle/heavy_slide-02",
-      "status": "awaiting_human_review",
-      "targetId": "vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6",
-      "key": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
-      "family": "vehicle",
-      "subpart": "heavy",
-      "image": "vehicle/heavy/slide-02.jpg",
-      "sourceFound": true,
-      "staleRowsCollapsed": 1,
-      "style": "heavy_crane_vehicle",
-      "symmetryMode": "mirrored_bilateral",
-      "featureEvidence": "missing_yolo26_schema_v2",
-      "evidenceOverride": "llm_visual_direct",
-      "eligible": false,
-      "pipelineEligibility": "awaiting_human_review",
-      "similarityReview": {
-        "similarityScore": null,
-        "verdict": "awaiting_human_review",
-        "corrections": [
-          "逐張對照來源圖與固定五方向視圖",
-          "確認車型特有零件、接點與前後輪徑"
-        ],
-        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
-        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
-        "independentMultimodalReview": "required",
-        "hardDefects": [
-          "human_visual_review_required"
-        ],
-        "fixedViews": [
-          "front_3_4",
-          "side_left",
-          "front",
-          "side_right",
-          "rear"
-        ],
-        "critique": "heavy_crane_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
-      },
-      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6",
-      "preview": "out/review_previews/vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6.png",
-      "bounds": {
-        "min": [
-          -5.18,
-          0.0284,
-          -1.6727
-        ],
-        "max": [
-          5.2225,
-          5.2064,
-          1.6727
-        ],
-        "size": [
-          10.402,
-          5.178,
-          3.345
-        ],
-        "rMax": 5.484,
-        "triangles": 3628,
-        "vertices": 2264
-      },
-      "parts": 58,
       "thinMembers": 4
     },
     {
@@ -7813,6 +7435,384 @@
         "vertices": 2254
       },
       "parts": 58,
+      "thinMembers": 2
+    },
+    {
+      "target": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2_d18c916a_luna_v6",
+      "key": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6",
+      "family": "vehicle",
+      "subpart": "heavy",
+      "image": "vehicle/heavy/149ff3_c62b92c0df064d42840a39204d5812ab~mv2.png",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "heavy_crane_vehicle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "heavy_crane_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2_d18c916a_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_heavy_149ff3_c62b92c0df064d42840a39204d5812ab_mv2_d18c916a_luna_v6.png",
+      "bounds": {
+        "min": [
+          -5.18,
+          0.0284,
+          -1.6727
+        ],
+        "max": [
+          5.2225,
+          5.3859,
+          1.6727
+        ],
+        "size": [
+          10.402,
+          5.357,
+          3.345
+        ],
+        "rMax": 5.484,
+        "triangles": 3628,
+        "vertices": 2264
+      },
+      "parts": 58,
+      "thinMembers": 4
+    },
+    {
+      "target": "vehicle/heavy_slide-02",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6",
+      "key": "vehicle/heavy_slide-02_b4e105cf_luna_v6",
+      "family": "vehicle",
+      "subpart": "heavy",
+      "image": "vehicle/heavy/slide-02.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "heavy_crane_vehicle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "heavy_crane_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_heavy_slide-02_b4e105cf_luna_v6.png",
+      "bounds": {
+        "min": [
+          -5.18,
+          0.0284,
+          -1.6727
+        ],
+        "max": [
+          5.2225,
+          5.3859,
+          1.6727
+        ],
+        "size": [
+          10.402,
+          5.357,
+          3.345
+        ],
+        "rMax": 5.484,
+        "triangles": 3628,
+        "vertices": 2264
+      },
+      "parts": 58,
+      "thinMembers": 4
+    },
+    {
+      "target": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "key": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "family": "vehicle",
+      "subpart": "heavy",
+      "image": "vehicle/heavy/2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg.webp",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "heavy_mixer_vehicle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6.png",
+      "bounds": {
+        "min": [
+          -4.455,
+          0.0274,
+          -1.5977
+        ],
+        "max": [
+          4.4975,
+          4.5843,
+          1.5977
+        ],
+        "size": [
+          8.953,
+          4.557,
+          3.195
+        ],
+        "rMax": 4.773,
+        "triangles": 3732,
+        "vertices": 2331
+      },
+      "parts": 57,
+      "thinMembers": 2
+    },
+    {
+      "target": "vehicle/heavy_3158_news_banner",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_heavy_3158_news_banner_cca40741_luna_v6",
+      "key": "vehicle/heavy_3158_news_banner_cca40741_luna_v6",
+      "family": "vehicle",
+      "subpart": "heavy",
+      "image": "vehicle/heavy/3158_news_banner.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "heavy_mixer_vehicle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_3158_news_banner_cca40741_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_heavy_3158_news_banner_cca40741_luna_v6.png",
+      "bounds": {
+        "min": [
+          -4.455,
+          0.0274,
+          -1.5977
+        ],
+        "max": [
+          4.4975,
+          4.5843,
+          1.5977
+        ],
+        "size": [
+          8.953,
+          4.557,
+          3.195
+        ],
+        "rMax": 4.773,
+        "triangles": 3732,
+        "vertices": 2331
+      },
+      "parts": 57,
+      "thinMembers": 2
+    },
+    {
+      "target": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "key": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "family": "vehicle",
+      "subpart": "heavy",
+      "image": "vehicle/heavy/mobile01-fddc2c1557ae9d63f48dec40bc203eef.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "heavy_mixer_vehicle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6.png",
+      "bounds": {
+        "min": [
+          -4.455,
+          0.0274,
+          -1.5977
+        ],
+        "max": [
+          4.4975,
+          4.5843,
+          1.5977
+        ],
+        "size": [
+          8.953,
+          4.557,
+          3.195
+        ],
+        "rMax": 4.773,
+        "triangles": 3732,
+        "vertices": 2331
+      },
+      "parts": 57,
+      "thinMembers": 2
+    },
+    {
+      "target": "vehicle/heavy_product_4714426807346_3",
+      "status": "awaiting_human_review",
+      "targetId": "vehicle_vehicle_heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "key": "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "family": "vehicle",
+      "subpart": "heavy",
+      "image": "vehicle/heavy/product_4714426807346_3.jpg",
+      "sourceFound": true,
+      "staleRowsCollapsed": 1,
+      "style": "heavy_mixer_vehicle",
+      "symmetryMode": "mirrored_bilateral",
+      "featureEvidence": "missing_yolo26_schema_v2",
+      "evidenceOverride": "llm_visual_direct",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "similarityReview": {
+        "similarityScore": null,
+        "verdict": "awaiting_human_review",
+        "corrections": [
+          "逐張對照來源圖與固定五方向視圖",
+          "確認車型特有零件、接點與前後輪徑"
+        ],
+        "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+        "reviewMode": "fixed_five_view_visual_inspection_plus_deterministic_geometry",
+        "independentMultimodalReview": "required",
+        "hardDefects": [
+          "human_visual_review_required"
+        ],
+        "fixedViews": [
+          "front_3_4",
+          "side_left",
+          "front",
+          "side_right",
+          "rear"
+        ],
+        "critique": "heavy_mixer_vehicle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。"
+      },
+      "outputDir": "out/3d_data/vehicle/heavy/vehicle_vehicle_heavy_product_4714426807346_3_c3e3d961_luna_v6",
+      "preview": "out/review_previews/vehicle_vehicle_heavy_product_4714426807346_3_c3e3d961_luna_v6.png",
+      "bounds": {
+        "min": [
+          -4.455,
+          0.0274,
+          -1.5977
+        ],
+        "max": [
+          4.4975,
+          4.5843,
+          1.5977
+        ],
+        "size": [
+          8.953,
+          4.557,
+          3.195
+        ],
+        "rMax": 4.773,
+        "triangles": 3732,
+        "vertices": 2331
+      },
+      "parts": 57,
       "thinMembers": 2
     }
   ]

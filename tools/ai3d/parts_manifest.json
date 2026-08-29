@@ -71260,48 +71260,6 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_d18c916a",
-          "family": "vehicle",
-          "part": "heavy",
-          "query": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2",
-          "api": "gpt-5.6-luna_visual_direct",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/heavy/149ff3_c62b92c0df064d42840a39204d5812ab~mv2.png"
-        }
-      ],
-      "gen": {
-        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
-        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "params": "--finalize",
-        "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3628, Vertices 2264, Similarity pending independent visual review"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          10.402,
-          5.178,
-          3.345
-        ],
-        "note": "heavy_crane_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
-      },
-      "keys": [
-        "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6"
-      ]
-    },
-    {
-      "method": "gpt-5.6-luna_visual_direct",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (heavy)",
-      "rev": "HEAD",
-      "at": "2026-08-29",
-      "imgs": [
-        {
-          "role": "primary",
           "id": "img_1eadc9df",
           "family": "vehicle",
           "part": "heavy",
@@ -71542,90 +71500,6 @@
       },
       "keys": [
         "vehicle/heavy_250px-Peterbilt_tractor-trailer_rig,_Loveland,_Colorado_cfcd90c9_luna_v6"
-      ]
-    },
-    {
-      "method": "gpt-5.6-luna_visual_direct",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (heavy)",
-      "rev": "HEAD",
-      "at": "2026-08-29",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_b9c7c1fe",
-          "family": "vehicle",
-          "part": "heavy",
-          "query": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg",
-          "api": "gpt-5.6-luna_visual_direct",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/heavy/2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg.webp"
-        }
-      ],
-      "gen": {
-        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
-        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "params": "--finalize",
-        "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          8.953,
-          3.543,
-          3.195
-        ],
-        "note": "heavy_mixer_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
-      },
-      "keys": [
-        "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6"
-      ]
-    },
-    {
-      "method": "gpt-5.6-luna_visual_direct",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (heavy)",
-      "rev": "HEAD",
-      "at": "2026-08-29",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_cca40741",
-          "family": "vehicle",
-          "part": "heavy",
-          "query": "vehicle/heavy_3158_news_banner",
-          "api": "gpt-5.6-luna_visual_direct",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/heavy/3158_news_banner.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
-        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "params": "--finalize",
-        "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          8.953,
-          3.543,
-          3.195
-        ],
-        "note": "heavy_mixer_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
-      },
-      "keys": [
-        "vehicle/heavy_3158_news_banner_cca40741_luna_v6"
       ]
     },
     {
@@ -72226,48 +72100,6 @@
       "imgs": [
         {
           "role": "primary",
-          "id": "img_58925e94",
-          "family": "vehicle",
-          "part": "heavy",
-          "query": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef",
-          "api": "gpt-5.6-luna_visual_direct",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/heavy/mobile01-fddc2c1557ae9d63f48dec40bc203eef.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
-        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "params": "--finalize",
-        "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          8.953,
-          3.543,
-          3.195
-        ],
-        "note": "heavy_mixer_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
-      },
-      "keys": [
-        "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6"
-      ]
-    },
-    {
-      "method": "gpt-5.6-luna_visual_direct",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (heavy)",
-      "rev": "HEAD",
-      "at": "2026-08-29",
-      "imgs": [
-        {
-          "role": "primary",
           "id": "img_0dca381c",
           "family": "vehicle",
           "part": "heavy",
@@ -72340,90 +72172,6 @@
       },
       "keys": [
         "vehicle/heavy_photooriginal-98016-XUIGz_15f63811_luna_v6"
-      ]
-    },
-    {
-      "method": "gpt-5.6-luna_visual_direct",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (heavy)",
-      "rev": "HEAD",
-      "at": "2026-08-29",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_c3e3d961",
-          "family": "vehicle",
-          "part": "heavy",
-          "query": "vehicle/heavy_product_4714426807346_3",
-          "api": "gpt-5.6-luna_visual_direct",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/heavy/product_4714426807346_3.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
-        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "params": "--finalize",
-        "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          8.953,
-          3.543,
-          3.195
-        ],
-        "note": "heavy_mixer_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
-      },
-      "keys": [
-        "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6"
-      ]
-    },
-    {
-      "method": "gpt-5.6-luna_visual_direct",
-      "version": 6,
-      "verStr": "v6",
-      "consumer": "vehicle catalog & partlib (heavy)",
-      "rev": "HEAD",
-      "at": "2026-08-29",
-      "imgs": [
-        {
-          "role": "primary",
-          "id": "img_b4e105cf",
-          "family": "vehicle",
-          "part": "heavy",
-          "query": "vehicle/heavy_slide-02",
-          "api": "gpt-5.6-luna_visual_direct",
-          "license": "unverified(restricted/local)",
-          "creator": null,
-          "source_url": "",
-          "file": "vehicle/heavy/slide-02.jpg"
-        }
-      ],
-      "gen": {
-        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
-        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "params": "--finalize",
-        "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 3628, Vertices 2264, Similarity pending independent visual review"
-      },
-      "post": {
-        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
-        "fit": 1,
-        "bounds": [
-          10.402,
-          5.178,
-          3.345
-        ],
-        "note": "heavy_crane_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
-      },
-      "keys": [
-        "vehicle/heavy_slide-02_b4e105cf_luna_v6"
       ]
     },
     {
@@ -72592,6 +72340,258 @@
       },
       "keys": [
         "vehicle/heavy_2021070912244646524316_bc441626_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (heavy)",
+      "rev": "HEAD",
+      "at": "2026-08-29",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_d18c916a",
+          "family": "vehicle",
+          "part": "heavy",
+          "query": "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/heavy/149ff3_c62b92c0df064d42840a39204d5812ab~mv2.png"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 3628, Vertices 2264, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          10.402,
+          5.357,
+          3.345
+        ],
+        "note": "heavy_crane_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/heavy_149ff3_c62b92c0df064d42840a39204d5812ab~mv2_d18c916a_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (heavy)",
+      "rev": "HEAD",
+      "at": "2026-08-29",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_b4e105cf",
+          "family": "vehicle",
+          "part": "heavy",
+          "query": "vehicle/heavy_slide-02",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/heavy/slide-02.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 3628, Vertices 2264, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          10.402,
+          5.357,
+          3.345
+        ],
+        "note": "heavy_crane_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/heavy_slide-02_b4e105cf_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (heavy)",
+      "rev": "HEAD",
+      "at": "2026-08-29",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_b9c7c1fe",
+          "family": "vehicle",
+          "part": "heavy",
+          "query": "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/heavy/2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg.webp"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          8.953,
+          4.557,
+          3.195
+        ],
+        "note": "heavy_mixer_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/heavy_2c88c53a-150a-4f16-be35-fb25fdd4f2bd.jpg_b9c7c1fe_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (heavy)",
+      "rev": "HEAD",
+      "at": "2026-08-29",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_cca40741",
+          "family": "vehicle",
+          "part": "heavy",
+          "query": "vehicle/heavy_3158_news_banner",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/heavy/3158_news_banner.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          8.953,
+          4.557,
+          3.195
+        ],
+        "note": "heavy_mixer_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/heavy_3158_news_banner_cca40741_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (heavy)",
+      "rev": "HEAD",
+      "at": "2026-08-29",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_58925e94",
+          "family": "vehicle",
+          "part": "heavy",
+          "query": "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/heavy/mobile01-fddc2c1557ae9d63f48dec40bc203eef.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          8.953,
+          4.557,
+          3.195
+        ],
+        "note": "heavy_mixer_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/heavy_mobile01-fddc2c1557ae9d63f48dec40bc203eef_58925e94_luna_v6"
+      ]
+    },
+    {
+      "method": "gpt-5.6-luna_visual_direct",
+      "version": 6,
+      "verStr": "v6",
+      "consumer": "vehicle catalog & partlib (heavy)",
+      "rev": "HEAD",
+      "at": "2026-08-29",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "img_c3e3d961",
+          "family": "vehicle",
+          "part": "heavy",
+          "query": "vehicle/heavy_product_4714426807346_3",
+          "api": "gpt-5.6-luna_visual_direct",
+          "license": "unverified(restricted/local)",
+          "creator": null,
+          "source_url": "",
+          "file": "vehicle/heavy/product_4714426807346_3.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "GPT-5.6 Luna direct visual vehicle reconstruction",
+        "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "params": "--finalize",
+        "machine": "Codex GPT-5.6 Luna",
+        "measured": "Triangles 3732, Vertices 2331, Similarity pending independent visual review"
+      },
+      "post": {
+        "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
+        "fit": 1,
+        "bounds": [
+          8.953,
+          4.557,
+          3.195
+        ],
+        "note": "heavy_mixer_vehicle；中心線／雙側構件與車輪方向契約通過，固定五方向預覽等待零件台人眼覆核。"
+      },
+      "keys": [
+        "vehicle/heavy_product_4714426807346_3_c3e3d961_luna_v6"
       ]
     }
   ]

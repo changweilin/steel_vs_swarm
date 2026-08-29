@@ -41,12 +41,12 @@
     ],
     "max": [
       4.4975,
-      3.57,
+      4.5843,
       1.5977
     ],
     "size": [
       8.953,
-      3.543,
+      4.557,
       3.195
     ],
     "rMax": 4.773,
@@ -54,7 +54,7 @@
     "vertices": 2331
   },
   "reconstructionNote": "重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。",
-  "created_at": "2026-08-29T02:33:27.561Z",
+  "created_at": "2026-08-29T03:19:07.374Z",
   "humanVerdictPreserved": true,
   "structuralContract": {
     "coordinateFrame": {

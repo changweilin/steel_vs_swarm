@@ -712,12 +712,26 @@ function heavySpec(target) {
   } else if (kind === 'crane') {
     parts.push(B('crane_rear_deck', profiles.L * 0.47, 0.20, profiles.W * 0.88, [-1.15, profiles.R + 0.54, 0], 'baseHex', [0, 0, 0], 'equipment'));
     parts.push(C('crane_pivot', 0.42, 0.34, [-1.00, profiles.R + 0.82, 0], 'accentHex', 10, [0, 0, 0], 'equipment'));
-    strut(parts, joints, 'crane_boom', [-1.00, profiles.R + 1.00, 0], [2.15, profiles.H + 1.12, 0], 0.13, 'accentHex', 8, 'equipment');
+    strut(parts, joints, 'crane_boom', [-1.00, profiles.R + 1.00, 0], [2.15, profiles.H + 1.12, 0], 0.40, 'accentHex', 8, 'equipment');
     strut(parts, joints, 'crane_hook_line', [2.15, profiles.H + 1.12, 0], [2.15, profiles.H + 0.35, 0], 0.018, 'darkHex', 6, 'equipment');
   } else if (kind === 'mixer') {
     parts.push(B('mixer_rear_deck', profiles.L * 0.56, 0.20, profiles.W * 0.88, [-1.20, profiles.R + 0.56, 0], 'baseHex', [0, 0, 0], 'equipment'));
-    parts.push(E('mixer_drum', profiles.L * 0.19, 1.08, profiles.W * 0.40, [-1.05, profiles.R + 1.55, 0], 'facadeHex', [0, 0, 0], 'cargo'));
-    parts.push(C('mixer_rear_cone', 0.42, 0.42, [-2.20, profiles.R + 1.55, 0], 'accentHex', 10, [0, 0, PI_2], 'equipment'));
+    const mixerTilt = -Math.PI / 12;
+    const mixerScale = 4 / 3;
+    const mixerRx = profiles.L * 0.22 * mixerScale;
+    const mixerRy = 1.20 * mixerScale;
+    const mixerRz = profiles.W * 0.40 * mixerScale;
+    const mixerDeckTop = profiles.R + 0.56 + 0.10;
+    const mixerVerticalExtent = Math.hypot(mixerRx * Math.sin(mixerTilt), mixerRy * Math.cos(mixerTilt));
+    const mixerDrumCenter = [-1.05, mixerDeckTop + mixerVerticalExtent, 0];
+    const mixerRearOffset = mixerRx * 0.78;
+    const mixerRearCone = [
+      mixerDrumCenter[0] - mixerRearOffset * Math.cos(mixerTilt),
+      mixerDrumCenter[1] - mixerRearOffset * Math.sin(mixerTilt),
+      0,
+    ];
+    parts.push(E('mixer_drum', mixerRx, mixerRy, mixerRz, mixerDrumCenter, 'facadeHex', [0, 0, mixerTilt], 'cargo'));
+    parts.push(C('mixer_rear_cone', 0.42, 0.42, mixerRearCone, 'accentHex', 10, [0, 0, PI_2 + mixerTilt], 'equipment'));
   } else if (kind === 'dump') {
     parts.push(P('dump_bed', 'tapered_box', { dimensions: [profiles.L * 0.55, profiles.cargoH, profiles.W * 0.92], topDimensions: [profiles.L * 0.48, profiles.W * 0.82] },
       'facadeHex', [-1.10, profiles.R + 0.48 + profiles.cargoH / 2, 0], [0, 0, 0], 'cargo'));
@@ -741,7 +755,7 @@ function heavySpec(target) {
   parts.push(C('fifth_wheel_coupling', 0.48, 0.16, [-2.0, profiles.R + 0.42, 0], 'darkHex', 10, [PI_2, 0, 0], 'coupling'));
   return { style: `heavy_${kind}_vehicle`, symmetryMode: 'mirrored_bilateral', colors: palette, parts, joints, wheels,
     envelope: [profiles.L + (kind === 'crane' ? 0.30 : 0.20),
-      profiles.H + (kind === 'crane' ? 1.30 : (kind === 'freight' || kind === 'fire' ? 0.90 : 0.20)),
+      profiles.H + (kind === 'crane' ? 1.55 : (kind === 'mixer' ? 1.00 : (kind === 'freight' || kind === 'fire' ? 0.90 : 0.20))),
       profiles.W + 0.70],
     note: '重型四輪以上載具以對稱底盤、駕駛室玻璃隔離、成對燈具與後視鏡建立；貨箱/消防設備/吊臂/攪拌筒維持功能性外掛，輪軸與輪胎依重型車實際多軸比例配置。' };
 }
