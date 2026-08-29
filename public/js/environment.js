@@ -140,10 +140,22 @@ function cloudTextures() {
   if (_cloudTextures) return _cloudTextures;
   const S = 128;
   const puffConfigs = [
+    // 1. 標準積雲 (典型多丘起伏)
     [[0.28, 0.62, 0.20], [0.46, 0.44, 0.28], [0.68, 0.58, 0.22], [0.84, 0.66, 0.14]],
-    [[0.22, 0.64, 0.16], [0.40, 0.48, 0.26], [0.62, 0.42, 0.29], [0.80, 0.60, 0.18]],
-    [[0.25, 0.58, 0.22], [0.50, 0.40, 0.30], [0.75, 0.54, 0.24], [0.52, 0.68, 0.18]],
-    [[0.30, 0.60, 0.19], [0.48, 0.46, 0.27], [0.65, 0.50, 0.23], [0.82, 0.62, 0.15], [0.38, 0.38, 0.18]],
+    // 2. 扁平層積雲 (橫向延展)
+    [[0.20, 0.64, 0.15], [0.38, 0.52, 0.24], [0.58, 0.46, 0.26], [0.76, 0.52, 0.22], [0.88, 0.65, 0.12]],
+    // 3. 高聳堡狀雲 (中央隆起圓頂)
+    [[0.25, 0.58, 0.20], [0.48, 0.36, 0.32], [0.72, 0.52, 0.23], [0.52, 0.66, 0.16]],
+    // 4. 複合滾軸雲 (雙峰交疊)
+    [[0.24, 0.60, 0.18], [0.42, 0.42, 0.26], [0.62, 0.40, 0.25], [0.80, 0.58, 0.17], [0.36, 0.38, 0.16]],
+    // 5. 飄逸卷積雲 (尾翼拖曳)
+    [[0.18, 0.66, 0.13], [0.34, 0.56, 0.21], [0.54, 0.48, 0.27], [0.74, 0.54, 0.20], [0.90, 0.68, 0.10]],
+    // 6. 緊湊團塊雲 (圓潤豐滿)
+    [[0.30, 0.54, 0.22], [0.50, 0.42, 0.30], [0.70, 0.50, 0.25], [0.40, 0.64, 0.18], [0.60, 0.64, 0.18]],
+    // 7. 斜向羽狀雲 (不對稱掠風)
+    [[0.22, 0.68, 0.14], [0.40, 0.58, 0.22], [0.60, 0.46, 0.28], [0.82, 0.40, 0.22], [0.88, 0.62, 0.12]],
+    // 8. 廣域砧狀雲 (寬頂覆蓋)
+    [[0.26, 0.48, 0.24], [0.48, 0.40, 0.29], [0.70, 0.44, 0.27], [0.38, 0.66, 0.17], [0.62, 0.66, 0.17]],
   ];
   _cloudTextures = puffConfigs.map((puffs) => {
     const cv = document.createElement('canvas');
@@ -171,8 +183,8 @@ const CLOUD_N = 28;        // 雲量基數;實際枚數與 WEATHERS[w].light 反
 const CLOUD_BOB = 0.015;      // 逐朵上下起伏
 const CLOUD_BREATH = 0.08;    // 逐朵尺寸呼吸
 function makeClouds(span, skyC, W, seed) {
-  const n = Math.max(0, Math.round(CLOUD_N * (1.05 - (W?.light ?? 1.0))));
-  if (!n || (W?.fogNear ?? 0.55) <= 0.05) return null;
+  const n = Math.max(0, Math.round(CLOUD_N * (1.05 - W.light)));
+  if (!n || W.fogNear <= 0.05) return null;
   const rnd = mulberry32(((seed ?? 0) ^ 0x93B7C1) >>> 0);
   const grp = new THREE.Group();
   const texs = cloudTextures();
@@ -209,6 +221,10 @@ function makeClouds(span, skyC, W, seed) {
     const offA = rnd() * Math.PI * 2;
     const offR = span * (0.04 + rnd() * 0.12);
     const baseScale = span * (0.09 + rnd() * 0.14);
+    // 初始形狀形態多樣化 (非對稱寬高比與層級高度初始偏移)
+    const baseScaleX = baseScale * (0.85 + rnd() * 0.35);
+    const baseScaleY = baseScale * (0.80 + rnd() * 0.35);
+    const tierAltitude = (rnd() - 0.5) * span * 0.08;
     const lifePeriod = 18.0 + rnd() * 14.0;
     const lifePhase = rnd() * Math.PI * 2;
 
@@ -219,6 +235,7 @@ function makeClouds(span, skyC, W, seed) {
     const morphPhaseY = rnd() * Math.PI * 2;
     const rotSpeed = 0.015 + rnd() * 0.018;
     const rotPhase = rnd() * Math.PI * 2;
+    const rot0 = (rnd() - 0.5) * 0.25;
     const swirlSpeed = 0.020 + rnd() * 0.025;
     const swirlPhase = rnd() * Math.PI * 2;
 
@@ -227,7 +244,9 @@ function makeClouds(span, skyC, W, seed) {
       cIdx,
       offA,
       offR,
-      baseScale,
+      baseScaleX,
+      baseScaleY,
+      tierAltitude,
       lifePeriod,
       lifePhase,
       bobPhase: rnd() * Math.PI * 2,
@@ -237,11 +256,12 @@ function makeClouds(span, skyC, W, seed) {
       morphPhaseY,
       rotSpeed,
       rotPhase,
+      rot0,
       swirlSpeed,
       swirlPhase,
     };
     cloudItems.push(item);
-    drift.push({ sp, along: c.cx + Math.cos(offA) * offR, side: c.cz + Math.sin(offA) * offR, y: c.y, s: baseScale, ph: lifePhase });
+    drift.push({ sp, along: c.cx + Math.cos(offA) * offR, side: c.cz + Math.sin(offA) * offR, y: c.y + tierAltitude, s: baseScale, ph: lifePhase });
   }
 
   grp.frustumCulled = false;
@@ -311,16 +331,16 @@ function makeClouds(span, skyC, W, seed) {
         const scaleMul = (0.7 + clusterMerge * 0.7) * (1 + Math.sin(t * 0.2 + item.bobPhase) * CLOUD_BREATH);
 
         // c. 風切與渦流慢速自轉微傾 (Eddy Rotation Morphing)
-        item.sp.material.rotation = Math.sin(t * item.rotSpeed + item.rotPhase) * 0.16 + Math.cos(t * item.rotSpeed * 0.38) * 0.05;
+        item.sp.material.rotation = item.rot0 + Math.sin(t * item.rotSpeed + item.rotPhase) * 0.16 + Math.cos(t * item.rotSpeed * 0.38) * 0.05;
 
         const posX = a * windDir[0] - d.side * windDir[1] + curOffX;
         const posZ = a * windDir[1] + d.side * windDir[0] + curOffZ;
 
-        // 雲層垂直高度: 霧量越高高度越低，且伴隨輕微起伏
+        // 雲層垂直高度: 霧量越高高度越低，且伴隨輕微起伏與初始層級分佈
         const posY = baseAltitudeShift + (d.y - span * 0.22) * fogAltitudeFactor + Math.sin(t * 0.14 + item.bobPhase) * span * CLOUD_BOB;
 
         item.sp.position.set(posX, posY, posZ);
-        item.sp.scale.set(item.baseScale * 2 * scaleMul * morphX, item.baseScale * scaleMul * morphY, 1);
+        item.sp.scale.set(item.baseScaleX * 2 * scaleMul * morphX, item.baseScaleY * scaleMul * morphY, 1);
         item.sp.material.color.copy(baseCloudColor);
         item.sp.material.opacity = fadeAlpha * (dyn?.isDarkCloud ? 0.92 : 0.75);
         item.sp.visible = fadeAlpha > 0.02;
