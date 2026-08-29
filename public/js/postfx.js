@@ -918,6 +918,7 @@ export class Pipeline {
     u.uW2.value = Math.min(1, Math.max(0, b));
     u.uFlash.value = Math.min(1, Math.max(0, opts?.flash ?? 0));
     if (opts?.color != null) u.uWipeC.value.set(opts.color);
+    else u.uWipeC.value.setRGB(0.06, 0.07, 0.09);
     u.uWipeA.value = this._wipeKnob;
     // 「有東西要畫」= 幕有寬度 或 閃光還在。兩者皆無 ⇒ 整個 pass 退出鏈
     this._wipeA = (this._wipeKnob > 0 && (u.uW1.value > u.uW2.value || u.uFlash.value > 0))

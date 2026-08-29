@@ -759,10 +759,10 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 .dead-sub { color: var(--dim); font-family: var(--mono); letter-spacing: 2px; }
 #deadTimer { font-family: var(--mono); font-size: 26px; color: #fff; }
 /* 陣亡頁(2026-07-17):不全屏變暗 —— 砲塔視窗以 box-shadow 打洞式聚光,倒數卡浮在上方 */
-.dead-overlay { background: transparent; pointer-events: none; flex-direction: column; gap: 22px; }
-.dead-overlay .dead-panel { position: relative; z-index: 2; padding: 20px 34px; }
+.dead-overlay { background: transparent; pointer-events: none; flex-direction: column; gap: 18px; }
+.dead-overlay .dead-panel { position: relative; z-index: 2; padding: 16px 30px; }
 .dead-cam {
-  position: relative; z-index: 1; width: min(40vw, 480px); aspect-ratio: 16 / 9;
+  position: relative; z-index: 1; width: min(54vw, calc(52vh * 16 / 9), 1020px); aspect-ratio: 16 / 9;
   border: 2px solid var(--danger); background: transparent;
   box-shadow: 0 0 0 100vmax rgba(3, 5, 8, 0.86), 0 0 24px rgba(255, 68, 54, 0.4);
 }
@@ -2346,7 +2346,7 @@ body.touch-ui .seg-sm > .segb { min-height: 40px; padding: 0 12px; font-size: 11
 body.touch-ui .btn { min-height: 44px; }
 body.touch-ui .shop-item { padding: 10px; gap: 8px; }
 body.touch-ui .shop-box { max-width: calc(100vw - 16px); }
-body.touch-ui .dead-cam { width: min(74vw, 420px); }
+body.touch-ui .dead-cam { width: min(84vw, calc(48vh * 16 / 9), 560px); }
 body.touch-ui .pause-title { font-size: 22px; letter-spacing: 6px; }
 body.touch-ui .over-title { font-size: 28px; letter-spacing: 6px; }
 body.touch-ui .dead-title { font-size: 22px; letter-spacing: 5px; }
@@ -2362,6 +2362,8 @@ body.touch-ui.ori-portrait .overlay-box .row .btn {
 body.touch-ui.ori-portrait .overlay-box .row .btn.big { font-size: 14px; letter-spacing: 3px; }
 /* 橫式疊層:高度吃緊 → 內距再壓、標題縮小 */
 body.touch-ui.ori-landscape .overlay-box { padding: 12px 18px; gap: 8px; }
+body.touch-ui.ori-landscape .dead-overlay { gap: 8px; }
+body.touch-ui.ori-landscape .dead-overlay .dead-panel { padding: 8px 16px; }
 /* ✕ 的落點:MUST 排在上面幾條 padding 簡寫**之後** —— 同特異度時後者勝,
    寫在前面的話 `body.touch-ui .overlay-box { padding: 18px 16px }` 會把上內距扳回去、內容又鑽到 ✕ 底下。 */
 body.touch-ui .overlay-box.has-close { padding-top: 58px; }
