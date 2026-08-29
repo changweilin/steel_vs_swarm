@@ -1903,8 +1903,86 @@ export function buildInuksukSite(group, x, y, z, rnd, opts = {}) {
 }
 
 /* =========================================================================
- * 6. 水面船艦航行與岸邊停泊 (Surface Vessels: Cruising & Moored)
+ * 6. 水面船艦航行、尾波與岸邊停泊 (Surface Vessels, Wakes & Moored Craft)
  * ========================================================================= */
+
+/**
+ * 建立巡邏艇水面尾波群 (Stern V-Wake & Propeller Wash & Bow Waves)
+ * 注意：潛艦 (Submarine) 為水下遺跡/深海探測器，不產生水面尾波 (潛艦不用)。
+ */
+export function buildShipWakeGroup() {
+  const g = new THREE.Group();
+  g.name = 'ship_wake';
+
+  const foamMat = toonPlain({
+    color: 0xf0f8ff,
+    transparent: true,
+    opacity: 0.75,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const washMat = toonPlain({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.88,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  // 1. 船尾開展 V 型尾浪 (Kelvin Wake - Expanding V-Shape Wings)
+  // 由船尾 z = -5.8 (寬 3.2m) 展開至 z = -24.0 (寬 10.5m)
+  const wakeGeo = new THREE.BufferGeometry();
+  const wakeVertices = new Float32Array([
+    // 左翼展開面
+    -1.6, -0.05, -5.8,
+    -5.2, -0.05, -24.0,
+     0.0, -0.05, -5.8,
+
+     0.0, -0.05, -5.8,
+    -5.2, -0.05, -24.0,
+     0.0, -0.05, -24.0,
+
+    // 右翼展開面
+     0.0, -0.05, -5.8,
+     5.2, -0.05, -24.0,
+     1.6, -0.05, -5.8,
+
+     0.0, -0.05, -5.8,
+     0.0, -0.05, -24.0,
+     5.2, -0.05, -24.0,
+  ]);
+  wakeGeo.setAttribute('position', new THREE.BufferAttribute(wakeVertices, 3));
+  wakeGeo.computeVertexNormals();
+  const vWake = new THREE.Mesh(wakeGeo, foamMat);
+  g.add(vWake);
+
+  // 2. 螺旋槳中心高密度白沫浪湧帶 (Propeller Wash Strip)
+  const washGeo = new THREE.PlaneGeometry(2.4, 12.0);
+  washGeo.rotateX(-Math.PI / 2);
+  washGeo.translate(0, -0.03, -12.0); // 從 z = -6.0 延伸至 -18.0
+  const washMesh = new THREE.Mesh(washGeo, washMat);
+  g.add(washMesh);
+
+  // 3. 船首劈波浪花 (Bow Spray Flairs)
+  const bowGeo = new THREE.BufferGeometry();
+  const bowVertices = new Float32Array([
+    // 左舷破浪
+    -0.2, -0.02,  6.8,
+    -2.2, -0.02,  3.5,
+    -0.8, -0.02,  3.5,
+
+    // 右舷破浪
+     0.2, -0.02,  6.8,
+     0.8, -0.02,  3.5,
+     2.2, -0.02,  3.5,
+  ]);
+  bowGeo.setAttribute('position', new THREE.BufferAttribute(bowVertices, 3));
+  bowGeo.computeVertexNormals();
+  const bowSpray = new THREE.Mesh(bowGeo, washMat);
+  g.add(bowSpray);
+
+  return g;
+}
 
 /**
  * 建立水面航行船艦與岸邊停泊小艇系統
@@ -1920,16 +1998,38 @@ export function createSurfaceVessels(terrain, seed) {
   const cruisers = [];
   const mooredBoats = [];
 
-  // A. 巡弋船艦（1~3 艘沿閉合航道巡航）
+  const SHIP_MARGIN = 24.0;
+  const clampMinX = minX + SHIP_MARGIN;
+  const clampMaxX = maxX - SHIP_MARGIN;
+  const clampMinZ = minZ + SHIP_MARGIN;
+  const clampMaxZ = maxZ - SHIP_MARGIN;
+
+  // A. 巡弋船艦（1~3 艘沿閉合航道巡航，嚴格約束在邊界與深水區）
   const numCruisers = Math.min(3, Math.max(1, Math.floor((maxX - minX) / 400)));
   for (let i = 0; i < numCruisers; i++) {
-    // 尋找寬闊開闊水域中心
-    let cx = 0, cz = 0, found = false;
-    for (let t = 0; t < 35; t++) {
-      const rx = minX + rnd() * (maxX - minX);
-      const rz = minZ + rnd() * (maxZ - minZ);
-      if (terrainEnvCode(terrain, rx, rz) === 1 && wy - terrain.heightAt(rx, rz) > 3.0) {
-        cx = rx; cz = rz; found = true; break;
+    let cx = 0, cz = 0, radius = 45, found = false;
+    for (let t = 0; t < 60; t++) {
+      const candidateR = 35 + rnd() * 35;
+      const spanX = Math.max(1, (clampMaxX - candidateR) - (clampMinX + candidateR));
+      const spanZ = Math.max(1, (clampMaxZ - candidateR) - (clampMinZ + candidateR));
+      const rx = (clampMinX + candidateR) + rnd() * spanX;
+      const rz = (clampMinZ + candidateR) + rnd() * spanZ;
+
+      if (terrainEnvCode(terrain, rx, rz) === 1 && wy - terrain.heightAt(rx, rz) > 2.5) {
+        let allWater = true;
+        for (let k = 0; k < 8; k++) {
+          const a = (k / 8) * Math.PI * 2;
+          const px = rx + Math.cos(a) * candidateR;
+          const pz = rz + Math.sin(a) * candidateR;
+          if (px < clampMinX || px > clampMaxX || pz < clampMinZ || pz > clampMaxZ
+            || terrainEnvCode(terrain, px, pz) !== 1 || wy - terrain.heightAt(px, pz) <= 1.6) {
+            allWater = false;
+            break;
+          }
+        }
+        if (allWater) {
+          cx = rx; cz = rz; radius = candidateR; found = true; break;
+        }
       }
     }
     if (!found) continue;
@@ -1937,29 +2037,25 @@ export function createSurfaceVessels(terrain, seed) {
     const shipMesh = buildPatrolShipMesh();
     vesselGroup.add(shipMesh);
 
-    // 建立破浪浪花網格 (Bow Wake Mesh)
-    const wakeGeo = new THREE.PlaneGeometry(3.5, 6.0);
-    wakeGeo.rotateX(-Math.PI / 2);
-    const wakeMat = toonPlain({ color: 0xffffff, transparent: true, opacity: 0.75 });
-    const wakeMesh = new THREE.Mesh(wakeGeo, wakeMat);
-    wakeMesh.position.set(0, -0.15, -4.5);
-    shipMesh.add(wakeMesh);
+    const wakeGroup = shipMesh.userData.wake || shipMesh.getObjectByName('ship_wake');
 
     cruisers.push({
       mesh: shipMesh,
+      wakeGroup,
       cx, cz,
-      radius: 45 + rnd() * 35,
+      radius,
       speed: AQUATIC.SHIP_CRUISE_SPD * (0.85 + rnd() * 0.3),
       angle: rnd() * Math.PI * 2,
       rotDir: rnd() > 0.5 ? 1 : -1,
+      phase: rnd() * Math.PI * 2,
     });
   }
 
-  // B. 停泊小艇（岸邊繫留搖擺）
+  // B. 停泊小艇（岸邊繫留搖擺，嚴格在邊界內）
   const maxMoored = 8;
   for (let i = 0; i < 60 && mooredBoats.length < maxMoored; i++) {
-    const rx = minX + rnd() * (maxX - minX);
-    const rz = minZ + rnd() * (maxZ - minZ);
+    const rx = clampMinX + rnd() * (clampMaxX - clampMinX);
+    const rz = clampMinZ + rnd() * (clampMaxZ - clampMinZ);
     // 靠近岸邊的淺水區 (depth 0.6m ~ 1.8m)
     if (terrainEnvCode(terrain, rx, rz) === 1) {
       const depth = wy - terrain.heightAt(rx, rz);
@@ -1987,14 +2083,28 @@ export function createSurfaceVessels(terrain, seed) {
       // 1. 更新巡弋船艦位置、朝向與航跡
       for (const c of cruisers) {
         c.angle += (c.speed / c.radius) * c.rotDir * dt;
-        const x = c.cx + Math.cos(c.angle) * c.radius;
-        const z = c.cz + Math.sin(c.angle) * c.radius;
-        const heading = c.angle + (c.rotDir > 0 ? Math.PI / 2 : -Math.PI / 2);
+        const rawX = c.cx + Math.cos(c.angle) * c.radius;
+        const rawZ = c.cz + Math.sin(c.angle) * c.radius;
+        const x = Math.max(clampMinX, Math.min(clampMaxX, rawX));
+        const z = Math.max(clampMinZ, Math.min(clampMaxZ, rawZ));
+
+        // 軌跡切線速度向量
+        const dx = -Math.sin(c.angle) * c.radius * c.rotDir;
+        const dz = Math.cos(c.angle) * c.radius * c.rotDir;
+        // 船首 (+Z) 嚴格指向軌跡切線前進方向
+        const heading = Math.atan2(dx, dz);
 
         c.mesh.position.set(x, wy + 0.1, z);
         c.mesh.rotation.y = heading;
-        c.mesh.rotation.z = Math.sin(time * 2.2) * 0.04; // 航行橫搖
-        c.mesh.rotation.x = Math.sin(time * 1.7) * 0.03; // 航行縱搖
+        c.mesh.rotation.z = Math.sin(time * 2.2 + c.phase) * 0.04; // 航行橫搖
+        c.mesh.rotation.x = Math.sin(time * 1.7 + c.phase) * 0.03; // 航行縱搖
+
+        // 尾波動態呼吸與脈動
+        if (c.wakeGroup) {
+          const pulseX = 1.0 + Math.sin(time * 4.2 + c.phase) * 0.06;
+          const pulseZ = 1.0 + Math.cos(time * 3.6 + c.phase) * 0.08;
+          c.wakeGroup.scale.set(pulseX, 1.0, pulseZ);
+        }
       }
 
       // 2. 更新停泊小艇波浪浮動
@@ -2112,6 +2222,11 @@ export function buildPatrolShipMesh() {
   const radar = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.22), trimMat);
   radar.position.set(0, cabinRoofY + 2.18, -0.55);
   g.add(radar);
+
+  // 水面尾波與破浪系統 (Stern V-Wake & Bow Spray)
+  const wakeGroup = buildShipWakeGroup();
+  g.add(wakeGroup);
+  g.userData.wake = wakeGroup;
 
   return g;
 }

@@ -2982,13 +2982,13 @@ export class BattleSim {
     });
   }
 
-  /** 隨機取一個非兵線、離主堡與障礙夠遠的平民生成點(比照 _airdropPoint)。 */
+  /** 隨機取一個非兵線、離主堡與障礙夠遠的平民生成點(比照 _airdropPoint，邊界預留安全餘量)。 */
   _civPoint() {
     const b = this.bounds;
     for (let tries = 0; tries < 40; tries++) {
       const x = b.minX + Math.random() * (b.maxX - b.minX);
       const z = b.minZ + Math.random() * (b.maxZ - b.minZ);
-      if (!this._inBounds(x, z, 2)) continue;
+      if (!this._inBounds(x, z, 4)) continue;
       if (this._distToLanes(x, z) < CIVILIAN.LANE_MIN) continue;
       if (!this._farFromStructures(x, z, CIVILIAN.BASE_CLEAR, 0)) continue;
       if (this.hazBlockers.some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + 2)) continue;
@@ -2998,12 +2998,12 @@ export class BattleSim {
     return null;
   }
 
-  /** 徘徊路點:繞出生點 WANDER_R 內、仍在非兵線範圍的隨機點(取不到回原地)。 */
+  /** 徘徊路點:繞出生點 WANDER_R 內、仍在非兵線範圍的隨機點(取不到回原地，嚴守邊界內)。 */
   _civWander(e) {
     for (let i = 0; i < 12; i++) {
       const a = Math.random() * Math.PI * 2, r = Math.random() * CIVILIAN.WANDER_R;
       const x = e.home[0] + Math.cos(a) * r, z = e.home[1] + Math.sin(a) * r;
-      if (!this._inBounds(x, z, 2)) continue;
+      if (!this._inBounds(x, z, 4)) continue;
       if (this._distToLanes(x, z) < CIVILIAN.LANE_MIN) continue;
       if (this._terrainBlocked(x, z)) continue;   // 徘徊路點避開水域/沼澤/火場(feature 9)
       return [x, z];
@@ -3011,14 +3011,15 @@ export class BattleSim {
     return [e.home[0], e.home[1]];
   }
 
-  /** 平民朝(away=遠離)目標移動;更新朝向、夾在地圖內。回傳是否有位移。 */
+  /** 平民朝(away=遠離)目標移動;更新朝向、夾在地圖安全邊界內。回傳是否有位移。 */
   _moveCiv(e, tx, tz, sp, dt, away = false) {
     let dx = tx - e.x, dz = tz - e.z;
     const d = Math.hypot(dx, dz);
     if (d < 1e-3) return false;
     const s = (away ? -1 : 1) / d;
-    const nx = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, e.x + s * dx * sp * dt));
-    const nz = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, e.z + s * dz * sp * dt));
+    const margin = 4.0;
+    const nx = Math.max(this.bounds.minX + margin, Math.min(this.bounds.maxX - margin, e.x + s * dx * sp * dt));
+    const nz = Math.max(this.bounds.minZ + margin, Math.min(this.bounds.maxZ - margin, e.z + s * dz * sp * dt));
     // 不走進水域/沼澤/火場(feature 9;逃離/跟隨的動態目標可能穿越危險區 → 逐步擋在邊緣;
     // 當前已在危險區內才放行走出來)。與第三方 _tpMove 邊緣守衛一致。
     if (this._terrainBlocked(nx, nz) && !this._terrainBlocked(e.x, e.z)) return false;
