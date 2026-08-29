@@ -4,13 +4,13 @@
   "style": "coastal layered rock with waterline attachment",
   "symmetryMode": "asymmetric",
   "colors": {
-    "roofHex": 6964528,
-    "facadeHex": 10119749,
-    "baseHex": 6767665,
+    "roofHex": 2370353,
+    "facadeHex": 5200224,
+    "baseHex": 3160123,
     "accentHex": 5602375,
-    "darkHex": 4861992,
+    "darkHex": 2106664,
     "brightHex": 10467954,
-    "glassHex": 2307908
+    "glassHex": 1518643
   },
   "totalParts": 14,
   "partNames": [
@@ -36,6 +36,32 @@
     "icosahedron_polyhedron",
     "polygonal_prism"
   ],
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.63721,
+      "warmEarth": 0.1763,
+      "green": 0.05112,
+      "lowerWaterSky": 0.08669
+    },
+    "overlays": {
+      "lichen": true,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 6717267,
+      "lichenLightHex": 11452549,
+      "wetHex": 1713196,
+      "foamHex": 14082258,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0.1,
+    "surfaceVariation": true
+  },
   "schemaVersion": 1,
   "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\Ballinagree.jpg",
   "oldV6": {
@@ -91,6 +117,97 @@
       "warmEarth": 0.14458,
       "neutralRock": 0.58754,
       "dark": 0.06582
+    },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        7,
+        104,
+        64
+      ],
+      "meanRgb": [
+        137,
+        144.08,
+        143.01
+      ],
+      "luminance": {
+        "mean": 142.5,
+        "range": 211.85
+      },
+      "coverage": {
+        "green": 0.05112,
+        "waterSky": 0.40221,
+        "warmEarth": 0.1763,
+        "neutralRock": 0.63721,
+        "dark": 0.04852
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            64,
+            64,
+            32
+          ],
+          "ratio": 0.12367
+        },
+        {
+          "rgb": [
+            192,
+            192,
+            192
+          ],
+          "ratio": 0.11479
+        },
+        {
+          "rgb": [
+            192,
+            224,
+            224
+          ],
+          "ratio": 0.10635
+        },
+        {
+          "rgb": [
+            160,
+            160,
+            192
+          ],
+          "ratio": 0.08382
+        },
+        {
+          "rgb": [
+            32,
+            32,
+            32
+          ],
+          "ratio": 0.0836
+        },
+        {
+          "rgb": [
+            160,
+            160,
+            160
+          ],
+          "ratio": 0.05956
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        42,
+        128,
+        73
+      ],
+      "coverage": {
+        "green": 0.2006,
+        "waterSky": 0.08669,
+        "warmEarth": 0.3309,
+        "neutralRock": 0.82056,
+        "dark": 0.15423
+      }
     },
     "edgeDensity": {
       "horizontal": 0.00586,

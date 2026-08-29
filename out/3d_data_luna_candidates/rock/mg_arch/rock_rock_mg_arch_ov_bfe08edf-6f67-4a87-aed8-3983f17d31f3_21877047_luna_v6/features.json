@@ -4,13 +4,13 @@
   "style": "weathered coastal rock arch with open span",
   "symmetryMode": "asymmetric",
   "colors": {
-    "roofHex": 6964528,
-    "facadeHex": 10119749,
-    "baseHex": 6767665,
+    "roofHex": 2370353,
+    "facadeHex": 5200224,
+    "baseHex": 3160123,
     "accentHex": 5602375,
-    "darkHex": 4861992,
+    "darkHex": 2106664,
     "brightHex": 10467954,
-    "glassHex": 2307908
+    "glassHex": 1518643
   },
   "totalParts": 16,
   "partNames": [
@@ -39,6 +39,32 @@
     "dodecahedron_polyhedron",
     "polygonal_prism"
   ],
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.58754,
+      "warmEarth": 0.16984,
+      "green": 0.07426,
+      "lowerWaterSky": 0.05401
+    },
+    "overlays": {
+      "lichen": true,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 6717267,
+      "lichenLightHex": 11452549,
+      "wetHex": 1713196,
+      "foamHex": 14082258,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0.133668,
+    "surfaceVariation": true
+  },
   "schemaVersion": 1,
   "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\mg_arch\\ov_bfe08edf-6f67-4a87-aed8-3983f17d31f3.jpg",
   "oldV6": {
@@ -98,6 +124,97 @@
       "warmEarth": 0.18913,
       "neutralRock": 0.56925,
       "dark": 0.19865
+    },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        17,
+        12,
+        78,
+        112
+      ],
+      "meanRgb": [
+        108.32,
+        109.7,
+        100.1
+      ],
+      "luminance": {
+        "mean": 108.71,
+        "range": 254.42
+      },
+      "coverage": {
+        "green": 0.07426,
+        "waterSky": 0.04377,
+        "warmEarth": 0.16984,
+        "neutralRock": 0.58754,
+        "dark": 0.22787
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            0,
+            0,
+            0
+          ],
+          "ratio": 0.15967
+        },
+        {
+          "rgb": [
+            64,
+            64,
+            64
+          ],
+          "ratio": 0.11885
+        },
+        {
+          "rgb": [
+            224,
+            224,
+            224
+          ],
+          "ratio": 0.09492
+        },
+        {
+          "rgb": [
+            96,
+            96,
+            96
+          ],
+          "ratio": 0.07492
+        },
+        {
+          "rgb": [
+            32,
+            32,
+            32
+          ],
+          "ratio": 0.06639
+        },
+        {
+          "rgb": [
+            96,
+            96,
+            64
+          ],
+          "ratio": 0.05623
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        74,
+        96,
+        128
+      ],
+      "coverage": {
+        "green": 0.12809,
+        "waterSky": 0.05401,
+        "warmEarth": 0.27296,
+        "neutralRock": 0.55961,
+        "dark": 0.37191
+      }
     },
     "edgeDensity": {
       "horizontal": 0.01741,
@@ -302,7 +419,7 @@
   "pipelineEligibility": "awaiting_human_review",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
-    "similarityScore": 88,
+    "similarityScore": 84,
     "verdict": "awaiting_human_review",
     "corrections": [],
     "reviewer": "gpt-5.6-luna_local_visual_feature_contract",

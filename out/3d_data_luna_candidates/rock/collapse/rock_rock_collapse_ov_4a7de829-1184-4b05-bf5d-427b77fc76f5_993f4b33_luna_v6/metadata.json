@@ -147,6 +147,97 @@
       "neutralRock": 0.70083,
       "dark": 0.02408
     },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        8,
+        104,
+        74
+      ],
+      "meanRgb": [
+        113,
+        106.99,
+        88.55
+      ],
+      "luminance": {
+        "mean": 106.94,
+        "range": 195.09
+      },
+      "coverage": {
+        "green": 0.09091,
+        "waterSky": 0.05705,
+        "warmEarth": 0.56528,
+        "neutralRock": 0.659,
+        "dark": 0.02207
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            64,
+            64,
+            64
+          ],
+          "ratio": 0.15956
+        },
+        {
+          "rgb": [
+            96,
+            96,
+            64
+          ],
+          "ratio": 0.11279
+        },
+        {
+          "rgb": [
+            96,
+            96,
+            96
+          ],
+          "ratio": 0.0939
+        },
+        {
+          "rgb": [
+            96,
+            64,
+            64
+          ],
+          "ratio": 0.06753
+        },
+        {
+          "rgb": [
+            128,
+            128,
+            96
+          ],
+          "ratio": 0.06697
+        },
+        {
+          "rgb": [
+            128,
+            96,
+            64
+          ],
+          "ratio": 0.06697
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        49,
+        128,
+        85
+      ],
+      "coverage": {
+        "green": 0.16363,
+        "waterSky": 0.06207,
+        "warmEarth": 0.41493,
+        "neutralRock": 0.80924,
+        "dark": 0.04058
+      }
+    },
     "edgeDensity": {
       "horizontal": 0.02971,
       "vertical": 0.0267,
@@ -223,6 +314,32 @@
     "angularVisual": true,
     "profile": "boulder"
   },
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.659,
+      "warmEarth": 0.56528,
+      "green": 0.09091,
+      "lowerWaterSky": 0.06207
+    },
+    "overlays": {
+      "lichen": true,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 6717267,
+      "lichenLightHex": 11452549,
+      "wetHex": 1713196,
+      "foamHex": 14082258,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0.163638,
+    "surfaceVariation": true
+  },
   "visualGeometryPolicy": {
     "mode": "angular_polyhedral_only",
     "angularOnly": true,
@@ -261,6 +378,6 @@
     "vertices": 235
   },
   "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「boulder」；以多層多面體重建輪廓，保留vegetation附著特徵；幾何政策：angular_polyhedral_only。",
-  "created_at": "2026-08-29T06:14:46.393Z",
+  "created_at": "2026-08-29T07:23:41.359Z",
   "humanVerdictPreserved": true
 }

@@ -147,6 +147,97 @@
       "neutralRock": 0.03239,
       "dark": 0.01213
     },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        17,
+        12,
+        78,
+        112
+      ],
+      "meanRgb": [
+        137.34,
+        93.86,
+        88.47
+      ],
+      "luminance": {
+        "mean": 102.71,
+        "range": 205.6
+      },
+      "coverage": {
+        "green": 0,
+        "waterSky": 0.20361,
+        "warmEarth": 0.78984,
+        "neutralRock": 0.01885,
+        "dark": 0.00016
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            128,
+            64,
+            32
+          ],
+          "ratio": 0.34639
+        },
+        {
+          "rgb": [
+            160,
+            64,
+            32
+          ],
+          "ratio": 0.08
+        },
+        {
+          "rgb": [
+            160,
+            96,
+            64
+          ],
+          "ratio": 0.07131
+        },
+        {
+          "rgb": [
+            96,
+            64,
+            32
+          ],
+          "ratio": 0.07
+        },
+        {
+          "rgb": [
+            128,
+            64,
+            64
+          ],
+          "ratio": 0.05902
+        },
+        {
+          "rgb": [
+            96,
+            32,
+            0
+          ],
+          "ratio": 0.04803
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        74,
+        96,
+        128
+      ],
+      "coverage": {
+        "green": 0,
+        "waterSky": 0.01505,
+        "warmEarth": 0.96065,
+        "neutralRock": 0.0434,
+        "dark": 0.02141
+      }
+    },
     "edgeDensity": {
       "horizontal": 0.01101,
       "vertical": 0.00967,
@@ -223,6 +314,32 @@
     "angularVisual": true,
     "profile": "strata"
   },
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "warm_sandstone",
+    "coverage": {
+      "neutralRock": 0.01885,
+      "warmEarth": 0.78984,
+      "green": 0,
+      "lowerWaterSky": 0.01505
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": true
+    },
+    "zoneHex": {
+      "lichenHex": 11372633,
+      "lichenLightHex": 14400900,
+      "wetHex": 3156524,
+      "foamHex": 14803156,
+      "strataHex": 8739389,
+      "strataDarkHex": 6899251
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "visualGeometryPolicy": {
     "mode": "angular_polyhedral_only",
     "angularOnly": true,
@@ -261,6 +378,6 @@
     "vertices": 176
   },
   "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「strata」；以多層多面體重建輪廓，保留waterline、strata附著特徵；幾何政策：angular_polyhedral_only。",
-  "created_at": "2026-08-29T06:14:56.397Z",
+  "created_at": "2026-08-29T07:23:50.808Z",
   "humanVerdictPreserved": true
 }

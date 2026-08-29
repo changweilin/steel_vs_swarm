@@ -147,6 +147,97 @@
       "neutralRock": 0.8855,
       "dark": 0.04915
     },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        9,
+        104,
+        84
+      ],
+      "meanRgb": [
+        119.28,
+        125.87,
+        131.1
+      ],
+      "luminance": {
+        "mean": 124.85,
+        "range": 215.23
+      },
+      "coverage": {
+        "green": 0.0316,
+        "waterSky": 0.48593,
+        "warmEarth": 0.00066,
+        "neutralRock": 0.93679,
+        "dark": 0.0158
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            64,
+            64,
+            64
+          ],
+          "ratio": 0.13844
+        },
+        {
+          "rgb": [
+            96,
+            96,
+            96
+          ],
+          "ratio": 0.12132
+        },
+        {
+          "rgb": [
+            128,
+            128,
+            128
+          ],
+          "ratio": 0.08543
+        },
+        {
+          "rgb": [
+            160,
+            160,
+            160
+          ],
+          "ratio": 0.07638
+        },
+        {
+          "rgb": [
+            128,
+            160,
+            160
+          ],
+          "ratio": 0.06074
+        },
+        {
+          "rgb": [
+            32,
+            64,
+            64
+          ],
+          "ratio": 0.05778
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        55,
+        128,
+        96
+      ],
+      "coverage": {
+        "green": 0.03316,
+        "waterSky": 0.01715,
+        "warmEarth": 0.00076,
+        "neutralRock": 0.93826,
+        "dark": 0.09089
+      }
+    },
     "edgeDensity": {
       "horizontal": 0.01579,
       "vertical": 0.0246,
@@ -223,6 +314,32 @@
     "angularVisual": true,
     "profile": "talus"
   },
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.93679,
+      "warmEarth": 0.00066,
+      "green": 0.0316,
+      "lowerWaterSky": 0.01715
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": true
+    },
+    "zoneHex": {
+      "lichenHex": 7043186,
+      "lichenLightHex": 11385007,
+      "wetHex": 1713196,
+      "foamHex": 14213084,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "visualGeometryPolicy": {
     "mode": "angular_polyhedral_only",
     "angularOnly": true,
@@ -261,6 +378,6 @@
     "vertices": 234
   },
   "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「talus」；以多層多面體重建輪廓，保留waterline、strata附著特徵；幾何政策：angular_polyhedral_only。",
-  "created_at": "2026-08-29T06:14:56.542Z",
+  "created_at": "2026-08-29T07:23:50.951Z",
   "humanVerdictPreserved": true
 }

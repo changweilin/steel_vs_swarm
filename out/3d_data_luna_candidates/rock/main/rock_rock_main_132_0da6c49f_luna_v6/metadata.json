@@ -147,6 +147,97 @@
       "neutralRock": 0.15156,
       "dark": 0.00138
     },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        8,
+        104,
+        74
+      ],
+      "meanRgb": [
+        199.92,
+        201.63,
+        169.06
+      ],
+      "luminance": {
+        "mean": 198.91,
+        "range": 227.59
+      },
+      "coverage": {
+        "green": 0.15002,
+        "waterSky": 0,
+        "warmEarth": 0.3064,
+        "neutralRock": 0.20801,
+        "dark": 0.00281
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            224,
+            224,
+            224
+          ],
+          "ratio": 0.44126
+        },
+        {
+          "rgb": [
+            160,
+            160,
+            128
+          ],
+          "ratio": 0.12177
+        },
+        {
+          "rgb": [
+            128,
+            128,
+            96
+          ],
+          "ratio": 0.06004
+        },
+        {
+          "rgb": [
+            160,
+            192,
+            32
+          ],
+          "ratio": 0.03947
+        },
+        {
+          "rgb": [
+            160,
+            192,
+            64
+          ],
+          "ratio": 0.03348
+        },
+        {
+          "rgb": [
+            192,
+            192,
+            160
+          ],
+          "ratio": 0.02899
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        49,
+        128,
+        85
+      ],
+      "coverage": {
+        "green": 0.4464,
+        "waterSky": 0.00065,
+        "warmEarth": 0.32248,
+        "neutralRock": 0.10113,
+        "dark": 0.00326
+      }
+    },
     "edgeDensity": {
       "horizontal": 0.01284,
       "vertical": 0.01325,
@@ -223,6 +314,32 @@
     "angularVisual": true,
     "profile": "dolmen"
   },
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.20801,
+      "warmEarth": 0.3064,
+      "green": 0.15002,
+      "lowerWaterSky": 0.00065
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 6061388,
+      "lichenLightHex": 10796152,
+      "wetHex": 1713196,
+      "foamHex": 14082258,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "visualGeometryPolicy": {
     "mode": "angular_polyhedral_only",
     "angularOnly": true,
@@ -261,6 +378,6 @@
     "vertices": 166
   },
   "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「dolmen」；以多層多面體重建輪廓，保留vegetation附著特徵；幾何政策：angular_polyhedral_only。",
-  "created_at": "2026-08-29T06:14:49.205Z",
+  "created_at": "2026-08-29T07:23:44.108Z",
   "humanVerdictPreserved": true
 }

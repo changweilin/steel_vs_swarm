@@ -4,13 +4,13 @@
   "style": "ancient dolmen assembly with polygonal lintel",
   "symmetryMode": "symmetric",
   "colors": {
-    "roofHex": 6964528,
-    "facadeHex": 10119749,
-    "baseHex": 6767665,
+    "roofHex": 2370353,
+    "facadeHex": 5200224,
+    "baseHex": 3160123,
     "accentHex": 5602375,
-    "darkHex": 4861992,
+    "darkHex": 2106664,
     "brightHex": 10467954,
-    "glassHex": 2307908
+    "glassHex": 1518643
   },
   "totalParts": 13,
   "partNames": [
@@ -35,6 +35,32 @@
     "icosahedron_polyhedron",
     "hull_polyhedron"
   ],
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.42019,
+      "warmEarth": 0.40963,
+      "green": 0.22926,
+      "lowerWaterSky": 0
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 6061388,
+      "lichenLightHex": 10796152,
+      "wetHex": 1713196,
+      "foamHex": 14082258,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "schemaVersion": 1,
   "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\st_dolmen\\ov_12575b8c-d342-40c6-a3eb-a97da9f7310f.jpg",
   "oldV6": {
@@ -95,6 +121,97 @@
       "warmEarth": 0.35781,
       "neutralRock": 0.42105,
       "dark": 0.05919
+    },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        15,
+        12,
+        69,
+        112
+      ],
+      "meanRgb": [
+        143.58,
+        144.47,
+        105.36
+      ],
+      "luminance": {
+        "mean": 141.46,
+        "range": 233.57
+      },
+      "coverage": {
+        "green": 0.22926,
+        "waterSky": 0.00278,
+        "warmEarth": 0.40963,
+        "neutralRock": 0.42019,
+        "dark": 0.02759
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            160,
+            160,
+            128
+          ],
+          "ratio": 0.11685
+        },
+        {
+          "rgb": [
+            128,
+            128,
+            96
+          ],
+          "ratio": 0.0887
+        },
+        {
+          "rgb": [
+            192,
+            192,
+            160
+          ],
+          "ratio": 0.08667
+        },
+        {
+          "rgb": [
+            128,
+            128,
+            64
+          ],
+          "ratio": 0.08111
+        },
+        {
+          "rgb": [
+            64,
+            64,
+            32
+          ],
+          "ratio": 0.06704
+        },
+        {
+          "rgb": [
+            96,
+            96,
+            64
+          ],
+          "ratio": 0.06611
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        74,
+        85,
+        128
+      ],
+      "coverage": {
+        "green": 0.08932,
+        "waterSky": 0,
+        "warmEarth": 0.46928,
+        "neutralRock": 0.28322,
+        "dark": 0.00305
+      }
     },
     "edgeDensity": {
       "horizontal": 0.02364,

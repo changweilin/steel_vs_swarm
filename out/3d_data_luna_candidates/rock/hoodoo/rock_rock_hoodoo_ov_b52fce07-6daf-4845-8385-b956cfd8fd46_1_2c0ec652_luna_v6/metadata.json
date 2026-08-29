@@ -147,6 +147,97 @@
       "neutralRock": 0.0326,
       "dark": 0.06838
     },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        8,
+        104,
+        71
+      ],
+      "meanRgb": [
+        203.16,
+        161.81,
+        146.85
+      ],
+      "luminance": {
+        "mean": 169.52,
+        "range": 235.8
+      },
+      "coverage": {
+        "green": 0,
+        "waterSky": 0.08015,
+        "warmEarth": 0.72663,
+        "neutralRock": 0.04723,
+        "dark": 0.00725
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            224,
+            224,
+            224
+          ],
+          "ratio": 0.16461
+        },
+        {
+          "rgb": [
+            224,
+            160,
+            128
+          ],
+          "ratio": 0.09896
+        },
+        {
+          "rgb": [
+            224,
+            192,
+            160
+          ],
+          "ratio": 0.06545
+        },
+        {
+          "rgb": [
+            192,
+            128,
+            96
+          ],
+          "ratio": 0.05428
+        },
+        {
+          "rgb": [
+            160,
+            96,
+            64
+          ],
+          "ratio": 0.0341
+        },
+        {
+          "rgb": [
+            160,
+            96,
+            96
+          ],
+          "ratio": 0.03312
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        46,
+        128,
+        81
+      ],
+      "coverage": {
+        "green": 0,
+        "waterSky": 0,
+        "warmEarth": 0.84196,
+        "neutralRock": 0.01295,
+        "dark": 0.1529
+      }
+    },
     "edgeDensity": {
       "horizontal": 0.02839,
       "vertical": 0.02242,
@@ -223,6 +314,32 @@
     "angularVisual": true,
     "profile": "hoodoo"
   },
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "warm_sandstone",
+    "coverage": {
+      "neutralRock": 0.04723,
+      "warmEarth": 0.72663,
+      "green": 0,
+      "lowerWaterSky": 0
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 11372633,
+      "lichenLightHex": 14400900,
+      "wetHex": 3156524,
+      "foamHex": 14803156,
+      "strataHex": 8739389,
+      "strataDarkHex": 6899251
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "visualGeometryPolicy": {
     "mode": "angular_polyhedral_only",
     "angularOnly": true,
@@ -261,6 +378,6 @@
     "vertices": 236
   },
   "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「hoodoo」；以多層多面體重建輪廓，保留岩體本身附著特徵；幾何政策：angular_polyhedral_only。",
-  "created_at": "2026-08-29T06:14:48.609Z",
+  "created_at": "2026-08-29T07:23:43.487Z",
   "humanVerdictPreserved": true
 }

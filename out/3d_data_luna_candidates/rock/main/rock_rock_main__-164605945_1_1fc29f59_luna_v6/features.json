@@ -35,6 +35,32 @@
     "icosahedron_polyhedron",
     "dodecahedron_polyhedron"
   ],
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "warm_sandstone",
+    "coverage": {
+      "neutralRock": 0.17728,
+      "warmEarth": 0.72263,
+      "green": 0,
+      "lowerWaterSky": 0.04402
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": true
+    },
+    "zoneHex": {
+      "lichenHex": 11372633,
+      "lichenLightHex": 14400900,
+      "wetHex": 3156524,
+      "foamHex": 14803156,
+      "strataHex": 8739389,
+      "strataDarkHex": 6899251
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "schemaVersion": 1,
   "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\南犹他州巨岩山-164605945.webp",
   "oldV6": {
@@ -94,6 +120,97 @@
       "warmEarth": 0.57048,
       "neutralRock": 0.23991,
       "dark": 0.01628
+    },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        9,
+        104,
+        84
+      ],
+      "meanRgb": [
+        169.67,
+        135.65,
+        103.8
+      ],
+      "luminance": {
+        "mean": 140.59,
+        "range": 226.67
+      },
+      "coverage": {
+        "green": 0,
+        "waterSky": 0.20049,
+        "warmEarth": 0.72263,
+        "neutralRock": 0.17728,
+        "dark": 0.02617
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            192,
+            128,
+            64
+          ],
+          "ratio": 0.19835
+        },
+        {
+          "rgb": [
+            224,
+            160,
+            96
+          ],
+          "ratio": 0.10041
+        },
+        {
+          "rgb": [
+            192,
+            160,
+            96
+          ],
+          "ratio": 0.0749
+        },
+        {
+          "rgb": [
+            128,
+            128,
+            160
+          ],
+          "ratio": 0.0637
+        },
+        {
+          "rgb": [
+            160,
+            96,
+            64
+          ],
+          "ratio": 0.05992
+        },
+        {
+          "rgb": [
+            192,
+            128,
+            96
+          ],
+          "ratio": 0.04198
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        55,
+        128,
+        96
+      ],
+      "coverage": {
+        "green": 0,
+        "waterSky": 0.04402,
+        "warmEarth": 0.91197,
+        "neutralRock": 0.07146,
+        "dark": 0.00934
+      }
     },
     "edgeDensity": {
       "horizontal": 0.02028,

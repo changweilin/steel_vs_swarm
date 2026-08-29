@@ -276,17 +276,135 @@ function visualGeometryPolicyFor(row, visual, profile) {
     forbiddenPrimitives: angularOnly ? ['ellipsoid_sphere', 'hemisphere_dome', 'cylinder', 'cone'] : [],
   };
 }
+function subjectVisual(visual) { return visual?.subjectRegion || visual || {}; }
+function subjectCoverage(visual) { return subjectVisual(visual).coverage || visual?.coverage || {}; }
+function lowerCoverage(visual) { return visual?.lowerRegion?.coverage || {}; }
+
+function mixHex(first, second, amount) {
+  const t = clamp(amount, 0, 1);
+  const channels = [16, 8, 0].map((shift) => Math.round(((first >> shift) & 0xff) * (1 - t) + ((second >> shift) & 0xff) * t));
+  return (channels[0] << 16) | (channels[1] << 8) | channels[2];
+}
+
+function scaleHex(value, factor) {
+  const channels = [16, 8, 0].map((shift) => clamp(Math.round(((value >> shift) & 0xff) * factor), 0, 255));
+  return (channels[0] << 16) | (channels[1] << 8) | channels[2];
+}
+
 function choosePalette(row, visual, hasVegetation) {
   const text = tokens(row);
+  const coverage = subjectCoverage(visual);
+  const warmEarth = Number(coverage.warmEarth) || 0;
+  const neutralRock = Number(coverage.neutralRock) || 0;
+  const explicitWarm = includesAny(text, ['sandstone', 'red', 'desert']);
+  const likelyWarmRock = explicitWarm || (warmEarth > 0.42 && neutralRock < 0.28);
   let palette;
-  if (visual?.coverage?.warmEarth > 0.10 || includesAny(text, ['sandstone', 'red', 'desert'])) palette = PALETTES.sandstone;
-  else if (includesAny(text, ['limestone', 'chalk', 'white'])) palette = PALETTES.limestone;
-  else if (hasVegetation && (visual?.coverage?.green || 0) > 0.36 && (visual?.coverage?.neutralRock || 0) < 0.45) palette = PALETTES.moss;
+  if (likelyWarmRock) palette = PALETTES.sandstone;
+  else if (includesAny(text, ['limestone', 'chalk', 'white', 'marble'])) palette = PALETTES.limestone;
+  else if (hasVegetation && (coverage.green || 0) > 0.36 && neutralRock < 0.45) palette = PALETTES.moss;
   else palette = PALETTES.basalt;
   if (hasVegetation && palette !== PALETTES.moss) {
     return { ...palette, accentHex: 0x557c47, brightHex: 0x9fba72 };
   }
-  return palette;
+  return { ...palette };
+}
+
+function appearanceFor(row, visual, palette) {
+  const coverage = subjectCoverage(visual);
+  const lower = lowerCoverage(visual);
+  const text = tokens(row);
+  const isSandstone = palette.facadeHex === PALETTES.sandstone.facadeHex;
+  const isLimestone = palette.facadeHex === PALETTES.limestone.facadeHex;
+  const isMoss = palette.facadeHex === PALETTES.moss.facadeHex;
+  const vegetation = includesAny(text, ['moss', 'lichen', 'vegetation', 'foliage', 'grass', 'bush', 'shrub', 'crown'])
+    || (Number(coverage.green) > 0.045 && Number(coverage.neutralRock) > 0.50);
+  const lichenHex = mixHex(palette.accentHex, 0x71815a, vegetation ? 0.62 : 0.25);
+  const lichenLightHex = mixHex(palette.brightHex, 0xb9c492, vegetation ? 0.58 : 0.18);
+  const wetHex = mixHex(palette.darkHex, 0x142331, 0.48);
+  const strataHex = mixHex(palette.baseHex, palette.facadeHex, 0.58);
+  const foamHex = mixHex(0xe1e7e4, palette.brightHex, 0.16);
+  const waterEvidence = includesAny(text, ['water', 'waterline', 'foam', 'sea', 'ocean', 'coastal'])
+    || ((lower.waterSky || 0) > 0.55 && (lower.green || 0) < 0.35 && (lower.warmEarth || 0) < 0.75);
+  return {
+    model: 'gpt-5.6-luna',
+    sourceRegion: subjectVisual(visual).kind || 'full_frame',
+    materialFamily: isSandstone ? 'warm_sandstone' : isLimestone ? 'pale_limestone_marble' : isMoss ? 'moss_covered_rock' : 'cool_gray_basalt',
+    coverage: {
+      neutralRock: Number(coverage.neutralRock) || 0,
+      warmEarth: Number(coverage.warmEarth) || 0,
+      green: Number(coverage.green) || 0,
+      lowerWaterSky: Number(lower.waterSky) || 0,
+    },
+    overlays: {
+      lichen: vegetation,
+      wetLowerBand: waterEvidence,
+      strata: includesAny(text, ['strata', 'layer', 'mineral', 'geologic', 'formation']),
+    },
+    zoneHex: {
+      lichenHex,
+      lichenLightHex,
+      wetHex,
+      foamHex,
+      strataHex,
+      strataDarkHex: mixHex(strataHex, palette.darkHex, 0.48),
+    },
+    lichenStrength: vegetation ? clamp((Number(coverage.green) || 0) * 1.8, 0.10, 0.34) : 0,
+    surfaceVariation: true,
+  };
+}
+
+function applyPartAppearance(parts, palette, appearance) {
+  const baseColors = { ...palette };
+  for (const part of parts) {
+    let color = baseColors[part.colorKey] || baseColors.facadeHex;
+    if (part.role === 'surface_attachment') {
+      color = appearance.overlays.lichen
+        ? (part.colorKey === 'brightHex' ? appearance.zoneHex.lichenLightHex : appearance.zoneHex.lichenHex)
+        : (part.colorKey === 'brightHex' ? baseColors.facadeHex : baseColors.baseHex);
+    } else if (part.role === 'waterline') {
+      color = appearance.overlays.wetLowerBand
+        ? (part.colorKey === 'brightHex' ? appearance.zoneHex.foamHex : appearance.zoneHex.wetHex)
+        : baseColors.baseHex;
+    } else if (part.role === 'strata') {
+      color = part.colorKey === 'darkHex' ? appearance.zoneHex.strataDarkHex : appearance.zoneHex.strataHex;
+    } else if (part.role === 'fracture') {
+      color = baseColors.darkHex;
+    }
+    part.color = color;
+  }
+}
+
+function applyVertexAppearance(geometry, spec, stable) {
+  const mesh = geometry.modelJson.meshData;
+  if (!mesh || !Array.isArray(mesh.colors) || !Array.isArray(mesh.faces)) return;
+  let faceCursor = 0;
+  for (let partIndex = 0; partIndex < geometry.modelJson.parts.length; partIndex++) {
+    const outputPart = geometry.modelJson.parts[partIndex];
+    const sourcePart = spec.parts[partIndex] || {};
+    const faceEnd = Math.min(mesh.faces.length, faceCursor + (outputPart.triangles || 0) * 3);
+    const varied = !['surface_attachment', 'attachment', 'waterline'].includes(sourcePart.role)
+      && spec.appearance?.surfaceVariation;
+    const touched = new Set();
+    for (let i = faceCursor; i < faceEnd; i++) touched.add(mesh.faces[i]);
+    for (const index of touched) {
+      const base = Number.isInteger(outputPart.color) ? outputPart.color : 0x888888;
+      const roll = hash01(`${stable}|${partIndex}|${index}`);
+      const factor = varied ? (roll < 0.18 ? 0.86 : roll > 0.84 ? 1.12 : 1) : 1;
+      let color = scaleHex(base, factor);
+      const lichenMask = varied && spec.appearance?.overlays?.lichen
+        && hash01(`${stable}|lichen|${partIndex}|${index}`) < (spec.appearance.lichenStrength || 0);
+      if (lichenMask) {
+        const lichenTone = hash01(`${stable}|lichen-tone|${partIndex}|${index}`) > 0.72
+          ? spec.appearance.zoneHex.lichenLightHex
+          : spec.appearance.zoneHex.lichenHex;
+        color = mixHex(color, lichenTone, 0.46);
+      }
+      mesh.colors[index * 3] = ((color >> 16) & 0xff) / 255;
+      mesh.colors[index * 3 + 1] = ((color >> 8) & 0xff) / 255;
+      mesh.colors[index * 3 + 2] = (color & 0xff) / 255;
+    }
+    faceCursor = faceEnd;
+  }
 }
 function dimensions(row) {
   const size = row.bounds?.size || [4, 4, 4];
@@ -534,6 +652,7 @@ function makeSpec(row, visual) {
   const visualGeometryPolicy = visualGeometryPolicyFor(row, visual, profile);
   flags.angularVisual = visualGeometryPolicy.angularOnly;
   const palette = choosePalette(row, visual, flags.vegetation);
+  const appearance = appearanceFor(row, visual, palette);
   const rng = rngFor(`${row.stable}|${profile}|gpt-5.6-luna`);
   const parts = [];
   if (profile === 'arch') addArch(parts, d, palette, flags, rng, false);
@@ -549,6 +668,7 @@ function makeSpec(row, visual) {
   else addBoulder(parts, d, palette, flags, rng);
   flags.profile = profile;
   addAttachments(parts, d, palette, flags, visual);
+  applyPartAppearance(parts, palette, appearance);
   const style = {
     boulder: 'faceted weathered erratic boulder',
     formation: 'layered asymmetrical geological formation',
@@ -571,6 +691,7 @@ function makeSpec(row, visual) {
     profile,
     dimensions: d,
     flags,
+    appearance,
     visualGeometryPolicy,
     note: `以 GPT-5.6 Luna 視覺特徵辨識為「${profile}」；以多層多面體重建輪廓，保留${Object.entries(flags).filter(([key, value]) => !['profile', 'angularVisual'].includes(key) && value).map(([key]) => key).join('、') || '岩體本身'}附著特徵；幾何政策：${visualGeometryPolicy.mode}。`,
   };
@@ -586,7 +707,7 @@ function assertGeometryPolicy(spec, geometry) {
 }
 
 function selfReview(spec, visual, oldBounds) {
-  const coverage = visual?.coverage || {};
+  const coverage = subjectCoverage(visual);
   let score = 68;
   if (spec.parts.length >= 12) score += 5;
   if (spec.flags.vegetation && coverage.green > 0.05) score += 4;
@@ -615,6 +736,9 @@ function processTarget(row, indexes, visualFeatures) {
   const visual = visualFeatures.get(row.sourcePath) || { status: 'missing_visual_capture', coverage: {} };
   const spec = makeSpec(row, visual);
   const geometry = buildGeometryFromParts(spec, 'rock', row.subpart, safeName(row.stable));
+  applyVertexAppearance(geometry, spec, row.stable);
+  geometry.modelJson.appearance = spec.appearance;
+  geometry.featuresJson.appearance = spec.appearance;
   assertGeometryPolicy(spec, geometry);
   const hash = createHash('sha1').update(`${row.stable}|${spec.profile}|gpt-5.6-luna|${row.source_image}`).digest('hex').slice(0, 8);
   const targetId = `rock_${safeName(row.stable)}_${hash}_luna_v6`;
@@ -647,6 +771,7 @@ function processTarget(row, indexes, visualFeatures) {
       evidenceStatus: evidence.status,
       evidenceOverride,
       attachments: spec.flags,
+      appearance: spec.appearance,
       visualGeometryPolicy: spec.visualGeometryPolicy,
       eligible: false,
       pipelineEligibility: 'awaiting_human_review',
@@ -677,6 +802,7 @@ function processTarget(row, indexes, visualFeatures) {
       evidenceOverride,
       lunaVisualFeatures: visual,
       attachments: spec.flags,
+      appearance: spec.appearance,
       visualGeometryPolicy: spec.visualGeometryPolicy,
       preview: relativePath(preview),
       bounds: geometry.bounds,
@@ -713,6 +839,7 @@ function processTarget(row, indexes, visualFeatures) {
     bounds: geometry.bounds,
     parts: geometry.modelJson.parts.length,
     attachments: spec.flags,
+    appearance: spec.appearance,
     visualGeometryPolicy: spec.visualGeometryPolicy,
   };
 }
