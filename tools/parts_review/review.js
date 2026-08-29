@@ -1200,6 +1200,14 @@ function featuresSection(r) {
   const partsList = feat?.partNames?.length
     ? `<div class="pr-dim" style="margin-top:6px"><b>細部幾何零件清單 (${feat.totalParts || feat.partNames.length} 塊):</b> ${feat.partNames.map(esc).join('、')}</div>`
     : '';
+  const geometryPolicy = feat?.visualGeometryPolicy || r.visualGeometryPolicy;
+  const geometryPolicyHtml = geometryPolicy
+    ? `<tr><td>視覺幾何政策</td><td class="num"><b>${geometryPolicy.angularOnly ? '稜角型：只准多面體' : '非稜角：允許圓滑 fallback'}</b></td><td>${esc(geometryPolicy.reason || geometryPolicy.mode || '未記載')}</td></tr>`
+    : '';
+  const primitiveList = Array.isArray(feat?.polyhedralPrimitivesUsed) ? feat.polyhedralPrimitivesUsed : [];
+  const primitiveListHtml = primitiveList.length
+    ? `<tr><td>實際 primitive</td><td class="num"><code>${primitiveList.map(esc).join('、')}</code></td><td class="pr-good">✔ 由同一份烘焙網格輸出</td></tr>`
+    : '';
 
   return `<div class="pr-sec"><h3>細部特徵辨識與重建報告</h3>
     <table class="pr-tab">
@@ -1207,6 +1215,8 @@ function featuresSection(r) {
       <tr><td>物件風格型態</td><td class="num"><b>${esc(style)}</b></td><td class="pr-good">專屬細部幾何構建</td></tr>
       <tr><td>對稱性模式</td><td class="num"><code>${esc(symMode)}</code></td><td>${symMode === 'symmetric' ? '✔ 雙側幾何鏡像 (Z=0) 與前後機能平衡' : '✦ 遮擋面/背部決定性隨機特徵增強'}</td></tr>
       <tr><td>影像長寬比 / 對稱分</td><td class="num">Aspect ${asp} / Sym ${symScore}</td><td class="pr-dim">照片空間亮度與輪廓分析</td></tr>
+      ${geometryPolicyHtml}
+      ${primitiveListHtml}
       ${featRows}
     </table>
     ${colorSwatches}

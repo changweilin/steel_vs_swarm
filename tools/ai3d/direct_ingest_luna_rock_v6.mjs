@@ -61,6 +61,8 @@ const frustum = (name, sides, topR, botR, height, x, base, z, colorKey, role = '
   P(name, 'frustum_pyramid', { sides, radii: [topR, botR], height }, colorKey, [x, base + height / 2, z], [0, 0, 0], role);
 const prism = (name, sides, radius, height, x, base, z, colorKey, role = 'structure') =>
   P(name, 'polygonal_prism', { sides, radius, height }, colorKey, [x, base + height / 2, z], [0, 0, 0], role);
+const hull = (name, width, height, depth, x, base, z, colorKey, rot = [0, 0, 0], role = 'structure') =>
+  P(name, 'hull_polyhedron', { dimensions: [width, height, depth] }, colorKey, [x, base, z], rot, role);
 const ico = (name, radius, x, y, z, colorKey, rot = [0, 0, 0], role = 'structure') =>
   P(name, 'icosahedron_polyhedron', { radius }, colorKey, [x, Math.max(y, radius * 1.12 + 0.02), z], rot, role);
 const dode = (name, radius, x, y, z, colorKey, rot = [0, 0, 0], role = 'structure') =>
@@ -250,6 +252,30 @@ function classify(row, visual) {
   if (visualWater || includesAny(text, ['water', 'waterline', 'sea', 'ocean', 'foam', 'coastal'])) return 'water_formation';
   return 'boulder';
 }
+function visualGeometryPolicyFor(row, visual, profile) {
+  const text = tokens(row);
+  const edgeDensity = Number(visual?.edgeDensity?.combined) || 0;
+  const neutralRock = Number(visual?.coverage?.neutralRock) || 0;
+  const luminanceRange = Number(visual?.luminance?.range) || 0;
+  const measuredHardEdges = edgeDensity >= 0.018 && neutralRock >= 0.28 && luminanceRange >= 180;
+  const angularProfile = profile !== 'boulder';
+  const angularTokens = includesAny(text, [
+    'angular', 'faceted', 'crag', 'fracture', 'strata', 'layer', 'slab', 'mesa', 'hoodoo',
+    'dolmen', 'tor', 'arch', 'tower', 'talus', 'scree', 'pyramid', 'monolith', 'formation',
+  ]);
+  const angularOnly = measuredHardEdges || angularProfile || angularTokens;
+  const reasons = [];
+  if (measuredHardEdges) reasons.push('edge_density');
+  if (angularProfile) reasons.push(`profile:${profile}`);
+  if (angularTokens) reasons.push('rock_feature_tokens');
+  return {
+    mode: angularOnly ? 'angular_polyhedral_only' : 'faceted_polyhedral_with_rounded_fallback',
+    angularOnly,
+    reason: reasons.join('+') || 'low_hard_edge_signal',
+    metrics: { edgeDensity, neutralRock, luminanceRange },
+    forbiddenPrimitives: angularOnly ? ['ellipsoid_sphere', 'hemisphere_dome', 'cylinder', 'cone'] : [],
+  };
+}
 function choosePalette(row, visual, hasVegetation) {
   const text = tokens(row);
   let palette;
@@ -292,7 +318,14 @@ function addBoulder(parts, d, palette, flags, rng) {
   const r = Math.min(d.width, d.depth);
   addGroundAnchor(parts, d.width, d.depth, palette, 'boulder');
   parts.push(frustum('faceted_lower_foot', 9, r * 0.34, r * 0.48, d.height * 0.22, 0, d.height * 0.10, 0, 'baseHex'));
-  parts.push(ellipsoid('weathered_main_mass', d.width * 0.42, d.height * 0.42, d.depth * 0.40, 0, d.height * 0.50, 0, 'facadeHex'));
+  if (flags.angularVisual) {
+    parts.push(hull('weathered_main_polyhedron', d.width * 0.84, d.height * 0.72, d.depth * 0.80, 0, d.height * 0.16, 0, 'facadeHex', [0.02, 0.08, -0.04], 'mass'));
+    parts.push(frustum('weathered_main_lower_facet', 8, r * 0.29, r * 0.43, d.height * 0.12, -d.width * 0.03, d.height * 0.23, d.depth * 0.02, 'baseHex', 'mass'));
+    parts.push(wedge('weathered_main_front_shear', d.width * 0.48, d.height * 0.23, d.depth * 0.26, d.width * 0.04, d.height * 0.54, d.depth * 0.27, 'facadeHex', [0.06, 0.10, -0.08], 'fracture'));
+    parts.push(dode('weathered_main_crown_facet', r * 0.24, -d.width * 0.05, d.height * 0.78, -d.depth * 0.04, 'roofHex', [0.14, 0.22, 0.02], 'mass'));
+  } else {
+    parts.push(ellipsoid('weathered_main_mass', d.width * 0.42, d.height * 0.42, d.depth * 0.40, 0, d.height * 0.50, 0, 'facadeHex'));
+  }
   parts.push(ico('front_angular_face', r * 0.27, d.width * 0.02, d.height * 0.44, d.depth * 0.30, 'facadeHex', [0.08, 0.24, -0.05]));
   parts.push(dode('upper_crest_facet', r * 0.25, d.width * between(rng, -0.08, 0.10), d.height * 0.78, d.depth * between(rng, -0.05, 0.08), 'roofHex', [0.12, 0.18, 0.04]));
   parts.push(ico('left_weathered_shoulder', r * 0.22, -d.width * 0.27, d.height * 0.43, d.depth * 0.03, 'baseHex', [0.18, -0.12, 0.12]));
@@ -373,7 +406,12 @@ function addArch(parts, d, palette, flags, rng, tor = false) {
     parts.push(ico(`arch_pillar_${side < 0 ? 'left' : 'right'}_facet`, pillarRadius * 1.18, x, pillarHeight * 0.54, d.depth * 0.03, 'facadeHex', [0.12, side * 0.16, 0.04]));
   }
   parts.push(wedge('arch_top_bridge', d.width * 0.60, d.height * 0.22, d.depth * 0.52, 0, d.height * 0.78, 0, 'roofHex', [0, 0.02, 0], 'bridge'));
-  parts.push(ellipsoid('arch_weathered_crown', d.width * 0.38, d.height * 0.25, d.depth * 0.34, 0, d.height * 0.75, -d.depth * 0.02, 'facadeHex'));
+  if (flags.angularVisual) {
+    parts.push(hull('arch_weathered_crown_polyhedron', d.width * 0.76, d.height * 0.30, d.depth * 0.68, 0, d.height * 0.60, -d.depth * 0.02, 'facadeHex', [0, 0.08, 0], 'mass'));
+    parts.push(wedge('arch_crown_shear_facet', d.width * 0.36, d.height * 0.15, d.depth * 0.24, d.width * 0.04, d.height * 0.76, d.depth * 0.24, 'accentHex', [0.06, -0.08, 0.04], 'fracture'));
+  } else {
+    parts.push(ellipsoid('arch_weathered_crown', d.width * 0.38, d.height * 0.25, d.depth * 0.34, 0, d.height * 0.75, -d.depth * 0.02, 'facadeHex'));
+  }
   parts.push(dode('arch_left_keystone', r * 0.14, -d.width * 0.15, d.height * 0.78, d.depth * 0.08, 'accentHex', [0.04, -0.10, 0.06]));
   parts.push(ico('arch_right_keystone', r * 0.13, d.width * 0.16, d.height * 0.76, d.depth * 0.08, 'baseHex', [-0.06, 0.14, -0.04]));
   parts.push(wedge('arch_inner_shadow', d.width * 0.27, d.height * 0.12, d.depth * 0.08, 0, d.height * 0.57, d.depth * 0.27, 'darkHex', [0.02, 0, 0], 'fracture'));
@@ -458,10 +496,21 @@ function addStairs(parts, d, palette) {
 function addAttachments(parts, d, palette, flags, visual) {
   if (flags.vegetation) {
     const topY = d.height * 0.90;
-    parts.push(dome('attached_lichen_canopy', d.width * 0.19, Math.max(0.10, d.height * 0.065), d.depth * 0.17, -d.width * 0.03, topY, -d.depth * 0.02, 'accentHex', [0, 0.08, 0], 'surface_attachment'));
+    if (flags.angularVisual) {
+      const lichenHeight = Math.max(0.10, d.height * 0.065);
+      parts.push(frustum('attached_lichen_canopy_polyhedron', 7, d.width * 0.10, d.width * 0.19, lichenHeight, -d.width * 0.03, topY - lichenHeight, -d.depth * 0.02, 'accentHex', 'surface_attachment'));
+      parts.push(wedge('attached_lichen_shear_facet', d.width * 0.20, lichenHeight * 0.90, d.depth * 0.12, -d.width * 0.03, topY - lichenHeight * 0.48, d.depth * 0.10, 'brightHex', [0.08, 0.12, -0.04], 'surface_attachment'));
+    } else {
+      parts.push(dome('attached_lichen_canopy', d.width * 0.19, Math.max(0.10, d.height * 0.065), d.depth * 0.17, -d.width * 0.03, topY, -d.depth * 0.02, 'accentHex', [0, 0.08, 0], 'surface_attachment'));
+    }
     parts.push(dode('attached_moss_facet', Math.min(d.width, d.depth) * 0.085, d.width * 0.16, d.height * 0.77, d.depth * 0.20, 'brightHex', [0.08, 0.24, 0.02], 'surface_attachment'));
     if ((visual?.coverage?.green || 0) > 0.22) {
-      parts.push(ellipsoid('attached_side_shrub', d.width * 0.16, d.height * 0.13, d.depth * 0.17, -d.width * 0.27, d.height * 0.57, d.depth * 0.05, 'facadeHex', [0.1, -0.12, 0], 'surface_attachment'));
+      if (flags.angularVisual) {
+        parts.push(hull('attached_side_shrub_polyhedron', d.width * 0.32, d.height * 0.26, d.depth * 0.34, -d.width * 0.27, d.height * 0.48, d.depth * 0.05, 'facadeHex', [0.10, -0.12, 0], 'surface_attachment'));
+        parts.push(ico('attached_side_shrub_facet', Math.min(d.width, d.depth) * 0.075, -d.width * 0.27, d.height * 0.70, d.depth * 0.05, 'brightHex', [0.12, -0.18, 0.04], 'surface_attachment'));
+      } else {
+        parts.push(ellipsoid('attached_side_shrub', d.width * 0.16, d.height * 0.13, d.depth * 0.17, -d.width * 0.27, d.height * 0.57, d.depth * 0.05, 'facadeHex', [0.1, -0.12, 0], 'surface_attachment'));
+      }
     }
   }
   if (flags.waterline) {
@@ -482,6 +531,8 @@ function makeSpec(row, visual) {
   const d = dimensions(row);
   const flags = attachmentFlags(row, visual);
   const profile = classify(row, visual);
+  const visualGeometryPolicy = visualGeometryPolicyFor(row, visual, profile);
+  flags.angularVisual = visualGeometryPolicy.angularOnly;
   const palette = choosePalette(row, visual, flags.vegetation);
   const rng = rngFor(`${row.stable}|${profile}|gpt-5.6-luna`);
   const parts = [];
@@ -520,8 +571,18 @@ function makeSpec(row, visual) {
     profile,
     dimensions: d,
     flags,
-    note: `以 GPT-5.6 Luna 視覺特徵辨識為「${profile}」；以多層多面體重建輪廓，保留${Object.entries(flags).filter(([key, value]) => key !== 'profile' && value).map(([key]) => key).join('、') || '岩體本身'}附著特徵。`,
+    visualGeometryPolicy,
+    note: `以 GPT-5.6 Luna 視覺特徵辨識為「${profile}」；以多層多面體重建輪廓，保留${Object.entries(flags).filter(([key, value]) => !['profile', 'angularVisual'].includes(key) && value).map(([key]) => key).join('、') || '岩體本身'}附著特徵；幾何政策：${visualGeometryPolicy.mode}。`,
   };
+}
+
+function assertGeometryPolicy(spec, geometry) {
+  if (!spec.visualGeometryPolicy.angularOnly) return;
+  const forbidden = new Set(spec.visualGeometryPolicy.forbiddenPrimitives);
+  const violations = geometry.modelJson.parts.filter((part) => forbidden.has(part.type)).map((part) => `${part.name}:${part.type}`);
+  if (violations.length) {
+    throw new Error(`稜角型視覺禁止圓滑幾何：${violations.join(', ')}`);
+  }
 }
 
 function selfReview(spec, visual, oldBounds) {
@@ -543,7 +604,7 @@ function selfReview(spec, visual, oldBounds) {
     verdict: 'awaiting_human_review',
     corrections: [],
     reviewer: 'gpt-5.6-luna_local_visual_feature_contract',
-    critique: `視覺特徵與${spec.profile}幾何契約已對齊；${spec.parts.length} 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。`,
+    critique: `視覺特徵與${spec.profile}幾何契約已對齊；${spec.visualGeometryPolicy.mode} 通過幾何禁用閘門；${spec.parts.length} 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。`,
   };
 }
 
@@ -554,6 +615,7 @@ function processTarget(row, indexes, visualFeatures) {
   const visual = visualFeatures.get(row.sourcePath) || { status: 'missing_visual_capture', coverage: {} };
   const spec = makeSpec(row, visual);
   const geometry = buildGeometryFromParts(spec, 'rock', row.subpart, safeName(row.stable));
+  assertGeometryPolicy(spec, geometry);
   const hash = createHash('sha1').update(`${row.stable}|${spec.profile}|gpt-5.6-luna|${row.source_image}`).digest('hex').slice(0, 8);
   const targetId = `rock_${safeName(row.stable)}_${hash}_luna_v6`;
   const key = `${row.stable}_${hash}_luna_v6`;
@@ -585,6 +647,7 @@ function processTarget(row, indexes, visualFeatures) {
       evidenceStatus: evidence.status,
       evidenceOverride,
       attachments: spec.flags,
+      visualGeometryPolicy: spec.visualGeometryPolicy,
       eligible: false,
       pipelineEligibility: 'awaiting_human_review',
       localModel: 'gpt-5.6-luna',
@@ -614,6 +677,7 @@ function processTarget(row, indexes, visualFeatures) {
       evidenceOverride,
       lunaVisualFeatures: visual,
       attachments: spec.flags,
+      visualGeometryPolicy: spec.visualGeometryPolicy,
       preview: relativePath(preview),
       bounds: geometry.bounds,
       reconstructionNote: spec.note,
@@ -649,6 +713,7 @@ function processTarget(row, indexes, visualFeatures) {
     bounds: geometry.bounds,
     parts: geometry.modelJson.parts.length,
     attachments: spec.flags,
+    visualGeometryPolicy: spec.visualGeometryPolicy,
   };
 }
 
