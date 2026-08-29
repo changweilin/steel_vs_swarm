@@ -1,0 +1,299 @@
+{
+  "id": "rock_main_rock_main_images_rock",
+  "sourceImage": "rock/images rock.jpg",
+  "style": "stacked geological slab and fracture assembly",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 2370353,
+    "facadeHex": 5200224,
+    "baseHex": 3160123,
+    "accentHex": 6911354,
+    "darkHex": 2106664,
+    "brightHex": 11187637,
+    "glassHex": 1518643
+  },
+  "totalParts": 8,
+  "partNames": [
+    "ground_contact_anchor",
+    "strata_mass_0",
+    "strata_mass_1",
+    "strata_mass_2",
+    "strata_mass_3",
+    "strata_mass_4",
+    "strata_front_break",
+    "strata_top_fragment"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "wedge",
+    "dodecahedron_polyhedron"
+  ],
+  "schemaVersion": 1,
+  "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\images rock.jpg",
+  "oldV6": {
+    "key": "rock/main_images rock_a92d6aa3_v6",
+    "style": "natural_rock",
+    "bounds": {
+      "min": [
+        -1.15,
+        -0.1,
+        -0.856
+      ],
+      "max": [
+        1.15,
+        0.8641,
+        0.856
+      ],
+      "size": [
+        2.3,
+        0.964,
+        1.712
+      ],
+      "rMax": 1.434,
+      "triangles": 544,
+      "vertices": 335
+    },
+    "partNames": [
+      "MainRockBody",
+      "RockBase",
+      "RockTopLayer",
+      "MineralBand1",
+      "RockFacetFront",
+      "RockFacetBack"
+    ]
+  },
+  "lunaVisualFeatures": {
+    "path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\images rock.jpg",
+    "status": "ok",
+    "width": 576,
+    "height": 363,
+    "aspectRatio": 1.5868,
+    "meanRgb": [
+      173.63,
+      173.41,
+      173.82
+    ],
+    "luminance": {
+      "mean": 173.49,
+      "range": 253.35,
+      "topMean": 245.56,
+      "bottomMean": 191.86
+    },
+    "coverage": {
+      "green": 0,
+      "waterSky": 0.03646,
+      "warmEarth": 0.01456,
+      "neutralRock": 0.40056,
+      "dark": 0.16705
+    },
+    "edgeDensity": {
+      "horizontal": 0.01829,
+      "vertical": 0.02224,
+      "combined": 0.02026
+    },
+    "dominantColors": [
+      {
+        "rgb": [
+          224,
+          224,
+          224
+        ],
+        "ratio": 0.41889
+      },
+      {
+        "rgb": [
+          32,
+          32,
+          32
+        ],
+        "ratio": 0.12269
+      },
+      {
+        "rgb": [
+          192,
+          192,
+          192
+        ],
+        "ratio": 0.10793
+      },
+      {
+        "rgb": [
+          160,
+          160,
+          160
+        ],
+        "ratio": 0.06453
+      },
+      {
+        "rgb": [
+          0,
+          0,
+          0
+        ],
+        "ratio": 0.06231
+      },
+      {
+        "rgb": [
+          128,
+          128,
+          128
+        ],
+        "ratio": 0.03511
+      }
+    ],
+    "capture": {
+      "model": "gpt-5.6-luna",
+      "mode": "local_visual_feature_capture",
+      "downsample": [
+        128,
+        81
+      ],
+      "deterministic": true
+    }
+  },
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/rock/main/images rock.json",
+    "target": {
+      "targetId": "images rock~0",
+      "bbox": [
+        0,
+        0,
+        576,
+        363
+      ],
+      "width": 576,
+      "height": 363,
+      "aspectRatio": 1.587,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.399,
+          "centerOffset": 0.03
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.684,
+          "centerOffset": 0.024
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.809,
+          "centerOffset": 0.021
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.884,
+          "centerOffset": 0.01
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.924,
+          "centerOffset": 0.002
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.948,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.955,
+          "centerOffset": -0.003
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.948,
+          "centerOffset": -0.007
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.931,
+          "centerOffset": -0.009
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.905,
+          "centerOffset": -0.01
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.877,
+          "centerOffset": -0.011
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.821,
+          "centerOffset": -0.011
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.71,
+          "centerOffset": -0.016
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.417,
+          "centerOffset": 0.036
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.292,
+          "centerOffset": 0.062
+        }
+      ],
+      "targetFile": "rock\\main\\images rock~0.png"
+    }
+  },
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批岩石依使用者指定以 GPT-5.6 Luna 視覺特徵與多面體岩石契約重建；缺少 YOLO26 schema-v2 時不提升 runtime 資格。"
+  },
+  "attachments": {
+    "vegetation": false,
+    "waterline": false,
+    "strata": true,
+    "stain": false,
+    "stairs": false,
+    "observation": false,
+    "hat": false,
+    "angularVisual": true,
+    "profile": "strata"
+  },
+  "visualGeometryPolicy": {
+    "mode": "angular_polyhedral_only",
+    "angularOnly": true,
+    "reason": "edge_density+profile:strata+rock_feature_tokens",
+    "metrics": {
+      "edgeDensity": 0.02026,
+      "neutralRock": 0.40056,
+      "luminanceRange": 253.35
+    },
+    "forbiddenPrimitives": [
+      "ellipsoid_sphere",
+      "hemisphere_dome",
+      "cylinder",
+      "cone"
+    ]
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 74,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_local_visual_feature_contract",
+    "critique": "視覺特徵與strata幾何契約已對齊；angular_polyhedral_only 通過幾何禁用閘門；8 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。"
+  },
+  "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「strata」；以多層多面體重建輪廓，保留strata附著特徵；幾何政策：angular_polyhedral_only。"
+}

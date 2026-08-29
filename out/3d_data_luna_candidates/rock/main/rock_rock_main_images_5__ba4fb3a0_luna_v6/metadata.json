@@ -1,0 +1,266 @@
+{
+  "id": "rock_rock_main_images_5__ba4fb3a0_luna_v6",
+  "key": "rock/main_images (5)_ba4fb3a0_luna_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "faceted weathered erratic boulder",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 79,
+  "similarityReview": "視覺特徵與boulder幾何契約已對齊；angular_polyhedral_only 通過幾何禁用閘門；13 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "rock/images (5).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\images (5).jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/building/main/images (5).json",
+    "target": {
+      "targetId": "images (5)~0",
+      "bbox": [
+        0,
+        0,
+        594,
+        336
+      ],
+      "width": 594,
+      "height": 336,
+      "aspectRatio": 1.768,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.343,
+          "centerOffset": 0.027
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.65,
+          "centerOffset": -0.04
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.747,
+          "centerOffset": -0.081
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.714,
+          "centerOffset": -0.064
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.682,
+          "centerOffset": -0.038
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.758,
+          "centerOffset": -0.02
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.818,
+          "centerOffset": 0.01
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.944,
+          "centerOffset": -0.028
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.901,
+          "centerOffset": 0.048
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.998,
+          "centerOffset": -0.001
+        }
+      ],
+      "targetFile": "building\\main\\images (5)~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批岩石依使用者指定以 GPT-5.6 Luna 視覺特徵與多面體岩石契約重建；缺少 YOLO26 schema-v2 時不提升 runtime 資格。"
+  },
+  "lunaVisualFeatures": {
+    "path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\images (5).jpg",
+    "status": "ok",
+    "width": 561,
+    "height": 356,
+    "aspectRatio": 1.5758,
+    "meanRgb": [
+      174.1,
+      171.04,
+      164.23
+    ],
+    "luminance": {
+      "mean": 171.2,
+      "range": 249.14,
+      "topMean": 230.53,
+      "bottomMean": 198.47
+    },
+    "coverage": {
+      "green": 0,
+      "waterSky": 0,
+      "warmEarth": 0.29282,
+      "neutralRock": 0.39448,
+      "dark": 0.1005
+    },
+    "edgeDensity": {
+      "horizontal": 0.01983,
+      "vertical": 0.02397,
+      "combined": 0.0219
+    },
+    "dominantColors": [
+      {
+        "rgb": [
+          224,
+          224,
+          224
+        ],
+        "ratio": 0.40779
+      },
+      {
+        "rgb": [
+          192,
+          192,
+          192
+        ],
+        "ratio": 0.12047
+      },
+      {
+        "rgb": [
+          128,
+          128,
+          96
+        ],
+        "ratio": 0.08353
+      },
+      {
+        "rgb": [
+          32,
+          32,
+          32
+        ],
+        "ratio": 0.04572
+      },
+      {
+        "rgb": [
+          96,
+          96,
+          64
+        ],
+        "ratio": 0.04456
+      },
+      {
+        "rgb": [
+          32,
+          32,
+          0
+        ],
+        "ratio": 0.0327
+      }
+    ],
+    "capture": {
+      "model": "gpt-5.6-luna",
+      "mode": "local_visual_feature_capture",
+      "downsample": [
+        128,
+        81
+      ],
+      "deterministic": true
+    }
+  },
+  "attachments": {
+    "vegetation": false,
+    "waterline": false,
+    "strata": true,
+    "stain": false,
+    "stairs": false,
+    "observation": false,
+    "hat": false,
+    "angularVisual": true,
+    "profile": "boulder"
+  },
+  "visualGeometryPolicy": {
+    "mode": "angular_polyhedral_only",
+    "angularOnly": true,
+    "reason": "edge_density+rock_feature_tokens",
+    "metrics": {
+      "edgeDensity": 0.0219,
+      "neutralRock": 0.39448,
+      "luminanceRange": 249.14
+    },
+    "forbiddenPrimitives": [
+      "ellipsoid_sphere",
+      "hemisphere_dome",
+      "cylinder",
+      "cone"
+    ]
+  },
+  "preview": "out/review_previews/rock_rock_main_images_5__ba4fb3a0_luna_v6.png",
+  "bounds": {
+    "min": [
+      -1.5568,
+      0,
+      -1.1532
+    ],
+    "max": [
+      1.4845,
+      1.995,
+      1.1532
+    ],
+    "size": [
+      3.041,
+      1.995,
+      2.306
+    ],
+    "rMax": 1.937,
+    "triangles": 360,
+    "vertices": 206
+  },
+  "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「boulder」；以多層多面體重建輪廓，保留strata附著特徵；幾何政策：angular_polyhedral_only。",
+  "created_at": "2026-08-29T06:14:51.563Z",
+  "humanVerdictPreserved": true
+}

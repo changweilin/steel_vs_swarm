@@ -1,0 +1,309 @@
+{
+  "id": "rock_st_dolmen_rock_st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f_1",
+  "sourceImage": "rock/st_dolmen/ov_12575b8c-d342-40c6-a3eb-a97da9f7310f.jpg",
+  "style": "ancient dolmen assembly with polygonal lintel",
+  "symmetryMode": "symmetric",
+  "colors": {
+    "roofHex": 6964528,
+    "facadeHex": 10119749,
+    "baseHex": 6767665,
+    "accentHex": 5602375,
+    "darkHex": 4861992,
+    "brightHex": 10467954,
+    "glassHex": 2307908
+  },
+  "totalParts": 13,
+  "partNames": [
+    "ground_contact_anchor",
+    "standing_stone_left",
+    "standing_stone_cap_left",
+    "standing_stone_right",
+    "standing_stone_cap_right",
+    "dolmen_lintel",
+    "dolmen_lintel_facet",
+    "dolmen_front_marker",
+    "attached_lichen_canopy_polyhedron",
+    "attached_lichen_shear_facet",
+    "attached_moss_facet",
+    "attached_side_shrub_polyhedron",
+    "attached_side_shrub_facet"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "frustum_pyramid",
+    "dodecahedron_polyhedron",
+    "wedge",
+    "icosahedron_polyhedron",
+    "hull_polyhedron"
+  ],
+  "schemaVersion": 1,
+  "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\st_dolmen\\ov_12575b8c-d342-40c6-a3eb-a97da9f7310f.jpg",
+  "oldV6": {
+    "key": "rock/st_dolmen_ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~1_3d1f7f2d_v6",
+    "style": "ancient_megalith",
+    "bounds": {
+      "min": [
+        -0.9622,
+        -0.1484,
+        -0.913
+      ],
+      "max": [
+        2.2664,
+        3.826,
+        0.9849
+      ],
+      "size": [
+        3.229,
+        3.974,
+        1.898
+      ],
+      "rMax": 2.471,
+      "triangles": 236,
+      "vertices": 136
+    },
+    "partNames": [
+      "central_monolith_lower",
+      "central_monolith_upper",
+      "central_monolith_top_crystal",
+      "base_stone_front",
+      "base_stone_left",
+      "base_stone_right",
+      "base_stone_back",
+      "adjacent_right_monolith",
+      "adjacent_right_monolith_top"
+    ]
+  },
+  "lunaVisualFeatures": {
+    "path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\st_dolmen\\ov_12575b8c-d342-40c6-a3eb-a97da9f7310f.jpg",
+    "status": "ok",
+    "width": 1365,
+    "height": 2048,
+    "aspectRatio": 0.6665,
+    "meanRgb": [
+      129.32,
+      131.33,
+      93.62
+    ],
+    "luminance": {
+      "mean": 128.18,
+      "range": 239.93,
+      "topMean": 90.71,
+      "bottomMean": 124.31
+    },
+    "coverage": {
+      "green": 0.23833,
+      "waterSky": 0.01985,
+      "warmEarth": 0.35781,
+      "neutralRock": 0.42105,
+      "dark": 0.05919
+    },
+    "edgeDensity": {
+      "horizontal": 0.02364,
+      "vertical": 0.02376,
+      "combined": 0.0237
+    },
+    "dominantColors": [
+      {
+        "rgb": [
+          160,
+          160,
+          128
+        ],
+        "ratio": 0.0943
+      },
+      {
+        "rgb": [
+          128,
+          128,
+          64
+        ],
+        "ratio": 0.09007
+      },
+      {
+        "rgb": [
+          64,
+          64,
+          32
+        ],
+        "ratio": 0.08915
+      },
+      {
+        "rgb": [
+          96,
+          96,
+          64
+        ],
+        "ratio": 0.08428
+      },
+      {
+        "rgb": [
+          128,
+          128,
+          96
+        ],
+        "ratio": 0.08309
+      },
+      {
+        "rgb": [
+          96,
+          96,
+          32
+        ],
+        "ratio": 0.06342
+      }
+    ],
+    "capture": {
+      "model": "gpt-5.6-luna",
+      "mode": "local_visual_feature_capture",
+      "downsample": [
+        85,
+        128
+      ],
+      "deterministic": true
+    }
+  },
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/rock/st_dolmen/ov_12575b8c-d342-40c6-a3eb-a97da9f7310f.json",
+    "target": {
+      "targetId": "ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0",
+      "bbox": [
+        0,
+        1405,
+        1365,
+        2048
+      ],
+      "width": 1365,
+      "height": 643,
+      "aspectRatio": 2.123,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.999,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "rock\\st_dolmen\\ov_12575b8c-d342-40c6-a3eb-a97da9f7310f~0.png"
+    }
+  },
+  "evidenceStatus": "legacy_feature_metadata_only",
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批岩石依使用者指定以 GPT-5.6 Luna 視覺特徵與多面體岩石契約重建；缺少 YOLO26 schema-v2 時不提升 runtime 資格。"
+  },
+  "attachments": {
+    "vegetation": true,
+    "waterline": false,
+    "strata": false,
+    "stain": false,
+    "stairs": false,
+    "observation": false,
+    "hat": false,
+    "angularVisual": true,
+    "profile": "dolmen"
+  },
+  "visualGeometryPolicy": {
+    "mode": "angular_polyhedral_only",
+    "angularOnly": true,
+    "reason": "edge_density+profile:dolmen+rock_feature_tokens",
+    "metrics": {
+      "edgeDensity": 0.0237,
+      "neutralRock": 0.42105,
+      "luminanceRange": 239.93
+    },
+    "forbiddenPrimitives": [
+      "ellipsoid_sphere",
+      "hemisphere_dome",
+      "cylinder",
+      "cone"
+    ]
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 80,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_local_visual_feature_contract",
+    "critique": "視覺特徵與dolmen幾何契約已對齊；angular_polyhedral_only 通過幾何禁用閘門；13 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。"
+  },
+  "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「dolmen」；以多層多面體重建輪廓，保留vegetation附著特徵；幾何政策：angular_polyhedral_only。"
+}

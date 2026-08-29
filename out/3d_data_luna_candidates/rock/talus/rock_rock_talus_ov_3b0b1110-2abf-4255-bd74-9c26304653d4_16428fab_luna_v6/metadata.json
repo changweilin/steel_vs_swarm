@@ -1,0 +1,266 @@
+{
+  "id": "rock_rock_talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_16428fab_luna_v6",
+  "key": "rock/talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_16428fab_luna_v6",
+  "family": "rock",
+  "subpart": "talus",
+  "style": "faceted talus slope with anchored debris field",
+  "symmetryMode": "asymmetric",
+  "similarityScore": 83,
+  "similarityReview": "視覺特徵與talus幾何契約已對齊；angular_polyhedral_only 通過幾何禁用閘門；14 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "rock/talus/ov_3b0b1110-2abf-4255-bd74-9c26304653d4.jpeg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\talus\\ov_3b0b1110-2abf-4255-bd74-9c26304653d4.jpeg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/rock/talus/ov_3b0b1110-2abf-4255-bd74-9c26304653d4.json",
+    "target": {
+      "targetId": "ov_3b0b1110-2abf-4255-bd74-9c26304653d4~0",
+      "bbox": [
+        0,
+        0,
+        2048,
+        1536
+      ],
+      "width": 2048,
+      "height": 1536,
+      "aspectRatio": 1.333,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 1,
+          "widthRatio": 0,
+          "centerOffset": 0
+        },
+        {
+          "level": 2,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.968,
+          "centerOffset": -0.016
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.611,
+          "centerOffset": -0.195
+        },
+        {
+          "level": 5,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 6,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 7,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 8,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 9,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 10,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 11,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 12,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 13,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 14,
+          "widthRatio": 1,
+          "centerOffset": 0
+        },
+        {
+          "level": 15,
+          "widthRatio": 1,
+          "centerOffset": 0
+        }
+      ],
+      "targetFile": "rock\\talus\\ov_3b0b1110-2abf-4255-bd74-9c26304653d4~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批岩石依使用者指定以 GPT-5.6 Luna 視覺特徵與多面體岩石契約重建；缺少 YOLO26 schema-v2 時不提升 runtime 資格。"
+  },
+  "lunaVisualFeatures": {
+    "path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\talus\\ov_3b0b1110-2abf-4255-bd74-9c26304653d4.jpeg",
+    "status": "ok",
+    "width": 2048,
+    "height": 1536,
+    "aspectRatio": 1.3333,
+    "meanRgb": [
+      121.25,
+      127.2,
+      131.88
+    ],
+    "luminance": {
+      "mean": 126.27,
+      "range": 241.08,
+      "topMean": 187.13,
+      "bottomMean": 102.56
+    },
+    "coverage": {
+      "green": 0.01831,
+      "waterSky": 0.41748,
+      "warmEarth": 0.00366,
+      "neutralRock": 0.8855,
+      "dark": 0.04915
+    },
+    "edgeDensity": {
+      "horizontal": 0.01579,
+      "vertical": 0.0246,
+      "combined": 0.02019
+    },
+    "dominantColors": [
+      {
+        "rgb": [
+          96,
+          96,
+          96
+        ],
+        "ratio": 0.16626
+      },
+      {
+        "rgb": [
+          64,
+          64,
+          64
+        ],
+        "ratio": 0.14893
+      },
+      {
+        "rgb": [
+          128,
+          128,
+          128
+        ],
+        "ratio": 0.06844
+      },
+      {
+        "rgb": [
+          160,
+          160,
+          160
+        ],
+        "ratio": 0.06567
+      },
+      {
+        "rgb": [
+          160,
+          160,
+          192
+        ],
+        "ratio": 0.05827
+      },
+      {
+        "rgb": [
+          128,
+          160,
+          160
+        ],
+        "ratio": 0.0568
+      }
+    ],
+    "capture": {
+      "model": "gpt-5.6-luna",
+      "mode": "local_visual_feature_capture",
+      "downsample": [
+        128,
+        96
+      ],
+      "deterministic": true
+    }
+  },
+  "attachments": {
+    "vegetation": false,
+    "waterline": true,
+    "strata": true,
+    "stain": false,
+    "stairs": false,
+    "observation": false,
+    "hat": false,
+    "angularVisual": true,
+    "profile": "talus"
+  },
+  "visualGeometryPolicy": {
+    "mode": "angular_polyhedral_only",
+    "angularOnly": true,
+    "reason": "edge_density+profile:talus+rock_feature_tokens",
+    "metrics": {
+      "edgeDensity": 0.02019,
+      "neutralRock": 0.8855,
+      "luminanceRange": 241.08
+    },
+    "forbiddenPrimitives": [
+      "ellipsoid_sphere",
+      "hemisphere_dome",
+      "cylinder",
+      "cone"
+    ]
+  },
+  "preview": "out/review_previews/rock_rock_talus_ov_3b0b1110-2abf-4255-bd74-9c26304653d4_16428fab_luna_v6.png",
+  "bounds": {
+    "min": [
+      -3.2701,
+      0,
+      -3.6671
+    ],
+    "max": [
+      3.48,
+      1.6297,
+      3.78
+    ],
+    "size": [
+      6.75,
+      1.63,
+      7.447
+    ],
+    "rMax": 5.138,
+    "triangles": 412,
+    "vertices": 234
+  },
+  "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「talus」；以多層多面體重建輪廓，保留waterline、strata附著特徵；幾何政策：angular_polyhedral_only。",
+  "created_at": "2026-08-29T06:14:56.542Z",
+  "humanVerdictPreserved": true
+}

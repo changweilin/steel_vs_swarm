@@ -1,0 +1,266 @@
+{
+  "id": "rock_rock_main_images_rock_1_0_fd270a13_luna_v6",
+  "key": "rock/main_images rock (1)~0_fd270a13_luna_v6",
+  "family": "rock",
+  "subpart": "main",
+  "style": "stacked geological slab and fracture assembly",
+  "symmetryMode": "symmetric",
+  "similarityScore": 78,
+  "similarityReview": "視覺特徵與strata幾何契約已對齊；angular_polyhedral_only 通過幾何禁用閘門；10 個多面體零件涵蓋主輪廓與附著特徵。分數是本地結構自檢，不是人眼/第二模型核准。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "rock/images rock (1).jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\images rock (1).jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "legacy_feature_metadata_only",
+    "featureFile": "../../../../.gemini/antigravity/worktrees/steel_vs_swarm/llm_img3d_db_v6/out/yolo_features/rock/main/images rock (1).json",
+    "target": {
+      "targetId": "images rock (1)~0",
+      "bbox": [
+        0,
+        409,
+        254,
+        501
+      ],
+      "width": 254,
+      "height": 92,
+      "aspectRatio": 2.761,
+      "slices": [
+        {
+          "level": 0,
+          "widthRatio": 0.004,
+          "centerOffset": -0.498
+        },
+        {
+          "level": 1,
+          "widthRatio": 0.039,
+          "centerOffset": -0.48
+        },
+        {
+          "level": 2,
+          "widthRatio": 0.181,
+          "centerOffset": -0.409
+        },
+        {
+          "level": 3,
+          "widthRatio": 0.209,
+          "centerOffset": -0.396
+        },
+        {
+          "level": 4,
+          "widthRatio": 0.24,
+          "centerOffset": -0.38
+        },
+        {
+          "level": 5,
+          "widthRatio": 0.295,
+          "centerOffset": -0.352
+        },
+        {
+          "level": 6,
+          "widthRatio": 0.378,
+          "centerOffset": -0.311
+        },
+        {
+          "level": 7,
+          "widthRatio": 0.48,
+          "centerOffset": -0.26
+        },
+        {
+          "level": 8,
+          "widthRatio": 0.74,
+          "centerOffset": -0.13
+        },
+        {
+          "level": 9,
+          "widthRatio": 0.815,
+          "centerOffset": -0.093
+        },
+        {
+          "level": 10,
+          "widthRatio": 0.85,
+          "centerOffset": -0.075
+        },
+        {
+          "level": 11,
+          "widthRatio": 0.874,
+          "centerOffset": -0.063
+        },
+        {
+          "level": 12,
+          "widthRatio": 0.882,
+          "centerOffset": -0.059
+        },
+        {
+          "level": 13,
+          "widthRatio": 0.898,
+          "centerOffset": -0.051
+        },
+        {
+          "level": 14,
+          "widthRatio": 0.909,
+          "centerOffset": -0.045
+        },
+        {
+          "level": 15,
+          "widthRatio": 0.917,
+          "centerOffset": -0.041
+        }
+      ],
+      "targetFile": "rock\\main\\images rock (1)~0.png"
+    }
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批岩石依使用者指定以 GPT-5.6 Luna 視覺特徵與多面體岩石契約重建；缺少 YOLO26 schema-v2 時不提升 runtime 資格。"
+  },
+  "lunaVisualFeatures": {
+    "path": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\images rock (1).jpg",
+    "status": "ok",
+    "width": 399,
+    "height": 501,
+    "aspectRatio": 0.7964,
+    "meanRgb": [
+      151.48,
+      166.78,
+      192.39
+    ],
+    "luminance": {
+      "mean": 165.38,
+      "range": 212.92,
+      "topMean": 179.49,
+      "bottomMean": 144.48
+    },
+    "coverage": {
+      "green": 0,
+      "waterSky": 0.97817,
+      "warmEarth": 0,
+      "neutralRock": 0.25705,
+      "dark": 0.00743
+    },
+    "edgeDensity": {
+      "horizontal": 0.0068,
+      "vertical": 0.01248,
+      "combined": 0.00964
+    },
+    "dominantColors": [
+      {
+        "rgb": [
+          192,
+          192,
+          224
+        ],
+        "ratio": 0.15993
+      },
+      {
+        "rgb": [
+          160,
+          160,
+          192
+        ],
+        "ratio": 0.14928
+      },
+      {
+        "rgb": [
+          160,
+          192,
+          224
+        ],
+        "ratio": 0.09206
+      },
+      {
+        "rgb": [
+          128,
+          160,
+          192
+        ],
+        "ratio": 0.08831
+      },
+      {
+        "rgb": [
+          128,
+          128,
+          160
+        ],
+        "ratio": 0.07996
+      },
+      {
+        "rgb": [
+          96,
+          128,
+          160
+        ],
+        "ratio": 0.05982
+      }
+    ],
+    "capture": {
+      "model": "gpt-5.6-luna",
+      "mode": "local_visual_feature_capture",
+      "downsample": [
+        102,
+        128
+      ],
+      "deterministic": true
+    }
+  },
+  "attachments": {
+    "vegetation": false,
+    "waterline": true,
+    "strata": true,
+    "stain": false,
+    "stairs": false,
+    "observation": false,
+    "hat": false,
+    "angularVisual": true,
+    "profile": "strata"
+  },
+  "visualGeometryPolicy": {
+    "mode": "angular_polyhedral_only",
+    "angularOnly": true,
+    "reason": "profile:strata+rock_feature_tokens",
+    "metrics": {
+      "edgeDensity": 0.00964,
+      "neutralRock": 0.25705,
+      "luminanceRange": 212.92
+    },
+    "forbiddenPrimitives": [
+      "ellipsoid_sphere",
+      "hemisphere_dome",
+      "cylinder",
+      "cone"
+    ]
+  },
+  "preview": "out/review_previews/rock_rock_main_images_rock_1_0_fd270a13_luna_v6.png",
+  "bounds": {
+    "min": [
+      -1.9994,
+      0,
+      -1.7091
+    ],
+    "max": [
+      1.6998,
+      7.652,
+      2.7617
+    ],
+    "size": [
+      3.699,
+      7.652,
+      4.471
+    ],
+    "rMax": 3.243,
+    "triangles": 312,
+    "vertices": 176
+  },
+  "reconstructionNote": "以 GPT-5.6 Luna 視覺特徵辨識為「strata」；以多層多面體重建輪廓，保留waterline、strata附著特徵；幾何政策：angular_polyhedral_only。",
+  "created_at": "2026-08-29T06:14:52.053Z",
+  "humanVerdictPreserved": true
+}
