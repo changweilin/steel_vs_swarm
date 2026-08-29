@@ -28,7 +28,24 @@ def face_normal(a, b, c):
     return nx / length, ny / length, nz / length
 
 
-def render_view(draw, vertices, faces, colors, panel_x, panel_w, height, yaw, label):
+def hex_rgb(value):
+    """將模型零件的 24-bit 顏色轉成光柵器使用的 RGB。"""
+    value = int(value or 0x888888)
+    return (value >> 16 & 0xff, value >> 8 & 0xff, value & 0xff)
+
+
+def part_face_colors(parts, face_count):
+    """舊模型沒有 meshData.colors 時，依既有零件面數回填面色。"""
+    out = []
+    for part in parts or []:
+        count = max(0, int(part.get("triangles", 0)))
+        out.extend([hex_rgb(part.get("color"))] * count)
+        if len(out) >= face_count:
+            return out[:face_count]
+    return out + [(136, 136, 136)] * (face_count - len(out))
+
+
+def render_view(draw, vertices, faces, colors, face_colors, panel_x, panel_w, height, yaw, label):
     rotated = [rotate(v, yaw, math.radians(-12)) for v in vertices]
     xs = [v[0] for v in rotated]
     ys = [v[1] for v in rotated]
@@ -42,13 +59,17 @@ def render_view(draw, vertices, faces, colors, panel_x, panel_w, height, yaw, la
 
     rows = []
     light = (0.35, 0.8, 0.48)
-    for i in range(0, len(faces), 3):
+    for face_index, i in enumerate(range(0, len(faces), 3)):
         ia, ib, ic = faces[i:i + 3]
         a, b, c = rotated[ia], rotated[ib], rotated[ic]
         normal = face_normal(a, b, c)
         shade = max(0.0, normal[0] * light[0] + normal[1] * light[1] + normal[2] * light[2])
         band = 0.35 if shade < 0.2 else 0.58 if shade < 0.55 else 0.82
-        if len(colors) == len(vertices) * 3:
+        if face_colors:
+            base = face_colors[face_index]
+            factor = 0.66 + band * 0.42
+            color = tuple(max(0, min(255, int(channel * factor))) for channel in base)
+        elif len(colors) == len(vertices) * 3:
             base = [sum(colors[index * 3 + channel] for index in (ia, ib, ic)) / 3 for channel in range(3)]
             factor = 0.66 + band * 0.42
             color = tuple(max(0, min(255, int(channel * 255 * factor))) for channel in base)
@@ -78,6 +99,8 @@ def main():
     vertices = [tuple(flat[i:i + 3]) for i in range(0, len(flat), 3)]
     faces = [int(i) for i in mesh["faces"]]
     colors = mesh.get("colors", [])
+    has_vertex_colors = len(colors) == len(vertices) * 3
+    face_colors = [] if has_vertex_colors else part_face_colors(data.get("parts"), len(faces) // 3)
     if not vertices or len(faces) < 3:
         raise ValueError("model.json 沒有可渲染網格")
 
@@ -93,7 +116,7 @@ def main():
     draw = ImageDraw.Draw(image)
     panel_w = width // len(views)
     for index, (yaw, label) in enumerate(views):
-        render_view(draw, vertices, faces, colors, panel_w * index, panel_w, height, yaw, label)
+        render_view(draw, vertices, faces, colors, face_colors, panel_w * index, panel_w, height, yaw, label)
         if index:
             draw.line((panel_w * index, 0, panel_w * index, height), fill=(55, 65, 78), width=2)
     output_path.parent.mkdir(parents=True, exist_ok=True)
