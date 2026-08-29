@@ -29,12 +29,62 @@
       3.85
     ],
     "rMax": 2.341,
-    "triangles": 1028,
-    "vertices": 632
+    "triangles": 1052,
+    "vertices": 648
   },
   "spec": {
     "style": "automotive_vehicle"
   },
   "method": "gemini_v6",
-  "status": "ingested"
+  "status": "ingested",
+  "totalParts": 31,
+  "partNames": [
+    "chassis_base",
+    "main_cabin_body",
+    "hood_front",
+    "hood_top_bump",
+    "roof",
+    "front_windshield",
+    "side_window_left",
+    "side_window_right",
+    "rear_side_window_left",
+    "rear_side_window_right",
+    "front_grille",
+    "headlight_left",
+    "headlight_right",
+    "front_bumper",
+    "front_license_plate_box",
+    "side_mirror_left",
+    "fender_flair_front_left",
+    "fender_flair_front_right",
+    "fender_flair_rear_left",
+    "fender_flair_rear_right",
+    "tire_front_left",
+    "rim_front_left",
+    "tire_front_right",
+    "rim_front_right",
+    "tire_rear_left",
+    "rim_rear_left",
+    "tire_rear_right",
+    "rim_rear_right",
+    "side_step_left",
+    "side_mirror_right",
+    "side_step_right"
+  ],
+  "symmetryContract": {
+    "lateralAxis": "x",
+    "mirrorPlane": "x=0",
+    "mirroredBilateral": true,
+    "repairedParts": [
+      {
+        "source": "side_mirror_left",
+        "mirrored": "side_mirror_right"
+      },
+      {
+        "source": "side_step_left",
+        "mirrored": "side_step_right"
+      }
+    ],
+    "functionalAsymmetry": "preserved"
+  }
 }

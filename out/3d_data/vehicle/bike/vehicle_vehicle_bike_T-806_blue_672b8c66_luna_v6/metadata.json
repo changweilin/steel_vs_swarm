@@ -1,0 +1,59 @@
+{
+  "id": "vehicle_vehicle_bike_T-806_blue_672b8c66_luna_v6",
+  "key": "vehicle/bike_T-806_blue_672b8c66_luna_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "city_utility_bicycle",
+  "symmetryMode": "mirrored_bilateral",
+  "similarityScore": null,
+  "similarityReview": "city_utility_bicycle：解析幾何契約已通過，中心線車架件為單件、雙側件才鏡像；細長件由共享接點生成、車輪法線沿 Z 且輪胎落地；尚未完成獨立視覺比對，不得視為通過。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "逐張對照來源圖與固定五方向視圖",
+    "確認車型特有零件、接點與前後輪徑"
+  ],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/bike/T-806_blue.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\T-806_blue.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_bike_T-806_blue_672b8c66_luna_v6.png",
+  "bounds": {
+    "min": [
+      -0.906,
+      0.0166,
+      -0.3675
+    ],
+    "max": [
+      0.906,
+      1.0425,
+      0.3675
+    ],
+    "size": [
+      1.812,
+      1.026,
+      0.735
+    ],
+    "rMax": 0.978,
+    "triangles": 2392,
+    "vertices": 1458
+  },
+  "reconstructionNote": "全尺寸通勤車的穿越式車架、單側鏈條、前後擋泥板、鏈罩、後貨架與把手均接回車架關節。",
+  "created_at": "2026-08-29T00:51:57.393Z",
+  "humanVerdictPreserved": true
+}

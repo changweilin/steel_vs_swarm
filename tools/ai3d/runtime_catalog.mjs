@@ -5,6 +5,7 @@ import {
   NATIVE_FUNCTIONAL_SUBPARTS,
   isNativeFunctionalSubpart,
 } from '../../public/js/nativeFunctionalBuildings.js';
+import { vehicleSymmetryReport } from './vehicle_symmetry.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '..', '..');
@@ -91,6 +92,57 @@ function sanitizePart(part) {
   return clean;
 }
 
+function hexRgb(value) {
+  const hex = Number.isInteger(value) ? value : 0x888888;
+  return [(hex >> 16 & 0xff) / 255, (hex >> 8 & 0xff) / 255, (hex & 0xff) / 255];
+}
+
+/**
+ * v6 vehicle 的 meshData 是預覽圖的幾何真相。執行期型錄必須保留它，
+ * 否則零件台/預覽圖看的是烘焙網格，遊戲卻會重新估算另一組 primitive。
+ */
+function sanitizeMeshData(raw, parts) {
+  if (!raw || !isFiniteArray(raw.vertices) || raw.vertices.length < 9 || raw.vertices.length % 3 !== 0
+    || !Array.isArray(raw.faces) || raw.faces.length < 3 || raw.faces.length % 3 !== 0
+    || !raw.faces.every((index) => Number.isInteger(index) && index >= 0 && index < raw.vertices.length / 3)) return null;
+  const vertexCount = raw.vertices.length / 3;
+  const normals = raw.normals == null ? null
+    : (isFiniteArray(raw.normals) && raw.normals.length === raw.vertices.length ? [...raw.normals] : null);
+  const uvs = raw.uvs == null ? null
+    : (isFiniteArray(raw.uvs) && raw.uvs.length === vertexCount * 2 ? [...raw.uvs] : null);
+  if (raw.normals != null && !normals) return null;
+  if (raw.uvs != null && !uvs) return null;
+
+  let colors = raw.colors;
+  if (!isFiniteArray(colors) || colors.length !== raw.vertices.length) {
+    colors = new Array(raw.vertices.length).fill(0);
+    let faceCursor = 0;
+    for (const part of parts) {
+      const triangleCount = Number.isInteger(part.triangles) ? part.triangles : 0;
+      const end = Math.min(raw.faces.length, faceCursor + triangleCount * 3);
+      const touched = new Set();
+      for (let i = faceCursor; i < end; i++) touched.add(raw.faces[i]);
+      const rgb = hexRgb(part.color);
+      for (const index of touched) {
+        colors[index * 3] = rgb[0];
+        colors[index * 3 + 1] = rgb[1];
+        colors[index * 3 + 2] = rgb[2];
+      }
+      faceCursor = end;
+    }
+  }
+  if (!isFiniteArray(colors) || colors.length !== raw.vertices.length) return null;
+  return {
+    vertexCount,
+    triangleCount: raw.faces.length / 3,
+    vertices: [...raw.vertices],
+    ...(normals ? { normals } : {}),
+    ...(uvs ? { uvs } : {}),
+    colors: [...colors],
+    faces: [...raw.faces],
+  };
+}
+
 function sanitizeSource(image) {
   return {
     id: image?.id || null,
@@ -105,6 +157,12 @@ function sanitizeAsset(database, manifest, review, model, canonicalTarget) {
   if (!Array.isArray(model.parts) || model.parts.length === 0) return null;
   const parts = model.parts.map(sanitizePart);
   if (parts.some((part) => part === null)) return null;
+  const meshData = database.family === 'vehicle' ? sanitizeMeshData(model.meshData, parts) : null;
+  if (database.family === 'vehicle' && !meshData) return null;
+  if (database.family === 'vehicle' && database.version === 6) {
+    const symmetry = vehicleSymmetryReport({ ...model, parts }, meshData);
+    if (!symmetry.ok) return null;
+  }
 
   return {
     key: database.key,
@@ -132,6 +190,7 @@ function sanitizeAsset(database, manifest, review, model, canonicalTarget) {
       },
     },
     parts,
+    ...(meshData ? { meshData } : {}),
   };
 }
 

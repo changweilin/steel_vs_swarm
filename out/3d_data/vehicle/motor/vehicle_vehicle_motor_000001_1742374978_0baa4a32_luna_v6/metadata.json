@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_vehicle_motor_000001_1742374978_0baa4a32_luna_v6",
+  "key": "vehicle_motor_000001_1742374978_0baa4a32_luna_v6",
+  "family": "vehicle",
+  "subpart": "motor",
+  "style": "retro_scooter",
+  "symmetryMode": "mirrored_bilateral",
+  "similarityScore": 86,
+  "similarityReview": "retro_scooter：細長件由共享接點生成，車輪法線沿 Z、輪胎落地；固定三視圖供人工覆核。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/motor/000001_1742374978.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\motor\\000001_1742374978.png",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_motor_000001_1742374978_0baa4a32_luna_v6.png",
+  "bounds": {
+    "min": [
+      -0.915,
+      0.0147,
+      -0.3972
+    ],
+    "max": [
+      0.915,
+      1.1248,
+      0.3972
+    ],
+    "size": [
+      1.83,
+      1.11,
+      0.794
+    ],
+    "rMax": 0.997,
+    "triangles": 1612,
+    "vertices": 979
+  },
+  "reconstructionNote": "踏板、前整流罩、擋風鏡、左右後視鏡、前叉、引擎、後搖臂、排氣管、側柱與雙輪均完整接合。",
+  "created_at": "2026-08-28T13:08:51.394Z",
+  "humanVerdictPreserved": true
+}

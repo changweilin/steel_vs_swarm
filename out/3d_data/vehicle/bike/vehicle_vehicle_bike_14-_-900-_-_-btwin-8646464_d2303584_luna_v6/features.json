@@ -1,0 +1,434 @@
+{
+  "id": "vehicle_bike_vehicle_bike_14-_-900-_-_-btwin-8646464",
+  "sourceImage": "vehicle/bike/14-鋁合金二合一自行車-900-綠色-含腳撐-btwin-8646464.jpg",
+  "style": "folding_city_bicycle",
+  "symmetryMode": "mirrored_bilateral",
+  "colors": {
+    "roofHex": 8896432,
+    "facadeHex": 15130320,
+    "baseHex": 6057577,
+    "accentHex": 10907472,
+    "darkHex": 2569009,
+    "brightHex": 16052447,
+    "glassHex": 2509906
+  },
+  "totalParts": 59,
+  "partNames": [
+    "rear_wheel_tire",
+    "rear_wheel_rim",
+    "rear_wheel_hub",
+    "rear_wheel_spoke_left_0",
+    "rear_wheel_spoke_left_1",
+    "rear_wheel_spoke_left_2",
+    "rear_wheel_spoke_left_3",
+    "rear_wheel_spoke_left_4",
+    "rear_wheel_spoke_left_5",
+    "rear_wheel_spoke_left_6",
+    "rear_wheel_spoke_left_7",
+    "rear_wheel_spoke_right_0",
+    "rear_wheel_spoke_right_1",
+    "rear_wheel_spoke_right_2",
+    "rear_wheel_spoke_right_3",
+    "rear_wheel_spoke_right_4",
+    "rear_wheel_spoke_right_5",
+    "rear_wheel_spoke_right_6",
+    "rear_wheel_spoke_right_7",
+    "front_wheel_tire",
+    "front_wheel_rim",
+    "front_wheel_hub",
+    "front_wheel_spoke_left_0",
+    "front_wheel_spoke_left_1",
+    "front_wheel_spoke_left_2",
+    "front_wheel_spoke_left_3",
+    "front_wheel_spoke_left_4",
+    "front_wheel_spoke_left_5",
+    "front_wheel_spoke_left_6",
+    "front_wheel_spoke_left_7",
+    "front_wheel_spoke_right_0",
+    "front_wheel_spoke_right_1",
+    "front_wheel_spoke_right_2",
+    "front_wheel_spoke_right_3",
+    "front_wheel_spoke_right_4",
+    "front_wheel_spoke_right_5",
+    "front_wheel_spoke_right_6",
+    "front_wheel_spoke_right_7",
+    "stepthrough_lower_left",
+    "stepthrough_lower_right",
+    "stepthrough_hinge_left",
+    "stepthrough_hinge_right",
+    "seat_support_left",
+    "seat_support_right",
+    "top_stepthrough_left",
+    "top_stepthrough_right",
+    "head_down_left",
+    "head_down_right",
+    "rear_chainstay_left",
+    "rear_chainstay_right",
+    "rear_seatstay_left",
+    "rear_seatstay_right",
+    "front_fork_left",
+    "front_fork_right",
+    "seat_post",
+    "handle_stem",
+    "flat_handlebar",
+    "rear_rack_lower",
+    "rear_rack_upper"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder"
+  ],
+  "structuralContract": {
+    "coordinateFrame": {
+      "nose": "+X",
+      "up": "+Y",
+      "lateral": "+Z"
+    },
+    "thinMembersEndpointDerived": true,
+    "sharedJoints": [
+      {
+        "name": "stepthrough_lower_left",
+        "a": [
+          -0.49,
+          0.245,
+          -0.052
+        ],
+        "b": [
+          0.02,
+          0.34,
+          -0.052
+        ],
+        "radius": 0.036
+      },
+      {
+        "name": "stepthrough_lower_right",
+        "a": [
+          -0.49,
+          0.245,
+          0.052
+        ],
+        "b": [
+          0.02,
+          0.34,
+          0.052
+        ],
+        "radius": 0.036
+      },
+      {
+        "name": "stepthrough_hinge_left",
+        "a": [
+          0.02,
+          0.34,
+          -0.052
+        ],
+        "b": [
+          0.08,
+          0.47,
+          -0.052
+        ],
+        "radius": 0.036
+      },
+      {
+        "name": "stepthrough_hinge_right",
+        "a": [
+          0.02,
+          0.34,
+          0.052
+        ],
+        "b": [
+          0.08,
+          0.47,
+          0.052
+        ],
+        "radius": 0.036
+      },
+      {
+        "name": "seat_support_left",
+        "a": [
+          0.08,
+          0.47,
+          -0.052
+        ],
+        "b": [
+          -0.28,
+          0.7,
+          -0.052
+        ],
+        "radius": 0.03312
+      },
+      {
+        "name": "seat_support_right",
+        "a": [
+          0.08,
+          0.47,
+          0.052
+        ],
+        "b": [
+          -0.28,
+          0.7,
+          0.052
+        ],
+        "radius": 0.03312
+      },
+      {
+        "name": "top_stepthrough_left",
+        "a": [
+          -0.28,
+          0.7,
+          -0.052
+        ],
+        "b": [
+          0.37,
+          0.7,
+          -0.052
+        ],
+        "radius": 0.029519999999999998
+      },
+      {
+        "name": "top_stepthrough_right",
+        "a": [
+          -0.28,
+          0.7,
+          0.052
+        ],
+        "b": [
+          0.37,
+          0.7,
+          0.052
+        ],
+        "radius": 0.029519999999999998
+      },
+      {
+        "name": "head_down_left",
+        "a": [
+          0.37,
+          0.7,
+          -0.052
+        ],
+        "b": [
+          0.25,
+          0.5,
+          -0.052
+        ],
+        "radius": 0.0324
+      },
+      {
+        "name": "head_down_right",
+        "a": [
+          0.37,
+          0.7,
+          0.052
+        ],
+        "b": [
+          0.25,
+          0.5,
+          0.052
+        ],
+        "radius": 0.0324
+      },
+      {
+        "name": "rear_chainstay_left",
+        "a": [
+          -0.49,
+          0.245,
+          -0.052
+        ],
+        "b": [
+          0.02,
+          0.34,
+          -0.052
+        ],
+        "radius": 0.02592
+      },
+      {
+        "name": "rear_chainstay_right",
+        "a": [
+          -0.49,
+          0.245,
+          0.052
+        ],
+        "b": [
+          0.02,
+          0.34,
+          0.052
+        ],
+        "radius": 0.02592
+      },
+      {
+        "name": "rear_seatstay_left",
+        "a": [
+          -0.49,
+          0.245,
+          -0.052
+        ],
+        "b": [
+          -0.28,
+          0.7,
+          -0.052
+        ],
+        "radius": 0.021599999999999998
+      },
+      {
+        "name": "rear_seatstay_right",
+        "a": [
+          -0.49,
+          0.245,
+          0.052
+        ],
+        "b": [
+          -0.28,
+          0.7,
+          0.052
+        ],
+        "radius": 0.021599999999999998
+      },
+      {
+        "name": "front_fork_left",
+        "a": [
+          0.25,
+          0.5,
+          -0.052
+        ],
+        "b": [
+          0.49,
+          0.245,
+          -0.052
+        ],
+        "radius": 0.021
+      },
+      {
+        "name": "front_fork_right",
+        "a": [
+          0.25,
+          0.5,
+          0.052
+        ],
+        "b": [
+          0.49,
+          0.245,
+          0.052
+        ],
+        "radius": 0.021
+      },
+      {
+        "name": "seat_post",
+        "a": [
+          -0.28,
+          0.7,
+          0
+        ],
+        "b": [
+          -0.28,
+          0.91,
+          0
+        ],
+        "radius": 0.018
+      },
+      {
+        "name": "handle_stem",
+        "a": [
+          0.37,
+          0.7,
+          0
+        ],
+        "b": [
+          0.43,
+          0.94,
+          0
+        ],
+        "radius": 0.018
+      },
+      {
+        "name": "rear_rack_lower",
+        "a": [
+          -0.54,
+          0.285,
+          -0.15
+        ],
+        "b": [
+          -0.54,
+          0.68,
+          -0.15
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "rear_rack_upper",
+        "a": [
+          -0.54,
+          0.68,
+          -0.15
+        ],
+        "b": [
+          0.05,
+          0.68,
+          -0.15
+        ],
+        "radius": 0.012
+      }
+    ],
+    "wheelContract": [
+      {
+        "name": "rear_wheel",
+        "center": [
+          -0.49,
+          0.245,
+          0
+        ],
+        "outerRadius": 0.245,
+        "tireTube": 0.04,
+        "axis": "z",
+        "tire": "rear_wheel_tire",
+        "rim": "rear_wheel_rim"
+      },
+      {
+        "name": "front_wheel",
+        "center": [
+          0.49,
+          0.245,
+          0
+        ],
+        "outerRadius": 0.245,
+        "tireTube": 0.04,
+        "axis": "z",
+        "tire": "front_wheel_tire",
+        "rim": "front_wheel_rim"
+      }
+    ],
+    "noGroundPenetrationExpected": true,
+    "mirroredBilateral": true
+  },
+  "schemaVersion": null,
+  "evidenceStatus": "missing_yolo26_schema_v2",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "reconstructionNote": "小徑輪、折疊鉸鏈、穿越式車架、雙側輪架、前後擋泥板與後籃完整接合。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 86,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+    "reviewMode": "fixed_three_view_visual_inspection_plus_deterministic_geometry",
+    "independentMultimodalReview": "not_run",
+    "hardDefects": [],
+    "fixedViews": [
+      "front_3_4",
+      "side",
+      "rear"
+    ],
+    "critique": "folding_city_bicycle：細長件由共享接點生成，車輪法線沿 Z、輪胎落地；固定三視圖供人工覆核。"
+  }
+}

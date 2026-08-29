@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_vehicle_bike_800x_03514b7a_luna_v6",
+  "key": "vehicle_bike_800x_03514b7a_luna_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "child_tricycle",
+  "symmetryMode": "explicit_three_wheel",
+  "similarityScore": 86,
+  "similarityReview": "child_tricycle：細長件由共享接點生成，車輪法線沿 Z、輪胎落地；固定三視圖供人工覆核。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/bike/800x.jpg",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\800x.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_bike_800x_03514b7a_luna_v6.png",
+  "bounds": {
+    "min": [
+      -0.67,
+      0.0093,
+      -0.335
+    ],
+    "max": [
+      0.75,
+      1.0252,
+      0.335
+    ],
+    "size": [
+      1.42,
+      1.016,
+      0.67
+    ],
+    "rMax": 0.821,
+    "triangles": 2196,
+    "vertices": 1328
+  },
+  "reconstructionNote": "單一前輪與左右後輪完整建模；籃筐、車架、把手與三組輪轂均接在對應接點。",
+  "created_at": "2026-08-28T13:08:50.033Z",
+  "humanVerdictPreserved": true
+}

@@ -864,6 +864,25 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
     vertices: vertices.length / 3,
   };
 
+  // 預覽、零件台與遊戲端共用同一份烘焙網格；顏色也隨頂點保存，避免各消費端
+  // 依 parts 重新估材質而產生不同的面色。每個 primitive 的頂點在 meshData 中
+  // 連續寫入，三角面順序則與 partsOut 一致，因此可安全回填對應零件色。
+  const vertexColors = new Array(vertices.length).fill(0);
+  let partFaceCursor = 0;
+  for (const part of partsOut) {
+    const faceEnd = Math.min(faces.length, partFaceCursor + part.triangles * 3);
+    const touched = new Set();
+    for (let i = partFaceCursor; i < faceEnd; i++) touched.add(faces[i]);
+    const color = Number.isInteger(part.color) ? part.color : 0x888888;
+    const rgb = [(color >> 16 & 0xff) / 255, (color >> 8 & 0xff) / 255, (color & 0xff) / 255];
+    for (const index of touched) {
+      vertexColors[index * 3] = rgb[0];
+      vertexColors[index * 3 + 1] = rgb[1];
+      vertexColors[index * 3 + 2] = rgb[2];
+    }
+    partFaceCursor = faceEnd;
+  }
+
   // ── OBJ 輸出 ──
   const objLines = [
     `# 3D Model: ${family}/${subpart}/${stem} (v6 Gemini)`,
@@ -884,7 +903,7 @@ export function buildGeometryFromParts(geminiResult, family, subpart, stem) {
     style: geminiResult.style, symmetryMode: geminiResult.symmetryMode,
     spec: { style: geminiResult.style }, bounds,
     parts: partsOut, reconstructedFeatures: [],
-    meshData: { vertexCount: vertices.length / 3, triangleCount: faces.length / 3, vertices, normals, uvs, faces },
+    meshData: { vertexCount: vertices.length / 3, triangleCount: faces.length / 3, vertices, normals, uvs, colors: vertexColors, faces },
   };
 
   const featuresJson = {

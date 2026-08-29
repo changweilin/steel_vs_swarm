@@ -93,7 +93,12 @@ const FAMILY_LABELS = {
   ship: 'ship (船艦)',
   tree: 'tree (植被/神木)',
   vehicle: 'vehicle (載具)',
+  vehicle_2w: '兩輪載具 (機車／腳踏車)',
+  vehicle_4w: '四輪載具 (汽車／重型載具)',
+  vehicle_other: '其他載具',
 };
+
+const rowCategory = (r) => r?.category || r?.family || (r?.key ? r.key.split('/')[0] : 'other');
 
 const isTreeModelRow = (r) => r?.family === 'tree' && r?.view?.builder === 'model3d';
 function treeModelPartRole(name) {
@@ -144,6 +149,7 @@ async function initGfx(data) {
   gfx.aquatics = await import('/public/js/aquatics.js');
   gfx.rng = await import('/public/js/rng.js');
   const partlib = await import('/public/js/partlib.js');
+  gfx.runtimePartModel = await import('/public/js/runtimePartModel.js');
   const { setCelSun, bakeContactAO } = await import('/public/js/toon.js');
   gfx.bakeContactAO = bakeContactAO;
   gfx.mods.set('now', gfx.beacons);
@@ -230,7 +236,20 @@ function build(phase, src, kind, seed, builder = 'beacon') {
         .then((res) => (res.ok ? res.json() : null))
         .then((model) => {
           if (!model) return;
-          if (model.parts && model.parts.length) {
+          const row = rowOf(kind);
+          const sharedVehicleMesh = row?.family === 'vehicle' && model.meshData?.vertices?.length;
+          if (sharedVehicleMesh) {
+            // 載具直接走遊戲同一個 loader；不可在零件台另寫一份 primitive 對照器。
+            const mesh = gfx.runtimePartModel.makeRuntimePartModel({
+              ...model,
+              key: kind,
+              family: row.family,
+              version: row.version,
+              image: row.item?.image || row.prov?.source?.file || row.at,
+            }, { environment: true });
+            mesh.userData.modelPartName = kind;
+            g.add(mesh);
+          } else if (model.parts && model.parts.length) {
             for (const p of model.parts) {
               let geo = null;
               if (p.type === 'box' && p.dimensions) {
@@ -394,6 +413,7 @@ function makeViewer() {
   const T = gfx.THREE;
   const canvas = document.createElement('canvas');
   const renderer = new T.WebGLRenderer({ canvas, antialias: true });
+  renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.setClearColor(0x171b21, 1);
   const scene = new T.Scene();
   const SUN = new T.Vector3(-0.5, 0.45, -0.75).normalize();
@@ -717,7 +737,7 @@ function setupFilters() {
   // 2. 物件分類選單
   const familyCounts = new Map();
   for (const r of app.data.rows) {
-    const fam = r.family || (r.key ? r.key.split('/')[0] : 'other');
+    const fam = rowCategory(r);
     familyCounts.set(fam, (familyCounts.get(fam) || 0) + 1);
   }
   const families = [...familyCounts.keys()].sort();
@@ -836,7 +856,7 @@ const keepRow = (r) => {
   }
   // 分類篩選
   if (app.filterFamily) {
-    const fam = r.family || (r.key ? r.key.split('/')[0] : '');
+    const fam = rowCategory(r);
     if (fam !== app.filterFamily) return false;
   }
   // 生成日期篩選
@@ -1389,6 +1409,7 @@ function renderBody() {
   <div class="pr-body-header">
     <h2 class="pr-h2">${esc(r.title)}</h2>
     <div class="pr-mline">${esc(r.method ? r.method.label : '未記載來源')}
+      ・ 分類 ${esc(FAMILY_LABELS[rowCategory(r)] || rowCategory(r))}
       ・ 版本 ${esc(r.verStr || `v${r.version || 1}`)}
       ・ 消費端 ${esc(r.consumer || '—')}${r.glbPath ? ` ・ ${esc(r.glbPath)}` : ''}
       ${r.missing ? ' ・ <span class="pr-bad">缺件:執行期整件走 fallback</span>' : ''}</div>

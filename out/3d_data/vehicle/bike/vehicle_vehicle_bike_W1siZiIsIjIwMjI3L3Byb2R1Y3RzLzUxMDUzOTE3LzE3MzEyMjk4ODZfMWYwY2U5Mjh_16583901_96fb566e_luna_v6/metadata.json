@@ -1,0 +1,56 @@
+{
+  "id": "vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_96fb566e_luna_v6",
+  "key": "vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d_96fb566e_luna_v6",
+  "family": "vehicle",
+  "subpart": "bike",
+  "style": "training_wheel_city_bicycle",
+  "symmetryMode": "explicit_training_wheel_pair",
+  "similarityScore": 86,
+  "similarityReview": "training_wheel_city_bicycle：細長件由共享接點生成，車輪法線沿 Z、輪胎落地；固定三視圖供人工覆核。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [],
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+  "source_full_path": "C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos\\vehicle\\bike\\W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "preview": "out/review_previews/vehicle_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901_96fb566e_luna_v6.png",
+  "bounds": {
+    "min": [
+      -0.755,
+      0.0054,
+      -0.462
+    ],
+    "max": [
+      0.755,
+      0.9852,
+      0.462
+    ],
+    "size": [
+      1.51,
+      0.98,
+      0.924
+    ],
+    "rMax": 0.885,
+    "triangles": 3272,
+    "vertices": 1977
+  },
+  "reconstructionNote": "前籃、鏈罩、前後擋泥板、穿越式車架與左右輔助輪完整建模，輔助輪軸與支架接回後車架。",
+  "created_at": "2026-08-28T13:08:51.015Z",
+  "humanVerdictPreserved": true
+}

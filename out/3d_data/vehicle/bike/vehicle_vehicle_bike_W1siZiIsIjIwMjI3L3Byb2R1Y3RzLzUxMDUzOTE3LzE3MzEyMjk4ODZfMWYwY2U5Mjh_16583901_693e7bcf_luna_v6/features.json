@@ -1,0 +1,483 @@
+{
+  "id": "vehicle_bike_vehicle_bike_W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5Mjh_16583901",
+  "sourceImage": "vehicle/bike/W1siZiIsIjIwMjI3L3Byb2R1Y3RzLzUxMDUzOTE3LzE3MzEyMjk4ODZfMWYwY2U5MjhkNjlmMDAzY2Y4YzEucG5nIl0sWyJwIiwidGh1bWIiLCI2MDB4NjAwIl1d.png",
+  "style": "hybrid_bicycle",
+  "symmetryMode": "mirrored_bilateral",
+  "colors": {
+    "roofHex": 2502713,
+    "facadeHex": 4684401,
+    "baseHex": 1382685,
+    "accentHex": 11912386,
+    "darkHex": 1119254,
+    "brightHex": 15002591,
+    "glassHex": 1652548
+  },
+  "totalParts": 66,
+  "partNames": [
+    "rear_wheel_tire",
+    "rear_wheel_rim",
+    "rear_wheel_hub",
+    "rear_wheel_spoke_left_0",
+    "rear_wheel_spoke_left_1",
+    "rear_wheel_spoke_left_2",
+    "rear_wheel_spoke_left_3",
+    "rear_wheel_spoke_left_4",
+    "rear_wheel_spoke_left_5",
+    "rear_wheel_spoke_left_6",
+    "rear_wheel_spoke_left_7",
+    "rear_wheel_spoke_right_0",
+    "rear_wheel_spoke_right_1",
+    "rear_wheel_spoke_right_2",
+    "rear_wheel_spoke_right_3",
+    "rear_wheel_spoke_right_4",
+    "rear_wheel_spoke_right_5",
+    "rear_wheel_spoke_right_6",
+    "rear_wheel_spoke_right_7",
+    "front_wheel_tire",
+    "front_wheel_rim",
+    "front_wheel_hub",
+    "front_wheel_spoke_left_0",
+    "front_wheel_spoke_left_1",
+    "front_wheel_spoke_left_2",
+    "front_wheel_spoke_left_3",
+    "front_wheel_spoke_left_4",
+    "front_wheel_spoke_left_5",
+    "front_wheel_spoke_left_6",
+    "front_wheel_spoke_left_7",
+    "front_wheel_spoke_right_0",
+    "front_wheel_spoke_right_1",
+    "front_wheel_spoke_right_2",
+    "front_wheel_spoke_right_3",
+    "front_wheel_spoke_right_4",
+    "front_wheel_spoke_right_5",
+    "front_wheel_spoke_right_6",
+    "front_wheel_spoke_right_7",
+    "top_tube_left",
+    "top_tube_right",
+    "down_tube_left",
+    "down_tube_right",
+    "seat_tube_left",
+    "seat_tube_right",
+    "rear_chainstay_left",
+    "rear_chainstay_right",
+    "rear_seatstay_left",
+    "rear_seatstay_right",
+    "head_tube_left",
+    "head_tube_right",
+    "front_fork_left",
+    "front_fork_right",
+    "seat_post",
+    "crank_ring_left",
+    "crank_axle_left",
+    "crank_arm_left",
+    "chain_upper_left",
+    "chain_lower_left",
+    "crank_ring_right",
+    "crank_axle_right",
+    "crank_arm_right",
+    "chain_upper_right",
+    "chain_lower_right",
+    "handle_stem",
+    "flat_handlebar",
+    "front_brake_cable"
+  ],
+  "polyhedralPrimitivesUsed": [
+    "torus_ring",
+    "cylinder"
+  ],
+  "structuralContract": {
+    "coordinateFrame": {
+      "nose": "+X",
+      "up": "+Y",
+      "lateral": "+Z"
+    },
+    "thinMembersEndpointDerived": true,
+    "sharedJoints": [
+      {
+        "name": "top_tube_left",
+        "a": [
+          -0.39,
+          0.79,
+          -0.052
+        ],
+        "b": [
+          0.4,
+          0.84,
+          -0.052
+        ],
+        "radius": 0.032
+      },
+      {
+        "name": "top_tube_right",
+        "a": [
+          -0.39,
+          0.79,
+          0.052
+        ],
+        "b": [
+          0.4,
+          0.84,
+          0.052
+        ],
+        "radius": 0.032
+      },
+      {
+        "name": "down_tube_left",
+        "a": [
+          0.38,
+          0.63,
+          -0.052
+        ],
+        "b": [
+          0,
+          0.39,
+          -0.052
+        ],
+        "radius": 0.035840000000000004
+      },
+      {
+        "name": "down_tube_right",
+        "a": [
+          0.38,
+          0.63,
+          0.052
+        ],
+        "b": [
+          0,
+          0.39,
+          0.052
+        ],
+        "radius": 0.035840000000000004
+      },
+      {
+        "name": "seat_tube_left",
+        "a": [
+          0,
+          0.39,
+          -0.052
+        ],
+        "b": [
+          -0.39,
+          0.79,
+          -0.052
+        ],
+        "radius": 0.0304
+      },
+      {
+        "name": "seat_tube_right",
+        "a": [
+          0,
+          0.39,
+          0.052
+        ],
+        "b": [
+          -0.39,
+          0.79,
+          0.052
+        ],
+        "radius": 0.0304
+      },
+      {
+        "name": "rear_chainstay_left",
+        "a": [
+          -0.54,
+          0.35,
+          -0.052
+        ],
+        "b": [
+          0,
+          0.39,
+          -0.052
+        ],
+        "radius": 0.023039999999999998
+      },
+      {
+        "name": "rear_chainstay_right",
+        "a": [
+          -0.54,
+          0.35,
+          0.052
+        ],
+        "b": [
+          0,
+          0.39,
+          0.052
+        ],
+        "radius": 0.023039999999999998
+      },
+      {
+        "name": "rear_seatstay_left",
+        "a": [
+          -0.54,
+          0.35,
+          -0.052
+        ],
+        "b": [
+          -0.39,
+          0.79,
+          -0.052
+        ],
+        "radius": 0.0192
+      },
+      {
+        "name": "rear_seatstay_right",
+        "a": [
+          -0.54,
+          0.35,
+          0.052
+        ],
+        "b": [
+          -0.39,
+          0.79,
+          0.052
+        ],
+        "radius": 0.0192
+      },
+      {
+        "name": "head_tube_left",
+        "a": [
+          0.38,
+          0.63,
+          -0.052
+        ],
+        "b": [
+          0.4,
+          0.84,
+          -0.052
+        ],
+        "radius": 0.02624
+      },
+      {
+        "name": "head_tube_right",
+        "a": [
+          0.38,
+          0.63,
+          0.052
+        ],
+        "b": [
+          0.4,
+          0.84,
+          0.052
+        ],
+        "radius": 0.02624
+      },
+      {
+        "name": "front_fork_left",
+        "a": [
+          0.38,
+          0.63,
+          -0.052
+        ],
+        "b": [
+          0.54,
+          0.35,
+          -0.052
+        ],
+        "radius": 0.021
+      },
+      {
+        "name": "front_fork_right",
+        "a": [
+          0.38,
+          0.63,
+          0.052
+        ],
+        "b": [
+          0.54,
+          0.35,
+          0.052
+        ],
+        "radius": 0.021
+      },
+      {
+        "name": "seat_post",
+        "a": [
+          -0.39,
+          0.79,
+          0
+        ],
+        "b": [
+          -0.39,
+          0.98,
+          0
+        ],
+        "radius": 0.018
+      },
+      {
+        "name": "crank_arm_left",
+        "a": [
+          0,
+          0.39,
+          -0.09
+        ],
+        "b": [
+          -0.12,
+          0.29000000000000004,
+          -0.09
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "chain_upper_left",
+        "a": [
+          -0.54,
+          0.35,
+          -0.09
+        ],
+        "b": [
+          0,
+          0.39,
+          -0.09
+        ],
+        "radius": 0.009
+      },
+      {
+        "name": "chain_lower_left",
+        "a": [
+          -0.54,
+          0.305,
+          -0.09
+        ],
+        "b": [
+          0,
+          0.34500000000000003,
+          -0.09
+        ],
+        "radius": 0.009
+      },
+      {
+        "name": "crank_arm_right",
+        "a": [
+          0,
+          0.39,
+          0.09
+        ],
+        "b": [
+          0.12,
+          0.29000000000000004,
+          0.09
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "chain_upper_right",
+        "a": [
+          -0.54,
+          0.35,
+          0.09
+        ],
+        "b": [
+          0,
+          0.39,
+          0.09
+        ],
+        "radius": 0.009
+      },
+      {
+        "name": "chain_lower_right",
+        "a": [
+          -0.54,
+          0.305,
+          0.09
+        ],
+        "b": [
+          0,
+          0.34500000000000003,
+          0.09
+        ],
+        "radius": 0.009
+      },
+      {
+        "name": "handle_stem",
+        "a": [
+          0.4,
+          0.84,
+          0
+        ],
+        "b": [
+          0.47,
+          0.9199999999999999,
+          0
+        ],
+        "radius": 0.018
+      },
+      {
+        "name": "front_brake_cable",
+        "a": [
+          0.47,
+          0.9199999999999999,
+          0
+        ],
+        "b": [
+          0.4,
+          0.84,
+          0
+        ],
+        "radius": 0.008
+      }
+    ],
+    "wheelContract": [
+      {
+        "name": "rear_wheel",
+        "center": [
+          -0.54,
+          0.35,
+          0
+        ],
+        "outerRadius": 0.35,
+        "tireTube": 0.045,
+        "axis": "z",
+        "tire": "rear_wheel_tire",
+        "rim": "rear_wheel_rim"
+      },
+      {
+        "name": "front_wheel",
+        "center": [
+          0.54,
+          0.35,
+          0
+        ],
+        "outerRadius": 0.35,
+        "tireTube": 0.045,
+        "axis": "z",
+        "tire": "front_wheel_tire",
+        "rim": "front_wheel_rim"
+      }
+    ],
+    "noGroundPenetrationExpected": true,
+    "mirroredBilateral": true
+  },
+  "schemaVersion": null,
+  "evidenceStatus": "missing_yolo26_schema_v2",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "依使用者指定以 GPT-5.6 Luna 視覺重建；YOLO26 schema-v2 缺失時保持 awaiting_human_review，不提升 runtime 資格。"
+  },
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "reconstructionNote": "雙側前三角、鏈條上下段、曲柄踏板、前叉、輪圈、輪轂、輻條、煞車盤與纜線均以接點建模。",
+  "localModel": "gpt-5.6-luna",
+  "similarityReview": {
+    "similarityScore": 86,
+    "verdict": "awaiting_human_review",
+    "corrections": [],
+    "reviewer": "gpt-5.6-luna_vehicle_geometry_contract",
+    "reviewMode": "fixed_three_view_visual_inspection_plus_deterministic_geometry",
+    "independentMultimodalReview": "not_run",
+    "hardDefects": [],
+    "fixedViews": [
+      "front_3_4",
+      "side",
+      "rear"
+    ],
+    "critique": "hybrid_bicycle：細長件由共享接點生成，車輪法線沿 Z、輪胎落地；固定三視圖供人工覆核。"
+  }
+}

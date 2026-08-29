@@ -21,6 +21,76 @@ const radiusPair = (p, fallback = 1) => {
   return [Math.max(0.001, r[0] || fallback), Math.max(0.001, r[1] || fallback)];
 };
 
+function validMeshArray(value, length, integer = false) {
+  return Array.isArray(value) && value.length === length
+    && value.every((n) => Number.isFinite(n) && (!integer || Number.isInteger(n)));
+}
+
+function partColor(part, palette) {
+  let value = part?.color;
+  if (palette && part?.colorKey) {
+    const key = part.colorKey;
+    if (palette[key + 'Hex'] !== undefined) value = palette[key + 'Hex'];
+    else if (palette[key] !== undefined) value = palette[key];
+  }
+  return Number.isInteger(value) ? value : 0x888888;
+}
+
+/**
+ * 舊 model.json 沒有顏色頂點屬性時，依生成器寫入的零件/面順序補回顏色。
+ * 面與零件皆由同一份 meshData 產生，這裡只做資料補全，不重建幾何。
+ */
+function deriveMeshColors(meshData, parts, palette) {
+  const vertexCount = Math.floor((meshData?.vertices?.length || 0) / 3);
+  const colors = new Float32Array(vertexCount * 3);
+  let faceCursor = 0;
+  for (const part of Array.isArray(parts) ? parts : []) {
+    const triangleCount = Number.isInteger(part?.triangles) ? part.triangles : 0;
+    const end = Math.min(meshData.faces.length, faceCursor + triangleCount * 3);
+    const touched = new Set();
+    for (let i = faceCursor; i < end; i++) {
+      const index = meshData.faces[i];
+      if (Number.isInteger(index) && index >= 0 && index < vertexCount) touched.add(index);
+    }
+    const color = new THREE.Color(partColor(part, palette));
+    for (const index of touched) {
+      colors[index * 3] = color.r;
+      colors[index * 3 + 1] = color.g;
+      colors[index * 3 + 2] = color.b;
+    }
+    faceCursor = end;
+  }
+  return colors;
+}
+
+/** 建立已烘焙的 v6 meshData；預覽、零件台與遊戲端共用同一組頂點與面。 */
+export function runtimeMeshDataGeometry(meshData, parts = [], palette = null) {
+  const vertices = meshData?.vertices;
+  const faces = meshData?.faces;
+  if (!Array.isArray(vertices) || vertices.length < 9 || vertices.length % 3 !== 0
+    || !Array.isArray(faces) || faces.length < 3 || faces.length % 3 !== 0
+    || !faces.every((n) => Number.isInteger(n) && n >= 0 && n < vertices.length / 3)) return null;
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  if (validMeshArray(meshData.normals, vertices.length)) {
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(meshData.normals, 3));
+  } else {
+    geo.computeVertexNormals();
+  }
+  if (validMeshArray(meshData.uvs, (vertices.length / 3) * 2)) {
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(meshData.uvs, 2));
+  }
+  const colors = validMeshArray(meshData.colors, vertices.length)
+    ? meshData.colors
+    : deriveMeshColors(meshData, parts, palette);
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.setIndex(faces);
+  geo.computeBoundingBox();
+  geo.computeBoundingSphere();
+  return geo;
+}
+
 function wedgeGeometry(dimensions) {
   const [w, h, d] = pos3(dimensions, 1).map((n) => Math.max(0.001, n));
   const hw = w / 2, hh = h / 2, hd = d / 2;
@@ -161,8 +231,11 @@ export function mergeRuntimeParts(parts, options = {}) {
 /** 建立可複製的零件台物件；entry 必須是 resolved runtime roster 的正式列。 */
 export function makeRuntimePartModel(entry, { environment = true, palette = null, paletteIndex = null, seed = null } = {}) {
   if (!entry?.parts?.length) throw new TypeError(`執行期目錄列缺少 parts:${entry?.key || 'unknown'}`);
+  const resolvedPalette = palette || resolvePalette(entry, { paletteIndex, seed });
+  const geometry = runtimeMeshDataGeometry(entry.meshData, entry.parts, resolvedPalette)
+    || mergeRuntimeParts(entry.parts, { entry, palette: resolvedPalette, paletteIndex, seed });
   const material = (environment ? envMat : toonMat)(0xffffff, { vertexColors: true });
-  const mesh = new THREE.Mesh(mergeRuntimeParts(entry.parts, { entry, palette, paletteIndex, seed }), material);
+  const mesh = new THREE.Mesh(geometry, material);
   mesh.name = `runtime:${entry.key}`;
   mesh.userData.runtimePart = {
     key: entry.key,
