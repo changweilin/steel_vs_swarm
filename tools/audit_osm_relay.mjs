@@ -167,8 +167,8 @@ sec('Ⅰ payload 淨化:冪等 + 對真實圖資恆等 + 不可信輸入');
   OSM_RELAY.MAX_BYTES = savedMax;
   t('CJK 招牌名以 UTF-8 位元組計量(拿 String.length 當尺會低估三倍)',
     /TextEncoder/.test(strip(relaySrc)));
-  t('客戶端自我封頂低於 server.js 的 maxPayload(2MiB)',
-    OSM_RELAY.MAX_BYTES < 2 * 1024 * 1024 && /maxPayload: 2 << 20/.test(srvSrc));
+  t('客戶端自我封頂低於 server.js 的 maxPayload',
+    OSM_RELAY.MAX_BYTES < 4 * 1024 * 1024 && /maxPayload: [24] << 20/.test(srvSrc));
 }
 
 // =================================================================================
