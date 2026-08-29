@@ -1960,9 +1960,9 @@ export class BattleSim {
     h.x = x; h.y = y; h.z = z; h.ry = ry;
     // 絕對視線高程(地形+跳躍+飛行;高度差空戰 _sightY 用)—— 位置本就客戶端權威,ay 同屬輸入。缺值退回離地眼高近似。
     if (Number.isFinite(ay)) h.ay = ay;
-    // 領機身處環境(0 乾 / 1 水 / 2 沼;客戶端偵測回報 —— 位置本就客戶端權威,env 同屬輸入非狀態改寫)。
+    // 領機身處環境(0 乾 / 1 水 / 2 沼 / 3 凍結;客戶端偵測回報 —— 位置本就客戶端權威,env 同屬輸入非狀態改寫)。
     // 環境改變即重置滯留計時(_wetT);沼澤扣血/停恢復、水域停電力/凍結 CD 換彈 皆在 tick 依此結算。
-    const w = wet === 1 || wet === 2 ? wet : 0;
+    const w = wet === 1 || wet === 2 || wet === 3 ? wet : 0;
     if (w !== (h.wet || 0)) { h.wet = w; h.wetT = this.t; }
     h.lev = lev === 1 || lev === 2 ? lev : 0;   // 所在結構層(0 地面 / 1 橋面 / 2 隧道):slab LOS 用(#1)
   }
@@ -4395,6 +4395,14 @@ export class BattleSim {
             // 來源分流:rally 生效中(rg > 1)= 招式,否則 = 主堡修裝甲。BOSS 只認前者(減半),
             // 主堡那一份對 BOSS 恆 0 —— 否則守在自家主堡旁的那名 BOSS 會一直把血補回去。
             this._healBody(b, UNITS[b.kind].regen * rg * dt, rg > 1 ? 'skill' : 'base');
+          }
+        }
+        if (bWet === 3 && !b.dead) {
+          // 凍結異常狀態(大雪時機體部分在水面下):持續扣血直到死亡
+          this._fireBurn(b, TERRAIN_FX.FROZEN_DOT * dt);
+          if ((b._freezeAt || 0) + 2 < this.t) {
+            b._freezeAt = this.t;
+            this.events.push({ e: 'freeze', pid: b.pid, x: b.x, z: b.z });
           }
         }
       }

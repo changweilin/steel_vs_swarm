@@ -59,6 +59,7 @@ import { CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange, deviceScheme } fro
 import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault } from './visualPrefs.js';
 import { BALANCE_KNOBS, balancePref, setBalancePref, resetBalancePrefs, balancePrefsDefault } from './balancePrefs.js';
 import { MatSample } from './matsample.js';
+import { isWeatherFrozen } from './toon.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -2065,6 +2066,20 @@ function startPrebuild(cfg) {
       // 會把站在樓旁的機體整台吸上屋頂。貼牆行走 curY 距頂 >> DECK_STEP ⇒ 永不誤觸。
       const bt = blockerTop(x, z, BLK_MARGIN);
       if (bt != null && bt > s && curY >= bt - DECK_STEP) s = bt;
+      // 結冰水面/沼澤: 水面凍結時可在上方行走; 原先在水面下時無法突破水面; 卡中間時只能上不能下
+      if (isWeatherFrozen() && terrain.waterY != null) {
+        const code = terrain.envCodeAt ? terrain.envCodeAt(x, z) : terrainEnvCode(terrain, x, z);
+        if (code > 0) {
+          const planeY = code === 1 ? terrain.waterY : terrain.waterY + WATER.SWAMP_BAND;
+          if (planeY > s) {
+            if (curY >= planeY - DECK_STEP) {
+              s = planeY;
+            } else {
+              s = Math.max(s, curY);
+            }
+          }
+        }
+      }
       return s;
     };
     // 天花碰撞面:回傳「玩家頭頂上方最近的不可穿越面」——地下道天花 或 橋面底緣(在其下方時)。無則回 null。
@@ -2078,6 +2093,16 @@ function startPrebuild(cfg) {
         const under = d - DECK_UNDER;
         // 只有「真能鑽過去的高架段」(底緣淨空 ≥ 最大機體)才擋頭;引道低架段不擋 → 交給 surfaceAt 上橋,免卡死
         if (under - terrain.heightAt(x, z) >= MAX_MECH_H && (c == null || under < c)) c = under;
+      }
+      // 結冰水面天花板: 原先在水面下(curY + 2.0 < planeY)無法突破水面; 若頭部已在水面之上則不擋向上脫困
+      if (isWeatherFrozen() && terrain.waterY != null) {
+        const code = terrain.envCodeAt ? terrain.envCodeAt(x, z) : terrainEnvCode(terrain, x, z);
+        if (code > 0) {
+          const planeY = code === 1 ? terrain.waterY : terrain.waterY + WATER.SWAMP_BAND;
+          if (curY + 2.0 < planeY && (c == null || planeY < c)) {
+            c = planeY;
+          }
+        }
       }
       return c;
     };

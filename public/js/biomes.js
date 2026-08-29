@@ -93,6 +93,7 @@ import { CARD, cardEnvelope, cardCount, planCards, cardRnd, leafSurfId } from '.
 // (`audit_cel_pipeline` Ⅺ⑧ 的凍結名冊守著:名冊非空 ⇒ `celSchool` 的 def MUST NOT 是 'b')。
 import {
   WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime,
+  isWeatherFrozen,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
 import { buildAquaticWorld, buildRelicObject, relicCollider, RELIC_KINDS } from './aquatics.js';
@@ -11862,7 +11863,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (terrain.waterY != null) {
     const aquaticWorld = buildAquaticWorld(group, terrain, { season, blockers });
     if (aquaticWorld?.step) {
-      dynamics.push((dt) => aquaticWorld.step(dt, celWindTime()));
+      dynamics.push((dt) => aquaticWorld.step(dt, celWindTime(), null, isWeatherFrozen()));
     }
   }
 
