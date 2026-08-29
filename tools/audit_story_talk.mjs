@@ -286,7 +286,7 @@ console.log('\n■ Ⅶ 行為直測(真的建一座 BattleSim,逐階打過去)')
   const cfg = (siege) => ({
     center: { lat: ctr[0], lng: ctr[1] }, bases: { SWARM: A, STEEL: B },
     lanes: [mkLane(0.3 * realD), mkLane(-0.3 * realD)],
-    sizeM, diagM: sizeM * Math.SQRT2, distM: D, teamSize: 3, siege,
+    sizeM, diagM: sizeM * Math.SQRT2, distM: D, teamSize: 3, siege, defSide: siege ? 'SWARM' : null,
   });
 
   const structs = (sim, side, sg) =>
@@ -317,12 +317,12 @@ console.log('\n■ Ⅶ 行為直測(真的建一座 BattleSim,逐階打過去)')
   t('中段全滅 → stage = 1 的 siege 事件', ev1.length === 1 && ev1[0].stage === 1, JSON.stringify(ev1));
   t('中段全滅 → 主堡解鎖', !s.siegeLocked(base[0]) && smash(s, base[0]));
   t('對手那一側不受影響(鎖血逐陣營各算各的)',
-    new BattleSim(cfg(true)).siegeLocked(structs(new BattleSim(cfg(true)), 'STEEL', 1)[0]) !== false);
+    !s.siegeLocked(structs(s, 'STEEL', SIEGE.BASE)[0]));
 
   // 一般對戰:旗標關掉 ⇒ 整套 no-op(對局行為逐位元同舊制)
   const n = new BattleSim(cfg(false));
-  const nMid = structs(n, 'SWARM', 1), nBase = structs(n, 'SWARM', SIEGE.BASE);
-  t('非劇情戰役:中段砲塔與主堡開場就打得動', !n.siegeLocked(nMid[0]) && smash(n, nMid[0])
+  const nFront = structs(n, 'SWARM', 0), nBase = structs(n, 'SWARM', SIEGE.BASE);
+  t('非劇情戰役:砲塔與主堡開場就打得動', !n.siegeLocked(nFront[0]) && smash(n, nFront[0])
     && !n.siegeLocked(nBase[0]) && smash(n, nBase[0]));
   n.events.length = 0;
   for (const e of structs(n, 'SWARM', 0)) smash(n, e);

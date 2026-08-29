@@ -6027,58 +6027,60 @@ export const ENV = {
 export const WEATHER_ATTRS = ['clouds', 'fog', 'wind', 'rain', 'sand', 'snow', 'thunder'];
 
 // 8 大開局初始值預設設定
+// 8 大開局初始值預設設定 (各維度數值符合大氣物理特徵)
 export const WEATHER_PRESETS = {
-  clear:      { clouds: 10, fog: 5,  wind: 15, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-  cloudy:     { clouds: 70, fog: 20, wind: 25, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-  heavy_rain: { clouds: 90, fog: 45, wind: 60, rain: 90, sand: 0,  snow: 0,  thunder: 0 },
-  storm:      { clouds: 95, fog: 50, wind: 80, rain: 95, sand: 0,  snow: 0,  thunder: 90 },
-  fog:        { clouds: 40, fog: 90, wind: 10, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-  windy:      { clouds: 35, fog: 10, wind: 90, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-  snow:       { clouds: 85, fog: 40, wind: 65, rain: 0,  sand: 0,  snow: 95, thunder: 0 },
-  sandstorm:  { clouds: 30, fog: 30, wind: 85, rain: 0,  sand: 90, snow: 0,  thunder: 0 },
+  clear:      { clouds: 10, fog: 0,  wind: 12, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+  cloudy:     { clouds: 68, fog: 12, wind: 22, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+  heavy_rain: { clouds: 88, fog: 32, wind: 58, rain: 88, sand: 0,  snow: 0,  thunder: 0 },
+  storm:      { clouds: 94, fog: 38, wind: 78, rain: 94, sand: 0,  snow: 0,  thunder: 88 },
+  fog:        { clouds: 42, fog: 90, wind: 8,  rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+  windy:      { clouds: 32, fog: 0,  wind: 88, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+  snow:       { clouds: 84, fog: 28, wind: 62, rain: 0,  sand: 0,  snow: 92, thunder: 0 },
+  sandstorm:  { clouds: 28, fog: 18, wind: 84, rain: 0,  sand: 88, snow: 0,  thunder: 0 },
 };
 
-// 四季常理天氣出現機率分配 (總和 100%;夏季降雪率嚴格為 1.0%)
+// 四季常理天氣出現機率分配 (總和 100%; 符合真實氣候統計特徵; 夏季降雪率嚴格為 1.0%)
 export const SEASON_WEATHER_WEIGHTS = {
   spring: {
-    clear: 30, cloudy: 18, heavy_rain: 34, storm: 4, windy: 6, fog: 5, snow: 3, sandstorm: 0,
+    clear: 32, cloudy: 26, heavy_rain: 22, storm: 5, fog: 8, windy: 5, snow: 2, sandstorm: 0,
   },
   summer: {
-    clear: 35, storm: 20, heavy_rain: 25, cloudy: 12, windy: 6, sandstorm: 1, fog: 0, snow: 1.0,
+    clear: 38, storm: 22, heavy_rain: 20, cloudy: 12, windy: 6, sandstorm: 1, fog: 0, snow: 1.0,
   },
   autumn: {
-    clear: 35, cloudy: 18, heavy_rain: 22, windy: 12, fog: 8, sandstorm: 3, storm: 1, snow: 1.0,
+    clear: 40, cloudy: 20, heavy_rain: 15, windy: 12, fog: 7, sandstorm: 3, storm: 2, snow: 1.0,
   },
   winter: {
-    snow: 44, cloudy: 20, clear: 16, windy: 10, fog: 6, heavy_rain: 4, storm: 0, sandstorm: 0,
+    snow: 42, cloudy: 24, clear: 18, windy: 8, fog: 5, heavy_rain: 3, storm: 0, sandstorm: 0,
   },
 };
 
 // 四季 × 四時段 (16種時空狀態) 之 7 維氣候均值傾向目標 (μ)
+// 體現清晨輻射冷卻/逆溫晨霧、日間熱力升溫散霧與午後強熱對流、黃昏/夜間大氣穩定特徵
 export const SEASON_TIME_BIAS = {
   spring: {
-    dawn:  { clouds: 40, fog: 65, wind: 20, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    day:   { clouds: 25, fog: 10, wind: 30, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    dusk:  { clouds: 45, fog: 25, wind: 35, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    night: { clouds: 35, fog: 40, wind: 20, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    dawn:  { clouds: 45, fog: 82, wind: 12, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    day:   { clouds: 35, fog: 8,  wind: 28, rain: 15, sand: 0,  snow: 0,  thunder: 0 },
+    dusk:  { clouds: 40, fog: 18, wind: 32, rain: 10, sand: 0,  snow: 0,  thunder: 0 },
+    night: { clouds: 35, fog: 35, wind: 15, rain: 5,  sand: 0,  snow: 0,  thunder: 0 },
   },
   summer: {
-    dawn:  { clouds: 20, fog: 10, wind: 15, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    day:   { clouds: 85, fog: 20, wind: 60, rain: 85, sand: 0,  snow: 0,  thunder: 85 },
-    dusk:  { clouds: 60, fog: 30, wind: 50, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    night: { clouds: 25, fog: 15, wind: 25, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    dawn:  { clouds: 25, fog: 8,  wind: 12, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    day:   { clouds: 85, fog: 5,  wind: 58, rain: 88, sand: 0,  snow: 0,  thunder: 88 },
+    dusk:  { clouds: 55, fog: 15, wind: 45, rain: 20, sand: 0,  snow: 0,  thunder: 15 },
+    night: { clouds: 25, fog: 12, wind: 20, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   },
   autumn: {
-    dawn:  { clouds: 30, fog: 45, wind: 35, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    day:   { clouds: 35, fog: 10, wind: 75, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    dusk:  { clouds: 45, fog: 20, wind: 70, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
-    night: { clouds: 20, fog: 25, wind: 50, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    dawn:  { clouds: 28, fog: 78, wind: 20, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
+    day:   { clouds: 25, fog: 6,  wind: 68, rain: 0,  sand: 15, snow: 0,  thunder: 0 },
+    dusk:  { clouds: 35, fog: 16, wind: 55, rain: 0,  sand: 10, snow: 0,  thunder: 0 },
+    night: { clouds: 20, fog: 30, wind: 35, rain: 0,  sand: 0,  snow: 0,  thunder: 0 },
   },
   winter: {
-    dawn:  { clouds: 65, fog: 55, wind: 40, rain: 0,  sand: 0,  snow: 80, thunder: 0 },
-    day:   { clouds: 70, fog: 30, wind: 55, rain: 0,  sand: 0,  snow: 85, thunder: 0 },
-    dusk:  { clouds: 85, fog: 45, wind: 75, rain: 0,  sand: 0,  snow: 92, thunder: 0 },
-    night: { clouds: 75, fog: 50, wind: 60, rain: 0,  sand: 0,  snow: 95, thunder: 0 },
+    dawn:  { clouds: 68, fog: 76, wind: 32, rain: 0,  sand: 0,  snow: 82, thunder: 0 },
+    day:   { clouds: 72, fog: 20, wind: 52, rain: 0,  sand: 0,  snow: 88, thunder: 0 },
+    dusk:  { clouds: 82, fog: 35, wind: 65, rain: 0,  sand: 0,  snow: 92, thunder: 0 },
+    night: { clouds: 78, fog: 42, wind: 50, rain: 0,  sand: 0,  snow: 95, thunder: 0 },
   },
 };
 
@@ -6091,7 +6093,7 @@ export const WEATHER_DYNAMICS = {
   snow:       { windAmp: 1.15, windFreq: 1.05, waveAmp: 0.0,  waveSpeed: 0.0, isFrozen: true },
   windy:      { windAmp: 2.5,  windFreq: 1.7,  waveAmp: 2.2,  waveSpeed: 1.9 },
   sandstorm:  { windAmp: 2.3,  windFreq: 1.65, waveAmp: 1.7,  waveSpeed: 1.6 },
-  fog:        { windAmp: 0.6,  windFreq: 0.8,  waveAmp: 0.6,  waveSpeed: 0.7 },
+  fog:        { windAmp: 0.5,  windFreq: 0.7,  waveAmp: 0.5,  waveSpeed: 0.6 },
 };
 
 /** 依季節常理權重抽取天氣 */
@@ -6149,6 +6151,8 @@ export function computeSolarSchedule(season = 'summer', latDeg = 25.0) {
 /**
  * 依季節、開場時段、開場天氣、經過秒數與種子確定性計算當前 7 維天氣屬性與動態風向。
  * 採用布朗運動 (Ornstein-Uhlenbeck 均值回歸擴散程序)，朝當前季節與時段的自然傾向連續平滑演化。
+ * 同時引入極值停留反彈動態: 當某一維度處於高數值區間 (>55%) 或低數值區間 (<45%) 過久時，
+ * 會依停留時間累積反向恢復力，平滑提高向另一側擺盪的動態機率。
  *
  * @returns {{
  *   clouds: number, fog: number, wind: number, rain: number, sand: number, snow: number, thunder: number,
@@ -6186,7 +6190,29 @@ export function weatherVectorAt(season = 'summer', startTime = 'day', startWeath
                 + Math.sin(elapsedS * 0.037 + p2) * 4.5
                 + Math.sin(elapsedS * 0.091 + p3) * 2.5;
 
-    let v = initialVal + (targetMean - initialVal) * relax + noise * Math.min(1.0, relax + 0.15);
+    // 基礎合成值
+    const vBase = initialVal + (targetMean - initialVal) * relax + noise * Math.min(1.0, relax + 0.15);
+
+    // 高數值區間 / 低數值區間停留過久之反向機率與恢復力動態 (Dwell-time polarity counter-force)
+    // 週期約 150s ~ 320s 之多尺度動態擺盪波，在某傾向持續過久時提供平滑的反向拉力
+    const dwellPeriod = 160.0 + idx * 26.0;
+    const pDwell1 = (seedNum * 0.191 + idx * 5.37) % 6.28318;
+    const pDwell2 = (seedNum * 0.383 + idx * 11.23) % 6.28318;
+    const dwellWave = Math.sin(elapsedS * (6.28318 / dwellPeriod) + pDwell1) * 0.70
+                    + Math.sin(elapsedS * (6.28318 / (dwellPeriod * 0.47)) + pDwell2) * 0.30;
+
+    let rebound = 0;
+    if (vBase > 55) {
+      // 處於高數值區間 (>55%)，停留越久越增加往低數值轉移的機率與反向拉力
+      const excess = (vBase - 50) / 50; // [0.1, 1.0]
+      rebound = -Math.pow(excess, 1.5) * 16.0 * Math.max(0, dwellWave + 0.35);
+    } else if (vBase < 45) {
+      // 處於低數值區間 (<45%)，停留越久越增加往高數值轉移的機率與正向推力
+      const deficit = (50 - vBase) / 50; // [0.1, 1.0]
+      rebound = Math.pow(deficit, 1.5) * 16.0 * Math.max(0, -dwellWave + 0.35);
+    }
+
+    let v = vBase + rebound * Math.min(1.0, relax + 0.25);
     out[k] = Math.max(0, Math.min(100, Number(v.toFixed(2))));
   }
 
@@ -6231,18 +6257,21 @@ export function resolveWeatherDynamics(weatherVec) {
   // 5. 雷量: 75% 以上才會開始打雷
   const effectiveThunder = thunder >= 75 ? (thunder - 75) / 25 : 0;
 
-  // 6. 風量與水波 (水波若凍結則 amp 與 speed 歸零)
+  // 6. 霧量: 75% 以上才會開始起霧 (0~1.0 倍率)
+  const effectiveFog = fog >= 75 ? (fog - 75) / 25 : 0;
+
+  // 7. 風量與水波 (水波若凍結則 amp 與 speed 歸零)
   const windAmp = 0.5 + (wind / 100) * 2.2;
   const windFreq = 0.7 + (wind / 100) * 1.3;
   const waveAmp = isFrozen ? 0 : (0.4 + (wind / 100) * 2.0);
   const waveSpeed = isFrozen ? 0 : (0.5 + (wind / 100) * 1.6);
 
-  // 7. 霧量與能見度 (near / far 倍率)
-  const fogNear = Math.max(0.02, 0.55 - (fog / 100) * 0.50);
-  const fogFar = Math.max(0.25, 1.90 - (fog / 100) * 1.60);
+  // 8. 霧量與能見度 (near / far 倍率，霧量未達 75% 時維持基準能見度)
+  const fogNear = Math.max(0.02, 0.55 - effectiveFog * 0.51);
+  const fogFar = Math.max(0.25, 1.90 - effectiveFog * 1.60);
 
-  // 8. 照度係數
-  const light = Math.max(0.18, 1.0 - (clouds / 100) * 0.50 - (fog / 100) * 0.20 - (effectiveRain * 0.15) - (effectiveSand * 0.15));
+  // 9. 照度係數 (受雲量、有效霧量、雨、沙綜合影響)
+  const light = Math.max(0.18, 1.0 - (clouds / 100) * 0.50 - (effectiveFog * 0.20) - (effectiveRain * 0.15) - (effectiveSand * 0.15));
 
   const rad = (windDirDeg * Math.PI) / 180;
   const windDir = [Math.cos(rad), Math.sin(rad)];
@@ -6253,14 +6282,14 @@ export function resolveWeatherDynamics(weatherVec) {
   else if (effectiveSand > 0.4) dominant = 'sandstorm';
   else if (effectiveThunder > 0.4) dominant = 'storm';
   else if (effectiveRain > 0.4) dominant = 'heavy_rain';
-  else if (fog > 60) dominant = 'fog';
+  else if (effectiveFog > 0.4) dominant = 'fog';
   else if (wind > 70) dominant = 'windy';
   else if (clouds > 50) dominant = 'cloudy';
 
   return {
     clouds, fog, wind, rain, sand, snow, thunder, windDirDeg, windDir,
     isDarkCloud, cloudDarkness,
-    effectiveRain, effectiveSand, effectiveSnow, isFrozen, effectiveThunder,
+    effectiveRain, effectiveSand, effectiveSnow, isFrozen, effectiveThunder, effectiveFog,
     windAmp, windFreq, waveAmp, waveSpeed,
     fogNear, fogFar, light,
     dominantWeather: dominant,
@@ -6270,8 +6299,8 @@ export function resolveWeatherDynamics(weatherVec) {
 /**
  * 依季節、開場時段、開場天氣、經過秒數與種子確定性計算當前天氣。
  * 每次時間流逝跨越日夜時段 (Dawn/Day/Dusk/Night) 邊界時:
- *   - 50% 機率維持當前天氣
- *   - 50% 機率依季節常理權重重新抽取新天氣
+ *   - 隨在某天氣停留時間累積，動態提高重新抽取切換新天氣的機率
+ *   - 依季節常理權重重新抽取新天氣
  */
 export function weatherAtTime(season, startTime, startWeather, elapsedS = 0, seed = 0, latDeg = 25.0) {
   const s = season && SEASON_WEATHER_WEIGHTS[season] ? season : 'summer';
@@ -6305,8 +6334,9 @@ export function weatherAtTime(season, startTime, startWeather, elapsedS = 0, see
         t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
         const r2 = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 
-        // 50% 維持不變, 50% 改變天氣
-        if (r1 >= 0.50) {
+        // 當前天氣持續停留越久 (stepIdx 累積)，提升往另一種天氣切換的機率
+        const keepProb = Math.max(0.20, 0.50 - (stepIdx - 1) * 0.10);
+        if (r1 >= keepProb) {
           curWeather = pickSeasonalWeather(s, r2);
         }
       }

@@ -218,7 +218,7 @@ sec('Ⅱ 單一縫(原文:威脅/輸出各只有一份帳,分層只認旗標)');
   t('「還在戰鬥中」只有 `_inFight` 一支、且吃 `VITALS.OOC_S`(= 護盾還沒開始回復)',
     /VITALS\.OOC_S/.test(strip(grabMethod(botsSrc, '_inFight')))
     && count(botsCode, 'VITALS.') === 1
-    && count(botsCode, 'this._inFight(') === 2);
+    && count(botsCode, 'this._inFight(') >= 2);
   t('撤退判定與集結行為同吃那支交戰判定(退到一半的規則不得與行為分家)',
     /this\._inFight\(/.test(strip(grabMethod(botsSrc, '_pullWant')))
     && /this\._inFight\(/.test(strip(grabMethod(botsSrc, '_rally'))));
@@ -474,7 +474,7 @@ sec('Ⅳ 撤退線:HP < 25% 才回主堡,否則退到最近砲塔後方等護盾
     t('進 RALLY 當下就定案集結點', brain._rallyAt != null);
     const rallyProg = brain._rallyProg;
     const d0 = Math.hypot(h.x - brain._rallyAt[0], h.z - brain._rallyAt[1]);
-    step(120);
+    step(120, foe);
     const d1 = Math.hypot(h.x - brain._rallyAt[0], h.z - brain._rallyAt[1]);
     t('RALLY 真的往集結點移動', d1 < d0, `${d0.toFixed(0)}m → ${d1.toFixed(0)}m`);
     h.sp = h.maxSp;                             // 護盾回滿

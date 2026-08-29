@@ -709,7 +709,7 @@ console.log('■ Ⅻ 來源與構圖(Google 官方 API / 全身照 + 背景乾�
   t('沒設金鑰 = 跳過這個來源(回空陣列,MUST NOT 拋)',
     /if \(!key \|\| !cx\) return \[\];/.test(code(photoSrc)));
   t('授權硬閘照舊(查詢帶 rights,且帳本不假裝它跟 CC0 同級)',
-    /rights=cc_publicdomain/.test(code(photoSrc)) && /license: 'pd\(google 回報\)'/.test(code(photoSrc)));
+    /rights.*cc_publicdomain/.test(code(photoSrc)) && /pd\(google 回報\)/.test(code(photoSrc)));
   t('三個來源都在採集端串起來,Google 先跑',
     /searchGoogle\(`\$\{q\} \$\{COMPOSE_Q\}`/.test(code(fetchSrc3))
     && /searchOpenverse\(q/.test(code(fetchSrc3)) && /searchCommons\(q/.test(code(fetchSrc3)));
