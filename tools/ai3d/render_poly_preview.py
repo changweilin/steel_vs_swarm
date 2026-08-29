@@ -45,7 +45,7 @@ def part_face_colors(parts, face_count):
     return out + [(136, 136, 136)] * (face_count - len(out))
 
 
-def render_view(draw, vertices, faces, colors, face_colors, panel_x, panel_w, height, yaw, label):
+def render_view(draw, vertices, faces, colors, face_colors, panel_x, panel_w, height, yaw, label, cloud=False):
     rotated = [rotate(v, yaw, math.radians(-12)) for v in vertices]
     xs = [v[0] for v in rotated]
     ys = [v[1] for v in rotated]
@@ -79,7 +79,9 @@ def render_view(draw, vertices, faces, colors, face_colors, panel_x, panel_w, he
 
     for _, (ia, ib, ic), color in sorted(rows, reverse=True):
         polygon = [(projected[k][0], projected[k][1]) for k in (ia, ib, ic)]
-        draw.polygon(polygon, fill=color, outline=(25, 35, 48))
+        # 雲仍保留多面體色階，但降低每個三角面的黑線對比，避免讀成碎石或刀片。
+        outline = color if cloud else (25, 35, 48)
+        draw.polygon(polygon, fill=color, outline=outline)
 
     draw.text((panel_x + 14, 14), label, fill=(225, 232, 240))
     draw.line((panel_x + margin, height - 30, panel_x + panel_w - margin, height - 30), fill=(120, 135, 150), width=2)
@@ -116,7 +118,8 @@ def main():
     draw = ImageDraw.Draw(image)
     panel_w = width // len(views)
     for index, (yaw, label) in enumerate(views):
-        render_view(draw, vertices, faces, colors, face_colors, panel_w * index, panel_w, height, yaw, label)
+        render_view(draw, vertices, faces, colors, face_colors, panel_w * index, panel_w, height, yaw, label,
+                    cloud=data.get("family") == "cloud")
         if index:
             draw.line((panel_w * index, 0, panel_w * index, height), fill=(55, 65, 78), width=2)
     output_path.parent.mkdir(parents=True, exist_ok=True)

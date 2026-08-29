@@ -1,14 +1,15 @@
 {
   "version": 6,
   "verStr": "v6",
-  "generated_at": "2026-08-29T04:25:48.102Z",
-  "total_objects": 685,
+  "generated_at": "2026-08-29T10:47:10.669Z",
+  "total_objects": 690,
   "families": [
     "building",
     "vehicle",
     "landmark",
     "tree",
-    "ship"
+    "ship",
+    "cloud"
   ],
   "items": [
     {
@@ -70108,6 +70109,231 @@
       },
       "triangles": 1964,
       "outputDir": "out/3d_data/vehicle/car/vehicle_vehicle_car_202409251527451_77ad7ab6_luna_v6"
+    },
+    {
+      "id": "cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "key": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "family": "cloud",
+      "subpart": "cumulus",
+      "style": "flat-bottom cauliflower cumulus cloud",
+      "silhouette": "扁底與花椰菜狀上緣，單一藍天中的蓬鬆雲團",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "generationTag": "luna 直接 v6",
+      "status": "awaiting_human_review",
+      "image": "cloud/cumulus/gfp_one_puffy_cloud.jpg",
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -4.2946,
+          0.1068,
+          -1.27
+        ],
+        "max": [
+          4.275,
+          3.2993,
+          1.4045
+        ],
+        "size": [
+          8.57,
+          3.192,
+          2.675
+        ],
+        "rMax": 4.5,
+        "triangles": 2716,
+        "vertices": 1559
+      },
+      "spec": {
+        "style": "flat-bottom cauliflower cumulus cloud"
+      },
+      "triangles": 2716,
+      "outputDir": "out/3d_data/cloud/cumulus/cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+      "preview": "out/review_previews/cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6.png"
+    },
+    {
+      "id": "cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "key": "cloud/mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "family": "cloud",
+      "subpart": "mammatus",
+      "style": "continuous layered mammatus cloud with hanging pouches",
+      "silhouette": "連續灰暗上層與多排下垂囊袋，囊袋大小與深度有節奏差",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 89,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "generationTag": "luna 直接 v6",
+      "status": "awaiting_human_review",
+      "image": "cloud/mammatus/mammatus_clouds1.jpg",
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -5.2226,
+          0.0697,
+          -1.0981
+        ],
+        "max": [
+          5.0764,
+          3.9595,
+          1.5759
+        ],
+        "size": [
+          10.299,
+          3.89,
+          2.674
+        ],
+        "rMax": 5.337,
+        "triangles": 3416,
+        "vertices": 1947
+      },
+      "spec": {
+        "style": "continuous layered mammatus cloud with hanging pouches"
+      },
+      "triangles": 3416,
+      "outputDir": "out/3d_data/cloud/mammatus/cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6",
+      "preview": "out/review_previews/cloud_mammatus_mammatus_clouds1_7a2c93d3_luna_v6.png"
+    },
+    {
+      "id": "cloud_cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "key": "cloud/cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "family": "cloud",
+      "subpart": "cirrus",
+      "style": "feathered cirrus cloud with branching filaments",
+      "silhouette": "長羽毛主脊、向兩側分叉的細絲與分散尖端",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 89,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "generationTag": "luna 直接 v6",
+      "status": "awaiting_human_review",
+      "image": "cloud/cirrus/cirrus_clouds.jpg",
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -5.0443,
+          1.1341,
+          -0.4231
+        ],
+        "max": [
+          4.4661,
+          1.6095,
+          0.9342
+        ],
+        "size": [
+          9.51,
+          0.475,
+          1.357
+        ],
+        "rMax": 5.062,
+        "triangles": 5616,
+        "vertices": 3203
+      },
+      "spec": {
+        "style": "feathered cirrus cloud with branching filaments"
+      },
+      "triangles": 5616,
+      "outputDir": "out/3d_data/cloud/cirrus/cloud_cirrus_cirrus_clouds_b36fb271_luna_v6",
+      "preview": "out/review_previews/cloud_cirrus_cirrus_clouds_b36fb271_luna_v6.png"
+    },
+    {
+      "id": "cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "key": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "family": "cloud",
+      "subpart": "altocumulus",
+      "style": "perspective-dense altocumulus wavelet field",
+      "silhouette": "前中後錯列的成排小雲片與低起伏波紋，後排密度更高更薄",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 88,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "generationTag": "luna 直接 v6",
+      "status": "awaiting_human_review",
+      "image": "cloud/altocumulus/altocumulus_006.jpg",
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -5.2544,
+          1.0034,
+          -2.3889
+        ],
+        "max": [
+          5.1714,
+          2.4778,
+          2.6742
+        ],
+        "size": [
+          10.426,
+          1.474,
+          5.063
+        ],
+        "rMax": 5.822,
+        "triangles": 5528,
+        "vertices": 3128
+      },
+      "spec": {
+        "style": "perspective-dense altocumulus wavelet field"
+      },
+      "triangles": 5528,
+      "outputDir": "out/3d_data/cloud/altocumulus/cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6",
+      "preview": "out/review_previews/cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6.png"
+    },
+    {
+      "id": "cloud_congestus_dark_clouds_2b6ba642_luna_v6",
+      "key": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+      "family": "cloud",
+      "subpart": "congestus",
+      "style": "towering congestus cloud with dark core and bright rim",
+      "silhouette": "高聳塔狀厚雲，右側暗芯、左側亮邊與不規則隆起",
+      "symmetryMode": "asymmetric",
+      "similarityScore": 91,
+      "version": 6,
+      "verStr": "v6",
+      "method": "gpt-5.6-luna_visual_direct",
+      "generationTag": "luna 直接 v6",
+      "status": "awaiting_human_review",
+      "image": "cloud/congestus/dark_clouds.jpg",
+      "evidenceStatus": "missing_yolo26_schema_v2",
+      "eligible": false,
+      "pipelineEligibility": "awaiting_human_review",
+      "bounds": {
+        "min": [
+          -3.1107,
+          0.0667,
+          -1.0461
+        ],
+        "max": [
+          3.0226,
+          6.0967,
+          1.4312
+        ],
+        "size": [
+          6.133,
+          6.03,
+          2.477
+        ],
+        "rMax": 3.344,
+        "triangles": 1972,
+        "vertices": 1124
+      },
+      "spec": {
+        "style": "towering congestus cloud with dark core and bright rim"
+      },
+      "triangles": 1972,
+      "outputDir": "out/3d_data/cloud/congestus/cloud_congestus_dark_clouds_2b6ba642_luna_v6",
+      "preview": "out/review_previews/cloud_congestus_dark_clouds_2b6ba642_luna_v6.png"
     }
   ]
 }

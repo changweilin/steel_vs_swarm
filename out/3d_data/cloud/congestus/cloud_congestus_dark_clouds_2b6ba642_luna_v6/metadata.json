@@ -1,0 +1,96 @@
+{
+  "id": "cloud_congestus_dark_clouds_2b6ba642_luna_v6",
+  "key": "cloud/congestus_dark_clouds_2b6ba642_luna_v6",
+  "canonicalTarget": "cloud/congestus_dark_clouds",
+  "family": "cloud",
+  "subpart": "congestus",
+  "stem": "dark_clouds",
+  "style": "towering congestus cloud with dark core and bright rim",
+  "symmetryMode": "asymmetric",
+  "cloudProfile": "congestus",
+  "silhouette": "高聳塔狀厚雲，右側暗芯、左側亮邊與不規則隆起",
+  "pureCloudOnly": true,
+  "cloudSemantic": {
+    "glassHex": "cloud_highlight",
+    "noWindowSemantics": true,
+    "noSunLandscapePeopleAnimals": true
+  },
+  "colors": {
+    "roofHex": 6189192,
+    "facadeHex": 9675702,
+    "baseHex": 4608352,
+    "accentHex": 13095642,
+    "glassHex": 14937846,
+    "darkHex": 2897218,
+    "brightHex": 16317437
+  },
+  "similarityScore": 91,
+  "similarityReview": "soft pass 以次級小瓣柔化高塔外緣並降低暗面對比；塔狀厚度與左側亮邊仍保留，外觀更輕盈蓬鬆。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "各 tier 以不同半徑與水平偏移維持塔狀收窄，不讓單一 lobe 佔主體",
+    "亮邊只能沿左側/前緣，右內層保持多瓣暗芯而不恢復大 core"
+  ],
+  "similarityReviewRecord": {
+    "similarityScore": 91,
+    "verdict": "awaiting_human_review",
+    "reviewer": "gpt-5.6-luna_visual_direct",
+    "reviewStage": "retry_2_three_view_visual_review",
+    "retry": 2,
+    "critique": "soft pass 以次級小瓣柔化高塔外緣並降低暗面對比；塔狀厚度與左側亮邊仍保留，外觀更輕盈蓬鬆。",
+    "corrections": [
+      "各 tier 以不同半徑與水平偏移維持塔狀收窄，不讓單一 lobe 佔主體",
+      "亮邊只能沿左側/前緣，右內層保持多瓣暗芯而不恢復大 core"
+    ]
+  },
+  "model": "gpt-5.6-luna",
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "generationTag": "luna 直接 v6",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "cloud/congestus/dark_clouds.jpg",
+  "source_full_path": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\congestus\\dark_clouds.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "eligible": false,
+    "pipelineEligibility": "awaiting_human_review",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批五件純雲目標依使用者指定由 GPT-5.6 Luna 直接逐張目視重建；缺少 YOLO26 schema-v2 時保持不可入 runtime。"
+  },
+  "preview": "out/review_previews/cloud_congestus_dark_clouds_2b6ba642_luna_v6.png",
+  "previewModel": "out/review_previews/cloud_congestus_dark_clouds_2b6ba642_luna_v6.png.model.json",
+  "bounds": {
+    "min": [
+      -3.1107,
+      0.0667,
+      -1.0461
+    ],
+    "max": [
+      3.0226,
+      6.0967,
+      1.4312
+    ],
+    "size": [
+      6.133,
+      6.03,
+      2.477
+    ],
+    "rMax": 3.344,
+    "triangles": 1972,
+    "vertices": 1124
+  },
+  "parts": 69,
+  "reconstructionNote": "照片特徵「高聳塔狀厚雲，右側暗芯、左側亮邊與不規則隆起」以 69 個連接多面體重建；ellipsoid 僅為嵌入核心，外輪廓由 faceted lobes/ridges/fibres 打破。",
+  "created_at": "2026-08-29T10:47:10.600Z",
+  "humanVerdictPreserved": true
+}

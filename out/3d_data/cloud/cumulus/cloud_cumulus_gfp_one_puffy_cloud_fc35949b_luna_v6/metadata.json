@@ -1,0 +1,96 @@
+{
+  "id": "cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+  "key": "cloud/cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6",
+  "canonicalTarget": "cloud/cumulus_gfp_one_puffy_cloud",
+  "family": "cloud",
+  "subpart": "cumulus",
+  "stem": "gfp_one_puffy_cloud",
+  "style": "flat-bottom cauliflower cumulus cloud",
+  "symmetryMode": "asymmetric",
+  "cloudProfile": "cumulus",
+  "silhouette": "扁底與花椰菜狀上緣，單一藍天中的蓬鬆雲團",
+  "pureCloudOnly": true,
+  "cloudSemantic": {
+    "glassHex": "cloud_highlight",
+    "noWindowSemantics": true,
+    "noSunLandscapePeopleAnimals": true
+  },
+  "colors": {
+    "roofHex": 11452373,
+    "facadeHex": 13885164,
+    "baseHex": 9544634,
+    "accentHex": 15199992,
+    "glassHex": 16186111,
+    "darkHex": 7637670,
+    "brightHex": 16777215
+  },
+  "similarityScore": 88,
+  "similarityReview": "soft pass 三視圖以交疊小瓣包覆原有大瓣邊界，扁底仍完整但尖角密度下降，整體改讀成輕盈棉花糖狀花椰菜輪廓。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "中央裂溝維持局部且不跨全寬",
+    "外輪廓以次級 cotton fringe 打散大面體尖角，不引入單一平滑球殼"
+  ],
+  "similarityReviewRecord": {
+    "similarityScore": 88,
+    "verdict": "awaiting_human_review",
+    "reviewer": "gpt-5.6-luna_visual_direct",
+    "reviewStage": "retry_2_three_view_visual_review",
+    "retry": 2,
+    "critique": "soft pass 三視圖以交疊小瓣包覆原有大瓣邊界，扁底仍完整但尖角密度下降，整體改讀成輕盈棉花糖狀花椰菜輪廓。",
+    "corrections": [
+      "中央裂溝維持局部且不跨全寬",
+      "外輪廓以次級 cotton fringe 打散大面體尖角，不引入單一平滑球殼"
+    ]
+  },
+  "model": "gpt-5.6-luna",
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "generationTag": "luna 直接 v6",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "cloud/cumulus/gfp_one_puffy_cloud.jpg",
+  "source_full_path": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\cumulus\\gfp_one_puffy_cloud.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "eligible": false,
+    "pipelineEligibility": "awaiting_human_review",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批五件純雲目標依使用者指定由 GPT-5.6 Luna 直接逐張目視重建；缺少 YOLO26 schema-v2 時保持不可入 runtime。"
+  },
+  "preview": "out/review_previews/cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6.png",
+  "previewModel": "out/review_previews/cloud_cumulus_gfp_one_puffy_cloud_fc35949b_luna_v6.png.model.json",
+  "bounds": {
+    "min": [
+      -4.2946,
+      0.1068,
+      -1.27
+    ],
+    "max": [
+      4.275,
+      3.2993,
+      1.4045
+    ],
+    "size": [
+      8.57,
+      3.192,
+      2.675
+    ],
+    "rMax": 4.5,
+    "triangles": 2716,
+    "vertices": 1559
+  },
+  "parts": 92,
+  "reconstructionNote": "照片特徵「扁底與花椰菜狀上緣，單一藍天中的蓬鬆雲團」以 92 個連接多面體重建；ellipsoid 僅為嵌入核心，外輪廓由 faceted lobes/ridges/fibres 打破。",
+  "created_at": "2026-08-29T10:47:09.566Z",
+  "humanVerdictPreserved": true
+}

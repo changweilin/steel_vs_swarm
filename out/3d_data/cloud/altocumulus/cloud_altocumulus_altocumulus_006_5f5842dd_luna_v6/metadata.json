@@ -1,0 +1,96 @@
+{
+  "id": "cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6",
+  "key": "cloud/altocumulus_altocumulus_006_5f5842dd_luna_v6",
+  "canonicalTarget": "cloud/altocumulus_altocumulus_006",
+  "family": "cloud",
+  "subpart": "altocumulus",
+  "stem": "altocumulus_006",
+  "style": "perspective-dense altocumulus wavelet field",
+  "symmetryMode": "asymmetric",
+  "cloudProfile": "altocumulus",
+  "silhouette": "前中後錯列的成排小雲片與低起伏波紋，後排密度更高更薄",
+  "pureCloudOnly": true,
+  "cloudSemantic": {
+    "glassHex": "cloud_highlight",
+    "noWindowSemantics": true,
+    "noSunLandscapePeopleAnimals": true
+  },
+  "colors": {
+    "roofHex": 11318464,
+    "facadeHex": 13817823,
+    "baseHex": 9608105,
+    "accentHex": 15196380,
+    "glassHex": 16118260,
+    "darkHex": 7832209,
+    "brightHex": 16775409
+  },
+  "similarityScore": 88,
+  "similarityReview": "soft pass 將 wavelet 接縫改成小瓣鏈並加入次級蓬鬆外緣；五排仍前大後小、保留透視縫，但個別雲片更像棉絮而非卵石。",
+  "similarityVerdict": "awaiting_human_review",
+  "similarityCorrections": [
+    "相鄰 row 使用非對齊 x 座標與 z 漂移，保留照片的透視密度",
+    "每個 wavelet 保持短 wedge 局部接縫，避免整排重新融合成薄盤"
+  ],
+  "similarityReviewRecord": {
+    "similarityScore": 88,
+    "verdict": "awaiting_human_review",
+    "reviewer": "gpt-5.6-luna_visual_direct",
+    "reviewStage": "retry_2_three_view_visual_review",
+    "retry": 2,
+    "critique": "soft pass 將 wavelet 接縫改成小瓣鏈並加入次級蓬鬆外緣；五排仍前大後小、保留透視縫，但個別雲片更像棉絮而非卵石。",
+    "corrections": [
+      "相鄰 row 使用非對齊 x 座標與 z 漂移，保留照片的透視密度",
+      "每個 wavelet 保持短 wedge 局部接縫，避免整排重新融合成薄盤"
+    ]
+  },
+  "model": "gpt-5.6-luna",
+  "version": 6,
+  "verStr": "v6",
+  "method": "gpt-5.6-luna_visual_direct",
+  "generationTag": "luna 直接 v6",
+  "status": "awaiting_human_review",
+  "eligible": false,
+  "pipelineEligibility": "awaiting_human_review",
+  "source_image": "cloud/altocumulus/altocumulus_006.jpg",
+  "source_full_path": "C:\\Users\\user\\.codex\\worktrees\\4a5c\\steel_vs_swarm\\tools\\ai3d\\photos\\cloud\\altocumulus\\altocumulus_006.jpg",
+  "yolo26": {
+    "schemaVersion": null,
+    "evidenceStatus": "missing_yolo26_schema_v2",
+    "eligible": false,
+    "pipelineEligibility": "awaiting_human_review",
+    "featureFile": null,
+    "target": null
+  },
+  "evidenceOverride": {
+    "type": "llm_visual_direct",
+    "authorizedBy": "user",
+    "model": "gpt-5.6-luna",
+    "reason": "本批五件純雲目標依使用者指定由 GPT-5.6 Luna 直接逐張目視重建；缺少 YOLO26 schema-v2 時保持不可入 runtime。"
+  },
+  "preview": "out/review_previews/cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6.png",
+  "previewModel": "out/review_previews/cloud_altocumulus_altocumulus_006_5f5842dd_luna_v6.png.model.json",
+  "bounds": {
+    "min": [
+      -5.2544,
+      1.0034,
+      -2.3889
+    ],
+    "max": [
+      5.1714,
+      2.4778,
+      2.6742
+    ],
+    "size": [
+      10.426,
+      1.474,
+      5.063
+    ],
+    "rMax": 5.822,
+    "triangles": 5528,
+    "vertices": 3128
+  },
+  "parts": 182,
+  "reconstructionNote": "照片特徵「前中後錯列的成排小雲片與低起伏波紋，後排密度更高更薄」以 182 個連接多面體重建；ellipsoid 僅為嵌入核心，外輪廓由 faceted lobes/ridges/fibres 打破。",
+  "created_at": "2026-08-29T10:47:10.396Z",
+  "humanVerdictPreserved": true
+}

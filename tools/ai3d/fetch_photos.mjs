@@ -55,6 +55,7 @@ const _HOME_I = process.argv.indexOf('--home');
 const HOME = _HOME_I >= 0 ? process.argv[_HOME_I + 1] : HERE;
 const PHOTOS = join(HOME, 'photos');
 const MANIFEST = join(HOME, 'photo_manifest.json');
+const CORPUS = corpusMeta(HOME);
 export const UA = 'steel-vs-swarm-asset-pipeline/1.0 (CC0 photo sourcing; contact: repo issues)';
 
 // 雙語料庫路徑(使用者需求:CC0 放入專案庫, 非 CC0 放入研究庫)
@@ -66,6 +67,13 @@ export const RESTRICTED_HOME = join(process.env.USERPROFILE || process.env.HOME 
 // image→3D 要的是樹冠模組/枝叉/板根各自成像)。want = 每零件目標張數(多抓幾張供挑選,
 // 一件零件最後只用一張 —— skill §1:一張好照片勝過三張拼湊的)。
 export const PHOTO_CATALOG = {
+  cloud: {                                                 // 純雲層 v6：逐雲型單一天空主體
+    cumulus:       { want: 1, q: ['single cumulus cloud blue sky isolated'] },
+    mammatus:      { want: 1, q: ['mammatus clouds sky only'] },
+    cirrus:        { want: 1, q: ['cirrus clouds blue sky only'] },
+    altocumulus:   { want: 1, q: ['altocumulus clouds sky only'] },
+    congestus:     { want: 1, q: ['cumulus congestus dark clouds sky only'] },
+  },
   // 第 5 輪大擴充(2026-08-05 使用者定案):「大量下載不同樹種的 2D 照片再 img→3D,
   // 無視舊有物件、不要只是原版重繪」⇒ 樹族改成**逐樹種**列(GIANT_DEFS 的 11 個真實
   // 樹種逐種對位 + VEG_DEFS 常見樹種),查詢一律走實測有效的「具名單一主體」句式;
