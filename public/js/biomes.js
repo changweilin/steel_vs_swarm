@@ -7453,7 +7453,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 裁切時端點可能落在河面上,hA/hB 取到水面高 → 舊版(僅 run.wet 有下限)剖面中段沉貼水面。
         // 乾地高架此下限低於地表,max 無感。
         const floor = WATER.LEVEL + 0.9;
-        return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT, floor);
+        return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT * ramp, floor);
       };
       // 隧道/地下道路面(單一縫 tunFloorAt):山體隧道 = 兩端洞口地表高的平直內插(洞內在山體
       // 之下、洞口與地表齊平);地下道 = 同一條基準線再減 smoothstep 下沉剖面(兩端引道、中段平底)。

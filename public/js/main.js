@@ -2045,7 +2045,7 @@ function startPrebuild(cfg) {
       const tn = tunnelAt(x, z);
       // open(地下道引道露天路塹)**刻意不濾**:捕捉讓單位站在精確的下沉剖面上(開挖後
       // 網格內插只是近似),入洞沿兩端斜坡、跨溝者依實際地形落入溝內(視覺上那裡就是一道溝)
-      if (tn && curY < tn.ceil) return tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體)
+      if (tn && curY < tn.ceil) return tn.open ? Math.min(h, tn.floor) : tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體;open段平滑對齊地面)
       const d = deckY(x, z, DECK_MARGIN);           // 站立查詢帶側向容差(貼緣不掉下)
       // 上橋:①已貼近橋面(DECK_STEP 內)②或橋面底緣貼地(引道段,機體鑽不過去 → 只能上去,免卡在橋腹下)
       let s = h;

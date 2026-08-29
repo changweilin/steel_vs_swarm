@@ -4007,6 +4007,8 @@ export class BattleClient {
     const bare = (x, z) => {
       const tn = t.tunnelAt?.(x, z);
       if (tn && y0 < tn.ceil) return false;   // 洞內(隧道/明隧道/引道路塹):站的是結構路面
+      const d = t.deckY?.(x, z, t.deckMargin || 3.0);
+      if (d != null && Math.abs(this._surf(x, z, y0) - d) < 0.6) return false; // 橋面/引道:站的是結構路面
       return Math.abs(this._surf(x, z, y0) - t.heightAt(x, z)) <= SLOPE.STRUCT_M;
     };
     if (!bare(x0, z0) || !bare(x0 + dx, z0 + dz)) return 0;
