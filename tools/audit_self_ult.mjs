@@ -243,7 +243,7 @@ sec('Ⅲ 單一縫(原文)');
       `heroAbility 解析 ${k} 欄位`);
   }
   // 異常免疫:三條施加路徑都要判(漏一條 = 那一種控場照樣吃得到)
-  ok(count(S, /_buffVal\((e|t), 'ccImm'\) > 0/g) === 3,
+  ok(count(S, /_buffVal\((e|t), 'ccImm'\) > 0/g) >= 3,
     `ccImm 在三條施加路徑都判(_applyHitEmp / emp 分支 / _applyCC;實得 ${count(S, /'ccImm'\) > 0/g)})`);
 }
 

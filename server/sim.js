@@ -1389,7 +1389,7 @@ export class BattleSim {
    * 只擋傷害的話,小兵與砲塔會停在打不動的目標前面把整條兵線卡死,而畫面上只表現成「兵不推了」。
    */
   siegeLocked(t) {
-    return this.siege && t.sg != null && t.sg > this._siegeOpen[t.side];
+    return !!(this.siege && t && t.sg != null && t.sg > this._siegeOpen[t.side]);
   }
 
   /**
