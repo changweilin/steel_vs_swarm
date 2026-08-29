@@ -4003,7 +4003,7 @@ export class BattleClient {
   _slopeDegAlong(x0, z0, y0, dx, dz) {
     const run = Math.hypot(dx, dz);
     const t = this.terrain;
-    if (run < 1e-4 || !t?.heightAt || this._flying() || this._env?.air) return 0;
+    if (run < 1e-4 || !t?.heightAt || this._flying() || this._env?.air || this.vy > 0) return 0;
     const bare = (x, z) => {
       const tn = t.tunnelAt?.(x, z);
       if (tn && y0 < tn.ceil) return false;   // 洞內(隧道/明隧道/引道路塹):站的是結構路面
@@ -8005,6 +8005,7 @@ export class BattleClient {
         // 有效地板 = 水面 − FULL_D(可涉水橫渡河湖)。深水不再由此擋下。
         const ce = this.terrain.ceilingAt?.(cx, cz, py0);
         if (ce != null && ce - this.selfH - 0.2 < g + hover) return false; // 夾縫 < 機高
+        if (!this._flying() && g > Math.max(this.pos.y, py0) + 1.2) return false; // 垂直峭壁高於跳躍淨空
         // 攀爬中豁免:掛在梯/抓點上的位移是「沿路線垂直 + 水平吸附到攀爬軸」,那一小段水平位移
         // 配上峭壁高差必然超標 —— 擋下來會連同 y 一起還原(見下方撞牆幀),等於整套攀爬失效。
         // 陡壁的垂直通道本來就是攀爬路線在提供(A31),兩者 MUST NOT 互相否決。
@@ -8029,7 +8030,7 @@ export class BattleClient {
       // 陡坡完全擋死(逐軸滑行也走不動)才提示:沿等高線橫走仍通 = 不算撞坡,別洗頻道
       if (slopeStop && this.pos.x === px0 && this.pos.z === pz0 && now - this._slopeWarnAt > 8) {
         this._slopeWarnAt = now;
-        this.hud.feed?.('⛰️ 坡度過陡:機甲爬不上去(繞緩坡或找攀爬路線)');
+        this.hud.feed?.('⛰️ 坡度過陡:機甲爬不上去(向前跳躍或找攀爬路線)');
       }
     }
 
