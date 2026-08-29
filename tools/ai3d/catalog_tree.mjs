@@ -287,6 +287,87 @@ function clusterStructures(records, threshold = 0.145) {
   return clusters.sort((a, b) => textCmp(a.id, b.id));
 }
 
+/**
+ * 將已篩選的物件壓成遊戲可用的「主結構 → 角色分支 → 葉零件」索引。
+ * records 與本檔內部 record 同形；呼叫端若只有 runtime asset，將 asset 同時放進 model 即可。
+ * 零件只記索引，不複製幾何資料；執行期仍以 runtimeParts.js 為唯一零件資料來源。
+ */
+export function buildAssemblyIndex(records, threshold = 0.145) {
+  if (!Array.isArray(records)) throw new TypeError('組裝型錄 records 必須是陣列');
+  const bySubcategory = new Map();
+  for (const record of records) {
+    if (!record?.key || !record.family || !record.subpart || !Array.isArray(record.model?.parts)) continue;
+    const id = `${record.family}/${record.subpart}`;
+    if (!bySubcategory.has(id)) bySubcategory.set(id, []);
+    bySubcategory.get(id).push(record);
+  }
+
+  const objects = {};
+  const subcategories = {};
+  for (const [subcategoryId, rows] of [...bySubcategory].sort(([a], [b]) => textCmp(a, b))) {
+    const [family, subpart] = subcategoryId.split('/');
+    const paletteMap = new Map();
+    for (const record of rows) {
+      const declared = Array.isArray(record.model.palettes) ? record.model.palettes : [];
+      const seen = new Set();
+      for (const palette of paletteRows(record)) {
+        if (!palette.colors || seen.has(palette.signature)) continue;
+        seen.add(palette.signature);
+        if (!paletteMap.has(palette.signature)) {
+          const declaredIndex = declared.findIndex((row) => {
+            const clean = normalizedColors(row?.colors || row);
+            return clean && ZONES.every((zone) => clean[zone] === palette.colors[zone]);
+          });
+          paletteMap.set(palette.signature, {
+            id: `palette_${hashOf(palette.signature, 8)}`,
+            ...(declaredIndex >= 0
+              ? { sourceKey: record.key, paletteIndex: declaredIndex }
+              : { colors: palette.colors }),
+          });
+        }
+      }
+    }
+
+    const structures = clusterStructures(rows, threshold).map((cluster) => {
+      const members = cluster.records.map(({ record, split }) => {
+        const leafByRole = new Map();
+        for (const row of split.accessory) {
+          if (!leafByRole.has(row.role)) leafByRole.set(row.role, []);
+          leafByRole.get(row.role).push(row.index);
+        }
+        const member = {
+          key: record.key,
+          bounds: record.model?.bounds || record.database?.bounds || null,
+          mainParts: split.main.map((row) => ({ index: row.index, role: row.role })),
+          leafRoles: [...leafByRole].sort(([a], [b]) => textCmp(a, b)).map(([role, partIndexes]) => ({
+            role, partIndexes,
+          })),
+        };
+        objects[record.key] = { subcategoryId, structureId: cluster.id };
+        return member;
+      });
+      return { id: cluster.id, canonicalKey: cluster.canonical.record.key, members };
+    });
+    subcategories[subcategoryId] = {
+      id: subcategoryId,
+      family,
+      subpart,
+      palettes: [...paletteMap.values()].sort((a, b) => textCmp(a.id, b.id)),
+      structures,
+    };
+  }
+  return {
+    schemaVersion: 1,
+    policy: {
+      hierarchy: ['target-main-structure', 'leaf-role', 'source-assembly', 'part-index'],
+      structureThreshold: threshold,
+      paletteScope: 'subcategory',
+    },
+    subcategories,
+    objects,
+  };
+}
+
 function partShapeSignature(row) {
   const maxSize = Math.max(...row.size, 1e-6);
   const ratio = row.size.map((v) => Math.round(v / maxSize * 8) / 8);

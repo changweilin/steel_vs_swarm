@@ -3,6 +3,7 @@
 import { readSrc } from './audit_src.mjs';
 import {
   BUILDING_PARTS,
+  RUNTIME_BACKGROUND_CATALOG,
   RUNTIME_PARTS_META,
   VEHICLE_PARTS,
 } from '../public/js/runtimeParts.js';
@@ -25,6 +26,7 @@ if (BREAK_NATIVE) biomes = biomes.replace('const native = nativeFunctionalKind(t
 let models = readSrc('public', 'js', 'models.js');
 if (BREAK_FACTION) models = models.replace('paintFactionUnit(built, side, kind);', 'paintUnit(built, null, side);');
 const runtimeRenderer = readSrc('public', 'js', 'runtimePartModel.js');
+const backgroundGenerator = readSrc('public', 'js', 'backgroundObjects.js');
 let npcModels = readSrc('public', 'js', 'npcModels.js');
 let buildingUnits = readSrc('public', 'js', 'buildingUnitModels.js');
 if (BREAK_NATIONAL_MODELS) {
@@ -92,8 +94,10 @@ ok([...usedTypes].every((type) => runtimeRenderer.includes(`'${type}'`)),
   `通用 renderer 涵蓋全部 ${usedTypes.size} 種正式 primitive`);
 ok(/fitApprovedBuilding\(b\)/.test(biomes)
   && /makeApprovedBuildingBatch\(entry, rows\)/.test(biomes), '一般建物經正式選款與每款批次進場');
-ok(/approvedVehicleModelAt\(/.test(biomes) && /makeRuntimePartModel\(model/.test(biomes),
-  '場景載具經正式 v6 型錄與通用 renderer 進場');
+ok(/generatedApprovedVehicleModelAt\(/.test(biomes) && /makeRuntimePartModel\(model/.test(biomes),
+  '場景載具經正式 v6 主結構／葉零件組裝器與通用 renderer 進場');
+ok(Object.keys(RUNTIME_BACKGROUND_CATALOG.objects).length === BUILDING_PARTS.length + VEHICLE_PARTS.length
+  && backgroundGenerator.includes('generateBackgroundObject('), '背景物件型錄完整覆蓋正式環境資產');
 ok(!/buildBldBucket\.mass\s*\(/.test(biomes) && !/makeVehicle\s*\(/.test(biomes),
   '舊整棟建模與舊場景載具建模已無執行期呼叫點');
 ok(/const PART_LIBS = \['rock', 'tree'\];/.test(partlib), '舊 building GLB 家族不再載入');

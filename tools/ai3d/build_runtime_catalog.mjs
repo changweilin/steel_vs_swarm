@@ -19,6 +19,7 @@ function moduleSource(catalog) {
   return `// 本檔由 tools/ai3d/build_runtime_catalog.mjs 決定性產生，請勿手改。\n`
     + `export const RUNTIME_PARTS_META = Object.freeze(${stableJson(meta)});\n\n`
     + `export const RUNTIME_PARTS = Object.freeze(${stableJson(catalog.families, true)});\n\n`
+    + `export const RUNTIME_BACKGROUND_CATALOG = Object.freeze(${stableJson(catalog.background, true)});\n\n`
     + `export const BUILDING_PARTS = RUNTIME_PARTS.building || Object.freeze([]);\n`
     + `export const VEHICLE_PARTS = RUNTIME_PARTS.vehicle || Object.freeze([]);\n`;
 }

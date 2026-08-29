@@ -1,4 +1,5 @@
 import { RUNTIME_PARTS } from './runtimeParts.js';
+import { generateBackgroundObject } from './backgroundObjects.js';
 
 // 通過零件台的場景載具適配層。來源零件保持原始局部座標，整台車只靠 sceneBasis
 // 轉成「鼻頭 +X、原點在足跡中心地面」；權威碰撞量體仍由既有 vehicles.js 管理。
@@ -117,6 +118,7 @@ function normalizePart(row, part, origin) {
     ],
     rotation: [...part.rotation],
     color: part.color,
+    ...(part.colorKey ? { colorKey: part.colorKey } : {}),
     materialRole: materialRole(part.name),
     triangles: part.triangles,
   };
@@ -198,6 +200,7 @@ function adapt(row) {
     },
     axles,
     materials: [...new Set(parts.map((part) => part.materialRole))],
+    palettes: Array.isArray(row.palettes) ? row.palettes : [],
     parts,
     meshData,
   };
@@ -235,4 +238,28 @@ export function approvedVehicleModelAt(index, vehicleClass = null) {
   const rows = vehicleClass ? approvedVehicleModelsByClass(vehicleClass) : APPROVED_VEHICLE_MODELS;
   if (!rows.length) fail(`類別 ${vehicleClass} 沒有正式載具`);
   return rows[((index % rows.length) + rows.length) % rows.length];
+}
+
+const generatedCache = new Map();
+
+/** 場景載具只借用既有權威 fit；可見成品改走主結構＋葉零件＋配色的背景物件組裝縫。 */
+export function generatedApprovedVehicleModelAt(index, vehicleClass = null) {
+  const base = approvedVehicleModelAt(index, vehicleClass);
+  const composite = generateBackgroundObject(base.key, index);
+  const cached = generatedCache.get(composite.key);
+  if (cached) return cached;
+  const origin = base.sceneBasis.origin;
+  const parts = composite.parts.map((part) => normalizePart(composite, part, origin));
+  const { meshData: _meshData, ...baseWithoutMesh } = base;
+  const generated = deepFreeze({
+    ...baseWithoutMesh,
+    key: composite.key,
+    targetKey: base.key,
+    parts,
+    palettes: composite.palettes,
+    materials: [...new Set(parts.map((part) => part.materialRole))],
+    generation: composite.generation,
+  });
+  generatedCache.set(composite.key, generated);
+  return generated;
 }
