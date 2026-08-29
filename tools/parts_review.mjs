@@ -46,6 +46,15 @@ const STATE_FILE = join(ROOT, 'tools', 'parts_review', 'state.json');
 /** 這支自己的預設埠 —— **它是這個數字的唯一真相**(同 codex_review:`dev_supervisor` MUST import) */
 export const DEFAULT_PORT = 8622;
 
+/** 零件台展示分類的唯一真相；載具 family 仍保留 vehicle，展示篩選再依實際子類拆開。 */
+function reviewCategory(family, subpart, key = '') {
+  if (family !== 'vehicle') return family || 'other';
+  const part = String(subpart || key.split('/')[1]?.split('_')[0] || '').toLowerCase();
+  if (part === 'bike' || part === 'motor') return 'vehicle_2w';
+  if (part === 'car' || part === 'heavy') return 'vehicle_4w';
+  return 'vehicle_other';
+}
+
 const readJson = (p, d) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return d; } };
 /** 語料家自己的 venv(screen_mattes 吃 numpy/PIL/scipy);沒有就退回 PATH 的 python,
  *  兩者都不行時由呼叫端把錯誤原樣送到頁面 —— MUST NOT 靜靜地當成「判決存好了」 */
@@ -492,6 +501,7 @@ export function manifest(items = {}, photosOpt = null) {
   })).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
 
   for (const r of rows) {
+    r.category = reviewCategory(r.family, r.node, r.key);
     const pDates = (r.imgs || []).map((im) => im.photoDate).filter(Boolean);
     r.photoDate = pDates[0] || null;
     r.photoDates = [...new Set(pDates)];
@@ -589,7 +599,7 @@ async function report() {
 
   let rows = m.rows;
   if (filterMethod) rows = rows.filter((r) => (r.method?.key || r.prov?.method) === filterMethod);
-  if (filterFamily) rows = rows.filter((r) => (r.family || r.key.split('/')[0]) === filterFamily);
+  if (filterFamily) rows = rows.filter((r) => r.category === filterFamily || (r.family || r.key.split('/')[0]) === filterFamily);
   if (filterDate) rows = rows.filter((r) => (r.at || r.prov?.at || '').startsWith(filterDate));
   if (filterPhotoDate) rows = rows.filter((r) => (r.photoDates && r.photoDates.some((d) => d.startsWith(filterPhotoDate))) || (r.photoDate && r.photoDate.startsWith(filterPhotoDate)));
   if (filterVersion) rows = rows.filter((r) => (r.verStr || `v${r.version || 1}`) === filterVersion || String(r.version) === filterVersion);

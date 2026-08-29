@@ -93,7 +93,12 @@ const FAMILY_LABELS = {
   ship: 'ship (船艦)',
   tree: 'tree (植被/神木)',
   vehicle: 'vehicle (載具)',
+  vehicle_2w: '兩輪載具 (機車／腳踏車)',
+  vehicle_4w: '四輪載具 (汽車／重型載具)',
+  vehicle_other: '其他載具',
 };
+
+const rowCategory = (r) => r?.category || r?.family || (r?.key ? r.key.split('/')[0] : 'other');
 
 const isTreeModelRow = (r) => r?.family === 'tree' && r?.view?.builder === 'model3d';
 function treeModelPartRole(name) {
@@ -732,7 +737,7 @@ function setupFilters() {
   // 2. 物件分類選單
   const familyCounts = new Map();
   for (const r of app.data.rows) {
-    const fam = r.family || (r.key ? r.key.split('/')[0] : 'other');
+    const fam = rowCategory(r);
     familyCounts.set(fam, (familyCounts.get(fam) || 0) + 1);
   }
   const families = [...familyCounts.keys()].sort();
@@ -851,7 +856,7 @@ const keepRow = (r) => {
   }
   // 分類篩選
   if (app.filterFamily) {
-    const fam = r.family || (r.key ? r.key.split('/')[0] : '');
+    const fam = rowCategory(r);
     if (fam !== app.filterFamily) return false;
   }
   // 生成日期篩選
@@ -1404,6 +1409,7 @@ function renderBody() {
   <div class="pr-body-header">
     <h2 class="pr-h2">${esc(r.title)}</h2>
     <div class="pr-mline">${esc(r.method ? r.method.label : '未記載來源')}
+      ・ 分類 ${esc(FAMILY_LABELS[rowCategory(r)] || rowCategory(r))}
       ・ 版本 ${esc(r.verStr || `v${r.version || 1}`)}
       ・ 消費端 ${esc(r.consumer || '—')}${r.glbPath ? ` ・ ${esc(r.glbPath)}` : ''}
       ${r.missing ? ' ・ <span class="pr-bad">缺件:執行期整件走 fallback</span>' : ''}</div>
