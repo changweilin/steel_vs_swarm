@@ -1,6 +1,6 @@
 {
   "model": "gpt-5.6-luna",
-  "generatedAt": "2026-08-28T16:52:46.883Z",
+  "generatedAt": "2026-08-29T00:52:00.658Z",
   "humanVerdictsPreserved": true,
   "candidates": [
     {
@@ -501,11 +501,11 @@
           0.48
         ],
         "rMax": 0.798,
-        "triangles": 1968,
-        "vertices": 1192
+        "triangles": 2016,
+        "vertices": 1220
       },
-      "parts": 59,
-      "thinMembers": 15
+      "parts": 61,
+      "thinMembers": 17
     },
     {
       "target": "vehicle/bike_19e97a45118b4dedac318903f350414f_R",
@@ -1257,10 +1257,10 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {
@@ -1320,10 +1320,10 @@
           0.989
         ],
         "rMax": 1.049,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {
@@ -1383,10 +1383,10 @@
           0.989
         ],
         "rMax": 1.067,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {
@@ -1446,10 +1446,10 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {
@@ -1509,10 +1509,10 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {
@@ -1572,10 +1572,10 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {
@@ -1635,10 +1635,10 @@
           0.989
         ],
         "rMax": 1.049,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {
@@ -1698,10 +1698,10 @@
           0.95
         ],
         "rMax": 1.213,
-        "triangles": 2920,
-        "vertices": 1781
+        "triangles": 2936,
+        "vertices": 1791
       },
-      "parts": 74,
+      "parts": 75,
       "thinMembers": 20
     },
     {
@@ -1824,10 +1824,10 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {
@@ -1887,10 +1887,10 @@
           0.989
         ],
         "rMax": 1.067,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
-      "parts": 61,
+      "parts": 63,
       "thinMembers": 8
     },
     {

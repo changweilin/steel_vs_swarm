@@ -25279,6 +25279,11 @@
     ],
     "noGroundPenetrationExpected": true,
     "mirroredBilateral": true,
+    "symmetryContract": {
+      "lateralAxis": "+Z",
+      "mirrorPlane": "z=0",
+      "functionalAsymmetry": "chain, brake disc, kickstand and exhaust may remain single-sided"
+    },
     "centerlineMembersSingle": true,
     "sourceSpecificAssembly": true,
     "visualReviewRequired": true

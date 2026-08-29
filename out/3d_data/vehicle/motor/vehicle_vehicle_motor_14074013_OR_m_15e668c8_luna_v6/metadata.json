@@ -50,10 +50,10 @@
       0.989
     ],
     "rMax": 1.04,
-    "triangles": 2220,
-    "vertices": 1358
+    "triangles": 2252,
+    "vertices": 1378
   },
   "reconstructionNote": "踏板、前整流罩、擋風鏡、左右後視鏡、前叉、引擎、後搖臂、單側排氣管、側柱與前後不同輪徑均完整接合。",
-  "created_at": "2026-08-28T16:52:45.133Z",
+  "created_at": "2026-08-29T00:51:58.838Z",
   "humanVerdictPreserved": true
 }

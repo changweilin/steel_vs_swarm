@@ -12,7 +12,7 @@
     "brightHex": 15855333,
     "glassHex": 1584195
   },
-  "totalParts": 74,
+  "totalParts": 75,
   "partNames": [
     "rear_wheel_tire",
     "rear_wheel_rim",
@@ -81,7 +81,8 @@
     "front_brake_line",
     "exhaust_left",
     "muffler_left",
-    "front_fairing",
+    "front_fairing_left",
+    "front_fairing_right",
     "windscreen",
     "radiator",
     "front_fender",
@@ -93,8 +94,7 @@
     "torus_ring",
     "cylinder",
     "box",
-    "ellipsoid_sphere",
-    "wedge"
+    "ellipsoid_sphere"
   ],
   "structuralContract": {
     "coordinateFrame": {
@@ -415,6 +415,11 @@
     ],
     "noGroundPenetrationExpected": true,
     "mirroredBilateral": true,
+    "symmetryContract": {
+      "lateralAxis": "+Z",
+      "mirrorPlane": "z=0",
+      "functionalAsymmetry": "chain, brake disc, kickstand and exhaust may remain single-sided"
+    },
     "centerlineMembersSingle": true,
     "sourceSpecificAssembly": true,
     "visualReviewRequired": true

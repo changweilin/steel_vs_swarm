@@ -5,6 +5,7 @@ import {
   NATIVE_FUNCTIONAL_SUBPARTS,
   isNativeFunctionalSubpart,
 } from '../../public/js/nativeFunctionalBuildings.js';
+import { vehicleSymmetryReport } from './vehicle_symmetry.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = path.resolve(HERE, '..', '..');
@@ -158,6 +159,10 @@ function sanitizeAsset(database, manifest, review, model, canonicalTarget) {
   if (parts.some((part) => part === null)) return null;
   const meshData = database.family === 'vehicle' ? sanitizeMeshData(model.meshData, parts) : null;
   if (database.family === 'vehicle' && !meshData) return null;
+  if (database.family === 'vehicle' && database.version === 6) {
+    const symmetry = vehicleSymmetryReport({ ...model, parts }, meshData);
+    if (!symmetry.ok) return null;
+  }
 
   return {
     key: database.key,

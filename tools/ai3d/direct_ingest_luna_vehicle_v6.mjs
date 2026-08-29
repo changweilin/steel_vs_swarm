@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { buildGeometryFromParts } from './direct_ingest_v6.mjs';
+import { vehicleSymmetryReport } from './vehicle_symmetry.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
@@ -83,6 +84,17 @@ const F = (name, topR, botR, h, pos, colorKey, sides = 8, rot = [0, 0, 0], role 
   P(name, 'conical_frustum', { radii: [topR, botR], height: h, sides }, colorKey, pos, rot, role);
 const T = (name, radius, tube, pos, colorKey, rot = [0, 0, 0], role = 'detail') =>
   P(name, 'torus_ring', { radius, tube }, colorKey, pos, rot, role);
+
+function bilateralBodyPanelPair(parts, name, dimensions, pos, colorKey, rot = [0, 0, 0], role = 'body') {
+  const [width, height, depth] = dimensions;
+  const halfDepth = depth / 2;
+  const sideOffset = depth / 4;
+  for (const side of [-1, 1]) {
+    const sideName = side < 0 ? 'left' : 'right';
+    parts.push(B(`${name}_${sideName}`, width, height, halfDepth,
+      [pos[0], pos[1], pos[2] + side * sideOffset], colorKey, rot, role));
+  }
+}
 
 function hashHex(value) {
   return createHash('sha1').update(String(value)).digest('hex').slice(0, 8);
@@ -279,8 +291,8 @@ function bikeSpec(target) {
     axle(parts, 'flat_handlebar', 0.43, 0.96, 0, 0.48, 0.016, 'baseHex', 'handlebar');
     parts.push(T('rear_fender', r + 0.014, 0.012, [rearX, r + 0.028, 0], 'brightHex', [PI_2, 0, 0], 'fender'));
     parts.push(T('front_fender', r + 0.014, 0.012, [frontX, r + 0.028, 0], 'brightHex', [PI_2, 0, 0], 'fender'));
-    strut(parts, joints, 'rear_rack_lower', [rearX - 0.05, r + 0.04, -0.15], [rearX - 0.05, 0.68, -0.15], 0.012, 'accentHex', 6, 'rack');
-    strut(parts, joints, 'rear_rack_upper', [rearX - 0.05, 0.68, -0.15], [0.05, 0.68, -0.15], 0.012, 'accentHex', 6, 'rack');
+    strutPair(parts, joints, 'rear_rack_lower', [rearX - 0.05, r + 0.04, -0.15], [rearX - 0.05, 0.68, -0.15], 0.012, 'accentHex', 6, 'rack');
+    strutPair(parts, joints, 'rear_rack_upper', [rearX - 0.05, 0.68, -0.15], [0.05, 0.68, -0.15], 0.012, 'accentHex', 6, 'rack');
     parts.push(B('rear_basket', 0.30, 0.22, 0.32, [rearX - 0.08, 0.80, 0], 'accentHex', [0, 0, 0], 'basket'));
     return { style: 'folding_city_bicycle', symmetryMode: 'mirrored_bilateral', colors: palette, parts, joints, wheels, note: '小徑輪、折疊鉸鏈、穿越式車架、雙側輪架、前後擋泥板與後籃完整接合。' };
   }
@@ -425,8 +437,8 @@ function motorSpec(target) {
   if (!motorcycle) {
     parts.push(B('underbody', 0.98, 0.18, 0.46, [-0.03, 0.37, 0], 'baseHex'));
     parts.push(B('footboard', 0.78, 0.11, 0.40, [-0.08, 0.50, 0], 'darkHex'));
-    parts.push(W('front_cowling', 0.48, 0.66, kind === 'maxi_scooter' ? 0.58 : 0.52, [0.43, 0.72, 0], 'roofHex', [0, 0, -0.12]));
-    parts.push(W('rear_body', 0.55, 0.43, 0.48, [-0.44, 0.63, 0], 'facadeHex', [0, 0, 0.08]));
+    bilateralBodyPanelPair(parts, 'front_cowling', [0.48, 0.66, kind === 'maxi_scooter' ? 0.58 : 0.52], [0.43, 0.72, 0], 'roofHex', [0, 0, -0.12]);
+    bilateralBodyPanelPair(parts, 'rear_body', [0.55, 0.43, 0.48], [-0.44, 0.63, 0], 'facadeHex', [0, 0, 0.08]);
     parts.push(B('seat', 0.58, 0.12, 0.40, [-0.28, 0.82, 0], 'darkHex'));
     parts.push(B('seat_trim', 0.46, 0.025, 0.33, [-0.28, 0.89, 0], 'brightHex'));
     strut(parts, joints, 'front_fork_left', [0.38, 0.63, -0.12], frontAxle.map((v, i) => i === 2 ? -0.12 : v), 0.022, 'baseHex', 7, 'fork');
@@ -477,7 +489,7 @@ function motorSpec(target) {
     parts.push(B(`muffler_${z < 0 ? 'left' : 'right'}`, 0.40, 0.09, 0.09, [-0.52, 0.35, z], 'accentHex', [0, 0, 0], 'exhaust'));
   }
   if (kind === 'sport_motorcycle') {
-    parts.push(W('front_fairing', 0.42, 0.58, 0.54, [0.55, 0.79, 0], 'roofHex', [0, 0, -0.16], 'fairing'));
+    bilateralBodyPanelPair(parts, 'front_fairing', [0.42, 0.58, 0.54], [0.55, 0.79, 0], 'roofHex', [0, 0, -0.16], 'fairing');
     parts.push(B('windscreen', 0.035, 0.34, 0.30, [0.60, 1.10, 0], 'glassHex', [0, 0, -0.20], 'glass'));
     parts.push(B('radiator', 0.12, 0.30, 0.42, [0.22, 0.54, 0], 'baseHex', [0, 0, 0], 'radiator'));
     parts.push(T('front_fender', frontR + 0.022, 0.014, [frontX, frontR + 0.038, 0], 'roofHex', [PI_2, 0, 0], 'fender'));
@@ -612,6 +624,14 @@ function assertVehicleContract(spec, target) {
   }
   const tireParts = spec.parts.filter((part) => part.role === 'wheel_tire');
   if (tireParts.length !== spec.wheels.length) throw new Error(`${target.stable}: 車輪與輪胎數量不一致`);
+  if (target.subpart === 'motor') {
+    const triangularBody = spec.parts.filter((part) => ['body', 'fairing'].includes(part.role) && part.type === 'wedge');
+    if (triangularBody.length) throw new Error(`${target.stable}: 機車車身禁止使用單一楔形三角主體 ${triangularBody.map((part) => part.name).join(', ')}`);
+    const bodyPanelNames = spec.parts
+      .filter((part) => ['body', 'fairing'].includes(part.role) && /(?:front_cowling|rear_body|front_fairing)_(?:left|right)$/.test(part.name))
+      .map((part) => part.name);
+    if (bodyPanelNames.length && bodyPanelNames.length % 2 !== 0) throw new Error(`${target.stable}: 機車左右車身面板數量不成對`);
+  }
 }
 
 function addContracts(geometry, spec) {
@@ -622,6 +642,12 @@ function addContracts(geometry, spec) {
     wheelContract: spec.wheels,
     noGroundPenetrationExpected: true,
     mirroredBilateral: spec.symmetryMode === 'mirrored_bilateral',
+    symmetryContract: {
+      lateralAxis: '+Z',
+      mirrorPlane: 'z=0',
+      functionalAsymmetry: 'chain, brake disc, kickstand and exhaust may remain single-sided',
+    },
+    motorBodyPanelsExplicitBilateral: spec.parts.some((part) => /(?:front_cowling|rear_body|front_fairing)_(?:left|right)$/.test(part.name)),
     centerlineMembersSingle: true,
     sourceSpecificAssembly: true,
     visualReviewRequired: true,
@@ -660,6 +686,8 @@ function processTarget(row, indexes) {
   geometry.modelJson.parts.forEach((part, index) => {
     part.role = spec.parts[index]?.role || 'structure';
   });
+  const symmetry = vehicleSymmetryReport(geometry.modelJson, geometry.modelJson.meshData);
+  if (!symmetry.ok) throw new Error(`${row.stable}: 左右對稱契約失敗 ${JSON.stringify(symmetry.issues)}`);
   addContracts(geometry, spec);
   geometry.objContent = geometry.objContent.replaceAll('v6 Gemini', 'v6 GPT-5.6 Luna');
   const evidence = readEvidence(row, indexes.evidence);

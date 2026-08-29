@@ -12,7 +12,7 @@
     "brightHex": 16052447,
     "glassHex": 2509906
   },
-  "totalParts": 59,
+  "totalParts": 61,
   "partNames": [
     "rear_wheel_tire",
     "rear_wheel_rim",
@@ -70,8 +70,10 @@
     "flat_handlebar",
     "rear_fender",
     "front_fender",
-    "rear_rack_lower",
-    "rear_rack_upper",
+    "rear_rack_lower_left",
+    "rear_rack_lower_right",
+    "rear_rack_upper_left",
+    "rear_rack_upper_right",
     "rear_basket"
   ],
   "polyhedralPrimitivesUsed": [
@@ -270,7 +272,7 @@
         "radius": 0.018
       },
       {
-        "name": "rear_rack_lower",
+        "name": "rear_rack_lower_left",
         "a": [
           -0.54,
           0.285,
@@ -284,7 +286,21 @@
         "radius": 0.012
       },
       {
-        "name": "rear_rack_upper",
+        "name": "rear_rack_lower_right",
+        "a": [
+          -0.54,
+          0.285,
+          0.15
+        ],
+        "b": [
+          -0.54,
+          0.68,
+          0.15
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "rear_rack_upper_left",
         "a": [
           -0.54,
           0.68,
@@ -294,6 +310,20 @@
           0.05,
           0.68,
           -0.15
+        ],
+        "radius": 0.012
+      },
+      {
+        "name": "rear_rack_upper_right",
+        "a": [
+          -0.54,
+          0.68,
+          0.15
+        ],
+        "b": [
+          0.05,
+          0.68,
+          0.15
         ],
         "radius": 0.012
       }
@@ -328,6 +358,11 @@
     ],
     "noGroundPenetrationExpected": true,
     "mirroredBilateral": true,
+    "symmetryContract": {
+      "lateralAxis": "+Z",
+      "mirrorPlane": "z=0",
+      "functionalAsymmetry": "chain, brake disc, kickstand and exhaust may remain single-sided"
+    },
     "centerlineMembersSingle": true,
     "sourceSpecificAssembly": true,
     "visualReviewRequired": true

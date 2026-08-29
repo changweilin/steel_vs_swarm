@@ -12,7 +12,7 @@
     "brightHex": 14540253,
     "glassHex": 2174310
   },
-  "totalParts": 29,
+  "totalParts": 31,
   "partNames": [
     "chassis_base",
     "main_cabin_body",
@@ -42,11 +42,49 @@
     "rim_rear_left",
     "tire_rear_right",
     "rim_rear_right",
-    "side_step_left"
+    "side_step_left",
+    "side_mirror_right",
+    "side_step_right"
   ],
   "polyhedralPrimitivesUsed": [
     "box",
     "cylinder",
     "torus_ring"
-  ]
+  ],
+  "symmetryContract": {
+    "lateralAxis": "x",
+    "mirrorPlane": "x=0",
+    "mirroredBilateral": true,
+    "repairedParts": [
+      {
+        "source": "side_mirror_left",
+        "mirrored": "side_mirror_right"
+      },
+      {
+        "source": "side_step_left",
+        "mirrored": "side_step_right"
+      }
+    ],
+    "functionalAsymmetry": "preserved"
+  },
+  "bounds": {
+    "min": [
+      -1.13,
+      -0.15,
+      -1.8
+    ],
+    "max": [
+      1.13,
+      1.725,
+      2.05
+    ],
+    "size": [
+      2.26,
+      1.875,
+      3.85
+    ],
+    "rMax": 2.341,
+    "triangles": 1052,
+    "vertices": 648
+  }
 }

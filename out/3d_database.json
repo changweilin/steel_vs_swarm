@@ -1,7 +1,7 @@
 {
   "version": 6,
   "verStr": "v6",
-  "generated_at": "2026-08-28T16:52:46.849Z",
+  "generated_at": "2026-08-29T00:52:00.624Z",
   "total_objects": 704,
   "families": [
     "building",
@@ -47156,28 +47156,28 @@
       "image": "vehicle/car/5-man.jpg",
       "bounds": {
         "min": [
-          -1.125,
-          0,
-          -1.9
+          -1.13,
+          -0.15,
+          -1.8
         ],
         "max": [
-          1.125,
-          1.8,
-          1.97
+          1.13,
+          1.725,
+          2.05
         ],
         "size": [
-          2.25,
-          1.8,
-          3.87
+          2.26,
+          1.875,
+          3.85
         ],
-        "rMax": 2.269,
-        "triangles": 632,
-        "vertices": 348
+        "rMax": 2.341,
+        "triangles": 1052,
+        "vertices": 648
       },
       "spec": {
         "style": "vehicle"
       },
-      "triangles": 632,
+      "triangles": 1052,
       "outputDir": "out/3d_data/vehicle/car/vehicle_car_5-man_v6"
     },
     {
@@ -69116,13 +69116,13 @@
           0.48
         ],
         "rMax": 0.798,
-        "triangles": 1968,
-        "vertices": 1192
+        "triangles": 2016,
+        "vertices": 1220
       },
       "spec": {
         "style": "folding_city_bicycle"
       },
-      "triangles": 1968,
+      "triangles": 2016,
       "outputDir": "out/3d_data/vehicle/bike/vehicle_vehicle_bike_14-_-900-_-_-btwin-8646464_55ff809f_luna_v6"
     },
     {
@@ -69620,13 +69620,13 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000001_1672123300_88ea4c82_luna_v6"
     },
     {
@@ -69662,13 +69662,13 @@
           0.989
         ],
         "rMax": 1.049,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "retro_scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000001_1742374978_4250286e_luna_v6"
     },
     {
@@ -69704,13 +69704,13 @@
           0.989
         ],
         "rMax": 1.067,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "maxi_scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_000002_1645174811_b1ef8e63_luna_v6"
     },
     {
@@ -69746,13 +69746,13 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_10905670_R_58b9efa4_luna_v6"
     },
     {
@@ -69788,13 +69788,13 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_11871715_O_m_8ecd286a_luna_v6"
     },
     {
@@ -69830,13 +69830,13 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_14074013_OR_m_15e668c8_luna_v6"
     },
     {
@@ -69872,13 +69872,13 @@
           0.989
         ],
         "rMax": 1.049,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "retro_scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_14892810_OR_m_d4fb62a2_luna_v6"
     },
     {
@@ -69914,13 +69914,13 @@
           0.95
         ],
         "rMax": 1.213,
-        "triangles": 2920,
-        "vertices": 1781
+        "triangles": 2936,
+        "vertices": 1791
       },
       "spec": {
         "style": "sport_motorcycle"
       },
-      "triangles": 2920,
+      "triangles": 2936,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_165019503901_c719b559_luna_v6"
     },
     {
@@ -69998,13 +69998,13 @@
           0.989
         ],
         "rMax": 1.04,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_24917349da43cda536c90d9b274f9e70_1200_5b880633_luna_v6"
     },
     {
@@ -70040,13 +70040,13 @@
           0.989
         ],
         "rMax": 1.067,
-        "triangles": 2220,
-        "vertices": 1358
+        "triangles": 2252,
+        "vertices": 1378
       },
       "spec": {
         "style": "maxi_scooter"
       },
-      "triangles": 2220,
+      "triangles": 2252,
       "outputDir": "out/3d_data/vehicle/motor/vehicle_vehicle_motor_54175397571_be4ab8de90_b_22934ea5_luna_v6"
     },
     {

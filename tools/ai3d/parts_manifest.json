@@ -48812,17 +48812,17 @@
         "runner": "tools/ai3d/direct_ingest_v6.mjs",
         "params": "--model gemini-3.5-flash-lite --family vehicle",
         "machine": "Gemini API (gemini-3.5-flash-lite)",
-        "measured": "Triangles 632, Vertices 348"
+        "measured": "Triangles 1052, Vertices 648"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_v6.mjs",
         "fit": 1,
         "bounds": [
-          2.25,
-          1.8,
-          3.87
+          2.26,
+          1.875,
+          3.85
         ],
-        "note": "Extents [2.25, 1.8, 3.87]m, rMax 2.269m"
+        "note": "Extents [2.26, 1.875, 3.85]m, rMax 2.341m; bilateral symmetry repaired"
       },
       "keys": [
         "vehicle/car_5-man_da4a0c78_v6"
@@ -72012,7 +72012,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72054,7 +72054,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72096,7 +72096,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72138,7 +72138,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72180,7 +72180,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72222,7 +72222,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72264,7 +72264,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72306,7 +72306,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72326,7 +72326,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 1968, Vertices 1192, Similarity pending independent visual review"
+        "measured": "Triangles 2016, Vertices 1220, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72348,7 +72348,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72390,7 +72390,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72432,7 +72432,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72474,7 +72474,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72516,7 +72516,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72558,7 +72558,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72600,7 +72600,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72642,7 +72642,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72684,7 +72684,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72726,7 +72726,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72768,7 +72768,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72810,7 +72810,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72830,7 +72830,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72852,7 +72852,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72872,7 +72872,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72894,7 +72894,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72914,7 +72914,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72936,7 +72936,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72956,7 +72956,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -72978,7 +72978,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -72998,7 +72998,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -73020,7 +73020,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -73040,7 +73040,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -73062,7 +73062,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -73082,7 +73082,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -73104,7 +73104,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -73124,7 +73124,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2920, Vertices 1781, Similarity pending independent visual review"
+        "measured": "Triangles 2936, Vertices 1791, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -73146,7 +73146,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -73188,7 +73188,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -73208,7 +73208,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -73230,7 +73230,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -73250,7 +73250,7 @@
         "runner": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
         "params": "--finalize",
         "machine": "Codex GPT-5.6 Luna",
-        "measured": "Triangles 2220, Vertices 1358, Similarity pending independent visual review"
+        "measured": "Triangles 2252, Vertices 1378, Similarity pending independent visual review"
       },
       "post": {
         "tool": "tools/ai3d/direct_ingest_luna_vehicle_v6.mjs",
@@ -73272,7 +73272,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -73314,7 +73314,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (motor)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",
@@ -73356,7 +73356,7 @@
       "verStr": "v6",
       "consumer": "vehicle catalog & partlib (bike)",
       "rev": "HEAD",
-      "at": "2026-08-28",
+      "at": "2026-08-29",
       "imgs": [
         {
           "role": "primary",

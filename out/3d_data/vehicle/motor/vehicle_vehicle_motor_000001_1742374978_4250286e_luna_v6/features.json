@@ -12,7 +12,7 @@
     "brightHex": 16775135,
     "glassHex": 2505288
   },
-  "totalParts": 61,
+  "totalParts": 63,
   "partNames": [
     "rear_wheel_tire",
     "rear_wheel_rim",
@@ -55,8 +55,10 @@
     "front_wheel_brake_disc",
     "underbody",
     "footboard",
-    "front_cowling",
-    "rear_body",
+    "front_cowling_left",
+    "front_cowling_right",
+    "rear_body_left",
+    "rear_body_right",
     "seat",
     "seat_trim",
     "front_fork_left",
@@ -80,7 +82,6 @@
     "torus_ring",
     "cylinder",
     "box",
-    "wedge",
     "ellipsoid_sphere"
   ],
   "structuralContract": {
@@ -234,6 +235,11 @@
     ],
     "noGroundPenetrationExpected": true,
     "mirroredBilateral": true,
+    "symmetryContract": {
+      "lateralAxis": "+Z",
+      "mirrorPlane": "z=0",
+      "functionalAsymmetry": "chain, brake disc, kickstand and exhaust may remain single-sided"
+    },
     "centerlineMembersSingle": true,
     "sourceSpecificAssembly": true,
     "visualReviewRequired": true
