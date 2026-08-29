@@ -4,13 +4,13 @@
   "style": "stacked geological monument with attached observation detail",
   "symmetryMode": "asymmetric",
   "colors": {
-    "roofHex": 6964528,
-    "facadeHex": 10119749,
-    "baseHex": 6767665,
-    "accentHex": 12683864,
-    "darkHex": 4861992,
-    "brightHex": 14859137,
-    "glassHex": 2307908
+    "roofHex": 2370353,
+    "facadeHex": 5200224,
+    "baseHex": 3160123,
+    "accentHex": 6911354,
+    "darkHex": 2106664,
+    "brightHex": 11187637,
+    "glassHex": 1518643
   },
   "totalParts": 10,
   "partNames": [
@@ -31,6 +31,32 @@
     "dodecahedron_polyhedron",
     "wedge"
   ],
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.67951,
+      "warmEarth": 0.44296,
+      "green": 0,
+      "lowerWaterSky": 0.00762
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 7043186,
+      "lichenLightHex": 11385007,
+      "wetHex": 1713196,
+      "foamHex": 14213084,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "schemaVersion": 1,
   "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\mg_tower\\ov_b44cd820-d44f-48fa-af35-d2920fab9d2a.jpg",
   "oldV6": {
@@ -102,6 +128,97 @@
       "warmEarth": 0.33203,
       "neutralRock": 0.7159,
       "dark": 0.07764
+    },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        9,
+        104,
+        84
+      ],
+      "meanRgb": [
+        121.85,
+        103.22,
+        102.14
+      ],
+      "luminance": {
+        "mean": 107.1,
+        "range": 223.51
+      },
+      "coverage": {
+        "green": 0,
+        "waterSky": 0.02815,
+        "warmEarth": 0.44296,
+        "neutralRock": 0.67951,
+        "dark": 0.10584
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            192,
+            192,
+            192
+          ],
+          "ratio": 0.08675
+        },
+        {
+          "rgb": [
+            160,
+            160,
+            160
+          ],
+          "ratio": 0.08576
+        },
+        {
+          "rgb": [
+            96,
+            64,
+            64
+          ],
+          "ratio": 0.08543
+        },
+        {
+          "rgb": [
+            32,
+            32,
+            32
+          ],
+          "ratio": 0.06765
+        },
+        {
+          "rgb": [
+            64,
+            64,
+            64
+          ],
+          "ratio": 0.06502
+        },
+        {
+          "rgb": [
+            96,
+            96,
+            96
+          ],
+          "ratio": 0.05531
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        55,
+        128,
+        96
+      ],
+      "coverage": {
+        "green": 0,
+        "waterSky": 0.00762,
+        "warmEarth": 0.53449,
+        "neutralRock": 0.73018,
+        "dark": 0.14196
+      }
     },
     "edgeDensity": {
       "horizontal": 0.01939,

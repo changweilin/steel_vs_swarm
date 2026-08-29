@@ -4,13 +4,13 @@
   "style": "natural stone tor gateway with open span",
   "symmetryMode": "asymmetric",
   "colors": {
-    "roofHex": 6964528,
-    "facadeHex": 10119749,
-    "baseHex": 6767665,
-    "accentHex": 12683864,
-    "darkHex": 4861992,
-    "brightHex": 14859137,
-    "glassHex": 2307908
+    "roofHex": 2370353,
+    "facadeHex": 5200224,
+    "baseHex": 3160123,
+    "accentHex": 6911354,
+    "darkHex": 2106664,
+    "brightHex": 11187637,
+    "glassHex": 1518643
   },
   "totalParts": 13,
   "partNames": [
@@ -35,6 +35,32 @@
     "hull_polyhedron",
     "dodecahedron_polyhedron"
   ],
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.87634,
+      "warmEarth": 0.7949,
+      "green": 0,
+      "lowerWaterSky": 0
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 7043186,
+      "lichenLightHex": 11385007,
+      "wetHex": 1713196,
+      "foamHex": 14213084,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "schemaVersion": 1,
   "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\tor\\ov_2a9113b2-94e0-4b21-a440-c3ced1ab0edb.jpg",
   "oldV6": {
@@ -96,6 +122,97 @@
       "warmEarth": 0.7291,
       "neutralRock": 0.80283,
       "dark": 0
+    },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        8,
+        104,
+        70
+      ],
+      "meanRgb": [
+        142,
+        125.99,
+        121.4
+      ],
+      "luminance": {
+        "mean": 129.06,
+        "range": 202.87
+      },
+      "coverage": {
+        "green": 0,
+        "waterSky": 0,
+        "warmEarth": 0.7949,
+        "neutralRock": 0.87634,
+        "dark": 0
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            64,
+            32,
+            32
+          ],
+          "ratio": 0.14217
+        },
+        {
+          "rgb": [
+            96,
+            64,
+            64
+          ],
+          "ratio": 0.13481
+        },
+        {
+          "rgb": [
+            64,
+            64,
+            64
+          ],
+          "ratio": 0.1141
+        },
+        {
+          "rgb": [
+            192,
+            160,
+            160
+          ],
+          "ratio": 0.07447
+        },
+        {
+          "rgb": [
+            160,
+            128,
+            128
+          ],
+          "ratio": 0.06651
+        },
+        {
+          "rgb": [
+            128,
+            96,
+            96
+          ],
+          "ratio": 0.06491
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        46,
+        128,
+        80
+      ],
+      "coverage": {
+        "green": 0,
+        "waterSky": 0,
+        "warmEarth": 0.71898,
+        "neutralRock": 0.80515,
+        "dark": 0
+      }
     },
     "edgeDensity": {
       "horizontal": 0.03744,

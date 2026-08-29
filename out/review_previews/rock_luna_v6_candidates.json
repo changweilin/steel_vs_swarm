@@ -1,6 +1,6 @@
 {
   "model": "gpt-5.6-luna",
-  "generatedAt": "2026-08-29T06:14:57.293Z",
+  "generatedAt": "2026-08-29T07:23:51.733Z",
   "humanVerdictsPreserved": true,
   "runtimeEligible": false,
   "candidates": [
@@ -62,6 +62,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "boulder"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.79592,
+          "warmEarth": 0.33801,
+          "green": 0.20239,
+          "lowerWaterSky": 0.03277
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.34,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -139,6 +165,32 @@
         "angularVisual": true,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.659,
+          "warmEarth": 0.56528,
+          "green": 0.09091,
+          "lowerWaterSky": 0.06207
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.163638,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -214,6 +266,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "boulder"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.95267,
+          "warmEarth": 0.17733,
+          "green": 0.16367,
+          "lowerWaterSky": 0.07335
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.29460600000000003,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -291,6 +369,32 @@
         "angularVisual": true,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.87656,
+          "warmEarth": 0.14246,
+          "green": 0.06836,
+          "lowerWaterSky": 0.02122
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.123048,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -367,6 +471,32 @@
         "angularVisual": false,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.59962,
+          "warmEarth": 0.99042,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "faceted_polyhedral_with_rounded_fallback",
         "angularOnly": false,
@@ -437,6 +567,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "mesa"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.59962,
+          "warmEarth": 0.99042,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -514,6 +670,32 @@
         "angularVisual": true,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.59962,
+          "warmEarth": 0.99042,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -589,6 +771,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "talus"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.396,
+          "warmEarth": 0.53779,
+          "green": 0,
+          "lowerWaterSky": 0.25022
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -666,6 +874,32 @@
         "angularVisual": true,
         "profile": "mesa"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.52905,
+          "warmEarth": 0.01185,
+          "green": 0,
+          "lowerWaterSky": 0.81364
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": true,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -741,6 +975,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "mesa"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.75,
+          "warmEarth": 0,
+          "green": 0,
+          "lowerWaterSky": 0.00521
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -818,6 +1078,32 @@
         "angularVisual": true,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.16724,
+          "warmEarth": 0.88922,
+          "green": 0.00132,
+          "lowerWaterSky": 0.04783
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 3156524,
+          "foamHex": 14082258,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -893,6 +1179,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "water_formation"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.52905,
+          "warmEarth": 0.01185,
+          "green": 0,
+          "lowerWaterSky": 0.81364
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": true,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -970,6 +1282,32 @@
         "angularVisual": true,
         "profile": "water_formation"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.92612,
+          "warmEarth": 0.4019,
+          "green": 0.00741,
+          "lowerWaterSky": 0.0029
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": true,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -1045,6 +1383,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "hoodoo"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.17235,
+          "warmEarth": 0.78601,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 11372633,
+          "lichenLightHex": 14400900,
+          "wetHex": 3156524,
+          "foamHex": 14803156,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -1122,6 +1486,32 @@
         "angularVisual": true,
         "profile": "hoodoo"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.04723,
+          "warmEarth": 0.72663,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 11372633,
+          "lichenLightHex": 14400900,
+          "wetHex": 3156524,
+          "foamHex": 14803156,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -1197,6 +1587,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "hoodoo"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.04723,
+          "warmEarth": 0.72663,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 11372633,
+          "lichenLightHex": 14400900,
+          "wetHex": 3156524,
+          "foamHex": 14803156,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -1274,6 +1690,32 @@
         "angularVisual": true,
         "profile": "water_formation"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.51407,
+          "warmEarth": 0.0242,
+          "green": 0.03506,
+          "lowerWaterSky": 0.37119
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": true,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -1350,6 +1792,32 @@
         "angularVisual": false,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.83062,
+          "warmEarth": 0.09605,
+          "green": 0,
+          "lowerWaterSky": 0.15437
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "faceted_polyhedral_with_rounded_fallback",
         "angularOnly": false,
@@ -1420,6 +1888,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "water_formation"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.25123,
+          "warmEarth": 0.32938,
+          "green": 0.08691,
+          "lowerWaterSky": 0.01128
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -1497,6 +1991,32 @@
         "angularVisual": true,
         "profile": "dolmen"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.20801,
+          "warmEarth": 0.3064,
+          "green": 0.15002,
+          "lowerWaterSky": 0.00065
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -1573,6 +2093,32 @@
         "angularVisual": true,
         "profile": "mesa"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.37456,
+          "warmEarth": 0.23832,
+          "green": 0.00375,
+          "lowerWaterSky": 0.60988
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": true,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -1609,7 +2155,7 @@
       "eligible": false,
       "pipelineEligibility": "awaiting_human_review",
       "similarityReview": {
-        "similarityScore": 87,
+        "similarityScore": 83,
         "verdict": "awaiting_human_review",
         "corrections": [],
         "reviewer": "gpt-5.6-luna_local_visual_feature_contract",
@@ -1648,6 +2194,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "mesa"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.80546,
+          "warmEarth": 0.09914,
+          "green": 0.00524,
+          "lowerWaterSky": 0.46332
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": true,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -1725,6 +2297,32 @@
         "angularVisual": true,
         "profile": "strata"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.42538,
+          "warmEarth": 0.48865,
+          "green": 0.00135,
+          "lowerWaterSky": 0.63603
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": true,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -1800,6 +2398,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "mesa"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.17728,
+          "warmEarth": 0.72263,
+          "green": 0,
+          "lowerWaterSky": 0.04402
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 11372633,
+          "lichenLightHex": 14400900,
+          "wetHex": 3156524,
+          "foamHex": 14803156,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -1877,6 +2501,32 @@
         "angularVisual": true,
         "profile": "mesa"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.17728,
+          "warmEarth": 0.72263,
+          "green": 0,
+          "lowerWaterSky": 0.04402
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 11372633,
+          "lichenLightHex": 14400900,
+          "wetHex": 3156524,
+          "foamHex": 14803156,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -1952,6 +2602,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "water_formation"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.63721,
+          "warmEarth": 0.1763,
+          "green": 0.05112,
+          "lowerWaterSky": 0.08669
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -2029,6 +2705,32 @@
         "angularVisual": true,
         "profile": "tower"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "moss_covered_rock",
+        "coverage": {
+          "neutralRock": 0.22746,
+          "warmEarth": 0.02525,
+          "green": 0.51871,
+          "lowerWaterSky": 0.1556
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 8163676,
+          "lichenLightHex": 11713419,
+          "wetHex": 2042156,
+          "foamHex": 14278870,
+          "strataHex": 5660743,
+          "strataDarkHex": 4212792
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -2104,6 +2806,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "boulder"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "moss_covered_rock",
+        "coverage": {
+          "neutralRock": 0.22746,
+          "warmEarth": 0.02525,
+          "green": 0.51871,
+          "lowerWaterSky": 0.1556
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 8163676,
+          "lichenLightHex": 11713419,
+          "wetHex": 2042156,
+          "foamHex": 14278870,
+          "strataHex": 5660743,
+          "strataDarkHex": 4212792
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -2181,6 +2909,32 @@
         "angularVisual": true,
         "profile": "tower"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "moss_covered_rock",
+        "coverage": {
+          "neutralRock": 0.22746,
+          "warmEarth": 0.02525,
+          "green": 0.51871,
+          "lowerWaterSky": 0.1556
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 8163676,
+          "lichenLightHex": 11713419,
+          "wetHex": 2042156,
+          "foamHex": 14278870,
+          "strataHex": 5660743,
+          "strataDarkHex": 4212792
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -2257,6 +3011,32 @@
         "angularVisual": false,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.63262,
+          "warmEarth": 0.37243,
+          "green": 0.00019,
+          "lowerWaterSky": 0.01693
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "faceted_polyhedral_with_rounded_fallback",
         "angularOnly": false,
@@ -2327,6 +3107,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "mesa"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.60868,
+          "warmEarth": 0.14553,
+          "green": 0.00299,
+          "lowerWaterSky": 0.00716
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -2404,6 +3210,32 @@
         "angularVisual": true,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.70086,
+          "warmEarth": 0.67556,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -2479,6 +3311,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "mesa"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.8042,
+          "warmEarth": 0.67543,
+          "green": 0.19704,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.34,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -2556,6 +3414,32 @@
         "angularVisual": true,
         "profile": "mesa"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.77979,
+          "warmEarth": 0.74099,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -2631,6 +3515,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "boulder"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.58162,
+          "warmEarth": 0.50852,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -2708,6 +3618,32 @@
         "angularVisual": true,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.62354,
+          "warmEarth": 0.51066,
+          "green": 0.01908,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -2784,6 +3720,32 @@
         "angularVisual": false,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.78319,
+          "warmEarth": 0.44314,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "faceted_polyhedral_with_rounded_fallback",
         "angularOnly": false,
@@ -2854,6 +3816,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "strata"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.30292,
+          "warmEarth": 0,
+          "green": 0,
+          "lowerWaterSky": 0.9715
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": true,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -2931,6 +3919,32 @@
         "angularVisual": true,
         "profile": "strata"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.58377,
+          "warmEarth": 0.029,
+          "green": 0,
+          "lowerWaterSky": 0.07344
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -3006,6 +4020,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "hoodoo"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.37218,
+          "warmEarth": 0.03918,
+          "green": 0.26025,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -3083,6 +4123,32 @@
         "angularVisual": true,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.03086,
+          "warmEarth": 0.63358,
+          "green": 0.00198,
+          "lowerWaterSky": 0.1033
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 11372633,
+          "lichenLightHex": 14400900,
+          "wetHex": 3156524,
+          "foamHex": 14803156,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -3158,6 +4224,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "water_formation"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.19907,
+          "warmEarth": 0.055,
+          "green": 0.10148,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -3235,6 +4327,32 @@
         "angularVisual": true,
         "profile": "water_formation"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.19907,
+          "warmEarth": 0.055,
+          "green": 0.10148,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -3311,6 +4429,32 @@
         "angularVisual": false,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.49753,
+          "warmEarth": 0.17321,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "faceted_polyhedral_with_rounded_fallback",
         "angularOnly": false,
@@ -3382,6 +4526,32 @@
         "angularVisual": false,
         "profile": "boulder"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.19346,
+          "warmEarth": 0.66395,
+          "green": 0.00025,
+          "lowerWaterSky": 0.0013
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 3156524,
+          "foamHex": 14082258,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0.1,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "faceted_polyhedral_with_rounded_fallback",
         "angularOnly": false,
@@ -3413,7 +4583,7 @@
       "eligible": false,
       "pipelineEligibility": "awaiting_human_review",
       "similarityReview": {
-        "similarityScore": 87,
+        "similarityScore": 89,
         "verdict": "awaiting_human_review",
         "corrections": [],
         "reviewer": "gpt-5.6-luna_local_visual_feature_contract",
@@ -3453,6 +4623,32 @@
         "angularVisual": true,
         "profile": "arch"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.58223,
+          "warmEarth": 0.2414,
+          "green": 0.08289,
+          "lowerWaterSky": 0.35963
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": true,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.149202,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -3489,7 +4685,7 @@
       "eligible": false,
       "pipelineEligibility": "awaiting_human_review",
       "similarityReview": {
-        "similarityScore": 88,
+        "similarityScore": 84,
         "verdict": "awaiting_human_review",
         "corrections": [],
         "reviewer": "gpt-5.6-luna_local_visual_feature_contract",
@@ -3528,6 +4724,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "arch"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.58754,
+          "warmEarth": 0.16984,
+          "green": 0.07426,
+          "lowerWaterSky": 0.05401
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.133668,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -3605,6 +4827,32 @@
         "angularVisual": true,
         "profile": "mesa"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.28,
+          "warmEarth": 0.60181,
+          "green": 0.00214,
+          "lowerWaterSky": 0.03963
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -3680,6 +4928,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "mesa"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.2028,
+          "warmEarth": 0.32198,
+          "green": 0.01021,
+          "lowerWaterSky": 0.11014
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -3757,6 +5031,32 @@
         "angularVisual": true,
         "profile": "mesa"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.41086,
+          "warmEarth": 0.57103,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -3832,6 +5132,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "mesa"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.25498,
+          "warmEarth": 0.28757,
+          "green": 0,
+          "lowerWaterSky": 0.53582
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -3909,6 +5235,32 @@
         "angularVisual": true,
         "profile": "mesa"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.25498,
+          "warmEarth": 0.28757,
+          "green": 0,
+          "lowerWaterSky": 0.53582
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -3984,6 +5336,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "strata"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.74131,
+          "warmEarth": 0.11967,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -4061,6 +5439,32 @@
         "angularVisual": true,
         "profile": "tower"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.38365,
+          "warmEarth": 0.32136,
+          "green": 0.03255,
+          "lowerWaterSky": 0.01128
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -4136,6 +5540,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "tower"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.28,
+          "warmEarth": 0.60181,
+          "green": 0.00214,
+          "lowerWaterSky": 0.03963
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -4213,6 +5643,32 @@
         "angularVisual": true,
         "profile": "tower"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.67951,
+          "warmEarth": 0.44296,
+          "green": 0,
+          "lowerWaterSky": 0.00762
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -4288,6 +5744,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "tower"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.3771,
+          "warmEarth": 0.18874,
+          "green": 0.00299,
+          "lowerWaterSky": 0.02452
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -4365,6 +5847,32 @@
         "angularVisual": true,
         "profile": "tower"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.3771,
+          "warmEarth": 0.18874,
+          "green": 0.00299,
+          "lowerWaterSky": 0.02452
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -4440,6 +5948,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "dolmen"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.42019,
+          "warmEarth": 0.40963,
+          "green": 0.22926,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": true,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6717267,
+          "lichenLightHex": 11452549,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0.34,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -4517,6 +6051,32 @@
         "angularVisual": true,
         "profile": "dolmen"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.42019,
+          "warmEarth": 0.40963,
+          "green": 0.22926,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -4592,6 +6152,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "dolmen"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.27611,
+          "warmEarth": 0.32256,
+          "green": 0.08936,
+          "lowerWaterSky": 0.00112
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -4669,6 +6255,32 @@
         "angularVisual": true,
         "profile": "dolmen"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.11953,
+          "warmEarth": 0.04003,
+          "green": 0.33277,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 1713196,
+          "foamHex": 14082258,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -4744,6 +6356,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "dolmen"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.32025,
+          "warmEarth": 0,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -4821,6 +6459,32 @@
         "angularVisual": true,
         "profile": "strata"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "pale_limestone_marble",
+        "coverage": {
+          "neutralRock": 0.33951,
+          "warmEarth": 0.16574,
+          "green": 0.24213,
+          "lowerWaterSky": 0.30459
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 2437173,
+          "foamHex": 14082258,
+          "strataHex": 8488055,
+          "strataDarkHex": 6119769
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -4896,6 +6560,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "strata"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.34212,
+          "warmEarth": 0.65993,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -4973,6 +6663,32 @@
         "angularVisual": true,
         "profile": "strata"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.01885,
+          "warmEarth": 0.78984,
+          "green": 0,
+          "lowerWaterSky": 0.01505
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 11372633,
+          "lichenLightHex": 14400900,
+          "wetHex": 3156524,
+          "foamHex": 14803156,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -5048,6 +6764,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "talus"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.93679,
+          "warmEarth": 0.00066,
+          "green": 0.0316,
+          "lowerWaterSky": 0.01715
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -5125,6 +6867,32 @@
         "angularVisual": true,
         "profile": "talus"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "warm_sandstone",
+        "coverage": {
+          "neutralRock": 0.44329,
+          "warmEarth": 0.15737,
+          "green": 0.36724,
+          "lowerWaterSky": 0.03544
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 6061388,
+          "lichenLightHex": 10796152,
+          "wetHex": 3156524,
+          "foamHex": 14082258,
+          "strataHex": 8739389,
+          "strataDarkHex": 6899251
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -5200,6 +6968,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "tor"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.87634,
+          "warmEarth": 0.7949,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
@@ -5277,6 +7071,32 @@
         "angularVisual": true,
         "profile": "tor"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.34091,
+          "warmEarth": 0.13794,
+          "green": 0.03128,
+          "lowerWaterSky": 0.03811
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -5353,6 +7173,32 @@
         "angularVisual": true,
         "profile": "tor"
       },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.66914,
+          "warmEarth": 0.37926,
+          "green": 0.013,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": false
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
+      },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",
         "angularOnly": true,
@@ -5428,6 +7274,32 @@
         "hat": false,
         "angularVisual": true,
         "profile": "tor"
+      },
+      "appearance": {
+        "model": "gpt-5.6-luna",
+        "sourceRegion": "central_rock_proxy",
+        "materialFamily": "cool_gray_basalt",
+        "coverage": {
+          "neutralRock": 0.60141,
+          "warmEarth": 0,
+          "green": 0,
+          "lowerWaterSky": 0
+        },
+        "overlays": {
+          "lichen": false,
+          "wetLowerBand": false,
+          "strata": true
+        },
+        "zoneHex": {
+          "lichenHex": 7043186,
+          "lichenLightHex": 11385007,
+          "wetHex": 1713196,
+          "foamHex": 14213084,
+          "strataHex": 4344656,
+          "strataDarkHex": 3291453
+        },
+        "lichenStrength": 0,
+        "surfaceVariation": true
       },
       "visualGeometryPolicy": {
         "mode": "angular_polyhedral_only",

@@ -39,6 +39,32 @@
     "icosahedron_polyhedron",
     "dodecahedron_polyhedron"
   ],
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.80546,
+      "warmEarth": 0.09914,
+      "green": 0.00524,
+      "lowerWaterSky": 0.46332
+    },
+    "overlays": {
+      "lichen": true,
+      "wetLowerBand": true,
+      "strata": true
+    },
+    "zoneHex": {
+      "lichenHex": 6717267,
+      "lichenLightHex": 11452549,
+      "wetHex": 1713196,
+      "foamHex": 14082258,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0.1,
+    "surfaceVariation": true
+  },
   "schemaVersion": 1,
   "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\61bc69c388977.webp",
   "oldV6": {
@@ -98,6 +124,97 @@
       "warmEarth": 0.06029,
       "neutralRock": 0.72068,
       "dark": 0.11204
+    },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        8,
+        104,
+        74
+      ],
+      "meanRgb": [
+        121.78,
+        124.85,
+        127.43
+      ],
+      "luminance": {
+        "mean": 124.38,
+        "range": 246.21
+      },
+      "coverage": {
+        "green": 0.00524,
+        "waterSky": 0.32211,
+        "warmEarth": 0.09914,
+        "neutralRock": 0.80546,
+        "dark": 0.18519
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            32,
+            32,
+            32
+          ],
+          "ratio": 0.1517
+        },
+        {
+          "rgb": [
+            128,
+            128,
+            128
+          ],
+          "ratio": 0.1388
+        },
+        {
+          "rgb": [
+            128,
+            128,
+            160
+          ],
+          "ratio": 0.09465
+        },
+        {
+          "rgb": [
+            160,
+            160,
+            160
+          ],
+          "ratio": 0.0896
+        },
+        {
+          "rgb": [
+            224,
+            224,
+            224
+          ],
+          "ratio": 0.05967
+        },
+        {
+          "rgb": [
+            128,
+            160,
+            160
+          ],
+          "ratio": 0.05743
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        49,
+        128,
+        85
+      ],
+      "coverage": {
+        "green": 0.16211,
+        "waterSky": 0.46332,
+        "warmEarth": 0.05599,
+        "neutralRock": 0.73286,
+        "dark": 0.14062
+      }
     },
     "edgeDensity": {
       "horizontal": 0.01462,
@@ -302,7 +419,7 @@
   "pipelineEligibility": "awaiting_human_review",
   "localModel": "gpt-5.6-luna",
   "similarityReview": {
-    "similarityScore": 87,
+    "similarityScore": 83,
     "verdict": "awaiting_human_review",
     "corrections": [],
     "reviewer": "gpt-5.6-luna_local_visual_feature_contract",

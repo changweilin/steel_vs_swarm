@@ -29,6 +29,32 @@
     "wedge",
     "icosahedron_polyhedron"
   ],
+  "appearance": {
+    "model": "gpt-5.6-luna",
+    "sourceRegion": "central_rock_proxy",
+    "materialFamily": "cool_gray_basalt",
+    "coverage": {
+      "neutralRock": 0.32025,
+      "warmEarth": 0,
+      "green": 0,
+      "lowerWaterSky": 0
+    },
+    "overlays": {
+      "lichen": false,
+      "wetLowerBand": false,
+      "strata": false
+    },
+    "zoneHex": {
+      "lichenHex": 7043186,
+      "lichenLightHex": 11385007,
+      "wetHex": 1713196,
+      "foamHex": 14213084,
+      "strataHex": 4344656,
+      "strataDarkHex": 3291453
+    },
+    "lichenStrength": 0,
+    "surfaceVariation": true
+  },
   "schemaVersion": 1,
   "sourceFullPath": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\tools\\ai3d\\photos\\rock\\st_dolmen\\ov_ab168278-6be0-4d4b-ae0a-448fd630ad80.jpg",
   "oldV6": {
@@ -86,6 +112,97 @@
       "warmEarth": 0,
       "neutralRock": 0.1734,
       "dark": 0.07654
+    },
+    "subjectRegion": {
+      "kind": "central_rock_proxy",
+      "box": [
+        23,
+        12,
+        104,
+        112
+      ],
+      "meanRgb": [
+        178.55,
+        177.22,
+        176.54
+      ],
+      "luminance": {
+        "mean": 177.46,
+        "range": 247.28
+      },
+      "coverage": {
+        "green": 0,
+        "waterSky": 0,
+        "warmEarth": 0,
+        "neutralRock": 0.32025,
+        "dark": 0.1516
+      },
+      "dominantColors": [
+        {
+          "rgb": [
+            224,
+            224,
+            224
+          ],
+          "ratio": 0.50593
+        },
+        {
+          "rgb": [
+            0,
+            0,
+            0
+          ],
+          "ratio": 0.10827
+        },
+        {
+          "rgb": [
+            192,
+            192,
+            192
+          ],
+          "ratio": 0.07901
+        },
+        {
+          "rgb": [
+            160,
+            160,
+            160
+          ],
+          "ratio": 0.07
+        },
+        {
+          "rgb": [
+            32,
+            32,
+            32
+          ],
+          "ratio": 0.05988
+        },
+        {
+          "rgb": [
+            64,
+            64,
+            64
+          ],
+          "ratio": 0.05654
+        }
+      ]
+    },
+    "lowerRegion": {
+      "kind": "lower_foreground_proxy",
+      "box": [
+        0,
+        74,
+        128,
+        128
+      ],
+      "coverage": {
+        "green": 0,
+        "waterSky": 0,
+        "warmEarth": 0,
+        "neutralRock": 0.20862,
+        "dark": 0.06525
+      }
     },
     "edgeDensity": {
       "horizontal": 0.02376,
