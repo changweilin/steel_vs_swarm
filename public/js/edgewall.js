@@ -856,25 +856,46 @@ export const BACKDROP_KINDS = {
   sea:      { bio: ['water'], hF: 0.14 },
 };
 
+// 邊界山脈四季雪線高度比例（佔最高天花板 H 的比例；夏天無雪）
+export const MOUNTAIN_SNOWLINE = {
+  spring: 0.74,  // 春季雪線：高海拔積雪（山頂 26% 覆雪）
+  summer: 1.0,   // 夏季無雪：雪線在山頂之上（0% 覆雪）
+  autumn: 0.80,  // 秋季初雪：最高峰頂積雪（山頂 20% 覆雪）
+  winter: 0.52,  // 冬季雪線：雪線大幅下降至中高海拔（山頂 48% 覆雪）
+};
+
 /** 地貌 → 背景款 */
 export const backdropKindFor = (biome) => Object.keys(BACKDROP_KINDS).find((k) => BACKDROP_KINDS[k].bio.includes(biome)) || 'mountain';
 
 const BACKDROP_PARTS = {
   // 假山:兩排錯開的山稜(後排高、前排矮)+ 稜線上的雪/裸岩帶
-  mountain: (len, H, rnd) => [
-    ...rep(len, H * 0.62, (x, s) => {
-      const h = H * (0.62 + rnd() * 0.38);
-      return [
-        { g: ['cone', s * 0.78, h, 5], c: pick(rnd, [0x5c6470, 0x525a66, 0x666e79]), p: [x, h / 2, -H * 0.18] },
-        // 雪冠的**頂**恰在山頂(疊上去的話最高那幾座就穿出 `objHeightMax()` 的天花板)
-        { g: ['cone', s * 0.3, h * 0.24, 5], c: 0xd8dee4, p: [x, h * 0.88, -H * 0.18] },
-      ];
-    }),
-    ...rep(len, H * 0.44, (x, s) => {
-      const h = H * (0.3 + rnd() * 0.3);
-      return [{ g: ['cone', s * 0.8, h, 5], c: pick(rnd, [0x4c5647, 0x566151, 0x445040]), p: [x, h / 2, H * 0.12] }];
-    }),
-  ],
+  // 雪線高度隨季節變化(夏天無雪);雪錐底面半徑嚴格由山稜斜率等比推導,頂點與山頂對齊,不外突也不懸空
+  mountain: (len, H, rnd, season = 'summer') => {
+    const snowLineF = MOUNTAIN_SNOWLINE[season] ?? MOUNTAIN_SNOWLINE.summer;
+    const ySnow = H * snowLineF;
+    return [
+      ...rep(len, H * 0.62, (x, s) => {
+        const h = H * (0.62 + rnd() * 0.38);
+        const rBase = s * 0.78;
+        const parts = [
+          { g: ['cone', rBase, h, 5], c: pick(rnd, [0x5c6470, 0x525a66, 0x666e79]), p: [x, h / 2, -H * 0.18] },
+        ];
+        // 峰頂超過季節雪線才覆雪(夏天 ySnow = H ⇒ h <= ySnow 故無雪)
+        if (h > ySnow) {
+          const hs = h - ySnow;
+          // 斜率嚴格等比(rSnow / hs ≈ rBase / h),微量 1.01 避免 WebGL 共面 Z-fighting
+          const rSnow = rBase * (hs / h) * 1.01;
+          const py = h - hs / 2;
+          parts.push({ g: ['cone', rSnow, hs, 5], c: 0xd8dee4, p: [x, py, -H * 0.18] });
+        }
+        return parts;
+      }),
+      ...rep(len, H * 0.44, (x, s) => {
+        const h = H * (0.3 + rnd() * 0.3);
+        return [{ g: ['cone', s * 0.8, h, 5], c: pick(rnd, [0x4c5647, 0x566151, 0x445040]), p: [x, h / 2, H * 0.12] }];
+      }),
+    ];
+  },
   // 假森林:密集的錐冠帶(兩排),前排壓低 ⇒ 遠看是一片起伏的林線
   forest: (len, H, rnd) => [
     ...rep(len, H * 0.42, (x, s) => {
@@ -916,9 +937,9 @@ const BACKDROP_PARTS = {
 };
 
 /** 取一段背景的零件表(局部座標:x = 沿邊、y = 由地面往上、z = 厚度方向) */
-export function backdropParts(kind, { len, h, seed = 1 }) {
+export function backdropParts(kind, { len, h, seed = 1, season = 'summer' }) {
   const fn = BACKDROP_PARTS[kind] || BACKDROP_PARTS.mountain;
-  return fn(len, h, mulberry32((seed * 3266489917) >>> 0));
+  return fn(len, h, mulberry32((seed * 3266489917) >>> 0), season);
 }
 
 /**

@@ -37,16 +37,20 @@
 //       短 run 併回去時取**較陡**的那一級、零共享亂數、決定性。
 //   Ⅷ 緩衝布景與視線邊界背景 —— 只擺在地形範圍之外、四種背景各對應陸/水域、高度吃
 //       `objHeightMax()` 同一個天花板、零共享亂數、決定性、**逐零件落地不懸空**(2026-08-12)。
+//   Ⅸ 邊界山脈雪線高度與山頂積雪接合 —— MOUNTAIN_SNOWLINE 四季階梯、夏季無雪、冬季覆雪最大、
+//       雪錐斜率嚴格等比貼合山稜、頂點重合、無外擴懸空(2026-08-29)。
 //
 // 跑法:`node tools/audit_world_edge.mjs`(不需伺服器/瀏覽器/網路)
-//       反向驗證:`--break-lap`    段長重疊係數 < 1 ⇒ 環上出現縫 ⇒ Ⅱ 紅
-//                 `--break-buffer` 緩衝深度砍半 ⇒ 外緣落進地平線之內 ⇒ Ⅰ・Ⅴ 紅
-//                 `--break-fit`    往型錄塞一件頂出盒子的零件 ⇒ Ⅲ・Ⅶ 紅
-//                 `--break-face`   把貼著內面的實體零件抽掉 ⇒ Ⅶ 紅(撞得到卻看得穿)
-//                 `--break-run`    拿掉「太長就換一款」那一條 ⇒ Ⅶ 紅
-//                 `--break-slope`  把每一款都改成三級都站得住 ⇒ Ⅶ 紅(崖面上會擺出貨櫃車)
-//                 `--break-land`   關掉逐零件落地 ⇒ Ⅷ 紅(斜坡上整段布景/背景浮在半空)
-//                 `--break-boxh`   盒高改回逐款一個值 ⇒ Ⅲ 紅(素牆頂上撞得到卻看不見)
+//       反向驗證:`--break-lap`          段長重疊係數 < 1 ⇒ 環上出現縫 ⇒ Ⅱ 紅
+//                 `--break-buffer`       緩衝深度砍半 ⇒ 外緣落進地平線之內 ⇒ Ⅰ・Ⅴ 紅
+//                 `--break-fit`          往型錄塞一件頂出盒子的零件 ⇒ Ⅲ・Ⅶ 紅
+//                 `--break-face`         把貼著內面的實體零件抽掉 ⇒ Ⅶ 紅(撞得到卻看得穿)
+//                 `--break-run`          拿掉「太長就換一款」那一條 ⇒ Ⅶ 紅
+//                 `--break-slope`        把每一款都改成三級都站得住 ⇒ Ⅶ 紅(崖面上會擺出貨櫃車)
+//                 `--break-land`         關掉逐零件落地 ⇒ Ⅷ 紅(斜坡上整段布景/背景浮在半空)
+//                 `--break-boxh`         盒高改回逐款一個值 ⇒ Ⅲ 紅(素牆頂上撞得到卻看不見)
+//                 `--break-snow-summer`  夏季出現覆雪 ⇒ Ⅸ 紅(夏天無雪契約破壞)
+//                 `--break-snow-slope`   雪錐斜率失真外突 ⇒ Ⅸ 紅(山頂雪錐外擴懸空)
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import {
@@ -61,6 +65,9 @@ const BREAK_FACE = process.argv.includes('--break-face');
 const BREAK_RUN = process.argv.includes('--break-run');
 const BREAK_BOXH = process.argv.includes('--break-boxh');
 const BREAK_LAND = process.argv.includes('--break-land');   // 逐零件落地關掉 ⇒ 斜坡上整段浮起來
+const BREAK_SNOW_SUMMER = process.argv.includes('--break-snow-summer');
+const BREAK_SNOW_SLOPE = process.argv.includes('--break-snow-slope');
+if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
 // 坡度分級失效:把每一款都改成「三級都站得住」⇒ 崖面上會擺出貨櫃車 / 連排民房
 if (process.argv.includes('--break-slope')) {
   for (const k of Object.values(EW.WALL_KINDS)) k.slope = 'steep';
@@ -69,12 +76,24 @@ if (process.argv.includes('--break-lap')) WORLD_EDGE.SEG_LAP_F = 0.8;
 if (process.argv.includes('--break-buffer')) WORLD_EDGE.BUFFER_F = 0.5;
 if (BREAK_RUN) EW.EDGE_WALL.RUN_MAX_M = 1e9;
 
-// 反向驗證的注入點:一律包在 `wallParts` **外面**(型錄本身不動)⇒ 斷言的期望值不隨
+// 反向驗證的注入點:一律包在 `wallParts` / `backdropParts` **外面**(型錄本身不動)⇒ 斷言的期望值不隨
 // `--break-*` 改變(㋑:期望值跟著 break 走的話,break 永遠是綠的)
 const wallParts = (kind, o) => {
   const parts = EW.wallParts(kind, o);
   if (BREAK_FIT) parts.push({ g: ['box', o.len * 1.4, 2, 2], c: 0x999999, p: [0, 1, 0] });
   if (BREAK_FACE) return parts.filter((p) => EW.partBox(p).z1 < o.depth / 2 - EW.EDGE_WALL.FACE_T);
+  return parts;
+};
+
+const backdropParts = (kind, o) => {
+  const parts = EW.backdropParts(kind, o);
+  if (BREAK_SNOW_SLOPE && kind === 'mountain') {
+    for (const p of parts) {
+      if (p.c === 0xd8dee4 && p.g?.[0] === 'cone') {
+        p.g[1] = p.g[1] * 2.5; // 破壞雪錐半徑使其外突
+      }
+    }
+  }
   return parts;
 };
 
@@ -850,6 +869,70 @@ console.log('\nⅧ 緩衝空間的 3D 物件 + 視線邊界的假山/假海/假�
   }
 }
 
+// ============ Ⅸ 邊界山脈雪線高度與山頂積雪接合 ============
+console.log('\nⅨ 邊界山脈雪線高度與山頂積雪接合(四季變化 + 斜率貼合)');
+{
+  t('MOUNTAIN_SNOWLINE 定義完整四季雪線(spring/summer/autumn/winter)',
+    EW.MOUNTAIN_SNOWLINE && ['spring', 'summer', 'autumn', 'winter'].every((s) => typeof EW.MOUNTAIN_SNOWLINE[s] === 'number'));
+  t('夏季雪線在天際線之上(summer ≥ 1.0 ⇒ 夏天無雪)',
+    EW.MOUNTAIN_SNOWLINE.summer >= 1.0);
+  t('四季雪線階梯符合常理(winter < spring < autumn < summer)',
+    EW.MOUNTAIN_SNOWLINE.winter < EW.MOUNTAIN_SNOWLINE.spring
+    && EW.MOUNTAIN_SNOWLINE.spring <= EW.MOUNTAIN_SNOWLINE.autumn
+    && EW.MOUNTAIN_SNOWLINE.autumn < EW.MOUNTAIN_SNOWLINE.summer);
+
+  const H = objHeightMax();
+  const len = EW.EDGE_WALL.BACK_SEG_M;
+
+  // 1. 夏季實測：0 個雪錐
+  let summerSnowCount = 0;
+  for (let s = 1; s <= 30; s++) {
+    const parts = backdropParts('mountain', { len, h: H, seed: s, season: 'summer' });
+    const snows = parts.filter((p) => p.c === 0xd8dee4);
+    summerSnowCount += snows.length;
+  }
+  t(`夏季無雪(實測 30 個種子共 ${summerSnowCount} 個雪錐 === 0)`, summerSnowCount === 0);
+
+  // 2. 冬季/春季/秋季實測階梯
+  let winterSnowCount = 0, springSnowCount = 0, autumnSnowCount = 0;
+  for (let s = 1; s <= 30; s++) {
+    winterSnowCount += backdropParts('mountain', { len, h: H, seed: s, season: 'winter' }).filter((p) => p.c === 0xd8dee4).length;
+    springSnowCount += backdropParts('mountain', { len, h: H, seed: s, season: 'spring' }).filter((p) => p.c === 0xd8dee4).length;
+    autumnSnowCount += backdropParts('mountain', { len, h: H, seed: s, season: 'autumn' }).filter((p) => p.c === 0xd8dee4).length;
+  }
+  t(`冬季覆雪最多、春季次之、秋季初雪(冬 ${winterSnowCount} ≥ 春 ${springSnowCount} ≥ 秋 ${autumnSnowCount} > 夏 0)`,
+    winterSnowCount >= springSnowCount && springSnowCount >= autumnSnowCount && autumnSnowCount > 0);
+
+  // 3. 斜率與頂點貼合測試
+  let slopeMisaligned = 0, apexMisaligned = 0, flareOut = 0;
+  for (let s = 1; s <= 40; s++) {
+    const parts = backdropParts('mountain', { len, h: H, seed: s, season: 'winter' });
+    // 找出山稜錐體與其對應的雪錐（同 x 座標）
+    const mtnCones = parts.filter((p) => p.p?.[2] < 0 && p.c !== 0xd8dee4 && p.g?.[0] === 'cone');
+    const snowCones = parts.filter((p) => p.c === 0xd8dee4 && p.g?.[0] === 'cone');
+    for (const sc of snowCones) {
+      const mc = mtnCones.find((m) => Math.abs(m.p[0] - sc.p[0]) < 1e-3);
+      if (!mc) { slopeMisaligned++; continue; }
+      const mH = mc.g[2], mR = mc.g[1];
+      const sH = sc.g[2], sR = sc.g[1];
+      const mApex = mc.p[1] + mH / 2;
+      const sApex = sc.p[1] + sH / 2;
+      // 頂點必須完全對齊山頂
+      if (Math.abs(mApex - sApex) > 1e-4) apexMisaligned++;
+      // 雪錐斜率 (sR / sH) 必須與山稜斜率 (mR / mH) 等比貼合（容許 1% 微幅擴張防止 z-fighting，上限 1.025）
+      const mSlope = mR / mH;
+      const sSlope = sR / sH;
+      const ratio = sSlope / mSlope;
+      if (ratio < 0.99 || ratio > 1.025) slopeMisaligned++;
+      // 底面半徑不得外突擴散
+      if (sR > mR * (sH / mH) * 1.025) flareOut++;
+    }
+  }
+  t('雪錐頂點與山頂完全重合(0 處偏移)', apexMisaligned === 0, `（實得 ${apexMisaligned} 處）`);
+  t('雪錐斜率嚴格等比貼合山稜(1.00 ~ 1.025×, 0 處不吻合)', slopeMisaligned === 0, `（實得 ${slopeMisaligned} 處）`);
+  t('雪冠無外擴懸空/飛碟狀突出(0 處外突)', flareOut === 0, `（實得 ${flareOut} 處）`);
+}
+
 for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-buffer', '緩衝深度砍半,Ⅰ・Ⅴ MUST 紅字'],
   ['--break-fit', '型錄多一件頂出盒子的零件,Ⅲ・Ⅶ MUST 紅字'],
@@ -857,7 +940,9 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-run', '拿掉「太長就換一款」,Ⅶ MUST 紅字'],
   ['--break-boxh', '盒高改回逐款一個值,Ⅲ MUST 紅字(素牆頂上的空氣)'],
   ['--break-slope', '每一款都改成三級都站得住,Ⅶ MUST 紅字(崖面上的貨櫃車)'],
-  ['--break-land', '關掉逐零件落地,Ⅷ MUST 紅字(斜坡上浮在半空的假山)']]) {
+  ['--break-land', '關掉逐零件落地,Ⅷ MUST 紅字(斜坡上浮在半空的假山)'],
+  ['--break-snow-summer', '夏季出現覆雪,Ⅸ MUST 紅字(夏天無雪契約破壞)'],
+  ['--break-snow-slope', '雪錐斜率失真外突,Ⅸ MUST 紅字(山頂雪錐外擴懸空)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);
 }
 console.log(`\n${fail === 0 ? '🎉' : '❌'} 世界邊界稽核:${pass} 通過 / ${fail} 失敗`);
