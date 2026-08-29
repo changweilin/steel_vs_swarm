@@ -76,7 +76,7 @@ export const STORY = [
 
   {
     id: 'ch2', act: '第二章', venueId: 'shibuya', teamSize: 3,
-    env: { season: 'autumn', time: 'night', weather: 'rain' },
+    env: { season: 'autumn', time: 'night', weather: 'heavy_rain' },
     STEEL: {
       title: '霓虹肅聲', heroes: ['t08', 't07'], mercs: ['m02'],
       img: 'assets/story/story_act2_steel.png',

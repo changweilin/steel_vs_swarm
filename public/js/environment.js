@@ -57,19 +57,16 @@ const SEASONS = {
   winter: { tint: 0xdceaf2, mul: 0.88 },
 };
 
-// 天氣:光量倍率 + 霧(near/far 為地圖跨距倍率)+ 粒子 (相容性與預設定義)
+// 天氣:光量倍率 + 霧(near/far 為地圖跨距倍率)+ 粒子 (8 大天氣預設定義)
 const WEATHERS = {
   clear:     { light: 1.0,  fogNear: 0.50, fogFar: 1.9 },
   cloudy:    { light: 0.58, fogNear: 0.40, fogFar: 1.6 },
-  rain:      { light: 0.45, fogNear: 0.20, fogFar: 1.0, particle: 'rain' },
   heavy_rain:{ light: 0.40, fogNear: 0.16, fogFar: 0.90, particle: 'heavy_rain' },
   storm:     { light: 0.32, fogNear: 0.12, fogFar: 0.75, particle: 'storm', fogTint: 0x4a5568 },
   windy:     { light: 0.85, fogNear: 0.35, fogFar: 1.5, particle: 'wind' },
   sandstorm: { light: 0.38, fogNear: 0.08, fogFar: 0.55, particle: 'sand', fogTint: 0xc89858 },
   fog:       { light: 0.50, fogNear: 0.04, fogFar: 0.35 },
   snow:      { light: 0.60, fogNear: 0.22, fogFar: 1.1, particle: 'snow', fogTint: 0xcfd8dd },
-  drizzle:   { light: 0.65, fogNear: 0.30, fogFar: 1.3, particle: 'drizzle' },
-  blizzard:  { light: 0.35, fogNear: 0.10, fogFar: 0.65, particle: 'blizzard', fogTint: 0xd8e4ee },
 };
 
 // ---- 漸層天空穹頂 ----
