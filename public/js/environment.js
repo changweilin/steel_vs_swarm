@@ -134,28 +134,38 @@ function makeSkyDome(span, skyC, fogC, W) {
   return dome;
 }
 
-/** 賽璐璐雲的貼圖:幾個硬邊圓疊出一朵,一張整場共用 */
-let _cloudTex = null;
-function cloudTexture() {
-  if (_cloudTex) return _cloudTex;
+/** 賽璐璐雲的多樣態貼圖:多種硬邊圓程序化疊合形態,整場共享 */
+let _cloudTextures = null;
+function cloudTextures() {
+  if (_cloudTextures) return _cloudTextures;
   const S = 128;
-  const cv = document.createElement('canvas');
-  cv.width = S; cv.height = S / 2;
-  const g = cv.getContext('2d');
-  g.fillStyle = '#fff';
-  for (const [cx, cy, r] of [[0.28, 0.62, 0.20], [0.46, 0.44, 0.28], [0.68, 0.58, 0.22], [0.84, 0.66, 0.14]]) {
-    g.beginPath(); g.arc(cx * S, cy * S / 2, r * S / 2 * 2, 0, Math.PI * 2); g.fill();
-  }
-  _cloudTex = new THREE.CanvasTexture(cv);
-  _cloudTex.colorSpace = THREE.SRGBColorSpace;
-  return _cloudTex;
+  const puffConfigs = [
+    [[0.28, 0.62, 0.20], [0.46, 0.44, 0.28], [0.68, 0.58, 0.22], [0.84, 0.66, 0.14]],
+    [[0.22, 0.64, 0.16], [0.40, 0.48, 0.26], [0.62, 0.42, 0.29], [0.80, 0.60, 0.18]],
+    [[0.25, 0.58, 0.22], [0.50, 0.40, 0.30], [0.75, 0.54, 0.24], [0.52, 0.68, 0.18]],
+    [[0.30, 0.60, 0.19], [0.48, 0.46, 0.27], [0.65, 0.50, 0.23], [0.82, 0.62, 0.15], [0.38, 0.38, 0.18]],
+  ];
+  _cloudTextures = puffConfigs.map((puffs) => {
+    const cv = document.createElement('canvas');
+    cv.width = S; cv.height = S / 2;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff';
+    for (const [cx, cy, r] of puffs) {
+      g.beginPath(); g.arc(cx * S, cy * S / 2, r * S / 2 * 2, 0, Math.PI * 2); g.fill();
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  });
+  return _cloudTextures;
 }
 
 /**
  * 多元動態雲層系統:
- * 1. 雲量 (0~100%): 數量隨雲量遞增; >50% 轉為烏雲, 越黑且照度越低。
+ * 1. 雲量 (0~100%): 控制水平密度; >50% 轉為烏雲, 越黑且照度越低。
  * 2. 雲朵動態: 隨風漂移、微幅隨機飄動、生命週期顯現/消失。
  * 3. 聚合與分散: 小雲聚合成大雲 (Clustering), 大雲分散為小雲 (Dispersal)。
+ * 4. 緩慢變形機制: 多頻非對稱縱橫拉伸、內部子結構慢速旋流位移與風切微旋轉。
  */
 const CLOUD_N = 28;        // 雲量基數;實際枚數與 WEATHERS[w].light 反比
 const CLOUD_BOB = 0.015;      // 逐朵上下起伏
@@ -165,15 +175,11 @@ function makeClouds(span, skyC, W, seed) {
   if (!n || (W?.fogNear ?? 0.55) <= 0.05) return null;
   const rnd = mulberry32(((seed ?? 0) ^ 0x93B7C1) >>> 0);
   const grp = new THREE.Group();
-  const tex = cloudTexture();
+  const texs = cloudTextures();
 
   const numClusters = 8;
   const spritesPerCluster = 6;
   const totalClouds = numClusters * spritesPerCluster;
-
-  const mat = new THREE.SpriteMaterial({
-    map: tex, color: new THREE.Color(0xffffff), transparent: true, opacity: 0.85, depthWrite: false, fog: false,
-  });
 
   const WRAP = span * 2.8;
   const clusters = [];
@@ -193,7 +199,11 @@ function makeClouds(span, skyC, W, seed) {
   for (let i = 0; i < totalClouds; i++) {
     const cIdx = i % numClusters;
     const c = clusters[cIdx];
-    const sp = new THREE.Sprite(mat.clone());
+    const tex = texs[i % texs.length];
+    const spMat = new THREE.SpriteMaterial({
+      map: tex, color: new THREE.Color(0xffffff), transparent: true, opacity: 0.85, depthWrite: false, fog: false,
+    });
+    const sp = new THREE.Sprite(spMat);
     grp.add(sp);
 
     const offA = rnd() * Math.PI * 2;
@@ -202,18 +212,36 @@ function makeClouds(span, skyC, W, seed) {
     const lifePeriod = 18.0 + rnd() * 14.0;
     const lifePhase = rnd() * Math.PI * 2;
 
+    // 緩慢變形參數 (慢速非線性多頻相位與速率，週期 25s ~ 60s)
+    const morphSpeedX = 0.035 + rnd() * 0.025;
+    const morphSpeedY = 0.028 + rnd() * 0.022;
+    const morphPhaseX = rnd() * Math.PI * 2;
+    const morphPhaseY = rnd() * Math.PI * 2;
+    const rotSpeed = 0.015 + rnd() * 0.018;
+    const rotPhase = rnd() * Math.PI * 2;
+    const swirlSpeed = 0.020 + rnd() * 0.025;
+    const swirlPhase = rnd() * Math.PI * 2;
+
     const item = {
       sp,
       cIdx,
-      offX: Math.cos(offA) * offR,
-      offZ: Math.sin(offA) * offR,
+      offA,
+      offR,
       baseScale,
       lifePeriod,
       lifePhase,
       bobPhase: rnd() * Math.PI * 2,
+      morphSpeedX,
+      morphSpeedY,
+      morphPhaseX,
+      morphPhaseY,
+      rotSpeed,
+      rotPhase,
+      swirlSpeed,
+      swirlPhase,
     };
     cloudItems.push(item);
-    drift.push({ sp, along: c.cx + item.offX, side: c.cz + item.offZ, y: c.y, s: baseScale, ph: lifePhase });
+    drift.push({ sp, along: c.cx + Math.cos(offA) * offR, side: c.cz + Math.sin(offA) * offR, y: c.y, s: baseScale, ph: lifePhase });
   }
 
   grp.frustumCulled = false;
@@ -270,10 +298,20 @@ function makeClouds(span, skyC, W, seed) {
         const clusterPulse = Math.sin(t * 0.12 + c.phase) * 0.5 + 0.5; // [0, 1] 聚合 -> 分散循環
         const clusterMerge = (cloudsPct > 50 ? 0.35 : 0.65) * clusterPulse + (cloudsPct > 50 ? 0.45 : 0.15);
 
-        // 水平偏移受水平廣度與密度調整
-        const curOffX = item.offX * (1.6 - clusterMerge * 0.9) * spreadFactor;
-        const curOffZ = item.offZ * (1.6 - clusterMerge * 0.9) * spreadFactor;
+        // 4. 緩慢變形動態 (Slow Morphing Dynamics)
+        // a. 雲團內部子結構慢速旋流位移 (Swirl Deformation)
+        const curSwirlA = item.offA + Math.sin(t * item.swirlSpeed + item.swirlPhase) * 0.45;
+        const curSwirlR = item.offR * (0.85 + Math.cos(t * item.swirlSpeed * 1.3 + item.swirlPhase) * 0.30);
+        const curOffX = Math.cos(curSwirlA) * curSwirlR * (1.6 - clusterMerge * 0.9) * spreadFactor;
+        const curOffZ = Math.sin(curSwirlA) * curSwirlR * (1.6 - clusterMerge * 0.9) * spreadFactor;
+
+        // b. 縱橫非對稱拉伸變形 (Aspect-Ratio Stretch Morphing)
+        const morphX = 1.0 + Math.sin(t * item.morphSpeedX + item.morphPhaseX) * 0.26 + Math.cos(t * item.morphSpeedX * 0.47) * 0.08;
+        const morphY = 1.0 + Math.cos(t * item.morphSpeedY + item.morphPhaseY) * 0.22 + Math.sin(t * item.morphSpeedY * 0.53) * 0.07;
         const scaleMul = (0.7 + clusterMerge * 0.7) * (1 + Math.sin(t * 0.2 + item.bobPhase) * CLOUD_BREATH);
+
+        // c. 風切與渦流慢速自轉微傾 (Eddy Rotation Morphing)
+        item.sp.material.rotation = Math.sin(t * item.rotSpeed + item.rotPhase) * 0.16 + Math.cos(t * item.rotSpeed * 0.38) * 0.05;
 
         const posX = a * windDir[0] - d.side * windDir[1] + curOffX;
         const posZ = a * windDir[1] + d.side * windDir[0] + curOffZ;
@@ -282,7 +320,7 @@ function makeClouds(span, skyC, W, seed) {
         const posY = baseAltitudeShift + (d.y - span * 0.22) * fogAltitudeFactor + Math.sin(t * 0.14 + item.bobPhase) * span * CLOUD_BOB;
 
         item.sp.position.set(posX, posY, posZ);
-        item.sp.scale.set(item.baseScale * 2 * scaleMul, item.baseScale * scaleMul, 1);
+        item.sp.scale.set(item.baseScale * 2 * scaleMul * morphX, item.baseScale * scaleMul * morphY, 1);
         item.sp.material.color.copy(baseCloudColor);
         item.sp.material.opacity = fadeAlpha * (dyn?.isDarkCloud ? 0.92 : 0.75);
         item.sp.visible = fadeAlpha > 0.02;
