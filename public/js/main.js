@@ -17,7 +17,7 @@ import {
   CREEP_UPG, creepUpgMul,
   FLIGHT, SQUAD, scopeRvmin,
   heroHexStats, SIEGE,
-  MINI, miniAllowed, miniOnlyFor, miniScaleF,
+  MINI, miniAllowed, miniOnlyFor, miniScaleF, SPEC_CAM,
 } from './data.js';
 import { LORE } from './lore.js';
 import { protoOf } from './codex.js';
@@ -55,7 +55,10 @@ import {
   renderTouchSettings, syncTouchSettings, renderCtrlSettings, syncCtrlSettings,
   renderCtrlModeRow, syncCtrlModeRow, isTouchUI, openTouchTest, closeTouchTest, toggleFullscreen,
 } from './mobile.js';
-import { CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange, deviceScheme } from './ctrlmode.js';
+import {
+  CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange, deviceScheme,
+  VIEW_MODES, viewMode, setViewMode, onViewModeChange,
+} from './ctrlmode.js';
 import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault } from './visualPrefs.js';
 import { BALANCE_KNOBS, balancePref, setBalancePref, resetBalancePrefs, balancePrefsDefault } from './balancePrefs.js';
 import { MatSample } from './matsample.js';
@@ -173,8 +176,7 @@ const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story']);
 function show(screen) {
   for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
   app.phaseShown = screen;
-  // 半透明全螢幕鍵(#fsToggleBtn)排除 game 頁的唯一寫入點:那頁已有自己的全螢幕鍵
-  // (見 index.html #fsToggleBtn 註解、style.css `body[data-screen="game"]`)。
+  // body 層常駐工具列(#quickTools)跨所有畫面共用；疊層與選址面板由 z-index 蓋住。
   document.body.dataset.screen = screen;
   if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // 離開房間:收放大視窗、兩台展示台停 rAF,不與戰場搶 GPU
   // 操作方式:整房一致、由房主定案(套用在 onSync;規則住 ctrlmode.js)。
@@ -2781,11 +2783,12 @@ function syncAudioSwitches(p) {
     if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $(`${p}BgmVal`).textContent = `${bv.value}%`; }
   }
   setSwitch(`${p}LowPower`, lowPower());   // 未設定過:手機預設開(唯一真相在 mobile.js)
+  syncFsToggleBtn();
 }
 // 一份綁定邏輯套兩處前綴;控件改動一律寫進 app.audio / lowPower(單一真相),只回寫自己那份 UI。
 function bindSettingsControls(p) {
-  bindSwitch(`${p}SfxOn`, (on) => app.audio?.setSfxOn(on));
-  bindSwitch(`${p}BgmOn`, (on) => app.audio?.setBgmOn(on));
+  bindSwitch(`${p}SfxOn`, (on) => { app.audio?.setSfxOn(on); syncFsToggleBtn(); });
+  bindSwitch(`${p}BgmOn`, (on) => { app.audio?.setBgmOn(on); syncFsToggleBtn(); });
   bindSwitch(`${p}LowPower`, (on) => {
     setLowPowerPref(on);
     app.battle?.setLowPower();
@@ -2794,10 +2797,12 @@ function bindSettingsControls(p) {
   $(`${p}SfxVol`)?.addEventListener('input', (e) => {
     const v = Number(e.target.value); $(`${p}SfxVal`).textContent = `${v}%`;
     app.audio?.setSfx(v / 100); if (v > 0 && !app.audio?.sfxOn) { app.audio.setSfxOn(true); setSwitch(`${p}SfxOn`, true); }
+    syncFsToggleBtn();
   });
   $(`${p}BgmVol`)?.addEventListener('input', (e) => {
     const v = Number(e.target.value); $(`${p}BgmVal`).textContent = `${v}%`;
     app.audio?.setBgm(v / 100); if (v > 0 && !app.audio?.bgmOn) { app.audio.setBgmOn(true); setSwitch(`${p}BgmOn`, true); }
+    syncFsToggleBtn();
   });
 }
 bindSettingsControls('set');
@@ -3425,14 +3430,56 @@ function syncTouchSetupBtn() {
 }
 syncTouchSetupBtn();
 
-// 半透明全螢幕鍵(#fsToggleBtn):同一套「觸控硬體才顯示」判準,與上面 touchSetupBtn 共用
-// —— game 頁的排除住 CSS(`body[data-screen="game"]`),這裡只管裝置判定。
+// 右上常駐工具列:同一套「觸控硬體才顯示」判準,與上面 touchSetupBtn 共用。
+// 狀態只從 GameAudio / ctrlmode.js / fullscreen API 讀取,按鈕本身不保存第二份狀態。
 function syncFsToggleBtn() {
-  const b = $('fsToggleBtn');
-  if (b) b.hidden = !(touchCapable() || TOUCH_UI());
+  const rail = $('quickTools');
+  if (rail) rail.hidden = !(touchCapable() || TOUCH_UI());
+
+  const sound = $('quickSoundToggle');
+  const audioOn = !!app.audio?.masterOn?.();
+  if (sound) {
+    sound.classList.toggle('active', audioOn);
+    sound.classList.toggle('off', !audioOn);
+    sound.setAttribute('aria-pressed', String(audioOn));
+    sound.setAttribute('aria-label', audioOn ? '關閉全部聲音' : '開啟全部聲音');
+  }
+
+  const view = $('quickViewToggle');
+  const battle = app.battle;
+  const spec = battle && !battle.side;
+  const current = spec ? battle._specView : viewMode();
+  const viewName = spec ? (SPEC_CAM.NAMES[current] || '視角') : (VIEW_MODES[current]?.label || '視角');
+  if (view) {
+    view.dataset.view = current || '';
+    view.setAttribute('aria-label', `目前${viewName}，切換視角`);
+  }
+
+  const full = $('fsToggleBtn');
+  const fullscreen = !!document.fullscreenElement;
+  if (full) {
+    full.classList.toggle('active', fullscreen);
+    full.setAttribute('aria-label', fullscreen ? '退出全螢幕' : '開啟全螢幕');
+  }
 }
 syncFsToggleBtn();
+$('quickSoundToggle')?.addEventListener('click', () => {
+  const a = app.audio;
+  if (!a) return;
+  a.setMasterOn(!a.masterOn());
+  syncAudioSwitches('set');
+  syncAudioSwitches('lset');
+});
+$('quickViewToggle')?.addEventListener('click', () => {
+  const b = app.battle;
+  if (b && !b.side) b._specCycleView?.();
+  else setViewMode(viewMode() === 'fpv' ? 'tps' : 'fpv');
+  syncFsToggleBtn();
+});
 $('fsToggleBtn')?.addEventListener('click', () => toggleFullscreen());
+onViewModeChange(() => syncFsToggleBtn());
+document.addEventListener('fullscreenchange', syncFsToggleBtn);
+document.addEventListener('webkitfullscreenchange', syncFsToggleBtn);
 
 window.addEventListener('DOMContentLoaded', () => {
   $('myName').value = localStorage.getItem('svs_name') || '';

@@ -1080,6 +1080,9 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     dc.invUntil = 1e9;
     // 旁觀者取 bunker(speed 0):測試假人無 lane,speed > 0 的兵種會被 _advance 撞上 undefined 兵線
     const bys = s3._add({ kind: 'bunker', side: 'STEEL', x: 450, z: 0, y: 0, hp: 4000 }); delete bys.lane;
+    // 這段只驗載具分批交付;移除隨機生成的防禦設施,避免額外防空火力改變存活架數。
+    for (const e of [...s3.ents.values()])
+      if (e.kind === 'tower' || e.kind === 'base') s3.ents.delete(e.id);
     s3.heroCast('uc_d', 'ult', 450, 0);
     const uk = [...s3.ents.values()].filter((e) => e.kami);
     assert(uk.length === SQUAD.KAMI.N && uk.every((k) => k.uA && k.pt), `s02 大招生成 ${SQUAD.KAMI.N} 架點遞送 kami(分批)`);

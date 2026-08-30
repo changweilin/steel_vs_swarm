@@ -625,7 +625,7 @@
        第 3、4 列才是各自的系統鍵。兩條**列數相同(4)**且用 CSS grid 指定 `grid-row`,
        所以 ZL(僅飛行機種)/ ⇄ 換機(僅無人機)隱藏時**列不會塌陷**,對應關係恆成立。
        欄位順序 MUST NOT 隨機種改動 —— 換機種就找不到鍵了。
-         L 條:① L 填彈 ② ZL 下降(飛行機種)③ HOME 戰場選單 ④ 全螢幕
+          L 條:① L 填彈 ② ZL 下降(飛行機種)③ HOME 戰場選單 ④ 保留空列
          R 條:① R 狙擊(短按切換、長按施放招式)② ZR 鎖定(按住)③ ⇄ 換機(無人機)④ 左手
 
        **ZR = 視野鎖定(2026-08-01 使用者需求,原為招式鈕)**:按住 → 視野收斂到鎖定的敵人,
@@ -638,7 +638,7 @@
     <button class="tl-sysb" type="button" data-act="reload">L 填彈</button>
     <button class="tl-sysb" type="button" data-act="dive" hidden>ZL 降</button>
     <button class="tl-sysb" type="button" data-act="menu" aria-label="戰場選單">HOME</button>
-    <button class="tl-sysb" type="button" data-act="full">全螢幕</button>
+    <button class="tl-sysb" type="button" data-act="full" hidden>全螢幕</button>
   </div>
   <div class="tl-sys tl-sys-r">
     <button class="tl-sysb gb-aim" type="button" data-act="aim">R 狙擊</button>
@@ -762,13 +762,30 @@
 
 <div id="toast" class="toast"></div>
 
-<!-- 半透明全螢幕鍵(2026-08-11 使用者需求「手機版每個頁面都加入」):MUST 留在 body 層
-     (position:fixed)—— 這樣才能跨越 index.html 全部 `.screen`,不必在每個畫面各掛一顆。
-     戰場(#game)刻意排除:那裡已有自己的全螢幕鍵(見 #touchLayer 的 tl-sys-l
-     `data-act="full"`,隨虛擬搖桿整組收放),排除規則住 style.css `body[data-screen="game"]`。
-     顯示與否、點擊行為一律轉呼 mobile.js 既有的唯一縫(touchCapable() / toggleFullscreen()),
-     MUST NOT 在這裡另寫一份判斷或另開一條全螢幕邏輯 —— 接線見 main.js syncFsToggleBtn()。 -->
-<button id="fsToggleBtn" class="fs-toggle-btn" type="button" aria-label="全螢幕切換" hidden>⛶</button>
+<!-- 觸控裝置常駐工具列:總聲音 / 視角 / 全螢幕。MUST 留在 body 層(position:fixed),
+     跨越所有 `.screen` 並與 #touchLayer 分開,避免滿版視角層吃掉按鈕事件。
+     顯示與行為沿用既有縫:音效由 GameAudio、視角由 ctrlmode.js / game.js、全螢幕由
+     mobile.js toggleFullscreen() 處理；桌機不顯示這組觸控工具列。 -->
+<div id="quickTools" class="quick-tools" hidden>
+  <button id="quickSoundToggle" class="quick-tool" type="button" aria-label="開啟全部聲音" aria-pressed="false">
+    <svg class="quick-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 10v4h4l5 4V6l-5 4H4Z"></path>
+      <path class="quick-sound-wave" d="M16 9.5a4 4 0 0 1 0 5M18.5 7a7.5 7.5 0 0 1 0 10"></path>
+      <path class="quick-sound-slash" d="m4 4 16 16"></path>
+    </svg>
+  </button>
+  <button id="quickViewToggle" class="quick-tool" type="button" aria-label="切換視角">
+    <svg class="quick-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M2.5 12s3.4-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z"></path>
+      <circle cx="12" cy="12" r="2.8"></circle>
+    </svg>
+  </button>
+  <button id="fsToggleBtn" class="quick-tool fs-toggle-btn" type="button" aria-label="開啟全螢幕">
+    <svg class="quick-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"></path>
+    </svg>
+  </button>
+</div>
 
 <!-- 角色簡歷跳出視窗(點頭像預覽,不影響選角)-->
 <div id="charBioModal" class="bio-modal" hidden>

@@ -210,6 +210,16 @@ export class GameAudio {
     if (this._unlocked && this._scene) this._applyScene(this._scene);
     else this._applyVolume();
   }
+  /** 總聲音圖示的狀態與寫入縫:一次同步 SFX / BGM,不改各自音量。 */
+  masterOn() { return this.sfxOn && this.bgmOn; }
+  setMasterOn(on) {
+    const next = !!on;
+    this.sfxOn = next;
+    this.bgmOn = next;
+    this._save();
+    if (this._unlocked && this._scene) this._applyScene(this._scene);
+    else this._applyVolume();
+  }
   /** 低功耗切換(與 game.js 共用 svs_lowpower 旗標;main.js 的 setLowPower switch 一併呼叫此處)。
    *  開 → 射擊/爆炸退合成 + 立即靜掉移動環境音;不動 BGM(串流本就低耗)。 */
   setLowPower(on) {
