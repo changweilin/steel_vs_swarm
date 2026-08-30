@@ -1,6 +1,13 @@
-// 背景物件的決定性組裝縫：指定主結構 → 逐角色挑一組葉零件 → 子類別配色抽樣。
+// 背景物件的決定性組裝縫：指定主結構 → 每個目標槽位獨立挑葉零件 → 子類別配色抽樣。
 // NPC、戰鬥建築與玩家機甲不引用本檔；它們各自保留權威 Rig / 碰撞 / 動畫契約。
 import { RUNTIME_BACKGROUND_CATALOG, RUNTIME_PARTS } from './runtimeParts.js';
+import {
+  eulerXYZFromMat3,
+  mat3Apply,
+  mat3FromEulerXYZ,
+  mat3Multiply,
+  mat3Transpose,
+} from './partTransform.js';
 
 export const BACKGROUND_VARIANTS_PER_TARGET = 4;
 
@@ -41,29 +48,28 @@ function decorate(part, role) {
   return out;
 }
 
-function boundsFrame(bounds) {
-  const min = bounds?.min;
-  const size = bounds?.size;
-  if (!finite3(min) || !finite3(size) || size.some((value) => value <= 0)) return null;
-  return { min, size, center: min.map((value, axis) => value + size[axis] * 0.5) };
-}
-
-/** 將另一成員的完整葉組等比例移植到目標主結構；位置按包絡三軸對應，形狀只等比縮放。 */
-function remapLeaf(part, role, sourceBounds, targetBounds) {
+/**
+ * 把來源槽的零件群塞進目標槽包絡。槽中心與方向取自目標，因此接合點不受來源物件座標影響；
+ * 槽內相對位置與尺寸一起縮放，疊層零件仍保持為同一個組件。
+ */
+function fitLeafSlot(part, role, sourceSlot, targetSlot) {
   const out = decorate(part, role);
-  const source = boundsFrame(sourceBounds);
-  const target = boundsFrame(targetBounds);
-  if (!source || !target || !finite3(out.position)) return out;
-  const ratios = target.size.map((value, axis) => value / source.size[axis]);
-  const uniform = Math.min(...ratios);
-  out.position = out.position.map((value, axis) => (
-    target.center[axis] + (value - source.center[axis]) * ratios[axis]
-  ));
-  if (Array.isArray(out.dimensions)) out.dimensions = out.dimensions.map((value) => value * uniform);
-  if (Array.isArray(out.radii)) out.radii = out.radii.map((value) => value * uniform);
-  for (const field of ['radius', 'height', 'tube']) {
-    if (Number.isFinite(out[field])) out[field] *= uniform;
-  }
+  if (!finite3(sourceSlot?.center) || !finite3(sourceSlot?.size)
+    || !finite3(targetSlot?.center) || !finite3(targetSlot?.size)
+    || sourceSlot.size.some((value) => value <= 0) || targetSlot.size.some((value) => value <= 0)
+    || !finite3(out.position)) return out;
+  const ratios = targetSlot.size.map((value, axis) => value / sourceSlot.size[axis]);
+  const sourceFrame = mat3FromEulerXYZ(sourceSlot.rotation);
+  const targetFrame = mat3FromEulerXYZ(targetSlot.rotation);
+  const sourceInverse = mat3Transpose(sourceFrame);
+  const relativePosition = mat3Apply(sourceInverse,
+    out.position.map((value, axis) => value - sourceSlot.center[axis]));
+  const targetOffset = mat3Apply(targetFrame, relativePosition.map((value, axis) => value * ratios[axis]));
+  out.position = targetSlot.center.map((value, axis) => value + targetOffset[axis]);
+  const baseScale = finite3(out.scale) ? out.scale : [1, 1, 1];
+  out.scale = baseScale.map((value, axis) => value * ratios[axis]);
+  const partFrame = mat3FromEulerXYZ(out.rotation);
+  out.rotation = eulerXYZFromMat3(mat3Multiply(targetFrame, mat3Multiply(sourceInverse, partFrame)));
   return out;
 }
 
@@ -97,19 +103,33 @@ export function generateBackgroundObject(targetKey, seed = 0) {
     % BACKGROUND_VARIANTS_PER_TARGET;
   const parts = target.mainParts.map(({ index, role }) => decorate(targetEntry.parts[index], role));
   const sources = {};
-  // 主結構目標自己的角色分支就是插槽名冊；別的成員多出的獨有配件不能憑空長到成品上。
-  const roles = target.leafRoles.map((row) => row.role).sort();
-  for (const role of roles) {
+  const slotSources = [];
+  // 目標自己的槽位名冊固定成品接合點；來源只提供槽內零件，不得新增目標不存在的位置。
+  for (const targetRole of target.leafRoles) {
     const choices = structure.members.flatMap((member) => member.leafRoles
-      .filter((row) => row.role === role)
-      .map((row) => ({ member, row })));
+      .filter((row) => row.role === targetRole.role)
+      .flatMap((row) => row.slots.map((slot) => ({ member, slot }))));
     if (!choices.length) continue;
-    const choice = pick(choices, variant, `${targetKey}:leaf:${role}`);
-    const sourceEntry = entries.get(choice.member.key);
-    if (!sourceEntry) throw new Error(`背景葉節點缺少來源:${choice.member.key}`);
-    sources[role] = choice.member.key;
-    for (const index of choice.row.partIndexes) {
-      parts.push(remapLeaf(sourceEntry.parts[index], role, choice.member.bounds, target.bounds));
+    sources[targetRole.role] = [];
+    for (const targetSlot of targetRole.slots) {
+      const choice = pick(choices, variant, `${targetKey}:leaf:${targetRole.role}:${targetSlot.id}`);
+      const sourceEntry = entries.get(choice.member.key);
+      if (!sourceEntry) throw new Error(`背景葉節點缺少來源:${choice.member.key}`);
+      const partStart = parts.length;
+      sources[targetRole.role].push(choice.member.key);
+      for (const index of choice.slot.partIndexes) {
+        parts.push(fitLeafSlot(sourceEntry.parts[index], targetRole.role, choice.slot, targetSlot));
+      }
+      slotSources.push({
+        role: targetRole.role,
+        targetSlotId: targetSlot.id,
+        sourceKey: choice.member.key,
+        sourceSlotId: choice.slot.id,
+        partStart,
+        partCount: choice.slot.partIndexes.length,
+        anchor: [...targetSlot.center],
+        size: [...targetSlot.size],
+      });
     }
   }
 
@@ -130,6 +150,7 @@ export function generateBackgroundObject(targetKey, seed = 0) {
       variant,
       mainPartCount: target.mainParts.length,
       leafSources: sources,
+      leafSlots: slotSources,
       paletteId: paletteRow?.id || null,
     },
   };

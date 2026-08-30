@@ -188,7 +188,7 @@ export function mergeRuntimeParts(parts, options = {}) {
   const q = new THREE.Quaternion();
   const e = new THREE.Euler();
   const p = new THREE.Vector3();
-  const s = new THREE.Vector3(1, 1, 1);
+  const s = new THREE.Vector3();
   const color = new THREE.Color();
 
   for (const part of parts) {
@@ -200,6 +200,7 @@ export function mergeRuntimeParts(parts, options = {}) {
     e.set(rx, ry, rz, 'XYZ');
     q.setFromEuler(e);
     p.set(px, py, pz);
+    s.fromArray(pos3(part.scale, 1).map((value) => Math.max(0.001, Math.abs(value))));
     matrix.compose(p, q, s);
     geo.applyMatrix4(matrix);
     if (!geo.attributes.normal) geo.computeVertexNormals();

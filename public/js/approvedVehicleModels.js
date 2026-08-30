@@ -111,6 +111,7 @@ function normalizePart(row, part, origin) {
     ...(finite(part.height) ? { height: part.height } : {}),
     ...(finite(part.sides) ? { sides: part.sides } : {}),
     ...(finite(part.tube) ? { tube: part.tube } : {}),
+    ...(part.scale ? { scale: [...requireVec3(part.scale, `${row.key}/${part.name}.scale`)] } : {}),
     position: [
       part.position[0] - origin[0],
       part.position[1] - origin[1],
