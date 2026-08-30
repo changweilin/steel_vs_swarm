@@ -33,6 +33,14 @@ import {
 // 劇情戰役開房那一段要真的地圖(旗標 defSide 由 venueConfig 帶進 battleConfig)
 import { VENUES, venueConfig } from '../public/js/venues.js';
 
+// e2e 的場景會生成地雷、防空陣地與平民;固定亂數序列,避免隨機事件改變測試前提。
+const TEST_RANDOM_ORIGINAL = Math.random;
+let testRandomState = 0x5eed1234;
+Math.random = () => {
+  testRandomState = (Math.imul(testRandomState, 1664525) + 1013904223) >>> 0;
+  return testRandomState / 0x100000000;
+};
+
 /**
  * 「未折算」的基準傷害 = 階梯值 × **剋制/範圍/機動/射程四個推導係數**。
  * 下面那幾條斷言驗的是「**小隊折算** SQUAD.DMG 沒有生效」,不是「dmg 欄不准有任何係數」——
@@ -1080,9 +1088,6 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     dc.invUntil = 1e9;
     // 旁觀者取 bunker(speed 0):測試假人無 lane,speed > 0 的兵種會被 _advance 撞上 undefined 兵線
     const bys = s3._add({ kind: 'bunker', side: 'STEEL', x: 450, z: 0, y: 0, hp: 4000 }); delete bys.lane;
-    // 這段只驗載具分批交付;移除隨機生成的防禦設施,避免額外防空火力改變存活架數。
-    for (const e of [...s3.ents.values()])
-      if (e.kind === 'tower' || e.kind === 'base') s3.ents.delete(e.id);
     s3.heroCast('uc_d', 'ult', 450, 0);
     const uk = [...s3.ents.values()].filter((e) => e.kami);
     assert(uk.length === SQUAD.KAMI.N && uk.every((k) => k.uA && k.pt), `s02 大招生成 ${SQUAD.KAMI.N} 架點遞送 kami(分批)`);
@@ -2535,5 +2540,6 @@ assert(movedM > 10, `bot 沿兵線推進(${pushS.toFixed(1)} 秒內移動 ${move
 hb.ws.close(); hbSpec.ws.close();
 
 log(failed ? '\n❌ 有測試失敗' : '\n🎉 全部通過');
+Math.random = TEST_RANDOM_ORIGINAL;
 host.ws.close(); guest2.ws.close(); spec.ws.close();
 process.exit(failed ? 1 : 0);
