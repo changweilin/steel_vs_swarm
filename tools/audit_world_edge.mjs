@@ -54,7 +54,7 @@
 //                 `--break-snow-slope`   雪錐斜率失真外突 ⇒ Ⅸ 紅(山頂雪錐外擴懸空)
 //                 `--break-wet`          拔掉沼澤分類 ⇒ Ⅶ 紅(wet 型錄成為死資料)
 //                 `--break-motion`       風機轉速拔掉風量倍率 ⇒ Ⅶ 紅
-//                 `--break-water-platform` 往浮動光電塞回整段水泥底座 ⇒ Ⅶ 紅
+//                 `--break-facility-support` 往陸域光電塞回整段底座 ⇒ Ⅶ 紅
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import {
@@ -73,7 +73,7 @@ const BREAK_SNOW_SUMMER = process.argv.includes('--break-snow-summer');
 const BREAK_SNOW_SLOPE = process.argv.includes('--break-snow-slope');
 const BREAK_WET = process.argv.includes('--break-wet');
 const BREAK_MOTION = process.argv.includes('--break-motion');
-const BREAK_WATER_PLATFORM = process.argv.includes('--break-water-platform');
+const BREAK_FACILITY_SUPPORT = process.argv.includes('--break-facility-support');
 if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
 // 坡度分級失效:把每一款都改成「三級都站得住」⇒ 崖面上會擺出貨櫃車 / 連排民房
 if (process.argv.includes('--break-slope')) {
@@ -88,7 +88,7 @@ if (BREAK_RUN) EW.EDGE_WALL.RUN_MAX_M = 1e9;
 const wallParts = (kind, o) => {
   const parts = EW.wallParts(kind, o);
   if (BREAK_FIT) parts.push({ g: ['box', o.len * 1.4, 2, 2], c: 0x999999, p: [0, 1, 0] });
-  if (BREAK_WATER_PLATFORM && kind === 'floatsolar') {
+  if (BREAK_FACILITY_SUPPORT && kind === 'solarfield') {
     parts.push({ g: ['box', o.len, 2, o.depth], c: 0x777777, p: [0, 1, 0] });
   }
   if (BREAK_FACE) return parts.filter((p) => EW.partBox(p).z1 < o.depth / 2 - EW.EDGE_WALL.FACE_T);
@@ -418,7 +418,7 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
   }
   t(`每一顆零件及完整運動包絡都收在碰撞柱之內(${visualEmitted.length} 件,頂出 ${out} 件)`, out === 0,
     worst ? `（例:x ${worst.x0.toFixed(1)}~${worst.x1.toFixed(1)} y ${worst.y0.toFixed(1)}~${worst.y1.toFixed(1)} z ${worst.z0.toFixed(1)}~${worst.z1.toFixed(1)}）` : '');
-  // 底座:段底到落地基準那一截 MUST 有東西(不然是「牆浮在坡上」+「撞得到卻看不見」)
+  // 地下埋深補片:只填段底到地表的不可見落差，不得抬高或承托障礙物本體。
   const floors = new Map();
   for (const b of blockers) floors.set(`${b.x.toFixed(2)},${b.z.toFixed(2)}`, b);
   let plinthOk = true;
@@ -426,7 +426,7 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
     const bottom = visualEmitted.filter((bx) => inBox(bx, b)).reduce((m, bx) => Math.min(m, bx.y0), Infinity);
     if (bottom > b.y + 0.05) plinthOk = false;
   }
-  t('每一段的演出都鋪到盒底(底座補滿地形起伏與埋深 ⇒ 牆不浮在坡上)', plinthOk);
+  t('每一段的地下埋深補片只補地形起伏，障礙物本體仍由地面／水面長出', plinthOk);
   // **盒高逐段實測**:城牆的城樓 14m / 素牆 9m 是同一款的不同節 —— 拿型錄宣告的最高值當
   // 每一節的盒高,素牆那幾節的頂上就多出一截撞得到卻看不見的空氣(A30 家族的反面)。
   // 下界仍是環高(`edgeWallHM`):比它矮的款照樣頂到那條線,「沒有機體看得過去」不動。
@@ -649,7 +649,7 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     bare: ['windland', 'solarfield', 'mine', 'oilfield'],
     green: ['windland', 'ranch', 'greenhouse'],
     urban: ['factory', 'powerplant', 'incinerator', 'skyscrapers'],
-    wet: ['oysterracks', 'strandedship', 'whale', 'wetpods'],
+    wet: ['oysterracks', 'strandedship', 'wetpods'],
   };
   for (const [bio, want] of Object.entries(requested)) {
     const got = EW.wallCandidates(bio, bio === 'water');
@@ -673,7 +673,7 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
       const f = EW.wallFit(parts, len, d.depth, H);
       ox = Math.max(ox, f.ox); oy = Math.max(oy, f.oy); oz = Math.max(oz, f.oz);
       dep = Math.max(dep, f.depth); top = Math.max(top, f.h);
-      cov = Math.min(cov, EW.wallFaceCover(parts, len, d.depth, Math.min(H, band)));
+      cov = Math.min(cov, EW.wallFaceCover(parts, len, d.depth, Math.min(H, d.faceH || band)));
     }
     if (ox > 1e-9 || oy > 1e-9 || oz > 1e-9) fitBad.push(`${k}(x+${ox.toFixed(2)} y+${oy.toFixed(2)} z+${oz.toFixed(2)})`);
     if (Math.abs(dep - d.depth) > EW.EDGE_WALL.FILL_TOL || Math.abs(top - H) > EW.EDGE_WALL.FILL_TOL) {
@@ -686,28 +686,35 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     fitBad.length === 0, `（${fitBad.join(' / ')}）`);
   t(`宣告的 depth/h 與零件實算雙向吻合(±${EW.EDGE_WALL.FILL_TOL}m;低報 = A30,虛胖 = 盒子裡有空的)`,
     fillBad.length === 0, `（${fillBad.join(' / ')}）`);
-  t(`每一款的內面都蓋滿到機體視線高 ${band.toFixed(1)}m(覆蓋率 ≥ ${EW.EDGE_WALL.FACE_COVER};不然是撞得到卻看得穿)`,
+  t(`每一款的內面都由障礙物本體蓋滿到其實際阻擋高度(一般款 ${band.toFixed(1)}m；低矮設施依 faceH；覆蓋率 ≥ ${EW.EDGE_WALL.FACE_COVER})`,
     faceBad.length === 0, `（${faceBad.join(' / ')}）`);
-  const directWater = water.filter((k) => k !== 'seawall');
-  const platformBad = [];
-  for (const k of directWater) {
+  t('擱淺鯨魚已從邊界型錄完整移除', !('whale' in EW.WALL_KINDS) && !/kind === ['"]whale['"]/.test(ewSrc));
+  const facilities = kinds.filter((k) => EW.WALL_KINDS[k].family);
+  const supportBad = [];
+  for (const k of facilities) {
     const d = EW.WALL_KINDS[k], H = Math.max(band, d.h);
     for (let s = 1; s <= 20; s++) {
-      const slab = wallParts(k, { len, depth: d.depth, h: H, seed: s }).find((p) => {
+      const support = wallParts(k, { len, depth: d.depth, h: H, seed: s }).find((p) => {
         if (p.role === 'hull' || p.g?.[0] !== 'box') return false;
         const b = EW.partBox(p);
         return p.g[1] >= len * 0.9 && p.g[3] >= d.depth * 0.8 && b.y0 <= 0.05 && p.g[2] >= 1;
       });
-      if (slab) { platformBad.push(`${k}@${s}`); break; }
+      if (support) { supportBad.push(`${k}@${s}`); break; }
     }
   }
-  t('水域邊界除海堤外一律直接落水：不得以整段海堤／擋土平台方盒墊高',
-    platformBad.length === 0, `（${platformBad.join(' / ')}）`);
+  t('陸海大型設施皆由障礙物本體落地／落水：不得另加整段底座或圍牆',
+    supportBad.length === 0
+    && !/\b(?:facilityBase|marineFrame)\b/.test(strip(ewSrc)), `（${supportBad.join(' / ')}）`);
+  const lowFace = facilities.filter((k) => EW.WALL_KINDS[k].faceH != null);
+  t('低矮阻擋帶只給太陽能設施，且 faceH 足以覆蓋人形單位（不得任意縮短以規避覆蓋率）',
+    lowFace.length === 2
+    && lowFace.every((k) => EW.WALL_KINDS[k].family === 'solar'
+      && EW.WALL_KINDS[k].faceH >= 1.7 && EW.WALL_KINDS[k].faceH < band));
   const partsOf = (k, seed = 9) => {
     const d = EW.WALL_KINDS[k];
     return wallParts(k, { len, depth: d.depth, h: Math.max(band, d.h), seed });
   };
-  t('海上風機使用直接入水的固定樁基／交叉構架，不借用陸域風機基座',
+  t('海上風機使用自身固定樁基與塔架直接入水',
     EW.WALL_KINDS.windsea.mount === 'fixed'
     && partsOf('windsea').some((p) => p.role === 'monopile')
     && partsOf('windsea').some((p) => p.role === 'mooring'));
@@ -1044,7 +1051,7 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-boxh', '盒高改回逐款一個值,Ⅲ MUST 紅字(素牆頂上的空氣)'],
   ['--break-slope', '每一款都改成三級都站得住,Ⅶ MUST 紅字(崖面上的貨櫃車)'],
   ['--break-land', '關掉逐零件落地,Ⅷ MUST 紅字(斜坡上浮在半空的假山)'],
-  ['--break-water-platform', '浮動光電塞回整段水泥底座,Ⅶ MUST 紅字'],
+  ['--break-facility-support', '陸域光電塞回整段底座,Ⅶ MUST 紅字'],
   ['--break-snow-summer', '夏季出現覆雪,Ⅸ MUST 紅字(夏天無雪契約破壞)'],
   ['--break-snow-slope', '雪錐斜率失真外突,Ⅸ MUST 紅字(山頂雪錐外擴懸空)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);
