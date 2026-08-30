@@ -18,7 +18,7 @@
 //   Ⅷ 公設分桶數(③-4)—— 顏色回到材質就是 25 個 draw call 一座停車場。
 //   Ⅹ 凹處零件的最小 z ≥ 量體前緣(③-2)—— 往內挖 = 面板整片消失,不報錯。
 //   Ⅺ 可視角(③-3)—— 淺而深的凹槽在站立高度上看不到底,做了等於沒做。
-//   Ⅻ `edgewall.partBox` 轉呼 `partAABB` —— AABB 只有一份實作。
+//   Ⅻ `edgewall.partBox` 的靜態外廓轉呼 `partAABB`，動態件只在其上擴張運動包絡。
 //   ⅩⅢ hazards 靜態件合併，但 rock / 動態 / 透明件排除。
 //
 // 反向驗證(`--break-*`;§5.4 ㋑:CRLF 容忍 + 替換無效當場失敗 + 期望值不隨 break 改變)
@@ -68,7 +68,7 @@ const mustReplace = (src, re, to, flag) => {
 };
 
 if (BREAK_CONVERGE) {
-  edge = mustReplace(edge, /return partAABB\(part\);/, 'return part;', '--break-converge');
+  edge = mustReplace(edge, /const b = partAABB\(part\);/, 'const b = part;', '--break-converge');
   beacon = mustReplace(beacon, /\.\.\.makeVehicle\('container20', \{ paint: 0xb4553c,[^\n]*\}\),/,
     "{ g: ['box', 6.1, 2.6, 2.5], c: 0xb4553c, p: [0, 1.3, -1.5] },", '--break-converge');
 }
@@ -409,7 +409,7 @@ console.log('\nⅪ ③-3 可視角:凹處在站立高度上看不看得到底');
     `對照組另一側:同一個溝槽挖 ${(dMax0 * 0.8).toFixed(3)}m MUST 判合格(兩側都有牙 ⇒ 不是恆真也不是恆假)`);
 }
 
-console.log('\nⅫ AABB 單一縫(edgewall.partBox → vehicles.partAABB)');
+console.log('\nⅫ AABB 單一縫(edgewall.partBox → vehicles.partAABB → 運動包絡)');
 {
   const cases = [
     { g: ['box', 3, 1, 2], p: [1, 2, -3] },
@@ -426,8 +426,9 @@ console.log('\nⅫ AABB 單一縫(edgewall.partBox → vehicles.partAABB)');
   }
   ok(worst <= 1e-12,
     `六個案例逐項相同(最大偏差 ${worst.toExponential(2)})`);
-  ok(/export function partBox\(part\) \{\s*return partAABB\(part\);\s*\}/.test(edge),
-    'edgewall.partBox 直接轉呼 partAABB，沒有第二份旋轉 AABB 算術');
+  ok(/export function partBox\(part\) \{\s*const b = partAABB\(part\);/.test(edge)
+    && count(edge, /\bpartAABB\(part\)/g) === 1,
+    'edgewall.partBox 的靜態外廓只轉呼一次 partAABB，動態件僅擴張運動包絡');
 }
 
 console.log('\nⅩⅢ hazards 靜態件合併:rock / 動態 / 透明件排除');
