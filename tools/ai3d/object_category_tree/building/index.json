@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "family": "building",
+  "categories": [
+    {
+      "path": "building/__unresolved__/insufficient_evidence",
+      "branch": "__unresolved__",
+      "objectType": "unresolved",
+      "resolution": "insufficient_evidence",
+      "members": 5
+    },
+    {
+      "path": "building/existing/civic_administrative",
+      "branch": "existing",
+      "objectType": "civic_administrative",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "building/existing/commercial_office",
+      "branch": "existing",
+      "objectType": "commercial_office",
+      "resolution": null,
+      "members": 5
+    },
+    {
+      "path": "building/existing/commercial_retail",
+      "branch": "existing",
+      "objectType": "commercial_retail",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "building/existing/hospitality",
+      "branch": "existing",
+      "objectType": "hospitality",
+      "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "building/existing/mixed_use",
+      "branch": "existing",
+      "objectType": "mixed_use",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "building/existing/observation_landmark",
+      "branch": "existing",
+      "objectType": "observation_landmark",
+      "resolution": null,
+      "members": 7
+    },
+    {
+      "path": "building/existing/religious",
+      "branch": "existing",
+      "objectType": "religious",
+      "resolution": null,
+      "members": 9
+    },
+    {
+      "path": "building/existing/residential_detached",
+      "branch": "existing",
+      "objectType": "residential_detached",
+      "resolution": null,
+      "members": 48
+    },
+    {
+      "path": "building/existing/residential_multifamily",
+      "branch": "existing",
+      "objectType": "residential_multifamily",
+      "resolution": null,
+      "members": 20
+    },
+    {
+      "path": "building/existing/residential_row",
+      "branch": "existing",
+      "objectType": "residential_row",
+      "resolution": null,
+      "members": 1
+    }
+  ]
+}

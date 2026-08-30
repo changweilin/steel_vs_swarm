@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/fishing_vessel",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "fishing_vessel",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/1718874672484-5f571666b46b4ec29d16e8b955dd37ba-1200x637.webp"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/2-5-1024x768.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/2-5-1024x768.jpg"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/2020120858047817.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/2020120858047817.jpg"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/202135002-4.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/202135002-4.jpg"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/2798933.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/2798933.jpg"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/300gt-tuna-long-liner-boat_02.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/300gt-tuna-long-liner-boat_02.jpg"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/6232d26edb8ab.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/6232d26edb8ab.jpg"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/7d1d0fe3-7909-4cab-a1cb-fcf8300c0d58.jpg"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/pngtree-a-small-fishing-boat-png-image_16296083.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/pngtree-a-small-fishing-boat-png-image_16296083.png"
+      },
+      "subtype": "commercial_fishing_vessel",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

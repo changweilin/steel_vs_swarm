@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "family": "tree",
+  "categories": [
+    {
+      "path": "tree/existing/broadleaf_tree",
+      "branch": "existing",
+      "objectType": "broadleaf_tree",
+      "resolution": null,
+      "members": 22
+    },
+    {
+      "path": "tree/existing/buttressed_giant",
+      "branch": "existing",
+      "objectType": "buttressed_giant",
+      "resolution": null,
+      "members": 15
+    },
+    {
+      "path": "tree/existing/conifer_tree",
+      "branch": "existing",
+      "objectType": "conifer_tree",
+      "resolution": null,
+      "members": 21
+    },
+    {
+      "path": "tree/existing/sculptural_tree",
+      "branch": "existing",
+      "objectType": "sculptural_tree",
+      "resolution": null,
+      "members": 20
+    },
+    {
+      "path": "tree/existing/shrub",
+      "branch": "existing",
+      "objectType": "shrub",
+      "resolution": null,
+      "members": 5
+    },
+    {
+      "path": "tree/existing/snag",
+      "branch": "existing",
+      "objectType": "snag",
+      "resolution": null,
+      "members": 1
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/tor",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "tor",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/132 images.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/132 images.jpg"
+      },
+      "subtype": "stacked_balanced_tor",
+      "confidence": 0.84,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/600_0e22036ae47633cc17a7c569e53cc66f.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/600_0e22036ae47633cc17a7c569e53cc66f.jpg"
+      },
+      "subtype": "forest_pinnacle_tor",
+      "confidence": 0.8,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images 132.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images 132.jpg"
+      },
+      "subtype": "balanced_sandstone_tor",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

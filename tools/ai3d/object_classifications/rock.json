@@ -1,0 +1,845 @@
+{
+  "schemaVersion": 1,
+  "family": "rock",
+  "classifier": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "max",
+    "basis": "visual+functional"
+  },
+  "items": [
+    {
+      "id": "primary:rock/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg",
+      "source": { "corpus": "primary", "image": "rock/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg" },
+      "family": "rock",
+      "objectType": "outcrop",
+      "subtype": "coastal_volcanic_sea_stack",
+      "paletteDomain": "natural-rock-volcanic",
+      "confidence": 0.91,
+      "reasons": [
+        "主體是海岸原地露頭，基部與潮間帶岩盤連續，不是散落巨石。",
+        "陡直節理與海蝕邊界形成厚大的海蝕岩柱。",
+        "頂部連續土壤與灌木覆蓋，與岩質主體具有獨立表面功能。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "exposed coastal rock body carrying self-weight and terrain mass", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "continuous-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "volcanic-rock", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "weathering_overlay", "function": "rooted soil and vegetation cover independently masking the rock surface", "interfaceFamily": "rock-surface-weathering", "kinematicClass": "fixed", "loadClass": "surface-cover", "workingMedium": "soil-moisture", "handedness": "none", "materialClass": "soil-vegetation-weathering", "paletteSlot": "weathering", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0.jpg",
+      "source": { "corpus": "primary", "image": "rock/1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0.jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "angular_detached_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.88,
+      "reasons": [
+        "單一脫離基質的大型角礫岩塊，底面落地且外部邊界完整。",
+        "可見裂隙與折面仍屬同一岩塊，沒有可證的獨立層理或附著覆層。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "detached rock body carrying self-weight at a ground contact", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/132 images.jpg",
+      "source": { "corpus": "primary", "image": "rock/132 images.jpg" },
+      "family": "rock",
+      "objectType": "tor",
+      "subtype": "stacked_balanced_tor",
+      "paletteDomain": "natural-rock-sedimentary",
+      "confidence": 0.84,
+      "reasons": [
+        "多塊獨立岩體以狹窄自然接點層疊，靠重力平衡形成 tor。",
+        "各塊之間有實體接觸界面，不是單一岩塊上的陰影或裝飾折面。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "lower balanced rock block transferring stacked load to the ground", "interfaceFamily": "natural-block-contact", "kinematicClass": "fixed", "loadClass": "stacked-base-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "weathered-sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "geologic_mass", "function": "intermediate balanced rock block carrying and transferring upper load", "interfaceFamily": "natural-block-contact", "kinematicClass": "fixed", "loadClass": "stacked-intermediate-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "weathered-sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 2 },
+        { "role": "geologic_mass", "function": "upper cantilevered rock block resting on a natural balance contact", "interfaceFamily": "natural-block-contact", "kinematicClass": "fixed", "loadClass": "cantilevered-cap-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "weathered-sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/132.jpg",
+      "source": { "corpus": "primary", "image": "rock/132.jpg" },
+      "family": "rock",
+      "objectType": "dolmen_megalith",
+      "subtype": "standing_stone_circle",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.93,
+      "reasons": [
+        "草地中可見多根直立石體，背景排列呈石圈遺址，具文化設置的空間關係。",
+        "前景石與背景石是同一類固定地面接觸的巨石，不以輪廓或顏色作分類。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-heritage-megalith", "safetyClass": "heritage-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "upright megalith body carrying its own load at a heritage ground contact", "interfaceFamily": "heritage-ground-contact", "kinematicClass": "fixed", "loadClass": "upright-monolith-load", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "heritage-stone-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/1586238562.jpg",
+      "source": { "corpus": "primary", "image": "rock/1586238562.jpg" },
+      "family": "rock",
+      "objectType": "monolith",
+      "subtype": "coastal_volcanic_plug",
+      "paletteDomain": "natural-rock-volcanic",
+      "confidence": 0.86,
+      "reasons": [
+        "整體是單一巨大孤立火山岩體，山麓與海岸基座連續，不是堆疊岩塊。",
+        "上部塊狀風化仍由同一主體承擔，沒有可獨立控制的層理或覆層。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "single coastal volcanic rock mass rising from a continuous base", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "monolithic-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "volcanic-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/20211010001701.jpg",
+      "source": { "corpus": "primary", "image": "rock/20211010001701.jpg" },
+      "family": "rock",
+      "objectType": "mesa",
+      "subtype": "desert_sandstone_butte",
+      "paletteDomain": "natural-rock-sandstone",
+      "confidence": 0.82,
+      "reasons": [
+        "荒漠中的孤立砂岩殘丘具有近水平頂面與陡直側壁，屬抬升後受侵蝕的 mesa/butte 形體。",
+        "左側可見重複沉積帶；現有 3D 主體未把可辨識層理作獨立地質件。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": ["geologic_layer"],
+      "parts": [
+        { "role": "geologic_mass", "function": "desert residual rock mass carrying the mesa body and ground load", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "residual-mesa-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sandstone-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/45523a13a3e80fe783a5b65867b29c15.jpg",
+      "source": { "corpus": "primary", "image": "rock/45523a13a3e80fe783a5b65867b29c15.jpg" },
+      "family": "rock",
+      "objectType": "talus",
+      "subtype": "angular_talus_slope",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.96,
+      "reasons": [
+        "大量未膠結角礫以鬆散斜坡堆積，彼此接觸而非一塊完整主岩體。",
+        "碎石尺寸與姿態各異，符合重力崩落後的 talus，不能以單顆輪廓替代整體成因。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "loose-rock-hazard", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "loose angular clast accumulation carrying a gravity-settled talus slope", "interfaceFamily": "loose-clast-ground-contact", "kinematicClass": "fixed", "loadClass": "loose-gravity-stack", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "angular-clast-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/600_0e22036ae47633cc17a7c569e53cc66f.jpg",
+      "source": { "corpus": "primary", "image": "rock/600_0e22036ae47633cc17a7c569e53cc66f.jpg" },
+      "family": "rock",
+      "objectType": "tor",
+      "subtype": "forest_pinnacle_tor",
+      "paletteDomain": "natural-rock-volcanic",
+      "confidence": 0.80,
+      "reasons": [
+        "單一抗蝕岩脊自森林山坡突起，岩體與下方基岩連續，符合殘留 tor 而非搬運巨石。",
+        "岩頂與側緣有明顯灌木、土壤覆蓋，生成時需與岩質質量分開控制。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "resistant pinnacle rock body rising continuously from mountain bedrock", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "continuous-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "volcanic-rock", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "weathering_overlay", "function": "rooted soil and shrubs covering exposed tor surfaces", "interfaceFamily": "rock-surface-weathering", "kinematicClass": "fixed", "loadClass": "surface-cover", "workingMedium": "soil-moisture", "handedness": "none", "materialClass": "soil-vegetation-weathering", "paletteSlot": "weathering", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/61bc69c388977.webp",
+      "source": { "corpus": "primary", "image": "rock/61bc69c388977.webp" },
+      "family": "rock",
+      "objectType": "stratified_slab",
+      "subtype": "bedded_coastal_sea_stack",
+      "paletteDomain": "natural-rock-sedimentary",
+      "confidence": 0.97,
+      "reasons": [
+        "海蝕柱由大量連續水平沉積層構成，層面在整個側壁重複可追蹤。",
+        "頂部草土帽與岩質層理有明確材料及風化界面，兩者都應獨立控制。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "coastal-terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "coastal bedrock mass supporting a stratified sea stack", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "continuous-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "geologic_layer", "function": "repeating horizontal bedding bands controlling exposed sedimentary relief", "interfaceFamily": "natural-bedding-contact", "kinematicClass": "fixed", "loadClass": "stratified-load", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "bedded-sedimentary-rock", "paletteSlot": "natural_secondary", "mountCount": 1 },
+        { "role": "weathering_overlay", "function": "thin grassy soil cap attached to the exposed stack surface", "interfaceFamily": "rock-surface-weathering", "kinematicClass": "fixed", "loadClass": "surface-cover", "workingMedium": "soil-moisture", "handedness": "none", "materialClass": "soil-grass-weathering", "paletteSlot": "weathering", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/61bc69d997822.webp",
+      "source": { "corpus": "primary", "image": "rock/61bc69d997822.webp" },
+      "family": "rock",
+      "objectType": "stratified_slab",
+      "subtype": "bedded_coastal_sea_stack",
+      "paletteDomain": "natural-rock-sedimentary",
+      "confidence": 0.98,
+      "reasons": [
+        "巨大海蝕岩柱的水平沉積層從前景延伸至頂部，層面是形成結構而非光影。",
+        "頂部薄土草被與下方岩層有獨立表面接觸，生成時不可併為同一材質質量。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "coastal-terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "massive coastal sedimentary body carrying the sea-stack load", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "continuous-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "geologic_layer", "function": "stacked horizontal bedding layers defining the cliff bands", "interfaceFamily": "natural-bedding-contact", "kinematicClass": "fixed", "loadClass": "stratified-load", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "bedded-sedimentary-rock", "paletteSlot": "natural_secondary", "mountCount": 1 },
+        { "role": "weathering_overlay", "function": "grass and soil cap independently covering the upper bedding surface", "interfaceFamily": "rock-surface-weathering", "kinematicClass": "fixed", "loadClass": "surface-cover", "workingMedium": "soil-moisture", "handedness": "none", "materialClass": "soil-grass-weathering", "paletteSlot": "weathering", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/69353_01.jpg",
+      "source": { "corpus": "primary", "image": "rock/69353_01.jpg" },
+      "family": "rock",
+      "objectType": "monolith",
+      "subtype": "inselberg_sandstone",
+      "paletteDomain": "natural-rock-sandstone",
+      "confidence": 0.95,
+      "reasons": [
+        "大尺度連續砂岩穹丘從平坦荒漠中孤立升起，屬單一 inselberg/monolith，不是碎石群。",
+        "表面溝槽是侵蝕切割的同體地貌，沒有可獨立安裝或運動的地質零件。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "continuous isolated sandstone inselberg mass carrying the full terrain form", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "monolithic-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sandstone-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/714USfuK4oL._AC_UF894,1000_QL80_.jpg",
+      "source": { "corpus": "primary", "image": "rock/714USfuK4oL._AC_UF894,1000_QL80_.jpg" },
+      "family": "rock",
+      "objectType": "stratified_slab",
+      "subtype": "weathered_bedded_slab",
+      "paletteDomain": "natural-rock-sedimentary",
+      "confidence": 0.83,
+      "reasons": [
+        "近距離照片可見反覆平行層面與薄板狀剝離，屬可追蹤的地質層理。",
+        "對應 3D 主體目前只有岩塊折面，尚未把層理作獨立地質件。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": ["geologic_layer"],
+      "parts": [
+        { "role": "geologic_mass", "function": "single slab-like rock body carrying the visible weathered form", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "slab-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/71W8rWv9TvL._AC_UF894,1000_QL80_.jpg",
+      "source": { "corpus": "primary", "image": "rock/71W8rWv9TvL._AC_UF894,1000_QL80_.jpg" },
+      "family": "rock",
+      "objectType": "stratified_slab",
+      "subtype": "laminated_slab_cluster",
+      "paletteDomain": "natural-rock-sedimentary",
+      "confidence": 0.91,
+      "reasons": [
+        "岩體由多組平行薄板與層面堆疊，層理方向在多個面上連續可辨。",
+        "對應 3D 主體把薄板當成輪廓碎面，尚缺 geologic_layer 的獨立控制。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": ["geologic_layer"],
+      "parts": [
+        { "role": "geologic_mass", "function": "slab cluster body carrying the visible layered-rock aggregate", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "slab-cluster-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/900px (1).avif",
+      "source": { "corpus": "primary", "image": "rock/900px (1).avif" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "mossy_angular_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.78,
+      "reasons": [
+        "照片呈現單一脫離基質、邊緣不規則的角狀岩塊，沒有露頭連續基座。",
+        "局部苔蘚/土壤是獨立表面覆層；現有對應 3D 主體尚未拆出 weathering_overlay。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": ["weathering_overlay"],
+      "parts": [
+        { "role": "geologic_mass", "function": "detached angular boulder body providing the static ground mass", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/900px.avif",
+      "source": { "corpus": "primary", "image": "rock/900px.avif" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "weathered_rounded_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.73,
+      "reasons": [
+        "單一低矮橢圓岩塊與背景分離，圓化表面符合搬運或長期風化後的 boulder。",
+        "照片不足以辨識層理、覆層或基岩連續性，維持單一地質質量。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "low rounded detached rock body resting on the ground", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/Ballinagree.jpg",
+      "source": { "corpus": "primary", "image": "rock/Ballinagree.jpg" },
+      "family": "rock",
+      "objectType": "monolith",
+      "subtype": "standing_stone_origin_uncertain",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.57,
+      "reasons": [
+        "照片可確認單根狹長直立岩塊與地面有獨立接觸，適合作為 monolith 主體。",
+        "沒有足夠證據判定人工立石、石圈或天然殘留露頭，因此不升級為 dolmen_megalith。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "upright detached rock body carrying its own load at a single ground contact", "interfaceFamily": "ground-contact-upright", "kinematicClass": "fixed", "loadClass": "upright-monolith-load", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/cfc0d6ff90ae224820a8d78861af93f5.webp",
+      "source": { "corpus": "primary", "image": "rock/cfc0d6ff90ae224820a8d78861af93f5.webp" },
+      "family": "rock",
+      "objectType": "outcrop",
+      "subtype": "accessed_pinnacle_with_observation_structure",
+      "paletteDomain": "natural-rock-volcanic",
+      "confidence": 0.86,
+      "reasons": [
+        "主體是陡直且與山體連續的基岩尖峰，頂部樓梯與觀景建物屬背景人造設施，不納入岩體功能。",
+        "岩面植被/土壤覆蓋可辨識，但對應 3D 主體尚未以 weathering_overlay 獨立表達。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": ["weathering_overlay"],
+      "parts": [
+        { "role": "geologic_mass", "function": "continuous exposed rock pinnacle carrying the natural cliff mass", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "continuous-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "volcanic-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/d087b40c-1b1a-4f8a-a620-c0aafe41056d.webp",
+      "source": { "corpus": "primary", "image": "rock/d087b40c-1b1a-4f8a-a620-c0aafe41056d.webp" },
+      "family": "rock",
+      "objectType": "dolmen_megalith",
+      "subtype": "stonehenge_standing_megalith",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.98,
+      "reasons": [
+        "前景直立巨石與背景可辨識的石圈排列共同證明文化遺址配置，非自然 tor。",
+        "岩體功能限於固定地面的 megalith 主體；草地與遊客不是岩體零件。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-heritage-megalith", "safetyClass": "heritage-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "upright heritage megalith body carrying self-weight at a set ground contact", "interfaceFamily": "heritage-ground-contact", "kinematicClass": "fixed", "loadClass": "upright-monolith-load", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "heritage-stone-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/grey-rock-standing-tall-green-grass-nature-stone-background_632498-55922.avif",
+      "source": { "corpus": "primary", "image": "rock/grey-rock-standing-tall-green-grass-nature-stone-background_632498-55922.avif" },
+      "family": "rock",
+      "objectType": "monolith",
+      "subtype": "upright_standing_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.66,
+      "reasons": [
+        "可見單一高聳直立石體與草地的獨立接觸，沒有層理、堆疊或基岩連續證據。",
+        "天然殘留岩柱與人工立石來源無法由此單張背景照確認，故保留中低信心 monolith。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "upright isolated rock body resting on a single natural ground contact", "interfaceFamily": "ground-contact-upright", "kinematicClass": "fixed", "loadClass": "upright-monolith-load", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/id14796060-shutterstock_783352309.jpg",
+      "source": { "corpus": "primary", "image": "rock/id14796060-shutterstock_783352309.jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "coastal_rounded_boulder_field",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.97,
+      "reasons": [
+        "潮間帶可見多顆巨大圓化岩塊，海岸搬運與長期磨蝕是主要形成線索。",
+        "每顆岩塊沒有可辨識層理或獨立機械接合；本列保留全幅照片的單一 boulder 場景目標。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "coastal-terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "rounded coastal boulder mass resting in the intertidal ground", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/image-1-206.jpg",
+      "source": { "corpus": "primary", "image": "rock/image-1-206.jpg" },
+      "family": "rock",
+      "objectType": "columnar_basalt",
+      "subtype": "columnar_basalt_mountain_cliff",
+      "paletteDomain": "natural-rock-basalt",
+      "confidence": 0.92,
+      "reasons": [
+        "陡峭火山岩壁出現密集規則垂直柱節理，柱狀冷卻結構比單純剪影更能決定分類。",
+        "山腳碎屑坡是崖體崩解後的伴生地貌，不把它誤拆成主岩體的裝飾面。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "cliff-terrain-hazard", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "continuous basalt cliff mass carrying the exposed columnar formation", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "columnar-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "basalt-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images (1).jpg",
+      "source": { "corpus": "primary", "image": "rock/images (1).jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "elongated_rounded_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.95,
+      "reasons": [
+        "單一橢圓長形岩塊與背景分離，表面圓化且沒有露頭基座。",
+        "外輪廓的平滑起伏不構成獨立層理或功能接縫，保持 geologic_mass。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "elongated rounded detached rock body resting on the ground", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images (2).jpg",
+      "source": { "corpus": "primary", "image": "rock/images (2).jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "weathered_rounded_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.96,
+      "reasons": [
+        "草地上的單一低矮岩塊具有完整圓化外表與獨立地面接觸，符合風化搬運 boulder。",
+        "表面凹凸是風化面，不足以證明層理或可拆附著覆層。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "rounded weathered rock body resting directly on grassland ground", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images (3).jpg",
+      "source": { "corpus": "primary", "image": "rock/images (3).jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "smooth_rounded_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.93,
+      "reasons": [
+        "單一近圓形岩塊置於中性背景，具有被水或冰長期磨圓的閉合表面。",
+        "沒有可見層理、裂解堆積或植被覆層，無理由切成多個地質零件。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "smooth rounded detached rock body carrying its own ground load", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images (4).jpg",
+      "source": { "corpus": "primary", "image": "rock/images (4).jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "elongated_flatslab_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.83,
+      "reasons": [
+        "單一扁長岩塊以圓化端部和厚實底面落地，沒有基岩連續面。",
+        "扁平輪廓本身不足以判定 stratified_slab，未見可追蹤平行層面。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "elongated detached rock mass with a low ground footprint", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images (5).jpg",
+      "source": { "corpus": "primary", "image": "rock/images (5).jpg" },
+      "family": "rock",
+      "objectType": "talus",
+      "subtype": "loose_angular_rock_pile",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.84,
+      "reasons": [
+        "多個鬆散、互不膠結的長形岩塊重疊成低矮堆積，符合碎石/坡積物而非單一 boulder。",
+        "照片未提供崩落源壁或斷裂面，故採 talus 而非 collapse，信心保守。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "loose-rock-hazard", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "loose gravity-settled clast accumulation forming a small talus pile", "interfaceFamily": "loose-clast-ground-contact", "kinematicClass": "fixed", "loadClass": "loose-gravity-stack", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "angular-clast-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images (6).jpg",
+      "source": { "corpus": "primary", "image": "rock/images (6).jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "moss_grass_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.94,
+      "reasons": [
+        "主體是單一脫離基質的圓鈍岩塊，底部與背景透明區分離。",
+        "表面苔蘚與根生草叢具有獨立材料和附著界面，對應生成物已可拆作 weathering_overlay。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "detached boulder body carrying the static ground mass", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "weathering_overlay", "function": "moss, humus, and rooted grass independently covering the boulder surface", "interfaceFamily": "rock-surface-weathering", "kinematicClass": "fixed", "loadClass": "surface-cover", "workingMedium": "soil-moisture", "handedness": "none", "materialClass": "moss-grass-weathering", "paletteSlot": "weathering", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images (7).jpg",
+      "source": { "corpus": "primary", "image": "rock/images (7).jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "blocky_weathered_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.90,
+      "reasons": [
+        "單一厚實塊狀岩塊具有獨立底面與不規則風化邊界，沒有露頭連續基座。",
+        "近直角折面是破碎/風化結果，不足以創造可替換的 geologic_layer。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "blocky detached rock body carrying self-weight on a ground footprint", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images 132.jpg",
+      "source": { "corpus": "primary", "image": "rock/images 132.jpg" },
+      "family": "rock",
+      "objectType": "tor",
+      "subtype": "balanced_sandstone_tor",
+      "paletteDomain": "natural-rock-sedimentary",
+      "confidence": 0.95,
+      "reasons": [
+        "多個風化岩塊以狹窄接點上下承托，形成明顯懸挑和平衡構造，符合 tor。",
+        "上下塊體有獨立自然接合界面，不能把懸挑陰影當成同一岩塊的紋理。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "lower tor block transferring the balanced stack load to the ground", "interfaceFamily": "natural-block-contact", "kinematicClass": "fixed", "loadClass": "stacked-base-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "weathered-sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "geologic_mass", "function": "middle tor block carrying upper blocks across natural contact points", "interfaceFamily": "natural-block-contact", "kinematicClass": "fixed", "loadClass": "stacked-intermediate-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "weathered-sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 2 },
+        { "role": "geologic_mass", "function": "upper overhanging tor cap supported by a narrow natural contact", "interfaceFamily": "natural-block-contact", "kinematicClass": "fixed", "loadClass": "cantilevered-cap-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "weathered-sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images rock (1).jpg",
+      "source": { "corpus": "primary", "image": "rock/images rock (1).jpg" },
+      "family": "rock",
+      "objectType": "unresolved",
+      "subtype": "fog_obscured_rock_pinnacle",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.42,
+      "reasons": [
+        "濃霧只露出一段深色尖峰，基部、接合關係與岩性大幅遮蔽。",
+        "目前不足以在 tor、outcrop、monolith 之間作成因判斷，保留 unresolved 而不以輪廓猜測。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "visible but incompletely observed rock pinnacle mass", "interfaceFamily": "substrate-contact-uncertain", "kinematicClass": "fixed", "loadClass": "self-supporting-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images rock.jpg",
+      "source": { "corpus": "primary", "image": "rock/images rock.jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "smooth_rounded_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.85,
+      "reasons": [
+        "單一扁圓岩塊與背景分離，外表經長期磨蝕而圓化。",
+        "照片沒有可靠的層理或覆層訊號，礦物色帶不作獨立功能判據。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "smooth rounded detached rock body carrying its own ground load", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/images.jpg",
+      "source": { "corpus": "primary", "image": "rock/images.jpg" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "glacial_erratic_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.88,
+      "reasons": [
+        "開闊高寒濕地中可見單一孤立大岩塊，與下方地表分離，符合搬運後的 erratic boulder。",
+        "岩面沒有可靠平行層理；背景山景只作地質尺度與環境參考，不改變主體分類。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "isolated transported boulder body resting on wet ground", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/IMG_7081.jpg",
+      "source": { "corpus": "primary", "image": "rock/IMG_7081.jpg" },
+      "family": "rock",
+      "objectType": "outcrop",
+      "subtype": "coastal_volcanic_outcrop_cluster",
+      "paletteDomain": "natural-rock-basalt",
+      "confidence": 0.86,
+      "reasons": [
+        "潮岸上多個相連的深色火山岩突起形成原地 outcrop 群，基部與潮間帶岩盤連續。",
+        "鋸齒狀侵蝕邊緣是同一岩體的風化面，照片未證明六角柱或獨立層理。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "coastal-terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "continuous coastal volcanic outcrop mass exposed between shore and sea", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "continuous-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "basalt-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/large-heavy-rock-stone-isolated-on-background-png.webp",
+      "source": { "corpus": "primary", "image": "rock/large-heavy-rock-stone-isolated-on-background-png.webp" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "angular_isolated_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.88,
+      "reasons": [
+        "單一大型角狀岩塊在透明背景中完整呈現，無基岩延伸或堆積坡證據。",
+        "內部折面與小缺口是同體風化/破碎，沒有獨立層理或覆層功能。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "large isolated angular rock body carrying its static ground mass", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/miyako-146.jpg",
+      "source": { "corpus": "primary", "image": "rock/miyako-146.jpg" },
+      "family": "rock",
+      "objectType": "outcrop",
+      "subtype": "coral_limestone_karst_outcrop",
+      "paletteDomain": "natural-rock-limestone",
+      "confidence": 0.91,
+      "reasons": [
+        "低矮寬厚岩體與地表連續，孔洞與懸挑是溶蝕/風化形成的 karst outcrop 結構。",
+        "周圍灌木屬環境地被；岩面沒有足夠證據拆成獨立層理或覆蓋件。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "continuous weathered limestone outcrop body carrying the low karst form", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "continuous-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "limestone-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/php1uNn7p.jpg",
+      "source": { "corpus": "primary", "image": "rock/php1uNn7p.jpg" },
+      "family": "rock",
+      "objectType": "monolith",
+      "subtype": "jointed_sandstone_monolith",
+      "paletteDomain": "natural-rock-sandstone",
+      "confidence": 0.85,
+      "reasons": [
+        "荒漠中單一厚實砂岩岩柱由狹長垂直節理切開，底部仍由同一主體承載。",
+        "中央裂隙是同體構造弱面，不是獨立層理、附著覆層或可替換零件。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "jointed sandstone monolith carrying the full desert rock body", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "monolithic-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sandstone-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/pic_9576_12.jpg",
+      "source": { "corpus": "primary", "image": "rock/pic_9576_12.jpg" },
+      "family": "rock",
+      "objectType": "monolith",
+      "subtype": "standing_stone_group_context",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.67,
+      "reasons": [
+        "前景是狹長直立石柱，兩側另有較小直立石，主體可判為固定地面的 monolith。",
+        "照片沒有足夠排列或施工證據升級為 dolmen_megalith，也看不出可拆的層理或覆層。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "upright stone mass carrying self-weight at an isolated ground contact", "interfaceFamily": "ground-contact-upright", "kinematicClass": "fixed", "loadClass": "upright-monolith-load", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/pngtree-big-boulder-transparent-png-image_13387881.png",
+      "source": { "corpus": "primary", "image": "rock/pngtree-big-boulder-transparent-png-image_13387881.png" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "angular_faceted_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.91,
+      "reasons": [
+        "透明背景中的單一角狀岩塊具有閉合底面，無露頭基座或碎石堆積證據。",
+        "多面折角只是同一岩塊的破碎表面，沒有獨立層理或覆層功能。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "single faceted detached boulder body carrying its ground load", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243.png",
+      "source": { "corpus": "primary", "image": "rock/pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243.png" },
+      "family": "rock",
+      "objectType": "boulder",
+      "subtype": "moss_seamed_boulder",
+      "paletteDomain": "natural-rock-uncertain",
+      "confidence": 0.86,
+      "reasons": [
+        "單一直立大石與透明背景分離，主體是完整 boulder 而非連續露頭。",
+        "裂隙中的苔蘚帶是可辨識的表面覆層；裂隙本身仍保留在 geologic_mass 內。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "large detached rock body carrying the upright boulder form", "interfaceFamily": "ground-contact-detached", "kinematicClass": "fixed", "loadClass": "detached-self-supporting", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "rock-unknown", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "weathering_overlay", "function": "moss and weathering soil occupying visible surface seams", "interfaceFamily": "rock-surface-weathering", "kinematicClass": "fixed", "loadClass": "surface-cover", "workingMedium": "soil-moisture", "handedness": "none", "materialClass": "moss-weathering", "paletteSlot": "weathering", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/w4a9462fb-jpg.avif",
+      "source": { "corpus": "primary", "image": "rock/w4a9462fb-jpg.avif" },
+      "family": "rock",
+      "objectType": "mesa",
+      "subtype": "flat_topped_table_mesa",
+      "paletteDomain": "natural-rock-sedimentary",
+      "confidence": 0.87,
+      "reasons": [
+        "遠景可見孤立平頂高地與陡壁，地貌尺度與頂部平台符合 mesa，而非單顆 boulder。",
+        "解析度不足以可靠拆出沉積層或頂部風化覆層，因此只保留 geologic_mass。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "flat-topped bedrock mesa mass carrying the plateau and cliff silhouette", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "plateau-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sedimentary-rock", "paletteSlot": "natural_primary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:rock/南犹他州巨岩山-164605945.webp",
+      "source": { "corpus": "primary", "image": "rock/南犹他州巨岩山-164605945.webp" },
+      "family": "rock",
+      "objectType": "mesa",
+      "subtype": "sandstone_cliff_mesa",
+      "paletteDomain": "natural-rock-sandstone",
+      "confidence": 0.94,
+      "reasons": [
+        "高聳砂岩台地具有連續頂部與陡峭崖壁，側面沉積帶和侵蝕台階清楚可見。",
+        "主岩體、可追蹤的沉積層面是不同地質功能通道；照片未顯示額外機械結構。"
+      ],
+      "functionalProfile": { "workingMedium": "solid-rock", "operationMode": "static-natural-formation", "safetyClass": "terrain-obstacle", "compatibleTypes": [] },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        { "role": "geologic_mass", "function": "continuous sandstone mesa body carrying the cliff and plateau mass", "interfaceFamily": "substrate-contact-bedrock", "kinematicClass": "fixed", "loadClass": "plateau-bedrock-mass", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "sandstone-rock", "paletteSlot": "natural_primary", "mountCount": 1 },
+        { "role": "geologic_layer", "function": "visible sedimentary bands controlling ledges and vertical cliff relief", "interfaceFamily": "natural-bedding-contact", "kinematicClass": "fixed", "loadClass": "stratified-load", "workingMedium": "solid-rock", "handedness": "none", "materialClass": "bedded-sandstone", "paletteSlot": "natural_secondary", "mountCount": 1 }
+      ],
+      "operationalMarking": []
+    }
+  ]
+}

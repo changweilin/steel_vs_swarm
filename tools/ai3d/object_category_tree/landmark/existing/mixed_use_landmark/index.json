@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "path": "landmark/existing/mixed_use_landmark",
+  "family": "landmark",
+  "branch": "existing",
+  "objectType": "mixed_use_landmark",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:landmark/ADEC6675-7A2D-4F66-8879-94B55E2CBACA.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/ADEC6675-7A2D-4F66-8879-94B55E2CBACA.jpg"
+      },
+      "subtype": "未來主義水岸公共與商業混合用途地標塔",
+      "confidence": 0.82,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/images tc.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/images tc.jpg"
+      },
+      "subtype": "垂直森林扭轉混合用途地標塔樓",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/progress-m.658f5ec2.png",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/progress-m.658f5ec2.png"
+      },
+      "subtype": "現代複合辦公與商業摩天樓群城市地標",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

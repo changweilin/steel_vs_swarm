@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "landmark/existing/observation_tower",
+  "family": "landmark",
+  "branch": "existing",
+  "objectType": "observation_tower",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:landmark/images.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/images.jpg"
+      },
+      "subtype": "巴黎艾菲爾鐵塔觀景地標",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/re_kv_sp.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/re_kv_sp.jpg"
+      },
+      "subtype": "京都塔城市觀景塔",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

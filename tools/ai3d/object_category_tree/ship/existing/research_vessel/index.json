@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/research_vessel",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "research_vessel",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/22xp-boaty-master1050.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/22xp-boaty-master1050.jpg"
+      },
+      "subtype": "polar_research_vessel",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/6621n.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/6621n.jpg"
+      },
+      "subtype": "oceanographic_research_vessel",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/666.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/666.jpg"
+      },
+      "subtype": "oceanographic_research_vessel",
+      "confidence": 0.85,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/8eadcf6f-3d54-4ddf-92e6-a815be2b03c1.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/8eadcf6f-3d54-4ddf-92e6-a815be2b03c1.jpg"
+      },
+      "subtype": "oceanographic_research_vessel",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/mobileadv_1976_9821316_46373.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/mobileadv_1976_9821316_46373.jpg"
+      },
+      "subtype": "oceanographic_research_vessel",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

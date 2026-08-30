@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/talus",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "talus",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/45523a13a3e80fe783a5b65867b29c15.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/45523a13a3e80fe783a5b65867b29c15.jpg"
+      },
+      "subtype": "angular_talus_slope",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images (5).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images (5).jpg"
+      },
+      "subtype": "loose_angular_rock_pile",
+      "confidence": 0.84,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

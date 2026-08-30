@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/columnar_basalt",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "columnar_basalt",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/image-1-206.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/image-1-206.jpg"
+      },
+      "subtype": "columnar_basalt_mountain_cliff",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

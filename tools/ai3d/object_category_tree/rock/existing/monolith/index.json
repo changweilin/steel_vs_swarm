@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/monolith",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "monolith",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/1586238562.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/1586238562.jpg"
+      },
+      "subtype": "coastal_volcanic_plug",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/69353_01.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/69353_01.jpg"
+      },
+      "subtype": "inselberg_sandstone",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/Ballinagree.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/Ballinagree.jpg"
+      },
+      "subtype": "standing_stone_origin_uncertain",
+      "confidence": 0.57,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/grey-rock-standing-tall-green-grass-nature-stone-background_632498-55922.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/grey-rock-standing-tall-green-grass-nature-stone-background_632498-55922.avif"
+      },
+      "subtype": "upright_standing_boulder",
+      "confidence": 0.66,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/php1uNn7p.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/php1uNn7p.jpg"
+      },
+      "subtype": "jointed_sandstone_monolith",
+      "confidence": 0.85,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/pic_9576_12.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/pic_9576_12.jpg"
+      },
+      "subtype": "standing_stone_group_context",
+      "confidence": 0.67,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

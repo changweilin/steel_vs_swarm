@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "path": "tree/existing/buttressed_giant",
+  "family": "tree",
+  "branch": "existing",
+  "objectType": "buttressed_giant",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:tree/images (7).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (7).jpg"
+      },
+      "subtype": "buttressed_broadleaf_tree",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg.webp"
+      },
+      "subtype": "heritage_banyan",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/700x1024_wmkn_0_C20250121000185.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/700x1024_wmkn_0_C20250121000185.jpg"
+      },
+      "subtype": "tall_heritage_broadleaf",
+      "confidence": 0.84,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/70248068_1006.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/70248068_1006.webp"
+      },
+      "subtype": "baobab_bottle_tree",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg"
+      },
+      "subtype": "baobab_flat_crown",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/boab-tree-header-image-blog.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/boab-tree-header-image-blog.jpg"
+      },
+      "subtype": "baobab_flat_crown",
+      "confidence": 0.93,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/boab-trees (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/boab-trees (1).jpg"
+      },
+      "subtype": "baobab_dryland",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg"
+      },
+      "subtype": "giant_sequoia",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/Derby_boab,_Western_Australia.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Derby_boab,_Western_Australia.jpg"
+      },
+      "subtype": "hollow_baobab",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/FB_IMG_1786333297321.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/FB_IMG_1786333297321.jpg"
+      },
+      "subtype": "coast_redwood",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/FB_IMG_1786333300422.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/FB_IMG_1786333300422.jpg"
+      },
+      "subtype": "multi_trunk_giant_broadleaf",
+      "confidence": 0.82,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg"
+      },
+      "subtype": "green_baobab",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/id13801237-shutterstock_1868040619s.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/id13801237-shutterstock_1868040619s.jpg"
+      },
+      "subtype": "giant_sequoia",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/madagascar-baobab.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/madagascar-baobab.jpg"
+      },
+      "subtype": "madagascar_baobab",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/p6CRn6GXmKSX.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/p6CRn6GXmKSX.jpg"
+      },
+      "subtype": "giant_redwood",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

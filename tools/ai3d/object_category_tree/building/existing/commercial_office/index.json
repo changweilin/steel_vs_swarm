@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/commercial_office",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "commercial_office",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/about-06_2_orig.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/about-06_2_orig.jpg"
+      },
+      "subtype": "中型辦公大樓",
+      "confidence": 0.8,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/e8832594.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/e8832594.jpg"
+      },
+      "subtype": "玻璃幕牆辦公園區",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (1).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (1).jpg"
+      },
+      "subtype": "都市多層辦公樓",
+      "confidence": 0.77,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/32a571b95c01a4a4a6f6da38885e83ba.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/32a571b95c01a4a4a6f6da38885e83ba.jpg"
+      },
+      "subtype": "高層辦公塔樓",
+      "confidence": 0.66,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/4582417806274137174c62995bfa9386.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/4582417806274137174c62995bfa9386.jpg"
+      },
+      "subtype": "高層辦公塔樓",
+      "confidence": 0.6,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

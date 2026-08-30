@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "landmark/existing/office_landmark",
+  "family": "landmark",
+  "branch": "existing",
+  "objectType": "office_landmark",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:landmark/11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global.webp"
+      },
+      "subtype": "天津金融中心辦公地標摩天塔",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

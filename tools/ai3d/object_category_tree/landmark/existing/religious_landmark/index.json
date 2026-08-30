@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "landmark/existing/religious_landmark",
+  "family": "landmark",
+  "branch": "existing",
+  "objectType": "religious_landmark",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:landmark/190322_prize_12.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/190322_prize_12.jpg"
+      },
+      "subtype": "現代主義教堂建築地標",
+      "confidence": 0.93,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/dffg.jpg_1140x855.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/dffg.jpg_1140x855.jpg"
+      },
+      "subtype": "現代主義三角教堂建築地標",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

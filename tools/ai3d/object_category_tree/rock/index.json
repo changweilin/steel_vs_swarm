@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "family": "rock",
+  "categories": [
+    {
+      "path": "rock/__unresolved__/insufficient_evidence",
+      "branch": "__unresolved__",
+      "objectType": "unresolved",
+      "resolution": "insufficient_evidence",
+      "members": 1
+    },
+    {
+      "path": "rock/existing/boulder",
+      "branch": "existing",
+      "objectType": "boulder",
+      "resolution": null,
+      "members": 15
+    },
+    {
+      "path": "rock/existing/columnar_basalt",
+      "branch": "existing",
+      "objectType": "columnar_basalt",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "rock/existing/dolmen_megalith",
+      "branch": "existing",
+      "objectType": "dolmen_megalith",
+      "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "rock/existing/mesa",
+      "branch": "existing",
+      "objectType": "mesa",
+      "resolution": null,
+      "members": 3
+    },
+    {
+      "path": "rock/existing/monolith",
+      "branch": "existing",
+      "objectType": "monolith",
+      "resolution": null,
+      "members": 6
+    },
+    {
+      "path": "rock/existing/outcrop",
+      "branch": "existing",
+      "objectType": "outcrop",
+      "resolution": null,
+      "members": 4
+    },
+    {
+      "path": "rock/existing/stratified_slab",
+      "branch": "existing",
+      "objectType": "stratified_slab",
+      "resolution": null,
+      "members": 4
+    },
+    {
+      "path": "rock/existing/talus",
+      "branch": "existing",
+      "objectType": "talus",
+      "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "rock/existing/tor",
+      "branch": "existing",
+      "objectType": "tor",
+      "resolution": null,
+      "members": 3
+    }
+  ]
+}

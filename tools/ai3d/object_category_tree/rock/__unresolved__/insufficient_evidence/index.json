@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/__unresolved__/insufficient_evidence",
+  "family": "rock",
+  "branch": "__unresolved__",
+  "objectType": "unresolved",
+  "resolution": "insufficient_evidence",
+  "definitionSource": "evidence gate",
+  "members": [
+    {
+      "id": "primary:rock/images rock (1).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images rock (1).jpg"
+      },
+      "subtype": "fog_obscured_rock_pinnacle",
+      "confidence": 0.42,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

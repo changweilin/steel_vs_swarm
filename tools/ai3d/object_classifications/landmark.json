@@ -1,0 +1,1686 @@
+{
+  "schemaVersion": 1,
+  "family": "landmark",
+  "classifier": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "max",
+    "basis": "visual+functional"
+  },
+  "items": [
+    {
+      "id": "primary:landmark/11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/11CC20Geba88ude20Welt-Tianjin20Finance%20Centre-GettyImages-global.webp"
+      },
+      "family": "landmark",
+      "objectType": "office_landmark",
+      "subtype": "天津金融中心辦公地標摩天塔",
+      "paletteDomain": "commercial-office-landmark",
+      "confidence": 0.98,
+      "reasons": [
+        "超高層玻璃帷幕、連續辦公樓層與城市綜合體背景顯示商業辦公用途。",
+        "孤立高塔及可辨識的城市天際線構圖使其屬辦公地標，而非通信或觀景專用塔。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "occupant-air",
+        "operationMode": "office-occupancy",
+        "safetyClass": "civil-commercial",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將超高層重力與風荷載傳至地基",
+          "interfaceFamily": "ground-core-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "核心筒、柱梁與外部斜向結構承擔樓層及側向荷載",
+          "interfaceFamily": "foundation-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "structural-steel-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "玻璃帷幕隔離辦公空間與外部風雨",
+          "interfaceFamily": "frame-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-aluminum",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "weather_protection",
+          "function": "外牆與塔冠導排雨水並抵禦高空風環境",
+          "interfaceFamily": "frame-roof-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "rain-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-aluminum",
+          "paletteSlot": "roof_weathering",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "帷幕玻璃提供辦公採光與城市視線",
+          "interfaceFamily": "enclosure-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "電梯、樓梯與入口供辦公人員及訪客進出",
+          "interfaceFamily": "core-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納辦公與商務活動",
+          "interfaceFamily": "enclosure-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "occupant-air",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark/190322_prize_12.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/190322_prize_12.jpg"
+      },
+      "family": "landmark",
+      "objectType": "religious_landmark",
+      "subtype": "現代主義教堂建築地標",
+      "paletteDomain": "religious-architectural-landmark",
+      "confidence": 0.93,
+      "reasons": [
+        "對稱的折翼式高聳屋頂、中央垂直採光縫與入口階梯構成大型宗教聚會建築。",
+        "屋頂頂端的十字標誌及教堂式中央門廊提供宗教用途的直接功能證據。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "occupant-air",
+        "operationMode": "religious-gathering",
+        "safetyClass": "civil-public",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將教堂殼體與人群荷載傳至地基",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "承擔折板屋頂、牆體與聚會空間的重力荷載",
+          "interfaceFamily": "foundation-shell-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "圍合禮拜與集會空間並隔離室內外",
+          "interfaceFamily": "frame-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "brick-concrete",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "weather_protection",
+          "function": "折翼屋頂遮蔽雨水並將屋面水排離入口",
+          "interfaceFamily": "frame-roof-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "rain-air",
+          "handedness": "symmetric",
+          "materialClass": "folded-concrete-shell",
+          "paletteSlot": "roof_weathering",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "中央玻璃縫提供採光並形成祭堂視線",
+          "interfaceFamily": "enclosure-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "中央木門與階梯供教友、訪客及工作人員進出",
+          "interfaceFamily": "enclosure-access-interface",
+          "kinematicClass": "hinged",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "wood-metal",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納禮拜、儀式與宗教集會",
+          "interfaceFamily": "enclosure-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "occupant-air",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["religious-symbol"]
+    },
+    {
+      "id": "primary:landmark/1mi33224x98pwxmef6871_Q90.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/1mi33224x98pwxmef6871_Q90.avif"
+      },
+      "family": "landmark",
+      "objectType": "commemorative_monument",
+      "subtype": "巴黎凱旋門軍事紀念拱門",
+      "paletteDomain": "heritage-commemorative",
+      "confidence": 0.99,
+      "reasons": [
+        "厚重石造拱體、軍事浮雕與銘文清楚表明其為紀念戰爭與歷史事件的紀念物。",
+        "拱下行人通道是附屬通行功能，主導用途仍是公共紀念與觀光參訪，而非交通閘門。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "visitor-air",
+        "operationMode": "heritage-commemoration",
+        "safetyClass": "public-heritage",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將紀念拱門與人群荷載傳至廣場地基",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "stone-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "拱券、柱墩與上部石構承擔紀念碑荷載",
+          "interfaceFamily": "foundation-masonry-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "stone-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "surface_finish",
+          "function": "浮雕、銘文與石材表面傳達軍事紀念敘事",
+          "interfaceFamily": "masonry-relief-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "identity-finish",
+          "workingMedium": "visual-information",
+          "handedness": "symmetric",
+          "materialClass": "carved-stone",
+          "paletteSlot": "weathering",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "拱下通道與行人入口供參訪者通行及進入紀念空間",
+          "interfaceFamily": "monument-passage-access-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "stone-masonry",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "提供行人短暫通行與紀念停留的拱下公共空間",
+          "interfaceFamily": "monument-public-space-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "visitor-air",
+          "handedness": "symmetric",
+          "materialClass": "stone-masonry",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["military-commemorative"]
+    },
+    {
+      "id": "primary:landmark/20190403085330527.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/20190403085330527.jpg"
+      },
+      "family": "landmark",
+      "objectType": "museum_cultural_landmark",
+      "subtype": "羅浮宮玻璃金字塔博物館入口地標",
+      "paletteDomain": "museum-cultural-landmark",
+      "confidence": 0.99,
+      "reasons": [
+        "玻璃金字塔位於歷史宮殿中庭，透明骨架與地下入口直接表明博物館門廳功能。",
+        "它是建築與參訪動線地標，不是紀念碑、通信塔或純公共藝術雕塑。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "visitor-air",
+        "operationMode": "museum-access",
+        "safetyClass": "public-heritage",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將金字塔鋼架與人群荷載傳至中庭基礎",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "鋼製三角網格承擔玻璃屋頂與風荷載",
+          "interfaceFamily": "foundation-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "structural-steel",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "玻璃斜面形成中庭門廳的透明外殼並隔離風雨",
+          "interfaceFamily": "frame-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "透明斜面提供中庭採光與地下入口的可視導引",
+          "interfaceFamily": "enclosure-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "底部門廳、樓梯與地下通道供博物館訪客進出",
+          "interfaceFamily": "pyramid-museum-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納博物館入口集散與票務前廳活動",
+          "interfaceFamily": "enclosure-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "visitor-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark/A13239_1459246004_0.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/A13239_1459246004_0.jpg"
+      },
+      "family": "landmark",
+      "objectType": "commemorative_monument",
+      "subtype": "奇琴伊察庫庫爾坎階梯金字塔考古地標",
+      "paletteDomain": "heritage-archaeological",
+      "confidence": 0.99,
+      "reasons": [
+        "四面階梯金字塔、石砌平台與考古遺址草地環境直接顯示古代遺構與觀光參訪用途。",
+        "其主導語意是保存與參觀的考古地標，並非現代可居住建築或自然岩體。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "visitor-air",
+        "operationMode": "heritage-visit",
+        "safetyClass": "public-heritage",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "階梯頂部神廟室與內部通道的可建模結構（外部照片未揭示）"
+      ],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將階梯金字塔石砌荷載傳至遺址地基",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "limestone-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "層疊石砌台階與核心承擔古代遺構荷載",
+          "interfaceFamily": "foundation-masonry-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "limestone-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "surface_finish",
+          "function": "石灰岩階梯、護面與雕刻表面表達考古身份",
+          "interfaceFamily": "masonry-facing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "identity-finish",
+          "workingMedium": "visual-information",
+          "handedness": "symmetric",
+          "materialClass": "weathered-limestone",
+          "paletteSlot": "weathering",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "外圍步道與階梯提供受管制的參訪動線",
+          "interfaceFamily": "archaeological-visitor-access-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "limestone-masonry",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "unresolved_detail",
+          "function": "外部照片無法確認頂部神廟室、內部通道與隱藏接縫；保留為未解析證據",
+          "interfaceFamily": "mass-interior-unresolved-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "unresolved",
+          "workingMedium": "unknown",
+          "handedness": "symmetric",
+          "materialClass": "unresolved",
+          "paletteSlot": "weathering",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["archaeological-heritage"]
+    },
+    {
+      "id": "primary:landmark/ADEC6675-7A2D-4F66-8879-94B55E2CBACA.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/ADEC6675-7A2D-4F66-8879-94B55E2CBACA.jpg"
+      },
+      "family": "landmark",
+      "objectType": "mixed_use_landmark",
+      "subtype": "未來主義水岸公共與商業混合用途地標塔",
+      "paletteDomain": "modern-mixed-use-landmark",
+      "confidence": 0.82,
+      "reasons": [
+        "水岸公園、遊船、公共基座與玻璃高塔共同顯示公共休閒、商業及觀景活動的混合用途。",
+        "未見專用通信桅杆或單一宗教/博物館用途，故歸入混合用途地標；具體租戶分區保留為未解析細節。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "occupant-air",
+        "operationMode": "mixed-use-occupancy",
+        "safetyClass": "civil-mixed-use",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將塔體與水岸基座荷載傳至地基",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-water",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "中央核心與外圍斜向構架承擔塔體及風荷載",
+          "interfaceFamily": "foundation-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "structural-steel-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "玻璃幕牆圍合塔內使用空間並隔離水岸風雨",
+          "interfaceFamily": "frame-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-aluminum",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "玻璃立面提供公共空間採光與水岸視線",
+          "interfaceFamily": "enclosure-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "基座入口與垂直交通供訪客進入塔內",
+          "interfaceFamily": "tower-core-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納公共休閒、商業與觀景活動",
+          "interfaceFamily": "enclosure-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "occupant-air",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "unresolved_detail",
+          "function": "照片未揭示塔內實際租戶、觀景層或服務核心配置；保留為未解析證據",
+          "interfaceFamily": "tower-program-unresolved-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "unresolved",
+          "workingMedium": "unknown",
+          "handedness": "symmetric",
+          "materialClass": "unresolved",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark/Arc_de_Triomf_Barcelona.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/Arc_de_Triomf_Barcelona.webp"
+      },
+      "family": "landmark",
+      "objectType": "ceremonial_gateway",
+      "subtype": "巴塞隆納展覽儀式凱旋門",
+      "paletteDomain": "heritage-ceremonial",
+      "confidence": 0.99,
+      "reasons": [
+        "中央大型拱洞、兩側塔墩與城市大道軸線構成可通行的儀式性入口。",
+        "磚石浮雕、徽章與行人穿越動線符合展覽/公共典禮拱門，而非通信或觀景塔。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "visitor-air",
+        "operationMode": "civic-ceremonial",
+        "safetyClass": "public-heritage",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將拱門與行人荷載傳至大道基礎",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "brick-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "兩側塔墩與拱券承擔門體荷載並形成通行開口",
+          "interfaceFamily": "foundation-masonry-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "brick-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "surface_finish",
+          "function": "磚面、浮雕、徽章與塔頂裝飾傳達展覽身份",
+          "interfaceFamily": "masonry-relief-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "identity-finish",
+          "workingMedium": "visual-information",
+          "handedness": "symmetric",
+          "materialClass": "decorated-brick-stone",
+          "paletteSlot": "weathering",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "中央拱洞提供行人穿越與大道兩側進出",
+          "interfaceFamily": "gateway-passage-access-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "brick-masonry",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "形成儀式遊行與行人短暫停留的拱下公共空間",
+          "interfaceFamily": "gateway-public-space-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "visitor-air",
+          "handedness": "symmetric",
+          "materialClass": "brick-masonry",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["civic-ceremonial"]
+    },
+    {
+      "id": "primary:landmark/atl_20220104114052_159.jpeg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/atl_20220104114052_159.jpeg"
+      },
+      "family": "landmark",
+      "objectType": "hospitality_landmark",
+      "subtype": "海上環形旅宿與休閒複合地標",
+      "paletteDomain": "hospitality-waterfront-landmark",
+      "confidence": 0.86,
+      "reasons": [
+        "獨立海上基座、環形濱水平台、遊艇與休閒庭園共同指向旅宿、餐飲及水上休閒用途。",
+        "塔頂未見通信設備，旅客住宿與公共接待是主要功能，故歸入旅宿地標而非通信或觀景專用塔。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "occupant-air",
+        "operationMode": "guest-lodging",
+        "safetyClass": "civil-hospitality",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將海上基座、塔體與人群荷載傳至水上基礎",
+          "interfaceFamily": "marine-ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-water",
+          "handedness": "symmetric",
+          "materialClass": "marine-reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "中央核心與環形平台承擔建築、風浪及人群荷載",
+          "interfaceFamily": "foundation-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind-water",
+          "handedness": "symmetric",
+          "materialClass": "structural-steel-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "玻璃及金屬外殼圍合旅客住宿與旅宿公共空間",
+          "interfaceFamily": "frame-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-aluminum",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "玻璃立面提供海景採光與水岸視線",
+          "interfaceFamily": "enclosure-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "濱水平台入口與塔內垂直交通供住客及訪客進出",
+          "interfaceFamily": "marine-complex-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納旅宿、餐飲與水岸公共活動",
+          "interfaceFamily": "enclosure-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "occupant-air",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark/dffg.jpg_1140x855.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/dffg.jpg_1140x855.jpg"
+      },
+      "family": "landmark",
+      "objectType": "religious_landmark",
+      "subtype": "現代主義三角教堂建築地標",
+      "paletteDomain": "religious-architectural-landmark",
+      "confidence": 0.97,
+      "reasons": [
+        "巨大折板屋頂、頂端十字與藍色垂直玻璃入口構成可辨識的教堂禮拜空間。",
+        "草坪前場與獨立入口支持公共宗教聚會用途，而非單純雕塑或觀景設施。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "occupant-air",
+        "operationMode": "religious-gathering",
+        "safetyClass": "civil-public",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將教堂殼體與集會荷載傳至地基",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "斜向混凝土板與側牆承擔屋頂及風荷載",
+          "interfaceFamily": "foundation-shell-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "側牆圍合禮拜空間並隔離室內外",
+          "interfaceFamily": "frame-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "brick-concrete",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "weather_protection",
+          "function": "高聳折板屋頂遮雨並導排屋面水",
+          "interfaceFamily": "frame-roof-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "rain-air",
+          "handedness": "symmetric",
+          "materialClass": "folded-concrete-shell",
+          "paletteSlot": "roof_weathering",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "藍色玻璃立面提供採光與入口識別",
+          "interfaceFamily": "enclosure-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "中央入口供教友、訪客及工作人員進入",
+          "interfaceFamily": "enclosure-access-interface",
+          "kinematicClass": "hinged",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "wood-metal",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納禮拜、儀式與宗教集會",
+          "interfaceFamily": "enclosure-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "occupant-air",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["religious-symbol"]
+    },
+    {
+      "id": "primary:landmark/images (1).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/images (1).jpg"
+      },
+      "family": "landmark",
+      "objectType": "communications_tower",
+      "subtype": "東京鐵塔廣播通信暨觀景塔",
+      "paletteDomain": "communications-infrastructure",
+      "confidence": 0.99,
+      "reasons": [
+        "紅白格構塔身、天線桅杆與多層設備平台直接顯示廣播通信結構。",
+        "中段大型觀景層是附加訪客功能，通信設備與航空障礙標記仍是分類主因。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "radio-air",
+        "operationMode": "broadcast-telecommunications",
+        "safetyClass": "public-infrastructure",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將格構塔身與設備風荷載傳至基礎",
+          "interfaceFamily": "tower-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-steel",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "鋼製格構腿、桁架與桅杆承擔塔體及側向荷載",
+          "interfaceFamily": "foundation-tower-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "structural-steel",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "sensor_communication",
+          "function": "天線與平台發射、接收並轉播無線電訊號",
+          "interfaceFamily": "tower-equipment-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "service-equipment",
+          "workingMedium": "radio-air",
+          "handedness": "symmetric",
+          "materialClass": "antenna-metal",
+          "paletteSlot": "emissive_signal",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "電梯、樓梯與維修平台供觀景訪客及技術人員進出",
+          "interfaceFamily": "tower-core-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "觀景層玻璃提供城市全景視線",
+          "interfaceFamily": "tower-observation-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納觀景、餐飲與塔內公共活動",
+          "interfaceFamily": "tower-observation-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "visitor-air",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "visibility_signal",
+          "function": "紅白航空障礙塗裝與夜間燈號使高塔對航空交通可見",
+          "interfaceFamily": "tower-aviation-marking-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "safety-equipment",
+          "workingMedium": "visual-air",
+          "handedness": "symmetric",
+          "materialClass": "aviation-paint-lamp",
+          "paletteSlot": "safety_marking",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["aviation-obstruction", "broadcast-communication"]
+    },
+    {
+      "id": "primary:landmark/images tc.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/images tc.jpg"
+      },
+      "family": "landmark",
+      "objectType": "mixed_use_landmark",
+      "subtype": "垂直森林扭轉混合用途地標塔樓",
+      "paletteDomain": "modern-biophilic-landmark",
+      "confidence": 0.94,
+      "reasons": [
+        "逐層錯位露台、玻璃樓板與大量植栽形成垂直森林式混合用途建築。",
+        "塔頂未見天線、波束設備或專用觀景層，主要功能是居住、辦公與公共綠化的混合用途。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "occupant-air",
+        "operationMode": "mixed-use-occupancy",
+        "safetyClass": "civil-mixed-use",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將扭轉塔體、露台與植栽荷載傳至地基",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "核心筒、樓板與懸挑露台承擔樓層及風荷載",
+          "interfaceFamily": "foundation-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-steel",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "玻璃幕牆與露台邊界圍合各層使用空間",
+          "interfaceFamily": "frame-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-aluminum",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "玻璃立面提供住戶與辦公空間採光和城市視線",
+          "interfaceFamily": "enclosure-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "核心電梯、樓梯與地面入口供各類使用者進出",
+          "interfaceFamily": "tower-core-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納混合居住、辦公與公共活動",
+          "interfaceFamily": "enclosure-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "occupant-air",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "露台植栽形成垂直綠化、遮陽與景觀生態層",
+          "interfaceFamily": "terrace-landscape-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "landscape-amenity",
+          "workingMedium": "plant-water-air",
+          "handedness": "symmetric",
+          "materialClass": "living-vegetation",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark/images.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/images.jpg"
+      },
+      "family": "landmark",
+      "objectType": "observation_tower",
+      "subtype": "巴黎艾菲爾鐵塔觀景地標",
+      "paletteDomain": "heritage-observation",
+      "confidence": 0.99,
+      "reasons": [
+        "四腿鏤空鐵構、分層平台與遊客動線顯示以登塔觀景為主的公共高塔。",
+        "畫面未呈現通信設備為主的功能配置，故觀景與歷史參訪優先於通信分類。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "visitor-air",
+        "operationMode": "observation-tourism",
+        "safetyClass": "public-heritage",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "四座塔腳基礎將鐵塔及人群荷載傳至地基",
+          "interfaceFamily": "tower-leg-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "masonry-steel",
+          "paletteSlot": "structural",
+          "mountCount": 4
+        },
+        {
+          "role": "primary_structure",
+          "function": "四腿桁架與水平繫桿承擔塔體及風荷載",
+          "interfaceFamily": "foundation-tower-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "wrought-iron",
+          "paletteSlot": "structural",
+          "mountCount": 4
+        },
+        {
+          "role": "access",
+          "function": "電梯與樓梯連接各觀景平台及地面入口",
+          "interfaceFamily": "tower-observation-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "多層觀景平台提供巴黎城市全景視線",
+          "interfaceFamily": "tower-observation-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-steel",
+          "paletteSlot": "transparent",
+          "mountCount": 3
+        },
+        {
+          "role": "surface_finish",
+          "function": "鐵構防鏽塗層維持結構耐候與歷史識別",
+          "interfaceFamily": "tower-coating-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "weather-finish",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "protective-metal-coating",
+          "paletteSlot": "weathering",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark/math272.png",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/math272.png"
+      },
+      "family": "landmark",
+      "objectType": "commemorative_monument",
+      "subtype": "吉薩胡夫金字塔古代陵墓地標",
+      "paletteDomain": "heritage-archaeological",
+      "confidence": 0.99,
+      "reasons": [
+        "四面石砌金字塔與周圍墓葬遺址構成古代王室陵墓，而非自然岩體或可居住建築。",
+        "現代畫面主要呈現保存、考古與觀光參訪功能，外部幾何足以確定紀念性地標類別。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "visitor-air",
+        "operationMode": "heritage-visit",
+        "safetyClass": "public-heritage",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "內部墓室、通道與封閉頂部構造（外部照片未揭示）"
+      ],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "將金字塔巨大石砌荷載傳至基岩地基",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "limestone-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "石砌金字塔核心承擔陵墓與覆層荷載",
+          "interfaceFamily": "foundation-masonry-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity",
+          "handedness": "symmetric",
+          "materialClass": "limestone-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "surface_finish",
+          "function": "石灰岩外護面與風化層表達古代陵墓的歷史外觀",
+          "interfaceFamily": "masonry-facing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "weather-finish",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "weathered-limestone",
+          "paletteSlot": "weathering",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "受管制入口與外圍步道供考古維護及遊客參訪",
+          "interfaceFamily": "pyramid-heritage-access-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "stone-masonry",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "unresolved_detail",
+          "function": "外部照片無法確認墓室、通道與封頂接縫；保留為未解析證據，不作替換依據",
+          "interfaceFamily": "mass-interior-unresolved-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "unresolved",
+          "workingMedium": "unknown",
+          "handedness": "symmetric",
+          "materialClass": "unresolved",
+          "paletteSlot": "weathering",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["archaeological-heritage"]
+    },
+    {
+      "id": "primary:landmark/Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008.jpg"
+      },
+      "family": "landmark",
+      "objectType": "commemorative_monument",
+      "subtype": "協和廣場盧克索方尖碑歷史紀念碑",
+      "paletteDomain": "heritage-commemorative",
+      "confidence": 0.99,
+      "reasons": [
+        "單一花崗岩方尖碑、埃及象形文字與基座銘文是歷史紀念標誌的直接證據。",
+        "圍欄、廣場與觀光人群顯示公共參訪功能；碑體本身不承擔通信、導航或居住用途。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "visitor-air",
+        "operationMode": "heritage-commemoration",
+        "safetyClass": "public-heritage",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "基座將方尖碑與風荷載傳至廣場地基",
+          "interfaceFamily": "ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "granite-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "單體花崗岩碑柱承擔紀念碑自重與風荷載",
+          "interfaceFamily": "foundation-monolith-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "granite-masonry",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "surface_finish",
+          "function": "象形文字、金字塔尖與基座銘文傳達歷史紀念訊息",
+          "interfaceFamily": "monolith-inscription-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "identity-finish",
+          "workingMedium": "visual-information",
+          "handedness": "symmetric",
+          "materialClass": "carved-granite-metal",
+          "paletteSlot": "weathering",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["historical-commemorative"]
+    },
+    {
+      "id": "primary:landmark/progress-m.658f5ec2.png",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/progress-m.658f5ec2.png"
+      },
+      "family": "landmark",
+      "objectType": "mixed_use_landmark",
+      "subtype": "現代複合辦公與商業摩天樓群城市地標",
+      "paletteDomain": "modern-mixed-use-landmark",
+      "confidence": 0.96,
+      "reasons": [
+        "中央玻璃超高層、周邊多座副塔與大型公共基座構成商業混合用途建築群。",
+        "多塔均無通信天線或專用觀景設備，功能主軸是辦公、商業、交通轉乘與公共集散的混合用途地標。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "occupant-air",
+        "operationMode": "mixed-use-occupancy",
+        "safetyClass": "civil-mixed-use",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "各塔基礎將塔群與基座荷載傳至地基",
+          "interfaceFamily": "complex-ground-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 4
+        },
+        {
+          "role": "primary_structure",
+          "function": "中央超高層與三座副塔的核心筒、柱梁承擔樓層及風荷載",
+          "interfaceFamily": "complex-foundation-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "structural-steel-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 4
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "各塔玻璃帷幕圍合商業與辦公樓層",
+          "interfaceFamily": "complex-frame-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-aluminum",
+          "paletteSlot": "enclosure",
+          "mountCount": 4
+        },
+        {
+          "role": "transparent_view",
+          "function": "玻璃立面提供各塔內部採光與城市視線",
+          "interfaceFamily": "complex-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 4
+        },
+        {
+          "role": "access",
+          "function": "各塔入口、電梯與樓梯連接公共基座及樓層",
+          "interfaceFamily": "complex-tower-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 4
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納辦公、商業、交通轉乘與公共活動",
+          "interfaceFamily": "complex-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "occupant-air",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 4
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark/re_kv_sp.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/re_kv_sp.jpg"
+      },
+      "family": "landmark",
+      "objectType": "observation_tower",
+      "subtype": "京都塔城市觀景塔",
+      "paletteDomain": "modern-observation-landmark",
+      "confidence": 0.99,
+      "reasons": [
+        "白色垂直塔身、環形觀景層與城市全景位置清楚指向觀景塔。",
+        "塔下商業/旅館基座是配套使用，不改變塔體以觀景參訪為主的現實功能。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "visitor-air",
+        "operationMode": "observation-tourism",
+        "safetyClass": "civil-public",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "塔下基座將塔體與觀景人群荷載傳至建築地基",
+          "interfaceFamily": "tower-podium-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "混凝土筒身與鋼製觀景環承擔塔體及風荷載",
+          "interfaceFamily": "foundation-tower-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-steel",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "enclosure_shell",
+          "function": "觀景層外殼提供訪客遮蔽並隔離高空風雨",
+          "interfaceFamily": "tower-observation-envelope-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-envelope",
+          "workingMedium": "weather-air",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "觀景層玻璃提供京都市景全景視線",
+          "interfaceFamily": "tower-observation-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "電梯與樓梯供觀景訪客、旅館住客及維護人員進出",
+          "interfaceFamily": "tower-core-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納觀景層與附屬公共接待活動",
+          "interfaceFamily": "tower-observation-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "visitor-air",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:landmark/Tokyo_Sky_Tree_2012.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/Tokyo_Sky_Tree_2012.jpg"
+      },
+      "family": "landmark",
+      "objectType": "communications_tower",
+      "subtype": "東京晴空塔廣播通信暨觀景塔",
+      "paletteDomain": "communications-infrastructure",
+      "confidence": 0.99,
+      "reasons": [
+        "超高格構塔身、頂部天線桅杆與多層設備環是廣播通信塔的直接功能證據。",
+        "兩個大型觀景艙提供訪客功能，但通信傳輸與航空可見性仍是主導用途。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "radio-air",
+        "operationMode": "broadcast-telecommunications",
+        "safetyClass": "public-infrastructure",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "塔基將超高塔身、設備與風荷載傳至地基",
+          "interfaceFamily": "tower-foundation-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "reinforced-concrete-steel",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "primary_structure",
+          "function": "格構筒身、中央心柱與桅杆承擔塔體及側向荷載",
+          "interfaceFamily": "foundation-tower-frame-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-structure",
+          "workingMedium": "static-gravity-wind",
+          "handedness": "symmetric",
+          "materialClass": "structural-steel",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "sensor_communication",
+          "function": "頂部天線與設備環發射、接收並轉播無線電訊號",
+          "interfaceFamily": "tower-equipment-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "service-equipment",
+          "workingMedium": "radio-air",
+          "handedness": "symmetric",
+          "materialClass": "antenna-metal",
+          "paletteSlot": "emissive_signal",
+          "mountCount": 1
+        },
+        {
+          "role": "access",
+          "function": "高速電梯、樓梯與維修平台連接觀景艙及設備層",
+          "interfaceFamily": "tower-core-access-interface",
+          "kinematicClass": "guided",
+          "loadClass": "occupant-access",
+          "workingMedium": "human-traffic",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "trim_identity",
+          "mountCount": 1
+        },
+        {
+          "role": "transparent_view",
+          "function": "兩層觀景艙玻璃提供東京城市全景視線",
+          "interfaceFamily": "tower-observation-glazing-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "light-opening",
+          "workingMedium": "daylight-air",
+          "handedness": "symmetric",
+          "materialClass": "glass-frame",
+          "paletteSlot": "transparent",
+          "mountCount": 2
+        },
+        {
+          "role": "occupant_space",
+          "function": "容納觀景、餐飲與訪客集散活動",
+          "interfaceFamily": "tower-observation-occupancy-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "occupied-volume",
+          "workingMedium": "visitor-air",
+          "handedness": "symmetric",
+          "materialClass": "steel-glass",
+          "paletteSlot": "enclosure",
+          "mountCount": 2
+        },
+        {
+          "role": "visibility_signal",
+          "function": "航空障礙燈與夜間照明使超高塔對航空交通可見",
+          "interfaceFamily": "tower-aviation-marking-interface",
+          "kinematicClass": "fixed",
+          "loadClass": "safety-equipment",
+          "workingMedium": "visual-air",
+          "handedness": "symmetric",
+          "materialClass": "aviation-lamp",
+          "paletteSlot": "safety_marking",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": ["aviation-obstruction", "broadcast-communication"]
+    }
+  ]
+}

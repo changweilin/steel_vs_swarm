@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/religious",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "religious",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/images (15).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (15).jpg"
+      },
+      "subtype": "天壇式祭祀宗教建築",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images.jpg"
+      },
+      "subtype": "大型中式寺廟宗教建築",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/155577510.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/155577510.jpg"
+      },
+      "subtype": "東亞寺院宗教建築群",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/architecture-houou-02-tmb.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/architecture-houou-02-tmb.jpg"
+      },
+      "subtype": "佛教寺院山門",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/kyotoworldheritage_2.jpg.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/kyotoworldheritage_2.jpg.webp"
+      },
+      "subtype": "金閣寺式佛教寺院",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/partenone.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/partenone.jpg"
+      },
+      "subtype": "古典神殿歷史遺址",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/phoenix-tower_rotated_270.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/phoenix-tower_rotated_270.jpg"
+      },
+      "subtype": "佛塔宗教建築",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/photo0jpg.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/photo0jpg.jpg"
+      },
+      "subtype": "山地寺院宗教建築群",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/the-white-tower-when.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/the-white-tower-when.jpg"
+      },
+      "subtype": "佛塔宗教建築",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

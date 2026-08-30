@@ -33,9 +33,9 @@ import { isNativeFunctionalSubpart } from '../../public/js/nativeFunctionalBuild
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
 
-const PHOTO_ROOTS = [
-  'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos',
-  'C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos',
+const PHOTO_CORPORA = [
+  { id: 'primary', root: 'C:\\Users\\user\\Documents\\steel_vs_swarm\\tools\\ai3d\\photos' },
+  { id: 'restricted', root: 'C:\\Users\\user\\Documents\\study\\ai3d_restricted\\photos' },
 ];
 
 const OUT_ROOTS = [
@@ -44,10 +44,11 @@ const OUT_ROOTS = [
 ];
 
 const MANIFEST_PATH = join(ROOT, 'tools', 'ai3d', 'parts_manifest.json');
+const CLASSIFICATION_MANIFEST_PATH = join(ROOT, 'tools', 'ai3d', 'object_classification_manifest.json');
 const DB_OUTPUT_LOCAL = join(ROOT, 'out', '3d_database.json');
 const DB_OUTPUT_RESTRICTED = 'C:\\Users\\user\\Documents\\study\\ai3d_restricted\\out\\3d_database.json';
 
-const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
 
 // ── CLI 參數 ──────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -289,9 +290,12 @@ async function requestStructured(modelName, contentParts, systemText, responseSc
 /**
  * 呼叫單一 Gemini 模型(node:https 原生,零 npm 依賴)。
  */
-async function callGeminiSingle(modelName, imageBase64, mimeType, family, subpart, yoloFeatures, critique = '') {
+async function callGeminiSingle(modelName, imageBase64, mimeType, family, subpart, yoloFeatures, functionalClassification, critique = '') {
   let userPrompt = `分析這張 ${family}/${subpart} 的照片,以多面體零件列精確重建其 3D 幾何。注意真實世界尺寸(公尺)。`;
   userPrompt += `\n以下是已落盤的 YOLO26 Detection / Segmentation / Depth 目標特徵；不得重新猜測目標邊界：\n${JSON.stringify(yoloFeatures)}`;
+  if (functionalClassification) {
+    userPrompt += `\n以下是 Luna Max 依現實用途完成的功能分類與拆件表。必須逐一建立其中具名 parts；missingFunctionalParts 也必須補成獨立零件。分類、零件角色與配色槽不得依外觀改寫：\n${JSON.stringify(functionalClassification)}`;
+  }
   if (critique) userPrompt += `\n上一輪獨立 3D 預覽複核未通過。逐項修正後重建：\n${critique}`;
   if (family === 'building') {
     userPrompt += `\n【building 建築幾何重建專項要求】:
@@ -361,7 +365,7 @@ async function callGeminiSingle(modelName, imageBase64, mimeType, family, subpar
 /**
  * 具備快速備援模型與頻率限制退避的 Gemini 呼叫器
  */
-async function callGemini(imageBase64, mimeType, family, subpart, yoloFeatures, critique = '') {
+async function callGemini(imageBase64, mimeType, family, subpart, yoloFeatures, functionalClassification, critique = '') {
   const models = [MODEL, 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.7-flash'].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
   let lastErr = null;
 
@@ -370,7 +374,7 @@ async function callGemini(imageBase64, mimeType, family, subpart, yoloFeatures, 
     const MAX_RETRIES = 1;
     while (retries <= MAX_RETRIES) {
       try {
-        return await callGeminiSingle(m, imageBase64, mimeType, family, subpart, yoloFeatures, critique);
+        return await callGeminiSingle(m, imageBase64, mimeType, family, subpart, yoloFeatures, functionalClassification, critique);
       } catch (err) {
         lastErr = err;
         const msg = err.message || '';
@@ -411,9 +415,9 @@ const REVIEW_SCHEMA = {
   required: ['similarityScore', 'verdict', 'critique', 'corrections'],
 };
 
-async function reviewGeometry(imageBase64, mimeType, previewPath, family, subpart, yoloFeatures) {
+async function reviewGeometry(imageBase64, mimeType, previewPath, family, subpart, yoloFeatures, functionalClassification) {
   const preview = readFileSync(previewPath).toString('base64');
-  const prompt = `第一張是 ${family}/${subpart} 的原始獨立目標，第二張是該 3D 模型固定 FRONT 3/4、SIDE、REAR 三視圖。依 YOLO26 特徵 ${JSON.stringify(yoloFeatures)} 嚴格比較輪廓、比例、深度、零件方向、接合、門窗玻璃、背面鏡像補全與細長結構。任何透視裸空、浮空、過度重疊、反向屋簷、錯向輪胎或缺失車架/枝幹都必須 retry。不得因同一模型自評而放寬。`;
+  const prompt = `第一張是 ${family}/${subpart} 的原始獨立目標，第二張是該 3D 模型固定 FRONT 3/4、SIDE、REAR 三視圖。依 YOLO26 特徵 ${JSON.stringify(yoloFeatures)} 與 Luna 功能拆件 ${JSON.stringify(functionalClassification)} 嚴格比較輪廓、比例、深度、功能零件是否逐一存在、零件方向、接合、門窗玻璃、背面鏡像補全與細長結構。任何功能零件缺失、透視裸空、浮空、過度重疊、反向屋簷、錯向輪胎或缺失車架/枝幹都必須 retry。不得因同一模型自評而放寬。`;
   const system = '你是獨立 3D 品質審查員。只比較來源目標與渲染後三視圖，不替生成器辯護。相似度低於門檻或任一硬性幾何缺陷存在時 verdict 必須是 retry，並提供可操作修正。';
   const models = [MODEL, 'gemini-3.6-flash', 'gemini-3.5-flash'].filter((v, i, a) => Boolean(v) && a.indexOf(v) === i);
   let lastError = null;
@@ -950,13 +954,24 @@ async function main() {
     } catch { /* 損壞不是例外 */ }
   }
 
+  const classificationBySource = new Map();
+  if (existsSync(CLASSIFICATION_MANIFEST_PATH)) {
+    try {
+      const manifest = JSON.parse(readFileSync(CLASSIFICATION_MANIFEST_PATH, 'utf8'));
+      for (const row of manifest.items || []) {
+        if (row.classification) classificationBySource.set(row.id, row.classification);
+      }
+    } catch { /* 分類清單損壞時保守不套用，直屬來源會在下方被拒絕 */ }
+  }
+
   // ── 掃描照片 ──
   const allImages = [];
-  for (const root of PHOTO_ROOTS) {
+  for (const corpus of PHOTO_CORPORA) {
+    const { id: corpusId, root } = corpus;
     if (existsSync(root)) {
       const imgs = findImages(root);
       console.log(`📂 發現照片來源: ${root} (共 ${imgs.length} 張)`);
-      for (const img of imgs) allImages.push({ path: img, baseDir: root });
+      for (const img of imgs) allImages.push({ path: img, baseDir: root, corpusId });
     } else {
       mkdirSync(root, { recursive: true });
     }
@@ -975,12 +990,14 @@ async function main() {
   }
 
   // ── 篩選 ──
-  const filtered = allImages.filter(({ path: imgPath, baseDir }) => {
+  const filtered = allImages.filter(({ path: imgPath, baseDir, corpusId }) => {
     const { family, subpart, stem } = parseCategory(imgPath, baseDir);
     if (isNativeFunctionalSubpart(family, subpart)) return false;
     if (FAMILY_FILTER && family !== FAMILY_FILTER) return false;
     if (ONLY_FILTER && `${family}/${subpart}` !== ONLY_FILTER) return false;
-    if (REVIEW_STATUS && !reviewTargets.has(`${family}/${subpart}_${stem}`)) return false;
+    if (REVIEW_STATUS
+      && !reviewTargets.has(`${family}/${subpart}_${corpusId}_${stem}`)
+      && !reviewTargets.has(`${family}/${subpart}_${stem}`)) return false;
     return true;
   });
 
@@ -1062,14 +1079,26 @@ async function main() {
   }
 
   for (let idx = 0; idx < filtered.length && processedCount < LIMIT; idx++) {
-    const { path: imgPath, baseDir } = filtered[idx];
+    const { path: imgPath, baseDir, corpusId } = filtered[idx];
     const { rel, family, subpart, filename, stem } = parseCategory(imgPath, baseDir);
+    const normalizedRel = rel.replace(/\\/g, '/');
+    const sourceId = `${corpusId}:${normalizedRel}`;
+    const functionalClassification = classificationBySource.get(sourceId) || null;
+    if (normalizedRel.split('/').length === 2 && !functionalClassification) {
+      console.warn(`  ⚠ 直屬來源缺 Luna 功能分類，拒絕生成: ${sourceId}`);
+      errorCount++;
+      continue;
+    }
 
     // ── 檢查是否有 YOLO26 多目標分離特徵 ──
-    let yoloFeaturePath = join(ROOT, 'out', 'yolo_features', family, subpart, `${stem}.json`);
+    const namespacedPath = join(ROOT, 'out', 'yolo_features', corpusId, family, subpart, `${stem}.json`);
+    const legacyPath = join(ROOT, 'out', 'yolo_features', family, subpart, `${stem}.json`);
+    let yoloFeaturePath = existsSync(namespacedPath) ? namespacedPath : legacyPath;
     if (!existsSync(yoloFeaturePath) && subpart !== 'main') {
-      const altPath = join(ROOT, 'out', 'yolo_features', family, 'main', `${stem}.json`);
-      if (existsSync(altPath)) yoloFeaturePath = altPath;
+      const namespacedAlt = join(ROOT, 'out', 'yolo_features', corpusId, family, 'main', `${stem}.json`);
+      const legacyAlt = join(ROOT, 'out', 'yolo_features', family, 'main', `${stem}.json`);
+      if (existsSync(namespacedAlt)) yoloFeaturePath = namespacedAlt;
+      else if (existsSync(legacyAlt)) yoloFeaturePath = legacyAlt;
     }
     if (!existsSync(yoloFeaturePath)) {
       console.warn(`  ⚠ 缺少 YOLO26 快取，拒絕直接送 LLM: ${family}/${subpart}/${stem}`);
@@ -1079,6 +1108,17 @@ async function main() {
     let yoloData;
     try { yoloData = JSON.parse(readFileSync(yoloFeaturePath, 'utf8')); } catch {
       console.warn(`  ⚠ YOLO26 快取無法解析: ${yoloFeaturePath}`);
+      errorCount++;
+      continue;
+    }
+    if (yoloData.corpusId && yoloData.corpusId !== corpusId) {
+      console.warn(`  ⚠ YOLO26 語料家不符，拒絕混用證據: ${yoloFeaturePath}`);
+      errorCount++;
+      continue;
+    }
+    if (!yoloData.corpusId && yoloData.sourceFullPath
+      && resolve(yoloData.sourceFullPath).toLowerCase() !== resolve(imgPath).toLowerCase()) {
+      console.warn(`  ⚠ 舊 YOLO26 快取來源不符，拒絕混用證據: ${yoloFeaturePath}`);
       errorCount++;
       continue;
     }
@@ -1097,7 +1137,8 @@ async function main() {
       continue;
     }
     const targetList = yoloData.targets.map((t) => {
-      const cropPath = resolve(ROOT, t.targetFile || `out/targets/${family}/${subpart}/${t.targetId}.png`);
+      const cropPath = resolve(ROOT, t.targetFile
+        || `out/targets/${corpusId}/${family}/${subpart}/${t.targetId}.png`);
       const maskPath = t.maskFile ? resolve(ROOT, t.maskFile) : null;
       return {
         targetId: t.targetId,
@@ -1121,12 +1162,13 @@ async function main() {
     for (let tIdx = 0; tIdx < targetList.length; tIdx++) {
       const tgt = targetList[tIdx];
       const curStem = targetList.length > 1 ? tgt.targetId : stem;
-      const targetId = `${family}_${subpart}_${curStem}_v6`.replace(/[^\w.-]+/g, '_');
-      const hash = createHash('sha1').update(`${rel}:${curStem}`).digest('hex').slice(0, 8);
-      const partKey = `${family}/${subpart}_${curStem}_${hash}_v6`;
+      const assetStem = `${corpusId}_${curStem}`;
+      const targetId = `${family}_${subpart}_${assetStem}_v6`.replace(/[^\w.-]+/g, '_');
+      const hash = createHash('sha1').update(`${corpusId}:${rel}:${curStem}`).digest('hex').slice(0, 8);
+      const partKey = `${family}/${subpart}_${assetStem}_${hash}_v6`;
 
       // 審查黑名單過濾 (已標註刪除者清理)
-      const stableTarget = `${family}/${subpart}_${stem}`;
+      const stableTarget = `${family}/${subpart}_${corpusId}_${stem}`;
       if ([...purgedKeys].some((key) => stableTargetOfKey(key) === stableTarget)) {
         skippedCount++;
         continue;
@@ -1156,11 +1198,11 @@ async function main() {
       let geminiResult, geometry, review, previewPath, critique = '';
       for (let attempt = 0; attempt <= MAX_GEOMETRY_RETRIES; attempt++) {
         try {
-          geminiResult = await callGemini(imageBase64, mimeType, family, subpart, tgt.features, critique);
+          geminiResult = await callGemini(imageBase64, mimeType, family, subpart, tgt.features, functionalClassification, critique);
           if (!geminiResult?.parts?.length) throw new Error('Gemini 回傳零件列為空');
-          geometry = buildGeometryFromParts(geminiResult, family, subpart, curStem);
+          geometry = buildGeometryFromParts(geminiResult, family, subpart, assetStem);
           previewPath = renderPreview(geometry.modelJson, targetId);
-          review = await reviewGeometry(imageBase64, mimeType, previewPath, family, subpart, tgt.features);
+          review = await reviewGeometry(imageBase64, mimeType, previewPath, family, subpart, tgt.features, functionalClassification);
         } catch (error) {
           console.warn(`  ⚠ 第 ${attempt + 1} 輪生成/複核失敗: ${error.message}`);
           if (attempt === MAX_GEOMETRY_RETRIES) break;
@@ -1183,6 +1225,7 @@ async function main() {
       const simScore = Number(review.similarityScore);
       const simReview = review.critique;
       featuresJson.yolo26 = tgt.features;
+      featuresJson.functionalClassification = functionalClassification;
       featuresJson.similarityReview = review;
 
       // ── 原子落盤 ──
@@ -1193,7 +1236,8 @@ async function main() {
         writeFileSync(join(targetDir, 'model.json'), JSON.stringify(modelJson, null, 2), 'utf8');
         writeFileSync(join(targetDir, 'features.json'), JSON.stringify(featuresJson, null, 2), 'utf8');
         const metadata = {
-          id: targetId, key: partKey, family, subpart,
+          id: targetId, key: partKey, family, subpart, corpusId,
+          functionalClassificationId: functionalClassification?.id || null,
           style: geminiResult.style, symmetryMode: geminiResult.symmetryMode,
           similarityScore: simScore,
           similarityReview: simReview,
@@ -1212,7 +1256,8 @@ async function main() {
 
       // ── 資料庫索引 (即時增量合併) ──
       const dbEntry = {
-        id: targetId, key: partKey, family, subpart,
+        id: targetId, key: partKey, family, subpart, corpusId,
+        functionalClassificationId: functionalClassification?.id || null,
         style: geminiResult.style, symmetryMode: geminiResult.symmetryMode,
         similarityScore: simScore,
         version: 6, verStr: 'v6',
@@ -1220,8 +1265,8 @@ async function main() {
         triangles: bounds.triangles,
         outputDir: `out/3d_data/${family}/${subpart}/${targetId}`,
       };
-      const producedStableTarget = `${family}/${subpart}_${curStem}`;
-      const sourceStableTarget = `${family}/${subpart}_${stem}`;
+      const producedStableTarget = `${family}/${subpart}_${corpusId}_${curStem}`;
+      const sourceStableTarget = `${family}/${subpart}_${corpusId}_${stem}`;
       allDbItems = allDbItems.filter((it) => ![producedStableTarget, sourceStableTarget].includes(stableTargetOfKey(it.key || '')));
       allDbItems.push(dbEntry);
       existingDb.add(partKey);
@@ -1236,7 +1281,7 @@ async function main() {
           consumer: `${family} catalog & partlib (${subpart})`,
           rev: 'HEAD', at: new Date().toISOString().slice(0, 10),
           imgs: [{
-            role: 'primary', id: `img_${hash}`, family, part: subpart,
+            role: 'primary', id: `img_${hash}`, family, part: subpart, corpusId,
             query: curStem, api: 'gemini_v6', license: 'unverified(restricted/local)',
             creator: null, source_url: '', file: rel,
           }],
@@ -1269,8 +1314,8 @@ async function main() {
 
     // 同一來源圖的所有獨立目標都通過後，才清除舊 regen verdict。
     if (REVIEW_STATUS && acceptedTargets.length === targetList.length) {
-      const sourceStableTarget = `${family}/${subpart}_${stem}`;
-      const old = reviewTargets.get(sourceStableTarget);
+      const sourceStableTarget = `${family}/${subpart}_${corpusId}_${stem}`;
+      const old = reviewTargets.get(sourceStableTarget) || reviewTargets.get(`${family}/${subpart}_${stem}`);
       if (old) delete reviewState.items[old.key];
       writeFileSync(stateJsonPath, `${JSON.stringify(reviewState, null, 2)}\n`, 'utf8');
     }

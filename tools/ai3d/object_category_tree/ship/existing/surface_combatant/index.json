@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/surface_combatant",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "surface_combatant",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/000-34TU8F7.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/000-34TU8F7.jpg"
+      },
+      "subtype": "guided_missile_surface_combatant",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/1802.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/1802.jpg"
+      },
+      "subtype": "guided_missile_surface_combatant",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/2000x1250_wmkn_84254351907813_0.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/2000x1250_wmkn_84254351907813_0.jpg"
+      },
+      "subtype": "guided_missile_surface_combatant",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/2000x1429_wmkn_19056648845677_0.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/2000x1429_wmkn_19056648845677_0.jpg"
+      },
+      "subtype": "guided_missile_surface_combatant",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/20oz-china-ships-wgkl-master1050.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/20oz-china-ships-wgkl-master1050.jpg"
+      },
+      "subtype": "guided_missile_surface_combatant",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/379b7bfc740ea9d22183f066b6e40ff8-600x400.jpg"
+      },
+      "subtype": "guided_missile_surface_combatant",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/id13750938-558191.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/id13750938-558191.jpg"
+      },
+      "subtype": "guided_missile_surface_combatant",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

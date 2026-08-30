@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/tanker",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "tanker",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/_127290139_04alamy-pwtk4p.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/_127290139_04alamy-pwtk4p.png"
+      },
+      "subtype": "lng_liquefied_natural_gas_carrier",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/20250401005245.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/20250401005245.jpg"
+      },
+      "subtype": "lng_liquefied_natural_gas_carrier",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/762bcd7026aa844c83ed2b0f5454b162.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/762bcd7026aa844c83ed2b0f5454b162.jpg"
+      },
+      "subtype": "lng_liquefied_natural_gas_carrier",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/Methanier_aspher_LNGRIVERS.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/Methanier_aspher_LNGRIVERS.jpg"
+      },
+      "subtype": "lng_liquefied_natural_gas_carrier",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

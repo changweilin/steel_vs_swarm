@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "path": "tree/existing/conifer_tree",
+  "family": "tree",
+  "branch": "existing",
+  "objectType": "conifer_tree",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:tree/images (5).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (5).jpg"
+      },
+      "subtype": "windswept_juniper",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/images (6).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (6).jpg"
+      },
+      "subtype": "windswept_juniper",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/images (8).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (8).jpg"
+      },
+      "subtype": "landscape_conifer_with_rock_context",
+      "confidence": 0.76,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/images (9).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (9).jpg"
+      },
+      "subtype": "rock_rooted_conifer_cluster",
+      "confidence": 0.78,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pine-tree-vector-white-background_28952-136.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pine-tree-vector-white-background_28952-136.avif"
+      },
+      "subtype": "stylized_windswept_pine",
+      "confidence": 0.7,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/1513x4724_wmkn_328537037215_202606050063000000.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/1513x4724_wmkn_328537037215_202606050063000000.jpg"
+      },
+      "subtype": "misty_tall_conifer",
+      "confidence": 0.74,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/5D11CCA4-7909-424.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/5D11CCA4-7909-424.jpg"
+      },
+      "subtype": "misty_sparse_conifer",
+      "confidence": 0.72,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1).jpg"
+      },
+      "subtype": "windswept_evergreen_tree",
+      "confidence": 0.64,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg"
+      },
+      "subtype": "windswept_evergreen_tree",
+      "confidence": 0.64,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg"
+      },
+      "subtype": "deodar_cedar",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg"
+      },
+      "subtype": "deodar_cedar",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg"
+      },
+      "subtype": "stylized_deodar_cedar",
+      "confidence": 0.89,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg"
+      },
+      "subtype": "stylized_deodar_cedar",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg"
+      },
+      "subtype": "alaska_cedar",
+      "confidence": 0.93,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg"
+      },
+      "subtype": "stylized_pine",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/pngtree-coniferous-tree-png-image_6230847.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-coniferous-tree-png-image_6230847.png"
+      },
+      "subtype": "stylized_conifer",
+      "confidence": 0.84,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png"
+      },
+      "subtype": "thick_branched_conifer",
+      "confidence": 0.87,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957.png"
+      },
+      "subtype": "slender_conifer",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg"
+      },
+      "subtype": "stylized_conifer",
+      "confidence": 0.82,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/山上的孤松樹.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/山上的孤松樹.jpg"
+      },
+      "subtype": "solitary_hill_pine",
+      "confidence": 0.83,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/臺灣杉照片提供／陳建帆.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/臺灣杉照片提供／陳建帆.jpg"
+      },
+      "subtype": "taiwan_cryptomeria",
+      "confidence": 0.9,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    }
+  ]
+}
