@@ -14,6 +14,7 @@
 //              假城市(視陸域或水域而定)。」
 //              追加:「也要考量坡度,太陡的時候只使用懸崖峭壁/土石流/山崩這類自然景觀,
 //              中等坡度可以再加上倒木/長城」
+//   2026-08-30「依水域/裸露地/綠地/市區/沼澤加入大型設施；風機轉速正比風量，浮動物隨浪起伏」
 //
 // 拆成可量測的不變式,本稽核逐條釘死:
 //   Ⅰ 推導不手寫 —— 環高下界 ← 最高機體全高、深型厚度 ← 基準厚、緩衝深度 ← 地平線距離。
@@ -51,6 +52,8 @@
 //                 `--break-boxh`         盒高改回逐款一個值 ⇒ Ⅲ 紅(素牆頂上撞得到卻看不見)
 //                 `--break-snow-summer`  夏季出現覆雪 ⇒ Ⅸ 紅(夏天無雪契約破壞)
 //                 `--break-snow-slope`   雪錐斜率失真外突 ⇒ Ⅸ 紅(山頂雪錐外擴懸空)
+//                 `--break-wet`          拔掉沼澤分類 ⇒ Ⅶ 紅(wet 型錄成為死資料)
+//                 `--break-motion`       風機轉速拔掉風量倍率 ⇒ Ⅶ 紅
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import {
@@ -67,6 +70,8 @@ const BREAK_BOXH = process.argv.includes('--break-boxh');
 const BREAK_LAND = process.argv.includes('--break-land');   // 逐零件落地關掉 ⇒ 斜坡上整段浮起來
 const BREAK_SNOW_SUMMER = process.argv.includes('--break-snow-summer');
 const BREAK_SNOW_SLOPE = process.argv.includes('--break-snow-slope');
+const BREAK_WET = process.argv.includes('--break-wet');
+const BREAK_MOTION = process.argv.includes('--break-motion');
 if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
 // 坡度分級失效:把每一款都改成「三級都站得住」⇒ 崖面上會擺出貨櫃車 / 連排民房
 if (process.argv.includes('--break-slope')) {
@@ -102,6 +107,7 @@ const gameSrc = readSrc('public', 'js', 'game.js');
 const bioSrc = readSrc('public', 'js', 'biomes.js');
 const terrSrc = readSrc('public', 'js', 'terrain.js');
 const ewSrc = readSrc('public', 'js', 'edgewall.js');
+const toonSrc = readSrc('public', 'js', 'toon.js');
 const simSrc = readSrc('server', 'sim.js');
 
 const strip = (s) => s
@@ -187,6 +193,8 @@ const mergeGeosStub = (geos, cols) => {
 };
 
 const classifyImg = new Function(`${grabFn(bioSrc, 'classifyImg')} return classifyImg;`)();
+const terrainEnvCode0 = new Function('WATER', `${grabFn(bioSrc, 'terrainEnvCode')} return terrainEnvCode;`)(WATER);
+const terrainEnvCode = BREAK_WET ? ((terrain, x, z) => terrainEnvCode0(terrain, x, z) === 2 ? 0 : terrainEnvCode0(terrain, x, z)) : terrainEnvCode0;
 // `--break-boxh`:把「盒高逐段實測」改回「逐款一個值」⇒ 素牆那幾節的頂上多出一截撞得到卻
 // 看不見的空氣。替換 MUST 當場驗有沒有生效(㋑:字面替換在 CRLF 工作區會是無聲 no-op)
 let wallSrc = grabFn(bioSrc, 'buildEdgeWall');
@@ -208,14 +216,14 @@ if (BREAK_LAND) {
 const mkWall = (extra = '', over = {}) => new Function(
   'THREE', 'envMat', 'mergeGeos', 'WORLD_EDGE', 'edgeWallInsetM', 'edgeWallHM', 'WATER',
   'SLOPE', 'slopeDeg', 'wallSlopeTier',
-  'classifyImg', 'planWallRuns', 'WALL_KINDS', 'wallParts', 'edgeSeed',
+  'classifyImg', 'terrainEnvCode', 'planWallRuns', 'WALL_KINDS', 'wallParts', 'edgeSeed',
   'planBufferProps', 'propParts', 'planBackdrop', 'backdropParts', 'BACKDROP_KINDS',
   'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox',
   `${HELPERS}\n${wallSrc}\n${grabFn(bioSrc, 'buildBufferProps')}\n${grabFn(bioSrc, 'buildBackdrop')}\n${extra}
    return { buildEdgeWall, buildBufferProps, buildBackdrop };`,
 )(THREE_STUB, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
   SLOPE, slopeDeg, EW.wallSlopeTier,
-  classifyImg, EW.planWallRuns, EW.WALL_KINDS, wallParts, EW.edgeSeed,
+  classifyImg, terrainEnvCode, EW.planWallRuns, EW.WALL_KINDS, wallParts, EW.edgeSeed,
   over.planBufferProps || EW.planBufferProps, over.propParts || EW.propParts,
   over.planBackdrop || EW.planBackdrop, over.backdropParts || EW.backdropParts, EW.BACKDROP_KINDS,
   EW.EDGE_WALL, edgeBufferM, objHeightMax, false, EW.partBox);
@@ -231,12 +239,13 @@ const T = {
   waterY: 2,
   heightAt: (x, z) => {
     if (z < -260) return -4;                                          // 水域
+    if (z < -180) return 3;                                           // 沼澤(水面上 SWAMP_BAND 內)
     const base = 30 + Math.sin(x / 37) * 9 + Math.cos(z / 53) * 7;
     if (x > 250) return base + (x - 250) * TAN_STEEP;                 // 陡崖
     if (x > 60) return base + (x - 60) * TAN_MID;                     // 中等坡
     return base;
   },
-  sampleColor: (x, z) => (z < -260 ? [60, 90, 160] : (x < 0 ? [120, 120, 120] : [150, 120, 80])),
+  sampleColor: (x, z) => (z < -260 ? [60, 90, 160] : (z < -180 ? [82, 96, 78] : (x < 0 ? [120, 120, 120] : [150, 120, 80]))),
   bufferHeightAt: (x, z) => 20 + Math.sin(x / 90) * 6 + Math.cos(z / 110) * 5,
   // 裙實際鋪的深度:2026-08-13 起 terrain 對外交出這一個數(迷你地圖縮到 1/3),
   // 緩衝布景 / 視線背景 / 地貌底毯一律讀它,MUST NOT 各自再呼叫 edgeBufferM()
@@ -248,6 +257,23 @@ emitted.length = 0;
 const segs = B.buildEdgeWall({ group, terrain: T, blockers });
 const wallEmitted = emitted.slice();
 const IN = edgeWallInsetM();
+// 動態件不進靜態合批；用 edgewall.partBox 的完整運動包絡轉成世界 AABB，與靜態件一起驗 A30。
+const motionEmitted = [];
+for (const s of segs) {
+  const c = Math.cos(s.fry), sn = Math.sin(s.fry);
+  for (const p of s.motion || []) {
+    const b = EW.partBox(p), pts = [];
+    for (const x of [b.x0, b.x1]) for (const z of [b.z0, b.z1]) {
+      pts.push([s.x + c * x + sn * z, s.z - sn * x + c * z]);
+    }
+    motionEmitted.push({
+      x0: Math.min(...pts.map((q) => q[0])), x1: Math.max(...pts.map((q) => q[0])),
+      y0: s.ground + b.y0, y1: s.ground + b.y1,
+      z0: Math.min(...pts.map((q) => q[1])), z1: Math.max(...pts.map((q) => q[1])),
+    });
+  }
+}
+const visualEmitted = [...wallEmitted, ...motionEmitted];
 
 // ============ Ⅰ 推導不手寫 ============
 console.log('\nⅠ 推導不手寫(環高 ← 機體 / 厚度 ← 基準厚 / 緩衝 ← 地平線)');
@@ -349,8 +375,9 @@ console.log('\nⅡ 不可越過 = 環上沒有縫(真品 buildEdgeWall + 合成�
   const src = grabFn(bioSrc, 'buildEdgeWall');
   t('零共享 rnd 消耗(§2.3:插在任何位置都不推移植被佈局)',
     !/\brnd\s*\(/.test(strip(src)) && !/Math\.random/.test(strip(src)));
-  t('選色/選款走 classifyImg(純影像判、零亂數),MUST NOT 改吃會抽 rnd 的 classify',
-    /classifyImg\(/.test(strip(src)) && !/[^g]\bclassify\(/.test(strip(src)));
+  t('水／沼選型走 terrainEnvCode、乾地才走 classifyImg(純分類、零亂數；wet 不再是死資料)',
+    /terrainEnvCode\(terrain, px, pz\)/.test(strip(src)) && /classifyImg\(/.test(strip(src))
+    && !/[^g]\bclassify\(/.test(strip(src)));
   emitted.length = 0;
   const again = B.buildEdgeWall({ group, terrain: T, blockers: [] });
   t('決定性:同一份輸入跑兩次逐位元相同', JSON.stringify(segs) === JSON.stringify(again));
@@ -379,19 +406,19 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
       && bx.z0 >= b.z - hz - e && bx.z1 <= b.z + hz + e;
   };
   let out = 0, worst = null;
-  for (const bx of wallEmitted) {
+  for (const bx of visualEmitted) {
     if (blockers.some((b) => inBox(bx, b))) continue;
     out++;
     if (!worst) worst = bx;
   }
-  t(`每一顆零件都收在碰撞柱之內(${wallEmitted.length} 件,頂出 ${out} 件)`, out === 0,
+  t(`每一顆零件及完整運動包絡都收在碰撞柱之內(${visualEmitted.length} 件,頂出 ${out} 件)`, out === 0,
     worst ? `（例:x ${worst.x0.toFixed(1)}~${worst.x1.toFixed(1)} y ${worst.y0.toFixed(1)}~${worst.y1.toFixed(1)} z ${worst.z0.toFixed(1)}~${worst.z1.toFixed(1)}）` : '');
   // 底座:段底到落地基準那一截 MUST 有東西(不然是「牆浮在坡上」+「撞得到卻看不見」)
   const floors = new Map();
   for (const b of blockers) floors.set(`${b.x.toFixed(2)},${b.z.toFixed(2)}`, b);
   let plinthOk = true;
   for (const b of blockers) {
-    const bottom = wallEmitted.filter((bx) => inBox(bx, b)).reduce((m, bx) => Math.min(m, bx.y0), Infinity);
+    const bottom = visualEmitted.filter((bx) => inBox(bx, b)).reduce((m, bx) => Math.min(m, bx.y0), Infinity);
     if (bottom > b.y + 0.05) plinthOk = false;
   }
   t('每一段的演出都鋪到盒底(底座補滿地形起伏與埋深 ⇒ 牆不浮在坡上)', plinthOk);
@@ -400,7 +427,7 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
   // 下界仍是環高(`edgeWallHM`):比它矮的款照樣頂到那條線,「沒有機體看得過去」不動。
   let airGap = 0, worstGap = null;
   for (const s of segs) {
-    const top = wallEmitted.filter((bx) => inBox(bx, s)).reduce((m, bx) => Math.max(m, bx.y1), -Infinity);
+    const top = visualEmitted.filter((bx) => inBox(bx, s)).reduce((m, bx) => Math.max(m, bx.y1), -Infinity);
     const want = Math.max(s.ground + edgeWallHM(), top);
     if (Math.abs((s.y + s.h) - want) > 1e-6) {
       airGap++;
@@ -409,9 +436,11 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
   }
   t('每一段的盒高 = 該段零件的實測頂(下界 = 環高)⇒ 頂上沒有一截撞得到卻看不見的空氣',
     airGap === 0, `（${airGap} 段;例:${worstGap}）`);
-  const cw = segs.filter((s) => s.kind === 'citywall');
-  t(`同一款的節可以有不同盒高(城牆 ${cw.length} 節出現 ${new Set(cw.map((s) => s.kh.toFixed(2))).size} 種高度 —— 素牆 / 箭樓 / 砲台 / 城樓)`,
-    cw.length === 0 || new Set(cw.map((s) => s.kh.toFixed(2))).size >= 2);
+  const city = EW.WALL_KINDS.citywall, cityH = Math.max(edgeWallHM(), city.h);
+  const cityTops = new Set(Array.from({ length: 80 }, (_, i) => Math.max(...wallParts('citywall', {
+    len: WORLD_EDGE.SEG_M * WORLD_EDGE.SEG_LAP_F, depth: city.depth, h: cityH, seed: i + 1,
+  }).map((p) => EW.partBox(p).y1)).toFixed(2)));
+  t(`同一款的節可以有不同盒高(城牆 80 種子出現 ${cityTops.size} 種高度 —— 素牆 / 箭樓 / 砲台 / 城樓)`, cityTops.size >= 4);
   t('演出走合併幾何而不是逐件 mesh(整圈一個 draw call;本渲染器是 draw call 瓶頸)',
     /mergeGeos\(batch\.geos, batch\.cols\)/.test(bioCode) && /vertexColors: true/.test(bioCode));
 }
@@ -610,6 +639,21 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
   }
   t('水域候選全是水域款(海堤/消波塊/貨輪 —— 城牆站在水裡是這一族最明顯的破綻)',
     EW.wallCandidates('water', true).every((k) => EW.WALL_KINDS[k].dom === 'water'));
+  const requested = {
+    water: ['windsea', 'floatsolar', 'searanch', 'deeprig', 'tetrapod'],
+    bare: ['windland', 'solarfield', 'mine', 'oilfield'],
+    green: ['windland', 'ranch', 'greenhouse'],
+    urban: ['factory', 'powerplant', 'incinerator', 'skyscrapers'],
+    wet: ['oysterracks', 'strandedship', 'whale', 'wetpods'],
+  };
+  for (const [bio, want] of Object.entries(requested)) {
+    const got = EW.wallCandidates(bio, bio === 'water');
+    t(`新增地貌型錄 ${bio}: ${want.map((k) => EW.WALL_KINDS[k]?.label || k).join(' / ')}`,
+      want.every((k) => got.includes(k)));
+  }
+  t('合成地形真的產生沼澤段，且只會挑 wet 型錄(不是只驗一張永遠選不到的表)',
+    segs.some((s) => s.biome === 'wet')
+    && segs.filter((s) => s.biome === 'wet').every((s) => EW.WALL_KINDS[s.kind].bio.includes('wet')));
   t('地貌認不出來也一定挑得到一款(原則 6:降級不例外)',
     EW.wallCandidates('???', false).length > 0 && EW.wallCandidates('???', true).length > 0);
   // 每一款:收得進盒子(三軸)+ 宣告的 depth/h 與實算雙向吻合 + 內面蓋得滿
@@ -639,6 +683,27 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     fillBad.length === 0, `（${fillBad.join(' / ')}）`);
   t(`每一款的內面都蓋滿到機體視線高 ${band.toFixed(1)}m(覆蓋率 ≥ ${EW.EDGE_WALL.FACE_COVER};不然是撞得到卻看得穿)`,
     faceBad.length === 0, `（${faceBad.join(' / ')}）`);
+  const windRows = ['windsea', 'windland'].flatMap((k) => {
+    const d = EW.WALL_KINDS[k]; return wallParts(k, { len, depth: d.depth, h: d.h, seed: 7 });
+  });
+  const floatingRows = ['floatsolar', 'searanch', 'deeprig'].flatMap((k) => {
+    const d = EW.WALL_KINDS[k]; return wallParts(k, { len, depth: d.depth, h: d.h, seed: 9 });
+  });
+  t('兩種風機陣列都把葉片標成 rotor 剛體樞軸(塔身仍留在靜態合批)',
+    windRows.some((p) => p.motion?.kind === 'rotor') && windRows.some((p) => !p.motion));
+  t('浮動太陽能／海上牧場／深海油井都具 float 剛體包絡',
+    ['floatsolar', 'searanch', 'deeprig'].every((k) => {
+      const d = EW.WALL_KINDS[k];
+      return wallParts(k, { len, depth: d.depth, h: d.h, seed: 9 }).some((p) => p.motion?.kind === 'float');
+    }));
+  let motionSrc = strip(grabFn(bioSrc, 'buildEdgeMotion'));
+  if (BREAK_MOTION) motionSrc = motionSrc.replace('EDGE_MOTION.ROTOR_RAD_S * wind', 'EDGE_MOTION.ROTOR_RAD_S');
+  t('風機角速度 = EDGE_MOTION.ROTOR_RAD_S × 即時風量(正比，不另寫第二份天氣表)',
+    /EDGE_MOTION\.ROTOR_RAD_S \* wind/.test(motionSrc) && /wind = celWindAmount\(\)/.test(motionSrc)
+    && /export function celWindAmount\(\)/.test(toonSrc));
+  t('浮動設施吃 celWindTime + celWaveAmount，並掛進既有 dynamics 桶',
+    /t = celWindTime\(\)/.test(motionSrc) && /wave = celWaveAmount\(\)/.test(motionSrc)
+    && /dynamics\.push\(/.test(motionSrc) && /buildEdgeMotion\(\{ group, segs: edgeSegs, dynamics \}\)/.test(bioCode));
   // 切分規則:①地貌/水陸域改變 ②太長 ③短 run 併回去 ④相鄰不同款 ⑤決定性
   const mk = (n, biome, water) => Array.from({ length: n }, (_, i) => (
     { x: -800 + i * len, z: -500, len, biome, water }));

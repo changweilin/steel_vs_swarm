@@ -1237,6 +1237,10 @@ export function stepCelWind(dt) {
 
 /** 目前的風時鐘(秒);雲朵那半(environment.js)與植被同吃一個時鐘 */
 export function celWindTime() { return _windT.value; }
+/** 邊界風機的即時風量；轉速必須與這一格成正比。 */
+export function celWindAmount() { return Math.max(0, _weatherWind.amp.value); }
+/** 浮動設施的即時浪量；結冰時為 0，與海面著色器使用同一來源。 */
+export function celWaveAmount() { return Math.max(0, _weatherWind.waveAmp.value); }
 
 /**
  * 餵入這一幀的擾動源(唯一寫入點;呼叫端 = `game.js` 主迴圈,MUST 排在 `_updateEnts` 之後)。
