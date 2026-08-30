@@ -105,11 +105,11 @@ export const WALL_KINDS = {
   seawall:   { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 10,  h: 8,    label: '海堤' },
   tetrapod:  { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 12,  h: 9.2,  label: '大型消波塊層層堆疊' },
   ship:      { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 18,  h: 22,   label: '連排貨輪' },
-  // ---- 大型邊界設施(同族共用生成器；款式差異只住資料列)----
-  windsea:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 28, label: '海上風機陣列', family: 'wind', col: [0xd9dde0, 0x70808c] },
-  floatsolar:   { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 14, label: '浮動式太陽能板陣列', family: 'solar', floating: true, col: [0x244b73, 0x6b8799] },
-  searanch:     { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 16, label: '海上牧場', family: 'ranch', floating: true, col: [0x3f6f7a, 0xc28c38] },
-  deeprig:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 28, label: '深海油井', family: 'extract', floating: true, col: [0xd07a32, 0x596168] },
+  // ---- 大型邊界設施(同族共用生成器；水域款直接落水，不借用海堤／擋土平台)----
+  windsea:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 28, label: '海上風機陣列', family: 'wind', mount: 'fixed', col: [0xd9dde0, 0x70808c] },
+  floatsolar:   { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 9,  label: '浮動式太陽能板陣列', family: 'solar', mount: 'float', col: [0x244b73, 0x6b8799] },
+  searanch:     { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 12, label: '海上牧場（網箱／圍網／貝類長線）', family: 'ranch', mount: 'float', col: [0x3f6f7a, 0xc28c38] },
+  deeprig:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 28, label: '深海油井', family: 'extract', mount: 'float', col: [0xd07a32, 0x596168] },
   windland:     { dom: 'land',  bio: ['bare', 'green'], slope: 'flat', depth: 14, h: 28, label: '陸域風機陣列', family: 'wind', col: [0xe1e4e4, 0x69747c] },
   solarfield:   { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 14, h: 14, label: '太陽能板陣列', family: 'solar', col: [0x243f63, 0x777b70] },
   mine:         { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 18, h: 20, label: '大型礦場', family: 'extract', col: [0xb88a3d, 0x786c5d] },
@@ -712,12 +712,10 @@ const PARTS = {
       ]),
     ];
   },
-  // 消波塊:拋石基座 + 兩層交錯的消波塊(每塊 = 塊心 + 三支腳,四支腳的第四支恆埋在下面)。
-  // 消波塊本來就是**有孔隙**的護面 —— 內面覆蓋率靠腳下那道混凝土護坡撐到門檻之上,
-  // 塊體之間看得到縫是它應該有的樣子(門檻 `FACE_COVER` 就是為這一款訂的下界)。
+  // 消波塊:直接由水面堆起的三層交錯塊群(每塊 = 塊心 + 四支腳)，不另墊海堤／護坡平台。
+  // 兩道塊群互相錯開；斜腳的包絡蓋住內面，但視覺上仍保留消波塊本來就該有的孔隙。
   tetrapod: (len, D, H, rnd) => {
-    const base = H * 0.5;   // 拋石基座:內面覆蓋率的主力(塊體之間本來就有孔隙,撐不起門檻)
-    // 一顆消波塊 = 塊心 + 四支腳(第四支朝外下方)。外廓:x/z ±1.92s、y −1.08s ~ +2.0s
+    // 一顆消波塊 = 塊心 + 四支腳。最低腳尖恰貼水面，整顆不靠方盒墊高。
     const pod = (x, y, z, s) => {
       const c = pick(rnd, [0x9fa2a4, 0x94989a, 0xa8abad]);
       const leg = [0.38 * s, 0.24 * s, 2.1 * s, 5];
@@ -730,27 +728,29 @@ const PARTS = {
       ];
     };
     return [
-      { g: ['box', len, base, D], c: 0x7f817f, p: [0, base / 2, 0] },
-      { g: ['box', len, base * 1.16, D * 0.44], c: 0x8b8d8b, p: [0, base * 0.58, -D / 2 + D * 0.22] },
-      ...rep(len, 5.1, (x, s, i) => {
-        const s1 = 1.0 + rnd() * 0.16, s2 = 1.0 + rnd() * 0.16, s3 = 0.92 + rnd() * 0.16;
+      ...rep(len, 3.0, (x, step, i) => {
+        const px = x * 0.8;
+        const s1 = 0.94 + rnd() * 0.06, s2 = 0.94 + rnd() * 0.06;
+        const s3 = 0.94 + rnd() * 0.06, s4 = 0.94 + rnd() * 0.06;
         return [
-          ...pod(x, base + 1.1 * s1, zIn(D, 4.2), s1),
-          ...pod(x + s * 0.06 * (i % 2 ? 1 : -1), base + 1.0 * s2, zIn(D, 4.2, 3.6), s2),
-          // 頂層由 H 反推(不是往上疊)—— 疊上去的話換一次機體尺寸就穿出盒頂
-          ...pod(x + s * 0.04, H - 2.0 * s3 - 0.05, zIn(D, 4.4, 1.8), s3),
+          ...pod(px, 1.08 * s1, zIn(D, 1.9), s1),
+          ...pod(px + step * 0.05 * (i % 2 ? 1 : -1), 3.08 * s2, zIn(D, 1.9), s2),
+          ...pod(px - step * 0.04 * (i % 2 ? 1 : -1), 5.08 * s3, zIn(D, 1.9), s3),
+          // 頂層由 H 反推；換機體尺度時不會穿出盒頂。
+          ...pod(px + step * 0.04, H - 2.0 * s4 - 0.05, zIn(D, 1.9), s4),
+          // 外側水下護腳只負責形成真正有深度的塊群，不是整段基座。
+          ...pod(px - step * 0.03, 1.08 * s2, -D / 2 + 1.92, s2),
         ];
       }),
     ];
   },
-  // 連排貨輪:擱淺的沿海貨輪一艘接一艘 —— 灘床 + 船體 + 舷條 + 貨櫃堆 + 上層建築 + 桅桿。
+  // 連排貨輪:船體吃水線直接貼水，不再以整段灘床／碼頭盒墊高。
   ship: (len, D, H, rnd) => {
-    const flat = 3.0, hullH = 8, hullD = 15, deck = flat + hullH;
+    const hullH = 8, hullD = D, deck = hullH;
     const hullC = pick(rnd, [0x7d3f36, 0x2f5566, 0x3f5a3c, 0x53565c]);
     return [
-      { g: ['box', len, flat, D], c: 0x6f6a5e, p: [0, flat / 2, 0] },
-      { g: ['box', len * 0.99, hullH, hullD], c: hullC, p: [0, flat + hullH / 2, zIn(D, hullD)] },
-      { g: ['box', len * 0.99, 0.9, hullD * 0.99], c: 0xb0402f, p: [0, flat + 1.4, zIn(D, hullD)] },
+      { g: ['box', len * 0.99, hullH, hullD], c: hullC, p: [0, hullH / 2, 0], role: 'hull' },
+      { g: ['box', len * 0.99, 0.9, hullD * 0.99], c: 0xb0402f, p: [0, 1.4, 0], role: 'hull' },
       { g: ['box', len * 0.99, 0.5, hullD], c: 0x8a8f92, p: [0, deck + 0.25, zIn(D, hullD)] },
       // 貨櫃堆(三列 × 兩層)
       ...rep(len, 6.4, (x, s) => [-4.6, 0, 4.6].flatMap((z, j) => [
@@ -784,11 +784,11 @@ const PARTS = {
 };
 
 // ---- 大型設施族生成器 -------------------------------------------------------
-// `WALL_KINDS` 的每一款只是資料列；同族共用這些生成器，避免風機／工業量體／農牧設施
-// 各自長出一份略有不同的接點與比例。所有設施都坐在可見的防洪／擋土基座上，這道基座
-// 同時填滿碰撞盒內面；陣列本身有孔隙，但不會形成「看得穿、走不過」的隱形牆。
+// `WALL_KINDS` 的每一款只是資料列；同族共用生成器，避免風機／工業量體／農牧設施各自
+// 長出一份略有不同的接點與比例。陸域設施才使用防洪／擋土基座；水域設施直接落水，改以
+// 固定式樁架、浮筒、繫泊浮標與交叉構架表達邊界量體，MUST NOT 偷墊整段海堤方盒。
 const facilityWallH = (H) => Math.min(H - 1, Math.max(7.4, H * 0.34));
-const facilityBase = (len, D, H, rnd, c) => {
+const facilityBase = (len, D, H, c) => {
   const bh = facilityWallH(H);
   return {
     bh,
@@ -799,20 +799,43 @@ const facilityBase = (len, D, H, rnd, c) => {
     ],
   };
 };
+// 水域邊界的交叉構架兼作風機樁架／網箱外框／光電維修邊框。細斜材的 AABB 蓋得住權威盒
+// 的內面，畫面上仍看得穿水；外側繫泊浮標把宣告深度用滿，不是整段平台。
+const marineFrame = (len, D, H, c) => {
+  const fh = Math.min(H - 0.3, 7.4), z = zIn(D, 0.18, 0.04);
+  return {
+    bh: 0,
+    parts: [
+      ...rep(len, 4.2, (x, step) => {
+        const span = step * 0.82, rise = fh - 0.36;
+        const L = Math.hypot(span, rise), a = Math.atan2(rise, span);
+        return [
+          { g: ['box', L, 0.16, 0.18], c: c[1], p: [x, fh / 2, z], r: [0, 0, a] },
+          { g: ['box', L, 0.16, 0.18], c: c[1], p: [x, fh / 2, z], r: [0, 0, -a] },
+          { g: ['box', step * 0.86, 0.16, 0.22], c: c[0], p: [x, 0.52, z] },
+        ];
+      }),
+      { g: ['ico', 0.4], c: 0xe2b84d, p: [0, 0.4, -D / 2 + 0.44], role: 'mooring' },
+    ],
+  };
+};
 const moving = (row, kind, id, pivot, phase, pad = 0) => ({
   ...row, motion: { kind, id, pivot, phase, pad },
 });
 
 const windFacility = (len, D, H, rnd, spec) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const marine = spec.dom === 'water';
+  const base = marine ? marineFrame(len, D, H, spec.col) : facilityBase(len, D, H, spec.col);
   const bladeR = 5.0, hubY = H - bladeR - 0.18;
   return [
     ...base.parts,
     ...rep(len, 11.8, (x, step, i) => {
       const z = zIn(D, 0.3, 0.55), id = `rotor_${i}`;
       const pivot = [x, hubY, z], phase = rnd() * Math.PI * 2;
+      const footY = marine ? 0 : base.bh;
       return [
-        { g: ['cyl', 0.34, 0.54, hubY - base.bh, 8], c: spec.col[0], p: [x, base.bh + (hubY - base.bh) / 2, zIn(D, 1.2, 1.5)] },
+        ...(marine ? [{ g: ['cone', 1.2, 2.4, 8], c: spec.col[1], p: [x, 1.2, zIn(D, 2.4, 1.2)], role: 'monopile' }] : []),
+        { g: ['cyl', 0.34, 0.54, hubY - footY, 8], c: spec.col[0], p: [x, footY + (hubY - footY) / 2, zIn(D, 1.2, 1.5)] },
         { g: ['box', 1.6, 0.8, 1.4], c: spec.col[1], p: [x, hubY, zIn(D, 1.4, 0.35)] },
         { g: ['ico', 0.62], c: 0xd9dde0, p: pivot },
         ...[0, 1, 2].map((j) => {
@@ -829,60 +852,73 @@ const windFacility = (len, D, H, rnd, spec) => {
 };
 
 const solarFacility = (len, D, H, rnd, spec) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const marine = spec.dom === 'water';
+  const base = marine ? marineFrame(len, D, H, spec.col) : facilityBase(len, D, H, spec.col);
   const panels = rep(len, 6.2, (x, step, i) => {
-    const y = base.bh + 1.05, z = zIn(D, 4.8, 1.1), id = `float_${i}`;
+    const y = marine ? 1.18 : base.bh + 1.05;
+    const z = zIn(D, 4.8, 1.1), id = `float_${i}`;
     const rows = [
       { g: ['box', step * 0.72, 0.22, 4.6], c: spec.col[0], p: [x, y, z], r: [-0.18, 0, 0] },
-      { g: ['box', step * 0.76, 0.28, 5.0], c: 0x56636a, p: [x, y - 0.42, z] },
+      { g: ['box', step * 0.76, 0.28, 5.0], c: 0x56636a, p: [x, marine ? 0.76 : y - 0.42, z], role: marine ? 'float' : undefined },
       ...[-1.7, 0, 1.7].map((o) => ({ g: ['box', step * 0.68, 0.06, 0.08], c: 0xaeb8bc, p: [x, y + 0.14, z + o] })),
     ];
-    if (!spec.floating) return rows;
-    const pivot = [x, y - 0.42, z];
+    if (spec.mount !== 'float') return rows;
+    const pivot = [x, 0.76, z];
     const phase = rnd() * Math.PI * 2;
     return rows.map((p) => moving(p, 'float', id, pivot, phase, EDGE_MOTION.FLOAT_AMP_M + 0.12));
   });
   return [
     ...base.parts, ...panels,
-    { g: ['cyl', 0.16, 0.22, H - base.bh, 6], c: 0xb9c0c2, p: [len * 0.38, base.bh + (H - base.bh) / 2, -D / 2 + 1.4] },
+    { g: ['box', 3.4, 0.7, 2.4], c: 0xe0ded4, p: [len * 0.2, marine ? 1.05 : base.bh + 0.35, -D / 2 + 1.4], role: marine ? 'inverter-float' : undefined },
+    { g: ['cyl', 0.16, 0.22, H - (marine ? 0.4 : base.bh), 6], c: 0xb9c0c2, p: [len * 0.38, (marine ? 0.4 : base.bh) + (H - (marine ? 0.4 : base.bh)) / 2, -D / 2 + 1.4], role: 'marker' },
   ];
 };
 
 const ranchFacility = (len, D, H, rnd, spec) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const marine = spec.dom === 'water';
+  const base = marine ? marineFrame(len, D, H, spec.col) : facilityBase(len, D, H, spec.col);
   const pens = rep(len, 7.5, (x, step, i) => {
-    const y = base.bh + 0.38, z = zIn(D, 5.2, 1.0), id = `pen_${i}`, pivot = [x, y, z];
+    const y = marine ? 1.0 : base.bh + 0.38;
+    const z = zIn(D, 5.2, 1.0), id = `pen_${i}`, pivot = [x, y, z];
     const rows = [
-      { g: ['box', step * 0.82, 0.34, 5.0], c: spec.col[1], p: [x, y, z] },
-      ...[-2.2, 2.2].map((o) => ({ g: ['box', step * 0.86, 1.2, 0.14], c: spec.col[0], p: [x, y + 0.6, z + o] })),
-      ...[-1, 1].map((sd) => ({ g: ['box', 0.14, 1.2, 4.5], c: spec.col[0], p: [x + sd * step * 0.38, y + 0.6, z] })),
-      ...[-1.5, 0, 1.5].map((o) => ({ g: ['ico', 0.42], c: spec.floating ? 0xd9b24b : 0xd8d0bd, p: [x + o, y + 0.72, z + (rnd() - 0.5) * 2.6] })),
+      // 大型箱網／圍網的浮式環框；中間保持空水面，不以方盒填滿。
+      ...[-2.2, 2.2].map((o) => ({ g: ['box', step * 0.86, 0.28, 0.22], c: spec.col[0], p: [x, y, z + o], role: 'cage-collar' })),
+      ...[-1, 1].map((sd) => ({ g: ['box', 0.22, 0.28, 4.6], c: spec.col[0], p: [x + sd * step * 0.39, y, z], role: 'cage-collar' })),
+      ...[-1.5, 0, 1.5].map((o) => ({ g: ['ico', 0.42], c: marine ? 0xd9b24b : 0xd8d0bd, p: [x + o, y + 0.28, z + (rnd() - 0.5) * 2.6], role: 'buoy' })),
+      // 上方細框是防鳥網／投餌索，不是建築牆面。
+      ...[-1, 1].map((sd) => ({ g: ['box', 0.12, 3.8, 0.12], c: spec.col[1], p: [x + sd * step * 0.36, y + 1.9, z + 2.15] })),
+      { g: ['box', step * 0.76, 0.1, 0.1], c: spec.col[1], p: [x, y + 3.78, z + 2.15] },
     ];
-    if (!spec.floating) return rows;
+    if (spec.mount !== 'float') return rows;
     const phase = rnd() * Math.PI * 2;
     return rows.map((p) => moving(p, 'float', id, pivot, phase, EDGE_MOTION.FLOAT_AMP_M + 0.12));
   });
   return [
     ...base.parts, ...pens,
-    { g: ['box', 5.8, H - base.bh, 5.2], c: spec.col[0], p: [len * 0.31, base.bh + (H - base.bh) / 2, -D / 2 + 3.0] },
-    { g: ['box', 6.4, 0.32, 5.8], c: 0x76563f, p: [len * 0.31, H - 0.16, -D / 2 + 3.0] },
+    // 飼料／維修浮台是獨立小船台；旁邊長線以浮標串出貝類養殖帶。
+    { g: ['box', 4.8, 0.8, 4.2], c: spec.col[0], p: [len * 0.26, marine ? 1.0 : base.bh + 0.4, -D / 2 + 2.6], role: marine ? 'service-float' : undefined },
+    { g: ['box', 3.8, 3.4, 3.2], c: 0xd8d0bd, p: [len * 0.26, marine ? 3.1 : base.bh + 2.1, -D / 2 + 2.6] },
+    ...rep(len * 0.62, 2.4, (x) => [{ g: ['ico', 0.34], c: 0xe0ad3f, p: [x - len * 0.16, 0.48, -D / 2 + 0.6], role: 'longline-buoy' }]),
+    { g: ['cyl', 0.14, 0.2, H - 0.4, 6], c: spec.col[1], p: [len * 0.4, 0.4 + (H - 0.4) / 2, -D / 2 + 1.0], role: 'marker' },
   ];
 };
 
 const extractFacility = (len, D, H, rnd, spec, kind) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const marine = spec.dom === 'water';
+  const base = marine ? marineFrame(len, D, H, spec.col) : facilityBase(len, D, H, spec.col);
   if (kind === 'deeprig') {
-    const y = base.bh + 2.4, pivot = [0, y, 0], id = 'rig_float';
+    const pad = EDGE_MOTION.FLOAT_AMP_M + 0.14;
+    const y = 2.5, pivot = [0, 1.2, 0], id = 'rig_float';
     const phase = rnd() * Math.PI * 2;
     const deck = [
       { g: ['box', len * 0.72, 1.0, D * 0.72], c: spec.col[0], p: [0, y, 0] },
-      ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({ g: ['cyl', 0.72, 1.0, 5.0, 7], c: spec.col[1], p: [sx * len * 0.27, y - 2.1, sz * D * 0.26] }))),
+      ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({ g: ['box', 2.2, 1.1, 4.8], c: spec.col[1], p: [sx * len * 0.25, 1.2, sz * D * 0.24], role: 'pontoon' }))),
       { g: ['box', 5.2, 4.2, 4.8], c: 0xd7d1c2, p: [len * 0.2, y + 2.6, -D * 0.1] },
-    ].map((p) => moving(p, 'float', id, pivot, phase, EDGE_MOTION.FLOAT_AMP_M + 0.14));
+      { g: ['cyl', 0.28, 0.42, H - pad - 3.0, 6], c: spec.col[1], p: [0, 3.0 + (H - pad - 3.0) / 2, 0] },
+      { g: ['box', 7.2, 0.42, 7.2], c: spec.col[0], p: [0, H - pad - 0.21, 0] },
+    ].map((p) => moving(p, 'float', id, pivot, phase, pad));
     return [
       ...base.parts, ...deck,
-      { g: ['cyl', 0.28, 0.42, H - base.bh, 6], c: spec.col[1], p: [0, base.bh + (H - base.bh) / 2, 0] },
-      { g: ['box', 7.2, 0.42, 7.2], c: spec.col[0], p: [0, H - 0.21, 0] },
     ];
   }
   const pump = (x, i) => {
@@ -902,7 +938,7 @@ const extractFacility = (len, D, H, rnd, spec, kind) => {
 };
 
 const greenhouseFacility = (len, D, H, rnd, spec) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const base = facilityBase(len, D, H, spec.col);
   return [
     ...base.parts,
     ...rep(len, 7.2, (x, step) => [
@@ -915,7 +951,7 @@ const greenhouseFacility = (len, D, H, rnd, spec) => {
 };
 
 const industryFacility = (len, D, H, rnd, spec, kind) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const base = facilityBase(len, D, H, spec.col);
   if (kind === 'skyscrapers') {
     return [
       ...base.parts,
@@ -945,7 +981,7 @@ const industryFacility = (len, D, H, rnd, spec, kind) => {
 };
 
 const wetlandFacility = (len, D, H, rnd, spec) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const base = facilityBase(len, D, H, spec.col);
   return [
     ...base.parts,
     ...rep(len, 5.4, (x, step) => [
@@ -958,7 +994,7 @@ const wetlandFacility = (len, D, H, rnd, spec) => {
 };
 
 const wreckFacility = (len, D, H, rnd, spec, kind) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const base = facilityBase(len, D, H, spec.col);
   if (kind === 'whale') {
     return [
       ...base.parts,
@@ -978,7 +1014,7 @@ const wreckFacility = (len, D, H, rnd, spec, kind) => {
 };
 
 const podFacility = (len, D, H, rnd, spec) => {
-  const base = facilityBase(len, D, H, rnd, spec.col);
+  const base = facilityBase(len, D, H, spec.col);
   const pod = (x, y, z, s, rz) => [
     { g: ['ico', 0.92 * s], c: pick(rnd, spec.col), p: [x, y, z] },
     ...[-1, 1].map((sd) => ({ g: ['cyl', 0.34 * s, 0.2 * s, 2.4 * s, 6], c: pick(rnd, spec.col), p: [x + sd * 0.82 * s, y, z], r: [0, 0, sd * 1.05 + rz] })),

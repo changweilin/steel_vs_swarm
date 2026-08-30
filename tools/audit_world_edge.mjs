@@ -54,6 +54,7 @@
 //                 `--break-snow-slope`   雪錐斜率失真外突 ⇒ Ⅸ 紅(山頂雪錐外擴懸空)
 //                 `--break-wet`          拔掉沼澤分類 ⇒ Ⅶ 紅(wet 型錄成為死資料)
 //                 `--break-motion`       風機轉速拔掉風量倍率 ⇒ Ⅶ 紅
+//                 `--break-water-platform` 往浮動光電塞回整段水泥底座 ⇒ Ⅶ 紅
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import {
@@ -72,6 +73,7 @@ const BREAK_SNOW_SUMMER = process.argv.includes('--break-snow-summer');
 const BREAK_SNOW_SLOPE = process.argv.includes('--break-snow-slope');
 const BREAK_WET = process.argv.includes('--break-wet');
 const BREAK_MOTION = process.argv.includes('--break-motion');
+const BREAK_WATER_PLATFORM = process.argv.includes('--break-water-platform');
 if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
 // 坡度分級失效:把每一款都改成「三級都站得住」⇒ 崖面上會擺出貨櫃車 / 連排民房
 if (process.argv.includes('--break-slope')) {
@@ -86,6 +88,9 @@ if (BREAK_RUN) EW.EDGE_WALL.RUN_MAX_M = 1e9;
 const wallParts = (kind, o) => {
   const parts = EW.wallParts(kind, o);
   if (BREAK_FIT) parts.push({ g: ['box', o.len * 1.4, 2, 2], c: 0x999999, p: [0, 1, 0] });
+  if (BREAK_WATER_PLATFORM && kind === 'floatsolar') {
+    parts.push({ g: ['box', o.len, 2, o.depth], c: 0x777777, p: [0, 1, 0] });
+  }
   if (BREAK_FACE) return parts.filter((p) => EW.partBox(p).z1 < o.depth / 2 - EW.EDGE_WALL.FACE_T);
   return parts;
 };
@@ -683,6 +688,39 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     fillBad.length === 0, `（${fillBad.join(' / ')}）`);
   t(`每一款的內面都蓋滿到機體視線高 ${band.toFixed(1)}m(覆蓋率 ≥ ${EW.EDGE_WALL.FACE_COVER};不然是撞得到卻看得穿)`,
     faceBad.length === 0, `（${faceBad.join(' / ')}）`);
+  const directWater = water.filter((k) => k !== 'seawall');
+  const platformBad = [];
+  for (const k of directWater) {
+    const d = EW.WALL_KINDS[k], H = Math.max(band, d.h);
+    for (let s = 1; s <= 20; s++) {
+      const slab = wallParts(k, { len, depth: d.depth, h: H, seed: s }).find((p) => {
+        if (p.role === 'hull' || p.g?.[0] !== 'box') return false;
+        const b = EW.partBox(p);
+        return p.g[1] >= len * 0.9 && p.g[3] >= d.depth * 0.8 && b.y0 <= 0.05 && p.g[2] >= 1;
+      });
+      if (slab) { platformBad.push(`${k}@${s}`); break; }
+    }
+  }
+  t('水域邊界除海堤外一律直接落水：不得以整段海堤／擋土平台方盒墊高',
+    platformBad.length === 0, `（${platformBad.join(' / ')}）`);
+  const partsOf = (k, seed = 9) => {
+    const d = EW.WALL_KINDS[k];
+    return wallParts(k, { len, depth: d.depth, h: Math.max(band, d.h), seed });
+  };
+  t('海上風機使用直接入水的固定樁基／交叉構架，不借用陸域風機基座',
+    EW.WALL_KINDS.windsea.mount === 'fixed'
+    && partsOf('windsea').some((p) => p.role === 'monopile')
+    && partsOf('windsea').some((p) => p.role === 'mooring'));
+  t('浮動光電具模組、浮筒、獨立逆變器浮台與繫泊浮標',
+    EW.WALL_KINDS.floatsolar.mount === 'float'
+    && ['float', 'inverter-float', 'mooring'].every((role) => partsOf('floatsolar').some((p) => p.role === role)));
+  t('海上牧場同時讀得出大型箱網／圍網、貝類長線、維修浮台與繫泊系統',
+    EW.WALL_KINDS.searanch.mount === 'float'
+    && ['cage-collar', 'longline-buoy', 'service-float', 'mooring'].every((role) => partsOf('searanch').some((p) => p.role === role)));
+  t('深海油井以浮筒平台直接繫泊於海域，不坐在連續海堤基座上',
+    EW.WALL_KINDS.deeprig.mount === 'float'
+    && partsOf('deeprig').some((p) => p.role === 'pontoon')
+    && partsOf('deeprig').some((p) => p.role === 'mooring'));
   const windRows = ['windsea', 'windland'].flatMap((k) => {
     const d = EW.WALL_KINDS[k]; return wallParts(k, { len, depth: d.depth, h: d.h, seed: 7 });
   });
@@ -1006,6 +1044,7 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-boxh', '盒高改回逐款一個值,Ⅲ MUST 紅字(素牆頂上的空氣)'],
   ['--break-slope', '每一款都改成三級都站得住,Ⅶ MUST 紅字(崖面上的貨櫃車)'],
   ['--break-land', '關掉逐零件落地,Ⅷ MUST 紅字(斜坡上浮在半空的假山)'],
+  ['--break-water-platform', '浮動光電塞回整段水泥底座,Ⅶ MUST 紅字'],
   ['--break-snow-summer', '夏季出現覆雪,Ⅸ MUST 紅字(夏天無雪契約破壞)'],
   ['--break-snow-slope', '雪錐斜率失真外突,Ⅸ MUST 紅字(山頂雪錐外擴懸空)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);
