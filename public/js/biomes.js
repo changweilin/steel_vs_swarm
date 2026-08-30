@@ -45,7 +45,7 @@ import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed
 // 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(2026-08-11 使用者定案)——
 // 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
 import {
-  EDGE_WALL, WALL_KINDS, BACKDROP_KINDS, planWallRuns, wallParts, wallSlopeTier, edgeSeed, partBox,
+  EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, wallParts, wallSlopeTier, edgeSeed, partBox,
   planBufferProps, propParts, planBackdrop, backdropParts,
 } from './edgewall.js';
 import { libGeo } from './partlib.js';
@@ -92,7 +92,7 @@ import { CARD, cardEnvelope, cardCount, planCards, cardRnd, leafSurfId } from '.
 // 葉子是硬切的、樹幹還是三階 ramp」,沒有任何錯誤訊息。一個場景 MUST 只有一套量化
 // (`audit_cel_pipeline` Ⅺ⑧ 的凍結名冊守著:名冊非空 ⇒ `celSchool` 的 def MUST NOT 是 'b')。
 import {
-  WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime,
+  WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime, celWindAmount, celWaveAmount,
   isWeatherFrozen,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
@@ -9505,12 +9505,14 @@ function buildEdgeWall({ group, terrain, blockers }) {
   const inset = edgeWallInsetM(), WH = edgeWallHM();
   const half = WORLD_EDGE.SEG_M / 2 * WORLD_EDGE.SEG_LAP_F;   // 沿邊半長(> 半間距 ⇒ 段段重疊)
   const wy = terrain.waterY;
-  // 地貌/水陸域取樣:**零亂數**(classifyImg 是純影像判;MUST NOT 改吃會抽 rnd 的 classify)。
-  // 水陸域先判 —— 水面上的段不管衛星色是什麼都只能放水域型式。
+  // 地貌/水陸域取樣:**零亂數**。水/沼 MUST 走 `terrainEnvCode`，否則 classifyImg 永遠
+  // 產不出 wet，沼澤型錄會成為永遠選不到的死資料；乾地才回到純影像分類。
   const probe = (x, z) => {
     const px = Math.min(terrain.maxX, Math.max(terrain.minX, x));
     const pz = Math.min(terrain.maxZ, Math.max(terrain.minZ, z));
-    if (wy != null && terrain.heightAt(px, pz) < wy + WATER.SHORE) return 'water';
+    const env = terrainEnvCode(terrain, px, pz);
+    if (env === 1) return 'water';
+    if (env === 2) return 'wet';
     return classifyImg(terrain.sampleColor?.(px, pz)) || 'green';
   };
   const segs = [];
@@ -9575,10 +9577,11 @@ function buildEdgeWall({ group, terrain, blockers }) {
         // 零件的落地基準:段內最高的地形,水域段改取水面(否則海堤/貨輪整艘沉在水面下)
         const ground = wy != null && s.water ? Math.max(s.hi, wy) : s.hi;
         const y = s.lo - 1.5;
+        const motion = parts.filter((p) => p.motion);
         segs.push({
           x, z, y, h: ground + kh - y, hw2: half, hd2,
           ry: e.ax ? 0 : Math.PI / 2, fry: e.fry,
-          kind: r.kind, biome: s.biome, water: s.water, tier: r.tier, ground, kh,
+          kind: r.kind, biome: s.biome, water: s.water, tier: r.tier, ground, kh, motion,
         });
         // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
         blockers.push({ x, z, y, h: ground + kh - y, hw2: half, hd2, ry: e.ax ? 0 : Math.PI / 2, r: Math.hypot(half, hd2) });
@@ -9586,7 +9589,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
         // 而那一截**在碰撞盒之內**,漏掉即是撞得到卻看不見。
         const plinth = ground - y;
         if (plinth > 0.01) parts.push({ g: ['box', half * 2, plinth, def.depth], c: PLINTH_C, p: [0, -plinth / 2, 0] });
-        emitWallParts(batch, parts, x, ground, z, e.fry, 1);
+        emitWallParts(batch, parts.filter((p) => !p.motion), x, ground, z, e.fry, 1);
       }
     }
   }
@@ -9658,6 +9661,68 @@ function flushPartBatch(group, batch, matOpts) {
   group.add(m);
 }
 const newBatch = () => ({ geos: [], cols: [] });
+
+/**
+ * 邊界設施的剛體動態層。靜態基座仍留在整圈單一批次；只有葉片／浮台按樞軸各合成一顆 mesh。
+ * 更新函式併進既有 `dynamics` 桶，風機與海面共用 toon 的風時鐘與天氣係數。
+ */
+function buildEdgeMotion({ group, segs, dynamics }) {
+  const rotors = [], floats = [];
+  for (const s of segs) {
+    if (!s.motion?.length) continue;
+    const sets = new Map();
+    for (const p of s.motion) {
+      const id = p.motion.id;
+      if (!sets.has(id)) sets.set(id, []);
+      sets.get(id).push(p);
+    }
+    for (const rows of sets.values()) {
+      const mot = rows[0].motion, [px = 0, py = 0, pz = 0] = mot.pivot || [];
+      const root = new THREE.Group(), pivot = new THREE.Group();
+      root.position.set(s.x, s.ground, s.z);
+      root.rotation.y = s.fry;
+      pivot.position.set(px, py, pz);
+      const geos = [], cols = [];
+      for (const p of rows) {
+        const geo = wallGeo(p.g);
+        const [x = 0, y = 0, z = 0] = p.p || [];
+        const [rx = 0, ry = 0, rz = 0] = p.r || [];
+        _we.set(rx, ry, rz);
+        _wm.compose(_wp.set(x - px, y - py, z - pz), _wq.setFromEuler(_we), _ws.set(1, 1, 1));
+        geo.applyMatrix4(_wm);
+        geos.push(geo); cols.push(p.c);
+      }
+      const mesh = new THREE.Mesh(mergeGeos(geos, cols), envMat(0xffffff, {
+        vertexColors: true, wash: 0.4, cool: 0.46,
+      }));
+      mesh.castShadow = false;
+      pivot.add(mesh); root.add(pivot); group.add(root);
+      if (mot.kind === 'rotor') {
+        pivot.rotation.z = mot.phase;
+        rotors.push({ pivot, angle: mot.phase });
+      } else {
+        floats.push({ pivot, baseY: py, phase: mot.phase });
+      }
+    }
+  }
+  if (!rotors.length && !floats.length) return 0;
+  dynamics.push((dt) => {
+    const step = Math.min(0.25, Math.max(0, dt || 0));
+    const wind = celWindAmount(), wave = celWaveAmount(), t = celWindTime();
+    for (const r of rotors) {
+      r.angle += step * EDGE_MOTION.ROTOR_RAD_S * wind;
+      r.pivot.rotation.z = r.angle;
+    }
+    for (const f of floats) {
+      const a = t * EDGE_MOTION.FLOAT_FREQ + f.phase;
+      const heave = Math.sin(a) * 0.76 + Math.sin(a * 1.87 + f.phase * 0.7) * 0.24;
+      f.pivot.position.y = f.baseY + heave * EDGE_MOTION.FLOAT_AMP_M * wave;
+      f.pivot.rotation.x = Math.sin(a * 0.83) * EDGE_MOTION.FLOAT_TILT * wave;
+      f.pivot.rotation.z = Math.sin(a * 0.67 + 1.3) * EDGE_MOTION.FLOAT_TILT * wave;
+    }
+  });
+  return rotors.length + floats.length;
+}
 
 // ---- 緩衝空間的 3D 物件(使用者定案:「邊界延伸不可進入的緩衝空間…並加入少許 3D 物件」)----
 // 純表現層:不進 blockers / occ / LOS / heightAt(玩家被 x/z 夾制在障礙環之內,永遠碰不到
@@ -11827,6 +11892,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 鐵路/捷運(含行駛列車)+ 瀑布(動態物件)----
   await onProgress?.(0.92, '鋪設鐵路與瀑布…');
   const dynamics = [];
+  const edgeMotionN = buildEdgeMotion({ group, segs: edgeSegs, dynamics });
   buildWaterEdges(group, terrain);   // 沼澤潮間帶(靜態;水岸泡沫 2026-08-16 退場,見該支檔頭)
   // 水面倒影塊(⑤-3):MUST 排在**所有** `blockers.push` 之後(名冊由碰撞柱推導 ——
   // 少一批就是「那幾棟樓在水裡沒有影子」),與 `planClimbRoutes` 同一個理由。
@@ -11918,6 +11984,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   await onProgress?.(1, '地貌完成');
   group.userData.blockers = blockers;   // 建物碰撞柱(main.js → terrain.blockers → game.js _collide)
+  group.userData.edgeMotionN = edgeMotionN;
   // 立體交通走廊(隧道全段 + 橋樑走廊):main.js 上傳伺服器 → sim 清除走廊內第三方障礙/地雷
   group.userData.gradeCorridors = gradeCorridors;
   // 分界線帶遮罩(2026-08-13):main.js → terrain.inBorderBand → terrainEnvCode。

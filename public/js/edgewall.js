@@ -51,6 +51,15 @@ export const EDGE_WALL = {
   BACK_INSET_F: 0.9, // 背景落在緩衝深度的這個比例上(留一截裙在它腳下,不然背景像浮在邊上)
 };
 
+// 邊界設施的剛體動態只在 `biomes.js` 建 mesh；本檔仍只交純資料。
+// 轉速的唯一輸入是 `toon.js` 的即時風量，浮動幅度的唯一輸入是同一份天氣浪量。
+export const EDGE_MOTION = {
+  ROTOR_RAD_S: 0.72, // 風量 1 時約 6.9 rpm；實際角速度 = 此值 × 即時風量
+  FLOAT_AMP_M: 0.42,
+  FLOAT_FREQ: 0.58,
+  FLOAT_TILT: 0.018,
+};
+
 // ---- 坡度分級(2026-08-11 使用者追加:「太陡的時候只使用懸崖峭壁/土石流/山崩這類自然
 //      景觀,中等坡度可以再加上倒木/長城」)----
 // 門檻**推導不手寫**,而且刻意錨在既有的兩條線上(`data.js SLOPE`,由呼叫端注入 —— 本檔
@@ -94,8 +103,27 @@ export const WALL_KINDS = {
   fallentree:{ dom: 'land',  bio: ['green'],                  slope: 'mid',   depth: 9,   h: 9,    label: '倒塌神木' },
   // ---- 水域 ----(水面恆是平的 ⇒ 水域段的分級一律 flat,見 `planWallRuns`)
   seawall:   { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 10,  h: 8,    label: '海堤' },
-  tetrapod:  { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 12,  h: 9.2,  label: '消波塊' },
+  tetrapod:  { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 12,  h: 9.2,  label: '大型消波塊層層堆疊' },
   ship:      { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 18,  h: 22,   label: '連排貨輪' },
+  // ---- 大型邊界設施(同族共用生成器；款式差異只住資料列)----
+  windsea:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 28, label: '海上風機陣列', family: 'wind', col: [0xd9dde0, 0x70808c] },
+  floatsolar:   { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 14, label: '浮動式太陽能板陣列', family: 'solar', floating: true, col: [0x244b73, 0x6b8799] },
+  searanch:     { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 16, label: '海上牧場', family: 'ranch', floating: true, col: [0x3f6f7a, 0xc28c38] },
+  deeprig:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 28, label: '深海油井', family: 'extract', floating: true, col: [0xd07a32, 0x596168] },
+  windland:     { dom: 'land',  bio: ['bare', 'green'], slope: 'flat', depth: 14, h: 28, label: '陸域風機陣列', family: 'wind', col: [0xe1e4e4, 0x69747c] },
+  solarfield:   { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 14, h: 14, label: '太陽能板陣列', family: 'solar', col: [0x243f63, 0x777b70] },
+  mine:         { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 18, h: 20, label: '大型礦場', family: 'extract', col: [0xb88a3d, 0x786c5d] },
+  oilfield:     { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 16, h: 18, label: '陸上油井', family: 'extract', col: [0x86583f, 0x555c62] },
+  ranch:        { dom: 'land',  bio: ['green'], slope: 'flat', depth: 14, h: 14, label: '大型畜牧場', family: 'ranch', col: [0x8e7652, 0x6b7a4b] },
+  greenhouse:   { dom: 'land',  bio: ['green'], slope: 'flat', depth: 14, h: 14, label: '大型溫室', family: 'greenhouse', col: [0xa9c7bf, 0x6a8a78] },
+  factory:      { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 24, label: '大型工廠', family: 'industry', col: [0x7b8790, 0xb0653e] },
+  powerplant:   { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 28, label: '大型電廠', family: 'industry', col: [0x69747c, 0x9a8f72] },
+  incinerator:  { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 30, label: '大型焚化爐', family: 'industry', col: [0x727c82, 0xb46b3f] },
+  skyscrapers:  { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 34, label: '摩天大樓群', family: 'industry', col: [0x64717d, 0x8ca0ad] },
+  oysterracks:  { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 14, h: 14, label: '蚵棚', family: 'wetland', col: [0x665541, 0x9caa9e] },
+  strandedship:{ dom: 'land',  bio: ['wet'], slope: 'flat', depth: 18, h: 18, label: '擱淺船隻', family: 'wreck', col: [0x5b6970, 0x8a4f3e] },
+  whale:        { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 14, h: 14, label: '擱淺鯨魚', family: 'wreck', col: [0x46545d, 0x71818a] },
+  wetpods:      { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 16, h: 14, label: '大型消波塊層層堆疊', family: 'pods', col: [0x969a9b, 0x777c7d] },
 };
 
 /** 這一款站得到這一級坡上嗎(`slope` 是**上界**:自然景觀在三級都合法) */
@@ -208,7 +236,19 @@ export function planWallRuns(segs, opts = {}) {
 // 兩支算的不是同一件事,故不是第二份實作;而且那一支住在 import THREE 的檔案裡(紀律①)。
 /** 零件在**局部座標**的 AABB:{ x0,x1, y0,y1, z0,z1 }。純幾何、無 three */
 export function partBox(part) {
-  return partAABB(part);
+  const b = partAABB(part);
+  const m = part.motion;
+  if (!m) return b;
+  if (m.kind === 'rotor') {
+    const [px = 0, py = 0] = m.pivot || [];
+    const r = Math.max(
+      Math.hypot(b.x0 - px, b.y0 - py), Math.hypot(b.x0 - px, b.y1 - py),
+      Math.hypot(b.x1 - px, b.y0 - py), Math.hypot(b.x1 - px, b.y1 - py),
+    );
+    return { ...b, x0: px - r, x1: px + r, y0: py - r, y1: py + r };
+  }
+  const pad = Math.max(0, m.pad || 0);
+  return { x0: b.x0 - pad, x1: b.x1 + pad, y0: b.y0 - pad, y1: b.y1 + pad, z0: b.z0 - pad, z1: b.z1 + pad };
 }
 
 /**
@@ -743,13 +783,238 @@ const PARTS = {
   },
 };
 
+// ---- 大型設施族生成器 -------------------------------------------------------
+// `WALL_KINDS` 的每一款只是資料列；同族共用這些生成器，避免風機／工業量體／農牧設施
+// 各自長出一份略有不同的接點與比例。所有設施都坐在可見的防洪／擋土基座上，這道基座
+// 同時填滿碰撞盒內面；陣列本身有孔隙，但不會形成「看得穿、走不過」的隱形牆。
+const facilityWallH = (H) => Math.min(H - 1, Math.max(7.4, H * 0.34));
+const facilityBase = (len, D, H, rnd, c) => {
+  const bh = facilityWallH(H);
+  return {
+    bh,
+    parts: [
+      { g: ['box', len, bh, D], c: c[1], p: [0, bh / 2, 0] },
+      { g: ['box', len, 0.42, D * 0.92], c: c[0], p: [0, bh - 0.21, zIn(D, D * 0.92)] },
+      ...rep(len, 4.2, (x) => [{ g: ['box', 0.16, bh * 0.82, 0.14], c: 0x535b60, p: [x, bh * 0.45, zIn(D, 0.14)] }]),
+    ],
+  };
+};
+const moving = (row, kind, id, pivot, phase, pad = 0) => ({
+  ...row, motion: { kind, id, pivot, phase, pad },
+});
+
+const windFacility = (len, D, H, rnd, spec) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  const bladeR = 5.0, hubY = H - bladeR - 0.18;
+  return [
+    ...base.parts,
+    ...rep(len, 11.8, (x, step, i) => {
+      const z = zIn(D, 0.3, 0.55), id = `rotor_${i}`;
+      const pivot = [x, hubY, z], phase = rnd() * Math.PI * 2;
+      return [
+        { g: ['cyl', 0.34, 0.54, hubY - base.bh, 8], c: spec.col[0], p: [x, base.bh + (hubY - base.bh) / 2, zIn(D, 1.2, 1.5)] },
+        { g: ['box', 1.6, 0.8, 1.4], c: spec.col[1], p: [x, hubY, zIn(D, 1.4, 0.35)] },
+        { g: ['ico', 0.62], c: 0xd9dde0, p: pivot },
+        ...[0, 1, 2].map((j) => {
+          const a = j * Math.PI * 2 / 3;
+          return moving({
+            g: ['box', 0.34, bladeR, 0.24], c: 0xe4e7e7,
+            p: [x + Math.cos(a) * bladeR / 2, hubY + Math.sin(a) * bladeR / 2, z],
+            r: [0, 0, a - Math.PI / 2],
+          }, 'rotor', id, pivot, phase);
+        }),
+      ];
+    }),
+  ];
+};
+
+const solarFacility = (len, D, H, rnd, spec) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  const panels = rep(len, 6.2, (x, step, i) => {
+    const y = base.bh + 1.05, z = zIn(D, 4.8, 1.1), id = `float_${i}`;
+    const rows = [
+      { g: ['box', step * 0.72, 0.22, 4.6], c: spec.col[0], p: [x, y, z], r: [-0.18, 0, 0] },
+      { g: ['box', step * 0.76, 0.28, 5.0], c: 0x56636a, p: [x, y - 0.42, z] },
+      ...[-1.7, 0, 1.7].map((o) => ({ g: ['box', step * 0.68, 0.06, 0.08], c: 0xaeb8bc, p: [x, y + 0.14, z + o] })),
+    ];
+    if (!spec.floating) return rows;
+    const pivot = [x, y - 0.42, z];
+    const phase = rnd() * Math.PI * 2;
+    return rows.map((p) => moving(p, 'float', id, pivot, phase, EDGE_MOTION.FLOAT_AMP_M + 0.12));
+  });
+  return [
+    ...base.parts, ...panels,
+    { g: ['cyl', 0.16, 0.22, H - base.bh, 6], c: 0xb9c0c2, p: [len * 0.38, base.bh + (H - base.bh) / 2, -D / 2 + 1.4] },
+  ];
+};
+
+const ranchFacility = (len, D, H, rnd, spec) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  const pens = rep(len, 7.5, (x, step, i) => {
+    const y = base.bh + 0.38, z = zIn(D, 5.2, 1.0), id = `pen_${i}`, pivot = [x, y, z];
+    const rows = [
+      { g: ['box', step * 0.82, 0.34, 5.0], c: spec.col[1], p: [x, y, z] },
+      ...[-2.2, 2.2].map((o) => ({ g: ['box', step * 0.86, 1.2, 0.14], c: spec.col[0], p: [x, y + 0.6, z + o] })),
+      ...[-1, 1].map((sd) => ({ g: ['box', 0.14, 1.2, 4.5], c: spec.col[0], p: [x + sd * step * 0.38, y + 0.6, z] })),
+      ...[-1.5, 0, 1.5].map((o) => ({ g: ['ico', 0.42], c: spec.floating ? 0xd9b24b : 0xd8d0bd, p: [x + o, y + 0.72, z + (rnd() - 0.5) * 2.6] })),
+    ];
+    if (!spec.floating) return rows;
+    const phase = rnd() * Math.PI * 2;
+    return rows.map((p) => moving(p, 'float', id, pivot, phase, EDGE_MOTION.FLOAT_AMP_M + 0.12));
+  });
+  return [
+    ...base.parts, ...pens,
+    { g: ['box', 5.8, H - base.bh, 5.2], c: spec.col[0], p: [len * 0.31, base.bh + (H - base.bh) / 2, -D / 2 + 3.0] },
+    { g: ['box', 6.4, 0.32, 5.8], c: 0x76563f, p: [len * 0.31, H - 0.16, -D / 2 + 3.0] },
+  ];
+};
+
+const extractFacility = (len, D, H, rnd, spec, kind) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  if (kind === 'deeprig') {
+    const y = base.bh + 2.4, pivot = [0, y, 0], id = 'rig_float';
+    const phase = rnd() * Math.PI * 2;
+    const deck = [
+      { g: ['box', len * 0.72, 1.0, D * 0.72], c: spec.col[0], p: [0, y, 0] },
+      ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({ g: ['cyl', 0.72, 1.0, 5.0, 7], c: spec.col[1], p: [sx * len * 0.27, y - 2.1, sz * D * 0.26] }))),
+      { g: ['box', 5.2, 4.2, 4.8], c: 0xd7d1c2, p: [len * 0.2, y + 2.6, -D * 0.1] },
+    ].map((p) => moving(p, 'float', id, pivot, phase, EDGE_MOTION.FLOAT_AMP_M + 0.14));
+    return [
+      ...base.parts, ...deck,
+      { g: ['cyl', 0.28, 0.42, H - base.bh, 6], c: spec.col[1], p: [0, base.bh + (H - base.bh) / 2, 0] },
+      { g: ['box', 7.2, 0.42, 7.2], c: spec.col[0], p: [0, H - 0.21, 0] },
+    ];
+  }
+  const pump = (x, i) => {
+    const y = base.bh + 2.3, c = i % 2 ? spec.col[0] : spec.col[1];
+    return [
+      { g: ['box', 3.8, 0.5, 3.4], c: 0x555b5f, p: [x, base.bh + 0.25, zIn(D, 3.4, 1.2)] },
+      { g: ['cyl', 0.22, 0.28, 4.2, 6], c, p: [x - 1.0, y, zIn(D, 0.7, 2.0)] },
+      { g: ['box', 5.2, 0.48, 0.72], c, p: [x + 0.8, y + 1.6, zIn(D, 0.72, 1.7)], r: [0, 0, kind === 'mine' ? -0.28 : 0.18] },
+      { g: ['ico', 1.25], c: kind === 'mine' ? 0x807568 : 0x444a4e, p: [x + 1.3, base.bh + 1.2, -D / 2 + 2.0] },
+    ];
+  };
+  return [
+    ...base.parts,
+    ...rep(len, 9.5, (x, s, i) => pump(x, i)),
+    { g: ['cyl', 0.28, 0.42, H - base.bh, 6], c: spec.col[1], p: [len * 0.34, base.bh + (H - base.bh) / 2, -D / 2 + 2.2] },
+  ];
+};
+
+const greenhouseFacility = (len, D, H, rnd, spec) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  return [
+    ...base.parts,
+    ...rep(len, 7.2, (x, step) => [
+      { g: ['box', step * 0.9, 4.4, D * 0.62], c: 0x78988b, p: [x, base.bh + 2.2, zIn(D, D * 0.62, 1.0)] },
+      { g: ['cyl', 2.0, 2.0, step * 0.9, 8], c: spec.col[0], p: [x, base.bh + 4.4, zIn(D, D * 0.62, 1.0)], r: [0, 0, Math.PI / 2] },
+      ...[-1.8, 0, 1.8].map((o) => ({ g: ['box', step * 0.84, 0.08, 0.08], c: 0xd3dfda, p: [x, base.bh + 4.8, zIn(D, 0.1, D * 0.22 + o)] })),
+    ]),
+    { g: ['cyl', 0.18, 0.22, H - base.bh, 6], c: 0x718078, p: [len * 0.4, base.bh + (H - base.bh) / 2, -D / 2 + 1.4] },
+  ];
+};
+
+const industryFacility = (len, D, H, rnd, spec, kind) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  if (kind === 'skyscrapers') {
+    return [
+      ...base.parts,
+      ...rep(len, 8.2, (x, step, i) => {
+        const h = i % 3 === 1 ? H - base.bh : (H - base.bh) * (0.55 + rnd() * 0.24);
+        return [
+          { g: ['box', step * 0.74, h, D * 0.58], c: i % 2 ? spec.col[0] : spec.col[1], p: [x, base.bh + h / 2, zIn(D, D * 0.58, 1.0)] },
+          ...[0.24, 0.48, 0.72].map((f) => ({ g: ['box', step * 0.68, 0.18, 0.16], c: 0xb6ccd5, p: [x, base.bh + h * f, zIn(D, 0.16)] })),
+        ];
+      }),
+    ];
+  }
+  const hallH = Math.min(H - base.bh - 1, kind === 'factory' ? 8 : 10);
+  const stacks = kind === 'powerplant' ? 3 : (kind === 'incinerator' ? 2 : 1);
+  return [
+    ...base.parts,
+    { g: ['box', len * 0.7, hallH, D * 0.68], c: spec.col[0], p: [-len * 0.08, base.bh + hallH / 2, zIn(D, D * 0.68, 1.0)] },
+    { g: ['box', len * 0.74, 0.6, D * 0.72], c: spec.col[1], p: [-len * 0.08, base.bh + hallH + 0.3, zIn(D, D * 0.72, 0.7)] },
+    ...Array.from({ length: stacks }, (_, i) => {
+      const x = len * (0.2 + i * 0.12), h = i === stacks - 1 ? H - base.bh : (H - base.bh) * (0.72 + i * 0.08);
+      return { g: ['cyl', 0.72, 1.15, h, 10], c: i % 2 ? spec.col[0] : spec.col[1], p: [x, base.bh + h / 2, -D / 2 + 2.2 + i * 1.3] };
+    }),
+    ...(kind === 'powerplant' ? rep(len * 0.42, 9, (x) => [
+      { g: ['cyl', 2.5, 3.4, 7.4, 10], c: 0x9b9d96, p: [x - len * 0.18, base.bh + 3.7, zIn(D, 6.8, 1.0)] },
+    ]) : []),
+  ];
+};
+
+const wetlandFacility = (len, D, H, rnd, spec) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  return [
+    ...base.parts,
+    ...rep(len, 5.4, (x, step) => [
+      ...[-1.8, 0, 1.8].map((z) => ({ g: ['cyl', 0.11, 0.15, 4.8, 5], c: spec.col[0], p: [x, base.bh + 2.4, zIn(D, 0.3, D * 0.22 + z)] })),
+      { g: ['box', step * 0.86, 0.16, 4.2], c: spec.col[1], p: [x, base.bh + 3.4, zIn(D, 4.2, 1.0)] },
+      ...[-1.2, 0, 1.2].map((z) => ({ g: ['cyl', 0.26, 0.34, step * 0.72, 6], c: 0xc7c1ad, p: [x, base.bh + 3.6, zIn(D, 0.7, D * 0.24 + z)], r: [0, 0, Math.PI / 2] })),
+    ]),
+    { g: ['cyl', 0.16, 0.2, H - base.bh, 5], c: spec.col[0], p: [len * 0.4, base.bh + (H - base.bh) / 2, -D / 2 + 1.3] },
+  ];
+};
+
+const wreckFacility = (len, D, H, rnd, spec, kind) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  if (kind === 'whale') {
+    return [
+      ...base.parts,
+      { g: ['cyl', 3.0, 3.0, len * 0.68, 10], c: spec.col[0], p: [-len * 0.05, base.bh + 2.6, zIn(D, 10.4, 1.2)], r: [0, 0, Math.PI / 2] },
+      { g: ['cone', 4.0, 5.8, 8], c: spec.col[1], p: [len * 0.34, base.bh + 2.4, zIn(D, 8.0, 2.0)], r: [0, 0, -Math.PI / 2] },
+      ...[-1, 1].map((sd) => ({ g: ['box', 4.2, 0.5, 1.8], c: spec.col[0], p: [-len * 0.36, base.bh + 3.0, zIn(D, 2.0, 2.2) + sd * 1.6], r: [0, sd * 0.36, sd * 0.38] })),
+      { g: ['cyl', 0.14, 0.18, H - base.bh, 5], c: 0xb6b1a4, p: [len * 0.42, base.bh + (H - base.bh) / 2, -D / 2 + 1.2] },
+    ];
+  }
+  return [
+    ...base.parts,
+    { g: ['box', len * 0.82, 6.4, D * 0.72], c: spec.col[0], p: [0, base.bh + 3.5, zIn(D, D * 0.72, 1.0)], r: [0.12, 0, 0.08] },
+    { g: ['box', len * 0.66, 0.5, D * 0.76], c: spec.col[1], p: [0, base.bh + 7.0, zIn(D, D * 0.76, 0.6)], r: [0.12, 0, 0.08] },
+    { g: ['box', 5.6, 3.0, 6.2], c: 0xc8c2b4, p: [len * 0.24, base.bh + 8.0, zIn(D, 6.2, 2.0)] },
+    { g: ['cyl', 0.18, 0.24, H - base.bh, 5], c: spec.col[1], p: [len * 0.24, base.bh + (H - base.bh) / 2, zIn(D, 0.5, 2.0)] },
+  ];
+};
+
+const podFacility = (len, D, H, rnd, spec) => {
+  const base = facilityBase(len, D, H, rnd, spec.col);
+  const pod = (x, y, z, s, rz) => [
+    { g: ['ico', 0.92 * s], c: pick(rnd, spec.col), p: [x, y, z] },
+    ...[-1, 1].map((sd) => ({ g: ['cyl', 0.34 * s, 0.2 * s, 2.4 * s, 6], c: pick(rnd, spec.col), p: [x + sd * 0.82 * s, y, z], r: [0, 0, sd * 1.05 + rz] })),
+    ...[-1, 1].map((sd) => ({ g: ['cyl', 0.34 * s, 0.2 * s, 2.4 * s, 6], c: pick(rnd, spec.col), p: [x, y + sd * 0.82 * s, z], r: [sd * 1.05, 0, rz] })),
+  ];
+  return [
+    ...base.parts,
+    ...rep(len, 4.8, (x, step, i) => [
+      ...pod(x, base.bh + 1.8, zIn(D, 5.0, 0.8), 1.2, i % 2 ? 0.25 : -0.25),
+      ...pod(x + step * 0.04, base.bh + 3.6, zIn(D, 5.0, 3.6), 1.05, i % 2 ? -0.3 : 0.3),
+    ]),
+    { g: ['cyl', 0.16, 0.2, H - base.bh, 5], c: spec.col[1], p: [len * 0.42, base.bh + (H - base.bh) / 2, -D / 2 + 1.0] },
+  ];
+};
+
+function facilityParts(kind, len, D, H, rnd) {
+  const spec = WALL_KINDS[kind];
+  if (!spec?.family) return null;
+  if (spec.family === 'wind') return windFacility(len, D, H, rnd, spec);
+  if (spec.family === 'solar') return solarFacility(len, D, H, rnd, spec);
+  if (spec.family === 'ranch') return ranchFacility(len, D, H, rnd, spec);
+  if (spec.family === 'extract') return extractFacility(len, D, H, rnd, spec, kind);
+  if (spec.family === 'greenhouse') return greenhouseFacility(len, D, H, rnd, spec);
+  if (spec.family === 'industry') return industryFacility(len, D, H, rnd, spec, kind);
+  if (spec.family === 'wetland') return wetlandFacility(len, D, H, rnd, spec);
+  if (spec.family === 'wreck') return wreckFacility(len, D, H, rnd, spec, kind);
+  return podFacility(len, D, H, rnd, spec);
+}
+
 /**
  * 取一款的零件表。`seed` 決定同款不同節的色差與擺位(零共享亂數)。
  * 找不到的款一律回退 `barricade`(原則 6:降級不例外)。
  */
 export function wallParts(kind, { len, depth, h, seed = 1 }) {
-  const fn = PARTS[kind] || PARTS.barricade;
-  return fn(len, depth, h, mulberry32((seed * 2654435761) >>> 0));
+  const rnd = mulberry32((seed * 2654435761) >>> 0);
+  return facilityParts(kind, len, depth, h, rnd) || (PARTS[kind] || PARTS.barricade)(len, depth, h, rnd);
 }
 
 // ============ 緩衝空間的 3D 物件(使用者原話:「加入少許 3D 物件」)============
