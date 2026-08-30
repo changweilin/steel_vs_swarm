@@ -1,17 +1,19 @@
 // 已通過零件台的建築型錄；選款、正規化與執行期批次只在此一份。
 import * as THREE from 'three';
 import { BUILDING_PARTS } from './runtimeParts.js';
+import { generateBackgroundObject } from './backgroundObjects.js';
 import { mergeRuntimeParts } from './runtimePartModel.js';
 import { envMat } from './toon.js';
 
 const geometryCache = new Map();
 let sharedMaterial = null;
 
-const hash01 = (x, z, salt = 0) => {
+const hash32 = (x, z, salt = 0) => {
   let h = ((Math.round(x * 10) * 73856093) ^ (Math.round(z * 10) * 19349663) ^ salt) >>> 0;
   h ^= h >>> 16; h = Math.imul(h, 0x7feb352d); h ^= h >>> 15;
-  return (h >>> 0) / 4294967296;
+  return h >>> 0;
 };
+const hash01 = (x, z, salt = 0) => hash32(x, z, salt) / 4294967296;
 
 const semanticPenalty = (entry, commercial) => {
   const s = entry.subpart || '';
@@ -23,8 +25,11 @@ const semanticPenalty = (entry, commercial) => {
   return 0;
 };
 
-const isCuboidAssembly = (entry) => Array.isArray(entry?.parts) && entry.parts.length > 0
-  && entry.parts.every((part) => part?.type === 'box');
+const isCuboidAssembly = (entry) => {
+  const count = entry?.generation?.mainPartCount ?? entry?.parts?.length ?? 0;
+  return Array.isArray(entry?.parts) && count > 0
+    && entry.parts.slice(0, count).every((part) => part?.type === 'box');
+};
 
 const profileOf = (entry) => {
   const size = entry.bounds.size;
@@ -66,13 +71,15 @@ export function fitApprovedBuilding(building) {
   if (!ranked.length) return null;
   const pool = ranked.slice(0, Math.min(6, ranked.length));
   const pick = pool[Math.floor(hash01(building.x, building.z, building.commercial ? 17 : 31) * pool.length)];
-  const proportional = !isCuboidAssembly(pick.entry);
+  const entry = generateBackgroundObject(pick.entry.key,
+    hash32(building.x, building.z, building.commercial ? 97 : 113));
+  const proportional = !isCuboidAssembly(entry);
   return {
-    entry: pick.entry,
-    key: pick.entry.key,
+    entry,
+    key: entry.key,
     rot: pick.rot,
     proportional,
-    prof: profileOf(pick.entry),
+    prof: profileOf(entry),
   };
 }
 

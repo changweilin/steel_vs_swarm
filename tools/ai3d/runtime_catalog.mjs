@@ -5,6 +5,7 @@ import {
   NATIVE_FUNCTIONAL_SUBPARTS,
   isNativeFunctionalSubpart,
 } from '../../public/js/nativeFunctionalBuildings.js';
+import { buildAssemblyIndex } from './catalog_tree.mjs';
 import { vehicleSymmetryReport } from './vehicle_symmetry.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -300,6 +301,13 @@ export function buildRuntimeCatalog(root = REPO_ROOT) {
   const counts = Object.fromEntries(Object.entries(families).map(([family, rows]) => [family, rows.length]));
   const versions = {};
   for (const asset of selected) versions[asset.verStr] = (versions[asset.verStr] || 0) + 1;
+  const background = buildAssemblyIndex(selected.map((asset) => ({
+    ...asset,
+    reviewStatus: asset.provenance.review.status,
+    model: asset,
+    database: asset,
+  })));
+  background.policy.excludedConsumers = ['npc', 'building-unit', 'player-mecha'];
 
   return {
     schemaVersion: 1,
@@ -314,6 +322,7 @@ export function buildRuntimeCatalog(root = REPO_ROOT) {
     counts,
     versions,
     families,
+    background,
     excluded,
   };
 }

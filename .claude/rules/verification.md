@@ -113,6 +113,8 @@ node tools/audit_gait_anat.mjs        # 步態關節曲線(前後肢拓樸/佔�
 node tools/audit_morph_rig.mjs       # 變形過程(兩態零件對應 / 反推的共同錨 / 換樹接得上 / 淡出淡入時間表)
 #   ±--break-class/--break-defer/--break-fade/--break-rest/--break-anchor/--break-post/--break-once
 node tools/audit_object_joints.mjs   # 程序生成零件接合(--seeds 8)
+node tools/audit_background_objects.mjs # 正式背景物件：主結構固定、同角色多槽獨立抽樣、槽包絡與接合中心
+#   ±--break-leaf/--break-multi/--break-slot/--break-palette
 node tools/audit_siteplan.mjs        # 都市計畫 / 樹冠羞避 / 地質排列 / 聚落場 / 整棟量體 / 平面整平
 #   ±--break-line/--break-shy/--break-strike/--break-gate/--break-mass/--break-mass2/--break-roof
 #   ±--break-prof/--break-fill/--break-glass/--break-flat
@@ -190,6 +192,7 @@ node tools/shot_scene.mjs --venue taroko     # 定場鏡頭組(--ink=0/--grade=0
 #                                            #   ⇒ 折邊勾線 / LUT / 空氣透視 / 陰影偏色在定場照裡本來一張都拍不到
 #   --only bridge --probe-ndc x,y            # 對固定鏡位射線,命中幾何/材質寫入 meta(辨識共面面片)
 node tools/shot_facades.mjs / shot_signs.mjs / shot_tunnels.mjs / shot_units.mjs
+node tools/shot_background_objects.mjs # 葉冠、建築窗帶、小客車、重型車的原型／生成變體三視角
 node tools/shot_morph.mjs            # 變形過程膠片(八台變形者 m=0/0.25/0.5/0.75/1 + 對應率 + 換樹落差;--fold = ?morph=0 對照組)
 node tools/shot_borders.mjs --port 8641    # 地貌界線拼圖全組合實拍圖錄(--seeds N / --only zoneA|zoneB)
 node tools/audit_gyro.mjs            # 陀螺儀(MUST 用 https/localhost 真機)

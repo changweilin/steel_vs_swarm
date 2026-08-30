@@ -20,6 +20,8 @@
     "parts": "node tools/parts_review.mjs",
     "parts:catalog": "node tools/ai3d/catalog_tree.mjs --write",
     "audit:catalog": "node tools/ai3d/audit_catalog_tree.mjs",
+    "audit:background": "node tools/audit_background_objects.mjs",
+    "shot:background": "node tools/shot_background_objects.mjs",
     "story": "node tools/story_book.mjs"
   },
   "dependencies": {

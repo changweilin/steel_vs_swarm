@@ -11,6 +11,12 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from '../audit_src.mjs';
+import {
+  mat3Apply,
+  mat3FromEulerXYZ,
+  mat3Multiply,
+  mat3Transpose,
+} from '../../public/js/partTransform.js';
 
 export const CATALOG_ROOT = path.join(ROOT, 'out', '3d_catalog');
 export const CATALOG_PATH = path.join(CATALOG_ROOT, 'catalog.json');
@@ -168,7 +174,107 @@ function primitiveMetric(part) {
     size = [2 * radius, 2 * radius, 2 * radius];
     volume = 4 * Math.PI * radius ** 3 / 3;
   }
-  return { size: size.map((v) => Math.abs(Number(v) || 0)), volume: Math.max(Math.abs(volume), 1e-9) };
+  const scale = Array.isArray(part.scale) && part.scale.length === 3
+    ? part.scale.map((v) => Math.abs(Number(v) || 1))
+    : [1, 1, 1];
+  return {
+    size: size.map((v, axis) => Math.abs(Number(v) || 0) * scale[axis]),
+    volume: Math.max(Math.abs(volume * scale[0] * scale[1] * scale[2]), 1e-9),
+  };
+}
+
+/** 與 runtimePartModel.js 的 XYZ Euler + primitive 尺寸同形；供型錄槽位與離線接合稽核共用。 */
+export function runtimePartBounds(part) {
+  const size = primitiveMetric(part).size;
+  const matrix = mat3FromEulerXYZ(part.rotation || part.rot);
+  const half = size.map((v) => v * 0.5);
+  const extent = [0, 1, 2].map((axis) => (
+    Math.abs(matrix[axis * 3]) * half[0]
+    + Math.abs(matrix[axis * 3 + 1]) * half[1]
+    + Math.abs(matrix[axis * 3 + 2]) * half[2]
+  ));
+  const center = partPos(part).map((v) => Number(v) || 0);
+  const min = center.map((v, axis) => v - extent[axis]);
+  const max = center.map((v, axis) => v + extent[axis]);
+  return { min, max, center, size: extent.map((v) => v * 2) };
+}
+
+export function runtimePartsFrameBounds(parts, rotation = [0, 0, 0]) {
+  if (!Array.isArray(parts) || !parts.length) return null;
+  const frame = mat3FromEulerXYZ(rotation);
+  const inverse = mat3Transpose(frame);
+  const rows = parts.map((part) => {
+    const size = primitiveMetric(part).size;
+    const relativeRotation = mat3Multiply(inverse, mat3FromEulerXYZ(part.rotation || part.rot));
+    const half = size.map((value) => value * 0.5);
+    const extent = [0, 1, 2].map((axis) => (
+      Math.abs(relativeRotation[axis * 3]) * half[0]
+      + Math.abs(relativeRotation[axis * 3 + 1]) * half[1]
+      + Math.abs(relativeRotation[axis * 3 + 2]) * half[2]
+    ));
+    const center = mat3Apply(inverse, partPos(part).map((value) => Number(value) || 0));
+    return {
+      min: center.map((value, axis) => value - extent[axis]),
+      max: center.map((value, axis) => value + extent[axis]),
+    };
+  });
+  const min = [0, 1, 2].map((axis) => Math.min(...rows.map((row) => row.min[axis])));
+  const max = [0, 1, 2].map((axis) => Math.max(...rows.map((row) => row.max[axis])));
+  const localCenter = min.map((value, axis) => (value + max[axis]) * 0.5);
+  return {
+    center: mat3Apply(frame, localCenter),
+    localCenter,
+    size: min.map((value, axis) => max[axis] - value),
+  };
+}
+
+export function runtimePartsBounds(parts) {
+  if (!Array.isArray(parts) || !parts.length) return null;
+  const rows = parts.map(runtimePartBounds);
+  const min = [0, 1, 2].map((axis) => Math.min(...rows.map((row) => row.min[axis])));
+  const max = [0, 1, 2].map((axis) => Math.max(...rows.map((row) => row.max[axis])));
+  return {
+    min,
+    max,
+    center: min.map((v, axis) => (v + max[axis]) * 0.5),
+    size: min.map((v, axis) => max[axis] - v),
+  };
+}
+
+function sameLeafSlot(a, b) {
+  const ap = partPos(a.part), bp = partPos(b.part);
+  const span = Math.min(Math.max(...a.size), Math.max(...b.size));
+  const tolerance = Math.max(0.04, span * 0.08);
+  return ap.every((value, axis) => Math.abs((Number(value) || 0) - (Number(bp[axis]) || 0)) <= tolerance);
+}
+
+/** 同角色、同接合位置的疊層零件為一槽；不同位置保持獨立，允許逐槽抽樣。 */
+function leafSlots(role, rows) {
+  const sorted = [...rows].sort((a, b) => a.index - b.index);
+  const parent = sorted.map((_, index) => index);
+  const root = (index) => parent[index] === index ? index : (parent[index] = root(parent[index]));
+  for (let a = 0; a < sorted.length; a++) {
+    for (let b = a + 1; b < sorted.length; b++) {
+      if (sameLeafSlot(sorted[a], sorted[b])) parent[root(b)] = root(a);
+    }
+  }
+  const groups = new Map();
+  for (let index = 0; index < sorted.length; index++) {
+    const key = root(index);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(sorted[index]);
+  }
+  return [...groups.values()].sort((a, b) => a[0].index - b[0].index).map((group, index) => {
+    const rotation = [...(group[0].part.rotation || group[0].part.rot || [0, 0, 0])];
+    const bounds = runtimePartsFrameBounds(group.map((row) => row.part), rotation);
+    return {
+      id: `${safeName(role)}_${index}`,
+      partIndexes: group.map((row) => row.index),
+      center: bounds.center,
+      size: bounds.size,
+      rotation,
+    };
+  });
 }
 
 const ROLE_RULES = Object.freeze([
@@ -285,6 +391,88 @@ function clusterStructures(records, threshold = 0.145) {
     for (const row of cluster.records) row.similarity = Math.max(0, Math.round((1 - row.distance / threshold) * 100));
   }
   return clusters.sort((a, b) => textCmp(a.id, b.id));
+}
+
+/**
+ * 將已篩選的物件壓成遊戲可用的「主結構 → 角色分支 → 葉零件」索引。
+ * records 與本檔內部 record 同形；呼叫端若只有 runtime asset，將 asset 同時放進 model 即可。
+ * 零件只記索引，不複製幾何資料；執行期仍以 runtimeParts.js 為唯一零件資料來源。
+ */
+export function buildAssemblyIndex(records, threshold = 0.145) {
+  if (!Array.isArray(records)) throw new TypeError('組裝型錄 records 必須是陣列');
+  const bySubcategory = new Map();
+  for (const record of records) {
+    if (!record?.key || !record.family || !record.subpart || !Array.isArray(record.model?.parts)) continue;
+    const id = `${record.family}/${record.subpart}`;
+    if (!bySubcategory.has(id)) bySubcategory.set(id, []);
+    bySubcategory.get(id).push(record);
+  }
+
+  const objects = {};
+  const subcategories = {};
+  for (const [subcategoryId, rows] of [...bySubcategory].sort(([a], [b]) => textCmp(a, b))) {
+    const [family, subpart] = subcategoryId.split('/');
+    const paletteMap = new Map();
+    for (const record of rows) {
+      const declared = Array.isArray(record.model.palettes) ? record.model.palettes : [];
+      const seen = new Set();
+      for (const palette of paletteRows(record)) {
+        if (!palette.colors || seen.has(palette.signature)) continue;
+        seen.add(palette.signature);
+        if (!paletteMap.has(palette.signature)) {
+          const declaredIndex = declared.findIndex((row) => {
+            const clean = normalizedColors(row?.colors || row);
+            return clean && ZONES.every((zone) => clean[zone] === palette.colors[zone]);
+          });
+          paletteMap.set(palette.signature, {
+            id: `palette_${hashOf(palette.signature, 8)}`,
+            ...(declaredIndex >= 0
+              ? { sourceKey: record.key, paletteIndex: declaredIndex }
+              : { colors: palette.colors }),
+          });
+        }
+      }
+    }
+
+    const structures = clusterStructures(rows, threshold).map((cluster) => {
+      const members = cluster.records.map(({ record, split }) => {
+        const leafByRole = new Map();
+        for (const row of split.accessory) {
+          if (!leafByRole.has(row.role)) leafByRole.set(row.role, []);
+          leafByRole.get(row.role).push(row);
+        }
+        const member = {
+          key: record.key,
+          bounds: record.model?.bounds || record.database?.bounds || null,
+          mainParts: split.main.map((row) => ({ index: row.index, role: row.role })),
+          leafRoles: [...leafByRole].sort(([a], [b]) => textCmp(a, b)).map(([role, roleRows]) => ({
+            role,
+            slots: leafSlots(role, roleRows),
+          })),
+        };
+        objects[record.key] = { subcategoryId, structureId: cluster.id };
+        return member;
+      });
+      return { id: cluster.id, canonicalKey: cluster.canonical.record.key, members };
+    });
+    subcategories[subcategoryId] = {
+      id: subcategoryId,
+      family,
+      subpart,
+      palettes: [...paletteMap.values()].sort((a, b) => textCmp(a.id, b.id)),
+      structures,
+    };
+  }
+  return {
+    schemaVersion: 2,
+    policy: {
+      hierarchy: ['target-main-structure', 'leaf-role', 'target-slot', 'source-slot', 'part-index'],
+      structureThreshold: threshold,
+      paletteScope: 'subcategory',
+    },
+    subcategories,
+    objects,
+  };
 }
 
 function partShapeSignature(row) {

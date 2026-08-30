@@ -51,7 +51,7 @@ import {
 import { libGeo } from './partlib.js';
 // 通過零件台的 v5/v6 建築：選款與每款一批的執行期建模縫。
 import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
-import { approvedVehicleModelAt } from './approvedVehicleModels.js';
+import { generatedApprovedVehicleModelAt } from './approvedVehicleModels.js';
 import { makeRuntimePartModel } from './runtimePartModel.js';
 // 鳥群 / 魚群 / 貓 / 狗 (2026-08-16 序 11 ⑥-2 / 2026-08-27 生態擴充; 零 THREE 的積分器)
 import {
@@ -9270,7 +9270,7 @@ function vehGroup(kind, opts = {}) {
   const paintSeed = Number.isInteger(opts.paint) ? opts.paint : 0;
   const atSeed = Math.round((opts.at?.[0] || 0) * 10) + Math.round((opts.at?.[2] || 0) * 10);
   const cls = kind === 'railcar' ? ((opts.fit?.L || 0) > 10 ? 'bus' : 'cargo') : 'passenger';
-  const model = approvedVehicleModelAt((paintSeed ^ atSeed ^ Math.round(fit.L * 100)) | 0, cls);
+  const model = generatedApprovedVehicleModelAt((paintSeed ^ atSeed ^ Math.round(fit.L * 100)) | 0, cls);
   const mesh = makeRuntimePartModel(model, { environment: true });
   mesh.rotation.y = model.sceneBasis.rotationY;
   const basis = new THREE.Group();
