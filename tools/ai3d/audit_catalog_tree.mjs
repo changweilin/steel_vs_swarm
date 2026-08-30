@@ -64,6 +64,12 @@ const serverSrc = readSrc('tools/parts_review.mjs');
 ok('零件台讀型錄唯一縫', serverSrc.includes("from './ai3d/catalog_tree.mjs'") && serverSrc.includes('catalogReviewView(catalog)'));
 ok('零件台呈現類別/子類別/主結構樹', reviewSrc.includes('pr-tree-cat')
   && reviewSrc.includes('pr-tree-sub') && reviewSrc.includes('pr-tree-shape') && reviewSrc.includes('catalogSection(r)'));
+ok('零件台樹葉列出零件群與配色', reviewSrc.includes('catalogTreeBranches')
+  && reviewSrc.includes('pr-tree-branches') && reviewSrc.includes('partGroups')
+  && reviewSrc.includes('palettes'));
+ok('零件台支援指定／隨機零件與配色', reviewSrc.includes('generateBackgroundObject')
+  && reviewSrc.includes('partOverrides') && reviewSrc.includes('data-assembly-action="random"')
+  && reviewSrc.includes('prAssemblyPalette'));
 
 for (const check of checks) console.log(`${check.pass ? '✓' : '✗'} ${check.name}${check.detail ? ` (${check.detail})` : ''}`);
 const failed = checks.filter((check) => !check.pass);

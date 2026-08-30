@@ -67,6 +67,23 @@ body.pr::before, body.pr::after { display: none; }
 .pr-tree-shape > summary { padding-left: 28px; color: #d8b8ff; font-size: 10px; }
 .pr-tree-shape .pr-row { padding-left: 39px; }
 .pr-tree-canonical { padding: 2px 8px 5px 39px; color: var(--dim); font: 9px var(--mono); word-break: break-all; }
+.pr-tree-branches { margin: 0 8px 5px 39px; border-left: 1px solid rgba(169, 200, 255, 0.18); }
+.pr-tree-branch { border-top: 1px dashed rgba(255, 255, 255, 0.06); }
+.pr-tree-branch > summary {
+  display: flex; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none;
+  padding: 4px 6px; color: #a9c8ff; font: 9px var(--mono);
+}
+.pr-tree-branch > summary::-webkit-details-marker { display: none; }
+.pr-tree-branch > summary::before { content: '▸'; color: var(--dim); margin-right: 4px; }
+.pr-tree-branch[open] > summary::before { content: '▾'; }
+.pr-tree-branch > summary i, .pr-tree-leaf > i { color: var(--dim); font-style: normal; white-space: nowrap; }
+.pr-tree-leaf {
+  display: flex; justify-content: space-between; gap: 6px; padding: 2px 6px 2px 18px;
+  color: var(--dim); font: 8.5px var(--mono);
+}
+.pr-tree-leaf span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-tree-leaf code { color: #d8b8ff; }
+.pr-tree-runtime { padding: 3px 6px 4px 18px; color: #9fe7bb; font: 8.5px var(--mono); }
 
 /* 附註標籤(清單上只留標籤,整句進 title 懸浮看 —— 一列塞三句話會把清單撐爆) */
 .pr-row .pr-notes { display: block; margin-top: 2px; }
@@ -128,6 +145,18 @@ body.pr::before, body.pr::after { display: none; }
 .pr-cat-palette { display: grid; grid-template-columns: 86px 1fr auto; align-items: center; gap: 5px; font: 9px var(--mono); color: var(--dim); }
 .pr-cat-palette code { overflow: hidden; text-overflow: ellipsis; }
 .pr-cat-swatch { display: inline-block; width: 11px; height: 11px; border-radius: 2px; border: 1px solid rgba(255, 255, 255, 0.18); margin-right: 2px; }
+.pr-assembly { border: 1px solid rgba(120, 170, 255, 0.24); border-radius: 4px; padding: 8px; }
+.pr-assembly > h3 { margin-top: 0; }
+.pr-assembly-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+.pr-assembly-btn {
+  font: 10px var(--mono); padding: 3px 7px; border: 1px solid var(--railS); border-radius: 3px;
+  background: rgba(120, 170, 255, 0.12); color: #a9c8ff; cursor: pointer;
+}
+.pr-assembly-btn:hover { border-color: var(--railW); background: rgba(120, 170, 255, 0.22); }
+.pr-assembly-palette, .pr-assembly-part { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 7px; align-items: center; margin-top: 5px; }
+.pr-assembly-palette > span, .pr-assembly-part > span { font: 9px var(--mono); color: var(--dim); }
+.pr-assembly-select { width: 100%; max-width: none; }
+.pr-assembly-note { margin-top: 7px; }
 .pr-h2 { margin: 0 0 2px; font-size: 17px; word-break: break-all; }
 .pr-mline { font-family: var(--mono); font-size: 10.5px; color: var(--dim); margin-bottom: 6px; }
 

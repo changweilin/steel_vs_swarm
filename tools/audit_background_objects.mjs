@@ -73,6 +73,30 @@ ok('每個目標槽位保留獨立來源帳', Object.keys(generated.generation.l
   ))));
 ok('渲染配色抽自子類別清單', generated.palettes.length === 1
   && sub.palettes.some((palette) => palette.id === generated.generation.paletteId));
+const selectableRole = member.leafRoles.map((targetRole) => ({
+  targetRole,
+  choice: structure.members.flatMap((sourceMember) => sourceMember.leafRoles
+    .filter((sourceRole) => sourceRole.role === targetRole.role)
+    .flatMap((sourceRole) => sourceRole.slots.map((slot) => ({ sourceMember, slot }))))
+    .find((choice) => choice.sourceMember.key !== target),
+})).find((row) => row.targetRole.slots.length && row.choice);
+const selectedPalette = sub.palettes.find((palette) => palette.id !== generated.generation.paletteId) || sub.palettes[0];
+const specified = selectableRole && selectedPalette
+  ? generateBackgroundObject(target, 3, {
+    partOverrides: {
+      [`${selectableRole.targetRole.role}:${selectableRole.targetRole.slots[0].id}`]: {
+        sourceKey: selectableRole.choice.sourceMember.key,
+        sourceSlotId: selectableRole.choice.slot.id,
+      },
+    },
+    paletteId: selectedPalette.id,
+  }) : null;
+ok('零件台可指定來源槽與子類別配色', !!specified
+  && specified.generation.leafSlots.some((slot) => slot.role === selectableRole.targetRole.role
+    && slot.targetSlotId === selectableRole.targetRole.slots[0].id
+    && slot.sourceKey === selectableRole.choice.sourceMember.key
+    && slot.sourceSlotId === selectableRole.choice.slot.id)
+  && specified.generation.paletteId === selectedPalette?.id);
 
 const variants = Array.from({ length: 32 }, (_, seed) => generateBackgroundObject(target, seed));
 ok('固定變體上限可合批', new Set(variants.map((row) => row.key)).size <= BACKGROUND_VARIANTS_PER_TARGET);

@@ -31,6 +31,16 @@ const pick = (rows, seed, salt) => rows[hash32(seed, salt) % rows.length];
 const clonePart = (part) => Object.fromEntries(Object.entries(part).map(([key, value]) => (
   [key, Array.isArray(value) ? [...value] : value]
 )));
+const slotKey = (role, id) => `${role}:${id}`;
+
+function requestedLeafChoice(choices, request) {
+  if (!request || request.random) return null;
+  const sourceKey = typeof request === 'string' ? request : request.sourceKey || request.key;
+  const sourceSlotId = typeof request === 'string' ? null : request.sourceSlotId || request.slotId;
+  if (!sourceKey) return null;
+  return choices.find((choice) => choice.member.key === sourceKey
+    && (!sourceSlotId || choice.slot.id === sourceSlotId)) || null;
+}
 
 function colorKeyForRole(role) {
   if (role === 'roof' || role === 'canopy') return 'roof';
@@ -93,12 +103,18 @@ function catalogTarget(targetKey) {
 /**
  * 以穩定 seed 產生一個背景物件描述子。相同 targetKey + seed 恆得到同一組零件與配色；
  * seed 先量化成固定變體數，讓渲染端仍可按成品 key 合批。
+ * options 只增加覆核台／工具需要的選擇，不改變未傳 options 時的遊戲路徑：
+ *   partOverrides: { 'role:target-slot': { sourceKey, sourceSlotId } | { random: true } }
+ *   randomParts: true、paletteId、randomPalette: true
  */
-export function generateBackgroundObject(targetKey, seed = 0) {
+export function generateBackgroundObject(targetKey, seed = 0, options = {}) {
   if (!Number.isSafeInteger(seed)) throw new TypeError('背景物件 seed 必須是安全整數');
   const targetEntry = entries.get(targetKey);
   if (!targetEntry) throw new RangeError(`背景物件主結構缺少執行期資料:${targetKey}`);
   const { subcategory, structure, target } = catalogTarget(targetKey);
+  const settings = options && typeof options === 'object' ? options : {};
+  const partOverrides = settings.partOverrides && typeof settings.partOverrides === 'object'
+    ? settings.partOverrides : {};
   const variant = ((seed % BACKGROUND_VARIANTS_PER_TARGET) + BACKGROUND_VARIANTS_PER_TARGET)
     % BACKGROUND_VARIANTS_PER_TARGET;
   const parts = target.mainParts.map(({ index, role }) => decorate(targetEntry.parts[index], role));
@@ -112,7 +128,10 @@ export function generateBackgroundObject(targetKey, seed = 0) {
     if (!choices.length) continue;
     sources[targetRole.role] = [];
     for (const targetSlot of targetRole.slots) {
-      const choice = pick(choices, variant, `${targetKey}:leaf:${targetRole.role}:${targetSlot.id}`);
+      const override = partOverrides[slotKey(targetRole.role, targetSlot.id)];
+      const choice = requestedLeafChoice(choices, override)
+        || pick(choices, variant, `${targetKey}:leaf:${targetRole.role}:${targetSlot.id}`
+          + (settings.randomParts || override?.random ? ':random' : ''));
       const sourceEntry = entries.get(choice.member.key);
       if (!sourceEntry) throw new Error(`背景葉節點缺少來源:${choice.member.key}`);
       const partStart = parts.length;
@@ -133,9 +152,12 @@ export function generateBackgroundObject(targetKey, seed = 0) {
     }
   }
 
-  const paletteRow = subcategory.palettes.length
-    ? pick(subcategory.palettes, variant, `${targetKey}:palette`)
-    : null;
+  const requestedPalette = settings.paletteId && settings.paletteId !== 'auto'
+    && settings.paletteId !== 'random'
+    ? subcategory.palettes.find((palette) => palette.id === settings.paletteId) : null;
+  const paletteRow = requestedPalette || (subcategory.palettes.length
+    ? pick(subcategory.palettes, variant, `${targetKey}:palette${settings.randomPalette ? ':random' : ''}`)
+    : null);
   const colors = paletteRow ? paletteColors(paletteRow) : null;
   const palette = colors ? [{ id: paletteRow.id, name: paletteRow.id, colors }] : [];
   return {
@@ -152,6 +174,9 @@ export function generateBackgroundObject(targetKey, seed = 0) {
       leafSources: sources,
       leafSlots: slotSources,
       paletteId: paletteRow?.id || null,
+      selectionMode: settings.randomParts ? 'random' : Object.keys(partOverrides).length ? 'specified' : 'seed',
+      paletteMode: settings.randomPalette || settings.paletteId === 'random'
+        ? 'random' : requestedPalette ? 'specified' : 'seed',
     },
   };
 }

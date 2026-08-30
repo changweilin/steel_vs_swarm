@@ -88,6 +88,7 @@ const app = {
   filterMethod: '', filterFamily: '', filterDate: '', filterPhotoDate: '', filterVersion: '',
   seed: SEEDS[0], dist: 'part', collider: true, spin: true,
   treeView: 'whole', topView: false,
+  assembly: Object.create(null),
 };
 
 const FAMILY_LABELS = {
@@ -137,11 +138,61 @@ const api = async (body) => (await fetch('/api/parts', body
 const rowOf = (key) => app.data.rows.find((r) => r.key === key);
 const itemOf = (key) => app.data?.state?.items?.[key] || null;
 
+function assemblyContext(key) {
+  const catalog = gfx.backgroundCatalog;
+  const ref = catalog?.objects?.[key];
+  const sub = ref ? catalog.subcategories?.[ref.subcategoryId] : null;
+  const structure = sub?.structures?.find((row) => row.id === ref.structureId);
+  const target = structure?.members?.find((row) => row.key === key);
+  return ref && sub && structure && target ? { ref, sub, structure, target } : null;
+}
+
+function assemblyState(key) {
+  if (!app.assembly[key]) {
+    app.assembly[key] = {
+      active: false, seed: null, randomParts: false, randomPalette: false,
+      paletteId: 'auto', overrides: Object.create(null), revision: 0,
+    };
+  }
+  return app.assembly[key];
+}
+
+function randomAssemblySeed() {
+  const values = new Uint32Array(1);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(values);
+    return values[0] & 0x7fffffff;
+  }
+  const nonce = (app.assemblyNonce = ((app.assemblyNonce || 0) + 1) >>> 0);
+  return (Date.now() ^ nonce) & 0x7fffffff;
+}
+
+const choiceValue = (sourceKey, sourceSlotId) => encodeURIComponent(JSON.stringify({ sourceKey, sourceSlotId }));
+const decodeChoiceValue = (value) => {
+  if (!value || value === 'auto' || value === 'random') return value;
+  try { return JSON.parse(decodeURIComponent(value)); } catch { return null; }
+};
+
+function runtimeAssembly(r) {
+  return r?.view?.builder === 'model3d' && gfx.backgroundTargets?.has(r.key) && gfx.backgroundObjects
+    && assemblyContext(r.key) ? assemblyContext(r.key) : null;
+}
+
+function assemblyOptions(state) {
+  return {
+    partOverrides: state.overrides,
+    randomParts: state.randomParts,
+    paletteId: state.paletteId === 'auto' ? null : state.paletteId,
+    randomPalette: state.randomPalette || state.paletteId === 'random',
+  };
+}
+
 // ---- 3D(全部集中在這一段;失敗只讓這一段停用)-------------------------------
 const gfx = {
   ready: false, error: null, THREE: null, beacons: null, aquatics: null, camera: null,
   mods: new Map(),      // 'now' | `rev:<sha>` → beacons 模組
-  groups: new Map(),    // `${phase}|${src}|${kind}|${seed}` → Group(整場快取,不重建也不 dispose)
+  groups: new Map(),    // `${phase}|${src}|${kind}|${seed}` → Group；替換變體切換時釋放舊組
+  backgroundTargets: new Set(),
   viewers: [], topCamera: null, frameTop: null,
   orbit: { yaw: 0.9, pitch: 0.28 },
 };
@@ -155,6 +206,9 @@ async function initGfx(data) {
   gfx.rng = await import('/public/js/rng.js');
   const partlib = await import('/public/js/partlib.js');
   gfx.runtimePartModel = await import('/public/js/runtimePartModel.js');
+  gfx.backgroundObjects = await import('/public/js/backgroundObjects.js');
+  gfx.backgroundCatalog = (await import('/public/js/runtimeParts.js')).RUNTIME_BACKGROUND_CATALOG;
+  gfx.backgroundTargets = new Set(gfx.backgroundObjects.backgroundObjectTargets());
   const { setCelSun, bakeContactAO } = await import('/public/js/toon.js');
   gfx.bakeContactAO = bakeContactAO;
   gfx.mods.set('now', gfx.beacons);
@@ -203,8 +257,29 @@ async function initGfx(data) {
  * 於是 `rock/mega_*`(kind 'megalith')兩側畫的都是**地標疊石**,而疊石自己也吃 `rock/*` 節點
  * ⇒ 左右真的長得不一樣、讀數也在動,看起來完全正常,只是那顆巨岩從來沒上過台。
  */
+function disposeAssemblyGroup(group) {
+  if (!group) return;
+  group.traverse((object) => {
+    if (object.geometry) object.geometry.dispose();
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) material?.dispose?.();
+  });
+}
+
 function build(phase, src, kind, seed, builder = 'beacon') {
-  const key = `${phase}|${src}|${kind}|${seed}|${builder}`;
+  const assembly = phase === 'post' && src === 'now' && builder === 'model3d'
+    && gfx.backgroundTargets?.has(kind) ? assemblyState(kind) : null;
+  const assemblyKey = assembly?.active ? `|assembly:${assembly.revision}` : '';
+  const key = `${phase}|${src}|${kind}|${seed}|${builder}${assemblyKey}`;
+  if (assembly) {
+    const prefix = `${phase}|${src}|${kind}|${seed}|${builder}|assembly:`;
+    for (const [cachedKey, group] of gfx.groups) {
+      if (cachedKey.startsWith(prefix) && cachedKey !== key) {
+        disposeAssemblyGroup(group);
+        gfx.groups.delete(cachedKey);
+      }
+    }
+  }
   if (!gfx.groups.has(key)) {
     const mod = gfx.mods.get(src);
     if (!mod) return null;
@@ -234,6 +309,17 @@ function build(phase, src, kind, seed, builder = 'beacon') {
       gfx.groups.set(key, g);
     } else if (builder === 'aquatic' && kind === 'patrol_ship') {
       gfx.groups.set(key, gfx.aquatics.buildPatrolShipMesh());
+    } else if (builder === 'model3d' && assembly?.active && gfx.backgroundObjects) {
+      const g = new gfx.THREE.Group();
+      gfx.groups.set(key, g);
+      const generated = gfx.backgroundObjects.generateBackgroundObject(
+        kind, assembly.seed ?? app.seed, assemblyOptions(assembly),
+      );
+      const mesh = gfx.runtimePartModel.makeRuntimePartModel(
+        { ...generated, meshData: null }, { environment: true },
+      );
+      mesh.userData.assembly = generated.generation;
+      g.add(mesh);
     } else if (builder === 'model3d') {
       const g = new gfx.THREE.Group();
       gfx.groups.set(key, g);
@@ -892,6 +978,32 @@ const keepRow = (r) => {
   return true;
 };
 
+function catalogTreeBranches(subcategory, structure, rows) {
+  const groups = [...(structure.partGroups || [])].sort((a, b) => `${a.role}/${a.id}`.localeCompare(`${b.role}/${b.id}`));
+  const groupRows = groups.map((group) => `<div class="pr-tree-leaf">
+    <span><code>${esc(group.id)}</code> ・ ${esc(group.type)}</span>
+    <i>${group.count} 零件・${group.objectCount} 物件</i></div>`).join('');
+  const palettes = [...(subcategory?.palettes || [])].sort((a, b) => a.id.localeCompare(b.id));
+  const paletteRows = palettes.map((palette) => {
+    const swatches = palette.colors ? Object.values(palette.colors).slice(0, 4).map((color) =>
+      `<i class="pr-cat-swatch" style="background:#${hexStr(color)}"></i>`).join('') : '';
+    return `<div class="pr-tree-leaf"><span><code>${esc(palette.id)}</code>${swatches}</span>
+      <i>${palette.objects?.length || 0} 物件</i></div>`;
+  }).join('');
+  const runtimeCount = rows.filter((row) => gfx.backgroundTargets?.has(row.key)).length;
+  return `<div class="pr-tree-branches">
+    <details class="pr-tree-branch">
+      <summary><span>零件群</span><i>${groups.length} 群</i></summary>
+      ${groupRows || '<div class="pr-dim">沒有可替換的非主結構零件群</div>'}
+    </details>
+    <details class="pr-tree-branch">
+      <summary><span>配色</span><i>${palettes.length} 組</i></summary>
+      ${paletteRows || '<div class="pr-dim">沒有配色記錄</div>'}
+    </details>
+    ${runtimeCount ? `<div class="pr-tree-runtime">${runtimeCount} 件可在右側指定／隨機替換</div>` : ''}
+  </div>`;
+}
+
 function renderList() {
   // 左側清單有四種內容:生成物 / 語料圖檔(四態)/ 封存區 / 執行進度。
   // 執行進度沒有「一件一件」可挑 ⇒ 清單只放一列當作它自己的入口(不留空白,也不假裝有列表)
@@ -935,13 +1047,16 @@ function renderList() {
     const catRows = [...subMap.values()].flatMap((structures) => [...structures.values()].flatMap((group) => group.rows));
     const catOpen = catRows.some((row) => row.key === app.cur);
     const subs = [...subMap].sort(([a], [b]) => a.localeCompare(b)).map(([subcategory, structures]) => {
-      const subRows = [...structures.values()].flatMap((group) => group.rows);
+    const subRows = [...structures.values()].flatMap((group) => group.rows);
       const subOpen = subRows.some((row) => row.key === app.cur);
       const shapes = [...structures].sort(([a], [b]) => a.localeCompare(b)).map(([shapeId, group]) => {
         const shapeOpen = group.rows.some((row) => row.key === app.cur);
+        const subcategoryData = app.data.catalog.subcategories?.[`${category}/${subcategory}`];
+        const structureData = subcategoryData?.structures?.find((row) => row.id === shapeId);
         return `<details class="pr-tree pr-tree-shape" ${shapeOpen ? 'open' : ''}>
           <summary><span>主結構 ${esc(shapeId)}</span><i>${group.rows.length} 件</i></summary>
           <div class="pr-tree-canonical">共用主結構：${esc(group.canonicalKey)}</div>
+          ${structureData ? catalogTreeBranches(subcategoryData, structureData, group.rows) : ''}
           ${group.rows.sort((a, b) => a.key.localeCompare(b.key)).map(rowHtml).join('')}</details>`;
       }).join('');
       return `<details class="pr-tree pr-tree-sub" ${subOpen ? 'open' : ''}>
@@ -1259,6 +1374,66 @@ function featuresSection(r) {
   </div>`;
 }
 
+function sourceLabel(key) {
+  const text = String(key || '');
+  const slash = text.lastIndexOf('/');
+  return slash >= 0 ? text.slice(slash + 1) : text;
+}
+
+function assemblySection(r) {
+  const context = runtimeAssembly(r);
+  if (!context) return '';
+  const state = assemblyState(r.key);
+  const roles = (context.target.leafRoles || []).filter((role) => role.slots?.length);
+  const palettes = context.sub.palettes || [];
+  const paletteOptions = [
+    `<option value="auto" ${state.paletteId === 'auto' ? 'selected' : ''}>座號自動配色</option>`,
+    `<option value="random" ${state.paletteId === 'random' ? 'selected' : ''}>隨機配色</option>`,
+    ...palettes.map((palette) => `<option value="${esc(palette.id)}" ${state.paletteId === palette.id ? 'selected' : ''}>
+      ${esc(palette.id)} ・ ${esc(palette.name || '型錄配色')}</option>`),
+  ].join('');
+  const roleHtml = roles.map((role) => role.slots.map((targetSlot, slotIndex) => {
+    const slotKey = `${role.role}:${targetSlot.id}`;
+    const choices = context.structure.members.flatMap((member) => (member.leafRoles || [])
+      .filter((sourceRole) => sourceRole.role === role.role)
+      .flatMap((sourceRole) => sourceRole.slots.map((sourceSlot) => ({ member, slot: sourceSlot }))));
+    const unique = [];
+    const seen = new Set();
+    for (const choice of choices) {
+      const id = `${choice.member.key}|${choice.slot.id}`;
+      if (!seen.has(id)) { seen.add(id); unique.push(choice); }
+    }
+    const current = state.overrides[slotKey];
+    const selected = current?.random ? 'random'
+      : current ? choiceValue(current.sourceKey, current.sourceSlotId) : 'auto';
+    const options = [
+      '<option value="auto">座號自動選擇</option>',
+      '<option value="random">隨機來源槽</option>',
+      ...unique.map((choice) => {
+        const value = choiceValue(choice.member.key, choice.slot.id);
+        return `<option value="${value}" ${selected === value ? 'selected' : ''}
+          title="${esc(choice.member.key)}／${esc(choice.slot.id)}">${esc(sourceLabel(choice.member.key))} ・ ${esc(choice.slot.id)}</option>`;
+      }),
+    ].join('');
+    return `<label class="pr-assembly-part"><span>${esc(role.role)} #${slotIndex + 1}</span>
+      <select class="pr-fsel pr-assembly-select" data-assembly-role="${esc(role.role)}" data-assembly-slot="${esc(targetSlot.id)}">
+        ${options}</select></label>`;
+  }).join('')).join('');
+  const mode = !state.active ? '原始執行期模型' : state.randomParts || state.randomPalette ? '隨機變體' : '指定變體';
+  return `<div class="pr-sec pr-assembly" data-assembly-key="${esc(r.key)}">
+    <h3>零件／配色替換</h3>
+    <div class="pr-assembly-bar">
+      <button class="pr-assembly-btn" data-assembly-action="random">隨機零件＋配色</button>
+      <button class="pr-assembly-btn" data-assembly-action="reset">還原原件</button>
+      <span class="pr-dim">${esc(mode)} ・ 變更即套用</span>
+    </div>
+    <label class="pr-assembly-palette"><span>配色方案</span>
+      <select class="pr-fsel pr-assembly-select" id="prAssemblyPalette">${paletteOptions}</select></label>
+    ${roleHtml || '<div class="pr-dim">此物件沒有可替換的葉零件槽，仍可切換配色。</div>'}
+    <div class="pr-dim pr-assembly-note">零件來源限同一子類別／主結構的相似槽；主結構與碰撞資料不會被替換。</div>
+  </div>`;
+}
+
 function catalogSection(r) {
   const ref = r.catalog;
   const sub = ref ? app.data.catalog?.subcategories?.[ref.subcategoryId] : null;
@@ -1290,7 +1465,58 @@ function catalogSection(r) {
     <details class="pr-cat-detail"><summary>非主結構零件樹 ${structure.partGroups.length} 群</summary>${partsHtml}</details>
     <details class="pr-cat-detail"><summary>${esc(ref.category)}/${esc(ref.subcategory)} 配色清單 ${sub.palettes.length} 組</summary>
       <div class="pr-cat-palettes">${palettesHtml}</div></details>
+    ${assemblySection(r)}
   </div>`;
+}
+
+function bindAssembly(r) {
+  const context = runtimeAssembly(r);
+  if (!context) return;
+  const state = assemblyState(r.key);
+  const rerender = () => { state.revision++; renderBody(); };
+  const palette = $('prAssemblyPalette');
+  if (palette) palette.onchange = () => {
+    state.paletteId = palette.value;
+    state.randomPalette = palette.value === 'random';
+    state.randomParts = false;
+    state.seed = null;
+    state.active = true;
+    rerender();
+  };
+  for (const select of document.querySelectorAll('.pr-assembly-part select')) {
+    select.onchange = () => {
+      const key = `${select.dataset.assemblyRole}:${select.dataset.assemblySlot}`;
+      const value = decodeChoiceValue(select.value);
+      if (value === 'auto') delete state.overrides[key];
+      else if (value === 'random') state.overrides[key] = { random: true };
+      else if (value?.sourceKey && value?.sourceSlotId) state.overrides[key] = value;
+      else return;
+      state.active = true;
+      state.randomParts = false;
+      state.seed = null;
+      rerender();
+    };
+  }
+  const random = document.querySelector('[data-assembly-action="random"]');
+  if (random) random.onclick = () => {
+    state.active = true;
+    state.seed = randomAssemblySeed();
+    state.randomParts = true;
+    state.randomPalette = true;
+    state.paletteId = 'random';
+    state.overrides = Object.create(null);
+    rerender();
+  };
+  const reset = document.querySelector('[data-assembly-action="reset"]');
+  if (reset) reset.onclick = () => {
+    state.active = false;
+    state.seed = null;
+    state.randomParts = false;
+    state.randomPalette = false;
+    state.paletteId = 'auto';
+    state.overrides = Object.create(null);
+    rerender();
+  };
 }
 
 async function loadYoloData(r) {
@@ -1548,6 +1774,7 @@ function renderBody() {
   </div>`;
 
   mountStage(r);
+  bindAssembly(r);
   renderGaps();
   loadYoloData(r);
 
