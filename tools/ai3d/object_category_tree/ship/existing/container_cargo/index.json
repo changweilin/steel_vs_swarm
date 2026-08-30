@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/container_cargo",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "container_cargo",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/1778437182_68368.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/1778437182_68368.jpg"
+      },
+      "subtype": "container_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/20260421104430-37bd4fa5.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/20260421104430-37bd4fa5.jpg"
+      },
+      "subtype": "container_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/489644a4-bb94-6109-6f71-d81400ca1a48_620.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/489644a4-bb94-6109-6f71-d81400ca1a48_620.jpg"
+      },
+      "subtype": "container_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/A04A00_P_01_02.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/A04A00_P_01_02.jpg"
+      },
+      "subtype": "container_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/Capture-3139.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/Capture-3139.jpg"
+      },
+      "subtype": "container_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/d5154891.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/d5154891.jpg"
+      },
+      "subtype": "container_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

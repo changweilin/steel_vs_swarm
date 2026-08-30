@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/outcrop",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "outcrop",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/0h2tT7PCNbbVtpTnIwEGoSDFIYYSpaO2ldEnx_I01JNGNCLCwOSXsrPE5SNjsXKzZdU31xIUUdN29GK34LVy0haA.jpg"
+      },
+      "subtype": "coastal_volcanic_sea_stack",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/cfc0d6ff90ae224820a8d78861af93f5.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/cfc0d6ff90ae224820a8d78861af93f5.webp"
+      },
+      "subtype": "accessed_pinnacle_with_observation_structure",
+      "confidence": 0.86,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/IMG_7081.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/IMG_7081.jpg"
+      },
+      "subtype": "coastal_volcanic_outcrop_cluster",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/miyako-146.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/miyako-146.jpg"
+      },
+      "subtype": "coral_limestone_karst_outcrop",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "path": "building/__unresolved__/insufficient_evidence",
+  "family": "building",
+  "branch": "__unresolved__",
+  "objectType": "unresolved",
+  "resolution": "insufficient_evidence",
+  "definitionSource": "evidence gate",
+  "members": [
+    {
+      "id": "primary:building/20230614-025323_U26000_M862223_8d98.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "building/20230614-025323_U26000_M862223_8d98.webp"
+      },
+      "subtype": "臨水多層公共建築（用途未定）",
+      "confidence": 0.34,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/20250122003527.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/20250122003527.jpg"
+      },
+      "subtype": "大型臨水公共建築（用途未定）",
+      "confidence": 0.32,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/admin_51_1680233914_9ARlI77I3P.jpg!t1000.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "building/admin_51_1680233914_9ARlI77I3P.jpg!t1000.webp"
+      },
+      "subtype": "現代多翼公共建築（用途未定）",
+      "confidence": 0.3,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/architecture-949708_1920_(1).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/architecture-949708_1920_(1).jpg"
+      },
+      "subtype": "現代多翼公共建築（用途未定）",
+      "confidence": 0.3,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/4b36cf76-bdea-7886-fd39-5a3269b6047e.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/4b36cf76-bdea-7886-fd39-5a3269b6047e.jpg"
+      },
+      "subtype": "大型公共建築（教育/文化用途未定）",
+      "confidence": 0.38,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

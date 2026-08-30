@@ -11,6 +11,9 @@
     "classified": 305,
     "yolo26": 0,
     "needsDecomposition": 31,
+    "extensionCategories": 0,
+    "insufficientEvidence": 6,
+    "invalidSources": 1,
     "issues": 0
   },
   "byFamily": {
@@ -24189,6 +24192,7 @@
         },
         "family": "ship",
         "objectType": "unresolved",
+        "categoryStatus": "invalid_source",
         "subtype": "undecodable_image_file",
         "paletteDomain": "marine-unresolved",
         "confidence": 0.05,

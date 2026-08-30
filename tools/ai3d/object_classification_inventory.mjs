@@ -11,6 +11,8 @@ import { pathToFileURL } from 'node:url';
 import { ROOT } from '../audit_src.mjs';
 import {
   CLASSIFICATION_SCHEMA_VERSION,
+  resolveCategory,
+  validateCategoryExtensions,
   validateClassification,
 } from './object_classification_policy.mjs';
 
@@ -26,6 +28,7 @@ export const CORPORA = Object.freeze({
 });
 
 export const CLASSIFICATION_DIR = path.join(ROOT, 'tools', 'ai3d', 'object_classifications');
+export const EXTENSIONS_PATH = path.join(ROOT, 'tools', 'ai3d', 'object_category_extensions.json');
 export const MANIFEST_PATH = path.join(ROOT, 'tools', 'ai3d', 'object_classification_manifest.json');
 export const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
 const DEFAULT_SUBPART = Object.freeze({ building: 'mass', ship: 'hull', tree: 'canopy' });
@@ -114,6 +117,9 @@ function pairedEvidence(source) {
 export function buildClassificationManifest() {
   const docs = classificationDocs();
   const issues = [];
+  const extensionDoc = readJson(EXTENSIONS_PATH, { schemaVersion: 1, categories: [] });
+  const extensionCategories = Array.isArray(extensionDoc?.categories) ? extensionDoc.categories : [];
+  for (const issue of validateCategoryExtensions(extensionDoc)) issues.push(`類別擴充登錄：${issue}`);
   const classified = new Map();
   for (const { file, doc } of docs) {
     if (!doc || doc.schemaVersion !== CLASSIFICATION_SCHEMA_VERSION || !Array.isArray(doc.items)) {
@@ -124,7 +130,7 @@ export function buildClassificationManifest() {
       issues.push(`${path.relative(ROOT, file)}：分類器必須是 gpt-5.6-luna/max`);
     }
     for (const row of doc.items) {
-      const rowIssues = validateClassification(row);
+      const rowIssues = validateClassification(row, { extensionCategories });
       for (const issue of rowIssues) issues.push(`${row?.id || '?'}：${issue}`);
       if (row.family !== doc.family) issues.push(`${row?.id || '?'}：family 與分類檔不一致`);
       if (classified.has(row.id)) issues.push(`${row.id}：分類重複`);
@@ -179,6 +185,12 @@ export function buildClassificationManifest() {
       classified: items.filter((row) => row.classification).length,
       yolo26: items.filter((row) => row.yolo26.status === 'present').length,
       needsDecomposition: items.filter((row) => row.classification?.decompositionStatus === 'needs_decomposition').length,
+      extensionCategories: items.filter((row) => row.classification
+        && resolveCategory(row.classification, extensionCategories).status === 'extension').length,
+      insufficientEvidence: items.filter((row) => row.classification
+        && resolveCategory(row.classification, extensionCategories).status === 'insufficient_evidence').length,
+      invalidSources: items.filter((row) => row.classification
+        && resolveCategory(row.classification, extensionCategories).status === 'invalid_source').length,
       issues: issues.length,
     },
     byFamily,

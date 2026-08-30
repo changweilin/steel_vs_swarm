@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/recreational_powerboat",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "recreational_powerboat",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/0350p12000t3nb68kA8C8.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/0350p12000t3nb68kA8C8.jpg"
+      },
+      "subtype": "recreational_planing_powerboat",
+      "confidence": 0.93,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/1593571989300.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/1593571989300.jpg"
+      },
+      "subtype": "recreational_planing_powerboat",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/20210430002927_47.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/20210430002927_47.jpg"
+      },
+      "subtype": "recreational_planing_powerboat",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/img-1478851082-74949.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/img-1478851082-74949.jpg"
+      },
+      "subtype": "recreational_planing_powerboat",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/pngtree-blue-and-white-speedboat-png-image_16228702.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/pngtree-blue-and-white-speedboat-png-image_16228702.png"
+      },
+      "subtype": "recreational_planing_powerboat",
+      "confidence": 0.89,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

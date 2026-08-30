@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/submarine",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "submarine",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/20240301000865.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/20240301000865.png"
+      },
+      "subtype": "military_submarine",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/202512251310033872.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/202512251310033872.webp"
+      },
+      "subtype": "military_submarine",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/mobile01-d0f6425557ae4a5310b111f39cf1a5ad.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/mobile01-d0f6425557ae4a5310b111f39cf1a5ad.jpg"
+      },
+      "subtype": "composite_submarine_infographic",
+      "confidence": 0.93,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/Virginia_class_submarine.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/Virginia_class_submarine.jpg"
+      },
+      "subtype": "military_submarine",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

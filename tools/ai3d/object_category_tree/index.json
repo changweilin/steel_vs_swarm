@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "axis": "real-world object function",
+    "existingPath": "<family>/existing/<objectType>",
+    "extensionPath": "<family>/extended/<objectType>",
+    "unresolvedPath": "<family>/__unresolved__/<reason>",
+    "sourceMutation": "none",
+    "extensionGate": "registered functional definition; never appearance"
+  },
+  "counts": {
+    "objects": 305,
+    "categories": 50,
+    "existingCategories": 47,
+    "extensionCategories": 0,
+    "insufficientEvidence": 6,
+    "invalidSources": 1,
+    "issues": 0
+  },
+  "families": [
+    {
+      "family": "building",
+      "path": "building",
+      "categories": 11,
+      "members": 100
+    },
+    {
+      "family": "landmark",
+      "path": "landmark",
+      "categories": 9,
+      "members": 17
+    },
+    {
+      "family": "rock",
+      "path": "rock",
+      "categories": 10,
+      "members": 41
+    },
+    {
+      "family": "ship",
+      "path": "ship",
+      "categories": 14,
+      "members": 63
+    },
+    {
+      "family": "tree",
+      "path": "tree",
+      "categories": 6,
+      "members": 84
+    }
+  ],
+  "categoryPaths": [
+    "building/__unresolved__/insufficient_evidence",
+    "building/existing/civic_administrative",
+    "building/existing/commercial_office",
+    "building/existing/commercial_retail",
+    "building/existing/hospitality",
+    "building/existing/mixed_use",
+    "building/existing/observation_landmark",
+    "building/existing/religious",
+    "building/existing/residential_detached",
+    "building/existing/residential_multifamily",
+    "building/existing/residential_row",
+    "landmark/existing/ceremonial_gateway",
+    "landmark/existing/commemorative_monument",
+    "landmark/existing/communications_tower",
+    "landmark/existing/hospitality_landmark",
+    "landmark/existing/mixed_use_landmark",
+    "landmark/existing/museum_cultural_landmark",
+    "landmark/existing/observation_tower",
+    "landmark/existing/office_landmark",
+    "landmark/existing/religious_landmark",
+    "rock/__unresolved__/insufficient_evidence",
+    "rock/existing/boulder",
+    "rock/existing/columnar_basalt",
+    "rock/existing/dolmen_megalith",
+    "rock/existing/mesa",
+    "rock/existing/monolith",
+    "rock/existing/outcrop",
+    "rock/existing/stratified_slab",
+    "rock/existing/talus",
+    "rock/existing/tor",
+    "ship/__unresolved__/invalid_source",
+    "ship/existing/aircraft_carrier",
+    "ship/existing/bulk_cargo",
+    "ship/existing/container_cargo",
+    "ship/existing/cruise_ship",
+    "ship/existing/fishing_vessel",
+    "ship/existing/passenger_ferry",
+    "ship/existing/patrol_rescue",
+    "ship/existing/recreational_powerboat",
+    "ship/existing/research_vessel",
+    "ship/existing/submarine",
+    "ship/existing/surface_combatant",
+    "ship/existing/tanker",
+    "ship/existing/vehicle_carrier",
+    "tree/existing/broadleaf_tree",
+    "tree/existing/buttressed_giant",
+    "tree/existing/conifer_tree",
+    "tree/existing/sculptural_tree",
+    "tree/existing/shrub",
+    "tree/existing/snag"
+  ],
+  "issues": []
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/aircraft_carrier",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "aircraft_carrier",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/00int-China-aircraft-carrier-HFO-placeholder-vjtw-master1050.jpg"
+      },
+      "subtype": "aircraft_carrier",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/e7642302.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/e7642302.jpg"
+      },
+      "subtype": "aircraft_carrier",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/GettyImages-630597388-compressor.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/GettyImages-630597388-compressor.jpg"
+      },
+      "subtype": "aircraft_carrier",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/US_Navy_120125-N-XO220-368_The_aircraft_carrier_USS_Enterprise_(CVN_65)_is_underway_in_the_Atlantic_Ocean_during_a_composite_training_unit_exercise.jpg"
+      },
+      "subtype": "aircraft_carrier",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/圖2-超日王號.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/圖2-超日王號.jpg"
+      },
+      "subtype": "aircraft_carrier",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

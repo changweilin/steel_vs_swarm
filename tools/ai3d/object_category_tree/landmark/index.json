@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "family": "landmark",
+  "categories": [
+    {
+      "path": "landmark/existing/ceremonial_gateway",
+      "branch": "existing",
+      "objectType": "ceremonial_gateway",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "landmark/existing/commemorative_monument",
+      "branch": "existing",
+      "objectType": "commemorative_monument",
+      "resolution": null,
+      "members": 4
+    },
+    {
+      "path": "landmark/existing/communications_tower",
+      "branch": "existing",
+      "objectType": "communications_tower",
+      "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "landmark/existing/hospitality_landmark",
+      "branch": "existing",
+      "objectType": "hospitality_landmark",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "landmark/existing/mixed_use_landmark",
+      "branch": "existing",
+      "objectType": "mixed_use_landmark",
+      "resolution": null,
+      "members": 3
+    },
+    {
+      "path": "landmark/existing/museum_cultural_landmark",
+      "branch": "existing",
+      "objectType": "museum_cultural_landmark",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "landmark/existing/observation_tower",
+      "branch": "existing",
+      "objectType": "observation_tower",
+      "resolution": null,
+      "members": 2
+    },
+    {
+      "path": "landmark/existing/office_landmark",
+      "branch": "existing",
+      "objectType": "office_landmark",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "landmark/existing/religious_landmark",
+      "branch": "existing",
+      "objectType": "religious_landmark",
+      "resolution": null,
+      "members": 2
+    }
+  ]
+}

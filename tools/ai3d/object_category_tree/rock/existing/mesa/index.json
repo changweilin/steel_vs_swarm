@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/mesa",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "mesa",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/20211010001701.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/20211010001701.jpg"
+      },
+      "subtype": "desert_sandstone_butte",
+      "confidence": 0.82,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/w4a9462fb-jpg.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/w4a9462fb-jpg.avif"
+      },
+      "subtype": "flat_topped_table_mesa",
+      "confidence": 0.87,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/南犹他州巨岩山-164605945.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/南犹他州巨岩山-164605945.webp"
+      },
+      "subtype": "sandstone_cliff_mesa",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

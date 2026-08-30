@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "landmark/existing/ceremonial_gateway",
+  "family": "landmark",
+  "branch": "existing",
+  "objectType": "ceremonial_gateway",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:landmark/Arc_de_Triomf_Barcelona.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/Arc_de_Triomf_Barcelona.webp"
+      },
+      "subtype": "巴塞隆納展覽儀式凱旋門",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

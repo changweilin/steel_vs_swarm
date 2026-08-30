@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/mixed_use",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "mixed_use",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/images (14).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (14).jpg"
+      },
+      "subtype": "街角底層商業與上層住宅大樓",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

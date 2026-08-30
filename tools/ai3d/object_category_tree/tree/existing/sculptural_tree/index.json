@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "path": "tree/existing/sculptural_tree",
+  "family": "tree",
+  "branch": "existing",
+  "objectType": "sculptural_tree",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:tree/images (1).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (1).jpg"
+      },
+      "subtype": "tiered_conifer_bonsai",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/images (16).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (16).jpg"
+      },
+      "subtype": "cloud_pruned_fruit_tree",
+      "confidence": 0.81,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/images (2).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (2).jpg"
+      },
+      "subtype": "tiered_conifer_topiary",
+      "confidence": 0.77,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/images (3).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (3).jpg"
+      },
+      "subtype": "windswept_conifer_bonsai",
+      "confidence": 0.8,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/images (4).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (4).jpg"
+      },
+      "subtype": "sweeping_conifer_bonsai",
+      "confidence": 0.88,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/images.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images.jpg"
+      },
+      "subtype": "baobab_bonsai",
+      "confidence": 0.87,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466.png"
+      },
+      "subtype": "flowering_broadleaf_bonsai",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp"
+      },
+      "subtype": "rounded_broadleaf_bonsai",
+      "confidence": 0.82,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-a-small-juniper-bonsai-png-image_12474477.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-a-small-juniper-bonsai-png-image_12474477.png"
+      },
+      "subtype": "juniper_bonsai",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524.png"
+      },
+      "subtype": "flowering_tung_bonsai",
+      "confidence": 0.9,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561.webp"
+      },
+      "subtype": "compact_broadleaf_bonsai",
+      "confidence": 0.79,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-chinese-juniper-isolated-on-white-background-png-image_320181.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-chinese-juniper-isolated-on-white-background-png-image_320181.jpg"
+      },
+      "subtype": "chinese_juniper_bonsai",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-dark-bonsai-in-blue-pot-png-image_16185488.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-dark-bonsai-in-blue-pot-png-image_16185488.png"
+      },
+      "subtype": "dark_juniper_bonsai",
+      "confidence": 0.87,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398.png"
+      },
+      "subtype": "pruned_twisted_bonsai",
+      "confidence": 0.88,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/pngtree-flowers-bonsai-tree-png-image_12485135.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-flowers-bonsai-tree-png-image_12485135.png"
+      },
+      "subtype": "flowering_bonsai",
+      "confidence": 0.9,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:tree/serene-bonsai-tree-digital-art-illustration-transparent-background_471203-3976.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/serene-bonsai-tree-digital-art-illustration-transparent-background_471203-3976.avif"
+      },
+      "subtype": "stylized_digital_bonsai",
+      "confidence": 0.62,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.jpg"
+      },
+      "subtype": "saguaro_cactus",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/Cardon_Pachycereus_pringlei.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Cardon_Pachycereus_pringlei.jpg"
+      },
+      "subtype": "cardon_cactus",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/getImage-3-4.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/getImage-3-4.jpg"
+      },
+      "subtype": "dragon_blood_tree",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/Pachycereus_pringlei_forest.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Pachycereus_pringlei_forest.jpg"
+      },
+      "subtype": "cardon_cactus_stand",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

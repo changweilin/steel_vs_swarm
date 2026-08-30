@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/boulder",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "boulder",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/1000_F_565803372_MnPpc72LIOu5vFmDZ9cAwnrYS5lbjTs0.jpg"
+      },
+      "subtype": "angular_detached_boulder",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/900px (1).avif",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/900px (1).avif"
+      },
+      "subtype": "mossy_angular_boulder",
+      "confidence": 0.78,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/900px.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/900px.avif"
+      },
+      "subtype": "weathered_rounded_boulder",
+      "confidence": 0.73,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/id14796060-shutterstock_783352309.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/id14796060-shutterstock_783352309.jpg"
+      },
+      "subtype": "coastal_rounded_boulder_field",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images (1).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images (1).jpg"
+      },
+      "subtype": "elongated_rounded_boulder",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images (2).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images (2).jpg"
+      },
+      "subtype": "weathered_rounded_boulder",
+      "confidence": 0.96,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images (3).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images (3).jpg"
+      },
+      "subtype": "smooth_rounded_boulder",
+      "confidence": 0.93,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images (4).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images (4).jpg"
+      },
+      "subtype": "elongated_flatslab_boulder",
+      "confidence": 0.83,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images (6).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images (6).jpg"
+      },
+      "subtype": "moss_grass_boulder",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images (7).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images (7).jpg"
+      },
+      "subtype": "blocky_weathered_boulder",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images rock.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images rock.jpg"
+      },
+      "subtype": "smooth_rounded_boulder",
+      "confidence": 0.85,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/images.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/images.jpg"
+      },
+      "subtype": "glacial_erratic_boulder",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/large-heavy-rock-stone-isolated-on-background-png.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/large-heavy-rock-stone-isolated-on-background-png.webp"
+      },
+      "subtype": "angular_isolated_boulder",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/pngtree-big-boulder-transparent-png-image_13387881.png",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/pngtree-big-boulder-transparent-png-image_13387881.png"
+      },
+      "subtype": "angular_faceted_boulder",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243.png",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/pngtree-mesmerizing-high-contrast-composition-featuring-one-large-stone-png-image_13631243.png"
+      },
+      "subtype": "moss_seamed_boulder",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

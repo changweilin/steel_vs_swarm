@@ -40,3 +40,14 @@ target crop、mask、depth 路徑，因此原圖與衍生證據永遠一併歸�
 兩個 corpus 的 YOLO26 feature、crop、mask、depth、v6 target id 與穩定鍵都必須帶 corpus id。直屬
 未分類來源若沒有 Luna 功能分類，v6 ingest 會 fail-closed；有分類時，生成與獨立複核都必須讀入完整
 功能拆件表，並把 `missingFunctionalParts` 補成獨立幾何零件後才可入庫。
+
+## 類別樹擴充
+
+分類結果依 `family/existing/objectType` 建立樹狀目錄。若功能證據完整、但現有 `OBJECT_TYPES` 確實沒有
+可容納的類型，父流程必須先在 `tools/ai3d/object_category_extensions.json` 登錄穩定 id、現實功能定義、
+與現有類型的差異及證據，再由 `object_category_tree.mjs` 建立 `family/extended/objectType` 節點。不得只因
+外形、顏色、照片風格或單一型號名稱建立新類別。
+
+看不清用途屬於 `__unresolved__/insufficient_evidence`，損壞或不是影像的來源屬於
+`__unresolved__/invalid_source`。兩者都不是新物件類別，也不得進入零件或配色替換群。來源照片維持
+原位；樹節點只保存穩定來源 id 與 YOLO26 狀態，避免搬檔破壞 `corpus + source.image` 身份。

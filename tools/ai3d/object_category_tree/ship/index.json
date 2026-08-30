@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "family": "ship",
+  "categories": [
+    {
+      "path": "ship/__unresolved__/invalid_source",
+      "branch": "__unresolved__",
+      "objectType": "unresolved",
+      "resolution": "invalid_source",
+      "members": 1
+    },
+    {
+      "path": "ship/existing/aircraft_carrier",
+      "branch": "existing",
+      "objectType": "aircraft_carrier",
+      "resolution": null,
+      "members": 5
+    },
+    {
+      "path": "ship/existing/bulk_cargo",
+      "branch": "existing",
+      "objectType": "bulk_cargo",
+      "resolution": null,
+      "members": 3
+    },
+    {
+      "path": "ship/existing/container_cargo",
+      "branch": "existing",
+      "objectType": "container_cargo",
+      "resolution": null,
+      "members": 6
+    },
+    {
+      "path": "ship/existing/cruise_ship",
+      "branch": "existing",
+      "objectType": "cruise_ship",
+      "resolution": null,
+      "members": 7
+    },
+    {
+      "path": "ship/existing/fishing_vessel",
+      "branch": "existing",
+      "objectType": "fishing_vessel",
+      "resolution": null,
+      "members": 9
+    },
+    {
+      "path": "ship/existing/passenger_ferry",
+      "branch": "existing",
+      "objectType": "passenger_ferry",
+      "resolution": null,
+      "members": 5
+    },
+    {
+      "path": "ship/existing/patrol_rescue",
+      "branch": "existing",
+      "objectType": "patrol_rescue",
+      "resolution": null,
+      "members": 1
+    },
+    {
+      "path": "ship/existing/recreational_powerboat",
+      "branch": "existing",
+      "objectType": "recreational_powerboat",
+      "resolution": null,
+      "members": 5
+    },
+    {
+      "path": "ship/existing/research_vessel",
+      "branch": "existing",
+      "objectType": "research_vessel",
+      "resolution": null,
+      "members": 5
+    },
+    {
+      "path": "ship/existing/submarine",
+      "branch": "existing",
+      "objectType": "submarine",
+      "resolution": null,
+      "members": 4
+    },
+    {
+      "path": "ship/existing/surface_combatant",
+      "branch": "existing",
+      "objectType": "surface_combatant",
+      "resolution": null,
+      "members": 7
+    },
+    {
+      "path": "ship/existing/tanker",
+      "branch": "existing",
+      "objectType": "tanker",
+      "resolution": null,
+      "members": 4
+    },
+    {
+      "path": "ship/existing/vehicle_carrier",
+      "branch": "existing",
+      "objectType": "vehicle_carrier",
+      "resolution": null,
+      "members": 1
+    }
+  ]
+}

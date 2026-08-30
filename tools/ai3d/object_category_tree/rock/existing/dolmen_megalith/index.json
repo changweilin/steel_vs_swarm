@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/dolmen_megalith",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "dolmen_megalith",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/132.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/132.jpg"
+      },
+      "subtype": "standing_stone_circle",
+      "confidence": 0.93,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/d087b40c-1b1a-4f8a-a620-c0aafe41056d.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/d087b40c-1b1a-4f8a-a620-c0aafe41056d.webp"
+      },
+      "subtype": "stonehenge_standing_megalith",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

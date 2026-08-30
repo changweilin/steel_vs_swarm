@@ -1,0 +1,538 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/residential_detached",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "residential_detached",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/101330.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/101330.jpg"
+      },
+      "subtype": "附獨立車庫與泳池的獨棟住宅",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/1596017844729-9295393d0aea4e97b102014ccfcbcdbf-1200x818.jpg"
+      },
+      "subtype": "郊區獨棟住宅",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/162562917953.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/162562917953.jpg"
+      },
+      "subtype": "多層獨棟住宅",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/depositphotos_415995326-stock-photo-house-modern-architecture-illustration.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/depositphotos_415995326-stock-photo-house-modern-architecture-illustration.jpg"
+      },
+      "subtype": "現代獨棟住宅",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/ea928273145f45cbb50e9db4.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/ea928273145f45cbb50e9db4.jpg"
+      },
+      "subtype": "現代獨棟住宅模型",
+      "confidence": 0.82,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/family-house-in-druskininkai-laurynas-zakevicius-architects_12.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/family-house-in-druskininkai-laurynas-zakevicius-architects_12.jpg"
+      },
+      "subtype": "林地獨棟住宅",
+      "confidence": 0.93,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/image-webp.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "building/image-webp.webp"
+      },
+      "subtype": "狹長基地多層住宅",
+      "confidence": 0.84,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (10).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (10).jpg"
+      },
+      "subtype": "附車庫獨棟住宅",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (11).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (11).jpg"
+      },
+      "subtype": "雙層坡屋頂住宅",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (12).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (12).jpg"
+      },
+      "subtype": "木構山屋住宅",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (13).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (13).jpg"
+      },
+      "subtype": "現代獨棟住宅",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (16).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (16).jpg"
+      },
+      "subtype": "窄基地多層獨棟住宅",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (18).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (18).jpg"
+      },
+      "subtype": "雙層獨棟住宅",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (19).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (19).jpg"
+      },
+      "subtype": "傳統合院住宅",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (2).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (2).jpg"
+      },
+      "subtype": "狹長基地現代住宅",
+      "confidence": 0.84,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (3).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (3).jpg"
+      },
+      "subtype": "三層獨棟住宅",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (4).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (4).jpg"
+      },
+      "subtype": "庭院獨棟住宅",
+      "confidence": 0.93,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (5).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (5).jpg"
+      },
+      "subtype": "傳統現代混合獨棟住宅",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (6).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (6).jpg"
+      },
+      "subtype": "庭院獨棟住宅模型",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (7).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (7).jpg"
+      },
+      "subtype": "大型庭院獨棟住宅",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (8).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (8).jpg"
+      },
+      "subtype": "低層現代獨棟住宅",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/images (9).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/images (9).jpg"
+      },
+      "subtype": "現代獨棟住宅",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/kvtoyweb.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/kvtoyweb.jpg"
+      },
+      "subtype": "現代獨棟住宅模型",
+      "confidence": 0.8,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/Minimalist-facade-with-sliding-glass-doors.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "building/Minimalist-facade-with-sliding-glass-doors.webp"
+      },
+      "subtype": "滑門玻璃立面獨棟住宅",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/mobile01-6f983fdd0b12d341a5c696410db00027.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/mobile01-6f983fdd0b12d341a5c696410db00027.jpg"
+      },
+      "subtype": "窄基地多層透天住宅",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521309.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521309.png"
+      },
+      "subtype": "泳池庭院獨棟住宅",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521310.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-3d-modern-house-or-home-isometric-modern-building-and-architecture-png-image_14521310.png"
+      },
+      "subtype": "多層現代獨棟住宅",
+      "confidence": 0.87,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-an-isometric-illustration-of-a-modern-two-story-house-with-clean-png-image_20265583.png"
+      },
+      "subtype": "雙層坡屋頂獨棟住宅",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-house-a-more-traditional-two-story-symbolizing-family-or-residence-png-image_15987021.png"
+      },
+      "subtype": "傳統雙層獨棟住宅模型",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-luxury-modern-house-featuring-sleek-design-and-poolside-png-image_19984938.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-luxury-modern-house-featuring-sleek-design-and-poolside-png-image_19984938.png"
+      },
+      "subtype": "泳池庭院豪宅",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-modern-architectural-3d-visualization-of-luxury-home-with-wood-accents-and-png-image_16602271.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-modern-architectural-3d-visualization-of-luxury-home-with-wood-accents-and-png-image_16602271.webp"
+      },
+      "subtype": "木質現代獨棟住宅",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-modern-house-isometric-view-illustration-3d-clipart-png-image_16779027.png"
+      },
+      "subtype": "大型庭院現代住宅",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-modern-house-with-stone-and-wood-exterior-3d-illustration-png-image_16999334.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-modern-house-with-stone-and-wood-exterior-3d-illustration-png-image_16999334.png"
+      },
+      "subtype": "石材木構現代獨棟住宅",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-modern-luxury-architectural-house-with-pool-and-greenery-isolated-on-transparent-png-image_21312324.png"
+      },
+      "subtype": "泳池庭院現代豪宅",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-modern-luxury-house-with-rooftop-pool-and-garden-terrace-png-image_18663928.webp"
+      },
+      "subtype": "屋頂泳池現代豪宅",
+      "confidence": 0.95,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-modern-two-story-house-architectural-3d-model-png-image_21224192.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-modern-two-story-house-architectural-3d-model-png-image_21224192.png"
+      },
+      "subtype": "雙層現代獨棟住宅",
+      "confidence": 0.93,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/pngtree-modern-two-story-house-architectural-3d-model-rendering-with-balconies-and-png-image_21138844.png",
+      "source": {
+        "corpus": "primary",
+        "image": "building/pngtree-modern-two-story-house-architectural-3d-model-rendering-with-balconies-and-png-image_21138844.png"
+      },
+      "subtype": "帶陽台雙層獨棟住宅",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/Ra_geleje_17_FotoHB_high.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/Ra_geleje_17_FotoHB_high.jpg"
+      },
+      "subtype": "海岸玻璃獨棟住宅",
+      "confidence": 0.72,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/shoreline-studio-norm-architects_14.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/shoreline-studio-norm-architects_14.jpg"
+      },
+      "subtype": "海岸草頂獨棟小屋",
+      "confidence": 0.64,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/tmp_AS173217722971.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "building/tmp_AS173217722971.webp"
+      },
+      "subtype": "窄基地多層透天住宅",
+      "confidence": 0.89,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:building/VillaSavoye.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/VillaSavoye.jpg"
+      },
+      "subtype": "現代主義獨棟別墅",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/0355a12000s97al9y467C.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/0355a12000s97al9y467C.jpg"
+      },
+      "subtype": "傳統茅草獨棟住宅",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/1308038026-5fcd82ecce1d6eb43ff1b4530d3e4bf2.jpg"
+      },
+      "subtype": "鄉村獨棟住宅",
+      "confidence": 0.9,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/1308038030-ff6b6b2acb89171e9cb16f9d3ea9028c.jpg"
+      },
+      "subtype": "田野旁大型獨棟住宅",
+      "confidence": 0.8,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/250808-31799-30-gNZVV.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/250808-31799-30-gNZVV.jpg"
+      },
+      "subtype": "山林木構獨棟住宅",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/66fc7920151e4d6b915aeaacc1502afd.jpeg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/66fc7920151e4d6b915aeaacc1502afd.jpeg"
+      },
+      "subtype": "山林木屋獨棟住宅",
+      "confidence": 0.86,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/b0e1e029-63b6-4f41-a4cb-2d4eb350dbfd.jpg"
+      },
+      "subtype": "歷史莊園獨棟住宅",
+      "confidence": 0.61,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/e28ba9534d67c7605a1800bc035444d5.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/e28ba9534d67c7605a1800bc035444d5.jpg"
+      },
+      "subtype": "傳統獨棟住宅",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

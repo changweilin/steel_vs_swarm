@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/hospitality",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "hospitality",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:building/0.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/0.jpg"
+      },
+      "subtype": "帆船形海濱豪華飯店",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/4f5ee370c1564cadabc47ce365c4f353.jpeg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/4f5ee370c1564cadabc47ce365c4f353.jpeg"
+      },
+      "subtype": "山林旅宿木屋",
+      "confidence": 0.58,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

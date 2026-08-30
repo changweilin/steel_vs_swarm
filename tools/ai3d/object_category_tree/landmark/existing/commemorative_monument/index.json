@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "landmark/existing/commemorative_monument",
+  "family": "landmark",
+  "branch": "existing",
+  "objectType": "commemorative_monument",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:landmark/1mi33224x98pwxmef6871_Q90.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/1mi33224x98pwxmef6871_Q90.avif"
+      },
+      "subtype": "巴黎凱旋門軍事紀念拱門",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/A13239_1459246004_0.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/A13239_1459246004_0.jpg"
+      },
+      "subtype": "奇琴伊察庫庫爾坎階梯金字塔考古地標",
+      "confidence": 0.99,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/math272.png",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/math272.png"
+      },
+      "subtype": "吉薩胡夫金字塔古代陵墓地標",
+      "confidence": 0.99,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:landmark/Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "landmark/Paris,_Obelisk_in_the_Place_de_la_Concorde,_July_22,_2008.jpg"
+      },
+      "subtype": "協和廣場盧克索方尖碑歷史紀念碑",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

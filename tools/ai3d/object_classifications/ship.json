@@ -6807,6 +6807,7 @@
       },
       "family": "ship",
       "objectType": "unresolved",
+      "categoryStatus": "invalid_source",
       "subtype": "undecodable_image_file",
       "paletteDomain": "marine-unresolved",
       "confidence": 0.05,

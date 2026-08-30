@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "path": "rock/existing/stratified_slab",
+  "family": "rock",
+  "branch": "existing",
+  "objectType": "stratified_slab",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:rock/61bc69c388977.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/61bc69c388977.webp"
+      },
+      "subtype": "bedded_coastal_sea_stack",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/61bc69d997822.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/61bc69d997822.webp"
+      },
+      "subtype": "bedded_coastal_sea_stack",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/714USfuK4oL._AC_UF894,1000_QL80_.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/714USfuK4oL._AC_UF894,1000_QL80_.jpg"
+      },
+      "subtype": "weathered_bedded_slab",
+      "confidence": 0.83,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "primary:rock/71W8rWv9TvL._AC_UF894,1000_QL80_.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "rock/71W8rWv9TvL._AC_UF894,1000_QL80_.jpg"
+      },
+      "subtype": "laminated_slab_cluster",
+      "confidence": 0.91,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    }
+  ]
+}

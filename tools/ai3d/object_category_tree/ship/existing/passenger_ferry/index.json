@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/passenger_ferry",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "passenger_ferry",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/20090411-TurboJET_Barca.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/20090411-TurboJET_Barca.jpg"
+      },
+      "subtype": "passenger_excursion_or_ferry",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/k23.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/k23.jpg"
+      },
+      "subtype": "passenger_excursion_or_ferry",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/nzdnc7pepb9ltbpslhtv.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/nzdnc7pepb9ltbpslhtv.jpg"
+      },
+      "subtype": "passenger_excursion_or_ferry",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/s11_1667405441519.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/s11_1667405441519.jpg"
+      },
+      "subtype": "passenger_excursion_or_ferry",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/tkldbkxi3ftl5wewz3u2.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/tkldbkxi3ftl5wewz3u2.jpg"
+      },
+      "subtype": "passenger_excursion_or_ferry",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

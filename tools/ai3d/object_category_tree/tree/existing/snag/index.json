@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "tree/existing/snag",
+  "family": "tree",
+  "branch": "existing",
+  "objectType": "snag",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:tree/FB_IMG_1786818411804.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/FB_IMG_1786818411804.jpg"
+      },
+      "subtype": "weathered_twisted_snag",
+      "confidence": 0.72,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/civic_administrative",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "civic_administrative",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:building/state-capitol.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/state-capitol.jpg"
+      },
+      "subtype": "州議會大廈行政建築",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

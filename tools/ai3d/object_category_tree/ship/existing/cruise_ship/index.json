@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/cruise_ship",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "cruise_ship",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/1695146093.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/1695146093.png"
+      },
+      "subtype": "ocean_cruise_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/174340740201.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/174340740201.jpg"
+      },
+      "subtype": "ocean_cruise_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/668d6f418c667-870x500.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/668d6f418c667-870x500.webp"
+      },
+      "subtype": "ocean_cruise_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/article-5ca19fe0e988a.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/article-5ca19fe0e988a.jpg"
+      },
+      "subtype": "ocean_cruise_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/Disney%20Adventure%20ship%201.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/Disney%20Adventure%20ship%201.jpg"
+      },
+      "subtype": "ocean_cruise_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/royal-caribbean-explorer-of-the-seas-01-eG_-WK3.webp"
+      },
+      "subtype": "ocean_cruise_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:ship/ttn1071_Cover0106.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/ttn1071_Cover0106.jpg"
+      },
+      "subtype": "ocean_cruise_ship",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

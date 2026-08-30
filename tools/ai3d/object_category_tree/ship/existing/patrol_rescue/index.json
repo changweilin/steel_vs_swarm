@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/patrol_rescue",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "patrol_rescue",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/202602131051276980.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/202602131051276980.webp"
+      },
+      "subtype": "fisheries_inspection_patrol_vessel",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

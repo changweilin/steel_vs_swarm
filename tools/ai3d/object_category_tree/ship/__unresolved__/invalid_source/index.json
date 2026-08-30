@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/__unresolved__/invalid_source",
+  "family": "ship",
+  "branch": "__unresolved__",
+  "objectType": "unresolved",
+  "resolution": "invalid_source",
+  "definitionSource": "evidence gate",
+  "members": [
+    {
+      "id": "restricted:ship/LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/LNG成為海事船舶減碳新選擇：高壓燃氣供應系統（FGSS）打造低碳排海運關鍵解方.webp"
+      },
+      "subtype": "undecodable_image_file",
+      "confidence": 0.05,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    }
+  ]
+}

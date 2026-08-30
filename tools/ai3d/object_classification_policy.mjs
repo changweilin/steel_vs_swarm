@@ -7,6 +7,9 @@
 
 export const CLASSIFICATION_SCHEMA_VERSION = 1;
 export const UNKNOWN_TYPE = 'unresolved';
+export const CATEGORY_STATUSES = Object.freeze([
+  'existing', 'extension', 'insufficient_evidence', 'invalid_source',
+]);
 
 export const OBJECT_TYPES = Object.freeze({
   building: Object.freeze([
@@ -84,6 +87,7 @@ export const DECOMPOSITION_RULES = Object.freeze({
 export const INTERCHANGE_RULES = Object.freeze({
   object: Object.freeze([
     '物件必須屬於相同 objectType，或由明文 functionalProfile.compatibleTypes 授權',
+    'insufficient_evidence 與 invalid_source 隔離物件永遠不可替換',
     '用途、工作介質、操作方向與安全責任必須一致',
     '主結構、權威碰撞或遊戲語意不同時一律不可替換',
   ]),
@@ -102,16 +106,65 @@ export const INTERCHANGE_RULES = Object.freeze({
   ]),
 });
 
-const allowed = (family, objectType) => OBJECT_TYPES[family]?.includes(objectType) === true;
 const text = (value) => typeof value === 'string' && value.trim() ? value.trim() : null;
 
-export function validateClassification(row) {
+export function validateCategoryExtensions(doc) {
+  const issues = [];
+  if (!doc || doc.schemaVersion !== 1 || !Array.isArray(doc.categories)) return ['schemaVersion/categories 無效'];
+  const seen = new Set();
+  for (const [index, category] of doc.categories.entries()) {
+    const key = `${category?.family}/${category?.id}`;
+    if (!OBJECT_TYPES[category?.family]) issues.push(`categories[${index}].family 不合法`);
+    if (!/^[a-z][a-z0-9_]*$/.test(category?.id || '')) issues.push(`categories[${index}].id 不合法`);
+    if (OBJECT_TYPES[category?.family]?.includes(category?.id)) issues.push(`${key} 已是現有類別`);
+    if (seen.has(key)) issues.push(`${key} 重複`);
+    seen.add(key);
+    for (const field of ['displayName', 'functionDefinition', 'distinguishesFrom', 'realityEvidence']) {
+      if (!text(category?.[field])) issues.push(`${key}.${field} 缺值`);
+    }
+  }
+  return issues;
+}
+
+export function resolveCategory(row, extensionCategories = []) {
+  if (!row) return { status: 'invalid', path: null };
+  const isExisting = OBJECT_TYPES[row.family]?.includes(row.objectType) && row.objectType !== UNKNOWN_TYPE;
+  const extension = extensionCategories.find((category) => (
+    category.family === row.family && category.id === row.objectType
+  ));
+  let status = row.categoryStatus;
+  if (!status) status = isExisting ? 'existing'
+    : extension ? 'extension'
+      : row.objectType === UNKNOWN_TYPE ? 'insufficient_evidence' : 'invalid';
+  const branch = status === 'existing' ? 'existing'
+    : status === 'extension' ? 'extended'
+      : status === 'invalid_source' ? '__unresolved__/invalid_source'
+        : status === 'insufficient_evidence' ? '__unresolved__/insufficient_evidence' : '__invalid__';
+  return {
+    status,
+    extension: extension || null,
+    path: status === 'existing' || status === 'extension'
+      ? `${row.family}/${branch}/${row.objectType}` : `${row.family}/${branch}`,
+  };
+}
+
+export function validateClassification(row, { extensionCategories = [] } = {}) {
   const issues = [];
   if (!row || typeof row !== 'object') return ['分類列不是物件'];
   if (!text(row.id)) issues.push('缺 id');
   if (!text(row.source?.corpus)) issues.push('缺 source.corpus');
   if (!text(row.source?.image)) issues.push('缺 source.image');
-  if (!allowed(row.family, row.objectType)) issues.push(`不合法 family/objectType：${row.family}/${row.objectType}`);
+  const category = resolveCategory(row, extensionCategories);
+  if (!CATEGORY_STATUSES.includes(category.status)) issues.push(`categoryStatus 不合法：${category.status}`);
+  if (category.status === 'existing' && !OBJECT_TYPES[row.family]?.includes(row.objectType)) {
+    issues.push(`existing 類別不存在：${row.family}/${row.objectType}`);
+  }
+  if (category.status === 'extension' && !category.extension) {
+    issues.push(`extension 類別未登錄：${row.family}/${row.objectType}`);
+  }
+  if (['insufficient_evidence', 'invalid_source'].includes(category.status) && row.objectType !== UNKNOWN_TYPE) {
+    issues.push(`${category.status} 必須使用 ${UNKNOWN_TYPE}`);
+  }
   if (!text(row.subtype)) issues.push('缺 subtype');
   if (!text(row.paletteDomain)) issues.push('缺 paletteDomain');
   if (!Number.isFinite(row.confidence) || row.confidence < 0 || row.confidence > 1) issues.push('confidence 必須介於 0 與 1');
@@ -139,6 +192,10 @@ export function validateClassification(row) {
 export function objectCompatibility(a, b) {
   const reasons = [];
   if (!a || !b) return { compatible: false, reasons: ['缺物件分類'] };
+  if ([a, b].some((row) => row.objectType === UNKNOWN_TYPE
+    || ['insufficient_evidence', 'invalid_source'].includes(row.categoryStatus))) {
+    reasons.push('證據不足或無效來源不得替換');
+  }
   const compatibleTypes = new Set([a.objectType, ...(a.functionalProfile?.compatibleTypes || [])]);
   if (!compatibleTypes.has(b.objectType)) reasons.push('objectType 未獲功能相容授權');
   for (const field of ['workingMedium', 'operationMode', 'safetyClass']) {

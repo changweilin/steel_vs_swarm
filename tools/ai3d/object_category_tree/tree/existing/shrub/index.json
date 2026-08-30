@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "path": "tree/existing/shrub",
+  "family": "tree",
+  "branch": "existing",
+  "objectType": "shrub",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:tree/1342001_PE948961_S5.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/1342001_PE948961_S5.jpg"
+      },
+      "subtype": "potted_columnar_cactus",
+      "confidence": 0.92,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/51YNHnO1PXL.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/51YNHnO1PXL.jpg"
+      },
+      "subtype": "potted_columnar_cactus_with_arms",
+      "confidence": 0.91,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/Choosing-the-right-cactus.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Choosing-the-right-cactus.jpg"
+      },
+      "subtype": "barrel_cactus",
+      "confidence": 0.97,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/e7838fe5b8bde5ad90.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/e7838fe5b8bde5ad90.jpg"
+      },
+      "subtype": "prickly_pear_cactus",
+      "confidence": 0.94,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg"
+      },
+      "subtype": "potted_candelabra_cactus",
+      "confidence": 0.93,
+      "decompositionStatus": "needs_decomposition",
+      "yolo26Status": "missing"
+    }
+  ]
+}

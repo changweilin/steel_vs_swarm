@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "path": "ship/existing/vehicle_carrier",
+  "family": "ship",
+  "branch": "existing",
+  "objectType": "vehicle_carrier",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "restricted:ship/c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "ship/c85048fc4c49c7444019ec75c0f06fb04a030e7c.jpg"
+      },
+      "subtype": "vehicle_carrier",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}

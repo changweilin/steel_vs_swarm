@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "path": "building/existing/observation_landmark",
+  "family": "building",
+  "branch": "existing",
+  "objectType": "observation_landmark",
+  "definitionSource": "tools/ai3d/object_classification_policy.mjs",
+  "members": [
+    {
+      "id": "primary:building/66aa8a1d152c130a45497bb5d93b8c73.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "building/66aa8a1d152c130a45497bb5d93b8c73.jpg"
+      },
+      "subtype": "日本城郭觀光地標（模型示意）",
+      "confidence": 0.88,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/104405729.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/104405729.jpg"
+      },
+      "subtype": "日本歷史城堡觀光地標",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/20230210700917.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/20230210700917.jpg"
+      },
+      "subtype": "陵墓型世界文化地標",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/211.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/211.jpg"
+      },
+      "subtype": "電波塔暨觀景地標",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/58e07d86c351679aa966afe4f56da3f6-420x280.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/58e07d86c351679aa966afe4f56da3f6-420x280.jpg"
+      },
+      "subtype": "日本城堡觀光地標",
+      "confidence": 0.98,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/list.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/list.jpg"
+      },
+      "subtype": "日本城堡觀光地標",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    },
+    {
+      "id": "restricted:building/pisa-1056568_960_720.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "building/pisa-1056568_960_720.jpg"
+      },
+      "subtype": "比薩斜塔歷史觀光地標",
+      "confidence": 0.99,
+      "decompositionStatus": "decomposed",
+      "yolo26Status": "missing"
+    }
+  ]
+}
