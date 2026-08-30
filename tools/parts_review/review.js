@@ -88,6 +88,7 @@ const app = {
   filterMethod: '', filterFamily: '', filterDate: '', filterPhotoDate: '', filterVersion: '',
   seed: SEEDS[0], dist: 'part', collider: true, spin: true,
   treeView: 'whole', topView: false,
+  assembly: Object.create(null),
 };
 
 const FAMILY_LABELS = {
@@ -137,11 +138,93 @@ const api = async (body) => (await fetch('/api/parts', body
 const rowOf = (key) => app.data.rows.find((r) => r.key === key);
 const itemOf = (key) => app.data?.state?.items?.[key] || null;
 
+function assemblyContext(key) {
+  const catalog = gfx.backgroundCatalog;
+  const ref = catalog?.objects?.[key];
+  const sub = ref ? catalog.subcategories?.[ref.subcategoryId] : null;
+  const structure = sub?.structures?.find((row) => row.id === ref.structureId);
+  const target = structure?.members?.find((row) => row.key === key);
+  return ref && sub && structure && target ? { ref, sub, structure, target } : null;
+}
+
+function assemblyState(key) {
+  if (!app.assembly[key]) {
+    app.assembly[key] = {
+      active: false, seed: null, randomParts: false, randomPalette: false,
+      paletteId: 'auto', overrides: Object.create(null), revision: 0,
+    };
+  }
+  return app.assembly[key];
+}
+
+function randomAssemblySeed() {
+  const values = new Uint32Array(1);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(values);
+    return values[0] & 0x7fffffff;
+  }
+  const nonce = (app.assemblyNonce = ((app.assemblyNonce || 0) + 1) >>> 0);
+  return (Date.now() ^ nonce) & 0x7fffffff;
+}
+
+const choiceValue = (sourceKey, sourceSlotId) => encodeURIComponent(JSON.stringify({ sourceKey, sourceSlotId }));
+const decodeChoiceValue = (value) => {
+  if (!value || value === 'auto' || value === 'random') return value;
+  try { return JSON.parse(decodeURIComponent(value)); } catch { return null; }
+};
+
+function runtimeAssembly(r) {
+  if (r?.view?.builder !== 'model3d' || !gfx.backgroundTargets?.has(r.key) || !gfx.backgroundObjects) return null;
+  return assemblyContext(r.key);
+}
+
+function catalogInfo(r) {
+  const ref = r?.catalog;
+  const sub = ref ? app.data.catalog?.subcategories?.[ref.subcategoryId] : null;
+  const structure = sub?.structures?.find((row) => row.id === ref.structureId);
+  return ref && sub && structure ? { ref, sub, structure } : null;
+}
+
+function replacementInfo(r) {
+  const context = runtimeAssembly(r);
+  if (!context) return {
+    available: false,
+    label: '不可替換',
+    className: 'locked',
+    detail: '目前沒有接入正式執行期組裝縫，僅能檢視本件。',
+  };
+  const slotCount = (context.target.leafRoles || []).reduce((sum, role) => sum + (role.slots?.length || 0), 0);
+  const paletteCount = context.sub.palettes?.length || 0;
+  return {
+    available: true,
+    label: '可替換',
+    className: 'ok',
+    detail: `${slotCount} 個葉零件槽、${paletteCount} 組配色可指定或隨機更換；主結構與碰撞資料固定。`,
+  };
+}
+
+const replacementPill = (r) => {
+  const info = replacementInfo(r);
+  return `<span class="pr-pill ${info.className}" title="${esc(info.detail)}">${info.label}</span>`;
+};
+
+const catalogTrail = (ref) => `${ref.category} → ${ref.subcategory} → ${ref.structureId}`;
+
+function assemblyOptions(state) {
+  return {
+    partOverrides: state.overrides,
+    randomParts: state.randomParts,
+    paletteId: state.paletteId === 'auto' ? null : state.paletteId,
+    randomPalette: state.randomPalette || state.paletteId === 'random',
+  };
+}
+
 // ---- 3D(全部集中在這一段;失敗只讓這一段停用)-------------------------------
 const gfx = {
   ready: false, error: null, THREE: null, beacons: null, aquatics: null, camera: null,
   mods: new Map(),      // 'now' | `rev:<sha>` → beacons 模組
-  groups: new Map(),    // `${phase}|${src}|${kind}|${seed}` → Group(整場快取,不重建也不 dispose)
+  groups: new Map(),    // `${phase}|${src}|${kind}|${seed}` → Group；替換變體切換時釋放舊組
+  backgroundTargets: new Set(),
   viewers: [], topCamera: null, frameTop: null,
   orbit: { yaw: 0.9, pitch: 0.28 },
 };
@@ -155,6 +238,9 @@ async function initGfx(data) {
   gfx.rng = await import('/public/js/rng.js');
   const partlib = await import('/public/js/partlib.js');
   gfx.runtimePartModel = await import('/public/js/runtimePartModel.js');
+  gfx.backgroundObjects = await import('/public/js/backgroundObjects.js');
+  gfx.backgroundCatalog = (await import('/public/js/runtimeParts.js')).RUNTIME_BACKGROUND_CATALOG;
+  gfx.backgroundTargets = new Set(gfx.backgroundObjects.backgroundObjectTargets());
   const { setCelSun, bakeContactAO } = await import('/public/js/toon.js');
   gfx.bakeContactAO = bakeContactAO;
   gfx.mods.set('now', gfx.beacons);
@@ -203,8 +289,29 @@ async function initGfx(data) {
  * 於是 `rock/mega_*`(kind 'megalith')兩側畫的都是**地標疊石**,而疊石自己也吃 `rock/*` 節點
  * ⇒ 左右真的長得不一樣、讀數也在動,看起來完全正常,只是那顆巨岩從來沒上過台。
  */
+function disposeAssemblyGroup(group) {
+  if (!group) return;
+  group.traverse((object) => {
+    if (object.geometry) object.geometry.dispose();
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) material?.dispose?.();
+  });
+}
+
 function build(phase, src, kind, seed, builder = 'beacon') {
-  const key = `${phase}|${src}|${kind}|${seed}|${builder}`;
+  const assembly = phase === 'post' && src === 'now' && builder === 'model3d'
+    && gfx.backgroundTargets?.has(kind) ? assemblyState(kind) : null;
+  const assemblyKey = assembly?.active ? `|assembly:${assembly.revision}` : '';
+  const key = `${phase}|${src}|${kind}|${seed}|${builder}${assemblyKey}`;
+  if (assembly) {
+    const prefix = `${phase}|${src}|${kind}|${seed}|${builder}|assembly:`;
+    for (const [cachedKey, group] of gfx.groups) {
+      if (cachedKey.startsWith(prefix) && cachedKey !== key) {
+        disposeAssemblyGroup(group);
+        gfx.groups.delete(cachedKey);
+      }
+    }
+  }
   if (!gfx.groups.has(key)) {
     const mod = gfx.mods.get(src);
     if (!mod) return null;
@@ -234,6 +341,17 @@ function build(phase, src, kind, seed, builder = 'beacon') {
       gfx.groups.set(key, g);
     } else if (builder === 'aquatic' && kind === 'patrol_ship') {
       gfx.groups.set(key, gfx.aquatics.buildPatrolShipMesh());
+    } else if (builder === 'model3d' && assembly?.active && gfx.backgroundObjects) {
+      const g = new gfx.THREE.Group();
+      gfx.groups.set(key, g);
+      const generated = gfx.backgroundObjects.generateBackgroundObject(
+        kind, assembly.seed ?? app.seed, assemblyOptions(assembly),
+      );
+      const mesh = gfx.runtimePartModel.makeRuntimePartModel(
+        { ...generated, meshData: null }, { environment: true },
+      );
+      mesh.userData.assembly = generated.generation;
+      g.add(mesh);
     } else if (builder === 'model3d') {
       const g = new gfx.THREE.Group();
       gfx.groups.set(key, g);
@@ -892,6 +1010,34 @@ const keepRow = (r) => {
   return true;
 };
 
+function catalogTreeBranches(subcategory, structure, rows) {
+  const groups = [...(structure.partGroups || [])].sort((a, b) => `${a.role}/${a.id}`.localeCompare(`${b.role}/${b.id}`));
+  const groupRows = groups.map((group) => `<div class="pr-tree-leaf">
+    <span><code>${esc(group.id)}</code> ・ ${esc(group.type)}</span>
+    <i>${group.count} 零件・${group.objectCount} 物件</i></div>`).join('');
+  const palettes = [...(subcategory?.palettes || [])].sort((a, b) => a.id.localeCompare(b.id));
+  const paletteRows = palettes.map((palette) => {
+    const swatches = palette.colors ? Object.values(palette.colors).slice(0, 4).map((color) =>
+      `<i class="pr-cat-swatch" style="background:#${hexStr(color)}"></i>`).join('') : '';
+    return `<div class="pr-tree-leaf"><span><code>${esc(palette.id)}</code>${swatches}</span>
+      <i>${palette.objects?.length || 0} 物件</i></div>`;
+  }).join('');
+  const runtimeCount = rows.filter((row) => gfx.backgroundTargets?.has(row.key)).length;
+  return `<div class="pr-tree-branches">
+    <details class="pr-tree-branch">
+      <summary><span>零件群</span><i>${groups.length} 群</i></summary>
+      ${groupRows || '<div class="pr-dim">沒有可替換的非主結構零件群</div>'}
+    </details>
+    <details class="pr-tree-branch">
+      <summary><span>配色</span><i>${palettes.length} 組</i></summary>
+      ${paletteRows || '<div class="pr-dim">沒有配色記錄</div>'}
+    </details>
+    <div class="pr-tree-runtime ${runtimeCount ? '' : 'locked'}">
+      ${runtimeCount ? `<span class="pr-pill ok">可替換</span> ${runtimeCount} 件可指定／隨機更換` : '<span class="pr-pill locked">不可替換</span> 此主結構沒有執行期替換入口'}
+    </div>
+  </div>`;
+}
+
 function renderList() {
   // 左側清單有四種內容:生成物 / 語料圖檔(四態)/ 封存區 / 執行進度。
   // 執行進度沒有「一件一件」可挑 ⇒ 清單只放一列當作它自己的入口(不留空白,也不假裝有列表)
@@ -917,7 +1063,7 @@ function renderList() {
     return `<div class="pr-row ${app.cur === r.key ? 'on' : ''}" data-key="${esc(r.key)}">
       <div class="pr-rn"><b>${esc(r.key)}</b><span>${esc(r.consumer || '—')}</span>
         ${noteLine(r)}</div>
-      ${verPill}${meth}${pill}</div>`;
+      ${verPill}${meth}${replacementPill(r)}${pill}</div>`;
   };
   const structured = rows.filter((r) => r.catalog);
   const loose = rows.filter((r) => !r.catalog);
@@ -939,9 +1085,12 @@ function renderList() {
       const subOpen = subRows.some((row) => row.key === app.cur);
       const shapes = [...structures].sort(([a], [b]) => a.localeCompare(b)).map(([shapeId, group]) => {
         const shapeOpen = group.rows.some((row) => row.key === app.cur);
+        const subcategoryData = app.data.catalog.subcategories?.[`${category}/${subcategory}`];
+        const structureData = subcategoryData?.structures?.find((row) => row.id === shapeId);
         return `<details class="pr-tree pr-tree-shape" ${shapeOpen ? 'open' : ''}>
           <summary><span>主結構 ${esc(shapeId)}</span><i>${group.rows.length} 件</i></summary>
           <div class="pr-tree-canonical">共用主結構：${esc(group.canonicalKey)}</div>
+          ${structureData ? catalogTreeBranches(subcategoryData, structureData, group.rows) : ''}
           ${group.rows.sort((a, b) => a.key.localeCompare(b.key)).map(rowHtml).join('')}</details>`;
       }).join('');
       return `<details class="pr-tree pr-tree-sub" ${subOpen ? 'open' : ''}>
@@ -1042,8 +1191,7 @@ function methodSection(r) {
   const p = r.prov;
   const kv = (o) => Object.entries(o).filter(([, v]) => v != null && v !== '')
     .map(([k, v]) => `<b>${esc(k)}</b><div>${esc(v)}</div>`).join('');
-  return `<div class="pr-sec"><h3>生成方法</h3>
-    <div class="pr-kv">${kv({
+  return infoFold('生成方法', `${r.method.short} ・ 來源帳細節`, `<div class="pr-kv">${kv({
     方法: `${r.method.label} ・ 帳上的鍵 ${r.method.key}`,
     適用: r.method.doc,
     工具: p.gen?.tool, 執行環境: p.gen?.runner, 參數: p.gen?.params,
@@ -1055,15 +1203,21 @@ function methodSection(r) {
     落地版本: p.rev ? `${p.rev}(${p.at || ''})` : null,
     原版版本: p.baseline?.rev ? `${p.baseline.rev} — ${p.baseline.what || ''}` : null,
     備註: p.note,
-  })}</div></div>`;
+  })}</div>`);
+}
+
+function infoFold(title, hint, content, className = '') {
+  return `<div class="pr-sec ${className}"><details class="pr-info-fold">
+    <summary><span>${esc(title)}</span><i>${esc(hint)}</i></summary>
+    <div class="pr-info-fold-body">${content}</div>
+  </details></div>`;
 }
 
 function dataSection(r) {
   if (r.bounds) {
     const sz = r.bounds.size ? `${r.bounds.size[0].toFixed(2)}m × ${r.bounds.size[1].toFixed(2)}m × ${r.bounds.size[2].toFixed(2)}m` : '—';
     const specRows = r.spec ? Object.entries(r.spec).map(([k, v]) => `<tr><td>規格 ${esc(k)}</td><td class="num">${esc(v)}</td><td class="pr-dim">遊戲規格參數</td></tr>`).join('') : '';
-    return `<div class="pr-sec"><h3>3D 物件幾何與規格</h3>
-      <table class="pr-tab">
+    return infoFold('3D 物件幾何與規格', `${r.bounds.triangles} tris ・ ${r.bounds.vertices} verts`, `<table class="pr-tab">
         <tr><th>項目</th><th>數值</th><th>說明</th></tr>
         <tr><td>尺寸 (長×高×寬)</td><td class="num">${sz}</td><td class="pr-good">實體尺寸包圍盒</td></tr>
         <tr><td>水平外廓半徑 (rMax)</td><td class="num">${n3(r.bounds.rMax)}m</td><td class="pr-dim">外接球/柱半徑</td></tr>
@@ -1071,13 +1225,12 @@ function dataSection(r) {
         <tr><td>頂點數 (Verts)</td><td class="num">${r.bounds.vertices}</td><td class="pr-dim">頂點數</td></tr>
         ${specRows}
       </table>
-      <div class="pr-dim" style="margin-top:4px">3D 物件已入庫至 <code>out/3d_data/</code> 與 <code>out/3d_database.json</code>，可在此進行覆核。</div></div>`;
+      <div class="pr-dim" style="margin-top:4px">3D 物件已入庫至 <code>out/3d_data/</code> 與 <code>out/3d_database.json</code>，可在此進行覆核。</div>`);
   }
   if (r.measured) {
     const okE = r.measured.rMax <= r.env.r + 1e-6;
     const okT = !r.budget || r.measured.tris <= r.budget.cap;
-    return `<div class="pr-sec"><h3>數據對照(離線量測)</h3>
-      <table class="pr-tab">
+    return infoFold('數據對照(離線量測)', `${r.measured.tris} tris ・ r ${n3(r.measured.rMax)}`, `<table class="pr-tab">
         <tr><th>項目</th><th>原版(fallback primitive)</th><th>AI 生成(GLB 節點)</th><th>判定</th></tr>
         <tr><td>描述子</td><td class="num">${esc(JSON.stringify(r.view.fb))}</td>
             <td class="num">${esc(r.key)}</td><td>—</td></tr>
@@ -1093,13 +1246,12 @@ function dataSection(r) {
           <td class="pr-dim">單件合格 ≠ 整株合格:一株十幾件全換掉,每件都「合格」卻是 20 倍</td></tr>` : ''}
       </table>
       <div class="pr-dim" style="margin-top:4px">外廓契約 = 離線外廓取 fallback 的外廓(partlib.js 檔頭);
-        執行期碰撞柱仍走 <code>beaconCollider</code> 實測 —— 上方兩張圖裡的青色圓柱就是它。</div></div>`;
+        執行期碰撞柱仍走 <code>beaconCollider</code> 實測 —— 上方兩張圖裡的青色圓柱就是它。</div>`);
   }
   if (r.now) {
     const row = (label, a, b) => `<tr><td>${label}</td><td class="num">${a ?? '—'}</td><td class="num">${b ?? '—'}</td>
       <td class="num">${a != null && b != null ? (b - a > 0 ? `+${(b - a).toFixed(2).replace(/\.00$/, '')}` : (b - a).toFixed(2).replace(/\.00$/, '')) : '—'}</td></tr>`;
-    return `<div class="pr-sec"><h3>數據對照(離線量測)</h3>
-      <table class="pr-tab">
+    return infoFold('數據對照(離線量測)', `${r.now.parts} 零件 ・ extent ${n3(r.now.extent)}`, `<table class="pr-tab">
         <tr><th>項目</th><th>原版(${esc(r.prov?.baseline?.rev || '?')})</th><th>現行</th><th>差</th></tr>
         ${row('零件數', r.base?.parts, r.now.parts)}
         ${row('實算水平外廓', r.base?.extent, r.now.extent)}
@@ -1107,7 +1259,7 @@ function dataSection(r) {
       </table>
       ${r.baseErr ? `<div class="pr-bad">原版取不到:${esc(r.baseErr)}</div>` : ''}
       <div class="pr-dim" style="margin-top:4px">件數與外廓一律由**兩個版本的零件表**推導,不在來源帳裡手寫。
-        <code>foot</code> 是規劃期預留值,MUST 貼著實算外廓(<code>audit_beacons</code> 雙向釘住)。</div></div>`;
+        <code>foot</code> 是規劃期預留值,MUST 貼著實算外廓(<code>audit_beacons</code> 雙向釘住)。</div>`);
   }
   return '';
 }
@@ -1243,8 +1395,7 @@ function featuresSection(r) {
     ? `<tr><td>實際 primitive</td><td class="num"><code>${primitiveList.map(esc).join('、')}</code></td><td class="pr-good">✔ 由同一份烘焙網格輸出</td></tr>`
     : '';
 
-  return `<div class="pr-sec"><h3>細部特徵辨識與重建報告</h3>
-    <table class="pr-tab">
+  return infoFold('細部特徵辨識與重建報告', `${featList.length} 項特徵 ・ ${palettes.length} 組配色`, `<table class="pr-tab">
       <tr><th>特徵維度</th><th>辨識數值 / 模式</th><th>說明</th></tr>
       <tr><td>物件風格型態</td><td class="num"><b>${esc(style)}</b></td><td class="pr-good">專屬細部幾何構建</td></tr>
       <tr><td>對稱性模式</td><td class="num"><code>${esc(symMode)}</code></td><td>${symMode === 'symmetric' ? '✔ 雙側幾何鏡像 (Z=0) 與前後機能平衡' : '✦ 遮擋面/背部決定性隨機特徵增強'}</td></tr>
@@ -1255,42 +1406,144 @@ function featuresSection(r) {
     </table>
     ${colorSwatches}
     ${palettesHtml}
-    ${partsList}
+    ${partsList}`);
+}
+
+function sourceLabel(key) {
+  const text = String(key || '');
+  const slash = text.lastIndexOf('/');
+  return slash >= 0 ? text.slice(slash + 1) : text;
+}
+
+function assemblySection(r) {
+  const context = runtimeAssembly(r);
+  if (!context) return '';
+  const state = assemblyState(r.key);
+  const roles = (context.target.leafRoles || []).filter((role) => role.slots?.length);
+  const palettes = context.sub.palettes || [];
+  const paletteOptions = [
+    `<option value="auto" ${state.paletteId === 'auto' ? 'selected' : ''}>座號自動配色</option>`,
+    `<option value="random" ${state.paletteId === 'random' ? 'selected' : ''}>隨機配色</option>`,
+    ...palettes.map((palette) => `<option value="${esc(palette.id)}" ${state.paletteId === palette.id ? 'selected' : ''}>
+      ${esc(palette.id)} ・ ${esc(palette.name || '型錄配色')}</option>`),
+  ].join('');
+  const roleHtml = roles.map((role) => role.slots.map((targetSlot, slotIndex) => {
+    const slotKey = `${role.role}:${targetSlot.id}`;
+    const choices = context.structure.members.flatMap((member) => (member.leafRoles || [])
+      .filter((sourceRole) => sourceRole.role === role.role)
+      .flatMap((sourceRole) => sourceRole.slots.map((sourceSlot) => ({ member, slot: sourceSlot }))));
+    const unique = [];
+    const seen = new Set();
+    for (const choice of choices) {
+      const id = `${choice.member.key}|${choice.slot.id}`;
+      if (!seen.has(id)) { seen.add(id); unique.push(choice); }
+    }
+    const current = state.overrides[slotKey];
+    const selected = current?.random ? 'random'
+      : current ? choiceValue(current.sourceKey, current.sourceSlotId) : 'auto';
+    const options = [
+      '<option value="auto">座號自動選擇</option>',
+      '<option value="random">隨機來源槽</option>',
+      ...unique.map((choice) => {
+        const value = choiceValue(choice.member.key, choice.slot.id);
+        return `<option value="${value}" ${selected === value ? 'selected' : ''}
+          title="${esc(choice.member.key)}／${esc(choice.slot.id)}">${esc(sourceLabel(choice.member.key))} ・ ${esc(choice.slot.id)}</option>`;
+      }),
+    ].join('');
+    return `<label class="pr-assembly-part"><span>${esc(role.role)} #${slotIndex + 1}</span>
+      <select class="pr-fsel pr-assembly-select" data-assembly-role="${esc(role.role)}" data-assembly-slot="${esc(targetSlot.id)}">
+        ${options}</select></label>`;
+  }).join('')).join('');
+  const slotCount = roles.reduce((sum, role) => sum + role.slots.length, 0);
+  const mode = !state.active ? '原始執行期模型' : state.randomParts || state.randomPalette ? '隨機變體' : '指定變體';
+  const info = replacementInfo(r);
+  return `<div class="pr-assembly" data-assembly-key="${esc(r.key)}">
+    <h3>零件／配色替換</h3>
+    <div class="pr-assembly-status"><span class="pr-pill ${info.className}">${info.label}</span><span>${esc(info.detail)}</span></div>
+    <div class="pr-assembly-bar">
+      <button class="pr-assembly-btn" data-assembly-action="random">隨機零件＋配色</button>
+      <button class="pr-assembly-btn" data-assembly-action="reset">還原原件</button>
+      <span class="pr-dim">${esc(mode)} ・ 變更即套用</span>
+    </div>
+    <label class="pr-assembly-palette"><span>配色方案</span>
+      <select class="pr-fsel pr-assembly-select" id="prAssemblyPalette">${paletteOptions}</select></label>
+    ${roleHtml ? `<details class="pr-assembly-detail"><summary><span>指定零件槽</span><i>${slotCount} 槽・預設收起</i></summary>
+      <div class="pr-assembly-parts">${roleHtml}</div></details>`
+      : '<div class="pr-dim">此物件沒有可替換的葉零件槽，仍可切換配色。</div>'}
+    <div class="pr-dim pr-assembly-note">零件來源限同一子類別／主結構的相似槽；主結構與碰撞資料不會被替換。</div>
   </div>`;
 }
 
 function catalogSection(r) {
-  const ref = r.catalog;
-  const sub = ref ? app.data.catalog?.subcategories?.[ref.subcategoryId] : null;
-  const structure = sub?.structures?.find((row) => row.id === ref.structureId);
-  if (!ref || !sub || !structure) {
-    return `<div class="pr-sec"><h3>樹狀型錄</h3><div class="pr-dim">尚未入選：型錄只收人眼通過或標記為 luna 直接 v6 的物件。</div></div>`;
+  const info = catalogInfo(r);
+  if (!info) {
+    const replace = replacementInfo(r);
+    return `<div class="pr-sec pr-catalog"><h3>型錄樹與替換</h3>
+      <div class="pr-catalog-status"><span class="pr-pill ${replace.className}">${replace.label}</span>
+        <span>尚未入選型錄：只收人眼通過或標記為 luna 直接 v6 的物件。</span></div></div>`;
   }
-  const partRoles = new Map();
-  for (const group of structure.partGroups || []) {
-    if (!partRoles.has(group.role)) partRoles.set(group.role, []);
-    partRoles.get(group.role).push(group);
-  }
-  const partsHtml = [...partRoles].sort(([a], [b]) => a.localeCompare(b)).map(([role, groups]) => `
-    <details class="pr-cat-branch"><summary>${esc(role)} <i>${groups.length} 種相似形</i></summary>
-      ${groups.map((group) => `<div><code>${esc(group.id)}</code> ・ ${esc(group.type)} ・ ${group.count} 零件 / ${group.objectCount} 物件</div>`).join('')}
-    </details>`).join('') || '<div class="pr-dim">這個主結構沒有獨立的非主結構零件。</div>';
-  const palettesHtml = (sub.palettes || []).map((palette) => {
-    const colors = palette.colors;
-    const swatches = colors ? Object.entries(colors).map(([zone, color]) =>
-      `<i class="pr-cat-swatch" style="background:#${hexStr(color)}" title="${esc(zone)} #${hexStr(color)}"></i>`).join('')
-      : '<span class="pr-dim">執行期繼承</span>';
-    return `<div class="pr-cat-palette"><code>${esc(palette.id)}</code><span>${swatches}</span><i>${palette.objects.length} 物件</i></div>`;
-  }).join('');
-  return `<div class="pr-sec"><h3>樹狀型錄</h3>
+  const { ref, sub, structure } = info;
+  const replace = replacementInfo(r);
+  return `<div class="pr-sec pr-catalog"><h3>型錄樹與替換</h3>
     <div class="pr-kv"><b>目錄</b><span><code>out/3d_catalog/${esc(ref.path)}</code></span></div>
-    <div class="pr-kv"><b>階層</b><span>${esc(ref.category)} → ${esc(ref.subcategory)} → ${esc(ref.structureId)}</span></div>
+    <div class="pr-kv"><b>目前位置</b><span class="pr-catalog-trail"><code>${esc(catalogTrail(ref))}</code> → <code>${esc(r.key)}</code></span></div>
     <div class="pr-kv"><b>共用主結構</b><span>${esc(ref.canonicalKey)}${ref.canonicalKey === r.key ? '（本件）' : ''}</span></div>
     <div class="pr-kv"><b>結構相似度</b><span>${ref.similarity}% ・ 同組 ${structure.members.length} 件</span></div>
-    <details class="pr-cat-detail"><summary>非主結構零件樹 ${structure.partGroups.length} 群</summary>${partsHtml}</details>
-    <details class="pr-cat-detail"><summary>${esc(ref.category)}/${esc(ref.subcategory)} 配色清單 ${sub.palettes.length} 組</summary>
-      <div class="pr-cat-palettes">${palettesHtml}</div></details>
+    <div class="pr-catalog-status"><span class="pr-pill ${replace.className}">${replace.label}</span>
+      <span>${esc(replace.detail)}</span></div>
+    ${catalogTreeBranches(sub, structure, [r])}
+    ${assemblySection(r)}
   </div>`;
+}
+
+function bindAssembly(r) {
+  const context = runtimeAssembly(r);
+  if (!context) return;
+  const state = assemblyState(r.key);
+  const rerender = () => { state.revision++; renderBody(); };
+  const palette = $('prAssemblyPalette');
+  if (palette) palette.onchange = () => {
+    state.paletteId = palette.value;
+    state.randomPalette = palette.value === 'random';
+    state.randomParts = false;
+    state.seed = null;
+    state.active = true;
+    rerender();
+  };
+  for (const select of document.querySelectorAll('.pr-assembly-part select')) {
+    select.onchange = () => {
+      const key = `${select.dataset.assemblyRole}:${select.dataset.assemblySlot}`;
+      const value = decodeChoiceValue(select.value);
+      if (value === 'auto') delete state.overrides[key];
+      else if (value === 'random') state.overrides[key] = { random: true };
+      else if (value?.sourceKey && value?.sourceSlotId) state.overrides[key] = value;
+      else return;
+      state.active = true;
+      state.randomParts = false;
+      state.seed = null;
+      rerender();
+    };
+  }
+  const random = document.querySelector('[data-assembly-action="random"]');
+  if (random) random.onclick = () => {
+    state.active = true;
+    state.seed = randomAssemblySeed();
+    state.randomParts = true;
+    state.randomPalette = true;
+    state.paletteId = 'random';
+    state.overrides = Object.create(null);
+    rerender();
+  };
+  const reset = document.querySelector('[data-assembly-action="reset"]');
+  if (reset) reset.onclick = () => {
+    state.active = false;
+    state.seed = null;
+    state.randomParts = false;
+    state.randomPalette = false;
+    state.paletteId = 'auto';
+    state.overrides = Object.create(null);
+    rerender();
+  };
 }
 
 async function loadYoloData(r) {
@@ -1355,8 +1608,8 @@ async function loadYoloData(r) {
     // 2. 右側數據區: 渲染 YOLO26 Detection / Segmentation / Depth 指標與原始檔案
     const detObjects = res.detection?.objects || [];
     const detTable = detObjects.length ? `
-      <div class="pr-yolo-sub">
-        <h4>🎯 Detection 目標偵測 (${detObjects.length} 個物件)</h4>
+      <details class="pr-yolo-sub pr-yolo-fold">
+        <summary><span>🎯 Detection 目標偵測 (${detObjects.length} 個物件)</span><i>預設收起</i></summary>
         <table class="pr-tab">
           <tr><th>類別 (Class)</th><th>信心度 (Conf)</th><th>邊界框 [x0, y0, x1, y1]</th><th>尺寸 (W×H)</th></tr>
           ${detObjects.map((o) => {
@@ -1371,12 +1624,12 @@ async function loadYoloData(r) {
             </tr>`;
           }).join('')}
         </table>
-      </div>` : '';
+      </details>` : '';
 
     const targets = res.targets || [];
     const segTable = targets.length ? `
-      <div class="pr-yolo-sub">
-        <h4>✂ Segmentation 實例分割 (${targets.length} 個獨立目標)</h4>
+      <details class="pr-yolo-sub pr-yolo-fold">
+        <summary><span>✂ Segmentation 實例分割 (${targets.length} 個獨立目標)</span><i>預設收起</i></summary>
         <table class="pr-tab">
           <tr><th>目標 ID</th><th>類別</th><th>信心度</th><th>長寬比</th><th>深度中位數</th></tr>
           ${targets.map((t) => `
@@ -1402,12 +1655,12 @@ async function loadYoloData(r) {
               `).join('')}
             </div>
           </div>` : ''}
-      </div>` : '';
+      </details>` : '';
 
     const depthSum = res.depth?.summary;
     const depthTable = depthSum ? `
-      <div class="pr-yolo-sub">
-        <h4>🌊 Metric Depth 度量深度指標 (單位: ${esc(res.depth?.units || 'meters')})</h4>
+      <details class="pr-yolo-sub pr-yolo-fold">
+        <summary><span>🌊 Metric Depth 度量深度指標 (單位: ${esc(res.depth?.units || 'meters')})</span><i>預設收起</i></summary>
         <table class="pr-tab">
           <tr><th>指標</th><th>數值 (公尺)</th><th>統計意義</th></tr>
           <tr><td>最小深度 (Min)</td><td class="num pr-good">${depthSum.minM}m</td><td class="pr-dim">前景最近距離</td></tr>
@@ -1416,7 +1669,7 @@ async function loadYoloData(r) {
           <tr><td>中位數 (Median)</td><td class="num pr-good">${depthSum.medianM}m</td><td class="pr-good">主體深度參考基準</td></tr>
           <tr><td>P05 ~ P95 區間</td><td class="num">${depthSum.p05M}m ~ ${depthSum.p95M}m</td><td class="pr-dim">去除極值後之主要主體深度帶</td></tr>
         </table>
-      </div>` : '';
+      </details>` : '';
 
     yoloDataEl.innerHTML = `
       <div class="pr-yolo-panel">
@@ -1548,6 +1801,7 @@ function renderBody() {
   </div>`;
 
   mountStage(r);
+  bindAssembly(r);
   renderGaps();
   loadYoloData(r);
 
