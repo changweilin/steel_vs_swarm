@@ -1,0 +1,5073 @@
+{
+  "schemaVersion": 1,
+  "family": "tree",
+  "classifier": {
+    "model": "gpt-5.6-luna",
+    "reasoningEffort": "max",
+    "basis": "visual+functional"
+  },
+  "items": [
+    {
+      "id": "primary:tree/cute-cartoon-tree-grass-game-art-element_88653-419.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/cute-cartoon-tree-grass-game-art-element_88653-419.avif"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "stylized_broadleaf_tree",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.68,
+      "reasons": [
+        "可辨識單一木本植物，粗幹向外展枝並形成寬闊葉冠。",
+        "草地與岩塊只是底座語境，未足以判定樹種。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "trunk_support",
+        "branch_support",
+        "foliage_canopy"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (1).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (1).jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "tiered_conifer_bonsai",
+      "paletteDomain": "ornamental-bonsai-conifer",
+      "confidence": 0.86,
+      "reasons": [
+        "盆器、受訓樹幹與分層針葉墊顯示容器栽培的修剪盆景。",
+        "針葉冠層與木質主幹的功能分工清楚，具體栽培品種不可判定。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓針葉主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (10).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (10).jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "stylized_spreading_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.9,
+      "reasons": [
+        "粗壯主幹向外分枝並承托寬闊葉冠，符合闊葉樹生長結構。",
+        "圖像是去背插畫，無法把造型細節視為特定樹種證據。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (11).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (11).jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "stylized_open_crown_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.89,
+      "reasons": [
+        "開放枝架與分散葉簇顯示闊葉樹的主幹—主枝—葉冠層次。",
+        "沒有可可靠辨識的物種或栽培介面。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (12).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (12).jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "stylized_flat_crown_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.86,
+      "reasons": [
+        "水平展枝與連續闊葉冠層是成熟闊葉樹的承載方式。",
+        "白底插畫未提供根部與物種的實景證據。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (13).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (13).jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "stylized_twisted_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.83,
+      "reasons": [
+        "可見扭曲主幹、主枝連接與葉冠，功能上屬闊葉木本。",
+        "插畫比例與陰影不能用來推斷真實樹種。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (14).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (14).jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "compact_round_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.82,
+      "reasons": [
+        "單一木質主幹連接緊密圓形葉冠，符合小型闊葉樹結構。",
+        "冠內枝條被葉片遮蔽，故不另造不可見主枝零件。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (15).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (15).jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "twisted_trunk_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.8,
+      "reasons": [
+        "扭結木質主幹與上方闊葉冠可辨識為木本樹。",
+        "主枝未以獨立可見構件呈現，保留主幹與冠層兩個證據單元。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (16).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (16).jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "cloud_pruned_fruit_tree",
+      "paletteDomain": "sculptural-topiary",
+      "confidence": 0.81,
+      "reasons": [
+        "多層雲狀冠幅與規整枝架顯示人工修剪的觀賞/果樹形態。",
+        "黃色小點是花或果的表現細節，不足以改變樹體功能分類。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (2).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (2).jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "tiered_conifer_topiary",
+      "paletteDomain": "sculptural-conifer",
+      "confidence": 0.77,
+      "reasons": [
+        "多層水平針葉墊沿單一直幹排列，表示受訓或修剪的觀賞針葉樹。",
+        "枝木被冠層遮蔽，照片沒有可獨立判定的主枝單元。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "受訓針葉主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (3).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (3).jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "windswept_conifer_bonsai",
+      "paletteDomain": "ornamental-bonsai-conifer",
+      "confidence": 0.8,
+      "reasons": [
+        "彎曲主幹與水平針葉枝層構成受訓針葉盆景。",
+        "可見枝條承托各針葉團，具體針葉樹種仍不可判定。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "受訓針葉主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪針葉主枝支撐並分配冠層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (4).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (4).jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "sweeping_conifer_bonsai",
+      "paletteDomain": "ornamental-bonsai-conifer",
+      "confidence": 0.88,
+      "reasons": [
+        "矩形栽植槽、彎曲主幹與掃掠狀針葉枝架明確指向盆景。",
+        "主枝承載與冠層功能可分離，盆器是獨立根系固定介面。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "栽植槽承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "stone-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓針葉主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪針葉主枝支撐並分配冠層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (5).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (5).jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "windswept_juniper",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.88,
+      "reasons": [
+        "針葉質感、扭曲木質主幹與風蝕枝架符合針葉樹生長形態。",
+        "根部與主枝在岩地上可見，未以顏色作分類依據。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "root_anchor",
+          "function": "根系錨定地面並傳遞樹體荷載",
+          "interfaceFamily": "root-soil-contact",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "soil",
+          "handedness": "symmetric",
+          "materialClass": "woody-root",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (6).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (6).jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "windswept_juniper",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.88,
+      "reasons": [
+        "可見同一株風塑針葉樹的扭曲主幹、主枝與針葉冠層。",
+        "外觀相近不構成功能替換證據，仍按獨立來源列帳。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "root_anchor",
+          "function": "根系錨定地面並傳遞樹體荷載",
+          "interfaceFamily": "root-soil-contact",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "soil",
+          "handedness": "symmetric",
+          "materialClass": "woody-root",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (7).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (7).jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "buttressed_broadleaf_tree",
+      "paletteDomain": "natural-buttressed-broadleaf",
+      "confidence": 0.86,
+      "reasons": [
+        "寬大根盤、粗壯主幹與大型闊葉冠層構成支柱根/巨樹生長結構。",
+        "枝架大多藏在冠層內，未把不可見主枝硬拆出來。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "root_anchor",
+          "function": "根系錨定地面並傳遞樹體荷載",
+          "interfaceFamily": "root-soil-contact",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "soil",
+          "handedness": "symmetric",
+          "materialClass": "woody-root",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (8).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (8).jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "landscape_conifer_with_rock_context",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.76,
+      "reasons": [
+        "畫面主體是直立針葉樹，岩塊是環境基座而非樹的功能零件。",
+        "距離與景深遮蔽根部、主枝細節，僅保留主幹與針葉冠。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images (9).jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images (9).jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "rock_rooted_conifer_cluster",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.78,
+      "reasons": [
+        "多株針葉樹以岩地為共同生長環境，主體功能仍是針葉樹群。",
+        "岩塊與苔/灌木未併入樹的拆件，樹根與主枝不可獨立判定。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/images.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/images.jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "baobab_bonsai",
+      "paletteDomain": "ornamental-bonsai-broadleaf",
+      "confidence": 0.87,
+      "reasons": [
+        "盆器、粗厚受訓樹幹與稀疏水平枝條顯示容器栽培的木本盆景。",
+        "主枝、主幹與葉冠有不同受力/替換責任，不能以單一樹塊代替。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓主幹承受並傳遞盆景冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪主枝分配盆景葉冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景闊葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pine-tree-vector-white-background_28952-136.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pine-tree-vector-white-background_28952-136.avif"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "stylized_windswept_pine",
+      "paletteDomain": "stylized-conifer",
+      "confidence": 0.7,
+      "reasons": [
+        "針葉簇、裸露枝條與單一直幹構成典型松類生長結構。",
+        "向量圖沒有根部或可靠物種線索，僅判定到針葉樹功能層級。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "trunk_support",
+        "branch_support",
+        "foliage_canopy"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-a-beautifully-arranged-bonsai-tree-with-delicate-pink-flowers-and-lush-png-image_16494466.png"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "flowering_broadleaf_bonsai",
+      "paletteDomain": "ornamental-bonsai-broadleaf",
+      "confidence": 0.94,
+      "reasons": [
+        "盆器、修剪枝架與粉色花簇顯示開花闊葉盆景。",
+        "花簇是冠層的生殖/視覺細節，不另假拆成結構件。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓主幹承受並傳遞盆景冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪主枝分配盆景葉冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景闊葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-a-bonsai-tree-in-pot-png-image_19036932.webp"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "rounded_broadleaf_bonsai",
+      "paletteDomain": "ornamental-bonsai-broadleaf",
+      "confidence": 0.82,
+      "reasons": [
+        "花盆與受訓主幹顯示容器盆景，圓形冠層承擔葉片光合作用。",
+        "冠內主枝不可見，故不臆造 branch_support。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓主幹承受並傳遞盆景冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景闊葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-a-small-juniper-bonsai-png-image_12474477.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-a-small-juniper-bonsai-png-image_12474477.png"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "juniper_bonsai",
+      "paletteDomain": "ornamental-bonsai-conifer",
+      "confidence": 0.95,
+      "reasons": [
+        "檔名與針葉墊狀冠層共同支持小型杜松/真柏類盆景判斷。",
+        "盆器與受訓木幹是獨立介面，葉冠是針葉功能層。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓針葉主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-a-tung-bonsai-tree-full-blossom-png-image_12538524.png"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "flowering_tung_bonsai",
+      "paletteDomain": "ornamental-bonsai-broadleaf",
+      "confidence": 0.9,
+      "reasons": [
+        "盆器、主幹分枝與滿開花簇符合開花闊葉盆景的栽培功能。",
+        "物種由檔名作弱佐證，分類仍以容器生長與枝冠結構為主。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓主幹承受並傳遞盆景冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪主枝分配盆景葉冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景闊葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561.webp",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-bonsai-tree-in-pot-transparent-background-png-image_18826561.webp"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "compact_broadleaf_bonsai",
+      "paletteDomain": "ornamental-bonsai-broadleaf",
+      "confidence": 0.79,
+      "reasons": [
+        "透明背景中的盆器、木幹與葉冠形成完整盆景資產。",
+        "根系被培養土遮住，主枝未以可見獨立構件呈現。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "容器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "plastic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓主幹承受並傳遞盆景冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景闊葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-chinese-juniper-isolated-on-white-background-png-image_320181.jpg",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-chinese-juniper-isolated-on-white-background-png-image_320181.jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "chinese_juniper_bonsai",
+      "paletteDomain": "ornamental-bonsai-conifer",
+      "confidence": 0.96,
+      "reasons": [
+        "檔名明示中國杜松，分層針葉墊與盆器也符合杜松盆景。",
+        "判斷依針葉生長與容器功能，不依白底或綠色色差。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓針葉主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-dark-bonsai-in-blue-pot-png-image_16185488.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-dark-bonsai-in-blue-pot-png-image_16185488.png"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "dark_juniper_bonsai",
+      "paletteDomain": "ornamental-bonsai-conifer",
+      "confidence": 0.87,
+      "reasons": [
+        "藍色盆器、扭曲木幹與修剪針葉墊構成針葉盆景。",
+        "藍色僅屬表現層，分類證據是容器根系介面與枝冠功能。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓針葉主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪針葉主枝支撐並分配冠層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-elegant-bonsai-tree-with-twisted-branches-beautifully-pruned-and-shaped-png-image_15938398.png"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "pruned_twisted_bonsai",
+      "paletteDomain": "ornamental-bonsai-conifer",
+      "confidence": 0.88,
+      "reasons": [
+        "明顯扭曲主幹、人工分層枝條與盆器指出受訓盆景。",
+        "可見主枝具有獨立受力責任，不能僅以冠層外輪廓代替。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓針葉主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪針葉主枝支撐並分配冠層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/pngtree-flowers-bonsai-tree-png-image_12485135.png",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/pngtree-flowers-bonsai-tree-png-image_12485135.png"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "flowering_bonsai",
+      "paletteDomain": "ornamental-bonsai-broadleaf",
+      "confidence": 0.9,
+      "reasons": [
+        "花盆、木幹、修剪枝架與花簇構成觀賞開花盆景。",
+        "花與葉冠是表現/生長層，主枝仍是獨立承載功能。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "盆器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "ceramic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "受訓主幹承受並傳遞盆景冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪主枝分配盆景葉冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景闊葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "primary:tree/serene-bonsai-tree-digital-art-illustration-transparent-background_471203-3976.avif",
+      "source": {
+        "corpus": "primary",
+        "image": "tree/serene-bonsai-tree-digital-art-illustration-transparent-background_471203-3976.avif"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "stylized_digital_bonsai",
+      "paletteDomain": "stylized-bonsai",
+      "confidence": 0.62,
+      "reasons": [
+        "單一彎曲木幹、稀疏枝條與雲狀冠層仍可判定為盆景式木本。",
+        "數位剪影沒有可驗證的盆器、根系或物種資訊，故信心偏低。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "trained-container-growth",
+        "safetyClass": "ornamental-container-plant",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "trunk_support",
+        "branch_support",
+        "foliage_canopy"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "受訓主幹承受並傳遞盆景冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "修剪主枝分配盆景葉冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "盆景闊葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "bonsai-broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/092313_274u9V4y.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/092313_274u9V4y.jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "umbrella_crown_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.9,
+      "reasons": [
+        "粗幹向外分叉並形成傘狀闊葉冠，符合成熟闊葉樹承載結構。",
+        "草地背景沒有提供可靠物種或根系細節。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/1342001_PE948961_S5.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/1342001_PE948961_S5.jpg"
+      },
+      "family": "tree",
+      "objectType": "shrub",
+      "subtype": "potted_columnar_cactus",
+      "paletteDomain": "ornamental-succulent",
+      "confidence": 0.92,
+      "reasons": [
+        "盆器中的直立肉質柱與側臂是仙人掌的儲水/支撐生長結構。",
+        "根系被盆土遮蔽；仙人掌沒有葉冠，故不硬加 foliage_canopy。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "container-succulent-growth",
+        "safetyClass": "thorned-succulent",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "容器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "plastic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "肉質主莖支撐植株並儲存水分",
+          "interfaceFamily": "cactus-stem-base",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "肉質側臂支撐並擴展光合作用表面",
+          "interfaceFamily": "cactus-arm-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/1513x4724_wmkn_328537037215_202606050063000000.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/1513x4724_wmkn_328537037215_202606050063000000.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "misty_tall_conifer",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.74,
+      "reasons": [
+        "霧景中的高直幹與稀疏針葉層支持針葉樹分類。",
+        "霧氣遮住枝葉與根部，樹種與主枝數量無法判定。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/15dc1b1d19bccbbf.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/15dc1b1d19bccbbf.webp"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "aerial_root_banyan",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.9,
+      "reasons": [
+        "闊葉冠與多條垂掛氣根顯示榕樹類的根—幹連續生長功能。",
+        "氣根是根錨定的可見特例，背景透明不代表沒有環境介面。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "root_anchor",
+          "function": "根系錨定地面並傳遞樹體荷載",
+          "interfaceFamily": "root-soil-contact",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "soil",
+          "handedness": "symmetric",
+          "materialClass": "woody-root",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/1位於台南市成大校園內的大榕樹隨著國泰企業廣告的強力放送，成為全台響噹噹的老樹明(林務局).jpg.webp"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "heritage_banyan",
+      "paletteDomain": "natural-buttressed-broadleaf",
+      "confidence": 0.94,
+      "reasons": [
+        "大型榕樹冠幅與粗大支柱性樹幹顯示老樹/巨樹功能，不把草坪當樹件。",
+        "畫面距離使主枝與根盤不可獨立辨識，保留主幹與冠層。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/20210316155158__33.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/20210316155158__33.jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "shrine_camphor_tree",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.87,
+      "reasons": [
+        "神社鳥居前的單一闊葉樹具有木質主幹與密集葉冠。",
+        "鳥居是場景中的獨立建築，不併入樹的功能零件。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/3f0fcc8d74ce8fcc.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/3f0fcc8d74ce8fcc.webp"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "aerial_root_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.86,
+      "reasons": [
+        "可見闊葉冠、木質主幹與垂掛根狀構造，符合榕樹類生長功能。",
+        "根部輪廓部分被透明遮罩/構圖截斷，僅列可辨識根錨定。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "root_anchor",
+          "function": "根系錨定地面並傳遞樹體荷載",
+          "interfaceFamily": "root-soil-contact",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "soil",
+          "handedness": "symmetric",
+          "materialClass": "woody-root",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/495849468.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/495849468.jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "park_round_crown_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.89,
+      "reasons": [
+        "公園草地上的巨大圓形闊葉冠與單一木質主幹指向成熟闊葉樹。",
+        "冠內枝條和根盤被距離遮蔽，不按外輪廓假拆。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/51YNHnO1PXL.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/51YNHnO1PXL.jpg"
+      },
+      "family": "tree",
+      "objectType": "shrub",
+      "subtype": "potted_columnar_cactus_with_arms",
+      "paletteDomain": "ornamental-succulent",
+      "confidence": 0.91,
+      "reasons": [
+        "盆栽柱狀肉質莖與多個側臂是仙人掌的儲水與支撐模組。",
+        "花盆承載培養土；看不到根系與葉片，因此不添加 root_anchor 或 foliage_canopy。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "container-succulent-growth",
+        "safetyClass": "thorned-succulent",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "容器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "plastic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "肉質主莖支撐植株並儲存水分",
+          "interfaceFamily": "cactus-stem-base",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "肉質側臂支撐並擴展光合作用表面",
+          "interfaceFamily": "cactus-arm-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/5D11CCA4-7909-424.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/5D11CCA4-7909-424.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "misty_sparse_conifer",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.72,
+      "reasons": [
+        "稀疏枝葉、直立木幹與針葉輪廓支持針葉樹判定。",
+        "霧景使樹種不確定，但可見裸露主枝仍具獨立支撐功能。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/700x1024_wmkn_0_C20250121000185.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/700x1024_wmkn_0_C20250121000185.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "tall_heritage_broadleaf",
+      "paletteDomain": "natural-buttressed-broadleaf",
+      "confidence": 0.84,
+      "reasons": [
+        "高大木質主幹與寬闊葉冠呈現老樹/巨樹的承載尺度。",
+        "圍欄是場景安全物件；樹根與枝架在遠景中不可獨立判定。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/70248068_1006.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/70248068_1006.webp"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "baobab_bottle_tree",
+      "paletteDomain": "natural-baobab",
+      "confidence": 0.96,
+      "reasons": [
+        "極粗瓶狀樹幹、寬展裸枝與稀疏冠層是猴麵包樹的生長結構。",
+        "分類依儲水主幹與枝冠功能，不依天空或草地顏色。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "瓶狀主幹儲水並承受樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-sapwood",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "粗枝托起並分配稀疏樹冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/7d535472ae45d3eb.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/7d535472ae45d3eb.webp"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "dense_round_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.84,
+      "reasons": [
+        "單一主幹支撐密集圓形闊葉冠，符合公園闊葉樹結構。",
+        "根部僅見樹幹接地陰影，未硬加 root_anchor。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/800_eb53c296eb6fc1ac757c290a1f6444b8.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/800_eb53c296eb6fc1ac757c290a1f6444b8.jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "isolated_field_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.66,
+      "reasons": [
+        "田野中的單一樹體具有闊葉冠與木質主幹。",
+        "距離與霧氣不足以判定樹種、枝條或根系，信心降低。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/8bfac7d0d6571bc99bcbb78.jpg_1280_1280_3_3d6c.jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "saguaro_cactus",
+      "paletteDomain": "natural-succulent",
+      "confidence": 0.96,
+      "reasons": [
+        "高大柱狀主莖與向上側臂是仙人掌的獨特支撐/儲水結構。",
+        "肉質莖本身兼具光合作用，不以闊葉冠語意替代。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-succulent-growth",
+        "safetyClass": "thorned-succulent",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "肉質主莖支撐植株並儲存水分",
+          "interfaceFamily": "cactus-stem-base",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "肉質側臂支撐並擴展光合作用表面",
+          "interfaceFamily": "cactus-arm-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/abc3c15b66b89dff.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/abc3c15b66b89dff.webp"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "stylized_round_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.8,
+      "reasons": [
+        "透明背景中的單一主幹與圓整葉冠仍保有闊葉樹功能層級。",
+        "來源是剪貼/插畫風格，無法從輪廓推定物種。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Adansonia-Fony-600-x-338-Fony-Baobab-tree.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "baobab_flat_crown",
+      "paletteDomain": "natural-baobab",
+      "confidence": 0.95,
+      "reasons": [
+        "瓶狀粗幹、扁平高位冠與水平主枝符合猴麵包樹。",
+        "遠景未露出根系，僅列可見幹、枝、冠三個功能單元。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "瓶狀主幹儲水並承受樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-sapwood",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "粗枝托起並分配稀疏樹冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/ADEY1909 (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/ADEY1909 (1).jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "landscape_round_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.78,
+      "reasons": [
+        "多幹/多枝向外支撐圓形闊葉冠，主要用途是成熟樹體遮蔭與生長。",
+        "花壇與地景不作樹的零件，物種不足以確定。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/ADEY1909.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/ADEY1909.jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "landscape_round_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.78,
+      "reasons": [
+        "可見木質主幹、左右主枝與連續闊葉冠層。",
+        "同名副本分開列帳，來源身份不以外觀合併。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94 (1).jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "windswept_evergreen_tree",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.64,
+      "reasons": [
+        "山坡岩地上的扭曲粗幹與低矮常綠冠層支持風塑針葉/常綠樹功能。",
+        "枝葉解析度不足以鎖定物種，分類信心偏低。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/bddb7c6b-3e6b-4ba4-9edb-d64a938a6a94.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "windswept_evergreen_tree",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.64,
+      "reasons": [
+        "扭曲主幹、低矮常綠冠與岩地環境呈現風塑針葉/常綠樹承載形態。",
+        "物種與枝條細節不足，低信心只延伸到功能層級。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/boab-tree-header-image-blog.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/boab-tree-header-image-blog.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "baobab_flat_crown",
+      "paletteDomain": "natural-baobab",
+      "confidence": 0.93,
+      "reasons": [
+        "粗瓶狀主幹、寬扁冠與裸露主枝是猴麵包樹典型生長結構。",
+        "照片未露清楚根盤，但主枝在冠層外可見。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "瓶狀主幹儲水並承受樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-sapwood",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "粗枝托起並分配稀疏樹冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/boab-trees (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/boab-trees (1).jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "baobab_dryland",
+      "paletteDomain": "natural-baobab",
+      "confidence": 0.94,
+      "reasons": [
+        "乾地猴麵包樹的粗幹、水平主枝與稀疏冠層可直接辨識。",
+        "圍欄/地景是外部環境，不併入樹的功能拆件。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "瓶狀主幹儲水並承受樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-sapwood",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "粗枝托起並分配稀疏樹冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/Cardon_Pachycereus_pringlei.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Cardon_Pachycereus_pringlei.jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "cardon_cactus",
+      "paletteDomain": "natural-succulent",
+      "confidence": 0.96,
+      "reasons": [
+        "柱狀仙人掌主幹與多個側臂具有清楚的支撐與儲水分工。",
+        "肉質莖無葉冠；分類不把刺或天空誤當成獨立樹冠。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-succulent-growth",
+        "safetyClass": "thorned-succulent",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "肉質主莖支撐植株並儲存水分",
+          "interfaceFamily": "cactus-stem-base",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "肉質側臂支撐並擴展光合作用表面",
+          "interfaceFamily": "cactus-arm-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree (1).jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "deodar_cedar",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.95,
+      "reasons": [
+        "檔名與層疊針葉冠、木質主幹共同支持雪松類針葉樹。",
+        "枝木被分層冠遮住，僅列可見主幹與針葉冠。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/cedrus-atlantica-deodar-cedar-atlas-mountains-cedrus-libani-tree-tree.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "deodar_cedar",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.95,
+      "reasons": [
+        "針葉分層由單一木質主幹承托，符合雪松類生長結構。",
+        "物種命名作佐證，功能分類仍依主幹與針葉冠。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/Choosing-the-right-cactus.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Choosing-the-right-cactus.jpg"
+      },
+      "family": "tree",
+      "objectType": "shrub",
+      "subtype": "barrel_cactus",
+      "paletteDomain": "natural-succulent",
+      "confidence": 0.97,
+      "reasons": [
+        "球狀肉質莖與刺座是低矮仙人掌的支撐/儲水結構。",
+        "礫石是地面介質，根部不可見；無葉冠或主枝可拆。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-succulent-growth",
+        "safetyClass": "thorned-succulent",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "肉質主莖支撐植株並儲存水分",
+          "interfaceFamily": "cactus-stem-base",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/d0cec1f4425528fa.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/d0cec1f4425528fa.webp"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "stylized_open_crown_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.82,
+      "reasons": [
+        "主幹分成左右主枝並承托多層闊葉冠，具備完整樹體功能結構。",
+        "透明背景只影響證據邊界，不新增不可見根部。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/ddf148d60683c553 (1).webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/ddf148d60683c553 (1).webp"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "generic_round_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.77,
+      "reasons": [
+        "單一直幹與圓形闊葉冠可判定為一般闊葉樹。",
+        "枝條被冠層完全遮蔽，不能僅因外輪廓假設 branch_support。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/ddf148d60683c553.webp",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/ddf148d60683c553.webp"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "generic_round_broadleaf",
+      "paletteDomain": "stylized-broadleaf",
+      "confidence": 0.77,
+      "reasons": [
+        "可見木質主幹與圓整闊葉冠，功能上屬一般闊葉樹。",
+        "同名副本維持獨立來源列，枝與根未在圖中露出。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/depositphotos_105012648-stock-photo-general-sherman-giant-sequoia-tree.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "giant_sequoia",
+      "paletteDomain": "natural-sequoia",
+      "confidence": 0.98,
+      "reasons": [
+        "巨大紅褐色主幹與高位針葉冠符合巨型紅杉/巨杉的承載尺度。",
+        "步道與解說牌是環境設施，不能替代樹的根、幹、冠功能。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "巨型針葉主幹承受並傳遞高大冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "sequoia-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/Derby_boab,_Western_Australia.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Derby_boab,_Western_Australia.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "hollow_baobab",
+      "paletteDomain": "natural-baobab",
+      "confidence": 0.96,
+      "reasons": [
+        "粗厚中空主幹、水平主枝與稀疏冠層是老猴麵包樹生長特徵。",
+        "圍欄不是樹體零件，樹根被地面遮蔽。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "瓶狀主幹儲水並承受樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-sapwood",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "粗枝托起並分配稀疏樹冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/e7838fe5b8bde5ad90.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/e7838fe5b8bde5ad90.jpg"
+      },
+      "family": "tree",
+      "objectType": "shrub",
+      "subtype": "prickly_pear_cactus",
+      "paletteDomain": "natural-succulent",
+      "confidence": 0.94,
+      "reasons": [
+        "扁平多肉莖節成簇連接，符合仙人掌的儲水與側枝功能。",
+        "莖節而非葉冠承擔光合作用，石地不構成 root_anchor。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-succulent-growth",
+        "safetyClass": "thorned-succulent",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "肉質主莖支撐植株並儲存水分",
+          "interfaceFamily": "cactus-stem-base",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "肉質側臂支撐並擴展光合作用表面",
+          "interfaceFamily": "cactus-arm-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/elegant-illustration-deodar-cedar-tree-ideal-design-projects-elegant-deodar-cedar-tree-illustration-design-362314166.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "stylized_deodar_cedar",
+      "paletteDomain": "stylized-conifer",
+      "confidence": 0.89,
+      "reasons": [
+        "分層針葉冠由直立木質主幹承托，符合雪松類針葉樹。",
+        "插畫沒有可驗證根系或主枝露出，保留主幹與冠層。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/FB_IMG_1786332532197 (2).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/FB_IMG_1786332532197 (2).jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "tall_sparse_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.71,
+      "reasons": [
+        "細長主幹、水平主枝與稀疏闊葉冠呈現成熟木本結構。",
+        "逆光使樹種和根盤不確定，僅作功能層級分類。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/FB_IMG_1786333297321.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/FB_IMG_1786333297321.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "coast_redwood",
+      "paletteDomain": "natural-sequoia",
+      "confidence": 0.9,
+      "reasons": [
+        "高聳紅褐色主幹與上方針葉冠呈現紅杉類巨型樹體。",
+        "可見側枝是冠層承載單元，林地背景不納入樹件。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "巨型針葉主幹承受並傳遞高大冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "sequoia-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "高位主枝承接並分配針葉冠層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "sequoia-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/FB_IMG_1786333300422.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/FB_IMG_1786333300422.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "multi_trunk_giant_broadleaf",
+      "paletteDomain": "natural-buttressed-broadleaf",
+      "confidence": 0.82,
+      "reasons": [
+        "多股粗大主幹與連續闊葉冠呈現巨型多幹樹承載結構。",
+        "枝架被密冠遮蔽，保留可見幹與冠，不臆造主枝。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/FB_IMG_1786818411804.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/FB_IMG_1786818411804.jpg"
+      },
+      "family": "tree",
+      "objectType": "snag",
+      "subtype": "weathered_twisted_snag",
+      "paletteDomain": "natural-snag",
+      "confidence": 0.72,
+      "reasons": [
+        "幾乎無葉的扭曲枯幹與裸露枯枝符合枯立木/死木結構。",
+        "活葉冠證據不足，故不添加 foliage_canopy；根部被山坡遮蔽。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "standing-deadwood",
+        "safetyClass": "deadwood-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "枯立木殘幹維持直立結構並承受風荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "deadwood-air",
+          "handedness": "symmetric",
+          "materialClass": "weathered-deadwood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "枯枝維持殘存骨架並形成棲地結構",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "deadwood-air",
+          "handedness": "symmetric",
+          "materialClass": "weathered-deadwood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/getImage-2-4.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/getImage-2-4.jpg"
+      },
+      "family": "tree",
+      "objectType": "broadleaf_tree",
+      "subtype": "snowy_flowering_broadleaf",
+      "paletteDomain": "natural-broadleaf",
+      "confidence": 0.88,
+      "reasons": [
+        "雪地中的開花闊葉樹具有裸露主枝與花冠，枝—冠功能分離清楚。",
+        "季節性無葉不等於 snag，花冠仍顯示活體生長。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "主幹承受並傳遞樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "主枝分配樹冠與葉片荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/getImage-3-4.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/getImage-3-4.jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "dragon_blood_tree",
+      "paletteDomain": "natural-dracaena",
+      "confidence": 0.91,
+      "reasons": [
+        "傘形葉簇、粗幹分枝與乾旱地景符合龍血樹/龍舌蘭樹形態。",
+        "岩石與天空只是環境；葉簇仍是獨立冠層功能。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-rosette-growth",
+        "safetyClass": "natural-plant-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "龍血樹木質主幹承受並傳遞傘形冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "dracaena-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "龍血樹分枝支撐各葉簇並分配荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "dracaena-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉簇執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "rosette-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Green baobab at sunny day. Madagascar dreamstime_xxl_46207442 (1).jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "green_baobab",
+      "paletteDomain": "natural-baobab",
+      "confidence": 0.95,
+      "reasons": [
+        "瓶狀粗幹、傘形稀疏冠與水平主枝直接支持猴麵包樹。",
+        "主枝在冠層下可見，根部未露出不另加 root_anchor。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "瓶狀主幹儲水並承受樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-sapwood",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "粗枝托起並分配稀疏樹冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/id13801237-shutterstock_1868040619s.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/id13801237-shutterstock_1868040619s.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "giant_sequoia",
+      "paletteDomain": "natural-sequoia",
+      "confidence": 0.97,
+      "reasons": [
+        "極粗紅褐主幹與高大針葉冠符合巨型紅杉。",
+        "樹皮傷痕是表面風化，不是可替換的主結構零件。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "巨型針葉主幹承受並傳遞高大冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "sequoia-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/imgbin-cedrus-libani-cedar-wood-lebanon-tree-tree-de9Zw3j1fZiEEKVW8Agjijfqi.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "stylized_deodar_cedar",
+      "paletteDomain": "stylized-conifer",
+      "confidence": 0.9,
+      "reasons": [
+        "針葉層與直幹呈現雪松類針葉樹生長分層。",
+        "去背插畫沒有根部或主枝獨立證據，不按輪廓過度拆件。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/madagascar-baobab.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/madagascar-baobab.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "madagascar_baobab",
+      "paletteDomain": "natural-baobab",
+      "confidence": 0.95,
+      "reasons": [
+        "猴麵包樹的粗瓶狀主幹、上部主枝與疏葉冠十分明確。",
+        "水面/草地是環境介質，未把它們列入樹的功能零件。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "瓶狀主幹儲水並承受樹冠荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-sapwood",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "粗枝托起並分配稀疏樹冠荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "baobab-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "葉冠執行光合作用與蒸散",
+          "interfaceFamily": "leaf-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "broadleaf-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/p6CRn6GXmKSX.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/p6CRn6GXmKSX.jpg"
+      },
+      "family": "tree",
+      "objectType": "buttressed_giant",
+      "subtype": "giant_redwood",
+      "paletteDomain": "natural-sequoia",
+      "confidence": 0.92,
+      "reasons": [
+        "高大紅褐主幹與針葉冠層符合巨型紅杉/紅木樹體。",
+        "可見主枝與冠層分離，樹根未在取景中露出。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "heritage-giant-tree",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "巨型針葉主幹承受並傳遞高大冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "sequoia-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "高位主枝承接並分配針葉冠層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "sequoia-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/Pachycereus_pringlei_forest.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/Pachycereus_pringlei_forest.jpg"
+      },
+      "family": "tree",
+      "objectType": "sculptural_tree",
+      "subtype": "cardon_cactus_stand",
+      "paletteDomain": "natural-succulent",
+      "confidence": 0.88,
+      "reasons": [
+        "多株柱狀卡登仙人掌與側臂形成乾旱地景植群，主體功能仍是肉質莖支撐/儲水。",
+        "這是群落照片而非單株，保留全幅 target，不臆造葉冠或背景植被。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-succulent-growth",
+        "safetyClass": "thorned-succulent",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "肉質主莖支撐植株並儲存水分",
+          "interfaceFamily": "cactus-stem-base",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "肉質側臂支撐並擴展光合作用表面",
+          "interfaceFamily": "cactus-arm-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-alaska-cedar-tree-png-image_5004137.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "alaska_cedar",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.93,
+      "reasons": [
+        "針葉樹冠、直幹與分層枝葉符合阿拉斯加雪松/針葉樹功能。",
+        "去背圖未露根與主枝接點，僅列主幹與冠層。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-coniferous-green-plant-pine-tree-clip-art-png-image_5876531.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "stylized_pine",
+      "paletteDomain": "stylized-conifer",
+      "confidence": 0.86,
+      "reasons": [
+        "層疊針葉枝冠與直立木幹是松類針葉樹結構。",
+        "卡通化枝葉沒有可驗證的根系證據。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/pngtree-coniferous-tree-png-image_6230847.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-coniferous-tree-png-image_6230847.png"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "stylized_conifer",
+      "paletteDomain": "stylized-conifer",
+      "confidence": 0.84,
+      "reasons": [
+        "錐形針葉冠沿中央木幹分層排列，屬針葉樹生長形態。",
+        "白底插畫未顯示根或主枝獨立介面。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-detailed-green-conifer-tree-with-thick-branches-png-image_16292677.png"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "thick_branched_conifer",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.87,
+      "reasons": [
+        "較厚的水平枝層支撐多層針葉冠，主枝功能可從冠層區分。",
+        "物種無法由去背插畫確定，保留針葉樹級別。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957.png",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/pngtree-tall-and-slender-conifer-tree-with-dense-green-needles-png-image_21005957.png"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "slender_conifer",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.88,
+      "reasons": [
+        "高聳錐形針葉冠與細長主幹符合針葉樹。",
+        "冠層遮蔽枝木，照片未提供可獨立判定的主枝。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "decomposed",
+      "missingFunctionalParts": [],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/un-albero-di-conifere-isolato-su-sfondo-bianco_927585-6.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "stylized_conifer",
+      "paletteDomain": "stylized-conifer",
+      "confidence": 0.82,
+      "reasons": [
+        "白底孤立圖中的錐形針葉冠與中央主幹清楚。",
+        "未見根系與主枝介面，僅列可觀測功能單元。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "trunk_support",
+        "foliage_canopy"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/山上的孤松樹.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/山上的孤松樹.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "solitary_hill_pine",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.83,
+      "reasons": [
+        "山坡上的孤立樹具有松類針葉冠與可見主枝輪廓。",
+        "遠景不支持物種級判斷，根部細節不可見。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "trunk_support",
+        "branch_support",
+        "foliage_canopy"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/網路花店-大型盆栽-elho胖盆-湖水綠-龍骨-03.jpg"
+      },
+      "family": "tree",
+      "objectType": "shrub",
+      "subtype": "potted_candelabra_cactus",
+      "paletteDomain": "ornamental-succulent",
+      "confidence": 0.93,
+      "reasons": [
+        "盆栽中的多叉柱狀肉質莖符合龍骨/大戟類觀賞多肉的支撐結構。",
+        "盆土承載介面可見，根與葉冠不可見；肉質莖兼具光合作用。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "potting-soil-air",
+        "operationMode": "container-succulent-growth",
+        "safetyClass": "thorned-succulent",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "foundation_mount",
+        "trunk_support",
+        "branch_support"
+      ],
+      "parts": [
+        {
+          "role": "foundation_mount",
+          "function": "容器承載培養土並固定盆栽根系",
+          "interfaceFamily": "container-potting-medium",
+          "kinematicClass": "fixed",
+          "loadClass": "foundation",
+          "workingMedium": "potting-soil",
+          "handedness": "symmetric",
+          "materialClass": "plastic-planter",
+          "paletteSlot": "structural",
+          "mountCount": 1
+        },
+        {
+          "role": "trunk_support",
+          "function": "肉質主莖支撐植株並儲存水分",
+          "interfaceFamily": "cactus-stem-base",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "肉質側臂支撐並擴展光合作用表面",
+          "interfaceFamily": "cactus-arm-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "water-storage-tissue",
+          "handedness": "symmetric",
+          "materialClass": "succulent-stem",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        }
+      ],
+      "operationalMarking": []
+    },
+    {
+      "id": "restricted:tree/臺灣杉照片提供／陳建帆.jpg",
+      "source": {
+        "corpus": "restricted",
+        "image": "tree/臺灣杉照片提供／陳建帆.jpg"
+      },
+      "family": "tree",
+      "objectType": "conifer_tree",
+      "subtype": "taiwan_cryptomeria",
+      "paletteDomain": "natural-conifer",
+      "confidence": 0.9,
+      "reasons": [
+        "高直幹、針葉枝層與森林尺度支持臺灣杉/大型針葉樹。",
+        "照片遮住根部，枝條細節仍足以列為主枝功能。"
+      ],
+      "functionalProfile": {
+        "workingMedium": "soil-air",
+        "operationMode": "rooted-perennial-growth",
+        "safetyClass": "natural-tree-obstacle",
+        "compatibleTypes": []
+      },
+      "decompositionStatus": "needs_decomposition",
+      "missingFunctionalParts": [
+        "trunk_support",
+        "branch_support",
+        "foliage_canopy"
+      ],
+      "parts": [
+        {
+          "role": "trunk_support",
+          "function": "針葉樹主幹承受並傳遞冠層荷載",
+          "interfaceFamily": "trunk-root-continuity",
+          "kinematicClass": "fixed",
+          "loadClass": "primary-load",
+          "workingMedium": "sapwood",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_primary",
+          "mountCount": 1
+        },
+        {
+          "role": "branch_support",
+          "function": "針葉樹主枝支撐並分配針葉層荷載",
+          "interfaceFamily": "branch-trunk-junction",
+          "kinematicClass": "fixed",
+          "loadClass": "secondary-load",
+          "workingMedium": "sapwood-air",
+          "handedness": "symmetric",
+          "materialClass": "conifer-wood",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 2
+        },
+        {
+          "role": "foliage_canopy",
+          "function": "針葉冠層執行光合作用與蒸散",
+          "interfaceFamily": "needle-branch-attachment",
+          "kinematicClass": "wind-flex",
+          "loadClass": "distributed-load",
+          "workingMedium": "air-light",
+          "handedness": "symmetric",
+          "materialClass": "needle-foliage",
+          "paletteSlot": "natural_secondary",
+          "mountCount": 1
+        }
+      ],
+      "operationalMarking": []
+    }
+  ]
+}
+

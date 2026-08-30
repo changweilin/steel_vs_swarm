@@ -18,9 +18,9 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parents[2]
-PHOTO_ROOTS = (
-    Path(r"C:\Users\user\Documents\steel_vs_swarm\tools\ai3d\photos"),
-    Path(r"C:\Users\user\Documents\study\ai3d_restricted\photos"),
+PHOTO_CORPORA = (
+    ("primary", Path(r"C:\Users\user\Documents\steel_vs_swarm\tools\ai3d\photos")),
+    ("restricted", Path(r"C:\Users\user\Documents\study\ai3d_restricted\photos")),
 )
 OUT_FEATURES = ROOT / "out" / "yolo_features"
 OUT_TARGETS = ROOT / "out" / "targets"
@@ -219,7 +219,7 @@ def save_depth(depth: np.ndarray, raw_path: Path, preview_path: Path):
     encoded.tofile(preview_path)
 
 
-def process_image(path: Path, corpus: Path, models, args):
+def process_image(path: Path, corpus_id: str, corpus: Path, models, args):
     parsed = parse_category(path, corpus)
     if parsed is None:
         return None
@@ -232,7 +232,8 @@ def process_image(path: Path, corpus: Path, models, args):
     stem = path.stem
     if args.review_targets is not None and f"{family}/{subpart}_{stem}" not in args.review_targets:
         return None
-    feature_file = OUT_FEATURES / family / subpart / f"{stem}.json"
+    # 兩個語料家可能有同 family/subpart/stem；corpus 是來源身份的一部分，衍生證據必須同列隔離。
+    feature_file = OUT_FEATURES / corpus_id / family / subpart / f"{stem}.json"
     if not args.force and feature_file.is_file() and cache_valid(feature_file):
         data = json.loads(feature_file.read_text(encoding="utf-8"))
         return "skipped", len(data["targets"])
@@ -246,7 +247,7 @@ def process_image(path: Path, corpus: Path, models, args):
     segmentations = segmentation_rows(segment_result, width, height)
     depth = depth_array(depth_result, width, height)
 
-    base_dir = Path(family) / subpart
+    base_dir = Path(corpus_id) / family / subpart
     raw_depth = OUT_DEPTH / base_dir / f"{stem}.npy"
     preview_depth = OUT_DEPTH / base_dir / f"{stem}.png"
     save_depth(depth, raw_depth, preview_depth)
@@ -290,6 +291,7 @@ def process_image(path: Path, corpus: Path, models, args):
 
     feature_data = {
         "schemaVersion": SCHEMA_VERSION,
+        "corpusId": corpus_id,
         "sourceImage": source_rel,
         "sourceFullPath": str(path),
         "family": family,
@@ -318,12 +320,12 @@ def process_image(path: Path, corpus: Path, models, args):
 
 def discover_images():
     rows = []
-    for corpus in PHOTO_ROOTS:
+    for corpus_id, corpus in PHOTO_CORPORA:
         if not corpus.is_dir():
             continue
         for path in corpus.rglob("*"):
             if path.is_file() and path.suffix.lower() in IMAGE_EXTS:
-                rows.append((path, corpus))
+                rows.append((path, corpus_id, corpus))
     return sorted(rows, key=lambda row: str(row[0]).lower())
 
 
@@ -342,11 +344,11 @@ def main():
     models = {name: YOLO(model_name) for name, model_name in MODEL_NAMES.items()}
     images = discover_images()
     computed = skipped = failed = multi = 0
-    for path, corpus in images:
+    for path, corpus_id, corpus in images:
         if computed + skipped >= args.limit:
             break
         try:
-            result = process_image(path, corpus, models, args)
+            result = process_image(path, corpus_id, corpus, models, args)
         except Exception as exc:
             failed += 1
             print(f"  ⚠ {path}: {exc}", file=sys.stderr)

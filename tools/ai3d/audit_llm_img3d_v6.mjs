@@ -5,6 +5,8 @@
  * ② 只有語意符合分類的多目標會拆分。
  * ③ ingest 缺快取不得偷吃原圖。
  * ④ 生成後必須渲染三視圖並由第二次 LLM 呼叫複核；低分回饋下一輪，未過不得入庫。
+ * ⑤ 原圖與 YOLO26 證據以 corpus id 隔離，避免兩個語料家同名檔互相覆蓋。
+ * 反向驗證：--break-yolo / --break-review / --break-corpus。
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,6 +21,11 @@ let js = readFileSync(join(ROOT, 'tools', 'ai3d', 'direct_ingest_v6.mjs'), 'utf8
 const reconcile = readFileSync(join(ROOT, 'tools', 'ai3d', 'reconcile_v6_review.mjs'), 'utf8');
 if (argv.includes('--break-yolo')) py = py.replace('yolo26n-seg.pt', broken);
 if (argv.includes('--break-review')) js = js.replace('async function reviewGeometry', broken);
+if (argv.includes('--break-corpus')) {
+  const before = 'feature_file = OUT_FEATURES / corpus_id / family / subpart / f"{stem}.json"';
+  if (!py.includes(before)) throw new Error('--break-corpus 替換不適用');
+  py = py.replace(before, 'feature_file = OUT_FEATURES / family / subpart / f"{stem}.json"');
+}
 
 const checks = [];
 const ok = (name, pass) => checks.push({ name, pass: Boolean(pass) });
@@ -32,12 +39,23 @@ ok('segmentation mask persistence', py.includes('maskFile'));
 ok('schema-v2 cache gate', py.includes('SCHEMA_VERSION = 2') && py.includes('cache_valid(feature_file)'));
 ok('semantic family filter', py.includes('FAMILY_LABELS') && py.includes('row["className"] in allowed'));
 ok('multi-target id', py.includes('target_id = f"{stem}~{index}"'));
+ok('corpus-isolated YOLO evidence', py.includes('PHOTO_CORPORA')
+  && py.includes('feature_file = OUT_FEATURES / corpus_id / family / subpart / f"{stem}.json"')
+  && py.includes('"corpusId": corpus_id')
+  && js.includes("'yolo_features', corpusId, family, subpart")
+  && js.includes('const assetStem = `${corpusId}_${curStem}`')
+  && js.includes('`${family}/${subpart}_${corpusId}_${stem}`')
+  && js.includes('family, subpart, corpusId')
+  && js.includes('舊 YOLO26 快取來源不符'));
 ok('ingest rejects missing YOLO cache', js.includes('缺少 YOLO26 快取，拒絕直接送 LLM'));
 ok('YOLO features enter LLM prompt', js.includes('不得重新猜測目標邊界') && js.includes('JSON.stringify(yoloFeatures)'));
+ok('Luna 功能拆件進入 LLM prompt 與產物', js.includes('missingFunctionalParts 也必須補成獨立零件')
+  && js.includes('JSON.stringify(functionalClassification)')
+  && js.includes('featuresJson.functionalClassification = functionalClassification'));
 ok('three-view preview renderer', js.includes("render_poly_preview.py") && js.includes("'out', 'review_previews'"));
 ok('independent image-vs-render review', js.includes('async function reviewGeometry(')
   && js.includes("{ inlineData: { mimeType: 'image/png', data: preview } }"));
-ok('review critique feeds retry', js.includes('callGemini(imageBase64, mimeType, family, subpart, tgt.features, critique)'));
+ok('review critique feeds retry', js.includes('callGemini(imageBase64, mimeType, family, subpart, tgt.features, functionalClassification, critique)'));
 ok('failed review cannot persist', js.includes('仍未通過獨立相似度閘，拒絕入庫'));
 ok('authoritative review is persisted', js.includes('similarityScore: simScore') && js.includes('similarityVerdict: review.verdict'));
 ok('review reconciliation uses stable identity', js.includes('stableTargetOfKey') && reconcile.includes('stableOfKey'));

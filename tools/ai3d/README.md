@@ -23,6 +23,11 @@ image→3D GLB、小植被維持程序生成)。
 | `drafts/{ch}/{slot}.jpg` | 逐槽位切圖 = image→3D 的輸入 |
 | `direct_ingest_all.mjs` | **v5 多面體幾何引擎**:獨立多面體純資料零件合成 (無關照片、零二進位負擔) |
 | `direct_ingest_v6.mjs` | **v6 照片重建引擎**:YOLO26 實例分割與深度證據 + LLM 多模態多面體重建 |
+| `object_classification_policy.mjs` | **功能分類唯一縫**：物件用途、現實零件角色、拆件與配色/零件替換資格；外觀相似度不得授權替換 |
+| `object_classifications/*.json` | GPT-5.6 Luna max 對直屬未分類照片逐張產出的功能分類與缺失拆件帳 |
+| `object_classification_inventory.mjs` | 把 corpus + 母照片 + YOLO26 schema-v2 證據綁成同一穩定列；`npm run classify:objects` 產生清單 |
+| `audit_object_classification.mjs` | 母照片覆蓋、YOLO26 同列配對與功能替換正反例；`npm run audit:classification` |
+| `audit_object_interchangeability.mjs` | Luna 跨物件功能、零件介面與語意配色群稽核；`npm run audit:interchange` |
 | `fetch_photos.mjs` | **照片庫抓取器**(Track B §4.1):逐族查詢型錄、可續跑補缺、CC0 雙重硬閘、記帳。沙箱代理連不到 Openverse/Commons(㋓)⇒ 在 3060 真機或 Actions 上跑 |
 | `photo_manifest.json` | 照片帳本(產出後自動生成):`{source_url, license, creator, retrieved_at, …}` 一項不少 |
 | `photos/{family}/{part}/` | 照片本體(**勿入版控** —— 照片只是離線輸入,入庫的只有零件 GLB) |
