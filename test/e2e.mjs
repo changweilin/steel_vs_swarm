@@ -1,6 +1,6 @@
 // 端對端測試:sim 直測(地雷/彈夾/克制/自爆/角色招式/雙層HP/防空伏擊)
 //            → 開房前選圖 → 建房(含隊伍規模/環境)→ 選陣營(N 席)→ 選角
-//            → 準備 → 開戰載入 → 快照 → 彈道命中 → 招式養成 → 勝負 → 回房保留地圖
+//            → 準備 → 開戰載入 → 快照 → 彈道命中 → 招式養成 → 回房保留地圖
 import WebSocket from 'ws';
 import { BattleSim, waveInterval, cumLen } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
@@ -859,10 +859,13 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(dr.dead, '無人機被擊落 → dead');
   sim.tick(0.05);
   assert(dr.dead, '死亡當下那個 tick 仍維持 dead(確保至少一份快照廣播 dead:true)');
+  const deadView = sim.snapshotFor(dr.side).ents.find((e) => e.id === dr.id);
+  assert(deadView?.dead && deadView.rs > 0, `陣營快照帶 dead:true 與重生倒數 rs:${deadView?.rs}`);
   assert(UNITS.drone.respawn.base > 0 && UNITS.robot.respawn.base > 0, '無人機/機甲重生都有冷卻(數值檢查)');
   sim.t += UNITS.drone.respawn.base + UNITS.drone.respawn.perDeath * 3;
   sim.tick(0.05); sim.tick(0.05);
   assert(!dr.dead, `重生冷卻結束後歸隊(base ${UNITS.drone.respawn.base}s)`);
+  assert(sim.snapshotFor(dr.side).ents.find((e) => e.id === dr.id)?.dead === false, '重生後陣營快照恢復 dead:false');
   dr.rg = false;
   sim.heroes.set('p_d', dr); sq.act = 0;   // 主視野切回 dr,後續測試對它結算
 
@@ -1658,6 +1661,24 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   }
 }
 
+// ================= sim 直測:勝負結算 =================
+// 完整平衡血量的拆堡耗時約 480 秒，只重複驗證已由 bal 守住的 DPS 與正式血量。
+// 這裡把主堡壓到臨界值，保留真正需要的權威結算、事件與快照契約。
+log('— sim:勝負結算(gameOver 事件 + 快照)—');
+{
+  const sim = new BattleSim(fakeBattleConfig(1));
+  purgeCamps(sim);
+  const attacker = sim.addHero('SWARM', 'p_win', 's02');
+  const base = [...sim.ents.values()].find((e) => e.kind === 'base' && e.side === 'STEEL');
+  base.hp = 1;
+  sim._damage(base, 99999, attacker, 999);
+  const snap = sim.snapshotFor(null);
+  assert(sim.over && sim.winner === 'SWARM', '敵方主堡被摧毀後立即結算蜂群獲勝');
+  assert(snap.ev.some((e) => e.e === 'gameOver' && e.winner === 'SWARM'),
+    '勝負快照送出 gameOver 事件與勝方');
+  assert(snap.over && snap.winner === 'SWARM', '權威快照帶 over 與 winner');
+}
+
 // ================= sim 直測:霧戰爭(單位類實體限視野,建築/中立物永遠可見)=================
 log('— sim:霧戰爭(視野外的敵方單位不進快照;瞄準模式加成視野;建築/中立物永遠可見)—');
 {
@@ -2399,15 +2420,6 @@ host.send({ t: 'cast', slot: 'ult', x: foeTower.x, z: foeTower.z });   // CD 內
 await new Promise((r) => setTimeout(r, 300));
 assert(kamiEvs().length === 1, 'CD 內再按不會再放一次大招載具');
 
-log('— 俯衝進兵線 → 被擊殺 → 重生 —');
-host.send({ t: 'pos', x: target.x, y: 5, z: target.z, ry: 0 });
-const mine = (c) => c.snaps.at(-1).ents.filter((e) => e.pid === host.sync.youId);
-const deadSnap = await host.wait((c) => (mine(c).some((e) => e.dead) ? c.snaps.at(-1) : null), 30000);
-const downed = deadSnap.ents.filter((e) => e.pid === host.sync.youId && e.dead);
-assert(true, `無人機硬闖兵線被擊落 ${downed.length} 架(重生倒數 ${downed[0].rs}s)`);
-await host.wait((c) => mine(c).length > 0 && mine(c).every((e) => !e.dead), 40000);
-assert(true, '全機重生成功(回到主堡)');
-
 log('— 斷線重連 —');
 const token = guest.sync.token;
 guest.ws.close();
@@ -2433,23 +2445,6 @@ host.send({ t: 'buy', item: 'hw' });
 await host.wait((c) => (meOf(c)?.up?.hw || 0) >= 1, 5000);
 clearInterval(homeIv);
 assert(true, '重武器強化 Lv.1(快照 up 同步)');
-
-// 2026-08-02 建築加乘移除:溫壓火箭的 vs.building 由 2.0 夾到 1.0、launcher 的 ×1.4 整組刪除
-// ⇒ 同一發打主堡的傷害剩約 1/2.8,拆堡時間等比拉長(逾時上限跟著放寬,不是變慢的 bug)。
-log('— 勝負(重武器溫壓火箭高空拆堡:建築無加乘 + 破甲)—');
-const steelBase = snap.ents.find((e) => e.k === 'base' && e.s === 'STEEL');
-const t0 = Date.now();
-const iv = setInterval(() => {
-  host.send({ t: 'pos', x: steelBase.x, y: HI_ALT, z: steelBase.z, ry: 0 });
-  host.send({ t: 'aim', on: true });   // 重武器需瞄準模式(死亡重生會被重置,循環內重送)
-  host.send({ t: 'burst', x: steelBase.x, z: steelBase.z });
-}, 300);
-// 2026-08-12 高地壓制(data.js HIGH_SUP)再放寬一次:本測試是**站在高空**打主堡,而主堡的回擊
-// 會讓射手一直處於壓制狀態 ⇒ 命中率 −HIT(封頂 10%)⇒ 拆堡時間 ×1/(1−0.10)。實測 451s → 約 480s,
-// 剛好貼著舊上限 = 會間歇性紅字的假警報。**這是設計上的變慢,不是退化**(高處挨打就打不準)。
-const overSnap = await host.wait((c) => c.snaps.at(-1).over ? c.snaps.at(-1) : null, 600000);
-clearInterval(iv);
-assert(overSnap.winner === 'SWARM', `蜂群獲勝(${((Date.now() - t0) / 1000).toFixed(0)}s 拆完主堡)`);
 
 log('— 回房再戰:地圖保留 —');
 host.send({ t: 'backToRoom' });

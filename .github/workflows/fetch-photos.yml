@@ -5,7 +5,7 @@
 # 產出走 artifact:下載到 3060 真機解壓進 tools/ai3d/photos/ 就能接 image→3D。
 # 帳本 photo_manifest.json 與照片同一份 artifact(授權欄位要跟著照片走)。
 #
-# 觸發:手動 workflow_dispatch;開發分支上改到抓取器/本檔也自動跑一輪(= 立即開抓)。
+# 觸發:手動 workflow_dispatch。這是外部資料採集作業，不屬於每次推送的回歸驗證。
 name: 照片庫抓取
 
 on:
@@ -19,12 +19,6 @@ on:
         description: '本輪最多下載幾張'
         required: false
         default: '60'
-  push:
-    branches: [claude/photo-db-img-to-3d-8j9tbe]
-    paths:
-      - tools/ai3d/fetch_photos.mjs
-      - .github/workflows/fetch-photos.yml
-
 jobs:
   fetch:
     runs-on: ubuntu-latest
