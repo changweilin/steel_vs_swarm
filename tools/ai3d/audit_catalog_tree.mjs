@@ -70,6 +70,11 @@ ok('零件台樹葉列出零件群與配色', reviewSrc.includes('catalogTreeBra
 ok('零件台支援指定／隨機零件與配色', reviewSrc.includes('generateBackgroundObject')
   && reviewSrc.includes('partOverrides') && reviewSrc.includes('data-assembly-action="random"')
   && reviewSrc.includes('prAssemblyPalette'));
+ok('零件台標示每件物件的替換能力', reviewSrc.includes('replacementInfo')
+  && reviewSrc.includes('replacementPill') && reviewSrc.includes('不可替換')
+  && reviewSrc.includes('可替換'));
+ok('零件台大型細節預設收起', reviewSrc.includes('pr-info-fold')
+  && reviewSrc.includes('pr-assembly-detail') && reviewSrc.includes('pr-yolo-fold'));
 
 for (const check of checks) console.log(`${check.pass ? '✓' : '✗'} ${check.name}${check.detail ? ` (${check.detail})` : ''}`);
 const failed = checks.filter((check) => !check.pass);
