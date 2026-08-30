@@ -1,6 +1,6 @@
 // 端對端測試:sim 直測(地雷/彈夾/克制/自爆/角色招式/雙層HP/防空伏擊)
 //            → 開房前選圖 → 建房(含隊伍規模/環境)→ 選陣營(N 席)→ 選角
-//            → 準備 → 開戰載入 → 快照 → 彈道命中 → 招式養成 → 勝負 → 回房保留地圖
+//            → 準備 → 開戰載入 → 快照 → 彈道命中 → 招式養成 → 回房保留地圖
 import WebSocket from 'ws';
 import { BattleSim, waveInterval, cumLen } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
@@ -1658,6 +1658,24 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   }
 }
 
+// ================= sim 直測:勝負結算 =================
+// 完整平衡血量的拆堡耗時約 480 秒，只重複驗證已由 bal 守住的 DPS 與正式血量。
+// 這裡把主堡壓到臨界值，保留真正需要的權威結算、事件與快照契約。
+log('— sim:勝負結算(gameOver 事件 + 快照)—');
+{
+  const sim = new BattleSim(fakeBattleConfig(1));
+  purgeCamps(sim);
+  const attacker = sim.addHero('SWARM', 'p_win', 's02');
+  const base = [...sim.ents.values()].find((e) => e.kind === 'base' && e.side === 'STEEL');
+  base.hp = 1;
+  sim._damage(base, 99999, attacker, 999);
+  const snap = sim.snapshotFor(null);
+  assert(sim.over && sim.winner === 'SWARM', '敵方主堡被摧毀後立即結算蜂群獲勝');
+  assert(snap.ev.some((e) => e.e === 'gameOver' && e.winner === 'SWARM'),
+    '勝負快照送出 gameOver 事件與勝方');
+  assert(snap.over && snap.winner === 'SWARM', '權威快照帶 over 與 winner');
+}
+
 // ================= sim 直測:霧戰爭(單位類實體限視野,建築/中立物永遠可見)=================
 log('— sim:霧戰爭(視野外的敵方單位不進快照;瞄準模式加成視野;建築/中立物永遠可見)—');
 {
@@ -2433,23 +2451,6 @@ host.send({ t: 'buy', item: 'hw' });
 await host.wait((c) => (meOf(c)?.up?.hw || 0) >= 1, 5000);
 clearInterval(homeIv);
 assert(true, '重武器強化 Lv.1(快照 up 同步)');
-
-// 2026-08-02 建築加乘移除:溫壓火箭的 vs.building 由 2.0 夾到 1.0、launcher 的 ×1.4 整組刪除
-// ⇒ 同一發打主堡的傷害剩約 1/2.8,拆堡時間等比拉長(逾時上限跟著放寬,不是變慢的 bug)。
-log('— 勝負(重武器溫壓火箭高空拆堡:建築無加乘 + 破甲)—');
-const steelBase = snap.ents.find((e) => e.k === 'base' && e.s === 'STEEL');
-const t0 = Date.now();
-const iv = setInterval(() => {
-  host.send({ t: 'pos', x: steelBase.x, y: HI_ALT, z: steelBase.z, ry: 0 });
-  host.send({ t: 'aim', on: true });   // 重武器需瞄準模式(死亡重生會被重置,循環內重送)
-  host.send({ t: 'burst', x: steelBase.x, z: steelBase.z });
-}, 300);
-// 2026-08-12 高地壓制(data.js HIGH_SUP)再放寬一次:本測試是**站在高空**打主堡,而主堡的回擊
-// 會讓射手一直處於壓制狀態 ⇒ 命中率 −HIT(封頂 10%)⇒ 拆堡時間 ×1/(1−0.10)。實測 451s → 約 480s,
-// 剛好貼著舊上限 = 會間歇性紅字的假警報。**這是設計上的變慢,不是退化**(高處挨打就打不準)。
-const overSnap = await host.wait((c) => c.snaps.at(-1).over ? c.snaps.at(-1) : null, 600000);
-clearInterval(iv);
-assert(overSnap.winner === 'SWARM', `蜂群獲勝(${((Date.now() - t0) / 1000).toFixed(0)}s 拆完主堡)`);
 
 log('— 回房再戰:地圖保留 —');
 host.send({ t: 'backToRoom' });
