@@ -859,10 +859,13 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(dr.dead, '無人機被擊落 → dead');
   sim.tick(0.05);
   assert(dr.dead, '死亡當下那個 tick 仍維持 dead(確保至少一份快照廣播 dead:true)');
+  const deadView = sim.snapshotFor(dr.side).ents.find((e) => e.id === dr.id);
+  assert(deadView?.dead && deadView.rs > 0, `陣營快照帶 dead:true 與重生倒數 rs:${deadView?.rs}`);
   assert(UNITS.drone.respawn.base > 0 && UNITS.robot.respawn.base > 0, '無人機/機甲重生都有冷卻(數值檢查)');
   sim.t += UNITS.drone.respawn.base + UNITS.drone.respawn.perDeath * 3;
   sim.tick(0.05); sim.tick(0.05);
   assert(!dr.dead, `重生冷卻結束後歸隊(base ${UNITS.drone.respawn.base}s)`);
+  assert(sim.snapshotFor(dr.side).ents.find((e) => e.id === dr.id)?.dead === false, '重生後陣營快照恢復 dead:false');
   dr.rg = false;
   sim.heroes.set('p_d', dr); sq.act = 0;   // 主視野切回 dr,後續測試對它結算
 
@@ -2416,15 +2419,6 @@ assert(droneDies() === dies0, '主機不自爆(大招載具不會炸掉自己)')
 host.send({ t: 'cast', slot: 'ult', x: foeTower.x, z: foeTower.z });   // CD 內再按:不應再放一次
 await new Promise((r) => setTimeout(r, 300));
 assert(kamiEvs().length === 1, 'CD 內再按不會再放一次大招載具');
-
-log('— 俯衝進兵線 → 被擊殺 → 重生 —');
-host.send({ t: 'pos', x: target.x, y: 5, z: target.z, ry: 0 });
-const mine = (c) => c.snaps.at(-1).ents.filter((e) => e.pid === host.sync.youId);
-const deadSnap = await host.wait((c) => (mine(c).some((e) => e.dead) ? c.snaps.at(-1) : null), 30000);
-const downed = deadSnap.ents.filter((e) => e.pid === host.sync.youId && e.dead);
-assert(true, `無人機硬闖兵線被擊落 ${downed.length} 架(重生倒數 ${downed[0].rs}s)`);
-await host.wait((c) => mine(c).length > 0 && mine(c).every((e) => !e.dead), 40000);
-assert(true, '全機重生成功(回到主堡)');
 
 log('— 斷線重連 —');
 const token = guest.sync.token;

@@ -1,13 +1,8 @@
-# ============ 1v1 兵線立體場景掃描(手動觸發 / 請求檔觸發;需要外網)============
+# ============ 1v1 兵線立體場景掃描(手動觸發;需要外網)============
 # `tools/audit_lane_scenarios.mjs` 要抓 Overpass 路網 + AWS terrarium 高程 —— 開發沙箱常沒有
 # 這兩個出口,故另開一支手動 workflow 在有外網的 runner 上跑,結果印在 job log 與 artifact。
 # 回歸驗證(ci.yml)刻意不含這支:外部服務會限流,不該讓 PR 卡在別人的伺服器上。
-#
-# 兩種觸發方式(參數相同,一份 SCAN_* env 收斂):
-#   ① workflow_dispatch:GitHub UI 手動填參數。
-#   ② push 改到 `tools/scen_scan_request.env`(請求檔):沙箱的整合權杖多半沒有
-#      `actions: write`,dispatch API 會 403 —— 把參數寫進請求檔推上分支即可觸發,
-#      參數格式見該檔;其他 push 一律不觸發(paths 過濾)。
+# 這是昂貴且受外部服務影響的 advisory 掃描,只允許 workflow_dispatch 明確觸發。
 name: 兵線場景掃描
 
 on:
@@ -29,8 +24,6 @@ on:
         description: '探測 bbox 放大倍數(L1 半徑僅 ~266 真實公尺;廣域找點用 3~6)'
         required: false
         default: '1'
-  push:
-    paths: ['tools/scen_scan_request.env']
 
 # 同時只跑一份掃描:新的觸發取代還在跑的舊掃描(Overpass 很慢,不要並排燒 runner)
 concurrency:
@@ -39,7 +32,7 @@ concurrency:
 
 # 重烤結果要**推回分支**(2026-08-04):沙箱沒有 artifact 下載權限,舊制只能從 job log
 # 把 `venueLanes.js` 的 diff 一行一行抄回來 —— 而那個檔一條兵線就是一行幾百個座標,
-# 抄回來的風險遠高於重跑一次。改成 runner 自己 commit,烘焙產物與請求檔同一條路徑。
+# 抄回來的風險遠高於重跑一次。改成 runner 自己 commit 回手動選定的分支。
 permissions:
   contents: write
 
@@ -56,12 +49,7 @@ jobs:
         with:
           node-version: '22'
 
-      # 兩種觸發收斂成同一組 SCAN_* env;後續步驟一律吃 env,不再碰 inputs
-      - name: 讀取掃描參數(請求檔)
-        if: ${{ github.event_name == 'push' }}
-        run: grep -E '^SCAN_' tools/scen_scan_request.env >> "$GITHUB_ENV" || true
-      - name: 讀取掃描參數(dispatch)
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: 設定掃描參數
         run: |
           {
             echo "SCAN_ONLY=${{ inputs.only }}"
@@ -128,7 +116,7 @@ jobs:
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add public/js/venueLanes.js
           git commit -m "兵線重烤:$SCAN_BAKE(workflow run ${GITHUB_RUN_ID})"
-          # 這支 workflow 由 push 觸發,期間分支可能已被推新 commit ⇒ rebase 後再推
+          # workflow 執行期間分支可能已被推新 commit ⇒ rebase 後再推
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 

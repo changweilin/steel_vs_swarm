@@ -376,12 +376,10 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     console.log(`   ⓘ ${k.padEnd(6)} EHP ${f.sh0 + f.ar0}(盾 ${f.sh0}/甲 ${f.ar0}) 機動 ${f.mob.toFixed(2)}`
       + ` 飛行 ${f.flying ? '是' : '否'} 射程上限 輕 ${rangeCap(k, 'light').toFixed(0)}m / 重 ${rangeCap(k, 'heavy').toFixed(0)}m`);
   }
-  let worst = null;
   for (const [x, y] of [['robot', 'morph'], ['robot', 'drone'], ['morph', 'drone']]) {
     const v = pairWin(x, y, all);
     const okC = v <= CHASSIS_MAX && v >= 1 - CHASSIS_MAX;
     if (!okC) fail++;
-    if (!worst || Math.abs(v - 0.5) > Math.abs(worst.v - 0.5)) worst = { x, y, v };
     // 逐重武器類型(使用者「使用不同武器類型交叉對戰」):底盤差會不會被某一類武器放大
     const byCls = ['blast', 'line', 'fan'].map((g) => {
       const idx = all.filter((i) => aoeClass(heroWeapon(chs[i], 'heavy', 1, true)) === g);
@@ -390,21 +388,6 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     console.log(`${okC ? '✅' : '❌'} f 機種底盤  ${x.padEnd(5)} vs ${y.padEnd(5)} ${(v * 100).toFixed(1)}%`
       + `(目標 50±${KIND_TOL * 100}pp;現行守門線 ${(CHASSIS_MAX * 100).toFixed(0)}% = 防退化欄杆)`
       + `  [${byCls.join(' / ')}]`);
-  }
-  // ⓘ 耐久當量:把勝率差換成一個可以談的數字 —— 落後那一側要把對手的底盤耐久乘上多少才打平。
-  //    ×1 = 已經平衡;越小代表對方底盤越吃香(現值 0.80 = 無人機底盤多了約兩成耐久當量)。
-  if (Math.abs(worst.v - 0.5) > 0.01) {
-    let lo = 0.5, hi = 1.5;
-    for (let it = 0; it < 6; it++) {
-      const f = (lo + hi) / 2;
-      const w = mean(all.map((i) => {
-        const t = CH_F[worst.y][i];
-        return duelSweep(CH_F[worst.x][i], { ...t, sh0: t.sh0 * f, ar0: t.ar0 * f }, sweep).win;
-      }));
-      if (w > 0.5) lo = f; else hi = f;          // f 越大 ⇒ y 越硬 ⇒ x 勝率越低
-    }
-    console.log(`   ⓘ f 耐久當量  ${worst.y} 底盤耐久 ×${((lo + hi) / 2).toFixed(2)} 才與 ${worst.x} 打平`
-      + `(×1 = 已平衡;這是「差多少」的可談數字,不是建議值 —— HP_F 是 ① 的校準錨)`);
   }
 }
 
