@@ -4,6 +4,7 @@
 // 因而 draw call 由型別數決定，不隨建物棟數線性增加。
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { envMat } from './toon.js';
 
 const EPS = 1e-5;
 const DEFAULT_H = Object.freeze({
@@ -124,8 +125,8 @@ function baseOf(poly, terrain, fallback = 0) {
 function defaultMaterials(style) {
   const row = BUILDING_STYLE_ROWS[style] || BUILDING_STYLE_ROWS.house;
   return {
-    wall: new THREE.MeshToonMaterial({ color: row.wall }),
-    roof: new THREE.MeshToonMaterial({ color: row.roof }),
+    wall: envMat(row.wall, { wash: 0.42, cool: 0.4 }),
+    roof: envMat(row.roof, { wash: 0.3, cool: 0.45 }),
   };
 }
 

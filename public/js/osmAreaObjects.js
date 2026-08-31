@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { areaAreaM2, buildContainmentIndex, placeAreaCandidates } from './osmAreas.js';
+import { envMat } from './toon.js';
 
 const ROWS = Object.freeze({
   industrial: { shape: 'tank', radius: 4.0, minArea: 700, max: 2, color: 0x707a82, solid: true },
@@ -106,7 +107,7 @@ export function buildOsmAreaObjects(group, areas = [], options = {}) {
     if (!batch.geos.length) continue;
     const geometry = batch.geos.length === 1 ? batch.geos[0] : mergeGeometries(batch.geos, false);
     const material = options.materialOf?.(generator, batch.row)
-      || new THREE.MeshToonMaterial({ color: batch.row.color });
+      || envMat(batch.row.color, { wash: 0.38, cool: 0.42 });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.osmAreaBatch = generator; mesh.frustumCulled = false; group.add(mesh);
   }
