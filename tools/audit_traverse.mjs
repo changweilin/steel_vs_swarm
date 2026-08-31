@@ -39,7 +39,8 @@
 // 網路:高程走 terrarium(快取在 tools/.scen_cache/),圖資走 Overpass → OSM API。
 //      **取不到圖資時自動降級成「地形層」**(原則 6 降級不例外):主堡/塔位仍然驗,
 //      結構航點列為未驗並在結尾標示 —— MUST NOT 因為取不到圖資就報綠。
-// 用法:node tools/audit_traverse.mjs [--only=jinlong,taroko] [--team=1|2|3] [--cell=4] [--json=out.json]
+// 用法:node tools/audit_traverse.mjs [--only=jinlong,taroko] [--team=1|2|3] [--cell=4]
+//      [--fixture-dir=test/fixtures/osm --fixtures=taipei_dense,shibuya_dense] [--json=out.json]
 //      node tools/audit_traverse.mjs --break-slope   ← 反向驗證:把坡度閘寫死成「什麼都擋」
 // 退出碼:0 = 全部航點可達;1 = 有航點不可達
 //
@@ -76,6 +77,7 @@ import {
   llToWorld, elevSampler, buildHeightField, osmFor, makeCarvedField, TUN, BRIDGE_RISE,
   buildStructs, projectArc, ptAt,
 } from './venue_field.mjs';
+import { DEFAULT_FIXTURE_DIR, fixtureOsm, loadOsmFixtureForVenue } from './osm_fixture.mjs';
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((s) => {
   const m = /^--([^=]+)(?:=(.*))?$/.exec(s);
@@ -85,6 +87,9 @@ const ONLY = (ARG.only || '').split(',').filter(Boolean);
 const TEAM = +(ARG.team || 1);
 const CELL = +(ARG.cell || 4);          // 泛洪格寬(遊戲公尺)
 const BREAK_SLOPE = !!ARG['break-slope'];   // 反向驗證開關(原則 9)
+const FIXTURE_MODE = ARG['fixture-dir'] != null || ARG.fixtures != null;
+const FIXTURE_DIR = ARG['fixture-dir'] || DEFAULT_FIXTURE_DIR;
+const FIXTURE_NAMES = new Set(String(ARG.fixtures || '').split(',').filter(Boolean));
 
 // 高度桶:固定量化,不是容差比對(見檔頭地雷②)。桶要夠粗才不會在斜坡上把同一層切成很多層,
 // 又要夠細才分得出「洞內路面」與「洞上山頂」—— 取隧道淨空(TUN.CLEAR)當尺:同一格若兩個
@@ -233,11 +238,27 @@ function clearance(structs, hf) {
 async function scanVenue(v) {
   const cfg = venueConfig(v, TEAM);
   const bbox = battleBBox(cfg);
+  let fixture = null;
+  if (FIXTURE_MODE) {
+    if (FIXTURE_NAMES.size && ![...FIXTURE_NAMES].some((name) => name === v.id)) {
+      // Alias fixture 仍可透過 metadata.venue.id 命中；只有完全不屬於本次選取才跳過。
+      fixture = loadOsmFixtureForVenue(v.id, FIXTURE_NAMES, FIXTURE_DIR);
+      if (!fixture) return { id: v.id, skip: '不在指定 fixture 名單', selected: false };
+    } else {
+      fixture = loadOsmFixtureForVenue(v.id, FIXTURE_NAMES, FIXTURE_DIR);
+    }
+    if (!fixture) return { id: v.id, skip: `找不到固定 fixture(${FIXTURE_DIR})`, unverified: true };
+  }
   const sampleElev = await elevSampler(bbox);
-  if (!sampleElev) return { id: v.id, skip: '取不到高程磚' };
+  if (!sampleElev) return { id: v.id, skip: '取不到高程磚', unverified: true };
   const hf = buildHeightField(cfg, bbox, sampleElev);
 
-  const osm = await osmFor(v.id, bbox);
+  let osm;
+  if (FIXTURE_MODE) {
+    osm = fixtureOsm(fixture);
+  } else {
+    osm = await osmFor(v.id, bbox);
+  }
   const { structs, marks, carveRuns } = osm
     ? buildStructs(osm, cfg.center, hf)
     : { structs: [], marks: [], carveRuns: [] };
@@ -332,6 +353,7 @@ console.log('');
 const list = VENUES.filter((v) => !ONLY.length || ONLY.includes(v.id));
 const results = [];
 let noOsm = 0;
+let unverified = 0;
 for (const v of list) {
   const t0 = Date.now();
   let r;
@@ -341,11 +363,16 @@ for (const v of list) {
   try { r = await scanVenue(v); } catch (e) { r = { id: v.id, crash: e }; }
   results.push(r);
   if (r.crash) { ok(false, `${v.id}:掃描拋出例外(不是降級,是 bug)—— ${r.crash.message}`); continue; }
-  if (r.skip) { console.log(`  ${v.id}  ⏭  ${r.skip}`); continue; }
+  if (r.skip) {
+    console.log(`  ${v.id}  ⏭  ${r.skip}`);
+    if (r.unverified) { unverified++; ok(false, `${v.id}:外部資料缺失，未完成可通行驗證`); }
+    continue;
+  }
   if (!r.osm) noOsm++;
   console.log(`  ${v.id}  ${((Date.now() - t0) / 1000).toFixed(1)}s  可站立節點 ${r.cells}`
     + `・結構 ${r.structs}・開挖走廊 ${r.carve}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`);
   ok(r.miss.length === 0, `${v.id}:${r.wps} 個航點全部可達${r.miss.length ? ` —— 不可達:${r.miss.join('、')}` : ''}`);
+  if (!r.osm) { unverified++; ok(false, `${v.id}:圖資缺失，只驗地形層，結構航點未驗`); }
   // 淨空(V-D):橋下塞不塞得下最大機體。洞體的「山藏不住頂板」只印出來當診斷 ——
   // 那一段本來就該被 `tunnelWallProfile` 判成明隧道(柱列側是開的),不是破圖。
   for (const d of r.clear.deck) {
@@ -363,5 +390,6 @@ for (const v of list) {
 if (ARG.json) writeFileSync(ARG.json, JSON.stringify(results, null, 2));
 if (noOsm) console.log(`\n⚠ ${noOsm} 個場地取不到路網(Overpass / OSM API 皆不可達)⇒ 結構航點未驗。`
   + '沙箱/公司網路常態如此,CI(GitHub Actions)可達。');
+if (unverified) console.log(`⚠ ${unverified} 個場地含未驗資料；未驗狀態已計入失敗，不得報綠。`);
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);
 process.exit(fail === 0 ? 0 : 1);

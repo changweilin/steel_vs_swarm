@@ -35,9 +35,13 @@ import { pruneRoads, quantizeRoads, GRID_HW } from './roadgrid.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { osmRelayKey } from './osmrelay.js';
 import {
-  OSM_AREA_KEYS, buildAreaRecords, projectAreaRecord, catalogAreas,
+  OSM_AREA_KEYS, projectAreaRecord, catalogAreas,
   pointInProjectedArea, mergeAreaGaps,
 } from './osmAreas.js';
+import {
+  OSM_FEATURE_QUERY_VERSION, osmFeatureQuery, osmFeatureQuotas, osmRoadQuery, osmRoadQuotas,
+  parseOsmFeatureElements, osmRoadsFromElements,
+} from './osmQuery.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { buildGroundCover, makeFootprintIndex } from './ground.js';
@@ -5058,18 +5062,6 @@ function buildingHeight(tags, type, rnd) {
   return floors * target;   // 量化為整數倍標準層高,杜絕垂直層高跳動
 }
 
-/**
- * Overpass `out N` 額度隨 bbox 真實面積縮放(2026-07-17):固定額度對大地圖截斷
- * (依 way id 序,空間上整片缺)、對小地圖浪費 payload/查詢時間。
- * 密度基準以巴黎 L3(~1.18 km²,實測幹道 ~95/小徑 ~1204/建物 ~676 每 km²)加 ~25% 裕度。
- */
-function bboxKm2(bbox) {
-  const midLat = (bbox.minLat + bbox.maxLat) / 2;
-  return (bbox.maxLat - bbox.minLat) * 111.32
-       * (bbox.maxLng - bbox.minLng) * 111.32 * Math.cos(midLat * Math.PI / 180);
-}
-const quotaOf = (km2, perKm2, lo, hi) => Math.max(lo, Math.min(hi, Math.round(km2 * perKm2)));
-
 // ---- Overpass 取用:鏡像輪替 + **逐站**逾時(2026-08-03 太魯閣結構整批消失案)----
 // 舊制三個鏡像共用**一個** AbortController:任何一站掛住(不回應也不斷線)就把整份時間預算
 // 吃光,`ctrl.signal.aborted` 一成立就 `return null` —— **後面的鏡像永遠輪不到**。
@@ -5165,8 +5157,6 @@ async function fetchOsmFeatures(bbox) {
   // 每一場(含它自己當房主的那一場),而快取的紀律正是「只准存自己完整抓到的東西」。
   const inj = osmInOf(bbox, 'feats');
   if (inj !== undefined) return inj && structuredClone(inj);
-  const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
-  const nBld = quotaOf(bboxKm2(bbox), 850, 400, 1200);
   // Overpass 回應快取(geocache.js):同 bbox 首次完整成功即定案(remark = 伺服器截斷/逾時,不入庫)。
   // 之後每場建物/鐵路輸入位元級一致 —— 圖資不再隨鏡像輪替/限流逐局忽有忽無。
   // 鍵含查詢額度:額度常數改版自然失效重抓。
@@ -5174,86 +5164,15 @@ async function fetchOsmFeatures(bbox) {
   // 舊中心點快取 MUST NOT 命中新管線。加入捷運／車站出入口節點；地下步道本體不渲染，只以這些點位與端點建入口。
   // **改查詢 MUST 同步 +1**:不改版的話舊快取會照樣命中,而它裡面沒有 pois ⇒ 新標牌
   // 在所有「以前開過這張圖」的機器上永遠不出現,且沒有任何錯誤訊息。
-  const nCover = quotaOf(bboxKm2(bbox), 400, 200, 900);
-  const nArea = quotaOf(bboxKm2(bbox), 1200, 600, 1800);
-  const ckey = geoKey('osmF', 5, bbox, `q${nBld}-${nCover}-${nArea}`);
+  const { nBld, nCover, nArea } = osmFeatureQuotas(bbox);
+  const ckey = geoKey('osmF', OSM_FEATURE_QUERY_VERSION, bbox, `q${nBld}-${nCover}-${nArea}`);
   const cached = await geoGet(ckey);
   if (cached) return cached;
   // 具名點位額度刻意極小:一張圖最多掛 32 塊牌(worldtext SIGN_MAX),多抓也用不到,
   // 而 node 查詢本身很便宜(不帶幾何)⇒ payload 幾乎不動。
-  const areaWays = OSM_AREA_KEYS.map((key) => `way["${key}"](${bb});`).join('');
-  const areaRelations = OSM_AREA_KEYS.map((key) => `rel["type"="multipolygon"]["${key}"](${bb});`).join('');
-  const q = `[out:json][timeout:15];`
-    // 面域查詢必須帶完整 geometry；multipolygon relation 的 member geometry 由 out geom 一併保留。
-    + `(${areaWays}${areaRelations});out tags geom ${nArea};`
-    + `node["power"="tower"](${bb});out tags ${nBld};`
-    + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
-    + `node["railway"="level_crossing"](${bb});out 40;`
-    + `node["waterway"="waterfall"](${bb});out 20;`
-    + `node["place"~"^(city|town|village|suburb|neighbourhood)$"](${bb});out 24;`
-    + `node["natural"="peak"](${bb});out 12;`
-    + `node["highway"="motorway_junction"](${bb});out 12;`
-    + `node["railway"~"^(station|halt)$"](${bb});out 12;`
-    + `node["railway"~"^(subway_entrance|station_entrance)$"](${bb});out 80;`
-    + `node["entrance"]["public_transport"~"^(station|subway)$"](${bb});out 40;`
-    + `way["waterway"~"^(river|stream|canal|drain|ditch)$"](${bb});out geom 120;`
-    + `way["landuse"](${bb});out geom ${nCover};`
-    + `way["natural"](${bb});out geom ${nCover};`
-    + `way["leisure"~"^(park|garden|golf_course|nature_reserve|recreation_ground)$"](${bb});out geom ${nCover};`
-    + `rel["boundary"="administrative"](${bb});way(r);out geom 400;`;
+  const q = osmFeatureQuery(bbox);
   return overpassQuery(q, (data) => {
-    const areaElements = [], rails = [], falls = [], crossings = [], pois = [], entrances = [];
-    const waters = [], boundaries = [];
-    const areaKeySet = new Set(OSM_AREA_KEYS);
-    const isClosed = (g) => Array.isArray(g) && g.length > 2
-      && Number.isFinite(g[0]?.lat) && Number.isFinite(g[0]?.lon ?? g[0]?.lng)
-      && Number.isFinite(g[g.length - 1]?.lat) && Number.isFinite(g[g.length - 1]?.lon ?? g[g.length - 1]?.lng)
-      && g[0].lat === g[g.length - 1].lat
-      && (g[0].lon ?? g[0].lng) === (g[g.length - 1].lon ?? g[g.length - 1].lng);
-    for (const el of data.elements || []) {
-      const tags = el.tags || {};
-      if (el.type === 'relation' && (tags.type === 'multipolygon' || Array.isArray(el.members))) {
-        // relation member way 仍留在 areaElements，buildAreaRecords 會依 source ID 串 outer/inner。
-        areaElements.push(el);
-      } else if (el.type === 'way' && el.geometry && Object.keys(tags).some((k) => areaKeySet.has(k))) {
-        // way 即使是 relation 邊段也保留，供 relation 組環；非閉合的線由 buildAreaRecords 略過並記 invalid。
-        areaElements.push(el);
-        if (tags.railway && !isClosed(el.geometry)) rails.push({ tags, geometry: el.geometry });
-        else if (tags.waterway && !isClosed(el.geometry)) waters.push({ tags, geometry: el.geometry });
-      } else if (el.type === 'way' && el.geometry && tags.railway) {
-        rails.push({ tags, geometry: el.geometry });
-      } else if (el.type === 'way' && el.geometry && tags.waterway) {
-        waters.push({ tags, geometry: el.geometry });
-      } else if (el.type === 'way' && el.geometry && tags.natural === 'coastline') {
-        boundaries.push({ tags, geometry: el.geometry });
-      } else if (el.type === 'way' && el.geometry) {
-        // relation 展開後的成員 way 通常沒有 boundary tag；排除具名類別後即為行政界成員。
-        boundaries.push({ tags, geometry: el.geometry });
-      } else if (el.type === 'node' && tags.railway === 'level_crossing') {
-        crossings.push({ lat: el.lat, lng: el.lon, tags });
-      } else if (el.type === 'node' && tags.waterway === 'waterfall') {
-        falls.push({ lat: el.lat, lng: el.lon, tags });
-      } else if (el.type === 'node' && (/^(subway_entrance|station_entrance)$/.test(tags.railway || '')
-        || (tags.entrance && /^(station|subway)$/.test(tags.public_transport || '')))) {
-        entrances.push({ lat: el.lat, lng: el.lon, tags });
-      } else if (el.type === 'node' && (tags.place || tags.natural === 'peak'
-        || tags.highway === 'motorway_junction' || tags.railway)) {
-        // 具名點位:MUST 排在下面那個 else **之前** —— 那一條是「其餘全部當建物」,
-        // 漏了這個分支就會在地名節點的位置長出一棟樓(而且看起來完全正常)。
-        pois.push({ lat: el.lat, lng: el.lon, tags });
-      }
-    }
-    const built = buildAreaRecords(areaElements);
-    const pointFeatures = { rails, waters, boundaries, falls, crossings, pois, entrances };
-    const res = {
-      areas: built.areas,
-      areaInvalid: built.invalid,
-      areaCapacity: built.capacity,
-      areaGaps: built.gaps,
-      pointFeatures,
-      // 舊消費端的短期讀取別名；來源仍只有 pointFeatures／areas 兩份，不再複製建物中心點或 covers。
-      ...pointFeatures,
-    };
+    const res = parseOsmFeatureElements(data.elements);
     // 入庫走深拷貝:IDB 寫入是非同步,下游(buildRails 等)會就地變異這些物件,
     // 不拷貝會把「該局變異後」的資料定案
     if (!data.remark) geoPut(ckey, structuredClone(res));
@@ -5268,27 +5187,19 @@ async function fetchOsmFeatures(bbox) {
 async function fetchOsmRoads(bbox) {
   const inj = osmInOf(bbox, 'roads');   // 路網中繼(理由同 fetchOsmFeatures)
   if (inj !== undefined) return inj && structuredClone(inj);
-  const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   // 路網快取:兵線橋/地下道/隧道的唯一 OSM 輸入 —— 首次完整成功即定案,
   // 之後每場真橋/隧道 way 集合恆定(dropLaneBridges/dedupe/carve 皆純幾何 → 整條管線可重現)。
   // 兩級查詢、各自額度(2026-07-17 巴黎道路消失案):單一 `out geom 300` 在密路網市區
   // (巴黎 L3 bbox 實測 1533 條 way)截掉八成道路,且 Overpass 依 id 序輸出 —— 主幹道
   // 一樣被犧牲。車道級與小徑分開給額(隨 bbox 面積縮放),幹道永不被 footway/path 擠掉。
   // 額度放大後 payload ~700KB、Overpass 實測 ~10s(舊 10s abort 必掐死)→ timeout 同步放寬。
-  const km2 = bboxKm2(bbox);
-  const nMain = quotaOf(km2, 150, 150, 600);
-  const nMinor = quotaOf(km2, 1300, 400, 1600);
+  const { nMain, nMinor } = osmRoadQuotas(bbox);
   const ckey = geoKey('osmR', 1, bbox, `q${nMain}-${nMinor}`);
   const cached = await geoGet(ckey);
   if (cached?.length) return cached;
-  const q = `[out:json][timeout:15];`
-    + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bb});out geom ${nMain};`
-    + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian|steps|cycleway|bridleway)$"](${bb});out geom ${nMinor};`;
+  const q = osmRoadQuery(bbox);
   return overpassQuery(q, (data) => {
-    const roads = [];
-    for (const el of data.elements || []) {
-      if (el.type === 'way' && el.geometry && el.tags?.highway) roads.push({ tags: el.tags, geometry: el.geometry });
-    }
+    const roads = osmRoadsFromElements(data.elements);
     if (!roads.length) return null;   // 空結果(部分逾時)也換鏡像
     // 深拷貝理由同 fetchOsmFeatures:mergeGradeChains/way._tun 會就地變異 way 物件
     if (!data.remark) geoPut(ckey, structuredClone(roads));
