@@ -55,6 +55,7 @@
 //                 `--break-wet`          拔掉沼澤分類 ⇒ Ⅶ 紅(wet 型錄成為死資料)
 //                 `--break-motion`       風機轉速拔掉風量倍率 ⇒ Ⅶ 紅
 //                 `--break-facility-support` 往陸域光電塞回整段底座 ⇒ Ⅶ 紅
+//                 `--break-redraw`       抽掉本輪邊界重繪辨識零件 ⇒ Ⅶ 紅
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import {
@@ -74,22 +75,38 @@ const BREAK_SNOW_SLOPE = process.argv.includes('--break-snow-slope');
 const BREAK_WET = process.argv.includes('--break-wet');
 const BREAK_MOTION = process.argv.includes('--break-motion');
 const BREAK_FACILITY_SUPPORT = process.argv.includes('--break-facility-support');
+const BREAK_REDRAW = process.argv.includes('--break-redraw');
 if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
 // 坡度分級失效:把每一款都改成「三級都站得住」⇒ 崖面上會擺出貨櫃車 / 連排民房
 if (process.argv.includes('--break-slope')) {
   for (const k of Object.values(EW.WALL_KINDS)) k.slope = 'steep';
 }
 if (process.argv.includes('--break-lap')) WORLD_EDGE.SEG_LAP_F = 0.8;
-if (process.argv.includes('--break-buffer')) WORLD_EDGE.BUFFER_F = 0.5;
+if (process.argv.includes('--break-buffer')) WORLD_EDGE.BUFFER_F *= 0.5;
 if (BREAK_RUN) EW.EDGE_WALL.RUN_MAX_M = 1e9;
 
 // 反向驗證的注入點:一律包在 `wallParts` / `backdropParts` **外面**(型錄本身不動)⇒ 斷言的期望值不隨
 // `--break-*` 改變(㋑:期望值跟著 break 走的話,break 永遠是綠的)
 const wallParts = (kind, o) => {
-  const parts = EW.wallParts(kind, o);
+  let parts = EW.wallParts(kind, o);
   if (BREAK_FIT) parts.push({ g: ['box', o.len * 1.4, 2, 2], c: 0x999999, p: [0, 1, 0] });
   if (BREAK_FACILITY_SUPPORT && kind === 'solarfield') {
     parts.push({ g: ['box', o.len, 2, o.depth], c: 0x777777, p: [0, 1, 0] });
+  }
+  if (BREAK_REDRAW) {
+    const removed = {
+      cliff: ['rock-strata', 'embedded-boulder', 'embedded-deadwood'],
+      landslide: ['soil-ridge', 'landslide-rock', 'landslide-deadwood', 'dust'],
+      debris: ['debris-rock', 'debris-deadwood'],
+      mine: ['mine-bench', 'ore-pile', 'mine-machine-arm', 'dust'],
+      oilfield: ['derrick-leg', 'oil-machine', 'smoke'],
+      deeprig: ['pontoon', 'offshore-derrick-leg', 'offshore-oil-machine', 'smoke'],
+      strandedship: ['bow', 'stern', 'keel', 'bridge', 'bridge-window', 'funnel', 'mast', 'lifeboat'],
+      factory: ['chimney', 'smoke'],
+      powerplant: ['chimney', 'smoke', 'cooling-tower'],
+    };
+    if (kind === 'tetrapod') parts = parts.filter((p) => p.role !== 'breakwater-core' || p.layer === 0);
+    else if (removed[kind]) parts = parts.filter((p) => !removed[kind].includes(p.role));
   }
   if (BREAK_FACE) return parts.filter((p) => EW.partBox(p).z1 < o.depth / 2 - EW.EDGE_WALL.FACE_T);
   return parts;
@@ -414,10 +431,18 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
   for (const bx of visualEmitted) {
     if (blockers.some((b) => inBox(bx, b))) continue;
     out++;
-    if (!worst) worst = bx;
+    if (!worst) {
+      const cx = (bx.x0 + bx.x1) / 2, cz = (bx.z0 + bx.z1) / 2;
+      let ni = 0, nd = Infinity;
+      for (let i = 0; i < blockers.length; i++) {
+        const d = Math.hypot(cx - blockers[i].x, cz - blockers[i].z);
+        if (d < nd) { nd = d; ni = i; }
+      }
+      worst = { ...bx, kind: segs[ni]?.kind || '?' };
+    }
   }
   t(`每一顆零件及完整運動包絡都收在碰撞柱之內(${visualEmitted.length} 件,頂出 ${out} 件)`, out === 0,
-    worst ? `（例:x ${worst.x0.toFixed(1)}~${worst.x1.toFixed(1)} y ${worst.y0.toFixed(1)}~${worst.y1.toFixed(1)} z ${worst.z0.toFixed(1)}~${worst.z1.toFixed(1)}）` : '');
+    worst ? `（例:${worst.kind} x ${worst.x0.toFixed(1)}~${worst.x1.toFixed(1)} y ${worst.y0.toFixed(1)}~${worst.y1.toFixed(1)} z ${worst.z0.toFixed(1)}~${worst.z1.toFixed(1)}）` : '');
   // 地下埋深補片:只填段底到地表的不可見落差，不得抬高或承托障礙物本體。
   const floors = new Map();
   for (const b of blockers) floors.set(`${b.x.toFixed(2)},${b.z.toFixed(2)}`, b);
@@ -749,6 +774,48 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
   t('浮動設施吃 celWindTime + celWaveAmount，並掛進既有 dynamics 桶',
     /t = celWindTime\(\)/.test(motionSrc) && /wave = celWaveAmount\(\)/.test(motionSrc)
     && /dynamics\.push\(/.test(motionSrc) && /buildEdgeMotion\(\{ group, segs: edgeSegs, dynamics \}\)/.test(bioCode));
+  const roles = (kind) => partsOf(kind).map((p) => p.role).filter(Boolean);
+  const cliffParts = partsOf('cliff');
+  const cliffAngles = cliffParts.filter((p) => p.role === 'rock-strata').map((p) => p.slopeDeg);
+  t('懸崖是 60~90° 的非垂直分層岩壁，具嵌入巨石與斜下枯木',
+    EW.WALL_KINDS.cliff.faceDeg?.[0] === 60 && EW.WALL_KINDS.cliff.faceDeg?.[1] === 90
+    && cliffAngles.length >= 6 && cliffAngles.every((a) => a >= 60 && a < 90)
+    && roles('cliff').includes('embedded-boulder')
+    && cliffParts.some((p) => p.role === 'embedded-deadwood' && p.slopeDown));
+  t('土石流與山崩地都有高密度石塊／枯木；山崩地另具起伏土脊與揚塵',
+    roles('debris').filter((r) => r === 'debris-rock').length >= 8
+    && roles('debris').filter((r) => r === 'debris-deadwood').length >= 4
+    && roles('landslide').includes('soil-ridge')
+    && roles('landslide').filter((r) => r === 'landslide-rock').length >= 6
+    && roles('landslide').filter((r) => r === 'landslide-deadwood').length >= 3
+    && partsOf('landslide').some((p) => p.role === 'dust' && p.motion?.kind === 'dust'));
+  t('礦場具起伏採掘台階、礦堆、至少兩組作業機具與揚塵',
+    ['mine-bench', 'ore-pile', 'mine-machine-arm', 'mine-machine-bucket', 'dust'].every((r) => roles('mine').includes(r))
+    && new Set(partsOf('mine').filter((p) => p.motion?.kind === 'machine').map((p) => p.motion.id)).size >= 2);
+  t('陸上油田具多座鑽塔／抽油機與煙塵；海上油井具完整浮台、雙鑽塔、機具與煙塵',
+    roles('oilfield').filter((r) => r === 'derrick-leg').length >= 4
+    && partsOf('oilfield').some((p) => p.motion?.kind === 'machine')
+    && partsOf('oilfield').some((p) => p.motion?.kind === 'smoke')
+    && ['platform-deck', 'pontoon', 'platform-leg', 'platform-control', 'offshore-derrick-leg', 'offshore-oil-machine', 'smoke']
+      .every((r) => roles('deeprig').includes(r))
+    && roles('deeprig').filter((r) => r === 'offshore-derrick-leg').length >= 4);
+  const podLayers = partsOf('tetrapod').filter((p) => p.role === 'breakwater-core' && p.layer >= 0);
+  const podCounts = [0, 1, 2, 3].map((layer) => podLayers.filter((p) => p.layer === layer).length);
+  t('消波塊由下而上逐層減少，形成金字塔式堆疊',
+    podCounts.every((n) => n > 0) && podCounts.every((n, i) => i === 0 || podCounts[i - 1] > n),
+    `（各層 ${podCounts.join(' > ')}）`);
+  t('擱淺船具船殼、龍骨、尖艏、方艉、甲板、駕駛台、煙囪、桅桿與救生艇，不再是貨櫃底座',
+    ['hull', 'keel', 'bow', 'stern', 'deck', 'bridge', 'bridge-window', 'funnel', 'mast', 'lifeboat']
+      .every((r) => roles('strandedship').includes(r))
+    && !roles('strandedship').some((r) => r.startsWith('container')));
+  t('工廠與電廠的煙囪都有動態煙塵，電廠另具冷卻塔',
+    ['factory', 'powerplant'].every((k) => roles(k).includes('chimney')
+      && partsOf(k).some((p) => p.role === 'smoke' && p.motion?.kind === 'smoke'))
+    && roles('powerplant').includes('cooling-tower'));
+  t('採掘機具與煙塵共用既有 dynamics 與 celWindTime，不建立第二份動畫時鐘',
+    /mot\.kind === 'machine'/.test(motionSrc) && /mot\.kind === 'smoke' \|\| mot\.kind === 'dust'/.test(motionSrc)
+    && /EDGE_MOTION\.MACHINE_FREQ/.test(motionSrc) && /EDGE_MOTION\.PLUME_FREQ/.test(motionSrc)
+    && /EDGE_MOTION\.PLUME_DRIFT_M \* wind/.test(motionSrc));
   // 切分規則:①地貌/水陸域改變 ②太長 ③短 run 併回去 ④相鄰不同款 ⑤決定性
   const mk = (n, biome, water) => Array.from({ length: n }, (_, i) => (
     { x: -800 + i * len, z: -500, len, biome, water }));
@@ -1052,6 +1119,7 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-slope', '每一款都改成三級都站得住,Ⅶ MUST 紅字(崖面上的貨櫃車)'],
   ['--break-land', '關掉逐零件落地,Ⅷ MUST 紅字(斜坡上浮在半空的假山)'],
   ['--break-facility-support', '陸域光電塞回整段底座,Ⅶ MUST 紅字'],
+  ['--break-redraw', '抽掉本輪邊界重繪辨識零件,Ⅶ MUST 紅字'],
   ['--break-snow-summer', '夏季出現覆雪,Ⅸ MUST 紅字(夏天無雪契約破壞)'],
   ['--break-snow-slope', '雪錐斜率失真外突,Ⅸ MUST 紅字(山頂雪錐外擴懸空)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);
