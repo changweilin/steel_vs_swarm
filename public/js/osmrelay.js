@@ -45,6 +45,9 @@ export const OSM_RELAY = {
   MAX_POI: 80,           // 具名點位(地名 24 + 山峰 12 + 交流道 12 + 車站 12)
   MAX_ENTRANCE: 120,     // 捷運／車站入口(80 + public_transport 補查 40)
   MAX_COVER: 900,        // landuse / natural / leisure 面(線工切面 + 面標籤)
+  MAX_AREA: 1800,        // closed way / multipolygon 面域；超額由來源 ID 決定性保留前段
+  MAX_AREA_RINGS: 5200,  // 面域外環與內洞總數
+  MAX_AREA_PTS: 200000,  // 面域節點共享總預算(與道路共用 relay 上限)
   MAX_WATERWAY: 120,     // 河川 / 溝渠線
   MAX_BOUNDARY: 500,     // 行政 relation 成員線 + 海岸線
   MAX_PTS: 4000,         // 單條 way 的節點數上限
@@ -66,7 +69,7 @@ function tagsOf(t) {
   const out = {};
   if (!t || typeof t !== 'object') return out;
   let n = 0;
-  for (const k of Object.keys(t)) {
+  for (const k of Object.keys(t).sort()) {
     if (n >= OSM_RELAY.MAX_TAGS) break;
     const v = t[k];
     if (typeof v !== 'string' && typeof v !== 'number') continue;
@@ -106,6 +109,119 @@ function nodesOf(arr, cap) {
   return out;
 }
 
+const cross = (a, b, c) => (b.lon - a.lon) * (c.lat - a.lat) - (b.lat - a.lat) * (c.lon - a.lon);
+const onSeg = (a, b, c) => Math.min(a.lon, c.lon) - 1e-12 <= b.lon && b.lon <= Math.max(a.lon, c.lon) + 1e-12
+  && Math.min(a.lat, c.lat) - 1e-12 <= b.lat && b.lat <= Math.max(a.lat, c.lat) + 1e-12;
+function segCross(a, b, c, d) {
+  const x1 = cross(a, b, c), x2 = cross(a, b, d), x3 = cross(c, d, a), x4 = cross(c, d, b);
+  if (Math.abs(x1) < 1e-12 && onSeg(a, c, b)) return true;
+  if (Math.abs(x2) < 1e-12 && onSeg(a, d, b)) return true;
+  if (Math.abs(x3) < 1e-12 && onSeg(c, a, d)) return true;
+  if (Math.abs(x4) < 1e-12 && onSeg(c, b, d)) return true;
+  return (x1 > 0) !== (x2 > 0) && (x3 > 0) !== (x4 > 0);
+}
+function simpleRing(ring) {
+  let area2 = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i], b = ring[(i + 1) % ring.length];
+    area2 += a.lon * b.lat - b.lon * a.lat;
+    for (let j = i + 1; j < ring.length; j++) {
+      if (j === i || j === (i + 1) % ring.length || i === (j + 1) % ring.length) continue;
+      if (segCross(a, b, ring[j], ring[(j + 1) % ring.length])) return false;
+    }
+  }
+  return Math.abs(area2) > 1e-14;
+}
+function pointInRing(p, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[i], b = ring[j];
+    if ((a.lat > p.lat) !== (b.lat > p.lat)
+      && p.lon < (b.lon - a.lon) * (p.lat - a.lat) / (b.lat - a.lat) + a.lon) inside = !inside;
+  }
+  return inside;
+}
+
+/** 面域環淨化：至少三個不同節點，超限整個環丟掉，不截斷 OSM 輪廓。 */
+function ringOf(g, budget) {
+  if (!Array.isArray(g) || g.length < 3 || g.length > OSM_RELAY.MAX_PTS || g.length > budget.left) return null;
+  const out = [];
+  for (const p of g) {
+    const lat = num(p?.lat), lon = num(p?.lon ?? p?.lng);
+    if (lat == null || lon == null) return null;
+    out.push({ lat, lon });
+  }
+  const unique = new Set(out.map((p) => `${p.lat},${p.lon}`));
+  if (unique.size < 3 || !simpleRing(out)) return null;
+  budget.left -= out.length;
+  return out;
+}
+
+/** closed way / multipolygon 統一為 AreaRecord 的 polygon 形狀。 */
+function areasOf(arr, budget) {
+  const out = [], invalid = new Set();
+  if (!Array.isArray(arr)) return { out, drop: 0 };
+  const areaBudget = { left: Math.min(OSM_RELAY.MAX_AREA_PTS, budget.left) };
+  const ordered = arr.slice().sort((a, b) => String(a?.sourceId ?? a?.id ?? '').localeCompare(String(b?.sourceId ?? b?.id ?? '')));
+  let rings = 0;
+  for (const a of ordered) {
+    if (out.length >= OSM_RELAY.MAX_AREA) { invalid.add(a); continue; }
+    const sourceId = a?.sourceId ?? (a?.type && a?.id != null ? `${a.type}/${a.id}` : a?.id);
+    if (sourceId == null) { invalid.add(a); continue; }
+    const rawPolygons = Array.isArray(a?.polygons) ? a.polygons
+      : (a?.outer || a?.geometry ? [{ outer: a.outer || a.geometry, holes: a.holes || [] }] : []);
+    if (!rawPolygons.length) { invalid.add(a); continue; }
+    const polygons = [];
+    let bad = false;
+    for (const raw of rawPolygons) {
+      if (rings >= OSM_RELAY.MAX_AREA_RINGS) { bad = true; break; }
+      const outer = ringOf(raw?.outer || raw?.geometry, areaBudget);
+      if (!outer) { bad = true; break; }
+      rings++;
+      const holes = [];
+      for (const h of raw?.holes || []) {
+        if (rings >= OSM_RELAY.MAX_AREA_RINGS) { bad = true; break; }
+        const hole = ringOf(h, areaBudget);
+        if (!hole || !pointInRing(hole[0], outer)) { bad = true; break; }
+        holes.push(hole); rings++;
+      }
+      if (bad) break;
+      polygons.push({ outer, holes });
+    }
+    if (bad || !polygons.length) { invalid.add(a); continue; }
+    out.push({
+      sourceId: String(sourceId),
+      sourceType: String(a?.sourceType || a?.type || 'way'),
+      tags: tagsOf(a?.tags),
+      polygons,
+    });
+  }
+  budget.left = areaBudget.left;
+  return { out, drop: invalid.size };
+}
+
+/** 非面狀圖資；建築中心點不再進這個新欄位，改由 areas 保留輪廓。 */
+function pointFeaturesOf(f, budget, prebuilt = null) {
+  if (!f || typeof f !== 'object') return null;
+  const ra = prebuilt?.ra || waysOf(f.rails, OSM_RELAY.MAX_RAIL, 'railway', budget);
+  const wa = prebuilt?.wa || waysOf(f.waters, OSM_RELAY.MAX_WATERWAY, 'waterway', budget);
+  const bd = prebuilt?.bd || waysOf(f.boundaries, OSM_RELAY.MAX_BOUNDARY, null, budget);
+  const out = {
+    rails: ra.out,
+    waters: wa.out,
+    boundaries: bd.out,
+    falls: nodesOf(f.falls, OSM_RELAY.MAX_FALL),
+    crossings: nodesOf(f.crossings, OSM_RELAY.MAX_XING),
+    pois: nodesOf(f.pois, OSM_RELAY.MAX_POI),
+    entrances: nodesOf(f.entrances, OSM_RELAY.MAX_ENTRANCE),
+  };
+  return { out, drop: ra.drop + wa.drop + bd.drop };
+}
+
+function featureHasData(f) {
+  return !!f && Object.values(f).some((v) => Array.isArray(v) ? v.length : false);
+}
+
 /**
  * way 元素([{tags, geometry}])。`need` = 必要的 tag 鍵,鏡射 `fetchOsmRoads`/`fetchOsmFeatures`
  * 自己的過濾條件(道路要 highway、鐵路要 railway)—— 少了它下游 `ROAD_W[hw]` 查不到寬度,
@@ -142,40 +258,72 @@ export function osmRelayKey(bbox) {
 
 /**
  * 中繼 payload 淨化(房主送出前 / 伺服器收到後,**同一支**)。
- * 回傳 `{ bbox, feats|null, roads|null, drop }`;整份不合用回 `null`。
+ * 回傳 `{ bbox, areas, pointFeatures|null, roads|null, drop }`；舊 `feats` 輸入才保留別名，
+ * 新契約不再把建築中心點當成面域。整份不合用回 `null`。
  * 順序是契約的一部分:道路 MUST 排在鐵路之前吃節點預算,否則兩端跑同一份資料會裁出不同結果。
- * @returns {null | { bbox: object, feats: object|null, roads: Array|null, drop: number }}
+ * @returns {null | { bbox: object, areas: Array, pointFeatures: object|null, roads: Array|null, drop: number }}
  */
 export function sanitizeOsmRelay(m) {
   const bbox = bboxOf(m?.bbox);
   if (!bbox) return null;
   const budget = { left: OSM_RELAY.MAX_PTS_TOTAL };
-  let drop = 0;
+  let drop = Number.isFinite(m?.drop) && m.drop >= 0 ? Math.floor(m.drop) : 0;
+  const hasRoadField = Array.isArray(m?.roads);
   const rd = waysOf(m?.roads, OSM_RELAY.MAX_ROAD, 'highway', budget);
   drop += rd.drop;
-  const roads = rd.out.length ? rd.out : null;
-  let feats = null;
-  const f = m?.feats;
+  // 新契約保留空陣列：Overpass 成功但沒有道路時，`[]` 與查詢失敗的 `null` 不可混為一談。
+  const roads = hasRoadField ? rd.out : null;
+  const rawAreas = m?.areas;
+  const ar = areasOf(rawAreas, budget);
+  drop += ar.drop;
+  const areas = ar.out;
+  // 新契約的非面狀欄位不含建築中心點；舊 feats 只在舊輸入上保留相容別名，
+  // osmRelayFit 對新資料不會把這份別名再傳一次，避免 1.8 MB 預算被複製資料吃掉。
+  const hasLegacy = Object.prototype.hasOwnProperty.call(m || {}, 'feats');
+  const hasAreas = Object.prototype.hasOwnProperty.call(m || {}, 'areas');
+  const hasPointFeatures = Object.prototype.hasOwnProperty.call(m || {}, 'pointFeatures');
+  const featureReady = hasLegacy || hasAreas || hasPointFeatures;
+  const f = hasLegacy
+    ? m?.feats
+    : (m?.pointFeatures && typeof m.pointFeatures === 'object' ? m.pointFeatures : null);
+  let pointFeatures = null, feats = null;
   if (f && typeof f === 'object') {
+    // 保留道路→鐵路的節點預算順序；三個結果傳入共用轉換縫，避免重複扣預算。
     const ra = waysOf(f.rails, OSM_RELAY.MAX_RAIL, 'railway', budget);
-    const cv = waysOf(f.covers, OSM_RELAY.MAX_COVER, null, budget);
     const wa = waysOf(f.waters, OSM_RELAY.MAX_WATERWAY, 'waterway', budget);
     const bd = waysOf(f.boundaries, OSM_RELAY.MAX_BOUNDARY, null, budget);
-    drop += ra.drop + cv.drop + wa.drop + bd.drop;
-    feats = {
-      buildings: nodesOf(f.buildings, OSM_RELAY.MAX_BLD),
-      rails: ra.out,
-      falls: nodesOf(f.falls, OSM_RELAY.MAX_FALL),
-      crossings: nodesOf(f.crossings, OSM_RELAY.MAX_XING),
-      pois: nodesOf(f.pois, OSM_RELAY.MAX_POI),
-      entrances: nodesOf(f.entrances, OSM_RELAY.MAX_ENTRANCE),
-      covers: cv.out,
-      waters: wa.out,
-      boundaries: bd.out,
-    };
+    const pf = pointFeaturesOf(f, budget, { ra, wa, bd });
+    pointFeatures = pf?.out || null;
+    drop += pf?.drop || 0;
+    if (hasLegacy) {
+      const cv = waysOf(f.covers, OSM_RELAY.MAX_COVER, null, budget);
+      drop += cv.drop;
+      feats = {
+        buildings: nodesOf(f.buildings, OSM_RELAY.MAX_BLD),
+        rails: pointFeatures?.rails || [],
+        falls: pointFeatures?.falls || [],
+        crossings: pointFeatures?.crossings || [],
+        pois: pointFeatures?.pois || [],
+        entrances: pointFeatures?.entrances || [],
+        covers: cv.out,
+        waters: pointFeatures?.waters || [],
+        boundaries: pointFeatures?.boundaries || [],
+      };
+    }
+  } else if (hasLegacy) {
+    feats = null;
   }
-  if (!feats && !roads) return null;
-  return { bbox, feats, roads, drop };
+  // `areas:[]`／`pointFeatures:{…空陣列}` 是「查詢成功但這個 bbox 沒有該類型」，
+  // 必須可中繼，否則入房者會把成功的零面域誤當成查詢失敗而自行長程序建物。
+  // 舊 feats 仍維持原本的「沒有有效資料就回 null」行為。
+  if (hasLegacy) {
+    if (!areas.length && !featureHasData(pointFeatures) && (!f || typeof f !== 'object') && !(roads?.length)) return null;
+  } else if (!hasAreas && !hasPointFeatures) {
+    if (!(roads?.length)) return null;
+  }
+  const out = { bbox, areas, pointFeatures, roads, drop, featureReady };
+  if (hasLegacy) out.feats = feats;
+  return out;
 }
 
 /** UTF-8 位元組長度(CJK 招牌名一個字 3 bytes ⇒ MUST NOT 拿 `String.length` 當尺) */
@@ -190,10 +338,32 @@ const byteLen = (s) => (typeof TextEncoder === 'function' ? new TextEncoder().en
  */
 export function osmRelayFit(clean) {
   if (!clean) return null;
-  let msg = { t: 'osm', bbox: clean.bbox, feats: clean.feats, roads: clean.roads };
-  if (byteLen(JSON.stringify(msg)) <= OSM_RELAY.MAX_BYTES) return { msg, dropFeats: false };
-  if (!clean.roads) return null;
-  msg = { t: 'osm', bbox: clean.bbox, feats: null, roads: clean.roads };
-  if (byteLen(JSON.stringify(msg)) <= OSM_RELAY.MAX_BYTES) return { msg, dropFeats: true };
+  const legacy = Object.prototype.hasOwnProperty.call(clean, 'feats');
+  let msg = legacy
+    ? { t: 'osm', bbox: clean.bbox, feats: clean.feats, roads: clean.roads }
+    : { t: 'osm', bbox: clean.bbox, areas: clean.areas || [], pointFeatures: clean.pointFeatures || null,
+      roads: clean.roads, drop: clean.drop || 0, featureReady: clean.featureReady !== false };
+  if (byteLen(JSON.stringify(msg)) <= OSM_RELAY.MAX_BYTES) return { msg, dropFeats: false, dropPointFeatures: false };
+  if (legacy) {
+    if (!clean.roads) return null;
+    msg = { t: 'osm', bbox: clean.bbox, feats: null, roads: clean.roads };
+    if (byteLen(JSON.stringify(msg)) <= OSM_RELAY.MAX_BYTES) return { msg, dropFeats: true, dropPointFeatures: false };
+    return null;
+  }
+  // 新契約先丟非面狀附屬點／線，保住 areas 與道路；面域本身不能被靜默改成中心點。
+  msg = { t: 'osm', bbox: clean.bbox, areas: clean.areas || [], pointFeatures: null, roads: clean.roads,
+    drop: (clean.drop || 0) + 1, featureReady: clean.featureReady !== false };
+  if (byteLen(JSON.stringify(msg)) <= OSM_RELAY.MAX_BYTES) return { msg, dropFeats: false, dropPointFeatures: true };
+  // 面域是建築／用地的權威輪廓；仍超過上限時按 sourceId 決定性丟棄尾端，
+  // 每一筆都累計 drop 供 runtime 缺項報表追查，禁止靜默 slice。
+  const areas = msg.areas.slice().sort((a, b) => String(a?.sourceId).localeCompare(String(b?.sourceId)));
+  let dropped = 0;
+  while (areas.length && byteLen(JSON.stringify({ ...msg, areas, drop: msg.drop + dropped })) > OSM_RELAY.MAX_BYTES) {
+    areas.pop(); dropped++;
+  }
+  msg = { ...msg, areas, drop: msg.drop + dropped };
+  if (byteLen(JSON.stringify(msg)) <= OSM_RELAY.MAX_BYTES) return {
+    msg, dropFeats: false, dropPointFeatures: true, dropAreas: dropped,
+  };
   return null;
 }

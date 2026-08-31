@@ -23,7 +23,7 @@ let bioSrc = readSrc('public', 'js', 'biomes.js');
 const mainSrc = readSrc('public', 'js', 'main.js');
 const helpSrc = readSrc('public', 'js', 'help.js');
 if (process.argv.includes('--break-cache')) {
-  const broken = bioSrc.replace(/geoKey\('osmF', 4,/, "geoKey('osmF', 3,");
+  const broken = bioSrc.replace(/geoKey\('osmF', 5,/, "geoKey('osmF', 4,");
   if (broken === bioSrc) throw new Error('--break-cache 無法造出舊快取版本');
   bioSrc = broken;
 }
@@ -130,8 +130,8 @@ console.log('\nⅢ 接線(biomes.js)');
     '不新增任何碰撞柱(原則 4:表現層不得動權威幾何)');
   ok(/建物的 ry|if \(!b\.commercial\) continue;/.test(fn), '住宅不掛招牌(量會爆掉且不合理)');
   // Overpass 查詢改了 ⇒ 快取版本 MUST 跟著跳
-  ok(/geoKey\('osmF', 4,/.test(bioSrc),
-    '圖資快取版本已跳到 4(包含 pois、地貌與車站入口；不跳版會讓舊快取靜默缺欄)');
+  ok(/geoKey\('osmF', 5,/.test(bioSrc),
+    '圖資快取版本已跳到 5(完整面域契約 + pois／地貌／車站入口；不跳版會讓舊快取靜默缺欄)');
   ok(/node\["place"/.test(bioSrc) && /node\["natural"="peak"\]/.test(bioSrc)
     && /node\["highway"="motorway_junction"\]/.test(bioSrc) && /node\["railway"~"\^\(station\|halt\)\$"\]/.test(bioSrc),
     '四類具名點位都進查詢');

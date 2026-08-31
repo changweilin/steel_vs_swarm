@@ -1823,9 +1823,12 @@ function onOsmRelay(m) {
   const cfg = app.lobby?.battleConfig;
   const key = osmRelayKey(clean.bbox);
   if (!cfg || key !== osmRelayKey(battleBBox(cfg))) return;
-  // 只定案**帶資料**的格:房主第一輪可能只抓到路網,建物那格要留在「未定案」,
+  // 只定案**有來源的格**:房主第一輪可能只抓到路網,面域那格要留在「未定案」,
   // 這樣逾時退回自己抓時才抓得到(寫成 null 等於替房主的失敗背書)。
-  const fresh = commitOsmIn(clean.bbox, { feats: clean.feats || undefined, roads: clean.roads || undefined });
+  const feats = clean.featureReady === false ? undefined : {
+    areas: clean.areas || [], pointFeatures: clean.pointFeatures || null, relayDrop: clean.drop || 0,
+  };
+  const fresh = commitOsmIn(clean.bbox, { feats, roads: clean.roads ?? undefined });
   if (_osmWait?.key === key) { clearTimeout(_osmWait.timer); _osmWait.done(); _osmWait = null; }
   if (!fresh) return;
   // 中繼晚到(自己已經先建好一份)⇒ 比照 scheduleOsmRetry:房間階段清掉重建,與全房重新對齊。
@@ -1866,7 +1869,13 @@ async function osmGate(cfg, onLabel = () => {}) {
   onLabel('取得道路圖資(全房共用一份)…');
   try { [feats, roads] = await warmOsm(bbox); } catch { /* 缺席照走備援 */ }
   onLabel('');
-  const fit = osmRelayFit(sanitizeOsmRelay({ bbox, feats, roads: roads?.length ? roads : null }));
+  const relayInput = { bbox, roads: roads?.length ? roads : null };
+  // features=null 代表查詢失敗；不得把空陣列送成「成功但零面域」，否則全房會停用 fallback。
+  if (feats !== null && feats !== undefined) {
+    relayInput.areas = Array.isArray(feats.areas) ? feats.areas : [];
+    relayInput.pointFeatures = feats.pointFeatures || null;
+  }
+  const fit = osmRelayFit(sanitizeOsmRelay(relayInput));
   // 超限退化 MUST 講出來:實測密市區 5v5 的中繼訊息已達 1.05MB(MAX_BYTES 餘裕 1.6×),
   // 這條分支不是理論上的 —— 它一旦觸發,建物/招牌就退回「每台各自抓」= 又會長不一樣,
   // 而房主是唯一看得到原因的人(console.warn 沒有人在看)。
@@ -1874,7 +1883,9 @@ async function osmGate(cfg, onLabel = () => {}) {
   // 兩格都定案(親自查過)—— null = 「查過且沒有」,fetcher 據此不再多發一次同樣的查詢
   // (少了這一條,抓不到的那一格會在 buildBiomes 裡再吃一整份逾時預算)。
   // 房間階段的補抓成功後由 `resetOsmMisses()` 把 null 退回未定案,重試才有意義。
-  commitOsmIn(bbox, { feats: fit?.msg.feats || null, roads: fit?.msg.roads || null });
+  const localFeats = fit?.msg?.featureReady === false ? null
+    : fit?.msg ? { areas: fit.msg.areas || [], pointFeatures: fit.msg.pointFeatures || null, relayDrop: fit.msg.drop || 0 } : null;
+  commitOsmIn(bbox, { feats: localFeats, roads: fit?.msg ? (fit.msg.roads ?? null) : null });
   if (fit) app.net?.send(fit.msg);
 }
 
@@ -1900,7 +1911,7 @@ function scheduleOsmRetry(cfg, key) {
     let feats = null, roads = null;
     try { [feats, roads] = await warmOsm(battleBBox(cfg)); } catch { /* 缺席照走備援 */ }
     if (_osmRetry !== st) return;
-    if (feats && roads?.length) {
+    if ((feats !== null && feats !== undefined) || (roads !== null && roads !== undefined)) {
       _osmRetry = null;
       // 中繼閘把「查過且沒有」記成 null:補抓成功後 MUST 把那些格退回未定案,
       // 否則第一輪的失敗會把自己永久鎖死,這一整段重試等於沒做(拿到資料的格刻意不動 ——
@@ -1954,6 +1965,41 @@ function buildYield() {
   });
 }
 
+// OSM 屋頂使用 polygon + holes 的站立面；不得回退成外接盒，否則中庭會被封死。
+function makeRoofPlatformIndex(platforms = [], cell = 64) {
+  const buckets = new Map();
+  const insideRing = (x, z, ring) => {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i], b = ring[j];
+      if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+    }
+    return inside;
+  };
+  for (const p of platforms) {
+    const b = p?.bounds;
+    if (!b || !Array.isArray(p.outer) || !Number.isFinite(p.y)) continue;
+    const i0 = Math.floor(b.minX / cell), i1 = Math.floor(b.maxX / cell);
+    const j0 = Math.floor(b.minZ / cell), j1 = Math.floor(b.maxZ / cell);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+      const k = `${i},${j}`;
+      let rows = buckets.get(k);
+      if (!rows) buckets.set(k, rows = []);
+      rows.push(p);
+    }
+  }
+  return (x, z) => {
+    const rows = buckets.get(`${Math.floor(x / cell)},${Math.floor(z / cell)}`) || [];
+    let top = null;
+    for (const p of rows) {
+      if (p.active === false || !insideRing(x, z, p.outer)) continue;
+      if ((p.holes || []).some((h) => insideRing(x, z, h))) continue;
+      if (top == null || p.y > top) top = p.y;
+    }
+    return top;
+  };
+}
+
 /**
  * 啟動(或沿用)地圖預建。冪等:同 key(同房同圖)重複呼叫回傳同一份在途/完成的預建。
  * 失敗不外拋(記在 pre.error,房間 UI 不受影響);enterLoading 消費時會重建一次,再失敗才顯示錯誤。
@@ -1989,6 +2035,20 @@ function startPrebuild(cfg) {
     terrain.group.add(biomes);
     terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
+    // client 碰撞與 server LOS 必須使用完全相同的容量選擇；不可只在上傳時 slice，
+    // 否則第 12001 根之後會變成「客戶端撞得到、伺服器看不見」。build 順序本身即語意優先序。
+    if (terrain.blockers.length > LOS.MAX_OCC) {
+      const dropped = terrain.blockers.length - LOS.MAX_OCC;
+      terrain.blockers.splice(LOS.MAX_OCC);
+      const catalog = biomes.userData.stats?.osmCatalog;
+      if (catalog) {
+        catalog.capacity = (catalog.capacity || 0) + dropped;
+        (catalog.gaps ||= []).push({
+          tagKey: 'blocker', tagValue: 'capacity', reason: 'capacity', fallback: null,
+          count: dropped, areaM2: 0, sourceIds: [],
+        });
+      }
+    }
     terrain.clearBuildingsAround = biomes.userData.clearAround || null;   // 碉堡淨空:移除重疊建物(game.js 碉堡進場時呼叫)
     // 地貌分界線帶 = 強制乾地(2026-08-13 使用者「確保水域/沼澤在分界線的區塊內不會觸發
     // 異常狀態」;規則住 ground.js bandDryAt、消費端只有 biomes.terrainEnvCode)。
@@ -2007,8 +2067,10 @@ function startPrebuild(cfg) {
     // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
     const deckY = makeDeckIndex(biomes.userData.decks);
     const tunnelAt = makeTunnelIndex(biomes.userData.tunnels);   // (x,z) → { floor, ceil, roof, open } | null
+    const roofPlatformAt = makeRoofPlatformIndex(biomes.userData.roofPlatforms || []);
     terrain.deckY = deckY;
     terrain.tunnelAt = tunnelAt;
+    terrain.roofPlatformAt = roofPlatformAt;
     // 地下道幾何側壁(2026-07-29):_updatePlayer 側壁閘的第二道判定 —— 步進跨出 ±hw 牆線
     // 且牆頂(基準線+KERB)高出腳下逾可跨步高即擋。網格把垂直路塹攤成緩坡後,單步
     // surfaceAt 高差在洞口內側永不觸發,幾何判定與地形解析度無關(唯一縫在 makeTunnelIndex)。
@@ -2068,6 +2130,8 @@ function startPrebuild(cfg) {
       // 會把站在樓旁的機體整台吸上屋頂。貼牆行走 curY 距頂 >> DECK_STEP ⇒ 永不誤觸。
       const bt = blockerTop(x, z, BLK_MARGIN);
       if (bt != null && bt > s && curY >= bt - DECK_STEP) s = bt;
+      const rp = roofPlatformAt(x, z);
+      if (rp != null && rp > s && curY >= rp - DECK_STEP) s = rp;
       // 結冰水面/沼澤: 水面凍結時可在上方行走; 原先在水面下時無法突破水面; 卡中間時只能上不能下
       if (typeof isWeatherFrozen === 'function' && isWeatherFrozen() && terrain.waterY != null) {
         const code = terrain.envCodeAt ? terrain.envCodeAt(x, z) : (typeof terrainEnvCode === 'function' ? terrainEnvCode(terrain, x, z) : 0);

@@ -1219,7 +1219,7 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     { x1: 0, z1: -400, x2: 0, z2: 400, hw: 4, main: false },
   ];
   const env = {
-    frontSegs, generic, landmarks, items, blockers,
+    frontSegs, generic, landmarks, items, blockers, osmSource: false,
     onProgress: null, inb: 30,
     terrain: { minX: -900, maxX: 900, minZ: -900, maxZ: 900, heightAt: () => 50 },
     blocked: new Set(),
@@ -1352,7 +1352,7 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
   }
   ok(/\(!rgb \|\| classifyImg\(rgb\) === 'urban'\) && urbanPts\.length < 500/.test(bcode),
     '市區種子:影像在手只收純影像判為 urban 的點;無影像才退回 classify(mix 是最後備援)');
-  ok(/if \(!osm && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)\s*&& !landmarks\.length && !generic\.length && urbanPts\.length > 8\)/.test(bcode),
+  ok(/if \(!osmSource && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)\s*&& !landmarks\.length && !generic\.length && urbanPts\.length > 8\)/.test(bcode),
     '備援程序街區只在圖資**查詢失敗**(!osm)且場地宣告有市區成分時觸發 —— '
     + '查詢成功但零建物 = 荒野維持荒野;宣告 urban ≤ 10% = 沒有市區可重建(mix 是階梯第三層的否決票)');
   ok(/placeBoundary\(\{ terrain, items, generic, rnd, mix, occ, settlement \}\)/.test(bcode),

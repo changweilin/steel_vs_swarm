@@ -34,6 +34,10 @@ import { llToWorld } from './terrain.js';
 import { pruneRoads, quantizeRoads, GRID_HW } from './roadgrid.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { osmRelayKey } from './osmrelay.js';
+import {
+  OSM_AREA_KEYS, buildAreaRecords, projectAreaRecord, catalogAreas,
+  pointInProjectedArea, mergeAreaGaps,
+} from './osmAreas.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { buildGroundCover, makeFootprintIndex } from './ground.js';
@@ -53,6 +57,8 @@ import { libGeo } from './partlib.js';
 import { fitApprovedBuilding, makeApprovedBuildingBatch } from './approvedBuildingModels.js';
 import { generatedApprovedVehicleModelAt } from './approvedVehicleModels.js';
 import { makeRuntimePartModel } from './runtimePartModel.js';
+import { buildOsmPolygonBuildings } from './osmBuilding.js';
+import { buildOsmAreaObjects } from './osmAreaObjects.js';
 // 鳥群 / 魚群 / 貓 / 狗 (2026-08-16 序 11 ⑥-2 / 2026-08-27 生態擴充; 零 THREE 的積分器)
 import {
   FLOCK, FISH, CAT, DOG,
@@ -5038,29 +5044,9 @@ export function matchedBuildingType(tags = {}) {
   return 'residential';
 }
 
-/**
- * OSM tags → 建物類型 (支援 50% 相關對接 / 50% 多元非相關輪替機率)
- * 遺跡與文化地標建築非直接 100% 綁定真實圖資，相關者佔 50%、其餘非相關者佔 50%。
- */
-export function buildingType(tags, seed = 0) {
-  const matched = matchedBuildingType(tags);
-  if (!matched) return 'residential';
-
-  // 若為宗教、文化或古代遺跡類地標，且提供種子座標時，套用 50/50 機率原則
-  if (seed !== 0 && CULTURAL_RELIC_LANDMARKS.includes(matched)) {
-    const s = ((seed * 1597334677) >>> 0) ^ 0x6D2B79F5;
-    const prob = (s >>> 8) / 16777216; // [0, 1)
-    if (prob < 0.5) {
-      return matched; // 50% 相關者
-    } else {
-      // 50% 其餘非相關者 (從多元文化名冊其餘項目中均勻輪替)
-      const others = CULTURAL_RELIC_LANDMARKS.filter((k) => k !== matched);
-      const idx = ((seed * 2246822507) >>> 0) % others.length;
-      return others[idx] || matched;
-    }
-  }
-
-  return matched;
+/** OSM tags → 建物類型；文化／宗教地標必須忠實採用匹配類型，不再隨機換成無關建物。 */
+export function buildingType(tags, _seed = 0) {
+  return matchedBuildingType(tags) || 'residential';
 }
 
 function buildingHeight(tags, type, rnd) {
@@ -5184,17 +5170,23 @@ async function fetchOsmFeatures(bbox) {
   // Overpass 回應快取(geocache.js):同 bbox 首次完整成功即定案(remark = 伺服器截斷/逾時,不入庫)。
   // 之後每場建物/鐵路輸入位元級一致 —— 圖資不再隨鏡像輪替/限流逐局忽有忽無。
   // 鍵含查詢額度:額度常數改版自然失效重抓。
-  // 版本 4(2026-08-25):加入捷運／車站出入口節點；地下步道本體不渲染，只以這些點位與端點建入口。
+  // 版本 5(2026-08-31):closed way + multipolygon relation 改走完整面域契約；
+  // 舊中心點快取 MUST NOT 命中新管線。加入捷運／車站出入口節點；地下步道本體不渲染，只以這些點位與端點建入口。
   // **改查詢 MUST 同步 +1**:不改版的話舊快取會照樣命中,而它裡面沒有 pois ⇒ 新標牌
   // 在所有「以前開過這張圖」的機器上永遠不出現,且沒有任何錯誤訊息。
   const nCover = quotaOf(bboxKm2(bbox), 400, 200, 900);
-  const ckey = geoKey('osmF', 4, bbox, `q${nBld}-${nCover}`);
+  const nArea = quotaOf(bboxKm2(bbox), 1200, 600, 1800);
+  const ckey = geoKey('osmF', 5, bbox, `q${nBld}-${nCover}-${nArea}`);
   const cached = await geoGet(ckey);
   if (cached) return cached;
   // 具名點位額度刻意極小:一張圖最多掛 32 塊牌(worldtext SIGN_MAX),多抓也用不到,
   // 而 node 查詢本身很便宜(不帶幾何)⇒ payload 幾乎不動。
+  const areaWays = OSM_AREA_KEYS.map((key) => `way["${key}"](${bb});`).join('');
+  const areaRelations = OSM_AREA_KEYS.map((key) => `rel["type"="multipolygon"]["${key}"](${bb});`).join('');
   const q = `[out:json][timeout:15];`
-    + `(way["building"](${bb});node["power"="tower"](${bb}););out center tags ${nBld};`
+    // 面域查詢必須帶完整 geometry；multipolygon relation 的 member geometry 由 out geom 一併保留。
+    + `(${areaWays}${areaRelations});out tags geom ${nArea};`
+    + `node["power"="tower"](${bb});out tags ${nBld};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`
     + `node["waterway"="waterfall"](${bb});out 20;`
@@ -5210,19 +5202,31 @@ async function fetchOsmFeatures(bbox) {
     + `way["leisure"~"^(park|garden|golf_course|nature_reserve|recreation_ground)$"](${bb});out geom ${nCover};`
     + `rel["boundary"="administrative"](${bb});way(r);out geom 400;`;
   return overpassQuery(q, (data) => {
-    const buildings = [], rails = [], falls = [], crossings = [], pois = [], entrances = [];
-    const covers = [], waters = [], boundaries = [];
+    const areaElements = [], rails = [], falls = [], crossings = [], pois = [], entrances = [];
+    const waters = [], boundaries = [];
+    const areaKeySet = new Set(OSM_AREA_KEYS);
+    const isClosed = (g) => Array.isArray(g) && g.length > 2
+      && Number.isFinite(g[0]?.lat) && Number.isFinite(g[0]?.lon ?? g[0]?.lng)
+      && Number.isFinite(g[g.length - 1]?.lat) && Number.isFinite(g[g.length - 1]?.lon ?? g[g.length - 1]?.lng)
+      && g[0].lat === g[g.length - 1].lat
+      && (g[0].lon ?? g[0].lng) === (g[g.length - 1].lon ?? g[g.length - 1].lng);
     for (const el of data.elements || []) {
       const tags = el.tags || {};
-      if (el.type === 'way' && el.geometry && tags.railway) {
+      if (el.type === 'relation' && (tags.type === 'multipolygon' || Array.isArray(el.members))) {
+        // relation member way 仍留在 areaElements，buildAreaRecords 會依 source ID 串 outer/inner。
+        areaElements.push(el);
+      } else if (el.type === 'way' && el.geometry && Object.keys(tags).some((k) => areaKeySet.has(k))) {
+        // way 即使是 relation 邊段也保留，供 relation 組環；非閉合的線由 buildAreaRecords 略過並記 invalid。
+        areaElements.push(el);
+        if (tags.railway && !isClosed(el.geometry)) rails.push({ tags, geometry: el.geometry });
+        else if (tags.waterway && !isClosed(el.geometry)) waters.push({ tags, geometry: el.geometry });
+      } else if (el.type === 'way' && el.geometry && tags.railway) {
         rails.push({ tags, geometry: el.geometry });
       } else if (el.type === 'way' && el.geometry && tags.waterway) {
         waters.push({ tags, geometry: el.geometry });
       } else if (el.type === 'way' && el.geometry && tags.natural === 'coastline') {
         boundaries.push({ tags, geometry: el.geometry });
-      } else if (el.type === 'way' && el.geometry && (tags.landuse || tags.natural || tags.leisure)) {
-        covers.push({ tags, geometry: el.geometry });
-      } else if (el.type === 'way' && el.geometry && !tags.building) {
+      } else if (el.type === 'way' && el.geometry) {
         // relation 展開後的成員 way 通常沒有 boundary tag；排除具名類別後即為行政界成員。
         boundaries.push({ tags, geometry: el.geometry });
       } else if (el.type === 'node' && tags.railway === 'level_crossing') {
@@ -5237,12 +5241,19 @@ async function fetchOsmFeatures(bbox) {
         // 具名點位:MUST 排在下面那個 else **之前** —— 那一條是「其餘全部當建物」,
         // 漏了這個分支就會在地名節點的位置長出一棟樓(而且看起來完全正常)。
         pois.push({ lat: el.lat, lng: el.lon, tags });
-      } else {
-        const lat = el.center?.lat ?? el.lat, lng = el.center?.lon ?? el.lon;
-        if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
       }
     }
-    const res = { buildings, rails, falls, crossings, pois, entrances, covers, waters, boundaries };
+    const built = buildAreaRecords(areaElements);
+    const pointFeatures = { rails, waters, boundaries, falls, crossings, pois, entrances };
+    const res = {
+      areas: built.areas,
+      areaInvalid: built.invalid,
+      areaCapacity: built.capacity,
+      areaGaps: built.gaps,
+      pointFeatures,
+      // 舊消費端的短期讀取別名；來源仍只有 pointFeatures／areas 兩份，不再複製建物中心點或 covers。
+      ...pointFeatures,
+    };
     // 入庫走深拷貝:IDB 寫入是非同步,下游(buildRails 等)會就地變異這些物件,
     // 不拷貝會把「該局變異後」的資料定案
     if (!data.remark) geoPut(ckey, structuredClone(res));
@@ -9096,7 +9107,7 @@ export function makeTunnelIndex(tunnels) {
  * 封路障礙頂距地僅 ~2m(落在 mount 台階內,會變成「走過去自動跨上」= 封路失效)。
  * 碉堡淨空 clearAround 會 in-place splice blockers —— MUST 經 terrain.rebuildBlockerTops 重建。
  */
-export function makeBlockerTopIndex(blockers) {
+export function makeBlockerTopIndex(blockers, platforms = []) {
   const CELL = 16;
   const grid = new Map();
   const key = (i, j) => `${i},${j}`;
@@ -9114,12 +9125,32 @@ export function makeBlockerTopIndex(blockers) {
       }
     }
   }
+  // 屋頂平台保留精確 outer/holes；只註冊 surface 查詢索引，不進 A30 blocker 碰撞。
+  for (const p of platforms || []) {
+    if (!p?.platform || !Array.isArray(p.outer) || p.outer.length < 3) continue;
+    const xs = p.outer.map((q) => q[0]), zs = p.outer.map((q) => q[1]);
+    const i0 = Math.floor((Math.min(...xs) - 1) / CELL), i1 = Math.floor((Math.max(...xs) + 1) / CELL);
+    const j0 = Math.floor((Math.min(...zs) - 1) / CELL), j1 = Math.floor((Math.max(...zs) + 1) / CELL);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+      const k = key(i, j);
+      let arr = grid.get(k);
+      if (!arr) { arr = []; grid.set(k, arr); }
+      arr.push(p);
+    }
+  }
   if (!grid.size) return () => null;
   return (x, z, margin = 0) => {
     const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
     if (!arr) return null;
     let best = null;
     for (const b of arr) {
+      if (b.platform) {
+        if (!pointInProjectedArea(x, z, b)) continue;
+        const top = Number(b.y);
+        if (!Number.isFinite(top)) continue;
+        if (best === null || top > best) best = top;
+        continue;
+      }
       if (b.hw2 != null) {
         const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
         const rx = x - b.x, rz = z - b.z;
@@ -10215,6 +10246,30 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 讓 Esri 影像失敗連鎖放棄整組 Overpass → 道路/真橋整套換成兵線備援,圖資逐局忽有忽無。
   // 影像與路網是獨立服務,各自失敗各自降級;離線時 fetch 快速失敗,不拖載入。
   let [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
+  // OSM 查詢一旦成功，即使 areas 為空也代表「這個 bbox 沒有面域」；只在整個來源回 null
+  // 時才走程序城市 fallback。投影與分類共用 osmAreas.js，後續建物／landfield 不再各猜一次。
+  const osmSource = osmData !== null && osmData !== undefined;
+  let osmCatalogReport = {
+    area: 0, building: 0, mapped: 0, exact: 0, parentFallback: 0,
+    unmapped: 0, invalid: 0, capacity: 0, byFamily: {}, byKind: {}, gaps: [],
+  };
+  if (osmSource) {
+    const projected = (osmData.areas || []).map((a) => projectAreaRecord(a, llToWorld, center)).filter(Boolean);
+    const cat = catalogAreas(projected);
+    const parserInvalid = Number(osmData.areaInvalid) || 0;
+    const parserCapacity = Number(osmData.areaCapacity) || 0;
+    const parserGaps = Array.isArray(osmData.areaGaps) ? osmData.areaGaps : [];
+    osmCatalogReport = {
+      ...cat.report,
+      invalid: cat.report.invalid + parserInvalid,
+      capacity: cat.report.capacity + parserCapacity,
+      gaps: mergeAreaGaps([...cat.report.gaps, ...parserGaps]),
+    };
+    const pf = osmData.pointFeatures || {};
+    // aliases 只指向 pointFeatures 同一份陣列，供既有鐵路／水路／入口消費端相容；
+    // 建物與用地只讀 areas，絕不重建第二份 covers。
+    osmData = { ...osmData, ...pf, areas: cat.areas };
+  }
   // 行人語意 MUST 先於剪枝／量化／橋隧判定：地下步道從此不再被任何道路消費端看見；
   // 高架與沿線主題則掛在 way 上，後續幾何重組用展開運算保留它。全段零共享 rnd。
   const pedestrianPlan = planPedestrianNetwork({
@@ -10254,7 +10309,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       (x, z) => worldToLL(x, z, center),
     );
   }
-  const osm = osmData?.buildings || null;
+  // 舊中心點建物欄位已退場；精確面域由下方 OSM polygon builder 消費。
+  const osm = null;
   // 隧道/橋樑分段合併(2026-07-15 二修):OSM 常把一條隧道/橋切成多條 way,共用節點
   // 深在山體內/河道上 —— 把「way 端點」當洞口/橋台會讓路面剖面在結構中段爬回地表
   // (Λ 形斷面、覆蓋斷開、接縫殘留岩階 = 洞內隱形牆)。共端點的同類 way MUST 先併成
@@ -10622,6 +10678,74 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 全建物共用占位網格(OSM/離線/地標/補間):佔地是隨機抽的、不是 OSM 實測輪廓,
   // 相鄰 OSM 種子放大後會彼此互穿 —— 一律先驗占位再收
   const occ = makeOccupancy();
+  // OSM 面域建物：外環/內洞直接生成，牆段與 blocker 共用同一份有向盒資料。
+  // 平台不混進 blockers；main.js 會透過現有 surfaceAt 查詢精確 outer/holes。
+  const osmRoofPlatforms = [];
+  const osmBuildingFootprints = [];
+  const osmBuildingMeshes = [];
+  let osmBuildingResult = { generated: 0, generatedByKind: {}, blockers: [], platforms: [], invalid: [], skipped: [], meshes: [] };
+  if (osmSource && osmData?.areas?.length) {
+    await onProgress?.(0.58, `建置 OSM 精確建物(${osmData.areas.length} 面域)…`);
+    const osmWallColors = {
+      residential: 0xb7a893, commercial: 0x7189a8, industrial: 0x727b83,
+      education: 0x9aaf8f, healthcare: 0xb47e7e, transport: 0x888fa4,
+      religion: 0xa58f73, civic: 0x9b9ea6, culture: 0x9d8eaa,
+      sports: 0x789b80, parking: 0x8a8d91, utility: 0x7e8b95,
+    };
+    osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
+      terrain,
+      materialOf: (kind, batch, style) => {
+        const family = osmData.areas.find((a) => a.classification?.kind === kind)?.classification?.family || kind;
+        const wall = envMat(style?.wall || osmWallColors[family] || 0xb7a893, { wash: 0.42, cool: 0.4 });
+        const roof = envMat(style?.roof || 0x4f5964, { wash: 0.3, cool: 0.45 });
+        return { wall, roof };
+      },
+    });
+    blockers.push(...osmBuildingResult.blockers);
+    osmRoofPlatforms.push(...osmBuildingResult.platforms);
+    osmBuildingFootprints.push(...osmBuildingResult.platforms);
+    osmBuildingMeshes.push(...osmBuildingResult.meshes);
+    // 只把建物腳印的涵蓋 cell 加入 blocked；用地面域不在此阻擋，避免大面域封死兵線。
+    for (const p of osmBuildingResult.platforms) {
+      const xs = p.outer.map((q) => q[0]), zs = p.outer.map((q) => q[1]);
+      const minI = Math.floor(Math.min(...xs) / CELL) - 1, maxI = Math.ceil(Math.max(...xs) / CELL) + 1;
+      const minJ = Math.floor(Math.min(...zs) / CELL) - 1, maxJ = Math.ceil(Math.max(...zs) / CELL) + 1;
+      for (let i = minI; i <= maxI; i++) for (let j = minJ; j <= maxJ; j++) {
+        const x = i * CELL, z = j * CELL;
+        if (pointInProjectedArea(x, z, p)) blocked.add(cellKey(x, z));
+      }
+    }
+  }
+  // 執行期生成失敗與 relay 容量也走同一份 gap schema；不得只留在 console 或靜默略過。
+  if (osmSource) {
+    const areaById = new Map((osmData?.areas || []).map((a) => [a.sourceId, a]));
+    const gaps = [...(osmCatalogReport.gaps || [])];
+    const addRuntimeGap = (entry, reason) => {
+      const area = areaById.get(entry?.sourceId);
+      const tag = Object.entries(area?.tags || {}).find(([k]) => OSM_AREA_KEYS.includes(k)) || ['source', entry?.sourceId || 'unknown'];
+      gaps.push({
+        tagKey: tag[0], tagValue: String(tag[1] ?? ''), reason,
+        fallback: area?.classification?.fallback || null, count: 1,
+        areaM2: Number(area?.areaM2) || 0, sourceIds: entry?.sourceId ? [entry.sourceId] : [],
+      });
+    };
+    for (const row of osmBuildingResult.invalid || []) addRuntimeGap(row, row.reason || 'invalid_footprint');
+    for (const row of osmBuildingResult.skipped || []) {
+      if (row.reason !== 'unmapped') addRuntimeGap(row, row.reason || 'unsupported_building');
+    }
+    const relayDrop = Math.max(0, Number(osmData?.relayDrop) || 0);
+    if (relayDrop) gaps.push({
+      tagKey: 'relay', tagValue: 'capacity', reason: 'capacity', fallback: null,
+      count: relayDrop, areaM2: 0, sourceIds: [],
+    });
+    osmCatalogReport = {
+      ...osmCatalogReport,
+      invalid: (osmCatalogReport.invalid || 0) + (osmBuildingResult.invalid?.length || 0),
+      capacity: (osmCatalogReport.capacity || 0) + relayDrop,
+      gaps: gaps.sort((a, b) => String(a.tagKey).localeCompare(String(b.tagKey))
+        || String(a.tagValue).localeCompare(String(b.tagValue)) || String(a.reason).localeCompare(String(b.reason))),
+    };
+  }
   // 障礙環先佔位:邊界帶的樓群/神木/巨岩經既有的 `occ.room` 自動縮到環外(不佔位就是
   // 巨幹/樓身長進環體)。環在 blockers 定案時就算好了,這裡只是把同一份幾何登記進占位網格。
   for (const s of edgeSegs) occ.add(s.x, s.z, Math.hypot(s.hw2, s.hd2));
@@ -10798,7 +10922,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 場地宣告根本沒有市區成分(urban ≤ 10%,荒野場地全是 0)就沒有東西可重建;放行的話,
   // Overpass 掛掉那幾局,裸岩/陰影的低飽和灰像素(classifyImg 的系統性誤判)照樣在
   // 太魯閣/合歡山長出一座城。市區/混合場地(urban ≥ 15%)不受影響。
-  if (!osm && (!mix || (mix.urban || 0) > 0.1)
+  if (!osmSource && (!mix || (mix.urban || 0) > 0.1)
     && !landmarks.length && !generic.length && urbanPts.length > 8) {
     await onProgress?.(0.6, '離線模式:程序生成市區…');
     const lmTypes = Object.keys(LANDMARKS);
@@ -10830,6 +10954,34 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
       });
     });
+  }
+
+  // 非建築用地物件：道路／兵線／主堡／塔位與既有建物先佔位，再依面積、間距與硬上限配置。
+  // 住宅／商業 district 不補樓；校園／醫院／車站已有子建物時不生成代表建築。
+  let osmAreaObjectResult = { generated: 0, generatedByKind: {}, blockers: [], capacity: [], skipped: [] };
+  if (osmSource && osmData?.areas?.length) {
+    osmAreaObjectResult = buildOsmAreaObjects(group, osmData.areas, {
+      maxObjects: 480,
+      heightAt: (x, z) => terrain.heightAt(x, z),
+      blocked: (x, z, r) => blocked.has(cellKey(x, z)) || !occ.free(x, z, r, 1)
+        || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5),
+      materialOf: (_generator, row) => envMat(row.color, { wash: 0.38, cool: 0.42 }),
+    });
+    blockers.push(...osmAreaObjectResult.blockers);
+    for (const b of osmAreaObjectResult.blockers) occ.add(b.x, b.z, b.r);
+    const areaById = new Map(osmData.areas.map((a) => [a.sourceId, a]));
+    const append = (entry, reason) => {
+      const area = areaById.get(entry?.sourceId);
+      const tag = Object.entries(area?.tags || {}).find(([k]) => OSM_AREA_KEYS.includes(k)) || ['source', entry?.sourceId || 'unknown'];
+      osmCatalogReport.gaps.push({
+        tagKey: tag[0], tagValue: String(tag[1] ?? ''), reason, fallback: area?.classification?.fallback || null,
+        count: 1, areaM2: Number(area?.areaM2) || 0, sourceIds: entry?.sourceId ? [entry.sourceId] : [],
+      });
+    };
+    for (const row of osmAreaObjectResult.capacity) append(row, 'capacity');
+    for (const row of osmAreaObjectResult.skipped) append(row, row.reason || 'blocked');
+    osmCatalogReport.capacity += osmAreaObjectResult.capacity.length;
+    osmCatalogReport.gaps = mergeAreaGaps(osmCatalogReport.gaps);
   }
 
   // ---- 聚落場(單一縫):街廓配置與市區補間**共用**這一支「這裡算不算聚落」----
@@ -10896,7 +11048,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // **零共享 `rnd()` 消耗**:量體/樣式/公設款式全由 `plotSeed`/`frac` 雜湊決定 ⇒ 這一段
   // 的存在與否不會推移任何一株植被、任何一棟圖資建物的亂數序列(§2.3)。
   const civics = [];
-  if (frontSegs.length && (generic.length || landmarks.length)) {
+  if (!osmSource && frontSegs.length && (generic.length || landmarks.length)) {
     await onProgress?.(0.63, '劃設街廓與公設用地…');
     const nearUrban = settlement;   // 「市區」閘 = 聚落場(單一縫;MUST NOT 在此另判一次)
     const dryAt = (x, z) => terrain.heightAt(x, z) > 0.4 && terrainEnvCode(terrain, x, z) === 0;
@@ -10993,14 +11145,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 市區補間:把被 8 倍世界撐開的街廓填回連續街區(隱蔽 + 走廊夾出戰略通道)。
   // 種子吃上面那份 `infillSeeds`(街廓配置**之前**就定案 + 過聚落場),MUST NOT 在此
   // 回頭讀 `generic` —— 那一份此刻已混進 planBlocks 剛配出來的臨街樓(見 infillSeeds 註解)。
-  if (infillSeeds.length) {
+  if (!osmSource && infillSeeds.length) {
     const n = densifyUrban({ seeds: infillSeeds, generic, blocked, terrain, rnd, inb, occ, roadFacing: nearestRoadAngle });
     if (n) await onProgress?.(0.68, `補間街廓建物(+${n} 棟)…`);
   }
 
   // 邊界帶視覺牆:放在補間之後(邊界樓不當補間種子)、植被過濾之前
   await onProgress?.(0.69, '築起邊界帶(樓群/神木/巨岩)…');
-  const boundaryN = placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement });
+  // OSM 成功時建物／用地輪廓已是權威來源；邊界帶的程序樓群也必須停用，避免真實建物外
+  // 再長出虛構街區。只有來源整體為 null 才由既有 fallback 產生。
+  const boundaryN = osmSource ? 0 : placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement });
 
   // 建物腳印內/貼牆的植被拔除:植被先散布、建物(圖資/補間)後放且互不看對方,
   // 不濾掉就會樹冠穿屋頂、樹卡進牆面。只濾「錨點貼地」的實例 —— 神木上的
@@ -11027,6 +11181,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
     const lmC = landmarks.map((lm) => [lm.x, lm.z, (LANDMARK_COL[lm.type]?.r || 10) * OVER.lm]);
     const hitsBld = (x, z, pad) => {
+      // 精確 OSM footprint 直接保留 outer/holes；不以外接方盒拔除植被。
+      if (osmBuildingFootprints.some((p) => pointInProjectedArea(x, z, p))) return true;
       const ci = Math.floor(x / C), cj = Math.floor(z / C);
       for (let i = -1; i <= 1; i++) {
         for (let j = -1; j <= 1; j++) {
@@ -11839,7 +11995,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const gseed = (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0;
   const landField = await buildLandField({
     terrain, center, roads: roadInput, rails: osmData?.rails || [], waters: osmData?.waters || [],
-    covers: osmData?.covers || [], boundaries: osmData?.boundaries || [], gradeCorridors,
+    areas: osmData?.areas || [], covers: osmData?.covers || [], boundaries: osmData?.boundaries || [], gradeCorridors,
     classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, null),
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z), projectAt: llToWorld,
     seed: gseed, onProgress,
@@ -11856,6 +12012,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     x: c.x, z: c.z, hw: c.w / 2, hd: c.d / 2, ry: c.ry,
     r: Math.hypot(c.w, c.d) / 2,
   }));
+  // ground.js 的地被落點同樣避開 OSM 建物 footprint；holes 由 surface API 保留。
+  for (const p of osmBuildingFootprints) {
+    const xs = p.outer.map((q) => q[0]), zs = p.outer.map((q) => q[1]);
+    reservedFootprints.push({
+      x: (Math.min(...xs) + Math.max(...xs)) / 2,
+      z: (Math.min(...zs) + Math.max(...zs)) / 2,
+      r: Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2,
+    });
+  }
   for (const type in items) {
     if (GIANT_DEFS[type]) continue;   // 神木幹已在 blockers；樹上附著物不占地面
     const rr = VEG_FOOT_R[type] ?? 1;
@@ -12016,6 +12181,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   await onProgress?.(1, '地貌完成');
   group.userData.blockers = blockers;   // 建物碰撞柱(main.js → terrain.blockers → game.js _collide)
+  group.userData.roofPlatforms = osmRoofPlatforms;
   group.userData.edgeMotionN = edgeMotionN;
   // 立體交通走廊(隧道全段 + 橋樑走廊):main.js 上傳伺服器 → sim 清除走廊內第三方障礙/地雷
   group.userData.gradeCorridors = gradeCorridors;
@@ -12036,7 +12202,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     groundBuffer: ground.bufCells,   // 緩衝空間的底毯格數(2026-08-12;0 = 那一圈沒鋪成)
     petals: petalsBuilt,             // 落花 / 落葉粒子數(0 = 夏冬、沒有落葉樹、或 ?petal=0)
     reflectors: reflN,               // 水面倒影塊的反射體數(0 = 無水域,或岸邊沒有夠高的東西)
-    buildings: generic.length + landmarks.length,
+    buildings: generic.length + landmarks.length + osmBuildingResult.generated,
     landmarks: landmarks.length,
     roads: roadsBuilt,
     roadPrune: roadPruneStats,
@@ -12053,7 +12219,28 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     rails: railLines,
     falls: fallsBuilt,
     signs: signsBuilt,   // 世界文字塊數(0 = 圖資沒名字或整批缺字 ⇒ 一塊都不掛)
-    osm: !!(osm && osm.length),
+    // `osm` 是來源是否成功，不是建物數量；成功但零 area 也必須阻斷程序城市 fallback。
+    osm: osmSource,
+    osmAreas: osmData?.areas?.length || 0,
+    osmObjects: osmAreaObjectResult.generated,
+    osmCatalog: {
+      ...osmCatalogReport,
+      byFamily: Object.fromEntries(Object.entries(osmCatalogReport.byFamily || {}).map(([family, row]) => {
+        const kinds = new Set((osmData?.areas || []).filter((a) => a.classification?.family === family)
+          .map((a) => a.classification?.kind));
+        let generated = row.generated || 0;
+        for (const kind of kinds) generated += (osmBuildingResult.generatedByKind?.[kind] || 0)
+          + (osmAreaObjectResult.generatedByKind?.[kind] || 0);
+        return [family, { ...row, generated }];
+      })),
+      byKind: Object.fromEntries(Object.entries(osmCatalogReport.byKind || {}).map(([kind, row]) => ({
+        [kind]: {
+          ...row,
+          generated: (row.generated || 0) + (osmBuildingResult.generatedByKind?.[kind] || 0)
+            + (osmAreaObjectResult.generatedByKind?.[kind] || 0),
+        },
+      }))),
+    },
     osmRoads: !!(osmRoads && osmRoads.length),   // 路網查詢是否成功(false = 兵線備援;main.js 房間補抓依據)
   };
   // 碉堡淨空(反應式):碉堡進場時 game.js 呼叫。移除「與碉堡淨空區重疊」的建物(縮 0 隱形)+ 地標(整棟隱藏),
@@ -12081,7 +12268,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const blk = group.userData.blockers;
     for (let i = blk.length - 1; i >= 0; i--) {
       const b = blk[i];
-      if (b.bld && Math.hypot(b.x - wx, b.z - wz) - (b.r || 0) < r) { blk.splice(i, 1); removed = true; }
+      // OSM 建物按型別合批，無法只隱藏單棟；保留其同源 wall blocker，避免留下可穿越的可見牆。
+      if (b.bld && !b.osm && Math.hypot(b.x - wx, b.z - wz) - (b.r || 0) < r) { blk.splice(i, 1); removed = true; }
     }
     // 攀爬路線同步清掉:樓沒了梯子不能留在空中(路線持有 blocker 參照 ⇒ 直接比對即可)。
     // 幾何是 InstancedMesh 不逐條拆(碉堡淨空區內的殘留梯子由建物一併消失時的視覺落差承擔),

@@ -218,8 +218,8 @@ console.log('Ⅰ 宣告自洽(mix 鍵集 / 總和 / type 對得上主成分)');
   const bare = bio.replace(/\/\/.*$/gm, '');
   ok(/biome === 'urban' && !settlement\?\.\(x, z\)/.test(bare),
     '邊界樓(placeBoundary)的市區判定過聚落場 —— mix / 衛星誤判不得憑空生出建物');
-  ok(/if \(!osm && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)/.test(bare),
-    '備援程序街區只在圖資查詢失敗(!osm)且宣告有市區成分時觸發 —— 查詢成功但零建物 ⇒ 荒野維持荒野');
+  ok(/if \(!osmSource && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)/.test(bare),
+    '備援程序街區只在圖資查詢失敗(!osmSource)且宣告有市區成分時觸發 —— 查詢成功但零面域 ⇒ 荒野維持荒野');
 
   // ---- 裁剪(2026-08-11;離線直測,CI 收得到)----
   // 這一組守的是**量測本身**:沒裁之前一塊 3.4 倍於方框的鎮級 landuse 就能把組成整個蓋掉,

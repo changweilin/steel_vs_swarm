@@ -98,7 +98,7 @@ function rollSideSwap(cfg) {
  *                           ready, loaded, connected, token}>,
  *   bots: Map<botId('b1'...), {name, side}>,   // 電腦玩家(房主增減,佔正式席位)
  *   battleConfig,          // 開房時就鎖定(地圖在開房前建立/選好)
- *   osm,                   // 路網中繼:{ key, bbox, feats, roads } —— 房主抓到的原始 OSM 圖資,
+ *   osm,                   // 路網中繼:{ key, bbox, areas, pointFeatures, roads } —— 房主抓到的原始 OSM 圖資,
  *                          // 轉給全房 ⇒ 整房逐位元同一份世界(逐格單調,見 t:'osm')
  *   battle: BattleSim|null, botBrains: BotBrain[], tickTimer,
  * }
@@ -209,7 +209,10 @@ export class RoomHub {
    */
   osmPayload(room) {
     const o = room.osm;
-    return o && (o.feats || o.roads) ? { t: 'osm', bbox: o.bbox, feats: o.feats, roads: o.roads } : null;
+    return o ? {
+      t: 'osm', bbox: o.bbox, areas: o.areas, pointFeatures: o.pointFeatures,
+      roads: o.roads, drop: o.drop || 0,
+    } : null;
   }
 
   /** 廣播房間(大廳/配對)狀態 */
@@ -564,12 +567,20 @@ export class RoomHub {
         const clean = sanitizeOsmRelay(m);
         if (!clean) return;
         const key = osmRelayKey(clean.bbox);
-        if (!room.osm) room.osm = { key, bbox: clean.bbox, feats: null, roads: null };
+        if (!room.osm) room.osm = { key, bbox: clean.bbox, areas: null, pointFeatures: null, roads: null, drop: 0 };
         if (room.osm.key !== key) return;      // 換圖了才會不同鍵 —— 那份中繼不屬於這一房
-        const add = { t: 'osm', bbox: room.osm.bbox, feats: null, roads: null };
-        if (!room.osm.feats && clean.feats) add.feats = room.osm.feats = clean.feats;
-        if (!room.osm.roads && clean.roads) add.roads = room.osm.roads = clean.roads;
-        if (!add.feats && !add.roads) return;  // 沒有新的格 ⇒ 不轉播(免得入房者白重建一次)
+        const add = { t: 'osm', bbox: room.osm.bbox, drop: clean.drop || 0 };
+        let changed = false;
+        // null = 尚未收到該格；[]／{} = 已成功查詢但沒有該類型，兩者必須區分。
+        if (room.osm.areas === null && clean.featureReady !== false && Array.isArray(clean.areas)) {
+          add.areas = room.osm.areas = clean.areas; changed = true;
+        }
+        if (room.osm.pointFeatures === null && clean.featureReady !== false && clean.pointFeatures) {
+          add.pointFeatures = room.osm.pointFeatures = clean.pointFeatures; changed = true;
+        }
+        if (room.osm.roads === null && Array.isArray(clean.roads)) { add.roads = room.osm.roads = clean.roads; changed = true; }
+        room.osm.drop = Math.max(room.osm.drop || 0, clean.drop || 0);
+        if (!changed) return;  // 沒有新的格 ⇒ 不轉播(免得入房者白重建一次)
         for (const [id, c] of room.clients) if (id !== myId) c.send(add);
         return;
       }

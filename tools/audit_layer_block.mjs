@@ -240,14 +240,16 @@ console.log('\n=== Ⅴ 隧道頂板頂面 = 可站立結構面(擋得住 = 站�
   };
   const K = { DECK_STEP: num('DECK_STEP'), DECK_MARGIN: num('DECK_MARGIN'),
     DECK_UNDER: num('DECK_UNDER'), MAX_MECH_H: num('MAX_MECH_H'), BLK_MARGIN: num('BLK_MARGIN') };
+  // 測試地景沒有屋頂平台資料，仍須把 surfaceAt 閉包的新依賴明確注入，避免沙箱靜默偏離真品。
+  const roofPlatformAtStub = () => null;
   const mkSurf = (heightAt, tunAt, src = M) => {
     const P0 = src.indexOf('    terrain.surfaceAt = (x, z, curY) => {');
     const P1 = src.indexOf('\n    };', P0);
     if (P0 < 0 || P1 <= P0) throw new Error('main.js 找不到 surfaceAt(結構已變?)');
-    const keys = ['heightAt', 'tunnelAt', 'deckY', 'blockerTop', ...Object.keys(K)];
+    const keys = ['heightAt', 'tunnelAt', 'deckY', 'blockerTop', 'roofPlatformAt', ...Object.keys(K)];
     return new Function(...keys,
       `const terrain = { heightAt };\n${src.slice(P0, P1 + 7)}\nreturn terrain.surfaceAt;`)(
-      heightAt, tunAt, () => null, () => null, ...Object.keys(K).map((k) => K[k]));
+      heightAt, tunAt, () => null, () => null, roofPlatformAtStub, ...Object.keys(K).map((k) => K[k]));
   };
   // 明隧道:頂板露在地形之外(側坡被 carveGalleryBands 挖到路面高)
   const GAL_H = TUN.floor + 1;                       // 洞外側坡地表(遠低於頂板 109)
