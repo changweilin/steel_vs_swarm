@@ -181,8 +181,8 @@ function show(screen) {
   if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // 離開房間:收放大視窗、兩台展示台停 rAF,不與戰場搶 GPU
   // 操作方式:整房一致、由房主定案(套用在 onSync;規則住 ctrlmode.js)。
   // 這裡只負責「回到大廳 ⇒ 解除戰區定案」,MUST NOT 在 UI 端另判一次能不能改(A21 同精神)。
+  if (LOBBY_SCREENS.has(screen)) setRoomCtrlMode(null);
   if (LOBBY_SCREENS.has(screen)) {
-    setRoomCtrlMode(null);
     app._autoPickedRoom = false;
     syncQuickRestartFab();
   }
@@ -3536,7 +3536,7 @@ function recordGameSession(lobby) {
     bots,
     teamSize: lobby.config?.teamSize || lobby.battleConfig?.teamSize || app.teamSize,
     botDiff: lobby.config?.botDiff || loadPrefs().botDiff || DEFAULT_BOT_DIFF,
-    ctrl: lobby.config?.ctrl || ctrlPref(),
+    ctrl: lobby.config?.ctrl || null,
     roomName: lobby.config?.roomName || '',
     battleConfig: lobby.battleConfig,
   };
@@ -3590,7 +3590,7 @@ function quickRestartGame() {
     isPublic: false,
     teamSize: session.teamSize || 1,
     botDiff: session.botDiff || DEFAULT_BOT_DIFF,
-    ctrl: session.ctrl || ctrlPref(),
+    ctrl: session.ctrl || null,
     battleConfig: session.battleConfig,
   });
 }
