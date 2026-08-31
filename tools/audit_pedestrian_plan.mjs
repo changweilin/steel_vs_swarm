@@ -33,6 +33,7 @@ if (argv.includes('--break-adjacent')) {
 }
 const M = await import(`data:text/javascript;base64,${Buffer.from(src).toString('base64')}`);
 let bioSrc = readSrc('public', 'js', 'biomes.js');
+const querySrc = readSrc('public', 'js', 'osmQuery.js');
 if (argv.includes('--break-collision')) {
   bioSrc = bioSrc.replace('blockers.push(...pedestrianEntrances.cols);', '// 入口碰撞接線已移除');
 }
@@ -134,8 +135,9 @@ sec('Ⅲ 道路／鐵道旁步道統一規劃');
 
 sec('Ⅳ 消費端單一接線');
 {
-  t('OSM features 快取已升版 4', /geoKey\('osmF', 4, bbox/.test(bioSrc));
-  t('查詢同時收 subway_entrance 與 station_entrance', /subway_entrance\|station_entrance/.test(bioSrc));
+  t('OSM features 快取版本與 query 共用縫接線', /OSM_FEATURE_QUERY_VERSION/.test(bioSrc)
+    && /geoKey\('osmF', OSM_FEATURE_QUERY_VERSION, bbox/.test(bioSrc));
+  t('查詢同時收 subway_entrance 與 station_entrance', /subway_entrance\|station_entrance/.test(querySrc));
   t('路網中繼保留 entrances 且有獨立上限', /MAX_ENTRANCE/.test(relaySrc)
     && /entrances: nodesOf\(f\.entrances, OSM_RELAY\.MAX_ENTRANCE\)/.test(relaySrc));
   t('地下移除先於 pruneRoads', bioSrc.indexOf('planPedestrianNetwork({') < bioSrc.indexOf('osmRoads = pruneRoads('));

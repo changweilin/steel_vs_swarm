@@ -1,0 +1,3195 @@
+{
+  "version": 1,
+  "results": [
+    {
+      "name": "berlin_bridge",
+      "bboxKm2": 0.4224032142135468,
+      "rawFeatureElements": 663,
+      "rawRoadElements": 576,
+      "areas": 467,
+      "roads": 576,
+      "report": {
+        "area": 467,
+        "building": 162,
+        "mapped": 315,
+        "exact": 245,
+        "parentFallback": 70,
+        "unmapped": 152,
+        "invalid": 152,
+        "capacity": 0,
+        "byFamily": {
+          "unknown": {
+            "count": 152,
+            "areaM2": 2368872.9513441967,
+            "generated": 0
+          },
+          "park": {
+            "count": 3,
+            "areaM2": 113997.09804498154,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 109,
+            "areaM2": 2262810.2385577136,
+            "generated": 0
+          },
+          "residential": {
+            "count": 79,
+            "areaM2": 740637.4494478668,
+            "generated": 0
+          },
+          "water": {
+            "count": 1,
+            "areaM2": 2798952.0665398943,
+            "generated": 0
+          },
+          "parking": {
+            "count": 77,
+            "areaM2": 37874.026246852416,
+            "generated": 0
+          },
+          "forestry": {
+            "count": 5,
+            "areaM2": 5283.083515931208,
+            "generated": 0
+          },
+          "utility": {
+            "count": 2,
+            "areaM2": 1084.2892594854202,
+            "generated": 0
+          },
+          "sports": {
+            "count": 14,
+            "areaM2": 29263.444831424735,
+            "generated": 0
+          },
+          "construction": {
+            "count": 3,
+            "areaM2": 62101.12708460194,
+            "generated": 0
+          },
+          "agriculture": {
+            "count": 1,
+            "areaM2": 2124.6903477399546,
+            "generated": 0
+          },
+          "transport": {
+            "count": 11,
+            "areaM2": 734432.0947962955,
+            "generated": 0
+          },
+          "industrial": {
+            "count": 5,
+            "areaM2": 33316.668078216986,
+            "generated": 0
+          },
+          "education": {
+            "count": 5,
+            "areaM2": 45677.57514955738,
+            "generated": 0
+          }
+        },
+        "byKind": {
+          "unknown": {
+            "count": 152,
+            "areaM2": 2368872.9513441967,
+            "generated": 0
+          },
+          "park": {
+            "count": 3,
+            "areaM2": 113997.09804498154,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 109,
+            "areaM2": 2262810.2385577136,
+            "generated": 0
+          },
+          "apartments": {
+            "count": 54,
+            "areaM2": 94865.62992371077,
+            "generated": 0
+          },
+          "water": {
+            "count": 1,
+            "areaM2": 2798952.0665398943,
+            "generated": 0
+          },
+          "parking": {
+            "count": 75,
+            "areaM2": 30871.270974563646,
+            "generated": 0
+          },
+          "wood": {
+            "count": 5,
+            "areaM2": 5283.083515931208,
+            "generated": 0
+          },
+          "residential": {
+            "count": 9,
+            "areaM2": 628757.3646544882,
+            "generated": 0
+          },
+          "power": {
+            "count": 2,
+            "areaM2": 1084.2892594854202,
+            "generated": 0
+          },
+          "sports": {
+            "count": 14,
+            "areaM2": 29263.444831424735,
+            "generated": 0
+          },
+          "house": {
+            "count": 16,
+            "areaM2": 17014.45486966789,
+            "generated": 0
+          },
+          "construction": {
+            "count": 3,
+            "areaM2": 62101.12708460194,
+            "generated": 0
+          },
+          "agriculture": {
+            "count": 1,
+            "areaM2": 2124.6903477399546,
+            "generated": 0
+          },
+          "station": {
+            "count": 9,
+            "areaM2": 69477.2823732479,
+            "generated": 0
+          },
+          "garage": {
+            "count": 2,
+            "areaM2": 7002.75527228877,
+            "generated": 0
+          },
+          "industrial": {
+            "count": 5,
+            "areaM2": 33316.668078216986,
+            "generated": 0
+          },
+          "school": {
+            "count": 4,
+            "areaM2": 11443.108471429106,
+            "generated": 0
+          },
+          "railway": {
+            "count": 2,
+            "areaM2": 664954.8124230476,
+            "generated": 0
+          },
+          "education": {
+            "count": 1,
+            "areaM2": 34234.46667812827,
+            "generated": 0
+          }
+        },
+        "gaps": [
+          {
+            "tagKey": "amenity",
+            "tagValue": "bicycle_parking",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 19,
+            "areaM2": 4611.397223710702,
+            "sourceIds": [
+              "way/1032378329",
+              "way/1081727218",
+              "way/1088804281",
+              "way/1088804282",
+              "way/1088804283"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "cafe",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 463.41669087889204,
+            "sourceIds": [
+              "way/740025150"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "fast_food",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 174.3965451218064,
+            "sourceIds": [
+              "way/740025157"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "fountain",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 4,
+            "areaM2": 200.10858513286803,
+            "sourceIds": [
+              "way/1329565229",
+              "way/1329565230",
+              "way/1329565231",
+              "way/1329565232"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "library",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 6023.55796680525,
+            "sourceIds": [
+              "way/739645082"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "mobility_hub",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 7,
+            "areaM2": 1309.1123920169275,
+            "sourceIds": [
+              "relation/19192600",
+              "way/1119479711",
+              "way/1379182328",
+              "way/1389745650",
+              "way/1390886388"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "nightclub",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 21009.494808273193,
+            "sourceIds": [
+              "way/342600129"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "pharmacy",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 784.6782615367129,
+            "sourceIds": [
+              "way/739645093"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "restaurant",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 1667.1321763539831,
+            "sourceIds": [
+              "way/747463527"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "container",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 20.314110124919807,
+            "sourceIds": [
+              "way/897762431"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "kiosk",
+            "reason": "unknown_building_value",
+            "fallback": "commercial",
+            "count": 3,
+            "areaM2": 155.29592310320004,
+            "sourceIds": [
+              "way/1222432200",
+              "way/751650279",
+              "way/751650280"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "roof",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 6,
+            "areaM2": 7997.747641237568,
+            "sourceIds": [
+              "way/291310007",
+              "way/345088322",
+              "way/739592385",
+              "way/739645107",
+              "way/751650277"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "service",
+            "reason": "unknown_building_value",
+            "fallback": "railway",
+            "count": 4,
+            "areaM2": 2464.493209965727,
+            "sourceIds": [
+              "way/182275189",
+              "way/278078598",
+              "way/296269689",
+              "way/296269690"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "shed",
+            "reason": "unknown_building_value",
+            "fallback": "commercial",
+            "count": 3,
+            "areaM2": 760.5913804269876,
+            "sourceIds": [
+              "way/1081727241",
+              "way/751650276",
+              "way/92225643"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "yes",
+            "reason": "unknown_building_value",
+            "fallback": "commercial",
+            "count": 16,
+            "areaM2": 71357.46841260372,
+            "sourceIds": [
+              "relation/2047866",
+              "relation/9061190",
+              "way/1163050430",
+              "way/1163115998",
+              "way/1163118431"
+            ]
+          },
+          {
+            "tagKey": "craft",
+            "tagValue": "photographer",
+            "reason": "unknown_area_value",
+            "fallback": "industrial",
+            "count": 1,
+            "areaM2": 130.07939325152347,
+            "sourceIds": [
+              "way/739645104"
+            ]
+          },
+          {
+            "tagKey": "historic",
+            "tagValue": "wall",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 1433.216763666307,
+            "sourceIds": [
+              "way/669475833"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "grass",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 19,
+            "areaM2": 22174.645545179483,
+            "sourceIds": [
+              "way/1047132720",
+              "way/1047132721",
+              "way/1047132722",
+              "way/1047133558",
+              "way/1047133559"
+            ]
+          },
+          {
+            "tagKey": "leisure",
+            "tagValue": "bleachers",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 561.8472544534889,
+            "sourceIds": [
+              "way/1068234982"
+            ]
+          },
+          {
+            "tagKey": "leisure",
+            "tagValue": "dance",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 1110.9879547906467,
+            "sourceIds": [
+              "way/740025161"
+            ]
+          },
+          {
+            "tagKey": "leisure",
+            "tagValue": "outdoor_seating",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 8655.296089355323,
+            "sourceIds": [
+              "way/682778458",
+              "way/740025168",
+              "way/843897698"
+            ]
+          },
+          {
+            "tagKey": "leisure",
+            "tagValue": "playground",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 417.49304451914213,
+            "sourceIds": [
+              "way/1085776967"
+            ]
+          },
+          {
+            "tagKey": "leisure",
+            "tagValue": "track",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1091062889",
+              "way/1091062897"
+            ]
+          },
+          {
+            "tagKey": "man_made",
+            "tagValue": "bridge",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 33058.721928097366,
+            "sourceIds": [
+              "way/335239771",
+              "way/639962839"
+            ]
+          },
+          {
+            "tagKey": "man_made",
+            "tagValue": "pier",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 398.99299533717567,
+            "sourceIds": [
+              "way/198293418"
+            ]
+          },
+          {
+            "tagKey": null,
+            "tagValue": null,
+            "reason": "unknown_building_value",
+            "fallback": "sports",
+            "count": 15,
+            "areaM2": 15216.758326239062,
+            "sourceIds": [
+              "way/1091062891",
+              "way/1091062895",
+              "way/1124378173",
+              "way/1163050431",
+              "way/1163112919"
+            ]
+          },
+          {
+            "tagKey": "power",
+            "tagValue": "cable",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/736462279"
+            ]
+          },
+          {
+            "tagKey": "power",
+            "tagValue": "generator",
+            "reason": "unknown_area_value",
+            "fallback": "power",
+            "count": 2,
+            "areaM2": 1084.2892594854202,
+            "sourceIds": [
+              "way/1083514459",
+              "way/1083514460"
+            ]
+          },
+          {
+            "tagKey": "public_transport",
+            "tagValue": "platform",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 9,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/383776463",
+              "way/383776464",
+              "way/383776471",
+              "way/383776472",
+              "way/383776473"
+            ]
+          },
+          {
+            "tagKey": "public_transport",
+            "tagValue": "platform",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 8,
+            "areaM2": 21073.58796269695,
+            "sourceIds": [
+              "relation/11765290",
+              "relation/11765307",
+              "way/171197663",
+              "way/171197664",
+              "way/379339107"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "abandoned",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1125299948",
+              "way/1132547431"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "disused",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 243.24446005964273,
+            "sourceIds": [
+              "way/321754189"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "light_rail",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 6,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/313040517",
+              "way/371846330",
+              "way/440405446",
+              "way/616271026",
+              "way/654481301"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "light_rail",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 13,
+            "areaM2": 104000.45491136669,
+            "sourceIds": [
+              "way/222917861",
+              "way/222917863",
+              "way/517041117",
+              "way/616271022",
+              "way/616271023"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "proposed",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 1928610.9844548241,
+            "sourceIds": [
+              "way/1157405740"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "rail",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 12,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1013584597",
+              "way/1036530165",
+              "way/200158735",
+              "way/335244075",
+              "way/335244076"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "rail",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 19,
+            "areaM2": 129882.88885437605,
+            "sourceIds": [
+              "way/1015954112",
+              "way/1036530164",
+              "way/1036530168",
+              "way/1036530169",
+              "way/1036530172"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "razed",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1104204158",
+              "way/448150628"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 29,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/199887587",
+              "way/199887589",
+              "way/199887590",
+              "way/206804828",
+              "way/26252974"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 23,
+            "areaM2": 29436.414000266985,
+            "sourceIds": [
+              "way/10746041",
+              "way/10746092",
+              "way/10746264",
+              "way/10746336",
+              "way/142925471"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "tram",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 23,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/11273262",
+              "way/1354182312",
+              "way/1354182314",
+              "way/1354182315",
+              "way/1354182318"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "tram",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 14,
+            "areaM2": 28472.26307440808,
+            "sourceIds": [
+              "way/1116067498",
+              "way/1354182313",
+              "way/1354182316",
+              "way/1354182317",
+              "way/1354182319"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "beauty",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 949.6468679779218,
+            "sourceIds": [
+              "way/739645085"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "books",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 800.0313998199417,
+            "sourceIds": [
+              "way/740025173"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "clothes",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 12,
+            "areaM2": 22558.42508411956,
+            "sourceIds": [
+              "way/739592364",
+              "way/739592369",
+              "way/739592370",
+              "way/739592373",
+              "way/739592376"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "electronics",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 5864.6057747211635,
+            "sourceIds": [
+              "way/739645102"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "gift",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 340.58616565665943,
+            "sourceIds": [
+              "way/739592384"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "hairdresser",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 367.94488887287116,
+            "sourceIds": [
+              "way/740025156"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "interior_decoration",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 1423.6420684802706,
+            "sourceIds": [
+              "way/739592383"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "jewelry",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 452.84465358973466,
+            "sourceIds": [
+              "way/739592377"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "mobile_phone",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 358.69636944656304,
+            "sourceIds": [
+              "way/740025169"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "nutrition_supplements",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 423.8944878359507,
+            "sourceIds": [
+              "way/739677593"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "shoes",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 2115.8456720952054,
+            "sourceIds": [
+              "way/739645084"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "sports",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 3934.802942703169,
+            "sourceIds": [
+              "way/739645094"
+            ]
+          },
+          {
+            "tagKey": "shop",
+            "tagValue": "vacant",
+            "reason": "unknown_area_value",
+            "fallback": "commercial",
+            "count": 1,
+            "areaM2": 432.14536409696666,
+            "sourceIds": [
+              "way/740025163"
+            ]
+          },
+          {
+            "tagKey": "sport",
+            "tagValue": "cycling",
+            "reason": "unknown_area_value",
+            "fallback": "sports",
+            "count": 1,
+            "areaM2": 13071.34009024969,
+            "sourceIds": [
+              "way/1091062894"
+            ]
+          },
+          {
+            "tagKey": "tourism",
+            "tagValue": "attraction",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 18264.433874396724,
+            "sourceIds": [
+              "way/288514442"
+            ]
+          },
+          {
+            "tagKey": "tourism",
+            "tagValue": "gallery",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 1501.353474046511,
+            "sourceIds": [
+              "relation/6807791"
+            ]
+          }
+        ]
+      },
+      "relationCount": 18,
+      "holeCount": 24,
+      "pointFeatures": {
+        "rails": 190,
+        "waters": 0,
+        "boundaries": 0,
+        "falls": 0,
+        "crossings": 4,
+        "pois": 2,
+        "entrances": 3
+      },
+      "relayBytes": 596482,
+      "relayDrop": 110,
+      "routeCoverage": {
+        "applicable": false,
+        "points": 0,
+        "misses": 0,
+        "missingPoints": []
+      }
+    },
+    {
+      "name": "london_water",
+      "bboxKm2": 0.528560118200472,
+      "rawFeatureElements": 775,
+      "rawRoadElements": 837,
+      "areas": 610,
+      "roads": 837,
+      "report": {
+        "area": 610,
+        "building": 495,
+        "mapped": 423,
+        "exact": 89,
+        "parentFallback": 334,
+        "unmapped": 187,
+        "invalid": 187,
+        "capacity": 0,
+        "byFamily": {
+          "unknown": {
+            "count": 187,
+            "areaM2": 2255637.1902087308,
+            "generated": 0
+          },
+          "residential": {
+            "count": 302,
+            "areaM2": 301976.3589949039,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 25,
+            "areaM2": 67256.2073268529,
+            "generated": 0
+          },
+          "parking": {
+            "count": 13,
+            "areaM2": 101087.7680060224,
+            "generated": 0
+          },
+          "park": {
+            "count": 22,
+            "areaM2": 391806.455189078,
+            "generated": 0
+          },
+          "agriculture": {
+            "count": 2,
+            "areaM2": 7126.115160610818,
+            "generated": 0
+          },
+          "religion": {
+            "count": 33,
+            "areaM2": 40356.712687297026,
+            "generated": 0
+          },
+          "healthcare": {
+            "count": 10,
+            "areaM2": 372031.8231099533,
+            "generated": 0
+          },
+          "forestry": {
+            "count": 1,
+            "areaM2": 97150.5671219588,
+            "generated": 0
+          },
+          "education": {
+            "count": 2,
+            "areaM2": 15543.636336782482,
+            "generated": 0
+          },
+          "water": {
+            "count": 5,
+            "areaM2": 3424.544582977158,
+            "generated": 0
+          },
+          "natural": {
+            "count": 3,
+            "areaM2": 37233.303997456795,
+            "generated": 0
+          },
+          "civic": {
+            "count": 3,
+            "areaM2": 12013.84655213698,
+            "generated": 0
+          },
+          "sports": {
+            "count": 2,
+            "areaM2": 17226.576663195854,
+            "generated": 0
+          }
+        },
+        "byKind": {
+          "unknown": {
+            "count": 187,
+            "areaM2": 2255637.1902087308,
+            "generated": 0
+          },
+          "apartments": {
+            "count": 4,
+            "areaM2": 14274.607176317855,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 25,
+            "areaM2": 67256.2073268529,
+            "generated": 0
+          },
+          "residential": {
+            "count": 2,
+            "areaM2": 99502.592531673,
+            "generated": 0
+          },
+          "house": {
+            "count": 296,
+            "areaM2": 188199.1592869132,
+            "generated": 0
+          },
+          "parking": {
+            "count": 13,
+            "areaM2": 101087.7680060224,
+            "generated": 0
+          },
+          "park": {
+            "count": 22,
+            "areaM2": 391806.455189078,
+            "generated": 0
+          },
+          "agriculture": {
+            "count": 1,
+            "areaM2": 6642.458008873844,
+            "generated": 0
+          },
+          "temple": {
+            "count": 31,
+            "areaM2": 12983.035830428471,
+            "generated": 0
+          },
+          "orchard": {
+            "count": 1,
+            "areaM2": 483.6571517369739,
+            "generated": 0
+          },
+          "hospital": {
+            "count": 10,
+            "areaM2": 372031.8231099533,
+            "generated": 0
+          },
+          "wood": {
+            "count": 1,
+            "areaM2": 97150.5671219588,
+            "generated": 0
+          },
+          "school": {
+            "count": 2,
+            "areaM2": 15543.636336782482,
+            "generated": 0
+          },
+          "wetland": {
+            "count": 1,
+            "areaM2": 1684.4570857575454,
+            "generated": 0
+          },
+          "beach": {
+            "count": 3,
+            "areaM2": 37233.303997456795,
+            "generated": 0
+          },
+          "water": {
+            "count": 4,
+            "areaM2": 1740.0874972196125,
+            "generated": 0
+          },
+          "civic": {
+            "count": 3,
+            "areaM2": 12013.84655213698,
+            "generated": 0
+          },
+          "church": {
+            "count": 2,
+            "areaM2": 27373.676856868562,
+            "generated": 0
+          },
+          "sports": {
+            "count": 2,
+            "areaM2": 17226.576663195854,
+            "generated": 0
+          }
+        },
+        "gaps": [
+          {
+            "tagKey": "amenity",
+            "tagValue": "bicycle_parking",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/863590099"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "bicycle_rental",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 105.59849121313891,
+            "sourceIds": [
+              "way/1083766765"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "waste_transfer_station",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 5267.076057019476,
+            "sourceIds": [
+              "way/344243443"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "flats",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 3416.343953987918,
+            "sourceIds": [
+              "way/23485680"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "tower",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 213.67247262275487,
+            "sourceIds": [
+              "way/979748251"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "yes",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 168,
+            "areaM2": 116713.97081512396,
+            "sourceIds": [
+              "way/106485306",
+              "way/106485317",
+              "way/106485320",
+              "way/106485321",
+              "way/107674934"
+            ]
+          },
+          {
+            "tagKey": "building:part",
+            "tagValue": "yes",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 39,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1127232166",
+              "way/1139769312",
+              "way/1139769313",
+              "way/1139769314",
+              "way/1139769315"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "education",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 29658.205173271934,
+            "sourceIds": [
+              "way/1413436478"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "flowerbed",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 661.1872520795077,
+            "sourceIds": [
+              "way/1444384324",
+              "way/166758982"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "governmental",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 646003.9953864561,
+            "sourceIds": [
+              "way/633493234",
+              "way/633493237",
+              "way/633493242"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "grass",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 29,
+            "areaM2": 60357.00383934618,
+            "sourceIds": [
+              "way/1083766758",
+              "way/1083766759",
+              "way/1083766764",
+              "way/1083785879",
+              "way/1083785882"
+            ]
+          },
+          {
+            "tagKey": "leisure",
+            "tagValue": "playground",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 11316.338358785637,
+            "sourceIds": [
+              "way/4260006"
+            ]
+          },
+          {
+            "tagKey": "man_made",
+            "tagValue": "courtyard",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 10,
+            "areaM2": 8409.963241779024,
+            "sourceIds": [
+              "way/1127604181",
+              "way/367642690",
+              "way/367642691",
+              "way/367642692",
+              "way/367642693"
+            ]
+          },
+          {
+            "tagKey": "man_made",
+            "tagValue": "pier",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 6018.446366621007,
+            "sourceIds": [
+              "way/204068877"
+            ]
+          },
+          {
+            "tagKey": "man_made",
+            "tagValue": "pillar",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/502463725"
+            ]
+          },
+          {
+            "tagKey": "man_made",
+            "tagValue": "pipeline",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1124321225"
+            ]
+          },
+          {
+            "tagKey": "natural",
+            "tagValue": "grassland",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 554.6886805534887,
+            "sourceIds": [
+              "way/1208838339"
+            ]
+          },
+          {
+            "tagKey": null,
+            "tagValue": null,
+            "reason": "unknown_building_value",
+            "fallback": "park",
+            "count": 288,
+            "areaM2": 174312.1732968138,
+            "sourceIds": [
+              "way/107674929",
+              "way/1087347196",
+              "way/1126495302",
+              "way/1127232167",
+              "way/1127232168"
+            ]
+          },
+          {
+            "tagKey": "public_transport",
+            "tagValue": "platform",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 5,
+            "areaM2": 8593.004043749628,
+            "sourceIds": [
+              "way/1002105974",
+              "way/162514000",
+              "way/162514001",
+              "way/162514002",
+              "way/162514003"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 13,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/110362962",
+              "way/110637929",
+              "way/1321862245",
+              "way/153052860",
+              "way/160478994"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 1359924.1830890365,
+            "sourceIds": [
+              "way/110362961",
+              "way/166702176",
+              "way/952036024"
+            ]
+          },
+          {
+            "tagKey": "tourism",
+            "tagValue": "artwork",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 172.36745399207211,
+            "sourceIds": [
+              "way/231879495",
+              "way/583423753"
+            ]
+          },
+          {
+            "tagKey": "tourism",
+            "tagValue": "attraction",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/216998718",
+              "way/920237508"
+            ]
+          },
+          {
+            "tagKey": "tourism",
+            "tagValue": "attraction",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 22002.360972691848,
+            "sourceIds": [
+              "way/256427111",
+              "way/920237507"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "river",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 4,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/857284754",
+              "way/857284757"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "river",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 291.109549732646,
+            "sourceIds": [
+              "way/198012868"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "stream",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 4,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1059661300",
+              "way/1059661301"
+            ]
+          }
+        ]
+      },
+      "relationCount": 0,
+      "holeCount": 0,
+      "pointFeatures": {
+        "rails": 21,
+        "waters": 9,
+        "boundaries": 45,
+        "falls": 0,
+        "crossings": 0,
+        "pois": 1,
+        "entrances": 6
+      },
+      "relayBytes": 833185,
+      "relayDrop": 5,
+      "routeCoverage": {
+        "applicable": false,
+        "verified": false,
+        "reason": "venueConfig 使用 synthetic fallback，沒有 baked OSM 兵線可比對",
+        "points": 30,
+        "misses": 10,
+        "missingPoints": [
+          {
+            "index": 3,
+            "point": [
+              51.50142981099605,
+              -0.12200638170956714
+            ],
+            "distanceM": 107.37010782273056,
+            "nearestRoad": {
+              "type": "way",
+              "id": 256764380,
+              "highway": "footway"
+            }
+          },
+          {
+            "index": 9,
+            "point": [
+              51.49931925069694,
+              -0.11884486676576694
+            ],
+            "distanceM": 91.68253340630389,
+            "nearestRoad": {
+              "type": "way",
+              "id": 822377420,
+              "highway": "footway"
+            }
+          },
+          {
+            "index": 14,
+            "point": [
+              51.500073877375975,
+              -0.12215981957820396
+            ],
+            "distanceM": 152.53542796829458,
+            "nearestRoad": {
+              "type": "way",
+              "id": 256760490,
+              "highway": "footway"
+            }
+          },
+          {
+            "index": 15,
+            "point": [
+              51.49988936374629,
+              -0.12143576214847947
+            ],
+            "distanceM": 181.66009145192174,
+            "nearestRoad": {
+              "type": "way",
+              "id": 129861228,
+              "highway": "footway",
+              "name": "Albert Embankment"
+            }
+          },
+          {
+            "index": 19,
+            "point": [
+              51.49931925069694,
+              -0.11884486676576694
+            ],
+            "distanceM": 91.68253340630389,
+            "nearestRoad": {
+              "type": "way",
+              "id": 822377420,
+              "highway": "footway"
+            }
+          },
+          {
+            "index": 24,
+            "point": [
+              51.49909320594777,
+              -0.1228944276389713
+            ],
+            "distanceM": 142.55577325614212,
+            "nearestRoad": {
+              "type": "way",
+              "id": 367645111,
+              "highway": "pedestrian",
+              "name": "The Terrace"
+            }
+          },
+          {
+            "index": 25,
+            "point": [
+              51.49890869231809,
+              -0.12217037020924679
+            ],
+            "distanceM": 247.09000224627462,
+            "nearestRoad": {
+              "type": "way",
+              "id": 367645111,
+              "highway": "pedestrian",
+              "name": "The Terrace"
+            }
+          },
+          {
+            "index": 26,
+            "point": [
+              51.499224853053285,
+              -0.12107126420190281
+            ],
+            "distanceM": 112.75275347448908,
+            "nearestRoad": {
+              "type": "way",
+              "id": 129861228,
+              "highway": "footway",
+              "name": "Albert Embankment"
+            }
+          },
+          {
+            "index": 28,
+            "point": [
+              51.49933517137793,
+              -0.1192640778738829
+            ],
+            "distanceM": 104.34341879200483,
+            "nearestRoad": {
+              "type": "way",
+              "id": 564849146,
+              "highway": "footway"
+            }
+          },
+          {
+            "index": 29,
+            "point": [
+              51.49931925069694,
+              -0.11884486676576694
+            ],
+            "distanceM": 91.68253340630389,
+            "nearestRoad": {
+              "type": "way",
+              "id": 822377420,
+              "highway": "footway"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ntu_campus_small",
+      "bboxKm2": 0.314427141516491,
+      "rawFeatureElements": 997,
+      "rawRoadElements": 418,
+      "areas": 779,
+      "roads": 418,
+      "report": {
+        "area": 779,
+        "building": 378,
+        "mapped": 481,
+        "exact": 328,
+        "parentFallback": 153,
+        "unmapped": 298,
+        "invalid": 298,
+        "capacity": 0,
+        "byFamily": {
+          "park": {
+            "count": 201,
+            "areaM2": 104503.13103188033,
+            "generated": 0
+          },
+          "education": {
+            "count": 137,
+            "areaM2": 250600.6947206969,
+            "generated": 0
+          },
+          "residential": {
+            "count": 81,
+            "areaM2": 168087.54610257474,
+            "generated": 0
+          },
+          "unknown": {
+            "count": 298,
+            "areaM2": 392374.8463580355,
+            "generated": 0
+          },
+          "parking": {
+            "count": 8,
+            "areaM2": 16162.321909938708,
+            "generated": 0
+          },
+          "water": {
+            "count": 10,
+            "areaM2": 4257.745766267545,
+            "generated": 0
+          },
+          "agriculture": {
+            "count": 27,
+            "areaM2": 44603.719466303744,
+            "generated": 0
+          },
+          "industrial": {
+            "count": 1,
+            "areaM2": 1986.6592365347005,
+            "generated": 0
+          },
+          "forestry": {
+            "count": 1,
+            "areaM2": 540.9804760462471,
+            "generated": 0
+          },
+          "natural": {
+            "count": 2,
+            "areaM2": 1488.672205451821,
+            "generated": 0
+          },
+          "healthcare": {
+            "count": 7,
+            "areaM2": 215990.1533791558,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 4,
+            "areaM2": 8534.429299648515,
+            "generated": 0
+          },
+          "construction": {
+            "count": 1,
+            "areaM2": 8574.96451686262,
+            "generated": 0
+          },
+          "sports": {
+            "count": 1,
+            "areaM2": 1667.7676759364585,
+            "generated": 0
+          }
+        },
+        "byKind": {
+          "park": {
+            "count": 201,
+            "areaM2": 104503.13103188033,
+            "generated": 0
+          },
+          "school": {
+            "count": 137,
+            "areaM2": 250600.6947206969,
+            "generated": 0
+          },
+          "apartments": {
+            "count": 11,
+            "areaM2": 29663.963774726144,
+            "generated": 0
+          },
+          "unknown": {
+            "count": 298,
+            "areaM2": 392374.8463580355,
+            "generated": 0
+          },
+          "parking": {
+            "count": 7,
+            "areaM2": 16021.970981811408,
+            "generated": 0
+          },
+          "water": {
+            "count": 10,
+            "areaM2": 4257.745766267545,
+            "generated": 0
+          },
+          "agriculture": {
+            "count": 4,
+            "areaM2": 24194.01601144287,
+            "generated": 0
+          },
+          "farm": {
+            "count": 23,
+            "areaM2": 20409.70345486088,
+            "generated": 0
+          },
+          "industrial": {
+            "count": 1,
+            "areaM2": 1986.6592365347005,
+            "generated": 0
+          },
+          "forest": {
+            "count": 1,
+            "areaM2": 540.9804760462471,
+            "generated": 0
+          },
+          "rock": {
+            "count": 2,
+            "areaM2": 1488.672205451821,
+            "generated": 0
+          },
+          "hospital": {
+            "count": 7,
+            "areaM2": 215990.1533791558,
+            "generated": 0
+          },
+          "house": {
+            "count": 69,
+            "areaM2": 26782.76319502621,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 4,
+            "areaM2": 8534.429299648515,
+            "generated": 0
+          },
+          "garage": {
+            "count": 1,
+            "areaM2": 140.3509281273,
+            "generated": 0
+          },
+          "residential": {
+            "count": 1,
+            "areaM2": 111640.81913282239,
+            "generated": 0
+          },
+          "construction": {
+            "count": 1,
+            "areaM2": 8574.96451686262,
+            "generated": 0
+          },
+          "sports": {
+            "count": 1,
+            "areaM2": 1667.7676759364585,
+            "generated": 0
+          }
+        },
+        "gaps": [
+          {
+            "tagKey": "amenity",
+            "tagValue": "bicycle_parking",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 13,
+            "areaM2": 17909.119264601326,
+            "sourceIds": [
+              "way/1052271469",
+              "way/1052281792",
+              "way/1052496716",
+              "way/1052496719",
+              "way/1052496720"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "roof",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 35,
+            "areaM2": 16851.940702681357,
+            "sourceIds": [
+              "way/1052301473",
+              "way/1052301488",
+              "way/1052304742",
+              "way/1052496718",
+              "way/1052496735"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "steps",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 47.63629154177033,
+            "sourceIds": [
+              "way/1303506181"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "yes",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 178,
+            "areaM2": 183063.38979196787,
+            "sourceIds": [
+              "way/1303202940",
+              "way/1303202941",
+              "way/1303202943",
+              "way/1303202946",
+              "way/1303202947"
+            ]
+          },
+          {
+            "tagKey": "building:part",
+            "tagValue": "yes",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1323394903"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "grass",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 152,
+            "areaM2": 245844.5256268541,
+            "sourceIds": [
+              "way/1052271445",
+              "way/1052279965",
+              "way/1052279966",
+              "way/1052279969",
+              "way/1052279970"
+            ]
+          },
+          {
+            "tagKey": "man_made",
+            "tagValue": "street_cabinet",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 121.45461652406811,
+            "sourceIds": [
+              "way/1052496697",
+              "way/1052496700"
+            ]
+          },
+          {
+            "tagKey": "man_made",
+            "tagValue": "water_tower",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 130.61011545233487,
+            "sourceIds": [
+              "way/192626462"
+            ]
+          },
+          {
+            "tagKey": "natural",
+            "tagValue": "tree_row",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 10,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/405513610",
+              "way/405513611",
+              "way/405513612",
+              "way/405513613",
+              "way/544527114"
+            ]
+          },
+          {
+            "tagKey": "natural",
+            "tagValue": "tree_row",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 116.89042430651716,
+            "sourceIds": [
+              "way/544527115"
+            ]
+          },
+          {
+            "tagKey": null,
+            "tagValue": null,
+            "reason": "unknown_building_value",
+            "fallback": "park",
+            "count": 65,
+            "areaM2": 21496.916544685064,
+            "sourceIds": [
+              "way/1052496731",
+              "way/1052496746",
+              "way/1291566860",
+              "way/1291566861",
+              "way/1291566862"
+            ]
+          },
+          {
+            "tagKey": "power",
+            "tagValue": "cable",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1187219540"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "drain",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 10,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1052288232",
+              "way/1052288234",
+              "way/1052288245",
+              "way/1323427636",
+              "way/1436337024"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "drain",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 580.2944220480531,
+            "sourceIds": [
+              "way/1052281787",
+              "way/1052281788",
+              "way/1052288233"
+            ]
+          }
+        ]
+      },
+      "relationCount": 0,
+      "holeCount": 0,
+      "pointFeatures": {
+        "rails": 0,
+        "waters": 16,
+        "boundaries": 0,
+        "falls": 0,
+        "crossings": 0,
+        "pois": 0,
+        "entrances": 0
+      },
+      "relayBytes": 526470,
+      "relayDrop": 0,
+      "routeCoverage": {
+        "applicable": false,
+        "points": 0,
+        "misses": 0,
+        "missingPoints": []
+      }
+    },
+    {
+      "name": "roppongi_underpass",
+      "bboxKm2": 2.7911627594794344,
+      "rawFeatureElements": 2259,
+      "rawRoadElements": 1835,
+      "areas": 1800,
+      "roads": 1835,
+      "report": {
+        "area": 1800,
+        "building": 1708,
+        "mapped": 163,
+        "exact": 149,
+        "parentFallback": 14,
+        "unmapped": 1637,
+        "invalid": 1637,
+        "capacity": 0,
+        "byFamily": {
+          "commercial": {
+            "count": 22,
+            "areaM2": 156990.91900911432,
+            "generated": 0
+          },
+          "residential": {
+            "count": 68,
+            "areaM2": 187867.3365106304,
+            "generated": 0
+          },
+          "park": {
+            "count": 13,
+            "areaM2": 316060.12663288787,
+            "generated": 0
+          },
+          "unknown": {
+            "count": 1637,
+            "areaM2": 1783767.1770830255,
+            "generated": 0
+          },
+          "education": {
+            "count": 4,
+            "areaM2": 88888.21261007457,
+            "generated": 0
+          },
+          "construction": {
+            "count": 10,
+            "areaM2": 76478.38209341743,
+            "generated": 0
+          },
+          "culture": {
+            "count": 2,
+            "areaM2": 62647.73157807674,
+            "generated": 0
+          },
+          "forestry": {
+            "count": 11,
+            "areaM2": 98063.33903681312,
+            "generated": 0
+          },
+          "parking": {
+            "count": 20,
+            "areaM2": 52120.71671215784,
+            "generated": 0
+          },
+          "water": {
+            "count": 3,
+            "areaM2": 10377.07423196287,
+            "generated": 0
+          },
+          "cemetery": {
+            "count": 5,
+            "areaM2": 10381.164696542344,
+            "generated": 0
+          },
+          "religion": {
+            "count": 3,
+            "areaM2": 4037.828202649205,
+            "generated": 0
+          },
+          "sports": {
+            "count": 1,
+            "areaM2": 798.4940111316973,
+            "generated": 0
+          },
+          "civic": {
+            "count": 1,
+            "areaM2": 2367.2550161856343,
+            "generated": 0
+          }
+        },
+        "byKind": {
+          "commercial": {
+            "count": 22,
+            "areaM2": 156990.91900911432,
+            "generated": 0
+          },
+          "residential": {
+            "count": 3,
+            "areaM2": 86521.58803986205,
+            "generated": 0
+          },
+          "park": {
+            "count": 13,
+            "areaM2": 316060.12663288787,
+            "generated": 0
+          },
+          "unknown": {
+            "count": 1637,
+            "areaM2": 1783767.1770830255,
+            "generated": 0
+          },
+          "education": {
+            "count": 1,
+            "areaM2": 53011.074396740034,
+            "generated": 0
+          },
+          "construction": {
+            "count": 10,
+            "areaM2": 76478.38209341743,
+            "generated": 0
+          },
+          "museum": {
+            "count": 2,
+            "areaM2": 62647.73157807674,
+            "generated": 0
+          },
+          "forest": {
+            "count": 9,
+            "areaM2": 93326.57241796207,
+            "generated": 0
+          },
+          "school": {
+            "count": 3,
+            "areaM2": 35877.13821333453,
+            "generated": 0
+          },
+          "house": {
+            "count": 22,
+            "areaM2": 43759.677284757025,
+            "generated": 0
+          },
+          "parking": {
+            "count": 20,
+            "areaM2": 52120.71671215784,
+            "generated": 0
+          },
+          "water": {
+            "count": 3,
+            "areaM2": 10377.07423196287,
+            "generated": 0
+          },
+          "apartments": {
+            "count": 43,
+            "areaM2": 57586.071186011344,
+            "generated": 0
+          },
+          "cemetery": {
+            "count": 5,
+            "areaM2": 10381.164696542344,
+            "generated": 0
+          },
+          "temple": {
+            "count": 3,
+            "areaM2": 4037.828202649205,
+            "generated": 0
+          },
+          "sports": {
+            "count": 1,
+            "areaM2": 798.4940111316973,
+            "generated": 0
+          },
+          "civic": {
+            "count": 1,
+            "areaM2": 2367.2550161856343,
+            "generated": 0
+          },
+          "wood": {
+            "count": 2,
+            "areaM2": 4736.766618851048,
+            "generated": 0
+          }
+        },
+        "gaps": [
+          {
+            "tagKey": "aeroway",
+            "tagValue": "helipad",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 22509.775786095677,
+            "sourceIds": [
+              "way/103425089"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "grave_yard",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 13494.630114916014,
+            "sourceIds": [
+              "way/140349249",
+              "way/140349250",
+              "way/146182085"
+            ]
+          },
+          {
+            "tagKey": "area",
+            "tagValue": "capacity",
+            "reason": "capacity",
+            "fallback": null,
+            "count": 191,
+            "areaM2": 0,
+            "sourceIds": []
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "roof",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 6912.296385106543,
+            "sourceIds": [
+              "way/103425083"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "yes",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 1612,
+            "areaM2": 1211110.9685939706,
+            "sourceIds": [
+              "way/109684605",
+              "way/109684607",
+              "way/109684608",
+              "way/109684609",
+              "way/109684611"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "churchyard",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 403.3447025882415,
+            "sourceIds": [
+              "way/147604504"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "grass",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1075497588",
+              "way/1075503380",
+              "way/1075503382"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "grass",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 11,
+            "areaM2": 4847.6075561442485,
+            "sourceIds": [
+              "way/1075497587",
+              "way/1075497589",
+              "way/1075497590",
+              "way/1075497591",
+              "way/1075497592"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "proposed",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 373691.5200040733,
+            "sourceIds": [
+              "way/1194198565",
+              "way/1228260906"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "recreation_ground",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 15507.816059566103,
+            "sourceIds": [
+              "way/146701747"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "religious",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 2607.131421223574,
+            "sourceIds": [
+              "way/147399667",
+              "way/147399682"
+            ]
+          },
+          {
+            "tagKey": "natural",
+            "tagValue": "cliff",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/219099488"
+            ]
+          },
+          {
+            "tagKey": "natural",
+            "tagValue": "tree_row",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1075504715"
+            ]
+          },
+          {
+            "tagKey": "natural",
+            "tagValue": "tree_row",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 86.53622560855001,
+            "sourceIds": [
+              "way/1308566155"
+            ]
+          },
+          {
+            "tagKey": null,
+            "tagValue": null,
+            "reason": "unknown_building_value",
+            "fallback": "construction",
+            "count": 14,
+            "areaM2": 24391.47318953507,
+            "sourceIds": [
+              "way/146193800",
+              "way/146193807",
+              "way/146193818",
+              "way/146605086",
+              "way/146609917"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 13,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/662520365",
+              "way/662520366",
+              "way/663518285",
+              "way/664535005",
+              "way/665380150"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 2951.3419914697297,
+            "sourceIds": [
+              "way/1427490455"
+            ]
+          },
+          {
+            "tagKey": "tourism",
+            "tagValue": "museum",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 129644.20824226402,
+            "sourceIds": [
+              "way/103425086"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "river",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1483757001"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "stream",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/560261476"
+            ]
+          }
+        ]
+      },
+      "relationCount": 0,
+      "holeCount": 0,
+      "pointFeatures": {
+        "rails": 31,
+        "waters": 3,
+        "boundaries": 151,
+        "falls": 0,
+        "crossings": 0,
+        "pois": 30,
+        "entrances": 36
+      },
+      "relayBytes": 1402093,
+      "relayDrop": 0,
+      "routeCoverage": {
+        "applicable": true,
+        "verified": true,
+        "points": 46,
+        "misses": 0,
+        "missingPoints": []
+      }
+    },
+    {
+      "name": "shibuya_dense",
+      "bboxKm2": 2.540802887040508,
+      "rawFeatureElements": 2359,
+      "rawRoadElements": 1849,
+      "areas": 1800,
+      "roads": 1849,
+      "report": {
+        "area": 1800,
+        "building": 1719,
+        "mapped": 157,
+        "exact": 144,
+        "parentFallback": 13,
+        "unmapped": 1643,
+        "invalid": 1643,
+        "capacity": 0,
+        "byFamily": {
+          "unknown": {
+            "count": 1643,
+            "areaM2": 1011938.8472438314,
+            "generated": 0
+          },
+          "sports": {
+            "count": 3,
+            "areaM2": 83578.87264252623,
+            "generated": 0
+          },
+          "civic": {
+            "count": 2,
+            "areaM2": 11621.84996647085,
+            "generated": 0
+          },
+          "industrial": {
+            "count": 2,
+            "areaM2": 32837.86627171101,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 55,
+            "areaM2": 108831.44340972979,
+            "generated": 0
+          },
+          "park": {
+            "count": 6,
+            "areaM2": 20511.387322117545,
+            "generated": 0
+          },
+          "residential": {
+            "count": 57,
+            "areaM2": 111696.19941357357,
+            "generated": 0
+          },
+          "forestry": {
+            "count": 6,
+            "areaM2": 139.75774979393464,
+            "generated": 0
+          },
+          "construction": {
+            "count": 7,
+            "areaM2": 66460.93236137168,
+            "generated": 0
+          },
+          "water": {
+            "count": 1,
+            "areaM2": 9.878248660214012,
+            "generated": 0
+          },
+          "education": {
+            "count": 6,
+            "areaM2": 8122.893159494015,
+            "generated": 0
+          },
+          "parking": {
+            "count": 7,
+            "areaM2": 7087.505387551977,
+            "generated": 0
+          },
+          "healthcare": {
+            "count": 3,
+            "areaM2": 928.7996886292203,
+            "generated": 0
+          },
+          "culture": {
+            "count": 1,
+            "areaM2": 328.02230958652217,
+            "generated": 0
+          },
+          "religion": {
+            "count": 1,
+            "areaM2": 118.50000622553489,
+            "generated": 0
+          }
+        },
+        "byKind": {
+          "unknown": {
+            "count": 1643,
+            "areaM2": 1011938.8472438314,
+            "generated": 0
+          },
+          "stadium": {
+            "count": 2,
+            "areaM2": 56254.171552825304,
+            "generated": 0
+          },
+          "civic": {
+            "count": 2,
+            "areaM2": 11621.84996647085,
+            "generated": 0
+          },
+          "industrial": {
+            "count": 2,
+            "areaM2": 32837.86627171101,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 55,
+            "areaM2": 108831.44340972979,
+            "generated": 0
+          },
+          "park": {
+            "count": 6,
+            "areaM2": 20511.387322117545,
+            "generated": 0
+          },
+          "residential": {
+            "count": 14,
+            "areaM2": 5453.930247831508,
+            "generated": 0
+          },
+          "wood": {
+            "count": 6,
+            "areaM2": 139.75774979393464,
+            "generated": 0
+          },
+          "construction": {
+            "count": 7,
+            "areaM2": 66460.93236137168,
+            "generated": 0
+          },
+          "house": {
+            "count": 15,
+            "areaM2": 68072.04044267976,
+            "generated": 0
+          },
+          "water": {
+            "count": 1,
+            "areaM2": 9.878248660214012,
+            "generated": 0
+          },
+          "apartments": {
+            "count": 28,
+            "areaM2": 38170.22872306226,
+            "generated": 0
+          },
+          "school": {
+            "count": 6,
+            "areaM2": 8122.893159494015,
+            "generated": 0
+          },
+          "parking": {
+            "count": 7,
+            "areaM2": 7087.505387551977,
+            "generated": 0
+          },
+          "sports": {
+            "count": 1,
+            "areaM2": 27324.701089700917,
+            "generated": 0
+          },
+          "hospital": {
+            "count": 3,
+            "areaM2": 928.7996886292203,
+            "generated": 0
+          },
+          "museum": {
+            "count": 1,
+            "areaM2": 328.02230958652217,
+            "generated": 0
+          },
+          "temple": {
+            "count": 1,
+            "areaM2": 118.50000622553489,
+            "generated": 0
+          }
+        },
+        "gaps": [
+          {
+            "tagKey": "aeroway",
+            "tagValue": "helipad",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 2497.040277129003,
+            "sourceIds": [
+              "way/101925757"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "love_hotel",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 393.2246576785292,
+            "sourceIds": [
+              "way/136667876"
+            ]
+          },
+          {
+            "tagKey": "area",
+            "tagValue": "capacity",
+            "reason": "capacity",
+            "fallback": null,
+            "count": 180,
+            "areaM2": 0,
+            "sourceIds": []
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "yes",
+            "reason": "unknown_building_value",
+            "fallback": null,
+            "count": 1635,
+            "areaM2": 902256.7736281782,
+            "sourceIds": [
+              "way/102123543",
+              "way/102123697",
+              "way/102123698",
+              "way/102123743",
+              "way/102137610"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "recreation_ground",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 3699.0635721414583,
+            "sourceIds": [
+              "way/1074513134"
+            ]
+          },
+          {
+            "tagKey": "natural",
+            "tagValue": "tree_row",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 17,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1154063726",
+              "way/1154063727",
+              "way/1367995751",
+              "way/1367996932",
+              "way/1429441692"
+            ]
+          },
+          {
+            "tagKey": null,
+            "tagValue": null,
+            "reason": "unknown_building_value",
+            "fallback": "park",
+            "count": 11,
+            "areaM2": 67171.70737289064,
+            "sourceIds": [
+              "way/116806278",
+              "way/133755315",
+              "way/133755319",
+              "way/133755353",
+              "way/133755652"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "rail",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 31,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/133806725",
+              "way/133806727",
+              "way/146060260",
+              "way/146060261",
+              "way/146060265"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "rail",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 10372.654347423319,
+            "sourceIds": [
+              "way/133806721",
+              "way/133806730",
+              "way/133806732"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 4,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/16688536",
+              "way/184696239",
+              "way/361085879"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "river",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1073084645",
+              "way/201531537",
+              "way/753428038"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "river",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 179.05536226555705,
+            "sourceIds": [
+              "way/1317356572",
+              "way/1317356573"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "stream",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1039597966",
+              "way/1039597968",
+              "way/230068543"
+            ]
+          },
+          {
+            "tagKey": "waterway",
+            "tagValue": "stream",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 102036.70535566294,
+            "sourceIds": [
+              "way/1039597967",
+              "way/1039597971"
+            ]
+          }
+        ]
+      },
+      "relationCount": 0,
+      "holeCount": 0,
+      "pointFeatures": {
+        "rails": 73,
+        "waters": 13,
+        "boundaries": 251,
+        "falls": 0,
+        "crossings": 2,
+        "pois": 27,
+        "entrances": 27
+      },
+      "relayBytes": 1479509,
+      "relayDrop": 0,
+      "routeCoverage": {
+        "applicable": true,
+        "verified": true,
+        "points": 62,
+        "misses": 0,
+        "missingPoints": []
+      }
+    },
+    {
+      "name": "taipei_dense",
+      "bboxKm2": 0.6036606882174963,
+      "rawFeatureElements": 974,
+      "rawRoadElements": 444,
+      "areas": 798,
+      "roads": 444,
+      "report": {
+        "area": 798,
+        "building": 574,
+        "mapped": 647,
+        "exact": 365,
+        "parentFallback": 282,
+        "unmapped": 151,
+        "invalid": 151,
+        "capacity": 0,
+        "byFamily": {
+          "residential": {
+            "count": 451,
+            "areaM2": 844957.0665568947,
+            "generated": 0
+          },
+          "unknown": {
+            "count": 151,
+            "areaM2": 215365.69169419035,
+            "generated": 0
+          },
+          "parking": {
+            "count": 7,
+            "areaM2": 163911.93147959784,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 134,
+            "areaM2": 780128.4494572256,
+            "generated": 0
+          },
+          "utility": {
+            "count": 3,
+            "areaM2": 2666377.2381410752,
+            "generated": 0
+          },
+          "sports": {
+            "count": 2,
+            "areaM2": 3370.4626486429015,
+            "generated": 0
+          },
+          "park": {
+            "count": 25,
+            "areaM2": 417648.3938785767,
+            "generated": 0
+          },
+          "civic": {
+            "count": 2,
+            "areaM2": 5303.662946224389,
+            "generated": 0
+          },
+          "water": {
+            "count": 9,
+            "areaM2": 2062.558668301955,
+            "generated": 0
+          },
+          "construction": {
+            "count": 4,
+            "areaM2": 99867.61048684118,
+            "generated": 0
+          },
+          "education": {
+            "count": 10,
+            "areaM2": 51054.706892130685,
+            "generated": 0
+          }
+        },
+        "byKind": {
+          "apartments": {
+            "count": 143,
+            "areaM2": 192132.03380447975,
+            "generated": 0
+          },
+          "house": {
+            "count": 279,
+            "areaM2": 337887.48581073637,
+            "generated": 0
+          },
+          "unknown": {
+            "count": 151,
+            "areaM2": 215365.69169419035,
+            "generated": 0
+          },
+          "parking": {
+            "count": 7,
+            "areaM2": 163911.93147959784,
+            "generated": 0
+          },
+          "commercial": {
+            "count": 134,
+            "areaM2": 780128.4494572256,
+            "generated": 0
+          },
+          "power": {
+            "count": 3,
+            "areaM2": 2666377.2381410752,
+            "generated": 0
+          },
+          "sports": {
+            "count": 2,
+            "areaM2": 3370.4626486429015,
+            "generated": 0
+          },
+          "park": {
+            "count": 25,
+            "areaM2": 417648.3938785767,
+            "generated": 0
+          },
+          "civic": {
+            "count": 2,
+            "areaM2": 5303.662946224389,
+            "generated": 0
+          },
+          "water": {
+            "count": 9,
+            "areaM2": 2062.558668301955,
+            "generated": 0
+          },
+          "construction": {
+            "count": 4,
+            "areaM2": 99867.61048684118,
+            "generated": 0
+          },
+          "residential": {
+            "count": 29,
+            "areaM2": 314937.5469416791,
+            "generated": 0
+          },
+          "school": {
+            "count": 10,
+            "areaM2": 51054.706892130685,
+            "generated": 0
+          }
+        },
+        "gaps": [
+          {
+            "tagKey": "aeroway",
+            "tagValue": "helipad",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 5195.466263551731,
+            "sourceIds": [
+              "way/1122882608",
+              "way/1239607989"
+            ]
+          },
+          {
+            "tagKey": "amenity",
+            "tagValue": "restaurant",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 70.13669915674836,
+            "sourceIds": [
+              "way/660472523"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "roof",
+            "reason": "unknown_building_value",
+            "fallback": "commercial",
+            "count": 16,
+            "areaM2": 22176.745325594402,
+            "sourceIds": [
+              "way/1303412383",
+              "way/1303412385",
+              "way/1303412406",
+              "way/1303423576",
+              "way/1338642117"
+            ]
+          },
+          {
+            "tagKey": "building",
+            "tagValue": "yes",
+            "reason": "unknown_building_value",
+            "fallback": "commercial",
+            "count": 104,
+            "areaM2": 185280.62395979534,
+            "sourceIds": [
+              "way/1159328965",
+              "way/1303412386",
+              "way/1303423540",
+              "way/1303423541",
+              "way/1303423542"
+            ]
+          },
+          {
+            "tagKey": "landuse",
+            "tagValue": "grass",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 126,
+            "areaM2": 96277.43190371957,
+            "sourceIds": [
+              "way/1339253332",
+              "way/1339253333",
+              "way/1339253334",
+              "way/1339253339",
+              "way/1339253340"
+            ]
+          },
+          {
+            "tagKey": "natural",
+            "tagValue": "tree_row",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 10,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1016745822",
+              "way/1016745823",
+              "way/1016745824",
+              "way/420430597",
+              "way/420430598"
+            ]
+          },
+          {
+            "tagKey": null,
+            "tagValue": null,
+            "reason": "unknown_building_value",
+            "fallback": "unknown",
+            "count": 176,
+            "areaM2": 278113.50075669657,
+            "sourceIds": [
+              "way/1159328963",
+              "way/1159328964",
+              "way/1303412380",
+              "way/1303412381",
+              "way/1303412382"
+            ]
+          },
+          {
+            "tagKey": "power",
+            "tagValue": "cable",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 4,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/1185936640",
+              "way/1185936641",
+              "way/1185936642",
+              "way/1187351668"
+            ]
+          },
+          {
+            "tagKey": "power",
+            "tagValue": "cable",
+            "reason": "unknown_area_value",
+            "fallback": "power",
+            "count": 2,
+            "areaM2": 2633342.346015963,
+            "sourceIds": [
+              "way/1185936639",
+              "way/1187351667"
+            ]
+          },
+          {
+            "tagKey": "power",
+            "tagValue": "substation",
+            "reason": "unknown_area_value",
+            "fallback": "power",
+            "count": 1,
+            "areaM2": 33034.89212511251,
+            "sourceIds": [
+              "way/1185506786"
+            ]
+          },
+          {
+            "tagKey": "public_transport",
+            "tagValue": "platform",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 7172.583667711263,
+            "sourceIds": [
+              "way/1054529716"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "invalid_ring",
+            "fallback": null,
+            "count": 2,
+            "areaM2": 0,
+            "sourceIds": [
+              "way/197881275"
+            ]
+          },
+          {
+            "tagKey": "railway",
+            "tagValue": "subway",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 3,
+            "areaM2": 81545.408784195,
+            "sourceIds": [
+              "way/197881274",
+              "way/685911181",
+              "way/685911182"
+            ]
+          },
+          {
+            "tagKey": "tourism",
+            "tagValue": "attraction",
+            "reason": "unknown_area_value",
+            "fallback": null,
+            "count": 1,
+            "areaM2": 12733.048548033395,
+            "sourceIds": [
+              "way/330187862"
+            ]
+          }
+        ]
+      },
+      "relationCount": 0,
+      "holeCount": 0,
+      "pointFeatures": {
+        "rails": 8,
+        "waters": 0,
+        "boundaries": 29,
+        "falls": 0,
+        "crossings": 0,
+        "pois": 2,
+        "entrances": 6
+      },
+      "relayBytes": 514509,
+      "relayDrop": 0,
+      "routeCoverage": {
+        "applicable": false,
+        "verified": false,
+        "reason": "venueConfig 使用 synthetic fallback，沒有 baked OSM 兵線可比對",
+        "points": 30,
+        "misses": 1,
+        "missingPoints": [
+          {
+            "index": 27,
+            "point": [
+              25.03095114711228,
+              121.5629131902671
+            ],
+            "distanceM": 124.17138263449318,
+            "nearestRoad": {
+              "type": "way",
+              "id": 373793743,
+              "highway": "footway"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
