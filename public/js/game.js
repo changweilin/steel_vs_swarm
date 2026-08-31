@@ -6226,24 +6226,24 @@ export class BattleClient {
    *     我方用回報給伺服器的同一個 `_altAG`,對方用 `sim._sightY` 的離地常數。
    * 兩端同框才有意義,細節與病灶見 `sim._altDh`。ent = null(打地面/沒解到目標)⇒ 1。
    */
-  _altRangeTo(ent) {
+  _altRangeTo(ent, def) {
     if (!this.side || this.dead) return 1;
     if (!ent) return 1;
     if (ent.hero) {
       // 絕對框:我方 ay 與回報伺服器的同一式(pos.y + _eyeH);對方取機體世界高 + 標準眼高
-      return altRangeF((this.pos.y + this._eyeH()) - (ent.mesh.position.y + LOS.EYE_M));
+      return altRangeF((this.pos.y + this._eyeH()) - (ent.mesh.position.y + LOS.EYE_M), def);
     }
     // 離地框:對方的離地視線高照抄 sim._sightY(塔/主堡砲位高、飛行類眼高、其餘目標身高)
     const tgt = (ent.kind === 'tower' || ent.kind === 'base') ? LOS.TOWER_EYE_M
       : (ent.kind === 'heli' || ent.decoy || ent.kami || ent.hyper)
         ? (ent.heroY || 0) + LOS.EYE_M
         : (ent.heroY || 0) + LOS.TGT_M;
-    return altRangeF(((this._altAG || 0) + LOS.EYE_M) - tgt);
+    return altRangeF(((this._altAG || 0) + LOS.EYE_M) - tgt, def);
   }
 
   /** 對某個目標的**有效射程**(公尺):射程光暈與擊發閘門吃的同一個數字(唯一縫)。 */
   _effRange(def, ent) {
-    return (def?.range || 0) * this._altRangeTo(ent);
+    return (def?.range || 0) * this._altRangeTo(ent, def);
   }
 
   /**
@@ -6252,7 +6252,7 @@ export class BattleClient {
    * MUST 以 `_effRange(def, ent)` 誠實夾回 —— 拿這個上限當射程 = 又一次兩端分家。
    */
   _maxRange(def) {
-    return (def?.range || 0) * altRangeMax();
+    return (def?.range || 0) * altRangeMax(def);
   }
 
   /** 磁軌蓄力狀態切換:廣播離散事件(比照 heroCast 的 'cast' 事件),
@@ -6780,7 +6780,7 @@ export class BattleClient {
     if (id === 'heavy') this.net?.send({ t: 'heavyFire' });
 
     // 這一發的有效射程(**唯一縫**:射程光暈 `_reachable` 吃的是同一個 `_effRange`)。
-    const rMul = this._altRangeTo(this._aimTarget(this._maxRange(def)));
+    const rMul = this._altRangeTo(this._aimTarget(this._maxRange(def)), def);
     const rng = def.range * rMul;
 
     // 槍口與射向(座艙槍管末端或 TPS 機體發射點,世界座標)
@@ -6936,7 +6936,7 @@ export class BattleClient {
    */
   _burstEchoSelf(def, id, prof) {
     if (!this.side || this.dead || !this.ch) return;
-    const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)));
+    const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)), def);
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
     const muzzle = this._selfMuzzle(dir, rng, id);

@@ -1875,12 +1875,13 @@ export class BattleSim {
   }
 
   /** 高度差「射程」乘數:較高的一方 +射程(封頂 +RANGE);同高/較低 = 1(曲線見 data.js altRangeF)。
+   *  重武器/大招的高度差射程優勢減為輕武器/小招的一半(2026-09-01 使用者需求)。
    *  2026-08-06 起同時併入招式的**射程加成**(mods 的 `range` 鍵,m04「全境盡職調查」)——
    *  每一道射程閘門本來就都經過這一支,加在這裡才只有一份;散到各閘門去乘就是第二份實作,
    *  症狀是「某幾條攻擊路徑吃得到加成、某幾條吃不到」,而且沒有任何錯誤訊息。 */
-  _altRange(shooter, target) {
+  _altRange(shooter, target, def) {
     if (!shooter || !target) return 1;
-    return altRangeF(this._altDh(shooter, target)) * (shooter.hero ? this._buffMul(shooter, 'range') : 1);
+    return altRangeF(this._altDh(shooter, target), def) * (shooter.hero ? this._buffMul(shooter, 'range') : 1);
   }
 
   /** 高度差「爆擊」乘數 {rate, dmg}(施加在 shooter→target 這一擊):較高方攻擊時爆率/爆傷↓、受擊時↑ */
@@ -2354,7 +2355,7 @@ export class BattleSim {
     //     客戶端的彈道上限本來就是 `range × _altRangeTo`(最高 1 + ALTITUDE.RANGE),閘門比它緊
     //     = 高地上合法的那一發被驗證後靜默丟棄:玩家看到砲彈在敵人身上炸開、傷害卻是 0
     //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
-    const impCap = wp.def.range * altRangeMax() * RANGE_TOL;
+    const impCap = wp.def.range * altRangeMax(wp.def) * RANGE_TOL;
     // 追擊命中:落點落在鎖定目標的爆風核心帶內(量到近側表面,與 _blast/_reachable 同一把尺)
     // ⇒ 射程包絡整條讓位給追擊燃料。**這是一道加分題,不是替代題**(2026-08-03 使用者定案
     // 「中途爆炸也要有傷害」):彈頭在半路撞到小兵/建物/地形就地引爆時,爆點當然不在鎖定
@@ -2570,7 +2571,7 @@ export class BattleSim {
     dx /= dl; dz /= dl; dy /= dl;   // 3D 單位化(_lanceHits 自行拆水平/垂直分量)
     // 射線長上限 = 射程 × 高度制空**機制上限**(誠實界;落點/線長沒有目標實體可以算高程差,
     // 與 heroBurst 的 impCap 同一條理由)。len 本來就是客戶端夾過的,這裡只防作弊放大。
-    const max = Math.min(Math.max(0, +len), wp.def.range * altRangeMax());
+    const max = Math.min(Math.max(0, +len), wp.def.range * altRangeMax(wp.def));
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     for (const b of this._bodies(h)) {
       if (b.dead) continue;

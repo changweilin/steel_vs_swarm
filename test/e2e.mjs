@@ -425,7 +425,7 @@ log('— sim:射程球心 = 彈藥擊發的位置,後續機體的移動不影響
     purgeCamps(sim);
     const h = sim.addHero(side, 'p_mv', ch);
     const w = sim._heroWeapon(h, 'heavy').def;
-    const impCap = w.range * altRangeMax() * RANGE_TOL;
+    const impCap = w.range * altRangeMax(w) * RANGE_TOL;
     const IMP = impCap * 0.9;                       // 落點:擊發位置正北 0.9×上界(合法)
     const flight = shotFlightS(w, IMP);
     h.x = 4000; h.z = 4000 + atFire; h.y = 0; h.ay = 1.8; h.aiming = true; h.mp = 1e6;
