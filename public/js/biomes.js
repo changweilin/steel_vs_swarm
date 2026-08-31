@@ -9667,7 +9667,7 @@ const newBatch = () => ({ geos: [], cols: [] });
  * 更新函式併進既有 `dynamics` 桶，風機與海面共用 toon 的風時鐘與天氣係數。
  */
 function buildEdgeMotion({ group, segs, dynamics }) {
-  const rotors = [], floats = [];
+  const rotors = [], floats = [], machines = [], plumes = [];
   for (const s of segs) {
     if (!s.motion?.length) continue;
     const sets = new Map();
@@ -9700,12 +9700,16 @@ function buildEdgeMotion({ group, segs, dynamics }) {
       if (mot.kind === 'rotor') {
         pivot.rotation.z = mot.phase;
         rotors.push({ pivot, angle: mot.phase });
-      } else {
+      } else if (mot.kind === 'float') {
         floats.push({ pivot, baseY: py, phase: mot.phase });
+      } else if (mot.kind === 'machine') {
+        machines.push({ pivot, phase: mot.phase });
+      } else if (mot.kind === 'smoke' || mot.kind === 'dust') {
+        plumes.push({ pivot, baseY: py, phase: mot.phase, kind: mot.kind });
       }
     }
   }
-  if (!rotors.length && !floats.length) return 0;
+  if (!rotors.length && !floats.length && !machines.length && !plumes.length) return 0;
   dynamics.push((dt) => {
     const step = Math.min(0.25, Math.max(0, dt || 0));
     const wind = celWindAmount(), wave = celWaveAmount(), t = celWindTime();
@@ -9720,8 +9724,19 @@ function buildEdgeMotion({ group, segs, dynamics }) {
       f.pivot.rotation.x = Math.sin(a * 0.83) * EDGE_MOTION.FLOAT_TILT * wave;
       f.pivot.rotation.z = Math.sin(a * 0.67 + 1.3) * EDGE_MOTION.FLOAT_TILT * wave;
     }
+    for (const m of machines) {
+      m.pivot.rotation.z = Math.sin(t * EDGE_MOTION.MACHINE_FREQ + m.phase) * EDGE_MOTION.MACHINE_SWING;
+    }
+    for (const p of plumes) {
+      const a = t * EDGE_MOTION.PLUME_FREQ + p.phase;
+      const lift = (Math.sin(a) * 0.5 + 0.5) * EDGE_MOTION.PLUME_RISE_M;
+      const drift = EDGE_MOTION.PLUME_DRIFT_M * wind;
+      p.pivot.position.x = Math.sin(a * 0.73) * drift;
+      p.pivot.position.y = p.baseY + lift;
+      p.pivot.position.z = Math.cos(a * 0.61 + p.phase) * drift * (p.kind === 'dust' ? 1 : 0.55);
+    }
   });
-  return rotors.length + floats.length;
+  return rotors.length + floats.length + machines.length + plumes.length;
 }
 
 // ---- 緩衝空間的 3D 物件(使用者定案:「邊界延伸不可進入的緩衝空間…並加入少許 3D 物件」)----
