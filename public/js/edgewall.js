@@ -97,7 +97,7 @@ export const wallSlopeTier = (deg, easeDeg, blockDeg) => (
 export const WALL_KINDS = {
   // ---- 陸域 ----
   citywall:  { dom: 'land',  bio: ['urban', 'bare'],          slope: 'mid',   depth: 5,   h: 14,   label: '城牆' },
-  rowhouse:  { dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 7.5, h: 9.5,  label: '連排民房' },
+  rowhouse:  { dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 7.5, h: 9.5,  label: '連排民房', mix: 'urban-building' },
   barricade: { dom: 'land',  bio: ['urban', 'bare'],          slope: 'flat',  depth: 6,   h: 7.5,  label: '軍工級路障' },
   train:     { dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 3.4, h: 7.2,  label: '停駛的列車' },
   trucks:    { dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 3.2, h: 7.4,  label: '連排大貨車' },
@@ -124,13 +124,20 @@ export const WALL_KINDS = {
   oilfield:     { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 16, h: 18, label: '陸上油井', family: 'extract', col: [0x86583f, 0x555c62] },
   ranch:        { dom: 'land',  bio: ['green'], slope: 'flat', depth: 14, h: 14, label: '大型畜牧場', family: 'ranch', col: [0x8e7652, 0x6b7a4b] },
   greenhouse:   { dom: 'land',  bio: ['green'], slope: 'flat', depth: 14, h: 14, label: '大型溫室', family: 'greenhouse', col: [0xa9c7bf, 0x6a8a78] },
-  factory:      { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 24, label: '大型工廠', family: 'industry', col: [0x7b8790, 0xb0653e] },
-  powerplant:   { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 28, label: '大型電廠', family: 'industry', col: [0x69747c, 0x9a8f72] },
-  incinerator:  { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 30, label: '大型焚化爐', family: 'industry', col: [0x727c82, 0xb46b3f] },
-  skyscrapers:  { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 34, label: '摩天大樓群', family: 'industry', col: [0x64717d, 0x8ca0ad] },
+  factory:      { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 24, label: '大型工廠', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x7b8790, 0xb0653e] },
+  powerplant:   { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 28, label: '大型電廠', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x69747c, 0x9a8f72] },
+  incinerator:  { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 30, label: '大型焚化爐', family: 'industry', mix: 'industry', variants: 3, separated: true, col: [0x727c82, 0xb46b3f] },
+  skyscrapers:  { dom: 'land',  bio: ['urban'], slope: 'flat', depth: 18, h: 34, label: '摩天大樓群', family: 'highrise', mix: 'urban-building', variants: 3, separated: true, col: [0x64717d, 0x8ca0ad] },
   oysterracks:  { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 14, h: 14, label: '蚵棚', family: 'wetland', col: [0x665541, 0x9caa9e] },
-  strandedship:{ dom: 'land',  bio: ['wet'], slope: 'flat', depth: 18, h: 18, label: '擱淺船隻', family: 'wreck', col: [0x5b6970, 0x8a4f3e] },
+  strandedship:{ dom: 'land',  bio: ['wet'], slope: 'flat', depth: 18, h: 18, label: '擱淺船隻', family: 'wreck', variants: 3, separated: true, col: [0x5b6970, 0x8a4f3e] },
   wetpods:      { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 16, h: 14, label: '大型消波塊層層堆疊', family: 'pods', col: [0x969a9b, 0x777c7d] },
+};
+
+// 同類設施可在一個地貌 run 內交錯；這是「可混排」名冊，不是生成器家族。
+// 住商與工業刻意分組，避免只因都在 urban 就把電廠插進連排住宅。
+export const WALL_MIX_GROUPS = {
+  industry: ['factory', 'powerplant', 'incinerator'],
+  'urban-building': ['rowhouse', 'skyscrapers'],
 };
 
 /** 這一款站得到這一級坡上嗎(`slope` 是**上界**:自然景觀在三級都合法) */
@@ -235,6 +242,35 @@ export function planWallRuns(segs, opts = {}) {
     prevKind = r.kind;
   }
   return runs;
+}
+
+/**
+ * 一個 run 內的逐節實際款式。同組款可穿插，且相鄰節不重複；沒有 mix 的長構造維持原款。
+ * `prevKind` 讓相鄰 run 的接縫也遵守去重。只使用座標雜湊，不消耗共享亂數。
+ */
+export function planWallKinds(run, segs, prevKind = null) {
+  const base = WALL_KINDS[run.kind] || WALL_KINDS.barricade;
+  const pool = (WALL_MIX_GROUPS[base.mix] || [run.kind]).filter((k) => (
+    kindFits(k, run.biome, run.water) && fitsTier(k, run.tier)));
+  const candidates = pool.length ? pool : [run.kind];
+  const out = [];
+  let prev = prevKind;
+  for (let i = run.i0; i < run.i1; i++) {
+    const s = segs[i];
+    let at = edgeSeed(s.x, s.z, i + 0x4D49) % candidates.length;
+    if (candidates.length > 1 && candidates[at] === prev) at = (at + 1) % candidates.length;
+    prev = candidates[at];
+    out.push(prev);
+  }
+  return out;
+}
+
+/** 同款的構型輪替；呼叫端傳入前一節構型即可保證相鄰不重複。 */
+export function wallVariant(kind, seed, prevVariant = -1) {
+  const n = Math.max(1, WALL_KINDS[kind]?.variants || 1);
+  let v = (seed >>> 0) % n;
+  if (n > 1 && v === prevVariant) v = (v + 1) % n;
+  return v;
 }
 
 // ---- 零件外廓(純幾何)----
@@ -1079,19 +1115,23 @@ const greenhouseFacility = (len, D, H, rnd, spec) => {
   ];
 };
 
-const industryFacility = (len, D, H, rnd, spec, kind) => {
-  if (kind === 'skyscrapers') {
-    return [
-      ...rep(len, 8.2, (x, step, i) => {
-        const h = i % 3 === 1 ? H : H * (0.55 + rnd() * 0.24);
-        return [
-          { g: ['box', step * 0.74, h, D * 0.58], c: i % 2 ? spec.col[0] : spec.col[1], p: [x, h / 2, zIn(D, D * 0.58)] },
-          ...[0.24, 0.48, 0.72].map((f) => ({ g: ['box', step * 0.68, 0.18, 0.16], c: 0xb6ccd5, p: [x, h * f, zIn(D, 0.16)] })),
-        ];
-      }),
-      { g: ['box', 4.2, H * 0.62, 2.0], c: spec.col[1], p: [0, H * 0.31, -D / 2 + 1.0], role: 'service-wing' },
-    ];
-  }
+const highriseFacility = (len, D, H, rnd, spec, variant = 0) => {
+  const widthF = [0.78, 0.76, 0.8][variant % 3];
+  return [
+    ...rep(len, 8.2, (x, step, i) => {
+      const rank = (i + variant) % 3;
+      const h = rank === 1 ? H : H * (0.52 + rnd() * 0.25);
+      const d = D * (0.5 + rank * 0.04);
+      return [
+        { g: ['box', step * widthF, h, d], c: (i + variant) % 2 ? spec.col[0] : spec.col[1], p: [x, h / 2, zIn(D, d)] },
+        ...[0.24, 0.48, 0.72].map((f) => ({ g: ['box', step * (widthF - 0.06), 0.18, 0.16], c: 0xb6ccd5, p: [x, h * f, zIn(D, 0.16)] })),
+      ];
+    }),
+    { g: ['box', 3.4 + variant * 0.4, H * (0.52 + variant * 0.05), 2.0], c: spec.col[1], p: [(variant - 1) * len * 0.18, H * (0.26 + variant * 0.025), -D / 2 + 1.0], role: 'service-wing' },
+  ];
+};
+
+const industryFacility = (len, D, H, rnd, spec, kind, variant = 0) => {
   const hallH = Math.min(H - 1, kind === 'factory' ? 9 : 11);
   const stacks = kind === 'powerplant' ? 3 : (kind === 'incinerator' ? 2 : 1);
   const stackRows = Array.from({ length: stacks }, (_, i) => {
@@ -1104,8 +1144,15 @@ const industryFacility = (len, D, H, rnd, spec, kind) => {
     ];
   }).flat();
   return [
-    { g: ['box', len * 0.96, hallH, D * 0.68], c: spec.col[0], p: [0, hallH / 2, zIn(D, D * 0.68)] },
-    { g: ['box', len * 0.94, 0.6, D * 0.72], c: spec.col[1], p: [0, hallH + 0.3, zIn(D, D * 0.72)] },
+    ...rep(len, variant === 1 ? 10.8 : 8.4, (x, step, i) => {
+      const h = hallH * (0.78 + ((i + variant) % 3) * 0.1);
+      const d = D * (0.5 + ((i + variant) % 2) * 0.08);
+      const back = ((i + variant) % 2) * 1.15;
+      return [
+        { g: ['box', step * 0.76, h, d], c: (i + variant) % 2 ? spec.col[0] : spec.col[1], p: [x, h / 2, zIn(D, d, back)], role: 'industrial-hall' },
+        { g: ['box', step * 0.72, 0.46, d + 0.35], c: spec.col[1], p: [x, h + 0.23, zIn(D, d + 0.35, back)], role: 'industrial-roof' },
+      ];
+    }),
     ...stackRows,
     ...(kind === 'powerplant' ? rep(len * 0.42, 9, (x) => [
       { g: ['cyl', 2.5, 3.4, 7.4, 10], c: 0x9b9d96, p: [x - len * 0.18, 3.7, zIn(D, 6.8, 1.0)], role: 'cooling-tower' },
@@ -1128,20 +1175,23 @@ const wetlandFacility = (len, D, H, rnd, spec) => {
   ];
 };
 
-const wreckFacility = (len, D, H, rnd, spec) => {
+const wreckFacility = (len, D, H, rnd, spec, variant = 0) => {
+  const dir = variant === 1 ? -1 : 1;
+  const hullF = [0.8, 0.76, 0.84][variant % 3];
+  const bridgeX = dir * len * (0.18 + variant * 0.025);
   return [
     // 分層船殼、龍骨、尖艏／方艉與甲板直接構成障礙；不是堆貨櫃的底座。
-    { g: ['box', len * 0.86, 5.2, D * 0.64], c: spec.col[0], p: [-len * 0.03, 2.6, zIn(D, D * 0.64, 0.05)], role: 'hull' },
-    { g: ['box', len * 0.78, 1.7, D * 0.72], c: spec.col[1], p: [-len * 0.06, 6.05, zIn(D, D * 0.72, 0.05)], role: 'hull-deck' },
-    { g: ['box', len * 0.72, 1.8, D * 0.28], c: 0x46545d, p: [-len * 0.06, 0.9, -D / 2 + D * 0.14], role: 'keel' },
-    { g: ['cone', D * 0.18, 5.2, 8], c: spec.col[0], p: [len * 0.39, D * 0.18, zIn(D, D * 0.42, 0.05)], r: [0, 0, -Math.PI / 2], role: 'bow' },
-    { g: ['box', len * 0.16, 4.2, D * 0.6], c: spec.col[1], p: [-len * 0.39, 2.3, zIn(D, D * 0.6, 0.1)], role: 'stern' },
-    { g: ['box', len * 0.78, 0.5, D * 0.76], c: 0xa55d45, p: [-len * 0.04, 7.15, zIn(D, D * 0.76)], role: 'deck' },
+    { g: ['box', len * hullF, 5.2, D * (0.6 + variant * 0.03)], c: spec.col[0], p: [-dir * len * 0.03, 2.6, zIn(D, D * (0.6 + variant * 0.03), 0.05)], role: 'hull' },
+    { g: ['box', len * (hullF - 0.08), 1.7, D * 0.72], c: spec.col[1], p: [-dir * len * 0.06, 6.05, zIn(D, D * 0.72, 0.05)], role: 'hull-deck' },
+    { g: ['box', len * (hullF - 0.14), 1.8, D * 0.28], c: 0x46545d, p: [-dir * len * 0.06, 0.9, -D / 2 + D * 0.14], role: 'keel' },
+    { g: ['cone', D * 0.18, 5.2, 8], c: spec.col[0], p: [dir * len * (hullF / 2 - 0.03), D * 0.18, zIn(D, D * 0.42, 0.05)], r: [0, 0, -dir * Math.PI / 2], role: 'bow' },
+    { g: ['box', len * 0.15, 4.2, D * 0.6], c: spec.col[1], p: [-dir * len * (hullF / 2 - 0.04), 2.3, zIn(D, D * 0.6, 0.1)], role: 'stern' },
+    { g: ['box', len * (hullF - 0.08), 0.5, D * 0.76], c: 0xa55d45, p: [-dir * len * 0.04, 7.15, zIn(D, D * 0.76)], role: 'deck' },
     // 駕駛台、舷窗帶、煙囪、桅桿與救生艇讓船型在遠景仍可辨識。
-    { g: ['box', 6.2, 3.8, 6.2], c: 0xc8c2b4, p: [len * 0.23, 9.0, zIn(D, 6.2, 2.0)], role: 'bridge' },
-    { g: ['box', 5.4, 0.7, 6.5], c: 0x53616a, p: [len * 0.23, 11.25, zIn(D, 6.5, 1.8)], role: 'bridge-window' },
-    { g: ['cyl', 0.55, 0.45, 3.3, 7], c: 0x9a4d37, p: [len * 0.2, 12.1, zIn(D, 1.1, 2.0)], role: 'funnel' },
-    { g: ['cyl', 0.16, 0.22, H - 12.5, 5], c: spec.col[1], p: [len * 0.05, 12.5 + (H - 12.5) / 2, zIn(D, 0.5, 2.1)], role: 'mast' },
+    { g: ['box', 5.4 + variant * 0.4, 3.8, 6.2], c: 0xc8c2b4, p: [bridgeX, 9.0, zIn(D, 6.2, 2.0)], role: 'bridge' },
+    { g: ['box', 4.8 + variant * 0.3, 0.7, 6.5], c: 0x53616a, p: [bridgeX, 11.25, zIn(D, 6.5, 1.8)], role: 'bridge-window' },
+    { g: ['cyl', 0.55, 0.45, 3.3, 7], c: variant === 2 ? 0x4f5960 : 0x9a4d37, p: [bridgeX - dir * 0.7, 12.1, zIn(D, 1.1, 2.0)], role: 'funnel' },
+    { g: ['cyl', 0.16, 0.22, H - 12.5, 5], c: spec.col[1], p: [-dir * len * 0.04, 12.5 + (H - 12.5) / 2, zIn(D, 0.5, 2.1)], role: 'mast' },
     ...[-1, 1].map((sd) => ({ g: ['box', 2.4, 0.55, 0.85], c: 0xd6c7a7, p: [len * 0.03, 8.0, zIn(D, 0.85, 5.3 + sd * 0.55)], role: 'lifeboat' })),
     ...rep(len * 0.72, 5.8, (x) => [
       { g: ['cyl', 0.07, 0.07, 1.0, 5], c: 0xb4b8b6, p: [x, 8.05, zIn(D, 0.18, 0.42)], role: 'ship-rail' },
@@ -1169,7 +1219,7 @@ const podFacility = (len, D, H, rnd, spec) => {
   ];
 };
 
-function facilityParts(kind, len, D, H, rnd) {
+function facilityParts(kind, len, D, H, rnd, variant) {
   const spec = WALL_KINDS[kind];
   if (!spec?.family) return null;
   if (spec.family === 'wind') return windFacility(len, D, H, rnd, spec);
@@ -1177,9 +1227,10 @@ function facilityParts(kind, len, D, H, rnd) {
   if (spec.family === 'ranch') return ranchFacility(len, D, H, rnd, spec);
   if (spec.family === 'extract') return extractFacility(len, D, H, rnd, spec, kind);
   if (spec.family === 'greenhouse') return greenhouseFacility(len, D, H, rnd, spec);
-  if (spec.family === 'industry') return industryFacility(len, D, H, rnd, spec, kind);
+  if (spec.family === 'industry') return industryFacility(len, D, H, rnd, spec, kind, variant);
+  if (spec.family === 'highrise') return highriseFacility(len, D, H, rnd, spec, variant);
   if (spec.family === 'wetland') return wetlandFacility(len, D, H, rnd, spec);
-  if (spec.family === 'wreck') return wreckFacility(len, D, H, rnd, spec);
+  if (spec.family === 'wreck') return wreckFacility(len, D, H, rnd, spec, variant);
   return podFacility(len, D, H, rnd, spec);
 }
 
@@ -1187,9 +1238,9 @@ function facilityParts(kind, len, D, H, rnd) {
  * 取一款的零件表。`seed` 決定同款不同節的色差與擺位(零共享亂數)。
  * 找不到的款一律回退 `barricade`(原則 6:降級不例外)。
  */
-export function wallParts(kind, { len, depth, h, seed = 1 }) {
+export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed) }) {
   const rnd = mulberry32((seed * 2654435761) >>> 0);
-  return facilityParts(kind, len, depth, h, rnd) || (PARTS[kind] || PARTS.barricade)(len, depth, h, rnd);
+  return facilityParts(kind, len, depth, h, rnd, variant) || (PARTS[kind] || PARTS.barricade)(len, depth, h, rnd);
 }
 
 // ============ 緩衝空間的 3D 物件(使用者原話:「加入少許 3D 物件」)============

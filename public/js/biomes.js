@@ -45,7 +45,7 @@ import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed
 // 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(2026-08-11 使用者定案)——
 // 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
 import {
-  EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, wallParts, wallSlopeTier, edgeSeed, partBox,
+  EDGE_WALL, EDGE_MOTION, WALL_KINDS, BACKDROP_KINDS, planWallRuns, planWallKinds, wallParts, wallVariant, wallSlopeTier, edgeSeed, partBox,
   planBufferProps, propParts, planBackdrop, backdropParts,
 } from './edgewall.js';
 import { libGeo } from './partlib.js';
@@ -9558,15 +9558,20 @@ function buildEdgeWall({ group, terrain, blockers }) {
     }
     // 切 run + 配款(唯一縫;純函式、零共享亂數);零件、碰撞柱、演出**同一趟**定案 ——
     // 盒高是逐段實測的(見下),分兩趟就要嘛把零件表存起來、要嘛重算一次,兩條都是第二份真相。
+    let prevKind = null, prevVariant = -1;
     for (const r of planWallRuns(row)) {
-      const def = WALL_KINDS[r.kind] || WALL_KINDS.barricade;
-      const hd2 = def.depth / 2, kh0 = Math.max(WH, def.h);
+      const kinds = planWallKinds(r, row, prevKind);
       for (let i = r.i0; i < r.i1; i++) {
         const s = row[i];
+        const kind = kinds[i - r.i0];
+        const def = WALL_KINDS[kind] || WALL_KINDS.barricade;
+        const hd2 = def.depth / 2, kh0 = Math.max(WH, def.h);
         // 盒心 = 內面往圖界方向退半個厚度 ⇒ 內緣恆落在夾制線上(不管這一款多厚)
         const x = e.ax ? s.x : s.x + e.sz * hd2;
         const z = e.ax ? s.z + e.sz * hd2 : s.z;
-        const parts = wallParts(r.kind, { len: half * 2, depth: def.depth, h: kh0, seed: edgeSeed(x, z) });
+        const seed = edgeSeed(x, z);
+        const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
+        const parts = wallParts(kind, { len: half * 2, depth: def.depth, h: kh0, seed, variant });
         // **盒高逐段實測**,不是逐款一個值(2026-08-11 城牆加了城門/城樓/砲台之後的必然):
         // 同一款的節有高有矮(素牆 9m / 箭樓 11m / 城樓 14m),拿型錄宣告的最高值當每一節的
         // 盒高,素牆那幾節的頂上就多出一截**撞得到卻看不見**的空氣(A30 家族的反面)。
@@ -9581,7 +9586,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
         segs.push({
           x, z, y, h: ground + kh - y, hw2: half, hd2,
           ry: e.ax ? 0 : Math.PI / 2, fry: e.fry,
-          kind: r.kind, biome: s.biome, water: s.water, tier: r.tier, ground, kh, motion,
+          kind, variant, biome: s.biome, water: s.water, tier: r.tier, ground, kh, motion,
         });
         // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
         blockers.push({ x, z, y, h: ground + kh - y, hw2: half, hd2, ry: e.ax ? 0 : Math.PI / 2, r: Math.hypot(half, hd2) });
@@ -9590,6 +9595,8 @@ function buildEdgeWall({ group, terrain, blockers }) {
         const plinth = ground - y;
         if (plinth > 0.01) parts.push({ g: ['box', half * 2, plinth, def.depth], c: PLINTH_C, p: [0, -plinth / 2, 0] });
         emitWallParts(batch, parts.filter((p) => !p.motion), x, ground, z, e.fry, 1);
+        prevKind = kind;
+        prevVariant = variant;
       }
     }
   }
