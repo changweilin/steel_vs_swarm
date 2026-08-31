@@ -57,6 +57,7 @@ import {
   elevSampler, buildHeightField, osmFor, landcoverFor, cutLinesFor, gradeWaysForAudit, markGradeCorridors,
   roadWidth, llToWorld, R_EARTH, WORLD_S, d2r, TUN, UND,
 } from './venue_field.mjs';
+import { OSM_FEATURE_QUERY_VERSION } from '../public/js/osmQuery.js';
 
 // `--k=v` 與 `--k v` 兩種寫法都收(既有稽核用前者,本支的用法說明寫後者;
 // 只收一種的話另一種會**靜默**變成 `--k=1` 而錯誤訊息完全不相干)
@@ -487,9 +488,12 @@ const ZONE_LIST = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
     const GND = readSrc('public', 'js', 'ground.js');
     const TER = readSrc('public', 'js', 'terrain.js');
     const RELAY = readSrc('public', 'js', 'osmrelay.js');
-    ok(/geoKey\('osmF',\s*[5-9]/.test(BIO) && /areas: cat\.areas/.test(BIO)
+    ok(OSM_FEATURE_QUERY_VERSION >= 5
+      && /OSM_FEATURE_QUERY_VERSION/.test(BIO)
+      && /geoKey\('osmF',\s*OSM_FEATURE_QUERY_VERSION,/.test(BIO)
+      && /areas: cat\.areas/.test(BIO)
       && /pointFeatures/.test(BIO) && /buildLandField\([\s\S]*areas: osmData\?\.areas/.test(BIO),
-      'OSM 快取已升 v5，areas/pointFeatures 與 landfield 共用新面域契約');
+      `OSM 快取版本由 query 共用常數推導(v${OSM_FEATURE_QUERY_VERSION})，areas/pointFeatures 與 landfield 共用新面域契約`);
     ok(/buildLandField\(/.test(BIO) && /setLandField\(/.test(BIO),
       'buildBiomes 建場後把單一 land field 接進 toon');
     ok((TER.match(/landField: true/g) || []).length === 2 && /CEL_LAND_FIELD/.test(TSRC),
