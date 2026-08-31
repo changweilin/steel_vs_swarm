@@ -182,6 +182,10 @@ function show(screen) {
   // 操作方式:整房一致、由房主定案(套用在 onSync;規則住 ctrlmode.js)。
   // 這裡只負責「回到大廳 ⇒ 解除戰區定案」,MUST NOT 在 UI 端另判一次能不能改(A21 同精神)。
   if (LOBBY_SCREENS.has(screen)) setRoomCtrlMode(null);
+  if (LOBBY_SCREENS.has(screen)) {
+    app._autoPickedRoom = false;
+    syncQuickRestartFab();
+  }
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
   if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
 }
@@ -947,7 +951,11 @@ function renderRoom() {
           const join = document.createElement('button');
           join.className = 'slot-btn';
           join.textContent = '＋ 入座';
-          join.onclick = (e) => { e.stopPropagation(); app.net?.send({ t: 'pickSide', side }); };
+          join.onclick = (e) => {
+            e.stopPropagation();
+            savePrefs({ lastSide: side });
+            app.net?.send({ t: 'pickSide', side });
+          };
           div.appendChild(join);
         }
         if (app.isHost) {
@@ -1550,6 +1558,9 @@ function unbindStageControls() {
 function selectChar(id) {
   if (!app.pickEditable) return;
   app.net?.send(app.pickIsSelf ? { t: 'pickChar', ch: id } : { t: 'setBotChar', id: app.pickSubject.id, ch: id });
+  if (app.pickIsSelf) {
+    savePrefs({ lastChar: id, lastSide: app.pickSide });
+  }
   showCharDetail(id, app.pickSide);
 }
 /** 放大視窗內的角色 + NPC 選擇格(req:放大頁面也出現選擇)。角色格僅在可選角(自己/房主代選)時出現。 */
@@ -3468,11 +3479,35 @@ function onSync(m) {
     // 固定項目提前(2026-07-22):開房/入房/再戰回房時 battleConfig 已定案 → 房間階段就預建地圖。
     // sync 會重播多次,startPrebuild 以 key 冪等;劇情戰役同樣受益(early return 前先觸發)。
     if (m.lobby.battleConfig) startPrebuild(m.lobby.battleConfig);
+    // 快速開始:不顯示配對房 UI,自動完成選陣營/角色/電腦陣容/準備/開戰(只跑一次)
+    if (app.quickRestart && !app.quickRestart.launched) {
+      launchQuickRestartBattle();
+      return;
+    }
     // 劇情戰役:不顯示配對房 UI,自動完成選陣營/角色/準備/開戰(只跑一次)
     if (app.story) { if (!app.story.launched) launchStoryBattle(); return; }
+
+    // 建立遊戲時記得上一場的陣營角色選擇:房主初次進房且尚未入座時自動入座並選角
+    if (app.isHost && !app._autoPickedRoom) {
+      const me = m.lobby.clients.find((c) => c.id === app.youId);
+      if (me && me.mode === 'player' && !me.side) {
+        app._autoPickedRoom = true;
+        const prefs = loadPrefs();
+        const lastSide = prefs.lastSide;
+        if (lastSide === 'SWARM' || lastSide === 'STEEL') {
+          app.net?.send({ t: 'pickSide', side: lastSide });
+          const lastChar = prefs.lastChar;
+          if (lastChar && charsOf(lastSide).includes(lastChar)) {
+            app.net?.send({ t: 'pickChar', ch: lastChar });
+          }
+        }
+      }
+    }
+
     if (app.phaseShown !== 'room') show('room');
     renderRoom();
   } else if (phase === 'loading') {
+    recordGameSession(m.lobby);
     // battleConfig 訊息會觸發 enterLoading;這裡只更新等待名單
     const waiting = m.lobby.clients.filter((c) => c.mode === 'player' && c.side && !c.loaded).map((c) => c.name);
     if (app.phaseShown === 'loading' && waiting.length) {
@@ -3480,10 +3515,116 @@ function onSync(m) {
     }
   } else if (phase === 'game' || phase === 'over') {
     // 斷線/跳頁後回連直達戰局:renderRoom 不會跑,自己的陣營從 lobby 還原(觀戰者維持 null)
+    recordGameSession(m.lobby);
     const me = m.lobby.clients.find((c) => c.id === app.youId);
     if (me) app.mySide = me.side || null;
     if (app.terrain && !app.battle) enterGame();
   }
+}
+
+// 記錄當前遊戲對局配置(含玩家陣營角色、地圖、敵我所有電腦玩家)
+function recordGameSession(lobby) {
+  if (!lobby || !lobby.battleConfig) return;
+  const me = lobby.clients?.find((c) => c.id === app.youId);
+  if (!me || !me.side || me.mode !== 'player') return;
+  const bots = (lobby.clients || []).filter((c) => c.isBot).map((b) => ({
+    side: b.side,
+    ch: b.ch || null,
+  }));
+  const session = {
+    player: { side: me.side, ch: me.ch || null },
+    bots,
+    teamSize: lobby.config?.teamSize || lobby.battleConfig?.teamSize || app.teamSize,
+    botDiff: lobby.config?.botDiff || loadPrefs().botDiff || DEFAULT_BOT_DIFF,
+    ctrl: lobby.config?.ctrl || null,
+    roomName: lobby.config?.roomName || '',
+    battleConfig: lobby.battleConfig,
+  };
+  savePrefs({
+    lastSession: session,
+    lastSide: me.side,
+    lastChar: me.ch || null,
+  });
+  syncQuickRestartFab();
+}
+
+/** 快速開始:自動依上一場完整配置開戰 */
+function launchQuickRestartBattle() {
+  const qr = app.quickRestart;
+  if (!qr) return;
+  qr.launched = true;
+  app.mySide = qr.player.side;
+  const net = app.net;
+  if (!net) return;
+  net.send({ t: 'pickSide', side: qr.player.side });
+  if (qr.player.ch) net.send({ t: 'pickChar', ch: qr.player.ch });
+  let n = 0;
+  const assign = [];
+  for (const b of (qr.bots || [])) {
+    net.send({ t: 'addBot', side: b.side });
+    const bid = 'b' + (++n);
+    if (b.ch) assign.push([bid, b.ch]);
+  }
+  for (const [bid, cid] of assign) net.send({ t: 'setBotChar', id: bid, ch: cid });
+  net.send({ t: 'setReady', ready: true });
+  net.send({ t: 'startBattle' });
+}
+
+/** 發起快速開始對戰 */
+function quickRestartGame() {
+  const session = loadPrefs().lastSession;
+  if (!session || !session.battleConfig || !session.player?.side) {
+    toast('⚠️ 尚未有上一場對戰記錄');
+    return;
+  }
+  if (!app.net) {
+    toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制');
+    return;
+  }
+  app.quickRestart = { ...session, launched: false };
+  toast('⚡ 正在套用上次配置快速開戰…');
+  app.net?.send({
+    t: 'createRoom',
+    name: myName(),
+    roomName: session.roomName || `${myName()} 的戰區`,
+    isPublic: false,
+    teamSize: session.teamSize || 1,
+    botDiff: session.botDiff || DEFAULT_BOT_DIFF,
+    ctrl: session.ctrl || null,
+    battleConfig: session.battleConfig,
+  });
+}
+
+function isLocalServer() {
+  if (typeof location === 'undefined') return false;
+  const h = location.hostname || '';
+  return ['localhost', '127.0.0.1', '::1', '[::1]'].includes(h)
+    || location.protocol === 'file:'
+    || h.endsWith('.localhost');
+}
+
+/** 本機伺服器首頁快速開始懸浮按鍵同步 */
+function syncQuickRestartFab() {
+  const fab = $('quickRestartFab');
+  if (!fab) return;
+  const session = loadPrefs().lastSession;
+  const isLocal = isLocalServer();
+  const valid = isLocal && session && session.battleConfig && session.player?.side;
+  fab.style.display = (valid && app.phaseShown === 'connect') ? '' : 'none';
+  if (!valid) return;
+  const cfg = session.battleConfig;
+  const placeName = cfg.placeName || '自訂戰區';
+  const sideName = session.player.side === 'SWARM' ? '蜂群' : '鋼鐵';
+  const charCode = session.player.ch && CHARACTERS[session.player.ch]
+    ? `「${CHARACTERS[session.player.ch].code}」`
+    : '隨機角色';
+  const n = session.teamSize || 1;
+  const descEl = $('quickRestartDesc');
+  if (descEl) {
+    descEl.textContent = `📍 ${placeName} ・ ${sideName} ${charCode} ・ ${n}v${n}`;
+  }
+  const botCount = (session.bots || []).length;
+  attachTip(fab, `以完全相同的配置直接開戰：${placeName}、${sideName} ${charCode}、${n}v${n}${botCount ? `、${botCount} 名電腦` : ''}。`);
 }
 
 // 觸控硬體(或目前就在用虛擬搖桿)才顯示大廳入口 —— 桌機不需要這顆鈕。
@@ -3577,6 +3718,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const mode = document.querySelector('input[name=joinMode]:checked')?.value || 'player';
     app.net?.send({ t: 'joinRoom', pin, name: myName(), mode });
   };
+  $('quickRestartFab')?.addEventListener('click', () => { myName(); quickRestartGame(); });
 
   // 入座/離座改由槽位內的「＋ 入座」按鈕與自己槽位的 ✕ 處理(見 renderRoom),
   // 整卡不再綁 pickSide —— 點卡片/槽位是「選取檢視角色」,不會誤觸換陣營。
@@ -3594,6 +3736,7 @@ window.addEventListener('DOMContentLoaded', () => {
   window.__SVS = app; // 除錯/測試用
   show('connect');
   refreshRooms();
+  syncQuickRestartFab();
   app.roomPoll = setInterval(() => {
     if (app.phaseShown === 'connect') refreshRooms();
   }, 5000);
