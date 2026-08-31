@@ -2,6 +2,12 @@
 // NPC、戰鬥建築與玩家機甲不引用本檔；它們各自保留權威 Rig / 碰撞 / 動畫契約。
 import { RUNTIME_BACKGROUND_CATALOG, RUNTIME_PARTS } from './runtimeParts.js';
 import {
+  STANDALONE_BOUNDARY_KINDS,
+  boundaryObjectMeta,
+  partBox,
+  standaloneBoundaryParts,
+} from './edgewall.js';
+import {
   eulerXYZFromMat3,
   mat3Apply,
   mat3FromEulerXYZ,
@@ -10,6 +16,7 @@ import {
 } from './partTransform.js';
 
 export const BACKGROUND_VARIANTS_PER_TARGET = 4;
+export const EDGE_BACKGROUND_PREFIX = 'edge/';
 
 const entries = new Map(Object.values(RUNTIME_PARTS).flat().map((entry) => [entry.key, entry]));
 const finite3 = (value) => Array.isArray(value) && value.length === 3 && value.every(Number.isFinite);
@@ -100,6 +107,72 @@ function catalogTarget(targetKey) {
   return { subcategory, structure, target };
 }
 
+function runtimeCategory(entry) {
+  if (entry.family === 'vehicle') return 'vehicle';
+  if (/adobe|house|rowhouse|stonecottage|yurt/.test(entry.subpart || '')) return 'residential';
+  if (entry.subpart === 'mass' || entry.subpart === 'bld_tower') return 'highrise';
+  return 'building';
+}
+
+function edgeRuntimePart(part, index) {
+  const [type, a, b, c, sides] = part.g;
+  const out = {
+    name: part.role || `edge_part_${index}`,
+    position: [...(part.p || [0, 0, 0])],
+    rotation: [...(part.r || [0, 0, 0])],
+    color: part.c,
+    colorKey: part.mat === 'glass' ? 'glass' : undefined,
+    materialRole: part.mat === 'glass' ? 'glass' : 'body',
+  };
+  if (type === 'box') return { ...out, type, dimensions: [a, b, c] };
+  if (type === 'cyl') return { ...out, type: 'cylinder', radii: [a, b], height: c, sides };
+  if (type === 'cone') return { ...out, type, radius: a, height: b, sides: c };
+  return { ...out, type: 'icosahedron_polyhedron', radius: a };
+}
+
+function edgeBackgroundObject(targetKey, seed, options) {
+  const kind = targetKey.slice(EDGE_BACKGROUND_PREFIX.length);
+  const meta = boundaryObjectMeta(kind);
+  if (!meta || meta.layout !== 'standalone') throw new RangeError(`背景型錄沒有獨立邊界物件:${targetKey}`);
+  const variant = ((seed % BACKGROUND_VARIANTS_PER_TARGET) + BACKGROUND_VARIANTS_PER_TARGET)
+    % BACKGROUND_VARIANTS_PER_TARGET;
+  const wallParts = standaloneBoundaryParts(kind, {
+    seed,
+    variant,
+    season: options.season,
+    len: options.len,
+    depth: options.depth,
+    h: options.h,
+  });
+  const boxes = wallParts.map(partBox);
+  const min = [
+    Math.min(...boxes.map((box) => box.x0)),
+    Math.min(...boxes.map((box) => box.y0)),
+    Math.min(...boxes.map((box) => box.z0)),
+  ];
+  const max = [
+    Math.max(...boxes.map((box) => box.x1)),
+    Math.max(...boxes.map((box) => box.y1)),
+    Math.max(...boxes.map((box) => box.z1)),
+  ];
+  return {
+    key: `${targetKey}#background-${variant}`,
+    targetKey,
+    family: 'environment',
+    subpart: kind,
+    bounds: { min, max, size: max.map((value, axis) => value - min[axis]) },
+    parts: wallParts.map(edgeRuntimePart),
+    palettes: [],
+    generation: {
+      targetKey,
+      source: 'edgewall',
+      category: meta.category,
+      layout: meta.layout,
+      variant,
+    },
+  };
+}
+
 /**
  * 以穩定 seed 產生一個背景物件描述子。相同 targetKey + seed 恆得到同一組零件與配色；
  * seed 先量化成固定變體數，讓渲染端仍可按成品 key 合批。
@@ -183,4 +256,26 @@ export function generateBackgroundObject(targetKey, seed = 0, options = {}) {
 
 export function backgroundObjectTargets(family = null) {
   return [...entries.values()].filter((entry) => !family || entry.family === family).map((entry) => entry.key);
+}
+
+/** 正式環境資產 + 可獨立散布的邊界物件；長構造不會進入此名冊。 */
+export function sharedBackgroundObjectTargets(category = null) {
+  const runtime = [...entries.values()]
+    .filter((entry) => !category || runtimeCategory(entry) === category)
+    .map((entry) => entry.key);
+  const edge = STANDALONE_BOUNDARY_KINDS
+    .filter((kind) => !category || boundaryObjectMeta(kind).category === category)
+    .map((kind) => `${EDGE_BACKGROUND_PREFIX}${kind}`);
+  return [...runtime, ...edge];
+}
+
+/**
+ * 背景物件共同出口。既有 v5/v6 資產維持原組裝路徑；edge/ 前綴直接轉用邊界生成器。
+ */
+export function generateSharedBackgroundObject(targetKey, seed = 0, options = {}) {
+  if (targetKey.startsWith(EDGE_BACKGROUND_PREFIX)) {
+    if (!Number.isSafeInteger(seed)) throw new TypeError('背景物件 seed 必須是安全整數');
+    return edgeBackgroundObject(targetKey, seed, options && typeof options === 'object' ? options : {});
+  }
+  return generateBackgroundObject(targetKey, seed, options);
 }

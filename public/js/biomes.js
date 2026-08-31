@@ -9651,25 +9651,35 @@ function emitWallParts(batch, parts, ox, oy, oz, ry, scale, groundY = null) {
     }
     _wm.compose(_wp.set(ox, by, oz), _wq.setFromEuler(_we), _ws.set(scale, scale, scale));
     geo.applyMatrix4(_wm);
-    batch.geos.push(geo);
-    batch.cols.push(p.c);
+    const target = p.mat === 'glass' ? batch.glass : batch.opaque;
+    target.geos.push(geo);
+    target.cols.push(p.c);
   }
 }
 /**
- * 一批零件 → **一個** mesh(合併走 beacons 的 `mergeGeos` 唯一縫,含 A25 的暫時幾何回收)。
- * 顏色走頂點色 ⇒ 整圈牆不管用了幾十個色票都只有一個 draw call(逐色一個 mesh 的話,
- * 光是型錄的色票就上百個 —— 本渲染器是 draw call 瓶頸)。
+ * 一批零件 → 不透明／玻璃至多各一個 mesh(合併走 beacons 的 `mergeGeos` 唯一縫，含 A25
+ * 的暫時幾何回收)。顏色走頂點色，draw call 不隨色票或零件數增加。
  */
 function flushPartBatch(group, batch, matOpts) {
-  if (!batch.geos.length) return;
-  const m = new THREE.Mesh(mergeGeos(batch.geos, batch.cols),
-    envMat(0xffffff, { vertexColors: true, ...matOpts }));
-  m.castShadow = false;
-  // 環繞全圖:整體包圍球恆與視錐相交,逐幀剔除只是白算(同舊制的環)
-  m.frustumCulled = false;
-  group.add(m);
+  const add = (partBatch, material) => {
+    if (!partBatch.geos.length) return;
+    const mesh = new THREE.Mesh(mergeGeos(partBatch.geos, partBatch.cols), material);
+    mesh.castShadow = false;
+    // 環繞全圖:整體包圍球恆與視錐相交,逐幀剔除只是白算(同舊制的環)
+    mesh.frustumCulled = false;
+    group.add(mesh);
+  };
+  add(batch.opaque, envMat(0xffffff, { vertexColors: true, ...matOpts }));
+  // 玻璃與牆體仍共用同一份零件表，只拆成第二個材質批次；透明面不寫深度，避免窗帶互相遮死。
+  add(batch.glass, envMat(0xffffff, {
+    vertexColors: true, transparent: true, opacity: 0.58, depthWrite: false,
+    side: THREE.DoubleSide, ...matOpts,
+  }));
 }
-const newBatch = () => ({ geos: [], cols: [] });
+const newBatch = () => ({
+  opaque: { geos: [], cols: [] },
+  glass: { geos: [], cols: [] },
+});
 
 /**
  * 邊界設施的剛體動態層。靜態基座仍留在整圈單一批次；只有葉片／浮台按樞軸各合成一顆 mesh。
