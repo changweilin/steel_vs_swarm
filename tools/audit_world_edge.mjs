@@ -56,6 +56,8 @@
 //                 `--break-motion`       風機轉速拔掉風量倍率 ⇒ Ⅶ 紅
 //                 `--break-facility-support` 往陸域光電塞回整段底座 ⇒ Ⅶ 紅
 //                 `--break-redraw`       抽掉本輪邊界重繪辨識零件 ⇒ Ⅶ 紅
+//                 `--break-facility-gap`  把非連續大型設施的透明縫補滿 ⇒ Ⅶ 紅
+//                 `--break-facility-mix`  關掉同類設施逐節穿插 ⇒ Ⅶ 紅
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import {
@@ -76,6 +78,8 @@ const BREAK_WET = process.argv.includes('--break-wet');
 const BREAK_MOTION = process.argv.includes('--break-motion');
 const BREAK_FACILITY_SUPPORT = process.argv.includes('--break-facility-support');
 const BREAK_REDRAW = process.argv.includes('--break-redraw');
+const BREAK_FACILITY_GAP = process.argv.includes('--break-facility-gap');
+const BREAK_FACILITY_MIX = process.argv.includes('--break-facility-mix');
 if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
 // 坡度分級失效:把每一款都改成「三級都站得住」⇒ 崖面上會擺出貨櫃車 / 連排民房
 if (process.argv.includes('--break-slope')) {
@@ -108,9 +112,19 @@ const wallParts = (kind, o) => {
     if (kind === 'tetrapod') parts = parts.filter((p) => p.role !== 'breakwater-core' || p.layer === 0);
     else if (removed[kind]) parts = parts.filter((p) => !removed[kind].includes(p.role));
   }
+  if (BREAK_FACILITY_GAP && EW.WALL_KINDS[kind]?.separated) {
+    parts.push({
+      g: ['box', o.len, Math.min(o.h, edgeWallHM()), EW.EDGE_WALL.FACE_T * 0.5], c: 0x777777,
+      p: [0, Math.min(o.h, edgeWallHM()) / 2, o.depth / 2 - EW.EDGE_WALL.FACE_T * 0.25], role: 'forbidden-gap-fill',
+    });
+  }
   if (BREAK_FACE) return parts.filter((p) => EW.partBox(p).z1 < o.depth / 2 - EW.EDGE_WALL.FACE_T);
   return parts;
 };
+const planWallKinds = (run, segs, prevKind = null) => (
+  BREAK_FACILITY_MIX
+    ? Array.from({ length: run.i1 - run.i0 }, () => run.kind)
+    : EW.planWallKinds(run, segs, prevKind));
 
 const backdropParts = (kind, o) => {
   const parts = EW.backdropParts(kind, o);
@@ -238,14 +252,14 @@ if (BREAK_LAND) {
 const mkWall = (extra = '', over = {}) => new Function(
   'THREE', 'envMat', 'mergeGeos', 'WORLD_EDGE', 'edgeWallInsetM', 'edgeWallHM', 'WATER',
   'SLOPE', 'slopeDeg', 'wallSlopeTier',
-  'classifyImg', 'terrainEnvCode', 'planWallRuns', 'WALL_KINDS', 'wallParts', 'edgeSeed',
+  'classifyImg', 'terrainEnvCode', 'planWallRuns', 'planWallKinds', 'WALL_KINDS', 'wallParts', 'wallVariant', 'edgeSeed',
   'planBufferProps', 'propParts', 'planBackdrop', 'backdropParts', 'BACKDROP_KINDS',
   'EDGE_WALL', 'edgeBufferM', 'objHeightMax', 'lowPower', 'partBox',
   `${HELPERS}\n${wallSrc}\n${grabFn(bioSrc, 'buildBufferProps')}\n${grabFn(bioSrc, 'buildBackdrop')}\n${extra}
    return { buildEdgeWall, buildBufferProps, buildBackdrop };`,
 )(THREE_STUB, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
   SLOPE, slopeDeg, EW.wallSlopeTier,
-  classifyImg, terrainEnvCode, EW.planWallRuns, EW.WALL_KINDS, wallParts, EW.edgeSeed,
+  classifyImg, terrainEnvCode, EW.planWallRuns, planWallKinds, EW.WALL_KINDS, wallParts, EW.wallVariant, EW.edgeSeed,
   over.planBufferProps || EW.planBufferProps, over.propParts || EW.propParts,
   over.planBackdrop || EW.planBackdrop, over.backdropParts || EW.backdropParts, EW.BACKDROP_KINDS,
   EW.EDGE_WALL, edgeBufferM, objHeightMax, false, EW.partBox);
@@ -735,6 +749,37 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     lowFace.length === 2
     && lowFace.every((k) => EW.WALL_KINDS[k].family === 'solar'
       && EW.WALL_KINDS[k].faceH >= 1.7 && EW.WALL_KINDS[k].faceH < band));
+  const separated = kinds.filter((k) => EW.WALL_KINDS[k].separated);
+  const gapBad = [], variantBad = [];
+  for (const k of separated) {
+    const d = EW.WALL_KINDS[k], H = Math.max(band, d.h);
+    const fingerprints = new Set();
+    for (let variant = 0; variant < d.variants; variant++) {
+      const parts = wallParts(k, { len, depth: d.depth, h: H, seed: 17, variant });
+      const cover = EW.wallFaceCover(parts, len, d.depth, band);
+      if (cover >= 0.96) gapBad.push(`${k}#${variant} ${(cover * 100).toFixed(0)}%`);
+      fingerprints.add(JSON.stringify(parts));
+    }
+    if (d.variants < 3 || fingerprints.size !== d.variants) variantBad.push(k);
+  }
+  t('非陣列大型設施保留可見透明縫（空氣牆仍連續，物件內面覆蓋率 < 96%）',
+    separated.length >= 5 && gapBad.length === 0, `（${gapBad.join(' / ')}）`);
+  t('工業建築／摩天樓／擱淺船各有至少三種不同構型，不以同一件連續複製',
+    variantBad.length === 0, `（${variantBad.join(' / ')}）`);
+  const mixSegs = Array.from({ length: 12 }, (_, i) => ({
+    x: -600 + i * len, z: -300, len, biome: 'urban', water: false, tier: 'flat',
+  }));
+  const mixChecks = Object.entries(EW.WALL_MIX_GROUPS).map(([group, pool]) => {
+    const seq = planWallKinds({ i0: 0, i1: mixSegs.length, kind: pool[0], biome: 'urban', water: false, tier: 'flat' }, mixSegs);
+    return { group, pool, seq };
+  });
+  t('同類混排名冊分成工業與住商兩組；逐節只在組內穿插且相鄰不重複',
+    mixChecks.length === 2 && mixChecks.every(({ pool, seq }) => (
+      new Set(seq).size >= 2 && seq.every((k) => pool.includes(k))
+      && seq.every((k, i) => i === 0 || seq[i - 1] !== k))));
+  t('真正建牆路徑有消費逐節混排與構型輪替（不是只有離線型錄會算）',
+    /planWallKinds\(r, row, prevKind\)/.test(bioCode)
+    && /wallVariant\(kind, seed, kind === prevKind \? prevVariant : -1\)/.test(bioCode));
   const partsOf = (k, seed = 9) => {
     const d = EW.WALL_KINDS[k];
     return wallParts(k, { len, depth: d.depth, h: Math.max(band, d.h), seed });
@@ -1120,6 +1165,8 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-land', '關掉逐零件落地,Ⅷ MUST 紅字(斜坡上浮在半空的假山)'],
   ['--break-facility-support', '陸域光電塞回整段底座,Ⅶ MUST 紅字'],
   ['--break-redraw', '抽掉本輪邊界重繪辨識零件,Ⅶ MUST 紅字'],
+  ['--break-facility-gap', '補滿非連續大型設施間的透明縫,Ⅶ MUST 紅字'],
+  ['--break-facility-mix', '關掉同類設施逐節混排,Ⅶ MUST 紅字'],
   ['--break-snow-summer', '夏季出現覆雪,Ⅸ MUST 紅字(夏天無雪契約破壞)'],
   ['--break-snow-slope', '雪錐斜率失真外突,Ⅸ MUST 紅字(山頂雪錐外擴懸空)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);

@@ -4,6 +4,8 @@
 > 讀本檔前 MUST 已內化根 `CLAUDE.md` §0 十條核心原則;禁令總表見 [`antipatterns.md`](antipatterns.md),改完要跑什麼見 [`verification.md`](verification.md)。
 > **共通鐵律(不逐列重述)**:消費端 MUST 全部走這個縫、MUST NOT 另寫第二份實作或在別處二次運算、**推導值 MUST NOT 手寫**、純表現層 MUST NOT 動權威幾何。「稽核」欄 = 該縫的細節與症狀敘事所在(檔頭),改它先開那支。
 
+> **2026-08-31 邊界大型物件更新**：非陣列、非相連長構造的大型設施 MUST 以 `separated` 保留可見透明縫，空氣牆碰撞環仍連續；工業組（工廠／電廠／焚化爐）與住商組（連排民房／摩天樓）只准各自在 `WALL_MIX_GROUPS` 組內逐節穿插，相鄰款式與同款構型 MUST NOT 重複。唯一縫為 `planWallKinds()`／`wallVariant()`／`wallParts(..., variant)`，稽核 `audit_world_edge` ±`--break-facility-gap`／`--break-facility-mix`。
+
 
 | 領域 | 唯一縫 | 鐵律 / 稽核 |
 |---|---|---|

@@ -38,6 +38,7 @@ node tools/audit_blood_splat.mjs     # 受擊濺血提示
 node tools/audit_cc_flash.mjs        # 異常狀態致盲白幕 + 蓄力跳水平移速
 node tools/audit_world_height.mjs    # 世界高度上限(遊戲天花板 / 物件上限)
 node tools/audit_world_edge.mjs      # 世界邊界(障礙環型錄 / 緩衝空間布景 / 視線邊界背景)
+#   ±--break-facility-gap / --break-facility-mix（非連續大型物件透明縫 / 同類逐節混排）
 node tools/audit_world_curve.mjs     # 世界曲面(拐點 / 地平線反解 / 幾何細度)
 node tools/audit_visual_prefs.mjs    # 畫面旋鈕 / 陰影偏色 / 風化場 / 抖動 / 景深 / **3D LUT 取代不疊加 / 斜向轉場(縫 + 呼叫端)**
 #   ±--break-lutstack(LUT 改查已經被 split-tone 動過的顏色 ⇒ Ⅶ MUST 紅)
