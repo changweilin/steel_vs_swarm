@@ -318,6 +318,7 @@ console.log('■ Ⅲ 受擊掉高:推導(校準錨 = 打完平均護盾+裝甲 �
     /export const airSinkM[\s\S]{0,220}?SQUAD\.DRONE_AVG_HP[\s\S]{0,120}?TARGET_H\.tower/.test(dataSrc));
   t('SINK_S 只是節奏旋鈕:MUST NOT 出現在掉幅公式裡',
     !/export const airSinkM[\s\S]{0,220}?SINK_S/.test(dataSrc));
+  t('受擊動力鎖定時長為正', FLIGHT.HIT_LOCK_S > 0, `${FLIGHT.HIT_LOCK_S}s`);
 }
 
 // ---------------------------------------------------------------------------
@@ -505,6 +506,16 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     const c = mk({ _flying: () => false });
     c._airSinkHit(300);
     t('地面機體不掉高(規則只作用於飛行機體)', c._airSink === 0);
+  }
+  // ⑥ 受擊掉高動力回復鎖定(2026-09-01 使用者需求:飛行時被擊中而下降時,會有一段時間無法恢復飛行動力)
+  {
+    const c = mk({ lift: 0 });
+    c._airSinkHit(100, 1.0);
+    c._stepLift(0.1, 1.5, { x: 0, y: 0, z: 0 }, u);
+    t('受擊掉高/鎖定窗內動力不回充', c.lift === 0);
+    c._airSink = 0;
+    c._stepLift(0.1, 1.0 + FLIGHT.HIT_LOCK_S + 0.1, { x: 0, y: 0, z: 0 }, u);
+    t('鎖定期結束後恢復回充', c.lift > 0);
   }
 }
 

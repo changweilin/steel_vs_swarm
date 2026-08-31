@@ -102,6 +102,7 @@ console.log('■ Ⅰ 曲線(data.js:後座量 → 移速係數,推導不手寫)'
   }));
 
   t('回穩速率 / 結束門檻 / 曲線指數皆為正', RECOIL.DECAY > 0 && RECOIL.END_RAD > 0 && RECOIL.MOVE_K > 0);
+  t('飛行後座力放大倍率 > 1(空中無地面支撐,後座力更大)', RECOIL.AIR_RECOIL_MUL > 1, `${RECOIL.AIR_RECOIL_MUL}`);
   t('結束門檻遠小於最小單發後座(否則輕武器連判定都進不去)',
     RECOIL.END_RAD < BY_CLIMB[0].p.climb / 3, `END_RAD=${RECOIL.END_RAD} min climb=${BY_CLIMB[0].p.climb}`);
 

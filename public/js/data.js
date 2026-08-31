@@ -586,7 +586,7 @@ export const HEROIC = { range: 1.2, dmg: 1.5 };
 // 走 sim._blast,由該處逐目標擲 `_dodges` —— 範圍見 `evadable()` 這個唯一縫。
 export const ALTITUDE = {
   TIERS: 3,             // |dh| 達「3 個砲塔高」時效果封頂(門檻在 1 個砲塔高)
-  RANGE: 0.25,         // 較高方 +射程(封頂)
+  RANGE: 0.30,         // 較高方 +射程(封頂)—— 2026-09-01 提高高度差射程優勢
   DODGE: 0.10,         // 較高方 +閃避率(封頂)
   // 爆擊代價四項於 2026-07-27 整組 ×0.7 重新校準(原 0.5/0.5/1.0/0.5)——
   // 對進戰模型(`npm run bal` ⑤)量到舊值讓「較高方勝率」只有 48.3%:+25% 射程只在接近期兌現、
@@ -717,6 +717,7 @@ export const CJUMP = {
 export const FLIGHT = {
   SINK_TOWERS: 2,    // 受擊掉高校準:掉光「平均護盾 + 裝甲」= 掉幾個砲塔高
   SINK_S: 0.5,       // 一次掉高的展開秒數(純手感節奏;總掉幅由 airSinkM 決定)
+  HIT_LOCK_S: 2.0,   // 受擊掉高動力回復鎖定(秒):飛行中被擊中下降時無法恢復飛行動力的持續時間
   DRAIN_S: 5,        // 滿動力全速爬升可持續秒數
   MAX_F: 1.0,        // 動力上限 = 電力上限 × 此比(正比於電力;現值 = 電力上限本身)
   // 變形者(飛行型態)的飛行動力上限校準(2026-08-02 使用者定案「變形者的飛行動力減少 1/3」):
@@ -2240,6 +2241,7 @@ export const reachRule = (def) => REACH_RULE[trajClass(def)] || REACH_RULE.flat;
 // MOVE_K / DECAY / END_RAD:位移懲罰的三個旋鈕,見下方 recoilMoveF 的說明。
 export const RECOIL = {
   AIR_F: 0.5,
+  AIR_RECOIL_MUL: 1.5, // 飛行時同型武器後座力倍率(空中無地面支撐,準星上踢/震動/反向推力均放大)
   MOVE_K: 1,        // 位移懲罰曲線指數(1 = 降幅正比於後座量)
   DECAY: 7,         // 後座回穩速率(recoil.p *= e^(−dt·DECAY);game.js `_updatePlayer` 唯一消費端)
   END_RAD: 0.001,   // 「後座力結束」門檻(rad ≈ 0.057°:準星回到這以內,肉眼與像素都分不出來)
