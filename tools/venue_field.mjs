@@ -718,54 +718,72 @@ export function sampleAlong(cum, vals, s) {
 /** 結構清單(隧道 / 地下道 / 橋)+ 它們貢獻的航點 + 開挖走廊(carveTunnels 的輸入) */
 export function buildStructs(osm, center, hf) {
   const structs = [], marks = [], carveRuns = [];
+  const clippedGeometries = (way) => {
+    const out = [], inb = 4;
+    let cur = [];
+    for (const p of way.geometry || []) {
+      const [x, z] = llToWorld(p.lat, p.lon, center);
+      if (x < hf.minX + inb || x > hf.maxX - inb || z < hf.minZ + inb || z > hf.maxZ - inb) {
+        if (cur.length >= 2) out.push(cur);
+        cur = [];
+        continue;
+      }
+      cur.push(p);
+    }
+    if (cur.length >= 2) out.push(cur);
+    return out;
+  };
   for (const w of (osm?.roads || [])) {
     if (!LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
-    const hw = strucHw(w.tags);
-    if (strucTunnel(w.tags)) {
-      const run = tunnelRunOf(w, center, hf.heightAt, hf);
-      if (!run || !run.intervals.length) continue;
-      const total = run.cum[run.cum.length - 1] || 1;
-      const floorAt = (s) => sampleAlong(run.cum, run.floors, s);
-      const st = { pts: run.pts, cum: run.cum, hw, floorAt, kind: run.under ? '地下道' : '隧道' };
-      structs.push(st);
-      // 航點:兩端洞口 + 每一段覆蓋區間的中點(= 真的鑽過去,不是繞到山頂上)
-      for (const [a, b] of run.intervals) {
-        marks.push({ name: `${st.kind}洞口A`, p: ptAt(run, a), y: floorAt(a) });
-        marks.push({ name: `${st.kind}洞中`, p: ptAt(run, (a + b) / 2), y: floorAt((a + b) / 2) });
-        marks.push({ name: `${st.kind}洞口B`, p: ptAt(run, b), y: floorAt(b) });
-      }
-      // 開挖走廊(V-C):`carveTunnels` 吃的是**敞開補集**(引道 / 路塹),不是覆蓋段本身 ——
-      // 洞體是把三角形整片刪掉,不是把山壓平。分段規則逐字鏡射 `biomes.js` 那一段
-      // (bounds = [頭, 各覆蓋段的頂點索引…, 尾],成對取);cut 旗標 = 地下道引道收窄成垂直路塹。
-      // 少了這一步,泛洪就是拿**天然**地形在走引道 —— 一條靠開挖才通的路會被報成不可達,
-      // 而那是假紅字,比沒驗還糟。
-      {
-        const bounds = [0, ...run.intervals.flatMap(([, , ia, ib]) => [ia, ib]), run.pts.length - 1];
-        for (let k = 0; k + 1 < bounds.length; k += 2) {
-          const a = bounds[k], b = bounds[k + 1];
-          if (!(b - a >= 1)) continue;
-          carveRuns.push({ pts: run.pts.slice(a, b + 1), floors: run.floors.slice(a, b + 1),
-            covA: k > 0, covB: k + 2 < bounds.length, hw, cut: !!run.under });
+    for (const geometry of clippedGeometries(w)) {
+      const way = { ...w, geometry };
+      const hw = strucHw(way.tags);
+      if (strucTunnel(way.tags)) {
+        const run = tunnelRunOf(way, center, hf.heightAt, hf);
+        if (!run || !run.intervals.length) continue;
+        const total = run.cum[run.cum.length - 1] || 1;
+        const floorAt = (s) => sampleAlong(run.cum, run.floors, s);
+        const st = { pts: run.pts, cum: run.cum, hw, floorAt, kind: run.under ? '地下道' : '隧道' };
+        structs.push(st);
+        // 航點:兩端洞口 + 每一段覆蓋區間的中點(= 真的鑽過去,不是繞到山頂上)
+        for (const [a, b] of run.intervals) {
+          marks.push({ name: `${st.kind}洞口A`, p: ptAt(run, a), y: floorAt(a) });
+          marks.push({ name: `${st.kind}洞中`, p: ptAt(run, (a + b) / 2), y: floorAt((a + b) / 2) });
+          marks.push({ name: `${st.kind}洞口B`, p: ptAt(run, b), y: floorAt(b) });
         }
+        // 開挖走廊(V-C):`carveTunnels` 吃的是**敞開補集**(引道 / 路塹),不是覆蓋段本身 ——
+        // 洞體是把三角形整片刪掉,不是把山壓平。分段規則逐字鏡射 `biomes.js` 那一段
+        // (bounds = [頭, 各覆蓋段的頂點索引…, 尾],成對取);cut 旗標 = 地下道引道收窄成垂直路塹。
+        // 少了這一步,泛洪就是拿**天然**地形在走引道 —— 一條靠開挖才通的路會被報成不可達,
+        // 而那是假紅字,比沒驗還糟。
+        {
+          const bounds = [0, ...run.intervals.flatMap(([, , ia, ib]) => [ia, ib]), run.pts.length - 1];
+          for (let k = 0; k + 1 < bounds.length; k += 2) {
+            const a = bounds[k], b = bounds[k + 1];
+            if (!(b - a >= 1)) continue;
+            carveRuns.push({ pts: run.pts.slice(a, b + 1), floors: run.floors.slice(a, b + 1),
+              covA: k > 0, covB: k + 2 < bounds.length, hw, cut: !!run.under });
+          }
+        }
+        if (run.under) {   // 地下道引道:兩端各一個(引道走不通 = 掉進洞裡出不來)
+          marks.push({ name: '地下道引道A', p: ptAt(run, Math.min(total, UND.EDGE + 2)), y: floorAt(Math.min(total, UND.EDGE + 2)) });
+          marks.push({ name: '地下道引道B', p: ptAt(run, Math.max(0, total - UND.EDGE - 2)), y: floorAt(Math.max(0, total - UND.EDGE - 2)) });
+        }
+      } else if (way.tags.bridge) {
+        const pts = densify(way.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
+        if (pts.length < 2) continue;
+        const cum = arcOf(pts);
+        const total = cum[cum.length - 1] || 1;
+        if (total < 24) continue;                       // 太短的「橋」是路面涵管,沒有橋面可走
+        const hA = hf.heightAt(pts[0][0], pts[0][1]);
+        const hB = hf.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+        const deckAt = makeDeckAt(hA, hB, total, hf.heightAt);
+        const st = { pts, cum, hw, floorAt: (s, x, z) => deckAt(s, x, z), kind: '橋' };
+        structs.push(st);
+        const mid = total / 2;
+        const mp = ptAt({ pts, cum }, mid);
+        marks.push({ name: '橋面中段', p: mp, y: deckAt(mid, mp[0], mp[1]) });
       }
-      if (run.under) {   // 地下道引道:兩端各一個(引道走不通 = 掉進洞裡出不來)
-        marks.push({ name: '地下道引道A', p: ptAt(run, Math.min(total, UND.EDGE + 2)), y: floorAt(Math.min(total, UND.EDGE + 2)) });
-        marks.push({ name: '地下道引道B', p: ptAt(run, Math.max(0, total - UND.EDGE - 2)), y: floorAt(Math.max(0, total - UND.EDGE - 2)) });
-      }
-    } else if (w.tags.bridge) {
-      const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
-      if (pts.length < 2) continue;
-      const cum = arcOf(pts);
-      const total = cum[cum.length - 1] || 1;
-      if (total < 24) continue;                       // 太短的「橋」是路面涵管,沒有橋面可走
-      const hA = hf.heightAt(pts[0][0], pts[0][1]);
-      const hB = hf.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
-      const deckAt = makeDeckAt(hA, hB, total, hf.heightAt);
-      const st = { pts, cum, hw, floorAt: (s, x, z) => deckAt(s, x, z), kind: '橋' };
-      structs.push(st);
-      const mid = total / 2;
-      const mp = ptAt({ pts, cum }, mid);
-      marks.push({ name: '橋面中段', p: mp, y: deckAt(mid, mp[0], mp[1]) });
     }
   }
   return { structs, marks, carveRuns };
