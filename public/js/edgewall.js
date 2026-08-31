@@ -52,6 +52,14 @@ export const EDGE_WALL = {
   BACK_INSET_F: 0.9, // 背景落在緩衝深度的這個比例上(留一截裙在它腳下,不然背景像浮在邊上)
 };
 
+// 岩景四季色階：假山與懸崖共用，避免邊界兩種岩體季節分家。
+export const ROCK_SEASON_TINT = {
+  spring: 0xdce8c8,
+  summer: 0xffffff,
+  autumn: 0xe1c39a,
+  winter: 0xc9d7df,
+};
+
 // 邊界設施的剛體動態只在 `biomes.js` 建 mesh；本檔仍只交純資料。
 // 轉速的唯一輸入是 `toon.js` 的即時風量，浮動幅度的唯一輸入是同一份天氣浪量。
 export const EDGE_MOTION = {
@@ -105,14 +113,18 @@ export const WALL_KINDS = {
   viaduct:   { dom: 'land',  bio: ['urban', 'wet'],           slope: 'flat',  depth: 13,  h: 14,   label: '倒塌高架橋' },
   levee:     { dom: 'land',  bio: ['wet', 'green'],           slope: 'flat',  depth: 12,  h: 8,    label: '河堤' },
   // `faceDeg` 是岩壁剖面的真實傾角範圍(相對水平)，幾何仍受同一個 depth/h 包絡約束。
-  cliff:     { dom: 'land',  bio: ['bare'],                   slope: 'steep', depth: 18,  h: 30,   label: '懸崖峭壁', faceDeg: [60, 90] },
+  cliff:     { dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'steep', depth: 18,  h: 30,   label: '懸崖峭壁', faceDeg: [60, 90], slopeBias: { mid: 6, steep: 10 } },
+  rockery:   { dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'steep', depth: 18,  h: 30,   label: '巨型假山群', slopeBias: { mid: 6, steep: 10 } },
   landslide: { dom: 'land',  bio: ['bare', 'green'],          slope: 'steep', depth: 16,  h: 18,   label: '山崩地' },
   debris:    { dom: 'land',  bio: ['bare', 'green', 'wet'],   slope: 'steep', depth: 16,  h: 10,   label: '土石流' },
-  fallentree:{ dom: 'land',  bio: ['green'],                  slope: 'mid',   depth: 9,   h: 9,    label: '倒塌神木' },
+  giantforest:{dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 18,  h: 28,   label: '巨木林壁', slopeBias: { mid: 7 } },
+  fallentree:{ dom: 'land',  bio: ['green', 'wet'],           slope: 'mid',   depth: 9,   h: 9,    label: '大倒木群', slopeBias: { mid: 7 } },
+  edgehamlet:{ dom: 'land',  bio: ['urban'],                  slope: 'flat',  depth: 18,  h: 24,   label: '邊界假城街' },
   // ---- 水域 ----(水面恆是平的 ⇒ 水域段的分級一律 flat,見 `planWallRuns`)
   seawall:   { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 10,  h: 8,    label: '海堤' },
   tetrapod:  { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 12,  h: 9.2,  label: '大型消波塊層層堆疊' },
   ship:      { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 18,  h: 22,   label: '連排貨輪' },
+  isletbarrier:{dom:'water', bio: ['water'],                   slope: 'flat',  depth: 18,  h: 22,   label: '島礁海界' },
   // ---- 大型邊界設施(同族共用生成器；水域款直接落水，不借用海堤／擋土平台)----
   windsea:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 28, label: '海上風機陣列', family: 'wind', mount: 'fixed', col: [0xd9dde0, 0x70808c] },
   floatsolar:   { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 9,  faceH: 1.7, label: '浮動式太陽能板陣列', family: 'solar', mount: 'float', col: [0x244b73, 0x6b8799] },
@@ -160,8 +172,10 @@ const kindFits = (k, biome, water) => {
 export function wallCandidates(biome, water, tier = 'flat') {
   const byTier = Object.keys(WALL_KINDS).filter((k) => fitsTier(k, tier));
   const list = byTier.filter((k) => kindFits(k, biome, water));
-  if (list.length) return list;
-  if (byTier.length) return byTier;
+  const weighted = (rows) => rows.flatMap((k) => Array.from(
+    { length: tier === 'flat' ? 1 : Math.max(1, WALL_KINDS[k].slopeBias?.[tier] || 1) }, () => k));
+  if (list.length) return weighted(list);
+  if (byTier.length) return weighted(byTier);
   return water ? ['seawall'] : ['barricade'];
 };
 
@@ -237,7 +251,9 @@ export function planWallRuns(segs, opts = {}) {
     const cand = wallCandidates(r.biome, r.water, r.tier);
     const s = segs[r.i0];
     let idx = edgeSeed(s.x, s.z, r.i0) % cand.length;
-    if (cand.length > 1 && cand[idx] === prevKind) idx = (idx + 1) % cand.length;
+    if (cand.some((k) => k !== prevKind) && cand[idx] === prevKind) {
+      do idx = (idx + 1) % cand.length; while (cand[idx] === prevKind);
+    }
     r.kind = cand[idx];
     prevKind = r.kind;
   }
@@ -719,6 +735,19 @@ const PARTS = {
       ]),
     ];
   },
+  // 假山群：把舊邊界外的山稜收入有碰撞的障礙環，基部實心、峰群前後錯落。
+  rockery: (len, D, H, rnd) => [
+    { g: ['box', len, H * 0.34, D], c: 0x68675f, p: [0, H * 0.17, 0], role: 'rockery-core' },
+    { g: ['cone', Math.min(D * 0.42, len * 0.2), H, 6], c: 0x74746b, p: [0, H / 2, zIn(D, D * 0.84)], role: 'rockery-peak' },
+    ...rep(len, 7.2, (x, step, i) => {
+      const h = H * (0.38 + rnd() * 0.34);
+      const r = Math.min(D * 0.23, step * 0.43);
+      return [
+        { g: ['cone', r, h, 5 + i % 3], c: pick(rnd, [0x817f75, 0x727269, 0x8c897e]), p: [x, h / 2, zIn(D, r * 2, 0.5 + rnd() * 2.2)], role: 'rockery-ridge' },
+        rock(rnd, x + step * 0.18, D, H * 0.34 + 1.2, 0.5, 1.15, 0x77746b, 2.2, 'rockery-boulder'),
+      ];
+    }),
+  ],
   // 山崩地:後方崩崖 + 前方起伏沙土 + 多層土脊、巨礫與折斷樹幹。
   landslide: (len, D, H, rnd) => {
     const bodyD = D * 0.94, bodyH = H * 0.58;
@@ -766,6 +795,28 @@ const PARTS = {
       { g: ['box', s * 0.92, 0.9, D * 0.36], c: 0x6f6553, p: [x, 0.45, zIn(D, D * 0.36)], role: 'mud-tongue' },
     ]),
   ],
+  // 巨木林壁：密林有實心暗核，避免多棵樹之間變成視覺漏洞。
+  giantforest: (len, D, H, rnd) => [
+    { g: ['box', len, H * 0.3, D], c: 0x35452f, p: [0, H * 0.15, 0], role: 'forest-core' },
+    { g: ['cyl', 1.35, 1.75, H * 0.68, 7], c: 0x584936, p: [0, H * 0.34, zIn(D, 3.5, 1.4)], role: 'giant-trunk' },
+    { g: ['cone', Math.min(5.2, D * 0.29), H * 0.48, 7], c: 0x405d37, p: [0, H * 0.76, zIn(D, 8.5, 1.4)], role: 'giant-crown' },
+    ...rep(len, 5.8, (x, step, i) => {
+      const h = H * (0.55 + rnd() * 0.28), cr = Math.min(D * 0.22, step * 0.43);
+      return [
+        { g: ['cyl', 0.42 + rnd() * 0.32, 0.64 + rnd() * 0.36, h * 0.64, 6], c: 0x5a4a36, p: [x, h * 0.32, zIn(D, 2.2, 0.4 + rnd() * 2.4)], role: 'forest-trunk' },
+        { g: ['cone', cr, h * 0.52, 6 + i % 2], c: pick(rnd, [0x3d5734, 0x49623b, 0x354d30]), p: [x, h * 0.74, zIn(D, cr * 2, 0.4 + rnd() * 2.4)], role: 'forest-crown' },
+      ];
+    }),
+  ],
+  // 假城街：舊遠景城市收入權威環，以連續街廓封底、高低塔楼破輪廓。
+  edgehamlet: (len, D, H, rnd) => [
+    { g: ['box', len, H * 0.32, D], c: 0x606975, p: [0, H * 0.16, 0], role: 'city-core' },
+    { g: ['box', len * 0.18, H, D * 0.54], c: 0x737d88, p: [0, H / 2, zIn(D, D * 0.54, 0.8)], role: 'city-tower' },
+    ...rep(len, 6.4, (x, step, i) => {
+      const h = H * (0.34 + rnd() * 0.38), d = D * (0.42 + rnd() * 0.2);
+      return [{ g: ['box', step * 0.82, h, d], c: pick(rnd, [0x68727d, 0x7a838d, 0x59636f]), p: [x, h / 2, zIn(D, d, 0.4 + (i % 2))], role: 'city-block' }];
+    }),
+  ],
   // 倒塌神木:兩根沿邊躺著的巨幹 + 兩側掀起的根盤 + 斷枝 + 苔蘚與新生樹苗。
   fallentree: (len, D, H, rnd) => {
     const mound = 1.5, r1 = 2.4, r2 = 1.5;
@@ -805,6 +856,15 @@ const PARTS = {
       ]),
     ];
   },
+  // 島礁海界：假海的島影收進碰撞環，水面下的連續礁盤負責封界。
+  isletbarrier: (len, D, H, rnd) => [
+    { g: ['box', len, H * 0.28, D], c: 0x626d73, p: [0, H * 0.14, 0], role: 'reef-core' },
+    { g: ['cone', Math.min(D * 0.4, len * 0.2), H, 6], c: 0x778084, p: [0, H / 2, zIn(D, D * 0.8)], role: 'reef-peak' },
+    ...rep(len, 5.6, (x, step, i) => {
+      const h = H * (0.28 + rnd() * 0.34), r = Math.min(step * 0.4, D * 0.22);
+      return [{ g: ['cone', r, h, 5 + i % 3], c: pick(rnd, [0x6a7479, 0x7b8385, 0x59656c]), p: [x, h / 2, zIn(D, r * 2, 0.6 + rnd() * 2)], role: 'reef-islet' }];
+    }),
+  ],
   // 消波塊:下層到上層逐步減少的四層交錯塊群(每塊 = 塊心 + 四支腳)，
   // 不另墊海堤／護坡平台；下層行數嚴格多於上層，堆疊輪廓呈金字塔。
   tetrapod: (len, D, H, rnd) => {
@@ -1238,9 +1298,18 @@ function facilityParts(kind, len, D, H, rnd, variant) {
  * 取一款的零件表。`seed` 決定同款不同節的色差與擺位(零共享亂數)。
  * 找不到的款一律回退 `barricade`(原則 6:降級不例外)。
  */
-export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed) }) {
+const mulColor = (a, b) => ((((a >> 16 & 255) * (b >> 16 & 255) / 255) | 0) << 16)
+  | ((((a >> 8 & 255) * (b >> 8 & 255) / 255) | 0) << 8) | (((a & 255) * (b & 255) / 255) | 0);
+const seasonalRock = (kind, rows, season) => {
+  if (kind !== 'cliff' && kind !== 'rockery') return rows;
+  const tint = ROCK_SEASON_TINT[season] ?? ROCK_SEASON_TINT.summer;
+  return rows.map((p) => (/cliff|rock|boulder|talus/.test(p.role || '') ? { ...p, c: mulColor(p.c, tint) } : p));
+};
+
+export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant(kind, seed), season = 'summer' }) {
   const rnd = mulberry32((seed * 2654435761) >>> 0);
-  return facilityParts(kind, len, depth, h, rnd, variant) || (PARTS[kind] || PARTS.barricade)(len, depth, h, rnd);
+  const rows = facilityParts(kind, len, depth, h, rnd, variant) || (PARTS[kind] || PARTS.barricade)(len, depth, h, rnd);
+  return seasonalRock(kind, rows, season);
 }
 
 // ============ 緩衝空間的 3D 物件(使用者原話:「加入少許 3D 物件」)============

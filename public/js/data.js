@@ -45,7 +45,7 @@ export const lanesFor = (n) => Math.ceil(n / 2);
 export const MINI = {
   TEAM_MAX: 2,      // 1 兵線地圖為 1v1 / 2v2
   STAGES: 1,        // 每側塔位數:只有前線砲塔
-  BUFFER_F: 1,      // 緩衝深度全圖統一吃 WORLD_EDGE.BUFFER_F
+  BUFFER_F: 1,      // 緩衝只容納邊界障礙，不再隨地圖型態縮放
 };
 /** 戰場每側塔位數:每條兵線各陣營各 1 座砲塔(各陣營一對) */
 export const FULL_STAGES = 1;
@@ -2880,11 +2880,8 @@ export const worldCeilY = (avgH, peakH) => Math.max(
 //     `edgeBufferM()`。它不可進入是**既有的**保證(x/z 夾制與高度無關 ⇒ 飛行機體越過環頂
 //     也照樣進不去),新增的只有「看得到」。
 //
-// **深度推導不手寫** = `curveHorizonM()`(世界曲面那一圈地平線)。理由是結構性的:曲面把
-// 地表的視角極大值鎖在那個距離上,更遠的地面一律被較近的地面擋住 ⇒ 裙的外緣恰好落在
-// 「再往外也看不到」的那一圈 ⇒ **地圖永遠不會露出硬邊**,而視點恆在障礙環之內(離地形邊
-// 至少 `WALL_M`)⇒ 還多出那一段餘裕。手寫一個公尺數的下場是改了射程/塔/機體之後地平線
-// 自己跑掉,而裙留在原地 —— 症狀是「某些場地站在邊界看得到世界的盡頭」,沒有任何錯誤訊息。
+// 2026-08-31 收旂：舊制將外緣裙鋪到地平線，現改為只容納最深障礙的少量緩衝。
+// 原在圖界外的假山／假林／假城／島礁收入障礙環，同時取得演出與碰撞，不再依賴巨大無碰撞背景遮邊。
 //
 // **環高由機體全高推導**(`edgeWallHM`),而且**刻意不追飛行天花板**:物件上限只有
 // `objHeightMax()`(4 × 砲塔高),天花板恆在它之上(WORLD_H 檔頭的結構不等式)⇒ 一道
@@ -2904,7 +2901,7 @@ export const WORLD_EDGE = {
   WALL_H_F: 1.6,     // 環高**下界** = 最高機體全高 × 此比(> 1 ⇒ 沒有任何機體看得到自己越過它)
   SEG_M: 24,         // 單段長度(公尺)= 一根碰撞柱;perimeter/SEG_M ≈ 200 段 ≪ LOS.MAX_OCC
   SEG_LAP_F: 1.06,   // 段長重疊係數(> 1 ⇒ 相鄰段互相咬住,環上結構性地沒有縫)
-  BUFFER_F: 0.5,     // 緩衝深度 = 地平線距離 × 此比(使用者定案:邊界緩衝區減半)
+  BUFFER_F: 1.25,    // 緩衝深度 = 最深邊界障礙 × 此安全餘裕
 };
 /** 障礙環內緣 = 不可進入界線的內縮量(公尺)。`game.js` 的 x/z 夾制與環體佈置同吃這一支 */
 export const edgeWallInsetM = () => WORLD_EDGE.WALL_M;
@@ -2922,12 +2919,11 @@ export const edgeWallHM = () => Math.min(objHeightMax(), heroTallestH() * WORLD_
 /** 最深型式的環厚(公尺)= 邊界帶要讓開的距離。單一縫,見上方檔頭 */
 export const edgeWallDeepM = () => WORLD_EDGE.WALL_T * WORLD_EDGE.WALL_T_F;
 /**
- * 緩衝空間深度(公尺):地形範圍再往外鋪這麼遠的地。推導不手寫,見檔頭。
- * 邊界緩衝區減半(BUFFER_F = 0.5)。
- * 省略參數 ⇒ 倍率 1 ⇒ 逐位元同舊制。
+ * 緩衝空間深度(公尺):只保留最深邊界障礙的放置空間與少量地面餘裕。
+ * 不再以地平線距離推導；遠景假山／假林／假城已收入權威邊界障礙環。
+ * 參數保留為相容介面，所有地圖型態同吃這把尺。
  */
-export const edgeBufferM = (m) =>
-  curveHorizonM() * WORLD_EDGE.BUFFER_F * (mapPlan(m).mode === 'mini' ? MINI.BUFFER_F : 1);
+export const edgeBufferM = (_m) => edgeWallDeepM() * WORLD_EDGE.BUFFER_F;
 
 // ---- 自機碰撞量體(2026-08-02 由 game.js 移入本檔)----
 // 住 data.js 的理由與 hitR/hitH 相同:**伺服器也要用**。使用者定案「電腦玩家的碰撞法則一律跟
