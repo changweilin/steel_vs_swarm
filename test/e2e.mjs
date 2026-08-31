@@ -2539,6 +2539,32 @@ for (; pushS < 10 && movedM <= 10; pushS += 0.25) {
 assert(movedM > 10, `bot 沿兵線推進(${pushS.toFixed(1)} 秒內移動 ${movedM.toFixed(0)}m;上限 10 秒)`);
 hb.ws.close(); hbSpec.ws.close();
 
+// — 快速開始:完全相同配置直接開戰(含電腦敵人指名)—
+log('— 快速開始:完全相同配置直接開戰(含電腦敵人指名)—');
+const qrHost = await client('qrHost');
+qrHost.send({
+  t: 'createRoom', name: '快開指揮官', roomName: '快速戰區', isPublic: false,
+  teamSize: 2, botDiff: 'medium', battleConfig: fakeBattleConfig(1),
+});
+await qrHost.wait((c) => c.sync?.lobby?.phase === 'room');
+qrHost.send({ t: 'pickSide', side: 'STEEL' });
+qrHost.send({ t: 'pickChar', ch: 't01' });
+qrHost.send({ t: 'addBot', side: 'STEEL' });
+qrHost.send({ t: 'setBotChar', id: 'b1', ch: 't02' });
+qrHost.send({ t: 'addBot', side: 'SWARM' });
+qrHost.send({ t: 'setBotChar', id: 'b2', ch: 's01' });
+qrHost.send({ t: 'addBot', side: 'SWARM' });
+qrHost.send({ t: 'setBotChar', id: 'b3', ch: 's03' });
+qrHost.send({ t: 'setReady', ready: true });
+qrHost.send({ t: 'startBattle' });
+await qrHost.wait((c) => c.battleConfig);
+qrHost.send({ t: 'loaded' });
+await qrHost.wait((c) => c.snaps.length > 2, 8000);
+const qrSnap = qrHost.snaps.at(-1);
+assert(qrSnap.ents.some((e) => e.pid === qrHost.sync.youId && e.ch === 't01'), '快速開戰:自機角色正確指派(t01)');
+assert(qrSnap.ents.some((e) => e.pid === 'b1' && e.ch === 't02'), '快速開戰:我方僚機正確指派(b1=t02)');
+qrHost.ws.close();
+
 log(failed ? '\n❌ 有測試失敗' : '\n🎉 全部通過');
 Math.random = TEST_RANDOM_ORIGINAL;
 host.ws.close(); guest2.ws.close(); spec.ws.close();
