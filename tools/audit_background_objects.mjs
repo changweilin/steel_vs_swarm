@@ -2,21 +2,26 @@
 /**
  * 背景物件組裝閘：主結構固定、同角色多槽獨立抽樣、槽包絡與接合中心固定、配色取自子類別清單。
  * NPC／戰鬥建築／玩家機甲必須與本縫隔離。
- * 反向驗證：--break-leaf / --break-multi / --break-slot / --break-palette。
+ * 反向驗證：--break-leaf / --break-multi / --break-slot / --break-palette / --break-boundary-share。
  */
 import { readSrc } from './audit_src.mjs';
 import { runtimePartsFrameBounds } from './ai3d/catalog_tree.mjs';
 import { RUNTIME_BACKGROUND_CATALOG, RUNTIME_PARTS } from '../public/js/runtimeParts.js';
 import {
   BACKGROUND_VARIANTS_PER_TARGET,
+  EDGE_BACKGROUND_PREFIX,
   backgroundObjectTargets,
   generateBackgroundObject,
+  generateSharedBackgroundObject,
+  sharedBackgroundObjectTargets,
 } from '../public/js/backgroundObjects.js';
+import { BOUNDARY_ONLY_KINDS, STANDALONE_BOUNDARY_KINDS } from '../public/js/edgewall.js';
 
 const BREAK_LEAF = process.argv.includes('--break-leaf');
 const BREAK_MULTI = process.argv.includes('--break-multi');
 const BREAK_SLOT = process.argv.includes('--break-slot');
 const BREAK_PALETTE = process.argv.includes('--break-palette');
+const BREAK_BOUNDARY_SHARE = process.argv.includes('--break-boundary-share');
 const entries = new Map(Object.values(RUNTIME_PARTS).flat().map((entry) => [entry.key, entry]));
 const checks = [];
 const ok = (name, pass, detail = '') => checks.push({ name, pass: Boolean(pass), detail });
@@ -166,6 +171,23 @@ outer: for (const [key, entryRef] of refs) {
 ok('所有葉槽渲染包絡與目標接合中心逐位元貼合', slotFitOk, `slots=${slotCount}`);
 ok('背景目標查詢只涵蓋執行期環境資產', backgroundObjectTargets().length === entries.size
   && backgroundObjectTargets('building').every((key) => key.startsWith('building/')));
+const sharedTargets = sharedBackgroundObjectTargets();
+const expectedStandalone = BREAK_BOUNDARY_SHARE
+  ? STANDALONE_BOUNDARY_KINDS.filter((kind) => kind !== 'powerplant')
+  : STANDALONE_BOUNDARY_KINDS;
+ok('獨立邊界物件全數加入共同背景型錄',
+  expectedStandalone.every((kind) => sharedTargets.includes(`${EDGE_BACKGROUND_PREFIX}${kind}`))
+  && sharedTargets.length === entries.size + expectedStandalone.length);
+ok('陣列式與長構造只供邊界使用',
+  BOUNDARY_ONLY_KINDS.every((kind) => !sharedTargets.includes(`${EDGE_BACKGROUND_PREFIX}${kind}`)));
+const edgeObject = generateSharedBackgroundObject(`${EDGE_BACKGROUND_PREFIX}powerplant`, 19);
+ok('共同出口直接產出決定性的邊界單體描述子',
+  edgeObject.generation.source === 'edgewall' && edgeObject.generation.layout === 'standalone'
+  && edgeObject.parts.length > 0
+  && JSON.stringify(edgeObject) === JSON.stringify(generateSharedBackgroundObject(`${EDGE_BACKGROUND_PREFIX}powerplant`, 19)));
+ok('共同出口拒絕長構造', (() => {
+  try { generateSharedBackgroundObject(`${EDGE_BACKGROUND_PREFIX}citywall`, 1); return false; } catch { return true; }
+})());
 
 const generatorSrc = readSrc('public', 'js', 'backgroundObjects.js');
 const buildingSrc = readSrc('public', 'js', 'approvedBuildingModels.js');

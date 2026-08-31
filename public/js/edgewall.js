@@ -145,6 +145,52 @@ export const WALL_KINDS = {
   wetpods:      { dom: 'land',  bio: ['wet'], slope: 'flat', depth: 16, h: 14, label: '大型消波塊層層堆疊', family: 'pods', col: [0x969a9b, 0x777c7d] },
 };
 
+// ---- 邊界物件分類 / 使用政策 -------------------------------------------------
+// 邊界型錄同時包含「一件就成立的物件」與「必須沿邊成列才成立的長構造」。分類只描述
+// 物件語意；layout 才決定能否流入一般背景物件型錄。長構造維持 edge-only，避免把一小截
+// 河堤／城牆／消波塊當成可任意散布的獨立擺件。
+export const BOUNDARY_OBJECT_CATEGORIES = Object.freeze({
+  citywall: 'fortification', rowhouse: 'residential', barricade: 'military', train: 'rail',
+  trucks: 'vehicle', skyfall: 'highrise', viaduct: 'bridge', levee: 'levee',
+  cliff: 'rock', rockery: 'rock', landslide: 'rock', debris: 'rock',
+  giantforest: 'giant-tree', fallentree: 'deadwood', edgehamlet: 'residential',
+  seawall: 'coastal', tetrapod: 'coastal', ship: 'marine-vehicle', isletbarrier: 'rock',
+  windsea: 'energy', floatsolar: 'energy', searanch: 'aquaculture', deeprig: 'extraction',
+  windland: 'energy', solarfield: 'energy', mine: 'extraction', oilfield: 'extraction',
+  ranch: 'agriculture', greenhouse: 'agriculture', factory: 'industry', powerplant: 'industry',
+  incinerator: 'industry', skyscrapers: 'highrise', oysterracks: 'aquaculture',
+  strandedship: 'marine-vehicle', wetpods: 'coastal',
+});
+
+// 只有這些完整單體可作一般背景物件。其餘款式仍只在邊界生成器內成列或延伸。
+export const STANDALONE_BOUNDARY_KINDS = Object.freeze([
+  'skyfall', 'rockery', 'fallentree', 'edgehamlet', 'mine', 'oilfield',
+  'factory', 'powerplant', 'incinerator', 'skyscrapers', 'strandedship',
+]);
+export const BOUNDARY_ONLY_KINDS = Object.freeze(
+  Object.keys(WALL_KINDS).filter((kind) => !STANDALONE_BOUNDARY_KINDS.includes(kind)),
+);
+
+export function boundaryObjectMeta(kind) {
+  const def = WALL_KINDS[kind];
+  if (!def) return null;
+  return {
+    kind,
+    category: BOUNDARY_OBJECT_CATEGORIES[kind],
+    layout: STANDALONE_BOUNDARY_KINDS.includes(kind) ? 'standalone' : 'edge-only',
+    dom: def.dom,
+    bio: [...def.bio],
+    label: def.label,
+  };
+}
+
+export function boundaryObjectKinds({ category = null, layout = null } = {}) {
+  return Object.keys(WALL_KINDS).filter((kind) => {
+    const meta = boundaryObjectMeta(kind);
+    return (!category || meta.category === category) && (!layout || meta.layout === layout);
+  });
+}
+
 // 同類設施可在一個地貌 run 內交錯；這是「可混排」名冊，不是生成器家族。
 // 住商與工業刻意分組，避免只因都在 urban 就把電廠插進連排住宅。
 export const WALL_MIX_GROUPS = {
@@ -546,10 +592,10 @@ const PARTS = {
           })),
           { g: ['box', s * 0.99, 0.3, 0.45], c: roofC, p: [x, 0.5 + wallH + (roofSpan / 2) * Math.tan(tilt), zc] },
           // 一樓店面 + 二樓窗:貼內面的深色薄板(看得出來是「有人住過的房子」)
-          { g: ['box', s * 0.72, 2.5, 0.24], c: 0x3c4148, p: [x, 1.7, zIn(D, 0.24)] },
+          { g: ['box', s * 0.72, 2.5, 0.24], c: 0x3c4148, p: [x, 1.7, zIn(D, 0.24)], role: 'storefront-glass', mat: 'glass' },
           { g: ['box', s * 0.7, 0.35, 0.7], c: pick(rnd, [0xc2513f, 0x3f6f7a, 0xb8912f]), p: [x, 3.2, zIn(D, 0.7)] },
           ...[0.62, 0.82].map((f) => (
-            { g: ['box', s * 0.5, 1.2, 0.2], c: 0x4a5158, p: [x, 0.5 + wallH * f, zIn(D, 0.2)] })),
+            { g: ['box', s * 0.5, 1.2, 0.2], c: 0x4a5158, p: [x, 0.5 + wallH * f, zIn(D, 0.2)], role: 'residential-window', mat: 'glass' })),
           // 頂樓水塔:雜湊決定有沒有(不是每一戶都有 ⇒ 天際線不齊)
           ...(rnd() < 0.45 ? [{ g: ['cyl', 0.85, 0.85, 1.6, 8], c: 0x9aa2a8, p: [x, H - 0.9, zIn(D, 1.7, 1.4)] }] : []),
         ];
@@ -632,7 +678,7 @@ const PARTS = {
     return [
       { g: ['box', len, base, D], c: 0x8b8378, p: [0, base / 2, 0] },
       ...rep(len, 4.5, (x) => [rock(rnd, x, D, base + 2.4, 1.1, 1.9, pick(rnd, [0x9a958a, 0x857f75, 0x8f8a80]), 3)]),
-      { g: ['box', len * 0.99, bodyH, bodyD], c: 0x8e97a0, p: [0, base + hy, zc], r: [tilt, 0, 0] },
+      { g: ['box', len * 0.99, bodyH, bodyD], c: 0x627b89, p: [0, base + hy, zc], r: [tilt, 0, 0], role: 'broken-curtain-wall', mat: 'glass' },
       // 樓板:一層一片,露在傾斜的斷面上
       ...[0.16, 0.34, 0.52, 0.7, 0.88].map((f) => (
         { g: ['box', len * 0.99, 0.34, bodyD * 1.01], c: 0xb2b8bd, p: [0, base + bodyH * f, zc], r: [tilt, 0, 0] })),
@@ -814,7 +860,11 @@ const PARTS = {
     { g: ['box', len * 0.18, H, D * 0.54], c: 0x737d88, p: [0, H / 2, zIn(D, D * 0.54, 0.8)], role: 'city-tower' },
     ...rep(len, 6.4, (x, step, i) => {
       const h = H * (0.34 + rnd() * 0.38), d = D * (0.42 + rnd() * 0.2);
-      return [{ g: ['box', step * 0.82, h, d], c: pick(rnd, [0x68727d, 0x7a838d, 0x59636f]), p: [x, h / 2, zIn(D, d, 0.4 + (i % 2))], role: 'city-block' }];
+      const back = 0.4 + (i % 2);
+      return [
+        { g: ['box', step * 0.82, h, d], c: pick(rnd, [0x68727d, 0x7a838d, 0x59636f]), p: [x, h / 2, zIn(D, d, back)], role: 'city-block' },
+        { g: ['box', step * 0.7, h * 0.62, 0.12], c: 0x496775, p: [x, h * 0.56, zIn(D, 0.12, back)], role: 'city-glass-wall', mat: 'glass' },
+      ];
     }),
   ],
   // 倒塌神木:兩根沿邊躺著的巨幹 + 兩側掀起的根盤 + 斷枝 + 苔蘚與新生樹苗。
@@ -937,7 +987,7 @@ const PARTS = {
       ),
       // 上層建築 + 駕駛台 + 煙囪 + 桅桿(桅頂 = 盒頂)
       { g: ['box', 6.5, 6.0, 9], c: 0xd6cdbb, p: [len * 0.32, deck + 3.0, zIn(D, 9, 2.4)] },
-      { g: ['box', 7.4, 1.7, 9.8], c: 0xe2dccd, p: [len * 0.32, deck + 6.85, zIn(D, 9.8, 2.4)] },
+      { g: ['box', 7.4, 1.7, 9.8], c: 0x526b78, p: [len * 0.32, deck + 6.85, zIn(D, 9.8, 2.4)], role: 'bridge-glass', mat: 'glass' },
       { g: ['box', 2.6, 3.2, 3.0], c: 0x3f4750, p: [len * 0.32 - 3.6, deck + 9.3, zIn(D, 3.0, 3.4)] },
       { g: ['cyl', 0.24, 0.16, H - deck - 7.7, 5], c: 0xd6cdbb, p: [len * 0.32, deck + 7.7 + (H - deck - 7.7) / 2, zIn(D, 0.5, 3.0)] },
       // 起重機吊臂(斜的細柱)
@@ -1167,8 +1217,8 @@ const extractFacility = (len, D, H, rnd, spec, kind) => {
 const greenhouseFacility = (len, D, H, rnd, spec) => {
   return [
     ...rep(len, 7.2, (x, step) => [
-      { g: ['box', step * 0.9, 6.8, D * 0.62], c: 0x78988b, p: [x, 3.4, zIn(D, D * 0.62)] },
-      { g: ['cyl', 2.0, 2.0, step * 0.9, 8], c: spec.col[0], p: [x, 6.8, zIn(D, D * 0.62)], r: [0, 0, Math.PI / 2] },
+      { g: ['box', step * 0.9, 6.8, D * 0.62], c: 0x78988b, p: [x, 3.4, zIn(D, D * 0.62)], role: 'greenhouse-glass-wall', mat: 'glass' },
+      { g: ['cyl', 2.0, 2.0, step * 0.9, 8], c: spec.col[0], p: [x, 6.8, zIn(D, D * 0.62)], r: [0, 0, Math.PI / 2], role: 'greenhouse-glass-roof', mat: 'glass' },
       ...[-1.8, 0, 1.8].map((o) => ({ g: ['box', step * 0.84, 0.08, 0.08], c: 0xd3dfda, p: [x, 7.2, zIn(D, 0.1, D * 0.22 + o)] })),
     ]),
     { g: ['cyl', 0.18, 0.22, H, 6], c: 0x718078, p: [len * 0.4, H / 2, -D / 2 + 0.22] },
@@ -1184,7 +1234,8 @@ const highriseFacility = (len, D, H, rnd, spec, variant = 0) => {
       const d = D * (0.5 + rank * 0.04);
       return [
         { g: ['box', step * widthF, h, d], c: (i + variant) % 2 ? spec.col[0] : spec.col[1], p: [x, h / 2, zIn(D, d)] },
-        ...[0.24, 0.48, 0.72].map((f) => ({ g: ['box', step * (widthF - 0.06), 0.18, 0.16], c: 0xb6ccd5, p: [x, h * f, zIn(D, 0.16)] })),
+        { g: ['box', step * (widthF - 0.08), h * 0.78, 0.12], c: 0x58798a, p: [x, h * 0.52, zIn(D, 0.12)], role: 'curtain-glass-wall', mat: 'glass' },
+        ...[0.24, 0.48, 0.72].map((f) => ({ g: ['box', step * (widthF - 0.06), 0.18, 0.16], c: 0xb6ccd5, p: [x, h * f, zIn(D, 0.16)], role: 'glass-mullion' })),
       ];
     }),
     { g: ['box', 3.4 + variant * 0.4, H * (0.52 + variant * 0.05), 2.0], c: spec.col[1], p: [(variant - 1) * len * 0.18, H * (0.26 + variant * 0.025), -D / 2 + 1.0], role: 'service-wing' },
@@ -1210,6 +1261,7 @@ const industryFacility = (len, D, H, rnd, spec, kind, variant = 0) => {
       const back = ((i + variant) % 2) * 1.15;
       return [
         { g: ['box', step * 0.76, h, d], c: (i + variant) % 2 ? spec.col[0] : spec.col[1], p: [x, h / 2, zIn(D, d, back)], role: 'industrial-hall' },
+        { g: ['box', step * 0.62, h * 0.32, 0.12], c: 0x537583, p: [x, h * 0.62, zIn(D, 0.12, back)], role: 'industrial-glass-wall', mat: 'glass' },
         { g: ['box', step * 0.72, 0.46, d + 0.35], c: spec.col[1], p: [x, h + 0.23, zIn(D, d + 0.35, back)], role: 'industrial-roof' },
       ];
     }),
@@ -1249,7 +1301,7 @@ const wreckFacility = (len, D, H, rnd, spec, variant = 0) => {
     { g: ['box', len * (hullF - 0.08), 0.5, D * 0.76], c: 0xa55d45, p: [-dir * len * 0.04, 7.15, zIn(D, D * 0.76)], role: 'deck' },
     // 駕駛台、舷窗帶、煙囪、桅桿與救生艇讓船型在遠景仍可辨識。
     { g: ['box', 5.4 + variant * 0.4, 3.8, 6.2], c: 0xc8c2b4, p: [bridgeX, 9.0, zIn(D, 6.2, 2.0)], role: 'bridge' },
-    { g: ['box', 4.8 + variant * 0.3, 0.7, 6.5], c: 0x53616a, p: [bridgeX, 11.25, zIn(D, 6.5, 1.8)], role: 'bridge-window' },
+    { g: ['box', 4.8 + variant * 0.3, 0.7, 6.5], c: 0x53616a, p: [bridgeX, 11.25, zIn(D, 6.5, 1.8)], role: 'bridge-window', mat: 'glass' },
     { g: ['cyl', 0.55, 0.45, 3.3, 7], c: variant === 2 ? 0x4f5960 : 0x9a4d37, p: [bridgeX - dir * 0.7, 12.1, zIn(D, 1.1, 2.0)], role: 'funnel' },
     { g: ['cyl', 0.16, 0.22, H - 12.5, 5], c: spec.col[1], p: [-dir * len * 0.04, 12.5 + (H - 12.5) / 2, zIn(D, 0.5, 2.1)], role: 'mast' },
     ...[-1, 1].map((sd) => ({ g: ['box', 2.4, 0.55, 0.85], c: 0xd6c7a7, p: [len * 0.03, 8.0, zIn(D, 0.85, 5.3 + sd * 0.55)], role: 'lifeboat' })),
@@ -1310,6 +1362,25 @@ export function wallParts(kind, { len, depth, h, seed = 1, variant = wallVariant
   const rnd = mulberry32((seed * 2654435761) >>> 0);
   const rows = facilityParts(kind, len, depth, h, rnd, variant) || (PARTS[kind] || PARTS.barricade)(len, depth, h, rnd);
   return seasonalRock(kind, rows, season);
+}
+
+/**
+ * 可獨立散布的邊界物件出口。背景型錄與邊界本體共用 wallParts，沒有第二份電廠／礦場／
+ * 摩天樓生成器；長構造在此直接拒絕，避免被誤當一般擺件。
+ */
+export function standaloneBoundaryParts(kind, opts = {}) {
+  if (!STANDALONE_BOUNDARY_KINDS.includes(kind)) {
+    throw new RangeError(`邊界款式不是獨立物件:${kind}`);
+  }
+  const def = WALL_KINDS[kind];
+  return wallParts(kind, {
+    len: opts.len ?? 30,
+    depth: opts.depth ?? def.depth,
+    h: opts.h ?? def.h,
+    seed: opts.seed ?? 1,
+    variant: opts.variant ?? wallVariant(kind, opts.seed ?? 1),
+    season: opts.season ?? 'summer',
+  });
 }
 
 // ============ 緩衝空間的 3D 物件(使用者原話:「加入少許 3D 物件」)============

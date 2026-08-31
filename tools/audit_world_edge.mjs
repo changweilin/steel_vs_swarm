@@ -57,6 +57,8 @@
 //                 `--break-redraw`       抽掉本輪邊界重繪辨識零件 ⇒ Ⅶ 紅
 //                 `--break-facility-gap`  把非連續大型設施的透明縫補滿 ⇒ Ⅶ 紅
 //                 `--break-facility-mix`  關掉同類設施逐節穿插 ⇒ Ⅶ 紅
+//                 `--break-shared-catalog` 抽掉獨立物件分類 ⇒ Ⅶ 紅
+//                 `--break-glass`         抽掉建築玻璃與透明批次 ⇒ Ⅲ・Ⅶ 紅
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import {
@@ -79,6 +81,8 @@ const BREAK_FACILITY_SUPPORT = process.argv.includes('--break-facility-support')
 const BREAK_REDRAW = process.argv.includes('--break-redraw');
 const BREAK_FACILITY_GAP = process.argv.includes('--break-facility-gap');
 const BREAK_FACILITY_MIX = process.argv.includes('--break-facility-mix');
+const BREAK_SHARED_CATALOG = process.argv.includes('--break-shared-catalog');
+const BREAK_GLASS = process.argv.includes('--break-glass');
 if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
 if (process.argv.includes('--break-rock-season')) {
   for (const s of Object.keys(EW.ROCK_SEASON_TINT)) EW.ROCK_SEASON_TINT[s] = 0xffffff;
@@ -124,6 +128,7 @@ const wallParts = (kind, o) => {
     });
   }
   if (BREAK_FACE) return parts.filter((p) => EW.partBox(p).z1 < o.depth / 2 - EW.EDGE_WALL.FACE_T);
+  if (BREAK_GLASS) parts = parts.map(({ mat, ...part }) => part);
   return parts;
 };
 const planWallKinds = (run, segs, prevKind = null) => (
@@ -488,8 +493,11 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
     len: WORLD_EDGE.SEG_M * WORLD_EDGE.SEG_LAP_F, depth: city.depth, h: cityH, seed: i + 1,
   }).map((p) => EW.partBox(p).y1)).toFixed(2)));
   t(`同一款的節可以有不同盒高(城牆 80 種子出現 ${cityTops.size} 種高度 —— 素牆 / 箭樓 / 砲台 / 城樓)`, cityTops.size >= 4);
-  t('演出走合併幾何而不是逐件 mesh(整圈一個 draw call;本渲染器是 draw call 瓶頸)',
-    /mergeGeos\(batch\.geos, batch\.cols\)/.test(bioCode) && /vertexColors: true/.test(bioCode));
+  const glassBatchSrc = BREAK_GLASS ? bioCode.replaceAll("p.mat === 'glass'", 'false') : bioCode;
+  t('演出依不透明／玻璃各自合批，而不是逐件 mesh（整圈最多兩個靜態 draw call）',
+    /mergeGeos\(partBatch\.geos, partBatch\.cols\)/.test(glassBatchSrc)
+    && /p\.mat === 'glass'/.test(glassBatchSrc)
+    && /transparent: true/.test(glassBatchSrc) && /depthWrite: false/.test(glassBatchSrc));
 }
 
 // ============ Ⅳ 單一縫 + blockers 順序 ============
@@ -671,6 +679,29 @@ console.log('\nⅥ 純表現層(伺服器對這一整套一無所知)');
 // ============ Ⅶ 型錄與切分規則 ============
 console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)');
 {
+  const categorizedKinds = BREAK_SHARED_CATALOG
+    ? Object.keys(EW.BOUNDARY_OBJECT_CATEGORIES).filter((kind) => kind !== 'powerplant')
+    : Object.keys(EW.BOUNDARY_OBJECT_CATEGORIES);
+  const allKinds = Object.keys(EW.WALL_KINDS);
+  t('每一款舊邊界障礙物皆歸入具名物件分類', categorizedKinds.length === allKinds.length
+    && allKinds.every((kind) => typeof EW.boundaryObjectMeta(kind)?.category === 'string'));
+  t('獨立物件與長構造完整互斥分流',
+    EW.STANDALONE_BOUNDARY_KINDS.length + EW.BOUNDARY_ONLY_KINDS.length === allKinds.length
+    && allKinds.every((kind) => EW.STANDALONE_BOUNDARY_KINDS.includes(kind) !== EW.BOUNDARY_ONLY_KINDS.includes(kind))
+    && ['citywall', 'levee', 'seawall', 'tetrapod', 'wetpods'].every((kind) => EW.BOUNDARY_ONLY_KINDS.includes(kind))
+    && ['powerplant', 'mine', 'fallentree', 'skyscrapers', 'edgehamlet'].every((kind) => EW.STANDALONE_BOUNDARY_KINDS.includes(kind)));
+  const standaloneSample = EW.standaloneBoundaryParts('powerplant', { len: 30, seed: 19 });
+  t('獨立背景出口直接委派 wallParts，長構造無法流入一般背景',
+    JSON.stringify(standaloneSample) === JSON.stringify(EW.wallParts('powerplant', {
+      len: 30, depth: EW.WALL_KINDS.powerplant.depth, h: EW.WALL_KINDS.powerplant.h,
+      seed: 19, variant: EW.wallVariant('powerplant', 19), season: 'summer',
+    })) && (() => { try { EW.standaloneBoundaryParts('citywall'); return false; } catch { return true; } })());
+  const glazedKinds = ['rowhouse', 'skyfall', 'edgehamlet', 'greenhouse', 'factory',
+    'powerplant', 'incinerator', 'skyscrapers', 'ship', 'strandedship'];
+  t('原邊界建築均具玻璃牆／窗帶材質語意', glazedKinds.every((kind) => {
+    const def = EW.WALL_KINDS[kind];
+    return wallParts(kind, { len: 30, depth: def.depth, h: def.h, seed: 11 }).some((part) => part.mat === 'glass');
+  }));
   const kinds = Object.keys(EW.WALL_KINDS);
   t(`型錄 ${kinds.length} 款(使用者點名 15 種:城牆/連排民房/河堤/海堤/軍工級路障/土石流/懸崖峭壁/山崩地/消波塊/倒塌神木/倒塌摩天樓/倒塌高架橋/停駛的列車/連排大貨車/連排貨輪)`,
     kinds.length >= 15);
@@ -1200,6 +1231,8 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-redraw', '抽掉本輪邊界重繪辨識零件,Ⅶ MUST 紅字'],
   ['--break-facility-gap', '補滿非連續大型設施間的透明縫,Ⅶ MUST 紅字'],
   ['--break-facility-mix', '關掉同類設施逐節混排,Ⅶ MUST 紅字'],
+  ['--break-shared-catalog', '抽掉獨立物件分類,Ⅶ MUST 紅字'],
+  ['--break-glass', '抽掉建築玻璃與透明批次,Ⅲ・Ⅶ MUST 紅字'],
   ['--break-snow-summer', '夏季出現覆雪,Ⅸ MUST 紅字(夏天無雪契約破壞)'],
   ['--break-snow-slope', '雪錐斜率失真外突,Ⅸ MUST 紅字(山頂雪錐外擴懸空)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);
