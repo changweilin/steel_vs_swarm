@@ -667,6 +667,15 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
   log(`${id}: ${full ? '✅' : '◐'}`);
 }
 
+// 指定場地只准在**全部**取得新路網並至少選出一組路線後寫檔。
+// 外部服務失敗時若仍重寫，`keep` 會把該場地當成已重烤而移除舊表，
+// 下一局才靜默退回 synthLane，等同把原本有效的 baked route 刪掉。
+const missing = ONLY.filter((id) => !out[id]);
+if (missing.length) {
+  log(`\n❌ 指定場地未取得可用路線，拒絕重寫 venueLanes.js：${missing.join(', ')}`);
+  process.exit(1);
+}
+
 log('\n---- 報告 ----');
 for (const r of report) log(r);
 log(`\n成功 ${Object.keys(out).length} / ${Object.keys(ANCHORS).length}`);

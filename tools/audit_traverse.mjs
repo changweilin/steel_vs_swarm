@@ -276,7 +276,10 @@ async function scanVenue(v) {
   sim.ents.delete(probe.id);   // 探針自己不參與碰撞(僚機由 pid 相同自動略過)
 
   const B = (side) => llToWorld(cfg.bases[side][0], cfg.bases[side][1], cfg.center);
-  const seeds = [B('SWARM'), B('STEEL')];
+  // 主堡中心是工事碰撞量體內部，直接從中心泛洪會被真 `solidResolve` 擋在原地。
+  // 以正式 `_spawnPoint` 作為第二個種子，與實際玩家出生位置一致；主堡中心仍保留為航點，
+  // 這樣同時驗「出生後能離堡」與「主堡座標屬於場地」，不繞過任何碰撞判定。
+  const seeds = ['SWARM', 'STEEL'].flatMap((side) => [B(side), sim._spawnPoint(side, 0, 0)]);
   const wps = [
     { name: '蜂群主堡', p: B('SWARM') },
     { name: '鋼鐵主堡', p: B('STEEL') },
