@@ -602,6 +602,7 @@ export class BattleClient {
     this._airSink = 0;                          // 受擊掉高:待落公尺數(逐幀以 _airSinkV 消化)
     this._airSinkV = 0;                         // 待落公尺數的下降速率(= 待落總量 / FLIGHT.SINK_S)
     this._liftLockUntil = 0;                    // 受擊掉高動力回復鎖定截止時刻(FLIGHT.HIT_LOCK_S)
+    this.unbalLeft = 0;                         // 受擊失衡異常狀態剩餘秒(伺服器快照同步)
 
     // 角色(專屬機體 + 輕/重武器 + 小招/大招);開房廣播帶 ch,快照亦會同步
     this.abil = { light: 1, heavy: 1, skill: 1, ult: 1 };   // 招式開場即 Lv1 可用(2026-07-20)
@@ -2323,6 +2324,7 @@ export class BattleClient {
     edge('_invOn', this.invLeft, '🛡️ 相位護盾:1 秒無敵!');
     edge('_empOn', this.empLeft, '⚡ 電磁干擾:武器系統離線(仍可移動)!', 'emp');
     edge('_blindOn', this.blindLeft, '💥 閃光彈:視野受阻!', VISION_BLIND.PEAK);
+    edge('_unbalOn', this._unbalanced() ? 1 : 0, '⚠️ 機體失衡:攻擊命中與暴擊減半、飛行動力鎖定!');
   }
 
   /**
@@ -3293,6 +3295,7 @@ export class BattleClient {
           this.hiSupF = e.hsf || 0;
           this.confLeft = e.cf || 0;
           this.markLeft = e.mk || 0;
+          this.unbalLeft = e.ub || 0;
           this.bleedLeft = e.bl || 0;
           this.invLeft = e.iv || 0;
           this.selfMods = e.md || [];   // 招式增益 [k, m, remS](speed/jump 由客戶端物理消費)
@@ -5278,6 +5281,7 @@ export class BattleClient {
     this.trauma = 0.35;
     this._airSink = 0;        // 換座機:掉高待落帳是上一具機體的,不跟著搬(_prevVital 同理)
     this._liftLockUntil = 0;
+    this.unbalLeft = 0;
     this._prevVital = null;   // 換座機:重置受傷偵測基準,避免血量落差誤觸暈影
     this._clearCcFlash();     // 換座機:白幕是上一具機體的感光反應,不跟著視野搬過來
     this._clearBlood();       // 換座機:血漬是上一具機體座艙玻璃上的,同理不跟著搬
@@ -5769,6 +5773,7 @@ export class BattleClient {
     this._climb = null;   // 掛在梯上陣亡:狀態 MUST 清掉,否則重生後第一幀會被吸回原本那條路線
     this._airSink = 0;    // 死亡:清掉高待落帳(墜機過場自有物理,兩套下降會打架)
     this._liftLockUntil = 0;
+    this.unbalLeft = 0;
     this._fireDwell = 0; this._swampDwell = 0; this._scopeFog = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
     this._clearBlood();     // 死亡:清濺血(_updatePlayer 對 dead 早退不再衰減 ⇒ 不清會凍在畫面上)
@@ -5824,6 +5829,7 @@ export class BattleClient {
     this.vel.set(0, 0, 0);
     this._airSink = 0;        // 重生:清掉高待落帳
     this._liftLockUntil = 0;
+    this.unbalLeft = 0;
     this.lift = null;         // 重生:爬升動力補滿(首幀由 _stepLift 夾到上限)
     // 重生滿彈、重武器 CD 清空
     for (const [id, st] of Object.entries(this.wstate)) { st.ammo = this.wdef[id]?.mag ?? st.ammo; st.reloadEnd = 0; }
@@ -7775,6 +7781,13 @@ export class BattleClient {
   /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力;變形者吃 FLIGHT.MORPH_F) */
   _liftMax() { return liftMax((this._mpAuth && this.maxMp) || UNITS[this.heroKind]?.mp || 0, this.isMorph); }
 
+  /** 飛行機體是否處於受擊失衡狀態?(2026-09-01 使用者需求:跌落到穩住期間進入失衡,命中/暴擊減半,無法恢復動力) */
+  _unbalanced(now) {
+    if (!this._flying() || this.dead) return false;
+    const t = now ?? (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
+    return (this._airSink > 0) || (t < (this._liftLockUntil || 0)) || ((this.unbalLeft || 0) > 0);
+  }
+
   /**
    * 爬升動力條:往上飛消耗、其餘時間回充。**唯一消費點** —— target.y > 0 才扣,扣速 ∝ 爬升率
    * (全速 = liftDrainPS ⇒ 滿動力撐 FLIGHT.DRAIN_S 秒);動力見底把上升分量歸零(= 爬不上去,
@@ -7801,9 +7814,8 @@ export class BattleClient {
           - liftDrainPS(this.maxMp || 0, this.isMorph) * Math.min(1, target.y / vsp) * dt);
       }
     } else {
-      // 受擊掉高與冷卻期間禁止回充(2026-09-01 使用者需求:飛行時被擊中而下降時,會有一段時間無法恢復飛行動力)
-      const locked = (this._airSink > 0) || (now != null && now < (this._liftLockUntil || 0));
-      if (!locked) {
+      // 受擊失衡期間禁止回充(2026-09-01 使用者需求:失衡時無法恢復飛行動力)
+      if (!this._unbalanced(now)) {
         const wet = this._env?.code || 0;
         this.lift = Math.min(lMax, this.lift + liftRegen(u?.mpRegen, this.upg?.ch) * fluidFactor(wet) * dt);
       }

@@ -717,7 +717,10 @@ export const CJUMP = {
 export const FLIGHT = {
   SINK_TOWERS: 2,    // 受擊掉高校準:掉光「平均護盾 + 裝甲」= 掉幾個砲塔高
   SINK_S: 0.5,       // 一次掉高的展開秒數(純手感節奏;總掉幅由 airSinkM 決定)
-  HIT_LOCK_S: 2.0,   // 受擊掉高動力回復鎖定(秒):飛行中被擊中下降時無法恢復飛行動力的持續時間
+  HIT_LOCK_S: 2.0,   // 受擊掉高穩住時間(秒):飛行中被擊中下降至穩住這段時間
+  UNBAL_ACC_MUL: 0.5,  // 失衡異常狀態:攻擊命中率減半(2026-09-01 使用者需求)
+  UNBAL_CRIT_MUL: 0.5, // 失衡異常狀態:暴擊率減半(2026-09-01 使用者需求)
+  UNBAL_S: 2.5,        // 失衡異常狀態持續時長(= SINK_S + HIT_LOCK_S,跌落到穩住)
   DRAIN_S: 5,        // 滿動力全速爬升可持續秒數
   MAX_F: 1.0,        // 動力上限 = 電力上限 × 此比(正比於電力;現值 = 電力上限本身)
   // 變形者(飛行型態)的飛行動力上限校準(2026-08-02 使用者定案「變形者的飛行動力減少 1/3」):
@@ -746,6 +749,9 @@ export const liftMax = (maxMp, isMorph) =>
 export const liftRegen = (mpRegen, chLvl) => Math.max(0, mpRegen || 0) * chargeF(chLvl) * FLIGHT.REGEN_F;
 /** 全速爬升的動力耗速(每秒;= 動力上限 ÷ DRAIN_S,推導不手寫) */
 export const liftDrainPS = (maxMp, isMorph) => liftMax(maxMp, isMorph) / FLIGHT.DRAIN_S;
+/** 失衡失準機率:若射手失衡,命中率減半(失準機率相應增加) */
+export const unbalMissP = (missP, unbalanced) =>
+  unbalanced ? 1 - (1 - (missP || 0)) * FLIGHT.UNBAL_ACC_MUL : (missP || 0);
 // ---- 無敵幀(2026-07-16;起跳離地 1 秒無敵)----
 // 客戶端在「起跳離地當下」送 {t:'iframe'},伺服器 sim.heroIframe 驗 CD 後結算(_damage 免傷、控場免疫)。
 // 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長。三機動能力共用此縫:
