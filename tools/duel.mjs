@@ -30,7 +30,7 @@
 // 「彈夾/裝填攤平成持續 DPS」(與 bal ①/④ 同一個簡化)。
 import { CHARACTERS, UNITS, GAME, VITALS, ALTITUDE, EVASION, SQUAD, evadeExpF, altScale, altTier,
   armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
-  dmgFalloff, heavyMpCost, shieldSplit, mobMid, rangeMid, speedMid,
+  dmgFalloff, heavyMpCost, shieldSplit, mobMid, rangeMid, speedMid, altRangeF,
   HIGH_SUP, highSupF, highSupDodgeF, highSupSpeedF, highSupMissP } from '../public/js/data.js';
 
 export const DUEL = {
@@ -51,9 +51,6 @@ export function dhSweep() {
   for (let k = -DUEL.DH_MAX_F; k <= DUEL.DH_MAX_F + 1e-9; k += DUEL.DH_STEP_F) out.push(k * T);
   return out;
 }
-
-/** 較高方射程乘數(對齊 sim._altRange:只有較高的一方拉遠射程) */
-const altRangeF = (dh) => (dh > 0 ? 1 + ALTITUDE.RANGE * altScale(dh) : 1);
 
 /** 爆擊期望倍率(對齊 sim._rollCrit + _altCrit:爆率 ×rate、爆傷**加成部分** ×dmg) */
 function critF(def, dh) {
@@ -151,10 +148,9 @@ export function duel(A, B, dh = 0) {
   // sup / supUntil = 高地壓制狀態(見 data.js HIGH_SUP):逐 tick 變動 ⇒ 住對局狀態不住 fighter
   const st = (F) => ({ f: F, sh: F.sh0, ar: F.ar0, mp: F.mp0, ehp0: F.sh0 + F.ar0, sup: 0, supUntil: -1 });
   const a = st(A), b = st(B);
-  const rF = { a: altRangeF(dh), b: altRangeF(-dh) };            // 較高方 +射程
   const cF = { a: dh, b: -dh };                                  // 各自視角的高度差(爆擊/閃避用)
-  // 有效射程(含高度差加成)
-  const eff = (S, side) => S.f.slots.map((s) => s.def.range * rF[side]);
+  // 有效射程(含高度差加成:重武器/大招減半)
+  const eff = (S, side) => S.f.slots.map((s) => s.def.range * altRangeF(side === 'a' ? dh : -dh, s.def));
   const effA = eff(a, 'a'), effB = eff(b, 'b');
 
   /**

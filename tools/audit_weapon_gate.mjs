@@ -84,7 +84,15 @@ sec('Ⅰ 射程閘門容差 / 爆風超壓帶:單一縫,推導不手寫');
 ok(RANGE_TOL > 1 && RANGE_TOL < 2, `RANGE_TOL 是合理的網路寬容(${RANGE_TOL})`);
 ok(Math.abs(altRangeMax() - (1 + ALTITUDE.RANGE)) < 1e-12,
   'altRangeMax() = 1 + ALTITUDE.RANGE(推導不手寫)');
-ok(/export const altRangeMax = \(\) => 1 \+ ALTITUDE\.RANGE;/.test(D),
+ok(Math.abs(altRangeMax('heavy') - (1 + ALTITUDE.RANGE * 0.5)) < 1e-12,
+  'altRangeMax("heavy") = 1 + ALTITUDE.RANGE * 0.5(重武器高度差射程優勢減半)');
+ok(Math.abs(altRangeMax('ult') - (1 + ALTITUDE.RANGE * 0.5)) < 1e-12,
+  'altRangeMax("ult") = 1 + ALTITUDE.RANGE * 0.5(大招高度差射程優勢減半)');
+ok(Math.abs(altRangeMax('light') - (1 + ALTITUDE.RANGE)) < 1e-12,
+  'altRangeMax("light") = 1 + ALTITUDE.RANGE(輕武器全額優勢)');
+ok(Math.abs(altRangeMax('skill') - (1 + ALTITUDE.RANGE)) < 1e-12,
+  'altRangeMax("skill") = 1 + ALTITUDE.RANGE(小招全額優勢)');
+ok(/export const altRangeMax = /.test(D),
   'altRangeMax 原文由 ALTITUDE.RANGE 推導(MUST NOT 寫死 1.25)');
 // sim.js 的每一道射程閘門都 MUST 吃 RANGE_TOL,且不得再出現「射程 × 手寫倍率」
 {
@@ -122,8 +130,8 @@ sec('Ⅱ 兩端射程閘門同界:客戶端飛得到的,伺服器 MUST 收得下
   const alt = methodSrc('_altRangeTo', G);
   ok(/altRangeF\(/.test(alt) && !/ALTITUDE\.RANGE \* altScale/.test(alt),
     '客戶端 _altRangeTo 走 data.js altRangeF 這個唯一縫(MUST NOT 自寫第二份曲線)');
-  ok(/this\._maxRange\(def\)/.test(methodSrc('_tryFire', G)) && /altRangeMax\(\)/.test(methodSrc('_maxRange', G)),
-    '搜尋上限 _maxRange = range × altRangeMax()(= 伺服器 impCap 的誠實界)');
+  ok(/this\._maxRange\(def\)/.test(methodSrc('_tryFire', G)) && /altRangeMax\(def\)/.test(methodSrc('_maxRange', G)),
+    '搜尋上限 _maxRange = range × altRangeMax(def)(= 伺服器 impCap 的誠實界)');
   // 拋物線武器取火控解夾制時用的**同一個**包絡(`lobFc.max`):兩個數字只要差一格浮點數,
   // 夾好的落點就落在球面外側 = 那一發變成不會爆的啞彈(見 Ⅺ ④ 的瞄準點夾制)。
   ok(/max: lobFc \? lobFc\.max : rng, mesh, origin: muzzle\.clone\(\),/.test(G),
@@ -131,8 +139,8 @@ sec('Ⅱ 兩端射程閘門同界:客戶端飛得到的,伺服器 MUST 收得下
   ok(!/\brMul\b/.test(G.replace(/^\s*(\/\/|\*).*$/gm, '')) || /const rMul = this\._altRangeTo\(/.test(G),
     'rMul 若仍出現在可執行原文 MUST 有宣告(巨砲移除後遺留的未宣告變數 = 一開火就 ReferenceError)');
   const burst = methodSrc('heroBurst', S);
-  ok(/const impCap = wp\.def\.range \* altRangeMax\(\) \* RANGE_TOL;/.test(burst),
-    'heroBurst 落點閘門 = range × altRangeMax() × RANGE_TOL(三個因子皆推導)');
+  ok(/const impCap = wp\.def\.range \* altRangeMax\(wp\.def\) \* RANGE_TOL;/.test(burst),
+    'heroBurst 落點閘門 = range × altRangeMax(wp.def) × RANGE_TOL(三個因子皆推導)');
   const burstCode = burst.replace(/^\s*\/\/.*$/gm, '');   // 只驗可執行原文(說明裡提得到舊值 1.15)
   ok(!/1\.15/.test(burstCode), 'heroBurst 不再手寫 1.15(舊制比其餘閘門緊 ⇒ 高地榴彈靜默丟包)');
   ok((burst.match(/impCap/g) || []).length >= 3,
@@ -618,7 +626,7 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
   }
 
   // ---- ② 著彈才回報 ⇒ 擊發資格的閘門要能把時間軸換算回擊發時刻 ----
-  ok(/export const flightCapS = \(def\) =>\s*\(def \? shotFlightS\(def, def\.range \* altRangeMax\(\) \* RANGE_TOL, -altDhMax\(\)\) : 0\);/.test(D),
+  ok(/export const flightCapS = \(def\) =>\s*\(def \? shotFlightS\(def, def\.range \* altRangeMax\(def\) \* RANGE_TOL, -altDhMax\(\)\) : 0\);/.test(D),
     'flightCapS 原文 = shotFlightS(落點閘門上界, 高差機制上限)(四個因子全推導,MUST NOT 手寫秒數)');
   ok(/export const altDhMax = \(\) => altTier\(\) \* ALTITUDE\.TIERS;/.test(D),
     'altDhMax 由 altScale 的封頂推導(俯射餘裕 MUST NOT 手寫公尺數)');
@@ -927,7 +935,7 @@ sec('Ⅶ 光暈 ⇔ 傷害:沒有射程光暈的敵人 MUST NOT 掉血(2026-08-0
   ok(/this\._sightY\(a, false\) - this\._sightY\(b, false\)/.test(dh),
     '_altDh:退回時兩邊都吃離地框(`abs=false`)—— 一邊絕對一邊離地就是病灶本身');
   const rangeM = methodSrc('_altRange', S);
-  ok(/altRangeF\(this\._altDh\(shooter, target\)\)/.test(rangeM),
+  ok(/altRangeF\(this\._altDh\(shooter, target\), def\)/.test(rangeM),
     '_altRange 走 data.js altRangeF + _altDh 兩個唯一縫(MUST NOT 自寫曲線或自己相減 _sightY)');
   for (const m of ['_altCrit', '_dodgeP']) {   // 閃避率的算式 2026-08-12 拆進 _dodgeP(_dodges 只剩擲骰)
     ok(/this\._altDh\(/.test(methodSrc(m, S)) && !/this\._sightY\([a-z]+\) - this\._sightY\(/.test(methodSrc(m, S)),
@@ -979,7 +987,7 @@ sec('Ⅶ 光暈 ⇔ 傷害:沒有射程光暈的敵人 MUST NOT 掉血(2026-08-0
 {
   // ---- ③ 客戶端與伺服器的有效射程 MUST 是同一個數字 ----
   const eff = methodSrc('_effRange', G);
-  ok(/def\?\.range \|\| 0\) \* this\._altRangeTo\(ent\)/.test(eff),
+  ok(/def\?\.range \|\| 0\) \* this\._altRangeTo\(ent, def\)/.test(eff),
     '_effRange = range × _altRangeTo(逐目標;客戶端的唯一有效射程縫)');
   const to = methodSrc('_altRangeTo', G);
   ok(/ent\.hero/.test(to) && /this\.pos\.y \+ this\._eyeH\(\)/.test(to),
@@ -1086,8 +1094,8 @@ sec('Ⅷ 隔山打牛:伺服器自己選目標的路徑 MUST 自己驗地形(202
   const lance = methodSrc('heroLance', S);
   ok(/wp\.def\.range \* this\._altRange\(b, t, wp\.def\)\) continue;/.test(lance),
     'heroLance 逐目標射程閘門吃誠實界(d3 從回報槍口量起,與射程光暈同一個起點)');
-  ok(/wp\.def\.range \* altRangeMax\(\)\);/.test(lance),
-    '射線長上限 = range × altRangeMax()(誠實界;len 本來就是客戶端夾過的)');
+  ok(/wp\.def\.range \* altRangeMax\(wp\.def\)\);/.test(lance),
+    '射線長上限 = range × altRangeMax(wp.def)(誠實界;len 本來就是客戶端夾過的)');
   const sim = new BattleSim(fakeCfg());
   purge(sim);
   const lineCh = heavyOf('line');
@@ -1780,7 +1788,7 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
     const wl = heroWeapon(lid, 'heavy', 1, true);
     const side = CHARACTERS[lid].side === 'STEEL' ? 'STEEL' : 'SWARM';
     const foe = side === 'SWARM' ? 'STEEL' : 'SWARM';
-    const impCap = wl.range * altRangeMax() * RANGE_TOL;
+    const impCap = wl.range * altRangeMax(wl) * RANGE_TOL;
     const IMP = impCap * 0.9;                       // 落點:擊發位置正北 0.9×上界(合法)
     const FLY = shotFlightS(wl, IMP);               // 這一發要飛多久
     const AWAY = impCap * 1.2;                      // 開完砲往後退到「從當下位置量就超程」

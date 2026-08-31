@@ -17,7 +17,7 @@ import {
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
-  HIGH_SUP, highSupF, highSupDodgeF, highSupMissP,
+  HIGH_SUP, highSupF, highSupDodgeF, highSupMissP, unbalMissP,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
@@ -33,7 +33,7 @@ let nextEntId = 1;
 const SQUAD_SHARED = [
   'money', 'upg', 'ammo', 'reloadUntil', 'fireAt', 'buffs', 'mp', 'maxMp', 'mpRegen',
   'abil', 'acd', 'kn', 'mods', 'empUntil', 'stealthUntil', 'aiming', 'lastBurst', 'markUntil',
-  'dmgOut',
+  'dmgOut', 'unbalUntil',
   // 純自身型大招補償(2026-08-06;見 data.js SELF_ULT):免裝填時窗與破隱爆發窗都是**小隊共用**——
   // 彈匣本來就只有一份(ammo/reloadUntil 在上面),免裝填逐機體各記一份就會出現「主視野機免裝填、
   // 僚機照裝填」這種只有拿碼表才量得出來的分歧。
@@ -1601,7 +1601,7 @@ export class BattleSim {
         acd: { skill: 0, ult: 0 }, kn: 0,   // kn = 戰鬥分數(八軌升級門檻;只增不減,見 data.BATTLE_SCORE)
         mods: [],                    // 招式增益 [{k, m, until}]
         empUntil: 0, stealthUntil: 0, blindUntil: 0, aiming: false, lastBurst: 0,
-        markUntil: 0,                // 定位標記(下一擊必中必爆;小隊共用 —— 任一架出手都算)
+        markUntil: 0, unbalUntil: 0, // 定位標記 / 失衡異常狀態
       },
     };
     // ---- NPC BOSS(劇情戰役的防守方;見 data.js BOSS)----
@@ -1875,12 +1875,13 @@ export class BattleSim {
   }
 
   /** 高度差「射程」乘數:較高的一方 +射程(封頂 +RANGE);同高/較低 = 1(曲線見 data.js altRangeF)。
+   *  重武器/大招的高度差射程優勢減為輕武器/小招的一半(2026-09-01 使用者需求)。
    *  2026-08-06 起同時併入招式的**射程加成**(mods 的 `range` 鍵,m04「全境盡職調查」)——
    *  每一道射程閘門本來就都經過這一支,加在這裡才只有一份;散到各閘門去乘就是第二份實作,
    *  症狀是「某幾條攻擊路徑吃得到加成、某幾條吃不到」,而且沒有任何錯誤訊息。 */
-  _altRange(shooter, target) {
+  _altRange(shooter, target, def) {
     if (!shooter || !target) return 1;
-    return altRangeF(this._altDh(shooter, target)) * (shooter.hero ? this._buffMul(shooter, 'range') : 1);
+    return altRangeF(this._altDh(shooter, target), def) * (shooter.hero ? this._buffMul(shooter, 'range') : 1);
   }
 
   /** 高度差「爆擊」乘數 {rate, dmg}(施加在 shooter→target 這一擊):較高方攻擊時爆率/爆傷↓、受擊時↑ */
@@ -1896,11 +1897,13 @@ export class BattleSim {
   /**
    * 爆擊擲骰(FPS:直擊武器限定,AoE 不爆);爆中推事件給客戶端跳橘字。
    * 高度差(_altCrit):爆率 ×rate;爆傷**加成部分**(critX − 1)×dmg —— 較高方攻擊時弱化、受擊時強化。
+   * 失衡狀態(_isUnbalanced):飛行機體受擊失衡時暴擊率減半(FLIGHT.UNBAL_CRIT_MUL, 2026-09-01 使用者需求)。
    */
   _rollCrit(h, def, dmg, t) {
     if (!def.crit) return dmg;
     const ac = this._altCrit(h, t);
-    if (Math.random() >= def.crit * ac.rate) return dmg;
+    const unbalF = this._isUnbalanced(h) ? FLIGHT.UNBAL_CRIT_MUL : 1;
+    if (Math.random() >= def.crit * ac.rate * unbalF) return dmg;
     const v = dmg * (1 + ((def.critX || VITALS.CRIT_X) - 1) * ac.dmg);
     this.events.push({ e: 'crit', pid: h.pid, x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, v: Math.round(v) });
     return v;
@@ -2073,13 +2076,31 @@ export class BattleSim {
     return e && (e.supUntil || 0) > this.t ? (e.supF || 0) : 0;
   }
 
+  /** 機體是否為飛行狀態英雄? */
+  _isFlyingHero(e) {
+    if (!e || !e.hero) return false;
+    return e.kind === 'drone' || (e.kind === 'morph' && (e.y || 0) > MORPH.GROUND_Y) || (e.y || 0) >= GAME.AA_MIN_ALT;
+  }
+
+  /** 飛行機體受擊失衡戳記(2026-09-01 使用者需求:跌落到穩住期間進入失衡狀態) */
+  _stampUnbal(t) {
+    if (!this._isFlyingHero(t)) return;
+    t.unbalUntil = Math.max(t.unbalUntil || 0, this.t + FLIGHT.UNBAL_S);
+  }
+
+  /** 這台機體當下是否處於失衡狀態? */
+  _isUnbalanced(e) {
+    return !!(e && (e.unbalUntil || 0) > this.t);
+  }
+
   /**
-   * 這一發打不中的機率 = 目標閃避 ⊕ **射手**被高地壓制而失準(獨立事件,見 data.highSupMissP)。
+   * 這一發打不中的機率 = 目標閃避 ⊕ **射手**被高地壓制而失準 ⊕ 射手受擊失衡(獨立事件,見 data.highSupMissP, unbalMissP)。
    * 伺服器只擲一顆骰 ⇒ 兩條路徑(`_dodges` 與 `_blast`)MUST 都經這一支;
    * 而閃避補償 `evadeCompF` 的分母 MUST 仍只吃 `_dodgeP`(壓制不在「維持 DPS」那個帳裡,A45 ⑦)。
    */
   _missP(t, shooter) {
-    return highSupMissP(this._dodgeP(t, shooter), this._supF(shooter));
+    const p = highSupMissP(this._dodgeP(t, shooter), this._supF(shooter));
+    return unbalMissP(p, this._isUnbalanced(shooter));
   }
 
   /** 擲骰。`p > 0` 的短路 MUST 留著:不合格的目標**不消耗亂數**(與拆成 _dodgeP 之前逐位元同流) */
@@ -2334,7 +2355,7 @@ export class BattleSim {
     //     客戶端的彈道上限本來就是 `range × _altRangeTo`(最高 1 + ALTITUDE.RANGE),閘門比它緊
     //     = 高地上合法的那一發被驗證後靜默丟棄:玩家看到砲彈在敵人身上炸開、傷害卻是 0
     //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
-    const impCap = wp.def.range * altRangeMax() * RANGE_TOL;
+    const impCap = wp.def.range * altRangeMax(wp.def) * RANGE_TOL;
     // 追擊命中:落點落在鎖定目標的爆風核心帶內(量到近側表面,與 _blast/_reachable 同一把尺)
     // ⇒ 射程包絡整條讓位給追擊燃料。**這是一道加分題,不是替代題**(2026-08-03 使用者定案
     // 「中途爆炸也要有傷害」):彈頭在半路撞到小兵/建物/地形就地引爆時,爆點當然不在鎖定
@@ -2550,7 +2571,7 @@ export class BattleSim {
     dx /= dl; dz /= dl; dy /= dl;   // 3D 單位化(_lanceHits 自行拆水平/垂直分量)
     // 射線長上限 = 射程 × 高度制空**機制上限**(誠實界;落點/線長沒有目標實體可以算高程差,
     // 與 heroBurst 的 impCap 同一條理由)。len 本來就是客戶端夾過的,這裡只防作弊放大。
-    const max = Math.min(Math.max(0, +len), wp.def.range * altRangeMax());
+    const max = Math.min(Math.max(0, +len), wp.def.range * altRangeMax(wp.def));
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
@@ -3978,6 +3999,7 @@ export class BattleSim {
       dmg *= this._buffMul(t, 'dmgTaken') * fluidFactor(wet);   // 複合裝甲詞綴 / 護盾招式 / 流體沉浸減傷(水域 1/2, 沼澤 1/4)
       t.lastHitAt = this.t;                  // 進入戰鬥:護盾回復重新計時
       this._stampSup(t, by);                 // 高地壓制:站得越高、挨這一發之後越打不準/閃不掉/跑不動
+      this._stampUnbal(t);                   // 飛行受擊失衡:跌落到穩住期間命中/暴擊減半、飛行動力鎖定
       this._breakOnHit(t);                   // 「挨一發就結束」的招式(t02 超載)在此撤銷
       this._interruptCast(t);                // 詠唱中受擊:強制立即施展 (t/T)^2 效果(2026-08-22)
       // 雙層拆分走 shieldSplit 單一縫(反護盾 / 穿盾 / 反裝甲三型;中性參數 = 舊制的「護盾先吃、
@@ -4541,7 +4563,7 @@ export class BattleSim {
     b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {
       b.mp = b.maxMp;
-      b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0; b.cast = null;
+      b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0; b.unbalUntil = 0; b.cast = null;
       b.ammo = {}; b.reloadUntil = {}; b.fireAt = {};   // 重生滿彈
     }
     this.events.push({ e: 'respawn', id: b.id, side: b.side, pid: b.pid });
@@ -5367,6 +5389,7 @@ export class BattleSim {
       // 高地壓制:客戶端要這兩欄才折得出移速(位置本就客戶端權威 ⇒ 伺服器 MUST NOT 再折一次)
       if (this._supF(e) > 0) { o.hs = Math.round((e.supUntil - this.t) * 100) / 100; o.hsf = Math.round(e.supF * 100) / 100; }
       if ((e.markUntil || 0) > this.t) o.mk = Math.round((e.markUntil - this.t) * 10) / 10;
+      if ((e.unbalUntil || 0) > this.t) o.ub = Math.round((e.unbalUntil - this.t) * 10) / 10;
       if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
       if ((e.invUntil || 0) > this.t) o.iv = Math.round((e.invUntil - this.t) * 10) / 10;   // 無敵幀
       const bf = [];

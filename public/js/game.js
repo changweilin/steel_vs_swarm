@@ -601,6 +601,8 @@ export class BattleClient {
     this.lift = null;                           // 目前爬升動力(null = 尚未知電力上限 ⇒ 首幀補滿)
     this._airSink = 0;                          // 受擊掉高:待落公尺數(逐幀以 _airSinkV 消化)
     this._airSinkV = 0;                         // 待落公尺數的下降速率(= 待落總量 / FLIGHT.SINK_S)
+    this._liftLockUntil = 0;                    // 受擊掉高動力回復鎖定截止時刻(FLIGHT.HIT_LOCK_S)
+    this.unbalLeft = 0;                         // 受擊失衡異常狀態剩餘秒(伺服器快照同步)
 
     // 角色(專屬機體 + 輕/重武器 + 小招/大招);開房廣播帶 ch,快照亦會同步
     this.abil = { light: 1, heavy: 1, skill: 1, ult: 1 };   // 招式開場即 Lv1 可用(2026-07-20)
@@ -2322,6 +2324,7 @@ export class BattleClient {
     edge('_invOn', this.invLeft, '🛡️ 相位護盾:1 秒無敵!');
     edge('_empOn', this.empLeft, '⚡ 電磁干擾:武器系統離線(仍可移動)!', 'emp');
     edge('_blindOn', this.blindLeft, '💥 閃光彈:視野受阻!', VISION_BLIND.PEAK);
+    edge('_unbalOn', this._unbalanced() ? 1 : 0, '⚠️ 機體失衡:攻擊命中與暴擊減半、飛行動力鎖定!');
   }
 
   /**
@@ -3292,6 +3295,7 @@ export class BattleClient {
           this.hiSupF = e.hsf || 0;
           this.confLeft = e.cf || 0;
           this.markLeft = e.mk || 0;
+          this.unbalLeft = e.ub || 0;
           this.bleedLeft = e.bl || 0;
           this.invLeft = e.iv || 0;
           this.selfMods = e.md || [];   // 招式增益 [k, m, remS](speed/jump 由客戶端物理消費)
@@ -5276,6 +5280,8 @@ export class BattleClient {
     this._crashSent = false;
     this.trauma = 0.35;
     this._airSink = 0;        // 換座機:掉高待落帳是上一具機體的,不跟著搬(_prevVital 同理)
+    this._liftLockUntil = 0;
+    this.unbalLeft = 0;
     this._prevVital = null;   // 換座機:重置受傷偵測基準,避免血量落差誤觸暈影
     this._clearCcFlash();     // 換座機:白幕是上一具機體的感光反應,不跟著視野搬過來
     this._clearBlood();       // 換座機:血漬是上一具機體座艙玻璃上的,同理不跟著搬
@@ -5766,6 +5772,8 @@ export class BattleClient {
     }
     this._climb = null;   // 掛在梯上陣亡:狀態 MUST 清掉,否則重生後第一幀會被吸回原本那條路線
     this._airSink = 0;    // 死亡:清掉高待落帳(墜機過場自有物理,兩套下降會打架)
+    this._liftLockUntil = 0;
+    this.unbalLeft = 0;
     this._fireDwell = 0; this._swampDwell = 0; this._scopeFog = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
     this._clearBlood();     // 死亡:清濺血(_updatePlayer 對 dead 早退不再衰減 ⇒ 不清會凍在畫面上)
@@ -5820,6 +5828,8 @@ export class BattleClient {
     this._spawnAt();
     this.vel.set(0, 0, 0);
     this._airSink = 0;        // 重生:清掉高待落帳
+    this._liftLockUntil = 0;
+    this.unbalLeft = 0;
     this.lift = null;         // 重生:爬升動力補滿(首幀由 _stepLift 夾到上限)
     // 重生滿彈、重武器 CD 清空
     for (const [id, st] of Object.entries(this.wstate)) { st.ammo = this.wdef[id]?.mag ?? st.ammo; st.reloadEnd = 0; }
@@ -6216,24 +6226,24 @@ export class BattleClient {
    *     我方用回報給伺服器的同一個 `_altAG`,對方用 `sim._sightY` 的離地常數。
    * 兩端同框才有意義,細節與病灶見 `sim._altDh`。ent = null(打地面/沒解到目標)⇒ 1。
    */
-  _altRangeTo(ent) {
+  _altRangeTo(ent, def) {
     if (!this.side || this.dead) return 1;
     if (!ent) return 1;
     if (ent.hero) {
       // 絕對框:我方 ay 與回報伺服器的同一式(pos.y + _eyeH);對方取機體世界高 + 標準眼高
-      return altRangeF((this.pos.y + this._eyeH()) - (ent.mesh.position.y + LOS.EYE_M));
+      return altRangeF((this.pos.y + this._eyeH()) - (ent.mesh.position.y + LOS.EYE_M), def);
     }
     // 離地框:對方的離地視線高照抄 sim._sightY(塔/主堡砲位高、飛行類眼高、其餘目標身高)
     const tgt = (ent.kind === 'tower' || ent.kind === 'base') ? LOS.TOWER_EYE_M
       : (ent.kind === 'heli' || ent.decoy || ent.kami || ent.hyper)
         ? (ent.heroY || 0) + LOS.EYE_M
         : (ent.heroY || 0) + LOS.TGT_M;
-    return altRangeF(((this._altAG || 0) + LOS.EYE_M) - tgt);
+    return altRangeF(((this._altAG || 0) + LOS.EYE_M) - tgt, def);
   }
 
   /** 對某個目標的**有效射程**(公尺):射程光暈與擊發閘門吃的同一個數字(唯一縫)。 */
   _effRange(def, ent) {
-    return (def?.range || 0) * this._altRangeTo(ent);
+    return (def?.range || 0) * this._altRangeTo(ent, def);
   }
 
   /**
@@ -6242,7 +6252,7 @@ export class BattleClient {
    * MUST 以 `_effRange(def, ent)` 誠實夾回 —— 拿這個上限當射程 = 又一次兩端分家。
    */
   _maxRange(def) {
-    return (def?.range || 0) * altRangeMax();
+    return (def?.range || 0) * altRangeMax(def);
   }
 
   /** 磁軌蓄力狀態切換:廣播離散事件(比照 heroCast 的 'cast' 事件),
@@ -6770,7 +6780,7 @@ export class BattleClient {
     if (id === 'heavy') this.net?.send({ t: 'heavyFire' });
 
     // 這一發的有效射程(**唯一縫**:射程光暈 `_reachable` 吃的是同一個 `_effRange`)。
-    const rMul = this._altRangeTo(this._aimTarget(this._maxRange(def)));
+    const rMul = this._altRangeTo(this._aimTarget(this._maxRange(def)), def);
     const rng = def.range * rMul;
 
     // 槍口與射向(座艙槍管末端或 TPS 機體發射點,世界座標)
@@ -6781,8 +6791,8 @@ export class BattleClient {
     // 後座力(依武器分級 def.recoil):視角上踢(準星上移)+ 偏擺 + 槍身後坐 + 鏡頭震動 + 位移擊退
     // 位移懲罰在 _updatePlayer 依 `_recoilMoveF()` 夾住(係數 ← 後座量);'back' 每發沿槍口反向擊退。
     const fly = this._flying();
-    const airF = fly ? RECOIL.AIR_F : 1;                                 // 空中位移懲罰減半(使用者指示)
-    const climb = prof.climb ?? (id === 'heavy' ? 0.033 : 0.011);        // 這一發的後座量(= 位移懲罰的尺)
+    const airRecoil = fly ? (RECOIL.AIR_RECOIL_MUL ?? 1.5) : 1;          // 飛行時後座力更大(2026-09-01 使用者需求)
+    const climb = (prof.climb ?? (id === 'heavy' ? 0.033 : 0.011)) * airRecoil; // 這一發的後座量(= 位移懲罰的尺)
     // 位移懲罰係數:MUST 排在下面 `recoil.p +=` **之前** —— 加完之後 `_recoiling()` 恆為真,
     // 「上一輪還沒結束就取較嚴者」會把這一發自己也算成上一輪,係數再也降不回來(單向棘輪)。
     // 取較嚴者的用意:重砲那一發的歸零 MUST NOT 被隨手切一把輕武器補一槍就提早解除。
@@ -6790,15 +6800,15 @@ export class BattleClient {
       ? Math.min(this._recoilMoveF0 ?? 1, recoilMoveF({ climb }))
       : recoilMoveF({ climb });
     this.recoil.p += climb;                                              // 準星上踢(開火停止後快速回穩)
-    this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1);
+    this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1) * airRecoil;
     // 鏡頭震動:重砲擊發要有頓挫感(輕武器維持細碎抖動)
-    this.trauma = Math.min(1, this.trauma + SHAKE.FIRE * (prof.kick ?? 1)
+    this.trauma = Math.min(1, this.trauma + SHAKE.FIRE * (prof.kick ?? 1) * airRecoil
       * (id === 'heavy' ? SHAKE.HEAVY_F : 1));
     this.weaponKick = 1;
     this.flash.visible = true;
     this._flashTtl = 0.045;
     this._flashHeavy = id === 'heavy';   // 重武器槍口焰放大(FPV 明顯度)
-    if (prof.back) this.vel.addScaledVector(dir, -prof.back * airF);     // 擊退走 vel:是後座本身的位移,不吃移速係數
+    if (prof.back) this.vel.addScaledVector(dir, -prof.back * airRecoil);     // 擊退走 vel:空中後座推力加大
 
     // 連發演出:這一發若是 N 連發,補畫剩下 N−1 發(純視覺,不再回報命中 —— 見 _queueBurst)。
     // N = 1 時整段是 no-op ⇒ 重武器與慢速輕武器逐位元維持舊路徑。
@@ -6926,20 +6936,22 @@ export class BattleClient {
    */
   _burstEchoSelf(def, id, prof) {
     if (!this.side || this.dead || !this.ch) return;
-    const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)));
+    const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)), def);
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
     const muzzle = this._selfMuzzle(dir, rng, id);
 
     // 逐發手感(見上方註):槍口焰 / 槍身後坐 / 鏡頭震動 / 準星上踢 / 擊退
+    const fly = this._flying();
+    const airRecoil = fly ? (RECOIL.AIR_RECOIL_MUL ?? 1.5) : 1;
     this.flash.visible = true;
     this._flashTtl = 0.045;
     this._flashHeavy = false;               // 連發只發生在輕武器(重武器 N 恆為 1)
     this.weaponKick = 1;
-    this.trauma = Math.min(1, this.trauma + SHAKE.FIRE * (prof.kick ?? 1));
-    this.recoil.p += (prof.climb ?? 0.011);
-    this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1);
-    if (prof.back) this.vel.addScaledVector(dir, -prof.back * (this._flying() ? RECOIL.AIR_F : 1));
+    this.trauma = Math.min(1, this.trauma + SHAKE.FIRE * (prof.kick ?? 1) * airRecoil);
+    this.recoil.p += (prof.climb ?? 0.011) * airRecoil;
+    this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1) * airRecoil;
+    if (prof.back) this.vel.addScaledVector(dir, -prof.back * airRecoil);
 
     if (def.type === 'beam') {
       const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
@@ -7769,6 +7781,13 @@ export class BattleClient {
   /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力;變形者吃 FLIGHT.MORPH_F) */
   _liftMax() { return liftMax((this._mpAuth && this.maxMp) || UNITS[this.heroKind]?.mp || 0, this.isMorph); }
 
+  /** 飛行機體是否處於受擊失衡狀態?(2026-09-01 使用者需求:跌落到穩住期間進入失衡,命中/暴擊減半,無法恢復動力) */
+  _unbalanced(now) {
+    if (!this._flying() || this.dead) return false;
+    const t = now ?? (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
+    return (this._airSink > 0) || (t < (this._liftLockUntil || 0)) || ((this.unbalLeft || 0) > 0);
+  }
+
   /**
    * 爬升動力條:往上飛消耗、其餘時間回充。**唯一消費點** —— target.y > 0 才扣,扣速 ∝ 爬升率
    * (全速 = liftDrainPS ⇒ 滿動力撐 FLIGHT.DRAIN_S 秒);動力見底把上升分量歸零(= 爬不上去,
@@ -7795,8 +7814,11 @@ export class BattleClient {
           - liftDrainPS(this.maxMp || 0, this.isMorph) * Math.min(1, target.y / vsp) * dt);
       }
     } else {
-      const wet = this._env?.code || 0;
-      this.lift = Math.min(lMax, this.lift + liftRegen(u?.mpRegen, this.upg?.ch) * fluidFactor(wet) * dt);
+      // 受擊失衡期間禁止回充(2026-09-01 使用者需求:失衡時無法恢復飛行動力)
+      if (!this._unbalanced(now)) {
+        const wet = this._env?.code || 0;
+        this.lift = Math.min(lMax, this.lift + liftRegen(u?.mpRegen, this.upg?.ch) * fluidFactor(wet) * dt);
+      }
     }
   }
 
@@ -7804,11 +7826,14 @@ export class BattleClient {
    * 受擊掉高入帳(飛行機體限定):掉的總公尺數 ∝ 該次傷害(airSinkM 推導,MUST NOT 在此手寫係數)。
    * 只記帳不直接改高度 —— 8Hz 快照一次入帳的傷害若直接扣 y,畫面上是瞬移;
    * 逐幀以「待落總量 / FLIGHT.SINK_S」的速率消化 ⇒ **總掉幅只由傷害決定**,SINK_S 只管節奏。
+   * 飛行受擊下降時設定鎖定窗 FLIGHT.HIT_LOCK_S(此期間無法恢復飛行動力)。
    */
-  _airSinkHit(dmg) {
+  _airSinkHit(dmg, now) {
     if (!this._flying() || !(dmg > 0)) return;
     this._airSink = (this._airSink || 0) + airSinkM(dmg);
     this._airSinkV = this._airSink / FLIGHT.SINK_S;
+    const t = now ?? (typeof performance !== 'undefined' ? performance.now() / 1000 : 0);
+    this._liftLockUntil = Math.max(this._liftLockUntil || 0, t + FLIGHT.HIT_LOCK_S);
   }
 
   // ---------------- 玩家移動 ----------------
@@ -7890,16 +7915,24 @@ export class BattleClient {
         this.pos.y -= d;
         this._airSink -= d;
       }
-      const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
-      // 飛行體(無人機/變形者)飛行基準面為實際地表 gyS,可沉入水面/沼面下飛行
+      // 飛行體受擊下降/落下時遇到高架橋等結構面(2026-09-01 使用者需求:落下遇到高架橋等物件要遵守碰撞機制,不會穿越到橋下)
+      // 以位移前高度 py0 與當前高度取較高者查詢表面,確保從上方落下時在橋面/頂板擋住,不穿越至橋下
+      const gyS = this._surf(this.pos.x, this.pos.z, Math.max(py0, this.pos.y));
+      // 飛行體(無人機/變形者)飛行基準面為實際地表/結構面 gyS,可沉入水面/沼面下飛行
       const gy = gyS;
+      const hoverY = gy + (this.isMorph ? 0 : FLIGHT.HOVER_M);
+      if (this.pos.y <= hoverY) {
+        this.pos.y = hoverY;
+        this._airSink = 0;              // 落下接觸到地表/橋面結構,停止掉高
+        if (this.vel.y < 0) this.vel.y = 0;
+      }
       // 無人機不貼地(下限 +HOVER_M);變形者允許降到地表 → 觸地即變形回地面型。
       // 上限兩道取嚴者:①離站立面 320m(既有的相對上限,防止在深谷上空一路飛出大氣層)
       // ②**遊戲最高高度**(2026-08-08 使用者定案的絕對天花板,見 `_ceilY`)。
       // 兩者問的是不同的問題(「離腳下多高」vs「離海平面多高」)⇒ 刻意都留著;
       // 位置本就客戶端權威(同 FLIGHT 全族)⇒ 伺服器不再驗一次(A1 的另一半:
       // 真人那半住客戶端物理,bot 那半見 `_ceilY` 檔頭與稽核 Ⅴ)。
-      this.pos.y = Math.max(gy + (this.isMorph ? 0 : FLIGHT.HOVER_M),
+      this.pos.y = Math.max(hoverY,
         Math.min(gy + 320, this._ceilY(), this.pos.y));
       // 變形者下降觸地著陸變形(進入水域/沼澤可著陸於水底/沼底地表)
       if (this.isMorph && (this.vel.y <= 0) && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);

@@ -25,7 +25,7 @@
 // LF 全綠、Windows 紅字)。MUST NOT 退回自己 `readFileSync`(§5 通則 ㋑)。
 import { readSrc } from './audit_src.mjs';
 import {
-  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
+  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, unbalMissP,
   SQUAD, TARGET_H, UNITS, CHARACTERS, ECON, chargeF,
   HYPER, DECOY, LANCE, lanceR, towerDps, towerSurviveHp, towerKillHp,
   kamiHp, kamiExposureS, kamiSide, hyperHp, hyperFlightS, hyperMaxArcM, ultLaunchLegM,
@@ -318,6 +318,11 @@ console.log('■ Ⅲ 受擊掉高:推導(校準錨 = 打完平均護盾+裝甲 �
     /export const airSinkM[\s\S]{0,220}?SQUAD\.DRONE_AVG_HP[\s\S]{0,120}?TARGET_H\.tower/.test(dataSrc));
   t('SINK_S 只是節奏旋鈕:MUST NOT 出現在掉幅公式裡',
     !/export const airSinkM[\s\S]{0,220}?SINK_S/.test(dataSrc));
+  t('受擊動力鎖定時長為正', FLIGHT.HIT_LOCK_S > 0, `${FLIGHT.HIT_LOCK_S}s`);
+  t('失衡異常狀態命中與暴擊率皆減半', FLIGHT.UNBAL_ACC_MUL === 0.5 && FLIGHT.UNBAL_CRIT_MUL === 0.5);
+  t('失衡時長 = 掉高消化 + 穩住時長(FLIGHT.UNBAL_S)', FLIGHT.UNBAL_S === FLIGHT.SINK_S + FLIGHT.HIT_LOCK_S);
+  t('unbalMissP 單一縫:失衡命中率減半、未失衡維持原值',
+    unbalMissP(0, true) === 0.5 && unbalMissP(0.2, true) === 0.6 && unbalMissP(0.2, false) === 0.2);
 }
 
 // ---------------------------------------------------------------------------
@@ -390,6 +395,11 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
     count(code, '_airSink = 0') >= 5, `${count(code, '_airSink = 0')} 處(含建構子)`);
   t('game.js MUST NOT 手寫掉高係數(砲塔高 / 平均血量只准住 data.js)',
     !/SINK_TOWERS/.test(code) && !/DRONE_AVG_HP/.test(code));
+  t('失衡戳記只在飛行機體受擊時設置(_stampUnbal)', /this\._stampUnbal\(t\)/.test(simSrc));
+  t('失衡命中率減半在伺服器唯一命中處(_missP)結算', /unbalMissP\(p, this\._isUnbalanced\(shooter\)\)/.test(simSrc));
+  t('失衡暴擊率減半在伺服器唯一暴擊處(_rollCrit)結算', /UNBAL_CRIT_MUL/.test(simSrc));
+  t('飛行動力回充以 _unbalanced 為閘', /if \(!this\._unbalanced\(now\)\)/.test(grab('_stepLift')));
+  t('HUD _ccFeed 有失衡警示', /_unbalOn/.test(grab('_ccFeed')));
   t('HUD:飛行機體才送 lift(地面機甲 null ⇒ 整條收起)',
     /lift: this\._flying\(\) \? \{ v:[\s\S]{0,120}?\} : null,/.test(code));
   t('main.js 依 lift 有無顯隱動力條、低動力才轉警示色(唯一渲染來源)',
@@ -407,12 +417,12 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
 // ---------------------------------------------------------------------------
 {
   const proto = new Function('FLIGHT', 'airSinkM', 'liftMax', 'liftRegen', 'liftDrainPS', 'UNITS', 'fluidFactor',
-    `return ({ ${grab('_stepLift')}, ${grab('_airSinkHit')}, ${grab('_liftMax')} });`)(
+    `return ({ ${grab('_unbalanced')}, ${grab('_stepLift')}, ${grab('_airSinkHit')}, ${grab('_liftMax')} });`)(
     FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, UNITS, fluidFactor);
   const u = { vspeed: UNITS.drone.vspeed, mpRegen: UNITS.drone.mpRegen };
   const mk = (over = {}) => Object.assign(Object.create(null), proto, {
     maxMp: UNITS.drone.mp, _mpAuth: true, heroKind: 'drone', upg: { ch: 0 }, hud: { feed: () => {} },
-    lift: null, _airSink: 0, _airSinkV: 0, _flying: () => true, ...over,
+    lift: null, _airSink: 0, _airSinkV: 0, _liftLockUntil: 0, unbalLeft: 0, _flying: () => true, ...over,
   });
 
   // ① 全速爬升:滿動力恰好撐 DRAIN_S 秒
@@ -505,6 +515,16 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     const c = mk({ _flying: () => false });
     c._airSinkHit(300);
     t('地面機體不掉高(規則只作用於飛行機體)', c._airSink === 0);
+  }
+  // ⑥ 受擊掉高動力回復鎖定(2026-09-01 使用者需求:飛行時被擊中而下降時,會有一段時間無法恢復飛行動力)
+  {
+    const c = mk({ lift: 0 });
+    c._airSinkHit(100, 1.0);
+    c._stepLift(0.1, 1.5, { x: 0, y: 0, z: 0 }, u);
+    t('受擊掉高/鎖定窗內動力不回充', c.lift === 0);
+    c._airSink = 0;
+    c._stepLift(0.1, 1.0 + FLIGHT.HIT_LOCK_S + 0.1, { x: 0, y: 0, z: 0 }, u);
+    t('鎖定期結束後恢復回充', c.lift > 0);
   }
 }
 
