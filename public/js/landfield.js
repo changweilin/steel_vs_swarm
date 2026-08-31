@@ -3,6 +3,7 @@
 // 這裡只產純資料；DataTexture 與 shader 生命週期由 toon.js 管。
 import { SLOPE } from './data.js';
 import { rasterLines, corridorKeepOut, floodFaces, assignWallTexels, mergeSmall, faceSamples } from './zonecut.js';
+import { areaSurfaceRows } from './osmAreas.js';
 
 export const LAND_ZONES = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
 export const LAND_FIELD_N = 1024;
@@ -36,13 +37,22 @@ const hash01 = (i, j, seed) => {
   n = Math.imul(n ^ (n >>> 13), 1274126177);
   return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
 };
-const pointInPoly = (x, z, pts) => {
+const pointInPoly = (x, z, pts, holes = []) => {
   let inside = false;
   for (let a = 0, b = pts.length - 1; a < pts.length; b = a++) {
     const [xa, za] = pts[a], [xb, zb] = pts[b];
     if ((za > z) !== (zb > z) && x < (xb - xa) * (z - za) / (zb - za) + xa) inside = !inside;
   }
-  return inside;
+  if (!inside) return false;
+  for (const hole of holes) {
+    let inHole = false;
+    for (let a = 0, b = hole.length - 1; a < hole.length; b = a++) {
+      const [xa, za] = hole[a], [xb, zb] = hole[b];
+      if ((za > z) !== (zb > z) && x < (xb - xa) * (z - za) / (zb - za) + xa) inHole = !inHole;
+    }
+    if (inHole) return false;
+  }
+  return true;
 };
 const median = (a) => {
   if (!a.length) return 0;
@@ -52,7 +62,7 @@ const median = (a) => {
 const yieldFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 /** 建立一次性地貌場。所有圖資陣列都必須是 osmrelay 淨化後、全房共用的那一份。 */
-export async function buildLandField({ terrain, center, roads = [], rails = [], waters = [], covers = [],
+export async function buildLandField({ terrain, center, roads = [], rails = [], waters = [], covers = [], areas = [],
   boundaries = [], gradeCorridors = [], classifyPureAt, envCodeAt, projectAt, seed = 0, onProgress }) {
   const spanX = terrain.worldW, spanZ = terrain.worldH;
   const mpt = Math.max(spanX, spanZ) / LAND_FIELD_N;
@@ -78,16 +88,36 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
 
   await onProgress?.(0.035, '建立地貌線工切面…');
   const roadWays = roads.filter((w) => ROAD_RANK(w.tags?.highway || '') <= LAND_ROAD_RANK);
-  const coverWays = covers.filter((w) => {
+  const coverWays = !areas.length && covers.filter((w) => {
     if (!coverZone(w.tags) || (w.geometry?.length || 0) < 4) return false;
     const a = w.geometry[0], b = w.geometry[w.geometry.length - 1];
     return Math.abs(a.lat - b.lat) + Math.abs((a.lon ?? a.lng) - (b.lon ?? b.lng)) < 1e-6;
   });
+  // 用地／自然／水域與休閒區域的唯一來源是 osmAreas 的 worldPolygons；每個 hole 都保留，
+  // 不再維護 covers 的第二份分類。areaSurfaceRows 只讀既有投影結果，避免 landfield 重算投影。
+  const areaRows = areaSurfaceRows(areas);
+  const areaPolys = areaRows
+    .map((r) => ({ zone: r.zone || coverZone(r.tags), pts: r.outer, holes: r.holes || [], priority: r.priority || 0 }))
+    .filter((p) => p.zone && Array.isArray(p.pts) && p.pts.length >= 3)
+    .sort((a, b) => b.priority - a.priority);
+  const ringSegs = (pts, hw) => {
+    const out = [];
+    for (let i = 0; i < pts.length; i++) {
+      const q = pts[(i + 1) % pts.length];
+      const a = pts[i], b = q;
+      out.push([ti(a[0]), tj(a[1]), ti(b[0]), tj(b[1]), Math.max(0.5, hw / mpt)]);
+    }
+    return out;
+  };
+  const areaSegs = areaPolys.flatMap((p) => [
+    ...ringSegs(p.pts, 1.5),
+    ...p.holes.flatMap((h) => ringSegs(h, 1.5)),
+  ]);
   const mainSegs = [
     ...waySegs(roadWays, (w) => (ROAD_W[w.tags?.highway] || 5) / 2),
     ...waySegs(rails, () => 3),
     ...waySegs(waters, (w) => (w.tags?.waterway === 'river' ? 6 : 2.5)),
-    ...waySegs(coverWays, () => 1.5),
+    ...(areaPolys.length ? areaSegs : waySegs(coverWays, () => 1.5)),
   ];
   const nearWall = rasterLines(nx, nz, mainSegs.map((s) => [s[0], s[1], s[2], s[3], 40 / mpt])).wall;
   const admSegs = waySegs(boundaries, () => 1.5).filter((s) => {
@@ -127,14 +157,14 @@ export async function buildLandField({ terrain, center, roads = [], rails = [], 
   await yieldFrame();
 
   const polyZone = new Int8Array(nx * nz).fill(-1);
-  const polys = coverWays.map((w) => ({ zone: coverZone(w.tags), pts: w.geometry.map(proj) }));
+  const polys = areaPolys.length ? areaPolys : coverWays.map((w) => ({ zone: coverZone(w.tags), pts: w.geometry.map(proj), holes: [] }));
   for (const p of polys) {
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (const [x, z] of p.pts) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
     const i0 = Math.max(0, Math.floor(ti(minX))), i1 = Math.min(nx - 1, Math.ceil(ti(maxX)));
     const j0 = Math.max(0, Math.floor(tj(minZ))), j1 = Math.min(nz - 1, Math.ceil(tj(maxZ)));
     const zi = LAND_ZONES.indexOf(p.zone);
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (pointInPoly(xOf(i), zOf(j), p.pts)) polyZone[j * nx + i] = zi;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (pointInPoly(xOf(i), zOf(j), p.pts, p.holes)) polyZone[j * nx + i] = zi;
   }
 
   const samples = faceSamples(mg.face, mg.n, 24), labels = new Int8Array(mg.n);

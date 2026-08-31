@@ -487,8 +487,9 @@ const ZONE_LIST = ['water', 'wet', 'green', 'bare', 'urban', 'alpine', 'cliff'];
     const GND = readSrc('public', 'js', 'ground.js');
     const TER = readSrc('public', 'js', 'terrain.js');
     const RELAY = readSrc('public', 'js', 'osmrelay.js');
-    ok(/geoKey\('osmF',\s*[4-9]/.test(BIO) && /covers, waters, boundaries/.test(BIO),
-      'OSM 快取已升 v4，四類新圖資進 runtime payload');
+    ok(/geoKey\('osmF',\s*[5-9]/.test(BIO) && /areas: cat\.areas/.test(BIO)
+      && /pointFeatures/.test(BIO) && /buildLandField\([\s\S]*areas: osmData\?\.areas/.test(BIO),
+      'OSM 快取已升 v5，areas/pointFeatures 與 landfield 共用新面域契約');
     ok(/buildLandField\(/.test(BIO) && /setLandField\(/.test(BIO),
       'buildBiomes 建場後把單一 land field 接進 toon');
     ok((TER.match(/landField: true/g) || []).length === 2 && /CEL_LAND_FIELD/.test(TSRC),

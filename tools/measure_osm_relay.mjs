@@ -16,6 +16,7 @@ import { VENUES, venueConfig } from '../public/js/venues.js';
 import { battleBBox, llToXZ } from '../public/js/data.js';
 import { OSM_RELAY, sanitizeOsmRelay, osmRelayFit } from '../public/js/osmrelay.js';
 import { planPedestrianNetwork } from '../public/js/pedestrian.js';
+import { OSM_AREA_KEYS, buildAreaRecords } from '../public/js/osmAreas.js';
 
 const OSM_UA = 'steel-vs-swarm/1.0 (relay payload measure)';
 const OVERPASS = [
@@ -37,7 +38,7 @@ const grabQ = (fn) => {
   return m[1];
 };
 const mkQuery = (fn, params) => new Function(...params, `return (${grabQ(fn)});`);
-const featQ = mkQuery('fetchOsmFeatures', ['bb', 'nBld', 'nCover']);
+const featQ = mkQuery('fetchOsmFeatures', ['bb', 'nBld', 'nCover', 'nArea', 'areaWays', 'areaRelations']);
 const roadQ = mkQuery('fetchOsmRoads', ['bb', 'nMain', 'nMinor']);
 const quotaOf = new Function('return ' + /const quotaOf = ([^;]+);/.exec(bio)[1])();
 const bboxKm2 = new Function(`${grabFn(bio, 'bboxKm2')}; return bboxKm2;`)();
@@ -62,15 +63,16 @@ async function overpass(q) {
 
 /** 逐字鏡射 fetchOsmFeatures 的分類(那一支住在 import 不了 three 的檔案裡) */
 function parseFeats(data) {
-  const buildings = [], rails = [], falls = [], crossings = [], pois = [], entrances = [];
-  const covers = [], waters = [], boundaries = [];
+  const areaElements = [], rails = [], falls = [], crossings = [], pois = [], entrances = [];
+  const waters = [], boundaries = [], areaKeys = new Set(OSM_AREA_KEYS);
   for (const el of data.elements || []) {
     const tags = el.tags || {};
-    if (el.type === 'way' && el.geometry && tags.railway) rails.push({ tags, geometry: el.geometry });
+    if (el.type === 'relation' && (tags.type === 'multipolygon' || Array.isArray(el.members))) areaElements.push(el);
+    else if (el.type === 'way' && el.geometry && Object.keys(tags).some((k) => areaKeys.has(k))) areaElements.push(el);
+    else if (el.type === 'way' && el.geometry && tags.railway) rails.push({ tags, geometry: el.geometry });
     else if (el.type === 'way' && el.geometry && tags.waterway) waters.push({ tags, geometry: el.geometry });
     else if (el.type === 'way' && el.geometry && tags.natural === 'coastline') boundaries.push({ tags, geometry: el.geometry });
-    else if (el.type === 'way' && el.geometry && (tags.landuse || tags.natural || tags.leisure)) covers.push({ tags, geometry: el.geometry });
-    else if (el.type === 'way' && el.geometry && !tags.building) boundaries.push({ tags, geometry: el.geometry });
+    else if (el.type === 'way' && el.geometry) boundaries.push({ tags, geometry: el.geometry });
     else if (el.type === 'node' && tags.railway === 'level_crossing') crossings.push({ lat: el.lat, lng: el.lon, tags });
     else if (el.type === 'node' && tags.waterway === 'waterfall') falls.push({ lat: el.lat, lng: el.lon, tags });
     else if (el.type === 'node' && (/^(subway_entrance|station_entrance)$/.test(tags.railway || '')
@@ -79,12 +81,10 @@ function parseFeats(data) {
     }
     else if (el.type === 'node' && (tags.place || tags.natural === 'peak' || tags.highway === 'motorway_junction' || tags.railway)) {
       pois.push({ lat: el.lat, lng: el.lon, tags });
-    } else {
-      const lat = el.center?.lat ?? el.lat, lng = el.center?.lon ?? el.lon;
-      if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
     }
   }
-  return { buildings, rails, falls, crossings, pois, entrances, covers, waters, boundaries };
+  const built = buildAreaRecords(areaElements);
+  return { areas: built.areas, pointFeatures: { rails, falls, crossings, pois, entrances, waters, boundaries } };
 }
 
 const argv = process.argv.slice(2);
@@ -93,7 +93,7 @@ const team = +arg('--team', 5);
 const ids = arg('--venues', 'barcelona,paris,manhattan,shibuya').split(',').filter(Boolean);
 
 console.log(`路網中繼 payload 實測(${team}v${team};上限 maxPayload 2048KB / MAX_BYTES ${kb(OSM_RELAY.MAX_BYTES)})\n`);
-console.log('場地        km²   道路way 建物 地被 水道 界線 入口 原始JSON  中繼訊息  餘裕vs2MiB  fit');
+console.log('場地        km²   道路way 面域 水道 界線 入口 原始JSON  中繼訊息  餘裕vs2MiB  fit');
 let worst = 0;
 let measured = 0;
 for (const id of ids) {
@@ -103,7 +103,10 @@ for (const id of ids) {
   const bbox = battleBBox(cfg);
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   const km2 = bboxKm2(bbox);
-  const fd = await overpass(featQ(bb, quotaOf(km2, 850, 400, 1200), quotaOf(km2, 400, 200, 900)));
+  const nArea = quotaOf(km2, 1200, 600, 1800);
+  const areaWays = OSM_AREA_KEYS.map((key) => `way["${key}"](${bb});`).join('');
+  const areaRelations = OSM_AREA_KEYS.map((key) => `rel["type"="multipolygon"]["${key}"](${bb});`).join('');
+  const fd = await overpass(featQ(bb, quotaOf(km2, 850, 400, 1200), quotaOf(km2, 400, 200, 900), nArea, areaWays, areaRelations));
   await sleep(1500);
   const rd = await overpass(roadQ(bb, quotaOf(km2, 150, 150, 600), quotaOf(km2, 1300, 400, 1600)));
   if (!fd || !rd) { console.log(`${id.padEnd(11)} 圖資取得失敗(換個時段再跑)`); continue; }
@@ -112,25 +115,25 @@ for (const id of ids) {
   for (const el of rd.elements || []) {
     if (el.type === 'way' && el.geometry && el.tags?.highway) roads.push({ tags: el.tags, geometry: el.geometry });
   }
-  const raw = bytes(JSON.stringify({ feats, roads }));
-  const clean = sanitizeOsmRelay({ bbox, feats, roads });
+  const raw = bytes(JSON.stringify({ areas: feats.areas, pointFeatures: feats.pointFeatures, roads }));
+  const clean = sanitizeOsmRelay({ bbox, areas: feats.areas, pointFeatures: feats.pointFeatures, roads });
   const fit = osmRelayFit(clean);
   const ped = planPedestrianNetwork({
     roads,
-    rails: feats.rails,
-    pois: feats.pois,
-    entrances: feats.entrances,
+    rails: feats.pointFeatures.rails,
+    pois: feats.pointFeatures.pois,
+    entrances: feats.pointFeatures.entrances,
     toXZ: (p) => llToXZ(p.lat, p.lng ?? p.lon, cfg.center),
   });
   const msg = fit ? bytes(JSON.stringify(fit.msg)) : 0;
   measured++;
   worst = Math.max(worst, msg);
   console.log(`${id.padEnd(11)} ${km2.toFixed(2).padStart(5)} ${String(roads.length).padStart(6)} `
-    + `${String(feats.buildings.length).padStart(6)} ${String(feats.covers.length).padStart(4)}`
-    + ` ${String(feats.waters.length).padStart(4)} ${String(feats.boundaries.length).padStart(4)}`
-    + ` ${String(feats.entrances.length).padStart(4)} `
+    + `${String(feats.areas.length).padStart(6)}`
+    + ` ${String(feats.pointFeatures.waters.length).padStart(4)} ${String(feats.pointFeatures.boundaries.length).padStart(4)}`
+    + ` ${String(feats.pointFeatures.entrances.length).padStart(4)} `
     + `${kb(raw).padStart(8)} ${kb(msg).padStart(9)} ${((2 * 1024 * 1024) / msg).toFixed(1).padStart(9)}× `
-    + `${fit ? (fit.dropFeats ? '丟了 feats' : 'ok') : '整份放棄'}`);
+    + `${fit ? (fit.dropPointFeatures ? `裁面域 ${fit.dropAreas || 0}` : 'ok') : '整份放棄'}`);
   console.log(`  行人規劃 天橋 ${ped.stats.footbridges}・地下路線移除 ${ped.stats.undergroundRemoved}`
     + `・入口 ${ped.stats.entrances}・老街 ${ped.stats.oldstreet}`
     + `・自行車道 ${ped.stats.cycleway}・商圈步道 ${ped.stats.promenade}`);

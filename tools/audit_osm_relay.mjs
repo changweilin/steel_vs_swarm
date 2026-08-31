@@ -146,7 +146,34 @@ sec('Ⅰ payload 淨化:冪等 + 對真實圖資恆等 + 不可信輸入');
 
   // 節點預算的消耗順序是契約:道路先於鐵路。兩端跑同一份資料若順序不同就會裁出不同結果。
   t('節點預算:道路 MUST 排在鐵路之前(順序不同 = 兩端裁出不同的世界)',
-    /waysOf\(m\?\.roads[\s\S]{0,600}waysOf\(f\.rails/.test(strip(relaySrc)));
+    /waysOf\(m\?\.roads[\s\S]*?waysOf\(f\.rails/.test(strip(relaySrc)));
+
+  // ---- OSM 面域新契約：closed way／multipolygon 已在 osmAreas 組裝，relay 只淨化輪廓 ----
+  const area = {
+    sourceId: 'way/9001', sourceType: 'way', tags: { building: 'yes', name: '中庭建築' },
+    polygons: [{
+      outer: [{ lat: 25.04, lon: 121.56 }, { lat: 25.04, lon: 121.561 }, { lat: 25.041, lon: 121.561 }, { lat: 25.041, lon: 121.56 }],
+      holes: [[{ lat: 25.0402, lon: 121.5602 }, { lat: 25.0402, lon: 121.5604 }, { lat: 25.0404, lon: 121.5604 }, { lat: 25.0404, lon: 121.5602 }]],
+    }],
+  };
+  const areaRaw = { bbox: BB, areas: [area], pointFeatures: { pois: [{ lat: 25.04, lng: 121.56, tags: { name: '入口' } }] }, roads: [] };
+  const areaClean = sanitizeOsmRelay(areaRaw);
+  t('新 schema 傳送 areas + pointFeatures，保留 sourceId/tags/holes', Array.isArray(areaClean?.areas)
+    && areaClean.areas[0]?.sourceId === 'way/9001' && areaClean.areas[0].polygons[0].holes.length === 1
+    && areaClean.areas[0].tags.building === 'yes' && !!areaClean.pointFeatures);
+  t('新 schema 不再帶建築中心點 feats 舊欄位', areaClean && !Object.prototype.hasOwnProperty.call(areaClean, 'feats'));
+  t('面域 relay 淨化冪等(第二次不改變環與來源 ID)', JSON.stringify(areaClean) === JSON.stringify(sanitizeOsmRelay(areaClean)));
+  const crossed = sanitizeOsmRelay({ bbox: BB, areas: [{
+    sourceId: 'way/bow', sourceType: 'way', tags: { landuse: 'park' },
+    polygons: [{ outer: [{ lat: 25.04, lon: 121.56 }, { lat: 25.041, lon: 121.561 }, { lat: 25.04, lon: 121.561 }, { lat: 25.041, lon: 121.56 }], holes: [] }],
+  }], pointFeatures: null, roads: [] });
+  t('惡意自交環整筆丟棄並記 drop', crossed?.areas.length === 0 && crossed.drop === 1);
+  const areaFit = osmRelayFit(areaClean);
+  t('fit 維持 areas，不以中心點或空 covers 取代', Array.isArray(areaFit?.msg?.areas) && areaFit.msg.areas[0]?.sourceId === 'way/9001');
+  const manyAreas = sanitizeOsmRelay({ bbox: BB, areas: Array.from({ length: OSM_RELAY.MAX_AREA + 2 }, (_, i) => ({
+    sourceId: `way/${100000 + i}`, tags: { landuse: 'park' }, polygons: [{ outer: area.polygons[0].outer, holes: [] }],
+  })) });
+  t('面域容量超限按 sourceId 決定性夾制並記 drop', manyAreas?.areas.length === OSM_RELAY.MAX_AREA && manyAreas.drop === 2);
 
   // ---- osmRelayFit:送得出去才算數 ----
   t('正常大小的 payload 原樣送出',
@@ -201,9 +228,10 @@ sec('Ⅲ 伺服器:不可信輸入 + 逐格單調 + 晚到者補送');
   t('一律過 sanitizeOsmRelay(存進房間的 MUST 是它回傳的新物件)',
     /const clean = sanitizeOsmRelay\(m\);/.test(blk) && !/room\.osm\.roads = m\./.test(blk));
   t('逐格單調:已定案的格 MUST NOT 被覆蓋',
-    /!room\.osm\.feats && clean\.feats/.test(blk) && /!room\.osm\.roads && clean\.roads/.test(blk));
+    /room\.osm\.areas === null[\s\S]*Array\.isArray\(clean\.areas\)/.test(blk)
+    && /room\.osm\.roads === null[\s\S]*Array\.isArray\(clean\.roads\)/.test(blk));
   t('沒有新的格就不轉播(否則入房者每收一次就白重建一次)',
-    /if \(!add\.feats && !add\.roads\) return;/.test(blk));
+    /if \(!changed\) return;/.test(blk));
   t('MUST NOT 碰 battleConfig —— 路網可以從無到有,座標框不行(A42 ③)',
     !/battleConfig/.test(blk) && !/center/.test(blk));
   t('MUST NOT 塞進 sync(那則會重播多次,幾百 KB 乘上去不可接受)',
@@ -225,7 +253,11 @@ sec('Ⅲ 伺服器:不可信輸入 + 逐格單調 + 晚到者補送');
   };
   const BB = { minLat: 25.03, minLng: 121.55, maxLat: 25.06, maxLng: 121.59 };
   const mkRoads = (name) => [{ tags: { highway: 'primary', name }, geometry: [{ lat: 25.04, lon: 121.56 }, { lat: 25.05, lon: 121.57 }] }];
-  const mkFeats = () => ({ buildings: [{ lat: 25.041, lng: 121.562, tags: { building: 'yes' } }], rails: [], falls: [], crossings: [], pois: [] });
+  const mkAreas = () => [{
+    sourceId: 'way/1', sourceType: 'way', tags: { building: 'yes' },
+    polygons: [{ outer: [{ lat: 25.041, lon: 121.562 }, { lat: 25.041, lon: 121.563 }, { lat: 25.042, lon: 121.563 }, { lat: 25.042, lon: 121.562 }], holes: [] }],
+  }];
+  const mkPoints = () => ({ rails: [], waters: [], boundaries: [], falls: [], crossings: [], pois: [], entrances: [] });
 
   const hub = new RoomHub({ urls: () => [], log: () => {}, dropMs: 0 });
   const hIn = [], host = hub.attach((m) => hIn.push(m));
@@ -236,15 +268,17 @@ sec('Ⅲ 伺服器:不可信輸入 + 逐格單調 + 晚到者補送');
   const gIn = [], guest = hub.attach((m) => gIn.push(m));
   guest.recv({ t: 'joinRoom', pin: room.pin, name: '入房者' });
   const roads1 = mkRoads('第一份');
-  host.recv({ t: 'osm', bbox: BB, feats: mkFeats(), roads: roads1 });
+  const areas1 = mkAreas();
+  host.recv({ t: 'osm', bbox: BB, areas: areas1, pointFeatures: mkPoints(), roads: roads1 });
   const got = gIn.filter((m) => m.t === 'osm');
   t('房主上傳 → 入房者立刻收到(房間階段就送,不等開戰)',
-    got.length === 1 && got[0].roads?.[0]?.tags?.name === '第一份' && !!got[0].feats);
+    got.length === 1 && got[0].roads?.[0]?.tags?.name === '第一份' && got[0].areas?.[0]?.sourceId === 'way/1');
   t('房主自己不會收到轉播(它就是來源)', hIn.filter((m) => m.t === 'osm').length === 0);
   t('房間副本與客戶端不共用參照(單機 hub 跑在同一個分頁裡,共用 = 被下游就地變異)',
-    room.osm.roads !== roads1 && room.osm.roads[0] !== roads1[0]);
+    room.osm.roads !== roads1 && room.osm.roads[0] !== roads1[0]
+    && room.osm.areas !== areas1 && room.osm.areas[0] !== areas1[0]);
 
-  host.recv({ t: 'osm', bbox: BB, feats: mkFeats(), roads: mkRoads('第二份') });
+  host.recv({ t: 'osm', bbox: BB, areas: mkAreas(), pointFeatures: mkPoints(), roads: mkRoads('第二份') });
   t('已定案的格不被覆蓋(房主重試成功再送一次 ⇒ 早進房與晚進房的人 MUST 拿到同一份)',
     room.osm.roads[0].tags.name === '第一份' && gIn.filter((m) => m.t === 'osm').length === 1);
 
@@ -252,7 +286,7 @@ sec('Ⅲ 伺服器:不可信輸入 + 逐格單調 + 晚到者補送');
   late.recv({ t: 'joinRoom', pin: room.pin, name: '晚到者', mode: 'spectator' });   // 1v1 席位已滿 ⇒ 觀戰身分
   const lateGot = lIn.find((m) => m.t === 'osm');
   t('晚到的入房者一進房就補到同一份(房主早就上傳完了,它不該乾等 20 秒)',
-    lateGot?.roads?.[0]?.tags?.name === '第一份');
+    lateGot?.roads?.[0]?.tags?.name === '第一份' && lateGot?.areas?.[0]?.sourceId === 'way/1');
 
   const before = JSON.stringify(room.osm);
   late.recv({ t: 'osm', bbox: BB, roads: mkRoads('冒名') });
@@ -296,9 +330,9 @@ sec('Ⅳ 客戶端接線:早退順序、真的等、與地形建構並行');
   t('房主取原始圖資走 warmOsm(buildBiomes 內那一份已被量化與就地變異過)',
     /await warmOsm\(bbox\)/.test(gate));
   t('房主吃的是**送出去的那一份**(fit.msg;兩邊資料不同 = 中繼白做)',
-    /commitOsmIn\(bbox, \{ feats: fit\?\.msg\.feats \|\| null, roads: fit\?\.msg\.roads \|\| null \}\)/.test(gate));
+    /localFeats = fit\?\.msg/.test(gate) && /commitOsmIn\(bbox, \{ feats: localFeats, roads: fit\?\.msg/.test(gate));
   t('房主親自查過的空手也定案成 null(不定案 ⇒ buildBiomes 會再吃一整份逾時預算)',
-    /\|\| null, roads: .*\|\| null \}\)/.test(gate));
+    /: null;[\s\S]*fit\.msg\.roads \?\? null\) : null/.test(gate));
   t('送出前一律經 osmRelayFit(直接硬送會被 ws 以 1009 斷掉房主的連線)',
     /osmRelayFit\(sanitizeOsmRelay\(/.test(gate));
 
@@ -324,7 +358,7 @@ sec('Ⅳ 客戶端接線:早退順序、真的等、與地形建構並行');
 
   const arrive = strip(grabFn(mainSrc, 'onOsmRelay'));
   t('中繼只定案帶資料的格(寫成 null 等於替房主的失敗背書,入房者從此不會自己去抓)',
-    /feats: clean\.feats \|\| undefined, roads: clean\.roads \|\| undefined/.test(arrive));
+    /clean\.featureReady === false \? undefined/.test(arrive) && /roads: clean\.roads \?\? undefined/.test(arrive));
   t('鍵 MUST 對得上本房這張圖(指向別張圖的中繼會把定案表整份換掉 = 已到手的路網被清掉)',
     /key !== osmRelayKey\(battleBBox\(cfg\)\)\) return;/.test(arrive));
   t('中繼晚到 ⇒ 只在房間階段重建(loading 之後重建會把全房卡在載入畫面)',

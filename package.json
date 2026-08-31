@@ -16,6 +16,8 @@
     "sim": "node test/simrun.mjs",
     "bal": "node tools/balance.mjs",
     "audit:net": "node tools/audit_net_modes.mjs",
+    "osm:catalog": "node tools/osm_catalog.mjs",
+    "audit:osm-catalog": "node tools/audit_osm_catalog.mjs",
     "codex": "node tools/codex_review.mjs",
     "parts": "node tools/parts_review.mjs",
     "parts:catalog": "node tools/ai3d/catalog_tree.mjs --write",

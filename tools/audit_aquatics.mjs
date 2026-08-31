@@ -255,7 +255,7 @@ ok(biomesSrc.includes('slate_house') && biomesSrc.includes('tongkonan')
 ok(biomesSrc.includes('CULTURAL_RELIC_LANDMARKS') && biomesSrc.includes('matchedBuildingType'),
   'biomes.js 具備 CULTURAL_RELIC_LANDMARKS 與 matchedBuildingType 結構');
 
-// 驗證 50% 相關對接 / 50% 多元非相關機率分佈 (離線模擬 1000 次抽樣)
+// OSM 文化／宗教建物必須忠實採用匹配類型，不再以種子換成無關地標。
 import { nativeFunctionalKind } from '../public/js/nativeFunctionalBuildings.js';
 const fnDef = biomesSrc
   .slice(biomesSrc.indexOf('export const CULTURAL_RELIC_LANDMARKS'), biomesSrc.indexOf('function buildingHeight('))
@@ -271,8 +271,8 @@ for (let i = 1; i <= N_SAMPLES; i++) {
   if (t === 'shrine') matchCount++;
 }
 const matchRatio = matchCount / N_SAMPLES;
-ok(matchRatio >= 0.45 && matchRatio <= 0.55,
-  `遺跡/文化地標建築機率性出現：相關者佔比接近 50% (實測 ${(matchRatio * 100).toFixed(1)}%, 目標 50±5%)`);
+ok(matchRatio === 1,
+  `遺跡/文化地標建築忠實匹配 OSM 類型 (實測 ${(matchRatio * 100).toFixed(1)}%, 目標 100%)`);
 ok(testBuildingType(testTags, 0) === 'shrine',
   '無 seed (seed=0) 呼叫時保持語意直接對接預設回傳');
 
