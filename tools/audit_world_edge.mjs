@@ -1,9 +1,8 @@
-// ============ 世界邊界(障礙環型錄 + 緩衝空間布景 + 視線邊界背景) 稽核 ============
+// ============ 世界邊界(障礙環型錄 + 最小緩衝裙) 稽核 ============
 // 用途:改 `data.js` 的 `WORLD_EDGE`/`edgeWallInsetM`/`heroTallestH`/`edgeWallHM`/`edgeWallDeepM`/
-// `edgeBufferM`、`edgewall.js` 的型錄與規劃器、`biomes.js` 的 `buildEdgeWall`/`buildBufferProps`/
-// `buildBackdrop`/`placeBoundary` 的帶寬/`buildRoadBlocks` 的內縮/散布內縮 `inb`、`terrain.js` 的
-// 外緣裙、`game.js` 的邊界夾制,或任何會動到地平線的東西(射程/砲塔/機體尺寸,因為
-// `edgeBufferM` ← `curveHorizonM`)之後跑。
+// `edgeBufferM`、`edgewall.js` 的型錄與規劃器、`biomes.js` 的 `buildEdgeWall`、`placeBoundary`
+// 的帶寬、`buildRoadBlocks` 的內縮、散布內縮 `inb`、`terrain.js` 的外緣裙或 `game.js` 的邊界
+// 夾制之後跑。舊 `buildBufferProps` / `buildBackdrop` 只留相容 helper，正式建圖不得呼叫。
 //
 // 使用者定案兩輪:
 //   2026-08-10「邊界加入不可越過的障礙,會再延伸可視距離但不可進入的緩衝空間」
@@ -15,11 +14,11 @@
 //              追加:「也要考量坡度,太陡的時候只使用懸崖峭壁/土石流/山崩這類自然景觀,
 //              中等坡度可以再加上倒木/長城」
 //   2026-08-30「依水域/裸露地/綠地/市區/沼澤加入大型設施；風機轉速正比風量，浮動物隨浪起伏」
+//   2026-08-31「緩衝大幅縮減到只容納障礙；舊外圈假景收入障礙；起伏處大幅提高自然障礙機率；
+//              假山與懸崖共用四季變化」
 //
 // 拆成可量測的不變式,本稽核逐條釘死:
-//   Ⅰ 推導不手寫 —— 環高下界 ← 最高機體全高、深型厚度 ← 基準厚、緩衝深度 ← 地平線距離。
-//       手寫公尺數的下場是改了射程/砲塔/機體之後地平線自己跑掉、裙留在原地,而畫面上只表現成
-//       「某些場地站在邊界看得到世界的盡頭」。
+//   Ⅰ 推導不手寫 —— 環高下界 ← 最高機體全高、深型厚度 ← 基準厚、緩衝深度 ← 最深障礙。
 //   Ⅱ 「不可越過」是**結構保證**不是校準 —— 以**真品原文**的 `buildEdgeWall` 跑合成地形,
 //       驗環上**沒有縫**(相鄰段的區間互相咬住,聯集覆蓋整條邊),而且**逐款厚度不同也照樣成立**
 //       (內面恆貼夾制線,厚度往圖界方向長)。
@@ -81,6 +80,12 @@ const BREAK_REDRAW = process.argv.includes('--break-redraw');
 const BREAK_FACILITY_GAP = process.argv.includes('--break-facility-gap');
 const BREAK_FACILITY_MIX = process.argv.includes('--break-facility-mix');
 if (BREAK_SNOW_SUMMER) EW.MOUNTAIN_SNOWLINE.summer = 0.5;
+if (process.argv.includes('--break-rock-season')) {
+  for (const s of Object.keys(EW.ROCK_SEASON_TINT)) EW.ROCK_SEASON_TINT[s] = 0xffffff;
+}
+if (process.argv.includes('--break-bias')) {
+  for (const k of ['cliff', 'rockery', 'giantforest', 'fallentree']) EW.WALL_KINDS[k].slopeBias = {};
+}
 // 坡度分級失效:把每一款都改成「三級都站得住」⇒ 崖面上會擺出貨櫃車 / 連排民房
 if (process.argv.includes('--break-slope')) {
   for (const k of Object.values(EW.WALL_KINDS)) k.slope = 'steep';
@@ -329,13 +334,11 @@ console.log('\nⅠ 推導不手寫(環高 ← 機體 / 厚度 ← 基準厚 / �
   const deepest = Math.max(...Object.values(EW.WALL_KINDS).map((k) => k.depth));
   t(`型錄裡最深的一款 ${deepest}m === edgeWallDeepM()(雙向釘住,不是各寫各的)`, near(deepest, edgeWallDeepM()));
   t('每一款都比夾制線薄(厚度整個落在圖界之內)', deepest < edgeWallInsetM());
-  t(`緩衝深度 ${edgeBufferM().toFixed(1)}m = 地平線 ${curveHorizonM().toFixed(1)}m × ${WORLD_EDGE.BUFFER_F}`,
-    near(edgeBufferM(), curveHorizonM() * WORLD_EDGE.BUFFER_F));
-  t('緩衝深度 = 地平線距離 × 0.5(邊界緩衝區減半)',
-    near(edgeBufferM(), curveHorizonM() * 0.5),
-    `（BUFFER_F=${WORLD_EDGE.BUFFER_F} ⇒ ${edgeBufferM().toFixed(1)}）`);
-  t('緩衝深度為正值(有效向外延伸緩衝空間)',
-    edgeBufferM() > 0);
+  t(`緩衝深度 ${edgeBufferM().toFixed(1)}m = 最深障礙 ${edgeWallDeepM().toFixed(1)}m × ${WORLD_EDGE.BUFFER_F}`,
+    near(edgeBufferM(), edgeWallDeepM() * WORLD_EDGE.BUFFER_F));
+  t('緩衝只留邊界障礙所需空間，且已大幅小於地平線距離',
+    edgeBufferM() >= edgeWallDeepM() && edgeBufferM() < curveHorizonM() * 0.1,
+    `（緩衝 ${edgeBufferM().toFixed(1)}m / 地平線 ${curveHorizonM().toFixed(1)}m）`);
   const defs = ['edgeWallInsetM', 'edgeWallHM', 'edgeWallDeepM', 'edgeBufferM', 'heroTallestH'];
   for (const d of defs) {
     const m = new RegExp(`export const ${d} = [\\s\\S]*?;\\n`).exec(dataSrc);
@@ -562,8 +565,8 @@ console.log('\nⅤ 緩衝空間:延伸可視距離、不可進入、貼地貌拼
   // 外推高度的對外單一縫
   t('`bufferHeightAt` 對外露出且恰為裙自己那份 outerH(緩衝布景/背景靠它落地)',
     /bufferHeightAt = outerH;/.test(terrCode) && /bufferHeightAt,/.test(terrCode));
-  t('緩衝布景與背景 MUST 走 bufferHeightAt(拿 heightAt 會被夾回圖界 ⇒ 整排物件高度錯位)',
-    count(bioCode, /terrain\.bufferHeightAt/g) >= 4 && !/bufferHeightAt = [^o]/.test(bioCode));
+  t('緩衝高度只對外保留一份；遊戲建圖不再發射圖界外的無碰撞布景',
+    !bioCode.includes('const bufferProps =') && !bioCode.includes('const backdropSegs ='));
   // 鏡射本身的數學(執行真品原文的那一小段)
   const mirrorSrc = /const mirror = \(v, lo, hi\) => \{[\s\S]*?\n    \};/.exec(terrCode);
   t('鏡射函式抽得出來', !!mirrorSrc);
@@ -625,7 +628,7 @@ console.log('\nⅤ-b 外緣裙行為直測(執行 terrain.js 原文)');
     t('高度夾在全圖的 [minH, maxH](不憑空長出比這張圖更高的山)', inBand);
     t(`與地形的接縫逐點對齊(最大落差 ${seam.toExponential(1)}m ≪ 岸線容差)`, seam < 1e-4);
     t(`只鋪環狀那一圈(${pos.length / 3} 顆頂點 / ${g.idx.length / 3} 三角形 —— 內域一顆都沒建)`,
-      pos.length / 3 < 12000 && g.idx.length / 3 > 4000);
+      pos.length / 3 < 12000 && g.idx.length / 3 > 1000);
     t('無影像路徑走 paintTerrainTones 取得頂點色(與地形同一支 ⇒ 顏色接得上)', !!g.att.color);
     t('影像路徑不需要頂點色、但一定要有 UV(否則整片採到同一個 texel)',
       !sat[0].g.att.color && !!sat[0].g.att.uv);
@@ -653,8 +656,8 @@ console.log('\nⅥ 純表現層(伺服器對這一整套一無所知)');
   t('環的碰撞柱走既有的 blockers 路徑(不新增第二條上傳管道)',
     !/edgeSegs/.test(strip(readSrc('public', 'js', 'main.js'))));
   const props = strip(grabFn(bioSrc, 'buildBufferProps')), back = strip(grabFn(bioSrc, 'buildBackdrop'));
-  t('緩衝布景與背景不進 blockers / occ / LOS(玩家永遠碰不到,登記了只是白佔上傳預算)',
-    !/blockers|\bocc\b/.test(props) && !/blockers|\bocc\b/.test(back));
+  t('舊緩衝布景與背景建構器不再被正式建圖路徑呼叫',
+    !bioCode.includes('const bufferProps =') && !bioCode.includes('const backdropSegs ='));
   t('兩者零共享 rnd 消耗(§2.3:插在建構流程任何位置都不推移植被佈局)',
     !/\brnd\s*\(/.test(props) && !/\brnd\s*\(/.test(back)
     && !/Math\.random/.test(props) && !/Math\.random/.test(back));
@@ -889,8 +892,8 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     !/Math\.random|\brnd\s*\(/.test(strip(grabFn(ewSrc, 'planWallRuns'))));
   // ---- 坡度分級(2026-08-11 使用者追加:「太陡的時候只使用懸崖峭壁/土石流/山崩這類自然
   //      景觀,中等坡度可以再加上倒木/長城」)----
-  const NATURAL = ['cliff', 'landslide', 'debris'];
-  const MID_EXTRA = ['fallentree', 'citywall'];
+  const NATURAL = ['cliff', 'rockery', 'landslide', 'debris'];
+  const MID_EXTRA = ['fallentree', 'giantforest', 'citywall'];
   const rank = (t2) => EW.SLOPE_TIERS.indexOf(t2);
   t(`分級恰三級(${EW.SLOPE_TIERS.join(' < ')})且每一款都宣告了 slope`,
     EW.SLOPE_TIERS.length === 3 && kinds.every((k) => EW.SLOPE_TIERS.includes(EW.WALL_KINDS[k].slope)));
@@ -918,6 +921,12 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
   t('自然三款在三級都合法(擺在緩坡上不突兀;反過來把貨櫃車擺上崖面才是穿幫)',
     NATURAL.every((k) => EW.WALL_KINDS[k].slope === 'steep')
     && ['flat', 'mid', 'steep'].every((tr) => EW.wallCandidates('bare', false, tr).some((k) => NATURAL.includes(k))));
+  const steepPool = EW.wallCandidates('bare', false, 'steep');
+  const midPool = EW.wallCandidates('green', false, 'mid');
+  const favored = (pool, kinds2) => pool.filter((k) => kinds2.includes(k)).length / pool.length;
+  t('海拔起伏處大幅加權假山／懸崖／巨木林／大倒木(候選權重 ≥ 70%)',
+    favored(steepPool, ['rockery', 'cliff']) >= 0.7
+    && favored(midPool, ['rockery', 'cliff', 'giantforest', 'fallentree']) >= 0.7);
   t('陡的市區配不到符合地貌的自然景觀時,退回「這一級全部合法的款」而不是退回平地款',
     EW.wallCandidates('urban', false, 'steep').every((k) => rank(EW.WALL_KINDS[k].slope) >= rank('steep')));
   // 切分:坡度級改變也要切;短 run 併回去時 MUST 取**較陡**的那一級
@@ -984,8 +993,8 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
 }
 
 // ============ Ⅷ 緩衝布景 + 視線邊界背景 ============
-console.log('\nⅧ 緩衝空間的 3D 物件 + 視線邊界的假山/假海/假森林/假城市');
-{
+console.log('\nⅧ 假山／巨木林／假城／島礁收入權威邊界障礙環');
+if (false) {
   emitted.length = 0;
   const nProps = B.buildBufferProps({ group, terrain: T });
   const propBoxes = emitted.slice();
@@ -1090,10 +1099,33 @@ console.log('\nⅧ 緩衝空間的 3D 物件 + 視線邊界的假山/假海/假�
     }
   }
 }
+{
+  const merged = {
+    rockery: ['bare', false], giantforest: ['green', false],
+    edgehamlet: ['urban', false], isletbarrier: ['water', true],
+  };
+  t('舊圖界外四類布景皆有對應的權威邊界障礙款',
+    Object.entries(merged).every(([k, [bio, water]]) => EW.WALL_KINDS[k]
+      && EW.wallCandidates(bio, water).includes(k)));
+  t('四類新款的演出均由同一個有向碰撞盒承接',
+    Object.keys(merged).every((k) => EW.WALL_KINDS[k].depth <= edgeWallDeepM()));
+  t('正式建圖路徑不再發射純背景的 buildBufferProps / buildBackdrop',
+    !bioCode.includes('const bufferProps =') && !bioCode.includes('const backdropSegs ='));
+  t('緩衝裙深度介於最深障礙與其 1.5 倍之間',
+    edgeBufferM() >= edgeWallDeepM() && edgeBufferM() <= edgeWallDeepM() * 1.5);
+}
 
 // ============ Ⅸ 邊界山脈雪線高度與山頂積雪接合 ============
 console.log('\nⅨ 邊界山脈雪線高度與山頂積雪接合(四季變化 + 斜率貼合)');
 {
+  t('假山與懸崖共用完整四季色階',
+    ['spring', 'summer', 'autumn', 'winter'].every((s) => typeof EW.ROCK_SEASON_TINT?.[s] === 'number'));
+  for (const kind of ['rockery', 'cliff']) {
+    const d = EW.WALL_KINDS[kind];
+    const variants = ['spring', 'summer', 'autumn', 'winter'].map((season) => JSON.stringify(
+      wallParts(kind, { len: WORLD_EDGE.SEG_M * WORLD_EDGE.SEG_LAP_F, depth: d.depth, h: d.h, seed: 17, season })));
+    t(`${EW.WALL_KINDS[kind].label}四季幾何不動、岩色四種皆不同`, new Set(variants).size === 4);
+  }
   t('MOUNTAIN_SNOWLINE 定義完整四季雪線(spring/summer/autumn/winter)',
     EW.MOUNTAIN_SNOWLINE && ['spring', 'summer', 'autumn', 'winter'].every((s) => typeof EW.MOUNTAIN_SNOWLINE[s] === 'number'));
   t('夏季雪線在天際線之上(summer ≥ 1.0 ⇒ 夏天無雪)',
@@ -1162,7 +1194,8 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-run', '拿掉「太長就換一款」,Ⅶ MUST 紅字'],
   ['--break-boxh', '盒高改回逐款一個值,Ⅲ MUST 紅字(素牆頂上的空氣)'],
   ['--break-slope', '每一款都改成三級都站得住,Ⅶ MUST 紅字(崖面上的貨櫃車)'],
-  ['--break-land', '關掉逐零件落地,Ⅷ MUST 紅字(斜坡上浮在半空的假山)'],
+  ['--break-bias', '抽掉起伏帶自然障礙加權,Ⅶ MUST 紅字'],
+  ['--break-rock-season', '假山與懸崖四季同色,Ⅸ MUST 紅字'],
   ['--break-facility-support', '陸域光電塞回整段底座,Ⅶ MUST 紅字'],
   ['--break-redraw', '抽掉本輪邊界重繪辨識零件,Ⅶ MUST 紅字'],
   ['--break-facility-gap', '補滿非連續大型設施間的透明縫,Ⅶ MUST 紅字'],

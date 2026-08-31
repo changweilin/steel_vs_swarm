@@ -9571,7 +9571,9 @@ function buildEdgeWall({ group, terrain, blockers }) {
         const z = e.ax ? s.z + e.sz * hd2 : s.z;
         const seed = edgeSeed(x, z);
         const variant = wallVariant(kind, seed, kind === prevKind ? prevVariant : -1);
-        const parts = wallParts(kind, { len: half * 2, depth: def.depth, h: kh0, seed, variant });
+        const parts = wallParts(kind, {
+          len: half * 2, depth: def.depth, h: kh0, seed, variant, season: terrain.season || 'summer',
+        });
         // **盒高逐段實測**,不是逐款一個值(2026-08-11 城牆加了城門/城樓/砲台之後的必然):
         // 同一款的節有高有矮(素牆 9m / 箭樓 11m / 城樓 14m),拿型錄宣告的最高值當每一節的
         // 盒高,素牆那幾節的頂上就多出一截**撞得到卻看不見**的空氣(A30 家族的反面)。
@@ -10508,12 +10510,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 邊界障礙環:MUST 是 blockers 的**第一批**(main.js 的 occ 上傳 slice(0, LOS.MAX_OCC),
   // 排在尾端會被密集市區擠掉 = 伺服器不知道有牆);排在這裡也保證地形開挖/整平都已定案。
   // 零共享 rnd 消耗 ⇒ 插在這一行不會推移後面任何一株植被的佈局(§2.3)。
-  const edgeSegs = buildEdgeWall({ group, terrain, blockers });
-  // 緩衝空間布景與視線邊界背景:純表現層(不進 blockers/occ/LOS)、零共享 rnd ⇒ 插在這裡
-  // 不會推移任何一株植被的佈局,也不影響 occ 上傳的段數。
-  const bufferProps = buildBufferProps({ group, terrain });
   terrain.season = season;
-  const backdropSegs = buildBackdrop({ group, terrain, ctr: INK_CTR.BACKDROP });
+  const edgeSegs = buildEdgeWall({ group, terrain, blockers });
+  // 舊緩衝區的林塊／岩塊／聚落／島礁與遠景假山已收入 edgewall 權威障礙環。
+  // 不再於圖界外發射無碰撞布景，緩衝裙只保留容納邊界障礙的深度。
   const greenSites = [], bareSites = [];
   for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 36); a++) {
     const x = rx(), z = rz();

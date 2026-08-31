@@ -20,7 +20,7 @@
 //      mini,就會把緩衝布景/背景擺到裙**外面**的虛空裡。故深度對外只准有 `terrain.bufferM` 一個數。
 //
 // 反向驗證(原則 9;每一支 MUST 讓對應段落紅字):
-//   --break-buffer  邊緣緩衝不縮(MINI.BUFFER_F = 1)
+//   --break-buffer  把緩衝壓到容不下最深邊界障礙
 //   --break-stage   迷你也留兩階塔(MINI.STAGES = FULL_STAGES)
 //   --break-team    人數上限放到 TEAM.MAX(迷你不再恆為單兵線)
 //   --break-full    Ⅸ 的行為直測改用完整戰場的 cfg(證明那幾條斷言真的分得出兩者,不是恆真)
@@ -29,7 +29,7 @@ import { readSrc } from './audit_src.mjs';
 import {
   MINI, FULL_STAGES, TEAM, towerStages, laneChainF, miniScaleF, mapScaleF, miniAllowed, miniOnlyFor,
   lanesFor, realSideMFor, sideMFor, targetDistFor, realDistFor, overlapCellM,
-  edgeBufferM, curveHorizonM, WORLD_EDGE, MAPGEO,
+  edgeBufferM, edgeWallDeepM, WORLD_EDGE, MAPGEO,
   solveTowerSites, towerLayoutAudit, laneSeparationAudit, siegeSiteStages,
 } from '../public/js/data.js';
 import { VENUES, venueConfig, trimLaneTo, venueLaneKey } from '../public/js/venues.js';
@@ -40,7 +40,7 @@ import { BattleSim } from '../server/sim.js';
 const ARG = new Set(process.argv.slice(2));
 const BRK = (k) => ARG.has(`--break-${k}`);
 // 反向驗證一律**改真品的可變常數**(MINI 是一般物件)⇒ 不需要改檔就能把規則寫回壞版本
-if (BRK('buffer')) MINI.BUFFER_F = 1;
+if (BRK('buffer')) WORLD_EDGE.BUFFER_F = 0.5;
 if (BRK('stage')) MINI.STAGES = FULL_STAGES;
 if (BRK('team')) MINI.TEAM_MAX = TEAM.MAX;
 const BREAK_FULL = BRK('full');   // 行為直測改吃完整戰場的 cfg(斷言不變 ⇒ 該紅)
@@ -114,7 +114,8 @@ console.log('\nⅠ 規格:四件事全是同一個布林的推論,而縮小比�
   const miniScaleSrc = /export const miniScaleF = \(\) => ([^;]+);/.exec(dataCode)?.[1] || '';
   t('縮小比的實作由 laneChainF 組成,且不出現任何字面比值', /laneChainF\(MINI\.STAGES\)/.test(miniScaleSrc)
     && /laneChainF\(FULL_STAGES\)/.test(miniScaleSrc) && !/\d\.\d/.test(miniScaleSrc), `（${miniScaleSrc}）`);
-  t('緩衝深度全圖統一(BUFFER_F = 0.5,邊界緩衝區減半)', near(WORLD_EDGE.BUFFER_F, 0.5));
+  t('緩衝深度全圖統一，且容得下最深邊界障礙',
+    MINI.BUFFER_F === 1 && edgeBufferM() >= edgeWallDeepM());
   t('手機閘門是「裝置判定 → 只准 1 兵線」的純述詞(裝置判定本身住 ctrlmode.js)',
     miniOnlyFor('pad') === true && miniOnlyFor('kbm') === false && miniOnlyFor(undefined) === false);
 }
@@ -132,7 +133,8 @@ console.log('\nⅡ 省略參數 = 完整戰場 = 逐位元同舊制(這一段紅
       && overlapCellM(L) === Math.max(MAPGEO.OVERLAP_CELL_MIN_M, realDistFor(L) * MAPGEO.OVERLAP_CELL_FRAC);
   });
   t('L1/L2/L3 的邊長 / 兩堡距離 / 重合網格逐位元 = 舊公式', sizeOK);
-  t('緩衝深度省略參數 = 地平線 × BUFFER_F(舊制)', edgeBufferM() === curveHorizonM() * WORLD_EDGE.BUFFER_F);
+  t('緩衝深度省略參數 = 最深障礙 × 安全餘裕',
+    edgeBufferM() === edgeWallDeepM() * WORLD_EDGE.BUFFER_F);
   // 塔位解:同一條兵線,mini 省略 / false 兩種呼叫 MUST 逐位元相同
   const lanes = toGame(venueConfig(VENUES[0], 5).lanes);
   t('solveTowerSites 省略參數 ≡ 明寫 false(逐位元)',
@@ -180,7 +182,8 @@ console.log('\nⅣ 地圖 / 據點距離 / 邊緣緩衝');
   const m = { side: sideMFor(1, true), dist: targetDistFor(1, true), buf: edgeBufferM(true) };
   t(`地圖邊長(L1=${f.side}m)`, near(m.side / f.side, miniScaleF()));
   t(`據點距離(L1=${f.dist.toFixed(0)}m)`, near(m.dist / f.dist, miniScaleF()));
-  t(`邊緣緩衝減半(${f.buf.toFixed(1)}m)`, near(m.buf, f.buf) && near(m.buf, curveHorizonM() * 0.5));
+  t(`邊緣緩衝同尺且只留障礙餘量(${f.buf.toFixed(1)}m)`,
+    near(m.buf, f.buf) && m.buf >= edgeWallDeepM() && m.buf <= edgeWallDeepM() * 1.5);
   // 深度只准有一個數:裙自己算完交出 bufferM,消費端一律讀它
   t('裙的深度吃 edgeBufferM(mini) 並對外交出 bufferM',
     /const B = edgeBufferM\(mapArg\(cfg\)\)/.test(terrSrc) && /bufferM = B;/.test(terrSrc) && /bufferM,/.test(terrSrc));

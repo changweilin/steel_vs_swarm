@@ -7,7 +7,7 @@
 //   M1 **表面群組**(共用 `surfaceId`,粒度 = 玩家會把它指成一個東西)⇒ 消掉物體內部的 id 線
 //   M2 **outlineContribution**(由既有的實測縫推導)⇒ 把「畫面上只有幾個像素的東西」的線調淡
 //   M3 `INK_MRT.SELF_F` / `GRAZE_K` 的內部折邊門檻 —— **住 lane-ink**(`audit_cel_pipeline` Ⅷ),
-//      本支不重複驗,只驗本道的兩個決定:①石堆刻意**不標 GROUP** ②遠景背景吃 `INK_CTR.BACKDROP`
+//      本支不重複驗,只驗本道的兩個決定:①石堆刻意**不標 GROUP** ②退役遠景不再進正式建圖
 //
 // 段別:
 //   Ⅰ 巨岩(`placeMegaliths`):兩個表面群組 + 判據是量出來的外廓比 + 三條順序 + 零亂數
@@ -187,7 +187,7 @@ console.log('\nⅡ 石堆散件(ground.js 的 3D 細節):一款一個號 + 貢�
 }
 
 // ---------------------------------------------------------------- Ⅲ
-console.log('\nⅢ 遠景背景 / 邊界牆環');
+console.log('\nⅢ 退役遠景背景 / 邊界障礙環');
 {
   const back = grabFn(bioSrc, 'buildBackdrop');
   ok(/function buildBackdrop\(\{ group, terrain, ctr \}\)/.test(back),
@@ -196,18 +196,14 @@ console.log('\nⅢ 遠景背景 / 邊界牆環');
     '本函式內不讀 `INK_CTR`(同 `edgewall.js` 的坡度門檻由呼叫端注入那一條紀律)');
   ok(/contrib: ctr/.test(code(back)),
     '注入值直達 `flushPartBatch` 的材質選項');
-  ok(/buildBackdrop\(\{ group, terrain, ctr: INK_CTR\.BACKDROP \}\)/.test(bioC),
-    '呼叫點餵的是 `INK_CTR.BACKDROP`(**授權值**,需美術方向定案:0 = 一張背景板 / 1 = 遠山)');
+  ok(!/const backdropSegs\s*=\s*buildBackdrop/.test(bioC),
+    '正式建圖不再產生圖界外純表現遠景；假山等外圈景物已併入具碰撞的邊界障礙環');
   ok(INK_CTR.BACKDROP >= 0 && INK_CTR.BACKDROP <= 1, `BACKDROP ∈ [0,1](現值 ${INK_CTR.BACKDROP})`);
   const wall = grabFn(bioSrc, 'buildEdgeWall');
   ok(/flushPartBatch\(group, batch, \{ wash: 0\.42, cool: 0\.42 \}\)/.test(code(wall)),
     '邊界牆環一格未動:它已經是**一個 merged mesh 一份材質** ⇒ M1 天生成立(id 線一條都沒有),剩下的全是法線折邊 ⇒ 由 `INK_MRT.SELF_F` 整段接手');
-  ok(!/blockers/.test(code(grabFn(bioSrc, 'buildBackdrop'))),
-    '背景仍是純表現層(不進 blockers / occ / LOS)—— A44 ⑧ 一格未動');
-  console.log('    ⚠ **遠景那一圈真正的病灶不在貢獻**:`INK.FADE0/FADE1` 錨在 `camera.far`(= span×2)');
-  console.log('      ⇒ 對現役地圖等於「永不淡出」,而背景環落在圖界外約 410m、`scene.fog` 的 near 是 span×0.5。');
-  console.log('      正解是計畫 ④-3「霧範圍 ≡ 勾線淡出範圍」,**本輪沒做**;貢獻只是止血,而**真山(地形)');
-  console.log('      在同樣距離上仍是全強度**。MUST NOT 因此把 FADE 常數就地改小(會把近景的線一起吃掉)。');
+  ok(!/blockers/.test(code(back)),
+    '保留的舊遠景 helper 仍是純表現層，避免誤接權威碰撞；正式路徑不得呼叫它');
 }
 
 console.log(`\n${fail ? '❌' : '🎉'} 通過 ${pass} 項,失敗 ${fail} 項`);
