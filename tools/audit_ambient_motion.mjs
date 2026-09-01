@@ -99,10 +99,13 @@ sec('Ⅰ 邊界(規則層 vs 幾何層)');
 // ---------------------------------------------------------------- Ⅱ
 sec('Ⅱ 季節閘與色調推導');
 {
-  ok(petalSeason('spring') === 'bloom' && petalSeason('autumn') === 'leaf',
-    '春 = 落花 / 秋 = 落葉');
-  ok(petalSeason('summer') === null && petalSeason('winter') === null && petalSeason(undefined) === null,
-    '夏 / 冬 / 缺季一律不下(季節閘;整段不建立 ⇒ 逐位元同舊制)');
+  ok(petalSeason('spring') === 'bloom'
+    && petalSeason('summer') === 'leaf'
+    && petalSeason('autumn') === 'leaf'
+    && petalSeason('winter') === 'leaf',
+    '四季專屬落花落葉: 春 = 櫻花(bloom) / 夏 = 綠葉(leaf) / 秋 = 楓紅(leaf) / 冬 = 枯葉(leaf)');
+  ok(petalSeason(undefined) === null && petalSeason('invalid') === null,
+    '缺季/無效季一律不下(季節閘;整段不建立 ⇒ 逐位元同舊制)');
 
   const tonesSrc = code(grabFn(petalSrc, 'petalTones'));
   ok(!/0x[0-9a-fA-F]{3,}/.test(tonesSrc),
@@ -120,8 +123,10 @@ sec('Ⅱ 季節閘與色調推導');
   ok(PETAL.TONE_W.length === 3 && Math.abs(PETAL.TONE_W.reduce((a, b) => a + b, 0) - 1) < 1e-9,
     `三色調權重和為 1(實得 ${PETAL.TONE_W.join('/')})`);
   ok(petalTones(ENV.seasons.spring, 'bloom')[0] === ENV.seasons.spring.accent
-    && petalTones(ENV.seasons.autumn, 'leaf')[0] === ENV.seasons.autumn.accent,
-    '主色調 = 該季的 ENV.seasons[].accent(在 2026-08-16 之前這一欄沒有任何消費端)');
+    && petalTones(ENV.seasons.summer, 'leaf')[0] === ENV.seasons.summer.accent
+    && petalTones(ENV.seasons.autumn, 'leaf')[0] === ENV.seasons.autumn.accent
+    && petalTones(ENV.seasons.winter, 'leaf')[0] === ENV.seasons.winter.accent,
+    '主色調 = 該季的 ENV.seasons[].accent (春櫻花 / 夏綠葉 / 秋楓紅 / 冬枯葉)');
 }
 
 // ---------------------------------------------------------------- 共用的測試場

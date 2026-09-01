@@ -91,14 +91,16 @@ export const PETAL = {
 
 /**
  * 這一季下不下、下什麼。
- * 春 = 落花(bloom)、秋 = 落葉(leaf)、夏冬不下(null)。
- * ⚠ 本專案的 `VEG_DEFS` **沒有櫻花樹種** ⇒ 「落花」在這個世界裡沒有對應的來源幾何,
- * 色調只能由既有的 `ENV.seasons[].accent` 推導(見 `petalTones`)。要不要真的加一款開花樹種
- * 是**內容決定**,不是實作決定 —— 留給使用者裁決(docs/_pending/lane-world.md 第 ⑤ 段)。
+ * 四季皆有專屬落花 / 落葉:
+ *   春 = 櫻花粉瓣 (bloom)
+ *   夏 = 翠綠夏葉 (leaf)
+ *   秋 = 楓紅秋葉 (leaf)
+ *   冬 = 枯褐枯葉 (leaf)
+ * 大風時所有季節落花落葉隨風加速飄舞與旋流擺盪。
  */
 export function petalSeason(season) {
   if (season === 'spring') return 'bloom';
-  if (season === 'autumn') return 'leaf';
+  if (season === 'summer' || season === 'autumn' || season === 'winter') return 'leaf';
   return null;
 }
 

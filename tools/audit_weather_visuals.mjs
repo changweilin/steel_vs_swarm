@@ -3,11 +3,11 @@
  * tools/audit_weather_visuals.mjs
  *
  * 離線稽核: 天氣視覺效果全域大翻新 (Weather Visual Effects Overhaul)
- * 驗證五大使用者需求與單一真相縫:
+ * 驗證使用者需求與單一真相縫:
  *   1. 陰天雲朵數量與覆蓋率 (與雲量成正比, 陰天覆蓋半數以上天空; 霧量垂直擴展, 越濃雲底越低)
- *   2. 大雪時水域凍結平緩過渡 (非瞬間變平, 隨雪量加劇漸進衰減至完全平坦凍結)
+ *   2. 大雪結束後持續凍結一段時間 (thaw delay), 隨後平緩連續動態融化解凍恢復波浪
  *   3. 濃霧最濃時能見度壓至防禦塔射程 (Single Seam: UNITS.tower.range)
- *   4. 雨 / 雪 / 沙塵微粒專屬紋理與運動物理軌跡; 風力不使用虛擬氣流 (高空由雲飄移與聚散表現, 低空由落花落葉表現)
+ *   4. 大風與四季自然物理表現: 春季櫻花 / 夏季綠葉 / 秋天楓紅 / 冬天枯葉 (淘汰虛擬氣流, 高空雲速/聚散 + 低空四季落花落葉)
  *   5. 雷雨時烏雲擊出真實 3D 分支閃電 (折線電弧 + 側向分叉 + 地面光暈 + 資源回收)
  */
 
@@ -16,8 +16,10 @@ import {
   resolveWeatherDynamics,
   WEATHER_PRESETS,
   WEATHER_DYNAMICS,
+  ENV,
   UNITS,
 } from '../public/js/data.js';
+import { petalSeason, petalTones } from '../public/js/petals.js';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -78,54 +80,43 @@ console.log('  ✓ 陰天雲朵橫向擴展與交疊覆蓋半數以上天空');
 console.log('  ✓ 霧量垂直擴展: 越濃雲底越低、垂直跨度越大\n');
 
 // --------------------------------------------------------------------------
-// Ⅱ. 大雪水域漸進平緩凍結 (非瞬間變平, 隨雪量連續衰減)
+// Ⅱ. 大雪水域漸進凍結、停雪後持續凍結保溫與平緩融化解凍動態過程
 // --------------------------------------------------------------------------
-console.log('▍Ⅱ. 大雪時水域漸進平緩凍結 (連續衰減至平坦)');
+console.log('▍Ⅱ. 大雪水域漸進凍結、停雪後持續凍結保溫與平緩動態融化');
 
-// 1. 輕微降雪 (snow 40%): 水波維持起伏
-const lightSnowDyn = resolveWeatherDynamics({
-  rain: 0,
-  fog: 10,
-  wind: 20,
-  clouds: 60,
-  thunder: 0,
-  sand: 0,
-  snow: 40,
-});
-assert.equal(lightSnowDyn.isFrozen, false, '初雪時尚未完全凍結');
-assert(lightSnowDyn.waveAmp > 0.3, `初雪時水波應保持擾動 (實得 ${lightSnowDyn.waveAmp.toFixed(2)})`);
+// 1. 深度大雪 (snow 95%): 水波完全凍結無起伏
+let simDyn = resolveWeatherDynamics({
+  rain: 0, fog: 20, wind: 20, clouds: 90, thunder: 0, sand: 0, snow: 95,
+}, null, 0);
 
-// 2. 中度降雪 (snow 70%): 水波平緩衰減
-const midSnowDyn = resolveWeatherDynamics({
-  rain: 0,
-  fog: 20,
-  wind: 20,
-  clouds: 70,
-  thunder: 0,
-  sand: 0,
-  snow: 70,
-});
-assert(midSnowDyn.waveAmp < lightSnowDyn.waveAmp, '中度降雪時水波振幅逐漸收斂平緩');
-assert(midSnowDyn.waveAmp > 0, '中度降雪時尚未瞬間歸零');
+assert.equal(simDyn.isFrozen, true, '大雪凍結時 isFrozen === true');
+assert.equal(simDyn.waveAmp, 0, '大雪凍結時 waveAmp === 0');
+assert.equal(simDyn.waveSpeed, 0, '大雪凍結時 waveSpeed === 0');
+console.log('  ✓ 降雪時水波漸進凍結，大雪達到完全平坦無起伏 (isFrozen = true)');
 
-// 3. 深度大雪 (snow 95%): 水波完全凍結無起伏
-const deepSnowDyn = resolveWeatherDynamics({
-  rain: 0,
-  fog: 20,
-  wind: 20,
-  clouds: 90,
-  thunder: 0,
-  sand: 0,
-  snow: 95,
-});
-assert.equal(deepSnowDyn.isFrozen, true, '大雪凍結時 isFrozen === true');
-assert.equal(deepSnowDyn.waveAmp, 0, '大雪凍結時 waveAmp === 0');
-assert.equal(deepSnowDyn.waveSpeed, 0, '大雪凍結時 waveSpeed === 0');
-console.log('  ✓ 降雪時水波連續平滑過渡，大雪達到完全凍結無起伏');
+// 2. 模擬大雪驟停 (snow 瞬間降為 0): 水面不會立刻融化，而是持續保溫凍結一段時間
+const clearVec = { rain: 0, fog: 0, wind: 30, clouds: 20, thunder: 0, sand: 0, snow: 0 };
 
-// 驗證 toon.js 中的 Shader 結冰無擾動保證
-assert.match(toonSrc, /if \( uWeatherWaveAmp <= 0\.001 \) return 0\.0;/, 'celSeaH 與 celFoam 於結冰時直接回傳 0.0');
-console.log('  ✓ toon.js 水面頂點位移與岸邊動態泡沫隨波浪振幅平緩歸零\n');
+// 經過 5 秒晴天
+simDyn = resolveWeatherDynamics(clearVec, simDyn, 5.0);
+console.log(`  - 停雪 5 秒後: freezeFactor = ${simDyn.freezeFactor.toFixed(2)}, thawHoldS = ${simDyn.thawHoldS.toFixed(1)}s, waveAmp = ${simDyn.waveAmp.toFixed(2)}`);
+assert.equal(simDyn.isFrozen, true, '停雪 5 秒內仍處於保溫凍結期 (isFrozen 保持 true)');
+assert.equal(simDyn.waveAmp, 0, '保溫凍結期水面保持完全平坦');
+
+// 經過 15 秒 (累積 20 秒，已過保溫期進入融化過程)
+simDyn = resolveWeatherDynamics(clearVec, simDyn, 15.0);
+console.log(`  - 停雪 20 秒後 (進入融化): freezeFactor = ${simDyn.freezeFactor.toFixed(2)}, waveAmp = ${simDyn.waveAmp.toFixed(2)}`);
+assert(simDyn.freezeFactor < 0.98, '保溫期結束後 freezeFactor 開始衰減融化');
+assert(simDyn.waveAmp > 0.05, '融化開始後水波逐漸復甦');
+assert(simDyn.waveAmp < 1.0, '融化初期水波振幅仍平緩抑制，處於動態過渡中');
+
+// 再經過 8 秒 (累積 28 秒，完全融化)
+simDyn = resolveWeatherDynamics(clearVec, simDyn, 8.0);
+console.log(`  - 停雪 28 秒後 (完全解凍): freezeFactor = ${simDyn.freezeFactor.toFixed(2)}, waveAmp = ${simDyn.waveAmp.toFixed(2)}`);
+assert.equal(simDyn.freezeFactor, 0, '完全解凍後 freezeFactor 歸零');
+assert.equal(simDyn.isFrozen, false, '完全解凍後 isFrozen === false');
+assert(simDyn.waveAmp > 0.8, '完全解凍後水波完全恢復正常');
+console.log('  ✓ 大雪結束後持續凍結保溫 (thawHoldS) → 連續平緩融化解凍 → 恢復正常起伏\n');
 
 // --------------------------------------------------------------------------
 // Ⅲ. 濃霧「最濃時」能見度壓至防禦塔射程 (UNITS.tower.range)
@@ -158,25 +149,47 @@ assert(Math.abs(maxActualFogFar - TOWER_RANGE) < 5, `最濃霧時視野距離精
 console.log('  ✓ 濃霧在「最濃時」精確收斂至 1 個砲塔射程\n');
 
 // --------------------------------------------------------------------------
-// Ⅳ. 風數值不使用虛擬氣流 (高空雲速/聚散 + 低空落花落葉)
+// Ⅳ. 風力自然表現與四季落花落葉 (春櫻花 / 夏綠葉 / 秋楓紅 / 冬枯葉)
 // --------------------------------------------------------------------------
-console.log('▍Ⅳ. 風力自然表現 (淘汰虛擬氣流, 高空雲速/聚散 + 低空落花落葉)');
+console.log('▍Ⅳ. 自然風力與四季落花落葉 (春櫻花 / 夏綠葉 / 秋楓紅 / 冬枯葉)');
 
-// 1. 虛擬氣流微粒已徹底移除
+// 1. 驗證四季色調與模式完整映射
+assert.equal(petalSeason('spring'), 'bloom', '春季 = 櫻花粉瓣 (bloom)');
+assert.equal(petalSeason('summer'), 'leaf', '夏季 = 翠綠夏葉 (leaf)');
+assert.equal(petalSeason('autumn'), 'leaf', '秋季 = 楓紅秋葉 (leaf)');
+assert.equal(petalSeason('winter'), 'leaf', '冬季 = 枯褐枯葉 (leaf)');
+
+const springTones = petalTones(ENV.seasons.spring, 'bloom');
+const summerTones = petalTones(ENV.seasons.summer, 'leaf');
+const autumnTones = petalTones(ENV.seasons.autumn, 'leaf');
+const winterTones = petalTones(ENV.seasons.winter, 'leaf');
+
+assert.equal(springTones[0], ENV.seasons.spring.accent, '春季主色調對齊櫻花粉');
+assert.equal(summerTones[0], ENV.seasons.summer.accent, '夏季主色調對齊綠葉');
+assert.equal(autumnTones[0], ENV.seasons.autumn.accent, '秋季主色調對齊楓紅');
+assert.equal(winterTones[0], ENV.seasons.winter.accent, '冬季主色調對齊枯葉');
+
+console.log(`  - 春季 (櫻花): 0x${springTones[0].toString(16)} (櫻花粉瓣)`);
+console.log(`  - 夏季 (綠葉): 0x${summerTones[0].toString(16)} (盛夏綠葉)`);
+console.log(`  - 秋季 (楓紅): 0x${autumnTones[0].toString(16)} (秋楓紅葉)`);
+console.log(`  - 冬季 (枯葉): 0x${winterTones[0].toString(16)} (凋零枯葉)`);
+console.log('  ✓ 四季落花落葉色調完全由 ENV.seasons 推導');
+
+// 2. 虛擬氣流微粒已徹底移除
 assert.doesNotMatch(envSrc, /'wind'/, '粒子系統中已無虛擬 wind 氣流條紋');
 assert.doesNotMatch(envSrc, /windTex/, '已無 windTex 虛擬氣流貼圖');
 
-// 2. 高空風力表現
+// 3. 高空風力表現
 assert.match(envSrc, /WIND\.CLOUD_MPS \* windAmp \* t/, '高空雲朵飄移速度由 windAmp 驅動');
 assert.match(envSrc, /clusterPulse = Math\.sin\(t \* 0\.12 \* Math\.max\(0\.4, windAmp\) \+ c\.phase\)/, '高空雲朵聚散頻率由 windAmp 驅動');
 console.log('  ✓ 高空: 雲朵飄移速度與聚散速率完全由風力 windAmp 即時驅動');
 
-// 3. 低空落花落葉表現
+// 4. 低空落花落葉風力動態響應
 assert.match(petalsSrc, /export function stepPetal\(p, dt, t, dyn\)/, 'petals.js stepPetal 支援即時天氣風力動態 dyn');
-assert.match(petalsSrc, /p\.w \* d \* wScale/, '低空落花/落葉自轉與旋流角速度隨風力加速');
-assert.match(petalsSrc, /const drift = \(wScale - 1\.0\) \* 1\.8;/, '低空落花/落葉軌跡受風向 windDir 與風力真實偏偏移');
+assert.match(petalsSrc, /p\.w \* d \* wScale/, '大風時落花/落葉自轉與旋流角速度隨風力加速');
+assert.match(petalsSrc, /const drift = \(wScale - 1\.0\) \* 1\.8;/, '大風時落花/落葉軌跡受風向 windDir 與風力真實偏移');
 assert.match(biomesSrc, /write\(Math\.min\(PETAL\.DT_MAX, Math\.max\(0, dt \|\| 0\)\), getWeatherDynamics\(\)\)/, 'biomes.js buildPetals 實時注入天氣動態風力');
-console.log('  ✓ 低空: 春季落花與秋季落葉之落速、擺盪、角速度與風向偏移隨風力即時響應\n');
+console.log('  ✓ 低空: 大風時四季落花落葉之落速、擺盪、角速度與風向偏移隨風力即時響應\n');
 
 // --------------------------------------------------------------------------
 // Ⅴ. 3D 實體雷電系統

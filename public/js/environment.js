@@ -952,9 +952,9 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
     update(dt, camera, elapsedS = 0) {
       _cam.position.copy(camera.position);
 
-      // 1. 連續 7 維布朗運動與四季時段氣候演化
+      // 1. 連續 7 維布朗運動與四季時段氣候演化 (含大雪凍結保溫與解凍動態)
       weatherVec = weatherVectorAt(startSeason, startTime, startWeather, elapsedS, seed, latDeg);
-      curDyn = resolveWeatherDynamics(weatherVec);
+      curDyn = resolveWeatherDynamics(weatherVec, curDyn, dt);
       setWeatherDynamics(curDyn);
 
       // 2. 打雷閃電系統 (>75% 觸發實體 3D 閃電擊向地面與全場強光頻閃)
