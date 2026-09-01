@@ -36,11 +36,14 @@
 // 斷言的是**航點清單**不是格數:兩座主堡、每一座塔位、每一座洞的兩端洞口與洞中、每一段
 // 橋面、每一條地下道引道。格數是個沒有意義的數字(地圖一改就變),航點才是契約。
 //
-// 網路:高程走 terrarium(快取在 tools/.scen_cache/),圖資走 Overpass → OSM API。
-//      **取不到圖資時自動降級成「地形層」**(原則 6 降級不例外):主堡/塔位仍然驗,
-//      結構航點列為未驗並在結尾標示 —— MUST NOT 因為取不到圖資就報綠。
+// 網路模式:高程走 terrarium(快取在 tools/.scen_cache/),圖資走 Overpass → OSM API。
+//      fixture 模式:高程與圖資一律讀 test/fixtures/osm/elevation + OSM raw，
+//      MUST NOT 查外部或用平地／synthetic fallback；缺固定高程即明確未驗並退出 1。
+//      網路模式取不到圖資時仍可降級成「地形層」(原則 6)，結構航點列為未驗；
+//      MUST NOT 因為取不到圖資或高程就報綠。
 // 用法:node tools/audit_traverse.mjs [--only=jinlong,taroko] [--team=1|2|3] [--cell=4]
 //      [--fixture-dir=test/fixtures/osm --fixtures=taipei_dense,shibuya_dense] [--json=out.json]
+//      高程 companion 預設位於 <fixture-dir>/elevation/<name>.json + tiles/*.png。
 //      node tools/audit_traverse.mjs --break-slope   ← 反向驗證:把坡度閘寫死成「什麼都擋」
 // 退出碼:0 = 全部航點可達;1 = 有航點不可達
 //
@@ -69,7 +72,9 @@ import { VENUES, venueConfig } from '../public/js/venues.js';
 // WATER 是橋下淨空那一段在用的(水面下不算「走得過去」)。漏了它不會報錯 ——
 // `scanVenue` 整段包在 try 裡,ReferenceError 會被吞成「⏭ 場地跳過」⇒ 每一個**有橋**的
 // 場地都靜默不驗,而收尾只會印「通過 N 項」看起來全綠(實測 27 場地跳掉 10 個)。
-import { SLOPE, slopeDeg, slopeBlocked, battleBBox, heroTargetH, CHARACTERS, WATER } from '../public/js/data.js';
+import {
+  SLOPE, slopeDeg, slopeBlocked, battleBBox, battleRect, heroTargetH, CHARACTERS, WATER,
+} from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 // `buildStructs`/`projectArc`/`ptAt`/`sampleAlong` 2026-08-16 起住 venue_field.mjs
 // (§0-a 線工切面樁要的「結構足跡 keep-out」與本支泛洪吃同一份清單,抄第二份就是繞過那條縫)。
@@ -80,7 +85,9 @@ import {
 import { readSrc } from './audit_src.mjs';
 import { catalogAreas, pointInProjectedArea, projectAreaRecord } from '../public/js/osmAreas.js';
 import {
-  DEFAULT_FIXTURE_DIR, fixtureOsm, fixtureQueries, loadOsmFixture, loadOsmFixtureForVenue,
+  DEFAULT_FIXTURE_DIR, elevationDirForFixtureDir, elevationFixtureContract, fixtureElevationSampler,
+  fixtureOsm, fixtureQueries, heightFieldBboxForWorldBounds, loadElevationFixture,
+  loadOsmFixture, loadOsmFixtureForVenue, validateElevationFixture,
 } from './osm_fixture.mjs';
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((s) => {
@@ -97,6 +104,7 @@ const BREAK_OSM_ROOF = !!(ARG['break-osm-roof'] || ARG['break-roof']);
 const BREAK_OSM_APPLIED = { hole: false, blocker: false, roof: false };
 const FIXTURE_MODE = ARG['fixture-dir'] != null || ARG.fixtures != null;
 const FIXTURE_DIR = ARG['fixture-dir'] || DEFAULT_FIXTURE_DIR;
+const ELEVATION_DIR = elevationDirForFixtureDir(FIXTURE_DIR);
 const FIXTURE_NAMES = new Set(String(ARG.fixtures || '').split(',').filter(Boolean));
 let FIXTURE_BINDINGS = new Map();
 
@@ -573,9 +581,21 @@ function fixtureContract(v, fixture) {
   };
 }
 
+function elevationContract(v, osmFixture, elevation) {
+  const cfg = venueConfig(v, TEAM);
+  return elevationFixtureContract(elevation, {
+    name: osmFixture?.name || null,
+    venueId: v.id,
+    team: TEAM,
+    bbox: battleBBox(cfg),
+    center: cfg.center,
+    bounds: battleRect(cfg),
+  });
+}
+
 function preflightFixtures(list) {
   if (!FIXTURE_MODE || !FIXTURE_NAMES.size) return;
-  console.log('固定 fixture 契約(venue.id / team / bbox / center / query)');
+  console.log('固定 fixture 契約(OSM venue.id / team / bbox / center / query + 真實高程 companion)');
   for (const name of FIXTURE_NAMES) {
     const fixture = loadOsmFixture(name, FIXTURE_DIR);
     if (!fixture) {
@@ -586,8 +606,24 @@ function preflightFixtures(list) {
     const matches = checks.filter((c) => c.ok);
     if (matches.length === 1) {
       const contract = matches[0];
-      FIXTURE_BINDINGS.set(contract.venueId, { fixture, contract });
-      ok(true, `${name} ↔ ${contract.venueId}:正式契約相容`);
+      const elevation = loadElevationFixture(name, ELEVATION_DIR, { validate: false });
+      const matchedVenue = list.find((v) => v.id === contract.venueId);
+      const elevationChecks = elevation ? elevationContract(matchedVenue, fixture, elevation) : null;
+      const elevationValid = elevation
+        ? validateElevationFixture(elevation, { dir: ELEVATION_DIR })
+        : null;
+      const elevationOk = !!elevation && !!elevationChecks?.ok && !!elevationValid?.ok;
+      FIXTURE_BINDINGS.set(contract.venueId, {
+        fixture, contract, elevation, elevationChecks, elevationValid,
+      });
+      ok(contract.ok && elevationOk,
+        `${name} ↔ ${contract.venueId}:OSM 契約相容・高程 fixture ${elevationOk ? '成立' : '缺失/未驗'}`);
+      if (!elevationOk) {
+        const reasons = elevation
+          ? [...(elevationChecks?.valid?.errors || []), ...(elevationValid?.errors || [])]
+          : ['找不到同名高程 fixture'];
+        console.error(`      高程未驗：${[...new Set(reasons)].join('；')}`);
+      }
       continue;
     }
     ok(false, `${name}:沒有唯一相容的正式 venue.id；fixture 保持未綁定`);
@@ -611,12 +647,18 @@ async function scanVenue(v) {
   const bbox = battleBBox(cfg);
   let fixture = null;
   let contract = null;
+  let elevation = null;
+  let elevationChecks = null;
+  let elevationValid = null;
   if (FIXTURE_MODE) {
     if (FIXTURE_NAMES.size) {
       const binding = FIXTURE_BINDINGS.get(v.id);
       if (!binding) return { id: v.id, skip: '不在契約相容的指定 fixture 名單', selected: false };
       fixture = binding.fixture;
       contract = binding.contract;
+      elevation = binding.elevation;
+      elevationChecks = binding.elevationChecks;
+      elevationValid = binding.elevationValid;
     } else {
       fixture = loadOsmFixtureForVenue(v.id, FIXTURE_NAMES, FIXTURE_DIR);
     }
@@ -626,10 +668,38 @@ async function scanVenue(v) {
       id: v.id, skip: '固定 fixture 未通過 venue.id/team/bbox/center/query 契約',
       unverified: true, fixtureMismatch: contract,
     };
+    elevation = elevation || loadElevationFixture(fixture.name, ELEVATION_DIR, { validate: false });
+    elevationChecks = elevationChecks || (elevation ? elevationContract(v, fixture, elevation) : null);
+    elevationValid = elevationValid || (elevation
+      ? validateElevationFixture(elevation, { dir: ELEVATION_DIR }) : null);
+    if (!elevation || !elevationChecks?.ok || !elevationValid?.ok) {
+      const reasons = elevation
+        ? [...(elevationChecks?.valid?.errors || []), ...(elevationValid?.errors || [])]
+        : ['找不到同名版本化真實高程 fixture'];
+      return {
+        id: v.id,
+        skip: '固定 fixture 缺少版本化真實高程資料(未查外部、未使用平地 fallback)',
+        unverified: true,
+        elevationMismatch: {
+          checks: elevationChecks, valid: elevationValid, reasons: [...new Set(reasons)],
+        },
+      };
+    }
   }
-  const sampleElev = await elevSampler(bbox);
+  const terrainBBox = FIXTURE_MODE ? heightFieldBboxForWorldBounds(battleRect(cfg), cfg.center) : bbox;
+  if (FIXTURE_MODE && !terrainBBox) {
+    return {
+      id: v.id,
+      skip: '固定高程 fixture 無法將 runtime world bounds 轉成 LL grid 契約',
+      unverified: true,
+      elevationMismatch: { reasons: ['heightFieldBboxForWorldBounds 失敗'] },
+    };
+  }
+  const sampleElev = FIXTURE_MODE
+    ? fixtureElevationSampler(elevation, { bbox: terrainBBox })
+    : await elevSampler(bbox);
   if (!sampleElev) return { id: v.id, skip: '取不到高程磚', unverified: true };
-  const hf = buildHeightField(cfg, bbox, sampleElev);
+  const hf = buildHeightField(cfg, terrainBBox, sampleElev);
 
   let osm;
   if (FIXTURE_MODE) {
@@ -736,7 +806,9 @@ async function scanVenue(v) {
   }
   return {
     id: v.id, cells: reached.length, wps: wps.length, miss, diagnostics, structs: structs.length,
-    carve: carveRuns.length, osm: !!osm, clear, fixtureContract: contract,
+    carve: carveRuns.length, osm: !!osm, clear, terrainBBox,
+    fixtureContract: contract,
+    elevationContract: elevationChecks, elevationValid,
     buildingMode: building.mode, buildingAreas: building.areas.length, buildingGenerated: building.generated,
     buildingBlockers: expectedBlockers.length, buildingRoofs: building.platforms.length,
     buildingHoles: building.holes, buildingError: building.error?.message || null, osmChecks,
@@ -817,6 +889,10 @@ for (const v of list) {
         + ` bbox=${JSON.stringify(r.fixtureMismatch.observedBBox)}`
         + ` expected center=${JSON.stringify(r.fixtureMismatch.expectedCenter)}`
         + ` bbox=${JSON.stringify(r.fixtureMismatch.expectedBBox)}`);
+    } else if (r.elevationMismatch) {
+      unverified++;
+      ok(false, `${v.id}:固定高程 fixture 契約未成立，未完成可通行驗證`);
+      console.error(`      高程未驗原因：${(r.elevationMismatch.reasons || []).join('；')}`);
     } else if (r.unverified) { unverified++; ok(false, `${v.id}:外部資料缺失，未完成可通行驗證`); }
     continue;
   }

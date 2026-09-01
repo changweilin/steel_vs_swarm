@@ -1,5 +1,7 @@
 // ============ 預設場地兵線離線預算 ============
 // 用法:node tools/bake_venue_lanes.mjs   (ONLY=taipei101,seoul 可只跑指定場地)
+// 固定 fixture 有界診斷:OSM_FIXTURE_DIR=test/fixtures/osm ONLY=taipei101 node tools/bake_venue_lanes.mjs
+// fixture 模式預設只列報告；只有人工複驗場地 center/bbox 後才可以 FIXTURE_WRITE=1 寫表。
 // 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
 // 逐場地烤四份:完整戰場 L1/L2/L3 + **縮小尺度的單兵線 m1**(迷你地圖與劇情戰役共用 ——
 // 兩者 mapScaleF 相同,見 venues.js venueLaneKey)。m1 的砲塔規則一次驗三種型態
@@ -9,7 +11,8 @@
 // → 用 overlapCellM(L) 驗重合率 ≤ MAX_OVERLAP、繞路 ≤ 2.2×、兩堡距離 ≥ 對角線 80%。
 // 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
 // #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit }
   from '../public/js/data.js';
 // 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
@@ -131,7 +134,27 @@ const ANCHORS_ALL = {
   kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // 右京區街廓 / 嵐山
 };
 
-const ANCHORS = ONLY.length ? Object.fromEntries(Object.entries(ANCHORS_ALL).filter(([k])=>ONLY.includes(k))) : ANCHORS_ALL;
+// 固定 fixture 模式：將版本化 raw road response 送進與正式 Overpass 相同的建圖／選線閘，
+// 完全離線且不得在 fixture 缺件時靜默改抓網路。fixture 的 venue.id 是唯一對應縫，
+// 因此 `berlin.json`、`london_water.json` 等檔名可以獨立於遊戲場地 id。
+const FIXTURE_DIR = process.env.OSM_FIXTURE_DIR || process.env.FIXTURE_DIR || '';
+const FIXTURE_BY_VENUE = new Map();
+if (FIXTURE_DIR) {
+  const fixtureRoot = resolve(FIXTURE_DIR);
+  if (!existsSync(fixtureRoot)) throw new Error(`OSM fixture 目錄不存在：${fixtureRoot}`);
+  for (const file of readdirSync(fixtureRoot).filter((name) => name.endsWith('.json')).sort()) {
+    const fixture = JSON.parse(readFileSync(join(fixtureRoot, file), 'utf8'));
+    const id = fixture.venue?.id || fixture.name;
+    if (fixture.team !== 5 || !id) continue;
+    if (FIXTURE_BY_VENUE.has(id)) throw new Error(`OSM fixture venue.id 重複：${id}`);
+    FIXTURE_BY_VENUE.set(id, fixture);
+  }
+}
+const ANCHORS = ONLY.length
+  ? Object.fromEntries(Object.entries(ANCHORS_ALL).filter(([k]) => ONLY.includes(k)))
+  : FIXTURE_DIR
+    ? Object.fromEntries(Object.entries(ANCHORS_ALL).filter(([k]) => FIXTURE_BY_VENUE.has(k)))
+    : ANCHORS_ALL;
 
 const DRIVABLE = 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service'
   + '|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link';
@@ -170,6 +193,31 @@ async function overpassRoads(id, lat, lng, radius) {
   const els = await osmApiRoads(lat, lng, radius);
   if (els) { writeFileSync(f, JSON.stringify(els)); return els; }
   return null;
+}
+
+function fixtureRoads(id) {
+  const fixture = FIXTURE_BY_VENUE.get(id);
+  if (!fixture) {
+    throw new Error(`OSM fixture 缺少 venue.id=${id} 的 team=5 raw road response`);
+  }
+  const roads = fixture.responses?.roads?.elements;
+  if (!Array.isArray(roads) || !roads.length) {
+    throw new Error(`OSM fixture ${id} 沒有 raw road response`);
+  }
+  const usable = roads.filter((way) => way?.type === 'way'
+    && new RegExp(`^(${DRIVABLE})$`).test(way.tags?.highway || '')
+    && Array.isArray(way.geometry) && way.geometry.length >= 2
+    && way.geometry.every((point) => Number.isFinite(point?.lat)
+      && Number.isFinite(point?.lon ?? point?.lng)));
+  if (!usable.length) throw new Error(`OSM fixture ${id} 沒有可建圖的 raw road geometry`);
+  log(`  fixture ${id}: raw roads=${roads.length} usable=${usable.length}`);
+  return usable;
+}
+
+async function roadsFor(id, anchor, radius) {
+  if (FIXTURE_DIR) return fixtureRoads(id);
+  return overpassRoads(`${id}_${anchor.map((v) => v.toFixed(4)).join('_')}_r${Math.round(radius)}`,
+    anchor[0], anchor[1], radius);
 }
 
 /** OSM 官方 /map 備援:回傳與 Overpass `out geom` 同形的 way 陣列(只留車行道) */
@@ -452,14 +500,61 @@ const inSector = (br, [a, b]) => ((br - a + 360) % 360) <= ((b - a + 360) % 360)
 /** 詞典序比較(錨點挑選用):第一個不同的欄位決勝,全同 = 不換(同分取先列者) */
 const lexGT = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
 
-function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false) {
+// 固定 fixture 的密集路網可能把「最接近理想方位的單一終點」卡在橋頭、死端或
+// 共享瓶頸；L3 仍須由同一組正式閘逐候選終點驗證，不能手填路線座標或退回合成弧。
+// 只擴展完整戰場 L3，並保留距理想端點最近的有限候選，讓離線重烤保持可重現。
+const FIXTURE_TARGET_LIMIT = Number.isFinite(+process.env.FIXTURE_TARGET_LIMIT)
+  ? Math.max(1, Math.floor(+process.env.FIXTURE_TARGET_LIMIT)) : 32;
+function targetCandidates(g, aIdx, bearing, L, mapA) {
+  if (!FIXTURE_DIR || L !== 3 || mapA) return [-1];
+  const realD = realDistFor(L, mapA);
+  const ax = g.X[aIdx], az = g.Z[aIdx];
+  const bx0 = ax + Math.sin(bearing * d2r) * realD;
+  const bz0 = az + Math.cos(bearing * d2r) * realD;
+  const minAB = realD * MAPGEO.MIN_DIST_FRAC / MAPGEO.BASE_DIST_FRAC;
+  const rows = [];
+  for (let i = 0; i < g.n; i++) {
+    const ab = Math.hypot(g.X[i] - ax, g.Z[i] - az);
+    if (ab < minAB || ab > realD * 1.15) continue;
+    rows.push({ i, off: Math.hypot(g.X[i] - bx0, g.Z[i] - bz0) });
+  }
+  rows.sort((a, b) => a.off - b.off || a.i - b.i);
+  return rows.slice(0, FIXTURE_TARGET_LIMIT).map((row) => row.i);
+}
+
+function fixtureAnchorCandidates(fixture) {
+  if (!FIXTURE_DIR || !fixture?.center) return [];
+  const { lat: clat, lng: clng } = fixture.center;
+  const cos = Math.cos(clat * d2r);
+  const cells = new Map();
+  for (const way of fixture.responses?.roads?.elements || []) {
+    for (const point of way?.geometry || []) {
+      const lat = +point.lat, lng = +(point.lon ?? point.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      const x = (lng - clng) * d2r * R * cos;
+      const z = (lat - clat) * d2r * R;
+      const key = `${Math.floor(x / 100)},${Math.floor(z / 100)}`;
+      const d = Math.hypot(x, z);
+      const prev = cells.get(key);
+      if (!prev || d < prev.d || (d === prev.d && `${lat},${lng}` < `${prev.lat},${prev.lng}`)) {
+        cells.set(key, { lat, lng, d });
+      }
+    }
+  }
+  const limit = Number.isFinite(+process.env.FIXTURE_ANCHOR_LIMIT)
+    ? Math.max(1, Math.floor(+process.env.FIXTURE_ANCHOR_LIMIT)) : 24;
+  return [...cells.values()].sort((a, b) => a.d - b.d || a.lat - b.lat || a.lng - b.lng)
+    .slice(0, limit).map((point) => [point.lat, point.lng]);
+}
+
+function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1) {
   const realD = realDistFor(L, mapA);
   const { X, Z, n } = g;
   const ax = X[aIdx], az = Z[aIdx];
   const bx0 = ax + Math.sin(bearing * d2r) * realD, bz0 = az + Math.cos(bearing * d2r) * realD;
   const minAB = realD * MAPGEO.MIN_DIST_FRAC / MAPGEO.BASE_DIST_FRAC;   // ⇒ distM ≥ diagM×0.80
-  let bIdx = -1, best = Infinity;
-  for (let i = 0; i < n; i++) {
+  let bIdx = targetIdx, best = Infinity;
+  if (bIdx < 0) for (let i = 0; i < n; i++) {
     const ab = Math.hypot(X[i] - ax, Z[i] - az);
     if (ab < minAB || ab > realD * 1.15) continue;
     const off = Math.hypot(X[i] - bx0, Z[i] - bz0);
@@ -587,11 +682,15 @@ const maxRealD = realDistFor(3);
 const KEYS = VENUE_LANE_KEYS.map((k) => k.key);
 for (const [id, anchors] of Object.entries(ANCHORS)) {
   let picked = null;
-  for (const anchor of anchors) {
+  const fixture = FIXTURE_BY_VENUE.get(id);
+  const fixtureAnchors = fixture?.center
+    ? [...anchors, [fixture.center.lat, fixture.center.lng], ...fixtureAnchorCandidates(fixture)]
+    : anchors;
+  for (const anchor of fixtureAnchors) {
     log(`${id} @ [${anchor}] …`);
     // 半徑要留給側翼外凸的空間(B 已在 1.15×realD;繞路上限 2.2×)
     const RAD = maxRealD * 2.4;
-    const ways = await overpassRoads(`${id}_${anchor.map((v) => v.toFixed(4)).join('_')}_r${Math.round(RAD)}`, anchor[0], anchor[1], RAD);
+    const ways = await roadsFor(id, anchor, RAD);
     if (!ways || ways.length < 20) { log(`  ways=${ways ? ways.length : 'ERR'} → skip`); continue; }
     const g = buildGraph(ways, anchor);
     log(`  ways=${ways.length} nodes=${g.n}`);
@@ -612,26 +711,28 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
       for (let i = 0; i < 72; i++) {
         if (sectors && !sectors.some((s) => inSector(i * 5, s))) continue;
         for (const off of OFFSET_FRACS) {
-          const r = tryBearing(g, aIdx, i * 5, L, off, mapA);
-          if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }
-          // 詞典序:先「規則 #5 洞內砲塔違規少」(塔埋在山體裡只能沿洞內走廊對射 = 功能性缺陷,
-          // 比 #4 的重疊殘餘嚴重)、再「規則 #4 殘餘少」、同分才取戰術評分高。
-          // 兩者皆是**偏好非硬門檻**:全方位皆不合規時仍取最小者(不放棄該 L,行為等同舊版最佳努力)。
-          // 無隧道的場地 tunBad 恆 0 ⇒ 排序退化為舊版,選線結果不動。
-          if (r && PREFER_TUNNEL.has(id)
-            && (!best || r.tunLen > best.tunLen + 1
-              || (Math.abs(r.tunLen - best.tunLen) <= 1 && (r.tunBad < best.tunBad
-                || (r.tunBad === best.tunBad && (r.resid < best.resid
-                  || (r.resid === best.resid && r.score > best.score))))))) { best = r; continue; }
-          if (r && PREFER_BRIDGE.has(id)
-            && (!best || r.brgLen > best.brgLen + 1
-              || (Math.abs(r.brgLen - best.brgLen) <= 1 && (r.tunBad < best.tunBad
-                || (r.tunBad === best.tunBad && (r.resid < best.resid
-                  || (r.resid === best.resid && r.score > best.score))))))) { best = r; continue; }
-          if (r && !PREFER_BRIDGE.has(id) && !PREFER_TUNNEL.has(id) && (!best || r.tunBad < best.tunBad
-            || (r.tunBad === best.tunBad && (r.resid < best.resid
-              || (r.resid === best.resid && r.score > best.score))))) best = r;
-          // ↑ 一般場地的排序(規則 #5 → 規則 #4 → 戰術評分)不動
+          for (const targetIdx of targetCandidates(g, aIdx, i * 5, L, mapA)) {
+            const r = tryBearing(g, aIdx, i * 5, L, off, mapA, targetIdx);
+            if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }
+            // 詞典序:先「規則 #5 洞內砲塔違規少」(塔埋在山體裡只能沿洞內走廊對射 = 功能性缺陷,
+            // 比 #4 的重疊殘餘嚴重)、再「規則 #4 殘餘少」、同分才取戰術評分高。
+            // 兩者皆是**偏好非硬門檻**:全方位皆不合規時仍取最小者(不放棄該 L,行為等同舊版最佳努力)。
+            // 無隧道的場地 tunBad 恆 0 ⇒ 排序退化為舊版,選線結果不動。
+            if (r && PREFER_TUNNEL.has(id)
+              && (!best || r.tunLen > best.tunLen + 1
+                || (Math.abs(r.tunLen - best.tunLen) <= 1 && (r.tunBad < best.tunBad
+                  || (r.tunBad === best.tunBad && (r.resid < best.resid
+                    || (r.resid === best.resid && r.score > best.score))))))) { best = r; continue; }
+            if (r && PREFER_BRIDGE.has(id)
+              && (!best || r.brgLen > best.brgLen + 1
+                || (Math.abs(r.brgLen - best.brgLen) <= 1 && (r.tunBad < best.tunBad
+                  || (r.tunBad === best.tunBad && (r.resid < best.resid
+                    || (r.resid === best.resid && r.score > best.score))))))) { best = r; continue; }
+            if (r && !PREFER_BRIDGE.has(id) && !PREFER_TUNNEL.has(id) && (!best || r.tunBad < best.tunBad
+              || (r.tunBad === best.tunBad && (r.resid < best.resid
+                || (r.resid === best.resid && r.score > best.score))))) best = r;
+            // ↑ 一般場地的排序(規則 #5 → 規則 #4 → 戰術評分)不動
+          }
         }
       }
       if (!best) {
@@ -680,6 +781,11 @@ log('\n---- 報告 ----');
 for (const r of report) log(r);
 log(`\n成功 ${Object.keys(out).length} / ${Object.keys(ANCHORS).length}`);
 
+if (FIXTURE_DIR && process.env.FIXTURE_WRITE !== '1') {
+  log('\nfixture 診斷模式：未設 FIXTURE_WRITE=1，不覆寫 public/js/venueLanes.js。');
+  process.exit(0);
+}
+
 let js = `// ============ 預設場地兵線(離線預算,勿手改)============
 // 由 tools/bake_venue_lanes.mjs 產生:Overpass 真實道路路網 → 邊不相交最短路徑。
 // 每條兵線的每個頂點都是 OSM 道路節點 ⇒ NPC 引導路線 100% 與現實導航路線相符。
@@ -695,7 +801,9 @@ export const VENUE_LANES = {\n`;
 // ONLY= 只烤指定場地時,**其餘場地的既有兵線 MUST 原樣保留** —— 這支一律重寫整份
 // venueLanes.js,少了這段就會把沒烤到的場地整批清空(2026-07-28 實測:ONLY=parkave
 // 之後其餘 22 個場地全數退回 synthLane 合成弧,場景掃描結果整個變樣)。
-const keep = ONLY.length ? Object.entries(VENUE_LANES).filter(([id]) => !(id in ANCHORS)) : [];
+const keep = FIXTURE_DIR
+  ? Object.entries(VENUE_LANES).filter(([id]) => !(id in ANCHORS) || !out[id])
+  : ONLY.length ? Object.entries(VENUE_LANES).filter(([id]) => !(id in ANCHORS)) : [];
 for (const [id, byL] of keep) {
   js += `  ${id}: {\n`;
   for (const K of KEYS) {
