@@ -582,8 +582,13 @@ function polygonProbe(polygon, hole = false) {
     Math.min(...xs) + (gx + 0.5) * (Math.max(...xs) - Math.min(...xs)) / 7,
     Math.min(...zs) + (gz + 0.5) * (Math.max(...zs) - Math.min(...zs)) / 7,
   ]);
-  return candidates.find(([x, z]) => pointInProjectedArea(x, z, { outer: ring, holes: [] })
-    && (!hole || pointInProjectedArea(x, z, { outer: polygon.outer, holes: [] }))) || null;
+  // 屋頂 probe 必須尊重完整 outer+holes 面域；否則排序最前的中庭建物會把
+  // probe 落進洞內，`makeSurfaces` 正確不產 roof 而稽核卻誤報 roof-mutation。
+  // hole probe 則刻意先在 hole ring 內，再確認仍在 outer 內，保留洞內 mutation 語意。
+  return candidates.find(([x, z]) => hole
+    ? pointInProjectedArea(x, z, { outer: ring, holes: [] })
+      && pointInProjectedArea(x, z, { outer: polygon.outer, holes: [] })
+    : pointInProjectedArea(x, z, polygon)) || null;
 }
 
 function rawStructureWays(fixture) {

@@ -123,8 +123,7 @@ export const VENUES = [
   { id: 'seoul',      name: '首爾・江南',             country: '🇰🇷', type: '市區', ll: [37.497891, 127.027621], bearing: 150, mix: { urban: 0.9, green: 0.1 }, relief: 22 },
   // 2026-08-02 使用者需求「找兵線有地下道 / 陸上高架橋 / 水上高架橋的地圖加入預設地圖」。
   // 三張新場地各鎖定一種場景,錨點由 `--probe` 實測選定(座標 = 探測回報的結構中點):
-  //   berlin  ③ 陸上高架橋 —— 華沙大街跨東站調車場,橋下是鐵道不是水(⇒ 純陸域)。
-  //           兩側數百公尺內沒有第二個跨越點 ⇒ 最短路徑非走橋面不可(bake 另掛 PREFER_BRIDGE)。
+  //   berlin 改綁 Prenzlauer Berg 一般市區路網；場景標記跟著新兵線重測。
   //   madrid  原為 ② 地下道候選,**兩輪實測皆未達標**,標記留白(標記 MUST 由實測產生):
   //           ① Joaquín Costa 錨點:兵線最近只到洞旁 1m 就繞回地面 —— 探測報的 165m 是圖資
   //              way 全長,執行期 underpassPlan 只挖得出 29m 覆蓋段。
@@ -133,7 +132,8 @@ export const VENUES = [
   //           市區地下道是**與地面街道分離的 way**,兩者等長 ⇒ 最短路徑沒有理由鑽下去,
   //           `PREFER_TUNNEL` 只在「地下道本身就是唯一通路」時才咬得住(taroko 的峽谷公路)。
   //           場地本身仍是一張可用的市區圖(真實道路兵線 + 實測 relief),故保留。
-  { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.508116, 13.449220], bearing: 195, mix: { urban: 0.85, green: 0.15 }, scen: ['bridge'], relief: 5 },
+  // Prenzlauer Berg:市區街廓與公園/運動設施,不宣稱橋或水域場景;scen/relief 由場景稽核填入。
+  { id: 'berlin',     name: '柏林・普倫茨勞山',       country: '🇩🇪', type: '市區', ll: [52.538038, 13.415268], bearing: 70,  mix: { urban: 0.8, green: 0.2 }, scen: [], relief: 2 },
   { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.437794, -3.685632], bearing: 245, mix: { urban: 0.85, green: 0.15 }, scen: ['overTunnel'], relief: 11 },
 
   // ---- 綠地單一(≥80%)----
@@ -184,14 +184,13 @@ export const VENUES = [
   // ② 地下道 171m(首個實測走得到 ② 的預設場地)、① 60m、⑧ 399m/+416m(峽谷絕壁)。
   { id: 'taroko',     name: '太魯閣・燕子口',         country: '🇹🇼', type: '混合', ll: [24.171200, 121.556000], bearing: 262, mix: { green: 0.5, bare: 0.4, water: 0.1 }, scen: ['tunnel', 'underpass', 'gallery', 'highGround'], relief: 371 },
   { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 }, relief: 15 },   // Eixample 格柵
-  // 2026-08-02 錨點改貼西敏橋西橋頭 + PREFER_BRIDGE + 方位角夾東西向 ⇒ L1 兵線重新走上橋面
-  //(使用者回報「倫敦也沒有橋了」:07-29 主軸偏航規則重烤後兵線改走同一岸)。
-  // 代價:單橋兩岸擠不出第二、三條互不接觸的真實道路兵線 ⇒ L2/L3 退回 synthLane。
-  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500964, -0.124511],  bearing: 115, mix: { urban: 0.6, water: 0.2, green: 0.2 }, scen: ['bridge', 'waterBridge'], relief: 10 },
+  // Ilford/Seven Kings:倫敦東郊市區街廓,周邊含公園與運動場；不宣稱泰晤士/水橋場景。
+  // scen/relief 由 `tools/audit_lane_scenarios.mjs` 依正式兵線與高程實測填入。
+  { id: 'london',     name: '倫敦・伊爾福德／七王站', country: '🇬🇧', type: '市區', ll: [51.560302, 0.084931], bearing: 140, mix: { urban: 0.8, green: 0.2 }, scen: [], relief: 3 },
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 }, relief: 8 },   // 右京區街廓
   //   chicago ⑨ 水上高架橋 —— 芝加哥河兩岸街廓緊貼、河面僅數十公尺寬,南北向幹道一律以
   //           可通車的開合橋跨河 ⇒ L1 兩堡(481 真實公尺)分踞兩岸時,兵線必然踩上橋面。
-  //           與 london(泰晤士河)的差別是「多座短橋 vs 單座長橋」,兩張都留著當對照。
+  //           本場地專門保留作水上高架橋對照。
   { id: 'chicago',    name: '芝加哥・河濱橋群',       country: '🇺🇸', type: '混合', ll: [41.887643, -87.624481], bearing: 0,   mix: { urban: 0.75, water: 0.2, green: 0.05 }, scen: ['overTunnel'], relief: 4 },
   // 2026-08-04 使用者需求「劇情戰役最終關卡改為克里米亞,預設地圖加入克里米亞」。
   // 錨點 = 塞瓦斯托波爾灣南岸的納希莫夫廣場(市中心路網最密的節點),bearing 205 讓 L1~L3

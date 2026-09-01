@@ -7,7 +7,7 @@
 export const VENUE_GRID = {
   aokigahara: -8.2079,
   barcelona: 42.8032,
-  berlin: -22.8745,
+  berlin: -6.4814,
   blackforest: 21.3496,
   chicago: -0.003,
   civicblvd: -11.2171,
@@ -17,7 +17,7 @@ export const VENUE_GRID = {
   iguazu: 44.5928,
   jinlong: 40.7597,
   kyoto: -2.5417,
-  london: -5.2105,
+  london: 18.8134,
   madrid: 0.2899,
   manhattan: -28.9951,
   okavango: 44.091,

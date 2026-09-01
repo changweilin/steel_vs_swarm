@@ -37,7 +37,8 @@ const PINNED_CATALOG = Object.freeze({
   // 正式 taipei_dense 隨三線場地移動；舊 bbox 獨立保留為幾何 fixture，避免路線重烤
   // 靜默換掉已固定的 L 型 source ID 證據。
   l_shape: Object.freeze({ fixture: 'taipei_lshape', sourceId: 'way/1071343896' }),
-  oblique: Object.freeze({ fixture: 'berlin', sourceId: 'way/615700425' }),
+  // Berlin 正式場地已改綁 Prenzlauer Berg；固定斜向證據改用新 raw 的 Kino in der Kulturbrauerei。
+  oblique: Object.freeze({ fixture: 'berlin', sourceId: 'way/23093989' }),
   courtyard: Object.freeze({ fixture: 'berlin_bridge', sourceId: 'relation/7671395' }),
   large_irregular: Object.freeze({ fixture: 'roppongi_underpass', sourceId: 'way/136048451' }),
   multipolygon: Object.freeze({ fixture: 'berlin_bridge', sourceId: 'relation/21178637' }),
