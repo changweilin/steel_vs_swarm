@@ -8775,6 +8775,82 @@ function planTowerBridgePads(cps, decks, terrain) {
   }
   return { pads, newDecks, cols, slabs, piers };
 }
+function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
+  if (!lanesW.length) return [];
+  const cps = [];   // 塔位控制點展平(每點左右各一座砲塔;solveTowerSites 與 sim 同一支,座標對得上)
+  for (const laneSites of solveTowerSites(lanesW, mapA)) for (const site of laneSites) for (const cp of siteCPs(site)) cps.push(cp);
+  const { pads, newDecks, cols: padCols, slabs, piers } = planTowerBridgePads(cps, decks, terrain);
+  const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
+  const pierM = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
+  for (const sp of slabs) {
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(sp.w, sp.t, sp.d), slabM);
+    slab.position.set(sp.cx, sp.cy, sp.cz);
+    slab.rotation.y = sp.ry;
+    group.add(slab);
+  }
+  for (const p of piers) {   // 墩帽(cap,上寬下窄)與墩身(shaft,上窄下寬)同用一支圓柱建法
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(p.rTop, p.rBot, p.h, 8), pierM);
+    m.position.set(p.x, p.y, p.z);
+    m.rotation.y = Math.PI / 8;
+    group.add(m);
+  }
+  cols.push(...padCols);
+  decks.push(...newDecks);   // 掃描完才併回(planTowerBridgePads 內 brg 只查原 decks ⇒ 後塔不吸附前塔墩座台)
+  return pads;
+}
+
+/**
+ * 橋面高度查詢:把橋面小段丟進均勻網格,回傳 deckY(x, z) —— 沒有橋面回 null。
+ * 多層橋重疊時取最高面(上層橋才是站得住的那一面)。
+ */
+export function makeDeckIndex(decks) {
+  if (!decks?.length) return () => null;
+  const CELL = 16;
+  const grid = new Map();
+  const key = (i, j) => `${i},${j}`;
+  decks.forEach((d, n) => {
+    const pad = d.hw + 2;
+    const i0 = Math.floor((Math.min(d.x1, d.x2) - pad) / CELL), i1 = Math.floor((Math.max(d.x1, d.x2) + pad) / CELL);
+    const j0 = Math.floor((Math.min(d.z1, d.z2) - pad) / CELL), j1 = Math.floor((Math.max(d.z1, d.z2) + pad) / CELL);
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const k = key(i, j);
+        let arr = grid.get(k);
+        if (!arr) { arr = []; grid.set(k, arr); }
+        arr.push(n);
+      }
+    }
+  });
+  // margin:**側向**容差(遊戲公尺,垂直於橋段方向)。站立表面查詢帶 margin(讓機體貼近橋緣不掉下
+  // 窄橋面 → 上得了橋),天花碰撞查詢用 0(緊貼可見橋面,免橋緣外憑空撞頭)。
+  // margin MUST NOT 洩到「縱向」(沿橋段方向):相鄰橋段共用端點會自然接手,只需 LONG_TOL 微容差銜接。
+  // 前科(2026-07-18 倫敦案實測):舊版用 hypot(到夾制端點) > hw+margin 判定,margin=3 讓查詢點
+  // 縱向溢出到「相鄰較高橋段」的端點 → 斜引道上回報的橋面高度被高估近一整段(~2.5m)→ 上橋台階
+  // 超過 DECK_STEP → 爬到一半掉回地面、卡在橋下(=「無法走上去 / 破圖穿越」)。分離側向/縱向即修正。
+  const LONG_TOL = 1.0;   // 縱向端點外容差:遠低於橋段長(ROAD_SEG 6m),不會夠到相鄰段端點
+  return (x, z, margin = 0) => {
+    const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
+    if (!arr) return null;
+    let best = null;
+    for (const n of arr) {
+      const d = decks[n];
+      const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
+      const len2 = ex * ex + ez * ez || 1, len = Math.sqrt(len2);
+      const tRaw = ((x - d.x1) * ex + (z - d.z1) * ez) / len2;
+      // 縱向:超出線段兩端的距離只准 LONG_TOL(margin 不放寬縱向 → 斜引道橋面高度不被高估)
+      const over = (tRaw < 0 ? -tRaw : tRaw > 1 ? tRaw - 1 : 0) * len;
+      if (over > LONG_TOL) continue;
+      // 側向:點到橋段直線的垂距(叉積 / 段長),margin 只放寬這一維(貼橋緣不掉下)
+      const lat = Math.abs((x - d.x1) * ez - (z - d.z1) * ex) / len;
+      if (lat > d.hw + margin) continue;
+      const t = tRaw < 0 ? 0 : tRaw > 1 ? 1 : tRaw;
+      const y = d.y1 + (d.y2 - d.y1) * t;
+      if (best === null || y > best) best = y;
+    }
+    return best;
+  };
+}
+
 // ---- 軍事基地／防禦工事平台塗裝標線 ----
 // 純程序生成 Canvas 貼圖(停機坪/警戒斜紋/陣營戰術徽記/物資格位/射角準星)。
 // 零外部依賴、全房一致(固定種子)、單張快取、透明底 + 賽璐璐環境材質。
@@ -8979,30 +9055,18 @@ function towerMarkingTex(side = 'STEEL') {
   return t;
 }
 
-function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
-  if (!lanesW.length) return [];
-  const cps = [];   // 塔位控制點展平(每點左右各一座砲塔;solveTowerSites 與 sim 同一支,座標對得上)
+// 陸地砲塔基座與標線（與兵線道路同高）
+function buildTowerPlatforms(group, lanesW, decks, terrain, cols, mapA, existingPads = []) {
+  if (!lanesW.length) return existingPads;
+  const cps = [];
   for (const laneSites of solveTowerSites(lanesW, mapA)) for (const site of laneSites) for (const cp of siteCPs(site)) cps.push(cp);
-  const { pads, newDecks, cols: padCols, slabs, piers } = planTowerBridgePads(cps, decks, terrain);
-  const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
-  const pierM = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
-  for (const sp of slabs) {
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(sp.w, sp.t, sp.d), slabM);
-    slab.position.set(sp.cx, sp.cy, sp.cz);
-    slab.rotation.y = sp.ry;
-    group.add(slab);
-  }
-  for (const p of piers) {   // 墩帽(cap,上寬下窄)與墩身(shaft,上窄下寬)同用一支圓柱建法
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(p.rTop, p.rBot, p.h, 8), pierM);
-    m.position.set(p.x, p.y, p.z);
-    m.rotation.y = Math.PI / 8;
-    group.add(m);
-  }
-
-  // 陸地砲塔平台與標線(與兵線道路截面同高)
   const deckIdx = decks.length ? makeDeckIndex(decks) : () => null;
-  const bridgePadKeys = new Set(pads.map((p) => `${p.x.toFixed(1)},${p.z.toFixed(1)}`));
+  const bridgePadKeys = new Set(existingPads.map((p) => `${p.x.toFixed(1)},${p.z.toFixed(1)}`));
+  const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
   const ROAD_LIFT = 0.45;
+  const allPads = [...existingPads];
+  const newDecks = [], newCols = [];
+
   for (const cp of cps) {
     const roadY = deckIdx(cp.x, cp.z) ?? (terrain.heightAt(cp.x, cp.z) + ROAD_LIFT);
     for (const s of [-1, 1]) {
@@ -9010,11 +9074,11 @@ function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
       const tz = cp.z + cp.nz * GAME.TOWER_SIDE_OFF * s;
       const key = `${tx.toFixed(1)},${tz.toFixed(1)}`;
       const isBridge = bridgePadKeys.has(key);
-      const dy = isBridge ? (pads.find((p) => Math.hypot(p.x - tx, p.z - tz) < 2)?.y ?? roadY) : roadY;
+      const dy = isBridge ? (existingPads.find((p) => Math.hypot(p.x - tx, p.z - tz) < 2)?.y ?? roadY) : roadY;
 
       if (!isBridge) {
-        pads.push({ x: tx, z: tz, y: dy });
-        padCols.push({ x: tx, z: tz, y: dy, r: TOWER_BASE_R, h: TOWER_BASE_H });
+        allPads.push({ x: tx, z: tz, y: dy });
+        newCols.push({ x: tx, z: tz, y: dy, r: TOWER_BASE_R, h: TOWER_BASE_H });
         const slab = new THREE.Mesh(new THREE.BoxGeometry(TOWER_PAD_AXIS * 1.8, TOWER_PAD_T, TOWER_PAD_AXIS * 1.8), slabM);
         slab.position.set(tx, dy - TOWER_PAD_SINK - TOWER_PAD_T / 2, tz);
         slab.rotation.y = Math.atan2(cp.nx, cp.nz);
@@ -9039,61 +9103,9 @@ function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
     }
   }
 
-  cols.push(...padCols);
-  decks.push(...newDecks);   // 掃描完才併回(planTowerBridgePads 內 brg 只查原 decks ⇒ 後塔不吸附前塔墩座台)
-  return pads;
-}
-
-/**
- * 橋面高度查詢:把橋面小段丟進均勻網格,回傳 deckY(x, z) —— 沒有橋面回 null。
- * 多層橋重疊時取最高面(上層橋才是站得住的那一面)。
- */
-export function makeDeckIndex(decks) {
-  if (!decks?.length) return () => null;
-  const CELL = 16;
-  const grid = new Map();
-  const key = (i, j) => `${i},${j}`;
-  decks.forEach((d, n) => {
-    const pad = d.hw + 2;
-    const i0 = Math.floor((Math.min(d.x1, d.x2) - pad) / CELL), i1 = Math.floor((Math.max(d.x1, d.x2) + pad) / CELL);
-    const j0 = Math.floor((Math.min(d.z1, d.z2) - pad) / CELL), j1 = Math.floor((Math.max(d.z1, d.z2) + pad) / CELL);
-    for (let i = i0; i <= i1; i++) {
-      for (let j = j0; j <= j1; j++) {
-        const k = key(i, j);
-        let arr = grid.get(k);
-        if (!arr) { arr = []; grid.set(k, arr); }
-        arr.push(n);
-      }
-    }
-  });
-  // margin:**側向**容差(遊戲公尺,垂直於橋段方向)。站立表面查詢帶 margin(讓機體貼近橋緣不掉下
-  // 窄橋面 → 上得了橋),天花碰撞查詢用 0(緊貼可見橋面,免橋緣外憑空撞頭)。
-  // margin MUST NOT 洩到「縱向」(沿橋段方向):相鄰橋段共用端點會自然接手,只需 LONG_TOL 微容差銜接。
-  // 前科(2026-07-18 倫敦案實測):舊版用 hypot(到夾制端點) > hw+margin 判定,margin=3 讓查詢點
-  // 縱向溢出到「相鄰較高橋段」的端點 → 斜引道上回報的橋面高度被高估近一整段(~2.5m)→ 上橋台階
-  // 超過 DECK_STEP → 爬到一半掉回地面、卡在橋下(=「無法走上去 / 破圖穿越」)。分離側向/縱向即修正。
-  const LONG_TOL = 1.0;   // 縱向端點外容差:遠低於橋段長(ROAD_SEG 6m),不會夠到相鄰段端點
-  return (x, z, margin = 0) => {
-    const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
-    if (!arr) return null;
-    let best = null;
-    for (const n of arr) {
-      const d = decks[n];
-      const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
-      const len2 = ex * ex + ez * ez || 1, len = Math.sqrt(len2);
-      const tRaw = ((x - d.x1) * ex + (z - d.z1) * ez) / len2;
-      // 縱向:超出線段兩端的距離只准 LONG_TOL(margin 不放寬縱向 → 斜引道橋面高度不被高估)
-      const over = (tRaw < 0 ? -tRaw : tRaw > 1 ? tRaw - 1 : 0) * len;
-      if (over > LONG_TOL) continue;
-      // 側向:點到橋段直線的垂距(叉積 / 段長),margin 只放寬這一維(貼橋緣不掉下)
-      const lat = Math.abs((x - d.x1) * ez - (z - d.z1) * ex) / len;
-      if (lat > d.hw + margin) continue;
-      const t = tRaw < 0 ? 0 : tRaw > 1 ? 1 : tRaw;
-      const y = d.y1 + (d.y2 - d.y1) * t;
-      if (best === null || y > best) best = y;
-    }
-    return best;
-  };
+  cols.push(...newCols);
+  decks.push(...newDecks);
+  return allPads;
 }
 
 // ---- 水域／沼澤主堡承台 ----
@@ -12262,13 +12274,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 兵線砲塔跨橋墩座:與橋重疊的砲塔改蓋在橋面上(台面 + 往外擴張的橋墩)----
   // MUST 排在兩次 buildRoads 之後(真橋 + 兵線補橋的 decks 都併齊了才判「塔在不在橋上」),
   // 且排在 blockers.push(roadRes.cols) 之前(墩身碰撞柱走同一條路徑)。
-  const towerPads = buildTowerBridgePads(
+  const bridgeTowerPads = buildTowerBridgePads(
     group, (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
     roadRes.decks, terrain, roadRes.cols, mapArg(cfg));
+  const towerPads = buildTowerPlatforms(
+    group, (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
+    roadRes.decks, terrain, roadRes.cols, mapArg(cfg), bridgeTowerPads);
   const basePads = buildBaseWaterPads(group, basesW, terrain, roadRes.decks, roadRes.cols);
   const roadsBuilt = roadRes.built;
-  group.userData.towerPads = towerPads;   // 橋上砲塔落位高度(main.js → terrain.towerPadY → game.js)
-  group.userData.basePads = basePads;     // 水域／沼澤主堡落位高度(main.js → terrain.basePadY → game.js)
+  group.userData.towerPads = towerPads;   // 橋上／陸地砲塔落位高度(main.js → terrain.towerPadY → game.js)
+  group.userData.basePads = basePads;     // 水域／陸地主堡落位高度(main.js → terrain.basePadY → game.js)
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)
   group.userData.tunnels = roadRes.tunnels;   // 地下道路面 + 天花(main.js → terrain.tunnelAt/ceilingAt)
   group.userData.portals = roadRes.portals;   // 洞口門洞(稽核/冒煙測試用:數量與位置驗證)
