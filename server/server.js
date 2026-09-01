@@ -57,6 +57,12 @@ const HOST = argVal('--host') || process.env.HOST || '0.0.0.0';
 // `--lan` 明確指定區網(壓過環境變數;讓 `npm run lan` 在設了 SVS_CLOUD 的機器上仍是區網)
 const CLOUD = !hasFlag('--lan') && (hasFlag('--cloud') || process.env.SVS_CLOUD === '1');
 const LINK_MODE = CLOUD ? 'cloud' : 'lan';
+// 固定 OSM 瀏覽器驗收的兩條 dev-only 輸入/輸出路由。一般部署(`--cloud` 或 production)
+// 不掛這兩條：fixture 只准從 loopback 取，截圖只准由同機的 audit 工具落盤。
+const DEV_BROWSER_IO = !CLOUD && process.env.NODE_ENV !== 'production';
+const OSM_FIXTURE_NAMES = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
+const OSM_BROWSER_SHOT_ROOT = path.join(ROOT_DIR, 'tools', '.shots');
+const OSM_BROWSER_SHOT_DIR = path.join(OSM_BROWSER_SHOT_ROOT, 'osm_browser');
 // 雲端節點的房間上限:單一節點被開房洗滿會拖垮全部對局(每間房一支 8Hz tick)。區網不限。
 const MAX_ROOMS = Number(argVal('--max-rooms') || process.env.SVS_MAX_ROOMS || (CLOUD ? 24 : 0)) || 0;
 // `--https`:用自簽憑證起 TLS。手機陀螺儀**必須**要這個 ——
@@ -190,6 +196,116 @@ function sendFile(res, filePath) {
   });
 }
 
+function loopbackReq(req) {
+  const addr = String(req.socket?.remoteAddress || '').replace(/^::ffff:/u, '');
+  return addr === '127.0.0.1' || addr === '::1' || addr === '0:0:0:0:0:0:0:1';
+}
+
+function sendJson(res, status, value) {
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+  });
+  res.end(JSON.stringify(value));
+}
+
+/** 有界讀取 dev 截圖 POST；超限後仍把 request drain 完才回覆，避免 socket 半開。 */
+async function readBody(req, maxBytes) {
+  const chunks = [];
+  let total = 0, over = false;
+  for await (const chunk of req) {
+    total += chunk.length;
+    if (total <= maxBytes) chunks.push(chunk);
+    else over = true;
+  }
+  if (over) throw new Error(`body 超過 ${maxBytes} bytes`);
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+/**
+ * 固定 OSM fixture 輸入(dev-only)。解析走 tools/osm_fixture 的 production OSM parser；
+ * 瀏覽器收到的仍是 relay input，後續必須回到 main.js 的 sanitize/fit/commit/buildBiomes。
+ */
+async function serveOsmFixture(req, res, urlPath) {
+  if (!DEV_BROWSER_IO || req.method !== 'GET' || !loopbackReq(req)
+    || req.headers['x-dev-tools'] !== '1') {
+    res.writeHead(404); res.end('404'); return;
+  }
+  const m = /^\/__osm_fixture\/([A-Za-z0-9][A-Za-z0-9_-]*)$/u.exec(urlPath);
+  if (!m || !OSM_FIXTURE_NAMES.test(m[1])) { res.writeHead(404); res.end('404'); return; }
+  try {
+    // 延遲載入：正式對局不會把 fixture parser/fs 送進 server process。
+    const mod = await import('../tools/osm_fixture.mjs');
+    const fixture = mod.loadOsmFixture(m[1], mod.DEFAULT_FIXTURE_DIR);
+    const parsed = fixture && mod.fixtureOsm(fixture);
+    if (!fixture || !parsed?.features || !Array.isArray(parsed.roads)) {
+      sendJson(res, 404, { ok: false, error: 'fixture 不存在或契約無效' });
+      return;
+    }
+    sendJson(res, 200, {
+      ok: true,
+      version: mod.FIXTURE_VERSION,
+      name: fixture.name,
+      venue: fixture.venue?.id || null,
+      center: fixture.center || null,
+      bbox: fixture.bbox,
+      relay: {
+        bbox: fixture.bbox,
+        areas: parsed.features.areas,
+        pointFeatures: parsed.features.pointFeatures,
+        roads: parsed.roads,
+      },
+    });
+  } catch (e) {
+    sendJson(res, 500, { ok: false, error: String(e?.message || e) });
+  }
+}
+
+/**
+ * 瀏覽器固定鏡位的 PNG 落盤(dev-only)。資料夾已在 .gitignore 的 tools/.shots/ 下，
+ * 不把驗收產物帶入版控；sidecar JSON 留下當幀 renderer.info 與鏡位讀數。
+ */
+async function serveOsmShot(req, res) {
+  if (!DEV_BROWSER_IO || req.method !== 'POST' || !loopbackReq(req)
+    || req.headers['x-dev-tools'] !== '1') {
+    res.writeHead(404); res.end('404'); return;
+  }
+  try {
+    const body = JSON.parse(await readBody(req, 18 << 20));
+    const name = String(body?.name || '');
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,120}$/u.test(name)) {
+      sendJson(res, 400, { ok: false, error: 'shot name 無效' }); return;
+    }
+    const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/u.exec(String(body?.dataUrl || ''));
+    if (!match) { sendJson(res, 400, { ok: false, error: '只收 PNG dataURL' }); return; }
+    const png = Buffer.from(match[1], 'base64');
+    const sig = '89504e470d0a1a0a';
+    if (!png.length || png.subarray(0, 8).toString('hex') !== sig || png.length > (12 << 20)) {
+      sendJson(res, 400, { ok: false, error: 'PNG 位元組無效或超限' }); return;
+    }
+    const requestedDir = body?.outputDir == null ? OSM_BROWSER_SHOT_DIR
+      : path.resolve(ROOT_DIR, String(body.outputDir));
+    const shotRoot = path.resolve(OSM_BROWSER_SHOT_ROOT);
+    if (requestedDir !== shotRoot && !requestedDir.startsWith(`${shotRoot}${path.sep}`)) {
+      sendJson(res, 400, { ok: false, error: '截圖輸出目錄必須在 tools/.shots/ 下' }); return;
+    }
+    fs.mkdirSync(requestedDir, { recursive: true });
+    const pngPath = path.join(requestedDir, `${name}.png`);
+    const metaPath = path.join(requestedDir, `${name}.json`);
+    fs.writeFileSync(pngPath, png);
+    const meta = body.meta && typeof body.meta === 'object' ? body.meta : {};
+    fs.writeFileSync(metaPath, JSON.stringify({ ...meta, name, bytes: png.length }, null, 2));
+    sendJson(res, 200, {
+      ok: true,
+      path: path.relative(ROOT_DIR, pngPath).replaceAll(path.sep, '/'),
+      metaPath: path.relative(ROOT_DIR, metaPath).replaceAll(path.sep, '/'),
+      bytes: png.length,
+    });
+  } catch (e) {
+    sendJson(res, 400, { ok: false, error: String(e?.message || e) });
+  }
+}
+
 // 開發工具的啟停(dev-only;設定頁那顆「▶ 啟動 / ⏹ 停止」)。
 // 這是一個**會開行程**的端點,所以三道閘缺一不可:①雲端節點連載都不載(下面那個 CLOUD 判斷排在
 // import 之前)②只回應 loopback(閘門住 `tools/dev_supervisor.mjs`,與 spawn 的邏輯同一支)
@@ -200,6 +316,15 @@ const devSup = () => (_devSup ||= import('../tools/dev_supervisor.mjs').catch(()
 
 const handler = (req, res) => {
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
+
+  if (urlPath.startsWith('/__osm_fixture/')) {
+    serveOsmFixture(req, res, urlPath);
+    return;
+  }
+  if (urlPath === '/__shot') {
+    serveOsmShot(req, res);
+    return;
+  }
 
   if (!CLOUD && urlPath.startsWith('/dev/tools')) {
     devSup().then(async (m) => {
