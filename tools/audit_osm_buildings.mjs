@@ -35,7 +35,7 @@ const BREAK_NAMES = ['real-hole', 'real-blocker', 'real-roof'];
 const BREAKS = BREAK_NAMES.filter((name) => process.argv.includes(`--break-${name}`));
 const PINNED_CATALOG = Object.freeze({
   l_shape: Object.freeze({ fixture: 'taipei_dense', sourceId: 'way/1071343896' }),
-  oblique: Object.freeze({ fixture: 'berlin_bridge', sourceId: 'way/615700425' }),
+  oblique: Object.freeze({ fixture: 'berlin', sourceId: 'way/615700425' }),
   courtyard: Object.freeze({ fixture: 'berlin_bridge', sourceId: 'relation/7671395' }),
   large_irregular: Object.freeze({ fixture: 'roppongi_underpass', sourceId: 'way/136048451' }),
   multipolygon: Object.freeze({ fixture: 'berlin_bridge', sourceId: 'relation/21178637' }),
@@ -46,6 +46,10 @@ const ONLY = new Set(String(args.only || '').split(',').map((v) => v.trim()).fil
 const DIR = resolve(args['fixture-dir'] || DEFAULT_FIXTURE_DIR);
 const OUT = args.json ? resolve(args.json) : null;
 const EPS = 1e-5;
+const PINNED_CATEGORY_KEYS = Object.freeze({
+  'L形': 'l_shape', '斜向': 'oblique', '中庭': 'courtyard', '大型不規則': 'large_irregular',
+  multipolygon: 'multipolygon', '多 outer': 'multi_outer', '超細長': 'super_long',
+});
 let pass = 0;
 let fail = 0;
 
@@ -199,7 +203,11 @@ function selectCatalog(records) {
     const rows = candidates.filter((row) => test(row.metric, row.area))
       .map((row) => candidateRecord(row.fixture, row.area, row.metric, category, score(row.metric, row.area)))
       .sort((a, b) => b.score - a.score || categoryRank(a, b));
-    return rows[0] || null;
+    // 新增正式 fixture 不得因候選分數更高而換掉既有回歸樣本；只要 pinned sourceId
+    // 仍存在，就固定選它。若 sourceId 已從所有 fixture 消失，後面的名冊斷言仍須報紅。
+    const pinned = PINNED_CATALOG[PINNED_CATEGORY_KEYS[category]];
+    return rows.find((row) => row.fixture === pinned?.fixture && row.sourceId === pinned?.sourceId)
+      || rows[0] || null;
   };
   return {
     l_shape: choose('L形', (m) => m.polygons === 1 && m.outerPoints >= 6 && m.reflex >= 1

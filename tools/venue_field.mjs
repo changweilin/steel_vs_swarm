@@ -772,6 +772,11 @@ export function buildStructs(osm, center, hf) {
       } else if (way.tags.bridge) {
         const pts = densify(way.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
         if (pts.length < 2) continue;
+        // 與 biomes.js buildRoads 的橋樑沉錨閘同一條件：任一端沉入水面下 1m，
+        // 代表 OSM 橋鏈在河面中斷或被邊界裁切；生產端不建這段，離線端也不得替它
+        // 製造橋面航點。否則會把一座執行期不存在的低橋報成不可達。
+        const sunk = (p) => hf.heightAt(p[0], p[1]) < WATER.LEVEL - 1.0;
+        if (sunk(pts[0]) || sunk(pts[pts.length - 1])) continue;
         const cum = arcOf(pts);
         const total = cum[cum.length - 1] || 1;
         if (total < 24) continue;                       // 太短的「橋」是路面涵管,沒有橋面可走
