@@ -1,7 +1,8 @@
 // ============ 預設場地兵線離線預算 ============
 // 用法:node tools/bake_venue_lanes.mjs   (ONLY=taipei101,seoul 可只跑指定場地)
 // 固定 fixture 有界診斷:OSM_FIXTURE_DIR=test/fixtures/osm ONLY=taipei101 node tools/bake_venue_lanes.mjs
-// fixture 模式預設只列報告；只有人工複驗場地 center/bbox 後才可以 FIXTURE_WRITE=1 寫表。
+// fixture 模式預設只列報告；FIXTURE_WRITE=1 仍會硬驗 center/bbox。真的移動場地時須另設
+// FIXTURE_RECAPTURE=1，寫入後立即用 fetch_osm_fixture.mjs --update 重抓同名 raw fixture。
 // 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
 // 逐場地烤四份:完整戰場 L1/L2/L3 + **縮小尺度的單兵線 m1**(迷你地圖與劇情戰役共用 ——
 // 兩者 mapScaleF 相同,見 venues.js venueLaneKey)。m1 的砲塔規則一次驗三種型態
@@ -13,7 +14,7 @@
 // #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
 import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit }
+import { MAPGEO, battleBBox, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit }
   from '../public/js/data.js';
 // 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
 import { VENUE_LANES } from '../public/js/venueLanes.js';
@@ -547,6 +548,35 @@ function fixtureAnchorCandidates(fixture) {
     .slice(0, limit).map((point) => [point.lat, point.lng]);
 }
 
+function bakedCenterOf(g, route) {
+  if (!route) return null;
+  const a = [r6(g.LA[route.aIdx]), r6(g.LN[route.aIdx])];
+  const b = [r6(g.LA[route.bIdx]), r6(g.LN[route.bIdx])];
+  return { lat: (a[0] + b[0]) / 2, lng: (a[1] + b[1]) / 2 };
+}
+
+function centerErrorM(fixture, g, route) {
+  const center = bakedCenterOf(g, route);
+  if (!center || !fixture?.center) return Infinity;
+  const dz = (center.lat - fixture.center.lat) * d2r * R;
+  const dx = (center.lng - fixture.center.lng) * d2r * R * Math.cos(fixture.center.lat * d2r);
+  return Math.hypot(dx, dz);
+}
+
+function fixtureContractDrift(fixture, g, route) {
+  const center = bakedCenterOf(g, route);
+  if (!center || !fixture?.center || !fixture?.bbox) return { centerM: Infinity, bboxDeg: Infinity };
+  center.rot = fixture.center.rot;
+  const sizeM = targetDistFor(3) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
+  const a = [r6(g.LA[route.aIdx]), r6(g.LN[route.aIdx])];
+  const b = [r6(g.LA[route.bIdx]), r6(g.LN[route.bIdx])];
+  const lanes = route.lanes.map((lane) => lane.idx.map((i) => [r6(g.LA[i]), r6(g.LN[i])]));
+  const bbox = battleBBox({ center, sizeM, bases: { SWARM: a, STEEL: b }, lanes });
+  const bboxDeg = Math.max(...['minLat', 'minLng', 'maxLat', 'maxLng']
+    .map((key) => Math.abs(bbox[key] - fixture.bbox[key])));
+  return { centerM: centerErrorM(fixture, g, route), bboxDeg };
+}
+
 function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1) {
   const realD = realDistFor(L, mapA);
   const { X, Z, n } = g;
@@ -683,8 +713,11 @@ const KEYS = VENUE_LANE_KEYS.map((k) => k.key);
 for (const [id, anchors] of Object.entries(ANCHORS)) {
   let picked = null;
   const fixture = FIXTURE_BY_VENUE.get(id);
+  const pinnedL3 = VENUE_LANES[id]?.[3];
+  const pinnedAnchor = pinnedL3?.bases?.[0];
   const fixtureAnchors = fixture?.center
-    ? [...anchors, [fixture.center.lat, fixture.center.lng], ...fixtureAnchorCandidates(fixture)]
+    ? [...anchors, [fixture.center.lat, fixture.center.lng], ...(pinnedAnchor ? [pinnedAnchor] : []),
+      ...fixtureAnchorCandidates(fixture)]
     : anchors;
   for (const anchor of fixtureAnchors) {
     log(`${id} @ [${anchor}] …`);
@@ -714,6 +747,14 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
           for (const targetIdx of targetCandidates(g, aIdx, i * 5, L, mapA)) {
             const r = tryBearing(g, aIdx, i * 5, L, off, mapA, targetIdx);
             if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }
+            // fixture 已有正式 L3 時，先固定其兩堡中點；同中心的候選才回到原本的
+            // 橋／隧偏好與戰術排序。這讓「烤路線 → 重抓 fixture → 再烤」收斂為固定點。
+            if (r && pinnedL3 && L === 3 && !mapA) {
+              r.centerM = centerErrorM(fixture, g, r);
+              const bestCenterM = best?.centerM ?? Infinity;
+              if (!best || r.centerM < bestCenterM - 0.001) { best = r; continue; }
+              if (r.centerM > bestCenterM + 0.001) continue;
+            }
             // 詞典序:先「規則 #5 洞內砲塔違規少」(塔埋在山體裡只能沿洞內走廊對射 = 功能性缺陷,
             // 比 #4 的重疊殘餘嚴重)、再「規則 #4 殘餘少」、同分才取戰術評分高。
             // 兩者皆是**偏好非硬門檻**:全方位皆不合規時仍取最小者(不放棄該 L,行為等同舊版最佳努力)。
@@ -756,15 +797,19 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
       const es = ks.map((k) => byL[k]).filter(Boolean);
       return [es.filter((b) => b.resid === 0 && b.tunBad === 0).length, es.length];
     };
-    const rank = [...cnt(KEYS.filter((k) => typeof k === 'number')), ...cnt(KEYS)];
-    if (!picked || lexGT(rank, picked.rank)) picked = { anchor, byL, ways: ways.length, g, conf: rank[2], rank };
-    if (hits === KEYS.length && rank[2] === KEYS.length) break;   // 完美(全鍵真實道路且全合規)才提前收手
+    // fixture 重烤還要把正式場地的投影縫固定住：同等合規時，優先選 L3 兩堡中點最貼近
+    // fixture.center 的候選。否則每次重抓 bbox 都會換一個「第一個完美錨點」，中心一路漂移。
+    const centerM = fixture ? centerErrorM(fixture, g, byL[3]) : 0;
+    const rank = [...cnt(KEYS.filter((k) => typeof k === 'number')), ...cnt(KEYS), -centerM];
+    if (!picked || lexGT(rank, picked.rank)) picked = { anchor, byL, ways: ways.length, g, conf: rank[2], rank, centerM };
+    if (!fixture && hits === KEYS.length && rank[2] === KEYS.length) break;   // 線上模式維持既有提前收手
   }
   if (!picked) { report.push(`${id}: ❌ 全尺度皆無真實道路解 → 一律 synthLane`); log(`${id}: ❌`); continue; }
   out[id] = picked;
   const mark = (K) => (picked.byL[K] ? `${K} ov=${picked.byL[K].maxOverlap.toFixed(2)}` : `${K} synth`);
   const full = Object.keys(picked.byL).length === KEYS.length;
-  report.push(`${id}: ${full ? '✅' : '◐'} A=[${picked.anchor.map((v) => v.toFixed(5))}] ${KEYS.map(mark).join(' | ')}`);
+  report.push(`${id}: ${full ? '✅' : '◐'} A=[${picked.anchor.map((v) => v.toFixed(5))}] ${KEYS.map(mark).join(' | ')}`
+    + (fixture ? ` | centerΔ=${Number.isFinite(picked.centerM) ? picked.centerM.toFixed(3) : '∞'}m` : ''));
   log(`${id}: ${full ? '✅' : '◐'}`);
 }
 
@@ -784,6 +829,20 @@ log(`\n成功 ${Object.keys(out).length} / ${Object.keys(ANCHORS).length}`);
 if (FIXTURE_DIR && process.env.FIXTURE_WRITE !== '1') {
   log('\nfixture 診斷模式：未設 FIXTURE_WRITE=1，不覆寫 public/js/venueLanes.js。');
   process.exit(0);
+}
+
+if (FIXTURE_DIR) {
+  const drifted = Object.entries(out).flatMap(([id, picked]) => {
+    const fixture = FIXTURE_BY_VENUE.get(id);
+    const drift = fixtureContractDrift(fixture, picked.g, picked.byL[3]);
+    return drift.centerM <= 0.001 && drift.bboxDeg < 1e-9
+      ? [] : [`${id}(center=${drift.centerM.toFixed(3)}m,bbox=${drift.bboxDeg.toExponential(2)}°)`];
+  });
+  if (drifted.length && process.env.FIXTURE_RECAPTURE !== '1') {
+    log(`\n❌ 候選會改變 fixture center/bbox，拒絕寫表：${drifted.join(', ')}`);
+    log('若確定要移動正式場地，請設 FIXTURE_RECAPTURE=1，寫入後立即用 fetch_osm_fixture.mjs --update 重抓同名 raw fixture。');
+    process.exit(1);
+  }
 }
 
 let js = `// ============ 預設場地兵線(離線預算,勿手改)============
