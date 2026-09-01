@@ -4,15 +4,20 @@
 // 用法：
 //   node tools/fetch_osm_fixture.mjs --name taipei_dense
 //   node tools/fetch_osm_fixture.mjs --name campus --bbox 25.012,121.535,25.020,121.548 --update
+//   node tools/fetch_osm_fixture.mjs --name taipei_dense --update --elevation
+// `--elevation` 僅接受 AWS Terrarium 真實來源；高程失敗時命令退出，不產生 fallback。
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { VENUES, venueConfig } from '../public/js/venues.js';
-import { battleBBox } from '../public/js/data.js';
+import { battleBBox, battleRect } from '../public/js/data.js';
 import {
   bboxKm2, OSM_FEATURE_QUERY_VERSION, OSM_ROAD_QUERY_VERSION,
   osmFeatureQuery, osmFeatureQuotas, osmRoadQuery, osmRoadQuotas,
 } from '../public/js/osmQuery.js';
-import { DEFAULT_FIXTURE_DIR, FIXTURE_VERSION, fixturePath } from './osm_fixture.mjs';
+import {
+  DEFAULT_FIXTURE_DIR, FIXTURE_VERSION, elevationDirForFixtureDir, elevationWorldBounds, fixturePath,
+} from './osm_fixture.mjs';
+import { captureElevationFixture } from './elevation_fixture.mjs';
 
 const MIRRORS = [
   'https://overpass-api.de/api/interpreter',
@@ -166,3 +171,27 @@ try {
   if (existsSync(tmp)) unlinkSync(tmp);
 }
 console.log(`✅ 已寫入 ${outPath} (${(readFileSync(outPath).length / 1024).toFixed(0)}KB)`);
+if (has('--elevation')) {
+  const elevationDir = resolve(value('--elevation-dir') || elevationDirForFixtureDir(dirname(outPath)));
+  const gridBounds = cfg ? battleRect(cfg) : elevationWorldBounds(bbox, center);
+  if (!gridBounds) fail('無法由 bbox/center 推導高程網格 bounds');
+  try {
+    const elevation = await captureElevationFixture({
+      name,
+      venue: venue ? {
+        id: venue.id, name: venue.name, type: venue.type, country: venue.country,
+      } : null,
+      team,
+      bbox,
+      center,
+      bounds: gridBounds,
+      outputDir: elevationDir,
+      timeoutMs,
+      update: has('--update'),
+    });
+    console.log('✅ 已寫入高程 fixture ' + elevation.path + ' ('
+      + elevation.fixture.stats.tileCount + ' tiles, ' + elevation.fixture.stats.points + ' points)');
+  } catch (error) {
+    fail('高程 fixture 捕獲失敗：' + error.message);
+  }
+}

@@ -6,49 +6,46 @@
 
 ## 現況判定
 
-固定 fixture 的抓取、共用 query/parser、離線 catalog/relay audit 與 fixture 模式 traversal 已建立，六份真實 payload 可離線重跑；但目前只能宣稱「真實資料的解析、分類、relay 與部分橋隧通行已有證據」，尚不能宣稱完整驗收完成。
+進度文件已依當前 worktree 與本輪 Luna Max 並行作業重新對帳。現在可宣稱：
 
-仍缺四層證據：
+- P0 fixture audit 硬化已完成：`sourceId` 唯一、raw 重排不變、sanitize/fit 冪等、候選守恆、drop ledger 與跨 fixture gaps 聚合均已有硬斷言；三個真實 fixture mutation 均會變紅。
+- P3 建築靜態契約已完成：`audit_osm_buildings` 用固定 source ID 驗證 L 型、斜向、中庭、大型不規則、multipolygon、多 outer 與超細長建築，正向 66/66 綠，`--break-real-hole/blocker/roof` 均會變紅。
+- `audit_traverse` 已有 production OSM building blocker／roof／hole 接線與對應 mutation，且舊的真實高程快取輸出顯示澀谷 41/41、六本木 61/61 航點可達。但高程 cache 未納入版控，乾淨環境不能重跑這項結論。
+- 本輪新增 `terrain-elevation-fixture-v1` 捕獲、SHA-256、bbox/center/team 與 193×193 runtime 同形網格契約；fixture traversal 現在完全離線，缺真實高程 companion 時必定列未驗並退出 1，不再偷查網路或回退平地。
+- 本輪新增 runtime 靜態預算證據：澀谷／六本木已量 raw/sanitized/fit bytes、areas/rings/nodes、buildings/blockers/roofs/area objects、capacity drops、建圖時間與 production batch 成長。瀏覽器 WebGL draw calls 仍明確列未驗。
 
-- `audit_osm_fixtures` 尚未完整證明 source ID 唯一、輸入重排不變、sanitize/fit 冪等、raw 到輸出的逐項守恆，以及 capacity drop 可追溯。
-- `audit_traverse` 現在只把固定 fixture 的道路交給地形、橋、隧道與地下道流程；沒有把真實 OSM 建築的 blocker／roof platform 放進同一張泛洪圖。
-- 尚無固定真實建築 source ID 的 outer／holes／牆段／碰撞／屋頂契約驗證，也沒有固定場地的瀏覽器畫面驗收。
-- relay 位元組上限已量到，但尚未取得 runtime blocker、roof、area object、draw call 與建圖時間的密集場景預算證據。
+因此仍不能宣稱完成。主要 blocker 已收斂為：兩個 5v5 L3 synthetic fallback、版本化真實高程資料缺失、新結構樣本缺失、瀏覽器畫面／draw-call 驗收缺失。
 
 ## 現存證據與紅字
 
 | Fixture | 已證明 | 尚未完成／目前紅字 |
 |---|---|---|
-| `taipei_dense` | raw feature 974、road 444、relay 503KB；真實高度場航點 8/8 | 5v5 L3 仍是 synthetic fallback，不能算 OSM 兵線覆蓋通過 |
-| `shibuya_dense` | raw feature 2359、road 1849、relay 1445KB；baked route 62/62；航點 41/41 | capacity 180；4 座橋跨中淨高不足 |
-| `london_water` | raw feature 775、road 837、relay 814KB | 5v5 L3 仍是 synthetic fallback；橋面航點 11/12 |
-| `roppongi_underpass` | raw feature 2259、road 1835、relay 1370KB；baked route 46/46 | capacity 191；航點 58/61；7 座橋淨高不足 |
-| `berlin_bridge` | raw feature 663、road 576、relay 583KB；18 relations／24 holes | metadata 未綁 `berlin`，尚無 runtime 幾何或通行證據 |
-| `ntu_campus_small` | raw feature 997、road 418、relay 515KB；分類缺件可列報 | 未綁正式場地，尚無通行與畫面驗收 |
+| `taipei_dense` | raw feature 1193、road 544、relay 576KB；baked route 24/24；5v5 L3 三線已是真實道路 | 缺版本化高程 companion；當前 traversal 依規列未驗 |
+| `taipei_lshape` | raw feature 974、road 444、relay 498KB；固定 `way/1071343896` L 型建築契約 | 保留為不綁正式場地的建築幾何 fixture，不冒充場地通行證據 |
+| `shibuya_dense` | raw feature 2359、road 1849、relay 1468KB；baked route 62/62；舊快取證據航點 41/41 | parser capacity 180；缺版本化高程 companion，當前 traversal 依規列未驗 |
+| `london_water` | raw feature 775、road 837、relay 820KB | 5v5 L3 仍是 synthetic fallback；有界正式選線門搜尋無解；舊證據尚有 1 航點未達 |
+| `roppongi_underpass` | raw feature 2259、road 1835、relay 1402KB；baked route 46/46；舊快取證據航點 61/61 | parser capacity 191；缺版本化高程 companion，當前 traversal 依規列未驗 |
+| `berlin` | raw feature 1195、road 860、relay 949KB；已正式綁 `venue.id=berlin` | 5v5 L3 仍是 synthetic fallback；有界正式選線門搜尋無解；缺版本化高程 companion |
+| `berlin_bridge` | raw feature 663、road 576、relay 590KB；18 relations／24 holes | 保留為小 bbox 建築幾何 fixture，不冒充正式場地通行證據 |
+| `ntu_campus_small` | raw feature 997、road 418、relay 525KB；分類缺件可列報 | 未綁正式場地，尚無通行與畫面驗收 |
 | `taroko_structures` | 無 | mirror 504，未取得 fixture；不得讓單一外部場地永久阻塞整體驗收 |
 
 `building=yes` 是目前主要 unmapped 候選。只有可信父用地時才允許 parent fallback，不得為提高覆蓋率而猜成住宅。`shibuya_dense` 與 `roppongi_underpass` 的 capacity drop 已被列報；完成條件不是「零裁切」，而是裁切順序固定、每筆可追溯且無靜默遺失。
 
 ## 未完成計畫
 
-### P0：先硬化 fixture audit，避免假綠
+### P0：fixture audit 硬化（已完成）
 
-1. 修正 `audit_osm_fixtures.mjs` 的例外路徑；目前 `catch` 將數字變數 `fail` 當函式呼叫，fixture 處理拋錯時會產生第二個例外。
-2. 將指標拆成互斥語意：`geometryInvalid`、`exact`、`parentFallback`、`unmapped`、`capacityDropped`。目前輸出的 `invalid` 混入 unmapped，不能拿來判斷真實幾何品質。
-3. 增加硬斷言：
-   - raw element 與 AreaRecord `sourceId` 唯一。
-   - raw elements 重排後，parser、catalog、gaps、relay fit 結果逐位元一致。
-   - sanitize 重跑與 fit 後再 sanitize 結果一致，不只檢查「非 null」。
-   - raw 候選必須能守恆到 accepted、invalid 或 capacity dropped；所有 drop 都帶 reason 與 source ID。
-   - 跨 fixture 聚合 gaps，輸出 `key=value`、reason、fallback、count、areaM2、fixture 數與範例 source IDs，依次數、面積、遊戲辨識重要性排序。
-4. 增加 fixture 層反向驗證：`--break-real-relation`、`--break-real-hole`、`--break-capacity-report`；壞版必須退出 1。
+- 例外路徑、互斥指標、source ID 唯一、重排不變、sanitize/fit 冪等、候選守恆、drop ledger 與跨 fixture gaps 聚合已落地。
+- `--break-real-relation`、`--break-real-hole`、`--break-capacity-report` 均命中真實 fixture 並退出 1。
+- 目前 `audit_osm_fixtures` 為 229 綠 / 2 紅；兩個紅字均是真實未完成的 L3 synthetic fallback，不是 P0 程式錯誤。
 
 ### P1：關閉目前已知紅字
 
-1. 逐項列出澀谷 4 座、六本木 7 座低橋的 OSM way ID、`bridge/layer/covered/tunnel` tags、下方道路與最小淨高。先判定它是可通橋下、僅橋面可走，或誤建結構，再調整結構資格、橋面剖面或路線；不得放寬淨高門檻掩蓋問題。
-2. 定位六本木 3 個、倫敦 1 個不可達航點的最近 blocker／結構與 source ID，修正後重跑固定高度場 traversal。
-3. 台北與倫敦必須補出 5v5 L3 baked OSM 兵線；若當地路網無法支撐目前戰場配置，應調整場地 bbox／戰場配置或更換驗收 fixture，不把 synthetic fallback 接受為固定 OSM 驗收綠燈。
-4. 將 `berlin_bridge` 正確綁到 `venue.id=berlin`，重跑 bbox／center 契約與 traversal。
+1. 澀谷／六本木低淨高段已按 runtime `surfaceAt/ceilingAt` 分成 underpass 與 `deck-only`，不再用放寬淨高門檻消紅；尚需把逐座 source ID/tags 清單從保存輸出整理成可審查名冊。
+2. 六本木已有 61/61 舊快取證據；倫敦仍有 1 航點未關閉。兩者均必須待版本化高程 companion 完成後再正式重跑。
+3. 5v5 L3 紅字現只剩倫敦、柏林。台北已用有界 raw fixture 搜尋取得三條真實道路兵線，按新 `venueConfig` 重抓同名 raw fixture，center/bbox/query 與 24 個烘焙節點全數一致。烘焙器會固定既有 L3 兩堡中點、寫入前硬驗 center/bbox；漂移時除非明示 `FIXTURE_RECAPTURE=1`，否則拒絕覆寫。連續兩次重烤 SHA-256 相同。
+4. 正式 `berlin.json` 已綁 `venue.id=berlin` 並通過 OSM bbox/center/query 契約；通行尚被高程 companion 缺失擋住。`berlin_bridge` 繼續作為小 bbox 建築幾何 fixture。
 5. 太魯閣只再做一次有紀錄的 bounded retry；仍失敗就改選可穩定取得、同樣涵蓋隧道／明隧道／水道語意的場地。結構覆蓋是目標，特定 mirror 或地名不是完成條件。
 
 ### P2：補齊「結構覆蓋」，不追求任意場地數量
@@ -63,23 +60,24 @@
 
 每份 fixture 必須保留 raw response、query/schema version、bbox、center、capturedAt、source URL、原始 IDs/tags/members，並通過 P0 的全部斷言。不要為湊數恢復「29 場都抓」的目標。
 
-### P3：補真實建築幾何與通行契約
+### P3：真實建築幾何與通行契約（靜態完成，離線 traversal 待高程資料）
 
-1. 從固定 fixture 鎖定 L 型、斜向、中庭、大型不規則、multipolygon、多 outer、超細長建築的 source IDs，形成可審查名冊。
-2. 使用正式 `buildOsmPolygonBuildings` 路徑驗證：
+1. 已從固定 fixture 鎖定 L 型、斜向、中庭、大型不規則、multipolygon、多 outer、超細長建築的 source IDs。
+2. 正式 `buildOsmPolygonBuildings` 受控執行已驗證：
    - OSM outer = 視覺外牆邊界 = authoritative blocker 邊界。
    - roof platform = outer − holes；中庭沒有屋頂或 blocker。
    - 碰撞不得退回外接 AABB／外接圓，附件不得超出 footprint；放不下即省略。
    - runtime invalid/skipped/capacity 均回到同一份 gaps 報告並帶 source ID。
-3. 擴充 fixture traversal，使泛洪同時吃正式 OSM building blockers、roof platforms、橋隧結構、塔／主堡與出生點。失敗輸出至少帶航點、source ID、catalog kind、polygon index、最近 blocker 與距離。
-4. 對上述真實建築加入 hole、blocker 或 roof 的反向驗證，確認契約真的能攔壞版。
+3. fixture traversal 已同時接 OSM building blockers、roof platforms、橋隧、塔／主堡與出生點，並輸出 source ID、catalog kind、polygon index、最近 blocker 與距離。
+4. 台北正式場地移動後，原本的 L 型固定 ID 沒有改綁弱樣本；舊 bbox 重新捕獲為 `taipei_lshape` 幾何 fixture，`way/1071343896` 的 27 段 blocker/wall、roof 與附件契約仍完整保留。
+5. `audit_osm_buildings --break-real-hole/blocker/roof` 已全部攔下壞版。`audit_traverse --break-osm-hole/blocker/roof` 要等同名高程 fixture 存在後才有適用樣本；目前必須 fail-loud，不准報綠。
 
-### P4：瀏覽器畫面與 runtime 預算
+### P4：瀏覽器畫面與 runtime 預算（靜態預算部分完成）
 
 1. 增加只供 audit/dev 的固定 fixture 注入路徑，讓瀏覽器完整走 relay → runtime generation；不得另寫一套只為截圖的建物生成器。
 2. 對密集都市、中庭／multipolygon、校園／醫院、工業、公園／運動／停車、農林、水域／橋隧保存驗收截圖與 manifest。人工檢查輪廓、holes、樓高、道路淨空、物件在 polygon 內、不跨 hole／道路、附件不飛出 footprint、材質合批無錯桶。
 3. `audit_solo_boot` 只驗單機模組與模擬開機，不能代替 OSM 畫面驗收。真實場地驗收命令在缺 Playwright／Chrome 時必須標為「未驗」並退出非零，或提供明確的 `--require-browser` 模式。
-4. 對最密集 fixture 記錄 raw/sanitized/fit bytes、areas/rings/nodes、buildings、blockers、roof polygons、area objects、capacity drops、建圖時間與 draw calls。驗收 `relay <= OSM_RELAY.MAX_BYTES`，並確認 draw calls 不隨建物數量線性成長。
+4. `audit_osm_runtime_budget.mjs` 已對澀谷／六本木記錄 raw/sanitized/fit bytes、areas/rings/nodes、buildings、blockers、roof polygons、area objects、capacity drops、建圖時間與 production static batches。fit 分別 1,479,509B／1,402,093B，均低於 1,800,000B；建物 batch kinds 10／7，area-object batch kinds 7／6。`--break-relay/blocker/roof/object-batch` 均會變紅。Node 不得把 batch 數當 WebGL draw call，因此正向指令目前固定以 `browser drawCall 未驗` 退出 1。
 
 ### P5：只修真實證據支持的分類缺口
 
@@ -93,6 +91,8 @@
 npm run audit:osm-catalog
 node tools/audit_osm_relay.mjs
 node tools/audit_osm_fixtures.mjs
+node tools/audit_osm_buildings.mjs
+node tools/audit_osm_runtime_budget.mjs
 node tools/audit_traverse.mjs --fixture-dir=test/fixtures/osm ...
 node tools/audit_client_syntax.mjs
 node tools/audit_siteplan.mjs
@@ -105,6 +105,17 @@ npm test
 npm run bal
 git diff --check
 ```
+
+本輪審查記錄：
+
+- `node tools/audit_osm_fixtures.mjs`：229 綠 / 2 紅；只剩柏林、倫敦 5v5 L3 synthetic fallback。台北專項 30/30 綠、routeCoverage 24/24。
+- P0 三個 `--break-*`：均命中真實 fixture 並退出 1。
+- `node tools/audit_osm_buildings.mjs`：66 綠 / 0 紅；L 型固定證據改由 `taipei_lshape/way/1071343896` 保留，三個 `--break-real-*` 均命中固定 source ID 並退出 1。
+- `node tools/audit_osm_runtime_budget.mjs`：34 綠 / 1 紅，唯一紅字為 browser drawCall 未驗；四個 runtime budget mutation 均會變紅。
+- `node tools/audit_traverse.mjs --only=berlin --team=5 --fixture-dir=test/fixtures/osm --fixtures=berlin`：OSM 契約相容，因缺 `elevation/berlin.json` 明確退出 1，未查網路、未用平地 fallback。
+- `node tools/audit_osm_relay.mjs`：83 綠 / 0 紅；`npm run bal` 通過。
+- `node tools/audit_client_syntax.mjs`：266 項通過；新增／修改的 Node 檔均通過 `node --check`。
+- `audit_map_rules`、`audit_lane_sep`、`audit_lane_navigation`、`audit_mini_map`、`audit_story_map` 全綠；台北 fixture 重烤連續兩次輸出 SHA-256 相同。
 
 既有 OSM catalog 七個 `--break-*` 與 P0/P3 新增的真實 fixture mutations 必須全部成功變紅。若 npm launcher 仍損壞，先修復執行環境；直接跑單一 Node 腳本只能作診斷，不能把 `npm run bal` 標成已完成。
 

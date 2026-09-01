@@ -34,7 +34,9 @@ const args = Object.fromEntries(process.argv.slice(2).map((arg) => {
 const BREAK_NAMES = ['real-hole', 'real-blocker', 'real-roof'];
 const BREAKS = BREAK_NAMES.filter((name) => process.argv.includes(`--break-${name}`));
 const PINNED_CATALOG = Object.freeze({
-  l_shape: Object.freeze({ fixture: 'taipei_dense', sourceId: 'way/1071343896' }),
+  // 正式 taipei_dense 隨三線場地移動；舊 bbox 獨立保留為幾何 fixture，避免路線重烤
+  // 靜默換掉已固定的 L 型 source ID 證據。
+  l_shape: Object.freeze({ fixture: 'taipei_lshape', sourceId: 'way/1071343896' }),
   oblique: Object.freeze({ fixture: 'berlin', sourceId: 'way/615700425' }),
   courtyard: Object.freeze({ fixture: 'berlin_bridge', sourceId: 'relation/7671395' }),
   large_irregular: Object.freeze({ fixture: 'roppongi_underpass', sourceId: 'way/136048451' }),
