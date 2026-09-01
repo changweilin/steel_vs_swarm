@@ -64,7 +64,7 @@ const WEATHERS = {
   cloudy:    { light: 0.58, fogNear: 0.40, fogFar: 1.6 },
   heavy_rain:{ light: 0.40, fogNear: 0.16, fogFar: 0.90, particle: 'heavy_rain' },
   storm:     { light: 0.32, fogNear: 0.12, fogFar: 0.75, particle: 'storm', fogTint: 0x4a5568 },
-  windy:     { light: 0.85, fogNear: 0.35, fogFar: 1.5, particle: 'wind' },
+  windy:     { light: 0.85, fogNear: 0.35, fogFar: 1.5 },
   sandstorm: { light: 0.38, fogNear: 0.08, fogFar: 0.55, particle: 'sand', fogTint: 0xc89858 },
   fog:       { light: 0.50, fogNear: 0.02, fogFar: 0.25 },
   snow:      { light: 0.60, fogNear: 0.22, fogFar: 1.1, particle: 'snow', fogTint: 0xcfd8dd },
@@ -285,6 +285,7 @@ function makeClouds(span, skyC, W, seed) {
       const windDir = dyn?.windDir ?? [1, 0];
       const windAmp = dyn?.windAmp ?? 1.0;
 
+      // 1. 高空風力直接驅動雲層飄移速度 (Wind drift speed)
       driftOffset += WIND.CLOUD_MPS * windAmp * (dt || 0.016);
 
       // 雲色更新: >50% 時由亮白/天色過渡為烏雲黑灰色
@@ -293,19 +294,21 @@ function makeClouds(span, skyC, W, seed) {
         baseCloudColor.lerp(DARK_CLOUD_COLOR, Math.min(1.0, darkness * 0.90));
       }
 
-      // 1. 雲朵數量與雲量成嚴格正比 (晴天 4~8 朵，陰天 >=50% 時 44~72 朵大面積覆蓋)
-      const activeRatio = Math.max(0.08, Math.min(1.0, Math.pow(cloudsPct / 100, 0.85)));
+      // 2. 雲朵數量與雲量成嚴格正比，並受霧數值垂直擴展與低空凝結增益
+      const fogFactor = fogPct / 100;
+      const fogCountBoost = fogFactor * 0.20;
+      const activeRatio = Math.max(0.08, Math.min(1.0, Math.pow(cloudsPct / 100, 0.85) + fogCountBoost));
       const activeCount = Math.min(totalClouds, Math.max(4, Math.round(totalClouds * activeRatio)));
 
-      // 2. 陰天時 (>=50%) 大幅擴展雲朵尺寸與水平覆蓋率，使一半以上的天空都是雲朵
+      // 3. 陰天時 (>=50%) 大幅擴展雲朵尺寸與水平覆蓋率，使一半以上的天空都是雲朵
       const overcastF = Math.max(0, (cloudsPct - 40) / 60);
       const scaleFactor = (0.80 + (cloudsPct / 100) * 1.30) * (1.0 + overcastF * 0.50);
       const spreadFactor = 0.55 + (cloudsPct / 100) * 0.90;
       const cloudCoverage = Math.max(0.08, Math.min(1.0, (cloudsPct / 100) * 1.15));
 
-      // 3. 霧量影響雲層分佈的高低 (高霧量時近地水氣重，雲底壓低貼近地平線；低霧量時雲層高掛於高空)
-      const fogAltitudeFactor = 1.0 - (fogPct / 100) * 0.52;
-      const baseAltitudeShift = span * (0.32 * fogAltitudeFactor + 0.08);
+      // 4. 霧數值垂直擴展: 越濃雲朵最小高度越低 (貼近地平線與低空)，且垂直厚度展布越大
+      const minAltitude = span * Math.max(0.04, 0.26 * (1.0 - fogFactor * 0.85) + 0.04);
+      const vertExpansion = 1.0 + fogFactor * 0.75;
 
       for (let i = 0; i < cloudItems.length; i++) {
         const item = cloudItems[i];
@@ -317,36 +320,37 @@ function makeClouds(span, skyC, W, seed) {
         const d = drift[i];
         const c = clusters[item.cIdx];
 
-        const a = ((d.along + WIND.CLOUD_MPS * t + WRAP * 0.5) % WRAP + WRAP) % WRAP - WRAP * 0.5;
+        // 5. 風力直接驅動雲層飄移位置 (Wind drift position)
+        const a = ((d.along + WIND.CLOUD_MPS * windAmp * t + WRAP * 0.5) % WRAP + WRAP) % WRAP - WRAP * 0.5;
 
         // 生命週期淡入淡出 (顯現 / 消失)
-        const life = Math.sin(t * (Math.PI * 2 / item.lifePeriod) + item.lifePhase) * 0.5 + 0.5;
+        const life = Math.sin(t * (Math.PI * 2 / item.lifePeriod) * Math.max(0.5, windAmp * 0.8) + item.lifePhase) * 0.5 + 0.5;
         const fadeAlpha = Math.max(0, Math.min(1, life * 1.5 - 0.15)) * cloudCoverage;
 
-        // 小雲匯聚成大雲 (Clustering) 與 大雲分散為小雲 (Dispersal)
-        const clusterPulse = Math.sin(t * 0.12 + c.phase) * 0.5 + 0.5; // [0, 1] 聚合 -> 分散循環
+        // 6. 風力驅動高空聚散速率 (Clustering & Dispersal pulse frequency scales with windAmp)
+        const clusterPulse = Math.sin(t * 0.12 * Math.max(0.4, windAmp) + c.phase) * 0.5 + 0.5; // 聚合 -> 分散循環
         const clusterMerge = (cloudsPct > 50 ? 0.35 : 0.65) * clusterPulse + (cloudsPct > 50 ? 0.45 : 0.15);
 
-        // 4. 緩慢變形動態 (Slow Morphing Dynamics)
+        // 7. 緩慢變形動態 (Slow Morphing Dynamics, 速率隨風力加乘)
         // a. 雲團內部子結構慢速旋流位移 (Swirl Deformation)
-        const curSwirlA = item.offA + Math.sin(t * item.swirlSpeed + item.swirlPhase) * 0.45;
-        const curSwirlR = item.offR * (0.85 + Math.cos(t * item.swirlSpeed * 1.3 + item.swirlPhase) * 0.30);
+        const curSwirlA = item.offA + Math.sin(t * item.swirlSpeed * Math.max(0.5, windAmp) + item.swirlPhase) * 0.45;
+        const curSwirlR = item.offR * (0.85 + Math.cos(t * item.swirlSpeed * Math.max(0.5, windAmp) * 1.3 + item.swirlPhase) * 0.30);
         const curOffX = Math.cos(curSwirlA) * curSwirlR * (1.6 - clusterMerge * 0.9) * spreadFactor;
         const curOffZ = Math.sin(curSwirlA) * curSwirlR * (1.6 - clusterMerge * 0.9) * spreadFactor;
 
         // b. 縱橫非對稱拉伸變形 (Aspect-Ratio Stretch Morphing)
-        const morphX = 1.0 + Math.sin(t * item.morphSpeedX + item.morphPhaseX) * 0.26 + Math.cos(t * item.morphSpeedX * 0.47) * 0.08;
-        const morphY = 1.0 + Math.cos(t * item.morphSpeedY + item.morphPhaseY) * 0.22 + Math.sin(t * item.morphSpeedY * 0.53) * 0.07;
-        const scaleMul = (0.75 + clusterMerge * 0.75) * (1 + Math.sin(t * 0.2 + item.bobPhase) * CLOUD_BREATH);
+        const morphX = 1.0 + Math.sin(t * item.morphSpeedX * Math.max(0.5, windAmp) + item.morphPhaseX) * 0.26 + Math.cos(t * item.morphSpeedX * 0.47) * 0.08;
+        const morphY = 1.0 + Math.cos(t * item.morphSpeedY * Math.max(0.5, windAmp) + item.morphPhaseY) * 0.22 + Math.sin(t * item.morphSpeedY * 0.53) * 0.07;
+        const scaleMul = (0.75 + clusterMerge * 0.75) * (1 + Math.sin(t * 0.2 * Math.max(0.5, windAmp) + item.bobPhase) * CLOUD_BREATH);
 
         // c. 風切與渦流慢速自轉微傾 (Eddy Rotation Morphing)
-        item.sp.material.rotation = item.rot0 + Math.sin(t * item.rotSpeed + item.rotPhase) * 0.16 + Math.cos(t * item.rotSpeed * 0.38) * 0.05;
+        item.sp.material.rotation = item.rot0 + Math.sin(t * item.rotSpeed * Math.max(0.5, windAmp) + item.rotPhase) * 0.16 + Math.cos(t * item.rotSpeed * 0.38) * 0.05;
 
         const posX = a * windDir[0] - d.side * windDir[1] + curOffX;
         const posZ = a * windDir[1] + d.side * windDir[0] + curOffZ;
 
-        // 雲層垂直高度: 霧量越高高度越低，且伴隨輕微起伏與初始層級分佈
-        const posY = baseAltitudeShift + (d.y - span * 0.22) * fogAltitudeFactor + Math.sin(t * 0.14 + item.bobPhase) * span * CLOUD_BOB;
+        // 雲層垂直高度: 霧越濃，雲底越低 (minAltitude)，垂直跨度 (vertExpansion) 越大
+        const posY = minAltitude + (d.y - span * 0.18) * vertExpansion + Math.sin(t * 0.14 * Math.max(0.5, windAmp) + item.bobPhase) * span * CLOUD_BOB;
 
         item.sp.position.set(posX, posY, posZ);
         item.sp.scale.set(item.baseScaleX * 2 * scaleMul * morphX * scaleFactor, item.baseScaleY * scaleMul * morphY * scaleFactor, 1);
@@ -419,7 +423,7 @@ function makeBodies(span) {
   };
 }
 
-/** 粒子專屬程序化 Canvas 紋理快取 (雨絲 / 結晶雪花 / 粗粒砂塵 / 氣流條紋) */
+/** 粒子專屬程序化 Canvas 紋理快取 (雨絲 / 結晶雪花 / 粗粒砂塵) */
 let _particleTextures = null;
 function particleTextures() {
   if (_particleTextures) return _particleTextures;
@@ -496,35 +500,20 @@ function particleTextures() {
   const sandTex = new THREE.CanvasTexture(sandCv);
   sandTex.colorSpace = THREE.SRGBColorSpace;
 
-  // 4. 氣流微粒: 半透明流線條紋
-  const windCv = document.createElement('canvas');
-  windCv.width = 128; windCv.height = 32;
-  const wg = windCv.getContext('2d');
-  const wGr = wg.createLinearGradient(0, 16, 128, 16);
-  wGr.addColorStop(0, 'rgba(255, 255, 255, 0)');
-  wGr.addColorStop(0.3, 'rgba(220, 235, 250, 0.7)');
-  wGr.addColorStop(0.7, 'rgba(200, 225, 245, 0.6)');
-  wGr.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
-  wg.fillStyle = wGr;
-  wg.beginPath();
-  wg.ellipse(64, 16, 58, 6, 0, 0, Math.PI * 2);
-  wg.fill();
-  const windTex = new THREE.CanvasTexture(windCv);
-  windTex.colorSpace = THREE.SRGBColorSpace;
-
-  _particleTextures = { rain: rainTex, snow: snowTex, sand: sandTex, wind: windTex };
+  _particleTextures = { rain: rainTex, snow: snowTex, sand: sandTex };
   return _particleTextures;
 }
 
 /**
- * 粒子系統 (雨 / 沙 / 雪 / 風微粒):
+ * 粒子系統 (雨 / 沙 / 雪 實體微粒):
  * 根據多元天氣之有效雨量 (effectiveRain)、沙量 (effectiveSand)、雪量 (effectiveSnow) 與即時風向風力更新。
- * 雨/雪/沙塵/風各自具備專屬程序化紋理與完全相異之運動物理軌跡。
+ * 雨/雪/沙塵各自具備專屬程序化紋理與完全相異之運動物理軌跡。
+ * 風力數值不使用虛擬氣流條紋，高空透過雲朵飄移與聚散表現，低空透過落花落葉表現。
  */
 function makeParticles() {
   const pTexs = particleTextures();
   const systems = {};
-  const kinds = ['rain', 'sand', 'snow', 'wind'];
+  const kinds = ['rain', 'sand', 'snow'];
   const grp = new THREE.Group();
 
   for (const k of kinds) {
@@ -532,7 +521,6 @@ function makeParticles() {
     if (k === 'rain')       { N = 2600; size = 1.45; speed = 135; color = 0xa4c6df; }
     else if (k === 'sand')  { N = 2200; size = 2.40; speed = 28;  color = 0xd4a359; }
     else if (k === 'snow')  { N = 1900; size = 2.20; speed = 12;  color = 0xffffff; }
-    else if (k === 'wind')  { N = 700;  size = 1.60; speed = 22;  color = 0xd8e4ee; }
 
     const BOX = 260, H = 180, pos = new Float32Array(N * 3), seed = new Float32Array(N);
     for (let i = 0; i < N; i++) {
@@ -565,7 +553,7 @@ function makeParticles() {
     /**
      * @param {number} dt
      * @param {THREE.Camera} camera
-     * @param {{ effectiveRain:number, effectiveSand:number, effectiveSnow:number, wind:number, windAmp:number, windDir:number[] }} dyn
+     * @param {{ effectiveRain:number, effectiveSand:number, effectiveSnow:number, windDir:number[], windAmp:number }} dyn
      */
     update(dt, camera, dyn) {
       t += dt;
@@ -574,7 +562,6 @@ function makeParticles() {
       const effRain = dyn?.effectiveRain ?? 0;
       const effSand = dyn?.effectiveSand ?? 0;
       const effSnow = dyn?.effectiveSnow ?? 0;
-      const windPct = dyn?.wind ?? 0;
 
       for (const [k, sys] of Object.entries(systems)) {
         let isActive = false;
@@ -597,11 +584,6 @@ function makeParticles() {
           targetOpacity = Math.min(0.92, 0.35 + effSnow * 0.55);
           driftSpeedX *= 12;
           driftSpeedZ *= 12;
-        } else if (k === 'wind' && windPct > 55 && !effRain && !effSand && !effSnow) {
-          isActive = true;
-          targetOpacity = Math.min(0.50, ((windPct - 55) / 45) * 0.45);
-          driftSpeedX *= 35;
-          driftSpeedZ *= 35;
         }
 
         sys.pts.visible = isActive;
@@ -633,11 +615,6 @@ function makeParticles() {
             y += (Math.sin(t * 4.2 + s * 3.7) * 16.0 + Math.cos(px * 0.05 + t * 3.0) * 8.0) * dt;
             px += (driftSpeedX + Math.cos(t * 3.5 + s) * 12.0) * dt;
             pz += (driftSpeedZ + Math.sin(t * 3.5 + s) * 12.0) * dt;
-          } else if (k === 'wind') {
-            // 氣流微粒: 沿風向平滑波狀掠過
-            y -= sys.speed * dt;
-            px += (driftSpeedX + Math.sin(t * 2.0 + s) * 4.0) * dt;
-            pz += (driftSpeedZ + Math.cos(t * 2.0 + s) * 4.0) * dt;
           }
 
           if (y < 0) {
@@ -1009,12 +986,13 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       const h = clockHour(startTime, elapsedS, sched.startH);
       setHour(h);
 
-      // 4. 能見度與空氣透視動態調整 (濃霧時能見度壓至 1 個砲塔射程 UNITS.tower.range = 310m)
-      const denseFogFarM = UNITS.tower?.range ?? 310;
+      // 4. 能見度與空氣透視動態調整 (濃霧最濃時壓至 1 個砲塔射程 UNITS.tower.range)
+      const denseFogFarM = UNITS.tower?.range ?? 155;
       const denseFogNearM = denseFogFarM * 0.10;
       const normalFogNear = span * curDyn.fogNear;
       const normalFogFar = span * curDyn.fogFar;
-      const effFog = Math.min(1.0, curDyn.effectiveFog * 1.25);
+      // 只有在最濃霧時 (effectiveFog 趨近 1.0) 能見度才精準壓至 1 個砲塔射程
+      const effFog = Math.pow(Math.max(0, curDyn.effectiveFog), 1.8);
       const actualFogFar = THREE.MathUtils.lerp(normalFogFar, Math.min(normalFogFar, denseFogFarM), effFog);
       const actualFogNear = THREE.MathUtils.lerp(normalFogNear, Math.min(normalFogNear, denseFogNearM), effFog);
 

@@ -103,7 +103,7 @@ import { CARD, cardEnvelope, cardCount, planCards, cardRnd, leafSurfId } from '.
 // (`audit_cel_pipeline` Ⅺ⑧ 的凍結名冊守著:名冊非空 ⇒ `celSchool` 的 def MUST NOT 是 'b')。
 import {
   WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime, celWindAmount, celWaveAmount,
-  isWeatherFrozen,
+  isWeatherFrozen, getWeatherDynamics,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
 import { buildAquaticWorld, buildRelicObject, relicCollider, RELIC_KINDS } from './aquatics.js';
@@ -1715,10 +1715,10 @@ function buildPetals(group, terrain, items, season, mode, dynamics, gseed) {
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), AX = new THREE.Vector3();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   let t = 0;
-  const write = (dt) => {
+  const write = (dt, dyn) => {
     t += dt;
     for (const p of parts) {
-      stepPetal(p, dt, t);
+      stepPetal(p, dt, t, dyn);
       // 位置一律是「場中心線 + 偏移」:環繞因此是構造保證,不靠任何係數調得剛好
       P.set(p.cx + p.ox, p.y0 + p.oy, p.cz + p.oz);
       AX.set(p.ax, p.ay, p.az);
@@ -1732,7 +1732,7 @@ function buildPetals(group, terrain, items, season, mode, dynamics, gseed) {
   write(0);   // 首幀就位(dynamics 尚未跑時不會整批疊在原點)
   // 逐幀 dt MUST 夾在 `PETAL.DT_MAX` —— 與 `toon.stepCelWind` 同一個理由(背景分頁切回來
   // 那一幀的 dt 是好幾秒,不夾就是整場落花瞬移到地面)。
-  dynamics.push((dt) => write(Math.min(PETAL.DT_MAX, Math.max(0, dt || 0))));
+  dynamics.push((dt) => write(Math.min(PETAL.DT_MAX, Math.max(0, dt || 0)), getWeatherDynamics()));
   return parts.length;
 }
 

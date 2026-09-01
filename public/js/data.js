@@ -6267,9 +6267,10 @@ export function resolveWeatherDynamics(weatherVec) {
   // 3. 沙量: 75% 以上才會開始顯現
   const effectiveSand = sand >= 75 ? (sand - 75) / 25 : 0;
 
-  // 4. 雪量: 75% 且烏雲時 (>50%) 才會真的下雪; 75% 以上水波凍結無起伏、船隻停止、地面積雪
+  // 4. 雪量與水域漸進凍結: 隨降雪加劇逐漸平緩降伏水波，避免瞬間跳變為死水
   const effectiveSnow = (snow >= 75 && isDarkCloud) ? ((snow - 75) / 25) * cloudDarkness : 0;
-  const isFrozen = snow >= 75 || effectiveSnow > 0.01;
+  const freezeFactor = Math.max(0, Math.min(1.0, Math.max(effectiveSnow, (snow - 60) / 30)));
+  const isFrozen = freezeFactor >= 0.98;
 
   // 5. 雷量: 75% 以上才會開始打雷
   const effectiveThunder = thunder >= 75 ? (thunder - 75) / 25 : 0;
@@ -6277,11 +6278,13 @@ export function resolveWeatherDynamics(weatherVec) {
   // 6. 霧量: 75% 以上才會開始起霧 (0~1.0 倍率)
   const effectiveFog = fog >= 75 ? (fog - 75) / 25 : 0;
 
-  // 7. 風量與水波 (水波若凍結則 amp 與 speed 歸零)
+  // 7. 風量與水波 (水波隨降雪凍結係數漸進平緩衰減至完全平坦)
   const windAmp = 0.5 + (wind / 100) * 2.2;
   const windFreq = 0.7 + (wind / 100) * 1.3;
-  const waveAmp = isFrozen ? 0 : (0.4 + (wind / 100) * 2.0);
-  const waveSpeed = isFrozen ? 0 : (0.5 + (wind / 100) * 1.6);
+  const rawWaveAmp = 0.4 + (wind / 100) * 2.0;
+  const rawWaveSpeed = 0.5 + (wind / 100) * 1.6;
+  const waveAmp = isFrozen ? 0 : rawWaveAmp * (1.0 - freezeFactor);
+  const waveSpeed = isFrozen ? 0 : rawWaveSpeed * (1.0 - freezeFactor);
 
   // 8. 霧量與能見度 (near / far 倍率，霧量未達 75% 時維持基準能見度)
   const fogNear = Math.max(0.02, 0.55 - effectiveFog * 0.51);

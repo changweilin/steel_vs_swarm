@@ -250,21 +250,31 @@ export function prewarmField(f) {
  * 推進一片。輸出恆是**相對場中心線**的偏移(`ox`/`oz`/`oy`)—— 呼叫端加上 `p.cx`/`p.cz`/`p.y0`
  * 就是世界座標。環繞因此是**構造保證**:水平恆在自己的軌道上、垂直恆在自己的高度帶內,
  * 一小時之後這叢花仍蓋在那叢樹上,不需要任何一個係數調得剛好。
+ * 低空風力數值透過落花 / 落葉的落速、擺盪、角速度與微幅風向偏倚表現 (視季節與即時風力動態而定)。
  * @param {object} p 粒子(就地變更)
  * @param {number} dt 幀時(呼叫端 MUST 已夾 `PETAL.DT_MAX`;本函式再夾一次當保險)
  * @param {number} t  場的累計時鐘(秒)
+ * @param {{ windAmp?:number, windDir?:number[] }} [dyn] 即時天氣風力動態
  */
-export function stepPetal(p, dt, t) {
+export function stepPetal(p, dt, t, dyn) {
   const d = dt > PETAL.DT_MAX ? PETAL.DT_MAX : (dt > 0 ? dt : 0);
-  p.y -= p.vy * d;
+  const wScale = dyn ? Math.max(0.4, Math.min(2.5, dyn.windAmp ?? 1.0)) : 1.0;
+  const windDir = dyn?.windDir ?? [1, 0];
+
+  p.y -= p.vy * d * (0.85 + wScale * 0.15);
   while (p.y < 0) p.y += p.h;        // 落到地面 → 回到冠頂(場自己的高度帶)
-  p.a += p.w * d;
-  p.ang += p.sp * d;
-  const s1 = Math.sin(t * PETAL.F_SLOW + p.p1);   // 慢波:這陣風
-  const s2 = Math.sin(t * PETAL.F_FAST + p.p2);   // 快顫:葉片自己在翻
+  p.a += p.w * d * wScale;
+  p.ang += p.sp * d * wScale;
+  const s1 = Math.sin(t * PETAL.F_SLOW * wScale + p.p1);   // 慢波:這陣風
+  const s2 = Math.sin(t * PETAL.F_FAST * wScale + p.p2);   // 快顫:葉片自己在翻
   const rad = p.r * (1 + PETAL.SWAY_SLOW * s1 + PETAL.SWAY_FAST * s2);
   p.ox = Math.cos(p.a) * rad;
   p.oz = Math.sin(p.a) * rad;
+  if (dyn && (wScale > 1.05 || wScale < 0.95)) {
+    const drift = (wScale - 1.0) * 1.8;
+    p.ox += windDir[0] * drift * (1 + s1 * 0.25);
+    p.oz += windDir[1] * drift * (1 + s1 * 0.25);
+  }
   p.oy = p.y + PETAL.BOB * (1 + s2);  // (1 + s2) ⇒ 恆 ≥ 0,不會有一幀沉到地面以下
 }
 
