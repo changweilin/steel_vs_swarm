@@ -75,9 +75,13 @@ import { BattleSim } from '../server/sim.js';
 // (§0-a 線工切面樁要的「結構足跡 keep-out」與本支泛洪吃同一份清單,抄第二份就是繞過那條縫)。
 import {
   llToWorld, elevSampler, buildHeightField, osmFor, makeCarvedField, TUN, BRIDGE_RISE,
-  buildStructs, projectArc, ptAt,
+  buildStructs, projectArc, ptAt, ptPoly, ptSeg, strucTunnel,
 } from './venue_field.mjs';
-import { DEFAULT_FIXTURE_DIR, fixtureOsm, loadOsmFixtureForVenue } from './osm_fixture.mjs';
+import { readSrc } from './audit_src.mjs';
+import { catalogAreas, pointInProjectedArea, projectAreaRecord } from '../public/js/osmAreas.js';
+import {
+  DEFAULT_FIXTURE_DIR, fixtureOsm, fixtureQueries, loadOsmFixture, loadOsmFixtureForVenue,
+} from './osm_fixture.mjs';
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((s) => {
   const m = /^--([^=]+)(?:=(.*))?$/.exec(s);
@@ -87,9 +91,56 @@ const ONLY = (ARG.only || '').split(',').filter(Boolean);
 const TEAM = +(ARG.team || 1);
 const CELL = +(ARG.cell || 4);          // 泛洪格寬(遊戲公尺)
 const BREAK_SLOPE = !!ARG['break-slope'];   // 反向驗證開關(原則 9)
+const BREAK_OSM_HOLE = !!(ARG['break-osm-hole'] || ARG['break-hole']);
+const BREAK_OSM_BLOCKER = !!(ARG['break-osm-blocker'] || ARG['break-blocker']);
+const BREAK_OSM_ROOF = !!(ARG['break-osm-roof'] || ARG['break-roof']);
+const BREAK_OSM_APPLIED = { hole: false, blocker: false, roof: false };
 const FIXTURE_MODE = ARG['fixture-dir'] != null || ARG.fixtures != null;
 const FIXTURE_DIR = ARG['fixture-dir'] || DEFAULT_FIXTURE_DIR;
 const FIXTURE_NAMES = new Set(String(ARG.fixtures || '').split(',').filter(Boolean));
+let FIXTURE_BINDINGS = new Map();
+
+// osmBuilding.js 直接 import THREE/CDN，Node 沒有 three 套件；這裡只提供最小的
+// 幾何接收器，讓 production 原文完整執行並回傳 blocker/platform。任何 stub 失敗都
+// 只能降級成「純資料 footprint 診斷」，不得把近似量體當成已驗證碰撞。
+let OSM_BUILDER;
+function loadOsmBuilder() {
+  if (OSM_BUILDER !== undefined) return OSM_BUILDER;
+  try {
+    const src = readSrc('public', 'js', 'osmBuilding.js')
+      .replace(/^import.*$/gm, '')
+      .replace(/^export\s+/gm, '');
+    class StubGeometry {
+      rotateX() { return this; }
+      rotateY() { return this; }
+      translate() { return this; }
+    }
+    class StubPath {
+      constructor() { this.holes = []; }
+      moveTo() {}
+      lineTo() {}
+    }
+    class StubMesh {
+      constructor(geometry, material) {
+        this.geometry = geometry;
+        this.material = material;
+        this.userData = {};
+        this.frustumCulled = true;
+      }
+    }
+    const THREE = {
+      Shape: StubPath, Path: StubPath, ShapeGeometry: StubGeometry,
+      BoxGeometry: StubGeometry, CylinderGeometry: StubGeometry,
+      ConeGeometry: StubGeometry, Mesh: StubMesh,
+    };
+    const factory = new Function('THREE', 'mergeGeometries', 'envMat',
+      `${src}\nreturn { buildOsmPolygonBuildings };`);
+    OSM_BUILDER = factory(THREE, () => new StubGeometry(), () => ({})).buildOsmPolygonBuildings;
+  } catch (error) {
+    OSM_BUILDER = { error };
+  }
+  return OSM_BUILDER;
+}
 
 // 高度桶:固定量化,不是容差比對(見檔頭地雷②)。桶要夠粗才不會在斜坡上把同一層切成很多層,
 // 又要夠細才分得出「洞內路面」與「洞上山頂」—— 取隧道淨空(TUN.CLEAR)當尺:同一格若兩個
@@ -119,7 +170,7 @@ const HEAD_M = 0.2;   // 頭頂餘裕(CLAUDE.md §5「淨空 > 最大機體 + 0.
  * 每個點可能有多個站立面:地表一個,加上每一座覆蓋到該點的結構(隧道/地下道/橋)各一個。
  * 每個面帶 `sid`(結構代號;地表 = -1)與 `buried`(地表高 − 該面高:> 0 = 頭頂有東西)。
  */
-function makeSurfaces(ground, structs) {
+function makeSurfaces(ground, structs, roofPlatforms = []) {
   return (x, z) => {
     const ty = ground(x, z);
     const out = [{ y: ty, sid: -1, buried: 0 }];
@@ -129,6 +180,15 @@ function makeSurfaces(ground, structs) {
       if (s == null) continue;
       const y = st.floorAt(s, x, z);
       out.push({ y, sid: k, buried: ty - y });
+    }
+    // 屋頂平台沿用 osmBuilding.js 的 outer/holes 面域契約；只用 bbox 會把洞內
+    // 也變成可站立面，與 runtime surfaceAt 分家。sid 排在結構之後，保持高度桶
+    // 與層別鍵的既有語意。
+    for (let k = 0; k < roofPlatforms.length; k++) {
+      const p = roofPlatforms[k];
+      if (p?.active === false || !pointInProjectedArea(x, z, p)) continue;
+      out.push({ y: p.y, sid: structs.length + k, buried: ty - p.y, roof: true,
+        sourceId: p.sourceId, catalogKind: p.kind, polygonIndex: p.polygonIndex ?? null });
     }
     return out;
   };
@@ -235,19 +295,311 @@ function clearance(structs, hf) {
   return out;
 }
 
+const isBuildingArea = (a) => a?.tags?.building != null || a?.tags?.['building:part'] != null;
+const near = (a, b, eps = 1e-7) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= eps;
+
+function ringMatches(a, b) {
+  return Array.isArray(a) && Array.isArray(b) && a.length === b.length
+    && a.every((p, i) => near(p?.[0], b[i]?.[0]) && near(p?.[1], b[i]?.[1]));
+}
+
+function polygonIndexForRing(area, ring) {
+  return (area?.worldPolygons || []).findIndex((p) => ringMatches(p.outer, ring));
+}
+
+function polygonIndexForBlocker(blocker, area) {
+  for (let pi = 0; pi < (area?.worldPolygons || []).length; pi++) {
+    const poly = area.worldPolygons[pi];
+    for (const ring of [poly.outer, ...(poly.holes || [])]) {
+      for (let i = 0; i < ring.length; i++) {
+        const a = ring[i], b = ring[(i + 1) % ring.length];
+        const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
+        if (!len) continue;
+        const ry = Math.atan2(dz, dx);
+        const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+        const parallel = Math.abs(Math.sin((blocker.ry || 0) - ry)) <= 1e-6;
+        if (parallel && Math.hypot(mid[0] - blocker.x, mid[1] - blocker.z) <= 1e-5
+          && Math.abs(len / 2 - blocker.hw2) <= 1e-5) return pi;
+      }
+    }
+  }
+  return null;
+}
+
+function flatRingDistance(x, z, ring) {
+  if (!Array.isArray(ring) || ring.length < 2) return Infinity;
+  let best = Infinity;
+  for (let i = 0; i < ring.length; i++) best = Math.min(best,
+    ptSeg([x, z], ring[i], ring[(i + 1) % ring.length]));
+  return best;
+}
+
+function footprintEdges(areas) {
+  const out = [];
+  for (const area of areas || []) {
+    for (let polygonIndex = 0; polygonIndex < (area.worldPolygons || []).length; polygonIndex++) {
+      const poly = area.worldPolygons[polygonIndex];
+      for (const ring of [poly.outer, ...(poly.holes || [])]) {
+        for (let i = 0; i < ring.length; i++) out.push({
+          a: ring[i], b: ring[(i + 1) % ring.length], sourceId: area.sourceId,
+          catalogKind: area.classification?.kind || null, polygonIndex,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function osmBuildingModel(osm, cfg, ground) {
+  const rawAreas = osm?.features?.areas || [];
+  if (!rawAreas.length) return {
+    mode: 'none', areas: [], blockers: [], platforms: [], edges: [], generated: 0,
+    generatedByKind: {}, invalid: [], skipped: [], holes: 0, catalog: null,
+  };
+  const projected = rawAreas.map((a) => projectAreaRecord(a, llToWorld, cfg.center)).filter(Boolean);
+  const catalog = catalogAreas(projected);
+  const areas = catalog.areas.filter(isBuildingArea);
+  const edges = footprintEdges(areas);
+  if (!areas.length) return {
+    mode: 'none', areas, blockers: [], platforms: [], edges, generated: 0,
+    generatedByKind: {}, invalid: [], skipped: [], holes: 0, catalog,
+  };
+  const builder = loadOsmBuilder();
+  if (typeof builder !== 'function') return {
+    mode: 'pure-data', error: builder?.error || new Error('osmBuilding.js harness unavailable'),
+    areas, blockers: [], platforms: [], edges, generated: 0, generatedByKind: {},
+    invalid: [], skipped: [], holes: 0, catalog,
+  };
+  try {
+    const group = { add() {} };
+    // terrain.heightAt 與 biomes.js 的 buildOsmPolygonBuildings 呼叫契約相同；Fake
+    // THREE 只接住 mesh，不改任何 production 幾何或 blocker 公式。
+    const result = builder(group, areas, { terrain: { heightAt: ground } });
+    const areaById = new Map(areas.map((a) => [a.sourceId, a]));
+    const blockers = (result.blockers || []).map((b) => {
+      const area = areaById.get(b.sourceId);
+      return { ...b, polygonIndex: polygonIndexForBlocker(b, area), catalogKind: b.kind || area?.classification?.kind || null };
+    });
+    const platforms = (result.platforms || []).map((p) => {
+      const area = areaById.get(p.sourceId);
+      return { ...p, polygonIndex: polygonIndexForRing(area, p.outer) };
+    });
+    const holes = platforms.reduce((n, p) => n + (p.holes?.length || 0), 0);
+    return {
+      mode: 'exact-runtime', result, areas, blockers, platforms, edges, generated: result.generated || 0,
+      generatedByKind: result.generatedByKind || {}, invalid: result.invalid || [], skipped: result.skipped || [],
+      holes, catalog,
+    };
+  } catch (error) {
+    return {
+      mode: 'pure-data', error, areas, blockers: [], platforms: [], edges, generated: 0,
+      generatedByKind: {}, invalid: [], skipped: [], holes: 0, catalog,
+    };
+  }
+}
+
+function boxDistance(x, z, blocker) {
+  const ry = Number(blocker.ry) || 0, c = Math.cos(ry), s = Math.sin(ry);
+  const lx = (x - blocker.x) * c + (z - blocker.z) * s;
+  const lz = -(x - blocker.x) * s + (z - blocker.z) * c;
+  const ax = Math.abs(lx), az = Math.abs(lz), hw = Number(blocker.hw2), hd = Number(blocker.hd2);
+  if (![ax, az, hw, hd].every(Number.isFinite)) return Infinity;
+  const dx = Math.max(ax - hw, 0), dz = Math.max(az - hd, 0);
+  return dx || dz ? Math.hypot(dx, dz) : Math.min(hw - ax, hd - az);
+}
+
+function nearestBuilding(x, z, model) {
+  if (model.mode === 'exact-runtime') {
+    let best = null;
+    for (const b of model.blockers || []) {
+      const distanceM = boxDistance(x, z, b);
+      if (!Number.isFinite(distanceM) || (best && distanceM >= best.distanceM)) continue;
+      best = {
+        type: 'building', sourceId: b.sourceId ?? null, catalogKind: b.catalogKind || b.kind || null,
+        polygonIndex: b.polygonIndex ?? null, distanceM,
+      };
+    }
+    return best;
+  }
+  let best = null;
+  for (const e of model.edges || []) {
+    const distanceM = flatRingDistance(x, z, [e.a, e.b]);
+    if (!Number.isFinite(distanceM) || (best && distanceM >= best.distanceM)) continue;
+    best = { type: 'building-footprint', sourceId: e.sourceId ?? null,
+      catalogKind: e.catalogKind || null, polygonIndex: e.polygonIndex ?? null, distanceM };
+  }
+  return best;
+}
+
+function nearestStructure(x, z, structs) {
+  let best = null;
+  for (const st of structs || []) {
+    const distanceM = Math.max(0, ptPoly([x, z], st.pts) - st.hw);
+    if (!Number.isFinite(distanceM) || (best && distanceM >= best.distanceM)) continue;
+    best = { type: 'structure', sourceId: st.sourceId ?? null, catalogKind: st.catalogKind || st.kind || null,
+      polygonIndex: null, distanceM };
+  }
+  return best;
+}
+
+function nearestReached(point, reached) {
+  let best = null;
+  for (const q of reached || []) {
+    const distanceM = Math.hypot(q[0] - point[0], q[1] - point[1]);
+    if (best && distanceM >= best.distanceM) continue;
+    best = { point: q, distanceM };
+  }
+  return best;
+}
+
+function diagnoseWaypoint(w, reached, model, structs) {
+  const b = nearestBuilding(w.p[0], w.p[1], model);
+  const s = nearestStructure(w.p[0], w.p[1], structs);
+  const nearest = b && s ? (b.distanceM <= s.distanceM ? b : s) : (b || s || null);
+  const reachedNear = nearestReached(w.p, reached);
+  return {
+    waypoint: w.name, point: w.p, targetY: w.y ?? null,
+    nearestReached: reachedNear?.point || null, nearestReachedM: reachedNear?.distanceM ?? null,
+    nearest, nearestSourceId: nearest?.sourceId ?? null, nearestCatalogKind: nearest?.catalogKind ?? null,
+    nearestPolygonIndex: nearest?.polygonIndex ?? null, nearestDistanceM: nearest?.distanceM ?? null,
+    nearestBlocker: b, nearestStructure: s,
+  };
+}
+
+function polygonProbe(polygon, hole = false) {
+  const ring = hole ? polygon?.holes?.[0] : polygon?.outer;
+  if (!Array.isArray(ring) || ring.length < 3) return null;
+  const candidates = [];
+  const average = ring.reduce((a, q) => [a[0] + q[0], a[1] + q[1]], [0, 0]);
+  candidates.push([average[0] / ring.length, average[1] / ring.length]);
+  const xs = ring.map((q) => q[0]), zs = ring.map((q) => q[1]);
+  candidates.push([(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...zs) + Math.max(...zs)) / 2]);
+  for (let gz = 0; gz < 7; gz++) for (let gx = 0; gx < 7; gx++) candidates.push([
+    Math.min(...xs) + (gx + 0.5) * (Math.max(...xs) - Math.min(...xs)) / 7,
+    Math.min(...zs) + (gz + 0.5) * (Math.max(...zs) - Math.min(...zs)) / 7,
+  ]);
+  return candidates.find(([x, z]) => pointInProjectedArea(x, z, { outer: ring, holes: [] })
+    && (!hole || pointInProjectedArea(x, z, { outer: polygon.outer, holes: [] }))) || null;
+}
+
+function rawStructureWays(fixture) {
+  return (fixture?.responses?.roads?.elements || []).filter((w) => w?.type === 'way'
+    && Array.isArray(w.geometry) && w.geometry.length >= 2
+    && (w.tags?.bridge || strucTunnel(w.tags || {})));
+}
+
+function polylineDistance(a, b) {
+  if (!a?.length || !b?.length) return Infinity;
+  const direct = Math.hypot(a[0][0] - b[0][0], a[0][1] - b[0][1])
+    + Math.hypot(a[a.length - 1][0] - b[b.length - 1][0], a[a.length - 1][1] - b[b.length - 1][1]);
+  const reverse = Math.hypot(a[0][0] - b[b.length - 1][0], a[0][1] - b[b.length - 1][1])
+    + Math.hypot(a[a.length - 1][0] - b[0][0], a[a.length - 1][1] - b[0][1]);
+  return Math.min(direct, reverse);
+}
+
+function annotateStructures(structs, fixture, center) {
+  const raws = rawStructureWays(fixture).map((w) => ({
+    ...w, world: w.geometry.map((p) => llToWorld(p.lat, p.lon ?? p.lng, center)),
+  }));
+  const used = new Set();
+  for (const st of structs || []) {
+    let best = null;
+    for (const raw of raws) {
+      if (used.has(raw.id)) continue;
+      if (st.kind === '橋' ? !raw.tags?.bridge : raw.tags?.bridge) continue;
+      const score = polylineDistance(st.pts, raw.world);
+      if (!best || score < best.score) best = { raw, score };
+    }
+    if (best && best.score <= Math.max(20, st.hw * 4)) {
+      used.add(best.raw.id);
+      st.sourceId = best.raw.id == null ? null : `way/${best.raw.id}`;
+    } else st.sourceId = null;
+    st.catalogKind = st.kind;
+  }
+  return structs;
+}
+
+function fixtureContract(v, fixture) {
+  const capturedTeam = Number(fixture?.team);
+  const team = Number.isFinite(capturedTeam) ? capturedTeam : TEAM;
+  const cfg = venueConfig(v, team);
+  const expectedBBox = battleBBox(cfg);
+  const observedBBox = fixture?.bbox || {};
+  const observedCenter = fixture?.center || {};
+  const bboxKeys = ['minLat', 'minLng', 'maxLat', 'maxLng'];
+  const bboxOk = bboxKeys.every((k) => near(Number(observedBBox[k]), Number(expectedBBox[k]), 1e-9));
+  const centerOk = ['lat', 'lng', 'rot'].every((k) => near(Number(observedCenter[k]), Number(cfg.center[k]), 1e-9));
+  const observedQueries = fixtureQueries(fixture);
+  const expectedQueries = fixtureQueries({ ...fixture, bbox: expectedBBox });
+  const queryTextOk = !!fixture?.queries?.features?.text && !!fixture?.queries?.roads?.text
+    && fixture.queries.features.text === expectedQueries.features
+    && fixture.queries.roads.text === expectedQueries.roads;
+  const observedQueryTextOk = !!fixture?.queries?.features?.text && !!fixture?.queries?.roads?.text
+    && fixture.queries.features.text === observedQueries.features
+    && fixture.queries.roads.text === observedQueries.roads;
+  const venueIdOk = fixture?.venue?.id === v.id;
+  const teamOk = capturedTeam === TEAM;
+  return {
+    venueId: v.id, capturedVenueId: fixture?.venue?.id ?? null, capturedTeam, teamOk,
+    venueIdOk, bboxOk, centerOk, queryTextOk, observedQueryTextOk,
+    ok: venueIdOk && teamOk && bboxOk && centerOk && queryTextOk,
+    expectedBBox, observedBBox, expectedCenter: cfg.center, observedCenter,
+  };
+}
+
+function preflightFixtures(list) {
+  if (!FIXTURE_MODE || !FIXTURE_NAMES.size) return;
+  console.log('固定 fixture 契約(venue.id / team / bbox / center / query)');
+  for (const name of FIXTURE_NAMES) {
+    const fixture = loadOsmFixture(name, FIXTURE_DIR);
+    if (!fixture) {
+      ok(false, `${name}:找不到或版本/schema 不符(${FIXTURE_DIR})`);
+      continue;
+    }
+    const checks = list.map((v) => fixtureContract(v, fixture));
+    const matches = checks.filter((c) => c.ok);
+    if (matches.length === 1) {
+      const contract = matches[0];
+      FIXTURE_BINDINGS.set(contract.venueId, { fixture, contract });
+      ok(true, `${name} ↔ ${contract.venueId}:正式契約相容`);
+      continue;
+    }
+    ok(false, `${name}:沒有唯一相容的正式 venue.id；fixture 保持未綁定`);
+    console.error(`      觀測 venue.id=${fixture.venue?.id ?? 'null'} team=${fixture.team ?? 'null'}`
+      + ` center=${JSON.stringify(fixture.center)} bbox=${JSON.stringify(fixture.bbox)}`);
+    const ranked = checks.slice().sort((a, b) => {
+      const score = (c) => Number(!c.venueIdOk) + Number(!c.teamOk) + Number(!c.bboxOk)
+        + Number(!c.centerOk) + Number(!c.queryTextOk);
+      return score(a) - score(b) || String(a.venueId).localeCompare(String(b.venueId));
+    }).slice(0, 3);
+    for (const c of ranked) console.error(`      ${c.venueId}: venue.id=${c.venueIdOk ? '✓' : '✗'}`
+      + ` team=${c.teamOk ? '✓' : '✗'} bbox=${c.bboxOk ? '✓' : '✗'} center=${c.centerOk ? '✓' : '✗'}`
+      + ` query(expected)=${c.queryTextOk ? '✓' : '✗'} query(observed)=${c.observedQueryTextOk ? '✓' : '✗'}`
+      + ` expectedCenter=${JSON.stringify(c.expectedCenter)} expectedBBox=${JSON.stringify(c.expectedBBox)}`);
+  }
+  console.log('');
+}
+
 async function scanVenue(v) {
   const cfg = venueConfig(v, TEAM);
   const bbox = battleBBox(cfg);
   let fixture = null;
+  let contract = null;
   if (FIXTURE_MODE) {
-    if (FIXTURE_NAMES.size && ![...FIXTURE_NAMES].some((name) => name === v.id)) {
-      // Alias fixture 仍可透過 metadata.venue.id 命中；只有完全不屬於本次選取才跳過。
-      fixture = loadOsmFixtureForVenue(v.id, FIXTURE_NAMES, FIXTURE_DIR);
-      if (!fixture) return { id: v.id, skip: '不在指定 fixture 名單', selected: false };
+    if (FIXTURE_NAMES.size) {
+      const binding = FIXTURE_BINDINGS.get(v.id);
+      if (!binding) return { id: v.id, skip: '不在契約相容的指定 fixture 名單', selected: false };
+      fixture = binding.fixture;
+      contract = binding.contract;
     } else {
       fixture = loadOsmFixtureForVenue(v.id, FIXTURE_NAMES, FIXTURE_DIR);
     }
     if (!fixture) return { id: v.id, skip: `找不到固定 fixture(${FIXTURE_DIR})`, unverified: true };
+    contract = contract || fixtureContract(v, fixture);
+    if (!contract.ok) return {
+      id: v.id, skip: '固定 fixture 未通過 venue.id/team/bbox/center/query 契約',
+      unverified: true, fixtureMismatch: contract,
+    };
   }
   const sampleElev = await elevSampler(bbox);
   if (!sampleElev) return { id: v.id, skip: '取不到高程磚', unverified: true };
@@ -262,11 +614,19 @@ async function scanVenue(v) {
   const { structs, marks, carveRuns } = osm
     ? buildStructs(osm, cfg.center, hf)
     : { structs: [], marks: [], carveRuns: [] };
+  annotateStructures(structs, fixture, cfg.center);
   // 站立面吃**開挖後**的地形(V-C):引道路塹/地下道斜坡是挖出來的,拿天然地形走那一段
   // 就是把一條通的路報成不通。淨空檢查刻意仍吃 `hf.heightAt`(天然)—— 覆蓋門檻問的是
   // 「這座山藏不藏得住頂板」,那本來就該用未開挖的山來問。
   const ground = carveRuns.length ? makeCarvedField(hf, carveRuns) : hf.heightAt;
-  const surfacesAt = makeSurfaces(ground, structs);
+  const building = osmBuildingModel(osm, cfg, ground);
+  const roofPlatforms = building.mode === 'exact-runtime'
+    ? building.platforms.map((p, i) => ({
+      ...p,
+      ...(BREAK_OSM_HOLE ? { holes: [] } : {}),
+      ...(BREAK_OSM_ROOF && i === 0 ? { active: false } : {}),
+    })) : [];
+  const surfacesAt = makeSurfaces(ground, structs, roofPlatforms);
 
   // 真 BattleSim:塔/主堡/碉堡的碰撞量體與塔位解都由它給(MUST NOT 另解一次)
   const sim = new BattleSim(cfg);
@@ -274,6 +634,10 @@ async function scanVenue(v) {
   for (const [id, e] of [...sim.ents]) if (e.kind !== 'tower' && e.kind !== 'base' && e.kind !== 'bunker') sim.ents.delete(id);
   const probe = sim.addHero('SWARM', 'p_probe', BIGGEST);
   sim.ents.delete(probe.id);   // 探針自己不參與碰撞(僚機由 pid 相同自動略過)
+  const expectedBlockers = building.mode === 'exact-runtime' ? building.blockers : [];
+  if (BREAK_OSM_BLOCKER && expectedBlockers.length) BREAK_OSM_APPLIED.blocker = true;
+  const submittedBlockers = BREAK_OSM_APPLIED.blocker ? expectedBlockers.slice(1) : expectedBlockers;
+  sim.setWorld({ occ: submittedBlockers.map((b) => [b.x, b.z, b.r, b.h, b.hw2, b.hd2, b.ry]) });
 
   const B = (side) => llToWorld(cfg.bases[side][0], cfg.bases[side][1], cfg.center);
   // 主堡中心是工事碰撞量體內部，直接從中心泛洪會被真 `solidResolve` 擋在原地。
@@ -294,20 +658,68 @@ async function scanVenue(v) {
 
   const clear = clearance(structs, hf);
   const reached = flood(seeds, surfacesAt, hf, ground, sim, probe);
-  const miss = [];
+  const missWaypoints = [];
   for (const w of wps) {
     const hit = reached.some(([x, z, y]) =>
       Math.hypot(x - w.p[0], z - w.p[1]) <= HIT_R && (w.y == null || Math.abs(y - w.y) <= BUCKET_M));
-    if (!hit) miss.push(w.name);
+    if (!hit) missWaypoints.push(w);
   }
-  return { id: v.id, cells: reached.length, wps: wps.length, miss, structs: structs.length,
-    carve: carveRuns.length, osm: !!osm, clear };
+  const miss = missWaypoints.map((w) => w.name);
+  const diagnostics = missWaypoints.map((w) => diagnoseWaypoint(w, reached, building, structs));
+  const osmChecks = [];
+  if (building.mode === 'exact-runtime') {
+    const polygonInput = building.areas
+      .filter((a) => a.classification?.generator === 'polygonBuilding')
+      .reduce((n, a) => n + (a.worldPolygons || []).length, 0);
+    const holeInput = building.areas
+      .filter((a) => a.classification?.generator === 'polygonBuilding')
+      .reduce((n, a) => n + (a.worldPolygons || []).reduce((m, p) => m + (p.holes?.length || 0), 0), 0);
+    if (BREAK_OSM_HOLE && holeInput > 0) BREAK_OSM_APPLIED.hole = true;
+    if (BREAK_OSM_ROOF && building.platforms.length > 0) BREAK_OSM_APPLIED.roof = true;
+    osmChecks.push({ kind: 'blocker', expected: expectedBlockers.length, submitted: submittedBlockers.length,
+      ok: !BREAK_OSM_BLOCKER && submittedBlockers.length === expectedBlockers.length });
+    osmChecks.push({ kind: 'roof', expected: building.generated, actual: building.platforms.length,
+      active: roofPlatforms.filter((p) => p.active !== false).length,
+      ok: !BREAK_OSM_ROOF && building.platforms.length === building.generated
+        && roofPlatforms.length === building.platforms.length });
+    osmChecks.push({ kind: 'hole', expected: holeInput, actual: building.holes,
+      ok: !BREAK_OSM_HOLE && building.holes === holeInput });
+    const holePlatform = building.platforms.find((p) => p.holes?.length && polygonProbe(p, true));
+    if (holePlatform) {
+      const hp = polygonProbe(holePlatform, true);
+      const regular = makeSurfaces(ground, structs, [holePlatform]);
+      const mutated = makeSurfaces(ground, structs, [{ ...holePlatform, holes: [] }]);
+      const regularHasRoof = regular(hp[0], hp[1]).some((s) => s.roof && s.sourceId === holePlatform.sourceId);
+      const mutatedHasRoof = mutated(hp[0], hp[1]).some((s) => s.roof && s.sourceId === holePlatform.sourceId);
+      osmChecks.push({ kind: 'hole-mutation', point: hp, ok: !regularHasRoof && mutatedHasRoof,
+        regularHasRoof, mutatedHasRoof });
+    } else if (holeInput) osmChecks.push({ kind: 'hole-mutation', ok: false, reason: '找不到可驗證洞內 probe' });
+    const roofPlatform = building.platforms.find((p) => polygonProbe(p));
+    if (roofPlatform) {
+      const rp = polygonProbe(roofPlatform);
+      const roofAt = makeSurfaces(ground, structs, roofPlatforms)(rp[0], rp[1])
+        .some((s) => s.roof && s.sourceId === roofPlatform.sourceId && s.y === roofPlatform.y);
+      osmChecks.push({ kind: 'roof-mutation', point: rp, ok: !BREAK_OSM_ROOF && roofAt, roofAt });
+    } else osmChecks.push({ kind: 'roof-mutation', ok: false, reason: '找不到可驗證屋頂 probe' });
+  } else if (building.areas.length) {
+    osmChecks.push({ kind: 'building-runtime', ok: false,
+      reason: building.error?.message || 'production osmBuilding.js 未能在 Node harness 執行' });
+  }
+  return {
+    id: v.id, cells: reached.length, wps: wps.length, miss, diagnostics, structs: structs.length,
+    carve: carveRuns.length, osm: !!osm, clear, fixtureContract: contract,
+    buildingMode: building.mode, buildingAreas: building.areas.length, buildingGenerated: building.generated,
+    buildingBlockers: expectedBlockers.length, buildingRoofs: building.platforms.length,
+    buildingHoles: building.holes, buildingError: building.error?.message || null, osmChecks,
+  };
 }
 
 // ---- 主流程 ----
 console.log(`== 兵線與結構可通行稽核 ==  ${TEAM}v${TEAM}、格寬 ${CELL}m、高度桶 ${BUCKET_M}m、`
   + `量體取最大機體 ${BIGGEST}(${heroTargetH(CHARACTERS[BIGGEST].kind, BIGGEST).toFixed(1)}m)`
-  + `${BREAK_SLOPE ? '  ⚠ 反向驗證模式(坡度閘寫死成全擋)' : ''}\n`);
+  + `${BREAK_SLOPE ? '  ⚠ 反向驗證模式(坡度閘寫死成全擋)' : ''}`
+  + `${BREAK_OSM_HOLE ? '  ⚠ break-hole' : ''}${BREAK_OSM_BLOCKER ? '  ⚠ break-blocker' : ''}`
+  + `${BREAK_OSM_ROOF ? '  ⚠ break-roof' : ''}\n`);
 
 // ---- 淨空的資料層檢查(V-D;不需網路、不需場地,CI 一定跑得到)----
 // `CLAUDE.md` §5 那條「改 SOLDIER_H / HERO_SIZE.mul / BRIDGE_RISE / TUN.CLEAR 要重驗
@@ -354,6 +766,7 @@ console.log('');
 }
 
 const list = VENUES.filter((v) => !ONLY.length || ONLY.includes(v.id));
+preflightFixtures(list);
 const results = [];
 let noOsm = 0;
 let unverified = 0;
@@ -368,13 +781,36 @@ for (const v of list) {
   if (r.crash) { ok(false, `${v.id}:掃描拋出例外(不是降級,是 bug)—— ${r.crash.message}`); continue; }
   if (r.skip) {
     console.log(`  ${v.id}  ⏭  ${r.skip}`);
-    if (r.unverified) { unverified++; ok(false, `${v.id}:外部資料缺失，未完成可通行驗證`); }
+    if (r.fixtureMismatch) {
+      unverified++;
+      ok(false, `${v.id}:fixture 契約不相容，未綁定/未完成可通行驗證`);
+      console.error(`      fixture observed center=${JSON.stringify(r.fixtureMismatch.observedCenter)}`
+        + ` bbox=${JSON.stringify(r.fixtureMismatch.observedBBox)}`
+        + ` expected center=${JSON.stringify(r.fixtureMismatch.expectedCenter)}`
+        + ` bbox=${JSON.stringify(r.fixtureMismatch.expectedBBox)}`);
+    } else if (r.unverified) { unverified++; ok(false, `${v.id}:外部資料缺失，未完成可通行驗證`); }
     continue;
   }
   if (!r.osm) noOsm++;
   console.log(`  ${v.id}  ${((Date.now() - t0) / 1000).toFixed(1)}s  可站立節點 ${r.cells}`
-    + `・結構 ${r.structs}・開挖走廊 ${r.carve}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`);
+    + `・結構 ${r.structs}・開挖走廊 ${r.carve}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`
+    + `・OSM建物 ${r.buildingMode}/${r.buildingAreas}面/${r.buildingBlockers} blockers/${r.buildingRoofs} roofs`);
   ok(r.miss.length === 0, `${v.id}:${r.wps} 個航點全部可達${r.miss.length ? ` —— 不可達:${r.miss.join('、')}` : ''}`);
+  for (const d of r.diagnostics || []) {
+    const n = d.nearest || {};
+    console.error(`      waypoint=${d.waypoint} nearest=${n.type || 'none'}`
+      + ` sourceId=${n.sourceId ?? 'null'} catalogKind=${n.catalogKind ?? 'null'}`
+      + ` polygonIndex=${n.polygonIndex ?? 'null'} distance=${Number.isFinite(n.distanceM) ? n.distanceM.toFixed(2) : 'null'}m`
+      + ` nearestReached=${Number.isFinite(d.nearestReachedM) ? d.nearestReachedM.toFixed(2) : 'null'}m`);
+  }
+  if (r.buildingMode === 'pure-data') {
+    unverified++;
+    console.error(`      OSM建物純資料診斷：${r.buildingError || 'production osmBuilding.js 未能在 Node harness 執行'}；未納入泛洪`);
+  }
+  for (const c of r.osmChecks || []) {
+    const detail = c.reason || `expected=${c.expected ?? '-'} actual=${c.actual ?? c.submitted ?? '-'}${c.point ? ` probe=${c.point.join(',')}` : ''}`;
+    ok(c.ok, `${v.id}:OSM ${c.kind} 契約${c.ok ? '成立' : `失敗(${detail})`}`);
+  }
   if (!r.osm) { unverified++; ok(false, `${v.id}:圖資缺失，只驗地形層，結構航點未驗`); }
   // 淨空(V-D):橋下塞不塞得下最大機體。洞體的「山藏不住頂板」只印出來當診斷 ——
   // 那一段本來就該被 `tunnelWallProfile` 判成明隧道(柱列側是開的),不是破圖。
@@ -387,6 +823,14 @@ for (const v of list) {
     console.log(`      洞體覆蓋:${r.clear.bore.length} 座,最薄 `
       + `${Math.min(...r.clear.bore.map((b) => b.worst)).toFixed(2)}m`
       + `${shallow ? `(其中 ${shallow} 座有裸露段 ⇒ 應由 tunnelWallProfile 判成明隧道)` : ''}`);
+  }
+}
+
+for (const [kind, requested] of Object.entries({
+  hole: BREAK_OSM_HOLE, blocker: BREAK_OSM_BLOCKER, roof: BREAK_OSM_ROOF,
+})) {
+  if (requested && !BREAK_OSM_APPLIED[kind]) {
+    ok(false, `--break-osm-${kind}:找不到適用的真實 OSM 建物，反向驗證未執行`);
   }
 }
 
