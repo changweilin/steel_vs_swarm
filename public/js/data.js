@@ -6016,9 +6016,9 @@ export const balanceFingerprint = () => {
 export const ENV = {
   seasons: {
     spring: { name: '春', foliage: 0x6fbf58, grass: 0x7cb85a, accent: 0xe8a0c8 },
-    summer: { name: '夏', foliage: 0x3e8f3a, grass: 0x5a9e46, accent: 0xffe08a },
+    summer: { name: '夏', foliage: 0x3e8f3a, grass: 0x5a9e46, accent: 0x529e46 },
     autumn: { name: '秋', foliage: 0xc9762b, grass: 0xa9924f, accent: 0xd94f2b },
-    winter: { name: '冬', foliage: 0x9fb3ad, grass: 0x9aa08d, accent: 0xe8f0f4 },
+    winter: { name: '冬', foliage: 0x9fb3ad, grass: 0x9aa08d, accent: 0x8a7258 },
   },
   // 開場時段(**只是起點**:開打之後時間會一直走,見下方 DAYCLOCK)。
   // 排序 = 一天的順序,讓下拉選單讀起來就是時間軸。
@@ -6245,8 +6245,12 @@ export function weatherVectorAt(season = 'summer', startTime = 'day', startWeath
 
 /**
  * 將 7 維天氣屬性解算為物理與表現層控制參數 (條件觸發判定門檻與各動態係數)
+ * 支援大雪結束後持續凍結一段時間 (thawHoldS) 與連續平滑解凍融化動態過程。
+ * @param {object} weatherVec 天氣向量
+ * @param {object} [prevDyn] 上一幀動態狀態
+ * @param {number} [dt=0] 幀時間差 (秒)
  */
-export function resolveWeatherDynamics(weatherVec) {
+export function resolveWeatherDynamics(weatherVec, prevDyn = null, dt = 0) {
   const v = weatherVec || WEATHER_PRESETS.clear;
   const clouds = v.clouds ?? 0;
   const fog = v.fog ?? 0;
@@ -6267,9 +6271,37 @@ export function resolveWeatherDynamics(weatherVec) {
   // 3. 沙量: 75% 以上才會開始顯現
   const effectiveSand = sand >= 75 ? (sand - 75) / 25 : 0;
 
-  // 4. 雪量: 75% 且烏雲時 (>50%) 才會真的下雪; 90% 時水波凍結、船隻停止、地面積雪
+  // 4. 雪量與水域漸進凍結 / 融化滯後 (Thermal Inertia / Thaw Delay):
+  // 降雪時水面漸進結冰；大雪結束後持續凍結一段時間 (thawHoldS) 才會慢慢融化恢復起伏
   const effectiveSnow = (snow >= 75 && isDarkCloud) ? ((snow - 75) / 25) * cloudDarkness : 0;
-  const isFrozen = snow >= 90;
+  const targetFreeze = Math.max(0, Math.min(1.0, Math.max(effectiveSnow, (snow - 60) / 30)));
+
+  let freezeFactor = targetFreeze;
+  let thawHoldS = prevDyn?.thawHoldS ?? (targetFreeze >= 0.80 ? 18.0 : 0);
+
+  if (prevDyn && typeof prevDyn.freezeFactor === 'number' && dt > 0) {
+    if (targetFreeze >= prevDyn.freezeFactor) {
+      // 降雪中或降雪增強: 快速跟隨結冰並維持解凍滯後計時器
+      freezeFactor = Math.min(targetFreeze, prevDyn.freezeFactor + dt * 0.45);
+      if (freezeFactor >= 0.80) thawHoldS = 18.0; // 深度凍結後保持 18 秒保溫
+    } else {
+      // 大雪結束或減弱: 保溫期維持凍結狀態，保溫結束後平滑融化解凍
+      if (thawHoldS > 0) {
+        if (dt <= thawHoldS) {
+          thawHoldS -= dt;
+          freezeFactor = prevDyn.freezeFactor;
+        } else {
+          const meltDt = dt - thawHoldS;
+          thawHoldS = 0;
+          freezeFactor = Math.max(targetFreeze, prevDyn.freezeFactor - meltDt * 0.12);
+        }
+      } else {
+        // 平緩融化解凍動態過程 (約 8~10 秒平滑過渡回正常波浪)
+        freezeFactor = Math.max(targetFreeze, prevDyn.freezeFactor - dt * 0.12);
+      }
+    }
+  }
+  const isFrozen = freezeFactor >= 0.98;
 
   // 5. 雷量: 75% 以上才會開始打雷
   const effectiveThunder = thunder >= 75 ? (thunder - 75) / 25 : 0;
@@ -6277,11 +6309,13 @@ export function resolveWeatherDynamics(weatherVec) {
   // 6. 霧量: 75% 以上才會開始起霧 (0~1.0 倍率)
   const effectiveFog = fog >= 75 ? (fog - 75) / 25 : 0;
 
-  // 7. 風量與水波 (水波若凍結則 amp 與 speed 歸零)
+  // 7. 風量與水波 (水波隨降雪凍結係數漸進平緩衰減至完全平坦，解凍時平緩復甦)
   const windAmp = 0.5 + (wind / 100) * 2.2;
   const windFreq = 0.7 + (wind / 100) * 1.3;
-  const waveAmp = isFrozen ? 0 : (0.4 + (wind / 100) * 2.0);
-  const waveSpeed = isFrozen ? 0 : (0.5 + (wind / 100) * 1.6);
+  const rawWaveAmp = 0.4 + (wind / 100) * 2.0;
+  const rawWaveSpeed = 0.5 + (wind / 100) * 1.6;
+  const waveAmp = isFrozen ? 0 : rawWaveAmp * (1.0 - freezeFactor);
+  const waveSpeed = isFrozen ? 0 : rawWaveSpeed * (1.0 - freezeFactor);
 
   // 8. 霧量與能見度 (near / far 倍率，霧量未達 75% 時維持基準能見度)
   const fogNear = Math.max(0.02, 0.55 - effectiveFog * 0.51);
@@ -6306,7 +6340,8 @@ export function resolveWeatherDynamics(weatherVec) {
   return {
     clouds, fog, wind, rain, sand, snow, thunder, windDirDeg, windDir,
     isDarkCloud, cloudDarkness,
-    effectiveRain, effectiveSand, effectiveSnow, isFrozen, effectiveThunder, effectiveFog,
+    effectiveRain, effectiveSand, effectiveSnow, isFrozen, freezeFactor, thawHoldS,
+    effectiveThunder, effectiveFog,
     windAmp, windFreq, waveAmp, waveSpeed,
     fogNear, fogFar, light,
     dominantWeather: dominant,

@@ -954,6 +954,17 @@ export function setWeatherDynamics(dyn) {
 export function isWeatherFrozen() {
   return _weatherWind.waveAmp.value <= 0.001;
 }
+
+/** 取得當前全域天氣風浪動態資訊 (供環境落花/落葉/微粒參考) */
+export function getWeatherDynamics() {
+  return {
+    windAmp: _weatherWind.amp.value,
+    windFreq: _weatherWind.freq.value,
+    waveAmp: _weatherWind.waveAmp.value,
+    waveSpeed: _weatherWind.waveSpeed.value,
+    windDir: [_windDir.value.x, _windDir.value.y],
+  };
+}
 // 玩家位移擾動的兩支共享 uniform(同 `_windT` 的 idiom:一份物件餵給所有軟性材質)。
 // 全槽 `spd = 0` ⇒ 位移項在著色器裡早退 ⇒ **逐位元同舊制**。
 const _charPos = { value: Array.from({ length: CHAR.N }, () => new THREE.Vector3()) };
@@ -2171,6 +2182,7 @@ ${CEL_SEA_GLSL}
         // 相位減去 celSeaH ⇒ 浪一來泡沫沖上岸(**MUST 吃同一支** —— 自己再寫一次相位的話
         // 泡沫的沖刷與浪峰會差半個波長)。深度 ≥ RANGE_M ⇒ 恆 0 ⇒ 中性場沒有泡沫。
         float celFoam( vec2 celFxz ) {
+          if ( uWeatherWaveAmp <= 0.001 ) return 0.0;
           vec2 celFuv = clamp( ( celFxz - uSeaRect.xy ) * uSeaRect.zw, 0.0, 1.0 );
           float celFd = texture2D( uSeaField, celFuv ).r * ${FOAM.RANGE_M.toFixed(2)};
           float celFade = clamp( 1.0 - celFd / ${FOAM.RANGE_M.toFixed(2)}, 0.0, 1.0 );
