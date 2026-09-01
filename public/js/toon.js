@@ -2171,6 +2171,7 @@ ${CEL_SEA_GLSL}
         // 相位減去 celSeaH ⇒ 浪一來泡沫沖上岸(**MUST 吃同一支** —— 自己再寫一次相位的話
         // 泡沫的沖刷與浪峰會差半個波長)。深度 ≥ RANGE_M ⇒ 恆 0 ⇒ 中性場沒有泡沫。
         float celFoam( vec2 celFxz ) {
+          if ( uWeatherWaveAmp <= 0.001 ) return 0.0;
           vec2 celFuv = clamp( ( celFxz - uSeaRect.xy ) * uSeaRect.zw, 0.0, 1.0 );
           float celFd = texture2D( uSeaField, celFuv ).r * ${FOAM.RANGE_M.toFixed(2)};
           float celFade = clamp( 1.0 - celFd / ${FOAM.RANGE_M.toFixed(2)}, 0.0, 1.0 );

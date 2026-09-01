@@ -6267,9 +6267,9 @@ export function resolveWeatherDynamics(weatherVec) {
   // 3. 沙量: 75% 以上才會開始顯現
   const effectiveSand = sand >= 75 ? (sand - 75) / 25 : 0;
 
-  // 4. 雪量: 75% 且烏雲時 (>50%) 才會真的下雪; 90% 時水波凍結、船隻停止、地面積雪
+  // 4. 雪量: 75% 且烏雲時 (>50%) 才會真的下雪; 75% 以上水波凍結無起伏、船隻停止、地面積雪
   const effectiveSnow = (snow >= 75 && isDarkCloud) ? ((snow - 75) / 25) * cloudDarkness : 0;
-  const isFrozen = snow >= 90;
+  const isFrozen = snow >= 75 || effectiveSnow > 0.01;
 
   // 5. 雷量: 75% 以上才會開始打雷
   const effectiveThunder = thunder >= 75 ? (thunder - 75) / 25 : 0;
