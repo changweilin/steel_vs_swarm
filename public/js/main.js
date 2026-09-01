@@ -2312,6 +2312,7 @@ function installDevSceneHook() {
         drawCalls: Number(info.render?.calls || 0),
         triangles: Number(info.render?.triangles || 0),
         points: Number(info.render?.points || 0), lines: Number(info.render?.lines || 0),
+        glError: Number(renderer.getContext()?.getError?.() || 0),
         camera: {
           position: [camera.position.x, camera.position.y, camera.position.z],
           rotation: [camera.rotation.x, camera.rotation.y, camera.rotation.z],

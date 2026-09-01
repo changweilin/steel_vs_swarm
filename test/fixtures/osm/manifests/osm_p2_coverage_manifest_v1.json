@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "schema": "osm-p2-coverage-manifest-v1",
+  "source": "tools/audit_osm_fixtures.mjs",
+  "rows": [
+    {
+      "category": "hospital",
+      "fixture": "p2_hospital_campus",
+      "sourceId": "way/1154453164",
+      "requiredTags": {
+        "building": "hospital"
+      }
+    },
+    {
+      "category": "industrial",
+      "fixture": "p2_hospital_campus",
+      "sourceId": "way/1154453180",
+      "requiredTags": {
+        "building": "industrial",
+        "man_made": "cooling"
+      }
+    },
+    {
+      "category": "utility",
+      "fixture": "p2_ntu_utility_park_farm_forest",
+      "sourceId": "way/1291566860",
+      "requiredTags": {
+        "power": "substation",
+        "utility": "power"
+      }
+    },
+    {
+      "category": "park",
+      "fixture": "p2_ntu_utility_park_farm_forest",
+      "sourceId": "way/299815319",
+      "requiredTags": {
+        "leisure": "park"
+      }
+    },
+    {
+      "category": "sports",
+      "fixture": "p2_ntu_utility_park_farm_forest",
+      "sourceId": "way/279686642",
+      "requiredTags": {
+        "leisure": "pitch",
+        "sport": "basketball"
+      }
+    },
+    {
+      "category": "large_parking",
+      "fixture": "p2_ntu_utility_park_farm_forest",
+      "sourceId": "way/712494250",
+      "requiredTags": {
+        "amenity": "parking",
+        "parking": "underground"
+      }
+    },
+    {
+      "category": "farmland",
+      "fixture": "p2_ntu_utility_park_farm_forest",
+      "sourceId": "way/1434342367",
+      "requiredTags": {
+        "landuse": "farmland",
+        "crop": "rice"
+      }
+    },
+    {
+      "category": "forest",
+      "fixture": "p2_ntu_utility_park_farm_forest",
+      "sourceId": "way/1052293683",
+      "requiredTags": {
+        "landuse": "forest"
+      }
+    },
+    {
+      "category": "multi_outer_hospital",
+      "fixture": "p2_hospital_campus",
+      "sourceId": "relation/4637783",
+      "requiredTags": {
+        "type": "multipolygon",
+        "amenity": "hospital",
+        "healthcare": "hospital"
+      },
+      "requiredOuterCount": 29
+    },
+    {
+      "category": "courtyard_hospital",
+      "fixture": "p2_hospital_campus",
+      "sourceId": "relation/14026203",
+      "requiredTags": {
+        "type": "multipolygon",
+        "building": "hospital"
+      },
+      "requiredOuterCount": 1,
+      "requireInner": true
+    }
+  ]
+}

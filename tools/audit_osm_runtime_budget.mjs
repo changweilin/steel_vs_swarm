@@ -1,8 +1,8 @@
 // ============ 固定 OSM fixture runtime 預算證據稽核 ============
 // 讀固定 raw fixture，經正式 fixture parser → catalog/project → relay sanitize/fit，
 // 再以 `readSrc()` 編譯並執行 osmBuilding.js／osmAreaObjects.js 原文。Three 只用
-// 受控 trace 容器記錄 production 幾何；Node 沒有 WebGL，因此 draw call 欄位永遠
-// 標為 `unverified`，本稽核也因此以非零退出，不能把 batch 數冒充瀏覽器實測。
+// 受控 trace 容器記錄 production 幾何；Node 沒有 WebGL，draw call 只有在明確傳入
+// 瀏覽器 audit report 時才解除 `unverified`，不能把 batch 數冒充瀏覽器實測。
 //
 // 預設驗收 shibuya_dense、roppongi_underpass；可用 --only=a,b 或 --all。
 // 可輸出 --json=<path>。反向驗證（每個旗標都應退出非零）：
@@ -10,11 +10,13 @@
 //   --break-blocker     production 外環少一段 blocker，邊界數量必須不符
 //   --break-roof        production roof 少一個 polygon，roof polygon 必須不符
 //   --break-object-batch production object batch 改成逐件 key，批次增長必須被攔下
+//   --break-browser-report 將傳入 report 的 browserDrawCalls 改壞，必須維持非零
 // 替換命中數不符、反向測資不適用或壞版未被攔下，均是稽核失敗。
 
 import { performance } from 'node:perf_hooks';
-import { readdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { isAbsolute, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { readSrc } from './audit_src.mjs';
 import {
   DEFAULT_FIXTURE_DIR, FIXTURE_VERSION, fixtureOsm, fixturePath,
@@ -28,8 +30,11 @@ import {
 import { llToXZ } from '../public/js/data.js';
 import { OSM_RELAY, osmRelayFit, sanitizeOsmRelay } from '../public/js/osmrelay.js';
 import { osmRoadsFromElements } from '../public/js/osmQuery.js';
+import { OSM_BROWSER_MANIFEST } from './osm_browser_manifest.mjs';
 
 const argv = process.argv.slice(2);
+const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const SHOT_ROOT = resolve(ROOT, 'tools', '.shots');
 const valueArg = (name, fallback = null) => {
   const exact = argv.find((arg) => arg.startsWith(`${name}=`));
   if (exact) return exact.slice(name.length + 1);
@@ -41,6 +46,8 @@ const ONLY = new Set(String(valueArg('--only', '')).split(',').map((x) => x.trim
 const DIR = resolve(valueArg('--fixture-dir', DEFAULT_FIXTURE_DIR));
 const OUT = valueArg('--json');
 const REQUIRE_BROWSER = hasArg('--require-browser');
+const BROWSER_REPORT = valueArg('--browser-report');
+const BREAK_BROWSER_REPORT = hasArg('--break-browser-report');
 const BREAKS = ['relay', 'blocker', 'roof', 'object-batch'].filter((name) => hasArg(`--break-${name}`));
 const DEFAULT_NAMES = ['shibuya_dense', 'roppongi_underpass'];
 const namesRequested = hasArg('--all')
@@ -792,6 +799,75 @@ function auditBreaks(records) {
   }
 }
 
+const BROWSER_EXPECTED_SHOTS = Object.freeze(Object.fromEntries(
+  Object.entries(OSM_BROWSER_MANIFEST.fixtures).map(([name, fixture]) =>
+    [name, Object.freeze(fixture.shots.map((shot) => shot.id))]),
+));
+
+function isWithin(root, target) {
+  const rel = relative(resolve(root), resolve(target));
+  return rel === '' || (!rel.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)
+    && rel !== '..' && !isAbsolute(rel));
+}
+
+function validateBrowserPayload(payload) {
+  const errors = [];
+  if (payload?.schema !== 'osm-browser-audit-v1') errors.push('schema 不是 osm-browser-audit-v1');
+  if (payload?.evidenceKind !== 'browser-webgl-renderer-info') errors.push('evidenceKind 不是 browser-webgl-renderer-info');
+  if (payload?.browserDrawCalls?.status !== 'verified') errors.push('browserDrawCalls.status 不是 verified');
+  const fixtureRows = payload?.fixtures && typeof payload.fixtures === 'object' ? payload.fixtures : {};
+  for (const [fixtureName, shotIds] of Object.entries(BROWSER_EXPECTED_SHOTS)) {
+    const row = fixtureRows[fixtureName];
+    if (!row || row.status !== 'verified') {
+      errors.push(`${fixtureName} fixture status 不是 verified`);
+      continue;
+    }
+    if (row.evidence?.fixture?.name !== fixtureName || row.evidence?.fixture?.status !== 'fitted') {
+      errors.push(`${fixtureName} fixture evidence 未 fitted`);
+    }
+    if (Number(row.evidence?.glError) !== 0) errors.push(`${fixtureName} glError 不是 0`);
+    if (!(Number(row.evidence?.rendererInfo?.calls) > 0)) errors.push(`${fixtureName} rendererInfo.calls 無效`);
+    const shots = Array.isArray(row.shots) ? row.shots : [];
+    for (const shotId of shotIds) {
+      const shot = shots.find((entry) => entry?.id === shotId);
+      if (!shot || shot.status !== 'verified') {
+        errors.push(`${fixtureName}/${shotId} shot status 不是 verified`);
+        continue;
+      }
+      if (!(Number(shot.drawCalls) > 0)) errors.push(`${fixtureName}/${shotId} drawCalls 無效`);
+      if (Number(shot.glError) !== 0) errors.push(`${fixtureName}/${shotId} glError 不是 0`);
+      for (const field of ['path', 'metaPath']) {
+        const value = shot[field];
+        if (typeof value !== 'string' || !value) {
+          errors.push(`${fixtureName}/${shotId} 缺少 ${field}`);
+          continue;
+        }
+        const file = resolve(ROOT, value);
+        if (!isWithin(SHOT_ROOT, file)) {
+          errors.push(`${fixtureName}/${shotId} ${field} 不在 tools/.shots`);
+          continue;
+        }
+        if (!existsSync(file) || statSync(file).size <= 0) errors.push(`${fixtureName}/${shotId} ${field} 不存在或為空`);
+      }
+    }
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+function readBrowserReport(reportPath) {
+  const resolved = resolve(reportPath);
+  if (!isWithin(SHOT_ROOT, resolved)) return { payload: null, errors: ['--browser-report 必須位於 tools/.shots/'] };
+  if (!existsSync(resolved)) return { payload: null, errors: [`找不到 browser report: ${resolved}`] };
+  try {
+    const payload = JSON.parse(readFileSync(resolved, 'utf8'));
+    return payload && typeof payload === 'object'
+      ? { payload, errors: [] }
+      : { payload: null, errors: ['browser report 必須是 JSON object'] };
+  } catch (error) {
+    return { payload: null, errors: [`browser report JSON 無法讀取: ${error.message}`] };
+  }
+}
+
 const records = [];
 for (const name of namesRequested) {
   if (!fixturePath(name, DIR)) {
@@ -817,16 +893,42 @@ if (!records.length) {
 }
 
 // Browser draw calls are deliberately not inferred from static mesh/batch counts.
-// This explicit red gate keeps the P4 browser requirement visible to CI/reviewers.
-fail++;
-console.error(`    ✗ browser drawCall 未驗（${REQUIRE_BROWSER ? '--require-browser 已要求' : 'Node static-only 模式'}；需要實際瀏覽器/WebGL renderer）`);
+// 只有固定瀏覽器 audit 產出的 report 能解除這道紅閘；Node trace 絕不冒充 WebGL。
+let browserEvidence = null;
+if (BROWSER_REPORT) {
+  const loaded = readBrowserReport(BROWSER_REPORT);
+  if (loaded.errors.length) {
+    fail++;
+    for (const error of loaded.errors) console.error(`    ✗ browser report: ${error}`);
+  } else if (BREAK_BROWSER_REPORT) {
+    const broken = JSON.parse(JSON.stringify(loaded.payload));
+    broken.browserDrawCalls = { ...(broken.browserDrawCalls || {}), status: 'failed' };
+    const caught = !validateBrowserPayload(broken).ok;
+    fail++;
+    console.error(`    ✗ --break-browser-report ${caught ? '已攔下壞版（預期紅字）' : '未攔下壞版'}`);
+  } else {
+    const checked = validateBrowserPayload(loaded.payload);
+    if (checked.ok) {
+      pass++;
+      browserEvidence = loaded.payload;
+      console.log('    ✓ browser report: schema/fixtures/shots/drawCalls/glError/PNG/sidecar 全部有效');
+    } else {
+      fail++;
+      for (const error of checked.errors) console.error(`    ✗ browser report: ${error}`);
+    }
+  }
+} else {
+  fail++;
+  console.error(`    ✗ browser drawCall 未驗（${REQUIRE_BROWSER ? '--require-browser 已要求，必須傳 --browser-report=<path>' : 'Node static-only 模式'}；不能以 batch 數冒充 WebGL）`);
+}
 
 const output = {
   version: 1,
   source: ['tools/osm_fixture.mjs', 'public/js/osmQuery.js', 'public/js/osmAreas.js', 'public/js/osmrelay.js',
     'public/js/osmBuilding.js', 'public/js/osmAreaObjects.js'],
   evidenceKind: 'node-static-batch',
-  browserDrawCalls: { status: 'unverified', requireBrowser: REQUIRE_BROWSER },
+  browserReport: BROWSER_REPORT ? resolve(BROWSER_REPORT) : null,
+  browserDrawCalls: browserEvidence?.browserDrawCalls || { status: 'unverified', requireBrowser: REQUIRE_BROWSER },
   relayLimit: OSM_RELAY.MAX_BYTES,
   fixtures: records.map((record) => record.report),
   pass,
