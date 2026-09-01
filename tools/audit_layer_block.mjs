@@ -242,14 +242,14 @@ console.log('\n=== Ⅴ 隧道頂板頂面 = 可站立結構面(擋得住 = 站�
     DECK_UNDER: num('DECK_UNDER'), MAX_MECH_H: num('MAX_MECH_H'), BLK_MARGIN: num('BLK_MARGIN') };
   // 測試地景沒有屋頂平台資料，仍須把 surfaceAt 閉包的新依賴明確注入，避免沙箱靜默偏離真品。
   const roofPlatformAtStub = () => null;
-  const mkSurf = (heightAt, tunAt, src = M) => {
+  const mkSurf = (heightAt, tunAt, src = M, deckAt = () => null) => {
     const P0 = src.indexOf('    terrain.surfaceAt = (x, z, curY) => {');
     const P1 = src.indexOf('\n    };', P0);
     if (P0 < 0 || P1 <= P0) throw new Error('main.js 找不到 surfaceAt(結構已變?)');
     const keys = ['heightAt', 'tunnelAt', 'deckY', 'blockerTop', 'roofPlatformAt', ...Object.keys(K)];
     return new Function(...keys,
       `const terrain = { heightAt };\n${src.slice(P0, P1 + 7)}\nreturn terrain.surfaceAt;`)(
-      heightAt, tunAt, () => null, () => null, roofPlatformAtStub, ...Object.keys(K).map((k) => K[k]));
+      heightAt, tunAt, deckAt, () => null, roofPlatformAtStub, ...Object.keys(K).map((k) => K[k]));
   };
   // 明隧道:頂板露在地形之外(側坡被 carveGalleryBands 挖到路面高)
   const GAL_H = TUN.floor + 1;                       // 洞外側坡地表(遠低於頂板 109)
@@ -273,6 +273,17 @@ console.log('\n=== Ⅴ 隧道頂板頂面 = 可站立結構面(擋得住 = 站�
   {
     const s = mkSurf(() => GAL_H, tunnelAt(true));
     ok(s(50, 0, TUN.roof) === GAL_H, 'Ⅴ open 段 MUST NOT 有可站的隱形頂板(A29;露天溝頭上是天空)');
+  }
+  // 低架橋：橋腹淨空不足最大機體時，執行期 MUST 把下方查詢導向橋面，
+  // 並由 ceilingAt 的 MAX_MECH_H 閘放棄橋下天花阻擋；否則引道會卡在「上不了橋又鑽不過去」的死區。
+  {
+    const lowDeck = mkSurf(() => 0, () => null, M, () => 5.5);
+    ok(lowDeck(50, 200, 0) === 5.5,
+      'Ⅴ 低架橋:底緣淨空不足時 surfaceAt MUST 強制上橋(不得卡在橋腹下)');
+    ok(/\(d - DECK_UNDER\) - h < MAX_MECH_H\)\) s = d;/.test(M),
+      'Ⅴ 低架橋:surfaceAt MUST 以 MAX_MECH_H 將低架段分類為橋面專用');
+    ok(/under - terrain\.heightAt\(x, z\) >= MAX_MECH_H/.test(M),
+      'Ⅴ 低架橋:ceilingAt MUST 只阻擋真正可鑽越的高架段');
   }
   // 反向對照:拿掉頂板站立面那一行 ⇒ 明隧道那組 MUST 立刻掉回側坡地表(= 使用者回報的踩空),
   // 而深埋/洞內/open 三組不動(證明差異單獨落在「頂板露出地形之外」這一種地形上)

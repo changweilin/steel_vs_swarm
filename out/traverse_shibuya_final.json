@@ -1,0 +1,290 @@
+[
+  {
+    "id": "taipei101",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "shibuya",
+    "cells": 579397,
+    "wps": 41,
+    "miss": [],
+    "diagnostics": [],
+    "structs": 11,
+    "carve": 12,
+    "osm": true,
+    "clear": {
+      "need": 4.7,
+      "bore": [
+        {
+          "worst": -13.94090528672271,
+          "at": 2220,
+          "total": 2415.4822903175923,
+          "kind": "隧道"
+        },
+        {
+          "worst": -10.763712681641664,
+          "at": 2184,
+          "total": 2229.928835782887,
+          "kind": "隧道"
+        },
+        {
+          "worst": -9.319830572542571,
+          "at": 352,
+          "total": 363.6928666974971,
+          "kind": "地下道"
+        },
+        {
+          "worst": -9,
+          "at": 0,
+          "total": 419.30329866506844,
+          "kind": "地下道"
+        },
+        {
+          "worst": -9.234252789509853,
+          "at": 12,
+          "total": 441.5553939766427,
+          "kind": "地下道"
+        }
+      ],
+      "deck": [
+        {
+          "worst": 0.45000000000000284,
+          "at": 40,
+          "total": 293.8622912734952,
+          "mode": "deck-only"
+        },
+        {
+          "worst": 0.45000000000000284,
+          "at": 168,
+          "total": 302.58660599970193,
+          "mode": "deck-only"
+        },
+        {
+          "worst": 0.45000000000000284,
+          "at": 572,
+          "total": 2452.57794111893,
+          "mode": "deck-only"
+        },
+        {
+          "worst": 0.45000000000000284,
+          "at": 1428,
+          "total": 2471.5268706145134,
+          "mode": "deck-only"
+        },
+        {
+          "worst": 5.798111123551045,
+          "at": 28,
+          "total": 114.17825227457892,
+          "mode": "underpass"
+        }
+      ]
+    },
+    "fixtureContract": {
+      "venueId": "shibuya",
+      "capturedVenueId": "shibuya",
+      "capturedTeam": 5,
+      "teamOk": true,
+      "venueIdOk": true,
+      "bboxOk": true,
+      "centerOk": true,
+      "queryTextOk": true,
+      "observedQueryTextOk": true,
+      "ok": true,
+      "expectedBBox": {
+        "minLat": 35.653456702998184,
+        "maxLat": 35.66800921884075,
+        "minLng": 139.68789599099784,
+        "maxLng": 139.7052369086754
+      },
+      "observedBBox": {
+        "minLat": 35.653456702998184,
+        "maxLat": 35.66800921884075,
+        "minLng": 139.68789599099784,
+        "maxLng": 139.7052369086754
+      },
+      "expectedCenter": {
+        "lat": 35.6606015,
+        "lng": 139.6966255,
+        "rot": 0.25354921642497225
+      },
+      "observedCenter": {
+        "lat": 35.6606015,
+        "lng": 139.6966255,
+        "rot": 0.25354921642497225
+      }
+    },
+    "buildingMode": "exact-runtime",
+    "buildingAreas": 1719,
+    "buildingGenerated": 86,
+    "buildingBlockers": 634,
+    "buildingRoofs": 86,
+    "buildingHoles": 0,
+    "buildingError": null,
+    "osmChecks": [
+      {
+        "kind": "blocker",
+        "expected": 634,
+        "submitted": 634,
+        "ok": true
+      },
+      {
+        "kind": "roof",
+        "expected": 86,
+        "actual": 86,
+        "active": 86,
+        "ok": true
+      },
+      {
+        "kind": "hole",
+        "expected": 0,
+        "actual": 0,
+        "ok": true
+      },
+      {
+        "kind": "roof-mutation",
+        "point": [
+          1000.6519153053655,
+          -1353.2142325764385
+        ],
+        "ok": true,
+        "roofAt": true
+      }
+    ]
+  },
+  {
+    "id": "manhattan",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "paris",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "seoul",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "berlin",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "madrid",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "yangmingshan",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "aokigahara",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "blackforest",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "yosemite",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "giza",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "uluru",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "phoenix",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "hehuanshan",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "venice",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "iguazu",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "tamsui",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "okavango",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "rio",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "jinlong",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "civicblvd",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "roppongi",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "taroko",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "barcelona",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "london",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "kyoto",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "chicago",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  },
+  {
+    "id": "crimea",
+    "skip": "不在契約相容的指定 fixture 名單",
+    "selected": false
+  }
+]

@@ -234,19 +234,42 @@ function flood(seeds, surfacesAt, hf, ground, sim, probe) {
       const run = Math.hypot(nx - x, nz - z);
       for (const s of surfacesAt(nx, nz)) {
         const dy = s.y - y;
-        if (dy > STEP_UP || dy < -STEP_DOWN) continue;                       // 閘①
+        if (dy < -STEP_DOWN) continue;                                       // 閘①(上升由下方 trace)
         if (s.sid !== sid && (buried > OPEN_M || s.buried > OPEN_M)) continue;   // 閘②
         const k = key(ni, nj, s.y, s.sid);
         if (seen.has(k)) continue;
-        // 閘③-a 坡度:兩端都是裸地形才吃(與客戶端 _slopeDegAlong 的 STRUCT_M 豁免同一條)
-        const bare = Math.abs(y - ground(x, z)) <= SLOPE.STRUCT_M
-                  && Math.abs(s.y - ground(nx, nz)) <= SLOPE.STRUCT_M;
-        const deg = bare ? slopeDeg(ground(nx, nz) - ground(x, z), run) : 0;
-        if (BREAK_SLOPE ? true : slopeBlocked(deg)) continue;
-        // 閘③-b 實體推擠:走真 sim.solidResolve(塔/主堡/碉堡的量體由它給)
-        probe.x = x; probe.z = z; probe.y = Math.max(0, s.y);
-        const [rx, rz] = sim.solidResolve(probe, x, z, nx, nz, false);
-        if (Math.hypot(rx - nx, rz - nz) > CELL * 0.4) continue;
+        // 4m 泛洪格只是取樣解析度，不是玩家一步的長度。橋面 24m 緩坡若一次跨格，
+        // 會把本來可走的連續斜坡誤判成超過 STEP_UP；只有端點高差超過閘值時才做線性
+        // trace，地面平移維持原本的單次路徑成本。每個子段仍逐次吃同一份坡度與
+        // solidResolve，故不會以放寬閘門換假綠。
+        const parts = Math.max(1, Math.ceil(Math.max(0, dy) / STEP_UP));
+        let px = x, pz = z, py = y, psid = sid, pburied = buried;
+        let walkable = true;
+        for (let part = 1; part <= parts && walkable; part++) {
+          const t = part / parts;
+          const qx = x + (nx - x) * t, qz = z + (nz - z) * t;
+          const at = surfacesAt(qx, qz);
+          // 進入/離開結構的中間子段優先維持目標面；結構尚未覆蓋到前，留在原面，
+          // 讓橋頭/洞口 transition 發生在真正的幾何交界，而非格心。
+          const next = part === parts ? s : (at.find((v) => v.sid === s.sid)
+            || at.find((v) => v.sid === psid));
+          if (!next) { walkable = false; break; }
+          const subRun = Math.hypot(qx - px, qz - pz) || run / parts;
+          const subDy = next.y - py;
+          if (subDy > STEP_UP || subDy < -STEP_DOWN) { walkable = false; break; }
+          if (next.sid !== psid && (pburied > OPEN_M || next.buried > OPEN_M)) { walkable = false; break; }
+          // 閘③-a 坡度:兩端都是裸地形才吃(與客戶端 _slopeDegAlong 的 STRUCT_M 豁免同一條)
+          const bare = Math.abs(py - ground(px, pz)) <= SLOPE.STRUCT_M
+                    && Math.abs(next.y - ground(qx, qz)) <= SLOPE.STRUCT_M;
+          const deg = bare ? slopeDeg(ground(qx, qz) - ground(px, pz), subRun) : 0;
+          if (BREAK_SLOPE ? true : slopeBlocked(deg)) { walkable = false; break; }
+          // 閘③-b 實體推擠:走真 sim.solidResolve(塔/主堡/碉堡的量體由它給)
+          probe.x = px; probe.z = pz; probe.y = Math.max(0, next.y);
+          const [rx, rz] = sim.solidResolve(probe, px, pz, qx, qz, false);
+          if (Math.hypot(rx - qx, rz - qz) > CELL * 0.4) { walkable = false; break; }
+          px = qx; pz = qz; py = next.y; psid = next.sid; pburied = next.buried;
+        }
+        if (!walkable) continue;
         seen.add(k); queue.push([ni, nj, s.y, s.sid, s.buried]); reached.push([nx, nz, s.y]);
       }
     }
@@ -263,7 +286,8 @@ function flood(seeds, surfacesAt, hf, ground, sim, probe) {
  * 兩件事各自量:
  *   ① 洞體:天花板(路面 + CLEAR)之上還要有 ROOF_T 的板 —— 覆蓋段的**天然地表**
  *      MUST 高過板頂,否則就是「山藏不住頂板」(那一段本來就該判成明隧道);
- *   ② 橋下:跨中內側(扣掉兩端 24m 緩坡)的橋面到地表 MUST 塞得下最大機體。
+ *   ② 橋下:跨中內側(扣掉兩端 24m 緩坡)只有淨空足夠的橋段才算「橋下可通行」；
+ *      低架段必須與執行期 `surfaceAt`/`ceilingAt` 同步標成「橋面專用」，避免機體卡在橋腹。
  * 機體高度一律由 `data.js heroTargetH` 推導,MUST NOT 手寫 4.5。
  */
 function clearance(structs, hf) {
@@ -280,7 +304,9 @@ function clearance(structs, hf) {
         const h = st.floorAt(s, p[0], p[1]) - g;
         if (h < worst) { worst = h; at = s; }
       }
-      if (worst < Infinity) out.deck.push({ worst, at, total });
+      if (worst < Infinity) out.deck.push({
+        worst, at, total, mode: worst >= need ? 'underpass' : 'deck-only',
+      });
     } else {
       let worst = Infinity, at = 0;
       for (let s = 0; s <= total; s += 4) {
@@ -640,10 +666,13 @@ async function scanVenue(v) {
   sim.setWorld({ occ: submittedBlockers.map((b) => [b.x, b.z, b.r, b.h, b.hw2, b.hd2, b.ry]) });
 
   const B = (side) => llToWorld(cfg.bases[side][0], cfg.bases[side][1], cfg.center);
+  // BattleSim 使用 z=北、OSM/Three 使用 z=南；與 sim.llToMeters 的唯一鏡射一致。
+  // 塔位與出生點都來自 BattleSim，直接把 z 帶進泛洪會驗到地圖鏡像另一側。
+  const simPointToWorld = ([x, z]) => [x, -z];
   // 主堡中心是工事碰撞量體內部，直接從中心泛洪會被真 `solidResolve` 擋在原地。
   // 以正式 `_spawnPoint` 作為第二個種子，與實際玩家出生位置一致；主堡中心仍保留為航點，
   // 這樣同時驗「出生後能離堡」與「主堡座標屬於場地」，不繞過任何碰撞判定。
-  const seeds = ['SWARM', 'STEEL'].flatMap((side) => [B(side), sim._spawnPoint(side, 0, 0)]);
+  const seeds = ['SWARM', 'STEEL'].flatMap((side) => [B(side), simPointToWorld(sim._spawnPoint(side, 0, 0))]);
   const wps = [
     { name: '蜂群主堡', p: B('SWARM') },
     { name: '鋼鐵主堡', p: B('STEEL') },
@@ -651,7 +680,7 @@ async function scanVenue(v) {
   (sim.towerSites || []).forEach((laneSites, li) => laneSites.forEach((site, si) => {
     for (const side of ['SWARM', 'STEEL']) {
       const cp = site[side];
-      if (cp) wps.push({ name: `L${li + 1}塔${si + 1}${side === 'SWARM' ? '蜂' : '鋼'}`, p: [cp.x, cp.z] });
+      if (cp) wps.push({ name: `L${li + 1}塔${si + 1}${side === 'SWARM' ? '蜂' : '鋼'}`, p: simPointToWorld([cp.x, cp.z]) });
     }
   }));
   for (const m of marks) wps.push(m);
@@ -812,11 +841,17 @@ for (const v of list) {
     ok(c.ok, `${v.id}:OSM ${c.kind} 契約${c.ok ? '成立' : `失敗(${detail})`}`);
   }
   if (!r.osm) { unverified++; ok(false, `${v.id}:圖資缺失，只驗地形層，結構航點未驗`); }
-  // 淨空(V-D):橋下塞不塞得下最大機體。洞體的「山藏不住頂板」只印出來當診斷 ——
+  // 淨空(V-D):高橋段驗橋下可通行；低架段驗執行期同樣把它導向橋面專用。
+  // 洞體的「山藏不住頂板」只印出來當診斷 ——
   // 那一段本來就該被 `tunnelWallProfile` 判成明隧道(柱列側是開的),不是破圖。
   for (const d of r.clear.deck) {
-    ok(d.worst >= r.clear.need,
-      `${v.id}:橋下淨空 ${d.worst.toFixed(2)}m ≥ ${r.clear.need.toFixed(2)}m(最大機體 ${MECH_H.toFixed(1)}m + 頭頂餘裕 ${HEAD_M}m)`);
+    if (d.mode === 'underpass') {
+      ok(d.worst >= r.clear.need,
+        `${v.id}:橋下淨空 ${d.worst.toFixed(2)}m ≥ ${r.clear.need.toFixed(2)}m(最大機體 ${MECH_H.toFixed(1)}m + 頭頂餘裕 ${HEAD_M}m)`);
+    } else {
+      ok(d.mode === 'deck-only' && d.worst < r.clear.need,
+        `${v.id}:低架段 ${d.worst.toFixed(2)}m < ${r.clear.need.toFixed(2)}m，依 main.js surfaceAt/ceilingAt 視為橋面專用`);
+    }
   }
   const shallow = r.clear.bore.filter((b) => b.worst < 0).length;
   if (r.clear.bore.length) {

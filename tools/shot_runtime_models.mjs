@@ -23,6 +23,11 @@ const errors = [];
 page.on('pageerror', (error) => errors.push(error.message));
 page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
 page.on('requestfailed', (request) => console.error(`REQUESTFAILED ${request.url()}: ${request.failure()?.errorText}`));
+// 這一頁只驗正式模型，不驗首頁房間列表；若讓 main.js 啟動，WS 回報 rooms 時會找不到
+// 測試頁刻意沒有建立的 #roomList。只攔截本頁入口，/public/js 的正式模型模組照常載入。
+await page.route('**/main.js', (route) => route.fulfill({
+  status: 200, contentType: 'text/javascript', body: 'export {};',
+}));
 if (process.env.THREE_MODULE && fs.existsSync(process.env.THREE_MODULE)) {
   const threeSource = fs.readFileSync(process.env.THREE_MODULE, 'utf8');
   const corePath = path.join(path.dirname(process.env.THREE_MODULE), 'three.core.js');
