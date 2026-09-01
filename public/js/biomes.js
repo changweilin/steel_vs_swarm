@@ -8776,7 +8776,7 @@ function planTowerBridgePads(cps, decks, terrain) {
   return { pads, newDecks, cols, slabs, piers };
 }
 function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
-  if (!decks.length || !lanesW.length) return [];
+  if (!lanesW.length) return [];
   const cps = [];   // 塔位控制點展平(每點左右各一座砲塔;solveTowerSites 與 sim 同一支,座標對得上)
   for (const laneSites of solveTowerSites(lanesW, mapA)) for (const site of laneSites) for (const cp of siteCPs(site)) cps.push(cp);
   const { pads, newDecks, cols: padCols, slabs, piers } = planTowerBridgePads(cps, decks, terrain);
@@ -8851,6 +8851,263 @@ export function makeDeckIndex(decks) {
   };
 }
 
+// ---- 軍事基地／防禦工事平台塗裝標線 ----
+// 純程序生成 Canvas 貼圖(停機坪/警戒斜紋/陣營戰術徽記/物資格位/射角準星)。
+// 零外部依賴、全房一致(固定種子)、單張快取、透明底 + 賽璐璐環境材質。
+const _platformTexCache = new Map();
+
+function createHazardStripes(ctx, x, y, w, h, angle = Math.PI / 4, stripeW = 16, c1 = '#f1c40f', c2 = '#232528') {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.fillStyle = c2;
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = c1;
+  const diag = Math.hypot(w, h) * 2;
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate(angle);
+  for (let sx = -diag; sx < diag; sx += stripeW * 2) {
+    ctx.fillRect(sx, -diag, stripeW, diag * 2);
+  }
+  ctx.restore();
+}
+
+function baseMarkingTex(side) {
+  const key = `base:${side}`;
+  if (_platformTexCache.has(key)) return _platformTexCache.get(key);
+  const S = 1024;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const isSwarm = side === 'SWARM';
+  const accent = isSwarm ? '#38ef7d' : '#e74c3c';
+  const yellow = '#f1c40f';
+  const dark = '#1e2124';
+  const white = '#edf2f7';
+
+  // 1. 周邊 45 度黃黑警戒斜紋邊框 (Outer Hazard Stripe Border)
+  const bw = 42;
+  createHazardStripes(g, 0, 0, S, bw, Math.PI / 4, 20, yellow, dark);
+  createHazardStripes(g, 0, S - bw, S, bw, -Math.PI / 4, 20, yellow, dark);
+  createHazardStripes(g, 0, bw, bw, S - bw * 2, -Math.PI / 4, 20, yellow, dark);
+  createHazardStripes(g, S - bw, bw, bw, S - bw * 2, Math.PI / 4, 20, yellow, dark);
+
+  // 2. 內框實線與角落戰術括弧 [   ]
+  g.strokeStyle = yellow;
+  g.lineWidth = 6;
+  g.strokeRect(bw + 10, bw + 10, S - (bw + 10) * 2, S - (bw + 10) * 2);
+
+  const bracket = (cx, cy, dx, dy, len = 64) => {
+    g.strokeStyle = white;
+    g.lineWidth = 8;
+    g.beginPath();
+    g.moveTo(cx + dx * len, cy);
+    g.lineTo(cx, cy);
+    g.lineTo(cx, cy + dy * len);
+    g.stroke();
+  };
+  const off = bw + 22;
+  bracket(off, off, 1, 1);
+  bracket(S - off, off, -1, 1);
+  bracket(off, S - off, 1, -1);
+  bracket(S - off, S - off, -1, -1);
+
+  // 3. 中央停機坪／降落起降區 (Helipad / VTOL Landing Zone)
+  const cx = S / 2, cy = S / 2;
+  const rMain = S * 0.32;
+  // 外圈雙環
+  g.strokeStyle = white;
+  g.lineWidth = 10;
+  g.beginPath();
+  g.arc(cx, cy, rMain, 0, Math.PI * 2);
+  g.stroke();
+
+  g.strokeStyle = yellow;
+  g.lineWidth = 4;
+  g.setLineDash([24, 16]);
+  g.beginPath();
+  g.arc(cx, cy, rMain - 20, 0, Math.PI * 2);
+  g.stroke();
+  g.setLineDash([]);
+
+  // 十字十字準星與刻度 (Cardinal Crosshairs)
+  g.strokeStyle = 'rgba(255,255,255,0.7)';
+  g.lineWidth = 4;
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+    g.beginPath();
+    g.moveTo(cx + Math.cos(a) * (rMain - 30), cy + Math.sin(a) * (rMain - 30));
+    g.lineTo(cx + Math.cos(a) * (rMain + 30), cy + Math.sin(a) * (rMain + 30));
+    g.stroke();
+  }
+
+  // 大號軍事 "H"
+  g.fillStyle = white;
+  g.font = 'bold 150px "Arial Black", sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('H', cx, cy - 6);
+
+  // 陣營名稱與戰術代號
+  g.fillStyle = accent;
+  g.font = 'bold 36px "Arial Black", sans-serif';
+  g.fillText(isSwarm ? 'SWARM ALLIANCE' : 'STEEL COVENANT', cx, cy - rMain - 32);
+
+  g.fillStyle = yellow;
+  g.font = 'bold 24px "Arial Black", sans-serif';
+  g.fillText(isSwarm ? 'TACTICAL COMMAND HQ [SECTOR 01]' : 'HEAVY BASTION CITADEL [SECTOR 01]', cx, cy + rMain + 36);
+
+  // 4. 車輛／物資調度區 (Staging & Parking Bays)
+  const drawBay = (bx, by, bw, bh, label) => {
+    g.strokeStyle = 'rgba(241, 196, 15, 0.85)';
+    g.lineWidth = 4;
+    g.setLineDash([12, 8]);
+    g.strokeRect(bx, by, bw, bh);
+    g.setLineDash([]);
+    g.fillStyle = white;
+    g.font = 'bold 20px "Arial Black", sans-serif';
+    g.fillText(label, bx + bw / 2, by + bh / 2);
+  };
+  drawBay(off + 20, cy - 50, 100, 100, 'BAY 01');
+  drawBay(S - off - 120, cy - 50, 100, 100, 'BAY 02');
+
+  // 警示標語 (Danger / Standoff Warnings)
+  g.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  g.font = 'bold 18px "Arial Black", sans-serif';
+  g.fillText('CAUTION: ARMED PERIMETER ・ STANDOFF 15M ・ KEEP CLEAR', cx, S - bw - 18);
+  g.fillText('MAX ELEVATION / CLEAR APPROACH ZONE', cx, bw + 28);
+
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  _platformTexCache.set(key, t);
+  return t;
+}
+
+function towerMarkingTex(side = 'STEEL') {
+  const key = `tower:${side}`;
+  if (_platformTexCache.has(key)) return _platformTexCache.get(key);
+  const S = 512;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const isSwarm = side === 'SWARM';
+  const accent = isSwarm ? '#38ef7d' : '#e74c3c';
+  const yellow = '#f1c40f';
+  const dark = '#1e2124';
+  const white = '#edf2f7';
+
+  // 1. 周邊 45 度警戒斜紋
+  const bw = 24;
+  createHazardStripes(g, 0, 0, S, bw, Math.PI / 4, 14, yellow, dark);
+  createHazardStripes(g, 0, S - bw, S, bw, -Math.PI / 4, 14, yellow, dark);
+  createHazardStripes(g, 0, bw, bw, S - bw * 2, -Math.PI / 4, 14, yellow, dark);
+  createHazardStripes(g, S - bw, bw, bw, S - bw * 2, Math.PI / 4, 20, yellow, dark);
+
+  // 2. 砲位防禦圓形刻度環 (Azimuth / Targeting Compass Ring)
+  const cx = S / 2, cy = S / 2;
+  const r = S * 0.35;
+
+  g.strokeStyle = white;
+  g.lineWidth = 6;
+  g.beginPath();
+  g.arc(cx, cy, r, 0, Math.PI * 2);
+  g.stroke();
+
+  g.strokeStyle = yellow;
+  g.lineWidth = 3;
+  g.setLineDash([14, 10]);
+  g.beginPath();
+  g.arc(cx, cy, r - 14, 0, Math.PI * 2);
+  g.stroke();
+  g.setLineDash([]);
+
+  // 刻度線與角度標記
+  g.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+  g.lineWidth = 3;
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6;
+    const len = (i % 3 === 0) ? 22 : 12;
+    g.beginPath();
+    g.moveTo(cx + Math.cos(a) * (r - len), cy + Math.sin(a) * (r - len));
+    g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    g.stroke();
+  }
+
+  // 3. 戰術代號與警示字樣
+  g.fillStyle = accent;
+  g.font = 'bold 22px "Arial Black", sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(isSwarm ? 'SWARM DEFENSE' : 'STEEL BATTERY', cx, cy - r - 14);
+
+  g.fillStyle = yellow;
+  g.font = 'bold 16px "Arial Black", sans-serif';
+  g.fillText('DANGER: AUTO-FIRE ZONE', cx, cy + r + 14);
+
+  g.fillStyle = white;
+  g.font = 'bold 28px "Arial Black", sans-serif';
+  g.fillText('T-01', cx - r + 30, cy);
+  g.fillText('T-02', cx + r - 30, cy);
+
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  _platformTexCache.set(key, t);
+  return t;
+}
+
+// 陸地砲塔基座與標線（與兵線道路同高）
+function buildTowerPlatforms(group, lanesW, decks, terrain, cols, mapA, existingPads = []) {
+  if (!lanesW.length) return existingPads;
+  const cps = [];
+  for (const laneSites of solveTowerSites(lanesW, mapA)) for (const site of laneSites) for (const cp of siteCPs(site)) cps.push(cp);
+  const deckIdx = decks.length ? makeDeckIndex(decks) : () => null;
+  const bridgePadKeys = new Set(existingPads.map((p) => `${p.x.toFixed(1)},${p.z.toFixed(1)}`));
+  const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
+  const ROAD_LIFT = 0.45;
+  const allPads = [...existingPads];
+  const newDecks = [], newCols = [];
+
+  for (const cp of cps) {
+    const roadY = deckIdx(cp.x, cp.z) ?? (terrain.heightAt(cp.x, cp.z) + ROAD_LIFT);
+    for (const s of [-1, 1]) {
+      const tx = cp.x + cp.nx * GAME.TOWER_SIDE_OFF * s;
+      const tz = cp.z + cp.nz * GAME.TOWER_SIDE_OFF * s;
+      const key = `${tx.toFixed(1)},${tz.toFixed(1)}`;
+      const isBridge = bridgePadKeys.has(key);
+      const dy = isBridge ? (existingPads.find((p) => Math.hypot(p.x - tx, p.z - tz) < 2)?.y ?? roadY) : roadY;
+
+      if (!isBridge) {
+        allPads.push({ x: tx, z: tz, y: dy });
+        newCols.push({ x: tx, z: tz, y: dy, r: TOWER_BASE_R, h: TOWER_BASE_H });
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(TOWER_PAD_AXIS * 1.8, TOWER_PAD_T, TOWER_PAD_AXIS * 1.8), slabM);
+        slab.position.set(tx, dy - TOWER_PAD_SINK - TOWER_PAD_T / 2, tz);
+        slab.rotation.y = Math.atan2(cp.nx, cp.nz);
+        group.add(slab);
+        newDecks.push({
+          x1: tx - TOWER_PAD_AXIS * 0.9, z1: tz, y1: dy,
+          x2: tx + TOWER_PAD_AXIS * 0.9, z2: tz, y2: dy, hw: TOWER_PAD_AXIS * 0.9,
+        });
+      }
+
+      // 砲塔平台表面渲染軍事基地標線
+      const markGeo = new THREE.PlaneGeometry(TOWER_PAD_AXIS * 1.65, TOWER_PAD_AXIS * 1.65);
+      const markMat = envMat(0xffffff, {
+        map: towerMarkingTex(cp.side || 'STEEL'),
+        transparent: true, alphaTest: 0.05, rim: 0, wash: 0.2, cool: 0.2,
+      });
+      const markMesh = new THREE.Mesh(markGeo, markMat);
+      markMesh.position.set(tx, dy + 0.02, tz);
+      markMesh.rotation.x = -Math.PI / 2;
+      markMesh.rotation.z = Math.atan2(cp.nx, cp.nz);
+      group.add(markMesh);
+    }
+  }
+
+  cols.push(...newCols);
+  decks.push(...newDecks);
+  return allPads;
+}
+
 // ---- 水域／沼澤主堡承台 ----
 // 主堡若落在水域或沼澤，建立與砲塔墩座同語彙的大型平台。台面半徑由治癒光環推導，
 // 因而同時涵蓋 HERO_SPAWN_OFF / HERO_SPAWN_SIDE 定義的重生點；站立面併入 decks，
@@ -8903,6 +9160,10 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
   const plan = planBaseWaterPads(basesW, terrain);
   const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
   const pierM = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
+  const ROAD_LIFT = 0.45;
+  const deckIdx = decks.length ? makeDeckIndex(decks) : () => null;
+
+  // 水域主堡板與墩柱
   for (const sp of plan.slabs) {
     const slab = new THREE.Mesh(new THREE.BoxGeometry(sp.size, BASE_PAD_T, sp.size), slabM);
     slab.position.set(sp.x, sp.y, sp.z);
@@ -8914,9 +9175,39 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
     pier.rotation.y = Math.PI / 8;
     group.add(pier);
   }
+
+  // 陸地主堡基礎平台（與兵線道路同高）
+  const allPads = [...plan.pads];
+  for (const base of basesW) {
+    if (terrainEnvCode(terrain, base.x, base.z) === 0) {
+      const roadY = deckIdx(base.x, base.z) ?? (terrain.heightAt(base.x, base.z) + ROAD_LIFT);
+      allPads.push({ side: base.side, x: base.x, z: base.z, y: roadY });
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(BASE_PAD_R * 2, BASE_PAD_T, BASE_PAD_R * 2), slabM);
+      slab.position.set(base.x, roadY - BASE_PAD_T / 2, base.z);
+      group.add(slab);
+      plan.newDecks.push({
+        x1: base.x - BASE_PAD_R, z1: base.z, y1: roadY,
+        x2: base.x + BASE_PAD_R, z2: base.z, y2: roadY, hw: BASE_PAD_R,
+      });
+    }
+  }
+
+  // 主堡平台表面渲染軍事基地常見的標線與圖案
+  for (const pad of allPads) {
+    const baseMarkGeo = new THREE.PlaneGeometry(BASE_PAD_R * 1.92, BASE_PAD_R * 1.92);
+    const baseMarkMat = envMat(0xffffff, {
+      map: baseMarkingTex(pad.side),
+      transparent: true, alphaTest: 0.05, rim: 0, wash: 0.2, cool: 0.2,
+    });
+    const baseMarkMesh = new THREE.Mesh(baseMarkGeo, baseMarkMat);
+    baseMarkMesh.position.set(pad.x, pad.y + 0.02, pad.z);
+    baseMarkMesh.rotation.x = -Math.PI / 2;
+    group.add(baseMarkMesh);
+  }
+
   decks.push(...plan.newDecks);
   cols.push(...plan.cols);
-  return plan.pads;
+  return allPads;
 }
 
 /**
@@ -11983,13 +12274,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 兵線砲塔跨橋墩座:與橋重疊的砲塔改蓋在橋面上(台面 + 往外擴張的橋墩)----
   // MUST 排在兩次 buildRoads 之後(真橋 + 兵線補橋的 decks 都併齊了才判「塔在不在橋上」),
   // 且排在 blockers.push(roadRes.cols) 之前(墩身碰撞柱走同一條路徑)。
-  const towerPads = buildTowerBridgePads(
+  const bridgeTowerPads = buildTowerBridgePads(
     group, (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
     roadRes.decks, terrain, roadRes.cols, mapArg(cfg));
+  const towerPads = buildTowerPlatforms(
+    group, (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
+    roadRes.decks, terrain, roadRes.cols, mapArg(cfg), bridgeTowerPads);
   const basePads = buildBaseWaterPads(group, basesW, terrain, roadRes.decks, roadRes.cols);
   const roadsBuilt = roadRes.built;
-  group.userData.towerPads = towerPads;   // 橋上砲塔落位高度(main.js → terrain.towerPadY → game.js)
-  group.userData.basePads = basePads;     // 水域／沼澤主堡落位高度(main.js → terrain.basePadY → game.js)
+  group.userData.towerPads = towerPads;   // 橋上／陸地砲塔落位高度(main.js → terrain.towerPadY → game.js)
+  group.userData.basePads = basePads;     // 水域／陸地主堡落位高度(main.js → terrain.basePadY → game.js)
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)
   group.userData.tunnels = roadRes.tunnels;   // 地下道路面 + 天花(main.js → terrain.tunnelAt/ceilingAt)
   group.userData.portals = roadRes.portals;   // 洞口門洞(稽核/冒煙測試用:數量與位置驗證)
