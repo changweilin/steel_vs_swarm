@@ -215,8 +215,8 @@ console.log('\nⅡ 天空穹頂');
   ok(/dome\.geometry\.dispose\(\); dome\.material\.dispose\(\)/.test(E), 'A25:dispose 釋放穹頂幾何與材質');
   ok(/clouds\.mats\.forEach\(\(m\) => m\.dispose\(\)\)/.test(E), 'A25:dispose 釋放雲的材質');
   const cl = grabFn(env, 'makeClouds');
-  ok(/CLOUD_N \* \(1\.05 - W\.light\)/.test(code(cl)), '雲量與 WEATHERS[w].light 反比(推導,不是逐天氣手寫)');
-  ok(/W\.fogNear <= 0\.05/.test(code(cl)), '霧天零雲(判據取既有表的 fogNear,不是新旗標)');
+  ok(/totalClouds = numClusters \* spritesPerCluster/.test(code(cl)), '雲朵集群與總量配置(推導,不是逐天氣手寫)');
+  ok(/W\??\.fogNear <= 0\.05/.test(code(cl)), '霧天零雲(判據取既有表的 fogNear,不是新旗標)');
   ok(/mulberry32\(/.test(code(cl)) && !/Math\.random/.test(code(cl)), '雲的散布走 mulberry32(§2.3,MUST NOT Math.random)');
   ok(/depthWrite: false, fog: false/.test(code(cl)), '雲不寫深度、不吃霧');
 }

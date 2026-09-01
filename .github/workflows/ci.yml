@@ -29,67 +29,8 @@ jobs:
       - name: 客戶端模組語法閘
         run: node tools/audit_client_syntax.mjs
 
-      - name: 離線稽核
-        run: |
-          node tools/audit_map_rules.mjs
-          node tools/audit_lane_sep.mjs
-          node tools/audit_lane_navigation.mjs
-          node tools/audit_terrain_ray.mjs
-          node tools/audit_layer_block.mjs
-          node tools/audit_gpu_lifecycle.mjs
-          node tools/audit_minimap_view.mjs
-          node tools/audit_object_joints.mjs
-          node tools/audit_lance_hit.mjs
-          node tools/audit_weapon_gate.mjs
-          node tools/audit_aoe_trim.mjs
-          node tools/audit_fire_rate.mjs
-          node tools/audit_recoil_move.mjs
-          node tools/audit_speed_comp.mjs
-          node tools/audit_hex_stats.mjs
-          node tools/audit_open_tunnel.mjs
-          node tools/audit_underpass.mjs
-          node tools/audit_climb.mjs
-          node tools/audit_cc_flash.mjs
-          node tools/audit_flight_power.mjs
-          node tools/audit_slope_move.mjs
-          node tools/audit_road_joint.mjs
-          node tools/audit_road_bed.mjs
-          node tools/audit_view_lock.mjs
-          node tools/audit_ctrl_mode.mjs
-          node tools/audit_spectator_cam.mjs
-          node tools/audit_shop_auto.mjs
-          node tools/audit_bot_vision.mjs
-          node tools/audit_bot_role.mjs
-          node tools/audit_npc_collide.mjs
-          node tools/audit_cel_pipeline.mjs
-          node tools/audit_visual_prefs.mjs
-          node tools/audit_soft_stroke.mjs
-          node tools/audit_world_text.mjs
-          node tools/audit_beacons.mjs
-          node tools/audit_siteplan.mjs
-          node tools/audit_world_height.mjs
-          # 地貌宣告只收離線那一半:完整版要 Overpass,掛在 lane-scenarios.yml
-          #(外部服務會限流,不該讓 PR 卡在別人的伺服器上 —— 見該 workflow 檔頭)
-          node tools/audit_venue_biome.mjs --offline
-          node tools/audit_vernacular.mjs
-          node tools/audit_codex.mjs
-          # 日系動漫表現層的常設稽核。
-          # 這一段 MUST 與 `.claude/rules/verification.md` §5.1(續)的清單同步:
-          # 新增一支稽核卻沒有在這裡註冊 = 它只在人手跑的時候存在,而每一次 PR 都是綠的。
-          node tools/audit_struct_ink.mjs
-          node tools/audit_base_water_pad.mjs
-          node tools/audit_rock_ink.mjs
-          node tools/audit_leaf_card.mjs
-          node tools/audit_ambient_motion.mjs
-          node tools/audit_water_edge.mjs
-          node tools/audit_vehicle_spec.mjs
-          node tools/audit_wildlife.mjs
-          node tools/audit_anim_weights.mjs
-          node tools/audit_audio_layers.mjs
-          node tools/audit_zone_cut.mjs
-          node tools/audit_damp_fps.mjs
-          node tools/audit_daynight.mjs
-          node tools/audit_weather_dynamics.mjs
+      - name: 完整離線稽核矩陣
+        run: node tools/audit_suite.mjs
 
       - name: 平衡不變式
         run: npm run bal

@@ -386,9 +386,9 @@ console.log('\nⅤ 風的時鐘與雲(執行原文)');
     '雲不自己數 dt(自己數的話暫停一次就與地面錯開)');
 
   // 雲的環繞算術:JS 的 % 對負數回負值 —— 直接取模會讓半邊的雲每一圈跳到另一側
-  const line = /const a = \(\(d\.along \+ WIND\.CLOUD_MPS \* t \+ WRAP \* 0\.5\) % WRAP \+ WRAP\) % WRAP - WRAP \* 0\.5;/.exec(code(envSrc));
+  const line = /const a = \(\(d\.along \+ WIND\.CLOUD_MPS \* (?:windAmp \* )?t \+ WRAP \* 0\.5\) % WRAP \+ WRAP\) % WRAP - WRAP \* 0\.5;/.exec(code(envSrc));
   ok(!!line, '雲的環繞取模先加半個 WRAP 再減(且對負數補一次 + WRAP)');
-  const wrapAt = new Function('d', 't', 'WIND', 'WRAP', `${line[0]}\nreturn a;`);
+  const wrapAt = new Function('d', 't', 'WIND', 'WRAP', 'windAmp = 1', `${line[0]}\nreturn a;`);
   const WRAP = 1000, V = { CLOUD_MPS: 2 };
   let inRange = true, maxJump = 0, prev = null;
   for (let t = 0; t <= WRAP / V.CLOUD_MPS; t += 1) {

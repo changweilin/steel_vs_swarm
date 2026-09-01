@@ -185,7 +185,7 @@ const CLOUD_N = 28;        // 雲量基數;實際枚數與 WEATHERS[w].light 反
 const CLOUD_BOB = 0.015;      // 逐朵上下起伏
 const CLOUD_BREATH = 0.08;    // 逐朵尺寸呼吸
 function makeClouds(span, skyC, W, seed) {
-  if (W?.fogNear <= 0.02) return null;
+  if (W?.fogNear <= 0.05) return null;
   const rnd = mulberry32(((seed ?? 0) ^ 0x93B7C1) >>> 0);
   const grp = new THREE.Group();
   const texs = cloudTextures();
