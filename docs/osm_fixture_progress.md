@@ -74,6 +74,8 @@
 | `audit_vernacular.mjs` | 287 綠 / 0 紅 |
 | `audit_world_height.mjs` | 49 綠 / 0 紅 |
 | `audit_terrain_ray.mjs` | 11 綠 / 0 紅 |
+| `audit_osm_browser.mjs --only shibuya_dense,roppongi_underpass --require-browser` | 4 鏡位通過，draw calls 非零，`glError=0` |
+| `audit_osm_runtime_budget.mjs --browser-report=tools/.shots/osm_browser/manifest.json --require-browser` | 35 綠 / 0 紅 |
 | `npm run audit:net` | 通過 |
 | `npm run bal` | 通過 |
 | `npm test` | 通過 |
@@ -87,9 +89,8 @@
 - `audit_mini_map.mjs --break-buffer/--break-stage/--break-team/--break-full`：各自命中對應紅字並退出 1。
 - 淨空 source／tags、真實 relation／hole 與 P2 source mutations 均會變紅；不適用 mutation 會 fail-loud。
 
-## 非本 OSM 仍待外部證據項
+## 非本 OSM 輔助未驗項
 
-- runtime budget 在沒有 browser report 時維持 34 綠 / 1 紅並明確要求實機證據；既有澀谷／六本木 Playwright report 接入後為 35/35。不得把 static-only 結果標成瀏覽器驗收。
 - `audit_lane_grade_sep` 在沒有 cache 時明確跳過 29 項；它沒有取代本輪 production traversal 與坡度反向驗證。
 
 ## 完成判定
