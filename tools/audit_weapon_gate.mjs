@@ -33,10 +33,10 @@ import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
-  BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO, WEAPONS, UNITS,
+  BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, TARGET_H, MAPGEO, WEAPONS, UNITS,
   GAME, STRUCT_W, NPC_BLAST, npcBlastR, towerDps, BASE_DPS_MULT, BASE_MISSILE,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
-  shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
+  shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn, GUIDED_LAUNCH, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchZeroPitchM, guidedLaunchDist,
   HIGH_SUP, highSupF, altTier, altDhMax,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
@@ -623,6 +623,45 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       `拋射武器吃吊射初速 ${shotV0(lob)}m/s 而非砲口初速 ${lob.mv}m/s(取錯 = 飛行時間差數倍)`);
     const fnf = heavyOf('fnf').def;
     ok(shotV0(fnf) === fnf.mv, '非拋射武器就是自己的砲口初速');
+  }
+
+  // ---- ①-b 低空導引彈先抬頭,再於既有解保險距離接手目標 ----
+  {
+    const guide = heavyOf('guide').def;
+    const fnf = heavyOf('fnf').def;
+    const lob = heavyOf('lob').def;
+    ok(guidedLaunchOf(guide) === GUIDED_LAUNCH && guidedLaunchOf(fnf) === GUIDED_LAUNCH
+      && guidedLaunchOf(lob) === null,
+      '低空抬頭只套用雷射導引/射後不理,榴彈不誤套');
+    ok(guidedLaunchDist(guide) === armingOf(guide).m && guidedLaunchDist(fnf) === armingOf(fnf).m,
+      '抬頭段距離直接沿用 ARMING.m,導引接手不另立第二個距離門檻');
+    const zeroPitchM = guidedLaunchZeroPitchM();
+    ok(GUIDED_LAUNCH.ZERO_PITCH_TOWER_F === 1.5
+      && zeroPitchM === TARGET_H.tower * 1.5
+      && guidedLaunchPitchDeg(guide, 0) === GUIDED_LAUNCH.PITCH_DEG
+      && guidedLaunchPitchDeg(guide, zeroPitchM / 2) === GUIDED_LAUNCH.PITCH_DEG / 2
+      && guidedLaunchPitchDeg(guide, zeroPitchM) === 0
+      && guidedLaunchPitchDeg(fnf, zeroPitchM + 1) === 0
+      && guidedLaunchPitchDeg(lob, 0) === 0,
+      '0 度門檻 = 1.5 個砲塔高,離地高度增加時抬頭角線性遞減');
+    const launch = methodSrc('_guidedLaunchVel', G);
+    const fire = methodSrc('_tryFire', G);
+    const ub = methodSrc('_updateBullets', G);
+    const vs = methodSrc('_updateVisShells', G);
+    ok(/const height = from\.y - this\._surf\(from\.x, from\.z, from\.y\);/.test(launch)
+      && /guidedLaunchPitchDeg\(def, height\)/.test(launch)
+      && /pitchDeg <= 0/.test(launch),
+      '低空判定量發射點離實際站立面的高度,上仰角由高度推導並可降至 0 度');
+    ok(/const launch = lobFc \? null : this\._guidedLaunchVel\(muzzle, fdir, def, v0\);/.test(fire)
+      && /launchDist: launch\?\.dist \|\| 0/.test(fire),
+      '自機導引彈記錄抬頭距離並沿同一支初速解發射');
+    ok(/const climbing = b\.launchDist > 0 && prev\.distanceTo\(b\.origin\) < b\.launchDist;/.test(ub)
+      && /if \(climbing\) \{\s*b\.vel\.y -= BALLISTIC\.G \* dt;/.test(ub),
+      '自機彈體在抬頭段仍走重力與碰撞掃掠,到距離後才進導引分支');
+    ok(/const launch = this\._guidedLaunchVel\(from, baseDir, def, v0\);/.test(methodSrc('_spawnVisShell', G))
+      && /const climbing = b\.guided && prev\.distanceTo\(b\.origin\) < b\.launchDist;/.test(vs)
+      && /else if \(b\.guided\)/.test(vs),
+      '他人/Bot 視覺彈體同樣先抬頭,穩定後再轉向目標');
   }
 
   // ---- ② 著彈才回報 ⇒ 擊發資格的閘門要能把時間軸換算回擊發時刻 ----
