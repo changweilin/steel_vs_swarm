@@ -526,7 +526,7 @@ export class BattleClient {
   /**
    * opts: { canvas, minimapCanvas, cfg, side(可 null=觀戰), youId, net, terrain, hud }
    * youId:自己的連線 id;快照裡英雄帶 pid,用來認出自己的座機(同陣營可多人)。
-   * hud: { self, bases, wave, feed, dead, over, cooldown, hitmark }
+   * hud: { self, aiming, bases, wave, feed, dead, over, cooldown, hitmark }
    */
   constructor(opts) {
     Object.assign(this, opts);
@@ -7268,6 +7268,8 @@ export class BattleClient {
       setViewMode('fpv');
     }
     this.aiming = on;
+    // 黑邊是本地表現層，必須跟著輸入當場切換，不能等下一個 8Hz 快照。
+    this.hud.aiming?.(on);
     this.net.send({ t: 'aim', on });
     if (!on && this._aimViewRestore) {
       const restore = this._aimViewRestore;
@@ -9727,6 +9729,7 @@ export class BattleClient {
     this.touch?.dispose();
     this.touch = null;
     document.body.classList.remove('mm-near');   // 小地圖模式的鈕面亮燈掛在 body,跟著戰局收掉
+    document.body.classList.remove('aiming');    // 狙擊遮罩的鈕面/黑邊跟著戰局收掉
     document.body.classList.remove('spectating', 'spec-follow');   // 觀戰版型同理(留著 = 下一局角色數據面板被收起)
     this._vlockHold = false; this._vlockId = null; this._vlockPrev = null;
     this._setVlockUi(false);                     // 視野鎖定的亮燈同理(留著 = 下一局開場就亮)
