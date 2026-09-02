@@ -2612,6 +2612,8 @@ function renderSpecUpg(upg) {
 function makeHud() {
   const feedBox = $('killFeed');
   return {
+    // 狙擊遮罩是本地輸入的即時表現；快照收到時仍由 self() 再同步一次。
+    aiming: (on) => document.body.classList.toggle('aiming', !!on),
     self: (hp, max, cd, w) => {
       // 觀戰(2026-08-02 使用者需求「顯示該玩家所有資訊,包括商店升級」):**同一塊角色數據面板**
       // 換一組數字 —— 標題改成跟隨中那位、額外掛上八軌升級列;沒跟人時只留標題(其餘由 CSS 收起)。
