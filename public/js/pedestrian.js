@@ -16,6 +16,7 @@ export const PED_PLAN = {
   ENTRANCE_MERGE_M: 10,
   FOOTBRIDGE_MIN_W_M: 6,  // 單機體可通行；車行橋仍走既有 PASS_W
   DRESS_STEP_M: 18,
+  JOINT_M: 0.06,          // 外觀結構接縫的最小重疊量；不進入口碰撞 OBB
 };
 
 // 一個生成器族 + 一張款式表；渲染端不得為每一款複製一套建模函式。

@@ -6112,12 +6112,47 @@ function buildPedestrianEntrances(group, terrain, sites) {
 
   const geos = getPedEntranceGeos();
   const val = (v, d) => typeof v === 'function' ? v(d) : v;
+  const jointM = PED_PLAN.JOINT_M;
+
+  // 零件表是款式外觀，不應靠每款手寫「剛好碰到」的數字。先量出實際屋頂下緣，
+  // 再把箱型牆向上補到屋頂並讓水平接點互疊；這只作用在表現層，不改入口 OBB。
+  const localBounds = (part, d) => {
+    const geo = geos[part.geo || 'box'] || geos.box;
+    if (!geo.boundingBox) geo.computeBoundingBox();
+    const e = new THREE.Euler(part.rx || 0, part.ry || 0, part.rz || 0, 'YXZ');
+    const q = new THREE.Quaternion().setFromEuler(e);
+    const s = new THREE.Vector3(val(part.sx, d), val(part.sy, d), val(part.sz, d));
+    const p = new THREE.Vector3(val(part.lx, d), val(part.ly, d), val(part.lz, d));
+    const m = new THREE.Matrix4().compose(p, q, s);
+    return geo.boundingBox.clone().applyMatrix4(m);
+  };
+  const jointFit = (parts, d) => {
+    const roofParts = parts.filter((part) => part.color === 'roof');
+    if (!roofParts.length) return new Map();
+    const roofBox = roofParts.map((part) => localBounds(part, d)).reduce((a, b) => a.union(b));
+    const fit = new Map();
+    for (const part of parts) {
+      if (part.geo !== 'box' || part.color !== 'wall') continue;
+      const box = localBounds(part, d);
+      const sx = val(part.sx, d), sy = val(part.sy, d), sz = val(part.sz, d);
+      const ly = val(part.ly, d);
+      const rise = Math.max(0, roofBox.min.y + jointM - box.max.y);
+      fit.set(part, {
+        sx: sx + jointM * 2,
+        sy: sy + rise,
+        sz: sz + jointM * 2,
+        ly: ly + rise * 0.5,
+      });
+    }
+    return fit;
+  };
 
   for (const kind of Object.keys(PED_ARCHETYPES)) {
     const list = rows.filter((r) => r.archKey === kind || (!r.archKey && r.kind === kind));
     if (!list.length) continue;
     const def = PED_ARCHETYPES[kind];
     const parts = STYLE_PARTS[def.style] || STYLE_PARTS[kind] || DEFAULT_PARTS;
+    const fit = jointFit(parts, def);
     for (let pi = 0; pi < parts.length; pi++) {
       const part = parts[pi];
       const color = part.fixed ?? def[part.color] ?? def.frame;
@@ -6137,7 +6172,9 @@ function buildPedestrianEntrances(group, terrain, sites) {
         P.set(px, py, pz);
         E.set(part.rx || 0, r.ry + (part.ry || 0), part.rz || 0, 'YXZ');
         Q.setFromEuler(E);
-        S.set(val(part.sx, d), val(part.sy, d), val(part.sz, d));
+        const f = fit.get(part);
+        S.set(f?.sx ?? val(part.sx, d), f?.sy ?? val(part.sy, d), f?.sz ?? val(part.sz, d));
+        if (f) P.y += f.ly - ly;
         M.compose(P, Q, S);
         mesh.setMatrixAt(i, M);
       });
