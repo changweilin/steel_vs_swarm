@@ -14,7 +14,7 @@ import {
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, worldCeilY, edgeWallInsetM,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-  aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
+  aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -4715,7 +4715,9 @@ export class BattleClient {
     // 兩條不同的弧(對方看到的砲彈從山腰擦過去、我這邊是吊過山頭)。初速由幾何反解(與射手同式),
     // 上限吃全裝藥 —— 拿回報的 mv 當上限會在四捨五入邊界上忽解忽不解。
     const v45 = def.type === 'launcher' && !aa ? this._lob45Vel(from, to, this._shotV0(def, false)) : null;
-    const vel = v45 || (def.type === 'launcher'
+    const baseDir = to.clone().sub(from).normalize();
+    const launch = this._guidedLaunchVel(from, baseDir, def, v0);
+    const vel = launch?.vel || v45 || (def.type === 'launcher'
       ? this._lobVel(from, to, v0)                              // 對空彈射:初速高 ⇒ 解自然拉平
       : to.clone().sub(from).normalize().multiplyScalar(v0));   // 飛彈/動能:直指目標(近似,純視覺)
     const ldir = vel.clone().normalize();
@@ -4727,17 +4729,29 @@ export class BattleClient {
       pos: from.clone(), vel,
       origin: from.clone(), max: (def.range || 300) * 1.35, mesh,   // 射程 = 以射擊點為中心的球面(與自機彈體同一把尺)
       cyclone: null, cycAcc: 0, cycCol: this._shotCols(side).col, age: 0,
+      guided: !!launch, launchDist: launch?.dist || 0, target: to.clone(),
     });
     return ldir;
   }
 
-  /** 視覺彈體逐幀積分:重力下墜 + 地形/實體障礙截斷(解析判定,純視覺不進 A6 raycast 目標) */
+  /** 視覺彈體逐幀積分:低空導引彈先抬頭,其餘重力下墜 + 地形/實體障礙截斷(純視覺不進 A6 raycast 目標) */
   _updateVisShells(dt) {
+    const steer = (b, want, maxTurn) => {
+      const cur = b.vel.clone().normalize();
+      const ang = cur.angleTo(want);
+      if (ang > 1e-4) cur.lerp(want, Math.min(1, maxTurn * dt / ang)).normalize();
+      b.vel.copy(cur.multiplyScalar(b.vel.length()));
+    };
     for (let i = this._visShells.length - 1; i >= 0; i--) {
       const b = this._visShells[i];
       b.age += dt;
       const prev = b.pos.clone();
-      b.vel.y -= BALLISTIC.G * dt;
+      const climbing = b.guided && prev.distanceTo(b.origin) < b.launchDist;
+      if (climbing) b.vel.y -= BALLISTIC.G * dt;
+      else if (b.guided) {
+        const want = b.target.clone().sub(b.pos);
+        if (want.lengthSq() > 1e-6) steer(b, want.normalize(), seekTurn(SEEK.RIDE_W, b.vel.length()));
+      } else b.vel.y -= BALLISTIC.G * dt;
       b.pos.addScaledVector(b.vel, dt);
       const seg = b.pos.clone().sub(prev);
       const len = seg.length();
@@ -6890,7 +6904,8 @@ export class BattleClient {
     // ⇒ 貼臉開導引彈會偏(命中率較低),拉開距離後導引/追蹤才把偏差修回來。
     const arm = armingOf(def);
     const fdir = arm ? this._armSpread(dir, arm.spread) : dir;
-    const fvel = lobFc ? lobFc.vel.clone() : fdir.clone().multiplyScalar(v0);
+    const launch = lobFc ? null : this._guidedLaunchVel(muzzle, fdir, def, v0);
+    const fvel = lobFc ? lobFc.vel.clone() : launch?.vel || fdir.clone().multiplyScalar(v0);
     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fvel.clone().normalize());
     this.bullets.push({
       slot: id, aoe, pierce, r: def.r || 0, core: blastCoreR(def),   // core:近炸引信半徑的爆風項(見 _updateBullets)
@@ -6901,6 +6916,7 @@ export class BattleClient {
       oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
       cyclone: null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
       mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0,
+      launchDist: launch?.dist || 0,
       // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
       // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
       fnf: trajClass(def) === 'fnf', fuel: chaseCapS(def), age: 0, chase: false,
@@ -7016,6 +7032,20 @@ export class BattleClient {
     return dir.clone().addScaledVector(nx, m * Math.cos(a)).addScaledVector(nz, m * Math.sin(a)).normalize();
   }
 
+  /** 低空導引彈的抬頭段:直到 ARMING 距離前只向上離地,避免槍口前的地面/背景物件提早引爆。 */
+  _guidedLaunchVel(from, dir, def, v0) {
+    const cfg = guidedLaunchOf(def);
+    if (!cfg || from.y - this._surf(from.x, from.z, from.y) > cfg.LOW_ALT_M) return null;
+    const flat = new THREE.Vector3(dir.x, 0, dir.z);
+    if (flat.lengthSq() <= 1e-6) flat.set(0, 0, 1);
+    flat.normalize();
+    const pitch = cfg.PITCH_DEG * Math.PI / 180;
+    return {
+      dist: guidedLaunchDist(def),
+      vel: flat.multiplyScalar(v0 * Math.cos(pitch)).setY(v0 * Math.sin(pitch)),
+    };
+  }
+
   /**
    * 彈道模擬:逐幀積分 + 線段判定(高初速子彈一幀飛 10m+,用線段補內插)。
    *
@@ -7057,7 +7087,10 @@ export class BattleClient {
       // 與射程同一把尺:量**離發射點的直線距離**(球面),而非航跡長 —— `_reachable` 的軌跡修正期
       // 警示帶(`surf < arm`)本來就是直線量的,兩邊不同尺 = 琥珀色的範圍與實際偏差期對不上。
       const armed = prev.distanceTo(b.origin) >= (b.arm || 0);
-      if (tgt && armed) {
+      const climbing = b.launchDist > 0 && prev.distanceTo(b.origin) < b.launchDist;
+      if (climbing) {
+        b.vel.y -= BALLISTIC.G * dt;
+      } else if (tgt && armed) {
         // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
         const want = _TMP_A.copy(tgt.mesh.position); want.y += 1.5;
         steer(b, want.sub(b.pos).normalize(), seekTurn(SEEK.HOME_W, b.mv));   // 轉彎半徑上限見 data.js SEEK

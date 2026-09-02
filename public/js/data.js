@@ -2121,6 +2121,23 @@ export const ARMING = {
 };
 export const armingOf = (def) => ARMING[trajClass(def)] || null;
 
+// ---- 低空導引彈抬頭段(2026-09-02 使用者需求)----
+// 從地面或接近地面發射的雷射導引 / 射後不理彈體,先用固定上仰角離開地面與背景物件,
+// 到既有 ARMING 距離後才接手導引。抬頭距離直接吃 ARMING.m,避免新增第二個「穩定」門檻。
+// 只影響表現層彈道;命中與傷害仍由伺服器既有落點回報/驗證結算。
+export const GUIDED_LAUNCH = {
+  LOW_ALT_M: 6,       // 發射點離站立面不超過此高度才啟用抬頭段
+  PITCH_DEG: 35,      // 初始上仰角;保持水平分速,不改武器初速
+};
+export const guidedLaunchOf = (def) => {
+  const cls = trajClass(def);
+  return cls === 'guide' || cls === 'fnf' ? GUIDED_LAUNCH : null;
+};
+export const guidedLaunchDist = (def) => {
+  const cfg = guidedLaunchOf(def);
+  return cfg ? (armingOf(def)?.m || 0) : 0;
+};
+
 // ---- 導引頭的機動上限(2026-07-30 使用者回報「導引/射後不理常常光暈亮著卻沒命中」)----
 // 舊制在 `game._updateBullets` 手寫「每秒最大轉角」(追蹤 3.2 / 騎波 2.2 rad/s)。固定**角速度**
 // 的毛病是實際能不能修正航向看的是**轉彎半徑** = 初速 ÷ 角速度:初速 1000m/s 的微型攔截彈
