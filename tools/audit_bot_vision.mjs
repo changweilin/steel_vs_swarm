@@ -241,6 +241,46 @@ sec('Ⅲ 前方視野錐 行為直測(真 BattleSim + 真 BotBrain)');
 }
 
 // ---------------------------------------------------------------------------------
+sec('Ⅲ-b 狙擊模式偵察:停下或重武器可用時先開鏡');
+// ---------------------------------------------------------------------------------
+{
+  const idle = blank();
+  const ih = idle.addHero('STEEL', 'b_scope_idle', CH_ROBOT);
+  const ib = new BotBrain(idle, 'b_scope_idle', 'STEEL', 0, 'high');
+  ih.aiming = false;
+  ib.state = 'RALLY';                              // 護盾回復中的停火停步
+  ib._updateAiming(ih);
+  t('停下等盾時先開狙擊模式查看兵線', ih.aiming === true);
+
+  const ranged = blank();
+  const rh = ranged.addHero('STEEL', 'b_scope_range', CH_ROBOT);
+  const rb = new BotBrain(ranged, 'b_scope_range', 'STEEL', 0, 'high');
+  const light = rb._gun(rh), heavy = rb._heavy(rh);
+  rh.aiming = false;
+  rh.ammo.heavy = heavy.mag;
+  rh.reloadUntil.heavy = 0;
+  rh.mp = 99999;
+  ranged.t = 1;
+  rb.state = 'PUSH';
+  rb._updateAiming(rh);
+  t('重武器可用時即使尚未發現目標也先開鏡', rh.aiming === true);
+  t('狙擊偵察把選敵射程擴到重武器(不只用輕武器射程)', (() => {
+    if (heavy.range <= light.range) return false;
+    const d = light.range * 1.1;
+    const tgt = ranged._add({ kind: 'soldier', side: 'SWARM', lane: 0, x: 0, z: d, y: 0, hp: 999, maxHp: 999 });
+    rh.x = 0; rh.z = 0; rh.ry = 0;
+    ranged._tickN++;
+    return rb._acquire(rh) === tgt;
+  })());
+
+  rh.ammo.heavy = 0;
+  ranged.t += 3;                                // 轉換操作的手速間隔已經過去
+  rh.reloadUntil.heavy = ranged.t + 2;
+  rb._updateAiming(rh);
+  t('移動中且重武器不可用時收鏡', rh.aiming === false);
+}
+
+// ---------------------------------------------------------------------------------
 sec('Ⅳ 受擊警戒:其他方向來襲 → 視角跟著轉(真 BattleSim)');
 // ---------------------------------------------------------------------------------
 {

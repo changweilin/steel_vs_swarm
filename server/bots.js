@@ -3,7 +3,7 @@
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RALLY(退到砲塔後方等護盾)→ RETREAT(回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide,
+import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, botDiffOf, botOpGap, isThirdSide,
   CHARACTERS, heroMobility, highSupSpeedF, BOSS,
   VITALS,
   BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
@@ -65,6 +65,39 @@ export class BotBrain {
 
   /** 目前角色輕武器實戰數值(英雄倍率 + 現階級) */
   _gun(h) { return heroWeapon(h.ch, 'light', h.abil.light, true); }
+
+  /** 目前角色重武器實戰數值(英雄倍率 + 現階級) */
+  _heavy(h) { return heroWeapon(h.ch, 'heavy', h.abil.heavy, true); }
+
+  /** 重武器現在能否擊發(彈夾/裝填/電力與難度旗標共用 sim 的結算欄位) */
+  _heavyReady(h, hv = this._heavy(h)) {
+    if (!this.diff.heavy || !hv) return false;
+    this.sim._refillIfDone(h, 'heavy', hv);
+    const reload = (h.reloadUntil?.heavy || 0) > this.sim.t;
+    const ammo = h.ammo?.heavy;
+    const overdrive = (h.noReloadUntil || 0) > this.sim.t;
+    return !reload && (ammo == null || ammo > 0 || overdrive) && (h.mp || 0) >= heavyMpCost(hv);
+  }
+
+  /** 選敵所用的有效武器:狙擊只在重武器真的可用時擴大攻擊射程,否則仍以輕武器開火 */
+  _targetGun(h) {
+    const hv = h.aiming ? this._heavy(h) : null;
+    return hv && this._heavyReady(h, hv) ? hv : this._gun(h);
+  }
+
+  /**
+   * 狙擊模式是偵察姿態,不只是一發重武器的前置動作:
+   *   ①停下等盾時保持開鏡,用狙擊視野查看兵線周遭;
+   *   ②重武器可用時提前開鏡,讓下一次掃描能看到重武器射程內的敵人;
+   *   ③離開停滯且重武器不可用時收鏡,避免用空彈夾持續佔用遠距視野。
+   * 轉換仍吃 `weapon` 操作閘,所以開鏡不會繞過 bot 的手速限制。
+   */
+  _updateAiming(h) {
+    const hv = this._heavy(h);
+    const stationary = this.state === 'RALLY' && !this._inFight(h);
+    const want = stationary || this._heavyReady(h, hv);
+    if (want !== !!h.aiming && this._op('weapon')) this.sim.heroAim(this.pid, want);
+  }
 
   /** 控場折速係數(招式追加)鏡像:真人玩家由客戶端自鎖,bot 的「客戶端」就是這裡 ——
    *  麻痺 = 0(原地,武器照常)、緩速 ×slowF、混亂 ×0.5(bot 沒有操縱可反轉,折半近似)。
@@ -185,7 +218,7 @@ export class BotBrain {
     let t = this._tid ? this.sim.ents.get(this._tid) : null;
     if (t && (t.hp <= 0 || t.side === h.side || t.neutral || t.gar
       || (t.hero && (t.dead || (t.stealthUntil || 0) > this.sim.t)))) { t = null; this._tid = 0; }
-    if (t && Math.hypot(h.x - t.x, h.z - t.z) > this._gun(h).range * 1.15) { t = null; this._tid = 0; }
+    if (t && Math.hypot(h.x - t.x, h.z - t.z) > this._targetGun(h).range * 1.15) { t = null; this._tid = 0; }
     if (!this._op('scan')) return t;                  // 手速/掃描間隔未到:維持現有目標
     const nt = this._acquire(h);
     if ((nt ? nt.id : 0) !== this._tid) {
@@ -213,6 +246,7 @@ export class BotBrain {
     else if (this.state === 'RETREAT' && frac >= this.tac.RESUME_HP && this._op('state')) this._resume(0);
     else if (this.state === 'RALLY' && spF >= this.tac.RALLY_SP && this._op('state')) this._resume(this._progAt(h));
 
+    this._updateAiming(h);
     const target = this._target(h);
     if (!this._pulling()) this.state = target ? 'ENGAGE' : 'PUSH';
 
@@ -513,7 +547,7 @@ export class BotBrain {
 
   /** 交戰:保持在射程 60~85% 的距離環,邊打邊橫移 */
   _engage(h, u, t, dt) {
-    const gun = this._gun(h);
+    const gun = this._targetGun(h);
     const dx = t.x - h.x, dz = t.z - h.z;
     const d = Math.hypot(dx, dz) || 1;
     // 打帶跑(高難度):裝填中拉到射程外緣、可擊發時再貼上去 —— 比例走 botKiteF 單一縫。
@@ -533,15 +567,15 @@ export class BotBrain {
     this._fire(t.id, 'light');
 
     // 重武器(CD 由 sim 的 mag/reload 把關):建築或成群敵人時出手。新手難度不使用重武器。
-    const hv = heroWeapon(h.ch, 'heavy', h.abil.heavy, true);
+    const hv = this._heavy(h);
     const packed = [...this.sim.ents.values()].filter((e2) =>
       e2.side !== h.side && !e2.neutral && Math.hypot(e2.x - t.x, e2.z - t.z) <= (hv.r || 10) * 1.5).length;
     // 切瞄準模式 + 打一發重武器 = 一項操作(`weapon`):難度越低,輕/重武器切換越遲鈍。
     // 裝填中/空夾就別付這格手速(打不出來的按鍵不該排擠掃描與招式;比照招式的 _ready 先驗再花)
-    const hvReady = !((h.reloadUntil?.heavy || 0) > this.sim.t || h.ammo?.heavy === 0);
+    const hvReady = this._heavyReady(h, hv);
     if (this.diff.heavy && (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero)
       && hvReady && this.sim.t >= this._aimAt && this._op('weapon')) {
-      h.aiming = true;   // 重武器需瞄準模式,bot 開火前直接切換(無真人輸入)
+      if (!h.aiming) this.sim.heroAim(this.pid, true);   // 重武器需瞄準模式,bot 開火前直接切換(無真人輸入)
       if (hv.type === 'launcher' || hv.type === 'missile') {
         // 對空引爆高度:目標是飛行機體(英雄/直升機)就在其高度炸(火箭筒對空)
         const ty = t.hero || t.kind === 'heli' ? (t.y || 0) : 0;
@@ -631,7 +665,7 @@ export class BotBrain {
    * 中難度以上再套一層**戰術優先度**(2026-08-02 使用者需求),見 `_prioritize`。
    */
   _acquire(h) {
-    const wd = this._gun(h);
+    const wd = this._targetGun(h);
     const range = wd.range;
     const fovHalf = this._fovHalf(h);   // 前方視野半角(推導不手寫,見 data.js botFovHalf)
     const bossHold = this.sim.bossHold?.get(this.pid);
