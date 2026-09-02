@@ -3069,6 +3069,23 @@ bindSettingsControls('lset');
 // **一份實作、兩個掛載點**(戰場暫停頁 + 大廳設定頁),與操作方式/觸控設定同一條規矩;
 // 樣品是一顆真的 WebGL context ⇒ 全程 MUST 只存在一個,換頁/關閉一律 dispose(A25)。
 let _matSample = null;
+function visualPreviewEnv() {
+  const active = app.battle?.cfg?.env || app.lobby?.battleConfig?.env;
+  if (active?.season && active?.time && active?.weather
+    && ENV.seasons[active.season] && ENV.times[active.time] && ENV.weathers[active.weather]) {
+    return active;
+  }
+  const selected = {
+    season: $('envSeason')?.value,
+    time: $('envTime')?.value,
+    weather: $('envWeather')?.value,
+  };
+  return {
+    season: ENV.seasons[selected.season] ? selected.season : 'summer',
+    time: ENV.times[selected.time] ? selected.time : 'day',
+    weather: ENV.weathers[selected.weather] ? selected.weather : 'clear',
+  };
+}
 function renderVisualSettings(mount) {
   if (!mount) return;
   _matSample?.dispose();
@@ -3154,7 +3171,7 @@ function renderVisualSettings(mount) {
   // 樣品最後建:上面若有任何一行拋出,至少不會留下一顆沒人收得掉的 WebGL context
   try {
     const initialTerrains = app.londonTerrains || LONDON_SHOWCASE_SITES.map((site) => createShowcaseFallbackTerrain(site.id));
-    const sample = new MatSample(preview, { terrains: initialTerrains });
+    const sample = new MatSample(preview, { terrains: initialTerrains, env: visualPreviewEnv() });
     _matSample = sample;
     const updateTerrainNote = (idx, terrain = sample.terrainSources[idx], site = LONDON_SHOWCASE_SITES[idx]) => {
       const mode = terrain?.usedFallback ? '備援地形' : terrain ? '圖資地形' : '載入中';

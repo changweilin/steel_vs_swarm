@@ -15,6 +15,7 @@ import { onVisualChange, visualPref } from './visualPrefs.js';
 import { lowPower, isTouchUI } from './mobile.js';
 import { makeUnit } from './models.js';
 import { charKind } from './data.js';
+import { applyEnvironment } from './environment.js';
 import {
   buildShowcasePatch, findShowcaseSite, showcaseAnchorSite,
   LONDON_SHOWCASE_UNITS, LONDON_SHOWCASE_SITES,
@@ -41,8 +42,10 @@ const BG_Z = -5.5;   // 背景排的 z(與 DOF_FAR 一起挑的:那一排 MUST �
 
 // 樣品自己的霧帶與兩個霧色(「空氣透視」那根拉桿的示範對象)—— 尺度兩軌、規則一份。
 const FOG_NEAR = 5.0, FOG_FAR = 44.0;
-const FOG_FAR_C = new THREE.Color(0x0f1622);    // MUST === scene.background
+const FOG_FAR_C = new THREE.Color(0x0f1622);    // 樣品後製遠端色；天空背景由正式環境系統提供
 const FOG_NEAR_C = new THREE.Color(0x4a3a2a);
+const PREVIEW_ENV_SPAN = 24.0;                  // 只縮放展示視口；環境規則仍走正式實作
+const DEFAULT_PREVIEW_ENV = Object.freeze({ season: 'summer', time: 'day', weather: 'clear' });
 
 const DEMO_SCENES = [
   { id: 'mech', name: '🤖 機體' },
@@ -54,7 +57,7 @@ const DEMO_SCENES = [
 
 export class MatSample {
   /** @param mount 要掛 canvas 的容器 */
-  constructor(mount, { terrain = null, terrains = null } = {}) {
+  constructor(mount, { terrain = null, terrains = null, env = null } = {}) {
     this.mount = mount;
     this._sceneIdx = 0;
     this._mats = [];
@@ -68,6 +71,8 @@ export class MatSample {
     this.terrainSites = new Array(DEMO_SCENES.length).fill(null);
     this.terrainSite = null;
     this._terrainGroups = new Array(DEMO_SCENES.length).fill(null);
+    this._envConfig = env || DEFAULT_PREVIEW_ENV;
+    this.envFx = null;
     this._flatGrounds = [];
     this._waterSurfaces = [];
     this._showcaseUnits = [];
@@ -472,6 +477,21 @@ export class MatSample {
       : terrain ? DEMO_SCENES.map(() => terrain) : null;
     this.setTerrains(initialTerrains);
 
+    // 背景直接借用戰場同一套天空/雲/天氣；樣品的地面霧帶仍保留，讓空氣透視旋鈕在小視口裡可見。
+    const envSource = this._terrainSources.find(Boolean);
+    const envTerrain = {
+      worldW: PREVIEW_ENV_SPAN,
+      worldH: PREVIEW_ENV_SPAN,
+      center: envSource?.center || { lat: 25.0, lng: 0.0 },
+      heightAt: (x, z) => this._terrainSources[this._sceneIdx]?.heightAt?.(x, z) ?? 0,
+    };
+    this.envFx = applyEnvironment(this.scene, envTerrain, this._envConfig, {
+      lowPower: lowPower() || isTouchUI(),
+      backgroundOnly: true,
+    });
+    // applyEnvironment 的穹頂與 scene.background 都保留，讓預覽的背景和戰場走同一條天空路徑。
+    this.scene.fog = new THREE.Fog(FOG_FAR_C.clone(), FOG_NEAR, FOG_FAR);
+
     // 勾線/調色走真品後製管線
     this.pipeline = new Pipeline(this.renderer, this.scene, this.camera, {
       lowPower: lowPower() || isTouchUI(),
@@ -570,7 +590,15 @@ export class MatSample {
   }
 
   /** 每幀更新實機動態演出 */
-  update(t) {
+  update(t, dt = 0) {
+    this.envFx?.update(dt, this.camera, t);
+    // 背景環境更新時會同步寫 scene.fog；樣品仍需自己的尺度，否則所有旋鈕都在遠霧之外。
+    if (this.scene.fog) {
+      this.scene.fog.color.copy(FOG_NEAR_C);
+      this.scene.fog.near = FOG_NEAR;
+      this.scene.fog.far = FOG_FAR;
+    }
+
     // 1. 機體展示台動態 (機甲浮動呼吸、伴隨機巡弋繞行、底座光環旋轉)
     if (this._mechAnims && this._gMech.visible) {
       const { core, chest, visor, armL, armR, ring, drone } = this._mechAnims;
@@ -684,6 +712,8 @@ export class MatSample {
     }
     this._off?.();
     this._off = null;
+    this.envFx?.dispose();
+    this.envFx = null;
     this.pipeline?.dispose();
     for (const m of this._mats) m.dispose();
     for (const g of this._geos) g.dispose();

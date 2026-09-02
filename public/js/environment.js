@@ -816,6 +816,7 @@ function makeLightningSystem(span, terrain) {
 
 export function applyEnvironment(scene, terrain, env, opts = {}) {
   const span = Math.max(terrain.worldW, terrain.worldH);
+  const backgroundOnly = !!opts.backgroundOnly;
   const startTime = TIMES[env?.time] ? env.time : 'day';
   const startSeason = env?.season || 'summer';
   const startWeather = env?.weather || 'clear';
@@ -824,11 +825,11 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
 
   const sched = computeSolarSchedule(startSeason, latDeg);
   const S = SEASONS[startSeason] || SEASONS.summer;
-  setSolarSchedule(sched);
+  if (!backgroundOnly) setSolarSchedule(sched);
 
   let weatherVec = weatherVectorAt(startSeason, startTime, startWeather, 0, seed, latDeg);
   let curDyn = resolveWeatherDynamics(weatherVec);
-  setWeatherDynamics(curDyn);
+  if (!backgroundOnly) setWeatherDynamics(curDyn);
 
   const tintC = new THREE.Color(S.tint);
   const T = newPhase();
@@ -849,14 +850,18 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
   const bodies = makeBodies(span);
   scene.add(bodies.obj);
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 1);
-  scene.add(hemi);
+  // 設定頁樣品只借用同一套天空/雲/天氣；燈光仍由 matsample 的鍵光控制，
+  // 避免背景預覽改寫戰場共享的 cel 光向。
+  const hemi = backgroundOnly ? null : new THREE.HemisphereLight(0xffffff, 0xffffff, 1);
+  if (hemi) scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xffffff, 1);
-  scene.add(sun);
-  scene.add(sun.target);
+  const sun = backgroundOnly ? null : new THREE.DirectionalLight(0xffffff, 1);
+  if (sun) {
+    scene.add(sun);
+    scene.add(sun.target);
+  }
 
-  const shadowOn = !!opts.shadow;
+  const shadowOn = !backgroundOnly && !!opts.shadow;
   const shSize = opts.lowPower ? SHADOW.SIZE_LOW : SHADOW.SIZE;
   const shR = shadowRangeM(shSize);
   if (shadowOn) {
@@ -925,20 +930,25 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
     u.uM.value.copy(stops.mid);
     u.uZ.value.copy(stops.zen);
 
-    hemi.color.copy(T.hemiSky);
-    hemi.groundColor.copy(T.hemiGnd);
-    hemi.intensity = (T.hemiI * (curDyn.light * 0.6 + 0.4) * S.mul) + (flashStrength * 3.5);
+    if (hemi) {
+      hemi.color.copy(T.hemiSky);
+      hemi.groundColor.copy(T.hemiGnd);
+      hemi.intensity = (T.hemiI * (curDyn.light * 0.6 + 0.4) * S.mul) + (flashStrength * 3.5);
+    }
 
-    const sd = sunDirAt(h), md = moonDirAt(h);
+    const sd = backgroundOnly ? sunDirAt(h, sched.riseH, sched.setH) : sunDirAt(h);
+    const md = backgroundOnly ? sunDirAt(h + 12, sched.riseH, sched.setH) : moonDirAt(h);
     _sunD.set(sd.x, sd.y, sd.z);
     _moonD.set(md.x, md.y, md.z);
     const up = sd.y > 0;
     out.sunUp = up;
     _lit.copy(up ? _sunD : _moonD);
     const fade = bodyFade(up ? sd.y : md.y);
-    sun.color.copy(sunC);
-    sun.intensity = (T.sunI * curDyn.light * S.mul * fade) + (flashStrength * 5.0);
-    setCelSun(_lit);
+    if (sun) {
+      sun.color.copy(sunC);
+      sun.intensity = (T.sunI * curDyn.light * S.mul * fade) + (flashStrength * 5.0);
+    }
+    if (!backgroundOnly) setCelSun(_lit);
 
     moonC.setHex(TIMES.night.sun).lerp(WHITE, 0.45);
     bodies.place(_cam, _sunD, _moonD, sunC, moonC, Math.max(0, Math.min(1, sd.y / 0.35)));
@@ -955,7 +965,7 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       // 1. 連續 7 維布朗運動與四季時段氣候演化 (含大雪凍結保溫與解凍動態)
       weatherVec = weatherVectorAt(startSeason, startTime, startWeather, elapsedS, seed, latDeg);
       curDyn = resolveWeatherDynamics(weatherVec, curDyn, dt);
-      setWeatherDynamics(curDyn);
+      if (!backgroundOnly) setWeatherDynamics(curDyn);
 
       // 2. 打雷閃電系統 (>75% 觸發實體 3D 閃電擊向地面與全場強光頻閃)
       flashStrength = 0;
@@ -1012,8 +1022,10 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       const cx = q ? Math.round(px / q) * q : px;
       const cz = q ? Math.round(pz / q) * q : pz;
       const cy = camera.position.y;
-      sun.target.position.set(cx, cy, cz);
-      sun.position.set(cx + _lit.x * shR * 2.5, cy + _lit.y * shR * 2.5, cz + _lit.z * shR * 2.5);
+      if (sun) {
+        sun.target.position.set(cx, cy, cz);
+        sun.position.set(cx + _lit.x * shR * 2.5, cy + _lit.y * shR * 2.5, cz + _lit.z * shR * 2.5);
+      }
 
       // 6. 粒子與雲群動態步進
       particles.update(dt, camera, curDyn);
@@ -1021,13 +1033,15 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       dome.position.copy(camera.position);
       if (clouds) {
         clouds.obj.position.copy(camera.position);
-        clouds.step(celWindTime(), dt, skyC, curDyn);
+        clouds.step(backgroundOnly ? elapsedS : celWindTime(), dt, skyC, curDyn);
       }
     },
     dispose() {
-      scene.remove(hemi);
-      scene.remove(sun);
-      scene.remove(sun.target);
+      if (hemi) scene.remove(hemi);
+      if (sun) {
+        scene.remove(sun);
+        scene.remove(sun.target);
+      }
       scene.remove(particles.obj);
       particles.dispose();
       scene.remove(lightning.obj);
