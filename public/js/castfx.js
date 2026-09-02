@@ -1002,6 +1002,7 @@ function pillar(col, r, h, o = 0.35) {
 /** 固定數量的共享幾何實例；矩陣只在建立時寫入，逐幀僅動父群組。 */
 function instances(geo, mat, count, place) {
   const mesh = new THREE.InstancedMesh(geo, mat, count);
+  mesh.frustumCulled = false;
   const dummy = new THREE.Object3D();
   for (let i = 0; i < count; i++) {
     dummy.position.set(0, 0, 0);
