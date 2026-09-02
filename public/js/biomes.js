@@ -4617,6 +4617,7 @@ function placeBaseFlags({ group, terrain, blocked, basesW, nation }) {
   });
   poles.instanceMatrix.needsUpdate = true;
   poles.castShadow = false;
+  poles.frustumCulled = false;
   group.add(poles);
   // 旗面:逐國一個 InstancedMesh(紀律 ③)。旗面掛在桿頂偏 +x 半個旗寬處 = 桿邊貼著桿。
   const byIso = new Map();
@@ -4639,6 +4640,7 @@ function placeBaseFlags({ group, terrain, blocked, basesW, nation }) {
     });
     fm.instanceMatrix.needsUpdate = true;
     fm.castShadow = false;
+    fm.frustumCulled = false;
     group.add(fm);
   }
   return sites.length;
