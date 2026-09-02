@@ -36,7 +36,9 @@ import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { loadPartLibs } from './partlib.js';
 import { CharPreview } from './charPreview.js';
-import { createShowcaseFallbackTerrain } from './showcase.js';
+import {
+  createShowcaseFallbackTerrain, LONDON_SHOWCASE_SITES, showcaseTerrainConfig,
+} from './showcase.js';
 import { VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
@@ -148,8 +150,8 @@ const app = {
   battle: null,         // BattleClient
   audio: null,          // GameAudio(app 層,跨戰局存活;BGM 大廳↔戰場切換)
   terrain: null,
-  londonTerrain: null,
-  londonTerrainPromise: null,
+  londonTerrains: null,
+  londonTerrainsPromise: null,
   pre: null,            // 地圖預建(startPrebuild):房間階段先建好的固定項目,enterLoading 消費後清空
   battleCfg: null,
   phaseShown: null,
@@ -1437,27 +1439,23 @@ $('charDetail').addEventListener('click', (e) => {
   if (row?.dataset.slot) app.stages.char?.preview.play(row.dataset.slot);
 });
 
-function ensureLondonTerrain() {
-  if (app.londonTerrain) return Promise.resolve(app.londonTerrain);
-  if (app.londonTerrainPromise) return app.londonTerrainPromise;
-  const venue = VENUES.find((v) => v.id === 'london');
-  if (!venue) {
-    app.londonTerrain = createShowcaseFallbackTerrain();
-    _matSample?.setTerrain(app.londonTerrain);
-    return Promise.resolve(app.londonTerrain);
-  }
-  const cfg = venueConfig(venue, TEAM.DEFAULT, false);
-  app.londonTerrainPromise = buildTerrain(cfg).then((terrain) => {
-    app.londonTerrain = terrain;
-    _matSample?.setTerrain(terrain);
-    return terrain;
-  }).catch(() => {
-    const terrain = createShowcaseFallbackTerrain();
-    app.londonTerrain = terrain;
-    _matSample?.setTerrain(terrain);
-    return terrain;
-  }).finally(() => { app.londonTerrainPromise = null; });
-  return app.londonTerrainPromise;
+function ensureLondonTerrains() {
+  if (Array.isArray(app.londonTerrains)) return Promise.resolve(app.londonTerrains);
+  if (app.londonTerrainsPromise) return app.londonTerrainsPromise;
+  app.londonTerrainsPromise = Promise.all(LONDON_SHOWCASE_SITES.map(async (site) => {
+    try {
+      const terrain = await buildTerrain(showcaseTerrainConfig(site));
+      terrain.showcaseId = site.id;
+      return terrain;
+    } catch {
+      return createShowcaseFallbackTerrain(site.id);
+    }
+  })).then((terrains) => {
+    app.londonTerrains = terrains;
+    _matSample?.setTerrains(terrains);
+    return terrains;
+  }).finally(() => { app.londonTerrainsPromise = null; });
+  return app.londonTerrainsPromise;
 }
 
 // ================= 放大獨立視窗(仿遊戲操作演出;含角色/NPC 選擇,可切換放大對象) =================
@@ -3083,7 +3081,7 @@ function renderVisualSettings(mount) {
 
   const terrainNote = document.createElement('div');
   terrainNote.className = 'vset-location';
-  terrainNote.textContent = '展示背景：倫敦・伊爾福德／七王站・正在準備圖資地形…';
+  terrainNote.textContent = '展示背景：倫敦・五個 demo 各自使用對應地貌圖資…';
   mount.insertBefore(terrainNote, preview);
 
   // 拉桿逐項由 VISUAL_KNOBS 推導(標籤/範圍/說明都在那一份表)—— 這裡 MUST NOT 再寫一次
@@ -3155,14 +3153,20 @@ function renderVisualSettings(mount) {
 
   // 樣品最後建:上面若有任何一行拋出,至少不會留下一顆沒人收得掉的 WebGL context
   try {
-    const sample = new MatSample(preview, { terrain: app.londonTerrain || createShowcaseFallbackTerrain() });
+    const initialTerrains = app.londonTerrains || LONDON_SHOWCASE_SITES.map((site) => createShowcaseFallbackTerrain(site.id));
+    const sample = new MatSample(preview, { terrains: initialTerrains });
     _matSample = sample;
-    ensureLondonTerrain().then((terrain) => {
+    const updateTerrainNote = (idx, terrain = sample.terrainSources[idx], site = LONDON_SHOWCASE_SITES[idx]) => {
+      const mode = terrain?.usedFallback ? '備援地形' : terrain ? '圖資地形' : '載入中';
+      const slope = Math.round(sample.terrainSites[idx]?.slopeDeg || 0);
+      terrainNote.textContent = `展示背景：倫敦・${site?.area || '指定地貌'}・${mode}・地點坡度 ${slope}°`;
+    };
+    sample.onSceneChange = (idx) => updateTerrainNote(idx);
+    updateTerrainNote(0);
+    ensureLondonTerrains().then((terrains) => {
       if (_matSample !== sample) return;
-      sample.setTerrain(terrain);
-      const mode = terrain.usedFallback ? '圖資暫時不可用，使用備援地形' : '圖資地形完成';
-      const slope = Math.round(sample.terrainSite?.slopeDeg || 0);
-      terrainNote.textContent = `展示背景：倫敦・伊爾福德／七王站・${mode}・地點坡度 ${slope}°`;
+      sample.setTerrains(terrains);
+      updateTerrainNote(sample._sceneIdx, terrains[sample._sceneIdx]);
     });
   } catch { preview.remove(); terrainNote.remove(); }   // WebGL 建不起來就不給樣品(原則 6)
 }

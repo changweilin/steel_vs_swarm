@@ -15,7 +15,10 @@ import { onVisualChange, visualPref } from './visualPrefs.js';
 import { lowPower, isTouchUI } from './mobile.js';
 import { makeUnit } from './models.js';
 import { charKind } from './data.js';
-import { buildShowcasePatch, findShowcaseSite, LONDON_SHOWCASE_UNITS } from './showcase.js';
+import {
+  buildShowcasePatch, findShowcaseSite, showcaseAnchorSite,
+  LONDON_SHOWCASE_UNITS, LONDON_SHOWCASE_SITES,
+} from './showcase.js';
 
 const W = 480, H = 270;
 
@@ -37,7 +40,7 @@ const DOF_NEAR = 11.0, DOF_FAR = 15.5;
 const BG_Z = -5.5;   // 背景排的 z(與 DOF_FAR 一起挑的:那一排 MUST 落在全糊帶裡)
 
 // 樣品自己的霧帶與兩個霧色(「空氣透視」那根拉桿的示範對象)—— 尺度兩軌、規則一份。
-const FOG_NEAR = 6.0, FOG_FAR = 27.0;
+const FOG_NEAR = 5.0, FOG_FAR = 44.0;
 const FOG_FAR_C = new THREE.Color(0x0f1622);    // MUST === scene.background
 const FOG_NEAR_C = new THREE.Color(0x4a3a2a);
 
@@ -51,7 +54,7 @@ const DEMO_SCENES = [
 
 export class MatSample {
   /** @param mount 要掛 canvas 的容器 */
-  constructor(mount, { terrain = null } = {}) {
+  constructor(mount, { terrain = null, terrains = null } = {}) {
     this.mount = mount;
     this._sceneIdx = 0;
     this._mats = [];
@@ -60,10 +63,13 @@ export class MatSample {
     this._time = 0;
     this._lastTime = performance.now();
     this._rafId = null;
-    this._terrainSource = null;
+    this._terrainSources = new Array(DEMO_SCENES.length).fill(null);
+    this.terrainSources = this._terrainSources;
+    this.terrainSites = new Array(DEMO_SCENES.length).fill(null);
     this.terrainSite = null;
-    this._terrainGroup = null;
+    this._terrainGroups = new Array(DEMO_SCENES.length).fill(null);
     this._flatGrounds = [];
+    this._waterSurfaces = [];
     this._showcaseUnits = [];
 
     // 場景切換列 (固定在預覽上方)
@@ -185,8 +191,8 @@ export class MatSample {
     this._mechAnims = { core: mech, chest: mechChest, visor: mechVisor, armL: mechArmL, armR: mechArm, ring: pedRing, drone };
 
     // 機體樣品直接走正式 makeUnit()；縮小後三台仍保留戰場剪影、掛件與材質。
-    const unitScale = 0.55;
-    const unitX = [-3.25, 0, 3.25];
+    const unitScale = 0.64;
+    const unitX = [-3.45, 0, 3.45];
     this._showcaseUnits = LONDON_SHOWCASE_UNITS.map((spec, i) => {
       const { group } = makeUnit(`hero:${charKind(spec.id)}`, spec.side,
         { ring: true, ch: spec.id });
@@ -221,6 +227,7 @@ export class MatSample {
       const water = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), waterM);
       water.position.set(7.5, 0.5, 0);
       water.rotation.x = -Math.PI / 2;
+      this._waterSurfaces.push(water);
 
       // 水中古石柱遺跡 1 (挺立高古柱)
       const pillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.75, 4.4, 16), relicM);
@@ -286,6 +293,7 @@ export class MatSample {
       const swampWater = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), swampWaterM);
       swampWater.position.set(7.5, 0.5, 0);
       swampWater.rotation.x = -Math.PI / 2;
+      this._waterSurfaces.push(swampWater);
 
       // 沼澤古石柱
       const sPillar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.75, 4.2, 16), swampRelicM);
@@ -459,7 +467,10 @@ export class MatSample {
     this._gTree.visible = false;
     this._gBiome.visible = false;
 
-    this.setTerrain(terrain);
+    const initialTerrains = Array.isArray(terrains)
+      ? terrains
+      : terrain ? DEMO_SCENES.map(() => terrain) : null;
+    this.setTerrains(initialTerrains);
 
     // 勾線/調色走真品後製管線
     this.pipeline = new Pipeline(this.renderer, this.scene, this.camera, {
@@ -486,35 +497,63 @@ export class MatSample {
     this._rafId = requestAnimationFrame(this._animate);
   }
 
-  /** 設定頁所有樣品共用同一塊倫敦圖資；地形只屬展示，不進戰場碰撞。 */
-  setTerrain(terrain) {
-    const source = terrain?.heightAt ? terrain : null;
-    if (!source) {
-      if (this._terrainGroup) {
-        this.scene.remove(this._terrainGroup);
-        disposeTree(this._terrainGroup);
-        this._terrainGroup = null;
+  /** 五個樣品各吃自己的倫敦地形；地形只屬展示，不進戰場碰撞。 */
+  setTerrains(terrains) {
+    const next = Array.isArray(terrains) ? terrains : [];
+    let changed = false;
+    for (let i = 0; i < DEMO_SCENES.length; i++) {
+      const source = next[i]?.heightAt ? next[i] : null;
+      if (source === this._terrainSources[i]) continue;
+      changed = true;
+      if (this._terrainGroups[i]) {
+        this.scene.remove(this._terrainGroups[i]);
+        disposeTree(this._terrainGroups[i]);
+        this._terrainGroups[i] = null;
       }
-      this._terrainSource = null;
-      this.terrainSite = null;
-      this._flatGrounds.forEach((ground) => { ground.visible = true; });
-      this._showcaseUnits.forEach((item) => { item.terrainY = 0; });
-      return;
+      this._terrainSources[i] = source;
+      this.terrainSites[i] = null;
+      if (!source) continue;
+
+      const spec = LONDON_SHOWCASE_SITES[i] || LONDON_SHOWCASE_SITES[0];
+      const siteMode = spec.terrain === 'heath' ? 'relief' : spec.water ? 'wet' : spec.terrain === 'forest' ? 'green' : 'flat';
+      const built = buildShowcasePatch(source, {
+        site: source.showcaseSite || findShowcaseSite(source, siteMode) || showcaseAnchorSite(source),
+        style: spec.terrain,
+        water: spec.water,
+      });
+      built.group.renderOrder = -2;
+      built.group.visible = i === this._sceneIdx;
+      this._terrainGroups[i] = built.group;
+      this.terrainSites[i] = built.site;
+      this.scene.add(built.group);
+      if (source.group) {
+        disposeTree(source.group);
+        source.group = null;
+      }
+      if (i === 0) {
+        for (const item of this._showcaseUnits) item.terrainY = built.localYAt(item.x, 0);
+      }
+      if (i === 1 && built.waterY != null) {
+        for (const mesh of this._foamMeshes || []) mesh.position.y = built.waterY + 0.03;
+      }
+      if (i === 2 && built.waterY != null) {
+        for (const mesh of [this._swampAnims?.sFoamRing1, this._swampAnims?.sFoamRing2]) {
+          if (mesh) mesh.position.y = built.waterY + 0.03;
+        }
+      }
     }
-    if (source === this._terrainSource) return;
-    const built = buildShowcasePatch(source, { site: findShowcaseSite(source) });
-    if (this._terrainGroup) {
-      this.scene.remove(this._terrainGroup);
-      disposeTree(this._terrainGroup);
-    }
-    this._terrainSource = source;
-    this.terrainSite = built.site;
-    this._terrainGroup = built.group;
-    this._terrainGroup.renderOrder = -2;
-    this.scene.add(this._terrainGroup);
-    this._flatGrounds.forEach((ground) => { ground.visible = false; });
-    this._showcaseUnits.forEach((item) => { item.terrainY = built.localYAt(item.x, 0); });
-    if (this.pipeline) this.render();
+    const hasTerrain = this._terrainSources.some(Boolean);
+    this._flatGrounds.forEach((ground) => { ground.visible = !hasTerrain; });
+    this._waterSurfaces.forEach((water) => { water.visible = !hasTerrain; });
+    this.terrainSite = this.terrainSites[this._sceneIdx];
+    if (changed && this.pipeline) this.render();
+  }
+
+  /** 單一地形的相容入口；新流程使用 setTerrains。 */
+  setTerrain(terrain, sceneIdx = 0) {
+    const terrains = this._terrainSources.slice();
+    terrains[sceneIdx] = terrain;
+    this.setTerrains(terrains);
   }
 
   /** 切換展示場景 */
@@ -523,7 +562,10 @@ export class MatSample {
     this._sceneIdx = idx;
     this._sceneBtns.forEach((b, i) => b.classList.toggle('on', i === idx));
     this._sceneGroups.forEach((g, i) => { g.visible = (i === idx); });
+    this._terrainGroups.forEach((g, i) => { if (g) g.visible = i === idx; });
+    this.terrainSite = this.terrainSites[idx] || null;
     if (this.roster) this.roster.hidden = idx !== 0;
+    this.onSceneChange?.(idx);
     this.render();
   }
 
@@ -646,7 +688,7 @@ export class MatSample {
     for (const m of this._mats) m.dispose();
     for (const g of this._geos) g.dispose();
     for (const item of this._showcaseUnits) disposeTree(item.group);
-    if (this._terrainGroup) disposeTree(this._terrainGroup);
+    for (const group of this._terrainGroups) if (group) disposeTree(group);
     this.renderer?.dispose();
     this.renderer = null;
     this.switcher?.remove();
