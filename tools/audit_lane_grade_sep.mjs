@@ -11,7 +11,7 @@
 // (biomes.tunnelCoverIntervals),平坦市區的 tunnel way 根本不立結構 ⇒ 這裡報的違規是上界,
 // 山地場地才是真違規(平地場地需以瀏覽器冒煙確認 portals 是否真的建出來)。
 // 用法:node tools/audit_lane_grade_sep.mjs
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { VENUE_LANES } from '../public/js/venueLanes.js';
@@ -23,6 +23,12 @@ const CORRIDOR = 9;    // 結構走廊半寬(≈ TUN.HW / PASS_W/2),幾何交叉
 const REBUILD_W = 30;  // 路徑重建走廊半寬(公尺):被簡化的節點理應緊貼直線段
 const SC = 1 / MAPGEO.REAL_SCALE;   // 真實公尺 → 遊戲公尺(規則判定與 runtime 同尺度)
 const SPAN_GAP = 36;   // 相鄰隧道段縫合門檻(遊戲公尺;同 biomes.TUN_GAP_CLOSE —— 雙孔/分段 way 視為同一座洞)
+
+if (!existsSync(CACHE)) {
+  console.log(`⏭ 無 .osm_cache，${Object.keys(VENUE_LANES).length} 個場地未驗；` +
+    'audit_traverse 的固定 fixture / 高程驗證不受影響。');
+  process.exit(0);
+}
 
 const k6 = (lat, lon) => `${lat.toFixed(6)},${lon.toFixed(6)}`;
 
