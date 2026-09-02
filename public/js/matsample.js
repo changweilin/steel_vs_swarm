@@ -9,10 +9,13 @@
 // 成本:一顆額外的 WebGL context(480×270),只在設定頁開著時存在,`dispose()` 一律
 // 連 renderer 一起收(A25)。低功耗/觸控走 8bit RT,與戰場同一條降級規則。
 import * as THREE from 'three';
-import { toonMat, envMat, updateCelLight } from './toon.js';
+import { toonMat, envMat, updateCelLight, disposeTree } from './toon.js';
 import { Pipeline } from './postfx.js';
 import { onVisualChange, visualPref } from './visualPrefs.js';
 import { lowPower, isTouchUI } from './mobile.js';
+import { makeUnit } from './models.js';
+import { charKind } from './data.js';
+import { buildShowcasePatch, findShowcaseSite, LONDON_SHOWCASE_UNITS } from './showcase.js';
 
 const W = 480, H = 270;
 
@@ -48,7 +51,7 @@ const DEMO_SCENES = [
 
 export class MatSample {
   /** @param mount 要掛 canvas 的容器 */
-  constructor(mount) {
+  constructor(mount, { terrain = null } = {}) {
     this.mount = mount;
     this._sceneIdx = 0;
     this._mats = [];
@@ -57,6 +60,11 @@ export class MatSample {
     this._time = 0;
     this._lastTime = performance.now();
     this._rafId = null;
+    this._terrainSource = null;
+    this.terrainSite = null;
+    this._terrainGroup = null;
+    this._flatGrounds = [];
+    this._showcaseUnits = [];
 
     // 場景切換列 (固定在預覽上方)
     this.switcher = document.createElement('div');
@@ -76,6 +84,15 @@ export class MatSample {
     this.canvas.width = W; this.canvas.height = H;
     this.canvas.className = 'vset-sample';
     mount.appendChild(this.canvas);
+
+    this.roster = document.createElement('div');
+    this.roster.className = 'vset-roster';
+    for (const spec of LONDON_SHOWCASE_UNITS) {
+      const item = document.createElement('div');
+      item.innerHTML = `<b>${spec.label}</b><span>${spec.note}</span>`;
+      this.roster.appendChild(item);
+    }
+    mount.appendChild(this.roster);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, alpha: false, stencil: false });
     this.renderer.setPixelRatio(1);
@@ -161,8 +178,27 @@ export class MatSample {
       pedGeo, pedRingGeo, droneGeo
     );
 
-    this._gMech.add(mech, mechChest, mechVisor, mechArm, mechArmL, ped, pedRing, drone, rock, ground, ...bg);
+    const legacyMech = new THREE.Group();
+    legacyMech.visible = false;
+    legacyMech.add(mech, mechChest, mechVisor, mechArm, mechArmL, ped, pedRing, drone, rock, ground, ...bg);
+    this._gMech.add(legacyMech);
     this._mechAnims = { core: mech, chest: mechChest, visor: mechVisor, armL: mechArmL, armR: mechArm, ring: pedRing, drone };
+
+    // 機體樣品直接走正式 makeUnit()；縮小後三台仍保留戰場剪影、掛件與材質。
+    const unitScale = 0.55;
+    const unitX = [-3.25, 0, 3.25];
+    this._showcaseUnits = LONDON_SHOWCASE_UNITS.map((spec, i) => {
+      const { group } = makeUnit(`hero:${charKind(spec.id)}`, spec.side,
+        { ring: true, ch: spec.id });
+      group.scale.setScalar(unitScale);
+      group.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(group);
+      const item = { ...spec, group, phase: i * 1.9, x: unitX[i], baseY: -box.min.y, hover: spec.hover * unitScale };
+      group.position.set(item.x, item.baseY + item.hover, 0.2);
+      this._gMech.add(group);
+      return item;
+    });
+    this._flatGrounds.push(ground);
 
     // ── 2. 海灘與水中遺跡 (海灘斜坡、清澈海水、水中石柱遺跡、沉沒艦體與浪花脈動) ──
     this._gShore = new THREE.Group();
@@ -179,6 +215,7 @@ export class MatSample {
       // 海灘沙地
       const beach = new THREE.Mesh(new THREE.BoxGeometry(12, 1.4, 26), sandM);
       beach.position.set(-6.0, 0.7, 0);
+      this._flatGrounds.push(beach);
 
       // 清澈水體
       const water = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), waterM);
@@ -243,6 +280,7 @@ export class MatSample {
       // 泥濘濕地陸塊
       const mudBank = new THREE.Mesh(new THREE.BoxGeometry(11, 1.3, 26), mudM);
       mudBank.position.set(-5.5, 0.65, 0);
+      this._flatGrounds.push(mudBank);
 
       // 沼澤水體
       const swampWater = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), swampWaterM);
@@ -309,6 +347,7 @@ export class MatSample {
 
       const groundT = new THREE.Mesh(new THREE.PlaneGeometry(28, 28), groundTM);
       groundT.rotation.x = -Math.PI / 2;
+      this._flatGrounds.push(groundT);
 
       // 主神木 (高大粗壯，全貌盡覽)
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.2, 5.2, 12), woodM);
@@ -382,6 +421,7 @@ export class MatSample {
       const seam = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 28), seamM);
       seam.position.set(0, 0.02, 0);
       seam.rotation.x = -Math.PI / 2;
+      this._flatGrounds.push(gGrass, gDesert, seam);
 
       // 宏偉巨岩石碑 1
       const m1 = new THREE.Mesh(new THREE.BoxGeometry(2.0, 4.8, 2.0), monolithM);
@@ -419,6 +459,8 @@ export class MatSample {
     this._gTree.visible = false;
     this._gBiome.visible = false;
 
+    this.setTerrain(terrain);
+
     // 勾線/調色走真品後製管線
     this.pipeline = new Pipeline(this.renderer, this.scene, this.camera, {
       lowPower: lowPower() || isTouchUI(),
@@ -444,12 +486,44 @@ export class MatSample {
     this._rafId = requestAnimationFrame(this._animate);
   }
 
+  /** 設定頁所有樣品共用同一塊倫敦圖資；地形只屬展示，不進戰場碰撞。 */
+  setTerrain(terrain) {
+    const source = terrain?.heightAt ? terrain : null;
+    if (!source) {
+      if (this._terrainGroup) {
+        this.scene.remove(this._terrainGroup);
+        disposeTree(this._terrainGroup);
+        this._terrainGroup = null;
+      }
+      this._terrainSource = null;
+      this.terrainSite = null;
+      this._flatGrounds.forEach((ground) => { ground.visible = true; });
+      this._showcaseUnits.forEach((item) => { item.terrainY = 0; });
+      return;
+    }
+    if (source === this._terrainSource) return;
+    const built = buildShowcasePatch(source, { site: findShowcaseSite(source) });
+    if (this._terrainGroup) {
+      this.scene.remove(this._terrainGroup);
+      disposeTree(this._terrainGroup);
+    }
+    this._terrainSource = source;
+    this.terrainSite = built.site;
+    this._terrainGroup = built.group;
+    this._terrainGroup.renderOrder = -2;
+    this.scene.add(this._terrainGroup);
+    this._flatGrounds.forEach((ground) => { ground.visible = false; });
+    this._showcaseUnits.forEach((item) => { item.terrainY = built.localYAt(item.x, 0); });
+    if (this.pipeline) this.render();
+  }
+
   /** 切換展示場景 */
   setScene(idx) {
     if (idx < 0 || idx >= this._sceneGroups.length) return;
     this._sceneIdx = idx;
     this._sceneBtns.forEach((b, i) => b.classList.toggle('on', i === idx));
     this._sceneGroups.forEach((g, i) => { g.visible = (i === idx); });
+    if (this.roster) this.roster.hidden = idx !== 0;
     this.render();
   }
 
@@ -470,6 +544,11 @@ export class MatSample {
       ring.rotation.z = t * 0.4;
       drone.position.set(-2.2 + Math.cos(t * 1.4) * 2.0, 3.4 + Math.sin(t * 2.2) * 0.2, Math.sin(t * 1.4) * 1.6);
       drone.rotation.y = -t * 1.4;
+
+      for (const item of this._showcaseUnits) {
+        item.group.position.y = item.baseY + (item.terrainY || 0) + item.hover + Math.sin(t * 1.45 + item.phase) * 0.025;
+        item.group.rotation.y = Math.sin(t * 0.42 + item.phase) * 0.10;
+      }
     }
 
     // 2. 海灘浪花動態 (潮汐伸縮沖岸、石柱波紋環縮放、沉船微晃)
@@ -566,6 +645,8 @@ export class MatSample {
     this.pipeline?.dispose();
     for (const m of this._mats) m.dispose();
     for (const g of this._geos) g.dispose();
+    for (const item of this._showcaseUnits) disposeTree(item.group);
+    if (this._terrainGroup) disposeTree(this._terrainGroup);
     this.renderer?.dispose();
     this.renderer = null;
     this.switcher?.remove();

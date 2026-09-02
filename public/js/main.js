@@ -36,6 +36,7 @@ import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { loadPartLibs } from './partlib.js';
 import { CharPreview } from './charPreview.js';
+import { createShowcaseFallbackTerrain } from './showcase.js';
 import { VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { talkOf, stageKey } from './storytalk.js';
@@ -147,6 +148,8 @@ const app = {
   battle: null,         // BattleClient
   audio: null,          // GameAudio(app 層,跨戰局存活;BGM 大廳↔戰場切換)
   terrain: null,
+  londonTerrain: null,
+  londonTerrainPromise: null,
   pre: null,            // 地圖預建(startPrebuild):房間階段先建好的固定項目,enterLoading 消費後清空
   battleCfg: null,
   phaseShown: null,
@@ -1433,6 +1436,29 @@ $('charDetail').addEventListener('click', (e) => {
   const row = e.target.closest('.cd-row');
   if (row?.dataset.slot) app.stages.char?.preview.play(row.dataset.slot);
 });
+
+function ensureLondonTerrain() {
+  if (app.londonTerrain) return Promise.resolve(app.londonTerrain);
+  if (app.londonTerrainPromise) return app.londonTerrainPromise;
+  const venue = VENUES.find((v) => v.id === 'london');
+  if (!venue) {
+    app.londonTerrain = createShowcaseFallbackTerrain();
+    _matSample?.setTerrain(app.londonTerrain);
+    return Promise.resolve(app.londonTerrain);
+  }
+  const cfg = venueConfig(venue, TEAM.DEFAULT, false);
+  app.londonTerrainPromise = buildTerrain(cfg).then((terrain) => {
+    app.londonTerrain = terrain;
+    _matSample?.setTerrain(terrain);
+    return terrain;
+  }).catch(() => {
+    const terrain = createShowcaseFallbackTerrain();
+    app.londonTerrain = terrain;
+    _matSample?.setTerrain(terrain);
+    return terrain;
+  }).finally(() => { app.londonTerrainPromise = null; });
+  return app.londonTerrainPromise;
+}
 
 // ================= 放大獨立視窗(仿遊戲操作演出;含角色/NPC 選擇,可切換放大對象) =================
 function stageTitleHTML(subject) {
@@ -3055,6 +3081,11 @@ function renderVisualSettings(mount) {
   preview.className = 'vset-preview';
   mount.appendChild(preview);
 
+  const terrainNote = document.createElement('div');
+  terrainNote.className = 'vset-location';
+  terrainNote.textContent = '展示背景：倫敦・伊爾福德／七王站・正在準備圖資地形…';
+  mount.insertBefore(terrainNote, preview);
+
   // 拉桿逐項由 VISUAL_KNOBS 推導(標籤/範圍/說明都在那一份表)—— 這裡 MUST NOT 再寫一次
   // 項目清單:兩份清單遲早分家,而症狀只是「某一根拉桿不見了」,不會報錯。
   const vals = [];
@@ -3123,7 +3154,17 @@ function renderVisualSettings(mount) {
   syncReset();
 
   // 樣品最後建:上面若有任何一行拋出,至少不會留下一顆沒人收得掉的 WebGL context
-  try { _matSample = new MatSample(preview); } catch { preview.remove(); }   // WebGL 建不起來就不給樣品(原則 6)
+  try {
+    const sample = new MatSample(preview, { terrain: app.londonTerrain || createShowcaseFallbackTerrain() });
+    _matSample = sample;
+    ensureLondonTerrain().then((terrain) => {
+      if (_matSample !== sample) return;
+      sample.setTerrain(terrain);
+      const mode = terrain.usedFallback ? '圖資暫時不可用，使用備援地形' : '圖資地形完成';
+      const slope = Math.round(sample.terrainSite?.slopeDeg || 0);
+      terrainNote.textContent = `展示背景：倫敦・伊爾福德／七王站・${mode}・地點坡度 ${slope}°`;
+    });
+  } catch { preview.remove(); terrainNote.remove(); }   // WebGL 建不起來就不給樣品(原則 6)
 }
 /** 設定頁收起時把樣品收掉(一顆 context 常駐在背景是實打實的成本) */
 function disposeVisualSettings() {

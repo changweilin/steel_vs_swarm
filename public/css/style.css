@@ -1743,6 +1743,20 @@ body:not(.touch-ui) .touch-layer { display: none; }
   border: 1px solid rgba(var(--railW-rgb), 0.35); background: #0f1622;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
+.vset-location {
+  color: var(--railW); font-family: var(--mono); font-size: 10px; letter-spacing: 1px; line-height: 1.5;
+  text-align: center;
+}
+.vset-roster {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 480px; max-width: 100%;
+}
+.vset-roster[hidden] { display: none; }
+.vset-roster > div {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 4px 6px;
+  background: rgba(11, 18, 25, 0.82); border-left: 2px solid var(--railW); font-family: var(--mono); font-size: 9px;
+}
+.vset-roster b { color: var(--text); font-size: 11px; letter-spacing: 1px; }
+.vset-roster span { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- 平衡性調整(升級曲線與數值倍率兩兩左右並排) ---------- */
 .bset-grid {
