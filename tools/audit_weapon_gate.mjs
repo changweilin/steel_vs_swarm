@@ -33,10 +33,10 @@ import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
-  BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO, WEAPONS, UNITS,
+  BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, TARGET_H, MAPGEO, WEAPONS, UNITS,
   GAME, STRUCT_W, NPC_BLAST, npcBlastR, towerDps, BASE_DPS_MULT, BASE_MISSILE,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
-  shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn, GUIDED_LAUNCH, guidedLaunchOf, guidedLaunchDist,
+  shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn, GUIDED_LAUNCH, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchZeroPitchM, guidedLaunchDist,
   HIGH_SUP, highSupF, altTier, altDhMax,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
@@ -635,13 +635,23 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       '低空抬頭只套用雷射導引/射後不理,榴彈不誤套');
     ok(guidedLaunchDist(guide) === armingOf(guide).m && guidedLaunchDist(fnf) === armingOf(fnf).m,
       '抬頭段距離直接沿用 ARMING.m,導引接手不另立第二個距離門檻');
+    const zeroPitchM = guidedLaunchZeroPitchM();
+    ok(GUIDED_LAUNCH.ZERO_PITCH_TOWER_F === 1.5
+      && zeroPitchM === TARGET_H.tower * 1.5
+      && guidedLaunchPitchDeg(guide, 0) === GUIDED_LAUNCH.PITCH_DEG
+      && guidedLaunchPitchDeg(guide, zeroPitchM / 2) === GUIDED_LAUNCH.PITCH_DEG / 2
+      && guidedLaunchPitchDeg(guide, zeroPitchM) === 0
+      && guidedLaunchPitchDeg(fnf, zeroPitchM + 1) === 0
+      && guidedLaunchPitchDeg(lob, 0) === 0,
+      '0 度門檻 = 1.5 個砲塔高,離地高度增加時抬頭角線性遞減');
     const launch = methodSrc('_guidedLaunchVel', G);
     const fire = methodSrc('_tryFire', G);
     const ub = methodSrc('_updateBullets', G);
     const vs = methodSrc('_updateVisShells', G);
-    ok(/from\.y - this\._surf\(from\.x, from\.z, from\.y\) > cfg\.LOW_ALT_M/.test(launch)
-      && /cfg\.PITCH_DEG/.test(launch),
-      '低空判定量發射點離實際站立面的高度,初速改為資料表上仰角');
+    ok(/const height = from\.y - this\._surf\(from\.x, from\.z, from\.y\);/.test(launch)
+      && /guidedLaunchPitchDeg\(def, height\)/.test(launch)
+      && /pitchDeg <= 0/.test(launch),
+      '低空判定量發射點離實際站立面的高度,上仰角由高度推導並可降至 0 度');
     ok(/const launch = lobFc \? null : this\._guidedLaunchVel\(muzzle, fdir, def, v0\);/.test(fire)
       && /launchDist: launch\?\.dist \|\| 0/.test(fire),
       '自機導引彈記錄抬頭距離並沿同一支初速解發射');

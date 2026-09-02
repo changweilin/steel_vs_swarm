@@ -14,7 +14,7 @@ import {
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, worldCeilY, edgeWallInsetM,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-  aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
+  aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchDist, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
@@ -7035,11 +7035,13 @@ export class BattleClient {
   /** 低空導引彈的抬頭段:直到 ARMING 距離前只向上離地,避免槍口前的地面/背景物件提早引爆。 */
   _guidedLaunchVel(from, dir, def, v0) {
     const cfg = guidedLaunchOf(def);
-    if (!cfg || from.y - this._surf(from.x, from.z, from.y) > cfg.LOW_ALT_M) return null;
+    const height = from.y - this._surf(from.x, from.z, from.y);
+    const pitchDeg = guidedLaunchPitchDeg(def, height);
+    if (!cfg || pitchDeg <= 0) return null;
     const flat = new THREE.Vector3(dir.x, 0, dir.z);
     if (flat.lengthSq() <= 1e-6) flat.set(0, 0, 1);
     flat.normalize();
-    const pitch = cfg.PITCH_DEG * Math.PI / 180;
+    const pitch = pitchDeg * Math.PI / 180;
     return {
       dist: guidedLaunchDist(def),
       vel: flat.multiplyScalar(v0 * Math.cos(pitch)).setY(v0 * Math.sin(pitch)),

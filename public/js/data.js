@@ -2126,12 +2126,19 @@ export const armingOf = (def) => ARMING[trajClass(def)] || null;
 // 到既有 ARMING 距離後才接手導引。抬頭距離直接吃 ARMING.m,避免新增第二個「穩定」門檻。
 // 只影響表現層彈道;命中與傷害仍由伺服器既有落點回報/驗證結算。
 export const GUIDED_LAUNCH = {
-  LOW_ALT_M: 6,       // 發射點離站立面不超過此高度才啟用抬頭段
+  ZERO_PITCH_TOWER_F: 1.5, // 發射點離站立面達 1.5 個砲塔高時,抬頭角降為 0 度
   PITCH_DEG: 35,      // 初始上仰角;保持水平分速,不改武器初速
 };
 export const guidedLaunchOf = (def) => {
   const cls = trajClass(def);
   return cls === 'guide' || cls === 'fnf' ? GUIDED_LAUNCH : null;
+};
+export const guidedLaunchZeroPitchM = () => TARGET_H.tower * GUIDED_LAUNCH.ZERO_PITCH_TOWER_F;
+export const guidedLaunchPitchDeg = (def, height) => {
+  const cfg = guidedLaunchOf(def);
+  if (!cfg) return 0;
+  const h = Math.max(0, Number(height) || 0);
+  return cfg.PITCH_DEG * Math.max(0, 1 - h / guidedLaunchZeroPitchM());
 };
 export const guidedLaunchDist = (def) => {
   const cfg = guidedLaunchOf(def);
