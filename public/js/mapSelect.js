@@ -15,6 +15,7 @@ import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
 const R_EARTH = 6371000;
+const PLACE_NAME_TIMEOUT_MS = 5000;
 
 // ---- 幾何工具(equirectangular,5km 內誤差可忽略)----
 function toMeters(p, origin) {
@@ -558,16 +559,20 @@ export class MapSelect {
   /** 反查地名(非必要,失敗就用座標;預設場地已有名稱直接用) */
   async fetchPlaceName(cfg) {
     if (cfg.venue?.name) return cfg;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), PLACE_NAME_TIMEOUT_MS);
     try {
       const resp = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${cfg.center.lat}&lon=${cfg.center.lng}&format=json&zoom=12&accept-language=zh-TW`,
-        { headers: { Accept: 'application/json' } },
+        { headers: { Accept: 'application/json' }, signal: ctrl.signal },
       );
+      if (!resp.ok) return cfg;
       const data = await resp.json();
       const a = data.address || {};
       cfg.placeName = [a.county || a.city || a.town, a.suburb || a.village || a.state]
         .filter(Boolean).join(' ') || data.display_name?.split(',')[0] || cfg.placeName;
     } catch { /* 保留座標字串 */ }
+    finally { clearTimeout(timer); }
     return cfg;
   }
 }

@@ -831,6 +831,7 @@ $('saveFavBtn')?.addEventListener('click', async () => {
   const prevStatus = $('mapStatus').innerHTML;   // 量測是短暫的過場,MUST 還原原本的選址摘要
   btn.disabled = true;
   try {
+    $('mapStatus').textContent = '取得地圖名稱(最久 5 秒)…';
     await app.mapSel.fetchPlaceName(cfg);
     if (cfg.center?.rot == null) $('mapStatus').textContent = '量測地圖主方位(對齊大馬路)…';
     await resolveMapRot(cfg);
