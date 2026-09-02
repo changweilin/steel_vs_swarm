@@ -830,17 +830,24 @@ $('saveFavBtn')?.addEventListener('click', async () => {
   const btn = $('saveFavBtn');
   const prevStatus = $('mapStatus').innerHTML;   // 量測是短暫的過場,MUST 還原原本的選址摘要
   btn.disabled = true;
+  app.mapSel?.resetPlaceNameStats?.();
   try {
+    $('mapStatus').textContent = '取得地圖名稱(最久 5 秒)…';
     await app.mapSel.fetchPlaceName(cfg);
     if (cfg.center?.rot == null) $('mapStatus').textContent = '量測地圖主方位(對齊大馬路)…';
     await resolveMapRot(cfg);
+    if (app.mapSel.placeNameLastSkipped) {
+      $('mapStatus').textContent = '地圖建立完成，補試地圖名稱(最久 5 秒)…';
+      await app.mapSel.fetchPlaceName(cfg);
+    }
   } finally { btn.disabled = false; $('mapStatus').innerHTML = prevStatus; }
   const name = prompt('地圖名稱:', cfg.placeName)?.trim();
   if (!name) return;
   saveFavorite(name, app.teamSize, cfg);
   const rotDeg = cfg.center.rot * 180 / Math.PI;
   toast(`⭐ 已存入最愛:${name}(可到「開戰時刻」選用)`
-    + (Math.abs(rotDeg) > 0.05 ? ` ・地圖主方位 ${rotDeg.toFixed(1)}°` : ''));
+    + (Math.abs(rotDeg) > 0.05 ? ` ・地圖主方位 ${rotDeg.toFixed(1)}°` : '')
+    + ` ・名稱查詢略過 ${app.mapSel.placeNameSkips || 0} 次`);
 });
 
 $('resetSiteBtn')?.addEventListener('click', () => {
