@@ -253,6 +253,8 @@ export class MapSelect {
     this.mini = false;           // 迷你地圖(見 data.js MINI):目標距離 / 重合網格 / 塔位階數整組跟著縮
     this._layers = [];
     this._searchAbort = null;
+    this.placeNameSkips = 0;
+    this.placeNameLastSkipped = false;
 
     // 圖層來源沿用 mapping_elf mapManager 的 TILE_LAYERS 設定
     this.map = L.map(containerId, { zoomControl: true, attributionControl: true })
@@ -284,6 +286,11 @@ export class MapSelect {
     this._searchAbort?.abort();
     this.map.stop();          // 中止進行中的 pan/zoom 動畫,避免 remove 後回呼摸到已拆的 DOM
     this.map.remove();
+  }
+
+  resetPlaceNameStats() {
+    this.placeNameSkips = 0;
+    this.placeNameLastSkipped = false;
   }
 
   /** 兵線數(隨隊伍規模)與兩堡目標距離(遊戲世界公尺) */
@@ -558,21 +565,33 @@ export class MapSelect {
 
   /** 反查地名(非必要,失敗就用座標;預設場地已有名稱直接用) */
   async fetchPlaceName(cfg) {
-    if (cfg.venue?.name) return cfg;
+    if (cfg.venue?.name) {
+      this.placeNameLastSkipped = false;
+      return cfg;
+    }
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), PLACE_NAME_TIMEOUT_MS);
+    let skipped = false;
     try {
       const resp = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${cfg.center.lat}&lon=${cfg.center.lng}&format=json&zoom=12&accept-language=zh-TW`,
         { headers: { Accept: 'application/json' }, signal: ctrl.signal },
       );
-      if (!resp.ok) return cfg;
-      const data = await resp.json();
-      const a = data.address || {};
-      cfg.placeName = [a.county || a.city || a.town, a.suburb || a.village || a.state]
-        .filter(Boolean).join(' ') || data.display_name?.split(',')[0] || cfg.placeName;
-    } catch { /* 保留座標字串 */ }
-    finally { clearTimeout(timer); }
+      if (!resp.ok) skipped = true;
+      else {
+        const data = await resp.json();
+        const a = data.address || {};
+        const placeName = [a.county || a.city || a.town, a.suburb || a.village || a.state]
+          .filter(Boolean).join(' ') || data.display_name?.split(',')[0];
+        if (placeName) cfg.placeName = placeName;
+        else skipped = true;
+      }
+    } catch { skipped = true; /* 保留座標字串 */ }
+    finally {
+      clearTimeout(timer);
+      this.placeNameLastSkipped = skipped;
+      if (skipped) this.placeNameSkips++;
+    }
     return cfg;
   }
 }
