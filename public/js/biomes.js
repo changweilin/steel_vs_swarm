@@ -1285,7 +1285,17 @@ export function buildVegMeshes(type, items, season) {
     const card = leafCardOn(part, sk) ? leafRowGeo(type, part, pi) : null;
     // 材質選項一路收在同一個物件裡:`const mat = toonMat(seasonColor…` **全檔恰一處**
     // (`audit_soft_stroke` Ⅳ⑤ 釘住),分支寫成第二個呼叫點就是「軟性旗標有兩條路」
-    const mo = sk ? { soft: { k: sk, span, base: part.y || 0, sy: part.sy || 1 } } : {};
+    // 樹幹/枝隨風搖曳(2026-09-02):「木質件」= 有葉子的樹型(TRUNK_TYPES) 且 sk===null。
+    // 走 'wood' kind(amp 是 leaf 的一半、同 freq/axis)共用同一個 span ⇒ 幹梢與葉冠底部
+    // 在相同 sw 高度上取到連續位移,接縫不會被風吹開。
+    // ⚠ vegSoftKind **刻意不改**:audit_soft_stroke 的 hardOk 驗證木質件 vegSoftKind 回 null,
+    //   此處直接在 mo 帶 soft 而不經 vegSoftKind,確保該驗證逐位元不變。
+    const isTreeWood = !sk && TRUNK_TYPES.has(type);
+    const mo = sk
+      ? { soft: { k: sk, span, base: part.y || 0, sy: part.sy || 1 } }
+      : isTreeWood
+        ? { soft: { k: 'wood', span, base: part.y || 0, sy: part.sy || 1 } }
+        : {};
     if (grpOn) {
       mo.surfAttr = true;                       // 面號改吃逐實例屬性 aSurfId
       if (sk === 'leaf') mo.ink = 'group';      // 葉列 = 群組剪影;木質列維持 'hard'(幹的折邊留著)
