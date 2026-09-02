@@ -43,8 +43,11 @@
 //      MUST NOT 因為取不到圖資或高程就報綠。
 // 用法:node tools/audit_traverse.mjs [--only=jinlong,taroko] [--team=1|2|3] [--cell=4]
 //      [--fixture-dir=test/fixtures/osm --fixtures=taipei_dense,shibuya_dense] [--json=out.json]
+//      [--clearance-report] [--check-clearance-manifest]
+//      [--write-clearance-manifest[=<path>]]  (path omitted = <fixture-dir>/manifests/osm_clearance_manifest_v1.json)
 //      高程 companion 預設位於 <fixture-dir>/elevation/<name>.json + tiles/*.png。
 //      node tools/audit_traverse.mjs --break-slope   ← 反向驗證:把坡度閘寫死成「什麼都擋」
+//      node tools/audit_traverse.mjs --break-clearance-source|--break-clearance-tags
 // 退出碼:0 = 全部航點可達;1 = 有航點不可達
 //
 // ---- 接縫紀律:泛洪看得到什麼、看不到什麼(2026-08-16 併入,`docs/anime_style_plan.md` ④-4;
@@ -67,7 +70,8 @@
 //     邊界緩衝裙的擺件、旗陣、落花與鳥群一律如此。所以「一道緣石橫在車道入口上」「一片布景
 //     擋住視線走廊」這一類 symptom,**本支永遠是綠的**,而它們只在真機上看得出來(㋕)。
 //     ⇒ 看到「通行稽核全綠」時 MUST NOT 推論成「這條路看起來也沒問題」。
-import { writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 // WATER 是橋下淨空那一段在用的(水面下不算「走得過去」)。漏了它不會報錯 ——
 // `scanVenue` 整段包在 try 裡,ReferenceError 會被吞成「⏭ 場地跳過」⇒ 每一個**有橋**的
@@ -102,10 +106,26 @@ const BREAK_OSM_HOLE = !!(ARG['break-osm-hole'] || ARG['break-hole']);
 const BREAK_OSM_BLOCKER = !!(ARG['break-osm-blocker'] || ARG['break-blocker']);
 const BREAK_OSM_ROOF = !!(ARG['break-osm-roof'] || ARG['break-roof']);
 const BREAK_OSM_APPLIED = { hole: false, blocker: false, roof: false };
+const BREAK_CLEARANCE_SOURCE = !!ARG['break-clearance-source'];
+const BREAK_CLEARANCE_TAGS = !!ARG['break-clearance-tags'];
+const BREAK_CLEARANCE_APPLIED = { source: false, tags: false };
 const FIXTURE_MODE = ARG['fixture-dir'] != null || ARG.fixtures != null;
 const FIXTURE_DIR = ARG['fixture-dir'] || DEFAULT_FIXTURE_DIR;
 const ELEVATION_DIR = elevationDirForFixtureDir(FIXTURE_DIR);
 const FIXTURE_NAMES = new Set(String(ARG.fixtures || '').split(',').filter(Boolean));
+const CLEARANCE_REPORT = !!ARG['clearance-report'];
+const CHECK_CLEARANCE_MANIFEST = !!ARG['check-clearance-manifest'];
+const WRITE_CLEARANCE_MANIFEST = Object.prototype.hasOwnProperty.call(ARG, 'write-clearance-manifest');
+const WRITE_CLEARANCE_MANIFEST_VALUE = ARG['write-clearance-manifest'];
+const CLEARANCE_MANIFEST_PATH = resolve(
+  WRITE_CLEARANCE_MANIFEST_VALUE && WRITE_CLEARANCE_MANIFEST_VALUE !== '1'
+    ? WRITE_CLEARANCE_MANIFEST_VALUE : join(FIXTURE_DIR, 'manifests', 'osm_clearance_manifest_v1.json'));
+const CLEARANCE_MANIFEST_SCHEMA = 'osm-clearance-manifest-v1';
+const CLEARANCE_MANIFEST_VERSION = 1;
+const CLEARANCE_MANIFEST_FIXTURES = Object.freeze([
+  Object.freeze({ name: 'shibuya_dense', venueId: 'shibuya' }),
+  Object.freeze({ name: 'roppongi_underpass', venueId: 'roppongi' }),
+]);
 let FIXTURE_BINDINGS = new Map();
 
 // osmBuilding.js 直接 import THREE/CDN，Node 沒有 three 套件；這裡只提供最小的
@@ -285,6 +305,55 @@ function flood(seeds, surfacesAt, hf, ground, sim, probe) {
   return reached;
 }
 
+function stableTags(tags) {
+  if (!tags || typeof tags !== 'object' || Array.isArray(tags)) return null;
+  return Object.fromEntries(Object.entries(tags).sort(([a], [b]) =>
+    a < b ? -1 : (a > b ? 1 : 0)));
+}
+
+function clearanceRow(st, mode, worst, at, total) {
+  return {
+    sourceId: st.sourceId ?? null,
+    tags: stableTags(st.sourceTags),
+    kind: st.kind ?? null,
+    mode,
+    worst,
+    at,
+    total,
+  };
+}
+
+/**
+ * 淨空列的來源帳檢查。sourceId 與 tags 必須逐列回到同一份 fixture raw way；
+ * 只驗「有字串」會讓錯綁另一條 OSM way 的壞版靜默通過。
+ */
+function clearanceMetadataAudit(rows, fixture) {
+  const raw = new Map(rawStructureWays(fixture).map((way) => [`way/${way.id}`, way]));
+  const errors = [];
+  for (const [index, row] of (rows || []).entries()) {
+    if (!row || typeof row.sourceId !== 'string' || !row.sourceId) {
+      errors.push(`row[${index}] 缺少 sourceId`);
+      continue;
+    }
+    const source = raw.get(row.sourceId);
+    if (!source) {
+      errors.push(`row[${index}] sourceId 不在 raw structure ways: ${row.sourceId}`);
+    } else if (JSON.stringify(stableTags(row.tags)) !== JSON.stringify(stableTags(source.tags))) {
+      errors.push(`row[${index}] tags 與 ${row.sourceId} 的 raw tags 不符`);
+    }
+    if (!['橋', '隧道', '地下道'].includes(row.kind)) {
+      errors.push(`row[${index}] kind 無效: ${row.kind ?? 'null'}`);
+    }
+    if (!['underpass', 'deck-only', 'tunnel'].includes(row.mode)) {
+      errors.push(`row[${index}] mode 無效: ${row.mode ?? 'null'}`);
+    }
+    for (const key of ['worst', 'at', 'total']) {
+      if (!Number.isFinite(Number(row[key]))) errors.push(`row[${index}] ${key} 非有限值`);
+    }
+  }
+  return { ok: errors.length === 0, rows: rows?.length || 0, errors };
+}
+
 /**
  * 淨空(V-D)。`CLAUDE.md` §5 只寫「重驗『淨空 > 最大機體 4.5m + 0.2 頭頂餘裕』」卻**沒有指名腳本**
  * —— 那是一次手動檢查。這裡把它變成數字。
@@ -300,7 +369,7 @@ function flood(seeds, surfacesAt, hf, ground, sim, probe) {
  */
 function clearance(structs, hf) {
   const need = MECH_H + HEAD_M;
-  const out = { need, bore: [], deck: [] };
+  const out = { need, bore: [], deck: [], rows: [] };
   for (const st of structs) {
     const total = st.cum[st.cum.length - 1] || 1;
     if (st.kind === '橋') {
@@ -312,9 +381,8 @@ function clearance(structs, hf) {
         const h = st.floorAt(s, p[0], p[1]) - g;
         if (h < worst) { worst = h; at = s; }
       }
-      if (worst < Infinity) out.deck.push({
-        worst, at, total, mode: worst >= need ? 'underpass' : 'deck-only',
-      });
+      if (worst < Infinity) out.deck.push(clearanceRow(
+        st, worst >= need ? 'underpass' : 'deck-only', worst, at, total));
     } else {
       let worst = Infinity, at = 0;
       for (let s = 0; s <= total; s += 4) {
@@ -323,9 +391,11 @@ function clearance(structs, hf) {
         const h = hf.heightAt(p[0], p[1]) - (st.floorAt(s, p[0], p[1]) + TUN.CLEAR + TUN.ROOF_T);
         if (h < worst) { worst = h; at = s; }
       }
-      if (worst < Infinity) out.bore.push({ worst, at, total, kind: st.kind });
+      if (worst < Infinity) out.bore.push(clearanceRow(
+        st, st.kind === '地下道' ? 'underpass' : 'tunnel', worst, at, total));
     }
   }
+  out.rows = [...out.deck, ...out.bore];
   return out;
 }
 
@@ -512,8 +582,13 @@ function polygonProbe(polygon, hole = false) {
     Math.min(...xs) + (gx + 0.5) * (Math.max(...xs) - Math.min(...xs)) / 7,
     Math.min(...zs) + (gz + 0.5) * (Math.max(...zs) - Math.min(...zs)) / 7,
   ]);
-  return candidates.find(([x, z]) => pointInProjectedArea(x, z, { outer: ring, holes: [] })
-    && (!hole || pointInProjectedArea(x, z, { outer: polygon.outer, holes: [] }))) || null;
+  // 屋頂 probe 必須尊重完整 outer+holes 面域；否則排序最前的中庭建物會把
+  // probe 落進洞內，`makeSurfaces` 正確不產 roof 而稽核卻誤報 roof-mutation。
+  // hole probe 則刻意先在 hole ring 內，再確認仍在 outer 內，保留洞內 mutation 語意。
+  return candidates.find(([x, z]) => hole
+    ? pointInProjectedArea(x, z, { outer: ring, holes: [] })
+      && pointInProjectedArea(x, z, { outer: polygon.outer, holes: [] })
+    : pointInProjectedArea(x, z, polygon)) || null;
 }
 
 function rawStructureWays(fixture) {
@@ -522,32 +597,67 @@ function rawStructureWays(fixture) {
     && (w.tags?.bridge || strucTunnel(w.tags || {})));
 }
 
-function polylineDistance(a, b) {
-  if (!a?.length || !b?.length) return Infinity;
-  const direct = Math.hypot(a[0][0] - b[0][0], a[0][1] - b[0][1])
-    + Math.hypot(a[a.length - 1][0] - b[b.length - 1][0], a[a.length - 1][1] - b[b.length - 1][1]);
-  const reverse = Math.hypot(a[0][0] - b[b.length - 1][0], a[0][1] - b[b.length - 1][1])
-    + Math.hypot(a[a.length - 1][0] - b[0][0], a[a.length - 1][1] - b[0][1]);
-  return Math.min(direct, reverse);
-}
-
-function annotateStructures(structs, fixture, center) {
-  const raws = rawStructureWays(fixture).map((w) => ({
-    ...w, world: w.geometry.map((p) => llToWorld(p.lat, p.lon ?? p.lng, center)),
-  }));
-  const used = new Set();
-  for (const st of structs || []) {
-    let best = null;
-    for (const raw of raws) {
-      if (used.has(raw.id)) continue;
-      if (st.kind === '橋' ? !raw.tags?.bridge : raw.tags?.bridge) continue;
-      const score = polylineDistance(st.pts, raw.world);
-      if (!best || score < best.score) best = { raw, score };
+function annotateStructures(structs, fixture, center, hf = null) {
+  // buildStructs 先以同一個 4m 邊界餘裕裁切 way，再由 underpassPlan 對兩端做
+  // 延伸；來源帳不能用 production run 的端點反推，必須拿裁切後 raw 節點作內點比對。
+  const raws = rawStructureWays(fixture).flatMap((way) => {
+    const segments = [];
+    let current = [];
+    for (const point of way.geometry) {
+      const world = llToWorld(point.lat, point.lon ?? point.lng, center);
+      const inside = !hf || (world[0] >= hf.minX + 4 && world[0] <= hf.maxX - 4
+        && world[1] >= hf.minZ + 4 && world[1] <= hf.maxZ - 4);
+      if (!inside) {
+        if (current.length >= 2) segments.push(current);
+        current = [];
+      } else current.push(world);
     }
-    if (best && best.score <= Math.max(20, st.hw * 4)) {
-      used.add(best.raw.id);
+    if (current.length >= 2) segments.push(current);
+    return segments.map((world, segmentIndex) => ({ ...way, world, segmentIndex }));
+  });
+  const pointDistance = (point, poly) => {
+    let best = Infinity;
+    for (let i = 1; i < poly.length; i++) best = Math.min(best, ptSeg(point, poly[i - 1], poly[i]));
+    return best;
+  };
+  const coverage = (from, to) => {
+    const distances = from.map((point) => pointDistance(point, to));
+    return {
+      max: Math.max(...distances),
+      mean: distances.reduce((sum, distance) => sum + distance, 0) / distances.length,
+    };
+  };
+  const lengthOf = (poly) => poly.slice(1).reduce((sum, point, index) =>
+    sum + Math.hypot(point[0] - poly[index][0], point[1] - poly[index][1]), 0);
+  for (const st of structs || []) {
+    const candidates = raws.filter((raw) => st.kind === '橋' ? raw.tags?.bridge : !raw.tags?.bridge)
+      .map((raw) => {
+        const sourceCoverage = coverage(raw.world, st.pts);
+        const productionCoverage = coverage(st.pts, raw.world);
+        return {
+          raw,
+          sourceCoverage,
+          productionCoverage,
+          lengthDelta: Math.abs(lengthOf(st.pts) - lengthOf(raw.world)),
+        };
+      })
+      .sort((a, b) => a.sourceCoverage.max - b.sourceCoverage.max
+        || a.sourceCoverage.mean - b.sourceCoverage.mean
+        || a.productionCoverage.max - b.productionCoverage.max
+        || a.productionCoverage.mean - b.productionCoverage.mean
+        || a.lengthDelta - b.lengthDelta
+        || Number(a.raw.id) - Number(b.raw.id)
+        || a.raw.segmentIndex - b.raw.segmentIndex);
+    // source 節點是 production run 的子折線；2m 只吸收浮點誤差，距離更大的候選
+    // 必須留 null 讓 provenance 稽核報紅，不可把鄰近的另一條 OSM way 誤綁進名冊。
+    const best = candidates[0];
+    if (best && best.raw.id != null && best.sourceCoverage.max <= 2) {
       st.sourceId = best.raw.id == null ? null : `way/${best.raw.id}`;
-    } else st.sourceId = null;
+      st.sourceTags = stableTags(best.raw.tags);
+    } else {
+      st.sourceId = null;
+      st.sourceTags = null;
+    }
     st.catalogKind = st.kind;
   }
   return structs;
@@ -591,6 +701,103 @@ function elevationContract(v, osmFixture, elevation) {
     center: cfg.center,
     bounds: battleRect(cfg),
   });
+}
+
+function clearanceTextCompare(a, b) {
+  const aa = String(a ?? ''), bb = String(b ?? '');
+  return aa < bb ? -1 : (aa > bb ? 1 : 0);
+}
+
+function canonicalClearanceRow(row) {
+  return {
+    sourceId: row?.sourceId ?? null,
+    tags: stableTags(row?.tags),
+    kind: row?.kind ?? null,
+    mode: row?.mode ?? null,
+    worst: row?.worst ?? null,
+    at: row?.at ?? null,
+    total: row?.total ?? null,
+  };
+}
+
+function canonicalClearanceRows(rows) {
+  return (rows || []).map(canonicalClearanceRow).sort((a, b) =>
+    clearanceTextCompare(a.sourceId, b.sourceId)
+    || clearanceTextCompare(a.kind, b.kind)
+    || clearanceTextCompare(a.mode, b.mode)
+    || Number(a.at) - Number(b.at));
+}
+
+/** 由本次 scan 的 production 結構資料建出穩定名冊；不放 cell count 或耗時。 */
+function clearanceManifestForResults(results) {
+  const fixtures = {};
+  for (const target of CLEARANCE_MANIFEST_FIXTURES) {
+    const result = (results || []).find((item) => item.id === target.venueId
+      && item.fixtureName === target.name && !item.skip);
+    if (!result) continue;
+    fixtures[target.name] = {
+      venueId: target.venueId,
+      team: Number(result.team),
+      rows: canonicalClearanceRows(result.clearanceRows),
+    };
+  }
+  return {
+    version: CLEARANCE_MANIFEST_VERSION,
+    schema: CLEARANCE_MANIFEST_SCHEMA,
+    source: 'tools/audit_traverse.mjs',
+    fixtures,
+  };
+}
+
+function manifestNames(doc) {
+  return Object.keys(doc?.fixtures || {}).sort(clearanceTextCompare);
+}
+
+function clearanceManifestErrors(doc, actual) {
+  const errors = [];
+  if (doc?.version !== CLEARANCE_MANIFEST_VERSION) errors.push('manifest version 不符');
+  if (doc?.schema !== CLEARANCE_MANIFEST_SCHEMA) errors.push('manifest schema 不符');
+  if (doc?.source !== 'tools/audit_traverse.mjs') errors.push('manifest source 不符');
+  if (manifestNames(doc).some((name) => Object.prototype.hasOwnProperty.call(doc.fixtures[name] || {}, 'cells'))) {
+    errors.push('manifest 不得含易漂移的 cells 欄');
+  }
+  const expectedNames = CLEARANCE_MANIFEST_FIXTURES.map((x) => x.name).sort(clearanceTextCompare);
+  const actualNames = manifestNames(actual);
+  const observedNames = manifestNames(doc);
+  if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
+    errors.push(`目前輸入未同時提供兩份目標 fixture(${expectedNames.join(',')})`);
+  }
+  if (JSON.stringify(observedNames) !== JSON.stringify(expectedNames)) {
+    errors.push(`manifest fixture 名單不符(${observedNames.join(',') || '空'})`);
+  }
+  for (const target of CLEARANCE_MANIFEST_FIXTURES) {
+    const want = actual.fixtures?.[target.name];
+    const got = doc.fixtures?.[target.name];
+    if (!want || !got) continue;
+    if (got.venueId !== target.venueId) errors.push(`${target.name} venueId 不符`);
+    if (Number(got.team) !== Number(want.team)) errors.push(`${target.name} team 不符`);
+    if (JSON.stringify(canonicalClearanceRows(got.rows))
+      !== JSON.stringify(canonicalClearanceRows(want.rows))) {
+      errors.push(`${target.name} clearance rows 與 production 重建結果不符`);
+    }
+  }
+  return errors;
+}
+
+function readClearanceManifest(path) {
+  if (!existsSync(path)) return { error: `找不到 manifest: ${path}` };
+  try { return { doc: JSON.parse(readFileSync(path, 'utf8')) }; }
+  catch (error) { return { error: `manifest JSON 無法解析: ${error.message}` }; }
+}
+
+function printClearanceReport(actual) {
+  console.log(`CLEARANCE_REPORT ${CLEARANCE_MANIFEST_SCHEMA}`);
+  for (const name of manifestNames(actual)) {
+    const fixture = actual.fixtures[name];
+    for (const row of fixture.rows) {
+      console.log(JSON.stringify({ fixture: name, venueId: fixture.venueId, team: fixture.team, ...row }));
+    }
+  }
 }
 
 function preflightFixtures(list) {
@@ -710,7 +917,21 @@ async function scanVenue(v) {
   const { structs, marks, carveRuns } = osm
     ? buildStructs(osm, cfg.center, hf)
     : { structs: [], marks: [], carveRuns: [] };
-  annotateStructures(structs, fixture, cfg.center);
+  annotateStructures(structs, fixture, cfg.center, hf);
+  if (BREAK_CLEARANCE_SOURCE || BREAK_CLEARANCE_TAGS) {
+    // 反向驗證只拔掉第一筆可辨識結構的 provenance；沒有適用列時收尾必須報錯。
+    const target = structs.find((st) => st.sourceId && st.sourceTags);
+    if (target) {
+      if (BREAK_CLEARANCE_SOURCE) {
+        target.sourceId = null;
+        BREAK_CLEARANCE_APPLIED.source = true;
+      }
+      if (BREAK_CLEARANCE_TAGS) {
+        target.sourceTags = null;
+        BREAK_CLEARANCE_APPLIED.tags = true;
+      }
+    }
+  }
   // 站立面吃**開挖後**的地形(V-C):引道路塹/地下道斜坡是挖出來的,拿天然地形走那一段
   // 就是把一條通的路報成不通。淨空檢查刻意仍吃 `hf.heightAt`(天然)—— 覆蓋門檻問的是
   // 「這座山藏不藏得住頂板」,那本來就該用未開挖的山來問。
@@ -756,6 +977,8 @@ async function scanVenue(v) {
   for (const m of marks) wps.push(m);
 
   const clear = clearance(structs, hf);
+  const clearanceMeta = FIXTURE_MODE && fixture
+    ? clearanceMetadataAudit(clear.rows, fixture) : null;
   const reached = flood(seeds, surfacesAt, hf, ground, sim, probe);
   const missWaypoints = [];
   for (const w of wps) {
@@ -807,6 +1030,8 @@ async function scanVenue(v) {
   return {
     id: v.id, cells: reached.length, wps: wps.length, miss, diagnostics, structs: structs.length,
     carve: carveRuns.length, osm: !!osm, clear, terrainBBox,
+    fixtureName: fixture?.name || null, team: fixture?.team ?? TEAM,
+    clearanceRows: clear.rows, clearanceMeta,
     fixtureContract: contract,
     elevationContract: elevationChecks, elevationValid,
     buildingMode: building.mode, buildingAreas: building.areas.length, buildingGenerated: building.generated,
@@ -897,9 +1122,15 @@ for (const v of list) {
     continue;
   }
   if (!r.osm) noOsm++;
-  console.log(`  ${v.id}  ${((Date.now() - t0) / 1000).toFixed(1)}s  可站立節點 ${r.cells}`
-    + `・結構 ${r.structs}・開挖走廊 ${r.carve}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`
-    + `・OSM建物 ${r.buildingMode}/${r.buildingAreas}面/${r.buildingBlockers} blockers/${r.buildingRoofs} roofs`);
+  if (CLEARANCE_REPORT) {
+    console.log(`  ${v.id}  clearance rows ${r.clearanceRows.length}`
+      + `・結構 ${r.structs}・開挖走廊 ${r.carve}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`
+      + `・OSM建物 ${r.buildingMode}/${r.buildingAreas}面/${r.buildingBlockers} blockers/${r.buildingRoofs} roofs`);
+  } else {
+    console.log(`  ${v.id}  ${((Date.now() - t0) / 1000).toFixed(1)}s  可站立節點 ${r.cells}`
+      + `・結構 ${r.structs}・開挖走廊 ${r.carve}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`
+      + `・OSM建物 ${r.buildingMode}/${r.buildingAreas}面/${r.buildingBlockers} blockers/${r.buildingRoofs} roofs`);
+  }
   ok(r.miss.length === 0, `${v.id}:${r.wps} 個航點全部可達${r.miss.length ? ` —— 不可達:${r.miss.join('、')}` : ''}`);
   for (const d of r.diagnostics || []) {
     const n = d.nearest || {};
@@ -915,6 +1146,11 @@ for (const v of list) {
   for (const c of r.osmChecks || []) {
     const detail = c.reason || `expected=${c.expected ?? '-'} actual=${c.actual ?? c.submitted ?? '-'}${c.point ? ` probe=${c.point.join(',')}` : ''}`;
     ok(c.ok, `${v.id}:OSM ${c.kind} 契約${c.ok ? '成立' : `失敗(${detail})`}`);
+  }
+  if (r.clearanceMeta) {
+    ok(r.clearanceMeta.ok,
+      `${v.id}:clearance sourceId/tags provenance ${r.clearanceMeta.ok ? '成立' : '失敗'}`);
+    for (const error of r.clearanceMeta.errors || []) console.error(`      clearance: ${error}`);
   }
   if (!r.osm) { unverified++; ok(false, `${v.id}:圖資缺失，只驗地形層，結構航點未驗`); }
   // 淨空(V-D):高橋段驗橋下可通行；低架段驗執行期同樣把它導向橋面專用。
@@ -944,6 +1180,47 @@ for (const [kind, requested] of Object.entries({
     ok(false, `--break-osm-${kind}:找不到適用的真實 OSM 建物，反向驗證未執行`);
   }
 }
+
+for (const [kind, requested] of Object.entries({
+  source: BREAK_CLEARANCE_SOURCE, tags: BREAK_CLEARANCE_TAGS,
+})) {
+  if (requested && !BREAK_CLEARANCE_APPLIED[kind]) {
+    ok(false, `--break-clearance-${kind}:找不到適用的淨空 provenance 列，反向驗證未執行`);
+  }
+}
+
+const actualClearanceManifest = clearanceManifestForResults(results);
+const actualClearanceNames = manifestNames(actualClearanceManifest);
+const expectedClearanceNames = CLEARANCE_MANIFEST_FIXTURES.map((x) => x.name).sort(clearanceTextCompare);
+if (CLEARANCE_REPORT && JSON.stringify(actualClearanceNames) !== JSON.stringify(expectedClearanceNames)) {
+  ok(false, `--clearance-report 必須同時指定澀谷與六本木 fixture(${expectedClearanceNames.join(',')})`);
+}
+if (WRITE_CLEARANCE_MANIFEST) {
+  if (JSON.stringify(actualClearanceNames) !== JSON.stringify(expectedClearanceNames)) {
+    ok(false, `--write-clearance-manifest 必須同時重建兩份目標 fixture(${expectedClearanceNames.join(',')})`);
+  } else if (fail > 0) {
+    ok(false, '淨空 manifest 有未通過稽核，拒絕寫入');
+  } else {
+    try {
+      mkdirSync(dirname(CLEARANCE_MANIFEST_PATH), { recursive: true });
+      writeFileSync(CLEARANCE_MANIFEST_PATH, JSON.stringify(actualClearanceManifest, null, 2) + '\n');
+      ok(true, `已寫入 deterministic clearance manifest: ${CLEARANCE_MANIFEST_PATH}`);
+    } catch (error) {
+      ok(false, `寫入 clearance manifest 失敗: ${error.message}`);
+    }
+  }
+}
+if (CHECK_CLEARANCE_MANIFEST) {
+  const loaded = readClearanceManifest(CLEARANCE_MANIFEST_PATH);
+  if (loaded.error) {
+    ok(false, `clearance manifest 比對失敗: ${loaded.error}`);
+  } else {
+    const errors = clearanceManifestErrors(loaded.doc, actualClearanceManifest);
+    ok(errors.length === 0, `clearance manifest deterministic 比對${errors.length ? '失敗' : '成立'}`);
+    for (const error of errors) console.error(`      manifest: ${error}`);
+  }
+}
+if (CLEARANCE_REPORT) printClearanceReport(actualClearanceManifest);
 
 if (ARG.json) writeFileSync(ARG.json, JSON.stringify(results, null, 2));
 if (noOsm) console.log(`\n⚠ ${noOsm} 個場地取不到路網(Overpass / OSM API 皆不可達)⇒ 結構航點未驗。`

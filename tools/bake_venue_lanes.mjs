@@ -1,6 +1,7 @@
 // ============ 預設場地兵線離線預算 ============
 // 用法:node tools/bake_venue_lanes.mjs   (ONLY=taipei101,seoul 可只跑指定場地)
 // 固定 fixture 有界診斷:OSM_FIXTURE_DIR=test/fixtures/osm ONLY=taipei101 node tools/bake_venue_lanes.mjs
+// target component 行為證據:node tools/bake_venue_lanes.mjs --self-test-target-components
 // fixture 模式預設只列報告；FIXTURE_WRITE=1 仍會硬驗 center/bbox。真的移動場地時須另設
 // FIXTURE_RECAPTURE=1，寫入後立即用 fetch_osm_fixture.mjs --update 重抓同名 raw fixture。
 // 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
@@ -46,6 +47,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => { console.log(...a); };
 
 const ONLY = (process.env.ONLY || '').split(',').filter(Boolean);
+const TARGET_COMPONENT_SELF_TEST = process.argv.includes('--self-test-target-components');
 const ANCHORS_ALL = {
   taipei101: [[25.0339, 121.5645]],
   shibuya: [[35.6595, 139.7005]],
@@ -77,18 +79,12 @@ const ANCHORS_ALL = {
   // 劇情終章場地(2026-08-04)。納希莫夫廣場 / 烏沙科夫廣場 —— 兩座廣場都在市中心
   // 半島的脊線上,之間隔著 ~450 真實公尺的密街廓 ⇒ L1~L3 都排得出互不接觸的三條真實道路。
   crimea: [[44.6172, 33.5243], [44.6137, 33.5218]],           // 塞瓦斯托波爾市中心
-  // 倫敦:2026-08-02 使用者回報「倫敦也沒有橋了」—— 07-29 主軸偏航規則重烤後兵線不再走
-  // Westminster Bridge(改前實測踩橋 298m)。錨點改貼西橋頭、方位角夾往東岸,並掛 PREFER_BRIDGE:
-  // 泰晤士河在此寬 ~250m,兩堡 481 真實公尺一南一北岸 ⇒ 唯一走得通的路線就是橋面。
-  london: [[51.50094, -0.12456], [51.50110, -0.11810]],
-  // 以下三張是 2026-08-02 探測(`--probe --probe-r=2`)選定的場地,錨點一律取探測回報的
-  // **結構中點**再沿軸退開 ~150m —— 錨點壓在結構上會讓主堡落進橋面/洞內(jinlong 同一條經驗)。
-  //
-  // 陸上高架橋(③):柏林 華沙大街跨東站調車場。實測 Warschauer Brücke 陸橋 446m
-  // @52.50569,13.44893(橋下是鐵道 ⇒ spansWater 判否);同一 bbox 的 Oberbaumbrücke 是水橋,
-  // 方位角夾南北(橋軸)才不會跑去跨施普雷河。左右數百公尺內沒有第二個跨越點 ⇒ 最短路徑非上橋不可
-  // (parkave 失敗的原因正是「等長替代路線太多」,曼哈頓格柵怎麼繞都一樣長)。
-  berlin: [[52.50330, 13.44875], [52.50810, 13.44930]],
+  // 倫敦東郊 Ilford/Seven Kings:正式 fixture bake 選出的完整 L1/L2/L3/m1 錨點。
+  // 一般市區路網,不掛 PREFER_BRIDGE 也不限制方位扇區。
+  london: [[51.560302, 0.084931]],
+  // 柏林 Prenzlauer Berg:候選報告首個完整 L1/L2/L3/m1 錨點。
+  // 一般市區路網,不掛 PREFER_BRIDGE 也不限制方位扇區。
+  berlin: [[52.538038, 13.415268]],
   // 地下道(②):馬德里 卡斯提亞大道一帶。地形全平 ⇒ 深度只能來自「挖」,正是 underpassPlan
   // 的適用面;PREFER_TUNNEL 讓選線踩上 tunnel way。
   // **錨點改用 María de Molina**(探測覆蓋 234m @40.43784,-3.68745):首輪的 Joaquín Costa
@@ -103,7 +99,7 @@ const ANCHORS_ALL = {
   madrid: [[40.43785, -3.69007], [40.43785, -3.68511], [40.44491, -3.68517]],
   // 水上高架橋(⑨):芝加哥河兩岸。實測 North Lower Michigan Avenue 水橋 201m
   // @41.88884,-87.62436(跨圖資水道)。河面僅數十公尺寬、南北向幹道一律以可通車的開合橋跨河
-  // ⇒ 兩堡分踞兩岸時兵線必然踩上橋面(與 london 的「單座長橋」互為對照組)。
+  // ⇒ 兩堡分踞兩岸時兵線必然踩上橋面；本場地專門保留作水上高架橋對照。
   chicago: [[41.88770, -87.62436], [41.89000, -87.62436]],
   // 市民大道:**2026-08-04 從 ② 地下道候選改成 ③ 陸上高架橋**。
   // 舊制錨點是為了追一群圖資地下道(L1 bbox 內 8 條 tunnel way)而擺的,配 PREFER_TUNNEL;
@@ -299,7 +295,23 @@ function buildGraph(ways, origin) {
       portalN.add(nid(gN.lat, gN.lon));
     }
   }
-  return { X, Z, LA, LN, adj, n: X.length, tunE, brgE, portalN };
+  // 連通 component 只作 fixture target 候選的穩定優先序；不改 Dijkstra 或任何路線閘。
+  // adjacency 的插入順序來自版本化 raw response，component id 只比較相等性，故不受 id 編號影響。
+  const component = new Int32Array(X.length).fill(-1);
+  let componentCount = 0;
+  for (let s = 0; s < X.length; s++) {
+    if (component[s] >= 0) continue;
+    const q = [s]; component[s] = componentCount;
+    for (let h = 0; h < q.length; h++) {
+      const u = q[h], a = adj[u];
+      for (let j = 0; j < a.length; j += 2) {
+        const v = a[j];
+        if (component[v] < 0) { component[v] = componentCount; q.push(v); }
+      }
+    }
+    componentCount++;
+  }
+  return { X, Z, LA, LN, adj, n: X.length, tunE, brgE, portalN, component, componentCount };
 }
 
 class MinHeap {
@@ -462,7 +474,7 @@ const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
 // 一般場地不受影響(集合外的 id 完全走舊路徑)。
 // 2026-08-04:`civicblvd` 從 PREFER_TUNNEL 改列這裡(市民大道要的是它自己的高架道路,
 // 不是那群挖不出來的圖資地下道 —— 見 ANCHORS 的註解)。
-const PREFER_BRIDGE = new Set(['parkave', 'london', 'berlin', 'chicago', 'civicblvd']);
+const PREFER_BRIDGE = new Set(['parkave', 'chicago', 'civicblvd']);
 // 同理:「兵線要走進地下道」的測試場地 ⇒ 先比「踩在 tunnel way 上的長度」。
 // **踩的是 `strucTunnel` 認可的那種 tunnel way**(見檔頭 import):`indoor` 通道不算,
 // 引擎會把它攤平成一般小路,選線期把它當隧道加分就是「號稱走地下道、開圖是平街」。
@@ -471,9 +483,7 @@ const PREFER_BRIDGE = new Set(['parkave', 'london', 'berlin', 'chicago', 'civicb
 // 以 `audit_lane_scenarios` 的實測為準。
 const PREFER_TUNNEL = new Set(['taroko', 'madrid', 'roppongi']);
 const BEARING_SECTORS = {
-  // 三張新橋樑場地都要「兵線橫過那道障礙(河/調車場)」⇒ 方位角夾在橋軸上,
-  // 否則暴搜會挑同一岸的街廓(分數更高、也不必過橋)。逐錨點一份扇區,兩錨對向。
-  london: [[[60, 120]], [[240, 300]]],     // 西橋頭 → 東岸 / 東橋頭 → 西岸(Westminster Bridge 東西向)
+  // 僅仍保留結構場地的定向扇區；一般都市場地不列入，走全向暴搜。
   // madrid 兩錨都夾往東(Joaquín Costa / María de Molina 都是東西向,目標地下道在錨點東側)。
   // 不夾的話 L2 會沿卡斯提亞大道往北,把後塔擺進一條 service 隧道深處 273m —— 規則 #5 直接紅字
   // (2026-08-02 首輪實測)。夾了以後 L2/L3 多半湊不出真實道路解 ⇒ 退回 synthLane,那正是想要的:
@@ -482,7 +492,6 @@ const BEARING_SECTORS = {
   // ③Joaquín Costa(2026-08-04 新增的第三錨,212m 覆蓋段)也是東西向,兩向都放行 ——
   // 這一錨沒有「目標在哪一側」的先驗,夾單向等於先賭一半。
   madrid: [[[60, 120]], [[240, 300]], [[60, 120], [240, 300]]],
-  berlin: [[[340, 40]], [[160, 220]]],     // 南錨 → 北 / 北錨 → 南(華沙大街南北向)
   chicago: [[[330, 30]], [[150, 210]]],    // 南岸 → 北 / 北岸 → 南(芝加哥河主河道東西向)
   jinlong: [[[30, 80]], [[210, 260]]],   // 西南錨(金龍路)→東北;東北錨(金湖路)→西南(隧道軸 ~56°)
   // taroko 兩錨都夾往西:東側是 656m 的靳珩隧道,PREFER_TUNNEL 不夾會整條兵線鑽進長隧道
@@ -506,6 +515,13 @@ const lexGT = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) 
 // 只擴展完整戰場 L3，並保留距理想端點最近的有限候選，讓離線重烤保持可重現。
 const FIXTURE_TARGET_LIMIT = Number.isFinite(+process.env.FIXTURE_TARGET_LIMIT)
   ? Math.max(1, Math.floor(+process.env.FIXTURE_TARGET_LIMIT)) : 32;
+function rankTargetRows(rows, sourceComponent, component) {
+  return rows.sort((a, b) => {
+    const aLocal = component[a.i] === sourceComponent ? 0 : 1;
+    const bLocal = component[b.i] === sourceComponent ? 0 : 1;
+    return aLocal - bLocal || a.off - b.off || a.i - b.i;
+  });
+}
 function targetCandidates(g, aIdx, bearing, L, mapA) {
   if (!FIXTURE_DIR || L !== 3 || mapA) return [-1];
   const realD = realDistFor(L, mapA);
@@ -519,8 +535,27 @@ function targetCandidates(g, aIdx, bearing, L, mapA) {
     if (ab < minAB || ab > realD * 1.15) continue;
     rows.push({ i, off: Math.hypot(g.X[i] - bx0, g.Z[i] - bz0) });
   }
-  rows.sort((a, b) => a.off - b.off || a.i - b.i);
+  // 先穩定優先 source 所在 component，再套用既有 cap；不可把 disconnected target
+  // 排在可達 target 前製造假 noPath，也不可因此放寬任何後續 route gate。
+  rankTargetRows(rows, g.component[aIdx], g.component);
   return rows.slice(0, FIXTURE_TARGET_LIMIT).map((row) => row.i);
+}
+
+function selfTestTargetComponentRanking() {
+  const component = Int32Array.from([7, 3, 7, 3]);
+  const rows = [
+    { i: 1, off: 0.01 },  // 舊排序會選到：幾何最近，但與 source 不連通
+    { i: 2, off: 0.20 },  // component-aware 排序必須先選到：稍遠但可達
+    { i: 3, off: 0.30 },
+  ];
+  const legacy = rows.slice().sort((a, b) => a.off - b.off || a.i - b.i).slice(0, 1);
+  const fixed = rankTargetRows(rows.slice(), component[0], component).slice(0, 1);
+  const legacyReachable = component[legacy[0].i] === component[0];
+  const fixedReachable = component[fixed[0].i] === component[0];
+  if (legacyReachable) throw new Error('target component self-test 舊排序未製造 disconnected red case');
+  if (!fixedReachable) throw new Error('target component self-test component-aware 排序未優先可達 target');
+  log('target component self-test legacy ordering: RED (disconnected target selected)');
+  log('target component self-test component-aware ordering: GREEN (same-component target selected)');
 }
 
 function fixtureAnchorCandidates(fixture) {
@@ -703,6 +738,11 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1) 
     tunBad,     // 規則 #5 違規塔數(逐型態加總;0 = 合規)
     score: tacticalScore(sinu, tpk, mo),
   };
+}
+
+if (TARGET_COMPONENT_SELF_TEST) {
+  selfTestTargetComponentRanking();
+  process.exit(0);
 }
 
 // ---- 主流程 ----

@@ -2,12 +2,7 @@
   "version": 1,
   "schema": "osm-fixture-v1",
   "name": "london_water",
-  "venue": {
-    "id": "london",
-    "name": "倫敦・泰晤士河畔",
-    "type": "混合",
-    "country": "🇬🇧"
-  },
+  "venue": null,
   "team": 5,
   "center": {
     "lat": 51.500141625348476,

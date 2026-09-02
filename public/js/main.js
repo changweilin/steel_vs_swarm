@@ -1778,12 +1778,36 @@ function warmModels(onProg) {
   return _modelsReady;
 }
 
+/**
+ * 固定 OSM 瀏覽器驗收閘(dev-only)：只有 loopback 頁面帶 query 才會問 server fixture route。
+ * 正式對局沒有這個 query，仍走下面唯一的 `warmOsm`→relay 路徑；fixture 不會進 production。
+ */
+function devOsmFixtureName() {
+  if (typeof location === 'undefined' || !/^https?:$/u.test(location.protocol) || !isLocalServer()) return null;
+  const name = new URLSearchParams(location.search).get('osmFixture');
+  return /^[A-Za-z0-9][A-Za-z0-9_-]*$/u.test(name || '') ? name : null;
+}
+
+async function fetchDevOsmRelay(name, bbox) {
+  const res = await fetch(`/__osm_fixture/${encodeURIComponent(name)}`, {
+    cache: 'no-store', headers: { 'x-dev-tools': '1' },
+  });
+  if (!res.ok) throw new Error(`固定 OSM fixture ${name} 回應 ${res.status}`);
+  const body = await res.json();
+  const relay = body?.relay;
+  if (body?.name !== name || osmRelayKey(relay?.bbox) !== osmRelayKey(bbox)) {
+    throw new Error(`固定 OSM fixture ${name} 的 bbox 與 battleConfig 不符`);
+  }
+  return relay;
+}
+
 function prebuildKey(cfg) {
   // 會影響地形/地貌的欄位全進 key:center/sizeM/bases/lanes(對調反轉後)/env(season/time 進地貌)/teamSize(進亂數種子)
   // mini 進 key:塔位階數(biomes 淨空/地標/墩座)與緩衝深度(裙)全由它推導 ⇒ 換了就得重建
   // `defSide` MUST 進 key:劇情戰役的塔位是非對稱的(只有防守方有塔)⇒ 換邊就是換一個世界,
   // 漏掉它會讓房間階段預建好的地形被原樣沿用,而塔的淨空/墩座全長在錯的那一側。
-  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, !!cfg.mini, cfg.defSide || null]);
+  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, !!cfg.mini, cfg.defSide || null,
+    devOsmFixtureName()]);
 }
 
 /** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */
@@ -1875,18 +1899,34 @@ async function osmGate(cfg, onLabel = () => {}) {
     }
     return;
   }
-  if (osmInReady(bbox)) return;          // 兩格都定案(再戰回房的重建;補抓成功時已由 resetOsmMisses 解鎖)
+  const fixtureName = devOsmFixtureName();
+  // 固定驗收每次都重播指定 fixture，即使同一分頁剛跑過同 bbox 的一般對局。
+  if (osmInReady(bbox) && !fixtureName) return;
   let feats = null, roads = null;
-  onLabel('取得道路圖資(全房共用一份)…');
-  try { [feats, roads] = await warmOsm(bbox); } catch { /* 缺席照走備援 */ }
-  onLabel('');
-  const relayInput = { bbox, roads: roads?.length ? roads : null };
-  // features=null 代表查詢失敗；不得把空陣列送成「成功但零面域」，否則全房會停用 fallback。
-  if (feats !== null && feats !== undefined) {
-    relayInput.areas = Array.isArray(feats.areas) ? feats.areas : [];
-    relayInput.pointFeatures = feats.pointFeatures || null;
+  let fit = null;
+  if (fixtureName) {
+    // fixture 只替代 Overpass 的來源；之後仍走與正式房主完全相同的 sanitize/fit/commit。
+    onLabel(`載入固定 OSM fixture(${fixtureName})…`);
+    const relayInput = await fetchDevOsmRelay(fixtureName, bbox);
+    fit = osmRelayFit(sanitizeOsmRelay(relayInput));
+    if (!fit) throw new Error(`固定 OSM fixture ${fixtureName} 無法通過 relay 上限/形狀契約`);
+    app.devOsm = {
+      name: fixtureName, status: 'fitted', featureReady: fit.msg.featureReady !== false,
+      drop: fit.msg.drop || 0, roadCount: fit.msg.roads?.length || 0,
+      areaCount: fit.msg.areas?.length || 0,
+    };
+  } else {
+    onLabel('取得道路圖資(全房共用一份)…');
+    try { [feats, roads] = await warmOsm(bbox); } catch { /* 缺席照走備援 */ }
+    const relayInput = { bbox, roads: roads?.length ? roads : null };
+    // features=null 代表查詢失敗；不得把空陣列送成「成功但零面域」，否則全房會停用 fallback。
+    if (feats !== null && feats !== undefined) {
+      relayInput.areas = Array.isArray(feats.areas) ? feats.areas : [];
+      relayInput.pointFeatures = feats.pointFeatures || null;
+    }
+    fit = osmRelayFit(sanitizeOsmRelay(relayInput));
   }
-  const fit = osmRelayFit(sanitizeOsmRelay(relayInput));
+  onLabel('');
   // 超限退化 MUST 講出來:實測密市區 5v5 的中繼訊息已達 1.05MB(MAX_BYTES 餘裕 1.6×),
   // 這條分支不是理論上的 —— 它一旦觸發,建物/招牌就退回「每台各自抓」= 又會長不一樣,
   // 而房主是唯一看得到原因的人(console.warn 沒有人在看)。
@@ -2034,7 +2074,13 @@ function startPrebuild(cfg) {
     // 每一種失敗都有備援(房主自己抓不到 = 走兵線備援;入房者等不到 = 退回自己抓),
     // MUST NOT 讓它把整份預建判成 pre.error。
     const onOsmLabel = (t) => { pre.osmLabel = t; };
-    const gate = osmGate(cfg, onOsmLabel).catch((e) => { console.warn('路網中繼略過:', e); });
+    const gate = osmGate(cfg, onOsmLabel).catch((e) => {
+      if (devOsmFixtureName()) {
+        app.devOsm = { name: devOsmFixtureName(), status: 'error', error: String(e?.message || e) };
+        throw e;
+      }
+      console.warn('路網中繼略過:', e);
+    });
     await warmModels((f) => setP(0.02 + f * 0.16, '載入 3D 模型(Quaternius CC0)…'));
     const terrain = await buildTerrain(cfg, (f, label) => setP(0.18 + f * 0.42, label));
     // 只有到這一刻**還在等**才寫進度列(見 osmGate 的 onLabel)。地形建完中繼通常早就到了 ⇒
@@ -2046,6 +2092,13 @@ function startPrebuild(cfg) {
     terrain.group.add(biomes);
     terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
+    // 給 dev-only 固定鏡位與 headless 量測讀取已定案結構；資料仍是 buildBiomes 的原始列，
+    // 不另建幾何或索引，正式碰撞/渲染消費端維持下面既有的 userData→index 接線。
+    // 沒有 fixture query 時不掛額外的公開欄位，避免驗收 hook 的資料面滲入正式頁。
+    if (devOsmFixtureName()) {
+      terrain.decks = biomes.userData.decks || [];
+      terrain.tunnels = biomes.userData.tunnels || [];
+    }
     // client 碰撞與 server LOS 必須使用完全相同的容量選擇；不可只在上傳時 slice，
     // 否則第 12001 根之後會變成「客戶端撞得到、伺服器看不見」。build 順序本身即語意優先序。
     if (terrain.blockers.length > LOS.MAX_OCC) {
@@ -2200,10 +2253,103 @@ function startPrebuild(cfg) {
   return pre;
 }
 
+/**
+ * headless-3d-inspection：固定 OSM 驗收的 dev-only 截圖縫。rAF 在背景分頁會停，
+ * 所以 audit 取消下一幀、明確只呼叫一次正式 Pipeline/renderer，再讀真實
+ * `renderer.info.render.calls`；不以 Node 靜態批次或牆鐘時間冒充 draw call。
+ */
+function installDevSceneHook() {
+  if (!devOsmFixtureName() || !isLocalServer() || !app.battle) return;
+  const battle = app.battle;
+  const camera = battle.camera, renderer = battle.renderer, canvas = battle.canvas;
+  const pipeline = battle.pipeline;
+  const sceneState = {
+    scene: battle.scene, camera, renderer, pipeline, terrain: app.terrain,
+    battle, cfg: app.battleCfg,
+    projectLL: (lat, lng) => llToXZ(lat, lng, app.battleCfg.center),
+  };
+  window.__scene = sceneState;
+  window.__shot = async (name, width, height, opts = {}) => {
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,120}$/u.test(String(name || ''))) {
+      throw new Error('shot name 無效');
+    }
+    const old = {
+      // 背景分頁/尚未 layout 時 client 尺寸可能是 0；restore(0,0) 會把正式
+      // renderer 留在不可見狀態，所以只把有效 viewport 帶進暫存值。
+      width: Math.max(1, canvas.clientWidth || 0), height: Math.max(1, canvas.clientHeight || 0),
+      aspect: camera.aspect,
+      position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      rotation: { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z, order: camera.rotation.order },
+      enabled: pipeline ? { ...pipeline.enabled } : null,
+      infoAutoReset: renderer.info.autoReset,
+    };
+    const w = Number.isFinite(width) && width > 0 ? Math.floor(width) : old.width;
+    const h = Number.isFinite(height) && height > 0 ? Math.floor(height) : old.height;
+    // 取消已排程的動畫幀；capture 不自行移動世界，也不呼叫任何更新 tick。
+    cancelAnimationFrame(battle._raf);
+    battle._raf = 0;
+    try {
+      if (opts && Array.isArray(opts.pos) && opts.pos.length === 3) camera.position.set(...opts.pos);
+      if (opts && Array.isArray(opts.target) && opts.target.length === 3) camera.lookAt(...opts.target);
+      if (opts?.pos || opts?.target) camera.updateMatrixWorld(true);
+      if (w !== old.width || h !== old.height) renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      if (pipeline && opts && typeof opts === 'object') {
+        for (const key of ['ink', 'dof', 'grade', 'fxaa', 'wipe']) {
+          if (typeof opts[key] === 'boolean') pipeline.enabled[key] = opts[key];
+        }
+      }
+      // Pipeline 會呼叫多次 renderer.render；autoReset=true 只會留下最後一個 pass，
+      // 無法代表整幀 draw calls。驗收期間關閉自動歸零，讓各 pass 累加到同一份讀數。
+      renderer.info.autoReset = false;
+      renderer.info.reset();
+      if (pipeline) pipeline.render();
+      else renderer.render(battle.scene, camera);
+      const info = renderer.info;
+      const meta = {
+        fixture: devOsmFixtureName(), name: String(name),
+        drawCalls: Number(info.render?.calls || 0),
+        triangles: Number(info.render?.triangles || 0),
+        points: Number(info.render?.points || 0), lines: Number(info.render?.lines || 0),
+        glError: Number(renderer.getContext()?.getError?.() || 0),
+        camera: {
+          position: [camera.position.x, camera.position.y, camera.position.z],
+          rotation: [camera.rotation.x, camera.rotation.y, camera.rotation.z],
+          aspect: camera.aspect,
+        },
+        viewport: { width: w, height: h },
+        osm: app.devOsm || null,
+      };
+      const res = await fetch('/__shot', {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-tools': '1' },
+        body: JSON.stringify({ name: String(name), dataUrl: canvas.toDataURL('image/png'),
+          outputDir: typeof opts?.outputDir === 'string' ? opts.outputDir : undefined, meta }),
+      });
+      const saved = await res.json();
+      if (!res.ok || !saved?.ok) throw new Error(saved?.error || `截圖落盤失敗(${res.status})`);
+      return { ...meta, path: saved.path, metaPath: saved.metaPath, bytes: saved.bytes };
+    } finally {
+      camera.position.set(old.position.x, old.position.y, old.position.z);
+      camera.rotation.set(old.rotation.x, old.rotation.y, old.rotation.z, old.rotation.order);
+      camera.aspect = old.aspect;
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld(true);
+      if (pipeline && old.enabled) Object.assign(pipeline.enabled, old.enabled);
+      renderer.info.autoReset = old.infoAutoReset;
+      if (w !== old.width || h !== old.height) renderer.setSize(old.width, old.height, false);
+    }
+  };
+}
+
 // ================= 載入 + 開戰 =================
 async function enterLoading(cfg) {
   app.battleCfg = cfg;
-  if (app.battle) { app.battle.dispose(); app.battle = null; }
+  if (app.battle) {
+    const oldBattle = app.battle;
+    app.battle.dispose(); app.battle = null;
+    if (window.__scene?.battle === oldBattle) { delete window.__scene; delete window.__shot; }
+  }
   app.dlg?.dispose(); app.dlg = null;   // 對話層與戰場同生死(定時器漏收 = 下一場冒出上一場的台詞)
   
   // Select a dynamic background based on room participants
@@ -2343,6 +2489,7 @@ function enterGame() {
     // 攻堅進度條:目前打得動敵方的哪一階(權威值來自快照,客戶端不自己數塔)
     onSiegeTrack: (sg) => app.dlg?.track(app.story ? sg[app.story.foe] : null),
   });
+  installDevSceneHook();
   if (app.fieldMsg) app.battle.onField(app.fieldMsg);   // 開戰前就收到的危險區資料
   // 陣營樣式 & 操作說明
   document.body.dataset.side = app.mySide || 'SPEC';

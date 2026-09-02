@@ -3,7 +3,9 @@
 // relay sanitize／fit → 固定場地路網來源覆蓋。它不查網路，因此可在 CI 重跑；
 // 真正的高程／結構／泛洪仍由 audit_traverse --fixture-dir 接同一份 fixture 驗證。
 // 用法：node tools/audit_osm_fixtures.mjs [--only=taipei_dense,shibuya_dense] [--json=out.json]
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+// P2 結構名冊：<fixture-dir>/manifests/osm_p2_coverage_manifest_v1.json；
+// 反向驗證：--break-p2-source／--break-p2-tags，找不到適用 row 會 fail-loud。
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { battleBBox, llToXZ } from '../public/js/data.js';
@@ -26,6 +28,11 @@ const argv = Object.fromEntries(process.argv.slice(2).map((arg) => {
 const ONLY = new Set(String(argv.only || '').split(',').filter(Boolean));
 const DIR = resolve(argv['fixture-dir'] || DEFAULT_FIXTURE_DIR);
 const OUT = argv.json ? resolve(argv.json) : null;
+const P2_MANIFEST_PATH = join(DIR, 'manifests', 'osm_p2_coverage_manifest_v1.json');
+const P2_REQUIRED_CATEGORIES = Object.freeze([
+  'hospital', 'industrial', 'utility', 'park', 'sports', 'large_parking',
+  'farmland', 'forest', 'multi_outer_hospital', 'courtyard_hospital',
+]);
 const bytes = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
 let pass = 0, fail = 0;
 const check = (condition, label) => {
@@ -37,11 +44,14 @@ const BREAKS = {
   relation: hasArg('--break-real-relation'),
   hole: hasArg('--break-real-hole'),
   capacity: hasArg('--break-capacity-report'),
+  p2Source: hasArg('--break-p2-source'),
+  p2Tags: hasArg('--break-p2-tags'),
 };
-const mutations = { relation: false, hole: false, capacity: false };
+const mutations = { relation: false, hole: false, capacity: false, p2Source: false, p2Tags: false };
 
 // `--break-*` 只准命中真實 fixture；找不到適用樣本時於收尾列紅，不能把 no-op 當成綠燈。
-const mutationTargets = { relation: null, hole: null, capacity: null };
+const mutationTargets = { relation: null, hole: null, capacity: null, p2Source: null, p2Tags: null };
+const p2RowsByFixture = new Map();
 
 function elementKey(el) {
   const rank = ({ node: '0', way: '1', relation: '2' })[el?.type] || '9';
@@ -64,6 +74,87 @@ function stableObject(value) {
 
 function stableJson(value) {
   return JSON.stringify(stableObject(value));
+}
+
+const isRecord = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
+
+function loadP2CoverageManifest(names) {
+  const wantsP2 = names.some((name) => name.startsWith('p2_'));
+  if (!existsSync(P2_MANIFEST_PATH)) {
+    if (wantsP2 || BREAKS.p2Source || BREAKS.p2Tags) {
+      check(false, `P2 coverage manifest 存在（${P2_MANIFEST_PATH}）`);
+    }
+    return;
+  }
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(P2_MANIFEST_PATH, 'utf8'));
+  } catch (error) {
+    check(false, `P2 coverage manifest 可解析（${error.message}）`);
+    return;
+  }
+  check(manifest.version === 1 && manifest.schema === 'osm-p2-coverage-manifest-v1'
+    && manifest.source === 'tools/audit_osm_fixtures.mjs', 'P2 coverage manifest schema/version/source');
+  const rows = Array.isArray(manifest.rows) ? manifest.rows : [];
+  const categories = rows.map((row) => row?.category);
+  const categorySet = new Set(categories);
+  check(rows.length === P2_REQUIRED_CATEGORIES.length
+    && categorySet.size === rows.length
+    && P2_REQUIRED_CATEGORIES.every((category) => categorySet.has(category)),
+  `P2 coverage manifest categories 固定（${P2_REQUIRED_CATEGORIES.join(',')}）`);
+  const rowsValid = rows.every((row) => {
+    if (!isRecord(row) || typeof row.category !== 'string' || typeof row.fixture !== 'string'
+      || !/^(?:node|way|relation)\/\d+$/u.test(String(row.sourceId))
+      || !isRecord(row.requiredTags) || !Object.keys(row.requiredTags).length
+      || Object.entries(row.requiredTags).some(([key, value]) => !key || typeof value !== 'string')) return false;
+    if (row.requiredOuterCount != null
+      && (!Number.isInteger(row.requiredOuterCount) || row.requiredOuterCount < 1)) return false;
+    return row.requireInner == null || typeof row.requireInner === 'boolean';
+  });
+  check(rowsValid, 'P2 coverage manifest rows 欄位完整');
+  if (!rowsValid) return;
+  for (const row of rows) {
+    const fixtureRows = p2RowsByFixture.get(row.fixture) || [];
+    fixtureRows.push(row);
+    p2RowsByFixture.set(row.fixture, fixtureRows);
+  }
+  for (const name of names.filter((item) => item.startsWith('p2_'))) {
+    check(p2RowsByFixture.has(name), `${name}:P2 coverage manifest 有固定 rows`);
+  }
+}
+
+function p2RowsFor(name) {
+  return p2RowsByFixture.get(name) || [];
+}
+
+function p2TagsMatch(element, requiredTags) {
+  const tags = element?.tags;
+  return isRecord(tags) && Object.entries(requiredTags || {}).every(([key, value]) =>
+    Object.prototype.hasOwnProperty.call(tags, key) && String(tags[key]) === value);
+}
+
+function auditP2Coverage(name, rawElements) {
+  const rows = p2RowsFor(name);
+  if (!rows.length) return;
+  const bySourceId = new Map(rawElements.map((element) => [sourceIdOf(element), element]));
+  for (const row of rows) {
+    const element = bySourceId.get(row.sourceId);
+    check(!!element, `${name}:${row.category} 固定 sourceId ${row.sourceId}`);
+    if (!element) continue;
+    check(p2TagsMatch(element, row.requiredTags),
+      `${name}:${row.category} requiredTags 未漂移（${row.sourceId}）`);
+    if (row.requiredOuterCount != null) {
+      const outerCount = element.type === 'relation'
+        ? (element.members || []).filter((member) => member?.role === 'outer').length : 0;
+      check(outerCount === row.requiredOuterCount,
+        `${name}:${row.category} requiredOuterCount=${row.requiredOuterCount}`);
+    }
+    if (row.requireInner) {
+      const innerCount = element.type === 'relation'
+        ? (element.members || []).filter((member) => member?.role === 'inner').length : 0;
+      check(innerCount > 0, `${name}:${row.category} requireInner`);
+    }
+  }
 }
 
 /**
@@ -255,7 +346,57 @@ function findCapacityFixture(featureElements, fixture) {
   return sourceId ? { sourceId, baselineCapacityIds: [...account.capacityIds].sort() } : null;
 }
 
+function findP2MutationTarget(name, featureElements) {
+  for (const row of p2RowsFor(name)) {
+    const element = featureElements.find((candidate) => sourceIdOf(candidate) === row.sourceId
+      && candidate?.type === 'way');
+    if (element) return { row, element };
+  }
+  return null;
+}
+
 function mutateFixture(name, fixture, featureElements) {
+  // P2 source/tag mutations deliberately target a manifest row instead of a hand-picked
+  // fixture element; changing the manifest target must therefore make the audit red.
+  if (BREAKS.p2Tags && !mutations.p2Tags) {
+    const target = findP2MutationTarget(name, featureElements);
+    if (target) {
+      const [tagKey] = Object.keys(target.row.requiredTags || {});
+      const before = stableJson(featureElements.filter((element) => sourceIdOf(element) === target.row.sourceId));
+      let changed = false;
+      for (const element of featureElements) {
+        if (sourceIdOf(element) !== target.row.sourceId || !isRecord(element.tags)) continue;
+        if (Object.prototype.hasOwnProperty.call(element.tags, tagKey)) {
+          delete element.tags[tagKey];
+          changed = true;
+        }
+      }
+      const after = stableJson(featureElements.filter((element) => sourceIdOf(element) === target.row.sourceId));
+      const applied = changed && before !== after;
+      check(applied, `${name}:--break-p2-tags mutation 已套用`);
+      mutations.p2Tags = applied;
+      mutationTargets.p2Tags = { name, sourceId: target.row.sourceId, tagKey };
+    }
+  }
+  if (BREAKS.p2Source && !mutations.p2Source) {
+    const target = findP2MutationTarget(name, featureElements);
+    if (target) {
+      const oldSourceId = target.row.sourceId;
+      const brokenId = `p2-break-${name}-${oldSourceId.replace('/', '-')}`;
+      const before = stableJson(featureElements.filter((element) => sourceIdOf(element) === oldSourceId));
+      let changed = false;
+      for (const element of featureElements) {
+        if (sourceIdOf(element) !== oldSourceId) continue;
+        element.id = brokenId;
+        changed = true;
+      }
+      const after = stableJson(featureElements.filter((element) => sourceIdOf(element) === brokenId));
+      const applied = changed && before !== after;
+      check(applied, `${name}:--break-p2-source mutation 已套用`);
+      mutations.p2Source = applied;
+      mutationTargets.p2Source = { name, sourceId: oldSourceId, brokenId };
+    }
+  }
   if (BREAKS.relation && !mutations.relation) {
     const target = findRelationFixture(featureElements);
     if (target) {
@@ -373,6 +514,7 @@ function inspect(name) {
   mutateFixture(name, fixture, featureElements);
   const rawFeatures = uniqueRaw(featureElements);
   const rawRoads = uniqueRaw(roadElements);
+  auditP2Coverage(name, rawFeatures.unique);
   const missingRawIds = [...rawFeatures.unique, ...rawRoads.unique].filter((element) => !sourceIdOf(element));
   check(missingRawIds.length === 0, `${name}:raw element source ID 完整`);
   check(rawFeatures.conflicts.length === 0 && rawRoads.conflicts.length === 0,
@@ -558,15 +700,23 @@ function aggregateGaps(results) {
 
 const names = (ONLY.size ? [...ONLY] : readdirSync(DIR).filter((file) => file.endsWith('.json')).map((file) => file.slice(0, -5))).sort();
 if (!names.length) { console.error(`❌ 找不到 fixture：${DIR}`); process.exit(2); }
+loadP2CoverageManifest(names);
 const results = [];
 for (const name of names) {
   try { results.push(inspect(name)); }
   catch (error) { fail++; console.error(`    ✗ ${name}:稽核拋出例外 —— ${error.message}`); }
 }
+const BREAK_FLAGS = Object.freeze({
+  relation: '--break-real-relation',
+  hole: '--break-real-hole',
+  capacity: '--break-capacity-report',
+  p2Source: '--break-p2-source',
+  p2Tags: '--break-p2-tags',
+});
 for (const [kind, enabled] of Object.entries(BREAKS)) {
   if (enabled && !mutations[kind]) {
     fail++;
-    const flag = kind === 'capacity' ? '--break-capacity-report' : `--break-real-${kind}`;
+    const flag = BREAK_FLAGS[kind];
     console.error(`    ✗ ${flag}: 找不到適用的真實 fixture，反向驗證未執行`);
   }
 }
