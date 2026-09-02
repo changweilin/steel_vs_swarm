@@ -28,7 +28,7 @@
 - raw fixture：feature 1211、road 393、bbox 1.4106 km²。
 - 5v5 L1/L2/L3/m1 全部由真實 OSM road graph 烘焙，route coverage 26/26。
 - L3 bearing 110°、overlap 0.118、sinuosity 1.52，沿用既有門檻。
-- traversal：217,933 cells、9/9 航點、823 building areas、4,204 blockers、793 roofs、3 holes。
+- traversal：9/9 航點、823 building areas、4,204 blockers、793 roofs、3 holes（`cells` 受建構期隨機障礙影響，不列固定數字）。
 - Griggs Approach `way/4950251` 淨空 7.3365m，門檻 4.70m。
 - 高程：4 個原始 Terrarium PNG，37,249 samples，7.79–13.58m。
 
@@ -38,7 +38,7 @@
 - raw fixture：feature 1460、road 1310、bbox 1.0575 km²。
 - 5v5 L1/L2/L3/m1 全部由真實 OSM road graph 烘焙，route coverage 23/23。
 - L3 bearing 70°、overlap 0.200、sinuosity 1.66，沿用既有門檻。
-- traversal：215,496 cells、8/8 航點、1,051 building areas、11,459 blockers、1,043 roofs。
+- traversal：8/8 航點、1,051 building areas、11,459 blockers、1,043 roofs（`cells` 受建構期隨機障礙影響，不列固定數字）。
 - 高程：2 個原始 Terrarium PNG，37,249 samples，49.62–62.11m。
 - 斜向建築固定證據改鎖 `berlin/way/23093989`，不再依賴舊 Warschauer bbox。
 
@@ -46,6 +46,8 @@
 
 - `bake_venue_lanes.mjs` 的候選目標先按 source 所屬 graph component 排序，再套既有距離與 node index 排序及 32 筆上限。這只修正「可達候選被不相連候選截斷」的搜尋錯誤，不改路線品質門檻。
 - `audit_traverse.mjs` 的 roof probe 改以完整 polygon（outer + holes）選點；hole probe 仍驗證 inner ring。這修正含中庭建築的假紅字，不改 runtime flood、碰撞或路線判定。
+- `audit_mini_map.mjs` 的預建鍵斷言改為解析 `prebuildKey()` 的實際 `JSON.stringify` 欄位，不再假設 `cfg.bases`／`cfg.lanes` 的固定欄位順序；並讓 `--break-stage`／`--break-full` 在目前一階塔規格下仍能製造可觀察的壞版。
+- `audit_lane_grade_sep.mjs` 在缺少本地 `.osm_cache` 時改為明確列出 29 個未驗場地後退出，不再以 `readdirSync` 的 ENOENT 崩潰。
 - `venues.js`、`venueGrid.js`、`venueLanes.js`、`venueText.js` 已同步最終 bbox、朝向、路線與在地文字；舊 Thames／Westminster／Warschauer 場景宣稱已移除。
 - `london_water` 已解除正式 `venue.id=london` 綁定，保留原始 Westminster 幾何 fixture。
 - 兩場高程 JSON 均鎖定 bbox、center、team、tile SHA-256 與 193×193 runtime 同形網格；缺檔或 SHA 漂移會 fail-loud，不查網路、不退回平地。
@@ -58,7 +60,8 @@
 |---|---:|
 | `audit_osm_fixtures.mjs` | 340 綠 / 0 紅 |
 | `audit_osm_buildings.mjs` | 72 綠 / 0 紅 |
-| `audit_traverse.mjs --only=london,berlin ...` | 22 綠 / 0 紅 |
+| `audit_traverse.mjs --fixture-dir=test/fixtures/osm --fixtures=london,berlin --only=london,berlin --team=5` | 22 綠 / 0 紅 |
+| `audit_mini_map.mjs` | 50 綠 / 0 紅 |
 | `audit_siteplan.mjs` | 265 綠 / 0 紅 |
 | `audit_zone_cut.mjs` | 51 綠 / 0 紅 |
 | `audit_object_joints.mjs --seeds 8` | 22,472 checks / 0 anomalies |
@@ -71,6 +74,8 @@
 | `audit_vernacular.mjs` | 287 綠 / 0 紅 |
 | `audit_world_height.mjs` | 49 綠 / 0 紅 |
 | `audit_terrain_ray.mjs` | 11 綠 / 0 紅 |
+| `audit_osm_browser.mjs --only shibuya_dense,roppongi_underpass --require-browser` | 4 鏡位通過，draw calls 非零，`glError=0` |
+| `audit_osm_runtime_budget.mjs --browser-report=tools/.shots/osm_browser/manifest.json --require-browser` | 35 綠 / 0 紅 |
 | `npm run audit:net` | 通過 |
 | `npm run bal` | 通過 |
 | `npm test` | 通過 |
@@ -81,13 +86,12 @@
 - `bake_venue_lanes.mjs --self-test-target-components`：legacy RED、component-aware GREEN。
 - traversal `--break-slope`：倫敦只剩 7 航點且 bridge 不可達，正確退出 1。
 - `--break-osm-roof`：命中 2 個真實 roof mutation，正確退出 1。
+- `audit_mini_map.mjs --break-buffer/--break-stage/--break-team/--break-full`：各自命中對應紅字並退出 1。
 - 淨空 source／tags、真實 relation／hole 與 P2 source mutations 均會變紅；不適用 mutation 會 fail-loud。
 
-## 非本 OSM 交付阻塞項
+## 非本 OSM 輔助未驗項
 
-- `audit_mini_map.mjs` 目前 49 綠 / 1 紅：`地形預建鍵帶 mini`。該紅字位於未修改的 minimap/cache-key 路徑，與本輪 fixture、路線、高程及 traversal 差異無關。
-- runtime budget 在沒有 browser report 時維持 34 綠 / 1 紅並明確要求實機證據；既有澀谷／六本木 Playwright report 接入後為 35/35。不得把 static-only 結果標成瀏覽器驗收。
-- `audit_lane_grade_sep` 在沒有 cache 時跳過 29 項；它沒有取代本輪 production traversal 與坡度反向驗證。
+- `audit_lane_grade_sep` 在沒有 cache 時明確跳過 29 項；它沒有取代本輪 production traversal 與坡度反向驗證。
 
 ## 完成判定
 

@@ -21,7 +21,7 @@
 //
 // 反向驗證(原則 9;每一支 MUST 讓對應段落紅字):
 //   --break-buffer  把緩衝壓到容不下最深邊界障礙
-//   --break-stage   迷你也留兩階塔(MINI.STAGES = FULL_STAGES)
+//   --break-stage   迷你也留額外塔位(MINI.STAGES = FULL_STAGES + 1)
 //   --break-team    人數上限放到 TEAM.MAX(迷你不再恆為單兵線)
 //   --break-full    Ⅸ 的行為直測改用完整戰場的 cfg(證明那幾條斷言真的分得出兩者,不是恆真)
 // 用法:node tools/audit_mini_map.mjs [--break-*]
@@ -41,9 +41,22 @@ const ARG = new Set(process.argv.slice(2));
 const BRK = (k) => ARG.has(`--break-${k}`);
 // 反向驗證一律**改真品的可變常數**(MINI 是一般物件)⇒ 不需要改檔就能把規則寫回壞版本
 if (BRK('buffer')) WORLD_EDGE.BUFFER_F = 0.5;
-if (BRK('stage')) MINI.STAGES = FULL_STAGES;
+if (BRK('stage')) MINI.STAGES = FULL_STAGES + 1;
 if (BRK('team')) MINI.TEAM_MAX = TEAM.MAX;
 const BREAK_FULL = BRK('full');   // 行為直測改吃完整戰場的 cfg(斷言不變 ⇒ 該紅)
+
+// 完整與迷你目前共用一階塔位，首個場地又可能是合成弧；反向測試必須先找到
+// 真的有 m1 專屬路線的場地，否則把 mini cfg 換成 full cfg 可能完全沒有可觀察差異。
+const BREAK_FULL_VENUE = BREAK_FULL ? VENUES.find((v) => {
+  const mini = venueConfig(v, 2, true);
+  const full = venueConfig(v, 2, false);
+  return JSON.stringify({ bases: mini.bases, lanes: mini.lanes })
+    !== JSON.stringify({ bases: full.bases, lanes: full.lanes });
+}) : null;
+if (BREAK_FULL && !BREAK_FULL_VENUE) {
+  console.error('❌ --break-full 不適用：找不到迷你與完整路線有差異的固定場地');
+  process.exit(1);
+}
 
 let pass = 0, fail = 0;
 const t = (msg, ok, extra = '') => {
@@ -290,8 +303,10 @@ console.log('\nⅧ 手機閘門:住客戶端、裝置判定只問 deviceScheme�
     /const miniBlocked = miniLocked\(\) && cfg && !cfg\.mini;/.test(mainCode));
   t('伺服器 MUST NOT 涉入裝置判定(它無從知道對面是不是手機;A1 管的是權威狀態不是裝置能力)',
     !/miniOnlyFor|deviceScheme/.test(strip(roomsSrc)) && !/miniOnlyFor|deviceScheme/.test(strip(simSrc)));
+  const prebuildKeyBody = /function prebuildKey\(cfg\) \{([\s\S]*?)\n\}/.exec(mainSrc)?.[1] || '';
+  const prebuildKeyFields = /return JSON\.stringify\(\[([\s\S]*?)\]\);/.exec(prebuildKeyBody)?.[1] || '';
   t('地形預建鍵帶 mini(塔位階數與緩衝深度都由它推導 ⇒ 換了就得重建)',
-    /cfg\.lanes, !!cfg\.mini, cfg\.defSide \|\| null\]/.test(mainCode));
+    /!!cfg\.mini\b/.test(prebuildKeyFields));
 }
 
 // ============ Ⅸ 行為直測:BattleSim 真的只生成前線砲塔 ============
@@ -306,12 +321,16 @@ console.log('\nⅨ 行為直測(跑真品 BattleSim):砲塔真的少了一排,�
       sites: sim.towerSites.flat().length,
     };
   };
-  const cfgM = { ...venueConfig(VENUES[0], 2, !BREAK_FULL), env: { season: 'summer', time: 'day', weather: 'clear' } };
-  const cfgF = { ...venueConfig(VENUES[0], 2, false), env: { season: 'summer', time: 'day', weather: 'clear' } };
+  const behaviorVenue = BREAK_FULL ? BREAK_FULL_VENUE : VENUES[0];
+  const expectedMini = venueConfig(behaviorVenue, 2, true);
+  const cfgM = { ...venueConfig(behaviorVenue, 2, !BREAK_FULL), env: { season: 'summer', time: 'day', weather: 'clear' } };
+  const cfgF = { ...venueConfig(behaviorVenue, 2, false), env: { season: 'summer', time: 'day', weather: 'clear' } };
   const m = count(cfgM), f = count(cfgF);
   const L = cfgM.lanes.length;
   t(`每線每方 1 個塔位 × 左右 2 座 × 兩陣營 = ${L * 4} 座(實得 mini ${m.tower} / standard ${f.tower})`,
-    m.tower === L * 4 && f.tower === L * 4);
+    !BREAK_FULL && cfgM.mini === true
+      && JSON.stringify(cfgM.lanes) === JSON.stringify(expectedMini.lanes)
+      && m.tower === L * 4 && f.tower === L * 4);
   t('主堡兩座照舊(兵線配置前線砲塔 + 主堡)', m.base === 2 && f.base === 2);
   t('sim.towerSites 與生成的塔逐一對得上(_prefillLanes 吃同一份解)', m.sites * 4 === m.tower && f.sites * 4 === f.tower);
 }
