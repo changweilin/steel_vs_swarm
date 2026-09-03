@@ -1,4 +1,4 @@
-﻿// ============ 無人戰略:鋼鐵與蜂群 — 共用遊戲常數 ============
+// ============ 無人戰略:鋼鐵與蜂群 — 共用遊戲常數 ============
 // 伺服器(server/sim.js)與前端(game.js)共用同一份數值,
 // 模式沿用 ai_tycoon:server 直接 import '../public/js/data.js'。
 import { BOT_POLICY } from './botPolicy.js';   // 電腦玩家學習策略(工具產出;見檔尾 BOT_LEARN 區塊)
@@ -5432,40 +5432,73 @@ export function solveTowerSites(lanes, mini) {
     return m;
   };
   // ---- 劇情戰役(非對稱):只有防守方有塔,「我方前線就是主堡」----
-  // 兩趟的規則**一條都沒換**,換的只是「對面那個東西是什麼」:
-  //   趟 1 前線塔的對照物 = 攻方的**主堡**(原本是攻方的前線塔)⇒ 對距 ≥ SEP 就是「不對射」;
-  //   趟 2 中段塔照舊對「己方主堡 + 己方前線塔」求 ≥ SEP,取最貼主堡者(防禦縱深)。
-  // 掃描上限也跟著換:對稱戰場的 `TOWER_MAX_FRAC` 是「不得越過戰場中線」,而劇情戰役沒有
-  // 對面的塔要爭中線 —— 真正的界線由「對距 ≥ SEP」自己夾出來,上限只需擋住「退進攻方主堡懷裡」。
+  // 敵方砲塔攻擊範圍不可涵蓋攻方主堡的重生處與治療光環;若會衝突,後面的砲塔/主堡距離可適度放寬。
   const plan = mapPlan(mini);
   if (plan.mode === 'story' && bases.length === 2) {
     const def = plan.def, atk = OTHER_SIDE[def];
     const defBase = def === 'SWARM' ? bases[0] : bases[1];
     const atkBase = atk === 'SWARM' ? bases[0] : bases[1];
     const FMAX = 1 - GAME.TOWER_MIN_FRAC;
-    return G.map(({ site, towers }) => {
-      // 趟 1:前線塔 —— 對距(到攻方主堡)≥ SEP 中最貼 SEP 者;塞不下取對距最大者(best-effort)
+    return G.map(({ site, towers }, li) => {
+      // 攻方主堡重生點集(隊列與側向偏移,見 sim._spawnPoint)
+      const atkSpawns = [];
+      const pts = lanes[li] || [];
+      if (pts.length >= 2) {
+        const end = atk === 'SWARM' ? pts[0] : pts[pts.length - 1];
+        const nxt = atk === 'SWARM' ? pts[1] : pts[pts.length - 2];
+        let dx = nxt[0] - end[0], dz = nxt[1] - end[1];
+        const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+        const px = dz, pz = -dx;
+        for (let sq = 0; sq < TEAM.MAX; sq++) {
+          const layer = sq;
+          const s = layer % 2 === 0 ? 1 : -1;
+          for (let b = 0; b < 3; b++) {
+            const lat = GAME.HERO_SPAWN_SIDE + Math.floor(layer / 2) * 11 + b * 10;
+            atkSpawns.push({ x: end[0] + dx * GAME.HERO_SPAWN_OFF + px * lat * s, z: end[1] + dz * GAME.HERO_SPAWN_OFF + pz * lat * s });
+          }
+        }
+      } else {
+        atkSpawns.push(atkBase);
+      }
+
+      // 趟 1:前線塔 —— 攻擊範圍不可涵蓋攻方主堡的重生處與治療光環,且對距 ≥ SEP。
+      // 在滿足條件的位置中取最前線者(f 最大);若空間受限無法完全避開,取距離重生處與光環最遠者(best-effort)。
       let front = null, fb = null;
       for (let f = GAME.TOWER_MIN_FRAC; f <= FMAX + 1e-9; f += 0.002) {
-        const p = site(def, f), opp = nearest(towers(p), [atkBase]);
-        if (opp >= SEP - 1e-6 && (!front || opp < front.opp)) front = { f, p, opp };
-        if (!fb || opp > fb.opp) fb = { f, p, opp };
+        const p = site(def, f), T = towers(p);
+        const oppBase = nearest(T, [atkBase]);
+        const oppSpawn = nearest(T, atkSpawns);
+        const safe = (oppBase - GAME.HERO_HEAL_R > R + 1e-6) && (oppSpawn > R + 1e-6) && (oppBase >= SEP - 1e-6);
+        if (safe) {
+          if (!front || f > front.f) front = { f, p, opp: oppBase };
+        }
+        const score = Math.min(oppBase - GAME.HERO_HEAL_R - R, oppSpawn - R);
+        if (!fb || score > fb.score) fb = { f, p, score, opp: oppBase };
       }
       const fe = front || fb;
       const out = [{ frac: fe.f, [def]: fe.p }];
       if (plan.defStages < 2) return out;
-      // 趟 2:中段塔 —— sep(到己方主堡 / 己方前線塔)≥ SEP 中最貼主堡者;硬底線 = 不與前線塔疊
+
+      // 趟 2:中段塔(後面的砲塔)—— 優先保持與前線塔間距(不疊塔、盡量 ≥ SEP)。
+      // 若與前塔間距產生衝突,後面的砲塔與己方主堡距離可適度放寬(底線為不疊塔 STACK)。
       const fT = towers(fe.p);
-      let strict = null, spread = null;
+      let strict = null, relaxed = null, spread = null;
       for (let f = GAME.TOWER_MIN_FRAC; f < fe.f - 1e-6; f += 0.002) {
         const p = site(def, f), T = towers(p);
         const stack = nearest(T, fT);
         if (stack < STACK - 1e-6) continue;
-        const sep = Math.min(nearest(T, [defBase]), stack);
+        const dBase = nearest(T, [defBase]);
+        if (dBase < STACK - 1e-6) continue;
+
+        const sep = Math.min(dBase, stack);
+        // 理想情況:後塔與主堡、後塔與前塔皆 ≥ SEP,取最貼主堡者(防禦縱深)
         if (sep >= SEP - 1e-6 && !strict) strict = { f, p };
+        // 若衝突:維持與前塔 ≥ SEP,後塔/主堡距離適度放寬(取 dBase 最大者)
+        if (stack >= SEP - 1e-6 && (!relaxed || dBase > relaxed.dBase)) relaxed = { f, p, dBase };
+        // 保底:空間極度受限時等分間隙
         if (!spread || sep > spread.sep) spread = { f, p, sep };
       }
-      const mid = strict || spread;
+      const mid = strict || relaxed || spread;
       // 回傳序 = [後塔, 前塔](與對稱版同約定:末項 = 前線,見 siegeSiteStages / _prefillLanes)
       return mid ? [{ frac: mid.f, [def]: mid.p }, ...out] : out;
     });
