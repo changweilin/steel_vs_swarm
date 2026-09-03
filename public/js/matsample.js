@@ -39,8 +39,8 @@ const W = 480, H = 270;
 const SUN_DIR = new THREE.Vector3(0.9, 0.42, -0.35).normalize();
 
 // 樣品自己的景深帶(公尺)。
-const DOF_NEAR = 16.0, DOF_FAR = 38.0;
-const BG_Z = -8.5;   // 背景排的 z
+const DOF_NEAR = 11.0, DOF_FAR = 15.5;
+const BG_Z = -5.5;   // 背景排的 z(與 DOF_FAR 一起挑的:那一排 MUST 落在全糊帶裡)
 
 // 開闊大氣透視霧帶與霧色（空氣透視示範對象，配合 240m 實機場地視野，不再鎖在 44m 封閉暗盒）
 const FOG_NEAR = 35.0, FOG_FAR = 220.0;
