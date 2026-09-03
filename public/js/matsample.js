@@ -19,6 +19,7 @@ import { applyEnvironment } from './environment.js';
 import {
   buildShowcasePatch, findShowcaseSite, showcaseAnchorSite,
   LONDON_SHOWCASE_UNITS, GAME_SHOWCASE_SITES,
+  dressingTree, dressingMound,
 } from './showcase.js';
 
 const W = 480, H = 270;
@@ -37,14 +38,14 @@ const W = 480, H = 270;
 const SUN_DIR = new THREE.Vector3(0.9, 0.42, -0.35).normalize();
 
 // 樣品自己的景深帶(公尺)。
-const DOF_NEAR = 11.0, DOF_FAR = 15.5;
-const BG_Z = -5.5;   // 背景排的 z(與 DOF_FAR 一起挑的:那一排 MUST 落在全糊帶裡)
+const DOF_NEAR = 16.0, DOF_FAR = 38.0;
+const BG_Z = -8.5;   // 背景排的 z
 
-// 樣品自己的霧帶與兩個霧色(「空氣透視」那根拉桿的示範對象)—— 尺度兩軌、規則一份。
-const FOG_NEAR = 5.0, FOG_FAR = 44.0;
-const FOG_FAR_C = new THREE.Color(0x0f1622);    // 樣品後製遠端色；天空背景由正式環境系統提供
-const FOG_NEAR_C = new THREE.Color(0x4a3a2a);
-const PREVIEW_ENV_SPAN = 24.0;                  // 只縮放展示視口；環境規則仍走正式實作
+// 開闊大氣透視霧帶與霧色（空氣透視示範對象，配合 240m 實機場地視野，不再鎖在 44m 封閉暗盒）
+const FOG_NEAR = 35.0, FOG_FAR = 220.0;
+const FOG_FAR_C = new THREE.Color(0x6e8499);    // 遠景大氣透視淡青色
+const FOG_NEAR_C = new THREE.Color(0x384a5c);
+const PREVIEW_ENV_SPAN = 240.0;                 // 與實機地圖同尺度，讓天頂穹頂與雲層環繞
 const DEFAULT_PREVIEW_ENV = Object.freeze({ season: 'summer', time: 'day', weather: 'clear' });
 
 const DEMO_SCENES = [
@@ -109,11 +110,10 @@ export class MatSample {
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(W, H, false);
     this.scene = new THREE.Scene();
-    this.scene.background = FOG_FAR_C.clone();
     this.scene.fog = new THREE.Fog(FOG_FAR_C.clone(), FOG_NEAR, FOG_FAR);
 
-    // 寬視角高機位：足夠大的視野與高度，讓樹木樹冠、遺跡建築等物件全貌盡收眼底
-    this.camera = new THREE.PerspectiveCamera(48, W / H, 0.5, 80);
+    // 寬視角高機位：遠剪裁面隨 span * 2.2 動態展開，讓天空穹頂、遠景地平線全貌盡收眼底且不被遠面裁切
+    this.camera = new THREE.PerspectiveCamera(48, W / H, 0.5, PREVIEW_ENV_SPAN * 2.2);
     this.camera.position.set(0, 4.6, 11.8);
     this.camera.lookAt(0, 1.9, 0);
 
@@ -348,41 +348,84 @@ export class MatSample {
       this._swampAnims = { sHull, sFoamRing1, sFoamRing2, reeds };
     }
 
-    // ── 4. 樹木植被與群鳥翱翔 (高大樹幹、分層立體樹冠、葉片卡與巡航鳥群) ──
+    // ── 4. 樹木植被與群鳥翱翔 (實機巨樹神木、立體葉冠群、葉片卡與巡航鳥群) ──
     this._gTree = new THREE.Group();
     {
       const groundTM = envMat(0x3d5636, { wash: 0.55, moss: { amount: 0.8 } });
-      const woodM = envMat(0x483526);
-      const leafM = envMat(0x35662e, { wash: 0.7, cool: 0.45 });
-      const cardM = envMat(0x457c38);
+      const woodM = envMat(0x563e2a, { wash: 0.25, cool: 0.1 });
+      const leafM = envMat(0x32622b, { wash: 0.65, cool: 0.4 });
+      const leafM2 = envMat(0x3f7236, { wash: 0.7, cool: 0.35 });
+      const cardM = envMat(0x447c38);
       const birdM = toonMat(0x283038);
-      this._mats.push(groundTM, woodM, leafM, cardM, birdM);
+      this._mats.push(groundTM, woodM, leafM, leafM2, cardM, birdM);
 
       const groundT = new THREE.Mesh(new THREE.PlaneGeometry(28, 28), groundTM);
       groundT.rotation.x = -Math.PI / 2;
       this._flatGrounds.push(groundT);
 
-      // 主神木 (高大粗壯，全貌盡覽)
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.2, 5.2, 12), woodM);
-      trunk.position.set(-1.4, 2.6, 0);
+      // 主神木樹幹 (實機 GIANT_DEFS 紅杉風格：基部板根、漸縮主幹與向上分枝)
+      const trunkGroup = new THREE.Group();
+      trunkGroup.position.set(-1.4, 0, 0);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 1.25, 5.4, 10), woodM);
+      trunk.position.y = 2.7;
+      trunkGroup.add(trunk);
 
-      const canopy1 = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 12), leafM);
-      canopy1.position.set(-1.4, 4.8, 0);
-      canopy1.scale.set(1.35, 0.95, 1.35);
+      for (const [ang, rz] of [[0, 0.25], [2.1, -0.2], [4.2, 0.22]]) {
+        const fin = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2.2, 3), woodM);
+        fin.position.set(Math.cos(ang) * 0.95, 1.1, Math.sin(ang) * 0.95);
+        fin.rotation.y = ang;
+        fin.rotation.z = rz;
+        trunkGroup.add(fin);
+      }
 
-      const canopy2 = new THREE.Mesh(new THREE.SphereGeometry(1.5, 14, 10), leafM);
-      canopy2.position.set(-0.3, 5.6, 0.4);
+      const bough1 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.2, 5), woodM);
+      bough1.position.set(0.7, 3.8, 0.2);
+      bough1.rotation.z = -0.75;
+      trunkGroup.add(bough1);
 
+      const bough2 = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.25, 1.9, 5), woodM);
+      bough2.position.set(-0.65, 4.2, -0.3);
+      bough2.rotation.z = 0.7;
+      trunkGroup.add(bough2);
+
+      // 多層次受光葉冠群（實機 icosahedron 多面體葉簇，告別圓球）
+      const canopyGeo1 = new THREE.IcosahedronGeometry(2.3, 1);
+      canopyGeo1.scale(1.4, 0.65, 1.35);
+      const canopy1 = new THREE.Mesh(canopyGeo1, leafM);
+      canopy1.position.set(-1.4, 4.9, 0);
+
+      const canopyGeo2 = new THREE.IcosahedronGeometry(1.7, 1);
+      canopyGeo2.scale(1.2, 0.7, 1.15);
+      const canopy2 = new THREE.Mesh(canopyGeo2, leafM2);
+      canopy2.position.set(-0.5, 5.8, 0.4);
+
+      const canopyGeo3 = new THREE.IcosahedronGeometry(1.3, 1);
+      canopyGeo3.scale(1.1, 0.75, 1.1);
+      const canopy3 = new THREE.Mesh(canopyGeo3, leafM);
+      canopy3.position.set(-2.2, 5.3, -0.3);
+
+      const canopyTopGeo = new THREE.IcosahedronGeometry(1.0, 1);
+      canopyTopGeo.scale(0.9, 0.85, 0.9);
+      const canopyTop = new THREE.Mesh(canopyTopGeo, leafM2);
+      canopyTop.position.set(-1.3, 6.7, 0.1);
+
+      // 葉片卡 (在主要葉冠邊緣隨風輕顫)
       const leafCards = [];
-      const cardGeo = new THREE.PlaneGeometry(0.8, 0.8);
+      const cardGeo = new THREE.PlaneGeometry(0.75, 0.75);
       this._geos.push(cardGeo);
-      for (let i = 0; i < 12; i++) {
-        const ang = (i / 12) * Math.PI * 2;
+      for (let i = 0; i < 14; i++) {
+        const ang = (i / 14) * Math.PI * 2;
         const c = new THREE.Mesh(cardGeo, cardM);
-        c.position.set(-1.4 + Math.cos(ang) * 2.3, 4.6 + (i % 3) * 0.5, Math.sin(ang) * 2.3);
+        c.position.set(-1.4 + Math.cos(ang) * 2.4, 4.6 + (i % 3) * 0.6, Math.sin(ang) * 2.4);
         c.rotation.set(0.3, ang, 0.2);
         leafCards.push(c);
       }
+
+      // 周圍配景：實機 conifer2 老雲杉群落
+      dressingTree(this._gTree, 3.2, -3.8, 1.3, () => 0, woodM, leafM);
+      dressingTree(this._gTree, -4.8, -2.6, 1.15, () => 0, woodM, leafM);
+      dressingTree(this._gTree, 5.6, 1.0, 0.95, () => 0, woodM, leafM2);
+      dressingTree(this._gTree, -3.6, 3.2, 0.85, () => 0, woodM, leafM2);
 
       // 飛翔鳥群 (具備左右雙翼，可模擬真實拍翼動作)
       const birds = [];
@@ -402,26 +445,29 @@ export class MatSample {
         wingR.rotation.y = Math.PI;
 
         bGroup.add(body, wingL, wingR);
-        bGroup.userData = { wingL, wingR, phase: i * 0.9, radius: 2.2 + (i % 3) * 0.7, height: 4.8 + i * 0.4, speed: 0.9 + i * 0.1 };
+        bGroup.userData = { wingL, wingR, phase: i * 0.9, radius: 2.3 + (i % 3) * 0.7, height: 5.1 + i * 0.4, speed: 0.9 + i * 0.1 };
         birds.push(bGroup);
       }
 
-      this._geos.push(groundT.geometry, trunk.geometry, canopy1.geometry, canopy2.geometry);
-      this._gTree.add(groundT, trunk, canopy1, canopy2, ...leafCards, ...birds);
+      this._geos.push(
+        groundT.geometry, trunk.geometry, canopyGeo1, canopyGeo2, canopyGeo3, canopyTopGeo
+      );
+      this._gTree.add(groundT, trunkGroup, canopy1, canopy2, canopy3, canopyTop, ...leafCards, ...birds);
       this._birdMeshes = birds;
       this._leafCardMeshes = leafCards;
-      this._treeAnims = { trunk, canopy1, canopy2, leafCards, birds };
+      this._treeAnims = { trunk: trunkGroup, canopy1, canopy2, leafCards, birds };
     }
 
-    // ── 5. 地貌分界、巨岩地標與建築遺跡 ──
+    // ── 5. 地貌分界、太魯閣峽谷峭壁與地標遺跡 ──
     this._gBiome = new THREE.Group();
     {
       const grassM = envMat(0x3a5a32, { wash: 0.6, moss: { amount: 0.9 } });
       const desertM = envMat(0x7e684a, { wash: 0.45, cool: 0.35 });
       const seamM = envMat(0x24321c, { wash: 0.2 });
-      const monolithM = envMat(0x565c52, { wash: 0.85, cool: 0.6, moss: { amount: 0.95 } });
+      const monolithM = envMat(0x626c6d, { wash: 0.35, cool: 0.3, land: true });
+      const monolithM2 = envMat(0x75807e, { wash: 0.45, cool: 0.25, land: true });
       const bannerM = toonMat(0x3b82f6);
-      this._mats.push(grassM, desertM, seamM, monolithM, bannerM);
+      this._mats.push(grassM, desertM, seamM, monolithM, monolithM2, bannerM);
 
       const gGrass = new THREE.Mesh(new THREE.PlaneGeometry(14, 28), grassM);
       gGrass.position.set(-7, 0, 0);
@@ -436,29 +482,54 @@ export class MatSample {
       seam.rotation.x = -Math.PI / 2;
       this._flatGrounds.push(gGrass, gDesert, seam);
 
-      // 宏偉巨岩石碑 1
-      const m1 = new THREE.Mesh(new THREE.BoxGeometry(2.0, 4.8, 2.0), monolithM);
-      m1.position.set(-2.4, 2.4, 0.5);
+      // 宏偉巨岩石階 1（實機 MEGALITHS 峽谷峭壁階地，多面沉積岩層）
+      const m1 = new THREE.Group();
+      const m1Base = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.1, 2.2, 8), monolithM);
+      m1Base.position.y = 1.1;
+      const m1Mid = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.65, 2.4, 7), monolithM2);
+      m1Mid.position.set(0.1, 3.2, -0.1);
+      m1Mid.rotation.y = 0.4;
+      const m1Top = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.25, 1.8, 7), monolithM);
+      m1Top.position.set(0.2, 5.1, -0.15);
+      m1Top.rotation.y = -0.3;
+      m1.add(m1Base, m1Mid, m1Top);
+      m1.position.set(-2.4, 0, 0.5);
       m1.rotation.y = 0.3;
 
-      // 宏偉巨岩石碑 2
-      const m2 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 5.8, 2.4), monolithM);
-      m2.position.set(2.8, 2.9, -1.2);
+      // 宏偉巨岩石碑 2（多面角錐石柱）
+      const m2 = new THREE.Group();
+      const m2Base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.9, 2.8, 7), monolithM);
+      m2Base.position.y = 1.4;
+      const m2Top = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.4, 3.0, 7), monolithM2);
+      m2Top.position.set(-0.1, 4.1, 0.1);
+      m2Top.rotation.y = 0.5;
+      m2.add(m2Base, m2Top);
+      m2.position.set(2.8, 0, -1.2);
       m2.rotation.y = -0.4;
 
-      // 背景遠景巨石群
-      const bgMono = new THREE.Mesh(new THREE.BoxGeometry(4.0, 7.5, 4.0), monolithM);
-      bgMono.position.set(0, 3.75, BG_Z);
+      // 背景遠景峭壁
+      const bgMono = new THREE.Group();
+      const bgRock1 = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.6, 6.8, 8), monolithM);
+      bgRock1.position.y = 3.4;
+      const bgRock2 = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.5, 5.2, 7), monolithM2);
+      bgRock2.position.set(2.4, 2.6, 0.8);
+      bgMono.add(bgRock1, bgRock2);
+      bgMono.position.set(0, 0, BG_Z);
 
-      // 遺跡旗幟 (隨風飄揚)
+      // 自然散佈風化巨石（DodecahedronGeometry）
+      for (const [x, z, r] of [[-0.6, 1.2, 0.75], [1.2, 2.4, 0.9], [4.5, -0.5, 1.1], [-4.2, -1.8, 1.2]]) {
+        dressingMound(this._gBiome, x, z, r, r * 0.85, () => 0, monolithM2);
+      }
+
+      // 遺跡旗幟 (立於高地石台頂峰，隨風飄揚)
       const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 4.2, 6), monolithM);
-      flagPole.position.set(-2.4, 5.0, 0.5);
-      const flagBanner = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.7), bannerM);
-      flagBanner.position.set(-1.8, 6.7, 0.5);
+      flagPole.position.set(-2.2, 5.8, 0.35);
+      const flagBanner = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.75), bannerM);
+      flagBanner.position.set(-1.55, 7.5, 0.35);
 
       this._geos.push(
-        gGrass.geometry, gDesert.geometry, seam.geometry, m1.geometry, m2.geometry,
-        bgMono.geometry, flagPole.geometry, flagBanner.geometry
+        gGrass.geometry, gDesert.geometry, seam.geometry, m1Base.geometry, m1Mid.geometry, m1Top.geometry,
+        m2Base.geometry, m2Top.geometry, bgRock1.geometry, bgRock2.geometry, flagPole.geometry, flagBanner.geometry
       );
       this._gBiome.add(gGrass, gDesert, seam, m1, m2, bgMono, flagPole, flagBanner);
       this._seamMesh = seam;
@@ -497,7 +568,12 @@ export class MatSample {
       lowPower: lowPower() || isTouchUI(),
     });
     this.pipeline.setDof(DOF_NEAR, DOF_FAR);
-    this.pipeline.setAirFog(FOG_NEAR_C, FOG_FAR_C, FOG_NEAR, FOG_FAR);
+    const air = this.envFx?.air;
+    if (air) {
+      this.pipeline.setAirFog(air.near, air.far, air.fogNear, air.fogFar);
+    } else {
+      this.pipeline.setAirFog(FOG_NEAR_C, FOG_FAR_C, FOG_NEAR, FOG_FAR);
+    }
 
     this._draw = () => this.render();
     this._off = onVisualChange(this._draw);
@@ -592,11 +668,9 @@ export class MatSample {
   /** 每幀更新實機動態演出 */
   update(t, dt = 0) {
     this.envFx?.update(dt, this.camera, t);
-    // 背景環境更新時會同步寫 scene.fog；樣品仍需自己的尺度，否則所有旋鈕都在遠霧之外。
-    if (this.scene.fog) {
-      this.scene.fog.color.copy(FOG_NEAR_C);
-      this.scene.fog.near = FOG_NEAR;
-      this.scene.fog.far = FOG_FAR;
+    const air = this.envFx?.air;
+    if (air && this.pipeline) {
+      this.pipeline.setAirFog(air.near, air.far, air.fogNear, air.fogFar);
     }
 
     // 1. 機體展示台動態 (機甲浮動呼吸、伴隨機巡弋繞行、底座光環旋轉)

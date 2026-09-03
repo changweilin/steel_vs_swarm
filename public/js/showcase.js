@@ -237,24 +237,60 @@ function drapedDisc(x, z, radius, yAt, material, segments = 18) {
   return new THREE.Mesh(geo, material);
 }
 
-function dressingBlock(group, x, z, w, d, h, yAt, material, rotation = 0) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  mesh.position.set(x, yAt(x, z) + h * 0.5 + 0.08, z);
-  mesh.rotation.y = rotation;
-  group.add(mesh);
+function dressingBuilding(group, x, z, w, d, h, yAt, wallMat, roofMat, glassMat, hvacMat, rotation = 0) {
+  const bGroup = new THREE.Group();
+  const baseY = yAt(x, z) + 0.04;
+  // 主牆身
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+  wall.position.y = h * 0.5;
+  bGroup.add(wall);
+  // 窗帶與立面玻璃開口
+  if (h > 1.2) {
+    const windowBand = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, h * 0.45, d + 0.04), glassMat);
+    windowBand.position.y = h * 0.52;
+    bGroup.add(windowBand);
+  }
+  // 屋頂女牆／挑簷
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(w + 0.16, 0.16, d + 0.16), roofMat);
+  roof.position.y = h + 0.08;
+  bGroup.add(roof);
+  // 屋頂機房／HVAC 設備盒
+  if (w > 2.0) {
+    const hvac = new THREE.Mesh(new THREE.BoxGeometry(w * 0.32, 0.35, d * 0.32), hvacMat);
+    hvac.position.set(w * 0.15, h + 0.25, -d * 0.12);
+    bGroup.add(hvac);
+  }
+  bGroup.position.set(x, baseY, z);
+  bGroup.rotation.y = rotation;
+  group.add(bGroup);
 }
 
-function dressingTree(group, x, z, scale, yAt, trunkM, leafM) {
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16 * scale, 0.25 * scale, 2.0 * scale, 7), trunkM);
-  trunk.position.set(x, yAt(x, z) + scale, z);
-  const crown = new THREE.Mesh(new THREE.ConeGeometry(1.35 * scale, 2.8 * scale, 8), leafM);
-  crown.position.set(x, yAt(x, z) + 2.65 * scale, z);
-  group.add(trunk, crown);
+export function dressingTree(group, x, z, scale, yAt, trunkM, leafM) {
+  const tGroup = new THREE.Group();
+  const baseY = yAt(x, z);
+  // 樹幹
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12 * scale, 0.22 * scale, 1.8 * scale, 6), trunkM);
+  trunk.position.y = 0.9 * scale;
+  tGroup.add(trunk);
+  // 實機 conifer 階梯塔狀三層樹冠
+  const c1 = new THREE.Mesh(new THREE.ConeGeometry(1.4 * scale, 1.8 * scale, 7), leafM);
+  c1.position.y = 1.8 * scale;
+  const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.05 * scale, 1.5 * scale, 7), leafM);
+  c2.position.y = 2.7 * scale;
+  const c3 = new THREE.Mesh(new THREE.ConeGeometry(0.7 * scale, 1.3 * scale, 7), leafM);
+  c3.position.y = 3.6 * scale;
+  tGroup.add(c1, c2, c3);
+  tGroup.position.set(x, baseY, z);
+  group.add(tGroup);
 }
 
-function dressingMound(group, x, z, radius, height, yAt, material) {
-  const mound = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 8), material);
-  mound.position.set(x, yAt(x, z) + height * 0.5 + 0.08, z);
+export function dressingMound(group, x, z, radius, height, yAt, material) {
+  // 實機風格多面體風化巨石（非尖圓錐）
+  const rockGeo = new THREE.DodecahedronGeometry(radius, 0);
+  rockGeo.scale(1.0, height / Math.max(0.1, radius), 0.85);
+  const mound = new THREE.Mesh(rockGeo, material);
+  mound.position.set(x, yAt(x, z) + height * 0.55 + 0.05, z);
+  mound.rotation.set(0.15, (x + z) * 0.4, -0.1);
   group.add(mound);
 }
 
@@ -273,11 +309,14 @@ function addTerrainDressing(group, style, yAt) {
       drapedRibbon([[-22, 14], [-11, 13], [1, 15], [12, 13], [22, 15]], 4.5, yAt, park),
       drapedRibbon([[-22, -10], [-10, -7], [0, -8], [10, -4], [22, -5]], 0.5, yAt, curb),
     );
-    const building = mat(0x879092, { wash: 0.08, cool: 0.04 });
-    dressingBlock(group, -8, -6, 4.0, 2.8, 1.8, yAt, building, -0.16);
-    dressingBlock(group, -3, -8, 3.0, 2.2, 1.4, yAt, building, 0.08);
-    dressingBlock(group, 6, -7, 4.2, 2.8, 2.2, yAt, building, 0.12);
-    dressingBlock(group, 11, -4, 3.2, 2.2, 1.6, yAt, building, -0.1);
+    const wallMat = mat(0x848e9c, { wash: 0.12, cool: 0.08 });
+    const roofMat = mat(0x485566, { wash: 0.08, cool: 0.04 });
+    const glassMat = mat(0x283848, { celMetal: true });
+    const hvacMat = mat(0x606a78, { wash: 0.05 });
+    dressingBuilding(group, -8, -6, 4.4, 3.2, 2.4, yAt, wallMat, roofMat, glassMat, hvacMat, -0.16);
+    dressingBuilding(group, -3, -8, 3.6, 2.6, 1.9, yAt, wallMat, roofMat, glassMat, hvacMat, 0.08);
+    dressingBuilding(group, 6, -7, 4.8, 3.2, 3.0, yAt, wallMat, roofMat, glassMat, hvacMat, 0.12);
+    dressingBuilding(group, 11, -4, 3.6, 2.6, 2.2, yAt, wallMat, roofMat, glassMat, hvacMat, -0.1);
     return;
   }
   if (style === 'shore') {
@@ -294,7 +333,12 @@ function addTerrainDressing(group, style, yAt) {
       drapedRibbon([[16, -18], [15, -8], [16, 3], [15, 12], [16, 18]], 1.2, yAt, timber),
     );
     for (const [x, z] of [[5, -6], [5.5, -1], [5, 4], [9, -4], [9, 5]]) {
-      dressingBlock(group, x, z, 0.45, 0.45, 1.8, yAt, timber);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 1.8, 7), timber);
+      pole.position.set(x, yAt(x, z) + 0.9, z);
+      group.add(pole);
+    }
+    for (const [x, z, r] of [[-4, -8, 1.2], [-6, 2, 1.5], [-3, 9, 1.1]]) {
+      dressingMound(group, x, z, r, r * 0.7, yAt, wet);
     }
     return;
   }
