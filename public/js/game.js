@@ -7879,7 +7879,6 @@ export class BattleClient {
     if (this.dead) return;
     this._env = this._envAt();   // 當幀環境(水/沼):移動減速、pos 回報、狀態結算(伺服器)皆讀它
     this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
-    this._updateCcFlash(dt);     // 異常狀態致盲 → 全白後漸淡(純客戶端表現)
     this._updateBlood(dt);       // 受擊濺血 → 依方位噴在座艙玻璃上後漸淡(純客戶端表現)
     // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)。
     // open 段(地下道引道露天路塹)**刻意不濾**:側壁閘(單步高差 + tunnelWallCross 幾何牆線)
@@ -9483,6 +9482,8 @@ export class BattleClient {
     this._tickWeapons(now);
     this._tickBurstFx(now);           // 連發演出補畫:MUST 排在擊發之後(本幀那一輪同幀進佇列)
     this._updatePlayer(dt, now);
+    // 致盲白幕是整個視野的表現層，不綁玩家移動或 FPV 座艙；TPS 與 FPV 共用同一消費點。
+    if (this.side && !this.dead) this._updateCcFlash(dt);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);
     this._updateViewOcclusion(now);
