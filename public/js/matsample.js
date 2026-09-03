@@ -19,8 +19,9 @@ import { applyEnvironment } from './environment.js';
 import {
   buildShowcasePatch, findShowcaseSite, showcaseAnchorSite,
   LONDON_SHOWCASE_UNITS, GAME_SHOWCASE_SITES,
-  dressingTree, dressingMound,
+  dressingTree, dressingMound, bakeShowcaseSeaDepth,
 } from './showcase.js';
+import { seaSoft, swampSoft, stepCelWind, stepSwampRipples } from './toon.js';
 
 const W = 480, H = 270;
 
@@ -72,6 +73,7 @@ export class MatSample {
     this.terrainSites = new Array(DEMO_SCENES.length).fill(null);
     this.terrainSite = null;
     this._terrainGroups = new Array(DEMO_SCENES.length).fill(null);
+    this._patchData = new Array(DEMO_SCENES.length).fill(null);
     this._envConfig = env || DEFAULT_PREVIEW_ENV;
     this.envFx = null;
     this._flatGrounds = [];
@@ -216,20 +218,25 @@ export class MatSample {
     {
       const sandM = envMat(0xdac8a2, { wash: 0.5, cool: 0.35 });
       const rockM = envMat(0x6c726a, { wash: 0.45, moss: { amount: 0.4 } });
-      const waterM = envMat(0x18485e, { wash: 0.85, cool: 0.7, transparent: true, opacity: 0.82 });
+      const waterM = envMat(0x18485e, {
+        bands: 'soft', rim: 0, transparent: true, opacity: 0.86, side: THREE.DoubleSide,
+        soft: seaSoft(),
+      });
       const relicM = toonMat(0x7e8884, { bands: 'soft' });
       const hullM = toonMat(0x3e5262, { celMetal: true });
-      const foamM = toonMat(0xf0f8ff, { bands: 'soft', transparent: true, opacity: 0.95 });
-      const reflM = toonMat(0x283e4a, { transparent: true, opacity: 0.45 });
-      this._mats.push(sandM, rockM, waterM, relicM, hullM, foamM, reflM);
+      this._mats.push(sandM, rockM, waterM, relicM, hullM);
 
       // 海灘沙地
       const beach = new THREE.Mesh(new THREE.BoxGeometry(12, 1.4, 26), sandM);
       beach.position.set(-6.0, 0.7, 0);
       this._flatGrounds.push(beach);
 
-      // 清澈水體
-      const water = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), waterM);
+      // 清澈水體（備援用，具備動態海浪波紋與 seaFade）
+      const wCols = 32, wRows = 24;
+      const waterGeo = new THREE.PlaneGeometry(18, 26, wCols, wRows);
+      const seaFade = new Float32Array((wCols + 1) * (wRows + 1)).fill(1.0);
+      waterGeo.setAttribute('seaFade', new THREE.BufferAttribute(seaFade, 1));
+      const water = new THREE.Mesh(waterGeo, waterM);
       water.position.set(7.5, 0.5, 0);
       water.rotation.x = -Math.PI / 2;
       this._waterSurfaces.push(water);
@@ -250,52 +257,35 @@ export class MatSample {
       subHull.position.set(8.2, 0.65, -0.2);
       subHull.rotation.set(0.12, -0.4, 0.08);
 
-      // 海岸浪花帶 (隨潮汐伸縮)
-      const foamShore = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 24), foamM);
-      foamShore.position.set(0.2, 0.52, 0);
-      foamShore.rotation.x = -Math.PI / 2;
-
-      // 遺跡石柱周遭同心浪花波紋
-      const foamRing1 = new THREE.Mesh(new THREE.RingGeometry(0.75, 1.25, 24), foamM);
-      foamRing1.position.set(4.4, 0.52, -1.5);
-      foamRing1.rotation.x = -Math.PI / 2;
-
-      const foamRing2 = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.75, 24), foamM);
-      foamRing2.position.set(4.4, 0.52, -1.5);
-      foamRing2.rotation.x = -Math.PI / 2;
-
-      const refl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 4.8), reflM);
-      refl.position.set(4.4, 0.51, 0.8);
-      refl.rotation.x = -Math.PI / 2;
-
-      this._geos.push(
-        beach.geometry, water.geometry, pillar1.geometry, pillar2.geometry,
-        subGeo, foamShore.geometry, foamRing1.geometry, foamRing2.geometry, refl.geometry
-      );
-      this._gShore.add(beach, water, pillar1, pillar2, subHull, foamShore, foamRing1, foamRing2, refl);
-      this._foamMeshes = [foamShore, foamRing1, foamRing2];
-      this._reflMesh = refl;
-      this._shoreAnims = { subHull, foamShore, foamRing1, foamRing2, refl };
+      this._geos.push(beach.geometry, waterGeo, pillar1.geometry, pillar2.geometry, subGeo);
+      this._gShore.add(beach, water, pillar1, pillar2, subHull);
+      this._shoreAnims = { subHull };
     }
 
     // ── 3. 沼澤與水中遺跡 (泥濘濕地、墨綠水體、青苔古柱、沉沒殘骸與風吹蘆葦) ──
     this._gSwamp = new THREE.Group();
     {
       const mudM = envMat(0x363c2c, { wash: 0.65, moss: { amount: 0.95 } });
-      const swampWaterM = envMat(0x193622, { wash: 0.85, cool: 0.6, transparent: true, opacity: 0.86 });
+      const swampWaterM = envMat(0x193622, {
+        wash: 0.85, cool: 0.6, bands: 'soft', rim: 0, transparent: true, opacity: 0.86, side: THREE.DoubleSide,
+        soft: swampSoft(),
+      });
       const swampRelicM = toonMat(0x4c564a, { bands: 'soft' });
       const swampHullM = toonMat(0x28382c, { celMetal: true });
-      const swampFoamM = toonMat(0xd0e8d4, { bands: 'soft', transparent: true, opacity: 0.75 });
       const reedM = envMat(0x3e5e2a);
-      this._mats.push(mudM, swampWaterM, swampRelicM, swampHullM, swampFoamM, reedM);
+      this._mats.push(mudM, swampWaterM, swampRelicM, swampHullM, reedM);
 
       // 泥濘濕地陸塊
       const mudBank = new THREE.Mesh(new THREE.BoxGeometry(11, 1.3, 26), mudM);
       mudBank.position.set(-5.5, 0.65, 0);
       this._flatGrounds.push(mudBank);
 
-      // 沼澤水體
-      const swampWater = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), swampWaterM);
+      // 沼澤水體（備援用，具備沼澤漣漪與撕裂波紋）
+      const swCols = 32, swRows = 24;
+      const sWaterGeo = new THREE.PlaneGeometry(18, 26, swCols, swRows);
+      const sSeaFade = new Float32Array((swCols + 1) * (swRows + 1)).fill(1.0);
+      sWaterGeo.setAttribute('seaFade', new THREE.BufferAttribute(sSeaFade, 1));
+      const swampWater = new THREE.Mesh(sWaterGeo, swampWaterM);
       swampWater.position.set(7.5, 0.5, 0);
       swampWater.rotation.x = -Math.PI / 2;
       this._waterSurfaces.push(swampWater);
@@ -315,15 +305,6 @@ export class MatSample {
       sHull.position.set(7.8, 0.6, -0.4);
       sHull.rotation.set(0.12, -0.38, 0.08);
 
-      // 沼澤呼吸波紋環
-      const sFoamRing1 = new THREE.Mesh(new THREE.RingGeometry(0.75, 1.2, 24), swampFoamM);
-      sFoamRing1.position.set(4.5, 0.52, -1.2);
-      sFoamRing1.rotation.x = -Math.PI / 2;
-
-      const sFoamRing2 = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.7, 24), swampFoamM);
-      sFoamRing2.position.set(4.5, 0.52, -1.2);
-      sFoamRing2.rotation.x = -Math.PI / 2;
-
       // 蘆葦叢群落
       const reeds = [];
       const reedGeo = new THREE.CylinderGeometry(0.04, 0.07, 2.2, 6);
@@ -340,12 +321,9 @@ export class MatSample {
         reeds.push(rm);
       }
 
-      this._geos.push(
-        mudBank.geometry, swampWater.geometry, sPillar1.geometry, sPillar2.geometry,
-        sHull.geometry, sFoamRing1.geometry, sFoamRing2.geometry
-      );
-      this._gSwamp.add(mudBank, swampWater, sPillar1, sPillar2, sHull, sFoamRing1, sFoamRing2, ...reeds);
-      this._swampAnims = { sHull, sFoamRing1, sFoamRing2, reeds };
+      this._geos.push(mudBank.geometry, sWaterGeo, sPillar1.geometry, sPillar2.geometry, sHullGeo);
+      this._gSwamp.add(mudBank, swampWater, sPillar1, sPillar2, sHull, ...reeds);
+      this._swampAnims = { sHull, reeds };
     }
 
     // ── 4. 樹木植被與群鳥翱翔 (實機巨樹神木、立體葉冠群、葉片卡與巡航鳥群) ──
@@ -621,6 +599,7 @@ export class MatSample {
       built.group.visible = i === this._sceneIdx;
       this._terrainGroups[i] = built.group;
       this.terrainSites[i] = built.site;
+      this._patchData[i] = built;
       this.scene.add(built.group);
       if (source.group) {
         disposeTree(source.group);
@@ -629,19 +608,17 @@ export class MatSample {
       if (i === 0) {
         for (const item of this._showcaseUnits) item.terrainY = built.localYAt(item.x, 0);
       }
-      if (i === 1 && built.waterY != null) {
-        for (const mesh of this._foamMeshes || []) mesh.position.y = built.waterY + 0.03;
-      }
-      if (i === 2 && built.waterY != null) {
-        for (const mesh of [this._swampAnims?.sFoamRing1, this._swampAnims?.sFoamRing2]) {
-          if (mesh) mesh.position.y = built.waterY + 0.03;
-        }
-      }
     }
     const hasTerrain = this._terrainSources.some(Boolean);
     this._flatGrounds.forEach((ground) => { ground.visible = !hasTerrain; });
     this._waterSurfaces.forEach((water) => { water.visible = !hasTerrain; });
     this.terrainSite = this.terrainSites[this._sceneIdx];
+    const curPatch = this._patchData[this._sceneIdx];
+    if (curPatch && curPatch.waterY != null) {
+      bakeShowcaseSeaDepth(curPatch.localYAt, curPatch.waterY);
+    } else if (this._sceneIdx === 1 || this._sceneIdx === 2) {
+      bakeShowcaseSeaDepth((x, z) => (x < 0 ? 0.7 : -1.2), 0.5);
+    }
     if (changed && this.pipeline) this.render();
   }
 
@@ -661,12 +638,22 @@ export class MatSample {
     this._terrainGroups.forEach((g, i) => { if (g) g.visible = i === idx; });
     this.terrainSite = this.terrainSites[idx] || null;
     if (this.roster) this.roster.hidden = idx !== 0;
+    const patch = this._patchData[idx];
+    if (patch && patch.waterY != null) {
+      bakeShowcaseSeaDepth(patch.localYAt, patch.waterY);
+    } else if (idx === 1 || idx === 2) {
+      bakeShowcaseSeaDepth((x, z) => (x < 0 ? 0.7 : -1.2), 0.5);
+    }
     this.onSceneChange?.(idx);
     this.render();
   }
 
   /** 每幀更新實機動態演出 */
   update(t, dt = 0) {
+    stepCelWind(dt);
+    if (this._gSwamp?.visible) {
+      stepSwampRipples([{ x: 0, z: 0 }], dt);
+    }
     this.envFx?.update(dt, this.camera, t);
     const air = this.envFx?.air;
     if (air && this.pipeline) {
@@ -695,31 +682,19 @@ export class MatSample {
       }
     }
 
-    // 2. 海灘浪花動態 (潮汐伸縮沖岸、石柱波紋環縮放、沉船微晃)
+    // 2. 海灘浪花動態 (沉船微晃；海面動態波浪與岸邊泡沫由 toon.js 著色器深度場自動演算)
     if (this._shoreAnims && this._gShore.visible) {
-      const { subHull, foamShore, foamRing1, foamRing2 } = this._shoreAnims;
-      const wave = Math.sin(t * 1.6);
-      foamShore.position.x = 0.2 + wave * 0.35;
-      foamShore.scale.x = 1.0 + wave * 0.2;
-
-      const rScale1 = 1.0 + Math.sin(t * 2.0) * 0.15;
-      const rScale2 = 1.0 + Math.sin(t * 2.0 + 1.2) * 0.15;
-      foamRing1.scale.set(rScale1, rScale1, 1);
-      foamRing2.scale.set(rScale2, rScale2, 1);
-
-      subHull.rotation.z = 0.08 + Math.sin(t * 1.2) * 0.03;
+      const { subHull } = this._shoreAnims;
+      if (subHull) subHull.rotation.z = 0.08 + Math.sin(t * 1.2) * 0.03;
     }
 
-    // 3. 沼澤濕地動態 (蘆葦迎風搖擺、死水波紋擴散)
+    // 3. 沼澤濕地動態 (蘆葦迎風搖擺；沼澤波紋與底泥起伏由 toon.js 著色器深度場自動演算)
     if (this._swampAnims && this._gSwamp.visible) {
-      const { sFoamRing1, sFoamRing2, reeds } = this._swampAnims;
-      const sWave1 = 1.0 + Math.sin(t * 1.4) * 0.12;
-      const sWave2 = 1.0 + Math.sin(t * 1.4 + 1.5) * 0.12;
-      sFoamRing1.scale.set(sWave1, sWave1, 1);
-      sFoamRing2.scale.set(sWave2, sWave2, 1);
-
-      for (let i = 0; i < reeds.length; i++) {
-        reeds[i].rotation.z = 0.1 + Math.sin(t * 2.6 + i * 0.7) * 0.14;
+      const { reeds } = this._swampAnims;
+      if (reeds) {
+        for (let i = 0; i < reeds.length; i++) {
+          reeds[i].rotation.z = 0.1 + Math.sin(t * 2.6 + i * 0.7) * 0.14;
+        }
       }
     }
 

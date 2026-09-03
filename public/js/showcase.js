@@ -1,8 +1,6 @@
-// ============ 遊戲實機空間地形展示場景 ============
-// 展示台只讀正式地形的 heightAt / sampleColor，機體仍由 makeUnit() 產生。
-// 直接使用範圍足夠小（約 44m×36m）的遊戲實機空間（對應正式 VENUES），無網路時顯示實機場地備援地貌。
 import * as THREE from 'three';
 import { envMat } from './hazards.js';
+import { seaSoft, swampSoft, setSeaDepthField, FOAM } from './toon.js';
 
 export const LONDON_SHOWCASE_UNITS = [
   { id: 's03', side: 'SWARM', label: '利維坦', note: '長耳可變訊號機', tint: 0x8ce7d8, hover: 0.10 },
@@ -35,8 +33,8 @@ export function showcaseTerrainConfig(site) {
   };
 }
 
-// 範圍足夠小的展示空間：44m×36m 緊湊幾何覆蓋視錐
-const PATCH = { width: 44, depth: 36, cols: 23, rows: 19 };
+// 範圍足夠小的展示空間：44m×36m 緊湊幾何覆蓋視錐，89×73 頂點高解析度網格（間距 0.5m，精細還原實機坡度與溝壑）
+const PATCH = { width: 44, depth: 36, cols: 89, rows: 73 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function slopeAt(terrain, x, z) {
@@ -185,8 +183,8 @@ function mapColor(terrain, x, z, localY, style = 'urban') {
     forest: 0x2f6c35,
     heath: x < 0 ? 0x4f7a43 : 0x9a8054,
   }[style] || 0x49624a;
-  // 圖資色彩保留場所辨識度，再疊一層地貌色帶，讓倫敦低對比衛星影像仍讀得出地表類型。
-  c.lerp(new THREE.Color(tint), style === 'urban' ? 0.32 : 0.52);
+  // 保留實機高解析圖資真實場所色彩，微幅疊加地貌色偏增強風格辨識度
+  c.lerp(new THREE.Color(tint), style === 'urban' ? 0.14 : 0.22);
   const relief = clamp(0.96 + localY * 0.045, 0.78, 1.16);
   c.multiplyScalar(relief);
   return [c.r, c.g, c.b];
@@ -320,44 +318,24 @@ function addTerrainDressing(group, style, yAt) {
     return;
   }
   if (style === 'shore') {
-    const sand = mat(0xd0b57b, { wash: 0.12, cool: 0.04 });
-    const wet = mat(0x5c8990, { wash: 0.08, cool: 0.08 });
-    const foam = mat(0xe7efe4, { wash: 0.04, cool: 0.02 });
+    const rock = mat(0x656e67, { wash: 0.15, cool: 0.08 });
     const timber = mat(0x795f42, { wash: 0.12, cool: 0.02 });
-    const shore = [[0, -18], [-1, -10], [0.5, -2], [-0.5, 6], [1, 18]];
-    group.add(
-      drapedRibbon(shore, 7.5, yAt, sand),
-      drapedRibbon(shore, 2.4, yAt, wet),
-      drapedRibbon(shore, 0.7, yAt, foam),
-      drapedRibbon([[9, -18], [8, -10], [9.5, -1], [8, 8], [9, 18]], 1.6, yAt, timber),
-      drapedRibbon([[16, -18], [15, -8], [16, 3], [15, 12], [16, 18]], 1.2, yAt, timber),
-    );
     for (const [x, z] of [[5, -6], [5.5, -1], [5, 4], [9, -4], [9, 5]]) {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 1.8, 7), timber);
       pole.position.set(x, yAt(x, z) + 0.9, z);
       group.add(pole);
     }
-    for (const [x, z, r] of [[-4, -8, 1.2], [-6, 2, 1.5], [-3, 9, 1.1]]) {
-      dressingMound(group, x, z, r, r * 0.7, yAt, wet);
+    for (const [x, z, r] of [[-4, -8, 1.2], [-6, 2, 1.5], [-3, 9, 1.1], [3, 8, 1.4], [6, -10, 1.6]]) {
+      dressingMound(group, x, z, r, r * 0.7, yAt, rock);
     }
     return;
   }
   if (style === 'swamp') {
-    const channel = mat(0x315c55, { wash: 0.05, cool: 0.18 });
-    const mud = mat(0x6f8150, { wash: 0.2, cool: 0.04 });
-    const reedM = mat(0x718e47, { wash: 0.08, cool: 0.02 });
-    group.add(
-      drapedRibbon([[-8, -18], [-3, -10], [-7, -2], [-2, 7], [-6, 18]], 4.5, yAt, channel),
-      drapedRibbon([[9, -18], [5, -9], [10, -1], [6, 9], [11, 18]], 3.5, yAt, channel),
-      drapedRibbon([[-22, 13], [-12, 10], [-3, 12], [8, 10], [22, 13]], 2.0, yAt, mud),
-      drapedRibbon([[-22, -13], [-13, -9], [-2, -12], [8, -10], [22, -13]], 1.6, yAt, mud),
-      drapedDisc(-2, 1, 3.0, yAt, channel),
-      drapedDisc(11, -3, 2.5, yAt, channel),
-    );
+    const reedM = mat(0x5a7536, { wash: 0.08, cool: 0.02 });
     const reedGeo = new THREE.CylinderGeometry(0.06, 0.11, 2.4, 5);
-    for (let i = 0; i < 10; i++) {
-      const x = -8 + (i % 4) * 3.8 + (i % 2) * 1.0;
-      const z = -9 + Math.floor(i / 4) * 8 + (i % 3) * 1.5;
+    for (let i = 0; i < 16; i++) {
+      const x = -14 + (i % 6) * 4.5 + (i % 2) * 1.0;
+      const z = -12 + Math.floor(i / 6) * 8 + (i % 3) * 1.5;
       const reed = new THREE.Mesh(reedGeo, reedM);
       reed.position.set(x, yAt(x, z) + 1.2, z);
       reed.rotation.z = (i % 2 ? -1 : 1) * 0.12;
@@ -394,6 +372,23 @@ function addTerrainDressing(group, style, yAt) {
   }
 }
 
+/** 烘烤展示地貌專屬的海面深度場（64×64），驅動水深漸層、水底陰影與岸邊賽璐璐泡沫帶。 */
+export function bakeShowcaseSeaDepth(localYAt, waterY, width = PATCH.width, depth = PATCH.depth) {
+  if (waterY == null) return false;
+  const n = 64;
+  const data = new Uint8Array(n * n);
+  for (let i = 0; i < n; i++) {
+    const z = -depth * 0.5 + depth * (i + 0.5) / n;
+    for (let j = 0; j < n; j++) {
+      const x = -width * 0.5 + width * (j + 0.5) / n;
+      const d = waterY - localYAt(x, z);
+      data[i * n + j] = d <= 0 ? 0 : d >= FOAM.RANGE_M ? 255 : Math.round(d / FOAM.RANGE_M * 255);
+    }
+  }
+  setSeaDepthField(data, n, { minX: -width * 0.5, minZ: -depth * 0.5, w: width, h: depth });
+  return true;
+}
+
 /** 從正式地形取樣一塊小型展示地貌；返回的 localYAt 與網格使用同一份 heightAt。 */
 export function buildShowcasePatch(terrain, { site = showcaseAnchorSite(terrain), style = 'urban', water = false } = {}) {
   const source = terrain || createShowcaseFallbackTerrain();
@@ -412,9 +407,7 @@ export function buildShowcasePatch(terrain, { site = showcaseAnchorSite(terrain)
       const x = -width * 0.5 + width * ix / (cols - 1);
       const y = localYAt(x, z);
       const k = iz * cols + ix;
-      const rgb = sourceMap
-        ? mapOverlayColor(x, z, y, style)
-        : mapColor(source, safeSite.x + x, safeSite.z + z, y, style);
+      const rgb = mapColor(source, safeSite.x + x, safeSite.z + z, y, style);
       pos[k * 3] = x; pos[k * 3 + 1] = y; pos[k * 3 + 2] = z;
       uv[k * 2] = clamp((safeSite.x + x - source.minX) / Math.max(1, source.maxX - source.minX), 0, 1);
       uv[k * 2 + 1] = 1 - clamp((safeSite.z + z - source.minZ) / Math.max(1, source.maxZ - source.minZ), 0, 1);
@@ -435,7 +428,7 @@ export function buildShowcasePatch(terrain, { site = showcaseAnchorSite(terrain)
   geo.computeVertexNormals();
   const mesh = new THREE.Mesh(geo, envMat(0xffffff, {
     ...(sourceMap ? { map: sourceMap } : {}),
-    vertexColors: true, bands: 4, wash: 0, cool: 0, rim: 0, land: true,
+    vertexColors: true, bands: 4, wash: 0, cool: 0, rim: 0, land: true, landField: true,
   }));
   mesh.receiveShadow = true;
   mesh.userData.showcaseTerrain = true;
@@ -444,18 +437,29 @@ export function buildShowcasePatch(terrain, { site = showcaseAnchorSite(terrain)
   addTerrainDressing(group, style, localYAt);
   let waterY = null;
   if (water) {
-    const waterWidth = water === 'shore' ? width * 0.52 : water === 'swamp' ? width * 0.46 : width;
-    const waterGeo = new THREE.PlaneGeometry(waterWidth, depth, 16, 12);
-    const waterMesh = new THREE.Mesh(waterGeo, envMat(water === 'swamp' ? 0x244f3b : 0x2b6b83, {
-      bands: 'soft', rim: 0, transparent: true, opacity: 0.82, side: THREE.DoubleSide,
+    const waterWidth = water === 'shore' ? width * 0.65 : width;
+    const wCols = 64, wRows = 48;
+    const waterGeo = new THREE.PlaneGeometry(waterWidth, depth, wCols, wRows);
+    const seaFadeArray = new Float32Array((wCols + 1) * (wRows + 1));
+    for (let r = 0; r <= wRows; r++) {
+      const fz = 1.0 - Math.pow(Math.abs(r / wRows - 0.5) * 2.0, 4.0);
+      for (let c = 0; c <= wCols; c++) {
+        const fx = water === 'shore' ? clamp((c / wCols) * 1.5, 0.15, 1.0) : 1.0;
+        seaFadeArray[r * (wCols + 1) + c] = clamp(fx * fz, 0, 1);
+      }
+    }
+    waterGeo.setAttribute('seaFade', new THREE.BufferAttribute(seaFadeArray, 1));
+    const waterMesh = new THREE.Mesh(waterGeo, envMat(water === 'swamp' ? 0x1f4730 : 0x184868, {
+      bands: 'soft', rim: 0, transparent: true, opacity: 0.85, side: THREE.DoubleSide,
+      soft: water === 'swamp' ? swampSoft() : seaSoft(),
     }));
     // 真實水面優先；個別潮間帶圖框若沒有回傳 waterY，退到地形低位分位數，仍保留實景坡面。
     const level = Number.isFinite(source.waterY)
       ? source.waterY
-      : baseY + minY + (maxY - minY) * (water === 'swamp' ? 0.56 : 0.38);
+      : baseY + minY + (maxY - minY) * (water === 'swamp' ? 0.48 : 0.35);
     waterMesh.rotation.x = -Math.PI / 2;
     waterMesh.position.set(
-      water === 'shore' ? width * 0.25 : water === 'swamp' ? width * 0.16 : 0,
+      water === 'shore' ? width * 0.22 : 0,
       level - baseY,
       0,
     );
@@ -463,6 +467,7 @@ export function buildShowcasePatch(terrain, { site = showcaseAnchorSite(terrain)
     waterMesh.userData.showcaseWater = true;
     group.add(waterMesh);
     waterY = waterMesh.position.y;
+    bakeShowcaseSeaDepth(localYAt, waterY, width, depth);
   }
   return { group, site: safeSite, baseY, minY, maxY, localYAt, waterY, source };
 }
