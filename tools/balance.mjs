@@ -11,7 +11,7 @@
 //   2.3 滿級電力攻堅續航 (原 ④): 回充 ≥ 重武器持續耗電率, 攻堅不斷火。
 //
 // 模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance)
-//   3.1~3.5 五大戰鬥情境 (原 ⑤ 完整保留: 遠戰 / 近戰 / 守塔 / 迷霧 / 無雙):
+//   3.1~3.5 五大戰鬥情境 (原 ⑤ 完整保留: 遠戰 / 近戰 / 兵線守塔 / 迷霧 / 無雙):
 //       - 3.1 各情境獨立勝率: 不做限制 (僅列印參考, 允許機體特化)。
 //       - 3.2 全情境綜合平均勝率: 守門 50% ± 5%。
 //       - 3.3 同機種內戰平衡: 守門 50% ± 5%。
@@ -242,7 +242,7 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
   const kinds = ['robot', 'drone', 'morph'];
   const chs = Object.keys(CHARACTERS);
 
-  console.log('3.1~3.5 五大戰鬥情境平衡測試 — 遠戰 / 近戰 / 守塔 / 迷霧 / 無雙 (Lv1 & Lv4, 變形雙形態)\n');
+  console.log('3.1~3.5 五大戰鬥情境平衡測試 — 遠戰 / 近戰 / 兵線守塔 / 迷霧 / 無雙 (Lv1 & Lv4, 變形雙形態)\n');
 
   const scWins = [0, 0, 0, 0, 0];
   let scN = 0;
@@ -302,7 +302,7 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
   }
 
   // 3.1 各戰鬥情境獨立勝率 (各情境獨立勝率不做限制，僅列印參考)
-  const scNames = ['遠戰拉鋸', '近戰站樁', '砲塔攻守', '迷霧搜敵', '無雙割草'];
+  const scNames = ['遠戰拉鋸', '近戰站樁', '兵線守塔', '迷霧搜敵', '無雙割草'];
   for (let idx = 0; idx < 5; idx++) {
     const scWinR = scWins[idx] / scN;
     console.log(`   ⓘ 3.1 情境 ${idx + 1} (${scNames[idx]}) 綜合勝率 ${(scWinR * 100).toFixed(1)}% (參考指標)`);
