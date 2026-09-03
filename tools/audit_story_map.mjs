@@ -56,6 +56,7 @@ const BRK = {
   enrageNpc: ARG.has('--break-enrage-npc'), enrageSpd: ARG.has('--break-enrage-spd'),
   enrageDmg: ARG.has('--break-enrage-dmg'), enrageCd: ARG.has('--break-enrage-cd'),
   enrageRate: ARG.has('--break-enrage-rate'),
+  turretRange: ARG.has('--break-turret-range'),
 };
 // 壞版:開場預置退回「兩側一律取較小者」。做法 = 在 `_prefillLanes` 執行期間把 defSide 藏起來
 // (那正是舊制的行為),不必抄一份舊實作 —— 抄的那一份會自己過期。
@@ -161,7 +162,7 @@ const toGame = (cfg) => cfg.lanes.map((l) => l.map(([lat, lng]) => llToXZ(lat, l
     return JSON.stringify(solveTowerSites(g)) === JSON.stringify(solveTowerSites(g, false));
   })());
 
-  let asym = 0, chained = 0, oppOk = 0, stageOk = 0, layoutOk = 0, n = 0;
+  let asym = 0, chained = 0, oppOk = 0, healOk = 0, spawnOk = 0, stageOk = 0, layoutOk = 0, n = 0;
   const soft = [];
   for (const v of VENUES.slice(0, 12)) {
     for (const def of ['SWARM', 'STEEL']) {
@@ -183,10 +184,44 @@ const toGame = (cfg) => cfg.lanes.map((l) => l.map(([lat, lng]) => llToXZ(lat, l
       const ab = atk === 'SWARM' ? { x: ep[0][0], z: ep[0][1] } : { x: ep.at(-1)[0], z: ep.at(-1)[1] };
       const front = sites[0].at(-1)[def];
       if (front) {
-        const d = Math.min(...[-1, 1].map((s) => Math.hypot(
-          front.x + front.nx * GAME.TOWER_SIDE_OFF * s - ab.x,
-          front.z + front.nz * GAME.TOWER_SIDE_OFF * s - ab.z)));
+        const fT = [-1, 1].map((s) => ({
+          x: front.x + front.nx * GAME.TOWER_SIDE_OFF * s,
+          z: front.z + front.nz * GAME.TOWER_SIDE_OFF * s,
+        }));
+        // 壞版模擬(--break-turret-range):刻意把砲塔往前拉進主堡 40m
+        const testT = BRK.turretRange ? fT.map((t) => ({ x: ab.x + (t.x - ab.x) * 0.5, z: ab.z + (t.z - ab.z) * 0.5 })) : fT;
+        const d = Math.min(...testT.map((t) => Math.hypot(t.x - ab.x, t.z - ab.z)));
         if (d >= SEP - 1) oppOk++;
+
+        // 敵方砲塔攻擊範圍不可涵蓋主堡治療光環
+        const dHeal = d - GAME.HERO_HEAL_R;
+        if (dHeal > UNITS.tower.range) healOk++;
+
+        // 敵方砲塔攻擊範圍不可涵蓋主堡重生處
+        const end = atk === 'SWARM' ? ep[0] : ep[ep.length - 1];
+        const nxt = atk === 'SWARM' ? ep[1] : ep[ep.length - 2];
+        let dx = nxt[0] - end[0], dz = nxt[1] - end[1];
+        const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+        const px = dz, pz = -dx;
+        let allSpawnSafe = true;
+        for (let sq = 0; sq < TEAM.MAX; sq++) {
+          const layer = sq;
+          const s = layer % 2 === 0 ? 1 : -1;
+          for (let b = 0; b < 3; b++) {
+            const lat = GAME.HERO_SPAWN_SIDE + Math.floor(layer / 2) * 11 + b * 10;
+            const spx = end[0] + dx * GAME.HERO_SPAWN_OFF + px * lat * s;
+            const spz = end[1] + dz * GAME.HERO_SPAWN_OFF + pz * lat * s;
+            for (const t of testT) {
+              if (Math.hypot(t.x - spx, t.z - spz) <= UNITS.tower.range) {
+                allSpawnSafe = false; break;
+              }
+            }
+            if (!allSpawnSafe) break;
+          }
+          if (!allSpawnSafe) break;
+        }
+        if (allSpawnSafe) spawnOk++;
+
         // 塔位沿兵線由主堡往外遞增(中段在前線之前)
         if (sites[0].length < 2 || sites[0][0].frac < sites[0].at(-1).frac) chained++;
       }
@@ -199,6 +234,10 @@ const toGame = (cfg) => cfg.lanes.map((l) => l.map(([lat, lng]) => llToXZ(lat, l
   t('末項 = 前線塔(與對稱版同約定 ⇒ siegeSiteStages / _prefillLanes / beacons 不必改)', stageOk === n, `${stageOk}/${n}`);
   t(`前線塔到**攻方主堡** ≥ 一個塔距 ${SEP.toFixed(0)}m(不對射;對照物換成主堡就是「我方前線就是主堡」)`,
     oppOk === n, `${oppOk}/${n}`);
+  t(`前線塔攻擊範圍不涵蓋攻方主堡治療光環(半徑 ${GAME.HERO_HEAL_R}m,到主堡中心 > ${(UNITS.tower.range + GAME.HERO_HEAL_R).toFixed(0)}m)`,
+    healOk === n, `${healOk}/${n}`);
+  t(`前線塔攻擊範圍不涵蓋攻方主堡重生處(距重生點 > 射程 ${UNITS.tower.range}m)`,
+    spawnOk === n, `${spawnOk}/${n}`);
   t('中段塔排在前線塔之後方(frac 遞增)', chained === n, `${chained}/${n}`);
   t('砲塔佈局規則(#4)照樣過:硬規則(不物理疊塔)MUST 全綠 —— 軟規則在劇情戰役降為警示',
     layoutOk === n, `${layoutOk}/${n}`);
@@ -233,7 +272,7 @@ console.log('\n■ Ⅲ 消費端:塔位名冊走 siteCPs、地圖型態走 mapAr
     /cfg\.siege = !!cfg\.defSide;/.test(roomsSrc) && !/cfg\.siege\s*=/.test(strip(mainSrc)));
   t('main.js 出戰把防守方交給 venueConfig(唯一一格旗標)',
     /venueConfig\(v, ch\.teamSize, foe\)/.test(mainSrc));
-  t('地形預建鍵帶 defSide(換邊 = 換一個世界)', /cfg\.defSide \|\| null\]/.test(mainSrc));
+  t('地形預建鍵帶 defSide(換邊 = 換一個世界)', /cfg\.defSide \|\| null/.test(mainSrc));
   t('sim 收下防守方與型態(一般對戰恆 null / false)',
     /this\.defSide = config\.defSide \|\| null;/.test(simSrc) && /this\.mapArg = mapArg\(config\);/.test(simSrc));
 }
