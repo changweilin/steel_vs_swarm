@@ -62,3 +62,6 @@ out/yolo_features/
 out/yolo_depth/
 out/yolo_masks/
 
+# 暫存日誌
+*.log
+.*.log
