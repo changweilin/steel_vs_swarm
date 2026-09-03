@@ -1,4 +1,4 @@
-// ============ 無人戰略:鋼鐵與蜂群 — 共用遊戲常數 ============
+﻿// ============ 無人戰略:鋼鐵與蜂群 — 共用遊戲常數 ============
 // 伺服器(server/sim.js)與前端(game.js)共用同一份數值,
 // 模式沿用 ai_tycoon:server 直接 import '../public/js/data.js'。
 import { BOT_POLICY } from './botPolicy.js';   // 電腦玩家學習策略(工具產出;見檔尾 BOT_LEARN 區塊)
@@ -528,6 +528,7 @@ export function laneSeparationAudit(lanes) {
   return { ok: crosses === 0 && minGap >= SEP, minGap, crosses };
 }
 
+
 /**
  * 兵線路徑平衡稽核（L2/L3 專屬，2026-09-02 使用者需求）。
  * lanes：[[x,z],…][] 遊戲公尺，依側向排序 [左/上, (中), 右/下]（與 laneSeparationAudit 同框）。
@@ -535,10 +536,14 @@ export function laneSeparationAudit(lanes) {
  *
  * 規則：
  *   L2：① 左右兩條長度誤差 ≤ LANE_BALANCE_LEN_TOL（10%）
- *        ② 兩條路線重合度 ≤ LANE_BALANCE_OV_MAX（5%）
+ *        ② 兩條路線中段重合度 ≤ LANE_BALANCE_OV_MAX（5%）
  *   L3：① 左右兩條長度誤差 ≤ LANE_BALANCE_LEN_TOL（10%）
  *        ② 外側長度 ≤ 中間長度 × LANE_BALANCE_OUTER_MAX（1.50）
- *        ③ 三條路線兩兩重合度 ≤ LANE_BALANCE_OV_MAX（5%）
+ *        ③ 三條路線兩兩中段重合度 ≤ LANE_BALANCE_OV_MAX（5%）
+ *
+ * 重合度計算豁免帶：排除沿 A→B 主軸進度落在 [0, LANE_SEP_SKIP_FRAC] 與
+ * [1−LANE_SEP_SKIP_FRAC, 1] 的格子（與 laneSeparationAudit 同語意）。
+ * O 形兵線在兩端主堡扇出帶必然共用路段，只量中段才能正確判斷側向分離程度。
  *
  * 注意：路徑長度取遊戲公尺折線長（比例計算與 REAL_SCALE 無關）；
  * 重合度網格 cell 依 targetDistFor(L) × OVERLAP_CELL_FRAC 推導（遊戲公尺語意）。
@@ -546,14 +551,21 @@ export function laneSeparationAudit(lanes) {
  * 回傳 { ok, lenErr, outerRatio, maxOverlap, violations }。
  *   lenErr      = |外側最長 − 外側最短| / max(外側兩者)（0~1）
  *   outerRatio  = 外側最長 / 中間長度（L3 才有；null = L2）
- *   maxOverlap  = 任兩條兵線重合度最大值
+ *   maxOverlap  = 任兩條兵線中段重合度最大值（豁免帶排除後）
  *   violations  = 違規描述陣列（空 = 全通過）
  */
 export function lanePathBalanceAudit(lanes, L) {
   if (!lanes || lanes.length < 2 || L < 2) return { ok: true, lenErr: 0, outerRatio: null, maxOverlap: 0, violations: [] };
   // 折線長(遊戲公尺)
   const polyLen = (pts) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return s; };
-  // 重合度網格(遊戲公尺;cell 依 targetDistFor×FRAC 推導,保持「不同格=互相打不到」物理意義)
+  // A→B 主軸(取 lanes[0] 首尾作為基準;所有兵線共用同一對主堡)
+  const A = lanes[0][0], B = lanes[0][lanes[0].length - 1];
+  const straight = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
+  const ux = (B[0] - A[0]) / straight, uz = (B[1] - A[1]) / straight;
+  const prog = (x, z) => ((x - A[0]) * ux + (z - A[1]) * uz) / straight;
+  const SK = MAPGEO.LANE_SEP_SKIP_FRAC;
+  // 重合度網格(遊戲公尺)。僅計入沿 A→B 主軸進度落在 [SK, 1−SK] 內的中段格子，排除兩端主堡扇出帶。
+  // O 形兵線必然在兩端主堡附近共用扇出路段(數學不可避免)，只測中段才能正確量測側向分離程度。
   const cell = Math.max(
     MAPGEO.OVERLAP_CELL_MIN_M / MAPGEO.REAL_SCALE,
     targetDistFor(L, false) * MAPGEO.OVERLAP_CELL_FRAC,
@@ -562,8 +574,17 @@ export function lanePathBalanceAudit(lanes, L) {
     const s = new Set();
     for (let i = 1; i < lane.length; i++) {
       const [x1, z1] = lane[i - 1], [x2, z2] = lane[i];
+      const t1 = prog(x1, z1), t2 = prog(x2, z2);
+      if (t1 < SK && t2 < SK) continue;          // 兩端點皆在起端扇出帶 → 整段跳過
+      if (t1 > 1 - SK && t2 > 1 - SK) continue;  // 兩端點皆在終端扇出帶 → 整段跳過
       const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / (cell / 2)));
-      for (let k = 0; k <= n; k++) s.add(`${Math.round((x1 + (x2 - x1) * k / n) / cell)},${Math.round((z1 + (z2 - z1) * k / n) / cell)}`);
+      for (let k = 0; k <= n; k++) {
+        const f = k / n;
+        const x = x1 + (x2 - x1) * f, z = z1 + (z2 - z1) * f;
+        const t = prog(x, z);
+        if (t < SK || t > 1 - SK) continue;      // 插值點在豁免帶 → 跳過
+        s.add(`${Math.round(x / cell)},${Math.round(z / cell)}`);
+      }
     }
     return s;
   };
@@ -591,17 +612,17 @@ export function lanePathBalanceAudit(lanes, L) {
     const midLen = lens[1];
     outerRatio = midLen > 0 ? Math.max(outerLen0, outerLen1) / midLen : null;
     if (outerRatio !== null && outerRatio > MAPGEO.LANE_BALANCE_OUTER_MAX + 1e-9)
-      violations.push(`外側最長 ${outerRatio.toFixed(2)}× 中間 > ${MAPGEO.LANE_BALANCE_OUTER_MAX.toFixed(2)}×`);
+      violations.push(`外側最長 ${outerRatio.toFixed(2)}x 中間 > ${MAPGEO.LANE_BALANCE_OUTER_MAX.toFixed(2)}x`);
   }
 
-  // 規則③:任兩條路線重合度 ≤ LANE_BALANCE_OV_MAX
+  // 規則③:任兩條路線中段重合度 ≤ LANE_BALANCE_OV_MAX(兩端扇出帶已豁免)
   let maxOverlap = 0;
   for (let i = 0; i < lanes.length; i++) {
     for (let j = i + 1; j < lanes.length; j++) {
       const ov = ovRatio(lanes[i], lanes[j]);
       if (ov > maxOverlap) maxOverlap = ov;
       if (ov > MAPGEO.LANE_BALANCE_OV_MAX + 1e-9)
-        violations.push(`兵線${i + 1}×兵線${j + 1} 重合度 ${(ov * 100).toFixed(1)}% > ${(MAPGEO.LANE_BALANCE_OV_MAX * 100).toFixed(0)}%`);
+        violations.push(`兵線${i + 1}x兵線${j + 1} 中段重合度 ${(ov * 100).toFixed(1)}% > ${(MAPGEO.LANE_BALANCE_OV_MAX * 100).toFixed(0)}%`);
     }
   }
 

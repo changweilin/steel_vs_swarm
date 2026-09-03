@@ -15,7 +15,7 @@
 // #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
 import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { MAPGEO, battleBBox, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit }
+import { MAPGEO, battleBBox, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit, lanePathBalanceAudit }
   from '../public/js/data.js';
 // 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
 import { VENUE_LANES } from '../public/js/venueLanes.js';
@@ -345,7 +345,7 @@ class MinHeap {
 // 已被前一條兵線用掉的邊:重罰而非硬禁。
 // 硬禁(邊不相交)會逼第三條繞路超過 2.2× 上限而全滅;重罰讓它「盡量不重用」,
 // 真正的硬門檻交給重合率(那才是規則本身)。
-const REUSE_PEN = 8;
+const REUSE_PEN = 20;  // 已用邊重罰倍數(提升後讓第二條路線強力迴避第一條,有助形成 O 形對)
 
 /** Dijkstra;used = Set of (u*n+v) 已用邊;wMul(u,v) 側翼偏好乘數 */
 function dijkstra(g, src, dst, used, wMul) {
@@ -465,7 +465,7 @@ function overlapXZ(a, b, cell) {
 }
 
 // 側移目標檔位:與 mapSelect 的 OFFSET_FRACS 同一組(近→遠)
-const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
+const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62, 0.80];  // 最後一檔 0.80 讓側翼偏到更遠街道，有助 O 形分離
 
 // 指定場地限定方位角扇區(度,[起, 迄] 順時針含跨 0°;**逐錨點**一份扇區清單):
 // 兵線軸向必須對準特定地標才有測試意義(如 jinlong:兩錨沿隧道軸對向,兵線才會穿
@@ -731,6 +731,10 @@ function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false, targetIdx = -1) 
       if (g.tunE?.has(`${u}:${v}`)) tunLen += seg;
     }
   }
+  // 規則(2026-09-02):L2/L3 路徑平衡閘 —— 左右長度誤差/外側比/重合度。
+  // lanesGame 已以 cc 為中心換算好遊戲公尺,與 lanePathBalanceAudit 要求的輸入格式相同。
+  // 閘放在 touch/overlap 之後(兩者先淘汰結構性違規)、return 之前。
+  if (L >= 2 && !lanePathBalanceAudit(lanesGame, L).ok) return { fail: 'balance' };
   return {
     bearing, aIdx, bIdx, lanes, brgLen, tunLen,
     maxOverlap: mo, sinuosity: sinu, turnsPerKm: tpk,
