@@ -692,14 +692,15 @@ export const HEROIC = { range: 1.2, dmg: 1.5 };
 // 效果**全部落在「較高的一方」**(高地換視野與機動,不換爆發):
 //   +射程 / +閃避率;但「攻擊時」爆率/爆傷↓、「受到攻擊時」爆率/爆傷↑。
 // 強度係數 s 隨 |dh| 由「1 個砲塔高」線性升到「3 個砲塔高(TIERS)」封頂;砲塔高 = TARGET_H.tower(推導不手寫)。
-// 封頂效果:+25% 射程、+10% 閃避、攻擊爆率 ×0.90、攻擊爆傷加成 ×0.90、受擊爆率 ×1.2、受擊爆傷加成 +10%。
+// 封頂效果:+10% 閃避、攻擊爆率 ×0.90、攻擊爆傷加成 ×0.90、受擊爆率 ×1.2、受擊爆傷加成 +10%。
 // 爆擊只作用於直擊武器(heroHit/heroLance _rollCrit);招式不吃高度差、也不吃爆擊(AoE 不爆)。
 // **閃避例外**(2026-08-11 使用者定案「所有攻擊招式也加入閃避機制」):招式與一切爆風的傷害
 // 走 sim._blast,由該處逐目標擲 `_dodges` —— 範圍見 `evadable()` 這個唯一縫。
+// 2026-09-03 使用者需求：武器射程範圍改為「上段球體 / 中下段 60° 圓錐體」，移除額外的高度差射程加成(RANGE: 0)。
 export const ALTITUDE = {
   TIERS: 3,             // |dh| 達「3 個砲塔高」時效果封頂(門檻在 1 個砲塔高)
-  RANGE: 0.30,         // 較高方 +射程(封頂)—— 2026-09-01 提高高度差射程優勢
-  RANGE_HEAVY_MUL: 0.5, // 重武器/大招高度差射程優勢減半(2026-09-01 使用者需求:重武器/大招的高度差射程優勢減為輕武器/小招的一半)
+  RANGE: 0,             // 較高方 +射程(封頂)—— 2026-09-03 依使用者需求移除額外高度差射程加成，射程優勢由 60° 圓錐幾何本身體現
+  RANGE_HEAVY_MUL: 0.5, // 重武器/大招高度差射程優勢比例(維持推導相容)
   DODGE: 0.10,         // 較高方 +閃避率(封頂)
   // 爆擊代價四項於 2026-07-27 整組 ×0.7 重新校準(原 0.5/0.5/1.0/0.5)——
   // 對進戰模型(`npm run bal` ⑤)量到舊值讓「較高方勝率」只有 48.3%:+25% 射程只在接近期兌現、
@@ -736,8 +737,7 @@ export const altRangeAdv = (slotOrDef) =>
   ALTITUDE.RANGE * (isHeavyOrUlt(slotOrDef) ? (ALTITUDE.RANGE_HEAVY_MUL ?? 0.5) : 1);
 /**
  * 高度制空射程加成的**上限**(推導不手寫)。用在「閘門的另一端拿不到目標實體」的場合 ——
- * 榴彈/飛彈的落點是一個**點**,伺服器算不出 `dh`(_sightY 要兩個實體)⇒ 只能取機制上限當誠實界,
- * 否則客戶端合法地以 `1 + altRangeAdv(slotOrDef)` 拉遠射程打出去的那一發,會在伺服器被判超程靜默丟棄。
+ * 榴彈/飛彈的落點是一個**點**,伺服器算不出 `dh`(_sightY 要兩個實體)⇒ 只能取機制上限當誠實界。
  */
 export const altRangeMax = (slotOrDef) => 1 + altRangeAdv(slotOrDef);
 /** 高度差的**機制上限**(公尺;推導不手寫 = `altScale` 封頂處的 TIERS 個砲塔高)。
@@ -745,16 +745,48 @@ export const altRangeMax = (slotOrDef) => 1 + altRangeAdv(slotOrDef);
 export const altDhMax = () => altTier() * ALTITUDE.TIERS;
 /**
  * 高度差「射程」乘數的**唯一縫**(伺服器 `sim._altRange` 與客戶端 `game._altRangeTo` 同吃):
- * 較高的一方 +射程(封頂 +`altRangeAdv(slotOrDef)`),同高/較低 = 1。兩端 MUST NOT 各寫一份曲線。
- * 重武器/大招高度差射程優勢減為輕武器/小招的一半(2026-09-01 使用者需求)。
- *
- * `dh` MUST 是**同一個高程參考框**下的兩個視線點高程差。跨框相減是 2026-08-01 使用者回報
- * 「攻擊範圍異常:沒有射程光暈的敵人也打得到」的病根 —— 英雄回報的 `ay` 是**絕對**高程
- * (含地形海拔;真實場地動輒數百公尺),而伺服器沒有地形、NPC/塔一律以「離地高 + 基準 0」
- * 表示 ⇒ 兩者相減等於拿海拔當高度差,`altScale` 直接封頂 = 英雄對**所有** NPC 恆 +25% 射程,
- * 而客戶端射程光暈量的是本地地形(恆 ≈1)⇒ 光暈與實際結算分家(見 sim._altDh)。
+ * 2026-09-03 使用者需求：移除額外的高度差射程加成，恆回傳 1（幾何優勢由圓錐包絡承擔）。
  */
 export const altRangeF = (dh, slotOrDef) => (dh > 0 ? 1 + altRangeAdv(slotOrDef) * altScale(dh) : 1);
+
+// ---- 武器射程範圍幾何（2026-09-03 使用者需求：上段球體 / 中下段 60° 圓錐體）----
+export const SQRT3 = Math.sqrt(3);
+export const WEAPON_CONE_TAN = SQRT3;         // 60° 圓錐母線斜率 tan(60°) = √3 ≈ 1.732
+export const WEAPON_SPHERE_R_F = SQRT3 / 2;    // 上段球體半徑比例 r = d * √3 / 2 ≈ 0.866 d
+export const WEAPON_TRANS_Y_F = SQRT3 / 4;     // 上段球體與中下段圓錐相切過渡高度 dy = d * √3 / 4 ≈ 0.433 d
+
+/**
+ * 給定平面射程 d (即原本武器 def.range) 與目標相對射手垂直高差 dy = y_target - y_shooter，
+ * 計算該垂直高度下允許的最大水平有效射程 rho_max (單一真相縫)：
+ *   - dy > d * √3 / 2 (超出球頂)：0
+ *   - d * √3 / 4 <= dy <= d * √3 / 2 (上段球體)：√( (d * √3 / 2)^2 - dy^2 )
+ *   - dy < d * √3 / 4 (中下段 60° 圓錐體)：d - dy / √3  (向下俯射 dy < 0 時射程自然展開)
+ */
+export function weaponMaxHoriz(d, dy) {
+  if (d <= 0) return 0;
+  const yTrans = d * WEAPON_TRANS_Y_F;
+  if (dy >= yTrans) {
+    const r = d * WEAPON_SPHERE_R_F;
+    if (dy >= r) return 0;
+    return Math.sqrt(r * r - dy * dy);
+  }
+  return Math.max(0, d - dy / SQRT3);
+}
+
+/**
+ * 判定目標點 (dx, dz, dy) 是否落在以 (0,0,0) 為射擊點、平面射程 d 的射程包絡內。
+ * hitR: 目標水平碰撞量體半徑（量到表面，surf = max(0, hypot(dx, dz) - hitR)）。
+ * mul: 額外倍率（如網路寬容 RANGE_TOL、buff 等）。
+ */
+export function inWeaponRange(d, dx, dz, dy, hitR = 0, mul = 1) {
+  const effD = d * mul;
+  if (effD <= 0) return false;
+  if (dy > effD * WEAPON_SPHERE_R_F) return false;
+  const maxH = weaponMaxHoriz(effD, dy);
+  const horiz = Math.hypot(dx, dz);
+  const surf = Math.max(0, horiz - hitR);
+  return surf <= maxH;
+}
 // ---- 射程閘門的網路寬容(2026-07-30 收成單一縫)----
 // 伺服器複驗客戶端回報(命中/落點/射線)時放給網路延遲與彈道飛行時間的倍率。**唯一縫**:
 // sim.js 的每一道射程閘門 MUST 吃這一個值,MUST NOT 各處手寫倍率 —— 逐處手寫的下場是

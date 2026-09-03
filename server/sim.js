@@ -20,6 +20,7 @@ import {
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP, unbalMissP,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
+  weaponMaxHoriz, inWeaponRange,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
 } from '../public/js/data.js';
 
@@ -2166,10 +2167,11 @@ export class BattleSim {
     if (!wp || !wp.def.rate) return;
     const cap = (trajClass(wp.def) === 'fnf' ? chaseCapS(wp.def) : flightCapS(wp.def)) || 0.5;
     if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > cap) return;   // 重武器需瞄準模式才能開火(容差窗與 heroBurst 同縫)
-    // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲/彈道飛行)
-    // 量到目標**近側表面**(_surfD3):彈著本來就停在建築牆面上,量中心會讓砲塔/主堡吃掉整段寬容
+    // 射程驗證(2026-09-03:上段球體 / 中下段 60° 圓錐體包絡;留 25% 寬容給網路延遲/彈道飛行)
+    // 量到目標**近側表面**(inWeaponRange 扣除 hitR):彈著本來就停在建築牆面上,量中心會讓砲塔/主堡吃掉整段寬容
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (this._surfD3(d3, t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL) return;   // 高度制空:對地拉遠/對高空無人機縮短
+    const dy = (t.hero ? (t.y || 0) : 0) - (h.y || 0);
+    if (!inWeaponRange(wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL, t.x - h.x, t.z - h.z, dy, hitR(t))) return;
     // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
     const pulse = this.visionUntil?.[h.side] > this.t;
@@ -2214,7 +2216,8 @@ export class BattleSim {
       if (b === h || b.dead) continue;
       if (t.hp <= 0 || (t.hero && t.dead)) return;
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-      if (this._surfD3(d3, t) > def.range * this._altRange(b, t, def) * RANGE_TOL) continue;   // 高度制空(見 heroHit);量到近側表面(_surfD3)
+      const dy = (t.hero ? (t.y || 0) : 0) - (b.y || 0);
+      if (!inWeaponRange(def.range * this._altRange(b, t, def) * RANGE_TOL, t.x - b.x, t.z - b.z, dy, hitR(t))) continue;
       // 僚機自己的射線也吃障礙遮蔽(主機看得到不代表僚機那個角度打得到)
       if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
       // pid/slot:客戶端解析僚機槍口錨(_entMuzzle 取離訊息座標最近那架)+ 開火動畫
@@ -2268,7 +2271,8 @@ export class BattleSim {
     const wp = this._heroWeapon(h, w);
     if (!wp) return false;
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (d3 > wp.def.range * this._altRange(h, t, wp.def)) return false;   // 高度制空(見 heroHit)
+    const dy = (t.hero ? (t.y || 0) : 0) - (h.y || 0);
+    if (!inWeaponRange(wp.def.range * this._altRange(h, t, wp.def), t.x - h.x, t.z - h.z, dy, 0)) return false;
     // 電腦玩家不能透視:彈道被實體障礙擋住 = 不開火(與真人 heroHit 同一條 LOS 規則)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
@@ -2356,6 +2360,7 @@ export class BattleSim {
     //     = 高地上合法的那一發被驗證後靜默丟棄:玩家看到砲彈在敵人身上炸開、傷害卻是 0
     //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
     const impCap = wp.def.range * altRangeMax(wp.def) * RANGE_TOL;
+    const maxH = weaponMaxHoriz(wp.def.range * RANGE_TOL, y - (org.y ?? h.y ?? 0));
     // 追擊命中:落點落在鎖定目標的爆風核心帶內(量到近側表面,與 _blast/_reachable 同一把尺)
     // ⇒ 射程包絡整條讓位給追擊燃料。**這是一道加分題,不是替代題**(2026-08-03 使用者定案
     // 「中途爆炸也要有傷害」):彈頭在半路撞到小兵/建物/地形就地引爆時,爆點當然不在鎖定
@@ -2365,6 +2370,7 @@ export class BattleSim {
     const chased = !!lockT
       && this._surfD3(dist2d(lockT.x, lockT.z, x, z), lockT) <= blastCoreR(wp.def);
     if (!chased && dImp > impCap) return;
+    if (!chased && dImp > maxH) return;
     // 這一發其實是「飛行時間」秒之前擊發的 —— 把裝填計時器接回擊發時刻(見 _gateFire 的 back)。
     // 飛行時間只准經 `shotFlightS` 這個縫(拋物線是 45° 反解初速,MUST NOT 自己拿 shotV0 除一次:
     // 那會低估 2.2 倍 ⇒ 伺服器的裝填窗比客戶端晚 4 秒);球心與回推量是**同一個解**,故一律取
@@ -2393,7 +2399,9 @@ export class BattleSim {
       // 僚機吃同一道閘門、也吃同一條球心規則(各自的擊發位置 —— 整個小隊在那 6 秒裡是一起
       // 移動的,只修主視野機那一份等於僚機那 1/3 傷害照樣被靜默丟棄)。追擊命中才豁免。
       const bo = this._shotOrigin(b, wp.def, x, z, cap);
+      const boMaxH = weaponMaxHoriz(wp.def.range * RANGE_TOL, y - (bo.y ?? b.y ?? 0));
       if (!chased && dist2d(bo.x, bo.z, x, z) > impCap) continue;
+      if (!chased && dist2d(bo.x, bo.z, x, z) > boMaxH) continue;
       this._blast(b, wp.def, x, z, y, lev, tooClose);
     }
   }
@@ -2448,7 +2456,8 @@ export class BattleSim {
         const tx = t.x - bx, tz = t.z - bz;
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, byD - (t.hero ? (t.y || 0) : 0));
-        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def)) continue;   // 誠實界(見上方註解);高度制空 + 量到近側表面(_surfD3)
+        const dy = (t.hero ? (t.y || 0) : 0) - byD;
+        if (!inWeaponRange(wp.def.range * this._altRange(b, t, wp.def), tx, tz, dy, hitR(t))) continue;   // 誠實界(見上方註解);高度制空 + 量到近側表面(_surfD3)
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內。
         // 錐緣量到目標**命中量體的近側表面**(fanConeHalf 單一縫,lanesim / 客戶端光暈同吃):
         // 量中心的話,貼著砲塔(hitR 7)/ 主堡(hitR 20)的牆面噴,整個錐子都打在牆上而中心
@@ -2580,11 +2589,12 @@ export class BattleSim {
       const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max);
       for (let i = 0; i < hits.length; i++) {
         const { t, d3, off } = hits[i];
-        // 誠實界(2026-08-01「超過射程範圍就沒傷害」):`d3` 是從**回報的槍口** ox/oz/oy 量起
-        // (見 _lanceHits),與客戶端射程光暈 `_reachable` 的 from 是同一個點 ⇒ 兩端量的是同一段
-        // 距離,不需要也不能再乘 RANGE_TOL —— 圓柱端帽本來就可以外溢 R + hitR,再放 25% 等於
+        // 誠實界(2026-08-01「超過射程範圍就沒傷害」;2026-09-03 上段球體/中下段 60° 圓錐體包絡):
+        // `d3` 是從**回報的槍口** ox/oz/oy 量起(見 _lanceHits),與客戶端射程光暈 `_reachable` 的 from 是同一個點
+        // ⇒ 兩端量的是同一段距離,不需要也不能再乘 RANGE_TOL —— 圓柱端帽本來就可以外溢 R + hitR,再放 25% 等於
         // 光暈不亮的敵人照樣掉血(與 heroPlasma 同一條規則)。
-        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def)) continue;   // 高度制空;量到近側表面(_surfD3,與 _lanceHits 的 R+hitR 同一條尺)
+        const vdy = (t.hero ? (t.y || 0) : this._tgtY(t)) - by;
+        if (!inWeaponRange(wp.def.range * this._altRange(b, t, wp.def), t.x - bx, t.z - bz, vdy, hitR(t))) continue;   // 高度制空;量到近側表面(inWeaponRange,與 _lanceHits 的 R+hitR 同一條尺)
         const dmg = this._rollCrit(b, wp.def,
           this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** i, t);
         this._applyHitEmp(b, wp.def, t);
@@ -5203,7 +5213,10 @@ export class BattleSim {
     // 塔射程拉到 310 也不會把高空無人機從 SAM 手上搶走(#INC-104 的 y=250 仍在天花板之上)
     if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph')
       && (t.y || 0) > Math.min(u.range * 0.9, GAME.GUN_CEIL_M)) return true;
-    if (d > u.range * this._altRange(e, t, wd)) return true;   // 高度制空:地面槍械對高空無人機縮短射程
+    const ey = e.hero ? (e.y || 0) : this._sightY(e);
+    const ty = t.hero ? (t.y || 0) : this._sightY(t);
+    const maxH = weaponMaxHoriz(u.range * this._altRange(e, t, wd), ty - ey);
+    if (d > maxH) return true;   // 射程包絡:上段球體/中下段 60° 圓錐體
     return false;
   }
 

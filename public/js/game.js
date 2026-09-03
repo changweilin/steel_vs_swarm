@@ -11,6 +11,7 @@ import {
   heroMobility, highSupSpeedF,
   WATER, CJUMP, IFRAME, AIR, envTrigger, fluidFactor, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur, VISION_BLIND,
+  weaponMaxHoriz, inWeaponRange,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, worldCeilY, edgeWallInsetM,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
@@ -5038,13 +5039,14 @@ export class BattleClient {
       // 數字的話,射程界內側那一條核心帶寬的環會被當成出界:那裡的敵人射程光暈亮著、鎖定光暈卻
       // 熄滅(而且落點被無故往回拉),又是一種兩把尺。射程內 ⇒ 這一整段是 no-op(逐位元同舊制)。
       const lim = Math.max(1, max - Math.min(blastCoreR(def), max * 0.5));
-      if (from.distanceTo(fc.aim) > max) {
-        const hx = fc.aim.x - from.x, hz = fc.aim.z - from.z;
-        const hl = Math.hypot(hx, hz);
+      const hx = fc.aim.x - from.x, hz = fc.aim.z - from.z;
+      const hl = Math.hypot(hx, hz);
+      const dyAim = fc.aim.y - from.y;
+      if (from.distanceTo(fc.aim) > max || hl > weaponMaxHoriz(max, dyAim)) {
         let L = Math.min(hl, lim);
         for (let k = 0; k < 3 && hl > 0; k++) {
           const gy = this.terrain.heightAt(from.x + hx / hl * L, from.z + hz / hl * L);
-          L = Math.min(hl, Math.sqrt(Math.max(1, lim * lim - (gy - from.y) ** 2)));
+          L = Math.min(hl, Math.max(1, weaponMaxHoriz(lim, gy - from.y)));
         }
         const gx = from.x + hx / hl * L, gz = from.z + hz / hl * L;
         // **MUST NOT 把落點夾進自己的爆風**:準星指著天空(幾乎垂直)時水平距離趨近 0,
@@ -5666,8 +5668,11 @@ export class BattleClient {
    */
   _inShotRange(ent, def, from) {
     const aim = this._entAimPoint(ent);
-    const surf = Math.max(0, from.distanceTo(aim) - this._hitR(ent));
-    if (surf > this._effRange(def, ent)) return false;
+    const hr = this._hitR(ent);
+    const rng = this._effRange(def, ent);
+    if (!inWeaponRange(rng, aim.x - from.x, aim.z - from.z, aim.y - from.y, hr)) return false;
+    const surf = Math.max(0, from.distanceTo(aim) - hr);
+    if (surf > rng) return false;
     const cut = this._layerHitT(from.x, from.y, from.z, aim.x, aim.y, aim.z);
     return cut == null || cut >= surf - RANGE_GLOW.SURF_TOL_M;
   }
@@ -5725,6 +5730,7 @@ export class BattleClient {
     // 瞄機體幾何中心(與 _coneAcquire 同一條):打頭/打腳都算打中同一具機體
     aim.set(p.x, p.y + (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 1.5), p.z);
     const hr = this._hitR(ent);
+    if (!inWeaponRange(rng, aim.x - from.x, aim.z - from.z, aim.y - from.y, hr)) return { ok: false, warn: false };
     const full = from.distanceTo(aim);
     const surf = Math.max(0, full - hr);   // 到近側表面(與伺服器 _surfD3 同一把尺)
     // 射程本身也住這裡(**唯一縫**):呼叫端的候選閘刻意只寬不緊,「打得到嗎」的距離判據

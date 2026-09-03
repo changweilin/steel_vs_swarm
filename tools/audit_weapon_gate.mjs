@@ -38,6 +38,7 @@ import {
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn, GUIDED_LAUNCH, guidedLaunchOf, guidedLaunchPitchDeg, guidedLaunchZeroPitchM, guidedLaunchDist,
   HIGH_SUP, highSupF, altTier, altDhMax,
+  inWeaponRange, weaponMaxHoriz,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 import { readSrc } from './audit_src.mjs';
@@ -313,7 +314,7 @@ const THREE = { Vector3: V3 };
 const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
 const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
 const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0,
-  aoeClass, blastFalloff, fanConeHalf, lanceR, LANCE };
+  aoeClass, blastFalloff, fanConeHalf, lanceR, LANCE, inWeaponRange, weaponMaxHoriz };
 const M = (n) => pickMethod(n, G, env);
 // 牆 = 沿 +X 的一道垂直面(擋住 x ≥ w.x 且高度低於 w.top 的射線);回傳截斷距離
 const mkWalls = (walls) => (ax, ay, az, bx, by, bz) => {
@@ -990,9 +991,9 @@ sec('Ⅶ 光暈 ⇔ 傷害:沒有射程光暈的敵人 MUST NOT 掉血(2026-08-0
     `海拔 500m 的英雄對地面小兵無高度加成(實得 ×${sim._altRange(h, npc)};舊制 ×1.25 = 隱形 +25% 射程)`);
   h.y = 0;
   const hiHero = { hero: true, ay: 500 + 2, y: 0 }, loHero = { hero: true, ay: 500 - 90, y: 0 };
-  ok(sim._altRange(h, loHero) > 1 && sim._altRange(h, hiHero) === 1,
-    '對照:英雄 vs 英雄(兩邊都有 ay)仍精確吃高度制空 —— 修的是跨框,不是把機制關掉');
-  ok(sim._altRange(h, loHero) === altRangeF(92), '英雄對英雄的倍率 = altRangeF(絕對高程差)');
+  ok(sim._altRange(h, loHero) === 1 && sim._altRange(h, hiHero) === 1,
+    '高度差射程加成已移除(ALTITUDE.RANGE=0,altRangeF 恆為 1)—— 射程優勢由 60° 圓錐幾何承擔');
+  ok(weaponMaxHoriz(100, -92) > 100, '60° 圓錐幾何在俯射時有效水平射程自然展開(推導不手寫)');
 }
 {
   // ---- ② 扇形武器:伺服器自己選目標的唯一一條英雄武器路徑 ⇒ MUST 吃誠實界 ----
@@ -1131,8 +1132,8 @@ sec('Ⅷ 隔山打牛:伺服器自己選目標的路徑 MUST 自己驗地形(202
 {
   // ---- 直線貫穿:超過射程就沒傷害(圓柱端帽不得再放 25% 寬容)----
   const lance = methodSrc('heroLance', S);
-  ok(/wp\.def\.range \* this\._altRange\(b, t, wp\.def\)\) continue;/.test(lance),
-    'heroLance 逐目標射程閘門吃誠實界(d3 從回報槍口量起,與射程光暈同一個起點)');
+  ok(/inWeaponRange\(wp\.def\.range \* this\._altRange\(b, t, wp\.def\)/.test(lance),
+    'heroLance 逐目標射程閘門吃誠實界(inWeaponRange 上球中下錐幾何,與射程光暈同一個起點)');
   ok(/wp\.def\.range \* altRangeMax\(wp\.def\)\);/.test(lance),
     '射線長上限 = range × altRangeMax(wp.def)(誠實界;len 本來就是客戶端夾過的)');
   const sim = new BattleSim(fakeCfg());
@@ -1511,7 +1512,7 @@ sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直�
     const stepProjectileFx = () => {};
     const raySolid = (o) => o.isMesh === true;
     const env = { THREE: { Vector3: V3 }, BALLISTIC, SEEK, seekTurn, ARC_MAXP, starburst, stepProjectileFx, raySolid,
-      shotV0, trajClass, lobMinRange, blastCoreR, altRangeF, LOS, altRangeMax,
+      shotV0, trajClass, lobMinRange, blastCoreR, altRangeF, LOS, altRangeMax, inWeaponRange, weaponMaxHoriz,
       _TMP_A: new V3(), _TMP_B: new V3(), _TMP_C: new V3(), _FWD_Z: new V3(0, 0, 1) };
     const M = (n) => pickMethod(n, G, env);
     const { id: lobId, def } = heavyOf('lob', 'SWARM');
@@ -2317,6 +2318,38 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
     const creep = sim._add({ kind: 'soldier', side: 'STEEL', x: 1, z: 0, y: 0, hp: 1e9, maxHp: 1e9 });
     ok(sim._dodgeP(creep, atk) === 0, '小兵的 p = 0 ⇒ 補償係數 1 ⇒ 爆風傷害逐位元同舊制');
   }
+}
+// =================================================================================
+sec('ⅩⅣ 武器射程範圍幾何（上段球體 / 中下段 60° 圓錐體）數學與包絡驗證');
+// ---------------------------------------------------------------------------------
+{
+  const d = 100;
+  // 1. 平面 (dy = 0): 水平射程恆為 d
+  ok(Math.abs(weaponMaxHoriz(d, 0) - d) < 1e-9, '同高 (dy = 0): 水平射程精確等於平面射程 d');
+
+  // 2. 俯射 (dy < 0): 60° 圓錐展開，每公尺爬降水平多 1/√3
+  const dyDown = -30 * Math.sqrt(3);
+  ok(Math.abs(weaponMaxHoriz(d, dyDown) - (d + 30)) < 1e-9,
+    '俯射 (dy < 0): 60° 圓錐水平射程自然展開為 d - dy/√3');
+
+  // 3. 切點過渡高度 (dy = d * √3 / 4): 球錐相切處水平射程連續且等於 d * 3/4
+  const dyTrans = d * Math.sqrt(3) / 4;
+  const hTransSphere = Math.sqrt((d * Math.sqrt(3) / 2) ** 2 - dyTrans ** 2);
+  const hTransCone = d - dyTrans / Math.sqrt(3);
+  ok(Math.abs(hTransSphere - hTransCone) < 1e-9 && Math.abs(weaponMaxHoriz(d, dyTrans) - d * 0.75) < 1e-9,
+    '過渡高度 (dy = d * √3 / 4): 上段球體與中下段圓錐平滑相切，水平射程連續等於 0.75 d');
+
+  // 4. 天花板 (dy = d * √3 / 2): 球頂水平射程收斂至 0
+  const dyCeil = d * Math.sqrt(3) / 2;
+  ok(Math.abs(weaponMaxHoriz(d, dyCeil)) < 1e-9, '球頂天花板 (dy = d * √3 / 2): 水平射程收斂至 0');
+
+  // 5. 超出天花板: 嚴格判定不在射程內
+  ok(weaponMaxHoriz(d, dyCeil + 0.1) === 0, '超出天花板 (dy > d * √3 / 2): weaponMaxHoriz 為 0');
+  ok(!inWeaponRange(d, 0, 0, dyCeil + 0.1, 0), '超出天花板: inWeaponRange 判定 false');
+
+  // 6. 表面量體判定 (hitR)
+  ok(inWeaponRange(d, d + 5, 0, 0, 6), '命中量體 hitR=6 讓離中心 d+5 的表面落在射程內');
+  ok(!inWeaponRange(d, d + 5, 0, 0, 4), '命中量體 hitR=4 讓離中心 d+5 的表面落在射程外');
 }
 
 // ---------------------------------------------------------------------------------

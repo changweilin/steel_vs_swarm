@@ -30,7 +30,7 @@
 // 「彈夾/裝填攤平成持續 DPS」(與 bal ①/④ 同一個簡化)。
 import { CHARACTERS, UNITS, GAME, VITALS, ALTITUDE, EVASION, SQUAD, evadeExpF, altScale, altTier,
   armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
-  dmgFalloff, heavyMpCost, shieldSplit, mobMid, rangeMid, speedMid, altRangeF,
+  dmgFalloff, heavyMpCost, shieldSplit, mobMid, rangeMid, speedMid, altRangeF, weaponMaxHoriz,
   HIGH_SUP, highSupF, highSupDodgeF, highSupSpeedF, highSupMissP } from '../public/js/data.js';
 
 export const DUEL = {
@@ -149,7 +149,7 @@ export function duel(A, B, dh = 0) {
   const st = (F) => ({ f: F, sh: F.sh0, ar: F.ar0, mp: F.mp0, ehp0: F.sh0 + F.ar0, sup: 0, supUntil: -1 });
   const a = st(A), b = st(B);
   const cF = { a: dh, b: -dh };                                  // 各自視角的高度差(爆擊/閃避用)
-  // 有效射程(含高度差加成:重武器/大招減半)
+  // 有效水平射程(含高度差加成:移除額外射程加成後 altRangeF 為 1)
   const eff = (S, side) => S.f.slots.map((s) => s.def.range * altRangeF(side === 'a' ? dh : -dh, s.def));
   const effA = eff(a, 'a'), effB = eff(b, 'b');
 
