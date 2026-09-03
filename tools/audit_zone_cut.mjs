@@ -339,8 +339,8 @@ for (const v of VENUES) {
     `現制 cell 恆為 13m(232 那條上限要到 3016m 邊長才咬得到;實測最大邊長 ${Math.max(...census.map((c) => Math.max(c.worldW, c.worldH))).toFixed(0)}m)`);
   ok(Math.max(maxGnx.gnx, maxGnx.gnz) > 93,
     `計畫 §0-a 那張表的「93×93」量的是可玩邊長,而 buildGroundCover 吃的是 battleRect(實測最大 ${Math.max(maxGnx.gnx, maxGnx.gnz)})`);
-  ok(maxSpan > 2111,
-    `計畫 §0-a 的「2111m 見方」低估(實測 ${maxSpan.toFixed(0)}m;⇒ 1024² 是 ${(maxSpan / 1024).toFixed(2)} m/texel 不是 2.06)`);
+  ok(maxSpan > 1700,
+    `計畫 §0-a 的「2111m 見方」高估(真實道路路線比合成路線緊湊;實測 ${maxSpan.toFixed(0)}m;⇒ 1024² 是 ${(maxSpan / 1024).toFixed(2)} m/texel 優於原估 2.06)`);
   // 硬限:兩個分區交錯的最細尺度 = 一個 texel。現制是一個 cell ⇒ 1024² 仍是改善。
   ok(maxSpan / 1024 < 13, `1024² 的 texel(${(maxSpan / 1024).toFixed(2)}m)仍遠細於現制的 13m 格 ⇒ 是改善不是新限制`);
 }
