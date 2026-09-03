@@ -18,8 +18,10 @@ import { charKind } from './data.js';
 import { applyEnvironment } from './environment.js';
 import {
   buildShowcasePatch, findShowcaseSite, showcaseAnchorSite,
-  LONDON_SHOWCASE_UNITS, LONDON_SHOWCASE_SITES,
+  LONDON_SHOWCASE_UNITS, GAME_SHOWCASE_SITES,
+  dressingTree, dressingMound, bakeShowcaseSeaDepth,
 } from './showcase.js';
+import { seaSoft, swampSoft, stepCelWind, stepSwampRipples } from './toon.js';
 
 const W = 480, H = 270;
 
@@ -40,11 +42,11 @@ const SUN_DIR = new THREE.Vector3(0.9, 0.42, -0.35).normalize();
 const DOF_NEAR = 11.0, DOF_FAR = 15.5;
 const BG_Z = -5.5;   // 背景排的 z(與 DOF_FAR 一起挑的:那一排 MUST 落在全糊帶裡)
 
-// 樣品自己的霧帶與兩個霧色(「空氣透視」那根拉桿的示範對象)—— 尺度兩軌、規則一份。
-const FOG_NEAR = 5.0, FOG_FAR = 44.0;
-const FOG_FAR_C = new THREE.Color(0x0f1622);    // 樣品後製遠端色；天空背景由正式環境系統提供
-const FOG_NEAR_C = new THREE.Color(0x4a3a2a);
-const PREVIEW_ENV_SPAN = 24.0;                  // 只縮放展示視口；環境規則仍走正式實作
+// 開闊大氣透視霧帶與霧色（空氣透視示範對象，配合 240m 實機場地視野，不再鎖在 44m 封閉暗盒）
+const FOG_NEAR = 35.0, FOG_FAR = 220.0;
+const FOG_FAR_C = new THREE.Color(0x6e8499);    // 遠景大氣透視淡青色
+const FOG_NEAR_C = new THREE.Color(0x384a5c);
+const PREVIEW_ENV_SPAN = 240.0;                 // 與實機地圖同尺度，讓天頂穹頂與雲層環繞
 const DEFAULT_PREVIEW_ENV = Object.freeze({ season: 'summer', time: 'day', weather: 'clear' });
 
 const DEMO_SCENES = [
@@ -71,6 +73,7 @@ export class MatSample {
     this.terrainSites = new Array(DEMO_SCENES.length).fill(null);
     this.terrainSite = null;
     this._terrainGroups = new Array(DEMO_SCENES.length).fill(null);
+    this._patchData = new Array(DEMO_SCENES.length).fill(null);
     this._envConfig = env || DEFAULT_PREVIEW_ENV;
     this.envFx = null;
     this._flatGrounds = [];
@@ -109,11 +112,10 @@ export class MatSample {
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(W, H, false);
     this.scene = new THREE.Scene();
-    this.scene.background = FOG_FAR_C.clone();
     this.scene.fog = new THREE.Fog(FOG_FAR_C.clone(), FOG_NEAR, FOG_FAR);
 
-    // 寬視角高機位：足夠大的視野與高度，讓樹木樹冠、遺跡建築等物件全貌盡收眼底
-    this.camera = new THREE.PerspectiveCamera(48, W / H, 0.5, 80);
+    // 寬視角高機位：遠剪裁面隨 span * 2.2 動態展開，讓天空穹頂、遠景地平線全貌盡收眼底且不被遠面裁切
+    this.camera = new THREE.PerspectiveCamera(48, W / H, 0.5, PREVIEW_ENV_SPAN * 2.2);
     this.camera.position.set(0, 4.6, 11.8);
     this.camera.lookAt(0, 1.9, 0);
 
@@ -216,20 +218,25 @@ export class MatSample {
     {
       const sandM = envMat(0xdac8a2, { wash: 0.5, cool: 0.35 });
       const rockM = envMat(0x6c726a, { wash: 0.45, moss: { amount: 0.4 } });
-      const waterM = envMat(0x18485e, { wash: 0.85, cool: 0.7, transparent: true, opacity: 0.82 });
+      const waterM = envMat(0x18485e, {
+        bands: 'soft', rim: 0, transparent: true, opacity: 0.86, side: THREE.DoubleSide,
+        soft: seaSoft(),
+      });
       const relicM = toonMat(0x7e8884, { bands: 'soft' });
       const hullM = toonMat(0x3e5262, { celMetal: true });
-      const foamM = toonMat(0xf0f8ff, { bands: 'soft', transparent: true, opacity: 0.95 });
-      const reflM = toonMat(0x283e4a, { transparent: true, opacity: 0.45 });
-      this._mats.push(sandM, rockM, waterM, relicM, hullM, foamM, reflM);
+      this._mats.push(sandM, rockM, waterM, relicM, hullM);
 
       // 海灘沙地
       const beach = new THREE.Mesh(new THREE.BoxGeometry(12, 1.4, 26), sandM);
       beach.position.set(-6.0, 0.7, 0);
       this._flatGrounds.push(beach);
 
-      // 清澈水體
-      const water = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), waterM);
+      // 清澈水體（備援用，具備動態海浪波紋與 seaFade）
+      const wCols = 32, wRows = 24;
+      const waterGeo = new THREE.PlaneGeometry(18, 26, wCols, wRows);
+      const seaFade = new Float32Array((wCols + 1) * (wRows + 1)).fill(1.0);
+      waterGeo.setAttribute('seaFade', new THREE.BufferAttribute(seaFade, 1));
+      const water = new THREE.Mesh(waterGeo, waterM);
       water.position.set(7.5, 0.5, 0);
       water.rotation.x = -Math.PI / 2;
       this._waterSurfaces.push(water);
@@ -250,52 +257,35 @@ export class MatSample {
       subHull.position.set(8.2, 0.65, -0.2);
       subHull.rotation.set(0.12, -0.4, 0.08);
 
-      // 海岸浪花帶 (隨潮汐伸縮)
-      const foamShore = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 24), foamM);
-      foamShore.position.set(0.2, 0.52, 0);
-      foamShore.rotation.x = -Math.PI / 2;
-
-      // 遺跡石柱周遭同心浪花波紋
-      const foamRing1 = new THREE.Mesh(new THREE.RingGeometry(0.75, 1.25, 24), foamM);
-      foamRing1.position.set(4.4, 0.52, -1.5);
-      foamRing1.rotation.x = -Math.PI / 2;
-
-      const foamRing2 = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.75, 24), foamM);
-      foamRing2.position.set(4.4, 0.52, -1.5);
-      foamRing2.rotation.x = -Math.PI / 2;
-
-      const refl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 4.8), reflM);
-      refl.position.set(4.4, 0.51, 0.8);
-      refl.rotation.x = -Math.PI / 2;
-
-      this._geos.push(
-        beach.geometry, water.geometry, pillar1.geometry, pillar2.geometry,
-        subGeo, foamShore.geometry, foamRing1.geometry, foamRing2.geometry, refl.geometry
-      );
-      this._gShore.add(beach, water, pillar1, pillar2, subHull, foamShore, foamRing1, foamRing2, refl);
-      this._foamMeshes = [foamShore, foamRing1, foamRing2];
-      this._reflMesh = refl;
-      this._shoreAnims = { subHull, foamShore, foamRing1, foamRing2, refl };
+      this._geos.push(beach.geometry, waterGeo, pillar1.geometry, pillar2.geometry, subGeo);
+      this._gShore.add(beach, water, pillar1, pillar2, subHull);
+      this._shoreAnims = { subHull };
     }
 
     // ── 3. 沼澤與水中遺跡 (泥濘濕地、墨綠水體、青苔古柱、沉沒殘骸與風吹蘆葦) ──
     this._gSwamp = new THREE.Group();
     {
       const mudM = envMat(0x363c2c, { wash: 0.65, moss: { amount: 0.95 } });
-      const swampWaterM = envMat(0x193622, { wash: 0.85, cool: 0.6, transparent: true, opacity: 0.86 });
+      const swampWaterM = envMat(0x193622, {
+        wash: 0.85, cool: 0.6, bands: 'soft', rim: 0, transparent: true, opacity: 0.86, side: THREE.DoubleSide,
+        soft: swampSoft(),
+      });
       const swampRelicM = toonMat(0x4c564a, { bands: 'soft' });
       const swampHullM = toonMat(0x28382c, { celMetal: true });
-      const swampFoamM = toonMat(0xd0e8d4, { bands: 'soft', transparent: true, opacity: 0.75 });
       const reedM = envMat(0x3e5e2a);
-      this._mats.push(mudM, swampWaterM, swampRelicM, swampHullM, swampFoamM, reedM);
+      this._mats.push(mudM, swampWaterM, swampRelicM, swampHullM, reedM);
 
       // 泥濘濕地陸塊
       const mudBank = new THREE.Mesh(new THREE.BoxGeometry(11, 1.3, 26), mudM);
       mudBank.position.set(-5.5, 0.65, 0);
       this._flatGrounds.push(mudBank);
 
-      // 沼澤水體
-      const swampWater = new THREE.Mesh(new THREE.PlaneGeometry(18, 26), swampWaterM);
+      // 沼澤水體（備援用，具備沼澤漣漪與撕裂波紋）
+      const swCols = 32, swRows = 24;
+      const sWaterGeo = new THREE.PlaneGeometry(18, 26, swCols, swRows);
+      const sSeaFade = new Float32Array((swCols + 1) * (swRows + 1)).fill(1.0);
+      sWaterGeo.setAttribute('seaFade', new THREE.BufferAttribute(sSeaFade, 1));
+      const swampWater = new THREE.Mesh(sWaterGeo, swampWaterM);
       swampWater.position.set(7.5, 0.5, 0);
       swampWater.rotation.x = -Math.PI / 2;
       this._waterSurfaces.push(swampWater);
@@ -315,15 +305,6 @@ export class MatSample {
       sHull.position.set(7.8, 0.6, -0.4);
       sHull.rotation.set(0.12, -0.38, 0.08);
 
-      // 沼澤呼吸波紋環
-      const sFoamRing1 = new THREE.Mesh(new THREE.RingGeometry(0.75, 1.2, 24), swampFoamM);
-      sFoamRing1.position.set(4.5, 0.52, -1.2);
-      sFoamRing1.rotation.x = -Math.PI / 2;
-
-      const sFoamRing2 = new THREE.Mesh(new THREE.RingGeometry(1.35, 1.7, 24), swampFoamM);
-      sFoamRing2.position.set(4.5, 0.52, -1.2);
-      sFoamRing2.rotation.x = -Math.PI / 2;
-
       // 蘆葦叢群落
       const reeds = [];
       const reedGeo = new THREE.CylinderGeometry(0.04, 0.07, 2.2, 6);
@@ -340,49 +321,89 @@ export class MatSample {
         reeds.push(rm);
       }
 
-      this._geos.push(
-        mudBank.geometry, swampWater.geometry, sPillar1.geometry, sPillar2.geometry,
-        sHull.geometry, sFoamRing1.geometry, sFoamRing2.geometry
-      );
-      this._gSwamp.add(mudBank, swampWater, sPillar1, sPillar2, sHull, sFoamRing1, sFoamRing2, ...reeds);
-      this._swampAnims = { sHull, sFoamRing1, sFoamRing2, reeds };
+      this._geos.push(mudBank.geometry, sWaterGeo, sPillar1.geometry, sPillar2.geometry, sHullGeo);
+      this._gSwamp.add(mudBank, swampWater, sPillar1, sPillar2, sHull, ...reeds);
+      this._swampAnims = { sHull, reeds };
     }
 
-    // ── 4. 樹木植被與群鳥翱翔 (高大樹幹、分層立體樹冠、葉片卡與巡航鳥群) ──
+    // ── 4. 樹木植被與群鳥翱翔 (實機巨樹神木、立體葉冠群、葉片卡與巡航鳥群) ──
     this._gTree = new THREE.Group();
     {
       const groundTM = envMat(0x3d5636, { wash: 0.55, moss: { amount: 0.8 } });
-      const woodM = envMat(0x483526);
-      const leafM = envMat(0x35662e, { wash: 0.7, cool: 0.45 });
-      const cardM = envMat(0x457c38);
+      const woodM = envMat(0x563e2a, { wash: 0.25, cool: 0.1 });
+      const leafM = envMat(0x32622b, { wash: 0.65, cool: 0.4 });
+      const leafM2 = envMat(0x3f7236, { wash: 0.7, cool: 0.35 });
+      const cardM = envMat(0x447c38);
       const birdM = toonMat(0x283038);
-      this._mats.push(groundTM, woodM, leafM, cardM, birdM);
+      this._mats.push(groundTM, woodM, leafM, leafM2, cardM, birdM);
 
       const groundT = new THREE.Mesh(new THREE.PlaneGeometry(28, 28), groundTM);
       groundT.rotation.x = -Math.PI / 2;
       this._flatGrounds.push(groundT);
 
-      // 主神木 (高大粗壯，全貌盡覽)
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.2, 5.2, 12), woodM);
-      trunk.position.set(-1.4, 2.6, 0);
+      // 主神木樹幹 (實機 GIANT_DEFS 紅杉風格：基部板根、漸縮主幹與向上分枝)
+      const trunkGroup = new THREE.Group();
+      trunkGroup.position.set(-1.4, 0, 0);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 1.25, 5.4, 10), woodM);
+      trunk.position.y = 2.7;
+      trunkGroup.add(trunk);
 
-      const canopy1 = new THREE.Mesh(new THREE.SphereGeometry(2.2, 16, 12), leafM);
-      canopy1.position.set(-1.4, 4.8, 0);
-      canopy1.scale.set(1.35, 0.95, 1.35);
+      for (const [ang, rz] of [[0, 0.25], [2.1, -0.2], [4.2, 0.22]]) {
+        const fin = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2.2, 3), woodM);
+        fin.position.set(Math.cos(ang) * 0.95, 1.1, Math.sin(ang) * 0.95);
+        fin.rotation.y = ang;
+        fin.rotation.z = rz;
+        trunkGroup.add(fin);
+      }
 
-      const canopy2 = new THREE.Mesh(new THREE.SphereGeometry(1.5, 14, 10), leafM);
-      canopy2.position.set(-0.3, 5.6, 0.4);
+      const bough1 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.2, 5), woodM);
+      bough1.position.set(0.7, 3.8, 0.2);
+      bough1.rotation.z = -0.75;
+      trunkGroup.add(bough1);
 
+      const bough2 = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.25, 1.9, 5), woodM);
+      bough2.position.set(-0.65, 4.2, -0.3);
+      bough2.rotation.z = 0.7;
+      trunkGroup.add(bough2);
+
+      // 多層次受光葉冠群（實機 icosahedron 多面體葉簇，告別圓球）
+      const canopyGeo1 = new THREE.IcosahedronGeometry(2.3, 1);
+      canopyGeo1.scale(1.4, 0.65, 1.35);
+      const canopy1 = new THREE.Mesh(canopyGeo1, leafM);
+      canopy1.position.set(-1.4, 4.9, 0);
+
+      const canopyGeo2 = new THREE.IcosahedronGeometry(1.7, 1);
+      canopyGeo2.scale(1.2, 0.7, 1.15);
+      const canopy2 = new THREE.Mesh(canopyGeo2, leafM2);
+      canopy2.position.set(-0.5, 5.8, 0.4);
+
+      const canopyGeo3 = new THREE.IcosahedronGeometry(1.3, 1);
+      canopyGeo3.scale(1.1, 0.75, 1.1);
+      const canopy3 = new THREE.Mesh(canopyGeo3, leafM);
+      canopy3.position.set(-2.2, 5.3, -0.3);
+
+      const canopyTopGeo = new THREE.IcosahedronGeometry(1.0, 1);
+      canopyTopGeo.scale(0.9, 0.85, 0.9);
+      const canopyTop = new THREE.Mesh(canopyTopGeo, leafM2);
+      canopyTop.position.set(-1.3, 6.7, 0.1);
+
+      // 葉片卡 (在主要葉冠邊緣隨風輕顫)
       const leafCards = [];
-      const cardGeo = new THREE.PlaneGeometry(0.8, 0.8);
+      const cardGeo = new THREE.PlaneGeometry(0.75, 0.75);
       this._geos.push(cardGeo);
-      for (let i = 0; i < 12; i++) {
-        const ang = (i / 12) * Math.PI * 2;
+      for (let i = 0; i < 14; i++) {
+        const ang = (i / 14) * Math.PI * 2;
         const c = new THREE.Mesh(cardGeo, cardM);
-        c.position.set(-1.4 + Math.cos(ang) * 2.3, 4.6 + (i % 3) * 0.5, Math.sin(ang) * 2.3);
+        c.position.set(-1.4 + Math.cos(ang) * 2.4, 4.6 + (i % 3) * 0.6, Math.sin(ang) * 2.4);
         c.rotation.set(0.3, ang, 0.2);
         leafCards.push(c);
       }
+
+      // 周圍配景：實機 conifer2 老雲杉群落
+      dressingTree(this._gTree, 3.2, -3.8, 1.3, () => 0, woodM, leafM);
+      dressingTree(this._gTree, -4.8, -2.6, 1.15, () => 0, woodM, leafM);
+      dressingTree(this._gTree, 5.6, 1.0, 0.95, () => 0, woodM, leafM2);
+      dressingTree(this._gTree, -3.6, 3.2, 0.85, () => 0, woodM, leafM2);
 
       // 飛翔鳥群 (具備左右雙翼，可模擬真實拍翼動作)
       const birds = [];
@@ -402,26 +423,29 @@ export class MatSample {
         wingR.rotation.y = Math.PI;
 
         bGroup.add(body, wingL, wingR);
-        bGroup.userData = { wingL, wingR, phase: i * 0.9, radius: 2.2 + (i % 3) * 0.7, height: 4.8 + i * 0.4, speed: 0.9 + i * 0.1 };
+        bGroup.userData = { wingL, wingR, phase: i * 0.9, radius: 2.3 + (i % 3) * 0.7, height: 5.1 + i * 0.4, speed: 0.9 + i * 0.1 };
         birds.push(bGroup);
       }
 
-      this._geos.push(groundT.geometry, trunk.geometry, canopy1.geometry, canopy2.geometry);
-      this._gTree.add(groundT, trunk, canopy1, canopy2, ...leafCards, ...birds);
+      this._geos.push(
+        groundT.geometry, trunk.geometry, canopyGeo1, canopyGeo2, canopyGeo3, canopyTopGeo
+      );
+      this._gTree.add(groundT, trunkGroup, canopy1, canopy2, canopy3, canopyTop, ...leafCards, ...birds);
       this._birdMeshes = birds;
       this._leafCardMeshes = leafCards;
-      this._treeAnims = { trunk, canopy1, canopy2, leafCards, birds };
+      this._treeAnims = { trunk: trunkGroup, canopy1, canopy2, leafCards, birds };
     }
 
-    // ── 5. 地貌分界、巨岩地標與建築遺跡 ──
+    // ── 5. 地貌分界、太魯閣峽谷峭壁與地標遺跡 ──
     this._gBiome = new THREE.Group();
     {
       const grassM = envMat(0x3a5a32, { wash: 0.6, moss: { amount: 0.9 } });
       const desertM = envMat(0x7e684a, { wash: 0.45, cool: 0.35 });
       const seamM = envMat(0x24321c, { wash: 0.2 });
-      const monolithM = envMat(0x565c52, { wash: 0.85, cool: 0.6, moss: { amount: 0.95 } });
+      const monolithM = envMat(0x626c6d, { wash: 0.35, cool: 0.3, land: true });
+      const monolithM2 = envMat(0x75807e, { wash: 0.45, cool: 0.25, land: true });
       const bannerM = toonMat(0x3b82f6);
-      this._mats.push(grassM, desertM, seamM, monolithM, bannerM);
+      this._mats.push(grassM, desertM, seamM, monolithM, monolithM2, bannerM);
 
       const gGrass = new THREE.Mesh(new THREE.PlaneGeometry(14, 28), grassM);
       gGrass.position.set(-7, 0, 0);
@@ -436,29 +460,54 @@ export class MatSample {
       seam.rotation.x = -Math.PI / 2;
       this._flatGrounds.push(gGrass, gDesert, seam);
 
-      // 宏偉巨岩石碑 1
-      const m1 = new THREE.Mesh(new THREE.BoxGeometry(2.0, 4.8, 2.0), monolithM);
-      m1.position.set(-2.4, 2.4, 0.5);
+      // 宏偉巨岩石階 1（實機 MEGALITHS 峽谷峭壁階地，多面沉積岩層）
+      const m1 = new THREE.Group();
+      const m1Base = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.1, 2.2, 8), monolithM);
+      m1Base.position.y = 1.1;
+      const m1Mid = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.65, 2.4, 7), monolithM2);
+      m1Mid.position.set(0.1, 3.2, -0.1);
+      m1Mid.rotation.y = 0.4;
+      const m1Top = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.25, 1.8, 7), monolithM);
+      m1Top.position.set(0.2, 5.1, -0.15);
+      m1Top.rotation.y = -0.3;
+      m1.add(m1Base, m1Mid, m1Top);
+      m1.position.set(-2.4, 0, 0.5);
       m1.rotation.y = 0.3;
 
-      // 宏偉巨岩石碑 2
-      const m2 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 5.8, 2.4), monolithM);
-      m2.position.set(2.8, 2.9, -1.2);
+      // 宏偉巨岩石碑 2（多面角錐石柱）
+      const m2 = new THREE.Group();
+      const m2Base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.9, 2.8, 7), monolithM);
+      m2Base.position.y = 1.4;
+      const m2Top = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.4, 3.0, 7), monolithM2);
+      m2Top.position.set(-0.1, 4.1, 0.1);
+      m2Top.rotation.y = 0.5;
+      m2.add(m2Base, m2Top);
+      m2.position.set(2.8, 0, -1.2);
       m2.rotation.y = -0.4;
 
-      // 背景遠景巨石群
-      const bgMono = new THREE.Mesh(new THREE.BoxGeometry(4.0, 7.5, 4.0), monolithM);
-      bgMono.position.set(0, 3.75, BG_Z);
+      // 背景遠景峭壁
+      const bgMono = new THREE.Group();
+      const bgRock1 = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.6, 6.8, 8), monolithM);
+      bgRock1.position.y = 3.4;
+      const bgRock2 = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.5, 5.2, 7), monolithM2);
+      bgRock2.position.set(2.4, 2.6, 0.8);
+      bgMono.add(bgRock1, bgRock2);
+      bgMono.position.set(0, 0, BG_Z);
 
-      // 遺跡旗幟 (隨風飄揚)
+      // 自然散佈風化巨石（DodecahedronGeometry）
+      for (const [x, z, r] of [[-0.6, 1.2, 0.75], [1.2, 2.4, 0.9], [4.5, -0.5, 1.1], [-4.2, -1.8, 1.2]]) {
+        dressingMound(this._gBiome, x, z, r, r * 0.85, () => 0, monolithM2);
+      }
+
+      // 遺跡旗幟 (立於高地石台頂峰，隨風飄揚)
       const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 4.2, 6), monolithM);
-      flagPole.position.set(-2.4, 5.0, 0.5);
-      const flagBanner = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.7), bannerM);
-      flagBanner.position.set(-1.8, 6.7, 0.5);
+      flagPole.position.set(-2.2, 5.8, 0.35);
+      const flagBanner = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.75), bannerM);
+      flagBanner.position.set(-1.55, 7.5, 0.35);
 
       this._geos.push(
-        gGrass.geometry, gDesert.geometry, seam.geometry, m1.geometry, m2.geometry,
-        bgMono.geometry, flagPole.geometry, flagBanner.geometry
+        gGrass.geometry, gDesert.geometry, seam.geometry, m1Base.geometry, m1Mid.geometry, m1Top.geometry,
+        m2Base.geometry, m2Top.geometry, bgRock1.geometry, bgRock2.geometry, flagPole.geometry, flagBanner.geometry
       );
       this._gBiome.add(gGrass, gDesert, seam, m1, m2, bgMono, flagPole, flagBanner);
       this._seamMesh = seam;
@@ -497,7 +546,12 @@ export class MatSample {
       lowPower: lowPower() || isTouchUI(),
     });
     this.pipeline.setDof(DOF_NEAR, DOF_FAR);
-    this.pipeline.setAirFog(FOG_NEAR_C, FOG_FAR_C, FOG_NEAR, FOG_FAR);
+    const air = this.envFx?.air;
+    if (air) {
+      this.pipeline.setAirFog(air.near, air.far, air.fogNear, air.fogFar);
+    } else {
+      this.pipeline.setAirFog(FOG_NEAR_C, FOG_FAR_C, FOG_NEAR, FOG_FAR);
+    }
 
     this._draw = () => this.render();
     this._off = onVisualChange(this._draw);
@@ -517,7 +571,7 @@ export class MatSample {
     this._rafId = requestAnimationFrame(this._animate);
   }
 
-  /** 五個樣品各吃自己的倫敦地形；地形只屬展示，不進戰場碰撞。 */
+  /** 五個樣品各吃自己的實機空間地形；地形只屬展示，不進戰場碰撞。 */
   setTerrains(terrains) {
     const next = Array.isArray(terrains) ? terrains : [];
     let changed = false;
@@ -534,7 +588,7 @@ export class MatSample {
       this.terrainSites[i] = null;
       if (!source) continue;
 
-      const spec = LONDON_SHOWCASE_SITES[i] || LONDON_SHOWCASE_SITES[0];
+      const spec = GAME_SHOWCASE_SITES[i] || GAME_SHOWCASE_SITES[0];
       const siteMode = spec.terrain === 'heath' ? 'relief' : spec.water ? 'wet' : spec.terrain === 'forest' ? 'green' : 'flat';
       const built = buildShowcasePatch(source, {
         site: source.showcaseSite || findShowcaseSite(source, siteMode) || showcaseAnchorSite(source),
@@ -545,6 +599,7 @@ export class MatSample {
       built.group.visible = i === this._sceneIdx;
       this._terrainGroups[i] = built.group;
       this.terrainSites[i] = built.site;
+      this._patchData[i] = built;
       this.scene.add(built.group);
       if (source.group) {
         disposeTree(source.group);
@@ -553,19 +608,17 @@ export class MatSample {
       if (i === 0) {
         for (const item of this._showcaseUnits) item.terrainY = built.localYAt(item.x, 0);
       }
-      if (i === 1 && built.waterY != null) {
-        for (const mesh of this._foamMeshes || []) mesh.position.y = built.waterY + 0.03;
-      }
-      if (i === 2 && built.waterY != null) {
-        for (const mesh of [this._swampAnims?.sFoamRing1, this._swampAnims?.sFoamRing2]) {
-          if (mesh) mesh.position.y = built.waterY + 0.03;
-        }
-      }
     }
     const hasTerrain = this._terrainSources.some(Boolean);
     this._flatGrounds.forEach((ground) => { ground.visible = !hasTerrain; });
     this._waterSurfaces.forEach((water) => { water.visible = !hasTerrain; });
     this.terrainSite = this.terrainSites[this._sceneIdx];
+    const curPatch = this._patchData[this._sceneIdx];
+    if (curPatch && curPatch.waterY != null) {
+      bakeShowcaseSeaDepth(curPatch.localYAt, curPatch.waterY);
+    } else if (this._sceneIdx === 1 || this._sceneIdx === 2) {
+      bakeShowcaseSeaDepth((x, z) => (x < 0 ? 0.7 : -1.2), 0.5);
+    }
     if (changed && this.pipeline) this.render();
   }
 
@@ -585,18 +638,26 @@ export class MatSample {
     this._terrainGroups.forEach((g, i) => { if (g) g.visible = i === idx; });
     this.terrainSite = this.terrainSites[idx] || null;
     if (this.roster) this.roster.hidden = idx !== 0;
+    const patch = this._patchData[idx];
+    if (patch && patch.waterY != null) {
+      bakeShowcaseSeaDepth(patch.localYAt, patch.waterY);
+    } else if (idx === 1 || idx === 2) {
+      bakeShowcaseSeaDepth((x, z) => (x < 0 ? 0.7 : -1.2), 0.5);
+    }
     this.onSceneChange?.(idx);
     this.render();
   }
 
   /** 每幀更新實機動態演出 */
   update(t, dt = 0) {
+    stepCelWind(dt);
+    if (this._gSwamp?.visible) {
+      stepSwampRipples([{ x: 0, z: 0 }], dt);
+    }
     this.envFx?.update(dt, this.camera, t);
-    // 背景環境更新時會同步寫 scene.fog；樣品仍需自己的尺度，否則所有旋鈕都在遠霧之外。
-    if (this.scene.fog) {
-      this.scene.fog.color.copy(FOG_NEAR_C);
-      this.scene.fog.near = FOG_NEAR;
-      this.scene.fog.far = FOG_FAR;
+    const air = this.envFx?.air;
+    if (air && this.pipeline) {
+      this.pipeline.setAirFog(air.near, air.far, air.fogNear, air.fogFar);
     }
 
     // 1. 機體展示台動態 (機甲浮動呼吸、伴隨機巡弋繞行、底座光環旋轉)
@@ -621,31 +682,19 @@ export class MatSample {
       }
     }
 
-    // 2. 海灘浪花動態 (潮汐伸縮沖岸、石柱波紋環縮放、沉船微晃)
+    // 2. 海灘浪花動態 (沉船微晃；海面動態波浪與岸邊泡沫由 toon.js 著色器深度場自動演算)
     if (this._shoreAnims && this._gShore.visible) {
-      const { subHull, foamShore, foamRing1, foamRing2 } = this._shoreAnims;
-      const wave = Math.sin(t * 1.6);
-      foamShore.position.x = 0.2 + wave * 0.35;
-      foamShore.scale.x = 1.0 + wave * 0.2;
-
-      const rScale1 = 1.0 + Math.sin(t * 2.0) * 0.15;
-      const rScale2 = 1.0 + Math.sin(t * 2.0 + 1.2) * 0.15;
-      foamRing1.scale.set(rScale1, rScale1, 1);
-      foamRing2.scale.set(rScale2, rScale2, 1);
-
-      subHull.rotation.z = 0.08 + Math.sin(t * 1.2) * 0.03;
+      const { subHull } = this._shoreAnims;
+      if (subHull) subHull.rotation.z = 0.08 + Math.sin(t * 1.2) * 0.03;
     }
 
-    // 3. 沼澤濕地動態 (蘆葦迎風搖擺、死水波紋擴散)
+    // 3. 沼澤濕地動態 (蘆葦迎風搖擺；沼澤波紋與底泥起伏由 toon.js 著色器深度場自動演算)
     if (this._swampAnims && this._gSwamp.visible) {
-      const { sFoamRing1, sFoamRing2, reeds } = this._swampAnims;
-      const sWave1 = 1.0 + Math.sin(t * 1.4) * 0.12;
-      const sWave2 = 1.0 + Math.sin(t * 1.4 + 1.5) * 0.12;
-      sFoamRing1.scale.set(sWave1, sWave1, 1);
-      sFoamRing2.scale.set(sWave2, sWave2, 1);
-
-      for (let i = 0; i < reeds.length; i++) {
-        reeds[i].rotation.z = 0.1 + Math.sin(t * 2.6 + i * 0.7) * 0.14;
+      const { reeds } = this._swampAnims;
+      if (reeds) {
+        for (let i = 0; i < reeds.length; i++) {
+          reeds[i].rotation.z = 0.1 + Math.sin(t * 2.6 + i * 0.7) * 0.14;
+        }
       }
     }
 
