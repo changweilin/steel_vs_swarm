@@ -7275,6 +7275,15 @@ export class BattleClient {
     const mpc = Math.round(A.mp);
     if (this.mp < mpc) { this.hud.feed?.(`🔋 電力不足(【${A.name}】需 ${mpc} MP)`); return; }
     if (this.empLeft > 0) { this.hud.feed?.('⚡ 系統離線(遭電磁癱瘓),無法施放!'); return; }
+    // 指向型攻擊招式必須鎖定敵方目標(2026-09-03):fx: 'strike'/'emp' 且有 range 的招式
+    // 需要準星已鎖定敵人(_lockId 由伺服器 lock 事件確認)才能施放。
+    // 豁免:buff/heal/stealth/vision/intercept/rally/recon/summon 以及 range=0 的招式
+    //   ─ 移動類(fx: 'dash')顯式豁免:突進不需敵人,未來帶 range 的位移招式亦同。
+    //   ─ target:'self'/'team' 的增益/治療光環天然無 fx:'strike'/'emp',不進這個閘。
+    if (A.range > 0 && (A.fx === 'strike' || A.fx === 'emp') && A.fx !== 'dash' && this._lockId == null) {
+      this.hud.feed?.(`🎯【${A.name}】需要鎖定敵方目標才能施放！`);
+      return;
+    }
     // 指向型招式:準星與地形/單位交點為目標落點(超程由伺服器夾回射程)
     let x = this.pos.x, z = this.pos.z;
     if (A.range) {
