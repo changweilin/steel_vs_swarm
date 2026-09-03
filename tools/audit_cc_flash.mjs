@@ -102,8 +102,8 @@ console.log('■ Ⅲ 白幕單一縫(觸發 / 衰減 / 清除只各一處)');
   }));
   // 觸發/衰減兩端 MUST 都接上:漏了衰減 = 白幕定格不淡(玩家以為畫面壞了),
   // 漏了觸發 = 整個系統靜默失效 —— 兩者在單測裡都看不出來,只能驗「呼叫點確實在幀迴圈/上升沿裡」。
-  t('_updateCcFlash 掛在 _updatePlayer 幀迴圈(緊鄰 _updateEnvFog)',
-    /this\._updateEnvFog\(dt\);[\s\S]{0,120}?this\._updateCcFlash\(dt\);/.test(code)
+  t('_updateCcFlash 掛在主渲染幀(與玩家視角模式無關)',
+    /this\._updatePlayer\(dt, now\);[\s\S]{0,180}?this\._updateCcFlash\(dt\);/.test(code)
     && count(code, 'this._updateCcFlash(dt)') === 1);
   t('_blindFlash 唯一呼叫點在 _ccFeed 上升沿',
     count(code, 'this._blindFlash(') === 1 && count(feed, 'this._blindFlash(') === 1);
