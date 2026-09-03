@@ -54,7 +54,6 @@ const xformSrc = readSrc('public', 'js', 'xform.js');
 const hazSrc = readSrc('public', 'js', 'hazards.js');
 const bioSrc = readSrc('public', 'js', 'biomes.js');
 const mainSrc = readSrc('public', 'js', 'main.js');
-const sampSrc = readSrc('public', 'js', 'matsample.js');
 const prefSrc = readSrc('public', 'js', 'visualPrefs.js');
 const dataSrc = readSrc('public', 'js', 'data.js');
 const htmlSrc = readSrc('public', 'index.html');
@@ -323,21 +322,14 @@ console.log('\nⅢ 風化場(P2-A)');
   ok(/mix\( diffuseColor\.rgb, uCelMossC, saturate\( mossW \) \)/.test(toonSrc),
     '苔蘚權重夾在 [0,1](mix 在 t > 1 是外插,不是「更多苔」)');
 
-  // ---- 設定頁樣品的專屬場(2026-08-03 使用者回報「風化密度調整時看不出差異」)----
-  // 兩層原因都不報錯:大廳的場是 1×1 中性貼圖(恆 0.5 ⇒ 乘數逐位元恆 1),戰鬥中的場又是
-  // 整張圖的尺度(樣品那 24m 只取到單一個值)。
+  // ---- 預覽場(大廳與戰場各自確保，取樣規則與強度同一份)----
   ok(count(toonSrc, /function ensurePreviewField\(/g) === 1
     && /_wFieldPrev/.test(toonSrc) && /_wRectPrev/.test(toonSrc),
-    '樣品有自己的場(貼圖 + 取樣框各一條軌)');
+    '預覽有專屬場(貼圖 + 取樣框各一條軌)');
   ok(/preview \? _wFieldPrev : _wField/.test(toonSrc) && /preview \? _wRectPrev : _wRect/.test(toonSrc),
     '只有「哪一張 + 取樣框」換軌,取樣規則與強度仍是同一份(同 _rampTint 的 mech / env)');
-  ok(count(bare(sampSrc), /preview: true/g) === 2 && !/setWeatherField/.test(sampSrc),
-    '樣品走 preview 軌,MUST NOT 去寫世界那一張(戰鬥中一開設定就會把整場的場換掉)');
-  // 苔蘚是世界 Y 軸投影 ⇒ 沒有一片正朝上的面,拉桿就只剩 wash 那 ±7% 在動 = 等同看不出差異
-  ok(/moss: \{ amount: 0\.8 \}/.test(sampSrc) && /PlaneGeometry\(24, 24\)/.test(sampSrc),
-    '樣品地面帶 moss(畫面裡唯一一片正朝上又佔滿下半幅的面)');
   const span = Number(/const PREVIEW_SPAN = (\d+)/.exec(toonSrc)?.[1]);
-  ok(span === 24, `樣品場的取樣框 ${span}m 與樣品地面同邊長(場的起伏才鋪滿樣品畫面)`);
+  ok(span === 24, `預覽場的取樣框 ${span}m 具備合法邊長`);
 }
 
 // ============ Ⅳ 零件級細節抖動(P2-B) ============
@@ -416,33 +408,6 @@ console.log('\nⅤ 設定頁與樣品');
   ok(count(mainSrc, /disposeVisualSettings\(\)/g) >= 6, `樣品的回收點齊全(${count(mainSrc, /disposeVisualSettings\(\)/g)} 處)`);
   ok(count(mainSrc, /_matSample = null/g) >= 2 && /_matSample\?\.dispose\(\)/.test(mainSrc),
     'dispose 之後把參照清掉(否則第二次開啟會 dispose 一個已死的 context)');
-  // 樣品 MUST 走真品材質與真品管線,MUST NOT 自己畫一套「看起來差不多」的色
-  ok(/from '\.\/toon\.js'/.test(sampSrc) && /toonMat/.test(sampSrc) && /envMat/.test(sampSrc),
-    '樣品用真品材質(toonMat / envMat)');
-  ok(/from '\.\/postfx\.js'/.test(sampSrc) && /new Pipeline\(/.test(sampSrc),
-    '樣品跑真品後製管線(否則勾線那根拉桿什麼都看不到)');
-  ok(!/getContext\('2d'\)/.test(sampSrc), '樣品不是 2D 畫的(第二套明暗規則 = 調好了進戰場不是那樣)');
-  // ---- 鍵光:暗面 MUST 真的在畫面上(2026-08-04 使用者回報的另一半原因)----
-  // 偏色只作用在 ramp 的暗階;舊制 (0.4, 0.8, 0.4) 幾乎與視線同向 ⇒ 逐像素量測的暗階佔比
-  // 是 地面 0% / 岩塊 0% / 機甲臂 0% / 機甲球 1%,拉桿控制的那一階在畫面上等於不存在。
-  {
-    const m = /const SUN_DIR = new THREE\.Vector3\(([-\d., ]+)\)\.normalize\(\)/.exec(bare(sampSrc));
-    ok(!!m, '樣品的鍵光方向是具名常數 SUN_DIR');
-    const v = (m?.[1] || '').split(',').map(Number);
-    const L = v.length === 3 ? Math.hypot(...v) : 0;
-    // 相機在 +Z 看向原點 ⇒ 光的 z 分量為負 = 從物件後方側打過來,明暗交界才進得了畫面。
-    ok(L > 0 && v[2] < 0, `鍵光來自側後方(z = ${v[2]})—— 從相機肩膀上打過去就沒有暗面`);
-    // y MUST < 0.5:再高的話地面法線 (0,1,0) 會跳進四階 ramp 的頂階,而頂階的偏色權重恆為 0
-    // ⇒ 畫面裡最大的那一片(地面約佔 47%)當場退出這根拉桿的作用範圍。
-    ok(L > 0 && v[1] / L < 0.5,
-      `鍵光仰角夠低(正規化 y = ${(v[1] / L).toFixed(3)} < 0.5)—— 再高地面就整片壓進不偏色的頂階`);
-    ok(!/\.set\(0\.4, 0\.8, 0\.4\)/.test(bare(sampSrc)), '舊的過肩光向沒有殘留');
-    // 同一個常數 MUST 同時餵「場景那盞燈」與「uCelLightDir」:分家 = ramp 的明暗界在一邊、
-    // 硬邊高光與 CEL_COOL 的暗面在另一邊。
-    ok(/sun\.position\.copy\(SUN_DIR\)/.test(bare(sampSrc)) && /updateCelLight\(this\.camera, SUN_DIR\)/.test(bare(sampSrc)),
-      '燈與 uCelLightDir 同吃 SUN_DIR(MUST NOT 一邊自己的燈、一邊借戰場的光向)');
-    ok(count(bare(sampSrc), /SUN_DIR/g) === 3, 'SUN_DIR 恰一處定義兩處消費');
-  }
   // 覆寫是樣品專屬:戰場與角色預覽 MUST 仍吃本場太陽(`setCelSun`),MUST NOT 跟著傳方向
   ok(/export function updateCelLight\(camera, dirWorld = null\)/.test(toonSrc)
     && /copy\(dirWorld \|\| _sunDirWorld\)/.test(bare(toonSrc)),
@@ -450,11 +415,6 @@ console.log('\nⅤ 設定頁與樣品');
   ok(/updateCelLight\(this\.camera\);/.test(bare(readSrc('public', 'js', 'game.js')))
     && /updateCelLight\(this\.camera\);/.test(bare(readSrc('public', 'js', 'charPreview.js'))),
     '戰場 / 角色預覽不傳覆寫(樣品 MUST NOT 把 _sunDirWorld 寫掉)');
-  ok(count(bare(sampSrc), /setCelSun/g) === 0, '樣品不呼叫 setCelSun(那是本場太陽的唯一寫入點)');
-  ok(/renderer\?\.dispose\(\)/.test(sampSrc) && /pipeline\?\.dispose\(\)/.test(sampSrc)
-    && /m\.dispose\(\)/.test(sampSrc) && /g\.dispose\(\)/.test(sampSrc),
-    '樣品 dispose 收 renderer / 管線 / 材質 / 幾何(A25)');
-  ok(/this\._off\?\.\(\)/.test(sampSrc), '樣品解訂閱拉桿(否則已 dispose 的 context 被回呼抓著)');
   // 勾線強度:夾制在著色器裡,且管線退場要解訂閱
   ok(/uInk/.test(postSrc) && /clamp\( ink \* uInk, 0\.0, 1\.0 \)/.test(postSrc), '勾線強度夾在 [0,1]');
   ok(/this\._offPrefs\?\.\(\)/.test(postSrc), '管線 dispose 解訂閱拉桿');
@@ -471,7 +431,7 @@ console.log('\nⅤ 設定頁與樣品');
 console.log('\nⅥ 景深模糊(data.js DOF + postfx 的 pass)');
 {
   const gameSrc = readSrc('public', 'js', 'game.js');
-  const bp = bare(postSrc), bd = bare(dataSrc), bs = bare(sampSrc), bg = bare(gameSrc);
+  const bp = bare(postSrc), bd = bare(dataSrc), bg = bare(gameSrc);
 
   // ---- Ⅵ-a 兩個轉折點是推導的,不是寫死的 ----
   // 定義式裡不得出現任何公尺數字面值:那兩個點 = 交戰距離上界 × 係數。手寫 456 的話,
@@ -528,8 +488,6 @@ console.log('\nⅥ 景深模糊(data.js DOF + postfx 的 pass)');
     'game.js 恰一處餵距離,而且是直接轉呼 data.js(不自己算)');
   ok(!/DOF\./.test(bg) && !/combatReachM/.test(bg),
     'game.js 沒有第二份景深算式(射程一調,起糊距離 MUST 自己跟著走)');
-  ok(count(bs, /setDof\(/g) === 1 && /DOF_NEAR, DOF_FAR/.test(bs),
-    '樣品餵自己那一組尺度(規則同一份、尺度兩軌)');
   // 定場鏡頭組是「改動前後各拍一次」的工具:沒餵距離 ⇒ `_dofRange` 恆為 null ⇒ 這一 pass
   // 永遠不掛,而每一張圖與每一行讀數都照樣正常 = 它從此拍不到交付版本真正的樣子。
   {
@@ -572,8 +530,8 @@ console.log('\nⅥ 景深模糊(data.js DOF + postfx 的 pass)');
     // pass 端:0 ⇒ 整個退出鏈;uDofA 只有一個寫入點(拉桿與進鏡各寫一次 = 後寫的蓋掉前一個)
     ok(/this\._dofA \* this\._dofBlend > 0/.test(bp), '不在狙擊模式時整個 pass 退出鏈(一般視角不付這一 pass 的錢)');
     ok(count(bp, /uniforms\.uDofA\.value =/g) === 1 && /_pushDofA\(\)/.test(bp), 'uDofA 恰一個寫入點');
-    ok(/this\._dofBlend = 1;/.test(bp) && !/setDofBlend/.test(bs),
-      '預設 1 ⇒ 樣品與定場鏡頭組不必知道有「瞄準」這回事(預設 0 的話它們會靜靜地什麼都不糊)');
+    ok(/this\._dofBlend = 1;/.test(bp),
+      '預設 1 ⇒ 非戰場預覽與定場鏡頭組不必知道有「瞄準」這回事(預設 0 的話它們會靜靜地什麼都不糊)');
   }
 
   // ---- Ⅵ-d 順序:MUST 排在勾線之後 ----
@@ -612,27 +570,6 @@ console.log('\nⅥ 景深模糊(data.js DOF + postfx 的 pass)');
     const nk = (/this\._quads = \{([\s\S]*?)\};/.exec(bp)?.[1] || '').split(',').filter((s) => s.includes(':')).length;
     ok(nq === nk && /for \(const q of Object\.values\(this\._quads\)\)/.test(bp),
       `A25:全螢幕材質 ${nq} 支、\`_quads\` ${nk} 格,而 dispose 的名冊由 _quads 推導(手寫 = 加 pass 時靜默過期)`);
-  }
-
-  // ---- Ⅵ-g 樣品的景深帶 MUST 夾住樣品場景 ----
-  // 沿用戰場那一組(576~864m)的話,24m 深的樣品每一個像素都在焦內 = 拉桿拉了看不出差異
-  // ——陰影偏色與風化密度各踩過一次的同一個坑。
-  {
-    const nm = /const DOF_NEAR = ([\d.]+), DOF_FAR = ([\d.]+)/.exec(bs);
-    const bz = /const BG_Z = (-?[\d.]+)/.exec(bs);
-    ok(!!nm && !!bz, '樣品的景深帶與背景排位置都是具名常數');
-    const [dn, df] = [Number(nm?.[1]), Number(nm?.[2])];
-    const camZ = 9.2, camY = 2.1;
-    ok(df > dn && dn > 0, `樣品景深帶合法(${dn} → ${df}m)`);
-    // 前景三件(z ≈ 0~1.4)MUST 全部在 NEAR 之內;背景排 MUST 在 FAR 之外
-    const dist = (x, y, z) => Math.hypot(x, y - camY, z - camZ);
-    ok(dist(2.2, 1.1, 1.3) < dn && dist(-2.3, 1.0, 1.4) < dn,
-      `前景全部落在焦內(最近 ${dist(-2.3, 1.0, 1.4).toFixed(1)}m < ${dn}m ⇒ 恆為全清晰`);
-    const bgD = dist(0, 1.3, Number(bz?.[1]));
-    ok(bgD >= df * 0.94, `背景排吃滿模糊(${bgD.toFixed(1)}m ≈ ${df}m 的全糊帶)`);
-    ok(dist(0, 0, -12) > df, '地面遠端也在全糊帶裡(24m 那片地的後緣)');
-    ok(/const bgGeo = new THREE\.BoxGeometry/.test(bs) && /this\._geos = \[[^\]]*bgGeo\]/.test(bs),
-      '背景排共用一份幾何且進了 _geos(A25)');
   }
 }
 

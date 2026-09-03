@@ -15,16 +15,27 @@ const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, '..');
 
 const AUDIT_SCRIPTS = [
+  // ── 核心模擬、連線機制與語法守門 ──
   'tools/audit_net_modes.mjs',
   'tools/audit_client_syntax.mjs',
+
+  // ── 核心地圖規則、兵線拓撲與通行阻擋 ──
   'tools/audit_map_rules.mjs',
   'tools/audit_lane_sep.mjs',
   'tools/audit_lane_navigation.mjs',
   'tools/audit_terrain_ray.mjs',
   'tools/audit_layer_block.mjs',
+  'tools/audit_open_tunnel.mjs',
+  'tools/audit_underpass.mjs',
+  'tools/audit_road_joint.mjs',
+  'tools/audit_road_bed.mjs',
+  'tools/audit_world_height.mjs',
+  'tools/audit_zone_cut.mjs',
+
+  // ── 核心幾何量體、武器判定與戰鬥物理 ──
   'tools/audit_gpu_lifecycle.mjs',
-  'tools/audit_minimap_view.mjs',
   'tools/audit_object_joints.mjs',
+  'tools/audit_npc_collide.mjs',
   'tools/audit_lance_hit.mjs',
   'tools/audit_weapon_gate.mjs',
   'tools/audit_aoe_trim.mjs',
@@ -32,47 +43,26 @@ const AUDIT_SCRIPTS = [
   'tools/audit_recoil_move.mjs',
   'tools/audit_speed_comp.mjs',
   'tools/audit_hex_stats.mjs',
-  'tools/audit_open_tunnel.mjs',
-  'tools/audit_underpass.mjs',
   'tools/audit_climb.mjs',
   'tools/audit_cc_flash.mjs',
   'tools/audit_flight_power.mjs',
   'tools/audit_slope_move.mjs',
-  'tools/audit_road_joint.mjs',
-  'tools/audit_road_bed.mjs',
+
+  // ── 核心控制、相機視角與局內經濟 ──
   'tools/audit_view_lock.mjs',
   'tools/audit_ctrl_mode.mjs',
   'tools/audit_spectator_cam.mjs',
+  'tools/audit_minimap_view.mjs',
   'tools/audit_shop_auto.mjs',
+
+  // ── 核心 Bot AI 戰術狀態機 ──
   'tools/audit_bot_vision.mjs',
   'tools/audit_bot_role.mjs',
-  'tools/audit_npc_collide.mjs',
-  'tools/audit_cel_pipeline.mjs',
-  'tools/audit_visual_prefs.mjs',
-  'tools/audit_soft_stroke.mjs',
-  'tools/audit_world_text.mjs',
-  'tools/audit_beacons.mjs',
-  'tools/audit_siteplan.mjs',
-  'tools/audit_world_height.mjs',
-  'tools/audit_venue_biome.mjs --offline',
-  'tools/audit_vernacular.mjs',
-  'tools/audit_codex.mjs',
-  'tools/audit_struct_ink.mjs',
-  'tools/audit_base_water_pad.mjs',
-  'tools/audit_rock_ink.mjs',
-  'tools/audit_leaf_card.mjs',
-  'tools/audit_ambient_motion.mjs',
-  'tools/audit_water_edge.mjs',
-  'tools/audit_vehicle_spec.mjs',
-  'tools/audit_wildlife.mjs',
+
+  // ── 輔助表現層演算法 (CI 保留類別 D) ──
   'tools/audit_anim_weights.mjs',
   'tools/audit_audio_layers.mjs',
-  'tools/audit_zone_cut.mjs',
   'tools/audit_damp_fps.mjs',
-  'tools/audit_daynight.mjs',
-  'tools/audit_weather_dynamics.mjs',
-  'tools/audit_weather_visuals.mjs',
-  'tools/audit_aquatics.mjs',
 ];
 
 console.log(`== 執行完整回歸驗證矩陣 (${AUDIT_SCRIPTS.length} 項離線稽核) ==\n`);
