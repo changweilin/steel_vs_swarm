@@ -1,4 +1,4 @@
-﻿# 無人戰略:鋼鐵與蜂群 (Steel vs. Swarm) — 全域儲存庫準則
+# 無人戰略:鋼鐵與蜂群 (Steel vs. Swarm) — 全域儲存庫準則
 
 > **本檔定位**: 四層情境系統的**第一層 (全域層)**，僅收錄每次改動皆適用之原則、技術棧、單一真相縫目錄、禁令索引、指令與驗證通則。**MUST 保持精簡** (≤ 150~200 行)。
 >
@@ -44,7 +44,7 @@
 **目錄職責劃分**
 - `server/`: `server.js` (傳輸層/靜態/Dev路由)、`rooms.js` (`RoomHub` 生命週期)、`sim.js` (`BattleSim` 權威核心)、`bots.js` (`BotBrain` 狀態機)。
 - `public/js/`: `data.js` (平衡數值唯一真相，伺服器直接 import)、`geo3d.js` (幾何積木縫)、`forge/` (機體建模)、渲染/HUD/輸入模組。
-- `tools/`: 離線平衡測試 (`balance.mjs`)、路網兵線烘烤、60+ 離線稽核腳本 (`audit_*.mjs`)、開發對照台。
+- `tools/`: 離線平衡測試 (`balance.mjs`)、路網兵線烘烤、離線稽核腳本 (`audit_*.mjs`)、開發對照台。
 - `test/`: `e2e.mjs` 確定性單元測試與 WebSocket 端對端測試。
 - `reference/`: 上游唯讀參考副本，**MUST NOT** 修改。
 
@@ -119,7 +119,7 @@ npm run story        # 故事書對照台 (埠 8623, --report 列印索引)
 | | [`.claude/rules/antipatterns.md`](.claude/rules/antipatterns.md) | A1~A48 絕對反模式全文 |
 | | [`.claude/rules/verification.md`](.claude/rules/verification.md) | 離線稽核清單、改動對應驗證矩陣與 AI 退化量測 |
 | | [`.claude/rules/retired.md`](.claude/rules/retired.md) | 33 條已退場機制清單 (嚴禁復辟) |
-| **③ 模組層** | [`public/js/.claude.md`](public/js/.claude.md) / [`.AGENTS.md`](public/js/.AGENTS.md) | 客戶端 60 支模組職責地圖與模組級地雷 |
+| **③ 模組層** | [`public/js/.claude.md`](public/js/.claude.md) / [`.AGENTS.md`](public/js/.AGENTS.md) | 客戶端模組職責地圖與模組級地雷 |
 | | [`server/CLAUDE.md`](server/CLAUDE.md) / [`server/AGENTS.md`](server/AGENTS.md) | 伺服器傳輸/房間/模擬/AI 邊界與硬約束 |
 | | [`tools/CLAUDE.md`](tools/CLAUDE.md) / [`tools/AGENTS.md`](tools/AGENTS.md) | 離線工具家族地圖與寫稽核 6 條紀律 |
 | **④ 專題層** | [`docs/characters.md`](docs/characters.md)・[`docs/story.md`](docs/story.md) | 角色檔案、關係網與戰役敘事 |

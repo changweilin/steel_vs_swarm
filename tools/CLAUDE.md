@@ -1,21 +1,21 @@
-﻿# tools/ — 離線工具層 (目錄層情境; 全域準則見根 `CLAUDE.md`)
+# tools/ — 離線工具層 (目錄層情境; 全域準則見根 `CLAUDE.md`)
 
 > 本檔規範 `tools/` 目錄結構、離線工具家族地圖與編寫稽核腳本之核心紀律。完整指令清單與驗證矩陣住 `.claude/rules/verification.md`。
 
-## 家族地圖 (133 項)
-
-| 家族 | 數量 | 用途與邊界 |
-|---|---|---|
-| `audit_*.mjs` | 91 | **離線稽核**: 本專案正確性主防線 (無 runtime logger)。以**執行原文**驗真品，一律不需伺服器/瀏覽器/網路 (少數例外於 verification.md 標記 ㋓) |
-| `shot_*.mjs` | 12 | 瀏覽器實拍圖錄 (定場照 / 立面 / 招牌 / 隧道 / 變形 / 界線)；需 Playwright (㋓) |
-| `bake_venue_*.mjs` | 3 | 烘焙表產出 (`venueLanes.js` / `venueGrid.js` / `venueText.js`)。重烤 MUST 分批指定 `ONLY=`，避免單一場地查詢超時導致全表覆蓋 |
-| `balance.mjs` / `duel.mjs` / `lanesim.mjs` | 3 | `npm run bal` 三大平衡模型 (核心不變式 / 對進戰勝率 / 前線交戰)；分工明確不合併 |
-| `ai3d/` | 管線 | img→3D 資產管線；方法論住 `.claude/skills/photo-to-3d-pipeline/` 等系列技能，規範見 `.claude/rules/seams-world.md` |
-| `*_review/`・`humanoid_forge/`・`story_book/` | 4 座 | Dev-only 獨立對照台 (埠 8621 生圖 / 8622 零件 / 8623 故事書 / 8631 機體台)；啟停一律經 `dev_supervisor.mjs` |
-| `dev_supervisor.mjs` | 1 | **全專案唯一「HTTP 請求 → spawn 行程」路徑**，三道防護閘 (loopback / 參數零信任 / `x-dev-tools` 標頭) 僅住於此 |
-| `venue_field.mjs` | 1 | Node 端取得「與執行期同形」地形 / 圖資 / 結構清單之**唯一縫**；消費端 MUST 透過它獲取資料，嚴禁各檔重複複製 |
-| `audit_src.mjs` | 1 | 讀取原始碼與抽取方法區塊之**唯一縫** (`readSrc()` / `grabMethod()`) |
-| `../public/js/zonecut.js` | 1 | 線工切面 (§0-a) 規則本體 (光柵化 / 4 鄰泛洪 / 小面併鄰 / 決定性分層取樣)；遊戲端與離線工具同吃一份定義，零 import、零亂數、純函式 |
+## 家族地圖
+ 
+| 家族 | 用途與邊界 |
+|---|---|
+| `audit_*.mjs` | **離線稽核**: 本專案正確性主防線 (無 runtime logger)。以**執行原文**驗真品，一律不需伺服器/瀏覽器/網路 (少數例外於 verification.md 標記 ㋓) |
+| `shot_*.mjs` | 瀏覽器實拍圖錄 (定場照 / 立面 / 招牌 / 隧道 / 變形 / 界線)；需 Playwright (㋓) |
+| `bake_venue_*.mjs` | 烘焙表產出 (`venueLanes.js` / `venueGrid.js` / `venueText.js`)。重烤 MUST 分批指定 `ONLY=`，避免單一場地查詢超時導致全表覆蓋 |
+| `balance.mjs` / `duel.mjs` / `lanesim.mjs` | `npm run bal` 三大平衡模型 (核心不變式 / 對進戰勝率 / 前線交戰)；分工明確不合併 |
+| `ai3d/` | img→3D 資產管線；方法論住 `.claude/skills/photo-to-3d-pipeline/` 等系列技能，規範見 `.claude/rules/seams-world.md` |
+| `*_review/`・`humanoid_forge/`・`story_book/` | Dev-only 獨立對照台 (埠 8621 生圖 / 8622 零件 / 8623 故事書 / 8631 機體台)；啟停一律經 `dev_supervisor.mjs` |
+| `dev_supervisor.mjs` | **全專案唯一「HTTP 請求 → spawn 行程」路徑**，三道防護閘 (loopback / 參數零信任 / `x-dev-tools` 標頭) 僅住於此 |
+| `venue_field.mjs` | Node 端取得「與執行期同形」地形 / 圖資 / 結構清單之**唯一縫**；消費端 MUST 透過它獲取資料，嚴禁各檔重複複製 |
+| `audit_src.mjs` | 讀取原始碼與抽取方法區塊之**唯一縫** (`readSrc()` / `grabMethod()`) |
+| `../public/js/zonecut.js` | 線工切面 (§0-a) 規則本體 (光柵化 / 4 鄰泛洪 / 小面併鄰 / 決定性分層取樣)；遊戲端與離線工具同吃一份定義，零 import、零亂數、純函式 |
 
 ## 寫 / 改稽核的六條紀律
 
