@@ -87,7 +87,7 @@ export function findShowcaseSite(terrain, mode = 'flat') {
         : 0;
       const centerBias = Math.hypot((x - cx) / spanX, (z - cz) / spanZ);
       let score;
-      if (mode === 'relief') score = -slope * 14 - relief * 0.18 + centerBias * 0.18;
+      if (mode === 'relief') score = Math.abs(slope - 0.18) * 16 - relief * 0.22 + centerBias * 0.18;
       else if (mode === 'wet') score = slope * 4 + Math.abs(y - (terrain.waterY ?? terrain.minH)) * 0.12 + centerBias * 0.2;
       else if (mode === 'green') score = slope * 7 + centerBias * 0.35 - green * 0.8;
       else score = slope * 9 + centerBias * 0.7 - green * 0.22;
