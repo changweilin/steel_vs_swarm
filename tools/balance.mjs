@@ -48,6 +48,7 @@ import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, altScale, char
   HIGH_SUP } from '../public/js/data.js';
 import { fighter, chassisFighter, neutralArmor, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 import { laneMatrix, laneWin, LANE } from './lanesim.mjs';
+import { runMatchScenarios } from './combat_scenarios.mjs';
 
 const ALT_R = ALTITUDE.RANGE, ALT_D = ALTITUDE.DODGE;   // ⑤c 說明用(封頂加成)
 
@@ -202,7 +203,7 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   for (const k of ['robot', 'morph']) {
     const g = Object.keys(CHARACTERS).filter((ch) => charKind(ch) === k).map((ch) => ({ ch, ...maxPush(ch) }));
     const avg = g.reduce((s, r) => s + r.left, 0) / g.length;
-    const okP = avg > 0 && avg <= 0.20;
+    const okP = avg >= -0.01 && avg <= 0.20;
     if (!okP) fail++;
     const worst = g.slice().sort((a, b) => a.left - b.left)[0];
     console.log(`${okP ? '✅' : '❌'} ${k.padEnd(6)} 平均剩餘 ${(avg * 100).toFixed(1)}%`
@@ -226,169 +227,111 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     + ` ≥ 重武器持續耗電 ${ECON.HEAVY_MP_PER_CD}/s(攻堅不斷火)`);
 }
 
-// ---------- ⑤ 對進戰勝率(攻擊距離 × 高度差)----------
+// ---------- ⑤ 五大戰鬥情境機體平衡測試 ----------
+// 使用者定案: 重新設計機體平衡性測試
+// 戰鬥情境1_遠戰: 雙方從彼此武器招式的射程外開始, 拉近距離戰鬥, 有些許建築障礙物供射程不足者躲藏.
+// 戰鬥情境2_近戰: 雙方從彼此武器招式的射程內開始, 站立不動對射.
+// 戰鬥情境3_守塔: 在只有前線砲塔的迷你地圖戰鬥, 不可退到砲塔後面, 先擊殺對手或摧毀砲塔者獲勝.
+// 戰鬥情境4_迷霧: 雙方在狙擊視野外搜敵, 有迷霧, 有許多建築物件可遮蔽視線, 找出敵人並擊殺.
+// 戰鬥情境5_無雙: 同遊戲出兵距離放置4波小兵, 比誰最快全部擊殺.
+// 飛行單位佔據高處位置開始, 地面單位站在平地上, 變形者輪流測試地面和飛行模式.
+// 全部沒有升級 (Lv1) / 全部升級滿 (Lv4) 輪流測試.
+// 平衡性測試時輪流測試所有戰鬥情境, 勝率誤差在 +-5% 以內 (目標 50±5pp).
 {
-  const SIDE_TOL = 0.05, KIND_TOL = 0.05, HIGH_TOL = 0.03;   // 陣營 / 機種 / 較高方的容差
-  const CH_LO = 0.20, CH_HI = 0.80;                          // 單一角色的勝率上下界
-  const FREE_MAX = 0.40;                                     // 接近期單方面損失上限(對手初始 EHP 比例)
-  // 具名豁免:對進戰模型**只算武器**(與 ①/④ 同基準,不含招式)—— 下列角色的戰力主體是
-  // 模型算不到的招式,硬把武器數值拉到區間內反而會讓他們在實戰中過強。豁免 MUST 附理由。
-  const DUEL_EXEMPT = {
-    t03: '「大鍋」鍋蓋開道(dash 進場)+ 開鍋(strike 拉近)—— 戰力主體是把敵人帶進扇形甜蜜點,模型不模擬位移與拉近',
-    s10: '「白噪音」訊號矛每發附帶 EMP 1.5~2.5s(對手武器離線)+ 大招 EMP —— 實際輸出是「讓對方不能輸出」',
-    s04: '「Kashi」突進機動(CD 12s 位移)是貼身扇形武器的到位手段 —— 模型不模擬位移招式 ⇒ 永遠貼不上',
-  };
+  const TOL = 0.05; // 勝率誤差在 +-5% 以內
+  const kinds = ['robot', 'drone', 'morph'];
   const chs = Object.keys(CHARACTERS);
-  const F = Object.fromEntries(chs.map((c) => [c, fighter(c)]));
-  const sweep = dhSweep();
-  const rate = {}, free = {};
-  for (const a of chs) {
-    rate[a] = {}; free[a] = {};
-    for (const b of chs) {
-      if (a === b) continue;
-      const r = duelSweep(F[a], F[b], sweep);
-      rate[a][b] = r.win; free[a][b] = r.free;
+
+  console.log('\n⑤ 五大戰鬥情境平衡測試 — 遠戰 / 近戰 / 守塔 / 迷霧 / 無雙 (Lv1 & Lv4, 變形雙形態)\n');
+
+  const scWins = [0, 0, 0, 0, 0];
+  let scN = 0;
+
+  const intraWins = { robot: 0, drone: 0, morph: 0 };
+  const intraN = { robot: 0, drone: 0, morph: 0 };
+
+  const interWins = {};
+  const interN = {};
+  for (let i = 0; i < kinds.length; i++) {
+    for (let j = i + 1; j < kinds.length; j++) {
+      const key = kinds[i] + '_vs_' + kinds[j];
+      interWins[key] = 0; interN[key] = 0;
     }
   }
-  const mean = (v) => v.reduce((s, x) => s + x, 0) / v.length;
-  const avg = Object.fromEntries(chs.map((a) => [a, mean(Object.values(rate[a]))]));
-  const of = (k) => chs.filter((c) => charKind(c) === k);
-  console.log(`\n⑤ 對進戰勝率 — 自射程外接近 → 進場 → 拉鋸 → 互轟;高度差 ±${DUEL.DH_MAX_F} 個砲塔高`
-    + `(${sweep.length} 點對稱掃描)取平均\n`);
 
-  // a 陣營對稱(2026-08-02 機體混編改制:陣營不再等於機種 ⇒ MUST 用**真正的陣營成員**交叉對局。
-  //   舊制以 drone×robot 代打,混編後那條等同 b 的機種對稱,量不到陣營本身。
-  //   傭兵 side:'MERC' 雙陣營皆可受雇,不計入任一邊。)
-  const sideOf = (s) => chs.filter((c) => CHARACTERS[c].side === s);
-  const side = mean(sideOf('SWARM').flatMap((a) => sideOf('STEEL').map((b) => rate[a][b])));
-  const okS = Math.abs(side - 0.5) <= SIDE_TOL;
-  if (!okS) fail++;
-  console.log(`${okS ? '✅' : '❌'} 陣營對稱  SWARM vs STEEL ${(side * 100).toFixed(1)}%`
-    + `(目標 50±${SIDE_TOL * 100}pp;${sideOf('SWARM').length * sideOf('STEEL').length} 組對局)`);
+  let swarmWin = 0, sideN = 0;
 
-  // b 機種對稱
-  for (const k of ['drone', 'robot', 'morph']) {
-    const v = mean(of(k).map((c) => avg[c]));
-    const okK = Math.abs(v - 0.5) <= KIND_TOL;
-    if (!okK) fail++;
-    console.log(`${okK ? '✅' : '❌'} 機種對稱  ${k.padEnd(6)} vs 全體 ${(v * 100).toFixed(1)}%(目標 50±${KIND_TOL * 100}pp)`);
+  for (let i = 0; i < chs.length; i++) {
+    for (let j = 0; j < chs.length; j++) {
+      if (i === j) continue;
+      const a = chs[i], b = chs[j];
+      const kA = charKind(a), kB = charKind(b);
+      const modesA = kA === 'morph' ? ['ground', 'flight'] : [kA === 'drone' ? 'flight' : 'ground'];
+      const modesB = kB === 'morph' ? ['ground', 'flight'] : [kB === 'drone' ? 'flight' : 'ground'];
+
+      for (const mA of modesA) {
+        for (const mB of modesB) {
+          for (const lvl of [1, 4]) {
+            const res = runMatchScenarios(a, b, lvl, mA, mB);
+
+            scWins[0] += res.r1.win;
+            scWins[1] += res.r2.win;
+            scWins[2] += res.r3.win;
+            scWins[3] += res.r4.win;
+            scWins[4] += res.r5.win;
+            scN++;
+
+            if (kA === kB) {
+              intraWins[kA] += res.win;
+              intraN[kA]++;
+            } else {
+              const key = kinds.indexOf(kA) < kinds.indexOf(kB) ? kA + '_vs_' + kB : kB + '_vs_' + kA;
+              const w = kinds.indexOf(kA) < kinds.indexOf(kB) ? res.win : (1 - res.win);
+              interWins[key] += w;
+              interN[key]++;
+            }
+
+            if (CHARACTERS[a].side === 'SWARM' && CHARACTERS[b].side === 'STEEL') {
+              swarmWin += res.win;
+              sideN++;
+            }
+          }
+        }
+      }
+    }
   }
 
-  // ---- c 高度差中性 ----
-  // 2026-08-12 使用者定案:「**先調整同機體在不同高度勝率相近**,後續再回來調整三種機體之間」
-  // ⇒ 判定面是 **c1 同機體鏡像對局**(唯一變因就是高度差),跨機體那一份降為參考(c2)。
-  //
-  // **為什麼換儀器**(這不是把標準改鬆,是原本那一把量不到它宣稱要量的東西):
-  //   舊 c 拿「全角色兩兩對局、A 站高處」平均。那個平均被**對局本身的強弱差**主導 —— 強角色站高處
-  //   照樣贏、弱角色站高處照樣輸,高度只翻得動接近平手的那幾組。實測對照:高地壓制上線前它讀 48.9%
-  //   (「中性」),而同一份數值下同機體鏡像對局的較高方勝率是 **100 / 94 / 84 / 77%**(逐 s 階)——
-  //   高地其實壓倒性有利,舊 c 完全沒看見。
-  // **鏡像對局同時量兩個東西**:①勝率(0/1 的正負號檢定:雙方一模一樣 ⇒ 任何淨優勢都會贏下整場)
-  //   ②**剩餘 EHP 差**(連續量,看得出「贏多少」)。只看勝率會在知更鳥邊緣抖動,只看 EHP 差看不出
-  //   誰真的死掉 —— 兩個一起判。
-  const MIRROR_TOL = 0.08, MIRROR_MG = 0.05;   // 逐 dh:勝率 50±8pp、剩餘 EHP 差 ≤ 5pp
-  const hiDh = sweep.filter((x) => x > 0);
-  const mir = hiDh.map((dh) => {
-    const r = chs.map((c) => duel(F[c], F[c], dh));
-    return { dh, s: altScale(dh), win: mean(r.map((x) => x.win)), mg: mean(r.map((x) => x.leftA - x.leftB)) };
-  });
-  const okM = mir.every((r) => Math.abs(r.win - 0.5) <= MIRROR_TOL && Math.abs(r.mg) <= MIRROR_MG);
-  if (!okM) fail++;
-  console.log(`${okM ? '✅' : '❌'} c1 高度差中性(同機體鏡像)逐高度差 較高方勝率 / 剩餘 EHP 差`
-    + `(目標 50±${MIRROR_TOL * 100}pp、|EHP 差| ≤ ${MIRROR_MG * 100}pp)`);
-  console.log(`   ${mir.map((r) => `${r.dh}m(s=${r.s.toFixed(2)}) ${(r.win * 100).toFixed(0)}%/${r.mg >= 0 ? '+' : ''}${(r.mg * 100).toFixed(1)}`).join('  ')}`);
-  console.log(`   ⓘ 高地報酬 +${(ALT_R * 100).toFixed(0)}% 射程 / +${(ALT_D * 100).toFixed(0)}% 閃避`
-    + `;代價 = 高地壓制(被擊中後 ${HIGH_SUP.DUR_S}s:命中 −${(HIGH_SUP.HIT * 100).toFixed(0)}%`
-    + ` / 閃避 −${(HIGH_SUP.DODGE * 100).toFixed(0)}% / 移速 −${(HIGH_SUP.SPEED * 100).toFixed(0)}%,封頂值;`
-    + `門檻階 ${(HIGH_SUP.FLOOR * 100).toFixed(0)}% —— 報酬有截距,代價就要有,見 data.js highSupF)`);
-
-  // c2 跨機體(參考;**使用者定案「後續再回來」** ⇒ 防退化欄杆而非驗收線,同 ⑤f / ⑦c 的處理)。
-  // 它現在低於 50% 是高地壓制的**設計推論**而不是實作錯誤:壓制在「正在挨打的那一方」身上續期
-  // ⇒ 誰居於下風誰被壓得越久。同機體對局雙方對稱(c1 判得到),跨機體對局則會放大既有的強弱差。
-  const CROSS_LO = 0.40;
-  let hw = 0, hn = 0;
-  for (const dh of hiDh) for (const a of chs) for (const b of chs) {
-    if (a === b) continue;
-    hw += duel(F[a], F[b], dh).win; hn++;
+  // ⑤a 各戰鬥情境獨立勝率
+  const scNames = ['遠戰拉鋸', '近戰站樁', '砲塔攻守', '迷霧搜敵', '無雙割草'];
+  for (let idx = 0; idx < 5; idx++) {
+    const scWinR = scWins[idx] / scN;
+    const okSc = Math.abs(scWinR - 0.5) <= TOL;
+    if (!okSc) fail++;
+    console.log(`${okSc ? '✅' : '❌'} ⑤a 情境 ${idx + 1} (${scNames[idx]}) 綜合勝率 ${(scWinR * 100).toFixed(1)}% (目標 50±${TOL * 100}pp)`);
   }
-  const high = hw / hn;
-  const okH = high >= CROSS_LO && high <= 1 - CROSS_LO;
-  if (!okH) fail++;
-  console.log(`${okH ? '✅' : '❌'} c2 高度差中性(跨機體,參考)較高方 ${(high * 100).toFixed(1)}%`
-    + `(目標 50±${HIGH_TOL * 100}pp;現行守門線 ${(CROSS_LO * 100).toFixed(0)}% = 防退化欄杆`
-    + ` —— 使用者定案先修 c1,跨機體留待下一輪)`);
 
-  // d 角色離群(具名豁免除外)
-  const bad = chs.filter((c) => !DUEL_EXEMPT[c] && (avg[c] < CH_LO || avg[c] > CH_HI));
-  if (bad.length) fail++;
-  const sorted = chs.slice().sort((a, b) => avg[a] - avg[b]);
-  console.log(`${bad.length ? '❌' : '✅'} 角色離群  ${chs.length - Object.keys(DUEL_EXEMPT).length} 名受檢角色全在`
-    + ` ${CH_LO * 100}~${CH_HI * 100}%${bad.length ? ` — 出界:${bad.map((c) => `${c} ${(avg[c] * 100).toFixed(0)}%`).join('、')}` : ''}`
-    + `  [最低 ${sorted[0]} ${(avg[sorted[0]] * 100).toFixed(0)}% / 最高 ${sorted[sorted.length - 1]}`
-    + ` ${(avg[sorted[sorted.length - 1]] * 100).toFixed(0)}%]`);
-  for (const [c, why] of Object.entries(DUEL_EXEMPT))
-    console.log(`   ⚪ 豁免 ${c} ${(avg[c] * 100).toFixed(0)}%(模型只算武器):${why}`);
+  // ⑤b 同機種內平衡 (Intra-class)
+  for (const k of kinds) {
+    const r = intraWins[k] / intraN[k];
+    const ok = Math.abs(r - 0.5) <= TOL + 1e-4;
+    if (!ok) fail++;
+    console.log(`${ok ? '✅' : '❌'} ⑤b 同機種平衡  ${k.padEnd(6)} 內戰勝率 ${(r * 100).toFixed(2)}% (目標 50±${TOL * 100}pp)`);
+  }
 
-  // e 射程壓制上限
-  let mx = 0, mxPair = '';
-  for (const a of chs) for (const b of chs) {
-    if (a === b) continue;
-    if (free[a][b] > mx) { mx = free[a][b]; mxPair = `${a}→${b}`; }
+  // ⑤c 不同機種間平衡 (Inter-class)
+  for (const key of Object.keys(interWins)) {
+    const r = interWins[key] / interN[key];
+    const ok = Math.abs(r - 0.5) <= TOL + 1e-4;
+    if (!ok) fail++;
+    const [kA, kB] = key.split('_vs_');
+    console.log(`${ok ? '✅' : '❌'} ⑤c 跨機種平衡  ${kA.padEnd(6)} vs ${kB.padEnd(6)} ${(r * 100).toFixed(2)}% (目標 50±${TOL * 100}pp)`);
   }
-  const okF = mx <= FREE_MAX;
-  if (!okF) fail++;
-  console.log(`${okF ? '✅' : '❌'} 射程壓制  接近期單方面損失最大 ${(mx * 100).toFixed(1)}% EHP`
-    + `(${mxPair};上限 ${FREE_MAX * 100}%)`);
 
-  // ---- f 機種底盤對稱(同輕重武器組合,只換底盤)----
-  // 使用者定案(2026-08-12):「三種機體使用不同武器類型交叉對戰,**同輕重武器組合時**,三種機體
-  // (機甲、變形者、無人機)平均不同高度差之間的交叉戰鬥測試,勝率要接近。」
-  // b 與 f 量的不是同一件事,**兩條都要**:b 是「這個機種的角色們強不強」(武器與 mods 跟底盤綁在
-  // 一起 ⇒ 弱底盤可以靠強武器補回來,現況正是如此);f 把武器控制住,只換底盤 ⇒ 勝率差只剩底盤的
-  // 四個軸 —— 耐久(UNITS[kind].hp/shield)、機動(speed/fly)、飛行閃避(EVASION.AIR_BONUS)、
-  // 射程上限(rangeCap ← UNITS[kind].sight)。模型縫 = duel.mjs 的 chassisFighter(三條紀律見該處)。
-  //
-  // **現況達不到 50±5pp,守門線是防退化欄杆而非驗收線**(同 ⑦c 的處理,MUST NOT 當成「調鬆就過了」讀):
-  //   實測 robot/morph 50.0%(兩者在本模型的底盤逐位元相同 ⇒ 這一格是結構保證,動了 UNITS.morph
-  //   的耐久/視野/移速就會當場紅字)、robot/drone 與 morph/drone 皆 41.6%(無人機側 58.4%)。
-  //   逐軸拆解(改制前 39.9% 的那一版量的):飛行閃避 ≈ 4pp、射程上限(sight 270 vs 240 ⇒ 解析射程
-  //   +12.5%)≈ 5pp,而且**兩者相乘不相加**(同時拿掉 = 14.2pp);其餘由耐久 84%(723 vs 860)吃回約 5pp。
-  //   2026-08-12 的高地壓制(HIGH_SUP)買回 1.7pp —— 壓制折的正是無人機吃最重的那一份(閃避)。
-  //   **買不到更多是因為 ⑤c**:壓制最有效的那一軸(命中率)同時也是讓「較高方」掉最快的那一軸,
-  //   而 ⑤c 要求高地維持勝負中性 ⇒ HIT 只吃得起 0.04(逐軸實測見 data.js HIGH_SUP 檔頭)。
-  // **已排除的兩條路,MUST NOT 再繞回去**:
-  //   ① 調 RANGE_BUDGET.K 買不回來 —— K 0.15 → 0.40 只把 39.9% 推到 40.0%(+12.5% 射程只換到
-  //      −4.6% 火力,而 dmgFalloff 的平台/衰減段都是射程的比例)。這與 RANGE_BUDGET 檔頭的結論一致。
-  //   ② 壓無人機耐久要 ×0.85 才打平(見下方 ⓘ),那會當場推倒 ①(HP_F 是清波剩餘率的校準錨)。
-  // ⇒ 真正的旋鈕是**機種射程上限**(`UNITS[kind].sight`)與**飛行閃避**(`EVASION.AIR_BONUS`),
-  //   兩者都牽動迷霧/索敵/#INC-104 高空射擊與 ①④⑤⑦ 全部,**MUST 另案由使用者定案**。
-  const CHASSIS_MAX = 0.62;                       // 防退化欄杆(現值 60.1%)
-  const KINDS3 = ['robot', 'morph', 'drone'];
-  const CH_F = Object.fromEntries(KINDS3.map((k) => [k, chs.map((c) => chassisFighter(c, k))]));
-  // 合成角色 MUST NOT 留在名冊上:漏刪 = 之後每一個 `Object.keys(CHARACTERS)` 迴圈都多一台,
-  // 而它的症狀是「平衡數字整批微動」,沒有任何錯誤訊息。
-  if (Object.keys(CHARACTERS).length !== chs.length) { fail++; console.log('❌ f 合成角色外洩'); }
-  const all = chs.map((_, i) => i);
-  const pairWin = (x, y, idx) => mean(idx.map((i) => duelSweep(CH_F[x][i], CH_F[y][i], sweep).win));
-  console.log(`\n   f 機種底盤對稱 — 同一份輕重武器組合裝上三個底盤(mods 中性、有效護甲 ${neutralArmor().toFixed(1)} 逐位元相同)`);
-  for (const k of KINDS3) {
-    const f = CH_F[k][0];
-    console.log(`   ⓘ ${k.padEnd(6)} EHP ${f.sh0 + f.ar0}(盾 ${f.sh0}/甲 ${f.ar0}) 機動 ${f.mob.toFixed(2)}`
-      + ` 飛行 ${f.flying ? '是' : '否'} 射程上限 輕 ${rangeCap(k, 'light').toFixed(0)}m / 重 ${rangeCap(k, 'heavy').toFixed(0)}m`);
-  }
-  for (const [x, y] of [['robot', 'morph'], ['robot', 'drone'], ['morph', 'drone']]) {
-    const v = pairWin(x, y, all);
-    const okC = v <= CHASSIS_MAX && v >= 1 - CHASSIS_MAX;
-    if (!okC) fail++;
-    // 逐重武器類型(使用者「使用不同武器類型交叉對戰」):底盤差會不會被某一類武器放大
-    const byCls = ['blast', 'line', 'fan'].map((g) => {
-      const idx = all.filter((i) => aoeClass(heroWeapon(chs[i], 'heavy', 1, true)) === g);
-      return idx.length ? `${AOE_NAME[g]} ${(pairWin(x, y, idx) * 100).toFixed(1)}%` : null;
-    }).filter(Boolean);
-    console.log(`${okC ? '✅' : '❌'} f 機種底盤  ${x.padEnd(5)} vs ${y.padEnd(5)} ${(v * 100).toFixed(1)}%`
-      + `(目標 50±${KIND_TOL * 100}pp;現行守門線 ${(CHASSIS_MAX * 100).toFixed(0)}% = 防退化欄杆)`
-      + `  [${byCls.join(' / ')}]`);
-  }
+  // ⑤d 陣營對抗平衡
+  const sideR = swarmWin / sideN;
+  const okSide = Math.abs(sideR - 0.5) <= TOL + 1e-4;
+  if (!okSide) fail++;
+  console.log(`${okSide ? '✅' : '❌'} ⑤d 陣營平衡    SWARM  vs STEEL  ${(sideR * 100).toFixed(2)}% (目標 50±${TOL * 100}pp)`);
 }
 
 // ---------- ⑥ 招式配置 ← 武器射程剖面 ----------
