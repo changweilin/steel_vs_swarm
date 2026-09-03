@@ -18,7 +18,7 @@ import { charKind } from './data.js';
 import { applyEnvironment } from './environment.js';
 import {
   buildShowcasePatch, findShowcaseSite, showcaseAnchorSite,
-  LONDON_SHOWCASE_UNITS, LONDON_SHOWCASE_SITES,
+  LONDON_SHOWCASE_UNITS, GAME_SHOWCASE_SITES,
 } from './showcase.js';
 
 const W = 480, H = 270;
@@ -517,7 +517,7 @@ export class MatSample {
     this._rafId = requestAnimationFrame(this._animate);
   }
 
-  /** 五個樣品各吃自己的倫敦地形；地形只屬展示，不進戰場碰撞。 */
+  /** 五個樣品各吃自己的實機空間地形；地形只屬展示，不進戰場碰撞。 */
   setTerrains(terrains) {
     const next = Array.isArray(terrains) ? terrains : [];
     let changed = false;
@@ -534,7 +534,7 @@ export class MatSample {
       this.terrainSites[i] = null;
       if (!source) continue;
 
-      const spec = LONDON_SHOWCASE_SITES[i] || LONDON_SHOWCASE_SITES[0];
+      const spec = GAME_SHOWCASE_SITES[i] || GAME_SHOWCASE_SITES[0];
       const siteMode = spec.terrain === 'heath' ? 'relief' : spec.water ? 'wet' : spec.terrain === 'forest' ? 'green' : 'flat';
       const built = buildShowcasePatch(source, {
         site: source.showcaseSite || findShowcaseSite(source, siteMode) || showcaseAnchorSite(source),

@@ -1,6 +1,6 @@
-// ============ 倫敦圖資地形展示場景 ============
+// ============ 遊戲實機空間地形展示場景 ============
 // 展示台只讀正式地形的 heightAt / sampleColor，機體仍由 makeUnit() 產生。
-// 網路圖資尚未完成或來源失效時，先用同一個高度場介面顯示小型備援地貌。
+// 直接使用範圍足夠小（約 44m×36m）的遊戲實機空間（對應正式 VENUES），無網路時顯示實機場地備援地貌。
 import * as THREE from 'three';
 import { envMat } from './hazards.js';
 
@@ -10,29 +10,33 @@ export const LONDON_SHOWCASE_UNITS = [
   { id: 'm04', side: 'MERC', label: '獵鷹', note: '鷹式偵獵機', tint: 0xe7c875, hover: 1.55 },
 ];
 
-// 五個展示各自取倫敦的真實地貌帶；座標只用來取圖資，不改戰場 VENUES。
-export const LONDON_SHOWCASE_SITES = Object.freeze([
-  { id: 'mech', area: '史特拉福／奧林匹克公園', center: [51.5446, -0.0102], sizeM: 1800, terrain: 'urban', water: false, mix: { urban: 0.68, green: 0.32 } },
-  { id: 'shore', area: '格林威治半島／泰晤士潮間帶', center: [51.4882, 0.0061], sizeM: 1800, terrain: 'shore', water: 'shore', mix: { urban: 0.35, green: 0.15, water: 0.50 } },
-  { id: 'swamp', area: 'Rainham Marshes／倫敦東部濕地', center: [51.5074, 0.2038], sizeM: 1800, terrain: 'swamp', water: 'swamp', mix: { wet: 0.58, water: 0.28, green: 0.14 } },
-  { id: 'tree', area: '埃平森林／High Beach', center: [51.6543, 0.0618], sizeM: 1800, terrain: 'forest', water: false, mix: { green: 0.88, urban: 0.04, bare: 0.08 } },
-  { id: 'biome', area: '漢普斯特德荒野／Hampstead Heath', center: [51.5607, -0.1782], sizeM: 1800, terrain: 'heath', water: false, mix: { green: 0.62, bare: 0.28, urban: 0.10 } },
+// 五個展示各自使用遊戲實機場地（VENUES）足夠小的實機空間
+export const GAME_SHOWCASE_SITES = Object.freeze([
+  { id: 'mech', venueId: 'taipei101', area: '台北・101 信義計畫區', center: [25.034009, 121.563871], sizeM: 240, terrain: 'urban', water: false, mix: { urban: 0.85, green: 0.1, water: 0.05 } },
+  { id: 'shore', venueId: 'rio', area: '里約・基督山海岸', center: [-22.969255, -43.184768], sizeM: 240, terrain: 'shore', water: 'shore', mix: { urban: 0.4, green: 0.35, water: 0.25 } },
+  { id: 'swamp', venueId: 'tamsui', area: '淡水河口・紅樹林濕地', center: [25.168155, 121.444729], sizeM: 240, terrain: 'swamp', water: 'swamp', mix: { wet: 0.5, water: 0.3, green: 0.2 } },
+  { id: 'tree', venueId: 'blackforest', area: '德國・黑森林', center: [48.466999, 8.411523], sizeM: 240, terrain: 'forest', water: false, mix: { green: 0.9, bare: 0.1 } },
+  { id: 'biome', venueId: 'taroko', area: '太魯閣・燕子口', center: [24.171200, 121.556000], sizeM: 240, terrain: 'heath', water: false, mix: { green: 0.5, bare: 0.4, water: 0.1 } },
 ]);
+export const LONDON_SHOWCASE_SITES = GAME_SHOWCASE_SITES;
+export const SHOWCASE_SITES = GAME_SHOWCASE_SITES;
 
-/** 建立只供設定頁取樣的場地設定；不註冊成可玩的 VENUE。 */
+/** 建立只供設定頁取樣的實機場地設定；不註冊成可玩的 VENUE。 */
 export function showcaseTerrainConfig(site) {
   const [lat, lng] = site.center;
   const anchor = [lat, lng];
+  const country = site.venueId === 'rio' ? '🇧🇷' : site.venueId === 'blackforest' ? '🇩🇪' : '🇹🇼';
   return {
     center: { lat, lng, rot: 0 },
     bases: { SWARM: anchor, STEEL: anchor },
     lanes: [],
-    sizeM: site.sizeM,
-    venue: { id: `london-showcase-${site.id}`, name: site.area, country: '🇬🇧', mix: site.mix },
+    sizeM: site.sizeM || 240,
+    venue: { id: site.venueId || `showcase-${site.id}`, name: site.area, country, mix: site.mix },
   };
 }
 
-const PATCH = { width: 136, depth: 108, cols: 33, rows: 27 };
+// 範圍足夠小的展示空間：44m×36m 緊湊幾何覆蓋視錐
+const PATCH = { width: 44, depth: 36, cols: 23, rows: 19 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function slopeAt(terrain, x, z) {
@@ -99,36 +103,41 @@ export function findShowcaseSite(terrain, mode = 'flat') {
 const FALLBACKS = {
   mech: {
     waterY: null,
-    heightAt: (x, z) => 0.42 * Math.sin(x * 0.028) + 0.22 * Math.cos(z * 0.04) + 0.12 * Math.sin((x + z) * 0.06),
-    color: (x, z) => [92 + Math.sin(x * 0.04) * 12, 112 + Math.cos(z * 0.05) * 10, 82],
+    // 台北・101 信義計畫區: 平坦市街網格微幅起伏
+    heightAt: (x, z) => 0.16 * Math.sin(x * 0.08) + 0.10 * Math.cos(z * 0.10),
+    color: (x, z) => [86 + Math.sin(x * 0.09) * 8, 98 + Math.cos(z * 0.1) * 8, 88],
   },
   shore: {
     waterY: 0,
-    heightAt: (x, z) => 0.34 + 0.50 * Math.tanh(-x / 15) + 0.08 * Math.sin(z * 0.05),
-    color: (x, z) => x < 0 ? [194 + Math.sin(z * 0.08) * 10, 174, 126] : [30, 86 + Math.cos(z * 0.04) * 8, 106],
+    // 里約・基督山海岸: 沙灘向海水緩降
+    heightAt: (x, z) => 0.30 + 0.45 * Math.tanh(-x / 8) + 0.06 * Math.sin(z * 0.12),
+    color: (x, z) => x < 0 ? [192 + Math.sin(z * 0.15) * 10, 172, 122] : [28, 84 + Math.cos(z * 0.1) * 8, 104],
   },
   swamp: {
     waterY: 0.18,
-    heightAt: (x, z) => 0.13 + 0.14 * Math.sin(x * 0.035) + 0.11 * Math.cos(z * 0.045) + 0.06 * Math.sin((x - z) * 0.08),
-    color: (x, z) => [48 + Math.sin(x * 0.04) * 7, 78 + Math.cos(z * 0.05) * 9, 48],
+    // 淡水河口・紅樹林濕地: 潮間帶泥濘平緩窪地
+    heightAt: (x, z) => 0.12 + 0.12 * Math.sin(x * 0.08) + 0.08 * Math.cos(z * 0.10),
+    color: (x, z) => [46 + Math.sin(x * 0.08) * 6, 76 + Math.cos(z * 0.1) * 8, 46],
   },
   tree: {
     waterY: null,
-    heightAt: (x, z) => 0.65 * Math.sin(x * 0.025) + 0.40 * Math.cos(z * 0.035) + 0.16 * Math.sin((x - z) * 0.055),
-    color: (x, z) => [48, 102 + Math.sin(x * 0.04) * 12, 48 + Math.cos(z * 0.05) * 8],
+    // 德國・黑森林: 起伏森林地帶
+    heightAt: (x, z) => 0.42 * Math.sin(x * 0.06) + 0.30 * Math.cos(z * 0.08),
+    color: (x, z) => [44, 96 + Math.sin(x * 0.08) * 10, 44 + Math.cos(z * 0.1) * 8],
   },
   biome: {
     waterY: null,
-    heightAt: (x, z) => 0.035 * x + 0.42 * Math.sin(z * 0.035) + 0.20 * Math.cos(x * 0.045),
-    color: (x, z) => x < 0 ? [70, 116 + Math.cos(z * 0.05) * 8, 58] : [142 + Math.sin(z * 0.04) * 12, 116, 72],
+    // 太魯閣・燕子口: 峽谷斷面與岩層高起伏
+    heightAt: (x, z) => 0.07 * x + 0.52 * Math.sin(z * 0.08) + 0.28 * Math.cos(x * 0.10),
+    color: (x, z) => x < 0 ? [72, 108 + Math.cos(z * 0.1) * 8, 62] : [136 + Math.sin(z * 0.08) * 10, 112, 76],
   },
 };
 
-/** 倫敦圖資下載失敗時的安全備援；每個展示仍保留自己的地貌輪廓。 */
+/** 實機場地圖資未連線或取樣失敗時的安全備援；各展示依場地特色提供小範圍高程。 */
 export function createShowcaseFallbackTerrain(sceneId = 'mech') {
-  const site = LONDON_SHOWCASE_SITES.find((item) => item.id === sceneId) || LONDON_SHOWCASE_SITES[0];
+  const site = GAME_SHOWCASE_SITES.find((item) => item.id === sceneId) || GAME_SHOWCASE_SITES[0];
   const profile = FALLBACKS[sceneId] || FALLBACKS.mech;
-  const minX = -900, maxX = 900, minZ = -900, maxZ = 900;
+  const minX = -120, maxX = 120, minZ = -120, maxZ = 120;
   const heightAt = profile.heightAt;
   return {
     minX, maxX, minZ, maxZ, worldW: maxX - minX, worldH: maxZ - minZ,
@@ -258,17 +267,17 @@ function addTerrainDressing(group, style, yAt) {
     const curb = mat(0xb0b5a6, { wash: 0.05, cool: 0.04 });
     const park = mat(0x6b895c, { wash: 0.25, cool: 0.1 });
     group.add(
-      drapedRibbon([[-68, -38], [-38, -28], [-4, -32], [30, -18], [68, -22]], 8.5, yAt, road),
-      drapedRibbon([[-48, -54], [-30, -25], [-8, 2], [8, 30], [30, 54]], 5.2, yAt, road),
-      drapedRibbon([[-68, 13], [-34, 10], [0, 18], [34, 15], [68, 30]], 4.2, yAt, road),
-      drapedRibbon([[-68, 43], [-34, 39], [4, 45], [38, 40], [68, 46]], 13, yAt, park),
-      drapedRibbon([[-68, -33], [-38, -23], [-4, -27], [30, -13], [68, -17]], 0.85, yAt, curb),
+      drapedRibbon([[-22, -12], [-10, -9], [0, -10], [10, -6], [22, -7]], 3.6, yAt, road),
+      drapedRibbon([[-16, -18], [-9, -8], [-2, 2], [4, 10], [12, 18]], 2.8, yAt, road),
+      drapedRibbon([[-22, 5], [-11, 4], [0, 6], [11, 5], [22, 10]], 2.2, yAt, road),
+      drapedRibbon([[-22, 14], [-11, 13], [1, 15], [12, 13], [22, 15]], 4.5, yAt, park),
+      drapedRibbon([[-22, -10], [-10, -7], [0, -8], [10, -4], [22, -5]], 0.5, yAt, curb),
     );
     const building = mat(0x879092, { wash: 0.08, cool: 0.04 });
-    dressingBlock(group, -22, -18, 8, 5, 2.2, yAt, building, -0.16);
-    dressingBlock(group, -9, -21, 6, 4, 1.7, yAt, building, 0.08);
-    dressingBlock(group, 17, -20, 9, 5, 3.0, yAt, building, 0.12);
-    dressingBlock(group, 29, -13, 6, 4, 2.0, yAt, building, -0.1);
+    dressingBlock(group, -8, -6, 4.0, 2.8, 1.8, yAt, building, -0.16);
+    dressingBlock(group, -3, -8, 3.0, 2.2, 1.4, yAt, building, 0.08);
+    dressingBlock(group, 6, -7, 4.2, 2.8, 2.2, yAt, building, 0.12);
+    dressingBlock(group, 11, -4, 3.2, 2.2, 1.6, yAt, building, -0.1);
     return;
   }
   if (style === 'shore') {
@@ -276,16 +285,16 @@ function addTerrainDressing(group, style, yAt) {
     const wet = mat(0x5c8990, { wash: 0.08, cool: 0.08 });
     const foam = mat(0xe7efe4, { wash: 0.04, cool: 0.02 });
     const timber = mat(0x795f42, { wash: 0.12, cool: 0.02 });
-    const shore = [[0, -54], [-2, -32], [1, -8], [-1, 17], [2, 54]];
+    const shore = [[0, -18], [-1, -10], [0.5, -2], [-0.5, 6], [1, 18]];
     group.add(
-      drapedRibbon(shore, 19, yAt, sand),
-      drapedRibbon(shore, 5.2, yAt, wet),
-      drapedRibbon(shore, 1.15, yAt, foam),
-      drapedRibbon([[26, -54], [23, -30], [27, -4], [22, 24], [25, 54]], 3.4, yAt, timber),
-      drapedRibbon([[46, -54], [43, -24], [47, 8], [44, 36], [47, 54]], 2.0, yAt, timber),
+      drapedRibbon(shore, 7.5, yAt, sand),
+      drapedRibbon(shore, 2.4, yAt, wet),
+      drapedRibbon(shore, 0.7, yAt, foam),
+      drapedRibbon([[9, -18], [8, -10], [9.5, -1], [8, 8], [9, 18]], 1.6, yAt, timber),
+      drapedRibbon([[16, -18], [15, -8], [16, 3], [15, 12], [16, 18]], 1.2, yAt, timber),
     );
-    for (const [x, z] of [[12, -18], [14, -4], [13, 12], [24, -13], [24, 15]]) {
-      dressingBlock(group, x, z, 0.65, 0.65, 2.6, yAt, timber);
+    for (const [x, z] of [[5, -6], [5.5, -1], [5, 4], [9, -4], [9, 5]]) {
+      dressingBlock(group, x, z, 0.45, 0.45, 1.8, yAt, timber);
     }
     return;
   }
@@ -294,19 +303,19 @@ function addTerrainDressing(group, style, yAt) {
     const mud = mat(0x6f8150, { wash: 0.2, cool: 0.04 });
     const reedM = mat(0x718e47, { wash: 0.08, cool: 0.02 });
     group.add(
-      drapedRibbon([[-22, -54], [-10, -31], [-20, -6], [-7, 20], [-18, 54]], 11, yAt, channel),
-      drapedRibbon([[26, -54], [15, -28], [29, -2], [17, 27], [31, 54]], 8, yAt, channel),
-      drapedRibbon([[-68, 40], [-38, 30], [-8, 36], [24, 29], [68, 39]], 4.2, yAt, mud),
-      drapedRibbon([[-68, -39], [-39, -28], [-7, -37], [24, -29], [68, -40]], 3.0, yAt, mud),
-      drapedDisc(-6, 4, 6.5, yAt, channel),
-      drapedDisc(34, -10, 5.0, yAt, channel),
+      drapedRibbon([[-8, -18], [-3, -10], [-7, -2], [-2, 7], [-6, 18]], 4.5, yAt, channel),
+      drapedRibbon([[9, -18], [5, -9], [10, -1], [6, 9], [11, 18]], 3.5, yAt, channel),
+      drapedRibbon([[-22, 13], [-12, 10], [-3, 12], [8, 10], [22, 13]], 2.0, yAt, mud),
+      drapedRibbon([[-22, -13], [-13, -9], [-2, -12], [8, -10], [22, -13]], 1.6, yAt, mud),
+      drapedDisc(-2, 1, 3.0, yAt, channel),
+      drapedDisc(11, -3, 2.5, yAt, channel),
     );
-    const reedGeo = new THREE.CylinderGeometry(0.06, 0.11, 2.8, 5);
-    for (let i = 0; i < 12; i++) {
-      const x = -25 + (i % 4) * 5.2 + (i % 2) * 1.4;
-      const z = -18 + Math.floor(i / 4) * 15 + (i % 3) * 2;
+    const reedGeo = new THREE.CylinderGeometry(0.06, 0.11, 2.4, 5);
+    for (let i = 0; i < 10; i++) {
+      const x = -8 + (i % 4) * 3.8 + (i % 2) * 1.0;
+      const z = -9 + Math.floor(i / 4) * 8 + (i % 3) * 1.5;
       const reed = new THREE.Mesh(reedGeo, reedM);
-      reed.position.set(x, yAt(x, z) + 1.4, z);
+      reed.position.set(x, yAt(x, z) + 1.2, z);
       reed.rotation.z = (i % 2 ? -1 : 1) * 0.12;
       group.add(reed);
     }
@@ -317,10 +326,10 @@ function addTerrainDressing(group, style, yAt) {
     const leaf = mat(0x477c42, { wash: 0.35, cool: 0.08 });
     const trunk = mat(0x5d4531, { wash: 0.12, cool: 0.02 });
     group.add(
-      drapedRibbon([[-68, 35], [-34, 16], [2, 3], [38, -16], [68, -36]], 5.5, yAt, trail),
-      drapedRibbon([[-68, -34], [-38, -21], [-8, -25], [26, -14], [68, -24]], 2.0, yAt, trail),
+      drapedRibbon([[-22, 12], [-11, 5], [1, 1], [12, -5], [22, -12]], 2.4, yAt, trail),
+      drapedRibbon([[-22, -11], [-13, -7], [-3, -8], [9, -5], [22, -8]], 1.2, yAt, trail),
     );
-    for (const [x, z, scale] of [[-13, -15, 1.1], [-7, -7, 0.9], [10, -13, 1.3], [15, -2, 0.95], [-14, 7, 1.0], [9, 10, 1.2], [18, 16, 0.9]]) {
+    for (const [x, z, scale] of [[-5, -5, 1.0], [-2, -2, 0.85], [4, -4, 1.15], [6, -1, 0.9], [-5, 2, 0.95], [3, 3, 1.1], [7, 5, 0.85]]) {
       dressingTree(group, x, z, scale, yAt, trunk, leaf);
     }
     return;
@@ -330,12 +339,12 @@ function addTerrainDressing(group, style, yAt) {
     const heather = mat(0x806b4e, { wash: 0.12, cool: 0.02 });
     const contour = mat(0xa09465, { wash: 0.1, cool: 0.02 });
     group.add(
-      drapedRibbon([[-68, 20], [-35, 27], [-2, 9], [34, 12], [68, -3]], 11, yAt, heath),
-      drapedRibbon([[-58, -34], [-18, -18], [22, -28], [68, -20]], 7, yAt, heather),
-      drapedRibbon([[-68, 8], [-36, 14], [0, -4], [36, 0], [68, -14]], 1.3, yAt, contour),
-      drapedRibbon([[-68, 32], [-36, 39], [0, 24], [36, 27], [68, 13]], 1.0, yAt, contour),
+      drapedRibbon([[-22, 7], [-11, 9], [-1, 3], [11, 4], [22, -1]], 4.5, yAt, heath),
+      drapedRibbon([[-19, -11], [-6, -6], [7, -9], [22, -7]], 3.0, yAt, heather),
+      drapedRibbon([[-22, 3], [-12, 5], [0, -1], [12, 0], [22, -5]], 0.8, yAt, contour),
+      drapedRibbon([[-22, 11], [-12, 13], [0, 8], [12, 9], [22, 4]], 0.7, yAt, contour),
     );
-    for (const [x, z, r] of [[-18, -15, 1.4], [-7, -11, 1.1], [10, -16, 1.35], [18, -5, 1.0], [-16, 9, 1.25], [11, 13, 1.1]]) {
+    for (const [x, z, r] of [[-7, -5, 1.2], [-3, -4, 0.95], [4, -5, 1.15], [7, -2, 0.9], [-6, 3, 1.05], [4, 4, 0.95]]) {
       dressingMound(group, x, z, r, r * 0.9, yAt, heather);
     }
   }
