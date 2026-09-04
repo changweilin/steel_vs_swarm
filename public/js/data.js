@@ -1860,7 +1860,14 @@ export const skillPower = (ch, lvl = 1) => {
     if (u.add?.fx === 'dodge' || u.add?.fx === 'mark') mag += 50;
     if (mag <= 0) mag = 50;
     p = dur * mag * (u.target === 'team' ? 0.35 : 0.2);
+  } else if (u.fx === 'storm') {
+    p = t(u.dmg || 45) * t(u.dur || 6) * 0.5;
+  } else if (u.fx === 'boomerang' || u.fx === 'lance' || u.fx === 'chain') {
+    p = t(u.dmg || 100) * 1.2;
+  } else if (u.fx === 'pillar' || u.fx === 'quake') {
+    p = t(u.dmg || 80) * 1.3;
   }
+  if (p <= 0) p = t(u.dmg || 100);
   return p;
 };
 
@@ -3253,6 +3260,7 @@ export function heroAbility(ch, slot, lvl = 1) {
     cd: abilCdMapped(ch, slot) ? abilCarrierCd(slot, t(a.cd)) : t(a.cd),
     mp: t(a.mp), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
     dmg: t(a.dmg ?? 0) * counterDmgF(a), heal: t(a.heal ?? 0), count: t(a.count ?? 1),   // 折減見 heroWeapon 同欄註
+    hp: t(a.hp ?? 0),
     range: deliverR ? hyperRange() : t(a.range ?? 0) * COMBAT_SCALE,
     imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),   // range 縮 reach;imp/scatter/r 為效果尺寸不縮
     unit: a.unit, target: a.target || 'self', sp: !!a.sp, vision: t(a.vision ?? 0) * COMBAT_SCALE,
@@ -3279,7 +3287,7 @@ export function heroAbility(ch, slot, lvl = 1) {
  * 不會有任何錯誤訊息。`remote` 由呼叫端量:戰場量**實際施放距離**、展示台量**宣告 range**
  * (兩者本來就不同,是刻意的;共用的是判準不是量法)。
  */
-export const castDirF = (fx, remote) => (fx === 'strike' || fx === 'dash' || (fx === 'emp' && !!remote) ? 1 : 0);
+export const castDirF = (fx, remote) => (fx === 'strike' || fx === 'dash' || fx === 'boomerang' || fx === 'lance' || fx === 'chain' || fx === 'pillar' || fx === 'quake' || fx === 'trees' || fx === 'moon' || fx === 'cube' || fx === 'fog' || (fx === 'emp' && !!remote) ? 1 : 0);
 
 /** 角色機體種類(不需要 side:2026-08-02 混編改制後**每名角色一律自帶 kind**)— heroWeapon 的折算依據。
  *  MUST NOT 再由 side 推機種:三陣營各自混編(蜂群 7/3/2、鋼鐵 3/7/2、傭兵 2/2/4),
@@ -3384,8 +3392,8 @@ export const CHARACTERS = {
     skill: { name: '巴哈賦格：萬象協奏', fx: 'buff', target: 'team', r: 180, mul: { dmg: [1.15, 1.23, 1.3] },
       add: { fx: 'vamp', f: [0.1, 0.13, 0.16] },
       dur: [6, 8, 10], cd: 20, mp: [35, 40, 45], desc: '奏響多聲部律動：同調全隊戰鬥頻率，火力激增且同步汲取敵機生機（吸血）' },
-    ult: { name: '極致終曲：天穹大合奏', fx: 'summon', unit: 'heli', count: [2, 3, 4],
-      cd: [80, 70, 60], mp: [80, 90, 100], desc: '指揮終章降臨：召喚重裝武裝直升機編隊凌空突進，以鋼鐵洪流碾碎陣線' },
+    ult: { name: '極致終曲：天穹大合奏', fx: 'summon', unit: 'heli_squad', count: [2, 3, 4],
+      cd: [80, 70, 60], mp: [80, 90, 100], desc: '指揮終章降臨：召喚交響重裝武裝直升機編隊凌空突進，自主索敵並與旗艦協同集火' },
   },
   s02: {
     side: 'SWARM', kind: 'drone', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
@@ -3405,8 +3413,10 @@ export const CHARACTERS = {
       // dmg −5%:讓出 15m 爆風換回的火力補償(aoeTrimF)把它推到 bal ⑤ 81% 出界(見 t02 heavy 同欄註)
       dmg: [48, 69, 100], r: [15, 17, 19], mag: 3, reload: 12, range: 264, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
-    skill: { name: '靈鋼淬火重塑', fx: 'heal', target: 'self', heal: [180, 260, 340],
-      cd: [24, 21, 18], mp: [35, 40, 45], desc: '引動高頻熔接電弧：瞬間重鑄自身受損結構，大幅回復機體裝甲' },
+    skill: { name: '地脈崩解：多段鑽地震波彈', fx: 'quake', target: 'ground',
+      dmg: [45, 62, 80], count: 3, r: 8, range: 220,
+      add: { fx: 'mud', slow: 0.6, dur: 3 },
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '投擲破障鑽地榴彈：引爆後產生 3 段地脈震波連環爆破，連續命中陷入泥沼狀態（大幅緩速且禁位移）' },
     ult: { name: '神爐焚天：萬象重鑄', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true,
       cd: [80, 70, 60], mp: [85, 95, 105], desc: '全功率開啟重型熔爐：以納米回火矩陣覆蓋全軍，大修裝甲並充盈能量護盾' },
   },
@@ -3519,8 +3529,10 @@ export const CHARACTERS = {
     heavy: { name: '「非歐撕裂」電漿防空網', rw: '高能磁約束電漿矩陣・拓撲扇形散布', type: 'plasma', arc: [20, 23, 26],
       dmg: [50, 77, 113], mag: 3, reload: 7, range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.6, air: 2.0, building: 0.4 } },
-    skill: { name: '真理之界：因果攔截網', fx: 'intercept', r: [170, 210, 250],
-      cd: [15, 13, 11], mp: [30, 35, 40], desc: '精確運算彈道幾何：以最佳幾何解瞬間湮滅半徑內所有來襲飛彈' },
+    skill: { name: '非歐折射：彈簧幾何裂解刃', fx: 'chain', target: 'enemy',
+      dmg: [70, 95, 125], range: 200, bounces: 4, decay: 0.2,
+      add: { fx: 'poison', dps: [16, 22, 28], dur: 4 },
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '投擲非歐幾何拓撲飛刃：命中目標後在周遭敵人間折射彈跳最多 4 次，每次傷害與神經毒性衰減' },
     ult: { name: '極限推論：幾何破滅陣', fx: 'strike', count: [5, 7, 9], dmg: [68, 85, 106], r: 11, scatter: 35,
       add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 340, pen: 6, cd: [72, 64, 56], mp: [85, 95, 105], vs: { air: 1.5, armor: 1.1 },
@@ -3536,8 +3548,10 @@ export const CHARACTERS = {
     heavy: { name: '「神聖裁決」電磁獵魔長槍', rw: '軌道級重型電磁狙擊管・高能穿甲針・初速 2200m/s', type: 'rail', mv: 2200,
       dmg: [66, 99, 149], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
-    skill: { name: '晨曦之露：天使空投箱', fx: 'heal', target: 'team', r: 140, heal: [150, 210, 270],
-      cd: [20, 18, 16], mp: [40, 45, 50], desc: '空投神聖修復納米莢艙：沐浴晨曦光輝，迅速修復範圍內友軍機體裝甲' },
+    skill: { name: '神聖裁決：朗基努斯電磁聖槍', fx: 'lance', target: 'enemy',
+      dmg: [120, 165, 215], range: 260, pen: 16, vsSp: 1.5,
+      add: { fx: 'stun', dur: [1.0, 1.25, 1.5] },
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '射出高能電磁聖槍：光速貫穿直線路徑上所有敵機，對護盾造成極高傷害並強烈麻痺沿途目標' },
     ult: { name: '聖城鐘聲：萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '奏響克拉科夫神聖晨鐘：大範圍釋放聖光奇蹟，全軍裝甲大量修復且護盾全滿' },
   },
@@ -3556,9 +3570,10 @@ export const CHARACTERS = {
       vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
     // mark 只在 heroHit(直擊彈道)有消耗路徑 —— s09 雙武器是 fan 散彈(heroPlasma)+ launcher
     // (heroBurst),掛 mark 等於死效果,2026-07-16 改 haste(獵手加速追獵)
-    skill: { name: '獵皇號令：疾馳獵巡', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
-      add: { fx: 'haste', f: [1.2, 1.25, 1.3] },
-      dur: 6, cd: [18, 16, 14], mp: [30, 35, 40], desc: '宣告圍獵開啟：大幅提升自身攻擊火力，底盤進入靈敏追獵躍步狀態' },
+    skill: { name: '荒原迴旋：獵場重力迴力鏢', fx: 'boomerang', target: 'enemy',
+      dmg: [75, 105, 138], range: 180,
+      add: { fx: 'stun', dur: [0.8, 1.0, 1.2] },
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '投擲澳洲重力獵刃：沿雙弧拋物線軌跡迴旋飛行並返回，橫掃路徑上所有敵機並造成眩暈' },
     ult: { name: '天羅地網：蒼穹禁獵區', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40,
       add: { fx: 'pull', imp: [16, 20, 24] },
       range: 300, cd: [70, 62, 54], mp: [80, 90, 100], vs: { air: 2.0, flesh: 1.2 },
@@ -3594,9 +3609,9 @@ export const CHARACTERS = {
     heavy: { name: '「擒縱碎核」重型磁軌貫甲砲', rw: '高密電磁穿甲重砲・關節破壞彈・初速 2000m/s', type: 'rail', mv: 2000,
       dmg: [48, 70, 99], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
       vs: { flesh: 0.8, armor: 2.2, air: 1.2, building: 0.7 } },
-    skill: { name: '命運之隙：致命裂解', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] },
-      add: { fx: 'mark', dur: [4, 5, 6] },
-      dur: [5, 6, 7], cd: [18, 16, 14], mp: [35, 40, 45], desc: '洞悉構造弱點：精確標定敵方機械結構應力破綻，下一擊必定暴擊貫穿' },
+    skill: { name: '黑森林的呼喊：神木防線', fx: 'trees', target: 'ground', range: 240, r: 14,
+      dmg: [90, 130, 180], hp: [400, 600, 850], dur: 8,
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '召喚黑森林遠古神木自地下急速破土拔地而起：破土造成衝擊傷害，巨木化為實體掩體阻擋敵我雙方彈道與移動' },
     ult: { name: '時序重調：格拉蘇蒂大修復', fx: 'heal', target: 'self', heal: [400, 550, 700], sp: true,
       cd: [80, 70, 60], mp: [80, 90, 100], desc: '逆轉機械時鐘結構：全面精密校準自身機體，裝甲大幅回復且護盾力場充盈' },
   },
@@ -3618,8 +3633,9 @@ export const CHARACTERS = {
       // ⇒ 解析射程 172.8 → 192m。曾經試過把名目射程壓回去讓解析值不動(320 → 240),結果是
       // ④ 當場紅字(172.8 < 砲塔的 186)、而且 rngDmgF 反手把傷害補上去,⑤ 直接衝到 88%。
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
-    skill: { name: '月影迷蹤：天幕偽裝', fx: 'stealth', dur: [4, 5, 6],
-      cd: [20, 18, 16], mp: [35, 40, 45], desc: '巴赫奇薩賴薰衣草斗篷：披上匿蹤光學偽裝，從敵方感測網上徹底消失（開火即現形）' },
+    skill: { name: '暗月引爆：引力星岩', fx: 'moon', target: 'ground', range: 240, r: 22,
+      dmg: [140, 200, 280], hp: [500, 750, 1050], dur: 3.5, imp: [18, 24, 30],
+      cd: [20, 18, 16], mp: [35, 40, 45], desc: '召喚高密度引力月岩浮空自轉：持續強烈牽引周圍敵軍並阻擋射擊，時間結束或生命耗盡時引爆月核造成毀滅傷害' },
     // 2026-08-06 使用者定案(機種絕招退場的補償;見 SELF_ULT):由「全隊無霧」改成**全隊復甦**——
     // 恢復速度倍率 + 解除既有異常 + 期間免疫異常 + **仍在重生倒數中**的隊友原地半血復活。
     // 復活刻意只救「倒數中」的(已重生的不算)且回場半血 + 一瞬無敵,CD 維持 70→54s:
@@ -3641,13 +3657,13 @@ export const CHARACTERS = {
     // 名冊內,紀律①)。反護盾的鏡像:榴彈的超壓是「大面積、慢」的能量,護盾場整個消化得掉;
     // 但盾一破,152mm 破片打在裝甲板上就不是護盾場能談的事了。
     // 它同時留著 vs.armor 1.3,依紀律③「加成越多含金量越低」⇒ vsHp 只給一小格,折減照吃。
-    heavy: { name: '「裂地泰坦」152mm 破障加農砲', rw: '大口徑重型破障榴彈加農砲・2A65 衍生・初速 650m/s', type: 'launcher', mv: 650,
-      dmg: [72, 107, 150], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 14,   // range:榴彈類短射程帶(見 s02 同欄註)
-      vsSp: 0.72, vsHp: 1.15,
-      vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
-    skill: { name: '鋼鐵意志：全軍突擊令', fx: 'buff', target: 'team', r: 200, mul: { dmg: [1.15, 1.25, 1.35] },
-      add: { fx: 'haste', f: [1.2, 1.25, 1.3] },
-      dur: [6, 8, 10], cd: [22, 20, 18], mp: [35, 40, 45], desc: '「以鋼鐵之軀鑄就榮光！」：吹響全線衝鋒號角，全隊攻擊力與行進速度齊升' },
+    heavy: { name: '「冰魄霜斧」重型電漿戰斧', rw: '高溫磁化冷焰電漿戰斧・重型扇形近戰揮砍', type: 'plasma', arc: [15, 17, 19],
+      dmg: [60, 90, 126], mag: 3, reload: 7, range: 264, pen: 16,
+      vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
+    skill: { name: '極寒雪暴：烏拉爾冰封斬', fx: 'storm', target: 'self', r: 12,
+      dmg: [44, 60, 80], dur: [5, 6, 7],
+      add: { fx: 'slow', f: 0.5, freezeS: 2.0, stunDur: 1.2 },
+      cd: [20, 18, 16], mp: [35, 40, 45], desc: '以自身為中心召喚極寒暴風雪：暴風跟隨機體移動持續造成冰霜傷害，範圍內敵軍嚴重緩速，逗留過久將陷入深度凍結' },
     ult: { name: '雪崩天降：烏拉爾雷霆齊射', fx: 'strike', count: [6, 8, 10], dmg: [77, 98, 119], r: 12, scatter: 40,
       add: { fx: 'stun', dur: [0.8, 1, 1.2] },
       range: 340, pen: 10, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
@@ -3684,9 +3700,10 @@ export const CHARACTERS = {
     light: { name: '「碎骨」12號重型狂暴霰彈', rw: '高射速彈鼓霰彈槍・大口徑碎肉彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [17, 15, 13],
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.6, air: 0.9, building: 0.5 } },
-    heavy: { name: '「焚天炎浪」重型電漿烈焰', rw: '高密度磁化電漿投射器・重型扇形烈焰噴湧', type: 'plasma', arc: [15, 17, 19],
-      dmg: [47, 70, 99], mag: 3, reload: 7, range: 264, pen: 12,
-      vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
+    heavy: { name: '「裂地泰坦」152mm 破障加農砲', rw: '大口徑重型破障榴彈加農砲・2A65 衍生・初速 650m/s', type: 'launcher', mv: 650,
+      dmg: [72, 107, 150], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 14,
+      vsSp: 0.72, vsHp: 1.15,
+      vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
     // 雙扇形(霰彈 + 電漿噴焰)= 全機種最短的交戰帶,又是最慢的機體 ⇒ 兩招都給貼身套件
     // (2026-07-27 使用者原則:扇形武器優先配置拉敵人/進場退場/匿蹤、控場或走位的大小招;稽核 bal ⑥)。
     // 舊制「承傷減免 + 傷害增益吸血」是站樁包:貼不上的時候一項都兌現不了,對進戰(bal ⑤)長年墊底。
@@ -3713,9 +3730,9 @@ export const CHARACTERS = {
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
     skill: { name: '幽影匿跡：虛無光學迷彩', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '啟動全光譜隱形迷彩：自雷達與光學感測器中徹底消隱（開火即現形）' },
-    ult: { name: '死神凝視：致命獵殺鎖定', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] }, vision: [8, 10, 12],
-      add: { fx: 'mark', dur: [5, 6, 7] },
-      dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '展開格魯烏全圖真視網：鎖定敵方高價值目標，下一發射擊必定百發百中且極限暴擊' },
+    ult: { name: '要塞展開：巨砲架設狙擊', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
+      add: { fx: 'siege', setupS: 1.0, recoverS: 1.5 },
+      dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '展開四足液壓駐鋤就地固定：強制進入重裝狙擊模式，期間無限重武器彈藥且免裝填，解除後需硬直恢復移動' },
   },
   t05: {
     side: 'STEEL', kind: 'robot', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
@@ -3729,8 +3746,8 @@ export const CHARACTERS = {
       vs: { flesh: 0.8, armor: 1.7, air: 0.6, building: 0.6 } },
     skill: { name: '九轉玄功：仿生應力自癒', fx: 'heal', target: 'self', heal: [200, 280, 360],
       cd: [22, 19, 16], mp: [35, 40, 45], desc: '啟動仿生關節微結構自檢：奈米修復矩陣高速重組，迅速回復機體裝甲' },
-    ult: { name: '千機天降：鐵甲重裝陣線', fx: 'summon', unit: 'tank', count: [1, 2, 3],
-      cd: [90, 80, 70], mp: [90, 100, 110], desc: '總設計師調動重工生產線：召喚重型主戰坦克編隊自後方兵線直接投入前線' },
+    ult: { name: '千機天降：鐵甲重裝陣線', fx: 'summon', unit: 'main_battle_tank', count: [1, 2, 3],
+      cd: [90, 80, 70], mp: [90, 100, 110], desc: '總設計師調動重工生產線：召喚自律重型主戰坦克投入前線，高裝甲高火力自主索敵推進' },
   },
   t06: {
     // 2026-08-02 機體混編(使用者定案:孫悟空轉鋼鐵、國籍中國 —— 他本來就是中國人):
@@ -3747,9 +3764,9 @@ export const CHARACTERS = {
       vs: { flesh: 1.1, armor: 1.4, air: 0.3, building: 0.8 } },
     skill: { name: '筋斗雲步：九霄遊龍步', fx: 'dash', imp: [28, 34, 40],
       cd: [11, 9, 7], mp: [25, 30, 35], desc: '發動如猿行般流暢靈動的奇門身法：神行百變，以極高機動性位移避開敵火' },
-    ult: { name: '大鬧天宮：齊天踏雲裂地', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.8, 0.75, 0.7] },
-      add: { fx: 'leap', f: [2.0, 2.3, 2.6] },
-      dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '大聖神力灌注核心：化作金光跨越一切地形發動滅頂重擊，大幅強化攻防姿態' },
+    ult: { name: '身外身法：三影齊天', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
+      add: { fx: 'clone', count: 2 },
+      dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '拔毫毛變幻兩具同等戰力分身跟隨本尊：分身僅使用輕武器（無限彈藥），本尊陣亡時轉移至最高 HP 分身' },
   },
   t07: {
     // 2026-08-02 機體混編:接下原屬蜂群的「翼龍」擬態翼無人機 —— 膜翼滑翔幾乎不耗電、也幾乎沒有聲音,
@@ -3802,8 +3819,8 @@ export const CHARACTERS = {
     heavy: { name: '「天罰見證」136 巡飛彈發射槽', rw: '三角翼自主攻擊巡飛彈・Shahed-136 縮裝・巡飛 100m/s', type: 'missile', mv: 100,
       dmg: [38, 55, 77], r: [15, 17, 19], mag: 4, reload: 11, range: 360, pen: 10,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
-    skill: { name: '英靈哀歌：火箭衛隊召喚', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
-      cd: [26, 23, 20], mp: [40, 45, 50], desc: '詠唱戰場無名哀歌：召喚重裝火箭兵編隊投入陣線，提供強力遠程火力壓制' },
+    skill: { name: '英靈哀歌：自律僚機召喚', fx: 'summon', unit: 'drone_wingman', count: [2, 2, 3],
+      cd: [26, 23, 20], mp: [40, 45, 50], desc: '詠唱戰場無名哀歌：召喚自律巡弋無人僚機高空伴隨，自主索敵並與母機協同集火' },
     ult: { name: '萬劫天罰：巡飛彈狂瀾', fx: 'strike', count: [7, 9, 11], dmg: [72, 89, 111], r: 11, scatter: 45,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 360, pen: 8, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
@@ -3819,8 +3836,9 @@ export const CHARACTERS = {
     heavy: { name: '「天穹衛士」垂直防空飛彈', rw: '垂直冷發射防空攔截飛彈・9M330 衍生・初速 800m/s', type: 'missile', mv: 800,
       dmg: [50, 75, 113], r: [11, 13, 15], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.7, armor: 0.7, air: 2.4, building: 0.4 } },
-    skill: { name: '宿命對偶：先知攔截矩陣', fx: 'intercept', r: [160, 200, 240],
-      cd: [15, 13, 11], mp: [30, 35, 40], desc: '精算反向彈道方程：以絕對防禦公式瞬間粉碎半徑內所有來襲敵方飛彈' },
+    skill: { name: '幾何神碑：法老立方石板', fx: 'cube', target: 'ground', range: 240, r: 11,
+      dmg: [40, 58, 80], hp: [300, 450, 650], dur: 5,
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '以黃金幾何在目標周圍立起六面古老符文石板牢籠：阻擋移動與直線彈道（留有逃脫縫隙），陣內持續共振空間殺傷' },
     ult: { name: '神聖不可侵犯：天穹庇護所', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.55, 0.45, 0.35] },
       dur: [6, 7, 8], cd: [80, 70, 60], mp: [90, 100, 110], desc: '展開不可動搖的絕對領域：在廣闊範圍內為全體友軍大幅減免承受傷害' },
   },
@@ -3838,8 +3856,8 @@ export const CHARACTERS = {
       vs: { flesh: 1.0, armor: 1.5, air: 0.4, building: 1.3 } },
     skill: { name: '百戰心訣：鐵甲弱點洞悉', fx: 'buff', target: 'team', r: 160, mul: { dmgTaken: [0.7, 0.65, 0.6] },
       dur: [4, 5, 6], cd: [20, 18, 16], mp: [35, 40, 45], desc: '傾注半生戰壕經驗：傳授避重就輕之法，使周遭全體友軍承受傷害顯著降低' },
-    ult: { name: '鋼鐵之師：老兵步兵連隊', fx: 'summon', unit: 'squad', count: [4, 6, 8],
-      cd: [85, 75, 65], mp: [85, 95, 105], desc: '吹響宿將集結哨音：召喚精銳重裝步兵班沿陣線全力壓上，推進戰線' },
+    ult: { name: '鋼鐵之師：老兵步兵連隊', fx: 'summon', unit: 'veteran_squad', count: [3, 4, 5],
+      cd: [85, 75, 65], mp: [85, 95, 105], desc: '吹響宿將集結哨音：召喚精銳老兵突擊特戰隊伴隨掩護推進，主動索敵與協同集火' },
   },
   t12: {
     side: 'STEEL', kind: 'robot', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「巨兵」訊號掃描機',
@@ -3896,8 +3914,10 @@ export const CHARACTERS = {
       dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
       spPierce: 0.45, vsHp: 0.9,
       vs: { flesh: 0.9, armor: 1.7, air: 0.5, building: 1.1 } },
-    skill: { name: '暗夜掠影：絕命突進', fx: 'dash', imp: [27, 33, 39],
-      cd: [12, 10, 8], mp: [25, 30, 35], desc: '發動夜行血蝠極速爆發：化作殘影沿視線方向瞬息脫離交戰危險區' },
+    skill: { name: '滅靈火柱：地獄火聚能陣', fx: 'pillar', target: 'ground',
+      dmg: [80, 110, 145], r: 6, dur: 4, range: 240,
+      add: { fx: 'burn', dps: [20, 28, 36], dur: 3 },
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '發射地獄火戰術飛彈：擊中目標引發持續直立火柱，造成高爆穿甲傷害並對圓柱範圍內敵機附加燃燒狀態' },
     ult: { name: '血夜狂宴：噬魂狂暴', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5], reload: [0.8, 0.75, 0.7] },
       add: { fx: 'vamp', f: [0.12, 0.16, 0.2] },
       dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '機體核心完全解限超頻：攻擊火力與裝填速度大幅暴增，並透過傷害瘋狂汲取生命（吸血）' },
@@ -3950,8 +3970,8 @@ export const CHARACTERS = {
     heavy: { name: '「天穹破甲」20mm 鷹眼重砲', rw: '大口徑遠程穿甲反器材砲・初速 900m/s', type: 'gun', mv: 900,
       dmg: [40, 58, 81], mag: 3, reload: 9, range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
-    skill: { name: '荒原霧隱：神鷹匿蹤術', fx: 'stealth', dur: [4, 5, 6],
-      cd: [20, 18, 16], mp: [35, 40, 45], desc: '「第三鄰國」無名隱跡：合約上絕不留名，從感測網上徹底隱身（開火即現形）' },
+    skill: { name: '荒原天幕：神鷹迷霧界', fx: 'fog', target: 'ground', range: 240, r: 35, dur: 8,
+      cd: [20, 18, 16], mp: [35, 40, 45], desc: '釋放遮蔽戰場的戰術濃霧：友軍享有單向透視，迷霧外敵軍無法窺視內部，迷霧內敵軍視野大幅縮減至 1/3' },
     // 2026-08-06 使用者定案(見 SELF_ULT):無霧秒數加倍,並在同一段窗內給**全隊**射程 / 跑速 /
     // 閃避率加成。fx 仍是 `recon`(不是 buff+team)⇒ `ultDelivered` 不收它,維持瞬發全隊型;
     // 射程加成走 mods 的 `range` 鍵(伺服器射程閘與客戶端有效射程同吃 heroRange 那條縫)。
@@ -3989,10 +4009,10 @@ export const CHARACTERS = {
     heavy: { name: '「萬象盛宴」集束子母巨彈', rw: '大範圍散布集束子母彈・拋撒破片・初速 400m/s', type: 'launcher', mv: 400,
       dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 6,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.4, armor: 0.9, air: 0.5, building: 1.2 } },
-    skill: { name: '神軍臨世：先鋒援軍令', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
-      cd: [26, 23, 20], mp: [40, 45, 50], desc: '引導空間傳送座標：召喚精銳火箭兵沿最近兵線迅速加入前線交鋒' },
-    ult: { name: '遮天蔽日：武裝直升機大編隊', fx: 'summon', unit: 'heli', count: [1, 2, 3],
-      cd: [85, 75, 65], mp: [90, 100, 110], desc: '號令空中主力艦隊：呼叫多架重裝攻擊直升機編隊全面凌空突擊破敵' },
+    skill: { name: '神軍臨世：先鋒漫遊車', fx: 'summon', unit: 'assault_rover', count: [2, 2, 3],
+      cd: [26, 23, 20], mp: [40, 45, 50], desc: '自背部骨板彈射自律重裝斥候戰車：主動索敵推進、伴隨掩護與協同集火，隨技能階級提升戰力' },
+    ult: { name: '遮天蔽日：嘉年華直升機隊', fx: 'summon', unit: 'carnival_heli', count: [2, 3, 4],
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '號令空中主力艦隊：呼叫嘉年華武裝直升機編隊全面凌空突擊，自主索敵與協同集火' },
   },
   m07: {
     side: 'MERC', kind: 'morph', name: '約蘭妲・里奧斯', code: '界碑', machine: '「落閘」區域拒止可變機甲',
@@ -4189,6 +4209,13 @@ export const UNITS = {
   tank:      { name: '主戰坦克', hp: 390, armor: 18, dmg: 39, range: 150, rate: 0.6, speed: 12, sight: 200, bounty: 4, wid: 'siege' },
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
+  // 自律召喚戰鬥部隊(獨立於 NPC 兵線、主動索敵與協同集火、隨召喚者等級成長)
+  drone_wingman:    { name: '自律巡弋無人機', hp: 220, armor: 10, dmg: 26, range: 170, rate: 0.8, speed: 22, sight: 220, bounty: 3, wid: 'rgun', fly: 1 },
+  assault_rover:    { name: '自律斥候戰車',   hp: 310, armor: 14, dmg: 28, range: 140, rate: 0.7, speed: 16, sight: 180, bounty: 3, wid: 'rocket', fly: 0 },
+  heli_squad:       { name: '交響武裝直升機', hp: 380, armor: 16, dmg: 35, range: 180, rate: 0.9, speed: 20, sight: 220, bounty: 5, wid: 'rocket', fly: 1 },
+  main_battle_tank: { name: '自律主戰坦克',   hp: 520, armor: 22, dmg: 55, range: 160, rate: 0.5, speed: 13, sight: 200, bounty: 6, wid: 'siege', fly: 0 },
+  veteran_squad:    { name: '精銳突擊步兵',   hp: 190, armor: 12, dmg: 18, range: 150, rate: 1.2, speed: 17, sight: 180, bounty: 2, wid: 'rgun', fly: 0 },
+  carnival_heli:    { name: '嘉年華武裝直升機', hp: 350, armor: 15, dmg: 32, range: 180, rate: 0.8, speed: 21, sight: 220, bounty: 5, wid: 'rocket', fly: 1 },
   // 建築(防禦塔)
   // range 310(2026-07-12):**恆大於所有玩家輕武器(最大 243 = drone sight 270 × RANGE_SIGHT_F)
   // 與所有 NPC(最大 220 = 榴彈兵)**,且 > 輕武器射程 + 同塔位左右塔間距(2×TOWER_SIDE_OFF)

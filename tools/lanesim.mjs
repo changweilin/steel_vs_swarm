@@ -515,6 +515,8 @@ function ufFrom(A, B, f, until) {
   if (ad.fx === 'evade') uf.evade = vf(ad.evade || 0);
   if (ad.fx === 'vamp') uf.vamp = vf(ad.f || 0);
   if (ad.fx === 'overdrive') { uf.noReload = true; uf.evade = vf(ad.evade || 0); }
+  if (ad.fx === 'siege') { uf.noReload = true; }
+  if (ad.fx === 'clone') { uf.dmgF = mf((A.mul?.dmg || 1) + (ad.count || 2) * 0.35 + B.dmgMul); }
   return uf;
 }
 

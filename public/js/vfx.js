@@ -1097,3 +1097,139 @@ export function glowTexture() {
   _texCache.set('glow', tex);
   return tex;
 }
+
+/** 黑森林神木防線:自地下拔地而起的神木群 */
+export function spawnTreesVFX(scene, effects, { x, z, trees, dur = 8 }) {
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  const treeList = trees || [
+    { x, z: z + 4.8, r: 2.0, h: 9 },
+    { x: x - 4.15, z: z - 2.4, r: 2.0, h: 9 },
+    { x: x + 4.15, z: z - 2.4, r: 2.0, h: 9 },
+  ];
+  const woodMat = toonMat(0x4a2e18);
+  const leafMat = toonMat(0x23522c);
+  for (const t of treeList) {
+    const tg = new THREE.Group();
+    tg.position.set(t.x - x, 0, t.z - z);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(t.r * 0.7, t.r, t.h * 0.5, 8), woodMat);
+    trunk.position.y = t.h * 0.25;
+    tg.add(trunk);
+    const canopy = new THREE.Mesh(new THREE.ConeGeometry(t.r * 2.2, t.h * 0.75, 8), leafMat);
+    canopy.position.y = t.h * 0.65;
+    tg.add(canopy);
+    g.add(tg);
+  }
+  g.scale.set(1, 0.05, 1);
+  scene.add(g);
+  let elapsed = 0;
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      elapsed += dt;
+      if (elapsed < 0.4) {
+        const p = elapsed / 0.4;
+        o.scale.y = 0.05 + 0.95 * p;
+      } else {
+        o.scale.y = 1;
+      }
+      if (f < 0.2) {
+        o.scale.x = o.scale.z = f / 0.2;
+      }
+    },
+  });
+}
+
+/** 暗月引爆:浮空月岩與引力漩渦 */
+export function spawnDarkMoonVFX(scene, effects, { x, z, y = 4.5, r = 3.5, dur = 3.5 }) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 16), toonMat(0x8a92a5));
+  g.add(moonMesh);
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(r * 1.3, r * 1.5, 16),
+    new THREE.MeshBasicMaterial({ color: 0xc8d8ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+  );
+  ring.rotation.x = Math.PI / 2;
+  g.add(ring);
+  scene.add(g);
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      moonMesh.rotation.y += dt * 1.5;
+      moonMesh.rotation.x += dt * 0.5;
+      ring.rotation.z += dt * 2.5;
+      const pulse = 1 + Math.sin((dur - f * dur) * 8) * 0.08;
+      o.scale.setScalar(pulse);
+    },
+  });
+}
+
+/** 幾何神碑:法老立方石板牢籠 */
+export function spawnCubicSlabsVFX(scene, effects, { x, z, r = 5.5, dur = 5 }) {
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  const slabMat = toonMat(0xd2b77a);
+  const runeMat = new THREE.MeshBasicMaterial({ color: 0xffe28a });
+  for (let k = 0; k < 6; k++) {
+    const ang = (k * Math.PI) / 3;
+    const sx = Math.cos(ang) * r, sz = Math.sin(ang) * r;
+    const sg = new THREE.Group();
+    sg.position.set(sx, 3, sz);
+    sg.rotation.y = -ang + Math.PI / 2;
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(3.5, 6, 0.4), slabMat);
+    sg.add(slab);
+    const rune = new THREE.Mesh(new THREE.BoxGeometry(2.2, 4.5, 0.42), runeMat);
+    sg.add(rune);
+    g.add(sg);
+  }
+  g.scale.set(1, 0.05, 1);
+  scene.add(g);
+  let elapsed = 0;
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      elapsed += dt;
+      if (elapsed < 0.3) {
+        o.scale.y = 0.05 + 0.95 * (elapsed / 0.3);
+      } else {
+        o.scale.y = 1;
+      }
+      if (f < 0.15) {
+        o.scale.x = o.scale.z = f / 0.15;
+      }
+    },
+  });
+}
+
+/** 荒原天幕:戰術迷霧 */
+export function spawnFogVFX(scene, effects, { x, z, r = 35, dur = 8, isAlly = true }) {
+  const g = new THREE.Group();
+  g.position.set(x, 0.5, z);
+  const fogColor = isAlly ? 0x7fa8d8 : 0x4a5568;
+  const baseOpacity = isAlly ? 0.28 : 0.85;
+  const disk = new THREE.Mesh(
+    new THREE.CircleGeometry(r, 24),
+    new THREE.MeshBasicMaterial({ color: fogColor, transparent: true, opacity: baseOpacity, side: THREE.DoubleSide })
+  );
+  disk.rotation.x = -Math.PI / 2;
+  g.add(disk);
+  for (let i = 0; i < 5; i++) {
+    const cloud = new THREE.Mesh(
+      new THREE.RingGeometry(r * (0.2 + i * 0.15), r * (0.4 + i * 0.15), 16),
+      new THREE.MeshBasicMaterial({ color: fogColor, transparent: true, opacity: baseOpacity * 0.7, side: THREE.DoubleSide })
+    );
+    cloud.rotation.x = -Math.PI / 2;
+    cloud.position.y = 1 + i * 0.8;
+    g.add(cloud);
+  }
+  scene.add(g);
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      o.rotation.y += dt * 0.2;
+      const op = f > 0.2 ? baseOpacity : baseOpacity * (f / 0.2);
+      disk.material.opacity = op;
+    },
+  });
+}

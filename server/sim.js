@@ -185,6 +185,11 @@ export class BattleSim {
     this.squads = new Map();          // pid -> { bodies:[ent], act, lock, lockAt, ps }(機甲小隊只有 1 架)
     this.missiles = [];               // 防空飛彈(伺服器權威 3D 追蹤)
     this.events = [];                 // 快照間累積的事件
+    this.sacredTrees = [];            // 黑森林神木防線
+    this.darkMoons = [];              // 暗月引爆巨石
+    this.cubicSlabs = [];             // 幾何神碑立方石板
+    this.fogs = [];                   // 荒原天幕戰術迷霧
+    this.autonomousSummons = [];      // 自律召喚戰鬥部隊
     this.over = false;
     this.winner = null;
     this.stats = { SWARM: { kills: 0, deaths: 0, creepKills: 0, assists: 0 }, STEEL: { kills: 0, deaths: 0, creepKills: 0, assists: 0 } };
@@ -588,6 +593,7 @@ export class BattleSim {
   _losBlocked(ax, az, ay, bx, bz, by, ea, eb) {
     // 橋面/隧道天花水平薄板(#1):兩端同 ribbon 且分屬板體兩側 → 擋(未上傳 slabs 則 _slabGrid 不存在,no-op)
     if (this._slabGrid && ea && eb && this._slabBlocked(ax, az, bx, bz, ea, eb)) return true;
+    if (this._skillBarriersBlocked(ax, az, ay, bx, bz, by)) return true;
     if (this._losDirty) { this._losDirty = false; this._rebuildLosGrid(); }   // 障礙被擊毀後的懶重建
     const grid = this._losGrid;
     if (!grid) return false;
@@ -1773,17 +1779,20 @@ export class BattleSim {
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
     const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1);
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * (lenient ? 1.5 : 1))) return false;
+    // 三個火槍手(t06):分身期間只能使用輕武器
+    if (id === 'heavy' && (h.clonesUntil || 0) > now) return false;
     if (h.ammo[id] == null) h.ammo[id] = def.mag;
-    // 超載(t02「同步率 100%」):時窗內免裝填 —— 見底就地補滿,不進填彈計時器。
-    // MUST 排在「打空 → 開始填彈」之前,否則彈匣一見底就先被推進填彈窗,免裝填等於沒有。
+    // 超載 / 巨砲狙擊 / 三個火槍手:時窗內免裝填 —— 見底就地補滿,不進填彈計時器。
     if (h.ammo[id] <= 0 && (h.noReloadUntil || 0) > now) h.ammo[id] = def.mag;
+    if (h.ammo[id] <= 0 && ((id === 'heavy' && (h.noHeavyReloadUntil || 0) > now) || (id === 'light' && (h.noLightReloadUntil || 0) > now))) h.ammo[id] = def.mag;
     if (h.ammo[id] <= 0) { h.reloadUntil[id] = now - back + this._reloadT(h, def); return false; }
     const mpc = id === 'heavy' ? heavyMpCost(def) : 0;
     if (mpc > 0 && h.mp < mpc) return false;   // 重武器電力不足:禁射(小隊電力共用,只扣一次)
     h.fireAt[id] = now;
     h.ammo[id]--;
     if (mpc > 0) h.mp -= mpc;
-    if (h.ammo[id] <= 0 && (h.noReloadUntil || 0) <= now) h.reloadUntil[id] = now - back + this._reloadT(h, def);  // 打空自動填彈(接回擊發時刻)
+    const freeR = (h.noReloadUntil || 0) > now || (id === 'heavy' && (h.noHeavyReloadUntil || 0) > now) || (id === 'light' && (h.noLightReloadUntil || 0) > now);
+    if (h.ammo[id] <= 0 && (h.noReloadUntil || 0) <= now && !freeR) h.reloadUntil[id] = now - back + this._reloadT(h, def);  // 打空自動填彈(接回擊發時刻)
     // 破隱爆發窗(m08;2026-08-06):**開火現形那一刻**才開窗 —— 這一行正是唯一的「現形」時刻,
     // 所以窗也只能開在這裡(在 _castEffect 就開 = 躲著不開火也在燒那一秒)。
     if ((h.alphaArm || 0) > now && (h.stealthUntil || 0) > now) {
@@ -1961,6 +1970,7 @@ export class BattleSim {
     if (h._posT == null) h._posT = this.t;
     const dt = this.t - h._posT;
     if (dt > 0) { h._spd = Math.hypot(x - h.x, z - h.z) / dt; h._posT = this.t; }
+    if ((h.rootedUntil || 0) > this.t && h._rootX != null) { x = h._rootX; z = h._rootZ; }
     h.x = x; h.y = y; h.z = z; h.ry = ry;
     // 絕對視線高程(地形+跳躍+飛行;高度差空戰 _sightY 用)—— 位置本就客戶端權威,ay 同屬輸入。缺值退回離地眼高近似。
     if (Number.isFinite(ay)) h.ay = ay;
@@ -2201,6 +2211,11 @@ export class BattleSim {
     }
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen, 0, wp.def);
+    if (wp.id === 'light' && h.clones && h.clones.length) {
+      for (const c of h.clones) {
+        if (!c.dead) this._damage(t, dmg, h, wp.def.pen, 0, wp.def);
+      }
+    }
     this._echo(h, t, wp.def);
   }
 
@@ -3375,6 +3390,22 @@ export class BattleSim {
             // 免裝填只是一個時窗旗標,MUST NOT 改成「彈匣無限大」(那會把彈匣整數化與射速壓縮一起繞過)。
             if (once) { a.ammo = {}; a.reloadUntil = {}; a.noReloadUntil = this.t + A.dur; }
             a.mods.push({ k: 'evade', m: vf(ad.evade || 0), until: this.t + A.dur, ...(A.brk ? { brk: 1 } : {}) });
+          } else if (ad.fx === 'siege') {
+            // 巨砲狙擊模式:無法移動,無限重武器彈藥免裝填
+            if (once) {
+              a.ammo = {}; a.reloadUntil = {};
+              a.noHeavyReloadUntil = this.t + A.dur;
+              a.rootedUntil = this.t + A.dur + (ad.recoverS || 1.5);
+              a._rootX = a.x; a._rootZ = a.z;
+              this.events.push({ e: 'siege_mode', pid: a.pid, side: a.side, until: this.t + A.dur });
+            }
+          } else if (ad.fx === 'clone') {
+            // 三個火槍手:生成兩具同等戰力分身跟隨本尊
+            if (once) {
+              a.clonesUntil = this.t + A.dur;
+              a.noLightReloadUntil = this.t + A.dur;
+              this._spawnClones(a, ad.count || 2, A.dur);
+            }
           }
         }
       }
@@ -3405,22 +3436,26 @@ export class BattleSim {
         if (A.add) this._applyCC(h, A.add, ix, iz, A.r);   // 控場類追加效果:彈著區內敵人
       }
     } else if (A.fx === 'summon') {
-      // 召喚中心 = 效果落點(瞬發 = 施放者位置;載具遞送 = 抵達點,單位就地投入最近兵線)
-      const nSum = nImp ?? Math.max(1, Math.round(A.count * frac));
-      const { li, d } = this._nearestLane(x, z);
-      const total = this._laneCum(li)[this._laneCum(li).length - 1];
-      const comp = A.unit === 'squad'
-        ? Array.from({ length: nSum }, (_, i) => (i % 3 === 2 ? 'rocketeer' : 'soldier'))
-        : Array(nSum).fill(A.unit);
-      comp.forEach((kind, i) => {
-        this._add({
-          kind, side: h.side, lane: li,
-          x: x + (Math.random() - 0.5) * 20, z: z + (Math.random() - 0.5) * 20,
-          y: kind === 'heli' ? GAME.HELI_ALT : 0,
-          hp: UNITS[kind].hp,
-          prog: (h.side === 'SWARM' ? d : total - d) - i * 12,
+      if (['drone_wingman', 'assault_rover', 'heli_squad', 'main_battle_tank', 'veteran_squad', 'carnival_heli'].includes(A.unit)) {
+        this._spawnAutonomousSummon(h, A, x, z, frac, nImp);
+      } else {
+        // 召喚中心 = 效果落點(瞬發 = 施放者位置;載具遞送 = 抵達點,單位就地投入最近兵線)
+        const nSum = nImp ?? Math.max(1, Math.round(A.count * frac));
+        const { li, d } = this._nearestLane(x, z);
+        const total = this._laneCum(li)[this._laneCum(li).length - 1];
+        const comp = A.unit === 'squad'
+          ? Array.from({ length: nSum }, (_, i) => (i % 3 === 2 ? 'rocketeer' : 'soldier'))
+          : Array(nSum).fill(A.unit);
+        comp.forEach((kind, i) => {
+          this._add({
+            kind, side: h.side, lane: li,
+            x: x + (Math.random() - 0.5) * 20, z: z + (Math.random() - 0.5) * 20,
+            y: kind === 'heli' ? GAME.HELI_ALT : 0,
+            hp: UNITS[kind].hp,
+            prog: (h.side === 'SWARM' ? d : total - d) - i * 12,
+          });
         });
-      });
+      }
     } else if (A.fx === 'emp') {
       // 區域電磁癱瘓:敵方英雄與小兵武器離線(建築免疫);可附帶回傳視野
       for (const e of this.ents.values()) {
@@ -3478,9 +3513,640 @@ export class BattleSim {
         this.events.push({ e: 'boom', x: ms.x, z: ms.z, y: ms.y, r: 8, side: h.side, sam: true });
       }
       if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
+    } else if (A.fx === 'storm') {
+      // 冰封斬:以自身為中心出現圓柱範圍暴風雪傷害,持續隨機體移動,範圍內緩速,一段時間凍結
+      h.storm = {
+        until: this.t + A.dur * frac,
+        r: A.r || 12,
+        dps: A.dmg * frac,
+        add: A.add || {},
+        dwell: new Map(),
+      };
+      this.events.push({ e: 'storm_start', pid: h.pid, side: h.side, x: h.x, z: h.z, r: A.r || 12, dur: A.dur * frac });
+    } else if (A.fx === 'boomerang') {
+      // 迴力鏢:拋物線折返軌跡,橫掃路徑敵人造成傷害並眩暈
+      const ang = Math.atan2(z - h.z, x - h.x) || 0;
+      const rng = A.range || 180;
+      this.boomerangs = this.boomerangs || [];
+      this.boomerangs.push({
+        owner: h,
+        dmg: A.dmg * frac,
+        add: A.add,
+        startX: h.x, startZ: h.z,
+        ang, rng,
+        t0: this.t,
+        dur: 1.6,
+        hitSet: new Set(),
+      });
+      this.events.push({ e: 'boomerang', pid: h.pid, side: h.side, sx: h.x, sz: h.z, ang, rng });
+    } else if (A.fx === 'lance') {
+      // 朗基努斯電磁聖槍:直線穿透所有目標造成傷害並麻痺
+      const dx = x - h.x, dz = z - h.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const rng = A.range || 260;
+      const nx = dx / d, nz = dz / d;
+      const ex = h.x + nx * rng, ez = h.z + nz * rng;
+      const lineR = 2.0;
+      for (const e of this.ents.values()) {
+        if (e.side === h.side || !e.side || e.neutral || (e.hero && e.dead)) continue;
+        const p = (e.x - h.x) * nx + (e.z - h.z) * nz;
+        if (p < 0 || p > rng) continue;
+        const perp = Math.hypot(e.x - (h.x + nx * p), e.z - (h.z + nz * p));
+        if (perp <= lineR + (e.r || 1)) {
+          this._damage(e, A.dmg * frac, h, A.pen || 16, 0, { pen: A.pen || 16, vsSp: A.vsSp || 1.5 });
+          if (A.add) this._applyCC(h, A.add, e.x, e.z, 2);
+          (e.asst ||= {})[h.pid] = this.t;
+        }
+      }
+      this.events.push({ e: 'lance', pid: h.pid, side: h.side, x1: h.x, z1: h.z, x2: ex, z2: ez, r: lineR });
+    } else if (A.fx === 'chain') {
+      // 彈簧飛刀:在目標周遭敵人間折射彈跳最多 N 次,傷害與毒性遞減
+      let curX = h.x, curZ = h.z;
+      const hitSet = new Set();
+      let curDmg = A.dmg * frac;
+      let curPsn = A.add?.dps ? (Array.isArray(A.add.dps) ? A.add.dps[0] : A.add.dps) * frac : 0;
+      const maxBounces = A.add?.bounces || A.bounces || 4;
+      const decay = A.add?.decay || A.decay || 0.2;
+      const chainPath = [{ x: h.x, z: h.z }];
+
+      for (let b = 0; b <= maxBounces; b++) {
+        let best = null, bd = (b === 0 ? A.range || 200 : 25);
+        for (const e of this.ents.values()) {
+          if (e.side === h.side || !e.side || e.neutral || (e.hero && e.dead) || hitSet.has(e)) continue;
+          const d = dist2d(curX, curZ, e.x, e.z);
+          if (d < bd) { bd = d; best = e; }
+        }
+        if (!best) break;
+        hitSet.add(best);
+        curX = best.x; curZ = best.z;
+        chainPath.push({ x: curX, z: curZ });
+        this._damage(best, curDmg, h, 8, 0, null);
+        if (curPsn > 0) {
+          best.bleed = { dps: curPsn, until: this.t + (A.add?.dur || 4), attacker: h, pen: 8 };
+        }
+        (best.asst ||= {})[h.pid] = this.t;
+        curDmg *= (1 - decay);
+        curPsn *= (1 - decay);
+      }
+      this.events.push({ e: 'chain_blade', pid: h.pid, side: h.side, path: chainPath });
+    } else if (A.fx === 'pillar') {
+      // 地獄火:直擊瞬間傷害 + 持續火柱圓柱範圍燃燒
+      this._blast(h, { dmg: A.dmg * frac, r: A.r || 6 }, x, z, 0, 0);
+      this.firePillars = this.firePillars || [];
+      this.firePillars.push({
+        x, z, r: A.r || 6,
+        until: this.t + (A.dur || 4),
+        dps: (A.add?.dps ? (Array.isArray(A.add.dps) ? A.add.dps[0] : A.add.dps) : 25) * frac,
+        side: h.side,
+        owner: h,
+      });
+      this.events.push({ e: 'fire_pillar', pid: h.pid, side: h.side, x, z, r: A.r || 6, dur: A.dur || 4 });
+    } else if (A.fx === 'quake') {
+      // 鑽地炸彈:引爆後多段地脈震波連環爆破,連續命中陷入泥沼狀態
+      this.quakes = this.quakes || [];
+      this.quakes.push({
+        x, z, r: A.r || 8,
+        dmg: A.dmg * frac,
+        remaining: A.count || 3,
+        interval: 0.4,
+        nextAt: this.t,
+        side: h.side,
+        owner: h,
+        hitCounts: new Map(),
+        add: A.add,
+      });
+      this.events.push({ e: 'quake_start', pid: h.pid, side: h.side, x, z, r: A.r || 8 });
+    } else if (A.fx === 'trees') {
+      this._spawnTrees(h, A, x, z, frac);
+    } else if (A.fx === 'moon') {
+      this._spawnDarkMoon(h, A, x, z, frac);
+    } else if (A.fx === 'cube') {
+      this._spawnCubicSlabs(h, A, x, z, frac);
+    } else if (A.fx === 'fog') {
+      this._spawnFog(h, A, x, z, frac);
     }
     // dash:位移在客戶端(位置本就客戶端回報),伺服器只管 CD/MP 與廣播特效
     if (A.fx === 'buff' && A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
+  }
+
+  // ---------- 新戰鬥技能 Tick 機制 ----------
+  _tickStorms(dt) {
+    for (const h of this.heroes.values()) {
+      if (!h.storm) continue;
+      if (h.dead || this.t >= h.storm.until) {
+        this.events.push({ e: 'storm_end', pid: h.pid, side: h.side });
+        delete h.storm;
+        continue;
+      }
+      const st = h.storm;
+      for (const e of this.ents.values()) {
+        if (e.side === h.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        const d = dist2d(h.x, h.z, e.x, e.z);
+        if (d <= st.r) {
+          this._damage(e, st.dps * dt, h, 8, 0, null);
+          this._applyCC(h, { fx: 'slow', f: st.add.f ?? 0.5, dur: 0.6 }, e.x, e.z, 2);
+          const dw = (st.dwell.get(e.id) || 0) + dt;
+          st.dwell.set(e.id, dw);
+          if (dw >= (st.add.freezeS || 2.0)) {
+            this._applyCC(h, { fx: 'stun', dur: st.add.stunDur || 1.2 }, e.x, e.z, 2);
+            st.dwell.set(e.id, -999);
+            this.events.push({ e: 'freeze', id: e.id, pid: h.pid, x: e.x, z: e.z });
+          }
+        } else {
+          st.dwell.delete(e.id);
+        }
+      }
+    }
+  }
+
+  _tickBoomerangs(dt) {
+    if (!this.boomerangs || !this.boomerangs.length) return;
+    for (let i = this.boomerangs.length - 1; i >= 0; i--) {
+      const b = this.boomerangs[i];
+      const el = this.t - b.t0;
+      const p = el / b.dur;
+      if (p >= 1.0) {
+        this.boomerangs.splice(i, 1);
+        continue;
+      }
+      const fOut = p <= 0.5 ? (p / 0.5) : ((1 - p) / 0.5);
+      const forwardDist = fOut * b.rng;
+      const lateral = Math.sin(p * Math.PI) * (b.rng * 0.35);
+      const curX = b.startX + Math.cos(b.ang) * forwardDist - Math.sin(b.ang) * lateral;
+      const curZ = b.startZ + Math.sin(b.ang) * forwardDist + Math.cos(b.ang) * lateral;
+      const hitRadius = 4.0;
+      for (const e of this.ents.values()) {
+        if (e.side === b.owner.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        if (b.hitSet.has(e.id)) continue;
+        if (dist2d(curX, curZ, e.x, e.z) <= hitRadius + (e.r || 1)) {
+          b.hitSet.add(e.id);
+          this._damage(e, b.dmg, b.owner, 12, 0, null);
+          if (b.add?.fx === 'stun' || b.add?.stunDur) {
+            this._applyCC(b.owner, { fx: 'stun', dur: b.add.stunDur || b.add.dur || 1.0 }, e.x, e.z, 2);
+          }
+          (e.asst ||= {})[b.owner.pid] = this.t;
+        }
+      }
+    }
+  }
+
+  _tickFirePillars(dt) {
+    if (!this.firePillars || !this.firePillars.length) return;
+    for (let i = this.firePillars.length - 1; i >= 0; i--) {
+      const fp = this.firePillars[i];
+      if (this.t >= fp.until) {
+        this.firePillars.splice(i, 1);
+        continue;
+      }
+      for (const e of this.ents.values()) {
+        if (e.side === fp.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        if (dist2d(fp.x, fp.z, e.x, e.z) <= fp.r + (e.r || 1)) {
+          this._damage(e, fp.dps * dt, fp.owner, 10, 0, null);
+          e.bleed = { dps: fp.dps * 0.4, until: this.t + 2.0, pen: 10, pid: fp.owner.pid };
+          (e.asst ||= {})[fp.owner.pid] = this.t;
+        }
+      }
+    }
+  }
+
+  _tickQuakes(dt) {
+    if (!this.quakes || !this.quakes.length) return;
+    for (let i = this.quakes.length - 1; i >= 0; i--) {
+      const q = this.quakes[i];
+      if (this.t >= q.nextAt && q.remaining > 0) {
+        q.nextAt = this.t + q.interval;
+        q.remaining--;
+        this._blast(q.owner, { dmg: q.dmg, r: q.r }, q.x, q.z, 0, 0);
+        this.events.push({ e: 'quake_stage', pid: q.owner.pid, side: q.side, x: q.x, z: q.z, r: q.r, rem: q.remaining });
+        for (const e of this.ents.values()) {
+          if (e.side === q.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+          if (dist2d(q.x, q.z, e.x, e.z) <= q.r + (e.r || 1)) {
+            const hits = (q.hitCounts.get(e.id) || 0) + 1;
+            q.hitCounts.set(e.id, hits);
+            if (hits >= (q.add?.mudHits || 2)) {
+              this._applyCC(q.owner, { fx: 'slow', dur: q.add?.mudDur || 2.5, f: q.add?.slow || 0.6 }, e.x, e.z, 2);
+            }
+          }
+        }
+      }
+      if (q.remaining <= 0) {
+        this.quakes.splice(i, 1);
+      }
+    }
+  }
+
+  _spawnClones(h, count = 2, dur = 12) {
+    this._despawnClones(h);
+    h.clones = [];
+    for (let i = 0; i < count; i++) {
+      const cid = `clone_${h.pid}_${i}_${Math.floor(this.t * 10)}`;
+      const ang = (h.ry || 0) + (i === 0 ? 2.1 : -2.1);
+      const c = {
+        id: cid,
+        pid: h.pid,
+        side: h.side,
+        hero: true,
+        isClone: true,
+        owner: h,
+        kind: h.kind,
+        ch: h.ch,
+        hp: h.hp,
+        maxHp: h.maxHp,
+        sp: h.sp || 0,
+        maxSp: h.maxSp || 0,
+        armor: h.armor || 0,
+        r: h.r || 1.8,
+        x: h.x + Math.cos(ang) * 4,
+        y: h.y,
+        z: h.z + Math.sin(ang) * 4,
+        ry: h.ry || 0,
+        dead: false,
+      };
+      h.clones.push(c);
+      this.ents.set(cid, c);
+    }
+    this.events.push({ e: 'clone_spawn', pid: h.pid, side: h.side, count });
+  }
+
+  _despawnClones(h) {
+    if (!h.clones) return;
+    for (const c of h.clones) {
+      c.dead = true;
+      this.ents.delete(c.id);
+    }
+    h.clones = [];
+    delete h.clonesUntil;
+    delete h.noLightReloadUntil;
+  }
+
+  _tickClones(dt) {
+    for (const h of this.heroes.values()) {
+      if (!h.clones || !h.clones.length) continue;
+      if (h.dead) {
+        this._despawnClones(h);
+        continue;
+      }
+      if (this.t >= (h.clonesUntil || 0)) {
+        const candidates = [{ e: h, hp: h.hp, sp: h.sp || 0, x: h.x, z: h.z }];
+        for (const c of h.clones) {
+          if (!c.dead && c.hp > 0) candidates.push({ e: c, hp: c.hp, sp: c.sp || 0, x: c.x, z: c.z });
+        }
+        candidates.sort((a, b) => b.hp - a.hp);
+        const best = candidates[0];
+        if (best.e !== h) {
+          h.hp = best.hp;
+          h.sp = best.sp;
+          h.x = best.x;
+          h.z = best.z;
+          this.events.push({ e: 'clone_time_swap', pid: h.pid, side: h.side, x: h.x, z: h.z });
+        }
+        this._despawnClones(h);
+        continue;
+      }
+      for (let i = 0; i < h.clones.length; i++) {
+        const c = h.clones[i];
+        if (c.dead) continue;
+        const ang = (h.ry || 0) + (i === 0 ? 2.1 : -2.1);
+        c.x = h.x + Math.cos(ang) * 4;
+        c.z = h.z + Math.sin(ang) * 4;
+        c.y = h.y;
+        c.ry = h.ry;
+      }
+    }
+  }
+
+  // ---------- 新戰鬥技能與自律召喚部隊系統 ----------
+  _spawnTrees(h, A, cx, cz, frac = 1) {
+    this.sacredTrees = this.sacredTrees || [];
+    const R = 4.8;
+    const offsets = [
+      [0, R],
+      [-R * 0.866, -R * 0.5],
+      [R * 0.866, -R * 0.5],
+    ];
+    const treeHp = Math.round((A.hp || 500) * frac);
+    const dur = A.dur || 8;
+    const until = this.t + dur;
+    const newTrees = [];
+    for (const [ox, oz] of offsets) {
+      const tx = cx + ox, tz = cz + oz;
+      const tree = this._add({
+        isTree: true,
+        kind: 'tree',
+        side: h.side,
+        x: tx, z: tz,
+        r: 2.0, h: 9,
+        hp: treeHp,
+        until,
+      });
+      this.sacredTrees.push(tree);
+      newTrees.push({ id: tree.id, x: tx, z: tz, r: 2.0, h: 9 });
+    }
+    // 破土爆破衝擊傷害與緩速
+    this._blast(h, { dmg: A.dmg * frac, r: A.r || 14 }, cx, cz, 0, 0);
+    this._applyCC(h, { fx: 'slow', f: 0.6, dur: 1.5 }, cx, cz, A.r || 14);
+    this.events.push({ e: 'tree_grow', x: cx, z: cz, r: A.r || 14, dur, trees: newTrees });
+  }
+
+  _tickTrees(dt) {
+    if (!this.sacredTrees || !this.sacredTrees.length) return;
+    for (let i = this.sacredTrees.length - 1; i >= 0; i--) {
+      const t = this.sacredTrees[i];
+      if (t.dead || t.hp <= 0 || this.t >= t.until) {
+        t.dead = true;
+        this.ents.delete(t.id);
+        this.sacredTrees.splice(i, 1);
+        this.events.push({ e: 'die', id: t.id, kind: 'tree', x: t.x, z: t.z, side: t.side });
+      }
+    }
+  }
+
+  _spawnDarkMoon(h, A, cx, cz, frac = 1) {
+    this.darkMoons = this.darkMoons || [];
+    const moonHp = Math.round((A.hp || 800) * frac);
+    const dur = A.dur || 3.5;
+    const moon = this._add({
+      isMoon: true,
+      kind: 'moon',
+      side: h.side,
+      owner: h,
+      x: cx, z: cz, y: 4.5,
+      r: 3.5,
+      hp: moonHp,
+      dur,
+      until: this.t + dur,
+      dmg: A.dmg * frac,
+      imp: (A.imp || 22) * frac,
+    });
+    this.darkMoons.push(moon);
+    this.events.push({ e: 'moon_spawn', id: moon.id, x: cx, z: cz, y: 4.5, r: 3.5, dur });
+  }
+
+  _moonBoom(m) {
+    if (m.dead) return;
+    m.dead = true;
+    this.ents.delete(m.id);
+    this._blast(m.owner, { dmg: m.dmg, r: 16, vs: { armor: 1.2, building: 1.2 } }, m.x, m.z, 0, 0);
+    this._applyCC(m.owner, { fx: 'stun', dur: 0.8 }, m.x, m.z, 16);
+    this.events.push({ e: 'moon_boom', x: m.x, z: m.z, y: m.y || 4.5, r: 16 });
+  }
+
+  _tickDarkMoons(dt) {
+    if (!this.darkMoons || !this.darkMoons.length) return;
+    for (let i = this.darkMoons.length - 1; i >= 0; i--) {
+      const m = this.darkMoons[i];
+      if (m.dead || m.hp <= 0 || this.t >= m.until) {
+        this._moonBoom(m);
+        this.darkMoons.splice(i, 1);
+        continue;
+      }
+      // 月球重力牽引周圍 22m 敵軍
+      for (const e of this.ents.values()) {
+        if (e.side === m.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0 || e.kind === 'tower' || e.kind === 'base' || e.isTree || e.isMoon || e.isSlab) continue;
+        const d = dist2d(e.x, e.z, m.x, m.z);
+        if (d <= 22 && d > 1.2) {
+          const pullSpeed = (m.imp || 22) * dt;
+          const nx = (m.x - e.x) / d, nz = (m.z - e.z) / d;
+          e.x += nx * Math.min(pullSpeed, d - 1.0);
+          e.z += nz * Math.min(pullSpeed, d - 1.0);
+        }
+      }
+    }
+  }
+
+  _spawnCubicSlabs(h, A, cx, cz, frac = 1) {
+    this.cubicSlabs = this.cubicSlabs || [];
+    const R = 5.5;
+    const slabHp = Math.round((A.hp || 350) * frac);
+    const dur = A.dur || 5;
+    const until = this.t + dur;
+    const slabList = [];
+    for (let k = 0; k < 6; k++) {
+      const a = (k * Math.PI) / 3;
+      const sx = cx + Math.cos(a) * R, sz = cz + Math.sin(a) * R;
+      const slab = this._add({
+        isSlab: true,
+        kind: 'slab',
+        side: h.side,
+        x: sx, z: sz,
+        ang: a,
+        r: 1.75, h: 6,
+        hp: slabHp,
+        until,
+      });
+      slabList.push(slab);
+    }
+    this.cubicSlabs.push({ cx, cz, r: R, dur, until, dps: (A.dmg || 50) * frac, owner: h, slabs: slabList });
+    this.events.push({ e: 'cube_spawn', x: cx, z: cz, r: R, dur });
+  }
+
+  _tickCubicSlabs(dt) {
+    if (!this.cubicSlabs || !this.cubicSlabs.length) return;
+    for (let i = this.cubicSlabs.length - 1; i >= 0; i--) {
+      const cage = this.cubicSlabs[i];
+      if (this.t >= cage.until || cage.slabs.every((s) => s.dead || s.hp <= 0)) {
+        for (const s of cage.slabs) {
+          s.dead = true;
+          this.ents.delete(s.id);
+        }
+        this.cubicSlabs.splice(i, 1);
+        continue;
+      }
+      // 陣內空間共振傷害
+      for (const e of this.ents.values()) {
+        if (e.side === cage.owner.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        if (dist2d(e.x, e.z, cage.cx, cage.cz) <= cage.r) {
+          this._damage(e, cage.dps * dt, cage.owner, 12, 0, null);
+        }
+      }
+    }
+  }
+
+  _spawnFog(h, A, cx, cz, frac = 1) {
+    this.fogs = this.fogs || [];
+    const dur = A.dur || 8;
+    this.fogs.push({ x: cx, z: cz, r: A.r || 35, dur, until: this.t + dur, side: h.side, owner: h });
+    this.events.push({ e: 'fog_spawn', x: cx, z: cz, r: A.r || 35, dur, side: h.side });
+  }
+
+  _tickFogs(dt) {
+    if (!this.fogs || !this.fogs.length) return;
+    this.fogs = this.fogs.filter((f) => f.until > this.t);
+  }
+
+  _spawnAutonomousSummon(h, A, x, z, frac = 1, nImp = null) {
+    this.autonomousSummons = this.autonomousSummons || [];
+    const kind = A.unit;
+    const u = UNITS[kind];
+    if (!u) return;
+    const lvl = h.abil[A.id] || 1;
+    const scale = 1 + (lvl - 1) * 0.35;
+    const nSum = nImp ?? Math.max(1, Math.round((A.count || 2) * frac));
+    const isFly = !!u.fly;
+    const alt = isFly ? (kind.includes('heli') ? GAME.HELI_ALT : GAME.DRONE_ALT) : 0;
+
+    for (let i = 0; i < nSum; i++) {
+      const ang = (i / nSum) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const d = 6 + i * 4;
+      const sx = x + Math.cos(ang) * d, sz = z + Math.sin(ang) * d;
+      const summon = this._add({
+        kind,
+        side: h.side,
+        lane: null,
+        summoned: true,
+        ownerPid: h.pid,
+        x: sx, z: sz,
+        y: alt,
+        hp: Math.round(u.hp * scale),
+        maxHp: Math.round(u.hp * scale),
+        dmg: Math.round(u.dmg * scale),
+        armor: u.armor || 0,
+        speed: u.speed || 15,
+        range: u.range || 150,
+        rate: u.rate || 0.8,
+        sight: u.sight || 200,
+        wid: u.wid,
+        offset: { x: Math.cos(ang) * 12, z: Math.sin(ang) * 12 },
+      });
+      this.autonomousSummons.push(summon);
+      this.events.push({ e: 'summon_spawn', id: summon.id, kind, side: h.side, x: sx, z: sz, y: alt });
+    }
+  }
+
+  _tickSummons(dt) {
+    if (!this.autonomousSummons || !this.autonomousSummons.length) return;
+    for (let i = this.autonomousSummons.length - 1; i >= 0; i--) {
+      const s = this.autonomousSummons[i];
+      if (s.dead || s.hp <= 0 || !this.ents.has(s.id)) {
+        s.dead = true;
+        this.ents.delete(s.id);
+        this.autonomousSummons.splice(i, 1);
+        continue;
+      }
+      const owner = this.heroes.get(s.ownerPid);
+      // 目標選擇:優先集火主人攻擊中的目標 (focusFire)
+      let target = null;
+      if (owner?.lastHitTargetId) {
+        const lt = this.ents.get(owner.lastHitTargetId);
+        if (lt && lt.hp > 0 && lt.side !== s.side && (!lt.hero || !lt.dead) && dist2d(s.x, s.z, lt.x, lt.z) <= s.sight * 1.5) {
+          target = lt;
+        }
+      }
+      if (!target) {
+        // 主動索敵警戒半徑 45m (英雄 > 塔 > 小兵)
+        let best = null, bestScore = Infinity;
+        for (const e of this.ents.values()) {
+          if (e.side === s.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+          const d = dist2d(s.x, s.z, e.x, e.z);
+          if (d > (s.sight || 200)) continue;
+          const prio = e.hero ? 0 : (e.kind === 'tower' || e.kind === 'base' ? 50 : 100);
+          const score = prio + d;
+          if (score < bestScore) { bestScore = score; best = e; }
+        }
+        target = best;
+      }
+
+      s.cd = Math.max(0, (s.cd || 0) - dt);
+      if (target) {
+        const d = dist2d(s.x, s.z, target.x, target.z);
+        if (d <= s.range) {
+          if (s.cd === 0) {
+            s.cd = 1 / (s.rate || 0.8);
+            const wd = s.wid ? WEAPONS[s.wid] : null;
+            this._damage(target, s.dmg, s, wd?.pen || 0, 0, wd);
+            this.events.push({ e: 'shot', id: s.id, x: s.x, z: s.z, y: s.y || 0, tx: target.x, tz: target.z, ty: target.y || 0, kind: s.kind });
+          }
+        } else {
+          // 向目標移動
+          const moveD = Math.min(s.speed * dt, d - s.range * 0.85);
+          if (moveD > 0) {
+            s.x += ((target.x - s.x) / d) * moveD;
+            s.z += ((target.z - s.z) / d) * moveD;
+          }
+        }
+      } else if (owner && !owner.dead) {
+        // 脫戰時跟隨主人,伴隨護衛
+        const targetX = owner.x + (s.offset?.x || 0);
+        const targetZ = owner.z + (s.offset?.z || 0);
+        const od = dist2d(s.x, s.z, targetX, targetZ);
+        if (od > 6) {
+          const moveD = Math.min(s.speed * dt, od - 4);
+          s.x += ((targetX - s.x) / od) * moveD;
+          s.z += ((targetZ - s.z) / od) * moveD;
+        }
+      }
+    }
+  }
+
+  _skillBarriersBlocked(ax, az, ay, bx, bz, by) {
+    const dx = bx - ax, dz = bz - az;
+    const len2 = dx * dx + dz * dz;
+    if (len2 < 1e-6) return false;
+
+    // 1. 神木防線 (圓柱測試)
+    if (this.sacredTrees?.length) {
+      for (const t of this.sacredTrees) {
+        if (t.hp <= 0 || t.dead) continue;
+        if (Math.min(ay, by) >= t.h) continue;
+        const ox = ax - t.x, oz = az - t.z;
+        const b = (ox * dx + oz * dz) / len2;
+        const c = (ox * ox + oz * oz - t.r * t.r);
+        const disc = b * b - c / len2;
+        if (disc < 0) continue;
+        const sq = Math.sqrt(disc);
+        const t0 = Math.max(0, -b - sq), t1 = Math.min(1, -b + sq);
+        if (t0 <= t1 && t1 >= 0 && t0 <= 1) {
+          const y0 = ay + t0 * (by - ay), y1 = ay + t1 * (by - ay);
+          if (Math.min(y0, y1) < t.h) return true;
+        }
+      }
+    }
+
+    // 2. 暗月巨石 (3D 球體測試)
+    if (this.darkMoons?.length) {
+      const dy = by - ay;
+      const len3Sq = len2 + dy * dy;
+      if (len3Sq > 1e-6) {
+        for (const m of this.darkMoons) {
+          if (m.hp <= 0 || m.dead) continue;
+          const px = ax - m.x, py = ay - m.y, pz = az - m.z;
+          const b = (px * dx + py * dy + pz * dz) / len3Sq;
+          const c = (px * px + py * py + pz * pz - m.r * m.r) / len3Sq;
+          const disc = b * b - c;
+          if (disc >= 0) {
+            const sq = Math.sqrt(disc);
+            const t0 = -b - sq, t1 = -b + sq;
+            if (t1 >= 0 && t0 <= 1) return true;
+          }
+        }
+      }
+    }
+
+    // 3. 立方石板 (6 面幾何板測試)
+    if (this.cubicSlabs?.length) {
+      for (const cage of this.cubicSlabs) {
+        if (cage.dead) continue;
+        for (const slab of cage.slabs) {
+          if (slab.hp <= 0 || slab.dead) continue;
+          const tangA = slab.ang + Math.PI / 2;
+          const hw = 1.75;
+          const s1x = slab.x - Math.cos(tangA) * hw, s1z = slab.z - Math.sin(tangA) * hw;
+          const s2x = slab.x + Math.cos(tangA) * hw, s2z = slab.z + Math.sin(tangA) * hw;
+          const sdx = s2x - s1x, sdz = s2z - s1z;
+          const denom = dx * sdz - dz * sdx;
+          if (Math.abs(denom) > 1e-6) {
+            const ua = ((s1x - ax) * sdz - (s1z - az) * sdx) / denom;
+            const ub = ((s1x - ax) * dz - (s1z - az) * dx) / denom;
+            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
+              const hitY = ay + ua * (by - ay);
+              if (hitY >= 0 && hitY <= (slab.h || 6)) return true;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -3998,6 +4664,11 @@ export class BattleSim {
     }
     // 助攻貢獻戳記(2026-07-17):英雄對敵方目標造成傷害 = 貢獻;_kill 結算時複驗時效/距離
     if (by && by.hero && by.side !== t.side) (t.asst ||= {})[by.pid] = this.t;
+    // 召喚僚機協同集火目標標記 (focusFire)
+    if (by && by.side !== t.side) {
+      const h = by.hero ? by : (by.ownerPid ? this.heroes.get(by.ownerPid) : null);
+      if (h) { h.lastHitTargetId = t.id; if (h.sq?.owner) h.sq.owner.lastHitTargetId = t.id; }
+    }
     // 第三方機動 NPC 被攻擊 → 記仇追擊攻擊者(脫離視野仍持續 THIRD.AGGRO_TTL 秒;追擊受 TETHER_M 繫繩上限)。
     // 駐守中(t.gar)已於開頭免傷早退 ⇒ 此處必為出堡機動單位;碉堡不動故排除。
     if (t.tp && t.kind !== 'bunker' && by && by.side && by.side !== t.side && !by.neutral) {
@@ -4047,6 +4718,39 @@ export class BattleSim {
     }
     t.hp -= dmg;
     if (t.hp <= 0) {
+      if (t.isTree || t.isSlab) {
+        t.hp = 0; t.dead = true; this.ents.delete(t.id);
+        this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side });
+        return;
+      }
+      if (t.isMoon) {
+        t.hp = 0; this._moonBoom(t);
+        return;
+      }
+      if (t.isClone) {
+        t.hp = 0;
+        t.dead = true;
+        this.ents.delete(t.id);
+        if (t.owner?.clones) t.owner.clones = t.owner.clones.filter((c) => c !== t);
+        this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side, pid: t.owner?.pid });
+        return;
+      }
+      if (t.hero && t.clones && t.clones.length > 0) {
+        const aliveClones = t.clones.filter((c) => !c.dead && c.hp > 0);
+        if (aliveClones.length > 0) {
+          aliveClones.sort((a, b) => b.hp - a.hp);
+          const best = aliveClones[0];
+          t.hp = best.hp;
+          t.sp = best.sp;
+          t.x = best.x;
+          t.z = best.z;
+          best.dead = true;
+          this.ents.delete(best.id);
+          t.clones = t.clones.filter((c) => c !== best);
+          this.events.push({ e: 'clone_death_swap', pid: t.pid, side: t.side, x: t.x, z: t.z });
+          return;
+        }
+      }
       t.hp = 0;
       this._kill(t, by);
     }
@@ -4470,13 +5174,23 @@ export class BattleSim {
     this._tickHazards(dt);
     this._tickAirdrops(dt);
     this._tickCamps(dt);
+    this._tickStorms(dt);
+    this._tickBoomerangs(dt);
+    this._tickFirePillars(dt);
+    this._tickQuakes(dt);
+    this._tickClones(dt);
+    this._tickTrees(dt);
+    this._tickDarkMoons(dt);
+    this._tickCubicSlabs(dt);
+    this._tickFogs(dt);
+    this._tickSummons(dt);
 
     // 小兵 / 塔 / 主堡行為
     this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
     this._buildTickIndex();   // 索敵網格 + (side|lane) 推擠分桶:一趟建好,tick 尾清空
     for (const e of [...this.ents.values()]) {
-      // 集束轟炸機/護衛機/極音速飛彈:位置由各自的 _tick* 管、自己不推線,但仍是敵方小兵/塔的合法目標
-      if (e.hero || e.neutral || e.decoy || e.kami || e.hyper || e.hp <= 0) continue;
+      // 集束轟炸機/護衛機/極音速飛彈/神木/暗月/石板/自律部隊:由各自的 _tick* 管、自己不推線
+      if (e.hero || e.neutral || e.decoy || e.kami || e.hyper || e.isTree || e.isMoon || e.isSlab || e.summoned || e.hp <= 0) continue;
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
       if (u.guns) this._tickBaseGuns(e, u.guns, dt);   // 主堡兩門大砲(獨立於本體火砲,砲塔級射程/傷害)
@@ -5440,7 +6154,16 @@ export class BattleSim {
       if (this._blinded(e)) continue;    // 閃光彈:受害單位不再提供視野
       const sight = UNITS[e.kind]?.sight;
       if (sight == null) continue;
-      const r = e.hero && e.aiming ? sight * GAME.AIM_SIGHT_MULT : sight;
+      let r = e.hero && e.aiming ? sight * GAME.AIM_SIGHT_MULT : sight;
+      // 迷霧內敵軍視野縮減至 1/3 (荒原天幕:神鷹迷霧界)
+      if (this.fogs?.length) {
+        for (const fog of this.fogs) {
+          if (fog.until > this.t && fog.side !== side && dist2d(e.x, e.z, fog.x, fog.z) <= fog.r) {
+            r *= 0.333;
+            break;
+          }
+        }
+      }
       sources.push([e.x, e.z, r, this._eyeY(e)]);   // 眼高:LOS 遮蔽用(高飛的無人機看得過建物)
     }
     m.src[side] = sources;
@@ -5455,6 +6178,15 @@ export class BattleSim {
   _visibleTo(e, side, sources) {
     if (e.side === side || e.neutral || e.kind === 'tower' || e.kind === 'base') return true;
     if (e.hero && (e.stealthUntil || 0) > this.t) return false;   // 匿蹤:連視野內也看不到
+    // 迷霧保護:迷霧外敵軍無法看見迷霧內部友軍 (只有友方或身處同一迷霧內部的敵軍可看見)
+    if (this.fogs?.length) {
+      for (const fog of this.fogs) {
+        if (fog.until > this.t && fog.side === e.side && dist2d(e.x, e.z, fog.x, fog.z) <= fog.r) {
+          sources = sources.filter(([sx, sz]) => dist2d(sx, sz, fog.x, fog.z) <= fog.r);
+          break;
+        }
+      }
+    }
     const m = this._visMemoFor();
     const memo = sources === m.src[side] ? m.vis[side] : null;
     if (memo) {

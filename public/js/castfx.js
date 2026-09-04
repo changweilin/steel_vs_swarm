@@ -1884,11 +1884,13 @@ const PARTICLE_RECIPES = Object.fromEntries(PROFILE_ROWS.map(([profileId], i) =>
 const ARCH_BY_FX = {
   buff: 'aura', heal: 'heal', strike: 'zone', summon: 'gate', emp: 'bind',
   vision: 'scan', stealth: 'veil', dash: 'dash', intercept: 'dome',
+  trees: 'zone', moon: 'zone', cube: 'zone', fog: 'veil',
 };
 // fx 型別輔色(語意色:治療綠 / 癱瘓紫 / 增益暖白……)
 const FX_ACCENT = {
   buff: 0xfff2b8, heal: 0x9dffb0, strike: 0xffb06b, summon: 0xfff2b8, emp: 0xb78aff,
   vision: 0x9adfff, stealth: 0xcfd6ff, dash: 0xffffff, intercept: 0x9adfff,
+  trees: 0x5ebd55, moon: 0xd9e5ff, cube: 0xe0ca85, fog: 0xccd9e8,
 };
 
 /**

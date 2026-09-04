@@ -33,7 +33,7 @@ import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampR
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { animWeights } from './animweights.js';
-import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
+import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
@@ -49,6 +49,12 @@ const KIND_KEY = {
   bunker: 'bunker',   // 第三方碉堡(GUER/MILI)
   kami: 'hero:drone', // 護衛自殺機:渲染成該角色的無人機(_spawnUnit 縮小 SIZE_F)
   hyper: 'hyper',     // 極音速飛彈(機甲長按招式的彈體;位置/朝向全由伺服器回報)
+  drone_wingman: 'hero:drone',
+  assault_rover: 'creep:apc',
+  heli_squad: 'creep:heli',
+  main_battle_tank: 'creep:tank',
+  veteran_squad: 'creep:soldier',
+  carnival_heli: 'creep:heli',
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
 // 彈道積分的最大取樣點數(步長 ≤0.03s 且 ≈3m/點)。繪製緩衝(_ensureArcGuide)與
@@ -3476,7 +3482,7 @@ export class BattleClient {
       id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
       isSelf, hero, heroY: 0, ry: 0,
-      flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper',
+      flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper' || e.k === 'drone_wingman' || e.k === 'heli_squad' || e.k === 'carnival_heli',
       decoy: e.k === 'decoy', kami: e.k === 'kami', hyper: e.k === 'hyper', si: e.si || 0,
       isStatic: e.k === 'tower' || e.k === 'base' || e.k === 'bunker',
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
@@ -4170,6 +4176,19 @@ export class BattleClient {
       // **榴彈拋物線** + 翻滾拖尾 → 落地才引爆(依類型的地面演出)。伺服器傷害在事件當下即結算(純視覺延後)。
       this._spawnDecoyBomb(ev.x, -ev.z, ev.y != null ? ev.y : 8, ev.bomb || 'fire', ev.r || 14,
         ev.fx != null ? { x: ev.fx, z: -ev.fz, y: ev.fy || 0 } : null);
+    } else if (ev.e === 'tree_grow') {
+      const trees = ev.trees ? ev.trees.map((t) => ({ x: t.x, z: -t.z, r: t.r, h: t.h })) : null;
+      spawnTreesVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, trees, dur: ev.dur });
+    } else if (ev.e === 'moon_spawn') {
+      spawnDarkMoonVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: ev.y || 4.5, r: ev.r || 3.5, dur: ev.dur });
+    } else if (ev.e === 'moon_boom') {
+      starburst(this.scene, this.effects, ev.x, ev.y || 4.5, -ev.z, (ev.r || 16) * 1.5, 0xcfd8ff);
+      shockRing(this.scene, this.effects, ev.x, this.terrain.heightAt(ev.x, -ev.z), -ev.z, ev.r || 16, 0x8aa8ff);
+    } else if (ev.e === 'cube_spawn') {
+      spawnCubicSlabsVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, r: ev.r || 5.5, dur: ev.dur });
+    } else if (ev.e === 'fog_spawn') {
+      const isAlly = ev.side === this.side;
+      spawnFogVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, r: ev.r || 35, dur: ev.dur, isAlly });
     } else if (ev.e === 'burn') {
       if (ev.pid === this.youId) {
         this.trauma = Math.min(1, this.trauma + 0.25);
