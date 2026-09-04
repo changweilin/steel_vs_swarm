@@ -40,6 +40,19 @@ const MAX_TIER = 1 + ECON.UPGRADES.lw.max;   // 戰鬥面向滿級階(開場 Lv1
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { BattleSim, waveInterval } from '../server/sim.js';
 
+// CLI 參數解析與測試模式判定 (平衡測試不考慮天氣, 天候恆常為中性無 Debuff)
+const ARGS = new Set(process.argv.slice(2));
+const IS_CI = ARGS.has('--ci') || process.env.CI === 'true' || process.env.CI === '1';
+const IS_STRICT = ARGS.has('--strict');
+const MODE_NAME = IS_CI
+  ? 'CI 快速模式 (抽樣少場數, 目標 50±10%)'
+  : (IS_STRICT
+    ? '平衡性改動調整模式 (全量場數, 嚴格目標 50±3%)'
+    : '常規平衡測試模式 (全量場數, 基準目標 50±5%)');
+
+console.log(`[平衡測試模式] ${MODE_NAME}`);
+console.log('   ⓘ 天氣設定: 平衡性測試時不考慮天氣 (恆常 clear / 無天候 Debuff 擾動)\n');
+
 const TARGET_LEFT = 0.40;          // 戰後應剩餘的 EHP 比例
 const WAVE = waveComp();   // 編制唯一真相住 data.js(waveComp;MUST NOT 手抄)
 
@@ -104,7 +117,9 @@ console.log(`1.1 最前線敵我砲塔 — 目標:塔距 ${WANT.toFixed(0)}m(射
 let lo = Infinity, hi = -Infinity, dual = 0;
 for (const v of VENUES) {
   for (const ts of [1, 3, 5]) {                      // teamSize → 1/2/3 線
-    const sim = new BattleSim(venueConfig(v, ts));
+    const cfg = venueConfig(v, ts);
+    cfg.env = { season: 'summer', time: 'day', weather: 'clear' };
+    const sim = new BattleSim(cfg);
     const tw = [...sim.ents.values()].filter((e) => e.kind === 'tower');
     let min = Infinity;
     for (const a of tw) for (const b of tw) {
@@ -238,11 +253,13 @@ console.log('\n=================================================================
 console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance)\n');
 
 {
-  const TOL = 0.05; // 勝率誤差在 +-5% 以內
+  const TOL = IS_CI ? 0.10 : (IS_STRICT ? 0.03 : 0.05);
   const kinds = ['robot', 'drone', 'morph'];
-  const chs = Object.keys(CHARACTERS);
+  const allChs = Object.keys(CHARACTERS);
+  // CI 模式採用間隔抽樣少場數 (16名代表機體，涵蓋全機種與雙陣營)，平衡改動調整時與常規模式跑全量 32 名機體
+  const chs = IS_CI ? allChs.filter((_, idx) => idx % 2 === 0) : allChs;
 
-  console.log('3.1~3.5 五大戰鬥情境平衡測試 — 遠戰 / 近戰 / 兵線守塔 / 迷霧 / 無雙 (Lv1 & Lv4, 變形雙形態)\n');
+  console.log(`3.1~3.5 五大戰鬥情境平衡測試 — 遠戰 / 近戰 / 兵線守塔 / 迷霧 / 無雙 (Lv1 & Lv4, 變形雙形態, 機體數: ${chs.length}, 守門目標: 50±${(TOL * 100).toFixed(0)}%)\n`);
 
   const scWins = [0, 0, 0, 0, 0];
   let scN = 0;
@@ -308,18 +325,18 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
     console.log(`   ⓘ 3.1 情境 ${idx + 1} (${scNames[idx]}) 綜合勝率 ${(scWinR * 100).toFixed(1)}% (參考指標)`);
   }
 
-  // 3.2 全情境綜合平均勝率 (守門: 50% ± 5%)
+  // 3.2 全情境綜合平均勝率
   const overallWinR = scWins.reduce((s, x) => s + x, 0) / (scN * 5);
   const okOverall = Math.abs(overallWinR - 0.5) <= TOL;
   if (!okOverall) fail++;
-  console.log(`${okOverall ? '✅' : '❌'} 3.2 全情境綜合平均勝率 ${(overallWinR * 100).toFixed(2)}% (目標 50±${TOL * 100}pp)`);
+  console.log(`${okOverall ? '✅' : '❌'} 3.2 全情境綜合平均勝率 ${(overallWinR * 100).toFixed(2)}% (目標 50±${(TOL * 100).toFixed(0)}pp)`);
 
   // 3.3 同機種內平衡 (Intra-class)
   for (const k of kinds) {
     const r = intraWins[k] / intraN[k];
     const ok = Math.abs(r - 0.5) <= TOL + 1e-4;
     if (!ok) fail++;
-    console.log(`${ok ? '✅' : '❌'} 3.3 同機種平衡  ${k.padEnd(6)} 內戰勝率 ${(r * 100).toFixed(2)}% (目標 50±${TOL * 100}pp)`);
+    console.log(`${ok ? '✅' : '❌'} 3.3 同機種平衡  ${k.padEnd(6)} 內戰勝率 ${(r * 100).toFixed(2)}% (目標 50±${(TOL * 100).toFixed(0)}pp)`);
   }
 
   // 3.4 不同機種間平衡 (Inter-class)
@@ -328,14 +345,14 @@ console.log('模組三：多維戰鬥情境平衡 (Multi-Scenario Combat Balance
     const ok = Math.abs(r - 0.5) <= TOL + 1e-4;
     if (!ok) fail++;
     const [kA, kB] = key.split('_vs_');
-    console.log(`${ok ? '✅' : '❌'} 3.4 跨機種平衡  ${kA.padEnd(6)} vs ${kB.padEnd(6)} ${(r * 100).toFixed(2)}% (目標 50±${TOL * 100}pp)`);
+    console.log(`${ok ? '✅' : '❌'} 3.4 跨機種平衡  ${kA.padEnd(6)} vs ${kB.padEnd(6)} ${(r * 100).toFixed(2)}% (目標 50±${(TOL * 100).toFixed(0)}pp)`);
   }
 
   // 3.5 陣營對抗平衡
   const sideR = swarmWin / sideN;
   const okSide = Math.abs(sideR - 0.5) <= TOL + 1e-4;
   if (!okSide) fail++;
-  console.log(`${okSide ? '✅' : '❌'} 3.5 陣營平衡    SWARM  vs STEEL  ${(sideR * 100).toFixed(2)}% (目標 50±${TOL * 100}pp)`);
+  console.log(`${okSide ? '✅' : '❌'} 3.5 陣營平衡    SWARM  vs STEEL  ${(sideR * 100).toFixed(2)}% (目標 50±${(TOL * 100).toFixed(0)}pp)`);
 }
 
 // 3.6 招式配置 ← 武器射程剖面 (原 ⑥)

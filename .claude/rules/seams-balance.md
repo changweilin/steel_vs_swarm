@@ -33,4 +33,5 @@
 | 環境標籤 | `data.js envLabel()`(`environment.js` re-export 舊入口) | 只是 `ENV` 的取名查表;住 data.js 是因為 environment.js import three ⇒ Node 端載不動(同 `hazards.js` → `rng.js`)|
 | 對進戰模型 | `tools/duel.mjs`(bal ⑤) | **只算武器是刻意的**;招式導向角色走具名豁免。機種控制變因(bal ⑤f)只有 `chassisFighter()` 一份 —— 換底盤會連動射程上限 / 機動 / 經 mobDmgF·rngDmgF 折算後的火力,MUST 走既有解析縫(暫時註冊合成角色 → 解析 → 當場移除),MUST NOT 手抄一份「換了底盤的武器數值」;護甲比**有效值**不比宣告值(無人機宣告值是另一把尺,MUST 反解 `SQUAD.ARMOR_F`) |
 | 前線交戰模型 | `tools/lanesim.mjs`(bal ⑦);擊發排程唯一縫 = `reFire()` | 場景距離/秒數全部由 `data.js` 推導,MUST NOT 手寫。與 `duel.mjs` **分工不合併**(本支是攻擊範圍唯一被計價的模型)。三個曾量錯的地方:升級 MUST NOT 重建槽位、站位要同時有下限與上限、閃避不吃「這一步有沒有位移」。長按 = 大招兩組都在模型內(載具當**真的實體**跑 / 自身型走 `castSelfUlt` 且效果值經 `selfUltBoost`);施放有兩道閘(交戰中才放、補血型等真的掉血);記帳 MUST 分桶(hero/tower/creep)。本模型看不到的價值 MUST 逐項列在檔頭並在 ⑦f 印出來 |
+| 平衡測試基準與守門分級 | `tools/balance.mjs`・`tools/combat_scenarios.mjs` | **平衡性測試時不考慮天氣** (恆常 clear、零天候 Debuff 與隨機天候擾動); **CI 模式** (`npm run bal:ci` / `--ci`) 採用代表機體少場數且勝率守門 50% ± 10% (40%~60%); **平衡改動調整模式** (`npm run bal:strict` / `--strict`) 採全量 32 機體且勝率守門比較嚴格的 50% ± 3% (47%~53%); 常規預設 `npm run bal` 基準守門 50% ± 5% |
 
