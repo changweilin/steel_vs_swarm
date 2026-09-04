@@ -842,6 +842,37 @@ export class BattleClient {
   }
 
   /**
+   * 查詢座標 (x, z) 半徑 r 範圍內可能相交的障礙碰撞體(由 64m 空間網格快篩)。
+   * 若空間網格未就位則退回全場 blockers。
+   */
+  _blockersNear(x, z, r) {
+    if (!this._blockGrid) return this.terrain?.blockers || [];
+    const { C, grid } = this._blockGrid;
+    const i0 = Math.floor((x - r) / C), i1 = Math.floor((x + r) / C);
+    const j0 = Math.floor((z - r) / C), j1 = Math.floor((z + r) / C);
+    if (i0 === i1 && j0 === j1) {
+      return grid.get(`${i0},${j0}`) || [];
+    }
+    const out = [];
+    const seen = this._blockerNearSet || (this._blockerNearSet = new Set());
+    seen.clear();
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const list = grid.get(`${i},${j}`);
+        if (!list) continue;
+        for (let k = 0; k < list.length; k++) {
+          const b = list[k];
+          if (!seen.has(b)) {
+            seen.add(b);
+            out.push(b);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
    * 線段 vs 障礙體(建物/神木/巨岩/橋墩):回傳最近命中距離(沿線段),沒打到回 null。
    * 橫斷面 = _collide 同一份碰撞體:**建物走有向盒**(hw2/hd2/ry)、其餘走圓柱(r);
    * 側面進入 / 打頂面 / 打底面**皆算,且不分上下方向**。有物理障礙的物件不可讓砲火穿越;
@@ -860,9 +891,18 @@ export class BattleClient {
     const dx = bx - ax, dy = by - ay, dz = bz - az;
     const len = Math.hypot(dx, dy, dz) || 1;
     let bestT = null;
-    const seen = new Set();
+    const seen = this._blockerHitSet || (this._blockerHitSet = new Set());
+    seen.clear();
+    const lenXZ2 = dx * dx + dz * dz;
+    const maxCellDistSq = (C * 0.85) * (C * 0.85);
     for (let i = i0; i <= i1; i++) {
       for (let j = j0; j <= j1; j++) {
+        if (lenXZ2 > 1e-6 && (i0 !== i1 || j0 !== j1)) {
+          const cx = (i + 0.5) * C, cz = (j + 0.5) * C;
+          const tProj = Math.max(0, Math.min(1, ((cx - ax) * dx + (cz - az) * dz) / lenXZ2));
+          const nx = ax + tProj * dx - cx, nz = az + tProj * dz - cz;
+          if (nx * nx + nz * nz > maxCellDistSq) continue;
+        }
         const a = grid.get(`${i},${j}`);
         if (!a) continue;
         for (const b of a) {
@@ -939,7 +979,9 @@ export class BattleClient {
    */
   _slabHitT(ax, ay, az, bx, by, bz) {
     const t = this.terrain;
-    if (!t.deckY && !t.tunnelAt) return null;
+    const hasDecks = !!t?.deckY && t.deckY.hasItems !== false;
+    const hasTunnels = !!t?.tunnelAt && t.tunnelAt.hasItems !== false;
+    if (!hasDecks && !hasTunnels) return null;
     const dx = bx - ax, dy = by - ay, dz = bz - az;
     const len = Math.hypot(dx, dy, dz);
     if (len < 1e-3) return null;
@@ -950,11 +992,11 @@ export class BattleClient {
       const f = s / n;
       const x = ax + dx * f, y = ay + dy * f, z = az + dz * f;
       const yLo = Math.min(py, y), yHi = Math.max(py, y);
-      if (t.deckY) {
+      if (hasDecks) {
         const d = t.deckY(x, z);                                 // 站立 margin 不吃:用實際橋面 ribbon
         if (d != null && yLo <= d && yHi >= d - du) return (s - 0.5) / n * len;
       }
-      if (t.tunnelAt) {
+      if (hasTunnels) {
         const tn = t.tunnelAt(x, z);
         // open 段(地下道引道露天路塹)頭上是天空、腳下就是地形本體 —— MUST NOT 當隱形天花
         // 或隱形路面擋彈道(A29)。天花與**路面**都是雙面塗層,同一條判定即涵蓋
@@ -2573,11 +2615,14 @@ export class BattleClient {
     for (let pass = 0; pass < 3; pass++) {
       let moved = false;
       for (const u of units) if (this._pushOutCircle(u.x, u.z, u.r, myR)) moved = true;
-      for (const b of this.terrain.blockers || []) {
+      const blockers = this._blockersNear ? this._blockersNear(this.pos.x, this.pos.z, myR + 15) : (this.terrain.blockers || []);
+      for (const b of this.terrain.blockers ? blockers : []) {
         if (onDeck && b.y < surfHere - 3) continue;   // 橋下街廓建物:玩家在橋面上,不推擠
         // myBot 貼在頂面(surfaceAt mount 站上頂)不側推 —— 與橋墩「柱頂封底緣」同一課(biomes 2668);
         // ε 0.1 併吞原嚴格不等式的 myBot > top 分支
         if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
+        const maxR = (b.r || Math.max(b.hw2, b.hd2)) + myR;
+        if (Math.abs(this.pos.x - b.x) > maxR || Math.abs(this.pos.z - b.z) > maxR) continue;
         if (b.hw2 != null) {
           // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
           const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
@@ -2618,9 +2663,16 @@ export class BattleClient {
     const len = Math.sqrt(len2);
     const SKIN = 0.3;                                 // 停在前緣再退一截,免貼面
     let bestT = Infinity;
-    for (const b of this.terrain.blockers || []) {
+    const minX = Math.min(px0, this.pos.x), maxX = Math.max(px0, this.pos.x);
+    const minZ = Math.min(pz0, this.pos.z), maxZ = Math.max(pz0, this.pos.z);
+    const sweepR = Math.max(len, myR + 15);
+    const midX = (px0 + this.pos.x) * 0.5, midZ = (pz0 + this.pos.z) * 0.5;
+    const sweepBlockers = this._blockersNear ? this._blockersNear(midX, midZ, sweepR) : (this.terrain.blockers || []);
+    for (const b of this.terrain.blockers ? sweepBlockers : []) {
       if (onDeck && b.y < surfHere - 3) continue;
       if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
+      const maxR = (b.r || Math.max(b.hw2, b.hd2)) + myR;
+      if (b.x < minX - maxR || b.x > maxX + maxR || b.z < minZ - maxR || b.z > maxZ + maxR) continue;
       let tEnter = null;
       // 終點在障礙「內」時的取捨(fwd = (P1−中心)·位移):近半(fwd<0)push-out 沿中心→P1 反向推 =
       // 退回進入側 → 交給 push-out 沿牆滑(手感不變);遠半(fwd≥0)push-out 會把機體推出「另一側」
@@ -2711,13 +2763,17 @@ export class BattleClient {
       if (t < maxT) maxT = t;
     };
     const onDeck = this._onDeck, surfHere = this._surfHere ?? this._surf(ox, oz, this.pos.y);
-    for (const b of this.terrain.blockers || []) {
+    const midCamX = (ox + cam.x) * 0.5, midCamZ = (oz + cam.z) * 0.5;
+    const deClipBlockers = this._blockersNear(midCamX, midCamZ, dlen + 25);
+    for (const b of deClipBlockers) {
       if (onDeck && b.y < surfHere - 3) continue;                       // 站橋面上:橋下街廓不處理(高架飛越)
       if (camY < b.y || camY > b.y + b.h) continue;                     // 垂直不重疊
       // broad-phase 半徑 MUST 用**外接**(對角 hypot)非 max(內切):貼牆角時 pos 在盒對角外緣,
       // 用 max 會誤判「太遠」而跳過 → 牆面過(pos 近盒面)但牆角漏(前科:撞牆角仍破圖)
       const rr = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;
-      if (Math.hypot(ox - b.x, oz - b.z) > dlen + rr + SKIN + 1) continue;  // broad-phase:太遠不可能戳到
+      const maxDist = dlen + rr + SKIN + 1;
+      if (Math.abs(ox - b.x) > maxDist || Math.abs(oz - b.z) > maxDist) continue;
+      if (Math.hypot(ox - b.x, oz - b.z) > maxDist) continue;  // broad-phase:太遠不可能戳到
       if (b.hw2 != null) clampBox(b); else clamp(b.x, b.z, b.r);
       if (maxT <= 0) break;
     }
@@ -2768,24 +2824,24 @@ export class BattleClient {
   /** 將命中的 Mesh 與其描邊殼一起換成獨立半透明材質,不污染共用材質。 */
   _fadeViewMesh(mesh, now) {
     if (!mesh?.isMesh || this._viewOcclusionSkip.has(mesh)) return;
+    const cache = this._fadedMatCache || (this._fadedMatCache = new WeakMap());
     const fade = (o) => {
       if (!o.isMesh || this._viewFades.has(o)) return;
       const base = o.material;
       const mats = Array.isArray(base) ? base : [base];
       const clones = [];
-      const cloned = new Map();
       const faded = mats.map((m) => {
         if (!m || m.transparent) return m;
-        let c = cloned.get(m);
+        let c = cache.get(m);
         if (!c) {
           c = m.clone();
           c.transparent = true;
           c.opacity = (m.opacity ?? 1) * TPS_OCCLUSION.OPACITY_F;
           c.depthWrite = false;
           c.needsUpdate = true;
-          cloned.set(m, c);
-          clones.push(c);
+          cache.set(m, c);
         }
+        clones.push(c);
         return c;
       });
       if (!clones.length) return;
@@ -2800,7 +2856,6 @@ export class BattleClient {
     const state = this._viewFades.get(mesh);
     if (!state) return;
     if (mesh.material === state.faded) mesh.material = state.base;
-    for (const m of state.clones) m.dispose();
     this._viewFades.delete(mesh);
   }
 
@@ -2828,7 +2883,8 @@ export class BattleClient {
 
     this.camera.updateMatrixWorld(true);
     self.mesh.updateWorldMatrix(true, true);
-    const box = new THREE.Box3();
+    const box = this._tpsBox || (this._tpsBox = new THREE.Box3());
+    box.makeEmpty();
     self.mesh.traverse((o) => {
       if (!o.isMesh || o.userData?.teamRing || o.userData?.isOutline || o.userData?.noOutline) return;
       box.expandByObject(o);
@@ -2837,35 +2893,63 @@ export class BattleClient {
       this._clearViewOcclusion();
       return;
     }
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    const size = box.getSize(this._tpsSize || (this._tpsSize = new THREE.Vector3()));
+    const center = box.getCenter(this._tpsCenter || (this._tpsCenter = new THREE.Vector3()));
+    const right = (this._tpsRight || (this._tpsRight = new THREE.Vector3())).set(1, 0, 0).applyQuaternion(this.camera.quaternion);
     right.y = 0;
     if (right.lengthSq() < 1e-6) right.set(1, 0, 0); else right.normalize();
     const span = Math.max(0.15, Math.max(size.x, size.z) * 0.28);
     const y0 = box.min.y, h = Math.max(size.y, this.selfH, 0.5);
-    const targets = [
-      new THREE.Vector3(center.x, y0 + h * 0.52, center.z),
-      new THREE.Vector3(center.x, y0 + h * 0.80, center.z),
-      new THREE.Vector3(center.x, y0 + h * 0.22, center.z),
-      center.clone().addScaledVector(right, span),
-      center.clone().addScaledVector(right, -span),
-    ];
-    const blocked = new Set();
+    const targets = this._tpsTargets || (this._tpsTargets = [
+      new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(),
+    ]);
+    targets[0].set(center.x, y0 + h * 0.52, center.z);
+    targets[1].set(center.x, y0 + h * 0.80, center.z);
+    targets[2].set(center.x, y0 + h * 0.22, center.z);
+    targets[3].copy(center).addScaledVector(right, span);
+    targets[4].copy(center).addScaledVector(right, -span);
+
     const eye = this.camera.position;
-    for (const target of targets) {
-      const delta = target.clone().sub(eye);
-      const dist = delta.length();
-      if (dist <= 0.2) continue;
-      this._viewRaycaster.set(eye, delta.normalize());
-      this._viewRaycaster.near = 0.05;
-      this._viewRaycaster.far = Math.max(0.05, dist - 0.05);
-      const hits = this._viewRaycaster.intersectObjects(this._viewOcclusionMeshes, false);
-      for (const hit of hits) {
-        if (hit.distance >= dist - 0.05) break;
-        const mesh = hit.object;
-        if (!mesh.isMesh || this._isViewDescendant(mesh, self.mesh)) continue;
-        blocked.add(mesh);
+    const camDist = eye.distanceTo(center);
+
+    // 空間快篩: 僅對相機至角色連線鄰近 (camDist + span + 20m) 的候選 Mesh 做射線檢測
+    // 消除對全地圖數千個模型進行逐面碰撞與矩陣計算的重大掉幀
+    const cand = this._tpsCandMeshes || (this._tpsCandMeshes = []);
+    cand.length = 0;
+    const midX = (eye.x + center.x) * 0.5, midZ = (eye.z + center.z) * 0.5;
+    const maxRange = (camDist * 0.5) + span + 20;
+    const maxRangeSq = maxRange * maxRange;
+    const allMeshes = this._viewOcclusionMeshes;
+    for (let i = 0; i < allMeshes.length; i++) {
+      const m = allMeshes[i];
+      if (!m.visible) continue;
+      const el = m.matrixWorld.elements;
+      const dx = el[12] - midX, dz = el[14] - midZ;
+      if (dx * dx + dz * dz > maxRangeSq) continue;
+      cand.push(m);
+    }
+
+    const blocked = this._tpsBlocked || (this._tpsBlocked = new Set());
+    blocked.clear();
+    const delta = this._tpsDelta || (this._tpsDelta = new THREE.Vector3());
+
+    if (cand.length) {
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i];
+        delta.copy(target).sub(eye);
+        const dist = delta.length();
+        if (dist <= 0.2) continue;
+        delta.normalize();
+        this._viewRaycaster.set(eye, delta);
+        this._viewRaycaster.near = 0.05;
+        this._viewRaycaster.far = Math.max(0.05, dist - 0.05);
+        const hits = this._viewRaycaster.intersectObjects(cand, false);
+        for (const hit of hits) {
+          if (hit.distance >= dist - 0.05) break;
+          const mesh = hit.object;
+          if (!mesh.isMesh || this._isViewDescendant(mesh, self.mesh)) continue;
+          blocked.add(mesh);
+        }
       }
     }
     for (const mesh of blocked) {
@@ -3470,34 +3554,46 @@ export class BattleClient {
     if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 護衛自殺機衝出:SIZE_F(1/2)體型
     if (e.bs != null) group.scale.setScalar(bossScaleF(e.bs));      // NPC BOSS 階段體型縮放
     const hero = HERO_KINDS.has(e.k);
+    const isStatic = e.k === 'tower' || e.k === 'base' || e.k === 'bunker';
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
     const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
     if (isSelf) group.visible = (this.viewMode === 'tps');
     this.scene.add(group);
-    this._registerViewOccluders(group);
+    if (isStatic) this._registerViewOccluders(group);
     if (mixer) this.mixers.add(mixer);
     if (group.userData.spin) this.spinners.add(group);
     // 基準包圍盒:MUST 在掛受擊殼/血條/敵方標記之前量(它們都是 mesh 子節點,事後 Box3 會被
     // 撐大 —— 塔的受擊殼半徑(舊制手寫 11m),曾把鎖定光暈吹成 49m 巨球、血條抬到半空)。
     // 貼地陣營光環(teamRing,塔的圈 r≈14)同樣排除:光暈/血條要包的是機體本體。
-    const bb = new THREE.Box3();
-    const bbT = new THREE.Box3();
-    group.updateWorldMatrix(true, true);
-    group.traverse((o) => {
-      if (!o.isMesh || !o.geometry || o.userData.teamRing) return;
-      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
-      bbT.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
-      bb.union(bbT);
-    });
+    // 同類機種/陣營的原始體積純為確定性靜態幾何,透過快取消除每波小兵生成時數十毫秒的遍歷卡頓。
+    const dimCache = (this._unitDimCache || (this._unitDimCache = new Map()));
+    const dimKey = `${key}:${e.s}:${e.bs ?? ''}:${civ ? e.pf : (e.ch ?? '')}:${e.k === 'kami' ? 1 : 0}`;
+    let dims = dimCache.get(dimKey);
+    if (!dims) {
+      const bb = new THREE.Box3();
+      const bbT = new THREE.Box3();
+      group.updateWorldMatrix(true, true);
+      group.traverse((o) => {
+        if (!o.isMesh || !o.geometry || o.userData.teamRing) return;
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        bbT.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+        bb.union(bbT);
+      });
+      dims = {
+        dimTop: bb.max.y,
+        dimH: bb.max.y - bb.min.y,
+        dimR: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2,
+      };
+      dimCache.set(dimKey, dims);
+    }
     const ent = {
-      dimTop: bb.max.y, dimH: bb.max.y - bb.min.y,
-      dimR: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2,
+      dimTop: dims.dimTop, dimH: dims.dimH, dimR: dims.dimR,
       id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
       isSelf, hero, heroY: 0, ry: 0,
       flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper' || e.k === 'drone_wingman' || e.k === 'heli_squad' || e.k === 'carnival_heli',
       decoy: e.k === 'decoy', kami: e.k === 'kami', hyper: e.k === 'hyper', si: e.si || 0,
-      isStatic: e.k === 'tower' || e.k === 'base' || e.k === 'bunker',
+      isStatic,
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch) : null,
     };
@@ -8977,7 +9073,8 @@ export class BattleClient {
         const r = ent.hitR || 1.8;
         const top = ent.dimH || 2.8;
         const h = ent.dimH || 2.4;
-        ent.statusFx = makeStatusFx({ r, top, h });
+        const isMajor = !!(ent.hero || ent.isSelf || ent.isBoss || ent.kind === 'base');
+        ent.statusFx = makeStatusFx({ r, top, h, isMajor });
         ent.mesh.add(ent.statusFx);
       }
       ent.statusFx.visible = true;
@@ -9461,7 +9558,7 @@ export class BattleClient {
    * 在這裡就轉成畫布座標的話,兩者只能對上一個,另一個的陰影會整片錯位。
    */
   _mmShadows(vx, vz, r) {
-    const bl = this.terrain.blockers;
+    const bl = this._blockersNear(vx, vz, r);
     if (!bl || !bl.length) return null;
     const out = [];
     const FAR = r * 2;   // 遠端延伸(超出視野圓,溢出部分被暫存罩裁掉)
@@ -9469,6 +9566,7 @@ export class BattleClient {
       const br = Math.min(60, b.r);
       if (br < 0.5) continue;
       const dx = b.x - vx, dz = b.z - vz;
+      if (Math.abs(dx) > r + br || Math.abs(dz) > r + br) continue;
       const d = Math.hypot(dx, dz);
       if (d <= br) continue;          // 光源在障礙內 → 不投影
       if (d - br >= r) continue;       // 障礙整體在視野外
@@ -9899,9 +9997,10 @@ export class BattleClient {
       }
     }
     // 每個小螢幕 = **再繪一次整個場景**(scissor 只縮小填充範圍,幾何照樣整批送出);
-    // 蜂群兩架僚機 ⇒ 一幀畫三次場景。低功耗模式(手機預設開)收成 1 個,主視野幀率優先。
+    // 蜂群兩架僚機 ⇒ 一幀畫三次場景。低功耗模式(手機預設開)或負載調降時(_resScale < 1)收成 1 個,主視野幀率優先。
     // 高功耗/桌機維持 2 個,行為不變。
-    return out.sort((a, b) => a.ent.si - b.ent.si).slice(0, lowPower() ? 1 : 2);
+    const maxPips = (lowPower() || (this._resScale && this._resScale < 1)) ? 1 : 2;
+    return out.sort((a, b) => a.ent.si - b.ent.si).slice(0, maxPips);
   }
 
   /**
@@ -9918,7 +10017,7 @@ export class BattleClient {
     const cockVis = this.cockpit?.visible;
     if (this.cockpit) this.cockpit.visible = false;
     // setClearColor 是 renderer 全域狀態:畫外框會蓋掉它,收工前必須還原
-    const clear0 = r.getClearColor(new THREE.Color());
+    const clear0 = r.getClearColor(this._pipClear0 || (this._pipClear0 = new THREE.Color()));
     const alpha0 = r.getClearAlpha();
     this.pipCam.aspect = pw / ph;
     this.pipCam.updateProjectionMatrix();

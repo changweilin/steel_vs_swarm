@@ -106,11 +106,10 @@ export function fitToHeight(obj, target, ref = obj) {
   const size = box.getSize(new THREE.Vector3());
   const s = target / (size.y || 1);
   obj.scale.setScalar(s);
-  const box2 = measureBox(ref);
-  const c = box2.getCenter(new THREE.Vector3());
-  obj.position.x -= c.x;
-  obj.position.z -= c.z;
-  obj.position.y -= box2.min.y;
+  const c = box.getCenter(new THREE.Vector3());
+  obj.position.x -= c.x * s;
+  obj.position.z -= c.z * s;
+  obj.position.y -= box.min.y * s;
   return obj;
 }
 

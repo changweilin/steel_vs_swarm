@@ -1563,6 +1563,18 @@ export function spawnSingularityImplosionVFX(scene, effects, { x, z, y = 2, r = 
 
 // ════════════ 異常狀態 3D 動態效果與頭頂標示 (2026-09-04) ════════════
 const _statusBadgeCache = new Map();
+const BADGE_DEFS = [
+  { bit: 1, key: 'pz', label: '麻痺', icon: '⚡', color: '#ffea00', border: '#ffe600', bg: 'rgba(35, 30, 0, 0.9)' },
+  { bit: 2, key: 'emp', label: '癱瘓', icon: '🚫', color: '#c084fc', border: '#a855f7', bg: 'rgba(25, 10, 40, 0.9)' },
+  { bit: 4, key: 'sl', label: '緩速', icon: '❄️', color: '#66e0ff', border: '#00ccff', bg: 'rgba(0, 25, 40, 0.9)' },
+  { bit: 8, key: 'cf', label: '混亂', icon: '💫', color: '#f472b6', border: '#ec4899', bg: 'rgba(35, 10, 30, 0.9)' },
+  { bit: 16, key: 'bl', label: '持續傷害', icon: '🩸', color: '#ff4d4f', border: '#f5222d', bg: 'rgba(40, 10, 10, 0.9)' },
+  { bit: 32, key: 'vb', label: '致盲', icon: '👁️', color: '#cbd5e1', border: '#94a3b8', bg: 'rgba(20, 24, 30, 0.9)' },
+  { bit: 64, key: 'mk', label: '標記', icon: '🎯', color: '#ff3333', border: '#ff0000', bg: 'rgba(40, 0, 0, 0.9)' },
+  { bit: 128, key: 'ub', label: '失衡', icon: '⚠️', color: '#fb923c', border: '#f97316', bg: 'rgba(40, 20, 0, 0.9)' },
+  { bit: 256, key: 'hs', label: '壓制', icon: '⬇️', color: '#facc15', border: '#ca8a04', bg: 'rgba(35, 28, 0, 0.9)' },
+];
+
 function getStatusBadgeTexture(sig, badges) {
   if (typeof document === 'undefined') return { tex: null, w: 1, h: 1 };
   if (_statusBadgeCache.has(sig)) return _statusBadgeCache.get(sig);
@@ -1601,89 +1613,122 @@ function getStatusBadgeTexture(sig, badges) {
   return res;
 }
 
+// 模組級共用單例材質與幾何 (Rule A25 / markShared: 嚴禁逐機體重複配置與釋放)
+let _statusSharedReady = false;
+let _matStunLine, _matSlowRing, _matSlowIce, _matEmp1, _matEmp2;
+let _matConfStar, _matBlindSmoke, _matBleedDrop, _matMarkRing, _matUnbalRing, _matSupRing;
+
+function initStatusShared() {
+  if (_statusSharedReady) return;
+  _statusSharedReady = true;
+  _matStunLine = new THREE.LineBasicMaterial({ color: 0xffea00, transparent: true, opacity: 0.95 });
+  _matSlowRing = new THREE.MeshBasicMaterial({ color: 0x4cc9f0, transparent: true, opacity: 0.75, side: THREE.DoubleSide });
+  _matSlowIce = new THREE.MeshBasicMaterial({ color: 0xa0e7ff, transparent: true, opacity: 0.85 });
+  _matEmp1 = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.85 });
+  _matEmp2 = new THREE.MeshBasicMaterial({ color: 0xb388ff, transparent: true, opacity: 0.85 });
+  _matConfStar = new THREE.MeshBasicMaterial({ color: 0xf472b6, transparent: true, opacity: 0.95 });
+  _matBlindSmoke = new THREE.SpriteMaterial({
+    map: smokeTexture(), color: 0x18181b, transparent: true, opacity: 0.85, depthWrite: false,
+  });
+  _matBleedDrop = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.9 });
+  _matMarkRing = new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
+  _matUnbalRing = new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+  _matSupRing = new THREE.MeshBasicMaterial({ color: 0xeab308, transparent: true, opacity: 0.75, side: THREE.DoubleSide });
+}
+
 /**
  * 為機體建立完整的異常狀態動態動畫與頭頂看版標示
  * 回傳 Group 掛在 ent.mesh 底下;update(dt, now, st) 逐幀更新、dispose() 釋放資源。
+ * isMajor: 僅主角/英雄/BOSS 啟用高解析度頭頂看板標示，一般小兵省略看板以省下大量 draw call 與 canvas 合成。
  */
-export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4 }) {
+export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4, isMajor = true }) {
+  initStatusShared();
   const g = new THREE.Group();
   g.userData.noOutline = true;
   const rr = Math.max(0.8, r);
 
-  // 1. 麻痺電弧 (pz):閃爍跳躍的金黃色折線
+  // 1. 麻痺電弧 (pz): 預分配頂點陣列，原地更新數值，消除每幀 new Vector3 與 setFromPoints
   const stunGroup = new THREE.Group();
   const stunLines = [];
-  for (let i = 0; i < 4; i++) {
-    const pts = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-    const geo = new THREE.BufferGeometry().setFromPoints(pts);
-    const mat = new THREE.LineBasicMaterial({ color: 0xffea00, transparent: true, opacity: 0.95 });
-    const line = new THREE.Line(geo, mat);
+  const stunCount = isMajor ? 4 : 1;
+  for (let i = 0; i < stunCount; i++) {
+    const pos = new Float32Array(9); // 3 個頂點
+    const geo = new THREE.BufferGeometry();
+    const posAttr = new THREE.BufferAttribute(pos, 3);
+    geo.setAttribute('position', posAttr);
+    const line = new THREE.Line(geo, _matStunLine);
+    line.frustumCulled = false;
     stunGroup.add(line);
-    stunLines.push({ line, geo });
+    stunLines.push({ line, geo, posAttr });
   }
   stunGroup.visible = false;
   g.add(stunGroup);
 
-  // 2. 緩速冰霜環 (sl):底盤冰藍光環與懸浮碎冰
+  // 2. 緩速冰霜環 (sl): 共用單位環與冰塊幾何
   const slowGroup = new THREE.Group();
   const slowRing = new THREE.Mesh(
-    new THREE.RingGeometry(rr * 0.7, rr * 1.3, 20),
-    new THREE.MeshBasicMaterial({ color: 0x4cc9f0, transparent: true, opacity: 0.75, side: THREE.DoubleSide })
+    unitRing('statusSlowRing', 0.7, 1.3, 20),
+    _matSlowRing
   );
+  slowRing.scale.set(rr, rr, 1);
   slowRing.rotation.x = -Math.PI / 2;
   slowRing.position.y = 0.12;
   slowGroup.add(slowRing);
   const slowIceCubes = [];
-  const iceGeo = new THREE.BoxGeometry(0.28, 0.28, 0.28);
-  const iceMat = new THREE.MeshBasicMaterial({ color: 0xa0e7ff, transparent: true, opacity: 0.85 });
-  for (let i = 0; i < 3; i++) {
-    const ice = new THREE.Mesh(iceGeo, iceMat);
-    slowGroup.add(ice);
-    slowIceCubes.push(ice);
+  if (isMajor) {
+    const iceGeo = unitGeo('statusIceBox', () => new THREE.BoxGeometry(0.28, 0.28, 0.28));
+    for (let i = 0; i < 3; i++) {
+      const ice = new THREE.Mesh(iceGeo, _matSlowIce);
+      slowGroup.add(ice);
+      slowIceCubes.push(ice);
+    }
   }
   slowGroup.visible = false;
   g.add(slowGroup);
 
-  // 3. 電磁癱瘓 (emp):電青色交錯脈衝環
+  // 3. 電磁癱瘓 (emp): 共用環面幾何
   const empGroup = new THREE.Group();
   const empTorus1 = new THREE.Mesh(
-    new THREE.TorusGeometry(rr * 1.15, 0.04, 6, 24),
-    new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.85 })
+    unitGeo('statusEmpTorus1', () => new THREE.TorusGeometry(1.15, 0.04, 6, 24)),
+    _matEmp1
   );
-  const empTorus2 = new THREE.Mesh(
-    new THREE.TorusGeometry(rr * 1.05, 0.04, 6, 24),
-    new THREE.MeshBasicMaterial({ color: 0xb388ff, transparent: true, opacity: 0.85 })
-  );
+  empTorus1.scale.set(rr, rr, rr);
   empTorus1.position.y = top * 0.5;
-  empTorus2.position.y = top * 0.5;
   empGroup.add(empTorus1);
-  empGroup.add(empTorus2);
+  let empTorus2 = null;
+  if (isMajor) {
+    empTorus2 = new THREE.Mesh(
+      unitGeo('statusEmpTorus2', () => new THREE.TorusGeometry(1.05, 0.04, 6, 24)),
+      _matEmp2
+    );
+    empTorus2.scale.set(rr, rr, rr);
+    empTorus2.position.y = top * 0.5;
+    empGroup.add(empTorus2);
+  }
   empGroup.visible = false;
   g.add(empGroup);
 
-  // 4. 混亂公轉眩暈星 (cf):頭頂公轉的 3 顆粉紫八面體星
+  // 4. 混亂公轉眩暈星 (cf): 共用八面體幾何
   const confGroup = new THREE.Group();
   confGroup.position.y = top + 0.4;
-  const starGeo = new THREE.OctahedronGeometry(0.22, 0);
-  const starMat = new THREE.MeshBasicMaterial({ color: 0xf472b6, transparent: true, opacity: 0.95 });
+  const starGeo = unitGeo('statusConfStar', () => new THREE.OctahedronGeometry(0.22, 0));
   const stars = [];
-  for (let i = 0; i < 3; i++) {
-    const st = new THREE.Mesh(starGeo, starMat);
+  const starCount = isMajor ? 3 : 1;
+  for (let i = 0; i < starCount; i++) {
+    const st = new THREE.Mesh(starGeo, _matConfStar);
     confGroup.add(st);
     stars.push(st);
   }
   confGroup.visible = false;
   g.add(confGroup);
 
-  // 5. 致盲黑煙 (vb):頭頂煙霧團
+  // 5. 致盲黑煙 (vb): 共用煙霧精靈
   const blindGroup = new THREE.Group();
   blindGroup.position.y = top * 0.85;
   const smokePuffs = [];
-  const blindTex = smokeTexture();
-  for (let i = 0; i < 2; i++) {
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: blindTex, color: 0x18181b, transparent: true, opacity: 0.85, depthWrite: false,
-    }));
+  const smokeCount = isMajor ? 2 : 1;
+  for (let i = 0; i < smokeCount; i++) {
+    const sp = new THREE.Sprite(_matBlindSmoke);
     const s = rr * 1.5;
     sp.scale.set(s, s, s);
     blindGroup.add(sp);
@@ -1692,13 +1737,13 @@ export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4 }) {
   blindGroup.visible = false;
   g.add(blindGroup);
 
-  // 6. 持續傷害/流血/燃燒/中毒 (bl):猩紅粒子向下滴落
+  // 6. 持續傷害/流血/燃燒/中毒 (bl): 共用球體幾何
   const bleedGroup = new THREE.Group();
-  const bleedGeo = new THREE.SphereGeometry(0.12, 6, 6);
-  const bleedMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.9 });
+  const bleedGeo = unitGeo('statusBleedSphere', () => new THREE.SphereGeometry(0.12, 6, 6));
   const bleedDrops = [];
-  for (let i = 0; i < 5; i++) {
-    const drop = new THREE.Mesh(bleedGeo, bleedMat);
+  const dropCount = isMajor ? 5 : 1;
+  for (let i = 0; i < dropCount; i++) {
+    const drop = new THREE.Mesh(bleedGeo, _matBleedDrop);
     bleedGroup.add(drop);
     bleedDrops.push({
       mesh: drop,
@@ -1710,52 +1755,58 @@ export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4 }) {
   bleedGroup.visible = false;
   g.add(bleedGroup);
 
-  // 7. 定位標記 (mk):目標頭頂紅色懸浮菱形準星
+  // 7. 定位標記 (mk): 共用 4 段環面 (菱形準星)
   const markGroup = new THREE.Group();
   markGroup.position.y = top + 1.1;
   const markRing = new THREE.Mesh(
-    new THREE.RingGeometry(rr * 0.45, rr * 0.55, 4),
-    new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.95, side: THREE.DoubleSide })
+    unitRing('statusMarkRing', 0.45, 0.55, 4),
+    _matMarkRing
   );
+  markRing.scale.set(rr, rr, 1);
   markRing.rotation.z = Math.PI / 4;
   markGroup.add(markRing);
   markGroup.visible = false;
   g.add(markGroup);
 
-  // 8. 失衡震盪 (ub):橙色地表擴散波紋
+  // 8. 失衡震盪 (ub): 共用地表擴散環
   const unbalGroup = new THREE.Group();
   const unbalRing = new THREE.Mesh(
-    new THREE.RingGeometry(rr * 0.4, rr * 0.7, 18),
-    new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+    unitRing('statusUnbalRing', 0.4, 0.7, 18),
+    _matUnbalRing
   );
+  unbalRing.scale.set(rr, rr, 1);
   unbalRing.rotation.x = -Math.PI / 2;
   unbalRing.position.y = 0.08;
   unbalGroup.add(unbalRing);
   unbalGroup.visible = false;
   g.add(unbalGroup);
 
-  // 9. 壓制 (hs):向下重壓指示
+  // 9. 壓制 (hs): 共用重壓指示環
   const supGroup = new THREE.Group();
   supGroup.position.y = top * 0.6;
   const supRing = new THREE.Mesh(
-    new THREE.RingGeometry(rr * 0.8, rr * 0.95, 16),
-    new THREE.MeshBasicMaterial({ color: 0xeab308, transparent: true, opacity: 0.75, side: THREE.DoubleSide })
+    unitRing('statusSupRing', 0.8, 0.95, 16),
+    _matSupRing
   );
+  supRing.scale.set(rr, rr, 1);
   supRing.rotation.x = -Math.PI / 2;
   supGroup.add(supRing);
   supGroup.visible = false;
   g.add(supGroup);
 
-  // 10. 頭頂 3D 看板標示 (Status Billboard Badge)
-  const badgeSprite = new THREE.Sprite(new THREE.SpriteMaterial({
-    transparent: true, depthWrite: false, depthTest: false,
-  }));
-  badgeSprite.position.y = top + 2.0;
-  badgeSprite.renderOrder = 998;
-  badgeSprite.visible = false;
-  g.add(badgeSprite);
+  // 10. 頭頂 3D 看板標示 (Status Billboard Badge): 僅 major 機體實裝
+  let badgeSprite = null;
+  if (isMajor) {
+    badgeSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      transparent: true, depthWrite: false, depthTest: false,
+    }));
+    badgeSprite.position.y = top + 2.0;
+    badgeSprite.renderOrder = 998;
+    badgeSprite.visible = false;
+    g.add(badgeSprite);
+  }
 
-  let lastSig = '';
+  let lastMask = 0;
 
   const update = (dt, now, st) => {
     // 檢查各狀態剩餘時間
@@ -1769,14 +1820,16 @@ export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4 }) {
     const ub = (st.ub || 0) > 0;
     const hs = (st.hs || 0) > 0;
 
-    // 麻痺電弧
+    // 麻痺電弧 (原地更新 Float32Array, 零 GC)
     stunGroup.visible = pz;
     if (pz) {
-      for (const item of stunLines) {
-        const p1 = new THREE.Vector3((Math.random() - 0.5) * rr * 1.5, Math.random() * top, (Math.random() - 0.5) * rr * 1.5);
-        const p2 = new THREE.Vector3((Math.random() - 0.5) * rr * 1.5, Math.random() * top, (Math.random() - 0.5) * rr * 1.5);
-        const p3 = new THREE.Vector3((Math.random() - 0.5) * rr * 1.5, Math.random() * top, (Math.random() - 0.5) * rr * 1.5);
-        item.geo.setFromPoints([p1, p2, p3]);
+      for (let j = 0; j < stunLines.length; j++) {
+        const item = stunLines[j];
+        const arr = item.posAttr.array;
+        arr[0] = (Math.random() - 0.5) * rr * 1.5; arr[1] = Math.random() * top; arr[2] = (Math.random() - 0.5) * rr * 1.5;
+        arr[3] = (Math.random() - 0.5) * rr * 1.5; arr[4] = Math.random() * top; arr[5] = (Math.random() - 0.5) * rr * 1.5;
+        arr[6] = (Math.random() - 0.5) * rr * 1.5; arr[7] = Math.random() * top; arr[8] = (Math.random() - 0.5) * rr * 1.5;
+        item.posAttr.needsUpdate = true;
       }
     }
 
@@ -1784,7 +1837,6 @@ export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4 }) {
     slowGroup.visible = sl;
     if (sl) {
       slowRing.rotation.z += dt * 1.2;
-      slowRing.material.opacity = 0.5 + 0.3 * Math.sin(now * 4);
       for (let i = 0; i < slowIceCubes.length; i++) {
         const a = now * 1.8 + (i * Math.PI * 2) / 3;
         slowIceCubes[i].position.set(Math.cos(a) * (rr * 0.9), 0.25 + 0.1 * Math.sin(now * 3 + i), Math.sin(a) * (rr * 0.9));
@@ -1798,8 +1850,10 @@ export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4 }) {
     if (emp) {
       empTorus1.rotation.x += dt * 3.5;
       empTorus1.rotation.y += dt * 2.1;
-      empTorus2.rotation.y -= dt * 3.0;
-      empTorus2.rotation.z += dt * 1.8;
+      if (empTorus2) {
+        empTorus2.rotation.y -= dt * 3.0;
+        empTorus2.rotation.z += dt * 1.8;
+      }
       const s = 1.0 + 0.12 * Math.sin(now * 10);
       empGroup.scale.set(s, s, s);
     }
@@ -1817,16 +1871,14 @@ export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4 }) {
     // 致盲煙霧
     blindGroup.visible = vb;
     if (vb) {
-      smokePuffs[0].rotation += dt * 0.8;
-      smokePuffs[1].rotation -= dt * 1.1;
-      smokePuffs[0].material.opacity = 0.65 + 0.2 * Math.sin(now * 5);
-      smokePuffs[1].material.opacity = 0.65 + 0.2 * Math.cos(now * 5);
+      blindGroup.rotation.y += dt * 0.8;
     }
 
     // 流血灼燒
     bleedGroup.visible = bl;
     if (bl) {
-      for (const item of bleedDrops) {
+      for (let j = 0; j < bleedDrops.length; j++) {
+        const item = bleedDrops[j];
         item.ph = (item.ph + dt * 1.4) % 1.0;
         const dy = (1.0 - item.ph) * (top * 0.8);
         item.mesh.position.set(item.rx, dy, item.rz);
@@ -1846,53 +1898,54 @@ export function makeStatusFx({ r = 1.8, top = 2.8, h = 2.4 }) {
     unbalGroup.visible = ub;
     if (ub) {
       const ubP = (now * 2.2) % 1.0;
-      unbalRing.scale.setScalar(1.0 + ubP * 1.6);
-      unbalRing.material.opacity = (1.0 - ubP) * 0.8;
+      unbalRing.scale.setScalar(rr * (1.0 + ubP * 1.6));
     }
 
     // 壓制
     supGroup.visible = hs;
     if (hs) {
       supGroup.position.y = (top * 0.8) - ((now * 1.8) % 1.0) * (top * 0.5);
-      supRing.material.opacity = 0.4 + 0.35 * Math.sin(now * 6);
     }
 
-    // 彙整目前有效狀態銘牌清單
-    const badgeList = [];
-    if (pz) badgeList.push({ label: '麻痺', icon: '⚡', color: '#ffea00', border: '#ffe600', bg: 'rgba(35, 30, 0, 0.9)' });
-    if (emp) badgeList.push({ label: '癱瘓', icon: '🚫', color: '#c084fc', border: '#a855f7', bg: 'rgba(25, 10, 40, 0.9)' });
-    if (sl) badgeList.push({ label: '緩速', icon: '❄️', color: '#66e0ff', border: '#00ccff', bg: 'rgba(0, 25, 40, 0.9)' });
-    if (cf) badgeList.push({ label: '混亂', icon: '💫', color: '#f472b6', border: '#ec4899', bg: 'rgba(35, 10, 30, 0.9)' });
-    if (bl) badgeList.push({ label: '持續傷害', icon: '🩸', color: '#ff4d4f', border: '#f5222d', bg: 'rgba(40, 10, 10, 0.9)' });
-    if (vb) badgeList.push({ label: '致盲', icon: '👁️', color: '#cbd5e1', border: '#94a3b8', bg: 'rgba(20, 24, 30, 0.9)' });
-    if (mk) badgeList.push({ label: '標記', icon: '🎯', color: '#ff3333', border: '#ff0000', bg: 'rgba(40, 0, 0, 0.9)' });
-    if (ub) badgeList.push({ label: '失衡', icon: '⚠️', color: '#fb923c', border: '#f97316', bg: 'rgba(40, 20, 0, 0.9)' });
-    if (hs) badgeList.push({ label: '壓制', icon: '⬇️', color: '#facc15', border: '#ca8a04', bg: 'rgba(35, 28, 0, 0.9)' });
+    // 狀態遮罩比對: 若非 major 機體或遮罩未變更，完全跳過銘牌與字串/陣列配置
+    if (!badgeSprite) return;
 
-    if (badgeList.length === 0) {
-      badgeSprite.visible = false;
-      lastSig = '';
-    } else {
-      const curSig = badgeList.map((b) => b.label).join('+');
-      if (curSig !== lastSig) {
-        lastSig = curSig;
-        const res = getStatusBadgeTexture(curSig, badgeList);
-        badgeSprite.material.map = res.tex;
-        badgeSprite.material.needsUpdate = true;
-        badgeSprite.scale.set(res.w, res.h, 1);
+    let mask = 0;
+    if (pz) mask |= 1;
+    if (emp) mask |= 2;
+    if (sl) mask |= 4;
+    if (cf) mask |= 8;
+    if (bl) mask |= 16;
+    if (vb) mask |= 32;
+    if (mk) mask |= 64;
+    if (ub) mask |= 128;
+    if (hs) mask |= 256;
+
+    if (mask === 0) {
+      if (lastMask !== 0) {
+        badgeSprite.visible = false;
+        lastMask = 0;
       }
+    } else if (mask !== lastMask) {
+      lastMask = mask;
+      const activeBadges = [];
+      for (let i = 0; i < BADGE_DEFS.length; i++) {
+        if ((mask & BADGE_DEFS[i].bit) !== 0) activeBadges.push(BADGE_DEFS[i]);
+      }
+      const curSig = String(mask);
+      const res = getStatusBadgeTexture(curSig, activeBadges);
+      badgeSprite.material.map = res.tex;
+      badgeSprite.material.needsUpdate = true;
+      badgeSprite.scale.set(res.w, res.h, 1);
       badgeSprite.visible = true;
     }
   };
 
   const dispose = () => {
-    g.traverse((obj) => {
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) {
-        if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
-        else obj.material.dispose();
-      }
-    });
+    // 專屬 BufferGeometry (內嵌 TypedArray) 需顯式釋放
+    for (let j = 0; j < stunLines.length; j++) stunLines[j].geo.dispose();
+    if (badgeSprite) badgeSprite.material.dispose();
+    // 其餘幾何與材質均為 markShared 共用單例,嚴禁 dispose 以免破壞其他實體
     if (g.parent) g.parent.remove(g);
   };
 
