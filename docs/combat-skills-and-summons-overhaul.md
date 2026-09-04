@@ -34,8 +34,8 @@
 To eliminate the remaining generic/homogenized skills across the mech roster (generic dashes, generic stealth, generic EMPs, and generic stat buffs), 8 original skill mechanics are designed with high tactical depth:
 
 ### 1. Kinetic Harpoon Tether (`harpoon`)
-- **Assigned Mech**: `s06` Dmytro Kravchenko ("Interceptor")
-- **Target Replacement**: Replaces generic dash `Swift Dash` (`dash`)
+- **Assigned Mech**: `s04` Soma Kashimura ("Kashi") [readjusted from s06 to strictly honor displacement-for-displacement invariant and preserve Maya's interceptor shield]
+- **Target Replacement**: Replaces original dash mobility `Swift Dash` (`dash`) with dual-vector kinetic harpoon
 - **Mechanics**:
   - Fires a high-tension electromagnetic alloy harpoon (range 45m).
   - **Hitting an enemy mech**: Drags the target directly in front of the caster, dealing armor-penetrating damage and inflicting a 1.0s stun.
@@ -78,15 +78,15 @@ To eliminate the remaining generic/homogenized skills across the mech roster (ge
   - Attracts enemy turret fire and missile guidance. When destroyed, each decoy releases a high-intensity flashbang blinding enemies within 14m for 1.5 seconds.
 
 ### 7. Nanite Swarm Infestation (`nanite`)
-- **Assigned Mech**: `s05` Oleg Kovalenko ("Gravedigger")
+- **Assigned Mech**: `s05` Ha Seul-gi ("Overclock")
 - **Target Replacement**: Replaces generic single-target blast
 - **Mechanics**:
   - Launches a bio-mechanical nanite canister consuming 8% max HP and armor per second for 4.0 seconds.
   - If the host unit dies while infected, the swarm splits into 2 micro-swarms seeking out adjacent enemy targets within 15m.
 
 ### 8. Singularity Implosion (`singularity`)
-- **Assigned Mech**: `s10` Tham ("Feather Array")
-- **Target Replacement**: Replaces generic EMP silence `Silence Veil` (`emp`)
+- **Assigned Mech**: `s12` Emir Seitov ("Return") [readjusted from s10 under expanded displacement definition to replace dark moon enemy-pulling vortex]
+- **Target Replacement**: Replaces original enemy displacement `Dark Moon Implosion` (`moon`, gravitational pull) with tactical singularity sphere
 - **Mechanics**:
   - Projects a forward-traveling micro-singularity sphere (8m/s) pulling in enemies and capturing flying projectiles within an 18m vortex.
   - After 3.0 seconds, the sphere collapses into a gravitational implosion, dealing exponential shockwave damage scaling with captured projectiles and entities.

@@ -4189,12 +4189,16 @@ export class BattleClient {
       const isAlly = ev.side === this.side;
       spawnFogVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, r: ev.r || 35, dur: ev.dur, isAlly });
     } else if (ev.e === 'harpoon') {
-      const fromY = this.terrain.heightAt(ev.from[0], -ev.from[1]) + 1.6;
-      const toY = this.terrain.heightAt(ev.to[0], -ev.to[1]) + 1.6;
+      const fromX = ev.from ? ev.from[0] : (ev.sx ?? 0);
+      const fromZ = ev.from ? ev.from[1] : (ev.sz ?? 0);
+      const toX = ev.to ? ev.to[0] : (ev.tx ?? 0);
+      const toZ = ev.to ? ev.to[1] : (ev.tz ?? 0);
+      const fromY = this.terrain.heightAt(fromX, -fromZ) + 1.6;
+      const toY = this.terrain.heightAt(toX, -toZ) + 1.6;
       spawnHarpoonVFX(this.scene, this.effects, {
-        fx: ev.from[0], fy: fromY, fz: -ev.from[1],
-        tx: ev.to[0], ty: toY, tz: -ev.to[1],
-        hit: ev.hit,
+        fx: fromX, fy: fromY, fz: -fromZ,
+        tx: toX, ty: toY, tz: -toZ,
+        hit: ev.hit ?? (ev.hitTargetId != null),
       });
     } else if (ev.e === 'reflect_barrier') {
       const getPos = () => {
