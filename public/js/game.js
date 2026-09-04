@@ -20,7 +20,7 @@ import {
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
-  CREEP_UPG, DISSOLVE, dissolveOutAt,
+  CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -32,7 +32,7 @@ import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.j
 import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
+import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
@@ -626,6 +626,8 @@ export class BattleClient {
     this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(爬升動力上限 MUST NOT 拿上面那個佔位的 1 去解析)
     this.kn = 0;                      // 戰鬥分數(八軌升級的第二道門檻;伺服器權威,只增不減)
     this.cds = [0, 0];                // [小招, 大招] 冷卻(伺服器倒數)
+    this.castLeft = 0;                // 招式前搖剩餘秒數(快照同步)
+    this._castingUntil = 0;           // 本地樂觀前搖結束時戳
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
     this.blindLeft = 0;               // 閃光彈致盲剩餘秒數(伺服器權威視野狀態)
     this.stealthLeft = 0;
@@ -3265,7 +3267,22 @@ export class BattleClient {
         if (wasDead && !e.dead && !ent.isSelf) ent._snapPos = true;
         ent.mesh.visible = !e.dead && (!ent.isSelf || this.viewMode === 'tps');
         if (e.dc != null) ent.dock = !!e.dc;   // 餌機掛點:已組合就緒(組合/分離動畫)
+        ent.emp = e.emp || 0;
+        ent.vb = e.vb || 0;
+        ent.st = e.st || 0;
+        ent.pz = e.pz || 0;
+        ent.sl = e.sl || 0;
+        ent.slf = e.slf ?? 0.6;
+        ent.cf = e.cf || 0;
+        ent.hs = e.hs || 0;
+        ent.hsf = e.hsf || 0;
+        ent.mk = e.mk || 0;
+        ent.ub = e.ub || 0;
+        ent.bl = e.bl || 0;
+        ent.iv = e.iv || 0;
+        ent.cst = e.cst || 0;
         if (ent.isSelf) {
+          this.castLeft = e.cst || 0;
           this.decoyCd = e.dcd ?? 0;
           this.decoyDocked = !!e.dc;
           this.kamiCd = e.kcd ?? 0;   // 無人機自殺攻擊機冷卻(HUD;歸零 = 可再次觸發)
@@ -3617,6 +3634,7 @@ export class BattleClient {
     if (this._lockId === id) this._clearLockGlow();   // 光暈是目標 mesh 的子節點,別留下懸空參照
     if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); this._rgPool?.push(ent._rgGlow); ent._rgGlow = null; }   // 射程光暈回收進池(共用材質,MUST NOT 隨 mesh 一起丟)
     if (ent.aura) { this.scene.remove(ent.aura); this._auras = (this._auras || []).filter((x) => x !== ent); }
+    if (ent.statusFx) { ent.statusFx.userData?.dispose?.(); ent.statusFx = null; }
     if (ent.guns) this.scene.remove(ent.guns);
     if (ent.mixer) this.mixers.delete(ent.mixer);
     if (ent.hitShell) this.hitShells.delete(ent.hitShell);
@@ -4406,6 +4424,8 @@ export class BattleClient {
       const a = c?.[ev.slot];
       if (ev.pid === this.youId) {
         this.hud.feed?.(`⏳ ${c?.code || ''}【${a?.name || '招式'}】詠唱中...(${ev.dur?.toFixed(1)}s)`);
+        this._castingUntil = performance.now() / 1000 + (ev.dur || 0.8);
+        this.castLeft = ev.dur || 0.8;
       }
       const wx = ev.x, wz = -ev.z;
       let casterPos = null;
@@ -4482,8 +4502,11 @@ export class BattleClient {
           : `⚠️ 敵方 ${c.code} 施放【${a.name}】!`);
         // 立繪演出:自己的招式一律演;敵方只演大招(小招太頻繁會蓋住視野)
         const self = ev.pid === this.youId;
+        if (self) { this._castingUntil = 0; this.castLeft = 0; }
         this.cutin.show(ev, self, ev.side ? SIDES[ev.side].color : '#ffffff');
         if (ev.slot === 'ult') this.trauma = Math.min(1, this.trauma + (self ? 0.45 : 0.25));
+      } else if (ev.pid === this.youId) {
+        this._castingUntil = 0; this.castLeft = 0;
       }
     } else if (ev.e === 'ultfx') {
       // 大招載具抵達:效果在落點結算(伺服器 _ultArrive)—— 這裡補上落點演出。
@@ -5947,6 +5970,8 @@ export class BattleClient {
     this._climb = null;   // 掛在梯上陣亡:狀態 MUST 清掉,否則重生後第一幀會被吸回原本那條路線
     this._airSink = 0;    // 死亡:清掉高待落帳(墜機過場自有物理,兩套下降會打架)
     this._liftLockUntil = 0;
+    this._castingUntil = 0;
+    this.castLeft = 0;
     this.unbalLeft = 0;
     this._fireDwell = 0; this._swampDwell = 0; this._scopeFog = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
@@ -6003,6 +6028,8 @@ export class BattleClient {
     this.vel.set(0, 0, 0);
     this._airSink = 0;        // 重生:清掉高待落帳
     this._liftLockUntil = 0;
+    this._castingUntil = 0;
+    this.castLeft = 0;
     this.unbalLeft = 0;
     this.lift = null;         // 重生:爬升動力補滿(首幀由 _stepLift 夾到上限)
     // 重生滿彈、重武器 CD 清空
@@ -6879,6 +6906,12 @@ export class BattleClient {
       : this.camera.position.clone().add(dir ? dir.clone().multiplyScalar(2) : new THREE.Vector3());
   }
 
+  _isCasting(now = performance.now() / 1000) {
+    if ((this.castLeft || 0) > 0) return true;
+    if (this._castingUntil && now < this._castingUntil) return true;
+    return false;
+  }
+
   _tryFire(now) {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
     const { id, def, st } = this._curWeapon();
@@ -6886,6 +6919,13 @@ export class BattleClient {
     // 2026-08-01:舊巨砲的「窗內免彈夾/免射速閘 + 自動擊發」旁路隨機甲改招整組移除 ——
     // 重武器射擊路徑上不該再有任何跳過彈夾/電力/射速閘的分支(MUST NOT 復辟)。
     if (!this.firing) return;
+    if (this._isCasting(now)) {
+      if (now - (this._castWarnAt || 0) > 1.2) {
+        this._castWarnAt = now;
+        this.hud.feed?.('⏳ 招式詠唱前搖中，無法使用武器！');
+      }
+      return;
+    }
     if (this.empLeft > 0) {
       if (now - (this._empWarnAt || 0) > 1.5) { this._empWarnAt = now; this.hud.feed?.('⚡ 武器離線(遭電磁癱瘓)!'); }
       return;
@@ -7426,6 +7466,14 @@ export class BattleClient {
   // ---------------- 招式(Q 小招 / E 大招:解鎖 + CD + 電力,伺服器結算)----------------
   _castAbility(slot) {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
+    const now = performance.now() / 1000;
+    if (this._isCasting(now)) {
+      if (now - (this._castWarnAt || 0) > 1.2) {
+        this._castWarnAt = now;
+        this.hud.feed?.('⏳ 招式詠唱前搖中，無法施放其他招式！');
+      }
+      return;
+    }
     const lvl = this.abil[slot] || 1;   // 招式開場即 Lv1(2026-07-20;不再有未解鎖狀態)
     const A = heroAbility(this.ch, slot, lvl);
     const cdLeft = this.cds[slot === 'skill' ? 0 : 1] || 0;
@@ -7450,6 +7498,11 @@ export class BattleClient {
       x = point.x; z = point.z;
     }
     this.net.send({ t: 'cast', slot, x: Math.round(x * 10) / 10, z: Math.round(-z * 10) / 10 });
+    const castDur = slot === 'ult' ? (A.castTime || ULT_CAST_S) : (A.castTime || 0);
+    if (castDur > 0) {
+      this._castingUntil = now + castDur;
+      this.castLeft = castDur;
+    }
     // 突進 / 相位穿梭:位移本就客戶端權威,樂觀立即生效(CD/MP 伺服器把關)
     if (A.fx === 'dash' || A.fx === 'phaseshift') {
       const look = this.camera.getWorldDirection(new THREE.Vector3());
@@ -7508,6 +7561,7 @@ export class BattleClient {
    */
   _fireHoldAbility() {
     if (!this.side || this.dead || this.shopOpen) return;
+    if (this._isCasting(performance.now() / 1000)) return;
     this._rmbAbilityFired = true;   // 同一次按住只觸發一次;放開時也據此不再切換模式
     this._castAbility(abilHoldSlot(this.aiming));
   }
@@ -8889,6 +8943,26 @@ export class BattleClient {
     piv.rotation.x += (-want - piv.rotation.x) * lerpFPS(4, dt);
   }
 
+  _updateStatusFx(ent, dt, now) {
+    if (!ent.mesh) return;
+    const hasStatus = (ent.pz || 0) > 0 || (ent.sl || 0) > 0 || (ent.emp || 0) > 0 ||
+      (ent.cf || 0) > 0 || (ent.vb || 0) > 0 || (ent.bl || 0) > 0 ||
+      (ent.mk || 0) > 0 || (ent.ub || 0) > 0 || (ent.hs || 0) > 0;
+    if (hasStatus) {
+      if (!ent.statusFx) {
+        const r = ent.hitR || 1.8;
+        const top = ent.dimH || 2.8;
+        const h = ent.dimH || 2.4;
+        ent.statusFx = makeStatusFx({ r, top, h });
+        ent.mesh.add(ent.statusFx);
+      }
+      ent.statusFx.visible = true;
+      ent.statusFx.userData?.update?.(dt, now, ent);
+    } else if (ent.statusFx) {
+      ent.statusFx.visible = false;
+    }
+  }
+
   _updateEnts(dt, now) {
     for (const ent of this.ents.values()) {
       if (ent.isSelf) {
@@ -8904,6 +8978,7 @@ export class BattleClient {
           ent.mesh.visible = false;
           ent.mesh.position.copy(this.pos);
         }
+        this._updateStatusFx(ent, dt, now);
         continue;
       }
       if (ent.isStatic) {
@@ -8912,6 +8987,7 @@ export class BattleClient {
         if (ent.kind === 'tower') this._aimTurret(ent, dt, now);
         if (ent.kind === 'base') this._aimBaseGuns(ent, dt, now);
         if (ent.bar) ent.bar.lookAt(this.camera.position);
+        this._updateStatusFx(ent, dt, now);
         continue;
       }
       if (ent.hero && ent.mesh.userData.decoyPod) this._updateDecoyPod(ent, dt);
@@ -9029,6 +9105,7 @@ export class BattleClient {
       stepLocomotion(ent, dt, now, px, pz, pyaw);
       // 血條面向相機
       if (ent.bar) ent.bar.lookAt(this.camera.position);
+      this._updateStatusFx(ent, dt, now);
       // 敵方單位:頭上掛對方陣營主視覺的箭頭(在快照裡 = 已進入我方視野)
       if (ent.civ) this._civMark(ent, dt, now);   // 平民:不分我方/敵方都掛陣營箭頭(外觀只能分辨陣營)
       else if (this.side && ent.side && ent.side !== this.side) this._enemyMark(ent, dt, now);
