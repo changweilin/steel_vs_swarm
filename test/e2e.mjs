@@ -313,8 +313,8 @@ log('— sim:榴彈類最小射程 → 太近則無差別波及友軍 + 自損(2
   assert(lobMinRange({ type: 'missile', r: 20 }) === 0, 'lobMinRange:飛彈不吃(trajClass fnf,自導武器)');
   assert(lobMinRange({ type: 'gun', r: 5 }) === 0, 'lobMinRange:直擊/輕武器不吃');
   assert(lobMinRange({ type: 'plasma', fan: true, r: 5 }) === 0, 'lobMinRange:扇形不吃');
-  // 152 榴彈砲(t01)實際武器解析後 def.r 為純量 ⇒ lobMinRange 良好定義且 > 0
-  assert(lobMinRange(heroWeapon('t01', 'heavy', 1)) > 0, 'lobMinRange:t01 152榴彈砲(解析後)> 0');
+  // 152 榴彈砲(t03)實際武器解析後 def.r 為純量 ⇒ lobMinRange 良好定義且 > 0
+  assert(lobMinRange(heroWeapon('t03', 'heavy', 1)) > 0, 'lobMinRange:t03 152榴彈砲(解析後)> 0');
 
   const def = { dmg: 300, r: 40, pen: 0 };   // 半徑 40:射手/友軍/敵方三點皆在爆風內
   // ② friendly=true(落點近於最小射程):敵我 + 射手自身皆受創

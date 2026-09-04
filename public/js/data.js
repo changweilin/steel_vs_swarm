@@ -1860,7 +1860,14 @@ export const skillPower = (ch, lvl = 1) => {
     if (u.add?.fx === 'dodge' || u.add?.fx === 'mark') mag += 50;
     if (mag <= 0) mag = 50;
     p = dur * mag * (u.target === 'team' ? 0.35 : 0.2);
+  } else if (u.fx === 'storm') {
+    p = t(u.dmg || 45) * t(u.dur || 6) * 0.5;
+  } else if (u.fx === 'boomerang' || u.fx === 'lance' || u.fx === 'chain') {
+    p = t(u.dmg || 100) * 1.2;
+  } else if (u.fx === 'pillar' || u.fx === 'quake') {
+    p = t(u.dmg || 80) * 1.3;
   }
+  if (p <= 0) p = t(u.dmg || 100);
   return p;
 };
 
@@ -3279,7 +3286,7 @@ export function heroAbility(ch, slot, lvl = 1) {
  * 不會有任何錯誤訊息。`remote` 由呼叫端量:戰場量**實際施放距離**、展示台量**宣告 range**
  * (兩者本來就不同,是刻意的;共用的是判準不是量法)。
  */
-export const castDirF = (fx, remote) => (fx === 'strike' || fx === 'dash' || (fx === 'emp' && !!remote) ? 1 : 0);
+export const castDirF = (fx, remote) => (fx === 'strike' || fx === 'dash' || fx === 'boomerang' || fx === 'lance' || fx === 'chain' || fx === 'pillar' || fx === 'quake' || (fx === 'emp' && !!remote) ? 1 : 0);
 
 /** 角色機體種類(不需要 side:2026-08-02 混編改制後**每名角色一律自帶 kind**)— heroWeapon 的折算依據。
  *  MUST NOT 再由 side 推機種:三陣營各自混編(蜂群 7/3/2、鋼鐵 3/7/2、傭兵 2/2/4),
@@ -3405,8 +3412,10 @@ export const CHARACTERS = {
       // dmg −5%:讓出 15m 爆風換回的火力補償(aoeTrimF)把它推到 bal ⑤ 81% 出界(見 t02 heavy 同欄註)
       dmg: [48, 69, 100], r: [15, 17, 19], mag: 3, reload: 12, range: 264, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
-    skill: { name: '靈鋼淬火重塑', fx: 'heal', target: 'self', heal: [180, 260, 340],
-      cd: [24, 21, 18], mp: [35, 40, 45], desc: '引動高頻熔接電弧：瞬間重鑄自身受損結構，大幅回復機體裝甲' },
+    skill: { name: '地脈崩解：多段鑽地震波彈', fx: 'quake', target: 'ground',
+      dmg: [45, 62, 80], count: 3, r: 8, range: 220,
+      add: { fx: 'mud', slow: 0.6, dur: 3 },
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '投擲破障鑽地榴彈：引爆後產生 3 段地脈震波連環爆破，連續命中陷入泥沼狀態（大幅緩速且禁位移）' },
     ult: { name: '神爐焚天：萬象重鑄', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true,
       cd: [80, 70, 60], mp: [85, 95, 105], desc: '全功率開啟重型熔爐：以納米回火矩陣覆蓋全軍，大修裝甲並充盈能量護盾' },
   },
@@ -3519,8 +3528,10 @@ export const CHARACTERS = {
     heavy: { name: '「非歐撕裂」電漿防空網', rw: '高能磁約束電漿矩陣・拓撲扇形散布', type: 'plasma', arc: [20, 23, 26],
       dmg: [50, 77, 113], mag: 3, reload: 7, range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.6, air: 2.0, building: 0.4 } },
-    skill: { name: '真理之界：因果攔截網', fx: 'intercept', r: [170, 210, 250],
-      cd: [15, 13, 11], mp: [30, 35, 40], desc: '精確運算彈道幾何：以最佳幾何解瞬間湮滅半徑內所有來襲飛彈' },
+    skill: { name: '非歐折射：彈簧幾何裂解刃', fx: 'chain', target: 'enemy',
+      dmg: [70, 95, 125], range: 200, bounces: 4, decay: 0.2,
+      add: { fx: 'poison', dps: [16, 22, 28], dur: 4 },
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '投擲非歐幾何拓撲飛刃：命中目標後在周遭敵人間折射彈跳最多 4 次，每次傷害與神經毒性衰減' },
     ult: { name: '極限推論：幾何破滅陣', fx: 'strike', count: [5, 7, 9], dmg: [68, 85, 106], r: 11, scatter: 35,
       add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 340, pen: 6, cd: [72, 64, 56], mp: [85, 95, 105], vs: { air: 1.5, armor: 1.1 },
@@ -3536,8 +3547,10 @@ export const CHARACTERS = {
     heavy: { name: '「神聖裁決」電磁獵魔長槍', rw: '軌道級重型電磁狙擊管・高能穿甲針・初速 2200m/s', type: 'rail', mv: 2200,
       dmg: [66, 99, 149], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
-    skill: { name: '晨曦之露：天使空投箱', fx: 'heal', target: 'team', r: 140, heal: [150, 210, 270],
-      cd: [20, 18, 16], mp: [40, 45, 50], desc: '空投神聖修復納米莢艙：沐浴晨曦光輝，迅速修復範圍內友軍機體裝甲' },
+    skill: { name: '神聖裁決：朗基努斯電磁聖槍', fx: 'lance', target: 'enemy',
+      dmg: [120, 165, 215], range: 260, pen: 16, vsSp: 1.5,
+      add: { fx: 'stun', dur: [1.0, 1.25, 1.5] },
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '射出高能電磁聖槍：光速貫穿直線路徑上所有敵機，對護盾造成極高傷害並強烈麻痺沿途目標' },
     ult: { name: '聖城鐘聲：萬物復甦', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '奏響克拉科夫神聖晨鐘：大範圍釋放聖光奇蹟，全軍裝甲大量修復且護盾全滿' },
   },
@@ -3556,9 +3569,10 @@ export const CHARACTERS = {
       vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
     // mark 只在 heroHit(直擊彈道)有消耗路徑 —— s09 雙武器是 fan 散彈(heroPlasma)+ launcher
     // (heroBurst),掛 mark 等於死效果,2026-07-16 改 haste(獵手加速追獵)
-    skill: { name: '獵皇號令：疾馳獵巡', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
-      add: { fx: 'haste', f: [1.2, 1.25, 1.3] },
-      dur: 6, cd: [18, 16, 14], mp: [30, 35, 40], desc: '宣告圍獵開啟：大幅提升自身攻擊火力，底盤進入靈敏追獵躍步狀態' },
+    skill: { name: '荒原迴旋：獵場重力迴力鏢', fx: 'boomerang', target: 'enemy',
+      dmg: [75, 105, 138], range: 180,
+      add: { fx: 'stun', dur: [0.8, 1.0, 1.2] },
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '投擲澳洲重力獵刃：沿雙弧拋物線軌跡迴旋飛行並返回，橫掃路徑上所有敵機並造成眩暈' },
     ult: { name: '天羅地網：蒼穹禁獵區', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40,
       add: { fx: 'pull', imp: [16, 20, 24] },
       range: 300, cd: [70, 62, 54], mp: [80, 90, 100], vs: { air: 2.0, flesh: 1.2 },
@@ -3641,13 +3655,13 @@ export const CHARACTERS = {
     // 名冊內,紀律①)。反護盾的鏡像:榴彈的超壓是「大面積、慢」的能量,護盾場整個消化得掉;
     // 但盾一破,152mm 破片打在裝甲板上就不是護盾場能談的事了。
     // 它同時留著 vs.armor 1.3,依紀律③「加成越多含金量越低」⇒ vsHp 只給一小格,折減照吃。
-    heavy: { name: '「裂地泰坦」152mm 破障加農砲', rw: '大口徑重型破障榴彈加農砲・2A65 衍生・初速 650m/s', type: 'launcher', mv: 650,
-      dmg: [72, 107, 150], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 14,   // range:榴彈類短射程帶(見 s02 同欄註)
-      vsSp: 0.72, vsHp: 1.15,
-      vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
-    skill: { name: '鋼鐵意志：全軍突擊令', fx: 'buff', target: 'team', r: 200, mul: { dmg: [1.15, 1.25, 1.35] },
-      add: { fx: 'haste', f: [1.2, 1.25, 1.3] },
-      dur: [6, 8, 10], cd: [22, 20, 18], mp: [35, 40, 45], desc: '「以鋼鐵之軀鑄就榮光！」：吹響全線衝鋒號角，全隊攻擊力與行進速度齊升' },
+    heavy: { name: '「冰魄霜斧」重型電漿戰斧', rw: '高溫磁化冷焰電漿戰斧・重型扇形近戰揮砍', type: 'plasma', arc: [15, 17, 19],
+      dmg: [60, 90, 126], mag: 3, reload: 7, range: 264, pen: 16,
+      vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
+    skill: { name: '極寒雪暴：烏拉爾冰封斬', fx: 'storm', target: 'self', r: 12,
+      dmg: [44, 60, 80], dur: [5, 6, 7],
+      add: { fx: 'slow', f: 0.5, freezeS: 2.0, stunDur: 1.2 },
+      cd: [20, 18, 16], mp: [35, 40, 45], desc: '以自身為中心召喚極寒暴風雪：暴風跟隨機體移動持續造成冰霜傷害，範圍內敵軍嚴重緩速，逗留過久將陷入深度凍結' },
     ult: { name: '雪崩天降：烏拉爾雷霆齊射', fx: 'strike', count: [6, 8, 10], dmg: [77, 98, 119], r: 12, scatter: 40,
       add: { fx: 'stun', dur: [0.8, 1, 1.2] },
       range: 340, pen: 10, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
@@ -3684,9 +3698,10 @@ export const CHARACTERS = {
     light: { name: '「碎骨」12號重型狂暴霰彈', rw: '高射速彈鼓霰彈槍・大口徑碎肉彈・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [17, 15, 13],
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.6, air: 0.9, building: 0.5 } },
-    heavy: { name: '「焚天炎浪」重型電漿烈焰', rw: '高密度磁化電漿投射器・重型扇形烈焰噴湧', type: 'plasma', arc: [15, 17, 19],
-      dmg: [47, 70, 99], mag: 3, reload: 7, range: 264, pen: 12,
-      vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
+    heavy: { name: '「裂地泰坦」152mm 破障加農砲', rw: '大口徑重型破障榴彈加農砲・2A65 衍生・初速 650m/s', type: 'launcher', mv: 650,
+      dmg: [72, 107, 150], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 14,
+      vsSp: 0.72, vsHp: 1.15,
+      vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
     // 雙扇形(霰彈 + 電漿噴焰)= 全機種最短的交戰帶,又是最慢的機體 ⇒ 兩招都給貼身套件
     // (2026-07-27 使用者原則:扇形武器優先配置拉敵人/進場退場/匿蹤、控場或走位的大小招;稽核 bal ⑥)。
     // 舊制「承傷減免 + 傷害增益吸血」是站樁包:貼不上的時候一項都兌現不了,對進戰(bal ⑤)長年墊底。
@@ -3713,9 +3728,9 @@ export const CHARACTERS = {
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
     skill: { name: '幽影匿跡：虛無光學迷彩', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '啟動全光譜隱形迷彩：自雷達與光學感測器中徹底消隱（開火即現形）' },
-    ult: { name: '死神凝視：致命獵殺鎖定', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] }, vision: [8, 10, 12],
-      add: { fx: 'mark', dur: [5, 6, 7] },
-      dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '展開格魯烏全圖真視網：鎖定敵方高價值目標，下一發射擊必定百發百中且極限暴擊' },
+    ult: { name: '要塞展開：巨砲架設狙擊', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
+      add: { fx: 'siege', setupS: 1.0, recoverS: 1.5 },
+      dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '展開四足液壓駐鋤就地固定：強制進入重裝狙擊模式，期間無限重武器彈藥且免裝填，解除後需硬直恢復移動' },
   },
   t05: {
     side: 'STEEL', kind: 'robot', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
@@ -3747,9 +3762,9 @@ export const CHARACTERS = {
       vs: { flesh: 1.1, armor: 1.4, air: 0.3, building: 0.8 } },
     skill: { name: '筋斗雲步：九霄遊龍步', fx: 'dash', imp: [28, 34, 40],
       cd: [11, 9, 7], mp: [25, 30, 35], desc: '發動如猿行般流暢靈動的奇門身法：神行百變，以極高機動性位移避開敵火' },
-    ult: { name: '大鬧天宮：齊天踏雲裂地', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.8, 0.75, 0.7] },
-      add: { fx: 'leap', f: [2.0, 2.3, 2.6] },
-      dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '大聖神力灌注核心：化作金光跨越一切地形發動滅頂重擊，大幅強化攻防姿態' },
+    ult: { name: '身外身法：三影齊天', fx: 'buff', target: 'self', mul: { dmg: [1.30, 1.40, 1.50] },
+      add: { fx: 'clone', count: 2 },
+      dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '拔毫毛變幻兩具同等戰力分身跟隨本尊：分身僅使用輕武器（無限彈藥），本尊陣亡時轉移至最高 HP 分身' },
   },
   t07: {
     // 2026-08-02 機體混編:接下原屬蜂群的「翼龍」擬態翼無人機 —— 膜翼滑翔幾乎不耗電、也幾乎沒有聲音,
@@ -3896,8 +3911,10 @@ export const CHARACTERS = {
       dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
       spPierce: 0.45, vsHp: 0.9,
       vs: { flesh: 0.9, armor: 1.7, air: 0.5, building: 1.1 } },
-    skill: { name: '暗夜掠影：絕命突進', fx: 'dash', imp: [27, 33, 39],
-      cd: [12, 10, 8], mp: [25, 30, 35], desc: '發動夜行血蝠極速爆發：化作殘影沿視線方向瞬息脫離交戰危險區' },
+    skill: { name: '滅靈火柱：地獄火聚能陣', fx: 'pillar', target: 'ground',
+      dmg: [80, 110, 145], r: 6, dur: 4, range: 240,
+      add: { fx: 'burn', dps: [20, 28, 36], dur: 3 },
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '發射地獄火戰術飛彈：擊中目標引發持續直立火柱，造成高爆穿甲傷害並對圓柱範圍內敵機附加燃燒狀態' },
     ult: { name: '血夜狂宴：噬魂狂暴', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5], reload: [0.8, 0.75, 0.7] },
       add: { fx: 'vamp', f: [0.12, 0.16, 0.2] },
       dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '機體核心完全解限超頻：攻擊火力與裝填速度大幅暴增，並透過傷害瘋狂汲取生命（吸血）' },

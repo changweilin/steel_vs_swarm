@@ -140,6 +140,7 @@ export class BotBrain {
    * 回傳「實際位移 ÷ 期望位移」(0~1)供撞牆繞行判斷。
    */
   _move(h, nx, nz) {
+    if ((h.rootedUntil || 0) > this.sim.t) return 0;
     [nx, nz] = this._zoneClamp(nx, nz);
     const want = Math.hypot(nx - h.x, nz - h.z);
     const [rx, rz] = this.sim.solidResolve(h, h.x, h.z, nx, nz, this._fly(h));
