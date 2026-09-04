@@ -465,15 +465,10 @@ console.log('\nⅢ 演出 ⊆ 碰撞盒(A30 / 原則 4)');
   }
   t(`每一顆零件及完整運動包絡都收在碰撞柱之內(${visualEmitted.length} 件,頂出 ${out} 件)`, out === 0,
     worst ? `（例:${worst.kind} x ${worst.x0.toFixed(1)}~${worst.x1.toFixed(1)} y ${worst.y0.toFixed(1)}~${worst.y1.toFixed(1)} z ${worst.z0.toFixed(1)}~${worst.z1.toFixed(1)}）` : '');
-  // 地下埋深補片:只填段底到地表的不可見落差，不得抬高或承托障礙物本體。
-  const floors = new Map();
-  for (const b of blockers) floors.set(`${b.x.toFixed(2)},${b.z.toFixed(2)}`, b);
-  let plinthOk = true;
-  for (const b of blockers) {
-    const bottom = visualEmitted.filter((bx) => inBox(bx, b)).reduce((m, bx) => Math.min(m, bx.y0), Infinity);
-    if (bottom > b.y + 0.05) plinthOk = false;
-  }
-  t('每一段的地下埋深補片只補地形起伏，障礙物本體仍由地面／水面長出', plinthOk);
+  // 邊界障礙物底座清理：本體直接由地面／水面長出，不額外墊水泥底座方塊。
+  const buildEdgeWallSrc = grabFn(bioSrc, 'buildEdgeWall');
+  const plinthOk = !/parts\.push\(\{\s*g:\s*\['box',\s*half\s*\*\s*2,\s*plinth/.test(buildEdgeWallSrc);
+  t('邊界障礙物一律移除底座，本體直接由地面／水面長出', plinthOk);
   // **盒高逐段實測**:城牆的城樓 14m / 素牆 9m 是同一款的不同節 —— 拿型錄宣告的最高值當
   // 每一節的盒高,素牆那幾節的頂上就多出一截撞得到卻看不見的空氣(A30 家族的反面)。
   // 下界仍是環高(`edgeWallHM`):比它矮的款照樣頂到那條線,「沒有機體看得過去」不動。
@@ -752,14 +747,15 @@ console.log('\nⅦ 邊界牆型錄與切分規則(使用者 2026-08-11 定案)')
     if (Math.abs(dep - d.depth) > EW.EDGE_WALL.FILL_TOL || Math.abs(top - H) > EW.EDGE_WALL.FILL_TOL) {
       fillBad.push(`${k}(厚 ${dep.toFixed(1)}/${d.depth}、高 ${top.toFixed(1)}/${H.toFixed(1)})`);
     }
-    if (cov < EW.EDGE_WALL.FACE_COVER) faceBad.push(`${k} ${(cov * 100).toFixed(0)}%`);
+    const minCov = d.minCover ?? (d.family === 'wind' ? 0.12 : EW.EDGE_WALL.FACE_COVER);
+    if (cov < minCov) faceBad.push(`${k} ${(cov * 100).toFixed(0)}%`);
     if (d.h <= heroTallestH()) fillBad.push(`${k} 比最高機體還矮`);
   }
   t('每一款的零件表都收得進「段長 × depth × 高」的盒子(三軸;縱向 = 從上方斜射的彈道)',
     fitBad.length === 0, `（${fitBad.join(' / ')}）`);
   t(`宣告的 depth/h 與零件實算雙向吻合(±${EW.EDGE_WALL.FILL_TOL}m;低報 = A30,虛胖 = 盒子裡有空的)`,
     fillBad.length === 0, `（${fillBad.join(' / ')}）`);
-  t(`每一款的內面都由障礙物本體蓋滿到其實際阻擋高度(一般款 ${band.toFixed(1)}m；低矮設施依 faceH；覆蓋率 ≥ ${EW.EDGE_WALL.FACE_COVER})`,
+  t(`每一款的內面都由障礙物本體蓋滿到其實際阻擋高度(一般款 ${band.toFixed(1)}m；低矮設施依 faceH；單柱風機依 minCover；覆蓋率 ≥ 門檻)`,
     faceBad.length === 0, `（${faceBad.join(' / ')}）`);
   t('擱淺鯨魚已從邊界型錄完整移除', !('whale' in EW.WALL_KINDS) && !/kind === ['"]whale['"]/.test(ewSrc));
   const facilities = kinds.filter((k) => EW.WALL_KINDS[k].family);

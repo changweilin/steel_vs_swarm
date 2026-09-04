@@ -1255,6 +1255,13 @@ export function celWindTime() { return _windT.value; }
 export function celWindAmount() { return Math.max(0, _weatherWind.amp.value); }
 /** 浮動設施的即時浪量；結冰時為 0，與海面著色器使用同一來源。 */
 export function celWaveAmount() { return Math.max(0, _weatherWind.waveAmp.value); }
+const _headingOut = [WIND_DIR[0], WIND_DIR[1]];
+/** 邊界風機等設施的即時風向向量 [wx, wz]；唯一出口，與著色器同一來源。 */
+export function celWindHeading() {
+  _headingOut[0] = _windDir.value.x;
+  _headingOut[1] = _windDir.value.y;
+  return _headingOut;
+}
 
 /**
  * 餵入這一幀的擾動源(唯一寫入點;呼叫端 = `game.js` 主迴圈,MUST 排在 `_updateEnts` 之後)。
