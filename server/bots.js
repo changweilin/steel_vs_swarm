@@ -524,7 +524,7 @@ export class BotBrain {
 
   /** 招式可用性(解鎖 + CD + MP)——實際結算仍由 sim.heroCast 把關 */
   _ready(h, slot) {
-    if (slot === 'skill' && h.cast) return null;
+    if (h.cast || (h.castLockUntil || 0) > this.sim.t) return null;
     const lvl = h.abil[slot];
     if (!lvl || (h.acd[slot] || 0) > this.sim.t) return null;
     const A = heroAbility(h.ch, slot, lvl);

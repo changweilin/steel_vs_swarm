@@ -468,24 +468,24 @@ sec('Ⅳ 大招載具化 + 小招本體詠唱施展(2026-08-22 使用者定案)'
   {
     // 小招詠唱直測:未受擊自然詠唱完成 → 100% 效果施放
     const sim = new BattleSim(mkCfg());
-    const h = sim.addHero('SWARM', 'o_cast', 's05');   // s05 小招:dmg buff
+    const h = sim.addHero('SWARM', 'o_cast', 's01');   // s01 小招:dmg buff
     h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1;
-    const ct = d.skillCastTime('s05', 1);
+    const ct = d.skillCastTime('s01', 1);
     sim.heroCast('o_cast', 'skill');
-    ok(!!h.cast && h.cast.dur === ct, `s05 小招開始詠唱(持續 ${ct.toFixed(2)}s)`);
+    ok(!!h.cast && h.cast.dur === ct, `s01 小招開始詠唱(持續 ${ct.toFixed(2)}s)`);
     ok(Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, '詠唱期間效果尚未生效');
     // tick 到詠唱完成
     sim.tick(ct + 0.05);
     ok(!h.cast, '詠唱時間到達,cast 狀態清除');
-    const fullMul = d.heroAbility('s05', 'skill', 1).mul.dmg;
+    const fullMul = d.heroAbility('s01', 'skill', 1).mul.dmg;
     ok(Math.abs(sim._buffMul(h, 'dmg') - fullMul) < 1e-6, `自然詠唱完成 ⇒ 100% 滿額效果(dmg ×${fullMul})`);
   }
   {
     // 小招受擊中斷直測:詠唱中途受擊強制立即施展,效果為 (t/T)^2
     const sim = new BattleSim(mkCfg());
-    const h = sim.addHero('SWARM', 'o_hit', 's05');
+    const h = sim.addHero('SWARM', 'o_hit', 's01');
     h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1;
-    const ct = d.skillCastTime('s05', 1);
+    const ct = d.skillCastTime('s01', 1);
     sim.heroCast('o_hit', 'skill');
     // 推進一半時間 (r = 0.5)
     sim.tick(ct * 0.5);
@@ -496,7 +496,7 @@ sec('Ⅳ 大招載具化 + 小招本體詠唱施展(2026-08-22 使用者定案)'
     // 效果應為 (0.5)^2 = 0.25
     const r = 0.5;
     const wantFrac = r * r; // 0.25
-    const rawMul = d.heroAbility('s05', 'skill', 1).mul.dmg;
+    const rawMul = d.heroAbility('s01', 'skill', 1).mul.dmg;
     const expectedMul = 1 + (rawMul - 1) * wantFrac;
     ok(Math.abs(sim._buffMul(h, 'dmg') - expectedMul) < 1e-6,
       `詠唱 50% 時受擊強制施展 ⇒ 效果比例 (t/T)² = ${(wantFrac * 100).toFixed(1)}%(dmg ×${expectedMul.toFixed(3)})`);

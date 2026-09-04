@@ -1832,6 +1832,8 @@ export const SKILL_CAST = {
   MIN_S: 0.5,   // 最短詠唱時間(秒)—— 輕量走位/突進類
   MAX_S: 2.5,   // 最長詠唱時間(秒)—— 重型全隊/大範圍控場類
 };
+/** 大招施展前搖時間(秒;單一真相縫:施法前搖期間鎖定武器開火與其他招式) */
+export const ULT_CAST_S = 0.8;
 
 /** 小招效果強度綜合評分(單一真相縫:推導不手寫) */
 export const skillPower = (ch, lvl = 1) => {
@@ -3259,7 +3261,7 @@ export function heroAbility(ch, slot, lvl = 1) {
   const isUlt = slot === 'ult';
   const carrier = isUlt && abilDelivered(ch, 'ult');
   const support = isUlt && !carrier;
-  const castTime = isUlt ? 0 : skillCastTime(ch, lvl);
+  const castTime = isUlt ? ULT_CAST_S : skillCastTime(ch, lvl);
   // 遞送距離的預設值只給**大招**:它是「從後方工事送到指定點」的戰略遞送 ⇒ 未標 range 的支援型
   //   要有一段可以指定的遞送距離(= hyperRange,與機甲接戰距離同一把尺)。小招從主機身邊施放,
   //   遞送距離就是招式本來的 range(未標 = 施放在腳下)。

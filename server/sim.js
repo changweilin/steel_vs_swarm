@@ -11,7 +11,7 @@ import {
   hyperClimbVx, hyperArcY, hyperTrackR,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
-  ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND,
+  ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin, VISION_BLIND, ULT_CAST_S,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
   SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF, bossInvulnS, bossScaleF,
@@ -38,7 +38,7 @@ const SQUAD_SHARED = [
   // 純自身型大招補償(2026-08-06;見 data.js SELF_ULT):免裝填時窗與破隱爆發窗都是**小隊共用**——
   // 彈匣本來就只有一份(ammo/reloadUntil 在上面),免裝填逐機體各記一份就會出現「主視野機免裝填、
   // 僚機照裝填」這種只有拿碼表才量得出來的分歧。
-  'noReloadUntil', 'alphaArm', 'alphaX', 'cast',
+  'noReloadUntil', 'alphaArm', 'alphaX', 'cast', 'castLockUntil',
 ];
 
 // ---- tick 內加速結構(2026-08-05 手機單機效能:索敵/推擠原是 O(N²) 全掃,實測佔 tick 近九成)----
@@ -1778,6 +1778,7 @@ export class BattleSim {
     this._refillIfDone(h, id, def);                                // 填彈完成 → 補滿(單一縫)
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
     if ((h.phaseUntil || 0) > now) return false;                   // 相位狀態下無法開火
+    if (h.cast || (h.castLockUntil || 0) > now) return false;      // 招式施展前搖期間鎖定武器開火
     const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1);
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * (lenient ? 1.5 : 1))) return false;
     // 三個火槍手(t06):分身期間只能使用輕武器
@@ -2807,6 +2808,7 @@ export class BattleSim {
     if (!hero || !hero.cast) return;
     const c = hero.cast;
     hero.cast = null;
+    hero.castLockUntil = 0;
     const elapsed = Math.max(0, Math.min(c.dur, this.t - c.start));
     const r = c.dur > 0 ? elapsed / c.dur : 1;
     const f = r * r;
@@ -3279,7 +3281,7 @@ export class BattleSim {
     if (!lvl) return;                                  // 尚未解鎖
     if ((h.acd[slot] || 0) > this.t) return;           // 冷卻中
     if (this._jammed(h)) return;                       // 電磁癱瘓:招式一併離線
-    if (slot === 'skill' && h.cast) return;            // 詠唱中不重複發動
+    if (h.cast || (h.castLockUntil || 0) > this.t) return;            // 招式前搖期間鎖定其他招式
     const A = heroAbility(h.ch, slot, lvl);
     // 2026-07-20:招式冷卻/電力隨招式階級(小招 sk / 大招 ult)成長,無獨立精通折減
     const mpc = Math.round(A ? A.mp : 0);
@@ -3309,15 +3311,16 @@ export class BattleSim {
     // 發射該機種形式的載具(kami×N / 集束轟炸機 / 極音速飛彈)或派出跟隨主機的輔助機隊,
     // 效果由載具抵達時經同一支 _castEffect 施放(單一縫;擊落 = 該份否定)。
     // 發射點只有 `abilOrigin` 一份(大招 = 最近的我方砲塔/主堡,見 _launchOrigin)。
+    h.castLockUntil = this.t + (A.castTime || ULT_CAST_S);
     const org = this._launchOrigin(h, slot);
     if (A.carrier) {
       this._launchUltCarrier(h, A, x, z, org);
-      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1, ox: org.x, oz: org.z });
+      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1, ox: org.x, oz: org.z, castDur: A.castTime || ULT_CAST_S });
       return;
     }
     // 自身強化型大招:派出 supportN 架跟隨玩家的輔助機
     this._launchUltSupport(h, A, org, slot);
-    this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 1, sup: supportN(h.ch, slot), ox: org.x, oz: org.z });
+    this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 1, sup: supportN(h.ch, slot), ox: org.x, oz: org.z, castDur: A.castTime || ULT_CAST_S });
   }
 
   /**
@@ -3590,7 +3593,7 @@ export class BattleSim {
         chainPath.push({ x: curX, z: curZ });
         this._damage(best, curDmg, h, 8, 0, null);
         if (curPsn > 0) {
-          best.bleed = { dps: curPsn, until: this.t + (A.add?.dur || 4), attacker: h, pen: 8 };
+          best.bleed = { dps: curPsn, until: this.t + (A.add?.dur || 4), pid: h.pid, pen: 8, attacker: h };
         }
         (best.asst ||= {})[h.pid] = this.t;
         curDmg *= (1 - decay);
@@ -5211,6 +5214,10 @@ export class BattleSim {
         }
       }
       t.hp = 0;
+      // 異常狀態 (DoT / bleed / 毒 / 灼燒) 致死算施加者的擊殺
+      if (!by && t.bleed && (t.bleed.pid || t.bleed.attacker)) {
+        by = (t.bleed.pid ? this.heroes.get(t.bleed.pid) : null) || t.bleed.attacker || null;
+      }
       this._kill(t, by);
     }
     // NPC BOSS 的段位推進:掛在 HP 唯一的**減損點**上(治療只會被夾在天花板之下,不會退段)。
@@ -5328,7 +5335,11 @@ export class BattleSim {
     h.lastHitAt = this.t;   // 灼傷 = 進入戰鬥:護盾脫戰回復重新計時
     h.sp = Math.max(0, (h.sp || 0) - amt * maxSp / denom);
     h.hp -= amt * maxHp / denom;   // 不吃裝甲:依最大值比例,與護盾同步見底
-    if (h.hp <= 0) { h.hp = 0; this._kill(h, null); }
+    if (h.hp <= 0) {
+      h.hp = 0;
+      const killer = (h.bleed && ((h.bleed.pid ? this.heroes.get(h.bleed.pid) : null) || h.bleed.attacker)) || null;
+      this._kill(h, killer);
+    }
     if (h.sq?.boss) this._bossSync(h.sq);   // 火場也扣得動 HP ⇒ 段位同步同樣要掛(見 _damage)
   }
 
@@ -5608,7 +5619,8 @@ export class BattleSim {
     for (const e of [...this.ents.values()]) {
       if (!e.bleed) continue;
       if (e.bleed.until <= this.t || e.hp <= 0 || (e.hero && e.dead)) { e.bleed = null; continue; }
-      this._damage(e, e.bleed.dps * dt, this.heroes.get(e.bleed.pid) || null, e.bleed.pen);
+      const killer = (e.bleed.pid ? this.heroes.get(e.bleed.pid) : null) || e.bleed.attacker || null;
+      this._damage(e, e.bleed.dps * dt, killer, e.bleed.pen);
     }
     // 助攻貢獻「在場」刷新:貢獻者仍在自身可視半徑內 → 戳記刷新為現在
     // ⇒「離開可視半徑 10 秒後不算」語意精確(TTL 從離開那一刻起算);
@@ -5752,7 +5764,7 @@ export class BattleSim {
     b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {
       b.mp = b.maxMp;
-      b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0; b.unbalUntil = 0; b.cast = null;
+      b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0; b.unbalUntil = 0; b.cast = null; b.castLockUntil = 0;
       b.ammo = {}; b.reloadUntil = {}; b.fireAt = {};   // 重生滿彈
     }
     this.events.push({ e: 'respawn', id: b.id, side: b.side, pid: b.pid });
@@ -6614,11 +6626,24 @@ export class BattleSim {
       if ((e.unbalUntil || 0) > this.t) o.ub = Math.round((e.unbalUntil - this.t) * 10) / 10;
       if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
       if ((e.invUntil || 0) > this.t) o.iv = Math.round((e.invUntil - this.t) * 10) / 10;   // 無敵幀
+      if (e.cast && (e.cast.start + e.cast.dur > this.t)) o.cst = Math.round((e.cast.start + e.cast.dur - this.t) * 10) / 10;
+      else if ((e.castLockUntil || 0) > this.t) o.cst = Math.round((e.castLockUntil - this.t) * 10) / 10;
       const bf = [];
       for (const id in e.buffs || {}) if (e.buffs[id] > this.t) bf.push([id, Math.round(e.buffs[id] - this.t)]);
       if (bf.length) o.bf = bf;   // 詞綴強化(HUD 倒數)
       const md = (e.mods || []).filter((m) => m.until > this.t).map((m) => [m.k, m.m, Math.round(m.until - this.t)]);
       if (md.length) o.md = md;   // 招式增益(HUD 倒數)
+    } else {
+      // 非英雄單位(小兵/坦克/直升機/第三方):同樣同步異常狀態讓客戶端呈現 3D 動畫與標示
+      if ((e.empUntil || 0) > this.t) o.emp = Math.round((e.empUntil - this.t) * 10) / 10;
+      if ((e.blindUntil || 0) > this.t) o.vb = Math.round((e.blindUntil - this.t) * 10) / 10;
+      if ((e.stunUntil || 0) > this.t) o.pz = Math.round((e.stunUntil - this.t) * 10) / 10;
+      if ((e.slowUntil || 0) > this.t) { o.sl = Math.round((e.slowUntil - this.t) * 10) / 10; o.slf = e.slowF ?? 0.6; }
+      if ((e.confUntil || 0) > this.t) o.cf = Math.round((e.confUntil - this.t) * 10) / 10;
+      if (this._supF(e) > 0) { o.hs = Math.round((e.supUntil - this.t) * 100) / 100; o.hsf = Math.round(e.supF * 100) / 100; }
+      if ((e.markUntil || 0) > this.t) o.mk = Math.round((e.markUntil - this.t) * 10) / 10;
+      if ((e.unbalUntil || 0) > this.t) o.ub = Math.round((e.unbalUntil - this.t) * 10) / 10;
+      if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
     }
     return o;
   }

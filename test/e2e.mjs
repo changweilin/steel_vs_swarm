@@ -1586,6 +1586,33 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       '預置波序為負(凝聚錨定桶不與開局第一波混同)');
   }
 
+  log('— sim:招式詠唱前搖鎖定(武器/招式不可用)與異常狀態致死擊殺結算 —');
+  {
+    const simLock = new BattleSim(fakeBattleConfig(1));
+    purgeCamps(simLock);
+    const h1 = simLock.addHero('SWARM', 'p_lock1', 's01');
+    h1.mp = 999; h1.abil.skill = 1; h1.abil.ult = 1;
+    // 1. 小招前搖期間鎖定武器與其他招式
+    simLock.heroCast('p_lock1', 'skill');
+    assert(!!h1.cast, '小招進入詠唱狀態');
+    assert(!simLock._gateFire(h1, 'light', simLock.t), '小招詠唱中武器開火被鎖定');
+    assert(!simLock._gateFire(h1, 'heavy', simLock.t), '小招詠唱中重武器被鎖定');
+    const castStartN = simLock.events.filter((e) => e.e === 'cast_start').length;
+    simLock.heroCast('p_lock1', 'ult');
+    assert(simLock.events.filter((e) => e.e === 'cast_start').length === castStartN, '詠唱中無法施放其他招式');
+
+    // 2. 異常狀態 (bleed / DoT) 致死算施加者擊殺
+    const victim = simLock._add({ kind: 'tank', side: 'STEEL', x: h1.x + 10, z: h1.z, hp: 50 });
+    victim.bleed = { dps: 30, until: simLock.t + 5, pid: 'p_lock1' };
+    const $m0 = h1.money;
+    const kn0 = h1.kn;
+    simLock._damage(victim, 100, null); // 由 DoT 扣血致死 (by 為 null)
+    assert(!simLock.ents.has(victim.id), '目標被異常狀態扣死');
+    assert(h1.money > $m0, '異常狀態致死:施加者獲得賞金');
+    assert(h1.kn > kn0, '異常狀態致死:施加者獲得戰鬥分數');
+    assert(simLock.events.some((e) => e.e === 'die' && e.id === victim.id), '異常狀態致死:正確派發 die 陣亡事件');
+  }
+
   log('— sim:陣營小兵強化(同陣營共用・兵線分開・成長率 log(LV))—');
   {
     const cs = new BattleSim(fakeBattleConfig(3));
