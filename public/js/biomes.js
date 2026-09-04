@@ -102,7 +102,7 @@ import { CARD, cardEnvelope, cardCount, planCards, cardRnd, leafSurfId } from '.
 // 葉子是硬切的、樹幹還是三階 ramp」,沒有任何錯誤訊息。一個場景 MUST 只有一套量化
 // (`audit_cel_pipeline` Ⅺ⑧ 的凍結名冊守著:名冊非空 ⇒ `celSchool` 的 def MUST NOT 是 'b')。
 import {
-  WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime, celWindAmount, celWaveAmount,
+  WIND, markShared, surfGroup, joinSurfGroup, REFL, seaSoft, swampSoft, celWindTime, celWindAmount, celWindHeading, celWaveAmount,
   isWeatherFrozen, getWeatherDynamics,
   SURF_ID, inkRepeat, INK_CONTRIB_NONE, toonPlain,
 } from './toon.js';
@@ -9874,10 +9874,7 @@ function buildEdgeWall({ group, terrain, blockers }) {
         });
         // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
         blockers.push({ x, z, y, h: ground + kh - y, hw2: half, hd2, ry: e.ax ? 0 : Math.PI / 2, r: Math.hypot(half, hd2) });
-        // 底座:段底到落地基準之間那一截(地形起伏 + 埋深)。沒有它就是「牆浮在坡上」——
-        // 而那一截**在碰撞盒之內**,漏掉即是撞得到卻看不見。
-        const plinth = ground - y;
-        if (plinth > 0.01) parts.push({ g: ['box', half * 2, plinth, def.depth], c: PLINTH_C, p: [0, -plinth / 2, 0] });
+        // 邊界障礙物一律移除底座：本體直接由地面／水面長出，不另加通用底座
         emitWallParts(batch, parts.filter((p) => !p.motion), x, ground, z, e.fry, 1);
         prevKind = kind;
         prevVariant = variant;
@@ -9999,8 +9996,9 @@ function buildEdgeMotion({ group, segs, dynamics }) {
       mesh.castShadow = false;
       pivot.add(mesh); root.add(pivot); group.add(root);
       if (mot.kind === 'rotor') {
+        pivot.rotation.order = 'YXZ';
         pivot.rotation.z = mot.phase;
-        rotors.push({ pivot, angle: mot.phase });
+        rotors.push({ pivot, angle: mot.phase, fry: s.fry });
       } else if (mot.kind === 'float') {
         floats.push({ pivot, baseY: py, phase: mot.phase });
       } else if (mot.kind === 'machine') {
@@ -10014,8 +10012,21 @@ function buildEdgeMotion({ group, segs, dynamics }) {
   dynamics.push((dt) => {
     const step = Math.min(0.25, Math.max(0, dt || 0));
     const wind = celWindAmount(), wave = celWaveAmount(), t = celWindTime();
+    const [wx, wz] = celWindHeading();
     for (const r of rotors) {
-      r.angle += step * EDGE_MOTION.ROTOR_RAD_S * wind;
+      // 風向在邊界段局部座標的法向投影 (normalFlow) 與切向投影 (crossFlow)
+      const normalFlow = wx * Math.sin(r.fry) + wz * Math.cos(r.fry);
+      const crossFlow = wx * Math.cos(r.fry) - wz * Math.sin(r.fry);
+      // 轉向：迎風正面吹來時順轉 (1)，由背面吹來時逆轉 (-1)；微幅側風依迎風側決定方向
+      const flowSign = normalFlow <= -0.05 ? 1 : (normalFlow >= 0.05 ? -1 : (crossFlow >= 0 ? 1 : -1));
+      // 轉速：正對迎風時全速，側風時依受風角平滑衰減，維持動態視覺
+      const flowRatio = Math.abs(normalFlow);
+      const speedFactor = 0.35 + 0.65 * flowRatio;
+      r.angle += step * EDGE_MOTION.ROTOR_RAD_S * wind * flowSign * speedFactor;
+      // 朝向：隨來風方向微幅動態迎風偏航（安全容差 ±0.08 rad ≈ 4.6°，收在 14m/16m 碰撞盒內）
+      const yawTarget = Math.atan2(-crossFlow, Math.max(0.1, -normalFlow)) * 0.12;
+      const clampedYaw = Math.max(-0.08, Math.min(0.08, yawTarget));
+      r.pivot.rotation.y = clampedYaw;
       r.pivot.rotation.z = r.angle;
     }
     for (const f of floats) {

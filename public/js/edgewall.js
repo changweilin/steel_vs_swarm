@@ -126,11 +126,11 @@ export const WALL_KINDS = {
   ship:      { dom: 'water', bio: ['water'],                  slope: 'flat',  depth: 18,  h: 22,   label: '連排貨輪' },
   isletbarrier:{dom:'water', bio: ['water'],                   slope: 'flat',  depth: 18,  h: 22,   label: '島礁海界' },
   // ---- 大型邊界設施(同族共用生成器；水域款直接落水，不借用海堤／擋土平台)----
-  windsea:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 28, label: '海上風機陣列', family: 'wind', mount: 'fixed', col: [0xd9dde0, 0x70808c] },
+  windsea:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 28, minCover: 0.12, label: '海上風機陣列', family: 'wind', mount: 'fixed', col: [0xd9dde0, 0x70808c] },
   floatsolar:   { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 9,  faceH: 1.7, label: '浮動式太陽能板陣列', family: 'solar', mount: 'float', col: [0x244b73, 0x6b8799] },
   searanch:     { dom: 'water', bio: ['water'], slope: 'flat', depth: 16, h: 12, label: '海上牧場（網箱／圍網／貝類長線）', family: 'ranch', mount: 'float', col: [0x3f6f7a, 0xc28c38] },
   deeprig:      { dom: 'water', bio: ['water'], slope: 'flat', depth: 18, h: 28, label: '深海油井', family: 'extract', mount: 'float', col: [0xd07a32, 0x596168] },
-  windland:     { dom: 'land',  bio: ['bare', 'green'], slope: 'flat', depth: 14, h: 28, label: '陸域風機陣列', family: 'wind', col: [0xe1e4e4, 0x69747c] },
+  windland:     { dom: 'land',  bio: ['bare', 'green'], slope: 'flat', depth: 14, h: 28, minCover: 0.12, label: '陸域風機陣列', family: 'wind', col: [0xe1e4e4, 0x69747c] },
   solarfield:   { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 14, h: 14, faceH: 1.7, label: '太陽能板陣列', family: 'solar', col: [0x243f63, 0x777b70] },
   mine:         { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 18, h: 20, label: '大型礦場', family: 'extract', col: [0xb88a3d, 0x786c5d] },
   oilfield:     { dom: 'land',  bio: ['bare'], slope: 'flat', depth: 16, h: 18, label: '陸上油井', family: 'extract', col: [0x86583f, 0x555c62] },
@@ -666,9 +666,9 @@ const PARTS = {
       }),
     ];
   },
-  // 倒塌摩天樓:瓦礫基座 + 側傾的塔身(樓板一層層露出來)+ 折斷的上段 + 天線。
+  // 倒塌摩天樓:側傾的塔身(樓板一層層露出來)+ 倒塌後翼 + 折斷的上段 + 天線；直接接地無底座。
   skyfall: (len, D, H, rnd) => {
-    const tilt = 0.18, bodyD = 12.5, bodyH = 12, base = 3.4;
+    const tilt = 0.18, bodyD = 12.5, bodyH = 12, base = 0;
     const hz = Math.abs(Math.sin(tilt)) * (bodyH / 2) + Math.cos(tilt) * (bodyD / 2);
     const hy = Math.cos(tilt) * (bodyH / 2) + Math.abs(Math.sin(tilt)) * (bodyD / 2);
     const zc = D / 2 - hz;
@@ -676,8 +676,7 @@ const PARTS = {
     const uhy = Math.cos(upTilt) * 5 + Math.abs(Math.sin(upTilt)) * (upD / 2);
     const uhz = Math.abs(Math.sin(upTilt)) * 5 + Math.cos(upTilt) * (upD / 2);
     return [
-      { g: ['box', len, base, D], c: 0x8b8378, p: [0, base / 2, 0] },
-      ...rep(len, 4.5, (x) => [rock(rnd, x, D, base + 2.4, 1.1, 1.9, pick(rnd, [0x9a958a, 0x857f75, 0x8f8a80]), 3)]),
+      ...rep(len, 4.5, (x) => [rock(rnd, x, D, 2.4, 1.1, 1.9, pick(rnd, [0x9a958a, 0x857f75, 0x8f8a80]), 3)]),
       { g: ['box', len * 0.99, bodyH, bodyD], c: 0x627b89, p: [0, base + hy, zc], r: [tilt, 0, 0], role: 'broken-curtain-wall', mat: 'glass' },
       // 樓板:一層一片,露在傾斜的斷面上
       ...[0.16, 0.34, 0.52, 0.7, 0.88].map((f) => (
@@ -686,6 +685,8 @@ const PARTS = {
       ...rep(len, 6.5, (x) => [
         { g: ['cyl', 0.34, 0.34, 5.2, 5], c: 0x767d84, p: [x, base + bodyH * 0.55, zc + 4.4], r: [tilt, 0, 0] },
       ]),
+      // 倒塌後翼殘構：填滿公稱深度，直接接地不使用通用底座
+      { g: ['box', len * 0.48, 6.0, 3.4], c: 0x5a636c, p: [-len * 0.2, 3.0, -D / 2 + 1.7], role: 'collapsed-rear-wing' },
       { g: ['box', len * 0.34, 10, upD], c: 0x828b94, p: [len * 0.24, base + bodyH + uhy - 3, D / 2 - uhz], r: [upTilt, 0, 0] },
       { g: ['cyl', 0.42, 0.24, 4.2, 6], c: 0x9aa2a8, p: [len * 0.24, H - 2.1, D / 2 - uhz] },
       ...rep(len, 8, (x) => [
@@ -938,8 +939,8 @@ const PARTS = {
     ];
     const out = [
       // 兩條窄腳帶只封住深度包絡的最外緣，不是連續可站立平台。
-      { g: ['box', len * 0.98, 0.24, 0.26], c: 0x8d9192, p: [0, 0.12, D / 2 - 0.13], role: 'breakwater-foot', layer: 0 },
-      { g: ['box', len * 0.98, 0.24, 0.26], c: 0x777b7d, p: [0, 0.12, -D / 2 + 0.13], role: 'breakwater-foot', layer: 0 },
+      { g: ['box', len * 0.98, 0.5, 0.26], c: 0x8d9192, p: [0, 0.25, D / 2 - 0.13], role: 'breakwater-foot', layer: 0 },
+      { g: ['box', len * 0.98, 0.5, 0.26], c: 0x777b7d, p: [0, 0.25, -D / 2 + 0.13], role: 'breakwater-foot', layer: 0 },
     ];
     for (let layer = 0; layer < layers.length; layer++) {
       const { n, y, span } = layers[layer], step = span / n;
@@ -1022,25 +1023,22 @@ const plume = (x, y, z, rnd, id, kind = 'smoke', role = kind) => {
 
 const windFacility = (len, D, H, rnd, spec) => {
   const marine = spec.dom === 'water';
-  const bladeR = 2.9, hubY = H - bladeR - 0.18;
+  const bladeR = 5.8, hubY = H - bladeR - 0.22;
   return [
-    ...rep(len, 7.2, (x, step, i) => {
-      const z = zIn(D, 0.3, 0.47), id = `rotor_${i}`;
+    ...rep(len, 13.5, (x, step, i) => {
+      const z = zIn(D, 0.44, 0.48), id = `rotor_${i}`;
       const pivot = [x, hubY, z], phase = rnd() * Math.PI * 2;
-      const span = step * 0.84, rise = hubY - 0.3;
-      const legL = Math.hypot(span / 2, rise), legA = Math.atan2(span / 2, rise);
+      const towerZ = zIn(D, 1.4, 0.7);
       return [
-        // 兩支斜腿與塔柱就是風機塔架本體；海上款的腿腳直接入水，陸上款直接落地。
-        { g: ['box', 0.32, legL, 0.34], c: spec.col[1], p: [x - span / 4, 0.3 + rise / 2, z], r: [0, 0, -legA], role: 'tower-leg' },
-        { g: ['box', 0.32, legL, 0.34], c: spec.col[1], p: [x + span / 4, 0.3 + rise / 2, z], r: [0, 0, legA], role: 'tower-leg' },
-        ...(marine ? [{ g: ['cone', 1.2, 2.4, 8], c: spec.col[1], p: [x, 1.2, zIn(D, 2.4, 1.2)], role: 'monopile' }] : []),
-        { g: ['cyl', 0.34, 0.54, hubY, 8], c: spec.col[0], p: [x, hubY / 2, zIn(D, 1.2, 1.5)] },
-        { g: ['box', 1.6, 0.8, 1.4], c: spec.col[1], p: [x, hubY, zIn(D, 1.4, 0.35)] },
-        { g: ['ico', 0.62], c: 0xd9dde0, p: pivot },
+        // 單支主柱塔身；海上款具水中轉接單樁，陸上款直接落地。
+        ...(marine ? [{ g: ['cyl', 1.0, 1.25, 4.0, 8], c: 0xe2b84d, p: [x, 2.0, towerZ], role: 'monopile' }] : []),
+        { g: ['cyl', 0.42, 0.72, hubY, 8], c: spec.col[0], p: [x, hubY / 2, towerZ], role: 'tower-column' },
+        { g: ['box', 1.8, 1.0, 2.4], c: spec.col[1], p: [x, hubY, zIn(D, 2.4, 0.5)], role: 'nacelle' },
+        { g: ['ico', 0.65], c: 0xd9dde0, p: pivot, role: 'hub' },
         ...[0, 1, 2].map((j) => {
           const a = j * Math.PI * 2 / 3;
           return moving({
-            g: ['box', 0.34, bladeR, 0.24], c: 0xe4e7e7,
+            g: ['box', 0.44, bladeR, 0.24], c: 0xe4e7e7,
             p: [x + Math.cos(a) * bladeR / 2, hubY + Math.sin(a) * bladeR / 2, z],
             r: [0, 0, a - Math.PI / 2],
           }, 'rotor', id, pivot, phase);
