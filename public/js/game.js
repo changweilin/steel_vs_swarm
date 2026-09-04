@@ -7446,8 +7446,8 @@ export class BattleClient {
       x = point.x; z = point.z;
     }
     this.net.send({ t: 'cast', slot, x: Math.round(x * 10) / 10, z: Math.round(-z * 10) / 10 });
-    // 突進:位移本就客戶端權威,樂觀立即生效(CD/MP 伺服器把關)
-    if (A.fx === 'dash') {
+    // 突進 / 相位穿梭:位移本就客戶端權威,樂觀立即生效(CD/MP 伺服器把關)
+    if (A.fx === 'dash' || A.fx === 'phaseshift') {
       const look = this.camera.getWorldDirection(new THREE.Vector3());
       if (!this._flying()) { look.y = 0; look.normalize(); this.vy = (this.vy ?? 0) + 5; }
       this.vel.addScaledVector(look, A.imp || 30);

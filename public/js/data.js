@@ -3692,8 +3692,8 @@ export const CHARACTERS = {
       // 依 §2.1「個別角色改 dmg 階梯」這條唯一的具名出口修正,MUST NOT 回頭動 vs 表。
       dmg: [65, 98, 142], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
       vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
-    skill: { name: '全息干涉：幻影突擊信標', fx: 'decoy_beacon', range: 200, dur: 6, count: 2, blindDur: 1.5, blindR: 14,
-      cd: [18, 16, 14], mp: [35, 40, 45], desc: '向前投擲全息干涉信標：投影 2 架具備真實雷達特徵的幻影突擊機吸引敵火與飛彈導引，被擊毀時引爆強光致盲周圍敵機 1.5 秒' },
+    skill: { name: '虛空躍遷：神經瞬影步', fx: 'dash', imp: [26, 32, 38],
+      cd: [12, 10, 8], mp: [25, 30, 35], desc: '神經突觸瞬影閃：神經同步率短暫暴走，機體撕裂空間瞬間位移' },
     // 2026-08-06 使用者定案(見 SELF_ULT):改成**超載** —— 彈藥全滿 + 期間無限彈藥(免裝填)
     // + 閃避率提升,**被擊中即結束**。補償當量由「免裝填的 DPS 增益 × 撐得住的秒數」兌現,
     // 故刻意不再疊 mul.dmg(疊上去就是同一份預算領兩次);`brk` 那條風險正是它的價錢 ——
@@ -3738,8 +3738,8 @@ export const CHARACTERS = {
     heavy: { name: '「天誅」14.5mm 反器材重砲', rw: '大口徑鎢芯穿甲反器材砲・KPV 縮裝・初速 1000m/s', type: 'gun', mv: 1000,
       dmg: [50, 75, 105], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],   // dmg −5%:同 t02 heavy 同欄註(bal ⑤ 離群修正)
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
-    skill: { name: '幽影匿跡：虛無光學迷彩', fx: 'stealth', dur: [4, 5, 6],
-      cd: [20, 18, 16], mp: [35, 40, 45], desc: '啟動全光譜隱形迷彩：自雷達與光學感測器中徹底消隱（開火即現形）' },
+    skill: { name: '全息干涉：幻影突擊信標', fx: 'decoy_beacon', range: 200, dur: 6, count: 2, blindDur: 1.5, blindR: 14,
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '向前投擲全息干涉信標：投影 2 架具備真實雷達特徵的幻影突擊機吸引敵火與飛彈導引，被擊毀時引爆強光致盲周圍敵機 1.5 秒' },
     ult: { name: '要塞展開：巨砲架設狙擊', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
       add: { fx: 'siege', setupS: 1.0, recoverS: 1.5 },
       dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '展開四足液壓駐鋤就地固定：強制進入重裝狙擊模式，期間無限重武器彈藥且免裝填，解除後需硬直恢復移動' },
@@ -4051,8 +4051,8 @@ export const CHARACTERS = {
     heavy: { name: '「冰川之息」大口徑反器材重狙', rw: '超遠程重型反器材狙擊砲・穿甲鎢芯彈・初速 900m/s', type: 'gun', mv: 900,
       dmg: [61, 89, 126], mag: 3, reload: 9, range: 390, crit: 0.2, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.3, armor: 1.7, air: 1.2, building: 0.5 } },
-    skill: { name: '相位穿梭：虛空超維步', fx: 'phaseshift', dur: 1.8, r: 6, dmg: [50, 70, 95],
-      cd: [14, 12, 10], mp: [30, 35, 40], desc: '機體進入 1.8 秒超維相位狀態：期間完全無敵且無視任何實體碰撞穿行（不可開火），現身引爆 6m 相位衝擊波擊退敵機並使下次攻擊必暴擊' },
+    skill: { name: '相位穿梭：虛空超維步', fx: 'phaseshift', imp: [28, 34, 40], dur: 1.8, r: 6, dmg: [50, 70, 95],
+      cd: [14, 12, 10], mp: [30, 35, 40], desc: '超維相位瞬影突進：向視線方向爆發位移並進入 1.8 秒超維相位狀態（無敵且無視實體碰撞），現身引爆 6m 相位衝擊波擊退敵機並使下次攻擊必暴擊' },
     // 2026-08-06 使用者定案(見 SELF_ULT):破隱後 SELF_ULT.ALPHA_S 秒內傷害倍增 ——
     // 倍率由 `selfUltBoost` 從被移除的機種絕招預算**推導**(MUST NOT 手寫);`alpha` 只是旗標。
     ult: { name: '無相歸真：剎那破滅一擊', fx: 'stealth', dur: [4, 5, 6], add: { fx: 'alpha' },

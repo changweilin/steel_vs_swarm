@@ -64,14 +64,14 @@ To eliminate the remaining generic/homogenized skills across the mech roster (ge
   - Triggered mines knock enemies airborne and create a 12m-diameter molten slag puddle burning for 5 seconds (continuous armor melt + 20% slow).
 
 ### 5. Phase Shift (`phaseshift`)
-- **Assigned Mech**: `m08` Leila Cardoso ("Night Leopard")
-- **Target Replacement**: Replaces stationary invisibility `Shadow Veil` (`stealth`)
+- **Assigned Mech**: `m08` Vidya Rathore ("Night Leopard")
+- **Target Replacement**: Upgrades original dash mobility to hyper-dimensional Phase Dash (`phaseshift`, impulse `[28, 34, 40]`)
 - **Mechanics**:
-  - The mech enters a hyper-dimensional phase state for 1.8 seconds: completely invulnerable, ignores all collision boxes (can pass through buildings, trees, and enemy mechs), but cannot fire weapons.
+  - The mech bursts forward along aim direction with impulse `[28, 34, 40]` and enters a hyper-dimensional phase state for 1.8 seconds: completely invulnerable, ignores all collision boxes (can pass through buildings, trees, and enemy mechs), but cannot fire weapons.
   - Re-emerging emits an omnidirectional 6m shockwave knocking back nearby enemies and granting 100% critical chance on the next attack.
 
 ### 6. Holographic Decoy Beacon (`decoy_beacon`)
-- **Assigned Mech**: `t02` Alexei Volkov ("Stinger")
+- **Assigned Mech**: `t04` Nadezhda Orlova ("Grey Goose") [readjusted from t02 to preserve Vera's dash mobility]
 - **Target Replacement**: Replaces generic optical camouflage `Thermal Cloaking` (`stealth`)
 - **Mechanics**:
   - Throws an active holographic emitter projecting 2 identical drone silhouettes that charge forward with realistic radar signatures.
