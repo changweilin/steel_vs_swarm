@@ -21,6 +21,7 @@ import {
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
   CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S,
+  WEATHER_DEBUFFS, windSpeedFactor,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -4299,6 +4300,17 @@ export class BattleClient {
         this.trauma = Math.min(1, this.trauma + 0.25);
         this.hud.feed?.('❄️ 機體沒入冰凍水面! 受到凍結異常狀態(行動力 1/8)並持續受創!');
       }
+    } else if (ev.e === 'lightning_strike') {
+      for (const p of ev.pts || []) {
+        const x = p.x, z = -p.z;
+        const y = this.terrain ? this.terrain.heightAt(x, z) + (p.y || 0) : (p.y || 0);
+        this.env?.strikeLightningAt?.(x, y, z);
+        if (p.id === this.bodyId || (this.hero && p.id === this.hero.id) || p.id === this.youId) {
+          this.hud?.feed?.(`⚡ 遭雷雨閃電擊中! 受損 ${WEATHER_DEBUFFS.LIGHTNING.BASE_DMG} HP`);
+          this._lastHurtAt = performance.now() / 1000;
+          this.trauma = Math.min(1, this.trauma + 0.4);
+        }
+      }
     } else if (ev.e === 'loot') {
       if (ev.pid === this.youId) {
         if (ev.ammo) {
@@ -6470,8 +6482,10 @@ export class BattleClient {
     const def = this.wdef[wid], st = this.wstate[wid];
     if (!def || !st || st.reloadEnd > 0 || st.ammo >= def.mag) return;
     st.ammo = 0;
-    // 填彈/冷卻時長 = 武器階級解析後的 reload(2026-07-20:折減併入階級,伺服器 _reloadT 同一條)
-    st.reloadEnd = performance.now() / 1000 + def.reload;
+    // 填彈/冷卻時長 = 武器階級解析後的 reload × 大雪氣候倍率(伺服器 _reloadT 同一條)
+    const snowMul = this.env?.getWeatherDynamics?.()?.snowCdMul ?? 1;
+    st.reloadDur = def.reload * snowMul;
+    st.reloadEnd = performance.now() / 1000 + st.reloadDur;
     if (this.net) this.net.send({ t: 'reload', w: wid });
     this.hud.feed?.(wid === 'heavy' ? `⏳ ${def.name} 冷卻中…` : `🔄 ${def.name} 填彈中…`);
   }
@@ -6932,7 +6946,9 @@ export class BattleClient {
     }
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
-    if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
+    const sandMul = this.env?.getWeatherDynamics?.()?.sandRateMul ?? 1;
+    const effRate = Math.max(0.01, def.rate * sandMul);
+    if (now - (this.lastFireAt[id] || 0) < 1 / effRate) return;
     this._fallbackFromEmptyHeavy(id, st);
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
@@ -7498,6 +7514,8 @@ export class BattleClient {
       x = point.x; z = point.z;
     }
     this.net.send({ t: 'cast', slot, x: Math.round(x * 10) / 10, z: Math.round(-z * 10) / 10 });
+    const snowMul = this.env?.getWeatherDynamics?.()?.snowCdMul ?? 1;
+    this.cds[slot === 'skill' ? 0 : 1] = (A.cd || 10) * snowMul;
     const castDur = slot === 'ult' ? (A.castTime || ULT_CAST_S) : (A.castTime || 0);
     if (castDur > 0) {
       this._castingUntil = now + castDur;
@@ -8146,8 +8164,13 @@ export class BattleClient {
       const ccF = this._ccMoveF();
       const tmag = target.length();
       const tSlow = this._terrainSlowF();
+      let windMul = 1;
+      const dyn = this.env?.getWeatherDynamics?.();
+      if (dyn && dyn.wind > WEATHER_DEBUFFS.THRESHOLD && (target.x !== 0 || target.z !== 0)) {
+        windMul = windSpeedFactor(target.x, target.z, dyn.windDir, dyn.wind);
+      }
       if (tmag > 0) target.multiplyScalar(spd * boost * this._recoilMoveF(true)
-        * ccF * this._modF('speed') * tSlow / Math.max(1, tmag));
+        * ccF * this._modF('speed') * tSlow * windMul / Math.max(1, tmag));
       // 混亂(招式追加效果):水平操縱反轉 + 慢速航向漂移(垂直升降不反轉,免得直接砸地)
       if ((this.confLeft || 0) > 0) { target.x *= -1; target.z *= -1; this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
       // 無人機完美迴避(2026-07-21):戰鬥狀態(近 COMBAT_S 秒攻擊或被攻擊)下按空白鍵飛行 →
@@ -8214,8 +8237,13 @@ export class BattleClient {
       const airK = this._lowG ? CJUMP.AIR_SPD_F : 1;
       // 地形坡度:上坡減速 / 下坡加速(平緩帶 = 兵線坡度限制內恆 1;騰空與人造鋪面回 1)
       const slopeF = this._slopeMoveF(move);
+      let windMul = 1;
+      const dyn = this.env?.getWeatherDynamics?.();
+      if (dyn && dyn.wind > WEATHER_DEBUFFS.THRESHOLD && (move.x !== 0 || move.z !== 0)) {
+        windMul = windSpeedFactor(move.x, move.z, dyn.windDir, dyn.wind);
+      }
       this.pos.addScaledVector(move, this._mobility(false) * boost * this._zoneSlow() * slowK * this._terrainSlowF()
-        * slopeF * this._recoilMoveF(false) * this._ccMoveF() * this._modF('speed') * airK * dt);
+        * slopeF * this._recoilMoveF(false) * this._ccMoveF() * this._modF('speed') * airK * windMul * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       // 蓄力跳騰空(_lowG):水平近乎無阻力滑行(太空漫步的慣性);觸地恢復地面摩擦
@@ -9807,9 +9835,9 @@ export class BattleClient {
       const cur = this._curWeapon();
       let reloadOff = { dz: 0, dy: 0, rx: 0 };
       if (cur.def && cur.st && cur.st.reloadEnd > 0) {
-        // 進度分母 = 武器階級解析後的填彈時長(2026-07-20:無精通折減),否則動作提前結束定格
-        const rl = cur.def.reload;
-        const p = 1 - Math.max(0, cur.st.reloadEnd - now) / rl;
+        // 進度分母 = 武器階級解析後的填彈時長(含大雪氣候倍率)
+        const rl = cur.st.reloadDur || (cur.def.reload * (this.env?.getWeatherDynamics?.()?.snowCdMul ?? 1));
+        const p = 1 - Math.max(0, cur.st.reloadEnd - now) / Math.max(0.001, rl);
         reloadOff = this._reloadAnimOffset(cur.def, p);
       }
       // 武裝姿勢:後座 + 填彈 + 榴彈超高仰角。三者都 MUST 夾在 `_solveGunPose` 反解出來的

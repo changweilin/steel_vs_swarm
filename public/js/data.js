@@ -6576,15 +6576,86 @@ export function resolveWeatherDynamics(weatherVec, prevDyn = null, dt = 0) {
   else if (wind > 70) dominant = 'windy';
   else if (clouds > 50) dominant = 'cloudy';
 
+  const debuffs = weatherDebuffFactors({ wind, rain, sand, snow, thunder, windDir });
+  const windDirServer = [windDir[0], -windDir[1]];
+
   return {
-    clouds, fog, wind, rain, sand, snow, thunder, windDirDeg, windDir,
+    clouds, fog, wind, rain, sand, snow, thunder, windDirDeg, windDir, windDirServer,
     isDarkCloud, cloudDarkness,
     effectiveRain, effectiveSand, effectiveSnow, isFrozen, freezeFactor, thawHoldS,
     effectiveThunder, effectiveFog,
     windAmp, windFreq, waveAmp, waveSpeed,
     fogNear, fogFar, light,
     dominantWeather: dominant,
+    ...debuffs,
   };
+}
+
+// 動態天氣 Debuff 參數與單一真相縫 (強風移速、大雪 CD、沙暴攻速、大雨攻擊力、雷雨閃電傷害)
+export const WEATHER_DEBUFFS = {
+  THRESHOLD: 75,       // 各屬性觸發門檻 75%
+  MAX_CHANGE: 0.125,   // 最大變化幅度 12.5%
+  LIGHTNING: {
+    BASE_DMG: 75,      // 閃電基礎傷害
+    PEN: 15,           // 穿甲值
+    INTERVAL_MIN: 2.0, // 雷雨 100% 時判定頻率 (每 2 秒一次)
+    INTERVAL_MAX: 8.0, // 雷雨 75% 剛觸發時判定頻率 (每 8 秒一次)
+    PROB_MIN: 0.35,    // 最低觸發機率
+    PROB_MAX: 0.90,    // 最高觸發機率
+    MAX_TARGETS: 3,    // 單次閃電最大打擊目標數
+  },
+};
+
+/**
+ * 依 7 維天氣向量計算各屬性 debuff 係數
+ * @param {object} v 天氣向量 { wind, rain, sand, snow, thunder, windDir, ... }
+ */
+export function weatherDebuffFactors(v = {}) {
+  const wind = v.wind ?? 0;
+  const rain = v.rain ?? 0;
+  const sand = v.sand ?? 0;
+  const snow = v.snow ?? 0;
+  const thunder = v.thunder ?? 0;
+
+  const windIntensity = wind > WEATHER_DEBUFFS.THRESHOLD ? (wind - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0;
+  const rainIntensity = rain > WEATHER_DEBUFFS.THRESHOLD ? (rain - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0;
+  const sandIntensity = sand > WEATHER_DEBUFFS.THRESHOLD ? (sand - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0;
+  const snowIntensity = snow > WEATHER_DEBUFFS.THRESHOLD ? (snow - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0;
+  const thunderIntensity = thunder >= WEATHER_DEBUFFS.THRESHOLD ? (thunder - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD) : 0;
+
+  return {
+    windIntensity,
+    rainIntensity,
+    sandIntensity,
+    snowIntensity,
+    thunderIntensity,
+    // 大雪指數 > 75% 影響換彈與招式 CD: 最高 +12.5%
+    snowCdMul: 1.0 + WEATHER_DEBUFFS.MAX_CHANGE * snowIntensity,
+    // 沙暴指數 > 75% 影響攻速: 最多減 12.5%
+    sandRateMul: 1.0 - WEATHER_DEBUFFS.MAX_CHANGE * sandIntensity,
+    // 大雨指數 > 75% 影響攻擊力: 最多減 12.5%
+    rainAtkMul: 1.0 - WEATHER_DEBUFFS.MAX_CHANGE * rainIntensity,
+  };
+}
+
+/**
+ * 強風指數 > 75% 時對移動速度的影響: 順風加速、逆風減速、最高變化 12.5%
+ * @param {number} moveX 移動方向向量 X
+ * @param {number} moveZ 移動方向向量 Z
+ * @param {number[]} windDir 風向單位向量 [wx, wz]
+ * @param {number} wind 風力指數 (0~100)
+ * @returns {number} 速度倍率
+ */
+export function windSpeedFactor(moveX, moveZ, windDir, wind) {
+  if (wind <= WEATHER_DEBUFFS.THRESHOLD) return 1.0;
+  const len = Math.hypot(moveX, moveZ);
+  if (len < 0.001) return 1.0;
+  const wx = windDir?.[0] ?? 1.0;
+  const wz = windDir?.[1] ?? 0.0;
+  const wLen = Math.hypot(wx, wz) || 1.0;
+  const cosTheta = (moveX * wx + moveZ * wz) / (len * wLen);
+  const intensity = Math.max(0, Math.min(1.0, (wind - WEATHER_DEBUFFS.THRESHOLD) / (100 - WEATHER_DEBUFFS.THRESHOLD)));
+  return 1.0 + WEATHER_DEBUFFS.MAX_CHANGE * intensity * cosTheta;
 }
 
 /**

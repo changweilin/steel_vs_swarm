@@ -1036,6 +1036,18 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
         clouds.step(backgroundOnly ? elapsedS : celWindTime(), dt, skyC, curDyn);
       }
     },
+    strikeLightningAt(targetX, targetY, targetZ) {
+      flashTimer = 0.25;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.min(span * 0.25, 120);
+      const startX = targetX + Math.cos(angle) * dist;
+      const startZ = targetZ + Math.sin(angle) * dist;
+      const startY = (targetY || 0) + Math.min(span * 0.35, 180);
+      lightning.strike(new THREE.Vector3(startX, startY, startZ), new THREE.Vector3(targetX, targetY || 0, targetZ));
+    },
+    getWeatherDynamics() {
+      return curDyn;
+    },
     dispose() {
       if (hemi) scene.remove(hemi);
       if (sun) {

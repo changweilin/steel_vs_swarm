@@ -5,7 +5,9 @@ import {
   weatherAtTime, resolveEnv, computeSolarSchedule, clockHour, phaseBlend, sunDirAt,
   WEATHER_ATTRS, WEATHER_PRESETS, SEASON_TIME_BIAS, weatherVectorAt, resolveWeatherDynamics,
   envTrigger, fluidFactor, TERRAIN_FX,
+  WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor,
 } from '../public/js/data.js';
+import { BattleSim } from '../server/sim.js';
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -237,6 +239,111 @@ console.log('\n▍Ⅵ 各維度條件觸發與物理連動判定 (resolveWeather
   ok(dWind.windAmp > 2.0 && dWind.waveAmp > 1.8, '風量 80% 正確放大風浪係數 (windAmp > 2.0, waveAmp > 1.8)');
   ok(Math.abs(dWind.windDir[0] - 0) < 1e-3 && Math.abs(dWind.windDir[1] - 1) < 1e-3,
     '風向 90° 正確導出向量 [cos 90°, sin 90°] = [0, 1]');
+}
+
+// Ⅶ 動態天氣 Debuff 參數與閃電判定 (強風/大雪/沙暴/大雨/雷雨閃電)
+console.log('\n▍Ⅶ 動態天氣 Debuff 參數與閃電判定 (WEATHER_DEBUFFS / weatherDebuffFactors / windSpeedFactor)');
+{
+  // 1. 常數規格門檻驗證 (門檻 75%, 最大變化 12.5%, 閃電參數)
+  ok(WEATHER_DEBUFFS.THRESHOLD === 75, 'Debuff 觸發門檻為 75% (WEATHER_DEBUFFS.THRESHOLD = 75)');
+  ok(WEATHER_DEBUFFS.MAX_CHANGE === 0.125, 'Debuff 最大變化幅度為 12.5% (WEATHER_DEBUFFS.MAX_CHANGE = 0.125)');
+  ok(WEATHER_DEBUFFS.LIGHTNING.BASE_DMG === 75, '閃電基礎傷害為 75 (BASE_DMG = 75)');
+  ok(WEATHER_DEBUFFS.LIGHTNING.PEN === 15, '閃電穿甲值為 15 (PEN = 15)');
+  ok(WEATHER_DEBUFFS.LIGHTNING.MAX_TARGETS === 3, '閃電單次最大目標數為 3 (MAX_TARGETS = 3)');
+  ok(WEATHER_DEBUFFS.LIGHTNING.INTERVAL_MIN === 2.0 && WEATHER_DEBUFFS.LIGHTNING.INTERVAL_MAX === 8.0,
+    '閃電頻率依雷雨指數介於 2s (100%) ~ 8s (75%)');
+  ok(WEATHER_DEBUFFS.LIGHTNING.PROB_MIN === 0.35 && WEATHER_DEBUFFS.LIGHTNING.PROB_MAX === 0.90,
+    '閃電判定機率介於 35% (75%) ~ 90% (100%)');
+
+  // 2. 門檻以內 (≤75%) 恆常無 Debuff (係數為 1.0)
+  const norm = weatherDebuffFactors({ wind: 75, rain: 75, sand: 75, snow: 75, thunder: 75, windDir: [1, 0] });
+  ok(norm.snowCdMul === 1.0, '大雪 ≤ 75% 換彈/招式 CD 無影響 (snowCdMul = 1.0)');
+  ok(norm.sandRateMul === 1.0, '沙暴 ≤ 75% 攻速無影響 (sandRateMul = 1.0)');
+  ok(norm.rainAtkMul === 1.0, '大雨 ≤ 75% 攻擊力無影響 (rainAtkMul = 1.0)');
+  ok(norm.windIntensity === 0, '強風 ≤ 75% 風力強度為 0');
+  ok(windSpeedFactor(1, 0, [1, 0], 75) === 1.0, '強風 ≤ 75% 順風不加速 (factor = 1.0)');
+  ok(windSpeedFactor(-1, 0, [1, 0], 75) === 1.0, '強風 ≤ 75% 逆風不減速 (factor = 1.0)');
+
+  // 3. 極限值 (100%) 規格驗證 (大雪 CD +12.5%, 沙暴攻速 -12.5%, 大雨攻擊力 -12.5%)
+  const maxDebuffs = weatherDebuffFactors({ wind: 100, rain: 100, sand: 100, snow: 100, thunder: 100, windDir: [1, 0] });
+  ok(Math.abs(maxDebuffs.snowCdMul - 1.125) < 1e-6, '大雪 100% 換彈與招式 CD 增加 12.5% (snowCdMul = 1.125)');
+  ok(Math.abs(maxDebuffs.sandRateMul - 0.875) < 1e-6, '沙暴 100% 攻速降低 12.5% (sandRateMul = 0.875)');
+  ok(Math.abs(maxDebuffs.rainAtkMul - 0.875) < 1e-6, '大雨 100% 攻擊力降低 12.5% (rainAtkMul = 0.875)');
+  ok(maxDebuffs.windIntensity === 1.0, '強風 100% 風力強度為 1.0');
+
+  // 4. 強風方向性驗證 (順風加速最高 +12.5%, 逆風減速最高 -12.5%, 側風無影響, 夾角餘弦連續)
+  const tailwind = windSpeedFactor(10, 0, [1, 0], 100);
+  const headwind = windSpeedFactor(-10, 0, [1, 0], 100);
+  const crosswind = windSpeedFactor(0, 10, [1, 0], 100);
+  ok(Math.abs(tailwind - 1.125) < 1e-6, '強風 100% 正順風移動速度增加 12.5% (tailwind = 1.125)');
+  ok(Math.abs(headwind - 0.875) < 1e-6, '強風 100% 正逆風移動速度降低 12.5% (headwind = 0.875)');
+  ok(Math.abs(crosswind - 1.0) < 1e-6, '強風 100% 正側風移動速度不受影響 (crosswind = 1.0)');
+
+  // 5. 中間值 (87.5%) 線性內插驗證
+  const midDebuffs = weatherDebuffFactors({ wind: 87.5, rain: 87.5, sand: 87.5, snow: 87.5, thunder: 87.5, windDir: [1, 0] });
+  ok(Math.abs(midDebuffs.snowCdMul - 1.0625) < 1e-6, '大雪 87.5% 換彈/招式 CD 增加 6.25% (snowCdMul = 1.0625)');
+  ok(Math.abs(midDebuffs.sandRateMul - 0.9375) < 1e-6, '沙暴 87.5% 攻速降低 6.25% (sandRateMul = 0.9375)');
+  ok(Math.abs(midDebuffs.rainAtkMul - 0.9375) < 1e-6, '大雨 87.5% 攻擊力降低 6.25% (rainAtkMul = 0.9375)');
+
+  // 6. resolveWeatherDynamics 輸出完整性與 windDirServer 坐標系轉換
+  const dynResolved = resolveWeatherDynamics({ clouds: 80, rain: 90, sand: 80, snow: 85, thunder: 95, wind: 90, windDirDeg: 30 });
+  ok(dynResolved.snowCdMul > 1.0 && dynResolved.sandRateMul < 1.0 && dynResolved.rainAtkMul < 1.0,
+    'resolveWeatherDynamics 整合回傳所有動態 Debuff 係數');
+  ok(Math.abs(dynResolved.windDir[0] - Math.cos(30 * Math.PI / 180)) < 1e-4 &&
+     Math.abs(dynResolved.windDir[1] - Math.sin(30 * Math.PI / 180)) < 1e-4,
+    'Three.js 客戶端風向向量符合數學角定義');
+  ok(Math.abs(dynResolved.windDirServer[0] - dynResolved.windDir[0]) < 1e-4 &&
+     Math.abs(dynResolved.windDirServer[1] - (-dynResolved.windDir[1])) < 1e-4,
+    '伺服器風向向量 windDirServer Z 軸鏡射翻轉, 保證跨端物理風向完全一致');
+
+  // 7. BattleSim 伺服器閃電模擬判定與傷害結算
+  const testCfg = {
+    center: { lat: 25.033, lng: 121.565 },
+    bases: { SWARM: [25.033, 121.565], STEEL: [25.037, 121.565] },
+    lanes: [[[25.033, 121.565], [25.037, 121.565]]],
+    startWeather: 'storm',
+    weatherSeed: 7777,
+  };
+  const sim = new BattleSim(testCfg);
+  sim.curWeatherVec = { clouds: 90, rain: 90, sand: 0, snow: 0, thunder: 100, wind: 80, windDirDeg: 45 };
+  sim.curWeatherDyn = resolveWeatherDynamics(sim.curWeatherVec);
+
+  // 加入測試單位以供雷擊
+  const dummyTarget = { id: 'dummy_tower', kind: 'tower', side: 'STEEL', x: 10, y: 0, z: 10, hp: 500, maxHp: 500, armor: 0, shield: 0 };
+  sim.ents.set(dummyTarget.id, dummyTarget);
+
+  let lightningFired = false;
+  let struckTarget = null;
+  for (let step = 0; step < 50; step++) {
+    sim.events = [];
+    sim._tickWeather(0.2);
+    const ev = sim.events.find((e) => e.e === 'lightning_strike');
+    if (ev) {
+      lightningFired = true;
+      ok(ev.pts && ev.pts.length >= 1 && ev.pts.length <= 3, `閃電事件打擊 1~3 個目標 (實得 ${ev.pts.length} 個)`);
+      for (const p of ev.pts) {
+        const ent = sim.ents.get(p.id);
+        if (ent && ent.hp < (ent.maxHp ?? 100000)) {
+          struckTarget = ent;
+          break;
+        }
+      }
+      break;
+    }
+  }
+  ok(lightningFired, '雷雨天氣 (thunder=100) 下 sim._tickWeather 正常觸發 lightning_strike 事件');
+  ok(struckTarget != null, `遭雷擊目標受到傷害 (目標 ${struckTarget?.id} 剩餘 HP: ${struckTarget?.hp})`);
+
+  // 當雷雨指數 ≤ 75% 時，不會觸發閃電
+  sim.curWeatherVec.thunder = 50;
+  sim.curWeatherDyn = resolveWeatherDynamics(sim.curWeatherVec);
+  let lowThunderFired = false;
+  for (let step = 0; step < 50; step++) {
+    sim.events = [];
+    sim._tickWeather(0.2);
+    if (sim.events.some((e) => e.e === 'lightning_strike')) lowThunderFired = true;
+  }
+  ok(!lowThunderFired, '雷雨指數 ≤ 75% 時不觸發閃電打擊');
 }
 
 console.log(`\n🎉 天氣與天文日照系統稽核通過: ${pass} 通過 / ${fail} 失敗`);
