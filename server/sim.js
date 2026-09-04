@@ -4989,7 +4989,8 @@ export class BattleSim {
           x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
         continue;
       }
-      const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) : this._heroDmg(h, def, t.kind);
+      const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
+      const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) * rainMul : this._heroDmg(h, def, t.kind);
       // 閃避補償(2026-08-12 使用者定案「維持 DPS 提高傷害,閃避率不動」):被閃掉的那一份還給
       // 沒被閃掉的這一發 ⇒ 期望傷害 = base × (1−p) × 1/(1−p) ≡ base。分母 MUST 是**這個目標自己的**
       // p(逐目標,與上面那一顆骰同一個值)—— 閃不掉的小兵/建築/重甲 p = 0 ⇒ 係數恆 1 ⇒ 逐位元同舊制。
@@ -5783,7 +5784,7 @@ export class BattleSim {
             // **真的在目標身上引爆**:範圍內敵方逐個各自擲閃避(_blast 內建),閃掉的只是自己
             // 那一份。傷害基準 MUST 走 npcDmg(NPC 傷害住 UNITS[kind].dmg 且刻意不吃 vs 剋制)。
             const ty = target.hero || target.kind === 'heli' ? (target.y || 0) : 0;
-            this._blast(e, wd, target.x, target.z, ty, this._unitLev(target), false, u.dmg * rainMul);
+            this._blast(e, wd, target.x, target.z, ty, this._unitLev(target), false, u.dmg);
             // 爆風看得見才讀得出危險區(原則 4:演出取用的尺寸 MUST 來自權威值)——
             // 舊制只有一條曳光,十幾二十公尺的超壓帶在畫面上完全沒有交代。
             this.events.push({ e: 'boom', x: target.x, z: target.z, y: ty, r: wd.r, side: e.side });
@@ -6459,7 +6460,7 @@ export class BattleSim {
       const mx = e.x + off, mz = e.z, my = BASE_MISSILE.LAUNCH_Y;
       this.missiles.push({
         id: nextEntId++, byId: e.id, side: e.side, tid: target.id, tpid: target.pid,
-        x: mx, y: my, z: mz, speed: BASE_MISSILE.SPEED, dmg: g.dmg * rainMul, pen: STRUCT_W.base.pen || 0,
+        x: mx, y: my, z: mz, speed: BASE_MISSILE.SPEED, dmg: g.dmg, pen: STRUCT_W.base.pen || 0,
         r: STRUCT_W.base.r, hp: BASE_MISSILE.HP, ttl: g.range / BASE_MISSILE.SPEED + BASE_MISSILE.TTL_PAD,
         ox: mx, oy: my, oz: mz, range: g.range,   // 出了主堡射程就失鎖直飛(與其他飛彈同一條規則)
       });

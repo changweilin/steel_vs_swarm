@@ -6946,9 +6946,9 @@ export class BattleClient {
     }
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
+    if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
     const sandMul = this.env?.getWeatherDynamics?.()?.sandRateMul ?? 1;
-    const effRate = Math.max(0.01, def.rate * sandMul);
-    if (now - (this.lastFireAt[id] || 0) < 1 / effRate) return;
+    if (sandMul < 1 && now - (this.lastFireAt[id] || 0) < 1 / (def.rate * sandMul)) return;
     this._fallbackFromEmptyHeavy(id, st);
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
@@ -8243,7 +8243,7 @@ export class BattleClient {
         windMul = windSpeedFactor(move.x, move.z, dyn.windDir, dyn.wind);
       }
       this.pos.addScaledVector(move, this._mobility(false) * boost * this._zoneSlow() * slowK * this._terrainSlowF()
-        * slopeF * this._recoilMoveF(false) * this._ccMoveF() * this._modF('speed') * airK * windMul * dt);
+        * slopeF * this._recoilMoveF(false) * this._ccMoveF() * this._modF('speed') * windMul * airK * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       // 蓄力跳騰空(_lowG):水平近乎無阻力滑行(太空漫步的慣性);觸地恢復地面摩擦
