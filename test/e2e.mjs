@@ -1256,18 +1256,18 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 
     // ④ 小招詠唱機制直測:詠唱期間無加成、自然完成滿額、受擊立即觸發 (t/T)^2
     const sb = new BattleSim(fakeBattleConfig(1));
-    const hb = sb.addHero('SWARM', 'ab_b', 's05');
+    const hb = sb.addHero('SWARM', 'ab_b', 's01');
     hb.x = 320; hb.z = 140; hb.mp = 999; hb.abil.skill = 1;
-    const ct = skillCastTime('s05', 1);
+    const ct = skillCastTime('s01', 1);
     sb.heroCast('ab_b', 'skill');
-    assert(!!hb.cast && hb.cast.dur === ct, `s05 小招開始詠唱(${ct.toFixed(2)}s)`);
+    assert(!!hb.cast && hb.cast.dur === ct, `s01 小招開始詠唱(${ct.toFixed(2)}s)`);
     assert(Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9, '小招詠唱中效果未生效');
     // 詠唱至 50% 受擊
     sb.tick(ct * 0.5);
     sb._damage(hb, 10, null);
     assert(!hb.cast, '受擊後立即結束詠唱強制施法');
     const fExp = 0.25; // (0.5)^2
-    const rawMul = heroAbility('s05', 'skill', 1).mul.dmg;
+    const rawMul = heroAbility('s01', 'skill', 1).mul.dmg;
     const expMul = 1 + (rawMul - 1) * fExp;
     assert(Math.abs(sb._buffMul(hb, 'dmg') - expMul) < 1e-6,
       `受擊強制施展效果比例 (t/T)² = ${(fExp * 100).toFixed(0)}%(dmg ×${expMul.toFixed(3)})`);
@@ -1540,9 +1540,9 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     // 招式型範圍 EMP 也是負面狀態 → 記助攻貢獻(與武器附帶 EMP / _applyCC 同規)
     const empc = sim.addHero('SWARM', 'p_e', 's03');
     const mark = sim._add({ kind: 'tank', side: 'STEEL', x: empc.x + 10, z: empc.z, hp: 9999 });
-    empc.abil.skill = 1; empc.mp = empc.maxMp;
-    sim.heroCast('p_e', 'skill', empc.x, empc.z);
-    // 小招載具化(2026-08-07):EMP 由轟炸機送到落點才施放 ⇒ 等它飛完投放腿
+    empc.abil.ult = 1; empc.mp = empc.maxMp;
+    sim.heroCast('p_e', 'ult', empc.x, empc.z);
+    // 大招載具化:EMP 由轟炸機送到落點才施放 ⇒ 等它飛完投放腿
     for (let i = 0; i < 400 && !((mark.empUntil || 0) > sim.t); i++) sim.tick(0.125);
     assert((mark.empUntil || 0) > sim.t && mark.asst && mark.asst.p_e != null,
       '範圍 EMP(負面狀態)寫入助攻貢獻戳記');

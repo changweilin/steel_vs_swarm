@@ -113,11 +113,11 @@ export function createFighter(ch, lvl = 1, morphMode = 'ground') {
         range: a.range || 0,
         imp: a.imp || 0,
         dur: a.dur || 0,
-        isDash: a.fx === 'dash',
+        isDash: a.fx === 'dash' || a.fx === 'phaseshift',
         isLeap: a.add?.fx === 'leap',
         isHaste: a.add?.fx === 'haste',
-        isPull: a.add?.fx === 'pull',
-        isDmg: (a.dmg || 0) > 0,
+        isPull: a.add?.fx === 'pull' || a.fx === 'harpoon',
+        isDmg: (a.dmg || 0) > 0 || (a.baseDmg || 0) > 0 || a.fx === 'nanite' || a.fx === 'singularity',
       });
     }
   }
@@ -176,6 +176,12 @@ function calcDodgeP(targetFighter, targetState, dh) {
 /** 傷害扣減單一縫: 吃 shieldSplit 與 armorMul，具備無敵幀判定 */
 function applyDamage(targetState, dmg, pen, def) {
   if (targetState.invulUntil > targetState.tNow) return; // 無敵幀豁免全部傷害
+  if (targetState.decoyHp > 0) {
+    const absorb = Math.min(targetState.decoyHp, dmg);
+    targetState.decoyHp -= absorb;
+    dmg -= absorb;
+    if (dmg <= 0) return;
+  }
   const { toSp, toHp } = shieldSplit(def, dmg, Math.max(0, targetState.sh));
   targetState.sh -= toSp;
   targetState.ar -= toHp * armorMul(targetState.f.armor, pen);
@@ -207,6 +213,7 @@ function evalCoverDamage(h, inCover) {
 /** 計算攻擊傷害輸出 (不立刻扣血，支援同步結算) */
 function calcStrikeDamage(shooterState, targetState, dist, dt, cDh, losBlocked = false) {
   if (losBlocked) return { mpUse: 0, hits: [] };
+  if (shooterState.blindUntil > shooterState.tNow) return { mpUse: 0, hits: [] };
   if (shooterState.sh + shooterState.ar <= 0 || targetState.sh + targetState.ar <= 0) {
     return { mpUse: 0, hits: [] };
   }
@@ -283,15 +290,38 @@ function castCombatAbilities(S, T, dist, dt) {
       const aDef = ab.def;
       const abRange = ab.range || sRangeMax(S.f);
 
-      if (ab.isDmg && dist <= abRange) {
+      if (aDef.fx === 'decoy_beacon' && dist <= 200) {
+        ab.cdLeft = ab.cd;
+        S.mp -= ab.mp;
+        S.decoyHp = (S.decoyHp || 0) + 240;
+        T.blindUntil = Math.max(T.blindUntil || 0, S.tNow + (aDef.blindDur || 1.5));
+      } else if (aDef.fx === 'nanite' && dist <= 220) {
+        ab.cdLeft = ab.cd;
+        S.mp -= ab.mp;
+        const totalDmg = T.ehp0 * (aDef.pctPerSec || 0.08) * (aDef.dur || 4.0);
+        applyDamage(T, totalDmg, 10, aDef);
+      } else if (aDef.fx === 'reflect') {
+        ab.cdLeft = ab.cd;
+        S.mp -= ab.mp;
+        ab.activeDur = aDef.dur || 3.0;
+      } else if (aDef.fx === 'phaseshift') {
+        ab.cdLeft = ab.cd;
+        S.mp -= ab.mp;
+        ab.activeDur = aDef.dur || 1.8;
+        S.invulUntil = Math.max(S.invulUntil || 0, S.tNow + ab.activeDur);
+        const psDmg = Array.isArray(aDef.dmg) ? aDef.dmg[0] : (aDef.dmg || 50);
+        applyDamage(T, psDmg, 10, aDef);
+      } else if (ab.isDmg && dist <= Math.max(abRange, 45)) {
         ab.cdLeft = ab.cd;
         S.mp -= ab.mp;
         const count = Array.isArray(aDef.count) ? aDef.count[0] : (aDef.count || 1);
-        const dmgPerHit = (Array.isArray(aDef.dmg) ? aDef.dmg[0] : (aDef.dmg || 0)) * vsMult(aDef, T.f.kind);
+        const rawDmg = aDef.dmg || aDef.baseDmg || 0;
+        const dmgPerHit = (Array.isArray(rawDmg) ? rawDmg[0] : rawDmg) * vsMult(aDef, T.f.kind);
         const totalDmg = dmgPerHit * count;
         if (totalDmg > 0) {
           applyDamage(T, totalDmg, aDef.pen || 0, aDef);
           if (T.f.flying) T.unbalUntil = S.tNow + FLIGHT.UNBAL_S;
+          if (aDef.stun) T.unbalUntil = Math.max(T.unbalUntil || 0, S.tNow + aDef.stun);
         }
       } else if (aDef.fx === 'heal') {
         ab.cdLeft = ab.cd;

@@ -1233,3 +1233,330 @@ export function spawnFogVFX(scene, effects, { x, z, r = 35, dur = 8, isAlly = tr
     },
   });
 }
+
+/** 天律鎖定：動能穿刺重索視覺演出 */
+export function spawnHarpoonVFX(scene, effects, { fx, fy = 1.5, fz, tx, ty = 1.5, tz, hit = false }) {
+  const g = new THREE.Group();
+  const vFrom = new THREE.Vector3(fx, fy, fz);
+  const vTo = new THREE.Vector3(tx, ty, tz);
+  const dist = vFrom.distanceTo(vTo);
+
+  const cableGeo = new THREE.CylinderGeometry(0.08, 0.08, Math.max(0.1, dist), 6);
+  cableGeo.translate(0, dist / 2, 0);
+  cableGeo.rotateX(Math.PI / 2);
+  const cableMat = new THREE.MeshBasicMaterial({ color: 0x90e0ef, transparent: true, opacity: 0.9 });
+  const cable = new THREE.Mesh(cableGeo, cableMat);
+  cable.position.copy(vFrom);
+  cable.lookAt(vTo);
+  g.add(cable);
+
+  if (hit) {
+    starburst(scene, effects, tx, ty, tz, 8, 0xffd166);
+    impactBurst(scene, effects, tx, ty, tz, 0x00f5d4);
+  }
+
+  scene.add(g);
+  effects.push({
+    obj: g, ttl: 0.35,
+    fade(o, f, dt) {
+      cable.scale.z = Math.max(0.05, f);
+      cableMat.opacity = f * 0.9;
+    },
+  });
+}
+
+/** 極化偏轉：鏡面防衛矩陣 (120° 偏轉護盾) */
+export function spawnReflectBarrierVFX(scene, effects, { getPos, ry = 0, dur = 3.0 }) {
+  const g = new THREE.Group();
+  const arcR = 3.2;
+  const arcAngle = (120 * Math.PI) / 180;
+  const shieldGeo = new THREE.CylinderGeometry(arcR, arcR, 3.5, 24, 1, true, -arcAngle / 2, arcAngle);
+  const shieldMat = new THREE.MeshBasicMaterial({
+    color: 0x66e0ff,
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+  shieldMesh.rotation.y = Math.PI / 2;
+  g.add(shieldMesh);
+
+  const innerGeo = new THREE.CylinderGeometry(arcR * 0.95, arcR * 0.95, 3.2, 16, 1, true, -arcAngle / 2, arcAngle);
+  const innerMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.4,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+  innerMesh.rotation.y = Math.PI / 2;
+  g.add(innerMesh);
+
+  scene.add(g);
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      if (getPos) {
+        const p = getPos();
+        if (p) {
+          o.position.set(p.x, p.y + 1.6, p.z);
+          o.rotation.y = p.ry || ry;
+        }
+      }
+      const pulse = 0.5 + 0.3 * Math.sin((dur - f * dur) * 12);
+      shieldMat.opacity = Math.min(f / 0.2, 1) * pulse;
+      innerMat.opacity = Math.min(f / 0.2, 1) * pulse * 0.6;
+    },
+  });
+}
+
+/** 量子命運：同調共振鏈 (多目標共振射線) */
+export function spawnEntangleLinkVFX(scene, effects, { getPositions, dur = 6.0 }) {
+  const g = new THREE.Group();
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0xb5179e,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const geo = new THREE.BufferGeometry();
+  const line = new THREE.LineSegments(geo, lineMat);
+  g.add(line);
+  scene.add(g);
+
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      const pts = getPositions ? getPositions() : [];
+      if (pts.length >= 2) {
+        const segs = [];
+        for (let i = 0; i < pts.length; i++) {
+          for (let j = i + 1; j < pts.length; j++) {
+            segs.push(pts[i].x, (pts[i].y || 1) + 1.2, pts[i].z);
+            segs.push(pts[j].x, (pts[j].y || 1) + 1.2, pts[j].z);
+          }
+        }
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+      }
+      lineMat.opacity = Math.min(f / 0.2, 1) * (0.6 + 0.3 * Math.sin((dur - f * dur) * 15));
+    },
+  });
+}
+
+/** 地熱拒止：熔核地雷標記 */
+export function spawnThermiteMinesVFX(scene, effects, { mines }) {
+  const g = new THREE.Group();
+  const mineMat = new THREE.MeshBasicMaterial({ color: 0xff3b30 });
+  const coreMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
+
+  for (const m of mines) {
+    const mg = new THREE.Group();
+    mg.position.set(m.x, m.y || 0.15, m.z);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.2, 8), mineMat);
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 6), coreMat);
+    light.position.y = 0.15;
+    mg.add(body);
+    mg.add(light);
+    g.add(mg);
+  }
+  scene.add(g);
+  const dur = mines[0]?.dur || 12;
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      const flash = (Math.sin((dur - f * dur) * 8) > 0) ? 1 : 0.2;
+      coreMat.opacity = flash;
+    },
+  });
+}
+
+/** 地熱拒止：熔核溫壓焦土火場 */
+export function spawnThermitePuddleVFX(scene, effects, { x, z, y = 0.1, r = 6, dur = 5 }) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  const circle = new THREE.Mesh(
+    new THREE.CircleGeometry(r, 24),
+    new THREE.MeshBasicMaterial({ color: 0xff4500, transparent: true, opacity: 0.65, side: THREE.DoubleSide })
+  );
+  circle.rotation.x = -Math.PI / 2;
+  g.add(circle);
+
+  const inner = new THREE.Mesh(
+    new THREE.CircleGeometry(r * 0.55, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffd000, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+  );
+  inner.rotation.x = -Math.PI / 2;
+  inner.position.y = 0.05;
+  g.add(inner);
+
+  scene.add(g);
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      const op = Math.min(f / 0.2, 1);
+      circle.material.opacity = op * (0.55 + 0.15 * Math.sin(f * 25));
+      inner.material.opacity = op * (0.75 + 0.2 * Math.sin(f * 35));
+    },
+  });
+}
+
+/** 相位穿梭：虛空超維步 */
+export function spawnPhaseShiftVFX(scene, effects, { getPos, dur = 1.8 }) {
+  const g = new THREE.Group();
+  const sphereMat = new THREE.MeshBasicMaterial({
+    color: 0x9b5de5,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.6,
+  });
+  const sphere = new THREE.Mesh(new THREE.IcosahedronGeometry(2.5, 2), sphereMat);
+  g.add(sphere);
+  scene.add(g);
+
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      if (getPos) {
+        const p = getPos();
+        if (p) o.position.set(p.x, p.y + 1.5, p.z);
+      }
+      sphere.rotation.x += dt * 3;
+      sphere.rotation.y += dt * 4;
+      sphereMat.opacity = Math.min(f / 0.15, 1) * 0.6;
+    },
+  });
+}
+
+/** 相位現身震波 */
+export function spawnPhaseExitVFX(scene, effects, { x, z, y = 0, r = 6 }) {
+  shockRing(scene, effects, x, y, z, r, 0x9b5de5);
+  starburst(scene, effects, x, y + 1.2, z, r * 1.2, 0xf15bb5);
+}
+
+/** 全息干涉：幻影突擊信標 (全息無人機) */
+export function spawnDecoyBeaconVFX(scene, effects, { id, x, z, y = 2.0, ry = 0, dur = 6 }) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  g.rotation.y = ry;
+  const holoMat = new THREE.MeshBasicMaterial({
+    color: 0x00f5d4,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.65,
+  });
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2.2, 4), holoMat);
+  body.rotation.x = Math.PI / 2;
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.1, 0.8), holoMat);
+  g.add(body);
+  g.add(wing);
+  scene.add(g);
+
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      o.position.x -= Math.sin(ry) * dt * 18;
+      o.position.z += Math.cos(ry) * dt * 18;
+      holoMat.opacity = (Math.sin(f * 40) > -0.7 ? 0.65 : 0.15) * Math.min(f / 0.15, 1);
+    },
+  });
+}
+
+/** 全息信標殉爆閃光彈 */
+export function spawnFlashbangVFX(scene, effects, { x, z, y = 2, r = 14 }) {
+  starburst(scene, effects, x, y, z, r * 1.5, 0xffffff);
+  shockRing(scene, effects, x, y - 1.8, z, r, 0x00f5d4);
+}
+
+/** 噬甲蟲群：納米病毒雲 */
+export function spawnNaniteSwarmVFX(scene, effects, { getPos, dur = 4.0 }) {
+  const g = new THREE.Group();
+  const pCount = 20;
+  const pts = [];
+  for (let i = 0; i < pCount; i++) {
+    pts.push((Math.random() - 0.5) * 2.5, (Math.random() - 0.5) * 2.5, (Math.random() - 0.5) * 2.5);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  const pMat = new THREE.PointsMaterial({
+    color: 0x76ff03,
+    size: 0.25,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const cloud = new THREE.Points(geo, pMat);
+  g.add(cloud);
+  scene.add(g);
+
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      if (getPos) {
+        const p = getPos();
+        if (p) o.position.set(p.x, p.y + 1.2, p.z);
+      }
+      cloud.rotation.y += dt * 5;
+      cloud.rotation.x += dt * 3;
+      pMat.opacity = Math.min(f / 0.2, 1) * 0.85;
+    },
+  });
+}
+
+/** 噬甲蟲群：破體分裂轉移軌跡 */
+export function spawnNaniteSplitVFX(scene, effects, { fx, fz, tx, tz }) {
+  const g = new THREE.Group();
+  const v1 = new THREE.Vector3(fx, 1.2, fz);
+  const v2 = new THREE.Vector3(tx, 1.2, tz);
+  const lineGeo = new THREE.BufferGeometry().setFromPoints([v1, v2]);
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x76ff03, transparent: true, opacity: 0.9 });
+  g.add(new THREE.Line(lineGeo, lineMat));
+  scene.add(g);
+  effects.push({
+    obj: g, ttl: 0.35,
+    fade(o, f, dt) {
+      lineMat.opacity = f * 0.9;
+    },
+  });
+}
+
+/** 重力塌縮：微型奇點透鏡 */
+export function spawnSingularityVFX(scene, effects, { x, z, y = 2, dur = 3.0, r = 18 }) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(1.2, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x05010a })
+  );
+  g.add(core);
+
+  const disk = new THREE.Mesh(
+    new THREE.RingGeometry(1.5, 3.8, 24),
+    new THREE.MeshBasicMaterial({ color: 0x7209b7, transparent: true, opacity: 0.75, side: THREE.DoubleSide })
+  );
+  disk.rotation.x = Math.PI / 3;
+  g.add(disk);
+
+  const outer = new THREE.Mesh(
+    new THREE.RingGeometry(3.9, 4.4, 24),
+    new THREE.MeshBasicMaterial({ color: 0x4cc9f0, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+  );
+  outer.rotation.x = Math.PI / 3;
+  g.add(outer);
+
+  scene.add(g);
+  effects.push({
+    obj: g, ttl: dur,
+    fade(o, f, dt) {
+      disk.rotation.z += dt * 6;
+      outer.rotation.z -= dt * 4;
+      const s = 1 + (1 - f) * 0.5;
+      o.scale.set(s, s, s);
+    },
+  });
+}
+
+/** 奇點引爆坍縮衝擊波 */
+export function spawnSingularityImplosionVFX(scene, effects, { x, z, y = 2, r = 18 }) {
+  starburst(scene, effects, x, y, z, r * 1.4, 0x7209b7);
+  shockRing(scene, effects, x, y - 1.8, z, r, 0x4cc9f0);
+}
