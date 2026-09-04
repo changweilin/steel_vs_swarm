@@ -8853,7 +8853,11 @@ function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
  * 多層橋重疊時取最高面(上層橋才是站得住的那一面)。
  */
 export function makeDeckIndex(decks) {
-  if (!decks?.length) return () => null;
+  if (!decks?.length) {
+    const fn = () => null;
+    fn.hasItems = false;
+    return fn;
+  }
   const CELL = 16;
   const grid = new Map();
   const key = (i, j) => `${i},${j}`;
@@ -8877,7 +8881,7 @@ export function makeDeckIndex(decks) {
   // 縱向溢出到「相鄰較高橋段」的端點 → 斜引道上回報的橋面高度被高估近一整段(~2.5m)→ 上橋台階
   // 超過 DECK_STEP → 爬到一半掉回地面、卡在橋下(=「無法走上去 / 破圖穿越」)。分離側向/縱向即修正。
   const LONG_TOL = 1.0;   // 縱向端點外容差:遠低於橋段長(ROAD_SEG 6m),不會夠到相鄰段端點
-  return (x, z, margin = 0) => {
+  const query = (x, z, margin = 0) => {
     const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
     if (!arr) return null;
     let best = null;
@@ -8898,6 +8902,8 @@ export function makeDeckIndex(decks) {
     }
     return best;
   };
+  query.hasItems = true;
+  return query;
 }
 
 // ---- 軍事基地／防禦工事平台塗裝標線 ----
@@ -9272,7 +9278,11 @@ function buildBaseWaterPads(group, basesW, terrain, decks, cols) {
  * open:true(地下道引道路塹)時天花/頂板/彈道/slab/lev 消費端 MUST 跳過(露天段頭上是天空)。
  */
 export function makeTunnelIndex(tunnels) {
-  if (!tunnels?.length) return () => null;
+  if (!tunnels?.length) {
+    const fn = () => null;
+    fn.hasItems = false;
+    return fn;
+  }
   const CELL = 16;
   const grid = new Map();
   const key = (i, j) => `${i},${j}`;
@@ -9312,6 +9322,7 @@ export function makeTunnelIndex(tunnels) {
     }
     return best;
   };
+  q.hasItems = true;
   // 幾何側壁(2026-07-29 破口封堵):步進 (x0,z0)→(x1,z1) 是否「由內跨出」某段地下道的
   // ±hw 牆線、且擋土牆頂(by)高出腳下逾可跨步高。高度場網格(格距 ~8.2m)把垂直路塹
   // 雙線性攤成每步 ≤0.6m 的緩坡 ⇒ 靠 surfaceAt 單步高差判側壁在洞口內側永不觸發,
@@ -9998,7 +10009,7 @@ function buildEdgeMotion({ group, segs, dynamics }) {
       if (mot.kind === 'rotor') {
         pivot.rotation.order = 'YXZ';
         pivot.rotation.z = mot.phase;
-        rotors.push({ pivot, angle: mot.phase, fry: s.fry });
+        rotors.push({ pivot, angle: mot.phase, fry: s.fry, sinFry: Math.sin(s.fry), cosFry: Math.cos(s.fry) });
       } else if (mot.kind === 'float') {
         floats.push({ pivot, baseY: py, phase: mot.phase });
       } else if (mot.kind === 'machine') {
@@ -10014,9 +10025,9 @@ function buildEdgeMotion({ group, segs, dynamics }) {
     const wind = celWindAmount(), wave = celWaveAmount(), t = celWindTime();
     const [wx, wz] = celWindHeading();
     for (const r of rotors) {
-      // 風向在邊界段局部座標的法向投影 (normalFlow) 與切向投影 (crossFlow)
-      const normalFlow = wx * Math.sin(r.fry) + wz * Math.cos(r.fry);
-      const crossFlow = wx * Math.cos(r.fry) - wz * Math.sin(r.fry);
+      // 風向在邊界段局部座標的法向投影 (normalFlow) 與切向投影 (crossFlow) (吃預先快取的 sin/cos)
+      const normalFlow = wx * r.sinFry + wz * r.cosFry;
+      const crossFlow = wx * r.cosFry - wz * r.sinFry;
       // 轉向：迎風正面吹來時順轉 (1)，由背面吹來時逆轉 (-1)；微幅側風依迎風側決定方向
       const flowSign = normalFlow <= -0.05 ? 1 : (normalFlow >= 0.05 ? -1 : (crossFlow >= 0 ? 1 : -1));
       // 轉速：正對迎風時全速，側風時依受風角平滑衰減，維持動態視覺

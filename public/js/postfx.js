@@ -273,7 +273,9 @@ export class Pipeline {
     // 半浮點 RT 在 tile GPU 上是**頻寬**成本(與 game.js 關 MSAA 同一個瓶頸)⇒ 低功耗走 8bit。
     // 8bit 線性緩衝在暗部會有輕微色帶,但那遠比掉幀好。
     this._rtType = opts.lowPower ? THREE.UnsignedByteType : THREE.HalfFloatType;
-    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    this._drawBufSize = new THREE.Vector2();
+    this._texelVec = new THREE.Vector2();
+    const size = renderer.getDrawingBufferSize(this._drawBufSize);
     this._size = size.clone();
     // 勾線資訊緩衝的能力閘:three 0.160 的 MRT 是 `WebGLMultipleRenderTargets`
     //(`WebGLRenderTarget({ count })` 是 r162 之後才有的),而它只在 WebGL2 上成立。
@@ -997,7 +999,7 @@ export class Pipeline {
 
   /** 畫布尺寸或 `_resScale` 改變時呼叫;尺寸一律由 drawing buffer 取得(見檔頭) */
   setSize() {
-    const s = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    const s = this.renderer.getDrawingBufferSize(this._drawBufSize);
     if (s.x === this._size.x && s.y === this._size.y) return;
     this._size.copy(s);
     for (const rt of [this.rtScene, this.rtA, this.rtB]) rt.setSize(Math.max(1, s.x), Math.max(1, s.y));
@@ -1007,7 +1009,7 @@ export class Pipeline {
   render() {
     const r = this.renderer;
     this.setSize();
-    const texel = new THREE.Vector2(1 / this._size.x, 1 / this._size.y);
+    const texel = this._texelVec.set(1 / this._size.x, 1 / this._size.y);
     const chain = [];
     if (this.enabled.ink) chain.push('ink');
     // 景深 MUST 排在勾線**之後**(檔頭 ②:先糊後勾 = 糊掉的色塊配上銳利的黑線)。

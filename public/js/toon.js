@@ -2380,7 +2380,7 @@ export function enableDissolve(target) {
   target?.traverse?.((o) => {
     if (!o.isMesh || o.userData.isOutline) return;
     for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
-      if (!m || m.transparent || seen.has(m) || !m.userData?.celOpts) continue;
+      if (!m || m.transparent || seen.has(m) || !m.userData?.celOpts || m.userData.celOpts.dissolve) continue;
       seen.add(m);
       applyCelPatch(m, { ...m.userData.celOpts, dissolve: true });
       m.needsUpdate = true;

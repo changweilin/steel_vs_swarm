@@ -510,6 +510,10 @@ function particleTextures() {
  * 雨/雪/沙塵各自具備專屬程序化紋理與完全相異之運動物理軌跡。
  * 風力數值不使用虛擬氣流條紋，高空透過雲朵飄移與聚散表現，低空透過落花落葉表現。
  */
+// 快速餘弦查表 (256 階，消除粒子每幀的動態三角計算)
+const _COS_LUT = new Float32Array(256);
+for (let i = 0; i < 256; i++) _COS_LUT[i] = Math.cos((i / 256) * Math.PI * 2);
+
 function makeParticles() {
   const pTexs = particleTextures();
   const systems = {};
@@ -517,10 +521,9 @@ function makeParticles() {
   const grp = new THREE.Group();
 
   for (const k of kinds) {
-    let N = 1600, size = 0.8, speed = 90, color = 0x9db8cc;
-    if (k === 'rain')       { N = 2600; size = 1.45; speed = 135; color = 0xa4c6df; }
-    else if (k === 'sand')  { N = 2200; size = 2.40; speed = 28;  color = 0xd4a359; }
-    else if (k === 'snow')  { N = 1900; size = 2.20; speed = 12;  color = 0xffffff; }
+    let N = 900, size = 1.60, speed = 135, color = 0xa4c6df;
+    if (k === 'sand')       { N = 700; size = 2.60; speed = 28;  color = 0xd4a359; }
+    else if (k === 'snow')  { N = 600; size = 2.40; speed = 12;  color = 0xffffff; }
 
     const BOX = 260, H = 180, pos = new Float32Array(N * 3), seed = new Float32Array(N);
     for (let i = 0; i < N; i++) {
@@ -529,6 +532,31 @@ function makeParticles() {
       pos[i * 3 + 2] = (Math.random() - 0.5) * BOX;
       seed[i] = Math.random() * Math.PI * 2;
     }
+
+    // 預先計算粒子種子相位之三角常數 (雪花與沙塵紊流)
+    const sinS1 = new Float32Array(N), cosS1 = new Float32Array(N);
+    const sinS2 = new Float32Array(N), cosS2 = new Float32Array(N);
+    const sinS3 = new Float32Array(N), cosS3 = new Float32Array(N);
+    const sinS4 = new Float32Array(N), cosS4 = new Float32Array(N);
+    const sinS5 = new Float32Array(N), cosS5 = new Float32Array(N);
+
+    if (k === 'snow') {
+      for (let i = 0; i < N; i++) {
+        const s = seed[i];
+        sinS1[i] = Math.sin(s * 4.1); cosS1[i] = Math.cos(s * 4.1);
+        sinS2[i] = Math.sin(s);       cosS2[i] = Math.cos(s);
+        sinS3[i] = Math.sin(s * 2.3); cosS3[i] = Math.cos(s * 2.3);
+        sinS4[i] = Math.sin(s * 1.7); cosS4[i] = Math.cos(s * 1.7);
+        sinS5[i] = Math.sin(s * 3.1); cosS5[i] = Math.cos(s * 3.1);
+      }
+    } else if (k === 'sand') {
+      for (let i = 0; i < N; i++) {
+        const s = seed[i];
+        sinS1[i] = Math.sin(s * 3.7); cosS1[i] = Math.cos(s * 3.7);
+        sinS2[i] = Math.sin(s);       cosS2[i] = Math.cos(s);
+      }
+    }
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const mat = new THREE.PointsMaterial({
@@ -544,7 +572,7 @@ function makeParticles() {
     pts.frustumCulled = false;
     pts.visible = false;
     grp.add(pts);
-    systems[k] = { pts, geo, mat, N, BOX, H, seed, speed };
+    systems[k] = { pts, geo, mat, N, BOX, H, seed, speed, sinS1, cosS1, sinS2, cosS2, sinS3, cosS3, sinS4, cosS4, sinS5, cosS5 };
   }
 
   let t = 0;
@@ -592,48 +620,109 @@ function makeParticles() {
         sys.mat.opacity = targetOpacity;
         sys.pts.position.set(camera.position.x, camera.position.y - sys.H * 0.45, camera.position.z);
         const p = sys.geo.attributes.position;
+        const arr = p.array;
+        const halfBox = sys.BOX * 0.5;
 
-        for (let i = 0; i < sys.N; i++) {
-          let y = p.array[i * 3 + 1];
-          let px = p.array[i * 3];
-          let pz = p.array[i * 3 + 2];
-          const s = sys.seed[i];
+        if (k === 'rain') {
+          // 雨滴: 高速垂直直墜穿刺 + 隨風強烈傾斜 (純線性浮點運算)
+          const vy = sys.speed * dt;
+          const vx = driftSpeedX * dt;
+          const vz = driftSpeedZ * dt;
+          for (let i = 0; i < sys.N; i++) {
+            const idx = i * 3;
+            let px = arr[idx] + vx;
+            let y = arr[idx + 1] - vy;
+            let pz = arr[idx + 2] + vz;
 
-          if (k === 'rain') {
-            // 雨滴: 高速垂直直墜穿刺 + 隨風強烈傾斜
-            y -= sys.speed * dt;
-            px += driftSpeedX * dt;
-            pz += driftSpeedZ * dt;
-          } else if (k === 'snow') {
-            // 雪花: 極緩慢飄落 + 多頻雙軸空間紊流擺動 + 上下浮動
-            y -= sys.speed * dt + Math.sin(t * 2.2 + s * 4.1) * dt * 2.0;
-            px += (Math.sin(t * 1.8 + s) * 7.5 + Math.cos(t * 0.8 + s * 2.3) * 3.5 + driftSpeedX) * dt;
-            pz += (Math.cos(t * 1.6 + s * 1.7) * 7.5 + Math.sin(t * 0.7 + s * 3.1) * 3.5 + driftSpeedZ) * dt;
-          } else if (k === 'sand') {
-            // 沙塵: 強烈橫向貼地高速狂吹 + 垂直翻滾跳躍與沙暴渦旋
-            y -= sys.speed * dt;
-            y += (Math.sin(t * 4.2 + s * 3.7) * 16.0 + Math.cos(px * 0.05 + t * 3.0) * 8.0) * dt;
-            px += (driftSpeedX + Math.cos(t * 3.5 + s) * 12.0) * dt;
-            pz += (driftSpeedZ + Math.sin(t * 3.5 + s) * 12.0) * dt;
+            if (y < 0) {
+              y = sys.H;
+              px = (Math.random() - 0.5) * sys.BOX;
+              pz = (Math.random() - 0.5) * sys.BOX;
+            }
+            if (px > halfBox) px -= sys.BOX; else if (px < -halfBox) px += sys.BOX;
+            if (pz > halfBox) pz -= sys.BOX; else if (pz < -halfBox) pz += sys.BOX;
+
+            arr[idx] = px; arr[idx + 1] = y; arr[idx + 2] = pz;
           }
+        } else if (k === 'snow') {
+          // 雪花: 和角公式展開，迴圈外計算一次時間諧波，迴圈內零三角呼叫
+          const sinT1 = Math.sin(t * 2.2), cosT1 = Math.cos(t * 2.2);
+          const sinT2 = Math.sin(t * 1.8), cosT2 = Math.cos(t * 1.8);
+          const sinT3 = Math.sin(t * 0.8), cosT3 = Math.cos(t * 0.8);
+          const sinT4 = Math.sin(t * 1.6), cosT4 = Math.cos(t * 1.6);
+          const sinT5 = Math.sin(t * 0.7), cosT5 = Math.cos(t * 0.7);
 
-          if (y < 0) {
-            y = sys.H;
-            px = (Math.random() - 0.5) * sys.BOX;
-            pz = (Math.random() - 0.5) * sys.BOX;
-          } else if (y > sys.H) {
-            y = 0;
+          const { sinS1, cosS1, sinS2, cosS2, sinS3, cosS3, sinS4, cosS4, sinS5, cosS5 } = sys;
+          const baseVy = sys.speed * dt;
+          const baseVx = driftSpeedX * dt;
+          const baseVz = driftSpeedZ * dt;
+
+          for (let i = 0; i < sys.N; i++) {
+            const idx = i * 3;
+            const sinW1 = sinT1 * cosS1[i] + cosT1 * sinS1[i];
+            const sinW2 = sinT2 * cosS2[i] + cosT2 * sinS2[i];
+            const cosW3 = cosT3 * cosS3[i] - sinT3 * sinS3[i];
+            const cosW4 = cosT4 * cosS4[i] - sinT4 * sinS4[i];
+            const sinW5 = sinT5 * cosS5[i] + cosT5 * sinS5[i];
+
+            let y = arr[idx + 1] - baseVy - sinW1 * dt * 2.0;
+            let px = arr[idx] + (sinW2 * 7.5 + cosW3 * 3.5) * dt + baseVx;
+            let pz = arr[idx + 2] + (cosW4 * 7.5 + sinW5 * 3.5) * dt + baseVz;
+
+            if (y < 0) {
+              y = sys.H;
+              px = (Math.random() - 0.5) * sys.BOX;
+              pz = (Math.random() - 0.5) * sys.BOX;
+            } else if (y > sys.H) {
+              y = 0;
+            }
+            if (px > halfBox) px -= sys.BOX; else if (px < -halfBox) px += sys.BOX;
+            if (pz > halfBox) pz -= sys.BOX; else if (pz < -halfBox) pz += sys.BOX;
+
+            arr[idx] = px; arr[idx + 1] = y; arr[idx + 2] = pz;
           }
-          if (px > sys.BOX * 0.5) px -= sys.BOX;
-          else if (px < -sys.BOX * 0.5) px += sys.BOX;
-          if (pz > sys.BOX * 0.5) pz -= sys.BOX;
-          else if (pz < -sys.BOX * 0.5) pz += sys.BOX;
+        } else if (k === 'sand') {
+          // 沙塵: 和角展開 + 查表地滾翻，迴圈內零三角呼叫
+          const sinT1 = Math.sin(t * 4.2), cosT1 = Math.cos(t * 4.2);
+          const sinT2 = Math.sin(t * 3.5), cosT2 = Math.cos(t * 3.5);
+          const tPhase = t * 3.0;
 
-          p.array[i * 3] = px;
-          p.array[i * 3 + 1] = y;
-          p.array[i * 3 + 2] = pz;
+          const { sinS1, cosS1, sinS2, cosS2 } = sys;
+          const baseVy = sys.speed * dt;
+          const lutMul = 256 / 6.2831853;
+
+          for (let i = 0; i < sys.N; i++) {
+            const idx = i * 3;
+            let px = arr[idx];
+            let y = arr[idx + 1];
+            let pz = arr[idx + 2];
+
+            const sinW1 = sinT1 * cosS1[i] + cosT1 * sinS1[i];
+            const cosW2 = cosT2 * cosS2[i] - sinT2 * sinS2[i];
+            const sinW2 = sinT2 * cosS2[i] + cosT2 * sinS2[i];
+
+            const lutIdx = (((px * 0.05 + tPhase) * lutMul) & 255);
+            const roll = _COS_LUT[lutIdx] * 8.0;
+
+            y -= baseVy;
+            y += (sinW1 * 16.0 + roll) * dt;
+            px += (driftSpeedX + cosW2 * 12.0) * dt;
+            pz += (driftSpeedZ + sinW2 * 12.0) * dt;
+
+            if (y < 0) {
+              y = sys.H;
+              px = (Math.random() - 0.5) * sys.BOX;
+              pz = (Math.random() - 0.5) * sys.BOX;
+            } else if (y > sys.H) {
+              y = 0;
+            }
+            if (px > halfBox) px -= sys.BOX; else if (px < -halfBox) px += sys.BOX;
+            if (pz > halfBox) pz -= sys.BOX; else if (pz < -halfBox) pz += sys.BOX;
+
+            arr[idx] = px; arr[idx + 1] = y; arr[idx + 2] = pz;
+          }
         }
-        sys.geo.attributes.position.needsUpdate = true;
+        p.needsUpdate = true;
       }
     },
     dispose() {
