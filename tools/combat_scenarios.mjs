@@ -701,7 +701,7 @@ export function simulateScenario2_Melee(A, B) {
 }
 
 // =========================================================================
-// 戰鬥情境 3: 守塔 (Tower defense, mini map, no retreating past tower)
+// 戰鬥情境 3: 全要素兵線守塔攻防 (Lane push & tower defense, minion waves, towers, abilities)
 // =========================================================================
 export function simulateScenario3_Tower(A, B) {
   const a = initState(A, 0);
@@ -709,18 +709,26 @@ export function simulateScenario3_Tower(A, B) {
   const cDhA = A.y - B.y;
 
   const Dsep = 186; // 砲塔間距
+  const towerPosA = -Dsep / 2;
+  const towerPosB = Dsep / 2;
   const tRange = 155; // 砲塔射程
   const tDps = 68; // 砲塔 DPS
 
-  let posA = -Dsep / 2 + 25; // A 在己方塔前 25m
-  let posB = Dsep / 2 - 25;  // B 在己方塔前 25m
+  let towerHpA = UNITS.tower?.hp || 1800;
+  let towerHpB = UNITS.tower?.hp || 1800;
+  const initTowerHp = towerHpA;
 
-  const towerPosA = -Dsep / 2;
-  const towerPosB = Dsep / 2;
+  let posA = towerPosA + 25; // A 在己方塔前 25m
+  let posB = towerPosB - 25; // B 在己方塔前 25m
 
-  let towerHpA = 1800;
-  let towerHpB = 1800;
+  const singleWave = waveComp();
+  const marchSpd = waveMarchSpeed ? waveMarchSpeed() : 12;
+  const waveInt = GAME.WAVE_S || 20;
 
+  const creepsA = []; // A 方小兵 (往 +x 前進)
+  const creepsB = []; // B 方小兵 (往 -x 前進)
+
+  let nextWaveTime = 0;
   let t = 0;
   const dt = SCENARIO.DT;
 
@@ -732,7 +740,119 @@ export function simulateScenario3_Tower(A, B) {
     tickAbilities(a, dt);
     tickAbilities(b, dt);
 
+    // 1. 週期性生成兵波
+    if (t >= nextWaveTime) {
+      for (let i = 0; i < singleWave.length; i++) {
+        const tk = singleWave[i];
+        const u = UNITS[tk];
+        creepsA.push({
+          kind: tk,
+          x: towerPosA + 5 - i * 3,
+          hp: u.hp,
+          armor: u.armor,
+          dmg: u.dmg,
+          rate: u.rate,
+          range: u.range,
+        });
+        creepsB.push({
+          kind: tk,
+          x: towerPosB - 5 + i * 3,
+          hp: u.hp,
+          armor: u.armor,
+          dmg: u.dmg,
+          rate: u.rate,
+          range: u.range,
+        });
+      }
+      nextWaveTime += waveInt;
+    }
+
+    const aliveA = creepsA.filter((c) => c.hp > 0);
+    const aliveB = creepsB.filter((c) => c.hp > 0);
+
+    // 2. 小兵推進與交火
+    for (const c of aliveA) {
+      // 尋找前方最近敵方小兵、敵方英雄或敵方防禦塔
+      let tgt = null;
+      let tgtDist = Infinity;
+      for (const foe of aliveB) {
+        if (foe.x > c.x && foe.x - c.x <= c.range && (foe.x - c.x) < tgtDist) {
+          tgt = foe; tgtDist = foe.x - c.x;
+        }
+      }
+      if (!tgt && posB > c.x && posB - c.x <= c.range) {
+        tgt = 'heroB'; tgtDist = posB - c.x;
+      }
+      if (!tgt && towerPosB - c.x <= c.range) {
+        tgt = 'towerB'; tgtDist = towerPosB - c.x;
+      }
+
+      if (tgt) {
+        const dps = c.dmg * c.rate * dt;
+        if (tgt === 'heroB') {
+          const vsAir = b.f.flying ? (UNITS[c.kind]?.vs?.air ?? 0.6) : 1.0;
+          applyDamage(b, dps * vsAir, 0, { id: 'creep', vs: {} });
+        } else if (tgt === 'towerB') {
+          towerHpB -= dps * vsMult({ id: c.kind }, 'tower');
+        } else {
+          tgt.hp -= dps * armorMul(tgt.armor, 0);
+        }
+      } else {
+        c.x = Math.min(towerPosB, c.x + marchSpd * dt);
+      }
+    }
+
+    for (const c of aliveB) {
+      let tgt = null;
+      let tgtDist = Infinity;
+      for (const foe of aliveA) {
+        if (foe.x < c.x && c.x - foe.x <= c.range && (c.x - foe.x) < tgtDist) {
+          tgt = foe; tgtDist = c.x - foe.x;
+        }
+      }
+      if (!tgt && posA < c.x && c.x - posA <= c.range) {
+        tgt = 'heroA'; tgtDist = c.x - posA;
+      }
+      if (!tgt && c.x - towerPosA <= c.range) {
+        tgt = 'towerA'; tgtDist = c.x - towerPosA;
+      }
+
+      if (tgt) {
+        const dps = c.dmg * c.rate * dt;
+        if (tgt === 'heroA') {
+          const vsAir = a.f.flying ? (UNITS[c.kind]?.vs?.air ?? 0.6) : 1.0;
+          applyDamage(a, dps * vsAir, 0, { id: 'creep', vs: {} });
+        } else if (tgt === 'towerA') {
+          towerHpA -= dps * vsMult({ id: c.kind }, 'tower');
+        } else {
+          tgt.hp -= dps * armorMul(tgt.armor, 0);
+        }
+      } else {
+        c.x = Math.max(towerPosA, c.x - marchSpd * dt);
+      }
+    }
+
+    // 3. 防禦塔仇恨機制: 小兵優先扛塔
+    const towerATargets = aliveB.filter((c) => Math.abs(c.x - towerPosA) <= tRange)
+      .sort((c1, c2) => Math.abs(c1.x - towerPosA) - Math.abs(c2.x - towerPosA));
+    if (towerATargets.length > 0) {
+      towerATargets[0].hp -= tDps * dt * armorMul(towerATargets[0].armor, 12);
+    } else if (Math.abs(posB - towerPosA) <= tRange) {
+      applyDamage(b, tDps * dt, 12, { id: 'tower', vs: { armor: 1.0, air: 1.0 } });
+    }
+
+    const towerBTargets = aliveA.filter((c) => Math.abs(c.x - towerPosB) <= tRange)
+      .sort((c1, c2) => Math.abs(c1.x - towerPosB) - Math.abs(c2.x - towerPosB));
+    if (towerBTargets.length > 0) {
+      towerBTargets[0].hp -= tDps * dt * armorMul(towerBTargets[0].armor, 12);
+    } else if (Math.abs(posA - towerPosB) <= tRange) {
+      applyDamage(a, tDps * dt, 12, { id: 'tower', vs: { armor: 1.0, air: 1.0 } });
+    }
+
+    // 4. 英雄招式、機動與直接交戰
     const dist = Math.abs(posA - posB);
+    const rMaxA = sRangeMax(A);
+    const rMaxB = sRangeMax(B);
 
     castCombatAbilities(a, b, dist, dt);
     castCombatAbilities(b, a, dist, dt);
@@ -751,19 +871,24 @@ export function simulateScenario3_Tower(A, B) {
     if (strikeA.hits.some((h) => h.isHeavy)) tryFlightInvul(b, true);
     if (strikeB.hits.some((h) => h.isHeavy)) tryFlightInvul(a, true);
 
+    const inCoverB = dist <= rMaxA && dist > rMaxB;
+    const inCoverA = dist <= rMaxB && dist > rMaxA;
+
     let heavyHitB = false;
     const dealtB = strikeA.hits.reduce((acc, h) => {
       const prev = b.sh + b.ar;
-      applyDamage(b, h.dmg, h.pen, h.def);
-      if (h.isHeavy) heavyHitB = true;
+      const effDmg = evalCoverDamage(h, inCoverB);
+      applyDamage(b, effDmg, h.pen, h.def);
+      if (h.isHeavy && effDmg > 0) heavyHitB = true;
       return acc + (prev - (b.sh + b.ar));
     }, 0);
 
     let heavyHitA = false;
     const dealtA = strikeB.hits.reduce((acc, h) => {
       const prev = a.sh + a.ar;
-      applyDamage(a, h.dmg, h.pen, h.def);
-      if (h.isHeavy) heavyHitA = true;
+      const effDmg = evalCoverDamage(h, inCoverA);
+      applyDamage(a, effDmg, h.pen, h.def);
+      if (h.isHeavy && effDmg > 0) heavyHitA = true;
       return acc + (prev - (a.sh + a.ar));
     }, 0);
 
@@ -776,44 +901,96 @@ export function simulateScenario3_Tower(A, B) {
       if (a.f.flying && heavyHitA) a.unbalUntil = t + FLIGHT.UNBAL_S;
     }
 
-    // 砲塔火力支援: 當敵機進入塔射程時開火
-    const distToTowerA = Math.abs(posB - towerPosA);
-    if (distToTowerA <= tRange) {
-      applyDamage(b, tDps * dt, 12, { id: 'tower', vs: { armor: 1.0, air: 1.0 } });
+    // AoE 武器波及小兵
+    for (const slot of A.slots) {
+      const wCls = aoeClass ? aoeClass(slot.def) : 'single';
+      if (wCls === 'blast' && slot.def.r) {
+        for (const foe of aliveB) {
+          const dDiff = Math.abs(foe.x - posB);
+          if (dDiff <= slot.def.r) {
+            const bDmg = slot.def.dmg * vsMult(slot.def, foe.kind) * blastFalloff(slot.def.r, dDiff) * slot.rps * dt;
+            foe.hp -= bDmg * armorMul(foe.armor, slot.def.pen);
+          }
+        }
+      }
     }
-    const distToTowerB = Math.abs(posA - towerPosB);
-    if (distToTowerB <= tRange) {
-      applyDamage(a, tDps * dt, 12, { id: 'tower', vs: { armor: 1.0, air: 1.0 } });
+    for (const slot of B.slots) {
+      const wCls = aoeClass ? aoeClass(slot.def) : 'single';
+      if (wCls === 'blast' && slot.def.r) {
+        for (const foe of aliveA) {
+          const dDiff = Math.abs(foe.x - posA);
+          if (dDiff <= slot.def.r) {
+            const bDmg = slot.def.dmg * vsMult(slot.def, foe.kind) * blastFalloff(slot.def.r, dDiff) * slot.rps * dt;
+            foe.hp -= bDmg * armorMul(foe.armor, slot.def.pen);
+          }
+        }
+      }
     }
 
     // 機體對防禦塔造成的火力 (攻堅)
+    const distToTowerB = Math.abs(posA - towerPosB);
     for (const slot of A.slots) {
       if (distToTowerB <= slot.range) {
         towerHpB -= slot.def.dmg * slot.rps * vsMult(slot.def, 'tower') * dt * 0.35;
       }
     }
+    const distToTowerA = Math.abs(posB - towerPosA);
     for (const slot of B.slots) {
       if (distToTowerA <= slot.range) {
         towerHpA -= slot.def.dmg * slot.rps * vsMult(slot.def, 'tower') * dt * 0.35;
       }
     }
 
-    // 走位限制: 機體不可退過己方防禦塔後面 (硬限制邊界)
+    // 5. 戰術走位與脫戰回盾 (Tactical retreat & shield recharge)
     const spdA = effectiveSpeed(a);
     const spdB = effectiveSpeed(b);
 
-    const rMaxA = sRangeMax(A);
-    const rMaxB = sRangeMax(B);
+    if (a.sh <= a.f.sh0 * 0.15 && !a.isRetreating) {
+      a.isRetreating = true;
+      a.outOfCombatTimer = 0;
+    }
+    if (a.isRetreating) {
+      posA = Math.max(towerPosA, posA - spdA * dt);
+      if (posA <= towerPosA + 15 || dist > sRangeMax(B)) {
+        a.outOfCombatTimer += dt;
+        if (a.outOfCombatTimer >= 4.0) {
+          a.sh = a.f.sh0;
+          a.isRetreating = false;
+          a.outOfCombatTimer = 0;
+        }
+      }
+    }
 
-    if (rMaxA > rMaxB + 10) {
-      posA = Math.max(towerPosA, posA - spdA * 0.3 * dt);
-      posB = Math.max(posA + 15, posB - spdB * dt);
-    } else if (rMaxB > rMaxA + 10) {
-      posB = Math.min(towerPosB, posB + spdB * 0.3 * dt);
-      posA = Math.min(posB - 15, posA + spdA * dt);
-    } else {
-      posA = Math.min(-5, posA + spdA * 0.2 * dt);
-      posB = Math.max(5, posB - spdB * 0.2 * dt);
+    if (b.sh <= b.f.sh0 * 0.15 && !b.isRetreating) {
+      b.isRetreating = true;
+      b.outOfCombatTimer = 0;
+    }
+    if (b.isRetreating) {
+      posB = Math.min(towerPosB, posB + spdB * dt);
+      if (posB >= towerPosB - 15 || dist > sRangeMax(A)) {
+        b.outOfCombatTimer += dt;
+        if (b.outOfCombatTimer >= 4.0) {
+          b.sh = b.f.sh0;
+          b.isRetreating = false;
+          b.outOfCombatTimer = 0;
+        }
+      }
+    }
+
+    if (!a.isRetreating && !b.isRetreating) {
+      const rMaxA = sRangeMax(A);
+      const rMaxB = sRangeMax(B);
+
+      if (rMaxA > rMaxB + 10) {
+        posA = Math.max(towerPosA, posA - spdA * 0.3 * dt);
+        posB = Math.max(posA + 15, posB - spdB * dt);
+      } else if (rMaxB > rMaxA + 10) {
+        posB = Math.min(towerPosB, posB + spdB * 0.3 * dt);
+        posA = Math.min(posB - 15, posA + spdA * dt);
+      } else {
+        posA = Math.min(-5, posA + spdA * 0.2 * dt);
+        posB = Math.max(5, posB - spdB * 0.2 * dt);
+      }
     }
 
     posA = Math.max(towerPosA, Math.min(towerPosB - 5, posA));
@@ -827,7 +1004,18 @@ export function simulateScenario3_Tower(A, B) {
   const bDead = b.sh + b.ar <= 0 || towerHpB <= 0;
   if (aDead && !bDead) win = 0;
   else if (!aDead && bDead) win = 1;
-  else win = decideWinner(a, b);
+  else if (aDead && bDead) {
+    win = (towerHpA > towerHpB) ? 1 : (towerHpA < towerHpB) ? 0 : decideWinner(a, b);
+  } else {
+    // 逾時推塔進度裁決: 敵塔血量損失較多者勝
+    const towerLossA = (initTowerHp - towerHpA) / initTowerHp;
+    const towerLossB = (initTowerHp - towerHpB) / initTowerHp;
+    if (Math.abs(towerLossB - towerLossA) > 0.05) {
+      win = towerLossB > towerLossA ? 1 : 0;
+    } else {
+      win = decideWinner(a, b);
+    }
+  }
 
   const leftA = Math.max(0, (a.sh + a.ar) / a.ehp0);
   const leftB = Math.max(0, (b.sh + b.ar) / b.ehp0);
