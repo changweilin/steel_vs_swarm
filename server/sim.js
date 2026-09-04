@@ -6197,7 +6197,7 @@ export class BattleSim {
             const adist = Math.hypot(ax, az);
             if (adist > 0.01 && (fx * ax + fz * az) / adist >= Math.cos((t.reflectArc || (120 * Math.PI / 180)) / 2)) {
               this.events.push({ e: 'reflect_hit', pid: t.pid, x: m.x, z: m.z, deflected: true });
-              this.events.push({ e: 'boom', x: m.x + fx * 15, z: m.z + fz * 15, y: m.y, r: 8, side: t.side });
+              this.events.push({ e: 'boom', x: m.x + fx * 15, z: m.z + fz * 15, y: m.y, r: m.r, side: t.side });
               this.missiles.splice(i, 1);
               continue;
             }
