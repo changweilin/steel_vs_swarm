@@ -1777,6 +1777,7 @@ export class BattleSim {
     // 重武器射擊路徑上不該再存在任何跳過彈夾/電力/射速閘的分支。
     this._refillIfDone(h, id, def);                                // 填彈完成 → 補滿(單一縫)
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
+    if ((h.phaseUntil || 0) > now) return false;                   // 相位狀態下無法開火
     const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1);
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * (lenient ? 1.5 : 1))) return false;
     // 三個火槍手(t06):分身期間只能使用輕武器
@@ -1910,6 +1911,13 @@ export class BattleSim {
    * 失衡狀態(_isUnbalanced):飛行機體受擊失衡時暴擊率減半(FLIGHT.UNBAL_CRIT_MUL, 2026-09-01 使用者需求)。
    */
   _rollCrit(h, def, dmg, t) {
+    if (h.phaseCrit) {
+      h.phaseCrit = false;
+      const ac = this._altCrit(h, t);
+      const v = dmg * (1 + ((def?.critX || VITALS.CRIT_X) - 1) * ac.dmg);
+      this.events.push({ e: 'crit', pid: h.pid, x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, v: Math.round(v) });
+      return v;
+    }
     if (!def.crit) return dmg;
     const ac = this._altCrit(h, t);
     const unbalF = this._isUnbalanced(h) ? FLIGHT.UNBAL_CRIT_MUL : 1;
@@ -3624,6 +3632,211 @@ export class BattleSim {
       this._spawnCubicSlabs(h, A, x, z, frac);
     } else if (A.fx === 'fog') {
       this._spawnFog(h, A, x, z, frac);
+    } else if (A.fx === 'harpoon') {
+      const maxR = 45;
+      const dx = (x !== h.x || z !== h.z) ? (x - h.x) : -Math.sin(h.ry || 0) * maxR;
+      const dz = (x !== h.x || z !== h.z) ? (z - h.z) : Math.cos(h.ry || 0) * maxR;
+      const d = Math.hypot(dx, dz) || 1;
+      const nx = dx / d, nz = dz / d;
+      const ex = h.x + nx * maxR, ez = h.z + nz * maxR;
+
+      let hitEnemy = null, hitEnemyD = Infinity;
+      for (const e of this.ents.values()) {
+        if (e.side === h.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        const p = (e.x - h.x) * nx + (e.z - h.z) * nz;
+        if (p < 0 || p > maxR) continue;
+        const perp = Math.hypot(e.x - (h.x + nx * p), e.z - (h.z + nz * p));
+        if (perp <= (e.r || 1.2) + 0.8) {
+          if (p < hitEnemyD) { hitEnemyD = p; hitEnemy = e; }
+        }
+      }
+
+      let hitObsD = Infinity;
+      if (this._losGrid) {
+        const steps = Math.ceil(maxR / 2);
+        for (let s = 1; s <= steps; s++) {
+          const rx = h.x + nx * (s * 2);
+          const rz = h.z + nz * (s * 2);
+          if (this._losBlocked(h.x, h.z, this._eyeY(h), rx, rz, this._eyeY(h), h, null)) {
+            hitObsD = s * 2;
+            break;
+          }
+        }
+      }
+
+      const origX = h.x, origZ = h.z;
+      if (hitEnemy && hitEnemyD <= hitObsD) {
+        hitEnemy.x = h.x + nx * 2.5;
+        hitEnemy.z = h.z + nz * 2.5;
+        const dmg = (A.dmg || 85) * frac;
+        const pen = A.pen || 16;
+        this._damage(hitEnemy, dmg, h, pen, 0, { pen });
+        hitEnemy.stunUntil = Math.max(hitEnemy.stunUntil || 0, this.t + (A.stun || 1.0));
+        (hitEnemy.asst ||= {})[h.pid] = this.t;
+        this.events.push({
+          e: 'harpoon', pid: h.pid, side: h.side,
+          sx: origX, sz: origZ, tx: hitEnemy.x, tz: hitEnemy.z,
+          hitTargetId: hitEnemy.id, pullSelf: false,
+        });
+      } else if (hitObsD < Infinity) {
+        const pullDist = Math.max(0, hitObsD - 1.5);
+        h.x = h.x + nx * pullDist;
+        h.z = h.z + nz * pullDist;
+        this.events.push({
+          e: 'harpoon', pid: h.pid, side: h.side,
+          sx: origX, sz: origZ, tx: h.x, tz: h.z,
+          hitTargetId: null, pullSelf: true,
+        });
+      } else {
+        this.events.push({
+          e: 'harpoon', pid: h.pid, side: h.side,
+          sx: origX, sz: origZ, tx: ex, tz: ez,
+          hitTargetId: null, pullSelf: false,
+        });
+      }
+    } else if (A.fx === 'reflect') {
+      const dur = A.dur || 3.0;
+      h.reflectUntil = this.t + dur * frac;
+      h.reflectArc = (A.arc || 120) * Math.PI / 180;
+      h.reflectRatio = A.ratio || 0.6;
+      this.events.push({ e: 'reflect_barrier', pid: h.pid, side: h.side, dur: dur * frac, arc: 120 });
+    } else if (A.fx === 'entangle') {
+      let primary = null, bestD = (A.range || 240);
+      for (const e of this.ents.values()) {
+        if (e.side === h.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        const d = dist2d(x, z, e.x, e.z);
+        if (d < bestD) { bestD = d; primary = e; }
+      }
+      if (primary) {
+        const linked = [primary];
+        const searchR = A.r || 15;
+        const maxLinked = A.count || 3;
+        for (const e of this.ents.values()) {
+          if (linked.length >= maxLinked) break;
+          if (e === primary || e.side === h.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+          if (dist2d(primary.x, primary.z, e.x, e.z) <= searchR) {
+            linked.push(e);
+          }
+        }
+        this.entangleGroups = this.entangleGroups || [];
+        const dur = (A.dur || 6.0) * frac;
+        const g = {
+          id: 'entangle_' + Math.floor(this.t * 100),
+          casterPid: h.pid,
+          side: h.side,
+          members: linked.map((e) => e.id),
+          until: this.t + dur,
+          ratio: A.ratio || 0.4,
+        };
+        this.entangleGroups.push(g);
+        this.events.push({ e: 'entangle_link', pid: h.pid, side: h.side, targets: g.members, dur });
+      }
+    } else if (A.fx === 'thermite') {
+      const count = A.count || 6;
+      const arc = Math.PI * 0.7;
+      const forwardAng = Math.atan2(-(z - h.z), x - h.x) || (h.ry || 0);
+      this.thermiteMines = this.thermiteMines || [];
+      const newMines = [];
+      for (let i = 0; i < count; i++) {
+        const ang = forwardAng + (i - (count - 1) / 2) * (arc / (count - 1));
+        const dist = 6 + (i % 2) * 4;
+        const mx = h.x - Math.sin(ang) * dist;
+        const mz = h.z + Math.cos(ang) * dist;
+        const m = {
+          id: 'tmine_' + Math.floor(this.t * 100) + '_' + i,
+          x: mx, z: mz, side: h.side, owner: h,
+          until: this.t + (A.dur || 12) * frac,
+          r: 2.5,
+          puddleR: A.puddleR || 6,
+          puddleDur: A.puddleDur || 5,
+          dmg: (A.dmg || 40) * frac,
+          dps: (A.dps || 25) * frac,
+          slow: A.slow || 0.2,
+        };
+        this.thermiteMines.push(m);
+        newMines.push({ id: m.id, x: m.x, z: m.z });
+      }
+      this.events.push({ e: 'thermite_spawn', pid: h.pid, side: h.side, mines: newMines, dur: (A.dur || 12) * frac });
+    } else if (A.fx === 'phaseshift') {
+      const dur = (A.dur || 1.8) * frac;
+      h.phaseUntil = this.t + dur;
+      h.phaseDmg = (A.dmg || 50) * frac;
+      this.events.push({ e: 'phase_start', pid: h.pid, side: h.side, dur });
+    } else if (A.fx === 'decoy_beacon') {
+      const dur = (A.dur || 6.0) * frac;
+      const count = A.count || 2;
+      const ry = h.ry || 0;
+      this.hologramDecoys = this.hologramDecoys || [];
+      for (let i = 0; i < count; i++) {
+        const offX = (i === 0 ? -3 : 3) * Math.cos(ry);
+        const offZ = (i === 0 ? -3 : 3) * Math.sin(ry);
+        const decId = `hdecoy_${h.pid}_${i}_${Math.floor(this.t * 10)}`;
+        const dec = {
+          id: decId,
+          pid: h.pid,
+          side: h.side,
+          kind: 'decoy_beacon',
+          isHoloDecoy: true,
+          owner: h,
+          x: h.x + offX,
+          z: h.z + offZ,
+          y: 2.0,
+          ry,
+          hp: 120,
+          maxHp: 120,
+          armor: 0,
+          speed: 18,
+          r: 1.5,
+          until: this.t + dur,
+          blindR: A.blindR || 14,
+          blindDur: A.blindDur || 1.5,
+        };
+        this._add(dec);
+        this.hologramDecoys.push(dec);
+        this.events.push({ e: 'decoy_beacon_spawn', pid: h.pid, side: h.side, id: decId, x: dec.x, z: dec.z, dur });
+      }
+    } else if (A.fx === 'nanite') {
+      let target = null, bestD = (A.range || 220);
+      for (const e of this.ents.values()) {
+        if (e.side === h.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+        const d = dist2d(x, z, e.x, e.z);
+        if (d < bestD) { bestD = d; target = e; }
+      }
+      if (target) {
+        const dur = (A.dur || 4.0) * frac;
+        target.naniteInfection = {
+          owner: h,
+          until: this.t + dur,
+          pctPerSec: A.pctPerSec || 0.08,
+          splitCount: A.splitCount || 2,
+          splitR: A.splitR || 15,
+        };
+        this.events.push({ e: 'nanite_infected', pid: h.pid, side: h.side, targetId: target.id, dur });
+      }
+    } else if (A.fx === 'singularity') {
+      const speed = A.speed || 8;
+      const dur = (A.dur || 3.0) * frac;
+      const dx = (x !== h.x || z !== h.z) ? (x - h.x) : -Math.sin(h.ry || 0);
+      const dz = (x !== h.x || z !== h.z) ? (z - h.z) : Math.cos(h.ry || 0);
+      const d = Math.hypot(dx, dz) || 1;
+      const nx = dx / d, nz = dz / d;
+      const sId = 'singularity_' + Math.floor(this.t * 100);
+      this.singularities = this.singularities || [];
+      this.singularities.push({
+        id: sId,
+        owner: h,
+        side: h.side,
+        x: h.x + nx * 2,
+        z: h.z + nz * 2,
+        vx: nx * speed,
+        vz: nz * speed,
+        until: this.t + dur,
+        pullR: A.pullR || 18,
+        baseDmg: (A.baseDmg || 70) * frac,
+        scalePerObj: A.scalePerObj || 0.25,
+        capturedCount: 0,
+      });
+      this.events.push({ e: 'singularity_launch', pid: h.pid, side: h.side, id: sId, x: h.x, z: h.z, vx: nx * speed, vz: nz * speed, dur });
     }
     // dash:位移在客戶端(位置本就客戶端回報),伺服器只管 CD/MP 與廣播特效
     if (A.fx === 'buff' && A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision * frac);
@@ -3974,6 +4187,191 @@ export class BattleSim {
     this.fogs = this.fogs.filter((f) => f.until > this.t);
   }
 
+  _tickThermiteMines(dt) {
+    if (this.thermiteMines && this.thermiteMines.length) {
+      for (let i = this.thermiteMines.length - 1; i >= 0; i--) {
+        const m = this.thermiteMines[i];
+        if (this.t >= m.until) {
+          this.thermiteMines.splice(i, 1);
+          continue;
+        }
+        let triggered = false;
+        for (const e of this.ents.values()) {
+          if (e.side === m.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+          if (dist2d(m.x, m.z, e.x, e.z) <= m.r + (e.r || 1.0)) {
+            triggered = true;
+            break;
+          }
+        }
+        if (triggered) {
+          this._applyCC(m.owner, { fx: 'stun', dur: 0.8 }, m.x, m.z, 3);
+          this._applyCC(m.owner, { fx: 'pull', imp: -15 }, m.x, m.z, 4);
+          this._blast(m.owner, { dmg: m.dmg, r: 4, pen: 12 }, m.x, m.z, 0, 0);
+
+          this.thermitePuddles = this.thermitePuddles || [];
+          this.thermitePuddles.push({
+            x: m.x, z: m.z,
+            r: m.puddleR,
+            until: this.t + m.puddleDur,
+            dps: m.dps,
+            slow: m.slow,
+            owner: m.owner,
+            side: m.side,
+          });
+          this.events.push({ e: 'thermite_detonate', id: m.id, x: m.x, z: m.z, puddleR: m.puddleR, dur: m.puddleDur });
+          this.thermiteMines.splice(i, 1);
+        }
+      }
+    }
+    if (this.thermitePuddles && this.thermitePuddles.length) {
+      for (let i = this.thermitePuddles.length - 1; i >= 0; i--) {
+        const p = this.thermitePuddles[i];
+        if (this.t >= p.until) {
+          this.thermitePuddles.splice(i, 1);
+          continue;
+        }
+        for (const e of this.ents.values()) {
+          if (e.side === p.side || !e.side || e.neutral || (e.hero && e.dead) || e.hp <= 0) continue;
+          if (dist2d(p.x, p.z, e.x, e.z) <= p.r + (e.r || 1.0)) {
+            this._damage(e, p.dps * dt, p.owner, 10, 0, null);
+            this._applyCC(p.owner, { fx: 'slow', f: 1 - p.slow, dur: 0.6 }, e.x, e.z, 1);
+            (e.asst ||= {})[p.owner.pid] = this.t;
+          }
+        }
+      }
+    }
+  }
+
+  _tickEntangle(dt) {
+    if (!this.entangleGroups || !this.entangleGroups.length) return;
+    for (let i = this.entangleGroups.length - 1; i >= 0; i--) {
+      const g = this.entangleGroups[i];
+      if (this.t >= g.until) {
+        this.entangleGroups.splice(i, 1);
+        continue;
+      }
+      g.members = g.members.filter((id) => {
+        const e = this.ents.get(id);
+        return e && e.hp > 0 && (!e.hero || !e.dead);
+      });
+      if (g.members.length <= 1) {
+        this.entangleGroups.splice(i, 1);
+      }
+    }
+  }
+
+  _tickPhaseShift(dt) {
+    for (const h of this.heroes.values()) {
+      if (!h.phaseUntil) continue;
+      if (h.dead) {
+        delete h.phaseUntil;
+        continue;
+      }
+      if (this.t >= h.phaseUntil) {
+        delete h.phaseUntil;
+        h.phaseCrit = true;
+        const dmg = h.phaseDmg || 50;
+        this._blast(h, { dmg, r: 6, pen: 10 }, h.x, h.z, 0, 0);
+        this._applyCC(h, { fx: 'pull', imp: -20 }, h.x, h.z, 6);
+        this.events.push({ e: 'phase_exit', pid: h.pid, side: h.side, x: h.x, z: h.z, r: 6 });
+      }
+    }
+  }
+
+  _tickDecoyBeacons(dt) {
+    if (!this.hologramDecoys || !this.hologramDecoys.length) return;
+    for (let i = this.hologramDecoys.length - 1; i >= 0; i--) {
+      const dec = this.hologramDecoys[i];
+      if (dec.hp <= 0 || this.t >= dec.until || dec.dead) {
+        this._applyCC(dec.owner, { fx: 'confuse', dur: dec.blindDur }, dec.x, dec.z, dec.blindR);
+        this.events.push({ e: 'flashbang_detonate', id: dec.id, x: dec.x, z: dec.z, r: dec.blindR, dur: dec.blindDur });
+        this.ents.delete(dec.id);
+        this.hologramDecoys.splice(i, 1);
+        continue;
+      }
+      dec.x += -Math.sin(dec.ry) * dec.speed * dt;
+      dec.z += Math.cos(dec.ry) * dec.speed * dt;
+    }
+  }
+
+  _tickNanites(dt) {
+    for (const e of this.ents.values()) {
+      if (!e.naniteInfection) continue;
+      const inf = e.naniteInfection;
+      if (e.hp <= 0 || (e.hero && e.dead)) {
+        const newVictims = [];
+        const maxSplit = inf.splitCount || 2;
+        const splitR = inf.splitR || 15;
+        for (const other of this.ents.values()) {
+          if (newVictims.length >= maxSplit) break;
+          if (other === e || other.side === inf.owner.side || !other.side || other.neutral || other.hp <= 0 || (other.hero && other.dead) || other.naniteInfection) continue;
+          if (dist2d(e.x, e.z, other.x, other.z) <= splitR) {
+            newVictims.push(other);
+          }
+        }
+        for (const nv of newVictims) {
+          nv.naniteInfection = {
+            owner: inf.owner,
+            until: this.t + 4.0,
+            pctPerSec: inf.pctPerSec,
+            splitCount: 1,
+            splitR: 10,
+          };
+        }
+        this.events.push({ e: 'nanite_split', fromId: e.id, newTargets: newVictims.map((v) => v.id) });
+        delete e.naniteInfection;
+      } else if (this.t >= inf.until) {
+        delete e.naniteInfection;
+      } else {
+        const maxHp = e.maxHp || (e.hero ? 640 : (UNITS[e.kind]?.hp || 100));
+        const tickDmg = maxHp * (inf.pctPerSec || 0.08) * dt;
+        this._damage(e, tickDmg, inf.owner, 20, 0, null);
+        (e.asst ||= {})[inf.owner.pid] = this.t;
+      }
+    }
+  }
+
+  _tickSingularity(dt) {
+    if (!this.singularities || !this.singularities.length) return;
+    for (let i = this.singularities.length - 1; i >= 0; i--) {
+      const s = this.singularities[i];
+      if (this.t >= s.until) {
+        let entitiesInRadius = 0;
+        for (const e of this.ents.values()) {
+          if (e.side !== s.side && !e.neutral && (!e.hero || !e.dead) && e.hp > 0 && dist2d(s.x, s.z, e.x, e.z) <= s.pullR) {
+            entitiesInRadius++;
+          }
+        }
+        const totalObj = (s.capturedCount || 0) + entitiesInRadius;
+        const totalDmg = s.baseDmg * (1 + totalObj * s.scalePerObj);
+        this._blast(s.owner, { dmg: totalDmg, r: 8, pen: 16 }, s.x, s.z, 0, 0);
+        this.events.push({ e: 'singularity_implosion', id: s.id, x: s.x, z: s.z, r: 8, dmg: totalDmg });
+        this.singularities.splice(i, 1);
+        continue;
+      }
+      s.x += s.vx * dt;
+      s.z += s.vz * dt;
+      for (const e of this.ents.values()) {
+        if (e.side !== s.side && !e.neutral && (!e.hero || !e.dead) && e.hp > 0) {
+          const d = dist2d(s.x, s.z, e.x, e.z);
+          if (d <= s.pullR && d > 0.5) {
+            const pullSpd = 12 * (1 - d / s.pullR) * dt;
+            e.x += ((s.x - e.x) / d) * pullSpd;
+            e.z += ((s.z - e.z) / d) * pullSpd;
+          }
+        }
+      }
+      for (let mIdx = this.missiles.length - 1; mIdx >= 0; mIdx--) {
+        const m = this.missiles[mIdx];
+        if (dist2d(s.x, s.z, m.x, m.z) <= s.pullR) {
+          s.capturedCount = (s.capturedCount || 0) + 1;
+          this.missiles.splice(mIdx, 1);
+          this.events.push({ e: 'singularity_capture', id: s.id, mx: m.x, mz: m.z });
+        }
+      }
+    }
+  }
+
   _spawnAutonomousSummon(h, A, x, z, frac = 1, nImp = null) {
     this.autonomousSummons = this.autonomousSummons || [];
     const kind = A.unit;
@@ -4054,7 +4452,12 @@ export class BattleSim {
             s.cd = 1 / (s.rate || 0.8);
             const wd = s.wid ? WEAPONS[s.wid] : null;
             this._damage(target, s.dmg, s, wd?.pen || 0, 0, wd);
-            this.events.push({ e: 'shot', id: s.id, x: s.x, z: s.z, y: s.y || 0, tx: target.x, tz: target.z, ty: target.y || 0, kind: s.kind });
+            this.events.push({
+              e: 'shot', id: s.id, kind: s.kind, wid: s.wid,
+              from: [s.x, s.z], to: [target.x, target.z],
+              x: s.x, z: s.z, y: s.y || 0, tx: target.x, tz: target.z, ty: target.y || 0,
+              side: s.side,
+            });
           }
         } else {
           // 向目標移動
@@ -4449,6 +4852,25 @@ export class BattleSim {
           t.z += (z - t.z) / dd * m;
         }
       }
+      if (!this._inEntangle && this.entangleGroups?.length) {
+        for (const g of this.entangleGroups) {
+          if (g.members.includes(t.id)) {
+            this._inEntangle = true;
+            for (const mid of g.members) {
+              if (mid !== t.id) {
+                const other = this.ents.get(mid);
+                if (other && other.hp > 0 && (!other.hero || !other.dead)) {
+                  const subAd = { ...ad };
+                  if (subAd.dur) subAd.dur = subAd.dur * (g.ratio || 0.4);
+                  if (subAd.dps) subAd.dps = subAd.dps * (g.ratio || 0.4);
+                  this._applyCC(h, subAd, other.x, other.z, 2);
+                }
+              }
+            }
+            this._inEntangle = false;
+          }
+        }
+      }
     }
   }
 
@@ -4655,6 +5077,43 @@ export class BattleSim {
     }
     if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
+    if (t.hero && (t.phaseUntil || 0) > this.t) return; // 相位穿梭(超維步):完全無敵
+    // 極化偏轉鏡面防衛矩陣 (reflect): 正面 120° 來襲直射傷害以 60% 反射
+    if (t.hero && (t.reflectUntil || 0) > this.t && by) {
+      const ry = t.ry || 0;
+      const fx = -Math.sin(ry), fz = Math.cos(ry);
+      const ax = by.x - t.x, az = by.z - t.z;
+      const adist = Math.hypot(ax, az);
+      if (adist > 0.01) {
+        const dot = (fx * ax + fz * az) / adist;
+        if (dot >= Math.cos((t.reflectArc || (120 * Math.PI / 180)) / 2)) {
+          if (by.side !== t.side && !this._inReflect) {
+            this._inReflect = true;
+            this._damage(by, dmg * (t.reflectRatio || 0.6), t, pen, 0, wd);
+            this._inReflect = false;
+          }
+          this.events.push({ e: 'reflect_hit', pid: t.pid, attackerId: by.id || by.pid, dmg: dmg * (t.reflectRatio || 0.6) });
+          return;
+        }
+      }
+    }
+    // 量子命運同調共振鏈 (entangle): 傷害以 40% 效率同步傳導給群組其他成員
+    if (!this._inEntangle && this.entangleGroups?.length) {
+      for (const g of this.entangleGroups) {
+        if (g.members.includes(t.id)) {
+          this._inEntangle = true;
+          for (const mid of g.members) {
+            if (mid !== t.id) {
+              const other = this.ents.get(mid);
+              if (other && other.hp > 0 && (!other.hero || !other.dead)) {
+                this._damage(other, dmg * (g.ratio || 0.4), by, pen, 0, wd);
+              }
+            }
+          }
+          this._inEntangle = false;
+        }
+      }
+    }
     // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減
     if (t.kind === 'base' && by && by.side) {
       const near = [...this.ents.values()].some((e) =>
@@ -5184,6 +5643,12 @@ export class BattleSim {
     this._tickCubicSlabs(dt);
     this._tickFogs(dt);
     this._tickSummons(dt);
+    this._tickThermiteMines(dt);
+    this._tickEntangle(dt);
+    this._tickPhaseShift(dt);
+    this._tickDecoyBeacons(dt);
+    this._tickNanites(dt);
+    this._tickSingularity(dt);
 
     // 小兵 / 塔 / 主堡行為
     this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
@@ -5692,6 +6157,18 @@ export class BattleSim {
       // (吸走砲火);自殺機炸掉/被擊落後其 tid 失效 → 下方目標消失分支使飛彈自毀。
       if (!m.lost) {
         const cur = this.ents.get(m.tid);
+        // 全息信標吸引飛彈導引 (優先於普通機體)
+        if (cur && this.hologramDecoys && this.hologramDecoys.length) {
+          let bestDec = null, bd = 40;
+          for (const dec of this.hologramDecoys) {
+            if (dec.hp <= 0 || dec.dead || dec.side !== cur.side) continue;
+            const d = Math.hypot(dec.x - m.x, (dec.y || 0) - m.y, dec.z - m.z);
+            if (d < bd) { bd = d; bestDec = dec; }
+          }
+          if (bestDec) m.tid = bestDec.id;
+        }
+        // 導引飛彈吸附(2026-07-17):目標是「有存活自殺攻擊機的無人機玩家」→ 改追最近的自殺機
+        // (吸走砲火);自殺機炸掉/被擊落後其 tid 失效 → 下方目標消失分支使飛彈自毀。
         if (cur && cur.hero && cur.kind === 'drone' && cur.sq && cur.sq.kamis && cur.sq.kamis.length) {
           let best = null, bd = Infinity;
           for (const k of cur.sq.kamis) {
@@ -5707,7 +6184,24 @@ export class BattleSim {
       if (t && !t.dead) {
         const dx = t.x - m.x, dy = (t.y || 0) - m.y, dz = t.z - m.z;
         const d = Math.hypot(dx, dy, dz) || 1;
-        if (d <= Math.max(12, step)) {   // 命中:近炸引信
+        // 相位穿梭 (phaseshift): 虛空超維狀態中無視鎖定與碰撞，飛彈直接失鎖直飛
+        if (t.hero && (t.phaseUntil || 0) > this.t) {
+          m.lost = true;
+          m.vx = dx / d * m.speed; m.vy = dy / d * m.speed; m.vz = dz / d * m.speed;
+        } else if (d <= Math.max(12, step)) {   // 命中:近炸引信
+          // 極化偏轉鏡面防衛矩陣 (reflect): 正面 120° 偏轉飛彈 off-course 並安全引爆
+          if (t.hero && (t.reflectUntil || 0) > this.t) {
+            const ry = t.ry || 0;
+            const fx = -Math.sin(ry), fz = Math.cos(ry);
+            const ax = m.x - t.x, az = m.z - t.z;
+            const adist = Math.hypot(ax, az);
+            if (adist > 0.01 && (fx * ax + fz * az) / adist >= Math.cos((t.reflectArc || (120 * Math.PI / 180)) / 2)) {
+              this.events.push({ e: 'reflect_hit', pid: t.pid, x: m.x, z: m.z, deflected: true });
+              this.events.push({ e: 'boom', x: m.x + fx * 15, z: m.z + fz * 15, y: m.y, r: m.r, side: t.side });
+              this.missiles.splice(i, 1);
+              continue;
+            }
+          }
           // 飛彈 = 導彈類 ⇒ 近炸引信引爆的是**爆風**,不是單發直擊(2026-08-13 使用者「所有爆炸
           // 傷害武器都套用」)。舊制這裡 `_damage` 單體結算,而下一行的 `boom` 事件卻畫著 r = 14
           // 的超壓帶 —— 演出與結算分家(原則 4)。半徑是推導值 GAME.AA_AMBUSH.R(data.js),
@@ -5940,6 +6434,7 @@ export class BattleSim {
     for (const t of this._tgCandidates(e, u)) {
       let d = dist2d(e.x, e.z, t.x, t.z);
       if (this._tgBlockedD(e, u, wd, t, d)) continue;
+      if (t.isHoloDecoy) d /= 10.0;                 // 全息信標吸引最高仇恨
       if (t.hero) d /= GAME.CREEP_AGGRO_HERO_BIAS; // 小兵偏好打兵線目標
       if (wd) d /= vsMult(wd, t.kind);             // 優先打武器克制的目標類型
       if (d >= bestD) continue;

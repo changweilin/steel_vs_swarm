@@ -1885,12 +1885,16 @@ const ARCH_BY_FX = {
   buff: 'aura', heal: 'heal', strike: 'zone', summon: 'gate', emp: 'bind',
   vision: 'scan', stealth: 'veil', dash: 'dash', intercept: 'dome',
   trees: 'zone', moon: 'zone', cube: 'zone', fog: 'veil',
+  harpoon: 'slash', reflect: 'dome', entangle: 'bind', thermite: 'zone',
+  phaseshift: 'veil', decoy_beacon: 'gate', nanite: 'aura', singularity: 'zone',
 };
 // fx 型別輔色(語意色:治療綠 / 癱瘓紫 / 增益暖白……)
 const FX_ACCENT = {
   buff: 0xfff2b8, heal: 0x9dffb0, strike: 0xffb06b, summon: 0xfff2b8, emp: 0xb78aff,
   vision: 0x9adfff, stealth: 0xcfd6ff, dash: 0xffffff, intercept: 0x9adfff,
   trees: 0x5ebd55, moon: 0xd9e5ff, cube: 0xe0ca85, fog: 0xccd9e8,
+  harpoon: 0xffffff, reflect: 0x66e0ff, entangle: 0x9d4edd, thermite: 0xff5500,
+  phaseshift: 0xbb86fc, decoy_beacon: 0x03dac6, nanite: 0x76ff03, singularity: 0x3700b3,
 };
 
 /**

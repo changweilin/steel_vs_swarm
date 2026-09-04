@@ -675,6 +675,13 @@ export const WEAPONS = {
   // (集束炸彈/極音速飛彈)共用機種絕招傷害預算,由 kamiBlast()/selfBoomBlast() 推導(見 SPECIAL)。
   bomb:   { name: '重型炸彈',   r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
   siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
+  // 自律召喚部隊專屬武裝
+  wingman_beam:     { name: '「哀歌」自律微型光束標槍', dmg: 26, rate: 0.8, range: 170, mag: 20, reload: 2.0, pen: 8,  type: 'beam', vs: { flesh: 1.2, armor: 0.8, air: 1.4, building: 0.5 } },
+  rover_autocannon: { name: '「狂歡節」雙聯破片速射砲', dmg: 28, rate: 0.7, range: 140, mag: 24, reload: 2.2, pen: 6,  mv: 850, vs: { flesh: 1.3, armor: 1.0, air: 0.9, building: 0.6 } },
+  squad_rocket:     { name: '「賦格」雷導集束微型火箭', dmg: 35, rate: 0.9, range: 180, mag: 4,  reload: 2.5, pen: 10, mv: 720, guide: 1, vs: { flesh: 1.0, armor: 1.4, air: 0.8, building: 1.2 } },
+  mbt_cannon:       { name: '「凌霄破陣」130mm 滑膛穿甲砲', dmg: 55, rate: 0.5, range: 160, mag: 3,  reload: 3.0, pen: 24, mv: 1650, needAim: true, vs: { flesh: 0.8, armor: 1.8, air: 0.3, building: 1.8 } },
+  veteran_hmg:      { name: '「老戰士」特裝 12.7mm 穿甲重機槍', dmg: 18, rate: 1.2, range: 150, mag: 40, reload: 2.0, pen: 8,  mv: 880, vs: { flesh: 1.3, armor: 1.1, air: 1.0, building: 0.5 } },
+  carnival_missile: { name: '「森巴熱浪」空對地燃燒火箭巢', dmg: 32, rate: 0.8, range: 180, mag: 6,  reload: 2.8, pen: 8,  mv: 650, vs: { flesh: 1.3, armor: 1.1, air: 0.6, building: 1.3 } },
 };
 export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 
@@ -2945,6 +2952,8 @@ export const TARGET_H = {
   hyper: 1.4 * HYPER.MODEL_F,   // 極音速飛彈 = 同一具彈體放大 MODEL_F(推導不手寫;models.js 吃同一個係數)
   'creep:soldier': SOLDIER_H, 'creep:rocketeer': SOLDIER_H, 'creep:howitzer': SOLDIER_H * 1.05,
   'creep:apc': 2.7, 'creep:tank': 2.8, 'creep:heli': 3.9,
+  'summon:drone_wingman': 1.6, 'summon:assault_rover': 2.4, 'summon:heli_squad': 3.6,
+  'summon:main_battle_tank': 2.8, 'summon:veteran_squad': SOLDIER_H * 1.05, 'summon:carnival_heli': 3.8,
   tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
   bunker: 5.2,   // 第三方碉堡(低矮工事;駐守 3 名步槍兵的量體)
   civ: SOLDIER_H,   // 平民/間諜(真人身高)
@@ -3458,8 +3467,9 @@ export const CHARACTERS = {
       dmg: [44, 66, 96], mag: 5, reload: 8, range: 320, emp: [0.8, 1.0, 1.2],
       vsSp: 1.7, vsHp: 0.7,
       vs: { flesh: 0.7, armor: 0.95, air: 2.0, building: 0.4 } },
-    skill: { name: '太虛匿影：萬籟俱寂', fx: 'emp', r: 120, dur: [2.5, 3, 3.5], range: 260,
-      cd: [18, 16, 14], mp: [40, 45, 50], desc: '雙耳陣列同相聚焦：定向癱瘓敵方感測與火控系統，使其徹底離線' },
+    skill: { name: '地熱拒止：熔核溫壓雷區', fx: 'thermite', count: 6, dur: 12, puddleDur: 5, puddleR: 6,
+      dmg: [40, 58, 80], dps: [25, 35, 48], slow: 0.2,
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '向周遭扇面拋灑 6 顆溫壓感應地雷（存在 12 秒）：敵機踩踏觸發強烈擊飛並留下直徑 12m 熔核焦土，持續 5 秒灼燒與緩速' },
     ult: { name: '利維坦天海長歌', fx: 'emp', r: 260, dur: [4, 5, 6],
       cd: [70, 62, 54], mp: [90, 100, 110], desc: '十六道共形陣列全頻共振：引動大範圍低頻電子鯨歌，封鎖全域電磁頻段' },
   },
@@ -3473,8 +3483,9 @@ export const CHARACTERS = {
     heavy: { name: '「紅蓮業火」聚能電漿噴湧口', rw: '高溫磁化電漿短程扇形投射器・熱核噴焰', type: 'plasma', arc: [13, 15, 17],
       dmg: [46, 75, 117], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
-    skill: { name: '瞬步・破陣突刺', fx: 'dash', imp: [28, 34, 40],
-      cd: [12, 10, 8], mp: [25, 30, 35], desc: '動力核心瞬間過載：化作流光沿視線爆發突進，強行切入白刃交戰距離' },
+    skill: { name: '天律鎖定：動能穿刺重索', fx: 'harpoon', target: 'ground', range: 45,
+      dmg: [85, 115, 150], stun: 1.0, pen: 16,
+      cd: [14, 12, 10], mp: [30, 35, 40], desc: '發射高張力電磁合金重索：命中敵機強制拖曳至身前並造成高額穿甲傷害與 1.0 秒眩暈；命中地形或掩體則將自身快速拉向著彈點' },
     ult: { name: '無雙修羅：斷空死線', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.85, 0.8, 0.75] },
       add: { fx: 'haste', f: [1.25, 1.3, 1.35] },
       dur: [8, 10, 12], cd: [70, 60, 50], mp: [75, 85, 95], desc: '進入極限白刃戰反射狀態：大幅減免承受傷害，並以極速強襲撕裂敵陣' },
@@ -3489,9 +3500,8 @@ export const CHARACTERS = {
     heavy: { name: '「星穹之影」巡飛蜂群', rw: '微型高動態巡飛彈掛架・複合制導・巡航 90m/s', type: 'missile', mv: 90,
       dmg: [44, 63, 88], r: [13, 15, 17], mag: 4, reload: 11, range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
-    skill: { name: '神經突觸：極限超頻', fx: 'buff', target: 'self', mul: { dmg: [1.05, 1.1, 1.15], reload: [0.65, 0.6, 0.55] },
-      add: { fx: 'dodge' },
-      dur: [6, 7, 8], cd: [18, 16, 14], mp: [30, 35, 40], desc: '思維極限超頻加速：武器裝填速度大幅飆升，並以極限軌跡閃避直射彈道' },
+    skill: { name: '噬甲蟲群：納米病毒莢艙', fx: 'nanite', target: 'enemy', range: 220, dur: 4.0, pctPerSec: 0.08, splitCount: 2, splitR: 15,
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '發射生化納米蟲群莢艙：持續 4 秒每秒腐蝕目標 8% 最大生命值與護甲；若宿主在感染期間陣亡，蟲群分裂破體尋找 15m 內相鄰敵機轉移' },
     ult: { name: '蒼穹狂嵐：星芒自爆蜂群', fx: 'strike', count: [6, 8, 10], dmg: [60, 77, 94], r: 10, scatter: 30,
       add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 320, pen: 8, cd: [70, 62, 54], mp: [85, 95, 105], vs: { armor: 1.3, building: 1.1 },
@@ -3633,9 +3643,8 @@ export const CHARACTERS = {
       // ⇒ 解析射程 172.8 → 192m。曾經試過把名目射程壓回去讓解析值不動(320 → 240),結果是
       // ④ 當場紅字(172.8 < 砲塔的 186)、而且 rngDmgF 反手把傷害補上去,⑤ 直接衝到 88%。
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
-    skill: { name: '暗月引爆：引力星岩', fx: 'moon', target: 'ground', range: 240, r: 22,
-      dmg: [140, 200, 280], hp: [500, 750, 1050], dur: 3.5, imp: [18, 24, 30],
-      cd: [20, 18, 16], mp: [35, 40, 45], desc: '召喚高密度引力月岩浮空自轉：持續強烈牽引周圍敵軍並阻擋射擊，時間結束或生命耗盡時引爆月核造成毀滅傷害' },
+    skill: { name: '重力塌縮：微型奇點透鏡', fx: 'singularity', range: 200, dur: 3.0, speed: 8, pullR: 18, baseDmg: [70, 95, 125], scalePerObj: 0.25,
+      cd: [20, 18, 16], mp: [40, 45, 50], desc: '向前投射緩速推進之微型重力奇點球：強烈牽引周圍 18m 內敵軍並捕捉來襲實體彈道，3.0 秒後重力坍縮引爆，傷害隨吸入物體數倍增' },
     // 2026-08-06 使用者定案(機種絕招退場的補償;見 SELF_ULT):由「全隊無霧」改成**全隊復甦**——
     // 恢復速度倍率 + 解除既有異常 + 期間免疫異常 + **仍在重生倒數中**的隊友原地半血復活。
     // 復活刻意只救「倒數中」的(已重生的不算)且回場半血 + 一瞬無敵,CD 維持 70→54s:
@@ -3728,8 +3737,8 @@ export const CHARACTERS = {
     heavy: { name: '「天誅」14.5mm 反器材重砲', rw: '大口徑鎢芯穿甲反器材砲・KPV 縮裝・初速 1000m/s', type: 'gun', mv: 1000,
       dmg: [50, 75, 105], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],   // dmg −5%:同 t02 heavy 同欄註(bal ⑤ 離群修正)
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
-    skill: { name: '幽影匿跡：虛無光學迷彩', fx: 'stealth', dur: [4, 5, 6],
-      cd: [20, 18, 16], mp: [35, 40, 45], desc: '啟動全光譜隱形迷彩：自雷達與光學感測器中徹底消隱（開火即現形）' },
+    skill: { name: '全息干涉：幻影突擊信標', fx: 'decoy_beacon', range: 200, dur: 6, count: 2, blindDur: 1.5, blindR: 14,
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '向前投擲全息干涉信標：投影 2 架具備真實雷達特徵的幻影突擊機吸引敵火與飛彈導引，被擊毀時引爆強光致盲周圍敵機 1.5 秒' },
     ult: { name: '要塞展開：巨砲架設狙擊', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
       add: { fx: 'siege', setupS: 1.0, recoverS: 1.5 },
       dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '展開四足液壓駐鋤就地固定：強制進入重裝狙擊模式，期間無限重武器彈藥且免裝填，解除後需硬直恢復移動' },
@@ -3869,8 +3878,8 @@ export const CHARACTERS = {
     heavy: { name: '「星火標定」EM 電磁貫通砲', rw: '電磁超導標定穿甲砲・初速 2500m/s', type: 'rail', mv: 2500,
       dmg: [53, 82, 122], mag: 2, reload: 8, range: 340, emp: [0.8, 1.0, 1.2],
       vs: { flesh: 0.8, armor: 1.0, air: 1.6, building: 0.5 } },
-    skill: { name: '幽光燭照：全頻譜洞悉', fx: 'vision', vision: [5, 7, 9],
-      cd: [24, 21, 18], mp: [35, 40, 45], desc: '啟動深層頻譜共振掃描：照亮幽暗戰場，為全體友軍提供限時無霧全局視野' },
+    skill: { name: '量子命運：同調共振鏈', fx: 'entangle', target: 'enemy', range: 240, r: 15, dur: 6.0, ratio: 0.4, count: 3,
+      cd: [18, 16, 14], mp: [35, 40, 45], desc: '發射頻譜共振射線：鏈結目標及其周圍 15m 內最多 3 名敵機，任一鏈結目標承受之傷害與負面狀態以 40% 效率同步傳導給全體鏈結目標' },
     ult: { name: '萬物同悲：全域心靈寂靜', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6],
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '引動全頻段訊號同調共鳴：強制靜默所有被標記之敵方目標並回傳精確座標' },
   },
@@ -4024,8 +4033,8 @@ export const CHARACTERS = {
     heavy: { name: '「焚天界域」扇面防衛電漿幕', rw: '近迫磁化電漿散射矩陣・扇形防空幕', type: 'plasma', arc: [22, 25, 28],
       dmg: [46, 73, 111], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 0.8, armor: 1.25, air: 2.2, building: 0.3 } },
-    skill: { name: '天塹無涯：絕對防禦穹頂', fx: 'intercept', r: [160, 200, 240],
-      cd: [16, 14, 12], mp: [30, 35, 40], desc: '展開重型神甲防衛穹頂：以狂暴電漿流瞬間清空半徑內一切來襲飛彈' },
+    skill: { name: '極化偏轉：鏡面防衛矩陣', fx: 'reflect', dur: 3.0, arc: 120, ratio: 0.6,
+      cd: [16, 14, 12], mp: [35, 40, 45], desc: '機體前方展開 120° 極化偏轉鏡面力場：持續 3.0 秒，將正面來襲直射彈道以 60% 傷害反射回射擊者，並偏折來襲飛彈與爆風' },
     ult: { name: '萬劫焚滅：全域火力封鎖', fx: 'strike', count: [7, 9, 11], dmg: [55, 68, 85], r: 9, scatter: 40,
       add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 320, cd: [74, 66, 58], mp: [85, 95, 105], vs: { air: 2.0, flesh: 1.2 },
@@ -4041,8 +4050,8 @@ export const CHARACTERS = {
     heavy: { name: '「冰川之息」大口徑反器材重狙', rw: '超遠程重型反器材狙擊砲・穿甲鎢芯彈・初速 900m/s', type: 'gun', mv: 900,
       dmg: [61, 89, 126], mag: 3, reload: 9, range: 390, crit: 0.2, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.3, armor: 1.7, air: 1.2, building: 0.5 } },
-    skill: { name: '縮地成寸：虛空幽影步', fx: 'dash', imp: [28, 34, 40],
-      cd: [12, 10, 8], mp: [25, 30, 35], desc: '「訂金已入帳」瞬息突進：訂金到帳立即就位，沿視線瞬間爆發位移' },
+    skill: { name: '相位穿梭：虛空超維步', fx: 'phaseshift', imp: [28, 34, 40], dur: 1.8, r: 6, dmg: [50, 70, 95],
+      cd: [14, 12, 10], mp: [30, 35, 40], desc: '超維相位瞬影突進：向視線方向爆發位移並進入 1.8 秒超維相位狀態（無敵且無視實體碰撞），現身引爆 6m 相位衝擊波擊退敵機並使下次攻擊必暴擊' },
     // 2026-08-06 使用者定案(見 SELF_ULT):破隱後 SELF_ULT.ALPHA_S 秒內傷害倍增 ——
     // 倍率由 `selfUltBoost` 從被移除的機種絕招預算**推導**(MUST NOT 手寫);`alpha` 只是旗標。
     ult: { name: '無相歸真：剎那破滅一擊', fx: 'stealth', dur: [4, 5, 6], add: { fx: 'alpha' },
@@ -4210,12 +4219,12 @@ export const UNITS = {
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
   // 自律召喚戰鬥部隊(獨立於 NPC 兵線、主動索敵與協同集火、隨召喚者等級成長)
-  drone_wingman:    { name: '自律巡弋無人機', hp: 220, armor: 10, dmg: 26, range: 170, rate: 0.8, speed: 22, sight: 220, bounty: 3, wid: 'rgun', fly: 1 },
-  assault_rover:    { name: '自律斥候戰車',   hp: 310, armor: 14, dmg: 28, range: 140, rate: 0.7, speed: 16, sight: 180, bounty: 3, wid: 'rocket', fly: 0 },
-  heli_squad:       { name: '交響武裝直升機', hp: 380, armor: 16, dmg: 35, range: 180, rate: 0.9, speed: 20, sight: 220, bounty: 5, wid: 'rocket', fly: 1 },
-  main_battle_tank: { name: '自律主戰坦克',   hp: 520, armor: 22, dmg: 55, range: 160, rate: 0.5, speed: 13, sight: 200, bounty: 6, wid: 'siege', fly: 0 },
-  veteran_squad:    { name: '精銳突擊步兵',   hp: 190, armor: 12, dmg: 18, range: 150, rate: 1.2, speed: 17, sight: 180, bounty: 2, wid: 'rgun', fly: 0 },
-  carnival_heli:    { name: '嘉年華武裝直升機', hp: 350, armor: 15, dmg: 32, range: 180, rate: 0.8, speed: 21, sight: 220, bounty: 5, wid: 'rocket', fly: 1 },
+  drone_wingman:    { name: '自律巡弋無人機', hp: 220, armor: 10, dmg: 26, range: 170, rate: 0.8, speed: 22, sight: 220, bounty: 3, wid: 'wingman_beam', fly: 1 },
+  assault_rover:    { name: '自律斥候戰車',   hp: 310, armor: 14, dmg: 28, range: 140, rate: 0.7, speed: 16, sight: 180, bounty: 3, wid: 'rover_autocannon', fly: 0 },
+  heli_squad:       { name: '交響武裝直升機', hp: 380, armor: 16, dmg: 35, range: 180, rate: 0.9, speed: 20, sight: 220, bounty: 5, wid: 'squad_rocket', fly: 1 },
+  main_battle_tank: { name: '自律主戰坦克',   hp: 520, armor: 22, dmg: 55, range: 160, rate: 0.5, speed: 13, sight: 200, bounty: 6, wid: 'mbt_cannon', fly: 0 },
+  veteran_squad:    { name: '精銳突擊步兵',   hp: 190, armor: 12, dmg: 18, range: 150, rate: 1.2, speed: 17, sight: 180, bounty: 2, wid: 'veteran_hmg', fly: 0 },
+  carnival_heli:    { name: '嘉年華武裝直升機', hp: 350, armor: 15, dmg: 32, range: 180, rate: 0.8, speed: 21, sight: 220, bounty: 5, wid: 'carnival_missile', fly: 1 },
   // 建築(防禦塔)
   // range 310(2026-07-12):**恆大於所有玩家輕武器(最大 243 = drone sight 270 × RANGE_SIGHT_F)
   // 與所有 NPC(最大 220 = 榴彈兵)**,且 > 輕武器射程 + 同塔位左右塔間距(2×TOWER_SIDE_OFF)

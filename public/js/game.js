@@ -32,8 +32,7 @@ import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.j
 import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { animWeights } from './animweights.js';
-import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX } from './vfx.js';
+import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls, onViewportSettled } from './mobile.js';
@@ -49,12 +48,12 @@ const KIND_KEY = {
   bunker: 'bunker',   // 第三方碉堡(GUER/MILI)
   kami: 'hero:drone', // 護衛自殺機:渲染成該角色的無人機(_spawnUnit 縮小 SIZE_F)
   hyper: 'hyper',     // 極音速飛彈(機甲長按招式的彈體;位置/朝向全由伺服器回報)
-  drone_wingman: 'hero:drone',
-  assault_rover: 'creep:apc',
-  heli_squad: 'creep:heli',
-  main_battle_tank: 'creep:tank',
-  veteran_squad: 'creep:soldier',
-  carnival_heli: 'creep:heli',
+  drone_wingman: 'summon:drone_wingman',
+  assault_rover: 'summon:assault_rover',
+  heli_squad: 'summon:heli_squad',
+  main_battle_tank: 'summon:main_battle_tank',
+  veteran_squad: 'summon:veteran_squad',
+  carnival_heli: 'summon:carnival_heli',
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
 // 彈道積分的最大取樣點數(步長 ≤0.03s 且 ≈3m/點)。繪製緩衝(_ensureArcGuide)與
@@ -4189,6 +4188,89 @@ export class BattleClient {
     } else if (ev.e === 'fog_spawn') {
       const isAlly = ev.side === this.side;
       spawnFogVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, r: ev.r || 35, dur: ev.dur, isAlly });
+    } else if (ev.e === 'harpoon') {
+      const fromX = ev.from ? ev.from[0] : (ev.sx ?? 0);
+      const fromZ = ev.from ? ev.from[1] : (ev.sz ?? 0);
+      const toX = ev.to ? ev.to[0] : (ev.tx ?? 0);
+      const toZ = ev.to ? ev.to[1] : (ev.tz ?? 0);
+      const fromY = this.terrain.heightAt(fromX, -fromZ) + 1.6;
+      const toY = this.terrain.heightAt(toX, -toZ) + 1.6;
+      spawnHarpoonVFX(this.scene, this.effects, {
+        fx: fromX, fy: fromY, fz: -fromZ,
+        tx: toX, ty: toY, tz: -toZ,
+        hit: ev.hit ?? (ev.hitTargetId != null),
+      });
+    } else if (ev.e === 'reflect_barrier') {
+      const getPos = () => {
+        if (ev.pid === this.youId) return { x: this.pos.x, y: this.pos.y, z: this.pos.z, ry: this.yaw };
+        const hero = this.remoteHeroes?.get(ev.pid) || this.bots?.get(ev.pid);
+        if (hero) return { x: hero.x, y: hero.y, z: -hero.z, ry: hero.ry };
+        return null;
+      };
+      spawnReflectBarrierVFX(this.scene, this.effects, { getPos, dur: ev.dur });
+    } else if (ev.e === 'reflect_hit') {
+      if (ev.x != null && ev.z != null) {
+        starburst(this.scene, this.effects, ev.x, this.terrain.heightAt(ev.x, -ev.z) + 1.5, -ev.z, 0x66e0ff);
+      }
+    } else if (ev.e === 'entangle_link') {
+      const getPositions = () => {
+        const res = [];
+        for (const tid of (ev.targets || [])) {
+          const e = this.ents?.get(tid) || (tid === this.youId ? { x: this.pos.x, y: this.pos.y, z: -this.pos.z } : null);
+          if (e) res.push({ x: e.x, y: e.y || this.terrain.heightAt(e.x, -e.z), z: -e.z });
+        }
+        return res;
+      };
+      spawnEntangleLinkVFX(this.scene, this.effects, { getPositions, dur: ev.dur });
+    } else if (ev.e === 'thermite_spawn') {
+      const mines = (ev.mines || []).map(m => ({
+        x: m.x, y: this.terrain.heightAt(m.x, -m.z) + 0.15, z: -m.z, dur: m.dur || 12
+      }));
+      spawnThermiteMinesVFX(this.scene, this.effects, { mines });
+    } else if (ev.e === 'thermite_detonate') {
+      const py = this.terrain.heightAt(ev.x, -ev.z) + 0.1;
+      spawnThermitePuddleVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: py, r: ev.r || 6, dur: ev.dur || 5 });
+      shockRing(this.scene, this.effects, ev.x, py, -ev.z, ev.r || 6, 0xff4500);
+    } else if (ev.e === 'phase_start') {
+      const getPos = () => {
+        if (ev.pid === this.youId) return { x: this.pos.x, y: this.pos.y, z: this.pos.z };
+        const hero = this.remoteHeroes?.get(ev.pid) || this.bots?.get(ev.pid);
+        if (hero) return { x: hero.x, y: hero.y, z: -hero.z };
+        return null;
+      };
+      spawnPhaseShiftVFX(this.scene, this.effects, { getPos, dur: ev.dur || 1.8 });
+    } else if (ev.e === 'phase_exit') {
+      const py = this.terrain.heightAt(ev.x, -ev.z);
+      spawnPhaseExitVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: py, r: ev.r || 6 });
+    } else if (ev.e === 'decoy_beacon_spawn') {
+      const dy = this.terrain.heightAt(ev.x, -ev.z) + 2.0;
+      spawnDecoyBeaconVFX(this.scene, this.effects, { id: ev.id, x: ev.x, z: -ev.z, y: dy, dur: ev.dur || 6 });
+    } else if (ev.e === 'flashbang_detonate') {
+      const fy = this.terrain.heightAt(ev.x, -ev.z) + 2.0;
+      spawnFlashbangVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: fy, r: ev.r || 14 });
+    } else if (ev.e === 'nanite_infected') {
+      const getPos = () => {
+        if (ev.targetId === this.youId) return { x: this.pos.x, y: this.pos.y, z: this.pos.z };
+        const e = this.ents?.get(ev.targetId);
+        if (e) return { x: e.x, y: e.y || this.terrain.heightAt(e.x, -e.z), z: -e.z };
+        return null;
+      };
+      spawnNaniteSwarmVFX(this.scene, this.effects, { getPos, dur: ev.dur || 4.0 });
+    } else if (ev.e === 'nanite_split') {
+      const fEnt = this.ents?.get(ev.fromId);
+      const tEnt = this.ents?.get(ev.toId);
+      if (fEnt && tEnt) {
+        spawnNaniteSplitVFX(this.scene, this.effects, {
+          fx: fEnt.x, fz: -fEnt.z,
+          tx: tEnt.x, tz: -tEnt.z,
+        });
+      }
+    } else if (ev.e === 'singularity_launch') {
+      const sy = this.terrain.heightAt(ev.x, -ev.z) + 2.5;
+      spawnSingularityVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: sy, dur: ev.dur || 3.0, r: ev.r || 18 });
+    } else if (ev.e === 'singularity_implosion') {
+      const iy = this.terrain.heightAt(ev.x, -ev.z) + 2.5;
+      spawnSingularityImplosionVFX(this.scene, this.effects, { x: ev.x, z: -ev.z, y: iy, r: ev.r || 18 });
     } else if (ev.e === 'burn') {
       if (ev.pid === this.youId) {
         this.trauma = Math.min(1, this.trauma + 0.25);
@@ -4500,8 +4582,10 @@ export class BattleClient {
     } else if (ev.e === 'shot') {
       // 開火事件(2026-07-17 全兵種化):曳光/槍口焰一律自射手機體的實際槍口射出、
       // 射手標記後座動畫並面向攻擊目標;榴彈兵(howitzer)畫拋物線曳光、砲管仰角與弧線一致
-      const [fx, fz] = [ev.from[0], -ev.from[1]];
-      const [tx, tz] = [ev.to[0], -ev.to[1]];
+      const fx = ev.from ? ev.from[0] : (ev.x ?? 0);
+      const fz = ev.from ? -ev.from[1] : -(ev.z ?? 0);
+      const tx = ev.to ? ev.to[0] : (ev.tx ?? 0);
+      const tz = ev.to ? -ev.to[1] : -(ev.tz ?? 0);
       const to = new THREE.Vector3(tx, this.terrain.heightAt(tx, tz) + (ev.ty || 0) + 2, tz);
       const t0 = performance.now() / 1000;
       if (ev.pid != null) {
@@ -4541,9 +4625,60 @@ export class BattleClient {
         }
         const { col, hot } = this._shotCols(ev.side);
         starburst(this.scene, this.effects, from.x, from.y, from.z, 1.0, hot);
-        // 拋物線曳光:榴彈兵 + 坦克攻城砲(wid 'siege' 彈道學拋物線)—— 砲管仰角與弧線一致
-        if (ev.kind === 'howitzer' || ev.kind === 'tank') this._arcTracer(from, to, col, ent);
-        else if (ev.kind !== 'base') {
+
+        // 專屬召喚部隊武器與 NPC 火力演出分流
+        const wid = ev.wid || (ent ? UNITS[ent.kind]?.wid : null);
+        const kind = ev.kind || ent?.kind;
+
+        if (wid === 'wingman_beam' || kind === 'drone_wingman') {
+          // 「哀歌」自律微型光束標槍:紫色同調光束 (0xd4afff) + 雙層白熾雷射核心
+          const clip = this._clipBeam(from, to);
+          beamLine(this.scene, this.effects, from, clip.to, 0xd4afff, { ttl: 0.22, w: 0.12 });
+          beamLine(this.scene, this.effects, from, clip.to, 0xffffff, { ttl: 0.14, w: 0.04 });
+          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.4, 0xd4afff);
+          starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 1.6, 0xd4afff);
+        } else if (wid === 'rover_autocannon' || kind === 'assault_rover') {
+          // 「狂歡節」雙聯破片速射砲:金色高射速曳光彈 (0xffdf66) + 碎裂火花
+          const clip = this._clipBeam(from, to);
+          beamLine(this.scene, this.effects, from, clip.to, 0xffdf66, { ttl: 0.10, w: 0.09 });
+          beamLine(this.scene, this.effects, from, clip.to, 0xffffff, { ttl: 0.06, w: 0.03 });
+          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.2, 0xffdf66);
+          impactBurst(this.scene, this.effects, clip.to, 0xffdf66, 1.0);
+        } else if (wid === 'squad_rocket' || kind === 'heli_squad') {
+          // 「賦格」雷導集束微型火箭:淡藍色火箭尾跡 (0x9ecfff) + 推進衝擊環
+          const clip = this._clipBeam(from, to);
+          beamLine(this.scene, this.effects, from, clip.to, 0x9ecfff, { ttl: 0.25, w: 0.14, op: 0.85 });
+          beamLine(this.scene, this.effects, from, clip.to, 0xffffff, { ttl: 0.16, w: 0.05 });
+          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.3, 0x9ecfff);
+          shockRing(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 0x9ecfff, { r: 3.5, ttl: 0.28 });
+          starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 2.0, 0x9ecfff);
+        } else if (wid === 'mbt_cannon' || kind === 'main_battle_tank') {
+          // 「凌霄破陣」130mm 穿甲滑膛砲:極速鎢芯脫殼穿甲彈道 (0xffebd2) + 動能震波
+          const clip = this._clipBeam(from, to);
+          beamLine(this.scene, this.effects, from, clip.to, 0xffebd2, { ttl: 0.18, w: 0.22 });
+          beamLine(this.scene, this.effects, from, clip.to, 0xffffff, { ttl: 0.12, w: 0.08 });
+          shockRing(this.scene, this.effects, from.x, from.y, from.z, 0xffebd2, { r: 3.2, ttl: 0.25 });
+          shockRing(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 0xffebd2, { r: 5.5, ttl: 0.35 });
+          starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 2.6, 0xffebd2);
+        } else if (wid === 'veteran_hmg' || kind === 'veteran_squad') {
+          // 「老戰士」特裝 12.7mm 穿甲重機槍:鎢芯穿甲彈曳光與高熱火花
+          const clip = this._clipBeam(from, to);
+          beamLine(this.scene, this.effects, from, clip.to, 0xffaa44, { ttl: 0.12, w: 0.08 });
+          beamLine(this.scene, this.effects, from, clip.to, 0xe0e8ff, { ttl: 0.07, w: 0.04 });
+          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.1, 0xffaa44);
+          debrisBurst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 0xffaa44);
+        } else if (wid === 'carnival_missile' || kind === 'carnival_heli') {
+          // 「森巴熱浪」空對地燃燒火箭巢:帶烈焰尾跡的燃燒火箭 (0xff6b35 / 0xffd23f)
+          const clip = this._clipBeam(from, to);
+          beamLine(this.scene, this.effects, from, clip.to, 0xff6b35, { ttl: 0.26, w: 0.16 });
+          beamLine(this.scene, this.effects, from, clip.to, 0xffd23f, { ttl: 0.18, w: 0.08 });
+          starburst(this.scene, this.effects, from.x, from.y, from.z, 1.5, 0xff6b35);
+          shockRing(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 0xff6b35, { r: 4.2, ttl: 0.3 });
+          starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 2.4, 0xff6b35);
+        } else if (ev.kind === 'howitzer' || ev.kind === 'tank') {
+          // 拋物線曳光:榴彈兵 + 坦克攻城砲(wid 'siege' 彈道學拋物線)—— 砲管仰角與弧線一致
+          this._arcTracer(from, to, col, ent);
+        } else if (ev.kind !== 'base') {
           // NPC/塔曳光被大型障礙截斷(伺服器 LOS 已擋開火,這裡吸收兩端幾何不同形的殘餘穿幫)
           const clip = this._clipBeam(from, to);
           beamLine(this.scene, this.effects, from, clip.to, col, { ttl: 0.11, w: 0.06 });
@@ -6369,15 +6504,20 @@ export class BattleClient {
     if (ent && ent.mesh.visible) {
       const ms = ent.mesh.userData.turretMuzzles;
       if (ms?.length) {
-        // 多槍口輪替擊發:塔(雙管/六管)與直升機(左右莢/側掛雙槍)共用同一條
+        // 多槍口輪替擊發:塔(雙管/六管)、直升機(左右莢/側掛雙槍)與自律載具共用同一條
         ent._mzi = ((ent._mzi ?? -1) + 1) % ms.length;
         return ms[ent._mzi].getWorldPosition(new THREE.Vector3());
+      }
+      if (ent.mesh.userData.muzzle) {
+        return ent.mesh.userData.muzzle.getWorldPosition(new THREE.Vector3());
       }
       if (ent.kind === 'base') {
         const mz = ent.gunMuzzles?.[ev.gi ?? 0];
         if (mz) {
           // 記下本發目標:_updateEnts 把該門砲管平滑轉向它(槍口朝攻擊方向)
-          (ent._gunAim ??= [])[ev.gi ?? 0] = { x: ev.to[0], z: -ev.to[1], until: performance.now() / 1000 + 3 };
+          const tox = ev.to ? ev.to[0] : (ev.tx ?? 0);
+          const toz = ev.to ? -ev.to[1] : -(ev.tz ?? 0);
+          (ent._gunAim ??= [])[ev.gi ?? 0] = { x: tox, z: toz, until: performance.now() / 1000 + 3 };
           return mz.getWorldPosition(new THREE.Vector3());
         }
       } else {
@@ -7310,8 +7450,8 @@ export class BattleClient {
       x = point.x; z = point.z;
     }
     this.net.send({ t: 'cast', slot, x: Math.round(x * 10) / 10, z: Math.round(-z * 10) / 10 });
-    // 突進:位移本就客戶端權威,樂觀立即生效(CD/MP 伺服器把關)
-    if (A.fx === 'dash') {
+    // 突進 / 相位穿梭:位移本就客戶端權威,樂觀立即生效(CD/MP 伺服器把關)
+    if (A.fx === 'dash' || A.fx === 'phaseshift') {
       const look = this.camera.getWorldDirection(new THREE.Vector3());
       if (!this._flying()) { look.y = 0; look.normalize(); this.vy = (this.vy ?? 0) + 5; }
       this.vel.addScaledVector(look, A.imp || 30);

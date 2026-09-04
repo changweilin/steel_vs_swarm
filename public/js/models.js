@@ -21,6 +21,7 @@ import { entryKey } from './forge/roster.js';
 // 非玩家單位新版宣告式建模；英雄機體仍只走 forge，兩條路徑不相交。
 import { buildNpcModel } from './npcModels.js';
 import { buildBuildingUnit, buildBuildingUnitTurret } from './buildingUnitModels.js';
+import { buildSummonModel } from './summonModels.js';
 
 // 單位 → GLB 檔(Quaternius,CC0 1.0;None = 直接用程式生成)
 // ⚠ **英雄機體不在這張表裡**(2026-08-14 新版建模全面替換舊版):hero:robot / hero:drone /
@@ -1956,6 +1957,12 @@ const FALLBACK = {
   tower: (side) => buildBuildingUnit('tower', side),
   'base:SWARM': () => buildBuildingUnit('base:SWARM', 'SWARM'),
   'base:STEEL': () => buildBuildingUnit('base:STEEL', 'STEEL'),
+  'summon:drone_wingman': (side) => buildSummonModel('summon:drone_wingman', side),
+  'summon:assault_rover': (side) => buildSummonModel('summon:assault_rover', side),
+  'summon:heli_squad': (side) => buildSummonModel('summon:heli_squad', side),
+  'summon:main_battle_tank': (side) => buildSummonModel('summon:main_battle_tank', side),
+  'summon:veteran_squad': (side) => buildSummonModel('summon:veteran_squad', side),
+  'summon:carnival_heli': (side) => buildSummonModel('summon:carnival_heli', side),
 };
 
 /** 找 walk / run 動畫,讓小兵走路(Quaternius 動畫角色) */
