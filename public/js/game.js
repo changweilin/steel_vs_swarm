@@ -678,11 +678,7 @@ export class BattleClient {
     }
 
     this.clock = new THREE.Clock();
-    // 開戰揭幕(序 8 ④-1):幕從全覆蓋退出去。MUST 排在第一次 `requestAnimationFrame`
-    // **之前** —— 揭幕的第 0 幀就是全覆蓋,晚一幀掛上去會先閃一格沒有幕的畫面。
-    // 這一支刻意**不走 `_wipeCut`**:開戰只有揭幕沒有遮幕(要遮什麼?前一幕是大廳的 DOM),
-    // 而 `_wipeCut` 的語意是「幕蓋上去 → 切 → 拉開」。旋鈕 0 ⇒ `playWipe` 早退回 false。
-    this.pipeline?.playWipe?.('reveal');
+    // 開戰揭幕效果已依需求取消(避免開場全黑/擋住視線)。
     this._raf = requestAnimationFrame(() => this._loop());
   }
 
