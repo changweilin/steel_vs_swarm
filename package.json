@@ -19,6 +19,8 @@
     "audit:all": "node tools/audit_suite.mjs && node tools/audit_offline_suite.mjs",
     "sim": "node test/simrun.mjs",
     "bal": "node tools/balance.mjs",
+    "bal:ci": "node tools/balance.mjs --ci",
+    "bal:strict": "node tools/balance.mjs --strict",
     "audit:net": "node tools/audit_net_modes.mjs",
     "osm:catalog": "node tools/osm_catalog.mjs",
     "osm:fixture": "node tools/fetch_osm_fixture.mjs",
