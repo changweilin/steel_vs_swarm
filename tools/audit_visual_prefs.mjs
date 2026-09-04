@@ -698,10 +698,9 @@ console.log('\nⅧ 斜向轉場(data.js WIPE + postfx 的 pass)');
   const cut = grabMethod(G, '_wipeCut');
   ok(/playWipe\('cover'/.test(cut) && /playWipe\('reveal'/.test(cut),
     '`_wipeCut` 內 cover 與 reveal **成對**(cover 的終態是全覆蓋 —— 少了 reveal 就是畫面停在一片幕色上)');
-  // 樣式吃得下選用鏈:建構子那一處是 `playWipe?.(`(API 沒上線時的降級,原則 6),
-  // `_wipeCut` 那一對是 `playWipe(`(它自己在上面用 typeof 擋過了)⇒ 1 + 2 = 3
-  ok(count(G, /playWipe\??\.?\(/g) === 3,
-    'game.js 的 `playWipe` 恰三處:開戰揭幕 1 + `_wipeCut` 的一對 2(第四處 = 有人在別的地方又寫了一次成對邏輯)');
+  // 樣式吃得下選用鏈:開戰揭幕已取消,`_wipeCut` 那一對是 `playWipe(`(它自己在上面用 typeof 擋過了)⇒ 2 處
+  ok(count(G, /playWipe\??\.?\(/g) === 2,
+    'game.js 的 `playWipe` 恰兩處:取消開戰揭幕後僅留 `_wipeCut` 的一對 2(第三處 = 有人在別的地方又寫了一次成對邏輯)');
   ok(count(G, /this\._wipeCut\(/g) === 2,
     '`_wipeCut` 恰兩個呼叫點(陣亡過場收尾 / 結算)');
   // Ⅷ-i 重入守衛:m.over 每一份快照都帶、陣亡的 done 每一幀都真 ⇒ 不擋就是幕一直重刷
