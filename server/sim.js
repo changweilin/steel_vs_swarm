@@ -22,6 +22,7 @@ import {
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
   weaponMaxHoriz, inWeaponRange,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
+  weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -253,6 +254,17 @@ export class BattleSim {
     this._seedField();
     this._seedCamps();
     this._seedCivilians();
+
+    // 動態天氣初始化 (2026-09-04): 與客戶端環境同種子、同緯度、同時段演化
+    const env = config.env || {};
+    this.startSeason = env.season || 'summer';
+    this.startTime = env.time || 'day';
+    this.startWeather = env.weather || 'clear';
+    this.latDeg = this.center?.lat ?? 25.0;
+    this.weatherSeed = Math.round((this.center?.lat ?? 0) * 1e4) * 31 + Math.round((this.center?.lng ?? 0) * 1e4);
+    this.curWeatherVec = weatherVectorAt(this.startSeason, this.startTime, this.startWeather, 0, this.weatherSeed, this.latDeg);
+    this.curWeatherDyn = resolveWeatherDynamics(this.curWeatherVec);
+    this._lightningTimer = 0;
   }
 
   // ---------- 世界障礙(2026-07-15:LOS 遮蔽 + 立體交通走廊淨空)----------
@@ -1750,9 +1762,9 @@ export class BattleSim {
     return def ? { id, def } : null;
   }
 
-  /** 填彈/冷卻時間:武器基準 × 招式增益(2026-07-20:填彈折減併入武器階級,無獨立精通;客戶端 HUD 同一條公式) */
+  /** 填彈/冷卻時間:武器基準 × 招式增益 × 天氣大雪係數(2026-07-20:填彈折減併入武器階級;2026-09-04:大雪>75%最高+12.5%) */
   _reloadT(h, def) {
-    let r = def.reload * this._buffMul(h, 'reload');
+    let r = def.reload * this._buffMul(h, 'reload') * (this.curWeatherDyn?.snowCdMul ?? 1);
     if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) r *= BOSS.ENRAGE_RELOAD_F;
     return r;
   }
@@ -1779,7 +1791,8 @@ export class BattleSim {
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
     if ((h.phaseUntil || 0) > now) return false;                   // 相位狀態下無法開火
     if (h.cast || (h.castLockUntil || 0) > now) return false;      // 招式施展前搖期間鎖定武器開火
-    const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1);
+    const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+    const rateMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_RATE_F : 1) * sandMul;
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * rateMul * (lenient ? 1.5 : 1))) return false;
     // 三個火槍手(t06):分身期間只能使用輕武器
     if (id === 'heavy' && (h.clonesUntil || 0) > now) return false;
@@ -1843,7 +1856,7 @@ export class BattleSim {
    *  2026-08-02:對建築的額外加成(舊 grenadeBuildingMul)已整組移除,MUST NOT 復辟。
    *  護盾/裝甲分軌剋制**不在這裡** —— 那要看目標當下的護盾水位,只能在 _damage 分層時結算。 */
   _heroDmg(h, def, targetKind) {
-    return def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg');
+    return def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg') * (this.curWeatherDyn?.rainAtkMul ?? 1);
   }
 
   /** 空中判定:無人機/直升機/集束轟炸機/護衛機/極音速飛彈恆算飛行;其餘以高度 ≥ AA_MIN_ALT 論 */
@@ -3295,7 +3308,8 @@ export class BattleSim {
       }
     } else { x = h.x; z = h.z; }
     h.mp -= mpc;
-    const cdMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_CD_F : 1);
+    const snowMul = this.curWeatherDyn?.snowCdMul ?? 1;
+    const cdMul = (h.sq?.boss && (h.sq.bossSeg || 0) >= 3 ? BOSS.ENRAGE_CD_F : 1) * snowMul;
     h.acd[slot] = this.t + A.cd * cdMul;
     if (A.fx !== 'stealth' && A.fx !== 'vision' && A.fx !== 'rally' && A.fx !== 'recon') h.stealthUntil = 0;   // 出手即現形
 
@@ -4452,9 +4466,11 @@ export class BattleSim {
         const d = dist2d(s.x, s.z, target.x, target.z);
         if (d <= s.range) {
           if (s.cd === 0) {
-            s.cd = 1 / (s.rate || 0.8);
+            const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+            const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
+            s.cd = 1 / ((s.rate || 0.8) * sandMul);
             const wd = s.wid ? WEAPONS[s.wid] : null;
-            this._damage(target, s.dmg, s, wd?.pen || 0, 0, wd);
+            this._damage(target, s.dmg * rainMul, s, wd?.pen || 0, 0, wd);
             this.events.push({
               e: 'shot', id: s.id, kind: s.kind, wid: s.wid,
               from: [s.x, s.z], to: [target.x, target.z],
@@ -4464,7 +4480,9 @@ export class BattleSim {
           }
         } else {
           // 向目標移動
-          const moveD = Math.min(s.speed * dt, d - s.range * 0.85);
+          const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
+          const windMul = this.curWeatherDyn ? windSpeedFactor(target.x - s.x, target.z - s.z, wDir, this.curWeatherDyn.wind) : 1;
+          const moveD = Math.min(s.speed * windMul * dt, d - s.range * 0.85);
           if (moveD > 0) {
             s.x += ((target.x - s.x) / d) * moveD;
             s.z += ((target.z - s.z) / d) * moveD;
@@ -4476,7 +4494,9 @@ export class BattleSim {
         const targetZ = owner.z + (s.offset?.z || 0);
         const od = dist2d(s.x, s.z, targetX, targetZ);
         if (od > 6) {
-          const moveD = Math.min(s.speed * dt, od - 4);
+          const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
+          const windMul = this.curWeatherDyn ? windSpeedFactor(targetX - s.x, targetZ - s.z, wDir, this.curWeatherDyn.wind) : 1;
+          const moveD = Math.min(s.speed * windMul * dt, od - 4);
           s.x += ((targetX - s.x) / od) * moveD;
           s.z += ((targetZ - s.z) / od) * moveD;
         }
@@ -4969,7 +4989,8 @@ export class BattleSim {
           x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
         continue;
       }
-      const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) : this._heroDmg(h, def, t.kind);
+      const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
+      const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) * rainMul : this._heroDmg(h, def, t.kind);
       // 閃避補償(2026-08-12 使用者定案「維持 DPS 提高傷害,閃避率不動」):被閃掉的那一份還給
       // 沒被閃掉的這一發 ⇒ 期望傷害 = base × (1−p) × 1/(1−p) ≡ base。分母 MUST 是**這個目標自己的**
       // p(逐目標,與上面那一顆骰同一個值)—— 閃不掉的小兵/建築/重甲 p = 0 ⇒ 係數恆 1 ⇒ 逐位元同舊制。
@@ -5548,11 +5569,79 @@ export class BattleSim {
     this.events.push({ e: 'penalty', pid: t.pid, side: t.side, v: Math.round(pen) });
   }
 
+  /**
+   * 雷雨天氣閃電隨機傷害結算 (2026-09-04 使用者定案):
+   * 雷雨天氣時的閃電有機率隨機造成一名或多名 NPC / 機體 / 建築單位傷害,
+   * 機率與頻率與雷雨指數有關 (thunder >= 75% 且 effectiveThunder > 0 時觸發)。
+   */
+  _tickWeather(dt) {
+    const dyn = this.curWeatherDyn;
+    if (!dyn || dyn.effectiveThunder <= 0) {
+      this._lightningTimer = 0;
+      return;
+    }
+    const cfg = WEATHER_DEBUFFS.LIGHTNING;
+    this._lightningTimer -= dt;
+    if (this._lightningTimer <= 0) {
+      // 依雷雨指數決定下次判定頻率 (75% 時 8s, 100% 時 2s)
+      const interval = Math.max(cfg.INTERVAL_MIN, (1.0 - dyn.effectiveThunder) * (cfg.INTERVAL_MAX - cfg.INTERVAL_MIN) + cfg.INTERVAL_MIN);
+      this._lightningTimer = interval;
+
+      // 依雷雨指數決定觸發機率 (75% 時 35%, 100% 時 90%)
+      const prob = cfg.PROB_MIN + dyn.effectiveThunder * (cfg.PROB_MAX - cfg.PROB_MIN);
+
+      // 確定性隨機判定 (以時間與種子為依據, mulbberry32 演算法)
+      const stepIdx = Math.floor(this.t * 10);
+      let aSeed = ((this.weatherSeed ^ (stepIdx * 0x9E3779B9)) >>> 0);
+      aSeed |= 0; aSeed = (aSeed + 0x6D2B79F5) | 0;
+      let t = Math.imul(aSeed ^ (aSeed >>> 15), 1 | aSeed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      const roll = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+
+      if (roll < prob) {
+        // 決定打擊目標數 (1 ~ 3 個單位)
+        let count = 1;
+        if (dyn.effectiveThunder > 0.45) count = 2;
+        if (dyn.effectiveThunder > 0.80) count = 3;
+
+        // 收集存活的候選目標: NPC (小兵/平民/中立)、機體 (英雄主機/僚機/bot)、建築 (防禦塔/主堡)
+        const candidates = [];
+        for (const e of this.ents.values()) {
+          if (!e.dead && (e.hp > 0 || (e.sp || 0) > 0)) {
+            candidates.push(e);
+          }
+        }
+
+        if (candidates.length > 0) {
+          const strikes = [];
+          for (let i = 0; i < count && candidates.length > 0; i++) {
+            aSeed = (aSeed + 0x6D2B79F5) | 0;
+            t = Math.imul(aSeed ^ (aSeed >>> 15), 1 | aSeed);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            const targetRoll = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            const idx = Math.floor(targetRoll * candidates.length);
+            const target = candidates.splice(idx, 1)[0];
+            this._damage(target, cfg.BASE_DMG, null, cfg.PEN);
+            strikes.push({ id: target.id, x: target.x, y: target.y || 0, z: target.z, kind: target.kind });
+          }
+          if (strikes.length > 0) {
+            this.events.push({ e: 'lightning_strike', pts: strikes });
+          }
+        }
+      }
+    }
+  }
+
   // ---------- 主迴圈 ----------
   tick(dt) {
     this._tickN++;   // 快照霧戰爭:同一 tick 內多次呼叫共用同一份事件/飛彈/物資
     if (this.over) return;
     this.t += dt;
+
+    // 動態天氣布朗運動步進與閃電結算 (2026-09-04)
+    this.curWeatherVec = weatherVectorAt(this.startSeason, this.startTime, this.startWeather, this.t, this.weatherSeed, this.latDeg);
+    this.curWeatherDyn = resolveWeatherDynamics(this.curWeatherVec, this.curWeatherDyn, dt);
+    this._tickWeather(dt);
 
     // 波次
     if (this.t >= this.nextWaveAt) {
@@ -5680,7 +5769,9 @@ export class BattleSim {
         // `u.guns`(主堡)在這裡**不開火**:2026-08-13 起它的兩把武器已合併成一把,
         // 開火路徑只剩 `_tickBaseGuns` 一條(合併卻留著本體那一支 = 又變回兩把)。
         if (e.cd === 0 && !u.guns && !((e.empUntil || 0) > this.t)) {
-          e.cd = 1 / u.rate;
+          const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+          const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
+          e.cd = 1 / (u.rate * sandMul);
           // 塔/主堡是制式火砲:沒有 `wid` ⇒ 舊制 wd 為 undefined = 既不可閃也不爆風。
           // 2026-08-13 使用者「**所有爆炸傷害武器都套用**」⇒ 它們也是爆炸彈頭,改吃 `STRUCT_W`
           // 這個只帶「半徑 + 破甲」的 def(傷害/射速/射程仍住 UNITS,MUST NOT 在那裡複製第二份)。
@@ -5705,7 +5796,7 @@ export class BattleSim {
             // 陣營小兵強化:傷害吃 e.cu(生成時定案;塔/主堡/第三方無此欄 ⇒ ×1),但
             // **只對非玩家目標**(2026-08-11 使用者改制:打玩家機體一律原始傷害)。
             // 高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
-            this._damage(target, u.dmg * (target.hero ? 1 : (e.cu || 1)), e, wd?.pen || 0, 0, wd);
+            this._damage(target, u.dmg * (target.hero ? 1 : (e.cu || 1)) * rainMul, e, wd?.pen || 0, 0, wd);
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
@@ -5866,7 +5957,9 @@ export class BattleSim {
     const dx = tx - b.x, dy = ty - (b.y || 0), dz = tz - b.z;
     const d = Math.hypot(dx, dy, dz);
     if (d < 0.01) return;
-    const k = Math.min(1, speed * dt / d);
+    const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
+    const windMul = this.curWeatherDyn ? windSpeedFactor(dx, dz, wDir, this.curWeatherDyn.wind) : 1;
+    const k = Math.min(1, speed * windMul * dt / d);
     b.x += dx * k;
     b.z += dz * k;
     b.y = Math.max(0, (b.y || 0) + dy * k);
@@ -6360,7 +6453,9 @@ export class BattleSim {
       if (e.gunCd[i] > 0) continue;
       const target = this._acquireTarget(e, gu);
       if (!target) continue;
-      e.gunCd[i] = 1 / g.rate;
+      const sandMul = this.curWeatherDyn?.sandRateMul ?? 1;
+      const rainMul = this.curWeatherDyn?.rainAtkMul ?? 1;
+      e.gunCd[i] = 1 / (g.rate * sandMul);
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
       const mx = e.x + off, mz = e.z, my = BASE_MISSILE.LAUNCH_Y;
       this.missiles.push({
@@ -6506,7 +6601,17 @@ export class BattleSim {
       if ((e.slowUntil || 0) > this.t) sf *= e.slowF ?? 0.6;
       if ((e.confUntil || 0) > this.t) sf *= -0.5;
     }
-    if (!hold && sf !== 0) e.prog = Math.max(0, (e.prog ?? 0) + u.speed * sf * dt);
+    let windMul = 1;
+    if (this.curWeatherDyn && this.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
+      const d0 = e.side === 'SWARM' ? (e.prog ?? 0) : total - (e.prog ?? 0);
+      let i = 1;
+      while (cum[i] < d0 && i < cum.length - 1) i++;
+      const ldx = pts[i][0] - pts[i - 1][0], ldz = pts[i][1] - pts[i - 1][1];
+      const dirSign = (e.side === 'SWARM' ? 1 : -1) * (sf < 0 ? -1 : 1);
+      const wDir = this.curWeatherDyn.windDirServer || this.curWeatherDyn.windDir;
+      windMul = windSpeedFactor(ldx * dirSign, ldz * dirSign, wDir, this.curWeatherDyn.wind);
+    }
+    if (!hold && sf !== 0) e.prog = Math.max(0, (e.prog ?? 0) + u.speed * sf * windMul * dt);
     const d = e.side === 'SWARM' ? e.prog : total - e.prog;
     const [x, z] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
     // 平滑靠攏路徑(保留生成時的隊形抖動,不瞬移)

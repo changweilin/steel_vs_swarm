@@ -8,7 +8,8 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, heavyMpCost, vsMult, b
   VITALS,
   BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
-  botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG } from '../public/js/data.js';
+  botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG,
+  WEATHER_DEBUFFS, windSpeedFactor } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -118,12 +119,16 @@ export class BotBrain {
   /** 地速:變形者飛行型態用飛行巡航速度(變形趕路才有意義)× 控場折速。
    *  取速一律經 `heroMobility`(A32「電腦玩家 MUST NOT 比真人多看/多走」的同一條):
    *  那支才含角色 `mods.speed` 與移速壓縮,直接讀 `UNITS[kind].speed` = bot 跑的是機種基準速。 */
-  _speed(h) {
+  _speed(h, dx = 0, dz = 0) {
     // 高地壓制折速(2026-08-12;見 data.js HIGH_SUP ⑤):真人那一半住客戶端 `game._mobility`,
     // bot 的「客戶端」就是這裡 —— 兩端同一支 `highSupSpeedF`,伺服器不對真人再折一次。
     const sup = highSupSpeedF(this.sim._supF(h));
     let spd = heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h) * sup;
     if (h.sq?.boss && (h.sq.bossSeg || 0) >= 3) spd *= BOSS.ENRAGE_SPD_F;
+    if ((dx !== 0 || dz !== 0) && this.sim?.curWeatherDyn && this.sim.curWeatherDyn.wind > WEATHER_DEBUFFS.THRESHOLD) {
+      const wDir = this.sim.curWeatherDyn.windDirServer || this.sim.curWeatherDyn.windDir;
+      spd *= windSpeedFactor(dx, dz, wDir, this.sim.curWeatherDyn.wind);
+    }
     return spd;
   }
 
@@ -320,12 +325,12 @@ export class BotBrain {
   _push(h, u, dt) {
     const pts = this.sim.lanes[this.lane];
     const total = this._cum[this._cum.length - 1];
-    this.prog = Math.min(total, this.prog + this._speed(h) * 0.85 * dt);
     const fwd = this.side === 'SWARM' ? 1 : -1;
     const d = this.side === 'SWARM' ? this.prog : total - this.prog;
     const [x, z] = pointAt(pts, this._cum, d);
     // 朝向取**前進方向**(沿兵線前瞻),不是腳下那個目標點 —— 見 PUSH_LOOK_M
     const [lx, lz] = pointAt(pts, this._cum, Math.max(0, Math.min(total, d + fwd * PUSH_LOOK_M)));
+    this.prog = Math.min(total, this.prog + this._speed(h, lx - x, lz - z) * 0.85 * dt);
     this._face(h, lx, lz);
     // 位置收斂同乘控場係數:prog 凍結(麻痺)時機體不得再以指數速率滑回線上目標點
     const cf = this._ccF(h);
@@ -560,9 +565,11 @@ export class BotBrain {
     const keep = gun.range * (struct ? this.tac.KEEP_STRUCT : kite);
     const radial = (d - keep) / Math.max(1, d);          // >0 靠近、<0 拉開
     const strafe = Math.sin(this.sim.t * 0.9 + this.lane * 2) * 0.6;
-    const spd = this._speed(h);                       // 控場(麻痺/緩速/混亂)折算後的地速
-    const vx = dx / d * radial * spd + (-dz / d) * strafe * spd;
-    const vz = dz / d * radial * spd + (dx / d) * strafe * spd;
+    const dirX = dx / d * radial + (-dz / d) * strafe;
+    const dirZ = dz / d * radial + (dx / d) * strafe;
+    const spd = this._speed(h, dirX, dirZ);              // 控場(麻痺/緩速/混亂)與天氣風向折算後的地速
+    const vx = dirX * spd;
+    const vz = dirZ * spd;
     this._move(h, h.x + vx * dt, h.z + vz * dt);   // 走位同吃碰撞唯一縫(交戰中一樣不能穿牆)
     this._face(h, t.x, t.z);
     this._fire(t.id, 'light');
@@ -616,7 +623,7 @@ export class BotBrain {
     this._face(h, tx, tz);
     const [gx, gz] = this._skirt(h, tx, tz);             // 撤退路上一樣會撞牆 ⇒ 同一套繞行
     const gd = Math.hypot(gx - h.x, gz - h.z) || 1;
-    const step = this._speed(h) * dt;
+    const step = this._speed(h, gx - h.x, gz - h.z) * dt;
     this._stuck(this._move(h, h.x + (gx - h.x) / gd * step, h.z + (gz - h.z) / gd * step), dt);
   }
 
