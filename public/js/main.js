@@ -15,7 +15,7 @@ import {
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
-  FLIGHT, SQUAD, scopeRvmin,
+   FLIGHT, SQUAD, scopeRvminFog, weatherFogStops, WEATHER_FOG_MASK,
   heroHexStats, SIEGE,
   MINI, miniAllowed, miniOnlyFor, miniScaleF, SPEC_CAM,
 } from './data.js';
@@ -2652,6 +2652,12 @@ function renderSpecUpg(upg) {
 
 function makeHud() {
   const feedBox = $('killFeed');
+  // 狙擊鏡圈組合半徑的兩個輸入(火場滯留 / 天氣濃霧密度):envFog 與 weatherFog 各推一份,
+  // `--scope-r` 由兩者相乘重算(曲線本體住 data.js `scopeRvminFog`,這裡只存值不算曲線)。
+  let _scopeFireF = 0, _scopeFogD = 0;
+  const _pushScopeR = () => {
+    document.body.style.setProperty('--scope-r', `${scopeRvminFog(_scopeFireF, _scopeFogD).toFixed(1)}vmin`);
+  };
   return {
     // 狙擊遮罩是本地輸入的即時表現；快照收到時仍由 self() 再同步一次。
     aiming: (on) => document.body.classList.toggle('aiming', !!on),
@@ -2860,14 +2866,41 @@ function makeHud() {
     },
     // 火場滯留視野霧化(2026-07-19;game.js 每幀推 0~1 濃度,離場漸清)—— 純表現,傷害由伺服器結算。
     // 越濃越嚴重:邊緣全黑(CSS 漸層)+ 中央漸模糊(backdrop blur)+ 狙擊視野縮圈(--scope-r)。
+    // 鏡圈組合半徑住 data.js `scopeRvminFog`(火場縮圈 × 天氣霧等比縮)—— 視野鎖定的取景判定吃同一支
     envFog: (v) => {
       const f = Math.max(0, Math.min(1, v || 0));
       const el = $('envFog');
       el.style.opacity = String(f);
       const blur = f > 0 ? `blur(${(f * 6).toFixed(2)}px)` : '';   // 離場移除 → 不留 backdrop 合成層(效能)
       el.style.backdropFilter = blur; el.style.webkitBackdropFilter = blur;
-      // 縮圈曲線住 data.js `scopeRvmin`(單一縫)—— 視野鎖定的取景判定吃同一支
-      document.body.style.setProperty('--scope-r', `${scopeRvmin(f).toFixed(1)}vmin`);
+      _scopeFireF = f; _pushScopeR();
+    },
+    // 天氣濃霧遮罩(2026-09-05;game.js 每幀推 effectiveFog 0~1)—— 純表現,權威視野由伺服器結算。
+    // 2026-09-06 使用者「半徑外濃、半徑內清的分界要看得出來」:漸層不再是固定形狀,
+    // 每幀按當下密度重建 —— 一般模式清澈洞徑吃 `weatherFogStops`(霧越濃洞越小),
+    // 狙擊模式直接錨定鏡圈(`scopeRvminFog` 的同一段數值,與 scope-vig 同一個圓)。
+    // 2026-09-06 使用者「洞外透明度隨霧指數降、100% 剩 25%」:濃度響應只住元素 opacity,
+    // 漸層洞外 alpha 恆 `WEATHER_FOG_MASK.EDGE_A`(0.75)不再隨密度加乘 ⇒ 實得洞外不透明度 = 0.75×密度。
+    weatherFog: (d) => {
+      const k = Math.max(0, Math.min(1, d || 0));
+      const el = $('weatherFog');
+      el.style.opacity = String(k);
+      _scopeFogD = k; _pushScopeR();
+      if (k <= 0) return;
+      const edgeA = WEATHER_FOG_MASK.EDGE_A.toFixed(2);
+      if (document.body.classList.contains('aiming')) {
+        const r = scopeRvminFog(_scopeFireF, _scopeFogD);   // vmin,與 --scope-r 同一段數值
+        const rIn = Math.max(0.5, r - 8).toFixed(1);        // 圈內 8vmin 開始起霧,霧 rim 落在鏡圈環上
+        el.style.background = 'radial-gradient(circle at 50% 50%,'
+          + ` rgba(200, 208, 215, 0.06) 0vmin, rgba(200, 208, 215, 0.30) ${rIn}vmin,`
+          + ` rgba(205, 212, 218, ${edgeA}) ${r.toFixed(1)}vmin)`;
+      } else {
+        const s = weatherFogStops(k);
+        el.style.background = 'radial-gradient(ellipse at center,'
+          + ' rgba(200, 208, 215, 0.06) 0%,'
+          + ` rgba(200, 208, 215, 0.30) ${(s.r0 * 100).toFixed(1)}%,`
+          + ` rgba(205, 212, 218, ${edgeA}) ${(s.r1 * 100).toFixed(1)}%)`;
+      }
     },
     // 受擊濺血(2026-08-02;game.js 每幀推整份清單 [{id,u,v,drops,a}],空陣列 = 全部退場)。
     // 依 id 對帳:新 id 建節點、舊 id 只更新 opacity、消失的 id 移除 —— 每幀重建 DOM 會讓

@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, upgradeScore, canUpgrade, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, castDirF, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
+   CHARACTERS, heroWeapon, heroAbility, castDirF, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
   heroMobility, highSupSpeedF,
   WATER, CJUMP, IFRAME, AIR, envTrigger, fluidFactor, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur, VISION_BLIND,
@@ -20,7 +20,7 @@ import {
   reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow, bossScaleF,
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
-  CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S,
+   CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S, fogSightMult, scopeRvminFog,
   WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
 } from './data.js';
 import { llToWorld } from './terrain.js';
@@ -580,6 +580,7 @@ export class BattleClient {
     this._vlockAt = 0;              // 上次索敵時刻(節流;0 = 下一幀立刻重找)
     this._vlockUi = false;          // 鈕面亮燈(body class)目前狀態
     this._scopeFog = 0;             // 火場霧化濃度 0~1(狙擊鏡縮圈;與 hud.envFog 同一個值)
+    this._weatherFogD = 0;          // 天氣濃霧密度 0~1(視野等比縮 + 濃霧遮罩;與 hud.weatherFog 同一個值)
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
     this._visShells = [];            // 他人重武器視覺彈體(2026-07-22 彈藥同源;純表現層)
     this._decoyBombs = [];           // 集束炸彈的「拋擲彈體」動畫(榴彈拋物線,落地才引爆演出,依類型上色)
@@ -4151,9 +4152,18 @@ export class BattleClient {
     }
     this._fireDwell = Math.max(0, this._fireDwell + (inFire ? dt : -dt * 2));
     const { FIRE_FOG_S, FIRE_FOG_MAX_S } = TERRAIN_FX;
-    // 濃度存一份:狙擊鏡縮圈(`scopeRvmin`)與視野鎖定的鏡圈取景吃同一個值,MUST NOT 去讀 CSS 變數
+    // 濃度存一份:狙擊鏡縮圈(`scopeRvminFog` 的火場輸入)與視野鎖定的鏡圈取景吃同一個值,MUST NOT 去讀 CSS 變數
     this._scopeFog = Math.max(0, Math.min(1, (this._fireDwell - FIRE_FOG_S) / (FIRE_FOG_MAX_S - FIRE_FOG_S)));
     this.hud.envFog?.(this._scopeFog);
+  }
+
+  /** 天氣濃霧 → 視野外霧罩(純客戶端表現;權威視野縮減由伺服器 `_visionSources` 結算)。
+   *  密度存一份:全屏霧罩 opacity、狙擊鏡圈組合半徑(`scopeRvminFog`)、視野鎖定鏡圈取景吃同一個值。
+   *  濃霧天遮罩蓋在狙擊鏡圈之內照樣生效(它與 scope-vig 同層、DOM 在後 ⇒ 霧在鏡圈裡、不擋 HUD)。 */
+  _updateWeatherFog() {
+    const d = Math.max(0, Math.min(1, this.envFx?.getWeatherDynamics?.()?.effectiveFog ?? 0));
+    this._weatherFogD = d;
+    this.hud.weatherFog?.(d);
   }
 
   /**
@@ -5662,8 +5672,9 @@ export class BattleClient {
     // 開場第一幀還是單位矩陣(整份名冊會算在錯的地方)。matrixWorld 與 `fwd` 同樣是上一幀的姿態 ⇒ 同調。
     const mvi = ndc ? new THREE.Matrix4().copy(this.camera.matrixWorld).invert() : null;
     const W = this.canvas.clientWidth || 1, H = this.canvas.clientHeight || 1;
-    // 狙擊模式的取景邊界 = 鏡圈正圓(半寬單位 vmin ⇒ 換成像素);曲線是 data.js `scopeRvmin` 那一份
-    const rPx = Math.max(1, scopeRvmin(this._scopeFog) / 100 * Math.min(W, H));
+    // 狙擊模式的取景邊界 = 鏡圈正圓(半寬單位 vmin ⇒ 換成像素);曲線是 data.js `scopeRvminFog` 那一份
+    // (火場縮圈 × 天氣霧等比縮,與主畫面 `--scope-r` 同一支,遮罩黑掉的地方 MUST NOT 鎖得到)
+    const rPx = Math.max(1, scopeRvminFog(this._scopeFog, this._weatherFogD) / 100 * Math.min(W, H));
     let lastX = 0;                               // off() 的副產品:水平投影(NDC x),名冊排序用
     /**
      * 偏離度(**取景唯一判定**):錐模式回傳夾角(rad,與門檻同單位);視野框模式回傳
@@ -6068,7 +6079,7 @@ export class BattleClient {
     this._castingUntil = 0;
     this.castLeft = 0;
     this.unbalLeft = 0;
-    this._fireDwell = 0; this._swampDwell = 0; this._scopeFog = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
+    this._fireDwell = 0; this._swampDwell = 0; this._scopeFog = 0; this._weatherFogD = 0; this.hud.envFog?.(0); this.hud.weatherFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
     this._clearBlood();     // 死亡:清濺血(_updatePlayer 對 dead 早退不再衰減 ⇒ 不清會凍在畫面上)
     this._burstQ = null;    // 死亡:清連發演出佇列(自機那半的閉包會在重生後的新機體上補畫舊武器)
@@ -8208,6 +8219,7 @@ export class BattleClient {
     if (this.dead) return;
     this._env = this._envAt();   // 當幀環境(水/沼):移動減速、pos 回報、狀態結算(伺服器)皆讀它
     this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
+    this._updateWeatherFog();    // 天氣濃霧 → 全屏霧罩 + 狙擊鏡圈等比縮(純客戶端表現;視野縮減由伺服器結算)
     this._updateBlood(dt);       // 受擊濺血 → 依方位噴在座艙玻璃上後漸淡(純客戶端表現)
     // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)。
     // open 段(地下道引道露天路塹)**刻意不濾**:側壁閘(單步高差 + tunnelWallCross 幾何牆線)
@@ -9517,20 +9529,22 @@ export class BattleClient {
 
   /** 戰爭迷霧視野來源(鏡像 sim._visionSources):己方存活單位各自 sight 半徑。
    *  瞄準視野加成:aiming 是小隊共用狀態(SQUAD_SHARED)→ 自機與僚機一起放大;
-   *  其他友方英雄的瞄準狀態快照未攜帶,不鏡像 —— 僅顯示層誤差(單位標記本就畫在迷霧之上)。 */
+   *  其他友方英雄的瞄準狀態快照未攜帶,不鏡像 —— 僅顯示層誤差(單位標記本就畫在迷霧之上)。
+   *  天氣濃霧等比縮減:與伺服器同一支 `fogSightMult`(raw fog),狙擊/步行同率。 */
   _mmVision() {
     const out = [];
     const aimF = this.aiming ? GAME.AIM_SIGHT_MULT : 1;
+    const fogMult = fogSightMult(this.envFx?.getWeatherDynamics?.()?.fog ?? 0);
     for (const ent of this.ents.values()) {
       if (ent.side !== this.side || ent.isSelf || ent.dead || ent.hp <= 0) continue;
       if (ent.decoy && ent.lost) continue;   // 失聯餌機不回傳遙測(與伺服器同規則)
       const sight = UNITS[ent.kind]?.sight;
       if (sight == null) continue;
-      out.push([ent.mesh.position.x, ent.mesh.position.z, sight * (ent.hero && ent.pid === this.youId ? aimF : 1)]);
+      out.push([ent.mesh.position.x, ent.mesh.position.z, sight * (ent.hero && ent.pid === this.youId ? aimF : 1) * fogMult]);
     }
     if (!this.dead && this.heroKind) {
       const sight = UNITS[this.heroKind]?.sight;
-      if (sight != null) out.push([this.pos.x, this.pos.z, sight * aimF]);
+      if (sight != null) out.push([this.pos.x, this.pos.z, sight * aimF * fogMult]);
     }
     return out;
   }

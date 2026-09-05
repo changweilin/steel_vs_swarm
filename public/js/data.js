@@ -984,13 +984,49 @@ export const LOCK = { TTL: 2.5, WARN_S: 1.6 };
 
 // ---- 狙擊鏡可視圓(CSS `--scope-r` 的唯一真相;2026-08-02 抽成單一縫)----
 // 狙擊模式(`body.aiming`)的黑邊遮罩(style.css `.scope-vig`)只留中央一個正圓看得見,
-// 火場滯留會把圓縮小(main.js `envFog`)。**「狙擊模式看得見誰」一律以這個圓為準** ——
+// 火場滯留與天氣濃霧會把圓縮小(main.js `envFog`/`weatherFog` 經 `scopeRvminFog` 組合)。**「狙擊模式看得見誰」一律以這個圓為準** ——
 // 視野鎖定的取景同吃這一份(遮罩黑掉的地方 MUST NOT 鎖得到)。
 // style.css 裡的 40vmin 只是 CSS 變數未設定時的回退值,MUST NOT 當第二份真相改。
 export const SCOPE = { R_VMIN: 40, FOG_R_VMIN: 18 };
 /** 目前的鏡圈半徑(vmin);`fog` = 火場霧化濃度 0~1(0 = 無霧)。縮圈曲線 MUST NOT 手寫第二份 */
 export const scopeRvmin = (fog = 0) =>
   SCOPE.R_VMIN - Math.max(0, Math.min(1, fog || 0)) * (SCOPE.R_VMIN - SCOPE.FOG_R_VMIN);
+
+// ---- 濃霧視野縮減(天氣霧;2026-09-05 使用者需求「濃霧時視野外加濃霧遮罩,狙擊等比縮」)----
+// 天氣霧是唯一會縮權威視野的天氣:raw fog 0~100 → 密度 → 視野倍率,伺服器 `_visionSources`
+// 與客戶端 `_mmVision` 同吃這一支(等比:瞄準加成 AIM_SIGHT_MULT 之後再乘,狙擊/步行同率)。
+// 純霧天渲染(THREE.Fog 壓到 1 個塔射程)只管「看不清」,不管「看不看得到」—— 沒有這一支,
+// 濃霧裡敵機快照照給、罩子(小地圖/鏡圈)照舊,只是 3D 糊掉,等於霧只糊不擋。
+export const FOG_SIGHT = { MIN_MULT: 1 / 3 };   // 密度 1 時視野剩 1/3(對齊戰術霧內縮減量級)
+/** raw fog(0~100) → 密度 0~1。`resolveWeatherDynamics` 的 effectiveFog 吃同一支,MUST NOT 另寫門檻 */
+export const fogDensity = (fog = 0) => {
+  const f = Number(fog) || 0;
+  return f >= 75 ? Math.max(0, Math.min(1, (f - 75) / 25)) : 0;
+};
+/** raw fog → 視野倍率(1 → MIN_MULT 線性) */
+export const fogSightMult = (fog = 0) =>
+  1 - (1 - FOG_SIGHT.MIN_MULT) * fogDensity(fog);
+/** 密度 → 視野倍率(手上只有 effectiveFog 時用,與上支同一條線) */
+export const fogSightMultByDensity = (d = 0) =>
+  1 - (1 - FOG_SIGHT.MIN_MULT) * Math.max(0, Math.min(1, d || 0));
+/** 狙擊鏡圈組合半徑(vmin):火場縮圈 × 天氣霧等比縮。主畫面與視野鎖定取景同吃這一支 */
+export const scopeRvminFog = (fireFog = 0, fogD = 0) =>
+  scopeRvmin(fireFog) * fogSightMultByDensity(fogD);
+
+// ---- 天氣濃霧罩漸層(2026-09-06 使用者「半徑外濃、半徑內清的分界要看得出來」)----
+// 全屏霧罩的「清澈洞」半徑吃視野倍率:霧越濃、洞越小,洞外迅速壓到不透明 ——
+// 只推整體 opacity 的話,霧天看起來只是整片泛白,看不出「哪裡是視野邊界」。
+// 狙擊模式不吃這一支:鏡圈本身就是正圓邊界,main.js 直接拿 `scopeRvminFog` 的數值當漸層錨。
+export const WEATHER_FOG_MASK = { R0_CLEAR: 0.30, R0_SPAN: 0.25, R1_PAD: 0.30, EDGE_A: 0.75 };
+/** 密度 0~1 → 霧罩漸層 {r0 清澈洞半徑(0~1 漸層比例), r1 全濃半徑}。
+ *  r0 隨視野倍率(霧越濃洞越小);洞外不透明度恆 EDGE_A —— 濃度響應只住元素 opacity
+ *  (main.js `weatherFog` 推密度),不再兩處相乘 ⇒ 100% 時洞外透明度剩 25%。 */
+export const weatherFogStops = (d = 0) => {
+  const k = Math.max(0, Math.min(1, d || 0));
+  const m = fogSightMultByDensity(k);   // 洞徑隨視野倍率:霧濃 ⇒ 視野小 ⇒ 洞小
+  const r0 = WEATHER_FOG_MASK.R0_CLEAR + WEATHER_FOG_MASK.R0_SPAN * m;
+  return { r0, r1: Math.min(1, r0 + WEATHER_FOG_MASK.R1_PAD) };
+};
 
 // ---- 景深模糊(2026-08-09 使用者需求「加入遠的物件隨距離景深模糊的效果」)----
 // **純表現層**(與 SCOPE / VIEW_LOCK / RECOIL 同層:伺服器完全不知道它的存在 ⇒ 不涉 A1),
@@ -6561,8 +6597,8 @@ export function resolveWeatherDynamics(weatherVec, prevDyn = null, dt = 0) {
   // 5. 雷量: 75% 以上才會開始打雷
   const effectiveThunder = thunder >= 75 ? (thunder - 75) / 25 : 0;
 
-  // 6. 霧量: 75% 以上才會開始起霧 (0~1.0 倍率)
-  const effectiveFog = fog >= 75 ? (fog - 75) / 25 : 0;
+  // 6. 霧量: 75% 以上才會開始起霧 (0~1.0 倍率;門檻曲線吃 `fogDensity` 單一縫)
+  const effectiveFog = fogDensity(fog);
 
   // 7. 風量與水波 (水波隨降雪凍結係數漸進平緩衰減至完全平坦，解凍時平緩復甦)
   const windAmp = 0.5 + (wind / 100) * 2.2;

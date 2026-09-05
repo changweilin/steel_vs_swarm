@@ -8,7 +8,8 @@
 //
 // 這支要釘住的**四件事**(每一件壞掉都不會報錯,只會「手感怪」或「靜默沒反應」):
 //   Ⅰ 常數與推導:DROP > EDGE(遲滯 —— 取得只認畫面內、脫鎖放寬一截,否則目標貼邊跑就忽鎖忽脫)、
-//     鏡圈半徑只有 `scopeRvmin` 一份(CSS 遮罩與鎖定取景同吃 ⇒ 黑掉的地方鎖不到)、
+//     鏡圈半徑只有 `scopeRvminFog` 一份(內層火場曲線仍是 `scopeRvmin`,組合只做相乘;
+//     CSS 遮罩與鎖定取景同吃 ⇒ 黑掉的地方鎖不到)、
 //     每幀轉角只有 `viewLockStep` 一份實作,game.js MUST NOT 手寫 W/EASE。
 //   Ⅱ **後座力不得被抵銷**(使用者指定「還是會有後座力」):鎖定只准經 `_applyLook` 改基準角
 //     yaw/pitch;相機角 = 基準角 + `recoil` + 震動的合成 MUST 原封不動。
@@ -18,7 +19,7 @@
 //   Ⅳ 鍵位與單一縫:ZR = 鎖定(按住型)、機種絕招搬到十字鍵左且仍只有一個派發縫、
 //     目標解析只有 `_coneAcquire` 一份、瞄準點只有 `_entAimPoint` 一份、
 //     **按一次輪替一個**(錨點 `_vlockPrev` 跨放開保留,名冊依畫面由左至右)。
-import { VIEW_LOCK, viewLockStep, SCOPE, scopeRvmin } from '../public/js/data.js';
+import { VIEW_LOCK, viewLockStep, SCOPE, scopeRvmin, scopeRvminFog, FOG_SIGHT } from '../public/js/data.js';
 import { readSrc as read } from './audit_src.mjs';
 
 const dataSrc = read('public', 'js', 'data.js');
@@ -58,11 +59,17 @@ ok(scopeRvmin(0) === SCOPE.R_VMIN && scopeRvmin(1) === SCOPE.FOG_R_VMIN,
   '`scopeRvmin` 兩端點 = SCOPE.R_VMIN / FOG_R_VMIN(縮圈曲線推導不手寫)');
 ok(scopeRvmin(0.5) < scopeRvmin(0) && scopeRvmin(0.5) > scopeRvmin(1), '火場越濃鏡圈越小(單調)');
 ok(scopeRvmin(-1) === SCOPE.R_VMIN && scopeRvmin(9) === SCOPE.FOG_R_VMIN, '濃度夾制在 0~1');
-ok(count(dataSrc, /export const scopeRvmin/g) === 1, '鏡圈半徑唯一縫 `scopeRvmin` 住 data.js');
-ok(/scopeRvmin\(/.test(mainSrc) && !/40 - f \* 22/.test(mainSrc),
-  'main.js 的 `--scope-r` 吃 `scopeRvmin`,舊的手寫縮圈式已拔掉');
-ok(/scopeRvmin\(this\._scopeFog\)/.test(gameSrc),
-  'game.js 的取景吃同一支 `scopeRvmin`(MUST NOT 去讀 CSS 變數字串或另寫一份半徑)');
+ok(count(dataSrc, /export const scopeRvmin(?![\w$])/g) === 1, '火場縮圈內層 `scopeRvmin` 仍恰一份(組合不得重寫曲線)');
+ok(count(dataSrc, /export const scopeRvminFog/g) === 1, '鏡圈半徑唯一縫 `scopeRvminFog` 住 data.js');
+ok(scopeRvminFog(0, 0) === SCOPE.R_VMIN, '無霧時組合半徑 = 舊制(逐位元相容)');
+ok(Math.abs(scopeRvminFog(0, 1) - SCOPE.R_VMIN * FOG_SIGHT.MIN_MULT) < 1e-9,
+  '最濃霧時鏡圈等比縮到 MIN_MULT(與權威視野同率)');
+ok(scopeRvminFog(1, 1) < scopeRvminFog(1, 0) && scopeRvminFog(0, 1) < scopeRvminFog(0, 0),
+  '火場/天氣兩軸各自單調(任一變濃鏡圈只小不大)');
+ok(/scopeRvminFog\(/.test(mainSrc) && !/40 - f \* 22/.test(mainSrc),
+  'main.js 的 `--scope-r` 吃 `scopeRvminFog`,舊的手寫縮圈式已拔掉');
+ok(/scopeRvminFog\(this\._scopeFog, this\._weatherFogD\)/.test(gameSrc),
+  'game.js 的取景吃同一支 `scopeRvminFog`(MUST NOT 去讀 CSS 變數字串或另寫一份半徑)');
 ok(/export const viewLockStep/.test(dataSrc), '每幀轉角唯一縫 `viewLockStep` 住 data.js');
 ok(count(gameSrc, /viewLockStep\(/g) === 2,
   'game.js 兩軸(yaw/pitch)都吃 viewLockStep,且只有這兩處');
@@ -197,7 +204,7 @@ ok(/list\.sort\(\(a, b\) => a\.x - b\.x\)/.test(acq),
   '名冊依**畫面由左至右**排序(依「離準星遠近」排 ⇒ 每切一次就重排,第三個以後輪不到)');
 ok(!/\.sort\(/.test(tick), '排序只有 `_coneAcquire` 那一份,`_tickViewLock` MUST NOT 自己再排一次');
 // 取景:一般 = 畫面矩形、狙擊 = 鏡圈正圓(使用者:「狙擊模式時以狙擊鏡視野為主」)
-ok(/this\.aiming \?/.test(acq) && /scopeRvmin\(/.test(acq),
+ok(/this\.aiming \?/.test(acq) && /scopeRvminFog\(/.test(acq),
   '狙擊模式的取景 MUST 換成鏡圈半徑(遮罩黑掉的地方鎖不到)');
 ok(/projectionMatrix/.test(acq) && !/zoomFov/.test(acq),
   '視野框吃相機投影矩陣 ⇒ 狙擊 FOV 自動生效,MUST NOT 另寫一份角度縮放');

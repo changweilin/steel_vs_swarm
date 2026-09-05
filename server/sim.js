@@ -22,7 +22,7 @@ import {
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, fluidFactor, offGround, airUnit,
   weaponMaxHoriz, inWeaponRange,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
-  weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor,
+  weatherVectorAt, resolveWeatherDynamics, WEATHER_DEBUFFS, weatherDebuffFactors, windSpeedFactor, fogSightMult,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -6522,7 +6522,10 @@ export class BattleSim {
   }
 
   /** 索敵合法性(單一縫:全掃 / 網格 / _acquireCached 快取沿用三路同吃;d = 已算好的 2D 距離)。
-   *  回 true = 不可鎖定;條款自舊制 _acquireTarget 逐字搬入,語意一字未動。 */
+   *  回 true = 不可鎖定;條款自舊制 _acquireTarget 逐字搬入,語意一字未動。
+   *  濃霧索敵(2026-09-05):收購包絡與權威視野同率縮減(`fogSightMult`,bot/玩家吃同一支)——
+   *  小兵/塔/主堡/第三方在霧裡與真人一樣變瞎子。晴天 mult = 1 ⇒ 與舊制逐位元相同。
+   *  乘在射程包絡上而不是驗 sight:主堡射程(310)大於視野(230)是既有設計,驗 sight 會連晴天一起砍主堡。 */
   _tgBlockedD(e, u, wd, t, d) {
     if (this._blinded(e)) return true;   // bot/NPC 被閃到時不能索敵
     if (t.side === e.side || t.neutral || t.hp <= 0) return true;   // 中立障礙不當目標
@@ -6538,6 +6541,7 @@ export class BattleSim {
     const ty = t.hero ? (t.y || 0) : this._sightY(t);
     const maxH = weaponMaxHoriz(u.range * this._altRange(e, t, wd), ty - ey);
     if (d > maxH) return true;   // 射程包絡:上段球體/中下段 60° 圓錐體
+    if (d > maxH * fogSightMult(this.curWeatherVec?.fog ?? 0)) return true;   // 濃霧:包絡同率縮(晴天 ×1 不動)
     return false;
   }
 
@@ -6774,10 +6778,12 @@ export class BattleSim {
     return this._visMemo;
   }
 
-  /** 一方目前的視野來源(英雄 + 小兵 + 塔 + 主堡,各自 sight 半徑;瞄準模式加成視野) */
+  /** 一方目前的視野來源(英雄 + 小兵 + 塔 + 主堡,各自 sight 半徑;瞄準模式加成視野;
+   *  天氣濃霧等比縮減:瞄準加成之後再乘 `fogSightMult`,狙擊/步行同率,客戶端 `_mmVision` 鏡像) */
   _visionSources(side) {
     const m = this._visMemoFor();
     if (m.src[side]) return m.src[side];
+    const fogMult = fogSightMult(this.curWeatherVec?.fog ?? 0);   // 天氣霧:全員同率縮視野
     const sources = [];
     for (const e of this.ents.values()) {
       if (e.side !== side || e.hp <= 0) continue;
@@ -6785,7 +6791,7 @@ export class BattleSim {
       if (this._blinded(e)) continue;    // 閃光彈:受害單位不再提供視野
       const sight = UNITS[e.kind]?.sight;
       if (sight == null) continue;
-      let r = e.hero && e.aiming ? sight * GAME.AIM_SIGHT_MULT : sight;
+      let r = (e.hero && e.aiming ? sight * GAME.AIM_SIGHT_MULT : sight) * fogMult;
       // 迷霧內敵軍視野縮減至 1/3 (荒原天幕:神鷹迷霧界)
       if (this.fogs?.length) {
         for (const fog of this.fogs) {

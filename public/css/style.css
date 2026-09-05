@@ -530,6 +530,17 @@ body.aiming .crosshair::after { height: 2px; }
 }
 .hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
 @keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
+/* 天氣濃霧遮罩:opacity 由 game.js 每幀依 effectiveFog 推(0~1)。霧白色 radial —— 中央較透
+   (視野內)、邊緣濃(視野外),讓「看不到」讀成「被霧擋住」而不是敵機憑空消失。漸層形狀由
+   main.js 每幀按密度重建(洞徑隨視野倍率、狙擊模式錨定鏡圈),這裡的 background 只是首幀回退。
+   狙擊模式下鏡圈已等比縮小,罩子照樣蓋在圈內。z 8 同 env-fog(HUD 之下,不擋讀數);DOM 排在 env-fog
+   之後 ⇒ 火場煙塵與天氣濃霧可疊加。transition 只放 opacity(每幀由 JS 驅動的值不加過渡相爭)。 */
+.weather-fog {
+  position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+  transition: opacity 0.5s ease-out;
+  background: radial-gradient(ellipse at center,
+    rgba(200, 208, 215, 0.06) 0%, rgba(200, 208, 215, 0.30) 55%, rgba(205, 212, 218, 0.75) 100%);
+}
 
 /* 受擊濺血:座艙玻璃上的半透明血漬。z 8 同 hurt-vig/env-fog(HUD 之下不擋讀數),DOM 排在
    env-fog 之後 ⇒ 同層時疊在暈影之上 = 血在玻璃上、霧在玻璃外。opacity 由 game.js 每幀依
