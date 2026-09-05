@@ -200,6 +200,8 @@ export class BattleSim {
     // 權威只有這一份(_creepMul 是唯一讀取縫);客戶端商店讀快照的 cu 欄(唯讀顯示),
     // 購買一律走 buy(pid, 'creep', lane)。長度於下方 this.lanes 定案後補齊。
     this.creepUpg = { SWARM: [], STEEL: [] };
+    this._cuVer = 0;   // 快照靜態欄版本:cu 變動才重送(客戶端 `if (m.cu)` 累積,缺席沿用上一份)
+    this._sgVer = 0;   // 同上,sg 欄(劇情戰役攻堅階段)
     // 攻堅順序(劇情戰役專用;見 data.js SIEGE)。旗標由開房的 battleConfig 帶進來,
     // 一般對戰恆 false ⇒ 下面兩張表全空、`siegeLocked()` 恆 false = 逐位元同舊制。
     this.siege = !!config.siege;
@@ -1455,6 +1457,7 @@ export class BattleSim {
     if (open === this._siegeOpen[t.side]) return;
     const fell = this._siegeOpen[t.side];
     this._siegeOpen[t.side] = open;
+    this._sgVer = (this._sgVer | 0) + 1;
     if (this.siege) this.events.push({ e: 'siege', side: t.side, stage: fell });
   }
 
@@ -1643,7 +1646,7 @@ export class BattleSim {
       // 逐階存活數點名:`_spawnStructures` 在建構期就數完了(那時還沒有英雄)⇒ BOSS 進場時
       // MUST 自己補記一筆,否則它守的那一階在鎖血眼裡是空的 —— 前線 BOSS 還活著中段就解鎖了。
       const left = this._siegeLeft[side];
-      if (left) { left[sq.bossStage] = (left[sq.bossStage] || 0) + 1; this._siegeOpen[side] = siegeOpenStage(left); }
+      if (left) { left[sq.bossStage] = (left[sq.bossStage] || 0) + 1; this._siegeOpen[side] = siegeOpenStage(left); this._sgVer = (this._sgVer | 0) + 1; }
       // 區域 BOSS 關卡的點名(見 siegeHpFloor):同一階可能不只一名(5 名 BOSS = 前中後 1:2:2)
       this._bossLeft[side][sq.bossStage] = (this._bossLeft[side][sq.bossStage] || 0) + 1;
     }
@@ -5079,6 +5082,7 @@ export class BattleSim {
     if (h.money < CREEP_UPG.PRICE) return `資金不足(小兵強化需 $${CREEP_UPG.PRICE})`;
     h.money -= CREEP_UPG.PRICE;
     arr[li] = lvl + 1;
+    this._cuVer = (this._cuVer | 0) + 1;
     // 全陣營共用 ⇒ 事件帶 side/lane(客戶端播報給同陣營全員,不是只有買的人)
     this.events.push({ e: 'creepUp', pid: h.pid, side: h.side, lane: li, lvl: arr[li] });
     return null;
@@ -5752,9 +5756,11 @@ export class BattleSim {
     this._tickSingularity(dt);
 
     // 小兵 / 塔 / 主堡行為
-    this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
+    // 單次展開共用:兩迴圈之間無 ents 變異(_buildTickIndex 不碰 ents)⇒ 與各展一次逐位元同義,省一份全量複製。
+    const _all = [...this.ents.values()];
+    this._structs = _all.filter((s) => s.kind === 'tower' || s.kind === 'base');
     this._buildTickIndex();   // 索敵網格 + (side|lane) 推擠分桶:一趟建好,tick 尾清空
-    for (const e of [...this.ents.values()]) {
+    for (const e of _all) {
       // 集束轟炸機/護衛機/極音速飛彈/神木/暗月/石板/自律部隊:由各自的 _tick* 管、自己不推線
       if (e.hero || e.neutral || e.decoy || e.kami || e.hyper || e.isTree || e.isMoon || e.isSlab || e.summoned || e.hp <= 0) continue;
       const u = UNITS[e.kind];
@@ -6805,9 +6811,19 @@ export class BattleSim {
     if (e.hero && (e.stealthUntil || 0) > this.t) return false;   // 匿蹤:連視野內也看不到
     // 迷霧保護:迷霧外敵軍無法看見迷霧內部友軍 (只有友方或身處同一迷霧內部的敵軍可看見)
     if (this.fogs?.length) {
-      for (const fog of this.fogs) {
+      for (let fi = 0; fi < this.fogs.length; fi++) {
+        const fog = this.fogs[fi];
         if (fog.until > this.t && fog.side === e.side && dist2d(e.x, e.z, fog.x, fog.z) <= fog.r) {
-          sources = sources.filter(([sx, sz]) => dist2d(sx, sz, fog.x, fog.z) <= fog.r);
+          // 同 tick 同 (side|eside|霧)共用一份裁後來源:filter 純函式,逐位元同逐隻重算。
+          // 只在正典來源(_visionSources 那份)上共用 —— 自組 sources(測試/特例)照舊現算,語意不變。
+          const m2 = this._visMemoFor();
+          if (sources === m2.src[side]) {
+            m2.fogSrc ??= {};
+            const fk = `${side}|${e.side}|${fi}`;
+            sources = m2.fogSrc[fk] ??= sources.filter(([sx, sz]) => dist2d(sx, sz, fog.x, fog.z) <= fog.r);
+          } else {
+            sources = sources.filter(([sx, sz]) => dist2d(sx, sz, fog.x, fog.z) <= fog.r);
+          }
           break;
         }
       }
@@ -6864,14 +6880,27 @@ export class BattleSim {
       ents.push(this._serializeEnt(e));
     }
     const { ev, sm, lt, ad } = this._frame();
+    // 靜態欄低頻:cu/sg 變動才重送 + 每 32 tick 全量基線(重連/遲到者 ≤4 秒補齊)。
+    // 客戶端 `if (m.cu)`/`if (m.sg)` 累積、缺席沿用 ⇒ 缺欄語意不變;`snapshot()`(無霧全量)恆帶。
+    this._staticSent ??= {};
+    const sk = side || 'all';
+    const sent = (this._staticSent[sk] ??= { cu: -1, sg: -1 });
+    const base = side == null || (this._tickN % 32 === 0);
+    const cuV = this._cuVer | 0, sgV = this._sgVer | 0;
+    const cuPart = (base || sent.cu !== cuV)
+      // 陣營小兵強化等級(唯讀顯示;每側每兵線一個整數)—— 商店與 HUD 讀這份權威值,MUST NOT 客戶端自算
+      ? { cu: { SWARM: [...this.creepUpg.SWARM], STEEL: [...this.creepUpg.STEEL] } } : {};
+    // 攻堅開放階段(只在劇情戰役發;一般對戰整個欄位不存在 ⇒ 快照逐位元同舊制)。
+    // HUD 的「目前該打哪一階」MUST 讀這一份權威值,MUST NOT 客戶端自己數塔(A1 家族)。
+    const sgPart = this.siege && (base || sent.sg !== sgV)
+      ? { sg: { SWARM: this._siegeOpen.SWARM, STEEL: this._siegeOpen.STEEL } } : {};
+    if (cuPart.cu) sent.cu = cuV;
+    if (sgPart.sg) sent.sg = sgV;
     return {
       t: 'snap', time: Math.round(this.t),
       nextWave: Math.max(0, Math.round(this.nextWaveAt - this.t)), wave: this.wave,
-      // 陣營小兵強化等級(唯讀顯示;每側每兵線一個整數)—— 商店與 HUD 讀這份權威值,MUST NOT 客戶端自算
-      cu: { SWARM: [...this.creepUpg.SWARM], STEEL: [...this.creepUpg.STEEL] },
-      // 攻堅開放階段(只在劇情戰役發;一般對戰整個欄位不存在 ⇒ 快照逐位元同舊制)。
-      // HUD 的「目前該打哪一階」MUST 讀這一份權威值,MUST NOT 客戶端自己數塔(A1 家族)。
-      ...(this.siege ? { sg: { SWARM: this._siegeOpen.SWARM, STEEL: this._siegeOpen.STEEL } } : {}),
+      ...cuPart,
+      ...sgPart,
       ents, ev, sm, lt, ad, stats: this.stats, over: this.over, winner: this.winner,
     };
   }
