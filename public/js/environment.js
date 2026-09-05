@@ -10,7 +10,6 @@ import {
   clockHour, phaseBlend, sunDirAt, moonDirAt, bodyFade,
   SHADOW, shadowRangeM, weatherAtTime, WEATHER_DYNAMICS, computeSolarSchedule, setSolarSchedule,
   weatherVectorAt, resolveWeatherDynamics, WEATHER_ATTRS, WEATHER_PRESETS,
-  UNITS,
 } from './data.js';
 import { setCelSun, WIND, celWindTime, INK_INFO_DECL, INK_INFO_NONE, setWeatherDynamics } from './toon.js';
 import { mulberry32 } from './rng.js';
@@ -1085,15 +1084,21 @@ export function applyEnvironment(scene, terrain, env, opts = {}) {
       const h = clockHour(startTime, elapsedS, sched.startH);
       setHour(h);
 
-      // 4. 能見度與空氣透視動態調整 (濃霧最濃時壓至 1 個砲塔射程 UNITS.tower.range)
-      const denseFogFarM = UNITS.tower?.range ?? 155;
-      const denseFogNearM = denseFogFarM * 0.10;
+      // 4. 能見度與空氣透視動態調整(2026-09-06 改制:渲染霧錨定權威視野 ——
+      // 敵機在視野邊界消失時 3D 必須已經一片白,否則消失讀成憑空不見。
+      // 舊制只在最濃霧壓至塔射程:霧預設(d=0.6,span 1000)時 far ~630m、near ~150m,
+      // 而步行視野只剩 72m ⇒ 霧連開始都還沒開始,遠方一片清明,正是「遠方不夠濃」。
+      // 錨:END_FAR ≈ 1.5 × 全霧步行視野(120/3=40m)⇒ 消失點落在 smoothstep ~0.6(約六成白);
+      // 權重 w=(1-eff)^5:eff=0 恆等舊制(clear 逐像素相同),eff≳0.5 幾乎全壓,全程連續無跳變。
+      // 狙擊鏡/小兵視野不可能同時對上單一全域霧 —— 取步行英雄為錨(小兵消失點偏清、
+      // 狙擊鏡內偏白,皆為同一條曲線的兩端;狙擊快照視野加成照吃,小地圖標記不受影響)。)
+      const FOG_SIGHT_FAR_M = 65;
+      const FOG_SIGHT_NEAR_M = FOG_SIGHT_FAR_M * 0.10;
       const normalFogNear = span * curDyn.fogNear;
       const normalFogFar = span * curDyn.fogFar;
-      // 只有在最濃霧時 (effectiveFog 趨近 1.0) 能見度才精準壓至 1 個砲塔射程
-      const effFog = Math.pow(Math.max(0, curDyn.effectiveFog), 1.8);
-      const actualFogFar = THREE.MathUtils.lerp(normalFogFar, Math.min(normalFogFar, denseFogFarM), effFog);
-      const actualFogNear = THREE.MathUtils.lerp(normalFogNear, Math.min(normalFogNear, denseFogNearM), effFog);
+      const fogW = Math.pow(1 - (curDyn.effectiveFog ?? 0), 5);
+      const actualFogFar = normalFogFar * fogW + FOG_SIGHT_FAR_M * (1 - fogW);
+      const actualFogNear = normalFogNear * fogW + FOG_SIGHT_NEAR_M * (1 - fogW);
 
       scene.fog.near = actualFogNear;
       scene.fog.far = actualFogFar;

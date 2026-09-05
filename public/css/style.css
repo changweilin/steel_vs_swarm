@@ -539,7 +539,7 @@ body.aiming .crosshair::after { height: 2px; }
   position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
   transition: opacity 0.5s ease-out;
   background: radial-gradient(ellipse at center,
-    rgba(200, 208, 215, 0.06) 0%, rgba(200, 208, 215, 0.30) 55%, rgba(205, 212, 218, 0.75) 100%);
+    rgba(200, 208, 215, 0.06) 0%, rgba(200, 208, 215, 0.30) 55%, rgba(205, 212, 218, 0.90) 100%);
 }
 
 /* 受擊濺血:座艙玻璃上的半透明血漬。z 8 同 hurt-vig/env-fog(HUD 之下不擋讀數),DOM 排在

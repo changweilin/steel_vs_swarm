@@ -2879,8 +2879,8 @@ function makeHud() {
     // 2026-09-06 使用者「半徑外濃、半徑內清的分界要看得出來」:漸層不再是固定形狀,
     // 每幀按當下密度重建 —— 一般模式清澈洞徑吃 `weatherFogStops`(霧越濃洞越小),
     // 狙擊模式直接錨定鏡圈(`scopeRvminFog` 的同一段數值,與 scope-vig 同一個圓)。
-    // 2026-09-06 使用者「洞外透明度隨霧指數降、100% 剩 25%」:濃度響應只住元素 opacity,
-    // 漸層洞外 alpha 恆 `WEATHER_FOG_MASK.EDGE_A`(0.75)不再隨密度加乘 ⇒ 實得洞外不透明度 = 0.75×密度。
+    // 2026-09-06 使用者「洞外透明度隨霧指數降、100% 剩 10%」:濃度響應只住元素 opacity,
+    // 漸層洞外 alpha 恆 `WEATHER_FOG_MASK.EDGE_A`(0.90)不再隨密度加乘 ⇒ 實得洞外不透明度 = 0.90×密度。
     weatherFog: (d) => {
       const k = Math.max(0, Math.min(1, d || 0));
       const el = $('weatherFog');

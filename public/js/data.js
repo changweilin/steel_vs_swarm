@@ -1017,10 +1017,10 @@ export const scopeRvminFog = (fireFog = 0, fogD = 0) =>
 // 全屏霧罩的「清澈洞」半徑吃視野倍率:霧越濃、洞越小,洞外迅速壓到不透明 ——
 // 只推整體 opacity 的話,霧天看起來只是整片泛白,看不出「哪裡是視野邊界」。
 // 狙擊模式不吃這一支:鏡圈本身就是正圓邊界,main.js 直接拿 `scopeRvminFog` 的數值當漸層錨。
-export const WEATHER_FOG_MASK = { R0_CLEAR: 0.30, R0_SPAN: 0.25, R1_PAD: 0.30, EDGE_A: 0.75 };
+export const WEATHER_FOG_MASK = { R0_CLEAR: 0.30, R0_SPAN: 0.25, R1_PAD: 0.30, EDGE_A: 0.90 };
 /** 密度 0~1 → 霧罩漸層 {r0 清澈洞半徑(0~1 漸層比例), r1 全濃半徑}。
  *  r0 隨視野倍率(霧越濃洞越小);洞外不透明度恆 EDGE_A —— 濃度響應只住元素 opacity
- *  (main.js `weatherFog` 推密度),不再兩處相乘 ⇒ 100% 時洞外透明度剩 25%。 */
+ *  (main.js `weatherFog` 推密度),不再兩處相乘 ⇒ 100% 時洞外透明度剩 10%。 */
 export const weatherFogStops = (d = 0) => {
   const k = Math.max(0, Math.min(1, d || 0));
   const m = fogSightMultByDensity(k);   // 洞徑隨視野倍率:霧濃 ⇒ 視野小 ⇒ 洞小
