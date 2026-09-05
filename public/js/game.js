@@ -1090,20 +1090,11 @@ export class BattleClient {
   }
 
   /**
-   * 兵線指引:不畫連續線,改成沿線的「ㄑ 字形」推進箭頭(馬力歐賽車加速板語彙)。
-   * 造型 —— 每支箭 = 兩根扁平橫桿在頂點交會的 chevron,**貼在地面上**(HOVER 只留 0.3m
-   *   離地淨空防 z-fighting;桿身厚度 0.12m)—— 浮在空中的箭頭地面玩家看不到(視線被機體
-   *   與地物擋掉),**MUST NOT** 再把它抬高成空中路標。
-   * 佈點 —— 直線段每 ARROW_GAP 一支;航向變化 > TURN_RAD 的轉角「一定」有一支。
-   * 動畫 —— 直線:原地沿前進方向前送 + 脹縮;**轉角:整支箭沿著兵線「走過那個彎」**
-   *   (在轉角前後 TURN_RUN 公尺之間來回巡行,朝向恆為該點的切線)⇒ 玩家看到的是
-   *   一支示範轉彎路徑的箭頭,不是一個靜止的折角。
-   * 姿態 —— **貼地形坡度**:每根桿的傾角由自己兩端的地表高度決定(不是統一抬頭角)。
+   * 兵線指引:沿每條兵線中心兩側各一條虛線緞帶(獨立幾何,不畫在道路上)——
+   * 虛段朝敵方主堡流動表方向。高度吃行進式表面剖面(橋上走橋面、隧道走路面)。
+   * 純表現層,不進碰撞/射線/描邊;顏色吃 data.js LANE_COLORS(中性引導色)。
    */
   _initLanes() {
-    const ARROW_GAP = 110, MIN_GAP = 52, TURN_RAD = 0.22;
-    const BAR_L = 5.5, SPREAD = 0.62;   // 桿長 / chevron 的半張角(rad)
-    const TURN_RUN = 60;                // 轉角箭頭的巡行長度(轉角前後各半)
     this.lanePts = this.cfg.lanes.map((lane) => lane.map(([lat, lng]) => {
       const [x, z] = llToWorld(lat, lng, this.center);
       return new THREE.Vector3(x, this.terrain.heightAt(x, z) + 2, z);
@@ -1113,8 +1104,23 @@ export class BattleClient {
     const fb = this.cfg.bases?.[this.side ? foe : 'STEEL'];
     const foeW = fb ? llToWorld(fb[0], fb[1], this.center) : null;
 
-    this.laneArrows = [];
     this.laneSideLines = [];
+    // 兩側線共用虛線貼圖(白段實、空段透):u 沿線每 DASH_LEN 一循環,動 offset.x 前進。
+    // 一張貼圖全線共用 ⇒ 各線同速、同向(每線 +s 皆已反轉朝敵方主堡)。
+    {
+      const cv = document.createElement('canvas');
+      cv.width = 128; cv.height = 8;
+      const g2d = cv.getContext('2d');
+      g2d.clearRect(0, 0, 128, 8);
+      g2d.fillStyle = '#ffffff';
+      g2d.fillRect(0, 0, 64, 8);
+      const tex = new THREE.CanvasTexture(cv);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      this._laneDashTex = tex;
+      this._laneDashLen = 12;    // 一循環實體長(6 實 + 6 虛)
+      this._laneDashSpeed = 10;  // 前進速度(m/s)
+    }
     this.lanePts.forEach((raw, li) => {
       const pts = raw.map((p) => [p.x, p.z]);
       if (foeW && Math.hypot(pts[0][0] - foeW[0], pts[0][1] - foeW[1])
@@ -1132,37 +1138,9 @@ export class BattleClient {
         const l = Math.hypot(dx, dz) || 1;
         return [pts[i - 1][0] + dx * f, pts[i - 1][1] + dz * f, dx / l, dz / l];
       };
-      // ① 轉角(優先佔位):整支箭之後會沿線巡行走過這個彎
-      const stations = [];
-      for (let i = 1; i < n - 1; i++) {
-        const a = Math.atan2(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
-        const b = Math.atan2(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
-        const turn = Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a)));
-        if (turn < TURN_RAD) continue;
-        if (stations.length && cum[i] - stations[stations.length - 1].s < TURN_RUN) continue;   // 連續彎共用一支巡行箭
-        stations.push({ s: cum[i], turn: true });
-      }
-      // ② 直線段等距補點(離任何轉角箭頭太近就略過)
-      const turns = stations.map((t) => t.s);
-      for (let s = ARROW_GAP * 0.5; s < total - 8; s += ARROW_GAP) {
-        if (turns.some((t) => Math.abs(t - s) < Math.max(MIN_GAP, TURN_RUN * 0.6))) continue;
-        stations.push({ s, turn: false });
-      }
-      // ③ 己方主堡(反轉後 s≈0 端)=玩家重生點:在堡外(base R 22)沿主路線補兩支近距箭頭,
-      //    重生後一眼看出往哪推。刻意較密(引導離開出生點),不受 ARROW_GAP 節流。
-      for (const s of [26, 46]) {
-        if (s < total - 8 && !stations.some((t) => Math.abs(t.s - s) < 18)) stations.push({ s, turn: false });
-      }
-      stations.sort((a, b) => a.s - b.s);
-      if (!stations.length) return;
-
-      const items = stations.map((st, k) => {
-        const [x, z, dx, dz] = at(st.s);
-        return { x, z, ry: Math.atan2(dx, dz), s: st.s, turn: st.turn, ph: k * 0.9 };
-      });
       // 兵線表面剖面(行進式取樣):像小兵一樣從線頭沿線走一遍,帶著「上一步的高度」問
       // surfaceAt ⇒ 上橋段走橋面、穿隧道段走隧道路面。舊做法 _surf(x, z, Infinity) 會把
-      // 穿隧道的箭頭放到上方山體、把從橋下經過的箭頭吸上別條路的橋面。
+      // 穿隧道的取樣放到上方山體、把從橋下經過的取樣吸上別條路的橋面。
       const PROF_SEG = 4;
       const prof = [];
       let py = this.terrain.heightAt(pts[0][0], pts[0][1]);
@@ -1177,35 +1155,28 @@ export class BattleClient {
         return prof[i] + (prof[j] - prof[i]) * (f - i);
       };
       const color = LANE_COLORS[li % LANE_COLORS.length];
-      // 扁平桿(幾何自頂點朝 −z 延伸):厚度 0.12 = 貼地薄片,不是空中的立體箭頭
-      const bar = () => new THREE.BoxGeometry(1.6, 0.12, BAR_L).translate(0, 0, -BAR_L / 2);
-      const mat = () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false });
-      const im = [new THREE.InstancedMesh(bar(), mat(), items.length),
-                  new THREE.InstancedMesh(bar(), mat(), items.length)];
-      for (const m of im) {
-        m.frustumCulled = false;
-        m.renderOrder = 3;
-        m.userData.noOutline = true;
-        this.scene.add(m);
-      }
-      this.laneArrows.push({ im, items, barL: BAR_L, at, total, run: TURN_RUN, spread: SPREAD, surfY });
-      // 兵線兩側獨立引導線(2026-09-06):不畫在道路上,沿兵線中心兩側各一條連續緞帶。
+      // 兵線兩側獨立引導線(2026-09-06):不畫在道路上,沿兵線中心兩側各一條虛線緞帶。
       // 偏移/寬/抬高全在此處常數,高度吃同一份 surfY 剖面(橋上走橋面、隧道走路面)。
+      // 虛實由共用 dash 貼圖表現,u = s / DASH_LEN,動 offset.x 朝 +s(敵方主堡)前進。
       // 純表現層靜態幾何,不進碰撞/射線/描邊;顏色吃 LANE_COLORS(中性引導色)。
       {
         const SIDE_OFF = 7, SIDE_W = 0.9, SIDE_HOVER = 0.55, SIDE_STEP = 4;
-        const pos = [], idx = [];
+        const DASH_LEN = this._laneDashLen || 12;
+        const pos = [], uv = [], idx = [];
         let base = 0;
         for (const side of [1, -1]) {
           let prev = -1;
           for (let s = 0; s <= total; s += SIDE_STEP) {
-            const [cx, cz, dx, dz] = at(Math.min(s, total));
+            const sc = Math.min(s, total);
+            const [cx, cz, dx, dz] = at(sc);
             const nx = dz, nz = -dx;
-            const y = surfY(Math.min(s, total)) + SIDE_HOVER;
+            const y = surfY(sc) + SIDE_HOVER;
             pos.push(
               cx + nx * (side * SIDE_OFF - SIDE_W / 2), y, cz + nz * (side * SIDE_OFF - SIDE_W / 2),
               cx + nx * (side * SIDE_OFF + SIDE_W / 2), y, cz + nz * (side * SIDE_OFF + SIDE_W / 2),
             );
+            const u = sc / DASH_LEN;
+            uv.push(u, 0, u, 1);
             const k = base + (prev + 1) * 2;
             if (prev >= 0) idx.push(k - 2, k - 1, k, k - 1, k + 1, k);
             prev++;
@@ -1214,10 +1185,12 @@ export class BattleClient {
         }
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
         g.setIndex(idx);
         g.computeVertexNormals();
         const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide,
+          color, map: this._laneDashTex, transparent: true, opacity: 0.9,
+          depthWrite: false, side: THREE.DoubleSide,
         }));
         mesh.frustumCulled = false;
         mesh.renderOrder = 2;
@@ -1226,11 +1199,6 @@ export class BattleClient {
         this.laneSideLines.push(mesh);
       }
     });
-    this._arrowM = new THREE.Matrix4();
-    this._arrowQ = new THREE.Quaternion();
-    this._arrowE = new THREE.Euler(0, 0, 0, 'YXZ');   // 先轉向(Y)再依坡度俯仰(X)
-    this._arrowP = new THREE.Vector3();
-    this._arrowS = new THREE.Vector3(1, 1, 1);
     this._buildLaneSurf();   // 兵線貼地剖面場(NPC 站位穩定種子 + 小地圖分級共用同一份)
   }
 
@@ -1296,57 +1264,14 @@ export class BattleClient {
   }
 
   /**
-   * 兵線箭頭動畫(全部貼地):
-   *   直線段 — ㄑ 字 chevron 原地沿前進方向前送 + 脹縮(加速板的流動感)。
-   *   轉角   — 同一支 chevron **沿兵線巡行走過彎道**(轉角前後各 run/2),朝向恆取該點切線
-   *            ⇒ 箭頭自己示範怎麼轉。
-   * 姿態貼地形:每根桿以「頂點 → 桿尾」兩點的地表高度差定俯仰角 ⇒ 桿身平行坡面。
+   * 兵線兩側虛線前進:u 沿 +s 朝敵方主堡,offset.x 遞減 ⇒ 虛段朝 +s 移動。
+   * 共用一張貼圖一次推進,純表現層。
    */
-  _updateLaneArrows(now) {
-    if (!this.laneArrows?.length) return;
-    const M = this._arrowM, Q = this._arrowQ, E = this._arrowE, P = this._arrowP, S = this._arrowS;
-    // 離地淨空:_surf() 在一般路段回傳「裸地形」高度,但實際鋪面比地形抬高 ROAD_LIFT(biomes.js,0.45)
-    // + 標線再抬高到 ~0.62 —— HOVER 若只有 0.3 會讓箭頭幾何埋進柏油下方,被路面 z-test 擋住。
-    // 0.85 留出安全餘裕,同時仍遠低於視線高度,不會變成空中路標。
-    const HOVER = 0.85;
-    for (const la of this.laneArrows) {
-      const L = la.barL, SP = la.spread;
-      la.items.forEach((it, i) => {
-        let ax, az, ry, sc, sPos;
-        if (it.turn) {
-          // 巡行:沿線 s 在 [s0 − run/2, s0 + run/2] 之間循環(14 m/s),朝向取切線
-          const u = ((now * 14 + it.ph * 20) % la.run) - la.run / 2;
-          sPos = Math.max(0, Math.min(la.total, it.s + u));
-          const [px, pz, dx, dz] = la.at(sPos);
-          ax = px; az = pz;
-          ry = Math.atan2(dx, dz);
-          const edge = 1 - Math.abs(u) / (la.run / 2);            // 兩端縮小 = 淡出淡入
-          sc = 0.55 + 0.55 * Math.min(1, edge * 2.5);
-        } else {
-          const t = now * 1.7 + it.ph;
-          const flow = (t % (Math.PI * 2)) / (Math.PI * 2) * 7;   // 原地前送 0~7m 後回捲
-          sc = 0.75 + 0.35 * Math.sin(t);
-          ry = it.ry;
-          ax = it.x + Math.sin(ry) * flow;
-          az = it.z + Math.cos(ry) * flow;
-          sPos = Math.min(la.total, it.s + flow);
-        }
-        // 高度與坡度查「兵線表面剖面」(隧道內 = 隧道路面、橋上 = 橋面):
-        // 桿尾在頂點後方 ≈ L·cos(SP),坡度 = 剖面前後高差
-        const y0 = la.surfY(sPos);
-        const dy = la.surfY(Math.max(0, sPos - L * 0.81)) - y0;
-        // 兩根桿共用頂點、左右各張開 SP ⇒ 頂點朝前進方向的 ㄑ
-        for (const [k, yaw] of [[0, ry + SP], [1, ry - SP]]) {
-          E.set(Math.asin(Math.max(-0.9, Math.min(0.9, dy / L))), yaw, 0);  // 俯仰 = 沿線坡度
-          Q.setFromEuler(E);
-          P.set(ax, y0 + HOVER, az);
-          S.setScalar(sc);
-          M.compose(P, Q, S);
-          la.im[k].setMatrixAt(i, M);
-        }
-      });
-      la.im[0].instanceMatrix.needsUpdate = true;
-      la.im[1].instanceMatrix.needsUpdate = true;
+  _updateLaneDashes(now) {
+    if (!this.laneSideLines?.length) return;
+    if (this._laneDashTex) {
+      const cyc = (now * (this._laneDashSpeed || 10) / (this._laneDashLen || 12)) % 1;
+      this._laneDashTex.offset.x = -cyc;
     }
   }
 
@@ -9939,7 +9864,7 @@ export class BattleClient {
     this._updateDecoyBombs(dt);       // 餌機投彈拋擲動畫(2026-07-22)
     this._updateArcGuide();           // 榴彈拋物線瞄準指示(2026-07-22)
     this._updateGuideLaser();         // 雷射導引武器的第一人稱導引雷射(2026-07-23)
-    this._updateLaneArrows(now);
+    this._updateLaneDashes(now);
     this._updateMines(now);
     this._updateLoot(dt, now);
     this._updateAirdrop(dt, now);
