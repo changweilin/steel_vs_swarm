@@ -10836,6 +10836,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       dj: rnd(),
     };
     const foot = { x, z, r: (VEG_FOOT_R[type] ?? 1) * actualS };
+    // 優先序:兵線/塔位/主堡淨空(blocked)高於植被 ⇒ 足印圓盤掃 areaFree(單格驗擋不住大樹)
+    if (!areaFree(blocked, x, z, foot.r)) return;
     if (roadOccupied(foot) || vegFootIndex.near(foot)) return;
     items[type] ??= [];
     items[type].push(item);
@@ -11236,12 +11238,24 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     osmAreaObjectResult = buildOsmAreaObjects(group, osmData.areas, {
       maxObjects: 480,
       heightAt: (x, z) => terrain.heightAt(x, z),
-      blocked: (x, z, r) => blocked.has(cellKey(x, z)) || !occ.free(x, z, r, 1)
+      // 優先序:兵線/塔位/主堡淨空高於圖資物件 ⇒ 足印半徑掃 areaFree(單格驗擋不住設施)
+      blocked: (x, z, r) => !areaFree(blocked, x, z, r) || !occ.free(x, z, r, 1)
         || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5),
       materialOf: (_generator, row) => envMat(row.color, { wash: 0.38, cool: 0.42 }),
     });
     blockers.push(...osmAreaObjectResult.blockers);
     for (const b of osmAreaObjectResult.blockers) occ.add(b.x, b.z, b.r);
+    // 優先序:圖資有標記物件(建築/公園/球場)高於樹木背景 ⇒ 先佔 vegFootIndex,
+    // 再把已散佈植被中與圖資物件互穿的拔除(零 rnd 消耗,只淘汰不重抽,序列不漂移)
+    for (const b of osmAreaObjectResult.blockers) vegFootIndex.add({ x: b.x, z: b.z, r: b.r });
+    for (const type in items) {
+      if (GIANT_DEFS[type] || !items[type]?.length) continue;
+      const rr = VEG_FOOT_R[type] ?? 1;
+      const kept = items[type].filter((it) => !osmAreaObjectResult.blockers.some(
+        (b) => Math.hypot(it.x - b.x, it.z - b.z) < rr * it.s + b.r));
+      placed -= items[type].length - kept.length;
+      items[type] = kept;
+    }
     const areaById = new Map(osmData.areas.map((a) => [a.sourceId, a]));
     const append = (entry, reason) => {
       const area = areaById.get(entry?.sourceId);
@@ -11402,6 +11416,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         const ts = plotSeed(Math.round(wx), Math.round(wz), 1, 5);
         // 樹種走樣(2026-08-05):約三成換白樺 —— 同一座公園不再整排同款(落點雜湊,零 rnd)
         const sp = frac(ts, 5) < 0.3 ? 'birch' : 'broadleaf';
+        // 園樹同樣吃互斥:淨空走廊/既有植被/圖資物件其一擋住就不種(全由雜湊推導,零 rnd)
+        const tf = { x: wx, z: wz, r: (VEG_FOOT_R[sp] ?? 1) * ls * (VEG_SCALE[sp] || 1) };
+        if (!areaFree(blocked, wx, wz, tf.r) || vegFootIndex.near(tf)) continue;
+        vegFootIndex.add(tf);
         (items[sp] ??= []).push({
           x: wx, y: terrain.heightAt(wx, wz), z: wz, s: ls * (VEG_SCALE[sp] || 1),
           ry: frac(ts, 1) * Math.PI * 2,

@@ -1228,7 +1228,8 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     // cols/rows:聚落場的退化保險 `URBAN_MIN_PEAK` 由它們推導(最小一塊補間街廓)
     INFILL: { gap: 2, maxSeeds: 160, cols: [3, 6], rows: [3, 6] }, OVER: { bldH: 1, bldCap: 170 },
     FACADES: { commercial: [0, 1, 2], residential: [0, 1] },
-    MAX_BUILDINGS: 240, MAX_INFILL: 1200, VEG_SCALE: { broadleaf: 1 },
+    MAX_BUILDINGS: 240, MAX_INFILL: 1200, VEG_SCALE: { broadleaf: 1, birch: 1 },
+    VEG_FOOT_R: { broadleaf: 1, birch: 1 }, vegFootIndex: { near: () => false, add: () => {} },
     areaFree: () => true, blockArea: () => {}, terrainEnvCode: () => 0,
     flatRadiusAt: (t, x, z, r) => r, sinkBaseY: () => 50,
     CIVIC_KINDS: M.CIVIC_KINDS, CIVIC_TREES: M.CIVIC_TREES, planBlocks: M.planBlocks,
