@@ -226,6 +226,22 @@ export const MAPGEO = {
   },
 };
 
+// ---- 兵線識別色(唯一縫:3D 箭頭 + 獨立兩側線 + 小地圖 + 選圖共用)----
+// MUST 避開陣營代表色:SWARM 琥珀 #ffb300 / STEEL 冷藍 #4fc3f7 /
+// GUER 叢林綠 #7ed957 / MILI 鏽橙 #e0714f ⇒ 選白 + 紫系(中性引導色)。
+// 道路渲染一律不動(路面底色/寬度/標線維持原樣),兵線線條為獨立幾何。
+export const LANE_COLORS = [0xf2f2f2, 0xb388ff, 0x7c4dff];
+/** 兵線色(hex) → 標線桶頂點色 [r,g,b](0~1)。推導不手寫。 */
+export const laneMarkColor = (li) => {
+  const h = LANE_COLORS[((li % LANE_COLORS.length) + LANE_COLORS.length) % LANE_COLORS.length];
+  return [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
+};
+/** 兵線色(hex) → 2D 地圖 CSS 色('#rrggbb')。推導不手寫。 */
+export const laneCssColor = (li) => {
+  const h = LANE_COLORS[((li % LANE_COLORS.length) + LANE_COLORS.length) % LANE_COLORS.length];
+  return `#${h.toString(16).padStart(6, '0')}`;
+};
+
 // ---- 戰場涵蓋範圍(地形 bbox)----
 // 兵線/主堡與地圖邊界(空氣牆)之間的保證淨空(遊戲公尺)。真實道路兵線會蜿蜒到
 // 對稱方框之外,若只給百分比 pad,最外側兵線頂點會貼著內縮 40m 的空氣牆(玩家沿線飛就撞牆)。

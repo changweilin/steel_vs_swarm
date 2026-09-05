@@ -21,7 +21,7 @@ import {
   SPEC_CAM, PLAYER_TPS, specViewNext, specViewLocked, lerpFPS, frictionFPS, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
   CREEP_UPG, DISSOLVE, dissolveOutAt, ULT_CAST_S,
-  WEATHER_DEBUFFS, windSpeedFactor,
+  WEATHER_DEBUFFS, windSpeedFactor, LANE_COLORS, laneCssColor,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -399,7 +399,6 @@ const heroView = (kind, ch, flying) => {
   }
   return VIEW_SHAPE[vis.proto || vis.creature || vis.ground] || VIEW_DEF;
 };
-const LANE_COLORS = [0xe6c34a, 0xe05c4a, 0x4ac3e6];
 
 // ---- 每幀熱路徑的共用暫存(彈道/準星每幀跑數十次,一次一顆 new 就是 GC 抖動的來源)----
 // 唯一紀律:**只准在同一個同步區塊內用完即丟**,MUST NOT 存進 bullets/effects 等跨幀結構。
@@ -1115,6 +1114,7 @@ export class BattleClient {
     const foeW = fb ? llToWorld(fb[0], fb[1], this.center) : null;
 
     this.laneArrows = [];
+    this.laneSideLines = [];
     this.lanePts.forEach((raw, li) => {
       const pts = raw.map((p) => [p.x, p.z]);
       if (foeW && Math.hypot(pts[0][0] - foeW[0], pts[0][1] - foeW[1])
@@ -1189,6 +1189,42 @@ export class BattleClient {
         this.scene.add(m);
       }
       this.laneArrows.push({ im, items, barL: BAR_L, at, total, run: TURN_RUN, spread: SPREAD, surfY });
+      // 兵線兩側獨立引導線(2026-09-06):不畫在道路上,沿兵線中心兩側各一條連續緞帶。
+      // 偏移/寬/抬高全在此處常數,高度吃同一份 surfY 剖面(橋上走橋面、隧道走路面)。
+      // 純表現層靜態幾何,不進碰撞/射線/描邊;顏色吃 LANE_COLORS(中性引導色)。
+      {
+        const SIDE_OFF = 7, SIDE_W = 0.9, SIDE_HOVER = 0.55, SIDE_STEP = 4;
+        const pos = [], idx = [];
+        let base = 0;
+        for (const side of [1, -1]) {
+          let prev = -1;
+          for (let s = 0; s <= total; s += SIDE_STEP) {
+            const [cx, cz, dx, dz] = at(Math.min(s, total));
+            const nx = dz, nz = -dx;
+            const y = surfY(Math.min(s, total)) + SIDE_HOVER;
+            pos.push(
+              cx + nx * (side * SIDE_OFF - SIDE_W / 2), y, cz + nz * (side * SIDE_OFF - SIDE_W / 2),
+              cx + nx * (side * SIDE_OFF + SIDE_W / 2), y, cz + nz * (side * SIDE_OFF + SIDE_W / 2),
+            );
+            const k = base + (prev + 1) * 2;
+            if (prev >= 0) idx.push(k - 2, k - 1, k, k - 1, k + 1, k);
+            prev++;
+          }
+          base += (prev + 1) * 2;
+        }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        g.setIndex(idx);
+        g.computeVertexNormals();
+        const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({
+          color, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide,
+        }));
+        mesh.frustumCulled = false;
+        mesh.renderOrder = 2;
+        mesh.userData.noOutline = true;
+        this.scene.add(mesh);
+        this.laneSideLines.push(mesh);
+      }
     });
     this._arrowM = new THREE.Matrix4();
     this._arrowQ = new THREE.Quaternion();
@@ -9749,12 +9785,12 @@ export class BattleClient {
       }
     }
     // 兵線:依立體交通分段畫線 —— 地面實線、高架橋 --- 虛線、地下道/隧道 ⋯ 點線
-    const cols = ['#e6c34a', '#e05c4a', '#4ac3e6'];
+    // 顏色吃 data.js laneCssColor 唯一縫(中性引導色,避開陣營色),MUST NOT 手寫色表。
     ctx.lineWidth = 1.5;
     ctx.globalAlpha = 0.7;
     this._mmLanes.forEach((samples, i) => {
       if (samples.length < 2) return;
-      ctx.strokeStyle = cols[i % cols.length];
+      ctx.strokeStyle = laneCssColor(i);
       let k = 0;
       while (k < samples.length - 1) {
         const gr = samples[k].grade;

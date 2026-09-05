@@ -10,7 +10,7 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit, laneCssColor } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -322,9 +322,8 @@ export class MapSelect {
     this._addLayer(L.circleMarker(cfg.bases.STEEL, {
       radius: 10, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
     }).bindTooltip('◆ 鋼鐵主堡', { permanent: true, direction: 'top' }), 'fav');
-    const colors = ['#e6c34a', '#e05c4a', '#4ac3e6'];
     cfg.lanes.forEach((lane, i) => {
-      this._addLayer(L.polyline(lane, { color: colors[i % 3], weight: 4, opacity: 0.85 }), 'fav');
+      this._addLayer(L.polyline(lane, { color: laneCssColor(i), weight: 4, opacity: 0.85 }), 'fav');
     });
     const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
     const dLat = half / R_EARTH * 180 / Math.PI;
@@ -508,11 +507,10 @@ export class MapSelect {
       radius: 12, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
     }).bindTooltip('◆ 鋼鐵主堡', { permanent: true, direction: 'top' }), 'cand');
 
-    const colors = ['#e6c34a', '#e05c4a', '#4ac3e6'];
     const names = cand.lanes.length === 1 ? ['中路']
       : cand.lanes.length === 2 ? ['上路', '下路'] : ['上路', '中路', '下路'];
     cand.lanes.forEach((lane, i) => {
-      this._addLayer(L.polyline(lane, { color: colors[i], weight: 4, opacity: 0.85 })
+      this._addLayer(L.polyline(lane, { color: laneCssColor(i), weight: 4, opacity: 0.85 })
         .bindTooltip(`${names[i]} 兵線`), 'lanes');
     });
     // 戰場邊界(以 AB 中點為中心的正方形)
