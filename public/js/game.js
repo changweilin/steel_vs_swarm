@@ -33,6 +33,7 @@ import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.j
 import { toonMat, outlinify, updateCelLight, stepCelWind, setCelChar, stepSwampRipples, setDissolve, CHAR, disposeTree, isWeatherFrozen } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
+import { animWeights } from './animweights.js';
 import { comicPop, starburst, shockRing, impactBurst, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, stepProjectileFx, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, makeStatusFx, DMG_FX, spawnTreesVFX, spawnDarkMoonVFX, spawnCubicSlabsVFX, spawnFogVFX, spawnHarpoonVFX, spawnReflectBarrierVFX, spawnEntangleLinkVFX, spawnThermiteMinesVFX, spawnThermitePuddleVFX, spawnPhaseShiftVFX, spawnPhaseExitVFX, spawnDecoyBeaconVFX, spawnFlashbangVFX, spawnNaniteSwarmVFX, spawnNaniteSplitVFX, spawnSingularityVFX, spawnSingularityImplosionVFX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
@@ -560,6 +561,7 @@ export class BattleClient {
     this.hitShells = new Set();      // 塔/主堡受擊回饋殼(hex shader,受擊閃亮;不是護盾層,工事無 sp)
     this.disposed = false;
     this._snapQueue = null;
+    this._spawnPend = new Map();   // 開場分幀建模:id -> 最新快照 raw(首包 ~200 隻不同一幀全建)
     // 物理:後座力(視角踢)、鏡頭震動(trauma)、FPV 側傾
     this.recoil = { p: 0, y: 0 };
     this.trauma = 0;
@@ -3297,7 +3299,15 @@ export class BattleClient {
     for (const e of m.ents) {
       seen.add(e.id);
       let ent = this.ents.get(e.id);
-      if (!ent) ent = this._spawnEnt(e);
+      if (!ent) {
+        // 開場分幀建模:自機(主視野接管不能等)與靜態工事(戰場地標)立即建,其餘排隊由
+        // _drainSpawnPend 每幀限量建 —— 首包 ~200 隻不同一幀全建,避免開場長凍結。
+        // 純表現層排程,權威狀態不受影響(A1 相容);tgt/hp 等欄位在建模幀由最新快照回填。
+        const selfHero = HERO_KINDS.has(e.k) && e.pid != null && e.pid === this.youId && !!e.act;
+        const statik = e.k === 'tower' || e.k === 'base' || e.k === 'bunker';
+        if (selfHero || statik) ent = this._spawnEnt(e);
+        else { this._spawnPend.set(e.id, e); continue; }
+      }
       // 工事受擊回饋:hp 下降的那個快照閃亮 + 波紋(工事無護盾層,掉的一律是裝甲)
       if (ent.hitShell && e.hp < ent.hp) ent.hitShell.userData.hit();
       ent.hp = e.hp; ent.max = e.m;
@@ -3508,6 +3518,26 @@ export class BattleClient {
     }
     // 覆蓋:此處回退,續建一般單位
     return this._spawnUnit(e);
+  }
+
+  // 開場分幀建模排程(_applySnap 只排隊,這裡每幀限量建;唯一消費端 = _loop)。
+  // raw 取建模當下最新的一份 ⇒ 排隊期間的位置/血量不靠舊快照,首幀即落在最新 tgt。
+  // _snapPos = 建模幀直接貼上最新位置,不從原點插值滑過去(舊制同幀建模同幀插值,首幀同樣不在 tgt 上)。
+  _drainSpawnPend() {
+    if (!this._spawnPend?.size) return;
+    const statik = (e) => (e.k === 'tower' || e.k === 'base' || e.k === 'bunker') ? 0 : 1;
+    const ids = [...this._spawnPend.keys()]
+      .sort((a, b) => statik(this._spawnPend.get(a)) - statik(this._spawnPend.get(b)));
+    let n = 0;
+    for (const id of ids) {
+      if (n >= 24) break;   // 每幀 24 隻:首包 ~200 隻約 9 幀排空,單幀建模成本壓回 1/8
+      if (this.ents.has(id)) { this._spawnPend.delete(id); continue; }
+      const raw = this._spawnPend.get(id);
+      this._spawnPend.delete(id);
+      const ent = this._spawnEnt(raw);
+      ent._snapPos = true;
+      n++;
+    }
   }
 
   /**
@@ -9428,6 +9458,7 @@ export class BattleClient {
   _initMinimap() {
     this.mmCtx = this.minimapCanvas.getContext('2d');
     this._mmLast = 0;
+    this._mmWarmUntil = performance.now() / 1000 + 3;   // 開場 3 秒小地圖降為 1Hz,把主線程讓給 _drainSpawnPend
     // 顯示範圍:'full' 全圖(預設,與舊版相同)/ 'near' 周遭(以自機為中心,涵蓋視野可見範圍)。
     // 切換走 KeyM 或觸控十字鍵右(兩者共用 _toggleMmMode)。
     this.mmMode = 'full';
@@ -9633,7 +9664,9 @@ export class BattleClient {
   }
 
   _drawMinimap(now) {
-    if (now - this._mmLast < 0.2) return;
+    // 開場暖機期降為 1Hz(純表現層節流,底圖/迷霧/標記算法一格未動)
+    const mmGate = now < (this._mmWarmUntil || 0) ? 1.0 : 0.2;
+    if (now - this._mmLast < mmGate) return;
     this._mmLast = now;
     const ctx = this.mmCtx;
     const w = this.minimapCanvas.width, h = this.minimapCanvas.height;
@@ -9843,6 +9876,7 @@ export class BattleClient {
     if (this._hitstop > 0) { this._hitstop -= dt; dt = 0; }
 
     if (this._snapQueue) { this._applySnap(this._snapQueue); this._snapQueue = null; }
+    this._drainSpawnPend();   // 開場分幀建模:MUST 在 _updateEnts 之前,建好的首幀即進插值
 
     // 觸控版每幀入口:①疊層(選單/商店/結束)開著就收起虛擬搖桿 ②視角搖桿積分。
     // 兩件事都 MUST 在幀迴圈做 —— 疊層的開關散在 _setPaused / _toggleShop / 結束事件三處,
@@ -9896,12 +9930,19 @@ export class BattleClient {
     // 沼澤漣漪(2026-08-26):推進沼澤水面的局部圓形漣漪(純表現層)。
     // MUST 排在 stepCelWind 之後(漣漪吃 windT 作為生成時間戳)。
     // 沼澤格點只在首次呼叫時建(地形在對局中不變);無沼澤 ⇒ 空陣列 ⇒ 早退。
+    // 沼澤格點分 ~6 幀掃完:全圖 terrainEnvCode 掃描不擠開場首幀,結果與一次掃完逐項相同。
+    // 掃完前 _swampCells 維持 undefined ⇒ stepSwampRipples 早退(見 toon.js 檔頭),純表現層缺席數幀。
     if (!this._swampCells && this.terrain?.waterY != null) {
-      const sc = [], t = this.terrain, step = 20;
-      for (let z = t.minZ; z < t.maxZ; z += step)
+      const t = this.terrain, step = 20;
+      const rows = Math.ceil((t.maxZ - t.minZ) / step);
+      const perFrame = Math.max(1, Math.ceil(rows / 6));
+      const sc = this._swampAcc ?? (this._swampAcc = []);
+      let z = this._swampZ ?? t.minZ, done = 0;
+      for (; z < t.maxZ && done < perFrame; z += step, done++)
         for (let x = t.minX; x < t.maxX; x += step)
           if (terrainEnvCode(t, x, z) === 2) sc.push({ x, z });
-      this._swampCells = sc;
+      if (z >= t.maxZ) { this._swampCells = sc; this._swampAcc = null; this._swampZ = null; }
+      else this._swampZ = z;
     }
     stepSwampRipples(this._swampCells, dt);
     // 日夜循環:鐘點 = f(開場時段, **伺服器權威的經過秒數**)。快照 8Hz 且秒數取整 ⇒ 兩幀之間
