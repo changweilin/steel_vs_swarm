@@ -6,7 +6,8 @@
  * 統一本地開發與 CI 流程之守門機制，確保 PR 前逐項執行完整離線稽核陣列與平衡驗證。
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
+import { cpus } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -65,7 +66,12 @@ const AUDIT_SCRIPTS = [
   'tools/audit_damp_fps.mjs',
 ];
 
-console.log(`== 執行完整回歸驗證矩陣 (${AUDIT_SCRIPTS.length} 項離線稽核) ==\n`);
+const ARGS = new Set(process.argv.slice(2));
+const jobsArg = process.argv.slice(2).find((a) => a.startsWith('--jobs='));
+const JOBS = ARGS.has('--serial') ? 1
+  : Math.max(1, parseInt(jobsArg?.split('=')[1] || '', 10) || Math.min(cpus().length, 8));
+
+console.log(`== 執行完整回歸驗證矩陣 (${AUDIT_SCRIPTS.length} 項離線稽核,並行 ${JOBS}) ==\n`);
 
 let passed = 0;
 let failed = 0;
@@ -73,29 +79,44 @@ const failures = [];
 
 const t0 = Date.now();
 
-for (let i = 0; i < AUDIT_SCRIPTS.length; i++) {
-  const item = AUDIT_SCRIPTS[i];
-  const [script, ...args] = item.split(' ');
-  const label = `[${i + 1}/${AUDIT_SCRIPTS.length}] ${item}`;
-  process.stdout.write(`${label.padEnd(50, ' ')} ... `);
-
-  const res = spawnSync('node', [resolve(rootDir, script), ...args], {
-    cwd: rootDir,
-    encoding: 'utf-8',
-    env: process.env,
-  });
-
-  if (res.status === 0) {
-    passed++;
-    console.log('✅ PASS');
-  } else {
-    failed++;
-    console.log('❌ FAIL');
-    failures.push({
-      item,
-      output: (res.stdout || '') + '\n' + (res.stderr || ''),
-    });
+// 語法閘快敗:它是白畫面守門,先同步跑,紅了後面不必浪費 CPU。
+const GATE = 'tools/audit_client_syntax.mjs';
+{
+  const gate = spawnSync('node', [resolve(rootDir, GATE)], { cwd: rootDir, encoding: 'utf-8', env: process.env });
+  const gateOk = gate.status === 0;
+  console.log(`[gate] ${GATE} ... ${gateOk ? '✅ PASS' : '❌ FAIL'}`);
+  if (!gateOk) {
+    console.error((gate.stdout || '') + '\n' + (gate.stderr || ''));
+    process.exit(1);
   }
+}
+const QUEUE = AUDIT_SCRIPTS.filter((s) => s !== GATE);
+
+const runOne = (item, idx) => new Promise((res) => {
+  const [script, ...args] = item.split(' ');
+  const label = `[${idx + 1}/${QUEUE.length}] ${item}`;
+  const cp = spawn('node', [resolve(rootDir, script), ...args], { cwd: rootDir, env: process.env });
+  let out = '', err = '';
+  cp.stdout?.on('data', (d) => { out += d; });
+  cp.stderr?.on('data', (d) => { err += d; });
+  cp.on('close', (code) => {
+    const ok = code === 0;
+    console.log(`${label.padEnd(50, ' ')} ... ${ok ? '✅ PASS' : '❌ FAIL'}`);
+    res({ item, ok, output: `${out}\n${err}` });
+  });
+});
+
+{
+  let next = 0;
+  const workers = Array.from({ length: Math.min(JOBS, QUEUE.length) }, async () => {
+    while (next < QUEUE.length) {
+      const i = next++;
+      const r = await runOne(QUEUE[i], i);
+      if (r.ok) passed++;
+      else { failed++; failures.push(r); }
+    }
+  });
+  await Promise.all(workers);
 }
 
 const elapsed = ((Date.now() - t0) / 1000).toFixed(1);

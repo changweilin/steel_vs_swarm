@@ -48,7 +48,12 @@ import {
   chapterCardHTML, briefHTML, overText, progressText,
 } from './storyui.js';
 import { Dialogue } from './dialogue.js';
-import { BattleClient } from './game.js';
+// `game.js`(600KB+toon/postfx/vfx 鏈)進戰才動態載入,首屏不解析(單航班,失敗回提示不炸頁)。
+let _BattleClient = null;
+function battleClientCtor() {
+  if (!_BattleClient) _BattleClient = import('./game.js').then((m) => m.BattleClient);
+  return _BattleClient;
+}
 import { GameAudio } from './audio.js';
 import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel, uiTip, specControls } from './help.js';
 import { installTips, attachTip, tipHTML } from './tip.js';
@@ -353,11 +358,36 @@ function esc(s) {
 }
 
 // ================= 建立地圖(隊伍規模/場地/選址,建好後存入最愛)=================
-function enterMapBuilder() {
+// Leaflet 按需載入:首屏不掛全域 `L`,進建圖頁才注入 CSS+JS(單航班,失敗回提示不炸頁)。
+let _leafletReady = null;
+function ensureLeaflet() {
+  if (window.L) return Promise.resolve();
+  if (!_leafletReady) {
+    _leafletReady = new Promise((res, rej) => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+      const sc = document.createElement('script');
+      sc.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      sc.onload = () => res();
+      sc.onerror = () => { _leafletReady = null; rej(new Error('Leaflet 載入失敗')); };
+      document.head.appendChild(sc);
+    });
+  }
+  return _leafletReady;
+}
+async function enterMapBuilder() {
   show('mapbuilder');
   app.favCfg = null;
   $('saveFavBtn').disabled = true;
 
+  try {
+    await ensureLeaflet();
+  } catch (e) {
+    $('mapStatus').textContent = '地圖元件載入失敗,檢查網路後重試。';
+    return;
+  }
   if (!app.mapSel) {
     app.mapSel = new MapSelect('leafletMap', {
       status: (text, frac) => {
@@ -2493,15 +2523,23 @@ async function enterLoading(cfg) {
   }
 }
 
-function enterGame() {
+async function enterGame() {
   if (app.battle || !app.terrain) return;
+  let Ctor;
+  try {
+    Ctor = await battleClientCtor();
+  } catch (e) {
+    console.error(e);
+    toast('戰鬥模組載入失敗,檢查網路後重試。');
+    return;
+  }
   show('game');
   app.audio?.setScene('battle');   // 進戰場 → 切戰鬥 BGM(離開由 BattleClient.dispose 交還大廳)
   const hud = makeHud();
   const meLobby = app.lobby?.clients.find((c) => c.id === app.youId);
   const myCh = meLobby?.ch || null;   // 開戰時伺服器已定案(隨機也回寫)
   app.dlg = new Dialogue($('dialogueLayer'));
-  app.battle = new BattleClient({
+  app.battle = new Ctor({
     canvas: $('gameCanvas'),
     minimapCanvas: $('minimap'),
     cfg: app.battleCfg,

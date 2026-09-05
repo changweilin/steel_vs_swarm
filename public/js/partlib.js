@@ -52,13 +52,14 @@ export function libNames() { return [..._geos.keys()]; }
 /**
  * 載入全部零件庫(戰鬥預載階段呼叫,與 `preloadModels` 並行)。
  * 個別家族失敗只印警告、該族全部查 null ⇒ 該族零件全數走 fallback,絕不 reject。
+ * `priority` 優先族先 await(自機/近景先有形),其餘背景補齊;缺省逐位元同舊制。
  */
-export function loadPartLibs() {
+export function loadPartLibs(priority = []) {
   if (_loaded) return _loaded;
   _loaded = (async () => {
     if (!PART_LIBS.length) return;
     const loader = new GLTFLoader();
-    await Promise.all(PART_LIBS.map(async (family) => {
+    const loadOne = async (family) => {
       try {
         const gltf = await new Promise((res, rej) =>
           loader.load(`assets/models/parts/${family}.glb`, res, undefined, rej));
@@ -70,7 +71,11 @@ export function loadPartLibs() {
       } catch (e) {
         console.warn(`零件庫載入失敗,該族退回程序生成:${family}`, e?.message || e);
       }
-    }));
+    };
+    const first = PART_LIBS.filter((f) => priority.includes(f));
+    const rest = PART_LIBS.filter((f) => !priority.includes(f));
+    for (const f of first) await loadOne(f);
+    await Promise.all(rest.map(loadOne));
   })();
   return _loaded;
 }

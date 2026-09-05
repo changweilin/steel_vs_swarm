@@ -267,12 +267,16 @@ export class GameAudio {
     this._loadBgm();
   }
 
-  /** BGM 串流註冊(不 decode 進 buffer)。兩條載入路徑共用;取檔一律經 `bgmUrl` 唯一縫。 */
-  _loadBgm() {
-    for (const name of Object.keys(BGM_MANIFEST)) {
+  /** BGM 串流註冊(不 decode 進 buffer)。兩條載入路徑共用;取檔一律經 `bgmUrl` 唯一縫。
+   * 進戰前不預抓戰鬥曲:只註冊指定場景(預設當前場景),另一首進場時 `_applyScene` 惰性補建。
+   * `preload='none'` —— 首屏不為還沒要播的長曲付 3MB 下載,播前才取檔。 */
+  _loadBgm(only = null) {
+    const names = only ? [only] : [this._scene || 'menu'];
+    for (const name of names) {
+      if (!bgmUrl(name, true) && !bgmUrl(name, false)) continue;
       if (this._bgm[name]) continue;   // 補載入時不重建(元素重建 = 曲子從頭開始)
       const el = new Audio();
-      el.loop = true; el.preload = 'auto'; el.volume = 0;
+      el.loop = true; el.preload = 'none'; el.volume = 0;
       el.addEventListener('canplaythrough', () => { this._bgm[name].ok = true; if (this._scene === name && this._unlocked) this._applyScene(name); }, { once: true });
       el.addEventListener('error', () => { this._bgm[name].ok = false; }, { once: true });
       el.src = bgmUrl(name, this.lowPower);
@@ -373,6 +377,8 @@ export class GameAudio {
   }
 
   _applyScene(name) {
+    // 惰性補建:目標曲尚未註冊(首屏只建當前場景那首)就地建一個,不重建既有曲。
+    if (!this._bgm[name] && (bgmUrl(name, true) || bgmUrl(name, false))) this._loadBgm(name);
     // 交叉淡出:目標曲淡入至音樂音量,其餘淡出至 0
     clearInterval(this._bgmFade);
     clearTimeout(this._bgmGrace);
@@ -780,7 +786,7 @@ export class GameAudio {
   _ambVoice(def) {
     if (this._dead || !this._ctx) return null;
     const el = new Audio();
-    el.loop = true; el.preload = 'auto'; el.volume = 1;
+    el.loop = true; el.preload = 'none'; el.volume = 1;
     el.src = def.url;
     let g = null;
     try {

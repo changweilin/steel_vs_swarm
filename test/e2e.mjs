@@ -62,6 +62,38 @@ function purgeCamps(sim) {
 
 const URL = process.env.WS_URL || 'ws://localhost:8620';
 const log = (...a) => console.log(...a);
+// e2e 自帶伺服器起停(外部已在聽就沿用,不搶埠;自起的在結束時收掉)
+let _autoServer = null;
+async function ensureServer() {
+  if (process.env.WS_URL) return;   // 指定遠端 ⇒ 不碰本地行程
+  try {
+    await new Promise((res, rej) => {
+      const probe = new WebSocket(URL);
+      const to = setTimeout(() => { try { probe.close(); } catch {} rej(new Error('probe timeout')); }, 1500);
+      probe.on('open', () => { clearTimeout(to); probe.close(); res(); });
+      probe.on('error', (e) => { clearTimeout(to); rej(e); });
+    });
+    return;   // 已有伺服器在聽
+  } catch { /* 無人聽 ⇒ 自起 */ }
+  const { spawn } = await import('node:child_process');
+  _autoServer = spawn(process.execPath, ['server/server.js', '--port', '8620'],
+    { cwd: process.cwd(), stdio: 'ignore' });
+  for (let i = 0; i < 50; i++) {
+    try {
+      await new Promise((res, rej) => {
+        const probe = new WebSocket(URL);
+        const to = setTimeout(() => { try { probe.close(); } catch {} rej(new Error('wait')); }, 400);
+        probe.on('open', () => { clearTimeout(to); probe.close(); res(); });
+        probe.on('error', (e) => { clearTimeout(to); rej(e); });
+      });
+      log('  ℹ e2e 自起本地伺服器(localhost:8620)');
+      return;
+    } catch { await new Promise((r) => setTimeout(r, 200)); }
+  }
+  throw new Error('e2e 自起伺服器逾時(10 秒連不上 ws://localhost:8620)');
+}
+process.on('exit', () => { try { _autoServer?.kill(); } catch {} });
+await ensureServer();
 let failed = false;
 const assert = (cond, msg) => {
   if (cond) log(`  ✅ ${msg}`);
