@@ -809,7 +809,7 @@ function giantCrownR(def) {
   return m;
 }
 
-function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadOccupied }) {
+function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadOccupied, occ, osmBldHit, vegFoot }) {
   const species = Object.keys(GIANT_DEFS);
   const centers = [];
   let trees = 0;
@@ -858,6 +858,10 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       // 抽樣紀律(§2.3):淘汰檢查排在 s 抽樣**之後** —— foot 要有 s 才算得出來。
       if (!areaFree(blocked, gx, gz, foot)) continue;
       if (roadOccupied?.({ x: gx, z: gz, r: foot })) continue;
+      // 背景實體互斥:圖資建物優先 + 已放置大型背景互不穿模(抽樣之後淘汰,亂數序列不漂移)。
+      if (osmBldHit?.(gx, gz, foot)) continue;
+      if (occ && !occ.free(gx, gz, def.r * s, 6)) continue;
+      if (vegFoot && vegFoot.near({ x: gx, z: gz, r: foot })) continue;
       // 落底高度取「板根腳印周圈最低點」(sinkBaseY 單一縫):只取中心高度的話,
       // 陡坡/巨岩崖邊的樹根會整片懸空。
       const gy = sinkBaseY(terrain, gx, gz, foot);
@@ -878,6 +882,8 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       // 碰撞半徑吃的是基部,不帶這個值的話繩錨會吊在幹外好幾公尺的空中。推導自 trunkR,MUST NOT 手寫
       blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree', tr: trunkR(def.h * s) });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
       blocked.add(cellKey(gx, gz));               // 小植被/地被不長進樹幹
+      occ?.add(gx, gz, def.r * s + 0.6);
+      vegFoot?.add({ x: gx, z: gz, r: foot });
       trunks.push([gx, gz, def.r * s + 8]);       // 巨幹半徑可 >10m 網格;+8 淨距 = 樹冠不貼建物牆面
       // 巨木表面特徵:掛在樹幹側面,世界尺寸與樹齡脫鉤
       const hang = (dtype, frac, ds, faceOut = false) => {
@@ -931,11 +937,20 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
         : ['broadleaf', 'birch'];
       const floorPool = ['sapling', 'shrub', 'redcap', 'browncap', 'parasol', 'toadstool', 'toadstool'];
       const drop = (t, ux, uz, uy, sc) => {
+        // 拒絕前固定抽完姿態亂數,後續物件不因淘汰而漂移(§2.3,与 put 同一紀律)。
+        const dry = rnd() * Math.PI * 2, dtx = (rnd() - 0.5) * 0.09, dtz = (rnd() - 0.5) * 0.09, ddj = rnd();
+        const footR = (VEG_FOOT_R[t] ?? 1) * sc * (VEG_SCALE[t] || 1);
+        const ff = { x: ux, z: uz, r: footR };
+        // 林下層同樣互斥:足印圓盤掃 blocked + 植被足跡索引 + 建物占位,抽樣之後淘汰不漂移序列。
+        if (!areaFree(blocked, ux, uz, footR)) return;
+        if (vegFoot && vegFoot.near(ff)) return;
+        if (occ && !occ.free(ux, uz, footR, 1)) return;
+        if (roadOccupied?.({ x: ux, z: uz, r: footR })) return;
         (items[t] ??= []).push({
           x: ux, y: uy, z: uz, s: sc * (VEG_SCALE[t] || 1),
-          ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,
-          dj: rnd(),
+          ry: dry, tx: dtx, tz: dtz, dj: ddj,
         });
+        vegFoot?.add(ff);
       };
       const scatterRing = (pool, count, rMin, rSpan, szMin, szSpan) => {
         for (let u = 0; u < count; u++) {
@@ -4557,7 +4572,7 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
  * 零共享 `rnd()` 消耗(§2.3):外觀差異由落點雜湊自帶種子,不動全圖佈局序列。
  * MUST 排在一般植被散布**之前** —— blockArea 之後小植被才會自動避開整件地標。
  */
-function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW, mapA }) {
+function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW, mapA, occ, osmBldHit }) {
   if (!lanesW.length) return 0;
   const anchors = beaconAnchors({ lanesW, basesW, towerSites: solveTowerSites(lanesW, mapA) });
   const probe = (x, z, r) => {
@@ -4569,7 +4584,11 @@ function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW, mapA 
       || [[r * 0.7, 0], [-r * 0.7, 0], [0, r * 0.7], [0, -r * 0.7]]
         .some(([ox, oz]) => terrainEnvCode(terrain, x + ox, z + oz) !== 0)) return false;
     if (flatRadiusAt(terrain, x, z, r) < r) return false;   // 站不平的地方不立(寧缺勿錯)
-    return areaFree(blocked, x, z, r);
+    if (!areaFree(blocked, x, z, r)) return false;
+    // 背景實體互斥:圖資建物優先 + 已放置大型背景互不穿模(零共享 rnd)。
+    if (osmBldHit?.(x, z, r)) return false;
+    if (occ && !occ.free(x, z, r, 2)) return false;
+    return true;
   };
   let n = 0;
   for (const st of planBeaconSites(anchors, probe)) {
@@ -4580,6 +4599,7 @@ function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW, mapA 
     g.rotation.y = st.ry;
     group.add(g);
     blockArea(blocked, st.x, st.z, col.r);
+    occ?.add(st.x, st.z, col.r);
     blockers.push({ x: st.x, z: st.z, y: gy - 1, r: col.r, h: col.h + 1 });
     n++;
   }
@@ -4687,7 +4707,7 @@ const SYNTH_COL_R = 30;
  * 緊密的界線是「碰撞柱不互穿」(`dist ≥ r_i + r_j`):再密也不能長進彼此體內 —— 那是
  * 破圖,不是景觀。逐顆仍走既有的水域/淨空/平坦度/邊界四道閘(一顆放不下就少一顆)。
  */
-function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW, roadOccupied }) {
+function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW, roadOccupied, occ, osmBldHit }) {
   const types = Object.keys(MEGALITHS);
   const start = Math.floor(rnd() * types.length);   // 每張圖不同起點,依序輪替求多樣
   const placedM = [];
@@ -4767,6 +4787,9 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
           .some(([ox, oz]) => terrainEnvCode(terrain, x + ox, z + oz) !== 0)) continue;
       if (!areaFree(blocked, x, z, r + 6)) continue;
       if (roadOccupied?.({ x, z, r: r + 6 })) continue;
+      // 背景實體互斥:圖資建物優先 + 已放置大型背景互不穿模(抽樣之後淘汰,亂數序列不漂移)。
+      if (osmBldHit?.(x, z, r + 6)) continue;
+      if (occ && !occ.free(x, z, r, 6)) continue;
       // 主堡退避:名岩公稱高即真實比例(放置後 90~160m),`blocked` 那圈 70m 是照**建物**
       // 尺度訂的 ⇒ 舊制只保證岩壁邊緣離主堡中心 `BASE_CLEAR_R + 6`,一座 160m 高的岩體
       // 站在 76m 外仰角就是 65° = 從主堡出生看出去整片天空被吃掉(2026-08-05 使用者回報)。
@@ -4913,6 +4936,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
         }
       }
       placedM.push({ x, z, r, f: fields.length });   // f = 所屬露頭群序(緊密判定只對同片放寬)
+      occ?.add(x, z, r);
       inField++;
     }
     // 岩種輪替以**露頭群**為單位遞增(同片同岩;逐顆遞增的話一片露頭會混七種名岩)
@@ -4975,7 +4999,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW,
  *   - 佔地登記 blockArea(blocked, x, z, r)，防止後續植被穿模
  *   - 貼地 AO 與坡度落底防懸空
  */
-function placeWildernessRelics({ group, terrain, blocked, blockers, sites, basesW, roadOccupied }) {
+function placeWildernessRelics({ group, terrain, blocked, blockers, sites, basesW, roadOccupied, occ, osmBldHit }) {
   const landKinds = Object.keys(RELIC_KINDS).filter((k) => RELIC_KINDS[k].land);
   if (!landKinds.length || !sites?.length) return 0;
 
@@ -5006,6 +5030,9 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
     // 避開淨空、道路與主堡
     if (!areaFree(blocked, sx, sz, r + 4)) continue;
     if (roadOccupied?.({ x: sx, z: sz, r: r + 4 })) continue;
+    // 背景實體互斥:圖資建物優先 + 已放置大型背景互不穿模(抽樣之後淘汰,共享 rnd 不消耗)。
+    if (osmBldHit?.(sx, sz, r + 4)) continue;
+    if (occ && !occ.free(sx, sz, r, 4)) continue;
     if (basesW?.some((b) => Math.hypot(sx - b.x, sz - b.z) < BASE_CLEAR_R + r * 2)) continue;
     if (placedList.some((p) => Math.hypot(sx - p.x, sz - p.z) < RELIC_SEP)) continue;
 
@@ -5022,6 +5049,7 @@ function placeWildernessRelics({ group, terrain, blocked, blockers, sites, bases
 
     group.add(g);
     blockArea(blocked, sx, sz, r);
+    occ?.add(sx, sz, r);
     const col = relicCollider(relic, `relic_${kind}`);
     if (col) blockers?.push(col);
     placedList.push({ x: sx, z: sz, r });
@@ -10170,7 +10198,7 @@ function buildBackdrop({ group, terrain, ctr }) {
 // 讓「打不開的邊」看起來是被城市/森林/岩壁圍住,而不是隱形牆。
 // 全部走既有管線(generic 建物 / items 植被 InstancedMesh);邊界樓沿管線
 // 也會登記碰撞柱 —— 反正在空氣牆外不可達,無礙。
-function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rings = [] }) {
+function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rings = [], blocked, vegFoot, osmBldHit, solids }) {
   // 帶的內緣 = 障礙環的外緣(推導不手寫:改環厚/內縮量,這一帶自己跟著讓開)。
   // 現值與舊制的 34 逐位元相同 ⇒ 這一支的亂數序列與佈局完全不變。
   // 2026-08-11:內緣改吃 `edgeWallDeepM()`(最深的那一款牆的厚度)—— 環體自從吃型錄之後
@@ -10214,6 +10242,11 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rin
         const f = Math.min(1, avail / (Math.max(w, dd) / 2));   // 塞不下就縮到剛好
         if (f < 0.45) continue;
         w *= f; dd *= f;
+        // 背景實體互斥:邊界樓同樣避開兵線走廊/圖資建物/既有植被(抽樣之後淘汰)。
+        const needR = Math.hypot(w, dd) / 2 * 0.75;
+        if (blocked && !areaFree(blocked, x, z, needR)) continue;
+        if (osmBldHit?.(x, z, Math.max(w, dd) / 2)) continue;
+        if (vegFoot && vegFoot.near({ x, z, r: Math.max(w, dd) / 2 })) continue;
         const commercial = rnd() < 0.5;
         const storeyTarget = commercial ? STOREY.commercial : STOREY.residential;
         const rawH = Math.min(22 + rnd() * 48, OVER.bldCap);
@@ -10226,16 +10259,23 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rin
           v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),
         });
         occ.add(x, z, Math.max(w, dd) / 2);
+        vegFoot?.add({ x, z, r: Math.max(w, dd) / 2 });
       } else if (biome === 'bare') {
         let s = 1.4 + rnd() * 2.0;
         s *= Math.min(1, avail / (3.6 * s));   // 腳印 ~3.6×s
         if (s < 0.7) continue;
+        // 背景實體互斥:邊界岩同樣避開走廊/圖資建物/既有植被。
+        if (blocked && !areaFree(blocked, x, z, 3.6 * s)) continue;
+        if (osmBldHit?.(x, z, 3.6 * s)) continue;
+        if (vegFoot && vegFoot.near({ x, z, r: 3.6 * s })) continue;
         (items.borderrock ??= []).push({
           x, y: sinkBaseY(terrain, x, z, 3.6 * s) - 0.6, z, s,
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.1, tz: (rnd() - 0.5) * 0.1,
           dj: rnd(),
         });
         occ.add(x, z, 3.6 * s);
+        vegFoot?.add({ x, z, r: 3.6 * s });
+        solids?.push({ x, z, r: 3.6 * s });
       } else {   // green / wet → 神木牆
         const sp = species[Math.floor(rnd() * species.length)];
         // 邊界神木牆吃同一個物件高度上限(分布版,同 placeGiantGroves)—— 邊界帶在空氣牆外
@@ -10245,12 +10285,19 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rin
         // 幹腳印 +6:與邊界樓保持淨距,樹冠不貼上建物牆面(樹冠彼此交疊成林無妨)
         s *= Math.min(1, avail / (rT * s + 6));
         if (s < 0.4) continue;
+        // 背景實體互斥:邊界神木同樣避開走廊/圖資建物/既有植被。
+        const bFoot = rT * s * 1.6;
+        if (blocked && !areaFree(blocked, x, z, bFoot)) continue;
+        if (osmBldHit?.(x, z, bFoot)) continue;
+        if (vegFoot && vegFoot.near({ x, z, r: bFoot })) continue;
         (items[sp] ??= []).push({
           x, y: sinkBaseY(terrain, x, z, rT * s * 1.6), z, s,   // 板根腳印落底(見 sinkBaseY)
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.04, tz: (rnd() - 0.5) * 0.04,
           dj: rnd(),
         });
         occ.add(x, z, rT * s + 6);
+        vegFoot?.add({ x, z, r: bFoot });
+        solids?.push({ x, z, r: bFoot });
       }
       placed++;
     }
@@ -10868,6 +10915,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (!areaFreeLane(blocked, towerBase, x, z, foot.r)) return;
     } else if (!areaFree(blocked, x, z, foot.r)) return;
     if (roadOccupied(foot) || vegFootIndex.near(foot)) return;
+    // 背景實體互斥:植被避開已登記的大型背景與圖資建物占位(抽樣之後淘汰,序列不漂移)。
+    if (occ && !occ.free(x, z, foot.r, 1)) return;
+    if (osmBldHit(x, z, foot.r)) return;
     items[type] ??= [];
     items[type].push(item);
     vegFootIndex.add(foot);
@@ -10895,165 +10945,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   }
   // 國旗歸屬(地圖 30 : 駐軍 60 : 敵對 10)。純函式、零共享 rnd ⇒ 建在哪一行都不影響序列。
   const nation = makeNationPicker(cfg, basesW);
-  const megalithsBuilt = placeMegaliths({
-    group, terrain, blocked, blockers, rnd, sites: bareSites, basesW, roadOccupied,
-  });
-  // 荒野遺跡與廢棄建築：零共享 rnd 消耗，排在植被前登記 blockArea 防止穿模
-  const relicsBuilt = placeWildernessRelics({
-    group, terrain, blocked, blockers, sites: bareSites, basesW, roadOccupied,
-  });
-  const giantTrees = placeGiantGroves({
-    terrain, blocked, blockers, items, rnd, sites: greenSites, roadOccupied,
-  });
-  // 語意化地標(P2-C):排在一般植被之前 ⇒ blockArea 之後小植被自動避開;零共享 rnd 消耗,
-  // 故插在這裡**不會**推移後面每一株植被/每一棟建物的亂數序列(§2.3)。
-  const beaconsBuilt = placeBeacons({
-    group, terrain, blocked, blockers,
-    lanesW: cfg.lanes.map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
-    basesW, mapA: mapArg(cfg),   // 塔位錨點的型態(迷你只有前線那一組;劇情戰役只有防守方有塔)
-  });
-  // 主堡旗陣:純表現層、零共享 rnd ⇒ 排在這裡不推移後面的植被序列(§2.3)
-  const baseFlags = placeBaseFlags({ group, terrain, blocked, basesW, nation });
-
-  const attempts = vegTarget * 3;
-  for (let a = 0; a < attempts && placed < vegTarget; a++) {
-    if ((a & 1023) === 0) await onProgress?.(0.05 + (a / attempts) * 0.30, '鋪設植被地貌…');
-    const x = rx(), z = rz();
-    // 塔堡圈的格子放行到 put() 再判(地被級平面植栽可留);走廊格照舊快拒,亂數序列不為走廊漂移
-    if (blocked.has(cellKey(x, z)) && !towerBase.has(cellKey(x, z))) continue;
-    const h = terrain.heightAt(x, z);
-    if (h < 0.4) {   // 水體:偶爾在水邊補蘆葦
-      if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
-      continue;
-    }
-    // 內陸影像水域(高於海平面盤、靠衛星水色判定):classify 的 mix 55% 改寫可能把水點
-    // 洗成 green 而種樹進河面 —— 比照水體處理(偶發岸邊蘆葦)。沼澤(code 2)保留 wet 分支植被。
-    if (terrainEnvCode(terrain, x, z) === 1) {
-      if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
-      continue;
-    }
-    const biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
-    if (biome === 'water') continue;
-    if (biome === 'urban') {
-      // 建物種子的信任階梯(2026-08-05 使用者回報「綠地/裸露地建築太多、不符真實圖資」):
-      // urbanPts 是「程序生成市區」備援的唯一種子 ⇒ 影像在手就只收**純影像**判為市區的點
-      // (`classifyImg` 單一縫、零亂數)—— 手寫 mix 的 55% 改寫是植被/地被的加權,
-      // MUST NOT 讓它憑空生出市區種子(綠地場地宣告一成 urban ⇒ 全圖撒滿假種子)。
-      // 影像也取不到(全離線)才退回 classify 的結果 = mix 當最後一層備援(原則 6 降級鏈)。
-      // 不動 classify 的呼叫 ⇒ 亂數消耗逐位元不變,植被佈局不漂移(§2.3)。
-      const rgb = terrain.sampleColor?.(x, z);
-      if ((!rgb || classifyImg(rgb) === 'urban') && urbanPts.length < 500) urbanPts.push([x, z]);
-      continue;
-    }
-    if (biome === 'green') {
-      const relH = (h - terrain.minH) / Math.max(1, terrain.maxH - terrain.minH);
-      const r = rnd();
-      if (r < 0.25) {
-        // 竹林:大小不一的群落
-        const n = 6 + Math.floor(rnd() * 12);
-        const cr = 5 + rnd() * 14;
-        for (let k = 0; k < n && placed < vegTarget; k++) {
-          const bx = x + (rnd() - 0.5) * cr * 2, bz = z + (rnd() - 0.5) * cr * 2;
-          if ((blocked.has(cellKey(bx, bz)) && !towerBase.has(cellKey(bx, bz))) || terrain.heightAt(bx, bz) < 0.4) continue;
-          put('bamboo', bx, bz, 0.8 + rnd() * 0.7);
-        }
-      } else if (relH > 0.55 || r < 0.55) {
-        // 針葉林四款輪廓輪替(塔錐/簇疊/紡錘/層盤),同林異形不再滿山三角錐
-        put(['conifer', 'conifer', 'conifer2', 'conifer3', 'conifer4'][(rnd() * 5) | 0], x, z, 0.75 + rnd() * 0.9);
-      } else {
-        put(rnd() < 0.3 ? 'birch' : 'broadleaf', x, z, 0.75 + rnd() * 0.9);
-      }
-    } else if (biome === 'bare') {
-      const r = rnd();
-      if (r < 0.38) put('silvergrass', x, z, 0.8 + rnd() * 1.0);
-      else if (r < 0.58) put('arrowbamboo', x, z, 0.8 + rnd() * 0.8);
-      else if (r < 0.78) put('shrub', x, z, 0.7 + rnd() * 0.9);
-      else if (r < 0.88) put('deadtree', x, z, 0.7 + rnd() * 0.7);
-      else put('succulent', x, z, 0.7 + rnd() * 0.8);
-    } else if (biome === 'wet') {
-      if (rnd() < 0.45) put('mangrove', x, z, 0.8 + rnd() * 0.7);
-      else put('reed', x, z, 0.8 + rnd() * 0.8);
-    }
-  }
-  // ---- 圖資建物(OSM 已於開頭抓取;植被網格延後到建物定案之後才建:
-  // 先拔掉落在建物腳印內的植被(見下),樹才不會穿屋頂)----
-  const generic = [];       // {x,z,w,h,d,ry,commercial}
-  const landmarks = [];     // {x,z,type,scale}
-  const usedLm = new Set();
-  // 全建物共用占位網格(OSM/離線/地標/補間):佔地是隨機抽的、不是 OSM 實測輪廓,
-  // 相鄰 OSM 種子放大後會彼此互穿 —— 一律先驗占位再收
+  // 全建物共用占位網格:提早到隨機背景之前建立,巨岩/神木/地標先登記,後續建物以 occ.free 精確避讓。
+  // 零共享 rnd 消耗 ⇒ 提前建立不推移任何佈局序列(§2.3)。
   const occ = makeOccupancy();
-  // OSM 面域建物：外環/內洞直接生成，牆段與 blocker 共用同一份有向盒資料。
-  // 平台不混進 blockers；main.js 會透過現有 surfaceAt 查詢精確 outer/holes。
-  const osmRoofPlatforms = [];
-  const osmBuildingFootprints = [];
-  const osmBuildingMeshes = [];
-  let osmBuildingResult = { generated: 0, generatedByKind: {}, blockers: [], platforms: [], invalid: [], skipped: [], meshes: [] };
-  if (osmSource && osmData?.areas?.length) {
-    await onProgress?.(0.58, `建置 OSM 精確建物(${osmData.areas.length} 面域)…`);
-    const osmWallColors = {
-      residential: 0xb7a893, commercial: 0x7189a8, industrial: 0x727b83,
-      education: 0x9aaf8f, healthcare: 0xb47e7e, transport: 0x888fa4,
-      religion: 0xa58f73, civic: 0x9b9ea6, culture: 0x9d8eaa,
-      sports: 0x789b80, parking: 0x8a8d91, utility: 0x7e8b95,
-    };
-    osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
-      terrain, rings,
-      materialOf: (kind, batch, style) => {
-        const family = osmData.areas.find((a) => a.classification?.kind === kind)?.classification?.family || kind;
-        const wall = envMat(style?.wall || osmWallColors[family] || 0xb7a893, { wash: 0.42, cool: 0.4 });
-        const roof = envMat(style?.roof || 0x4f5964, { wash: 0.3, cool: 0.45 });
-        return { wall, roof };
-      },
-    });
-    blockers.push(...osmBuildingResult.blockers);
-    osmRoofPlatforms.push(...osmBuildingResult.platforms);
-    osmBuildingFootprints.push(...osmBuildingResult.platforms);
-    osmBuildingMeshes.push(...osmBuildingResult.meshes);
-    // 只把建物腳印的涵蓋 cell 加入 blocked；用地面域不在此阻擋，避免大面域封死兵線。
-    for (const p of osmBuildingResult.platforms) {
-      const xs = p.outer.map((q) => q[0]), zs = p.outer.map((q) => q[1]);
-      const minI = Math.floor(Math.min(...xs) / CELL) - 1, maxI = Math.ceil(Math.max(...xs) / CELL) + 1;
-      const minJ = Math.floor(Math.min(...zs) / CELL) - 1, maxJ = Math.ceil(Math.max(...zs) / CELL) + 1;
-      for (let i = minI; i <= maxI; i++) for (let j = minJ; j <= maxJ; j++) {
-        const x = i * CELL, z = j * CELL;
-        if (pointInProjectedArea(x, z, p)) blocked.add(cellKey(x, z));
-      }
-    }
-  }
-  // 執行期生成失敗與 relay 容量也走同一份 gap schema；不得只留在 console 或靜默略過。
-  if (osmSource) {
-    const areaById = new Map((osmData?.areas || []).map((a) => [a.sourceId, a]));
-    const gaps = [...(osmCatalogReport.gaps || [])];
-    const addRuntimeGap = (entry, reason) => {
-      const area = areaById.get(entry?.sourceId);
-      const tag = Object.entries(area?.tags || {}).find(([k]) => OSM_AREA_KEYS.includes(k)) || ['source', entry?.sourceId || 'unknown'];
-      gaps.push({
-        tagKey: tag[0], tagValue: String(tag[1] ?? ''), reason,
-        fallback: area?.classification?.fallback || null, count: 1,
-        areaM2: Number(area?.areaM2) || 0, sourceIds: entry?.sourceId ? [entry.sourceId] : [],
-      });
-    };
-    for (const row of osmBuildingResult.invalid || []) addRuntimeGap(row, row.reason || 'invalid_footprint');
-    for (const row of osmBuildingResult.skipped || []) {
-      if (row.reason !== 'unmapped') addRuntimeGap(row, row.reason || 'unsupported_building');
-    }
-    const relayDrop = Math.max(0, Number(osmData?.relayDrop) || 0);
-    if (relayDrop) gaps.push({
-      tagKey: 'relay', tagValue: 'capacity', reason: 'capacity', fallback: null,
-      count: relayDrop, areaM2: 0, sourceIds: [],
-    });
-    osmCatalogReport = {
-      ...osmCatalogReport,
-      invalid: (osmCatalogReport.invalid || 0) + (osmBuildingResult.invalid?.length || 0),
-      capacity: (osmCatalogReport.capacity || 0) + relayDrop,
-      gaps: gaps.sort((a, b) => String(a.tagKey).localeCompare(String(b.tagKey))
-        || String(a.tagValue).localeCompare(String(b.tagValue)) || String(a.reason).localeCompare(String(b.reason))),
-    };
-  }
-  // 障礙環先佔位:邊界帶的樓群/神木/巨岩經既有的 `occ.room` 自動縮到環外(不佔位就是
-  // 巨幹/樓身長進環體)。環在 blockers 定案時就算好了,這裡只是把同一份幾何登記進占位網格。
   for (const s of edgeSegs) occ.add(s.x, s.z, Math.hypot(s.hw2, s.hd2));
+  // 圖資建物優先(2026-09):OSM 面域建物是固定足跡、不可移動,隨機背景(巨岩/神木/遺跡/地標)
+  // ---- 道路占位與街廓索引提早建立(2026-09 圖資優先)----
+  // 零共享 rnd 消耗 ⇒ 提早不推移任何佈局序列(§2.3)。圖資物件與隨機背景同吃這一份 occ。
   // 街道淨空(2026-07-17 巴黎建物騎路案):OSM 建物只有中心點、量體與朝向是程序抽的,
   // 沿街種子與補間網格會直接壓上路面 —— 道路以占位圓帶進 occ,建物系統(種子/補間/邊界物)
   // 經既有 occ.free 檢查自動避讓。占位圓只作用於建物,植被/危險區不查 occ,影響面最小;
@@ -11176,6 +11074,236 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     && z > terrain.minZ + inb && z < terrain.maxZ - inb
     && terrain.heightAt(x, z) > 0.4
     && terrainEnvCode(terrain, x, z) === 0;   // 水域/沼澤不蓋建物(單一縫:OSM 建物/地標/離線街區共用)
+  // ---- 圖資精確建物先放(2026-09 圖資優先)----
+  // OSM 面域建物:外環/內洞直接生成,牆段與 blocker 共用同一份有向盒資料。
+  // 平台不混進 blockers;main.js 會透過現有 surfaceAt 查詢精確 outer/holes。
+  // 先放 → 隨機背景(巨岩/神木/遺跡/地標/植被)以 blocked/occ/osmBldHit 避讓,不再依賴事後拔除。
+  const osmRoofPlatforms = [];
+  const osmBuildingFootprints = [];
+  const osmBuildingMeshes = [];
+  let osmBuildingResult = { generated: 0, generatedByKind: {}, blockers: [], platforms: [], invalid: [], skipped: [], meshes: [] };
+  if (osmSource && osmData?.areas?.length) {
+    await onProgress?.(0.58, `建置 OSM 精確建物(${osmData.areas.length} 面域)…`);
+    const osmWallColors = {
+      residential: 0xb7a893, commercial: 0x7189a8, industrial: 0x727b83,
+      education: 0x9aaf8f, healthcare: 0xb47e7e, transport: 0x888fa4,
+      religion: 0xa58f73, civic: 0x9b9ea6, culture: 0x9d8eaa,
+      sports: 0x789b80, parking: 0x8a8d91, utility: 0x7e8b95,
+    };
+    osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
+      terrain, rings,
+      materialOf: (kind, batch, style) => {
+        const family = osmData.areas.find((a) => a.classification?.kind === kind)?.classification?.family || kind;
+        const wall = envMat(style?.wall || osmWallColors[family] || 0xb7a893, { wash: 0.42, cool: 0.4 });
+        const roof = envMat(style?.roof || 0x4f5964, { wash: 0.3, cool: 0.45 });
+        return { wall, roof };
+      },
+    });
+    blockers.push(...osmBuildingResult.blockers);
+    osmRoofPlatforms.push(...osmBuildingResult.platforms);
+    osmBuildingFootprints.push(...osmBuildingResult.platforms);
+    osmBuildingMeshes.push(...osmBuildingResult.meshes);
+    // 只把建物腳印的涵蓋 cell 加入 blocked;用地面域不在此阻擋,避免大面域封死兵線。
+    // 同步登記 occ:隨機背景與後續程序建物以精確占位避讓圖資建物(圖資優先)。
+    for (const p of osmBuildingResult.platforms) {
+      const xs = p.outer.map((q) => q[0]), zs = p.outer.map((q) => q[1]);
+      const minI = Math.floor(Math.min(...xs) / CELL) - 1, maxI = Math.ceil(Math.max(...xs) / CELL) + 1;
+      const minJ = Math.floor(Math.min(...zs) / CELL) - 1, maxJ = Math.ceil(Math.max(...zs) / CELL) + 1;
+      for (let i = minI; i <= maxI; i++) for (let j = minJ; j <= maxJ; j++) {
+        const x = i * CELL, z = j * CELL;
+        if (pointInProjectedArea(x, z, p)) blocked.add(cellKey(x, z));
+      }
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+      occ.add(cx, cz, Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2);
+    }
+  }
+  // 執行期生成失敗與 relay 容量也走同一份 gap schema;不得只留在 console 或靜默略過。
+  if (osmSource) {
+    const areaById = new Map((osmData?.areas || []).map((a) => [a.sourceId, a]));
+    const gaps = [...(osmCatalogReport.gaps || [])];
+    const addRuntimeGap = (entry, reason) => {
+      const area = areaById.get(entry?.sourceId);
+      const tag = Object.entries(area?.tags || {}).find(([k]) => OSM_AREA_KEYS.includes(k)) || ['source', entry?.sourceId || 'unknown'];
+      gaps.push({
+        tagKey: tag[0], tagValue: String(tag[1] ?? ''), reason,
+        fallback: area?.classification?.fallback || null, count: 1,
+        areaM2: Number(area?.areaM2) || 0, sourceIds: entry?.sourceId ? [entry.sourceId] : [],
+      });
+    };
+    for (const row of osmBuildingResult.invalid || []) addRuntimeGap(row, row.reason || 'invalid_footprint');
+    for (const row of osmBuildingResult.skipped || []) {
+      if (row.reason !== 'unmapped') addRuntimeGap(row, row.reason || 'unsupported_building');
+    }
+    const relayDrop = Math.max(0, Number(osmData?.relayDrop) || 0);
+    if (relayDrop) gaps.push({
+      tagKey: 'relay', tagValue: 'capacity', reason: 'capacity', fallback: null,
+      count: relayDrop, areaM2: 0, sourceIds: [],
+    });
+    osmCatalogReport = {
+      ...osmCatalogReport,
+      invalid: (osmCatalogReport.invalid || 0) + (osmBuildingResult.invalid?.length || 0),
+      capacity: (osmCatalogReport.capacity || 0) + relayDrop,
+      gaps: gaps.sort((a, b) => String(a.tagKey).localeCompare(String(b.tagKey))
+        || String(a.tagValue).localeCompare(String(b.tagValue)) || String(a.reason).localeCompare(String(b.reason))),
+    };
+  }
+  // ---- 圖資用地物件先放(2026-09 圖資優先)----
+  // 非建築用地物件:道路/兵線/主堡/塔位與既有建物先佔位,再依面積、間距與硬上限配置。
+  // 住宅/商業 district 不補樓;校園/醫院/車站已有子建物時不生成代表建築。
+  // 先放 → 隨機背景以 occ/vegFootIndex 避讓;植被拔除保留在散布之後(見下,安全網)。
+  let osmAreaObjectResult = { generated: 0, generatedByKind: {}, blockers: [], capacity: [], skipped: [] };
+  if (osmSource && osmData?.areas?.length) {
+    osmAreaObjectResult = buildOsmAreaObjects(group, osmData.areas, {
+      maxObjects: 480,
+      heightAt: (x, z) => terrain.heightAt(x, z),
+      // 優先序:兵線/塔位/主堡淨空高於圖資物件 ⇒ 足印半徑掃 areaFree(單格驗擋不住設施)
+      blocked: (x, z, r) => !areaFree(blocked, x, z, r) || !occ.free(x, z, r, 1)
+        || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5),
+      materialOf: (_generator, row) => envMat(row.color, { wash: 0.38, cool: 0.42 }),
+    });
+    blockers.push(...osmAreaObjectResult.blockers);
+    for (const b of osmAreaObjectResult.blockers) occ.add(b.x, b.z, b.r);
+    // 先佔 vegFootIndex:後續散布的植被以同一索引避讓(放置時避開,不再事後拔除為主)。
+    for (const b of osmAreaObjectResult.blockers) vegFootIndex.add({ x: b.x, z: b.z, r: b.r });
+    const areaById2 = new Map(osmData.areas.map((a) => [a.sourceId, a]));
+    const append2 = (entry, reason) => {
+      const area = areaById2.get(entry?.sourceId);
+      const tag = Object.entries(area?.tags || {}).find(([k]) => OSM_AREA_KEYS.includes(k)) || ['source', entry?.sourceId || 'unknown'];
+      osmCatalogReport.gaps.push({
+        tagKey: tag[0], tagValue: String(tag[1] ?? ''), reason, fallback: area?.classification?.fallback || null,
+        count: 1, areaM2: Number(area?.areaM2) || 0, sourceIds: entry?.sourceId ? [entry.sourceId] : [],
+      });
+    };
+    for (const row of osmAreaObjectResult.capacity) append2(row, 'capacity');
+    for (const row of osmAreaObjectResult.skipped) append2(row, row.reason || 'blocked');
+    osmCatalogReport.capacity += osmAreaObjectResult.capacity.length;
+    osmCatalogReport.gaps = mergeAreaGaps(osmCatalogReport.gaps);
+  }
+  // MUST 事先避讓。worldPolygons 在開頭已投影完畢,此處只建索引,零共享 rnd 消耗。
+  const osmBldPolys = [];
+  if (osmSource && osmData?.areas?.length) {
+    for (const a of osmData.areas) {
+      if (a?.tags?.building == null && a?.tags?.['building:part'] == null) continue;
+      for (const p of a.worldPolygons || []) {
+        const xs = p.outer.map((q) => q[0]), zs = p.outer.map((q) => q[1]);
+        osmBldPolys.push({
+          poly: p,
+          minX: Math.min(...xs), maxX: Math.max(...xs),
+          minZ: Math.min(...zs), maxZ: Math.max(...zs),
+        });
+      }
+    }
+  }
+  // 圓盤與 OSM 建物面域是否互穿:中心/環周八點落入面域,或面域頂點落入圓盤,皆視為互穿。
+  const osmBldHit = (x, z, r) => {
+    if (!osmBldPolys.length) return false;
+    const pad = r + 1;
+    for (const b of osmBldPolys) {
+      if (x < b.minX - pad || x > b.maxX + pad || z < b.minZ - pad || z > b.maxZ + pad) continue;
+      if (pointInProjectedArea(x, z, b.poly)) return true;
+      for (let k = 0; k < 8; k++) {
+        const a = k / 8 * Math.PI * 2;
+        if (pointInProjectedArea(x + Math.cos(a) * r, z + Math.sin(a) * r, b.poly)) return true;
+      }
+      for (const q of b.poly.outer) {
+        if (Math.hypot(q[0] - x, q[1] - z) < r + 1) return true;
+      }
+    }
+    return false;
+  };
+  const megalithsBuilt = placeMegaliths({
+    group, terrain, blocked, blockers, rnd, sites: bareSites, basesW, roadOccupied, occ, osmBldHit,
+  });
+  // 荒野遺跡與廢棄建築：零共享 rnd 消耗，排在植被前登記 blockArea 防止穿模
+  const relicsBuilt = placeWildernessRelics({
+    group, terrain, blocked, blockers, sites: bareSites, basesW, roadOccupied, occ, osmBldHit,
+  });
+  const giantTrees = placeGiantGroves({
+    terrain, blocked, blockers, items, rnd, sites: greenSites, roadOccupied, occ, osmBldHit,
+    vegFoot: vegFootIndex,
+  });
+  // 語意化地標(P2-C):排在一般植被之前 ⇒ blockArea 之後小植被自動避開;零共享 rnd 消耗,
+  // 故插在這裡**不會**推移後面每一株植被/每一棟建物的亂數序列(§2.3)。
+  const beaconsBuilt = placeBeacons({
+    group, terrain, blocked, blockers, occ, osmBldHit,
+    lanesW: cfg.lanes.map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
+    basesW, mapA: mapArg(cfg),   // 塔位錨點的型態(迷你只有前線那一組;劇情戰役只有防守方有塔)
+  });
+  // 主堡旗陣:純表現層、零共享 rnd ⇒ 排在這裡不推移後面的植被序列(§2.3)
+  const baseFlags = placeBaseFlags({ group, terrain, blocked, basesW, nation });
+
+  const attempts = vegTarget * 3;
+  for (let a = 0; a < attempts && placed < vegTarget; a++) {
+    if ((a & 1023) === 0) await onProgress?.(0.05 + (a / attempts) * 0.30, '鋪設植被地貌…');
+    const x = rx(), z = rz();
+    // 塔堡圈的格子放行到 put() 再判(地被級平面植栽可留);走廊格照舊快拒,亂數序列不為走廊漂移
+    if (blocked.has(cellKey(x, z)) && !towerBase.has(cellKey(x, z))) continue;
+    const h = terrain.heightAt(x, z);
+    if (h < 0.4) {   // 水體:偶爾在水邊補蘆葦
+      if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
+      continue;
+    }
+    // 內陸影像水域(高於海平面盤、靠衛星水色判定):classify 的 mix 55% 改寫可能把水點
+    // 洗成 green 而種樹進河面 —— 比照水體處理(偶發岸邊蘆葦)。沼澤(code 2)保留 wet 分支植被。
+    if (terrainEnvCode(terrain, x, z) === 1) {
+      if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
+      continue;
+    }
+    const biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
+    if (biome === 'water') continue;
+    if (biome === 'urban') {
+      // 建物種子的信任階梯(2026-08-05 使用者回報「綠地/裸露地建築太多、不符真實圖資」):
+      // urbanPts 是「程序生成市區」備援的唯一種子 ⇒ 影像在手就只收**純影像**判為市區的點
+      // (`classifyImg` 單一縫、零亂數)—— 手寫 mix 的 55% 改寫是植被/地被的加權,
+      // MUST NOT 讓它憑空生出市區種子(綠地場地宣告一成 urban ⇒ 全圖撒滿假種子)。
+      // 影像也取不到(全離線)才退回 classify 的結果 = mix 當最後一層備援(原則 6 降級鏈)。
+      // 不動 classify 的呼叫 ⇒ 亂數消耗逐位元不變,植被佈局不漂移(§2.3)。
+      const rgb = terrain.sampleColor?.(x, z);
+      if ((!rgb || classifyImg(rgb) === 'urban') && urbanPts.length < 500) urbanPts.push([x, z]);
+      continue;
+    }
+    if (biome === 'green') {
+      const relH = (h - terrain.minH) / Math.max(1, terrain.maxH - terrain.minH);
+      const r = rnd();
+      if (r < 0.25) {
+        // 竹林:大小不一的群落
+        const n = 6 + Math.floor(rnd() * 12);
+        const cr = 5 + rnd() * 14;
+        for (let k = 0; k < n && placed < vegTarget; k++) {
+          const bx = x + (rnd() - 0.5) * cr * 2, bz = z + (rnd() - 0.5) * cr * 2;
+          if ((blocked.has(cellKey(bx, bz)) && !towerBase.has(cellKey(bx, bz))) || terrain.heightAt(bx, bz) < 0.4) continue;
+          put('bamboo', bx, bz, 0.8 + rnd() * 0.7);
+        }
+      } else if (relH > 0.55 || r < 0.55) {
+        // 針葉林四款輪廓輪替(塔錐/簇疊/紡錘/層盤),同林異形不再滿山三角錐
+        put(['conifer', 'conifer', 'conifer2', 'conifer3', 'conifer4'][(rnd() * 5) | 0], x, z, 0.75 + rnd() * 0.9);
+      } else {
+        put(rnd() < 0.3 ? 'birch' : 'broadleaf', x, z, 0.75 + rnd() * 0.9);
+      }
+    } else if (biome === 'bare') {
+      const r = rnd();
+      if (r < 0.38) put('silvergrass', x, z, 0.8 + rnd() * 1.0);
+      else if (r < 0.58) put('arrowbamboo', x, z, 0.8 + rnd() * 0.8);
+      else if (r < 0.78) put('shrub', x, z, 0.7 + rnd() * 0.9);
+      else if (r < 0.88) put('deadtree', x, z, 0.7 + rnd() * 0.7);
+      else put('succulent', x, z, 0.7 + rnd() * 0.8);
+    } else if (biome === 'wet') {
+      if (rnd() < 0.45) put('mangrove', x, z, 0.8 + rnd() * 0.7);
+      else put('reed', x, z, 0.8 + rnd() * 0.8);
+    }
+  }
+  // ---- 圖資建物(OSM 已於開頭抓取;植被網格延後到建物定案之後才建:
+  // 先拔掉落在建物腳印內的植被(見下),樹才不會穿屋頂)----
+  const generic = [];       // {x,z,w,h,d,ry,commercial}
+  const landmarks = [];     // {x,z,type,scale}
+  const usedLm = new Set();
+  // 全建物共用占位網格(OSM/離線/地標/補間):佔地是隨機抽的、不是 OSM 實測輪廓,
+  // 相鄰 OSM 種子放大後會彼此互穿 —— 一律先驗占位再收(本體已提早至隨機背景之前建立,見上)。
+  // (此處不再重建,沿用上游 occ。)
+  // ---- 圖資建物(點位/程序備援;精確面域見上)----
+  // 圖資優先:精確面域建物已先放並登記 blocked/occ,隨機背景散布時避開;
+  // 此處殘留的植被過濾是安全網(足跡近似差),不是主要防線。
+  // (道路占位與街廓索引已提早至圖資物件之前建立,見上。)
 
   if (osm && osm.length) {
     await onProgress?.(0.6, `建置圖資建物(${osm.length} 筆)…`);
@@ -11261,23 +11389,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     });
   }
 
-  // 非建築用地物件：道路／兵線／主堡／塔位與既有建物先佔位，再依面積、間距與硬上限配置。
-  // 住宅／商業 district 不補樓；校園／醫院／車站已有子建物時不生成代表建築。
-  let osmAreaObjectResult = { generated: 0, generatedByKind: {}, blockers: [], capacity: [], skipped: [] };
-  if (osmSource && osmData?.areas?.length) {
-    osmAreaObjectResult = buildOsmAreaObjects(group, osmData.areas, {
-      maxObjects: 480,
-      heightAt: (x, z) => terrain.heightAt(x, z),
-      // 優先序:兵線/塔位/主堡淨空高於圖資物件 ⇒ 足印半徑掃 areaFree(單格驗擋不住設施)
-      blocked: (x, z, r) => !areaFree(blocked, x, z, r) || !occ.free(x, z, r, 1)
-        || blockers.some((b) => Math.hypot(b.x - x, b.z - z) < (b.r || 0) + r + 0.5),
-      materialOf: (_generator, row) => envMat(row.color, { wash: 0.38, cool: 0.42 }),
-    });
-    blockers.push(...osmAreaObjectResult.blockers);
-    for (const b of osmAreaObjectResult.blockers) occ.add(b.x, b.z, b.r);
-    // 優先序:圖資有標記物件(建築/公園/球場)高於樹木背景 ⇒ 先佔 vegFootIndex,
-    // 再把已散佈植被中與圖資物件互穿的拔除(零 rnd 消耗,只淘汰不重抽,序列不漂移)
-    for (const b of osmAreaObjectResult.blockers) vegFootIndex.add({ x: b.x, z: b.z, r: b.r });
+  // 用地物件植被安全網(2026-09 圖資優先):配置已提早完成(見上),此處僅保留散布後的
+  // 互穿拔除(足跡近似差 + 邊界後置物),零 rnd 消耗,只淘汰不重抽。
+  if (osmSource && osmAreaObjectResult.blockers.length) {
     for (const type in items) {
       if (GIANT_DEFS[type] || !items[type]?.length) continue;
       const rr = VEG_FOOT_R[type] ?? 1;
@@ -11286,19 +11400,6 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       placed -= items[type].length - kept.length;
       items[type] = kept;
     }
-    const areaById = new Map(osmData.areas.map((a) => [a.sourceId, a]));
-    const append = (entry, reason) => {
-      const area = areaById.get(entry?.sourceId);
-      const tag = Object.entries(area?.tags || {}).find(([k]) => OSM_AREA_KEYS.includes(k)) || ['source', entry?.sourceId || 'unknown'];
-      osmCatalogReport.gaps.push({
-        tagKey: tag[0], tagValue: String(tag[1] ?? ''), reason, fallback: area?.classification?.fallback || null,
-        count: 1, areaM2: Number(area?.areaM2) || 0, sourceIds: entry?.sourceId ? [entry.sourceId] : [],
-      });
-    };
-    for (const row of osmAreaObjectResult.capacity) append(row, 'capacity');
-    for (const row of osmAreaObjectResult.skipped) append(row, row.reason || 'blocked');
-    osmCatalogReport.capacity += osmAreaObjectResult.capacity.length;
-    osmCatalogReport.gaps = mergeAreaGaps(osmCatalogReport.gaps);
   }
 
   // ---- 聚落場(單一縫):街廓配置與市區補間**共用**這一支「這裡算不算聚落」----
@@ -11477,14 +11578,34 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   await onProgress?.(0.69, '築起邊界帶(樓群/神木/巨岩)…');
   // OSM 成功時建物／用地輪廓已是權威來源；邊界帶的程序樓群也必須停用，避免真實建物外
   // 再長出虛構街區。只有來源整體為 null 才由既有 fallback 產生。
-  const boundaryN = osmSource ? 0 : placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rings });
+  // 背景實體互斥:邊界物件避開走廊/圖資建物/既有植被,並收集實體足跡供後續植被過濾。
+  const boundarySolids = [];
+  const boundaryN = osmSource ? 0 : placeBoundary({
+    terrain, items, generic, rnd, mix, occ, settlement, rings,
+    blocked, vegFoot: vegFootIndex, osmBldHit, solids: boundarySolids,
+  });
+  // 邊界實體後置植被拔除:邊界岩/神木晚於植被散布,與其互穿的植被在此拔除(零 rnd,只淘汰)。
+  if (boundarySolids.length) {
+    for (const type in items) {
+      if (GIANT_DEFS[type] || !items[type]?.length) continue;
+      if (type === 'borderrock') continue;
+      const rr = VEG_FOOT_R[type] ?? 1;
+      const kept = items[type].filter((it) => !boundarySolids.some(
+        (b) => Math.hypot(it.x - b.x, it.z - b.z) < rr * it.s + b.r));
+      placed -= items[type].length - kept.length;
+      items[type] = kept;
+    }
+  }
 
-  // 建物腳印內/貼牆的植被拔除:植被先散布、建物(圖資/補間)後放且互不看對方,
-  // 不濾掉就會樹冠穿屋頂、樹卡進牆面。只濾「錨點貼地」的實例 —— 神木上的
+  // 建物腳印內/貼牆的植被拔除:圖資建物先放、隨機植被散布時已避開,此處是安全網。
+  // 圖資成功但無點位建物時 generic/landmarks 皆空,仍須過濾精確面域與用地物件 ⇒
+  // 閘門一併看精確面域/用地物件/公設,不再只看點位建物(否則 OSM 圖上樹穿屋頂)。
+  // 只濾「錨點貼地」的實例 —— 神木上的
   // 鳥巢/樹屋/垂藤錨在樹身高處,不在此列(神木本體已進 blocked,建物不會壓上來)。
   // 判定用「旋轉矩形 + 樹冠半徑外擴」:圓測試(半對角 ×0.8)在長方形建物的
   // 長邊側面留縫、角落外凸,貼牆的樹會漏掉。
-  if (generic.length || landmarks.length) {
+  if (generic.length || landmarks.length || osmBuildingFootprints.length
+    || osmAreaObjectResult.blockers.length || civics.length) {
     // 桶格 > 最大半對角 + 最大樹冠外擴 ~8,±1 格掃描必然涵蓋:建物 ~23(裙樓外擴後 ~32)、
     // 鋪面型公設 ~45(運動場 76×48)⇒ 53 < 64。改大公設尺寸 MUST 重算這一條。
     const C = 64;

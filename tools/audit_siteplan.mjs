@@ -74,6 +74,10 @@ const BREAK_DENOISE = process.argv.includes('--break-denoise');
 // 2026-08-14(使用者圈了三處「破洞」⇒ 量出來是底面內凹的穹頂 + 扇貝狀底緣):
 //   --break-seal 封底的三道夾制拿掉 ⇒ ⑥-e 的封底四條 MUST 紅字
 const BREAK_SEAL = process.argv.includes('--break-seal');
+// 2026-09-05(使用者「樹木等背景實體碰撞物件不可互相重疊:建築/地標等圖資背景優先,
+// 其次是與地貌相符的隨機背景」):
+//   --break-overlap 背景互斥三道閘拿掉(圖資建物避讓 + 占位互斥 + 植被足跡)⇒ Ⅸ MUST 紅字
+const BREAK_OVERLAP = process.argv.includes('--break-overlap');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -1359,7 +1363,7 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
   ok(/if \(!osmSource && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)\s*&& !landmarks\.length && !generic\.length && urbanPts\.length > 8\)/.test(bcode),
     '備援程序街區只在圖資**查詢失敗**(!osm)且場地宣告有市區成分時觸發 —— '
     + '查詢成功但零建物 = 荒野維持荒野;宣告 urban ≤ 10% = 沒有市區可重建(mix 是階梯第三層的否決票)');
-  ok(/placeBoundary\(\{ terrain, items, generic, rnd, mix, occ, settlement(, rings)? \}\)/.test(bcode),
+  ok(/placeBoundary\(\{[^}]*terrain, items, generic, rnd, mix, occ, settlement[^}]*rings[^}]*\}\)/.test(bcode),
     '呼叫端把聚落場傳進 placeBoundary(邊界樓與兩個放大器同一把尺)');
   ok(/biome === 'urban' && !settlement\?\.\(x, z\)/.test(bcode),
     '邊界樓的市區判定過聚落場(衛星低飽和誤判 / mix 改寫不得憑空生出建物)');
@@ -1505,7 +1509,7 @@ console.log('\nⅧ 塔堡 1/4 射程淨空');
     'buildClearance 交出 rings(圓盤視圖,與格子同一次登記)');
   ok(bcode8.includes('terrain, rings,'),
     '圖資精確建物收到 rings(不吃就是舊制:圈內照長)');
-  ok(bcode8.includes('occ, settlement, rings }'),
+  ok(bcode8.includes('settlement, rings,'),
     '邊界帶收到 rings(主堡落圖端時邊界樓讓圈)');
   const osmb = readSrc('public', 'js', 'osmBuilding.js');
   ok(/const rings = Array\.isArray\(options\.rings\) \? options\.rings : \[\];/.test(osmb),
@@ -1531,6 +1535,70 @@ console.log('\nⅧ 塔堡 1/4 射程淨空');
       ok(PH(court, 10, 10, 3) === false, '塔在中庭內洞 ⇒ 放行(無實體重疊)');
     }
   }
+}
+
+// ============ Ⅸ 背景實體互斥(圖資優先 + 隨機背景互不穿模)============
+// 使用者定案(2026-09-05):樹木等背景實體碰撞物件不可互相重疊;建築/地標等記錄在圖資
+// 有的背景物件優先生成,其次是與地貌相符的隨機背景物件。
+//   ① occ 提早到隨機背景之前建立,巨岩/遺跡/神木/地標先登記,後續建物以 occ.free 精確避讓
+//   ② OSM 面域建物足跡建成 osmBldPolys + osmBldHit,隨機背景(巨岩/遺跡/神木/地標/植被/邊界)
+//      一律事先避讓(抽樣之後淘汰,零共享 rnd,§2.3)
+//   ③ 巨木林下層走足印圓盤互斥(blocked + 植被足跡 + 占位),拒絕前固定抽完姿態亂數
+//   ④ 邊界帶同樣避開走廊/圖資建物/既有植被,邊界岩/神木收集 solids 供後置植被拔除
+// 反向驗證:--break-overlap 把互斥三道閘拿掉 ⇒ 下面 MUST 紅字
+console.log('\nⅨ 背景實體互斥(圖資優先)');
+{
+  let bcode9 = strip(bio);
+  if (BREAK_OVERLAP) {
+    const busts = [
+      [/if \(osmBldHit\?\.\(x, z, r \+ 6\)\) continue;/, ''],
+      [/if \(occ && !occ\.free\(x, z, r, 6\)\) continue;/, ''],
+      [/vegFoot\?\.add\(\{ x: gx, z: gz, r: foot \}\);/, ''],
+      [/if \(vegFoot && vegFoot\.near\(\{ x, z, r: Math\.max\(w, dd\) \/ 2 \}\)\) continue;/, ''],
+      [/blockers\.push\(\.\.\.osmAreaObjectResult\.blockers\);/, ''],
+    ];
+    for (const [re, to] of busts) {
+      const next = bcode9.replace(re, to);
+      if (next === bcode9) throw new Error(`反向驗證 --break-overlap:原文沒有匹配到 ${re},改壞規則已失效`);
+      bcode9 = next;
+    }
+  }
+  ok(bcode9.indexOf('const occ = makeOccupancy();') >= 0
+    && bcode9.indexOf('const occ = makeOccupancy();') < bcode9.indexOf('const megalithsBuilt = placeMegaliths({'),
+    'occ 提早到隨機背景之前建立(巨岩/神木/地標先登記,後續建物精確避讓)');
+  ok(/tags\?\.building == null && .*building:part/.test(bcode9) && bcode9.includes('const osmBldPolys = []'),
+    '圖資建物足跡建成 osmBldPolys(固定足跡、不可移動者才有優先權)');
+  ok(bcode9.includes('const osmBldHit = (x, z, r)'),
+    '圓盤與面域互穿只有 osmBldHit 一份(中心/環周/頂點三向判定)');
+  ok(/if \(osmBldHit\?\.\(x, z, r \+ 6\)\) continue;/.test(bcode9),
+    '巨岩避讓圖資建物(抽樣之後淘汰,序列不漂移)');
+  ok(/if \(occ && !occ\.free\(x, z, r, 6\)\) continue;/.test(bcode9),
+    '巨岩與已放置大型背景互斥(占位網格)');
+  ok(/if \(osmBldHit\?\.\(sx, sz, r \+ 4\)\) continue;/.test(bcode9),
+    '遺跡避讓圖資建物');
+  ok(/placeGiantGroves\(\{[^}]*vegFoot/.test(bcode9),
+    '神木群落收到植被足跡索引(林下層與主幹同索引)');
+  ok(/vegFoot\?\.add\(\{ x: gx, z: gz, r: foot \}\);/.test(bcode9),
+    '神木主幹登記植被足跡(後續植被/邊界自動避開)');
+  ok(/if \(vegFoot && vegFoot\.near\(\{ x, z, r: Math\.max\(w, dd\) \/ 2 \}\)\) continue;/.test(bcode9),
+    '邊界樓避讓既有植被');
+  ok(bcode9.includes('const boundarySolids = []') && bcode9.includes('solids: boundarySolids'),
+    '邊界實體收集 solids 供後置植被拔除(晚於散布者用淘汰收尾,零 rnd)');
+  // 圖資先放(2026-09 使用者「圖資物件先放,隨機物件放置時避開圖資物件」):
+  // 精確建物與用地物件的建置點 MUST 排在巨岩/神木/植被散布之前,否則隨機物先佔位、
+  // 圖資物後讓位 = 優先序倒置,畫面上就是樹穿屋頂。
+  ok(bcode9.indexOf('buildOsmPolygonBuildings(group, osmData.areas') >= 0
+    && bcode9.indexOf('buildOsmPolygonBuildings(group, osmData.areas') < bcode9.indexOf('const megalithsBuilt = placeMegaliths({'),
+    '圖資精確建物先於巨岩群落建立(隨機背景放置時避開)');
+  ok(bcode9.indexOf('buildOsmAreaObjects(group, osmData.areas') >= 0
+    && bcode9.indexOf('buildOsmAreaObjects(group, osmData.areas') < bcode9.indexOf('const megalithsBuilt = placeMegaliths({'),
+    '圖資用地物件先於巨岩群落配置(隨機背景放置時避開)');
+  ok(bcode9.indexOf('buildOsmAreaObjects(group, osmData.areas') < bcode9.indexOf('const attempts = vegTarget * 3;'),
+    '圖資用地物件先於植被散布(植被放置時以 vegFoot 避開)');
+  ok(/blockers\.push\(\.\.\.osmAreaObjectResult\.blockers\);/.test(bcode9),
+    '用地物件 blockers 先登記(隨機背景以 occ/vegFoot 避讓)');
+  ok(/if \(generic\.length \|\| landmarks\.length \|\| osmBuildingFootprints\.length/.test(bcode9),
+    '植被過濾閘門一併看精確面域(圖資成功但無點位建物時不再整段跳過)');
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項${fail ? `,失敗 ${fail} 項` : ''}`);
