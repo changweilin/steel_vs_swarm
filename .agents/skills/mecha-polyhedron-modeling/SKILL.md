@@ -7,12 +7,12 @@ compatibility: forge lives in public/js/forge/ (game + board eat the same tree s
 
 # Mecha Polyhedron Modeling (2D art → part assemblies, screenshot-verified)
 
-> **Route disambiguation** — two skills share the "more mecha detail, rig must not move" trigger:
-> - NPCs, vehicles and structures in `public/js/models.js` (heroes left it on 2026-08-14), detail
->   via **AI-generated GLB parts** through the
->   `partlib.js` fuse and the `audit_muzzle/cockpit/cast_jump` acceptance gate → `mech-part-forge`.
+> **Route disambiguation** — two tracks share the "more mecha detail, rig must not move" trigger:
+> - NPCs, vehicles and structures in `public/js/models.js`, detail via **AI-generated GLB parts**
+>   through the `partlib.js` fuse and the `audit_muzzle/cockpit/cast_jump` acceptance gate → Appendix T
+>   of this file (merged from `mech-part-forge`, retired 2026-09-06; do not resurrect the old skill name).
 > - The **humanoid forge** (`public/js/forge/`), detail via **procedural polyhedra written by hand
->   from 2D art**, screenshot loop as the only gate → this skill. It stopped being a prototype on
+>   from 2D art**, screenshot loop as the only gate → this skill's main track below. It stopped being a prototype on
 >   2026-08-14: the user ruled the new modelling replaces the old wholesale, so `makeUnit()`'s hero
 >   branch now calls `forgeHero()` and the board renders the same tree the match does. The old
 >   builders are frozen in `tools/humanoid_forge/legacy/legacy_models.js`, on the board only.
@@ -189,3 +189,40 @@ Two endpoints, two authorities (§0.1) — never conflate them:
   mech file against "before" via git; keep the previous agent's shots as the baseline instead.
 - Restarting the shared server invalidates every other agent's loop mid-flight. Additive server
   changes (new endpoint) go on a **second** port until the fan-out finishes.
+
+---
+
+## Appendix T. NPC AI-GLB-parts track (merged from `mech-part-forge`, retired 2026-09-06)
+
+This appendix covers AI geometry dropped into the existing named rig slots of `models.js` (building-unit NPCs, drones, beast mechs, transformers). The rig is a **named part hierarchy** (`rig.hips`, `rig.legChainL`, `rig.muzzles.light.n`, `rig.wpn.heavy`), not a skinned skeleton - the unit of AI output is a **part, never a whole machine**, and there is **no auto-rigging** (UniRig / SkinTokens solve a problem this repo does not have).
+
+### T.1 Slot contract (`models.js` source is authoritative, this table is an index)
+
+| Kind | `rig.kind` | Nodes that must exist with unchanged position/orientation |
+|---|---|---|
+| Drone | `aerial` | `tilt`, body, `wpn.light.g` / `wpn.heavy.g`, `muzzles.light.n` / `muzzles.heavy.n`, `lightGlow` |
+| Mech (biped) | `biped` | `hips` `chest` `neck` `head` `legL/R` `armL/R` `legChainL/R` `armChainL/R` `tailSegs` `gunR` `gunL` `aimPose` |
+| Mech (beast) | `quad` | `spine` `chest` `neck` `head` `tail` `tail2` `legFL/FR/HL/HR` `chFL/FR/HL/HR` `tents` `armSh/armEl` |
+| Transformer | `morph` | `torso` `head` `legL/R` `armL/R` `kneeL/R` `ankleL/R` `elbowL/R` `wristL/R` `vents` `thrusters` `rotors` `flapWings` `midLegs/midKnees/midTarsi` |
+
+Four MUSTs: do not touch `muzzles.*.n` / `rig.wpn` local transforms (forward muzzles come from a build-time world-alignment inverse; rerun `audit_muzzle.mjs` on any hardpoint change); bbox drift <= +/-5% (else `fitToHeight` skews spawn-measured `dimTop/dimH/dimR`); hydraulic single-end-anchored angled parts must not become two-end spanning parts; `heavy.pivot` stays empty for morph handheld weapons.
+
+### T.2 Runtime seam (`public/js/partlib.js`)
+
+Consumers change only the geometry-resolution line and keep the fuse: `const geo = libGeo('m05/thigh_L') ?? new THREE.BoxGeometry(0.34, 1.2, 0.4)`. The fuse is the `MODEL_MANIFEST` degradation (frame is bit-identical to today when the library fails). Library geometry is always `markShared()`; `disposeTree` skips it by registry (A25).
+
+### T.3 Production flow (per-slot, not whole-unit)
+
+`concept master -> per-slot 2D split (§T.4) -> rembg matte -> image-to-3D fallback chain (TRELLIS.2@512 -> @256 -> Hunyuan3D 2.1 shape-only -> SF3D) -> Blender headless (decimate, origin to slot pivot, orient local +Z forward, merge by colour) -> parts GLB -> partlib lookup`. Per-slot prompts hard-code the part mapping; whole-unit generation is for silhouette cross-check only. AI origin is bbox-centred while rig nodes pivot at joints - Blender MUST move the origin to the pivot or segments rotate about the wrong axis.
+
+### T.4 Per-slot 2D splitting (nine prompt rules)
+
+Bulk goes local, subscription quota goes to hard splits: route A `agy` Nano Banana Pro for mech 2D, route B local FLUX.1 Kontext for other 2D, route C Gemini CLI only with a paid key. Drawing order: mechs, drones, transformers (dual-form: one part set from the ground form, flight masters for acceptance; never a part set per form). Volume rules: mirror-symmetric parts generated once and mirrored in Blender (~40% fewer slots); retry only bad splits. Prompt: one complete uncropped object at ~85% frame, three-quarter view (~35 deg yaw, ~20 deg elevation), long-lens flattened perspective, flat even light, flat `#808080` background, fully opaque (no glass/glow), panel lines kept, no text/watermark, >= 1024 square. Known defects: translucent glowing wings (restate opaque), thick black outline strokes on the alpha edge (add `no outline stroke`).
+
+### T.5 Tool ladder at 12GB and colour rule
+
+TRELLIS.2-4B primary but MUST be measured first; Hunyuan3D 2.1 shape-only backup (paint 21GB never run); Hunyuan3D-2GP fuse; SF3D bulk small parts. Python 3.13 cannot run this stack - separate `tools/ai3d/.venv`, never in `package.json` (A2). Geometry plus one overridable base colour only: normal / metal / roughness maps never enter the repo (same delight-only boundary as the toon ramp); part colour comes from `paint.js` / `visual.hue`.
+
+### T.6 Acceptance
+
+`audit_muzzle.mjs` (hardpoints) + `audit_cockpit.mjs` (FPV framing) + `audit_cast_jump.mjs` (cast/jump) + `audit_gpu_lifecycle.mjs` (markShared) + `shot_units.mjs` (before/after) + `npm test && npm run bal`. Reverse-verify: offset one part origin by 0.5 m - the muzzle audit or shot comparison MUST show it. Triangle budget is measured per unit first, never hand-written.

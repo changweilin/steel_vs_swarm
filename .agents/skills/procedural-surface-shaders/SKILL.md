@@ -26,7 +26,7 @@ geometry batch
 - Light bands, shadow hue, grading, LUTs, and AA belong to `cel-shading-pipeline`.
 - Depth/normal/identity edge interpretation belongs to `anime-line-control`.
 - Geometry variation, foliage silhouettes, scatter, and weathering placement belong to `procedural-object-detail`.
-- Offline albedo/normal/roughness generation belongs to `ai-pbr-texturing`.
+- Offline texture authoring (if any) ships delighted base colour only; normal / metal / roughness maps never enter this repo.
 
 Do not duplicate those systems inside a master surface shader. Return the data they consume.
 

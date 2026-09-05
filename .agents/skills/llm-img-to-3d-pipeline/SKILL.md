@@ -8,6 +8,8 @@ license: MIT
 
 This skill owns the orchestration and artifact contract for the versioned photo-to-declarative-polyhedron pipeline used by the parts review board and runtime catalog. It does not duplicate family modeling, runtime shading, placement, mobile admission, motion, or visual-inspection methods owned by the routed skills below.
 
+Retired and merged into this file (2026-09-06): `photo-to-3d-pipeline` (routed photo-to-part execution procedure) and `photo-to-prop-forge` (static part-vocabulary contract). Their unique operational rules are preserved in Appendix A below; do not resurrect the old skill names.
+
 **v5 and v6 are both production sources.** v6 supersedes v5 only when both records represent the same source target and consumer slot. Keep both records in the database and review board; resolve precedence only when building a runtime selection. Legacy v1 is runtime-eligible only for rocks and conifers.
 
 Player-controlled mecha are out of scope by default. Do not read, regenerate, or modify `public/js/forge/**` for this workflow. Building units and NPCs are separate consumers and may be processed only when the request names them.
@@ -316,3 +318,72 @@ In compliance with Core Principle 6 ("Graceful Degradation, No Exceptions; Bette
 1. **API High Demand & Rate Limiting (503 / 429)**: When an API encounters temporary load spikes or timeouts, the script logs a warning and skips the image, **never aborting the entire batch**.
 2. **Corrupt Images or Unsupported Formats**: Unreadable files are skipped with a warning log.
 3. **Empty Output or Filter Rejection**: If an LLM response cannot be parsed or yields zero parts, the item is skipped gracefully, ensuring database integrity remains uncorrupted.
+
+---
+
+## Appendix A. Legacy photo-route discipline (merged from `photo-to-3d-pipeline` + `photo-to-prop-forge`, retired 2026-09-06)
+
+This appendix preserves the pre-v6 operational knowledge that the v5/v6 gates above do not restate. It is normative for photo-sourced static parts (rock/tree/building/landmark) and advisory elsewhere.
+
+### A.1 Route decision (shape, not family)
+
+| Route | What the photo becomes | When |
+|---|---|---|
+| **0 - drawing to hull** (`method: plan_hull`) | Orthographic drawing contours extruded and intersected (visual hull is solved, not generated) | Whenever a measured drawing exists; a drawing states depth, a photo guesses it |
+| **A - img to three.js** (`method: llm_parts`) | Read the photo, write pure-data primitive rows into the existing part table; zero GPU, zero binary | Regular / man-made geometry a primitive can honestly express |
+| **B - local Blender** (`method: sf3d`) | Run the photo through SF3D on the 12GB box, normalise headless, ship a named node in `assets/models/parts/{family}.glb` | Organic / irregular geometry a primitive cannot express |
+| **neither** (`method: procedural`) | Nothing stays; small/ordinary vegetation keeps procedural parts; mechs never enter this pipeline | Budget or rig reasons |
+
+Route A is the cheapest complete proof of photo to part vocabulary to audits to review board (no Python, GPU, or GLB). Ship Route A members first when a family is blocked on weights or quota.
+
+### A.2 Photo sourcing (CC0 hard gate)
+
+- Hard-code `license=cc0` (public domain included); **CC-BY is also rejected** - a baked-in part carries no attribution slot. Record `{source_url, license, creator, retrieved_at}` per download; manifest paths are relative POSIX.
+- Fetcher: `node tools/ai3d/fetch_photos.mjs --plan | --family <f> --limit <n> | --part <family/subpart> | --review`. Catalog order is priority order. Bytes are sniffed (JPEG/PNG/WebP headers only), never trusted by extension.
+- Throttling is per host (Wikimedia `upload.wikimedia.org` 429 with `Retry-After: 600` after ~30 downloads); a 429 is network state, never booked to the manifest.
+- Query wording is the largest quality lever: ask for a **named single subject** (`glacial erratic`, `solitary oak tree meadow`), never a scene. Selection standard: single subject, clean, well lit, short side >= 1024.
+- After matting, `screen_mattes.py` enforces: largest connected alpha component >= 0.70 of subject area; mean subject luma >= 35 unless shadow fraction < 0.70. Thresholds carry a shape assumption - re-scope per family, never tighten on two samples. Measure the matte, not the photo; area share, not blob count.
+
+### A.3 Route B operation (SF3D workhorse)
+
+```bash
+# 1. matte (CPU ok)
+.venv/Scripts/python matte_photos.py <family> <subpart>
+# 2. generate (batch; batching is ~free)
+.venv/Scripts/python vendor/stable-fast-3d/run.py <matte dir>/*.png --texture-resolution 512 --remesh_option triangle --target_vertex_count 520
+# 3. solidity prefilter (statistics, not content)
+node tools/ai3d/mesh_stats.mjs <sf3d out dir>
+# 4. normalise (Blender headless; field separator is `|` since `:` collides with drive letters)
+blender --background --python tools/ai3d/normalize_parts.py -- --base public/assets/models/parts/<family>.glb --out public/assets/models/parts/<family>.glb --node "<node>=<src.glb>|<r>x<hy>|<tri cap>|<ry>|<dy>"
+# 5. intake gate
+node tools/ai3d/intake_parts.mjs
+```
+
+- Use SF3D remesh; never hard-decimate raw output in Blender (50k-tri shell tears into speckle holes at 50:1). Blender only centres, scales, trims.
+- `mesh_stats` filters shells (blocky fill >= ~0.34, shells/flakes < 0.15); the human-eye pass on the top few is mandatory (~1/15 usable from a CC0 pool).
+- **Origin on the mating face**: canopy origin at canopy base, roof cap at eaves, talus at ground. Centring is correct only for stacked stone (consumer `p:` offsets assume it); use `dy` to ground. Same-source nodes get a yaw so duplicates do not read as one stone twice. Always `--base` when appending (re-running a node causes bit drift).
+
+### A.4 Consumption seams (pick by consumer, do not invent a fourth)
+
+- `beacons.js KIND_PARTS` (declarative): `{ g: ['lib', 'rock/facet_a', ['ico', 1.15]], ... }` - `g[2]` fuse is the offline extent bound.
+- `biomes.js VEG_DEFS / GIANT_DEFS` (declarative): `{ g: ico(5), lib: 'tree/canopy_a5', y: 12, key: 'foliage' }` - the `??` fallback MUST stay.
+- `biomes.js MEGALITHS / synthMegalith` (imperative): `const g = megaGeo('rock/mega_a') ?? primitive()` with `.clone()` (bakeContactAO writes vertex colours in place).
+- Layout math reads the fuse, never library geometry (load-dependent radii diverge clients silently). Swapping geometry consumes zero extra `rnd()` on both paths. `beacons.js` front half stays THREE-free for offline verification.
+
+### A.5 Triangle budget and provenance
+
+- Family gets two gates: per part <= heaviest whole unit today, AND sum(library parts) per unit <= `kind_factor` x current unit total. `kind_tris` is a measured snapshot - re-measure after any consumer table change. Measurement = headless browser executing the consumer source with real three, summing `index.count/3`. A missing measurement is a legitimate stop; never hand-write a cap.
+- One row per generation job in `tools/ai3d/parts_manifest.json` (`method`, `consumer`, `rev`, `imgs[]`, `gen`, `post`, `baseline.rev` for Route A). Size ladders are one row with `keys: [...]`. Never copy derivable numbers (extents, tri counts) into it. No record = listed as unrecorded on the review board.
+
+### A.6 Acceptance battery
+
+```bash
+node tools/ai3d/intake_parts.mjs
+node tools/audit_object_joints.mjs --seeds 8
+node tools/audit_beacons.mjs && node tools/audit_beacons.mjs --break-extent
+node tools/audit_siteplan.mjs && node tools/audit_siteplan.mjs --break-shy
+node tools/shot_scene.mjs --venue taroko   # --ink=0 / --grade=0 / --post=0 isolate a layer
+npm test && npm run bal
+```
+
+Reverse verification is the acceptance: if `--break-extent` / `--break-shy` / an oversized node does not turn red, the round proved nothing. Build the board "original" pane and cache it before `loadPartLibs()` or both panes silently draw the same geometry.
