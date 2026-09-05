@@ -31,9 +31,10 @@
 //                   ⇒ Ⅴ 的屋頂帶兩條 MUST 紅字
 //   --break-storey  層高不再夾在帶內(拿掉「先取落在帶內的候選」那一步)
 //                   ⇒ Ⅴ 的層高全域不變式 MUST 紅字
+//   --break-tower   砲塔圈由 1/4 射程退回 1/8 ⇒ Ⅷ 的推導值 MUST 紅字
 import { readSrc } from './audit_src.mjs';
 import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
-import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM, edgeWallDeepM } from '../public/js/data.js';
+import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM, edgeWallDeepM, UNITS } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
 // 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
 import { bioLibDescs, partLibs, parseGlb } from './ai3d/parts_src.mjs';
@@ -106,6 +107,7 @@ const M = new Function('partExtent', 'makeVehicle', 'makeRecess', `
            CROWN, crownGap, planShyGrove, ROCKFIELD, strikeRad, planRockField };
 `)(partExtent, makeVehicle, makeRecess);
 
+const BREAK_TOWER = process.argv.includes('--break-tower');
 if (BREAK_LINE) M.URBAN.DEPTH = [12, 40];
 if (BREAK_SHY) { M.CROWN.GAP_M = 0; M.CROWN.GAP_F = 0; M.CROWN.FIT_MIN = 0; }
 if (BREAK_STRIKE) M.ROCKFIELD.RY_JIT = 3;
@@ -1230,7 +1232,8 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     FACADES: { commercial: [0, 1, 2], residential: [0, 1] },
     MAX_BUILDINGS: 240, MAX_INFILL: 1200, VEG_SCALE: { broadleaf: 1, birch: 1 },
     VEG_FOOT_R: { broadleaf: 1, birch: 1 }, vegFootIndex: { near: () => false, add: () => {} },
-    areaFree: () => true, blockArea: () => {}, terrainEnvCode: () => 0,
+    areaFree: () => true, areaFreeLane: () => true, towerBase: new Set(),
+    blockArea: () => {}, terrainEnvCode: () => 0,
     flatRadiusAt: (t, x, z, r) => r, sinkBaseY: () => 50,
     CIVIC_KINDS: M.CIVIC_KINDS, CIVIC_TREES: M.CIVIC_TREES, planBlocks: M.planBlocks,
     civicColliders: M.civicColliders, plotSeed: M.plotSeed, frac: M.frac,
@@ -1356,7 +1359,7 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
   ok(/if \(!osmSource && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)\s*&& !landmarks\.length && !generic\.length && urbanPts\.length > 8\)/.test(bcode),
     '備援程序街區只在圖資**查詢失敗**(!osm)且場地宣告有市區成分時觸發 —— '
     + '查詢成功但零建物 = 荒野維持荒野;宣告 urban ≤ 10% = 沒有市區可重建(mix 是階梯第三層的否決票)');
-  ok(/placeBoundary\(\{ terrain, items, generic, rnd, mix, occ, settlement \}\)/.test(bcode),
+  ok(/placeBoundary\(\{ terrain, items, generic, rnd, mix, occ, settlement(, rings)? \}\)/.test(bcode),
     '呼叫端把聚落場傳進 placeBoundary(邊界樓與兩個放大器同一把尺)');
   ok(/biome === 'urban' && !settlement\?\.\(x, z\)/.test(bcode),
     '邊界樓的市區判定過聚落場(衛星低飽和誤判 / mix 改寫不得憑空生出建物)');
@@ -1425,6 +1428,107 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
       ok(town.generic.length > 0, `市區邊界照長樓(聚落場背書 ⇒ ${town.generic.length} 棟,城市場地不受影響)`);
       ok((bareV.items.borderrock || []).length > 0 && bareV.generic.length === 0,
         '裸露地場地降格成巨岩(mix.bare 佔多 → borderrock;視覺牆選型走宣告,建物才要圖資背書)');
+    }
+  }
+}
+
+// ============ Ⅷ 塔堡 1/4 射程淨空(實體禁行、平面放行)============
+// 使用者定案:砲塔/主堡周遭 1/4 射程內不與背景實體物件重疊;停車場/球場/公園/
+// 草原/沙漠等平面背景可保留(視地貌而定:市區→停車場/球場、綠地→公園/草原、
+// 裸露地→沙漠/空地,地表拼圖本身即背景)。
+//   ① 砲塔圈 = UNITS.tower.range / 4 推導(吃 COMBAT_SCALE 縮放後權威值);
+//      主堡維持 BASE_CLEAR_R(70m,已涵蓋主堡 1/4,既有錨點不動)
+//   ② towerBase 格與 blocked 同一次登記(另開一份 Set 遲早分家)
+//   ③ areaFreeLane 只放行 towerBase 格,其餘與 areaFree 一致(執行原文行為直測)
+//   ④ VEG_FLAT = 地被級平面植栽名冊;put() 依此分流,probeCivic 走 areaFreeLane
+// 反向驗證:--break-tower 把 1/4 改成 1/8 ⇒ ① MUST 紅字
+console.log('\nⅧ 塔堡 1/4 射程淨空');
+{
+  const bcode8 = strip(bio);
+  const tcm = bcode8.match(/const TOWER_CLEAR_R\s*=\s*([^;]+);/);
+  let tSrc = (tcm?.[1] || '').trim();
+  if (BREAK_TOWER) {
+    const nb = tSrc.replace('UNITS.tower.range / 4', 'UNITS.tower.range / 8');
+    ok(nb !== tSrc, '反向驗證錨點有效(替換真的發生,不是靜默 no-op)');
+    tSrc = nb;
+  }
+  ok(tcm && tSrc === 'UNITS.tower.range / 4',
+    `砲塔圈 = UNITS.tower.range / 4 推導(實得 ${tSrc || '缺失'})`);
+  // UNITS.tower.range 吃 COMBAT_SCALE 縮放後權威值(與 game/sim 同一數);只驗「大於舊制」,
+  // 不手寫米數 —— 平衡改射程時此圈自己跟著走,不該紅在這裡
+  ok(UNITS.tower.range / 4 > 30,
+    `推導圈 ${(UNITS.tower.range / 4).toFixed(2)}m 大於舊制手寫 30m(淨空確實放大)`);
+  ok(/blockPoint\(p\.x, p\.z, TOWER_CLEAR_R, towerBase\)/.test(bcode8),
+    '塔圈登記吃 TOWER_CLEAR_R 並同步記進 towerBase');
+  ok(/return \{ blocked, towerBase, rings \};/.test(bcode8),
+    'buildClearance 交出 blocked + towerBase + rings(平面背景才分得清走廊與塔堡圈)');
+  // areaFreeLane 執行原文行為直測(CELL 具名注入,與真品同一格距)
+  const k0 = bio.indexOf('function areaFreeCore(');
+  const k1 = bio.indexOf('function buildClearance(');
+  let coreErr = null, AF = null, AFL = null;
+  try {
+    ({ areaFree: AF, areaFreeLane: AFL } = new Function('CELL',
+      `${bio.slice(k0, k1)}\nreturn { areaFree, areaFreeLane };`)(10));
+  } catch (e) { coreErr = e; }
+  ok(!coreErr, `淨空原文執行不炸${coreErr ? ` —— ${coreErr.message}` : ''}`);
+  if (!coreErr) {
+    const blk = new Set(['0,0']), tb = new Set(['0,0']);
+    ok(AF(blk, 0, 0, 10) === false, '實體判:圈內格 areaFree 照樣擋下');
+    ok(AFL(blk, tb, 0, 0, 10) === true, '平面判:同一格 areaFreeLane 放行(towerBase)');
+    ok(AFL(new Set(['0,0']), new Set(), 0, 0, 10) === false,
+      '走廊格(不在 towerBase)areaFreeLane 照樣擋下');
+    ok(AFL(new Set(), new Set(), 0, 0, 10) === true, '空地兩邊都放行');
+    const side = new Set(['1,0']);
+    ok(AF(side, 0, 0, 10) === false && AFL(side, new Set(['1,0']), 0, 0, 10) === true,
+      '鄰格(足印圓盤)同樣只對 towerBase 放行');
+  }
+  const fm = bcode8.match(/const VEG_FLAT = new Set\(\[([^\]]*)\]\);/);
+  const flats = fm?.[1] || '';
+  ok(!!fm, '地被級平面植栽名冊 VEG_FLAT 只有一份');
+  for (const t of ['silvergrass', 'reed', 'redcap', 'toadstool']) {
+    ok(flats.includes(`'${t}'`), `平面背景:${t} 在名冊內`);
+  }
+  for (const t of ['bamboo', 'broadleaf', 'conifer', 'deadtree', 'mangrove', 'shrub']) {
+    ok(!flats.includes(`'${t}'`), `實體植栽:${t} 不在名冊內(一律淨空)`);
+  }
+  ok(/if \(VEG_FLAT\.has\(type\)\) \{\s*if \(!areaFreeLane\(blocked, towerBase/.test(bcode8)
+    && /\} else if \(!areaFree\(blocked, x, z, foot\.r\)\) return;/.test(bcode8),
+    'put() 依名冊分流:平面走 areaFreeLane,實體走 areaFree');
+  ok(bcode8.includes('if (!areaFreeLane(blocked, towerBase, x, z, r)) return false;'),
+    'probeCivic 走 areaFreeLane(公設鋪面可鋪進塔堡圈當平面背景)');
+  ok((bcode8.match(/areaFreeLane\(blocked, towerBase, x, z, /g) || []).length === 3,
+    'areaFreeLane 恰三處(定義 + put + probeCivic,多一處就是分家)');
+  // 精確圖資建物(2026-09 使用者回報「還是沒淨空」):buildOsmPolygonBuildings 原本完全不吃
+  // blocked,市區圖資樓直接長進塔堡圈(實測 barcelona 15 棟進塔圈、最近 2.3m)。修法:呼叫端
+  // 餵 rings(圓盤視圖),輪廓撞圈整棟略過記 skipped —— 格子不夠精,多邊形走真幾何相交。
+  ok(/return \{ blocked, towerBase, rings \};/.test(bcode8),
+    'buildClearance 交出 rings(圓盤視圖,與格子同一次登記)');
+  ok(bcode8.includes('terrain, rings,'),
+    '圖資精確建物收到 rings(不吃就是舊制:圈內照長)');
+  ok(bcode8.includes('occ, settlement, rings }'),
+    '邊界帶收到 rings(主堡落圖端時邊界樓讓圈)');
+  const osmb = readSrc('public', 'js', 'osmBuilding.js');
+  ok(/const rings = Array\.isArray\(options\.rings\) \? options\.rings : \[\];/.test(osmb),
+    'rings 是選用參數(稽核傳 {} 行為不變)');
+  ok((osmb.match(/function polyHitsDisc\(/g) || []).length === 1
+    && /reason: 'tower_base_clear'/.test(osmb),
+    '多邊形-圓盤相交只有一份實作,撞圈記 tower_base_clear 缺口');
+  {
+    const p0 = osmb.indexOf('function pointInRing(');
+    const p1 = osmb.indexOf('function attachmentSite(');
+    let gErr = null, PH = null;
+    try {
+      PH = new Function('EPS', `${osmb.slice(p0, p1)}\nreturn polyHitsDisc;`)(1e-5);
+    } catch (e) { gErr = e; }
+    ok(!gErr, `相交原文執行不炸${gErr ? ` —— ${gErr.message}` : ''}`);
+    if (!gErr) {
+      const sq = { outer: [[0, 0], [10, 0], [10, 10], [0, 10]], holes: [] };
+      ok(PH(sq, 5, 5, 3) === true, '盤心在實體內 ⇒ 撞');
+      ok(PH(sq, 20, 5, 3) === false, '盤在實體外 ⇒ 放行');
+      ok(PH(sq, 11, 5, 2) === true, '邊緣掠過盤內 ⇒ 撞(只驗中心格會漏)');
+      ok(PH(sq, 10.5, 5, 0.4) === false, '盤擦邊未入 ⇒ 放行(不過度清空)');
+      const court = { outer: [[0, 0], [20, 0], [20, 20], [0, 20]], holes: [[[8, 8], [12, 8], [12, 12], [8, 12]]] };
+      ok(PH(court, 10, 10, 3) === false, '塔在中庭內洞 ⇒ 放行(無實體重疊)');
     }
   }
 }

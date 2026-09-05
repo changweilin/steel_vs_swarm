@@ -139,6 +139,22 @@ function pointInRing(x, z, ring) {
   return inside;
 }
 
+// 多邊形實體與圓盤是否相交(零 import 純幾何):外環頂點入盤、或外環邊緣掠過盤內、
+// 或盤心落在實體內(外環內且不在內洞裡) —— 塔堡 1/4 圈淨空的判定縫,呼叫端只餵圈,
+// 幾何只認這一份(中庭裡的塔不算重疊,照樣放行)
+function polyHitsDisc(poly, cx, cz, r) {
+  const outer = poly?.outer || [];
+  for (const p of outer) if (Math.hypot(p[0] - cx, p[1] - cz) < r) return true;
+  for (let i = 0; i < outer.length; i++) {
+    const a = outer[i], b = outer[(i + 1) % outer.length];
+    const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz;
+    let t = l2 ? ((cx - a[0]) * dx + (cz - a[1]) * dz) / l2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    if (Math.hypot(cx - (a[0] + t * dx), cz - (a[1] + t * dz)) < r) return true;
+  }
+  return pointInRing(cx, cz, outer) && !(poly.holes || []).some((hole) => pointInRing(cx, cz, hole));
+}
+
 function attachmentSite(poly, half) {
   const xs = poly.outer.map((p) => p[0]), zs = poly.outer.map((p) => p[1]);
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
@@ -171,12 +187,14 @@ function attachmentGeometry(kind, poly, y) {
 
 /**
  * 生成 OSM 建物外環／內洞。`materialOf` 回傳 { wall, roof }，可由 biomes 注入既有材質縫。
+ * `rings` = 塔堡 1/4 圈 [{x,z,r}]:實體撞圈的輪廓整棟略過(寧缺勿錯),記進 skipped 供圖資缺口報表。
  * 回傳的 platforms 不放進 blockers，僅交給 main.js 的既有 surfaceAt 平台索引。
  */
 export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
   const terrain = options.terrain;
   const materialOf = typeof options.materialOf === 'function' ? options.materialOf : defaultMaterials;
   const wallThickness = Math.max(0.08, Number(options.wallThickness) || 0.28);
+  const rings = Array.isArray(options.rings) ? options.rings : [];
   const batches = new Map();
   const blockers = [], platforms = [], generatedByKind = {}, invalid = [], skipped = [];
   const ordered = [...areas].sort((a, b) => String(a?.sourceId).localeCompare(String(b?.sourceId)));
@@ -194,6 +212,10 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
     for (const raw of area.worldPolygons || []) {
       const poly = polyOf(raw);
       if (!poly) { invalid.push({ sourceId: area.sourceId, reason: 'invalid_footprint' }); continue; }
+      if (rings.some((rg) => polyHitsDisc(poly, rg.x, rg.z, rg.r))) {
+        skipped.push({ sourceId: area.sourceId, reason: 'tower_base_clear' });
+        continue;
+      }
       const baseY = baseOf(poly, terrain, 0);
       const topY = baseY + height;
       let batch = batches.get(kind);

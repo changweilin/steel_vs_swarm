@@ -28,7 +28,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {
   ENV, solveTowerSites, siteCPs, mapArg, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
   WORLD_EDGE, edgeWallInsetM, edgeWallHM, edgeWallDeepM, xzToLL, SLOPE, slopeDeg,
-  CHARACTERS, INK_CTR,
+  CHARACTERS, INK_CTR, UNITS,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { pruneRoads, quantizeRoads, GRID_HW } from './roadgrid.js';
@@ -148,6 +148,8 @@ const VEG_FOOT_R = {
   shrub: 1.2, silvergrass: 0.9, arrowbamboo: 1.0, succulent: 0.8, reed: 0.8,
   sapling: 1.0, redcap: 0.6, browncap: 0.6, parasol: 0.5, toadstool: 0.5,
 };
+// 地被級平面植栽(無木質幹/冠):塔堡 1/4 圈內可保留為草原/沙漠背景;名冊之外一律視為實體淨空
+const VEG_FLAT = new Set(['silvergrass', 'arrowbamboo', 'succulent', 'reed', 'redcap', 'browncap', 'parasol', 'toadstool']);
 // Overpass 鏡像輪替(2026-07-22 倫敦橋數浮動案):主站限流(429/504)是圖資逐局忽有忽無的
 // 主因之一 —— 限流回應是即時的,換鏡像重試幾乎不吃載入時間預算;逾時(abort)才放棄。
 // 與 tools/bake_venue_lanes.mjs 同一組鏡像。
@@ -164,18 +166,29 @@ const OVERPASS_URLS = [
 // (兩處各寫一個 70 = 改了其中一個,名岩的退避距悄悄以另一個基準計算,而畫面上只表現成
 //  「這張圖的巨岩離主堡近了一點」)。
 const BASE_CLEAR_R = 70;
+// 砲塔淨空半徑:1/4 射程推導(UNITS.tower.range 一動自己跟著走;推導值 MUST NOT 手寫)
+const TOWER_CLEAR_R = UNITS.tower.range / 4;
 function cellKey(x, z) { return `${Math.round(x / CELL)},${Math.round(z / CELL)}`; }
 
 // 大型地物 footprint 淨空:巨岩/神木群半徑可達數十公尺,逐格掃整個圓盤
-function areaFree(blocked, x, z, r) {
+function areaFreeCore(blocked, ignore, x, z, r) {
   const n = Math.ceil(r / CELL);
   const cx = Math.round(x / CELL), cz = Math.round(z / CELL);
   for (let i = -n; i <= n; i++) {
     for (let j = -n; j <= n; j++) {
-      if (i * i + j * j <= n * n + n && blocked.has(`${cx + i},${cz + j}`)) return false;
+      const k = `${cx + i},${cz + j}`;
+      if (i * i + j * j <= n * n + n && blocked.has(k) && !(ignore && ignore.has(k))) return false;
     }
   }
   return true;
+}
+function areaFree(blocked, x, z, r) {
+  return areaFreeCore(blocked, null, x, z, r);
+}
+// 走廊淨空(平面背景用):與 areaFree 同一掃描,但塔堡 1/4 圈的格子視為可放 ——
+// 公設鋪面/地被小植栽可以鋪進圈內,實體物件(樹/建物/岩/地標)不行
+function areaFreeLane(blocked, towerBase, x, z, r) {
+  return areaFreeCore(blocked, towerBase, x, z, r);
 }
 function blockArea(blocked, x, z, r) {
   const n = Math.ceil(r / CELL);
@@ -189,12 +202,18 @@ function blockArea(blocked, x, z, r) {
 
 function buildClearance(cfg, center) {
   const blocked = new Set();
-  const blockPoint = (x, z, r = CELL) => {
+  const towerBase = new Set();   // 塔堡 1/4 圈格:平面背景可放行、實體物件禁行(與 blocked 同一次登記)
+  const rings = [];              // 同一圈的圓盤視圖:精確多邊形(圖資建物)走真幾何相交,不吃格子
+  const blockPoint = (x, z, r = CELL, ring = null) => {
     const n = Math.ceil(r / CELL);
     const cx = Math.round(x / CELL), cz = Math.round(z / CELL);
     for (let i = -n; i <= n; i++) {
       for (let j = -n; j <= n; j++) {
-        if (i * i + j * j <= n * n + n) blocked.add(`${cx + i},${cz + j}`);
+        if (i * i + j * j <= n * n + n) {
+          const k = `${cx + i},${cz + j}`;
+          blocked.add(k);
+          if (ring) ring.add(k);
+        }
       }
     }
   };
@@ -214,14 +233,19 @@ function buildClearance(cfg, center) {
   // 名冊走 `siteCPs`:劇情戰役只有防守方有塔,直接讀 st[side] 會拿到 undefined(見該支註)
   for (const sites of solveTowerSites(lanesW, mapArg(cfg))) {
     for (const st of sites) {
-      for (const p of siteCPs(st)) blockPoint(p.x, p.z, 30);
+      // 砲塔 1/4 射程圈淨空:圈內不與背景實體物件重疊(平面背景另由 areaFreeLane 放行)
+      for (const p of siteCPs(st)) {
+        blockPoint(p.x, p.z, TOWER_CLEAR_R, towerBase);
+        rings.push({ x: p.x, z: p.z, r: TOWER_CLEAR_R });
+      }
     }
   }
   for (const side of ['SWARM', 'STEEL']) {
     const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
-    blockPoint(x, z, BASE_CLEAR_R);
+    blockPoint(x, z, BASE_CLEAR_R, towerBase);
+    rings.push({ x, z, r: BASE_CLEAR_R });
   }
-  return blocked;
+  return { blocked, towerBase, rings };
 }
 
 // ---- 地貌分類(影像顏色 + 高程 + 場地 mix 加權)----
@@ -10146,7 +10170,7 @@ function buildBackdrop({ group, terrain, ctr }) {
 // 讓「打不開的邊」看起來是被城市/森林/岩壁圍住,而不是隱形牆。
 // 全部走既有管線(generic 建物 / items 植被 InstancedMesh);邊界樓沿管線
 // 也會登記碰撞柱 —— 反正在空氣牆外不可達,無礙。
-function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement }) {
+function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rings = [] }) {
   // 帶的內緣 = 障礙環的外緣(推導不手寫:改環厚/內縮量,這一帶自己跟著讓開)。
   // 現值與舊制的 34 逐位元相同 ⇒ 這一支的亂數序列與佈局完全不變。
   // 2026-08-11:內緣改吃 `edgeWallDeepM()`(最深的那一款牆的厚度)—— 環體自從吃型錄之後
@@ -10171,6 +10195,8 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement }) {
       const h = terrain.heightAt(x, z);
       // 水面/濕地缺口:水面本身就是邊界;沼澤帶也不種邊界樓/神木牆/巨岩(水沼上禁大型障礙物)
       if (h < 0.4 || terrainEnvCode(terrain, x, z) !== 0) continue;
+      // 塔堡圈退讓(主堡落在圖端時邊界帶可能壓進圈):三型最大腳印保守外擴 20m
+      if (rings.some((rg) => Math.hypot(x - rg.x, z - rg.z) < rg.r + 20)) continue;
       const avail = occ.room(x, z) - 1;   // 與既有物(含邊界鄰居/邊緣 OSM 樓)的可用半徑
       let biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
       // 邊界樓是**建物**(進 generic ⇒ 立面/占位與圖資建物同一條路)⇒ 市區判定 MUST 過
@@ -10493,7 +10519,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   await onProgress?.(0.02, '規劃兵線淨空走廊…');
   const naturePromise = loadNatureModels(season);   // Quaternius 植被:與散佈並行載入
-  const blocked = buildClearance(cfg, center);
+  const { blocked, towerBase, rings } = buildClearance(cfg, center);
   // 主堡世界座標:道路預整理、名岩退避與語意化地標的錨點同吃這一份(各算一次 = 第二份實作)
   const basesW = ['SWARM', 'STEEL'].map((side) => {
     const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
@@ -10836,8 +10862,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       dj: rnd(),
     };
     const foot = { x, z, r: (VEG_FOOT_R[type] ?? 1) * actualS };
-    // 優先序:兵線/塔位/主堡淨空(blocked)高於植被 ⇒ 足印圓盤掃 areaFree(單格驗擋不住大樹)
-    if (!areaFree(blocked, x, z, foot.r)) return;
+    // 優先序:兵線/塔位/主堡淨空(blocked)高於植被 ⇒ 足印圓盤掃 areaFree(單格驗擋不住大樹);
+    // 地被級平面植栽走 areaFreeLane,可鋪進塔堡圈當草原/沙漠背景
+    if (VEG_FLAT.has(type)) {
+      if (!areaFreeLane(blocked, towerBase, x, z, foot.r)) return;
+    } else if (!areaFree(blocked, x, z, foot.r)) return;
     if (roadOccupied(foot) || vegFootIndex.near(foot)) return;
     items[type] ??= [];
     items[type].push(item);
@@ -10890,7 +10919,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   for (let a = 0; a < attempts && placed < vegTarget; a++) {
     if ((a & 1023) === 0) await onProgress?.(0.05 + (a / attempts) * 0.30, '鋪設植被地貌…');
     const x = rx(), z = rz();
-    if (blocked.has(cellKey(x, z))) continue;
+    // 塔堡圈的格子放行到 put() 再判(地被級平面植栽可留);走廊格照舊快拒,亂數序列不為走廊漂移
+    if (blocked.has(cellKey(x, z)) && !towerBase.has(cellKey(x, z))) continue;
     const h = terrain.heightAt(x, z);
     if (h < 0.4) {   // 水體:偶爾在水邊補蘆葦
       if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
@@ -10924,7 +10954,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         const cr = 5 + rnd() * 14;
         for (let k = 0; k < n && placed < vegTarget; k++) {
           const bx = x + (rnd() - 0.5) * cr * 2, bz = z + (rnd() - 0.5) * cr * 2;
-          if (blocked.has(cellKey(bx, bz)) || terrain.heightAt(bx, bz) < 0.4) continue;
+          if ((blocked.has(cellKey(bx, bz)) && !towerBase.has(cellKey(bx, bz))) || terrain.heightAt(bx, bz) < 0.4) continue;
           put('bamboo', bx, bz, 0.8 + rnd() * 0.7);
         }
       } else if (relH > 0.55 || r < 0.55) {
@@ -10968,7 +10998,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       sports: 0x789b80, parking: 0x8a8d91, utility: 0x7e8b95,
     };
     osmBuildingResult = buildOsmPolygonBuildings(group, osmData.areas, {
-      terrain,
+      terrain, rings,
       materialOf: (kind, batch, style) => {
         const family = osmData.areas.find((a) => a.classification?.kind === kind)?.classification?.family || kind;
         const wall = envMat(style?.wall || osmWallColors[family] || 0xb7a893, { wash: 0.42, cool: 0.4 });
@@ -11369,7 +11399,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           lo = Math.min(lo, hh); hi = Math.max(hi, hh);
         }
         if (hi - lo > CIVIC_KINDS[kind].flat) return false;
-        if (!areaFree(blocked, x, z, r)) return false;
+        // 公設鋪面是平面背景,可鋪進塔堡圈(市區→停車場/球場、綠地→公園/草原);
+        // 有量體零件照常登記 blockers,仍與實體互斥
+        if (!areaFreeLane(blocked, towerBase, x, z, r)) return false;
         if (!occ.free(x, z, r, 2)) return false;
         if (flatRadiusAt(terrain, x, z, r, CIVIC_KINDS[kind].flat) < r) return false;
         occ.add(x, z, r);
@@ -11445,7 +11477,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   await onProgress?.(0.69, '築起邊界帶(樓群/神木/巨岩)…');
   // OSM 成功時建物／用地輪廓已是權威來源；邊界帶的程序樓群也必須停用，避免真實建物外
   // 再長出虛構街區。只有來源整體為 null 才由既有 fallback 產生。
-  const boundaryN = osmSource ? 0 : placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement });
+  const boundaryN = osmSource ? 0 : placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rings });
 
   // 建物腳印內/貼牆的植被拔除:植被先散布、建物(圖資/補間)後放且互不看對方,
   // 不濾掉就會樹冠穿屋頂、樹卡進牆面。只濾「錨點貼地」的實例 —— 神木上的
