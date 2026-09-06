@@ -51,7 +51,7 @@
       "triangles": 36
     },
     {
-      "name": "trunk_crown",
+      "name": "trunk_upper",
       "type": "conical_frustum",
       "sides": 8,
       "radii": [

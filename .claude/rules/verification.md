@@ -114,6 +114,8 @@ node tools/audit_gait_anat.mjs        # 步態關節曲線(前後肢拓樸/佔�
 node tools/audit_morph_rig.mjs       # 變形過程(兩態零件對應 / 反推的共同錨 / 換樹接得上 / 淡出淡入時間表)
 #   ±--break-class/--break-defer/--break-fade/--break-rest/--break-anchor/--break-post/--break-once
 node tools/audit_object_joints.mjs   # 程序生成零件接合(--seeds 8)
+node tools/audit_tree_joints.mjs     # 樹木幹枝接合(幹柱連續/幹頂埋冠/枝根梢/木橋誤名/模型接合)
+#   ±--break-trunk-gap/--break-branch-tip/--break-crown-name
 node tools/audit_background_objects.mjs # 正式背景物件：主結構固定、同角色多槽獨立抽樣、槽包絡與接合中心
 #   ±--break-leaf/--break-multi/--break-slot/--break-palette
 node tools/audit_siteplan.mjs        # 都市計畫 / 樹冠羞避 / 地質排列 / 聚落場 / 整棟量體 / 平面整平
