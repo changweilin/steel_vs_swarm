@@ -2,18 +2,17 @@
 
 > Scope: principles and boundaries only. No methods, no workflows, no commands.
 > Global principles live in root `AGENTS.md`.
+> Full definitions live in `.claude/rules/` (`seams-balance`, `seams-weapons`, `seams-bots`, `seams-ui-net`).
 > Nothing in this file restricts skill selection or skill usage.
 
-## Module Boundaries (MUST NOT interpenetrate)
+## Roles (MUST NOT interpenetrate)
 
-- `server.js`: transport only (HTTP static + WebSocket + health + LAN/dev routes).
-- `rooms.js`: `RoomHub` lifecycle (rooms, matchmaking, battleConfig, 8Hz loop).
-- `sim.js`: `BattleSim` — sole settlement point for HP / damage / ammo / economy / outcome.
-- `bots.js`: `BotBrain` state machine (push / engage / retreat).
+- Transport: static serving, real-time connections, health, and dev routes only.
+- Rooms: room lifecycle, matchmaking, battle-configuration validation, and combat loop only.
+- Simulation: the sole settlement point for HP / damage / ammo / economy / outcome.
+- Bots: the computer-player state machine (push / engage / retreat) only.
 
-## Hard Boundaries
+## Behavioral Boundaries
 
-1. `rooms.js`, `sim.js`, `bots.js` MUST stay browser-runnable. MUST NOT import Node builtins, `process.*`, `Buffer`, or `require()`. Only `server.js` may use Node APIs.
-2. No hard-coded balance numbers in `sim.js` / `bots.js`. `public/js/data.js` is the single numeric source, imported directly by the server.
-3. Client input is untrusted. Reports are validated, then silently dropped on failure. MUST NOT trust coordinates, fire points, or hit targets blindly.
-4. Heroes are keyed by connection `pid` in the `heroes` Map (bots use string pids such as `'b1'`). MUST NOT key by array index or Socket object. Squad-shared state mounts via `_bindShared()`; per-team iteration uses `heroes.values()`, per-body iteration uses `_allBodies()`.
+- **Browser-runnable core**: simulation, room, and bot logic MUST stay browser-runnable; Node APIs live in the transport module only, so all three modes share one codebase.
+- **Stable identity and granularity**: player state is keyed by stable connection identity, never by positional index or socket object; squad-shared state mounts once; per-team and per-body iteration stay distinct.
