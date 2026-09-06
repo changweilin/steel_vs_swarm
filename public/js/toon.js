@@ -1721,17 +1721,20 @@ ${CEL_SEA_GLSL}
           vec3 swU = normalize( vec3( swUrow.x / ( swLx * swLx ), swUrow.y / ( swLy * swLy ), swUrow.z / ( swLx * swLx ) ) + vec3( 1e-6 ) );
           transformed -= swU * ( sw * ( uSoftAmp * uWeatherWindAmp ) * abs( swOsc ) * 0.3 / swLy );
           // ---- 玩家位移擾動(S5;⑤-1)----
-          // 距離是 **2.5D**:水平取**實例原點**(逐頂點取 XZ 會把整株拉歪)、垂直取這個頂點
-          // 自己的株上高度 ⇒ 一台在地面走的機體構造上碰不到 6m 高的樹冠。
+          // 距離是 **2.5D**:水平取**同一株的樹基**(swTXZ,與擺動相位同一個點)、垂直取這個頂點
+          // 自己的世界高度 ⇒ 同株的幹/枝/冠拿到同一份推重,接合處在機體經過時不錯開;
+          // 地面走的機體構造上碰不到 6m 高的樹冠。逐零件原點水平差可達 ±10m(巨木冠偏移)、
+          // 株上高度名義值又把零件基高重複計入 ⇒ 兩者都會讓同株各段各被推各的。
+          // 單零件散草/旗面樹基恆等於實例原點 ⇒ 無感。
           // 半徑 **是速度的函式**(走路撥開、跑步甩開)—— 這一行就是這一項的本體。
           // ⚠ 兩條硬規則:①MUST NOT 引入第三個 sin(;②MUST NOT 對零向量 normalize() 之後
           //   乘 0(NaN × 0 仍是 NaN ⇒ 那批 InstancedMesh 整批消失而 console 一個字都沒有)
           //   —— 故一律 spd > 0 早退 + 除以 max(len, 1e-4)。
-          float swHy = swO.y + swH * length( swM[ 1 ] );
+          float swWy = swO.y + ( swM * transformed ).y;
           for ( int ci = 0; ci < ${CHAR.N}; ci++ ) {
             float cSpd = uCharSpd[ ci ];
             if ( cSpd <= 0.0 ) continue;
-            vec3 cRel = vec3( swO.x, swHy, swO.z ) - uCharPos[ ci ];
+            vec3 cRel = vec3( swTXZ.x, swWy, swTXZ.y ) - uCharPos[ ci ];
             float cR = ${CHAR.R0.toFixed(3)} + ${CHAR.R_PER_MPS.toFixed(3)} * cSpd;
             float cD = length( cRel );
             if ( cD >= cR ) continue;

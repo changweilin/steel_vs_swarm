@@ -735,8 +735,9 @@ console.log('\nⅩ 玩家位移擾動(S5)+ 岸邊泡沫 / 倒影(S6)');
     '離心方向除以 max(len, 1e-4) —— **MUST NOT 對零向量 normalize() 之後乘 0**(NaN × 0 仍是 NaN ⇒ 那批 InstancedMesh 整批消失,console 一個字都沒有)');
   ok(/vec3\( cOut\.x, 0\.0, cOut\.y \) \* swM/.test(S5),
     '方向轉進零件局部座標(沿用 swD 那一行的轉置 idiom;實例的 ry 是亂數)');
-  ok(/swO\.y \+ swH \* length\( swM\[ 1 \] \)/.test(S5),
-    '距離是 2.5D:水平取實例原點、垂直取這個頂點自己的株上高度 ⇒ 地面上的機體構造上碰不到 6m 高的樹冠');
+  ok(/float swWy = swO\.y \+ \( swM \* transformed \)\.y;/.test(S5)
+    && /vec3\( swTXZ\.x, swWy, swTXZ\.y \) - uCharPos\[ ci \]/.test(S5),
+    '距離是 2.5D:水平取同一株的樹基、垂直取這個頂點自己的世界高度 ⇒ 同株幹/枝/冠同推不同剪,地面機體構造上碰不到 6m 高的樹冠');
   ok(count(S5, /sin\(/g) === 2,
     '**沒有第三個 sin(**(擴充這一區塊時最容易踩的一條:Ⅲ 的正規式是全域計數)');
 
