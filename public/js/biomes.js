@@ -1261,20 +1261,23 @@ function leafRowGeo(type, part, pi) {
 }
 
 /**
- * 幫一列掛上逐實例的 `aSurfId`。**只換屬性、不動拓樸**:position / normal / uv / index
+ * 幫一列掛上逐實例的 `aSurfId` / `aTreeO`。**只換屬性、不動拓樸**:position / normal / uv / index
  * 沿用**同一份** `BufferAttribute`(與 `alignedGeo` 的窗格對齊同一個 idiom)⇒ draw call、
- * 三角形數、記憶體逐位元不動,只多一條逐實例的 float。
+ * 三角形數、記憶體逐位元不動,只多逐實例的 float。
+ * `aTreeO` = 同一株的樹基世界 XZ(幹/枝/冠共用 ⇒ 整株同相位,見 toon.js 的 treeO):
+ * 各零件的實例原點含自己的 px/pz 偏移,相位取它 = 同一株各擺各的。
  * ⚠ 殼 `markShared` 註冊:它借用的是別人的屬性,被 `disposeTree` 放掉就會把保險絲幾何
  * (整場共用、每一場都要用)一起釋放 ⇒ 之後所有借用者變空白(A25 的原話)。
  */
-function surfIdGeo(geo, attr) {
-  if (!attr) return geo;               // 群組剪影關著 ⇒ 連殼都不建(逐位元同舊制)
+function surfIdGeo(geo, attr, treeAttr) {
+  if (!attr && !treeAttr) return geo;     // 群組剪影關著且不帶樹基 ⇒ 連殼都不建(逐位元同舊制)
   const q = new THREE.BufferGeometry();
   for (const k in geo.attributes) q.setAttribute(k, geo.attributes[k]);
   if (geo.index) q.setIndex(geo.index);
   q.boundingBox = geo.boundingBox;
   q.boundingSphere = geo.boundingSphere;
-  q.setAttribute('aSurfId', attr);   // 逐型**一份**屬性,各列共用 ⇒ 一顆 GPU buffer
+  if (attr) q.setAttribute('aSurfId', attr);   // 逐型**一份**屬性,各列共用 ⇒ 一顆 GPU buffer
+  if (treeAttr) q.setAttribute('aTreeO', treeAttr);   // 同一型各列共用同一份(實例順序逐列一致)
   return markShared(q);
 }
 
@@ -1314,6 +1317,11 @@ export function buildVegMeshes(type, items, season) {
     items.forEach((it, i) => { arr[i] = leafSurfId(it.x, it.z); });
     sidAttr = new THREE.InstancedBufferAttribute(arr, 1);
   }
+  // 逐株樹基相位(見 toon.js 的 treeO):同一型的實例順序逐列一致 ⇒ 一份屬性各列共用。
+  // 世界 XZ(樹基),不是實例原點(各零件含自己的 px/pz 偏移)。
+  const treeArr = new Float32Array(items.length * 2);
+  items.forEach((it, i) => { treeArr[i * 2] = it.x; treeArr[i * 2 + 1] = it.z; });
+  const treeAttr = new THREE.InstancedBufferAttribute(treeArr, 2);
   rows.forEach((part, pi) => {
     // 日漫賽璐璐渲染(4 階 toon 漸層,取代寫實 PBR)
     // 軟性零件(葉/草)另帶擺動錨點:base = 這個零件的原點在整株上的高度、sy = 它自己的
@@ -1335,6 +1343,9 @@ export function buildVegMeshes(type, items, season) {
       : isTreeWood
         ? { soft: { k: 'wood', span, base: part.y || 0, sy: (part.sy || 1) * Math.cos(part.rx || 0) * Math.cos(part.rz || 0) } }
         : {};
+    // 逐株樹基相位:有擺動的列一律改吃 aTreeO(同一株的幹/枝/冠同相位 ⇒ 接合處不分解)。
+    // 判定沿用上面的 soft 結果,不另開名單;單零件散草(px = pz = 0)樹基恆等於實例原點 ⇒ 無感。
+    if (mo.soft) mo.treeO = true;
     if (grpOn) {
       mo.surfAttr = true;                       // 面號改吃逐實例屬性 aSurfId
       if (sk === 'leaf') mo.ink = 'group';      // 葉列 = 群組剪影;木質列維持 'hard'(幹的折邊留著)
@@ -1343,9 +1354,10 @@ export function buildVegMeshes(type, items, season) {
     const mat = toonMat(seasonColor(part.key, part.c, season), mo);
     // 畫的是 partGeo 解析結果(AI 零件庫 ?? 保險絲);佈局(span/冠幅)仍吃 p.g,見 partGeo 檔頭
     const m = new THREE.InstancedMesh(partGeo(part), mat, items.length);
-    // 卡片與逐株面號**只換這一列的幾何**,那一行的解析縫一格未動:卡片是「畫什麼」的第三個
-    // 解析結果,優先序 `lib` > 卡片 > 保險絲(判定住 `leafCardOn`);面號是只換屬性的殼。
-    if (card || sidAttr) m.geometry = surfIdGeo(card || m.geometry, sidAttr);
+    // 卡片與逐株面號/樹基**只換這一列的幾何**,那一行的解析縫一格未動:卡片是「畫什麼」的第三個
+    // 解析結果,優先序 `lib` > 卡片 > 保險絲(判定住 `leafCardOn`);面號/樹基是只換屬性的殼。
+    // 無擺動的列不掛 aTreeO(材質沒有 CEL_TREEO,掛了也是沒人讀的屬性)。
+    if (card || sidAttr || mo.treeO) m.geometry = surfIdGeo(card || m.geometry, sidAttr, mo.treeO ? treeAttr : null);
     items.forEach((it, i) => {
       // 零件擺位 + 實例朝向/微傾斜(剛體)一律走 xform.js 的單一縫:
       // 併進逐零件歐拉角會讓 rx≠0 的枝叉被朝向攪亂、微傾斜變成分段剪切(接合開縫)

@@ -33,7 +33,8 @@
 // 跑法:node tools/audit_soft_stroke.mjs
 // 反向驗證:--break-ink(軟性倍率當成 1)/ --break-anchor(擺動錨點拿掉)
 //           --break-wave(海浪相位改取實例原點)/ --break-gust(陣風包絡拿掉)
-//           --break-cloth(旗面速率退回全員同步)。五者 MUST 各自讓對應欄紅字,否則等於沒驗到(原則 9)。
+//           --break-cloth(旗面速率退回全員同步)/ --break-treephase(逐株相位退回逐零件原點)。
+//           六者 MUST 各自讓對應欄紅字,否則等於沒驗到(原則 9)。
 import { readSrc } from './audit_src.mjs';
 // 載具型錄唯一縫(零 import ⇒ Node 端直接載得動真品;⑧ 段的 CIVIC_PARTS 沙箱要注入)
 import { makeVehicle, makeRecess } from '../public/js/vehicles.js';
@@ -64,6 +65,8 @@ const BREAK_INKANCHOR = process.argv.includes('--break-inkanchor');
 const BREAK_GRAZE = process.argv.includes('--break-graze');
 /** 反向驗證:旗面速率不再逐件變化 ⇒ Ⅲ 布料波形 MUST 紅字 */
 const BREAK_CLOTH = process.argv.includes('--break-cloth');
+/** 反向驗證:逐株樹基相位退回逐零件原點(= 同一株各擺各的舊制)⇒ Ⅲ + Ⅶ MUST 紅字 */
+const BREAK_TREEPHASE = process.argv.includes('--break-treephase');
 
 let toon = readSrc('public', 'js', 'toon.js');
 let post = readSrc('public', 'js', 'postfx.js');
@@ -96,6 +99,11 @@ if (BREAK_GRAZE) {
 if (BREAK_CLOTH) {
   toon = bend(toon, /swRate \*= mix\( 0\.88, 1\.12, swPiece \);/g,
     'swRate *= 1.0;', '--break-cloth');
+}
+if (BREAK_TREEPHASE) {
+  // 壞版 = 逐株相位退回逐零件原點:巨木枝冠 ±10m 偏移 = 2.5rad 相位差 = 風裡分解。
+  // `swTXZ` 只活在擺動區塊(註解不逐字複述它 ⇒ /g 不會先咬到註解)。
+  toon = bend(toon, /swTXZ/g, 'swO.xz', '--break-treephase');
 }
 const biomes = readSrc('public', 'js', 'biomes.js');
 const site = readSrc('public', 'js', 'siteplan.js');
@@ -261,18 +269,29 @@ console.log('\nⅢ 擺動的不變式(toon.js 頂點原文)');
   ok(/uSoftBase \+ transformed\.x/.test(S), '橫向(旗幟)權重錨在旗桿側');
   ok(/clamp\(([\s\S]*?), 0\.0, 1\.0 \)/.test(S) && /sw \*= sw;/.test(S),
     '權重夾在 [0,1] 且取二次(一次的話整株看起來像被平移)');
-  ok(/swO = instanceMatrix \* swO/.test(S) && /dot\( swO\.xz, uWindK \)/.test(S),
-    '空間相位取**實例原點**(逐頂點取 = 同一片葉子的兩端各走各的 = 幾何被拉扯變形)');
+  ok(/swO = instanceMatrix \* swO/.test(S),
+    '實例原點仍算出來餵玩家位移擾動的距離(擺動相位已改吃同一株的樹基,不再吃它)');
+  // 逐株相位(2026-09-06 樹枝分解案):各零件的實例原點含自己的 px/pz 偏移,
+  // 巨木冠偏移 ±10m × 波長 26m = 相位差 2.5rad ⇒ 同一株的幹/枝/冠各擺各的。
+  // 相位 MUST 取同株樹基(aTreeO);逐零件原點就是分解本身。
+  ok(/attribute vec2 aTreeO;/.test(V),
+    '逐株相位屬性 aTreeO(同一株樹的樹基世界 XZ,幹/枝/冠共用)');
+  ok(/vec2 swTXZ = aTreeO;/.test(S) && /dot\( swTXZ, uWindK \)/.test(S),
+    '擺動相位取同一株的樹基(逐零件原點 = 巨木枝冠差 2rad 以上、接合處在風裡分解)');
   ok(!/dot\( transformed\.xz, uWindK \)/.test(S), '相位 MUST NOT 逐頂點取');
-  ok(/vec3\( uWindDir\.x, 0\.0, uWindDir\.y \) \* swM/.test(S),
+  ok(/vec3 swDrow = vec3\( uWindDir\.x, 0\.0, uWindDir\.y \) \* swM/.test(S),
     '世界風向轉進零件局部座標(實例的 ry 是亂數 ⇒ 直接拿世界向量會變成每株各吹各的)');
+  ok(/swLx \* swLx/.test(S) && /swLy \* swLy/.test(S)
+    && /vec3 swUrow = vec3\( 0\.0, 1\.0, 0\.0 \) \* swM/.test(S),
+    '精確逆映射(逐分量除 Lx²/Ly²):轉置在冠盤這類非等比縮放下把傾角污染放大,下沉偏離世界垂直 30°');
   ok(/sin\( uWindT \* swRate \+ swPhase \)/.test(S) && count(S, /sin\(/g) === 2,
     '兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點');
   ok(/#ifdef CEL_SWAY_H[\s\S]*?swPiece = fract[\s\S]*?swRate \*= mix\( 0\.88, 1\.12, swPiece \);[\s\S]*?swPhase \+= swPiece \* 6\.2831853;[\s\S]*?#endif/.test(S),
     '旗面 rate / phase 逐件由已定案落點雜湊,零共享 rnd(全員同速 = 機械連桿)');
   ok(/swBeat = 3\.3;[\s\S]*?swSlowW = 0\.75;[\s\S]*?swFastW = 0\.25;[\s\S]*?swFastPhase = swPhase;/.test(S),
     '布料波形 = 75% 慢抬起 + 25% 的 3.3× 快顫,兩層共用逐件相位');
-  ok(/transformed\.y -= /.test(S), '擺出去時梢端略降(少了這一項會看起來像整株在平移)');
+  ok(/transformed -= swU \* \([\s\S]*?\/ swLy \)/.test(S),
+    '擺出去時梢端略降(世界 +Y 走精確逆映射,下沉量再除以 Ly;直接寫 transformed.y 會把斜枝的下沉打到水平方向、不除會讓壓扁冠的下沉只剩 1/3,枝與幹/冠的接合點錯開)');
   ok(count(code(toon), /defines\.CEL_SWAY = ''/g) === 1 && /sk\.amp > 0/.test(code(toon)),
     '擺動與細勾線分兩個 define(草坪要前者不要後者)');
   // 鑰匙 MUST 同時帶 kind 與**細勾線開關**:同一個 soft.k 在不透明件開、在半透明件關,
@@ -326,6 +345,11 @@ console.log('\nⅣ 消費端覆蓋(使用者點名的六種軟性物質)');
     '分類恰一處定義一處消費;`sf` 是逐零件覆寫,MUST NOT 另開一張名單');
   ok(count(code(biomes), /const mat = toonMat\(seasonColor/g) === 1,
     '程序生成植被的材質恰一處建立(軟性旗標跟著它走)');
+  // ⑥-2 逐株相位(2026-09-06 樹枝分解案):有擺動的列一律改吃樹基,判定沿用 soft 結果不另開名單
+  ok(/if \(mo\.soft\) mo\.treeO = true;/.test(code(biomes)),
+    '有擺動的植被列一律掛 treeO(判定沿用 soft,不另開「哪些列要同相」名單)');
+  ok(/treeArr\[i \* 2\] = it\.x;/.test(code(biomes)) && /q\.setAttribute\('aTreeO', treeAttr\)/.test(code(biomes)),
+    'aTreeO 由實例落點(it.x/it.z)推導 = 樹基本體(讀零件原點就是分解本身)');
 
   // ⑥ GLB 植被:葉片判定只有一條(季節色偏與軟性同吃)
   const glb = block(biomes, 'function extractNatureParts(');
@@ -473,8 +497,8 @@ console.log('\nⅥ 海浪(表面波;toon.js + terrain.js 原文)');
 console.log('\nⅦ 陣風包絡(「波」的本錢在振幅也要跟著跑)');
 {
   let T = code(toon);
-  if (BREAK_GUST) T = T.replace(/swOsc \*= celGust\( swO\.xz \);\n/, '');
-  if (BREAK_GUST && /swOsc \*= celGust\( swO\.xz \);/.test(T)) {
+  if (BREAK_GUST) T = T.replace(/swOsc \*= celGust\( swTXZ \);\n/, '');
+  if (BREAK_GUST && /swOsc \*= celGust\( swTXZ \);/.test(T)) {
     console.error('  ✗ --break-gust 的字面替換沒有生效(原文改過了?)'); fail++;
   }
   ok(WIND.GUST_M > WIND.WAVE_M * 3,
@@ -487,8 +511,8 @@ console.log('\nⅦ 陣風包絡(「波」的本錢在振幅也要跟著跑)');
   // 深度是模板插值(`${WIND.GUST_F.toFixed(3)}`)⇒ 釘的是**那個常數的名字**不是它今天的值
   ok(/return 1\.0 \+ \$\{WIND\.GUST_F[^}]*\} \* sin\(/.test(T),
     '包絡形如 1 + F·sin ⇒ **平均值恆為 1**:這一層只重新分配擺幅,不改變平均值(也就不是偷偷調大)');
-  ok(/swOsc \*= celGust\( swO\.xz \);/.test(T),
-    '植被的包絡吃**實例原點**(逐頂點取 ⇒ 同一株的根與梢落在包絡的不同位置 = 那株被拉長)');
+  ok(/swOsc \*= celGust\( swTXZ \);/.test(T),
+    '植被的包絡吃**同一株的樹基**(逐零件原點 ⇒ 同一株各段強弱不一 = 那株被拉長)');
   ok(/celGust\( celSxz \)/.test(T), '海浪的包絡吃逐頂點世界 XZ(它本來就是逐頂點的)');
   ok(/uniform vec2 uGustK;/.test(T) && count(T, /_gustK/g) === 2,
     '包絡的波數向量恰一處定義一處餵入,且與風向同源(另寫一份方向 = 陣風與擺動走不同方向)');
@@ -857,7 +881,7 @@ const BREAKS = [BREAK_INK && '--break-ink', BREAK_ANCHOR && '--break-anchor',
   BREAK_CHAR && '--break-char', BREAK_CHARR && '--break-charR',
   BREAK_CHARSLOT && '--break-charslot', BREAK_FOAM && '--break-foam', BREAK_FOAM_SHAPE && '--break-foam-shape',
   BREAK_INKBREAK && '--break-inkbreak', BREAK_INKANCHOR && '--break-inkanchor',
-  BREAK_GRAZE && '--break-graze'].filter(Boolean);
+  BREAK_GRAZE && '--break-graze', BREAK_TREEPHASE && '--break-treephase'].filter(Boolean);
 if (BREAKS.length) {
   console.log(`（反向驗證模式:${BREAKS.join(' ')} —— 上面 MUST 有紅字）`);
   process.exit(fail === 0 ? 1 : 0);

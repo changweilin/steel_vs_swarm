@@ -216,10 +216,13 @@ console.log('\nⅤ 配不到第二張附件 / 群組剪影關著 ⇒ 逐位元�
     "三態:`auto` 只換**解析不到庫節點**的葉列(⇒ intake_parts 的分母與 node_cap 完全不動)、`all` 連庫冠簇一起換");
   ok(/typeof THREE\.WebGLMultipleRenderTargets === 'function'/.test(bioC),
     '能力判準與 postfx 的 `_mrtCap` 逐字同一句(three 版本那一半;renderer 那一半見交付說明的待裁決)');
-  // 旋鈕關著 ⇒ 連殼都不建
+  // 旋鈕關著 ⇒ 連殼都不建。殼自 2026-09-06 起有第二個用途(aTreeO 逐株相位):
+  // 早退條件 MUST 是「兩種屬性都沒有」,單寫 !attr 會把有擺動列的樹基殼擋掉 = 風裡分解回來。
   const sg = code(grabFn(bioSrc, 'surfIdGeo'));
-  ok(/if \(!attr\) return geo;/.test(sg),
-    '群組剪影關著 ⇒ `surfIdGeo` 連幾何殼都不建(逐位元同舊制)');
+  ok(/if \(!attr && !treeAttr\) return geo;/.test(sg),
+    '兩種屬性都沒有 ⇒ `surfIdGeo` 連幾何殼都不建(逐位元同舊制)');
+  ok(/mo\.treeO \? treeAttr : null/.test(code(grabFn(bioSrc, 'buildVegMeshes'))),
+    'aTreeO 只掛給帶 treeO 的列(材質不讀的屬性 = 白佔一份 buffer)');
   ok(/for \(const k in geo\.attributes\) q\.setAttribute\(k, geo\.attributes\[k\]\);/.test(sg)
     && /q\.setIndex\(geo\.index\)/.test(sg),
     '面號殼**只換屬性不動拓樸**(position / normal / uv / index 沿用同一份 BufferAttribute ⇒ draw call 與三角形數逐位元不動)');

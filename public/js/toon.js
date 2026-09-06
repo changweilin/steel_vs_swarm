@@ -1351,6 +1351,11 @@ export function stepSwampRipples(swampCells, dt) {
  *   surf     — 顯式指定表面群組號(`surfGroup()` 給的);`land` 勝出。
  *   surfKey  — 穩定的材質語意鍵；省略時由環境/機體軌道與底色推導。
  *   surfAttr — 面號改吃逐實例屬性 `aSurfId`(同一株樹的幹 / 枝 / 冠共用一號)。
+ *   treeO    — 逐株相位錨點改吃逐實例屬性 `aTreeO`(同一株樹的樹基世界 XZ)。
+ *              同一株的幹 / 枝 / 冠實例原點各含自己的 px/pz 偏移(巨木達 ±10m),
+ *              相位取實例原點 = 同一株各擺各的(冠與幹差 2rad 以上 = 風裡分解);
+ *              取樹基 ⇒ 整株同相位,風仍以波的形式掃過林子(相鄰株的樹基差幾公尺)。
+ *              只給多零件植被列(biomes.js);散草/旗面是單實例單株,沿用實例原點。
  *   card     — 葉片卡:四角在視域空間展開(屬性 `aCard`)。
  *   refl     — 水面倒影塊:朝向在頂點著色器算(屬性 `aReflO` + uniform `uWaterY`),類別恆 NONE。
  * 序 4 / 序 8 的擴充(2026-08-16;同樣 MUST 一律加在**尾端**):
@@ -1363,7 +1368,7 @@ export function stepSwampRipples(swampCells, dt) {
  *              拉桿 0 或屬性缺席 ⇒ 恆等於 `LAND_SURF_ID` = 逐位元同舊制。
  */
 const INK_KIND = { none: 'NONE', land: 'LAND', hard: 'HARD', group: 'GROUP' };
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false, ink = 'hard', contrib = 1, surf = null, surfKey = null, surfAttr = false, card = false, refl = false, dissolve = false, landId = false, landField = false } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false, ink = 'hard', contrib = 1, surf = null, surfKey = null, surfAttr = false, card = false, refl = false, dissolve = false, landId = false, landField = false, treeO = false } = {}) {
   if (preview) ensurePreviewField();
   const sk = soft ? (SOFT_KINDS[soft.k] || SOFT_KINDS.leaf) : null;
   const defines = { ...(mat.defines || {}) };
@@ -1415,13 +1420,14 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   if (landNrm) defines.CEL_LAND_N = '';
   // S2 的四個新 define。**類別碼與貢獻刻意不在這裡** —— 它們是 uniform(見簽章註解)。
   if (surfAttr) defines.CEL_SURF_A = '';
+  if (treeO) defines.CEL_TREEO = '';
   if (card) defines.CEL_LEAFCARD = '';
   if (refl) defines.CEL_REFL = '';
   if (dissolve) defines.CEL_DIS = '';
   if (landId) defines.CEL_LAND_ID = '';
   if (landField) defines.CEL_LAND_FIELD = '';
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm, ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, landId, landField };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm, ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, landId, landField, treeO };
   // 溶入進度是**穩定的 uniform 物件**(同 `_windT` / `_rampTint` 的做法):在 onBeforeCompile
   // 裡 `{ value: 1 }` 新建的話,材質一重編譯(改 defines / needsUpdate)就換一顆,而驅動端
   // 抓著的是舊的 ⇒ 症狀是「有時候不會溶入」。1 = 完全實體。
@@ -1579,6 +1585,10 @@ ${CEL_SEA_GLSL}
         uniform vec3 uCharPos[ ${CHAR.N} ];
         uniform float uCharSpd[ ${CHAR.N} ];
         #endif
+        #ifdef CEL_TREEO
+        // 逐株相位錨點:同一株樹的樹基世界 XZ(幹/枝/冠共用 ⇒ 整株同相位;見 applyCelPatch 的 treeO)。
+        attribute vec2 aTreeO;
+        #endif
         void main() {`)
       // 法線 MUST 在 `beginnormal_vertex` 這一段改:three 的 normal_vertex(算 vNormal)排在
       // begin_vertex **之前**,等到 project_vertex 才動就來不及了 —— 頂點真的起伏了,而賽璐璐
@@ -1640,9 +1650,12 @@ ${CEL_SEA_GLSL}
           #endif
           float sw = clamp( swH / uSoftSpan, 0.0, 1.0 );
           sw *= sw;   // 二次:根部更硬、梢端更軟(一次的話整株看起來像被平移)
-          // ---- 相位:取**實例原點**,不是逐頂點 ----
+          // ---- 相位:取**同一株的樹基**,不是逐頂點也不是逐零件原點 ----
           // 逐頂點取相位 = 同一片葉子的兩端各走各的 = 幾何被拉扯變形;取原點則整個零件同相,
           // 而相鄰植株的原點差幾公尺 ⇒ 風以波的形式掃過林子(uWindK 的波長 WIND.WAVE_M)。
+          // 但各零件的實例原點含自己的 px/pz 偏移(巨木冠偏移達 ±10m = 相位差 2.5rad)⇒
+          // 同一株的幹/枝/冠會各擺各的、接合處在風裡分解。故多零件植被列(CEL_TREEO)改吃
+          // 逐實例屬性 aTreeO(樹基世界 XZ);單實例單株(散草/旗面)沿用實例原點。
           mat3 swM = mat3( modelMatrix );
           vec4 swO = vec4( 0.0, 0.0, 0.0, 1.0 );
           #ifdef USE_INSTANCING
@@ -1650,7 +1663,12 @@ ${CEL_SEA_GLSL}
             swO = instanceMatrix * swO;
           #endif
           swO = modelMatrix * swO;
-          float swP = dot( swO.xz, uWindK );
+          #ifdef CEL_TREEO
+          vec2 swTXZ = aTreeO;
+          #else
+          vec2 swTXZ = swO.xz;
+          #endif
+          float swP = dot( swTXZ, uWindK );
           #ifdef CEL_SWAY_H
             // 旗面**沿自己**再推遲一段相位 ⇒ 波由旗桿往旗尾跑 = 飄揚。
             // 少了這一項,整面旗只是被同一個相位「剪」過去 —— 那是一塊被推歪的板子,
@@ -1679,18 +1697,29 @@ ${CEL_SEA_GLSL}
           // 兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點。
           float swOsc = sin( uWindT * swRate + swPhase ) * swSlowW
                       + sin( uWindT * swRate * swBeat + swFastPhase ) * swFastW;
-          // 世界風向 → 零件局部方向。GLSL 的 \`v * m\` = transpose(m) * v;實例矩陣是
-          // 旋轉 × (XZ 等比、Y 另計) 的縮放 ⇒ 轉置與逆只差一個對角縮放,水平分量的比例不變,
-          // 正規化後方向一致。MUST NOT 省掉這一步:實例的 ry 是亂數,直接拿世界向量當局部
-          // 向量的話每一株會各吹各的方向,那就不是「風」了。
-          vec3 swD = normalize( vec3( uWindDir.x, 0.0, uWindDir.y ) * swM + vec3( 1e-6 ) );
-          // 陣風包絡吃**實例原點**的世界 XZ(與相位同一個點):逐頂點取的話同一株的根與梢
+          // 世界風向 → 零件局部方向。**精確逆映射,不是轉置**:M = R·S 而轉置 = S·R^T,
+          // 兩者差一個 S² —— 等比縮放下只是常數倍(正規化消掉),但冠盤 sy = 0.34 這種
+          // 非等比縮放會把站姿微傾的污染放大:下沉能偏離世界垂直 30°,
+          // 冠底與枝梢在強風下錯開 0.3m。R^T·v = S^-1·(v·M),而 Lx = |M·X| = s·jr、
+          // Ly = |M·Y| = s·sy(旋轉保長度 ⇒ 與零件傾角無關)⇒ 逐分量除以 Lx²/Ly²
+          // 正是 S^-2·(v·M) ∥ M^-1·v。MUST NOT 省掉這一步:實例的 ry 是亂數,
+          // 直接拿世界向量當局部向量的話每一株會各吹各的方向,那就不是「風」了。
+          float swLx = max( length( swM[ 0 ] ), 1e-4 );
+          float swLy = max( length( swM[ 1 ] ), 1e-4 );
+          vec3 swDrow = vec3( uWindDir.x, 0.0, uWindDir.y ) * swM;
+          vec3 swD = normalize( vec3( swDrow.x / ( swLx * swLx ), swDrow.y / ( swLy * swLy ), swDrow.z / ( swLx * swLx ) ) + vec3( 1e-6 ) );
+          // 陣風包絡吃**同一株的樹基**(與相位同一個點):逐頂點取的話同一株的根與梢
           // 會落在包絡的不同位置,強弱沿著株身變化 = 那株自己被拉長,不是被風吹。
-          swOsc *= celGust( swO.xz );
+          swOsc *= celGust( swTXZ );
           float swA = sw * ( uSoftAmp * uWeatherWindAmp ) * swOsc;
           transformed += swD * swA;
           // 擺出去時梢端略降(弧長守恆的一階近似)—— 少了這一項會看起來像整株在平移
-          transformed.y -= sw * ( uSoftAmp * uWeatherWindAmp ) * abs( swOsc ) * 0.3;
+          // 世界 +Y 走上面同一個精確逆映射(斜枝的局部 Y 是沿枝軸,直接寫 transformed.y
+          // 會把下沉打到水平方向去),下沉量再除以 Ly(局部 Y 一單位的世界長):
+          // 同一個 sw 壓扁冠拿到的世界下沉才會與幹一致,不除就只剩 1/3。
+          vec3 swUrow = vec3( 0.0, 1.0, 0.0 ) * swM;
+          vec3 swU = normalize( vec3( swUrow.x / ( swLx * swLx ), swUrow.y / ( swLy * swLy ), swUrow.z / ( swLx * swLx ) ) + vec3( 1e-6 ) );
+          transformed -= swU * ( sw * ( uSoftAmp * uWeatherWindAmp ) * abs( swOsc ) * 0.3 / swLy );
           // ---- 玩家位移擾動(S5;⑤-1)----
           // 距離是 **2.5D**:水平取**實例原點**(逐頂點取 XZ 會把整株拉歪)、垂直取這個頂點
           // 自己的株上高度 ⇒ 一台在地面走的機體構造上碰不到 6m 高的樹冠。
@@ -2247,7 +2276,7 @@ ${CEL_SEA_GLSL}
   // 漏掉 `card`/`surfAttr` 的症狀是「四個角都落在中心 ⇒ 整叢卡片塌成一個點」,
   // 而 `contrib`(uniform)進去的話就是每一個貢獻值編一支新程式(編譯尖峰 + 記憶體)。
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${coolOn ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${surfAttr ? 'A' : ''}${card ? 'K' : ''}${refl ? 'R' : ''}${inkAlpha ? 'B' : ''}${dissolve ? 'D' : ''}${sk?.ripple ? 'V' : ''}${landId ? 'Z' : ''}${landField ? 'X' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${coolOn ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${surfAttr ? 'A' : ''}${card ? 'K' : ''}${refl ? 'R' : ''}${inkAlpha ? 'B' : ''}${dissolve ? 'D' : ''}${sk?.ripple ? 'V' : ''}${landId ? 'Z' : ''}${landField ? 'X' : ''}${rim}${treeO ? 'T' : ''}`;
   return mat;
 }
 
@@ -2273,11 +2302,11 @@ export function toonMat(color, opts = {}) {
   // `landId` **刻意不在這裡**:它與 `land` / `landNrm` 同一族(地貌),而機體之間的線是要的
   // —— 稽核 Ⅶ 那一條 `!/land/.test(toonMat)` 就是為這件事訂的,MUST NOT 為了方便鬆掉它。
   const { celMetal, bands, rim = 0.22, soft = null,
-    ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, ...rest } = opts;
+    ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, treeO, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // `bands` MUST 一起傳下去:偏色權重要以**這張 ramp 自己的暗階**正規化,拿不到就會用
   // 預設 3 階的 0.4 去量 soft(0.745)那一組 = 白色大面積的陰影偏色少掉一半。
-  return applyCelPatch(m, { metal: !!celMetal, rim, soft, bands, ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve });
+  return applyCelPatch(m, { metal: !!celMetal, rim, soft, bands, ink, contrib, surf, surfKey, surfAttr, card, refl, dissolve, treeO });
 }
 
 /**
