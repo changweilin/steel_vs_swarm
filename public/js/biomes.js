@@ -641,8 +641,8 @@ const GIANT_DEFS = {
   // ---- 2026-07-29 增補:三種世界地標巨樹(實存 >65m,剪影與現有八種互異)----
   klinki:   { h: 90, r: 2.2, parts: [                            // 克林奇南洋杉(紐幾內亞 90m):下 2/3 淨幹 + 輪生枝盤
     { g: cyl(2.2, 3.4, 5, 7), y: 2.5, c: 0x6a5138 },
-    { g: cyl(1.5, 2.2, 46, 7), y: 28, c: 0x75593c },             // 通直淨幹
-    { g: cyl(0.8, 1.5, 26, 6), y: 64, c: 0x7d6142 },
+    { g: cyl(1.5, 2.2, 47, 7), y: 27.5, c: 0x75593c },             // 通直淨幹(底 4 埋進基段頂、頂 51 接頂段底)
+    { g: cyl(0.8, 1.5, 28, 6), y: 64, c: 0x7d6142 },              // 頂段底 50 疊中段頂、頂 78 埋進頂冠底(77)1m,幹冠不斷開
     { g: cyl(2.25, 2.32, 4, 7), y: 20, c: 0x8f9a6e },            // 地衣環帶
     // 南洋杉的識別特徵是**輪生**:枝盤成層,層與層之間留明顯空隙(不是把葉簇黏在幹上)。
     // 2026-08-06 重寫骨架:三層 × 每層一對枝 + 枝端葉盤,層距 8m、盤壓到 sy 0.34 = 一層層的盤子。
@@ -1324,16 +1324,16 @@ export function buildVegMeshes(type, items, season) {
     const card = leafCardOn(part, sk) ? leafRowGeo(type, part, pi) : null;
     // 材質選項一路收在同一個物件裡:`const mat = toonMat(seasonColor…` **全檔恰一處**
     // (`audit_soft_stroke` Ⅳ⑤ 釘住),分支寫成第二個呼叫點就是「軟性旗標有兩條路」
-    // 樹幹/枝隨風搖曳(2026-09-02):「木質件」= 有葉子的樹型(TRUNK_TYPES) 且 sk===null。
-    // 走 'wood' kind(amp 是 leaf 的一半、同 freq/axis)共用同一個 span ⇒ 幹梢與葉冠底部
-    // 在相同 sw 高度上取到連續位移,接縫不會被風吹開。
+    // 樹幹/枝隨風搖曳(2026-09-02;2026-09-06 納入神木):「木質件」= 有葉子的樹型(TRUNK_TYPES/神木) 且 sk===null。
+    // 走 'wood' kind(amp/freq/axis 皆與 leaf 一致)共用同一個 span ⇒ 幹梢與葉冠底部
+    // 在相同 sw 高度上取到連續位移,接縫不會被風吹開。sy 吃傾角餘弦 ⇒ 斜枝整段同權重平移,枝根/枝梢不與幹/冠錯位。
     // ⚠ vegSoftKind **刻意不改**:audit_soft_stroke 的 hardOk 驗證木質件 vegSoftKind 回 null,
     //   此處直接在 mo 帶 soft 而不經 vegSoftKind,確保該驗證逐位元不變。
-    const isTreeWood = !sk && TRUNK_TYPES.has(type);
+    const isTreeWood = !sk && (TRUNK_TYPES.has(type) || GIANT_DEFS[type]);
     const mo = sk
-      ? { soft: { k: sk, span, base: part.y || 0, sy: part.sy || 1 } }
+      ? { soft: { k: sk, span, base: part.y || 0, sy: (part.sy || 1) * Math.cos(part.rx || 0) * Math.cos(part.rz || 0) } }
       : isTreeWood
-        ? { soft: { k: 'wood', span, base: part.y || 0, sy: part.sy || 1 } }
+        ? { soft: { k: 'wood', span, base: part.y || 0, sy: (part.sy || 1) * Math.cos(part.rx || 0) * Math.cos(part.rz || 0) } }
         : {};
     if (grpOn) {
       mo.surfAttr = true;                       // 面號改吃逐實例屬性 aSurfId
