@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { createForestDefs } from '../public/js/forest.js';
+import { quatApply, quatFromEuler } from '../public/js/xform.js';
 // 樹木幹枝接合離線稽核(2026-09-06;南洋杉 trunk_crown 誤名 + dinizia/tualang 幹頂懸空案)
 // ---------------------------------------------------------------------------
 // 為什麼要這支:audit_object_joints 以凸包探針驗「零件有沒有貼著」,但三種樹木病灶
@@ -56,21 +58,18 @@ const note = (m) => { warn++; console.log(`  ! ${m}`); };
 
 // ---------------- 真品抽出 ----------------
 let bioSrc = readSrc('public', 'js', 'biomes.js');
-if (BRK.trunkGap) {
-  const before = bioSrc;
-  bioSrc = bioSrc.replace(
-    /\{ g: cyl\(1\.0, 1\.7, 24, 6\), y: 64, c: 0xa07a54 \}[^\n]*\r?\n/,
-    '{ g: cyl(1.0, 1.7, 18, 6), y: 61, c: 0xa07a54 },\n');
-  if (bioSrc === before) { console.log('x --break-trunk-gap 的字面替換沒有生效(原文改了?)'); process.exit(1); }
-}
 const tableCode = grabConst(bioSrc, 'VEG_DEFS') + '\n' + grabConst(bioSrc, 'GIANT_DEFS')
   + '\nreturn { VEG_DEFS, GIANT_DEFS };';
-const { VEG_DEFS, GIANT_DEFS } = new Function('cyl', 'cone', 'ico', 'Math', tableCode)(
+const { VEG_DEFS, GIANT_DEFS } = new Function('cyl', 'cone', 'ico', 'Math', 'createForestDefs', tableCode)(
   (r1, r2, h, n = 5) => ({ t: 'cyl', r1, r2, h, n }),
   (r, h, n = 5) => ({ t: 'cone', r, h, n }),
   (r) => ({ t: 'ico', r }),
-  Math,
+  Math, createForestDefs,
 );
+
+if (BRK.trunkGap) {
+  for (const parts of GIANT_DEFS.dinizia.variants) { parts[0].g.h -= 20; parts[0].y -= 10; }
+}
 
 // ---------------- 小工具 ----------------
 const GAP_TOL = 0.05;    // 同軸柱垂直間隙容差(m)
@@ -83,6 +82,15 @@ const SNAG_R = 0.5;      // 枯梢/內枝收尾的底半徑上限(m):結構枝�
 const SNAG_DIST = 1.2;   // 收尾梢離冠面的最大距離(m)
 
 // 冠部體積:cone 按線性收分、ico 按 sy 壓扁橢球(含 sy 欄,預設 1)
+function tubeContains(part, point, tolerance = ROOT_TOL) {
+  if (part.g.t !== 'cyl') return false;
+  const q = quatFromEuler(part.rx || 0, part.ry || 0, part.rz || 0);
+  const local = quatApply([-q[0], -q[1], -q[2], q[3]], [point[0] - (part.px || 0), point[1] - part.y, point[2] - (part.pz || 0)]);
+  const half = part.g.h / 2;
+  if (Math.abs(local[1]) > half + tolerance) return false;
+  const t = Math.max(0, Math.min(1, (local[1] + half) / part.g.h));
+  return Math.hypot(local[0], local[2]) <= part.g.r2 + (part.g.r1 - part.g.r2) * t + tolerance;
+}
 function crownContains(part, pt, tol = 0) {
   const [x, y, z] = pt;
   const cx = part.px ?? 0, cy = part.y ?? 0, cz = part.pz ?? 0;
@@ -92,6 +100,7 @@ function crownContains(part, pt, tol = 0) {
     const r = g.r * (1 - (y - (cy - g.h / 2)) / g.h);
     return Math.hypot(x - cx, z - cz) <= r + tol;
   }
+  if (g.t === 'cyl') return tubeContains(part, pt, tol);
   if (g.t === 'ico') {
     const sy = part.sy ?? 1, ry = g.r * sy;
     const dx = (x - cx) / g.r, dy = (y - cy) / ry, dz = (z - cz) / g.r;
@@ -115,15 +124,15 @@ function crownGap(part, pt) {
   }
   return Infinity;
 }
-const isCrownPart = (p) => p.g.t === 'cone' || p.g.t === 'ico';
+const isCrownPart = (p) => p.role ? p.role === 'leaf' : p.g.t === 'cone' || p.g.t === 'ico';
 // 主幹候選:貼軸無傾角的柱狀 cyl(扁平冠盤 h≤一半最大半徑,自然排除;
 // 矮胖多肉幹/基部喇叭口 h≈R 仍保留)
-const isBoleCyl = (p) => p.g.t === 'cyl' && Math.abs(p.px ?? 0) <= 0.6
+const isBoleCyl = (p) => p.role === 'trunk' && p.g.t === 'cyl' || p.g.t === 'cyl' && Math.abs(p.px ?? 0) <= 0.6
   && Math.abs(p.pz ?? 0) <= 0.6 && !(p.rx || p.rz) && p.g.h > 0.5 * Math.max(p.g.r1, p.g.r2);
-// 單軸傾角枝的方向('vertical' = 近垂直表面件;null = 雙軸,呼叫端判紅)
+// Generated branches use the runtime XYZ rotation, including two-axis forks.
 function branchDir(p) {
   const rx = p.rx ?? 0, rz = p.rz ?? 0;
-  if (rx && rz) return null;
+  if (rx && rz) return quatApply(quatFromEuler(rx, p.ry || 0, rz), [0, 1, 0]);
   if (Math.abs(rz) > TILT_TOL) return [-Math.sin(rz), Math.cos(rz), 0];
   if (Math.abs(rx) > TILT_TOL) return [0, Math.cos(rx), Math.sin(rx)];
   return 'vertical';
@@ -136,7 +145,8 @@ const trunkRAt = (r1, r2, h, yBot, y) => {
 // ---------------- Ⅰ 宣告表 ----------------
 console.log('Ⅰ biomes.js 宣告表幹柱連續');
 for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
-  for (const [name, def] of Object.entries(table)) {
+  for (const [name, def] of Object.entries(table).flatMap(([name, def]) => def.variants
+    ? def.variants.map((parts, i) => [`${name}:${i}`, { ...def, parts }]) : [[name, def]])) {
     const boles = def.parts.filter(isBoleCyl)
       .map((p) => ({ p, bot: p.y - p.g.h / 2, top: p.y + p.g.h / 2 }));
     // 被別段完全包住的段(苔蘚環帶)不計入柱
@@ -202,10 +212,15 @@ for (const [group, table] of [['神木', GIANT_DEFS], ['植被', VEG_DEFS]]) {
         if (a[1] < t.bot - ROOT_TOL || a[1] > t.top + ROOT_TOL) return false;
         const tr = trunkRAt(t.p.g.r1, t.p.g.r2, t.p.g.h, t.bot, a[1]);
         return Math.hypot(a[0] - (t.p.px ?? 0), a[2] - (t.p.pz ?? 0)) <= tr + ROOT_TOL + 0.1 * tr;
-      }) || crowns.some((c) => crownContains(c, a, ROOT_TOL));
+      }) || crowns.some((c) => c !== b && crownContains(c, a, ROOT_TOL))
+        || def.parts.some(p => p !== b && tubeContains(p, a));
       ok(rootIn, `${group} ${name} 枝根 y=${b.y} 埋進幹身/冠內/接地`);
+      // Buttress roots connect ground to bole, rather than terminating in foliage.
+      if (a[1] <= ROOT_TOL && boles.some(t => e[1] >= t.bot && e[1] <= t.top
+        && Math.hypot(e[0], e[2]) <= trunkRAt(t.p.g.r1, t.p.g.r2, t.p.g.h, t.bot, e[1]))) { pass++; continue; }
+      if (rootIn && (b.role === 'root' || b.role === 'leaf')) { pass++; continue; }
       if (d === 'vertical' || !crowns.length) continue;
-      if (crowns.some((c) => crownContains(c, e, TIP_TOL))) { pass++; continue; }
+      if (crowns.some((c) => c !== b && crownContains(c, e, TIP_TOL)) || def.parts.some(p => p !== b && tubeContains(p, e, TIP_TOL))) { pass++; continue; }
       const thin = (b.g.r2 ?? 1) <= SNAG_R;
       const gap = Math.min(...crowns.map((c) => crownGap(c, e)));
       if (rootIn && thin && (gap <= SNAG_DIST || e[1] >= crownBottom - TIP_TOL)) {

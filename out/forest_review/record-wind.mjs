@@ -1,0 +1,36 @@
+import fs from 'node:fs';
+import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
+const browser = await chromium.launch({headless:true,args:['--use-gl=angle','--enable-unsafe-swiftshader']});
+const context=await browser.newContext({viewport:{width:1500,height:900},deviceScaleFactor:1,recordVideo:{dir:'out/forest_review/video',size:{width:1500,height:900}}});
+const page=await context.newPage();
+const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+await page.route('**/three@0.160.0/build/three.module.js',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync('out/forest_review/three.module.js','utf8')}));
+await page.route('**/three@0.160.0/examples/jsm/**',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync('out/forest_review/'+route.request().url().split('/examples/jsm/')[1].replaceAll('/','_'),'utf8')}));
+await page.route('http://localhost:8666/public/',route=>route.fulfill({contentType:'text/html',body:'<html><head><script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script></head><body></body></html>'}));
+await page.goto('http://localhost:8666/public/',{waitUntil:'domcontentloaded'});
+await page.evaluate(async()=>{
+const THREE=await import('three');
+const {buildVegMeshes}=await import('/public/js/biomes.js');
+const {Pipeline}=await import('/public/js/postfx.js');
+const {stepCelWind,updateCelLight}=await import('/public/js/toon.js');
+document.body.innerHTML=''; document.body.style.cssText='margin:0;background:#e6e9dc;overflow:hidden';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xe6e9dc);
+const camera=new THREE.PerspectiveCamera(36,1500/900,1,2000);camera.position.set(0,105,340);camera.lookAt(0,45,0);
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setSize(1500,900);renderer.toneMapping=THREE.ACESFilmicToneMapping;document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x5b604b,0.6));const sun=new THREE.DirectionalLight(0xffffff,1.0);sun.position.set(-60,150,100);scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(1000,1000),new THREE.MeshLambertMaterial({color:0xc6cdb4}));ground.rotation.x=-Math.PI/2;ground.position.y=-1;scene.add(ground);
+const types=['dinizia','euc','taiwania','klinki','tualang'];
+let calls=0;for(let i=0;i<types.length;i++) {const meshes=buildVegMeshes(types[i],[{x:(i-2)*56,y:0,z:0,s:0.9,ry:i*.71,dj:.36}], 'summer');for(const m of meshes)scene.add(m);calls+=meshes.length;}
+const title=document.createElement('div');title.style.cssText='position:absolute;top:30px;left:40px;color:#263b32;font:26px sans-serif';title.textContent='程序森林 / 傘冠・疏冠・針葉・輪生・板根';document.body.appendChild(title);
+const pipeline=new Pipeline(renderer,scene,camera,{dof:false,wipe:false});
+window.forestReview={renderer,scene,camera,calls,pipeline};
+const frame=()=>{stepCelWind(1/60);updateCelLight(camera);pipeline.render();requestAnimationFrame(frame)};frame();
+});
+await page.waitForTimeout(8000);
+await page.screenshot({path:'out/forest_review/forest.png'});
+console.log(JSON.stringify({errors,render:await page.evaluate(()=>({calls:window.forestReview.calls,triangles:window.forestReview.renderer.info.render.triangles}))}));
+const video=page.video();
+await context.close();
+await video.saveAs('out/forest_review/forest-wind.webm');
+await browser.close();
+if(errors.length)process.exitCode=1;

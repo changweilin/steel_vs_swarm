@@ -54,7 +54,8 @@
 import { HAZARDS } from '../public/js/data.js';
 import { vegPartXform } from '../public/js/xform.js';
 import { makeVehicle } from '../public/js/vehicles.js';
-import { readSrc } from './audit_src.mjs';
+import { readSrc, grabConst } from './audit_src.mjs';
+import { createForestDefs } from '../public/js/forest.js';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
 const SEEDS = Math.max(1, +arg('--seeds', 4));
@@ -655,11 +656,11 @@ const defs = (() => {
   const code = [
     pick(/const bough = \(\) => \[[\s\S]*?\n\];/, 'bough'),
     pick(/const VEG_DEFS = \{[\s\S]*?\n\};/, 'VEG_DEFS'),
-    pick(/const GIANT_DEFS = \{[\s\S]*?\n\};/, 'GIANT_DEFS'),
+    grabConst(bmSrc, 'GIANT_DEFS'),
     pick(/const GIANT_DECO = \{[\s\S]*?\n\};/, 'GIANT_DECO'),
     'return { VEG_DEFS, GIANT_DEFS, GIANT_DECO };',
   ].join('\n');
-  return new Function('cyl', 'cone', 'ico', 'THREE', 'Math', code)(G.cyl, G.cone, G.ico, THREE_STUB, Math);
+  return new Function('cyl', 'cone', 'ico', 'THREE', 'Math', 'createForestDefs', code)(G.cyl, G.cone, G.ico, THREE_STUB, Math, createForestDefs);
 })();
 
 /** 宣告式零件表 → 稽核零件(實例變換走 xform.js 的 vegPartXform 單一縫) */
@@ -669,6 +670,8 @@ function vegParts(def, it) {
     const ls = localSolid(part.g);
     if (!ls) return;
     const { pos, quat, scl } = vegPartXform(part, it);
+    scl[0] *= part.sx ?? 1;
+    scl[2] *= part.sz ?? 1;
     parts.push({ tag: `#${i} ${part.g.t}`, ls, xf: { m: quatM3(quat, scl[0], scl[1], scl[2]), t: pos } });
   });
   return parts;
@@ -800,7 +803,13 @@ const INSTANCES = [
 for (const [group, table] of [['神木', defs.GIANT_DEFS], ['植被', defs.VEG_DEFS]]) {
   for (const [name, def] of Object.entries(table)) {
     if (ONLY && !name.includes(ONLY)) continue;
-    for (const inst of INSTANCES) report(`${group} ${name}(${inst.name})`, auditJoints(vegParts(def, inst.it), [GROUND]));
+    // Live procedural trees bake one specimen and disable per-part jitter before instancing.
+    for (const [variant, parts] of (def.variants || [def.parts]).entries()) {
+      for (const inst of INSTANCES) report(`${group} ${name}/${variant}(${inst.name})`,
+        auditJoints(vegParts({ parts }, def.variants ? { ...inst.it, dj: 0 } : inst.it), [GROUND],
+          // Separate bamboo culms can stand independently; FLOAT/DETACHED still apply.
+          { scatter: name === 'forestBamboo' }));
+    }
   }
 }
 // ---- 巨木表面特徵(掛在樹皮上:local +x 徑向外 ⇒ 錨體 = 樹皮半空間 x ≤ 0)----

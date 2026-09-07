@@ -709,6 +709,7 @@ export async function buildTerrain(cfg, onProgress) {
       : d + (c - d) * (1 - fj) + (b - d) * (1 - fi); // 三角形 (b, c, d)
   }
   const heightAt = (x, z) => sampleField(heights, x, z);
+  const elevationAt = (x, z) => sampleField(rawElev, x, z);
   // 天然地形高(**開挖/整平之前**的那一份;2026-08-01 明隧道判定改制)。
   // 「這一側在不在地形之外」問的是**天然**地形:我們自己挖出來的路塹/斜壁/整平台不算證據。
   // 不分這一份的後果是判定隨呼叫時機漂移 —— 明隧道判定跑三次(carveGalleryBands 呼叫端在
@@ -1368,5 +1369,5 @@ export async function buildTerrain(cfg, onProgress) {
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
   // ⬇ 新欄位一律**只加不改**(⑤-2 / ⑤-3):`stampSeaBlockers` = 深度場的蓋章入口(main.js
   //   在 buildBiomes 之後呼叫一次)、`seaFadeAtWorld` = 倒影塊頂點的浪幅淡出(biomes.js)。
-  return { group, mesh, heightAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
+  return { group, mesh, heightAt, elevationAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand, stampSeaBlockers, seaFadeAtWorld };
 }

@@ -1,3 +1,5 @@
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, treeHabitatWeight, pickTreeType, forestSeed } from './forest.js';
 // ============ 地貌系統:五類地被 + 圖資建物 + 兵線淨空 ============
 // 依衛星影像逐點分類五種地貌,鋪設對應的 3D 地物:
 //   綠地   — 竹林(大小不一的群落)/ 闊葉林 / 針葉林(高海拔)
@@ -470,245 +472,25 @@ function registerTreeTrunkColliders(items, blockers) {
   return count;
 }
 
-// ---- 神木(全球實存 >65m 巨樹樹種;綠地超尺度地標植被)----
-//   紅杉(海岸紅杉 115m)/ 巨杉(世界爺 95m)/ 杏仁桉(澳洲王桉 100m)/
-//   花旗松(100m)/ 西加雲杉(97m)/ 黃柳桉(婆羅洲熱帶巨樹 100m)/ 台灣杉(90m)/
-//   亞馬遜天使樹(Dinizia excelsa 88m)/ 克林奇南洋杉(紐幾內亞 90m)/
-//   蜂樹(東南亞 Koompassia 88m)/ 智利柏(巴塔哥尼亞 Fitzroya 70m+)
-// 同一種神木成群聚落、株高各異(s = 0.75~1.10 → 公稱高的 75%~110%,即真實世界株高區間);
-// 每株多零件建模:板根/樹皮絲帶/斜出枝節/多層樹冠(px/pz = 距軸心偏移,
-// rx/rz = 枝幹傾角),樹幹登記碰撞柱 = 立體障礙與隱蔽。h/r = 公稱高/幹半徑。
-//
-// `lib:` = AI 零件庫的節點名(2026-08-05,計畫書 P2c 綠地首批):`g` 仍是**保險絲**
-// —— 載不到 GLB 就逐位元退回今天的畫面,而佈局數學(giantCrownR 冠幅 / vegSpan 擺幅 /
-// 淨空 / 碰撞)一律只讀 `g`(見 partGeo 檔頭:讀庫幾何 = 佈局隨載入成敗分家)。
-// 三條選列紀律:
-//   ① **只換 ico 冠簇,不換 cone 冠層**:cone 的包絡是 {r, h/2}(如 cone(7,26) = r7/hy13),
-//      把一團樹冠塞進去會被拉成柱子;ico 的包絡是球,實拍樹冠正好是球內的團塊。
-//   ② **節點半徑 MUST ≤ 該列 fallback 半徑**(且 ≥ 一半)—— 這就是離線外廓契約,
-//      `intake_parts.mjs` 逐列驗;所以節點做成尺寸階梯(10/8/7/6/5/4.5/3.5)而不是一顆通用件。
-//   ③ **三角形數是預算不是免費的**:實測現行一整株神木只有 259~402 tris、冠簇一顆 20,
-//      而 AI 零件一顆 215 ⇒ 逐株換幾件是有上限的(tri_budget.json families.tree:
-//      單件 ≤ 現行最重一整株、逐株 Σ 庫零件 ≤ 4× 該株現值)。klinki/alerce 的冠簇半徑
-//      只有 2.2~3.0m,比最小節點還小 ⇒ **刻意不換**(硬塞就破契約)。
-const GIANT_DEFS = {
-  redwood:  { h: 110, r: 3.4, parts: [
-    { g: cyl(3.4, 5.6, 7, 7), y: 3.5, c: 0x6e4630 },
-    { g: cyl(2.4, 3.5, 40, 7), y: 26, c: 0x7a4a32 },
-    { g: cyl(1.4, 2.4, 34, 7), y: 63, c: 0x82503a },
-    { g: cyl(0.6, 1.4, 22, 6), y: 91, c: 0x82503a },
-    { g: cone(2.6, 8, 3), y: 4, px: 3.4, c: 0x5e3c28 },          // 板根鰭(基部放射狀;鰭尖須貼回幹面)
-    { g: cone(2.4, 7, 3), y: 3.5, px: -1.9, pz: 2.8, c: 0x664130 },
-    { g: cone(2.4, 7, 3), y: 3.5, px: -1.9, pz: -2.8, c: 0x5e3c28 },
-    { g: cyl(2.65, 2.72, 5, 7), y: 40, c: 0x8f9a6e },            // 地衣環帶(淡黃綠)
-    { g: cyl(1.4, 2.2, 6, 4), y: 3, px: 3.2, c: 0x38241a },      // 火疤(基部焦黑鑿痕)
-    // 側枝外端一律朝上(rz 符號 = −sign(px);真樹分叉向上,不下垂)
-    { g: cyl(0.4, 0.6, 9, 5), y: 56, px: 4.5, rz: -1.25, c: 0x6e4630 },
-    { g: cyl(0.4, 0.6, 8, 5), y: 48, px: -4, rz: 1.2, c: 0x6e4630 },
-    { g: cone(7, 26, 7), y: 96, c: 0x3f7a46 },                   // 頂冠偏亮 = 受光層次
-    { g: cone(9, 20, 7), y: 82, c: 0x33643c },
-    { g: cone(10, 16, 7), y: 68, c: 0x2e5c38 },
-    { g: ico(5), y: 58, px: 6, sy: 0.8, lib: 'tree/canopy_a5', c: 0x33643c },
-    { g: ico(5), y: 51, px: -6, sy: 0.8, lib: 'tree/canopy_b5', c: 0x2e5c38 },
-    { g: ico(4), y: 74, px: -8, sy: 0.7, c: 0x4a8a4e },          // 受光亮綠簇
-    { g: ico(4.5), y: 62, pz: 6.5, sy: 0.75, lib: 'tree/canopy_c45', c: 0x3b7042 },
-    // 樹種特徵配件(2026-07-29):毬果簇(紅杉小毬果掛冠緣;R 主導色不吃 gleaf 季節疊色,
-    // 錨在既有樹冠簇內 → 接合天然成立;各簇色抖動獨立,見 buildVegMeshes)
-    { g: ico(1.4), y: 55.5, px: 6.8, c: 0x6e4a30 },
-    { g: ico(1.2), y: 48.5, px: -6.5, c: 0x66452c },
-  ] },
-  sequoia:  { h: 92, r: 5.6, parts: [
-    { g: cyl(5.6, 9.2, 9, 8), y: 4.5, c: 0x7d4a2e },
-    { g: cyl(4.0, 5.7, 44, 8), y: 30, c: 0x8a552f },
-    { g: cyl(2.2, 4.0, 26, 7), y: 65, c: 0x936030 },
-    { g: cyl(1.0, 2.2, 12, 7), y: 84, c: 0x936030 },              // 主幹通頂(78→90,頂錐與亮簇全串起;頂粗保住枯梢豁免的半徑階)
-    { g: cyl(0.7, 1.0, 15.6, 5), y: 54.88, px: 3.37, rz: -0.56, c: 0x7d4a2e },   // 側枝梢進冠(根釘在幹身不動,梢送進 y60 葉簇底)
-    { g: cyl(0.7, 1.0, 12, 5), y: 58, px: -5.5, rz: 1.3, c: 0x7d4a2e },
-    { g: cone(4.5, 9, 3), y: 4.5, px: 5.6, c: 0x6e4226 },        // 板根鰭(鰭尖貼回幹面)
-    { g: cone(4.2, 8, 3), y: 4, px: -3.5, pz: 4.8, c: 0x75462a },
-    { g: ico(1.9), y: 12, px: 5.4, sy: 0.8, c: 0x6e4226 },       // 樹瘤
-    { g: ico(5), y: 88, px: 4, sy: 0.7, c: 0x55904a },           // 頂部受光亮簇
-    { g: ico(9), y: 72, sy: 0.8, lib: 'tree/canopy_c8', c: 0x39683a },
-    { g: ico(7), y: 82, lib: 'tree/canopy_a7', c: 0x336033 },
-    { g: ico(6), y: 66, px: 7.5, lib: 'tree/canopy_c6', c: 0x4a7a3c },   // 黃綠受光簇
-    { g: ico(6), y: 60, px: -7.5, lib: 'tree/canopy_d6', c: 0x336033 },
-    { g: ico(5), y: 55, pz: 7, lib: 'tree/canopy_f5', c: 0x39683a },
-    { g: cone(5, 10, 6), y: 89, c: 0x336033 },
-    { g: cyl(0.24, 0.45, 7, 5), y: 96, c: 0x8a6a4a },            // 突出頂梢枯枝(雷擊痕)
-    { g: ico(1.3), y: 63.5, px: 8, c: 0x7a5230 },                // 世界爺毬果簇(冠緣)
-    { g: ico(1.1), y: 57.5, px: -8, c: 0x704b2c },
-  ] },
-  euc:      { h: 98, r: 2.6, parts: [
-    { g: cyl(2.2, 3.6, 6, 7), y: 3, c: 0xcfc4b0 },
-    { g: cyl(1.6, 2.3, 52, 7), y: 32, c: 0xdbd2c0 },
-    { g: cyl(0.9, 1.6, 28, 6), y: 72, c: 0xe3dac8 },
-    { g: cyl(0.3, 0.9, 10, 6), y: 91, c: 0xe3dac8 },              // 主幹通頂(86→96,頂簇全串起)
-    { g: cyl(0.16, 0.2, 12, 4), y: 20, px: 2.1, c: 0x9a8a76 },   // 剝落樹皮絲帶
-    { g: cyl(0.14, 0.18, 10, 4), y: 44, px: -2.0, pz: 0.8, rz: 0.12, c: 0xa89884 },
-    { g: cyl(0.15, 0.19, 11, 4), y: 60, px: 1.2, pz: -0.9, rz: -0.1, c: 0xb0a28c },
-    { g: ico(3.5), y: 70, px: 3.2, sy: 0.6, c: 0x86985e },       // 低位側簇(銀綠;內緣貼幹,無枝可錨)
-    { g: cyl(0.5, 0.9, 18, 5), y: 79.65, px: 4.03, rz: -0.62, c: 0xcfc4b0 },  // 側枝外端朝上(根釘在幹身不動,梢送進 +x 葉簇內 0.5m)
-    { g: cyl(0.5, 0.8, 16, 5), y: 76, px: -3.2, rz: 0.6, c: 0xd6ccba },
-    { g: ico(7), y: 90, sy: 0.7, lib: 'tree/canopy_b7', c: 0x5c7a4a },
-    { g: ico(5.5), y: 84, px: 8.5, sy: 0.65, lib: 'tree/canopy_a5', c: 0x738a52 },   // 橄欖偏黃簇(桉葉銀綠層次)
-    { g: ico(5), y: 80, px: -8, sy: 0.65, lib: 'tree/canopy_b5', c: 0x5c7a4a },
-    { g: ico(4.5), y: 83, pz: 4.5, sy: 0.6, c: 0x648250 },       // z 向無側枝 → 內緣貼幹
-    { g: ico(4), y: 96, c: 0x7a9058 },
-    { g: ico(1.5), y: 86, px: 9, c: 0xe9e2c8 },                  // 桉樹乳白花簇(冠緣,R≥G 不吃 gleaf)
-    { g: ico(1.3), y: 84.5, pz: 5, c: 0xe4dcc0 },
-  ] },
-  dougfir:  { h: 100, r: 2.5, parts: [
-    { g: cyl(2.5, 4.0, 6, 7), y: 3, c: 0x5d4027 },
-    { g: cyl(1.8, 2.6, 42, 7), y: 27, c: 0x694a2d },
-    { g: cyl(0.5, 1.8, 52, 7), y: 74, c: 0x694a2d },              // 主幹通頂(48→100,五層錐冠全串起)
-    { g: cyl(2.52, 2.62, 8, 7), y: 13, c: 0x49663a },            // 樹幹苔蘚環帶
-    { g: ico(3.2), y: 34, pz: 4.4, sy: 0.55, c: 0x3a7a52 },
-    { g: cone(11, 22, 8), y: 52, c: 0x2f5e40 },
-    { g: cone(9, 20, 8), y: 65, c: 0x35684a },
-    { g: cone(7, 18, 7), y: 78, c: 0x2f5e40 },
-    { g: cone(4.5, 16, 7), y: 90, c: 0x35684a },
-    { g: cone(2, 11, 6), y: 99, c: 0x2f5e40 },
-    { g: ico(4), y: 46, px: 6, sy: 0.6, lib: 'tree/canopy_e4', c: 0x35684a },
-    { g: ico(4), y: 42, px: -6, sy: 0.6, lib: 'tree/canopy_e4', c: 0x2f5e40 },
-    { g: cone(1.2, 5, 4), y: 47, px: 5.5, rx: Math.PI, c: 0x7fa06a },   // 枝下垂掛松蘿(上端埋進樹冠錐)
-    { g: cone(1.0, 4, 4), y: 60, px: -5.0, rx: Math.PI, c: 0x8aa876 },
-    { g: ico(1.1), y: 44.4, px: 6.4, c: 0x8a6244 },              // 花旗松垂毬果簇(側簇下緣)
-    { g: ico(1.0), y: 40.6, px: -6.4, c: 0x805b3e },
-  ] },
-  sitka:    { h: 96, r: 2.3, parts: [
-    { g: cyl(2.3, 3.7, 5, 7), y: 2.5, c: 0x59452f },
-    { g: cyl(1.6, 2.4, 44, 7), y: 27, c: 0x64503a },
-    { g: cyl(0.5, 1.6, 44, 7), y: 71, c: 0x64503a },              // 主幹通頂(49→93,四層錐冠全串起)
-    { g: cone(9, 20, 7), y: 54, c: 0x3d6a5e },
-    { g: cone(7.5, 18, 7), y: 66, c: 0x467567 },
-    { g: cone(6, 16, 7), y: 78, c: 0x3d6a5e },
-    { g: cone(3.5, 15, 6), y: 89, c: 0x467567 },
-    { g: ico(3.8), y: 46, px: 5.5, sy: 0.55, lib: 'tree/canopy_f38', c: 0x3d6a5e },
-    { g: ico(3.8), y: 44.5, px: -5.5, sy: 0.55, lib: 'tree/canopy_f38', c: 0x467567 },
-    { g: ico(3.2), y: 44, pz: 5.5, sy: 0.55, lib: 'tree/canopy_e32', c: 0x3d6a5e },
-    { g: cone(1.1, 4.5, 4), y: 50, px: 6, rx: Math.PI, c: 0xa8c0a8 },   // 老人鬚地衣(灰綠垂簾)
-    { g: cone(0.9, 3.6, 4), y: 62, px: -4.2, rx: Math.PI, c: 0x9db89d },
-    { g: ico(3), y: 88, px: 3.2, sy: 0.6, c: 0x529272 },         // 頂部亮青簇
-    { g: ico(1.0), y: 44.8, px: 5.9, c: 0x9a7a52 },              // 西加雲杉淺褐毬果簇
-    { g: ico(0.9), y: 42.9, pz: 5.8, c: 0x92714a },
-  ] },
-  meranti:  { h: 95, r: 2.5, parts: [
-    { g: cone(3.0, 10, 3), y: 5, px: 2.3, c: 0x8a7354 },         // 板根鰭(鰭尖貼回幹面)
-    { g: cone(3.0, 10, 3), y: 5, px: -1.25, pz: 1.95, c: 0x93805e },
-    { g: cone(3.0, 10, 3), y: 5, px: -1.25, pz: -1.95, c: 0x8a7354 },
-    { g: cyl(1.5, 2.5, 52, 7), y: 30, c: 0xa08462 },
-    { g: cyl(0.9, 1.5, 22, 6), y: 67, c: 0xa89068 },            // 頂段伸入冠盤(底 56 貼主幹頂、頂 78 埋進冠底 76.2,幹冠不斷開)
-    { g: cyl(0.5, 0.8, 14, 5), y: 74, px: 4, rz: -0.7, c: 0x93805e },     // 側枝外端朝上(傾角勿過斜:枝根會穿出幹身反側)
-    { g: cyl(0.5, 0.8, 14, 5), y: 76, px: -4, rz: 0.7, c: 0x93805e },
-    // 龍腦香突出傘冠 = **一片攤平的圓盤**(2026-08-06 重寫骨架):四方等高環繞、整層壓到 sy 0.4,
-    // 中心只比外圈高一點。舊制的「中心 + 兩側 + 頂上再堆兩層」與 dinizia/tualang 是同一份配方,
-    // `lib:` 換的只是每一團的表面起伏,三種樹的剪影還是一樣的。
-    { g: ico(12), y: 81, sy: 0.4, lib: 'tree/canopy_i10', c: 0x4a8a3e },
-    { g: ico(8), y: 79.5, px: 9.8, sy: 0.36, lib: 'tree/canopy_i8', c: 0x57994a },
-    { g: ico(8), y: 79.5, px: -9.8, sy: 0.36, lib: 'tree/canopy_i8', c: 0x4a8a3e },
-    { g: ico(8), y: 79, pz: 9.8, sy: 0.36, lib: 'tree/canopy_i8', c: 0x57994a },
-    { g: ico(7), y: 79, pz: -9.8, sy: 0.36, c: 0x4a8a3e },
-    { g: ico(6), y: 83, px: 4.6, pz: 4.2, sy: 0.42, c: 0x8fa054 },   // 盤上兩處隆起(開花期淡黃;留保險絲控逐株預算)
-    { g: ico(5), y: 82.6, px: -4.4, pz: -4.6, sy: 0.42, c: 0x8fa054 },
-    { g: cyl(0.1, 0.16, 26, 4), y: 40, px: 1.7, rz: 0.018, c: 0x6a7a44 },   // 纏繞藤蔓(貼幹面、傾角跟隨幹身收分)
-    { g: ico(1.5), y: 77.2, px: 10, c: 0xc27a4a },               // 龍腦香翅果簇(掛在冠盤下緣;冠盤高度一改這一顆要跟著走)
-    { g: ico(1.3), y: 76.8, pz: 9.5, c: 0xb8703f },
-  ] },
-  taiwania: { h: 86, r: 2.1, parts: [
-    { g: cyl(2.1, 3.4, 5, 7), y: 2.5, c: 0x8a5a38 },             // 紅褐樹皮(台灣杉特徵)
-    { g: cyl(1.4, 2.2, 38, 7), y: 24, c: 0x96603a },
-    { g: cyl(0.4, 1.4, 43, 7), y: 64.5, c: 0x96603a },            // 主幹通頂(43→86,五層錐冠全串起)
-    { g: cone(8, 14, 7), y: 45, c: 0x2c6242 },
-    { g: cone(6.5, 13, 7), y: 56, c: 0x347050 },
-    { g: cone(5, 12, 7), y: 67, c: 0x2c6242 },
-    { g: cone(3.2, 11, 6), y: 77, c: 0x347050 },
-    { g: cone(1.6, 9, 5), y: 85, c: 0x2c6242 },
-    { g: ico(3.5), y: 38, px: 4.5, sy: 0.65, lib: 'tree/canopy_e35', c: 0x347050 },
-    { g: ico(3.5), y: 34, px: -3.9, sy: 0.65, lib: 'tree/canopy_d35', c: 0x2c6242 },
-    { g: cyl(0.2, 0.35, 6, 4), y: 86, px: -0.4, rz: 0.5, c: 0x9a7a56 },   // 頂梢突出枯枝(基部埋回頂冠內)
-    { g: ico(3), y: 50, pz: 5, sy: 0.6, c: 0x3f7a52 },
-    { g: ico(0.9), y: 36.6, px: 4.9, c: 0x8a5a38 },              // 台灣杉紅褐毬果簇
-    { g: ico(0.8), y: 48.9, pz: 5.3, c: 0x825332 },
-  ] },
-  dinizia:  { h: 88, r: 2.7, parts: [                            // 亞馬遜天使樹(Dinizia excelsa 88m)
-    { g: cone(3.4, 11, 3), y: 5.5, px: 2.5, c: 0x7a5a40 },       // 高聳板根(鰭尖貼回幹面)
-    { g: cone(3.4, 11, 3), y: 5.5, px: -1.3, pz: 2.15, c: 0x846248 },
-    { g: cone(3.4, 11, 3), y: 5.5, px: -1.3, pz: -2.15, c: 0x7a5a40 },
-    { g: cyl(1.7, 2.7, 48, 7), y: 28, c: 0x96704e },             // 淡紅褐通直巨幹
-    { g: cyl(1.0, 1.7, 24, 6), y: 64, c: 0xa07a54 },            // 頂段伸入冠盤(底 52 貼主幹頂、頂 76 埋進冠底 74.8,幹冠不斷開)
-    { g: cyl(0.5, 0.9, 17.17, 5), y: 71.75, px: 4.0, rz: -0.57, c: 0x846248 },  // 側枝梢進冠(根釘在幹身不動,梢送進外緣葉簇底)
-    { g: cyl(0.5, 0.9, 15, 5), y: 72, px: -4.5, rz: 0.75, c: 0x846248 },
-    { g: cyl(0.4, 0.7, 12.9, 5), y: 73.63, pz: 4.18, rx: 0.72, c: 0x7a5a40 },   // 側枝梢進冠(根釘在幹身不動,梢送進前緣葉簇底)
-    // 天使樹的平頂冠 = **外緣高於中心的凹頂**(2026-08-06 重寫骨架):它突出主林冠、常年受風,
-    // 中心反而被削低。與 meranti 的「攤平圓盤」和 tualang 的「高處聚冠」是三種不同剪影。
-    { g: ico(11), y: 78.5, sy: 0.34, lib: 'tree/canopy_g10', c: 0x4f8a44 },   // 低平中心
-    { g: ico(7), y: 80.5, px: 8.6, sy: 0.5, lib: 'tree/canopy_g7', c: 0x5c9a50 },   // 外緣抬高一圈
-    { g: ico(7), y: 80.5, px: -8.6, sy: 0.5, lib: 'tree/canopy_g7', c: 0x468040 },
-    { g: ico(7), y: 80, pz: 8.4, sy: 0.5, lib: 'tree/canopy_g7', c: 0x549048 },
-    { g: ico(6), y: 79.8, pz: -8.2, sy: 0.5, c: 0x86a45c },
-    { g: ico(1.3), y: 77.8, px: 9.4, c: 0x7a5434 },              // 天使樹豆莢簇(豆科莢果;掛側枝梢旁,枝一動這顆要跟著走)
-    { g: ico(1.1), y: 77.5, pz: 9, c: 0x714d30 },
-  ] },
-  // ---- 2026-07-29 增補:三種世界地標巨樹(實存 >65m,剪影與現有八種互異)----
-  klinki:   { h: 90, r: 2.2, parts: [                            // 克林奇南洋杉(紐幾內亞 90m):下 2/3 淨幹 + 輪生枝盤
-    { g: cyl(2.2, 3.4, 5, 7), y: 2.5, c: 0x6a5138 },
-    { g: cyl(1.5, 2.2, 47, 7), y: 27.5, c: 0x75593c },             // 通直淨幹(底 4 埋進基段頂、頂 51 接頂段底)
-    { g: cyl(0.8, 1.5, 28, 6), y: 64, c: 0x7d6142 },              // 頂段底 50 疊中段頂、頂 78 埋進頂冠底(77)1m,幹冠不斷開
-    { g: cyl(0.25, 0.8, 11, 6), y: 83.5, c: 0x7d6142 },           // 主幹通頂(78→89,頂梢窄錐全串起)
-    { g: cyl(2.25, 2.32, 4, 7), y: 20, c: 0x8f9a6e },            // 地衣環帶
-    // 南洋杉的識別特徵是**輪生**:枝盤成層,層與層之間留明顯空隙(不是把葉簇黏在幹上)。
-    // 2026-08-06 重寫骨架:三層 × 每層一對枝 + 枝端葉盤,層距 8m、盤壓到 sy 0.34 = 一層層的盤子。
-    { g: cyl(0.35, 0.55, 11, 5), y: 58, px: 5.5, rz: -1.42, c: 0x6a5138 },   // 第一輪(近水平,梢端略朝上)
-    { g: cyl(0.35, 0.55, 11, 5), y: 58, px: -5.5, rz: 1.42, c: 0x6a5138 },
-    { g: cyl(0.32, 0.5, 9.5, 5), y: 66, pz: 4.75, rx: 1.44, c: 0x75593c },   // 第二輪(轉 90°)
-    { g: cyl(0.32, 0.5, 9.5, 5), y: 66, pz: -4.75, rx: -1.44, c: 0x75593c },
-    { g: cyl(0.28, 0.44, 7.5, 5), y: 74, px: 3.75, rz: -1.46, c: 0x6a5138 },   // 第三輪(收小)
-    { g: cyl(0.28, 0.44, 7.5, 5), y: 74, px: -3.75, rz: 1.46, c: 0x6a5138 },
-    { g: ico(2.6), y: 58.5, px: 10.4, sy: 0.34, lib: 'tree/canopy_j22', c: 0x3a6b3a },   // 枝端扁平葉盤
-    { g: ico(2.6), y: 58.5, px: -10.4, sy: 0.34, lib: 'tree/canopy_j22', c: 0x2f5e34 },
-    { g: ico(2.4), y: 66.5, pz: 9.0, sy: 0.34, lib: 'tree/canopy_j22', c: 0x3a6b3a },
-    { g: ico(2.4), y: 66.5, pz: -9.0, sy: 0.34, c: 0x2f5e34 },
-    { g: ico(2.2), y: 74.5, px: 7.1, sy: 0.34, lib: 'tree/canopy_j22', c: 0x35643a },
-    { g: ico(2.2), y: 74.5, px: -7.1, sy: 0.34, c: 0x3a6b3a },
-    { g: cone(4.5, 14, 6), y: 84, c: 0x2f5e34 },                 // 頂梢窄錐冠
-    { g: ico(1.2), y: 59.5, px: 9.5, c: 0x7a5a34 },              // 克林奇大毬果簇(掛枝端葉盤)
-  ] },
-  tualang:  { h: 85, r: 2.8, parts: [                            // 蜂樹(東南亞 Koompassia 88m):灰白滑幹 + 突出傘冠 + 野蜂巢
-    { g: cone(3.6, 12, 3), y: 6, px: 2.6, c: 0x9a917e },         // 高聳板根(鰭尖貼回幹面)
-    { g: cone(3.6, 12, 3), y: 6, px: -1.3, pz: 2.25, c: 0xa39a86 },
-    { g: cone(3.6, 12, 3), y: 6, px: -1.3, pz: -2.25, c: 0x9a917e },
-    { g: cyl(1.8, 2.8, 50, 7), y: 29, c: 0xb3aa94 },             // 灰白滑幹(蜜蜂天敵爬不上去)
-    { g: cyl(1.0, 1.8, 24, 6), y: 66, c: 0xbcb29c },            // 頂段伸入冠底(底 54 貼主幹頂、頂 78 埋進冠底 75.8,幹冠不斷開)
-    { g: cyl(0.4, 1.0, 12, 6), y: 84, c: 0xbcb29c },              // 主幹通頂(78→90,聚冠頂簇全串起)
-    { g: cyl(0.5, 0.9, 13, 5), y: 71, px: 4, rz: -0.8, c: 0xa39a86 },   // 側枝外端朝上
-    { g: cyl(0.5, 0.9, 13, 5), y: 73, px: -4, rz: 0.8, c: 0xa39a86 },
-    // 蜂樹 = **枝下高極高、冠小而聚**(2026-08-06 重寫骨架):灰白滑幹一路光禿到近頂,冠幅收在
-    // 軸心附近並往上堆成半球 —— 與 meranti 的攤平圓盤、dinizia 的凹頂各走各的剪影。
-    { g: ico(10), y: 82, sy: 0.62, lib: 'tree/canopy_h10', c: 0x4f8a44 },
-    { g: ico(6.5), y: 79.5, px: 5.4, sy: 0.6, lib: 'tree/canopy_h65', c: 0x5c9a50 },   // 收在軸心附近
-    { g: ico(6.5), y: 79.5, px: -5.2, pz: 1.2, sy: 0.6, lib: 'tree/canopy_h65', c: 0x468040 },
-    { g: ico(5.5), y: 86.5, px: 1.4, sy: 0.62, c: 0x549048 },     // 往上堆的冠頂
-    { g: ico(4.5), y: 89.5, px: -1.2, sy: 0.6, c: 0x6fa050 },
-    { g: ico(1.3), y: 74.8, px: 9, c: 0x8a5a30 },                // 豆莢簇(蜂樹為豆科)
-    { g: ico(0.9), y: 55, px: 1.9, c: 0xd8b04a },                // 樹幹垂掛野巨蜂巢(蜂樹地標特徵)
-  ] },
-  alerce:   { h: 72, r: 2.4, parts: [                            // 智利柏(巴塔哥尼亞 Fitzroya 70m+):紅褐纖維皮窄錐塔
-    { g: cyl(2.4, 3.8, 6, 7), y: 3, c: 0x7d4a30 },
-    { g: cyl(1.6, 2.4, 34, 7), y: 23, c: 0x8a5434 },
-    { g: cyl(0.8, 1.6, 20, 6), y: 50, c: 0x935c38 },
-    { g: cyl(0.3, 0.8, 12, 6), y: 66, c: 0x935c38 },              // 主幹通頂(60→72,頂錐全串起)
-    { g: cyl(2.45, 2.52, 5, 7), y: 14, c: 0x49663a },            // 苔蘚環帶(溫帶雨林老樹)
-    { g: cone(6.5, 16, 7), y: 32, c: 0x2c5c40 },                 // 窄錐疊冠
-    { g: cone(5.5, 15, 7), y: 43, c: 0x336850 },
-    { g: cone(4.4, 14, 7), y: 53, c: 0x2c5c40 },
-    { g: cone(3.2, 13, 6), y: 62, c: 0x336850 },
-    { g: cone(1.8, 10, 5), y: 70, c: 0x2c5c40 },
-    { g: ico(2.6), y: 36, px: 3.8, sy: 0.6, lib: 'tree/canopy_k22', c: 0x33684a },
-    { g: ico(2.4), y: 33, px: -3.6, sy: 0.6, lib: 'tree/canopy_k22', c: 0x2c5c40 },
-    { g: cyl(0.2, 0.3, 5, 4), y: 72.5, c: 0x9a7a56 },            // 頂梢枯枝(千年老樹雷痕)
-    { g: ico(0.8), y: 30.5, pz: 4.2, c: 0x7a5434 },              // 小毬果簇
-  ] },
-};
+// Photo-guided procedural forest. Variant envelopes also drive crown shyness.
+const GIANT_DEFS = { ...createForestDefs(cyl, ico) };
+
+function forestEnvironmentAt(terrain, x, z) {
+  let input = terrain.forestEnv || {};
+  for (const region of Array.isArray(input.regions) ? input.regions : []) {
+    if ([region.minX, region.maxX, region.minZ, region.maxZ].every(Number.isFinite)
+      && x >= region.minX && x <= region.maxX && z >= region.minZ && z <= region.maxZ) input = { ...input, ...region };
+  }
+  const heightAt = terrain.natureAt || terrain.heightAt;
+  const step = terrain.gridM || 16;
+  const slope = Math.atan(Math.hypot(heightAt(x + step, z) - heightAt(x - step, z),
+    heightAt(x, z + step) - heightAt(x, z - step)) / (2 * step)) * 180 / Math.PI;
+  return { ...input, slope: Number.isFinite(input.slope) ? input.slope : slope, wet: terrainEnvCode(terrain, x, z) !== 0 };
+}
+function forestTypeAt(terrain, x, z, roll) {
+  const altitude = terrain.elevationAt?.(x, z) ?? terrain.natureAt?.(x, z) ?? terrain.heightAt(x, z);
+  return pickTreeType(terrain.center?.lat, altitude, roll, forestSeed(x, z), forestEnvironmentAt(terrain, x, z));
+}
 
 // 神木吃四季:綠色主導(g 為最大通道)的樹冠/苔蘚/地衣零件自動標記 'gleaf' → 季節疊色
 // (保留樹種色相與冠層層次);紅褐樹幹/板根/剝皮絲帶(R 主導)不動。>65m 巨樹皆常綠,
@@ -824,16 +606,17 @@ function giantCrownR(def) {
 }
 
 function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadOccupied, occ, osmBldHit, vegFoot }) {
-  const species = Object.keys(GIANT_DEFS);
   const centers = [];
   let trees = 0;
   for (const [x, z] of sites) {
     if (centers.length >= 6) break;
     if (centers.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 210)) continue;
-    const type = species[Math.floor(rnd() * species.length)];
+    const type = forestTypeAt(terrain, x, z, rnd());
+    if (!type) continue;
     const def = GIANT_DEFS[type];
-    const n = 5 + Math.floor(rnd() * 7);          // 一群 5~11 株
-    const cr = 52 + rnd() * 70;                   // 群落半徑(株體放大 → 群落跟著攤開;
+    const grove = TREE_SPECIES[type].grove;
+    const n = grove.count[0] + Math.floor(rnd() * (grove.count[1] - grove.count[0] + 1));          // 一群 5~11 株
+    const cr = grove.spread[0] + rnd() * (grove.spread[1] - grove.spread[0]);                   // 群落半徑(株體放大 → 群落跟著攤開;
                                                   // 2026-08-03 樹冠羞避上線後同步放大:冠緣要留間隙,
                                                   // 林子攤不開就只能少種樹 —— 使用者要的是「森林」)
     const base = (0.75 + rnd() * 0.35) * OVER.giant;   // 群落基準體格(隨建物佔地等比放大)
@@ -844,7 +627,6 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
     // 傾斜 `lean` 遠離鄰冠:羞避的成因就是枝梢感受到鄰株而偏離,林相才不是一排直挺挺的柱子。
     // 注意規則跑在地形淘汰(水域/淨空)**之前**:被地形刷掉的那株仍算進鄰株 ⇒ 間隙偏保守,
     // 方向朝「留得更開」而不是「黏在一起」(原則 6)。
-    const gcr = giantCrownR(def);
     const cands = [];
     for (let k = 0; k < n; k++) {
       const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 10 + rnd() * cr;
@@ -857,15 +639,18 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       // 全是同一個值,晚一步夾就是「冠幅按大株算、樹身按小株長」(原則 4)。
       // 夾制**不消耗亂數** ⇒ 佈局序列逐位元不變(§2.3)。
       const s = objScaleFit(base * (0.72 + rnd() * 0.63), def.h, base * 1.35);
-      cands.push({ x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, s, cr: gcr, h: def.h });
+      const gx = x + Math.cos(a) * d, gz = z + Math.sin(a) * d;
+      const tree = createForestTree(type, forestSeed(gx, gz));
+      cands.push({ x: gx, z: gz, s, cr: giantCrownR(tree), h: tree.h });
     }
     const shy = planShyGrove(cands);
     let added = 0;
     const trunks = [];   // 本群樹幹腳印:迴圈後才整圓封鎖(不干擾同群後續植株的群聚)
     for (const cand of shy) {
       const gx = cand.x, gz = cand.z, s = cand.s;
+      const def = createForestTree(type, forestSeed(gx, gz));
       // 腳印半徑 = 幹半徑 × 1.6(基部喇叭口 + 板根鰭)—— 落底與淨空 MUST 吃同一個值
-      const foot = def.r * s * 1.6;
+      const foot = def.footprint * s;
       // 淨空 MUST 掃**整個腳印圓盤**(areaFree,同 placeMegaliths),MUST NOT 只問中心格:
       // 巨幹半徑可 >10m,中心落在隧道走廊淨空外一格、樹身照樣橫插進洞內斷面
       // (2026-08-01 金龍隧道真圖資實測:洞內卡著整根神木樹幹)。
@@ -881,7 +666,12 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       const gy = sinkBaseY(terrain, gx, gz, foot);
       // 水域/沼澤不長神木(terrainEnvCode 確定性純函式;群落中心的 classify 有 55% mix 改寫
       // 可能把水色點洗成 green、株散 ±82m 也會越到濕地 —— 這裡是最後把關)
-      if (gy < 0.4 || terrainEnvCode(terrain, gx, gz) !== 0) continue;
+      const environment = forestEnvironmentAt(terrain, gx, gz);
+      const altitude = terrain.elevationAt?.(gx, gz) ?? terrain.heightAt(gx, gz);
+      const mangrove = TREE_SPECIES[type].roots === 'pneumatophore';
+      if ((!mangrove && (gy < 0.4 || environment.wet))
+        || (mangrove && (!environment.wet || terrain.waterY == null || gy < terrain.waterY - .8))
+        || treeHabitatWeight(type, terrain.center?.lat, altitude, environment) <= 0) continue;
       (items[type] ??= []).push({
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
@@ -895,6 +685,11 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       // tr = **頂端**幹半徑(climb.js:垂降技術繩的頂端繩錨靠 `r − tr` 的跨接臂伸回幹身)——
       // 碰撞半徑吃的是基部,不帶這個值的話繩錨會吊在幹外好幾公尺的空中。推導自 trunkR,MUST NOT 手寫
       blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree', tr: trunkR(def.h * s) });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
+      const instance = items[type][items[type].length - 1];
+      for (const stem of def.stems.slice(1)) {
+        const xf = vegPartXform({ px: stem.x, pz: stem.z, y: 0 }, instance);
+        blockers.push({ x: xf.pos[0], z: xf.pos[2], y: gy - .1, r: stem.r * s + .12, h: stem.h * s + .1, std: 1 });
+      }
       blocked.add(cellKey(gx, gz));               // 小植被/地被不長進樹幹
       occ?.add(gx, gz, def.r * s + 0.6);
       vegFoot?.add({ x: gx, z: gz, r: foot });
@@ -905,7 +700,8 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
         const hy = def.h * s * frac;
         // faceOut:錨點落在樹皮表面、零件 local +x 指徑向外(枝根埋入、巢懸枝梢)
         const rr = trunkR(hy) + (faceOut ? 0 : 0.3);
-        const jry = rnd() * Math.PI * 2;   // 保留亂數消耗序(確定性:faceOut 也照抽不跳號)
+        const jry = rnd() * Math.PI * 2;
+        if (def.h * s < 18 || def.r * s < .6) return;   // 保留亂數消耗序(確定性:faceOut 也照抽不跳號)
         const hx = gx + Math.cos(ha) * rr, hz = gz + Math.sin(ha) * rr;
         (items[dtype] ??= []).push({
           x: hx, y: gy + hy, z: hz,
@@ -932,6 +728,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       {
         const xb = djAt(gx + 11.3, gz - 7.9);
         const hangH = (dtype, salt, hfrac, ds) => {
+          if (def.h * s < 18 || def.r * s < .6) return;
           const ha2 = djAt(gx + salt, gz - salt * 1.7) * Math.PI * 2;
           const hy2 = def.h * s * hfrac;
           const rr2 = trunkR(hy2);
@@ -1240,12 +1037,12 @@ const _cardGeo = new Map();
  */
 function leafRowGeo(type, part, pi) {
   const ck = `${type}|${pi}`;
-  if (_cardGeo.has(ck)) return _cardGeo.get(ck);
+  if (type !== null && _cardGeo.has(ck)) return _cardGeo.get(ck);
   // **MUST 讀保險絲 `part.g` 的 parameters**(不是 partGeo 的解析結果):包絡與 `giantCrownR`
   // 吃同一組參數,畫出來的冠幅才不可能大過佈局用的那一份(leafcard.js 檔頭 ③④)
   const env = cardEnvelope(part.g?.parameters);
   const cards = env ? planCards(env, cardRnd(type, pi)) : [];
-  if (!cards.length) { _cardGeo.set(ck, null); return null; }
+  if (!cards.length) { if (type !== null) _cardGeo.set(ck, null); return null; }
   const n = cards.length;
   const pos = new Float32Array(n * 12), nor = new Float32Array(n * 12);
   const crd = new Float32Array(n * 12), uv = new Float32Array(n * 8);
@@ -1269,8 +1066,7 @@ function leafRowGeo(type, part, pi) {
   g.setAttribute('aCard', new THREE.BufferAttribute(crd, 3));
   g.setIndex(new THREE.BufferAttribute(idx, 1));
   g.computeBoundingBox(); g.computeBoundingSphere();
-  markShared(g);
-  _cardGeo.set(ck, g);
+  if (type !== null) { markShared(g); _cardGeo.set(ck, g); }
   return g;
 }
 
@@ -1283,7 +1079,12 @@ function leafRowGeo(type, part, pi) {
  * ⚠ 殼 `markShared` 註冊:它借用的是別人的屬性,被 `disposeTree` 放掉就會把保險絲幾何
  * (整場共用、每一場都要用)一起釋放 ⇒ 之後所有借用者變空白(A25 的原話)。
  */
-function surfIdGeo(geo, attr, treeAttr) {
+function surfIdGeo(geo, attr, treeAttr, owned = false) {
+  if (owned) {
+    if (attr) geo.setAttribute('aSurfId', attr);
+    if (treeAttr) geo.setAttribute('aTreeO', treeAttr);
+    return geo;
+  }
   if (!attr && !treeAttr) return geo;     // 群組剪影關著且不帶樹基 ⇒ 連殼都不建(逐位元同舊制)
   const q = new THREE.BufferGeometry();
   for (const k in geo.attributes) q.setAttribute(k, geo.attributes[k]);
@@ -1295,14 +1096,63 @@ function surfIdGeo(geo, attr, treeAttr) {
   return markShared(q);
 }
 
+// Bake every branch into tree-local space before wind deformation. Shared vertex height
+// gives wood and leaves identical displacement at their joints, even on tilted branches.
+function forestRenderDef(type, item, season) {
+  const tree = createForestTree(type, forestSeed(item.x, item.z),
+    (rt, rb, h, n, sections) => new THREE.CylinderGeometry(rt, rb, h, n, sections), ico, item.s ?? 1, season);
+  const buckets = { wood: [], leaf: [], flower: [], fruit: [] };
+  let cards = false;
+  for (const [i, part] of tree.parts.entries()) {
+    const isLeaf = part.key === 'gleaf';
+    const card = isLeaf && !part.noCard && leafCardOn(part, 'leaf') ? leafRowGeo(null, part, i) : null;
+    const g = card || part.g;
+    cards ||= !!card;
+    const xf = vegPartXform(part, { x: 0, y: 0, z: 0, s: 1 });
+    xf.scl[0] *= part.sx ?? 1;
+    xf.scl[2] *= part.sz ?? 1;
+    const matrix = new THREE.Matrix4().compose(new THREE.Vector3(...xf.pos),
+      new THREE.Quaternion(...xf.quat), new THREE.Vector3(...xf.scl));
+    g.applyMatrix4(matrix);
+    const color = new THREE.Color(part.c);
+    const colors = new Float32Array(g.attributes.position.count * 3);
+    for (let k = 0; k < colors.length; k += 3) { colors[k] = color.r; colors[k + 1] = color.g; colors[k + 2] = color.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const role = isLeaf ? 'leaf' : part.role === 'flower' || part.role === 'fruit' ? part.role : 'wood';
+    buckets[role].push(g);
+    if (card) part.g.dispose();
+  }
+  const merge = list => {
+    if (list.some(g => !g.index)) list = list.map(g => {
+      if (!g.index) return g;
+      const expanded = g.toNonIndexed();
+      g.dispose();
+      return expanded;
+    });
+    const g = mergeGeometries(list);
+    for (const part of list) part.dispose();
+    if (!g) throw new Error('Forest geometry attributes do not match');
+    g.computeBoundingBox(); g.computeBoundingSphere();
+    return g;
+  };
+  const height = tree.h * (item.s ?? 1);
+  return { ...tree, bend: treeBend(height, tree.r * (item.s ?? 1)),
+    parts: Object.entries(buckets).filter(([, list]) => list.length).map(([role, list]) => ({
+      g: merge(list), c: 0xffffff, key: role === 'leaf' ? 'gleaf' : null,
+      card: role === 'leaf' && cards, vertexColors: true, role })) };
+}
+
 /**
  * 把某類植被的所有實例組成 InstancedMesh(每 part 一個 draw call)。
  * `export` 是給 **3D 零件對照台**(dev-only)用的:那座台子要兩側都由**遊戲自己的**建構器建,
  * 不然「原版」跟遊戲裡的原版不是同一個東西而且不會報錯(對照台檔頭紀律 ①)。遊戲路徑不變。
  */
-export function buildVegMeshes(type, items, season) {
-  const def = VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
-  const span = vegSpan(def);
+export function buildVegMeshes(type, items, season, generated = null) {
+  if (GIANT_DEFS[type] && !generated) {
+    return items.flatMap(item => buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item, season)));
+  }
+  const def = generated || VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
+  const span = generated ? generated.h : vegSpan(def);
   // 整樹節點(def.whole;2026-08-07 §5u,**2026-08-08 起是「一列以上」**):lib 全數載到 ⇒
   // 這一型只畫 whole 那幾列(保險絲零件全藏 —— 與 synthMegalith tower 的「載到就不 add 原
   // primitive」同語意);載不到 ⇒ rows = def.parts 逐位元同舊制。span/佈局仍讀 parts,
@@ -1343,7 +1193,7 @@ export function buildVegMeshes(type, items, season) {
     const sk = vegSoftKind(part);
     // 葉片卡是「畫什麼」的**第三個**解析結果(`lib` > 卡片 > 保險絲;優先序住 leafCardOn)。
     // 判定 MUST 沿用上面那一次 `vegSoftKind` 的結果 —— 再呼叫一次就是第二張名單(A39)。
-    const card = leafCardOn(part, sk) ? leafRowGeo(type, part, pi) : null;
+    const card = part.card ? part.g : !generated && leafCardOn(part, sk) ? leafRowGeo(type, part, pi) : null;
     // 材質選項一路收在同一個物件裡:`const mat = toonMat(seasonColor…` **全檔恰一處**
     // (`audit_soft_stroke` Ⅳ⑤ 釘住),分支寫成第二個呼叫點就是「軟性旗標有兩條路」
     // 樹幹/枝隨風搖曳(2026-09-02;2026-09-06 納入神木):「木質件」= 有葉子的樹型(TRUNK_TYPES/神木) 且 sk===null。
@@ -1360,10 +1210,12 @@ export function buildVegMeshes(type, items, season) {
     // 逐株樹基相位:有擺動的列一律改吃 aTreeO(同一株的幹/枝/冠同相位 ⇒ 接合處不分解)。
     // 判定沿用上面的 soft 結果,不另開名單;單零件散草(px = pz = 0)樹基恆等於實例原點 ⇒ 無感。
     if (mo.soft) mo.treeO = true;
+    if (mo.soft && generated) Object.assign(mo.soft, generated.bend);
     if (grpOn) {
       mo.surfAttr = true;                       // 面號改吃逐實例屬性 aSurfId
       if (sk === 'leaf') mo.ink = 'group';      // 葉列 = 群組剪影;木質列維持 'hard'(幹的折邊留著)
     }
+    if (part.vertexColors) mo.vertexColors = true;
     if (card) { mo.map = leafCardTex(); mo.alphaTest = 0.5; mo.transparent = false; mo.card = true; }
     const mat = toonMat(seasonColor(part.key, part.c, season), mo);
     // 畫的是 partGeo 解析結果(AI 零件庫 ?? 保險絲);佈局(span/冠幅)仍吃 p.g,見 partGeo 檔頭
@@ -1371,7 +1223,7 @@ export function buildVegMeshes(type, items, season) {
     // 卡片與逐株面號/樹基**只換這一列的幾何**,那一行的解析縫一格未動:卡片是「畫什麼」的第三個
     // 解析結果,優先序 `lib` > 卡片 > 保險絲(判定住 `leafCardOn`);面號/樹基是只換屬性的殼。
     // 無擺動的列不掛 aTreeO(材質沒有 CEL_TREEO,掛了也是沒人讀的屬性)。
-    if (card || sidAttr || mo.treeO) m.geometry = surfIdGeo(card || m.geometry, sidAttr, mo.treeO ? treeAttr : null);
+    if (card || sidAttr || mo.treeO) m.geometry = surfIdGeo(card || m.geometry, sidAttr, mo.treeO ? treeAttr : null, !!generated);
     items.forEach((it, i) => {
       // 零件擺位 + 實例朝向/微傾斜(剛體)一律走 xform.js 的單一縫:
       // 併進逐零件歐拉角會讓 rx≠0 的枝叉被朝向攪亂、微傾斜變成分段剪切(接合開縫)
@@ -10230,7 +10082,6 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rin
   // 2026-08-11:內緣改吃 `edgeWallDeepM()`(最深的那一款牆的厚度)—— 環體自從吃型錄之後
   // 厚度是逐款的真實尺寸(貨輪 18m),沿用 `WALL_T` 的話邊界樓群會長進船身裡。
   const IN0 = 8, IN1 = edgeWallInsetM() - edgeWallDeepM();
-  const species = Object.keys(GIANT_DEFS);
   const edges = [
     { x0: terrain.minX, z0: terrain.minZ, dx: 1, dz: 0, len: terrain.worldW },
     { x0: terrain.minX, z0: terrain.maxZ, dx: 1, dz: 0, len: terrain.worldW },
@@ -10303,21 +10154,23 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rin
         vegFoot?.add({ x, z, r: 3.6 * s });
         solids?.push({ x, z, r: 3.6 * s });
       } else {   // green / wet → 神木牆
-        const sp = species[Math.floor(rnd() * species.length)];
+        const sp = forestTypeAt(terrain, x, z, rnd());
+        if (!sp) continue;
         // 邊界神木牆吃同一個物件高度上限(分布版,同 placeGiantGroves)—— 邊界帶在空氣牆外
         // 不可達,但它照樣**看得見**,漏掉這一支就是「圖中央的神木被削平、圍牆那圈還是 200m」
         let s = objScaleFit(0.65 + rnd() * 0.5, GIANT_DEFS[sp].h, 1.15);
-        const rT = GIANT_DEFS[sp].r;
+        const tree = createForestTree(sp, forestSeed(x, z));
+        const rT = tree.r;
         // 幹腳印 +6:與邊界樓保持淨距,樹冠不貼上建物牆面(樹冠彼此交疊成林無妨)
         s *= Math.min(1, avail / (rT * s + 6));
         if (s < 0.4) continue;
         // 背景實體互斥:邊界神木同樣避開走廊/圖資建物/既有植被。
-        const bFoot = rT * s * 1.6;
+        const bFoot = tree.footprint * s;
         if (blocked && !areaFree(blocked, x, z, bFoot)) continue;
         if (osmBldHit?.(x, z, bFoot)) continue;
         if (vegFoot && vegFoot.near({ x, z, r: bFoot })) continue;
         (items[sp] ??= []).push({
-          x, y: sinkBaseY(terrain, x, z, rT * s * 1.6), z, s,   // 板根腳印落底(見 sinkBaseY)
+          x, y: sinkBaseY(terrain, x, z, bFoot), z, s,   // 板根腳印落底(見 sinkBaseY)
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.04, tz: (rnd() - 0.5) * 0.04,
           dj: rnd(),
         });
@@ -10579,6 +10432,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const season = cfg.env?.season || 'summer';
   const night = cfg.env?.time === 'night';
   const mix = cfg.venue?.mix || null;
+  terrain.forestEnv = cfg.env?.forest || cfg.venue?.forest || {};
   const rnd = mulberry32(
     (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) ^ ((cfg.teamSize || 5) << 20),
   );
@@ -10968,10 +10822,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 36); a++) {
     const x = rx(), z = rz();
     const h = terrain.heightAt(x, z);
-    if (h < 0.4 || blocked.has(cellKey(x, z))) continue;
+    const input = forestEnvironmentAt(terrain, x, z);
+    const tidalForest = input.wet && input.salinity >= .05 && terrain.waterY != null && h >= terrain.waterY - .8;
+    if ((h < 0.4 && !tidalForest) || blocked.has(cellKey(x, z))) continue;
     const b = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
-    if (b === 'green' && greenSites.length < 20) greenSites.push([x, z]);
-    else if (b === 'bare' && bareSites.length < 36) bareSites.push([x, z]);
+    if (greenSites.length < 20) {
+      const dryForest = b === 'bare' && (['arid', 'mediterranean', 'alpine'].includes(input.climate) || input.moisture < .35);
+      if (b === 'green' || dryForest || tidalForest) greenSites.push([x, z]);
+    }
+    if (b === 'bare' && bareSites.length < 36) bareSites.push([x, z]);
   }
   // 國旗歸屬(地圖 30 : 駐軍 60 : 敵對 10)。純函式、零共享 rnd ⇒ 建在哪一行都不影響序列。
   const nation = makeNationPicker(cfg, basesW);

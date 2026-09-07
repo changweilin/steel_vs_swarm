@@ -31,6 +31,7 @@ const AUDIT_SCRIPTS = [
   'tools/audit_road_joint.mjs',
   'tools/audit_road_bed.mjs',
   'tools/audit_world_height.mjs',
+  'tools/audit_forest.mjs',
   'tools/audit_zone_cut.mjs',
 
   // ── 核心幾何量體、武器判定與戰鬥物理 ──

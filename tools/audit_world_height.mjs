@@ -1,3 +1,4 @@
+import { createForestDefs } from '../public/js/forest.js';
 // ============ 世界高度上限(遊戲最高高度 / 物件最高高度) 稽核 ============
 // 用途:改 `data.js` 的 `WORLD_H`/`objHeightMax`/`objScaleCap`/`objScaleFit`/`worldCeilY`、
 // `TARGET_H.tower`、`terrain.js` 的 `avgH`、`game.js` 的 `_ceilY` 與其消費端(飛行夾制 /
@@ -76,7 +77,7 @@ const runTable = (src, name, extraNames = [], extraVals = []) => new Function(
   'cyl', 'cone', 'ico', ...extraNames, `${grabConst(src, name)} return ${name};`,
 )(gStub.cyl, gStub.cone, gStub.ico, ...extraVals);
 
-const GIANT_DEFS = runTable(bioSrc, 'GIANT_DEFS');
+const GIANT_DEFS = runTable(bioSrc, 'GIANT_DEFS', ['createForestDefs'], [createForestDefs]);
 const MEGALITHS = runTable(bioSrc, 'MEGALITHS');
 const LANDMARK_COL = runTable(bioSrc, 'LANDMARK_COL');
 const VEG_DEFS = runTable(bioSrc, 'VEG_DEFS');

@@ -552,14 +552,9 @@ function loadArrows() {
 const AR = loadArrows();
 const A = AR.CLIMB_ARROW;
 {
-  // 兵線 chevron 的桿長/張角(原 game.js _initLanes: BAR_L = 5.5, SPREAD = 0.62)—— 「縮到適當大小」是相對它定義的
-  const m = /const BAR_L = ([\d.]+), SPREAD = ([\d.]+);/.exec(gameSrc);
-  const LANE_BAR = m ? +m[1] : 5.5;
-  const LANE_SP = m ? +m[2] : 0.62;
-
-  ok(A.BAR < LANE_BAR * 0.45 && A.BAR > LANE_BAR * 0.2,
-    `Ⅴ 桿長 MUST 明顯短於兵線 chevron(攀爬 ${A.BAR}m vs 兵線 ${LANE_BAR}m,期望 0.2~0.45 倍)`);
-  ok(near(A.SPREAD, LANE_SP, 1e-9), `Ⅴ 半張角 MUST 與兵線同(${A.SPREAD})—— 縮的是尺寸不是語彙`);
+  // 兵線已改用流動虛線，不再提供 chevron 常數；鎖住原有攀爬箭頭的視覺尺寸。
+  ok(near(A.BAR, 1.9, 1e-9), `Ⅴ 攀爬箭頭桿長維持 1.9m(實得 ${A.BAR})`);
+  ok(near(A.SPREAD, .62, 1e-9), `Ⅴ 攀爬箭頭半張角維持 0.62rad(實得 ${A.SPREAD})`);
   ok(A.T <= 0.15, `Ⅴ 桿厚 ${A.T}m = 貼片(不是空中的立體箭頭)`);
 
   // 建一組:一棟朝 +X 的樓 + 一棵神木,兩端各 N 支 chevron × 2 根桿

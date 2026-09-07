@@ -1,3 +1,4 @@
+import { createForestDefs } from '../../public/js/forest.js';
 // ============ AI 零件庫的「消費端真相」讀取縫(入庫檢查 + 3D 對照台共用)============
 //
 // 這一支回答四個問題,每一個都**只准有一份答案**:
@@ -71,9 +72,9 @@ export function bioLibDescs(src = biomesSrc()) {
     const cone = (r, h, n = 5) => ['cone', r, h, n];
     const ico = (r) => ['ico', r];
   `;
-  const { VEG_DEFS, GIANT_DEFS } = new Function(
+  const { VEG_DEFS, GIANT_DEFS } = new Function('createForestDefs',
     `${stub}\n${blockOf(src, 'VEG_DEFS')};\n${blockOf(src, 'GIANT_DEFS')};\nreturn { VEG_DEFS, GIANT_DEFS };`,
-  )();
+  )(createForestDefs);
   const out = [];
   for (const [table, defs] of [['VEG_DEFS', VEG_DEFS], ['GIANT_DEFS', GIANT_DEFS]]) {
     for (const [kind, def] of Object.entries(defs)) {
