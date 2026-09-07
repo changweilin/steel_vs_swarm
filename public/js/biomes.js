@@ -10644,6 +10644,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   }
   const architectureAt = createArchitecturePlanner({
     areas: osmData?.areas || [], terrain, seed: cfg.architectureSeed || 0, mix,
+    center, venue: cfg.venue, country: cfg.venue?.country,
   });
   // 行人語意 MUST 先於剪枝／量化／橋隧判定：地下步道從此不再被任何道路消費端看見；
   // 高架與沿線主題則掛在 way 上，後續幾何重組用展開運算保留它。全段零共享 rnd。
