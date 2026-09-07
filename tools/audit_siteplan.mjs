@@ -1396,6 +1396,8 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
         // `objScaleFit`,少了它這段原文一執行就 undefined(而不是安靜地少驗一條)
         GIANT_DEFS: { kapok: { r: 6, h: 90 } },
         forestTypeAt: () => 'kapok', // This fixture isolates settlement gating; climate is audited by audit_forest.
+        createForestTree: () => ({ r: 6 }),
+        forestSeed: () => 0,
         FACADES: { commercial: [0], residential: [0] },
         OVER: { bldCap: objHeightMax() },   // 真品上限(舊制手寫 170 已退場)
         objScaleFit,

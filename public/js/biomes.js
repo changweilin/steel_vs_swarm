@@ -1,4 +1,5 @@
-import { createForestDefs, pickTreeType, forestSeed } from './forest.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { TREE_SPECIES, createForestDefs, createForestTree, treeBend, pickTreeType, forestSeed } from './forest.js';
 // ============ 地貌系統:五類地被 + 圖資建物 + 兵線淨空 ============
 // 依衛星影像逐點分類五種地貌,鋪設對應的 3D 地物:
 //   綠地   — 竹林(大小不一的群落)/ 闊葉林 / 針葉林(高海拔)
@@ -613,7 +614,6 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
     // 傾斜 `lean` 遠離鄰冠:羞避的成因就是枝梢感受到鄰株而偏離,林相才不是一排直挺挺的柱子。
     // 注意規則跑在地形淘汰(水域/淨空)**之前**:被地形刷掉的那株仍算進鄰株 ⇒ 間隙偏保守,
     // 方向朝「留得更開」而不是「黏在一起」(原則 6)。
-    const gcr = giantCrownR(def);
     const cands = [];
     for (let k = 0; k < n; k++) {
       const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 10 + rnd() * cr;
@@ -626,13 +626,16 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites, roadO
       // 全是同一個值,晚一步夾就是「冠幅按大株算、樹身按小株長」(原則 4)。
       // 夾制**不消耗亂數** ⇒ 佈局序列逐位元不變(§2.3)。
       const s = objScaleFit(base * (0.72 + rnd() * 0.63), def.h, base * 1.35);
-      cands.push({ x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, s, cr: gcr, h: def.h });
+      const gx = x + Math.cos(a) * d, gz = z + Math.sin(a) * d;
+      const tree = createForestTree(type, forestSeed(gx, gz));
+      cands.push({ x: gx, z: gz, s, cr: giantCrownR(tree), h: tree.h });
     }
     const shy = planShyGrove(cands);
     let added = 0;
     const trunks = [];   // 本群樹幹腳印:迴圈後才整圓封鎖(不干擾同群後續植株的群聚)
     for (const cand of shy) {
       const gx = cand.x, gz = cand.z, s = cand.s;
+      const def = createForestTree(type, forestSeed(gx, gz));
       // 腳印半徑 = 幹半徑 × 1.6(基部喇叭口 + 板根鰭)—— 落底與淨空 MUST 吃同一個值
       const foot = def.r * s * 1.6;
       // 淨空 MUST 掃**整個腳印圓盤**(areaFree,同 placeMegaliths),MUST NOT 只問中心格:
@@ -1009,12 +1012,12 @@ const _cardGeo = new Map();
  */
 function leafRowGeo(type, part, pi) {
   const ck = `${type}|${pi}`;
-  if (_cardGeo.has(ck)) return _cardGeo.get(ck);
+  if (type !== null && _cardGeo.has(ck)) return _cardGeo.get(ck);
   // **MUST 讀保險絲 `part.g` 的 parameters**(不是 partGeo 的解析結果):包絡與 `giantCrownR`
   // 吃同一組參數,畫出來的冠幅才不可能大過佈局用的那一份(leafcard.js 檔頭 ③④)
   const env = cardEnvelope(part.g?.parameters);
   const cards = env ? planCards(env, cardRnd(type, pi)) : [];
-  if (!cards.length) { _cardGeo.set(ck, null); return null; }
+  if (!cards.length) { if (type !== null) _cardGeo.set(ck, null); return null; }
   const n = cards.length;
   const pos = new Float32Array(n * 12), nor = new Float32Array(n * 12);
   const crd = new Float32Array(n * 12), uv = new Float32Array(n * 8);
@@ -1038,8 +1041,7 @@ function leafRowGeo(type, part, pi) {
   g.setAttribute('aCard', new THREE.BufferAttribute(crd, 3));
   g.setIndex(new THREE.BufferAttribute(idx, 1));
   g.computeBoundingBox(); g.computeBoundingSphere();
-  markShared(g);
-  _cardGeo.set(ck, g);
+  if (type !== null) { markShared(g); _cardGeo.set(ck, g); }
   return g;
 }
 
@@ -1052,7 +1054,12 @@ function leafRowGeo(type, part, pi) {
  * ⚠ 殼 `markShared` 註冊:它借用的是別人的屬性,被 `disposeTree` 放掉就會把保險絲幾何
  * (整場共用、每一場都要用)一起釋放 ⇒ 之後所有借用者變空白(A25 的原話)。
  */
-function surfIdGeo(geo, attr, treeAttr) {
+function surfIdGeo(geo, attr, treeAttr, owned = false) {
+  if (owned) {
+    if (attr) geo.setAttribute('aSurfId', attr);
+    if (treeAttr) geo.setAttribute('aTreeO', treeAttr);
+    return geo;
+  }
   if (!attr && !treeAttr) return geo;     // 群組剪影關著且不帶樹基 ⇒ 連殼都不建(逐位元同舊制)
   const q = new THREE.BufferGeometry();
   for (const k in geo.attributes) q.setAttribute(k, geo.attributes[k]);
@@ -1064,20 +1071,49 @@ function surfIdGeo(geo, attr, treeAttr) {
   return markShared(q);
 }
 
+// Bake every branch into tree-local space before wind deformation. Shared vertex height
+// gives wood and leaves identical displacement at their joints, even on tilted branches.
+function forestRenderDef(type, item) {
+  const tree = createForestTree(type, forestSeed(item.x, item.z),
+    (rt, rb, h, n, sections) => new THREE.CylinderGeometry(rt, rb, h, n, sections), ico, item.s ?? 1);
+  const wood = [], leaves = [];
+  let cards = false;
+  for (const [i, part] of tree.parts.entries()) {
+    const isLeaf = part.key === 'gleaf';
+    const card = isLeaf && leafCardOn(part, 'leaf') ? leafRowGeo(null, part, i) : null;
+    const g = card || part.g;
+    cards ||= !!card;
+    const xf = vegPartXform(part, { x: 0, y: 0, z: 0, s: 1 });
+    const matrix = new THREE.Matrix4().compose(new THREE.Vector3(...xf.pos),
+      new THREE.Quaternion(...xf.quat), new THREE.Vector3(...xf.scl));
+    g.applyMatrix4(matrix);
+    (isLeaf ? leaves : wood).push(g);
+    if (card) part.g.dispose();
+  }
+  const merge = list => {
+    const g = mergeGeometries(list);
+    for (const part of list) part.dispose();
+    if (!g) throw new Error('Forest geometry attributes do not match');
+    g.computeBoundingBox(); g.computeBoundingSphere();
+    return g;
+  };
+  const height = tree.h * (item.s ?? 1);
+  return { ...tree, bend: treeBend(height, tree.r * (item.s ?? 1)),
+    parts: [ { g: merge(wood), c: TREE_SPECIES[type].bark },
+      { g: merge(leaves), key: 'gleaf', c: TREE_SPECIES[type].leaf, card: cards } ] };
+}
+
 /**
  * 把某類植被的所有實例組成 InstancedMesh(每 part 一個 draw call)。
  * `export` 是給 **3D 零件對照台**(dev-only)用的:那座台子要兩側都由**遊戲自己的**建構器建,
  * 不然「原版」跟遊戲裡的原版不是同一個東西而且不會報錯(對照台檔頭紀律 ①)。遊戲路徑不變。
  */
-export function buildVegMeshes(type, items, season, variant = null) {
-  const variants = GIANT_DEFS[type]?.variants;
-  if (variants && variant === null) {
-    const buckets = variants.map(() => []);
-    for (const item of items) buckets[forestSeed(item.x, item.z) % variants.length].push(item);
-    return buckets.flatMap((bucket, i) => bucket.length ? buildVegMeshes(type, bucket, season, i) : []);
+export function buildVegMeshes(type, items, season, generated = null) {
+  if (GIANT_DEFS[type] && !generated) {
+    return items.flatMap(item => buildVegMeshes(type, [{ ...item, dj: 0 }], season, forestRenderDef(type, item)));
   }
-  const def = VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
-  const span = vegSpan(def);
+  const def = generated || VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
+  const span = generated ? generated.h : vegSpan(def);
   // 整樹節點(def.whole;2026-08-07 §5u,**2026-08-08 起是「一列以上」**):lib 全數載到 ⇒
   // 這一型只畫 whole 那幾列(保險絲零件全藏 —— 與 synthMegalith tower 的「載到就不 add 原
   // primitive」同語意);載不到 ⇒ rows = def.parts 逐位元同舊制。span/佈局仍讀 parts,
@@ -1092,7 +1128,7 @@ export function buildVegMeshes(type, items, season, variant = null) {
   // **MUST 是全有全無**(`every`):只載到木質那一列 ⇒ 畫出一棵沒有葉子的樹,比整型退回
   // 保險絲更糟(原則 6 寧缺勿錯)。
   const whole = def.whole;
-  const rows = variants ? variants[variant] : (whole && whole.every((w) => partGeo(w) !== w.g)) ? whole : def.parts;
+  const rows = (whole && whole.every((w) => partGeo(w) !== w.g)) ? whole : def.parts;
   const meshes = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
@@ -1118,7 +1154,7 @@ export function buildVegMeshes(type, items, season, variant = null) {
     const sk = vegSoftKind(part);
     // 葉片卡是「畫什麼」的**第三個**解析結果(`lib` > 卡片 > 保險絲;優先序住 leafCardOn)。
     // 判定 MUST 沿用上面那一次 `vegSoftKind` 的結果 —— 再呼叫一次就是第二張名單(A39)。
-    const card = leafCardOn(part, sk) ? leafRowGeo(type, part, pi) : null;
+    const card = part.card ? part.g : !generated && leafCardOn(part, sk) ? leafRowGeo(type, part, pi) : null;
     // 材質選項一路收在同一個物件裡:`const mat = toonMat(seasonColor…` **全檔恰一處**
     // (`audit_soft_stroke` Ⅳ⑤ 釘住),分支寫成第二個呼叫點就是「軟性旗標有兩條路」
     // 樹幹/枝隨風搖曳(2026-09-02;2026-09-06 納入神木):「木質件」= 有葉子的樹型(TRUNK_TYPES/神木) 且 sk===null。
@@ -1135,6 +1171,7 @@ export function buildVegMeshes(type, items, season, variant = null) {
     // 逐株樹基相位:有擺動的列一律改吃 aTreeO(同一株的幹/枝/冠同相位 ⇒ 接合處不分解)。
     // 判定沿用上面的 soft 結果,不另開名單;單零件散草(px = pz = 0)樹基恆等於實例原點 ⇒ 無感。
     if (mo.soft) mo.treeO = true;
+    if (mo.soft && generated) Object.assign(mo.soft, generated.bend);
     if (grpOn) {
       mo.surfAttr = true;                       // 面號改吃逐實例屬性 aSurfId
       if (sk === 'leaf') mo.ink = 'group';      // 葉列 = 群組剪影;木質列維持 'hard'(幹的折邊留著)
@@ -1146,7 +1183,7 @@ export function buildVegMeshes(type, items, season, variant = null) {
     // 卡片與逐株面號/樹基**只換這一列的幾何**,那一行的解析縫一格未動:卡片是「畫什麼」的第三個
     // 解析結果,優先序 `lib` > 卡片 > 保險絲(判定住 `leafCardOn`);面號/樹基是只換屬性的殼。
     // 無擺動的列不掛 aTreeO(材質沒有 CEL_TREEO,掛了也是沒人讀的屬性)。
-    if (card || sidAttr || mo.treeO) m.geometry = surfIdGeo(card || m.geometry, sidAttr, mo.treeO ? treeAttr : null);
+    if (card || sidAttr || mo.treeO) m.geometry = surfIdGeo(card || m.geometry, sidAttr, mo.treeO ? treeAttr : null, !!generated);
     items.forEach((it, i) => {
       // 零件擺位 + 實例朝向/微傾斜(剛體)一律走 xform.js 的單一縫:
       // 併進逐零件歐拉角會讓 rx≠0 的枝叉被朝向攪亂、微傾斜變成分段剪切(接合開縫)
@@ -10082,7 +10119,8 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement, rin
         // 邊界神木牆吃同一個物件高度上限(分布版,同 placeGiantGroves)—— 邊界帶在空氣牆外
         // 不可達,但它照樣**看得見**,漏掉這一支就是「圖中央的神木被削平、圍牆那圈還是 200m」
         let s = objScaleFit(0.65 + rnd() * 0.5, GIANT_DEFS[sp].h, 1.15);
-        const rT = GIANT_DEFS[sp].r;
+        const tree = createForestTree(sp, forestSeed(x, z));
+        const rT = tree.r;
         // 幹腳印 +6:與邊界樓保持淨距,樹冠不貼上建物牆面(樹冠彼此交疊成林無妨)
         s *= Math.min(1, avail / (rT * s + 6));
         if (s < 0.4) continue;

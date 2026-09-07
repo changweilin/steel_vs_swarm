@@ -1053,6 +1053,7 @@ const CEL_WIND_GLSL = `
         uniform float uSoftSy;
         uniform float uSoftAmp;
         uniform float uSoftFreq;
+        uniform float uSoftLag;
         uniform float uWeatherWindAmp;
         uniform float uWeatherWindFreq;
         uniform float uWeatherWaveAmp;
@@ -1486,8 +1487,9 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uSoftSpan = { value: Math.max(1e-3, soft?.span ?? 1) };
     shader.uniforms.uSoftBase = { value: soft?.base ?? 0 };
     shader.uniforms.uSoftSy = { value: soft?.sy ?? 1 };
-    shader.uniforms.uSoftAmp = { value: (sk?.amp ?? 0) * Math.max(1e-3, soft?.span ?? 1) };
-    shader.uniforms.uSoftFreq = { value: sk?.freq ?? 0 };
+    shader.uniforms.uSoftAmp = { value: (sk?.amp ?? 0) * Math.max(1e-3, soft?.span ?? 1) * (soft?.flex ?? 1) };
+    shader.uniforms.uSoftFreq = { value: (sk?.freq ?? 0) * (soft?.rate ?? 1) };
+    shader.uniforms.uSoftLag = { value: soft?.lag ?? 0 };
     shader.uniforms.uWindT = _windT;
     shader.uniforms.uWindDir = _windDir;
     shader.uniforms.uWindK = _windK;
@@ -1669,6 +1671,9 @@ ${CEL_SEA_GLSL}
           vec2 swTXZ = swO.xz;
           #endif
           float swP = dot( swTXZ, uWindK );
+          // Height-delayed bending: roots stay pinned; the tip follows with elastic lag.
+          // Baked forest parts share tree-local height, so every joint stays continuous.
+          swP -= uSoftLag * sw;
           #ifdef CEL_SWAY_H
             // 旗面**沿自己**再推遲一段相位 ⇒ 波由旗桿往旗尾跑 = 飄揚。
             // 少了這一項,整面旗只是被同一個相位「剪」過去 —— 那是一塊被推歪的板子,
