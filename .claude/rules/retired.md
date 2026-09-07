@@ -1,6 +1,6 @@
 # §6 Retired List (MUST NOT revive)
 
-> Layer 2: retired mechanisms with their replacements. Principles live in root `AGENTS.md`. English only; no operations.
+> Layer 2: retired mechanisms with their replacements. Principles live in root `AGENTS.md`.
 
 | Retired mechanism | Replacement |
 |---|---|

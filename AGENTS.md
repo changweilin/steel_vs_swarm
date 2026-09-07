@@ -1,8 +1,8 @@
 # Steel vs. Swarm — Global Principles & Boundaries
 
-> Scope: principles and boundaries only. No methods, no workflows, no commands.
+> Scope: principles and boundaries only.
 > Nothing in this file restricts skill selection or skill usage.
-> Keywords MUST / MUST NOT / SHOULD per RFC-2119. A MUST NOT violation is an architecture violation.
+> Keywords MUST / MUST NOT per RFC-2119. A MUST NOT violation is an architecture violation.
 > Full definitions live in `.claude/rules/`; read the relevant rule file when touching a topic.
 
 ## 0. Principles
@@ -21,7 +21,6 @@
 
 - Runtime: Node.js with a single websocket dependency. MUST NOT add dependencies.
 - No build step, no bundler, no framework, no TypeScript.
-- Comments and UI strings use Traditional Chinese.
 - 3D assets prefer CC0 with a procedural fallback.
 
 ## 2. Behavioral Boundaries

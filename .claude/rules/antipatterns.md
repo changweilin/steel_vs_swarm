@@ -1,6 +1,6 @@
 # §3 Absolute Antipatterns (stable A-numbers for cross-file reference)
 
-> Layer 2: full definitions. Principles and boundaries live in root `AGENTS.md`; assertion details live in audit script headers (layer 4). A-numbers are stable identifiers cited by code and audit headers — gaps are dropped entries, never renumber. English only; no operations.
+> Layer 2: full definitions. Principles and boundaries live in root `AGENTS.md`; assertion details live in audit script headers (layer 4). A-numbers are stable identifiers cited by code and audit headers — gaps are dropped entries, never renumber.
 
 | ID | Boundary | Guards |
 |---|---|---|

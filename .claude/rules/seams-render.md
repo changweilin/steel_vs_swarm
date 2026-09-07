@@ -1,6 +1,6 @@
 # §2.1 F — Presentation & Picture (single seams)
 
-> Layer 2: full definitions. Principles live in root `AGENTS.md`; assertion details live in audit script headers (layer 4). English only; no operations.
+> Layer 2: full definitions. Principles live in root `AGENTS.md`; assertion details live in audit script headers (layer 4).
 
 | Topic | Single seam | Constraints | Guards |
 |---|---|---|---|
