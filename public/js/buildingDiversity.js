@@ -1,5 +1,8 @@
 // 純規劃：不依賴 Three.js、不消耗場景共享亂數。
-import { ARCHITECTURE_STYLES, ARCHITECTURE_PROFILES, ARCHITECTURE_SITE } from './architectureStyles.js';
+import {
+  ARCHITECTURE_STYLES, ARCHITECTURE_PROFILES, ARCHITECTURE_SITE,
+  BUILDING_FUNCTION_RANGES, CULTURAL_REGIONS, CULTURAL_AFFINITY_RATIO,
+} from './architectureStyles.js';
 import { buildContainmentIndex } from './osmAreas.js';
 
 export function architectureHash(value, salt = '') {
@@ -10,17 +13,190 @@ export function architectureHash(value, salt = '') {
   return h >>> 0;
 }
 
+/** 依國家代碼或經緯度判定所屬文化圈 */
+export function detectCulturalRegion(location = {}) {
+  const country = String(location.country || location.iso || '').toUpperCase();
+  if (country) {
+    for (const [regionKey, reg] of Object.entries(CULTURAL_REGIONS)) {
+      if (reg.countries?.includes(country)) return regionKey;
+    }
+  }
+  const lat = location.lat ?? location.center?.lat ?? location.ll?.[0];
+  const lon = location.lng ?? location.lon ?? location.center?.lng ?? location.center?.lon ?? location.ll?.[1];
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    for (const [regionKey, reg] of Object.entries(CULTURAL_REGIONS)) {
+      const [minLat, minLon, maxLat, maxLon] = reg.bbox || [];
+      if (lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon) return regionKey;
+    }
+  }
+  return null;
+}
+
+/** 推導建築地點與功能分類 */
+export function inferBuildingFunction(building = {}, poly = null, context = {}) {
+  const tags = building.tags || {};
+  const bld = String(tags.building || tags['building:part'] || '');
+  const shop = String(tags.shop || '');
+  const amenity = String(tags.amenity || '');
+  const landuse = String(tags.landuse || context.landuse || '');
+  const points = poly?.outer || [];
+  const width = points.length ? Math.max(...points.map(p => p[0])) - Math.min(...points.map(p => p[0])) : (building.w || 10);
+  const depth = points.length ? Math.max(...points.map(p => p[1])) - Math.min(...points.map(p => p[1])) : (building.d || 10);
+  const area = width * depth;
+  const levels = Number.parseFloat(tags['building:levels'] || tags.levels);
+  const rawH = Number.parseFloat(tags.height);
+
+  // 1. 商業區 (Commercial)
+  if (bld === 'skyscraper' || (levels >= 14) || (rawH >= 45) || (context.urban && area > 1400 && levels >= 8)) {
+    return { category: 'commercial', type: 'skyscraper', key: 'commercial_skyscraper' };
+  }
+  if (/mall|supermarket|department_store/.test(shop) || /retail|commercial/.test(bld) && area > 600 && (levels <= 4 || !levels)) {
+    return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+  }
+  if (tags.office || /office|commercial/.test(bld) || /commercial/.test(landuse)) {
+    return { category: 'commercial', type: 'office', key: 'commercial_office' };
+  }
+
+  // 2. 工業區 (Industrial)
+  if (tags.power || bld === 'power' || /substation|generator|transformer/.test(tags.power || '')) {
+    return { category: 'industrial', type: 'power', key: 'industrial_power' };
+  }
+  if (/warehouse|depot|storage/.test(bld)) {
+    return { category: 'industrial', type: 'warehouse', key: 'industrial_warehouse' };
+  }
+  if (/industrial|factory|manufacture|works|workshop/.test(bld) || /industrial/.test(landuse)) {
+    return { category: 'industrial', type: 'factory', key: 'industrial_factory' };
+  }
+
+  // 3. 鄉村 (Rural)
+  if (bld === 'greenhouse' || tags.greenhouse) {
+    return { category: 'rural', type: 'greenhouse', key: 'rural_greenhouse' };
+  }
+  if (/farm|barn|stable|farm_auxiliary|cowshed/.test(bld) || /farmland|farmyard|orchard|vineyard/.test(landuse) || context.rural && area < 250) {
+    return { category: 'rural', type: 'farmhouse', key: 'rural_farmhouse' };
+  }
+
+  // 4. 觀光區 (Tourism / Civic / Cultural)
+  if (/museum|theatre|historic|temple|church|mosque|shrine|castle|pagoda/.test(bld) || tags.tourism === 'museum' || tags.historic) {
+    return { category: 'tourism', type: 'cultural', key: 'tourism_cultural' };
+  }
+  if (/visitor_center|information/.test(tags.tourism || '') || tags.information === 'office' || (tags.tourism && area < 400)) {
+    return { category: 'tourism', type: 'visitor', key: 'tourism_visitor' };
+  }
+
+  // 5. 住宅郊區 (Residential / Suburban)
+  if (/apartments|dormitory/.test(bld) || (/residential/.test(bld) && (levels >= 4 || area > 500))) {
+    return { category: 'residential', type: 'apartment', key: 'residential_apartment' };
+  }
+  if (context.elongated || context.density > ARCHITECTURE_SITE.urbanNeighbors || width < 7 || depth < 7) {
+    return { category: 'residential', type: 'alley', key: 'residential_alley' };
+  }
+  if ((bld === 'house' || bld === 'detached' || bld === 'semidetached_house') && !context.urban) {
+    return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
+  }
+
+  // 6. 無專屬標籤時：依環境尺度與確定性雜湊產生豐富多元分類
+  const idHash = architectureHash(context.identity || building.sourceId || `${width},${depth}`, `${context.seed || 0}:bld_func`);
+  const prob = (idHash >>> 0) / 4294967296;
+
+  if (context.urban) {
+    if (area >= 800) {
+      if (prob < 0.45) return { category: 'commercial', type: 'skyscraper', key: 'commercial_skyscraper' };
+      if (prob < 0.80) return { category: 'commercial', type: 'office', key: 'commercial_office' };
+      return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+    }
+    if (area >= 300) {
+      if (prob < 0.40) return { category: 'residential', type: 'apartment', key: 'residential_apartment' };
+      if (prob < 0.70) return { category: 'commercial', type: 'office', key: 'commercial_office' };
+      if (prob < 0.88) return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+      return { category: 'tourism', type: 'cultural', key: 'tourism_cultural' };
+    }
+    if (prob < 0.40) return { category: 'residential', type: 'alley', key: 'residential_alley' };
+    if (prob < 0.70) return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
+    if (prob < 0.88) return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+    return { category: 'commercial', type: 'office', key: 'commercial_office' };
+  }
+
+  if (context.rural) {
+    if (prob < 0.60) return { category: 'rural', type: 'farmhouse', key: 'rural_farmhouse' };
+    if (prob < 0.88) return { category: 'rural', type: 'greenhouse', key: 'rural_greenhouse' };
+    return { category: 'tourism', type: 'visitor', key: 'tourism_visitor' };
+  }
+
+  if (prob < 0.45) return { category: 'residential', type: 'townhouse', key: 'residential_townhouse' };
+  if (prob < 0.70) return { category: 'residential', type: 'apartment', key: 'residential_apartment' };
+  if (prob < 0.85) return { category: 'commercial', type: 'retail', key: 'commercial_retail' };
+  if (prob < 0.94) return { category: 'industrial', type: 'factory', key: 'industrial_factory' };
+  return { category: 'tourism', type: 'cultural', key: 'tourism_cultural' };
+}
+
+/** 依功能類別與確定性種子計算樓高與層數（未標註 height/levels 時隨機抽取） */
+export function sampleBuildingHeight(functionKey, seed, identity, area = {}) {
+  const tags = area.tags || {};
+  const rawH = Number.parseFloat(tags.height);
+  if (Number.isFinite(rawH) && rawH > 2) {
+    const levels = Math.max(1, Math.round(rawH / 3.4));
+    return { height: Math.min(120, rawH), levels, floorH: rawH / levels };
+  }
+  const rawL = Number.parseFloat(tags['building:levels']);
+  if (Number.isFinite(rawL) && rawL > 0) {
+    const floorH = 3.2;
+    return { height: Math.min(120, Math.max(3.2, rawL * floorH)), levels: Math.round(rawL), floorH };
+  }
+
+  const range = BUILDING_FUNCTION_RANGES[functionKey] || BUILDING_FUNCTION_RANGES.residential_townhouse;
+  const hash = architectureHash(identity, `${seed}:h_levels`);
+  const t = hash / 4294967296;
+  const levels = Math.round(range.levels[0] + t * (range.levels[1] - range.levels[0]));
+  const hashF = architectureHash(identity, `${seed}:h_floor`);
+  const tf = hashF / 4294967296;
+  const floorH = range.floorH[0] + tf * (range.floorH[1] - range.floorH[0]);
+  const height = Math.max(range.minH, Math.min(range.maxH, levels * floorH));
+  return { height: Math.round(height * 10) / 10, levels, floorH: Math.round(floorH * 10) / 10 };
+}
+
 export function architectureWeights(context = {}) {
   const profile = context.slope >= ARCHITECTURE_SITE.slopeDeg ? 'hillside'
     : context.urban ? 'urban' : context.rural ? 'rural' : 'plain';
-  const weights = { ...ARCHITECTURE_PROFILES[profile] };
-  if (context.courtyard) weights.courtyard *= 2;
-  if (context.elongated) { weights.machiya *= 1.5; weights.industrial *= 1.5; }
-  return { profile, weights };
+  let weights = { ...ARCHITECTURE_PROFILES[profile] };
+  if (context.courtyard) weights.courtyard = (weights.courtyard || 10) * 2;
+  if (context.elongated) {
+    if (weights.machiya) weights.machiya *= 1.5;
+    if (weights.industrial) weights.industrial *= 1.5;
+  }
+
+  // 依座標位置所屬文化圈調整權重：符合文化者占 60%
+  const region = context.region || detectCulturalRegion(context.location || context);
+  if (region && CULTURAL_REGIONS[region]) {
+    const culturalStyleIds = new Set(CULTURAL_REGIONS[region].styles || []);
+    // 注入該文化圈風格候選
+    for (const styleId of culturalStyleIds) {
+      if (weights[styleId] == null && ARCHITECTURE_STYLES[styleId]) {
+        weights[styleId] = 10;
+      }
+    }
+    const cultKeys = Object.keys(weights).filter(k => culturalStyleIds.has(k));
+    const otherKeys = Object.keys(weights).filter(k => !culturalStyleIds.has(k));
+    const cultSum = cultKeys.reduce((sum, k) => sum + weights[k], 0);
+    const otherSum = otherKeys.reduce((sum, k) => sum + weights[k], 0);
+
+    if (cultSum > 0 && otherSum > 0) {
+      const cultTarget = CULTURAL_AFFINITY_RATIO;
+      const otherTarget = 1 - CULTURAL_AFFINITY_RATIO;
+      const cultScale = cultTarget / cultSum;
+      const otherScale = otherTarget / otherSum;
+      const balanced = {};
+      for (const k of cultKeys) balanced[k] = weights[k] * cultScale * 100;
+      for (const k of otherKeys) balanced[k] = weights[k] * otherScale * 100;
+      weights = balanced;
+    }
+  }
+
+  return { profile, weights, region };
 }
 
 export function chooseArchitecture(seed, identity, context = {}) {
-  const { profile, weights } = architectureWeights(context);
+  const { profile, weights, region } = architectureWeights(context);
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   let pick = architectureHash(identity, seed) / 4294967296 * total;
   let id = Object.keys(weights).at(-1);
@@ -28,11 +204,25 @@ export function chooseArchitecture(seed, identity, context = {}) {
     pick -= weight;
     if (pick < 0) { id = key; break; }
   }
-  return { ...ARCHITECTURE_STYLES[id], id, profile, variant: architectureHash(identity, `${seed}:variant`) % 3 };
+
+  const funcInfo = context.functionInfo || inferBuildingFunction(context.building, context.poly, context);
+  const heightInfo = sampleBuildingHeight(funcInfo.key, seed, identity, context.building || {});
+
+  return {
+    ...ARCHITECTURE_STYLES[id],
+    id, profile, region,
+    variant: architectureHash(identity, `${seed}:variant`) % 3,
+    functionInfo: funcInfo,
+    targetHeight: heightInfo.height,
+    levels: heightInfo.levels,
+    floorH: heightInfo.floorH,
+  };
 }
 
 /** 用地採最小包含面；密度用空間格，坡度量裸地，不讀建物屋頂。 */
-export function createArchitecturePlanner({ areas = [], terrain, seed = 0, mix = null } = {}) {
+export function createArchitecturePlanner({
+  areas = [], terrain, seed = 0, mix = null, center = null, venue = null, country = null, location = null,
+} = {}) {
   const land = buildContainmentIndex(areas);
   const cells = new Map();
   const cell = ARCHITECTURE_SITE.densityCellM;
@@ -41,10 +231,14 @@ export function createArchitecturePlanner({ areas = [], terrain, seed = 0, mix =
     const key = `${Math.floor(area.centroid.x / cell)},${Math.floor(area.centroid.z / cell)}`;
     cells.set(key, (cells.get(key) || 0) + 1);
   }
+
+  const loc = location || { center, venue, country: country || venue?.country };
+  const region = detectCulturalRegion(loc);
+
   return (building, poly = null, settlement = false) => {
-    const center = building.centroid || { x: building.x || 0, z: building.z || 0 };
-    const x = center.x, z = center.z;
-    const parent = land.parentOf({ centroid: center });
+    const centerPt = building.centroid || { x: building.x || 0, z: building.z || 0 };
+    const x = centerPt.x, z = centerPt.z;
+    const parent = land.parentOf({ centroid: centerPt });
     const use = parent?.tags?.landuse || building.tags?.landuse || '';
     let density = 0;
     const cx = Math.floor(x / cell), cz = Math.floor(z / cell);
@@ -61,10 +255,17 @@ export function createArchitecturePlanner({ areas = [], terrain, seed = 0, mix =
     // 輪廓直接進 seed：同地址的多個 outer 各有變體，輸入順序不改選款。
     const identity = `${building.sourceId || `${x},${z}`}|${JSON.stringify(poly?.outer || [])}`;
     const points = poly?.outer || [];
-    const width = points.length ? Math.max(...points.map(p => p[0])) - Math.min(...points.map(p => p[0])) : building.w;
-    const depth = points.length ? Math.max(...points.map(p => p[1])) - Math.min(...points.map(p => p[1])) : building.d;
+    const width = points.length ? Math.max(...points.map(p => p[0])) - Math.min(...points.map(p => p[0])) : (building.w || 10);
+    const depth = points.length ? Math.max(...points.map(p => p[1])) - Math.min(...points.map(p => p[1])) : (building.d || 10);
     const elongated = Math.max(width, depth) / Math.max(0.001, Math.min(width, depth)) > 2.5;
-    return chooseArchitecture(seed, identity, { slope, urban, rural, courtyard: !!poly?.holes?.length, elongated });
+
+    const ctx = {
+      slope, urban, rural, courtyard: !!poly?.holes?.length, elongated,
+      density, landuse: use, building, poly, region, location: loc,
+      seed, identity,
+    };
+    ctx.functionInfo = inferBuildingFunction(building, poly, ctx);
+    return chooseArchitecture(seed, identity, ctx);
   };
 }
 

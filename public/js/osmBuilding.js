@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { envMat, sceneObjectMat } from './toon.js';
+import { generateBuildingAppurtenances } from './buildingAppurtenances.js';
+import { resolveAdaptiveRoofForm, calculateFootprintMetrics } from './architectureStyles.js';
 
 const EPS = 1e-5;
 const DEFAULT_H = Object.freeze({
@@ -134,7 +136,7 @@ function defaultMaterials(style, batch = null) {
   };
 }
 
-function pointInRing(x, z, ring) {
+export function pointInRing(x, z, ring) {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
     const a = ring[i], b = ring[j];
@@ -159,7 +161,7 @@ function polyHitsDisc(poly, cx, cz, r) {
   return pointInRing(cx, cz, outer) && !(poly.holes || []).some((hole) => pointInRing(cx, cz, hole));
 }
 
-function attachmentSite(poly, half) {
+export function attachmentSite(poly, half) {
   const xs = poly.outer.map((p) => p[0]), zs = poly.outer.map((p) => p[1]);
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
   const points = [[cx, cz], ...poly.outer.map((p) => [(p[0] + cx) / 2, (p[1] + cz) / 2])];
@@ -189,7 +191,7 @@ function attachmentGeometry(kind, poly, y) {
   return geo;
 }
 
-function paintGeometry(geometry, hex, variant = 0) {
+export function paintGeometry(geometry, hex, variant = 0) {
   const color = new THREE.Color(hex).multiplyScalar(0.94 + variant * 0.06);
   const colors = new Float32Array(geometry.attributes.position.count * 3);
   for (let i = 0; i < colors.length; i += 3) { colors[i] = color.r; colors[i + 1] = color.g; colors[i + 2] = color.b; }
@@ -197,59 +199,95 @@ function paintGeometry(geometry, hex, variant = 0) {
   return geometry;
 }
 
-/** 沿真實外環／中庭牆段配置窗格、立柱與橫梁，零件數有上限。 */
+/** 沿真實外環／中庭牆段配置窗格、立柱與橫梁，零件數有上限。
+ * 採階層式深度分層（Glass < Mullion/Frame < Trim/Header < Column/Pier），
+ * 杜絕同平面共面 (Coplanar) 導致的 WebGL Z-fighting 閃爍。
+ */
 function architecturalFacade(edges, style, thickness) {
   const geos = [];
   let budget = 180;
+  const facade = style.facade || style.wallType || 'ribbon';
+  const glassColor = style.glass || 0x68a5c2;
+  const trimColor = style.trim || 0x546575;
+
   for (const edge of edges) {
     if (budget <= 0) break;
     const length = edge.hw2 * 2;
     const floors = Math.max(1, Math.min(8, Math.floor(edge.h / 3.2)));
-    const bays = Math.max(1, Math.min(10, Math.floor(length / (style.facade === 'ribbon' ? 6 : 3.2))));
+    const isCurtain = facade === 'ribbon' || facade === 'glass_curtain';
+    const bays = Math.max(1, Math.min(10, Math.floor(length / (isCurtain ? 5 : 3.2))));
     const bayW = length / bays, floorH = edge.h / floors;
-    const add = (w, h, u, y, color) => {
+
+    // Helper: 在特定額外厚度階層上生成幾何，避免 Z-fighting
+    const add = (w, h, u, y, color, extraDepth = 0.05) => {
       if (budget-- <= 0) return;
-      const geo = new THREE.BoxGeometry(w, h, thickness + 0.035);
+      const geo = new THREE.BoxGeometry(w, h, thickness + extraDepth);
       geo.translate(u, y, 0);
       geo.rotateY(edge.ry);
       geo.translate(edge.x, edge.y, edge.z);
       geos.push(paintGeometry(geo, color, style.variant));
     };
+
     for (let floor = 0; floor < floors && budget > 0; floor++) {
-      const y = (floor + 0.55) * floorH;
+      const y = (floor + 0.52) * floorH;
       for (let bay = 0; bay < bays && budget > 0; bay++) {
         const u = -length / 2 + (bay + 0.5) * bayW;
-        const ribbon = style.facade === 'ribbon';
-        const w = bayW * (ribbon ? 0.9 : style.facade === 'recess' ? 0.32 : 0.55);
-        const h = floorH * (style.facade === 'piers' ? 0.72 : 0.48);
-        add(w, h, u, y, style.glass);
-        if (style.facade === 'lattice' || style.facade === 'timber') {
-          add(0.09, h, u, y, style.trim);
-          add(w, 0.09, u, y, style.trim);
+
+        // 1. 玻璃窗尺寸比例設定：帷幕窗高透光，一般窗開口均勻
+        const w = bayW * (isCurtain ? 0.94 : (facade === 'recess' || facade === 'concrete') ? 0.40 : 0.62);
+        const h = floorH * (isCurtain ? 0.82 : (facade === 'piers' || facade === 'stone') ? 0.70 : 0.55);
+
+        // Tier 1: 玻璃窗面（深度 +0.05m，突出於牆面 2.5cm，徹底脫離牆面 Z-fighting）
+        add(w, h, u, y, glassColor, 0.05);
+
+        // Tier 2: 窗框 / 窗梃 / 格子（深度 +0.09m，突出於玻璃面 2cm，徹底脫離與玻璃的共面閃爍）
+        if (isCurtain) {
+          // 帷幕下沿金屬飾條
+          add(w, 0.06, u, y - h / 2 + 0.03, trimColor, 0.09);
         }
-        if (style.facade === 'arches') {
-          // 拱楣為實體半環，正反兩面都沿同一牆段貼齊。
+        if (facade === 'lattice' || facade === 'timber') {
+          add(0.08, h, u, y, trimColor, 0.09);
+          add(w, 0.08, u, y, trimColor, 0.09);
+        }
+
+        // Tier 3: 磚石窗楣 / 綠化花槽 / 拱圈（深度 +0.13m ~ +0.14m）
+        if (facade === 'brick') {
+          add(w + 0.08, 0.09, u, y + h / 2 + 0.045, trimColor, 0.13);
+        }
+        if (facade === 'green') {
+          add(w + 0.06, 0.16, u, y - h / 2 - 0.08, 0x3d6e4a, 0.14);
+        }
+        if (facade === 'arches') {
           for (const side of [-1, 1]) {
             if (budget-- <= 0) break;
-            const arch = new THREE.TorusGeometry(w / 2, Math.min(0.11, w * 0.06), 3, 8, Math.PI);
-            arch.translate(u, y + h / 2, side * (thickness / 2 + 0.025));
+            const arch = new THREE.TorusGeometry(w / 2, Math.min(0.12, w * 0.07), 3, 8, Math.PI);
+            arch.translate(u, y + h / 2, side * (thickness / 2 + 0.055));
             arch.rotateY(edge.ry); arch.translate(edge.x, edge.y, edge.z);
-            geos.push(paintGeometry(arch, style.trim, style.variant));
+            geos.push(paintGeometry(arch, trimColor, style.variant));
           }
         }
       }
-      if (style.facade !== 'recess') add(length, 0.12, 0, floor * floorH + 0.14, style.trim);
+
+      // Tier 4: 水平樓層腰帶 (Stringcourse / Cornice)（深度 +0.15m）
+      if (facade !== 'recess' && facade !== 'concrete') {
+        add(length, 0.14, 0, floor * floorH + 0.10, trimColor, 0.15);
+      }
     }
-    if (['columns', 'piers', 'timber', 'industrial'].includes(style.facade)) {
-      for (let bay = 1; bay < bays && budget > 0; bay++) add(0.16, edge.h, -length / 2 + bay * bayW, edge.h / 2, style.trim);
+
+    // Tier 5: 垂直立柱 / 壁柱 (Piers / Columns)（深度 +0.18m）
+    if (['columns', 'piers', 'timber', 'industrial', 'stone'].includes(facade)) {
+      for (let bay = 1; bay < bays && budget > 0; bay++) {
+        add(0.18, edge.h, -length / 2 + bay * bayW, edge.h / 2, trimColor, 0.18);
+      }
     }
   }
   return geos;
 }
 
-/** 屋頂構件僅放於可完整容納的凸外環；凹輪廓與中庭保留原形，不跨空洞搭橋。 */
-function architecturalRoof(poly, y, style) {
-  if (style.roofForm === 'flat' || poly.holes.length) return [];
+/** 屋頂構件僅放於可完整容納的凸外環；凹輪廓與中庭保留原形，不跨空洞搭橋。支援 12 種屋頂幾何造型並依高度與跨度比例調校大小。 */
+function architecturalRoof(poly, y, style, actualRoofForm = null, metrics = null, targetH = 10) {
+  const form = actualRoofForm || style?.actualRoofForm || style?.roofForm;
+  if (!form || form === 'flat' || poly.holes.length) return [];
   let sign = 0;
   for (let i = 0; i < poly.outer.length; i++) {
     const a = poly.outer[i], b = poly.outer[(i + 1) % poly.outer.length], c = poly.outer[(i + 2) % poly.outer.length];
@@ -259,7 +297,9 @@ function architecturalRoof(poly, y, style) {
     sign = Math.sign(cross);
   }
   const xs = poly.outer.map(p => p[0]), zs = poly.outer.map(p => p[1]);
-  const half = Math.min(6, (Math.max(...xs) - Math.min(...xs)) * 0.32, (Math.max(...zs) - Math.min(...zs)) * 0.32);
+  const span = metrics?.span || Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs));
+  const maxHalfByHeight = (targetH || 10) * 0.45;
+  const half = Math.min(8.0, maxHalfByHeight, Math.max(0.6, span * 0.32));
   if (half < 0.6) return [];
   const site = attachmentSite(poly, half);
   if (!site) return [];
@@ -269,18 +309,69 @@ function architecturalRoof(poly, y, style) {
     geo.translate(x, y + lift, z);
     geos.push(paintGeometry(geo, style.roof, style.variant));
   };
-  if (style.roofForm === 'dome') {
+  if (form === 'dome') {
     add(new THREE.SphereGeometry(half, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0);
-  } else if (style.roofForm === 'tiered') {
+  } else if (form === 'vault') {
+    const geo = new THREE.CylinderGeometry(half * 0.9, half * 0.9, half * 1.8, 12, 1, false, 0, Math.PI);
+    geo.rotateZ(Math.PI / 2); geo.rotateY(Math.PI / 2);
+    add(geo, 0);
+  } else if (form === 'spire') {
+    const geo = new THREE.ConeGeometry(half * 0.65, half * 2.6, 4);
+    geo.rotateY(Math.PI / 4);
+    add(geo, half * 1.3);
+  } else if (form === 'shed') {
+    const geo = new THREE.BoxGeometry(half * 1.8, 0.16, half * 1.6);
+    geo.rotateZ(0.24);
+    add(geo, half * 0.3);
+  } else if (form === 'mansard') {
+    const lower = new THREE.CylinderGeometry(half * 0.72, half, half * 0.45, 4);
+    lower.rotateY(Math.PI / 4);
+    add(lower, half * 0.225);
+    const upper = new THREE.CylinderGeometry(half * 0.4, half * 0.72, half * 0.25, 4);
+    upper.rotateY(Math.PI / 4);
+    add(upper, half * 0.575);
+  } else if (form === 'curved_ridge') {
+    const geo = new THREE.CylinderGeometry(half * 1.2, half * 1.2, half * 1.8, 14, 1, false, Math.PI * 0.25, Math.PI * 0.5);
+    geo.rotateZ(Math.PI / 2); geo.rotateY(Math.PI / 2);
+    add(geo, half * 0.08);
+  } else if (form === 'wudian') {
+    const hip = new THREE.CylinderGeometry(half * 0.35, half, half * 0.6, 4);
+    hip.rotateY(Math.PI / 4);
+    add(hip, half * 0.3);
+    const ridge = new THREE.BoxGeometry(half * 0.65, 0.12, 0.14);
+    add(ridge, half * 0.62);
+  } else if (form === 'xieshan') {
+    const lower = new THREE.CylinderGeometry(half * 0.65, half, half * 0.35, 4);
+    lower.rotateY(Math.PI / 4);
+    add(lower, half * 0.175);
+    const upper = new THREE.CylinderGeometry(half * 0.45, half * 0.45, half * 1.1, 3);
+    upper.rotateZ(Math.PI / 2);
+    add(upper, half * 0.55);
+  } else if (form === 'xuanshan') {
+    const geo = new THREE.CylinderGeometry(half * 0.85, half * 0.85, half * 2.3, 3);
+    geo.rotateZ(Math.PI / 2);
+    add(geo, half * 0.42);
+    const beam = new THREE.BoxGeometry(half * 2.4, 0.1, 0.1);
+    add(beam, half * 0.84);
+  } else if (form === 'yingshan') {
+    const geo = new THREE.CylinderGeometry(half * 0.8, half * 0.8, half * 1.6, 3);
+    geo.rotateZ(Math.PI / 2);
+    add(geo, half * 0.4);
+    for (const side of [-1, 1]) {
+      const wall = new THREE.BoxGeometry(0.14, half * 0.85, half * 1.4);
+      wall.translate(side * half * 0.85, half * 0.42, 0);
+      geos.push(paintGeometry(wall, style.trim || style.wall, style.variant));
+    }
+  } else if (form === 'tiered') {
     for (let i = 0; i < 3; i++) {
       const geo = new THREE.ConeGeometry(half * (1 - i * 0.22), half * 0.45, 4);
       geo.rotateY(Math.PI / 4);
       add(geo, half * (0.225 + i * 0.32));
     }
-  } else if (style.roofForm === 'stepped') {
+  } else if (form === 'stepped') {
     for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(half * (1.6 - i * 0.35), half * 0.25, half * (1.6 - i * 0.35)), half * (0.125 + i * 0.25));
   } else {
-    const n = style.roofForm === 'sawtooth' ? 3 : 1;
+    const n = form === 'sawtooth' ? 3 : 1;
     for (let i = 0; i < n; i++) {
       // 三角柱屋面：長軸沿 X，不把有坡屋頂拉成方盒。
       const geo = new THREE.CylinderGeometry(half / n, half / n, half * 1.8, 3);
@@ -324,20 +415,21 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         skipped.push({ sourceId: area.sourceId, reason: 'tower_base_clear' });
         continue;
       }
-      const baseY = baseOf(poly, terrain, 0);
-      const topY = baseY + height;
       const architecture = options.architectureOf?.(area, poly) || null;
+      const targetH = (area?.tags?.height || area?.tags?.['building:levels']) ? height : (architecture?.targetHeight || height);
+      const baseY = baseOf(poly, terrain, 0);
+      const topY = baseY + targetH;
       let batch = batches.get(kind);
       if (!batch) { batch = { kind, walls: [], roofs: [], details: [], count: 0 }; batches.set(kind, batch); }
       const wallStart = batch.walls.length, roofStart = batch.roofs.length, detailStart = batch.details.length;
       batch.roofs.push(roofGeometry(poly, topY));
       const detail = attachmentGeometry(kind, poly, topY);
       if (detail) batch.details.push(detail);
-      const outer = edgeGeometry(poly.outer, baseY, height, wallThickness, area.sourceId, kind);
+      const outer = edgeGeometry(poly.outer, baseY, targetH, wallThickness, area.sourceId, kind);
       batch.walls.push(...outer.geos); blockers.push(...outer.edges);
       const facadeEdges = [...outer.edges];
       for (const hole of poly.holes) {
-        const inner = edgeGeometry(hole, baseY, height, wallThickness, area.sourceId, kind);
+        const inner = edgeGeometry(hole, baseY, targetH, wallThickness, area.sourceId, kind);
         batch.walls.push(...inner.geos); blockers.push(...inner.edges);
         facadeEdges.push(...inner.edges);
       }
@@ -346,11 +438,27 @@ export function buildOsmPolygonBuildings(group, areas = [], options = {}) {
         for (const geo of batch.walls.slice(wallStart)) paintGeometry(geo, architecture.wall, architecture.variant);
         for (const geo of batch.roofs.slice(roofStart)) paintGeometry(geo, architecture.roof, architecture.variant);
         for (const geo of batch.details.slice(detailStart)) paintGeometry(geo, architecture.trim, architecture.variant);
-        batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness));
-        // 用途有識別件的宗教／公共設施不被住宅屋頂蓋掉。
+        // 4 階段程序化管線 (4-Phase Procedural Pipeline)
+        // Phase 1: 依 OSM 圖資外環計算建物實體尺寸指標
+        const metrics = calculateFootprintMetrics(poly);
+
+        // Phase 2: 決議最適屋頂構造並自適應調整尺寸 (防止長寬比異常或過大面積失真)
+        const adaptiveRoofForm = resolveAdaptiveRoofForm(
+          architecture.roofForm,
+          metrics,
+          targetH,
+          architecture.functionInfo?.category
+        );
+        architecture.actualRoofForm = adaptiveRoofForm;
         if (['house', 'terrace', 'apartments', 'commercial', 'farm', 'garage', 'industrial'].includes(kind)) {
-          batch.details.push(...architecturalRoof(poly, topY, architecture));
+          batch.details.push(...architecturalRoof(poly, topY, architecture, adaptiveRoofForm, metrics, targetH));
         }
+
+        // Phase 3: 建築立面與平面特徵渲染 (大玻璃窗、塗鴉牆、壁柱、格柵等)
+        batch.details.push(...architecturalFacade(facadeEdges, architecture, wallThickness));
+
+        // Phase 4: 外部零件依屋頂類型嚴格篩選相容性後隨機配置
+        batch.details.push(...generateBuildingAppurtenances(poly, facadeEdges, baseY, topY, architecture, wallThickness, adaptiveRoofForm, metrics));
         const key = `${architecture.profile}:${architecture.id}`;
         architectureCounts[key] = (architectureCounts[key] || 0) + 1;
       }
