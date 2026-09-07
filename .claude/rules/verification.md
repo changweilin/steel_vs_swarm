@@ -4,7 +4,6 @@
 
 | Change area | Guards | Invariant |
 |---|---|---|
-| Roster kind and visual assignment | `audit_muzzle`, `audit_cockpit` | Roster composition and per-kind identity stay stable. |
 | Fire-rate compression and burst presentation | `audit_fire_rate` | Rate changes preserve expected output ordering. |
 | Movement-speed compression | `audit_speed_comp` | Speed gaps narrow while ordering stays unchanged. |
 | Move penalty while firing | `audit_recoil_move` | Firing slows movement without canceling recoil. |
@@ -42,41 +41,14 @@
 | NPC height and unit collision | `audit_npc_collide` | Server height baseline and collision stay stable. |
 | World height caps | `audit_world_height` | Ceiling and object caps stay consistent. |
 | World edge and buffer skirt | `audit_world_edge` | Boundary staging stays inside collision. |
-| World curvature | `audit_world_curve` | Curve and horizon behavior stays stable. |
-| Depth of field | `audit_visual_prefs` | Focus behavior stays presentation-only. |
-| Day cycle, sun, moon, shadows | `audit_daynight` | Sky contracts stay unchanged by time. |
-| Visual knobs and weathering | `audit_visual_prefs` | Knobs stay presentation-only. |
-| Soft matter | `audit_soft_stroke` | Vertex sway never moves joint tables. |
-| Waves, gusts, grass motion | `audit_soft_stroke` | Water and wind motion stays presentation-only. |
-| Flag objects | `audit_soft_stroke` | Layout stays deterministic with zero shared randomness. |
-| Cel pipeline and outline width | `audit_cel_pipeline` | Outline decisions stay reproducible. |
 | Resource lifecycle and adaptive resolution | `audit_gpu_lifecycle` | Resource release stays complete. |
-| Outline buffer and new shader materials | `audit_cel_pipeline` | Soft alpha contract restores exactly when disabled. |
-| Terrain codes and color branch | `audit_cel_pipeline` | Geometry and randomness stay untouched by color work. |
-| Color grade lookup | `audit_visual_prefs` | Grade replaces rather than stacks. |
-| Aerial perspective fog | `audit_visual_prefs` | Fog restore returns exactly the ungraded image. |
-| Packed outline info and surface groups | `audit_cel_pipeline` | Geometry and shared randomness stay unchanged. |
-| Ink breaks, graze term, wipes, dissolve, fade | `audit_soft_stroke`, `audit_cel_pipeline` | Single-writer semantics hold at every soft-contract site. |
-| Cel school switching | `audit_cel_pipeline` | Exactly one school active at a time. |
-| Leaf cards, rocks, distant backdrop groups | `audit_leaf_card`, `audit_rock_ink` | Shared randomness and canopy contracts stay stable. |
-| Foam and reflection consumers | `audit_water_edge` | Foam follows depth; reflections stay presentation-only. |
-| Vehicle and prop catalog | `audit_vehicle_spec` | Declared boxes contain measured extents with no second implementation. |
-| Bird flocks | `audit_wildlife` | Flocks stay frame-rate independent with zero shared randomness. |
-| Animation weight vector | `audit_anim_weights` | Gait output stays unchanged while weights stay normalized. |
-| Vegetation disturbance feed | `audit_anim_weights` | Locomotion stays untouched by disturbance feed. |
-| Wipe call sites | `audit_visual_prefs` | Cover and reveal calls stay paired with reentry guards. |
 | Audio layers | `audit_audio_layers` | Movement bed follows the weight vector with registered sources. |
 | Page touch hardening | `audit_ctrl_mode` | Device and layout flags stay separated. |
-| Procedural object placement | `audit_object_joints` | Joints stay connected without isolated failures. |
 | Site layout, shyness, geology | `audit_siteplan` | Passages stay walkable after placement. |
-| Settlement fields and source trust | `audit_siteplan`, `audit_venue_biome` | Roster and clipping behavior stays consistent. |
+| Settlement fields and source trust | `audit_siteplan` | Roster and clipping behavior stays consistent. |
 | Building mass and window bands | `audit_siteplan` | Mass and band behavior stays reproducible. |
 | Planarization, sealing, wall panels | `audit_siteplan` | Panel grids stay integral inside window bands. |
 | Collision profile, fit, signs, glazing | `audit_siteplan` | Ground passage width stays unchanged. |
-| Mirror patching | `audit_object_joints` | Part extents and budgets stay unchanged. |
-| Semantic landmarks | `audit_beacons` | Landmark extents and ordering stay stable. |
-| World text | `audit_world_text` | Atlas, layout, and choice knobs stay consistent. |
-| Vernacular corpus | `audit_vernacular` | Rebuilt corpus matches runtime collection rules. |
 | Codex format | `audit_codex` | Format layers and pose alignment stay stable. |
 | Coating block and tunnel roof | `audit_layer_block` | Geometry stays unchanged across coating work. |
 | Open tunnels | `audit_open_tunnel` | Tunnel geometry behavior stays stable. |
@@ -92,12 +64,6 @@
 | Mini map and tower layout | `audit_mini_map` | Mini geometry stays isolated from full battles. |
 | Lane baking keys and tower ranges | `audit_mini_map`, `audit_story_map` | Shared short-lane geometry stays identical. |
 | Venue menu descriptions | `audit_ui_layout` | Summaries derive from venue config and tactics. |
-| Overlap gaps and footprints | `audit_ground_qc` | Judgments use true footprints without overlap. |
-| Carpet color, pattern, buffer carpet | `audit_ground_tile` | Variant ordering and spill behavior stay stable. |
-| Land adoption of terrain triangles | `audit_ground_tile` | Planning layer stays unchanged by adoption. |
-| Field bunds and alignment | `audit_ground_qc` | Neighboring bunds truly join with consistent winding. |
-| Pasture seasons | `audit_ground_tile` | Seasons differ by more than base color. |
-| Drape lift | `audit_ground_drape` | Flat ground stays flat by design. |
 | View lock | `audit_view_lock` | Lock behavior stays consistent across layouts. |
 | Spectator camera | `audit_spectator_cam` | Spectator behavior stays consistent across layouts. |
 | Blood splats | `audit_blood_splat` | Hit feedback behavior stays stable. |
@@ -105,19 +71,11 @@
 | Tips, key styles, room tabs, icons | `audit_ui_layout` | Button and overlay rules stay consistent. |
 | Tap detection | `audit_touch_gesture` | Taps separate cleanly from holds and drags. |
 | Viewport settle behavior | `audit_ctrl_mode` | Single wait time with no bypassing consumers. |
-| Frame-rate independent damping | `audit_damp_fps` | Bot turn exception stays stepwise while presentation damps. |
 | Menu layout and button text | `audit_ui_layout` | Button and stacking rules stay stable. |
-| FPV cockpit | `audit_cockpit` | Framing, clearance, and band limits hold. |
-| Hero modeling from forge parts | `audit_muzzle`, `audit_cockpit` | Muzzle, cockpit, outline, and roster behavior stay consistent. |
-| Morph transition | `audit_morph_rig` | Part correspondence and tree swap stay continuous. |
-| Gait curves and combat posture | `audit_gait_anat` | Muzzle and cockpit behavior follows skeletal pose. |
 | Game modes and solo packaging | `audit_net_modes` | Mode behavior stays consistent across transports. |
 | Road network relay | `audit_osm_relay` | Payload stays sanitized, monotone, and ordered. |
 | Multi-path LAN | `audit_net_modes` | All paths stay playable together. |
 | Side swap on room creation | `audit_net_modes` | Single implementation with exactly two call sites. |
 | Developer tool gating | `audit_net_modes` | No hard-coded ports and kind-based routing holds. |
-| Flag cloth waveform | `audit_soft_stroke` | Cloth motion stays off geometry and randomness. |
-| Terrain moss and wet masks | `audit_cel_pipeline` | Mask edges change without moving color or seams. |
-| Authoritative death dissolve | `audit_cel_pipeline` | Death dissolves while plain disappearance stays instant. |
 
 Assertion formulas and thresholds live in layer-4 audit script headers.
