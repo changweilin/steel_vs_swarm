@@ -14,6 +14,5 @@
 - **One spawn path**: HTTP-request-to-spawned-process has exactly one gated path.
 - **One world-data provider**: Node-side runtime-shaped terrain / map / structure data comes from one seam; consumers MUST NOT keep private copies.
 - **One source-reading provider**: reading source text and extracting blocks goes through one seam, so audits verify what actually ships.
-- **One section rule**: the linework-section rule has a single pure, deterministic definition shared by game and offline tools.
 - **Separate balance models**: each balance model keeps its distinct role and MUST NOT be merged.
 - **Dev-only benches**: review and showcase benches MUST NOT leak into production paths.

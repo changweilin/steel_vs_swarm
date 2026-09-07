@@ -15,4 +15,3 @@
 ## Behavioral Boundaries
 
 - **Browser-runnable core**: simulation, room, and bot logic MUST stay browser-runnable; Node APIs live in the transport module only, so all three modes share one codebase.
-- **Stable identity and granularity**: player state is keyed by stable connection identity, never by positional index or socket object; squad-shared state mounts once; per-team and per-body iteration stay distinct.
