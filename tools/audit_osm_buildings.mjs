@@ -343,8 +343,8 @@ function compileBuilder(source) {
   // `readSrc` 已先正規化 CRLF；只移除 ES module 外殼，函式本體仍是正式原文。
   const body = source.replace(/^import[^\n]*\n/gm, '')
     .replace(/^export\s+(?=(?:const|function)\b)/gm, '');
-  const factory = new Function('THREE', 'mergeGeometries', 'envMat', `${body}\nreturn { buildOsmPolygonBuildings };`);
-  return factory(THREE_STUB, mergeGeometries, envMat).buildOsmPolygonBuildings;
+  const factory = new Function('THREE', 'mergeGeometries', 'envMat', 'sceneObjectMat', `${body}\nreturn { buildOsmPolygonBuildings };`);
+  return factory(THREE_STUB, mergeGeometries, envMat, envMat).buildOsmPolygonBuildings;
 }
 
 function executeBuilder(builder, areas) {

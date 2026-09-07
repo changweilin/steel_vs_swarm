@@ -385,6 +385,7 @@ export class RoomHub {
         const err = validateBattleConfig(cfg, teamSize);
         if (err) { send({ t: 'error', msg: err }); return; }
         cfg.env = resolveEnv(cfg.env || {});   // 隨機項在此定案,全房共用同一組環境
+        cfg.architectureSeed = Math.floor(Math.random() * 4294967296); // 每局建築外觀種子，伺服器定案
         // 攻堅順序(前線塔 → 中段塔 → 主堡)**是劇情戰役的推導不是第二格旗標**:兩格各送一份
         // 就會出現「照順序鎖血但沒有 BOSS」或反過來的半套狀態,而每一條既有斷言照樣全綠。
         cfg.siege = !!cfg.defSide;
@@ -635,6 +636,7 @@ export class RoomHub {
         // 但主堡的陣營歸屬**重擲**:下一場有五成機率換邊(見 rollSideSwap)。
         // 廣播出去的 sync 帶著新 cfg → 客戶端在房間階段重跑預建(prebuildKey 吃 bases/lanes)。
         rollSideSwap(room.battleConfig);
+        room.battleConfig.architectureSeed = ((room.battleConfig.architectureSeed || 0) + 1) >>> 0;
         for (const c of room.clients.values()) { c.ready = false; c.loaded = false; }
         hub.broadcast(room);
         return;

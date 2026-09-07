@@ -2514,9 +2514,13 @@ clearInterval(homeIv);
 assert(true, '重武器強化 Lv.1(快照 up 同步)');
 
 log('— 回房再戰:地圖保留 —');
+const previousArchitectureSeed = host.sync.lobby.battleConfig.architectureSeed;
+assert(Number.isInteger(previousArchitectureSeed), '建築種子由房間定案');
+assert(previousArchitectureSeed === spec.battleConfig.architectureSeed, '同房玩家共用建築種子');
 host.send({ t: 'backToRoom' });
 await host.wait((c) => c.sync.lobby.phase === 'room');
 assert(host.sync.lobby.battleConfig?.placeName === '測試戰區', '返回房間後地圖仍鎖定(不需重選)');
+assert(host.sync.lobby.battleConfig.architectureSeed !== previousArchitectureSeed, '再戰更換建築種子');
 
 log('— 5v5 房:同陣營多席 + 3 線 —');
 const h5 = await client('h5');

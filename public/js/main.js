@@ -1871,7 +1871,7 @@ function prebuildKey(cfg) {
   // `defSide` MUST 進 key:劇情戰役的塔位是非對稱的(只有防守方有塔)⇒ 換邊就是換一個世界,
   // 漏掉它會讓房間階段預建好的地形被原樣沿用,而塔的淨空/墩座全長在錯的那一側。
   return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, !!cfg.mini, cfg.defSide || null,
-    devOsmFixtureName()]);
+    cfg.architectureSeed || 0, devOsmFixtureName()]);
 }
 
 /** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */
@@ -2145,8 +2145,20 @@ function startPrebuild(cfg) {
       }
       console.warn('路網中繼略過:', e);
     });
-    await warmModels((f) => setP(0.02 + f * 0.16, '載入 3D 模型(Quaternius CC0)…'));
-    const terrain = await buildTerrain(cfg, (f, label) => setP(0.18 + f * 0.42, label));
+    // 資產與地形並行準備；兩者完成後才開放場景建構讀取零件庫。
+    let assetProgress = 0, terrainProgress = 0;
+    const preparedAt = performance.now();
+    const [, terrain] = await Promise.all([
+      warmModels((f) => {
+        assetProgress = f;
+        return setP(0.02 + assetProgress * 0.16 + terrainProgress * 0.42, '準備 3D 物件資產…');
+      }),
+      buildTerrain(cfg, (f, label) => {
+        terrainProgress = f;
+        return setP(0.02 + assetProgress * 0.16 + terrainProgress * 0.42, label);
+      }),
+    ]);
+    pre.prepareMs = performance.now() - preparedAt;
     // 只有到這一刻**還在等**才寫進度列(見 osmGate 的 onLabel)。地形建完中繼通常早就到了 ⇒
     // 平時一個字都不會多;真的卡住時(房主整組失敗)入房者會停最多 WAIT_MS,那段沉默正是
     // 唯一「畫面沒說明」的窗口 —— 它不寫,狀態列就停在上一句地形文案上乾等 20 秒。

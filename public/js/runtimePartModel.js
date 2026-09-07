@@ -1,7 +1,7 @@
 // 零件台宣告式零件 → 遊戲執行期幾何的唯一轉接縫。
 // 每個通過物件合併成一顆 vertex-color mesh；碰撞與場景配置不得反讀此視覺幾何。
 import * as THREE from 'three';
-import { envMat, toonMat } from './toon.js';
+import { sceneObjectMat, toonMat } from './toon.js';
 
 const TYPES = new Set([
   'box', 'cone', 'conical_frustum', 'cylinder', 'dodecahedron_polyhedron',
@@ -229,13 +229,38 @@ export function mergeRuntimeParts(parts, options = {}) {
   return merged;
 }
 
+// 僅快取不可變正式列；編輯中的預覽列每次重建，避免看到上一版零件。
+// 回傳獨立幾何，物件拆除不會釋放其他實體仍在使用的 buffer。
+const compiledModels = new Map();
+const COMPILED_MODEL_LIMIT = 32;
+function compiledGeometry(entry, palette, options) {
+  const key = JSON.stringify(palette);
+  const cached = compiledModels.get(entry);
+  if (cached && cached.key === key) {
+    compiledModels.delete(entry);
+    compiledModels.set(entry, cached);
+    return cached.geometry.clone();
+  }
+  const geometry = runtimeMeshDataGeometry(entry.meshData, entry.parts, palette)
+    || mergeRuntimeParts(entry.parts, { ...options, entry, palette });
+  if (!Object.isFrozen(entry)) return geometry;
+  if (cached) cached.geometry.dispose();
+  compiledModels.delete(entry);
+  compiledModels.set(entry, { key, geometry });
+  if (compiledModels.size > COMPILED_MODEL_LIMIT) {
+    const oldest = compiledModels.keys().next().value;
+    compiledModels.get(oldest).geometry.dispose();
+    compiledModels.delete(oldest);
+  }
+  return geometry.clone();
+}
+
 /** 建立可複製的零件台物件；entry 必須是 resolved runtime roster 的正式列。 */
 export function makeRuntimePartModel(entry, { environment = true, palette = null, paletteIndex = null, seed = null } = {}) {
   if (!entry?.parts?.length) throw new TypeError(`執行期目錄列缺少 parts:${entry?.key || 'unknown'}`);
   const resolvedPalette = palette || resolvePalette(entry, { paletteIndex, seed });
-  const geometry = runtimeMeshDataGeometry(entry.meshData, entry.parts, resolvedPalette)
-    || mergeRuntimeParts(entry.parts, { entry, palette: resolvedPalette, paletteIndex, seed });
-  const material = (environment ? envMat : toonMat)(0xffffff, { vertexColors: true });
+  const geometry = compiledGeometry(entry, resolvedPalette, { paletteIndex, seed });
+  const material = (environment ? sceneObjectMat : toonMat)(0xffffff, { vertexColors: true });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = `runtime:${entry.key}`;
   mesh.userData.runtimePart = {
